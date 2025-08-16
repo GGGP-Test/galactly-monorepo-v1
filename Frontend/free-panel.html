@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Galactly — Live Leads</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script defer src="./api-base.js"></script>
+</head>
+<body>
+  <header class="nav"><a class="brand" href="./">Galactly</a><div id="humans" class="btn">Humans online: —</div></header>
+  <main style="max-width:1100px;margin:20px auto;padding:0 20px">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <select id="cat" class="btn"><option value="all">All</option><option>Flexible</option><option>Corrugated</option><option>Labels</option><option>Crating</option></select>
+      <input id="q" placeholder="Search keyword" class="btn" style="min-width:240px"/>
+      <label class="btn">Min fit <input id="fit" type="range" min="60" max="99" value="80"/></label>
+      <button id="alerts" class="btn">Enable Alerts</button>
+    </div>
+
+    <div id="list" style="margin-top:16px"></div>
+  </main>
+
+  <script>
+  const uid = localStorage.getItem('uid') || ('u-'+Math.random().toString(36).slice(2));
+  localStorage.setItem('uid', uid);
+
+  async function gate(){
+    await fetch('/api/v1/gate',{method:'POST',headers:{'Content-Type':'application/json','x-galactly-user':uid},body:JSON.stringify({industries:['Flexible'],region:'US',alerts:false})});
+  }
+
+  function row(L){
+    const div=document.createElement('div');
+    div.style.cssText='border:1px solid var(--stroke);border-radius:12px;padding:12px;margin:10px 0;background:rgba(255,255,255,.03)';
+    div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div><b>${L.kw}</b> • ${L.cat} • ${L.platform} • Fit ${L.fit} • <small>${L.age}s ago</small></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn claim" data-id="${L.id}">Press & Hold to Claim</button>
+        <button class="btn why" data-id="${L.id}">Why?</button>
+      </div>
+    </div>`;
+    return div;
+  }
+
+  let holdT=null;
+  function wireHold(btn, ms, fn){
+    const start=()=>{ if(holdT) return; holdT=setTimeout(()=>{ holdT=null; fn(); }, ms); btn.textContent='Holding…'; };
+    const stop=()=>{ clearTimeout(holdT); holdT=null; btn.textContent='Press & Hold to Claim'; };
+    btn.addEventListener('mousedown', start); btn.addEventListener('touchstart', start);
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=> btn.addEventListener(ev, stop));
+  }
+
+  async function load(){
+    const cat=document.getElementById('cat').value; const q=document.getElementById('q').value; const fit=document.getElementById('fit').value;
+    const r = await fetch(`/api/v1/leads?cat=${cat}&q=${encodeURIComponent(q)}&fitMin=${fit}&region=US`,{headers:{'x-galactly-user':uid}});
+    const d = await r.json();
+    document.getElementById('humans').textContent = 'Humans online: '+d.humansOnline;
+    const list=document.getElementById('list'); list.innerHTML='';
+    (d.leads||[]).forEach(L=>{
+      const node=row(L); list.appendChild(node);
+      const claim=node.querySelector('.claim');
+      wireHold(claim, 1100, async()=>{
+        const r = await fetch('/api/v1/claim',{method:'POST',headers:{'Content-Type':'application/json','x-galactly-user':uid},body:JSON.stringify({leadId:L.id})});
+        const d = await r.json();
+        if(!r.ok){ alert(d.error||'Failed'); return; }
+        alert('Reserved 60s! '+(d.reveal.company||''));
+      });
+      node.querySelector('.why').onclick= async()=>{
+        const r= await fetch('/api/v1/lead-explain?leadId='+L.id,{headers:{'x-galactly-user':uid}}); const d= await r.json();
+        alert('Why this lead:\n- '+(d.reasons||[]).join('\n- '));
+      }
+    });
+  }
+
+  async function enablePush(){
+    if(!('serviceWorker' in navigator)) return alert('No SW');
+    const reg = await navigator.serviceWorker.register('./sw.js');
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlB64ToUint8Array(window._VAPID_) });
+    await fetch('/api/v1/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json','x-galactly-user':uid},body:JSON.stringify(sub)});
+    alert('Alerts enabled');
+  }
+
+  function urlB64ToUint8Array(b64){ const pad='='.repeat((4-b64.length%4)%4); const base=(b64+pad).replace(/-/g,'+').replace(/_/g,'/'); const raw=atob(base); const arr=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++)arr[i]=raw.charCodeAt(i); return arr; }
+
+  document.getElementById('cat').onchange=load; document.getElementById('q').oninput=()=>setTimeout(load,200); document.getElementById('fit').oninput=load;
+  document.getElementById('alerts').onclick=enablePush;
+
+  (async()=>{ await gate();
+    // Fetch VAPID public key for frontend
+    window._VAPID_ = (await (await fetch(window.API_BASE + '/vapid.txt')).text()).trim();
+    load(); setInterval(load, 3000);
+  })();
+  </script>
+</body>
+</html>
