@@ -5,6 +5,7 @@ import cryptoRandomString from 'crypto-random-string';
 import { db, upsertUser } from './db.js';
 import { startSchedulers } from './scheduler.js';
 import { initPush, saveSubscription, pushToUser } from './push.js';
+app.get('/vapid.txt', (req,res)=> res.type('text/plain').send(process.env.VAPID_PUBLIC_KEY||''));
 import { clamp } from './util.js';
 
 const app = express();
