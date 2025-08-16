@@ -5,7 +5,7 @@ import cryptoRandomString from 'crypto-random-string';
 import { db, upsertUser } from './db.js';
 import { startSchedulers } from './scheduler.js';
 import { initPush, saveSubscription, pushToUser } from './push.js';
-app.get('/vapid.txt', (req,res)=> res.type('text/plain').send(process.env.VAPID_PUBLIC_KEY||''));
+app.get('/vapid.txt', (req,res)=> res.type('text/plain').send(process.env.VAPID_PUBLIC_KEY||'BD07Rlh5PRL369Wrji_x98wg3XYHVBDBEkZKyk034FfwPnMh9am7hPtftjpbulFveBcnSXpIRfkJG6vSaPFwmok'));
 import { clamp } from './util.js';
 
 const app = express();
