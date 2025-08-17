@@ -22,6 +22,62 @@ app.use(rateLimit({ windowMs: 60_000, max: 120 }));
 initPush();
 startSchedulers();
 
+// --- DEBUG & ADMIN UTILITIES ---
+// (SAFE to leave on for now. You can remove later or guard with a secret.)
+
+import { pollSamGov } from './connectors/samGov.js';
+import { pollReddit } from './connectors/reddit.js';
+import { pollRss } from './connectors/rss.js';
+
+// serve VAPID pub key to frontend (if you didn't already add this)
+app.get('/vapid.txt', (req,res)=> res.type('text/plain').send(process.env.VAPID_PUBLIC_KEY||''));
+
+// Quick peek: counts and one example lead
+app.get('/api/v1/debug/peek', (req,res)=>{
+  const cAll = db.prepare(`SELECT COUNT(*) as n FROM lead_pool`).get() as any;
+  const cAvail = db.prepare(`SELECT COUNT(*) as n FROM lead_pool WHERE state='available'`).get() as any;
+  const sample = db.prepare(`SELECT id,cat,kw,platform,region,fit_user,generated_at FROM lead_pool ORDER BY generated_at DESC LIMIT 1`).get() as any;
+  res.json({ total:cAll.n, available:cAvail.n, sample, env:{
+    SAM: !!process.env.SAM_API_KEY,
+    REDDIT_ENABLED: process.env.REDDIT_ENABLED==='true',
+    RSS_FEEDS: (process.env.RSS_FEEDS||'').split(',').filter(Boolean).length
+  }});
+});
+
+// Force-run any connector now: /api/v1/admin/poll-now?source=sam|reddit|rss|all
+app.get('/api/v1/admin/poll-now', async (req,res)=>{
+  const src = String(req.query.source||'all').toLowerCase();
+  try{
+    if(src==='sam'||src==='all') await pollSamGov();
+    if(src==='reddit'||src==='all') await pollReddit();
+    if(src==='rss'||src==='all') await pollRss();
+    res.json({ ok:true });
+  }catch(e){ res.status(500).json({ ok:false, error: String(e) }); }
+});
+
+// Seed 8 demo leads so the UI shows cards (no external calls)
+app.post('/api/v1/debug/seed', (req,res)=>{
+  const now = Date.now();
+  const demo = [
+    ['Flexible','stand-up pouch','Demo','US', 88, 'https://example.com/1', 'Looking for 50k stand-up pouches'],
+    ['Corrugated','mailer box','Demo','US', 86, 'https://example.com/2', 'Need custom mailer boxes with inserts'],
+    ['Labels','GHS label','Demo','US', 84, 'https://example.com/3', 'GHS chemical labels required'],
+    ['Crating','ISPM-15 pallet','Demo','US', 82, 'https://example.com/4', 'Export pallets ISPM-15'],
+    ['Flexible','retort pouch','Demo','US', 85, 'https://example.com/5', 'Retort pouches for ready meals'],
+    ['Corrugated','RSC shipper','Demo','US', 83, 'https://example.com/6', 'RSC shippers 12x9x4'],
+    ['Labels','thermal transfer','Demo','US', 81, 'https://example.com/7', 'TT labels 4x6'],
+    ['Flexible','laminate film','Demo','US', 87, 'https://example.com/8', 'PET/PE laminate rollstock']
+  ];
+  const stmt = db.prepare(`INSERT INTO lead_pool
+    (cat,kw,platform,region,fit_user,fit_competition,heat,source_url,evidence_snippet,generated_at,expires_at,state)
+    VALUES (?,?,?,?,?,?,? ,?,?,?,?,'available')`);
+  for(const [cat,kw,platform,region,fit,src,evi] of demo){
+    stmt.run(cat,kw,platform,region, Number(fit), Number(fit)+3, 'OK', src, evi, now, now+72*3600*1000);
+  }
+  res.json({ ok:true, added: demo.length });
+});
+
+
 // --- tiny in-memory presence for Humans Online ---
 const seen = new Map<string, number>();
 setInterval(() => {
