@@ -207,11 +207,11 @@
     let t = 15; // seconds
 
     function fmtAge(sec){
-      if (sec < 60) return Math.floor(sec)+"s";
-      const m = sec/60; if (m < 60) return Math.floor(m)+"m";
-      const h = m/60; if (h < 24) return h.toFixed(1)+"h";
-      const d = h/24; return d.toFixed(1)+"d";
-    }
+  if (sec < 60) return Math.floor(sec)+"s";
+  const m = sec/60; if (m < 60) return Math.floor(m)+"m";
+  const h = m/60;  if (h < 24) return h.toFixed(1)+"h";
+  const d = h/24;  return d.toFixed(1)+"d";
+}
 
     async function ping(){
       try{
@@ -231,5 +231,77 @@
     ping(); // first paint fast
   })();
   </script>
+  <script>
+/* --- instant, no-jank hero viz animation --- */
+(function(){
+  const wrap = document.getElementById('viz');
+  if(!wrap) return;
+
+  // compute centers once and on resize
+  let rect, center;
+  function measure(){
+    rect = wrap.getBoundingClientRect();
+    // orb center roughly at 520,280 in viewBox mapped to wrap box
+    const w = rect.width, h = rect.height;
+    const vbW = 800, vbH = 560;
+    const cx = (520/vbW)*w, cy = (280/vbH)*h;
+    center = { x: cx, y: cy };
+  }
+  measure(); addEventListener('resize', ()=>requestAnimationFrame(measure), { passive:true });
+
+  // helper to spawn a dot at random polar point
+  function spawnDot(){
+    const r = Math.min(rect.width, rect.height)*0.48;   // radius around the sphere
+    const a = Math.random()*Math.PI*2;
+    const sx = center.x + Math.cos(a)*r;
+    const sy = center.y + Math.sin(a)*r;
+
+    const dot = document.createElement('div');
+    dot.className = 'lead-dot';
+    dot.style.left = `${sx}px`;
+    dot.style.top  = `${sy}px`;
+    dot.style.setProperty('--dx', `${center.x - sx}px`);
+    dot.style.setProperty('--dy', `${center.y - sy}px`);
+    dot.style.setProperty('--t', `${1.9 + Math.random()*1.1}s`);
+    wrap.appendChild(dot);
+
+    // when flight ends, dispatch to a random ESP icon
+    const t = parseFloat(getComputedStyle(dot).getPropertyValue('--t'))*1000;
+    setTimeout(()=>{
+      dot.remove();
+      dispatchSpark();
+    }, t);
+  }
+
+  function dispatchSpark(){
+    const targets = [ 'esp-email','esp-dm','esp-sms' ].map(id => document.getElementById(id)).filter(Boolean);
+    if(!targets.length) return;
+    const target = targets[Math.floor(Math.random()*targets.length)];
+    const tr = target.getBoundingClientRect();
+
+    const sx = center.x, sy = center.y;
+    const tx = tr.left + tr.width/2 - rect.left;
+    const ty = tr.top  + tr.height/2 - rect.top;
+
+    const spark = document.createElement('div');
+    spark.className = 'lead-spark';
+    spark.style.left = `${sx}px`; spark.style.top = `${sy}px`;
+    spark.style.setProperty('--dx', `${tx - sx}px`);
+    spark.style.setProperty('--dy', `${ty - sy}px`);
+    spark.style.setProperty('--t',  `${0.9 + Math.random()*0.5}s`);
+    wrap.appendChild(spark);
+    setTimeout(()=>spark.remove(), 1600);
+  }
+
+  // keep a gentle stream going, capped to avoid overload
+  let inFlight = 0;
+  function loop(){
+    if(inFlight < 7){ spawnDot(); inFlight++; setTimeout(()=>inFlight--, 2200); }
+    setTimeout(loop, 420 + Math.random()*420);
+  }
+  loop();
+})();
+</script>
+
 </body>
 </html>
