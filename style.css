@@ -9,3 +9,22 @@ html,body{height:100%} body{margin:0;background:var(--bg);color:var(--ink);font-
 .hero p{opacity:.9}
 .cta{margin-top:12px}
 .foot{padding:20px;text-align:center;opacity:.7;border-top:1px solid var(--stroke);margin-top:40px}
+/* stronger coastline + border dash motion */
+.hero-v2__viz .na-outline{ stroke:#d7e8ff; stroke-width:1.6; opacity:.9 }
+.hero-v2__viz .border49{ stroke:#66e0ff; stroke-width:2; stroke-dasharray:4 6; opacity:.95;
+  animation:dash 8s linear infinite, pulse 2.8s ease-in-out infinite }
+@keyframes dash { to { stroke-dashoffset:-180; } }
+
+/* crisper sphere edge */
+.hero-v2__viz .sphereEdge circle{ filter:url(#edgeBlur); opacity:.92 }
+
+/* tiny orbit yaw to sell the 3D */
+.hero-v2__viz .orb{ transform-origin:520px 280px; will-change:transform; animation:orb-yaw 16s ease-in-out infinite }
+@keyframes orb-yaw { 0%,100%{ transform:rotateZ(-1.5deg) } 50%{ transform:rotateZ(1.5deg) } }
+
+/* ticker: fixed height + skeleton to prevent push-down */
+.hero-v2__ticker{ height:108px; overflow:hidden }      /* was max-height */
+.hero-v2__skeleton{ height:16px; border-radius:6px; margin:6px 0;
+  background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.09),rgba(255,255,255,.05));
+  background-size:200% 100%; animation:shimmer 1.4s linear infinite }
+@keyframes shimmer{ to { background-position-x:-200% } }
