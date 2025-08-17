@@ -1,307 +1,144 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Galactly — Packaging Leads in <30s</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet" />
-  <script defer src="./api-base.js"></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Galactly — Transfusion AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#fff;--ink-d:#cfd3df;--stroke:rgba(255,255,255,.10);--accent:#86f7d6;--accent2:#57a4ff;--bg:#000;--panel:#0b0c13;--panel2:#090a10;--mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;--inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;color:var(--ink);background:#000;font-family:var(--inter);line-height:1.55;overflow-x:hidden}
+/* header: centered menu */
+header{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px) saturate(1.05);background:rgba(0,0,0,.55);border-bottom:1px solid var(--stroke)}
+.nav{max-width:1240px;margin:auto;padding:10px 18px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none}
+.brand svg{width:26px;height:26px} .brand b{font:800 16px var(--mont)}
+.menu{justify-self:center;display:flex;gap:16px}
+.menu a{color:#fff;text-decoration:none;padding:8px 10px;border-radius:12px;border:1px solid transparent}
+.menu a:hover{background:rgba(255,255,255,.06);border-color:var(--stroke)}
+.nav-cta{justify-self:end}
+.nav-cta .btn{padding:9px 12px;border-radius:12px}
 
-  <style>
-    
-    :root{
-      --ink:#fff; --bg:#07080d; --accent:#58a6ff; --accent2:#6ee7ff; --stroke:rgba(255,255,255,.12);
-      --mont:"Montserrat",Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
-      --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
-    }
-    html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--inter)}
-
-    /* NAV — centered menu */
-    .nav{position:sticky;top:0;z-index:20;background:rgba(7,8,13,.6);backdrop-filter:blur(8px);border-bottom:1px solid var(--stroke)}
-    .nav__in{max-width:1200px;margin:0 auto;padding:12px 20px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
-    .brand{font:800 16px var(--mont);letter-spacing:.3px;text-decoration:none;color:#fff;opacity:.95}
-    .menu{justify-self:center;display:flex;gap:16px;align-items:center}
-    .menu a{color:#e9eefc;text-decoration:none;padding:8px 10px;border-radius:10px;border:1px solid transparent;font:600 13px var(--inter)}
-    .menu a:hover{border-color:var(--stroke);background:rgba(255,255,255,.05)}
-    .nav__cta{justify-self:end}
-    .btn{border:1px solid var(--stroke);background:#0d101a;color:#fff;padding:9px 12px;border-radius:12px;text-decoration:none;font:800 13px var(--inter)}
-
-    /* HERO */
-    .hero{position:relative;overflow:hidden;background:radial-gradient(120% 140% at 70% 20%,#0c1022,#07080d 48%)}
-    .hero__in{max-width:1200px;margin:0 auto;padding:28px 20px 56px}
-    .hero__wrap{display:grid;grid-template-columns:1.05fr .95fr;align-items:stretch;gap:26px;margin-top:14px}
-    @media (max-width:960px){ .hero__wrap{grid-template-columns:1fr} }
-
-    .h1{font:800 clamp(34px,6.2vw,64px) var(--mont);line-height:1.04;margin:6px 0 10px}
-    .accent{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
-    .sub{opacity:.9;margin:0}
-    .ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
-    .btn--primary{background:#fff;color:#0c0f18}
-    .btn--ghost{background:#0c0f18}
-    .btn svg{width:16px;height:16px;vertical-align:-2px;margin-right:6px}
-
-    /* meta row has fixed height to avoid any push-down when numbers tick */
-    .meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px;min-height:32px}
-    .badge{display:inline-flex;align-items:center;gap:8px;border:1px dashed var(--stroke);padding:6px 10px;border-radius:12px;background:rgba(255,255,255,.03);font:700 12px var(--inter)}
-    .num{font-variant-numeric:tabular-nums;font-family:ui-monospace,Menlo,Consolas,monospace;min-width:3ch;text-align:right}
-
-    /* RIGHT VISUAL */
-    .vizWrap{position:relative;border-radius:18px;min-height:520px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));border:1px solid var(--stroke);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)}
-    .viz{position:absolute;inset:0;display:block;width:100%;height:100%}
-    .viz .sphereEdge{filter:url(#edgeBlur)}
-    .viz .grid line{stroke:rgba(255,255,255,.07);stroke-width:.8}
-    .viz .border49{stroke:#66e0ff;stroke-width:1.4;stroke-dasharray:2 3;opacity:.9}
-    .viz .na-outline{stroke:#bfdcff;stroke-width:1.1;fill:none;opacity:.85}
-    .viz .pulse{stroke:#94d0ff;stroke-width:1.6;stroke-linecap:round;filter:drop-shadow(0 0 6px #5bc5ff);animation:pulse 2.8s ease-in-out infinite}
-    @keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
-
-    /* ticker list — fixed height so it never pushes page down */
-    .ticker{margin-top:14px;border-top:1px solid var(--stroke);max-height:108px;overflow:auto;padding-top:8px}
-    .ti{font:600 12px var(--inter);opacity:.95;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
-    .ti:last-child{border-bottom:none}
-
-    /* no layout shift on load */
-    .hero[aria-busy="true"] .vizWrap{opacity:0;transition:opacity .2s ease}
-    .hero[aria-busy="false"] .vizWrap{opacity:1}
-    @media (prefers-reduced-motion:reduce){ .viz .pulse{animation:none} }
-    /* --- NAV centered --- */
-.hero-v2__nav{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
-.hero-v2__menu{justify-self:center;display:flex;gap:16px;align-items:center}
-.hero-v2__ctaTop{justify-self:end}
-
-/* --- stop countdown pushing layout --- */
-.hero-v2__meta{min-height:32px}              /* reserves space */
-.hero-v2__num{font-variant-numeric:tabular-nums;min-width:3ch;text-align:right}
-
-/* --- viz performance + visual polish --- */
-.hero-v2__vizWrap{position:relative;contain:layout paint;will-change:opacity}
-.hero-v2__viz .grid line{stroke:rgba(255,255,255,.07);stroke-width:.8}
-.hero-v2__viz .na-outline{stroke:#bfdcff;stroke-width:1.1;fill:none;opacity:.75}
-.hero-v2__viz .border49{stroke:#66e0ff;stroke-width:1.4;stroke-dasharray:2 3;opacity:.85}
-.hero-v2__viz .pulse{stroke:#94d0ff;stroke-width:1.6;stroke-linecap:round;filter:drop-shadow(0 0 6px #5bc5ff);animation:pulse 2.8s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
-
-/* --- lead sparks (map -> orb) --- */
-.lead-dot,.lead-spark{position:absolute;width:8px;height:8px;border-radius:999px;background:radial-gradient(#9fe6ff,#59c1ff 60%,rgba(89,193,255,.1) 70%);box-shadow:0 0 10px #59c1ff80,0 0 24px #59c1ff40;pointer-events:none;will-change:transform,opacity}
-.lead-dot{opacity:.9;transform:translate(0,0)}
-@keyframes flyToOrb{to{transform:translate(var(--dx,0px),var(--dy,0px)) scale(.9);opacity:.05}}
-.lead-dot{animation:flyToOrb var(--t,2.4s) cubic-bezier(.22,.61,.36,1) forwards}
-
-/* --- dispatch (orb -> ESP icons) --- */
-.lead-spark{width:6px;height:6px;opacity:.95;background:radial-gradient(#fff,#a0ffea 60%,transparent 70%)}
-@keyframes dispatch{to{transform:translate(var(--dx,0px),var(--dy,0px)) scale(.85);opacity:0}}
-.lead-spark{animation:dispatch var(--t,1.2s) cubic-bezier(.22,.61,.36,1) forwards}
-
-/* --- ESP icons (static targets) --- */
-.esp-stack{position:absolute;right:18px;bottom:18px;display:flex;gap:10px;opacity:.9}
-.esp{width:28px;height:28px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));display:grid;place-items:center}
-.esp svg{width:16px;height:16px;opacity:.9}
-
-  </style>
+.hero{position:relative;min-height:720px;border-bottom:1px solid var(--stroke);background:
+  radial-gradient(1200px 700px at 25% -10%,rgba(255,255,255,.06),rgba(0,0,0,0) 60%),
+  radial-gradient(900px 500px at 80% 120%,rgba(255,255,255,.05),rgba(0,0,0,0) 60%),
+  linear-gradient(180deg,#0b0c13,#06070c)}
+.wrap{max-width:1240px;margin:auto;display:grid;grid-template-columns:1fr min(780px,52%);gap:44px;align-items:center;padding:44px 28px}
+@media (max-width:1100px){.wrap{grid-template-columns:1fr}}
+.copy h1{font:800 clamp(28px,3.8vw,48px) var(--mont);line-height:1.12;margin:0 0 12px}
+.copy .accent{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.copy p{opacity:.94;margin:16px 0 0} .copy .sub{opacity:.86;font-size:14px;margin-top:12px}
+.copy .cta{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap}
+.btn{border:1px solid var(--stroke);background:#111214;color:#fff;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}
+.btn.white{background:#fff;color:#0b0c12} .btn.small{padding:8px 12px;font-weight:800}
+.flow{position:relative;background:linear-gradient(180deg,#0b0b10,#07080d);border:1px solid var(--stroke);border-radius:18px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.38)}
+.flow .glass{position:relative;border-radius:16px;background:
+  radial-gradient(120% 130% at 65% 35%,rgba(255,255,255,.06),rgba(255,255,255,.02)),
+  radial-gradient(90% 120% at 20% 80%,rgba(255,255,255,.05),rgba(255,255,255,.01));
+  overflow:hidden;min-height:400px}
+.flow .glass::before{content:"";display:block;padding-top:56.25%}
+#flowCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:16px}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center;min-height:38px}
+.badge{background:#0b0d14;border:1px solid var(--stroke);border-radius:12px;padding:7px 11px;font:700 12px var(--mont);display:flex;gap:6px;align-items:center}
+.badge small{opacity:.75;font-weight:600}
+.badge .num{font-variant-numeric:tabular-nums;font-family:ui-monospace,Menlo,Consolas,monospace;min-width:3ch;text-align:right}
+.ticker{margin-top:14px;max-height:108px;overflow:auto;border-top:1px solid var(--stroke);padding-top:10px}
+.ti{font-size:12px;opacity:.95;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.06)} .ti:last-child{border-bottom:none}
+</style>
 </head>
 <body>
-  <!-- NAV -->
+<header>
   <div class="nav">
-    <div class="nav__in">
-      <a class="brand" href="./">Galactly</a>
-      <nav class="menu">
-        <a href="./free-panel.html">Live Leads</a>
-        <a href="./TwoAIEngines.html">AI Engines</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#docs">Docs</a>
-      </nav>
-      <div class="nav__cta"><a class="btn" href="./free-panel.html">Open Live Feed</a></div>
-    </div>
+    <a class="brand" href="#">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs>
+        <circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/>
+        <path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/>
+        <circle cx="20" cy="20" r="6" fill="url(#g)"/>
+      </svg>
+      <b>Galactly</b>
+    </a>
+    <nav class="menu">
+      <a href="./free-panel.html">Live Leads</a>
+      <a href="./TwoAIEngines.html">AI Engines</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#docs">Docs</a>
+    </nav>
+    <div class="nav-cta"><a class="btn white small" href="./free-panel.html">Open Live Feed</a></div>
   </div>
+</header>
 
-  <!-- HERO -->
-  <section class="hero" aria-busy="false">
-    <div class="hero__in">
-      <div class="hero__wrap">
-        <!-- LEFT copy -->
-        <div>
-          <h1 class="h1">Find US &amp; Canada <span class="accent">Packaging Buyers</span> in <span class="accent">&lt;30s</span></h1>
-          <p class="sub">Real posts &amp; tenders from SAM.gov, Reddit, and public feeds. Free forever. Automations &amp; CRM handoff are paid.</p>
-          <div class="ctas">
-            <a class="btn btn--primary" href="./free-panel.html">Open the Live Feed</a>
-            <a class="btn btn--ghost" href="#" aria-disabled="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 5v14l11-7z"/></svg>
-              Watch 90s demo
-            </a>
-          </div>
-          <div class="meta">
-            <span class="badge">Humans online: <span id="heroHumans" class="num">00</span></span>
-            <span class="badge">Next refresh in <span id="heroT" class="num">15</span>s</span>
-          </div>
-          <div class="ticker" id="heroTicker" aria-live="polite"></div>
-        </div>
-
-        <!-- RIGHT: SVG visual with North America outline + 49th parallel pulse -->
-        <div class="hero-v2__vizWrap" id="viz">
-  <svg class="hero-v2__viz" viewBox="0 0 800 560" role="img" aria-label="North America with US–Canada border">
-    <defs>
-      <radialGradient id="glow" cx="60%" cy="40%" r="70%">
-        <stop offset="0%" stop-color="#1b2a55"/>
-        <stop offset="70%" stop-color="#0a1024"/>
-        <stop offset="100%" stop-color="#080a18"/>
-      </radialGradient>
-      <filter id="edgeBlur"><feGaussianBlur stdDeviation="4"/></filter>
-    </defs>
-
-    <!-- sphere backdrop (kept) -->
-    <g class="sphereEdge" filter="url(#edgeBlur)">
-      <circle cx="520" cy="280" r="220" fill="url(#glow)"/>
-    </g>
-
-    <!-- subtle grid so it feels 3D -->
-    <g class="grid">
-      <line x1="520" y1="60" x2="520" y2="500"/>
-      <line x1="600" y1="70" x2="600" y2="490"/>
-      <line x1="440" y1="70" x2="440" y2="490"/>
-      <line x1="320" y1="200" x2="720" y2="200"/>
-      <line x1="320" y1="280" x2="720" y2="280"/>
-      <line x1="320" y1="360" x2="720" y2="360"/>
-    </g>
-
-    <!-- North America outline (stylized) -->
-    <path class="na-outline" d="M410,260 C380,220 360,190 360,172 360,160 368,152 385,150 410,148 460,165 500,180 540,195 590,210 610,230 640,260 640,300 595,315 570,323 530,325 510,335 485,348 465,370 450,380 440,387 425,385 420,372 414,355 420,330 410,310 402,295 395,280 410,260 Z"/>
-
-    <!-- US–Canada border (49th parallel feel) -->
-    <path class="border49 pulse" d="M360,260 C420,250 480,248 540,250 600,252 660,260 700,275"/>
-
-    <!-- thin “funnel line” across the sphere -->
-    <path class="pulse" d="M330,280 C430,280 610,280 710,280" />
-  </svg>
-
-  <!-- ESP target icons -->
-  <div class="esp-stack" aria-hidden="true">
-    <div class="esp" id="esp-email">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16v12H4z"/><path d="M4 6l8 6 8-6"/></svg>
+<section class="hero" id="hero">
+  <div class="wrap">
+    <div class="copy">
+      <h1><span class="accent">Transfusion AI</span> — one-click growth for packaging.</h1>
+      <p>Finds live buyers online → thinks through the next step → sends simple, easy-to-follow actions that close.</p>
+      <p class="sub">Built for packaging owners and sales teams. B2B / Corporate leads live. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding. Just clicks.</p>
+      <div class="cta">
+        <a class="btn white" href="./free-panel.html">Open the Live Feed</a>
+        <a class="btn" href="#" aria-disabled="true">▶ Watch demo</a>
+      </div>
+      <div class="meta">
+        <div class="badge"><small>Humans online</small><span id="b-humans" class="num">00</span></div>
+        <div class="badge"><small>Next refresh in</small><span id="b-next" class="num">15</span><small>s</small></div>
+      </div>
+      <div class="ticker" id="ticker"></div>
     </div>
-    <div class="esp" id="esp-dm">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
-    </div>
-    <div class="esp" id="esp-sms">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 10h10M7 14h6"/></svg>
-    </div>
-  </div>
-</div>
+    <div class="flow">
+      <div class="glass"><canvas id="flowCanvas"></canvas></div>
+      <div class="meta">
+        <div class="badge"><small>Leads / 30 sec</small><span id="b-leads" class="num">0</span></div>
+        <div class="badge"><small>First connection</small><span id="b-first" class="num">—</span></div>
+        <div class="badge"><small>Ready now</small><span id="b-ready" class="num">—</span></div>
+        <div class="badge"><small>Quoted</small><span id="b-quote" class="num">—</span></div>
+        <div class="badge"><small>AI closed</small><span id="b-ai" class="num">—</span></div>
+        <div class="badge"><small>Rep closed</small><span id="b-human" class="num">—</span></div>
+        <div class="badge"><small>Saved / mo</small><span id="b-saved" class="num">—</span></div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <footer style="max-width:1200px;margin:20px auto;padding:18px 20px;color:#aab;opacity:.9;border-top:1px solid var(--stroke)">
-    © 2025 Galactly — Transfusion AI
-  </footer>
+<script>
+// ===== Canvas lead-flow visual (with US–Canada border & no layout shift) =====
+const cvs=document.getElementById('flowCanvas');const DPR=Math.min(2.2,window.devicePixelRatio||1);
+let ctx=null,started=false;const K={humans:document.getElementById('b-humans'),next:document.getElementById('b-next'),leads:document.getElementById('b-leads'),first:document.getElementById('b-first'),ready:document.getElementById('b-ready'),quote:document.getElementById('b-quote'),ai:document.getElementById('b-ai'),human:document.getElementById('b-human'),saved:document.getElementById('b-saved')};const ticker=document.getElementById('ticker');
+let cx=0,cy=0,R=0,coreX=0,coreY=0,coreR=22;let chips=[];
+const CHANNELS=[{name:'Email',color:'rgba(134,247,214,0.65)'},{name:'SMS',color:'rgba(160,255,160,0.65)'},{name:'Call',color:'rgba(159,208,255,0.65)'},{name:'LinkedIn',color:'rgba(120,200,255,0.65)'},{name:'Quote',color:'rgba(255,210,140,0.70)'},{name:'ERP',color:'rgba(200,170,255,0.70)'}];
+const CITIES=[{city:'New York',lat:40.7128,lon:-74.006},{city:'Toronto',lat:43.6532,lon:-79.3832},{city:'Chicago',lat:41.8781,lon:-87.6298},{city:'Dallas',lat:32.7767,lon:-96.797},{city:'Miami',lat:25.7617,lon:-80.1918},{city:'Seattle',lat:47.6062,lon:-122.3321},{city:'San Francisco',lat:37.7749,lon:-122.4194},{city:'Los Angeles',lat:34.0522,lon:-118.2437},{city:'Mexico City',lat:19.4326,lon:-99.1332},{city:'Bogotá',lat:4.711,lon:-74.0721},{city:'São Paulo',lat:-23.5505,lon:-46.6333},{city:'Buenos Aires',lat:-34.6037,lon:-58.3816}];
+const FIRST="Ava,Noah,Sophia,Liam,Isabella,Elijah,Mia,Lucas,Amelia,Mason,Harper,Logan,Evelyn,James,Abigail,Oliver,Emily".split(',');
+const LAST="Smith,Johnson,Williams,Brown,Jones,Miller,Davis,Garcia,Wilson,Moore,Taylor,Anderson".split(',');
+const pick=a=>a[(Math.random()*a.length)|0];const center={lat:25*Math.PI/180,lon:-90*Math.PI/180};
+function proj(lat,lon){const dLon=lon-center.lon;const sinC=Math.sin(center.lat),cosC=Math.cos(center.lat);const sinLat=Math.sin(lat),cosLat=Math.cos(lat);const sinDL=Math.sin(dLon),cosDL=Math.cos(dLon);const k=sinC*sinLat+cosC*cosLat*cosDL;if(k<=0)return null;return{x:cx+R*(cosLat*sinDL),y:cy-R*(cosC*sinLat-sinC*cosLat*cosDL)}}
+const LAND_NA=[[71,-156],[48,-124],[34,-118],[25,-111],[20,-105],[18,-103],[16,-99],[20,-90],[27,-81],[31,-80],[36,-76],[42,-72],[49,-64],[54,-60],[60,-75],[69,-95],[71,-156]];
+const LAND_SA=[[10,-79],[8,-74],[5,-60],[0,-58],[-8,-54],[-18,-44],[-24,-42],[-30,-52],[-40,-61],[-48,-70],[-55,-66],[-33,-71],[-20,-70],[-12,-77],[-8,-79],[10,-79]];
+const packets=[];const targets={leads:0,first:'8 sec',ready:'48%',quote:'62%',ai:'24%',human:'29%',saved:'$14,200'};const state={leads:0};
+function updateBadges(){state.leads=Math.round(state.leads*0.95+targets.leads*0.05);K.leads.textContent=state.leads;K.first.textContent=targets.first;K.ready.textContent=targets.ready;K.quote.textContent=targets.quote;K.ai.textContent=targets.ai;K.human.textContent=targets.human;K.saved.textContent=targets.saved}
+function pushTick(html){const d=document.createElement('div');d.className='ti';d.innerHTML=html;ticker.insertBefore(d,ticker.firstChild);while(ticker.children.length>6)ticker.lastElementChild.remove()}
+function cubic(p0,p1,p2,p3,t){const it=1-t;return{x:it*it*it*p0.x+3*it*it*t*p1.x+3*it*t*t*p2.x+t*t*t*p3.x,y:it*it*it*p0.y+3*it*it*t*p1.y+3*it*t*t*p2.y+t*t*t*p3.y}}
+function lerp(a,b,t){return a+(b-a)*t}
+function resize(){const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(resize,60);return}cvs.width=Math.floor(r.width*DPR);cvs.height=Math.floor(r.height*DPR);cvs.style.width=r.width+'px';cvs.style.height=r.height+'px';ctx=cvs.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);cx=r.width*0.28;cy=r.height*0.56;R=Math.min(r.width*0.30,r.height*0.46);coreX=r.width*0.56;coreY=r.height*0.56;coreR=Math.max(18,Math.min(24,r.width*0.03));const baseX=r.width*0.83,baseY=coreY,rad=Math.min(110,r.height*0.20),a0=-Math.PI/3,a1=Math.PI/3;chips=CHANNELS.map((c,i)=>{const a=CHANNELS.length>1?a0+(a1-a0)*(i/(CHANNELS.length-1)):0;return{x:baseX+rad*Math.cos(a),y:baseY+rad*Math.sin(a),r:12,label:c.name,color:c.color}})}
+window.addEventListener('resize',resize);
+function drawHemisphere(){const g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,R*1.1);g.addColorStop(0,'rgba(255,255,255,.05)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();ctx.beginPath();LAND_NA.concat(LAND_SA).forEach(([la,lo],i)=>{const P=proj(la*Math.PI/180,lo*Math.PI/180);if(!P)return;i?ctx.lineTo(P.x,P.y):ctx.moveTo(P.x,P.y)});ctx.closePath();ctx.fillStyle='rgba(134,247,214,0.09)';ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.14)';ctx.stroke(); // 49th parallel (US–Canada)
+  const pts=[];for(let lon=-130;lon<=-60;lon+=1.5){const P=proj(49*Math.PI/180,lon*Math.PI/180);if(P)pts.push(P);}if(pts.length){ctx.save();ctx.setLineDash([6,4]);ctx.lineWidth=1.4;ctx.strokeStyle='rgba(103,224,255,0.95)';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.stroke();ctx.restore();}}
+function drawCore(t){const g=ctx.createRadialGradient(coreX,coreY,0,coreX,coreY,coreR*2.6);g.addColorStop(0,'rgba(255,255,255,.04)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(coreX,coreY,coreR*2.6,0,Math.PI*2);ctx.fill();ctx.save();ctx.translate(coreX,coreY);for(let i=0;i<3;i++){const r=coreR+i*18;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.strokeStyle=`rgba(255,255,255,${0.14-i*0.02})`;ctx.lineWidth=1.2;ctx.stroke();const a0=t*0.4+i*0.6,a1=a0+Math.PI*0.42;ctx.beginPath();ctx.arc(0,0,r,a0,a1);const lg=ctx.createLinearGradient(Math.cos(a0)*r,Math.sin(a0)*r,Math.cos(a1)*r,Math.sin(a1)*r);lg.addColorStop(0,'rgba(255,255,255,.70)');lg.addColorStop(1,'rgba(255,255,255,.18)');ctx.strokeStyle=lg;ctx.lineWidth=3;ctx.stroke()}const pul=1+0.2*Math.sin(t*1.1),pr=coreR*0.9*pul,cg=ctx.createRadialGradient(0,0,0,0,0,pr*2.0);cg.addColorStop(0,'rgba(255,255,255,.90)');cg.addColorStop(1,'rgba(255,255,255,0)');ctx.globalCompositeOperation='lighter';ctx.beginPath();ctx.arc(0,0,pr*2.0,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill();ctx.restore();ctx.globalCompositeOperation='source-over'}
+function drawChannels(){CHANNELS.forEach((ch,i)=>{const chip=chips[i];if(!chip)return;ctx.save();ctx.strokeStyle=ch.color;ctx.globalAlpha=0.5;ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(coreX,coreY);ctx.quadraticCurveTo((coreX+chip.x)/2,(coreY+chip.y*1.1)/2,chip.x,chip.y);ctx.stroke();ctx.globalAlpha=1;ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.beginPath();ctx.moveTo(coreX,coreY);ctx.quadraticCurveTo((coreX+chip.x)/2,(coreY+chip.y*1.1)/2,chip.x,chip.y);ctx.stroke();const g=ctx.createRadialGradient(chip.x,chip.y,0,chip.x,chip.y,chip.r*2.2);g.addColorStop(0,ch.color);g.addColorStop(1,'rgba(255,255,255,0)');ctx.beginPath();ctx.arc(chip.x,chip.y,chip.r*2.0,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();ctx.beginPath();ctx.arc(chip.x,chip.y,chip.r,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.24)';ctx.lineWidth=1.2;ctx.stroke();ctx.font="700 11px Montserrat, Inter, system-ui";ctx.fillStyle='rgba(255,255,255,.92)';ctx.textAlign='center';ctx.fillText(chip.label,chip.x,chip.y-chip.r-8);ctx.restore()})}
+function drawPaths(t){ctx.save();ctx.globalCompositeOperation='lighter';packets.forEach(p=>{ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.p0.x,p.p0.y);ctx.bezierCurveTo(p.p1.x,p.p1.y,p.p2.x,p.p2.y,p.p3.x,p.p3.y);ctx.stroke();const u=p.t,q=u*u*(3-2*u),A=cubic(p.p0,p.p1,p.p2,p.p3,q);ctx.beginPath();ctx.arc(A.x,A.y,2.2,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.96)';ctx.fill();if(p.phase==='core'){const chip=chips[p.idx];const u2=p.t2,q2=u2*u2*(3-2*u2);const bx=lerp(coreX,(coreX+chip.x)/2,q2),by=lerp(coreY,(coreY+chip.y*1.1)/2,q2);const px=lerp(bx,chip.x,q2),py=lerp(by,chip.y,q2);ctx.beginPath();ctx.arc(px,py,2.2,0,Math.PI*2);ctx.fillStyle=CHANNELS[p.idx].color;ctx.fill()}});ctx.restore()}
+function spawn(){const c=CITIES[(Math.random()*CITIES.length)|0];const P=proj(c.lat*Math.PI/180,c.lon*Math.PI/180);if(!P)return;const name=pick(FIRST)+" "+pick(LAST);const start={x:P.x,y:P.y};const mpx=(start.x+coreX)/2,mpy=(start.y+coreY)/2;const p0=start,p1={x:mpx-40,y:mpy-30},p2={x:mpx+40,y:mpy+30},p3={x:coreX,y:coreY};const idx=(Math.random()*CHANNELS.length)|0;packets.push({p0,p1,p2,p3,idx,t:0,t2:0,phase:'toCore'});targets.leads=Math.min(500,targets.leads+(5+Math.random()*12|0));targets.first=((3+Math.random()*15)|0)+' sec';targets.ready=(35+Math.random()*30|0)+'%';targets.quote=(40+Math.random()*30|0)+'%';targets.ai=(12+Math.random()*18|0)+'%';targets.human=(18+Math.random()*28|0)+'%';targets.saved='$'+(12000+(Math.random()*18000|0)).toLocaleString();pushTick(`<strong>${name}</strong> · ${c.city} → <em>${CHANNELS[idx].name}</em>`)}
+function update(dt){for(let i=packets.length-1;i>=0;i--){const p=packets[i];if(p.phase==='toCore'){p.t=Math.min(1,p.t+dt*0.08);if(p.t>=1){p.phase='core';p.t2=0}}else{p.t2=Math.min(1,p.t2+dt*0.06);if(p.t2>=1){packets.splice(i,1)}}}}
+function draw(ts){const t=ts/1000;ctx.clearRect(0,0,cvs.width/DPR,cvs.height/DPR);drawHemisphere();drawPaths(t);drawCore(t);drawChannels()}
+let last=0,acc=0;function loop(ts){requestAnimationFrame(loop);if(!last)last=ts;const dt=Math.min(0.05,(ts-last)/1000);last=ts;update(dt);draw(ts);updateBadges();acc+=dt;if(acc>(1.2+Math.random()*1.2)){acc=0;if(packets.length<12)spawn()}}
+function init(){if(started)return;const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(init,60);return}started=true;resize();requestAnimationFrame(loop)}
+requestAnimationFrame(init);
 
-  <script>
-  (function(){
-    const uid = localStorage.getItem('uid') || ('u-'+Math.random().toString(36).slice(2));
-    localStorage.setItem('uid', uid);
-    const humansEl = document.getElementById('heroHumans');
-    const tEl = document.getElementById('heroT');
-    const ticker = document.getElementById('heroTicker');
-    let t = 15; // seconds
-
-    function fmtAge(sec){
-  if (sec < 60) return Math.floor(sec)+"s";
-  const m = sec/60; if (m < 60) return Math.floor(m)+"m";
-  const h = m/60;  if (h < 24) return h.toFixed(1)+"h";
-  const d = h/24;  return d.toFixed(1)+"d";
-}
-
-    async function ping(){
-      try{
-        const r = await fetch((window.API_BASE||'https://galactly-monorepo-v1.onrender.com') + '/api/v1/leads?fitMin=60&region=US', { headers: { 'x-galactly-user': uid } });
-        const d = await r.json();
-        humansEl.textContent = String(d.humansOnline||0).padStart(2,'0');
-        if (Array.isArray(d.leads)){
-          const rows = d.leads.slice(0,6).map(L=>`<div class="ti">• <b>${L.kw}</b> — ${L.cat} <span style="opacity:.7">(${fmtAge(L.age)} ago)</span></div>`).join('');
-          ticker.innerHTML = rows;
-        }
-        t = (d.nextRefreshSec||15);
-      }catch(e){ /* ignore */ }
-    }
-
-    // countdown with fixed width (no layout shift)
-    setInterval(()=>{ t = Math.max(0, t-1); tEl.textContent = String(t).padStart(2,'0'); if (t===0) ping(); }, 1000);
-    ping(); // first paint fast
-  })();
-  </script>
-  <script>
-/* --- instant, no-jank hero viz animation --- */
-(function(){
-  const wrap = document.getElementById('viz');
-  if(!wrap) return;
-
-  // compute centers once and on resize
-  let rect, center;
-  function measure(){
-    rect = wrap.getBoundingClientRect();
-    // orb center roughly at 520,280 in viewBox mapped to wrap box
-    const w = rect.width, h = rect.height;
-    const vbW = 800, vbH = 560;
-    const cx = (520/vbW)*w, cy = (280/vbH)*h;
-    center = { x: cx, y: cy };
-  }
-  measure(); addEventListener('resize', ()=>requestAnimationFrame(measure), { passive:true });
-
-  // helper to spawn a dot at random polar point
-  function spawnDot(){
-    const r = Math.min(rect.width, rect.height)*0.48;   // radius around the sphere
-    const a = Math.random()*Math.PI*2;
-    const sx = center.x + Math.cos(a)*r;
-    const sy = center.y + Math.sin(a)*r;
-
-    const dot = document.createElement('div');
-    dot.className = 'lead-dot';
-    dot.style.left = `${sx}px`;
-    dot.style.top  = `${sy}px`;
-    dot.style.setProperty('--dx', `${center.x - sx}px`);
-    dot.style.setProperty('--dy', `${center.y - sy}px`);
-    dot.style.setProperty('--t', `${1.9 + Math.random()*1.1}s`);
-    wrap.appendChild(dot);
-
-    // when flight ends, dispatch to a random ESP icon
-    const t = parseFloat(getComputedStyle(dot).getPropertyValue('--t'))*1000;
-    setTimeout(()=>{
-      dot.remove();
-      dispatchSpark();
-    }, t);
-  }
-
-  function dispatchSpark(){
-    const targets = [ 'esp-email','esp-dm','esp-sms' ].map(id => document.getElementById(id)).filter(Boolean);
-    if(!targets.length) return;
-    const target = targets[Math.floor(Math.random()*targets.length)];
-    const tr = target.getBoundingClientRect();
-
-    const sx = center.x, sy = center.y;
-    const tx = tr.left + tr.width/2 - rect.left;
-    const ty = tr.top  + tr.height/2 - rect.top;
-
-    const spark = document.createElement('div');
-    spark.className = 'lead-spark';
-    spark.style.left = `${sx}px`; spark.style.top = `${sy}px`;
-    spark.style.setProperty('--dx', `${tx - sx}px`);
-    spark.style.setProperty('--dy', `${ty - sy}px`);
-    spark.style.setProperty('--t',  `${0.9 + Math.random()*0.5}s`);
-    wrap.appendChild(spark);
-    setTimeout(()=>spark.remove(), 1600);
-  }
-
-  // keep a gentle stream going, capped to avoid overload
-  let inFlight = 0;
-  function loop(){
-    if(inFlight < 7){ spawnDot(); inFlight++; setTimeout(()=>inFlight--, 2200); }
-    setTimeout(loop, 420 + Math.random()*420);
-  }
-  loop();
-})();
+// ===== Live badges + ticker from backend =====
+const uid=localStorage.getItem('uid')||('u-'+Math.random().toString(36).slice(2));localStorage.setItem('uid',uid);
+function fmtAge(sec){ if(sec<60) return Math.floor(sec)+'s'; const m=sec/60; if(m<60) return Math.floor(m)+'m'; const h=m/60; if(h<24) return h.toFixed(1)+'h'; const d=h/24; return d.toFixed(1)+'d'; }
+let tRem=15; async function ping(){ try{ const base=(window.API_BASE||'https://galactly-monorepo-v1.onrender.com'); const r=await fetch(base+'/api/v1/leads?fitMin=60&region=US',{headers:{'x-galactly-user':uid}}); const d=await r.json(); K.humans.textContent=String(d.humansOnline||0).padStart(2,'0'); if(Array.isArray(d.leads)){ ticker.innerHTML=d.leads.slice(0,6).map(L=>`<div class="ti">• <b>${L.kw}</b> — ${L.cat} <span style="opacity:.7">(${fmtAge(L.age)} ago)</span></div>`).join(''); } tRem=d.nextRefreshSec||15; }catch(e){ /* silent */ } }
+setInterval(()=>{tRem=Math.max(0,tRem-1);K.next.textContent=String(tRem).padStart(2,'0'); if(tRem===0) ping();},1000); ping();
 </script>
-
 </body>
 </html>
