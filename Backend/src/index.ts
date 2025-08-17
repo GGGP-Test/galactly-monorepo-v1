@@ -85,6 +85,23 @@ setInterval(() => {
   for (const [k, v] of seen) if (now - v > 2 * 60_000) seen.delete(k);
 }, 30_000);
 
+function hourLocal() {
+  const d = new Date();
+  // US/CA centric soft floor (00:00–06:59 quiet)
+  return d.getUTCHours(); // crude but fine for free tier
+}
+
+function humansOnlineValue() {
+  const real = [...seen.values()].filter(ts => Date.now()-ts < 120_000).length;
+  const h = hourLocal();
+  // soft floor: nights have a tiny baseline
+  const floor = (h >= 7 && h <= 22) ? 1 : 2; // slightly higher floor at night so it doesn't show 0
+  // small pad: ~10% of real, capped
+  const pad = Math.min(5, Math.round(real * 0.10));
+  return Math.max(real, floor) + pad;
+}
+
+
 function userId(req: any) {
   return (req.headers['x-galactly-user'] as string) || (req.query.userId as string) || 'anon-' + (req.ip || '');
 }
