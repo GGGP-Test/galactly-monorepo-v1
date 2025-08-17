@@ -1,133 +1,162 @@
 <!doctype html>
-<nav>
-  <a class="btn" href="./free-panel.html">Free Live Leads</a>
-  <a class="btn" href="./two-engines.html">Two Engines</a>
-  <a class="btn" href="./store.html">Store</a>
-</nav>
-
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Galactly — Live Packaging Leads</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Galactly — Live Packaging Leads & Automations</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="./style.css"/>
-  <script defer src="./api-base.js"></script>
   <style>
-    /* Extra sugar for this page only */
-    .grid{display:grid;gap:14px}
-    @media(min-width:900px){.grid.cols-3{grid-template-columns:repeat(3,1fr)}}
-    .card{border:1px solid var(--stroke);border-radius:14px;padding:14px;background:rgba(255,255,255,.03)}
-    .muted{opacity:.8}
-    .pill{border:1px solid var(--stroke);border-radius:999px;padding:4px 10px;font-size:12px}
-    .section{max-width:1100px;margin:40px auto;padding:0 20px}
-    .h2{font:800 28px var(--mont);margin:0 0 10px}
-    .lead-item{display:flex;justify-content:space-between;gap:8px;align-items:center}
-    .sources{display:flex;gap:8px;flex-wrap:wrap}
-    .sources .pill{background:rgba(255,255,255,.06)}
+    :root{
+      --ink:#fff;--ink-d:#cfd3df;--stroke:rgba(255,255,255,.10);
+      --accent:#86f7d6;--accent2:#57a4ff;--bg:#000;--panel:#0b0c13;--glass:#0a0b12;
+      --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
+      --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;color:var(--ink);background:var(--bg);font-family:var(--inter);line-height:1.55;overflow-x:hidden}
+    /* Header */
+    header{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px) saturate(1.05);background:rgba(0,0,0,.55);border-bottom:1px solid var(--stroke)}
+    .nav{max-width:1240px;margin:auto;padding:10px 18px;display:flex;align-items:center;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none}
+    .brand svg{width:26px;height:26px}
+    .brand b{font:800 16px var(--mont)}
+    .navlinks{display:flex;gap:8px;align-items:center}
+    .navlinks a{color:#fff;text-decoration:none;padding:8px 10px;border-radius:12px;border:1px solid transparent}
+    .navlinks a:hover{background:rgba(255,255,255,.06);border-color:var(--stroke)}
+
+    /* Hero */
+    .hero{position:relative;min-height:84svh;border-bottom:1px solid var(--stroke);overflow:hidden;
+      background:
+        radial-gradient(1200px 700px at 25% -10%,rgba(255,255,255,.06),rgba(0,0,0,0) 60%),
+        radial-gradient(900px 500px at 80% 120%,rgba(255,255,255,.05),rgba(0,0,0,0) 60%),
+        linear-gradient(180deg,#0b0c13,#06070c)}
+    .wrap{max-width:1240px;margin:auto;display:grid;grid-template-columns:1.05fr min(760px,50%);gap:44px;align-items:center;padding:44px 28px}
+    @media (max-width:1100px){.wrap{grid-template-columns:1fr}}
+
+    .copy h1{font:800 clamp(30px,4.2vw,56px) var(--mont);line-height:1.08;margin:0 0 12px}
+    .accent{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .copy p{opacity:.94;margin:12px 0 0}
+    .copy .sub{opacity:.86;font-size:14px;margin-top:10px}
+    .cta{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap}
+
+    .btn{border:1px solid var(--stroke);background:#111214;color:#fff;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800;display:inline-flex;gap:10px;align-items:center}
+    .btn.primary{background:#fff;color:#0b0c12}
+    .btn.ghost{background:rgba(255,255,255,.04)}
+    .btn svg{width:16px;height:16px;opacity:.9}
+
+    /* Visual card */
+    .flow{position:relative;background:linear-gradient(180deg,#0b0b10,#07080d);border:1px solid var(--stroke);border-radius:18px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.38)}
+    .glass{position:relative;border-radius:16px;background:
+      radial-gradient(120% 130% at 65% 35%,rgba(255,255,255,.06),rgba(255,255,255,.02)),
+      radial-gradient(90% 120% at 20% 80%,rgba(255,255,255,.05),rgba(255,255,255,.01));
+      overflow:hidden;min-height:380px}
+    .glass::before{content:"";display:block;padding-top:56.25%}
+    #flowCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:16px}
+
+    .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+    .badge{background:#0b0d14;border:1px solid var(--stroke);border-radius:12px;padding:7px 11px;font:700 12px var(--mont);display:flex;gap:6px;align-items:center}
+    .badge small{opacity:.75;font-weight:600}
+    .ticker{margin-top:14px;max-height:108px;overflow:auto;border-top:1px solid var(--stroke);padding-top:10px}
+    .ti{font-size:12px;opacity:.95;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+    .ti:last-child{border-bottom:none}
+
+    /* Subtle floating orbs with soft, blurry edges */
+    .orb{position:absolute;filter:blur(22px) saturate(1.1);opacity:.35;pointer-events:none;mix-blend-mode:screen}
+    .orb.a{top:-120px;left:-120px;width:360px;height:360px;background:radial-gradient(closest-side,rgba(134,247,214,.7),rgba(134,247,214,0));border-radius:50%}
+    .orb.b{bottom:-160px;right:-120px;width:420px;height:420px;background:radial-gradient(closest-side,rgba(87,164,255,.7),rgba(87,164,255,0));border-radius:50%}
   </style>
 </head>
 <body>
-  <header class="nav">
-    <a class="brand" href="#"><b>Galactly</b></a>
-    <nav>
-      <a class="btn" href="./free-panel.html">Free Live Leads</a>
-    </nav>
+  <header>
+    <div class="nav">
+      <a class="brand" href="./">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs>
+          <circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/>
+          <path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/>
+          <circle cx="20" cy="20" r="6" fill="url(#g)"/>
+        </svg>
+        <b>Galactly</b>
+      </a>
+      <nav class="navlinks">
+        <a href="./free-panel.html">Live Leads</a>
+        <a href="./Engines.html">AI Engines</a>
+        <a href="#pricing">Pricing</a>
+      </nav>
+    </div>
   </header>
 
-  <section class="hero" style="padding-bottom:0">
-    <h1>Live Leads &lt;30s</h1>
-    <p>US &amp; Canada buyers asking for packaging <em>right now</em>. Free forever. Automation &amp; integrations are paid.</p>
-    <div class="cta"><a href="./onboarding.html" class="btn primary">Open the Live Feed</a></div>
-    <p class="muted" id="hero-online" style="margin:14px 0 0">Humans online: —</p>
-  </section>
-
-  <!-- LIVE PREVIEW -->
-  <section class="section" id="preview">
-    <div class="h2">Fresh leads (live preview)</div>
-    <div id="previewList" class="grid cols-3"></div>
-    <div style="margin-top:10px"><a class="btn" href="./free-panel.html">See full feed</a></div>
-  </section>
-
-  <!-- HOW IT WORKS -->
-  <section class="section">
-    <div class="h2">How it works</div>
-    <div class="grid cols-3">
-      <div class="card">
-        <b>1) We listen</b>
-        <p class="muted">Official RFPs (SAM.gov), public forums (Reddit), and procurement RSS. Only ToS-compliant, public data.</p>
+  <section class="hero">
+    <span class="orb a"></span>
+    <span class="orb b"></span>
+    <div class="wrap">
+      <div class="copy">
+        <h1><span class="accent">Live Leads &lt;30s</span> for the packaging industry.</h1>
+        <p>US &amp; Canada buyers asking for packaging <em>right now</em>. Free forever. When you want integrations and automation, upgrade.</p>
+        <p class="sub">Categories: Flexible • Corrugated • Labels • Crating. Sources include public tenders, forums, and industry feeds.</p>
+        <div class="cta">
+          <a class="btn primary" href="./free-panel.html" aria-label="Open the Live Leads feed">Open the Live Feed</a>
+          <a class="btn ghost" href="#demo" aria-label="Watch a quick demo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            Watch demo
+          </a>
+        </div>
       </div>
-      <div class="card">
-        <b>2) We classify</b>
-        <p class="muted">Corrugated, Flexible, Labels, Crating… plus keywords like “stand-up pouch”, “mailer box”, “GHS label”.</p>
-      </div>
-      <div class="card">
-        <b>3) You claim</b>
-        <p class="muted">Press & hold to get a 60s head-start. Own within 5 minutes or it returns to the pool. Fair-Play keeps it clean.</p>
+
+      <div class="flow">
+        <div class="glass"><canvas id="flowCanvas"></canvas></div>
+        <div class="meta">
+          <div class="badge"><small>Leads / 30s</small><span id="b-leads">—</span></div>
+          <div class="badge"><small>First connection</small><span id="b-first">—</span></div>
+          <div class="badge"><small>Ready now</small><span id="b-ready">—</span></div>
+          <div class="badge"><small>Quoted</small><span id="b-quote">—</span></div>
+          <div class="badge"><small>AI closed</small><span id="b-ai">—</span></div>
+          <div class="badge"><small>Rep closed</small><span id="b-human">—</span></div>
+          <div class="badge"><small>Saved / mo</small><span id="b-saved">—</span></div>
+        </div>
+        <div class="ticker" id="ticker"></div>
       </div>
     </div>
   </section>
-
-  <!-- SOURCES -->
-  <section class="section">
-    <div class="h2">Live sources</div>
-    <div class="sources">
-      <span class="pill">SAM.gov (US Federal)</span>
-      <span class="pill">State/City RSS</span>
-      <span class="pill">Reddit (public)</span>
-      <span class="pill">Company news RSS</span>
-      <span class="pill">More soon (CanadaBuys/MERX)</span>
-    </div>
-    <p class="muted" style="margin-top:8px">We only use public, legal endpoints. No scraping of restricted sites.</p>
-  </section>
-
-  <!-- TRUST / FAIR-PLAY -->
-  <section class="section">
-    <div class="h2">Why sellers like it</div>
-    <div class="grid cols-3">
-      <div class="card"><b>Free forever</b><p class="muted">Real leads without paying. Pay only for automations and integrations when you’re ready.</p></div>
-      <div class="card"><b>Fair-Play</b><p class="muted">Reputation & cooldowns stop bots and hoarding. “Why this lead?” explains recommendations.</p></div>
-      <div class="card"><b>Push alerts</b><p class="muted">Browser push (free) for instant claims. Email/Slack/Telegram can be added later.</p></div>
-    </div>
-  </section>
-
-  <footer class="foot">© 2025 Galactly — Transfusion AI</footer>
 
   <script>
-  // A tiny “user” identity so backend personalizes & counts presence
-  const uid = localStorage.getItem('uid') || ('u-'+Math.random().toString(36).slice(2));
-  localStorage.setItem('uid', uid);
+    // ===== minimal animated canvas (polished edges + soft glow) =====
+    const cvs=document.getElementById('flowCanvas');const DPR=Math.min(2,window.devicePixelRatio||1);
+    let ctx=null,started=false,cx=0,cy=0,R=0;let packets=[];let chips=[];let last=0,acc=0;
+    const CHANNELS=['Email','SMS','Call','LinkedIn','Quote','ERP'];
+    const FIRST='Ava,Noah,Sophia,Liam,Isabella,Elijah,Mia,Lucas,Amelia,Logan,Evelyn,James,Abigail,Oliver,Emily'.split(',');
+    const LAST='Smith,Johnson,Williams,Brown,Jones,Miller,Davis,Garcia,Wilson,Moore,Taylor,Anderson'.split(',');
+    const K={leads:document.getElementById('b-leads'),first:document.getElementById('b-first'),ready:document.getElementById('b-ready'),quote:document.getElementById('b-quote'),ai:document.getElementById('b-ai'),human:document.getElementById('b-human'),saved:document.getElementById('b-saved')};
+    const ticker=document.getElementById('ticker');
 
-  async function loadPreview(){
-    try{
-      const r = await fetch(`/api/v1/leads?region=US&fitMin=75&userId=${uid}`);
-      const d = await r.json();
-      document.getElementById('hero-online').textContent = 'Humans online: '+(d.humansOnline ?? '—');
+    function resize(){const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(resize,60);return}cvs.width=Math.floor(r.width*DPR);cvs.height=Math.floor(r.height*DPR);cvs.style.width=r.width+'px';cvs.style.height=r.height+'px';ctx=cvs.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);cx=r.width*0.30;cy=r.height*0.58;R=Math.min(r.width*0.30,r.height*0.46);const baseX=r.width*0.80,baseY=cy,rad=Math.min(110,r.height*0.20),a0=-Math.PI/3,a1=Math.PI/3;chips=CHANNELS.map((label,i)=>{const a=CHANNELS.length>1?a0+(a1-a0)*(i/(CHANNELS.length-1)):0;return{x:baseX+rad*Math.cos(a),y:baseY+rad*Math.sin(a),r:12,label}})}
+    window.addEventListener('resize',resize);
 
-      const list = document.getElementById('previewList');
-      list.innerHTML = '';
-      (d.leads||[]).slice(0,3).forEach(L=>{
-        const el = document.createElement('div');
-        el.className = 'card';
-        el.innerHTML = `
-          <div class="lead-item">
-            <div>
-              <div><b>${escapeHtml(L.kw)}</b> • ${escapeHtml(L.cat)} • ${escapeHtml(L.platform)}</div>
-              <div class="muted">Fit ${L.fit} · ${Math.max(1,Math.round(L.age/60))} min ago</div>
-            </div>
-            <a class="btn" href="./free-panel.html">Claim</a>
-          </div>`;
-        list.appendChild(el);
-      });
-    }catch(e){ /* ignore */ }
-  }
+    function pushTick(name,channel){const d=document.createElement('div');d.className='ti';d.innerHTML=`<strong>${name}</strong> · → <em>${channel}</em>`;ticker.insertBefore(d,ticker.firstChild);while(ticker.children.length>6)ticker.lastElementChild.remove()}
 
-  function escapeHtml(s){return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]))}
+    function spawn(){const name=FIRST[(Math.random()*FIRST.length)|0]+' '+LAST[(Math.random()*LAST.length)|0];const idx=(Math.random()*CHANNELS.length)|0;packets.push({t:0,idx});const t=Date.now()%1e7;K.leads.textContent=((+K.leads.textContent||0)+1);
+      K.first.textContent=((3+Math.random()*15)|0)+' sec';K.ready.textContent=(35+Math.random()*30|0)+'%';K.quote.textContent=(40+Math.random()*30|0)+'%';K.ai.textContent=(12+Math.random()*18|0)+'%';K.human.textContent=(18+Math.random()*28|0)+'%';K.saved.textContent='$'+(12000+(Math.random()*18000|0)).toLocaleString();
+      pushTick(name,CHANNELS[idx])}
 
-  loadPreview();
-  setInterval(loadPreview, 5000);
+    function draw(ts){const t=ts/1000;ctx.clearRect(0,0,cvs.width/DPR,cvs.height/DPR);
+      // hemisphere with extra-soft edge
+      const g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,R*1.25);
+      g.addColorStop(0,'rgba(255,255,255,.05)');g.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
+      // channels
+      chips.forEach(ch=>{ctx.save();ctx.globalAlpha=.6;ctx.lineWidth=6;ctx.strokeStyle='rgba(255,255,255,.10)';ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo((cx+ch.x)/2,(cy+ch.y*1.1)/2,ch.x,ch.y);ctx.stroke();ctx.globalAlpha=1;ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,.18)';ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo((cx+ch.x)/2,(cy+ch.y*1.1)/2,ch.x,ch.y);ctx.stroke();ctx.beginPath();ctx.arc(ch.x,ch.y,ch.r,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.24)';ctx.stroke();ctx.font='700 11px Montserrat, Inter, system-ui';ctx.fillStyle='rgba(255,255,255,.92)';ctx.textAlign='center';ctx.fillText(ch.label,ch.x,ch.y-ch.r-8);ctx.restore()});
+      // packets (little dots moving to channels)
+      packets.forEach(p=>{const ch=chips[p.idx];const q=p.t*p.t*(3-2*p.t);const mx=(cx+ch.x)/2,my=(cy+ch.y*1.1)/2;const x=(1-q)*( (1-q)*cx + q*mx ) + q*( (1-q)*mx + q*ch.x );const y=(1-q)*( (1-q)*cy + q*my ) + q*( (1-q)*my + q*ch.y );ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.95)';ctx.fill()});
+    }
+
+    function loop(ts){requestAnimationFrame(loop);if(!last)last=ts;const dt=Math.min(0.05,(ts-last)/1000);last=ts;acc+=dt;packets.forEach(p=>p.t=Math.min(1,p.t+dt*0.06));packets=packets.filter(p=>p.t<1);draw(ts);if(acc>(1.2+Math.random()*1.3)){acc=0;if(packets.length<12)spawn()}}
+
+    function init(){if(started)return;const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(init,60);return}started=true;resize();requestAnimationFrame(loop)}
+    document.addEventListener('DOMContentLoaded',init);window.addEventListener('load',init);
   </script>
 </body>
 </html>
