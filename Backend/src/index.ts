@@ -441,4 +441,5 @@ app.get('/api/v1/lead-explain', (req, res) => {
 });
 
 const port = process.env.PORT || 8787;
+registerBilling(app);
 app.listen(port, () => console.log('API up on', port));
