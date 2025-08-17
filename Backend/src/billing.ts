@@ -1,7 +1,7 @@
 import type { Express } from 'express';
 import Stripe from 'stripe';
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY!;
+const stripe = new Stripe(process.env.STRIPE_SECRET!, { apiVersion: API_VERSION as any });
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || process.env.SITE_ORIGIN || 'http://localhost:8787';
 
 // Map plan slugs coming from the frontend to your Stripe Price IDs
@@ -14,7 +14,7 @@ export function registerBilling(app: Express){
   if(!STRIPE_SECRET_KEY){
     console.warn('[billing] STRIPE_SECRET_KEY missing — endpoint will 400');
   }
-  const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
+  const API_VERSION: string = process.env.STRIPE_API_VERSION || '2023-10-16';
 
   app.post('/api/v1/billing/create-session', async (req, res)=>{
     try{
