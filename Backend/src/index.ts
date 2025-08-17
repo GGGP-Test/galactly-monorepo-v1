@@ -159,7 +159,7 @@ app.get('/api/v1/leads', (req, res) => {
     )
     .all(...params);
 
-  const humansOnline = [...seen.values()].filter((ts) => Date.now() - ts < 120_000).length + 3;
+  const humansOnline = humansOnlineValue();
   const nextRefreshSec = 15;
   return res.json({ leads: rows, humansOnline, nextRefreshSec });
 });
