@@ -82,7 +82,17 @@ CREATE TABLE IF NOT EXISTS push_subs (
   auth TEXT NOT NULL,
   created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS supplier_profiles (
+  user_id TEXT PRIMARY KEY,
+  company TEXT, site TEXT, role TEXT, location TEXT,
+  moq TEXT, leadtime TEXT, caps TEXT, links TEXT,
+  cats_json TEXT NOT NULL DEFAULT '[]',
+  tags_json TEXT NOT NULL DEFAULT '[]',
+  updated_at INTEGER NOT NULL
+);
 `);
+
+
 
 export function upsertUser(id: string, region: Region, email?: string) {
   const now = Date.now();
