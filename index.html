@@ -102,8 +102,15 @@
             <span class="badge">Humans online: <span id="heroHumans" class="num">00</span></span>
             <span class="badge">Next refresh in <span id="heroT" class="num">15</span>s</span>
           </div>
-          <div class="ticker" id="heroTicker" aria-live="polite"></div>
-        </div>
+          <div class="hero-v2__ticker" id="heroTicker" aria-live="polite">
+  <div class="hero-v2__skeleton"></div>
+  <div class="hero-v2__skeleton"></div>
+  <div class="hero-v2__skeleton"></div>
+  <div class="hero-v2__skeleton"></div>
+  <div class="hero-v2__skeleton"></div>
+  <div class="hero-v2__skeleton"></div>
+</div>
+
 
         <!-- RIGHT: SVG visual with North America outline + 49th parallel pulse -->
         <div class="vizWrap">
@@ -120,6 +127,34 @@
             <g class="sphereEdge">
               <circle cx="520" cy="280" r="220" fill="url(#glow)"/>
             </g>
+            <!-- sphere backdrop stays as-is -->
+<g class="sphereEdge">
+  <circle cx="520" cy="280" r="220" fill="url(#glow)"/>
+</g>
+
+<!-- wrap these in .orb for the subtle yaw -->
+<g class="orb">
+  <!-- lat/long grid -->
+  <g class="grid">
+    <line x1="520" y1="60" x2="520" y2="500"/>
+    <line x1="600" y1="70" x2="600" y2="490"/>
+    <line x1="440" y1="70" x2="440" y2="490"/>
+    <line x1="320" y1="200" x2="720" y2="200"/>
+    <line x1="320" y1="280" x2="720" y2="280"/>
+    <line x1="320" y1="360" x2="720" y2="360"/>
+  </g>
+
+  <!-- coastline (kept), now a touch brighter -->
+  <path class="na-outline"
+        d="M410,260 C380,220 360,190 360,172 360,160 368,152 385,150 410,148 460,165 500,180 540,195 590,210 610,230
+           640,260 640,300 595,315 570,323 530,325 510,335 485,348 465,370 450,380 440,387 425,385 420,372
+           414,355 420,330 410,310 402,295 395,280 410,260 Z"/>
+
+  <!-- US–Canada border (49th parallel) with animated dash -->
+  <path class="border49"
+        d="M360,260 C420,250 480,248 540,250 600,252 660,260 700,275"/>
+</g>
+
             <!-- latitude / longitude grid -->
             <g class="grid">
               <line x1="520" y1="60" x2="520" y2="500"/>
@@ -129,6 +164,7 @@
               <line x1="320" y1="280" x2="720" y2="280"/>
               <line x1="320" y1="360" x2="720" y2="360"/>
             </g>
+            
             <!-- stylized North America coastline -->
             <path class="na-outline" d="M410,260 C380,220 360,190 360,172 360,160 368,152 385,150 410,148 460,165 500,180 540,195 590,210 610,230 640,260 640,300 595,315 570,323 530,325 510,335 485,348 465,370 450,380 440,387 425,385 420,372 414,355 420,330 410,310 402,295 395,280 410,260 Z"/>
             <!-- US–Canada border (approx 49th parallel across the sphere) -->
