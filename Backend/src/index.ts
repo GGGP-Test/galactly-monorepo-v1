@@ -7,6 +7,7 @@ import { startSchedulers } from './scheduler.js';
 import { initPush, saveSubscription, pushToUser } from './push.js';
 import { clamp } from './util.js';
 import { registerBilling } from './billing.js';
+import { mountBilling } from './billing.js';
 
 
 // ---------- Demo backfill types & pool ----------
