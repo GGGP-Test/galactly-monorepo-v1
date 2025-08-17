@@ -14,7 +14,7 @@ export function registerBilling(app: Express){
   if(!STRIPE_SECRET_KEY){
     console.warn('[billing] STRIPE_SECRET_KEY missing — endpoint will 400');
   }
-  const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
+  const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
 
   app.post('/api/v1/billing/create-session', async (req, res)=>{
     try{
