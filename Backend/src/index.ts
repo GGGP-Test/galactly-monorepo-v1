@@ -6,6 +6,8 @@ import { db, upsertUser } from './db.js';
 import { startSchedulers } from './scheduler.js';
 import { initPush, saveSubscription, pushToUser } from './push.js';
 import { clamp } from './util.js';
+import { registerBilling } from './billing.js';
+
 
 // ---------- Demo backfill types & pool ----------
 type SimpleLead = {
