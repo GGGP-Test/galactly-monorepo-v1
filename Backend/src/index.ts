@@ -5,16 +5,23 @@ import cryptoRandomString from 'crypto-random-string';
 import { db, upsertUser } from './db.js';
 import { startSchedulers } from './scheduler.js';
 import { initPush, saveSubscription, pushToUser } from './push.js';
-app.get('/vapid.txt', (req,res)=> res.type('text/plain').send(process.env.VAPID_PUBLIC_KEY||'BD07Rlh5PRL369Wrji_x98wg3XYHVBDBEkZKyk034FfwPnMh9am7hPtftjpbulFveBcnSXpIRfkJG6vSaPFwmok'));
 import { clamp } from './util.js';
 
+// 👇 MUST come before any app.use(...)
 const app = express();
+
 app.use(express.json());
-app.use(cors({ origin: (origin, cb)=> cb(null, true), credentials: true }));
+app.use(
+  cors({
+    origin: (_origin: string | undefined, cb: (err: any, allow?: boolean) => void) => cb(null, true),
+    credentials: true,
+  })
+);
 app.use(rateLimit({ windowMs: 60_000, max: 120 }));
 
 initPush();
 startSchedulers();
+
 
 // --- tiny in-memory presence for Humans Online ---
 const seen = new Map<string, number>();
