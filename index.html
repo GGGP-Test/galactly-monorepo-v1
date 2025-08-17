@@ -184,42 +184,6 @@
   </section>
 
   <script>
-    // ===== minimal animated canvas (polished edges + soft glow) =====
-    const cvs=document.getElementById('flowCanvas');const DPR=Math.min(2,window.devicePixelRatio||1);
-    let ctx=null,started=false,cx=0,cy=0,R=0;let packets=[];let chips=[];let last=0,acc=0;
-    const CHANNELS=['Email','SMS','Call','LinkedIn','Quote','ERP'];
-    const FIRST='Ava,Noah,Sophia,Liam,Isabella,Elijah,Mia,Lucas,Amelia,Logan,Evelyn,James,Abigail,Oliver,Emily'.split(',');
-    const LAST='Smith,Johnson,Williams,Brown,Jones,Miller,Davis,Garcia,Wilson,Moore,Taylor,Anderson'.split(',');
-    const K={leads:document.getElementById('b-leads'),first:document.getElementById('b-first'),ready:document.getElementById('b-ready'),quote:document.getElementById('b-quote'),ai:document.getElementById('b-ai'),human:document.getElementById('b-human'),saved:document.getElementById('b-saved')};
-    const ticker=document.getElementById('ticker');
-
-    function resize(){const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(resize,60);return}cvs.width=Math.floor(r.width*DPR);cvs.height=Math.floor(r.height*DPR);cvs.style.width=r.width+'px';cvs.style.height=r.height+'px';ctx=cvs.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);cx=r.width*0.30;cy=r.height*0.58;R=Math.min(r.width*0.30,r.height*0.46);const baseX=r.width*0.80,baseY=cy,rad=Math.min(110,r.height*0.20),a0=-Math.PI/3,a1=Math.PI/3;chips=CHANNELS.map((label,i)=>{const a=CHANNELS.length>1?a0+(a1-a0)*(i/(CHANNELS.length-1)):0;return{x:baseX+rad*Math.cos(a),y:baseY+rad*Math.sin(a),r:12,label}})}
-    window.addEventListener('resize',resize);
-
-    function pushTick(name,channel){const d=document.createElement('div');d.className='ti';d.innerHTML=`<strong>${name}</strong> · → <em>${channel}</em>`;ticker.insertBefore(d,ticker.firstChild);while(ticker.children.length>6)ticker.lastElementChild.remove()}
-
-    function spawn(){const name=FIRST[(Math.random()*FIRST.length)|0]+' '+LAST[(Math.random()*LAST.length)|0];const idx=(Math.random()*CHANNELS.length)|0;packets.push({t:0,idx});const t=Date.now()%1e7;K.leads.textContent=((+K.leads.textContent||0)+1);
-      K.first.textContent=((3+Math.random()*15)|0)+' sec';K.ready.textContent=(35+Math.random()*30|0)+'%';K.quote.textContent=(40+Math.random()*30|0)+'%';K.ai.textContent=(12+Math.random()*18|0)+'%';K.human.textContent=(18+Math.random()*28|0)+'%';K.saved.textContent='$'+(12000+(Math.random()*18000|0)).toLocaleString();
-      pushTick(name,CHANNELS[idx])}
-
-    function draw(ts){const t=ts/1000;ctx.clearRect(0,0,cvs.width/DPR,cvs.height/DPR);
-      // hemisphere with extra-soft edge
-      const g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,R*1.25);
-      g.addColorStop(0,'rgba(255,255,255,.05)');g.addColorStop(1,'rgba(255,255,255,0)');
-      ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
-      // channels
-      chips.forEach(ch=>{ctx.save();ctx.globalAlpha=.6;ctx.lineWidth=6;ctx.strokeStyle='rgba(255,255,255,.10)';ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo((cx+ch.x)/2,(cy+ch.y*1.1)/2,ch.x,ch.y);ctx.stroke();ctx.globalAlpha=1;ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,.18)';ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo((cx+ch.x)/2,(cy+ch.y*1.1)/2,ch.x,ch.y);ctx.stroke();ctx.beginPath();ctx.arc(ch.x,ch.y,ch.r,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.24)';ctx.stroke();ctx.font='700 11px Montserrat, Inter, system-ui';ctx.fillStyle='rgba(255,255,255,.92)';ctx.textAlign='center';ctx.fillText(ch.label,ch.x,ch.y-ch.r-8);ctx.restore()});
-      // packets (little dots moving to channels)
-      packets.forEach(p=>{const ch=chips[p.idx];const q=p.t*p.t*(3-2*p.t);const mx=(cx+ch.x)/2,my=(cy+ch.y*1.1)/2;const x=(1-q)*( (1-q)*cx + q*mx ) + q*( (1-q)*mx + q*ch.x );const y=(1-q)*( (1-q)*cy + q*my ) + q*( (1-q)*my + q*ch.y );ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.95)';ctx.fill()});
-    }
-
-    function loop(ts){requestAnimationFrame(loop);if(!last)last=ts;const dt=Math.min(0.05,(ts-last)/1000);last=ts;acc+=dt;packets.forEach(p=>p.t=Math.min(1,p.t+dt*0.06));packets=packets.filter(p=>p.t<1);draw(ts);if(acc>(1.2+Math.random()*1.3)){acc=0;if(packets.length<12)spawn()}}
-
-    function init(){if(started)return;const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(init,60);return}started=true;resize();requestAnimationFrame(loop)}
-    document.addEventListener('DOMContentLoaded',init);window.addEventListener('load',init);
-  </script>
-  <script>
 (function(){
   const uid = localStorage.getItem('uid') || ('u-'+Math.random().toString(36).slice(2));
   localStorage.setItem('uid', uid);
@@ -261,6 +225,7 @@
   ping();
 })();
 </script>
+
 
 </body>
 </html>
