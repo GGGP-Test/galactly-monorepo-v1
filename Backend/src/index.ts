@@ -197,6 +197,18 @@ app.get('/api/v1/leads', (req, res) => {
   return res.json({ leads: rows, humansOnline, nextRefreshSec });
 });
 
+let cards = rows as any[];
+
+// Backfill only when quiet so real data stays dominant
+if (cards.length < 6) {
+  const need = 6 - cards.length;
+  const demos = makeDemoCards(need, cat);
+  cards = [...cards, ...demos];
+}
+
+return res.json({ leads: cards, humansOnline, nextRefreshSec });
+
+
 app.post('/api/v1/claim', (req, res) => {
   const uid = userId(req);
   const { leadId } = req.body || {};
