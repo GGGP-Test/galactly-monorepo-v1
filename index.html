@@ -143,28 +143,7 @@
     <line x1="320" y1="280" x2="720" y2="280"/>
     <line x1="320" y1="360" x2="720" y2="360"/>
   </g>
-
-  <!-- coastline (kept), now a touch brighter -->
-  <path class="na-outline"
-        d="M410,260 C380,220 360,190 360,172 360,160 368,152 385,150 410,148 460,165 500,180 540,195 590,210 610,230
-           640,260 640,300 595,315 570,323 530,325 510,335 485,348 465,370 450,380 440,387 425,385 420,372
-           414,355 420,330 410,310 402,295 395,280 410,260 Z"/>
-
-  <!-- US–Canada border (49th parallel) with animated dash -->
-  <path class="border49"
-        d="M360,260 C420,250 480,248 540,250 600,252 660,260 700,275"/>
-</g>
-
-            <!-- latitude / longitude grid -->
-            <g class="grid">
-              <line x1="520" y1="60" x2="520" y2="500"/>
-              <line x1="600" y1="70" x2="600" y2="490"/>
-              <line x1="440" y1="70" x2="440" y2="490"/>
-              <line x1="320" y1="200" x2="720" y2="200"/>
-              <line x1="320" y1="280" x2="720" y2="280"/>
-              <line x1="320" y1="360" x2="720" y2="360"/>
-            </g>
-            
+    
             <!-- stylized North America coastline -->
             <path class="na-outline" d="M410,260 C380,220 360,190 360,172 360,160 368,152 385,150 410,148 460,165 500,180 540,195 590,210 610,230 640,260 640,300 595,315 570,323 530,325 510,335 485,348 465,370 450,380 440,387 425,385 420,372 414,355 420,330 410,310 402,295 395,280 410,260 Z"/>
             <!-- US–Canada border (approx 49th parallel across the sphere) -->
@@ -202,7 +181,13 @@
         humansEl.textContent = String(d.humansOnline||0).padStart(2,'0');
         if (Array.isArray(d.leads)){
           const rows = d.leads.slice(0,6).map(L=>`<div class="ti">• <b>${L.kw}</b> — ${L.cat} <span style="opacity:.7">(${fmtAge(L.age)} ago)</span></div>`).join('');
-          ticker.innerHTML = rows;
+          if (Array.isArray(d.leads)){
+  const rows = d.leads.slice(0,6).map(L =>
+    `<div class="hero-v2__ti">• <b>${L.kw}</b> — ${L.cat} <span style="opacity:.7">(${fmtAge(L.age)} ago)</span></div>`
+  );
+  while (rows.length < 6) rows.push('<div class="hero-v2__ti" style="opacity:.35">• &nbsp;</div>');
+  ticker.innerHTML = rows.join('');
+}
         }
         t = (d.nextRefreshSec||15);
       }catch(e){ /* ignore */ }
