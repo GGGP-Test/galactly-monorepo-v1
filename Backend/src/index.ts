@@ -7,6 +7,39 @@ import { startSchedulers } from './scheduler.js';
 import { initPush, saveSubscription, pushToUser } from './push.js';
 import { clamp } from './util.js';
 
+
+type SimpleLead = { id:number, cat:string, kw:string, platform:string, region:'US'|'Canada'|'Other', fit:number, compFit:number, heat:'HOT'|'WARM'|'OK', age:number, demo?:boolean };
+
+const DEMO_POOL: Array<Omit<SimpleLead,'id'|'age'>> = [
+  { cat:'Flexible',   kw:'stand-up pouch',   platform:'Practice', region:'US',     fit:88, compFit:91, heat:'OK'  },
+  { cat:'Corrugated', kw:'mailer box',       platform:'Practice', region:'US',     fit:86, compFit:89, heat:'OK'  },
+  { cat:'Labels',     kw:'GHS label',        platform:'Practice', region:'US',     fit:84, compFit:88, heat:'OK'  },
+  { cat:'Crating',    kw:'ISPM-15 pallet',   platform:'Practice', region:'US',     fit:83, compFit:86, heat:'OK'  },
+  { cat:'Flexible',   kw:'retort pouch',     platform:'Practice', region:'US',     fit:85, compFit:88, heat:'OK'  },
+  { cat:'Corrugated', kw:'RSC shipper',      platform:'Practice', region:'US',     fit:82, compFit:85, heat:'OK'  },
+  { cat:'Labels',     kw:'thermal transfer', platform:'Practice', region:'US',     fit:81, compFit:84, heat:'OK'  },
+  { cat:'Flexible',   kw:'laminate film',    platform:'Practice', region:'US',     fit:87, compFit:90, heat:'OK'  }
+];
+
+function makeDemoCards(n:number, catFilter:string): SimpleLead[] {
+  const base = DEMO_POOL.filter(l => catFilter==='all' ? true : l.cat===catFilter);
+  const pick = base.length ? base : DEMO_POOL;
+  const out: SimpleLead[] = [];
+  for (let i=0;i<n;i++){
+    const x = pick[i % pick.length];
+    out.push({
+      id: -(i+1), // negative ids = demo
+      cat: x.cat, kw: x.kw, platform: x.platform, region: x.region,
+      fit: x.fit, compFit: x.compFit, heat: x.heat,
+      age: Math.floor(Math.random()*180)+30, // 30–210s
+      demo: true
+    });
+  }
+  return out;
+}
+
+
+
 // 👇 app must be created before any app.use(...)
 const app = express();
 
