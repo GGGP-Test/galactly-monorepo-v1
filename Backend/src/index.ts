@@ -70,6 +70,8 @@ app.use(rateLimit({ windowMs: 60_000, max: 120 }));
 
 initPush();
 startSchedulers();
+mountBilling(app);
+
 
 // ---------- Connectors + debug ----------
 import { pollSamGov } from './connectors/samGov.js';
