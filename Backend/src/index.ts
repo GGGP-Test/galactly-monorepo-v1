@@ -208,6 +208,21 @@ if (cards.length < 6) {
 
 return res.json({ leads: cards, humansOnline, nextRefreshSec });
 
+// Demo claim: negative ids are practice cards
+if (typeof leadId === 'number' && leadId < 0) {
+  // simulate the same UX but don't touch DB
+  return res.json({
+    reservedForSec: 60,
+    windowId: 'demo-'+Math.random().toString(36).slice(2),
+    reveal: {
+      whoFull: 'Practice lead',
+      company: '—',
+      contact: {},
+      demo: true
+    }
+  });
+}
+
 
 app.post('/api/v1/claim', (req, res) => {
   const uid = userId(req);
