@@ -458,4 +458,5 @@ app.post('/api/v1/expose', (req,res)=>{
 
 
 const port = process.env.PORT || 8787;
+mountBilling(app);
 app.listen(port, () => console.log('API up on', port));
