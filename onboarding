@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Galactly — Onboarding</title>
+  <link rel="stylesheet" href="./style.css" />
+  <style>
+    .wrap{max-width:1000px;margin:24px auto;padding:0 20px}
+    .step{border:1px solid var(--stroke);border-radius:16px;padding:16px;margin:14px 0;background:rgba(255,255,255,.03)}
+    .h{font:800 20px var(--mont);margin:0 0 10px}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{border:1px solid var(--stroke);padding:8px 10px;border-radius:999px;cursor:pointer;user-select:none}
+    .chip.sel{background:#fff;color:#0a0b10}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+    .small{opacity:.85;font-size:12px}
+    .muted{opacity:.75}
+    .danger{color:#ff7676}
+    .ok{color:#8dffa7}
+    input,select,textarea{background:rgba(255,255,255,.04);color:#fff;border:1px solid var(--stroke);border-radius:12px;padding:10px}
+    label{display:flex;gap:8px;align-items:center}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .right{margin-left:auto}
+    .hidden{display:none}
+  </style>
+  <script defer src="./api-base.js"></script>
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="./"><b>Galactly</b></a>
+    <nav class="row">
+      <a class="btn" href="./free-panel.html">Live Leads</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <h1 class="h">Tell us what you sell — we’ll surface the right buyers</h1>
+    <p class="muted">60 seconds — no login required. You can enable alerts later.</p>
+
+    <!-- STEP 1: Industries & Tags -->
+    <section class="step" id="s1">
+      <div class="h">1) Pick your industries</div>
+      <div class="chips" id="cats"></div>
+      <div class="small muted" style="margin-top:6px">Tip: choose up to 3 that truly fit. You can refine later from the live feed.</div>
+
+      <div class="h" style="margin-top:16px">Optional: add capability tags</div>
+      <div class="chips" id="tags"></div>
+      <div class="small muted" style="margin-top:6px">These help us rank leads. You can skip.</div>
+    </section>
+
+    <!-- STEP 2: Region & Alerts -->
+    <section class="step" id="s2">
+      <div class="h">2) Region & alerts</div>
+      <div class="row">
+        <label>Region
+          <select id="region">
+            <option value="US">United States</option>
+            <option value="Canada">Canada</option>
+            <option value="Other">Other</option>
+          </select>
+        </label>
+        <label class="right">Business email (for claim alerts)
+          <input id="email" type="email" placeholder="you@company.com" />
+        </label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label><input type="checkbox" id="emailAlerts"/> Email me when I claim a lead (fast draft + contact)</label>
+        <label><input type="checkbox" id="pushAlerts"/> Browser push alerts</label>
+      </div>
+      <div class="small muted">Verified US/CA emails get a small trust boost. You can disable alerts anytime.</div>
+    </section>
+
+    <!-- STEP 3: Inbound opportunities (supplier exposure) -->
+    <section class="step" id="s3">
+      <div class="h">3) Want inbound opportunities for free?</div>
+      <label><input type="checkbox" id="exposeToggle"/> Yes — list my business so buyers can find me on Galactly</label>
+      <div id="exposeForm" class="hidden" style="margin-top:12px">
+        <div class="grid">
+          <label>Company <input id="biz_company" placeholder="ACME Packaging"/></label>
+          <label>Website <input id="biz_site" placeholder="https://…"/></label>
+          <label>Role <input id="biz_role" placeholder="Owner / Sales / Ops"/></label>
+          <label>Location <input id="biz_loc" placeholder="City, State/Province"/></label>
+          <label>Min order (MOQ) <input id="biz_moq" placeholder="e.g., 5,000 pouches"/></label>
+          <label>Lead time <input id="biz_lead" placeholder="e.g., 10–14 business days"/></label>
+        </div>
+        <label style="margin-top:8px">Capabilities (comma‑separated)
+          <input id="biz_caps" placeholder="e.g., flexo 8c, digital, die‑cut mailers, GHS labels"/>
+        </label>
+        <label style="margin-top:8px">Catalog / spec links (optional)
+          <textarea id="biz_links" rows="2" placeholder="Paste any public links to sell sheets, catalogs, GS1 certs, etc."></textarea>
+        </label>
+        <div class="small muted" style="margin-top:6px">We only index public info you provide. You can ask us to remove your profile at any time.</div>
+      </div>
+    </section>
+
+    <section class="row" style="justify-content:flex-end;margin:16px 0">
+      <a class="btn" href="./free-panel.html">Skip</a>
+      <button id="finish" class="btn primary">Finish & open Live Feed</button>
+    </section>
+
+    <div id="msg" class="small"></div>
+  </main>
+
+  <footer class="foot">© 2025 Galactly — Transfusion AI</footer>
+
+<script>
+const uid = localStorage.getItem('uid') || ('u-'+Math.random().toString(36).slice(2));
+localStorage.setItem('uid', uid);
+
+const CATS = ['Flexible','Corrugated','Labels','Crating','Folding Cartons','Rigid','Shrink','Protective','Sustainable','Display/POP'];
+const TAGS = [
+  'stand-up pouch','spouted pouch','retort pouch','sachets','stick pack','rollstock','laminate film','BOPP','PET','PE','CPP','OPP','foil','barrier','vacuum','zipper','child-resistant',
+  'mailer box','RSC','die-cut mailer','folding carton','SBS','Kraft','E‑flute','B‑flute','litho-lam','inserts','foam','void fill','bubble','air pillows',
+  'labels','thermal transfer','direct thermal','GHS','UL','barcode','RFID','shrink sleeve','tamper-evident','wrap label',
+  'pallet','crate','ISPM‑15','heat-treated','skids','export',
+  'stretch film','strapping','tapes','edge protectors',
+  'printing flexo','digital','offset','gravure','coating','lamination',
+  'compostable','recyclable','PCR','mono-material',
+  '3PL kitting','co‑packing','design dielines','short‑run','rush'
+];
+
+const catsEl = document.getElementById('cats');
+const tagsEl = document.getElementById('tags');
+
+function chip(txt, on){
+  const a = document.createElement('button'); a.type='button'; a.className='chip'; a.textContent=txt;
+  a.onclick=()=>{ a.classList.toggle('sel'); on?.(a.classList.contains('sel')); };
+  return a;
+}
+
+CATS.forEach(c=> catsEl.appendChild(chip(c)));
+TAGS.forEach(t=> tagsEl.appendChild(chip(t)));
+
+document.getElementById('exposeToggle').onchange = (e)=>{
+  document.getElementById('exposeForm').classList.toggle('hidden', !e.target.checked);
+};
+
+async function enablePush(){
+  try{
+    const reg = await navigator.serviceWorker.register('./sw.js');
+    const pub = (await (await fetch(window.API_BASE + '/vapid.txt')).text()).trim();
+    const sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey: urlB64ToUint8Array(pub)});
+    await fetch('/api/v1/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json','x-galactly-user':uid},body:JSON.stringify(sub)});
+    return true;
+  }catch{ return false; }
+}
+
+function urlB64ToUint8Array(b64){ const pad='='.repeat((4-b64.length%4)%4); const base=(b64+pad).replace(/-/g,'+').replace(/_/g,'/'); const raw=atob(base); const arr=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++)arr[i]=raw.charCodeAt(i); return arr; }
+
+function pickSelected(container){ return [...container.querySelectorAll('.chip.sel')].map(x=>x.textContent); }
+
+async function submit(){
+  const industries = pickSelected(catsEl).slice(0,3);
+  const region = (document.getElementById('region')).value || 'US';
+  const email  = (document.getElementById('email')).value.trim();
+  const emailOn= document.getElementById('emailAlerts').checked;
+  const pushOn = document.getElementById('pushAlerts').checked;
+  // Gate call (saves base prefs)
+  await fetch('/api/v1/gate', { method:'POST', headers:{'Content-Type':'application/json','x-galactly-user':uid}, body:JSON.stringify({ industries, region, email, alerts: emailOn }) });
+  if(emailOn){ await fetch('/api/v1/alerts',{method:'POST',headers:{'Content-Type':'application/json','x-galactly-user':uid},body:JSON.stringify({emailOn:true})}); }
+  if(pushOn && 'serviceWorker' in navigator){ await enablePush(); }
+
+  // Optional: supplier exposure (store locally and POST to backend endpoint when available)
+  if(document.getElementById('exposeToggle').checked){
+    const payload = {
+      company: document.getElementById('biz_company').value.trim(),
+      site: document.getElementById('biz_site').value.trim(),
+      role: document.getElementById('biz_role').value.trim(),
+      location: document.getElementById('biz_loc').value.trim(),
+      moq: document.getElementById('biz_moq').value.trim(),
+      leadtime: document.getElementById('biz_lead').value.trim(),
+      caps: document.getElementById('biz_caps').value.trim(),
+      links: document.getElementById('biz_links').value.trim(),
+      cats: industries,
+      tags: pickSelected(tagsEl)
+    };
+    // Save locally so user never loses it
+    localStorage.setItem('galactly_supplier_profile', JSON.stringify(payload));
+    // Try POST to backend (we'll add /api/v1/expose soon)
+    try{
+      const r = await fetch('/api/v1/expose',{method:'POST',headers:{'Content-Type':'application/json','x-galactly-user':uid},body:JSON.stringify(payload)});
+      if(!r.ok){ throw new Error('no endpoint'); }
+    }catch(e){
+      // Silently continue. We'll sync once endpoint exists.
+    }
+  }
+
+  document.getElementById('msg').innerHTML = '<span class="ok">Saved. Opening the live feed…</span>';
+  setTimeout(()=> location.href = './free-panel.html', 600);
+}
+
+document.getElementById('finish').onclick = ()=>{ submit().catch(err=>{
+  document.getElementById('msg').innerHTML = '<span class="danger">Failed: '+(err.message||err)+'</span>';
+}); };
+</script>
+</body>
+</html>
