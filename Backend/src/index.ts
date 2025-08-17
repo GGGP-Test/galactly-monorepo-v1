@@ -440,6 +440,21 @@ app.get('/api/v1/lead-explain', (req, res) => {
   res.json({ reasons });
 });
 
+app.post('/api/v1/expose', (req,res)=>{
+  const uid = (req.headers['x-galactly-user'] as string) || 'anon';
+  const { company='', site='', role='', location='', moq='', leadtime='', caps='', links='', cats=[], tags=[] } = req.body||{};
+  db.prepare(`
+    INSERT INTO supplier_profiles(user_id,company,site,role,location,moq,leadtime,caps,links,cats_json,tags_json,updated_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(user_id) DO UPDATE SET
+      company=excluded.company, site=excluded.site, role=excluded.role, location=excluded.location,
+      moq=excluded.moq, leadtime=excluded.leadtime, caps=excluded.caps, links=excluded.links,
+      cats_json=excluded.cats_json, tags_json=excluded.tags_json, updated_at=excluded.updated_at
+  `).run(uid, company, site, role, location, moq, leadtime, caps, links, JSON.stringify(cats||[]), JSON.stringify(tags||[]), Date.now());
+  res.json({ok:true});
+});
+
+
 const port = process.env.PORT || 8787;
 registerBilling(app);
 app.listen(port, () => console.log('API up on', port));
