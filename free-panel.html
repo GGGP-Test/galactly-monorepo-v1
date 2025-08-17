@@ -40,15 +40,13 @@
 
   <script>
   // ---- helpers ----
-  function formatAge(sec){
+function formatAge(sec){
   if (sec < 60) return `${Math.floor(sec)}s`;
-  const min = sec/60;
-  if (min < 60) return `${Math.floor(min)}m`;
-  const hr = min/60;
-  if (hr < 24) return `${hr.toFixed(1)}h`;
-  const days = hr/24;
-  return `${days.toFixed(1)}d`;
+  const min = sec/60; if (min < 60) return `${Math.floor(min)}m`;
+  const hr = min/60;  if (hr < 24) return `${hr.toFixed(1)}h`;
+  const d = hr/24;    return `${d.toFixed(1)}d`;
 }
+
     
   const uid = localStorage.getItem('uid') || ('u-'+Math.random().toString(36).slice(2));
   localStorage.setItem('uid', uid);
