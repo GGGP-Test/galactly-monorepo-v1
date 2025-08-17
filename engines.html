@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Galactly — AI Engines</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script defer src="./api-base.js"></script>
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="./">Galactly</a>
+    <nav>
+      <a class="btn" href="./free-panel.html">Free Live Leads</a>
+      <a class="btn primary" href="./engines.html">AI Engines</a>
+    </nav>
+  </header>
+
+  <main style="max-width:1100px;margin:24px auto;padding:0 20px">
+    <h1 style="font:800 32px var(--mont);margin:0 0 8px">AI Engines</h1>
+    <p style="opacity:.85;margin:0 0 20px">Unlock automation, integrations and higher‑throughput firehose. Free live pool stays free forever.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
+      <section style="border:1px solid var(--stroke);border-radius:16px;padding:16px;background:rgba(255,255,255,.03)">
+        <h2 style="font:700 20px var(--inter);margin:0 0 6px">Automation & Integrations</h2>
+        <p style="opacity:.8;margin:0 0 10px">One‑click push to your CRM + auto‑draft outreach + email/Slack/Telegram workflows.</p>
+        <ul style="opacity:.9;line-height:1.6;margin:0 0 14px 18px">
+          <li>CRM sync (HubSpot/Zoho/CSV)</li>
+          <li>Auto first‑message drafts</li>
+          <li>Email + Push + Slack/Telegram alerts</li>
+          <li>Priority support</li>
+        </ul>
+        <button class="btn primary" data-plan="automation" id="buy-automation">Start</button>
+      </section>
+
+      <section style="border:1px solid var(--stroke);border-radius:16px;padding:16px;background:rgba(255,255,255,.03)">
+        <h2 style="font:700 20px var(--inter);margin:0 0 6px">Priority Firehose</h2>
+        <p style="opacity:.8;margin:0 0 10px">More sources, faster cadence, higher caps. Best for teams.</p>
+        <ul style="opacity:.9;line-height:1.6;margin:0 0 14px 18px">
+          <li>Accelerated polling & caps</li>
+          <li>Broader procurement feeds</li>
+          <li>Custom keyword buckets</li>
+          <li>Queue priority</li>
+        </ul>
+        <button class="btn primary" data-plan="firehose" id="buy-firehose">Start</button>
+      </section>
+    </div>
+
+    <p id="msg" style="margin-top:16px"></p>
+  </main>
+
+  <script>
+  const uid = localStorage.getItem('uid') || ('u-'+Math.random().toString(36).slice(2));
+  localStorage.setItem('uid', uid);
+
+  function getParam(k){ return new URLSearchParams(location.search).get(k); }
+  const msg = document.getElementById('msg');
+  if(getParam('success')) msg.textContent = '✅ Payment successful. We\'ll enable your features shortly.';
+  if(getParam('canceled')) msg.textContent = '❕ Checkout canceled.';
+
+  async function startCheckout(plan){
+    try{
+      const r = await fetch('/api/v1/billing/create-session',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-galactly-user':uid},
+        body: JSON.stringify({ plan, userId: uid })
+      });
+      const d = await r.json();
+      if(!r.ok || !d.url){ throw new Error(d.error||'Failed to create session'); }
+      window.location.href = d.url;
+    }catch(e){
+      alert('Could not start checkout: '+ e.message);
+    }
+  }
+
+  document.getElementById('buy-automation').onclick = ()=> startCheckout('automation');
+  document.getElementById('buy-firehose').onclick   = ()=> startCheckout('firehose');
+  </script>
+</body>
+</html>
