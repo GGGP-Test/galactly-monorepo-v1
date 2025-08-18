@@ -2,12 +2,16 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import cryptoRandomString from 'crypto-random-string';
+import crypto from 'crypto';
 import { db, upsertUser } from './db.js';
 import { startSchedulers } from './scheduler.js';
 import { initPush, saveSubscription, pushToUser } from './push.js';
-import { clamp } from './util.js';
+import { clamp, classify, heatFromSource, fitScore } from './util.js';
 import { mountBilling } from './billing.js';
 
+// ---------- Config ----------
+const ADMIN_KEY = process.env.ADMIN_KEY || '';
+const INGEST_SECRET = process.env.INGEST_SECRET || '';
 
 // ---------- Demo backfill types & pool ----------
 type SimpleLead = {
@@ -19,8 +23,9 @@ type SimpleLead = {
   fit: number;
   compFit: number;
   heat: 'HOT' | 'WARM' | 'OK';
-  age: number;
+  age: number; // seconds
   demo?: boolean;
+  momentum?: number; // 0-100
 };
 
 const DEMO_POOL: Array<Omit<SimpleLead, 'id' | 'age'>> = [
@@ -34,12 +39,13 @@ const DEMO_POOL: Array<Omit<SimpleLead, 'id' | 'age'>> = [
   { cat: 'Flexible',   kw: 'laminate film',    platform: 'Practice', region: 'US', fit: 87, compFit: 90, heat: 'OK' }
 ];
 
-function makeDemoCards(n: number, catFilter: string): SimpleLead[] {
+function makeDemoCards(n: number, catFilter: string, humansOnline: number): SimpleLead[] {
   const base = DEMO_POOL.filter(l => (catFilter === 'all' ? true : l.cat === catFilter));
   const pick = base.length ? base : DEMO_POOL;
   const out: SimpleLead[] = [];
   for (let i = 0; i < n; i++) {
     const x = pick[i % pick.length];
+    const age = Math.floor(Math.random() * 180) + 30; // 30–210s
     out.push({
       id: -(i + 1), // negative ids = demo
       cat: x.cat,
@@ -49,11 +55,37 @@ function makeDemoCards(n: number, catFilter: string): SimpleLead[] {
       fit: x.fit,
       compFit: x.compFit,
       heat: x.heat,
-      age: Math.floor(Math.random() * 180) + 30, // 30–210s
-      demo: true
+      age,
+      demo: true,
+      momentum: momentumScore(x.compFit, humansOnline, age)
     });
   }
   return out;
+}
+
+// ---------- Helpers ----------
+function hourLocal() {
+  const d = new Date();
+  return d.getUTCHours(); // simple UTC-based hour; good enough for free tier
+}
+
+function humansOnlineValue(seen: Map<string, number>) {
+  const real = [...seen.values()].filter(ts => Date.now() - ts < 120_000).length;
+  const h = hourLocal();
+  const floor = h >= 7 && h <= 22 ? 1 : 2; // avoid 0 at night
+  const pad = Math.min(5, Math.round(real * 0.1));
+  return Math.max(real, floor) + pad;
+}
+
+function sigmoid(x: number) { return 1 / (1 + Math.exp(-x)); }
+function momentumScore(compFit: number, humansOnline: number, ageSec: number) {
+  const ageMin = Math.max(0, ageSec / 60);
+  const z = 0.04 * compFit + 0.03 * humansOnline - 0.02 * ageMin; // tunable
+  return Math.round(sigmoid(z) * 100);
+}
+
+function userId(req: any) {
+  return (req.headers['x-galactly-user'] as string) || (req.query.userId as string) || 'anon-' + (req.ip || '');
 }
 
 // ---------- Express app ----------
@@ -69,13 +101,35 @@ app.use(rateLimit({ windowMs: 60_000, max: 120 }));
 
 initPush();
 startSchedulers();
-mountBilling(app);
+mountBilling(app); // ensure mounted once
 
+// Ensure new tables exist (lightweight, safe to run at boot)
+db.exec(`
+CREATE TABLE IF NOT EXISTS actions_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  lead_id INTEGER,
+  action TEXT NOT NULL,
+  meta_json TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ingest_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source TEXT NOT NULL,
+  hash TEXT NOT NULL UNIQUE,
+  received_at INTEGER NOT NULL,
+  accepted INTEGER NOT NULL,
+  error TEXT
+);
+`);
 
 // ---------- Connectors + debug ----------
 import { pollSamGov } from './connectors/samGov.js';
 import { pollReddit } from './connectors/reddit.js';
 import { pollRss } from './connectors/rss.js';
+// Optional: wire additional collectors if present
+try { const m = await import('./connectors/youtube.js'); (m as any).pollYouTube && (m as any).pollYouTube(); } catch {}
+try { const m = await import('./connectors/googleNews.js'); (m as any).pollGoogleNews && (m as any).pollGoogleNews(); } catch {}
 
 // VAPID public key for frontend
 app.get('/vapid.txt', (_req, res) => res.type('text/plain').send(process.env.VAPID_PUBLIC_KEY || ''));
@@ -101,13 +155,19 @@ app.get('/api/v1/debug/peek', (_req, res) => {
   });
 });
 
-// Force-run connectors
+// Force-run connectors (admin protected)
 app.get('/api/v1/admin/poll-now', async (req, res) => {
+  if (!ADMIN_KEY || String(req.headers['x-admin']||'') !== ADMIN_KEY) {
+    return res.status(401).json({ ok: false, error: 'unauthorized' });
+  }
   const src = String(req.query.source || 'all').toLowerCase();
   try {
     if (src === 'sam' || src === 'all') await pollSamGov();
     if (src === 'reddit' || src === 'all') await pollReddit();
     if (src === 'rss' || src === 'all') await pollRss();
+    // optional ones if loaded
+    try { if (src === 'youtube' || src === 'all') { const m = await import('./connectors/youtube.js'); (m as any).pollYouTube && await (m as any).pollYouTube(); } } catch {}
+    try { if (src === 'news' || src === 'all') { const m = await import('./connectors/googleNews.js'); (m as any).pollGoogleNews && await (m as any).pollGoogleNews(); } } catch {}
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e) });
@@ -145,23 +205,6 @@ setInterval(() => {
   for (const [k, v] of seen) if (now - v > 2 * 60_000) seen.delete(k);
 }, 30_000);
 
-function hourLocal() {
-  const d = new Date();
-  return d.getUTCHours(); // simple UTC-based hour; good enough for free tier
-}
-
-function humansOnlineValue() {
-  const real = [...seen.values()].filter(ts => Date.now() - ts < 120_000).length;
-  const h = hourLocal();
-  const floor = h >= 7 && h <= 22 ? 1 : 2; // avoid 0 at night
-  const pad = Math.min(5, Math.round(real * 0.1));
-  return Math.max(real, floor) + pad;
-}
-
-function userId(req: any) {
-  return (req.headers['x-galactly-user'] as string) || (req.query.userId as string) || 'anon-' + (req.ip || '');
-}
-
 // ---------- Routes ----------
 app.post('/api/v1/gate', (req, res) => {
   const { industries = [], region = 'US', email = '', alerts = false } = req.body || {};
@@ -192,14 +235,8 @@ app.get('/api/v1/leads', (req, res) => {
 
   const where: string[] = ["state IN ('available','reserved')", 'expires_at > ?', 'region = ?'];
   const params: any[] = [Date.now(), region];
-  if (cat !== 'all') {
-    where.push('cat = ?');
-    params.push(cat);
-  }
-  if (fitMin) {
-    where.push('fit_user >= ?');
-    params.push(fitMin);
-  }
+  if (cat !== 'all') { where.push('cat = ?'); params.push(cat); }
+  if (fitMin) { where.push('fit_user >= ?'); params.push(fitMin); }
   if (q) {
     where.push('(lower(kw) LIKE ? OR lower(cat) LIKE ? OR lower(platform) LIKE ?)');
     params.push(`%${q}%`, `%${q}%`, `%${q}%`);
@@ -216,14 +253,16 @@ app.get('/api/v1/leads', (req, res) => {
     )
     .all(...params) as SimpleLead[];
 
-  const humansOnline = humansOnlineValue();
+  const humansOnline = humansOnlineValue(seen);
   const nextRefreshSec = 15;
 
+  // Compute Momentum for live rows
+  let cards: SimpleLead[] = rows.map(r => ({ ...r, momentum: momentumScore(r.compFit, humansOnline, r.age) }));
+
   // Backfill with demo/practice cards if quiet
-  let cards: SimpleLead[] = rows;
   if (cards.length < 6) {
     const need = 6 - cards.length;
-    const demos = makeDemoCards(need, cat);
+    const demos = makeDemoCards(need, cat, humansOnline);
     cards = [...cards, ...demos];
   }
 
@@ -422,7 +461,8 @@ app.get('/api/v1/status', (req, res) => {
   const priority = Math.round(st.fp * (m.verified || 1.0) * (m.alerts || 1.0) * (m.payment || 1.0) * 10) / 10;
   const cd = db.prepare(`SELECT ends_at FROM cooldowns WHERE user_id=?`).get(uid) as any;
   const cooldownSec = cd ? Math.max(0, Math.ceil((cd.ends_at - Date.now()) / 1000)) : 0;
-  res.json({ fp: st.fp, cooldownSec, priority, multipliers: m });
+  const fastLane = (m.payment || 1.0) > 1.0;
+  res.json({ fp: st.fp, cooldownSec, priority, multipliers: m, fastLane });
 });
 
 app.get('/api/v1/lead-explain', (req, res) => {
@@ -456,6 +496,70 @@ app.post('/api/v1/expose', (req,res)=>{
   res.json({ok:true});
 });
 
+// ---------- Ingestion Webhook (HMAC) ----------
+app.post('/api/v1/ingest', (req, res) => {
+  if (!INGEST_SECRET) return res.status(503).json({ ok: false, error: 'Ingest disabled' });
+  const sig = String(req.headers['x-ingest-signature'] || '');
+  const bodyStr = JSON.stringify(req.body || {});
+  const calc = crypto.createHmac('sha256', INGEST_SECRET).update(bodyStr).digest('hex');
+  if (sig !== calc) return res.status(401).json({ ok: false, error: 'bad signature' });
 
+  try {
+    const {
+      cat, kw, platform = 'ingest', region = 'US',
+      source_url = '', evidence_snippet = '',
+      company = null, person_handle = null, contact_email = null,
+      heat = 'OK', ttlHours = 72,
+      text = ''
+    } = req.body || {};
+
+    const textForClassify = (text || evidence_snippet || '').toString();
+    const picks = classify(textForClassify);
+    const finCat = cat || picks.cat;
+    const finKw  = kw  || picks.kw;
+    const now = Date.now();
+    const expires = now + Math.max(1, Number(ttlHours)) * 3600 * 1000;
+
+    // dedupe by source_url or content hash
+    let hash = crypto.createHash('sha1').update((platform||'') + '|' + (source_url||'') + '|' + textForClassify.slice(0,200)).digest('hex');
+    const dupeByUrl = source_url ? db.prepare(`SELECT 1 FROM lead_pool WHERE source_url=? AND generated_at > ?`).get(source_url, now - 3*24*3600*1000) : null;
+    const dupeByHash = db.prepare(`SELECT 1 FROM ingest_events WHERE hash=?`).get(hash);
+    if (dupeByUrl || dupeByHash) {
+      db.prepare(`INSERT OR IGNORE INTO ingest_events(source,hash,received_at,accepted,error) VALUES(?,?,?,?,?)`).run(platform, hash, now, 0, 'duplicate');
+      return res.json({ ok: true, duplicate: true });
+    }
+
+    const lead = {
+      cat: finCat, kw: finKw,
+      platform, region: region as 'US'|'Canada'|'Other',
+      fit_user: fitScore(75),
+      fit_competition: fitScore(82,2),
+      heat: heatFromSource(platform),
+      source_url: source_url || null,
+      evidence_snippet: evidence_snippet?.toString().slice(0,180) || textForClassify.slice(0,180),
+      generated_at: now,
+      expires_at: expires,
+      state: 'available' as const,
+      reserved_by: null,
+      reserved_until: null,
+      company,
+      person_handle,
+      contact_email
+    };
+
+    const stmt = db.prepare(`INSERT INTO lead_pool(cat,kw,platform,region,fit_user,fit_competition,heat,source_url,evidence_snippet,generated_at,expires_at,state,reserved_by,reserved_until,company,person_handle,contact_email)
+      VALUES(@cat,@kw,@platform,@region,@fit_user,@fit_competition,@heat,@source_url,@evidence_snippet,@generated_at,@expires_at,@state,@reserved_by,@reserved_until,@company,@person_handle,@contact_email)`);
+    stmt.run(lead as any);
+
+    db.prepare(`INSERT OR IGNORE INTO ingest_events(source,hash,received_at,accepted,error) VALUES(?,?,?,?,NULL)`).run(platform, hash, now, 1);
+
+    res.json({ ok: true });
+  } catch (e:any) {
+    db.prepare(`INSERT INTO ingest_events(source,hash,received_at,accepted,error) VALUES(?,?,?,?,?)`).run('ingest', crypto.randomBytes(8).toString('hex'), Date.now(), 0, String(e?.message||e));
+    res.status(500).json({ ok: false, error: String(e?.message||e) });
+  }
+});
+
+// ---------- Boot ----------
 const port = process.env.PORT || 8787;
 app.listen(port, () => console.log('API up on', port));
