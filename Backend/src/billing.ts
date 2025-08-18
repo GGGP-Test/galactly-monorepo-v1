@@ -2,7 +2,7 @@ import type { Express, Request, Response } from 'express';
 import Stripe from 'stripe';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET || '';
-const SITE_ORIGIN = process.env.SITE_ORIGIN || 'http://localhost:8787';
+const SITE_ORIGIN = process.env.SITE_ORIGIN || 'https://gggp-test.github.io/galactly-monorepo-v1/';
 
 export function mountBilling(app: Express) {
   if (!STRIPE_SECRET_KEY) {
