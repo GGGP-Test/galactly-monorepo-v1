@@ -1,80 +1,67 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Galactly — AI Engines</title>
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./style.css"/>
+  <script>window.API_BASE = window.API_BASE || ''; window.PRICE_ID = window.PRICE_ID || 'price_test_123';</script>
   <script defer src="./api-base.js"></script>
+  <style>
+    .wrap{max-width:980px;margin:40px auto;padding:0 20px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+    .card{border:1px solid var(--stroke);border-radius:16px;padding:18px;background:rgba(255,255,255,.03)}
+    .h{font:800 24px var(--mont);margin:0 0 8px}
+    .muted{opacity:.75}
+    .badge{display:inline-block;border:1px solid var(--stroke);border-radius:999px;padding:4px 8px;margin-left:8px}
+    .ok{color:#8dffa7}
+  </style>
 </head>
 <body>
   <header class="nav">
-    <a class="brand" href="./">Galactly</a>
-    <nav>
-      <a class="btn" href="./free-panel.html">Free Live Leads</a>
-      <a class="btn primary" href="./engines.html">AI Engines</a>
+    <a class="brand" href="./"><b>Galactly</b></a>
+    <nav class="row">
+      <a class="btn" href="./free-panel.html">Live Leads</a>
     </nav>
   </header>
 
-  <main style="max-width:1100px;margin:24px auto;padding:0 20px">
-    <h1 style="font:800 32px var(--mont);margin:0 0 8px">AI Engines</h1>
-    <p style="opacity:.85;margin:0 0 20px">Unlock automation, integrations and higher‑throughput firehose. Free live pool stays free forever.</p>
+  <main class="wrap">
+    <h1 class="h">AI Engines</h1>
+    <p class="muted">Automation packs that turn live signals into first touches, replies, and quote drafts.</p>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
-      <section style="border:1px solid var(--stroke);border-radius:16px;padding:16px;background:rgba(255,255,255,.03)">
-        <h2 style="font:700 20px var(--inter);margin:0 0 6px">Automation & Integrations</h2>
-        <p style="opacity:.8;margin:0 0 10px">One‑click push to your CRM + auto‑draft outreach + email/Slack/Telegram workflows.</p>
-        <ul style="opacity:.9;line-height:1.6;margin:0 0 14px 18px">
-          <li>CRM sync (HubSpot/Zoho/CSV)</li>
-          <li>Auto first‑message drafts</li>
-          <li>Email + Push + Slack/Telegram alerts</li>
-          <li>Priority support</li>
-        </ul>
-        <button class="btn primary" data-plan="automation" id="buy-automation">Start</button>
-      </section>
-
-      <section style="border:1px solid var(--stroke);border-radius:16px;padding:16px;background:rgba(255,255,255,.03)">
-        <h2 style="font:700 20px var(--inter);margin:0 0 6px">Priority Firehose</h2>
-        <p style="opacity:.8;margin:0 0 10px">More sources, faster cadence, higher caps. Best for teams.</p>
-        <ul style="opacity:.9;line-height:1.6;margin:0 0 14px 18px">
-          <li>Accelerated polling & caps</li>
-          <li>Broader procurement feeds</li>
-          <li>Custom keyword buckets</li>
-          <li>Queue priority</li>
-        </ul>
-        <button class="btn primary" data-plan="firehose" id="buy-firehose">Start</button>
-      </section>
+    <div class="grid" style="margin:16px 0">
+      <div class="card">
+        <div class="h">Money Maker <span class="badge">Drafts • CRM • Follow-ups</span></div>
+        <p class="muted">First touch + 2 follow-ups, CRM/CSV export, and fast lane in the feed.</p>
+        <button class="btn primary" onclick="goPro()">Go Pro — Enable Fast-Lane</button>
+      </div>
+      <div class="card">
+        <div class="h">Money Saver <span class="badge">Reply Assist • Triage</span></div>
+        <p class="muted">Reply suggestions, summarization, and task routing into your ops flow.</p>
+        <button class="btn" onclick="goPro()">Enable with Pro</button>
+      </div>
     </div>
 
-    <p id="msg" style="margin-top:16px"></p>
+    <div id="msg" class="muted"></div>
   </main>
 
   <script>
-  const uid = localStorage.getItem('uid') || ('u-'+Math.random().toString(36).slice(2));
-  localStorage.setItem('uid', uid);
-
-  function getParam(k){ return new URLSearchParams(location.search).get(k); }
-  const msg = document.getElementById('msg');
-  if(getParam('success')) msg.textContent = '✅ Payment successful. We\'ll enable your features shortly.';
-  if(getParam('canceled')) msg.textContent = '❕ Checkout canceled.';
-
-  async function startCheckout(plan){
-    try{
-      const r = await fetch('/api/v1/billing/create-checkout-session',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','x-galactly-user':uid},
-        body: JSON.stringify({ plan, userId: uid })
-      });
-      const d = await r.json();
-      if(!r.ok || !d.url){ throw new Error(d.error||'Failed to create session'); }
-      window.location.href = d.url;
-    }catch(e){
-      alert('Could not start checkout: '+ e.message);
+    async function goPro(){
+      const priceId = window.PRICE_ID; // set this on page load or via env injection
+      document.getElementById('msg').textContent = 'Opening Stripe Checkout…';
+      try{
+        const r = await fetch((window.API_BASE||'') + '/api/v1/billing/create-checkout-session', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ priceId, mode:'subscription' })
+        });
+        const d = await r.json();
+        if(d.url){ location.href = d.url; }
+        else { document.getElementById('msg').textContent = 'Failed: ' + (d.error||'Unknown'); }
+      }catch(e){
+        document.getElementById('msg').textContent = 'Failed: ' + (e.message||e);
+      }
     }
-  }
-
-  document.getElementById('buy-automation').onclick = ()=> startCheckout('automation');
-  document.getElementById('buy-firehose').onclick   = ()=> startCheckout('firehose');
   </script>
 </body>
 </html>
