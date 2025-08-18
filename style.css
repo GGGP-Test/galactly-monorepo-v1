@@ -9,6 +9,10 @@ html,body{height:100%} body{margin:0;background:var(--bg);color:var(--ink);font-
 .hero p{opacity:.9}
 .cta{margin-top:12px}
 .foot{padding:20px;text-align:center;opacity:.7;border-top:1px solid var(--stroke);margin-top:40px}
+.risk {height:6px;border:1px solid var(--stroke);border-radius:999px;overflow:hidden}
+.risk > i {display:block;height:100%}
+.badge-fast{display:inline-block;border:1px solid var(--stroke);border-radius:999px;padding:4px 8px;margin-left:8px}
+
 /* stronger coastline + border dash motion */
 .hero-v2__viz .na-outline{ stroke:#d7e8ff; stroke-width:1.6; opacity:.9 }
 .hero-v2__viz .border49{ stroke:#66e0ff; stroke-width:2; stroke-dasharray:4 6; opacity:.95;
