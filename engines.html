@@ -60,7 +60,7 @@
 
   async function startCheckout(plan){
     try{
-      const r = await fetch('/api/v1/billing/create-session',{
+      const r = await fetch('/api/v1/billing/create-checkout-session',{
         method:'POST',
         headers:{'Content-Type':'application/json','x-galactly-user':uid},
         body: JSON.stringify({ plan, userId: uid })
