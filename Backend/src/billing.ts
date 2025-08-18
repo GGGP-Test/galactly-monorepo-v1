@@ -2,11 +2,11 @@ import type { Express, Request, Response } from 'express';
 import Stripe from 'stripe';
 
 // Read your secret from env. Keep the name exactly STRIPE_SECRET in Render.
-const STRIPE_SECRET = process.env.STRIPE_SECRET || '';
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 
 export function mountBilling(app: Express) {
   // If Stripe isn’t configured yet, mount a safe stub.
-  if (!STRIPE_SECRET) {
+  if (!STRIPE_SECRET_KEY) {
     app.post('/api/v1/billing/create-checkout-session', (_req: Request, res: Response) => {
       res.status(503).json({ ok: false, error: 'Stripe not configured' });
     });
@@ -14,7 +14,7 @@ export function mountBilling(app: Express) {
   }
 
   // Don’t pass apiVersion — avoids TypeScript literal mismatch errors.
-  const stripe = new Stripe(STRIPE_SECRET);
+  const stripe = new Stripe(STRIPE_SECRET_KEY);
 
   // Create a Checkout Session (works for one-time or subscription prices).
   app.post('/api/v1/billing/create-checkout-session', async (req: Request, res: Response) => {
