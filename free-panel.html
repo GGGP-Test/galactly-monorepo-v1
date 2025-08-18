@@ -40,6 +40,12 @@
 
   <script>
   // ---- helpers ----
+    const fastLaneLocal = localStorage.getItem('galactly_fastlane') === '1';
+const st = await fetch('/api/v1/status').then(r=>r.json());
+if (fastLaneLocal || (st.multipliers && st.multipliers.payment && st.multipliers.payment > 1.0)) {
+  document.querySelector('#badges').innerHTML += '<span class="badge-fast">Fast-Lane: ON</span>';
+}
+
 function formatAge(sec){
   if (sec < 60) return `${Math.floor(sec)}s`;
   const min = sec/60; if (min < 60) return `${Math.floor(min)}m`;
@@ -71,6 +77,10 @@ function formatAge(sec){
     div.innerHTML = `
       <div class="row">
        <small>${formatAge(L.age)} ago</small>
+<div class="risk" title="Steal risk">
+  <i style="width: {{risk}}%"></i>
+</div>
+<small class="muted">Steal risk: {{risk}}% • {{countdown}}s</small>
 
 
       </div>
