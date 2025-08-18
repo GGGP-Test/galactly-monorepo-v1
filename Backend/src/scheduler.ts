@@ -4,10 +4,13 @@ import { pollRss } from './connectors/rss.js';
 import { pollYouTube } from './connectors/youtube.js';
 import { pollGoogleNews } from './connectors/googleNews.js';
 import { pollJobBoards } from './connectors/jobBoards.js';
+import { startImapWatcher } from './connectors/imapWatcher.js';
+
 
 export function startSchedulers(){
   // initial warm
-  pollSamGov(); pollReddit(); pollRss(); pollYouTube(); pollGoogleNews(); pollJobBoards();
+  pollSamGov(); pollReddit(); pollRss(); pollYouTube(); pollGoogleNews(); pollJobBoards(); startImapWatcher();
+
   // repeaters
   setInterval(pollSamGov, 15*60*1000); // every 15m
   setInterval(pollReddit, 2*60*1000);  // every 2m
