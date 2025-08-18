@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Galactly — Payment Successful</title>
+  <link rel="stylesheet" href="./style.css"/>
+  <style>
+    .wrap{max-width:800px;margin:60px auto;padding:0 20px;text-align:center}
+    .card{border:1px solid var(--stroke);border-radius:16px;padding:22px;background:rgba(255,255,255,.03)}
+    .h{font:800 28px var(--mont);margin:0 0 10px}
+    .muted{opacity:.75}
+    .ok{color:#8dffa7}
+  </style>
+  <script defer src="./api-base.js"></script>
+</head>
+<body>
+  <main class="wrap">
+    <div class="card">
+      <h1 class="h">You’re in. <span class="ok">Fast-Lane: ON</span></h1>
+      <p class="muted">We’ve turned on priority lanes and reduced cooldowns. Opening your Live Feed…</p>
+      <p><a class="btn" href="./free-panel.html">Open Live Feed now</a></p>
+    </div>
+  </main>
+  <script>
+    // Mark Fast-Lane locally so the UI can show the badge immediately
+    try { localStorage.setItem('galactly_fastlane', '1'); } catch {}
+    // Optional: bounce straight to the feed after a short beat
+    setTimeout(()=> location.href = './free-panel.html', 1200);
+  </script>
+</body>
+</html>
