@@ -10,7 +10,7 @@ import { pollGoogleAlertsRss } from './connectors/googleAlertsRss.js';
 
 export function startSchedulers(){
   // initial warm
-  pollSamGov(); pollReddit(); pollRss(); pollYouTube(); pollGoogleNews(); pollJobBoards(); startImapWatcher(); 
+  pollSamGov(); pollReddit(); pollRss(); pollYouTube(); pollGoogleNews(); pollJobBoards(); startImapWatcher(); pollGoogleAlertsRss();
 
   // repeaters
   setInterval(pollSamGov, 15*60*1000); // every 15m
