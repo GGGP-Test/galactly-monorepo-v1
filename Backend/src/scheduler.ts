@@ -6,11 +6,11 @@ import { pollGoogleNews } from './connectors/googleNews.js';
 import { pollJobBoards } from './connectors/jobBoards.js';
 import { startImapWatcher } from './connectors/imapWatcher.js';
 import { pollGoogleAlertsRss } from './connectors/googleAlertsRss.js';
-
+import { pollSocialFirehose } from './connectors/socialFirehose.js';
 
 export function startSchedulers(){
   // initial warm
-  pollSamGov(); pollReddit(); pollRss(); pollYouTube(); pollGoogleNews(); pollJobBoards(); startImapWatcher(); pollGoogleAlertsRss();
+  pollSamGov(); pollReddit(); pollRss(); pollYouTube(); pollGoogleNews(); pollJobBoards(); startImapWatcher(); pollGoogleAlertsRss(); pollSocialFirehose();
 
   // repeaters
   setInterval(pollSamGov, 15*60*1000); // every 15m
@@ -20,4 +20,5 @@ export function startSchedulers(){
   setInterval(pollGoogleNews, 15*60*1000);
   setInterval(pollJobBoards, 30*60*1000); // every 30m
   setInterval(pollGoogleAlertsRss, 10*60*1000);
+  setInterval(pollSocialFirehose, 3*60*1000);
 }
