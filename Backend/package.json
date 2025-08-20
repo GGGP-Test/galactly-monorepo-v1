@@ -5,10 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p .",
-    "start": "node dist/Backend/index.js",
-    "start:dist": "node dist/Backend/index.js",
-    "dev": "node --loader ts-node/esm Backend/index.ts",
-    "gen:vapid": "node --loader ts-node/esm Backend/genVapid.ts"
+    "start": "node dist/index.js",
+    "dev": "node --loader ts-node/esm src/index.ts",
+    "gen:vapid": "node --loader ts-node/esm src/genVapid.ts"
   },
   "dependencies": {
     "better-sqlite3": "9.6.0",
