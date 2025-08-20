@@ -1,26 +1,15 @@
 import webpush from 'web-push';
+import { db } from './db.js';
 
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY!;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY!;
 const SITE_ORIGIN = process.env.SITE_ORIGIN || 'http://localhost:8787';
 
 export function initPush() {
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
-    console.warn('[push] Disabled: missing VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY');
-    return;
-  }
-  try {
-    webpush.setVapidDetails(`${SITE_ORIGIN}/contact`, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-    console.log('[push] Web Push enabled');
-  } catch (e) {
-    console.error('[push] Failed to init, continuing without push:', e);
-  }
+  webpush.setVapidDetails(`${SITE_ORIGIN}/contact`, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 }
 
 export function saveSubscription(userId: string, sub: any) {
-  // no-op if push disabled
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
-  const { db } from '../db.js';
   const { endpoint, keys } = sub || {};
   if (!endpoint || !keys?.p256dh || !keys?.auth) return;
   db.prepare(
@@ -31,8 +20,6 @@ export function saveSubscription(userId: string, sub: any) {
 type SubRow = { endpoint: string; p256dh: string; auth: string };
 
 export async function pushToUser(userId: string, payload: object) {
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
-  const { db } = await import('../db.js');
   const rows = db
     .prepare(`SELECT endpoint,p256dh,auth FROM push_subs WHERE user_id=?`)
     .all(userId) as SubRow[];
