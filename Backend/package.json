@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 {
   "name": "galactly-api",
   "version": "1.0.0",
@@ -12,14 +10,14 @@
     "gen:vapid": "node --loader ts-node/esm src/genVapid.ts"
   },
   "dependencies": {
-    "axios": "1.7.7",
-    "better-sqlite3": "9.6.0",
+    "axios": "^1.7.7",
+    "better-sqlite3": "^9.6.0",
     "cors": "2.8.5",
     "crypto-random-string": "5.0.0",
     "express": "4.19.2",
     "express-rate-limit": "7.1.5",
-    "imapflow": "1.0.110",
-    "mailparser": "3.8.0",
+    "imapflow": "^1.0.110",
+    "mailparser": "^3.9.0",
     "node-fetch": "3.3.2",
     "pino": "9.3.2",
     "pino-pretty": "11.2.2",
