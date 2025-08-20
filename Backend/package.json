@@ -10,6 +10,10 @@
     "gen:vapid": "node --loader ts-node/esm src/genVapid.ts"
   },
   "dependencies": {
+    "axios": "1.7.7",
+    "express-rate-limit": "7.1.5",
+    "imapflow": "1.0.110",
+    "mailparser": "3.8.0"
     "better-sqlite3": "9.6.0",
     "cors": "2.8.5",
     "crypto-random-string": "5.0.0",
