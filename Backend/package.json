@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "tsc", "start": "node dist/index.js" 
+    "build": "tsc",
     "start": "node dist/index.js",
     "gen:vapid": "tsx scripts/genVapid.ts"
 
