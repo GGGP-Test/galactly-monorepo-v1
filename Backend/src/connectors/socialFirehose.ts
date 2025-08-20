@@ -24,3 +24,4 @@ export async function pollSocialFeeds(): Promise<any[]> {
   }
   return out;
 }
+export { pollSocialFeeds as pollSocialFirehose };
