@@ -1,20 +1,4 @@
-// File: src/connectors/socialFirehose.ts
-// Purpose: Pull near‑real‑time buyer‑intent from compliant sources (no RSS.app).
-// Sources (all optional, toggle by env):
-//  • X (Twitter): snscrape CLI if available; else HTTP microservice (SNS_SERVICE_URL); else Apify actor
-//  • Instagram: RSSHub routes (self‑hosted) via RSSHUB_FEEDS
-//  • LinkedIn: Google CSE connector (handled in googleCse.ts)
-//  • Reddit/YouTube/Threads/Bluesky/Generic: RSSHub + native RSS via FEEDS_NATIVE
-//  • Webz.io: News API Lite (webz) via WEBZ_TOKEN (already implemented in previous module)
-//
-// Env:
-//   SNSCRAPE_CMD=/usr/local/bin/snscrape   # if Docker path set
-//   SNS_SERVICE_URL=https://snservice.onrender.com  # Python microservice fallback
-//   APIFY_TOKEN=...                         # final fallback for X (actor)
-//   APIFY_X_ACTOR_ID=xtdata~twitter-x-scraper
-//   RSSHUB_FEEDS=https://your-rsshub/instagram/tag/customboxes?key=K,...
-//   FEEDS_NATIVE=https://www.reddit.com/search.rss?q=...,https://www.youtube.com/feeds/videos.xml?channel_id=...
-//   REGION_DEFAULT=US|Canada|Other
+
 
 import fetch from 'node-fetch';
 import { exec as execCb } from 'child_process';
@@ -22,6 +6,7 @@ import { promisify } from 'util';
 import Parser from 'rss-parser';
 import { db, insertLead } from '../db.js';
 import { classify, heatFromSource, fitScore } from '../util.js';
+import { loadRssHubFeeds, curatedNativeFeeds } from './connectors/rssHub.js';
 
 const exec = promisify(execCb);
 const parser = new Parser();
@@ -34,6 +19,8 @@ const APIFY_X_ACTOR = process.env.APIFY_X_ACTOR_ID || 'xtdata~twitter-x-scraper'
 
 const RSSHUB_FEEDS = (process.env.RSSHUB_FEEDS || '').split(',').map(s=>s.trim()).filter(Boolean);
 const FEEDS_NATIVE = (process.env.FEEDS_NATIVE || '').split(',').map(s=>s.trim()).filter(Boolean);
+const feeds = loadRssHubFeeds();           // RSSHub list
+const natives = curatedNativeFeeds();      // Reddit / Google News etc.
 const REGION_DEFAULT: 'US' | 'Canada' | 'Other' = (process.env.REGION_DEFAULT as any) || 'US';
 
 // ---- helpers ----
