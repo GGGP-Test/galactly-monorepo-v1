@@ -104,6 +104,7 @@ app.get('/api/v1/admin/poll-now', async (req, res) => {
     if (src === 'sam' || src === 'all') await pollSamGov();
     if (src === 'reddit' || src === 'all') await pollReddit();
     if (src === 'rss' || src === 'all') await pollRss();
+    if (src === 'cse' || src === 'all') await pollCSE();
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e) });
