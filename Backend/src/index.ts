@@ -4,6 +4,13 @@ import { pollSocialFeeds } from './connectors/socialFirehose.js';
 import { pollSamGov } from './connectors/samGov.js';
 import { pollReddit } from './connectors/reddit.js';
 import { pollRss } from './connectors/rss.js';
+process.on('unhandledRejection', err => {
+  console.error('[unhandledRejection]', err);
+});
+process.on('uncaughtException', err => {
+  console.error('[uncaughtException]', err);
+});
+
 
 // Used by scheduler or one-off warmups
 export async function runIngestOnce() {
