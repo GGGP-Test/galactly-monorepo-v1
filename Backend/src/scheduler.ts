@@ -1,26 +1,24 @@
 import { pollSamGov } from './connectors/samGov.js';
 import { pollReddit } from './connectors/reddit.js';
 import { pollRss } from './connectors/rss.js';
-import { pollYouTube } from './connectors/youtube.js';
-import { pollGoogleNews } from './connectors/googleNews.js';
-import { pollJobBoards } from './connectors/jobBoards.js';
-import { startImapWatcher } from './connectors/imapWatcher.js';
-import { pollGoogleAlertsRss } from './connectors/googleAlertsRss.js';
-import { pollSocialFirehose } from './connectors/socialFirehose.js';
-import { pollGoogleCSE } from './connectors/googleCse.js';
+import { pollSocialFeeds } from './connectors/socialFirehose.js';
 
-export function startSchedulers(){
-  // initial warm
-  pollSamGov(); pollReddit(); pollRss(); pollYouTube(); pollGoogleNews(); pollJobBoards(); startImapWatcher(); pollGoogleAlertsRss(); pollSocialFirehose(); pollGoogleCSE();
+function safeRun<T>(p: Promise<T>, tag: string) {
+  p.catch(e => console.error(`[scheduler] ${tag} failed`, e));
+}
 
-  // repeaters
-  setInterval(pollSamGov, 15*60*1000); // every 15m
-  setInterval(pollReddit, 2*60*1000);  // every 2m
-  setInterval(pollRss, 20*60*1000);    // every 20m
-  setInterval(pollYouTube, 10*60*1000); // every 10m
-  setInterval(pollGoogleNews, 15*60*1000);
-  setInterval(pollJobBoards, 30*60*1000); // every 30m
-  setInterval(pollGoogleAlertsRss, 10*60*1000);
-  setInterval(pollSocialFirehose, 3*60*1000);
-  setInterval(pollGoogleCSE, 5*60*1000); // every 5 minutes
+export function startSchedulers() {
+  // initial warm (don’t crash if any fails)
+  safeRun((async () => {
+    await pollSamGov();
+    await pollReddit();
+    await pollRss();
+    await pollSocialFeeds();
+  })(), 'warmup');
+
+  // repeaters (all errors are caught)
+  setInterval(() => safeRun(pollSamGov(), 'samGov'), 15 * 60 * 1000);
+  setInterval(() => safeRun(pollReddit(), 'reddit'), 2 * 60 * 1000);
+  setInterval(() => safeRun(pollRss(), 'rss'), 20 * 60 * 1000);
+  setInterval(() => safeRun(pollSocialFeeds(), 'social'), 5 * 60 * 1000);
 }
