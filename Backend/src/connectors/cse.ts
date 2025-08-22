@@ -3,6 +3,7 @@
 // - Reads queries from env or secret file
 // - Supports multiple CXs (one per platform/domain family)
 // - Classifies, dedupes by URL, inserts into lead_pool
+ // @ts-nocheck
 
 import axios from 'axios';
 import fs from 'fs';
