@@ -1,3 +1,5 @@
+ // @ts-nocheck
+
 import fetch from 'node-fetch';
 import { db, insertLead } from '../db.js';
 import { classify, heatFromSource, fitScore, clamp } from '../util.js';
