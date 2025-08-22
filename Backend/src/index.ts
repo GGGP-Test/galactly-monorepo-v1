@@ -1,18 +1,24 @@
+// Backend/src/index.ts
 // @ts-nocheck
-@@ -1,7 +1,9 @@
- // @ts-nocheck
- import type { Express, Request, Response } from 'express';
+import express, { type Express, type Request, type Response } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import cryptoRandomString from 'crypto-random-string';
-import { db, upsertUser } from './db.js';
+
+import { db, upsertUser, initDb } from './db.js';
 import { startSchedulers } from './scheduler.js';
 import { initPush, saveSubscription, pushToUser } from './push.js';
 import { clamp } from './util.js';
 import { mountBilling } from './billing.js';
 import { pollCSE } from './connectors/cse.js';
-import { initDb } from './db.js';
+import { pollSamGov } from './connectors/samGov.js';
+import { pollReddit } from './connectors/reddit.js';
+import { pollRss } from './connectors/rss.js';
+import { pollSocialFeeds } from './connectors/socialFirehose.js';
+
 await initDb();
+
+// only start scheduler if explicitly enabled
 if (process.env.SCHEDULER_ENABLED === '1') startSchedulers();
 
 process.on('unhandledRejection', err => console.error('[unhandledRejection]', err));
@@ -72,14 +78,9 @@ app.use(cors({ origin: (_o, cb) => cb(null, true), credentials: true }));
 app.use(rateLimit({ windowMs: 60_000, max: 120 }));
 
 initPush();
-startSchedulers();
 mountBilling(app);
 
-// ---------- Connectors + debug ----------
-import { pollSamGov } from './connectors/samGov.js';
-import { pollReddit } from './connectors/reddit.js';
-import { pollRss } from './connectors/rss.js';
-
+// ---------- Debug / admin ----------
 app.get('/vapid.txt', (_req, res) =>
   res.type('text/plain').send(process.env.VAPID_PUBLIC_KEY || '')
 );
@@ -97,7 +98,8 @@ app.get('/api/v1/debug/peek', (_req, res) => {
     env: {
       SAM: !!process.env.SAM_API_KEY,
       REDDIT_ENABLED: process.env.REDDIT_ENABLED === 'true',
-      RSS_FEEDS: (process.env.RSS_FEEDS || '').split(',').filter(Boolean).length
+      RSS_FEED_COUNT:
+        (process.env.RSS_FEEDS || '').split(',').filter(Boolean).length
     }
   });
 });
@@ -105,37 +107,15 @@ app.get('/api/v1/debug/peek', (_req, res) => {
 app.get('/api/v1/admin/poll-now', async (req, res) => {
   const src = String(req.query.source || 'all').toLowerCase();
   try {
-    if (src === 'sam' || src === 'all') await pollSamGov();
-    if (src === 'reddit' || src === 'all') await pollReddit();
-    if (src === 'rss' || src === 'all') await pollRss();
-    if (src === 'cse' || src === 'all') await pollCSE();
+    if (src === 'sam' || src === 'all')     await pollSamGov();
+    if (src === 'reddit' || src === 'all')  await pollReddit();
+    if (src === 'rss' || src === 'all')     await pollRss();
+    if (src === 'social' || src === 'all')  await pollSocialFeeds();
+    if (src === 'cse' || src === 'all')     await pollCSE();
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e) });
   }
-});
-
-app.post('/api/v1/debug/seed', (_req, res) => {
-  const now = Date.now();
-  const demo = [
-    ['Flexible', 'stand-up pouch', 'Demo', 'US', 88, 'https://example.com/1', 'Looking for 50k stand-up pouches'],
-    ['Corrugated', 'mailer box', 'Demo', 'US', 86, 'https://example.com/2', 'Need custom mailer boxes with inserts'],
-    ['Labels', 'GHS label', 'Demo', 'US', 84, 'https://example.com/3', 'GHS chemical labels required'],
-    ['Crating', 'ISPM-15 pallet', 'Demo', 'US', 82, 'https://example.com/4', 'Export pallets ISPM-15'],
-    ['Flexible', 'retort pouch', 'Demo', 'US', 85, 'https://example.com/5', 'Retort pouches for ready meals'],
-    ['Corrugated', 'RSC shipper', 'Demo', 'US', 83, 'https://example.com/6', 'RSC shippers 12x9x4'],
-    ['Labels', 'thermal transfer', 'Demo', 'US', 81, 'https://example.com/7', 'TT labels 4x6'],
-    ['Flexible', 'laminate film', 'Demo', 'US', 87, 'https://example.com/8', 'PET/PE laminate rollstock']
-  ];
-  const stmt = db.prepare(`
-    INSERT INTO lead_pool
-      (cat,kw,platform,region,fit_user,fit_competition,heat,source_url,evidence_snippet,generated_at,expires_at,state)
-    VALUES (?,?,?,?,?,?,?, ?,?,?,?,'available')
-  `);
-  for (const [cat, kw, platform, region, fit, src, evi] of demo) {
-    stmt.run(cat, kw, platform, region, Number(fit), Number(fit) + 3, 'OK', src, evi, now, now + 72 * 3600 * 1000);
-  }
-  res.json({ ok: true, added: demo.length });
 });
 
 // ---------- Presence (humans online) ----------
@@ -373,23 +353,6 @@ app.get('/api/v1/status', (req, res) => {
   const cd = db.prepare(`SELECT ends_at FROM cooldowns WHERE user_id=?`).get(uid) as any;
   const cooldownSec = cd ? Math.max(0, Math.ceil((cd.ends_at - Date.now()) / 1000)) : 0;
   res.json({ fp: st.fp, cooldownSec, priority, multipliers: m });
-});
-
-app.get('/api/v1/lead-explain', (req, res) => {
-  const uid = userId(req);
-  const leadId = parseInt(req.query.leadId as string, 10);
-  const lead = db.prepare(`SELECT * FROM lead_pool WHERE id=?`).get(leadId) as any;
-  const prefs = db.prepare(`SELECT * FROM user_prefs WHERE user_id=?`).get(uid) as any;
-  const cats = prefs ? JSON.parse(prefs.cat_weights_json || '{}') : {};
-  const kws = prefs ? JSON.parse(prefs.kw_weights_json || '{}') : {};
-  const plats = prefs ? JSON.parse(prefs.plat_weights_json || '{}') : {};
-  const reasons: string[] = [];
-  if (cats[lead.cat]) reasons.push(`Matches your category preference: **${lead.cat}** (+${cats[lead.cat].toFixed(1)})`);
-  if (kws[lead.kw]) reasons.push(`Keyword you reacted to: **${lead.kw}** (+${kws[lead.kw].toFixed(1)})`);
-  if (plats[lead.platform]) reasons.push(`Platform you prefer: **${lead.platform}** (+${plats[lead.platform].toFixed(1)})`);
-  reasons.push(`Freshness boost: posted ${Math.round((Date.now() - lead.generated_at) / 60000)} min ago.`);
-  reasons.push(`Competition heat: **${lead.heat}**.`);
-  res.json({ reasons });
 });
 
 app.post('/api/v1/expose', (req,res)=>{
