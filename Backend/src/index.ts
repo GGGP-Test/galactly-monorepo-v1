@@ -15,6 +15,12 @@ import { pollSamGov } from './connectors/samGov.js';
 import { pollReddit } from './connectors/reddit.js';
 import { pollRss } from './connectors/rss.js';
 import { pollSocialFeeds } from './connectors/socialFirehose.js';
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+function requireAdmin(req: any, res: any, next: any) {
+  if (!ADMIN_TOKEN) return next(); // if you leave it blank, route stays open
+  if (req.headers['x-admin-token'] === ADMIN_TOKEN) return next();
+  return res.status(403).json({ ok:false, error:'forbidden' });
+}
 
 
 await initDb();
