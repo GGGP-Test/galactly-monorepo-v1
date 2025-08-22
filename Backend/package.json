@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  
   "scripts": {
     "build": "tsc -p .",
     "start": "node dist/index.js",
     "dev": "node --loader ts-node/esm src/index.ts",
     "gen:vapid": "node --loader ts-node/esm src/genVapid.ts"
+    "gen:feeds": "node --loader ts-node/esm scripts/feeds.expand.ts --out-native generated/feeds_native.txt --out-rsshub generated/rsshub_feeds.txt --rsshub-base $RSSHUB_BASE --rsshub-key $RSSHUB_KEY",
+  
   },
   "dependencies": {
     "axios": "^1.7.7",
