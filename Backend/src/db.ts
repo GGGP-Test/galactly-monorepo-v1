@@ -20,7 +20,7 @@ if (usePg) {
   sqlite = new Database(file);
 }
 
-// Convert SQLite-style ? placeholders to $1,$2 for pg
+// Convert SQLite-style ? placeholders to $1,$2,... for pg
 function toPg(sql: string) {
   let i = 0;
   return sql.replace(/\?/g, () => `$${++i}`);
@@ -31,7 +31,7 @@ async function exec(sql: string, args: any[] = []) {
   return sqlite!.prepare(sql).run(...args);
 }
 async function one<T = any>(sql: string, args: any[] = []) {
-  if (usePg) { const r = await pool.query(toPg(sql), args); return (r.rows[0] as T) || null; }
+  if (usePg) { const r = await pool.query(toPg(sql), args); return (r.rows[0] as T) ?? null; }
   return (sqlite!.prepare(sql).get(...args) as T) ?? null;
 }
 async function many<T = any>(sql: string, args: any[] = []) {
@@ -39,7 +39,7 @@ async function many<T = any>(sql: string, args: any[] = []) {
   return (sqlite!.prepare(sql).all(...args) as T[]) ?? [];
 }
 
-// Keep the same API shape but NOTE: these are async now.
+// Same API surface; NOTE: all methods return Promises now.
 export const db = {
   prepare(sql: string) {
     return {
@@ -51,8 +51,7 @@ export const db = {
 };
 
 export async function initDb() {
-  // Minimal bootstrap; your Neon already has full schema from the SQL you ran.
-  // We only ensure lead_pool & push_subs exist for local SQLite fallback.
+  // Keep minimal for local SQLite; Neon already has your schema.
   const createLead = `
     CREATE TABLE IF NOT EXISTS lead_pool (
       id ${usePg ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${usePg ? '' : 'AUTOINCREMENT'},
@@ -80,9 +79,7 @@ export async function initDb() {
     );
   `;
 
-  for (const stmt of [createLead, idxLead, createPush]) {
-    await exec(stmt);
-  }
+  for (const stmt of [createLead, idxLead, createPush]) await exec(stmt);
 }
 
 export async function insertLead(lead: any) {
