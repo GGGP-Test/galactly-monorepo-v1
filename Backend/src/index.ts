@@ -1,7 +1,6 @@
 // Backend/src/index.ts
 // @ts-nocheck
 import express from 'express';
-import express, { type Express, type Request, type Response } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import cryptoRandomString from 'crypto-random-string';
@@ -16,6 +15,7 @@ import { pollSamGov } from './connectors/samGov.js';
 import { pollReddit } from './connectors/reddit.js';
 import { pollRss } from './connectors/rss.js';
 import { pollSocialFeeds } from './connectors/socialFirehose.js';
+
 
 await initDb();
 
