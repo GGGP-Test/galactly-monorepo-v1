@@ -13,6 +13,9 @@ RUN npm i -D typescript ts-node --no-save
 
 # copy sources and compile
 COPY . .
+# generate giant feed lists into /app/generated
+RUN mkdir -p generated && node --loader ts-node/esm scripts/feeds.expand.ts --out-native generated/feeds_native.txt --out-rsshub generated/rsshub_feeds.txt --rsshub-base "$RSSHUB_BASE" --rsshub-key "$RSSHUB_KEY"
+
 RUN npx tsc -p .
 RUN npm prune --omit=dev
 
