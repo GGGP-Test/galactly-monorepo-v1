@@ -1,4 +1,3 @@
-// Backend/src/db.ts
 // Works with Neon Postgres when DATABASE_URL is set; falls back to SQLite file otherwise.
 import Database from 'better-sqlite3';
 import pgPkg from 'pg';
@@ -39,7 +38,7 @@ async function many<T = any>(sql: string, args: any[] = []) {
   return sqlite!.prepare(sql).all(...args) as T[];
 }
 
-// Keep your existing db.prepare(...).get/run/all API but make them async-returning.
+// Keep the convenient db.prepare(...).get/run/all API, but async-backed.
 export const db = {
   prepare(sql: string) {
     return {
@@ -51,7 +50,8 @@ export const db = {
 };
 
 export async function initDb() {
-  // Postgres vs SQLite DDL
+  // ---- DDL ----
+  // lead_pool + push_subs already in your app
   const createLead = usePg ? `
     CREATE TABLE IF NOT EXISTS lead_pool (
       id SERIAL PRIMARY KEY,
@@ -102,8 +102,177 @@ export async function initDb() {
     );
   `;
 
-  for (const stmt of (createLead + createPush).split(';').map(s => s.trim()).filter(Boolean)) {
+  // Minimal tables used by routes in index.ts
+  const createUsers = usePg ? `
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      region TEXT,
+      email TEXT,
+      fp INTEGER DEFAULT 50,
+      multipliers_json TEXT DEFAULT '{"verified":1.0,"alerts":1.0,"payment":1.0}',
+      verified_at BIGINT,
+      created_at BIGINT,
+      updated_at BIGINT
+    );
+  ` : `
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      region TEXT,
+      email TEXT,
+      fp INTEGER DEFAULT 50,
+      multipliers_json TEXT DEFAULT '{"verified":1.0,"alerts":1.0,"payment":1.0}',
+      verified_at INTEGER,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+  `;
+
+  const createAlerts = usePg ? `
+    CREATE TABLE IF NOT EXISTS alerts (
+      user_id TEXT PRIMARY KEY,
+      email_on INTEGER DEFAULT 0,
+      created_at BIGINT,
+      updated_at BIGINT
+    );
+  ` : `
+    CREATE TABLE IF NOT EXISTS alerts (
+      user_id TEXT PRIMARY KEY,
+      email_on INTEGER DEFAULT 0,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+  `;
+
+  const createCooldowns = usePg ? `
+    CREATE TABLE IF NOT EXISTS cooldowns (
+      user_id TEXT PRIMARY KEY,
+      ends_at BIGINT
+    );
+  ` : `
+    CREATE TABLE IF NOT EXISTS cooldowns (
+      user_id TEXT PRIMARY KEY,
+      ends_at INTEGER
+    );
+  `;
+
+  const createAbuse = usePg ? `
+    CREATE TABLE IF NOT EXISTS abuse (
+      user_id TEXT PRIMARY KEY,
+      score INTEGER DEFAULT 0,
+      last_inc_at BIGINT
+    );
+  ` : `
+    CREATE TABLE IF NOT EXISTS abuse (
+      user_id TEXT PRIMARY KEY,
+      score INTEGER DEFAULT 0,
+      last_inc_at INTEGER
+    );
+  `;
+
+  const createPrefs = usePg ? `
+    CREATE TABLE IF NOT EXISTS user_prefs (
+      user_id TEXT PRIMARY KEY,
+      cat_weights_json TEXT DEFAULT '{}',
+      kw_weights_json  TEXT DEFAULT '{}',
+      plat_weights_json TEXT DEFAULT '{}',
+      updated_at BIGINT
+    );
+  ` : `
+    CREATE TABLE IF NOT EXISTS user_prefs (
+      user_id TEXT PRIMARY KEY,
+      cat_weights_json TEXT DEFAULT '{}',
+      kw_weights_json  TEXT DEFAULT '{}',
+      plat_weights_json TEXT DEFAULT '{}',
+      updated_at INTEGER
+    );
+  `;
+
+  const createClaims = usePg ? `
+    CREATE TABLE IF NOT EXISTS claims (
+      id SERIAL PRIMARY KEY,
+      lead_id INTEGER,
+      user_id TEXT,
+      action TEXT,
+      created_at BIGINT
+    );
+  ` : `
+    CREATE TABLE IF NOT EXISTS claims (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id INTEGER,
+      user_id TEXT,
+      action TEXT,
+      created_at INTEGER
+    );
+  `;
+
+  const createLeadWindows = usePg ? `
+    CREATE TABLE IF NOT EXISTS lead_windows (
+      id TEXT PRIMARY KEY,
+      lead_id INTEGER,
+      user_id TEXT,
+      reserved_until BIGINT,
+      decision_deadline BIGINT
+    );
+  ` : `
+    CREATE TABLE IF NOT EXISTS lead_windows (
+      id TEXT PRIMARY KEY,
+      lead_id INTEGER,
+      user_id TEXT,
+      reserved_until INTEGER,
+      decision_deadline INTEGER
+    );
+  `;
+
+  const createSupplierProfiles = usePg ? `
+    CREATE TABLE IF NOT EXISTS supplier_profiles (
+      user_id TEXT PRIMARY KEY,
+      company TEXT, site TEXT, role TEXT, location TEXT,
+      moq TEXT, leadtime TEXT, caps TEXT, links TEXT,
+      cats_json TEXT, tags_json TEXT,
+      updated_at BIGINT
+    );
+  ` : `
+    CREATE TABLE IF NOT EXISTS supplier_profiles (
+      user_id TEXT PRIMARY KEY,
+      company TEXT, site TEXT, role TEXT, location TEXT,
+      moq TEXT, leadtime TEXT, caps TEXT, links TEXT,
+      cats_json TEXT, tags_json TEXT,
+      updated_at INTEGER
+    );
+  `;
+
+  const schema = [
+    createLead, createPush, createUsers, createAlerts, createCooldowns,
+    createAbuse, createPrefs, createClaims, createLeadWindows, createSupplierProfiles
+  ].join('\n');
+
+  for (const stmt of schema.split(';').map(s => s.trim()).filter(Boolean)) {
     await exec(stmt);
+  }
+}
+
+export async function upsertUser(id: string, region = 'US', email = '') {
+  const now = Date.now();
+  const defaultJson = '{"verified":1.0,"alerts":1.0,"payment":1.0}';
+
+  if (usePg) {
+    await exec(`
+      INSERT INTO users(id, region, email, fp, multipliers_json, created_at, updated_at)
+      VALUES (?,?,?,?,?,?,?)
+      ON CONFLICT (id) DO UPDATE SET
+        region = EXCLUDED.region,
+        email  = EXCLUDED.email,
+        updated_at = EXCLUDED.updated_at
+    `, [id, region, email, 50, defaultJson, now, now]);
+  } else {
+    await exec(`
+      INSERT INTO users(id, region, email, fp, multipliers_json, created_at, updated_at)
+      VALUES (?,?,?,?,?,?,?)
+      ON CONFLICT(id) DO UPDATE SET
+        region = excluded.region,
+        email  = excluded.email,
+        updated_at = excluded.updated_at
+    `, [id, region, email, 50, defaultJson, now, now]);
   }
 }
 
@@ -149,4 +318,5 @@ export async function insertLead(lead: any) {
     );
   }
 }
+
 export default db;
