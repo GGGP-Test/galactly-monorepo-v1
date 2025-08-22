@@ -83,6 +83,9 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: (_o, cb) => cb(null, true), credentials: true }));
 app.use(rateLimit({ windowMs: 60_000, max: 120 }));
+// health & ping
+app.get('/healthz', (_req, res) => res.json({ ok: true }));
+app.get('/whoami', (_req, res) => res.send('galactly-api ' + (process.env.RENDER_SERVICE_NAME || 'local')));
 
 initPush();
 mountBilling(app);
