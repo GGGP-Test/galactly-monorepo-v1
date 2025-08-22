@@ -57,10 +57,10 @@ export async function pollRss(){
           contact_email: null
         };
         if (!lead.source_url) continue;
-        const exists = db.prepare(
-          `SELECT 1 FROM lead_pool WHERE source_url=? AND generated_at > ?`
-        ).get(lead.source_url, Date.now() - 3*24*3600*1000);
-        if (!exists) insertLead(lead as any);
+        const exists = await db.prepare(
+  `SELECT 1 FROM lead_pool WHERE source_url=? AND generated_at > ?`
+).get(lead.source_url, Date.now() - 3*24*3600*1000);
+if (!exists) await insertLead(lead as any);
       }
     }catch { /* ignore bad feeds */ }
   }
