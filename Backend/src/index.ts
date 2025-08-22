@@ -5,23 +5,17 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import cryptoRandomString from 'crypto-random-string';
 
-
 import { db, upsertUser, initDb } from './db.js';
 import { startSchedulers } from './scheduler.js';
 import { initPush, saveSubscription, pushToUser } from './push.js';
 import { clamp } from './util.js';
 import { mountBilling } from './billing.js';
+
 import { pollCSE } from './connectors/cse.js';
 import { pollSamGov } from './connectors/samGov.js';
 import { pollReddit } from './connectors/reddit.js';
 import { pollRss } from './connectors/rss.js';
 import { pollSocialFeeds } from './connectors/socialFirehose.js';
-function requireAdmin(req: any, res: any, next: any) {
-  if (!ADMIN_TOKEN) return next(); // if you leave it blank, route stays open
-  if (req.headers['x-admin-token'] === ADMIN_TOKEN) return next();
-  return res.status(403).json({ ok:false, error:'forbidden' });
-}
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 
 await initDb();
 
@@ -31,7 +25,8 @@ if (process.env.SCHEDULER_ENABLED === '1') startSchedulers();
 process.on('unhandledRejection', err => console.error('[unhandledRejection]', err));
 process.on('uncaughtException', err => console.error('[uncaughtException]', err));
 
-// ---------- Demo backfill types & pool ----------
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+
 type SimpleLead = {
   id: number;
   cat: string;
@@ -78,46 +73,47 @@ function makeDemoCards(n: number, catFilter: string): SimpleLead[] {
   return out;
 }
 
-// ---------- Express app ----------
 const app = express();
 app.use(express.json());
 app.use(cors({ origin: (_o, cb) => cb(null, true), credentials: true }));
 app.use(rateLimit({ windowMs: 60_000, max: 120 }));
-// health & ping
-app.get('/healthz', (_req, res) => res.json({ ok: true }));
-app.get('/whoami', (_req, res) => res.send('galactly-api ' + (process.env.RENDER_SERVICE_NAME || 'local')));
 
 initPush();
 mountBilling(app);
 
-// ---------- Debug / admin ----------
-app.get('/vapid.txt', (_req, res) =>
-  res.type('text/plain').send(process.env.VAPID_PUBLIC_KEY || '')
+// health/debug
+app.get('/healthz', (_req, res) => res.json({ ok: true }));
+app.get('/whoami', (_req, res) =>
+  res.type('text/plain').send(`galactly-api ${process.env.RENDER_SERVICE_NAME || ''}`.trim())
 );
 
-app.get('/api/v1/debug/peek', (_req, res) => {
-  const cAll = db.prepare(`SELECT COUNT(*) as n FROM lead_pool`).get() as any;
-  const cAvail = db.prepare(`SELECT COUNT(*) as n FROM lead_pool WHERE state='available'`).get() as any;
-  const sample = db.prepare(
+function isAdmin(req: any) {
+  const t = String((req.query.token as string) || req.headers['x-admin-token'] || '');
+  return ADMIN_TOKEN && t === ADMIN_TOKEN;
+}
+
+// --------- Debug / peek (async DB) ----------
+app.get('/api/v1/debug/peek', async (_req, res) => {
+  const cAll = (await db.prepare(`SELECT COUNT(*) as n FROM lead_pool`).get()) as any || { n: 0 };
+  const cAvail = (await db.prepare(`SELECT COUNT(*) as n FROM lead_pool WHERE state='available'`).get()) as any || { n: 0 };
+  const sample = (await db.prepare(
     `SELECT id,cat,kw,platform,region,fit_user,generated_at FROM lead_pool ORDER BY generated_at DESC LIMIT 1`
-  ).get() as any;
+  ).get()) as any || {};
   res.json({
-    total: cAll.n,
-    available: cAvail.n,
+    total: cAll.n || 0,
+    available: cAvail.n || 0,
     sample,
     env: {
       SAM: !!process.env.SAM_API_KEY,
       REDDIT_ENABLED: process.env.REDDIT_ENABLED === 'true',
-      RSS_FEED_COUNT:
-        (process.env.RSS_FEEDS || '').split(',').filter(Boolean).length
+      RSS_FEED_COUNT: (process.env.RSS_FEEDS || '').split(',').filter(Boolean).length
     }
   });
 });
 
+// --------- Admin ingest (token required) ----------
 app.get('/api/v1/admin/poll-now', async (req, res) => {
-  if (ADMIN_TOKEN && String(req.query.token) !== ADMIN_TOKEN) {
-    return res.status(401).json({ ok: false, error: 'unauthorized' });
-  }
+  if (!isAdmin(req)) return res.status(401).json({ ok: false, error: 'unauthorized' });
   const src = String(req.query.source || 'all').toLowerCase();
   try {
     if (src === 'sam' || src === 'all')     await pollSamGov();
@@ -131,7 +127,7 @@ app.get('/api/v1/admin/poll-now', async (req, res) => {
   }
 });
 
-// ---------- Presence (humans online) ----------
+// ---------- Presence tracking ----------
 const seen = new Map<string, number>();
 setInterval(() => {
   const now = Date.now();
@@ -151,25 +147,25 @@ function userId(req: any) {
 }
 
 // ---------- Routes ----------
-app.post('/api/v1/gate', (req, res) => {
+app.post('/api/v1/gate', async (req, res) => {
   const { industries = [], region = 'US', email = '', alerts = false } = req.body || {};
   const uid = userId(req);
-  upsertUser(uid, region, email);
+  await upsertUser(uid, region, email);
 
   if (email && /@/.test(email) && (region === 'US' || region === 'Canada')) {
-    db.prepare(`UPDATE users SET fp = MIN(99, fp+3), verified_at=? WHERE id=?`).run(Date.now(), uid);
+    await db.prepare(`UPDATE users SET fp = MIN(99, fp+3), verified_at=? WHERE id=?`).run(Date.now(), uid);
   }
   if (alerts) {
-    db.prepare(
+    await db.prepare(
       `INSERT INTO alerts(user_id,email_on,created_at,updated_at) VALUES(?,?,?,?)
        ON CONFLICT(user_id) DO UPDATE SET email_on=excluded.email_on, updated_at=excluded.updated_at`
     ).run(uid, 1, Date.now(), Date.now());
-    db.prepare(`UPDATE users SET multipliers_json=json_set(multipliers_json,'$.alerts',1.1) WHERE id=?`).run(uid);
+    await db.prepare(`UPDATE users SET multipliers_json=json_set(multipliers_json,'$.alerts',1.1) WHERE id=?`).run(uid);
   }
   return res.json({ ok: true });
 });
 
-app.get('/api/v1/leads', (req, res) => {
+app.get('/api/v1/leads', async (req, res) => {
   const uid = userId(req);
   const region = (req.query.region as string) || 'US';
   const cat = (req.query.cat as string) || 'all';
@@ -187,7 +183,7 @@ app.get('/api/v1/leads', (req, res) => {
     params.push(`%${q}%`, `%${q}%`, `%${q}%`);
   }
 
-  const rows = db.prepare(
+  const rows = await db.prepare(
     `SELECT id,cat,kw,platform,region,fit_user as fit,fit_competition as compFit,heat,
             ((strftime('%s','now')*1000 - generated_at)/1000) as age
      FROM lead_pool
@@ -198,7 +194,7 @@ app.get('/api/v1/leads', (req, res) => {
 
   const humansOnline = humansOnlineValue();
   const nextRefreshSec = 15;
-  let cards: SimpleLead[] = rows;
+  let cards: SimpleLead[] = rows || [];
   if (cards.length < 6) {
     const need = 6 - cards.length;
     const demos = makeDemoCards(need, cat);
@@ -207,7 +203,7 @@ app.get('/api/v1/leads', (req, res) => {
   return res.json({ leads: cards, humansOnline, nextRefreshSec });
 });
 
-app.post('/api/v1/claim', (req, res) => {
+app.post('/api/v1/claim', async (req, res) => {
   const uid = userId(req);
   const { leadId } = req.body || {};
   if (typeof leadId === 'number' && leadId < 0) {
@@ -217,37 +213,37 @@ app.post('/api/v1/claim', (req, res) => {
       reveal: { whoFull: 'Practice lead', company: '—', contact: {}, demo: true }
     });
   }
-  const cd = db.prepare(`SELECT ends_at FROM cooldowns WHERE user_id=?`).get(uid) as any;
+  const cd = await db.prepare(`SELECT ends_at FROM cooldowns WHERE user_id=?`).get(uid) as any;
   if (cd && cd.ends_at > Date.now()) {
     const left = Math.ceil((cd.ends_at - Date.now()) / 1000);
     return res.status(429).json({ error: `Cooldown active. Wait ${left}s` });
   }
-  const row = db.prepare(`SELECT * FROM lead_pool WHERE id=? AND state='available' AND expires_at > ?`)
+  const row = await db.prepare(`SELECT * FROM lead_pool WHERE id=? AND state='available' AND expires_at > ?`)
     .get(leadId, Date.now()) as any;
   if (!row) return res.status(410).json({ error: 'Lead expired' });
 
   const reservedUntil = Date.now() + 60_000;
   const decisionDeadline = Date.now() + 5 * 60_000;
-  const ok = db.prepare(
+  const ok = await db.prepare(
     `UPDATE lead_pool SET state='reserved', reserved_by=?, reserved_until=? WHERE id=? AND state='available'`
-  ).run(uid, reservedUntil, leadId);
-  if (!ok.changes) return res.status(410).json({ error: 'Lead already claimed' });
+  ).run(uid, reservedUntil, leadId) as any;
+  if (!ok || !ok.changes) return res.status(410).json({ error: 'Lead already claimed' });
 
   const windowId = cryptoRandomString({ length: 24 });
-  db.prepare(
+  await db.prepare(
     `INSERT INTO lead_windows(id,lead_id,user_id,reserved_until,decision_deadline) VALUES(?,?,?,?,?)`
   ).run(windowId, leadId, uid, reservedUntil, decisionDeadline);
-  db.prepare(`INSERT INTO claims(lead_id,user_id,action,created_at) VALUES(?,?,?,?)`).run(
+  await db.prepare(`INSERT INTO claims(lead_id,user_id,action,created_at) VALUES(?,?,?,?)`).run(
     leadId, uid, 'claim', Date.now()
   );
 
-  const abuse = (db.prepare(`SELECT score FROM abuse WHERE user_id=?`).get(uid) as any)?.score || 0;
+  const abuse = (await db.prepare(`SELECT score FROM abuse WHERE user_id=?`).get(uid) as any)?.score || 0;
   const seconds = clamp(7 + Math.round(14 * abuse), 7, 300);
-  db.prepare(
+  await db.prepare(
     `INSERT INTO cooldowns(user_id,ends_at) VALUES(?,?)
      ON CONFLICT(user_id) DO UPDATE SET ends_at=?`
   ).run(uid, Date.now() + seconds * 1000, Date.now() + seconds * 1000);
-  db.prepare(
+  await db.prepare(
     `INSERT INTO abuse(user_id,score,last_inc_at) VALUES(?,?,?)
      ON CONFLICT(user_id) DO UPDATE SET score=score+1,last_inc_at=?`
   ).run(uid, 1, Date.now(), Date.now());
@@ -265,52 +261,52 @@ app.post('/api/v1/claim', (req, res) => {
   pushToUser(uid, { type: 'lead_claimed', id: leadId, title: row.kw, platform: row.platform }).catch(() => {});
   res.json({ reservedForSec: 60, windowId, reveal });
 
-  setTimeout(() => {
-    const w = db.prepare(`SELECT 1 FROM lead_windows WHERE id=?`).get(windowId);
-    const cur = db.prepare(`SELECT state FROM lead_pool WHERE id=?`).get(leadId) as any;
+  setTimeout(async () => {
+    const w = await db.prepare(`SELECT 1 FROM lead_windows WHERE id=?`).get(windowId);
+    const cur = await db.prepare(`SELECT state FROM lead_pool WHERE id=?`).get(leadId) as any;
     if (w && cur && cur.state === 'reserved') {
-      db.prepare(`UPDATE lead_pool SET state='available', reserved_by=NULL, reserved_until=NULL WHERE id=?`).run(leadId);
+      await db.prepare(`UPDATE lead_pool SET state='available', reserved_by=NULL, reserved_until=NULL WHERE id=?`).run(leadId);
     }
   }, 60_500);
 
-  setTimeout(() => {
-    const cur = db.prepare(`SELECT state,reserved_by FROM lead_pool WHERE id=?`).get(leadId) as any;
+  setTimeout(async () => {
+    const cur = await db.prepare(`SELECT state,reserved_by FROM lead_pool WHERE id=?`).get(leadId) as any;
     if (cur && cur.state !== 'owned') {
-      db.prepare(`UPDATE lead_pool SET state='returned', reserved_by=NULL, reserved_until=NULL WHERE id=?`).run(leadId);
-      db.prepare(`DELETE FROM lead_windows WHERE id=?`).run(windowId);
-      db.prepare(`UPDATE users SET fp = MAX(0, fp-1) WHERE id=?`).run(uid);
+      await db.prepare(`UPDATE lead_pool SET state='returned', reserved_by=NULL, reserved_until=NULL WHERE id=?`).run(leadId);
+      await db.prepare(`DELETE FROM lead_windows WHERE id=?`).run(windowId);
+      await db.prepare(`UPDATE users SET fp = MAX(0, fp-1) WHERE id=?`).run(uid);
     }
   }, 5 * 60_000 + 2_000);
 });
 
-app.post('/api/v1/own', (req, res) => {
+app.post('/api/v1/own', async (req, res) => {
   const uid = userId(req);
   const { windowId } = req.body || {};
-  const w = db.prepare(`SELECT lead_id FROM lead_windows WHERE id=? AND user_id=?`).get(windowId, uid) as any;
+  const w = await db.prepare(`SELECT lead_id FROM lead_windows WHERE id=? AND user_id=?`).get(windowId, uid) as any;
   if (!w) return res.status(404).json({ error: 'Window not found' });
 
-  const ok = db.prepare(`UPDATE lead_pool SET state='owned' WHERE id=? AND state IN ('reserved','available')`)
-    .run(w.lead_id);
-  if (!ok.changes) return res.status(410).json({ error: 'Lead already owned/expired' });
+  const ok = await db.prepare(`UPDATE lead_pool SET state='owned' WHERE id=? AND state IN ('reserved','available')`)
+    .run(w.lead_id) as any;
+  if (!ok || !ok.changes) return res.status(410).json({ error: 'Lead already owned/expired' });
 
-  db.prepare(`DELETE FROM lead_windows WHERE id=?`).run(windowId);
-  db.prepare(`INSERT INTO claims(lead_id,user_id,action,created_at) VALUES(?,?,?,?)`)
+  await db.prepare(`DELETE FROM lead_windows WHERE id=?`).run(windowId);
+  await db.prepare(`INSERT INTO claims(lead_id,user_id,action,created_at) VALUES(?,?,?,?)`)
     .run(w.lead_id, uid, 'own', Date.now());
-  const alerts = db.prepare(`SELECT email_on FROM alerts WHERE user_id=?`).get(uid) as any;
+  const alerts = await db.prepare(`SELECT email_on FROM alerts WHERE user_id=?`).get(uid) as any;
   const delta = alerts && alerts.email_on ? 4 : 2;
-  db.prepare(`UPDATE users SET fp = MIN(99, fp+?) WHERE id=?`).run(delta, uid);
-  db.prepare(`UPDATE abuse SET score = MAX(0, score-1) WHERE user_id=?`).run(uid);
+  await db.prepare(`UPDATE users SET fp = MIN(99, fp+?) WHERE id=?`).run(delta, uid);
+  await db.prepare(`UPDATE abuse SET score = MAX(0, score-1) WHERE user_id=?`).run(uid);
 
   res.json({ ok: true });
 });
 
-app.post('/api/v1/arrange-more', (req, res) => {
+app.post('/api/v1/arrange-more', async (req, res) => {
   const uid = userId(req);
   const { leadId } = req.body || {};
-  const lead = db.prepare(`SELECT cat,kw,platform FROM lead_pool WHERE id=?`).get(leadId) as any;
+  const lead = await db.prepare(`SELECT cat,kw,platform FROM lead_pool WHERE id=?`).get(leadId) as any;
   if (lead) {
     const now = Date.now();
-    const prefs = (db.prepare(
+    const prefs = (await db.prepare(
       `SELECT cat_weights_json,kw_weights_json,plat_weights_json FROM user_prefs WHERE user_id=?`
     ).get(uid) as any) || { cat_weights_json: '{}', kw_weights_json: '{}', plat_weights_json: '{}' };
     const cat = JSON.parse(prefs.cat_weights_json || '{}');
@@ -319,59 +315,59 @@ app.post('/api/v1/arrange-more', (req, res) => {
     cat[lead.cat] = (cat[lead.cat] || 0) + 0.4;
     kw[lead.kw] = (kw[lead.kw] || 0) + 0.6;
     plat[lead.platform] = (plat[lead.platform] || 0) + 0.3;
-    db.prepare(
+    await db.prepare(
       `UPDATE user_prefs SET cat_weights_json=?, kw_weights_json=?, plat_weights_json=?, updated_at=? WHERE user_id=?`
     ).run(JSON.stringify(cat), JSON.stringify(kw), JSON.stringify(plat), now, uid);
-    db.prepare(`UPDATE users SET fp = MIN(99, fp+1) WHERE id=?`).run(uid);
-    db.prepare(`INSERT INTO claims(lead_id,user_id,action,created_at) VALUES(?,?,?,?)`)
+    await db.prepare(`UPDATE users SET fp = MIN(99, fp+1) WHERE id=?`).run(uid);
+    await db.prepare(`INSERT INTO claims(lead_id,user_id,action,created_at) VALUES(?,?,?,?)`)
       .run(leadId, uid, 'arrange_more', now);
   }
   res.json({ ok: true });
 });
 
-app.post('/api/v1/human-check', (req, res) => {
+app.post('/api/v1/human-check', async (req, res) => {
   const uid = userId(req);
-  db.prepare(`UPDATE users SET fp = MIN(99, fp+2) WHERE id=?`).run(uid);
-  db.prepare(`DELETE FROM cooldowns WHERE user_id=?`).run(uid);
+  await db.prepare(`UPDATE users SET fp = MIN(99, fp+2) WHERE id=?`).run(uid);
+  await db.prepare(`DELETE FROM cooldowns WHERE user_id=?`).run(uid);
   res.json({ ok: true, fpDelta: 2 });
 });
 
-app.post('/api/v1/alerts', (req, res) => {
+app.post('/api/v1/alerts', async (req, res) => {
   const uid = userId(req);
   const { emailOn } = req.body || {};
-  db.prepare(
+  await db.prepare(
     `INSERT INTO alerts(user_id,email_on,created_at,updated_at) VALUES(?,?,?,?)
      ON CONFLICT(user_id) DO UPDATE SET email_on=excluded.email_on, updated_at=excluded.updated_at`
   ).run(uid, emailOn ? 1 : 0, Date.now(), Date.now());
-  db.prepare(`UPDATE users SET multipliers_json=json_set(multipliers_json,'$.alerts', ?) WHERE id=?`)
+  await db.prepare(`UPDATE users SET multipliers_json=json_set(multipliers_json,'$.alerts', ?) WHERE id=?`)
     .run(emailOn ? 1.1 : 1.0, uid);
   res.json({ ok: true });
 });
 
-app.post('/api/v1/push/subscribe', (req, res) => {
+app.post('/api/v1/push/subscribe', async (req, res) => {
   const uid = userId(req);
   const sub = req.body;
   saveSubscription(uid, sub);
   res.json({ ok: true });
 });
 
-app.get('/api/v1/status', (req, res) => {
+app.get('/api/v1/status', async (req, res) => {
   const uid = userId(req);
-  const st = (db.prepare(`SELECT fp, multipliers_json FROM users WHERE id=?`).get(uid) as any) || {
+  const st = (await db.prepare(`SELECT fp, multipliers_json FROM users WHERE id=?`).get(uid) as any) || {
     fp: 50,
     multipliers_json: '{"verified":1.0,"alerts":1.0,"payment":1.0}'
   };
   const m = JSON.parse(st.multipliers_json || '{}');
   const priority = Math.round(st.fp * (m.verified || 1.0) * (m.alerts || 1.0) * (m.payment || 1.0) * 10) / 10;
-  const cd = db.prepare(`SELECT ends_at FROM cooldowns WHERE user_id=?`).get(uid) as any;
+  const cd = await db.prepare(`SELECT ends_at FROM cooldowns WHERE user_id=?`).get(uid) as any;
   const cooldownSec = cd ? Math.max(0, Math.ceil((cd.ends_at - Date.now()) / 1000)) : 0;
   res.json({ fp: st.fp, cooldownSec, priority, multipliers: m });
 });
 
-app.post('/api/v1/expose', (req,res)=>{
+app.post('/api/v1/expose', async (req,res)=>{
   const uid = (req.headers['x-galactly-user'] as string) || 'anon';
   const { company='', site='', role='', location='', moq='', leadtime='', caps='', links='', cats=[], tags=[] } = req.body||{};
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO supplier_profiles(user_id,company,site,role,location,moq,leadtime,caps,links,cats_json,tags_json,updated_at)
     VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(user_id) DO UPDATE SET
