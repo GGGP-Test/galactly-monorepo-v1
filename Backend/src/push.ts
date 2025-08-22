@@ -1,10 +1,11 @@
 // @ts-nocheck
 import webpush from 'web-push';
-import { db } from './db.js'; // FIX: db.ts lives in src/, so use './db.js'
+import { db } from './db.js'; // same folder as push.ts after build (dist/db.js)
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const SITE_ORIGIN = process.env.SITE_ORIGIN || 'https://galactly-api-docker.onrender.com';
+const SITE_ORIGIN =
+  process.env.SITE_ORIGIN || 'https://galactly-api-docker.onrender.com';
 
 export function initPush() {
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
@@ -12,7 +13,11 @@ export function initPush() {
     return;
   }
   try {
-    webpush.setVapidDetails(`${SITE_ORIGIN}/contact`, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    webpush.setVapidDetails(
+      `${SITE_ORIGIN}/contact`,
+      VAPID_PUBLIC_KEY,
+      VAPID_PRIVATE_KEY
+    );
     console.log('[push] Web Push enabled');
   } catch (e) {
     console.error('[push] Failed to init, continuing without push:', e);
@@ -20,20 +25,25 @@ export function initPush() {
 }
 
 export function saveSubscription(userId: string, sub: any) {
+  // no-op if push disabled
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
+
   const { endpoint, keys } = sub || {};
   if (!endpoint || !keys?.p256dh || !keys?.auth) return;
-  return db.prepare(
-  `INSERT OR IGNORE INTO push_subs(user_id,endpoint,p256dh,auth,created_at) VALUES(?,?,?,?,?)`
-).run(userId, endpoint, keys.p256dh, keys.auth, Date.now());
+
+  db.prepare(
+    `INSERT OR IGNORE INTO push_subs(user_id,endpoint,p256dh,auth,created_at) VALUES(?,?,?,?,?)`
+  ).run(userId, endpoint, keys.p256dh, keys.auth, Date.now());
+}
 
 type SubRow = { endpoint: string; p256dh: string; auth: string };
 
 export async function pushToUser(userId: string, payload: object) {
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
-  const rows = await db
-  .prepare(`SELECT endpoint,p256dh,auth FROM push_subs WHERE user_id=?`)
-  .all(userId) as SubRow[];
+
+  const rows = db
+    .prepare(`SELECT endpoint,p256dh,auth FROM push_subs WHERE user_id=?`)
+    .all(userId) as SubRow[];
 
   for (const r of rows) {
     try {
