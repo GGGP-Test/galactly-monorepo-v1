@@ -5,6 +5,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import cryptoRandomString from 'crypto-random-string';
 
+
 import { db, upsertUser, initDb } from './db.js';
 import { startSchedulers } from './scheduler.js';
 import { initPush, saveSubscription, pushToUser } from './push.js';
@@ -21,7 +22,7 @@ function requireAdmin(req: any, res: any, next: any) {
   if (req.headers['x-admin-token'] === ADMIN_TOKEN) return next();
   return res.status(403).json({ ok:false, error:'forbidden' });
 }
-
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 
 await initDb();
 
@@ -111,7 +112,10 @@ app.get('/api/v1/debug/peek', (_req, res) => {
   });
 });
 
-app.get('/api/v1/admin/poll-now', requireAdmin, async (req, res) => {
+app.get('/api/v1/admin/poll-now', async (req, res) => {
+  if (ADMIN_TOKEN && String(req.query.token) !== ADMIN_TOKEN) {
+    return res.status(401).json({ ok: false, error: 'unauthorized' });
+  }
   const src = String(req.query.source || 'all').toLowerCase();
   try {
     if (src === 'sam' || src === 'all')     await pollSamGov();
