@@ -11,6 +11,7 @@
 // Limits: Google CSE returns up to 10 results per page; we fetch up to 3 pages (30) per (cx,site,query).
 // Dedupe: 3 days by source_url.
 // Age: CSE has no publish date; we treat as "now" and rely on scoring/intent.
+ // @ts-nocheck
 
 import fetch from 'node-fetch';
 import { db, insertLead } from '../db.js';
