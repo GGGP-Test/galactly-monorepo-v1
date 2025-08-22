@@ -111,7 +111,7 @@ app.get('/api/v1/debug/peek', (_req, res) => {
   });
 });
 
-app.get('/api/v1/admin/poll-now', async (req, res) => {
+app.get('/api/v1/admin/poll-now', requireAdmin, async (req, res) => {
   const src = String(req.query.source || 'all').toLowerCase();
   try {
     if (src === 'sam' || src === 'all')     await pollSamGov();
