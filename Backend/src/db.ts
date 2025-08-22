@@ -1,3 +1,4 @@
+// Backend/src/db.ts
 // Works with Neon Postgres when DATABASE_URL is set; falls back to SQLite file otherwise.
 import Database from 'better-sqlite3';
 import pgPkg from 'pg';
@@ -10,20 +11,14 @@ let pool: any = null;
 let sqlite: Database.Database | null = null;
 
 if (usePg) {
-  pool = new Pool({
-    connectionString: PG_URL,
-    ssl: { rejectUnauthorized: false }, // Neon needs SSL
-  });
+  pool = new Pool({ connectionString: PG_URL, ssl: { rejectUnauthorized: false } });
 } else {
   const file = process.env.DB_PATH || './galactly.sqlite';
   sqlite = new Database(file);
 }
 
 // Convert SQLite-style ? placeholders to $1,$2 for pg
-function toPg(sql: string) {
-  let i = 0;
-  return sql.replace(/\?/g, () => `$${++i}`);
-}
+function toPg(sql: string) { let i = 0; return sql.replace(/\?/g, () => `$${++i}`); }
 
 async function exec(sql: string, args: any[] = []) {
   if (usePg) { await pool.query(toPg(sql), args); return; }
@@ -38,7 +33,7 @@ async function many<T = any>(sql: string, args: any[] = []) {
   return sqlite!.prepare(sql).all(...args) as T[];
 }
 
-// Keep the convenient db.prepare(...).get/run/all API, but async-backed.
+// Keep a prepare-like API (async underneath)
 export const db = {
   prepare(sql: string) {
     return {
@@ -49,10 +44,9 @@ export const db = {
   },
 };
 
+// Create/upgrade schema
 export async function initDb() {
-  // ---- DDL ----
-  // lead_pool + push_subs already in your app
-  const createLead = usePg ? `
+  const leadPool = usePg ? `
     CREATE TABLE IF NOT EXISTS lead_pool (
       id SERIAL PRIMARY KEY,
       cat TEXT, kw TEXT,
@@ -82,54 +76,47 @@ export async function initDb() {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_lead_source ON lead_pool(source_url);
   `;
 
-  const createPush = usePg ? `
-    CREATE TABLE IF NOT EXISTS push_subs (
-      id SERIAL PRIMARY KEY,
-      user_id TEXT,
-      endpoint TEXT UNIQUE,
-      p256dh TEXT,
-      auth TEXT,
-      created_at BIGINT
+  const users = usePg ? `
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      region TEXT,
+      email TEXT,
+      fp INTEGER DEFAULT 50,
+      multipliers_json JSONB DEFAULT '{"verified":1.0,"alerts":1.0,"payment":1.0}',
+      verified_at BIGINT
     );
   ` : `
-    CREATE TABLE IF NOT EXISTS push_subs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT,
-      endpoint TEXT UNIQUE,
-      p256dh TEXT,
-      auth TEXT,
-      created_at INTEGER
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      region TEXT,
+      email TEXT,
+      fp INTEGER DEFAULT 50,
+      multipliers_json TEXT DEFAULT '{"verified":1.0,"alerts":1.0,"payment":1.0}',
+      verified_at INTEGER
     );
   `;
 
-  // Minimal tables used by routes in index.ts
-  const createUsers = usePg ? `
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      region TEXT,
-      email TEXT,
-      fp INTEGER DEFAULT 50,
-      multipliers_json TEXT DEFAULT '{"verified":1.0,"alerts":1.0,"payment":1.0}',
-      verified_at BIGINT,
-      created_at BIGINT,
+  const userPrefs = usePg ? `
+    CREATE TABLE IF NOT EXISTS user_prefs (
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      cat_weights_json JSONB DEFAULT '{}',
+      kw_weights_json JSONB DEFAULT '{}',
+      plat_weights_json JSONB DEFAULT '{}',
       updated_at BIGINT
     );
   ` : `
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      region TEXT,
-      email TEXT,
-      fp INTEGER DEFAULT 50,
-      multipliers_json TEXT DEFAULT '{"verified":1.0,"alerts":1.0,"payment":1.0}',
-      verified_at INTEGER,
-      created_at INTEGER,
+    CREATE TABLE IF NOT EXISTS user_prefs (
+      user_id TEXT PRIMARY KEY,
+      cat_weights_json TEXT DEFAULT '{}',
+      kw_weights_json TEXT DEFAULT '{}',
+      plat_weights_json TEXT DEFAULT '{}',
       updated_at INTEGER
     );
   `;
 
-  const createAlerts = usePg ? `
+  const alerts = usePg ? `
     CREATE TABLE IF NOT EXISTS alerts (
-      user_id TEXT PRIMARY KEY,
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       email_on INTEGER DEFAULT 0,
       created_at BIGINT,
       updated_at BIGINT
@@ -143,9 +130,9 @@ export async function initDb() {
     );
   `;
 
-  const createCooldowns = usePg ? `
+  const cooldowns = usePg ? `
     CREATE TABLE IF NOT EXISTS cooldowns (
-      user_id TEXT PRIMARY KEY,
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       ends_at BIGINT
     );
   ` : `
@@ -155,9 +142,9 @@ export async function initDb() {
     );
   `;
 
-  const createAbuse = usePg ? `
+  const abuse = usePg ? `
     CREATE TABLE IF NOT EXISTS abuse (
-      user_id TEXT PRIMARY KEY,
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       score INTEGER DEFAULT 0,
       last_inc_at BIGINT
     );
@@ -169,28 +156,10 @@ export async function initDb() {
     );
   `;
 
-  const createPrefs = usePg ? `
-    CREATE TABLE IF NOT EXISTS user_prefs (
-      user_id TEXT PRIMARY KEY,
-      cat_weights_json TEXT DEFAULT '{}',
-      kw_weights_json  TEXT DEFAULT '{}',
-      plat_weights_json TEXT DEFAULT '{}',
-      updated_at BIGINT
-    );
-  ` : `
-    CREATE TABLE IF NOT EXISTS user_prefs (
-      user_id TEXT PRIMARY KEY,
-      cat_weights_json TEXT DEFAULT '{}',
-      kw_weights_json  TEXT DEFAULT '{}',
-      plat_weights_json TEXT DEFAULT '{}',
-      updated_at INTEGER
-    );
-  `;
-
-  const createClaims = usePg ? `
+  const claims = usePg ? `
     CREATE TABLE IF NOT EXISTS claims (
       id SERIAL PRIMARY KEY,
-      lead_id INTEGER,
+      lead_id INTEGER REFERENCES lead_pool(id) ON DELETE CASCADE,
       user_id TEXT,
       action TEXT,
       created_at BIGINT
@@ -205,10 +174,10 @@ export async function initDb() {
     );
   `;
 
-  const createLeadWindows = usePg ? `
+  const windows = usePg ? `
     CREATE TABLE IF NOT EXISTS lead_windows (
       id TEXT PRIMARY KEY,
-      lead_id INTEGER,
+      lead_id INTEGER REFERENCES lead_pool(id) ON DELETE CASCADE,
       user_id TEXT,
       reserved_until BIGINT,
       decision_deadline BIGINT
@@ -223,12 +192,13 @@ export async function initDb() {
     );
   `;
 
-  const createSupplierProfiles = usePg ? `
+  const supplier = usePg ? `
     CREATE TABLE IF NOT EXISTS supplier_profiles (
-      user_id TEXT PRIMARY KEY,
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       company TEXT, site TEXT, role TEXT, location TEXT,
       moq TEXT, leadtime TEXT, caps TEXT, links TEXT,
-      cats_json TEXT, tags_json TEXT,
+      cats_json JSONB DEFAULT '[]',
+      tags_json JSONB DEFAULT '[]',
       updated_at BIGINT
     );
   ` : `
@@ -236,44 +206,48 @@ export async function initDb() {
       user_id TEXT PRIMARY KEY,
       company TEXT, site TEXT, role TEXT, location TEXT,
       moq TEXT, leadtime TEXT, caps TEXT, links TEXT,
-      cats_json TEXT, tags_json TEXT,
+      cats_json TEXT DEFAULT '[]',
+      tags_json TEXT DEFAULT '[]',
       updated_at INTEGER
     );
   `;
 
-  const schema = [
-    createLead, createPush, createUsers, createAlerts, createCooldowns,
-    createAbuse, createPrefs, createClaims, createLeadWindows, createSupplierProfiles
-  ].join('\n');
+  const pushSubs = usePg ? `
+    CREATE TABLE IF NOT EXISTS push_subs (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT,
+      endpoint TEXT UNIQUE,
+      p256dh TEXT,
+      auth TEXT,
+      created_at BIGINT
+    );
+  ` : `
+    CREATE TABLE IF NOT EXISTS push_subs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT,
+      endpoint TEXT UNIQUE,
+      p256dh TEXT,
+      auth TEXT,
+      created_at INTEGER
+    );
+  `;
 
-  for (const stmt of schema.split(';').map(s => s.trim()).filter(Boolean)) {
+  const ddl = [leadPool, users, userPrefs, alerts, cooldowns, abuse, claims, windows, supplier, pushSubs]
+    .join('\n');
+  for (const stmt of ddl.split(';').map(s => s.trim()).filter(Boolean)) {
     await exec(stmt);
   }
 }
 
-export async function upsertUser(id: string, region = 'US', email = '') {
-  const now = Date.now();
-  const defaultJson = '{"verified":1.0,"alerts":1.0,"payment":1.0}';
-
-  if (usePg) {
-    await exec(`
-      INSERT INTO users(id, region, email, fp, multipliers_json, created_at, updated_at)
-      VALUES (?,?,?,?,?,?,?)
-      ON CONFLICT (id) DO UPDATE SET
-        region = EXCLUDED.region,
-        email  = EXCLUDED.email,
-        updated_at = EXCLUDED.updated_at
-    `, [id, region, email, 50, defaultJson, now, now]);
-  } else {
-    await exec(`
-      INSERT INTO users(id, region, email, fp, multipliers_json, created_at, updated_at)
-      VALUES (?,?,?,?,?,?,?)
-      ON CONFLICT(id) DO UPDATE SET
-        region = excluded.region,
-        email  = excluded.email,
-        updated_at = excluded.updated_at
-    `, [id, region, email, 50, defaultJson, now, now]);
-  }
+// Simple helper used by the API
+export function upsertUser(id: string, region: string, email: string) {
+  const mjson = '{"verified":1.0,"alerts":1.0,"payment":1.0}';
+  return exec(
+    `INSERT INTO users(id,region,email,fp,multipliers_json,verified_at)
+     VALUES(?,?,?,?,?,NULL)
+     ON CONFLICT (id) DO UPDATE SET region=excluded.region, email=excluded.email`,
+    [id, region, email || null, 50, mjson]
+  );
 }
 
 export async function insertLead(lead: any) {
@@ -318,5 +292,4 @@ export async function insertLead(lead: any) {
     );
   }
 }
-
 export default db;
