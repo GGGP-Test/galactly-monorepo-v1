@@ -9,7 +9,7 @@ import { initPush, saveSubscription, pushToUser } from './push.js';
 import { clamp } from './util.js';
 import { mountBilling } from './billing.js';
 import { pollCSE } from './connectors/cse.js';
-
+if (process.env.SCHEDULER_ENABLED === '1') startSchedulers();
 
 process.on('unhandledRejection', err => console.error('[unhandledRejection]', err));
 process.on('uncaughtException', err => console.error('[uncaughtException]', err));
