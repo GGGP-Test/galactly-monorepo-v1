@@ -1,5 +1,6 @@
 // Backend/src/index.ts
 // @ts-nocheck
+import express from 'express';
 import express, { type Express, type Request, type Response } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
