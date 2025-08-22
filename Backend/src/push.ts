@@ -23,7 +23,7 @@ export function saveSubscription(userId: string, sub: any) {
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
   const { endpoint, keys } = sub || {};
   if (!endpoint || !keys?.p256dh || !keys?.auth) return;
-  await db.prepare(
+  return db.prepare(
   `INSERT OR IGNORE INTO push_subs(user_id,endpoint,p256dh,auth,created_at) VALUES(?,?,?,?,?)`
 ).run(userId, endpoint, keys.p256dh, keys.auth, Date.now());
 
