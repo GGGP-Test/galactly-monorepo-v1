@@ -43,7 +43,7 @@ export async function pollGoogleNews(){
           person_handle: null,
           contact_email: null
         };
-        insertLead(lead as any);
+        await insertLead(lead as any);
       }
     }catch{ /* ignore bad feeds */ }
   }
