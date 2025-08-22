@@ -23,18 +23,17 @@ export function saveSubscription(userId: string, sub: any) {
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
   const { endpoint, keys } = sub || {};
   if (!endpoint || !keys?.p256dh || !keys?.auth) return;
-  db.prepare(
-    `INSERT OR IGNORE INTO push_subs(user_id,endpoint,p256dh,auth,created_at) VALUES(?,?,?,?,?)`
-  ).run(userId, endpoint, keys.p256dh, keys.auth, Date.now());
-}
+  await db.prepare(
+  `INSERT OR IGNORE INTO push_subs(user_id,endpoint,p256dh,auth,created_at) VALUES(?,?,?,?,?)`
+).run(userId, endpoint, keys.p256dh, keys.auth, Date.now());
 
 type SubRow = { endpoint: string; p256dh: string; auth: string };
 
 export async function pushToUser(userId: string, payload: object) {
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
-  const rows = db
-    .prepare(`SELECT endpoint,p256dh,auth FROM push_subs WHERE user_id=?`)
-    .all(userId) as SubRow[];
+  const rows = await db
+  .prepare(`SELECT endpoint,p256dh,auth FROM push_subs WHERE user_id=?`)
+  .all(userId) as SubRow[];
 
   for (const r of rows) {
     try {
