@@ -23,9 +23,7 @@ function getAllFeeds(): string[] {
     readFileIfSet('FEEDS_NATIVE_FILE'),
   ].filter(Boolean).join(',');
 
-  const uniq = new Set(
-    joined.split(/[,\r\n]+/).map(s => s.trim()).filter(Boolean)
-  );
+  const uniq = new Set(joined.split(/[,\r\n]+/).map(s => s.trim()).filter(Boolean));
   return Array.from(uniq);
 }
 
@@ -45,7 +43,6 @@ export async function pollRss() {
         const exists = await db.prepare(
           `SELECT 1 FROM lead_pool WHERE source_url=? AND generated_at > ?`
         ).get(src, Date.now() - 3 * 24 * 3600 * 1000);
-
         if (exists) continue;
 
         const lead = {
@@ -68,8 +65,6 @@ export async function pollRss() {
         };
         await insertLead(lead as any);
       }
-    } catch {
-      // ignore bad feeds
-    }
+    } catch { /* ignore bad feeds */ }
   }
 }
