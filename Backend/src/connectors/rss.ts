@@ -1,3 +1,4 @@
+// Backend/src/connectors/rss.ts
 // @ts-nocheck
 import Parser from 'rss-parser';
 import fs from 'fs';
@@ -34,11 +35,19 @@ export async function pollRss() {
 
   for (const f of feeds) {
     try {
-      // NOTE: no unsupported options (like "size") here
       const feed = await parser.parseURL(f);
       for (const item of (feed.items || [])) {
         const text = `${item.title || ''} ${item.contentSnippet || ''}`;
         const { cat, kw } = classify(text);
+        const src = (item.link || '').trim();
+        if (!src) continue;
+
+        const exists = await db.prepare(
+          `SELECT 1 FROM lead_pool WHERE source_url=? AND generated_at > ?`
+        ).get(src, Date.now() - 3 * 24 * 3600 * 1000);
+
+        if (exists) continue;
+
         const lead = {
           cat, kw,
           platform: 'RSS',
@@ -46,7 +55,7 @@ export async function pollRss() {
           fit_user: fitScore(74),
           fit_competition: fitScore(80),
           heat: heatFromSource(f),
-          source_url: item.link || '',
+          source_url: src,
           evidence_snippet: (item.contentSnippet || '').slice(0, 180),
           generated_at: Date.now(),
           expires_at: Date.now() + 72 * 3600 * 1000,
@@ -57,16 +66,10 @@ export async function pollRss() {
           person_handle: null,
           contact_email: null
         };
-        if (!lead.source_url) continue;
-
-        const exists = db.prepare(
-          `SELECT 1 FROM lead_pool WHERE source_url=? AND generated_at > ?`
-        ).get(lead.source_url, Date.now() - 3 * 24 * 3600 * 1000);
-
-        if (!exists) insertLead(lead as any);
+        await insertLead(lead as any);
       }
     } catch {
-      // bad feed -> ignore
+      // ignore bad feeds
     }
   }
 }
