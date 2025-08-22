@@ -9,6 +9,8 @@ import { initPush, saveSubscription, pushToUser } from './push.js';
 import { clamp } from './util.js';
 import { mountBilling } from './billing.js';
 import { pollCSE } from './connectors/cse.js';
+import { initDb } from './db.js';
+await initDb();
 if (process.env.SCHEDULER_ENABLED === '1') startSchedulers();
 
 process.on('unhandledRejection', err => console.error('[unhandledRejection]', err));
