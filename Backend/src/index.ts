@@ -1,5 +1,7 @@
 // @ts-nocheck
-import express from 'express';
+@@ -1,7 +1,9 @@
+ // @ts-nocheck
+ import type { Express, Request, Response } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import cryptoRandomString from 'crypto-random-string';
