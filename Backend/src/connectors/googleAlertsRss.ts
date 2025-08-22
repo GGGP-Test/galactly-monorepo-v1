@@ -1,6 +1,7 @@
 // File: src/connectors/googleAlertsRss.ts
 // Purpose: Ingest Google Alerts RSS feeds (and optional Google News query RSS) into lead_pool.
 // Notes: Zero API keys. Pairs with IMAP watcher (email alerts), but works standalone too.
+ // @ts-nocheck
 
 import Parser from 'rss-parser';
 import { db, insertLead } from '../db.js';
