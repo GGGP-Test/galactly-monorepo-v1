@@ -1,4 +1,23 @@
-// File: Backend/src/Index.ts (with permissive CORS)
+import 'dotenv/config';
+if (host) await q(`UPDATE app_user SET user_prefs = jsonb_set(COALESCE(user_prefs,'{}'::jsonb), '{muteDomains}', COALESCE(user_prefs->'muteDomains','[]'::jsonb) || to_jsonb($2::text)) WHERE id=$1`, [userId, host]);
+}
+res.json({ ok: true });
+});
+
+
+app.post('/api/v1/gate', async (req, res) => {
+const userId = (req as any).userId; if (!userId) return res.status(400).json({ ok: false, error: 'missing x-galactly-user' });
+const { region, email, alerts } = req.body || {};
+await q(`INSERT INTO app_user (id, region, email, alerts) VALUES ($1,$2,$3,COALESCE($4,false)) ON CONFLICT (id) DO UPDATE SET region=EXCLUDED.region, email=EXCLUDED.email, alerts=EXCLUDED.alerts, updated_at=now()`, [userId, region || null, email || null, alerts === true]);
+res.json({ ok: true });
+});
+
+
+app.get('/api/v1/leads', async (req, res) => {
+const userId = (req as any).userId || null; const limit = 40;
+const r = await q(`SELECT id, cat, kw, platform, fit_user, heat, source_url, title, snippet, ttl, state, created_at FROM lead_pool WHERE state='available' ORDER BY created_at DESC LIMIT $1`, [limit]);
+let leads = r.rows as any[];
+const wRow = await q<{ weights: any }>(`SELECT weights FROM model_state WHERE segment='global'`);
 const weights: Weights = (wRow.rows[0]?.weights as Weights) || { coeffs:{recency:0.4,platform:1.0,domain:0.5,intent:0.6,histCtr:0.3,userFit:1.0}, platforms:{}, badDomains:[] } as any;
 let prefs: UserPrefs | undefined; if (userId) { const pr = await q<{ user_prefs: any }>('SELECT user_prefs FROM app_user WHERE id=$1', [userId]); prefs = pr.rows[0]?.user_prefs || undefined; }
 leads = leads.map(L => ({ ...L, _score: computeScore(L, weights, prefs) })).sort((a,b)=>b._score-a._score).slice(0,20);
