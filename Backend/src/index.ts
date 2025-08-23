@@ -1,13 +1,4 @@
 import 'dotenv/config';
-res.json({ ok: true });
-});
-
-
-app.post('/api/v1/gate', async (req, res) => {
-const userId = (req as any).userId; if (!userId) return res.status(400).json({ ok: false, error: 'missing x-galactly-user' });
-const { region, email, alerts } = req.body || {};
-await q(`INSERT INTO app_user (id, region, email, alerts) VALUES ($1,$2,$3,COALESCE($4,false)) ON CONFLICT (id) DO UPDATE SET region=EXCLUDED.region, email=EXCLUDED.email, alerts=EXCLUDED.alerts, updated_at=now()`, [userId, region || null, email || null, alerts === true]);
-res.json({ ok: true });
 });
 
 
@@ -56,3 +47,4 @@ res.json({ fp, cooldownSec:0, priority:1, multipliers:{ freshness:1.0, fit:1.0 }
 
 
 migrate().then(()=> app.listen(PORT, '0.0.0.0', ()=> console.log(`galactly-api listening on :${PORT}`)));
+
