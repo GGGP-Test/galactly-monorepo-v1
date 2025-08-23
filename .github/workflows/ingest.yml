@@ -1,79 +1,51 @@
 name: Ingest Scheduler
-
 on:
-  # Run every 5 minutes; the plan step decides what to fire
-  schedule:
-    - cron: "*/5 * * * *"
-  workflow_dispatch:
+schedule:
+- cron: "*/5 * * * *"
+workflow_dispatch:
 
-# Keep secrets out of logs; set TARGET_URL + ADMIN_TOKEN in repo → Settings → Secrets → Actions
+
 env:
-  # Example: https://galactly-api-docker.onrender.com   (Render now, swap to Northflank later)
-  API_BASE: ${{ secrets.TARGET_URL }}
+API_BASE: https://galactly-api-docker.onrender.com
 
-permissions:
-  contents: read
 
 jobs:
-  run:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    concurrency:
-      group: ingest-scheduler
-      cancel-in-progress: false
-    steps:
-      - name: Health check
-        run: |
-          set -euxo pipefail
-          curl -fsSL --max-time 15 "$API_BASE/healthz"
+run:
+runs-on: ubuntu-latest
+timeout-minutes: 10
+concurrency:
+group: ingest-scheduler
+cancel-in-progress: false
+steps:
+- name: Decide which tasks to run
+id: plan
+run: |
+MIN=$(date -u +%M)
+echo "minute=$MIN" >> $GITHUB_OUTPUT
+RUN_RSS_SOCIAL=0
+RUN_CSE=0
+if [ $((10#$MIN % 15)) -eq 0 ]; then RUN_RSS_SOCIAL=1; fi
+if [ "$MIN" = "05" ]; then RUN_CSE=1; fi
+echo "rss_social=$RUN_RSS_SOCIAL" >> $GITHUB_OUTPUT
+echo "cse=$RUN_CSE" >> $GITHUB_OUTPUT
 
-      - name: Decide which tasks to run
-        id: plan
-        run: |
-          set -euxo pipefail
-          MIN=$(date -u +%M)
-          echo "minute=$MIN" >> $GITHUB_OUTPUT
-          RUN_RSS_SOCIAL=0
-          RUN_CSE=0
-          RUN_SAM=0
-          # Every 15 minutes => 00,15,30,45
-          if [ $((10#$MIN % 15)) -eq 0 ]; then RUN_RSS_SOCIAL=1; fi
-          # Hourly at :05 => CSE
-          if [ "$MIN" = "05" ]; then RUN_CSE=1; fi
-          # Hourly at :20 => SAM
-          if [ "$MIN" = "20" ]; then RUN_SAM=1; fi
-          echo "rss_social=$RUN_RSS_SOCIAL" >> $GITHUB_OUTPUT
-          echo "cse=$RUN_CSE" >> $GITHUB_OUTPUT
-          echo "sam=$RUN_SAM" >> $GITHUB_OUTPUT
 
-      - name: RSS
-        if: steps.plan.outputs.rss_social == '1'
-        run: |
-          set -euxo pipefail
-          curl -fsSL --retry 3 --retry-connrefused --retry-delay 2 --max-time 20 \
-            -H "x-admin-token: ${{ secrets.ADMIN_TOKEN }}" \
-            "$API_BASE/api/v1/admin/poll-now?source=rss"
+- name: RSS
+if: steps.plan.outputs.rss_social == '1'
+run: |
+curl -fsS --retry 2 -H "x-admin-token: ${{ secrets.ADMIN_TOKEN }}" \
+"$API_BASE/api/v1/admin/poll-now?source=rss"
 
-      - name: Social
-        if: steps.plan.outputs.rss_social == '1'
-        run: |
-          set -euxo pipefail
-          curl -fsSL --retry 3 --retry-connrefused --retry-delay 2 --max-time 20 \
-            -H "x-admin-token: ${{ secrets.ADMIN_TOKEN }}" \
-            "$API_BASE/api/v1/admin/poll-now?source=social"
 
-      - name: CSE
-        if: steps.plan.outputs.cse == '1'
-        run: |
-          set -euxo pipefail
-          curl -fsSL --retry 3 --retry-connrefused --retry-delay 2 --max-time 60 \
-            -H "x-admin-token: ${{ secrets.ADMIN_TOKEN }}" \
-            "$API_BASE/api/v1/admin/poll-now?source=cse"
+- name: Social
+if: steps.plan.outputs.rss_social == '1'
+run: |
+curl -fsS --retry 2 -H "x-admin-token: ${{ secrets.ADMIN_TOKEN }}" \
+"$API_BASE/api/v1/admin/poll-now?source=social"
 
-      - name: SAM
-        if: steps.plan.outputs.sam == '1'
-        run: |
-          set -euxo pipefail
-          curl -fsSL --retry 3 --retry-connrefused --retry-delay 2 --max-time 60 \
-            -H "x-admin-token: ${{ secrets.ADMIN_TOKEN }}" \
-            "$API_BASE/api/v1/admin/poll-now?source=sam"
+
+- name: CSE
+if: steps.plan.outputs.cse == '1'
+run: |
+curl -fsS --retry 2 -H "x-admin-token: ${{ secrets.ADMIN_TOKEN }}" \
+"$API_BASE/api/v1/admin/poll-now?source=cse"
