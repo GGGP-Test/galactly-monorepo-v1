@@ -1,150 +1,69 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Galactly — Live Leads</title>
-  <link rel="stylesheet" href="./style.css" />
-  <script defer src="./api-base.js"></script>
-  <style>
-    .toolbar{max-width:1100px;margin:20px auto;padding:0 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .list{max-width:1100px;margin:10px auto 40px;padding:0 20px}
-    .card{border:1px solid var(--stroke);border-radius:12px;padding:14px;background:linear-gradient(180deg,#0f1118,#0b0e13);margin:12px 0}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
-    .meta{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
-    .tag{padding:4px 8px;border:1px solid var(--stroke);border-radius:999px;font:700 11px var(--mont)}
-    .hold{position:relative;display:inline-flex;align-items:center;gap:8px;background:#fff;color:#0a0b10;border:1px solid var(--stroke);border-radius:12px;padding:10px 14px;font:800 12px var(--mont);cursor:pointer;overflow:hidden}
-    .hold .fill{position:absolute;inset:0;width:0%;background:linear-gradient(90deg,rgba(134,247,214,.4),rgba(87,164,255,.5));pointer-events:none}
-  </style>
-</head>
-<body>
-  <header class="nav">
-    <a class="brand" href="./"><b>Galactly</b></a>
-    <nav style="margin-left:auto;display:flex;gap:8px">
-      <a class="btn" href="./engines.html">AI Engines</a>
-      <div id="humans" class="btn">Humans online: —</div>
-    </nav>
-  </header>
-
-  <div class="toolbar">
-    <select id="cat" class="btn"><option value="all">All</option><option>Flexible</option><option>Corrugated</option><option>Labels</option><option>Crating</option></select>
-    <input id="q" placeholder="Search keyword" class="btn" style="min-width:240px"/>
-    <label class="btn">Min fit <input id="fit" type="range" min="60" max="99" value="80"/></label>
-    <button id="alerts" class="btn">Enable Alerts</button>
-  </div>
-
-  <div id="list" class="list"></div>
-
-
-
-
-  <script>
-  // ---- helpers ----
-    const fastLaneLocal = localStorage.getItem('galactly_fastlane') === '1';
-const st = await fetch('/api/v1/status').then(r=>r.json());
-if (fastLaneLocal || (st.multipliers && st.multipliers.payment && st.multipliers.payment > 1.0)) {
-  document.querySelector('#badges').innerHTML += '<span class="badge-fast">Fast-Lane: ON</span>';
-}
-
-function formatAge(sec){
-  if (sec < 60) return `${Math.floor(sec)}s`;
-  const min = sec/60; if (min < 60) return `${Math.floor(min)}m`;
-  const hr = min/60;  if (hr < 24) return `${hr.toFixed(1)}h`;
-  const d = hr/24;    return `${d.toFixed(1)}d`;
-}
-
-    
-  const uid = localStorage.getItem('uid') || ('u-'+Math.random().toString(36).slice(2));
-  localStorage.setItem('uid', uid);
-
-  function timeAgoFromSeconds(s){
-    if (s < 60) return Math.max(0, Math.floor(s)) + 's ago';
-    const m = s / 60;
-    if (m < 60) return Math.floor(m) + 'm ago';
-    const h = s / 3600;
-    if (h < 24) return (Math.round(h * 10) / 10).toFixed(1) + 'h ago';
-    const d = s / 86400;
-    return (Math.round(d * 10) / 10).toFixed(1) + 'd ago';
-  }
-
-  async function gate(){
-    await fetch('/api/v1/gate',{method:'POST',headers:{'Content-Type':'application/json','x-galactly-user':uid},body:JSON.stringify({industries:['Flexible'],region:'US',alerts:false})});
-  }
-
-  function card(L){
-    const div=document.createElement('div');
-    div.className='card';
-    div.innerHTML = `
-      <div class="row">
-       <small>${formatAge(L.age)} ago</small>
-<div class="risk" title="Steal risk">
-  <i style="width: {{risk}}%"></i>
+<div><label>API:
+<input id="apiBase" size="48"/></label>
+<button id="saveApi">Save</button>
 </div>
-<small class="muted">Steal risk: {{risk}}% • {{countdown}}s</small>
+</header>
+<div class="wrap">
+<div id="feed" class="grid"></div>
+</div>
 
 
-      </div>
-      <div class="meta">
-        <span class="tag">${L.cat}</span>
-        <span class="tag">${L.platform}</span>
-        <span class="tag">Fit ${L.fit}</span>
-        <span class="tag">Heat ${L.heat}</span>
-      </div>
-      <div class="row">
-        <div style="opacity:.85">${(L.evidence_snippet||'').slice(0,120)}</div>
-        <div style="display:flex;gap:8px">
-          <button class="hold claim" data-id="${L.id}"><span class="fill"></span><span>Press & Hold to Claim</span></button>
-          <button class="btn why" data-id="${L.id}">Why?</button>
-        </div>
-      </div>`;
-    return div;
-  }
+<script>
+const uidKey='galactly_uid';
+let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
+const apiInput=document.getElementById('apiBase');
+const saved=localStorage.getItem('api_base')||'';
+apiInput.value=saved||'https://<PUT-YOUR-NORTHFLANK-ROUTE>.northflank.app';
+document.getElementById('saveApi').onclick=()=>{ localStorage.setItem('api_base', apiInput.value.trim()); location.reload(); };
+const API=(p)=> (localStorage.getItem('api_base')||apiInput.value).replace(/\/$/,'') + p;
 
-  let holdT=null;
-  function wireHold(btn, ms, fn){
-    const start=()=>{ if(holdT) return; holdT=setTimeout(()=>{ holdT=null; fn(); }, ms); btn.querySelector('.fill').style.width='100%'; };
-    const stop=()=>{ clearTimeout(holdT); holdT=null; btn.querySelector('.fill').style.width='0%'; };
-    btn.addEventListener('mousedown', start); btn.addEventListener('touchstart', start, {passive:true});
-    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=> btn.addEventListener(ev, stop));
-  }
 
-  async function load(){
-    const cat=document.getElementById('cat').value; const q=document.getElementById('q').value; const fit=document.getElementById('fit').value;
-    const r = await fetch(`/api/v1/leads?cat=${cat}&q=${encodeURIComponent(q)}&fitMin=${fit}&region=US`,{headers:{'x-galactly-user':uid}});
-    const d = await r.json();
-    document.getElementById('humans').textContent = 'Humans online: '+(d.humansOnline||0);
-    const list=document.getElementById('list'); list.innerHTML='';
-    (d.leads||[]).forEach(L=>{
-      const node=card(L); list.appendChild(node);
-      const claim=node.querySelector('.claim');
-      wireHold(claim, 1100, async()=>{
-        const r = await fetch('/api/v1/claim',{method:'POST',headers:{'Content-Type':'application/json','x-galactly-user':uid},body:JSON.stringify({leadId:L.id})});
-        const d = await r.json();
-        if(!r.ok){ alert(d.error||'Failed'); return; }
-        alert('Reserved 60s! '+(d.reveal.company||''));
-      });
-      node.querySelector('.why').onclick= async()=>{
-        const r= await fetch('/api/v1/lead-explain?leadId='+L.id,{headers:{'x-galactly-user':uid}}); const d= await r.json();
-        alert('Why this lead:\n- '+(d.reasons||[]).join('\n- '));
-      };
-    });
-  }
+async function post(path, body){
+const r=await fetch(API(path), {method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body:JSON.stringify(body)});
+return r.json();
+}
+async function events(type, lead, meta){ if(!lead||!lead.id) return; try{ await post('/api/v1/events',{type,leadId:lead.id,meta:meta||{}});}catch(e){} }
+function openLead(lead){ events('click', lead, {url:lead.source_url}); window.open(lead.source_url,'_blank','noopener'); }
+function likeLead(lead){ events('like', lead); }
+function dislikeLead(lead){ events('dislike', lead); }
+function muteLead(lead){ let host=''; try{host=new URL(lead.source_url).hostname;}catch(e){} events('mute_domain', lead, {domain:host}); }
 
-  async function enablePush(){
-    if(!('serviceWorker' in navigator)) return alert('Your browser does not support push notifications');
-    const reg = await navigator.serviceWorker.register('./sw.js');
-    const vapid = (await (await fetch(window.API_BASE + '/vapid.txt')).text()).trim();
-    const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlB64ToUint8Array(vapid) });
-    await fetch('/api/v1/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json','x-galactly-user':uid},body:JSON.stringify(sub)});
-    alert('Alerts enabled');
-  }
 
-  function urlB64ToUint8Array(b64){ const pad='='.repeat((4-b64.length%4)%4); const base=(b64+pad).replace(/-/g,'+').replace(/_/g,'/'); const raw=atob(base); const arr=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++)arr[i]=raw.charCodeAt(i); return arr; }
+const elFeed=document.getElementById('feed');
+function card(lead){
+const d=document.createElement('div'); d.className='card';
+d.innerHTML=`<div class="meta">${lead.platform||'source'} • ${new URL(lead.source_url).hostname}</div>
+<div><strong>${escapeHtml(lead.title||'Untitled')}</strong></div>
+<div>${escapeHtml(lead.snippet||'')}</div>
+<div class="btns">
+<button>Open</button>
+<button>👍</button>
+<button>👎</button>
+<button>Mute</button>
+</div>`;
+const [bOpen,bLike,bDis,bMute]=d.querySelectorAll('button');
+bOpen.onclick=()=>openLead(lead);
+bLike.onclick=()=>likeLead(lead);
+bDis.onclick=()=>dislikeLead(lead);
+bMute.onclick=()=>muteLead(lead);
+return d;
+}
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
-  // wire UI
-  document.getElementById('cat').onchange=load; document.getElementById('q').oninput=()=>setTimeout(load,200); document.getElementById('fit').oninput=load; document.getElementById('alerts').onclick=enablePush;
 
-  (async()=>{ await gate(); load(); setInterval(load, 4000); })();
-  </script>
+async function fetchLeads(){
+try{
+const r=await fetch(API('/api/v1/leads'), { headers: {'x-galactly-user':uid} });
+const data=await r.json();
+if(!data?.ok){ throw new Error('bad response'); }
+elFeed.innerHTML='';
+for(const L of data.leads){ elFeed.appendChild(card(L)); }
+document.getElementById('status').textContent='ok';
+setTimeout(fetchLeads, (data.nextRefreshSec||15)*1000);
+}catch(e){ document.getElementById('status').textContent='error'; setTimeout(fetchLeads, 5000); }
+}
+fetchLeads();
+</script>
 </body>
 </html>
