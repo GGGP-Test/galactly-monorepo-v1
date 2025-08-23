@@ -1,4 +1,4 @@
-// @ts-nocheck
-export { pollSocialFeeds as runIngestOnce } from './connectors/socialFirehose.js';
-export { pollSocialFeeds } from './connectors/socialFirehose.js';
-export default {};
+export async function runIngest(source: string){
+console.log('[ingest] stub run on NF; source=', source);
+return { ok:true } as const;
+}
