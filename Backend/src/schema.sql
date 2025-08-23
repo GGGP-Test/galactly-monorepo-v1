@@ -1,9 +1,28 @@
-// File: Backend/src/schema.sql
-// -------------------------------------------------
--- Idempotent additive schema for Galactly
+-- Idempotent base + additive schema for Galactly (safe to run repeatedly)
+fit_user INTEGER,
+heat INTEGER,
+source_url TEXT UNIQUE,
+title TEXT,
+snippet TEXT,
+ttl TIMESTAMPTZ,
+state TEXT DEFAULT 'available',
+reserved_by TEXT,
+reserved_at TIMESTAMPTZ,
+owned_by TEXT,
+owned_at TIMESTAMPTZ,
+created_at TIMESTAMPTZ DEFAULT now()
+);
 
 
--- lead_pool enrichment columns
+CREATE TABLE IF NOT EXISTS claim_window (
+window_id TEXT PRIMARY KEY,
+lead_id BIGINT REFERENCES lead_pool(id) ON DELETE CASCADE,
+user_id TEXT REFERENCES app_user(id) ON DELETE SET NULL,
+reserved_until TIMESTAMPTZ
+);
+
+
+-- enrichment columns (additive)
 ALTER TABLE IF EXISTS lead_pool
 ADD COLUMN IF NOT EXISTS contact_email TEXT,
 ADD COLUMN IF NOT EXISTS contact_handle TEXT,
@@ -34,12 +53,7 @@ updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 
--- per-user prefs
-ALTER TABLE IF EXISTS app_user
-ADD COLUMN IF NOT EXISTS user_prefs JSONB DEFAULT '{}'::jsonb;
-
-
--- default weights
+-- default weights row
 INSERT INTO model_state(segment, weights)
 SELECT 'global', '{"coeffs":{"recency":0.4,"platform":1.0,"domain":0.5,"intent":0.6,"histCtr":0.3,"userFit":1.0},"platforms":{},"badDomains":[]}'::jsonb
 WHERE NOT EXISTS (SELECT 1 FROM model_state WHERE segment='global');
