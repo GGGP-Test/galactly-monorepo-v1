@@ -1,5 +1,3 @@
-// File: Backend/scripts/update-weights.ts
-// -------------------------------------------------
 import { pool, q } from '../src/db';
 function norm(x:number,min:number,max:number,fallback=0.5){ if(!Number.isFinite(x))return fallback; if(max<=min)return fallback; const v=(x-min)/(max-min); return Math.max(0,Math.min(1,v)); }
 async function main(){
