@@ -1,17 +1,16 @@
 # Build & run the Backend service (TypeScript → JS)
-FROM node:20-alpine AS base
+FROM node:20-alpine
 WORKDIR /app
 
 
-# Install backend deps
-COPY Backend/package*.json ./Backend/
-WORKDIR /app/Backend
+# 1) Install deps using only package files for cache
+COPY Backend/package*.json ./
 RUN npm ci
 
 
-# Copy source and build
-COPY Backend/ /app/Backend/
-RUN npm run build
+# 2) Copy source and build
+COPY Backend/ ./
+RUN npm run build && cp -f src/schema.sql dist/schema.sql || true
 
 
 EXPOSE 8787
