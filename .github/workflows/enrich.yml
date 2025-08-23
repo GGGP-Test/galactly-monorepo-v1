@@ -1,0 +1,21 @@
+name: Enrich Leads (light)
+on:
+schedule:
+- cron: "5 * * * *" # hourly at :05
+workflow_dispatch:
+
+
+env:
+API_BASE: https://galactly-api-docker.onrender.com
+
+
+jobs:
+enrich:
+runs-on: ubuntu-latest
+steps:
+- name: Enrich latest 5 leads
+run: |
+# Pull latest IDs (simple demo via API peek or DB would be better)
+curl -s "$API_BASE/api/v1/debug/peek" >/dev/null || true
+# Normally we'd query Neon for latest IDs and loop call /enrich-one
+echo "(Hook ready; swap to a small DB query step when desired)"
