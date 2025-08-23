@@ -1,4 +1,13 @@
 -- v4: telemetry + model state + user prefs
+-- lead enrichment
+ALTER TABLE IF EXISTS lead_pool
+ADD COLUMN IF NOT EXISTS contact_email TEXT,
+ADD COLUMN IF NOT EXISTS contact_handle TEXT,
+ADD COLUMN IF NOT EXISTS meta JSONB,
+ADD COLUMN IF NOT EXISTS last_enriched_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_lead_enriched ON lead_pool(last_enriched_at DESC);
+
+
 CREATE TABLE IF NOT EXISTS event_log (
 id BIGSERIAL PRIMARY KEY,
 user_id TEXT,
@@ -12,9 +21,10 @@ CREATE INDEX IF NOT EXISTS idx_event_user ON event_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_event_type_time ON event_log(event_type, created_at DESC);
 
 
+-- model weights/state
 CREATE TABLE IF NOT EXISTS model_state (
-segment TEXT PRIMARY KEY, -- e.g. 'global' or 'sector:food'
-weights JSONB NOT NULL, -- { coeffs:{recency,platform,domain,intent,histCtr,userFit}, platforms:{}, badDomains:[] }
+segment TEXT PRIMARY KEY,
+weights JSONB NOT NULL,
 updated_at TIMESTAMPTZ DEFAULT now()
 );
 
