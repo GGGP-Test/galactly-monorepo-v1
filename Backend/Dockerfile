@@ -1,35 +1,18 @@
-# ---- build ----
-FROM node:20-bookworm AS build
+# Build & run the Backend service (TypeScript → JS)
+FROM node:20-alpine AS base
 WORKDIR /app
 
-# native deps for better-sqlite3
-RUN apt-get update && apt-get install -y python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
 
-# install deps (Backend is the build context)
-COPY package*.json tsconfig.json* ./
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
-RUN npm i -D typescript ts-node --no-save
+# Install backend deps
+COPY Backend/package*.json ./Backend/
+WORKDIR /app/Backend
+RUN npm ci
 
-# copy sources and compile
-COPY . .
-# no feed generation here; secrets are read at runtime
-RUN npx tsc -p .
-RUN npm prune --omit=dev
 
-# ---- runtime ----
-FROM node:20-bookworm AS runtime
-WORKDIR /app
+# Copy source and build
+COPY Backend/ /app/Backend/
+RUN npm run build
 
-# native deps for better-sqlite3 at runtime
-RUN apt-get update && apt-get install -y python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
-
-ENV NODE_ENV=production
-ENV PORT=8787
-
-COPY --from=build /app/dist /app/dist
-COPY --from=build /app/node_modules /app/node_modules
 
 EXPOSE 8787
-CMD ["node","dist/index.js"]
+CMD ["node","dist/Index.js"]
