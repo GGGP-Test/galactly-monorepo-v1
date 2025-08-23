@@ -1,54 +1,74 @@
 import 'dotenv/config';
-import express from 'express';
-import { randomUUID } from 'crypto';
-import { migrate, q } from './db';
-import { computeScore, type Weights, type UserPrefs } from './scoring';
-
-
-const app = express();
-app.use(express.json({ limit: '200kb' }));
-app.use((req, res, next) => {
-res.header('Access-Control-Allow-Origin', '*');
-res.header('Access-Control-Allow-Headers', 'Content-Type, x-galactly-user, x-admin-token');
-res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-if (req.method === 'OPTIONS') return res.sendStatus(200);
-(req as any).userId = req.header('x-galactly-user') || null;
-next();
-});
-
-
-const PORT = Number(process.env.PORT || 8787);
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
-
-
-// health for NF
-app.get('/', (_req, res) => res.status(200).send('ok'));
-app.get('/healthz', (_req, res) => res.json({ ok: true }));
-app.get('/whoami', (_req, res) => res.send('galactly-api'));
-
-
-// peek
-app.get('/api/v1/debug/peek', async (_req, res) => {
-try{
-const total = (await q('SELECT COUNT(*) FROM lead_pool')).rows[0]?.count || 0;
-const available = (await q("SELECT COUNT(*) FROM lead_pool WHERE state='available'"))
-.rows[0]?.count || 0;
-const cxCount = Object.keys(process.env).filter(k => k.startsWith('GOOGLE_CX_') && (process.env[k]||'').length>0).length;
-res.json({ total: Number(total), available: Number(available),
-env: { RSSHUB_FEEDS_FILE: !!process.env.RSSHUB_FEEDS_FILE,
-FEEDS_NATIVE_FILE: !!process.env.FEEDS_NATIVE_FILE,
-GOOGLE_API_KEY: !!process.env.GOOGLE_API_KEY,
-GOOGLE_CX_COUNT: cxCount }});
-}catch(e){ res.json({ ok:false, error: String(e) }); }
-});
-
-
-function isAdmin(req: express.Request) {
-const token = (req.query.token as string) || req.header('x-admin-token') || '';
-return ADMIN_TOKEN && token === ADMIN_TOKEN;
+if (userId && leads.length) {
+const vals = leads.map(L => `('${userId}', ${Number(L.id)}, 'impression', now(), '{}'::jsonb)`).join(',');
+await q(`INSERT INTO event_log (user_id, lead_id, event_type, created_at, meta) VALUES ${vals}`);
 }
 
 
-// live list of active CSE queries (for cross-platform ingestion)
-app.get('/api/v1/admin/queries.txt', async (req, res) => {
+// Pad with safe demo cards (no stray semicolons)
+if (leads.length < 6) {
+const missing = 6 - leads.length;
+const demos: any[] = [];
+for (let i = 0; i < missing; i++) {
+demos.push({
+id: -(i+1),
+cat: 'demo',
+kw: ['packaging'],
+platform: 'demo',
+fit_user: 60,
+heat: 60,
+source_url: 'https://example.com/demo',
+title: `Sample Lead #${i+1}`,
+snippet: 'Demo card while ingest warms up',
+ttl: new Date(Date.now()+3600_000).toISOString(),
+state: 'available',
+created_at: new Date().toISOString(),
+});
+}
+leads = leads.concat(demos);
+}
+
+
+res.json({ ok:true, leads: leads.map(({_score, ...rest})=>rest), nextRefreshSec });
+});
+
+
+// claim/own minimal flow
+app.post('/api/v1/claim', async (req, res) => {
+const userId = (req as any).userId;
+if (!userId) return res.status(400).json({ ok:false, error:'missing x-galactly-user' });
+const { leadId } = req.body || {};
+if (!leadId || leadId < 0) return res.json({ ok:true, demo:true, reservedForSec:120, reveal:null });
+const windowId = randomUUID();
+const r = await q(
+`UPDATE lead_pool SET state='reserved', reserved_by=$1, reserved_at=now()
+WHERE id=$2 AND state='available' RETURNING id`, [userId, leadId]);
+if (r.rowCount === 0) return res.status(409).json({ ok:false, error:'not available' });
+await q(`INSERT INTO claim_window (window_id, lead_id, user_id, reserved_until)
+VALUES ($1,$2,$3, now()+interval '2 minutes')`, [windowId, leadId, userId]);
+await q(`INSERT INTO event_log (user_id, lead_id, event_type, meta) VALUES ($1,$2,'claim','{}')`, [userId, leadId]);
+res.json({ ok:true, windowId, reservedForSec:120, reveal:{} });
+});
+
+
+app.post('/api/v1/own', async (req, res) => {
+const userId = (req as any).userId;
+const { windowId } = req.body || {};
+if (!userId || !windowId) return res.status(400).json({ ok:false, error:'bad request' });
+const w = await q(`SELECT lead_id FROM claim_window WHERE window_id=$1 AND user_id=$2 AND reserved_until>now()`, [windowId, userId]);
+const leadId = w.rows[0]?.lead_id;
+if (!leadId) return res.status(410).json({ ok:false, error:'window expired' });
+await q(`UPDATE lead_pool SET state='owned', owned_by=$1, owned_at=now() WHERE id=$2`, [userId, leadId]);
+await q(`INSERT INTO event_log (user_id, lead_id, event_type, meta) VALUES ($1,$2,'own','{}')`, [userId, leadId]);
+res.json({ ok:true });
+});
+
+
+app.get('/api/v1/status', async (req, res) => {
+const userId = (req as any).userId || 'anon';
+const fp = userId.split('').reduce((a:number,c:string)=>a+c.charCodeAt(0),0)%1000;
+res.json({ fp, cooldownSec:0, priority:1, multipliers:{ freshness:1.0, fit:1.0 } });
+});
+
+
 migrate().then(()=> app.listen(PORT, '0.0.0.0', ()=> console.log(`galactly-api :${PORT}`)));
