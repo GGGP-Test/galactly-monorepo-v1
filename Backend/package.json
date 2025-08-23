@@ -1,24 +1,26 @@
 {
-"name": "galactly-backend",
-"version": "1.0.0",
-"private": true,
-"type": "commonjs",
-"scripts": {
-"build": "tsc -p tsconfig.json",
-"dev": "tsx watch src/Index.ts",
-"start": "node dist/Index.js",
-"weights": "tsx scripts/update-weights.ts"
-},
-"dependencies": {
-"dotenv": "^16.4.5",
-"express": "^4.19.2",
-"pg": "^8.11.5"
-},
-"devDependencies": {
-"@types/express": "^4.17.21",
-"@types/node": "^20.12.12",
-"@types/pg": "^8.11.6",
-"tsx": "^4.16.2",
-"typescript": "^5.5.4"
-}
+  "name": "galactly-backend",
+  "version": "1.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/Index.ts",
+    "start": "node dist/Index.js",
+    "weights": "tsx scripts/update-weights.ts",
+    "bandit": "tsx scripts/update-bandit.ts",
+    "expand": "tsx scripts/expand-keywords.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "pg": "^8.11.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.12.12",
+    "@types/pg": "^8.11.6",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4"
+  }
 }
