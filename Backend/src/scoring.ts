@@ -1,5 +1,3 @@
-// File: Backend/src/scoring.ts
-// -------------------------------------------------
 export type Weights = {
 coeffs: { recency: number; platform: number; domain: number; intent: number; histCtr: number; userFit: number };
 platforms: Record<string, number>;
