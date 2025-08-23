@@ -1,5 +1,3 @@
-// File: scripts/smoke-test.sh
-// -------------------------------------------------
 #!/usr/bin/env bash
 set -euo pipefail
 BASE="${BASE:-https://galactly-api-docker.onrender.com}"
