@@ -1,14 +1,4 @@
 <!doctype html>
-// claim/own flow
-async function claimLead(lead){
-const r=await post('/api/v1/claim',{leadId:lead.id});
-if(r?.ok){ lead._windowId=r.windowId; lead._exp=Date.now()+(r.reservedForSec||120)*1000; render(); }
-}
-async function ownLead(lead){ if(!lead._windowId) return; const r=await post('/api/v1/own',{windowId:lead._windowId}); if(r?.ok){ events('own',lead); lead._owned=true; render(); } }
-function remain(lead){ if(!lead._exp) return ''; const s=Math.max(0,Math.ceil((lead._exp-Date.now())/1000)); return s+'s'; }
-
-
-const elFeed=document.getElementById('feed');
 function card(lead){
 const d=document.createElement('div'); d.className='card';
 let host=''; try{host=new URL(lead.source_url).hostname;}catch(e){}
