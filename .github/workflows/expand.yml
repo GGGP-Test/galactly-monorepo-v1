@@ -1,0 +1,21 @@
+name: Keyword Expansion
+on:
+  schedule:
+    - cron: "34 3 * * 1"
+  workflow_dispatch:
+
+jobs:
+  expand:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci || npm install
+        working-directory: Backend
+      - name: Expand queries
+        working-directory: Backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/expand-keywords.ts
