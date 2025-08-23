@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-BASE=${BASE:-http://localhost:8787}
-TOKEN=${ADMIN_TOKEN:-CHANGE_ME}
-USER=${USER_ID:-demo-user-1}
+BASE="${BASE:-https://galactly-api-docker.onrender.com}"
+TOKEN="${ADMIN_TOKEN:-CHANGE_ME}"
+USER="${USER_ID:-demo-user-1}"
 
 
 say(){ printf "
@@ -18,8 +18,8 @@ say peek
 curl -fsS "$BASE/api/v1/debug/peek" || true
 
 
-say admin-poll
-curl -fsS "$BASE/api/v1/admin/poll-now?source=all&token=$TOKEN" || true
+say admin-all
+curl -fsS -H "x-admin-token: $TOKEN" "$BASE/api/v1/admin/poll-now?source=all" || true
 
 
 say gate
