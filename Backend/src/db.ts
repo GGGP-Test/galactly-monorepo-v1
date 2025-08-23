@@ -1,5 +1,3 @@
-// File: Backend/src/db.ts
-// -------------------------------------------------
 import { Pool } from 'pg';
 import fs from 'fs';
 import path from 'path';
