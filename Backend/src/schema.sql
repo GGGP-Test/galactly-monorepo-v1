@@ -1,10 +1,4 @@
 -- Idempotent base + additive schema for Galactly (safe to run repeatedly)
-source_url TEXT UNIQUE,
-title TEXT,
-snippet TEXT,
-ttl TIMESTAMPTZ,
-state TEXT DEFAULT 'available',
-reserved_by TEXT,
 reserved_at TIMESTAMPTZ,
 owned_by TEXT,
 owned_at TIMESTAMPTZ,
