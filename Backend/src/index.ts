@@ -1,4 +1,24 @@
 import 'dotenv/config';
+const { nowPlusMinutes: _npm, toISO: _t } = { nowPlusMinutes, toISO };
+const missing = 6 - leads.length;
+const demos = Array.from({ length: missing }).map((_, i) => ({
+id: -(i + 1),
+cat: 'demo', kw: ['packaging'], platform: 'demo', fit_user: 60, heat: 60,
+source_url: 'https://example.com/demo', title: 'Sample Lead', snippet: 'Demo card while ingest warms up', ttl: toISO(nowPlusMinutes(60)), state: 'available', created_at: new Date().toISOString(), _score: 0
+}));
+leads = [...leads, ...demos];
+}
+res.json({ ok: true, leads: leads.map(({_score, ...rest}) => rest), nextRefreshSec });
+});
+
+
+app.post('/api/v1/claim', async (req, res) => {
+const userId = (req as any).userId;
+if (!userId) return res.status(400).json({ ok: false, error: 'missing x-galactly-user' });
+const { leadId } = req.body || {};
+if (!leadId || leadId < 0) return res.json({ ok: true, demo: true, reservedForSec: 120, reveal: null });
+const windowId = randomUUID();
+const reservedUntil = nowPlusMinutes(2);
 
 
 const r = await q(`UPDATE lead_pool SET state='reserved', reserved_by=$1, reserved_at=now()
@@ -15,7 +35,6 @@ res.json({ ok: true, windowId, reservedForSec: 120, reveal: { } });
 });
 
 
-// Own lead (logs event)
 app.post('/api/v1/own', async (req, res) => {
 const userId = (req as any).userId;
 const { windowId } = req.body || {};
@@ -31,7 +50,6 @@ res.json({ ok: true });
 });
 
 
-// Status (unchanged lightweight)
 app.get('/api/v1/status', async (req, res) => {
 const userId = (req as any).userId || 'anon';
 const fp = userId.split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0) % 1000;
