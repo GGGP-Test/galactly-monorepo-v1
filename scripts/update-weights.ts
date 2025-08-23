@@ -5,7 +5,7 @@
 * Reads recent events/leads, computes platform success rates, and updates model_state.global.
 * Run with: node scripts/update-weights.js (after tsc) or tsx scripts/update-weights.ts
 */
-import { pool, q } from '../backend/src/db.js';
+import { pool, q } from '../backend/src/db.ts';
 
 
 function norm(x: number, min: number, max: number, fallback=0.5){
