@@ -1,5 +1,4 @@
 import 'dotenv/config';
-const reservedUntil = nowPlusMinutes(2);
 
 
 const r = await q(`UPDATE lead_pool SET state='reserved', reserved_by=$1, reserved_at=now()
