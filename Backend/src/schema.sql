@@ -1,6 +1,4 @@
 -- Idempotent base + additive schema for Galactly (safe to run repeatedly)
-fit_user INTEGER,
-heat INTEGER,
 source_url TEXT UNIQUE,
 title TEXT,
 snippet TEXT,
