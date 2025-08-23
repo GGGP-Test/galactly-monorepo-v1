@@ -1,3 +1,5 @@
+// File: scripts/smoke-test.sh
+// -------------------------------------------------
 #!/usr/bin/env bash
 set -euo pipefail
 BASE="${BASE:-https://galactly-api-docker.onrender.com}"
@@ -23,9 +25,7 @@ curl -fsS -H "x-admin-token: $TOKEN" "$BASE/api/v1/admin/poll-now?source=all" ||
 
 
 say gate
-curl -fsS -H 'content-type: application/json' -H "x-galactly-user: $USER" \
--d '{"region":"US","email":"you@example.com","alerts":true}' \
-"$BASE/api/v1/gate" || true
+curl -fsS -H 'content-type: application/json' -H "x-galactly-user: $USER" -d '{"region":"US","email":"you@example.com","alerts":true}' "$BASE/api/v1/gate" || true
 
 
 say status
