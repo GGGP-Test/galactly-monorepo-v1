@@ -1,15 +1,17 @@
-# Build & run the Backend service (TypeScript → JS)
+// -------------------------------------------------
+// File: Backend/Dockerfile (Context = Backend)
+// -------------------------------------------------
 FROM node:20-alpine
 WORKDIR /app
 
 
-# 1) Install deps using only package files for cache
-COPY Backend/package*.json ./
-RUN npm ci
+# Dependencies
+COPY package*.json ./
+RUN if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
 
 
-# 2) Copy source and build
-COPY Backend/ ./
+# Source & build
+COPY . .
 RUN npm run build && cp -f src/schema.sql dist/schema.sql || true
 
 
