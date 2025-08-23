@@ -1,6 +1,5 @@
 /** Lightweight daily weights updater. Run with tsx or build + node. */
-import { pool, q } from '../Backend/src/db';
-
+import { pool, q } from '../Backend/src/db'
 
 function norm(x: number, min: number, max: number, fallback=0.5){
 if (!Number.isFinite(x)) return fallback;
