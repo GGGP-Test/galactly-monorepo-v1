@@ -1,6 +1,3 @@
-// -------------------------------------------------
-// File: Backend/Dockerfile (Context = Backend)
-// -------------------------------------------------
 FROM node:20-alpine
 WORKDIR /app
 
