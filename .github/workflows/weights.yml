@@ -1,0 +1,21 @@
+name: Update Weights
+on:
+schedule:
+- cron: "13 2 * * *" # 02:13 UTC daily
+workflow_dispatch:
+
+
+jobs:
+weights:
+runs-on: ubuntu-latest
+steps:
+- uses: actions/checkout@v4
+- uses: actions/setup-node@v4
+with: { node-version: 20 }
+- run: npm ci || npm install
+working-directory: Backend
+- name: Run weight update
+working-directory: Backend
+env:
+DATABASE_URL: ${{ secrets.DATABASE_URL }}
+run: npx tsx scripts/update-weights.ts
