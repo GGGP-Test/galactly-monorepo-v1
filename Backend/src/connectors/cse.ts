@@ -1,4 +1,15 @@
-import { q } from '../db.js';
+import { q } from '../db';
+if (cxs.length === 0) return 0;
+
+
+const baseQs = await readLines(process.env.CSE_QUERIES_FILE);
+const companies = await readLines(process.env.CSE_COMPANY_FILE);
+const queries = buildQueries(baseQs, companies).slice(0, MAX_QUERIES);
+
+
+let inserted = 0;
+for (const { name, cx } of cxs) {
+for (const qstr of queries) {
 const url = new URL('https://www.googleapis.com/customsearch/v1');
 url.searchParams.set('key', API_KEY);
 url.searchParams.set('cx', cx);
@@ -31,9 +42,7 @@ if (res.rows[0]?.id) inserted++;
 } catch {}
 }
 }
-} catch (e) {
-console.error('CSE error', e);
-}
+} catch (e) { console.error('CSE error', e); }
 await sleep(SLEEP_MS);
 }
 }
