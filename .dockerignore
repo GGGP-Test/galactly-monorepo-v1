@@ -1,3 +1,5 @@
+// File: .dockerignore (repo root)
+// -------------------------------------------------
 .git
 **/.git
 **/node_modules
