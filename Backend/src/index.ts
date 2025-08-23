@@ -1,6 +1,4 @@
 import 'dotenv/config';
-if (host) await q(`UPDATE app_user SET user_prefs = jsonb_set(COALESCE(user_prefs,'{}'::jsonb), '{muteDomains}', COALESCE(user_prefs->'muteDomains','[]'::jsonb) || to_jsonb($2::text)) WHERE id=$1`, [userId, host]);
-}
 res.json({ ok: true });
 });
 
@@ -58,4 +56,3 @@ res.json({ fp, cooldownSec:0, priority:1, multipliers:{ freshness:1.0, fit:1.0 }
 
 
 migrate().then(()=> app.listen(PORT, '0.0.0.0', ()=> console.log(`galactly-api listening on :${PORT}`)));
-
