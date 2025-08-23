@@ -320,5 +320,5 @@ app.post('/api/v1/debug/seed', async (_req, res) => {
   res.json({ ok:true, added: demo.length });
 });
 
-const port = process.env.PORT || 8787;
-app.listen(port, () => console.log('API up on', port));
+const PORT = Number(process.env.PORT || 8787);
+app.listen(PORT, '0.0.0.0', () => console.log(`listening on :${PORT}`));
