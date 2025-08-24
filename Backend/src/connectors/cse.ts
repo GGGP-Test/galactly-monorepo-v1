@@ -1,4 +1,24 @@
-export type CseType = "web" | "linkedin" | "youtube";
+// Google Custom Search connector used by /peek and /leads
+snippet?: string;
+displayLink?: string;
+}
+
+
+function env(name: string): string | undefined {
+const v = process.env[name];
+return (v && v.trim()) || undefined;
+}
+
+
+function pickCx(kind: CseType): string | undefined {
+if (kind === "linkedin") return env("GOOGLE_CX_LINKEDIN") || env("GOOGLE_CSE_ID");
+if (kind === "youtube") return env("GOOGLE_CX_YOUTUBE") || env("GOOGLE_CSE_ID");
+return env("GOOGLE_CSE_ID") || env("GOOGLE_CX_WEB") || env("GOOGLE_CX_DEFAULT");
+}
+
+
+export async function cseSearch(params: {
+q: string;
 type?: CseType;
 limit?: number; // Google API returns up to 10 per call
 }): Promise<LeadItem[]> {
@@ -24,26 +44,15 @@ const data: any = await res.json();
 const items: any[] = Array.isArray(data?.items) ? data.items : [];
 
 
-const out: LeadItem[] = [];
-for (const it of items) {
-const title = typeof it?.title === "string" ? it.title : "";
-const url =
-typeof it?.link === "string"
-? it.link
-: typeof it?.formattedUrl === "string"
-? it.formattedUrl
-: "";
-if (title && url) {
-out.push({
+return items
+.map((it) => ({
 source: type,
-title,
-url,
-snippet: typeof it?.snippet === "string" ? it.snippet : undefined,
-displayLink: typeof it?.displayLink === "string" ? it.displayLink : undefined,
-});
-}
-}
-return out;
+title: String(it.title ?? ""),
+url: String(it.link ?? it.formattedUrl ?? ""),
+snippet: it.snippet ? String(it.snippet) : undefined,
+displayLink: it.displayLink ? String(it.displayLink) : undefined,
+}))
+.filter((it) => it.title && it.url);
 }
 
 
@@ -58,18 +67,4 @@ out.push(it);
 }
 }
 return out;
-}
-
-
-// Optional: keep admin route happy if it calls pollCSE()
-export async function pollCSE(): Promise<{ ok: true; ran: boolean }>{
-// Lightweight self-check – no DB writes, just verifies env present
-const have = !!env("GOOGLE_API_KEY") && !!(env("GOOGLE_CSE_ID") || env("GOOGLE_CX_WEB") || env("GOOGLE_CX_DEFAULT") || env("GOOGLE_CX_LINKEDIN") || env("GOOGLE_CX_YOUTUBE"));
-if (!have) return { ok: true, ran: false };
-try {
-await cseSearch({ q: "packaging buyers RFP", type: "web", limit: 1 });
-return { ok: true, ran: true };
-} catch {
-return { ok: true, ran: false };
-}
 }
