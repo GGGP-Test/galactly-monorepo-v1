@@ -1,14 +1,4 @@
 import 'dotenv/config';
-if (userId && leads.length) {
-const vals = leads.map(L => `('${userId}', ${Number(L.id)}, 'impression', now(), '{}'::jsonb)`).join(',');
-await q(`INSERT INTO event_log (user_id, lead_id, event_type, created_at, meta) VALUES ${vals}`);
-}
-
-
-// Pad with safe demo cards (no stray semicolons)
-if (leads.length < 6) {
-const missing = 6 - leads.length;
-const demos: any[] = [];
 for (let i = 0; i < missing; i++) {
 demos.push({
 id: -(i+1),
