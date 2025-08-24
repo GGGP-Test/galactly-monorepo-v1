@@ -11,10 +11,9 @@
 "skipLibCheck": true,
 "noEmitOnError": true
 },
-"include": [
+"files": [
 "src/index.ts",
 "src/routes/leads.ts",
 "src/connectors/cse.ts"
-],
-"exclude": ["node_modules"]
+]
 }
