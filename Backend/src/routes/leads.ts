@@ -9,7 +9,7 @@ export const leadsRouter = Router();
 leadsRouter.get("/peek", async (req, res) => {
 try {
 const q = String(req.query.q || "packaging buyers RFP");
-const type = (String(req.query.type || "web") as CseType);
+const type = String(req.query.type || "web") as CseType;
 const limit = Number(req.query.limit || 10);
 const data = await cseSearch({ q, type, limit });
 res.json({ ok: true, count: data.length, items: data });
@@ -19,21 +19,26 @@ res.status(500).json({ ok: false, error: String((err as Error).message || err) }
 });
 
 
-// GET /api/v1/leads?limit=20
+// GET /api/v1/leads?limit=20&q=...
 // Aggregates across available channels
 leadsRouter.get("/leads", async (req, res) => {
 try {
 const limit = Math.max(1, Math.min(Number(req.query.limit || 20), 50));
-const q = String(req.query.q || "packaging buyer OR procurement OR RFP site:gov OR site:linkedin.com OR site:reddit.com");
+const q = String(
+req.query.q ||
+"packaging buyer OR procurement OR RFP site:gov OR site:linkedin.com OR site:reddit.com"
+);
 
 
-const kinds: CseType[] = ["web", "linkedin", "youtube"]; // will skip missing CXs automatically
+const kinds: CseType[] = ["web", "linkedin", "youtube"]; // will skip if CX missing
 
 
-const batches = await Promise.all(kinds.map(async (type) => {
+const batches = await Promise.all(
+kinds.map(async (type) => {
 const items = await cseSearch({ q, type, limit: Math.min(10, limit) });
 return items;
-}));
+})
+);
 
 
 let merged: LeadItem[] = [];
