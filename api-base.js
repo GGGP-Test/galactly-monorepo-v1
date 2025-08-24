@@ -1,5 +1,5 @@
 // 🔧 EDIT ME: Set this to your Render backend URL
-window.API_BASE = window.API_BASE || 'https://galactly-monorepo-v1.onrender.com';
+window.API_BASE = "https://p01--animated-cellar--vz4ftkwrzdfs.code.run";
 
 // Patch global fetch: if request starts with /api/v1, rewrite to backend
 const _fetch = window.fetch.bind(window);
