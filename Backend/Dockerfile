@@ -1,18 +1,17 @@
+# File: Backend/Dockerfile (Context = Backend)
+# --------------------------------------------------
 FROM node:20-alpine
 WORKDIR /app
 
 
-# deps
+# Dependencies first (better caching)
 COPY package*.json ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
 
 
-# source
+# Copy source and build
 COPY . .
-
-
-# build TS -> dist (don’t rely on package.json script)
-RUN npx tsc -p tsconfig.json && cp -f src/schema.sql dist/schema.sql || true
+RUN npm run build && cp -f src/schema.sql dist/schema.sql || true
 
 
 EXPOSE 8787
