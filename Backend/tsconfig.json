@@ -13,8 +13,7 @@
 },
 "include": [
 "src/index.ts",
-"src/db.ts",
-"src/routes/**/*.ts",
+"src/routes/leads.ts",
 "src/connectors/cse.ts"
 ],
 "exclude": ["node_modules"]
