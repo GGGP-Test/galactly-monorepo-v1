@@ -9,7 +9,7 @@ export const leadsRouter = Router();
 leadsRouter.get("/peek", async (req: Request, res: Response) => {
 try {
 const q = String(req.query.q || "packaging buyers RFP");
-const type = (String(req.query.type || "web") as CseType);
+const type = String(req.query.type || "web") as CseType;
 const limit = Number(req.query.limit || 10);
 const data = await cseSearch({ q, type, limit });
 res.json({ ok: true, count: data.length, items: data });
@@ -29,7 +29,7 @@ req.query.q ||
 );
 
 
-const kinds: CseType[] = ["web", "linkedin", "youtube"]; // will skip missing CXs automatically
+const kinds: CseType[] = ["web", "linkedin", "youtube"]; // missing CXs auto-skip
 
 
 const batches = await Promise.all(
