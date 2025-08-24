@@ -1,81 +1,38 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Live Leads</title>
+<title>Galactly — Live packaging leads</title>
 <style>
-  :root{--bg:#0b0e18;--card:#0c1022;--ink:#fff;--mut:#9aa3b2;--line:rgba(255,255,255,.08)}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-  header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px}
-  main{max-width:1000px;margin:20px auto;padding:0 16px}
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  label{font-size:14px;color:var(--mut)}
-  input,select,button{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0f142b;color:var(--ink)}
-  input[type="text"]{min-width:280px}
-  button{cursor:pointer}
-  ul{list-style:none;padding:0;margin:18px 0}
-  li{padding:12px 10px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:linear-gradient(180deg,#0b1025,#0a0f1f)}
-  a{color:#86f7d6;text-decoration:none}
-  small{opacity:.8}
-</style>
-</head>
-<body>
-<header>
-  <div class="row">
-    <label for="base">API:&nbsp;</label>
-    <input id="base" placeholder="https://p01--animated-cellar--vz4ftkwrzdfs.code.run" />
-    <button id="save">Save</button>
-    <input id="q" placeholder="query" value="packaging buyers RFP" style="flex:1"/>
-    <select id="type">
-      <option value="web">web</option>
-      <option value="linkedin">linkedin</option>
-      <option value="youtube">youtube</option>
-    </select>
-    <input id="limit" type="number" min="1" max="10" value="10" style="width:80px"/>
-    <button id="search">Search</button>
-  </div>
-</header>
-<main>
-  <ul id="list"></ul>
-</main>
-<script>
-  const $ = s => document.querySelector(s);
-  const baseInput = $('#base');
-  baseInput.value = localStorage.getItem('apiBase') || '';
-  $('#save').onclick = () => {
-    let v = baseInput.value.trim();
-    if (!/^https?:\/\//i.test(v)) v = 'https://' + v.replace(/^\/+/, '');
-    baseInput.value = v.replace(/\/+$/,'');
-    localStorage.setItem('apiBase', baseInput.value);
-    alert('Saved API base: ' + baseInput.value);
-  };
-  async function search(){
-    let base = baseInput.value.trim();
-    if (!base) { alert('Enter API base'); return; }
-    if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
-    base = base.replace(/\/+$/,'');
-    const q = encodeURIComponent($('#q').value.trim());
-    const type = $('#type').value;
-    const limit = Math.max(1, Math.min(parseInt($('#limit').value||'10',10), 10));
-    const url = `${base}/api/v1/peek?q=${q}&type=${type}&limit=${limit}`;
-    const res = await fetch(url);
-    const data = await res.json().catch(()=>({items:[]}));
-    const ul = $('#list'); ul.innerHTML='';
-    (data.items||[]).forEach(it=>{
-      const li = document.createElement('li');
-      li.innerHTML = `<a href="${it.url}" target="_blank" rel="noopener">${it.title||it.url}</a><br/>
-                      <small>${it.displayLink||it.url}</small><br/>
-                      <small>${it.snippet||''}</small>`;
-      ul.appendChild(li);
-    });
-    if(!(data.items||[]).length){
-      const li = document.createElement('li');
-      li.innerHTML = `<small>No items. Check your GOOGLE_API_KEY / CSE IDs and that you deployed the latest build.</small>`;
-      ul.appendChild(li);
-    }
-  }
-  $('#search').onclick = search;
-</script>
-</body>
+:root{--bg:#0b0e18;--card:#0c1022;--ink:#fff;--mut:#9aa3b2;--line:rgba(255,255,255,.08);--acc:#86f7d6}
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+header{position:sticky;top:0;background:#0c1022bd;border-bottom:1px solid var(--line);padding:10px 16px;backdrop-filter:blur(10px)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+label{font-size:14px;color:var(--mut)}
+input[type="text"],input[type="email"],select,button{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0f142b;color:#fff}
+button{cursor:pointer}
+main{max-width:1050px;margin:20px auto;padding:0 16px}
+.top{display:flex;align-items:center;gap:10px;color:var(--mut);font-weight:600}
+.pill{border:1px solid var(--line);padding:6px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px}
+.list{margin:16px 0 60px;display:grid;gap:10px}
+.card{padding:14px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,#0b1025,#0a0f1f);display:grid;gap:6px}
+.title{font-weight:700}
+.mut{color:var(--mut)}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.tag{font-size:12px;border:1px solid var(--line);padding:2px 8px;border-radius:999px;color:#cfe7ff}
+.why{margin-left:auto;color:#cfe7ff;cursor:pointer;opacity:.9}
+.why:hover{opacity:1}
+dialog{border:none;border-radius:14px;background:#0c1022;color:#fff;max-width:560px;width:calc(100% - 24px)}
+dialog::backdrop{background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}
+.why-body{padding:16px}
+.why-body a{color:var(--acc);text-decoration:none}
+
+
+/* Onboarding gate */
+.gate{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:50}
+.gate.on{display:flex}
+.gate .panel{width:min(700px,92vw);background:#0c1022;border:1px solid var(--line);border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.gate h3{margin:0 0 8px}
 </html>
