@@ -1,4 +1,13 @@
 // Google Custom Search connector used by /peek and /leads
+
+
+export type CseType = "web" | "linkedin" | "youtube";
+
+
+export interface LeadItem {
+source: CseType;
+title: string;
+url: string;
 snippet?: string;
 displayLink?: string;
 }
@@ -65,6 +74,4 @@ if (!seen.has(key)) {
 seen.add(key);
 out.push(it);
 }
-}
-return out;
 }
