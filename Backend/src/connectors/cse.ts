@@ -1,50 +1,83 @@
-import { q } from '../db';
-if (cxs.length === 0) return 0;
-
-
-const baseQs = await readLines(process.env.CSE_QUERIES_FILE);
-const companies = await readLines(process.env.CSE_COMPANY_FILE);
-const queries = buildQueries(baseQs, companies).slice(0, MAX_QUERIES);
-
-
-let inserted = 0;
-for (const { name, cx } of cxs) {
-for (const qstr of queries) {
-const url = new URL('https://www.googleapis.com/customsearch/v1');
-url.searchParams.set('key', API_KEY);
-url.searchParams.set('cx', cx);
-url.searchParams.set('q', qstr);
-url.searchParams.set('num', String(Math.min(RESULTS_PER_QUERY, 10)));
+export interface CSEItem {
+publishedAt: String(it?.pagemap?.metatags?.[0]?.["article:published_time"] ?? ""),
+source: (() => {
 try {
-const r = await fetch(url.toString());
-if (!r.ok) {
-console.error('CSE HTTP', r.status, await r.text());
-} else {
-const data: any = await r.json();
-const items: any[] = data.items || [];
-for (const it of items) {
-const source_url = it.link as string;
-if (!source_url) continue;
-if (isExcluded(source_url)) continue;
-const title = (it.title as string) || null;
-const snippet = (it.snippet as string) || null;
-if (CSE_REQUIRE_INTENT && !hasIntent(title, snippet)) continue;
-const heat = scoreHeat();
-try {
-const res = await q<{ id: number }>(
-`INSERT INTO lead_pool (cat, kw, platform, fit_user, heat, source_url, title, snippet, ttl, state)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'available')
-ON CONFLICT (source_url) DO NOTHING
-RETURNING id`,
-[null, null, name, 65, heat, source_url, title, snippet, null]
-);
-if (res.rows[0]?.id) inserted++;
-} catch {}
+const u = new URL(String(it.link ?? ""));
+return u.hostname.replace(/^www\./, "");
+} catch {
+return "";
+}
+})(),
+})) as CSEItem[];
+} catch (err) {
+logger.error(`[CSE] fetch failed for query: ${query} →`, err);
+return [];
 }
 }
-} catch (e) { console.error('CSE error', e); }
-await sleep(SLEEP_MS);
+
+
+/**
+* Main entry — polls Google CSE for a list of queries.
+* Returns a de-duplicated list of results across queries.
+*/
+export async function pollCSE(options: PollCSEOptions): Promise<CSEItem[]> {
+const logger = options.logger ?? console;
+
+
+if (!CSE_ENABLED) {
+logger.warn("[CSE] Disabled: GOOGLE_CSE_KEY or GOOGLE_CSE_CX missing.");
+return [];
+}
+
+
+const maxResultsPerQuery = options.maxResultsPerQuery ?? 5;
+const delayMsBetweenQueries = options.delayMsBetweenQueries ?? 250;
+const safe = options.safe ?? "off";
+
+
+const queries = uniq(options.queries.map(normalizeQuery).filter(Boolean));
+if (!queries.length) return [];
+
+
+const all: CSEItem[] = [];
+const seen = new Set<string>();
+
+
+for (let i = 0; i < queries.length; i++) {
+const q = queries[i];
+const batch = await searchOnce(q, {
+queries,
+maxResultsPerQuery,
+delayMsBetweenQueries,
+safe,
+logger,
+} as Required<PollCSEOptions>);
+
+
+for (const item of batch) {
+const key = item.link;
+if (!seen.has(key)) {
+seen.add(key);
+all.push(item);
 }
 }
-return inserted;
+
+
+if (i < queries.length - 1 && delayMsBetweenQueries > 0) {
+await sleep(delayMsBetweenQueries);
 }
+}
+
+
+return all;
+}
+
+
+// ————————————————————————————————————————————————
+// Aliases (keep older imports working)
+// ————————————————————————————————————————————————
+export const runCSE = pollCSE;
+export const searchCSE = pollCSE;
+
+
+export default { pollCSE, runCSE, searchCSE, CSE_ENABLED };
