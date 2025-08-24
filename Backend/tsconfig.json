@@ -11,6 +11,11 @@
 "skipLibCheck": true,
 "noEmitOnError": true
 },
-"include": ["src/**/*.ts"],
+"include": [
+"src/index.ts",
+"src/db.ts",
+"src/routes/**/*.ts",
+"src/connectors/cse.ts"
+],
 "exclude": ["node_modules"]
 }
