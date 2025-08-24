@@ -1,8 +1,9 @@
-.git
+# Keep the image tiny and avoid leaking local artefacts
 node_modules
+npm-debug.log
+.DS_Store
+.git
+.github
+scripts/**
 dist
-Dockerfile
-.dockerignore
-pipeline
-scripts
-*.log
+*.local.*
