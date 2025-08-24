@@ -1,21 +1,4 @@
 // Google Custom Search connector used by /peek and /leads
-
-
-export type CseType = "web" | "linkedin" | "youtube";
-
-
-export interface LeadItem {
-source: CseType;
-title: string;
-url: string;
-snippet?: string;
-displayLink?: string;
-}
-
-
-function env(name: string): string | undefined {
-const v = process.env[name];
-return (v && v.trim()) || undefined;
 }
 
 
@@ -37,7 +20,7 @@ const limit = Math.max(1, Math.min(params.limit ?? 10, 10));
 
 const apiKey = env("GOOGLE_API_KEY");
 const cx = pickCx(type);
-if (!apiKey || !cx) return [];
+if (!apiKey || !cx || !q) return [];
 
 
 const url = new URL("https://www.googleapis.com/customsearch/v1");
@@ -53,15 +36,26 @@ const data: any = await res.json();
 const items: any[] = Array.isArray(data?.items) ? data.items : [];
 
 
-return items
-.map((it) => ({
+const out: LeadItem[] = [];
+for (const it of items) {
+const title = typeof it.title === "string" ? it.title : "";
+const url =
+typeof it.link === "string"
+? it.link
+: typeof it.formattedUrl === "string"
+? it.formattedUrl
+: "";
+if (title && url) {
+out.push({
 source: type,
-title: String(it.title ?? ""),
-url: String(it.link ?? it.formattedUrl ?? ""),
-snippet: it.snippet ? String(it.snippet) : undefined,
-displayLink: it.displayLink ? String(it.displayLink) : undefined,
-}))
-.filter((it) => it.title && it.url);
+title,
+url,
+snippet: typeof it.snippet === "string" ? it.snippet : undefined,
+displayLink: typeof it.displayLink === "string" ? it.displayLink : undefined,
+});
+}
+}
+return out;
 }
 
 
@@ -74,4 +68,6 @@ if (!seen.has(key)) {
 seen.add(key);
 out.push(it);
 }
+}
+return out;
 }
