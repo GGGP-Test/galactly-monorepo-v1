@@ -3,76 +3,75 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Transfusion AI</title>
+<title>Galactly — Packaging Leads (Free) + Money Maker AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#fff;--ink-d:#cfd3df;--stroke:rgba(255,255,255,.12);
-  --accent:#86f7d6;--accent2:#57a4ff;
+  --ink:#fff;--mut:#aeb6c6;--line:rgba(255,255,255,.12);--card:#0b0e18;--card2:#0a0f1f;
+  --accent:#86f7d6;--accent2:#57a4ff;--bad:#ff8a8a;--good:#8bffb7;
   --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
-  --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif
+  --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
 }
-*{box-sizing:border-box} html,body{height:100%}
-
-/* Background refresh */
-body{
-  margin:0;color:var(--ink);font-family:var(--inter);line-height:1.55;overflow-x:hidden;
-  background:
-    radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%),
-    radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%),
-    linear-gradient(180deg,#0b0e18,#06070c 55%)
-}
-
-header{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px) saturate(1.05);background:rgba(5,7,12,.55);border-bottom:1px solid var(--stroke)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;color:var(--ink);font-family:var(--inter);line-height:1.55;background:linear-gradient(180deg,#0b0e18,#06070c 55%)}
+header{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px) saturate(1.05);background:rgba(5,7,12,.55);border-bottom:1px solid var(--line)}
 .nav{max-width:1240px;margin:auto;padding:10px 18px;display:flex;align-items:center;justify-content:space-between}
 .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none}
-.brand svg{width:26px;height:26px} .brand b{font:800 16px var(--mont)}
+.brand svg{width:26px;height:26px}.brand b{font:800 16px var(--mont)}
 nav a{color:#fff;text-decoration:none;padding:8px 10px;border-radius:12px}
 nav a:hover{background:rgba(255,255,255,.06)}
 
-.hero{position:relative;min-height:720px;border-bottom:1px solid var(--stroke)}
+.hero{position:relative;border-bottom:1px solid var(--line)}
 .wrap{max-width:1240px;margin:auto;display:grid;grid-template-columns:1fr min(780px,52%);gap:44px;align-items:center;padding:44px 28px}
 @media (max-width:1100px){.wrap{grid-template-columns:1fr}}
-
-.copy h1{font:800 clamp(32px,6.2vw,66px) var(--mont);line-height:1.05;margin:0 0 12px}
+.copy h1{font:800 clamp(30px,6vw,60px) var(--mont);line-height:1.05;margin:0 0 12px}
 .copy .accent{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
-.copy p{opacity:.94;margin:16px 0 0} .copy .sub{opacity:.86;font-size:14px;margin-top:12px}
-
-/* New button styling (only change to buttons) */
+.copy p{opacity:.94;margin:16px 0 0}.copy .sub{opacity:.86;font-size:14px;margin-top:12px}
 .copy .cta{display:flex;gap:14px;margin-top:28px;flex-wrap:wrap}
-.btn{
-  display:inline-flex;align-items:center;gap:8px;
-  border:1px solid var(--stroke);padding:12px 18px;border-radius:14px;
-  text-decoration:none;font:800 14px var(--inter);transition:transform .08s ease, box-shadow .18s ease, background .18s ease,color .18s ease
-}
-.btn--primary{
-  background:linear-gradient(90deg,#ffffff,#e9f0ff);
-  color:#0b0c12;border-color:transparent;
-  box-shadow:0 10px 30px rgba(120,160,255,.18), inset 0 0 0 1px rgba(255,255,255,.35)
-}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);padding:12px 18px;border-radius:14px;text-decoration:none;font:800 14px var(--inter);transition:transform .08s ease, box-shadow .18s ease, background .18s ease,color .18s ease}
+.btn--primary{background:linear-gradient(90deg,#ffffff,#e9f0ff);color:#0b0c12;border-color:transparent;box-shadow:0 10px 30px rgba(120,160,255,.18), inset 0 0 0 1px rgba(255,255,255,.35)}
 .btn--primary:hover{transform:translateY(-1px);box-shadow:0 14px 36px rgba(120,160,255,.28), inset 0 0 0 1px rgba(255,255,255,.5)}
-.btn--ghost{
-  background:rgba(255,255,255,.06);color:#fff;border-color:rgba(255,255,255,.18)
-}
+.btn--ghost{background:rgba(255,255,255,.06);color:#fff;border-color:rgba(255,255,255,.18)}
 .btn--ghost:hover{background:rgba(255,255,255,.10)}
 .btn svg{width:16px;height:16px;vertical-align:-2px}
 
-.flow{position:relative;background:linear-gradient(180deg,#0b0b10,#07080d);border:1px solid var(--stroke);border-radius:18px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.38)}
-.flow .glass{position:relative;border-radius:16px;background:
-  radial-gradient(120% 130% at 65% 35%,rgba(255,255,255,.06),rgba(255,255,255,.02)),
-  radial-gradient(90% 120% at 20% 80%,rgba(255,255,255,.05),rgba(255,255,255,.01));
-  overflow:hidden;min-height:400px}
-.flow .glass::before{content:"";display:block;padding-top:56.25%}
-#flowCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:16px}
+/* Pool */
+.section{max-width:1240px;margin:28px auto;padding:0 28px}
+.h2{font:800 22px var(--mont);margin:0 0 12px}
+.pool{display:grid;grid-template-columns:1fr 320px;gap:16px}
+@media (max-width:1100px){.pool{grid-template-columns:1fr}}
+.card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:16px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;padding:12px}
+.controls input, .controls select, .controls button{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#0f142b;color:#fff}
+.controls .grow{flex:1}
+.list{margin:0;padding:0;list-style:none}
+.item{padding:12px;border-top:1px dashed rgba(255,255,255,.06)}
+.item:first-child{border-top:none}
+.item a{color:#86f7d6;text-decoration:none}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.badge{border:1px solid var(--line);border-radius:999px;padding:3px 8px;font:700 11px var(--mont);opacity:.85}
+.badge.hot{border-color:rgba(255,200,87,.55);background:rgba(255,200,87,.08)}
+.badge.sam{border-color:rgba(87,164,255,.55);background:rgba(87,164,255,.08)}
+.meta{opacity:.8;font-size:12px;margin-top:6px}
 
-.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
-.badge{background:#0b0d14;border:1px dashed var(--stroke);border-radius:12px;padding:7px 11px;font:700 12px var(--mont);display:flex;gap:6px;align-items:center}
-.badge small{opacity:.75;font-weight:600}
+.side{padding:12px 12px 16px}
+.side .box{border:1px dashed var(--line);border-radius:14px;padding:12px;margin-top:10px}
+.side b{font:800 13px var(--mont)}
+.side small{opacity:.85}
 
-.ticker{margin-top:14px;max-height:108px;overflow:auto;border-top:1px solid var(--stroke);padding-top:10px;scrollbar-width:none;-ms-overflow-style:none}
-.ti{font-size:12px;opacity:.95;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.06)} .ti:last-child{border-bottom:none}
+/* Gate */
+.gate{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+.gate .pane{width:min(560px,96vw);background:linear-gradient(180deg,#0c0f19,#0a0e18);border:1px solid var(--line);border-radius:16px;padding:18px}
+.gate h3{margin:0 0 8px;font:800 22px var(--mont)}
+.gate p{opacity:.9;margin:0 0 12px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form input,.form select{padding:12px;border-radius:12px;border:1px solid var(--line);background:#0f142b;color:#fff}
+.form button{grid-column:1/-1}
+
+.hint{margin-top:8px;font-size:12px;opacity:.8}
 </style>
 </head>
 <body>
@@ -81,14 +80,15 @@ nav a:hover{background:rgba(255,255,255,.06)}
     <a class="brand" href="#">
       <svg viewBox="0 0 64 64" aria-hidden="true">
         <defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs>
-        <circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/>
+        <circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".12" stroke-width="2"/>
         <path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/>
         <circle cx="20" cy="20" r="6" fill="url(#g)"/>
       </svg>
       <b>Galactly</b>
     </a>
     <nav>
-      <a href="#hero">Hero</a>
+      <a href="#pool">Live pool</a>
+      <a href="#mm">Money Maker AI</a>
     </nav>
   </div>
 </header>
@@ -96,64 +96,182 @@ nav a:hover{background:rgba(255,255,255,.06)}
 <section class="hero" id="hero">
   <div class="wrap">
     <div class="copy">
-      <!-- current site copy -->
-      <h1>Find US &amp; Canada <span class="accent">Packaging</span> Buyers in <span class="accent">&lt;30s</span></h1>
-      <p>Real posts &amp; tenders from SAM.gov, Reddit, and public feeds. Free forever. Automations &amp; CRM handoff are paid.</p>
-      <p class="sub">Built for packaging owners and sales teams. B2B / Corporate leads live. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding. Just clicks.</p>
+      <h1>Find US & Canada <span class="accent">Packaging</span> Buyers in <span class="accent">&lt;30s</span></h1>
+      <p>Real posts & tenders from public feeds. Free forever. Priority access, automations & CRM handoff are paid.</p>
+      <p class="sub">Built for packaging owners & sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding — just clicks.</p>
       <div class="cta">
-        <a class="btn btn--primary" href="./free-panel.html">Open the Live Feed</a>
-        <a class="btn btn--ghost" href="#">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          Watch 90s demo
-        </a>
+        <a class="btn btn--primary" href="#pool">Open the Live Pool</a>
+        <a class="btn btn--ghost" href="#mm">See Money Maker AI</a>
       </div>
     </div>
-
-    <div class="flow">
-      <div class="glass"><canvas id="flowCanvas"></canvas></div>
-      <div class="meta">
-        <div class="badge"><small>Leads / 30 sec</small><span id="b-leads">0</span></div>
-        <div class="badge"><small>First connection</small><span id="b-first">—</span></div>
-        <div class="badge"><small>Ready now</small><span id="b-ready">—</span></div>
-        <div class="badge"><small>Quoted</small><span id="b-quote">—</span></div>
-        <div class="badge"><small>AI closed</small><span id="b-ai">—</span></div>
-        <div class="badge"><small>Rep closed</small><span id="b-human">—</span></div>
-        <div class="badge"><small>Saved / mo</small><span id="b-saved">—</span></div>
-      </div>
-      <div class="ticker" id="ticker"></div>
+    <div class="card" style="padding:16px">
+      <div style="font:800 14px var(--mont);margin-bottom:8px">What happens every 30 seconds</div>
+      <ul class="list" id="ticker" style="max-height:260px;overflow:auto"></ul>
     </div>
   </div>
 </section>
 
+<section class="section" id="pool">
+  <div class="h2">Live Leads Pool (free)</div>
+  <div class="pool">
+    <div class="card">
+      <div class="controls">
+        <input id="q" class="grow" placeholder="Try: packaging buyer RFP OR RFQ OR tender (United States OR Canada)"/>
+        <select id="type"><option value="web">web</option><option value="linkedin">linkedin</option><option value="youtube">youtube</option></select>
+        <label style="display:flex;gap:6px;align-items:center"><input id="hotOnly" type="checkbox" checked/> hot only</label>
+        <button id="searchBtn">Search</button>
+      </div>
+      <ul class="list" id="list"></ul>
+    </div>
+
+    <aside class="card side">
+      <div class="box">
+        <b>How the free pool works</b><br/>
+        <small>We scan public signals and surface the <i>intent</i> ones (RFQ, buying now, procurement). Everyone sees these for free. Paid users get <u>first pick</u>, auto-outreach and CRM/ERP handoff.</small>
+      </div>
+      <div class="box">
+        <b>Ready to win more deals?</b>
+        <ul style="margin:8px 0 0 18px;opacity:.9">
+          <li>Priority access to hot leads</li>
+          <li>1‑click email / SMS / call / LinkedIn</li>
+          <li>Auto‑quote & AI closer (handoff to rep)</li>
+        </ul>
+        <button class="btn btn--primary" style="margin-top:10px;width:100%" onclick="alert('Coming soon — we'll enable checkout next')">Upgrade (coming soon)</button>
+      </div>
+      <div class="box">
+        <b>List your plant (free)</b><br/>
+        <small>Let buyers find you by capability. Shows in the pool as inbound opportunities.</small>
+        <button class="btn btn--ghost" style="margin-top:10px;width:100%" onclick="openGate()">Add my business</button>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<section class="section" id="mm">
+  <div class="h2">Money Maker AI (paid)</div>
+  <div class="card" style="padding:12px 12px 2px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <div class="box"><b>Leads per 30s</b><div id="k-leads">0</div></div>
+      <div class="box"><b>Hot filtered</b><div id="k-hot">0</div></div>
+      <div class="box"><b>AI/Rep closes</b><div id="k-close">0 / 0</div></div>
+    </div>
+    <div class="hint">This is a visual summary. Upgrading unlocks priority feed + automations (email/SMS/call/quote) and AI closer.
+    </div>
+  </div>
+</section>
+
+<!-- Opt‑in / gate overlay -->
+<div class="gate" id="gate">
+  <div class="pane">
+    <h3>Dial in your feed</h3>
+    <p>Tell us where you sell so we can put the right buyers in front of you. Free forever. You can opt‑out anytime.</p>
+    <div class="form">
+      <input id="email" placeholder="work email (for alerts)"/>
+      <select id="region">
+        <option value="US">United States</option>
+        <option value="Canada">Canada</option>
+        <option value="Other">Other</option>
+      </select>
+      <button class="btn btn--primary" onclick="saveGate()">Save & show leads</button>
+    </div>
+    <div class="hint">We only use your email to send you alerts you opt into. No spam, ever.</div>
+  </div>
+</div>
+
+<script src="./api-base.js"></script>
 <script>
-const cvs=document.getElementById('flowCanvas');const DPR=Math.min(2.2,window.devicePixelRatio||1);
-let ctx=null,started=false;const K={leads:document.getElementById('b-leads'),first:document.getElementById('b-first'),ready:document.getElementById('b-ready'),quote:document.getElementById('b-quote'),ai:document.getElementById('b-ai'),human:document.getElementById('b-human'),saved:document.getElementById('b-saved')};const ticker=document.getElementById('ticker');
-let cx=0,cy=0,R=0,coreX=0,coreY=0,coreR=22;let chips=[];
-const CHANNELS=[{name:'Email',color:'rgba(134,247,214,0.65)'},{name:'SMS',color:'rgba(160,255,160,0.65)'},{name:'Call',color:'rgba(159,208,255,0.65)'},{name:'LinkedIn',color:'rgba(120,200,255,0.65)'},{name:'Quote',color:'rgba(255,210,140,0.70)'},{name:'ERP',color:'rgba(200,170,255,0.70)'}];
-const CITIES=[{city:'New York',lat:40.7128,lon:-74.006},{city:'Toronto',lat:43.6532,lon:-79.3832},{city:'Chicago',lat:41.8781,lon:-87.6298},{city:'Dallas',lat:32.7767,lon:-96.797},{city:'Miami',lat:25.7617,lon:-80.1918},{city:'Seattle',lat:47.6062,lon:-122.3321},{city:'San Francisco',lat:37.7749,lon:-122.4194},{city:'Los Angeles',lat:34.0522,lon:-118.2437},{city:'Mexico City',lat:19.4326,lon:-99.1332},{city:'Bogotá',lat:4.711,lon:-74.0721},{city:'São Paulo',lat:-23.5505,lon:-46.6333},{city:'Buenos Aires',lat:-34.6037,lon:-58.3816}];
-const FIRST="Ava,Noah,Sophia,Liam,Isabella,Elijah,Mia,Lucas,Amelia,Mason,Harper,Logan,Evelyn,James,Abigail,Oliver,Emily".split(',');
-const LAST="Smith,Johnson,Williams,Brown,Jones,Miller,Davis,Garcia,Wilson,Moore,Taylor,Anderson".split(',');
-const pick=a=>a[(Math.random()*a.length)|0];const center={lat:25*Math.PI/180,lon:-90*Math.PI/180};
-function proj(lat,lon){const dLon=lon-center.lon;const sinC=Math.sin(center.lat),cosC=Math.cos(center.lat);const sinLat=Math.sin(lat),cosLat=Math.cos(lat);const sinDL=Math.sin(dLon),cosDL=Math.cos(dLon);const k=sinC*sinLat+cosC*cosLat*cosDL;if(k<=0)return null;return{x:cx+R*(cosLat*sinDL),y:cy-R*(cosC*sinLat-sinC*cosLat*cosDL)}}
-const LAND_NA=[[71,-156],[48,-124],[34,-118],[25,-111],[20,-105],[18,-103],[16,-99],[20,-90],[27,-81],[31,-80],[36,-76],[42,-72],[49,-64],[54,-60],[60,-75],[69,-95],[71,-156]];
-const LAND_SA=[[10,-79],[8,-74],[5,-60],[0,-58],[-8,-54],[-18,-44],[-24,-42],[-30,-52],[-40,-61],[-48,-70],[-55,-66],[-33,-71],[-20,-70],[-12,-77],[-8,-79],[10,-79]];
-const packets=[];const targets={leads:0,first:'8 sec',ready:'48%',quote:'62%',ai:'24%',human:'29%',saved:'$14,200'};const state={leads:0};
-function updateBadges(){state.leads=Math.round(state.leads*0.95+targets.leads*0.05);K.leads.textContent=state.leads;K.first.textContent=targets.first;K.ready.textContent=targets.ready;K.quote.textContent=targets.quote;K.ai.textContent=targets.ai;K.human.textContent=targets.human;K.saved.textContent=targets.saved}
-function pushTick(html){const d=document.createElement('div');d.className='ti';d.innerHTML=html;ticker.insertBefore(d,ticker.firstChild);while(ticker.children.length>6)ticker.lastElementChild.remove()}
-function cubic(p0,p1,p2,p3,t){const it=1-t;return{x:it*it*it*p0.x+3*it*it*t*p1.x+3*it*t*t*p2.x+t*t*t*p3.x,y:it*it*it*p0.y+3*it*it*t*p1.y+3*it*t*t*p2.y+t*t*t*p3.y}}
-function lerp(a,b,t){return a+(b-a)*t}
-function resize(){const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(resize,60);return}cvs.width=Math.floor(r.width*DPR);cvs.height=Math.floor(r.height*DPR);cvs.style.width=r.width+'px';cvs.style.height=r.height+'px';ctx=cvs.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);cx=r.width*0.28;cy=r.height*0.56;R=Math.min(r.width*0.30,r.height*0.46);coreX=r.width*0.56;coreY=r.height*0.56;coreR=Math.max(18,Math.min(24,r.width*0.03));const baseX=r.width*0.83,baseY=coreY,rad=Math.min(110,r.height*0.20),a0=-Math.PI/3,a1=Math.PI/3;chips=CHANNELS.map((c,i)=>{const a=CHANNELS.length>1?a0+(a1-a0)*(i/(CHANNELS.length-1)):0;return{x:baseX+rad*Math.cos(a),y:baseY+rad*Math.sin(a),r:12,label:c.name,color:c.color}})}
-window.addEventListener('resize',resize);
-function drawHemisphere(){const g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,R*1.1);g.addColorStop(0,'rgba(255,255,255,.05)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();ctx.beginPath();LAND_NA.concat(LAND_SA).forEach(([la,lo],i)=>{const P=proj(la*Math.PI/180,lo*Math.PI/180);if(!P)return;i?ctx.lineTo(P.x,P.y):ctx.moveTo(P.x,P.y)});ctx.closePath();ctx.fillStyle='rgba(134,247,214,0.09)';ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.14)';ctx.stroke()}
-function drawCore(t){const g=ctx.createRadialGradient(coreX,coreY,0,coreX,coreY,coreR*2.6);g.addColorStop(0,'rgba(255,255,255,.04)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(coreX,coreY,coreR*2.6,0,Math.PI*2);ctx.fill();ctx.save();ctx.translate(coreX,coreY);for(let i=0;i<3;i++){const r=coreR+i*18;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.strokeStyle=`rgba(255,255,255,${0.14-i*0.02})`;ctx.lineWidth=1.2;ctx.stroke();const a0=t*0.4+i*0.6,a1=a0+Math.PI*0.42;ctx.beginPath();ctx.arc(0,0,r,a0,a1);const lg=ctx.createLinearGradient(Math.cos(a0)*r,Math.sin(a0)*r,Math.cos(a1)*r,Math.sin(a1)*r);lg.addColorStop(0,'rgba(255,255,255,.70)');lg.addColorStop(1,'rgba(255,255,255,.18)');ctx.strokeStyle=lg;ctx.lineWidth=3;ctx.stroke()}const pul=1+0.2*Math.sin(t*1.1),pr=coreR*0.9*pul,cg=ctx.createRadialGradient(0,0,0,0,0,pr*2.0);cg.addColorStop(0,'rgba(255,255,255,.90)');cg.addColorStop(1,'rgba(255,255,255,0)');ctx.globalCompositeOperation='lighter';ctx.beginPath();ctx.arc(0,0,pr*2.0,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill();ctx.restore();ctx.globalCompositeOperation='source-over'}
-function drawChannels(){CHANNELS.forEach((ch,i)=>{const chip=chips[i];if(!chip)return;ctx.save();ctx.strokeStyle=ch.color;ctx.globalAlpha=0.5;ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(coreX,coreY);ctx.quadraticCurveTo((coreX+chip.x)/2,(coreY+chip.y*1.1)/2,chip.x,chip.y);ctx.stroke();ctx.globalAlpha=1;ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.beginPath();ctx.moveTo(coreX,coreY);ctx.quadraticCurveTo((coreX+chip.x)/2,(coreY+chip.y*1.1)/2,chip.x,chip.y);ctx.stroke();const g=ctx.createRadialGradient(chip.x,chip.y,0,chip.x,chip.y,chip.r*2.2);g.addColorStop(0,ch.color);g.addColorStop(1,'rgba(255,255,255,0)');ctx.beginPath();ctx.arc(chip.x,chip.y,chip.r*2.0,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();ctx.beginPath();ctx.arc(chip.x,chip.y,chip.r,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.24)';ctx.lineWidth=1.2;ctx.stroke();ctx.font="700 11px Montserrat, Inter, system-ui";ctx.fillStyle='rgba(255,255,255,.92)';ctx.textAlign='center';ctx.fillText(chip.label,chip.x,chip.y-chip.r-8);ctx.restore()})}
-function drawPaths(t){ctx.save();ctx.globalCompositeOperation='lighter';packets.forEach(p=>{ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.p0.x,p.p0.y);ctx.bezierCurveTo(p.p1.x,p.p1.y,p.p2.x,p.p2.y,p.p3.x,p.p3.y);ctx.stroke();const u=p.t,q=u*u*(3-2*u),A=cubic(p.p0,p.p1,p.p2,p.p3,q);ctx.beginPath();ctx.arc(A.x,A.y,2.2,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.96)';ctx.fill();if(p.phase==='core'){const chip=chips[p.idx];const u2=p.t2,q2=u2*u2*(3-2*u2);const bx=lerp(coreX,(coreX+chip.x)/2,q2),by=lerp(coreY,(coreY+chip.y*1.1)/2,q2);const px=lerp(bx,chip.x,q2),py=lerp(by,chip.y,q2);ctx.beginPath();ctx.arc(px,py,2.2,0,Math.PI*2);ctx.fillStyle=CHANNELS[p.idx].color;ctx.fill()}});ctx.restore()}
-function spawn(){const c=CITIES[(Math.random()*CITIES.length)|0];const P=proj(c.lat*Math.PI/180,c.lon*Math.PI/180);if(!P)return;const name=pick(FIRST)+" "+pick(LAST);const start={x:P.x,y:P.y};const mpx=(start.x+coreX)/2,mpy=(start.y+coreY)/2;const p0=start,p1={x:mpx-40,y:mpy-30},p2={x:mpx+40,y:mpy+30},p3={x:coreX,y:coreY};const idx=(Math.random()*CHANNELS.length)|0;packets.push({p0,p1,p2,p3,idx,t:0,t2:0,phase:'toCore'});targets.leads=Math.min(500,targets.leads+(5+Math.random()*12|0));targets.first=((3+Math.random()*15)|0)+' sec';targets.ready=(35+Math.random()*30|0)+'%';targets.quote=(40+Math.random()*30|0)+'%';targets.ai=(12+Math.random()*18|0)+'%';targets.human=(18+Math.random()*28|0)+'%';targets.saved='$'+(12000+(Math.random()*18000|0)).toLocaleString();pushTick(`<strong>${name}</strong> · ${c.city} → <em>${CHANNELS[idx].name}</em>`)}
-function update(dt){for(let i=packets.length-1;i>=0;i--){const p=packets[i];if(p.phase==='toCore'){p.t=Math.min(1,p.t+dt*0.08);if(p.t>=1){p.phase='core';p.t2=0}}else{p.t2=Math.min(1,p.t2+dt*0.06);if(p.t2>=1){packets.splice(i,1)}}}}
-function draw(ts){const t=ts/1000;ctx.clearRect(0,0,cvs.width/DPR,cvs.height/DPR);drawHemisphere();drawPaths(t);drawCore(t);drawChannels()}
-let last=0,acc=0;function loop(ts){requestAnimationFrame(loop);if(!last)last=ts;const dt=Math.min(0.05,(ts-last)/1000);last=ts;update(dt);draw(ts);updateBadges();acc+=dt;if(acc>(1.2+Math.random()*1.2)){acc=0;if(packets.length<12)spawn()}}
-function init(){if(started)return;const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(init,60);return}started=true;resize();requestAnimationFrame(loop)}
-document.addEventListener('DOMContentLoaded',init);window.addEventListener('load',init);
+// ---------- tiny state ----------
+const $ = s => document.querySelector(s);
+const list = $('#list');
+const ticker = $('#ticker');
+const INTENT = ['rfp','rfq','request for quote','request for proposal','tender','bid','buying','procurement','sourcing','need supplier','quote'];
+const SAM_HINT = ['sam.gov','beta.sam.gov'];
+const DEFAULT_Q = 'packaging (buyer OR procurement OR sourcing OR RFP OR RFQ OR tender) (United States OR Canada)';
+
+function pushTick(html){const d=document.createElement('li');d.className='item';d.innerHTML=html;ticker.insertBefore(d,ticker.firstChild);while(ticker.children.length>6)ticker.lastElementChild.remove()}
+
+// ---------- onboard gate ----------
+function openGate(){ $('#gate').style.display='flex'; }
+function maybeGate(){
+  try{ const v=JSON.parse(localStorage.getItem('gal_onboard')||'{}'); if(v && v.region){ return; } }catch{}
+  openGate();
+}
+async function saveGate(){
+  const email = $('#email').value.trim();
+  const region = $('#region').value;
+  localStorage.setItem('gal_onboard', JSON.stringify({email,region,ts:Date.now()}));
+  try{ await fetch('/api/v1/gate',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email,region,alerts:!!email})}); }catch{}
+  $('#gate').style.display='none';
+  doSearch();
+}
+
+// ---------- hot score ----------
+function scoreItem(it){
+  const title=(it.title||'').toLowerCase();
+  const sn=(it.snippet||'').toLowerCase();
+  const host=(it.displayLink||it.url||'').toLowerCase();
+  let s=0; INTENT.forEach(k=>{ if(title.includes(k)||sn.includes(k)) s+=3; });
+  SAM_HINT.forEach(k=>{ if(host.includes(k)) s+=6; });
+  if(host.includes('linkedin.com')) s+=2;
+  if(host.includes('reddit.com')) s+=1;
+  return s;
+}
+
+// ---------- search / render ----------
+async function doSearch(){
+  const qVal = ($('#q').value||'').trim() || DEFAULT_Q;
+  const type = $('#type').value;
+  const hotOnly = $('#hotOnly').checked;
+  $('#searchBtn').disabled = true; $('#searchBtn').textContent = 'Searching…';
+  try{
+    const res = await fetch(`/api/v1/peek?q=${encodeURIComponent(qVal)}&type=${encodeURIComponent(type)}&limit=10`);
+    const data = await res.json();
+    const items = Array.isArray(data.items)?data.items:[];
+    // score & sort
+    const enriched = items.map(it=>({ ...it, _score:scoreItem(it) })).sort((a,b)=>b._score-a._score);
+    const filtered = hotOnly ? enriched.filter(it=>it._score>=3) : enriched;
+    list.innerHTML = '';
+    if(!filtered.length){ list.innerHTML = '<li class="item"><small>No items. Try a broader query or uncheck “hot only”.</small></li>'; }
+    filtered.forEach(it=>{
+      const hot = it._score>=3;
+      const sam = SAM_HINT.some(k=>(it.displayLink||it.url||'').toLowerCase().includes(k));
+      const li=document.createElement('li'); li.className='item';
+      li.innerHTML = `
+        <a href="${it.url}" target="_blank" rel="noopener">${it.title||it.url}</a>
+        <div class="badges">
+          ${hot?'<span class="badge hot">HOT</span>':''}
+          ${sam?'<span class="badge sam">SAM.gov</span>':''}
+          ${it.displayLink?`<span class="badge">${it.displayLink}</span>`:''}
+        </div>
+        ${it.snippet?`<div class="meta">${it.snippet}</div>`:''}
+      `;
+      list.appendChild(li);
+    });
+
+    // demo KPIs + ticker
+    const leadsPerWin = items.length;
+    const hotCount = filtered.filter(x=>x._score>=3).length;
+    $('#k-leads').textContent = leadsPerWin;
+    $('#k-hot').textContent = hotCount;
+    $('#k-close').textContent = `${Math.round(hotCount*0.28)} / ${Math.round(hotCount*0.16)}`;
+    pushTick(`<small>${new Date().toLocaleTimeString()} — Window: ${leadsPerWin} leads, ${hotCount} hot</small>`);
+  }catch(e){
+    list.innerHTML = `<li class="item"><small style="color:${'var(--bad)'}">Fetch failed (${e.message}). Check API base & CORS.</small></li>`;
+  }finally{
+    $('#searchBtn').disabled = false; $('#searchBtn').textContent = 'Search';
+  }
+}
+
+$('#searchBtn').addEventListener('click', doSearch);
+
+// first load
+window.addEventListener('load', ()=>{
+  $('#q').value = DEFAULT_Q;
+  maybeGate();
+  doSearch();
+  // refresh every 30s
+  setInterval(doSearch, 30_000);
+});
 </script>
 </body>
 </html>
