@@ -1,21 +1,22 @@
 {
-"name": "galactly-backend",
-"version": "1.2.0",
-"private": true,
-"main": "dist/index.js",
-"scripts": {
-"build": "tsc -p tsconfig.json",
-"start": "node dist/index.js",
-"dev": "tsx watch src/index.ts"
-},
-"dependencies": {
-"cors": "^2.8.5",
-"express": "^4.19.2"
-},
-"devDependencies": {
-"@types/express": "^4.17.21",
-"@types/node": "^20.14.11",
-"tsx": "^4.16.2",
-"typescript": "^5.6.2"
-}
+  "name": "galactly-backend",
+  "version": "1.1.2",
+  "private": true,
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.12.7",
+    "typescript": "^5.6.2"
+  }
 }
