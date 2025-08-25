@@ -1,11 +1,20 @@
 import { Router, Request, Response } from "express";
 import { cseSearch, dedupe, CseType, LeadItem } from "../connectors/cse";
-import { requireAuth } from "../auth";
 
 export const leadsRouter = Router();
 
-// all lead endpoints require auth
-leadsRouter.use(requireAuth);
+// GET /api/v1/peek?q=...&type=web|linkedin|youtube&limit=10
+leadsRouter.get("/peek", async (req: Request, res: Response) => {
+  try {
+    const q = String(req.query.q || "packaging buyers RFP");
+    const type = String(req.query.type || "web") as CseType;
+    const limit = Number(req.query.limit || 10);
+    const data = await cseSearch({ q, type, limit });
+    res.json({ ok: true, count: data.length, items: data });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String((err as Error).message || err) });
+  }
+});
 
 // GET /api/v1/leads?limit=20&q=...
 leadsRouter.get("/leads", async (req: Request, res: Response) => {
@@ -13,7 +22,7 @@ leadsRouter.get("/leads", async (req: Request, res: Response) => {
     const limit = Math.max(1, Math.min(Number(req.query.limit || 20), 50));
     const q = String(
       req.query.q ||
-        "packaging buyer OR copacker OR corrugated boxes OR cartons OR mailers OR RFP site:gov OR site:linkedin.com OR site:reddit.com"
+        "packaging buyer OR procurement OR RFP site:gov OR site:linkedin.com OR site:reddit.com"
     );
 
     const kinds: CseType[] = ["web", "linkedin", "youtube"];
@@ -26,25 +35,10 @@ leadsRouter.get("/leads", async (req: Request, res: Response) => {
 
     let merged: LeadItem[] = [];
     for (const b of batches) merged = merged.concat(b);
-
-    // filter: down-rank or drop generic .gov & sam.gov unless strongly relevant
-    const strong = /(packag|copack|corrugat|carton|mailer|box|rfp|rfq)/i;
-    function keep(it: LeadItem) {
-      const host = (it.displayLink || it.url).toLowerCase();
-      const text = `${it.title} ${it.snippet || ""}`;
-      const isSam = /(^|[./])sam\.gov($|[/:])/i.test(host);
-      const isGenericGov = /\.gov($|[/:])/i.test(host);
-      if (isSam && !strong.test(text)) return false;
-      if (isGenericGov && !strong.test(text)) return false;
-      return true;
-    }
-
-    const items = dedupe(merged).filter(keep).slice(0, limit);
+    const items = dedupe(merged).slice(0, limit);
     res.json({ ok: true, q, items, count: items.length });
   } catch (err) {
-    res
-      .status(500)
-      .json({ ok: false, error: String((err as Error).message || err) });
+    res.status(500).json({ ok: false, error: String((err as Error).message || err) });
   }
 });
 
