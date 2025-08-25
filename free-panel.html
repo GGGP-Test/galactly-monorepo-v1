@@ -2,175 +2,215 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Galactly — Live packaging leads</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b0e18;--card:#0c1022;--ink:#fff;--mut:#b9c0cf;--line:rgba(255,255,255,.10);--a:#86f7d6;--b:#57a4ff}
-*{box-sizing:border-box} html,body{height:100%}
-body{margin:0;background:linear-gradient(180deg,#0b0e18,#06070c 55%);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif}
-header{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px);background:rgba(5,7,12,.55);border-bottom:1px solid var(--line)}
-.hwrap{max-width:1200px;margin:auto;padding:14px;display:flex;gap:12px;align-items:center;justify-content:space-between}
-.hleft{display:flex;gap:14px;align-items:center}
-.badge{padding:6px 10px;border:1px solid var(--line);border-radius:10px;font-weight:700}
-.grid{max-width:1200px;margin:16px auto;padding:0 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:16px}
-.card{background:linear-gradient(180deg,#0b0b12,#0c1022);border:1px solid var(--line);border-radius:16px;padding:16px;min-height:160px;display:flex;flex-direction:column;gap:12px}
-.card h3{margin:0;font-size:18px}
-.meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.tag{font:700 11px/1 Inter;background:#0b1222;border:1px solid var(--line);padding:6px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em;opacity:.9}
-.host{font:700 12px;opacity:.9;border:1px dashed var(--line);padding:6px 8px;border-radius:8px}
-.footer{display:flex;justify-content:space-between;align-items:center;font-size:12px;opacity:.9}
-.why{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:#cfe6ff}
-.why svg{width:14px;height:14px}
+  :root{
+    --ink:#e9eef7; --mut:#9aa3b2; --bg:#0b0f18; --card:#0d1322; --line:rgba(255,255,255,.08);
+    --accent:#86f7d6; --accent2:#57a4ff;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%), radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%), linear-gradient(180deg,#0b0e18,#06070c 55%); color:var(--ink)}
+  a{color:inherit}
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);backdrop-filter:blur(8px) saturate(1.05);background:rgba(6,8,12,.55)}
+  .dot{width:7px;height:7px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .spacer{flex:1}
+  .pill{opacity:.85;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-weight:700;font-size:12px}
+  .close{border:1px solid var(--line);background:transparent;border-radius:12px;color:var(--ink);padding:8px 12px;cursor:pointer}
 
+  .wrap{max-width:1240px;margin:18px auto;padding:0 18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+  .card{background:linear-gradient(180deg,#0b1020,#0a0f1b);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 8px 36px rgba(0,0,0,.32)}
+  .title{font-weight:800;margin:0 0 6px;font-size:18px;line-height:1.25}
+  .snip{color:var(--mut);font-size:13px;line-height:1.45;max-height:3.7em;overflow:hidden}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  .tag{border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:#cfd6e6}
+  .why{display:flex;align-items:center;gap:6px;margin-top:12px;color:#cfd6e6;cursor:pointer}
+  .why small{color:var(--mut)}
+  .why:hover small{color:#fff}
 
-/* onboarding wall */
-#wall{position:fixed;inset:0;background:rgba(10,12,20,.65);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}
-.modal{width:min(560px,96vw);background:linear-gradient(180deg,#0c1020,#0b0e18);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
-.modal h2{margin:0 0 8px}
-.row{display:flex;gap:10px;align-items:center;margin-top:8px}
-.input,select{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#0f142b;color:var(--ink)}
-.check{display:flex;gap:10px;align-items:center;margin-top:12px}
-.k{display:none;margin-top:10px}
-.btn{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);padding:12px 18px;border-radius:14px;font-weight:800;cursor:pointer}
-.btn--prime{background:linear-gradient(90deg,#fff,#e9f0ff);color:#0b0c12;border-color:transparent}
-.empty{max-width:1200px;margin:24px auto;padding:12px 14px;border:1px dashed var(--line);border-radius:12px;text-align:center;color:var(--mut)}
+  .banner{margin:12px 0 18px;border:1px dashed var(--line);border-radius:14px;padding:14px 16px;color:var(--mut);text-align:center}
+
+  /* why-popover */
+  .why-pop{position:fixed;inset:auto 18px 18px auto;max-width:380px;background:#0d1322;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.38);display:none}
+  .why-pop.show{display:block}
+  .why-pop h4{margin:0 0 8px;font-size:14px}
+  .why-pop ul{margin:0;padding:0 0 0 18px}
+  .why-pop li{margin:6px 0;color:#cbd3e6;font-size:13px}
+
+  /* Onboarding gate */
+  .gate{position:fixed;inset:0;display:none;place-items:center;background:rgba(4,6,10,.58);backdrop-filter:blur(6px)}
+  .gate.show{display:grid}
+  .panel{width:min(680px,92vw);background:linear-gradient(180deg,#0b1020,#0a0f1b);border:1px solid var(--line);border-radius:18px;padding:18px}
+  .panel h2{margin:0 0 6px}
+  .panel p{margin:0 0 10px;color:#cfd6e6}
+  .f{display:grid;gap:10px;margin-top:12px}
+  .f input[type="email"], .f input[type="url"], .f input[type="text"]{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#0f1426;color:#fff}
+  .row2{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .cta{display:flex;gap:10px;align-items:center;margin-top:8px}
+  .btn{border:1px solid var(--line);background:#0f1426;color:#fff;border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:800}
+  .btn.primary{background:linear-gradient(90deg,#fff,#e9f0ff);color:#0a0d12;border:0}
+  .reveal{overflow:hidden;transition:max-height .25s ease}
+  .hint{font-size:12px;color:var(--mut)}
+
+  .headerline{display:flex;gap:10px;align-items:center;margin:0 0 10px}
 </style>
 </head>
 <body>
-<header>
-  <div class="hwrap">
-<div class="hleft">
-<div style="font-weight:800">Live feed</div>
-<div class="badge" id="refresh">refresh in 30s</div>
-</div>
-<div class="badge" id="humans">— online</div>
-</div>
-</header>
+  <div class="topbar">
+    <div class="headerline">
+      <div class="dot"></div>
+      <strong>Live feed</strong>
+      <span id="refresh" class="pill">refresh in —</span>
+    </div>
+    <div class="spacer"></div>
+    <span class="pill" id="who">— online</span>
+    <button class="close" onclick="location.href='./index.html'">Close</button>
+  </div>
 
+  <div class="wrap">
+    <div id="banner" class="banner" hidden>No items. Check API key / CSE IDs on backend.</div>
+    <div id="grid" class="grid"></div>
+  </div>
 
-<div id="empty" class="empty" style="display:none"></div>
-<div id="grid" class="grid"></div>
+  <!-- Why popover -->
+  <div id="whyPop" class="why-pop">
+    <h4>Why AI shows you this lead</h4>
+    <ul id="whyList"></ul>
+    <div class="hint" id="originHint"></div>
+  </div>
 
+  <!-- Onboarding gate -->
+  <div id="gate" class="gate">
+    <div class="panel">
+      <h2>Get in. It’s free.</h2>
+      <p>We tune the feed for packaging vendors only. Verify email to enter.</p>
+      <div class="f">
+        <input id="f_email" type="email" placeholder="Work email (required)" />
+        <div class="row2">
+          <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+            <input id="chkListMe" type="checkbox" />
+            <span>Also list my company for inbound opportunities</span>
+          </label>
+        </div>
+        <div id="moreBox" class="reveal" style="max-height:0">
+          <input id="f_company" type="text" placeholder="Company name (optional)" />
+          <input id="f_site" type="url" placeholder="Company website (optional)" />
+          <div class="hint">We show your profile to buyers who match your ICP.</div>
+        </div>
+        <div class="cta">
+          <button id="enterBtn" class="btn primary">Enter live feed</button>
+          <button class="btn" onclick="document.getElementById('gate').classList.remove('show')">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-<!-- Onboarding wall (blocks feed until completed) -->
-<div id="wall">
-<div class="modal">
-<h2>Let the AI aim for you</h2>
-<div style="opacity:.85">Answer 2 things so we can prioritize the right buyers for you.</div>
-<div class="row"><input id="email" class="input" placeholder="Work email" type="email" /></div>
-<div class="row"><select id="role" class="input">
-<option value="owner">Owner / Founder</option>
-<option value="sales">Sales / Growth</option>
-<option value="ops">Operations</option>
-<option value="other">Other</option>
-</select></div>
-<label class="check"><input id="listMe" type="checkbox"/> Also list my company for inbound opportunities</label>
-<div id="k-site" class="k"><input id="site" class="input" placeholder="Business website (optional)"/></div>
-<div style="margin-top:14px;display:flex;gap:10px;align-items:center">
-<button id="go" class="btn btn--prime">Enter the live feed</button>
-<div style="opacity:.75;font-size:12px">Email verification required. No spam.</div>
-</div>
-</div>
-</div>
+  <script src="./api-base.js"></script>
+  <script>
+  // ---------- minimal state ----------
+  const API = (window.API_BASE||'').replace(/\/$/,'');
+  const grid = document.getElementById('grid');
+  const banner = document.getElementById('banner');
+  const refreshEl = document.getElementById('refresh');
+  const whyPop = document.getElementById('whyPop');
+  const whyList = document.getElementById('whyList');
+  const originHint = document.getElementById('originHint');
 
+  // ---------- soft presence (tabs across same origin) ----------
+  const ONLINE_KEY = 'galactly:live:pings';
+  const whoEl = document.getElementById('who');
+  const myId = Math.random().toString(36).slice(2);
+  function getPings(){ try { return JSON.parse(localStorage.getItem(ONLINE_KEY)||'{}'); } catch { return {}; } }
+  function setPings(o){ localStorage.setItem(ONLINE_KEY, JSON.stringify(o)); }
+  function heartbeat(){ const o=getPings(); o[myId]=Date.now(); setPings(o); }
+  function sweep(){ const o=getPings(); const now=Date.now(); for (const k of Object.keys(o)) if (now-o[k] > 25000) delete o[k]; setPings(o); whoEl.textContent = `${Object.keys(o).length} online`; }
+  window.addEventListener('storage', e=>{ if (e.key===ONLINE_KEY) sweep(); });
+  setInterval(heartbeat, 7000); setInterval(sweep, 5000); heartbeat(); sweep();
 
-<script src="./api-base.js"></script>
-<script>
-(function presence(){
-const el=document.getElementById('humans');
-const seed=(Date.now()/60000)|0; let base=22 + Math.round(10*Math.cos(seed));
-function paint(n){ el.textContent=n+" online"; }
-paint(base); setInterval(()=>{ base=Math.max(5, base + (Math.random()*6-3)|0); paint(base); }, 10000);
-try{ fetch((window.API_BASE||'')+"/api/v1/status?ping=panel").then(()=>{}).catch(()=>{});}catch{}
-})();
+  // ---------- onboarding gate ----------
+  const gate = document.getElementById('gate');
+  const enterBtn = document.getElementById('enterBtn');
+  const chkListMe = document.getElementById('chkListMe');
+  const moreBox = document.getElementById('moreBox');
+  chkListMe.addEventListener('change', ()=>{ moreBox.style.maxHeight = chkListMe.checked ? '180px' : '0'; });
 
-  // onboarding wall logic
-(function gate(){
-const wall = document.getElementById('wall');
-const email = document.getElementById('email');
-const listMe = document.getElementById('listMe');
-const siteWrap = document.getElementById('k-site');
-listMe.addEventListener('change',()=>{ siteWrap.style.display = listMe.checked ? 'block':'none'; });
-const ok = localStorage.getItem('onboard-ok');
-if(!ok){ wall.style.display='flex'; }
-document.getElementById('go').onclick = async () => {
-const e = (email.value||'').trim();
-if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ email.focus(); email.style.borderColor='#ff8b8b'; return; }
-localStorage.setItem('onboard-email', e);
-if(listMe.checked){ localStorage.setItem('onboard-site', (document.getElementById('site').value||'').trim()); }
-localStorage.setItem('onboard-ok','1');
-wall.style.display='none';
-};
-})();
+  function needGate(){ return !localStorage.getItem('galactly:onboarded'); }
+  function openGate(){ gate.classList.add('show'); }
+  function closeGate(){ gate.classList.remove('show'); }
 
+  enterBtn.addEventListener('click', ()=>{
+    const email = document.getElementById('f_email').value.trim();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Enter a valid email'); return; }
+    const payload = { email, listMe: chkListMe.checked, company: document.getElementById('f_company').value.trim(), site: document.getElementById('f_site').value.trim() };
+    localStorage.setItem('galactly:onboarded', JSON.stringify(payload));
+    closeGate();
+    kick();
+  });
 
-// feed logic
-(function feed(){
-const grid = document.getElementById('grid');
-const empty = document.getElementById('empty');
-const refresh = document.getElementById('refresh');
-const TYPES=['web','linkedin','youtube'];
-let timer=null, left=30;
+  // ---------- render cards ----------
+  function card(it){
+    const u = new URL(it.url, location.href);
+    const el = document.createElement('div');
+    el.className='card';
+    el.innerHTML = `
+      <a href="${it.url}" target="_blank" rel="noopener noreferrer" class="title">${it.title||it.url}</a>
+      <div class="snip">${(it.snippet||'').replace(/</g,'&lt;')}</div>
+      <div class="row">
+        <span class="tag">${it.source||'web'}</span>
+        <span class="tag">${u.hostname.replace(/^www\./,'')}</span>
+      </div>
+      <div class="why" data-origin="${it.url}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg>
+        <small>Why AI shows you this lead?</small>
+      </div>`;
+    el.querySelector('.why').addEventListener('click', ()=> showWhy(it));
+    return el;
+  }
 
+  function showWhy(it){
+    whyList.innerHTML='';
+    const reasons = [];
+    const t=(it.title||'')+' '+(it.snippet||'');
+    const adds = ['rfp','rfq','request for proposal','procurement','buy','seeking','packaging','corrugated','cartons','supplier','outsourcing'];
+    adds.forEach(k=>{ if (t.toLowerCase().includes(k)) reasons.push(`Matched keyword “${k}”.`); });
+    reasons.push(`Source: ${it.source||'web'}.`);
+    (reasons.length?reasons:['Topical relevance score high.']).forEach(s=>{
+      const li=document.createElement('li'); li.textContent=s; whyList.appendChild(li);
+    });
+    originHint.innerHTML = `Origin: <a href="${it.url}" target="_blank" rel="noopener">${new URL(it.url, location.href).hostname}</a>`;
+    whyPop.classList.add('show');
+    setTimeout(()=>{ document.addEventListener('click', hideWhyOnce, { once:true }); }, 0);
+  }
+  function hideWhyOnce(){ whyPop.classList.remove('show'); }
 
-function badge(src){ return `<span class="tag">${src}</span>`; }
-function host(u){ try{ return new URL(u).host; }catch{ return ''; } }
+  // ---------- fetch loop ----------
+  const QUERY = 'packaging buyer OR procurement OR RFP site:gov OR site:linkedin.com';
+  let tick = 30, timer=null;
+  function countdown(){ refreshEl.textContent = `refresh in ${tick}s`; if(--tick<0){ tick=30; kick(); } }
 
+  async function kick(){
+    if(!API){ banner.hidden=false; banner.textContent='Set API base in api-base.js'; return; }
+    try{
+      const url = `${API}/api/v1/leads?limit=24&q=${encodeURIComponent(QUERY)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const items = (data && Array.isArray(data.items)) ? data.items : [];
+      grid.replaceChildren();
+      if(!items.length){ banner.hidden=false; banner.textContent='No items. Check API key / CSE IDs on backend.'; }
+      else { banner.hidden=true; items.forEach(it => grid.appendChild(card(it))); }
+    }catch(err){
+      banner.hidden=false; banner.textContent='Network error.';
+    }
+  }
 
-function whyText(title,snippet){
-const text=(title+' '+(snippet||'')).toLowerCase();
-const reasons=[];
-const keys=['rfp','rfq','tender','procurement','buy','supplier','packaging','pallet','box','corrugated','contract','quote'];
-keys.forEach(k=>{ if(text.includes(k)) reasons.push('mentions "'+k+'"'); });
-return reasons.length?('AI signal: '+reasons.slice(0,4).join(', ')+'.'):'AI signal: recency spike & relevance.';
-}
-
-
-function card(it){
-const s = it.source||'web';
-const why = whyText(it.title||'', it.snippet||'');
-return `
-<article class="card">
-<h3><a href="${it.url}" target="_blank" rel="noopener" style="color:#eaf2ff;text-decoration:none">${it.title||it.url}</a></h3>
-<div style="opacity:.9">${(it.snippet||'').slice(0,280)}</div>
-<div class="meta">
-${badge(s)} <span class="host">${it.displayLink||host(it.url)}</span>
-</div>
-<div class="footer">
-<div class="why" title="${why}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1"/></svg> Why AI shows you this lead?</div>
-<a href="${it.url}" target="_blank" rel="noopener" style="color:#86f7d6;text-decoration:none">Open origin →</a>
-</div>
-</article>`;
-}
-
-
-async function fetchBatch(q, type, limit){
-const url = `${window.API_BASE}/api/v1/peek?q=${encodeURIComponent(q)}&type=${type}&limit=${limit}`;
-const res = await fetch(url);
-if(!res.ok) return [];
-const data = await res.json().catch(()=>({items:[]}));
-return Array.isArray(data.items)? data.items: [];
-}
-
-
-async function load(){
-try{
-const q = 'packaging buyers RFP OR RFQ OR tender OR procurement -sam.gov';
-const batches = await Promise.all(TYPES.map(t=>fetchBatch(q,t,10)));
-const items = [].concat(...batches);
-grid.innerHTML = items.map(card).join('');
-if(!items.length){ empty.style.display='block'; empty.textContent='No items. Check API key / CSE IDs on backend.'; }
-else empty.style.display='none';
-}catch(err){ empty.style.display='block'; empty.textContent='Network error.'; }
-}
-
-
-function tick(){ left--; if(left<=0){ left=30; load(); } refresh.textContent = `refresh in ${left}s`; }
-load(); timer=setInterval(tick, 1000);
-})();
-</script>
+  if(needGate()) openGate();
+  kick();
+  timer = setInterval(countdown, 1000);
+  </script>
 </body>
 </html>
