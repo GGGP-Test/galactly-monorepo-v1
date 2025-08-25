@@ -1,38 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Live packaging leads</title>
-<style>
-:root{--bg:#0b0e18;--card:#0c1022;--ink:#fff;--mut:#9aa3b2;--line:rgba(255,255,255,.08);--acc:#86f7d6}
-*{box-sizing:border-box}
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-header{position:sticky;top:0;background:#0c1022bd;border-bottom:1px solid var(--line);padding:10px 16px;backdrop-filter:blur(10px)}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-label{font-size:14px;color:var(--mut)}
-input[type="text"],input[type="email"],select,button{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0f142b;color:#fff}
-button{cursor:pointer}
-main{max-width:1050px;margin:20px auto;padding:0 16px}
-.top{display:flex;align-items:center;gap:10px;color:var(--mut);font-weight:600}
-.pill{border:1px solid var(--line);padding:6px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px}
-.list{margin:16px 0 60px;display:grid;gap:10px}
-.card{padding:14px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,#0b1025,#0a0f1f);display:grid;gap:6px}
-.title{font-weight:700}
-.mut{color:var(--mut)}
-.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
-.tag{font-size:12px;border:1px solid var(--line);padding:2px 8px;border-radius:999px;color:#cfe7ff}
-.why{margin-left:auto;color:#cfe7ff;cursor:pointer;opacity:.9}
-.why:hover{opacity:1}
-dialog{border:none;border-radius:14px;background:#0c1022;color:#fff;max-width:560px;width:calc(100% - 24px)}
-dialog::backdrop{background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}
-.why-body{padding:16px}
-.why-body a{color:var(--acc);text-decoration:none}
-
-
-/* Onboarding gate */
-.gate{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:50}
-.gate.on{display:flex}
-.gate .panel{width:min(700px,92vw);background:#0c1022;border:1px solid var(--line);border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
-.gate h3{margin:0 0 8px}
+<div class="meta">
+<div class="badge"><small>Leads / 30s</small><span id="b-leads">0</span></div>
+<div class="badge"><small>First connection</small><span id="b-first">—</span></div>
+<div class="badge"><small>Ready now</small><span id="b-ready">—</span></div>
+<div class="badge"><small>Quoted</small><span id="b-quote">—</span></div>
+<div class="badge"><small>AI closed</small><span id="b-ai">—</span></div>
+<div class="badge"><small>Rep closed</small><span id="b-human">—</span></div>
+<div class="badge"><small>Saved / mo</small><span id="b-saved">—</span></div>
+</div>
+<div class="ticker" id="ticker"></div>
+</div>
+</div>
+</section>
+<script>
+// Minimal sphere animation (unchanged look)
+const cvs=document.getElementById('flowCanvas');const DPR=Math.min(2.2,window.devicePixelRatio||1);let ctx=null;let started=false;let cx=0,cy=0,R=0,coreX=0,coreY=0,coreR=22;let chips=[];
+const CHANNELS=['Email','SMS','Call','LinkedIn','Quote','ERP'].map((name,i)=>({name,color:['rgba(134,247,214,.65)','rgba(160,255,160,.65)','rgba(159,208,255,.65)','rgba(120,200,255,.65)','rgba(255,210,140,.7)','rgba(200,170,255,.7)'][i]}));
+const K={leads:document.getElementById('b-leads'),first:document.getElementById('b-first'),ready:document.getElementById('b-ready'),quote:document.getElementById('b-quote'),ai:document.getElementById('b-ai'),human:document.getElementById('b-human'),saved:document.getElementById('b-saved')};
+const ticker=document.getElementById('ticker');
+const center={lat:25*Math.PI/180,lon:-90*Math.PI/180};function proj(lat,lon){const dLon=lon-center.lon;const sC=Math.sin(center.lat),cC=Math.cos(center.lat);const sL=Math.sin(lat),cL=Math.cos(lat);const sDL=Math.sin(dLon),cDL=Math.cos(dLon);const k=sC*sL+cC*cL*cDL;if(k<=0)return null;return{x:cx+R*(cL*sDL),y:cy-R*(cC*sL-sC*cL*cDL)}}
+const LAND_NA=[[71,-156],[48,-124],[34,-118],[25,-111],[20,-105],[18,-103],[16,-99],[20,-90],[27,-81],[31,-80],[36,-76],[42,-72],[49,-64],[54,-60],[60,-75],[69,-95],[71,-156]];
+const LAND_SA=[[10,-79],[8,-74],[5,-60],[0,-58],[-8,-54],[-18,-44],[-24,-42],[-30,-52],[-40,-61],[-48,-70],[-55,-66],[-33,-71],[-20,-70],[-12,-77],[-8,-79],[10,-79]];
+function resize(){const r=cvs.getBoundingClientRect();cvs.width=Math.floor(r.width*DPR);cvs.height=Math.floor(r.height*DPR);cvs.style.width=r.width+'px';cvs.style.height=r.height+'px';ctx=cvs.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);cx=r.width*0.28;cy=r.height*0.56;R=Math.min(r.width*0.30,r.height*0.46);coreX=r.width*0.56;coreY=r.height*0.56;coreR=Math.max(18,Math.min(24,r.width*0.03));const baseX=r.width*0.83,baseY=coreY,rad=Math.min(110,r.height*0.20),a0=-Math.PI/3,a1=Math.PI/3;chips=CHANNELS.map((c,i)=>{const a=CHANNELS.length>1?a0+(a1-a0)*(i/(CHANNELS.length-1)):0;return{x:baseX+rad*Math.cos(a),y:baseY+rad*Math.sin(a),r:12,label:c.name,color:c.color}})}
+function drawHemisphere(){const g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,R*1.1);g.addColorStop(0,'rgba(255,255,255,.05)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();ctx.beginPath();LAND_NA.concat(LAND_SA).forEach(([la,lo],i)=>{const P=proj(la*Math.PI/180,lo*Math.PI/180);if(!P)return;i?ctx.lineTo(P.x,P.y):ctx.moveTo(P.x,P.y)});ctx.closePath();ctx.fillStyle='rgba(134,247,214,0.09)';ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.14)';ctx.stroke()}
+function drawCore(t){const g=ctx.createRadialGradient(coreX,coreY,0,coreX,coreY,coreR*2.6);g.addColorStop(0,'rgba(255,255,255,.04)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(coreX,coreY,coreR*2.6,0,Math.PI*2);ctx.fill();ctx.save();ctx.translate(coreX,coreY);for(let i=0;i<3;i++){const r=coreR+i*18;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.strokeStyle=`rgba(255,255,255,${0.14-i*0.02})`;ctx.lineWidth=1.2;ctx.stroke() }ctx.restore()}
+function drawChannels(){CHANNELS.forEach((ch,i)=>{const chip=chips[i];ctx.save();ctx.strokeStyle=ch.color;ctx.globalAlpha=0.5;ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(coreX,coreY);ctx.quadraticCurveTo((coreX+chip.x)/2,(coreY+chip.y*1.1)/2,chip.x,chip.y);ctx.stroke();ctx.globalAlpha=1;ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.beginPath();ctx.moveTo(coreX,coreY);ctx.quadraticCurveTo((coreX+chip.x)/2,(coreY+chip.y*1.1)/2,chip.x,chip.y);ctx.stroke();ctx.beginPath();ctx.arc(chip.x,chip.y,chip.r,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.24)';ctx.lineWidth=1.2;ctx.stroke();ctx.font="700 11px Montserrat,Inter";ctx.fillStyle='rgba(255,255,255,.92)';ctx.textAlign='center';ctx.fillText(chip.label,chip.x,chip.y-chip.r-8);ctx.restore()})}
+function loop(ts){requestAnimationFrame(loop);const t=ts/1000;ctx.clearRect(0,0,cvs.width/DPR,cvs.height/DPR);drawHemisphere();drawCore(t);drawChannels()}
+function init(){if(started)return;started=true;resize();requestAnimationFrame(loop)}
+window.addEventListener('resize',resize);document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
 </html>
