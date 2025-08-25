@@ -1,3 +1,5 @@
+// Google Custom Search connector used by /peek and /leads
+
 export type CseType = "web" | "linkedin" | "youtube";
 
 export interface LeadItem {
@@ -14,26 +16,24 @@ function env(name: string): string | undefined {
 }
 
 function pickCx(kind: CseType): string | undefined {
+  // You can set any/all of these on your backend service:
+  // GOOGLE_CSE_ID (default), GOOGLE_CX_WEB, GOOGLE_CX_LINKEDIN, GOOGLE_CX_YOUTUBE
   if (kind === "linkedin") return env("GOOGLE_CX_LINKEDIN") || env("GOOGLE_CSE_ID");
-  if (kind === "youtube") return env("GOOGLE_CX_YOUTUBE") || env("GOOGLE_CSE_ID");
+  if (kind === "youtube")  return env("GOOGLE_CX_YOUTUBE")  || env("GOOGLE_CSE_ID");
   return env("GOOGLE_CSE_ID") || env("GOOGLE_CX_WEB") || env("GOOGLE_CX_DEFAULT");
 }
 
 export async function cseSearch(params: {
   q: string;
   type?: CseType;
-  limit?: number; // up to 10 per call
+  limit?: number; // max 10 per CSE request
 }): Promise<LeadItem[]> {
   const { q, type = "web" } = params;
   const limit = Math.max(1, Math.min(params.limit ?? 10, 10));
 
   const apiKey = env("GOOGLE_API_KEY");
   const cx = pickCx(type);
-  if (!apiKey || !cx) {
-    throw new Error(
-      `CSE_MISCONFIG: GOOGLE_API_KEY=${!!apiKey}, CX(${type})=${cx ? "set" : "missing"}`
-    );
-  }
+  if (!apiKey || !cx || !q) return [];
 
   const url = new URL("https://www.googleapis.com/customsearch/v1");
   url.searchParams.set("key", apiKey);
@@ -42,28 +42,30 @@ export async function cseSearch(params: {
   url.searchParams.set("num", String(limit));
 
   const res = await fetch(url.toString());
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`CSE_HTTP_${res.status}: ${txt.slice(0, 400)}`);
-  }
-
+  if (!res.ok) return [];
   const data: any = await res.json();
   const items: any[] = Array.isArray(data?.items) ? data.items : [];
 
-  return items
-    .map((it) => ({
-      source: type,
-      title: typeof it.title === "string" ? it.title : "",
-      url:
-        typeof it.link === "string"
-          ? it.link
-          : typeof it.formattedUrl === "string"
-          ? it.formattedUrl
-          : "",
-      snippet: typeof it.snippet === "string" ? it.snippet : undefined,
-      displayLink: typeof it.displayLink === "string" ? it.displayLink : undefined
-    }))
-    .filter((it) => it.title && it.url);
+  const out: LeadItem[] = [];
+  for (const it of items) {
+    const title = typeof it.title === "string" ? it.title : "";
+    const urlStr =
+      typeof it.link === "string"
+        ? it.link
+        : typeof it.formattedUrl === "string"
+        ? it.formattedUrl
+        : "";
+    if (title && urlStr) {
+      out.push({
+        source: type,
+        title,
+        url: urlStr,
+        snippet: typeof it.snippet === "string" ? it.snippet : undefined,
+        displayLink: typeof it.displayLink === "string" ? it.displayLink : undefined
+      });
+    }
+  }
+  return out;
 }
 
 export function dedupe(items: LeadItem[]): LeadItem[] {
