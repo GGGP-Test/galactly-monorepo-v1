@@ -110,6 +110,12 @@
   window.fetch=(input,init)=>{ try{const url=typeof input==='string'?input:input.url; if(url && url.startsWith('/api/')) return _fetch(window.API_BASE+url,init);}catch{} return _fetch(input,init); };
 })();
 
+  let SESSION = localStorage.getItem('galactly:session') || '';
+function authHeaders() {
+  return SESSION ? { 'Authorization': 'Bearer ' + SESSION } : {};
+}
+
+
 // --- soft presence (tabs across same origin) ---
 const ONLINE_KEY='galactly:live:pings';
 const whoEl=document.getElementById('who');
@@ -130,14 +136,25 @@ chkListMe.addEventListener('change',()=>{ moreBox.style.maxHeight=chkListMe.chec
 function needGate(){ return !localStorage.getItem('galactly:onboarded'); }
 function openGate(){ gate.classList.add('show'); }
 function closeGate(){ gate.classList.remove('show'); }
-enterBtn.addEventListener('click',()=>{
-  const email=document.getElementById('f_email').value.trim();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ alert('Enter a valid email'); return; }
-  const payload={ email, listMe:chkListMe.checked, company:document.getElementById('f_company').value.trim(), site:document.getElementById('f_site').value.trim() };
-  localStorage.setItem('galactly:onboarded',JSON.stringify(payload));
-  closeGate();
-  kick();
+enterBtn.addEventListener('click', async ()=>{
+  const email = document.getElementById('f_email').value.trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Enter a valid email'); return; }
+  const payload = { email, listMe: chkListMe.checked, company: document.getElementById('f_company').value.trim(), site: document.getElementById('f_site').value.trim() };
+  try{
+    const r = await fetch(API + '/api/v1/onboard', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const j = await r.json();
+    if(j.session){
+      SESSION = j.session;
+      localStorage.setItem('galactly:session', SESSION);
+      localStorage.setItem('galactly:onboarded', JSON.stringify(payload));
+      closeGate();
+      kick();
+    }else{
+      alert('Check your email to verify.');
+    }
+  }catch(e){ alert('Network error.'); }
 });
+
 
 // --- UI helpers ---
 const grid=document.getElementById('grid');
@@ -188,7 +205,7 @@ async function fetchPrimary(){
   const API=(window.API_BASE||'').replace(/\/$/,'');
   if(!API) throw new Error('NO_API');
   const url=`${API}/api/v1/leads?limit=24&q=${encodeURIComponent(QUERY)}`;
-  const res=await fetch(url);
+  const res = await fetch(url, { headers: authHeaders() });
   if(!res.ok) throw new Error('HTTP_'+res.status);
   return res.json();
 }
@@ -211,9 +228,25 @@ async function kick(){
   }
 }
 
-if(needGate()) openGate();
+if(!SESSION){ openGate(); } else { kick(); }
 kick();
 timer=setInterval(countdown,1000);
+  // presence
+async function beatPresence(){
+  if(!SESSION) return;
+  try{ await fetch(API + '/api/v1/presence/beat', { method:'POST', headers: authHeaders() }); }catch{}
+}
+async function pollOnline(){
+  try{
+    const r = await fetch(API + '/api/v1/presence/online');
+    const j = await r.json();
+    document.getElementById('who').textContent = (j.displayed||0) + ' online';
+  }catch{}
+}
+setInterval(beatPresence, 10_000);
+setInterval(pollOnline, 12_000);
+beatPresence(); pollOnline();
+
 </script>
 </body>
 </html>
