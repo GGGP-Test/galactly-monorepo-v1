@@ -8,7 +8,7 @@ leadsRouter.get("/peek", async (req: Request, res: Response) => {
   try {
     const q = String(req.query.q || "packaging buyers RFP");
     const type = String(req.query.type || "web") as CseType;
-    const limit = Number(req.query.limit || 10);
+    const limit = Math.max(1, Math.min(Number(req.query.limit || 10), 10));
     const data = await cseSearch({ q, type, limit });
     res.json({ ok: true, count: data.length, items: data });
   } catch (err) {
@@ -27,10 +27,7 @@ leadsRouter.get("/leads", async (req: Request, res: Response) => {
 
     const kinds: CseType[] = ["web", "linkedin", "youtube"];
     const batches = await Promise.all(
-      kinds.map(async (type) => {
-        const items = await cseSearch({ q, type, limit: Math.min(10, limit) });
-        return items;
-      })
+      kinds.map(async (type) => cseSearch({ q, type, limit: Math.min(10, limit) }))
     );
 
     let merged: LeadItem[] = [];
