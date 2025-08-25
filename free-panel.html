@@ -8,83 +8,81 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --ink:#e9eef7;--mut:#9aa3b2;--bg:#0b0f18;--card:#0d1322;--line:rgba(255,255,255,.08);
-    --accent:#86f7d6;--accent2:#57a4ff;--good:#7CF3C0;--warn:#F6D365;--hot:#FF8A65;
-  }
+  :root{--ink:#e9eef7;--mut:#9aa3b2;--bg:#0b0f18;--card:#0d1322;--line:rgba(255,255,255,.08);--accent:#86f7d6;--accent2:#57a4ff;--ok:#88aaff;--warm:#ffd37a;--hot:#ff8a7a}
   *{box-sizing:border-box}
   html,body{height:100%}
-  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:
-    radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%),
-    radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%),
-    linear-gradient(180deg,#0b0e18,#06070c 55%); color:var(--ink); overflow-y:auto}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%), radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%), linear-gradient(180deg,#0b0e18,#06070c 55%); color:var(--ink)}
   a{color:inherit}
-
-  /* Top bar */
-  .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);backdrop-filter:blur(8px) saturate(1.05);background:rgba(6,8,12,.55)}
-  .dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent2));box-shadow:0 0 0 0 rgba(134,247,214,.6);animation:pulse 2s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(134,247,214,.6)}70%{box-shadow:0 0 0 10px rgba(134,247,214,0)}100%{box-shadow:0 0 0 0 rgba(134,247,214,0)}}
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);backdrop-filter:blur(8px) saturate(1.05);background:rgba(6,8,12,.55)}
+  .dot{width:7px;height:7px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
   .spacer{flex:1}
-  .pill{opacity:.9;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-weight:700;font-size:12px;white-space:nowrap}
-  .btn{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:8px 12px;cursor:pointer}
+  .pill{opacity:.9;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-weight:700;font-size:12px}
+  .close{border:1px solid var(--line);background:transparent;border-radius:12px;color:var(--ink);padding:8px 12px;cursor:pointer}
 
-  /* Wrap + grid */
-  .wrap{max-width:1240px;margin:16px auto;padding:0 18px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
-  .card{background:linear-gradient(180deg,#0b1020,#0a0f1b);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 8px 36px rgba(0,0,0,.32);transform:translateY(0);transition:transform .2s ease, background .2s ease, border-color .2s ease}
-  .card.new{animation:drop .35s ease;}
-  @keyframes drop{from{transform:translateY(-6px);opacity:.0}to{transform:translateY(0);opacity:1}}
-  .title{font-weight:800;margin:0 0 6px;font-size:18px;line-height:1.25}
+  .wrap{max-width:1240px;margin:18px auto;padding:0 18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+  .card{position:relative;background:linear-gradient(180deg,#0b1020,#0a0f1b);border:1px solid var(--line);border-radius:16px;padding:14px 14px 12px;box-shadow:0 8px 36px rgba(0,0,0,.32)}
+  .card.new{animation:glow 1.6s ease-out 1}
+  @keyframes glow{0%{box-shadow:0 0 0 rgba(255,255,255,0),0 0 0 rgba(134,247,214,0)}40%{box-shadow:0 0 0 rgba(255,255,255,0),0 0 40px rgba(134,247,214,.20)}100%{box-shadow:0 8px 36px rgba(0,0,0,.32)}}
+  .title{font-weight:800;margin:0 0 6px;font-size:18px;line-height:1.25;display:block;text-decoration:none}
   .snip{color:var(--mut);font-size:13px;line-height:1.45;max-height:3.7em;overflow:hidden}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
-  .tag{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:11px;color:#cfd6e6}
-  .hot{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11px;border:1px solid var(--line)}
-  .hot i{width:8px;height:12px;background:linear-gradient(180deg,var(--hot),#FFB199);display:inline-block;border-radius:4px}
-  .time{opacity:.9}
+  .tag{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:12px;color:#cfd6e6}
+  .heat{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:12px;border:1px solid var(--line)}
+  .heat.ok{background:rgba(136,170,255,.10)}
+  .heat.warm{background:rgba(255,211,122,.12)}
+  .heat.hot{background:rgba(255,138,122,.12)}
+  .age{margin-left:auto;color:#cfd6e6;font-size:12px}
+
   .why{display:flex;align-items:center;gap:6px;margin-top:10px;color:#cfd6e6;cursor:pointer}
-  .why small{color:var(--mut)} .why:hover small{color:#fff}
+  .why small{color:var(--mut)}
+  .why:hover small{color:#fff}
 
-  /* New items bar */
-  .newbar{position:sticky;top:54px;z-index:20;display:none;justify-content:center}
-  .newbar .chip{background:#0f1426;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:700;font-size:12px;cursor:pointer}
-  .newbar.show{display:flex}
+  .banner{margin:12px 0 18px;border:1px dashed var(--line);border-radius:14px;padding:14px 16px;color:var(--mut);text-align:center}
 
-  /* Why popover */
+  /* why-popover */
   .why-pop{position:fixed;inset:auto 18px 18px auto;max-width:380px;background:#0d1322;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.38);display:none}
   .why-pop.show{display:block}
   .why-pop h4{margin:0 0 8px;font-size:14px}
   .why-pop ul{margin:0;padding:0 0 0 18px}
   .why-pop li{margin:6px 0;color:#cbd3e6;font-size:13px}
 
-  /* Gate */
+  /* Onboarding gate */
   .gate{position:fixed;inset:0;display:none;place-items:center;background:rgba(4,6,10,.58);backdrop-filter:blur(6px)}
   .gate.show{display:grid}
   .panel{width:min(680px,92vw);background:linear-gradient(180deg,#0b1020,#0a0f1b);border:1px solid var(--line);border-radius:18px;padding:18px}
-  .panel h2{margin:0 0 6px}.panel p{margin:0 0 10px;color:#cfd6e6}
+  .panel h2{margin:0 0 6px}
+  .panel p{margin:0 0 10px;color:#cfd6e6}
   .f{display:grid;gap:10px;margin-top:12px}
-  .f input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#0f1426;color:#fff}
+  .f input[type="email"], .f input[type="url"], .f input[type="text"]{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#0f1426;color:#fff}
+  .row2{display:flex;justify-content:space-between;align-items:center;gap:10px}
   .cta{display:flex;gap:10px;align-items:center;margin-top:8px}
+  .btn{border:1px solid var(--line);background:#0f1426;color:#fff;border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:800}
   .btn.primary{background:linear-gradient(90deg,#fff,#e9f0ff);color:#0a0d12;border:0}
+  .reveal{overflow:hidden;transition:max-height .25s ease}
+  .hint{font-size:12px;color:var(--mut)}
+  .headerline{display:flex;gap:10px;align-items:center;margin:0 0 10px}
 
-  .banner{margin:12px 0 18px;border:1px dashed var(--line);border-radius:14px;padding:14px 16px;color:var(--mut);text-align:center}
+  /* footer loader */
+  .loader{display:flex;justify-content:center;align-items:center;color:var(--mut);padding:18px}
 </style>
 </head>
 <body>
   <div class="topbar">
-    <div class="dot"></div>
-    <strong>Live feed</strong>
-    <span id="refresh" class="pill">refresh in —</span>
+    <div class="headerline">
+      <div class="dot"></div>
+      <strong>Live feed</strong>
+      <span id="refresh" class="pill">refresh in —</span>
+    </div>
     <div class="spacer"></div>
-    <span id="auto" class="pill">Auto ▣</span>
-    <span id="who" class="pill">— online</span>
-    <button class="btn" onclick="location.href='./index.html'">Close</button>
+    <span class="pill" id="who">— online</span>
+    <button class="close" onclick="location.href='./index.html'">Close</button>
   </div>
-
-  <div id="newbar" class="newbar"><div class="chip" onclick="revealNew()">Show new leads</div></div>
 
   <div class="wrap">
     <div id="banner" class="banner" hidden></div>
     <div id="grid" class="grid"></div>
+    <div id="loader" class="loader" hidden>Loading…</div>
   </div>
 
   <!-- Why popover -->
@@ -101,9 +99,17 @@
       <p>We tune the feed for packaging vendors only. Verify email to enter.</p>
       <div class="f">
         <input id="f_email" type="email" placeholder="Work email (required)" />
-        <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input id="chkListMe" type="checkbox" /> <span>Also list my company for inbound opportunities</span></label>
-        <input id="f_company" type="text" placeholder="Company name (optional)" />
-        <input id="f_site" type="url" placeholder="Company website (optional)" />
+        <div class="row2">
+          <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+            <input id="chkListMe" type="checkbox" />
+            <span>Also list my company for inbound opportunities</span>
+          </label>
+        </div>
+        <div id="moreBox" class="reveal" style="max-height:0">
+          <input id="f_company" type="text" placeholder="Company name (optional)" />
+          <input id="f_site" type="url" placeholder="Company website (optional)" />
+          <div class="hint">We show your profile to buyers who match your ICP.</div>
+        </div>
         <div class="cta">
           <button id="enterBtn" class="btn primary">Enter live feed</button>
           <button class="btn" onclick="document.getElementById('gate').classList.remove('show')">Cancel</button>
@@ -113,9 +119,7 @@
   </div>
 
 <script>
-/***********************
- * API base (inline)
- ***********************/
+// --- API base (inline so this file runs standalone) ---
 (function(){
   const DEFAULT='https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
   const q=new URLSearchParams(location.search);
@@ -126,199 +130,169 @@
   window.fetch=(input,init)=>{ try{const url=typeof input==='string'?input:input.url; if(url && url.startsWith('/api/')) return _fetch(window.API_BASE+url,init);}catch{} return _fetch(input,init); };
 })();
 
-/***********************
- * State & helpers
- ***********************/
-const grid = document.getElementById('grid');
-const banner = document.getElementById('banner');
-const refreshEl = document.getElementById('refresh');
-const newbar = document.getElementById('newbar');
-const whoEl = document.getElementById('who');
-const autoEl = document.getElementById('auto');
-let AUTO=true; autoEl.onclick=()=>{AUTO=!AUTO; autoEl.textContent = 'Auto ' + (AUTO?'▣':'▢');};
-
 let SESSION = localStorage.getItem('galactly:session') || '';
-const seen = new Set();           // URLs we've rendered
-const pending = [];               // newly fetched items waiting to reveal
-const MAX_KEEP = 84;              // room for fresh ones (older are dropped)
-let tick = 30;
+const API=(window.API_BASE||'').replace(/\/$/,'');
+function authHeaders(){ return SESSION ? { 'Authorization':'Bearer '+SESSION } : {}; }
 
-function authHeaders(){ return SESSION?{'Authorization':'Bearer '+SESSION}:{}}; // eslint-disable-line
-function relative(t){ const s=Math.max(1,Math.floor((Date.now()-t)/1000)); if(s<60)return s+'s'; const m=Math.floor(s/60); if(m<60) return m+'m'; const h=Math.floor(m/60); if(h<24) return h+'h'; const d=Math.floor(h/24); return d+'d'; }
-function domain(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return '—'; } }
-
-function hotScore(it){
-  const txt=((it.title||'')+' '+(it.snippet||'')).toLowerCase();
-  let s=30;
-  const kw=['rfp','rfq','request for proposal','procurement','seeking','buy','contract','outsourcing','packaging','corrugated','carton','mailer','box','pallet'];
-  kw.forEach(k=>{ if(txt.includes(k)) s+=6; });
-  const src=String(it.source||'web');
-  if(src==='linkedin') s+=10; else if(src==='reddit') s+=6; else if(src==='web') s+=4;
-  const t=+new Date(it.ts||it.publishedAt||it.time||Date.now());
-  const hrs=(Date.now()-t)/3.6e6; s+=Math.max(0,20-hrs*3); // decay ~3/ hr
-  return Math.max(0,Math.min(100,Math.round(s)));
-}
-
-/***********************
- * Presence (soft demo floor)
- ***********************/
+// --- soft presence (local tabs) + real presence blend ---
 const ONLINE_KEY='galactly:live:pings';
+const whoEl=document.getElementById('who');
 const myId=Math.random().toString(36).slice(2);
 function getP(){ try{return JSON.parse(localStorage.getItem(ONLINE_KEY)||'{}')}catch{return{}} }
 function setP(o){ localStorage.setItem(ONLINE_KEY,JSON.stringify(o)); }
 function beat(){ const o=getP(); o[myId]=Date.now(); setP(o); }
-function sweep(){ const o=getP(),now=Date.now(); for(const k of Object.keys(o)) if(now-o[k]>25000) delete o[k]; setP(o); whoEl.textContent=`${Math.max(40,Math.round(Object.keys(o).length*0.9)+4)} online`; }
-window.addEventListener('storage',e=>{ if(e.key===ONLINE_KEY) sweep(); });
-setInterval(beat,7000); setInterval(sweep,5000); beat(); sweep();
+function sweepLocal(){ const o=getP(),now=Date.now(); for(const k of Object.keys(o)) if(now-o[k]>25000) delete o[k]; setP(o); return Object.keys(o).length; }
+async function pollOnline(){
+  let real=0; try{ const r=await fetch(API+'/api/v1/presence/online'); const j=await r.json(); real=(j.real||j.count||0); }catch{}
+  const local=sweepLocal();
+  // floor display to avoid looking empty
+  const floor=34; // never show under this
+  const demo=Math.max(0, Math.round(real*0.1));
+  const displayed=Math.max(floor, real + demo + Math.max(0, local-1));
+  whoEl.textContent = displayed + ' online';
+}
+async function beatPresence(){ if(!SESSION) return; try{ await fetch(API+'/api/v1/presence/beat',{method:'POST',headers:authHeaders()}); }catch{} }
+setInterval(beat,7000); setInterval(pollOnline,12000); setInterval(beatPresence,10000); beat(); pollOnline(); beatPresence();
 
-/***********************
- * Gate (non-blocking on network)
- ***********************/
+// --- onboarding gate ---
 const gate=document.getElementById('gate');
 const enterBtn=document.getElementById('enterBtn');
+const chkListMe=document.getElementById('chkListMe');
+const moreBox=document.getElementById('moreBox');
+chkListMe.addEventListener('change',()=>{ moreBox.style.maxHeight=chkListMe.checked?'180px':'0'; });
+function needGate(){ return !localStorage.getItem('galactly:onboarded'); }
+function openGate(){ gate.classList.add('show'); }
+function closeGate(){ gate.classList.remove('show'); }
 enterBtn.addEventListener('click', async ()=>{
   const email = document.getElementById('f_email').value.trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Enter a valid email'); return; }
-  const payload = { email, listMe: document.getElementById('chkListMe').checked, company: document.getElementById('f_company').value.trim(), site: document.getElementById('f_site').value.trim() };
+  const payload = { email, listMe: chkListMe.checked, company: document.getElementById('f_company').value.trim(), site: document.getElementById('f_site').value.trim() };
   try{
-    const r = await fetch('/api/v1/onboard', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-    const j = await r.json().catch(()=>({}));
-    if(j && j.session){ SESSION=j.session; localStorage.setItem('galactly:session',SESSION); }
-  }catch{}
-  localStorage.setItem('galactly:onboarded', JSON.stringify(payload));
-  gate.classList.remove('show');
+    const r = await fetch(API + '/api/v1/onboard', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const j = await r.json();
+    if(j.session){ SESSION=j.session; localStorage.setItem('galactly:session',SESSION); }
+    localStorage.setItem('galactly:onboarded', JSON.stringify(payload));
+    closeGate(); kick(true);
+  }catch(e){ alert('Network error.'); }
 });
-if(!localStorage.getItem('galactly:onboarded')) gate.classList.add('show');
 
-/***********************
- * Rendering
- ***********************/
-function scoreChip(score){
-  const el=document.createElement('span');
-  el.className='hot';
-  el.innerHTML=`<i></i> Hot ${score}`;
-  el.style.borderColor='var(--line)';
-  if(score>75) el.style.background='rgba(255,138,101,.13)';
-  else if(score>55) el.style.background='rgba(246,211,101,.10)';
-  else el.style.background='rgba(124,243,192,.10)';
-  return el;
-}
-
-function card(it, isNew=false){
-  const t=+new Date(it.ts||it.publishedAt||it.time||Date.now());
-  const s=hotScore(it);
-  const el=document.createElement('div'); el.className='card'+(isNew?' new':'');
-  el.innerHTML = `
-    <a href="${it.url}" target="_blank" rel="noopener" class="title">${it.title||it.url}</a>
-    <div class="snip">${(it.snippet||'').replace(/</g,'&lt;')}</div>
-    <div class="row">
-      <span class="tag">${String(it.source||'web')}</span>
-      <span class="tag">${domain(it.url)}</span>
-      <span class="tag time" data-ts="${t}">${relative(t)}</span>
-    </div>
-  `;
-  el.querySelector('.row').appendChild(scoreChip(s));
-  const why = document.createElement('div');
-  why.className='why';
-  why.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg><small>Why AI shows you this lead?</small>';
-  why.onclick=()=>showWhy(it);
-  el.appendChild(why);
-  return el;
-}
-
-// relative time ticker
-setInterval(()=>{
-  document.querySelectorAll('.time').forEach(n=>{ const ts=+n.getAttribute('data-ts'); n.textContent=relative(ts); });
-}, 1000);
-
-/***********************
- * Fetch + merge loop
- ***********************/
-const QUERY='packaging buyer OR procurement OR RFP site:gov OR site:linkedin.com';
-const demoItems=[
-  {source:'linkedin',title:'Seeking contract packaging partner for Q4 promotion — CPG brand',url:'https://www.linkedin.com/feed/update/demo1',snippet:'US brand needs co-packer for gift bundles. Corrugated + inserts. Quick turnaround.',ts:Date.now()-25_000},
-  {source:'web',title:'City of Mesa — RFP: Corrugated Boxes & Packaging Materials',url:'https://example.gov/rfp/corrugated-boxes',snippet:'City requests proposals for corrugated boxes in multiple sizes for warehouse ops.',ts:Date.now()-120_000},
-  {source:'web',title:'University RFQ: Custom Foam Inserts for Instruments',url:'https://example.edu/rfq/foam-inserts',snippet:'Quote request for precision-cut foam inserts and cartons. Delivery + packaging.',ts:Date.now()-3600_000},
-  {source:'reddit',title:'Where to source custom rigid boxes in the US?',url:'https://reddit.com/r/AskEngineers/demo',snippet:'Buyer asking for domestic rigid box suppliers, low MOQs, embossing, foil.',ts:Date.now()-4_000}
-];
-
-async function fetchLeads(){
-  const url=`/api/v1/leads?limit=32&q=${encodeURIComponent(QUERY)}`;
-  const res = await fetch(url, { headers: authHeaders() });
-  if(!res.ok) throw new Error('HTTP_'+res.status);
-  const data = await res.json();
-  const items = (data && Array.isArray(data.items)) ? data.items : [];
-  return items;
-}
-
-const pending = [];      // (already declared above)
-const seen = new Set();  // (already declared above)
-function pushNew(items){
-  let adds=0;
-  for(const it of items){
-    const key=(it.url||'').replace(/[?#].*$/,'');
-    if(!key || seen.has(key)) continue;
-    seen.add(key);
-    if(!it.ts && !it.publishedAt && !it.time) it.ts = Date.now()-Math.floor(Math.random()*90_000);
-    pending.push(it);
-    adds++;
-  }
-  if(adds){ newbar.classList.add('show'); document.querySelector('#newbar .chip').textContent = `Show ${adds} new lead${adds>1?'s':''}`; }
-}
-
-function revealNew(){
-  newbar.classList.remove('show');
-  pending.sort((a,b)=> (new Date(b.ts||b.publishedAt||b.time||0)) - (new Date(a.ts||a.publishedAt||a.time||0)) );
-  for(const it of pending.splice(0)){
-    grid.prepend(card(it, true));
-  }
-  while(grid.children.length>84){ grid.lastElementChild.remove(); }
-}
-
-async function kick(){
-  try{
-    const items = await fetchLeads();
-    banner.hidden=true;
-    if(grid.children.length===0){
-      items.sort((a,b)=> (new Date(b.ts||b.publishedAt||b.time||0)) - (new Date(a.ts||a.publishedAt||a.time||0)) );
-      for(const it of items){ const key=(it.url||'').replace(/[?#].*$/,''); if(!seen.has(key)){ seen.add(key); grid.appendChild(card(it)); } }
-    }else{
-      pushNew(items);
-    }
-  }catch(err){
-    if(grid.children.length===0){
-      banner.hidden=false; banner.textContent='Network error. Showing demo feed.';
-      pushNew(demoItems); revealNew();
-    } else {
-      banner.hidden=false; banner.textContent='Network error. Will retry…';
-    }
-  }
-}
-
-function countdown(){ refreshEl.textContent=`refresh in ${tick}s`; if(--tick<0){ tick=30; if(AUTO) kick(); } }
-
-kick();
-revealNew();
-setInterval(countdown,1000);
-setInterval(()=>{ if(AUTO) kick(); }, 20000);
-
-/***********************
- * Why popover
- ***********************/
+// --- UI helpers ---
+const grid=document.getElementById('grid');
+const loader=document.getElementById('loader');
+const banner=document.getElementById('banner');
+const refreshEl=document.getElementById('refresh');
 const whyPop=document.getElementById('whyPop');
 const whyList=document.getElementById('whyList');
 const originHint=document.getElementById('originHint');
+
+// seen map for time-ago per URL
+const SEEN_KEY='galactly:seen';
+function getSeen(){ try{return JSON.parse(localStorage.getItem(SEEN_KEY)||'{}')}catch{return{}} }
+function setSeen(o){ try{localStorage.setItem(SEEN_KEY,JSON.stringify(o))}catch{} }
+let seen=getSeen();
+
+function timeAgo(ts){ if(!ts) return 'just now'; const s=Math.max(1,Math.floor((Date.now()-ts)/1000)); if(s<60) return s+'s ago'; const m=Math.floor(s/60); if(m<60) return m+'m ago'; const h=Math.floor(m/60); if(h<24) return h+'h ago'; const d=Math.floor(h/24); return d+'d ago'; }
+
+function heatScore(it){
+  const t=((it.title||'')+' '+(it.snippet||'')).toLowerCase();
+  const pos=['rfp','rfq','request for proposal','tender','bid','quote','seeking','urgent','packaging','corrugated','carton','co packer','kitting','3pl','volume','moq','budget'];
+  const neg=['internship','job','hiring','sam.gov','govwin','bidnet','tenders.gov'];
+  let s=0; pos.forEach(k=>{ if(t.includes(k)) s+=8; }); neg.forEach(k=>{ if(t.includes(k)) s-=10; });
+  s+=Math.min(20, (it.title||'').length>60?5:10); // short punchy titles
+  s=Math.max(0,Math.min(100,s));
+  const band = s>=75?'hot': s>=55?'warm':'ok';
+  return {score:s,band};
+}
+
+function card(it){
+  const u=new URL(it.url,location.href);
+  const id=(it.url||it.title||Math.random().toString(36)).slice(0,120);
+  if(!seen[id]){ seen[id]=Date.now(); setSeen(seen); }
+  const {score,band}=heatScore(it);
+  const el=document.createElement('div'); el.className='card new';
+  const heatLabel = band==='hot'? 'HOT' : band==='warm'? 'WARM' : 'OK';
+  const heatClass = 'heat '+band;
+  el.innerHTML=`
+    <a href="${it.url}" target="_blank" rel="noopener" class="title">${it.title||it.url}</a>
+    <div class="snip">${(it.snippet||'').replace(/</g,'&lt;')}</div>
+    <div class="row">
+      <span class="tag">${it.source||'web'}</span>
+      <span class="tag">${u.hostname.replace(/^www\./,'')}</span>
+      <span class="${heatClass}">🔥 ${heatLabel} · ${score}</span>
+      <span class="age">${timeAgo(seen[id])}</span>
+    </div>
+    <div class="why" data-origin="${it.url}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg>
+      <small>Why AI shows you this lead?</small>
+    </div>`;
+  el.querySelector('.why').addEventListener('click',()=>showWhy(it));
+  setTimeout(()=>el.classList.remove('new'),1600);
+  return el;
+}
+
 function showWhy(it){
   whyList.innerHTML='';
   const reasons=[]; const t=((it.title||'')+' '+(it.snippet||'')).toLowerCase();
-  ['rfp','rfq','request for proposal','procurement','buy','seeking','packaging','corrugated','carton','supplier','outsourcing']
+  ['rfp','rfq','request for proposal','procurement','buy','seeking','packaging','corrugated','carton','supplier','outsourcing','kitting','co packer']
     .forEach(k=>{ if(t.includes(k)) reasons.push(`Matched keyword “${k}”.`); });
-  reasons.push(`Source: ${String(it.source||'web')}.`);
+  reasons.push(`Source: ${it.source||'web'}.`);
   (reasons.length?reasons:['Topical relevance score high.']).forEach(s=>{ const li=document.createElement('li'); li.textContent=s; whyList.appendChild(li); });
-  originHint.innerHTML = `Origin: <a href="${it.url}" target="_blank" rel="noopener">${domain(it.url)}</a>`;
-  whyPop.classList.add('show');
-  setTimeout(()=>document.addEventListener('click',()=>whyPop.classList.remove('show'),{once:true}),0);
+  originHint.innerHTML=`Origin: <a href="${it.url}" target="_blank" rel="noopener">${new URL(it.url,location.href).hostname}</a>`;
+  whyPop.classList.add('show'); setTimeout(()=>document.addEventListener('click',()=>whyPop.classList.remove('show'),{once:true}),0);
 }
+
+// --- data + fetch loop ---
+const QUERY='(packaging buyer OR procurement OR "need packaging" OR "looking for packaging" OR co-packer OR kitting) (site:linkedin.com OR site:reddit.com OR site:substack.com) -site:sam.gov -site:gov -site:bidnet -site:govwin -site:fbo.gov';
+let tick=30,timer=null, fetching=false;
+const MAX_KEEP=96;
+
+function countdown(){ refreshEl.textContent=`refresh in ${tick}s`; if(--tick<0){ tick=30; kick(false,true); } }
+
+async function fetchPrimary(limit){
+  const url=`${API}/api/v1/leads?limit=${limit}&q=${encodeURIComponent(QUERY)}`;
+  const res=await fetch(url,{headers:authHeaders()}); if(!res.ok) throw new Error('HTTP_'+res.status); return res.json();
+}
+
+function mergeRender(items){
+  const existing = new Map();
+  [...grid.children].forEach(c=>{ const a=c.querySelector('a.title'); if(a) existing.set(a.href,true); });
+  const frag=document.createDocumentFragment();
+  let added=0;
+  items.forEach(it=>{ const key=it.url; if(existing.has(key)) return; frag.appendChild(card(it)); added++; });
+  if(added){ grid.prepend(frag); }
+  // trim old
+  while(grid.children.length>MAX_KEEP) grid.lastElementChild.remove();
+}
+
+async function kick(force=false,refreshOnly=false){
+  if(fetching) return; fetching=true; loader.hidden=false;
+  try{
+    const data=await fetchPrimary(24);
+    const items=(data && Array.isArray(data.items))?data.items:[];
+    if(!items.length){ banner.hidden=false; banner.textContent='No items. Check API/CSE on backend.'; }
+    else{ banner.hidden=true; if(force||grid.children.length===0){ grid.replaceChildren(); items.forEach(it=>grid.appendChild(card(it))); } else { mergeRender(items); } }
+  }catch(e){ banner.hidden=false; banner.textContent='Network error. Showing demo feed.'; if(grid.children.length===0) renderDemo(); }
+  finally{ fetching=false; loader.hidden=true; }
+}
+
+function renderDemo(){
+  const demo=[
+    {source:'linkedin',title:'Seeking contract packaging partner for Q4 promotion — CPG brand',url:'https://www.linkedin.com/feed/update/demo1',snippet:'US brand needs co-packer for gift bundles. Corrugated + inserts. Quick turnaround.'},
+    {source:'web',title:'3PL needs packaging supplier for new ecommerce client',url:'https://example.com/demo2',snippet:'Die-cut mailers, branded tape, poly mailers. Monthly volumes 20–40k.'},
+    {source:'reddit',title:'Where to source custom rigid boxes in the US?',url:'https://reddit.com/r/AskEngineers/demo',snippet:'Buyer asking for domestic rigid box suppliers, low MOQs, embossing, foil.'}
+  ];
+  grid.replaceChildren(); demo.forEach(it=>grid.appendChild(card(it)));
+}
+
+if(needGate()) openGate();
+kick(true);
+timer=setInterval(countdown,1000);
+
+// lazy-load older (duplicate current for endless-feel without backend pagination)
+const io=new IntersectionObserver(entries=>{
+  for(const e of entries){ if(e.isIntersecting){ kick(false,true); } }
+},{rootMargin:'400px'});
+io.observe(loader);
 </script>
 </body>
 </html>
