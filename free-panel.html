@@ -1,22 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Galactly — Live packaging leads</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --ink:#e9eef7; --mut:#9aa3b2; --bg:#0b0f18; --card:#0d1322; --line:rgba(255,255,255,.08);
-    --accent:#86f7d6; --accent2:#57a4ff;
-  }
-  *{box-sizing:border-box} html,body{height:100%}
-  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:
-    radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%),
-    radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%),
-    linear-gradient(180deg,#0b0e18,#06070c 55%); color:var(--ink)}
+  :root{--ink:#e9eef7;--mut:#9aa3b2;--bg:#0b0f18;--card:#0d1322;--line:rgba(255,255,255,.08);--accent:#86f7d6;--accent2:#57a4ff}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%), radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%), linear-gradient(180deg,#0b0e18,#06070c 55%); color:var(--ink)}
   a{color:inherit}
   .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);backdrop-filter:blur(8px) saturate(1.05);background:rgba(6,8,12,.55)}
   .dot{width:7px;height:7px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
@@ -31,15 +26,19 @@
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
   .tag{border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:#cfd6e6}
   .why{display:flex;align-items:center;gap:6px;margin-top:12px;color:#cfd6e6;cursor:pointer}
-  .why small{color:var(--mut)} .why:hover small{color:#fff}
+  .why small{color:var(--mut)}
+  .why:hover small{color:#fff}
   .banner{margin:12px 0 18px;border:1px dashed var(--line);border-radius:14px;padding:14px 16px;color:var(--mut);text-align:center}
   .why-pop{position:fixed;inset:auto 18px 18px auto;max-width:380px;background:#0d1322;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.38);display:none}
-  .why-pop.show{display:block} .why-pop h4{margin:0 0 8px;font-size:14px}
-  .why-pop ul{margin:0;padding:0 0 0 18px} .why-pop li{margin:6px 0;color:#cbd3e6;font-size:13px}
+  .why-pop.show{display:block}
+  .why-pop h4{margin:0 0 8px;font-size:14px}
+  .why-pop ul{margin:0;padding:0 0 0 18px}
+  .why-pop li{margin:6px 0;color:#cbd3e6;font-size:13px}
   .gate{position:fixed;inset:0;display:none;place-items:center;background:rgba(4,6,10,.58);backdrop-filter:blur(6px)}
   .gate.show{display:grid}
   .panel{width:min(680px,92vw);background:linear-gradient(180deg,#0b1020,#0a0f1b);border:1px solid var(--line);border-radius:18px;padding:18px}
-  .panel h2{margin:0 0 6px} .panel p{margin:0 0 10px;color:#cfd6e6}
+  .panel h2{margin:0 0 6px}
+  .panel p{margin:0 0 10px;color:#cfd6e6}
   .f{display:grid;gap:10px;margin-top:12px}
   .f input[type="email"], .f input[type="url"], .f input[type="text"]{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#0f1426;color:#fff}
   .row2{display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -54,7 +53,8 @@
 <body>
   <div class="topbar">
     <div class="headerline">
-      <div class="dot"></div><strong>Live feed</strong>
+      <div class="dot"></div>
+      <strong>Live feed</strong>
       <span id="refresh" class="pill">refresh in —</span>
     </div>
     <div class="spacer"></div>
@@ -78,16 +78,16 @@
       <h2>Get in. It’s free.</h2>
       <p>We tune the feed for packaging vendors only. Verify email to enter.</p>
       <div class="f">
-        <input id="f_email" type="email" placeholder="Work email (required)"/>
+        <input id="f_email" type="email" placeholder="Work email (required)" />
         <div class="row2">
           <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
-            <input id="chkListMe" type="checkbox"/>
+            <input id="chkListMe" type="checkbox" />
             <span>Also list my company for inbound opportunities</span>
           </label>
         </div>
         <div id="moreBox" class="reveal" style="max-height:0">
-          <input id="f_company" type="text" placeholder="Company name (optional)"/>
-          <input id="f_site" type="url" placeholder="Company website (optional)"/>
+          <input id="f_company" type="text" placeholder="Company name (optional)" />
+          <input id="f_site" type="url" placeholder="Company website (optional)" />
           <div class="hint">We show your profile to buyers who match your ICP.</div>
         </div>
         <div class="cta">
@@ -98,119 +98,122 @@
     </div>
   </div>
 
-  <script src="./api-base.js"></script>
-  <script>
-  // --- basics
-  const API=(window.API_BASE||'').replace(/\/$/,'');
-  const grid=document.getElementById('grid');
-  const banner=document.getElementById('banner');
-  const refreshEl=document.getElementById('refresh');
-  const whyPop=document.getElementById('whyPop');
-  const whyList=document.getElementById('whyList');
-  const originHint=document.getElementById('originHint');
+<script>
+// --- API base (inline so this file runs standalone) ---
+(function(){
+  const DEFAULT='https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
+  const q=new URLSearchParams(location.search);
+  let base=q.get('api')||localStorage.getItem('apiBase')||DEFAULT;
+  function norm(v){ if(!v) return DEFAULT; v=String(v).trim().replace(/\/+$/,''); if(!/^https?:\/\//i.test(v)) v='https://'+v; return v; }
+  base=norm(base); window.API_BASE=base; try{localStorage.setItem('apiBase',base)}catch{}
+  const _fetch=window.fetch.bind(window);
+  window.fetch=(input,init)=>{ try{const url=typeof input==='string'?input:input.url; if(url && url.startsWith('/api/')) return _fetch(window.API_BASE+url,init);}catch{} return _fetch(input,init); };
+})();
 
-  // --- presence (per-tab)
-  const ONLINE_KEY='galactly:live:pings', whoEl=document.getElementById('who'), myId=Math.random().toString(36).slice(2);
-  const getPings=()=>{try{return JSON.parse(localStorage.getItem(ONLINE_KEY)||'{}')}catch{return{}}};
-  const setPings=o=>localStorage.setItem(ONLINE_KEY,JSON.stringify(o));
-  const beat=()=>{const o=getPings();o[myId]=Date.now();setPings(o)};
-  const sweep=()=>{const o=getPings(),now=Date.now();for(const k of Object.keys(o)) if(now-o[k]>25000) delete o[k]; setPings(o); whoEl.textContent=`${Object.keys(o).length} online`};
-  window.addEventListener('storage',e=>{if(e.key===ONLINE_KEY) sweep()}); setInterval(beat,7000); setInterval(sweep,5000); beat(); sweep();
+// --- soft presence (tabs across same origin) ---
+const ONLINE_KEY='galactly:live:pings';
+const whoEl=document.getElementById('who');
+const myId=Math.random().toString(36).slice(2);
+function getP(){ try{return JSON.parse(localStorage.getItem(ONLINE_KEY)||'{}')}catch{return{}} }
+function setP(o){ localStorage.setItem(ONLINE_KEY,JSON.stringify(o)); }
+function beat(){ const o=getP(); o[myId]=Date.now(); setP(o); }
+function sweep(){ const o=getP(),now=Date.now(); for(const k of Object.keys(o)) if(now-o[k]>25000) delete o[k]; setP(o); whoEl.textContent=`${Object.keys(o).length} online`; }
+window.addEventListener('storage',e=>{ if(e.key===ONLINE_KEY) sweep(); });
+setInterval(beat,7000); setInterval(sweep,5000); beat(); sweep();
 
-  // --- gate (always ON unless ?skipGate=1)
-  const gate=document.getElementById('gate'), enterBtn=document.getElementById('enterBtn'), chk=document.getElementById('chkListMe'), more=document.getElementById('moreBox');
-  chk.addEventListener('change',()=>{more.style.maxHeight=chk.checked?'180px':'0'});
-  const params=new URLSearchParams(location.search);
-  const BYPASS=params.get('skipGate')==='1';
-  function needGate(){
-    if(BYPASS) return false;
-    try{const o=JSON.parse(localStorage.getItem('galactly:onboarded')||'{}'); return !o.email;}catch{return true}
-  }
-  function openGate(){gate.classList.add('show')}
-  enterBtn.addEventListener('click',()=>{
-    const email=document.getElementById('f_email').value.trim();
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return alert('Enter a valid email');
-    const payload={email,listMe:chk.checked,company:document.getElementById('f_company').value.trim(),site:document.getElementById('f_site').value.trim()};
-    localStorage.setItem('galactly:onboarded',JSON.stringify(payload));
-    gate.classList.remove('show'); kick(true);
-  });
-
-  // --- cards
-  function card(it){
-    const u=new URL(it.url,location.href);
-    const el=document.createElement('div'); el.className='card';
-    el.innerHTML=`
-      <a href="${it.url}" target="_blank" rel="noopener" class="title">${it.title||it.url}</a>
-      <div class="snip">${(it.snippet||'').replace(/</g,'&lt;')}</div>
-      <div class="row">
-        <span class="tag">${it.source||'web'}</span>
-        <span class="tag">${u.hostname.replace(/^www\./,'')}</span>
-      </div>
-      <div class="why">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg>
-        <small>Why AI shows you this lead?</small>
-      </div>`;
-    el.querySelector('.why').onclick=()=>showWhy(it);
-    return el;
-  }
-  function showWhy(it){
-    whyList.innerHTML='';
-    const t=((it.title||'')+' '+(it.snippet||'')).toLowerCase();
-    const adds=['rfp','rfq','request for proposal','procurement','buy','seeking','packaging','corrugated','cartons','supplier','outsourcing'];
-    const reasons=adds.filter(k=>t.includes(k)).map(k=>`Matched keyword “${k}”.`);
-    if(!reasons.length) reasons.push('Topical relevance score high.');
-    reasons.push(`Source: ${it.source||'web'}.`);
-    reasons.forEach(s=>{const li=document.createElement('li'); li.textContent=s; whyList.appendChild(li)});
-    originHint.innerHTML=`Origin: <a href="${it.url}" target="_blank" rel="noopener">${new URL(it.url,location.href).hostname}</a>`;
-    whyPop.classList.add('show'); setTimeout(()=>document.addEventListener('click',()=>whyPop.classList.remove('show'),{once:true}),0);
-  }
-
-  // --- fetch strategy (primary + hard fallback) + diagnostics
-  const QUERY='(packaging buyer OR procurement OR RFP OR RFQ OR "request for proposal") (site:gov OR site:linkedin.com OR site:reddit.com)';
-  let tick=30, timer=setInterval(()=>{refreshEl.textContent=`refresh in ${tick--}s`; if(tick<0){tick=30;kick()}},1000);
-
-  const dedupe=(arr)=>{const seen=new Set(),out=[];for(const it of arr){const k=(it.url||'').replace(/[#?].*$/,''); if(!k||seen.has(k)) continue; seen.add(k); out.push(it)} return out};
-
-  async function getPrimary(q){
-    const url=`${API}/api/v1/leads?limit=24&q=${encodeURIComponent(q)}`;
-    const r=await fetch(url);
-    if(!r.ok){ const txt=await r.text().catch(()=>r.statusText||''); throw new Error(`primary ${r.status}: ${txt}`); }
-    const j=await r.json(); return Array.isArray(j.items)?j.items:[];
-  }
-  async function getFallback(q){
-    const types=['web','linkedin','youtube'];
-    const req=types.map(t=>fetch(`${API}/api/v1/peek?q=${encodeURIComponent(q)}&type=${t}&limit=10`).then(r=>r.ok?r.json():Promise.reject(new Error(`${t} ${r.status}`))).catch(()=>({items:[]})));
-    const res=await Promise.all(req);
-    const all=res.flatMap(x=>Array.isArray(x.items)?x.items:[]);
-    return dedupe(all);
-  }
-
-  async function kick(force){
-    if(needGate() && !force){ openGate(); return; }
-    if(!API){ banner.hidden=false; banner.textContent='Set API base in api-base.js'; return; }
-    try{
-      banner.hidden=true; grid.replaceChildren();
-      let items=await getPrimary(QUERY);
-      if(!items.length) items=await getFallback(QUERY);
-      if(!items.length){
-        banner.hidden=false;
-        banner.textContent='No items from API. Check GOOGLE_API_KEY / CSE IDs on backend (or quota).';
-      } else {
-        items.forEach(it=>grid.appendChild(card(it)));
-      }
-    }catch(e){
-      banner.hidden=false;
-      banner.textContent=`Network error: ${e.message||e}`;
-      console.error(e);
-      // Bonus quick probe to help diagnose CORS/backends quickly:
-      try{
-        const s=await fetch(`${API}/api/v1/status`); if(!s.ok) throw new Error(`${s.status}`); 
-      }catch(err){ console.warn('Status probe failed',err); }
-    }
-  }
-
-  if(needGate()) openGate();
+// --- onboarding gate ---
+const gate=document.getElementById('gate');
+const enterBtn=document.getElementById('enterBtn');
+const chkListMe=document.getElementById('chkListMe');
+const moreBox=document.getElementById('moreBox');
+chkListMe.addEventListener('change',()=>{ moreBox.style.maxHeight=chkListMe.checked?'180px':'0'; });
+function needGate(){ return !localStorage.getItem('galactly:onboarded'); }
+function openGate(){ gate.classList.add('show'); }
+function closeGate(){ gate.classList.remove('show'); }
+enterBtn.addEventListener('click',()=>{
+  const email=document.getElementById('f_email').value.trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ alert('Enter a valid email'); return; }
+  const payload={ email, listMe:chkListMe.checked, company:document.getElementById('f_company').value.trim(), site:document.getElementById('f_site').value.trim() };
+  localStorage.setItem('galactly:onboarded',JSON.stringify(payload));
+  closeGate();
   kick();
-  </script>
+});
+
+// --- UI helpers ---
+const grid=document.getElementById('grid');
+const banner=document.getElementById('banner');
+const refreshEl=document.getElementById('refresh');
+const whyPop=document.getElementById('whyPop');
+const whyList=document.getElementById('whyList');
+const originHint=document.getElementById('originHint');
+
+function card(it){
+  const u=new URL(it.url,location.href);
+  const el=document.createElement('div'); el.className='card';
+  el.innerHTML=`<a href="${it.url}" target="_blank" rel="noopener" class="title">${it.title||it.url}</a>
+  <div class="snip">${(it.snippet||'').replace(/</g,'&lt;')}</div>
+  <div class="row"><span class="tag">${it.source||'web'}</span><span class="tag">${u.hostname.replace(/^www\./,'')}</span></div>
+  <div class="why" data-origin="${it.url}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg><small>Why AI shows you this lead?</small></div>`;
+  el.querySelector('.why').addEventListener('click',()=>showWhy(it));
+  return el;
+}
+function showWhy(it){
+  whyList.innerHTML='';
+  const reasons=[]; const t=((it.title||'')+' '+(it.snippet||'')).toLowerCase();
+  ['rfp','rfq','request for proposal','procurement','buy','seeking','packaging','corrugated','carton','supplier','outsourcing']
+    .forEach(k=>{ if(t.includes(k)) reasons.push(`Matched keyword “${k}”.`); });
+  reasons.push(`Source: ${it.source||'web'}.`);
+  (reasons.length?reasons:['Topical relevance score high.']).forEach(s=>{ const li=document.createElement('li'); li.textContent=s; whyList.appendChild(li); });
+  originHint.innerHTML=`Origin: <a href="${it.url}" target="_blank" rel="noopener">${new URL(it.url,location.href).hostname}</a>`;
+  whyPop.classList.add('show'); setTimeout(()=>document.addEventListener('click',()=>whyPop.classList.remove('show'),{once:true}),0);
+}
+
+// --- data ---
+const QUERY='packaging buyer OR procurement OR RFP site:gov OR site:linkedin.com';
+const demoItems=[
+  {source:'linkedin',title:'Seeking contract packaging partner for Q4 promotion — CPG brand',url:'https://www.linkedin.com/feed/update/demo1',snippet:'US brand needs co-packer for gift bundles. Corrugated + inserts. Quick turnaround.'},
+  {source:'web',title:'City of Mesa — RFP: Corrugated Boxes & Packaging Materials',url:'https://example.gov/rfp/corrugated-boxes',snippet:'The City requests proposals for corrugated boxes in multiple sizes for warehouse ops.'},
+  {source:'web',title:'University RFQ: Custom Foam Inserts for Instruments',url:'https://example.edu/rfq/foam-inserts',snippet:'Quote request for precision-cut foam inserts and cartons. Delivery + packaging.'},
+  {source:'linkedin',title:'3PL needs packaging supplier for new ecommerce client',url:'https://www.linkedin.com/feed/update/demo2',snippet:'Die-cut mailers, branded tape, poly mailers. Monthly volumes 20–40k.'},
+  {source:'web',title:'County Bid: Recycling-friendly retail packaging',url:'https://county.gov/rfp/retail-packaging',snippet:'Sustainable packaging pilot. RFP for recycled-content cartons and labels.'},
+  {source:'reddit',title:'Where to source custom rigid boxes in the US?',url:'https://reddit.com/r/AskEngineers/demo',snippet:'Buyer asking for domestic rigid box suppliers, low MOQs, embossing, foil.'},
+  {source:'web',title:'Hospital System RFP — Pharmacy shipping coolers',url:'https://health.org/rfp/coolers',snippet:'Insulated shippers for gel packs, indicators. Multi‑state system.'},
+  {source:'linkedin',title:'SaaS company launching swag kits — need kitting + packaging',url:'https://linkedin.com/posts/demo',snippet:'Kitting 2k welcome kits. Inserts, mailers, fulfillment. Q3 timeline.'}
+];
+
+let tick=30,timer=null;
+function countdown(){ refreshEl.textContent=`refresh in ${tick}s`; if(--tick<0){ tick=30; kick(); } }
+
+async function fetchPrimary(){
+  const API=(window.API_BASE||'').replace(/\/$/,'');
+  if(!API) throw new Error('NO_API');
+  const url=`${API}/api/v1/leads?limit=24&q=${encodeURIComponent(QUERY)}`;
+  const res=await fetch(url);
+  if(!res.ok) throw new Error('HTTP_'+res.status);
+  return res.json();
+}
+
+function renderItems(items){
+  grid.replaceChildren();
+  if(!items.length){ banner.hidden=false; banner.textContent='No items.'; return; }
+  banner.hidden=true; items.forEach(it=>grid.appendChild(card(it)));
+}
+
+async function kick(){
+  try{
+    const data=await fetchPrimary();
+    const items=(data && Array.isArray(data.items))?data.items:[];
+    if(!items.length){ banner.hidden=false; banner.textContent='No items. Check API key / CSE IDs on backend.'; }
+    else renderItems(items);
+  }catch(err){
+    banner.hidden=false; banner.textContent='Network error. Falling back to demo feed.';
+    renderItems(demoItems);
+  }
+}
+
+if(needGate()) openGate();
+kick();
+timer=setInterval(countdown,1000);
+</script>
 </body>
 </html>
