@@ -1,33 +1,77 @@
 <!DOCTYPE html>
-<div class="meta">
-<div class="badge"><small>Leads / 30s</small><span id="b-leads">0</span></div>
-<div class="badge"><small>First connection</small><span id="b-first">—</span></div>
-<div class="badge"><small>Ready now</small><span id="b-ready">—</span></div>
-<div class="badge"><small>Quoted</small><span id="b-quote">—</span></div>
-<div class="badge"><small>AI closed</small><span id="b-ai">—</span></div>
-<div class="badge"><small>Rep closed</small><span id="b-human">—</span></div>
-<div class="badge"><small>Saved / mo</small><span id="b-saved">—</span></div>
-</div>
-<div class="ticker" id="ticker"></div>
-</div>
-</div>
-</section>
-<script>
-// Minimal sphere animation (unchanged look)
-const cvs=document.getElementById('flowCanvas');const DPR=Math.min(2.2,window.devicePixelRatio||1);let ctx=null;let started=false;let cx=0,cy=0,R=0,coreX=0,coreY=0,coreR=22;let chips=[];
-const CHANNELS=['Email','SMS','Call','LinkedIn','Quote','ERP'].map((name,i)=>({name,color:['rgba(134,247,214,.65)','rgba(160,255,160,.65)','rgba(159,208,255,.65)','rgba(120,200,255,.65)','rgba(255,210,140,.7)','rgba(200,170,255,.7)'][i]}));
-const K={leads:document.getElementById('b-leads'),first:document.getElementById('b-first'),ready:document.getElementById('b-ready'),quote:document.getElementById('b-quote'),ai:document.getElementById('b-ai'),human:document.getElementById('b-human'),saved:document.getElementById('b-saved')};
-const ticker=document.getElementById('ticker');
-const center={lat:25*Math.PI/180,lon:-90*Math.PI/180};function proj(lat,lon){const dLon=lon-center.lon;const sC=Math.sin(center.lat),cC=Math.cos(center.lat);const sL=Math.sin(lat),cL=Math.cos(lat);const sDL=Math.sin(dLon),cDL=Math.cos(dLon);const k=sC*sL+cC*cL*cDL;if(k<=0)return null;return{x:cx+R*(cL*sDL),y:cy-R*(cC*sL-sC*cL*cDL)}}
-const LAND_NA=[[71,-156],[48,-124],[34,-118],[25,-111],[20,-105],[18,-103],[16,-99],[20,-90],[27,-81],[31,-80],[36,-76],[42,-72],[49,-64],[54,-60],[60,-75],[69,-95],[71,-156]];
-const LAND_SA=[[10,-79],[8,-74],[5,-60],[0,-58],[-8,-54],[-18,-44],[-24,-42],[-30,-52],[-40,-61],[-48,-70],[-55,-66],[-33,-71],[-20,-70],[-12,-77],[-8,-79],[10,-79]];
-function resize(){const r=cvs.getBoundingClientRect();cvs.width=Math.floor(r.width*DPR);cvs.height=Math.floor(r.height*DPR);cvs.style.width=r.width+'px';cvs.style.height=r.height+'px';ctx=cvs.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);cx=r.width*0.28;cy=r.height*0.56;R=Math.min(r.width*0.30,r.height*0.46);coreX=r.width*0.56;coreY=r.height*0.56;coreR=Math.max(18,Math.min(24,r.width*0.03));const baseX=r.width*0.83,baseY=coreY,rad=Math.min(110,r.height*0.20),a0=-Math.PI/3,a1=Math.PI/3;chips=CHANNELS.map((c,i)=>{const a=CHANNELS.length>1?a0+(a1-a0)*(i/(CHANNELS.length-1)):0;return{x:baseX+rad*Math.cos(a),y:baseY+rad*Math.sin(a),r:12,label:c.name,color:c.color}})}
-function drawHemisphere(){const g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,R*1.1);g.addColorStop(0,'rgba(255,255,255,.05)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();ctx.beginPath();LAND_NA.concat(LAND_SA).forEach(([la,lo],i)=>{const P=proj(la*Math.PI/180,lo*Math.PI/180);if(!P)return;i?ctx.lineTo(P.x,P.y):ctx.moveTo(P.x,P.y)});ctx.closePath();ctx.fillStyle='rgba(134,247,214,0.09)';ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.14)';ctx.stroke()}
-function drawCore(t){const g=ctx.createRadialGradient(coreX,coreY,0,coreX,coreY,coreR*2.6);g.addColorStop(0,'rgba(255,255,255,.04)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(coreX,coreY,coreR*2.6,0,Math.PI*2);ctx.fill();ctx.save();ctx.translate(coreX,coreY);for(let i=0;i<3;i++){const r=coreR+i*18;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.strokeStyle=`rgba(255,255,255,${0.14-i*0.02})`;ctx.lineWidth=1.2;ctx.stroke() }ctx.restore()}
-function drawChannels(){CHANNELS.forEach((ch,i)=>{const chip=chips[i];ctx.save();ctx.strokeStyle=ch.color;ctx.globalAlpha=0.5;ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(coreX,coreY);ctx.quadraticCurveTo((coreX+chip.x)/2,(coreY+chip.y*1.1)/2,chip.x,chip.y);ctx.stroke();ctx.globalAlpha=1;ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.beginPath();ctx.moveTo(coreX,coreY);ctx.quadraticCurveTo((coreX+chip.x)/2,(coreY+chip.y*1.1)/2,chip.x,chip.y);ctx.stroke();ctx.beginPath();ctx.arc(chip.x,chip.y,chip.r,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.24)';ctx.lineWidth=1.2;ctx.stroke();ctx.font="700 11px Montserrat,Inter";ctx.fillStyle='rgba(255,255,255,.92)';ctx.textAlign='center';ctx.fillText(chip.label,chip.x,chip.y-chip.r-8);ctx.restore()})}
-function loop(ts){requestAnimationFrame(loop);const t=ts/1000;ctx.clearRect(0,0,cvs.width/DPR,cvs.height/DPR);drawHemisphere();drawCore(t);drawChannels()}
-function init(){if(started)return;started=true;resize();requestAnimationFrame(loop)}
-window.addEventListener('resize',resize);document.addEventListener('DOMContentLoaded',init);
+
+
+gateForm.addEventListener('submit',async(ev)=>{
+ev.preventDefault();
+const email=(document.getElementById('email').value||'').trim();
+const site=(document.getElementById('site').value||'').trim();
+if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return alert('Enter a valid email');
+localStorage.setItem(KEY, JSON.stringify({email,listMe:listMe.checked,site}));
+hideGate();
+// Optional: hit a lightweight event endpoint later
+loadFeed(true);
+});
+
+
+// --- Live feed ---
+const grid=document.getElementById('grid');
+const empty=document.getElementById('empty');
+const refreshEl=document.getElementById('refreshIn');
+const onlineEl=document.getElementById('online');
+let countdown=25, timer=null;
+
+
+function tag(label){const span=document.createElement('span'); span.className='tag'; span.textContent=label; return span}
+function origin(href,txt){const a=document.createElement('a'); a.className='origin'; a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent=txt; return a}
+function explain(it){ // heuristic reasons
+const t=(it.title||'').toLowerCase(); const s=(it.snippet||'').toLowerCase();
+const cues=['rfp','rfq','bid','vendor','supplier','packaging','pallet','box','carton','label','fulfillment','contract','buy','procure'];
+const hits=cues.filter(k=>t.includes(k)||s.includes(k));
+const host=it.displayLink||new URL(it.url).host;
+let why=`Signals on ${host}: `+ (hits.length? hits.slice(0,4).join(', '):'engagement spike / buyer intent keywords');
+return why+ (it.url?` · <a class="origin" href="${it.url}" target="_blank" rel="noopener">open source</a>`:'');
+}
+
+
+function card(it){
+const el=document.createElement('div'); el.className='card';
+const h=document.createElement('h3'); h.innerHTML=it.title||it.url; el.appendChild(h);
+const p=document.createElement('p'); p.textContent=it.snippet||''; el.appendChild(p);
+const row=document.createElement('div'); row.className='row';
+row.appendChild(tag(it.source||'web'));
+row.appendChild(origin(it.url, it.displayLink||new URL(it.url).host));
+el.appendChild(row);
+const why=document.createElement('div'); why.className='why'; why.innerHTML='<i>i</i> Why AI shows you this lead?'; el.appendChild(why);
+const reason=document.createElement('div'); reason.className='reason'; reason.innerHTML=explain(it); el.appendChild(reason);
+why.addEventListener('click',()=>el.classList.toggle('open'));
+return el;
+}
+
+
+async function fetchJSON(u){try{const r=await fetch(u,{headers:{'accept':'application/json'}}); if(!r.ok) return null; return await r.json()}catch(_){return null}}
+
+
+async function loadFeed(force){
+clearInterval(timer); countdown=25; tickCountdown(); timer=setInterval(tickCountdown,1000);
+const q='packaging buyers RFP';
+// Prefer /leads, fallback to /peek
+let data=await fetchJSON(`/api/v1/leads?limit=24&q=${encodeURIComponent(q)}`);
+if(!data||!Array.isArray(data.items)||!data.items.length){
+data=await fetchJSON(`/api/v1/peek?type=web&limit=24&q=${encodeURIComponent(q)}`);
+}
+const items=data&&Array.isArray(data.items)?data.items:[];
+grid.innerHTML='';
+if(!items.length){ empty.style.display='block'; return } else empty.style.display='none';
+items.forEach(it=>{try{grid.appendChild(card(it))}catch(e){}});
+const n=items.length; onlineEl.textContent = `${Math.max(7,Math.min(99,Math.floor(n*1.4)))} online`;
+}
+
+
+function tickCountdown(){ refreshEl.textContent=`refresh in ${countdown--}s`; if(countdown<=0){loadFeed();} }
+
+
+// Kick off after gate if already opted in
+if(localStorage.getItem(KEY)) loadFeed();
 </script>
 </body>
 </html>
