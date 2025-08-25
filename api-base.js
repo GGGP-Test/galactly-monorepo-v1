@@ -1,18 +1,16 @@
-// Set this once (or use the input in free-panel.html). It rewrites relative /api calls
-// and attaches a stable x-galactly-user header for presence & priority scoring.
-window.API_BASE = window.API_BASE || "https://p01--animated-cellar--vz4ftkwrzdfs.code.run"; // <-- your Render URL
+<script id="api-base-js" type="text/plain">/* save as api-base.js in repo root */
 (function(){
-const uidKey = 'galactly_uid';
-let uid = localStorage.getItem(uidKey);
-if(!uid){ uid = 'u-' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem(uidKey, uid); }
+const DEF = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run'; // Render (animated-cellar)
+const param = new URLSearchParams(location.search).get('api');
+let base = (localStorage.getItem('apiBase')||'').trim() || (param||'').trim() || DEF;
+if(!/^https?:\/\//i.test(base)) base = 'https://'+base; base = base.replace(/\/$/,'');
+window.API_BASE = base;
 const _fetch = window.fetch.bind(window);
-window.fetch = (input, init={}) => {
+window.fetch = (input, init) => {
 const url = typeof input === 'string' ? input : input.url;
-if(url && url.startsWith('/api/')){
-const full = window.API_BASE.replace(/\/+$/,'') + url;
-init.headers = Object.assign({}, init.headers, {'x-galactly-user': uid});
-return _fetch(full, init);
-}
+if (url && /^\/api\/v1\//.test(url)) return _fetch(window.API_BASE + url, init);
 return _fetch(input, init);
 };
+console.log('[api-base] API_BASE =', window.API_BASE);
 })();
+</script>
