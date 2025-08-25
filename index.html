@@ -48,7 +48,6 @@ header{position:sticky;top:0;z-index:30;backdrop-filter:blur(10px);background:rg
 .btn--ghost{background:rgba(255,255,255,.06);color:#fff}
 .btn svg{width:16px;height:16px}
 
-
 .flow{background:linear-gradient(180deg,#0b0b10,#07080d);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow)}
 .glass{position:relative;border-radius:16px;overflow:hidden;min-height:400px;background:radial-gradient(120% 130% at 65% 35%,rgba(255,255,255,.06),rgba(255,255,255,.02)), radial-gradient(90% 120% at 20% 80%,rgba(255,255,255,.05),rgba(255,255,255,.01))}
 #flowCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -69,4 +68,106 @@ header{position:sticky;top:0;z-index:30;backdrop-filter:blur(10px);background:rg
 <a class="brand" href="#">
 <svg viewBox="0 0 64 64" aria-hidden="true">
 <defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs>
+<circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/>
+<path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/>
+<circle cx="20" cy="20" r="6" fill="url(#g)"/>
+</svg>
+<b>Galactly</b>
+</a>
+<div class="badge-mini" id="humans">— online</div>
+</div>
+</header>
+
+
+<section class="hero">
+<div class="wrap">
+<div class="copy">
+<h1>Find US &amp; Canada <span class="accent">Packaging</span> Buyers in <span class="accent">&lt;30s</span></h1>
+<p>Real posts &amp; tenders from public feeds. Free viewer; paid automations, priority, CRM & reporting.</p>
+<p class="sub">Built for packaging owners & sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding. Just clicks.</p>
+<div class="cta">
+<a class="btn btn--prime" href="./free-panel.html">Open the Live Feed</a>
+<a class="btn btn--ghost" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch 90s demo</a>
+</div>
+</div>
+<div class="flow">
+<div class="glass"><canvas id="flowCanvas"></canvas></div>
+<div class="meta">
+<div class="badge"><small>Leads / 30s</small><span id="b-leads">0</span></div>
+<div class="badge"><small>First connection</small><span id="b-first">—</span></div>
+<div class="badge"><small>Ready now</small><span id="b-ready">—</span></div>
+<div class="badge"><small>Quoted</small><span id="b-quote">—</span></div>
+<div class="badge"><small>AI closed</small><span id="b-ai">—</span></div>
+<div class="badge"><small>Rep closed</small><span id="b-human">—</span></div>
+<div class="badge"><small>Saved / mo</small><span id="b-saved">—</span></div>
+</div>
+<div class="ticker" id="ticker"></div>
+</div>
+</div>
+</section>
+
+
+<script src="./api-base.js"></script>
+<script>
+// —— humans online (client-side estimate + optional ping to backend)
+(function presence(){
+const el=document.getElementById('humans');
+const seed=(Date.now()/60000)|0; // minute bucket
+let base=28 + Math.round(12*Math.sin(seed));
+function paint(n){ el.textContent = n+" online"; }
+paint(base);
+setInterval(()=>{ base = Math.max(7, base + (Math.random()*6-3)|0); paint(base); }, 10000);
+// best-effort ping (ignored if backend returns plain {status:"ok"})
+try{ fetch((window.API_BASE||'')+"/api/v1/status?ping=1").then(()=>{}).catch(()=>{});}catch{}
+})();
+
+
+// —— animated sphere demo (no external deps)
+(function hero(){
+const cvs=document.getElementById('flowCanvas');
+const DPR=Math.min(2,window.devicePixelRatio||1);
+let ctx=null,cx=0,cy=0,R=0,coreX=0,coreY=0,coreR=22,start=false;
+let chips=[]; const CH=["Email","SMS","Call","LinkedIn","Quote","ERP"];
+const K={leads:byId('b-leads'),first:byId('b-first'),ready:byId('b-ready'),quote:byId('b-quote'),ai:byId('b-ai'),human:byId('b-human'),saved:byId('b-saved')};
+const ticker=byId('ticker');
+function byId(id){return document.getElementById(id)}
+function resize(){ const r=cvs.getBoundingClientRect(); if(!r.width||!r.height){setTimeout(resize,60);return}
+cvs.width=r.width*DPR; cvs.height=r.height*DPR; cvs.style.width=r.width+'px'; cvs.style.height=r.height+'px';
+ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0);
+cx=r.width*0.30; cy=r.height*0.54; R=Math.min(r.width*0.30, r.height*0.46);
+coreX=r.width*0.62; coreY=cy; coreR=Math.max(18,Math.min(26,r.width*0.04));
+const baseX=r.width*0.86, baseY=coreY, rad=Math.min(120,r.height*0.22), a0=-Math.PI/3, a1=Math.PI/3;
+chips=CH.map((name,i)=>{ const a=CH.length>1? a0+(a1-a0)*(i/(CH.length-1)):0; return {x:baseX+rad*Math.cos(a), y:baseY+rad*Math.sin(a), name};});
+}
+window.addEventListener('resize', resize);
+
+
+function circle(x,y,r,stroke,fill){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); if(fill){ctx.fillStyle=fill; ctx.fill();} if(stroke){ctx.strokeStyle=stroke; ctx.stroke();} }
+function rnd(a,b){return a+Math.random()*(b-a)}
+
+
+const packets=[]; const cities=[[40.7,-74],[43.6,-79.3],[41.8,-87.6],[32.7,-96.8],[25.7,-80.1],[47.6,-122.3],[37.7,-122.4],[34.0,-118.2],[19.4,-99.1]];
+const center=[25*Math.PI/180,-90*Math.PI/180];
+function proj(lat,lon){ const dLon=lon-center[1]; const sinC=Math.sin(center[0]),cosC=Math.cos(center[0]); const sinLat=Math.sin(lat),cosLat=Math.cos(lat); const sinDL=Math.sin(dLon),cosDL=Math.cos(dLon); const k=sinC*sinLat+cosC*cosLat*cosDL; if(k<=0) return null; return {x:cx+R*(cosLat*Math.sin(dLon)), y:cy-R*(cosC*sinLat - sinC*cosLat*cosDL)}; }
+
+
+function spawn(){ const c=cities[(Math.random()*cities.length)|0]; const P=proj(c[0]*Math.PI/180,c[1]*Math.PI/180); if(!P) return; const midx=(P.x+coreX)/2, midy=(P.y+coreY)/2; packets.push({x:P.x,y:P.y, t:0, cp:[midx-40, midy-30, midx+40, midy+30]});
+bumpStats(); addTick(); }
+function bumpStats(){ K.leads.textContent = (parseInt(K.leads.textContent,10)||0) + (1+Math.random()*4|0); K.first.textContent=(3+Math.random()*10|0)+'s'; K.ready.textContent=(35+Math.random()*30|0)+'%'; K.quote.textContent=(40+Math.random()*30|0)+'%'; K.ai.textContent=(12+Math.random()*18|0)+'%'; K.human.textContent=(18+Math.random()*28|0)+'%'; K.saved.textContent='$'+(12000+(Math.random()*18000|0)).toLocaleString(); }
+function addTick(){ const names=['Ava','Noah','Sophia','Liam','Isabella','Elijah','Mia','Lucas','Amelia','Mason','Harper']; const last=['Smith','Johnson','Brown','Jones','Davis','Garcia','Wilson','Moore']; const n=names[(Math.random()*names.length)|0]+' '+last[(Math.random()*last.length)|0]; const ch=CH[(Math.random()*CH.length)|0]; const d=document.createElement('div'); d.className='ti'; d.textContent = `${n} → ${ch}`; ticker.insertBefore(d,ticker.firstChild); while(ticker.children.length>6) ticker.lastElementChild.remove(); }
+
+
+function drawGlobe(){ const g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,R*1.1); g.addColorStop(0,'rgba(255,255,255,.05)'); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; circle(cx,cy,R,null,g); ctx.lineWidth=1.2; circle(cx,cy,R,'rgba(255,255,255,.18)'); }
+function drawCore(t){ const a=t*0.4; for(let i=0;i<3;i++){ circle(coreX,coreY,coreR+i*18,'rgba(255,255,255,'+(0.14-i*0.02)+')'); ctx.beginPath(); ctx.arc(coreX,coreY,coreR+i*18,a+i*0.6,a+i*0.6+Math.PI*0.45); const lg=ctx.createLinearGradient(coreX,coreY,coreX+100,coreY+10); lg.addColorStop(0,'rgba(255,255,255,.9)'); lg.addColorStop(1,'rgba(255,255,255,.2)'); ctx.strokeStyle=lg; ctx.lineWidth=3; ctx.stroke(); }
+const cg=ctx.createRadialGradient(coreX,coreY,0,coreX,coreY,coreR*2.2); cg.addColorStop(0,'rgba(255,255,255,.65)'); cg.addColorStop(1,'rgba(255,255,255,0)'); circle(coreX,coreY,coreR*2.0,null,cg); }
+function drawChannels(){ chips.forEach(ch=>{ ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(coreX,coreY); ctx.quadraticCurveTo((coreX+ch.x)/2,(coreY+ch.y*1.1)/2,ch.x,ch.y); ctx.stroke(); circle(ch.x,ch.y,11,'rgba(255,255,255,.25)'); ctx.fillStyle='rgba(255,255,255,.92)'; ctx.font='700 11px Montserrat,Inter,system-ui'; ctx.textAlign='center'; ctx.fillText(ch.name,ch.x,ch.y-16); }); }
+function drawPackets(){ packets.forEach(p=>{ p.t=Math.min(1,p.t+0.012); const u=p.t*p.t*(3-2*p.t); const x=(1-u)*(1-u)*(1-u)*p.x + 3*(1-u)*(1-u)*u*p.cp[0] + 3*(1-u)*u*u*p.cp[2] + u*u*u*coreX; const y=(1-u)*(1-u)*(1-u)*p.y + 3*(1-u)*(1-u)*u*p.cp[1] + 3*(1-u)*u*u*p.cp[3] + u*u*u*coreY; circle(x,y,2.2,null,'rgba(255,255,255,.96)'); }); for(let i=packets.length-1;i>=0;i--) if(packets[i].t>=1) packets.splice(i,1); }
+
+
+let last=0,acc=0; function loop(ts){ if(!last) last=ts; const dt=(ts-last)/1000; last=ts; ctx.clearRect(0,0,cvs.width, cvs.height); drawGlobe(); drawPackets(); drawCore(ts/1000); drawChannels(); acc+=dt; if(acc>rnd(0.8,1.6)){ spawn(); acc=0; } requestAnimationFrame(loop); }
+function init(){ if(start) return; const r=cvs.getBoundingClientRect(); if(!r.width||!r.height){setTimeout(init,60);return} start=true; resize(); requestAnimationFrame(loop); }
+document.addEventListener('DOMContentLoaded', init); window.addEventListener('load', init);
+})();
+</script>
+</body>
 </html>
