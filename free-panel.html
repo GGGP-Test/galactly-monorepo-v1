@@ -110,22 +110,21 @@
   window.fetch=(input,init)=>{ try{const url=typeof input==='string'?input:input.url; if(url && url.startsWith('/api/')) return _fetch(window.API_BASE+url,init);}catch{} return _fetch(input,init); };
 })();
 
-  let SESSION = localStorage.getItem('galactly:session') || '';
-function authHeaders() {
-  return SESSION ? { 'Authorization': 'Bearer ' + SESSION } : {};
-}
+// --- global API + session helpers (FIX) ---
+const API = (window.API_BASE||'').replace(/\/$/,'');
+let SESSION = localStorage.getItem('galactly:session') || '';
+function authHeaders(){ return SESSION ? { 'Authorization':'Bearer '+SESSION } : {}; }
 
-
-// --- soft presence (tabs across same origin) ---
+// --- soft presence (in-tab) ---
 const ONLINE_KEY='galactly:live:pings';
 const whoEl=document.getElementById('who');
 const myId=Math.random().toString(36).slice(2);
 function getP(){ try{return JSON.parse(localStorage.getItem(ONLINE_KEY)||'{}')}catch{return{}} }
 function setP(o){ localStorage.setItem(ONLINE_KEY,JSON.stringify(o)); }
-function beat(){ const o=getP(); o[myId]=Date.now(); setP(o); }
+function beatLocal(){ const o=getP(); o[myId]=Date.now(); setP(o); }
 function sweep(){ const o=getP(),now=Date.now(); for(const k of Object.keys(o)) if(now-o[k]>25000) delete o[k]; setP(o); whoEl.textContent=`${Object.keys(o).length} online`; }
 window.addEventListener('storage',e=>{ if(e.key===ONLINE_KEY) sweep(); });
-setInterval(beat,7000); setInterval(sweep,5000); beat(); sweep();
+setInterval(beatLocal,7000); setInterval(sweep,5000); beatLocal(); sweep();
 
 // --- onboarding gate ---
 const gate=document.getElementById('gate');
@@ -133,28 +132,21 @@ const enterBtn=document.getElementById('enterBtn');
 const chkListMe=document.getElementById('chkListMe');
 const moreBox=document.getElementById('moreBox');
 chkListMe.addEventListener('change',()=>{ moreBox.style.maxHeight=chkListMe.checked?'180px':'0'; });
-function needGate(){ return !localStorage.getItem('galactly:onboarded'); }
 function openGate(){ gate.classList.add('show'); }
 function closeGate(){ gate.classList.remove('show'); }
-enterBtn.addEventListener('click', async ()=>{
-  const email = document.getElementById('f_email').value.trim();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Enter a valid email'); return; }
-  const payload = { email, listMe: chkListMe.checked, company: document.getElementById('f_company').value.trim(), site: document.getElementById('f_site').value.trim() };
-  try{
-    const r = await fetch(API + '/api/v1/onboard', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-    const j = await r.json();
-    if(j.session){
-      SESSION = j.session;
-      localStorage.setItem('galactly:session', SESSION);
-      localStorage.setItem('galactly:onboarded', JSON.stringify(payload));
-      closeGate();
-      kick();
-    }else{
-      alert('Check your email to verify.');
-    }
-  }catch(e){ alert('Network error.'); }
-});
 
+enterBtn.addEventListener('click', async ()=>{
+  const email=document.getElementById('f_email').value.trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Enter a valid email'); return; }
+  const payload={ email, listMe: chkListMe.checked, company: (document.getElementById('f_company').value||'').trim(), site: (document.getElementById('f_site').value||'').trim() };
+  try{
+    const r=await fetch(API + '/api/v1/onboard', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const j=await r.json();
+    if(j.session){
+      SESSION=j.session; localStorage.setItem('galactly:session',SESSION); localStorage.setItem('galactly:onboarded',JSON.stringify(payload)); closeGate(); kick();
+    }else{ alert('Check your email to verify.'); }
+  }catch{ alert('Network error.'); }
+});
 
 // --- UI helpers ---
 const grid=document.getElementById('grid');
@@ -202,7 +194,6 @@ let tick=30,timer=null;
 function countdown(){ refreshEl.textContent=`refresh in ${tick}s`; if(--tick<0){ tick=30; kick(); } }
 
 async function fetchPrimary(){
-  const API=(window.API_BASE||'').replace(/\/$/,'');
   if(!API) throw new Error('NO_API');
   const url=`${API}/api/v1/leads?limit=24&q=${encodeURIComponent(QUERY)}`;
   const res = await fetch(url, { headers: authHeaders() });
@@ -229,24 +220,20 @@ async function kick(){
 }
 
 if(!SESSION){ openGate(); } else { kick(); }
-kick();
+
 timer=setInterval(countdown,1000);
-  // presence
+
+// --- presence to backend (uses global API + session) ---
 async function beatPresence(){
   if(!SESSION) return;
   try{ await fetch(API + '/api/v1/presence/beat', { method:'POST', headers: authHeaders() }); }catch{}
 }
 async function pollOnline(){
-  try{
-    const r = await fetch(API + '/api/v1/presence/online');
-    const j = await r.json();
-    document.getElementById('who').textContent = (j.displayed||0) + ' online';
-  }catch{}
+  try{ const r=await fetch(API + '/api/v1/presence/online'); const j=await r.json(); whoEl.textContent=(j.displayed||0)+' online'; }catch{}
 }
-setInterval(beatPresence, 10_000);
-setInterval(pollOnline, 12_000);
+setInterval(beatPresence,10_000);
+setInterval(pollOnline,12_000);
 beatPresence(); pollOnline();
-
 </script>
 </body>
 </html>
