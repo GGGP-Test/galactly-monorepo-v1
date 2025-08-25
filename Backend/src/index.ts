@@ -4,6 +4,8 @@ import { leadsRouter } from "./routes/leads";
 import { requireAuth } from "./auth";
 import { beat, countActive, displayedCount } from "./presence";
 import gateRouter from "./routes/gate";
+import aiRouter from './routes/ai';
+
 
 function makeCors() {
   const list = (process.env.CORS_ORIGIN || "")
@@ -45,7 +47,7 @@ app.get("/api/v1/presence/online", (_req, res) => {
 
 // leads
 app.use("/api/v1", leadsRouter);
-
+app.use('/api/v1/ai', aiRouter);
 // tiny debug route
 app.get("/__routes", (_req, res) => {
   const anyApp: any = app;
