@@ -1,8 +1,10 @@
 import express from "express";
 import cors from "cors";
 import { leadsRouter } from "./routes/leads";
+import { requireAuth } from "./auth";
+import { beat, countActive, displayedCount } from "./presence";
+import gateRouter from "./routes/gate";
 
-// Allow all by default; restrict via CORS_ORIGIN env (comma-separated)
 function makeCors() {
   const list = (process.env.CORS_ORIGIN || "")
     .split(",")
@@ -27,10 +29,24 @@ app.use(makeCors());
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.get("/api/v1/status", (_req, res) => res.json({ status: "ok" }));
 
-// mount leads router
+// onboarding (AUTO_VERIFY_EMAIL=1 returns session immediately)
+app.use("/api/v1", gateRouter);
+
+// presence
+app.post("/api/v1/presence/beat", requireAuth, (req, res) => {
+  const email = (req as any).userEmail as string;
+  beat(email);
+  res.json({ ok: true });
+});
+app.get("/api/v1/presence/online", (_req, res) => {
+  const real = countActive();
+  res.json({ ok: true, real, displayed: displayedCount(real) });
+});
+
+// leads
 app.use("/api/v1", leadsRouter);
 
-// tiny debug to list routes
+// tiny debug route
 app.get("/__routes", (_req, res) => {
   const anyApp: any = app;
   const routes =
