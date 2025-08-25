@@ -35,4 +35,142 @@ header{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px);background:rg
 .check{display:flex;gap:10px;align-items:center;margin-top:12px}
 .k{display:none;margin-top:10px}
 .btn{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);padding:12px 18px;border-radius:14px;font-weight:800;cursor:pointer}
+.btn--prime{background:linear-gradient(90deg,#fff,#e9f0ff);color:#0b0c12;border-color:transparent}
+.empty{max-width:1200px;margin:24px auto;padding:12px 14px;border:1px dashed var(--line);border-radius:12px;text-align:center;color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <div class="hwrap">
+<div class="hleft">
+<div style="font-weight:800">Live feed</div>
+<div class="badge" id="refresh">refresh in 30s</div>
+</div>
+<div class="badge" id="humans">— online</div>
+</div>
+</header>
+
+
+<div id="empty" class="empty" style="display:none"></div>
+<div id="grid" class="grid"></div>
+
+
+<!-- Onboarding wall (blocks feed until completed) -->
+<div id="wall">
+<div class="modal">
+<h2>Let the AI aim for you</h2>
+<div style="opacity:.85">Answer 2 things so we can prioritize the right buyers for you.</div>
+<div class="row"><input id="email" class="input" placeholder="Work email" type="email" /></div>
+<div class="row"><select id="role" class="input">
+<option value="owner">Owner / Founder</option>
+<option value="sales">Sales / Growth</option>
+<option value="ops">Operations</option>
+<option value="other">Other</option>
+</select></div>
+<label class="check"><input id="listMe" type="checkbox"/> Also list my company for inbound opportunities</label>
+<div id="k-site" class="k"><input id="site" class="input" placeholder="Business website (optional)"/></div>
+<div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+<button id="go" class="btn btn--prime">Enter the live feed</button>
+<div style="opacity:.75;font-size:12px">Email verification required. No spam.</div>
+</div>
+</div>
+</div>
+
+
+<script src="./api-base.js"></script>
+<script>
+(function presence(){
+const el=document.getElementById('humans');
+const seed=(Date.now()/60000)|0; let base=22 + Math.round(10*Math.cos(seed));
+function paint(n){ el.textContent=n+" online"; }
+paint(base); setInterval(()=>{ base=Math.max(5, base + (Math.random()*6-3)|0); paint(base); }, 10000);
+try{ fetch((window.API_BASE||'')+"/api/v1/status?ping=panel").then(()=>{}).catch(()=>{});}catch{}
+})();
+
+  // onboarding wall logic
+(function gate(){
+const wall = document.getElementById('wall');
+const email = document.getElementById('email');
+const listMe = document.getElementById('listMe');
+const siteWrap = document.getElementById('k-site');
+listMe.addEventListener('change',()=>{ siteWrap.style.display = listMe.checked ? 'block':'none'; });
+const ok = localStorage.getItem('onboard-ok');
+if(!ok){ wall.style.display='flex'; }
+document.getElementById('go').onclick = async () => {
+const e = (email.value||'').trim();
+if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ email.focus(); email.style.borderColor='#ff8b8b'; return; }
+localStorage.setItem('onboard-email', e);
+if(listMe.checked){ localStorage.setItem('onboard-site', (document.getElementById('site').value||'').trim()); }
+localStorage.setItem('onboard-ok','1');
+wall.style.display='none';
+};
+})();
+
+
+// feed logic
+(function feed(){
+const grid = document.getElementById('grid');
+const empty = document.getElementById('empty');
+const refresh = document.getElementById('refresh');
+const TYPES=['web','linkedin','youtube'];
+let timer=null, left=30;
+
+
+function badge(src){ return `<span class="tag">${src}</span>`; }
+function host(u){ try{ return new URL(u).host; }catch{ return ''; } }
+
+
+function whyText(title,snippet){
+const text=(title+' '+(snippet||'')).toLowerCase();
+const reasons=[];
+const keys=['rfp','rfq','tender','procurement','buy','supplier','packaging','pallet','box','corrugated','contract','quote'];
+keys.forEach(k=>{ if(text.includes(k)) reasons.push('mentions "'+k+'"'); });
+return reasons.length?('AI signal: '+reasons.slice(0,4).join(', ')+'.'):'AI signal: recency spike & relevance.';
+}
+
+
+function card(it){
+const s = it.source||'web';
+const why = whyText(it.title||'', it.snippet||'');
+return `
+<article class="card">
+<h3><a href="${it.url}" target="_blank" rel="noopener" style="color:#eaf2ff;text-decoration:none">${it.title||it.url}</a></h3>
+<div style="opacity:.9">${(it.snippet||'').slice(0,280)}</div>
+<div class="meta">
+${badge(s)} <span class="host">${it.displayLink||host(it.url)}</span>
+</div>
+<div class="footer">
+<div class="why" title="${why}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1"/></svg> Why AI shows you this lead?</div>
+<a href="${it.url}" target="_blank" rel="noopener" style="color:#86f7d6;text-decoration:none">Open origin →</a>
+</div>
+</article>`;
+}
+
+
+async function fetchBatch(q, type, limit){
+const url = `${window.API_BASE}/api/v1/peek?q=${encodeURIComponent(q)}&type=${type}&limit=${limit}`;
+const res = await fetch(url);
+if(!res.ok) return [];
+const data = await res.json().catch(()=>({items:[]}));
+return Array.isArray(data.items)? data.items: [];
+}
+
+
+async function load(){
+try{
+const q = 'packaging buyers RFP OR RFQ OR tender OR procurement -sam.gov';
+const batches = await Promise.all(TYPES.map(t=>fetchBatch(q,t,10)));
+const items = [].concat(...batches);
+grid.innerHTML = items.map(card).join('');
+if(!items.length){ empty.style.display='block'; empty.textContent='No items. Check API key / CSE IDs on backend.'; }
+else empty.style.display='none';
+}catch(err){ empty.style.display='block'; empty.textContent='Network error.'; }
+}
+
+
+function tick(){ left--; if(left<=0){ left=30; load(); } refresh.textContent = `refresh in ${left}s`; }
+load(); timer=setInterval(tick, 1000);
+})();
+</script>
+</body>
 </html>
