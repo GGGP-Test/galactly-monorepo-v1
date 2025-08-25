@@ -231,6 +231,23 @@ function card(it){
 }
 
 function showWhy(it){
+  (async () => {
+  try {
+    const api = (window.API_BASE||'').replace(/\/$/,'');
+    const u = new URL(it.url, location.href);
+    const r = await fetch(`${api}/api/v1/ai/reasons?`+
+      `url=${encodeURIComponent(it.url)}`+
+      `&title=${encodeURIComponent(it.title||'')}`+
+      `&snippet=${encodeURIComponent(it.snippet||'')}`+
+      `&source=${encodeURIComponent(it.source||'web')}`);
+    const j = await r.json();
+    whyList.innerHTML = '';
+    (j.reasons||[]).forEach((s)=>{ const li=document.createElement('li'); li.textContent=s; whyList.appendChild(li); });
+    originHint.innerHTML = `Origin: <a href="${it.url}" target="_blank" rel="noopener">${j.origin||u.hostname}</a> · via ${j.model||'grok'}`;
+    whyPop.classList.add('show');
+    setTimeout(()=>document.addEventListener('click', ()=>whyPop.classList.remove('show'), { once:true }),0);
+  } catch {
+    
   whyList.innerHTML='';
   const reasons=[]; const t=((it.title||'')+' '+(it.snippet||'')).toLowerCase();
   ['rfp','rfq','request for proposal','procurement','buy','seeking','packaging','corrugated','carton','supplier','outsourcing','kitting','co packer']
@@ -239,6 +256,7 @@ function showWhy(it){
   (reasons.length?reasons:['Topical relevance score high.']).forEach(s=>{ const li=document.createElement('li'); li.textContent=s; whyList.appendChild(li); });
   originHint.innerHTML=`Origin: <a href="${it.url}" target="_blank" rel="noopener">${new URL(it.url,location.href).hostname}</a>`;
   whyPop.classList.add('show'); setTimeout(()=>document.addEventListener('click',()=>whyPop.classList.remove('show'),{once:true}),0);
+  
 }
 
 // --- data + fetch loop ---
@@ -283,6 +301,7 @@ function renderDemo(){
   ];
   grid.replaceChildren(); demo.forEach(it=>grid.appendChild(card(it)));
 }
+})();
 
 if(needGate()) openGate();
 kick(true);
