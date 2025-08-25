@@ -1,101 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Galactly — Find Packaging Buyers in &lt;30s</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#fff;--mut:#a9b3c2;--line:rgba(255,255,255,.12);--accent:#86f7d6;--accent2:#57a4ff}
-*{box-sizing:border-box} html,body{height:100%}
-body{margin:0;color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;line-height:1.55;overflow-x:hidden;background:
-radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%),
-radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%),
-linear-gradient(180deg,#0b0e18,#06070c 55%)}
-header{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px) saturate(1.05);background:rgba(5,7,12,.55);border-bottom:1px solid var(--line)}
+:root{
+--bg:#0b0e18; --card:#0c1022; --ink:#fff; --mut:#cfd3df; --line:rgba(255,255,255,.10);
+--a:#86f7d6; --b:#57a4ff; --shadow:0 20px 60px rgba(0,0,0,.35);
+--mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif;
+--inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), transparent 60%),
+radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.10), transparent 60%),
+linear-gradient(180deg,#0b0e18,#06070c 55%);
+color:var(--ink);font-family:var(--inter);}
+
+
+header{position:sticky;top:0;z-index:30;backdrop-filter:blur(10px);background:rgba(5,7,12,.55);border-bottom:1px solid var(--line)}
 .nav{max-width:1240px;margin:auto;padding:10px 18px;display:flex;align-items:center;justify-content:space-between}
-.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none}
-.brand svg{width:26px;height:26px} .brand b{font:800 16px Montserrat,Inter,sans-serif}
+.brand{display:flex;gap:10px;align-items:center;text-decoration:none;color:#fff}
+.brand svg{width:26px;height:26px}
+.brand b{font:800 16px var(--mont)}
+.badge-mini{font:700 12px var(--inter);opacity:.9;border:1px solid var(--line);border-radius:20px;padding:6px 10px}
+
+
 .hero{min-height:720px;border-bottom:1px solid var(--line)}
-.wrap{max-width:1240px;margin:auto;display:grid;grid-template-columns:1fr min(780px,52%);gap:44px;align-items:center;padding:44px 28px}
+.wrap{max-width:1240px;margin:auto;padding:44px 28px;display:grid;gap:44px;align-items:center;grid-template-columns:1fr min(760px,52%)}
 @media (max-width:1100px){.wrap{grid-template-columns:1fr}}
-.copy h1{font:800 clamp(32px,6.2vw,66px) Montserrat,Inter,sans-serif;line-height:1.05;margin:0 0 12px}
-.copy .accent{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
-.copy p{color:var(--mut);margin:16px 0 0} .copy .sub{opacity:.86;font-size:14px;margin-top:12px}
+
+
+.copy h1{font:800 clamp(32px,6.2vw,66px) var(--mont);line-height:1.05;margin:0 0 12px}
+.copy .accent{background:linear-gradient(90deg,var(--a),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+.copy p{opacity:.94;margin:16px 0 0}
+.copy .sub{opacity:.85;font-size:14px;margin-top:12px}
+
+
 .cta{display:flex;gap:14px;margin-top:28px;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:14px;text-decoration:none;font-weight:800;font-size:14px;border:1px solid var(--line);transition:.16s ease}
+.btn{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);padding:12px 18px;border-radius:14px;text-decoration:none;font:800 14px var(--inter);transition:transform .08s, box-shadow .18s, background .18s, color .18s}
+.btn--prime{background:linear-gradient(90deg,#fff,#e9f0ff);color:#0b0c12;border-color:transparent;box-shadow:0 10px 30px rgba(120,160,255,.18), inset 0 0 0 1px rgba(255,255,255,.35)}
+.btn--prime:hover{transform:translateY(-1px);box-shadow:0 14px 36px rgba(120,160,255,.28), inset 0 0 0 1px rgba(255,255,255,.5)}
+.btn--ghost{background:rgba(255,255,255,.06);color:#fff}
 .btn svg{width:16px;height:16px}
-.btn.primary{background:linear-gradient(90deg,#ffffff,#e9f0ff);color:#10131a;border-color:transparent;box-shadow:0 12px 30px rgba(120,160,255,.22)}
-.btn.primary:hover{transform:translateY(-1px);box-shadow:0 16px 38px rgba(120,160,255,.32)}
-.btn.ghost{background:rgba(255,255,255,.06);color:#fff}
-.flow{position:relative;background:linear-gradient(180deg,#0b0b10,#07080d);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.38)}
-.glass{position:relative;border-radius:16px;background:
-radial-gradient(120% 130% at 65% 35%,rgba(255,255,255,.06),rgba(255,255,255,.02)),
-radial-gradient(90% 120% at 20% 80%,rgba(255,255,255,.05),rgba(255,255,255,.01));
-overflow:hidden;min-height:420px}
-.glass::before{content:"";display:block;padding-top:56.25%}
-#flowCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:16px}
-.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
-.badge{background:#0b0d14;border:1px dashed var(--line);border-radius:12px;padding:7px 11px;font:700 12px Montserrat,Inter;display:flex;gap:6px;align-items:center}
+
+
+.flow{background:linear-gradient(180deg,#0b0b10,#07080d);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow)}
+.glass{position:relative;border-radius:16px;overflow:hidden;min-height:400px;background:radial-gradient(120% 130% at 65% 35%,rgba(255,255,255,.06),rgba(255,255,255,.02)), radial-gradient(90% 120% at 20% 80%,rgba(255,255,255,.05),rgba(255,255,255,.01))}
+#flowCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.badge{background:#0b0d14;border:1px dashed var(--line);border-radius:12px;padding:7px 11px;font:700 12px var(--mont);display:flex;gap:6px;align-items:center}
 .badge small{opacity:.75}
+
+
 .ticker{margin-top:14px;max-height:108px;overflow:auto;border-top:1px solid var(--line);padding-top:10px;scrollbar-width:none}
-.ti{font-size:12px;color:#dfe5f2;opacity:.95;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.06)} .ti:last-child{border-bottom:none}
+.ti{font-size:12px;opacity:.95;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.06)} .ti:last-child{border-bottom:none}
 </style>
 </head>
 <body>
 <header>
 <div class="nav">
 <a class="brand" href="#">
-<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/><path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
+<svg viewBox="0 0 64 64" aria-hidden="true">
+<defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs>
+<circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/>
+<path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/>
+<circle cx="20" cy="20" r="6" fill="url(#g)"/>
+</svg>
 <b>Galactly</b>
 </a>
-<nav><a href="#hero" style="color:#fff;text-decoration:none;padding:8px 10px;border-radius:12px">Hero</a></nav>
+<div class="badge-mini" id="humans">— online</div>
 </div>
-</header>
-<section class="hero" id="hero">
-<div class="wrap">
-<div class="copy">
-<h1>Find US &amp; Canada <span class="accent">Packaging</span> Buyers in <span class="accent">&lt;30s</span></h1>
-<p>Real posts & tenders from public feeds. Free viewer; paid automations, priority, CRM & reporting.</p>
-<p class="sub">Built for packaging owners & sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding. Just clicks.</p>
-<div class="cta">
-<a class="btn primary" href="./free-panel.html">Open the Live Feed</a>
-<a class="btn ghost" href="#demo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch 90s demo</a>
-</div>
-</div>
-<div class="flow">
-<div class="glass"><canvas id="flowCanvas"></canvas></div>
-<div class="meta">
-<div class="badge"><small>Leads / 30s</small><span id="b-leads">0</span></div>
-<div class="badge"><small>First connection</small><span id="b-first">—</span></div>
-<div class="badge"><small>Ready now</small><span id="b-ready">—</span></div>
-<div class="badge"><small>Quoted</small><span id="b-quote">—</span></div>
-<div class="badge"><small>AI closed</small><span id="b-ai">—</span></div>
-<div class="badge"><small>Rep closed</small><span id="b-human">—</span></div>
-<div class="badge"><small>Saved / mo</small><span id="b-saved">—</span></div>
-</div>
-<div class="ticker" id="ticker"></div>
-</div>
-</div>
-</section>
-<script>
-// Minimal sphere animation (unchanged look)
-const cvs=document.getElementById('flowCanvas');const DPR=Math.min(2.2,window.devicePixelRatio||1);let ctx=null;let started=false;let cx=0,cy=0,R=0,coreX=0,coreY=0,coreR=22;let chips=[];
-const CHANNELS=['Email','SMS','Call','LinkedIn','Quote','ERP'].map((name,i)=>({name,color:['rgba(134,247,214,.65)','rgba(160,255,160,.65)','rgba(159,208,255,.65)','rgba(120,200,255,.65)','rgba(255,210,140,.7)','rgba(200,170,255,.7)'][i]}));
-const K={leads:document.getElementById('b-leads'),first:document.getElementById('b-first'),ready:document.getElementById('b-ready'),quote:document.getElementById('b-quote'),ai:document.getElementById('b-ai'),human:document.getElementById('b-human'),saved:document.getElementById('b-saved')};
-const ticker=document.getElementById('ticker');
-const center={lat:25*Math.PI/180,lon:-90*Math.PI/180};function proj(lat,lon){const dLon=lon-center.lon;const sC=Math.sin(center.lat),cC=Math.cos(center.lat);const sL=Math.sin(lat),cL=Math.cos(lat);const sDL=Math.sin(dLon),cDL=Math.cos(dLon);const k=sC*sL+cC*cL*cDL;if(k<=0)return null;return{x:cx+R*(cL*sDL),y:cy-R*(cC*sL-sC*cL*cDL)}}
-const LAND_NA=[[71,-156],[48,-124],[34,-118],[25,-111],[20,-105],[18,-103],[16,-99],[20,-90],[27,-81],[31,-80],[36,-76],[42,-72],[49,-64],[54,-60],[60,-75],[69,-95],[71,-156]];
-const LAND_SA=[[10,-79],[8,-74],[5,-60],[0,-58],[-8,-54],[-18,-44],[-24,-42],[-30,-52],[-40,-61],[-48,-70],[-55,-66],[-33,-71],[-20,-70],[-12,-77],[-8,-79],[10,-79]];
-function resize(){const r=cvs.getBoundingClientRect();cvs.width=Math.floor(r.width*DPR);cvs.height=Math.floor(r.height*DPR);cvs.style.width=r.width+'px';cvs.style.height=r.height+'px';ctx=cvs.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);cx=r.width*0.28;cy=r.height*0.56;R=Math.min(r.width*0.30,r.height*0.46);coreX=r.width*0.56;coreY=r.height*0.56;coreR=Math.max(18,Math.min(24,r.width*0.03));const baseX=r.width*0.83,baseY=coreY,rad=Math.min(110,r.height*0.20),a0=-Math.PI/3,a1=Math.PI/3;chips=CHANNELS.map((c,i)=>{const a=CHANNELS.length>1?a0+(a1-a0)*(i/(CHANNELS.length-1)):0;return{x:baseX+rad*Math.cos(a),y:baseY+rad*Math.sin(a),r:12,label:c.name,color:c.color}})}
-function drawHemisphere(){const g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,R*1.1);g.addColorStop(0,'rgba(255,255,255,.05)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();ctx.beginPath();LAND_NA.concat(LAND_SA).forEach(([la,lo],i)=>{const P=proj(la*Math.PI/180,lo*Math.PI/180);if(!P)return;i?ctx.lineTo(P.x,P.y):ctx.moveTo(P.x,P.y)});ctx.closePath();ctx.fillStyle='rgba(134,247,214,0.09)';ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.14)';ctx.stroke()}
-function drawCore(t){const g=ctx.createRadialGradient(coreX,coreY,0,coreX,coreY,coreR*2.6);g.addColorStop(0,'rgba(255,255,255,.04)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(coreX,coreY,coreR*2.6,0,Math.PI*2);ctx.fill();ctx.save();ctx.translate(coreX,coreY);for(let i=0;i<3;i++){const r=coreR+i*18;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.strokeStyle=`rgba(255,255,255,${0.14-i*0.02})`;ctx.lineWidth=1.2;ctx.stroke() }ctx.restore()}
-function drawChannels(){CHANNELS.forEach((ch,i)=>{const chip=chips[i];ctx.save();ctx.strokeStyle=ch.color;ctx.globalAlpha=0.5;ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(coreX,coreY);ctx.quadraticCurveTo((coreX+chip.x)/2,(coreY+chip.y*1.1)/2,chip.x,chip.y);ctx.stroke();ctx.globalAlpha=1;ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.beginPath();ctx.moveTo(coreX,coreY);ctx.quadraticCurveTo((coreX+chip.x)/2,(coreY+chip.y*1.1)/2,chip.x,chip.y);ctx.stroke();ctx.beginPath();ctx.arc(chip.x,chip.y,chip.r,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.24)';ctx.lineWidth=1.2;ctx.stroke();ctx.font="700 11px Montserrat,Inter";ctx.fillStyle='rgba(255,255,255,.92)';ctx.textAlign='center';ctx.fillText(chip.label,chip.x,chip.y-chip.r-8);ctx.restore()})}
-function loop(ts){requestAnimationFrame(loop);const t=ts/1000;ctx.clearRect(0,0,cvs.width/DPR,cvs.height/DPR);drawHemisphere();drawCore(t);drawChannels()}
-function init(){if(started)return;started=true;resize();requestAnimationFrame(loop)}
-window.addEventListener('resize',resize);document.addEventListener('DOMContentLoaded',init);
-</script>
-</body>
 </html>
