@@ -101,13 +101,13 @@
   <script src="./api-base.js"></script>
   <script>
   // --- basics
-  const API = (window.API_BASE||'').replace(/\/$/,'');
-  const grid = document.getElementById('grid');
-  const banner = document.getElementById('banner');
-  const refreshEl = document.getElementById('refresh');
-  const whyPop = document.getElementById('whyPop');
-  const whyList = document.getElementById('whyList');
-  const originHint = document.getElementById('originHint');
+  const API=(window.API_BASE||'').replace(/\/$/,'');
+  const grid=document.getElementById('grid');
+  const banner=document.getElementById('banner');
+  const refreshEl=document.getElementById('refresh');
+  const whyPop=document.getElementById('whyPop');
+  const whyList=document.getElementById('whyList');
+  const originHint=document.getElementById('originHint');
 
   // --- presence (per-tab)
   const ONLINE_KEY='galactly:live:pings', whoEl=document.getElementById('who'), myId=Math.random().toString(36).slice(2);
@@ -117,10 +117,16 @@
   const sweep=()=>{const o=getPings(),now=Date.now();for(const k of Object.keys(o)) if(now-o[k]>25000) delete o[k]; setPings(o); whoEl.textContent=`${Object.keys(o).length} online`};
   window.addEventListener('storage',e=>{if(e.key===ONLINE_KEY) sweep()}); setInterval(beat,7000); setInterval(sweep,5000); beat(); sweep();
 
-  // --- gate
+  // --- gate (always ON unless ?skipGate=1)
   const gate=document.getElementById('gate'), enterBtn=document.getElementById('enterBtn'), chk=document.getElementById('chkListMe'), more=document.getElementById('moreBox');
   chk.addEventListener('change',()=>{more.style.maxHeight=chk.checked?'180px':'0'});
-  const needGate=()=>!localStorage.getItem('galactly:onboarded');
+  const params=new URLSearchParams(location.search);
+  const BYPASS=params.get('skipGate')==='1';
+  function needGate(){
+    if(BYPASS) return false;
+    try{const o=JSON.parse(localStorage.getItem('galactly:onboarded')||'{}'); return !o.email;}catch{return true}
+  }
+  function openGate(){gate.classList.add('show')}
   enterBtn.addEventListener('click',()=>{
     const email=document.getElementById('f_email').value.trim();
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return alert('Enter a valid email');
@@ -159,7 +165,7 @@
     whyPop.classList.add('show'); setTimeout(()=>document.addEventListener('click',()=>whyPop.classList.remove('show'),{once:true}),0);
   }
 
-  // --- fetch strategy (primary + hard fallback)
+  // --- fetch strategy (primary + hard fallback) + diagnostics
   const QUERY='(packaging buyer OR procurement OR RFP OR RFQ OR "request for proposal") (site:gov OR site:linkedin.com OR site:reddit.com)';
   let tick=30, timer=setInterval(()=>{refreshEl.textContent=`refresh in ${tick--}s`; if(tick<0){tick=30;kick()}},1000);
 
@@ -167,43 +173,43 @@
 
   async function getPrimary(q){
     const url=`${API}/api/v1/leads?limit=24&q=${encodeURIComponent(q)}`;
-    const r=await fetch(url); if(!r.ok) throw new Error('primary http'); const j=await r.json();
-    return Array.isArray(j.items)?j.items:[];
+    const r=await fetch(url);
+    if(!r.ok){ const txt=await r.text().catch(()=>r.statusText||''); throw new Error(`primary ${r.status}: ${txt}`); }
+    const j=await r.json(); return Array.isArray(j.items)?j.items:[];
   }
   async function getFallback(q){
     const types=['web','linkedin','youtube'];
-    const req=types.map(t=>fetch(`${API}/api/v1/peek?q=${encodeURIComponent(q)}&type=${t}&limit=10`).then(r=>r.json()).catch(()=>({items:[]})));
+    const req=types.map(t=>fetch(`${API}/api/v1/peek?q=${encodeURIComponent(q)}&type=${t}&limit=10`).then(r=>r.ok?r.json():Promise.reject(new Error(`${t} ${r.status}`))).catch(()=>({items:[]})));
     const res=await Promise.all(req);
     const all=res.flatMap(x=>Array.isArray(x.items)?x.items:[]);
     return dedupe(all);
   }
 
   async function kick(force){
-    if(needGate() && !force){ gate.classList.add('show'); return; }
+    if(needGate() && !force){ openGate(); return; }
     if(!API){ banner.hidden=false; banner.textContent='Set API base in api-base.js'; return; }
     try{
-      banner.hidden=true;
-      grid.replaceChildren();
-
-      // 1) try primary
+      banner.hidden=true; grid.replaceChildren();
       let items=await getPrimary(QUERY);
-
-      // 2) fallback if empty
       if(!items.length) items=await getFallback(QUERY);
-
-      // 3) render / message
       if(!items.length){
         banner.hidden=false;
-        banner.textContent='No items from API. Check GOOGLE_API_KEY / CSE IDs on backend (or daily quota).';
-      }else{
+        banner.textContent='No items from API. Check GOOGLE_API_KEY / CSE IDs on backend (or quota).';
+      } else {
         items.forEach(it=>grid.appendChild(card(it)));
       }
     }catch(e){
-      banner.hidden=false; banner.textContent='Network error.';
+      banner.hidden=false;
+      banner.textContent=`Network error: ${e.message||e}`;
+      console.error(e);
+      // Bonus quick probe to help diagnose CORS/backends quickly:
+      try{
+        const s=await fetch(`${API}/api/v1/status`); if(!s.ok) throw new Error(`${s.status}`); 
+      }catch(err){ console.warn('Status probe failed',err); }
     }
   }
 
-  if(needGate()) gate.classList.add('show');
+  if(needGate()) openGate();
   kick();
   </script>
 </body>
