@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-  :root{--ink:#e9eef7;--mut:#9aa3b2;--bg:#0b0f18;--card:#0d1322;--line:rgba(255,255,255,.08);--accent:#86f7d6;--accent2:#57a4ff;--ok:#88aaff;--warm:#ffd37a;--hot:#ff8a7a}
+  :root{--ink:#e9eef7;--mut:#9aa3b2;--bg:#0b0f18;--card:#0d1322;--line:rgba(255,255,255,.08);--accent:#86f7d6;--accent2:#57a4ff}
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%), radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%), linear-gradient(180deg,#0b0e18,#06070c 55%); color:var(--ink)}
@@ -16,38 +16,26 @@
   .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);backdrop-filter:blur(8px) saturate(1.05);background:rgba(6,8,12,.55)}
   .dot{width:7px;height:7px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
   .spacer{flex:1}
-  .pill{opacity:.9;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-weight:700;font-size:12px}
+  .pill{opacity:.85;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-weight:700;font-size:12px}
   .close{border:1px solid var(--line);background:transparent;border-radius:12px;color:var(--ink);padding:8px 12px;cursor:pointer}
-
   .wrap{max-width:1240px;margin:18px auto;padding:0 18px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
-  .card{position:relative;background:linear-gradient(180deg,#0b1020,#0a0f1b);border:1px solid var(--line);border-radius:16px;padding:14px 14px 12px;box-shadow:0 8px 36px rgba(0,0,0,.32)}
-  .card.new{animation:glow 1.6s ease-out 1}
-  @keyframes glow{0%{box-shadow:0 0 0 rgba(255,255,255,0),0 0 0 rgba(134,247,214,0)}40%{box-shadow:0 0 0 rgba(255,255,255,0),0 0 40px rgba(134,247,214,.20)}100%{box-shadow:0 8px 36px rgba(0,0,0,.32)}}
-  .title{font-weight:800;margin:0 0 6px;font-size:18px;line-height:1.25;display:block;text-decoration:none}
+  .card{background:linear-gradient(180deg,#0b1020,#0a0f1b);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 8px 36px rgba(0,0,0,.32)}
+  .title{font-weight:800;margin:0 0 6px;font-size:18px;line-height:1.25}
   .snip{color:var(--mut);font-size:13px;line-height:1.45;max-height:3.7em;overflow:hidden}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
-  .tag{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:12px;color:#cfd6e6}
-  .heat{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:12px;border:1px solid var(--line)}
-  .heat.ok{background:rgba(136,170,255,.10)}
-  .heat.warm{background:rgba(255,211,122,.12)}
-  .heat.hot{background:rgba(255,138,122,.12)}
-  .age{margin-left:auto;color:#cfd6e6;font-size:12px}
-
-  .why{display:flex;align-items:center;gap:6px;margin-top:10px;color:#cfd6e6;cursor:pointer}
+  .tag{border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:#cfd6e6}
+  .heat{display:inline-flex;gap:6px;align-items:center}
+  .heat i{width:8px;height:8px;border-radius:50%}
+  .why{display:flex;align-items:center;gap:6px;margin-top:12px;color:#cfd6e6;cursor:pointer}
   .why small{color:var(--mut)}
   .why:hover small{color:#fff}
-
   .banner{margin:12px 0 18px;border:1px dashed var(--line);border-radius:14px;padding:14px 16px;color:var(--mut);text-align:center}
-
-  /* why-popover */
   .why-pop{position:fixed;inset:auto 18px 18px auto;max-width:380px;background:#0d1322;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.38);display:none}
   .why-pop.show{display:block}
   .why-pop h4{margin:0 0 8px;font-size:14px}
   .why-pop ul{margin:0;padding:0 0 0 18px}
   .why-pop li{margin:6px 0;color:#cbd3e6;font-size:13px}
-
-  /* Onboarding gate */
   .gate{position:fixed;inset:0;display:none;place-items:center;background:rgba(4,6,10,.58);backdrop-filter:blur(6px)}
   .gate.show{display:grid}
   .panel{width:min(680px,92vw);background:linear-gradient(180deg,#0b1020,#0a0f1b);border:1px solid var(--line);border-radius:18px;padding:18px}
@@ -62,9 +50,6 @@
   .reveal{overflow:hidden;transition:max-height .25s ease}
   .hint{font-size:12px;color:var(--mut)}
   .headerline{display:flex;gap:10px;align-items:center;margin:0 0 10px}
-
-  /* footer loader */
-  .loader{display:flex;justify-content:center;align-items:center;color:var(--mut);padding:18px}
 </style>
 </head>
 <body>
@@ -82,17 +67,14 @@
   <div class="wrap">
     <div id="banner" class="banner" hidden></div>
     <div id="grid" class="grid"></div>
-    <div id="loader" class="loader" hidden>Loading…</div>
   </div>
 
-  <!-- Why popover -->
   <div id="whyPop" class="why-pop">
     <h4>Why AI shows you this lead</h4>
     <ul id="whyList"></ul>
     <div class="hint" id="originHint"></div>
   </div>
 
-  <!-- Onboarding gate -->
   <div id="gate" class="gate">
     <div class="panel">
       <h2>Get in. It’s free.</h2>
@@ -119,42 +101,34 @@
   </div>
 
 <script>
-// --- API base (inline so this file runs standalone) ---
+// -------- API base (inline, NF by default) --------
 (function(){
   const DEFAULT='https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
   const q=new URLSearchParams(location.search);
   let base=q.get('api')||localStorage.getItem('apiBase')||DEFAULT;
   function norm(v){ if(!v) return DEFAULT; v=String(v).trim().replace(/\/+$/,''); if(!/^https?:\/\//i.test(v)) v='https://'+v; return v; }
   base=norm(base); window.API_BASE=base; try{localStorage.setItem('apiBase',base)}catch{}
-  const _fetch=window.fetch.bind(window);
-  window.fetch=(input,init)=>{ try{const url=typeof input==='string'?input:input.url; if(url && url.startsWith('/api/')) return _fetch(window.API_BASE+url,init);}catch{} return _fetch(input,init); };
 })();
 
-let SESSION = localStorage.getItem('galactly:session') || '';
-const API=(window.API_BASE||'').replace(/\/$/,'');
-function authHeaders(){ return SESSION ? { 'Authorization':'Bearer '+SESSION } : {}; }
-
-// --- soft presence (local tabs) + real presence blend ---
-const ONLINE_KEY='galactly:live:pings';
+// -------- presence (soft + server if available) --------
 const whoEl=document.getElementById('who');
-const myId=Math.random().toString(36).slice(2);
+const ONLINE_KEY='galactly:live:pings';
+const me=Math.random().toString(36).slice(2);
 function getP(){ try{return JSON.parse(localStorage.getItem(ONLINE_KEY)||'{}')}catch{return{}} }
 function setP(o){ localStorage.setItem(ONLINE_KEY,JSON.stringify(o)); }
-function beat(){ const o=getP(); o[myId]=Date.now(); setP(o); }
-function sweepLocal(){ const o=getP(),now=Date.now(); for(const k of Object.keys(o)) if(now-o[k]>25000) delete o[k]; setP(o); return Object.keys(o).length; }
-async function pollOnline(){
-  let real=0; try{ const r=await fetch(API+'/api/v1/presence/online'); const j=await r.json(); real=(j.real||j.count||0); }catch{}
-  const local=sweepLocal();
-  // floor display to avoid looking empty
-  const floor=34; // never show under this
-  const demo=Math.max(0, Math.round(real*0.1));
-  const displayed=Math.max(floor, real + demo + Math.max(0, local-1));
-  whoEl.textContent = displayed + ' online';
+function beat(){ const o=getP(); o[me]=Date.now(); setP(o); }
+function sweep(){ const o=getP(),now=Date.now(); for(const k of Object.keys(o)) if(now-o[k]>25000) delete o[k]; setP(o); showOnline(Object.keys(o).length); }
+function showOnline(soft){
+  const hour=(new Date()).getHours();
+  const floor = (hour>=7 && hour<=22) ? 34 : 28; // never look empty
+  const fudge = Math.min(8, Math.round(soft*0.2)+2);
+  const display = Math.max(floor, soft+fudge);
+  whoEl.textContent = display+" online";
 }
-async function beatPresence(){ if(!SESSION) return; try{ await fetch(API+'/api/v1/presence/beat',{method:'POST',headers:authHeaders()}); }catch{} }
-setInterval(beat,7000); setInterval(pollOnline,12000); setInterval(beatPresence,10000); beat(); pollOnline(); beatPresence();
+window.addEventListener('storage',e=>{ if(e.key===ONLINE_KEY) sweep(); });
+setInterval(beat,7000); setInterval(sweep,5000); beat(); sweep();
 
-// --- onboarding gate ---
+// -------- onboarding gate --------
 const gate=document.getElementById('gate');
 const enterBtn=document.getElementById('enterBtn');
 const chkListMe=document.getElementById('chkListMe');
@@ -166,152 +140,151 @@ function closeGate(){ gate.classList.remove('show'); }
 enterBtn.addEventListener('click', async ()=>{
   const email = document.getElementById('f_email').value.trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Enter a valid email'); return; }
-  const payload = { email, listMe: chkListMe.checked, company: document.getElementById('f_company').value.trim(), site: document.getElementById('f_site').value.trim() };
+  const payload = { region:'US', email, alerts:true };
   try{
-    const r = await fetch(API + '/api/v1/onboard', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-    const j = await r.json();
-    if(j.session){ SESSION=j.session; localStorage.setItem('galactly:session',SESSION); }
-    localStorage.setItem('galactly:onboarded', JSON.stringify(payload));
-    closeGate(); kick(true);
-  }catch(e){ alert('Network error.'); }
+    await fetch(window.API_BASE + '/api/v1/gate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if(chkListMe.checked){
+      const company=document.getElementById('f_company').value.trim();
+      const site=document.getElementById('f_site').value.trim();
+      if(company||site){
+        await fetch(window.API_BASE + '/api/v1/expose', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ company, site, role:'Packaging supplier', location:'', moq:'', leadtime:'', caps:'', links:'' }) });
+      }
+    }
+    localStorage.setItem('galactly:onboarded','1');
+    closeGate();
+    kick();
+  }catch(e){ alert('Network error. Try again.'); }
 });
 
-// --- UI helpers ---
+// -------- UI helpers --------
 const grid=document.getElementById('grid');
-const loader=document.getElementById('loader');
 const banner=document.getElementById('banner');
 const refreshEl=document.getElementById('refresh');
 const whyPop=document.getElementById('whyPop');
 const whyList=document.getElementById('whyList');
 const originHint=document.getElementById('originHint');
 
-// seen map for time-ago per URL
-const SEEN_KEY='galactly:seen';
-function getSeen(){ try{return JSON.parse(localStorage.getItem(SEEN_KEY)||'{}')}catch{return{}} }
-function setSeen(o){ try{localStorage.setItem(SEEN_KEY,JSON.stringify(o))}catch{} }
-let seen=getSeen();
+function relTime(ms){
+  const s=Math.max(1, Math.floor(ms/1000));
+  if(s<60) return s+'s ago';
+  const m=Math.floor(s/60); if(m<60) return m+'m ago';
+  const h=Math.floor(m/60); if(h<24) return h+'h ago';
+  const d=Math.floor(h/24); return d+'d ago';
+}
 
-function timeAgo(ts){ if(!ts) return 'just now'; const s=Math.max(1,Math.floor((Date.now()-ts)/1000)); if(s<60) return s+'s ago'; const m=Math.floor(s/60); if(m<60) return m+'m ago'; const h=Math.floor(m/60); if(h<24) return h+'h ago'; const d=Math.floor(h/24); return d+'d ago'; }
-
-function heatScore(it){
+function heatOf(it){
   const t=((it.title||'')+' '+(it.snippet||'')).toLowerCase();
-  const pos=['rfp','rfq','request for proposal','tender','bid','quote','seeking','urgent','packaging','corrugated','carton','co packer','kitting','3pl','volume','moq','budget'];
-  const neg=['internship','job','hiring','sam.gov','govwin','bidnet','tenders.gov'];
-  let s=0; pos.forEach(k=>{ if(t.includes(k)) s+=8; }); neg.forEach(k=>{ if(t.includes(k)) s-=10; });
-  s+=Math.min(20, (it.title||'').length>60?5:10); // short punchy titles
-  s=Math.max(0,Math.min(100,s));
-  const band = s>=75?'hot': s>=55?'warm':'ok';
-  return {score:s,band};
+  const hot=['rfp','rfq','request for proposal','seeking','buy','need supplier','co pack','co-packer'];
+  const warm=['recommend','looking for','any vendor','suggest'];
+  if(hot.some(k=>t.includes(k))) return {label:'HOT', color:'#ff6b6b'};
+  if(warm.some(k=>t.includes(k))) return {label:'WARM', color:'#ffd166'};
+  return {label:'OK', color:'#6ee7b7'};
 }
 
 function card(it){
   const u=new URL(it.url,location.href);
-  const id=(it.url||it.title||Math.random().toString(36)).slice(0,120);
-  if(!seen[id]){ seen[id]=Date.now(); setSeen(seen); }
-  const {score,band}=heatScore(it);
-  const el=document.createElement('div'); el.className='card new';
-  const heatLabel = band==='hot'? 'HOT' : band==='warm'? 'WARM' : 'OK';
-  const heatClass = 'heat '+band;
+  const h=heatOf(it);
+  const el=document.createElement('div'); el.className='card';
+  const ageTag = it.__addedAt ? `<span class="tag">${relTime(Date.now()-it.__addedAt)}</span>` : '';
   el.innerHTML=`
     <a href="${it.url}" target="_blank" rel="noopener" class="title">${it.title||it.url}</a>
     <div class="snip">${(it.snippet||'').replace(/</g,'&lt;')}</div>
     <div class="row">
       <span class="tag">${it.source||'web'}</span>
       <span class="tag">${u.hostname.replace(/^www\./,'')}</span>
-      <span class="${heatClass}">🔥 ${heatLabel} · ${score}</span>
-      <span class="age">${timeAgo(seen[id])}</span>
+      ${ageTag}
+      <span class="tag heat"><i style="background:${h.color}"></i>${h.label}</span>
     </div>
     <div class="why" data-origin="${it.url}">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg>
       <small>Why AI shows you this lead?</small>
     </div>`;
   el.querySelector('.why').addEventListener('click',()=>showWhy(it));
-  setTimeout(()=>el.classList.remove('new'),1600);
   return el;
 }
 
 function showWhy(it){
-  (async () => {
-  try {
-    const api = (window.API_BASE||'').replace(/\/$/,'');
-    const u = new URL(it.url, location.href);
-    const r = await fetch(`${api}/api/v1/ai/reasons?`+
-      `url=${encodeURIComponent(it.url)}`+
-      `&title=${encodeURIComponent(it.title||'')}`+
-      `&snippet=${encodeURIComponent(it.snippet||'')}`+
-      `&source=${encodeURIComponent(it.source||'web')}`);
-    const j = await r.json();
-    whyList.innerHTML = '';
-    (j.reasons||[]).forEach((s)=>{ const li=document.createElement('li'); li.textContent=s; whyList.appendChild(li); });
-    originHint.innerHTML = `Origin: <a href="${it.url}" target="_blank" rel="noopener">${j.origin||u.hostname}</a> · via ${j.model||'grok'}`;
-    whyPop.classList.add('show');
-    setTimeout(()=>document.addEventListener('click', ()=>whyPop.classList.remove('show'), { once:true }),0);
-  } catch {
-    
   whyList.innerHTML='';
   const reasons=[]; const t=((it.title||'')+' '+(it.snippet||'')).toLowerCase();
-  ['rfp','rfq','request for proposal','procurement','buy','seeking','packaging','corrugated','carton','supplier','outsourcing','kitting','co packer']
+  ['rfp','rfq','request for proposal','procurement','buy','seeking','packaging','corrugated','carton','supplier','outsourcing']
     .forEach(k=>{ if(t.includes(k)) reasons.push(`Matched keyword “${k}”.`); });
   reasons.push(`Source: ${it.source||'web'}.`);
   (reasons.length?reasons:['Topical relevance score high.']).forEach(s=>{ const li=document.createElement('li'); li.textContent=s; whyList.appendChild(li); });
   originHint.innerHTML=`Origin: <a href="${it.url}" target="_blank" rel="noopener">${new URL(it.url,location.href).hostname}</a>`;
   whyPop.classList.add('show'); setTimeout(()=>document.addEventListener('click',()=>whyPop.classList.remove('show'),{once:true}),0);
-  
 }
 
-// --- data + fetch loop ---
-const QUERY='(packaging buyer OR procurement OR "need packaging" OR "looking for packaging" OR co-packer OR kitting) (site:linkedin.com OR site:reddit.com OR site:substack.com) -site:sam.gov -site:gov -site:bidnet -site:govwin -site:fbo.gov';
-let tick=30,timer=null, fetching=false;
-const MAX_KEEP=96;
-
-function countdown(){ refreshEl.textContent=`refresh in ${tick}s`; if(--tick<0){ tick=30; kick(false,true); } }
-
-async function fetchPrimary(limit){
-  const url=`${API}/api/v1/leads?limit=${limit}&q=${encodeURIComponent(QUERY)}`;
-  const res=await fetch(url,{headers:authHeaders()}); if(!res.ok) throw new Error('HTTP_'+res.status); return res.json();
-}
-
-function mergeRender(items){
-  const existing = new Map();
-  [...grid.children].forEach(c=>{ const a=c.querySelector('a.title'); if(a) existing.set(a.href,true); });
-  const frag=document.createDocumentFragment();
+// -------- data flow (endless-ish) --------
+const QUERY='packaging buyer OR procurement OR RFP site:gov OR site:linkedin.com';
+let feed=[], seen=new Set();
+function upsert(items){
   let added=0;
-  items.forEach(it=>{ const key=it.url; if(existing.has(key)) return; frag.appendChild(card(it)); added++; });
-  if(added){ grid.prepend(frag); }
-  // trim old
-  while(grid.children.length>MAX_KEEP) grid.lastElementChild.remove();
+  for(const it of items){
+    const key=(it.url||'').replace(/[#?].*$/,'');
+    if(!key) continue;
+    if(!seen.has(key)){
+      seen.add(key);
+      it.__addedAt = Date.now();
+      feed.unshift(it);
+      added++;
+    }
+  }
+  if(feed.length>120){ feed=feed.slice(0,120); seen=new Set(feed.map(x=>x.url.replace(/[#?].*$/,''))); }
+  return added;
+}
+function render(){
+  grid.replaceChildren();
+  for(const it of feed){ grid.appendChild(card(it)); }
 }
 
-async function kick(force=false,refreshOnly=false){
-  if(fetching) return; fetching=true; loader.hidden=false;
+const refreshElTick = { v:30 };
+function countdown(){ refreshEl.textContent=`refresh in ${refreshElTick.v}s`; if(--refreshElTick.v<0){ refreshElTick.v=30; kick(); } }
+
+async function fetchPrimary(){
+  const API=(window.API_BASE||'').replace(/\/$/,'');
+  if(!API) throw new Error('NO_API');
+  const url=`${API}/api/v1/leads?limit=24&q=${encodeURIComponent(QUERY)}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('HTTP_'+res.status);
+  return res.json();
+}
+
+function normalizeItems(data){
+  if(Array.isArray(data?.items)) return data.items;
+  if(Array.isArray(data?.leads)){
+    // map DB-style leads to web-like
+    return data.leads.map(l=>({
+      source: l.platform||'web',
+      title: l.kw||l.cat||'Lead',
+      url: '#',
+      snippet: `${l.region||''} • fit ${l.fit||''}`.trim()
+    }));
+  }
+  return [];
+}
+
+async function kick(){
   try{
-    const data=await fetchPrimary(24);
-    const items=(data && Array.isArray(data.items))?data.items:[];
-    if(!items.length){ banner.hidden=false; banner.textContent='No items. Check API/CSE on backend.'; }
-    else{ banner.hidden=true; if(force||grid.children.length===0){ grid.replaceChildren(); items.forEach(it=>grid.appendChild(card(it))); } else { mergeRender(items); } }
-  }catch(e){ banner.hidden=false; banner.textContent='Network error. Showing demo feed.'; if(grid.children.length===0) renderDemo(); }
-  finally{ fetching=false; loader.hidden=true; }
+    const data=await fetchPrimary();
+    const items=normalizeItems(data);
+    const n=upsert(items);
+    if(!feed.length){ banner.hidden=false; banner.textContent='No items yet. Check backend keys.'; }
+    else { banner.hidden=true; }
+    if(n>0) render();
+    if(typeof data.humansOnline==='number') whoEl.textContent = Math.max(parseInt(whoEl.textContent)||0, data.humansOnline)+" online";
+  }catch(err){
+    if(!feed.length){ banner.hidden=false; banner.textContent='Network error. Showing demo.'; }
+    // tiny demo to avoid blank screen
+    const demo=[
+      {source:'linkedin',title:'3PL needs packaging supplier for new ecommerce client',url:'https://www.linkedin.com/feed/update/demo2',snippet:'Die-cut mailers, branded tape, poly mailers. Monthly volumes 20–40k.'},
+      {source:'web',title:'City RFP: Corrugated Boxes & Packaging Materials',url:'https://example.gov/rfp/corrugated-boxes',snippet:'Request for proposals for corrugated boxes in multiple sizes.'}
+    ];
+    upsert(demo); render();
+  }
 }
 
-function renderDemo(){
-  const demo=[
-    {source:'linkedin',title:'Seeking contract packaging partner for Q4 promotion — CPG brand',url:'https://www.linkedin.com/feed/update/demo1',snippet:'US brand needs co-packer for gift bundles. Corrugated + inserts. Quick turnaround.'},
-    {source:'web',title:'3PL needs packaging supplier for new ecommerce client',url:'https://example.com/demo2',snippet:'Die-cut mailers, branded tape, poly mailers. Monthly volumes 20–40k.'},
-    {source:'reddit',title:'Where to source custom rigid boxes in the US?',url:'https://reddit.com/r/AskEngineers/demo',snippet:'Buyer asking for domestic rigid box suppliers, low MOQs, embossing, foil.'}
-  ];
-  grid.replaceChildren(); demo.forEach(it=>grid.appendChild(card(it)));
-}
-})();
-
-if(needGate()) openGate();
-kick(true);
-timer=setInterval(countdown,1000);
-
-// lazy-load older (duplicate current for endless-feel without backend pagination)
-const io=new IntersectionObserver(entries=>{
-  for(const e of entries){ if(e.isIntersecting){ kick(false,true); } }
-},{rootMargin:'400px'});
-io.observe(loader);
+if(needGate()) openGate(); else kick();
+setInterval(countdown,1000);
 </script>
 </body>
 </html>
