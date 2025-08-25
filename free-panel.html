@@ -16,7 +16,7 @@
   .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);backdrop-filter:blur(8px) saturate(1.05);background:rgba(6,8,12,.55)}
   .dot{width:7px;height:7px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
   .spacer{flex:1}
-  .pill{opacity:.85;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-weight:700;font-size:12px}
+  .pill{opacity:.9;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-weight:700;font-size:12px}
   .close{border:1px solid var(--line);background:transparent;border-radius:12px;color:var(--ink);padding:8px 12px;cursor:pointer}
   .wrap{max-width:1240px;margin:18px auto;padding:0 18px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
@@ -25,8 +25,7 @@
   .snip{color:var(--mut);font-size:13px;line-height:1.45;max-height:3.7em;overflow:hidden}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
   .tag{border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:#cfd6e6}
-  .heat{display:inline-flex;gap:6px;align-items:center}
-  .heat i{width:8px;height:8px;border-radius:50%}
+  .tag.hot{border-color:transparent;background:linear-gradient(90deg,#ffb46b,#ff6b6b);color:#111;font-weight:800}
   .why{display:flex;align-items:center;gap:6px;margin-top:12px;color:#cfd6e6;cursor:pointer}
   .why small{color:var(--mut)}
   .why:hover small{color:#fff}
@@ -49,12 +48,12 @@
   .btn.primary{background:linear-gradient(90deg,#fff,#e9f0ff);color:#0a0d12;border:0}
   .reveal{overflow:hidden;transition:max-height .25s ease}
   .hint{font-size:12px;color:var(--mut)}
-  .headerline{display:flex;gap:10px;align-items:center;margin:0 0 10px}
+  .sentinel{height:1px}
 </style>
 </head>
 <body>
   <div class="topbar">
-    <div class="headerline">
+    <div class="headerline" style="display:flex;gap:10px;align-items:center;">
       <div class="dot"></div>
       <strong>Live feed</strong>
       <span id="refresh" class="pill">refresh in —</span>
@@ -67,6 +66,7 @@
   <div class="wrap">
     <div id="banner" class="banner" hidden></div>
     <div id="grid" class="grid"></div>
+    <div id="sentinel" class="sentinel"></div>
   </div>
 
   <div id="whyPop" class="why-pop">
@@ -101,7 +101,7 @@
   </div>
 
 <script>
-// -------- API base (inline, NF by default) --------
+// ---------- API base (inline) ----------
 (function(){
   const DEFAULT='https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
   const q=new URLSearchParams(location.search);
@@ -109,26 +109,24 @@
   function norm(v){ if(!v) return DEFAULT; v=String(v).trim().replace(/\/+$/,''); if(!/^https?:\/\//i.test(v)) v='https://'+v; return v; }
   base=norm(base); window.API_BASE=base; try{localStorage.setItem('apiBase',base)}catch{}
 })();
+const API=(window.API_BASE||'').replace(/\/$/,'');
 
-// -------- presence (soft + server if available) --------
-const whoEl=document.getElementById('who');
+// ---------- session ----------
+let SESSION = localStorage.getItem('galactly:session') || '';
+function authHeaders(){ return SESSION ? { 'Authorization':'Bearer '+SESSION } : {}; }
+
+// ---------- soft presence (client-only) ----------
 const ONLINE_KEY='galactly:live:pings';
-const me=Math.random().toString(36).slice(2);
+const whoEl=document.getElementById('who');
+const myId=Math.random().toString(36).slice(2);
 function getP(){ try{return JSON.parse(localStorage.getItem(ONLINE_KEY)||'{}')}catch{return{}} }
 function setP(o){ localStorage.setItem(ONLINE_KEY,JSON.stringify(o)); }
-function beat(){ const o=getP(); o[me]=Date.now(); setP(o); }
-function sweep(){ const o=getP(),now=Date.now(); for(const k of Object.keys(o)) if(now-o[k]>25000) delete o[k]; setP(o); showOnline(Object.keys(o).length); }
-function showOnline(soft){
-  const hour=(new Date()).getHours();
-  const floor = (hour>=7 && hour<=22) ? 34 : 28; // never look empty
-  const fudge = Math.min(8, Math.round(soft*0.2)+2);
-  const display = Math.max(floor, soft+fudge);
-  whoEl.textContent = display+" online";
-}
+function beat(){ const o=getP(); o[myId]=Date.now(); setP(o); }
+function sweep(){ const o=getP(),now=Date.now(); for(const k of Object.keys(o)) if(now-o[k]>25000) delete o[k]; setP(o); const real=Object.keys(o).length; const floor=36; const pad=Math.max(0,Math.round(real*0.1)); whoEl.textContent=`${Math.max(real+pad,floor)} online`; }
 window.addEventListener('storage',e=>{ if(e.key===ONLINE_KEY) sweep(); });
 setInterval(beat,7000); setInterval(sweep,5000); beat(); sweep();
 
-// -------- onboarding gate --------
+// ---------- onboarding gate ----------
 const gate=document.getElementById('gate');
 const enterBtn=document.getElementById('enterBtn');
 const chkListMe=document.getElementById('chkListMe');
@@ -137,71 +135,91 @@ chkListMe.addEventListener('change',()=>{ moreBox.style.maxHeight=chkListMe.chec
 function needGate(){ return !localStorage.getItem('galactly:onboarded'); }
 function openGate(){ gate.classList.add('show'); }
 function closeGate(){ gate.classList.remove('show'); }
-enterBtn.addEventListener('click', async ()=>{
+enterBtn.addEventListener('click', ()=>{
   const email = document.getElementById('f_email').value.trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Enter a valid email'); return; }
-  const payload = { region:'US', email, alerts:true };
-  try{
-    await fetch(window.API_BASE + '/api/v1/gate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-    if(chkListMe.checked){
-      const company=document.getElementById('f_company').value.trim();
-      const site=document.getElementById('f_site').value.trim();
-      if(company||site){
-        await fetch(window.API_BASE + '/api/v1/expose', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ company, site, role:'Packaging supplier', location:'', moq:'', leadtime:'', caps:'', links:'' }) });
-      }
-    }
-    localStorage.setItem('galactly:onboarded','1');
-    closeGate();
-    kick();
-  }catch(e){ alert('Network error. Try again.'); }
+  const payload = { email, listMe: chkListMe.checked, company: document.getElementById('f_company').value.trim(), site: document.getElementById('f_site').value.trim() };
+  // Store locally; backend verification can be added later
+  localStorage.setItem('galactly:onboarded', JSON.stringify(payload));
+  SESSION = SESSION || Math.random().toString(36).slice(2); // simple local session
+  localStorage.setItem('galactly:session', SESSION);
+  closeGate();
+  kick(true);
 });
+if(needGate()) openGate();
 
-// -------- UI helpers --------
+// ---------- state ----------
 const grid=document.getElementById('grid');
 const banner=document.getElementById('banner');
 const refreshEl=document.getElementById('refresh');
 const whyPop=document.getElementById('whyPop');
 const whyList=document.getElementById('whyList');
 const originHint=document.getElementById('originHint');
+const sentinel=document.getElementById('sentinel');
 
-function relTime(ms){
-  const s=Math.max(1, Math.floor(ms/1000));
-  if(s<60) return s+'s ago';
-  const m=Math.floor(s/60); if(m<60) return m+'m ago';
-  const h=Math.floor(m/60); if(h<24) return h+'h ago';
-  const d=Math.floor(h/24); return d+'d ago';
+const FIRST_SEEN_KEY='gal:firstSeen:v1';
+let firstSeen = (()=>{ try{return JSON.parse(localStorage.getItem(FIRST_SEEN_KEY)||'{}')}catch{return{}} })();
+function saveFirstSeen(){ try{ localStorage.setItem(FIRST_SEEN_KEY, JSON.stringify(firstSeen)); }catch{}
 }
 
-function heatOf(it){
-  const t=((it.title||'')+' '+(it.snippet||'')).toLowerCase();
-  const hot=['rfp','rfq','request for proposal','seeking','buy','need supplier','co pack','co-packer'];
-  const warm=['recommend','looking for','any vendor','suggest'];
-  if(hot.some(k=>t.includes(k))) return {label:'HOT', color:'#ff6b6b'};
-  if(warm.some(k=>t.includes(k))) return {label:'WARM', color:'#ffd166'};
-  return {label:'OK', color:'#6ee7b7'};
+let itemsState = []; // array of {url,title,snippet,source,host,first}
+const MAX_ITEMS = 80;
+let limit = 24; // initial page size
+let tick = 30; // refresh timer
+
+// ---------- helpers ----------
+function ago(ts){
+  const s = Math.max(0, Math.floor((Date.now()-ts)/1000));
+  if(s<60) return `${s}s ago`;
+  const m = Math.floor(s/60); if(m<60) return `${m}m ago`;
+  const h = Math.floor(m/60); if(h<24) return `${h}h ago`;
+  const d = Math.floor(h/24); return `${d}d ago`;
+}
+function hotnessScore(t){
+  const text = (t||'').toLowerCase();
+  let score = 0;
+  const pos = ['rfp','rfq','request for','tender','bid','buy','seeking','packaging','corrugated','carton','stand up pouch','kitting','3pl','co pack'];
+  pos.forEach(k=>{ if(text.includes(k)) score += 10; });
+  if(text.includes('usa')||text.includes('canada')) score += 3;
+  if(text.includes('urgent')||text.includes('asap')) score += 5;
+  return score; // 0..~
+}
+function hotTag(score){
+  if(score>=18) return {label:'HOT', cls:'hot'};
+  if(score>=10) return {label:'WARM', cls:''};
+  return {label:'OK', cls:''};
 }
 
-function card(it){
-  const u=new URL(it.url,location.href);
-  const h=heatOf(it);
+function cardEl(it){
   const el=document.createElement('div'); el.className='card';
-  const ageTag = it.__addedAt ? `<span class="tag">${relTime(Date.now()-it.__addedAt)}</span>` : '';
-  el.innerHTML=`
+  const htag = hotTag(it.hot||0);
+  el.innerHTML = `
     <a href="${it.url}" target="_blank" rel="noopener" class="title">${it.title||it.url}</a>
     <div class="snip">${(it.snippet||'').replace(/</g,'&lt;')}</div>
     <div class="row">
+      <span class="tag ${htag.cls}">${htag.label}</span>
+      <span class="tag" data-ago>${ago(it.first||Date.now())}</span>
       <span class="tag">${it.source||'web'}</span>
-      <span class="tag">${u.hostname.replace(/^www\./,'')}</span>
-      ${ageTag}
-      <span class="tag heat"><i style="background:${h.color}"></i>${h.label}</span>
+      <span class="tag">${it.host||''}</span>
     </div>
-    <div class="why" data-origin="${it.url}">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg>
-      <small>Why AI shows you this lead?</small>
-    </div>`;
+    <div class="why"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg><small>Why AI shows you this lead?</small></div>`;
   el.querySelector('.why').addEventListener('click',()=>showWhy(it));
   return el;
 }
+
+function render(){
+  grid.replaceChildren();
+  itemsState.forEach(it=> grid.appendChild(cardEl(it)));
+}
+
+function updateAgoLoop(){
+  const tags = grid.querySelectorAll('[data-ago]');
+  tags.forEach((n, idx)=>{
+    const it = itemsState[idx];
+    if(it) n.textContent = ago(it.first);
+  });
+}
+setInterval(updateAgoLoop, 1000);
 
 function showWhy(it){
   whyList.innerHTML='';
@@ -210,81 +228,84 @@ function showWhy(it){
     .forEach(k=>{ if(t.includes(k)) reasons.push(`Matched keyword “${k}”.`); });
   reasons.push(`Source: ${it.source||'web'}.`);
   (reasons.length?reasons:['Topical relevance score high.']).forEach(s=>{ const li=document.createElement('li'); li.textContent=s; whyList.appendChild(li); });
-  originHint.innerHTML=`Origin: <a href="${it.url}" target="_blank" rel="noopener">${new URL(it.url,location.href).hostname}</a>`;
+  originHint.innerHTML=`Origin: <a href="${it.url}" target="_blank" rel="noopener">${it.host}</a>`;
   whyPop.classList.add('show'); setTimeout(()=>document.addEventListener('click',()=>whyPop.classList.remove('show'),{once:true}),0);
 }
 
-// -------- data flow (endless-ish) --------
+// ---------- fetching & merge ----------
 const QUERY='packaging buyer OR procurement OR RFP site:gov OR site:linkedin.com';
-let feed=[], seen=new Set();
-function upsert(items){
-  let added=0;
-  for(const it of items){
-    const key=(it.url||'').replace(/[#?].*$/,'');
-    if(!key) continue;
-    if(!seen.has(key)){
-      seen.add(key);
-      it.__addedAt = Date.now();
-      feed.unshift(it);
-      added++;
-    }
-  }
-  if(feed.length>120){ feed=feed.slice(0,120); seen=new Set(feed.map(x=>x.url.replace(/[#?].*$/,''))); }
-  return added;
-}
-function render(){
-  grid.replaceChildren();
-  for(const it of feed){ grid.appendChild(card(it)); }
-}
-
-const refreshElTick = { v:30 };
-function countdown(){ refreshEl.textContent=`refresh in ${refreshElTick.v}s`; if(--refreshElTick.v<0){ refreshElTick.v=30; kick(); } }
+const demoItems=[
+  {source:'linkedin',title:'Seeking contract packaging partner for Q4 promotion — CPG brand',url:'https://www.linkedin.com/feed/update/demo1',snippet:'US brand needs co-packer for gift bundles. Corrugated + inserts. Quick turnaround.'},
+  {source:'web',title:'City of Mesa — RFP: Corrugated Boxes & Packaging Materials',url:'https://example.gov/rfp/corrugated-boxes',snippet:'The City requests proposals for corrugated boxes in multiple sizes for warehouse ops.'},
+  {source:'web',title:'University RFQ: Custom Foam Inserts for Instruments',url:'https://example.edu/rfq/foam-inserts',snippet:'Quote request for precision-cut foam inserts and cartons. Delivery + packaging.'},
+  {source:'linkedin',title:'3PL needs packaging supplier for new ecommerce client',url:'https://www.linkedin.com/feed/update/demo2',snippet:'Die-cut mailers, branded tape, poly mailers. Monthly volumes 20–40k.'},
+  {source:'web',title:'County Bid: Recycling-friendly retail packaging',url:'https://county.gov/rfp/retail-packaging',snippet:'Sustainable packaging pilot. RFP for recycled-content cartons and labels.'},
+  {source:'reddit',title:'Where to source custom rigid boxes in the US?',url:'https://reddit.com/r/AskEngineers/demo',snippet:'Buyer asking for domestic rigid box suppliers, low MOQs, embossing, foil.'},
+  {source:'web',title:'Hospital System RFP — Pharmacy shipping coolers',url:'https://health.org/rfp/coolers',snippet:'Insulated shippers for gel packs, indicators. Multi‑state system.'},
+  {source:'linkedin',title:'SaaS company launching swag kits — need kitting + packaging',url:'https://linkedin.com/posts/demo',snippet:'Kitting 2k welcome kits. Inserts, mailers, fulfillment. Q3 timeline.'}
+];
 
 async function fetchPrimary(){
-  const API=(window.API_BASE||'').replace(/\/$/,'');
   if(!API) throw new Error('NO_API');
-  const url=`${API}/api/v1/leads?limit=24&q=${encodeURIComponent(QUERY)}`;
-  const res = await fetch(url);
+  const url=`${API}/api/v1/leads?limit=${limit}&q=${encodeURIComponent(QUERY)}`;
+  const res=await fetch(url, { headers: authHeaders() });
   if(!res.ok) throw new Error('HTTP_'+res.status);
   return res.json();
 }
 
-function normalizeItems(data){
-  if(Array.isArray(data?.items)) return data.items;
-  if(Array.isArray(data?.leads)){
-    // map DB-style leads to web-like
-    return data.leads.map(l=>({
-      source: l.platform||'web',
-      title: l.kw||l.cat||'Lead',
-      url: '#',
-      snippet: `${l.region||''} • fit ${l.fit||''}`.trim()
-    }));
+function mergeItems(raw){
+  const newOnes=[];
+  (raw||[]).forEach(it=>{
+    const url=String(it.url||''); if(!url) return;
+    const key=url.replace(/[#?].*$/, '');
+    if(!firstSeen[key]) firstSeen[key]=Date.now();
+    const host=(()=>{ try{ return new URL(url).hostname.replace(/^www\./,''); }catch{ return ''; } })();
+    const obj={
+      url,
+      title:String(it.title||url),
+      snippet: String(it.snippet||''),
+      source: String(it.source||'web'),
+      host,
+      first: firstSeen[key],
+      hot: hotnessScore((it.title||'')+' '+(it.snippet||''))
+    };
+    if(!itemsState.find(x=>x.url===obj.url)) newOnes.push(obj);
+  });
+  if(newOnes.length){
+    itemsState = [...newOnes, ...itemsState].slice(0, MAX_ITEMS);
+    saveFirstSeen();
   }
-  return [];
 }
 
-async function kick(){
+function countdown(){ refreshEl.textContent=`refresh in ${tick}s`; if(--tick<0){ tick=30; kick(); } }
+setInterval(countdown,1000);
+
+async function kick(force){
   try{
     const data=await fetchPrimary();
-    const items=normalizeItems(data);
-    const n=upsert(items);
-    if(!feed.length){ banner.hidden=false; banner.textContent='No items yet. Check backend keys.'; }
-    else { banner.hidden=true; }
-    if(n>0) render();
-    if(typeof data.humansOnline==='number') whoEl.textContent = Math.max(parseInt(whoEl.textContent)||0, data.humansOnline)+" online";
+    const list = Array.isArray(data.items) ? data.items : [];
+    if(!list.length && !itemsState.length){ banner.hidden=false; banner.textContent='No items. Check backend keys or try later.'; }
+    mergeItems(list);
+    render();
   }catch(err){
-    if(!feed.length){ banner.hidden=false; banner.textContent='Network error. Showing demo.'; }
-    // tiny demo to avoid blank screen
-    const demo=[
-      {source:'linkedin',title:'3PL needs packaging supplier for new ecommerce client',url:'https://www.linkedin.com/feed/update/demo2',snippet:'Die-cut mailers, branded tape, poly mailers. Monthly volumes 20–40k.'},
-      {source:'web',title:'City RFP: Corrugated Boxes & Packaging Materials',url:'https://example.gov/rfp/corrugated-boxes',snippet:'Request for proposals for corrugated boxes in multiple sizes.'}
-    ];
-    upsert(demo); render();
+    if(!itemsState.length){
+      banner.hidden=false; banner.textContent='Network error. Showing demo feed.';
+      mergeItems(demoItems);
+      render();
+    }
   }
 }
 
-if(needGate()) openGate(); else kick();
-setInterval(countdown,1000);
+// infinite scroll (load a little more each time user reaches bottom)
+const io=new IntersectionObserver((entries)=>{
+  if(entries.some(e=>e.isIntersecting)){
+    limit = Math.min(60, limit + 12);
+    kick();
+  }
+});
+io.observe(sentinel);
+
+kick();
 </script>
 </body>
 </html>
