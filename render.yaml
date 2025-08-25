@@ -1,0 +1,45 @@
+# Render Blueprint — deploy Backend/ as a free Docker web service
+# Save this file at repo root as: render.yaml
+# Then in Render: Blueprints → New Blueprint → Pick this repo → Apply.
+
+services:
+  - type: web
+    name: galactly-api
+    env: docker
+    plan: free
+    region: oregon
+    autoDeploy: true
+    healthCheckPath: /healthz
+    dockerfilePath: Backend/Dockerfile
+    
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "8787"
+
+      # CORS: allow your GitHub Pages origins (adjust if your pages URL differs)
+      - key: CORS_ORIGIN
+        value: https://gggp-test.github.io,https://gggp-test.github.io/galactly-monorepo-v1
+
+      # AI providers (free-tier friendly). Add real keys in Render dashboard → Environment.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: HUGGINGFACE_API_TOKEN
+        sync: false
+
+      # Google CSE (optional; comment out if not using web/linkedin/youtube search)
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GOOGLE_CX_WEB
+        sync: false
+      - key: GOOGLE_CX_LINKEDIN
+        sync: false
+      - key: GOOGLE_CX_YOUTUBE
+        sync: false
+
+      # Keep background jobs off on free tier
+      - key: SCHEDULER_ENABLED
+        value: "0"
+      - key: REDDIT_ENABLED
+        value: "false"
