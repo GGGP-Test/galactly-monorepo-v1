@@ -6,8 +6,7 @@ WORKDIR /app
 
 # Dependencies first (better caching)
 COPY package*.json ./
-RUN if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
-
+RUN if [ -f package-lock.json ]; then npm ci --include=dev; else npm install --include=dev --no-audit --no-fund; fi
 
 # Copy source and build
 COPY . .
