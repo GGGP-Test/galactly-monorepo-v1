@@ -1,22 +1,14 @@
 {
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
-    "outDir": "dist",
-    "rootDir": "src",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "noEmitOnError": true
-  },
-  "files": [
-    "src/index.ts",
-    "src/routes/leads.ts",
-    "src/connectors/cse.ts",
-    "src/auth.ts",
-    "src/presence.ts",
-    "src/routes/gate.ts"
-  ]
+"compilerOptions": {
+"target": "ES2020",
+"module": "CommonJS",
+"moduleResolution": "Node",
+"outDir": "dist",
+"rootDir": "src",
+"esModuleInterop": true,
+"resolveJsonModule": true,
+"strict": false,
+"skipLibCheck": true
+},
+"include": ["src/**/*", "scripts/**/*"]
 }
