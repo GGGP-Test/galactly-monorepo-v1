@@ -6,8 +6,7 @@
 "scripts": {
 "build": "tsc -p tsconfig.json",
 "dev": "tsx watch src/Index.ts",
-"start": "node dist/Index.js",
-"weights": "tsx scripts/update-weights.ts"
+"start": "node dist/Index.js"
 },
 "dependencies": {
 "dotenv": "^16.4.5",
