@@ -13,4 +13,5 @@ RUN npm run build && cp -f src/schema.sql dist/schema.sql || true
 
 
 EXPOSE 8787
-CMD ["node","dist/Index.js"]
+CMD ["node","dist/index.js"]
+
