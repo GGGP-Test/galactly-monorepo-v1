@@ -1,7 +1,7 @@
 name: Update Weights
 on:
 schedule:
-- cron: "13 2 * * *" # 02:13 UTC daily
+- cron: "13 2 * * *" # daily 02:13 UTC
 workflow_dispatch:
 
 
