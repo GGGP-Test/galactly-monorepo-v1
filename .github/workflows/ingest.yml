@@ -1,49 +1,19 @@
 name: Ingest Scheduler
+on:
+schedule:
 - cron: "*/5 * * * *"
 workflow_dispatch:
 
 
 env:
-API_BASE: https://galactly-api-docker.onrender.com
+API_BASE: https://<YOUR-NF-ROUTE>.northflank.app
 
 
 jobs:
 run:
 runs-on: ubuntu-latest
-timeout-minutes: 10
-concurrency:
-group: ingest-scheduler
-cancel-in-progress: false
 steps:
-- name: Decide which tasks to run
-id: plan
-run: |
-MIN=$(date -u +%M)
-echo "minute=$MIN" >> $GITHUB_OUTPUT
-RUN_RSS_SOCIAL=0
-RUN_CSE=0
-if [ $((10#$MIN % 15)) -eq 0 ]; then RUN_RSS_SOCIAL=1; fi
-if [ "$MIN" = "05" ]; then RUN_CSE=1; fi
-echo "rss_social=$RUN_RSS_SOCIAL" >> $GITHUB_OUTPUT
-echo "cse=$RUN_CSE" >> $GITHUB_OUTPUT
-
-
-- name: RSS
-if: steps.plan.outputs.rss_social == '1'
-run: |
-curl -fsS --retry 2 -H "x-admin-token: ${{ secrets.ADMIN_TOKEN }}" \
-"$API_BASE/api/v1/admin/poll-now?source=rss"
-
-
-- name: Social
-if: steps.plan.outputs.rss_social == '1'
-run: |
-curl -fsS --retry 2 -H "x-admin-token: ${{ secrets.ADMIN_TOKEN }}" \
-"$API_BASE/api/v1/admin/poll-now?source=social"
-
-
-- name: CSE
-if: steps.plan.outputs.cse == '1'
+- name: CSE (example)
 run: |
 curl -fsS --retry 2 -H "x-admin-token: ${{ secrets.ADMIN_TOKEN }}" \
 "$API_BASE/api/v1/admin/poll-now?source=cse"
