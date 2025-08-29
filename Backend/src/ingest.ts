@@ -1,154 +1,123 @@
 // Backend/src/ingest.ts
-// Real brand-intake ingestor (NF-safe, no external APIs)
-
 import fs from 'fs';
 import { q } from './db';
 
-type Hit = { url: string; title?: string; snippet?: string; why: string[] };
-
-const PATHS = [
-  '/', 'suppliers', 'supplier', 'vendors', 'vendor', 'partners', 'partner',
-  'procurement', 'sourcing', 'purchasing', 'become-a-supplier',
-  'supplier-registration', 'vendor-registration', 'rfq', 'rfi'
+const INTENT = [
+  'supplier','vendors','procurement','sourcing','vendor registration',
+  'become a supplier','purchasing','rfq','rfi','request for quote'
+];
+const PACKAGING = [
+  'packaging','corrugated','carton','cartons','rsc','mailers',
+  'labels','pouch','pouches','folding carton','case pack'
 ];
 
-const TOK_INTENT = [
-  'supplier', 'vendors', 'procurement', 'sourcing', 'rfq', 'rfi',
-  'vendor registration', 'supplier registration', 'become a supplier', 'purchasing'
-];
-
-const TOK_PACKAGING = [
-  'packaging', 'corrugated', 'carton', 'cartons', 'rsc',
-  'mailer', 'mailers', 'labels', 'label', 'pouch', 'pouches',
-  'folding carton', 'case pack'
-];
-
-function readDomainsFromEnvFile(): string[] {
-  const p = process.env.BRANDS_FILE || process.env.BUYERS_FILE || '';
-  if (!p) return [];
-  try {
-    const raw = fs.readFileSync(p, 'utf8');
-    return raw
-      .split(/\r?\n/g)
-      .map(s => s.trim().toLowerCase())
-      .filter(Boolean)
-      .map(s => s.replace(/^https?:\/\//, '').replace(/\/+.*/, ''))
-      .filter(s => s.includes('.'))
-      .slice(0, Number(process.env.BI_MAX_DOMAINS || 50));
-  } catch {
-    return [];
-  }
+function readLines(p?: string): string[] {
+  if (!p || !fs.existsSync(p)) return [];
+  return fs.readFileSync(p, 'utf8')
+    .split(/\r?\n/g)
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean)
+    .map(s => s.replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/.*$/,''));
 }
 
-function buildCandidates(domain: string): string[] {
-  const base = `https://${domain.replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
-  const list: string[] = [];
-  for (const p of PATHS) {
-    list.push(p === '/' ? base : `${base}/${p}`);
-  }
-  return list.slice(0, Number(process.env.BI_MAX_URLS || 300));
+function candidates(domain: string): string[] {
+  const base = `https://${domain}`;
+  const paths = [
+    '/', '/suppliers','/supplier','/vendors','/vendor',
+    '/vendor-registration','/become-a-supplier','/procurement',
+    '/sourcing','/purchasing','/partners','/rfq','/rfi'
+  ];
+  return paths.map(p => base + p);
 }
 
-function hasAny(hay: string, needles: string[]) {
-  const H = hay.toLowerCase();
-  return needles.some(t => H.includes(t));
+function hasAny(hay: string, needles: string[]): boolean {
+  const h = hay.toLowerCase();
+  return needles.some(t => h.includes(t));
 }
 
-function pickTitle(html: string): string {
-  const m = html.match(/<title[^>]*>(.*?)<\/title>/i);
-  return (m?.[1] || 'Supplier / Procurement').trim().replace(/\s+/g, ' ').slice(0, 140);
-}
-
-function snippetFrom(html: string, why: string[]): string {
-  const txt = html.replace(/<[^>]+>/g, ' ');
-  let idx = 0;
-  for (const w of why) {
-    const i = txt.toLowerCase().indexOf(w.toLowerCase());
-    if (i >= 0) { idx = i; break; }
-  }
-  const start = Math.max(0, idx - 120);
-  const end = Math.min(txt.length, idx + 240);
-  return txt.slice(start, end).replace(/\s+/g, ' ').trim().slice(0, 280);
-}
-
-async function fetchHtml(url: string): Promise<string | null> {
-  try {
-    const r = await fetch(url, {
-      redirect: 'follow',
-      headers: { 'user-agent': process.env.BRANDINTAKE_USERAGENT || 'GalactlyBot/0.1 (+https://galactly.dev)' }
-    } as any);
-    if (!r.ok) return null;
-    const ct = (r.headers.get('content-type') || '').toLowerCase();
-    if (!ct.includes('text/html')) return null;
-    const html = await r.text();
-    return html.slice(0, 250_000);
-  } catch {
-    return null;
-  }
-}
-
-function score(html: string): { ok: boolean; why: string[] } {
+function score(html: string): {score:number; why:string[]} {
   const why: string[] = [];
-  for (const t of TOK_INTENT) if (html.toLowerCase().includes(t)) why.push(t);
-  let packHits = 0;
-  for (const t of TOK_PACKAGING) if (html.toLowerCase().includes(t)) { packHits++; why.push(t); }
-  // must have *intent* and at least one packaging token
-  const ok = why.some(w => TOK_INTENT.includes(w)) && packHits > 0;
-  return { ok, why: Array.from(new Set(why)).slice(0, 6) };
+  let s = 0;
+  for (const t of INTENT) if (html.toLowerCase().includes(t)) { s+=1; why.push(t); }
+  let packs = 0;
+  for (const t of PACKAGING) if (html.toLowerCase().includes(t)) { packs+=1; why.push(t); }
+  s += packs*2;
+  return { score: s, why: Array.from(new Set(why)).slice(0, 8) };
+}
+
+function titleOf(html: string): string {
+  const m = html.match(/<title[^>]*>(.*?)<\/title>/i);
+  return (m?.[1] || 'Supplier / Procurement').trim().replace(/\s+/g,' ').slice(0,140);
+}
+
+function snippetOf(html: string, hits: string[]): string {
+  const lo = html.toLowerCase();
+  const pos = hits
+    .map(h => lo.indexOf(h.toLowerCase()))
+    .filter(i => i >= 0)
+    .sort((a,b) => a-b)[0] ?? 0;
+  const start = Math.max(0, pos-120);
+  const end   = Math.min(html.length, pos+280);
+  return html.slice(start,end).replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().slice(0,280);
+}
+
+async function fetchHtml(url: string): Promise<string|null> {
+  try {
+    const ua = process.env.BRANDINTAKE_USERAGENT || 'GalactlyBot/0.1 (+https://galactly.dev)';
+    const r = await fetch(url, { redirect: 'follow', headers: { 'user-agent': ua } } as any);
+    if (!r.ok) return null;
+    const ct = (r.headers.get('content-type')||'').toLowerCase();
+    if (!ct.includes('text/html')) return null;
+    const text = await r.text();
+    return text.slice(0, 300_000);
+  } catch { return null; }
 }
 
 export async function runIngest(source: string) {
-  const S = (source || '').toLowerCase().trim();
-  const allowed = ['brandintake', 'brand-intake', 'buyers', 'brands', 'all'];
-  if (!allowed.includes(S)) return { ok: true, did: 'noop' } as const;
-
-  if (process.env.BRANDINTAKE_ENABLED === '0') {
-    return { ok: true, did: 'disabled' } as const;
+  const S = (source || '').toLowerCase();
+  if (S && S !== 'brandintake' && S !== 'all') {
+    return { ok: true, did: 'skipped', note: `source=${source}` } as const;
   }
 
-  const domains = readDomainsFromEnvFile();
-  if (!domains.length) {
-    console.log('[brandintake] no domains (BRANDS_FILE/BUYERS_FILE empty or missing)');
-    return { ok: true, did: 'brandintake', checked: 0, created: 0, note: 'no domains' } as const;
-  }
+  const enabled = process.env.BRANDINTAKE_ENABLED === '1';
+  if (!enabled) return { ok: true, did: 'brandintake', checked: 0, created: 0, note: 'disabled' } as const;
 
-  const ttlMin = Number(process.env.BRANDINTAKE_TTL_MIN || 240);
-  let checked = 0;
-  let created = 0;
+  // Use buyers list as the domain seed (your chosen design)
+  const file = process.env.BRANDS_FILE || process.env.BUYERS_FILE;
+  const domains = readLines(file);
+  const MAX_DOMAINS = Number(process.env.BI_MAX_DOMAINS || 40);
+  const MAX_URLS    = Number(process.env.BI_MAX_URLS || 200);
+
+  console.log(`[brandintake] starting: domains=${domains.length} maxD=${MAX_DOMAINS} maxU=${MAX_URLS}`);
+
+  let checked = 0, created = 0;
   const seen = new Set<string>();
 
-  console.log(`[brandintake] start — domains=${domains.length}`);
-
-  for (const d of domains) {
-    for (const u of buildCandidates(d)) {
+  outer: for (const d of domains.slice(0, MAX_DOMAINS)) {
+    for (const u of candidates(d)) {
       if (seen.has(u)) continue;
       seen.add(u);
-      checked++;
+      if (seen.size > MAX_URLS) break outer;
 
       const html = await fetchHtml(u);
-      if (!html) continue;
+      if (!html) { checked++; continue; }
 
-      const { ok, why } = score(html);
-      if (!ok) continue;
-
-      const title = pickTitle(html);
-      const snippet = snippetFrom(html, why);
-
-      try {
+      const { score: sc, why } = score(html);
+      if (sc >= 3) {
+        const title = titleOf(html);
+        const snippet = snippetOf(html, why);
         await q(
-          `INSERT INTO lead_pool (platform, source_url, title, snippet, cat, kw, heat, ttl, state)
-           VALUES ('brandintake', $1, $2, $3, 'procurement', $4::text[], $5,
-                   now() + interval '${ttlMin} minutes', 'available')
+          `INSERT INTO lead_pool (platform, source_url, title, snippet, cat, kw, heat)
+           VALUES ('brandintake', $1, $2, $3, 'procurement', $4::text[], $5)
            ON CONFLICT (source_url) DO NOTHING`,
-          [u, title, snippet, why, 70]
+          [u, title, snippet, why, Math.min(95, 60 + sc*5)]
         );
         created++;
-      } catch (e) {
-        // ignore per-row DB errors, keep going
       }
+      checked++;
     }
   }
 
-  console.log(`[brandintake] done — checked=${checked}, created=${created}`);
+  console.log(`[brandintake] done: checked=${checked} created=${created}`);
   return { ok: true, did: 'brandintake', checked, created } as const;
 }
