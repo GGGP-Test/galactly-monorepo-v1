@@ -1,111 +1,135 @@
-import fs from "fs/promises";
-import { q } from "./db";
+// Backend/src/ingest.ts
+import fs from 'fs';
+import { q } from './db';
 
-// tokens that indicate supplier / procurement intake pages
-const TOKENS = [
-  "become a supplier","supplier registration","vendor registration",
-  "suppliers","supplier","vendors","vendor",
-  "procurement","sourcing","rfq","rfi","request for quote","bid"
+const TOK_INTENT = [
+  'supplier', 'vendors', 'procurement', 'sourcing', 'rfq', 'rfi',
+  'vendor registration', 'become a supplier', 'purchasing'
 ];
 
-// fetch HTML with timeout
-async function getHtml(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return null;
-    const ct = (res.headers.get("content-type") || "").toLowerCase();
-    if (!ct.includes("text/html")) return null;
-    return await res.text();
-  } catch {
-    return null;
+const TOK_PACKAGING = [
+  'packaging', 'corrugated', 'carton', 'cartons', 'rsc',
+  'mailer', 'labels', 'pouch', 'pouches', 'folding carton', 'case pack'
+];
+
+// very small timeout helper
+async function withTimeout<T>(p: Promise<T>, ms=10000): Promise<T> {
+  return await Promise.race([
+    p,
+    new Promise<T>((_,rej)=>setTimeout(()=>rej(new Error('timeout')), ms))
+  ]);
+}
+
+function readDomainsFromFile(p?: string): string[] {
+  if (!p || !fs.existsSync(p)) return [];
+  const raw = fs.readFileSync(p, 'utf8');
+  return raw
+    .split(/\r?\n/g)
+    .map(s => s.trim().toLowerCase())
+    .filter(s => !!s && !s.startsWith('#'))
+    .map(s => s.replace(/^https?:\/\//, '').replace(/\/+.*/, ''))
+    .filter(s => s.includes('.'));
+}
+
+function candidatesFor(domain: string): string[] {
+  const base = `https://${domain}`;
+  const paths = [
+    '/', '/suppliers', '/supplier', '/vendors', '/vendor',
+    '/vendor-registration', '/become-a-supplier', '/procurement',
+    '/sourcing', '/purchasing', '/partners', '/rfq', '/rfi'
+  ];
+  return paths.map(p => base + p);
+}
+
+function scoreTextForSignals(html: string): { score: number; why: string[] } {
+  const txt = html.toLowerCase();
+  const why: string[] = [];
+  let s = 0;
+  for (const t of TOK_INTENT) if (txt.includes(t)) { s += 1; why.push(t); }
+  // packaging tokens give us stronger signal this is OUR category
+  let pHits = 0;
+  for (const t of TOK_PACKAGING) if (txt.includes(t)) { pHits += 1; why.push(t); }
+  s += pHits * 2;
+  return { score: s, why: Array.from(new Set(why)).slice(0, 6) };
+}
+
+function pickTitle(html: string): string {
+  const m = html.match(/<title[^>]*>(.*?)<\/title>/i);
+  return (m?.[1] || 'Supplier / Procurement').trim().replace(/\s+/g, ' ').slice(0, 140);
+}
+
+function snippetFrom(html: string, hits: string[]): string {
+  if (!hits.length) return '';
+  const idx = hits
+    .map(h => html.toLowerCase().indexOf(h.toLowerCase()))
+    .filter(i => i >= 0)
+    .sort((a, b) => a - b)[0] ?? 0;
+  const start = Math.max(0, idx - 120);
+  const end = Math.min(html.length, idx + 240);
+  return html.slice(start, end).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().slice(0, 280);
+}
+
+async function fetchText(url: string): Promise<string> {
+  // Node 20 has global fetch; typings aren’t necessary here
+  const res = await withTimeout(fetch(url, {
+    method: 'GET',
+    headers: { 'user-agent': 'GalactlyBot/1.0 (+https://trygalactly.com)' }
+  }) as any, 12000) as Response;
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const ct = res.headers.get('content-type') || '';
+  if (!ct.includes('text/html')) {
+    // non-html pages aren’t useful; bail
+    throw new Error(`not html: ${ct}`);
   }
-}
-
-function mkUrls(domain: string): string[] {
-  const d = domain.replace(/^https?:\/\//, "").replace(/\/+$/, "");
-  const bases = [`https://${d}`, `http://${d}`];
-  const paths = ["", "/suppliers", "/supplier", "/vendors", "/vendor", "/procurement", "/sourcing", "/rfq", "/rfi", "/bid"];
-  const out: string[] = [];
-  for (const b of bases) for (const p of paths) out.push((b + p).replace(/\/+$/, ""));
-  return Array.from(new Set(out));
-}
-
-function pickTitle(html: string): string | null {
-  const m = html.match(/<title[^>]*>([^<]{1,200})<\/title>/i);
-  return m?.[1]?.trim() || null;
-}
-
-function pickSnippet(html: string): string {
-  const low = html.toLowerCase();
-  for (const t of TOKENS) {
-    const i = low.indexOf(t);
-    if (i >= 0) {
-      const start = Math.max(0, i - 100);
-      const end = Math.min(html.length, i + 140);
-      return html.slice(start, end).replace(/\s+/g, " ").trim();
-    }
-  }
-  return "";
-}
-
-async function scanDomain(domain: string) {
-  const urls = mkUrls(domain);
-  const hits: { url: string; title: string; snippet: string }[] = [];
-  for (const u of urls) {
-    const html = await getHtml(u);
-    if (!html) continue;
-    const low = html.toLowerCase();
-    const found = TOKENS.some(t => low.includes(t));
-    if (!found) continue;
-    hits.push({
-      url: u,
-      title: pickTitle(html) || "Supplier / Vendor intake",
-      snippet: pickSnippet(html) || "Vendor / procurement intake detected"
-    });
-    if (hits.length >= 2) break; // keep it light per domain
-  }
-  return hits;
-}
-
-async function loadBuyerDomains(): Promise<string[]> {
-  const p = process.env.BRANDS_FILE || process.env.BUYERS_FILE || "";
-  if (!p) return [];
-  try {
-    const txt = await fs.readFile(p, "utf8");
-    return Array.from(new Set(
-      txt.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
-    ));
-  } catch {
-    return [];
-  }
+  const text = await res.text();
+  return text;
 }
 
 export async function runIngest(source: string) {
-  const s = String(source || "brandintake").toLowerCase();
+  const S = (source || 'all').toLowerCase();
+  if (S !== 'brandintake' && S !== 'all') return { ok: true, did: 'noop' } as const;
 
-  // we only wire up brandintake on NF; other sources are no-ops here
-  if (s !== "brandintake" && s !== "all") return { ok: true, did: "noop" as const };
+  const file = process.env.BRANDS_FILE;
+  const domains = readDomainsFromFile(file);
+  if (!domains.length) return { ok: true, did: 'brandintake', checked: 0, created: 0, note: 'BRANDS_FILE empty/missing' } as const;
 
-  const domains = await loadBuyerDomains();
-  if (!domains.length) return { ok: true, did: "brandintake", scanned: 0, created: 0, note: "buyers file empty or not mounted" };
+  // small safety limits for free tier
+  const MAX_DOMAINS = Number(process.env.BI_MAX_DOMAINS || 30);
+  const MAX_URLS = Number(process.env.BI_MAX_URLS || 120);
 
-  let scanned = 0, created = 0;
+  let checked = 0;
+  let created = 0;
+  const seen = new Set<string>();
 
-  for (const d of domains.slice(0, 250)) { // cap per run
-    scanned++;
-    const hits = await scanDomain(d);
-    for (const h of hits) {
+  outer: for (const d of domains.slice(0, MAX_DOMAINS)) {
+    for (const url of candidatesFor(d)) {
+      if (seen.has(url)) continue;
+      seen.add(url);
+      if (seen.size > MAX_URLS) break outer;
+
       try {
-        await q(
-          `INSERT INTO lead_pool(platform, source_url, title, snippet, cat, kw, heat, created_at)
-           VALUES('supplier_page',$1,$2,$3,'intake',ARRAY['supplier','procurement'],70, now())
-           ON CONFLICT (source_url) DO NOTHING`,
-          [h.url, h.title, h.snippet]
-        );
-        created++;
-      } catch { /* ignore single-row failures */ }
+        const html = await fetchText(url);
+        const { score, why } = scoreTextForSignals(html);
+        if (score >= 3) {
+          const title = pickTitle(html);
+          const snippet = snippetFrom(html, why);
+          // rely on UNIQUE(source_url) to dedupe
+          await q(
+            `INSERT INTO lead_pool (platform, source_url, title, snippet, cat, kw, heat)
+             VALUES ('brandintake', $1, $2, $3, 'procurement', $4::text[], $5)
+             ON CONFLICT (source_url) DO NOTHING`,
+            [url, title, snippet, why, Math.min(95, 60 + score * 5)]
+          );
+          created++;
+        }
+      } catch {
+        // ignore fetch/parse errors; move on
+      } finally {
+        checked++;
+      }
     }
   }
 
-  return { ok: true, did: "brandintake", scanned, created };
+  return { ok: true, did: 'brandintake', checked, created } as const;
 }
