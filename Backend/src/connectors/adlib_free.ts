@@ -1,64 +1,86 @@
-// Backend/src/connectors/adlib_free.ts
-// Free, no-API helper that turns buyer domains into "proof" links on public ad libraries.
+// Lightweight, free "advertiser discovery" helper.
+// No paid APIs. We just construct public search/proof URLs for ad libraries.
 
-export type AdvertiserProof = {
-  domain: string;           // buyer domain, e.g. "olipop.com"
-  source: 'meta' | 'google';
-  proofUrl: string;         // deep link to Ads Library / Transparency Center
-  adCount?: number;         // unknown on free path
-  lastSeen?: string;        // now (we're synthesizing the link)
+type Opts = {
+  regions?: string[];         // e.g., ['US']
+  industries?: string[];      // unused for now (future keyword bias)
+  max?: number;               // cap on returned items
 };
 
-function toHost(x: string): string {
+export type AdvertiserHit = {
+  domain: string;
+  source: 'meta' | 'google';
+  proofUrl: string;           // always present
+  adCount?: number | null;    // unknown in free mode
+  lastSeen?: string | null;   // unknown in free mode
+};
+
+/** normalize host → example.com */
+function cleanHost(s: string): string {
+  const t = (s || '').trim().toLowerCase();
   try {
-    const s = x.trim();
-    const u = s.startsWith('http') ? new URL(s) : new URL(`https://${s}`);
-    return u.hostname.toLowerCase().replace(/^www\./, '');
-  } catch { return x.replace(/^https?:\/\//,'').replace(/\/.*$/,'').toLowerCase(); }
-}
-
-function brandKeywordFromHost(host: string): string {
-  // crude brand token: take the 2nd-level label ("liquiddeath" from "liquiddeath.com")
-  const parts = host.split('.').filter(Boolean);
-  if (parts.length >= 2) return parts[parts.length - 2];
-  return host.replace(/\W+/g, ' ');
-}
-
-function metaLinkFor(host: string, country = 'US'): string {
-  const q = encodeURIComponent(brandKeywordFromHost(host));
-  // "all ads" search for brand keyword
-  return `https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=${country}&q=${q}`;
-}
-
-function googleLinkFor(host: string, country = 'US'): string {
-  const q = encodeURIComponent(brandKeywordFromHost(host));
-  // Google Ads Transparency Center search by brand keyword (site filters are spotty)
-  return `https://adstransparency.google.com/advertiser/${country}/search?q=${q}`;
-}
-
-export async function findAdvertisersFree(input: {
-  buyers?: string[];
-  industries?: string[];      // unused in free mode, kept for parity
-  regions?: string[];         // we only use first (default US)
-}): Promise<AdvertiserProof[]> {
-  const buyers = (input?.buyers || []).map(toHost).filter(Boolean);
-  const country = (input?.regions && input.regions[0]) || 'US';
-  const proofs: AdvertiserProof[] = [];
-  const seen = new Set<string>();
-
-  for (const host of buyers) {
-    const meta = metaLinkFor(host, country);
-    const goo  = googleLinkFor(host, country);
-
-    const pair: AdvertiserProof[] = [
-      { domain: host, source: 'meta',   proofUrl: meta,   lastSeen: new Date().toISOString() },
-      { domain: host, source: 'google', proofUrl: goo,    lastSeen: new Date().toISOString() },
-    ];
-
-    for (const p of pair) {
-      if (!seen.has(p.proofUrl)) { proofs.push(p); seen.add(p.proofUrl); }
-    }
+    const u = new URL(t.includes('://') ? t : `https://${t}`);
+    return u.hostname.replace(/^www\./, '');
+  } catch {
+    return t.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
   }
+}
 
-  return proofs;
+/** Build a Meta Ads Library search URL (works as a proof link even without an API). */
+function metaProof(domain: string, country: string) {
+  // Country must be a 2-letter code Meta accepts (fallback US)
+  const cc = (country || 'US').toUpperCase();
+  // q supports brand/page text or domain; using domain keeps it generic and free
+  return `https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=${encodeURIComponent(
+    cc
+  )}&q=${encodeURIComponent(domain)}`;
+}
+
+/** Build a Google Ads Transparency Center search URL (free, public). */
+function googleProof(domain: string, country: string) {
+  // The ATC is SPA-based; this search URL still opens the correct view for humans
+  const cc = (country || 'US').toUpperCase();
+  return `https://adstransparency.google.com/advertiser/${encodeURIComponent(
+    domain
+  )}?region=${encodeURIComponent(cc)}&hl=en-US`;
+}
+
+/**
+ * Free mode:
+ *  - If the caller passes buyers, we use those directly.
+ *  - Otherwise we return [] (we’re not crawling at all in free mode).
+ * Each buyer yields 2 hits (meta + google) with proof URLs you can click.
+ */
+export async function findAdvertisersFree(
+  buyers: string[] | undefined,
+  opts?: Opts
+): Promise<AdvertiserHit[]> {
+  const max = Math.max(1, Number(opts?.max ?? 50));
+  const region = (opts?.regions && opts?.regions[0]) || 'US';
+
+  const domains = (buyers || [])
+    .map(cleanHost)
+    .filter(Boolean)
+    .filter((v, i, a) => a.indexOf(v) === i) // unique
+    .slice(0, max);
+
+  const out: AdvertiserHit[] = [];
+  for (const d of domains) {
+    // Always include at least one proof per network
+    out.push({
+      domain: d,
+      source: 'meta',
+      proofUrl: metaProof(d, region),
+      adCount: null,
+      lastSeen: null,
+    });
+    out.push({
+      domain: d,
+      source: 'google',
+      proofUrl: googleProof(d, region),
+      adCount: null,
+      lastSeen: null,
+    });
+  }
+  return out;
 }
