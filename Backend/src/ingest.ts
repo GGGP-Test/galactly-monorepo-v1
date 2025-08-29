@@ -1,99 +1,54 @@
-// Backend/src/ingest.ts
+// Real brand-intake ingest for Northflank
+// Scans buyer domains (BRANDS_FILE) for supplier / vendor / procurement pages,
+// prefers pages that mention packaging categories, and inserts into lead_pool.
+
 import fs from 'fs';
 import { q } from './db';
 
-/**
- * Why you were only getting DEMO:
- * - A previous stub returned {did:"noop"} on NF.
- * - Requiring packaging tokens made us drop generic "Become a supplier" pages.
- *
- * This version:
- * - Reads BUYERS_FILE (fallback BRANDS_FILE)
- * - Scans common intake/procurement paths
- * - Emits a lead if we see intake intent; boosts heat if packaging words are present
- * - Logs counts so you can verify it ran
- */
+const INTENT = [
+  'supplier', 'suppliers', 'vendor', 'vendors', 'procurement', 'purchasing',
+  'sourcing', 'partner', 'partners', 'vendor registration', 'supplier registration',
+  'become a supplier', 'rfq', 'rfi', 'request for quote', 'ariba', 'coupa', 'jaggaer'
+];
+
+const PACKAGING = [
+  'packaging', 'corrugated', 'carton', 'cartons', 'rsc', 'mailer', 'mailers',
+  'labels', 'label', 'pouch', 'pouches', 'folding carton', 'case pack', 'secondary packaging',
+  'primary packaging', 'box', 'boxes'
+];
 
 const PATHS = [
-  '/', 'suppliers', 'supplier', 'vendor', 'vendors', 'partners', 'partner',
-  'supplier-portal', 'supplierportal', 'vendor-portal', 'procurement',
-  'purchasing', 'sourcing', 'rfq', 'rfi',
-  'vendor-registration', 'supplier-registration', 'become-a-supplier',
-  'become-a-vendor', 'register-supplier', 'supplier-onboarding',
-  'ariba', 'coupa', 'jaggaer', 'sap-ariba', 'suppliernetwork'
+  '/', '/suppliers', '/supplier', '/vendors', '/vendor', '/partners', '/partner',
+  '/procurement', '/purchasing', '/sourcing', '/supply-chain', '/supplychain',
+  '/vendor-registration', '/supplier-registration', '/become-a-supplier',
+  '/rfq', '/rfi'
 ];
 
-const TOK_INTENT = [
-  'become a supplier','become a vendor','supplier registration','vendor registration',
-  'supplier portal','vendor portal','register as a supplier','register supplier',
-  'procurement','purchasing','sourcing','rfq','rfi','ariba','coupa','jaggaer','supplier onboarding'
+const SUBS = [
+  '', 'suppliers', 'supplier', 'vendors', 'vendor', 'partners',
+  'procurement', 'purchasing', 'sourcing'
 ];
-
-const TOK_PACKAGING = [
-  'packaging','corrugated','carton','cartons','rsc','mailer','mailers',
-  'labels','label','pouch','pouches','folding carton','case pack','secondary packaging',
-  'primary packaging','printed box','corrugate'
-];
-
-// tiny helpers
-function uniq<T>(a: T[]) { return Array.from(new Set(a)); }
-function normDomain(s: string) {
-  return s.trim().toLowerCase()
-    .replace(/^https?:\/\//, '')
-    .replace(/^www\./, '')
-    .replace(/\/.*/, '');
-}
 
 function readDomainsFromFile(p?: string): string[] {
   if (!p || !fs.existsSync(p)) return [];
-  return uniq(
-    fs.readFileSync(p, 'utf8')
-      .split(/\r?\n/g)
-      .map(normDomain)
-      .filter(Boolean)
-  );
+  const raw = fs.readFileSync(p, 'utf8');
+  return raw
+    .split(/\r?\n/g)
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean)
+    .map(s => s.replace(/^https?:\/\//, ''))
+    .map(s => s.replace(/\/.+$/, ''))
+    .map(s => s.replace(/^www\./, ''))
+    .filter(s => s.includes('.'));
 }
 
-function candidateUrls(domain: string): string[] {
-  const base = `https://${domain}`;
-  return uniq(PATHS.map(p => p.startsWith('/') ? base + p : `${base}/${p}`));
-}
-
-function containsAny(hay: string, needles: string[]) {
-  const h = hay.toLowerCase();
-  return needles.some(t => h.includes(t));
-}
-
-function scoreHits(html: string) {
-  const t = html.toLowerCase();
-  const why: string[] = [];
-  let score = 0;
-
-  for (const k of TOK_INTENT) if (t.includes(k)) { score += 2; why.push(k); }
-  let p = 0;
-  for (const k of TOK_PACKAGING) if (t.includes(k)) { p += 1; why.push(k); }
-  score += p * 2;
-
-  return { score, why: uniq(why).slice(0, 10), hasPackaging: p > 0 };
-}
-
-function pickTitle(html: string) {
-  const m = html.match(/<title[^>]*>(.*?)<\/title>/i);
-  return (m?.[1] || 'Supplier / Procurement').trim().replace(/\s+/g, ' ').slice(0, 140);
-}
-
-function pickSnippet(html: string, hits: string[]) {
-  const plain = html.replace(/<script[\s\S]*?<\/script>/gi, ' ')
-                    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-                    .replace(/<[^>]+>/g, ' ')
-                    .replace(/\s+/g, ' ');
-  if (!hits.length) return plain.slice(0, 280);
-  const idx = hits
-    .map(h => plain.toLowerCase().indexOf(h.toLowerCase()))
-    .filter(i => i >= 0)
-    .sort((a, b) => a - b)[0] ?? 0;
-  const start = Math.max(0, idx - 160);
-  return plain.slice(start, start + 300);
+function buildCandidates(host: string): string[] {
+  const urls: string[] = [];
+  for (const sub of SUBS) {
+    const h = sub ? `${sub}.${host}` : host;
+    for (const p of PATHS) urls.push(`https://${h}${p}`);
+  }
+  return Array.from(new Set(urls));
 }
 
 async function fetchHtml(url: string): Promise<string | null> {
@@ -112,69 +67,85 @@ async function fetchHtml(url: string): Promise<string | null> {
   }
 }
 
+function score(html: string) {
+  const h = html.toLowerCase();
+  let s = 0;
+  const why: string[] = [];
+
+  for (const t of INTENT) if (h.includes(t)) { s += 1; why.push(t); }
+  let pkHits = 0;
+  for (const t of PACKAGING) if (h.includes(t)) { pkHits += 1; why.push(t); }
+  s += pkHits * 2;
+
+  return { score: s, pkHits, why: Array.from(new Set(why)).slice(0, 8) };
+}
+
+function titleOf(html: string) {
+  const m = html.match(/<title[^>]*>(.*?)<\/title>/i);
+  return (m?.[1] || '').trim().replace(/\s+/g, ' ').slice(0, 140) || 'Supplier / Procurement';
+}
+
+function snippet(html: string, hits: string[]) {
+  const text = html.replace(/<[^>]+>/g, ' ');
+  if (!hits.length) return text.slice(0, 260).replace(/\s+/g, ' ').trim();
+  const idx = hits
+    .map(h => text.toLowerCase().indexOf(h.toLowerCase()))
+    .filter(i => i >= 0)
+    .sort((a, b) => a - b)[0] ?? 0;
+  const start = Math.max(0, idx - 120);
+  return text.slice(start, start + 280).replace(/\s+/g, ' ').trim();
+}
+
+async function insertLead(url: string, title: string, snip: string, kw: string[], heat: number) {
+  await q(
+    `INSERT INTO lead_pool (platform, source_url, title, snippet, cat, kw, heat, state, created_at)
+     VALUES ('brandintake', $1, $2, $3, 'supplier-intake', $4::text[], $5, 'available', now())
+     ON CONFLICT (source_url) DO NOTHING`,
+    [url, title, snip, kw, Math.min(95, Math.max(50, heat))]
+  );
+}
+
 export async function runIngest(source: string) {
-  const S = String(source || 'all').toLowerCase();
+  const S = (source || 'all').toLowerCase();
+
   if (S !== 'brandintake' && S !== 'all') {
+    // keep existing “signals” passthrough behaviour for other sources
     return { ok: true, did: 'noop' } as const;
   }
 
-  const buyersPath = process.env.BUYERS_FILE;
-  const brandsPath = process.env.BRANDS_FILE;
-  const domains = readDomainsFromFile(buyersPath) || readDomainsFromFile(brandsPath);
-  if (!domains.length) {
-    return { ok: true, did: 'brandintake', checked: 0, created: 0, note: 'BUYERS_FILE/BRANDS_FILE empty' } as const;
-  }
-
+  const file = process.env.BRANDS_FILE;
+  const strict = String(process.env.BI_STRICT || '1') === '1'; // require packaging tokens by default
   const MAX_DOMAINS = Number(process.env.BI_MAX_DOMAINS || 40);
   const MAX_URLS = Number(process.env.BI_MAX_URLS || 200);
-  const REQUIRE_PACK = (process.env.BI_REQUIRE_PACKAGING || '0') === '1';
 
-  let checked = 0;
-  let created = 0;
-  let skipped = 0;
+  const domains = readDomainsFromFile(file);
+  if (!domains.length) {
+    return { ok: true, did: 'brandintake', checked: 0, created: 0, note: 'BRANDS_FILE empty/missing' } as const;
+  }
 
+  let checked = 0, created = 0;
   const seen = new Set<string>();
-  const slice = domains.slice(0, MAX_DOMAINS);
 
-  for (const d of slice) {
-    for (const url of candidateUrls(d)) {
+  outer:
+  for (const host of domains.slice(0, MAX_DOMAINS)) {
+    for (const url of buildCandidates(host)) {
       if (seen.has(url)) continue;
       seen.add(url);
-      if (seen.size > MAX_URLS) break;
+      if (seen.size > MAX_URLS) break outer;
 
       const html = await fetchHtml(url);
       if (!html) { checked++; continue; }
 
-      // Require general intake signals; packaging is a bonus unless BI_REQUIRE_PACKAGING=1
-      const { score, why, hasPackaging } = scoreHits(html);
-      const hasIntent = containsAny(html, TOK_INTENT);
+      const { score: s, pkHits, why } = score(html);
 
-      if (hasIntent && (!REQUIRE_PACK || hasPackaging)) {
-        const title = pickTitle(html);
-        const snippet = pickSnippet(html, why);
-        const heat = Math.min(95, 55 + score * (hasPackaging ? 3 : 2)); // packaging boosts heat
-        try {
-          await q(
-            `INSERT INTO lead_pool (platform, source_url, title, snippet, cat, kw, heat)
-             VALUES ('brandintake', $1, $2, $3, 'supplier_intake', $4::text[], $5)
-             ON CONFLICT (source_url) DO NOTHING`,
-            [url, title, snippet, why, heat]
-          );
-          // check whether we inserted
-          const r = await q('SELECT id FROM lead_pool WHERE source_url=$1', [url]);
-          if (r.rowCount) created += 1;
-        } catch {
-          skipped += 1;
-        }
-      } else {
-        skipped += 1;
-      }
-      checked++;
+      // Thresholds: packaging pages get in easily; otherwise need stronger intent.
+      const pass = strict ? (pkHits > 0 && s >= 3) : (s >= 3);
+      if (!pass) { checked++; continue; }
+
+      await insertLead(url, titleOf(html), snippet(html, why), why, 60 + s * 5);
+      created++; checked++;
     }
   }
 
-  // helpful server log so you can see it ran
-  console.log(`[brandintake] domains=${slice.length} urlsChecked=${checked} created=${created} skipped=${skipped}`);
-
-  return { ok: true, did: 'brandintake', checked, created, skipped } as const;
+  return { ok: true, did: 'brandintake', checked, created } as const;
 }
