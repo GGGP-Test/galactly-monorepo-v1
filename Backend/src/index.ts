@@ -4,8 +4,6 @@ import { randomUUID } from 'crypto';
 import fs from 'fs';
 import { migrate, q } from './db';
 import { nowPlusMinutes } from './util';
-
-// connectors (free-only)
 import { findAdvertisersFree } from './connectors/adlib_free';
 import { scanPDP } from './connectors/pdp';
 import { scanBrandIntake } from './brandintake';
@@ -260,54 +258,75 @@ app.post('/api/v1/admin/ingest', async (req, res) => {
 //   competitor_domains?: string[] // more seeds
 // }
 
+// -------------------- NEW: find-now (user-onboarding, seed-first) --------------------
 app.post('/api/v1/find-now', async (req, res) => {
-  const vendor = (req.body || {}) as any;
-  const maxDomains = Number(process.env.FIND_MAX_DOMAINS || 30);
+  const vendor = (req.body || {}) as {
+    industries?: string[];
+    regions?: string[];
+    buyers?: string[];     // explicit buyer domains from the user
+    examples?: string[];   // example clients (domains)
+  };
 
-  type Advertiser = { domain: string; source?: string; proofUrl?: string; adCount?: number; lastSeen?: string | null };
+  const maxDomains = Number(process.env.FIND_MAX_DOMAINS || 30);
+  const seen = new Set<string>();
+  let created = 0, checked = 0;
+
+  const sanitize = (s?: string) =>
+    (s || '')
+      .trim()
+      .replace(/^https?:\/\//i, '')
+      .replace(/\/.*$/, '')
+      .toLowerCase();
 
   try {
-    const advertisers: Advertiser[] = await findAdvertisersFree(vendor).catch(() => []);
+    // 1) Build seed domain list from the user (buyers + examples)
+    const seedDomains = [
+      ...(vendor.buyers || []).map(sanitize),
+      ...(vendor.examples || []).map(sanitize),
+    ]
+      .filter(d => d && d.includes('.')) as string[];
 
-    // merge any user-provided seeds (buyers/examples/competitors)
-    const seeds: string[] = [];
-    for (const k of ['buyers', 'examples', 'competitor_domains', 'seedDomains', 'hintDomains']) {
-      const arr = Array.isArray(vendor[k]) ? vendor[k] : [];
-      for (const v of arr) if (typeof v === 'string') seeds.push(v);
-    }
+    // 2) Feed seeds to our free "adlib"; this currently just echoes normalized seeds (no paid libs)
+    const advertisers = await findAdvertisersFree({
+      seeds: seedDomains,
+      industries: vendor.industries || [],
+      regions: vendor.regions || [],
+    });
 
-    const domainSet = new Set<string>();
-    for (const a of advertisers) { const h = hostFrom(a.domain || ''); if (h) domainSet.add(h); }
-    for (const s of seeds) { const h = hostFrom(s || ''); if (h) domainSet.add(h); }
+    // Candidate domains = the advertiser domains (seed-based) de-duped
+    const candidates = Array.from(new Set(advertisers.map(a => a.domain))).slice(0, maxDomains);
 
-    const domains = Array.from(domainSet).slice(0, maxDomains);
+    // 3) For each candidate domain, run intake + PDP scans and insert leads
+    const insertLead = async (row: {
+      platform: string;
+      source_url: string;
+      title?: string | null;
+      snippet?: string | null;
+      kw?: string[];
+      cat?: string;
+      heat?: number;
+    }) => {
+      const cat = row.cat || 'demand';
+      const kw = row.kw || [];
+      const heat = Math.max(30, Math.min(95, Number(row.heat ?? 70)));
+      await q(
+        `INSERT INTO lead_pool (cat, kw, platform, heat, source_url, title, snippet, state, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'available', now())
+         ON CONFLICT (source_url) DO NOTHING`,
+        [cat, kw, row.platform, heat, row.source_url, row.title || null, row.snippet || null]
+      );
+    };
 
-    let created = 0, checked = 0;
-    const seen = new Set<string>();
+    for (const host of candidates) {
+      if (!host) continue;
 
-    // 1) Keep ad proofs as leads (high intent: they spend on acquisition)
-    for (const adv of advertisers) {
-      if (adv.proofUrl && !seen.has(adv.proofUrl)) {
-        await insertLead({
-          platform: 'adlib_free',
-          source_url: adv.proofUrl,
-          title: `${hostFrom(adv.domain || adv.proofUrl || '') || 'advertiser'} — active ads (${adv.source || 'ads'})`,
-          snippet: `Last seen: ${adv.lastSeen || 'recent'}. ${adv.adCount ? `~${adv.adCount} creatives.` : ''}`.trim(),
-          kw: ['ads', 'buyer'],
-          cat: 'demand',
-          heat: 72,
-        });
-        seen.add(adv.proofUrl);
-        created++;
-      }
-    }
+      // Keep the seed itself as a “proof” card if you want (optional). Skipping to avoid noise.
 
-    // 2) For each candidate domain, look for intake & PDP signals
-    for (const host of domains) {
-      // Intake (supplier/procurement) pages
-      const intakeHits = await scanBrandIntake(host).catch(() => []);
-      for (const h of intakeHits) {
-        if (!seen.has(h.url)) {
+      // Intake/procurement (supplier/vendor pages)
+      try {
+        const intakeHits = await scanBrandIntake(host).catch(() => []);
+        for (const h of intakeHits) {
+          if (!h?.url || seen.has(h.url)) continue;
           await insertLead({
             platform: 'brandintake',
             source_url: h.url,
@@ -320,12 +339,13 @@ app.post('/api/v1/find-now', async (req, res) => {
           seen.add(h.url);
           created++;
         }
-      }
+      } catch {}
 
-      // PDP/retail signals (case-of-N, restock, new_sku)
-      const pdpHits = await scanPDP(host).catch(() => []);
-      for (const p of pdpHits) {
-        if (!seen.has(p.url)) {
+      // PDP / product signals (case-of-N, restock, etc.)
+      try {
+        const pdpHits = await scanPDP(host).catch(() => []);
+        for (const p of pdpHits) {
+          if (!p?.url || seen.has(p.url)) continue;
           await insertLead({
             platform: p.type || 'pdp',
             source_url: p.url,
@@ -338,7 +358,7 @@ app.post('/api/v1/find-now', async (req, res) => {
           seen.add(p.url);
           created++;
         }
-      }
+      } catch {}
 
       checked++;
     }
@@ -348,6 +368,7 @@ app.post('/api/v1/find-now', async (req, res) => {
     return res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 });
+
 
 // -------------------------------------------------
 // Start
