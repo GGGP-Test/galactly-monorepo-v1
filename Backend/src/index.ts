@@ -5,15 +5,16 @@ import fs from 'fs';
 import { migrate, q } from './db';
 import { nowPlusMinutes } from './util';
 
-// connectors
+// connectors (free-only)
 import { findAdvertisersFree } from './connectors/adlib_free';
 import { scanPDP } from './connectors/pdp';
 import { scanBrandIntake } from './brandintake';
 
+// -------------------------------------------------
+// App & middleware
+// -------------------------------------------------
 const app = express();
 app.use(express.json({ limit: '250kb' }));
-
-// CORS
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type, x-galactly-user, x-admin-token');
@@ -26,13 +27,15 @@ const PORT = Number(process.env.PORT || 8787);
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const BRANDS_FILE = process.env.BRANDS_FILE || '';
 
-// attach user id from header
+// attach user id from header (optional)
 app.use((req, _res, next) => {
   (req as any).userId = req.header('x-galactly-user') || null;
   next();
 });
 
-// -------------------- helpers --------------------
+// -------------------------------------------------
+// Helpers
+// -------------------------------------------------
 function isAdmin(req: express.Request) {
   const t = (req.query.token as string) || req.header('x-admin-token') || '';
   return !!ADMIN_TOKEN && t === ADMIN_TOKEN;
@@ -54,11 +57,24 @@ async function insertLead(row: {
     `INSERT INTO lead_pool (cat, kw, platform, heat, source_url, title, snippet, state, created_at)
      VALUES ($1,$2,$3,$4,$5,$6,$7,'available', now())
      ON CONFLICT (source_url) DO NOTHING`,
-    [cat, kw, row.platform, heat, row.source_url, row.title ?? null, row.snippet ?? null]
+    [cat, kw, row.platform, heat, row.source_url, row.title || null, row.snippet || null]
   );
 }
 
-// -------------------- basics --------------------
+function hostFrom(input: string): string | null {
+  try {
+    const s = input.trim();
+    if (!s) return null;
+    const u = s.includes('://') ? new URL(s) : new URL('https://' + s);
+    return u.hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+// -------------------------------------------------
+// Basics & debug
+// -------------------------------------------------
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
 app.get('/whoami', (_req, res) => res.send('galactly-api'));
 
@@ -82,22 +98,26 @@ app.get('/__routes', (_req, res) => {
 
 app.get('/api/v1/status', (_req, res) => res.json({ ok: true, mode: 'vendor-signals' }));
 
-// -------------------- presence --------------------
-const online: Record<string, number> = {};
-app.post('/api/v1/presence/beat', (req, res) => {
-  const id = (req as any).userId || randomUUID();
-  online[id] = Date.now();
-  res.json({ ok: true });
-});
-app.get('/api/v1/presence/online', (_req, res) => {
-  const now = Date.now();
-  for (const k of Object.keys(online)) if (now - online[k] > 30000) delete online[k];
-  const real = Object.keys(online).length;
-  const display = Math.max(34, Math.round(real * 0.9 + 6));
-  res.json({ ok: true, real, displayed: display });
+app.get('/api/v1/debug/peek', async (_req, res) => {
+  try {
+    const a = await q(`SELECT COUNT(*) FROM lead_pool WHERE state='available'`);
+    const t = await q(`SELECT COUNT(*) FROM lead_pool`);
+    res.json({
+      ok: true,
+      counts: {
+        leads_available: Number(a.rows[0]?.count || 0),
+        leads_total: Number(t.rows[0]?.count || 0),
+      },
+      env: { BRANDS_FILE: !!BRANDS_FILE, BRANDS_FILE_PATH: BRANDS_FILE || null },
+    });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
+  }
 });
 
-// -------------------- users --------------------
+// -------------------------------------------------
+// Users & events
+// -------------------------------------------------
 app.post('/api/v1/gate', async (req, res) => {
   const userId = (req as any).userId;
   if (!userId) return res.status(400).json({ ok: false, error: 'missing x-galactly-user' });
@@ -111,12 +131,27 @@ app.post('/api/v1/gate', async (req, res) => {
   res.json({ ok: true });
 });
 
-// -------------------- leads feed --------------------
+app.post('/api/v1/events', async (req, res) => {
+  const userId = (req as any).userId || null;
+  const { leadId, type, meta } = (req.body || {}) as any;
+  if (!leadId || !type) return res.status(400).json({ ok: false, error: 'bad request' });
+  await q(
+    `INSERT INTO event_log (user_id, lead_id, event_type, meta)
+     VALUES ($1,$2,$3,$4)`,
+    [userId, Number(leadId), String(type), meta || {}]
+  );
+  res.json({ ok: true });
+});
+
+// -------------------------------------------------
+// Leads feed + claim/own
+// -------------------------------------------------
 app.get('/api/v1/leads', async (_req, res) => {
   const r = await q(
     `SELECT id, cat, kw, platform, heat, source_url, title, snippet, ttl, state, created_at
-     FROM lead_pool WHERE state='available'
-     ORDER BY created_at DESC LIMIT 40`
+       FROM lead_pool WHERE state='available'
+       ORDER BY created_at DESC
+       LIMIT 40`
   );
   let leads = r.rows as any[];
 
@@ -132,19 +167,18 @@ app.get('/api/v1/leads', async (_req, res) => {
       snippet: 'This placeholder disappears once your signal ingestors run.',
       ttl: nowPlusMinutes(60).toISOString(),
       state: 'available',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     }];
   }
-
   res.json({ ok: true, leads, nextRefreshSec: 20 });
 });
 
-// -------------------- claim/own --------------------
 app.post('/api/v1/claim', async (req, res) => {
   const userId = (req as any).userId;
   const { leadId } = (req.body || {}) as any;
   if (!userId) return res.status(400).json({ ok: false, error: 'missing x-galactly-user' });
-  if (!leadId || leadId < 0) return res.json({ ok: true, demo: true, reservedForSec: 120, reveal: null });
+  if (!leadId || Number(leadId) < 0)
+    return res.json({ ok: true, demo: true, reservedForSec: 120, reveal: null });
 
   const windowId = randomUUID();
   const reservedUntil = nowPlusMinutes(2).toISOString();
@@ -152,19 +186,16 @@ app.post('/api/v1/claim', async (req, res) => {
   const r = await q(
     `UPDATE lead_pool SET state='reserved', reserved_by=$1, reserved_at=now()
      WHERE id=$2 AND state='available' RETURNING id`,
-    [userId, leadId]
+    [userId, Number(leadId)]
   );
   if (r.rowCount === 0) return res.status(409).json({ ok: false, error: 'not available' });
 
   await q(
     `INSERT INTO claim_window(window_id, lead_id, user_id, reserved_until)
      VALUES($1,$2,$3,$4)`,
-    [windowId, leadId, userId, reservedUntil]
+    [windowId, Number(leadId), userId, reservedUntil]
   );
-  await q(
-    `INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,'claim','{}')`,
-    [userId, leadId]
-  );
+  await q(`INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,'claim','{}')`, [userId, Number(leadId)]);
   res.json({ ok: true, windowId, reservedForSec: 120, reveal: {} });
 });
 
@@ -175,22 +206,23 @@ app.post('/api/v1/own', async (req, res) => {
 
   const r = await q<any>(
     `SELECT lead_id FROM claim_window
-     WHERE window_id=$1 AND user_id=$2 AND reserved_until>now()`,
-    [windowId, userId]
+       WHERE window_id=$1 AND user_id=$2 AND reserved_until>now()`,
+    [String(windowId), String(userId)]
   );
   const leadId = r.rows[0]?.lead_id;
   if (!leadId) return res.status(410).json({ ok: false, error: 'window expired' });
 
-  await q(`UPDATE lead_pool SET state='owned', owned_by=$1, owned_at=now() WHERE id=$2`, [userId, leadId]);
-  await q(`INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,'own','{}')`, [userId, leadId]);
+  await q(`UPDATE lead_pool SET state='owned', owned_by=$1, owned_at=now() WHERE id=$2`, [userId, Number(leadId)]);
+  await q(`INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,'own','{}')`, [userId, Number(leadId)]);
   res.json({ ok: true });
 });
 
-// -------------------- admin: seed + ingest (legacy) --------------------
+// -------------------------------------------------
+// Admin (legacy)
+// -------------------------------------------------
 app.post('/api/v1/admin/seed-brands', async (req, res) => {
   if (!isAdmin(req)) return res.status(401).json({ ok: false, error: 'unauthorized' });
   if (!BRANDS_FILE || !fs.existsSync(BRANDS_FILE)) return res.json({ ok: false, error: 'BRANDS_FILE missing' });
-
   const raw = fs.readFileSync(BRANDS_FILE, 'utf8');
   const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   let inserted = 0, skipped = 0;
@@ -201,75 +233,78 @@ app.post('/api/v1/admin/seed-brands', async (req, res) => {
     const name = parts[1] || domain;
     const sector = parts[2] || null;
     try {
-      await q(
-        `INSERT INTO brand(name, domain, sector) VALUES ($1,$2,$3)
-         ON CONFLICT (domain) DO NOTHING`,
-        [name, domain, sector]
-      );
+      await q(`INSERT INTO brand(name, domain, sector) VALUES ($1,$2,$3) ON CONFLICT (domain) DO NOTHING`, [name, domain, sector]);
       inserted++;
-    } catch {
-      skipped++;
-    }
+    } catch { skipped++; }
   }
   res.json({ ok: true, inserted, skipped, total: lines.length });
 });
 
 app.post('/api/v1/admin/ingest', async (req, res) => {
   if (!isAdmin(req)) return res.status(401).json({ ok: false, error: 'unauthorized' });
+  // kept for compatibility – collectors may call this later
   res.json({ ok: true, did: 'noop' });
 });
 
-// -------------------- debug --------------------
-app.get('/api/v1/debug/peek', async (_req, res) => {
-  const lAvail = await q(`SELECT COUNT(*) FROM lead_pool WHERE state='available'`);
-  const lTotal = await q(`SELECT COUNT(*) FROM lead_pool`);
-  res.json({
-    ok: true,
-    counts: {
-      leads_available: Number(lAvail.rows[0]?.count || 0),
-      leads_total: Number(lTotal.rows[0]?.count || 0)
-    },
-    env: {
-      BRANDS_FILE: !!BRANDS_FILE,
-      BRANDS_FILE_PATH: BRANDS_FILE || null
-    }
-  });
-});
+// -------------------------------------------------
+// NEW: On‑demand buyer discovery for a single vendor
+// -------------------------------------------------
 
-// -------------------- NEW: find-now (core on-demand flow) --------------------
+// Body schema (any of these are optional):
+// {
+//   industries?: string[],
+//   regions?: string[],
+//   keywords?: string[],
+//   buyers?: string[],            // explicit buyer domains/URLs
+//   examples?: string[],          // example brands to include
+//   competitor_domains?: string[] // more seeds
+// }
+
 app.post('/api/v1/find-now', async (req, res) => {
   const vendor = (req.body || {}) as any;
   const maxDomains = Number(process.env.FIND_MAX_DOMAINS || 30);
-  const seen = new Set<string>();
-  let created = 0, checked = 0;
+
+  type Advertiser = { domain: string; source?: string; proofUrl?: string; adCount?: number; lastSeen?: string | null };
 
   try {
-    // 1) Advertisers (free heuristics)
-    const advertisers = await findAdvertisersFree(vendor).catch((e:any) => {
-      console.warn('[find-now] adlib_free error:', e?.message || e);
-      return [] as any[];
-    });
+    const advertisers: Advertiser[] = await findAdvertisersFree(vendor).catch(() => []);
 
-    for (const adv of advertisers.slice(0, maxDomains)) {
-      const host = String(adv.domain || '').replace(/^https?:\/\//, '').replace(/\/+$/, '');
-      if (!host) continue;
+    // merge any user-provided seeds (buyers/examples/competitors)
+    const seeds: string[] = [];
+    for (const k of ['buyers', 'examples', 'competitor_domains', 'seedDomains', 'hintDomains']) {
+      const arr = Array.isArray(vendor[k]) ? vendor[k] : [];
+      for (const v of arr) if (typeof v === 'string') seeds.push(v);
+    }
 
-      // keep the ad proof (ad spend = demand)
+    const domainSet = new Set<string>();
+    for (const a of advertisers) { const h = hostFrom(a.domain || ''); if (h) domainSet.add(h); }
+    for (const s of seeds) { const h = hostFrom(s || ''); if (h) domainSet.add(h); }
+
+    const domains = Array.from(domainSet).slice(0, maxDomains);
+
+    let created = 0, checked = 0;
+    const seen = new Set<string>();
+
+    // 1) Keep ad proofs as leads (high intent: they spend on acquisition)
+    for (const adv of advertisers) {
       if (adv.proofUrl && !seen.has(adv.proofUrl)) {
         await insertLead({
           platform: 'adlib_free',
           source_url: adv.proofUrl,
-          title: `${host} — active ads (${adv.source || 'ads'})`,
-          snippet: `Last seen: ${adv.lastSeen || 'recent'}. ~${adv.adCount ?? '?'} creatives.`,
-          kw: ['ads', 'spend', 'buyer'],
+          title: `${hostFrom(adv.domain || adv.proofUrl || '') || 'advertiser'} — active ads (${adv.source || 'ads'})`,
+          snippet: `Last seen: ${adv.lastSeen || 'recent'}. ${adv.adCount ? `~${adv.adCount} creatives.` : ''}`.trim(),
+          kw: ['ads', 'buyer'],
           cat: 'demand',
-          heat: 72
+          heat: 72,
         });
         seen.add(adv.proofUrl);
         created++;
       }
+    }
 
-      // 2) Intake / procurement
+    // 2) For each candidate domain, look for intake & PDP signals
+    for (const host of domains) {
+      // Intake (supplier/procurement) pages
       const intakeHits = await scanBrandIntake(host).catch(() => []);
       for (const h of intakeHits) {
         if (!seen.has(h.url)) {
@@ -280,14 +315,14 @@ app.post('/api/v1/find-now', async (req, res) => {
             snippet: h.snippet || host,
             kw: ['procurement', 'supplier', 'packaging'],
             cat: 'procurement',
-            heat: 82
+            heat: 82,
           });
           seen.add(h.url);
           created++;
         }
       }
 
-      // 3) Product/retail signals
+      // PDP/retail signals (case-of-N, restock, new_sku)
       const pdpHits = await scanPDP(host).catch(() => []);
       for (const p of pdpHits) {
         if (!seen.has(p.url)) {
@@ -298,7 +333,7 @@ app.post('/api/v1/find-now', async (req, res) => {
             snippet: p.snippet || '',
             kw: ['case', 'restock', 'sku'],
             cat: 'product',
-            heat: p.type === 'restock_post' ? 78 : 68
+            heat: p.type === 'restock_post' ? 78 : 68,
           });
           seen.add(p.url);
           created++;
@@ -310,12 +345,13 @@ app.post('/api/v1/find-now', async (req, res) => {
 
     return res.json({ ok: true, checked, created, advertisers: advertisers.length });
   } catch (e: any) {
-    console.error('[find-now] fatal error:', e);
     return res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 });
 
-// -------------------- start --------------------
+// -------------------------------------------------
+// Start
+// -------------------------------------------------
 migrate().then(() => {
   app.listen(PORT, '0.0.0.0', () => console.log(`galactly-api listening on :${PORT}`));
 });
