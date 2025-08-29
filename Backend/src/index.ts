@@ -1,3 +1,4 @@
+// Backend/src/index.ts
 import 'dotenv/config';
 import express from 'express';
 import { randomUUID } from 'crypto';
@@ -5,10 +6,9 @@ import fs from 'fs';
 import path from 'path';
 import { migrate, q } from './db';
 import { nowPlusMinutes } from './util';
-import { findAdvertisersFree } from './connectors/adlib_free';
 
 // connectors
-import { findAdvertisers } from './connectors/adlib_free';
+import { findAdvertisersFree, type Advertiser } from './connectors/adlib_free';
 import { scanPDP } from './connectors/pdp';
 import { scanBrandIntake } from './brandintake';
 
@@ -29,7 +29,10 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const BRANDS_FILE = process.env.BRANDS_FILE || ''; // optional legacy
 
 // attach user id from header
-app.use((req, _res, next) => { (req as any).userId = req.header('x-galactly-user') || null; next(); });
+app.use((req, _res, next) => {
+  (req as any).userId = req.header('x-galactly-user') || null;
+  next();
+});
 
 // -------------------- helpers --------------------
 function isAdmin(req: express.Request) {
@@ -57,6 +60,11 @@ async function insertLead(row: {
   );
 }
 
+function hostOf(u: string): string {
+  try { return new URL(u).hostname.replace(/^www\./, '').toLowerCase(); }
+  catch { return u.replace(/^https?:\/\//, '').replace(/\/+.*/, '').toLowerCase(); }
+}
+
 // -------------------- basics --------------------
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
 app.get('/whoami', (_req, res) => res.send('galactly-api'));
@@ -65,43 +73,27 @@ app.get('/__routes', (_req, res) => {
   res.json([
     { path: '/healthz', methods: ['get'] },
     { path: '/__routes', methods: ['get'] },
+    { path: '/whoami', methods: ['get'] },
     { path: '/api/v1/status', methods: ['get'] },
-    { path: '/api/v1/presence/beat', methods: ['post'] },
-    { path: '/api/v1/presence/online', methods: ['get'] },
     { path: '/api/v1/gate', methods: ['post'] },
     { path: '/api/v1/leads', methods: ['get'] },
     { path: '/api/v1/claim', methods: ['post'] },
     { path: '/api/v1/own', methods: ['post'] },
+    { path: '/api/v1/events', methods: ['post'] },
     { path: '/api/v1/debug/peek', methods: ['get'] },
     { path: '/api/v1/admin/ingest', methods: ['post'] },
     { path: '/api/v1/admin/seed-brands', methods: ['post'] },
-    { path: '/api/v1/find-now', methods: ['post'] } // NEW
-    
+    { path: '/api/v1/find-now', methods: ['post'] }
   ]);
 });
 
 app.get('/api/v1/status', (_req, res) => res.json({ ok: true, mode: 'vendor-signals' }));
 
-// -------------------- presence --------------------
-const online: Record<string, number> = {};
-app.post('/api/v1/presence/beat', (req, res) => {
-  const id = (req as any).userId || randomUUID();
-  online[id] = Date.now();
-  res.json({ ok: true });
-});
-app.get('/api/v1/presence/online', (_req, res) => {
-  const now = Date.now();
-  for (const k of Object.keys(online)) if (now - online[k] > 30000) delete online[k];
-  const real = Object.keys(online).length;
-  const display = Math.max(34, Math.round(real * 0.9 + 6));
-  res.json({ ok: true, real, displayed: display });
-});
-
 // -------------------- users --------------------
 app.post('/api/v1/gate', async (req, res) => {
   const userId = (req as any).userId;
   if (!userId) return res.status(400).json({ ok: false, error: 'missing x-galactly-user' });
-  const { region, email, alerts } = req.body || {};
+  const { region, email, alerts } = (req.body || {}) as any;
   await q(
     `INSERT INTO app_user(id,region,email,alerts)
      VALUES ($1,$2,$3,COALESCE($4,false))
@@ -120,7 +112,6 @@ app.get('/api/v1/leads', async (_req, res) => {
   );
   let leads = r.rows as any[];
 
-  // fallback demo cards if empty
   if (!leads.length) {
     leads = [{
       id: -1,
@@ -143,7 +134,7 @@ app.get('/api/v1/leads', async (_req, res) => {
 // -------------------- claim/own --------------------
 app.post('/api/v1/claim', async (req, res) => {
   const userId = (req as any).userId;
-  const { leadId } = req.body || {};
+  const { leadId } = (req.body || {}) as any;
   if (!userId) return res.status(400).json({ ok: false, error: 'missing x-galactly-user' });
   if (!leadId || leadId < 0) return res.json({ ok: true, demo: true, reservedForSec: 120, reveal: null });
 
@@ -168,7 +159,7 @@ app.post('/api/v1/claim', async (req, res) => {
 
 app.post('/api/v1/own', async (req, res) => {
   const userId = (req as any).userId;
-  const { windowId } = req.body || {};
+  const { windowId } = (req.body || {}) as any;
   if (!userId || !windowId) return res.status(400).json({ ok: false, error: 'bad request' });
 
   const r = await q<any>(
@@ -187,8 +178,9 @@ app.post('/api/v1/own', async (req, res) => {
 // -------------------- admin: seed + ingest (legacy) --------------------
 app.post('/api/v1/admin/seed-brands', async (req, res) => {
   if (!isAdmin(req)) return res.status(401).json({ ok: false, error: 'unauthorized' });
-  if (!BRANDS_FILE || !fs.existsSync(BRANDS_FILE)) return res.json({ ok: false, error: 'BRANDS_FILE missing' });
-
+  if (!BRANDS_FILE || !fs.existsSync(BRANDS_FILE)) {
+    return res.json({ ok: false, error: 'BRANDS_FILE missing' });
+  }
   const raw = fs.readFileSync(BRANDS_FILE, 'utf8');
   const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   let inserted = 0, skipped = 0;
@@ -207,7 +199,7 @@ app.post('/api/v1/admin/seed-brands', async (req, res) => {
 });
 
 app.post('/api/v1/admin/ingest', async (req, res) => {
-  // keep for compatibility; your collectors may call this later
+  // kept for compatibility; collectors may call this later
   if (!isAdmin(req)) return res.status(401).json({ ok: false, error: 'unauthorized' });
   res.json({ ok: true, did: 'noop' });
 });
@@ -231,21 +223,20 @@ app.get('/api/v1/debug/peek', async (_req, res) => {
 
 // -------------------- NEW: find-now (core on-demand flow) --------------------
 app.post('/api/v1/find-now', async (req, res) => {
-  // Body is the vendor profile (can be empty; we’ll still run a generic pass)
-  const vendor = req.body || {};
+  const vendor = (req.body || {}) as any;             // vendor profile (can be empty)
   const maxDomains = Number(process.env.FIND_MAX_DOMAINS || 30);
 
   let created = 0, checked = 0;
   const seen = new Set<string>();
 
   try {
-    // 1) Advertisers (Meta/Google libraries via Apify)
-    const advertisers = await findAdvertisersFree(candidateBuyerDomains); // returns proofs
+    // 1) Advertisers (free: Google Search + public pages proxy)
+    const advertisers: Advertiser[] = await findAdvertisersFree(vendor);
     for (const adv of advertisers.slice(0, maxDomains)) {
-      const host = (adv.domain || '').replace(/^https?:\/\//, '').replace(/\/+$/, '');
+      const host = hostOf(adv.domain || '');
       if (!host) continue;
 
-      // Keep the ad proof itself as a lead (high signal they are spending)
+      // Keep ad proof (high-signal)
       if (adv.proofUrl && !seen.has(adv.proofUrl)) {
         await insertLead({
           platform: 'adlib_free',
@@ -260,7 +251,7 @@ app.post('/api/v1/find-now', async (req, res) => {
         created++;
       }
 
-      // 2) Intake/procurement pages on the brand’s domain
+      // 2) Intake/procurement pages
       const intakeHits = await scanBrandIntake(host).catch(() => []);
       for (const h of intakeHits) {
         if (!seen.has(h.url)) {
