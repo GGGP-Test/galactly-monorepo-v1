@@ -66,11 +66,3 @@ export async function runIngest(source: string) {
     return { ok: true, did: 'derive_leads', created: 0 } as const;
   }
 
-  // keep other sources as explicit no‑ops (you removed CSE/RSS)
-  if (S === 'cse' || S === 'rss' || S === 'social') {
-    return { ok: true, did: 'noop' } as const;
-  }
-
-  // unknown source → noop (preserves old behavior)
-  return { ok: true, did: 'noop' } as const;
-}
