@@ -1,197 +1,124 @@
 // Backend/src/connectors/pdp.ts
-// Lightweight PDP/retail signal collector (Shopify-first, generic fallback)
-// Inserts directly into lead_pool (UNIQUE on source_url prevents dupes)
+// Lightweight PDP discovery: Shopify JSON → fallback to sitemap → fallback to common PDP paths.
+// Emits concrete product URLs + short evidence snippet.
 
-import { q } from "../db";
+type PDP = { url: string; title?: string; snippet?: string; type: 'pdp'|'restock_post'|'new_sku'|'pdp_change' };
 
-const UA = process.env.BRANDINTAKE_USERAGENT ||
-  "GalactlyBot/0.1 (+https://trygalactly.com)";
+const FETCH_MS = Number(process.env.PDP_TIMEOUT_MS || 9000);
 
-// Limits (env‑tunable)
-const PDP_MAX_PAGES = Number(process.env.PDP_MAX_PAGES || 12); // per domain
-const PDP_TIMEOUT_MS = Number(process.env.PDP_TIMEOUT_MS || 10000);
-
-// --- helpers ---
-function normDomain(d: string) {
-  return d.replace(/^https?:\/\//, "").replace(/\/+.*/, "").toLowerCase();
-}
-
-async function fetchText(url: string): Promise<string | null> {
+async function get(url: string): Promise<string|null> {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), FETCH_MS);
   try {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), PDP_TIMEOUT_MS);
-    const r = await fetch(url, { headers: { "user-agent": UA }, redirect: "follow", signal: ctl.signal });
-    clearTimeout(t);
+    const r = await fetch(url, { signal: ctl.signal, headers: { 'user-agent': 'GalactlyBot/0.1' } });
     if (!r.ok) return null;
-    const ct = (r.headers.get("content-type") || "").toLowerCase();
-    if (!ct.includes("text/html")) return null;
-    const html = await r.text();
-    return html.slice(0, 400_000);
-  } catch { return null; }
+    const ct = (r.headers.get('content-type') || '').toLowerCase();
+    if (!ct.includes('json') && !ct.includes('xml') && !ct.includes('html')) return null;
+    return await r.text();
+  } catch { return null; } finally { clearTimeout(t); }
 }
 
-async function fetchJson<T=any>(url: string): Promise<T | null> {
-  try {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), PDP_TIMEOUT_MS);
-    const r = await fetch(url, { headers: { "user-agent": UA }, redirect: "follow", signal: ctl.signal });
-    clearTimeout(t);
-    if (!r.ok) return null;
-    const ct = (r.headers.get("content-type") || "").toLowerCase();
-    if (!ct.includes("json")) return null;
-    return await r.json();
-  } catch { return null; }
+function hostOf(d: string) { return d.replace(/^https?:\/\//,'').replace(/\/+$/,'').toLowerCase(); }
+function h2t(html: string) { return html.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(); }
+
+const CASE_RE = /\b(case|pack|ct)[ -]?(of)?[ -]?\d{1,3}\b/i;
+const DIMS_RE = /\b\d{1,3}\s?[x×]\s?\d{1,3}\s?(x|×)\s?\d{1,3}\s?(in|inch|")\b/i;
+const WT_RE = /\b\d+(\.\d+)?\s?(lb|oz|kg|g)\b/i;
+const RESTOCK_RE = /\b(back\s?in\s?stock|restocked|available\s?again)\b/i;
+
+function looksPackagingy(t: string) {
+  const s = t.toLowerCase();
+  return CASE_RE.test(s) || DIMS_RE.test(s) || WT_RE.test(s) || s.includes('carton') || s.includes('corrugated') || s.includes('box') || s.includes('case of');
 }
 
-function pickTitle(html: string) {
-  const m = html.match(/<title[^>]*>(.*?)<\/title>/i);
-  return (m?.[1] || "Product").trim().replace(/\s+/g, " ").slice(0, 140);
-}
-
-function toKw(arr: string[]): string[] {
-  return Array.from(new Set(arr.map(s => s.toLowerCase()))).slice(0, 8);
-}
-
-function looksLikeShopifyRoot(html: string) {
-  return /shopify|cdn\.shopify\.com|\/collections\//i.test(html);
-}
-
-// Extract quick PDP signals from HTML text
-function htmlSignals(url: string, html: string) {
-  const sigs: {kw: string[]; why: string; heat: number; title: string; snippet: string}[] = [];
-  const lower = html.toLowerCase();
-  const title = pickTitle(html);
-
-  // Patterns
-  const caseM = html.match(/case\s+of\s+(\d{1,4})/i);
-  const backInStock = /back\s*in\s*stock/i.test(html);
-  const newSku = /new\s+(sku|flavor|product|variant)/i.test(html);
-  const dims = html.match(/(\d{1,3}(?:\.\d+)?)\s*(?:x|×)\s*(\d{1,3}(?:\.\d+)?)\s*(?:x|×)\s*(\d{1,3}(?:\.\d+)?)(?:\s*(?:in|inch|\"))?/i);
-
-  const pieces: string[] = [];
-  if (caseM) pieces.push(`case of ${caseM[1]}`);
-  if (dims) pieces.push(`dims ${dims[0].replace(/\s+/g,' ')}`);
-  if (backInStock) pieces.push("back in stock");
-  if (newSku) pieces.push("new sku");
-
-  if (pieces.length) {
-    const why = pieces.join(" · ");
-    const kw = toKw(["pdp", "retail", "case", caseM?.[1] || "", backInStock?"restock":"", newSku?"new":"", dims?"dims":""]);
-    // crude heat: more signals => hotter
-    const heat = Math.min(95, 60 + pieces.length * 8);
-    const snippet = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 260);
-    sigs.push({ kw, why, heat, title, snippet });
-  }
-
-  // Also look for wholesale/pack terms even without explicit case-of
-  if (/carton|master\s*case|shipper|12[-\s]*pk|24[-\s]*pk|unit\s*weight|case\s*pack/i.test(lower)) {
-    const why = "carton/case-pack hints";
-    const kw = toKw(["pdp","retail","case-pack","carton"]);
-    const snippet = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 240);
-    sigs.push({ kw, why, heat: 72, title, snippet });
-  }
-
-  return sigs.map(s => ({ ...s, url }));
-}
-
-// Shopify: /products.json (public) — many shops keep this open
-async function scanShopify(domain: string) {
-  const base = `https://${domain}`;
-  const out: { url: string; title: string; snippet: string; kw: string[]; heat: number }[] = [];
-
-  // Try products endpoint (limit few pages to stay light)
-  const perPage = 50;
-  for (let page = 1; page <= 2; page++) {
-    const api = `${base}/products.json?limit=${perPage}&page=${page}`;
-    const data = await fetchJson<any>(api);
-    if (!data || !Array.isArray(data.products) || !data.products.length) break;
-
-    for (const p of data.products.slice(0, PDP_MAX_PAGES)) {
-      const pUrl = `${base}/products/${p.handle || encodeURIComponent(String(p.id))}`;
-      const title = String(p.title || "Product");
-      const body = String(p.body_html || "");
-      const variants = Array.isArray(p.variants) ? p.variants : [];
-      const anyAvail = variants.some((v: any) => v?.available === true);
-
-      // signals from structured fields + body text
-      const htmlSig = htmlSignals(pUrl, `<title>${title}</title> ${body}`);
-      const kw = new Set<string>(["pdp","shopify"]);
-      if (anyAvail) kw.add("in-stock");
-      if (htmlSig.length) htmlSig[0].kw.forEach(k => kw.add(k));
-
-      const snippet = body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 260);
-      const heat = Math.min(92, 65 + (anyAvail ? 6 : 0) + (htmlSig.length ? 6 : 0));
-      out.push({ url: pUrl, title, snippet, kw: Array.from(kw), heat });
-    }
-  }
-
-  // Fallback: collections/all page
-  const allHtml = await fetchText(`${base}/collections/all`);
-  if (allHtml) {
-    const sigs = htmlSignals(`${base}/collections/all`, allHtml);
-    for (const s of sigs) out.push({ url: s.url, title: s.title, snippet: s.snippet, kw: s.kw, heat: s.heat });
-  }
-
-  return out;
-}
-
-// Generic scan few obvious pages
-async function scanGeneric(domain: string) {
-  const base = `https://${domain}`;
-  const paths = ["/", "/shop", "/products", "/collections/all", "/store"];
-  const out: { url: string; title: string; snippet: string; kw: string[]; heat: number }[] = [];
-  for (const p of paths.slice(0, PDP_MAX_PAGES)) {
-    const html = await fetchText(base + p);
-    if (!html) continue;
-    const sigs = htmlSignals(base + p, html);
-    for (const s of sigs) out.push({ url: s.url, title: s.title, snippet: s.snippet, kw: s.kw, heat: s.heat });
-  }
-  return out;
-}
-
-export async function scanPdpForDomain(domainInput: string) {
-  const domain = normDomain(domainInput);
-  const base = `https://${domain}`;
-  let created = 0, checked = 0;
-  const proofs: any[] = [];
-
-  // Quick root sniff
-  const root = await fetchText(base);
-  checked++;
-  let leads: { url: string; title: string; snippet: string; kw: string[]; heat: number }[] = [];
-  if (root && looksLikeShopifyRoot(root)) {
-    leads = await scanShopify(domain);
-  } else {
-    // still try Shopify JSON once (some themes hide hints)
-    const sj = await fetchJson<any>(`${base}/products.json?limit=1`);
-    if (sj && Array.isArray(sj.products)) leads = await scanShopify(domain);
-    else leads = await scanGeneric(domain);
-  }
-
-  for (const L of leads.slice(0, PDP_MAX_PAGES)) {
+async function shopifyProducts(host: string): Promise<PDP[]> {
+  const urls = [
+    `https://${host}/products.json?limit=50`,
+    `https://${host}/collections/all?view=json`,
+  ];
+  const out: PDP[] = [];
+  for (const u of urls) {
+    const txt = await get(u);
+    if (!txt) continue;
+    // try JSON first
     try {
-      await q(
-        `INSERT INTO lead_pool (cat, kw, platform, heat, source_url, title, snippet, ttl, state)
-         VALUES ('retail', $1::text[], 'pdp', $2, $3, $4, $5, now() + interval '6 hours', 'available')
-         ON CONFLICT (source_url) DO NOTHING`,
-        [L.kw, L.heat, L.url, L.title, L.snippet]
-      );
-      created++;
-      proofs.push({ url: L.url, why: L.kw, heat: L.heat });
+      const j = JSON.parse(txt);
+      const products = j.products || j.items || [];
+      for (const p of products) {
+        const title = (p.title || p.name || '').toString();
+        const h = `${title} ${p.body_html || p.description || ''}`;
+        if (!looksPackagingy(h)) continue;
+        const handle = p.handle || (p.url ? String(p.url).split('/').pop() : null);
+        const url = p.handle ? `https://${host}/products/${handle}` : (p.url || null);
+        if (url) out.push({ url, title, snippet: (h2t(h) || '').slice(0, 200), type: 'pdp' });
+      }
+      if (out.length) return out;
     } catch {
-      // ignore insert errors (uniq conflicts etc.)
+      // maybe HTML in “view=json”; treat like HTML list
+      const text = h2t(txt).toLowerCase();
+      // very rough split on "/products/"
+      const m = txt.match(/href="\/products\/[^"]+/gi) || [];
+      for (const a of m.slice(0, 30)) {
+        const path = a.replace(/^href="/,'');
+        const url = `https://${host}${path}`;
+        const t = path.replace('/products/','').replace(/[-_]/g,' ');
+        if (looksPackagingy(`${t} ${text.slice(0, 1000)}`)) out.push({ url, title: t, snippet: '', type: 'pdp' });
+      }
+      if (out.length) return out;
     }
   }
-
-  return { ok: true, created, checked, proofs } as const;
+  return out;
 }
 
-// Convenience for an array of domains
-export async function scanPdpMany(domains: string[]) {
-  let created = 0, checked = 0; const allProofs: any[] = [];
-  for (const d of domains) {
-    const r = await scanPdpForDomain(d);
-    created += r.created; checked += r.checked; allProofs.push(...r.proofs);
+async function sitemapProducts(host: string): Promise<PDP[]> {
+  const txt = await get(`https://${host}/sitemap.xml`);
+  if (!txt) return [];
+  const links = Array.from(txt.matchAll(/<loc>(.*?)<\/loc>/g)).map(m => m[1]).filter(u => /\/products?\//i.test(u)).slice(0, 60);
+  const out: PDP[] = [];
+  for (const u of links) {
+    const page = await get(u);
+    if (!page) continue;
+    const t = h2t(page);
+    if (looksPackagingy(t)) out.push({ url: u, title: (t.slice(0, 80) || 'Product'), snippet: (t.slice(0, 240) || ''), type: RESTOCK_RE.test(t) ? 'restock_post' : 'pdp' });
+    if (out.length >= 25) break;
   }
-  return { ok: true, created, checked, proofs: allProofs } as const;
+  return out;
+}
+
+async function genericPdp(host: string): Promise<PDP[]> {
+  // Last resort: probe common catalog pages and lift a few product links
+  const seeds = [
+    `https://${host}/products/`,
+    `https://${host}/collections/all`,
+    `https://${host}/shop/`,
+    `https://${host}/store/`,
+  ];
+  const out: PDP[] = [];
+  for (const s of seeds) {
+    const html = await get(s);
+    if (!html) continue;
+    const links = (html.match(/href="(\/products\/[^"]+)"/gi) || []).map(x => x.replace(/^href="/,'').replace(/"$/,''));
+    for (const p of Array.from(new Set(links)).slice(0, 20)) {
+      const u = `https://${host}${p}`;
+      const page = await get(u);
+      if (!page) continue;
+      const t = h2t(page);
+      if (looksPackagingy(t)) out.push({ url: u, title: (t.slice(0, 80)||'Product'), snippet: t.slice(0, 220), type: 'pdp' });
+      if (out.length >= 20) break;
+    }
+    if (out.length) break;
+  }
+  return out;
+}
+
+export async function scanPDP(domain: string): Promise<PDP[]> {
+  const host = hostOf(domain);
+  if (!host.includes('.')) return [];
+  // try Shopify, then sitemap, then generic
+  const a = await shopifyProducts(host);
+  if (a.length) return a.slice(0, Number(process.env.PDP_MAX || 25));
+  const b = await sitemapProducts(host);
+  if (b.length) return b.slice(0, Number(process.env.PDP_MAX || 25));
+  const c = await genericPdp(host);
+  return c.slice(0, Number(process.env.PDP_MAX || 25));
 }
