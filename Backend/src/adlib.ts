@@ -1,224 +1,157 @@
-// Backend/src/adlib.ts
-// Finds recent advertisers (likely buyers) via Apify actors + your seed keywords.
-// Zero extra deps. Node 20 global fetch OK.
 
-import fs from 'fs';
-import path from 'path';
-
-export type VendorProfile = {
-  industries?: string[];
-  regions?: string[];   // e.g. ["US","CA","North America"]
-  materials?: string[]; // not used here but kept for shape
-  print?: string[];     // "
-  moq?: number;         // "
+type FindOpts = {
+  keywords: string[];      // e.g. ["gummies","beverage","snack","beauty"]
+  regions?: string[];      // e.g. ["US","CA"]
+  limit?: number;          // cap final merged list
 };
 
-export type AdHit = {
-  source: string;       // 'meta' | 'google' | 'tiktok' | etc.
+export type AdvertiserHit = {
   domain: string;
+  brand?: string;
+  source: 'meta' | 'google';
   proofUrl: string;
-  adCount?: number;
-  lastSeen?: string;    // ISO
-  pageName?: string;
+  adCount: number;
+  lastSeen: string; // ISO
 };
 
 const APIFY_TOKEN = process.env.APIFY_TOKEN || '';
-const META_ACTOR  = process.env.APIFY_META_ADS_ACTOR_ID || '';    // e.g. "lucagruentzel/facebook-ads-library-scraper" (example, set your own)
-const GOOGLE_ACTOR= process.env.APIFY_GOOGLE_ADS_ACTOR_ID || '';  // optional, set if you have one
-const TIKTOK_ACTOR= process.env.APIFY_TIKTOK_ADS_ACTOR_ID || '';  // optional
+const META_ACTOR = process.env.APIFY_META_ACTOR_ID || 'apify~facebook-ads-library-scraper';
+const GADS_ACTOR = process.env.APIFY_GADS_ACTOR_ID || ''; // leave blank if you don’t have one
+const LOOKBACK_D = Number(process.env.ADLIB_LOOKBACK_DAYS || 14);
+const MAX_OUT = Number(process.env.ADLIB_MAX_RESULTS || 80);
 
-const AD_KEYWORDS_FILE = process.env.AD_KEYWORDS_FILE || '/etc/secrets/ad_keywords.txt';
-const MAX_RESULTS = Number(process.env.AD_MAX_RESULTS || 50);
-const LOOKBACK_DAYS = Number(process.env.AD_LOOKBACK_DAYS || 14);
-
-function readLines(p: string): string[] {
-  try {
-    const t = fs.readFileSync(p, 'utf8');
-    return t.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  } catch { return []; }
+function daysAgoIso(d: number) {
+  const t = Date.now() - d * 86400000;
+  return new Date(t).toISOString();
+}
+function host(u: string) { try { return new URL(u).hostname.toLowerCase(); } catch { return ''; } }
+function normDomain(s: string) {
+  let h = s.trim().toLowerCase();
+  if (!h) return '';
+  if (!h.includes('.') && h.includes(' ')) return ''; // “Acme Inc” → ignore
+  // handle “www.domain.com/..”, “http(s)://”
+  try { h = new URL(/^https?:\/\//i.test(h) ? h : 'https://' + h).hostname.toLowerCase(); } catch {}
+  h = h.replace(/^www\./, '');
+  return h;
 }
 
-function normalizeDomain(u: string): string {
-  try {
-    const raw = u.startsWith('http') ? u : `https://${u}`;
-    const url = new URL(raw);
-    let h = url.hostname.toLowerCase();
-    if (h.startsWith('www.')) h = h.slice(4);
-    return h;
-  } catch {
-    // fallback: strip path, protocol-ish
-    return u.replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();
-  }
-}
-
-function dedupeByDomain(hits: AdHit[]): AdHit[] {
-  const m = new Map<string, AdHit>();
-  for (const h of hits) {
-    const d = normalizeDomain(h.domain);
-    if (!d) continue;
-    const prev = m.get(d);
-    if (!prev) { m.set(d, { ...h, domain: d }); continue; }
-    // keep the one with newer lastSeen or higher adCount
-    const newer = (a?: string, b?: string) => (a && b) ? (new Date(a).getTime() >= new Date(b).getTime()) : (!!a && !b);
-    if (newer(h.lastSeen, prev.lastSeen) || (Number(h.adCount||0) > Number(prev.adCount||0))) {
-      m.set(d, { ...h, domain: d });
-    }
-  }
-  return Array.from(m.values());
-}
-
-async function runActor(actorId: string, input: any): Promise<any[]> {
+async function apifyRunGetItems(actorId: string, input: any): Promise<any[]> {
   if (!APIFY_TOKEN || !actorId) return [];
+  // Use run-sync-get-dataset-items to receive items directly
+  const url = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${APIFY_TOKEN}`;
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!r.ok) return [];
+  return await r.json().catch(() => []);
+}
+
+function withinLookback(iso?: string | null) {
+  if (!iso) return false;
   try {
-    // Start run
-    const start = await fetch(`https://api.apify.com/v2/actors/${encodeURIComponent(actorId)}/runs`, {
-      method: 'POST',
-      headers: { 'content-type':'application/json' },
-      body: JSON.stringify({ input })
-    });
-    if (!start.ok) return [];
-    const run = await start.json() as any;
-    const runId = run?.data?.id;
-    if (!runId) return [];
+    const t = new Date(iso).getTime();
+    return t >= Date.now() - LOOKBACK_D * 86400000;
+  } catch { return false; }
+}
 
-    // Poll status (short, to stay free-tier friendly)
-    const deadline = Date.now() + 45_000; // 45s cap
-    let datasetId = run?.data?.defaultDatasetId;
-    let status = run?.data?.status || 'RUNNING';
-    while (!datasetId && Date.now() < deadline) {
-      await new Promise(r=>setTimeout(r, 1500));
-      const r2 = await fetch(`https://api.apify.com/v2/actor-runs/${runId}`);
-      if (!r2.ok) break;
-      const j = await r2.json() as any;
-      status = j?.data?.status;
-      datasetId = j?.data?.defaultDatasetId || datasetId;
-      if (status === 'SUCCEEDED' || status === 'FAILED' || status === 'ABORTED' || status === 'TIMED-OUT') break;
+export async function findAdvertisers(opts: FindOpts): Promise<AdvertiserHit[]> {
+  const { keywords, regions = ['US', 'CA'], limit = MAX_OUT } = opts || {};
+  const after = daysAgoIso(LOOKBACK_D);
+
+  const out: AdvertiserHit[] = [];
+  const seen = new Map<string, AdvertiserHit>(); // key by domain+source
+
+  // ---- Meta Ads Library (via Apify actor) ----
+  // Common inputs the community actors accept:
+  //   searchTerms: [], countries: ["US","CA"], adActiveStatus: "ACTIVE", adDeliveryDateFrom: after
+  try {
+    const items = await apifyRunGetItems(META_ACTOR, {
+      searchTerms: keywords && keywords.length ? keywords : ['packaging', 'boxes', 'labels'],
+      countries: regions,
+      adActiveStatus: 'ACTIVE',
+      adDeliveryDateFrom: after,
+      maxConcurrency: 2,
+    });
+
+    for (const it of items || []) {
+      // actor schemas vary; try to extract best we can
+      const pageUrl = it.pageUrl || it.page_url || it.advertiserUrl || '';
+      const website = it.website || it.advertiserWebsite || '';
+      const proof = it.adLink || it.permalink || it.url || pageUrl || website || '';
+      const last = it.lastSeen || it.adSnapshotDate || it.publishedAt || it.updatedAt || it.scrapedAt || null;
+      const brand = it.pageName || it.advertiserName || it.name || null;
+
+      const d = normDomain(website || pageUrl || proof);
+      if (!d) continue;
+      if (last && !withinLookback(last)) continue;
+
+      const key = d + '|meta';
+      const prev = seen.get(key);
+      const hit: AdvertiserHit = {
+        domain: d,
+        brand: brand || undefined,
+        source: 'meta',
+        proofUrl: proof || `https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=ALL&q=${encodeURIComponent(brand || d)}`,
+        adCount: Number(it.adCount || it.adsCount || 1),
+        lastSeen: (last && new Date(last).toISOString()) || new Date().toISOString(),
+      };
+      if (!prev || hit.adCount > prev.adCount) seen.set(key, hit);
     }
+  } catch { /* ignore meta errors */ }
 
-    if (!datasetId) return [];
-    const itemsRes = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?clean=true&format=json`);
-    if (!itemsRes.ok) return [];
-    const items = await itemsRes.json();
-    return Array.isArray(items) ? items : [];
-  } catch {
-    return [];
+  // ---- Google Ads Transparency Center (optional) ----
+  if (GADS_ACTOR) {
+    try {
+      const items = await apifyRunGetItems(GADS_ACTOR, {
+        queries: keywords && keywords.length ? keywords : ['packaging', 'boxes', 'labels'],
+        countries: regions,
+        since: after,
+        maxConcurrency: 1,
+      });
+
+      for (const it of items || []) {
+        const advSite = it.advertiserWebsite || it.website || '';
+        const proof = it.adUrl || it.proofUrl || it.detailsUrl || '';
+        const last = it.lastSeen || it.updatedAt || it.scrapedAt || null;
+        const brand = it.advertiserName || it.name || null;
+
+        const d = normDomain(advSite || proof);
+        if (!d) continue;
+        if (last && !withinLookback(last)) continue;
+
+        const key = d + '|google';
+        const prev = seen.get(key);
+        const hit: AdvertiserHit = {
+          domain: d,
+          brand: brand || undefined,
+          source: 'google',
+          proofUrl: proof || `https://transparencyreport.google.com/political-ads/advertiser/${encodeURIComponent(brand || d)}`,
+          adCount: Number(it.adCount || 1),
+          lastSeen: (last && new Date(last).toISOString()) || new Date().toISOString(),
+        };
+        if (!prev || hit.adCount > prev.adCount) seen.set(key, hit);
+      }
+    } catch { /* ignore google errors */ }
   }
+
+  // Merge + rank
+  for (const v of seen.values()) out.push(v);
+  out.sort((a, b) => {
+    const aa = Date.parse(a.lastSeen || '') || 0;
+    const bb = Date.parse(b.lastSeen || '') || 0;
+    // favor recency then adCount
+    if (bb !== aa) return bb - aa;
+    return (b.adCount || 0) - (a.adCount || 0);
+  });
+
+  return out.slice(0, limit);
 }
 
-function buildQueries(v: VendorProfile, kwFromFile: string[]): string[] {
-  const baseKw = kwFromFile.length ? kwFromFile : [
-    'custom packaging', 'corrugated boxes', 'folding cartons', 'labels', 'pouches'
-  ];
-  const inds = (v.industries||[]).slice(0,4);
-  const reg  = (v.regions||[]).slice(0,3);
-
-  // Compose short query strings like: "snack brand packaging", "supplements boxes", etc.
-  const out = new Set<string>();
-  if (inds.length) {
-    for (const i of inds) for (const k of baseKw) out.add(`${i} ${k}`);
-  } else {
-    for (const k of baseKw) out.add(k);
-  }
-  // Region hints appended (loose)
-  if (reg.length) {
-    const rSfx = reg.join(' OR ');
-    for (const q of Array.from(out)) { out.delete(q); out.add(`${q} (${rSfx})`); }
-  }
-  return Array.from(out).slice(0, 12);
-}
-
-function toCountryCodes(regions?: string[]): string[] | undefined {
-  if (!regions || !regions.length) return undefined;
-  const map: Record<string,string> = { US:'US', USA:'US', 'United States':'US', CA:'CA', Canada:'CA', 'North America':'US' };
-  const codes = Array.from(new Set(regions.map(r=>map[r] || '').filter(Boolean)));
-  return codes.length ? codes : undefined;
-}
-
-function mapMetaItems(items: any[]): AdHit[] {
-  // Actor outputs vary. We try common fields: pageUrl, pageName, website, adCount, lastSeen, transparencyUrl
-  const hits: AdHit[] = [];
-  for (const it of items||[]) {
-    const url = it.website || it.pageUrl || it.transparencyUrl || it.url || '';
-    if (!url) continue;
-    hits.push({
-      source: 'meta',
-      domain: normalizeDomain(url),
-      proofUrl: (it.transparencyUrl || it.pageUrl || url),
-      adCount: Number(it.adCount || it.adsCount || 0),
-      lastSeen: it.lastSeen || it.updatedAt || it.scrapedAt || null,
-      pageName: it.pageName || it.name || undefined
-    });
-  }
-  return hits;
-}
-
-function mapGenericItems(items: any[], source: string): AdHit[] {
-  const hits: AdHit[] = [];
-  for (const it of items||[]) {
-    const url = it.website || it.landingPage || it.pageUrl || it.url || '';
-    if (!url) continue;
-    hits.push({
-      source,
-      domain: normalizeDomain(url),
-      proofUrl: it.pageUrl || it.proofUrl || url,
-      adCount: Number(it.adCount || 0),
-      lastSeen: it.lastSeen || it.updatedAt || null,
-      pageName: it.pageName || it.name || undefined
-    });
-  }
-  return hits;
-}
-
-export async function findAdvertisers(vendor: VendorProfile): Promise<AdHit[]> {
-  const keywords = readLines(AD_KEYWORDS_FILE);
-  const queries = buildQueries(vendor, keywords);
-  const countries = toCountryCodes(vendor.regions);
-  const sinceDays = LOOKBACK_DAYS;
-
-  const all: AdHit[] = [];
-
-  // META (Facebook/Instagram) — strongest free signal
-  if (APIFY_TOKEN && META_ACTOR) {
-    const input = {
-      queries,
-      sinceDays,
-      countries,          // actor-dependent; many accept "countries" or "country"
-      maxItems: 200,
-      // vendor filters can be passed via "search" or "keywords" — actors differ; this is generic
-      keywords
-    };
-    const items = await runActor(META_ACTOR, input);
-    all.push(...mapMetaItems(items));
-  }
-
-  // Google Ads Transparency (optional; actor differs — generic map)
-  if (APIFY_TOKEN && GOOGLE_ACTOR) {
-    const input = { queries, sinceDays, countries, maxItems: 200 };
-    const items = await runActor(GOOGLE_ACTOR, input);
-    all.push(...mapGenericItems(items, 'google'));
-  }
-
-  // TikTok (optional)
-  if (APIFY_TOKEN && TIKTOK_ACTOR) {
-    const input = { queries, sinceDays, countries, maxItems: 200 };
-    const items = await runActor(TIKTOK_ACTOR, input);
-    all.push(...mapGenericItems(items, 'tiktok'));
-  }
-
-  // Deduplicate & trim
-  const deduped = dedupeByDomain(all)
-    .filter(h => h.domain.endsWith('.com') || h.domain.endsWith('.ca'))
-    .slice(0, MAX_RESULTS);
-
-  return deduped;
-}
-
-// Quick manual test helper (optional)
-// npx tsx src/adlib.ts
-if (require.main === module) {
-  (async () => {
-    const sample: VendorProfile = { industries:['snacks','supplements'], regions:['US','CA'] };
-    const res = await findAdvertisers(sample);
-    console.log(JSON.stringify(res.slice(0,10), null, 2));
-  })();
+// Tiny helper to map advertisers to distinct domains (for downstream scans)
+export function advertisersToDomains(hits: AdvertiserHit[]): string[] {
+  const s = new Set<string>();
+  for (const h of hits) if (h.domain) s.add(h.domain);
+  return Array.from(s);
 }
