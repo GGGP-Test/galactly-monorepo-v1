@@ -5,9 +5,10 @@ import fs from 'fs';
 import path from 'path';
 import { migrate, q } from './db';
 import { nowPlusMinutes } from './util';
+import { findAdvertisersFree } from './connectors/adlib_free';
 
 // connectors
-import { findAdvertisers } from './connectors/adlib';
+import { findAdvertisers } from './connectors/adlib_free';
 import { scanPDP } from './connectors/pdp';
 import { scanBrandIntake } from './brandintake';
 
@@ -75,6 +76,7 @@ app.get('/__routes', (_req, res) => {
     { path: '/api/v1/admin/ingest', methods: ['post'] },
     { path: '/api/v1/admin/seed-brands', methods: ['post'] },
     { path: '/api/v1/find-now', methods: ['post'] } // NEW
+    
   ]);
 });
 
@@ -238,7 +240,7 @@ app.post('/api/v1/find-now', async (req, res) => {
 
   try {
     // 1) Advertisers (Meta/Google libraries via Apify)
-    const advertisers = await findAdvertisers(vendor).catch(() => []);
+    const advertisers = await findAdvertisersFree(candidateBuyerDomains); // returns proofs
     for (const adv of advertisers.slice(0, maxDomains)) {
       const host = (adv.domain || '').replace(/^https?:\/\//, '').replace(/\/+$/, '');
       if (!host) continue;
@@ -246,7 +248,7 @@ app.post('/api/v1/find-now', async (req, res) => {
       // Keep the ad proof itself as a lead (high signal they are spending)
       if (adv.proofUrl && !seen.has(adv.proofUrl)) {
         await insertLead({
-          platform: 'adlib',
+          platform: 'adlib_free',
           source_url: adv.proofUrl,
           title: `${host} — active ads (${adv.source || 'ads'})`,
           snippet: `Last seen: ${adv.lastSeen || 'recent'}. ~${adv.adCount ?? '?'} creatives.`,
