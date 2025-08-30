@@ -283,6 +283,18 @@ app.post('/api/v1/find-now', async (req, res) => {
   const vendor = req.body || {};
   const buyers: string[] = Array.from(new Set([...(vendor.buyers || []), ...(vendor.exampleBuyers || [])]
     .map((x: string) => x?.toString().trim()).filter(Boolean)));
+  
+if (adv.proofUrl) {
+  await insertLead({
+    platform: 'adlib_free',
+    source_url: adv.proofUrl,
+    title: `${host} — ad proof (${adv.source})`,
+    snippet: 'Click to verify in the official library, then tap Verify.',
+    kw: ['ads','buyer','spend'],
+    cat: 'demand',
+    heat: 68  // modest until verified
+  });
+}
 
   // If no buyers provided, use brand strings the user typed (industries/brands terms)
   const brands: string[] = (vendor.brands || []).map((x: string) => x?.toString().trim()).filter(Boolean);
