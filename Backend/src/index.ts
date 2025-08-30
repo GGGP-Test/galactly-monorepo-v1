@@ -161,6 +161,13 @@ app.get('/api/v1/leads', async (req,res)=>{
        ORDER BY created_at DESC
        LIMIT 40`
   );
+  leads = leads.map(L => {
+  const base = computeScore(L, weights, prefs);
+  const perUser = confirmBoostFor(L.source_url, prefs);
+  return { ...L, _score: base + perUser };
+}).sort((a,b)=>b._score-a._score);
+
+  
   let leads = r.rows as any[];
   if (!leads.length) {
     leads = [{
