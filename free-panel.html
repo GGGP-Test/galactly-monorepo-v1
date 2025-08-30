@@ -1,168 +1,182 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Galactly — Live Buyers Feed</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Galactly — DIY Lead Finder</title>
   <style>
-    :root{--bg:#0b0e13;--panel:#111725;--border:#1f2a3b;--text:#e8ecf1;--muted:#9ab;--accent:#7fb2ff}
+    :root{
+      --bg:#0b0e13; --card:#111725; --line:#1f2a3b; --text:#e8ecf1; --muted:#9bb1c7;
+      --btn:#1e2a3b; --btn-line:#2a3b55; --accent:#69b3ff; --green:#36d399; --red:#f87272;
+    }
     *{box-sizing:border-box}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);margin:0}
-    header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial}
+    header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
     header .brand{font-weight:700}
-    .pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:2px 8px;margin-left:8px;font-size:12px;opacity:.85}
+    .pill{border:1px solid var(--btn-line);border-radius:999px;padding:2px 8px;color:var(--muted);font-size:12px;margin-left:8px}
     .wrap{max-width:1100px;margin:0 auto;padding:18px}
     .row{display:flex;gap:16px;flex-wrap:wrap}
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
-    .grow{flex:1 1 460px}
-    .small{flex:1 1 280px}
-    label{display:block;font-size:13px;margin:6px 0 6px;color:var(--muted)}
-    input,textarea,select{width:100%;background:#0f1420;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px}
-    textarea{min-height:92px}
-    button{background:#1e2a3b;border:1px solid #2a3b55;color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer}
-    button:hover{filter:brightness(1.12)}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .form{display:grid;grid-template-columns:repeat(12,1fr);gap:10px;align-items:end}
+    .form .field{grid-column:span 12}
+    @media (min-width:920px){ .form .field.sm-4{grid-column:span 4} .form .field.sm-6{grid-column:span 6} }
+    label{display:block;font-size:12px;opacity:.85;margin-bottom:6px}
+    input,textarea,select{width:100%;background:#0e1420;border:1px solid var(--btn-line);color:var(--text);padding:9px 10px;border-radius:10px}
+    textarea{min-height:70px;resize:vertical}
+    button{background:var(--btn);border:1px solid var(--btn-line);color:var(--text);padding:9px 12px;border-radius:10px;cursor:pointer}
+    button:hover{filter:brightness(1.1)}
+    .btn-acc{border-color:#2c6ebf}
+    .btn-ok{border-color:#2c7a57}
+    .btn-bad{border-color:#9b2c2c}
+    .mute{color:var(--muted)}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-    .lead{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
-    .meta{opacity:.75;font-size:12px}
+    .meta{font-size:12px;color:var(--muted)}
     a{color:var(--accent)}
+    .spacer{height:8px}
   </style>
 </head>
 <body>
   <header>
-    <div class="brand">Galactly <span id="status" class="pill">connecting…</span></div>
-    <div class="row">
-      <label>API Base
-        <input id="apiBase" size="52"/>
-      </label>
+    <div class="brand">Galactly <span id="status" class="pill">init…</span></div>
+    <div>
+      <label class="mute">API Base</label>
+      <input id="apiBase" size="42" />
       <button id="saveApi">Save</button>
     </div>
   </header>
 
   <div class="wrap">
-    <div class="row">
-      <div class="card grow">
-        <h3 style="margin:0 0 8px">Find buyers now</h3>
-        <div class="row">
-          <div class="grow">
-            <label>Your website (optional)
-              <input id="vendorSite" placeholder="https://your-vendor.com"/>
-            </label>
-          </div>
-          <div class="small">
-            <label>Regions
-              <input id="regions" placeholder="US, CA"/>
-            </label>
-          </div>
+    <div class="card">
+      <form id="finder" class="form" onsubmit="return false">
+        <div class="field sm-6">
+          <label>Your website (optional)</label>
+          <input id="vendorDomain" placeholder="acme-packaging.com" />
         </div>
-        <div class="row">
-          <div class="grow">
-            <label>Industries (comma‑separated)
-              <input id="industries" placeholder="beverage, candy, cosmetics"/>
-            </label>
-          </div>
+        <div class="field sm-6">
+          <label>Seed buyer domains (comma or newline separated)</label>
+          <textarea id="buyers" placeholder="liquiddeath.com, soylent.com\nexamplebrand.com"></textarea>
         </div>
-        <label>Known / ideal buyer domains (one per line)
-          <textarea id="buyers" placeholder="acmecandy.com\nliquiddeath.com\ndrinkolipop.com"></textarea>
-        </label>
-        <div class="row" style="justify-content:space-between;align-items:center">
-          <div>
-            <label style="display:inline-block;margin-right:8px"><input type="checkbox" id="diy" checked/> DIY verify ads (show proof links)</label>
-            <span class="meta">We’ll also parse product & procurement pages</span>
-          </div>
-          <div>
-            <button id="run">Find now</button>
-          </div>
+        <div class="field sm-4">
+          <label>Industries (comma separated)</label>
+          <input id="industries" placeholder="beverage, food, cosmetics" />
         </div>
-      </div>
-
-      <div class="card small">
-        <h3 style="margin:0 0 8px">How to use</h3>
-        <div class="meta">
-          1) Paste a few buyer domains or just industry/region.<br/>
-          2) Click <em>Find now</em> — we fetch ad‑proof links, product pages, and supplier intake.<br/>
-          3) Click a card to verify. Hit <em>Confirm ad</em> to boost heat.
+        <div class="field sm-4">
+          <label>Regions (ISO-2, comma: e.g. US,CA,GB)</label>
+          <input id="regions" placeholder="US,CA" />
         </div>
-      </div>
+        <div class="field sm-4">
+          <label>Meta Ad Library Countries (ISO-2, env-driven)</label>
+          <input id="metaCountries" placeholder="US,CA" />
+        </div>
+        <div class="field sm-6">
+          <button id="run" class="btn-acc">Find buyers now</button>
+          <span class="mute" id="result"></span>
+        </div>
+      </form>
     </div>
 
-    <h3 style="margin:18px 0 8px">Live feed</h3>
-    <div id="feed" class="grid"></div>
+    <div class="spacer"></div>
+
+    <div class="row">
+      <div style="flex:1">
+        <div class="mute" style="margin:6px 2px">Live feed</div>
+        <div id="feed" class="grid"></div>
+      </div>
+    </div>
   </div>
 
 <script>
+  // ------- tiny state -------
   const uidKey='galactly_uid';
   let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
   const apiInput=document.getElementById('apiBase');
-  apiInput.value = localStorage.getItem('api_base') || 'https://<PUT-YOUR-NORTHFLANK-ROUTE>.northflank.app';
+  apiInput.value=localStorage.getItem('api_base')||'https://<PUT-YOUR-NORTHFLANK-ROUTE>.code.run';
   document.getElementById('saveApi').onclick=()=>{ localStorage.setItem('api_base', apiInput.value.trim()); location.reload(); };
   const API=(p)=> (localStorage.getItem('api_base')||apiInput.value).replace(/\/$/,'') + p;
 
+  function textToList(v){
+    if(!v) return [];
+    return v.split(/\n|,|;|\s+/).map(s=>s.trim()).filter(Boolean);
+  }
+  function setStatus(s){ document.getElementById('status').textContent=s; }
+
   async function post(path, body){
-    const r = await fetch(API(path), { method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body: JSON.stringify(body||{}) });
+    const r=await fetch(API(path), {method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body:JSON.stringify(body)});
     if(!r.ok) throw new Error('HTTP '+r.status);
     return r.json();
   }
-  async function get(path){ const r = await fetch(API(path), { headers:{'x-galactly-user':uid} }); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+  async function events(type, lead, meta){ if(!lead||!lead.id) return; try{ await post('/api/v1/events',{type,leadId:lead.id,meta:meta||{}});}catch(e){} }
+  function openLead(lead){ try{ events('click', lead, {url:lead.source_url}); window.open(lead.source_url,'_blank','noopener'); }catch(e){} }
+  function likeLead(l){ events('like',l); }
+  function dislikeLead(l){ events('dislike',l); }
+  function muteLead(l){ let host=''; try{host=new URL(l.source_url).hostname;}catch(e){} events('mute_domain', l, {domain:host}); }
+  async function claimLead(l){ const r=await post('/api/v1/claim',{leadId:l.id}); if(r?.ok){ l._win=r.windowId; l._exp=Date.now()+(r.reservedForSec||120)*1000; render(); } }
+  async function ownLead(l){ if(!l._win) return; const r=await post('/api/v1/own',{windowId:l._win}); if(r?.ok){ events('own',l); l._owned=true; render(); } }
 
-  // On-demand find
-  document.getElementById('run').onclick=async()=>{
-    const buyers = document.getElementById('buyers').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    const industries = document.getElementById('industries').value.split(',').map(s=>s.trim()).filter(Boolean);
-    const regions = document.getElementById('regions').value.split(',').map(s=>s.trim()).filter(Boolean);
-    const body = { buyers, industries, regions, diy: document.getElementById('diy').checked, vendorSite: document.getElementById('vendorSite').value.trim() };
+  // ------- form submit -------
+  document.getElementById('run').onclick=async ()=>{
+    const buyers=textToList(document.getElementById('buyers').value);
+    const industries=textToList(document.getElementById('industries').value);
+    const regions=textToList(document.getElementById('regions').value);
+    const vendorDomain=(document.getElementById('vendorDomain').value||'').trim();
+    // optionally reflect desired meta countries to backend via env (UI hint only)
+    const metaCountries=(document.getElementById('metaCountries').value||'').trim();
+    if(metaCountries) localStorage.setItem('adlib_meta_countries_hint', metaCountries);
+
+    setStatus('running…');
+    document.getElementById('result').textContent='';
     try{
-      const r = await post('/api/v1/find-now', body);
-      document.getElementById('status').textContent = `ok • checked ${r.checked} • created ${r.created}`;
-      await refresh();
-    }catch(e){ document.getElementById('status').textContent='error'; }
+      const out=await post('/api/v1/find-now',{ buyers, industries, regions, vendorDomain });
+      document.getElementById('result').textContent=`checked ${out.checked}, created ${out.created} (ads: ${out.advertisers})`;
+      setStatus('ok');
+      await fetchLeads();
+    }catch(e){ setStatus('error'); document.getElementById('result').textContent='error: '+e.message; }
   };
 
-  // Feed
-  const feed=document.getElementById('feed');
-  function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",
-  ">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
-  function card(lead){
-    let host=''; try{ host=new URL(lead.source_url).hostname; }catch{}
-    const div=document.createElement('div'); div.className='lead';
-    div.innerHTML=`<div class="meta">${esc(lead.platform||'source')} • ${esc(host)}</div>
-      <div><strong>${esc(lead.title||'Untitled')}</strong></div>
-      <div>${esc(lead.snippet||'')}</div>
-      <div class="row" style="gap:8px">
-        <button data-act="open">Open</button>
-        <button data-act="confirm">Confirm ad</button>
-        <button data-act="like">👍</button>
-        <button data-act="dis">👎</button>
-        <button data-act="mute">Mute</button>
-        <button data-act="claim">Claim</button>
-        <button data-act="own">Own</button>
+  // ------- feed -------
+  const feedEl=document.getElementById('feed');
+  let last=null;
+  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+  function remain(l){ if(!l._exp) return ''; const s=Math.max(0,Math.ceil((l._exp-Date.now())/1000)); return s+'s'; }
+  function card(L){
+    const d=document.createElement('div'); d.className='card';
+    let host=''; try{ host=new URL(L.source_url).hostname; }catch{}
+    d.innerHTML=`
+      <div class="meta">${escapeHtml(L.platform||'source')} • ${escapeHtml(host)}</div>
+      <div><strong>${escapeHtml(L.title||'Untitled')}</strong></div>
+      <div class="meta">${escapeHtml(L.snippet||'')}</div>
+      <div class="row" style="gap:8px;margin-top:8px">
+        <button data-a="open">Open</button>
+        <button data-a="like">👍</button>
+        <button data-a="dis">👎</button>
+        <button data-a="mute">Mute</button>
+        <button data-a="claim" class="btn-ok">Claim</button>
+        <button data-a="own" class="btn-ok">Own</button>
+        <button data-a="confirm" class="btn-acc">Confirm ad</button>
+        <span class="meta" data-a="left"></span>
       </div>`;
-    div.querySelector('[data-act=open]').onclick=()=>{ window.open(lead.source_url,'_blank','noopener'); post('/api/v1/events',{type:'click',leadId:lead.id,meta:{url:lead.source_url}}).catch(()=>{}); };
-    div.querySelector('[data-act=confirm]').onclick=()=> post('/api/v1/events',{type:'confirm_ad',leadId:lead.id,meta:{url:lead.source_url}}).then(()=>refresh());
-    div.querySelector('[data-act=like]').onclick=()=> post('/api/v1/events',{type:'like',leadId:lead.id});
-    div.querySelector('[data-act=dis]').onclick=()=> post('/api/v1/events',{type:'dislike',leadId:lead.id});
-    div.querySelector('[data-act=mute]').onclick=()=> post('/api/v1/events',{type:'mute_domain',leadId:lead.id,meta:{domain:host}});
-    div.querySelector('[data-act=claim]').onclick=async()=>{
-      const r = await post('/api/v1/claim',{leadId:lead.id});
-      if(r?.ok){ lead._windowId=r.windowId; setTimeout(refresh, 500); }
-    };
-    div.querySelector('[data-act=own]').onclick=async()=>{
-      if(!lead._windowId) return;
-      const r = await post('/api/v1/own',{windowId:lead._windowId});
-      if(r?.ok) refresh();
-    };
-    return div;
+    d.querySelector('[data-a=open]').onclick=()=>openLead(L);
+    d.querySelector('[data-a=like]').onclick=()=>likeLead(L);
+    d.querySelector('[data-a=dis]').onclick=()=>dislikeLead(L);
+    d.querySelector('[data-a=mute]').onclick=()=>muteLead(L);
+    d.querySelector('[data-a=claim]').onclick=()=>claimLead(L);
+    d.querySelector('[data-a=own]').onclick=()=>ownLead(L);
+    d.querySelector('[data-a=confirm]').onclick=()=>events('confirm_ad', L, {url:L.source_url});
+    const left=d.querySelector('[data-a=left]');
+    if(L._win && !L._owned){ left.textContent='reserved '+remain(L); }
+    if(L._owned){ left.textContent='owned'; }
+    return d;
   }
+  function render(){ if(!last) return; feedEl.innerHTML=''; for(const L of last.leads){ feedEl.appendChild(card(L)); } }
 
-  async function refresh(){
+  async function fetchLeads(){
     try{
-      const data = await get('/api/v1/leads');
-      feed.innerHTML='';
-      (data.leads||[]).forEach(L => feed.appendChild(card(L)));
-      document.getElementById('status').textContent = 'ok';
-      setTimeout(refresh, (data.nextRefreshSec||15)*1000);
-    }catch(e){ document.getElementById('status').textContent='error'; setTimeout(refresh, 5000); }
+      const r=await fetch(API('/api/v1/leads'), { headers:{'x-galactly-user':uid} });
+      const data=await r.json(); last=data; render(); setStatus('ok');
+      setTimeout(fetchLeads, (data.nextRefreshSec||20)*1000);
+    }catch(e){ setStatus('error'); setTimeout(fetchLeads, 6000); }
   }
-  refresh();
+  fetchLeads();
 </script>
 </body>
 </html>
