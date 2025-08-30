@@ -109,9 +109,31 @@ app.post('/api/v1/events', async (req,res)=>{
   if (!leadId || !type) return res.status(400).json({ ok:false, error:'bad request' });
   await q(`INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,$3,$4)`, [userId, leadId, String(type), meta || {}]);
   // bump heat on explicit confirmation of ad proof
-  if (String(type) === 'confirm_ad') {
-    await q(`UPDATE lead_pool SET heat = LEAST(95, COALESCE(heat,60) + 10) WHERE id=$1`, [leadId]);
+if (String(type) === 'confirm_ad' && userId) {
+  // 1) persist a per-user proof record: domain, platform, ts
+  const host = (() => { try { return new URL(meta?.url || '').hostname; } catch { return meta?.domain || null; } })();
+  const platform = String(meta?.platform || lead.platform || 'adlib_free').toLowerCase();
+  if (host) {
+    await q(
+      `UPDATE app_user
+         SET user_prefs = jsonb_set(
+           COALESCE(user_prefs,'{}'::jsonb),
+           '{confirmedProofs}',
+           COALESCE(user_prefs->'confirmedProofs','[]'::jsonb) || to_jsonb(json_build_object('host',$2,'platform',$3,'ts',now()))
+         )
+       WHERE id=$1`,
+      [userId, host, platform]
+    );
   }
+
+  // 2) optional soft bump only for THIS user's cached fit (do not touch global heat)
+  await q(
+    `UPDATE lead_pool
+       SET fit_user = LEAST(100, COALESCE(fit_user,60) + 5)   -- per-user fit hint (read at ranking)
+     WHERE id=$1`,
+    [leadId]
+  );
+}
   // mute domain (optional)
   if (String(type) === 'mute_domain' && userId && meta?.domain) {
     await q(`UPDATE app_user SET user_prefs = jsonb_set(COALESCE(user_prefs,'{}'::jsonb), '{muteDomains}', COALESCE(user_prefs->'muteDomains','[]'::jsonb) || to_jsonb($2::text)) WHERE id=$1`, [userId, String(meta.domain)]);
