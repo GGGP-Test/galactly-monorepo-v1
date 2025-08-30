@@ -138,6 +138,18 @@ if (String(type) === 'confirm_ad' && userId) {
   if (String(type) === 'mute_domain' && userId && meta?.domain) {
     await q(`UPDATE app_user SET user_prefs = jsonb_set(COALESCE(user_prefs,'{}'::jsonb), '{muteDomains}', COALESCE(user_prefs->'muteDomains','[]'::jsonb) || to_jsonb($2::text)) WHERE id=$1`, [userId, String(meta.domain)]);
   }
+
+  // after you’ve loaded `prefs` (JSONB from app_user.user_prefs)
+function confirmBoostFor(url: string, prefs: any): number {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    const list = Array.isArray(prefs?.confirmedProofs) ? prefs.confirmedProofs : [];
+    const has = list.some((r: any) => typeof r?.host === 'string' && host.endsWith(r.host.toLowerCase()));
+    return has ? 0.25 : 0; // +0.25 into your scoring model (tune)
+  } catch { return 0; }
+}
+
+  
   res.json({ ok:true });
 });
 
