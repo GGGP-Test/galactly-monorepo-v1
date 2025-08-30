@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import fs from 'fs';
 import { migrate, q } from './db';
 import { nowPlusMinutes } from './util';
+import { deriveBuyersFromVendorSite } from './connectors/derivebuyersfromvendorsite';
 
 // connectors (free-only path)
 import { findAdvertisersFree } from './connectors/adlib_free';
@@ -207,7 +208,11 @@ app.post('/api/v1/find-now', async (req,res)=>{
   const buyersRaw: string[] = Array.isArray(body.buyers) ? body.buyers : [];
   const industries: string[] = Array.isArray(body.industries) ? body.industries : [];
   const regions: string[] = Array.isArray(body.regions) ? body.regions : [];
-
+if ((!body.buyers || !body.buyers.length) && body.vendorDomain) {
+  const icp = await deriveBuyersFromVendorSite(body.vendorDomain);
+  // use icp.buyers.map(b=>b.domain) as your candidate buyer list,
+  // and also insert a few `proofUrl` leads so users can click/verify.
+}
   // 1) seed = user-provided buyers
   const seedDomains = buyersRaw.map(normHost).filter(Boolean);
 
