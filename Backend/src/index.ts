@@ -123,13 +123,24 @@ app.post('/api/v1/gate', async (req, res) => {
 // ---------- events (likes/mutes/etc.) ----------
 app.post('/api/v1/events', async (req, res) => {
   const userId = (req as any).userId || null;
-  const { leadId, type, meta } = (req.body || {}) as any;
-  if (!leadId || !type) return res.status(400).json({ ok: false, error: 'bad request' });
-  await q(
-    `INSERT INTO event_log (user_id, lead_id, event_type, meta)
-     VALUES ($1,$2,$3,$4)`,
-    [userId, Number(leadId) || null, String(type), meta || {}]
-  ).catch(() => {});
+  const { leadId, type, meta } = req.body || {};
+  if (!leadId || !type) return res.status(400).json({ ok:false, error:'bad request' });
+
+  // record the event
+  await q(`INSERT INTO event_log (user_id, lead_id, event_type, meta) VALUES ($1,$2,$3,$4)`,
+          [userId, leadId, String(type), meta || {}]);
+
+  // NEW: user confirmed the ad exists → bump heat + mark verified
+  if (type === 'verify_ads') {
+    await q(`
+      UPDATE lead_pool
+      SET
+        confidence = LEAST(1.0, COALESCE(confidence,0.5) + 0.25),
+        heat       = LEAST(95, GREATEST(COALESCE(heat,60)+15, 70)),
+        meta       = jsonb_set(COALESCE(meta,'{}'::jsonb), '{verified_ads}', 'true'::jsonb, true)
+      WHERE id=$1
+    `, [leadId]);
+  }
   res.json({ ok: true });
 });
 
