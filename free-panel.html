@@ -1,311 +1,168 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Galactly — Live packaging leads</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-<style>
-  :root{--ink:#e9eef7;--mut:#9aa3b2;--bg:#0b0f18;--card:#0d1322;--line:rgba(255,255,255,.08);--accent:#86f7d6;--accent2:#57a4ff}
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%), radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%), linear-gradient(180deg,#0b0e18,#06070c 55%); color:var(--ink)}
-  a{color:inherit}
-  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);backdrop-filter:blur(8px) saturate(1.05);background:rgba(6,8,12,.55)}
-  .dot{width:7px;height:7px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
-  .spacer{flex:1}
-  .pill{opacity:.9;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-weight:700;font-size:12px}
-  .close{border:1px solid var(--line);background:transparent;border-radius:12px;color:var(--ink);padding:8px 12px;cursor:pointer}
-  .wrap{max-width:1240px;margin:18px auto;padding:0 18px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
-  .card{background:linear-gradient(180deg,#0b1020,#0a0f1b);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 8px 36px rgba(0,0,0,.32)}
-  .title{font-weight:800;margin:0 0 6px;font-size:18px;line-height:1.25}
-  .snip{color:var(--mut);font-size:13px;line-height:1.45;max-height:3.7em;overflow:hidden}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
-  .tag{border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:#cfd6e6}
-  .tag.hot{border-color:transparent;background:linear-gradient(90deg,#ffb46b,#ff6b6b);color:#111;font-weight:800}
-  .why{display:flex;align-items:center;gap:6px;margin-top:12px;color:#cfd6e6;cursor:pointer}
-  .why small{color:var(--mut)}
-  .why:hover small{color:#fff}
-  .banner{margin:12px 0 18px;border:1px dashed var(--line);border-radius:14px;padding:14px 16px;color:var(--mut);text-align:center}
-  .why-pop{position:fixed;inset:auto 18px 18px auto;max-width:380px;background:#0d1322;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.38);display:none}
-  .why-pop.show{display:block}
-  .why-pop h4{margin:0 0 8px;font-size:14px}
-  .why-pop ul{margin:0;padding:0 0 0 18px}
-  .why-pop li{margin:6px 0;color:#cbd3e6;font-size:13px}
-  .gate{position:fixed;inset:0;display:none;place-items:center;background:rgba(4,6,10,.58);backdrop-filter:blur(6px)}
-  .gate.show{display:grid}
-  .panel{width:min(680px,92vw);background:linear-gradient(180deg,#0b1020,#0a0f1b);border:1px solid var(--line);border-radius:18px;padding:18px}
-  .panel h2{margin:0 0 6px}
-  .panel p{margin:0 0 10px;color:#cfd6e6}
-  .f{display:grid;gap:10px;margin-top:12px}
-  .f input[type="email"], .f input[type="url"], .f input[type="text"]{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#0f1426;color:#fff}
-  .row2{display:flex;justify-content:space-between;align-items:center;gap:10px}
-  .cta{display:flex;gap:10px;align-items:center;margin-top:8px}
-  .btn{border:1px solid var(--line);background:#0f1426;color:#fff;border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:800}
-  .btn.primary{background:linear-gradient(90deg,#fff,#e9f0ff);color:#0a0d12;border:0}
-  .reveal{overflow:hidden;transition:max-height .25s ease}
-  .hint{font-size:12px;color:var(--mut)}
-  .sentinel{height:1px}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Galactly — Live Buyers Feed</title>
+  <style>
+    :root{--bg:#0b0e13;--panel:#111725;--border:#1f2a3b;--text:#e8ecf1;--muted:#9ab;--accent:#7fb2ff}
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);margin:0}
+    header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+    header .brand{font-weight:700}
+    .pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:2px 8px;margin-left:8px;font-size:12px;opacity:.85}
+    .wrap{max-width:1100px;margin:0 auto;padding:18px}
+    .row{display:flex;gap:16px;flex-wrap:wrap}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
+    .grow{flex:1 1 460px}
+    .small{flex:1 1 280px}
+    label{display:block;font-size:13px;margin:6px 0 6px;color:var(--muted)}
+    input,textarea,select{width:100%;background:#0f1420;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px}
+    textarea{min-height:92px}
+    button{background:#1e2a3b;border:1px solid #2a3b55;color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer}
+    button:hover{filter:brightness(1.12)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+    .lead{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .meta{opacity:.75;font-size:12px}
+    a{color:var(--accent)}
+  </style>
 </head>
 <body>
-  <div class="topbar">
-    <div class="headerline" style="display:flex;gap:10px;align-items:center;">
-      <div class="dot"></div>
-      <strong>Live feed</strong>
-      <span id="refresh" class="pill">refresh in —</span>
+  <header>
+    <div class="brand">Galactly <span id="status" class="pill">connecting…</span></div>
+    <div class="row">
+      <label>API Base
+        <input id="apiBase" size="52"/>
+      </label>
+      <button id="saveApi">Save</button>
     </div>
-    <div class="spacer"></div>
-    <span class="pill" id="who">— online</span>
-    <button class="close" onclick="location.href='./index.html'">Close</button>
-  </div>
+  </header>
 
   <div class="wrap">
-    <div id="banner" class="banner" hidden></div>
-    <div id="grid" class="grid"></div>
-    <div id="sentinel" class="sentinel"></div>
-  </div>
-
-  <div id="whyPop" class="why-pop">
-    <h4>Why AI shows you this lead</h4>
-    <ul id="whyList"></ul>
-    <div class="hint" id="originHint"></div>
-  </div>
-
-  <div id="gate" class="gate">
-    <div class="panel">
-      <h2>Get in. It’s free.</h2>
-      <p>We tune the feed for packaging vendors only. Verify email to enter.</p>
-      <div class="f">
-        <input id="f_email" type="email" placeholder="Work email (required)" />
-        <div class="row2">
-          <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
-            <input id="chkListMe" type="checkbox" />
-            <span>Also list my company for inbound opportunities</span>
-          </label>
+    <div class="row">
+      <div class="card grow">
+        <h3 style="margin:0 0 8px">Find buyers now</h3>
+        <div class="row">
+          <div class="grow">
+            <label>Your website (optional)
+              <input id="vendorSite" placeholder="https://your-vendor.com"/>
+            </label>
+          </div>
+          <div class="small">
+            <label>Regions
+              <input id="regions" placeholder="US, CA"/>
+            </label>
+          </div>
         </div>
-        <div id="moreBox" class="reveal" style="max-height:0">
-          <input id="f_company" type="text" placeholder="Company name (optional)" />
-          <input id="f_site" type="url" placeholder="Company website (optional)" />
-          <div class="hint">We show your profile to buyers who match your ICP.</div>
+        <div class="row">
+          <div class="grow">
+            <label>Industries (comma‑separated)
+              <input id="industries" placeholder="beverage, candy, cosmetics"/>
+            </label>
+          </div>
         </div>
-        <div class="cta">
-          <button id="enterBtn" class="btn primary">Enter live feed</button>
-          <button class="btn" onclick="document.getElementById('gate').classList.remove('show')">Cancel</button>
+        <label>Known / ideal buyer domains (one per line)
+          <textarea id="buyers" placeholder="acmecandy.com\nliquiddeath.com\ndrinkolipop.com"></textarea>
+        </label>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div>
+            <label style="display:inline-block;margin-right:8px"><input type="checkbox" id="diy" checked/> DIY verify ads (show proof links)</label>
+            <span class="meta">We’ll also parse product & procurement pages</span>
+          </div>
+          <div>
+            <button id="run">Find now</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card small">
+        <h3 style="margin:0 0 8px">How to use</h3>
+        <div class="meta">
+          1) Paste a few buyer domains or just industry/region.<br/>
+          2) Click <em>Find now</em> — we fetch ad‑proof links, product pages, and supplier intake.<br/>
+          3) Click a card to verify. Hit <em>Confirm ad</em> to boost heat.
         </div>
       </div>
     </div>
+
+    <h3 style="margin:18px 0 8px">Live feed</h3>
+    <div id="feed" class="grid"></div>
   </div>
 
 <script>
-// ---------- API base (inline) ----------
-(function(){
-  const DEFAULT='https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
-  const q=new URLSearchParams(location.search);
-  let base=q.get('api')||localStorage.getItem('apiBase')||DEFAULT;
-  function norm(v){ if(!v) return DEFAULT; v=String(v).trim().replace(/\/+$/,''); if(!/^https?:\/\//i.test(v)) v='https://'+v; return v; }
-  base=norm(base); window.API_BASE=base; try{localStorage.setItem('apiBase',base)}catch{}
-})();
-const API=(window.API_BASE||'').replace(/\/$/,'');
+  const uidKey='galactly_uid';
+  let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
+  const apiInput=document.getElementById('apiBase');
+  apiInput.value = localStorage.getItem('api_base') || 'https://<PUT-YOUR-NORTHFLANK-ROUTE>.northflank.app';
+  document.getElementById('saveApi').onclick=()=>{ localStorage.setItem('api_base', apiInput.value.trim()); location.reload(); };
+  const API=(p)=> (localStorage.getItem('api_base')||apiInput.value).replace(/\/$/,'') + p;
 
-// ---------- session ----------
-let SESSION = localStorage.getItem('galactly:session') || '';
-function authHeaders(){ return SESSION ? { 'Authorization':'Bearer '+SESSION } : {}; }
+  async function post(path, body){
+    const r = await fetch(API(path), { method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body: JSON.stringify(body||{}) });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }
+  async function get(path){ const r = await fetch(API(path), { headers:{'x-galactly-user':uid} }); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 
-// ---------- soft presence (client-only) ----------
-const ONLINE_KEY='galactly:live:pings';
-const whoEl=document.getElementById('who');
-const myId=Math.random().toString(36).slice(2);
-function getP(){ try{return JSON.parse(localStorage.getItem(ONLINE_KEY)||'{}')}catch{return{}} }
-function setP(o){ localStorage.setItem(ONLINE_KEY,JSON.stringify(o)); }
-function beat(){ const o=getP(); o[myId]=Date.now(); setP(o); }
-function sweep(){ const o=getP(),now=Date.now(); for(const k of Object.keys(o)) if(now-o[k]>25000) delete o[k]; setP(o); const real=Object.keys(o).length; const floor=36; const pad=Math.max(0,Math.round(real*0.1)); whoEl.textContent=`${Math.max(real+pad,floor)} online`; }
-window.addEventListener('storage',e=>{ if(e.key===ONLINE_KEY) sweep(); });
-setInterval(beat,7000); setInterval(sweep,5000); beat(); sweep();
+  // On-demand find
+  document.getElementById('run').onclick=async()=>{
+    const buyers = document.getElementById('buyers').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    const industries = document.getElementById('industries').value.split(',').map(s=>s.trim()).filter(Boolean);
+    const regions = document.getElementById('regions').value.split(',').map(s=>s.trim()).filter(Boolean);
+    const body = { buyers, industries, regions, diy: document.getElementById('diy').checked, vendorSite: document.getElementById('vendorSite').value.trim() };
+    try{
+      const r = await post('/api/v1/find-now', body);
+      document.getElementById('status').textContent = `ok • checked ${r.checked} • created ${r.created}`;
+      await refresh();
+    }catch(e){ document.getElementById('status').textContent='error'; }
+  };
 
-// ---------- onboarding gate ----------
-const gate=document.getElementById('gate');
-const enterBtn=document.getElementById('enterBtn');
-const chkListMe=document.getElementById('chkListMe');
-const moreBox=document.getElementById('moreBox');
-chkListMe.addEventListener('change',()=>{ moreBox.style.maxHeight=chkListMe.checked?'180px':'0'; });
-function needGate(){ return !localStorage.getItem('galactly:onboarded'); }
-function openGate(){ gate.classList.add('show'); }
-function closeGate(){ gate.classList.remove('show'); }
-enterBtn.addEventListener('click', ()=>{
-  const email = document.getElementById('f_email').value.trim();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Enter a valid email'); return; }
-  const payload = { email, listMe: chkListMe.checked, company: document.getElementById('f_company').value.trim(), site: document.getElementById('f_site').value.trim() };
-  // Store locally; backend verification can be added later
-  localStorage.setItem('galactly:onboarded', JSON.stringify(payload));
-  SESSION = SESSION || Math.random().toString(36).slice(2); // simple local session
-  localStorage.setItem('galactly:session', SESSION);
-  closeGate();
-  kick(true);
-});
-if(needGate()) openGate();
-
-// ---------- state ----------
-const grid=document.getElementById('grid');
-const banner=document.getElementById('banner');
-const refreshEl=document.getElementById('refresh');
-const whyPop=document.getElementById('whyPop');
-const whyList=document.getElementById('whyList');
-const originHint=document.getElementById('originHint');
-const sentinel=document.getElementById('sentinel');
-
-const FIRST_SEEN_KEY='gal:firstSeen:v1';
-let firstSeen = (()=>{ try{return JSON.parse(localStorage.getItem(FIRST_SEEN_KEY)||'{}')}catch{return{}} })();
-function saveFirstSeen(){ try{ localStorage.setItem(FIRST_SEEN_KEY, JSON.stringify(firstSeen)); }catch{}
-}
-
-let itemsState = []; // array of {url,title,snippet,source,host,first}
-const MAX_ITEMS = 80;
-let limit = 24; // initial page size
-let tick = 30; // refresh timer
-
-// ---------- helpers ----------
-function ago(ts){
-  const s = Math.max(0, Math.floor((Date.now()-ts)/1000));
-  if(s<60) return `${s}s ago`;
-  const m = Math.floor(s/60); if(m<60) return `${m}m ago`;
-  const h = Math.floor(m/60); if(h<24) return `${h}h ago`;
-  const d = Math.floor(h/24); return `${d}d ago`;
-}
-function hotnessScore(t){
-  const text = (t||'').toLowerCase();
-  let score = 0;
-  const pos = ['rfp','rfq','request for','tender','bid','buy','seeking','packaging','corrugated','carton','stand up pouch','kitting','3pl','co pack'];
-  pos.forEach(k=>{ if(text.includes(k)) score += 10; });
-  if(text.includes('usa')||text.includes('canada')) score += 3;
-  if(text.includes('urgent')||text.includes('asap')) score += 5;
-  return score; // 0..~
-}
-function hotTag(score){
-  if(score>=18) return {label:'HOT', cls:'hot'};
-  if(score>=10) return {label:'WARM', cls:''};
-  return {label:'OK', cls:''};
-}
-
-function cardEl(it){
-  const el=document.createElement('div'); el.className='card';
-  const htag = hotTag(it.hot||0);
-  el.innerHTML = `
-    <a href="${it.url}" target="_blank" rel="noopener" class="title">${it.title||it.url}</a>
-    <div class="snip">${(it.snippet||'').replace(/</g,'&lt;')}</div>
-    <div class="row">
-      <span class="tag ${htag.cls}">${htag.label}</span>
-      <span class="tag" data-ago>${ago(it.first||Date.now())}</span>
-      <span class="tag">${it.source||'web'}</span>
-      <span class="tag">${it.host||''}</span>
-    </div>
-    <div class="why"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg><small>Why AI shows you this lead?</small></div>`;
-  el.querySelector('.why').addEventListener('click',()=>showWhy(it));
-  return el;
-}
-
-function render(){
-  grid.replaceChildren();
-  itemsState.forEach(it=> grid.appendChild(cardEl(it)));
-}
-
-function updateAgoLoop(){
-  const tags = grid.querySelectorAll('[data-ago]');
-  tags.forEach((n, idx)=>{
-    const it = itemsState[idx];
-    if(it) n.textContent = ago(it.first);
-  });
-}
-setInterval(updateAgoLoop, 1000);
-
-function showWhy(it){
-  whyList.innerHTML='';
-  const reasons=[]; const t=((it.title||'')+' '+(it.snippet||'')).toLowerCase();
-  ['rfp','rfq','request for proposal','procurement','buy','seeking','packaging','corrugated','carton','supplier','outsourcing']
-    .forEach(k=>{ if(t.includes(k)) reasons.push(`Matched keyword “${k}”.`); });
-  reasons.push(`Source: ${it.source||'web'}.`);
-  (reasons.length?reasons:['Topical relevance score high.']).forEach(s=>{ const li=document.createElement('li'); li.textContent=s; whyList.appendChild(li); });
-  originHint.innerHTML=`Origin: <a href="${it.url}" target="_blank" rel="noopener">${it.host}</a>`;
-  whyPop.classList.add('show'); setTimeout(()=>document.addEventListener('click',()=>whyPop.classList.remove('show'),{once:true}),0);
-}
-
-// ---------- fetching & merge ----------
-const QUERY='packaging buyer OR procurement OR RFP site:gov OR site:linkedin.com';
-const demoItems=[
-  {source:'linkedin',title:'Seeking contract packaging partner for Q4 promotion — CPG brand',url:'https://www.linkedin.com/feed/update/demo1',snippet:'US brand needs co-packer for gift bundles. Corrugated + inserts. Quick turnaround.'},
-  {source:'web',title:'City of Mesa — RFP: Corrugated Boxes & Packaging Materials',url:'https://example.gov/rfp/corrugated-boxes',snippet:'The City requests proposals for corrugated boxes in multiple sizes for warehouse ops.'},
-  {source:'web',title:'University RFQ: Custom Foam Inserts for Instruments',url:'https://example.edu/rfq/foam-inserts',snippet:'Quote request for precision-cut foam inserts and cartons. Delivery + packaging.'},
-  {source:'linkedin',title:'3PL needs packaging supplier for new ecommerce client',url:'https://www.linkedin.com/feed/update/demo2',snippet:'Die-cut mailers, branded tape, poly mailers. Monthly volumes 20–40k.'},
-  {source:'web',title:'County Bid: Recycling-friendly retail packaging',url:'https://county.gov/rfp/retail-packaging',snippet:'Sustainable packaging pilot. RFP for recycled-content cartons and labels.'},
-  {source:'reddit',title:'Where to source custom rigid boxes in the US?',url:'https://reddit.com/r/AskEngineers/demo',snippet:'Buyer asking for domestic rigid box suppliers, low MOQs, embossing, foil.'},
-  {source:'web',title:'Hospital System RFP — Pharmacy shipping coolers',url:'https://health.org/rfp/coolers',snippet:'Insulated shippers for gel packs, indicators. Multi‑state system.'},
-  {source:'linkedin',title:'SaaS company launching swag kits — need kitting + packaging',url:'https://linkedin.com/posts/demo',snippet:'Kitting 2k welcome kits. Inserts, mailers, fulfillment. Q3 timeline.'}
-];
-
-async function fetchPrimary(){
-  if(!API) throw new Error('NO_API');
-  const url=`${API}/api/v1/leads?limit=${limit}&q=${encodeURIComponent(QUERY)}`;
-  const res=await fetch(url, { headers: authHeaders() });
-  if(!res.ok) throw new Error('HTTP_'+res.status);
-  return res.json();
-}
-
-function mergeItems(raw){
-  const newOnes=[];
-  (raw||[]).forEach(it=>{
-    const url=String(it.url||''); if(!url) return;
-    const key=url.replace(/[#?].*$/, '');
-    if(!firstSeen[key]) firstSeen[key]=Date.now();
-    const host=(()=>{ try{ return new URL(url).hostname.replace(/^www\./,''); }catch{ return ''; } })();
-    const obj={
-      url,
-      title:String(it.title||url),
-      snippet: String(it.snippet||''),
-      source: String(it.source||'web'),
-      host,
-      first: firstSeen[key],
-      hot: hotnessScore((it.title||'')+' '+(it.snippet||''))
+  // Feed
+  const feed=document.getElementById('feed');
+  function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",
+  ">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+  function card(lead){
+    let host=''; try{ host=new URL(lead.source_url).hostname; }catch{}
+    const div=document.createElement('div'); div.className='lead';
+    div.innerHTML=`<div class="meta">${esc(lead.platform||'source')} • ${esc(host)}</div>
+      <div><strong>${esc(lead.title||'Untitled')}</strong></div>
+      <div>${esc(lead.snippet||'')}</div>
+      <div class="row" style="gap:8px">
+        <button data-act="open">Open</button>
+        <button data-act="confirm">Confirm ad</button>
+        <button data-act="like">👍</button>
+        <button data-act="dis">👎</button>
+        <button data-act="mute">Mute</button>
+        <button data-act="claim">Claim</button>
+        <button data-act="own">Own</button>
+      </div>`;
+    div.querySelector('[data-act=open]').onclick=()=>{ window.open(lead.source_url,'_blank','noopener'); post('/api/v1/events',{type:'click',leadId:lead.id,meta:{url:lead.source_url}}).catch(()=>{}); };
+    div.querySelector('[data-act=confirm]').onclick=()=> post('/api/v1/events',{type:'confirm_ad',leadId:lead.id,meta:{url:lead.source_url}}).then(()=>refresh());
+    div.querySelector('[data-act=like]').onclick=()=> post('/api/v1/events',{type:'like',leadId:lead.id});
+    div.querySelector('[data-act=dis]').onclick=()=> post('/api/v1/events',{type:'dislike',leadId:lead.id});
+    div.querySelector('[data-act=mute]').onclick=()=> post('/api/v1/events',{type:'mute_domain',leadId:lead.id,meta:{domain:host}});
+    div.querySelector('[data-act=claim]').onclick=async()=>{
+      const r = await post('/api/v1/claim',{leadId:lead.id});
+      if(r?.ok){ lead._windowId=r.windowId; setTimeout(refresh, 500); }
     };
-    if(!itemsState.find(x=>x.url===obj.url)) newOnes.push(obj);
-  });
-  if(newOnes.length){
-    itemsState = [...newOnes, ...itemsState].slice(0, MAX_ITEMS);
-    saveFirstSeen();
+    div.querySelector('[data-act=own]').onclick=async()=>{
+      if(!lead._windowId) return;
+      const r = await post('/api/v1/own',{windowId:lead._windowId});
+      if(r?.ok) refresh();
+    };
+    return div;
   }
-}
 
-function countdown(){ refreshEl.textContent=`refresh in ${tick}s`; if(--tick<0){ tick=30; kick(); } }
-setInterval(countdown,1000);
-
-async function kick(force){
-  try{
-    const data=await fetchPrimary();
-    const list = Array.isArray(data.items) ? data.items : [];
-    if(!list.length && !itemsState.length){ banner.hidden=false; banner.textContent='No items. Check backend keys or try later.'; }
-    mergeItems(list);
-    render();
-  }catch(err){
-    if(!itemsState.length){
-      banner.hidden=false; banner.textContent='Network error. Showing demo feed.';
-      mergeItems(demoItems);
-      render();
-    }
+  async function refresh(){
+    try{
+      const data = await get('/api/v1/leads');
+      feed.innerHTML='';
+      (data.leads||[]).forEach(L => feed.appendChild(card(L)));
+      document.getElementById('status').textContent = 'ok';
+      setTimeout(refresh, (data.nextRefreshSec||15)*1000);
+    }catch(e){ document.getElementById('status').textContent='error'; setTimeout(refresh, 5000); }
   }
-}
-
-// infinite scroll (load a little more each time user reaches bottom)
-const io=new IntersectionObserver((entries)=>{
-  if(entries.some(e=>e.isIntersecting)){
-    limit = Math.min(60, limit + 12);
-    kick();
-  }
-});
-io.observe(sentinel);
-
-kick();
+  refresh();
 </script>
 </body>
 </html>
