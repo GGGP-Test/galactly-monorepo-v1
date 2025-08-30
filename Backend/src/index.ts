@@ -50,26 +50,21 @@ function normHost(s: string): string {
 }
 
 async function insertLead(row: {
-  platform: string;
-  source_url: string;
-  title?: string | null;
-  snippet?: string | null;
-  kw?: string[];
-  cat?: string;
-  heat?: number;
-}) {
-  const cat = row.cat || 'demand';
-  const kw = row.kw || [];
+  platform: string; source_url: string;
+  title?: string | null; snippet?: string | null;
+  kw?: string[]; cat?: string; heat?: number;
+}): Promise<boolean> {
+  const cat = row.cat ?? 'demand';
+  const kw = row.kw ?? [];
   const heat = Math.max(30, Math.min(95, Number(row.heat ?? 70)));
-  await q(
+  const r = await q(
     `INSERT INTO lead_pool (cat, kw, platform, heat, source_url, title, snippet, state, created_at)
      VALUES ($1,$2,$3,$4,$5,$6,$7,'available', now())
      ON CONFLICT (source_url) DO NOTHING`,
-    [cat, kw, row.platform, heat, row.source_url, row.title || null, row.snippet || null]
-  ).catch((e) => {
-    // don't crash the request on duplicate/format issues
-    console.error('[insertLead] failed for', row.source_url, e?.message || e);
-  });
+    [cat, kw, row.platform, heat, row.source_url, row.title ?? null, row.snippet ?? null]
+  );
+  // @ts-ignore rowCount exists on pg result
+  return (r as any)?.rowCount > 0;
 }
 
 // ---------- basics ----------
@@ -273,119 +268,76 @@ app.get('/api/v1/debug/peek', async (_req, res) => {
 
 // ---------- NEW: find-now (on-demand) ----------
 app.post('/api/v1/find-now', async (req, res) => {
-  const start = Date.now();
+  const t0 = Date.now();
+  const vendor = req.body || {};
+  const buyers: string[] = Array.from(new Set([...(vendor.buyers || []), ...(vendor.exampleBuyers || [])]
+    .map((x: string) => x?.toString().trim()).filter(Boolean)));
+
+  // If no buyers provided, use brand strings the user typed (industries/brands terms)
+  const brands: string[] = (vendor.brands || []).map((x: string) => x?.toString().trim()).filter(Boolean);
+
+  const maxDomains = Number(process.env.FIND_MAX_DOMAINS || 30);
   let created = 0, checked = 0;
-  const seen = new Set<string>();
 
   try {
-    const vendor = (req.body || {}) as {
-      industries?: string[];
-      regions?: string[];
-      buyers?: string[];           // explicit examples from the user
-      exampleBuyer?: string;       // single example
-    };
-
-    const maxDomains = Number(process.env.FIND_MAX_DOMAINS || 30);
-    const buyerSeeds = [
-      ...(vendor.buyers || []),
-      ...(vendor.exampleBuyer ? [vendor.exampleBuyer] : [])
-    ]
-      .map(normHost)
-      .filter(Boolean);
-
-    // 1) advertisers (free path)
-    let advertisers: Array<{ domain: string; source?: string; proofUrl?: string; adCount?: number; lastSeen?: string }> = [];
-    try {
-      advertisers = await findAdvertisersFree({
-        industries: vendor.industries || [],
-        regions: vendor.regions || [],
-        seeds: buyerSeeds
-      }) || [];
-    } catch (e: any) {
-      console.error('[findAdvertisersFree] error:', e?.message || e);
-      advertisers = [];
-    }
-
-    // Merge explicit buyers into the list if not present
-    for (const b of buyerSeeds) {
-      if (!advertisers.find(a => normHost(a.domain) === b)) advertisers.push({ domain: b, source: 'seed' });
-    }
-
-    // nothing to do?
-    if (!advertisers.length) {
-      return res.json({ ok: true, checked: 0, created: 0, advertisers: 0, tookMs: Date.now() - start });
-    }
-
-    // 2) per domain: ad proof lead + intake + pdp
-    for (const adv of advertisers.slice(0, maxDomains)) {
-      const host = normHost(adv.domain);
-      if (!host) continue;
-
-      // (a) ad proof lead
-      if (adv.proofUrl && !seen.has(adv.proofUrl)) {
-        await insertLead({
-          platform: adv.source || 'ads',
-          source_url: adv.proofUrl,
-          title: `${host} — active ads`,
-          snippet: `Last seen: ${adv.lastSeen || 'recent'}. ~${adv.adCount ?? '?'} creatives.`,
-          kw: ['ads', 'spend', 'buyer'],
-          cat: 'demand',
-          heat: 72
-        });
-        seen.add(adv.proofUrl);
-        created++;
-      }
-
-      // (b) intake / procurement
-      try {
-        const intakeHits = await scanBrandIntake(host);
-        for (const h of intakeHits) {
-          if (!seen.has(h.url)) {
-            await insertLead({
-              platform: 'brandintake',
-              source_url: h.url,
-              title: h.title || `${host} — Supplier / Procurement`,
-              snippet: h.snippet || host,
-              kw: ['procurement', 'supplier', 'packaging'],
-              cat: 'procurement',
-              heat: 82
-            });
-            seen.add(h.url);
-            created++;
-          }
-        }
-      } catch (e: any) {
-        console.error('[brandintake]', host, e?.message || e);
-      }
-
-      // (c) product / PDP
-      try {
-        const pdpHits = await scanPDP(host);
-        for (const p of pdpHits) {
-          if (!seen.has(p.url)) {
-            await insertLead({
-              platform: p.type || 'pdp',
-              source_url: p.url,
-              title: p.title || `${host} product`,
-              snippet: p.snippet || '',
-              kw: ['case', 'restock', 'sku'],
-              cat: 'product',
-              heat: p.type === 'restock_post' ? 78 : 68
-            });
-            seen.add(p.url);
-            created++;
-          }
-        }
-      } catch (e: any) {
-        console.error('[pdp]', host, e?.message || e);
-      }
-
+    // 1) Advertiser proof (free)
+    const proofs = await findAdvertisersFree(buyers, { brands });
+    for (const p of proofs.slice(0, maxDomains)) {
+      const ok = await insertLead({
+        platform: `ads_${p.source}`,
+        source_url: p.proofUrl,
+        title: `${p.domain} — active ads (${p.source})`,
+        snippet: `Proof page (${p.source.toUpperCase()}). Last seen: ${p.lastSeen}`,
+        kw: ['ads', 'buyer', 'spend'],
+        cat: 'demand',
+        heat: 72
+      });
+      if (ok) created++;
       checked++;
     }
 
-    return res.json({ ok: true, checked, created, advertisers: advertisers.length, tookMs: Date.now() - start });
+    // 2) Intake on exact domains
+    for (const d of buyers.slice(0, maxDomains)) {
+      const host = d.replace(/^https?:\/\//,'').replace(/\/+$/,'').toLowerCase();
+      if (!host.includes('.')) continue;
+      const intake = await scanBrandIntake(host).catch(() => []);
+      for (const h of intake) {
+        const ok = await insertLead({
+          platform: 'brandintake',
+          source_url: h.url,
+          title: h.title || `${host} — Supplier / Procurement`,
+          snippet: h.snippet || host,
+          kw: ['procurement','supplier','packaging'],
+          cat: 'procurement',
+          heat: 82
+        });
+        if (ok) created++;
+      }
+      checked++;
+    }
+
+    // 3) PDP / products on the same domains
+    for (const d of buyers.slice(0, maxDomains)) {
+      const host = d.replace(/^https?:\/\//,'').replace(/\/+$/,'').toLowerCase();
+      if (!host.includes('.')) continue;
+      const pdps = await scanPDP(host).catch(() => []);
+      for (const p of pdps) {
+        const ok = await insertLead({
+          platform: p.type,
+          source_url: p.url,
+          title: p.title || `${host} product`,
+          snippet: p.snippet || '',
+          kw: ['case','pack','dims'],
+          cat: 'product',
+          heat: p.type === 'restock_post' ? 78 : 68
+        });
+        if (ok) created++;
+      }
+      checked++;
+    }
+
+    return res.json({ ok: true, checked, created, advertisers: proofs.length, tookMs: Date.now() - t0 });
   } catch (e: any) {
-    console.error('[find-now] fatal', e?.stack || e);
     return res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 });
