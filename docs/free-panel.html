@@ -5,315 +5,192 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Galactly — Free Panel</title>
   <style>
-    :root{
-      --bg:#0b0e13;--card:#101722;--line:#1c2533;--text:#e8ecf1;--muted:#a7b0bf;--brand:#74b4ff;--good:#3fd97b;--warm:#ffb454;--hot:#ff6a6a;
-      --accent:#2a3b55;--accent-2:#172032;--glass:rgba(15,19,27,.7);
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif}
-    header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:linear-gradient(0deg,rgba(11,14,19,.2),rgba(11,14,19,.9));backdrop-filter:saturate(140%) blur(6px)}
-    h1{font-size:16px;margin:0;display:flex;gap:8px;align-items:center}
-    .pill{border:1px solid var(--line);border-radius:999px;padding:3px 8px;font-size:12px;color:var(--muted)}
-    .wrap{max-width:1100px;margin:0 auto;padding:18px}
+    :root{--bg:#0b0e13;--fg:#e8ecf1;--sub:#a6b3c4;--card:#101624;--stroke:#1f2a3b;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif}
+    header{padding:14px 18px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;gap:10px}
+    header .brand{font-weight:800}
+    header .pill{margin-left:auto;color:var(--sub);font-size:12px}
+    .wrap{max-width:1100px;margin:0 auto;padding:20px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+    .meta{font-size:12px;color:var(--sub);display:flex;justify-content:space-between}
+    .title{font-weight:700}
+    .bar{height:8px;border-radius:999px;background:#0b1220;border:1px solid #243048;overflow:hidden}
+    .bar>i{display:block;height:100%;background:linear-gradient(90deg,#1f7ae0,#34d399)}
+    .cta{display:flex;gap:8px}
+    button{background:#162135;border:1px solid #263247;color:var(--fg);border-radius:10px;padding:9px 12px;cursor:pointer}
+    button[disabled]{opacity:.6;cursor:not-allowed}
+    .hold{user-select:none;-webkit-user-select:none;background:#0f172a;border:1px dashed #334155;border-radius:12px;padding:10px;text-align:center;color:#d1eaff}
+    .hint{font-size:12px;color:var(--sub)}
 
-    .onboard-tip{margin:6px 0 14px 0;color:var(--muted)}
-
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
-    .meta{color:var(--muted);font-size:12px}
-    .title{font-weight:600}
-    .bar{height:6px;background:var(--accent-2);border-radius:999px;overflow:hidden}
-    .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--good),var(--warm),var(--hot));width:0%}
-    .actions{display:flex;align-items:center;gap:8px;margin-top:2px}
-    .btn{appearance:none;border:1px solid var(--accent);background:var(--accent-2);color:var(--text);border-radius:12px;padding:8px 10px;cursor:pointer;font-weight:600}
-    .btn[disabled]{opacity:.5;cursor:not-allowed}
-    .ghost{border-color:var(--line);background:transparent}
-
-    .hold-veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(13,18,27,.2),rgba(13,18,27,.85));display:flex;align-items:center;justify-content:center;gap:10px}
-    .ring{--d:42px;width:var(--d);height:var(--d);border-radius:50%;border:3px solid var(--line);border-top-color:var(--brand);animation:spin 1s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-
-    /* Modal */
-    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px}
-    .modal.on{display:flex;background:rgba(5,8,12,.66);backdrop-filter:blur(6px)}
-    .sheet{width:min(720px,96vw);max-height:88vh;overflow:auto;background:#0f1622;border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 80px rgba(0,0,0,.45)}
-    .sheet header{position:sticky;top:0;background:#0f1622;border-bottom:1px solid var(--line);padding:12px 16px}
+    /* Reveal modal */
+    .modal{position:fixed;inset:0;background:rgba(7,10,14,.6);display:none;align-items:center;justify-content:center;padding:20px}
+    .modal.open{display:flex}
+    .sheet{width:min(760px,100%);background:#0e1520;border:1px solid var(--stroke);border-radius:16px;overflow:hidden}
+    .sheet header{display:flex;gap:10px;align-items:center;padding:12px 16px;background:#0c1320;border-bottom:1px solid var(--stroke)}
     .sheet .body{padding:16px}
-    .x{float:right;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:18px}
-
-    .tabs{display:flex;gap:8px;margin:6px 0 12px 0}
-    .tab{padding:8px 10px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--accent-2)}
-    .tab.on{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand)}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    input[type=text],textarea,select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#0b1320;color:var(--text)}
-    textarea{min-height:96px}
-
-    .gauge{display:flex;align-items:center;gap:10px}
-    .gauge i{display:block;height:10px;border-radius:8px;background:linear-gradient(90deg,var(--good),var(--warm),var(--hot));width:160px}
-    .kv{display:grid;grid-template-columns:1fr auto;gap:8px;margin:10px 0}
-    .kv .k{color:var(--muted)}
-
-    .toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--glass);border:1px solid var(--line);padding:10px 14px;border-radius:10px;display:none}
-    .toast.on{display:block}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .k{font-size:12px;color:#9fb3c8}
+    .v{font-weight:700}
+    .why{margin:6px 0 0 18px;color:#cfe2ff}
   </style>
+  <script defer src="api-base.js"></script>
 </head>
 <body>
   <header>
-    <h1>Galactly <span class="pill" id="pill">connecting…</span></h1>
-    <div class="meta">
-      <span style="opacity:.8">API:</span>
-      <input id="apiBase" style="width:360px"/>
-      <button class="btn ghost" id="saveApi">Save</button>
-    </div>
+    <div class="brand">Galactly — Free Panel</div>
+    <div class="pill">API: <span id="apiTxt">…</span></div>
   </header>
-
   <div class="wrap">
-    <div id="quota" class="onboard-tip"></div>
+    <p class="hint">Tip: press & hold a card to reveal details. Free plan allows <span id="capTxt"></span> deep reveals per day.</p>
     <div id="feed" class="grid"></div>
   </div>
 
-  <!-- Onboarding modal -->
-  <div class="modal" id="onb">
+  <!-- Reveal Modal -->
+  <div id="reveal" class="modal">
     <div class="sheet">
       <header>
-        <strong>Quick onboarding</strong>
-        <button class="x" id="xOnb">✕</button>
+        <div style="font-weight:800" id="rv-title">Lead</div>
+        <div style="margin-left:auto"><button id="rv-close">Close</button></div>
       </header>
       <div class="body">
-        <p class="onboard-tip">Pick one path. We’ll fetch a tiny set of high-signal buyers and show up to <strong>2 full reveals/day</strong> on the free plan.</p>
-        <div class="tabs">
-          <button class="tab on" data-tab="auto">Auto (enter your website)</button>
-          <button class="tab" data-tab="manual">Manual (choose ICP)</button>
+        <div class="row">
+          <div><span class="k">Confidence</span><div class="bar" style="width:220px"><i id="rv-heat" style="width:0%"></i></div></div>
+          <div><span class="k">Source</span> <span class="v" id="rv-src">—</span></div>
         </div>
-        <div id="tab-auto">
-          <div class="row">
-            <div style="flex:2">
-              <label>Your website</label>
-              <input type="text" id="vendorDomain" placeholder="acme-packaging.com"/>
-            </div>
-            <div style="flex:1">
-              <label>Region</label>
-              <select id="regionAuto">
-                <option>US</option>
-                <option>CA</option>
-                <option>EU</option>
-                <option>UK</option>
-                <option>AU</option>
-              </select>
-            </div>
-          </div>
-          <button class="btn" id="goAuto">Find buyers now</button>
+        <div class="row"><div><span class="k">Why this lead</span><ul id="rv-why" class="why"></ul></div></div>
+        <div class="row">
+          <button id="rv-proof">Open proof link</button>
+          <button id="rv-claim" class="">Claim & Own</button>
         </div>
-        <div id="tab-manual" style="display:none">
-          <div class="row">
-            <div style="flex:2">
-              <label>Example buyers (domains, comma separated)</label>
-              <input type="text" id="buyers" placeholder="liquiddeath.com, soylent.com"/>
-            </div>
-            <div style="flex:1">
-              <label>Industries (comma separated)</label>
-              <input type="text" id="industries" placeholder="beverage, candy, supplements"/>
-            </div>
-          </div>
-          <div class="row">
-            <div style="flex:1">
-              <label>Regions (comma separated)</label>
-              <input type="text" id="regions" placeholder="US, CA"/>
-            </div>
-          </div>
-          <button class="btn" id="goManual">Find buyers now</button>
-        </div>
+        <p class="hint" id="rv-note"></p>
       </div>
     </div>
   </div>
-
-  <!-- Detail modal (opens after hold-to-reveal) -->
-  <div class="modal" id="detail">
-    <div class="sheet">
-      <header>
-        <strong id="dTitle">Lead details</strong>
-        <button class="x" id="xDetail">✕</button>
-      </header>
-      <div class="body" id="dBody"></div>
-    </div>
-  </div>
-
-  <div class="toast" id="toast"></div>
 
 <script>
-  // ---------- API base helper ----------
-  const DEFAULT_BASE = localStorage.getItem('api_base') || 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
-  const apiInput = document.getElementById('apiBase');
-  apiInput.value = DEFAULT_BASE;
-  document.getElementById('saveApi').onclick = ()=>{ localStorage.setItem('api_base', apiInput.value.trim()); tip('Saved API base'); setTimeout(()=>location.reload(), 450); };
-  const API = (p)=> (localStorage.getItem('api_base') || DEFAULT_BASE).replace(/\/$/,'') + p;
+  const FREE_DAILY_REVEALS = 2; // tweakable
+  const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
+  const apiTxt=document.getElementById('apiTxt'); apiTxt.textContent=(window.API_BASE||'').replace(/^https?:\/\//,'');
+  document.getElementById('capTxt').textContent = FREE_DAILY_REVEALS;
 
-  // ---------- identity ----------
-  const uidKey='galactly_uid';
-  let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
+  const LKEY = () => 'reveals_'+new Date().toISOString().slice(0,10);
+  function revealsUsed(){ return Number(localStorage.getItem(LKEY())||'0'); }
+  function addReveal(){ const k=LKEY(); localStorage.setItem(k, String(revealsUsed()+1)); }
+  function capReached(){ return revealsUsed() >= FREE_DAILY_REVEALS; }
 
-  // ---------- daily reveal quota ----------
-  const DAILY_FREE = Number(localStorage.getItem('FREE_DAILY')||'2'); // can change via feature flags
-  function keyForToday(){ const d=new Date(); return reveal_${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}; }
-  function getReveals(){ const k=keyForToday(); return Number(localStorage.getItem(k)||'0'); }
-  function addReveal(){ const k=keyForToday(); const v=getReveals()+1; localStorage.setItem(k, String(v)); return v; }
-  function leftToday(){ return Math.
-    max(0, DAILY_FREE - getReveals()); }
+  const feedEl=document.getElementById('feed');
+  let leads=[];
 
-  function tip(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); setTimeout(()=>t.classList.remove('on'), 1400); }
+  // Round-robin interleave by platform to avoid back-to-back sameness
+  function interleaveByPlatform(arr){
+    const buckets={}; arr.forEach(o=>{ const p=(o.platform||'misc').toLowerCase(); (buckets[p]||(buckets[p]=[])).push(o); });
+    const keys=Object.keys(buckets).sort(); const out=[]; let added=true;
+    while(added){ added=false; for(const k of keys){ const b=buckets[k]; if(b && b.length){ out.push(b.shift()); added=true; } } }
+    return out;
+  }
 
-  // ---------- fetch helpers ----------
-  async function get(path){ const r=await fetch(API(path), { headers:{'x-galactly-user':uid} }); if(!r.ok) throw new Error(r.status+''); return r.json(); }
-  async function post(path, body){ const r=await fetch(API(path), { method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body: JSON.stringify(body||{}) }); if(!r.ok) throw new Error(r.status+''); return r.json(); }
-  async function event(type, meta){ try{ await post('/api/v1/events', { type, ...meta }); } catch(e){} }
+  function brandFrom(lead){
+    const t=(lead.title||'').trim();
+    if(t && t.length>3) return t.length>68? t.slice(0,65)+'…' : t;
+    try { const h=new URL(lead.source_url).hostname; return h.replace(/^www\./,''); } catch { return '—'; }
+  }
 
-  // ---------- onboarding ----------
-  const onb = document.getElementById('onb');
-  const tabs = [...document.querySelectorAll('.tab')];
-  tabs.forEach(btn=> btn.onclick = ()=>{
-    tabs.forEach(b=>b.classList.remove('on')); btn.classList.add('on');
-    const t = btn.dataset.tab; document.getElementById('tab-auto').style.display = t==='auto'? 'block':'none'; document.getElementById('tab-manual').style.display = t==='manual'? 'block':'none';
-  });
-  document.getElementById('xOnb').onclick = ()=> onb.classList.remove('on');
-  document.getElementById('goAuto').onclick = async ()=>{
-    const vendorDomain = document.getElementById('vendorDomain').value.trim();
-    const region = document.getElementById('regionAuto').value;
-    if(!vendorDomain){ tip('Enter your website'); return; }
-    try{
-      const r = await post('/api/v1/find-now', { vendorDomain, regions:[region] });
-      tip(`Checked ${r.checked||0}, created ${r.created||0}`);
-      onb.classList.remove('on');
-      fetchLeads(true);
-    }catch(e){ tip('Failed to run finder'); }
-  };
-  document.getElementById('goManual').onclick = async ()=>{
-    const buyers = document.getElementById('buyers').value.split(',').map(s=>s.trim()).filter(Boolean);
-    const industries = document.getElementById('industries').value.split(',').map(s=>s.trim()).filter(Boolean);
-    const regions = document.getElementById('regions').value.split(',').map(s=>s.trim()).filter(Boolean);
-    if(!buyers.length && !industries.length){ tip('Add buyers or industries'); return; }
-    try{
-      const r = await post('/api/v1/find-now', { buyers, industries, regions });
-      tip(`Checked ${r.checked||0}, created ${r.created||0}`);
-      onb.classList.remove('on');
-      fetchLeads(true);
-    }catch(e){ tip('Failed to run finder'); }
-  };
-
-  // ---------- feed ----------
-  const feed = document.getElementById('feed');
-  const pill = document.getElementById('pill');
-  const quota = document.getElementById('quota');
-  let cache = { leads:[], nextRefreshSec: 20 };
-
-  function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return ''; } }
-  function brandFrom(lead){ const t=(lead.title||'').trim(); if(t) return t.replace(/\s+\|.+$/,'').slice(0,120); const h=hostOf(lead.source_url); return h||'Untitled'; }
+  function platformLabel(p){ p=(p||'').toLowerCase(); if(p.includes('pdp')) return 'Product'; if(p.includes('brandintake')) return 'Procurement'; if(p.includes('adlib')) return 'Ads'; return 'Signal'; }
 
   function card(lead){
-    const el = document.createElement('div'); el.className='card';
-    const heat = Number(lead.heat||0); const pct = Math.max(0, Math.min(100, heat));
-
-    // Visuals
-    el.innerHTML = `
-      <div class="meta">${(lead.platform||'source').toUpperCase()} • ${hostOf(lead.source_url)}</div>
+    const d=document.createElement('div'); d.className='card';
+    const heat = Math.max(0, Math.min(100, Number(lead.heat||0)));
+    d.innerHTML = `
+      <div class="meta"><span>${platformLabel(lead.platform)}</span><span class="hint">created ${new Date(lead.created_at||Date.now()).toLocaleString()}</span></div>
       <div class="title">${escapeHtml(brandFrom(lead))}</div>
-      <div class="bar"><i style="width:${pct}%"></i></div>
-      <div class="actions">
-        <button class="btn" data-act="hold">Press & Hold to reveal</button>
-        <span class="meta" style="margin-left:auto">heat ${heat}</span>
-      </div>
+      <div class="bar"><i style="width:${heat}%"></i></div>
+      <div class="hold" data-action="reveal">Press & hold to reveal</div>
+      <div class="cta"><button data-action="own">Claim & Own</button></div>
     `;
 
-    // Hold-to-reveal behavior with quota
-    const btn = el.querySelector('[data-act=hold]');
-    let t, held=false; const HOLD_MS = 1000;
-    const start = ()=>{
-      if(leftToday()<=0){ tip('Free reveals used up today'); return; }
-      btn.textContent='Hold…'; btn.disabled=true; held=false;
-      t=setTimeout(async ()=>{ held=true; await reveal(lead); btn.textContent='Press & Hold to reveal'; btn.
-        disabled=false; }, HOLD_MS);
-    };
-    const cancel = ()=>{ clearTimeout(t); if(!held){ btn.textContent='Press & Hold to reveal'; btn.disabled=false; } };
-    btn.addEventListener('mousedown', start);
-    btn.addEventListener('touchstart', start);
-    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=> btn.addEventListener(ev, cancel));
+    // Hold-to-reveal
+    const hold = d.querySelector('[data-action=reveal]');
+    let t0=null, timer=null;
+    const start=(ev)=>{ ev.preventDefault(); if(capReached()){ hold.textContent='Daily reveal cap reached — upgrade to unlock'; return; } t0=Date.now(); hold.textContent='Keep holding…'; timer=setTimeout(()=>{ reveal(lead); addReveal(); hold.textContent='Revealed ✓'; }, 800); };
+    const cancel=()=>{ if(timer){ clearTimeout(timer); timer=null; hold.textContent='Press & hold to reveal'; } };
+    ['pointerdown','touchstart','mousedown'].forEach(e=>hold.addEventListener(e,start,{passive:false}));
+    ['pointerup','pointerleave','touchend','touchcancel','mouseup','mouseleave'].forEach(e=>hold.addEventListener(e,cancel));
 
-    return el;
+    // Claim & own (one button)
+    d.querySelector('[data-action=own]').onclick=()=> claimAndOwn(lead);
+    return d;
   }
 
-  async function reveal(lead){
-    const used = addReveal(); quotaText(); await event('reveal', { leadId: lead.id, type:'reveal', meta:{ source: lead.platform } });
-    openDetail(lead);
-  }
-
-  function render(){
-    feed.innerHTML='';
-    quotaText();
-    const items = cache.leads.slice(0, 2); // hard-limit for free
-    for(const L of items){ feed.appendChild(card(L)); }
-  }
-  function quotaText(){ quota.innerHTML = Free reveals left today: <strong>${leftToday()}</strong> / ${DAILY_FREE}; }
-
-  async function fetchLeads(force=false){
+  async function claimAndOwn(lead){
     try{
-      pill.textContent='loading…';
-      const data = await get('/api/v1/leads');
-      cache = data; render(); pill.textContent='ok';
-      if(!force) setTimeout(fetchLeads, (data.nextRefreshSec||20)*1000);
-    }catch(e){ pill.textContent='error'; setTimeout(fetchLeads, 6000); }
+      const r1 = await fetch('/api/v1/claim',{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({leadId:lead.id})}).then(r=>r.json());
+      if(!r1?.ok) return alert('Not available');
+      const r2 = await fetch('/api/v1/own',{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({windowId:r1.windowId})}).then(r=>r.json());
+      if(r2?.ok) alert('Owned ✓');
+    }catch(e){ console.error(e); }
   }
 
-  // ---------- detail modal ----------
-  const detail = document.getElementById('detail');
-  const dBody = document.getElementById('dBody');
-  document.getElementById('xDetail').onclick = ()=> detail.classList.remove('on');
+  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
-  function openDetail(lead){
-    document.getElementById('dTitle').textContent = brandFrom(lead);
-    const host = hostOf(lead.source_url);
-    const conf = Number(lead.heat||0);
-    const confLabel = conf>=80? 'On fire' : conf>=65? 'Hot' : conf>=50? 'Warm' : 'Cold';
+  async function load(){
+    try{
+      const data = await fetch('/api/v1/leads', { headers:{'x-galactly-user':uid} }).then(r=>r.json());
+      let arr = Array.isArray(data?.leads)?data.leads:[];
+      // de-duplicate by source_url just in case
+      const seen=new Set(); arr = arr.filter(x=>{ if(seen.has(x.source_url)) return false; seen.add(x.source_url); return true; });
+      arr = interleaveByPlatform(arr).slice(0,12);
+      leads = arr;
+      feedEl.innerHTML='';
+      for(const L of arr) feedEl.appendChild(card(L));
+    }catch(e){ feedEl.innerHTML='<div class="hint">Failed to load. Check API base.</div>'; }
+  }
 
-    // Minimal reasons — avoids raw URLs on the card; offers proof links inside
-    const proofBtn = (lead.platform||'').toLowerCase().includes('ad')
-      ? <button class="btn" data-act="proof">Open proof</button>
-      : <button class="btn" data-act="open">Open page</button>;
+  // Reveal modal population
+  const modal = document.getElementById('reveal');
+  const rvTitle = document.getElementById('rv-title');
+  const rvWhy = document.getElementById('rv-why');
+  const rvHeat = document.getElementById('rv-heat');
+  const rvSrc = document.getElementById('rv-src');
+  const rvNote = document.getElementById('rv-note');
+  const rvProofBtn = document.getElementById('rv-proof');
+  const rvClose = document.getElementById('rv-close');
+  rvClose.onclick=()=>modal.classList.remove('open');
 
-    dBody.innerHTML = `
-      <div class="gauge"><strong>Confidence:</strong> <i></i> <span>${conf} — ${confLabel}</span></div>
-      <div class="kv">
-        <div class="k">Domain</div><div>${escapeHtml(host)}</div>
-        <div class="k">Source</div><div>${escapeHtml(lead.platform||'source')}</div>
-        <div class="k">Why this showed up</div><div>${escapeHtml((lead.snippet||'').slice(0,220))}</div>
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px">${proofBtn}
-        <button class="btn" data-act="claim">Claim</button>
-      </div>
-    `;
+  function inferWhy(lead){
+    const txt = `${(lead.title||'')} ${(lead.snippet||'')}`.toLowerCase();
+    const why = [];
+    if((lead.platform||'').includes('adlib')) why.push('Active ad presence (verify via proof link)');
+    if((lead.platform||'').includes('brandintake')) why.push('Supplier / procurement entrypoint on site');
+    if((lead.platform||'').includes('pdp')) why.push('Product detail signals (case/pack/dimensions/restock)');
+    if(/rfq|rfi|vendor|supplier|procure/.test(txt)) why.push('Explicit sourcing/registration language');
+    if(/case|pack|carton|labels|corrugated/.test(txt)) why.push('Pack size or material hint');
+    return why.length? why : ['Relevant demand signal on site'];
+  }
 
-    detail.classList.add('on');
+  function reveal(lead){
+    rvTitle.textContent = brandFrom(lead);
+    rvHeat.style.width = Math.max(0,Math.min(100, Number(lead.heat||0)))+'%';
+    rvSrc.textContent = platformLabel(lead.platform);
+    rvWhy.innerHTML = '';
+    for(const r of inferWhy(lead)){
+      const li=document.createElement('li'); li.textContent=r; rvWhy.appendChild(li);
+    }
+    rvNote.textContent = capReached()? 'Daily cap reached. Upgrade to unlock more reveals.' : '';
 
-    // wire buttons
-    const openProof = ()=>{ window.open(lead.source_url,'_blank','noopener'); event('click',{ leadId: lead.id, type:'click', meta:{url:lead.source_url}}); };
-    const claim = async ()=>{
-      try{ const r = await post('/api/v1/claim', { leadId: lead.id }); if(r?.ok){ tip('Reserved for 2 min'); detail.classList.remove('on'); } }
-      catch(e){ tip('Claim failed'); }
+    // proof button (kept out of card for minimal UI)
+    rvProofBtn.onclick = ()=>{
+      try{ window.open(lead.source_url,'_blank','noopener'); }catch(e){}
+      // optional feedback ping
+      fetch('/api/v1/events',{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({type:'confirm_ad',leadId:lead.id,meta:{url:lead.source_url,platform:lead.platform}})}).catch(()=>{});
     };
-    const bProof = dBody.querySelector('[data-act=proof]'); if(bProof) bProof.onclick = openProof;
-    const bOpen = dBody.querySelector('[data-act=open]'); if(bOpen) bOpen.onclick = openProof;
-    dBody.querySelector('[data-act=claim]').onclick = claim;
+
+    modal.classList.add('open');
   }
 
-  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
-
-  // ---------- boot ----------
-  (async function boot(){
-    // status ping (optional)
-    try{ const st = await get('/api/v1/status'); document.getElementById('pill').textContent = 'ok'; } catch(e){ }
-    // show onboarding on first visit or when no reveals yet and no leads cached
-    const first = !localStorage.getItem('onb_done');
-    if(first) { document.getElementById('onb').classList.add('on'); localStorage.setItem('onb_done','1'); }
-    fetchLeads(true);
-  })();
+  // poll
+  load();
+  setInterval(load, 15000);
 </script>
 </body>
 </html>
