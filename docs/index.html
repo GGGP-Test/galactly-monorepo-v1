@@ -1,170 +1,179 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Galactly — Find Packaging Buyers Now</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Galactly — Packaging Buyers Finder</title>
   <style>
-    :root{--bg:#0b0e13;--fg:#e8ecf1;--sub:#a6b3c4;--card:#111725;--stroke:#1f2a3b;--brand:#7dd3fc;--accent:#34d399;}
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif}
-    header{padding:20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--stroke)}
-    header .logo{font-weight:800;letter-spacing:.5px}
-    .wrap{max-width:1100px;margin:0 auto;padding:40px 20px}
-    .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;align-items:center}
-    .hero h1{font-size:40px;line-height:1.05;margin:0 0 12px}
-    .hero p{color:var(--sub);margin:0 0 18px}
-    .card{background:var(--card);border:1px solid var(--stroke);border-radius:16px;padding:18px}
-    .cta{background:var(--brand);color:#082032;font-weight:700;border:none;border-radius:12px;padding:12px 16px;cursor:pointer}
-    .muted{color:var(--sub)}
+    :root{
+      --bg:#0b0f14; --panel:#0f1621; --muted:#7d8aa0; --text:#eaf1ff; --brand:#67d2ff; --accent:#8be0a3; --warn:#ffcc66;
+      --stroke:#1f2a3b; --card:#101827; --chip:#132033; --btn:#18263a; --btnH:#1e2f49;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:radial-gradient(1200px 800px at 10% 0%, #0f1a2b 0%, #0b0f14 50%, #0b0f14 100%);color:var(--text)}
+    header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--stroke);backdrop-filter:saturate(120%) blur(6px)}
+    .brand{display:flex;gap:10px;align-items:center}
+    .brand b{font-weight:700}
+    .wrap{max-width:1200px;margin:0 auto;padding:42px 18px}
+    .hero{display:grid;grid-template-columns:1.1fr 1fr;gap:32px;align-items:center}
+    .h1{font-size:60px;line-height:1.02;margin:0 0 12px}
+    .h1 .hl{color:#7cd1ff}
+    .p{color:var(--muted);font-size:16px;line-height:1.5;margin:10px 0 22px}
+    .ctaRow{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+    .btn{background:var(--btn);border:1px solid var(--stroke);color:var(--text);padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:600}
+    .btn.primary{background:linear-gradient(180deg,#1f3d5f,#18263a);border-color:#2b4668}
+    .btn:hover{background:var(--btnH)}
+    .fakeviz{background:var(--card);border:1px solid var(--stroke);border-radius:16px;min-height:340px;position:relative;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+    .fakeviz:before{content:"";position:absolute;inset:0;border-radius:16px;background:radial-gradient(600px 320px at 30% 50%, rgba(103,210,255,.15), transparent 60%), radial-gradient(400px 260px at 80% 30%, rgba(139,224,163,.1), transparent 60%)}
+    .badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .badge{font-size:12px;color:#c8d7f0;border:1px dashed #2b3b55;padding:6px 10px;border-radius:999px;background:#0d1524}
 
     /* Modal */
-    .modal{position:fixed;inset:0;background:rgba(7,10,14,.6);display:none;align-items:center;justify-content:center;padding:20px}
-    .modal.open{display:flex}
-    .sheet{width:min(840px,100%);background:#0f1522;border:1px solid var(--stroke);border-radius:16px;overflow:hidden}
-    .sheet header{display:flex;gap:10px;align-items:center;border:none;padding:16px 18px;background:#0e1520}
-    .tabs{display:flex;gap:8px}
-    .tab{background:#122034;border:1px solid var(--stroke);color:var(--fg);padding:8px 10px;border-radius:10px;cursor:pointer}
-    .tab.active{outline:2px solid var(--brand)}
-    .grid{display:grid;gap:16px;grid-template-columns:1fr 1fr;padding:18px}
-    label{display:block;font-size:12px;color:var(--sub);margin-bottom:6px}
-    input,textarea{width:100%;background:#0b1220;border:1px solid #263246;color:var(--fg);border-radius:10px;padding:10px}
-    .row{display:flex;gap:10px}
-    .btn{background:#1e2a3b;border:1px solid #2a3b55;color:var(--fg);padding:10px 14px;border-radius:10px;cursor:pointer}
-    .btn.pri{background:var(--accent);border-color:#4ade80;color:#06210f;font-weight:700}
-    .hint{font-size:12px;color:var(--sub)}
+    .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(3,8,14,.55);backdrop-filter:blur(6px);z-index:50}
+    .modal.show{display:grid}
+    .panel{width:min(800px,94vw);background:var(--panel);border:1px solid var(--stroke);border-radius:16px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+    .panel h2{margin:6px 0 2px}
+    .sub{color:#a8b4c9;font-size:13px;margin-bottom:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    label{display:block;font-size:13px;color:#9fb3d4;margin:10px 0 6px}
+    input,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #25344a;background:#0d1524;color:#e9f1ff}
+    textarea{min-height:84px;resize:vertical}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{background:var(--chip);border:1px solid var(--stroke);padding:6px 10px;border-radius:999px;cursor:pointer}
+    .chip.active{outline:1px solid #3f7ddb;background:#162538}
+    .foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+    .muted{color:#90a3bf;font-size:12px}
   </style>
-  <script defer src="api-base.js"></script>
 </head>
 <body>
   <header>
-    <div class="logo">Galactly</div>
-    <div class="muted">API: <span id="apiTxt">loading…</span></div>
+    <div class="brand"><span style="width:8px;height:8px;border-radius:50%;background:#6ef3a3;display:inline-block"></span><b>Galactly</b></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <small style="color:#9db3d3">API</small>
+      <input id="apiBase" style="width:360px" placeholder="https://<your-nf>.app" />
+      <button class="btn" id="saveApi">Save</button>
+    </div>
   </header>
 
-  <div class="wrap">
-    <div class="hero">
+  <main class="wrap">
+    <section class="hero">
       <div>
-        <h1>Instant packaging buyers, tailored to <em>your</em> shop</h1>
-        <p>Two ways: paste your website and we infer your ICP, or hand‑pick industries & sample buyers. Then go to the free panel and claim leads.</p>
-        <div class="row">
-          <button id="openOnboard" class="cta">Start (free)</button>
-          <button class="btn" onclick="location.href='free-panel.html'">Open free panel</button>
+        <h1 class="h1">Find US & Canada <span class="hl">Packaging</span> Buyers in <span class="hl">&lt;30s</span></h1>
+        <p class="p">Real posts & tenders from public feeds. Free viewer; paid verifications & automations. Built for packaging owners & sales teams. No coding. Just clicks.</p>
+        <div class="ctaRow">
+          <button class="btn primary" id="startFree">Start free</button>
+          <a class="btn" href="free-panel.html">Open live feed</a>
         </div>
-        <p class="hint">No calls. No credit card. We’ll do 1–2 deep reveals/day on the free plan.</p>
+        <div class="badges">
+          <div class="badge">Live leads</div>
+          <div class="badge">Press & hold to reveal</div>
+          <div class="badge">US & CA focus</div>
+        </div>
       </div>
-      <div class="card">
-        <strong>How it works</strong>
-        <ol>
-          <li>Tell us your website <em>or</em> industries & example buyers.</li>
-          <li>We fetch active demand signals (ads, procurement, PDP clues).</li>
-          <li>In the free panel, <b>press & hold</b> to reveal one lead deeply/day.</li>
-        </ol>
-      </div>
-    </div>
-  </div>
+      <div class="fakeviz"></div>
+    </section>
+  </main>
 
   <!-- Onboarding Modal -->
-  <div id="onboard" class="modal">
-    <div class="sheet">
-      <header>
-        <div style="font-weight:700">Onboarding</div>
-        <div class="tabs">
-          <button class="tab active" data-tab="auto">Use my website</button>
-          <button class="tab" data-tab="custom">Customize ICP</button>
+  <div class="modal" id="obModal" aria-hidden="true">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h2>Tell us who you sell to</h2>
+          <div class="sub">Pick one: use <b>your website</b> (we infer ICP) or paste a few <b>example buyers</b>.</div>
         </div>
-        <div style="margin-left:auto"><button class="btn" id="closeModal">Close</button></div>
-      </header>
-      <div class="grid">
-        <!-- AUTO -->
-        <div id="pane-auto">
-          <label>Your website</label>
-          <input id="vendorDomain" placeholder="acme‑packaging.com"/>
-          <div class="row" style="margin-top:10px">
-            <button class="btn pri" id="runAuto">Find buyers now</button>
-            <span id="autoStatus" class="hint"></span>
-          </div>
-          <p class="hint">We’ll infer your ICP from your site and start collecting demand signals.</p>
+        <button class="btn" id="obClose">✕</button>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Option A — Your website (we infer ICP)</label>
+          <input id="vendorSite" placeholder="https://yourcompany.com" />
+          <small class="muted">We only read public pages to guess industries, regions and examples.</small>
         </div>
-        <!-- CUSTOM -->
-        <div id="pane-custom" style="display:none">
-          <div class="row">
-            <div style="flex:1">
-              <label>Industries (comma‑sep)</label>
-              <input id="industries" placeholder="beverage, confectionery, supplements"/>
-            </div>
-            <div style="flex:1">
-              <label>Regions (comma‑sep, 2‑letter)</label>
-              <input id="regions" placeholder="US, CA"/>
-            </div>
+        <div>
+          <label>Option B — Example buyers (comma‑separated domains)</label>
+          <textarea id="seedBuyers" placeholder="liquiddeath.com, soylent.com"></textarea>
+          <small class="muted">Paste 1–10 domains. We’ll expand from these.</small>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <div>
+          <label>Industries (comma list)</label>
+          <input id="industries" placeholder="beverage, confectionery, cosmetics" />
+        </div>
+        <div>
+          <label>Regions</label>
+          <div class="chips">
+            <span class="chip active" data-region="US">US</span>
+            <span class="chip" data-region="CA">CA</span>
           </div>
-          <label style="margin-top:10px">Example buyers (one per line)</label>
-          <textarea id="buyers" rows="6" placeholder="liquiddeath.com
-soylent.com"></textarea>
-          <div class="row" style="margin-top:10px">
-            <button class="btn pri" id="runCustom">Find buyers now</button>
-            <span id="customStatus" class="hint"></span>
-          </div>
+        </div>
+      </div>
+
+      <div class="foot">
+        <div class="muted">We’ll save your prefs locally. You can change API base in the header.</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="testScan">Scan & go to feed</button>
         </div>
       </div>
     </div>
   </div>
 
 <script>
-  // API display
-  window.addEventListener('DOMContentLoaded',()=>{
-    const t=document.getElementById('apiTxt'); t.textContent=(window.API_BASE||'').replace(/^https?:\/\//,'');
-  });
+// ========== tiny API base helper ==========
+(function(){
+  const DEFAULT = localStorage.getItem('api_base_default') || '';
+  const q = new URLSearchParams(location.search);
+  let base = q.get('api') || localStorage.getItem('api_base') || DEFAULT;
+  function normalize(v){ if(!v) return ''; v = String(v).trim().replace(/\/+$/,''); if(v && !/^https?:\/\//i.test(v)) v = 'https://' + v; return v; }
+  base = normalize(base);
+  if(base) { window.API_BASE = base; }
+  const input = document.getElementById('apiBase'); if(input){ input.value = base; }
+  document.getElementById('saveApi').onclick = ()=>{ const v = normalize(input.value); window.API_BASE = v; try{ localStorage.setItem('api_base', v); }catch{} alert('Saved API base.'); };
+})();
 
-  // Modal logic
-  const modal = document.getElementById('onboard');
-  document.getElementById('openOnboard').onclick=()=>modal.classList.add('open');
-  document.getElementById('closeModal').onclick=()=>modal.classList.remove('open');
-  const tabs=[...document.querySelectorAll('.tab')];
-  const showTab = (k)=>{
-    tabs.forEach(b=>b.classList.toggle('active', b.dataset.tab===k));
-    document.getElementById('pane-auto').style.display = k==='auto'?'block':'none';
-    document.getElementById('pane-custom').style.display = k==='custom'?'block':'none';
-  };
-  tabs.forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+function API(p){ const b = window.API_BASE || (document.getElementById('apiBase')?.value||''); return (b||'').replace(/\/$/,'') + p; }
+const uidKey='gal_uid'; let UID = localStorage.getItem(uidKey); if(!UID){ UID = 'u-' + Math.random().toString(36).slice(2); localStorage.setItem(uidKey, UID); }
 
-  // Simple user id
-  const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
+// Modal wiring
+const modal = document.getElementById('obModal');
+const startBtn = document.getElementById('startFree');
+const closeBtn = document.getElementById('obClose');
+startBtn.onclick = ()=> modal.classList.add('show');
+closeBtn.onclick = ()=> modal.classList.remove('show');
+modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.classList.remove('show'); });
 
-  async function gate(){
-    try{ await fetch('/api/v1/gate',{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({alerts:true})}); }catch(e){}
-  }
+// Region chip toggles
+for (const chip of document.querySelectorAll('.chip[data-region]')){
+  chip.addEventListener('click', ()=> chip.classList.toggle('active'));
+}
 
-  async function findNow(payload){
-    const r = await fetch('/api/v1/find-now',{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify(payload)});
-    return r.json();
-  }
+// Submit => gate + find-now + redirect
+async function gate(body){ try{ const r = await fetch(API('/api/v1/gate'), { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body: JSON.stringify(body)}); return await r.json(); }catch(e){ return null; } }
+async function findNow(payload){ try{ const r = await fetch(API('/api/v1/find-now'), { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body: JSON.stringify(payload)}); return await r.json(); }catch(e){ return null; } }
 
-  document.getElementById('runAuto').onclick = async ()=>{
-    const vendorDomain = (document.getElementById('vendorDomain').value||'').trim();
-    const s = document.getElementById('autoStatus'); s.textContent='Working…';
-    await gate();
-    try{
-      const out = await findNow({ vendorDomain });
-      s.textContent = `Created ${out.created||0} • Checked ${out.checked||0}`;
-      setTimeout(()=>location.href='free-panel.html', 600);
-    }catch(e){ s.textContent = 'Error. Check API base.'; }
-  };
+function parseList(s){ return (s||'').split(/[,\n]/).map(x=>x.trim()).filter(Boolean); }
 
-  document.getElementById('runCustom').onclick = async ()=>{
-    const buyers = (document.getElementById('buyers').value||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    const industries = (document.getElementById('industries').value||'').split(',').map(s=>s.trim()).filter(Boolean);
-    const regions = (document.getElementById('regions').value||'').split(',').map(s=>s.trim()).filter(Boolean);
-    const s = document.getElementById('customStatus'); s.textContent='Working…';
-    await gate();
-    try{
-      const out = await findNow({ buyers, industries, regions });
-      s.textContent = `Created ${out.created||0} • Checked ${out.checked||0}`;
-      setTimeout(()=>location.href='free-panel.html', 600);
-    }catch(e){ s.textContent = 'Error. Check API base.'; }
-  };
+async function runAndGo(){
+  const vendorDomain = document.getElementById('vendorSite').value.trim();
+  const buyers = parseList(document.getElementById('seedBuyers').value);
+  const industries = parseList(document.getElementById('industries').value);
+  const regions = Array.from(document.querySelectorAll('.chip[data-region].active')).map(el=>el.getAttribute('data-region'));
+
+  const profile = { vendorDomain: vendorDomain || undefined, buyers, industries, regions };
+  try{ localStorage.setItem('gal_profile', JSON.stringify(profile)); }catch{}
+
+  // gate
+  await gate({ region: regions[0]||'US', email: null, alerts: false });
+  // find-now (fire & forget; feed will still open if API is slow)
+  findNow(profile).finally(()=>{ location.href = 'free-panel.html'; });
+}
+
+document.getElementById('testScan').onclick = runAndGo;
+
 </script>
 </body>
 </html>
