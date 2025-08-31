@@ -1,258 +1,282 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Galactly — Free Panel (Minimal)</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Galactly — Free Lead Panel</title>
   <style>
     :root{
-      --bg:#0b0f15; --card:#111826; --muted:#7d8aa5; --ink:#e9eef6; --line:#1f2a38; --brand:#79c0ff; --ok:#31d0aa; --warn:#ffcc66;
+      --bg:#0b0f16; --card:#111827; --muted:#94a3b8; --ink:#e5ecf5; --line:#1f2937;
+      --accent:#60a5fa; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444;
     }
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-    header{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
-    .brand{display:flex;align-items:center;gap:8px;font-weight:600}
-    .status{border:1px solid var(--line);padding:3px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
-    .wrap{max-width:1100px;margin:0 auto;padding:18px}
-    .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-    .filters input{background:transparent;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:10px;min-width:220px}
-    .filters button{background:var(--brand);color:#001927;border:none;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-    .card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;min-height:160px;display:flex;flex-direction:column;gap:8px}
-    .meta{font-size:12px;color:var(--muted)}
-    .title{font-weight:700}
-    .chips{display:flex;gap:6px;flex-wrap:wrap}
-    .chip{font-size:11px;border:1px solid var(--line);padding:2px 8px;border-radius:999px;color:var(--muted)}
-    .footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto}
-    .btn{background:#1a2536;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:10px;cursor:pointer}
-    .btn.primary{background:var(--ok);color:#00251d;border:none;font-weight:700}
-    .hint{font-size:12px;color:var(--muted)}
-    .hold{position:absolute;inset:0;border-radius:16px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:.2s}
-    .card.locked .hold{opacity:1;pointer-events:auto}
-    .hold>div{background:rgba(16,22,33,.9);border:1px solid var(--line);padding:10px 12px;border-radius:12px;display:flex;align-items:center;gap:8px}
-    .ring{width:18px;height:18px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:spin 1s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
+    html,body{height:100%}
+    body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    header{position:sticky;top:0;z-index:5;background:linear-gradient(#0b0f16,#0b0f16cc 60%,#0b0f1600);backdrop-filter:saturate(1.2) blur(6px);border-bottom:1px solid var(--line)}
+    .bar{max-width:1100px;margin:0 auto;padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+    .status{font-weight:600}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border:1px solid #334155;border-radius:999px;color:#cbd5e1}
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+
+    /* Onboarding */
+    .form{display:grid;grid-template-columns:1.2fr .9fr .9fr .7fr auto;gap:10px}
+    .form input{width:100%;background:#0f172a;border:1px solid #243146;color:var(--ink);border-radius:10px;padding:10px}
+    .form button{background:#1f2a44;border:1px solid #2b3b5b;color:var(--ink);border-radius:10px;padding:10px 14px;cursor:pointer}
+    .hint{color:var(--muted);font-size:12px;margin-top:6px}
+
+    /* Grid */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px}
+    .card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;min-height:180px}
+    .card h3{margin:0;font-size:16px}
+    .meta{color:var(--muted);font-size:12px}
+    .chips{display:flex;flex-wrap:wrap;gap:6px}
+    .chip{font-size:11px;padding:2px 8px;border:1px solid #2b3b5b;border-radius:999px;color:#cbd5e1}
+    .heat{font-weight:700}
+
+    /* Hold-to-reveal overlay */
+    .hold{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(#0b0f1600,#0b0f1620 40%,#0b0f1640);border-radius:16px}
+    .hold .inner{display:flex;flex-direction:column;align-items:center;gap:8px}
+    .ring{width:54px;height:54px;border-radius:50%;background:conic-gradient(var(--accent) 0,var(--accent) 0, #304562 0 360deg);mask:radial-gradient(circle at center, transparent 58%, #000 61%)}
+    .hold span{font-size:12px;color:#cbd5e1}
+    .locked .hold{background:linear-gradient(#0b0f1600,#0b0f1640)}
+
+    /* Minimal buttons */
+    .actions{display:flex;gap:8px;margin-top:auto}
+    .btn{background:#172036;border:1px solid #263248;color:#dbe7ff;border-radius:10px;padding:7px 10px;cursor:pointer}
+    .btn.secondary{background:transparent;color:#cbd5e1}
+    .btn.good{border-color:#25673a;background:#12331e}
 
     /* Modal */
-    dialog{border:none;border-radius:16px;max-width:680px;width:calc(100% - 24px);background:#0e1522;color:var(--ink)}
-    .modal{padding:0}
-    .modal header{border:none;padding:16px 18px}
-    .modal .body{padding:0 18px 16px}
-    .modal h2{margin:0 0 2px;font-size:18px}
-    .confidence{display:flex;gap:10px;align-items:center;margin:8px 0}
-    .bar{flex:1;height:8px;background:#0b0f15;border:1px solid var(--line);border-radius:999px;overflow:hidden}
-    .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--warn),var(--ok));width:0%}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .box{border:1px solid var(--line);border-radius:12px;padding:12px}
-    .box h3{margin:0 0 8px;font-size:13px;color:#a8b3c9;text-transform:uppercase;letter-spacing:.04em}
-    .why{font-size:14px;line-height:1.45;white-space:pre-wrap}
-    .row{display:flex;align-items:center;gap:8px}
-    .verify{margin-top:8px;display:inline-flex;gap:8px}
-    .verify a{color:var(--brand)}
-    .cap{font-size:12px;color:var(--muted)}
-    .closebar{display:flex;justify-content:flex-end;border-top:1px solid var(--line);padding:10px}
-    .closebar button{background:#172235;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 10px}
+    .modal{position:fixed;inset:0;background:#0008;display:none;place-items:center;padding:18px}
+    .modal.show{display:grid}
+    .sheet{max-width:840px;width:100%;background:#0f1625;border:1px solid #23314a;border-radius:16px;box-shadow:0 20px 60px #0009;overflow:hidden}
+    .sheet header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border:0;border-bottom:1px solid #23314a;background:#0f1625}
+    .sheet h2{margin:0;font-size:18px}
+    .sheet .body{display:grid;grid-template-columns:1.2fr .9fr;gap:16px;padding:16px}
+    .block{background:#0c1321;border:1px solid #1f2a41;border-radius:12px;padding:12px}
+    .block h4{margin:0 0 6px 0;font-size:13px;color:#cbd5e1}
+    .kv{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;font-size:13px}
+    .bar{height:8px;border-radius:999px;background:#1d2a42;overflow:hidden}
+    .bar > i{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#60a5fa)}
+    .why li{margin:6px 0}
+    .proofs a{display:inline-block;margin-right:10px;color:#9cc7ff}
+    .closeX{background:transparent;border:1px solid #334155;color:#cbd5e1;border-radius:999px;padding:5px 8px;cursor:pointer}
+    .paywall{display:none;text-align:center}
+    .paywall.show{display:block}
   </style>
 </head>
 <body>
   <header>
-    <div class="brand">Galactly <span id="api" class="status">api: connecting…</span></div>
-
-    <div class="cap">Free plan: <b id="quota">2</b> reveals left today</div>
-  </header>
-  <div class="wrap">
-    <div class="filters">
-      <input id="vendor" placeholder="Vendor site (optional)" />
-      <input id="buyers" placeholder="Seed buyers (comma domains)" />
-      <input id="industries" placeholder="Industries (comma)" />
-      <input id="regions" placeholder="Regions e.g. US,CA" />
-      <button id="findBtn">Find now</button>
-      <span class="hint">Tip: Vendor OR Seed buyers is enough; we’ll expand & dedupe.</span>
+    <div class="bar">
+      <div class="status">Galactly <span class="pill" id="status">connecting…</span></div>
+      <div>
+        <label style="font-size:12px;color:#cbd5e1">API
+          <input id="apiBase" style="width:340px;background:#0f172a;border:1px solid #243146;color:#cbd5e1;border-radius:10px;padding:7px 10px"/>
+        </label>
+        <button class="closeX" id="saveApi">Save</button>
+      </div>
     </div>
-    <div id="feed" class="grid"></div>
+  </header>
+
+  <main class="wrap">
+    <!-- Onboarding row (minimal) -->
+    <div class="form" id="form">
+      <input id="vendor" placeholder="Vendor site  e.g. yourcompany.com (optional)"/>
+      <input id="buyers" placeholder="Seed buyers  comma domains, e.g. liquiddeath.com"/>
+      <input id="inds" placeholder="Industries  e.g. beverage, confectionery"/>
+      <input id="regions" placeholder="Regions  e.g. US, CA"/>
+      <button id="find" title="Run on-demand search">Find now</button>
+    </div>
+    <div class="hint">Tip: You can enter either <strong>Vendor site</strong> (we derive ICP) or explicit <strong>Seed buyers</strong> (comma‑separated), optionally with industries/regions.</div>
+
+    <div class="grid" id="grid"></div>
+  </main>
+
+  <!-- Details modal -->
+  <div class="modal" id="modal">
+    <div class="sheet">
+      <header>
+        <h2 id="mTitle">Lead</h2>
+        <button class="closeX" id="closeModal">Close</button>
+      </header>
+      <div class="body">
+        <div class="block">
+          <h4>Confidence</h4>
+          <div class="kv">
+            <div>Score</div><div class="bar"><i id="mConfBar" style="width:60%"></i></div>
+            <div>Signals</div><div id="mSignals">ads, procurement, sku</div>
+            <div>Why now</div><div id="mWhyNow">Fresh activity detected in last 24h.</div>
+          </div>
+        </div>
+        <div class="block">
+          <h4>Verify & Actions</h4>
+          <div class="proofs" id="mProofs"></div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button class="btn good" id="mClaim">Claim</button>
+            <button class="btn" id="mOwn">Own</button>
+          </div>
+        </div>
+        <div class="block" style="grid-column:1 / -1">
+          <h4>Why this lead (top reasons)</h4>
+          <ul class="why" id="mWhy"></ul>
+        </div>
+        <div class="block paywall" id="mPaywall" style="grid-column:1 / -1">
+          <h4>Daily free reveals used</h4>
+          <p>You’ve reached your <strong id="mLimitTxt">2</strong> free deep‑reveals for today. Upgrade to unlock more and run auto‑find hourly.</p>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <dialog id="modal"><div class="modal">
-    <header><h2 id="mTitle">Lead</h2><div class="meta" id="mMeta"></div></header>
-    <div class="body">
-      <div class="confidence">
-        <div class="row"><strong>Confidence</strong><span id="mConfLabel" class="chip">warm</span></div>
-        <div class="bar"><i id="mConf"></i></div>
-      </div>
-      <div class="grid2">
-        <div class="box">
-          <h3>Why this lead</h3>
-          <div id="mWhy" class="why"></div>
-        </div>
-        <div class="box">
-          <h3>Signals</h3>
-          <ul id="mSignals"></ul>
-          <div id="mVerify" class="verify"></div>
-        </div>
-      </div>
-    </div>
-    <div class="closebar"><button id="closeModal">Close</button></div>
-  </div></dialog>
-
 <script>
-// ---------- API base (from localStorage or ?api=) ----------
-const DEFAULT_API = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
-const qs = new URLSearchParams(location.search);
-const apiBase = (qs.get('api')  localStorage.getItem('apiBase')  DEFAULT_API).replace(/\/$/,'');
-localStorage.setItem('apiBase', apiBase);
-byId('api').textContent = 'api: ' + apiBase.split('//')[1];
+// ---- API base helper (inlined) ----
+(function(){
+  const DEFAULT = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
+  const q = new URLSearchParams(location.search);
+  let base = q.get('api') || localStorage.getItem('apiBase') || DEFAULT;
+  function norm(v){ v=(v||'').trim(); if(!v) return DEFAULT; v=v.replace(/\/+$/,''); if(!/^https?:\/\//i.test(v)) v='https://'+v; return v; }
+  base = norm(base);
+  window.API_BASE = base;
+  try{ localStorage.setItem('apiBase', base); }catch{}
+  const orig = window.fetch.bind(window);
+  window.fetch = (input, init)=>{ try{ const url = typeof input==='string'? input : input.url; if(url && url.startsWith('/api/')) return orig(window.API_BASE+url, init);}catch{} return orig(input, init); };
+})();
 
-// ---------- Anon user ----------
-const UID_KEY = 'gal_uid';
-let uid = localStorage.getItem(UID_KEY);
-if(!uid){ uid = 'u-' + Math.random().toString(36).slice(2); localStorage.setItem(UID_KEY, uid); }
+// ---- tiny utils ----
+const $ = (sel)=>document.querySelector(sel);
+const uidKey='galactly_uid';
+let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
+$('#apiBase').value = window.API_BASE;
+$('#saveApi').onclick = ()=>{ const v=$('#apiBase').value.trim(); window.__setApiBase ? window.__setApiBase(v) : localStorage.setItem('apiBase', v); location.reload(); };
 
-// ---------- Daily reveal quota (client guard; server can add a hard cap later) ----------
-const QUOTA = 2; // free plan
-function getQuota(){
-  const k = 'reveal_'+ new Date().toISOString().slice(0,10);
-  const used = Number(localStorage.getItem(k) || '0');
-  return { key:k, used, left: Math.max(0, QUOTA - used) };
+function domain(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{ return ''; } }
+function titleFor(lead){
+  const host = domain(lead.source_url);
+  const p = (lead.platform||'').toLowerCase();
+  if(p==='adlib_free') return (host? host: 'Brand') + ' — active ads (proof)';
+  if(p==='brandintake') return host? (host+' — Supplier/Procurement') : (lead.title||'Procurement');
+  if(p==='pdp') return lead.title || (host+' product');
+  return lead.title || host || 'Lead';
 }
-function spendReveal(){ const {key, used} = getQuota(); localStorage.setItem(key, String(used+1)); updateQuota(); }
-function updateQuota(){ byId('quota').textContent = getQuota().left; }
-updateQuota();
-
-// ---------- Fetch helpers ----------
-async function get(path){ const r = await fetch(apiBase+path, { headers: { 'x-galactly-user': uid }}); return r.json(); }
-async function post(path, body){ const r = await fetch(apiBase+path, { method:'POST', headers:{ 'content-type':'application/json','x-galactly-user':uid }, body: JSON.stringify(body||{}) }); return r.json(); }
-
-// ---------- UI helpers ----------
-function byId(id){ return document.getElementById(id); }
-function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
-function hostOf(u){ try{ return new URL(u).hostname; }catch{return ''} }
-
-// ---------- Render feed ----------
-let lastLeads = [];
-const feed = byId('feed');
-function interleaveByPlatform(leads){
-  const buckets = new Map();
-  for(const L of leads){ const k=(L.platform||'other').toLowerCase(); (buckets.get(k)||buckets.set(k,[]).get(k)).push(L); }
-  const keys = Array.from(buckets.keys());
-  const out=[]; let any=true, i=0;
-  while(any){ any=false; for(const k of keys){ const b=buckets.get(k)||[]; if(i<b.length){ out.push(b[i]); any=true; } } i++; }
-  return out;
+function chipsFor(lead){
+  const arr = [];
+  if(lead.platform==='adlib_free') arr.push('ads','buyer');
+  if(lead.platform==='brandintake') arr.push('procurement');
+  if(lead.platform==='pdp') arr.push('case-pack','sku');
+  (lead.kw||[]).slice(0,2).forEach(k=>{ if(!arr.includes(k)) arr.push(k) });
+  return arr;
 }
 
-function render(){
-  feed.innerHTML='';
-  const ordered = interleaveByPlatform(lastLeads);
-  for(const L of ordered){ feed.appendChild(card(L)); }
-}
+// gating
+const LIMIT_REVEALS= Number(localStorage.getItem('FREE_DAILY_REVEALS')||'2'); // change in console if needed
+function gateKey(){ const d=new Date(); return 'reveal_'+d.getUTCFullYear()+('_'+(d.getUTCMonth()+1))+'_'+d.getUTCDate(); }
+function getReveals(){ return Number(localStorage.getItem(gateKey())||'0'); }
+function bumpReveals(){ const n=getReveals()+1; localStorage.setItem(gateKey(), String(n)); return n; }
 
-function card(lead){
-  const d = document.createElement('div'); d.className = 'card locked';
-  d.dataset.id = lead.id;
-  d.innerHTML = `
-    <div class="meta">${esc((lead.platform||'source') + ' • ' + hostOf(lead.source_url))}</div>
-    <div class="title">${esc(lead.title||'Untitled')}</div>
-    <div class="chips">${(lead.kw||[]).slice(0,3).map(k=>`<span class="chip">${esc(k)}</span>`).join('')}</div>
-    <div class="footer">
-      <button class="btn primary" data-act="claim">Claim</button>
-      <span class="hint">Press & hold to reveal</span>
-    </div>
-    <div class="hold"><div><span class="ring"></span> Hold…</div></div>`;
+// fetch helpers
+async function get(path){ const r=await fetch(path, { headers:{'x-galactly-user':uid} }); return r.json(); }
+async function post(path, body){ const r=await fetch(path, {method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body: JSON.stringify(body||{})}); return r.json(); }
 
-  // Hold-to-reveal (1.2s)
-  let timer=null, downAt=0;
-  function startHold(){ if(getQuota().left<=0) { toast('Out of free reveals for today.'); return; } downAt=Date.now(); timer=setTimeout(()=>{ reveal(lead, d); }, 1200); }
-  function endHold(){ if(timer){ clearTimeout(timer); timer=null; } }
-  d.addEventListener('pointerdown', startHold);
-  d.addEventListener('pointerup', endHold);
-  d.addEventListener('pointerleave', endHold);
-
-  // Claim/Own flow
-  d.querySelector('[data-act="claim"]').onclick = async (e)=>{
-    e.stopPropagation();
-    const r = await post('/api/v1/claim', { leadId: lead.id });
-    if(r?.ok){ lead._windowId = r.windowId; lead._exp = Date.now() + (r.reservedForSec||120)*1000; updateClaimUI(d, lead); }
-  };
-
-  return d;
-}
-
-function updateClaimUI(cardEl, lead){
-  const btn = cardEl.querySelector('[data-act="claim"]');
-  if(lead._windowId){ btn.textContent = 'Own'; btn.onclick = async (e)=>{ e.stopPropagation(); const r=await post('/api/v1/own',{ windowId: lead._windowId }); if(r?.ok){ btn.textContent='Owned'; btn.disabled=true; } }; }
-}
-
-// ---------- Reveal modal ----------
-const modal = byId('modal');
-byId('closeModal').onclick = () => modal.close();
-
-async function reveal(lead, cardEl){
-  spendReveal();
-  cardEl.classList.remove('locked');
-  // Confidence from heat (0–100)
-  const heat = Number(lead.heat||60); const pct = Math.max(0, Math.min(100, heat));
-  byId('mTitle').textContent = (lead.title||'Lead');
-  byId('mMeta').textContent = ${(lead.platform||'source')} • ${hostOf(lead.source_url)};
-  byId('mConf').style.width = pct + '%';
-  byId('mConfLabel').textContent = pct>=80 ? 'hot' : (pct>=60? 'warm' : 'cool');
-  byId('mWhy').textContent = buildWhy(lead);
-  byId('mSignals').innerHTML = buildSignals(lead).map(s=>`<li>${esc(s)}</li>`).join('');
-  const verify = buildVerify(lead);
-  byId('mVerify').innerHTML = verify ? <a href="${verify}" target="_blank" rel="noopener">Verify</a> : '';
-  modal.showModal();
-}
-
-function buildWhy(L){
-  const parts = [];
-  const p = (L.platform||'').toLowerCase();
-  if(p.includes('pdp')) parts.push('Product pages indicate active SKUs and pack sizes.');
-  if(p.includes('brandintake')) parts.push('Supplier/Procurement channel is open.');
-  if(p.includes('adlib')) parts.push('Active advertising suggests ongoing demand and replenishment.');
-  if((L.kw||[]).includes('case')) parts.push('Mentions of “case/pack” imply corrugated or master-case usage.');
-  parts.push('Freshness and domain quality factored in.');
-  return parts.join('\n• ');
-}
-function buildSignals(L){
-  const out=[]; const host=hostOf(L.source_url);
-  out.push(`Domain: ${host}`);
-  if(L.cat) out.push(`Category: ${L.cat}`);
-  if(Array.isArray(L.kw)&&L.kw.length) out.push(`Keywords: ${L.kw.slice(0,5).join(', ')}`);
-  const ts = L.created_at ? new Date(L.created_at).toLocaleString() : '';
-  if(ts) out.push(`Observed: ${ts}`);
-  return out;
-}
-function buildVerify(L){
-  const h = hostOf(L.source_url);
-  const p = (L.platform||'').toLowerCase();
-  if(p.includes('adlib')){
-    const isMeta = L.source_url.includes('facebook.com/ads/library');
-    if(isMeta) return https://www.facebook.com/ads/library/?active_status=active&ad_type=all&q=${encodeURIComponent(h)};
-    return https://www.google.com/search?q=${encodeURIComponent('site:adstransparency.google.com '+h)};
-  }
-  return '';
-}
-
-// ---------- Fetch leads loop ----------
-async function loop(){
-  try{
-    const data = await get('/api/v1/leads');
-    if(!data?.ok) throw new Error('bad');
-    lastLeads = data.leads || [];
-    render();
-    setTimeout(loop, (data.nextRefreshSec||20)*1000);
-  }catch(e){ setTimeout(loop, 5000); }
-}
-loop();
-
-// ---------- Find-now ----------
-byId('findBtn').onclick = async () => {
-  const buyers = byId('buyers').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const industries = byId('industries').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const regions = byId('regions').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const vendor = byId('vendor').value.trim();
-  const body = { buyers, industries, regions, vendorDomain: vendor||undefined };
-  const r = await post('/api/v1/find-now', body);
-  console.log('find-now', r);
+// run find-now
+$('#find').onclick = async()=>{
+  const body={ vendorDomain: $('#vendor').value.trim()||undefined,
+               buyers: ($('#buyers').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+               industries: ($('#inds').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+               regions: ($('#regions').value||'').split(',').map(s=>s.trim()).filter(Boolean) };
+  $('#find').disabled=true; $('#find').textContent='Finding…';
+  try{ await post('/api/v1/find-now', body); await load(); }
+  finally{ $('#find').disabled=false; $('#find').textContent='Find now'; }
 };
+
+const grid = $('#grid');
+let leads=[];
+
+function card(lead, idx){
+  const el = document.createElement('div'); el.className='card';
+  el.innerHTML = `
+    <div class="meta">${(lead.platform||'source').replace('_',' ')} • ${domain(lead.source_url)||''}</div>
+    <h3>${escapeHtml(titleFor(lead))}</h3>
+    <div class="chips">${chipsFor(lead).map(c=>`<span class=chip>${escapeHtml(c)}</span>`).join('')}</div>
+    <div class="meta">Confidence: <span class=heat>${Math.round(lead.heat||65)}</span></div>
+    <div class="actions">
+      <button class="btn" data-a="reveal">Hold to reveal</button>
+      <button class="btn good" data-a="claim">Claim</button>
+    </div>
+    <div class="hold"><div class="inner"><div class="ring" data-ring></div><span>Press & hold to reveal</span></div></div>
+  `;
+  const locked = getReveals() >= LIMIT_REVEALS;
+  if(locked){ el.classList.add('locked'); el.querySelector('.hold span').textContent='Upgrade to reveal'; }
+
+  // hold mechanics
+  let t=null, prog=0, raf=null, startTs=0;
+  const holdMs=1500; const ring = el.querySelector('[data-ring]');
+  const startHold = ()=>{ if(locked) return openModal(lead, true); startTs=performance.now(); prog=0; ring.style.background=`conic-gradient(var(--accent) 0, #304562 0 360deg)`; t=setInterval(()=>{}, 50); raf=requestAnimationFrame(step); };
+  const stopHold = ()=>{ if(raf) cancelAnimationFrame(raf); if(t) clearInterval(t); ring.style.background=`conic-gradient(var(--accent) 0, #304562 0 360deg)`; };
+  const step=(ts)=>{ prog = Math.min(1, (ts-startTs)/holdMs); const deg = Math.floor(prog*360); ring.style.background=`conic-gradient(var(--accent) ${deg}deg, #304562 0 360deg)`; if(prog<1) raf=requestAnimationFrame(step); else { stopHold(); onReveal(); } };
+  const onReveal=()=>{ bumpReveals(); events('reveal', lead); openModal(lead, false); render(); };
+
+  el.addEventListener('mousedown', (e)=>{ if(e.target.closest('.btn')) return; startHold(); });
+  el.addEventListener('mouseup', stopHold);
+  el.addEventListener('mouseleave', stopHold);
+  el.addEventListener('touchstart', (e)=>{ if(e.target.closest('.btn')) return; startHold(); }, {passive:true});
+  el.addEventListener('touchend', stopHold);
+
+  el.querySelector('[data-a=claim]').onclick = async()=>{ const r=await post('/api/v1/claim',{leadId:lead.id}); if(r?.ok){ lead._windowId=r.windowId; lead._exp=Date.now()+(r.reservedForSec||120)*1000; render(); } };
+  el.querySelector('[data-a=reveal]').onclick = ()=> startHold();
+
+  return el;
+}
+
+function render(){ grid.innerHTML=''; leads.forEach((L,i)=> grid.appendChild(card(L,i))); }
+
+function makeProofLinks(host){
+  const h = host.replace(/^www\./,'');
+  return [
+    { name:'Meta Ad Library', url:`https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&q=${encodeURIComponent(h)}` },
+    { name:'Google Ads Transparency', url:`https://www.google.com/search?q=${encodeURIComponent('site:adstransparency.google.com '+h)}` }
+  ];
+}
+
+function whyBullets(lead){
+  const p=(lead.platform||'').toLowerCase();
+  const out=[];
+  if(p==='adlib_free') out.push('Active advertiser → indicates current velocity and packaging throughput.');
+  if(p==='brandintake') out.push('Supplier/Procurement page open → accepting vendor info.');
+  if(p==='pdp') out.push('Case pack / multipack SKU found → box & label cadence implied.');
+  if((lead.snippet||'').toLowerCase().includes('back in stock')) out.push('Back-in-stock signal in last crawl.');
+  out.push('Freshness weight applied in ranking (past 72h boosted).');
+  return out.slice(0,4);
+}
+
+function openModal(lead, locked){
+  const m=$('#modal');
+  $('#mTitle').textContent = titleFor(lead);
+  const conf = Math.max(30, Math.min(95, Number(lead.heat||65)));
+  $('#mConfBar').style.width = conf+'%';
+  $('#mSignals').textContent = chipsFor(lead).join(', ');
+  $('#mWhyNow').textContent = 'Derived from platform activity and recent changes.';
+  $('#mWhy').innerHTML = whyBullets(lead).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
+  const host = domain(lead.source_url);
+  $('#mProofs').innerHTML = makeProofLinks(host).map(p=>`<a href="${p.url}" target="_blank" rel="noopener">${p.name}</a>`).join(' ');
+  $('#mClaim').onclick = async()=>{ const r=await post('/api/v1/claim',{leadId:lead.id}); if(r?.ok){ m.classList.remove('show'); alert('Reserved for 2 minutes. Go to the card to Own.'); } };
+  $('#mOwn').onclick = async()=>{ alert('Open the card and press Own after you Claim.'); };
+  const pay = $('#mPaywall'); $('#mLimitTxt').textContent = String(LIMIT_REVEALS);
+  if(getReveals()>LIMIT_REVEALS || locked){ pay.classList.add('show'); } else { pay.classList.remove('show'); }
+  m.classList.add('show');
+}
+$('#closeModal').onclick = ()=> $('#modal').classList.remove('show');
+
+function escapeHtml(s){ return (''+s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
+async function load(){
+  const data = await get('/api/v1/leads');
+  if(!data?.ok) throw new Error('bad');
+  leads = data.leads || [];
+  render();
+  $('#status').textContent = 'ok';
+}
+
+load().catch(()=> $('#status').textContent='error');
 </script>
 </body>
 </html>
