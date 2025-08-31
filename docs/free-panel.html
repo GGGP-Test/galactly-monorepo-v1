@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -59,10 +58,7 @@
     .btn--ghost{background:transparent;color:#e9f0ff;border:1px solid var(--line)}
     .hint{cursor:help;color:#a9c7ff;border-bottom:1px dotted #a9c7ff}
 
-    .
-
-Ali Hosseinioun, [9/1/2025 1:17 AM]
-signals{min-height:160px}
+    .signals{min-height:160px}
     .bar{height:8px;background:#0f1626;border:1px solid #1a2131;border-radius:8px;overflow:hidden}
     .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%}
     .sigList{margin:10px 0 0;display:grid;grid-template-columns:1fr;gap:6px}
@@ -140,9 +136,7 @@ signals{min-height:160px}
   document.getElementById('saveApi').onclick=()=>{ localStorage.setItem('apiBase', apiInput.value.trim()); toast('Saved API base'); };
   const API = p => (apiInput.value||DEFAULT_API).replace(/\/$/,'') + p;
   const uidKey='gal_uid';
-
-Ali Hosseinioun, [9/1/2025 1:17 AM]
-let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
+  let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
 
   // ---------- DOM refs ----------
   const elStatus=document.getElementById('status');
@@ -212,9 +206,7 @@ let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(
   async function runSignalsSlow(){ resetSignals(); elSigState.textContent='running…'; elEngineState.textContent='analyzing';
     const rows=[...elSigList.children]; const steps=Math.min(18,rows.length); // free: partial
     for(let i=0;i<steps;i++){
-
-Ali Hosseinioun, [9/1/2025 1:17 AM]
-await sleep(1200 + Math.random()*900); rows[i].querySelector('.state').textContent='ok'; elBar.style.width = Math.round(((i+1)/(SIGS.length))*100)+'%';
+      await sleep(1200 + Math.random()*900); rows[i].querySelector('.state').textContent='ok'; elBar.style.width = Math.round(((i+1)/(SIGS.length))*100)+'%';
     }
     elSigState.textContent='paused — upgrade to run full 1126 metrics'; elEngineState.textContent='idle';
   }
@@ -239,7 +231,7 @@ await sleep(1200 + Math.random()*900); rows[i].querySelector('.state').textConte
     attachHoldToReveal(d, ()=>{
       // reveal content (no raw URL shown; user can Own or inspect Why)
       const more=document.createElement('div'); more.style.marginTop='8px';
-      more.innerHTML = <div class="row"><button class="btn btn--ghost" data-a="own">Own</button><button class="btn btn--ghost" data-a="why">Why this?</button></div>;
+      more.innerHTML = `<div class="row"><button class="btn btn--ghost" data-a="own">Own</button><button class="btn btn--ghost" data-a="why">Why this?</button></div>`;
       d.appendChild(more);
       more.querySelector('[data-a=own]').onclick=()=>claimOwn(L);
       more.querySelector('[data-a=why]').onclick=()=>showWhy(L);
@@ -274,9 +266,7 @@ await sleep(1200 + Math.random()*900); rows[i].querySelector('.state').textConte
     const payload = collect(); localStorage.setItem('onboard_payload', JSON.stringify(payload));
     elResults.innerHTML=''; lastSeen.clear(); toast('Searching…'); elStatus.textContent='searching…'; elEngineState.textContent='warming'; runSignalsSlow();
     try{
-
-Ali Hosseinioun, [9/1/2025 1:17 AM]
-await fetch(API('/api/v1/find-now'),{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify(payload)}).then(r=>r.json());
+      await fetch(API('/api/v1/find-now'),{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify(payload)}).then(r=>r.json());
       // begin polling and gradual add
       if(!polling){ polling=true; pollLeads(); }
     }catch(e){ toast('API error'); elStatus.textContent='error'; }
