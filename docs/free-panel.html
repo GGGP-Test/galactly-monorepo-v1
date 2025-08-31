@@ -1,288 +1,334 @@
+
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Galactly — Live Results</title>
+  <title>Galactly — Free Panel</title>
   <style>
     :root{
-      --bg:#0b0f17;--panel:#0f1623;--line:#1b2433;--ink:#eaf0ff;--mut:#9fb0c9;
-      --a:#86f7d6;--b:#57a4ff;--warm:#ffcd7a;--good:#90f7a7;--warn:#ffc68a;
+      --ink:#eaf0ff; --mut:#b7c0d6; --line:rgba(255,255,255,.08);
+      --bg:#0b0f16; --panel:#0d1420; --panel2:#0e1726; --chip:#0f1b2e;
+      --accent:#86f7d6; --accent2:#57a4ff; --warn:#ffd479;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;background:radial-gradient(1200px 700px at 85% -10%,rgba(80,130,255,.12),rgba(0,0,0,0) 60%),radial-gradient(900px 500px at 15% 110%,rgba(120,200,255,.08),rgba(0,0,0,0) 60%),linear-gradient(180deg,#0b0e18,#070a12 55%);
-         color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
-    header{position:sticky;top:0;z-index:50;background:rgba(10,14,22,.6);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-    .nav{max-width:1280px;margin:auto;display:flex;align-items:center;gap:12px;justify-content:space-between;padding:10px 16px}
-    .brand{display:flex;align-items:center;gap:8px}
+    body{margin:0;background:radial-gradient(900px 600px at 80% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%),linear-gradient(180deg,#0b0f16,#070a11 70%);color:var(--ink);font:500 14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    header{position:sticky;top:0;z-index:30;backdrop-filter:blur(8px) saturate(1.05);background:rgba(6,10,17,.55);border-bottom:1px solid var(--line)}
+    .nav{max-width:1280px;margin:auto;padding:10px 16px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff}
     .brand svg{width:22px;height:22px}
-    .pill{border:1px solid var(--line);padding:5px 8px;border-radius:999px;color:var(--mut)}
-    .api{display:flex;align-items:center;gap:8px}
-    .api input{width:460px;max-width:52vw;background:#0c1320;border:1px solid var(--line);color:var(--ink);padding:7px 9px;border-radius:10px}
-    .btn{background:linear-gradient(90deg,#ffffff,#e9f0ff);color:#0b0c12;border:none;border-radius:12px;padding:8px 12px;font-weight:800;cursor:pointer}
+    .brand b{font-weight:800}
+    .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);padding:4px 8px;border-radius:999px;opacity:.85}
+    .api input{width:420px;max-width:52vw;background:#0e1420;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:10px}
+    .api button{margin-left:8px;background:#e9f0ff;color:#0b0c12;border:0;padding:8px 12px;border-radius:10px;font-weight:800;cursor:pointer}
 
-    .wrap{max-width:1280px;margin:auto;display:grid;grid-template-columns:280px minmax(280px,520px) 1fr;gap:18px;padding:18px}
-    @media (max-width:1140px){.wrap{grid-template-columns:1fr}}
+    .grid{max-width:1280px;margin:18px auto;padding:0 16px;display:grid;grid-template-columns:320px 1fr 380px;gap:16px}
+    @media (max-width:1100px){.grid{grid-template-columns:1fr}}
 
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+    .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);position:relative;overflow:hidden}
+    .card h4{margin:0 0 8px;padding:14px 14px 0;font:800 13px/1.2 system-ui}
+    .card .body{padding:14px}
 
-    /* left: neutron */
-    #neutronBox{position:relative;height:460px;display:flex;align-items:center;justify-content:center}
-    #neutron{display:block;width:100%;height:100%;border-radius:16px}
-    .neutron-meta{position:absolute;bottom:10px;left:12px;display:flex;gap:8px;align-items:center;color:var(--mut)}
+    /* Left: Neutron star */
+    #starWrap{min-height:420px;display:flex;align-items:center;justify-content:center}
+    #starCanvas{display:block;width:100%;height:100%;min-height:420px}
+    .engineFoot{position:absolute;left:14px;bottom:10px;color:var(--mut);font-size:12px;opacity:.9}
 
-    /* center: live results */
-    .results{padding:12px}
-    .lead{position:relative;background:#0e1522;border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 4px;overflow:hidden}
-    .lead .top{display:flex;align-items:center;gap:8px;color:var(--mut);font-size:12px}
-    .lead h3{margin:6px 0 4px;font-size:15px}
-    .chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:11px;color:var(--mut);margin-right:6px}
-    .hold{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,15,25,.6),rgba(10,15,25,.85));display:flex;align-items:center;justify-content:center;gap:10px;backdrop-filter:blur(2px)}
-    .ring{width:22px;height:22px;border-radius:50%;border:3px solid rgba(255,255,255,.22);border-top-color:#fff;animation:spin .9s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .hold .cta{border:1px dashed var(--line);padding:6px 10px;border-radius:12px;color:#ccd7ea}
-    .metaRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .btn-small{background:#121b2c;border:1px solid var(--line);color:#dfe7fb;border-radius:10px;padding:6px 8px;cursor:pointer}
+    /* Middle: Live results */
+    .results{min-height:420px;padding:8px 10px 14px}
+    .lead{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 4px;position:relative;background:#0f1626}
+    .lead h5{margin:0 0 6px;font:800 14px system-ui}
+    .lead .row{display:flex;align-items:center;gap:10px}
+    .lead .kw{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 0}
+    .chip{background:var(--chip);border:1px solid #1b2a41;border-radius:999px;padding:2px 8px;font-size:12px;opacity:.9}
+    .lead .meta{color:var(--mut);font-size:12px}
+    .hold{position:absolute;inset:0;background:linear-gradient(180deg,rgba(3,7,14,.0),rgba(3,7,14,.45));backdrop-filter:blur(0px);display:flex;align-items:center;justify-content:center;border-radius:14px;border:1px dashed rgba(255,255,255,.06)}
+    .hold span{background:#0f1626;border:1px solid var(--line);padding:9px 12px;border-radius:10px;color:#dfe7ff}
+    .revealTimer{position:absolute;right:10px;top:10px;font-size:12px;color:var(--mut)}
 
-    /* right: customize + metrics */
-    .side{display:grid;grid-template-rows:auto 1fr;gap:18px}
-    .panel{padding:14px}
-    .panel h4{margin:2px 0 8px}
-    .f{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .f input,.f textarea{width:100%;background:#0c1320;border:1px solid var(--line);color:var(--ink);padding:10px;border-radius:12px}
-    .f textarea{grid-column:1/-1;min-height:90px;resize:vertical}
-    .mut{color:var(--mut);font-size:12px}
-    .inline{display:flex;gap:8px;align-items:center}
-    .help{display:inline-flex;width:18px;height:18px;border:1px solid var(--line);border-radius:50%;align-items:center;justify-content:center;color:var(--mut);cursor:pointer}
+    /* Right: Customize + Signals */
+    .group{padding:12px 12px 12px}
+    .row{display:flex;gap:10px}
+    .ctl{flex:1;display:flex;align-items:center;gap:8px;margin:10px 0}
+    .ctl input,.ctl textarea{width:100%;background:#0f1626;border:1px solid #1b2539;color:var(--ink);padding:10px 12px;border-radius:12px}
+    .ctl textarea{min-height:92px;resize:vertical}
+    .ctl small{color:var(--mut)}
+    .cta{display:flex;gap:10px;align-items:center;margin-top:6px}
+    .btn{background:#e9f0ff;color:#06101e;border:0;padding:10px 14px;border-radius:12px;font-weight:800;cursor:pointer}
+    .btn--ghost{background:transparent;color:#e9f0ff;border:1px solid var(--line)}
+    .hint{cursor:help;color:#a9c7ff;border-bottom:1px dotted #a9c7ff}
 
-    .meter{padding:14px}
-    .bar{height:8px;background:#0e1422;border:1px solid var(--line);border-radius:999px;overflow:hidden}
-    .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--a),var(--b))}
-    .task{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
-    .task:last-child{border-bottom:none}
-    .tname{color:#dfe7fb}
-    .tstate{color:var(--mut)}
+    .
+
+Ali Hosseinioun, [9/1/2025 1:17 AM]
+signals{min-height:160px}
+    .bar{height:8px;background:#0f1626;border:1px solid #1a2131;border-radius:8px;overflow:hidden}
+    .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%}
+    .sigList{margin:10px 0 0;display:grid;grid-template-columns:1fr;gap:6px}
+    .sig{display:flex;justify-content:space-between;gap:8px;background:#0f1626;border:1px solid #1a2131;border-radius:10px;padding:8px 10px}
+    .sig .name{opacity:.92}
+    .sig .state{opacity:.7;color:var(--mut)}
+    .lock{opacity:.8;color:#ffd8a6}
+    .idle{opacity:.7;color:var(--mut)}
+
+    .toast{position:fixed;right:16px;bottom:16px;background:#0e1727;border:1px solid var(--line);padding:10px 12px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;transform:translateY(6px);transition:all .2s ease}
+    .toast.show{opacity:1;transform:translateY(0)}
   </style>
 </head>
 <body>
   <header>
     <div class="nav">
-      <div class="brand">
-        <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/><path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
-        <strong>Galactly</strong>
-        <span class="pill" id="stat">connecting…</span>
-      </div>
-      <div class="api"><label style="color:var(--mut)">API:</label>
-        <input id="apiBase" placeholder="https://<your-api>"/>
-        <button class="btn" id="saveApi">Save</button>
-      </div>
+      <a class="brand" href="#" title="Galactly">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".12"/><path d="M12 36c8 8 18 12 28 12" stroke="url(#g)" stroke-width="4" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
+        <b>Galactly</b>
+        <span class="pill" id="status">connecting…</span>
+      </a>
+      <div class="api"><label style="opacity:.8">API:</label> <input id="apiBase" placeholder="https://..."/> <button id="saveApi">Save</button></div>
     </div>
   </header>
 
-  <main class="wrap">
-    <!-- Left: minimal neutron star animation -->
-    <section class="card" id="neutronBox">
-      <canvas id="neutron"></canvas>
-      <div class="neutron-meta mut">Lead Engine • idle</div>
+  <main class="grid">
+    <!-- Left: Lead Engine animation -->
+    <section class="card" id="starWrap">
+      <canvas id="starCanvas"></canvas>
+      <div class="engineFoot" id="engineFoot">Lead Engine • <span id="engineState">idle</span></div>
     </section>
 
-    <!-- Center: Live results (single column, stream-in) -->
-    <section class="card results">
-      <div class="mut" style="padding:6px 4px 2px">Live results</div>
-      <div id="leads"></div>
+    <!-- Center: Live results (added one-by-one) -->
+    <section class="card">
+      <h4>Live results</h4>
+      <div class="results" id="results"></div>
     </section>
 
-    <!-- Right: Customize your AI + Metrics preview -->
-    <section class="side">
-      <div class="card panel">
-        <h4>Customize your AI</h4>
-        <div class="f">
-          <input id="vsite" placeholder="Vendor site (optional) e.g. yourcompany.com"/>
-          <input id="buyers" placeholder="Seed buyers (comma-separated domains)"/>
-          <input id="inds" placeholder="Industries e.g. beverage, confectionery"/>
-          <input id="regs" placeholder="Regions e.g. US, CA"/>
-          <textarea id="guidance" placeholder="Describe your ideal customers in plain words. Products, pack types, order sizes, retailer channels, and any exclusions."></textarea>
+    <!-- Right: Customize + Signals preview -->
+    <aside class="card">
+      <h4>Customize your AI</h4>
+      <div class="body">
+        <div class="ctl"><input id="f_vendor" placeholder="Vendor site (optional) e.g. yourcompany.com"></div>
+        <div class="ctl"><input id="f_buyers" placeholder="Seed buyers (comma separated domains)"></div>
+        <div class="row">
+          <div class="ctl"><input id="f_inds" placeholder="Industries e.g. beverage, confectionery"></div>
+          <div class="ctl"><input id="f_regs" placeholder="Regions e.g. US, CA"></div>
         </div>
-        <div class="inline" style="margin-top:8px">
-          <button class="btn" id="runBtn">Find now</button>
-          <span class="mut">Tip: hold to reveal. 2 deep reveals/day on free.</span>
-          <span class="help" id="how">?</span>
+        <div class="ctl">
+          <textarea id="f_icp" placeholder="Describe your ideal customers in plain words. Products, pack types, order sizes, retailer channels, and any exclusions."></textarea>
+        </div>
+        <div class="cta">
+          <button class="btn" id="btnFind">Find now</button>
+          <button class="btn btn--ghost" id="btnTip" title="How to guide">?</button>
+          <small class="idle">Tip: hold to reveal. 2 deep reveals/day on free.</small>
         </div>
       </div>
-
-      <div class="card meter">
-        <div class="inline" style="justify-content:space-between">
-          <h4 style="margin:0">Signals preview</h4>
-          <span class="mut" id="meterState">idle</span>
-        </div>
-        <div class="bar" style="margin:6px 0 10px"><i id="bar"></i></div>
-        <div id="tasks"></div>
+      <h4 style="border-top:1px solid var(--line);padding-top:12px;margin-top:6px">Signals preview <small id="sigState" class="idle">idle</small></h4>
+      <div class="group signals">
+        <div class="bar"><i id="bar"></i></div>
+        <div class="sigList" id="sigList"></div>
       </div>
-    </section>
+    </aside>
   </main>
 
-  <script>
-    // ---------- API base + user ----------
-    const q = new URLSearchParams(location.search);
-    const apiInput = document.getElementById('apiBase');
-    apiInput.value = (q.get('api') || localStorage.getItem('apiBase') || 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run').replace(/\/$/,'');
-    document.getElementById('saveApi').onclick = () => { localStorage.setItem('apiBase', apiInput.value.trim()); location.reload(); };
-    const API = p => (apiInput.value || '').replace(/\/$/,'') + p;
-    const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
+  <div class="toast" id="toast"></div>
 
-    // ---------- Left: Neutron star (lightweight 2D canvas) ----------
-    const cvs = document.getElementById('neutron'); const DPR=Math.min(2, window.devicePixelRatio||1); let ctx=null, T=0;
-    function fit(){ const r=cvs.parentElement.getBoundingClientRect(); cvs.width=Math.floor(r.width*DPR); cvs.height=Math.floor(r.height*DPR); cvs.style.width=r.width+'px'; cvs.style.height=r.height+'px'; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0);} window.addEventListener('resize',fit); fit();
-    function drawNeutron(ts){ if(!ctx) return; T=ts/1000; const {width:w,height:h}=cvs.getBoundingClientRect(); ctx.clearRect(0,0,w,h);
-      const cx=w*0.55, cy=h*0.56; const core=18; // core radius
-      // background glow
-      const g0=ctx.createRadialGradient(cx,cy,0,cx,cy,core*8); g0.addColorStop(0,'rgba(255,255,255,.05)'); g0.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g0; ctx.beginPath(); ctx.arc(cx,cy,core*8,0,Math.PI*2); ctx.fill();
-      // rotating spokes (2)
-      for(let i=0;i<2;i++){
-        const a=T*0.35 + i*Math.PI; const r1=core*1.2, r2=Math.min(w,h)*0.42; const x1=cx+Math.cos(a)*r1, y1=cy+Math.sin(a)*r1; const x2=cx+Math.cos(a)*r2, y2=cy+Math.sin(a)*r2;
-        const grad=ctx.createLinearGradient(x1,y1,x2,y2); grad.addColorStop(0,'rgba(134,247,214,0.0)'); grad.addColorStop(0.15,'rgba(134,247,214,0.25)'); grad.addColorStop(1,'rgba(87,164,255,0.0)');
-        ctx.strokeStyle=grad; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-      }
-      // pulsar ring
-      const pul=1+0.2*Math.sin(T*1.6); const rr=core*2.8*pul; ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(cx,cy,rr,0,Math.PI*2); ctx.stroke();
-      // core
-      const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,core*2.4); cg.addColorStop(0,'rgba(255,255,255,.95)'); cg.addColorStop(1,'rgba(255,255,255,0)'); ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.arc(cx,cy,core*2.4,0,Math.PI*2); ctx.fillStyle=cg; ctx.fill(); ctx.globalCompositeOperation='source-over';
-      requestAnimationFrame(drawNeutron);
+<script>
+(()=>{
+  // ---------- API base + uid ----------
+  const qs=new URLSearchParams(location.search);
+  const apiInput=document.getElementById('apiBase');
+  const DEFAULT_API = localStorage.getItem('apiBase')||qs.get('api')||'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
+  apiInput.value = DEFAULT_API;
+  document.getElementById('saveApi').onclick=()=>{ localStorage.setItem('apiBase', apiInput.value.trim()); toast('Saved API base'); };
+  const API = p => (apiInput.value||DEFAULT_API).replace(/\/$/,'') + p;
+  const uidKey='gal_uid';
+
+Ali Hosseinioun, [9/1/2025 1:17 AM]
+let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
+
+  // ---------- DOM refs ----------
+  const elStatus=document.getElementById('status');
+  const elResults=document.getElementById('results');
+  const elEngineState=document.getElementById('engineState');
+  const elSigState=document.getElementById('sigState');
+  const elBar=document.getElementById('bar');
+  const elSigList=document.getElementById('sigList');
+  const btnFind=document.getElementById('btnFind');
+
+  // ---------- Prefill from onboarding (if present) ----------
+  try{ const o=JSON.parse(localStorage.getItem('onboard_payload')||'null'); if(o){
+    g('f_vendor').value=o.vendorDomain||''; g('f_buyers').value=(o.buyers||[]).join(', ');
+    g('f_inds').value=(o.industries||[]).join(', '); g('f_regs').value=(o.regions||[]).join(', ');
+    btnFind.textContent='Save & run';
+  }}catch{}
+
+  // ---------- Helpers ----------
+  function g(id){ return document.getElementById(id); }
+  function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1700); }
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  // ---------- Hold-to-reveal logic ----------
+  function attachHoldToReveal(card, onReveal){
+    const cover = document.createElement('div'); cover.className='hold'; cover.innerHTML='<span>Press & hold to reveal</span>';
+    const timerEl = document.createElement('div'); timerEl.className='revealTimer'; timerEl.textContent='';
+    card.appendChild(cover); card.appendChild(timerEl);
+    let t0=null, hold=false, remain=0, timer=null, open=false, gateSec=1.35, viewSec=15;
+    const start=(e)=>{ if(open) return; hold=true; t0=Date.now(); timer=setInterval(()=>{
+      const p=(Date.now()-t0)/1000; remain=Math.max(0, gateSec-p); timerEl.textContent = remain>0? ('hold '+remain.toFixed(1)+'s') : 'unlocked';
+      if(p>=gateSec){ clearInterval(timer); cover.remove(); open=true; onReveal?.(); const until=Date.now()+viewSec*1000; const tick=()=>{ const left=Math.max(0,Math.ceil((until-Date.now())/1000)); timerEl.textContent = left? ('visible '+left+'s') : ''; if(left) requestAnimationFrame(tick); }; tick(); }
+    }, 60); };
+    const stop=()=>{ hold=false; if(timer){ clearInterval(timer); timer=null; timerEl.textContent=''; } };
+    cover.addEventListener('mousedown',start); cover.addEventListener('touchstart',start,{passive:true});
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>cover.addEventListener(ev,stop));
+  }
+
+  // ---------- Signals Runner (slow, partial on free) ----------
+  const SIGS = [
+    ['Demand index','scanning…'],
+    ['Audience pulse','scanning…'],
+    ['Offer freshness','scanning…'],
+    ['Purchase intent','scanning…'],
+    ['Stock cadence','scanning…'],
+    ['Restock chatter','scanning…'],
+    ['Cart velocity','scanning…'],
+    ['Return friction','scanning…'],
+    ['Procurement doors','scanning…'],
+    ['Vendor routes','scanning…'],
+    ['Price elasticity','scanning…'],
+    ['Unit economics','scanning…'],
+    ['Lead reachability','scanning…'],
+    ['Decision window','scanning…'],
+    ['Quoteability','scanning…'],
+    ['Priority fit','scanning…'],
+    ['Budget moments','scanning…'],
+    ['Risk screen','scanning…'],
+    ['AI match (Pro)','locked','lock'],
+    ['Attribution trails (Pro)','locked','lock'],
+    ['Buyer queues (Pro)','locked','lock'],
+    ['Contact orchestration (Pro)','locked','lock'],
+  ];
+  function resetSignals(){ elSigList.innerHTML=''; SIGS.forEach(([name,state,flag])=>{
+    const d=document.createElement('div'); d.className='sig'; d.innerHTML=`<div class="name">${name}</div><div class="state ${flag||''}">${state||'—'}</div>`; elSigList.appendChild(d);
+  }); elBar.style.width='0%'; }
+
+  async function runSignalsSlow(){ resetSignals(); elSigState.textContent='running…'; elEngineState.textContent='analyzing';
+    const rows=[...elSigList.children]; const steps=Math.min(18,rows.length); // free: partial
+    for(let i=0;i<steps;i++){
+
+Ali Hosseinioun, [9/1/2025 1:17 AM]
+await sleep(1200 + Math.random()*900); rows[i].querySelector('.state').textContent='ok'; elBar.style.width = Math.round(((i+1)/(SIGS.length))*100)+'%';
     }
-    requestAnimationFrame(drawNeutron);
+    elSigState.textContent='paused — upgrade to run full 1126 metrics'; elEngineState.textContent='idle';
+  }
 
-    // ---------- Right: Customize + preview ----------
-    const els = { vsite:$('#vsite'), buyers:$('#buyers'), inds:$('#inds'), regs:$('#regs'), guidance:$('#guidance'), runBtn:$('#runBtn'), tasks:$('#tasks'), bar:$('#bar'), meterState:$('#meterState'), stat:$('#stat') };
-    function $(id){ return document.getElementById(id); }
+  // ---------- Live results pipeline ----------
+  let adding=false, queue=[]; function addLeadGradually(lead){ queue.push(lead); if(!adding){ adding=true; pump(); } }
+  async function pump(){ while(queue.length){ const L=queue.shift(); renderLead(L); await sleep(900 + Math.random()*700); } adding=false; }
 
-    // Prefill from onboarding
+  function prettifyHost(u){ try{ const h=new URL(u).hostname; return h.replace(/^www\./,''); }catch{return ''} }
+
+  function renderLead(L){
+    const d=document.createElement('div'); d.className='lead';
+    const host = prettifyHost(L.source_url);
+    // company-ish name from title/host
+    const name = (L.title||host||'New buyer');
+    const kw = (L.kw||[]).slice(0,3);
+    d.innerHTML = `
+      <div class="row"><h5>${esc(name)}</h5><span class="chip" title="Confidence">Conf ${String(L.heat||60)}</span></div>
+      <div class="meta">${esc((L.platform||'')).toLowerCase()} • ${host?esc(host):'—'}</div>
+      <div class="kw">${kw.map(k=>`<span class='chip'>${esc(k)}</span>`).join('')}</div>
+    `;
+    attachHoldToReveal(d, ()=>{
+      // reveal content (no raw URL shown; user can Own or inspect Why)
+      const more=document.createElement('div'); more.style.marginTop='8px';
+      more.innerHTML = <div class="row"><button class="btn btn--ghost" data-a="own">Own</button><button class="btn btn--ghost" data-a="why">Why this?</button></div>;
+      d.appendChild(more);
+      more.querySelector('[data-a=own]').onclick=()=>claimOwn(L);
+      more.querySelector('[data-a=why]').onclick=()=>showWhy(L);
+    });
+    elResults.appendChild(d);
+  }
+
+  async function claimOwn(L){
+    try{ const r=await fetch(API('/api/v1/claim'),{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({leadId:L.id})}).then(r=>r.json());
+      if(r?.ok){ toast('Reserved. Click Own to complete'); const r2=await fetch(API('/api/v1/own'),{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({windowId:r.windowId})}).then(r=>r.json()); if(r2?.ok) toast('Owned!'); }
+    }catch(e){ toast('Could not own now'); }
+  }
+
+  function showWhy(L){
+    const wrap=document.createElement('div'); wrap.style.position='fixed'; wrap.style.inset='0'; wrap.style.background='rgba(0,0,0,.45)'; wrap.style.backdropFilter='blur(2px)'; wrap.onclick=()=>wrap.remove();
+    const m=document.createElement('div'); m.style.width='min(560px,92vw)'; m.style.margin='10vh auto'; m.style.background='#0e1727'; m.style.border='1px solid var(--line)'; m.style.borderRadius='14px'; m.style.padding='16px';
+    m.innerHTML = `<h3 style="margin:0 0 6px">${esc(L.title||'Lead')}</h3>
+      <div style='opacity:.8;font-size:12px'>Our model surfaced this from <b>${esc((L.platform||'source').toLowerCase())}</b>. Confidence ${L.heat||60}.<br/>Pro features would add: AI Match, Buyer Queues, and Contact Orchestration.</div>
+      <div style='margin-top:10px'>${esc(L.snippet||'')}</div>
+      <div style='margin-top:12px;display:flex;gap:8px'>
+        <button class='btn' id='openProof'>Open proof</button>
+        <button class='btn btn--ghost' id='closeWhy'>Close</button>
+      </div>`;
+    m.querySelector('#closeWhy').onclick=()=>wrap.remove();
+    m.querySelector('#openProof').onclick=()=>{ try{ window.open(L.source_url,'_blank','noopener'); }catch{} };
+    wrap.appendChild(m); document.body.appendChild(wrap);
+  }
+
+  // ---------- Find flow ----------
+  let polling=false, lastSeen=new Set();
+  btnFind.onclick = async ()=>{
+    const payload = collect(); localStorage.setItem('onboard_payload', JSON.stringify(payload));
+    elResults.innerHTML=''; lastSeen.clear(); toast('Searching…'); elStatus.textContent='searching…'; elEngineState.textContent='warming'; runSignalsSlow();
     try{
-      const ob = JSON.parse(localStorage.getItem('onboarding')||'null') || {};
-      if(ob.vendorDomain) els.vsite.value = ob.vendorDomain;
-      if(Array.isArray(ob.buyers)) els.buyers.value = ob.buyers.join(', ');
-      if(Array.isArray(ob.industries)) els.inds.value = ob.industries.join(', ');
-      if(Array.isArray(ob.regions)) els.regs.value = ob.regions.join(', ');
-      if(ob.guidance) els.guidance.value = ob.guidance;
-      if(ob.vendorDomain || (ob.buyers && ob.buyers.length)) { els.runBtn.textContent='Save & refresh'; setTimeout(()=>runFindNow(true), 600); }
-    }catch{}
 
-    $('#how').title = 'Be specific. Example: "We make PET jars (16–32oz) for gummy candy brands with Target/Costco channels. Prefer audiences running social + search ads; MOQ > 5k units/order; exclude pharma."';
+Ali Hosseinioun, [9/1/2025 1:17 AM]
+await fetch(API('/api/v1/find-now'),{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify(payload)}).then(r=>r.json());
+      // begin polling and gradual add
+      if(!polling){ polling=true; pollLeads(); }
+    }catch(e){ toast('API error'); elStatus.textContent='error'; }
+  };
 
-    let previewTimer=null, previewIdx=0, previewDone=false; const TASKS = buildTasks(); renderTasks(TASKS);
+  function collect(){
+    const buyers = g('f_buyers').value.split(',').map(s=>s.trim()).filter(Boolean);
+    const industries = g('f_inds').value.split(',').map(s=>s.trim()).filter(Boolean);
+    const regions = g('f_regs').value.split(',').map(s=>s.trim()).filter(Boolean);
+    const vendorDomain = g('f_vendor').value.trim()||undefined;
+    const desc = g('f_icp').value.trim();
+    return { buyers, industries, regions, vendorDomain, desc };
+  }
 
-    els.runBtn.onclick = ()=> runFindNow(false);
-
-    async function runFindNow(wasAuto){
-      const body = { vendorDomain: els.vsite.value.trim()||undefined,
-                     buyers: splitCSV(els.buyers.value),
-                     industries: splitCSV(els.inds.value),
-                     regions: splitCSV(els.regs.value),
-                     guidance: els.guidance.value.trim()||undefined };
-      localStorage.setItem('onboarding', JSON.stringify(body));
-      els.runBtn.disabled = true; els.runBtn.textContent = wasAuto? 'Refreshing…' : 'Finding…';
-      els.meterState.textContent = 'planning'; setBar(0);
-      // kick preview first (feels real)
-      startPreview(90); // ~90s walk-through
+  async function pollLeads(){
+    while(true){
       try{
-        const r = await fetch(API('/api/v1/find-now'), {method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body: JSON.stringify(body)});
-        const j = await r.json(); if(!j.ok) throw new Error(j.error||'find-now failed');
-        els.stat.textContent='ok'; els.meterState.textContent = 'scanning';
-        // begin streaming in live results slowly
-        streamLeads();
-      }catch(e){ els.stat.textContent='error'; console.error(e); }
-      finally{ els.runBtn.disabled=false; els.runBtn.textContent='Save & refresh'; }
+        const r=await fetch(API('/api/v1/leads'),{headers:{'x-galactly-user':uid}}).then(r=>r.json());
+        if(r?.leads){ for(const L of r.leads){ if(!lastSeen.has(L.id)){ lastSeen.add(L.id); addLeadGradually(L); } } elStatus.textContent='ok'; }
+      }catch(e){ elStatus.textContent='error'; }
+      await sleep(6000);
     }
+  }
 
-    function splitCSV(s){ return (s||'').split(',').map(x=>x.trim()).filter(Boolean); }
+  // ---------- Star animation (neutron‑style, light) ----------
+  const cvs=document.getElementById('starCanvas'); const DPR=Math.min(2,window.devicePixelRatio||1); let ctx=null, start=0;
+  function resize(){ const r=cvs.getBoundingClientRect(); if(!r.width||!r.height){ setTimeout(resize,80); return; }
+    cvs.width=Math.floor(r.width*DPR); cvs.height=Math.floor(r.height*DPR); cvs.style.width=r.width+'px'; cvs.style.height=r.height+'px'; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  window.addEventListener('resize',resize); resize();
+  function ring(x,y,r,alpha){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.strokeStyle='rgba(255,255,255,'+alpha+')'; ctx.lineWidth=1.1; ctx.stroke(); }
+  function glow(x,y,r,inner,outer){ const g=ctx.createRadialGradient(x,y,inner,x,y,outer); g.addColorStop(0,'rgba(255,255,255,.95)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,outer,0,Math.PI*2); ctx.fill(); }
+  function beam(x,y,angle,len){ ctx.save(); ctx.translate(x,y); ctx.rotate(angle); const grd=ctx.createLinearGradient(0,0,len,0); grd.addColorStop(0,'rgba(134,247,214,.9)'); grd.addColorStop(1,'rgba(134,247,214,0)'); ctx.strokeStyle=grd; ctx.lineWidth=3; ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(len,0); ctx.stroke(); ctx.restore(); ctx.globalCompositeOperation='source-over'; }
+  function animate(ts){ if(!start) start=ts; const t=(ts-start)/1000; const r=cvs.getBoundingClientRect(); const w=r.width, h=r.height; const cx=w*0.5, cy=h*0.55; ctx.clearRect(0,0,w,h);
+    // background soft starfield
+    ctx.fillStyle='rgba(255,255,255,.02)'; for(let i=0;i<14;i++){ const px=(i*97%w), py=(i*53%h); ctx.fillRect(px,py,1,1); }
+    // core
+    glow(cx,cy,8,0,70); ring(cx,cy,42,0.09); ring(cx,cy,74,0.06);
+    // beams rotating slowly
+    const a=t*0.35, b=a+Math.PI*0.62; beam(cx,cy,a,120); beam(cx,cy,b,140);
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
 
-    // ---------- Metrics preview (generic names) ----------
-    function buildTasks(){
-      const cats = [
-        ['Demand','Media presence sweep','Offer cadence check','Traffic lift monitor','Seasonal push detector','Audience freshness scan'],
-        ['Procurement','Vendor-portal pass','Tender board sweep','Form availability check','Supplier intake discover','Policy notes scrape'],
-        ['Product','Case/pack configs','Unit dims & weight','Restock pulse','Bundle/variety mapping','Price band map'],
-        ['Momentum','PR/launch heat','Retail expansion hints','Hiring velocity','Engagement slope','Referral chatter'],
-        ['Ops Fit','MOQ & cadence guess','Ship lanes & lead times','Regulatory flags','Contactability test','Pattern match to ICP']
-      ];
-      // flatten with category header rows
-      const out=[]; let id=1; for(const [cat, ...items] of cats){ out.push({kind:'cat', name:cat}); for(const it of items){ out.push({kind:'task', name:it, id:id++}); } }
-      // pad to ~40 preview items
-      while(out.filter(x=>x.kind==='task').length<40){ out.push({kind:'task', name:'Exploratory scan '+(out.length%9+1), id:id++}); }
-      return out;
-    }
+  // ---------- kick ----------
+  ;(async()=>{
+    try{ const r=await fetch(API('/api/v1/status'),{headers:{'x-galactly-user':uid}}).then(r=>r.json()); elStatus.textContent='ok'; }catch{ elStatus.textContent='offline'; }
+    resetSignals();
+  })();
+})();
 
-    function renderTasks(list){ els.tasks.innerHTML=''; for(const t of list){ if(t.kind==='cat'){ const d=document.createElement('div'); d.className='task'; d.innerHTML = `<div class="tname"><strong>${t.name}</strong></div><div class="tstate mut">queued</div>`; els.tasks.appendChild(d); t._el=d; } else { const d=document.createElement('div'); d.className='task'; d.innerHTML = `<div class="tname">${t.name}</div><div class="tstate mut">queued</div>`; els.tasks.appendChild(d); t._el=d; } }
-    }
-
-    function setBar(p){ els.bar.style.width = Math.round(p*100)+'%'; }
-
-    function startPreview(totalSec){
-      if(previewTimer) clearInterval(previewTimer); previewIdx=0; previewDone=false; let progressed=0, steps=TASKS.filter(t=>t.kind==='task').length; const tick=1500; // 1.5s per task
-      previewTimer = setInterval(()=>{
-        // advance one task
-        const next = TASKS.find((t,i)=> t.kind==='task' && !t.done && i>=previewIdx); if(next){ next.done=true; next._el.querySelector('.tstate').textContent='ok'; previewIdx++; }
-        progressed = Math.min(0.6, (previewIdx/steps) * 0.6); // cap at 60% on free
-        setBar(progressed);
-        els.meterState.textContent = progressed>0.55 ? 'awaiting pro metrics…' : 'running';
-        if(previewIdx>=Math.min(steps, Math.floor(totalSec*1000/tick))){ clearInterval(previewTimer); previewDone=true; }
-      }, tick);
-    }
-
-    // ---------- Center: stream-in leads, one by one ----------
-    const elLeads = document.getElementById('leads'); const seen=new Set(); let streamTimer=null;
-    async function streamLeads(){ if(streamTimer) clearInterval(streamTimer); streamTimer = setInterval(fetchAndAppend, 4500); fetchAndAppend(); }
-    async function fetchAndAppend(){
-      try{
-        const r = await fetch(API('/api/v1/leads'), { headers: {'x-galactly-user':uid} }); const j = await r.json(); if(!j?.ok) return;
-        const list = j.leads.filter(x=>!seen.has(x.source_url));
-        // append only one at a time
-        if(list.length){ addLead(list[0]); seen.add(list[0].source_url); }
-        els.stat.textContent='ok';
-      }catch(e){ els.stat.textContent='error'; }
-    }
-
-    function addLead(L){
-      const host = safeHost(L.source_url); const title = L.title || host || 'Untitled'; const cat = L.cat || 'signal';
-      const d = document.createElement('div'); d.className='lead';
-      d.innerHTML = `
-        <div class="top">${(L.platform||'source')} • ${host?host:'—'}</div>
-        <h3>${escapeHtml(title)}</h3>
-        <div class="metaRow"><span class="chip">${cat}</span>${(L.kw||[]).slice(0,2).map(k=>`<span class='chip'>${escapeHtml(k)}</span>`).join('')}</div>
-        <div class="mut" style="margin-top:6px">Confidence <strong>${L.heat||60}</strong></div>
-        <div class="hold"><div class="ring"></div><div class="cta">Press & hold to reveal</div></div>`;
-      // long-press
-      const overlay = d.querySelector('.hold'); let t=null;
-      const start = () => { if(t) return; t=setTimeout(()=>{ overlay.remove(); revealDetails(d, L); }, 1500); };
-      const cancel = () => { if(!t) return; clearTimeout(t); t=null; };
-      overlay.addEventListener('pointerdown', start); overlay.addEventListener('pointerup', cancel); overlay.addEventListener('pointerleave', cancel); overlay.addEventListener('pointercancel', cancel);
-      elLeads.appendChild(d);
-    }
-
-    function revealDetails(container, L){
-      // enrich view without showing raw URL upfront
-      const more = document.createElement('div'); more.style.marginTop='8px';
-      const host = safeHost(L.source_url);
-      more.innerHTML = `
-        <div class="mut">Why this lead</div>
-        <div style="margin:6px 0 10px">${escapeHtml(L.snippet||'Recent activity matched your profile.')}</div>
-        <div class="metaRow">
-          <button class="btn-small" onclick="window.open('${L.source_url}','_blank','noopener')">Open proof</button>
-          <button class="btn-small" onclick="claim(${L.id})">Claim</button>
-          <button class="btn-small" onclick="own(${L.id})">Own</button>
-        </div>`;
-      container.appendChild(more);
-    }
-
-    // expose claim/own helpers that call API with stored last lead id
-    window.claim = async function(id){ try{ await fetch(API('/api/v1/claim'),{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({leadId:id})}); }catch{} };
-    window.own = async function(id){ try{ await fetch(API('/api/v1/own'),{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({windowId:'todo'})}); }catch{} };
-
-    function safeHost(u){ try{ return new URL(u).hostname; }catch{ return ''; } }
-    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
-
-    // initial status ping
-    (async ()=>{ try{ const r=await fetch(API('/api/v1/status'), {headers:{'x-galactly-user':uid}}); const j=await r.json(); if(j?.cooldownSec===0) els.stat.textContent='ok'; }catch{} })();
-  </script>
+function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+</script>
 </body>
 </html>
