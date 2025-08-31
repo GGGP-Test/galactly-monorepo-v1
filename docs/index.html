@@ -1,4 +1,3 @@
-Ali Hosseinioun, [8/31/2025 11:04 PM]
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -49,6 +48,7 @@ nav a:hover{background:rgba(255,255,255,.06)}
 .btn--ghost:hover{background:rgba(255,255,255,.10)}
 .btn svg{width:16px;height:16px;vertical-align:-2px}
 
+/* RIGHT PANE (your original) */
 .flow{position:relative;background:linear-gradient(180deg,#0b0b10,#07080d);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.38)}
 .flow .glass{position:relative;border-radius:16px;background:
   radial-gradient(120% 130% at 65% 35%,rgba(255,255,255,.06),rgba(255,255,255,.02)),
@@ -60,29 +60,21 @@ nav a:hover{background:rgba(255,255,255,.06)}
 .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
 .badge{background:#0b0d14;border:1px dashed var(--line);border-radius:12px;padding:7px 11px;font:700 12px var(--mont);display:flex;gap:6px;align-items:center}
 .badge small{opacity:.75;font-weight:600}
-.
 
-Ali Hosseinioun, [8/31/2025 11:04 PM]
-ticker{margin-top:14px;max-height:108px;overflow:auto;border-top:1px solid var(--line);padding-top:10px;scrollbar-width:none;-ms-overflow-style:none}
+.ticker{margin-top:14px;max-height:108px;overflow:auto;border-top:1px solid var(--line);padding-top:10px;scrollbar-width:none;-ms-overflow-style:none}
 .ti{font-size:12px;opacity:.95;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.06)} .ti:last-child{border-bottom:none}
 
-/* ===== Onboarding modal ===== */
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:60}
-.modal{width:min(820px,92vw);background:#0c0f16;border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 70px rgba(0,0,0,.6);padding:18px}
-.modal h3{font:800 18px var(--mont);margin:4px 0 2px}
-.modal p.small{opacity:.8;margin:6px 0 14px;font-size:13px}
-.tabs{display:flex;gap:8px;margin:10px 0 16px}
-.tab{flex:1;text-align:center;border:1px solid var(--line);padding:10px 12px;border-radius:12px;cursor:pointer}
-.tab.active{background:rgba(255,255,255,.06)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.grid .full{grid-column:1/-1}
-input,textarea{width:100%;background:#0f131c;border:1px solid #20283a;color:#e8ecf1;border-radius:10px;padding:10px 12px;font:600 14px var(--inter)}
-.help{font-size:12px;opacity:.75}
+/* ONBOARDING MODAL */
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,12,.55);backdrop-filter:blur(8px);z-index:90}
+.modal.show{display:flex}
+.box{width:min(760px,96vw);border:1px solid var(--line);border-radius:18px;background:#0b0e15;padding:18px}
+.box h3{margin:0 0 6px;font:800 18px var(--mont)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:820px){.row{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:6px}
+input,textarea{background:#0f1420;color:#fff;border:1px solid #233147;border-radius:12px;padding:12px 12px;font:600 14px var(--inter)}
+.tagline{opacity:.8;font-size:12px;margin-bottom:8px}
 .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
-.btn--dim{background:#101521;color:#dbe2f2;border-color:#233048}
-.btn--dim:hover{filter:brightness(1.15)}
-.bad{color:#ffb4b4}
-.good{color:#86f7d6}
 </style>
 </head>
 <body>
@@ -108,14 +100,12 @@ input,textarea{width:100%;background:#0f131c;border:1px solid #20283a;color:#e8e
       <p>Real posts &amp; tenders from public feeds. Free viewer; paid automations, priority, CRM &amp; reporting.</p>
       <p class="sub">Built for packaging owners &amp; sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding. Just clicks.</p>
       <div class="cta">
-        <!-- changed: anchor -> button that opens modal -->
-        <button class="btn btn--primary" id="startFreeBtn">Start free</button>
+        <button class="btn btn--primary" id="btnStart">Start free</button>
         <a class="btn btn--ghost" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch 90s demo</a>
       </div>
-      <p class="sub" id="apiNote" style="margin-top:10px;opacity:.7"></p>
     </div>
 
-    <!-- your original right-side visualization kept verbatim -->
+    <!-- RIGHT: your original animated card -->
     <div class="flow">
       <div class="glass"><canvas id="flowCanvas"></canvas></div>
       <div class="meta">
@@ -132,71 +122,41 @@ input,textarea{width:100%;background:#0f131c;border:1px solid #20283a;color:#e8e
   </div>
 </section>
 
-<!-- ===== Onboarding Modal (2 paths) ===== -->
-<div class="modal-backdrop" id="ob">
-  <div class="modal">
-    <h3>Tell us who to find</h3>
-    <p class="small">Use your website (we derive your ICP) or enter an example buyer list.
-
-Ali Hosseinioun, [8/31/2025 11:04 PM]
-We’ll pull fresh, verifiable signals and open your live feed.</p>
-
-    <div class="tabs">
-      <div class="tab active" id="tabSite">Use my website</div>
-      <div class="tab" id="tabCustom">Custom ICP</div>
-    </div>
-
-    <!-- Site tab -->
-    <div class="tab-pane" id="paneSite">
-      <div class="grid">
-        <div class="full">
-          <label>Vendor website</label>
-          <input id="siteDomain" placeholder="yourcompany.com"/>
-          <div class="help">We derive industries/regions and seed buyers from pages like “Customers/Partners/Case studies.”</div>
+<!-- ONBOARDING MODAL -->
+<div class="modal" id="onb">
+  <div class="box">
+    <h3>Set your buyer profile</h3>
+    <div class="tagline">Pick one path. You can change this anytime in the feed.</div>
+    <div class="row">
+      <div class="col">
+        <div class="field">
+          <label for="vendor">Use my website (auto-derive ICP)</label>
+          <input id="vendor" placeholder="yourcompany.com"/>
         </div>
-        <div>
-          <label>Region(s)</label>
-          <input id="siteRegions" placeholder="e.g. US, CA"/>
+      </div>
+      <div class="col">
+        <div class="field">
+          <label for="buyers">Pick targets (comma-separated domains)</label>
+          <input id="buyers" placeholder="liquiddeath.com, soylent.com"/>
         </div>
-        <div>
-          <label>Email (optional)</label>
-          <input id="siteEmail" placeholder="you@company.com"/>
+        <div class="field">
+          <label for="inds">Industries</label>
+          <input id="inds" placeholder="beverage, confectionery"/>
         </div>
-        <div class="full">
-          <div id="siteStatus" class="help"></div>
+        <div class="field">
+          <label for="regs">Regions</label>
+          <input id="regs" placeholder="US, CA"/>
         </div>
       </div>
     </div>
-
-    <!-- Custom tab -->
-    <div class="tab-pane" id="paneCustom" style="display:none">
-      <div class="grid">
-        <div class="full">
-          <label>Example buyer domains (comma separated)</label>
-          <input id="cBuyers" placeholder="liquiddeath.com, soylent.com"/>
-        </div>
-        <div>
-          <label>Industries</label>
-          <input id="cIndustries" placeholder="e.g. beverage, confectionery"/>
-        </div>
-        <div>
-          <label>Region(s)</label>
-          <input id="cRegions" placeholder="e.g. US, CA"/>
-        </div>
-        <div class="full">
-          <div id="customStatus" class="help"></div>
-        </div>
-      </div>
-    </div>
-
     <div class="actions">
-      <button class="btn btn--dim" id="closeOb">Cancel</button>
-      <button class="btn btn--primary" id="runOb">Find now</button>
+      <button class="btn btn--ghost" id="closeOnb">Cancel</button>
+      <button class="btn btn--primary" id="goFeed">Continue to live feed</button>
     </div>
   </div>
 </div>
 
-<!-- ===== Your original canvas script (unchanged) ===== -->
+<!-- Your original animation script (unchanged) -->
 <script>
 const cvs=document.getElementById('flowCanvas');const DPR=Math.min(2.2,window.devicePixelRatio||1);let ctx=null,started=false;
 const K={leads:document.getElementById('b-leads'),first:document.getElementById('b-first'),ready:document.getElementById('b-ready'),quote:document.getElementById('b-quote'),ai:document.getElementById('b-ai'),human:document.getElementById('b-human'),saved:document.getElementById('b-saved')};
@@ -209,17 +169,13 @@ const LAST="Smith,Johnson,Williams,Brown,Jones,Miller,Davis,Garcia,Wilson,Moore,
 const pick=a=>a[(Math.random()*a.length)|0];
 const center={lat:25*Math.PI/180,lon:-90*Math.PI/180};
 function proj(lat,lon){const dLon=lon-center.lon;const sinC=Math.sin(center.lat),cosC=Math.cos(center.lat);const sinLat=Math.sin(lat),cosLat=Math.cos(lat);const sinDL=Math.sin(dLon),cosDL=Math.cos(dLon);const k=sinC*sinLat+cosC*cosLat*cosDL;if(k<=0)return null;return{x:cx+R*(cosLat*sinDL),y:cy-R*(cosC*sinLat-sinC*cosLat*cosDL)}}
-
-Ali Hosseinioun, [8/31/2025 11:04 PM]
 const LAND_NA=[[71,-156],[48,-124],[34,-118],[25,-111],[20,-105],[18,-103],[16,-99],[20,-90],[27,-81],[31,-80],[36,-76],[42,-72],[49,-64],[54,-60],[60,-75],[69,-95],[71,-156]];
 const LAND_SA=[[10,-79],[8,-74],[5,-60],[0,-58],[-8,-54],[-18,-44],[-24,-42],[-30,-52],[-40,-61],[-48,-70],[-55,-66],[-33,-71],[-20,-70],[-12,-77],[-8,-79],[10,-79]];
 
-// dashboard numbers
 const packets=[];const targets={leads:0,first:'8 sec',ready:'48%',quote:'62%',ai:'24%',human:'29%',saved:'$14,200'};const state={leads:0};
 function updateBadges(){state.leads=Math.round(state.leads*0.95+targets.leads*0.05);K.leads.textContent=state.leads;K.first.textContent=targets.first;K.ready.textContent=targets.ready;K.quote.textContent=targets.quote;K.ai.textContent=targets.ai;K.human.textContent=targets.human;K.saved.textContent=targets.saved}
 function pushTick(html){const d=document.createElement('div');d.className='ti';d.innerHTML=html;ticker.insertBefore(d,ticker.firstChild);while(ticker.children.length>6)ticker.lastElementChild.remove()}
 
-// helpers
 function cubic(p0,p1,p2,p3,t){const it=1-t;return{x:it*it*it*p0.x+3*it*it*t*p1.x+3*it*t*t*p2.x+t*t*t*p3.x,y:it*it*it*p0.y+3*it*it*t*p1.y+3*it*t*t*p2.y+t*t*t*p3.y}}
 function lerp(a,b,t){return a+(b-a)*t}
 
@@ -251,7 +207,6 @@ function drawCore(t){
   ctx.restore();ctx.globalCompositeOperation='source-over'
 }
 
-// ORIGINAL-STYLE BEAMS
 function drawBeamsOriginal(){
   CHANNELS.forEach((ch,i)=>{
     const chip=chips[i];if(!chip)return;
@@ -265,10 +220,7 @@ function drawBeamsOriginal(){
     ctx.beginPath();ctx.moveTo(coreX,coreY);
     ctx.quadraticCurveTo(mx,my*1.02,chip.x,chip.y);
     ctx.stroke();
-    const g=ctx.
-
-Ali Hosseinioun, [8/31/2025 11:04 PM]
-createRadialGradient(chip.x,chip.y,0,chip.x,chip.y,chip.r*2.2);g.addColorStop(0,ch.color);g.addColorStop(1,'rgba(255,255,255,0)');
+    const g=ctx.createRadialGradient(chip.x,chip.y,0,chip.x,chip.y,chip.r*2.2);g.addColorStop(0,ch.color);g.addColorStop(1,'rgba(255,255,255,0)');
     ctx.beginPath();ctx.arc(chip.x,chip.y,chip.r*2.0,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
     ctx.beginPath();ctx.arc(chip.x,chip.y,chip.r,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.24)';ctx.lineWidth=1.2;ctx.stroke();
     ctx.font="700 11px Montserrat, Inter, system-ui";ctx.fillStyle='rgba(255,255,255,.92)';ctx.textAlign='center';ctx.fillText(chip.label,chip.x,chip.y-chip.r-8);
@@ -294,8 +246,8 @@ function drawPaths(t){
 }
 
 function spawn(){
-  const c=CITIES[(Math.random()*CITIES.length)|0];const P=proj(c.lat*Math.PI/180,c.lon*Math.PI/180);if(!P)return;
-  const name=pick(FIRST)+" "+pick(LAST);const start={x:P.x,y:P.y};
+  const C=[...CITIES];const c=C[(Math.random()*C.length)|0];const P=proj(c.lat*Math.PI/180,c.lon*Math.PI/180);if(!P)return;
+  const name=FIRST[(Math.random()*FIRST.length)|0]+" "+LAST[(Math.random()*LAST.length)|0];const start={x:P.x,y:P.y};
   const mpx=(start.x+coreX)/2,mpy=(start.y+coreY)/2;
   const p0=start,p1={x:mpx-40,y:mpy-30},p2={x:mpx+40,y:mpy+30},p3={x:coreX,y:coreY};
   const idx=(Math.random()*CHANNELS.length)|0;
@@ -307,7 +259,7 @@ function spawn(){
   targets.ai=(12+Math.random()*18|0)+'%';
   targets.human=(18+Math.random()*28|0)+'%';
   targets.saved='$'+(12000+(Math.random()*18000|0)).toLocaleString();
-  pushTick(`<strong>${name}</strong> · ${c.city} → <em>${CHANNELS[idx].name}</em>`)
+  pushTick(`<strong>${name}</strong> · ${c.city} → <em>${CHANNELS[idx].name}</em>`);
 }
 
 function update(dt){
@@ -325,118 +277,31 @@ function draw(ts){
 
 let last=0,acc=0;function loop(ts){requestAnimationFrame(loop);if(!last)last=ts;const dt=Math.min(0.05,(ts-last)/1000);last=ts;update(dt);draw(ts);updateBadges();acc+=dt;if(acc>(1.2+Math.random()*1.2)){acc=0;if(packets.length<12)spawn()}}
 function init(){if(started)return;const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(init,60);return}started=true;resize();requestAnimationFrame(loop)}
-
 document.addEventListener('DOMContentLoaded',init);window.addEventListener('load',init);
 </script>
 
-<!-- API base rewriter (kept as-is from your project) -->
-<script src="./api-base.js"></script>
-
+<!-- Onboarding modal logic -->
 <script>
-/* ===== Onboarding wiring ===== */
-(function(){
-  const ob = document.getElementById('ob');
-  const startBtn = document.getElementById('startFreeBtn');
-  const closeBtn = document.getElementById('closeOb');
-  const runBtn = document.getElementById('runOb');
-
-  const tabSite = document.getElementById('tabSite');
-  const tabCustom = document.getElementById('tabCustom');
-  const paneSite = document.getElementById('paneSite');
-  const paneCustom = document.getElementById('paneCustom');
-
-  const siteDomain = document.getElementById('siteDomain');
-  const siteRegions = document.getElementById('siteRegions');
-  const siteEmail = document.getElementById('siteEmail');
-  const siteStatus = document.getElementById('siteStatus');
-
-  const cBuyers = document.getElementById('cBuyers');
-
-Ali Hosseinioun, [8/31/2025 11:04 PM]
-const cIndustries = document.getElementById('cIndustries');
-  const cRegions = document.getElementById('cRegions');
-  const customStatus = document.getElementById('customStatus');
-
-  const apiNote = document.getElementById('apiNote');
-
-  // uid (same scheme as free panel)
-  const uidKey='galactly_uid';
-  let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
-
-  function openModal(){ ob.style.display='flex'; }
-  function closeModal(){ ob.style.display='none'; siteStatus.textContent=''; customStatus.textContent=''; }
-
-  startBtn.addEventListener('click', openModal);
-  closeBtn.addEventListener('click', closeModal);
-  ob.addEventListener('click', (e)=>{ if(e.target===ob) closeModal(); });
-
-  function activate(which){
-    const isSite = which==='site';
-    tabSite.classList.toggle('active', isSite);
-    tabCustom.classList.toggle('active', !isSite);
-    paneSite.style.display = isSite?'block':'none';
-    paneCustom.style.display = isSite?'none':'block';
-  }
-  tabSite.onclick=()=>activate('site');
-  tabCustom.onclick=()=>activate('custom');
-
-  function splitCSV(s){ return (s||'').split(',').map(v=>v.trim()).filter(Boolean); }
-  function normHost(s){ if(!s) return ''; s=s.trim(); s=s.replace(/^https?:\/\//i,''); return s.split('/')[0]; }
-
-  async function post(path, body){
-    const r=await fetch('/api/v1'+path, { method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body: JSON.stringify(body||{}) });
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
-  }
-
-  // show which API we're talking to (from api-base.js)
-  try {
-    const base = window.API_BASE || '';
-    apiNote.textContent = base ? ('API: '+base) : '';
-  } catch {}
-
-  runBtn.addEventListener('click', async ()=>{
-    runBtn.disabled = true;
-    siteStatus.textContent = '';
-    customStatus.textContent = '';
-
-    const usingSite = tabSite.classList.contains('active');
-
-    try {
-      // optional gate
-      const email = usingSite ? siteEmail.value.trim() : null;
-      const region = usingSite ? siteRegions.value.trim() : cRegions.value.trim();
-      await post('/gate', { region: region  null, email: email  null, alerts: true }).catch(()=>{});
-
-      if (usingSite) {
-        const domain = normHost(siteDomain.value);
-        const regions = splitCSV(siteRegions.value);
-        if (!domain) { siteStatus.innerHTML = '<span class="bad">Please enter your website.</span>'; runBtn.disabled=false; return; }
-        siteStatus.innerHTML = '<span class="good">Finding buyers…</span>';
-        const r = await post('/find-now', { vendorDomain: domain, regions });
-        siteStatus.innerHTML = <span class="good">Done. Created ${r.created||0} leads.</span>;
-      } else {
-        const buyers = splitCSV(cBuyers.value).map(normHost);
-        const industries = splitCSV(cIndustries.value);
-        const regions = splitCSV(cRegions.value);
-        if (!buyers.length && !industries.length) { customStatus.innerHTML = '<span class="bad">Add at least one buyer or industry.</span>'; runBtn.disabled=false; return; }
-        customStatus.innerHTML = '<span class="good">Checking signals…</span>';
-        const r = await post('/find-now', { buyers, industries, regions });
-        customStatus.innerHTML = <span class="good">Done. Created ${r.created||0} leads.</span>;
-      }
-
-      // go to live feed
-      setTimeout(()=>{ location.href='./free-panel.html'; }, 400);
-    } catch (e) {
-      (usingSite ? siteStatus : customStatus).innerHTML = '<span class="bad">Something went wrong. Try again.</span>';
-    } finally {
-      runBtn.disabled = false;
-    }
-  });
-
-  // default to the site tab
-  activate('site');
-})();
+const onb = document.getElementById('onb');
+document.getElementById('btnStart').addEventListener('click', ()=> onb.classList.add('show'));
+document.getElementById('closeOnb').addEventListener('click', ()=> onb.classList.remove('show'));
+document.getElementById('goFeed').addEventListener('click', ()=>{
+  const vendor = (document.getElementById('vendor').value||'').trim();
+  const buyers = (document.getElementById('buyers').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const inds = (document.getElementById('inds').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const regs = (document.getElementById('regs').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  // persist for the free panel to pick up
+  try{
+    localStorage.setItem('onboard.vendorDomain', vendor);
+    localStorage.setItem('onboard.seedDomains', JSON.stringify(buyers));
+    localStorage.setItem('onboard.industries', JSON.stringify(inds));
+    localStorage.setItem('onboard.regions', JSON.stringify(regs));
+  }catch(e){}
+  location.href = './free-panel.html';
+});
 </script>
+
+<!-- (optional) your existing helper files -->
+<script src="./api-base.js"></script>
 </body>
 </html>
