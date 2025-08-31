@@ -167,5 +167,28 @@ app.post('/api/v1/find-now', async (req,res)=>{
   }
   res.json({ ok:true, checked, created, advertisers: advertisers.length, tookMs: Date.now()-started });
 });
+// --- lightweight status / gating / knobs ---
+app.get('/api/v1/status', (req, res) => {
+  // anonymous-safe fingerprint to seed front-end timers/animations
+  const userId = (req as any)?.userId || 'anon';
+  const fp = [...userId].reduce((a, c) => a + c.charCodeAt(0), 0) % 1000;
+
+  // free plan defaults (you can lift these via env in the future)
+  const plan = 'free';
+  const revealsDaily = 2;          // number of deep reveals/day
+  const previewOnlyOnFire = true;  // show “On Fire” as blurred teaser on free
+  const cooldownSec = 0;           // per-request UI cooldown if you want it
+  const priority = 1;              // match-making priority (1 low, 5 high)
+
+  // transparent knobs for client ranking (used in the feed UI)
+  const multipliers = {
+    freshness: 1.0,  // how hard to weight recency on this plan/user
+    fit: 1.0,        // per-user vault boost (confirmations, mutes, prefs)
+    proof: 0.8       // how much to boost leads with verified proof
+  };
+
+  res.json({ ok: true, plan, fp, revealsDaily, previewOnlyOnFire, cooldownSec, priority, multipliers });
+});
+
 
 migrate().then(()=> app.listen(PORT, '0.0.0.0', ()=> console.log(`galactly-api listening on :${PORT}`)));
