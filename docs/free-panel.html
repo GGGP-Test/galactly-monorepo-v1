@@ -3,194 +3,257 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Galactly — Free Panel</title>
+  <title>Galactly — Live Feed</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#0b0e13;--fg:#e8ecf1;--sub:#a6b3c4;--card:#101624;--stroke:#1f2a3b;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;}
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif}
-    header{padding:14px 18px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;gap:10px}
-    header .brand{font-weight:800}
-    header .pill{margin-left:auto;color:var(--sub);font-size:12px}
-    .wrap{max-width:1100px;margin:0 auto;padding:20px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
-    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
-    .meta{font-size:12px;color:var(--sub);display:flex;justify-content:space-between}
-    .title{font-weight:700}
-    .bar{height:8px;border-radius:999px;background:#0b1220;border:1px solid #243048;overflow:hidden}
-    .bar>i{display:block;height:100%;background:linear-gradient(90deg,#1f7ae0,#34d399)}
-    .cta{display:flex;gap:8px}
-    button{background:#162135;border:1px solid #263247;color:var(--fg);border-radius:10px;padding:9px 12px;cursor:pointer}
-    button[disabled]{opacity:.6;cursor:not-allowed}
-    .hold{user-select:none;-webkit-user-select:none;background:#0f172a;border:1px dashed #334155;border-radius:12px;padding:10px;text-align:center;color:#d1eaff}
-    .hint{font-size:12px;color:var(--sub)}
+    :root{--ink:#e8ecf1;--mut:#a9b2c7;--bg:#0b0e13;--card:#111725;--line:#1f2a3b;--pri:#86f7d6;--pri2:#57a4ff}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.55 Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    header{position:sticky;top:0;z-index:40;background:rgba(10,13,18,.7);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+    .bar{max-width:1180px;margin:auto;padding:10px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:8px;font-weight:800}
+    .brand .ok{display:inline-block;border:1px solid #2a3b55;border-radius:999px;padding:3px 8px;font-weight:600;color:var(--mut)}
+    .api{display:flex;gap:6px;align-items:center;color:var(--mut)}
+    .api input{width:420px;max-width:52vw;background:#0f141f;border:1px solid #22324a;color:var(--ink);padding:6px 8px;border-radius:10px}
+    .api button{background:#162236;border:1px solid #274061;color:#dfe6f3;padding:6px 10px;border-radius:10px;cursor:pointer}
 
-    /* Reveal modal */
-    .modal{position:fixed;inset:0;background:rgba(7,10,14,.6);display:none;align-items:center;justify-content:center;padding:20px}
-    .modal.open{display:flex}
-    .sheet{width:min(760px,100%);background:#0e1520;border:1px solid var(--stroke);border-radius:16px;overflow:hidden}
-    .sheet header{display:flex;gap:10px;align-items:center;padding:12px 16px;background:#0c1320;border-bottom:1px solid var(--stroke)}
-    .sheet .body{padding:16px}
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    .k{font-size:12px;color:#9fb3c8}
-    .v{font-weight:700}
-    .why{margin:6px 0 0 18px;color:#cfe2ff}
+    .wrap{max-width:1180px;margin:16px auto;padding:0 14px}
+    .notice{margin:10px 0 16px;padding:10px 12px;border:1px solid #243149;border-radius:12px;background:#0f1522;color:#cfe4ff}
+    .notice small{opacity:.8}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+    .head{display:flex;align-items:center;gap:8px}
+    .pill{border:1px solid #2a3b55;border-radius:999px;padding:2px 8px;font-size:12px;color:#c7d2e8}
+    .ttl{font-weight:800;margin:2px 0 0}
+    .why{opacity:.9}
+    .hold{margin-top:8px}
+    .hold button{width:100%;background:linear-gradient(90deg,#ffffff,#e9f0ff);color:#0b0c12;font-weight:800;border:0;padding:10px 12px;border-radius:12px;cursor:pointer;box-shadow:0 8px 24px rgba(120,160,255,.18)}
+    .hold button:active{transform:translateY(1px)}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:20px}
+    .modal.show{display:flex}
+    .sheet{width:min(720px,94vw);background:#0f1521;border:1px solid #243149;border-radius:16px;padding:16px}
+    .sheet h3{margin:0 0 6px}
+    .rows{display:grid;grid-template-columns:1fr;gap:12px}
+    .chips{display:flex;flex-wrap:wrap;gap:6px}
+    .chip{border:1px dashed #2a3b55;border-radius:12px;padding:6px 9px;font-size:12px;color:#d3def5}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .btn{background:#162236;border:1px solid #274061;color:#e8ecf1;padding:8px 12px;border-radius:12px;cursor:pointer}
+    .btn--own{background:linear-gradient(90deg,#86f7d6,#57a4ff);color:#031320;border:0}
+    .mut{color:var(--mut)}
+
+    /* Onboarding (fallback) */
+    .ob{display:none;margin:10px 0;padding:12px;border:1px solid #2a3b55;border-radius:12px;background:#0f1522}
+    .ob.show{display:block}
+    .ob input{width:100%;background:#0f141f;border:1px solid #22324a;color:var(--ink);padding:8px 10px;border-radius:10px;margin:6px 0}
+    .ob .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .ob .go{margin-top:8px}
   </style>
-  <script defer src="api-base.js"></script>
 </head>
 <body>
   <header>
-    <div class="brand">Galactly — Free Panel</div>
-    <div class="pill">API: <span id="apiTxt">…</span></div>
+    <div class="bar">
+      <div class="brand">Galactly <span class="ok" id="ok">connecting…</span></div>
+      <div class="api"><span>API:</span>
+        <input id="apiBase" placeholder="https://…"/>
+        <button id="saveApi">Save</button>
+      </div>
+    </div>
   </header>
+
   <div class="wrap">
-    <p class="hint">Tip: press & hold a card to reveal details. Free plan allows <span id="capTxt"></span> deep reveals per day.</p>
-    <div id="feed" class="grid"></div>
+    <div id="profileNotice" class="notice" style="display:none"></div>
+
+    <div id="ob" class="ob">
+      <div style="font-weight:800;margin-bottom:6px">Tell us who you want</div>
+      <label>Vendor site (we derive ICP)
+        <input id="obVendor" placeholder="yourcompany.com (optional)"/>
+      </label>
+      <div class="row">
+        <label>Seed buyers
+          <input id="obBuyers" placeholder="comma domains, e.g. liquiddeath.com, soylent.com"/>
+        </label>
+        <label>Industries
+          <input id="obIndustries" placeholder="e.g. beverage, confectionery"/>
+        </label>
+      </div>
+      <div class="row">
+        <label>Regions
+          <input id="obRegions" placeholder="e.g. US, CA"/>
+        </label>
+        <div></div>
+      </div>
+      <button class="btn go" id="obGo">Find now</button>
+    </div>
+
+    <div id="feed" class="grid" aria-live="polite"></div>
   </div>
 
-  <!-- Reveal Modal -->
-  <div id="reveal" class="modal">
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-label="Lead details">
     <div class="sheet">
-      <header>
-        <div style="font-weight:800" id="rv-title">Lead</div>
-        <div style="margin-left:auto"><button id="rv-close">Close</button></div>
-      </header>
-      <div class="body">
-        <div class="row">
-          <div><span class="k">Confidence</span><div class="bar" style="width:220px"><i id="rv-heat" style="width:0%"></i></div></div>
-          <div><span class="k">Source</span> <span class="v" id="rv-src">—</span></div>
-        </div>
-        <div class="row"><div><span class="k">Why this lead</span><ul id="rv-why" class="why"></ul></div></div>
-        <div class="row">
-          <button id="rv-proof">Open proof link</button>
-          <button id="rv-claim" class="">Claim & Own</button>
-        </div>
-        <p class="hint" id="rv-note"></p>
+      <div class="mut" id="mSource"></div>
+      <h3 id="mTitle">Lead</h3>
+      <div id="mWhy" class="why"></div>
+      <div class="chips" id="mChips"></div>
+      <div class="actions">
+        <button class="btn" id="mClaim">Reserve 2m</button>
+        <button class="btn btn--own" id="mOwn">Own</button>
+        <a class="mut" id="mVerify" href="#" target="_blank" rel="noopener">Verify (optional)</a>
+        <span class="mut" id="mTimer"></span>
+        <span style="flex:1"></span>
+        <button class="btn" id="mClose">Close</button>
       </div>
     </div>
   </div>
 
-<script>
-  const FREE_DAILY_REVEALS = 2; // tweakable
-  const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
-  const apiTxt=document.getElementById('apiTxt'); apiTxt.textContent=(window.API_BASE||'').replace(/^https?:\/\//,'');
-  document.getElementById('capTxt').textContent = FREE_DAILY_REVEALS;
+  <script src="./api-base.js"></script>
+  <script>
+    // ---------- API base + session ----------
+    const uidKey='gal_uid';
+    let UID=localStorage.getItem(uidKey); if(!UID){ UID='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey, UID); }
+    const apiInput=document.getElementById('apiBase');
+    apiInput.value=window.API_BASE||localStorage.getItem('apiBase')||'';
+    document.getElementById('saveApi').onclick=()=>{ window.__setApiBase?.(apiInput.value); location.reload(); };
+    const OK=document.getElementById('ok');
 
-  const LKEY = () => 'reveals_'+new Date().toISOString().slice(0,10);
-  function revealsUsed(){ return Number(localStorage.getItem(LKEY())||'0'); }
-  function addReveal(){ const k=LKEY(); localStorage.setItem(k, String(revealsUsed()+1)); }
-  function capReached(){ return revealsUsed() >= FREE_DAILY_REVEALS; }
+    async function jget(path){ const r=await fetch(path.startsWith('/api/')? path:('/api'+path), { headers:{'x-galactly-user':UID} }); return r.json(); }
+    async function jpost(path, body){ const r=await fetch(path, { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body:JSON.stringify(body||{}) }); return r.json(); }
 
-  const feedEl=document.getElementById('feed');
-  let leads=[];
+    // ---------- Onboarding profile (auto-read) ----------
+    const OB_KEY='gal_onboard_v1';
+    function parseQP(){ const q=new URLSearchParams(location.search); const o={};
+      if(q.get('vendor')) o.vendorDomain=q.get('vendor');
+      if(q.get('buyers')) o.buyers=q.get('buyers').split(',').map(s=>s.trim()).filter(Boolean);
+      if(q.get('industries')) o.industries=q.get('industries').split(',').map(s=>s.trim()).filter(Boolean);
+      if(q.get('regions')) o.regions=q.get('regions').split(',').map(s=>s.trim()).filter(Boolean);
+      return o; }
+    function readProfile(){ const qp=parseQP(); if(Object.keys(qp).length){ localStorage.setItem(OB_KEY, JSON.stringify(qp)); return qp; }
+      try{ return JSON.parse(localStorage.getItem(OB_KEY)||'{}'); }catch{ return {}; } }
+    function saveProfile(p){ localStorage.setItem(OB_KEY, JSON.stringify(p||{})); }
 
-  // Round-robin interleave by platform to avoid back-to-back sameness
-  function interleaveByPlatform(arr){
-    const buckets={}; arr.forEach(o=>{ const p=(o.platform||'misc').toLowerCase(); (buckets[p]||(buckets[p]=[])).push(o); });
-    const keys=Object.keys(buckets).sort(); const out=[]; let added=true;
-    while(added){ added=false; for(const k of keys){ const b=buckets[k]; if(b && b.length){ out.push(b.shift()); added=true; } } }
-    return out;
-  }
+    async function ensureGate(){ try{ await jpost('/api/v1/gate', { region: (profile.regions||[])[0]||null, email:null, alerts:false }); }catch(e){} }
 
-  function brandFrom(lead){
-    const t=(lead.title||'').trim();
-    if(t && t.length>3) return t.length>68? t.slice(0,65)+'…' : t;
-    try { const h=new URL(lead.source_url).hostname; return h.replace(/^www\./,''); } catch { return '—'; }
-  }
+    // ---------- Feed ----------
+    const FEED=document.getElementById('feed');
+    let LEADS=[], ACTIVE=null, TIMER=null;
 
-  function platformLabel(p){ p=(p||'').toLowerCase(); if(p.includes('pdp')) return 'Product'; if(p.includes('brandintake')) return 'Procurement'; if(p.includes('adlib')) return 'Ads'; return 'Signal'; }
+    function niceHost(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{return '';}}
+    function confident(heat){ if(!Number.isFinite(heat)) return '—'; const n=Math.max(0,Math.min(99,heat|0)); return n+"/100"; }
 
-  function card(lead){
-    const d=document.createElement('div'); d.className='card';
-    const heat = Math.max(0, Math.min(100, Number(lead.heat||0)));
-    d.innerHTML = `
-      <div class="meta"><span>${platformLabel(lead.platform)}</span><span class="hint">created ${new Date(lead.created_at||Date.now()).toLocaleString()}</span></div>
-      <div class="title">${escapeHtml(brandFrom(lead))}</div>
-      <div class="bar"><i style="width:${heat}%"></i></div>
-      <div class="hold" data-action="reveal">Press & hold to reveal</div>
-      <div class="cta"><button data-action="own">Claim & Own</button></div>
-    `;
+    function card(lead){
+      const d=document.createElement('div'); d.className='card';
+      const host=niceHost(lead.source_url);
+      const platform=(lead.platform||'').replace('_free','').replace('_',' ');
+      const why=(lead.snippet||'').slice(0,160);
+      d.innerHTML = `
+        <div class="head">
+          <span class="pill">${platform||'signal'}</span>
+          <span class="pill">Conf: ${confident(lead.heat)}</span>
+          ${lead.cat?`<span class="pill">${lead.cat}</span>`:''}
+        </div>
+        <div class="ttl">${escapeHtml(lead.title||host||'Untitled')}</div>
+        <div class="why">${escapeHtml(why)}</div>
+        <div class="hold"><button data-act="reveal">Press & hold to reveal</button></div>
+      `;
 
-    // Hold-to-reveal
-    const hold = d.querySelector('[data-action=reveal]');
-    let t0=null, timer=null;
-    const start=(ev)=>{ ev.preventDefault(); if(capReached()){ hold.textContent='Daily reveal cap reached — upgrade to unlock'; return; } t0=Date.now(); hold.textContent='Keep holding…'; timer=setTimeout(()=>{ reveal(lead); addReveal(); hold.textContent='Revealed ✓'; }, 800); };
-    const cancel=()=>{ if(timer){ clearTimeout(timer); timer=null; hold.textContent='Press & hold to reveal'; } };
-    ['pointerdown','touchstart','mousedown'].forEach(e=>hold.addEventListener(e,start,{passive:false}));
-    ['pointerup','pointerleave','touchend','touchcancel','mouseup','mouseleave'].forEach(e=>hold.addEventListener(e,cancel));
-
-    // Claim & own (one button)
-    d.querySelector('[data-action=own]').onclick=()=> claimAndOwn(lead);
-    return d;
-  }
-
-  async function claimAndOwn(lead){
-    try{
-      const r1 = await fetch('/api/v1/claim',{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({leadId:lead.id})}).then(r=>r.json());
-      if(!r1?.ok) return alert('Not available');
-      const r2 = await fetch('/api/v1/own',{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({windowId:r1.windowId})}).then(r=>r.json());
-      if(r2?.ok) alert('Owned ✓');
-    }catch(e){ console.error(e); }
-  }
-
-  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
-
-  async function load(){
-    try{
-      const data = await fetch('/api/v1/leads', { headers:{'x-galactly-user':uid} }).then(r=>r.json());
-      let arr = Array.isArray(data?.leads)?data.leads:[];
-      // de-duplicate by source_url just in case
-      const seen=new Set(); arr = arr.filter(x=>{ if(seen.has(x.source_url)) return false; seen.add(x.source_url); return true; });
-      arr = interleaveByPlatform(arr).slice(0,12);
-      leads = arr;
-      feedEl.innerHTML='';
-      for(const L of arr) feedEl.appendChild(card(L));
-    }catch(e){ feedEl.innerHTML='<div class="hint">Failed to load. Check API base.</div>'; }
-  }
-
-  // Reveal modal population
-  const modal = document.getElementById('reveal');
-  const rvTitle = document.getElementById('rv-title');
-  const rvWhy = document.getElementById('rv-why');
-  const rvHeat = document.getElementById('rv-heat');
-  const rvSrc = document.getElementById('rv-src');
-  const rvNote = document.getElementById('rv-note');
-  const rvProofBtn = document.getElementById('rv-proof');
-  const rvClose = document.getElementById('rv-close');
-  rvClose.onclick=()=>modal.classList.remove('open');
-
-  function inferWhy(lead){
-    const txt = `${(lead.title||'')} ${(lead.snippet||'')}`.toLowerCase();
-    const why = [];
-    if((lead.platform||'').includes('adlib')) why.push('Active ad presence (verify via proof link)');
-    if((lead.platform||'').includes('brandintake')) why.push('Supplier / procurement entrypoint on site');
-    if((lead.platform||'').includes('pdp')) why.push('Product detail signals (case/pack/dimensions/restock)');
-    if(/rfq|rfi|vendor|supplier|procure/.test(txt)) why.push('Explicit sourcing/registration language');
-    if(/case|pack|carton|labels|corrugated/.test(txt)) why.push('Pack size or material hint');
-    return why.length? why : ['Relevant demand signal on site'];
-  }
-
-  function reveal(lead){
-    rvTitle.textContent = brandFrom(lead);
-    rvHeat.style.width = Math.max(0,Math.min(100, Number(lead.heat||0)))+'%';
-    rvSrc.textContent = platformLabel(lead.platform);
-    rvWhy.innerHTML = '';
-    for(const r of inferWhy(lead)){
-      const li=document.createElement('li'); li.textContent=r; rvWhy.appendChild(li);
+      // long-press
+      const btn=d.querySelector('[data-act=reveal]');
+      let to=null, tStart=0;
+      const start=()=>{ if(to) return; tStart=Date.now(); to=setTimeout(()=>{ to=null; openModal(lead); }, 1100); };
+      const cancel=()=>{ if(!to) return; clearTimeout(to); to=null; if(Date.now()-tStart<1100){ /* tap ignored */ } };
+      btn.addEventListener('mousedown', start); btn.addEventListener('touchstart', start, {passive:true});
+      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>btn.addEventListener(ev, cancel));
+      return d;
     }
-    rvNote.textContent = capReached()? 'Daily cap reached. Upgrade to unlock more reveals.' : '';
 
-    // proof button (kept out of card for minimal UI)
-    rvProofBtn.onclick = ()=>{
-      try{ window.open(lead.source_url,'_blank','noopener'); }catch(e){}
-      // optional feedback ping
-      fetch('/api/v1/events',{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({type:'confirm_ad',leadId:lead.id,meta:{url:lead.source_url,platform:lead.platform}})}).catch(()=>{});
+    function render(){ FEED.innerHTML=''; LEADS.forEach(L=>FEED.appendChild(card(L))); }
+
+    async function refresh(){
+      try{
+        const d=await jget('/api/v1/leads'); if(!d?.ok) throw new Error('bad');
+        LEADS=d.leads||[]; render(); OK.textContent='ok';
+        setTimeout(refresh, (d.nextRefreshSec||15)*1000);
+      }catch(e){ OK.textContent='retrying…'; setTimeout(refresh, 5000); }
+    }
+
+    // ---------- Modal (details) ----------
+    const MOD=document.getElementById('modal');
+    const MT=document.getElementById('mTitle');
+    const MS=document.getElementById('mSource');
+    const MW=document.getElementById('mWhy');
+    const MC=document.getElementById('mChips');
+    const MV=document.getElementById('mVerify');
+    const MBclaim=document.getElementById('mClaim');
+    const MBown=document.getElementById('mOwn');
+    const MClose=document.getElementById('mClose');
+    const MTmr=document.getElementById('mTimer');
+
+    function chipsFor(lead){
+      const out=[];
+      if(lead.kw && lead.kw.length) out.push(...lead.kw.slice(0,4));
+      if(lead.cat) out.push(lead.cat);
+      if(lead.platform && /adlib/.test(lead.platform)) out.push('ad spender');
+      return out;
+    }
+
+    async function claim(lead){ const r=await jpost('/api/v1/claim', { leadId: lead.id }); if(r?.ok){ lead._windowId=r.windowId; lead._exp=Date.now()+(r.reservedForSec||120)*1000; tick(lead); } }
+    async function own(lead){ if(!lead._windowId) return; const r=await jpost('/api/v1/own', { windowId: lead._windowId }); if(r?.ok){ closeModal(); refresh(); } }
+
+    function tick(lead){ if(TIMER) cancelAnimationFrame(TIMER); const t=()=>{ if(!lead._exp){ MTmr.textContent=''; return; } const s=Math.max(0, Math.ceil((lead._exp-Date.now())/1000)); MTmr.textContent = s?`reserved ${s}s`:'ready'; if(s) TIMER=requestAnimationFrame(t); }; t(); }
+
+    function openModal(lead){ ACTIVE=lead; MOD.classList.add('show');
+      MS.textContent = `${(lead.platform||'signal')} • ${niceHost(lead.source_url)}`;
+      MT.textContent = lead.title || niceHost(lead.source_url) || 'Lead';
+      MW.textContent = (lead.snippet||'').slice(0,260);
+      MC.innerHTML=''; chipsFor(lead).forEach(c=>{ const s=document.createElement('span'); s.className='chip'; s.textContent=c; MC.appendChild(s); });
+      MV.style.display = lead.source_url ? 'inline-block' : 'none'; MV.href = lead.source_url || '#';
+      MBclaim.onclick=()=>claim(lead); MBown.onclick=()=>own(lead); tick(lead);
+    }
+    function closeModal(){ MOD.classList.remove('show'); ACTIVE=null; if(TIMER) cancelAnimationFrame(TIMER); TIMER=null; }
+    MClose.onclick=closeModal; MOD.addEventListener('click', (e)=>{ if(e.target===MOD) closeModal(); });
+
+    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
+    // ---------- Boot (auto-onboard) ----------
+    const profBox=document.getElementById('profileNotice');
+    const obWrap=document.getElementById('ob');
+    const obVendor=document.getElementById('obVendor');
+    const obBuyers=document.getElementById('obBuyers');
+    const obIndustries=document.getElementById('obIndustries');
+    const obRegions=document.getElementById('obRegions');
+    const obGo=document.getElementById('obGo');
+
+    let profile = readProfile();
+
+    function showProfile(p){ const buyers=(p.buyers||[]).slice(0,3).join(', ')+( (p.buyers||[]).length>3? '…':'' );
+      const parts=[]; if(p.vendorDomain) parts.push(`<b>Vendor</b> ${escapeHtml(p.vendorDomain)}`);
+      if(p.industries?.length) parts.push(`<b>Industries</b> ${escapeHtml(p.industries.join(', '))}`);
+      if(p.regions?.length) parts.push(`<b>Regions</b> ${escapeHtml(p.regions.join(', '))}`);
+      if(p.buyers?.length) parts.push(`<b>Seed</b> ${escapeHtml(buyers)}`);
+      profBox.innerHTML = parts.length? `Using your profile → ${parts.join(' • ')} <span class="mut">(edit below)</span>` : '';
+      profBox.style.display = parts.length? 'block':'none';
+    }
+
+    async function runFindNow(p){ if(!p) return; showProfile(p); OK.textContent='searching…'; await ensureGate(); try{ await jpost('/api/v1/find-now', p); }catch(e){} OK.textContent='ok'; }
+
+    // If nothing stored, show inline onboarding; else run immediately
+    if(!Object.keys(profile).length){ obWrap.classList.add('show'); }
+    else{ runFindNow(profile); }
+
+    obGo.onclick = async()=>{
+      const p={}; const v=obVendor.value.trim(); if(v) p.vendorDomain=v;
+      const B=obBuyers.value.split(',').map(s=>s.trim()).filter(Boolean); if(B.length) p.buyers=B;
+      const I=obIndustries.value.split(',').map(s=>s.trim()).filter(Boolean); if(I.length) p.industries=I;
+      const R=obRegions.value.split(',').map(s=>s.trim()).filter(Boolean); if(R.length) p.regions=R;
+      saveProfile(p); profile=p; obWrap.classList.remove('show'); await runFindNow(profile); refresh();
     };
 
-    modal.classList.add('open');
-  }
-
-  // poll
-  load();
-  setInterval(load, 15000);
-</script>
+    // Start polling feed
+    refresh();
+  </script>
 </body>
 </html>
