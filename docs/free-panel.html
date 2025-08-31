@@ -1,135 +1,258 @@
-```html
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Galactly — Free Lead Panel</title>
-  <script src="./api-base.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Galactly — Free Panel (Minimal)</title>
   <style>
-    body{font-family:System-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:#0b0e13;color:#e8ecf1;margin:0}
-    header{padding:16px 20px;border-bottom:1px solid #1e2430;display:flex;gap:16px;align-items:center;justify-content:space-between}
+    :root{
+      --bg:#0b0f15; --card:#111826; --muted:#7d8aa5; --ink:#e9eef6; --line:#1f2a38; --brand:#79c0ff; --ok:#31d0aa; --warn:#ffcc66;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:8px;font-weight:600}
+    .status{border:1px solid var(--line);padding:3px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
     .wrap{max-width:1100px;margin:0 auto;padding:18px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
-    .card{background:#111725;border:1px solid #1f2a3b;border-radius:14px;padding:12px;position:relative}
-    .meta{opacity:.75;font-size:12px}
-    .title{font-weight:600;margin:6px 0}
-    .chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
-    .chip{font-size:11px;border:1px solid #2a3b55;border-radius:999px;padding:2px 8px;opacity:.85}
-    .btn{background:#1e2a3b;border:1px solid #2a3b55;color:#e8ecf1;padding:6px 10px;border-radius:10px;cursor:pointer}
-    .btn:disabled{opacity:.45;cursor:not-allowed}
-    #modal{position:fixed;inset:0;background:rgba(5,8,12,.7);display:none;align-items:center;justify-content:center}
-    #modal .box{background:#0f1522;border:1px solid #263149;border-radius:16px;max-width:720px;width:92%;padding:16px}
-    .row{display:flex;gap:8px;align-items:center}
+    .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+    .filters input{background:transparent;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:10px;min-width:220px}
+    .filters button{background:var(--brand);color:#001927;border:none;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+    .card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;min-height:160px;display:flex;flex-direction:column;gap:8px}
+    .meta{font-size:12px;color:var(--muted)}
+    .title{font-weight:700}
+    .chips{display:flex;gap:6px;flex-wrap:wrap}
+    .chip{font-size:11px;border:1px solid var(--line);padding:2px 8px;border-radius:999px;color:var(--muted)}
+    .footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto}
+    .btn{background:#1a2536;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:10px;cursor:pointer}
+    .btn.primary{background:var(--ok);color:#00251d;border:none;font-weight:700}
+    .hint{font-size:12px;color:var(--muted)}
+    .hold{position:absolute;inset:0;border-radius:16px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:.2s}
+    .card.locked .hold{opacity:1;pointer-events:auto}
+    .hold>div{background:rgba(16,22,33,.9);border:1px solid var(--line);padding:10px 12px;border-radius:12px;display:flex;align-items:center;gap:8px}
+    .ring{width:18px;height:18px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Modal */
+    dialog{border:none;border-radius:16px;max-width:680px;width:calc(100% - 24px);background:#0e1522;color:var(--ink)}
+    .modal{padding:0}
+    .modal header{border:none;padding:16px 18px}
+    .modal .body{padding:0 18px 16px}
+    .modal h2{margin:0 0 2px;font-size:18px}
+    .confidence{display:flex;gap:10px;align-items:center;margin:8px 0}
+    .bar{flex:1;height:8px;background:#0b0f15;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+    .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--warn),var(--ok));width:0%}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .box{border:1px solid var(--line);border-radius:12px;padding:12px}
+    .box h3{margin:0 0 8px;font-size:13px;color:#a8b3c9;text-transform:uppercase;letter-spacing:.04em}
+    .why{font-size:14px;line-height:1.45;white-space:pre-wrap}
+    .row{display:flex;align-items:center;gap:8px}
+    .verify{margin-top:8px;display:inline-flex;gap:8px}
+    .verify a{color:var(--brand)}
+    .cap{font-size:12px;color:var(--muted)}
+    .closebar{display:flex;justify-content:flex-end;border-top:1px solid var(--line);padding:10px}
+    .closebar button{background:#172235;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 10px}
   </style>
 </head>
 <body>
-<header>
-  <div><strong>Galactly</strong> <span id="status" class="chip">connecting…</span></div>
-  <div class="row">
-    <input id="api" size="42" placeholder="https://<YOUR-NF>.app"/>
-    <button class="btn" id="save">Save API</button>
-    <button class="btn" id="refresh">Refresh</button>
-  </div>
-</header>
-<div class="wrap">
-  <div id="quota" class="meta" style="margin:6px 2px 12px"></div>
-  <div id="feed" class="grid"></div>
-</div>
+  <header>
+    <div class="brand">Galactly <span id="api" class="status">api: connecting…</span></div>
 
-<div id="modal">
-  <div class="box">
-    <div class="row" style="justify-content:space-between">
-      <div><div id="m_title" class="title"></div><div id="m_meta" class="meta"></div></div>
-      <button class="btn" id="m_close">Close</button>
+    <div class="cap">Free plan: <b id="quota">2</b> reveals left today</div>
+  </header>
+  <div class="wrap">
+    <div class="filters">
+      <input id="vendor" placeholder="Vendor site (optional)" />
+      <input id="buyers" placeholder="Seed buyers (comma domains)" />
+      <input id="industries" placeholder="Industries (comma)" />
+      <input id="regions" placeholder="Regions e.g. US,CA" />
+      <button id="findBtn">Find now</button>
+      <span class="hint">Tip: Vendor OR Seed buyers is enough; we’ll expand & dedupe.</span>
     </div>
-    <div id="m_body" style="margin-top:8px"></div>
+    <div id="feed" class="grid"></div>
   </div>
-</div>
+
+  <dialog id="modal"><div class="modal">
+    <header><h2 id="mTitle">Lead</h2><div class="meta" id="mMeta"></div></header>
+    <div class="body">
+      <div class="confidence">
+        <div class="row"><strong>Confidence</strong><span id="mConfLabel" class="chip">warm</span></div>
+        <div class="bar"><i id="mConf"></i></div>
+      </div>
+      <div class="grid2">
+        <div class="box">
+          <h3>Why this lead</h3>
+          <div id="mWhy" class="why"></div>
+        </div>
+        <div class="box">
+          <h3>Signals</h3>
+          <ul id="mSignals"></ul>
+          <div id="mVerify" class="verify"></div>
+        </div>
+      </div>
+    </div>
+    <div class="closebar"><button id="closeModal">Close</button></div>
+  </div></dialog>
 
 <script>
-const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
-const apiInp=document.getElementById('api'); apiInp.value = localStorage.getItem('apiBase')||window.API_BASE||'';
-document.getElementById('save').onclick=()=>{ window.__setApiBase(apiInp.value); location.reload(); };
+// ---------- API base (from localStorage or ?api=) ----------
+const DEFAULT_API = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
+const qs = new URLSearchParams(location.search);
+const apiBase = (qs.get('api')  localStorage.getItem('apiBase')  DEFAULT_API).replace(/\/$/,'');
+localStorage.setItem('apiBase', apiBase);
+byId('api').textContent = 'api: ' + apiBase.split('//')[1];
 
-const quotaKey='daily_reveals_v1'; const quotaMax=2; function quota(){ const d=new Date().toISOString().slice(0,10); const raw=localStorage.getItem(quotaKey); let obj=raw?JSON.parse(raw):{day:d,used:0}; if(obj.day!==d){obj={day:d,used:0}; localStorage.setItem(quotaKey,JSON.stringify(obj)); } return obj; }
-function incQuota(){ const q=quota(); q.used++; localStorage.setItem(quotaKey,JSON.stringify(q)); renderQuota(); }
-function renderQuota(){ const q=quota(); document.getElementById('quota').textContent=`Free plan: ${quotaMax-q.used} deep reveals left today`; }
+// ---------- Anon user ----------
+const UID_KEY = 'gal_uid';
+let uid = localStorage.getItem(UID_KEY);
+if(!uid){ uid = 'u-' + Math.random().toString(36).slice(2); localStorage.setItem(UID_KEY, uid); }
 
-function api(p){ return (window.API_BASE||'').replace(/\/$/,'') + p; }
-async function get(path){ const r=await fetch(api(path), { headers:{'x-galactly-user':uid} }); return r.json(); }
-async function post(path, body){ const r=await fetch(api(path), {method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body:JSON.stringify(body||{})}); return r.json(); }
-
-let RULES=[]; (async()=>{ try{ const r=await get('/api/v1/ifthen'); if(r?.ok) RULES=r.rules||[]; }catch{} })();
-
-let data=null; const feed=document.getElementById('feed');
-function chip(txt){ const s=document.createElement('span'); s.className='chip'; s.textContent=txt; return s; }
-
-function openModal(lead){
-  const q=quota(); if(q.used>=quotaMax){ alert('Free daily detail views used. Upgrade to Pro for unlimited.'); return; }
-  const box=document.getElementById('modal'); box.style.display='flex';
-  document.getElementById('m_title').textContent=lead.title||'Untitled';
-  const host = (()=>{ try{return new URL(lead.source_url).hostname;}catch{return '';} })();
-  document.getElementById('m_meta').textContent=`${lead.platform||'source'} • ${host}`;
-
-  const why=[]; if((lead.kw||[]).includes('case')) why.push('Case/pack sizing on PDP'); if((lead.kw||[]).includes('procurement')) why.push('Procurement page open'); if((lead.kw||[]).includes('ads')) why.push('Active ads observed');
-  const rules = RULES.slice(0,6).map(r=>`<li><strong>${r.name}</strong> — lift +${Math.round(r.lift*100)}% <span class="meta">(${r.when})</span><br/><span class="meta">${r.explain}</span></li>`).join('');
-
-  document.getElementById('m_body').innerHTML = `
-    <div class="chips">${why.map(w=>`<span class=chip>${w}</span>`).join('')}</div>
-    <p><strong>Confidence:</strong> ${lead.heat||70}/100</p>
-    <details open><summary><strong>Why this buyer</strong></summary>
-      <ul>${rules}</ul>
-    </details>
-    <div style="margin-top:8px" class="meta">Tip: Press and hold on cards to preview without spending reveal. Click <em>Reveal details</em> to consume 1 of your daily reveals.</div>
-    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
-      <button class="btn" id="m_open">Open Proof</button>
-      <button class="btn" id="m_confirm">Looks right</button>
-      <button class="btn" id="m_mute">Mute domain</button>
-    </div>`;
-  document.getElementById('m_open').onclick=()=>{ try{ window.open(lead.source_url,'_blank','noopener'); }catch{} };
-  document.getElementById('m_confirm').onclick=async()=>{ await post('/api/v1/events',{type:'confirm_ad', leadId:lead.id, meta:{ url:lead.source_url, platform:lead.platform }}); incQuota(); closeModal(); };
-  document.getElementById('m_mute').onclick=async()=>{ let host=''; try{host=new URL(lead.source_url).hostname;}catch{} await post('/api/v1/events',{type:'mute_domain', leadId:lead.id, meta:{ domain: host }}); closeModal(); fetchLeads(); };
+// ---------- Daily reveal quota (client guard; server can add a hard cap later) ----------
+const QUOTA = 2; // free plan
+function getQuota(){
+  const k = 'reveal_'+ new Date().toISOString().slice(0,10);
+  const used = Number(localStorage.getItem(k) || '0');
+  return { key:k, used, left: Math.max(0, QUOTA - used) };
 }
-function closeModal(){ const box=document.getElementById('modal'); box.style.display='none'; }
- document.getElementById('m_close').onclick=closeModal;
- document.getElementById('modal').addEventListener('click', (e)=>{ if(e.target.id==='modal') closeModal(); });
+function spendReveal(){ const {key, used} = getQuota(); localStorage.setItem(key, String(used+1)); updateQuota(); }
+function updateQuota(){ byId('quota').textContent = getQuota().left; }
+updateQuota();
+
+// ---------- Fetch helpers ----------
+async function get(path){ const r = await fetch(apiBase+path, { headers: { 'x-galactly-user': uid }}); return r.json(); }
+async function post(path, body){ const r = await fetch(apiBase+path, { method:'POST', headers:{ 'content-type':'application/json','x-galactly-user':uid }, body: JSON.stringify(body||{}) }); return r.json(); }
+
+// ---------- UI helpers ----------
+function byId(id){ return document.getElementById(id); }
+function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+function hostOf(u){ try{ return new URL(u).hostname; }catch{return ''} }
+
+// ---------- Render feed ----------
+let lastLeads = [];
+const feed = byId('feed');
+function interleaveByPlatform(leads){
+  const buckets = new Map();
+  for(const L of leads){ const k=(L.platform||'other').toLowerCase(); (buckets.get(k)||buckets.set(k,[]).get(k)).push(L); }
+  const keys = Array.from(buckets.keys());
+  const out=[]; let any=true, i=0;
+  while(any){ any=false; for(const k of keys){ const b=buckets.get(k)||[]; if(i<b.length){ out.push(b[i]); any=true; } } i++; }
+  return out;
+}
+
+function render(){
+  feed.innerHTML='';
+  const ordered = interleaveByPlatform(lastLeads);
+  for(const L of ordered){ feed.appendChild(card(L)); }
+}
 
 function card(lead){
-  const d=document.createElement('div'); d.className='card';
-  let host=''; try{host=new URL(lead.source_url).hostname;}catch{}
-  d.innerHTML = `<div class="meta">${lead.platform||'source'} • ${host}</div>
-    <div class="title">${escapeHtml(lead.title||'Untitled')}</div>
-    <div class="meta">Heat ${lead.heat||70}/100</div>
-    <div class="chips"></div>
-    <div style="display:flex; gap:8px; margin-top:8px">
-      <button class="btn" data-a="reveal">Reveal details</button>
-      <button class="btn" data-a="open">Open</button>
-    </div>`;
-  const chips=d.querySelector('.chips');
-  (lead.kw||[]).slice(0,3).forEach(k=> chips.appendChild(chip(k)) );
-  d.querySelector('[data-a=reveal]').onclick=()=>openModal(lead);
-  d.querySelector('[data-a=open]').onclick=()=>{ window.open(lead.source_url,'_blank','noopener'); };
-  // long-press preview (1.5s)
-  let t=null; function down(){ t=setTimeout(()=>openModal(lead),1500);} function up(){ if(t) clearTimeout(t); }
-  d.addEventListener('mousedown',down); d.addEventListener('touchstart',down); d.addEventListener('mouseup',up); d.addEventListener('mouseleave',up); d.addEventListener('touchend',up);
+  const d = document.createElement('div'); d.className = 'card locked';
+  d.dataset.id = lead.id;
+  d.innerHTML = `
+    <div class="meta">${esc((lead.platform||'source') + ' • ' + hostOf(lead.source_url))}</div>
+    <div class="title">${esc(lead.title||'Untitled')}</div>
+    <div class="chips">${(lead.kw||[]).slice(0,3).map(k=>`<span class="chip">${esc(k)}</span>`).join('')}</div>
+    <div class="footer">
+      <button class="btn primary" data-act="claim">Claim</button>
+      <span class="hint">Press & hold to reveal</span>
+    </div>
+    <div class="hold"><div><span class="ring"></span> Hold…</div></div>`;
+
+  // Hold-to-reveal (1.2s)
+  let timer=null, downAt=0;
+  function startHold(){ if(getQuota().left<=0) { toast('Out of free reveals for today.'); return; } downAt=Date.now(); timer=setTimeout(()=>{ reveal(lead, d); }, 1200); }
+  function endHold(){ if(timer){ clearTimeout(timer); timer=null; } }
+  d.addEventListener('pointerdown', startHold);
+  d.addEventListener('pointerup', endHold);
+  d.addEventListener('pointerleave', endHold);
+
+  // Claim/Own flow
+  d.querySelector('[data-act="claim"]').onclick = async (e)=>{
+    e.stopPropagation();
+    const r = await post('/api/v1/claim', { leadId: lead.id });
+    if(r?.ok){ lead._windowId = r.windowId; lead._exp = Date.now() + (r.reservedForSec||120)*1000; updateClaimUI(d, lead); }
+  };
+
   return d;
 }
-function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
-async function fetchLeads(){
-  try{
-    const r=await get('/api/v1/leads');
-    if(!r?.ok) throw new Error('bad');
-    document.getElementById('status').textContent='ok';
-    renderQuota();
-    data=r; feed.innerHTML='';
-    r.leads.forEach(L=> feed.appendChild(card(L)) );
-    setTimeout(fetchLeads, (r.nextRefreshSec||20)*1000);
-  }catch(e){ document.getElementById('status').textContent='retrying'; setTimeout(fetchLeads, 5000); }
+function updateClaimUI(cardEl, lead){
+  const btn = cardEl.querySelector('[data-act="claim"]');
+  if(lead._windowId){ btn.textContent = 'Own'; btn.onclick = async (e)=>{ e.stopPropagation(); const r=await post('/api/v1/own',{ windowId: lead._windowId }); if(r?.ok){ btn.textContent='Owned'; btn.disabled=true; } }; }
 }
 
-document.getElementById('refresh').onclick=fetchLeads; fetchLeads();
+// ---------- Reveal modal ----------
+const modal = byId('modal');
+byId('closeModal').onclick = () => modal.close();
+
+async function reveal(lead, cardEl){
+  spendReveal();
+  cardEl.classList.remove('locked');
+  // Confidence from heat (0–100)
+  const heat = Number(lead.heat||60); const pct = Math.max(0, Math.min(100, heat));
+  byId('mTitle').textContent = (lead.title||'Lead');
+  byId('mMeta').textContent = ${(lead.platform||'source')} • ${hostOf(lead.source_url)};
+  byId('mConf').style.width = pct + '%';
+  byId('mConfLabel').textContent = pct>=80 ? 'hot' : (pct>=60? 'warm' : 'cool');
+  byId('mWhy').textContent = buildWhy(lead);
+  byId('mSignals').innerHTML = buildSignals(lead).map(s=>`<li>${esc(s)}</li>`).join('');
+  const verify = buildVerify(lead);
+  byId('mVerify').innerHTML = verify ? <a href="${verify}" target="_blank" rel="noopener">Verify</a> : '';
+  modal.showModal();
+}
+
+function buildWhy(L){
+  const parts = [];
+  const p = (L.platform||'').toLowerCase();
+  if(p.includes('pdp')) parts.push('Product pages indicate active SKUs and pack sizes.');
+  if(p.includes('brandintake')) parts.push('Supplier/Procurement channel is open.');
+  if(p.includes('adlib')) parts.push('Active advertising suggests ongoing demand and replenishment.');
+  if((L.kw||[]).includes('case')) parts.push('Mentions of “case/pack” imply corrugated or master-case usage.');
+  parts.push('Freshness and domain quality factored in.');
+  return parts.join('\n• ');
+}
+function buildSignals(L){
+  const out=[]; const host=hostOf(L.source_url);
+  out.push(`Domain: ${host}`);
+  if(L.cat) out.push(`Category: ${L.cat}`);
+  if(Array.isArray(L.kw)&&L.kw.length) out.push(`Keywords: ${L.kw.slice(0,5).join(', ')}`);
+  const ts = L.created_at ? new Date(L.created_at).toLocaleString() : '';
+  if(ts) out.push(`Observed: ${ts}`);
+  return out;
+}
+function buildVerify(L){
+  const h = hostOf(L.source_url);
+  const p = (L.platform||'').toLowerCase();
+  if(p.includes('adlib')){
+    const isMeta = L.source_url.includes('facebook.com/ads/library');
+    if(isMeta) return https://www.facebook.com/ads/library/?active_status=active&ad_type=all&q=${encodeURIComponent(h)};
+    return https://www.google.com/search?q=${encodeURIComponent('site:adstransparency.google.com '+h)};
+  }
+  return '';
+}
+
+// ---------- Fetch leads loop ----------
+async function loop(){
+  try{
+    const data = await get('/api/v1/leads');
+    if(!data?.ok) throw new Error('bad');
+    lastLeads = data.leads || [];
+    render();
+    setTimeout(loop, (data.nextRefreshSec||20)*1000);
+  }catch(e){ setTimeout(loop, 5000); }
+}
+loop();
+
+// ---------- Find-now ----------
+byId('findBtn').onclick = async () => {
+  const buyers = byId('buyers').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const industries = byId('industries').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const regions = byId('regions').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const vendor = byId('vendor').value.trim();
+  const body = { buyers, industries, regions, vendorDomain: vendor||undefined };
+  const r = await post('/api/v1/find-now', body);
+  console.log('find-now', r);
+};
 </script>
 </body>
 </html>
