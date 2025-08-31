@@ -3,285 +3,350 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Galactly — Live results</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+  <title>Galactly — Free Panel</title>
   <style>
-    :root{--ink:#eaf0f7;--mut:#9aa7bd;--line:rgba(255,255,255,.08);--bg:#0b0e13;--panel:#0f141d;--pill:#132031;--hi:#86f7d6;--hi2:#57a4ff}
+    :root{
+      --bg:#0b0e13; --panel:#0f1420; --ink:#e8ecf1; --mut:#a8b1c4; --line:#1e2430; --hl:#86f7d6; --hl2:#57a4ff;
+      --ok:#77e39e; --warn:#ffd166; --bad:#ff7b7b;
+    }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;background:radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.10), rgba(0,0,0,0) 60%),radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.07), rgba(0,0,0,0) 60%),linear-gradient(180deg,#0b0e13,#06080d 55%);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
-    header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--line);backdrop-filter:blur(8px) saturate(1.05);background:rgba(6,9,15,.55)}
-    .brand{display:flex;align-items:center;gap:10px}
+    body{margin:0;background:radial-gradient(1100px 700px at 85% -10%,rgba(120,160,255,.10),transparent 60%),
+                       radial-gradient(800px 500px at 15% 110%,rgba(120,200,255,.06),transparent 60%),
+                       linear-gradient(180deg,#0b0e13,#0a0d15 55%);
+         color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;}
+    header{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px) saturate(1.05);background:rgba(10,14,22,.55);border-bottom:1px solid var(--line);}
+    .nav{max-width:1240px;margin:auto;padding:10px 18px;display:flex;align-items:center;gap:12px}
+    .brand{display:flex;align-items:center;gap:8px;color:#fff;text-decoration:none}
     .brand svg{width:22px;height:22px}
-    .brand b{font:800 16px Montserrat,Inter}
-    .pill{background:var(--pill);border:1px solid var(--line);padding:6px 10px;border-radius:18px;font-size:12px;color:var(--mut)}
+    .brand b{font-weight:800}
+    .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;opacity:.9}
+    .api{margin-left:auto;display:flex;align-items:center;gap:8px}
+    .api input{width:380px;max-width:45vw;background:#0e1320;border:1px solid var(--line);border-radius:10px;color:#dbe3f4;padding:8px 10px}
+    .api button{background:linear-gradient(90deg,#fff,#e9f0ff);color:#0b0c12;border:none;padding:8px 12px;border-radius:10px;font-weight:800;cursor:pointer}
 
-    .page{height:calc(100vh - 58px);display:grid;grid-template-columns:1.2fr 1fr;gap:16px;padding:16px;max-width:1200px;margin:0 auto}
-    @media (max-width:1050px){.page{grid-template-columns:1fr;grid-auto-rows:minmax(340px,auto);height:auto;overflow:auto}}
+    /* layout */
+    .wrap{height:calc(100vh - 54px);max-width:1240px;margin:0 auto;padding:16px;display:grid;grid-template-columns:1.35fr .9fr;gap:16px}
+    @media (max-width:1100px){.wrap{grid-template-columns:1fr;grid-auto-rows:minmax(280px,auto)}}
 
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.28);display:flex;flex-direction:column;min-height:0}
-    .card h3{margin:0;padding:12px 14px;border-bottom:1px solid var(--line);font:700 13px Inter;color:#cfe0ff;letter-spacing:.2px}
-    .card .body{padding:12px;display:flex;flex-direction:column;gap:12px;min-height:0}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;min-height:220px}
+    .panel h3{margin:0;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:800;letter-spacing:.2px}
+    .panel .body{flex:1;min-height:0;padding:14px;overflow:auto}
 
-    /* LEFT COLUMN: live results */
-    .neutron{position:relative;height:220px;border-radius:12px;background:radial-gradient(120% 100% at 50% 40%, rgba(255,255,255,.06), rgba(255,255,255,.01));border:1px solid var(--line);overflow:hidden}
-    canvas#neutron{position:absolute;inset:0;width:100%;height:100%;display:block}
-    .engineStatus{position:absolute;left:10px;bottom:8px;font-size:12px;color:var(--mut)}
+    /* LEFT column (Live results + neutron) */
+    .live{position:relative;overflow:hidden}
+    .live .body{padding:0}
+    .neutron{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+    canvas#neutron{width:100%;height:100%;display:block;opacity:.9}
+    .list{position:relative;z-index:2;padding:14px;display:flex;flex-direction:column;gap:12px}
+    .card{background:#0f1726;border:1px solid #202b3e;border-radius:14px;padding:12px 12px 10px}
+    .cardHeader{display:flex;align-items:center;gap:8px}
+    .dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(90deg,var(--hl),var(--hl2))}
+    .host{opacity:.8;font-size:12px}
+    .title{font-weight:800;margin-top:6px}
+    .hint{opacity:.6;font-size:12px;margin-top:4px}
+    .row{display:flex;gap:8px;margin-top:10px}
+    .btn{border:1px solid #273246;background:#121a2a;color:#e6ecff;border-radius:10px;padding:8px 10px;cursor:pointer}
+    .btn:hover{filter:brightness(1.1)}
+    .pill2{margin-left:auto;border:1px dashed #34415a;border-radius:999px;padding:4px 8px;font-size:12px;opacity:.8}
+    .veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,10,17,.92),rgba(8,10,17,.82));display:grid;place-items:center;border-radius:14px}
+    .veil span{opacity:.85}
 
-    .feed{flex:1;min-height:0;overflow:auto;border:1px dashed var(--line);border-radius:12px;padding:8px}
-    .lead{position:relative;background:#0f1724;border:1px solid #1a2740;border-radius:12px;padding:10px;margin:8px 4px;display:flex;flex-direction:column;gap:6px}
-    .lead h4{margin:0;font:700 14px Inter;color:#e9f0ff}
-    .lead .meta{font-size:12px;color:var(--mut)}
-    .revealMask{position:absolute;inset:0;border-radius:12px;background:linear-gradient(180deg, rgba(7,11,18,.66), rgba(7,11,18,.66));display:flex;align-items:center;justify-content:center;gap:8px;color:#cfe0ff;font-weight:700;letter-spacing:.2px;user-select:none}
-    .revealMask .hold{opacity:.9;border:1px solid var(--line);padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.04)}
-    .btnRow{display:flex;gap:8px}
-    .btn{background:#182338;border:1px solid #243555;color:#e8efff;border-radius:10px;padding:6px 10px;font-weight:700;font-size:12px;cursor:pointer}
-    .btn.secondary{background:#121a29;color:#cfe0ff}
+    /* RIGHT column */
+    .stack{display:flex;flex-direction:column;gap:16px;height:100%}
+    .formRow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .formRow3{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .formRow+.formRow, .formRow3+.formRow3{margin-top:10px}
+    input,textarea{width:100%;background:#0e1320;border:1px solid var(--line);border-radius:12px;color:#dbe3f4;padding:10px 12px}
+    textarea{min-height:96px;resize:vertical}
+    .actions{display:flex;gap:10px;align-items:center;margin-top:12px}
+    .primary{background:linear-gradient(90deg,#ffffff,#e9f0ff);color:#0b0c12;border:none;padding:10px 14px;border-radius:12px;font-weight:800;cursor:pointer}
+    .mut{opacity:.8}
+    .help{margin-left:6px;opacity:.75;cursor:pointer;border:1px solid var(--line);padding:2px 6px;border-radius:10px}
 
-    /* RIGHT COLUMN */
-    .formGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .formGrid .row{grid-column:1/-1}
-    input,textarea{width:100%;background:#0d1422;border:1px solid #1b2942;color:#e9f0ff;border-radius:12px;padding:10px 12px;font:600 13px Inter;outline:none}
-    textarea{min-height:88px;resize:vertical}
-    .cta{display:flex;gap:10px;align-items:center}
-    .hint{font-size:12px;color:var(--mut)}
-    .help{margin-left:auto;border:1px solid var(--line);border-radius:10px;padding:4px 8px;color:#cfe0ff;background:#121a23;cursor:default}
-
-    .signals{flex:1;min-height:200px;overflow:auto;border:1px dashed var(--line);border-radius:12px;padding:10px}
-    .sigRow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
-    .sigRow:last-child{border-bottom:none}
-    .dot{width:8px;height:8px;border-radius:50%;background:#7dd3fc;box-shadow:0 0 8px #7dd3fc88}
-    .bar{height:6px;background:#132035;border-radius:6px;overflow:hidden;flex:1}
-    .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg, var(--hi), var(--hi2))}
-    .off{opacity:.55}
+    /* metrics */
+    .metricLine{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed #243047}
+    .metricLine:last-child{border-bottom:none}
+    .dot2{width:8px;height:8px;border-radius:50%;background:#2b9dff}
+    .cat{font-weight:700;opacity:.9}
+    .meter{margin:8px 0 10px;height:6px;background:#0c1322;border:1px solid #1f2a36;border-radius:999px;overflow:hidden}
+    .meter>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--hl),var(--hl2))}
+    .small{opacity:.7;font-size:12px}
+    .lock{margin-top:12px;padding:10px;border:1px dashed #2b3750;border-radius:12px;opacity:.9}
   </style>
 </head>
 <body>
   <header>
-    <div class="brand">
-      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="#000" stroke="#fff" stroke-opacity=".12" stroke-width="1.5"/><path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="3" fill="none"/><circle cx="20" cy="20" r="5" fill="url(#g)"/></svg>
-      <b>Galactly</b>
+    <div class="nav">
+      <a class="brand" href="./index.html"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/><path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg><b>Galactly</b></a>
       <span id="status" class="pill">connecting…</span>
+      <div class="api">
+        <label>API:</label>
+        <input id="apiBase" placeholder="https://…"/>
+        <button id="saveApi">Save</button>
+      </div>
     </div>
-    <div class="pill" title="Change API base in api-base.js or via ?api=">API ready</div>
   </header>
 
-  <main class="page">
-    <!-- LEFT: Live results (single column pane) -->
-    <section class="card" id="leftCol">
+  <div class="wrap">
+    <!-- LEFT: one section: Live results -->
+    <section class="panel live" id="livePanel">
       <h3>Live results</h3>
-      <div class="body" style="gap:12px">
-        <div class="neutron"><canvas id="neutron"></canvas><div class="engineStatus" id="engineStatus">Lead Engine • idle</div></div>
-        <div id="feed" class="feed" aria-live="polite"></div>
-      </div>
-    </section>
-
-    <!-- RIGHT: Customize + Signals (stacked) -->
-    <section class="card" id="rightCol">
-      <h3>Customize your AI</h3>
       <div class="body">
-        <div class="formGrid">
-          <div class="row"><input id="vSite" placeholder="Vendor site e.g. yourcompany.com (optional)"></div>
-          <input id="buyers" placeholder="Seed buyers (comma‑separated domains)">
-          <input id="industries" placeholder="Industries e.g. beverage, confectionery">
-          <input id="regions" placeholder="Regions e.g. US, CA">
-          <div class="row"><textarea id="brief" placeholder="Describe ideal customers in plain words. Products, pack types, order sizes, retailer channels, exclusions."></textarea></div>
-        </div>
-        <div class="cta">
-          <button id="runBtn" class="btn">Find now</button>
-          <span class="hint">Tip: long‑press a card to reveal. 2 deep reveals/day on free.</span>
-          <span class="help" title="Be direct: list products, pack formats (bottle, can, sachet), order sizes, certifications, retailer channels, regions, exclusions.">?</span>
-        </div>
-      </div>
-      <h3>Signals preview <span id="sigState" class="off">idle</span></h3>
-      <div class="body" style="padding-top:8px">
-        <div id="signals" class="signals"></div>
+        <div class="neutron"><canvas id="neutron"></canvas></div>
+        <div id="cards" class="list" style="display:none"></div>
       </div>
     </section>
-  </main>
 
-  <script src="./api-base.js"></script>
-  <script>
-    // --------- Session + API helpers ---------
-    const uidKey='galactly_uid';
-    let UID=localStorage.getItem(uidKey); if(!UID){ UID='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,UID); }
-    async function api(path, opts){
-      const r=await fetch(path, { ...opts, headers:{ 'content-type':'application/json', 'x-galactly-user': UID, ...(opts&&opts.headers||{}) } });
-      return r.json();
-    }
-    function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+    <!-- RIGHT: one column with two stacked sections -->
+    <div class="stack">
+      <section class="panel" id="customPanel">
+        <h3>Customize your AI</h3>
+        <div class="body">
+          <div class="formRow">
+            <input id="vendor" placeholder="Vendor site e.g. yourcompany.com (optional)"/>
+            <input id="seeds" placeholder="Seed buyers (comma separated domains)"/>
+          </div>
+          <div class="formRow3" style="margin-top:10px">
+            <input id="industries" placeholder="Industries e.g. beverage, confectionery"/>
+            <input id="regions" placeholder="Regions e.g. US, CA"/>
+          </div>
+          <textarea id="desc" style="margin-top:10px" placeholder="Describe ideal customers in plain words. Products, pack types, order sizes, retailer channels, and exclusions."></textarea>
+          <div class="actions">
+            <button id="runBtn" class="primary">Find now</button>
+            <span class="small mut">Tip: hold to reveal. 2 deep reveals/day on free.</span>
+            <span id="how" class="help" title="How to teach the AI: Be concrete. Example → ‘Gummy vitamin brands in US & CA selling 30–60 count, bottle or pouch, DTC + Amazon; exclude private label.’">?</span>
+          </div>
+        </div>
+      </section>
 
-    // --------- Prefill from onboarding (if present) ---------
-    (function prefill(){
-      const get=(k)=>localStorage.getItem(k)||'';
-      const vSite=document.getElementById('vSite');
-      const buyers=document.getElementById('buyers');
-      const industries=document.getElementById('industries');
-      const regions=document.getElementById('regions');
-      const brief=document.getElementById('brief');
-      const vals={
-        v: get('onboard_vendor')||get('vendorDomain')||'',
-        b: get('onboard_buyers')||get('buyersCsv')||'',
-        i: get('onboard_industries')||get('industriesCsv')||'',
-        r: get('onboard_regions')||get('regionsCsv')||'',
-        t: get('onboard_notes')||get('brief')||''
-      };
-      if(vals.v) vSite.value=vals.v;
-      if(vals.b) buyers.value=vals.b;
-      if(vals.i) industries.value=vals.i;
-      if(vals.r) regions.value=vals.r;
-      if(vals.t) brief.value=vals.t;
-      // Button label logic
-      document.getElementById('runBtn').textContent = (vals.v||vals.b||vals.i||vals.r||vals.t) ? 'Save & run' : 'Find now';
-    })();
+      <section class="panel" id="metricsPanel">
+        <h3>Signals preview <span id="mState" class="small" style="margin-left:6px;opacity:.8">idle</span></h3>
+        <div class="body">
+          <div class="meter"><i id="mBar"></i></div>
+          <div id="metrics"></div>
+          <div id="mLock" class="lock" style="display:none">This is a partial run. Upgrade to unlock timing AI, audience overlay, supplier graph, and 1,000+ checks per query.</div>
+        </div>
+      </section>
+    </div>
+  </div>
 
-    // --------- Signals preview model ---------
-    const SIGNAL_SET=[
-      {cat:'Demand',    name:"Retail lift & repeats",             weight:0.9},
-      {cat:'Demand',    name:"Paid reach (blended)",               weight:0.8},
-      {cat:'Demand',    name:"Search surge (CSE pulses)",         weight:0.7},
-      {cat:'Procure',   name:"Supplier intake surface",            weight:0.9},
-      {cat:'Procure',   name:"Compliance & docs footprint",        weight:0.6},
-      {cat:'Product',   name:"Case‑of‑N & pack dims",              weight:0.8},
-      {cat:'Product',   name:"Restock cadence (site/blog)",        weight:0.7},
-      {cat:'Quality',   name:"Returns chatter (sentiment)",        weight:0.5},
-      {cat:'Channels',  name:"Wholesale/retail placement",         weight:0.7},
-      {cat:'Ops',       name:"Ship lanes & lead times",            weight:0.6},
-      {cat:'Ops',       name:"Seasonal windows (promo)",           weight:0.6},
-      {cat:'Finance',   name:"Unit economics sanity",              weight:0.5}
-    ];
+<script>
+(function initApiBase(){
+  const DEFAULT = (window.API_BASE)|| (localStorage.getItem('apiBase') || 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run');
+  const q = new URLSearchParams(location.search);
+  const override = q.get('api');
+  let base = override || DEFAULT;
+  if(base && !/^https?:\/\//i.test(base)) base = 'https://' + base;
+  base = base.replace(/\/$/,'');
+  window.API_BASE = base;
+  try{ localStorage.setItem('apiBase', base); }catch{}
+  const input = document.getElementById('apiBase'); input.value = base;
+  document.getElementById('saveApi').onclick = ()=>{ const v=(input.value||'').trim().replace(/\/$/,''); window.API_BASE=v; try{localStorage.setItem('apiBase',v)}catch{}; location.reload(); };
+})();
 
-    const sigHost=document.getElementById('signals');
-    function renderSignals(){ sigHost.innerHTML=''; SIGNAL_SET.forEach((s,i)=>{
-      const row=document.createElement('div'); row.className='sigRow';
-      row.innerHTML=`<span class="dot"></span><strong style="min-width:88px;opacity:.8">${s.cat}</strong><span style="flex:1">${s.name}</span><div class="bar"><i style="width:${Math.round(s.weight*12)}%"></i></div>`;
-      sigHost.appendChild(row);
-    }); }
-    renderSignals();
+const uidKey = 'gal_uid';
+let UID = localStorage.getItem(uidKey); if(!UID){ UID='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,UID); }
 
-    async function slowPreview(total=24){
-      // Walk through signals slowly, never finishing 100% on free
-      document.getElementById('sigState').textContent='running…';
-      document.getElementById('sigState').classList.remove('off');
-      const bars=[...sigHost.querySelectorAll('.bar>i')];
-      let step=0; const maxTicks=Math.min(total, 28);
-      while(step<maxTicks){
-        const idx=step % bars.length; const b=bars[idx];
-        const cur=parseFloat(b.style.width)||0; const next=Math.min(100, cur + 6 + Math.random()*10);
-        b.style.width = next + '%';
-        step++; await sleep(900+Math.random()*600);
-      }
-      document.getElementById('sigState').textContent='paused (free cap)';
-      document.getElementById('sigState').classList.add('off');
-    }
+const $ = (sel)=>document.querySelector(sel);
+const statusEl = $('#status');
+const listEl = $('#cards');
+const neutron = $('#neutron');
 
-    // --------- Neutron star (lightweight) ---------
-    const cvs=document.getElementById('neutron'); const DPR=Math.min(2, devicePixelRatio||1); let ctx=null, t0=0;
-    function sizeNeutron(){ const r=cvs.getBoundingClientRect(); cvs.width=r.width*DPR; cvs.height=r.height*DPR; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
-    window.addEventListener('resize', sizeNeutron); sizeNeutron();
-    function drawNeutron(ts){ if(!ctx) return; const t=(ts-(t0||ts))/1000; if(!t0) t0=ts; const w=cvs.clientWidth, h=cvs.clientHeight; ctx.clearRect(0,0,w,h);
-      const cx=w*0.46, cy=h*0.54; const core=18 + 2*Math.sin(ts*0.003);
-      // halo
-      let g=ctx.createRadialGradient(cx,cy,0,cx,cy,110); g.addColorStop(0,'rgba(255,255,255,.08)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,110,0,Math.PI*2); ctx.fill();
-      // rings
-      ctx.strokeStyle='rgba(255,255,255,.18)'; for(let i=0;i<2;i++){ ctx.beginPath(); ctx.arc(cx,cy,core+22*i,0,Math.PI*2); ctx.stroke(); }
-      // core
-      g=ctx.createRadialGradient(cx,cy,0,cx,cy,core*2.2); g.addColorStop(0,'rgba(255,255,255,.95)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.arc(cx,cy,core*2.2,0,Math.PI*2); ctx.fillStyle=g; ctx.fill(); ctx.globalCompositeOperation='source-over';
-      // beams (two subtle rotating)
-      const ang = ts*0.0007; const len=Math.min(w,h)*0.5; const w1=2.2;
-      ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang);
-      for(const rot of [0, Math.PI]){
-        ctx.rotate(rot);
-        const grad=ctx.createLinearGradient(0,0,len,0); grad.addColorStop(0,'rgba(134,247,214,0.9)'); grad.addColorStop(1,'rgba(134,247,214,0.0)');
-        ctx.strokeStyle=grad; ctx.lineWidth=w1; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(len,0); ctx.stroke();
-        const grad2=ctx.createLinearGradient(0,0,len,0); grad2.addColorStop(0,'rgba(87,164,255,0.8)'); grad2.addColorStop(1,'rgba(87,164,255,0.0)');
-        ctx.strokeStyle=grad2; ctx.lineWidth=w1; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(len*0.65,0); ctx.stroke();
-      }
-      ctx.restore();
-      requestAnimationFrame(drawNeutron);
-    }
-    requestAnimationFrame(drawNeutron);
+// ---------- Live neutron star (low CPU) ----------
+(function neutronStar(){
+  const cvs = neutron, ctx = cvs.getContext('2d');
+  const DPR = Math.min(2, window.devicePixelRatio||1);
+  let w=0,h=0,t=0; let raf = null;
+  function resize(){ const r=cvs.getBoundingClientRect(); w=r.width; h=r.height; cvs.width=w*DPR; cvs.height=h*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); }
+  function ring(cx,cy,r,alpha){ ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.strokeStyle='rgba(255,255,255,'+alpha+')'; ctx.lineWidth=1.2; ctx.stroke(); }
+  function loop(ts){ raf=requestAnimationFrame(loop); t=ts/1000; ctx.clearRect(0,0,w,h); const cx=w*0.5, cy=h*0.52;
+    const coreR = Math.min(w,h)*0.06; // core
+    // glow
+    const g = ctx.createRadialGradient(cx,cy,0,cx,cy,coreR*5);
+    g.addColorStop(0,'rgba(255,255,255,.95)'); g.addColorStop(0.15,'rgba(255,255,255,.25)'); g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,coreR*5,0,Math.PI*2); ctx.fill();
+    // rings
+    ring(cx,cy,coreR*1.4,0.24); ring(cx,cy,coreR*2.2,0.16); ring(cx,cy,coreR*3.2,0.10);
+    // slow beams (two jets)
+    const a = t*0.6, len=Math.min(w,h)*0.35;
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(a);
+    beam(0,-len,0, len, 0.85); ctx.rotate(Math.PI/2.2); beam(0,-len*0.8,0,len*0.8,0.55); ctx.restore();
+    function beam(x1,y1,x2,y2,alpha){ const grd=ctx.createLinearGradient(x1,y1,x2,y2); grd.addColorStop(0,'rgba(134,247,214,'+alpha+')'); grd.addColorStop(1,'rgba(87,164,255,'+alpha+')'); ctx.strokeStyle=grd; ctx.lineWidth=3; ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.globalCompositeOperation='source-over'; }
+  }
+  new ResizeObserver(resize).observe(neutron); resize(); requestAnimationFrame(loop);
+})();
 
-    // --------- Live feed logic ---------
-    const feed=document.getElementById('feed'); const statusEl=document.getElementById('status'); const engineEl=document.getElementById('engineStatus');
-    let cards=[]; function domLead(L){
-      const el=document.createElement('div'); el.className='lead';
-      const host=(()=>{ try{return new URL(L.source_url).hostname.replace(/^www\./,'');}catch{return ''} })();
-      el.innerHTML=`<div class="meta">${(L.platform||'source').replace('_',' ')} • ${host||'domain'}</div>
-        <h4>${escapeHtml(L.title||'Candidate')}</h4>
-        <div class="meta">confidence <strong>${Math.max(50, Math.min(92, L.heat||68))}%</strong> • ${L.cat||'demand'}</div>
-        <div class="btnRow"><button class="btn" data-a="own">Own</button><button class="btn secondary" data-a="why">Why this?</button></div>`;
-      // hold‑to‑reveal mask
-      const mask=document.createElement('div'); mask.className='revealMask'; mask.innerHTML='<span class="hold">Press & hold to reveal</span>'; el.appendChild(mask);
-      let timer=null, held=false; const holdMs=1100;
-      el.addEventListener('pointerdown',()=>{ if(held) return; timer=setTimeout(async()=>{ held=true; mask.remove(); await claim(L); }, holdMs); });
-      ['pointerup','pointerleave','pointercancel'].forEach(evt=> el.addEventListener(evt,()=>{ if(timer){ clearTimeout(timer); timer=null; }}));
-      el.querySelector('[data-a=own]').onclick=()=>own(L);
-      el.querySelector('[data-a=why]').onclick=()=>showWhy(L);
-      return el;
-    }
-    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+// ---------- Prefill from onboarding ----------
+(function prefill(){
+  const V = localStorage.getItem('onboard_vendor') || '';
+  const S = localStorage.getItem('onboard_seed') || '';
+  const I = localStorage.getItem('onboard_industries') || '';
+  const R = localStorage.getItem('onboard_regions') || '';
+  const D = localStorage.getItem('onboard_desc') || '';
+  if(V) $('#vendor').value = V;
+  if(S) $('#seeds').value = S;
+  if(I) $('#industries').value = I;
+  if(R) $('#regions').value = R;
+  if(D) $('#desc').value = D;
+  if(V || S || I || R || D){ $('#runBtn').textContent = 'Save & run'; setTimeout(()=>runFind(true), 600); }
+})();
 
-    async function claim(L){ try{ const r=await api('/api/v1/claim',{ method:'POST', body:JSON.stringify({leadId:L.id})}); if(r?.ok){ L._windowId=r.windowId; L._exp=Date.now()+(r.reservedForSec||120)*1000; } }catch(e){} }
-    async function own(L){ if(!L._windowId) return; const r=await api('/api/v1/own',{ method:'POST', body:JSON.stringify({windowId:L._windowId})}); if(r?.ok){ L._owned=true; }}
-    function showWhy(L){ alert('Why this: strong external demand + recent product activity + procurement surface. Upgrade for full breakdown.'); }
+// ---------- Fetch helpers ----------
+async function apiGet(path){ const r = await fetch(window.API_BASE+path, { headers:{'x-galactly-user':UID} }); return r.json(); }
+async function apiPost(path, body){
+  const r = await fetch(window.API_BASE+path, { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body: JSON.stringify(body||{}) });
+  return r.json();
+}
 
-    async function pullLeads(){
-      try{
-        const r=await api('/api/v1/leads', { headers:{} });
-        if(!r?.ok) throw new Error('bad');
-        statusEl.textContent='ok'; engineEl.textContent='Lead Engine • adding…';
-        // Clear and stream in slowly to feel real‑time
-        feed.innerHTML='';
-        const arr = r.leads || [];
-        for(let i=0;i<arr.length;i++){
-          const L = arr[i];
-          const el = domLead(L); feed.appendChild(el);
-          await sleep(600 + Math.random()*500);
-        }
-        engineEl.textContent='Lead Engine • ready';
-      }catch(e){ statusEl.textContent='retrying…'; setTimeout(pullLeads, 3000); }
-    }
+// ---------- Leads stream (progressive) ----------
+let streamTimer=null; let enqueue=[]; let seenUrls=new Set();
+function startStream(leads){ enqueue = leads.slice(); tickStream(); }
+function tickStream(){ if(streamTimer) clearTimeout(streamTimer); const next = enqueue.shift(); if(next){ addCard(next); streamTimer=setTimeout(tickStream, 1200); } else { /* idle */ } }
 
-    // Kick a run when user hits Find now / Save & run
-    document.getElementById('runBtn').addEventListener('click', async ()=>{
-      const body = {
-        vendorDomain: document.getElementById('vSite').value.trim() || undefined,
-        buyers: csv(document.getElementById('buyers').value),
-        industries: csv(document.getElementById('industries').value),
-        regions: csv(document.getElementById('regions').value),
-        brief: document.getElementById('brief').value.trim() || undefined
-      };
-      // Persist for future sessions
-      try{ if(body.vendorDomain) localStorage.setItem('onboard_vendor', body.vendorDomain);
-        localStorage.setItem('onboard_buyers', (body.buyers||[]).join(', '));
-        localStorage.setItem('onboard_industries', (body.industries||[]).join(', '));
-        localStorage.setItem('onboard_regions', (body.regions||[]).join(', '));
-        if(body.brief) localStorage.setItem('onboard_notes', body.brief);
-      }catch{}
+function fmtHost(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{return 'source';} }
+function addCard(L){
+  if(seenUrls.has(L.source_url)) return; seenUrls.add(L.source_url);
+  // Hide neutron once first card lands
+  if(listEl.style.display==='none'){ listEl.style.display='flex'; }
+  const d = document.createElement('div'); d.className='card';
+  d.innerHTML = `<div class="cardHeader"><span class="dot"></span><div class="host">${fmtHost(L.source_url)} • ${L.platform||'source'}</div><span class="pill2">Conf ${Math.max(55,Math.min(92, Number(L.heat||68)))}%</span></div>
+                 <div class="title">${esc(L.title||'Untitled')}</div>
+                 <div class="hint">Press & hold to reveal details</div>`;
+  // veil for hold-to-reveal
+  const veil = document.createElement('div'); veil.className='veil'; veil.innerHTML = '<span>Press & hold to reveal…</span>';
+  d.appendChild(veil);
 
-      // Show running state + slow signals preview
-      engineEl.textContent='Lead Engine • normalizing…';
-      slowPreview(24);
+  // actions row (minimal)
+  const row = document.createElement('div'); row.className='row';
+  const own = btn('Own'); const why = btn('Why this?'); row.appendChild(own); row.appendChild(why); d.appendChild(row);
 
-      try{ await api('/api/v1/find-now',{ method:'POST', body:JSON.stringify(body) }); }
-      catch(e){}
-      await sleep(1200); // give backend a moment
-      pullLeads();
-    });
+  // long press logic
+  let t0=null, holding=false, holdTimer=null; const HOLD_MS=1200;
+  function pointerDown(e){ if(holding) return; holding=true; t0=Date.now(); holdTimer=setTimeout(()=>reveal(), HOLD_MS); document.addEventListener('pointerup', pointerUp, {once:true}); }
+  function pointerUp(){ clearTimeout(holdTimer); holding=false; }
+  function reveal(){ veil.remove(); d.querySelector('.hint').textContent='';
+    const details=document.createElement('div'); details.className='small'; details.style.marginTop='8px';
+    const proof = L.source_url?`<a href="#" data-a="proof">Open proof</a>`:'';
+    details.innerHTML = `${esc(L.snippet||'')} ${proof?('· '+proof):''}`;
+    d.insertBefore(details,row);
+    if(proof){ details.querySelector('[data-a=proof]').onclick=(ev)=>{ev.preventDefault(); window.open(L.source_url,'_blank','noopener'); }; }
+    // event
+    apiPost('/api/v1/events', { leadId:L.id, type:'hold_reveal', meta:{ms:Date.now()-t0} }).catch(()=>{});
+  }
+  d.addEventListener('pointerdown', pointerDown);
 
-    function csv(s){ return (s||'').split(',').map(x=>x.trim()).filter(Boolean); }
+  // own flow (claim then own)
+  own.onclick = async()=>{
+    const r = await apiPost('/api/v1/claim',{leadId:L.id}); if(r?.ok){ own.textContent='Confirm own'; own.disabled=false; let w=r.windowId; own.onclick=async()=>{ const r2=await apiPost('/api/v1/own',{windowId:w}); if(r2?.ok){ own.textContent='Owned'; own.disabled=true; } }; }
+  };
+  // why modal (tiny)
+  why.onclick=()=>{
+    const m=document.createElement('div'); m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:50';
+    m.innerHTML=`<div style="width:min(520px,92vw);background:#0f1420;border:1px solid #202a3a;border-radius:14px;padding:14px">
+      <div style="font-weight:800;margin-bottom:6px">Why this lead</div>
+      <div class="small">AI score blends recency, channel strength, product signals and procurement traces. Timed to likely buyer cycles. <em>Proof link available after hold.</em></div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <span class="pill">Demand Engine</span><span class="pill">Product Signals</span><span class="pill">Procurement</span>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" id="closeM">Close</button></div>
+    </div>`; document.body.appendChild(m); m.querySelector('#closeM').onclick=()=>m.remove();
+  };
 
-    // Initial auto‑run if we came from onboarding with values
-    (function autoKick(){
-      const any = ['onboard_vendor','onboard_buyers','onboard_industries','onboard_regions','onboard_notes'].some(k=>localStorage.getItem(k));
-      if(any){ document.getElementById('runBtn').click(); }
-    })();
+  listEl.prepend(d);
+}
+function btn(txt){ const b=document.createElement('button'); b.className='btn'; b.textContent=txt; return b; }
+function esc(s){ return (s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
-    // First leads fetch (in case user skips run)
-    pullLeads();
-  </script>
+// ---------- Run find-now & refresh leads ----------
+const runBtn = document.getElementById('runBtn');
+runBtn.addEventListener('click', ()=>runFind());
+async function runFind(auto=false){
+  statusEl.textContent='working…';
+  const vendor = $('#vendor').value.trim();
+  const seeds = $('#seeds').value.trim();
+  const industries = $('#industries').value.trim();
+  const regions = $('#regions').value.trim();
+  const desc = $('#desc').value.trim();
+  // persist for future
+  try{ localStorage.setItem('onboard_vendor', vendor); localStorage.setItem('onboard_seed', seeds); localStorage.setItem('onboard_industries', industries); localStorage.setItem('onboard_regions', regions); localStorage.setItem('onboard_desc', desc); }catch{}
+
+  // kick the preview engine (slow, partial)
+  startMetrics();
+
+  // call backend (free path)
+  const payload = { vendorDomain: vendor||undefined, buyers: splitCSV(seeds), industries: splitCSV(industries), regions: splitCSV(regions) };
+  try{ await apiPost('/api/v1/find-now', payload); }catch{}
+  // pull fresh leads
+  setTimeout(refreshLeads, 800);
+}
+function splitCSV(s){ if(!s) return []; return s.split(',').map(x=>x.trim()).filter(Boolean); }
+
+async function refreshLeads(){
+  try{
+    const data = await apiGet('/api/v1/leads'); if(!data?.ok) throw 0; statusEl.textContent='ok';
+    // stage cards
+    const leads = (data.leads||[]).filter(L=>L.platform!=='demo');
+    if(leads.length){ startStream(leads.slice(0, 10)); // keep it tight visually
+                      document.querySelector('.neutron').style.opacity = 0.25; }
+    else { document.querySelector('.neutron').style.opacity = 0.9; }
+    // schedule next poll
+    const next = Math.max(10, Number(data.nextRefreshSec||15));
+    setTimeout(refreshLeads, next*1000);
+  }catch(e){ statusEl.textContent='error'; setTimeout(refreshLeads, 5000); }
+}
+refreshLeads();
+
+// ---------- Metrics preview (slow, partial, anonymized) ----------
+const METRIC_STEPS = (function(){
+  const cat = (c,n)=>({cat:c, name:n});
+  return [
+    cat('Demand Engine','Active channel health'),
+    cat('Demand Engine','Audience surge check'),
+    cat('Demand Engine','Offer & hook sweep'),
+    cat('Product Signals','New SKU pulse'),
+    cat('Product Signals','Bundle / case-of-N patterns'),
+    cat('Product Signals','Price-move watch'),
+    cat('Procurement','Vendor-intake doorways'),
+    cat('Procurement','Bid/tender phrasing'),
+    cat('Vendor Flow','Supplier form freshness'),
+    cat('Vendor Flow','Payment & terms hints'),
+    cat('Ops Footprint','Hiring & capacity tells'),
+    cat('Ops Footprint','Fulfillment strain markers'),
+    cat('Seasonality','Calendar & retail windows'),
+    cat('Seasonality','Geo demand alignment'),
+    cat('Social/PR','Launch chatter & PR rate'),
+    cat('Social/PR','Retailer shelf buzz'),
+    cat('Timing AI','Contact hour propensity'),
+    cat('Timing AI','Follow-up decay curve'),
+    cat('Supplier Graph','Co-supplier overlap'),
+    cat('Supplier Graph','Switching risk flags'),
+    cat('Compliance','Certs & MSDS mentions'),
+    cat('Compliance','Recall adjacency scan'),
+    cat('Finance','Funding / runway hints'),
+    cat('Finance','Shipping & landed cost stress'),
+    cat('Channels','Marketplace cadence'),
+    cat('Channels','Wholesale vs DTC mix'),
+    cat('Intent','Urgency language score'),
+    cat('Intent','Quantity & size cues'),
+    cat('Trust','Review velocity'),
+    cat('Trust','Return/defect mentions')
+  ];
+})();
+let mIdx=0, mTimer=null; const mBar=$('#mBar'), mList=$('#metrics'), mState=$('#mState'), mLock=$('#mLock');
+function startMetrics(){ clearInterval(mTimer); mIdx=0; mList.innerHTML=''; mLock.style.display='none'; mState.textContent='running…';
+  const maxRun = 22 + Math.floor(Math.random()*4); // partial on free
+  mTimer = setInterval(()=>{
+    if(mIdx>=maxRun){ clearInterval(mTimer); mState.textContent='partial'; mLock.style.display='block'; return; }
+    const step = METRIC_STEPS[mIdx % METRIC_STEPS.length];
+    const row = document.createElement('div'); row.className='metricLine';
+    row.innerHTML = `<span class="dot2"></span><span class="cat">${step.cat}</span><span>${step.name}</span>`;
+    mList.appendChild(row); mList.scrollTop = mList.scrollHeight;
+    mIdx++; const p = Math.min(100, Math.round(mIdx/1126*100)); mBar.style.width = (10+p)+'%';
+  }, 1300); // slow, teachy
+}
+
+</script>
 </body>
 </html>
+
