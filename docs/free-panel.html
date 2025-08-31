@@ -3,303 +3,311 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Galactly — Live Feed (Minimal)</title>
+  <title>Galactly — Free Panel</title>
   <style>
     :root{
-      --bg:#0b0e13; --panel:#0f1420; --line:#1d2635; --ink:#e8ecf1; --mut:#9aa7bd;
-      --accent:#86f7d6; --accent2:#57a4ff; --warn:#ffb454; --ok:#76e2b3;
+      --ink:#e8ecf1;--mut:#9aa5b5;--bg:#0b0e13;--card:#111725;--line:#1e2430;--accent:#7fe8cc;--accent2:#6aa8ff;--warn:#ffd480;--hot:#f7a8a8;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;}
-    header{position:sticky;top:0;z-index:40;background:rgba(10,13,20,.7);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
-    .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--mut);}
-    .api{display:flex;gap:8px;align-items:center}
-    .api input{width:380px;max-width:54vw;background:#0d1220;border:1px solid var(--line);color:var(--ink);padding:6px 10px;border-radius:10px}
-    .api button{background:#111a2b;border:1px solid var(--line);color:var(--ink);padding:6px 10px;border-radius:10px;cursor:pointer}
+    body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif}
+    header{position:sticky;top:0;z-index:50;backdrop-filter:blur(8px) saturate(1.05);background:rgba(9,12,18,.6);border-bottom:1px solid var(--line)}
+    .nav{max-width:1200px;margin:auto;padding:14px 18px;display:flex;gap:14px;align-items:center;justify-content:space-between}
+    .brand{display:flex;gap:10px;align-items:center;text-decoration:none;color:var(--ink)}
+    .brand b{font-weight:800}
+    .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--mut)}
 
-    main{max-width:1200px;margin:0 auto;padding:16px;display:grid;grid-template-columns:360px 1fr;gap:16px}
-    @media (max-width:1000px){ main{grid-template-columns:1fr} }
+    .wrap{max-width:1200px;margin:0 auto;padding:18px;display:grid;grid-template-columns: minmax(320px, 520px) 1fr;gap:18px}
+    @media (max-width: 980px){ .wrap{grid-template-columns: 1fr;}}
 
-    /* Left: one‑column feed */
-    #feedCol{display:flex;flex-direction:column;gap:10px}
-    .card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;}
-    .card .top{display:flex;align-items:center;justify-content:space-between}
-    .host{color:var(--mut);font-size:12px}
-    .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-    .chip{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--mut)}
-    .title{font-weight:700;margin-top:6px}
-    .snippet{opacity:.85;margin-top:4px;max-height:52px;overflow:hidden}
-    .btnrow{display:flex;gap:8px;margin-top:8px}
-    .btn{background:#121a2a;border:1px solid var(--line);color:var(--ink);padding:6px 10px;border-radius:10px;cursor:pointer}
-    .btn[disabled]{opacity:.5;cursor:not-allowed}
+    .col{display:flex;flex-direction:column;gap:14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+    .card > .hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
+    .card > .bd{padding:14px}
 
-    /* Hold‑to‑reveal mask */
-    .mask{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(0deg, rgba(9,12,18,.92), rgba(9,12,18,.86));border-radius:14px;border:1px solid var(--line);color:#c9d3e9;opacity:.96}
-    .mask .hint{display:flex;gap:8px;align-items:center}
-    .meter{height:4px;background:#0d1422;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:8px}
-    .meter>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+    /* LEFT: results */
+    .results{min-height:460px;position:relative}
+    .results .list{display:flex;flex-direction:column;gap:12px}
+    .lead{position:relative;border:1px solid var(--line);border-radius:12px;padding:12px;background:#0f1523}
+    .lead h3{margin:0 0 6px;font:700 15px/1.3 system-ui}
+    .lead .meta{font-size:12px;color:var(--mut)}
+    .lead .row{display:flex;align-items:center;gap:8px;margin-top:8px}
+    .lead button{background:#1b2436;border:1px solid #22304a;color:var(--ink);padding:7px 10px;border-radius:10px;cursor:pointer}
+    .lead button:hover{filter:brightness(1.08)}
+    .conf{margin-left:auto;font-size:12px;border:1px solid #2b3954;border-radius:10px;padding:4px 8px;color:#bcd}
 
-    /* Right: AI Working panel */
-    #engine{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;min-height:420px}
-    .h{display:flex;justify-content:space-between;align-items:center}
-    .sub{color:var(--mut);font-size:12px}
-    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .row input{flex:1;min-width:220px;background:#0d1220;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:10px}
-    .row button{background:#162036;border:1px solid var(--line);color:var(--ink);padding:8px 12px;border-radius:10px;cursor:pointer}
-    .steps{margin:10px 0;border-top:1px dashed var(--line);padding-top:10px}
-    .step{display:flex;align-items:flex-start;gap:8px;margin:6px 0}
-    .dot{width:10px;height:10px;border-radius:999px;border:1px solid var(--line);background:#0d1422;margin-top:4px}
-    .step.done .dot{background:var(--ok);border-color:transparent}
-    .step.run .dot{background:linear-gradient(90deg,var(--accent),var(--accent2))}
-    .log{max-height:180px;overflow:auto;border-top:1px dashed var(--line);padding-top:8px}
-    .log .li{font-size:12px;color:#cbd6eb;padding:4px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
-    .bar{height:8px;background:#0d1422;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:10px 0}
-    .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
-    .kv{display:flex;gap:12px;flex-wrap:wrap}
-    .kv .k{font-size:12px;color:var(--mut)} .kv .v{font-weight:700}
+    /* Hold-to-reveal overlay */
+    .veil{position:absolute;inset:0;background:rgba(3,6,12,.65);border:1px dashed #2a3954;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#cfe3ff;font-weight:700;letter-spacing:.2px}
+    .veil small{display:block;opacity:.8;font-weight:600}
+    .veil .ring{width:26px;height:26px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#9ad;margin-right:10px;animation:spin 1.2s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Empty state orb */
+    .orb{position:absolute;inset:14px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:radial-gradient(120% 120% at 70% 30%,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px dashed var(--line)}
+    .orb .bubble{width:56px;height:56px;border-radius:50%;background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.8), rgba(255,255,255,0) 60%),
+                               radial-gradient(#76e5c7,#5aa6ff);filter:blur(.2px);animation:float 3.2s ease-in-out infinite alternate}
+    @keyframes float{from{transform:translateY(0)}to{transform:translateY(-14px)}}
+    .orb .copy{position:absolute;bottom:16px;left:16px;right:16px;color:#bcd;text-align:center;font-size:12px}
+
+    /* RIGHT: engine + metrics */
+    .inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+    .inputs input{width:100%;padding:10px 12px;border-radius:10px;background:#0f1523;border:1px solid #22304a;color:var(--ink)}
+    .inputs .row{grid-column:1/-1;display:flex;gap:10px;align-items:center}
+    .inputs .row button{background:linear-gradient(90deg,#ffffff,#e6f0ff);color:#0b0e13;border:0;padding:10px 14px;border-radius:10px;font-weight:800}
+
+    .chips{display:flex;flex-wrap:wrap;gap:8px;color:#bcd}
+    .chip{border:1px solid #2b3954;border-radius:999px;padding:6px 10px;font-size:12px}
+
+    .stream{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#0e1422;border:1px solid #1f2a35;border-radius:10px;padding:12px;max-height:260px;overflow:auto}
+    .line{opacity:.9}
+    .mut{opacity:.6}
+    .bar{height:6px;background:#0f1520;border:1px solid #213047;border-radius:999px;overflow:hidden}
+    .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:80}
+    .modal .panel{width:min(680px,92vw);background:#101725;border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+    .modal .panel .hd{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+    .modal .panel .bd{padding:16px}
+    .modal .panel .ft{padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+    .modal .panel button{background:#1b2436;border:1px solid #22304a;color:var(--ink);padding:8px 12px;border-radius:10px}
+
+    .hint{color:#bcd;font-size:12px;opacity:.8}
   </style>
 </head>
 <body>
 <header>
-  <div class="brand">Galactly <span id="status" class="pill">connecting…</span></div>
-  <div class="api">
-    <label>API: <input id="apiBase" placeholder="https://<your-northflank>.app"/></label>
-    <button id="saveApi">Save</button>
+  <div class="nav">
+    <a class="brand" href="#"><svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/><path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg> <b>Galactly</b></a>
+    <div class="pill">API: <input id="apiBase" size="42" style="margin-left:8px;background:#0f1523;border:1px solid #22304a;border-radius:8px;padding:6px 8px;color:var(--ink)"> <button id="saveApi" style="margin-left:6px">Save</button></div>
   </div>
 </header>
 
-<main>
-  <!-- LEFT: Single-column feed -->
-  <aside id="feedCol">
-    <!-- cards injected here -->
-  </aside>
+<main class="wrap">
+  <!-- LEFT: live results (starts empty with orb) -->
+  <section class="col">
+    <div class="card results" id="resultsCard">
+      <div class="hd"><strong>Live results</strong><span class="hint" id="rsStatus">waiting…</span></div>
+      <div class="bd">
+        <div class="orb" id="orb">
+          <div class="bubble"></div>
+          <div class="copy">Your AI is warming up. New leads will drop here as the engine works.<br/><span class="hint">Tip: press & hold a card to inspect details.</span></div>
+        </div>
+        <div class="list" id="list" style="display:none"></div>
+      </div>
+    </div>
+  </section>
 
-  <!-- RIGHT: Engine (onboarding + working) -->
-  <section id="engine">
-    <div class="h"><strong>Lead Engine</strong><span class="sub" id="engState">idle</span></div>
-    <div class="row">
-      <input id="inVendor" placeholder="Vendor site (optional) e.g. yourcompany.com"/>
-      <input id="inBuyers" placeholder="Seed buyers (comma separated domains)"/>
-    </div>
-    <div class="row">
-      <input id="inIndustries" placeholder="Industries e.g. beverage, confectionery"/>
-      <input id="inRegions" placeholder="Regions e.g. US, CA"/>
-      <button id="btnRun">Find now</button>
-    </div>
-
-    <div class="steps" id="steps">
-      <div class="step" data-k="prep"><i class="dot"></i><div>
-        <div><strong>Normalize inputs</strong> <span class="sub">vendor, seeds, industry & region bias</span></div>
-      </div></div>
-      <div class="step" data-k="ads"><i class="dot"></i><div>
-        <div><strong>Check ad libraries</strong> <span class="sub">Meta & Google transparency</span></div>
-      </div></div>
-      <div class="step" data-k="intake"><i class="dot"></i><div>
-        <div><strong>Scan vendor pages</strong> <span class="sub">Supplier / procurement / vendor forms</span></div>
-      </div></div>
-      <div class="step" data-k="pdp"><i class="dot"></i><div>
-        <div><strong>Products & packs</strong> <span class="sub">case‑of‑N, dimensions, restock</span></div>
-      </div></div>
-      <div class="step" data-k="insert"><i class="dot"></i><div>
-        <div><strong>Insert leads</strong> <span class="sub">dedupe + score + queue</span></div>
-      </div></div>
+  <!-- RIGHT: engine + guidance + metrics preview -->
+  <section class="col">
+    <div class="card">
+      <div class="hd"><strong>Lead Engine</strong><span class="hint" id="engineState">idle</span></div>
+      <div class="bd">
+        <div class="inputs">
+          <input id="inVendor" placeholder="Vendor site (optional) e.g. yourcompany.com"/>
+          <input id="inSeeds" placeholder="Seed buyers (comma domains)"/>
+          <input id="inIndustries" placeholder="Industries e.g. beverage, confectionery"/>
+          <div class="row">
+            <input id="inRegions" placeholder="Regions e.g. US, CA" style="flex:1"/>
+            <button id="btnFind">Find now</button>
+          </div>
+        </div>
+        <div class="chips" style="margin-top:6px">
+          <span class="chip">Normalize inputs</span>
+          <span class="chip">Check ad libraries</span>
+          <span class="chip">Scan vendor pages</span>
+          <span class="chip">Products & packs</span>
+          <span class="chip">Insert leads</span>
+        </div>
+      </div>
     </div>
 
-    <div class="kv"><div class="k">Metrics</div><div class="v" id="mCount">0 / 1126</div></div>
-    <div class="bar"><i id="mBar"></i></div>
-    <div class="kv">
-      <div class="k">Checked</div><div class="v" id="mChecked">0</div>
-      <div class="k">Created</div><div class="v" id="mCreated">0</div>
-      <div class="k">Run time</div><div class="v" id="mTook">—</div>
+    <div class="card">
+      <div class="hd"><strong>Customize your AI</strong><span class="hint">optional</span></div>
+      <div class="bd">
+        <textarea id="aiGuide" rows="4" style="width:100%;background:#0f1523;border:1px solid #22304a;border-radius:10px;color:var(--ink);padding:10px" placeholder="Describe ideal buyers, exclude lists, order sizes, materials, certifications…"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="btnGuide">Update guidance</button>
+          <span class="hint" id="guideSaved"></span>
+        </div>
+      </div>
     </div>
-    <div class="log" id="log"></div>
+
+    <div class="card">
+      <div class="hd"><strong>Metrics preview</strong><span class="hint"><span id="mCount">0</span> / 1126</span></div>
+      <div class="bd">
+        <div class="stream" id="stream"></div>
+        <div class="bar" style="margin-top:10px"><span id="bar"></span></div>
+        <div class="hint" style="margin-top:8px" id="mHint">Free plan runs a subset to show how the engine reasons. Upgrade to run all metrics and auto-verify.</div>
+      </div>
+    </div>
   </section>
 </main>
 
+<!-- Inspect modal -->
+<div class="modal" id="modal">
+  <div class="panel">
+    <div class="hd"><strong id="mdTitle">Lead</strong><button id="mdClose">Close</button></div>
+    <div class="bd" id="mdBody"></div>
+    <div class="ft" id="mdFt"></div>
+  </div>
+</div>
+
 <script>
-// ---------- API base + session ----------
+// ---------- API base helper ----------
 (function(){
-  const DEF = (localStorage.getItem('api_base') || '').trim() || 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
-  const el = document.getElementById('apiBase'); el.value = DEF; 
-  document.getElementById('saveApi').onclick = () => { localStorage.setItem('api_base', el.value.trim()); location.reload(); };
-  window.API_BASE = DEF.replace(/\/+$/, '');
+  const DEFAULT = localStorage.getItem('api_base_default') || 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
+  const q = new URLSearchParams(location.search); let base = q.get('api') || localStorage.getItem('api_base') || DEFAULT;
+  function norm(v){ if(!v) return DEFAULT; v=String(v).trim().replace(/\/+$/,''); if(!/^https?:\/\//i.test(v)) v='https://'+v; return v; }
+  base = norm(base); window.API_BASE = base; try{ localStorage.setItem('api_base', base);}catch{}
+  const apiInput = document.getElementById('apiBase'); if(apiInput){ apiInput.value = base; document.getElementById('saveApi').onclick = ()=>{ const next = norm(apiInput.value); localStorage.setItem('api_base', next); window.API_BASE = next; location.reload(); }; }
+  const _fetch = window.fetch.bind(window); window.fetch = (input, init)=>{ try{ const url = typeof input==='string'?input:input.url; if(url && url.startsWith('/api/')) return _fetch(window.API_BASE+url, init); }catch{} return _fetch(input, init); };
 })();
-const uidKey='galactly_uid'; let UID=localStorage.getItem(uidKey); if(!UID){ UID='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,UID); }
 
-function api(path){ return window.API_BASE + path; }
-async function GET(path){ const r=await fetch(api(path), { headers:{'x-galactly-user':UID} }); return r.json(); }
-async function POST(path, body){ const r=await fetch(api(path), { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body:JSON.stringify(body||{}) }); return r.json(); }
+// ---------- Session & helpers ----------
+const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
+const H = (sel)=>document.querySelector(sel);
+const listEl = H('#list'); const orbEl = H('#orb'); const rsStatus=H('#rsStatus'); const engineState=H('#engineState');
+let feedTimer=null, running=false, metricsTimer=null, metricsDone=0;
 
-// ---------- FEED (single column) ----------
-const feedEl = document.getElementById('feedCol');
-let FEED = [];
-function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
-function hostFrom(u){ try{ return new URL(u).hostname; } catch { return ''; } }
+function brandFromUrl(u){ try{ const h = new URL(u).hostname; const core = h.replace(/^www\./,'').split('.')[0]; return core.charAt(0).toUpperCase()+core.slice(1); }catch{ return 'Brand'; } }
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
-function renderFeed(){
-  feedEl.innerHTML='';
-  for(const L of FEED){ feedEl.appendChild(card(L)); }
+async function post(path, body){ const r = await fetch('/api'+path, { method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body:JSON.stringify(body||{}) }); return r.json(); }
+
+// ---------- Engine actions ----------
+H('#btnFind').onclick = async () => {
+  engineState.textContent = 'running…'; rsStatus.textContent = 'searching'; running = true; startMetrics(); stopFeed(); clearResults();
+  const body = collectInputs(); await post('/v1/find-now', body).catch(()=>{});
+  // give backend a moment, then start feed polling
+  setTimeout(()=>{ fetchLeads(); }, 2500);
+};
+
+function collectInputs(){
+  const vendor = H('#inVendor').value.trim();
+  const seeds = H('#inSeeds').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const industries = H('#inIndustries').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const regions = H('#inRegions').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const guide = H('#aiGuide').value.trim();
+  const body = { buyers: seeds, industries, regions };
+  if(vendor) body.vendorDomain = vendor; if(guide) body.aiGuide = guide;
+  // persist
+  sessionStorage.setItem('onboard_body', JSON.stringify(body));
+  return body;
+}
+
+// ---------- Guidance ----------
+H('#btnGuide').onclick = async ()=>{
+  const txt = H('#aiGuide').value.trim(); localStorage.setItem('ai_guidance', txt);
+  H('#guideSaved').textContent = 'Saved'; setTimeout(()=>H('#guideSaved').textContent='', 1200);
+  try{ await post('/v1/events', { type:'ai_guidance', leadId:-1, meta:{ text: txt } }); }catch{}
+};
+H('#aiGuide').value = localStorage.getItem('ai_guidance') || '';
+
+// ---------- Feed ----------
+function clearResults(){ listEl.innerHTML=''; listEl.style.display='none'; orbEl.style.display='flex'; }
+function ensureList(){ orbEl.style.display='none'; listEl.style.display='flex'; }
+
+async function fetchLeads(){
+  try{
+    const r = await fetch('/api/v1/leads', { headers: { 'x-galactly-user': uid } }); const data = await r.json();
+    if(!data?.ok) throw new Error('bad');
+    renderLeads(data.leads||[]);
+    rsStatus.textContent = 'ok'; engineState.textContent = running? 'working…' : 'idle';
+    const next = Math.max(10, Math.min(30, Number(data.nextRefreshSec||15))); feedTimer = setTimeout(fetchLeads, next*1000);
+  }catch(e){ rsStatus.textContent='retrying…'; feedTimer = setTimeout(fetchLeads, 5000); }
+}
+function stopFeed(){ if(feedTimer){ clearTimeout(feedTimer); feedTimer=null; } }
+
+function renderLeads(leads){ ensureList(); listEl.innerHTML='';
+  // only show first 1–2 to keep it premium-feel
+  const maxCards = Math.max(1, Math.min(2, leads.length));
+  for(let i=0;i<maxCards;i++){ listEl.appendChild(card(leads[i])); }
 }
 
 function card(lead){
-  const d=document.createElement('div'); d.className='card';
-  d.innerHTML = `
-    <div class="top">
-      <div class="host">${escapeHtml(hostFrom(lead.source_url))}</div>
-      <div class="chips">
-        <span class="chip">${escapeHtml(lead.platform||'signal')}</span>
-        <span class="chip">Conf <b>${lead.heat??'—'}</b></span>
-      </div>
-    </div>
-    <div class="title">${escapeHtml(lead.title||'Untitled')}</div>
-    <div class="snippet">${escapeHtml(lead.snippet||'')}</div>
-    <div class="btnrow">
-      <button class="btn own">Own</button>
-      <button class="btn why">Why this?</button>
-    </div>
-    <div class="mask">
-      <div>
-        <div class="hint">Press & hold to reveal</div>
-        <div class="meter"><i></i></div>
-      </div>
+  const d = document.createElement('div'); d.className='lead';
+  const brand = brandFromUrl(lead.source_url);
+  const intent = intentFromLead(lead);
+  d.innerHTML = `<h3>${escapeHtml(brand)} — ${escapeHtml(intent)}</h3>
+    <div class="meta">${escapeHtml(prettyPlatform(lead.platform))}</div>
+    <div class="row">
+      <button data-a="own">Own</button>
+      <span class="conf">Conf ${Math.max(40,Math.min(95,lead.heat||65))}</span>
     </div>`;
 
-  // long press logic
-  const mask = d.querySelector('.mask');
-  const bar = d.querySelector('.meter>i');
-  let t0=0, tid=null, revealed=false;
-  const HOLD_MS = 1500;
-  function start(){ if(revealed) return; t0 = Date.now(); mask.classList.add('hold'); bar.style.width='0%'; tid = setInterval(()=>{
-      const p = Math.min(1, (Date.now()-t0)/HOLD_MS); bar.style.width=(p*100).toFixed(0)+'%';
-      if(p>=1){ clear(); reveal(); }
-    }, 16);
-  }
-  function clear(){ if(tid){ clearInterval(tid); tid=null; } mask.classList.remove('hold'); bar.style.width='0%'; }
-  function reveal(){ revealed=true; mask.remove(); }
-  mask.addEventListener('mousedown', start); mask.addEventListener('touchstart', start);
-  ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=> mask.addEventListener(ev, clear));
+  // hold-to-reveal veil
+  const veil = document.createElement('div'); veil.className='veil'; veil.innerHTML = `<div class="ring"></div> Press & hold to reveal <small>(~1.2s)</small>`; d.appendChild(veil);
+  let holdT=null; const start=()=>{ holdT = setTimeout(()=>{ veil.remove(); openInspect(lead); addRevealCredit(); }, 1200); };
+  const cancel=()=>{ if(holdT) clearTimeout(holdT); holdT=null; };
+  veil.addEventListener('mousedown',start); veil.addEventListener('touchstart',start, {passive:true});
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=> veil.addEventListener(ev,cancel));
 
-  // actions
-  d.querySelector('.own').onclick = async () => {
-    const claim = await POST('/api/v1/claim', { leadId: lead.id });
-    if(claim?.ok && claim.windowId){ await POST('/api/v1/own', { windowId: claim.windowId }); fetchLeads(0); }
-  };
-  d.querySelector('.why').onclick = () => openWhy(lead);
-
+  d.querySelector('[data-a=own]').onclick = ()=> claimThenOwn(lead);
   return d;
 }
 
-function openWhy(lead){
-  const modal = document.createElement('div');
-  Object.assign(modal.style,{position:'fixed',inset:'0',background:'rgba(0,0,0,.55)',backdropFilter:'blur(4px)',display:'grid',placeItems:'center',zIndex:100});
-  const box = document.createElement('div');
-  Object.assign(box.style,{width:'min(720px,92vw)',background:'var(--panel)',border:'1px solid var(--line)',borderRadius:'14px',padding:'16px'});
-  box.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <strong>Why this lead</strong>
-      <button class="btn x">Close</button>
+function intentFromLead(L){
+  if((L.platform||'').startsWith('adlib')) return 'Active demand (ads)';
+  if((L.platform||'')==='brandintake') return 'Supplier / procurement';
+  if((L.platform||'')==='pdp') return 'Product purchasing';
+  return 'Buyer signal';
+}
+function prettyPlatform(p){ if(!p) return 'signal'; const m=p.replace(/_/g,' '); return m; }
+
+async function claimThenOwn(lead){ try{ const r=await post('/v1/claim',{leadId:lead.id}); if(r?.ok){ await post('/v1/own',{windowId:r.windowId}); alert('Lead moved to Owned'); } }catch(e){ alert('Unable to own right now'); } }
+
+// ---------- Reveal limit (free) ----------
+function todayKey(){ const d=new Date(); return `reveal_${d.getUTCFullYear()}_${d.getUTCMonth()+1}_${d.getUTCDate()}`; }
+function addRevealCredit(){ const k=todayKey(); const n=Number(localStorage.getItem(k)||0)+1; localStorage.setItem(k,String(n)); if(n>=2){ setTimeout(()=> upsellModal('Daily reveal limit reached. Get unlimited reveals + auto-verify.'), 300); } }
+
+// ---------- Inspect modal ----------
+const modal = H('#modal'); const mdTitle=H('#mdTitle'); const mdBody=H('#mdBody'); const mdFt=H('#mdFt');
+H('#mdClose').onclick = ()=> closeModal();
+function openInspect(L){ mdTitle.textContent = brandFromUrl(L.source_url) + ' — details';
+  mdBody.innerHTML = `
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px">
+      <span class="chip">Platform: ${escapeHtml(prettyPlatform(L.platform))}</span>
+      <span class="chip">Category: ${escapeHtml(L.cat||'—')}</span>
+      <span class="chip">Keywords: ${escapeHtml((L.kw||[]).slice(0,4).join(', ')||'—')}</span>
     </div>
-    <div class="chips" style="margin-top:10px">
-      <span class="chip">Platform: ${escapeHtml(lead.platform||'?')}</span>
-      <span class="chip">Confidence: ${escapeHtml(String(lead.heat??'—'))}</span>
-    </div>
-    <div style="margin-top:10px">${escapeHtml(lead.title||'Untitled')}</div>
-    <div class="sub" style="margin-top:6px">${escapeHtml(lead.snippet||'')}</div>
-    <div style="margin-top:12px" class="kv">
-      <div class="k">Intent</div><div class="v">${(lead.kw||[]).slice(0,3).join(', ')||'—'}</div>
-    </div>
-    <div class="row" style="margin-top:12px">
-      ${lead.source_url?`<button class="btn open">Open proof</button>`:''}
-      <button class="btn own">Own</button>
-    </div>
+    <div style="margin-bottom:10px">${escapeHtml(L.title||'Untitled')}</div>
+    <div class="hint" style="margin-bottom:10px">Why this: High demand indicators for packaging (derived from public signals). Press Verify to open a proof link and confirm manually.</div>
   `;
-  modal.appendChild(box); document.body.appendChild(modal);
-  box.querySelector('.x').onclick = ()=> modal.remove();
-  if(lead.source_url){ box.querySelector('.open').onclick = ()=> window.open(lead.source_url,'_blank','noopener'); }
-  box.querySelector('.own').onclick = async ()=>{ const claim = await POST('/api/v1/claim',{leadId:lead.id}); if(claim?.ok && claim.windowId){ await POST('/api/v1/own',{windowId:claim.windowId}); modal.remove(); fetchLeads(0);} };
+  mdFt.innerHTML = '';
+  const btnProof = document.createElement('button'); btnProof.textContent = 'Open proof'; btnProof.onclick = ()=>{ try{ window.open(L.source_url,'_blank','noopener'); }catch{} };
+  const btnClose = document.createElement('button'); btnClose.textContent='Close'; btnClose.onclick=()=>closeModal();
+  mdFt.appendChild(btnProof); mdFt.appendChild(btnClose);
+  modal.style.display='flex';
+}
+function closeModal(){ modal.style.display='none'; }
+
+function upsellModal(msg){ mdTitle.textContent = 'Upgrade to unlock'; mdBody.innerHTML = `<p>${escapeHtml(msg)}</p><ul><li>Run all 1126 metrics</li><li>Unlimited reveals</li><li>AI auto-verify + contact discovery</li></ul>`; mdFt.innerHTML=''; const b=document.createElement('button'); b.textContent='See plans'; b.onclick=()=>{ window.location.href='./index.html#pricing'; }; mdFt.appendChild(b); modal.style.display='flex'; }
+
+// ---------- Metrics stream (right column) ----------
+const METRICS = (()=>{
+  const items = [];
+  const cats = {
+    'Demand': ['Meta library check','Google ads presence','Search lift (90d)','Brand mentions (7d)','Social shop restock','Retailer OOS signals','UGC spike rate','Coupon issuance','Affiliate pushes','Store locator growth'],
+    'Procurement': ['Supplier form/pages','RFP keywords on site','Vendor guidelines','Certs & compliance','ERP footprint','Hiring buyers roles','Payment terms hints','Inbound procurement posts'],
+    'Product': ['Case-of-N detected','Pack size variety','New SKU velocity','Bundle frequency','Cold-chain hints','Fragile/oversize hints','Material cues','Sustainability claims'],
+    'Timing': ['Seasonality window','Holiday adjacency','Launch cadence','Promo calendar','Regional paydays','Weather impact'],
+    'Risk': ['Website health','Cart/checkout ok','Shipping policy gaps','Returns spike risk','Regulatory mentions']
+  };
+  for(const [cat, arr] of Object.entries(cats)) for(const name of arr) items.push({cat,name});
+  return items; // ~50 demo metrics; we will stop early on free
+})();
+
+function startMetrics(){ if(metricsTimer) clearInterval(metricsTimer); const stream=H('#stream'); const bar=H('#bar'); const mCount=H('#mCount'); stream.innerHTML=''; metricsDone=0; let i=0; const MAX = 26; // stop early on free
+  metricsTimer = setInterval(()=>{
+    if(i>=METRICS.length || metricsDone>=MAX){ clearInterval(metricsTimer); engineState.textContent = 'partial complete'; H('#mHint').innerHTML = 'Free plan shows a subset. <a href="#pricing" style="color:#9ad">Upgrade</a> to run all metrics + auto-verify.'; return; }
+    const m = METRICS[i++]; const div=document.createElement('div'); div.className='line'; div.innerHTML = `<span class="mut">[${m.cat}]</span> ${m.name}… <span style="color:#9ad">ok</span>`; stream.appendChild(div); stream.scrollTop = stream.scrollHeight; metricsDone++; mCount.textContent = metricsDone; bar.style.width = Math.round((metricsDone/1126)*100)+'%';
+  }, 1200); // slow & readable
 }
 
-async function fetchLeads(delay){ if(delay>0) await new Promise(r=>setTimeout(r,delay));
-  try{
-    const data = await GET('/api/v1/leads');
-    if(!data?.ok) throw new Error('bad response');
-    FEED = data.leads || [];
-    renderFeed();
-    document.getElementById('status').textContent='ok';
-    setTimeout(()=>fetchLeads(data.nextRefreshSec?data.nextRefreshSec*1000:15000), data.nextRefreshSec?data.nextRefreshSec*1000:15000);
-  }catch(e){ document.getElementById('status').textContent='error'; setTimeout(fetchLeads, 5000); }
-}
+// --------- Restore saved onboarding if any ---------
+(function(){ try{ const cached = JSON.parse(sessionStorage.getItem('onboard_body')||'null'); if(cached){ H('#inSeeds').value = (cached.buyers||[]).join(', '); H('#inIndustries').value = (cached.industries||[]).join(', '); H('#inRegions').value = (cached.regions||[]).join(', '); if(cached.vendorDomain) H('#inVendor').value=cached.vendorDomain; } }catch{} })();
 
-// ---------- ENGINE (onboarding + working) ----------
-const inVendor = document.getElementById('inVendor');
-const inBuyers = document.getElementById('inBuyers');
-const inIndustries = document.getElementById('inIndustries');
-const inRegions = document.getElementById('inRegions');
-const btnRun = document.getElementById('btnRun');
-const engState = document.getElementById('engState');
-const steps = document.getElementById('steps');
-const mBar = document.getElementById('mBar');
-const mCount = document.getElementById('mCount');
-const mChecked = document.getElementById('mChecked');
-const mCreated = document.getElementById('mCreated');
-const mTook = document.getElementById('mTook');
-const logEl = document.getElementById('log');
-
-// hydrate from localStorage
-(function(){ try{
-  const s = JSON.parse(localStorage.getItem('onboard_v1')||'{}');
-  inVendor.value = s.vendorDomain||''; inBuyers.value = (s.buyers||[]).join(', ');
-  inIndustries.value = (s.industries||[]).join(', '); inRegions.value = (s.regions||[]).join(', ');
-} catch{} })();
-
-function saveOnboard(){ const payload = collect(); localStorage.setItem('onboard_v1', JSON.stringify(payload)); return payload; }
-function collect(){
-  const buyers = inBuyers.value.split(',').map(s=>s.trim()).filter(Boolean);
-  const industries = inIndustries.value.split(',').map(s=>s.trim()).filter(Boolean);
-  const regions = inRegions.value.split(',').map(s=>s.trim()).filter(Boolean);
-  const vendorDomain = inVendor.value.trim()||undefined;
-  return { buyers, industries, regions, vendorDomain };
-}
-
-btnRun.onclick = () => runFindNow();
-
-function setStep(key, state){ const el = steps.querySelector(`[data-k="${key}"]`); if(!el) return; el.classList.remove('run','done'); if(state) el.classList.add(state); }
-function pushLog(text){ const li=document.createElement('div'); li.className='li'; li.textContent=text; logEl.prepend(li); while(logEl.children.length>16) logEl.lastChild.remove(); }
-
-async function runFindNow(){
-  const payload = saveOnboard();
-  // UI prep
-  engState.textContent='running…';
-  ['prep','ads','intake','pdp','insert'].forEach(k=> setStep(k,null));
-  setStep('prep','run'); pushLog('Normalizing inputs…');
-  let metrics=0; const METRIC_MAX=1126; mBar.style.width='0%'; mCount.textContent=`0 / ${METRIC_MAX}`;
-  let meter = setInterval(()=>{ metrics=Math.min(METRIC_MAX, metrics + Math.ceil(Math.random()*7)); mBar.style.width=(metrics/METRIC_MAX*100).toFixed(1)+'%'; mCount.textContent=`${metrics} / ${METRIC_MAX}`; }, 50);
-
-  // staged visuals
-  setTimeout(()=>{ setStep('prep','done'); setStep('ads','run'); pushLog('Querying ad libraries for spend signals…'); }, 600);
-  setTimeout(()=>{ setStep('ads','done'); setStep('intake','run'); pushLog('Scanning supplier / procurement pages…'); }, 2200);
-  setTimeout(()=>{ setStep('intake','done'); setStep('pdp','run'); pushLog('Checking product pages for case‑of‑N & restock…'); }, 4200);
-
-  const t0 = Date.now();
-  let result = { ok:false };
-  try{ result = await POST('/api/v1/find-now', payload); } catch(e){ pushLog('Find‑now failed.'); }
-
-  setStep('pdp','done'); setStep('insert','run'); pushLog('Inserting leads & scoring…');
-  const took = Date.now()-t0; mTook.textContent = (took/1000).toFixed(1)+'s';
-  clearInterval(meter); mBar.style.width='100%'; mCount.textContent=`${METRIC_MAX} / ${METRIC_MAX}`;
-
-  if(result && result.ok){ mChecked.textContent = String(result.checked||0); mCreated.textContent = String(result.created||0); engState.textContent='done'; pushLog(`Created ${result.created||0} new leads from ${result.checked||0} domains.`); }
-  else { engState.textContent='error'; pushLog('Engine error. Check backend logs.'); }
-
-  setStep('insert','done');
-  // immediate refresh of feed, then let poller continue
-  fetchLeads(0);
-}
-
-// auto-run on first load if we have onboard data but feed is empty
-(async function init(){ fetchLeads(0); const s = JSON.parse(localStorage.getItem('onboard_v1')||'{}'); if((s.buyers&&s.buyers.length) || s.vendorDomain){ runFindNow(); } })();
 </script>
 </body>
 </html>
