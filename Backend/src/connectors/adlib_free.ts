@@ -1,58 +1,57 @@
-// Free-mode “advertiser discovery”: we don’t scrape paid APIs.
-// We emit *proof links* you (or the vendor) can click to verify current ads.
 
-export type AdvertiserFreeHit = {
-  domain: string;                 // normalized host (e.g., "liquiddeath.com")
-  source: 'meta' | 'google';      // library we point to
-  proofUrl: string;               // click this to verify
-  adCount?: number | null;        // unknown in free mode
-  lastSeen?: string | null;       // unknown in free mode
+export type AdProof = {
+  domain: string;
+  source: 'meta' | 'google';
+  proofUrl: string;
+  adCount?: number;    // unknown in free mode
+  lastSeen?: string;   // "recent" in free mode
 };
 
-const DEFAULT_REGION = 'US';
-
-function normHost(s?: string): string {
-  if (!s) return '';
-  let h = s.trim().toLowerCase();
+function normHost(s?: string) {
+  if (!s) return ''; let h = s.trim();
   if (!h) return '';
-  h = h.replace(/^https?:\/\//, '');
-  const i = h.indexOf('/');
-  if (i > -1) h = h.slice(0, i);
-  return h;
+  h = h.replace(/^https?:\/\//i, '').replace(/\/$/, '');
+  const slash = h.indexOf('/');
+  return slash > 0 ? h.slice(0, slash) : h;
 }
 
-function proofLinks(domain: string, region = DEFAULT_REGION): AdvertiserFreeHit[] {
-  const host = normHost(domain);
-  if (!host) return [];
-  const enc = encodeURIComponent(host);
-  return [
-    // Meta Ad Library search (free, interactive)
-    {
-      domain: host,
-      source: 'meta',
-      proofUrl: `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=${encodeURIComponent(region)}&q=${enc}`,
-    },
-    // Google Ads Transparency Center – Google search that lands on advertiser pages
-    {
-      domain: host,
-      source: 'google',
-      proofUrl: `https://www.google.com/search?q=site:adstransparency.google.com%20${enc}`,
-    },
-  ];
+function encode(q: string) { return encodeURIComponent(q); }
+
+function buildMetaUrl(host: string, country: string) {
+  return `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=${encodeURIComponent(country)}&q=${encode(host)}`;
 }
 
-// Main entry — NO top-level execution anymore.
-export async function findAdvertisersFree(opts: {
-  seedDomains?: string[];
-  industries?: string[];          // not used yet (future keyword boost)
-  regions?: string[];
-}): Promise<AdvertiserFreeHit[]> {
-  const region = (opts.regions?.[0] || DEFAULT_REGION).toUpperCase();
-  const seeds = (opts.seedDomains || []).map(normHost).filter(Boolean);
+function buildGoogleUrl(host: string) {
+  // Google Ads Transparency doesn’t let us filter by advertiser in URL reliably,
+  // so we use a site: search that lands on the ads transparency host with the domain.
+  const q = `site:adstransparency.google.com ${host}`;
+  return `https://www.google.com/search?q=${encode(q)}`;
+}
 
-  const out: AdvertiserFreeHit[] = [];
-  for (const d of seeds) out.push(...proofLinks(d, region));
+export async function findAdvertisersFree(params: {
+  industries?: string[];   // currently unused (reserved for keyword expansions)
+  regions?: string[];      // ISO‑2 like ["US","CA"]; default from env
+  seedDomains?: string[];  // user seed + discovered
+}): Promise<AdProof[]> {
+  const regions = (process.env.ADLIB_FREE_META_COUNTRIES || 'US')
+    .split(',').map(s => s.trim()).filter(Boolean);
 
-  // No network calls in free path; return instantly.
+  const out: AdProof[] = [];
+  const seen = new Set<string>();
+  const domains = Array.from(new Set((params.seedDomains || []).map(normHost).filter(Boolean)));
+
+  for (const host of domains) {
+    // Meta per region
+    for (const c of regions) {
+      const url = buildMetaUrl(host, c);
+      if (!seen.has(url)) { seen.add(url); out.push({ domain: host, source: 'meta', proofUrl: url, lastSeen: 'recent' }); }
+    }
+    // Google (single)
+    const g = buildGoogleUrl(host);
+    if (!seen.has(g)) { seen.add(g); out.push({ domain: host, source: 'google', proofUrl: g, lastSeen: 'recent' }); }
+  }
   return out;
 }
+```
+
+---
