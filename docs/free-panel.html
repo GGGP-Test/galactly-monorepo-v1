@@ -3,257 +3,303 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Galactly — Live Feed</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <title>Galactly — Live Feed (Minimal)</title>
   <style>
-    :root{--ink:#e8ecf1;--mut:#a9b2c7;--bg:#0b0e13;--card:#111725;--line:#1f2a3b;--pri:#86f7d6;--pri2:#57a4ff}
+    :root{
+      --bg:#0b0e13; --panel:#0f1420; --line:#1d2635; --ink:#e8ecf1; --mut:#9aa7bd;
+      --accent:#86f7d6; --accent2:#57a4ff; --warn:#ffb454; --ok:#76e2b3;
+    }
     *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.55 Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-    header{position:sticky;top:0;z-index:40;background:rgba(10,13,18,.7);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-    .bar{max-width:1180px;margin:auto;padding:10px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between}
-    .brand{display:flex;align-items:center;gap:8px;font-weight:800}
-    .brand .ok{display:inline-block;border:1px solid #2a3b55;border-radius:999px;padding:3px 8px;font-weight:600;color:var(--mut)}
-    .api{display:flex;gap:6px;align-items:center;color:var(--mut)}
-    .api input{width:420px;max-width:52vw;background:#0f141f;border:1px solid #22324a;color:var(--ink);padding:6px 8px;border-radius:10px}
-    .api button{background:#162236;border:1px solid #274061;color:#dfe6f3;padding:6px 10px;border-radius:10px;cursor:pointer}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;}
+    header{position:sticky;top:0;z-index:40;background:rgba(10,13,20,.7);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
+    .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--mut);}
+    .api{display:flex;gap:8px;align-items:center}
+    .api input{width:380px;max-width:54vw;background:#0d1220;border:1px solid var(--line);color:var(--ink);padding:6px 10px;border-radius:10px}
+    .api button{background:#111a2b;border:1px solid var(--line);color:var(--ink);padding:6px 10px;border-radius:10px;cursor:pointer}
 
-    .wrap{max-width:1180px;margin:16px auto;padding:0 14px}
-    .notice{margin:10px 0 16px;padding:10px 12px;border:1px solid #243149;border-radius:12px;background:#0f1522;color:#cfe4ff}
-    .notice small{opacity:.8}
+    main{max-width:1200px;margin:0 auto;padding:16px;display:grid;grid-template-columns:360px 1fr;gap:16px}
+    @media (max-width:1000px){ main{grid-template-columns:1fr} }
 
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
-    .head{display:flex;align-items:center;gap:8px}
-    .pill{border:1px solid #2a3b55;border-radius:999px;padding:2px 8px;font-size:12px;color:#c7d2e8}
-    .ttl{font-weight:800;margin:2px 0 0}
-    .why{opacity:.9}
-    .hold{margin-top:8px}
-    .hold button{width:100%;background:linear-gradient(90deg,#ffffff,#e9f0ff);color:#0b0c12;font-weight:800;border:0;padding:10px 12px;border-radius:12px;cursor:pointer;box-shadow:0 8px 24px rgba(120,160,255,.18)}
-    .hold button:active{transform:translateY(1px)}
+    /* Left: one‑column feed */
+    #feedCol{display:flex;flex-direction:column;gap:10px}
+    .card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;}
+    .card .top{display:flex;align-items:center;justify-content:space-between}
+    .host{color:var(--mut);font-size:12px}
+    .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .chip{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--mut)}
+    .title{font-weight:700;margin-top:6px}
+    .snippet{opacity:.85;margin-top:4px;max-height:52px;overflow:hidden}
+    .btnrow{display:flex;gap:8px;margin-top:8px}
+    .btn{background:#121a2a;border:1px solid var(--line);color:var(--ink);padding:6px 10px;border-radius:10px;cursor:pointer}
+    .btn[disabled]{opacity:.5;cursor:not-allowed}
 
-    /* Modal */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:20px}
-    .modal.show{display:flex}
-    .sheet{width:min(720px,94vw);background:#0f1521;border:1px solid #243149;border-radius:16px;padding:16px}
-    .sheet h3{margin:0 0 6px}
-    .rows{display:grid;grid-template-columns:1fr;gap:12px}
-    .chips{display:flex;flex-wrap:wrap;gap:6px}
-    .chip{border:1px dashed #2a3b55;border-radius:12px;padding:6px 9px;font-size:12px;color:#d3def5}
-    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .btn{background:#162236;border:1px solid #274061;color:#e8ecf1;padding:8px 12px;border-radius:12px;cursor:pointer}
-    .btn--own{background:linear-gradient(90deg,#86f7d6,#57a4ff);color:#031320;border:0}
-    .mut{color:var(--mut)}
+    /* Hold‑to‑reveal mask */
+    .mask{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(0deg, rgba(9,12,18,.92), rgba(9,12,18,.86));border-radius:14px;border:1px solid var(--line);color:#c9d3e9;opacity:.96}
+    .mask .hint{display:flex;gap:8px;align-items:center}
+    .meter{height:4px;background:#0d1422;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:8px}
+    .meter>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
 
-    /* Onboarding (fallback) */
-    .ob{display:none;margin:10px 0;padding:12px;border:1px solid #2a3b55;border-radius:12px;background:#0f1522}
-    .ob.show{display:block}
-    .ob input{width:100%;background:#0f141f;border:1px solid #22324a;color:var(--ink);padding:8px 10px;border-radius:10px;margin:6px 0}
-    .ob .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .ob .go{margin-top:8px}
+    /* Right: AI Working panel */
+    #engine{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;min-height:420px}
+    .h{display:flex;justify-content:space-between;align-items:center}
+    .sub{color:var(--mut);font-size:12px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .row input{flex:1;min-width:220px;background:#0d1220;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:10px}
+    .row button{background:#162036;border:1px solid var(--line);color:var(--ink);padding:8px 12px;border-radius:10px;cursor:pointer}
+    .steps{margin:10px 0;border-top:1px dashed var(--line);padding-top:10px}
+    .step{display:flex;align-items:flex-start;gap:8px;margin:6px 0}
+    .dot{width:10px;height:10px;border-radius:999px;border:1px solid var(--line);background:#0d1422;margin-top:4px}
+    .step.done .dot{background:var(--ok);border-color:transparent}
+    .step.run .dot{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+    .log{max-height:180px;overflow:auto;border-top:1px dashed var(--line);padding-top:8px}
+    .log .li{font-size:12px;color:#cbd6eb;padding:4px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+    .bar{height:8px;background:#0d1422;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:10px 0}
+    .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+    .kv{display:flex;gap:12px;flex-wrap:wrap}
+    .kv .k{font-size:12px;color:var(--mut)} .kv .v{font-weight:700}
   </style>
 </head>
 <body>
-  <header>
-    <div class="bar">
-      <div class="brand">Galactly <span class="ok" id="ok">connecting…</span></div>
-      <div class="api"><span>API:</span>
-        <input id="apiBase" placeholder="https://…"/>
-        <button id="saveApi">Save</button>
-      </div>
-    </div>
-  </header>
-
-  <div class="wrap">
-    <div id="profileNotice" class="notice" style="display:none"></div>
-
-    <div id="ob" class="ob">
-      <div style="font-weight:800;margin-bottom:6px">Tell us who you want</div>
-      <label>Vendor site (we derive ICP)
-        <input id="obVendor" placeholder="yourcompany.com (optional)"/>
-      </label>
-      <div class="row">
-        <label>Seed buyers
-          <input id="obBuyers" placeholder="comma domains, e.g. liquiddeath.com, soylent.com"/>
-        </label>
-        <label>Industries
-          <input id="obIndustries" placeholder="e.g. beverage, confectionery"/>
-        </label>
-      </div>
-      <div class="row">
-        <label>Regions
-          <input id="obRegions" placeholder="e.g. US, CA"/>
-        </label>
-        <div></div>
-      </div>
-      <button class="btn go" id="obGo">Find now</button>
-    </div>
-
-    <div id="feed" class="grid" aria-live="polite"></div>
+<header>
+  <div class="brand">Galactly <span id="status" class="pill">connecting…</span></div>
+  <div class="api">
+    <label>API: <input id="apiBase" placeholder="https://<your-northflank>.app"/></label>
+    <button id="saveApi">Save</button>
   </div>
+</header>
 
-  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-label="Lead details">
-    <div class="sheet">
-      <div class="mut" id="mSource"></div>
-      <h3 id="mTitle">Lead</h3>
-      <div id="mWhy" class="why"></div>
-      <div class="chips" id="mChips"></div>
-      <div class="actions">
-        <button class="btn" id="mClaim">Reserve 2m</button>
-        <button class="btn btn--own" id="mOwn">Own</button>
-        <a class="mut" id="mVerify" href="#" target="_blank" rel="noopener">Verify (optional)</a>
-        <span class="mut" id="mTimer"></span>
-        <span style="flex:1"></span>
-        <button class="btn" id="mClose">Close</button>
+<main>
+  <!-- LEFT: Single-column feed -->
+  <aside id="feedCol">
+    <!-- cards injected here -->
+  </aside>
+
+  <!-- RIGHT: Engine (onboarding + working) -->
+  <section id="engine">
+    <div class="h"><strong>Lead Engine</strong><span class="sub" id="engState">idle</span></div>
+    <div class="row">
+      <input id="inVendor" placeholder="Vendor site (optional) e.g. yourcompany.com"/>
+      <input id="inBuyers" placeholder="Seed buyers (comma separated domains)"/>
+    </div>
+    <div class="row">
+      <input id="inIndustries" placeholder="Industries e.g. beverage, confectionery"/>
+      <input id="inRegions" placeholder="Regions e.g. US, CA"/>
+      <button id="btnRun">Find now</button>
+    </div>
+
+    <div class="steps" id="steps">
+      <div class="step" data-k="prep"><i class="dot"></i><div>
+        <div><strong>Normalize inputs</strong> <span class="sub">vendor, seeds, industry & region bias</span></div>
+      </div></div>
+      <div class="step" data-k="ads"><i class="dot"></i><div>
+        <div><strong>Check ad libraries</strong> <span class="sub">Meta & Google transparency</span></div>
+      </div></div>
+      <div class="step" data-k="intake"><i class="dot"></i><div>
+        <div><strong>Scan vendor pages</strong> <span class="sub">Supplier / procurement / vendor forms</span></div>
+      </div></div>
+      <div class="step" data-k="pdp"><i class="dot"></i><div>
+        <div><strong>Products & packs</strong> <span class="sub">case‑of‑N, dimensions, restock</span></div>
+      </div></div>
+      <div class="step" data-k="insert"><i class="dot"></i><div>
+        <div><strong>Insert leads</strong> <span class="sub">dedupe + score + queue</span></div>
+      </div></div>
+    </div>
+
+    <div class="kv"><div class="k">Metrics</div><div class="v" id="mCount">0 / 1126</div></div>
+    <div class="bar"><i id="mBar"></i></div>
+    <div class="kv">
+      <div class="k">Checked</div><div class="v" id="mChecked">0</div>
+      <div class="k">Created</div><div class="v" id="mCreated">0</div>
+      <div class="k">Run time</div><div class="v" id="mTook">—</div>
+    </div>
+    <div class="log" id="log"></div>
+  </section>
+</main>
+
+<script>
+// ---------- API base + session ----------
+(function(){
+  const DEF = (localStorage.getItem('api_base') || '').trim() || 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
+  const el = document.getElementById('apiBase'); el.value = DEF; 
+  document.getElementById('saveApi').onclick = () => { localStorage.setItem('api_base', el.value.trim()); location.reload(); };
+  window.API_BASE = DEF.replace(/\/+$/, '');
+})();
+const uidKey='galactly_uid'; let UID=localStorage.getItem(uidKey); if(!UID){ UID='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,UID); }
+
+function api(path){ return window.API_BASE + path; }
+async function GET(path){ const r=await fetch(api(path), { headers:{'x-galactly-user':UID} }); return r.json(); }
+async function POST(path, body){ const r=await fetch(api(path), { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body:JSON.stringify(body||{}) }); return r.json(); }
+
+// ---------- FEED (single column) ----------
+const feedEl = document.getElementById('feedCol');
+let FEED = [];
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+function hostFrom(u){ try{ return new URL(u).hostname; } catch { return ''; } }
+
+function renderFeed(){
+  feedEl.innerHTML='';
+  for(const L of FEED){ feedEl.appendChild(card(L)); }
+}
+
+function card(lead){
+  const d=document.createElement('div'); d.className='card';
+  d.innerHTML = `
+    <div class="top">
+      <div class="host">${escapeHtml(hostFrom(lead.source_url))}</div>
+      <div class="chips">
+        <span class="chip">${escapeHtml(lead.platform||'signal')}</span>
+        <span class="chip">Conf <b>${lead.heat??'—'}</b></span>
       </div>
     </div>
-  </div>
+    <div class="title">${escapeHtml(lead.title||'Untitled')}</div>
+    <div class="snippet">${escapeHtml(lead.snippet||'')}</div>
+    <div class="btnrow">
+      <button class="btn own">Own</button>
+      <button class="btn why">Why this?</button>
+    </div>
+    <div class="mask">
+      <div>
+        <div class="hint">Press & hold to reveal</div>
+        <div class="meter"><i></i></div>
+      </div>
+    </div>`;
 
-  <script src="./api-base.js"></script>
-  <script>
-    // ---------- API base + session ----------
-    const uidKey='gal_uid';
-    let UID=localStorage.getItem(uidKey); if(!UID){ UID='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey, UID); }
-    const apiInput=document.getElementById('apiBase');
-    apiInput.value=window.API_BASE||localStorage.getItem('apiBase')||'';
-    document.getElementById('saveApi').onclick=()=>{ window.__setApiBase?.(apiInput.value); location.reload(); };
-    const OK=document.getElementById('ok');
+  // long press logic
+  const mask = d.querySelector('.mask');
+  const bar = d.querySelector('.meter>i');
+  let t0=0, tid=null, revealed=false;
+  const HOLD_MS = 1500;
+  function start(){ if(revealed) return; t0 = Date.now(); mask.classList.add('hold'); bar.style.width='0%'; tid = setInterval(()=>{
+      const p = Math.min(1, (Date.now()-t0)/HOLD_MS); bar.style.width=(p*100).toFixed(0)+'%';
+      if(p>=1){ clear(); reveal(); }
+    }, 16);
+  }
+  function clear(){ if(tid){ clearInterval(tid); tid=null; } mask.classList.remove('hold'); bar.style.width='0%'; }
+  function reveal(){ revealed=true; mask.remove(); }
+  mask.addEventListener('mousedown', start); mask.addEventListener('touchstart', start);
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=> mask.addEventListener(ev, clear));
 
-    async function jget(path){ const r=await fetch(path.startsWith('/api/')? path:('/api'+path), { headers:{'x-galactly-user':UID} }); return r.json(); }
-    async function jpost(path, body){ const r=await fetch(path, { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body:JSON.stringify(body||{}) }); return r.json(); }
+  // actions
+  d.querySelector('.own').onclick = async () => {
+    const claim = await POST('/api/v1/claim', { leadId: lead.id });
+    if(claim?.ok && claim.windowId){ await POST('/api/v1/own', { windowId: claim.windowId }); fetchLeads(0); }
+  };
+  d.querySelector('.why').onclick = () => openWhy(lead);
 
-    // ---------- Onboarding profile (auto-read) ----------
-    const OB_KEY='gal_onboard_v1';
-    function parseQP(){ const q=new URLSearchParams(location.search); const o={};
-      if(q.get('vendor')) o.vendorDomain=q.get('vendor');
-      if(q.get('buyers')) o.buyers=q.get('buyers').split(',').map(s=>s.trim()).filter(Boolean);
-      if(q.get('industries')) o.industries=q.get('industries').split(',').map(s=>s.trim()).filter(Boolean);
-      if(q.get('regions')) o.regions=q.get('regions').split(',').map(s=>s.trim()).filter(Boolean);
-      return o; }
-    function readProfile(){ const qp=parseQP(); if(Object.keys(qp).length){ localStorage.setItem(OB_KEY, JSON.stringify(qp)); return qp; }
-      try{ return JSON.parse(localStorage.getItem(OB_KEY)||'{}'); }catch{ return {}; } }
-    function saveProfile(p){ localStorage.setItem(OB_KEY, JSON.stringify(p||{})); }
+  return d;
+}
 
-    async function ensureGate(){ try{ await jpost('/api/v1/gate', { region: (profile.regions||[])[0]||null, email:null, alerts:false }); }catch(e){} }
+function openWhy(lead){
+  const modal = document.createElement('div');
+  Object.assign(modal.style,{position:'fixed',inset:'0',background:'rgba(0,0,0,.55)',backdropFilter:'blur(4px)',display:'grid',placeItems:'center',zIndex:100});
+  const box = document.createElement('div');
+  Object.assign(box.style,{width:'min(720px,92vw)',background:'var(--panel)',border:'1px solid var(--line)',borderRadius:'14px',padding:'16px'});
+  box.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Why this lead</strong>
+      <button class="btn x">Close</button>
+    </div>
+    <div class="chips" style="margin-top:10px">
+      <span class="chip">Platform: ${escapeHtml(lead.platform||'?')}</span>
+      <span class="chip">Confidence: ${escapeHtml(String(lead.heat??'—'))}</span>
+    </div>
+    <div style="margin-top:10px">${escapeHtml(lead.title||'Untitled')}</div>
+    <div class="sub" style="margin-top:6px">${escapeHtml(lead.snippet||'')}</div>
+    <div style="margin-top:12px" class="kv">
+      <div class="k">Intent</div><div class="v">${(lead.kw||[]).slice(0,3).join(', ')||'—'}</div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      ${lead.source_url?`<button class="btn open">Open proof</button>`:''}
+      <button class="btn own">Own</button>
+    </div>
+  `;
+  modal.appendChild(box); document.body.appendChild(modal);
+  box.querySelector('.x').onclick = ()=> modal.remove();
+  if(lead.source_url){ box.querySelector('.open').onclick = ()=> window.open(lead.source_url,'_blank','noopener'); }
+  box.querySelector('.own').onclick = async ()=>{ const claim = await POST('/api/v1/claim',{leadId:lead.id}); if(claim?.ok && claim.windowId){ await POST('/api/v1/own',{windowId:claim.windowId}); modal.remove(); fetchLeads(0);} };
+}
 
-    // ---------- Feed ----------
-    const FEED=document.getElementById('feed');
-    let LEADS=[], ACTIVE=null, TIMER=null;
+async function fetchLeads(delay){ if(delay>0) await new Promise(r=>setTimeout(r,delay));
+  try{
+    const data = await GET('/api/v1/leads');
+    if(!data?.ok) throw new Error('bad response');
+    FEED = data.leads || [];
+    renderFeed();
+    document.getElementById('status').textContent='ok';
+    setTimeout(()=>fetchLeads(data.nextRefreshSec?data.nextRefreshSec*1000:15000), data.nextRefreshSec?data.nextRefreshSec*1000:15000);
+  }catch(e){ document.getElementById('status').textContent='error'; setTimeout(fetchLeads, 5000); }
+}
 
-    function niceHost(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch{return '';}}
-    function confident(heat){ if(!Number.isFinite(heat)) return '—'; const n=Math.max(0,Math.min(99,heat|0)); return n+"/100"; }
+// ---------- ENGINE (onboarding + working) ----------
+const inVendor = document.getElementById('inVendor');
+const inBuyers = document.getElementById('inBuyers');
+const inIndustries = document.getElementById('inIndustries');
+const inRegions = document.getElementById('inRegions');
+const btnRun = document.getElementById('btnRun');
+const engState = document.getElementById('engState');
+const steps = document.getElementById('steps');
+const mBar = document.getElementById('mBar');
+const mCount = document.getElementById('mCount');
+const mChecked = document.getElementById('mChecked');
+const mCreated = document.getElementById('mCreated');
+const mTook = document.getElementById('mTook');
+const logEl = document.getElementById('log');
 
-    function card(lead){
-      const d=document.createElement('div'); d.className='card';
-      const host=niceHost(lead.source_url);
-      const platform=(lead.platform||'').replace('_free','').replace('_',' ');
-      const why=(lead.snippet||'').slice(0,160);
-      d.innerHTML = `
-        <div class="head">
-          <span class="pill">${platform||'signal'}</span>
-          <span class="pill">Conf: ${confident(lead.heat)}</span>
-          ${lead.cat?`<span class="pill">${lead.cat}</span>`:''}
-        </div>
-        <div class="ttl">${escapeHtml(lead.title||host||'Untitled')}</div>
-        <div class="why">${escapeHtml(why)}</div>
-        <div class="hold"><button data-act="reveal">Press & hold to reveal</button></div>
-      `;
+// hydrate from localStorage
+(function(){ try{
+  const s = JSON.parse(localStorage.getItem('onboard_v1')||'{}');
+  inVendor.value = s.vendorDomain||''; inBuyers.value = (s.buyers||[]).join(', ');
+  inIndustries.value = (s.industries||[]).join(', '); inRegions.value = (s.regions||[]).join(', ');
+} catch{} })();
 
-      // long-press
-      const btn=d.querySelector('[data-act=reveal]');
-      let to=null, tStart=0;
-      const start=()=>{ if(to) return; tStart=Date.now(); to=setTimeout(()=>{ to=null; openModal(lead); }, 1100); };
-      const cancel=()=>{ if(!to) return; clearTimeout(to); to=null; if(Date.now()-tStart<1100){ /* tap ignored */ } };
-      btn.addEventListener('mousedown', start); btn.addEventListener('touchstart', start, {passive:true});
-      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>btn.addEventListener(ev, cancel));
-      return d;
-    }
+function saveOnboard(){ const payload = collect(); localStorage.setItem('onboard_v1', JSON.stringify(payload)); return payload; }
+function collect(){
+  const buyers = inBuyers.value.split(',').map(s=>s.trim()).filter(Boolean);
+  const industries = inIndustries.value.split(',').map(s=>s.trim()).filter(Boolean);
+  const regions = inRegions.value.split(',').map(s=>s.trim()).filter(Boolean);
+  const vendorDomain = inVendor.value.trim()||undefined;
+  return { buyers, industries, regions, vendorDomain };
+}
 
-    function render(){ FEED.innerHTML=''; LEADS.forEach(L=>FEED.appendChild(card(L))); }
+btnRun.onclick = () => runFindNow();
 
-    async function refresh(){
-      try{
-        const d=await jget('/api/v1/leads'); if(!d?.ok) throw new Error('bad');
-        LEADS=d.leads||[]; render(); OK.textContent='ok';
-        setTimeout(refresh, (d.nextRefreshSec||15)*1000);
-      }catch(e){ OK.textContent='retrying…'; setTimeout(refresh, 5000); }
-    }
+function setStep(key, state){ const el = steps.querySelector(`[data-k="${key}"]`); if(!el) return; el.classList.remove('run','done'); if(state) el.classList.add(state); }
+function pushLog(text){ const li=document.createElement('div'); li.className='li'; li.textContent=text; logEl.prepend(li); while(logEl.children.length>16) logEl.lastChild.remove(); }
 
-    // ---------- Modal (details) ----------
-    const MOD=document.getElementById('modal');
-    const MT=document.getElementById('mTitle');
-    const MS=document.getElementById('mSource');
-    const MW=document.getElementById('mWhy');
-    const MC=document.getElementById('mChips');
-    const MV=document.getElementById('mVerify');
-    const MBclaim=document.getElementById('mClaim');
-    const MBown=document.getElementById('mOwn');
-    const MClose=document.getElementById('mClose');
-    const MTmr=document.getElementById('mTimer');
+async function runFindNow(){
+  const payload = saveOnboard();
+  // UI prep
+  engState.textContent='running…';
+  ['prep','ads','intake','pdp','insert'].forEach(k=> setStep(k,null));
+  setStep('prep','run'); pushLog('Normalizing inputs…');
+  let metrics=0; const METRIC_MAX=1126; mBar.style.width='0%'; mCount.textContent=`0 / ${METRIC_MAX}`;
+  let meter = setInterval(()=>{ metrics=Math.min(METRIC_MAX, metrics + Math.ceil(Math.random()*7)); mBar.style.width=(metrics/METRIC_MAX*100).toFixed(1)+'%'; mCount.textContent=`${metrics} / ${METRIC_MAX}`; }, 50);
 
-    function chipsFor(lead){
-      const out=[];
-      if(lead.kw && lead.kw.length) out.push(...lead.kw.slice(0,4));
-      if(lead.cat) out.push(lead.cat);
-      if(lead.platform && /adlib/.test(lead.platform)) out.push('ad spender');
-      return out;
-    }
+  // staged visuals
+  setTimeout(()=>{ setStep('prep','done'); setStep('ads','run'); pushLog('Querying ad libraries for spend signals…'); }, 600);
+  setTimeout(()=>{ setStep('ads','done'); setStep('intake','run'); pushLog('Scanning supplier / procurement pages…'); }, 2200);
+  setTimeout(()=>{ setStep('intake','done'); setStep('pdp','run'); pushLog('Checking product pages for case‑of‑N & restock…'); }, 4200);
 
-    async function claim(lead){ const r=await jpost('/api/v1/claim', { leadId: lead.id }); if(r?.ok){ lead._windowId=r.windowId; lead._exp=Date.now()+(r.reservedForSec||120)*1000; tick(lead); } }
-    async function own(lead){ if(!lead._windowId) return; const r=await jpost('/api/v1/own', { windowId: lead._windowId }); if(r?.ok){ closeModal(); refresh(); } }
+  const t0 = Date.now();
+  let result = { ok:false };
+  try{ result = await POST('/api/v1/find-now', payload); } catch(e){ pushLog('Find‑now failed.'); }
 
-    function tick(lead){ if(TIMER) cancelAnimationFrame(TIMER); const t=()=>{ if(!lead._exp){ MTmr.textContent=''; return; } const s=Math.max(0, Math.ceil((lead._exp-Date.now())/1000)); MTmr.textContent = s?`reserved ${s}s`:'ready'; if(s) TIMER=requestAnimationFrame(t); }; t(); }
+  setStep('pdp','done'); setStep('insert','run'); pushLog('Inserting leads & scoring…');
+  const took = Date.now()-t0; mTook.textContent = (took/1000).toFixed(1)+'s';
+  clearInterval(meter); mBar.style.width='100%'; mCount.textContent=`${METRIC_MAX} / ${METRIC_MAX}`;
 
-    function openModal(lead){ ACTIVE=lead; MOD.classList.add('show');
-      MS.textContent = `${(lead.platform||'signal')} • ${niceHost(lead.source_url)}`;
-      MT.textContent = lead.title || niceHost(lead.source_url) || 'Lead';
-      MW.textContent = (lead.snippet||'').slice(0,260);
-      MC.innerHTML=''; chipsFor(lead).forEach(c=>{ const s=document.createElement('span'); s.className='chip'; s.textContent=c; MC.appendChild(s); });
-      MV.style.display = lead.source_url ? 'inline-block' : 'none'; MV.href = lead.source_url || '#';
-      MBclaim.onclick=()=>claim(lead); MBown.onclick=()=>own(lead); tick(lead);
-    }
-    function closeModal(){ MOD.classList.remove('show'); ACTIVE=null; if(TIMER) cancelAnimationFrame(TIMER); TIMER=null; }
-    MClose.onclick=closeModal; MOD.addEventListener('click', (e)=>{ if(e.target===MOD) closeModal(); });
+  if(result && result.ok){ mChecked.textContent = String(result.checked||0); mCreated.textContent = String(result.created||0); engState.textContent='done'; pushLog(`Created ${result.created||0} new leads from ${result.checked||0} domains.`); }
+  else { engState.textContent='error'; pushLog('Engine error. Check backend logs.'); }
 
-    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+  setStep('insert','done');
+  // immediate refresh of feed, then let poller continue
+  fetchLeads(0);
+}
 
-    // ---------- Boot (auto-onboard) ----------
-    const profBox=document.getElementById('profileNotice');
-    const obWrap=document.getElementById('ob');
-    const obVendor=document.getElementById('obVendor');
-    const obBuyers=document.getElementById('obBuyers');
-    const obIndustries=document.getElementById('obIndustries');
-    const obRegions=document.getElementById('obRegions');
-    const obGo=document.getElementById('obGo');
-
-    let profile = readProfile();
-
-    function showProfile(p){ const buyers=(p.buyers||[]).slice(0,3).join(', ')+( (p.buyers||[]).length>3? '…':'' );
-      const parts=[]; if(p.vendorDomain) parts.push(`<b>Vendor</b> ${escapeHtml(p.vendorDomain)}`);
-      if(p.industries?.length) parts.push(`<b>Industries</b> ${escapeHtml(p.industries.join(', '))}`);
-      if(p.regions?.length) parts.push(`<b>Regions</b> ${escapeHtml(p.regions.join(', '))}`);
-      if(p.buyers?.length) parts.push(`<b>Seed</b> ${escapeHtml(buyers)}`);
-      profBox.innerHTML = parts.length? `Using your profile → ${parts.join(' • ')} <span class="mut">(edit below)</span>` : '';
-      profBox.style.display = parts.length? 'block':'none';
-    }
-
-    async function runFindNow(p){ if(!p) return; showProfile(p); OK.textContent='searching…'; await ensureGate(); try{ await jpost('/api/v1/find-now', p); }catch(e){} OK.textContent='ok'; }
-
-    // If nothing stored, show inline onboarding; else run immediately
-    if(!Object.keys(profile).length){ obWrap.classList.add('show'); }
-    else{ runFindNow(profile); }
-
-    obGo.onclick = async()=>{
-      const p={}; const v=obVendor.value.trim(); if(v) p.vendorDomain=v;
-      const B=obBuyers.value.split(',').map(s=>s.trim()).filter(Boolean); if(B.length) p.buyers=B;
-      const I=obIndustries.value.split(',').map(s=>s.trim()).filter(Boolean); if(I.length) p.industries=I;
-      const R=obRegions.value.split(',').map(s=>s.trim()).filter(Boolean); if(R.length) p.regions=R;
-      saveProfile(p); profile=p; obWrap.classList.remove('show'); await runFindNow(profile); refresh();
-    };
-
-    // Start polling feed
-    refresh();
-  </script>
+// auto-run on first load if we have onboard data but feed is empty
+(async function init(){ fetchLeads(0); const s = JSON.parse(localStorage.getItem('onboard_v1')||'{}'); if((s.buyers&&s.buyers.length) || s.vendorDomain){ runFindNow(); } })();
+</script>
 </body>
 </html>
