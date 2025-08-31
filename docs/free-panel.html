@@ -1,251 +1,135 @@
+```html
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Free Lead Panel</title>
-<style>
-  :root{--bg:#0b0e13;--card:#111725;--ink:#e8ecf1;--muted:#9cb0c9;--line:#1e2430;--btn:#1e2a3b;--btn2:#26344c;--accent:#7ac2ff}
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif}
-  header{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
-  .pill{border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--muted)}
-  .wrap{max-width:1120px;margin:0 auto;padding:18px}
-  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
-  input,select,button,textarea{background:var(--btn);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 10px}
-  button:hover{filter:brightness(1.12);cursor:pointer}
-  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));margin-top:16px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
-  .meta{color:var(--muted);font-size:12px}
-  a{color:var(--accent)}
-  .tag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin-right:6px;color:var(--muted);font-size:12px}
-  .btns{display:flex;gap:8px;flex-wrap:wrap}
-  .primary{background:var(--btn2)}
-  .section{margin:12px 0}
-  .hint{font-size:12px;color:var(--muted)}
-  /* modal */
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;padding:16px}
-  .modal.show{display:flex}
-  .sheet{max-width:560px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
-  .sheet h3{margin:0 0 8px}
-  .sheet .meta{margin-bottom:8px}
-  .sheet .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Galactly — Free Lead Panel</title>
+  <script src="./api-base.js"></script>
+  <style>
+    body{font-family:System-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:#0b0e13;color:#e8ecf1;margin:0}
+    header{padding:16px 20px;border-bottom:1px solid #1e2430;display:flex;gap:16px;align-items:center;justify-content:space-between}
+    .wrap{max-width:1100px;margin:0 auto;padding:18px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+    .card{background:#111725;border:1px solid #1f2a3b;border-radius:14px;padding:12px;position:relative}
+    .meta{opacity:.75;font-size:12px}
+    .title{font-weight:600;margin:6px 0}
+    .chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+    .chip{font-size:11px;border:1px solid #2a3b55;border-radius:999px;padding:2px 8px;opacity:.85}
+    .btn{background:#1e2a3b;border:1px solid #2a3b55;color:#e8ecf1;padding:6px 10px;border-radius:10px;cursor:pointer}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    #modal{position:fixed;inset:0;background:rgba(5,8,12,.7);display:none;align-items:center;justify-content:center}
+    #modal .box{background:#0f1522;border:1px solid #263149;border-radius:16px;max-width:720px;width:92%;padding:16px}
+    .row{display:flex;gap:8px;align-items:center}
+  </style>
 </head>
 <body>
 <header>
-  <div><strong>Galactly</strong> <span class="pill" id="status">connecting…</span></div>
+  <div><strong>Galactly</strong> <span id="status" class="chip">connecting…</span></div>
   <div class="row">
-    <label>API <input id="apiBase" size="42"/></label>
-    <button id="saveApi">Save</button>
+    <input id="api" size="42" placeholder="https://<YOUR-NF>.app"/>
+    <button class="btn" id="save">Save API</button>
+    <button class="btn" id="refresh">Refresh</button>
   </div>
 </header>
-
 <div class="wrap">
-  <!-- Onboarding -->
-  <div class="card">
-    <div class="row">
-      <label>Vendor site
-        <input id="vendorDomain" placeholder="yourcompany.com (optional)"/>
-      </label>
-      <label>Seed buyers
-        <input id="buyers" size="38" placeholder="comma-separated domains, e.g. liquiddeath.com, soylent.com"/>
-      </label>
-    </div>
-    <div class="row">
-      <label>Industries
-        <input id="industries" placeholder="e.g. beverage, confectionery"/>
-      </label>
-      <label>Regions
-        <input id="regions" placeholder="e.g. US, CA"/>
-      </label>
-      <button id="runFind" class="primary">Find now</button>
-      <span id="findNote" class="hint"></span>
-    </div>
-    <div class="hint">Tip: you can enter either <em>Vendor site</em> (we derive ICP) or explicit <em>Seed buyers</em> (comma-separated), optionally with industries/regions.</div>
-  </div>
-
-  <!-- Feed -->
+  <div id="quota" class="meta" style="margin:6px 2px 12px"></div>
   <div id="feed" class="grid"></div>
 </div>
 
-<!-- Modal (Why This / Confirm) -->
-<div id="modal" class="modal" aria-hidden="true">
-  <div class="sheet">
-    <h3 id="mTitle">Why this lead?</h3>
-    <div class="meta" id="mSrc"></div>
-    <div id="mBody"></div>
-    <div class="actions">
-      <button id="mClose">Close</button>
-      <button id="mConfirm" class="primary">Confirm proof</button>
+<div id="modal">
+  <div class="box">
+    <div class="row" style="justify-content:space-between">
+      <div><div id="m_title" class="title"></div><div id="m_meta" class="meta"></div></div>
+      <button class="btn" id="m_close">Close</button>
     </div>
+    <div id="m_body" style="margin-top:8px"></div>
   </div>
 </div>
 
 <script>
-  // ---------- API base picker ----------
-  const uidKey='galactly_uid';
-  let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
-  const apiInput=document.getElementById('apiBase');
-  const savedApi=localStorage.getItem('api_base')||'';
-  apiInput.value=savedApi || 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
-  document.getElementById('saveApi').onclick=()=>{ localStorage.setItem('api_base', apiInput.value.trim()); location.reload(); };
-  const API=(p)=> (localStorage.getItem('api_base')||apiInput.value).replace(/\/$/,'') + p;
+const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
+const apiInp=document.getElementById('api'); apiInp.value = localStorage.getItem('apiBase')||window.API_BASE||'';
+document.getElementById('save').onclick=()=>{ window.__setApiBase(apiInp.value); location.reload(); };
 
-  // ---------- helpers ----------
-  function esc(s){return (s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
-  async function post(path, body){
-    const r=await fetch(API(path), {method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body:JSON.stringify(body)});
-    if(!r.ok) throw new Error('HTTP '+r.status); return r.json();
-  }
-  async function events(type, lead, meta){ try{ await post('/api/v1/events',{type,leadId:lead.id,meta:meta||{}});}catch(e){} }
+const quotaKey='daily_reveals_v1'; const quotaMax=2; function quota(){ const d=new Date().toISOString().slice(0,10); const raw=localStorage.getItem(quotaKey); let obj=raw?JSON.parse(raw):{day:d,used:0}; if(obj.day!==d){obj={day:d,used:0}; localStorage.setItem(quotaKey,JSON.stringify(obj)); } return obj; }
+function incQuota(){ const q=quota(); q.used++; localStorage.setItem(quotaKey,JSON.stringify(q)); renderQuota(); }
+function renderQuota(){ const q=quota(); document.getElementById('quota').textContent=`Free plan: ${quotaMax-q.used} deep reveals left today`; }
 
-  // ---------- modal ----------
-  const modal=document.getElementById('modal');
-  const mTitle=document.getElementById('mTitle');
-  const mSrc=document.getElementById('mSrc');
-  const mBody=document.getElementById('mBody');
-  const mClose=document.getElementById('mClose');
-  const mConfirm=document.getElementById('mConfirm');
-  let modalLead=null;
+function api(p){ return (window.API_BASE||'').replace(/\/$/,'') + p; }
+async function get(path){ const r=await fetch(api(path), { headers:{'x-galactly-user':uid} }); return r.json(); }
+async function post(path, body){ const r=await fetch(api(path), {method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body:JSON.stringify(body||{})}); return r.json(); }
 
-  function openModal(lead, whyLines){
-    modalLead=lead;
-    mTitle.textContent = lead.title || 'Why this lead?';
-    const host = (()=>{ try{return new URL(lead.source_url).hostname;}catch{return '';}})();
-    mSrc.textContent = `${lead.platform || 'source'} • ${host}`;
-    mBody.innerHTML = `<ul>${whyLines.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>`;
-    modal.classList.add('show');
-    modal.setAttribute('aria-hidden','false');
-  }
-  function closeModal(){
-    modal.classList.remove('show');
-    modal.setAttribute('aria-hidden','true');
-    modalLead=null;
-  }
-  mClose.onclick=closeModal;
-  modal.onclick=(e)=>{ if(e.target===modal) closeModal(); };
-  mConfirm.onclick=async()=>{
-    if(!modalLead) return;
-    await events('confirm_ad', modalLead, { url: modalLead.source_url, platform: modalLead.platform||'adlib_free' });
-    closeModal();
-    // soft UI nudge
-    alert('Saved. We’ll prioritize similar proofs for you.');
-  };
+let RULES=[]; (async()=>{ try{ const r=await get('/api/v1/ifthen'); if(r?.ok) RULES=r.rules||[]; }catch{} })();
 
-  // ---------- find-now ----------
-  const vendorDomainEl = document.getElementById('vendorDomain');
-  const buyersEl = document.getElementById('buyers');
-  const industriesEl = document.getElementById('industries');
-  const regionsEl = document.getElementById('regions');
-  const runBtn = document.getElementById('runFind');
-  const findNote = document.getElementById('findNote');
+let data=null; const feed=document.getElementById('feed');
+function chip(txt){ const s=document.createElement('span'); s.className='chip'; s.textContent=txt; return s; }
 
-  runBtn.onclick = async () => {
-    findNote.textContent = 'Running…';
-    try{
-      const buyers = buyersEl.value.split(',').map(s=>s.trim()).filter(Boolean);
-      const industries = industriesEl.value.split(',').map(s=>s.trim()).filter(Boolean);
-      const regions = regionsEl.value.split(',').map(s=>s.trim()).filter(Boolean);
-      const vendorDomain = vendorDomainEl.value.trim() || undefined;
-      const body = { buyers, industries, regions, vendorDomain };
-      const r = await post('/api/v1/find-now', body);
-      findNote.textContent = `checked ${r.checked}, created ${r.created}`;
-      await fetchLeads(true);
-    }catch(e){
-      findNote.textContent = 'Error';
-    }
-  };
+function openModal(lead){
+  const q=quota(); if(q.used>=quotaMax){ alert('Free daily detail views used. Upgrade to Pro for unlimited.'); return; }
+  const box=document.getElementById('modal'); box.style.display='flex';
+  document.getElementById('m_title').textContent=lead.title||'Untitled';
+  const host = (()=>{ try{return new URL(lead.source_url).hostname;}catch{return '';} })();
+  document.getElementById('m_meta').textContent=`${lead.platform||'source'} • ${host}`;
 
-  // ---------- feed ----------
-  const elFeed=document.getElementById('feed');
-  let lastData=null;
-  function card(lead){
-    const d=document.createElement('div'); d.className='card';
-    const host=(()=>{ try{return new URL(lead.source_url).hostname;}catch{return ''; }})();
-    const tags=(lead.kw||[]).slice(0,3).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
-    d.innerHTML=`
-      <div class="meta">${esc(lead.platform||'source')} • ${esc(host)}</div>
-      <div><strong>${esc(lead.title||'Untitled')}</strong></div>
-      <div>${esc(lead.snippet||'')}</div>
-      <div>${tags}</div>
-      <div class="btns">
-        <button data-a="open" class="primary">Open proof</button>
-        <button data-a="why">Why this?</button>
-        <button data-a="like">👍</button>
-        <button data-a="dis">👎</button>
-        <button data-a="mute">Mute</button>
-        <button data-a="claim">Claim</button>
-        <button data-a="own">Own</button>
-      </div>
-    `;
-    const whyLines = buildWhy(lead);
-    d.querySelector('[data-a=open]').onclick=()=>{ events('click', lead, {url:lead.source_url}); window.open(lead.source_url,'_blank','noopener'); };
-    d.querySelector('[data-a=why]').onclick=()=> openModal(lead, whyLines);
-    d.querySelector('[data-a=like]').onclick=()=> events('like', lead);
-    d.querySelector('[data-a=dis]').onclick=()=> events('dislike', lead);
-    d.querySelector('[data-a=mute]').onclick=()=>{ let h=''; try{h=new URL(lead.source_url).hostname;}catch{} events('mute_domain', lead, {domain:h}); };
-    d.querySelector('[data-a=claim]').onclick=()=> claimLead(lead);
-    d.querySelector('[data-a=own]').onclick=()=> ownLead(lead);
-    return d;
-  }
+  const why=[]; if((lead.kw||[]).includes('case')) why.push('Case/pack sizing on PDP'); if((lead.kw||[]).includes('procurement')) why.push('Procurement page open'); if((lead.kw||[]).includes('ads')) why.push('Active ads observed');
+  const rules = RULES.slice(0,6).map(r=>`<li><strong>${r.name}</strong> — lift +${Math.round(r.lift*100)}% <span class="meta">(${r.when})</span><br/><span class="meta">${r.explain}</span></li>`).join('');
 
-  function buildWhy(lead){
-    const p=(lead.platform||'').toLowerCase();
-    const host=(()=>{ try{return new URL(lead.source_url).hostname;}catch{return lead.source_url;}})();
-    const base = [
-      p.includes('adlib') ? `Ad transparency lookup for ${host}` :
-      p.includes('brandintake') ? `Supplier / Procurement page discovered on ${host}` :
-      p.includes('pdp') ? `Product page shows pack/case/dimensions on ${host}` :
-      `Recent activity detected on ${host}`,
-      `Freshness heuristic: newer links are ranked higher`,
-      `Click "Confirm proof" if this looks like an active buyer for you`
-    ];
-    return base;
-  }
+  document.getElementById('m_body').innerHTML = `
+    <div class="chips">${why.map(w=>`<span class=chip>${w}</span>`).join('')}</div>
+    <p><strong>Confidence:</strong> ${lead.heat||70}/100</p>
+    <details open><summary><strong>Why this buyer</strong></summary>
+      <ul>${rules}</ul>
+    </details>
+    <div style="margin-top:8px" class="meta">Tip: Press and hold on cards to preview without spending reveal. Click <em>Reveal details</em> to consume 1 of your daily reveals.</div>
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
+      <button class="btn" id="m_open">Open Proof</button>
+      <button class="btn" id="m_confirm">Looks right</button>
+      <button class="btn" id="m_mute">Mute domain</button>
+    </div>`;
+  document.getElementById('m_open').onclick=()=>{ try{ window.open(lead.source_url,'_blank','noopener'); }catch{} };
+  document.getElementById('m_confirm').onclick=async()=>{ await post('/api/v1/events',{type:'confirm_ad', leadId:lead.id, meta:{ url:lead.source_url, platform:lead.platform }}); incQuota(); closeModal(); };
+  document.getElementById('m_mute').onclick=async()=>{ let host=''; try{host=new URL(lead.source_url).hostname;}catch{} await post('/api/v1/events',{type:'mute_domain', leadId:lead.id, meta:{ domain: host }}); closeModal(); fetchLeads(); };
+}
+function closeModal(){ const box=document.getElementById('modal'); box.style.display='none'; }
+ document.getElementById('m_close').onclick=closeModal;
+ document.getElementById('modal').addEventListener('click', (e)=>{ if(e.target.id==='modal') closeModal(); });
 
-  async function claimLead(lead){
-    const r=await post('/api/v1/claim',{leadId:lead.id});
-    if(r?.ok){ alert('Reserved for 2 minutes. Click Own to keep it.'); }
-  }
-  async function ownLead(lead){
-    const win=prompt('Enter claim window id (dev demo — normally kept in memory):');
-    if(!win) return;
-    const r=await post('/api/v1/own',{windowId:win});
-    if(r?.ok){ alert('Owned'); }
-  }
+function card(lead){
+  const d=document.createElement('div'); d.className='card';
+  let host=''; try{host=new URL(lead.source_url).hostname;}catch{}
+  d.innerHTML = `<div class="meta">${lead.platform||'source'} • ${host}</div>
+    <div class="title">${escapeHtml(lead.title||'Untitled')}</div>
+    <div class="meta">Heat ${lead.heat||70}/100</div>
+    <div class="chips"></div>
+    <div style="display:flex; gap:8px; margin-top:8px">
+      <button class="btn" data-a="reveal">Reveal details</button>
+      <button class="btn" data-a="open">Open</button>
+    </div>`;
+  const chips=d.querySelector('.chips');
+  (lead.kw||[]).slice(0,3).forEach(k=> chips.appendChild(chip(k)) );
+  d.querySelector('[data-a=reveal]').onclick=()=>openModal(lead);
+  d.querySelector('[data-a=open]').onclick=()=>{ window.open(lead.source_url,'_blank','noopener'); };
+  // long-press preview (1.5s)
+  let t=null; function down(){ t=setTimeout(()=>openModal(lead),1500);} function up(){ if(t) clearTimeout(t); }
+  d.addEventListener('mousedown',down); d.addEventListener('touchstart',down); d.addEventListener('mouseup',up); d.addEventListener('mouseleave',up); d.addEventListener('touchend',up);
+  return d;
+}
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
-  function render(){
-    if(!lastData) return;
-    elFeed.innerHTML='';
-    // diversify: interleave platforms so we don’t show same source back-to-back
-    const byPlat = {};
-    for(const L of lastData.leads){
-      const p=(L.platform||'other').toLowerCase();
-      (byPlat[p]=byPlat[p]||[]).push(L);
-    }
-    const order = Object.keys(byPlat).sort(); // stable
-    let added=0;
-    while(added<lastData.leads.length){
-      let progressed=false;
-      for(const k of order){
-        const arr=byPlat[k]; if(!arr || !arr.length) continue;
-        elFeed.appendChild(card(arr.shift())); added++; progressed=true;
-      }
-      if(!progressed) break; // no more
-    }
-  }
+async function fetchLeads(){
+  try{
+    const r=await get('/api/v1/leads');
+    if(!r?.ok) throw new Error('bad');
+    document.getElementById('status').textContent='ok';
+    renderQuota();
+    data=r; feed.innerHTML='';
+    r.leads.forEach(L=> feed.appendChild(card(L)) );
+    setTimeout(fetchLeads, (r.nextRefreshSec||20)*1000);
+  }catch(e){ document.getElementById('status').textContent='retrying'; setTimeout(fetchLeads, 5000); }
+}
 
-  async function fetchLeads(force){
-    try{
-      const r=await fetch(API('/api/v1/leads'), { headers: {'x-galactly-user':uid} });
-      const data=await r.json(); lastData=data;
-      if(!data?.ok) throw new Error('bad response');
-      render();
-      document.getElementById('status').textContent='ok';
-      if(!force) setTimeout(fetchLeads, (data.nextRefreshSec||15)*1000);
-    }catch(e){ document.getElementById('status').textContent='error'; setTimeout(fetchLeads, 5000); }
-  }
-  fetchLeads(false);
+document.getElementById('refresh').onclick=fetchLeads; fetchLeads();
 </script>
 </body>
 </html>
