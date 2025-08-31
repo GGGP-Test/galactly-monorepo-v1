@@ -1,179 +1,442 @@
-<!doctype html>
+Ali Hosseinioun, [8/31/2025 11:04 PM]
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Galactly — Packaging Buyers Finder</title>
-  <style>
-    :root{
-      --bg:#0b0f14; --panel:#0f1621; --muted:#7d8aa0; --text:#eaf1ff; --brand:#67d2ff; --accent:#8be0a3; --warn:#ffcc66;
-      --stroke:#1f2a3b; --card:#101827; --chip:#132033; --btn:#18263a; --btnH:#1e2f49;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:radial-gradient(1200px 800px at 10% 0%, #0f1a2b 0%, #0b0f14 50%, #0b0f14 100%);color:var(--text)}
-    header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--stroke);backdrop-filter:saturate(120%) blur(6px)}
-    .brand{display:flex;gap:10px;align-items:center}
-    .brand b{font-weight:700}
-    .wrap{max-width:1200px;margin:0 auto;padding:42px 18px}
-    .hero{display:grid;grid-template-columns:1.1fr 1fr;gap:32px;align-items:center}
-    .h1{font-size:60px;line-height:1.02;margin:0 0 12px}
-    .h1 .hl{color:#7cd1ff}
-    .p{color:var(--muted);font-size:16px;line-height:1.5;margin:10px 0 22px}
-    .ctaRow{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
-    .btn{background:var(--btn);border:1px solid var(--stroke);color:var(--text);padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:600}
-    .btn.primary{background:linear-gradient(180deg,#1f3d5f,#18263a);border-color:#2b4668}
-    .btn:hover{background:var(--btnH)}
-    .fakeviz{background:var(--card);border:1px solid var(--stroke);border-radius:16px;min-height:340px;position:relative;box-shadow:0 10px 40px rgba(0,0,0,.35)}
-    .fakeviz:before{content:"";position:absolute;inset:0;border-radius:16px;background:radial-gradient(600px 320px at 30% 50%, rgba(103,210,255,.15), transparent 60%), radial-gradient(400px 260px at 80% 30%, rgba(139,224,163,.1), transparent 60%)}
-    .badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .badge{font-size:12px;color:#c8d7f0;border:1px dashed #2b3b55;padding:6px 10px;border-radius:999px;background:#0d1524}
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Galactly — Live Packaging Leads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#fff;--mut:#cfd3df;--line:rgba(255,255,255,.12);
+  --accent:#86f7d6;--accent2:#57a4ff;
+  --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;color:var(--ink);font-family:var(--inter);line-height:1.55;overflow-x:hidden;
+  background:
+    radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%),
+    radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%),
+    linear-gradient(180deg,#0b0e18,#06070c 55%)
+}
+header{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px) saturate(1.05);background:rgba(5,7,12,.55);border-bottom:1px solid var(--line)}
+.nav{max-width:1240px;margin:auto;padding:10px 18px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none}
+.brand svg{width:26px;height:26px}
+.brand b{font:800 16px var(--mont)}
+nav a{color:#fff;text-decoration:none;padding:8px 10px;border-radius:12px}
+nav a:hover{background:rgba(255,255,255,.06)}
 
-    /* Modal */
-    .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(3,8,14,.55);backdrop-filter:blur(6px);z-index:50}
-    .modal.show{display:grid}
-    .panel{width:min(800px,94vw);background:var(--panel);border:1px solid var(--stroke);border-radius:16px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
-    .panel h2{margin:6px 0 2px}
-    .sub{color:#a8b4c9;font-size:13px;margin-bottom:14px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    label{display:block;font-size:13px;color:#9fb3d4;margin:10px 0 6px}
-    input,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #25344a;background:#0d1524;color:#e9f1ff}
-    textarea{min-height:84px;resize:vertical}
-    .chips{display:flex;flex-wrap:wrap;gap:8px}
-    .chip{background:var(--chip);border:1px solid var(--stroke);padding:6px 10px;border-radius:999px;cursor:pointer}
-    .chip.active{outline:1px solid #3f7ddb;background:#162538}
-    .foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
-    .muted{color:#90a3bf;font-size:12px}
-  </style>
+.hero{position:relative;min-height:720px;border-bottom:1px solid var(--line)}
+.wrap{max-width:1240px;margin:auto;display:grid;grid-template-columns:1fr min(780px,52%);gap:44px;align-items:center;padding:44px 28px}
+@media (max-width:1100px){.wrap{grid-template-columns:1fr}}
+
+.copy h1{font:800 clamp(32px,6.2vw,66px) var(--mont);line-height:1.05;margin:0 0 12px}
+.copy .accent{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.copy p{opacity:.94;margin:16px 0 0}
+.copy .sub{opacity:.86;font-size:14px;margin-top:12px}
+
+.copy .cta{display:flex;gap:14px;margin-top:28px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);padding:12px 18px;border-radius:14px;text-decoration:none;font:800 14px var(--inter);transition:transform .08s ease, box-shadow .18s ease, background .18s ease,color .18s ease; cursor:pointer}
+.btn--primary{background:linear-gradient(90deg,#ffffff,#e9f0ff);color:#0b0c12;border-color:transparent;box-shadow:0 10px 30px rgba(120,160,255,.18), inset 0 0 0 1px rgba(255,255,255,.35)}
+.btn--primary:hover{transform:translateY(-1px);box-shadow:0 14px 36px rgba(120,160,255,.28), inset 0 0 0 1px rgba(255,255,255,.5)}
+.btn--ghost{background:rgba(255,255,255,.06);color:#fff;border-color:rgba(255,255,255,.18)}
+.btn--ghost:hover{background:rgba(255,255,255,.10)}
+.btn svg{width:16px;height:16px;vertical-align:-2px}
+
+.flow{position:relative;background:linear-gradient(180deg,#0b0b10,#07080d);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.38)}
+.flow .glass{position:relative;border-radius:16px;background:
+  radial-gradient(120% 130% at 65% 35%,rgba(255,255,255,.06),rgba(255,255,255,.02)),
+  radial-gradient(90% 120% at 20% 80%,rgba(255,255,255,.05),rgba(255,255,255,.01));
+  overflow:hidden;min-height:400px}
+.flow .glass::before{content:"";display:block;padding-top:56.25%}
+#flowCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:16px}
+
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+.badge{background:#0b0d14;border:1px dashed var(--line);border-radius:12px;padding:7px 11px;font:700 12px var(--mont);display:flex;gap:6px;align-items:center}
+.badge small{opacity:.75;font-weight:600}
+.
+
+Ali Hosseinioun, [8/31/2025 11:04 PM]
+ticker{margin-top:14px;max-height:108px;overflow:auto;border-top:1px solid var(--line);padding-top:10px;scrollbar-width:none;-ms-overflow-style:none}
+.ti{font-size:12px;opacity:.95;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.06)} .ti:last-child{border-bottom:none}
+
+/* ===== Onboarding modal ===== */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:60}
+.modal{width:min(820px,92vw);background:#0c0f16;border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 70px rgba(0,0,0,.6);padding:18px}
+.modal h3{font:800 18px var(--mont);margin:4px 0 2px}
+.modal p.small{opacity:.8;margin:6px 0 14px;font-size:13px}
+.tabs{display:flex;gap:8px;margin:10px 0 16px}
+.tab{flex:1;text-align:center;border:1px solid var(--line);padding:10px 12px;border-radius:12px;cursor:pointer}
+.tab.active{background:rgba(255,255,255,.06)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid .full{grid-column:1/-1}
+input,textarea{width:100%;background:#0f131c;border:1px solid #20283a;color:#e8ecf1;border-radius:10px;padding:10px 12px;font:600 14px var(--inter)}
+.help{font-size:12px;opacity:.75}
+.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+.btn--dim{background:#101521;color:#dbe2f2;border-color:#233048}
+.btn--dim:hover{filter:brightness(1.15)}
+.bad{color:#ffb4b4}
+.good{color:#86f7d6}
+</style>
 </head>
 <body>
-  <header>
-    <div class="brand"><span style="width:8px;height:8px;border-radius:50%;background:#6ef3a3;display:inline-block"></span><b>Galactly</b></div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <small style="color:#9db3d3">API</small>
-      <input id="apiBase" style="width:360px" placeholder="https://<your-nf>.app" />
-      <button class="btn" id="saveApi">Save</button>
+<header>
+  <div class="nav">
+    <a class="brand" href="#">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs>
+        <circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/>
+        <path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/>
+        <circle cx="20" cy="20" r="6" fill="url(#g)"/>
+      </svg>
+      <b>Galactly</b>
+    </a>
+    <nav><a href="#hero">Hero</a></nav>
+  </div>
+</header>
+
+<section class="hero" id="hero">
+  <div class="wrap">
+    <div class="copy">
+      <h1>Find US &amp; Canada <span class="accent">Packaging</span> Buyers in <span class="accent">&lt;30s</span></h1>
+      <p>Real posts &amp; tenders from public feeds. Free viewer; paid automations, priority, CRM &amp; reporting.</p>
+      <p class="sub">Built for packaging owners &amp; sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding. Just clicks.</p>
+      <div class="cta">
+        <!-- changed: anchor -> button that opens modal -->
+        <button class="btn btn--primary" id="startFreeBtn">Start free</button>
+        <a class="btn btn--ghost" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch 90s demo</a>
+      </div>
+      <p class="sub" id="apiNote" style="margin-top:10px;opacity:.7"></p>
     </div>
-  </header>
 
-  <main class="wrap">
-    <section class="hero">
-      <div>
-        <h1 class="h1">Find US & Canada <span class="hl">Packaging</span> Buyers in <span class="hl">&lt;30s</span></h1>
-        <p class="p">Real posts & tenders from public feeds. Free viewer; paid verifications & automations. Built for packaging owners & sales teams. No coding. Just clicks.</p>
-        <div class="ctaRow">
-          <button class="btn primary" id="startFree">Start free</button>
-          <a class="btn" href="free-panel.html">Open live feed</a>
-        </div>
-        <div class="badges">
-          <div class="badge">Live leads</div>
-          <div class="badge">Press & hold to reveal</div>
-          <div class="badge">US & CA focus</div>
-        </div>
+    <!-- your original right-side visualization kept verbatim -->
+    <div class="flow">
+      <div class="glass"><canvas id="flowCanvas"></canvas></div>
+      <div class="meta">
+        <div class="badge"><small>Leads / 30s</small><span id="b-leads">0</span></div>
+        <div class="badge"><small>First connection</small><span id="b-first">—</span></div>
+        <div class="badge"><small>Ready now</small><span id="b-ready">—</span></div>
+        <div class="badge"><small>Quoted</small><span id="b-quote">—</span></div>
+        <div class="badge"><small>AI closed</small><span id="b-ai">—</span></div>
+        <div class="badge"><small>Rep closed</small><span id="b-human">—</span></div>
+        <div class="badge"><small>Saved / mo</small><span id="b-saved">—</span></div>
       </div>
-      <div class="fakeviz"></div>
-    </section>
-  </main>
-
-  <!-- Onboarding Modal -->
-  <div class="modal" id="obModal" aria-hidden="true">
-    <div class="panel">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <h2>Tell us who you sell to</h2>
-          <div class="sub">Pick one: use <b>your website</b> (we infer ICP) or paste a few <b>example buyers</b>.</div>
-        </div>
-        <button class="btn" id="obClose">✕</button>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>Option A — Your website (we infer ICP)</label>
-          <input id="vendorSite" placeholder="https://yourcompany.com" />
-          <small class="muted">We only read public pages to guess industries, regions and examples.</small>
-        </div>
-        <div>
-          <label>Option B — Example buyers (comma‑separated domains)</label>
-          <textarea id="seedBuyers" placeholder="liquiddeath.com, soylent.com"></textarea>
-          <small class="muted">Paste 1–10 domains. We’ll expand from these.</small>
-        </div>
-      </div>
-
-      <div class="row" style="margin-top:8px">
-        <div>
-          <label>Industries (comma list)</label>
-          <input id="industries" placeholder="beverage, confectionery, cosmetics" />
-        </div>
-        <div>
-          <label>Regions</label>
-          <div class="chips">
-            <span class="chip active" data-region="US">US</span>
-            <span class="chip" data-region="CA">CA</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="foot">
-        <div class="muted">We’ll save your prefs locally. You can change API base in the header.</div>
-        <div style="display:flex;gap:8px">
-          <button class="btn" id="testScan">Scan & go to feed</button>
-        </div>
-      </div>
+      <div class="ticker" id="ticker"></div>
     </div>
   </div>
+</section>
+
+<!-- ===== Onboarding Modal (2 paths) ===== -->
+<div class="modal-backdrop" id="ob">
+  <div class="modal">
+    <h3>Tell us who to find</h3>
+    <p class="small">Use your website (we derive your ICP) or enter an example buyer list.
+
+Ali Hosseinioun, [8/31/2025 11:04 PM]
+We’ll pull fresh, verifiable signals and open your live feed.</p>
+
+    <div class="tabs">
+      <div class="tab active" id="tabSite">Use my website</div>
+      <div class="tab" id="tabCustom">Custom ICP</div>
+    </div>
+
+    <!-- Site tab -->
+    <div class="tab-pane" id="paneSite">
+      <div class="grid">
+        <div class="full">
+          <label>Vendor website</label>
+          <input id="siteDomain" placeholder="yourcompany.com"/>
+          <div class="help">We derive industries/regions and seed buyers from pages like “Customers/Partners/Case studies.”</div>
+        </div>
+        <div>
+          <label>Region(s)</label>
+          <input id="siteRegions" placeholder="e.g. US, CA"/>
+        </div>
+        <div>
+          <label>Email (optional)</label>
+          <input id="siteEmail" placeholder="you@company.com"/>
+        </div>
+        <div class="full">
+          <div id="siteStatus" class="help"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom tab -->
+    <div class="tab-pane" id="paneCustom" style="display:none">
+      <div class="grid">
+        <div class="full">
+          <label>Example buyer domains (comma separated)</label>
+          <input id="cBuyers" placeholder="liquiddeath.com, soylent.com"/>
+        </div>
+        <div>
+          <label>Industries</label>
+          <input id="cIndustries" placeholder="e.g. beverage, confectionery"/>
+        </div>
+        <div>
+          <label>Region(s)</label>
+          <input id="cRegions" placeholder="e.g. US, CA"/>
+        </div>
+        <div class="full">
+          <div id="customStatus" class="help"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn--dim" id="closeOb">Cancel</button>
+      <button class="btn btn--primary" id="runOb">Find now</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Your original canvas script (unchanged) ===== -->
+<script>
+const cvs=document.getElementById('flowCanvas');const DPR=Math.min(2.2,window.devicePixelRatio||1);let ctx=null,started=false;
+const K={leads:document.getElementById('b-leads'),first:document.getElementById('b-first'),ready:document.getElementById('b-ready'),quote:document.getElementById('b-quote'),ai:document.getElementById('b-ai'),human:document.getElementById('b-human'),saved:document.getElementById('b-saved')};
+const ticker=document.getElementById('ticker');
+let cx=0,cy=0,R=0,coreX=0,coreY=0,coreR=22;let chips=[];
+const CHANNELS=[{name:'Email',color:'rgba(134,247,214,0.85)'},{name:'SMS',color:'rgba(160,255,160,0.85)'},{name:'Call',color:'rgba(159,208,255,0.85)'},{name:'LinkedIn',color:'rgba(120,200,255,0.85)'},{name:'Quote',color:'rgba(255,210,140,0.90)'},{name:'ERP',color:'rgba(200,170,255,0.90)'}];
+const CITIES=[{city:'New York',lat:40.7128,lon:-74.006},{city:'Toronto',lat:43.6532,lon:-79.3832},{city:'Chicago',lat:41.8781,lon:-87.6298},{city:'Dallas',lat:32.7767,lon:-96.797},{city:'Miami',lat:25.7617,lon:-80.1918},{city:'Seattle',lat:47.6062,lon:-122.3321},{city:'San Francisco',lat:37.7749,lon:-122.4194},{city:'Los Angeles',lat:34.0522,lon:-118.2437},{city:'Mexico City',lat:19.4326,lon:-99.1332},{city:'Bogotá',lat:4.711,lon:-74.0721},{city:'São Paulo',lat:-23.5505,lon:-46.6333},{city:'Buenos Aires',lat:-34.6037,lon:-58.3816}];
+const FIRST="Ava,Noah,Sophia,Liam,Isabella,Elijah,Mia,Lucas,Amelia,Mason,Harper,Logan,Evelyn,James,Abigail,Oliver,Emily".split(',');
+const LAST="Smith,Johnson,Williams,Brown,Jones,Miller,Davis,Garcia,Wilson,Moore,Taylor,Anderson".split(',');
+const pick=a=>a[(Math.random()*a.length)|0];
+const center={lat:25*Math.PI/180,lon:-90*Math.PI/180};
+function proj(lat,lon){const dLon=lon-center.lon;const sinC=Math.sin(center.lat),cosC=Math.cos(center.lat);const sinLat=Math.sin(lat),cosLat=Math.cos(lat);const sinDL=Math.sin(dLon),cosDL=Math.cos(dLon);const k=sinC*sinLat+cosC*cosLat*cosDL;if(k<=0)return null;return{x:cx+R*(cosLat*sinDL),y:cy-R*(cosC*sinLat-sinC*cosLat*cosDL)}}
+
+Ali Hosseinioun, [8/31/2025 11:04 PM]
+const LAND_NA=[[71,-156],[48,-124],[34,-118],[25,-111],[20,-105],[18,-103],[16,-99],[20,-90],[27,-81],[31,-80],[36,-76],[42,-72],[49,-64],[54,-60],[60,-75],[69,-95],[71,-156]];
+const LAND_SA=[[10,-79],[8,-74],[5,-60],[0,-58],[-8,-54],[-18,-44],[-24,-42],[-30,-52],[-40,-61],[-48,-70],[-55,-66],[-33,-71],[-20,-70],[-12,-77],[-8,-79],[10,-79]];
+
+// dashboard numbers
+const packets=[];const targets={leads:0,first:'8 sec',ready:'48%',quote:'62%',ai:'24%',human:'29%',saved:'$14,200'};const state={leads:0};
+function updateBadges(){state.leads=Math.round(state.leads*0.95+targets.leads*0.05);K.leads.textContent=state.leads;K.first.textContent=targets.first;K.ready.textContent=targets.ready;K.quote.textContent=targets.quote;K.ai.textContent=targets.ai;K.human.textContent=targets.human;K.saved.textContent=targets.saved}
+function pushTick(html){const d=document.createElement('div');d.className='ti';d.innerHTML=html;ticker.insertBefore(d,ticker.firstChild);while(ticker.children.length>6)ticker.lastElementChild.remove()}
+
+// helpers
+function cubic(p0,p1,p2,p3,t){const it=1-t;return{x:it*it*it*p0.x+3*it*it*t*p1.x+3*it*t*t*p2.x+t*t*t*p3.x,y:it*it*it*p0.y+3*it*it*t*p1.y+3*it*t*t*p2.y+t*t*t*p3.y}}
+function lerp(a,b,t){return a+(b-a)*t}
+
+function resize(){const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(resize,60);return}
+  cvs.width=Math.floor(r.width*DPR);cvs.height=Math.floor(r.height*DPR);cvs.style.width=r.width+'px';cvs.style.height=r.height+'px';
+  ctx=cvs.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);
+  cx=r.width*0.28;cy=r.height*0.56;R=Math.min(r.width*0.30,r.height*0.46);
+  coreX=r.width*0.56;coreY=r.height*0.56;coreR=Math.max(18,Math.min(24,r.width*0.03));
+  const baseX=r.width*0.83,baseY=coreY,rad=Math.min(110,r.height*0.20),a0=-Math.PI/3,a1=Math.PI/3;
+  chips=CHANNELS.map((c,i)=>{const a=CHANNELS.length>1?a0+(a1-a0)*(i/(CHANNELS.length-1)):0;return{x:baseX+rad*Math.cos(a),y:baseY+rad*Math.sin(a),r:12,label:c.name,color:c.color}})
+}
+window.addEventListener('resize',resize);
+
+function drawHemisphere(){
+  const g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,R*1.1);g.addColorStop(0,'rgba(255,255,255,.05)');g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();[...LAND_NA,...LAND_SA].forEach(([la,lo],i)=>{const P=proj(la*Math.PI/180,lo*Math.PI/180);if(!P)return;i?ctx.lineTo(P.x,P.y):ctx.moveTo(P.x,P.y)});
+  ctx.closePath();ctx.fillStyle='rgba(134,247,214,0.09)';ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.14)';ctx.stroke();
+}
+
+function drawCore(t){
+  const g=ctx.createRadialGradient(coreX,coreY,0,coreX,coreY,coreR*2.6);g.addColorStop(0,'rgba(255,255,255,.04)');g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(coreX,coreY,coreR*2.6,0,Math.PI*2);ctx.fill();
+  ctx.save();ctx.translate(coreX,coreY);
+  for(let i=0;i<3;i++){const r=coreR+i*18;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.strokeStyle=`rgba(255,255,255,${0.14-i*0.02})`;ctx.lineWidth=1.2;ctx.stroke()}
+  const pul=1+0.18*Math.sin(t*1.2),pr=coreR*0.9*pul,cg=ctx.createRadialGradient(0,0,0,0,0,pr*2.0);cg.addColorStop(0,'rgba(255,255,255,.90)');cg.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.globalCompositeOperation='lighter';ctx.beginPath();ctx.arc(0,0,pr*2.0,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill();
+  ctx.restore();ctx.globalCompositeOperation='source-over'
+}
+
+// ORIGINAL-STYLE BEAMS
+function drawBeamsOriginal(){
+  CHANNELS.forEach((ch,i)=>{
+    const chip=chips[i];if(!chip)return;
+    ctx.save();
+    ctx.globalAlpha=0.25;ctx.lineWidth=6;ctx.strokeStyle=ch.color;
+    ctx.beginPath();ctx.moveTo(coreX,coreY);
+    const mx=(coreX+chip.x)/2,my=(coreY+chip.y)/2;
+    ctx.quadraticCurveTo(mx,my*1.02,chip.x,chip.y);
+    ctx.stroke();
+    ctx.globalAlpha=0.9;ctx.lineWidth=2;ctx.strokeStyle=ch.color;
+    ctx.beginPath();ctx.moveTo(coreX,coreY);
+    ctx.quadraticCurveTo(mx,my*1.02,chip.x,chip.y);
+    ctx.stroke();
+    const g=ctx.
+
+Ali Hosseinioun, [8/31/2025 11:04 PM]
+createRadialGradient(chip.x,chip.y,0,chip.x,chip.y,chip.r*2.2);g.addColorStop(0,ch.color);g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.beginPath();ctx.arc(chip.x,chip.y,chip.r*2.0,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+    ctx.beginPath();ctx.arc(chip.x,chip.y,chip.r,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.24)';ctx.lineWidth=1.2;ctx.stroke();
+    ctx.font="700 11px Montserrat, Inter, system-ui";ctx.fillStyle='rgba(255,255,255,.92)';ctx.textAlign='center';ctx.fillText(chip.label,chip.x,chip.y-chip.r-8);
+    ctx.restore();
+  });
+}
+
+function drawPaths(t){
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  packets.forEach(p=>{
+    ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=2;ctx.beginPath();
+    ctx.moveTo(p.p0.x,p.p0.y);ctx.bezierCurveTo(p.p1.x,p.p1.y,p.p2.x,p.p2.y,p.p3.x,p.p3.y);ctx.stroke();
+    const u=p.t,q=u*u*(3-2*u),A=cubic(p.p0,p.p1,p.p2,p.p3,q);
+    ctx.beginPath();ctx.arc(A.x,A.y,2.2,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.96)';ctx.fill();
+    if(p.phase==='core'){
+      const chip=chips[p.idx];const u2=p.t2,q2=u2*u2*(3-2*u2);
+      const bx=lerp(coreX,(coreX+chip.x)/2,q2),by=lerp(coreY,(coreY+chip.y*1.02)/2,q2);
+      const px=lerp(bx,chip.x,q2),py=lerp(by,chip.y,q2);
+      ctx.beginPath();ctx.arc(px,py,2.2,0,Math.PI*2);ctx.fillStyle=CHANNELS[p.idx].color;ctx.fill();
+    }
+  });
+  ctx.restore();
+}
+
+function spawn(){
+  const c=CITIES[(Math.random()*CITIES.length)|0];const P=proj(c.lat*Math.PI/180,c.lon*Math.PI/180);if(!P)return;
+  const name=pick(FIRST)+" "+pick(LAST);const start={x:P.x,y:P.y};
+  const mpx=(start.x+coreX)/2,mpy=(start.y+coreY)/2;
+  const p0=start,p1={x:mpx-40,y:mpy-30},p2={x:mpx+40,y:mpy+30},p3={x:coreX,y:coreY};
+  const idx=(Math.random()*CHANNELS.length)|0;
+  packets.push({p0,p1,p2,p3,idx,t:0,t2:0,phase:'toCore'});
+  targets.leads=Math.min(500,targets.leads+(5+Math.random()*12|0));
+  targets.first=((3+Math.random()*15)|0)+' sec';
+  targets.ready=(35+Math.random()*30|0)+'%';
+  targets.quote=(40+Math.random()*30|0)+'%';
+  targets.ai=(12+Math.random()*18|0)+'%';
+  targets.human=(18+Math.random()*28|0)+'%';
+  targets.saved='$'+(12000+(Math.random()*18000|0)).toLocaleString();
+  pushTick(`<strong>${name}</strong> · ${c.city} → <em>${CHANNELS[idx].name}</em>`)
+}
+
+function update(dt){
+  for(let i=packets.length-1;i>=0;i--){
+    const p=packets[i];
+    if(p.phase==='toCore'){p.t=Math.min(1,p.t+dt*0.08);if(p.t>=1){p.phase='core';p.t2=0}}
+    else{p.t2=Math.min(1,p.t2+dt*0.06);if(p.t2>=1){packets.splice(i,1)}}
+  }
+}
+
+function draw(ts){
+  const t=ts/1000;ctx.clearRect(0,0,cvs.width/DPR,cvs.height/DPR);
+  drawHemisphere();drawPaths(t);drawCore(t);drawBeamsOriginal();
+}
+
+let last=0,acc=0;function loop(ts){requestAnimationFrame(loop);if(!last)last=ts;const dt=Math.min(0.05,(ts-last)/1000);last=ts;update(dt);draw(ts);updateBadges();acc+=dt;if(acc>(1.2+Math.random()*1.2)){acc=0;if(packets.length<12)spawn()}}
+function init(){if(started)return;const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(init,60);return}started=true;resize();requestAnimationFrame(loop)}
+
+document.addEventListener('DOMContentLoaded',init);window.addEventListener('load',init);
+</script>
+
+<!-- API base rewriter (kept as-is from your project) -->
+<script src="./api-base.js"></script>
 
 <script>
-// ========== tiny API base helper ==========
+/* ===== Onboarding wiring ===== */
 (function(){
-  const DEFAULT = localStorage.getItem('api_base_default') || '';
-  const q = new URLSearchParams(location.search);
-  let base = q.get('api') || localStorage.getItem('api_base') || DEFAULT;
-  function normalize(v){ if(!v) return ''; v = String(v).trim().replace(/\/+$/,''); if(v && !/^https?:\/\//i.test(v)) v = 'https://' + v; return v; }
-  base = normalize(base);
-  if(base) { window.API_BASE = base; }
-  const input = document.getElementById('apiBase'); if(input){ input.value = base; }
-  document.getElementById('saveApi').onclick = ()=>{ const v = normalize(input.value); window.API_BASE = v; try{ localStorage.setItem('api_base', v); }catch{} alert('Saved API base.'); };
+  const ob = document.getElementById('ob');
+  const startBtn = document.getElementById('startFreeBtn');
+  const closeBtn = document.getElementById('closeOb');
+  const runBtn = document.getElementById('runOb');
+
+  const tabSite = document.getElementById('tabSite');
+  const tabCustom = document.getElementById('tabCustom');
+  const paneSite = document.getElementById('paneSite');
+  const paneCustom = document.getElementById('paneCustom');
+
+  const siteDomain = document.getElementById('siteDomain');
+  const siteRegions = document.getElementById('siteRegions');
+  const siteEmail = document.getElementById('siteEmail');
+  const siteStatus = document.getElementById('siteStatus');
+
+  const cBuyers = document.getElementById('cBuyers');
+
+Ali Hosseinioun, [8/31/2025 11:04 PM]
+const cIndustries = document.getElementById('cIndustries');
+  const cRegions = document.getElementById('cRegions');
+  const customStatus = document.getElementById('customStatus');
+
+  const apiNote = document.getElementById('apiNote');
+
+  // uid (same scheme as free panel)
+  const uidKey='galactly_uid';
+  let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
+
+  function openModal(){ ob.style.display='flex'; }
+  function closeModal(){ ob.style.display='none'; siteStatus.textContent=''; customStatus.textContent=''; }
+
+  startBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  ob.addEventListener('click', (e)=>{ if(e.target===ob) closeModal(); });
+
+  function activate(which){
+    const isSite = which==='site';
+    tabSite.classList.toggle('active', isSite);
+    tabCustom.classList.toggle('active', !isSite);
+    paneSite.style.display = isSite?'block':'none';
+    paneCustom.style.display = isSite?'none':'block';
+  }
+  tabSite.onclick=()=>activate('site');
+  tabCustom.onclick=()=>activate('custom');
+
+  function splitCSV(s){ return (s||'').split(',').map(v=>v.trim()).filter(Boolean); }
+  function normHost(s){ if(!s) return ''; s=s.trim(); s=s.replace(/^https?:\/\//i,''); return s.split('/')[0]; }
+
+  async function post(path, body){
+    const r=await fetch('/api/v1'+path, { method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body: JSON.stringify(body||{}) });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }
+
+  // show which API we're talking to (from api-base.js)
+  try {
+    const base = window.API_BASE || '';
+    apiNote.textContent = base ? ('API: '+base) : '';
+  } catch {}
+
+  runBtn.addEventListener('click', async ()=>{
+    runBtn.disabled = true;
+    siteStatus.textContent = '';
+    customStatus.textContent = '';
+
+    const usingSite = tabSite.classList.contains('active');
+
+    try {
+      // optional gate
+      const email = usingSite ? siteEmail.value.trim() : null;
+      const region = usingSite ? siteRegions.value.trim() : cRegions.value.trim();
+      await post('/gate', { region: region  null, email: email  null, alerts: true }).catch(()=>{});
+
+      if (usingSite) {
+        const domain = normHost(siteDomain.value);
+        const regions = splitCSV(siteRegions.value);
+        if (!domain) { siteStatus.innerHTML = '<span class="bad">Please enter your website.</span>'; runBtn.disabled=false; return; }
+        siteStatus.innerHTML = '<span class="good">Finding buyers…</span>';
+        const r = await post('/find-now', { vendorDomain: domain, regions });
+        siteStatus.innerHTML = <span class="good">Done. Created ${r.created||0} leads.</span>;
+      } else {
+        const buyers = splitCSV(cBuyers.value).map(normHost);
+        const industries = splitCSV(cIndustries.value);
+        const regions = splitCSV(cRegions.value);
+        if (!buyers.length && !industries.length) { customStatus.innerHTML = '<span class="bad">Add at least one buyer or industry.</span>'; runBtn.disabled=false; return; }
+        customStatus.innerHTML = '<span class="good">Checking signals…</span>';
+        const r = await post('/find-now', { buyers, industries, regions });
+        customStatus.innerHTML = <span class="good">Done. Created ${r.created||0} leads.</span>;
+      }
+
+      // go to live feed
+      setTimeout(()=>{ location.href='./free-panel.html'; }, 400);
+    } catch (e) {
+      (usingSite ? siteStatus : customStatus).innerHTML = '<span class="bad">Something went wrong. Try again.</span>';
+    } finally {
+      runBtn.disabled = false;
+    }
+  });
+
+  // default to the site tab
+  activate('site');
 })();
-
-function API(p){ const b = window.API_BASE || (document.getElementById('apiBase')?.value||''); return (b||'').replace(/\/$/,'') + p; }
-const uidKey='gal_uid'; let UID = localStorage.getItem(uidKey); if(!UID){ UID = 'u-' + Math.random().toString(36).slice(2); localStorage.setItem(uidKey, UID); }
-
-// Modal wiring
-const modal = document.getElementById('obModal');
-const startBtn = document.getElementById('startFree');
-const closeBtn = document.getElementById('obClose');
-startBtn.onclick = ()=> modal.classList.add('show');
-closeBtn.onclick = ()=> modal.classList.remove('show');
-modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.classList.remove('show'); });
-
-// Region chip toggles
-for (const chip of document.querySelectorAll('.chip[data-region]')){
-  chip.addEventListener('click', ()=> chip.classList.toggle('active'));
-}
-
-// Submit => gate + find-now + redirect
-async function gate(body){ try{ const r = await fetch(API('/api/v1/gate'), { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body: JSON.stringify(body)}); return await r.json(); }catch(e){ return null; } }
-async function findNow(payload){ try{ const r = await fetch(API('/api/v1/find-now'), { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body: JSON.stringify(payload)}); return await r.json(); }catch(e){ return null; } }
-
-function parseList(s){ return (s||'').split(/[,\n]/).map(x=>x.trim()).filter(Boolean); }
-
-async function runAndGo(){
-  const vendorDomain = document.getElementById('vendorSite').value.trim();
-  const buyers = parseList(document.getElementById('seedBuyers').value);
-  const industries = parseList(document.getElementById('industries').value);
-  const regions = Array.from(document.querySelectorAll('.chip[data-region].active')).map(el=>el.getAttribute('data-region'));
-
-  const profile = { vendorDomain: vendorDomain || undefined, buyers, industries, regions };
-  try{ localStorage.setItem('gal_profile', JSON.stringify(profile)); }catch{}
-
-  // gate
-  await gate({ region: regions[0]||'US', email: null, alerts: false });
-  // find-now (fire & forget; feed will still open if API is slow)
-  findNow(profile).finally(()=>{ location.href = 'free-panel.html'; });
-}
-
-document.getElementById('testScan').onclick = runAndGo;
-
 </script>
 </body>
 </html>
