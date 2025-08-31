@@ -3,322 +3,285 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Galactly — Free Panel</title>
+  <title>Galactly — Live results</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --ink:#eaf0ff; --mut:#b7c0d6; --line:rgba(255,255,255,.08);
-      --bg:#0b0f16; --panel:#0d1420; --panel2:#0e1726; --chip:#0f1b2e;
-      --accent:#86f7d6; --accent2:#57a4ff; --warn:#ffd479;
-    }
+    :root{--ink:#eaf0f7;--mut:#9aa7bd;--line:rgba(255,255,255,.08);--bg:#0b0e13;--panel:#0f141d;--pill:#132031;--hi:#86f7d6;--hi2:#57a4ff}
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;background:radial-gradient(900px 600px at 80% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%),linear-gradient(180deg,#0b0f16,#070a11 70%);color:var(--ink);font:500 14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-    header{position:sticky;top:0;z-index:30;backdrop-filter:blur(8px) saturate(1.05);background:rgba(6,10,17,.55);border-bottom:1px solid var(--line)}
-    .nav{max-width:1280px;margin:auto;padding:10px 16px;display:flex;gap:10px;align-items:center;justify-content:space-between}
-    .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff}
+    body{margin:0;background:radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.10), rgba(0,0,0,0) 60%),radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.07), rgba(0,0,0,0) 60%),linear-gradient(180deg,#0b0e13,#06080d 55%);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+    header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--line);backdrop-filter:blur(8px) saturate(1.05);background:rgba(6,9,15,.55)}
+    .brand{display:flex;align-items:center;gap:10px}
     .brand svg{width:22px;height:22px}
-    .brand b{font-weight:800}
-    .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);padding:4px 8px;border-radius:999px;opacity:.85}
-    .api input{width:420px;max-width:52vw;background:#0e1420;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:10px}
-    .api button{margin-left:8px;background:#e9f0ff;color:#0b0c12;border:0;padding:8px 12px;border-radius:10px;font-weight:800;cursor:pointer}
+    .brand b{font:800 16px Montserrat,Inter}
+    .pill{background:var(--pill);border:1px solid var(--line);padding:6px 10px;border-radius:18px;font-size:12px;color:var(--mut)}
 
-    .grid{max-width:1280px;margin:18px auto;padding:0 16px;display:grid;grid-template-columns:320px 1fr 380px;gap:16px}
-    @media (max-width:1100px){.grid{grid-template-columns:1fr}}
+    .page{height:calc(100vh - 58px);display:grid;grid-template-columns:1.2fr 1fr;gap:16px;padding:16px;max-width:1200px;margin:0 auto}
+    @media (max-width:1050px){.page{grid-template-columns:1fr;grid-auto-rows:minmax(340px,auto);height:auto;overflow:auto}}
 
-    .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);position:relative;overflow:hidden}
-    .card h4{margin:0 0 8px;padding:14px 14px 0;font:800 13px/1.2 system-ui}
-    .card .body{padding:14px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.28);display:flex;flex-direction:column;min-height:0}
+    .card h3{margin:0;padding:12px 14px;border-bottom:1px solid var(--line);font:700 13px Inter;color:#cfe0ff;letter-spacing:.2px}
+    .card .body{padding:12px;display:flex;flex-direction:column;gap:12px;min-height:0}
 
-    /* Left: Neutron star */
-    #starWrap{min-height:420px;display:flex;align-items:center;justify-content:center}
-    #starCanvas{display:block;width:100%;height:100%;min-height:420px}
-    .engineFoot{position:absolute;left:14px;bottom:10px;color:var(--mut);font-size:12px;opacity:.9}
+    /* LEFT COLUMN: live results */
+    .neutron{position:relative;height:220px;border-radius:12px;background:radial-gradient(120% 100% at 50% 40%, rgba(255,255,255,.06), rgba(255,255,255,.01));border:1px solid var(--line);overflow:hidden}
+    canvas#neutron{position:absolute;inset:0;width:100%;height:100%;display:block}
+    .engineStatus{position:absolute;left:10px;bottom:8px;font-size:12px;color:var(--mut)}
 
-    /* Middle: Live results */
-    .results{min-height:420px;padding:8px 10px 14px}
-    .lead{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 4px;position:relative;background:#0f1626}
-    .lead h5{margin:0 0 6px;font:800 14px system-ui}
-    .lead .row{display:flex;align-items:center;gap:10px}
-    .lead .kw{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 0}
-    .chip{background:var(--chip);border:1px solid #1b2a41;border-radius:999px;padding:2px 8px;font-size:12px;opacity:.9}
-    .lead .meta{color:var(--mut);font-size:12px}
-    .hold{position:absolute;inset:0;background:linear-gradient(180deg,rgba(3,7,14,.0),rgba(3,7,14,.45));backdrop-filter:blur(0px);display:flex;align-items:center;justify-content:center;border-radius:14px;border:1px dashed rgba(255,255,255,.06)}
-    .hold span{background:#0f1626;border:1px solid var(--line);padding:9px 12px;border-radius:10px;color:#dfe7ff}
-    .revealTimer{position:absolute;right:10px;top:10px;font-size:12px;color:var(--mut)}
+    .feed{flex:1;min-height:0;overflow:auto;border:1px dashed var(--line);border-radius:12px;padding:8px}
+    .lead{position:relative;background:#0f1724;border:1px solid #1a2740;border-radius:12px;padding:10px;margin:8px 4px;display:flex;flex-direction:column;gap:6px}
+    .lead h4{margin:0;font:700 14px Inter;color:#e9f0ff}
+    .lead .meta{font-size:12px;color:var(--mut)}
+    .revealMask{position:absolute;inset:0;border-radius:12px;background:linear-gradient(180deg, rgba(7,11,18,.66), rgba(7,11,18,.66));display:flex;align-items:center;justify-content:center;gap:8px;color:#cfe0ff;font-weight:700;letter-spacing:.2px;user-select:none}
+    .revealMask .hold{opacity:.9;border:1px solid var(--line);padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.04)}
+    .btnRow{display:flex;gap:8px}
+    .btn{background:#182338;border:1px solid #243555;color:#e8efff;border-radius:10px;padding:6px 10px;font-weight:700;font-size:12px;cursor:pointer}
+    .btn.secondary{background:#121a29;color:#cfe0ff}
 
-    /* Right: Customize + Signals */
-    .group{padding:12px 12px 12px}
-    .row{display:flex;gap:10px}
-    .ctl{flex:1;display:flex;align-items:center;gap:8px;margin:10px 0}
-    .ctl input,.ctl textarea{width:100%;background:#0f1626;border:1px solid #1b2539;color:var(--ink);padding:10px 12px;border-radius:12px}
-    .ctl textarea{min-height:92px;resize:vertical}
-    .ctl small{color:var(--mut)}
-    .cta{display:flex;gap:10px;align-items:center;margin-top:6px}
-    .btn{background:#e9f0ff;color:#06101e;border:0;padding:10px 14px;border-radius:12px;font-weight:800;cursor:pointer}
-    .btn--ghost{background:transparent;color:#e9f0ff;border:1px solid var(--line)}
-    .hint{cursor:help;color:#a9c7ff;border-bottom:1px dotted #a9c7ff}
+    /* RIGHT COLUMN */
+    .formGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .formGrid .row{grid-column:1/-1}
+    input,textarea{width:100%;background:#0d1422;border:1px solid #1b2942;color:#e9f0ff;border-radius:12px;padding:10px 12px;font:600 13px Inter;outline:none}
+    textarea{min-height:88px;resize:vertical}
+    .cta{display:flex;gap:10px;align-items:center}
+    .hint{font-size:12px;color:var(--mut)}
+    .help{margin-left:auto;border:1px solid var(--line);border-radius:10px;padding:4px 8px;color:#cfe0ff;background:#121a23;cursor:default}
 
-    .signals{min-height:160px}
-    .bar{height:8px;background:#0f1626;border:1px solid #1a2131;border-radius:8px;overflow:hidden}
-    .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%}
-    .sigList{margin:10px 0 0;display:grid;grid-template-columns:1fr;gap:6px}
-    .sig{display:flex;justify-content:space-between;gap:8px;background:#0f1626;border:1px solid #1a2131;border-radius:10px;padding:8px 10px}
-    .sig .name{opacity:.92}
-    .sig .state{opacity:.7;color:var(--mut)}
-    .lock{opacity:.8;color:#ffd8a6}
-    .idle{opacity:.7;color:var(--mut)}
-
-    .toast{position:fixed;right:16px;bottom:16px;background:#0e1727;border:1px solid var(--line);padding:10px 12px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;transform:translateY(6px);transition:all .2s ease}
-    .toast.show{opacity:1;transform:translateY(0)}
+    .signals{flex:1;min-height:200px;overflow:auto;border:1px dashed var(--line);border-radius:12px;padding:10px}
+    .sigRow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+    .sigRow:last-child{border-bottom:none}
+    .dot{width:8px;height:8px;border-radius:50%;background:#7dd3fc;box-shadow:0 0 8px #7dd3fc88}
+    .bar{height:6px;background:#132035;border-radius:6px;overflow:hidden;flex:1}
+    .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg, var(--hi), var(--hi2))}
+    .off{opacity:.55}
   </style>
 </head>
 <body>
   <header>
-    <div class="nav">
-      <a class="brand" href="#" title="Galactly">
-        <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".12"/><path d="M12 36c8 8 18 12 28 12" stroke="url(#g)" stroke-width="4" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
-        <b>Galactly</b>
-        <span class="pill" id="status">connecting…</span>
-      </a>
-      <div class="api"><label style="opacity:.8">API:</label> <input id="apiBase" placeholder="https://..."/> <button id="saveApi">Save</button></div>
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="#000" stroke="#fff" stroke-opacity=".12" stroke-width="1.5"/><path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="3" fill="none"/><circle cx="20" cy="20" r="5" fill="url(#g)"/></svg>
+      <b>Galactly</b>
+      <span id="status" class="pill">connecting…</span>
     </div>
+    <div class="pill" title="Change API base in api-base.js or via ?api=">API ready</div>
   </header>
 
-  <main class="grid">
-    <!-- Left: Lead Engine animation -->
-    <section class="card" id="starWrap">
-      <canvas id="starCanvas"></canvas>
-      <div class="engineFoot" id="engineFoot">Lead Engine • <span id="engineState">idle</span></div>
+  <main class="page">
+    <!-- LEFT: Live results (single column pane) -->
+    <section class="card" id="leftCol">
+      <h3>Live results</h3>
+      <div class="body" style="gap:12px">
+        <div class="neutron"><canvas id="neutron"></canvas><div class="engineStatus" id="engineStatus">Lead Engine • idle</div></div>
+        <div id="feed" class="feed" aria-live="polite"></div>
+      </div>
     </section>
 
-    <!-- Center: Live results (added one-by-one) -->
-    <section class="card">
-      <h4>Live results</h4>
-      <div class="results" id="results"></div>
-    </section>
-
-    <!-- Right: Customize + Signals preview -->
-    <aside class="card">
-      <h4>Customize your AI</h4>
+    <!-- RIGHT: Customize + Signals (stacked) -->
+    <section class="card" id="rightCol">
+      <h3>Customize your AI</h3>
       <div class="body">
-        <div class="ctl"><input id="f_vendor" placeholder="Vendor site (optional) e.g. yourcompany.com"></div>
-        <div class="ctl"><input id="f_buyers" placeholder="Seed buyers (comma separated domains)"></div>
-        <div class="row">
-          <div class="ctl"><input id="f_inds" placeholder="Industries e.g. beverage, confectionery"></div>
-          <div class="ctl"><input id="f_regs" placeholder="Regions e.g. US, CA"></div>
-        </div>
-        <div class="ctl">
-          <textarea id="f_icp" placeholder="Describe your ideal customers in plain words. Products, pack types, order sizes, retailer channels, and any exclusions."></textarea>
+        <div class="formGrid">
+          <div class="row"><input id="vSite" placeholder="Vendor site e.g. yourcompany.com (optional)"></div>
+          <input id="buyers" placeholder="Seed buyers (comma‑separated domains)">
+          <input id="industries" placeholder="Industries e.g. beverage, confectionery">
+          <input id="regions" placeholder="Regions e.g. US, CA">
+          <div class="row"><textarea id="brief" placeholder="Describe ideal customers in plain words. Products, pack types, order sizes, retailer channels, exclusions."></textarea></div>
         </div>
         <div class="cta">
-          <button class="btn" id="btnFind">Find now</button>
-          <button class="btn btn--ghost" id="btnTip" title="How to guide">?</button>
-          <small class="idle">Tip: hold to reveal. 2 deep reveals/day on free.</small>
+          <button id="runBtn" class="btn">Find now</button>
+          <span class="hint">Tip: long‑press a card to reveal. 2 deep reveals/day on free.</span>
+          <span class="help" title="Be direct: list products, pack formats (bottle, can, sachet), order sizes, certifications, retailer channels, regions, exclusions.">?</span>
         </div>
       </div>
-      <h4 style="border-top:1px solid var(--line);padding-top:12px;margin-top:6px">Signals preview <small id="sigState" class="idle">idle</small></h4>
-      <div class="group signals">
-        <div class="bar"><i id="bar"></i></div>
-        <div class="sigList" id="sigList"></div>
+      <h3>Signals preview <span id="sigState" class="off">idle</span></h3>
+      <div class="body" style="padding-top:8px">
+        <div id="signals" class="signals"></div>
       </div>
-    </aside>
+    </section>
   </main>
 
-  <div class="toast" id="toast"></div>
-
-<script>
-(()=>{
-  // ---------- API base + uid ----------
-  const qs=new URLSearchParams(location.search);
-  const apiInput=document.getElementById('apiBase');
-  const DEFAULT_API = localStorage.getItem('apiBase')||qs.get('api')||'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
-  apiInput.value = DEFAULT_API;
-  document.getElementById('saveApi').onclick=()=>{ localStorage.setItem('apiBase', apiInput.value.trim()); toast('Saved API base'); };
-  const API = p => (apiInput.value||DEFAULT_API).replace(/\/$/,'') + p;
-  const uidKey='gal_uid';
-  let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
-
-  // ---------- DOM refs ----------
-  const elStatus=document.getElementById('status');
-  const elResults=document.getElementById('results');
-  const elEngineState=document.getElementById('engineState');
-  const elSigState=document.getElementById('sigState');
-  const elBar=document.getElementById('bar');
-  const elSigList=document.getElementById('sigList');
-  const btnFind=document.getElementById('btnFind');
-
-  // ---------- Prefill from onboarding (if present) ----------
-  try{ const o=JSON.parse(localStorage.getItem('onboard_payload')||'null'); if(o){
-    g('f_vendor').value=o.vendorDomain||''; g('f_buyers').value=(o.buyers||[]).join(', ');
-    g('f_inds').value=(o.industries||[]).join(', '); g('f_regs').value=(o.regions||[]).join(', ');
-    btnFind.textContent='Save & run';
-  }}catch{}
-
-  // ---------- Helpers ----------
-  function g(id){ return document.getElementById(id); }
-  function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1700); }
-  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-  // ---------- Hold-to-reveal logic ----------
-  function attachHoldToReveal(card, onReveal){
-    const cover = document.createElement('div'); cover.className='hold'; cover.innerHTML='<span>Press & hold to reveal</span>';
-    const timerEl = document.createElement('div'); timerEl.className='revealTimer'; timerEl.textContent='';
-    card.appendChild(cover); card.appendChild(timerEl);
-    let t0=null, hold=false, remain=0, timer=null, open=false, gateSec=1.35, viewSec=15;
-    const start=(e)=>{ if(open) return; hold=true; t0=Date.now(); timer=setInterval(()=>{
-      const p=(Date.now()-t0)/1000; remain=Math.max(0, gateSec-p); timerEl.textContent = remain>0? ('hold '+remain.toFixed(1)+'s') : 'unlocked';
-      if(p>=gateSec){ clearInterval(timer); cover.remove(); open=true; onReveal?.(); const until=Date.now()+viewSec*1000; const tick=()=>{ const left=Math.max(0,Math.ceil((until-Date.now())/1000)); timerEl.textContent = left? ('visible '+left+'s') : ''; if(left) requestAnimationFrame(tick); }; tick(); }
-    }, 60); };
-    const stop=()=>{ hold=false; if(timer){ clearInterval(timer); timer=null; timerEl.textContent=''; } };
-    cover.addEventListener('mousedown',start); cover.addEventListener('touchstart',start,{passive:true});
-    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>cover.addEventListener(ev,stop));
-  }
-
-  // ---------- Signals Runner (slow, partial on free) ----------
-  const SIGS = [
-    ['Demand index','scanning…'],
-    ['Audience pulse','scanning…'],
-    ['Offer freshness','scanning…'],
-    ['Purchase intent','scanning…'],
-    ['Stock cadence','scanning…'],
-    ['Restock chatter','scanning…'],
-    ['Cart velocity','scanning…'],
-    ['Return friction','scanning…'],
-    ['Procurement doors','scanning…'],
-    ['Vendor routes','scanning…'],
-    ['Price elasticity','scanning…'],
-    ['Unit economics','scanning…'],
-    ['Lead reachability','scanning…'],
-    ['Decision window','scanning…'],
-    ['Quoteability','scanning…'],
-    ['Priority fit','scanning…'],
-    ['Budget moments','scanning…'],
-    ['Risk screen','scanning…'],
-    ['AI match (Pro)','locked','lock'],
-    ['Attribution trails (Pro)','locked','lock'],
-    ['Buyer queues (Pro)','locked','lock'],
-    ['Contact orchestration (Pro)','locked','lock'],
-  ];
-  function resetSignals(){ elSigList.innerHTML=''; SIGS.forEach(([name,state,flag])=>{
-    const d=document.createElement('div'); d.className='sig'; d.innerHTML=`<div class="name">${name}</div><div class="state ${flag||''}">${state||'—'}</div>`; elSigList.appendChild(d);
-  }); elBar.style.width='0%'; }
-
-  async function runSignalsSlow(){ resetSignals(); elSigState.textContent='running…'; elEngineState.textContent='analyzing';
-    const rows=[...elSigList.children]; const steps=Math.min(18,rows.length); // free: partial
-    for(let i=0;i<steps;i++){
-      await sleep(1200 + Math.random()*900); rows[i].querySelector('.state').textContent='ok'; elBar.style.width = Math.round(((i+1)/(SIGS.length))*100)+'%';
+  <script src="./api-base.js"></script>
+  <script>
+    // --------- Session + API helpers ---------
+    const uidKey='galactly_uid';
+    let UID=localStorage.getItem(uidKey); if(!UID){ UID='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,UID); }
+    async function api(path, opts){
+      const r=await fetch(path, { ...opts, headers:{ 'content-type':'application/json', 'x-galactly-user': UID, ...(opts&&opts.headers||{}) } });
+      return r.json();
     }
-    elSigState.textContent='paused — upgrade to run full 1126 metrics'; elEngineState.textContent='idle';
-  }
+    function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
-  // ---------- Live results pipeline ----------
-  let adding=false, queue=[]; function addLeadGradually(lead){ queue.push(lead); if(!adding){ adding=true; pump(); } }
-  async function pump(){ while(queue.length){ const L=queue.shift(); renderLead(L); await sleep(900 + Math.random()*700); } adding=false; }
+    // --------- Prefill from onboarding (if present) ---------
+    (function prefill(){
+      const get=(k)=>localStorage.getItem(k)||'';
+      const vSite=document.getElementById('vSite');
+      const buyers=document.getElementById('buyers');
+      const industries=document.getElementById('industries');
+      const regions=document.getElementById('regions');
+      const brief=document.getElementById('brief');
+      const vals={
+        v: get('onboard_vendor')||get('vendorDomain')||'',
+        b: get('onboard_buyers')||get('buyersCsv')||'',
+        i: get('onboard_industries')||get('industriesCsv')||'',
+        r: get('onboard_regions')||get('regionsCsv')||'',
+        t: get('onboard_notes')||get('brief')||''
+      };
+      if(vals.v) vSite.value=vals.v;
+      if(vals.b) buyers.value=vals.b;
+      if(vals.i) industries.value=vals.i;
+      if(vals.r) regions.value=vals.r;
+      if(vals.t) brief.value=vals.t;
+      // Button label logic
+      document.getElementById('runBtn').textContent = (vals.v||vals.b||vals.i||vals.r||vals.t) ? 'Save & run' : 'Find now';
+    })();
 
-  function prettifyHost(u){ try{ const h=new URL(u).hostname; return h.replace(/^www\./,''); }catch{return ''} }
+    // --------- Signals preview model ---------
+    const SIGNAL_SET=[
+      {cat:'Demand',    name:"Retail lift & repeats",             weight:0.9},
+      {cat:'Demand',    name:"Paid reach (blended)",               weight:0.8},
+      {cat:'Demand',    name:"Search surge (CSE pulses)",         weight:0.7},
+      {cat:'Procure',   name:"Supplier intake surface",            weight:0.9},
+      {cat:'Procure',   name:"Compliance & docs footprint",        weight:0.6},
+      {cat:'Product',   name:"Case‑of‑N & pack dims",              weight:0.8},
+      {cat:'Product',   name:"Restock cadence (site/blog)",        weight:0.7},
+      {cat:'Quality',   name:"Returns chatter (sentiment)",        weight:0.5},
+      {cat:'Channels',  name:"Wholesale/retail placement",         weight:0.7},
+      {cat:'Ops',       name:"Ship lanes & lead times",            weight:0.6},
+      {cat:'Ops',       name:"Seasonal windows (promo)",           weight:0.6},
+      {cat:'Finance',   name:"Unit economics sanity",              weight:0.5}
+    ];
 
-  function renderLead(L){
-    const d=document.createElement('div'); d.className='lead';
-    const host = prettifyHost(L.source_url);
-    // company-ish name from title/host
-    const name = (L.title||host||'New buyer');
-    const kw = (L.kw||[]).slice(0,3);
-    d.innerHTML = `
-      <div class="row"><h5>${esc(name)}</h5><span class="chip" title="Confidence">Conf ${String(L.heat||60)}</span></div>
-      <div class="meta">${esc((L.platform||'')).toLowerCase()} • ${host?esc(host):'—'}</div>
-      <div class="kw">${kw.map(k=>`<span class='chip'>${esc(k)}</span>`).join('')}</div>
-    `;
-    attachHoldToReveal(d, ()=>{
-      // reveal content (no raw URL shown; user can Own or inspect Why)
-      const more=document.createElement('div'); more.style.marginTop='8px';
-      more.innerHTML = `<div class="row"><button class="btn btn--ghost" data-a="own">Own</button><button class="btn btn--ghost" data-a="why">Why this?</button></div>`;
-      d.appendChild(more);
-      more.querySelector('[data-a=own]').onclick=()=>claimOwn(L);
-      more.querySelector('[data-a=why]').onclick=()=>showWhy(L);
-    });
-    elResults.appendChild(d);
-  }
+    const sigHost=document.getElementById('signals');
+    function renderSignals(){ sigHost.innerHTML=''; SIGNAL_SET.forEach((s,i)=>{
+      const row=document.createElement('div'); row.className='sigRow';
+      row.innerHTML=`<span class="dot"></span><strong style="min-width:88px;opacity:.8">${s.cat}</strong><span style="flex:1">${s.name}</span><div class="bar"><i style="width:${Math.round(s.weight*12)}%"></i></div>`;
+      sigHost.appendChild(row);
+    }); }
+    renderSignals();
 
-  async function claimOwn(L){
-    try{ const r=await fetch(API('/api/v1/claim'),{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({leadId:L.id})}).then(r=>r.json());
-      if(r?.ok){ toast('Reserved. Click Own to complete'); const r2=await fetch(API('/api/v1/own'),{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify({windowId:r.windowId})}).then(r=>r.json()); if(r2?.ok) toast('Owned!'); }
-    }catch(e){ toast('Could not own now'); }
-  }
+    async function slowPreview(total=24){
+      // Walk through signals slowly, never finishing 100% on free
+      document.getElementById('sigState').textContent='running…';
+      document.getElementById('sigState').classList.remove('off');
+      const bars=[...sigHost.querySelectorAll('.bar>i')];
+      let step=0; const maxTicks=Math.min(total, 28);
+      while(step<maxTicks){
+        const idx=step % bars.length; const b=bars[idx];
+        const cur=parseFloat(b.style.width)||0; const next=Math.min(100, cur + 6 + Math.random()*10);
+        b.style.width = next + '%';
+        step++; await sleep(900+Math.random()*600);
+      }
+      document.getElementById('sigState').textContent='paused (free cap)';
+      document.getElementById('sigState').classList.add('off');
+    }
 
-  function showWhy(L){
-    const wrap=document.createElement('div'); wrap.style.position='fixed'; wrap.style.inset='0'; wrap.style.background='rgba(0,0,0,.45)'; wrap.style.backdropFilter='blur(2px)'; wrap.onclick=()=>wrap.remove();
-    const m=document.createElement('div'); m.style.width='min(560px,92vw)'; m.style.margin='10vh auto'; m.style.background='#0e1727'; m.style.border='1px solid var(--line)'; m.style.borderRadius='14px'; m.style.padding='16px';
-    m.innerHTML = `<h3 style="margin:0 0 6px">${esc(L.title||'Lead')}</h3>
-      <div style='opacity:.8;font-size:12px'>Our model surfaced this from <b>${esc((L.platform||'source').toLowerCase())}</b>. Confidence ${L.heat||60}.<br/>Pro features would add: AI Match, Buyer Queues, and Contact Orchestration.</div>
-      <div style='margin-top:10px'>${esc(L.snippet||'')}</div>
-      <div style='margin-top:12px;display:flex;gap:8px'>
-        <button class='btn' id='openProof'>Open proof</button>
-        <button class='btn btn--ghost' id='closeWhy'>Close</button>
-      </div>`;
-    m.querySelector('#closeWhy').onclick=()=>wrap.remove();
-    m.querySelector('#openProof').onclick=()=>{ try{ window.open(L.source_url,'_blank','noopener'); }catch{} };
-    wrap.appendChild(m); document.body.appendChild(wrap);
-  }
+    // --------- Neutron star (lightweight) ---------
+    const cvs=document.getElementById('neutron'); const DPR=Math.min(2, devicePixelRatio||1); let ctx=null, t0=0;
+    function sizeNeutron(){ const r=cvs.getBoundingClientRect(); cvs.width=r.width*DPR; cvs.height=r.height*DPR; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
+    window.addEventListener('resize', sizeNeutron); sizeNeutron();
+    function drawNeutron(ts){ if(!ctx) return; const t=(ts-(t0||ts))/1000; if(!t0) t0=ts; const w=cvs.clientWidth, h=cvs.clientHeight; ctx.clearRect(0,0,w,h);
+      const cx=w*0.46, cy=h*0.54; const core=18 + 2*Math.sin(ts*0.003);
+      // halo
+      let g=ctx.createRadialGradient(cx,cy,0,cx,cy,110); g.addColorStop(0,'rgba(255,255,255,.08)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,110,0,Math.PI*2); ctx.fill();
+      // rings
+      ctx.strokeStyle='rgba(255,255,255,.18)'; for(let i=0;i<2;i++){ ctx.beginPath(); ctx.arc(cx,cy,core+22*i,0,Math.PI*2); ctx.stroke(); }
+      // core
+      g=ctx.createRadialGradient(cx,cy,0,cx,cy,core*2.2); g.addColorStop(0,'rgba(255,255,255,.95)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.arc(cx,cy,core*2.2,0,Math.PI*2); ctx.fillStyle=g; ctx.fill(); ctx.globalCompositeOperation='source-over';
+      // beams (two subtle rotating)
+      const ang = ts*0.0007; const len=Math.min(w,h)*0.5; const w1=2.2;
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang);
+      for(const rot of [0, Math.PI]){
+        ctx.rotate(rot);
+        const grad=ctx.createLinearGradient(0,0,len,0); grad.addColorStop(0,'rgba(134,247,214,0.9)'); grad.addColorStop(1,'rgba(134,247,214,0.0)');
+        ctx.strokeStyle=grad; ctx.lineWidth=w1; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(len,0); ctx.stroke();
+        const grad2=ctx.createLinearGradient(0,0,len,0); grad2.addColorStop(0,'rgba(87,164,255,0.8)'); grad2.addColorStop(1,'rgba(87,164,255,0.0)');
+        ctx.strokeStyle=grad2; ctx.lineWidth=w1; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(len*0.65,0); ctx.stroke();
+      }
+      ctx.restore();
+      requestAnimationFrame(drawNeutron);
+    }
+    requestAnimationFrame(drawNeutron);
 
-  // ---------- Find flow ----------
-  let polling=false, lastSeen=new Set();
-  btnFind.onclick = async ()=>{
-    const payload = collect(); localStorage.setItem('onboard_payload', JSON.stringify(payload));
-    elResults.innerHTML=''; lastSeen.clear(); toast('Searching…'); elStatus.textContent='searching…'; elEngineState.textContent='warming'; runSignalsSlow();
-    try{
-      await fetch(API('/api/v1/find-now'),{method:'POST',headers:{'content-type':'application/json','x-galactly-user':uid},body:JSON.stringify(payload)}).then(r=>r.json());
-      // begin polling and gradual add
-      if(!polling){ polling=true; pollLeads(); }
-    }catch(e){ toast('API error'); elStatus.textContent='error'; }
-  };
+    // --------- Live feed logic ---------
+    const feed=document.getElementById('feed'); const statusEl=document.getElementById('status'); const engineEl=document.getElementById('engineStatus');
+    let cards=[]; function domLead(L){
+      const el=document.createElement('div'); el.className='lead';
+      const host=(()=>{ try{return new URL(L.source_url).hostname.replace(/^www\./,'');}catch{return ''} })();
+      el.innerHTML=`<div class="meta">${(L.platform||'source').replace('_',' ')} • ${host||'domain'}</div>
+        <h4>${escapeHtml(L.title||'Candidate')}</h4>
+        <div class="meta">confidence <strong>${Math.max(50, Math.min(92, L.heat||68))}%</strong> • ${L.cat||'demand'}</div>
+        <div class="btnRow"><button class="btn" data-a="own">Own</button><button class="btn secondary" data-a="why">Why this?</button></div>`;
+      // hold‑to‑reveal mask
+      const mask=document.createElement('div'); mask.className='revealMask'; mask.innerHTML='<span class="hold">Press & hold to reveal</span>'; el.appendChild(mask);
+      let timer=null, held=false; const holdMs=1100;
+      el.addEventListener('pointerdown',()=>{ if(held) return; timer=setTimeout(async()=>{ held=true; mask.remove(); await claim(L); }, holdMs); });
+      ['pointerup','pointerleave','pointercancel'].forEach(evt=> el.addEventListener(evt,()=>{ if(timer){ clearTimeout(timer); timer=null; }}));
+      el.querySelector('[data-a=own]').onclick=()=>own(L);
+      el.querySelector('[data-a=why]').onclick=()=>showWhy(L);
+      return el;
+    }
+    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
-  function collect(){
-    const buyers = g('f_buyers').value.split(',').map(s=>s.trim()).filter(Boolean);
-    const industries = g('f_inds').value.split(',').map(s=>s.trim()).filter(Boolean);
-    const regions = g('f_regs').value.split(',').map(s=>s.trim()).filter(Boolean);
-    const vendorDomain = g('f_vendor').value.trim()||undefined;
-    const desc = g('f_icp').value.trim();
-    return { buyers, industries, regions, vendorDomain, desc };
-  }
+    async function claim(L){ try{ const r=await api('/api/v1/claim',{ method:'POST', body:JSON.stringify({leadId:L.id})}); if(r?.ok){ L._windowId=r.windowId; L._exp=Date.now()+(r.reservedForSec||120)*1000; } }catch(e){} }
+    async function own(L){ if(!L._windowId) return; const r=await api('/api/v1/own',{ method:'POST', body:JSON.stringify({windowId:L._windowId})}); if(r?.ok){ L._owned=true; }}
+    function showWhy(L){ alert('Why this: strong external demand + recent product activity + procurement surface. Upgrade for full breakdown.'); }
 
-  async function pollLeads(){
-    while(true){
+    async function pullLeads(){
       try{
-        const r=await fetch(API('/api/v1/leads'),{headers:{'x-galactly-user':uid}}).then(r=>r.json());
-        if(r?.leads){ for(const L of r.leads){ if(!lastSeen.has(L.id)){ lastSeen.add(L.id); addLeadGradually(L); } } elStatus.textContent='ok'; }
-      }catch(e){ elStatus.textContent='error'; }
-      await sleep(6000);
+        const r=await api('/api/v1/leads', { headers:{} });
+        if(!r?.ok) throw new Error('bad');
+        statusEl.textContent='ok'; engineEl.textContent='Lead Engine • adding…';
+        // Clear and stream in slowly to feel real‑time
+        feed.innerHTML='';
+        const arr = r.leads || [];
+        for(let i=0;i<arr.length;i++){
+          const L = arr[i];
+          const el = domLead(L); feed.appendChild(el);
+          await sleep(600 + Math.random()*500);
+        }
+        engineEl.textContent='Lead Engine • ready';
+      }catch(e){ statusEl.textContent='retrying…'; setTimeout(pullLeads, 3000); }
     }
-  }
 
-  // ---------- Star animation (neutron‑style, light) ----------
-  const cvs=document.getElementById('starCanvas'); const DPR=Math.min(2,window.devicePixelRatio||1); let ctx=null, start=0;
-  function resize(){ const r=cvs.getBoundingClientRect(); if(!r.width||!r.height){ setTimeout(resize,80); return; }
-    cvs.width=Math.floor(r.width*DPR); cvs.height=Math.floor(r.height*DPR); cvs.style.width=r.width+'px'; cvs.style.height=r.height+'px'; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0);
-  }
-  window.addEventListener('resize',resize); resize();
-  function ring(x,y,r,alpha){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.strokeStyle='rgba(255,255,255,'+alpha+')'; ctx.lineWidth=1.1; ctx.stroke(); }
-  function glow(x,y,r,inner,outer){ const g=ctx.createRadialGradient(x,y,inner,x,y,outer); g.addColorStop(0,'rgba(255,255,255,.95)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,outer,0,Math.PI*2); ctx.fill(); }
-  function beam(x,y,angle,len){ ctx.save(); ctx.translate(x,y); ctx.rotate(angle); const grd=ctx.createLinearGradient(0,0,len,0); grd.addColorStop(0,'rgba(134,247,214,.9)'); grd.addColorStop(1,'rgba(134,247,214,0)'); ctx.strokeStyle=grd; ctx.lineWidth=3; ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(len,0); ctx.stroke(); ctx.restore(); ctx.globalCompositeOperation='source-over'; }
-  function animate(ts){ if(!start) start=ts; const t=(ts-start)/1000; const r=cvs.getBoundingClientRect(); const w=r.width, h=r.height; const cx=w*0.5, cy=h*0.55; ctx.clearRect(0,0,w,h);
-    // background soft starfield
-    ctx.fillStyle='rgba(255,255,255,.02)'; for(let i=0;i<14;i++){ const px=(i*97%w), py=(i*53%h); ctx.fillRect(px,py,1,1); }
-    // core
-    glow(cx,cy,8,0,70); ring(cx,cy,42,0.09); ring(cx,cy,74,0.06);
-    // beams rotating slowly
-    const a=t*0.35, b=a+Math.PI*0.62; beam(cx,cy,a,120); beam(cx,cy,b,140);
-    requestAnimationFrame(animate);
-  }
-  requestAnimationFrame(animate);
+    // Kick a run when user hits Find now / Save & run
+    document.getElementById('runBtn').addEventListener('click', async ()=>{
+      const body = {
+        vendorDomain: document.getElementById('vSite').value.trim() || undefined,
+        buyers: csv(document.getElementById('buyers').value),
+        industries: csv(document.getElementById('industries').value),
+        regions: csv(document.getElementById('regions').value),
+        brief: document.getElementById('brief').value.trim() || undefined
+      };
+      // Persist for future sessions
+      try{ if(body.vendorDomain) localStorage.setItem('onboard_vendor', body.vendorDomain);
+        localStorage.setItem('onboard_buyers', (body.buyers||[]).join(', '));
+        localStorage.setItem('onboard_industries', (body.industries||[]).join(', '));
+        localStorage.setItem('onboard_regions', (body.regions||[]).join(', '));
+        if(body.brief) localStorage.setItem('onboard_notes', body.brief);
+      }catch{}
 
-  // ---------- kick ----------
-  ;(async()=>{
-    try{ const r=await fetch(API('/api/v1/status'),{headers:{'x-galactly-user':uid}}).then(r=>r.json()); elStatus.textContent='ok'; }catch{ elStatus.textContent='offline'; }
-    resetSignals();
-  })();
-})();
+      // Show running state + slow signals preview
+      engineEl.textContent='Lead Engine • normalizing…';
+      slowPreview(24);
 
-function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
-</script>
+      try{ await api('/api/v1/find-now',{ method:'POST', body:JSON.stringify(body) }); }
+      catch(e){}
+      await sleep(1200); // give backend a moment
+      pullLeads();
+    });
+
+    function csv(s){ return (s||'').split(',').map(x=>x.trim()).filter(Boolean); }
+
+    // Initial auto‑run if we came from onboarding with values
+    (function autoKick(){
+      const any = ['onboard_vendor','onboard_buyers','onboard_industries','onboard_regions','onboard_notes'].some(k=>localStorage.getItem(k));
+      if(any){ document.getElementById('runBtn').click(); }
+    })();
+
+    // First leads fetch (in case user skips run)
+    pullLeads();
+  </script>
 </body>
 </html>
