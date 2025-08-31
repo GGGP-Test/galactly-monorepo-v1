@@ -52,6 +52,3 @@ export async function findAdvertisersFree(params: {
   }
   return out;
 }
-```
-
----
