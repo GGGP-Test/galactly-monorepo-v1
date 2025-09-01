@@ -28,22 +28,20 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 .brand svg{width:20px;height:20px}
 .badge{display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:#cdd6ea; background:#0c1220}
 .badge.ok{color:#b8ffd8}
-
 .row{height:calc(100% - 56px); display:grid; grid-template-columns: minmax(420px, 48%) 1fr; gap:16px; padding:16px}
 @media (max-width:1120px){ .row{grid-template-columns:1fr} }
+
 .col{background:var(--panel); border:1px solid var(--line); border-radius:16px; display:flex; flex-direction:column; min-height:0}
 .section{padding:14px 16px; border-bottom:1px solid var(--line); font:700 14px var(--mont); opacity:.9}
 .scroller{padding:12px 12px 14px; overflow:auto; min-height:0}
 
-/* LEFT hero (neutron star) */
 .leftHero{position:relative; height:220px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#0b0f19,#0a0e17)}
 #star{width:100%; height:100%}
-.engine-status{
-  position:absolute; left:14px; bottom:12px; font-size:12px; opacity:.85; color:#cfd7e6; pointer-events:none;
-}
-.engine-status .dot{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#64708a; }
-.engine-status.working .dot{ background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6); animation:pulse 1.8s ease-in-out infinite; }
-@keyframes pulse{ 0%{transform:scale(.9); opacity:.6} 50%{transform:scale(1.2); opacity:1} 100%{transform:scale(.9); opacity:.6} }
+.engine-status{position:absolute; left:16px; bottom:12px; font-size:12px; opacity:.85; color:#cfd7e6}
+.engine-status .dot{display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6)}
+.engine-status.idle .dot{background:#64708a; box-shadow:none}
+.engine-status.working .dot{animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%{transform:scale(.9);opacity:.6}50%{transform:scale(1.2);opacity:1}100%{transform:scale(.9);opacity:.6}}
 
 /* card list */
 .list{display:flex; flex-direction:column; gap:10px}
@@ -60,18 +58,22 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 .btn.ghost{background:rgba(255,255,255,.06)}
 .btn:disabled{opacity:.6; cursor:not-allowed}
 
-/* RIGHT column */
+/* right column */
 .form{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .form .full{grid-column:1 / -1}
 .input{background:#0e1523; border:1px solid var(--line); border-radius:10px; color:#e8eef7; padding:10px 12px; width:100%}
 .note{opacity:.7; font-size:12px; margin-top:6px}
 .preview{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; background:#0d1320; border:1px dashed var(--line); border-radius:12px; padding:10px; font-size:12px; line-height:1.45}
-.progress{height:6px; background:#0c1220; border:1px solid var(--line); border-radius:999px; overflow:hidden; margin:10px 0 2px}
-.progress > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.meter{height:6px; background:#0c1220; border:1px solid var(--line); border-radius:999px; overflow:hidden; margin:10px 0 6px}
+.meter>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
 .tip{opacity:.75; font-size:12px}
-.quota-note{ font-size:12px; opacity:.8; display:flex; align-items:center; gap:10px }
 
-/* WHY modal */
+/* chips */
+.chips{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 8px}
+.chip{border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-size:11px; opacity:.9}
+.chip b{opacity:.9}
+
+/* modal for Why */
 .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55)}
 .modal.in{display:flex}
 .modal .box{width:min(680px,92vw); background:#0f1524; border:1px solid var(--line); border-radius:16px; padding:16px}
@@ -81,7 +83,7 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 </head>
 <body>
 <header>
-  <a class="brand" href="./index.html" title="Back to hero">
+  <a class="brand" href="./index.html">
     <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/><path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
     <span>Galactly</span>
   </a>
@@ -90,19 +92,16 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 </header>
 
 <div class="row">
-  <!-- LEFT: Live results -->
+  <!-- LEFT: Live results (single column) -->
   <div class="col" id="col-left">
     <div class="section">Live results <span id="newBadge" class="badge" style="margin-left:6px; display:none">new results ready</span></div>
-    <div class="leftHero">
-      <canvas id="star"></canvas>
-      <div id="engineStatus" class="engine-status"><span class="dot"></span>Idle</div>
-    </div>
+    <div class="leftHero"><canvas id="star"></canvas><div id="engineStatus" class="engine-status idle"><span class="dot"></span>Idle</div></div>
     <div class="scroller">
       <div id="list" class="list"></div>
     </div>
   </div>
 
-  <!-- RIGHT: Customize + Signals preview -->
+  <!-- RIGHT: Customize + Signals preview (stacked) -->
   <div class="col" id="col-right">
     <div class="section">Customize your AI</div>
     <div class="scroller" id="pane-form">
@@ -119,14 +118,15 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
       <div style="display:flex; gap:10px; align-items:center; margin-top:10px">
         <button id="btnDry" class="btn ghost" title="Simulate, don’t store">Dry run</button>
         <button id="btnFind" class="btn primary">Find now</button>
-        <div class="quota-note" id="quotaNote">Free: …</div>
+        <div class="note" id="quotaNote">Free: …</div>
       </div>
       <div class="note">Tip: we’ll add 1–2 leads at a time, and stream the reasoning below. Hold to reveal. Free plan allows 2 deep reveals/day.</div>
     </div>
 
     <div class="section">Signals preview <small id="sigState" style="opacity:.6;font-weight:600;margin-left:8px">idle</small></div>
     <div class="scroller" id="pane-preview">
-      <div class="progress"><i id="bar"></i></div>
+      <div class="chips" id="metricHeader"></div>
+      <div class="meter"><i id="bar"></i></div>
       <div id="preview" class="preview"></div>
       <div class="tip" id="previewTip"></div>
     </div>
@@ -148,13 +148,12 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 
 <script src="./api-base.js"></script>
 <script>
-/* ---------- sticky ids & api label ---------- */
+// ---------- globals & helpers ----------
 const uidKey='galactly_uid';
 let UID = localStorage.getItem(uidKey) || ('u-'+Math.random().toString(36).slice(2));
 localStorage.setItem(uidKey, UID);
 document.getElementById('apiBaseLabel').textContent = (window.API_BASE||'').replace(/^https?:\/\//,'');
 
-/* ---------- prefill from onboarding / query ---------- */
 const qs = new URLSearchParams(location.search);
 const onboard = JSON.parse(localStorage.getItem('onboard')||'{}');
 const seed = {
@@ -165,112 +164,62 @@ const seed = {
   describe: qs.get('describe') || (onboard.describe||''),
   listMe: onboard.listMe === true
 };
-['vendor','buyers','industries','regions','describe'].forEach(id=>{ const el=document.getElementById(id); el.value = seed[id]||''; });
+['vendor','buyers','industries','regions','describe'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value = seed[id]||''; });
 document.getElementById('listMe').checked = !!seed.listMe;
 
-/* ---------- neutron-star canvas ---------- */
+// ---------- neutron-star canvas ----------
 const cvs = document.getElementById('star'); const DPR = Math.min(2, window.devicePixelRatio||1);
-let ctx=null;
-function resizeStar(){ const r=cvs.getBoundingClientRect(); cvs.width=r.width*DPR; cvs.height=r.height*DPR; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
-function drawStar(ts){
-  if(!ctx){ requestAnimationFrame(drawStar); return; }
-  const w=cvs.clientWidth, h=cvs.clientHeight, cx=w*0.5, cy=h*0.5;
-  ctx.clearRect(0,0,w,h);
-  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.42);
-  g.addColorStop(0,'rgba(255,255,255,.04)'); g.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,Math.min(w,h)*0.42,0,Math.PI*2); ctx.fill();
-  const pulse = 1 + 0.12*Math.sin(ts*0.002);
-  const coreR = 22*pulse;
-  const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,coreR*2.2);
-  cg.addColorStop(0,'rgba(255,255,255,.95)'); cg.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.globalCompositeOperation='lighter';
-  ctx.beginPath(); ctx.arc(cx,cy,coreR*2.2,0,Math.PI*2); ctx.fillStyle=cg; ctx.fill();
-  ctx.globalCompositeOperation='source-over';
-  const a = ts*0.0005, off = Math.PI/2.8;
-  for(const k of [0,off]){
-    const ang=a+k, len=Math.min(w,h)*0.5;
-    ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang);
-    const grad=ctx.createLinearGradient(-len/2,0,len/2,0);
-    grad.addColorStop(0,'rgba(136,255,216,0)'); grad.addColorStop(0.48,'rgba(136,255,216,.22)');
-    grad.addColorStop(0.52,'rgba(104,167,255,.22)'); grad.addColorStop(1,'rgba(104,167,255,0)');
-    ctx.fillStyle=grad; ctx.fillRect(-len/2,-1.2,len,2.4);
-    ctx.restore();
-  }
+let ctx=null; function resizeStar(){ const r=cvs.getBoundingClientRect(); cvs.width=r.width*DPR; cvs.height=r.height*DPR; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
+function drawStar(ts){ if(!ctx) return; const w=cvs.clientWidth, h=cvs.clientHeight, cx=w*0.5, cy=h*0.5; ctx.clearRect(0,0,w,h);
+  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.42); g.addColorStop(0,'rgba(255,255,255,.04)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,Math.min(w,h)*0.42,0,Math.PI*2); ctx.fill();
+  const pulse = 1 + 0.12*Math.sin(ts*0.002); const coreR = 22*pulse; const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,coreR*2.2); cg.addColorStop(0,'rgba(255,255,255,.95)'); cg.addColorStop(1,'rgba(255,255,255,0)'); ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.arc(cx,cy,coreR*2.2,0,Math.PI*2); ctx.fillStyle=cg; ctx.fill(); ctx.globalCompositeOperation='source-over';
+  const a = ts*0.0005, off = Math.PI/2.8; for(const k of [0,off]){ const ang=a+k, len=Math.min(w,h)*0.5; ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang); const grad=ctx.createLinearGradient(-len/2,0,len/2,0); grad.addColorStop(0,'rgba(136,255,216,0)'); grad.addColorStop(0.48,'rgba(136,255,216,.22)'); grad.addColorStop(0.52,'rgba(104,167,255,.22)'); grad.addColorStop(1,'rgba(104,167,255,0)'); ctx.fillStyle=grad; ctx.fillRect(-len/2,-1.2,len,2.4); ctx.restore(); }
   requestAnimationFrame(drawStar);
 }
 addEventListener('resize', resizeStar); resizeStar(); requestAnimationFrame(drawStar);
 
-/* ---------- state ---------- */
+// ---------- state ----------
 const elEngine=document.getElementById('engine');
 const elBar=document.getElementById('bar');
 const elPreview=document.getElementById('preview');
 const elPreviewTip=document.getElementById('previewTip');
 const elNew=document.getElementById('newBadge');
 const elList=document.getElementById('list');
+const elMetricHeader=document.getElementById('metricHeader');
 const elSigState=document.getElementById('sigState');
-const elStatus = document.getElementById('engineStatus');
-const elQuota = document.getElementById('quotaNote');
+const elStatus=document.getElementById('engineStatus');
 
-let engine = { phase:'idle' };
-let queue = [];         // leads to trickle
-let visible = [];       // rendered ids
+const FREE_METRICS_CAP = 71; // stop here for free plan
+const TOTAL_METRICS = 1126;  // show as total available
+const MAX_FREE_LEADS = 2;    // render at most 2 cards on free
+
+let engine = { phase:'idle', progress:0 };
+let queue = [];  // leads waiting to appear
+let visible = []; // leads rendered
+let ticker=null; // preview stream timer
 let inflight=false;
-let sse=null;           // EventSource
-let leadsPoll=null;
 
-/* ---------- helpers ---------- */
-function setEnginePhase(ph, sub=''){
-  engine.phase = ph;
-  elEngine.textContent = 'engine: ' + ph;
-  elStatus.classList.toggle('working', ph!=='idle');
-  elStatus.innerHTML = `<span class="dot"></span>${sub || (ph==='idle'?'Idle':'Running')}`;
-}
+// ---------- helpers ----------
+function setEngine(p){ engine = {...engine, ...p}; elEngine.textContent = 'engine: '+engine.phase; }
+function setEngineStatus(state, text){ elStatus.classList.remove('idle','working'); elStatus.classList.add(state); elStatus.innerHTML = `<span class="dot"></span>${text}`; }
 function pushes(arr){ for(const x of arr) queue.push(x); runQueue(); }
-function runQueue(){
-  if(inflight || queue.length===0) return;
-  inflight=true;
-  setTimeout(()=>{ const next = queue.shift(); if(next) addCard(next); inflight=false; if(queue.length) runQueue(); }, 1000+Math.random()*900);
-}
-function maskTitle(t){ return t.replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.8 ? '•' : c)); }
-function safeHost(u){ try{ return new URL(u).hostname; }catch{ return 'source'; } }
+function runQueue(){ if(inflight || engine.phase!=='running') return; if(queue.length===0) return; inflight=true; setTimeout(()=>{ const next = queue.shift(); if(next && visible.length < MAX_FREE_LEADS) addCard(next); inflight=false; runQueue(); }, 1200 + Math.random()*900); }
+function revealsUsedKey(){ return 'reveals_'+new Date().toISOString().slice(0,10); }
+function revealsUsed(){ return Number(localStorage.getItem(revealsUsedKey())||'0'); }
+function incReveal(){ const k=revealsUsedKey(); const n=revealsUsed()+1; localStorage.setItem(k,String(n)); return n; }
 
-/* ---------- API thin wrappers (from api-base.js) ---------- */
-async function apiGet(path){ return API.get(path); }
-async function apiPost(path, body){ return API.post(path, body); }
+// ---------- API ----------
+async function post(path, body){ const r = await fetch((window.API_BASE||'')+path, { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body:JSON.stringify(body||{}) }); return r.json(); }
+async function get(path){ const r = await fetch((window.API_BASE||'')+path, { headers:{'x-galactly-user':UID} }); return r.json(); }
+async function pollLeadsOnce(){ const r = await get('/api/v1/leads'); if(r?.ok && Array.isArray(r.leads)){ if(visible.length===0){ elNew.style.display='inline-flex'; } pushes(r.leads.map(L => ({...L, _locked:true}))); } }
 
-/* ---------- quotas ---------- */
-async function refreshQuotaNote(){
-  try{
-    const s = await apiGet('/api/v1/status');
-    if(s?.ok){
-      elQuota.textContent = `Free: ${s.free.findsLeft} searches left • ${s.free.revealsLeft} reveals left`;
-    }
-  }catch{ elQuota.textContent = 'Free: …'; }
-}
-refreshQuotaNote();
-
-/* ---------- poll leads ---------- */
-async function pollLeadsOnce(){
-  try{
-    const r = await apiGet('/api/v1/leads');
-    if(r?.ok && Array.isArray(r.leads)){
-      // only stage unseen ids
-      const unseen = r.leads.filter(L => !visible.includes(L.id));
-      if(unseen.length){
-        elNew.style.display='inline-flex';
-        pushes(unseen.map(L => ({...L, _locked:true})));
-      }
-    }
-  }catch(e){}
-}
-
-/* ---------- cards & reveal ---------- */
+// ---------- UI: cards ----------
 function cardEl(lead){
   const d=document.createElement('div'); d.className='card locked'; d.dataset.id = lead.id;
   const conf = Math.max(48, Math.min(92, Number(lead.heat || 60)));
   d.innerHTML = `
     <div class="meta">
-      <span class="pill">${lead.cat || 'signal'}</span>
+      <span class="pill">${lead.cat||'signal'}</span>
       <span class="pill">Confidence ${conf}%</span>
     </div>
     <div class="title">${maskTitle(lead.title||'New buyer signal')}</div>
@@ -280,103 +229,105 @@ function cardEl(lead){
       <button class="btn primary" data-a="own" disabled>Own</button>
     </div>`;
   let timer=null, revealed=false;
-  const press = ()=> {
-    // optimistic front-end guard; backend still enforces
-    if(elQuota.textContent.includes('0 reveals')){ d.querySelector('.hold').innerHTML='<span style="color:#f6ba6a">Daily reveal limit reached. Upgrade to continue.</span>'; return; }
-    timer = setTimeout(()=> revealLead(), 1400);
-  };
+  const press = ()=> { if(revealsUsed()>=2){ d.querySelector('.hold').innerHTML='<span style="color:#f6ba6a">Daily reveal limit reached. Upgrade to continue.</span>'; return; } timer = setTimeout(()=> revealLead(), 1400); };
   const cancel = ()=> { clearTimeout(timer); timer=null; };
-  d.addEventListener('pointerdown', press);
-  d.addEventListener('pointerup', cancel);
-  d.addEventListener('pointerleave', cancel);
-
-  async function revealLead(){
-    if(revealed) return; revealed=true;
-    // ask backend to count the reveal
-    try{ await apiPost('/api/v1/reveal', { leadId: lead.id }); refreshQuotaNote(); }catch{}
-    d.classList.remove('locked'); d.querySelector('.hold').remove();
-    d.querySelector('[data-a=why]').disabled=false;
-    d.querySelector('[data-a=own]').disabled=false;
-    d.querySelector('.title').textContent = lead.title || 'Buyer signal';
-    const meta = d.querySelector('.meta');
-    meta.insertAdjacentHTML('beforeend', `<span class="pill">${safeHost(lead.source_url)}</span>`);
-  }
-  d.querySelector('[data-a=own]').onclick = async ()=> {
-    try{
-      await apiPost('/api/v1/claim',{leadId:lead.id});
-      await apiPost('/api/v1/own',{windowId:lead._windowId||null});
-    }catch{}
-  };
+  d.addEventListener('pointerdown', press); d.addEventListener('pointerup', cancel); d.addEventListener('pointerleave', cancel);
+  async function revealLead(){ if(revealed) return; revealed=true; d.classList.remove('locked'); d.querySelector('.hold').remove(); d.querySelector('[data-a=why]').disabled=false; d.querySelector('[data-a=own]').disabled=false; d.querySelector('.title').textContent = lead.title || 'Buyer signal'; const meta = d.querySelector('.meta'); const host = safeHost(lead.source_url); meta.insertAdjacentHTML('beforeend', `<span class="pill">${host}</span>`); incReveal(); }
+  d.querySelector('[data-a=own]').onclick = ()=> { post('/api/v1/claim',{leadId:lead.id}).then(()=> post('/api/v1/own',{windowId:lead._windowId||null}).catch(()=>{})); };
   d.querySelector('[data-a=why]').onclick = ()=> openWhy(lead);
   return d;
 }
-function addCard(lead){ visible.push(lead.id); elList.appendChild(cardEl(lead)); }
+function addCard(lead){ visible.push(lead); elList.appendChild(cardEl(lead)); }
+function maskTitle(t){ return t.replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.8 ? '•' : c)); }
+function safeHost(u){ try{ return new URL(u).hostname; }catch{ return 'source'; } }
 
-/* ---------- WHY modal ---------- */
+// ---------- WHY modal ----------
 const modal = document.getElementById('whyModal');
 document.getElementById('mClose').onclick = ()=> modal.classList.remove('in');
 document.getElementById('mConfirm').onclick = ()=> { modal.classList.remove('in'); };
-function openWhy(lead){
-  document.getElementById('whyTitle').textContent = (lead.title||safeHost(lead.source_url));
-  document.getElementById('whyBullets').innerHTML = `
+function openWhy(lead){ document.getElementById('whyTitle').textContent = (lead.title||safeHost(lead.source_url)); document.getElementById('whyBullets').innerHTML = `
     <ul style="margin:0 0 6px 18px;">
-      <li>Paid reach ≈ <strong>$${roughSpend(lead)} / mo</strong> → indicates active demand generation for your category.</li>
-      <li>Recent product / restock activity observed → packaging throughput likely up.</li>
-      <li>Category & region match your profile. Queue window open.</li>
-    </ul>`;
-  const proof = {
-    source: safeHost(lead.source_url), id: lead.id,
-    observed: lead.platform || 'signal', confidence: lead.heat||60
-  };
-  document.getElementById('whyProof').textContent = JSON.stringify(proof, null, 2);
-  modal.classList.add('in');
+      <li>Paid reach ≈ <strong>$${roughSpend(lead)} / mo</strong> → indicates active demand generation for ${safeHost(lead.source_url)}.</li>
+      <li>Recent product / restock activity observed → likely packaging throughput this week.</li>
+      <li>Category & region match your profile → higher response odds.</li>
+    </ul>`; document.getElementById('whyProof').textContent = JSON.stringify({source: safeHost(lead.source_url), id: lead.id, observed:"ad/procurement/pdp", confidence: Number(lead.heat||60)}, null, 2); modal.classList.add('in'); }
+function roughSpend(lead){ const h = Number(lead.heat||60); const lo=2000, hi=12000; return Math.round(lo + (hi-lo)*(h/100)).toLocaleString(); }
+
+// ---------- Signals preview (structured, slow, capped) ----------
+const CATS = [
+  { key:'Demand', total:210 },
+  { key:'Product', total:180 },
+  { key:'Procurement', total:140 },
+  { key:'Retail', total:160 },
+  { key:'Ops', total:120 },
+  { key:'Social', total:90 },
+  { key:'Events', total:70 },
+  { key:'Reviews', total:156 }
+];
+const STEPS = [
+  ['Demand','Paid reach probes · Meta, Google, Reddit mentions'],
+  ['Demand','CPM trend & geo expansion'],
+  ['Demand','Ad creative churn velocity'],
+  ['Product','SKU cadence · new flavors / sizes'],
+  ['Product','Case‑of‑N, dims & restock posts'],
+  ['Procurement','Supplier / intake pages updated'],
+  ['Procurement','Vendor forms: packaging fields present'],
+  ['Retail','PDP deltas · price promo cadence'],
+  ['Retail','Planogram / shelf additions spotted'],
+  ['Ops','Hiring spikes · shifts, forklift, pick‑pack'],
+  ['Ops','Warehouse adds / new lanes'],
+  ['Events','Trade calendar match (next 30–60d)'],
+  ['Social','Creator whitelisting / UGC bursts'],
+  ['Reviews','Packaging complaints surfaced (leak, dent, spill)'],
+  ['Reviews','Unboxing experience feedback trending']
+];
+function headerHtml(progress, caps){
+  const chips = CATS.map(c=>`<span class="chip"><b>${c.key}</b> · ${caps[c.key]||0}/${c.total}</span>`).join('');
+  return `<span class="chip"><b>Metrics</b> · ${progress}/${TOTAL_METRICS}</span>` + chips;
 }
-function roughSpend(lead){
-  const h = Number(lead.heat||60); // simple proxy → $2k–$12k/mo
-  const lo=2000, hi=12000; return Math.round(lo + (hi-lo)*(h/100)).toLocaleString();
+function startPreview(seconds=90){
+  clearInterval(ticker);
+  elPreview.textContent=''; elPreviewTip.textContent='';
+  setEngine({phase:'running', progress:0}); elNew.style.display='none'; elSigState.textContent='scanning…'; setEngineStatus('working','Scanning signals…');
+
+  // counters
+  let progress = 0, shown = 0; const caps = Object.create(null); CATS.forEach(c=>caps[c.key]=0);
+  elMetricHeader.innerHTML = headerHtml(progress, caps);
+
+  const totalTicks = Math.ceil(Math.min(FREE_METRICS_CAP, TOTAL_METRICS) / Math.max(1, Math.floor(TOTAL_METRICS/(seconds/3))));
+  let i=0;
+  ticker = setInterval(()=>{
+    const step = STEPS[i % STEPS.length]; i++;
+    const [cat, text] = step; if (caps[cat] < (CATS.find(c=>c.key===cat)?.total||0)) { caps[cat]++; progress++; }
+    elMetricHeader.innerHTML = headerHtml(progress, caps);
+    elBar.style.width = Math.min(100, (progress/TOTAL_METRICS)*100) + '%';
+
+    // append pretty line
+    const line = `[${cat}] ${text}  —  computed`;
+    elPreview.textContent += '• '+line+'\n';
+    elPreview.scrollTop = elPreview.scrollHeight;
+    elSigState.textContent = `${progress} metrics computed`;
+    setEngineStatus('working', `Scanning ${cat} • step ${shown+1}`);
+    shown++;
+
+    if (progress >= FREE_METRICS_CAP){
+      clearInterval(ticker);
+      elSigState.textContent = 'stopped early (free)';
+      setEngine({phase:'ready', progress:100});
+      setEngineStatus('idle','Idle');
+      elPreviewTip.innerHTML = `Free plan stops at <strong>${FREE_METRICS_CAP}/${TOTAL_METRICS}</strong>. Unlock <strong>full signals</strong> to compute the remaining metrics (demand depth, promo windows, review mining & more).`;
+      elNew.style.display='inline-flex';
+    }
+  }, 1800);
 }
 
-/* ---------- Signals preview via SSE ---------- */
-function startSSE(vendor, industries, regions){
-  stopSSE();
-  const url = API.sseURL(`/api/v1/progress.sse?vendor=${encodeURIComponent(vendor||'')}&industries=${encodeURIComponent(industries.join(','))}&regions=${encodeURIComponent(regions.join(','))}`);
-  sse = new EventSource(url);
-  elPreview.textContent=''; elPreviewTip.textContent=''; elBar.style.width='0%'; elSigState.textContent='0%';
-  setEnginePhase('running', 'Scanning…');
-
-  sse.addEventListener('hello', e=>{ /* handshake */ });
-  sse.addEventListener('step', e=>{
-    try{
-      const d = JSON.parse(e.data);
-      elPreview.textContent += `• [${d.cap}] ${d.label} — computed\n`;
-      const pct = Math.min(100, Math.round( (d.index / d.of) * 100 ));
-      elBar.style.width = pct + '%'; elSigState.textContent = pct + '%';
-      setEnginePhase('running', `Scanning: ${d.cap}…`);
-    }catch{}
-  });
-  sse.addEventListener('halt', e=>{
-    try{
-      const d = JSON.parse(e.data);
-      elPreviewTip.innerHTML = `Free plan stops early. Enable <strong>${d.upsell?.title||'full signals'}</strong> to unlock the remaining rules.`;
-    }catch{}
-    stopSSE(true);
-  });
-  sse.onerror = ()=> stopSSE(true);
-}
-function stopSSE(done=false){
-  if(sse){ try{sse.close();}catch{} sse=null; }
-  if(done){ setEnginePhase('ready','Ready'); elNew.style.display='inline-flex'; }
-}
-
-/* ---------- run (Find now / Dry run) ---------- */
+// ---------- buttons ----------
 document.getElementById('btnDry').onclick = ()=> run(false);
 document.getElementById('btnFind').onclick = ()=> run(true);
 
 async function run(persist){
-  // clear UI
+  // wipe current list & show star only until results trickle
   elList.innerHTML=''; visible=[]; queue=[]; elNew.style.display='none';
-  clearInterval(leadsPoll);
-
   // gather form
   const body = {
     vendorDomain: document.getElementById('vendor').value.trim(),
@@ -386,40 +337,30 @@ async function run(persist){
     describe: document.getElementById('describe').value.trim(),
     listMe: document.getElementById('listMe').checked === true
   };
-  // persist onboarding snapshot
-  localStorage.setItem('onboard', JSON.stringify({
-    vendorDomain: body.vendorDomain, buyers: body.buyers,
-    industries: body.industries, regions: body.regions,
-    describe: body.describe, listMe: body.listMe
-  }));
+  localStorage.setItem('onboard', JSON.stringify(body));
 
-  // kick SSE stream (slow, educational)
-  startSSE(body.vendorDomain, body.industries, body.regions);
+  // kick the slow preview first
+  startPreview(120);
 
-  // fire backend find (non-blocking for UI)
   try{
-    document.getElementById('btnFind').disabled = true;
-    await apiPost('/api/v1/find-now', body);
-    refreshQuotaNote(); // backend will decrement Finds
-  }catch(e){ /* still allow preview to run */ }
-  finally{ document.getElementById('btnFind').disabled = false; }
-
-  // poll leads every 5s for a minute
-  await pollLeadsOnce();
-  let ticks=0;
-  leadsPoll = setInterval(async ()=>{
-    ticks++; await pollLeadsOnce();
-    if(ticks>12) clearInterval(leadsPoll);
-  }, 5000);
+    const res = await post('/api/v1/find-now', body);
+    // update quotas text
+    const status = await get('/api/v1/status').catch(()=>null);
+    if(status?.free){ document.getElementById('quotaNote').textContent = `Free: ${status.free.findsLeft} searches left · ${status.free.revealsLeft} reveals left`; }
+    setTimeout(pollLeadsOnce, 2200);
+    if(res?.ok){ setTimeout(pollLeadsOnce, 7000); setTimeout(pollLeadsOnce, 12000); }
+  }catch(e){ console.warn(e); }
 }
 
-/* ---------- init ---------- */
-setEnginePhase('idle','Idle');
-(function onlyPaneScrolls(){
-  document.querySelectorAll('.scroller').forEach(el=>{
-    el.addEventListener('wheel', (ev)=>{ ev.stopPropagation(); }, {passive:true});
-  });
-})();
+// show initial quotas
+get('/api/v1/status').then(s=>{ if(s?.free){ document.getElementById('quotaNote').textContent = `Free: ${s.free.findsLeft} searches left · ${s.free.revealsLeft} reveals left`; }}).catch(()=>{});
+
+// pane scroll-only (page fixed)
+document.querySelectorAll('.scroller').forEach(el=>{ el.addEventListener('wheel', ev=>ev.stopPropagation(), {passive:true}); });
+
+// initial state
+document.getElementById('engine').textContent = 'engine: idle';
+setEngineStatus('idle','Idle');
 </script>
 </body>
 </html>
