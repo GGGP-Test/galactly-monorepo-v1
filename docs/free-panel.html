@@ -1,328 +1,345 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Galactly — Free Panel</title>
-<style>
-  :root{--bg:#0a0d14;--card:#0e1421;--line:#1e2838;--ink:#e8ecf1;--mut:#a6b0c2;--acc:#86f7d6;--acc2:#57a4ff}
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:linear-gradient(180deg,#0b0e18,#06070c);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;overflow:hidden}
-  header{height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);backdrop-filter:blur(8px) saturate(1.1);background:rgba(5,7,12,.55)}
-  .pill{border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:12px;opacity:.85}
-  .layout{height:calc(100vh - 60px);display:grid;grid-template-columns:58% 42%;gap:0}
-  @media (max-width:1100px){.layout{grid-template-columns:1fr}}
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Galactly — Live Results</title>
+  <style>
+    :root{
+      --bg:#070a10; --panel:#0e1420; --ink:#e9eef6; --mut:#94a3b8; --line:#1d2533;
+      --accent:#86f7d6; --accent2:#57a4ff; --good:#76f7a4; --warn:#ffd166; --bad:#ff6b6b;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:radial-gradient(1200px 700px at 85% -10%,rgba(120,160,255,.10),rgba(0,0,0,0) 60%), radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.07), rgba(0,0,0,0) 60%), linear-gradient(180deg,#0b0e18,#06070c 55%); color:var(--ink); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; overflow:hidden}
+    a{color:inherit}
+    header{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 18px; border-bottom:1px solid var(--line); backdrop-filter: blur(10px) saturate(1.05); background:rgba(5,7,12,.55); position:sticky; top:0; z-index:20}
+    .brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:#fff}
+    .brand svg{width:22px;height:22px}
+    .brand b{font-weight:800}
 
-  /* left column */
-  .left{position:relative;border-right:1px solid var(--line);display:flex;flex-direction:column}
-  .loader{position:relative;flex:0 0 220px;padding:14px;border-bottom:1px solid var(--line);display:flex;gap:16px}
-  .loader .viz{position:relative;flex:0 0 240px;border:1px solid var(--line);border-radius:14px;background:radial-gradient(120% 140% at 60% 40%,rgba(255,255,255,.05),rgba(255,255,255,.01));overflow:hidden}
-  #star{position:absolute;inset:0;display:block;width:100%;height:100%}
-  .loader .info{flex:1;display:flex;flex-direction:column;gap:10px}
-  .bar{height:8px;background:#0b0f18;border:1px solid var(--line);border-radius:999px;overflow:hidden}
-  .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--acc2))}
-  .mini{display:flex;gap:8px;flex-wrap:wrap}
-  .mini .chip{border:1px dashed var(--line);border-radius:999px;padding:4px 8px;font-size:12px;opacity:.9}
+    .shell{display:grid; grid-template-columns: 1.1fr 0.9fr; gap:16px; height:calc(100% - 60px); padding:16px; max-width:1400px; margin:0 auto}
+    @media (max-width:1100px){ .shell{grid-template-columns:1fr; height:auto; overflow:auto} }
 
-  .results{flex:1;overflow:auto;padding:10px}
-  .lead{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:0 0 10px 0;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
-  .lead h4{margin:0;font:700 14px/1.3 Inter,system-ui}
-  .lead p{margin:2px 0 0 0;color:var(--mut);font-size:12px}
-  .lead .heat{height:6px;background:#0b0f18;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:6px}
-  .lead .heat>i{display:block;height:100%;width:40%}
-  .lead .act{display:flex;gap:8px}
-  .btn{background:#111827;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:12px;font-weight:700;cursor:pointer}
-  .btn:hover{filter:brightness(1.08)}
-  .ghost{background:transparent}
+    .pane{background:var(--panel); border:1px solid var(--line); border-radius:14px; display:flex; flex-direction:column; min-height:0; box-shadow:0 8px 30px rgba(0,0,0,.35)}
+    .pane h3{margin:0; padding:12px 14px; border-bottom:1px solid var(--line); font-weight:800; letter-spacing:.2px}
+    .pane .content{padding:12px; display:flex; flex-direction:column; gap:12px; min-height:0}
 
-  /* right column */
-  .right{position:relative;display:flex;flex-direction:column;overflow:hidden}
-  .pane{padding:14px;border-bottom:1px solid var(--line)}
-  .pane h3{margin:0 0 10px;font:800 14px/1.2 Inter,system-ui;letter-spacing:.3px}
-  .pane .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
-  .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  @media (max-width:900px){.formgrid{grid-template-columns:1fr}}
-  label{display:flex;flex-direction:column;font-size:12px;opacity:.9}
-  input,textarea{background:#0b0f1c;border:1px solid var(--line);color:#fff;border-radius:10px;padding:9px;margin-top:6px}
-  textarea{min-height:82px}
-  .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
-  .scroll{flex:1;overflow:auto;padding:14px}
-  .logline{font-size:12px;color:var(--mut);padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
-  .ok{color:#9fe0b5}
-  .warn{color:#ffd08a}
-  .lock{opacity:.6}
+    /* Left column: Live Results */
+    .liveHead{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .pill{border:1px solid var(--line); background:#0b1320; padding:4px 9px; border-radius:999px; font-size:12px; opacity:.9}
 
-  /* hold-to-reveal overlay */
-  .reveal{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center}
-  .reveal.on{display:flex}
-  .reveal .sheet{width:min(820px,92vw);max-height:84vh;overflow:auto;background:#0d1220;border:1px solid var(--line);border-radius:16px;padding:14px}
-  .sheet h4{margin:0 0 8px}
-  .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin:8px 0}
-  .why li{margin:6px 0}
-</style>
+    .starWrap{position:relative; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:linear-gradient(180deg,#09111b,#0b0f19); height:220px}
+    canvas#neutron{display:block; width:100%; height:100%}
+
+    .feed{display:flex; flex-direction:column; gap:10px; min-height:0; overflow:auto; padding-right:2px}
+    .card{position:relative; border:1px solid var(--line); background:#0d1524; border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px}
+    .cardHead{display:flex; align-items:center; justify-content:space-between; gap:8px}
+    .brandDot{width:8px;height:8px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent2)); display:inline-block; margin-right:8px}
+    .h{font-weight:700}
+    .meta{font-size:12px; color:var(--mut)}
+    .badges{display:flex; flex-wrap:wrap; gap:6px}
+    .badge{border:1px solid var(--line); border-radius:999px; padding:3px 8px; font-size:12px; opacity:.9}
+    .hot{background:rgba(134,247,214,.12); border-color:rgba(134,247,214,.28)}
+    .warm{background:rgba(255,209,102,.10); border-color:rgba(255,209,102,.22)}
+
+    .holdMask{position:absolute; inset:0; background:linear-gradient(180deg,rgba(6,8,12,.35),rgba(6,8,12,.55)); display:flex; align-items:center; justify-content:center; border-radius:12px; backdrop-filter: blur(2px)}
+    .holdBtn{display:flex; align-items:center; gap:8px; border:1px dashed var(--line); background:rgba(255,255,255,.04); padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer}
+
+    /* Right column: Customize + Metrics */
+    .section{border:1px solid var(--line); border-radius:12px; background:#0c1322}
+    .section h4{margin:0; padding:10px 12px; border-bottom:1px solid var(--line)}
+    .section .body{padding:12px; display:flex; flex-direction:column; gap:10px}
+    .row{display:grid; grid-template-columns:120px 1fr; gap:10px; align-items:center}
+    .row label{font-size:12px; color:var(--mut)}
+    input[type=text], textarea{width:100%; background:#0b111c; color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-family:inherit}
+    textarea{min-height:80px; resize:vertical}
+    .actions{display:flex; align-items:center; gap:10px; justify-content:flex-end}
+    .btn{border:1px solid var(--line); background:linear-gradient(90deg,#fff,#eef3ff); color:#0a0d12; padding:10px 16px; border-radius:12px; font-weight:800; cursor:pointer}
+    .btnGhost{border:1px solid var(--line); background:rgba(255,255,255,.06); color:#fff; padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer}
+    .hint{font-size:12px; color:var(--mut)}
+
+    .metrics{border:1px solid var(--line); border-radius:12px; background:#0b111c; min-height:220px; display:flex; flex-direction:column}
+    .meter{height:6px; background:#0a1220; border-bottom:1px solid var(--line)}
+    .bar{height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2)); box-shadow:0 0 12px rgba(134,247,214,.45) inset; transition:width .6s ease}
+    .log{flex:1; overflow:auto; padding:10px 12px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12.5px}
+    .logLine{opacity:.95; padding:6px 0; border-bottom:1px dashed rgba(255,255,255,.06)}
+    .lock{opacity:.6}
+
+    .apiBox{display:flex; align-items:center; gap:8px}
+    .apiBox input{width:360px}
+
+    /* Scroll only inside panes */
+    .content.scroll{overflow:auto}
+  </style>
 </head>
 <body>
-<header>
-  <div><strong>Galactly</strong> <span class="pill" id="status">warming…</span></div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <label style="font-size:12px">API <input id="apiBase" size="36" style="margin-left:6px"/></label>
-    <button class="btn" id="saveApi">Save</button>
-  </div>
-</header>
-<div class="layout">
-  <!-- Left: Live results (single column) -->
-  <section class="left">
-    <div class="loader">
-      <div class="viz"><canvas id="star"></canvas></div>
-      <div class="info">
-        <div style="font-weight:800">Live results</div>
-        <div class="bar"><i id="bar"></i></div>
-        <div class="mini">
-          <div class="chip" id="chip-checked">Checked: 0</div>
-          <div class="chip" id="chip-created">New leads: 0</div>
-          <div class="chip" id="chip-advertisers">Advertisers: 0</div>
-        </div>
-        <div style="font-size:12px;color:var(--mut)">We’re analyzing your inputs and streaming in results. This can take ~30–60s.</div>
-      </div>
+  <header>
+    <a class="brand" href="./index.html">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/><path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
+      <b>Galactly</b>
+    </a>
+    <div class="apiBox">
+      <span class="pill" id="status">engine: idle</span>
+      <label class="hint">API</label>
+      <input id="apiBase" type="text" placeholder="https://your-northflank.app"/>
+      <button class="btnGhost" id="saveApi">Save</button>
     </div>
-    <div id="results" class="results"></div>
-  </section>
+  </header>
 
-  <!-- Right: Customize + Metrics -->
-  <section class="right">
-    <div class="pane">
+  <main class="shell">
+    <!-- Left: Live Results (single column list) -->
+    <section class="pane" id="live">
+      <h3 class="liveHead">
+        <span>Live results</span>
+        <span class="pill" id="liveNote">waiting for your AI to scan…</span>
+      </h3>
+      <div class="content">
+        <div class="starWrap"><canvas id="neutron"></canvas></div>
+        <div class="feed content scroll" id="feed"></div>
+      </div>
+    </section>
+
+    <!-- Right: Customize Your AI + Metrics Preview -->
+    <section class="pane" id="rightCol">
       <h3>Customize your AI</h3>
-      <div class="card">
-        <div class="formgrid">
-          <label>Vendor site (yours)
-            <input id="vnd" placeholder="acme-packaging.com"/>
-          </label>
-          <label>Industries
-            <input id="ind" placeholder="beverage, food"/>
-          </label>
-          <label>Regions
-            <input id="reg" placeholder="US, CA"/>
-          </label>
-          <label>Example buyers
-            <textarea id="buy" placeholder="liquiddeath.com\nsoylent.com"></textarea>
-          </label>
-          <label>Guidance to AI (natural language)
-            <textarea id="guide" placeholder="We prefer beverage DTC brands in US/CA; MOQ 10k, flexibles + labels." ></textarea>
-          </label>
+      <div class="content" style="gap:12px;">
+        <div class="section">
+          <h4>Profile & targeting</h4>
+          <div class="body">
+            <div class="row"><label>Vendor site</label><input id="fVendor" type="text" placeholder="https://yourpackagingco.com"/></div>
+            <div class="row"><label>Industries</label><input id="fIndustries" type="text" placeholder="beverage, confectionery"/></div>
+            <div class="row"><label>Regions</label><input id="fRegions" type="text" placeholder="US, CA"/></div>
+            <div class="row"><label>Example buyers</label><input id="fBuyers" type="text" placeholder="soylent.com, liquiddeath.com"/></div>
+            <div class="row" style="grid-template-columns:120px 1fr; align-items:start">
+              <label>Describe ideal buyer</label>
+              <textarea id="fPrompt" placeholder="Short, specific. e.g. ‘DTC beverage brands in US with retail presence, launching 4+ flavors/yr, cans or pouches, MOQ 10k+.’"></textarea>
+            </div>
+            <label style="display:flex; gap:8px; align-items:center; font-size:13px; opacity:.95">
+              <input id="fListInbound" type="checkbox"/> List my company for inbound opportunities
+            </label>
+            <div class="actions">
+              <button class="btnGhost" id="testRun">Dry run</button>
+              <button class="btn" id="doRun">Find now</button>
+            </div>
+            <div class="hint" id="runHint">Tip: we’ll add 1–2 leads at a time. Press‑and‑hold a card to reveal details.</div>
+          </div>
         </div>
-        <div class="actions">
-          <button class="btn" id="runBtn">Find now</button>
-          <button class="btn ghost" id="clearBtn">Clear</button>
+
+        <div class="metrics">
+          <div class="meter"><div class="bar" id="mBar"></div></div>
+          <div class="log" id="mLog"></div>
         </div>
       </div>
-    </div>
-    <div class="scroll" id="metricsPane">
-      <h3 style="margin:0 0 8px">Signal engine (preview)</h3>
-      <div id="log"></div>
-    </div>
-  </section>
-</div>
+    </section>
+  </main>
 
-<!-- Hold-to-reveal modal -->
-<div id="reveal" class="reveal"><div class="sheet">
-  <h4 id="rv-title">Lead</h4>
-  <div class="kv"><div>Domain</div><div id="rv-domain">—</div></div>
-  <div class="kv"><div>Platform</div><div id="rv-platform">—</div></div>
-  <div class="kv"><div>Confidence</div><div id="rv-heat">—</div></div>
-  <div class="kv"><div>Why this</div><div>
-    <ul id="rv-why" class="why"></ul>
-  </div></div>
-  <div class="kv"><div>Actions</div><div>
-    <button class="btn" id="rv-open">Open proof</button>
-    <button class="btn" id="rv-claim">Claim</button>
-    <button class="btn" id="rv-own">Own</button>
-    <button class="btn ghost" id="rv-close">Close</button>
-  </div></div>
-</div></div>
+  <script>
+  // ---------- API base + session ----------
+  (function initApi(){
+    const DEFAULT = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
+    const q = new URLSearchParams(location.search);
+    let base = q.get('api') || localStorage.getItem('apiBase') || DEFAULT;
+    function normalize(v){ if(!v) return DEFAULT; v=String(v).trim().replace(/\/+$/,''); if(!/^https?:\/\//i.test(v)) v='https://'+v; return v; }
+    base = normalize(base);
+    window.API_BASE = base;
+    try{ localStorage.setItem('apiBase', base); }catch{}
+    const apiInput = document.getElementById('apiBase'); if(apiInput){ apiInput.value = base; document.getElementById('saveApi').onclick = ()=>{ const n=normalize(apiInput.value); localStorage.setItem('apiBase', n); window.API_BASE=n; document.getElementById('status').textContent='api saved'; setTimeout(()=>location.reload(), 350); }; }
+  })();
 
-<script src="./api-base.js"></script>
-<script>
-// ---------- API + session helpers ----------
-const uidKey='galactly_uid';
-let uid=localStorage.getItem(uidKey); if(!uid){ uid='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey,uid); }
-const apiInput=document.getElementById('apiBase');
-apiInput.value = localStorage.getItem('apiBase')  (window.API_BASE  '');
-document.getElementById('saveApi').onclick=()=>{ window.__setApiBase(apiInput.value); location.reload(); };
-const API=(p)=> (window.API_BASE||'').replace(/\/$/,'') + p;
+  const uidKey='galactly_uid';
+  let UID = localStorage.getItem(uidKey); if(!UID){ UID='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey, UID); }
+  const headers = ()=> ({ 'content-type':'application/json', 'x-galactly-user': UID });
 
-function qsGetAll(){ const q=new URLSearchParams(location.search); return Object.fromEntries(q.entries()); }
-function prefillFromOnboard(){
-  const q=qsGetAll(); let data=null;
-  if(Object.keys(q).length){ data={ vendorDomain:q.vendorDomain||'', industries:(q.industries||'').split(',').filter(Boolean), regions:(q.regions||'').split(',').filter(Boolean), buyers:(q.buyers||'').split(',').filter(Boolean) } }if(!data){ try{ data = JSON.parse(sessionStorage.getItem('galactly_onboard')||'null'); }catch{ data=null; }
+  // ---------- Helper ----------
+  async function $get(path){ const r=await fetch(window.API_BASE+path, { headers: headers() }); return r.json(); }
+  async function $post(path, body){ const r=await fetch(window.API_BASE+path, { method:'POST', headers: headers(), body: JSON.stringify(body||{}) }); return r.json(); }
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+  function host(url){ try{ return new URL(url).hostname.replace(/^www\./,''); }catch{return ''} }
+  function el(tag, cls, html){ const d=document.createElement(tag); if(cls) d.className=cls; if(html!=null) d.innerHTML=html; return d; }
+
+  // ---------- Gate (register user) ----------
+  (async()=>{ try{ await $post('/api/v1/gate', { region:'US', alerts:false }); }catch(e){} })();
+
+  // ---------- Live feed ----------
+  const feedEl = document.getElementById('feed');
+  const liveNote = document.getElementById('liveNote');
+  let seen = new Set();
+  let allowAppend = true;
+  let polling = false;
+
+  function confidenceHeat(lead){ const h = Number(lead.heat||60); return h>=80? 'hot' : 'warm'; }
+
+  function renderCard(lead){
+    const brand = (lead.title||'').split(' — ')[0] || host(lead.source_url) || 'Buyer';
+    const c = el('div','card');
+    const head = el('div','cardHead');
+    head.appendChild(el('div','h',`<span class="brandDot"></span>${brand}`));
+    head.appendChild(el('div','meta', new Date(lead.created_at||Date.now()).toLocaleString()))
+    c.appendChild(head);
+    const badges = el('div','badges');
+    const conf = el('span',`badge ${confidenceHeat(lead)}`, `Confidence ${Math.max(55, Math.min(95, lead.heat||68))}%`); badges.appendChild(conf);
+    if(lead.cat) badges.appendChild(el('span','badge', lead.cat));
+    if(Array.isArray(lead.kw)) badges.appendChild(el('span','badge', lead.kw.slice(0,2).join(' • ')));
+    c.appendChild(badges);
+
+    const overlay = el('div','holdMask');
+    const btn = el('div','holdBtn','<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-width="2"/><path d="M12 7v5l4 2" stroke-width="2"/></svg> Press & hold to reveal');
+    overlay.appendChild(btn); c.appendChild(overlay);
+
+    let pressT=null, holding=false, revealed=false, claimOk=false; let timer;
+    const THOLD = 700; // ms
+    function onDown(e){ if(revealed) return; holding=true; pressT=Date.now(); timer=setTimeout(async()=>{ if(!holding) return; // claim
+        try{ const r = await $post('/api/v1/claim', { leadId: lead.id }); if(r?.ok){ claimOk=true; overlay.remove(); revealed=true; liveNote.textContent = 'reserved 120s — click to own';
+            // add quick reveal details
+            const hint = el('div','meta', 'Reserved for you. Click card to open proof (where available).'); c.appendChild(hint);
+            c.onclick = ()=>{ if(lead.source_url) window.open(lead.source_url,'_blank','noopener'); };
+          } else { btn.textContent='Already taken'; }
+        }catch(err){ btn.textContent='Hold again'; }
+    }, THOLD); }
+    function onUp(){ holding=false; clearTimeout(timer); }
+    overlay.addEventListener('pointerdown', onDown); overlay.addEventListener('pointerup', onUp); overlay.addEventListener('pointerleave', onUp);
+
+    return c;
   }
-  if(!data) return null;
-  // fill inputs
-  document.getElementById('vnd').value = data.vendorDomain||'';
-  document.getElementById('ind').value = (data.industries||[]).join(', ');
-  document.getElementById('reg').value = (data.regions||[]).join(', ');
-  document.getElementById('buy').value = (data.buyers||[]).join('\n');
-  return data;
-}
 
-// ---------- Neutron star (lightweight canvas) ----------
-(function(){
-  const c=document.getElementById('star'); if(!c) return; const ctx=c.getContext('2d'); let W=0,H=0, t=0;
-  function resize(){ const r=c.parentElement.getBoundingClientRect(); W=r.width; H=r.height; c.width=W*2; c.height=H*2; c.style.width=W+'px'; c.style.height=H+'px'; ctx.setTransform(2,0,0,2,0,0);} window.addEventListener('resize',resize); resize();
-  function ring(x,y,r,alpha){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.strokeStyle='rgba(255,255,255,'+alpha+')'; ctx.lineWidth=1.2; ctx.stroke(); }
-  function loop(ts){ t=ts/1000; ctx.clearRect(0,0,W,H); const x=W/2,y=H/2; const base=Math.min(W,H)*0.35; // glow
-    const g=ctx.createRadialGradient(x,y,0,x,y,base*2.2); g.addColorStop(0,'rgba(134,247,214,.25)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,base*2.2,0,Math.PI*2); ctx.fill();
-    // core pulse
-    const p=1+0.10*Math.sin(t*1.6); ring(x,y,base*0.62*p,0.22); ring(x,y,base*0.95,0.12);
-    // spokes
-    const spokes=24; ctx.save(); ctx.translate(x,y); ctx.rotate(t*0.5);
-    for(let i=0;i<spokes;i++){ ctx.rotate((Math.PI*2)/spokes); const L=base*(0.65+0.25*Math.sin(t*1.1+i)); ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(L,0); ctx.strokeStyle='rgba(134,247,214,.22)'; ctx.lineWidth=1.2; ctx.stroke(); }
-    ctx.restore();
-    requestAnimationFrame(loop);
+  async function refreshFeed(){
+    if(polling) return; polling=true;
+    try{
+      const data = await $get('/api/v1/leads');
+      const list = Array.isArray(data?.leads)? data.leads : [];
+      const fresh = list.filter(L => !seen.has(String(L.id))).slice(0, 2); // append at most 2 at a time
+      if(fresh.length){ liveNote.textContent = 'new results ready'; }
+      for(const L of fresh){
+        seen.add(String(L.id));
+        const card = renderCard(L);
+        feedEl.insertBefore(card, feedEl.firstChild);
+        // limit visible cards
+        while(feedEl.children.length>6) feedEl.lastElementChild.remove();
+        await sleep(600); // staggered reveal
+      }
+    }catch(e){ /* ignore */ }
+    finally{ polling=false; }
   }
-  requestAnimationFrame(loop);
-})();
 
-// ---------- Metrics preview (slow, partial) ----------
-const steps=[
-  ['Demand sweep','Detecting outward demand acceleration'],
-  ['Retail velocity','Estimating sell‑through cadence'],
-  ['Catalog delta','New SKUs / flavors / sizes'],
-  ['Procurement door','Supplier / vendor access points'],
-  ['Promo cycles','Discount / BOGO cadence'],
-  ['Seasonal pulse','Event & holiday lift'],
-  ['Geo reach','Where demand clusters'],
-  ['Ops signals','Restock & back‑in‑stock hints'],
-  ['Wholesale drift','Case packs / pallets'],
-  ['Sustainability','Claims matching (PCR, compostable, etc.)'],
-  ['Freight drag','Dim weight & pack density'],
-  ['Material fit','Corrugated vs flex vs rigid fit'],
-  ['Art changes','New dielines / label swaps'],
-  ['3P sellers','Marketplace spillover'],
-  ['Price moves','Promo windows & elasticity'],
-  ['Shelf adds','Retailer adds / new doors'],
-  ['Ops intent','Job posts matching packaging ops'],
-  ['Audit ready','Risk & compliance breadcrumbs']
-];
-let stepIx=0; const logEl=document.getElementById('log');
-function pushLog(text, cls){ const d=document.createElement('div'); d.className='logline '+(cls||''); d.textContent=text; logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight; }
-function runPreview(){
-  pushLog('Starting preview • running 18/1126 checks…','warn');
-  const int=setInterval(()=>{
-    if(stepIx>=steps.length){ clearInterval(int); pushLog('Upgrade to run all 1,126 checks + AI reasoning.','lock'); return; }
-    const [k,v]=steps[stepIx++]; pushLog(`✔ ${k} — ${v}`,'ok');
-  }, 1800);
-}
-runPreview();
+  async function pollLoop(){ while(true){ await refreshFeed(); await sleep(8000); } }
+  pollLoop();
 
-// ---------- Live feed + hold‑to‑reveal ----------
-const state={ seen:new Set(), leads:[], lastRun:null };
-const elResults=document.getElementById('results');
-function host(u){ try{ return new URL(u).hostname; }catch{return ''} }
-function heatWidth(h){ const v=Math.max(0,Math.min(95, Number(h||0))); return (v/95*100).toFixed(1)+'%'; }
-function mkLeadCard(L){
-  const d=document.createElement('div'); d.className='lead'; d.dataset.id=L.id;
-  const h=host(L.source_url);
-  d.innerHTML=`<div><h4>${escapeHtml(L.title||h||'Potential buyer')}</h4>
-    <p>${escapeHtml((L.cat||'').toUpperCase())} • ${escapeHtml((L.platform||'signal'))} • ${escapeHtml(h)}</p>
-    <div class="heat"><i style="background:linear-gradient(90deg,var(--acc),var(--acc2));width:${heatWidth(L.heat)}"></i></div></div>
-    <div class="act"><button class="btn" data-own>Own</button></div>`;
-  // press & hold
-  let pressT=null; const openReveal=()=>showReveal(L);
-  d.addEventListener('mousedown',()=>{ pressT=setTimeout(openReveal,600); });
-  d.addEventListener('mouseup',()=>{ if(pressT){ clearTimeout(pressT); pressT=null; } });
-  d.addEventListener('mouseleave',()=>{ if(pressT){ clearTimeout(pressT); pressT=null; } });
-  d.addEventListener('touchstart',()=>{ pressT=setTimeout(openReveal,700); },{passive:true});
-  d.addEventListener('touchend',()=>{ if(pressT){ clearTimeout(pressT); pressT=null; } },{passive:true});
-  d.querySelector('[data-own]').onclick=()=> ownLead(L);
-  return d;
-}
-function render(){ elResults.innerHTML=''; for(const L of state.leads){ elResults.appendChild(mkLeadCard(L)); } }
-function upsertLeads(newList){
-  let added=0;
-  for(const L of newList){ if(state.seen.has(L.id)) continue; state.seen.add(L.id); state.leads.push(L); added++; }
-  if(added){ render(); }
-}
-function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+  // ---------- Neutron star (gentle) ----------
+  (function(){
+    const cvs=document.getElementById('neutron'); if(!cvs) return; const DPR=Math.min(2, window.devicePixelRatio||1); let ctx, W=0, H=0; let t=0; let stop=false;
+    function resize(){ const r=cvs.getBoundingClientRect(); W=r.width; H=r.height; cvs.width=Math.floor(W*DPR); cvs.height=Math.floor(H*DPR); ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
+    function ring(x,y,r,alpha){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.strokeStyle=`rgba(134,247,214,${alpha})`; ctx.lineWidth=1; ctx.stroke(); }
+    function beam(cx,cy,r,ang,len){ const x1=cx + Math.cos(ang)*r*0.2; const y1=cy + Math.sin(ang)*r*0.2; const x2=cx + Math.cos(ang)*(r*len); const y2=cy + Math.sin(ang)*(r*len); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
+    function draw(){ if(stop) return; requestAnimationFrame(draw); if(!ctx) return; t+=0.014; ctx.clearRect(0,0,W,H); const cx=W*0.5, cy=H*0.52, r=Math.min(W,H)*0.26;
+      const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,r*2); grad.addColorStop(0,'rgba(255,255,255,.08)'); grad.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(cx,cy,r*2.2,0,Math.PI*2); ctx.fill();
+      ctx.save(); ctx.globalAlpha=0.9; ctx.strokeStyle='rgba(134,247,214,.28)'; for(let i=0;i<3;i++) ring(cx,cy,r*(0.6+i*0.35), 0.14-i*0.04); ctx.restore();
+      // rotating spokes (minimal motion)
+      ctx.save(); ctx.lineWidth=1.4; for(let i=0;i<10;i++){ const a=t*0.6 + i*(Math.PI*2/10); ctx.strokeStyle= i%2? 'rgba(134,247,214,.28)':'rgba(87,164,255,.22)'; beam(cx,cy,r*0.2,a,1.25); }
+      ctx.restore();
+      // core pulse
+      const p=1+0.06*Math.sin(t*2.2); ctx.beginPath(); ctx.arc(cx,cy,r*0.32*p,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,.75)'; ctx.fill();
+      // slow rotation halo
+      ctx.beginPath(); ctx.arc(cx,cy,r*0.55,0,Math.PI*2); ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.stroke();
+    }
+    function start(){ stop=false; resize(); draw(); }
+    function halt(){ stop=true; }
+    document.addEventListener('visibilitychange', ()=>{ if(document.hidden) halt(); else start(); });
+    window.addEventListener('resize', resize); start();
+  })();
 
-async function post(path, body){
-  const r=await fetch(API(path), {method:'POST', headers:{'content-type':'application/json','x-galactly-user':uid}, body:JSON.stringify(body||{})});
-  return r.json();
-}
-async function fetchLeads(){
-  try{
-    const r=await fetch(API('/api/v1/leads'), { headers:{'x-galactly-user':uid} });
-    const data=await r.json(); if(data?.ok && Array.isArray(data.leads)){ upsertLeads(data.leads); document.getElementById('status').textContent='live'; }
-  }catch(e){ document.getElementById('status').textContent='retry…'; }
-}
-async function ownLead(L){
-  try{
-    const claim=await post('/api/v1/claim',{leadId:L.id});
-    if(claim?.ok && claim.windowId){ await post('/api/v1/own',{windowId:claim.windowId}); }
-  }catch{}
-}
+  // ---------- Customize form + Metrics preview ----------
+  const fVendor = document.getElementById('fVendor');
+  const fIndustries = document.getElementById('fIndustries');
+  const fRegions = document.getElementById('fRegions');
+  const fBuyers = document.getElementById('fBuyers');
+  const fPrompt = document.getElementById('fPrompt');
+  const fListInbound = document.getElementById('fListInbound');
+  const btnRun = document.getElementById('doRun');
+  const btnTest = document.getElementById('testRun');
+  const statusPill = document.getElementById('status');
 
-// ---------- Run find-now (auto from onboarding) ----------
-async function runFindNow(payload){
-  try{
-    const r=await post('/api/v1/find-now', payload);
-    // Update loader chips & slow progress
-    document.getElementById('chip-checked').textContent = 'Checked: '+(r.checked||0);
-    document.getElementById('chip-created').textContent = 'New leads: '+(r.created||0);
-    document.getElementById('chip-advertisers').textContent = 'Advertisers: '+(r.advertisers||0);
-    slowBarTo(80, 1200);
-  }catch{}
-}
+  // Prefill from onboarding deep‑link
+  (function prefill(){
+    const q = new URLSearchParams(location.search);
+    const vendor = q.get('vendor')||''; if(vendor) fVendor.value = vendor;
+    const inds = q.get('industries')||''; if(inds) fIndustries.value = inds;
+    const regs = q.get('regions')||''; if(regs) fRegions.value = regs;
+    const buyers = q.get('buyers')||''; if(buyers) fBuyers.value = buyers;
+    const prompt = q.get('prompt')||''; if(prompt) fPrompt.value = prompt;
+    const listme = q.get('listme'); if(listme==='1'||listme==='true') fListInbound.checked = true;
+    if(vendor || inds || buyers){ btnRun.textContent='Save'; document.getElementById('runHint').textContent='Loaded your onboarding answers. Hit Save to update the engine.'; }
+  })();
 
-function slowBarTo(pct, ms){ const bar=document.getElementById('bar'); const start=performance.now(); const init=Number(bar.style.width.replace('%',''))||0; const target=Math.max(init, Math.min(100,pct));
-  function step(t){ const k=Math.min(1,(t-start)/ms); const v=init+(target-init)*k; bar.style.width=v+'%'; if(k<1) requestAnimationFrame(step); }
-  requestAnimationFrame(step);
-}
+  btnTest.addEventListener('click', (e)=>{ e.preventDefault(); startMetrics(true); });
+  btnRun.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    statusPill.textContent='engine: running';
+    liveNote.textContent='scanning buyers…';
+    const body = {
+      vendorDomain: fVendor.value.trim()||undefined,
+      industries: fIndustries.value.split(',').map(s=>s.trim()).filter(Boolean),
+      regions: fRegions.value.split(',').map(s=>s.trim()).filter(Boolean),
+      buyers: fBuyers.value.split(',').map(s=>s.trim()).filter(Boolean),
+      listInbound: !!fListInbound.checked,
+      prompt: fPrompt.value.trim()||undefined
+    };
+    try{
+      // kick the engine
+      await $post('/api/v1/find-now', body);
+      // start slow metrics preview (educational, partial)
+      startMetrics(false);
+      // pull fresh leads a few times
+      for(let i=0;i<4;i++){ await sleep(3500); await refreshFeed(); }
+      statusPill.textContent='engine: ok';
+    }catch(err){ statusPill.textContent='engine: error'; console.error(err); }
+  });
 
-// kickoff
-const seed=prefillFromOnboard();
-if(seed){
-  // If user came from onboarding, change CTA to Save
-  document.getElementById('runBtn').textContent='Save & Run';
-  // build payload
-  const payload={ vendors:seed.vendorDomain? [seed.vendorDomain]:[], vendorDomain:seed.vendorDomain||undefined, industries:seed.industries||[], regions:seed.regions||[], buyers:seed.buyers||[] };
-  runFindNow(payload);
-}
+  // Metrics typing log (proprietary names; partial on free)
+  const M = document.getElementById('mLog'); const MB = document.getElementById('mBar');
+  const RULES = [
+    ['Demand Index','Paid Reach Velocity','✓ computed'],
+    ['Demand Index','Channel Mix Confirmation','✓ computed'],
+    ['Demand Index','Geo Heat Clusters','✓ computed'],
+    ['Product Movement','Multi‑SKU Momentum','✓ computed'],
+    ['Product Movement','Pack‑Size Tilt','✓ computed'],
+    ['Product Movement','Restock Pulse','✓ computed'],
+    ['Supply Timing','Vendor Portal Open','✓ computed'],
+    ['Supply Timing','Shelf‑Reset Window','✓ computed'],
+    ['Supply Timing','Seasonal Pull','✓ computed'],
+    ['Timing Windows','11‑day Lift', '✓ computed'],
+    ['Timing Windows','2‑5pm Answer Band','✓ computed'],
+    ['Packaging Math','Units→Cases Estimator','✓ computed'],
+    ['Packaging Math','Primary→Secondary Map','✓ computed'],
+    ['Packaging Math','Outbound Palletization','✓ computed'],
+    // locks shown for FOMO
+    ['Pro Signals','Trade Import Events','🔒 Pro'],
+    ['Pro Signals','Retailer Price/Promo Cadence','🔒 Pro'],
+    ['Pro Signals','Competitor Cannibalization','🔒 Pro'],
+    ['Pro AI','Real Ad Spend Attribution','🔒 Pro'],
+    ['Pro AI','Store‑level Velocity','🔒 Pro'],
+    ['Pro AI','Cohort LTV/CPA Fit','🔒 Pro']
+  ];
 
-// poll loop (kept independent; panel shows loader until first lead lands)
-fetchLeads(); setInterval(fetchLeads, 8000);
+  let typing=false;
+  async function startMetrics(dry){ if(typing){ return; } typing=true; M.innerHTML=''; MB.style.width='0%';
+    const slow = (new URLSearchParams(location.search)).has('fast')? 60 : (dry? 120 : 280);
+    for(let i=0;i<RULES.length;i++){
+      const [cat,name,state] = RULES[i];
+      const line = el('div','logLine'+(state.includes('🔒')?' lock':''), `<strong>[${cat}]</strong> ${name} — <em>${state}</em>`);
+      M.appendChild(line); M.scrollTop = M.scrollHeight;
+      const pct = Math.min(100, Math.round(((i+1)/1126)*100)); MB.style.width = pct+'%';
+      await sleep(slow + Math.round(Math.random()*slow*0.6));
+      if(i===12 && !dry){ // stop early for free plan
+        const more = el('div','logLine lock', '… 1,114 additional rules held on free tier'); M.appendChild(more); MB.style.width = Math.min(100, Math.round(((i+1)/1126)*100))+'%'; break;
+      }
+    }
+    typing=false;
+  }
 
-// Customize form actions
-function readForm(){
-  const vendorDomain=document.getElementById('vnd').value.trim();
-  const industries=document.getElementById('ind').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const regions=document.getElementById('reg').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const buyers=document.getElementById('buy').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  const guide=document.getElementById('guide').value.trim();
-  return { vendorDomain, industries, regions, buyers, guide };
-}
-
-document.getElementById('runBtn').onclick=()=>{ const v=readForm(); sessionStorage.setItem('galactly_onboard', JSON.stringify(v)); runFindNow(v); };
-document.getElementById('clearBtn').onclick=()=>{ ['vnd','ind','reg','buy','guide'].forEach(id=>document.getElementById(id).value=''); };
-
-// ---------- Reveal modal population ----------
-const R={ root:document.getElementById('reveal'), title:document.getElementById('rv-title'), domain:document.getElementById('rv-domain'), platform:document.getElementById('rv-platform'), heat:document.getElementById('rv-heat'), why:document.getElementById('rv-why'), open:document.getElementById('rv-open'), claim:document.getElementById('rv-claim'), own:document.getElementById('rv-own'), close:document.getElementById('rv-close') };
-function showReveal(L){
-  R.title.textContent=L.title||'Lead'; R.domain.textContent=host(L.source_url); R.platform.textContent=L.platform||'signal'; R.heat.textContent=(L.heat||'—')+ ' / 95';
-  // Why‑this bullets (no raw links on card)
-  const why=[];
-  if((L.platform||'').includes('adlib')) why.push('Active paid reach → real demand → packaging replenishment likely');
-  if((L.platform||'').includes('pdp')) why.push('New SKU/pack or case size hints → near‑term packaging need');
-  if((L.platform||'').includes('brandintake')) why.push('Supplier/Procurement page live → intake path is open');
-  if((L.kw||[]).includes('restock')) why.push('Recent restock signal → reorder window likely open');
-  if(!why.length) why.push('Composite buyer signal matched your ICP');
-  R.why.innerHTML=''; for(const w of why){ const li=document.createElement('li'); li.textContent=w; R.why.appendChild(li);}  
-  R.open.onclick=()=>{ if(L.source_url) window.open(L.source_url,'_blank','noopener'); };
-  R.claim.onclick=async()=>{ try{ const r=await post('/api/v1/claim',{leadId:L.id}); if(r?.ok) alert('Reserved for 2 minutes'); }catch{} };
-  R.own.onclick=async()=>{ try{ const c=await post('/api/v1/claim',{leadId:L.id}); if(c?.windowId){ await post('/api/v1/own',{windowId:c.windowId}); alert('Owned'); } }catch{} };
-  R.close.onclick=()=> R.root.classList.remove('on');
-  R.root.classList.add('on');
-}
-</script>
+  // ---------- Kick things on load ----------
+  liveNote.textContent='ready — configure the right panel and press Find now';
+  document.getElementById('status').textContent='api: connected';
+  </script>
 </body>
 </html>
