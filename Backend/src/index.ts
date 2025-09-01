@@ -4,6 +4,8 @@ import { randomUUID } from 'crypto';
 import fs from 'fs';
 import { migrate, q } from './db';
 import { computeScore, type Weights, type UserPrefs } from './scoring';
+import { scanReviews } from './connectors/reviews';
+
 
 /** Optional connectors (safe to keep even if stubs) */
 import { findAdvertisersFree } from './connectors/adlib_free';
@@ -483,6 +485,26 @@ app.post('/api/v1/find-now', async (req, res) => {
     }
     checked++;
   }
+  
+// Reviews / complaints (packaging-related signals)
+const revHits = await runSafely(scanReviews(host)) || [];
+for (const r of revHits) {
+  if (!seenUrl.has(r.url)) {
+    const heatBase = 62; // reviews are medium-hot by default
+    const heat = Math.max(50, Math.min(92, Math.round(heatBase + (r.severity * 20) - ((r.ratingApprox || 3.2) - 3) * 4)));
+    await insertLead({
+      platform: 'reviews',
+      source_url: r.url,
+      title: `${host} — customer review (packaging)`,
+      snippet: r.snippet || r.title,
+      kw: ['reviews','packaging','complaint', ...(r.terms.slice(0,3))],
+      cat: 'voice',
+      heat,
+      meta: { domain: host, source: r.source, rating: r.ratingApprox, terms: r.terms }
+    });
+    seenUrl.add(r.url); created++;
+  }
+}
 
   // if no leads got created, drop one demo so UX shows movement
   if (!created) {
