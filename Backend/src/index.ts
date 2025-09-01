@@ -7,7 +7,7 @@ import { migrate, q } from './db';
 import { nowPlusMinutes } from './util';
 import { computeScore, type Weights, type UserPrefs } from './scoring';
 
-// Optional connectors (present in this repo). Keep imports static so builds succeed.
+// Optional connectors (present in your repo)
 import { findAdvertisersFree } from './connectors/adlib_free';
 import { scanPDP } from './connectors/pdp';
 import { scanBrandIntake } from './brandintake';
@@ -16,7 +16,7 @@ import { deriveBuyersFromVendorSite } from './connectors/derivebuyersfromvendors
 const app = express();
 app.use(express.json({ limit: '300kb' }));
 
-// --- CORS (permissive for GH Pages / static hosting) ---
+// ---------- CORS (permissive for GH Pages / static hosting) ----------
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type, x-galactly-user, x-admin-token');
@@ -29,16 +29,34 @@ const PORT = Number(process.env.PORT || 8787);
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const BRANDS_FILE = process.env.BRANDS_FILE || '';
 
-// Attach pseudo user id from header
-app.use((req, _res, next) => { (req as any).userId = req.header('x-galactly-user') || null; next(); });
+app.use((req, _res, next) => {
+  (req as any).userId = req.header('x-galactly-user') || null;
+  next();
+});
 
-// -------------------- utils --------------------
+// ---------- utils ----------
 function isAdmin(req: express.Request) {
   const t = (req.query.token as string) || req.header('x-admin-token') || '';
   return !!ADMIN_TOKEN && t === ADMIN_TOKEN;
 }
-function normHost(s?: string){ if(!s) return ''; let h = s.trim(); if(!h) return ''; h = h.replace(/^https?:\/\//i, '').replace(/\/$/, ''); const i=h.indexOf('/'); return i>0? h.slice(0,i): h; }
-async function insertLead(row: { platform: string; source_url: string; title?: string|null; snippet?: string|null; kw?: string[]; cat?: string; heat?: number; meta?: any; }){
+function normHost(s?: string) {
+  if (!s) return '';
+  let h = s.trim();
+  if (!h) return '';
+  h = h.replace(/^https?:\/\//i, '').replace(/\/$/, '');
+  const i = h.indexOf('/');
+  return i > 0 ? h.slice(0, i) : h;
+}
+async function insertLead(row: {
+  platform: string;
+  source_url: string;
+  title?: string | null;
+  snippet?: string | null;
+  kw?: string[];
+  cat?: string;
+  heat?: number;
+  meta?: any;
+}) {
   const cat = row.cat || 'demand';
   const kw = row.kw || [];
   const heat = Math.max(30, Math.min(95, Number(row.heat ?? 70)));
@@ -49,12 +67,14 @@ async function insertLead(row: { platform: string; source_url: string; title?: s
     [cat, kw, row.platform, heat, row.source_url, row.title || null, row.snippet || null, row.meta || null]
   );
 }
-async function runSafely<T>(p: Promise<T>): Promise<T|null>{ try { return await p; } catch { return null; } }
+async function runSafely<T>(p: Promise<T>): Promise<T | null> {
+  try { return await p; } catch { return null; }
+}
 
-// -------------------- basics --------------------
+// ---------- health + route list ----------
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
 app.get('/whoami', (_req, res) => res.send('galactly-api'));
-app.get('/__routes', (_req, res) => {
+app.get('/__routes', (_req, res) =>
   res.json([
     { path: '/healthz', methods: ['get'] },
     { path: '/__routes', methods: ['get'] },
@@ -69,19 +89,55 @@ app.get('/__routes', (_req, res) => {
     { path: '/api/v1/admin/ingest', methods: ['post'] },
     { path: '/api/v1/admin/seed-brands', methods: ['post'] },
     { path: '/api/v1/find-now', methods: ['post'] },
+    { path: '/api/v1/reveal', methods: ['post'] },
     { path: '/api/v1/progress.sse', methods: ['get'] },
-  ]);
-});
+  ])
+);
+
+// ---------- Quotas ----------
+type Quota = { date: string; findsUsed: number; revealsUsed: number };
+const TODAY = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+async function getQuota(userId: string): Promise<Quota> {
+  const r = await q<{ user_prefs: any }>('SELECT user_prefs FROM app_user WHERE id=$1', [userId]);
+  const prefs = r.rows[0]?.user_prefs || {};
+  const qn = prefs.quota || {};
+  const today = TODAY();
+  if (qn.date !== today) return { date: today, findsUsed: 0, revealsUsed: 0 };
+  return {
+    date: String(qn.date),
+    findsUsed: Number(qn.findsUsed || 0),
+    revealsUsed: Number(qn.revealsUsed || 0),
+  };
+}
+async function saveQuota(userId: string, qn: Quota) {
+  await q(
+    `UPDATE app_user
+       SET user_prefs = jsonb_set(
+         COALESCE(user_prefs,'{}'::jsonb),
+         '{quota}',
+         $2::jsonb,
+         true
+       )
+     WHERE id=$1`,
+    [userId, JSON.stringify(qn)]
+  );
+}
+function resetAtUtc(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString();
+}
 
 app.get('/api/v1/status', async (req, res) => {
   const userId = (req as any).userId || 'anon';
-  const freeFindsPerDay   = Number(process.env.FREE_FINDS_PER_DAY   || 2);
+  const freeFindsPerDay = Number(process.env.FREE_FINDS_PER_DAY || 2);
   const freeRevealsPerDay = Number(process.env.FREE_REVEALS_PER_DAY || 2);
 
   let quota: Quota = { date: TODAY(), findsUsed: 0, revealsUsed: 0 };
   if (userId && userId !== 'anon') quota = await getQuota(userId);
 
-  const findsLeft   = Math.max(0, freeFindsPerDay   - quota.findsUsed);
+  const findsLeft = Math.max(0, freeFindsPerDay - quota.findsUsed);
   const revealsLeft = Math.max(0, freeRevealsPerDay - quota.revealsUsed);
 
   res.json({
@@ -91,82 +147,64 @@ app.get('/api/v1/status', async (req, res) => {
       findsLeft,
       revealsLeft,
       resetsAt: resetAtUtc(quota.date),
-      perDay: { finds: freeFindsPerDay, reveals: freeRevealsPerDay }
-    }
+      perDay: { finds: freeFindsPerDay, reveals: freeRevealsPerDay },
+    },
   });
 });
 
-
-// --- Quota helpers (JSONB inside app_user.user_prefs) ---
-type Quota = { date: string, findsUsed: number, revealsUsed: number };
-const TODAY = () => new Date().toISOString().slice(0,10); // YYYY-MM-DD
-
-async function getQuota(userId: string): Promise<Quota> {
-  const r = await q<{ user_prefs: any }>(`SELECT user_prefs FROM app_user WHERE id=$1`, [userId]);
-  const prefs = r.rows[0]?.user_prefs || {};
-  const qn = prefs.quota || {};
-  const today = TODAY();
-  if (qn.date !== today) return { date: today, findsUsed: 0, revealsUsed: 0 };
-  return { date: String(qn.date), findsUsed: Number(qn.findsUsed||0), revealsUsed: Number(qn.revealsUsed||0) };
-}
-
-async function saveQuota(userId: string, qn: Quota) {
-  await q(
-    `UPDATE app_user
-       SET user_prefs = jsonb_set(
-         COALESCE(user_prefs,'{}'::jsonb),
-         '{quota}',
-         to_jsonb($2::jsonb)
-       )
-     WHERE id=$1`,
-    [userId, qn as any]
-  );
-}
-
-function resetAtUtc(dateStr: string): string {
-  // midnight rollover for the *next* day in UTC (free plan resets daily)
-  const d = new Date(dateStr + 'T00:00:00Z');
-  d.setUTCDate(d.getUTCDate()+1);
-  return d.toISOString();
-}
-
-
-// -------------------- presence (soft) --------------------
+// ---------- presence (light) ----------
 const online: Record<string, number> = {};
-app.post('/api/v1/presence/beat', (req, res) => { const id = (req as any).userId || randomUUID(); online[id] = Date.now(); res.json({ ok: true }); });
+app.post('/api/v1/presence/beat', (req, res) => {
+  const id = (req as any).userId || randomUUID();
+  online[id] = Date.now();
+  res.json({ ok: true });
+});
 app.get('/api/v1/presence/online', (_req, res) => {
-  const now = Date.now(); for (const k of Object.keys(online)) if (now - online[k] > 30000) delete online[k];
-  const real = Object.keys(online).length; const display = Math.max(34, Math.round(real * 0.9 + 6));
+  const now = Date.now();
+  for (const k of Object.keys(online)) if (now - online[k] > 30000) delete online[k];
+  const real = Object.keys(online).length;
+  const display = Math.max(34, Math.round(real * 0.9 + 6));
   res.json({ ok: true, real, displayed: display });
 });
 
-// -------------------- users --------------------
+// ---------- users ----------
 app.post('/api/v1/gate', async (req, res) => {
-  const userId = (req as any).userId; if (!userId) return res.status(400).json({ ok: false, error: 'missing x-galactly-user' });
+  const userId = (req as any).userId;
+  if (!userId) return res.status(400).json({ ok: false, error: 'missing x-galactly-user' });
   const { region, email, alerts } = req.body || {};
   await q(
     `INSERT INTO app_user(id,region,email,alerts)
      VALUES ($1,$2,$3,COALESCE($4,false))
-     ON CONFLICT (id) DO UPDATE SET region=EXCLUDED.region, email=EXCLUDED.email, alerts=EXCLUDED.alerts, updated_at=now()`,
+     ON CONFLICT (id)
+     DO UPDATE SET region=EXCLUDED.region, email=EXCLUDED.email, alerts=EXCLUDED.alerts, updated_at=now()`,
     [userId, region || null, email || null, alerts === true]
   );
   res.json({ ok: true });
 });
 
-// -------------------- events (like / dislike / mute / confirm) --------------------
+// ---------- events ----------
 app.post('/api/v1/events', async (req, res) => {
   const userId = (req as any).userId || null;
   const { leadId, type, meta } = req.body || {};
-  if (!leadId || !type) return res.status(400).json({ ok:false, error:'bad request' });
-  await q(`INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,$3,$4)`, [userId, leadId, String(type), meta || {}]);
-
+  if (!leadId || !type) return res.status(400).json({ ok: false, error: 'bad request' });
+  await q(
+    `INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,$3,$4)`,
+    [userId, leadId, String(type), meta || {}]
+  );
   if (String(type) === 'mute_domain' && userId && meta?.domain) {
-    await q(`UPDATE app_user SET user_prefs = jsonb_set(COALESCE(user_prefs,'{}'::jsonb), '{muteDomains}', COALESCE(user_prefs->'muteDomains','[]'::jsonb) || to_jsonb($2::text)) WHERE id=$1`, [userId, String(meta.domain)]);
+    await q(
+      `UPDATE app_user SET user_prefs =
+         jsonb_set(COALESCE(user_prefs,'{}'::jsonb),
+                   '{muteDomains}',
+                   COALESCE(user_prefs->'muteDomains','[]'::jsonb) || to_jsonb($2::text))
+       WHERE id=$1`,
+      [userId, String(meta.domain)]
+    );
   }
-  res.json({ ok:true });
+  res.json({ ok: true });
 });
 
-// -------------------- feed --------------------
+// ---------- feed ----------
 app.get('/api/v1/leads', async (req, res) => {
   const userId = (req as any).userId || null;
   const r = await q(
@@ -176,22 +214,42 @@ app.get('/api/v1/leads', async (req, res) => {
   );
   let leads = r.rows as any[];
 
-  // scoring (global weights + per-user prefs)
   const wRow = await q<{ weights: any }>(`SELECT weights FROM model_state WHERE segment='global'`);
-  const weights: Weights = (wRow.rows[0]?.weights as Weights) || { coeffs:{recency:0.4,platform:1.0,domain:0.5,intent:0.6,histCtr:0.3,userFit:1.0}, platforms:{}, badDomains:[] } as any;
-  let prefs: UserPrefs | undefined; if (userId) { const pr = await q<{ user_prefs: any }>('SELECT user_prefs FROM app_user WHERE id=$1', [userId]); prefs = pr.rows[0]?.user_prefs || undefined; }
-  leads = leads.map(L => ({ ...L, _score: computeScore(L, weights, prefs) })).sort((a,b)=>b._score-a._score).slice(0, 20);
+  const weights: Weights =
+    (wRow.rows[0]?.weights as Weights) ||
+    ({ coeffs: { recency: 0.4, platform: 1.0, domain: 0.5, intent: 0.6, histCtr: 0.3, userFit: 1.0 }, platforms: {}, badDomains: [] } as any);
+  let prefs: UserPrefs | undefined;
+  if (userId) {
+    const pr = await q<{ user_prefs: any }>('SELECT user_prefs FROM app_user WHERE id=$1', [userId]);
+    prefs = pr.rows[0]?.user_prefs || undefined;
+  }
+  leads = leads.map(L => ({ ...L, _score: computeScore(L, weights, prefs) })).sort((a, b) => b._score - a._score).slice(0, 20);
 
-  // fallback demo
+  // fallback demo if empty
   if (!leads.length) {
-    leads = [{ id: -1, cat: 'demo', kw: ['packaging'], platform: 'demo', fit_user: 60, heat: 80, source_url: 'https://example.com/proof', title: 'Demo HOT lead (signals warming up)', snippet: 'This placeholder disappears once your signal ingestors run.', ttl: nowPlusMinutes(60).toISOString(), state: 'available', created_at: new Date().toISOString(), _score:0 }];
+    leads = [
+      {
+        id: -1,
+        cat: 'demo',
+        kw: ['packaging'],
+        platform: 'demo',
+        fit_user: 60,
+        heat: 80,
+        source_url: 'https://example.com/proof',
+        title: 'Demo HOT lead (signals warming up)',
+        snippet: 'This placeholder disappears once your signal ingestors run.',
+        ttl: nowPlusMinutes(60).toISOString(),
+        state: 'available',
+        created_at: new Date().toISOString(),
+        _score: 0,
+      },
+    ];
   }
 
-  const nextRefreshSec = 15;
-  res.json({ ok: true, leads: leads.map(({_score, ...rest})=>rest), nextRefreshSec });
+  res.json({ ok: true, leads: leads.map(({ _score, ...rest }) => rest), nextRefreshSec: 15 });
 });
 
-// -------------------- claim / own --------------------
+// ---------- claim / own ----------
 app.post('/api/v1/claim', async (req, res) => {
   const userId = (req as any).userId;
   const { leadId } = req.body || {};
@@ -206,26 +264,32 @@ app.post('/api/v1/claim', async (req, res) => {
     [userId, leadId]
   );
   if (r.rowCount === 0) return res.status(409).json({ ok: false, error: 'not available' });
-  await q(`INSERT INTO claim_window(window_id, lead_id, user_id, reserved_until) VALUES($1,$2,$3,$4)`, [windowId, leadId, userId, reservedUntil]);
+  await q(`INSERT INTO claim_window(window_id, lead_id, user_id, reserved_until) VALUES($1,$2,$3,$4)`, [
+    windowId,
+    leadId,
+    userId,
+    reservedUntil,
+  ]);
   await q(`INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,'claim','{}')`, [userId, leadId]);
   res.json({ ok: true, windowId, reservedForSec: 120, reveal: {} });
 });
 
 app.post('/api/v1/own', async (req, res) => {
-  const userId = (req as any).userId; const { windowId } = req.body || {};
+  const userId = (req as any).userId;
+  const { windowId } = req.body || {};
   if (!userId || !windowId) return res.status(400).json({ ok: false, error: 'bad request' });
   const r = await q<any>(
-    `SELECT lead_id FROM claim_window
-     WHERE window_id=$1 AND user_id=$2 AND reserved_until>now()`,
+    `SELECT lead_id FROM claim_window WHERE window_id=$1 AND user_id=$2 AND reserved_until>now()`,
     [windowId, userId]
   );
-  const leadId = r.rows[0]?.lead_id; if (!leadId) return res.status(410).json({ ok: false, error: 'window expired' });
+  const leadId = r.rows[0]?.lead_id;
+  if (!leadId) return res.status(410).json({ ok: false, error: 'window expired' });
   await q(`UPDATE lead_pool SET state='owned', owned_by=$1, owned_at=now() WHERE id=$2`, [userId, leadId]);
   await q(`INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,'own','{}')`, [userId, leadId]);
   res.json({ ok: true });
 });
 
-// -------------------- admin: seed + ingest (legacy) --------------------
+// ---------- admin: seed + ingest (compat) ----------
 app.post('/api/v1/admin/seed-brands', async (req, res) => {
   if (!isAdmin(req)) return res.status(401).json({ ok: false, error: 'unauthorized' });
   if (!BRANDS_FILE || !fs.existsSync(BRANDS_FILE)) return res.json({ ok: false, error: 'BRANDS_FILE missing' });
@@ -248,80 +312,94 @@ app.post('/api/v1/admin/seed-brands', async (req, res) => {
 
 app.post('/api/v1/admin/ingest', async (req, res) => {
   if (!isAdmin(req)) return res.status(401).json({ ok: false, error: 'unauthorized' });
-  // kept for compatibility; your collectors may call this later
   res.json({ ok: true, did: 'noop' });
 });
 
-// -------------------- debug --------------------
-app.get('/api/v1/debug/peek', async (_req, res) => {
-  try {
-    const lAvail = await q(`SELECT COUNT(*) FROM lead_pool WHERE state='available'`);
-    const lTotal = await q(`SELECT COUNT(*) FROM lead_pool`);
-    res.json({ ok: true, counts: { leads_available: Number(lAvail.rows[0]?.count || 0), leads_total: Number(lTotal.rows[0]?.count || 0) }, env: { BRANDS_FILE: !!BRANDS_FILE, BRANDS_FILE_PATH: BRANDS_FILE || null } });
-  } catch (e:any) {
-    res.status(500).json({ ok: false, error: String(e?.message || e) });
-  }
-});
-
-// -------------------- NEW: /api/v1/find-now  (free path: advertisers → intake → pdp) --------------------
+// ---------- NEW: /api/v1/find-now  (applies find quota) ----------
 app.post('/api/v1/find-now', async (req, res) => {
   const started = Date.now();
   const body = req.body || {};
   const userId = (req as any).userId || null;
-if (userId) {
-  const freeFindsPerDay = Number(process.env.FREE_FINDS_PER_DAY || 2);
-  let quota = await getQuota(userId);
-  if (quota.date !== TODAY()) quota = { date: TODAY(), findsUsed: 0, revealsUsed: 0 };
-  if (quota.findsUsed >= freeFindsPerDay) {
-    return res.status(429).json({ ok:false, error:'free_limit_reached', message:'Daily free searches used.' });
+
+  if (userId) {
+    const freeFindsPerDay = Number(process.env.FREE_FINDS_PER_DAY || 2);
+    let quota = await getQuota(userId);
+    if (quota.date !== TODAY()) quota = { date: TODAY(), findsUsed: 0, revealsUsed: 0 };
+    if (quota.findsUsed >= freeFindsPerDay) {
+      return res.status(429).json({ ok: false, error: 'free_limit_reached', message: 'Daily free searches used.' });
+    }
+    quota.findsUsed += 1;
+    await saveQuota(userId, quota);
   }
-  quota.findsUsed += 1;
-  await saveQuota(userId, quota);
-}
+
   const buyersRaw: string[] = Array.isArray(body.buyers) ? body.buyers : [];
   const industries: string[] = Array.isArray(body.industries) ? body.industries : [];
   const regions: string[] = Array.isArray(body.regions) ? body.regions : [];
 
   let seedDomains = buyersRaw.map(normHost).filter(Boolean);
-
-  // If no buyers provided but vendorDomain is set, derive a few similar brands (free heuristic)
   if ((!seedDomains.length) && body.vendorDomain) {
     const icp = await runSafely(deriveBuyersFromVendorSite(String(body.vendorDomain)));
-    const derived = (icp?.buyers || []).map((b:any)=>normHost(b.domain)).filter(Boolean);
+    const derived = (icp?.buyers || []).map((b: any) => normHost(b.domain)).filter(Boolean);
     seedDomains = Array.from(new Set([...seedDomains, ...derived])).slice(0, 20);
   }
 
-  // Expand via free ad libraries (query URLs as proof)
-  const advertisers = await runSafely(findAdvertisersFree({ industries, regions, seedDomains })) || [];
-  const advDomains = advertisers.map((a:any)=>normHost(a.domain)).filter(Boolean);
+  const advertisers = (await runSafely(findAdvertisersFree({ industries, regions, seedDomains }))) || [];
+  const advDomains = advertisers.map((a: any) => normHost(a.domain)).filter(Boolean);
   const domainSet = new Set<string>([...seedDomains, ...advDomains]);
   const domains = Array.from(domainSet).slice(0, Number(process.env.FIND_MAX_DOMAINS || 40));
 
   let created = 0, checked = 0; const seenUrl = new Set<string>();
 
-  for (const host of domains){
-    // Ad proof links (so vendors can DIY-verify; medium heat)
-    for (const a of advertisers.filter((x:any)=> normHost(x.domain) === host)){
-      if (a.proofUrl && !seenUrl.has(a.proofUrl)){
-        await insertLead({ platform:'adlib_free', source_url:a.proofUrl, title: `${host} — ad transparency search`, snippet: `Source: ${a.source || 'ads'} • Last seen: ${a.lastSeen || 'recent'} • ~${a.adCount ?? '?'} creatives`, kw:['ads','buyer','spend'], cat:'demand', heat:70, meta:{domain:host, platform:a.source||'ads'} });
+  for (const host of domains) {
+    // Ad proof links
+    for (const a of advertisers.filter((x: any) => normHost(x.domain) === host)) {
+      if (a.proofUrl && !seenUrl.has(a.proofUrl)) {
+        await insertLead({
+          platform: 'adlib_free',
+          source_url: a.proofUrl,
+          title: `${host} — ad transparency search`,
+          snippet: `Source: ${a.source || 'ads'} • Last seen: ${a.lastSeen || 'recent'} • ~${a.adCount ?? '?'} creatives`,
+          kw: ['ads', 'buyer', 'spend'],
+          cat: 'demand',
+          heat: 70,
+          meta: { domain: host, platform: a.source || 'ads' }
+        });
         seenUrl.add(a.proofUrl); created++;
       }
     }
 
     // Intake / procurement
-    const intakeHits = await runSafely(scanBrandIntake(host)) || [];
-    for (const h of intakeHits){
-      if (!seenUrl.has(h.url)){
-        await insertLead({ platform:'brandintake', source_url:h.url, title: h.title || `${host} — Supplier/Procurement`, snippet: h.snippet || host, kw:['procurement','supplier','packaging'], cat:'procurement', heat:82, meta:{domain:host} });
+    const intakeHits = (await runSafely(scanBrandIntake(host))) || [];
+    for (const h of intakeHits) {
+      if (!seenUrl.has(h.url)) {
+        await insertLead({
+          platform: 'brandintake',
+          source_url: h.url,
+          title: h.title || `${host} — Supplier/Procurement`,
+          snippet: h.snippet || host,
+          kw: ['procurement', 'supplier', 'packaging'],
+          cat: 'procurement',
+          heat: 82,
+          meta: { domain: host }
+        });
         seenUrl.add(h.url); created++;
       }
     }
 
     // PDP / product signals
-    const pdpHits = await runSafely(scanPDP(host)) || [];
-    for (const p of pdpHits){
-      if (!seenUrl.has(p.url)){
-        await insertLead({ platform: p.type || 'pdp', source_url: p.url, title: p.title || `${host} product`, snippet: p.snippet || '', kw: ['case','pack','dims'], cat:'product', heat: p.type==='restock_post'?78:68, meta:{domain:host} });
+    const pdpHits = (await runSafely(scanPDP(host))) || [];
+    for (const p of pdpHits) {
+      if (!seenUrl.has(p.url)) {
+        await insertLead({
+          platform: p.type || 'pdp',
+          source_url: p.url,
+          title: p.title || `${host} product`,
+          snippet: p.snippet || '',
+          kw: ['case', 'pack', 'dims'],
+          cat: 'product',
+          heat: p.type === 'restock_post' ? 78 : 68,
+          meta: { domain: host }
+        });
         seenUrl.add(p.url); created++;
       }
     }
@@ -329,25 +407,27 @@ if (userId) {
     checked++;
   }
 
-  app.post('/api/v1/reveal', async (req, res) => {
+  res.json({ ok: true, checked, created, tookMs: Date.now() - started });
+});
+
+// ---------- NEW: /api/v1/reveal  (applies reveal quota) ----------
+app.post('/api/v1/reveal', async (req, res) => {
   const userId = (req as any).userId || null;
   if (userId) {
     const freeRevealsPerDay = Number(process.env.FREE_REVEALS_PER_DAY || 2);
     let quota = await getQuota(userId);
     if (quota.date !== TODAY()) quota = { date: TODAY(), findsUsed: 0, revealsUsed: 0 };
     if (quota.revealsUsed >= freeRevealsPerDay) {
-      return res.status(429).json({ ok:false, error:'free_limit_reached', message:'Daily free reveals used.' });
+      return res.status(429).json({ ok: false, error: 'free_limit_reached', message: 'Daily free reveals used.' });
     }
     quota.revealsUsed += 1;
     await saveQuota(userId, quota);
   }
-    
-  res.json({ ok:true, reveal: {/* ... */} });
+  res.json({ ok: true });
 });
 
-// -------------------- NEW: /api/v1/progress.sse (Server-Sent Events for right-column metric preview) --------------------
+// ---------- NEW: /api/v1/progress.sse (slow “signals preview”) ----------
 app.get('/api/v1/progress.sse', async (req, res) => {
-  // headers for SSE
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
@@ -359,53 +439,60 @@ app.get('/api/v1/progress.sse', async (req, res) => {
   const industries = String(req.query.industries || '').split(',').filter(Boolean);
   const regions = String(req.query.regions || '').split(',').filter(Boolean);
 
-  function send(ev: string, data: any){ res.write(`event: ${ev}\n`); res.write(`data: ${JSON.stringify(data)}\n\n`); }
-
-  // initial handshake
-  send('hello', { sid, userId, vendor, industries, regions, startedAt: Date.now() });
-
-  // A curated sequence of ~40 steps; we will emit slowly (every ~2s) and stop ~20–25 items on free plan
-  const STEPS: { id: string; cap: string; detail: string }[] = [];
-  const caps = [
-    ['Demand', 'Ad-velocity scan (Meta, Google, Reddit mentions)'],
-    ['Product', 'SKU & variety churn (case-of-N, restocks, new flavor cadence)'],
-    ['Procurement', 'Supplier portal changes, vendor intake forms'],
-    ['Social', 'Creator whitelisting, UGC bursts'],
-    ['Retail', 'Retailer PDP deltas, price promotions'],
-    ['Wholesale', 'B2B pages, case-pack MOQ shifts'],
-    ['Ops', 'Fulfillment spikes (job posts, shift adds)'],
-    ['Events', 'Trade calendar alignment']
-  ];
-  let ctr = 0;
-  for (const [cap, label] of caps){
-    for (let i=0;i<6;i++){
-      STEPS.push({ id: `${cap.toLowerCase()}_${i+1}`, cap, detail: label });
-    }
+  function send(ev: string, data: any) {
+    res.write(`event: ${ev}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
   }
 
-  // emit loop
+  send('hello', { sid, userId, vendor, industries, regions, startedAt: Date.now() });
+
+  const buckets: [string, string][] = [
+    ['Demand', 'Ad-velocity probes (Meta, Google, Reddit)'],
+    ['Product', 'SKU churn • restocks • variety expansions'],
+    ['Procurement', 'Supplier portals • intake forms'],
+    ['Retail', 'PDP deltas • promo cadence'],
+    ['Ops', 'Job posts • shift adds (throughput)'],
+    ['Wholesale', 'Case/pack MOQs • B2B catalog'],
+    ['Events', 'Trade windows • seasonal pull'],
+    ['Queue', 'Convert units → pack windows']
+  ];
+  const steps: { id: string; cap: string; detail: string }[] = [];
+  buckets.forEach(([cap, label]) => { for (let i = 0; i < 6; i++) steps.push({ id: `${cap.toLowerCase()}_${i+1}`, cap, detail: label }); });
+
   let idx = 0;
-  const maxFree = Math.min(26, STEPS.length); // stop early on free
+  const maxFree = Math.min(26, steps.length);
+
   const timer = setInterval(() => {
-    if (idx >= STEPS.length) idx = 0;
-    if (idx >= maxFree){
-      send('halt', { reason: 'free_cap', shown: idx, total: STEPS.length, upsell: { title: 'Unlock full scan & auto-enrichment', plan: 'Pro', price: '$39/mo' } });
+    if (idx >= maxFree) {
+      send('halt', { reason: 'free_cap', shown: idx, total: steps.length, upsell: { title: 'Unlock full scan & auto-enrichment', plan: 'Pro', price: '$39/mo' } });
       clearInterval(timer);
-      // leave connection open a little for client animation grace; then end
-      setTimeout(() => { try { res.end(); } catch {} }, 1500);
+      setTimeout(() => { try { res.end(); } catch {} }, 1200);
       return;
     }
-    const S = STEPS[idx++]; ctr++;
-    send('step', { index: idx, of: STEPS.length, cap: S.cap, label: S.detail, id: S.id, ts: Date.now() });
+    const S = steps[idx++];
+    send('step', { index: idx, of: steps.length, cap: S.cap, label: S.detail, id: S.id, ts: Date.now() });
   }, 1800);
 
-  // heartbeat every 15s
-  const hb = setInterval(() => { send('ping', { t: Date.now() }); }, 15000);
-
+  const hb = setInterval(() => send('ping', { t: Date.now() }), 15000);
   req.on('close', () => { clearInterval(timer); clearInterval(hb); });
 });
 
-// -------------------- start --------------------
+// ---------- peek ----------
+app.get('/api/v1/debug/peek', async (_req, res) => {
+  try {
+    const lAvail = await q('SELECT COUNT(*) FROM lead_pool WHERE state=\'available\'');
+    const lTotal = await q('SELECT COUNT(*) FROM lead_pool');
+    res.json({
+      ok: true,
+      counts: { leads_available: Number(lAvail.rows[0]?.count || 0), leads_total: Number(lTotal.rows[0]?.count || 0) },
+      env: { BRANDS_FILE: !!BRANDS_FILE, BRANDS_FILE_PATH: BRANDS_FILE || null }
+    });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
+  }
+});
+
+// ---------- start ----------
 migrate().then(() => {
   app.listen(PORT, '0.0.0.0', () => console.log(`galactly-api listening on :${PORT}`));
 });
