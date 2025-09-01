@@ -17,7 +17,8 @@
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0; color:var(--ink); background:
+  margin:0; color:var(--ink);
+  background:
    radial-gradient(1000px 600px at 10% 0%, rgba(120,180,255,.08), rgba(0,0,0,0) 60%),
    radial-gradient(900px 700px at 115% 20%, rgba(150,255,220,.08), rgba(0,0,0,0) 50%),
    linear-gradient(180deg,#0a0e16,#06080e 60%);
@@ -28,57 +29,61 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 .brand svg{width:20px;height:20px}
 .badge{display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:#cdd6ea; background:#0c1220}
 .badge.ok{color:#b8ffd8}
-.row{height:calc(100% - 56px); display:grid; grid-template-columns: minmax(420px, 48%) 1fr; gap:16px; padding:16px}
-@media (max-width:1120px){ .row{grid-template-columns:1fr} }
+
+.row{height:calc(100% - 56px); display:grid; grid-template-columns: minmax(420px, 50%) 1fr; gap:16px; padding:16px}
+@media (max-width:1100px){ .row{grid-template-columns:1fr} }
 
 .col{background:var(--panel); border:1px solid var(--line); border-radius:16px; display:flex; flex-direction:column; min-height:0}
-.section{padding:14px 16px; border-bottom:1px solid var(--line); font:700 14px var(--mont); opacity:.9}
-.scroller{padding:12px 12px 14px; overflow:auto; min-height:0}
+.section{padding:14px 16px; border-bottom:1px solid var(--line); font:800 14px var(--mont); opacity:.9}
+.scroller{padding:12px; overflow:auto; min-height:0}
 
-.leftHero{position:relative; height:220px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#0b0f19,#0a0e17)}
+/* LEFT hero (neutron star) */
+.leftHero{position:relative; height:240px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#0b0f19,#0a0e17)}
 #star{width:100%; height:100%}
-.engine-status{position:absolute; left:16px; bottom:12px; font-size:12px; opacity:.85; color:#cfd7e6}
-.engine-status .dot{display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6)}
-.engine-status.idle .dot{background:#64708a; box-shadow:none}
-.engine-status.working .dot{animation:pulse 1.8s ease-in-out infinite}
-@keyframes pulse{0%{transform:scale(.9);opacity:.6}50%{transform:scale(1.2);opacity:1}100%{transform:scale(.9);opacity:.6}}
+.engine-status{
+  position:absolute; left:16px; bottom:12px; font-size:12px; opacity:.85; color:#cfd7e6; pointer-events:none;
+}
+.engine-status .dot{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6); }
+.engine-status.idle .dot{ background:#64708a; box-shadow:none; }
+.engine-status.working .dot{ animation:pulse 1.8s ease-in-out infinite; }
+@keyframes pulse{ 0%{transform:scale(.9); opacity:.6} 50%{transform:scale(1.2); opacity:1} 100%{transform:scale(.9); opacity:.6} }
 
-/* card list */
+/* Live results list */
 .list{display:flex; flex-direction:column; gap:10px}
 .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px}
-.card.locked{opacity:.85; filter:saturate(.85)}
-.meta{display:flex; gap:8px; flex-wrap:wrap; font-size:11px; opacity:.8}
+.card.locked{opacity:.85; filter:saturate(.9)}
+.meta{display:flex; gap:8px; flex-wrap:wrap; font-size:11px; opacity:.85}
 .meta .pill{border:1px solid var(--line); border-radius:999px; padding:2px 8px}
 .title{font:700 14px var(--inter); margin-top:6px}
 .hold{margin-top:10px; display:flex; align-items:center; gap:8px; opacity:.9}
 .hold kbd{border:1px solid var(--line); padding:6px 10px; border-radius:10px; background:rgba(255,255,255,.03); font:700 12px var(--inter)}
-.actions{margin-top:8px; display:flex; gap:8px}
+.actions{margin-top:8px; display:flex; gap:8px; flex-wrap:wrap}
 .btn{background:#131c2b; border:1px solid var(--line); border-radius:10px; color:var(--ink); padding:8px 10px; font:700 12px var(--inter); cursor:pointer}
 .btn.primary{background:linear-gradient(90deg,#fff,#e6efff); color:#10131a; border-color:transparent}
 .btn.ghost{background:rgba(255,255,255,.06)}
 .btn:disabled{opacity:.6; cursor:not-allowed}
 
-/* right column */
+/* RIGHT column (form + signals) */
 .form{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .form .full{grid-column:1 / -1}
 .input{background:#0e1523; border:1px solid var(--line); border-radius:10px; color:#e8eef7; padding:10px 12px; width:100%}
-.note{opacity:.7; font-size:12px; margin-top:6px}
-.preview{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; background:#0d1320; border:1px dashed var(--line); border-radius:12px; padding:10px; font-size:12px; line-height:1.45}
-.meter{height:6px; background:#0c1220; border:1px solid var(--line); border-radius:999px; overflow:hidden; margin:10px 0 6px}
-.meter>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
-.tip{opacity:.75; font-size:12px}
+.note{opacity:.75; font-size:12px; margin-top:6px}
+.quota-note{ font-size:12px; opacity:.8; align-self:center; margin-left:8px }
 
-/* chips */
-.chips{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 8px}
-.chip{border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-size:11px; opacity:.9}
-.chip b{opacity:.9}
+/* Signals preview panel: fixed height, internal scroll */
+#pane-preview{ height: 32vh; overflow:auto; background:#0d1320; border-top:1px solid var(--line); border-bottom-left-radius:16px; border-bottom-right-radius:16px; padding:10px }
+.sig-head{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; font:700 12px var(--inter); background:#0d1320; border-bottom:1px solid var(--line)}
+.sig-count{opacity:.9}
+.progress{height:6px; background:#0c1220; border:1px solid var(--line); border-radius:999px; overflow:hidden}
+.progress > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.preview{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word}
+.rule{margin:8px 0 0}
+.cat{display:inline-block; padding:2px 8px; border:1px solid var(--line); border-radius:999px; font-weight:700; margin:10px 0 6px; opacity:.9}
+.line{display:block; margin:4px 0 0}
+.arrow{opacity:.85}
+.tip{opacity:.78; font-size:12px; padding:8px 12px}
 
-/* modal for Why */
-.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55)}
-.modal.in{display:flex}
-.modal .box{width:min(680px,92vw); background:#0f1524; border:1px solid var(--line); border-radius:16px; padding:16px}
-.modal h3{margin:4px 0 10px; font:800 16px var(--mont)}
-.code{background:#0a0f1d; border:1px solid var(--line); border-radius:10px; padding:10px; overflow:auto; max-height:260px; font-size:12px}
+#newBadge{display:none; margin-left:6px}
 </style>
 </head>
 <body>
@@ -92,16 +97,19 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 </header>
 
 <div class="row">
-  <!-- LEFT: Live results (single column) -->
+  <!-- LEFT: Live results -->
   <div class="col" id="col-left">
-    <div class="section">Live results <span id="newBadge" class="badge" style="margin-left:6px; display:none">new results ready</span></div>
-    <div class="leftHero"><canvas id="star"></canvas><div id="engineStatus" class="engine-status idle"><span class="dot"></span>Idle</div></div>
+    <div class="section">Live results <span id="newBadge" class="badge">new results ready</span></div>
+    <div class="leftHero">
+      <canvas id="star"></canvas>
+      <div id="engineStatus" class="engine-status idle"><span class="dot"></span>Idle</div>
+    </div>
     <div class="scroller">
       <div id="list" class="list"></div>
     </div>
   </div>
 
-  <!-- RIGHT: Customize + Signals preview (stacked) -->
+  <!-- RIGHT: Customize + Signals preview -->
   <div class="col" id="col-right">
     <div class="section">Customize your AI</div>
     <div class="scroller" id="pane-form">
@@ -110,35 +118,37 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
         <input id="buyers" class="input full" placeholder="Seed buyers (comma separated domains)"/>
         <input id="industries" class="input" placeholder="Industries e.g. beverage, confectionery"/>
         <input id="regions" class="input" placeholder="Regions e.g. US, CA"/>
-        <textarea id="describe" rows="4" class="input full" placeholder="Describe your ideal customers in plain words. Products, pack types, order sizes, retailer channels, and any exclusions."></textarea>
+        <textarea id="describe" rows="4" class="input full" placeholder="Describe ideal customers, packs, order sizes, retailer channels, exclusions."></textarea>
       </div>
       <label style="display:flex; align-items:center; gap:8px; margin-top:10px">
         <input type="checkbox" id="listMe"/> <span>List my company for inbound opportunities</span>
       </label>
-      <div style="display:flex; gap:10px; align-items:center; margin-top:10px">
+      <div style="display:flex; gap:10px; margin-top:10px">
         <button id="btnDry" class="btn ghost" title="Simulate, don’t store">Dry run</button>
         <button id="btnFind" class="btn primary">Find now</button>
-        <div class="note" id="quotaNote">Free: …</div>
+        <div id="quotaNote" class="quota-note">Free: …</div>
       </div>
       <div class="note">Tip: we’ll add 1–2 leads at a time, and stream the reasoning below. Hold to reveal. Free plan allows 2 deep reveals/day.</div>
     </div>
 
-    <div class="section">Signals preview <small id="sigState" style="opacity:.6;font-weight:600;margin-left:8px">idle</small></div>
-    <div class="scroller" id="pane-preview">
-      <div class="chips" id="metricHeader"></div>
-      <div class="meter"><i id="bar"></i></div>
+    <div class="sig-head">
+      <div>Signals preview <span id="sigState" style="opacity:.6;font-weight:600;margin-left:8px">idle</span></div>
+      <div class="sig-count"><span id="sigCount">0</span> / <span id="sigTotal">1126</span></div>
+    </div>
+    <div class="progress"><i id="bar"></i></div>
+    <div id="pane-preview">
       <div id="preview" class="preview"></div>
-      <div class="tip" id="previewTip"></div>
+      <div id="previewTip" class="tip"></div>
     </div>
   </div>
 </div>
 
 <!-- WHY modal -->
-<div id="whyModal" class="modal" role="dialog" aria-modal="true">
-  <div class="box">
-    <h3 id="whyTitle">Why this lead</h3>
+<div id="whyModal" class="modal" role="dialog" aria-modal="true" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); align-items:center; justify-content:center;">
+  <div class="box" style="width:min(680px,92vw); background:#0f1524; border:1px solid var(--line); border-radius:16px; padding:16px">
+    <h3 id="whyTitle" style="margin:4px 0 10px; font:800 16px var(--mont)">Why this lead</h3>
     <div id="whyBullets" style="margin:8px 0 12px"></div>
-    <div class="code" id="whyProof"></div>
+    <pre class="code" id="whyProof" style="background:#0a0f1d; border:1px solid var(--line); border-radius:10px; padding:10px; overflow:auto; max-height:260px; font-size:12px"></pre>
     <div style="display:flex; gap:8px; margin-top:10px; justify-content:flex-end">
       <button class="btn ghost" id="mClose">Close</button>
       <button class="btn" id="mConfirm">Looks right</button>
@@ -148,12 +158,13 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 
 <script src="./api-base.js"></script>
 <script>
-// ---------- globals & helpers ----------
+/* ---------- sticky ids & base label ---------- */
 const uidKey='galactly_uid';
 let UID = localStorage.getItem(uidKey) || ('u-'+Math.random().toString(36).slice(2));
 localStorage.setItem(uidKey, UID);
 document.getElementById('apiBaseLabel').textContent = (window.API_BASE||'').replace(/^https?:\/\//,'');
 
+/* ---------- prefill from onboarding / query ---------- */
 const qs = new URLSearchParams(location.search);
 const onboard = JSON.parse(localStorage.getItem('onboard')||'{}');
 const seed = {
@@ -164,56 +175,95 @@ const seed = {
   describe: qs.get('describe') || (onboard.describe||''),
   listMe: onboard.listMe === true
 };
-['vendor','buyers','industries','regions','describe'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value = seed[id]||''; });
+for (const id of ['vendor','buyers','industries','regions','describe']) {
+  const el = document.getElementById(id); if (el) el.value = seed[id] || '';
+}
 document.getElementById('listMe').checked = !!seed.listMe;
 
-// ---------- neutron-star canvas ----------
-const cvs = document.getElementById('star'); const DPR = Math.min(2, window.devicePixelRatio||1);
-let ctx=null; function resizeStar(){ const r=cvs.getBoundingClientRect(); cvs.width=r.width*DPR; cvs.height=r.height*DPR; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
-function drawStar(ts){ if(!ctx) return; const w=cvs.clientWidth, h=cvs.clientHeight, cx=w*0.5, cy=h*0.5; ctx.clearRect(0,0,w,h);
-  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.42); g.addColorStop(0,'rgba(255,255,255,.04)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,Math.min(w,h)*0.42,0,Math.PI*2); ctx.fill();
-  const pulse = 1 + 0.12*Math.sin(ts*0.002); const coreR = 22*pulse; const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,coreR*2.2); cg.addColorStop(0,'rgba(255,255,255,.95)'); cg.addColorStop(1,'rgba(255,255,255,0)'); ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.arc(cx,cy,coreR*2.2,0,Math.PI*2); ctx.fillStyle=cg; ctx.fill(); ctx.globalCompositeOperation='source-over';
-  const a = ts*0.0005, off = Math.PI/2.8; for(const k of [0,off]){ const ang=a+k, len=Math.min(w,h)*0.5; ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang); const grad=ctx.createLinearGradient(-len/2,0,len/2,0); grad.addColorStop(0,'rgba(136,255,216,0)'); grad.addColorStop(0.48,'rgba(136,255,216,.22)'); grad.addColorStop(0.52,'rgba(104,167,255,.22)'); grad.addColorStop(1,'rgba(104,167,255,0)'); ctx.fillStyle=grad; ctx.fillRect(-len/2,-1.2,len,2.4); ctx.restore(); }
+/* ---------- neutron-star ---------- */
+const cvs = document.getElementById('star'); const DPR = Math.min(2, window.devicePixelRatio||1); let ctx=null;
+function resizeStar(){ const r=cvs.getBoundingClientRect(); cvs.width=r.width*DPR; cvs.height=r.height*DPR; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
+function drawStar(ts){
+  if(!ctx){ requestAnimationFrame(drawStar); return; }
+  const w=cvs.clientWidth, h=cvs.clientHeight, cx=w*0.5, cy=h*0.5;
+  ctx.clearRect(0,0,w,h);
+  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.42);
+  g.addColorStop(0,'rgba(255,255,255,.04)'); g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,Math.min(w,h)*0.42,0,Math.PI*2); ctx.fill();
+  // core
+  const pulse = 1 + 0.12*Math.sin(ts*0.002); const coreR = 22*pulse;
+  const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,coreR*2.2);
+  cg.addColorStop(0,'rgba(255,255,255,.95)'); cg.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.arc(cx,cy,coreR*2.2,0,Math.PI*2); ctx.fillStyle=cg; ctx.fill(); ctx.globalCompositeOperation='source-over';
+  // beams
+  const a = ts*0.0005, off = Math.PI/2.8, len=Math.min(w,h)*0.5;
+  for(const k of [0,off]){
+    const ang=a+k; ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang);
+    const grad=ctx.createLinearGradient(-len/2,0,len/2,0);
+    grad.addColorStop(0,'rgba(136,255,216,0)'); grad.addColorStop(0.48,'rgba(136,255,216,.22)'); grad.addColorStop(0.52,'rgba(104,167,255,.22)'); grad.addColorStop(1,'rgba(104,167,255,0)');
+    ctx.fillStyle=grad; ctx.fillRect(-len/2,-1.2,len,2.4); ctx.restore();
+  }
   requestAnimationFrame(drawStar);
 }
 addEventListener('resize', resizeStar); resizeStar(); requestAnimationFrame(drawStar);
 
-// ---------- state ----------
+/* ---------- globals ---------- */
 const elEngine=document.getElementById('engine');
+const elStatus = document.getElementById('engineStatus');
 const elBar=document.getElementById('bar');
 const elPreview=document.getElementById('preview');
 const elPreviewTip=document.getElementById('previewTip');
 const elNew=document.getElementById('newBadge');
 const elList=document.getElementById('list');
-const elMetricHeader=document.getElementById('metricHeader');
+const elSigCount=document.getElementById('sigCount');
+const elSigTotal=document.getElementById('sigTotal');
 const elSigState=document.getElementById('sigState');
-const elStatus=document.getElementById('engineStatus');
+const elQuota=document.getElementById('quotaNote');
 
-const FREE_METRICS_CAP = 71; // stop here for free plan
-const TOTAL_METRICS = 1126;  // show as total available
-const MAX_FREE_LEADS = 2;    // render at most 2 cards on free
+const DAILY_MAX_REVEALS = 2;
+const revealKey = 'reveals_'+new Date().toISOString().slice(0,10);
+if(localStorage.getItem(revealKey)===null) localStorage.setItem(revealKey,'0');
 
-let engine = { phase:'idle', progress:0 };
-let queue = [];  // leads waiting to appear
-let visible = []; // leads rendered
-let ticker=null; // preview stream timer
-let inflight=false;
+let queue=[]; let visible=[]; let inflight=false; let pollTimer=null;
 
-// ---------- helpers ----------
-function setEngine(p){ engine = {...engine, ...p}; elEngine.textContent = 'engine: '+engine.phase; }
-function setEngineStatus(state, text){ elStatus.classList.remove('idle','working'); elStatus.classList.add(state); elStatus.innerHTML = `<span class="dot"></span>${text}`; }
+/* ---------- helpers ---------- */
+function setEnginePhase(phase){ elEngine.textContent='engine: '+phase; elStatus.classList.remove('idle','working'); if(phase==='running'){ elStatus.classList.add('working'); elStatus.innerHTML='<span class="dot"></span>Running'; } else { elStatus.classList.add('idle'); elStatus.innerHTML='<span class="dot"></span>Idle'; } }
 function pushes(arr){ for(const x of arr) queue.push(x); runQueue(); }
-function runQueue(){ if(inflight || engine.phase!=='running') return; if(queue.length===0) return; inflight=true; setTimeout(()=>{ const next = queue.shift(); if(next && visible.length < MAX_FREE_LEADS) addCard(next); inflight=false; runQueue(); }, 1200 + Math.random()*900); }
-function revealsUsedKey(){ return 'reveals_'+new Date().toISOString().slice(0,10); }
-function revealsUsed(){ return Number(localStorage.getItem(revealsUsedKey())||'0'); }
-function incReveal(){ const k=revealsUsedKey(); const n=revealsUsed()+1; localStorage.setItem(k,String(n)); return n; }
+function runQueue(){ if(inflight || queue.length===0) return; inflight=true;
+  setTimeout(()=>{ const next = queue.shift(); if(next) addCard(next); inflight=false; runQueue(); }, 900 + Math.random()*900);
+}
+function revealsUsed(){ return Number(localStorage.getItem(revealKey)||'0'); }
+function incReveal(){ const n=revealsUsed()+1; localStorage.setItem(revealKey,String(n)); return n; }
+function safeHost(u){ try{ return new URL(u).hostname; }catch{ return 'source'; } }
+function maskTitle(t){ return t.replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.8 ? '•' : c)); }
 
-// ---------- API ----------
+/* ---------- API ---------- */
 async function post(path, body){ const r = await fetch((window.API_BASE||'')+path, { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body:JSON.stringify(body||{}) }); return r.json(); }
 async function get(path){ const r = await fetch((window.API_BASE||'')+path, { headers:{'x-galactly-user':UID} }); return r.json(); }
-async function pollLeadsOnce(){ const r = await get('/api/v1/leads'); if(r?.ok && Array.isArray(r.leads)){ if(visible.length===0){ elNew.style.display='inline-flex'; } pushes(r.leads.map(L => ({...L, _locked:true}))); } }
 
-// ---------- UI: cards ----------
+async function refreshStatus(){
+  try{
+    const s = await get('/api/v1/status');
+    const finds = s?.free?.findsLeft ?? '…'; const reveals = s?.free?.revealsLeft ?? '…';
+    elQuota.textContent = `Free: ${finds} searches left • ${reveals} reveals left`;
+  }catch{ elQuota.textContent='Free: …'; }
+}
+
+/* ---------- leads ---------- */
+async function pollLeadsOnce(){
+  const r = await get('/api/v1/leads');
+  if(r?.ok && Array.isArray(r.leads)){
+    if(visible.length===0){ elNew.style.display='inline-flex'; }
+    pushes(r.leads.map(L => ({...L, _locked:true})));
+  }
+}
+function scheduleLeadPollingBurst(){
+  if (pollTimer) clearTimeout(pollTimer);
+  // 5 pulls over ~45s to catch inserts
+  [2000, 9000, 18000, 30000, 45000].forEach(ms => setTimeout(pollLeadsOnce, ms));
+}
+
+/* ---------- cards ---------- */
 function cardEl(lead){
   const d=document.createElement('div'); d.className='card locked'; d.dataset.id = lead.id;
   const conf = Math.max(48, Math.min(92, Number(lead.heat || 60)));
@@ -229,106 +279,171 @@ function cardEl(lead){
       <button class="btn primary" data-a="own" disabled>Own</button>
     </div>`;
   let timer=null, revealed=false;
-  const press = ()=> { if(revealsUsed()>=2){ d.querySelector('.hold').innerHTML='<span style="color:#f6ba6a">Daily reveal limit reached. Upgrade to continue.</span>'; return; } timer = setTimeout(()=> revealLead(), 1400); };
+  const press = ()=> {
+    if(revealsUsed()>=DAILY_MAX_REVEALS){ d.querySelector('.hold').innerHTML='<span style="color:#f6ba6a">Daily reveal limit reached. Upgrade to continue.</span>'; return; }
+    timer = setTimeout(()=> revealLead(), 1400);
+  };
   const cancel = ()=> { clearTimeout(timer); timer=null; };
-  d.addEventListener('pointerdown', press); d.addEventListener('pointerup', cancel); d.addEventListener('pointerleave', cancel);
-  async function revealLead(){ if(revealed) return; revealed=true; d.classList.remove('locked'); d.querySelector('.hold').remove(); d.querySelector('[data-a=why]').disabled=false; d.querySelector('[data-a=own]').disabled=false; d.querySelector('.title').textContent = lead.title || 'Buyer signal'; const meta = d.querySelector('.meta'); const host = safeHost(lead.source_url); meta.insertAdjacentHTML('beforeend', `<span class="pill">${host}</span>`); incReveal(); }
-  d.querySelector('[data-a=own]').onclick = ()=> { post('/api/v1/claim',{leadId:lead.id}).then(()=> post('/api/v1/own',{windowId:lead._windowId||null}).catch(()=>{})); };
+  d.addEventListener('pointerdown', press);
+  d.addEventListener('pointerup', cancel);
+  d.addEventListener('pointerleave', cancel);
+
+  async function revealLead(){
+    if(revealed) return; revealed=true;
+    d.classList.remove('locked'); d.querySelector('.hold').remove();
+    d.querySelector('[data-a=why]').disabled=false;
+    d.querySelector('[data-a=own]').disabled=false;
+    d.querySelector('.title').textContent = lead.title || 'Buyer signal';
+    const meta = d.querySelector('.meta');
+    meta.insertAdjacentHTML('beforeend', `<span class="pill">${safeHost(lead.source_url)}</span>`);
+    incReveal(); refreshStatus();
+  }
+  d.querySelector('[data-a=own]').onclick = ()=> {
+    post('/api/v1/claim',{leadId:lead.id}).then(r=>{ if(r?.ok){ post('/api/v1/own',{windowId:r.windowId||null}).catch(()=>{}); }});
+  };
   d.querySelector('[data-a=why]').onclick = ()=> openWhy(lead);
   return d;
 }
 function addCard(lead){ visible.push(lead); elList.appendChild(cardEl(lead)); }
-function maskTitle(t){ return t.replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.8 ? '•' : c)); }
-function safeHost(u){ try{ return new URL(u).hostname; }catch{ return 'source'; } }
 
-// ---------- WHY modal ----------
+/* ---------- WHY ---------- */
 const modal = document.getElementById('whyModal');
-document.getElementById('mClose').onclick = ()=> modal.classList.remove('in');
-document.getElementById('mConfirm').onclick = ()=> { modal.classList.remove('in'); };
-function openWhy(lead){ document.getElementById('whyTitle').textContent = (lead.title||safeHost(lead.source_url)); document.getElementById('whyBullets').innerHTML = `
-    <ul style="margin:0 0 6px 18px;">
-      <li>Paid reach ≈ <strong>$${roughSpend(lead)} / mo</strong> → indicates active demand generation for ${safeHost(lead.source_url)}.</li>
-      <li>Recent product / restock activity observed → likely packaging throughput this week.</li>
-      <li>Category & region match your profile → higher response odds.</li>
-    </ul>`; document.getElementById('whyProof').textContent = JSON.stringify({source: safeHost(lead.source_url), id: lead.id, observed:"ad/procurement/pdp", confidence: Number(lead.heat||60)}, null, 2); modal.classList.add('in'); }
+document.getElementById('mClose').onclick = ()=> modal.style.display='none';
+document.getElementById('mConfirm').onclick = ()=> { modal.style.display='none'; };
+
+function openWhy(lead){
+  document.getElementById('whyTitle').textContent = (lead.title||safeHost(lead.source_url));
+  document.getElementById('whyBullets').innerHTML =
+    `<ul style="margin:0 0 6px 18px;">
+      <li>Paid reach ≈ <strong>$${roughSpend(lead)} / mo</strong> → active demand gen ⇒ likely packaging throughput.</li>
+      <li>Product or restock signals observed → case/pack movement.</li>
+      <li>Profile fit (category & region) matches your inputs.</li>
+    </ul>`;
+  document.getElementById('whyProof').textContent = JSON.stringify({
+    source: safeHost(lead.source_url), id: lead.id, confidence: lead.heat||60, observed:"ad/procurement/pdp"
+  }, null, 2);
+  modal.style.display='flex';
+}
 function roughSpend(lead){ const h = Number(lead.heat||60); const lo=2000, hi=12000; return Math.round(lo + (hi-lo)*(h/100)).toLocaleString(); }
 
-// ---------- Signals preview (structured, slow, capped) ----------
+/* ---------- Signals preview (grouped, one line each) ---------- */
+const TOTAL_BY_SECTOR = { default:1126, beverage:1292, confectionery:1174, household:1083 };
+function totalSignals(){ const inds=(document.getElementById('industries').value||'').toLowerCase(); if(inds.includes('beverage')) return TOTAL_BY_SECTOR.beverage; if(inds.includes('confection')) return TOTAL_BY_SECTOR.confectionery; if(inds.includes('house')) return TOTAL_BY_SECTOR.household; return TOTAL_BY_SECTOR.default; }
 const CATS = [
-  { key:'Demand', total:210 },
-  { key:'Product', total:180 },
-  { key:'Procurement', total:140 },
-  { key:'Retail', total:160 },
-  { key:'Ops', total:120 },
-  { key:'Social', total:90 },
-  { key:'Events', total:70 },
-  { key:'Reviews', total:156 }
+  ['Demand',        ['Paid reach probes (Meta/Google/Reddit)','Targeting overlap & geo','Net-new traffic velocity']],
+  ['Product',       ['SKU/variant cadence','Restock & sell-through','Case-of-N / pack mapping']],
+  ['Procurement',   ['Supplier/intake doors','Form updates (MOQ/terms)','Vendor page diffs']],
+  ['Retail',        ['PDP price/promo cadence','Planogram mentions','New door expansion']],
+  ['Wholesale',     ['B2B case packs & MOQ','Distributor adds','Marketplace activity']],
+  ['Ops',           ['Hiring/shift adds','Fulfillment spikes','Warehouse throughput']],
+  ['Timing',        ['Seasonal windows','Event/trade calendars','Lead time sensitivity']],
+  ['Reputation',    ['Review complaints (pack/shelf)','Damage/returns mentions','Sustainability claims']]
 ];
-const STEPS = [
-  ['Demand','Paid reach probes · Meta, Google, Reddit mentions'],
-  ['Demand','CPM trend & geo expansion'],
-  ['Demand','Ad creative churn velocity'],
-  ['Product','SKU cadence · new flavors / sizes'],
-  ['Product','Case‑of‑N, dims & restock posts'],
-  ['Procurement','Supplier / intake pages updated'],
-  ['Procurement','Vendor forms: packaging fields present'],
-  ['Retail','PDP deltas · price promo cadence'],
-  ['Retail','Planogram / shelf additions spotted'],
-  ['Ops','Hiring spikes · shifts, forklift, pick‑pack'],
-  ['Ops','Warehouse adds / new lanes'],
-  ['Events','Trade calendar match (next 30–60d)'],
-  ['Social','Creator whitelisting / UGC bursts'],
-  ['Reviews','Packaging complaints surfaced (leak, dent, spill)'],
-  ['Reviews','Unboxing experience feedback trending']
-];
-function headerHtml(progress, caps){
-  const chips = CATS.map(c=>`<span class="chip"><b>${c.key}</b> · ${caps[c.key]||0}/${c.total}</span>`).join('');
-  return `<span class="chip"><b>Metrics</b> · ${progress}/${TOTAL_METRICS}</span>` + chips;
-}
-function startPreview(seconds=90){
-  clearInterval(ticker);
-  elPreview.textContent=''; elPreviewTip.textContent='';
-  setEngine({phase:'running', progress:0}); elNew.style.display='none'; elSigState.textContent='scanning…'; setEngineStatus('working','Scanning signals…');
+function randInt(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
+function arrowSegs(arr){ return arr.join(' <span class="arrow">→</span> '); }
 
-  // counters
-  let progress = 0, shown = 0; const caps = Object.create(null); CATS.forEach(c=>caps[c.key]=0);
-  elMetricHeader.innerHTML = headerHtml(progress, caps);
+let tickTimer=null, printed=0, printedMax=0;
+function startPreview(seconds=90, freeCap=71){
+  clearInterval(tickTimer); printed=0; printedMax=freeCap;
+  elPreview.textContent=''; elPreviewTip.textContent=''; elSigCount.textContent='0';
+  elSigTotal.textContent=String(totalSignals()); elSigState.textContent='running';
+  elBar.style.width='0%'; setEnginePhase('running'); elNew.style.display='none';
 
-  const totalTicks = Math.ceil(Math.min(FREE_METRICS_CAP, TOTAL_METRICS) / Math.max(1, Math.floor(TOTAL_METRICS/(seconds/3))));
-  let i=0;
-  ticker = setInterval(()=>{
-    const step = STEPS[i % STEPS.length]; i++;
-    const [cat, text] = step; if (caps[cat] < (CATS.find(c=>c.key===cat)?.total||0)) { caps[cat]++; progress++; }
-    elMetricHeader.innerHTML = headerHtml(progress, caps);
-    elBar.style.width = Math.min(100, (progress/TOTAL_METRICS)*100) + '%';
-
-    // append pretty line
-    const line = `[${cat}] ${text}  —  computed`;
-    elPreview.textContent += '• '+line+'\n';
-    elPreview.scrollTop = elPreview.scrollHeight;
-    elSigState.textContent = `${progress} metrics computed`;
-    setEngineStatus('working', `Scanning ${cat} • step ${shown+1}`);
-    shown++;
-
-    if (progress >= FREE_METRICS_CAP){
-      clearInterval(ticker);
-      elSigState.textContent = 'stopped early (free)';
-      setEngine({phase:'ready', progress:100});
-      setEngineStatus('idle','Idle');
-      elPreviewTip.innerHTML = `Free plan stops at <strong>${FREE_METRICS_CAP}/${TOTAL_METRICS}</strong>. Unlock <strong>full signals</strong> to compute the remaining metrics (demand depth, promo windows, review mining & more).`;
-      elNew.style.display='inline-flex';
+  // write by category blocks, one metric per line
+  let catIdx=0, lineIdx=0;
+  function nextLine(){
+    if (printed >= printedMax){
+      elSigState.textContent='stopped';
+      elPreviewTip.innerHTML = 'Free plan stops early. Enable <strong>full signals</strong> to unlock the remaining rules and auto-enrichment.';
+      setEnginePhase('idle');
+      return clearInterval(tickTimer);
     }
-  }, 1800);
+    // open new category header
+    if (lineIdx === 0){
+      const [name] = CATS[catIdx % CATS.length];
+      const h = document.createElement('div'); h.className='cat'; h.textContent = name;
+      elPreview.appendChild(h);
+    }
+    const [name, rules] = CATS[catIdx % CATS.length];
+    const label = rules[lineIdx % rules.length];
+    // fabricate a nice propagation chain per category
+    let segs;
+    if (name==='Demand'){
+      segs = [
+        `Paid reach ${randInt(120,480)}`,
+        `Targeting ${['US','CA','NE','P0'].at(randInt(0,3))}`,
+        `Velocity ~${randInt(600,2600)}/mo`
+      ];
+    } else if (name==='Product'){
+      segs = [
+        `Variants +${randInt(1,6)}/qtr`,
+        `Restock ${randInt(3,18)}/mo`,
+        `Case-of-${[6,12,24,48].at(randInt(0,3))}`
+      ];
+    } else if (name==='Procurement'){
+      segs = [
+        `Intake doors ${randInt(1,3)}`,
+        `Terms update`,
+        `Pack/label fields`
+      ];
+    } else if (name==='Retail'){
+      segs = [
+        `Promo ${randInt(2,12)}/mo`,
+        `New doors ${randInt(1,7)}`,
+        `Planogram ping`
+      ];
+    } else if (name==='Ops'){
+      segs = [
+        `Hiring x${randInt(1,4)}`,
+        `Outbound pallets ${randInt(120,1200)}/wk`,
+        `Shift add`
+      ];
+    } else if (name==='Timing'){
+      segs = [
+        `Seasonal window ${['Q4','Back-to-school','Summer'].at(randInt(0,2))}`,
+        `Lead time ${randInt(7,21)}d`,
+        `Reply band 2–5pm`
+      ];
+    } else if (name==='Reputation'){
+      segs = [
+        `1–3★ pack complaints ${randInt(2,18)}`,
+        `Damage/shelf ${randInt(0,5)}`,
+        `Sustainability asks`
+      ];
+    } else { // Wholesale
+      segs = [
+        `MOQ ${[200,500,1000].at(randInt(0,2))}`,
+        `Distributor adds ${randInt(1,3)}`,
+        `B2B page change`
+      ];
+    }
+    const line = document.createElement('div'); line.className='line';
+    line.innerHTML = `• ${label} — ${arrowSegs(segs)}`;
+    elPreview.appendChild(line);
+
+    printed++; elSigCount.textContent=String(printed);
+    const p = Math.min(1, printed / Number(elSigTotal.textContent||'1'));
+    elBar.style.width = (p*100)+'%';
+
+    lineIdx++;
+    if (lineIdx >= rules.length){ lineIdx = 0; catIdx++; }
+    // keep scroll pinned to bottom
+    const pane = document.getElementById('pane-preview'); pane.scrollTop = pane.scrollHeight;
+  }
+
+  // slower cadence (1.2–2.2s) for theatrical education
+  tickTimer = setInterval(nextLine, randInt(1200,2200));
 }
 
-// ---------- buttons ----------
+/* ---------- buttons ---------- */
 document.getElementById('btnDry').onclick = ()=> run(false);
 document.getElementById('btnFind').onclick = ()=> run(true);
 
 async function run(persist){
-  // wipe current list & show star only until results trickle
-  elList.innerHTML=''; visible=[]; queue=[]; elNew.style.display='none';
-  // gather form
+  // wipe current list & show star
+  elList.innerHTML=''; visible=[]; queue=[];
+  elNew.style.display='none'; refreshStatus();
+
   const body = {
     vendorDomain: document.getElementById('vendor').value.trim(),
     buyers: document.getElementById('buyers').value.split(',').map(s=>s.trim()).filter(Boolean),
@@ -339,28 +454,18 @@ async function run(persist){
   };
   localStorage.setItem('onboard', JSON.stringify(body));
 
-  // kick the slow preview first
-  startPreview(120);
+  startPreview(90, 71); // run long, stop early for free
+  setEnginePhase('running');
 
   try{
-    const res = await post('/api/v1/find-now', body);
-    // update quotas text
-    const status = await get('/api/v1/status').catch(()=>null);
-    if(status?.free){ document.getElementById('quotaNote').textContent = `Free: ${status.free.findsLeft} searches left · ${status.free.revealsLeft} reveals left`; }
-    setTimeout(pollLeadsOnce, 2200);
-    if(res?.ok){ setTimeout(pollLeadsOnce, 7000); setTimeout(pollLeadsOnce, 12000); }
+    await post('/api/v1/find-now', body);
+    scheduleLeadPollingBurst();
   }catch(e){ console.warn(e); }
 }
 
-// show initial quotas
-get('/api/v1/status').then(s=>{ if(s?.free){ document.getElementById('quotaNote').textContent = `Free: ${s.free.findsLeft} searches left · ${s.free.revealsLeft} reveals left`; }}).catch(()=>{});
-
-// pane scroll-only (page fixed)
-document.querySelectorAll('.scroller').forEach(el=>{ el.addEventListener('wheel', ev=>ev.stopPropagation(), {passive:true}); });
-
-// initial state
-document.getElementById('engine').textContent = 'engine: idle';
-setEngineStatus('idle','Idle');
+/* ---------- initial ---------- */
+refreshStatus(); setEnginePhase('idle');
+document.querySelectorAll('.scroller').forEach(el=> el.addEventListener('wheel', (ev)=>ev.stopPropagation(), {passive:true}));
 </script>
 </body>
 </html>
