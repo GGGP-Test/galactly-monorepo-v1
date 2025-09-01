@@ -93,6 +93,18 @@ INSERT INTO model_state(segment, weights)
 SELECT 'global', '{"coeffs":{"recency":0.4,"platform":1.0,"domain":0.5,"intent":0.6,"histCtr":0.3,"userFit":1.0},"platforms":{},"badDomains":[]}'::jsonb
 WHERE NOT EXISTS (SELECT 1 FROM model_state WHERE segment='global');
 
+-- === Reviews cache (idempotent) ===
+CREATE TABLE IF NOT EXISTS review_cache (
+  domain TEXT PRIMARY KEY,
+  rating NUMERIC,
+  count INTEGER,
+  pkg_mentions INTEGER,
+  last_checked TIMESTAMPTZ DEFAULT now(),
+  source JSONB
+);
+CREATE INDEX IF NOT EXISTS idx_review_checked ON review_cache(last_checked DESC);
+
+
 -- enrichment columns (forward-compatible)
 ALTER TABLE IF EXISTS lead_pool
   ADD COLUMN IF NOT EXISTS contact_email TEXT,
