@@ -10,35 +10,42 @@
 <style>
 :root{
   --ink:#e9eef7; --mut:#a7b0c3; --line:#202838; --card:#0f1420; --panel:#0b101a;
-  --accent:#89ffd8; --accent2:#68a7ff; --warn:#f7c46a;
+  --accent:#89ffd8; --accent2:#68a7ff; --warn:#f7c46a; --ok:#7fffd4;
   --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
   --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;color:var(--ink);background:
-  radial-gradient(1000px 600px at 10% 0%, rgba(120,180,255,.08), rgba(0,0,0,0) 60%),
-  radial-gradient(900px 700px at 115% 20%, rgba(150,255,220,.08), rgba(0,0,0,0) 50%),
-  linear-gradient(180deg,#0a0e16,#06080e 60%);
-  font-family:var(--inter); line-height:1.55; overflow:hidden}
+body{
+  margin:0; color:var(--ink); background:
+   radial-gradient(1000px 600px at 10% 0%, rgba(120,180,255,.08), rgba(0,0,0,0) 60%),
+   radial-gradient(900px 700px at 115% 20%, rgba(150,255,220,.08), rgba(0,0,0,0) 50%),
+   linear-gradient(180deg,#0a0e16,#06080e 60%);
+  font-family:var(--inter); line-height:1.55; overflow:hidden;
+}
 header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px}
 .brand{display:flex; align-items:center; gap:8px; font:800 15px var(--mont); color:#fff; text-decoration:none}
 .brand svg{width:20px;height:20px}
 .badge{display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:#cdd6ea; background:#0c1220}
+.badge.ok{color:#b8ffd8}
+
 .row{height:calc(100% - 56px); display:grid; grid-template-columns: minmax(420px, 48%) 1fr; gap:16px; padding:16px}
 @media (max-width:1120px){ .row{grid-template-columns:1fr} }
 .col{background:var(--panel); border:1px solid var(--line); border-radius:16px; display:flex; flex-direction:column; min-height:0}
 .section{padding:14px 16px; border-bottom:1px solid var(--line); font:700 14px var(--mont); opacity:.9}
 .scroller{padding:12px 12px 14px; overflow:auto; min-height:0}
 
-/* left hero */
+/* LEFT hero (neutron star) */
 .leftHero{position:relative; height:220px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#0b0f19,#0a0e17)}
 #star{width:100%; height:100%}
-.engine-status{position:absolute; left:16px; bottom:12px; font-size:12px; opacity:.85; color:#cfd7e6;}
-.engine-status .dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6)}
-.engine-status.idle .dot{background:#64708a; box-shadow:none}
+.engine-status{
+  position:absolute; left:14px; bottom:12px; font-size:12px; opacity:.85; color:#cfd7e6; pointer-events:none;
+}
+.engine-status .dot{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#64708a; }
+.engine-status.working .dot{ background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6); animation:pulse 1.8s ease-in-out infinite; }
+@keyframes pulse{ 0%{transform:scale(.9); opacity:.6} 50%{transform:scale(1.2); opacity:1} 100%{transform:scale(.9); opacity:.6} }
 
-/* list */
+/* card list */
 .list{display:flex; flex-direction:column; gap:10px}
 .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px}
 .card.locked{opacity:.85; filter:saturate(.85)}
@@ -53,18 +60,18 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 .btn.ghost{background:rgba(255,255,255,.06)}
 .btn:disabled{opacity:.6; cursor:not-allowed}
 
-/* right column */
+/* RIGHT column */
 .form{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .form .full{grid-column:1 / -1}
 .input{background:#0e1523; border:1px solid var(--line); border-radius:10px; color:#e8eef7; padding:10px 12px; width:100%}
 .note{opacity:.7; font-size:12px; margin-top:6px}
-.preview{font-family:ui-monospace,Menlo,Consolas,monospace; background:#0d1320; border:1px dashed var(--line); border-radius:12px; padding:10px; font-size:12px; line-height:1.45}
+.preview{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; background:#0d1320; border:1px dashed var(--line); border-radius:12px; padding:10px; font-size:12px; line-height:1.45}
 .progress{height:6px; background:#0c1220; border:1px solid var(--line); border-radius:999px; overflow:hidden; margin:10px 0 2px}
 .progress > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2))}
 .tip{opacity:.75; font-size:12px}
-.quota-note{ font-size:12px; opacity:.8; margin:6px 0 0 6px; }
+.quota-note{ font-size:12px; opacity:.8; display:flex; align-items:center; gap:10px }
 
-/* modal: Why */
+/* WHY modal */
 .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55)}
 .modal.in{display:flex}
 .modal .box{width:min(680px,92vw); background:#0f1524; border:1px solid var(--line); border-radius:16px; padding:16px}
@@ -74,7 +81,7 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 </head>
 <body>
 <header>
-  <a class="brand" href="./index.html">
+  <a class="brand" href="./index.html" title="Back to hero">
     <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/><path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
     <span>Galactly</span>
   </a>
@@ -83,36 +90,36 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 </header>
 
 <div class="row">
-  <!-- LEFT -->
-  <div class="col">
+  <!-- LEFT: Live results -->
+  <div class="col" id="col-left">
     <div class="section">Live results <span id="newBadge" class="badge" style="margin-left:6px; display:none">new results ready</span></div>
     <div class="leftHero">
       <canvas id="star"></canvas>
-      <div id="engineStatus" class="engine-status idle"><span class="dot"></span>Idle</div>
+      <div id="engineStatus" class="engine-status"><span class="dot"></span>Idle</div>
     </div>
     <div class="scroller">
       <div id="list" class="list"></div>
     </div>
   </div>
 
-  <!-- RIGHT -->
-  <div class="col">
+  <!-- RIGHT: Customize + Signals preview -->
+  <div class="col" id="col-right">
     <div class="section">Customize your AI</div>
     <div class="scroller" id="pane-form">
       <div class="form">
         <input id="vendor" class="input full" placeholder="Vendor site (optional) e.g. yourcompany.com"/>
         <input id="buyers" class="input full" placeholder="Seed buyers (comma separated domains)"/>
         <input id="industries" class="input" placeholder="Industries e.g. beverage, confectionery"/>
-        <input id="regions" class="input" placeholder="Regions e.g. US, CA" value="US, CA"/>
-        <textarea id="describe" rows="4" class="input full" placeholder="Describe ideal customers. Products, pack types, order sizes, retail channels, exclusions."></textarea>
+        <input id="regions" class="input" placeholder="Regions e.g. US, CA"/>
+        <textarea id="describe" rows="4" class="input full" placeholder="Describe your ideal customers in plain words. Products, pack types, order sizes, retailer channels, and any exclusions."></textarea>
       </div>
       <label style="display:flex; align-items:center; gap:8px; margin-top:10px">
         <input type="checkbox" id="listMe"/> <span>List my company for inbound opportunities</span>
       </label>
-      <div style="display:flex; align-items:center; gap:10px; margin-top:10px">
+      <div style="display:flex; gap:10px; align-items:center; margin-top:10px">
         <button id="btnDry" class="btn ghost" title="Simulate, don’t store">Dry run</button>
         <button id="btnFind" class="btn primary">Find now</button>
-        <span id="quotaNote" class="quota-note">Free: …</span>
+        <div class="quota-note" id="quotaNote">Free: …</div>
       </div>
       <div class="note">Tip: we’ll add 1–2 leads at a time, and stream the reasoning below. Hold to reveal. Free plan allows 2 deep reveals/day.</div>
     </div>
@@ -141,13 +148,13 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 
 <script src="./api-base.js"></script>
 <script>
-/* ---------- sticky uid + API label ---------- */
+/* ---------- sticky ids & api label ---------- */
 const uidKey='galactly_uid';
 let UID = localStorage.getItem(uidKey) || ('u-'+Math.random().toString(36).slice(2));
 localStorage.setItem(uidKey, UID);
 document.getElementById('apiBaseLabel').textContent = (window.API_BASE||'').replace(/^https?:\/\//,'');
 
-/* ---------- form prefill from onboarding query/localStorage ---------- */
+/* ---------- prefill from onboarding / query ---------- */
 const qs = new URLSearchParams(location.search);
 const onboard = JSON.parse(localStorage.getItem('onboard')||'{}');
 const seed = {
@@ -158,18 +165,15 @@ const seed = {
   describe: qs.get('describe') || (onboard.describe||''),
   listMe: onboard.listMe === true
 };
-for (const [k,v] of Object.entries(seed)) {
-  const el = document.getElementById(k);
-  if (el && 'value' in el) el.value = v as any;
-}
+['vendor','buyers','industries','regions','describe'].forEach(id=>{ const el=document.getElementById(id); el.value = seed[id]||''; });
 document.getElementById('listMe').checked = !!seed.listMe;
 
-/* ---------- neutron star (minimal perf) ---------- */
-const cvs = document.getElementById('star'); const DPR=Math.min(2, window.devicePixelRatio||1);
+/* ---------- neutron-star canvas ---------- */
+const cvs = document.getElementById('star'); const DPR = Math.min(2, window.devicePixelRatio||1);
 let ctx=null;
 function resizeStar(){ const r=cvs.getBoundingClientRect(); cvs.width=r.width*DPR; cvs.height=r.height*DPR; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
 function drawStar(ts){
-  if(!ctx){ requestAnimationFrame(drawStar); return;}
+  if(!ctx){ requestAnimationFrame(drawStar); return; }
   const w=cvs.clientWidth, h=cvs.clientHeight, cx=w*0.5, cy=h*0.5;
   ctx.clearRect(0,0,w,h);
   const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.42);
@@ -187,7 +191,8 @@ function drawStar(ts){
     const ang=a+k, len=Math.min(w,h)*0.5;
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang);
     const grad=ctx.createLinearGradient(-len/2,0,len/2,0);
-    grad.addColorStop(0,'rgba(136,255,216,0)'); grad.addColorStop(0.48,'rgba(136,255,216,.22)'); grad.addColorStop(0.52,'rgba(104,167,255,.22)'); grad.addColorStop(1,'rgba(104,167,255,0)');
+    grad.addColorStop(0,'rgba(136,255,216,0)'); grad.addColorStop(0.48,'rgba(136,255,216,.22)');
+    grad.addColorStop(0.52,'rgba(104,167,255,.22)'); grad.addColorStop(1,'rgba(104,167,255,0)');
     ctx.fillStyle=grad; ctx.fillRect(-len/2,-1.2,len,2.4);
     ctx.restore();
   }
@@ -195,44 +200,77 @@ function drawStar(ts){
 }
 addEventListener('resize', resizeStar); resizeStar(); requestAnimationFrame(drawStar);
 
-/* ---------- UI/State ---------- */
+/* ---------- state ---------- */
 const elEngine=document.getElementById('engine');
-const elEngineDot=document.getElementById('engineStatus');
-const elNew=document.getElementById('newBadge');
-const elList=document.getElementById('list');
 const elBar=document.getElementById('bar');
 const elPreview=document.getElementById('preview');
 const elPreviewTip=document.getElementById('previewTip');
+const elNew=document.getElementById('newBadge');
+const elList=document.getElementById('list');
 const elSigState=document.getElementById('sigState');
-const elQuota=document.getElementById('quotaNote');
+const elStatus = document.getElementById('engineStatus');
+const elQuota = document.getElementById('quotaNote');
 
-function setEngine(status){ elEngine.textContent='engine: '+status; elEngineDot.classList.toggle('idle', status!=='running'); elEngineDot.innerHTML = `<span class="dot"></span>${status[0].toUpperCase()+status.slice(1)}`; }
+let engine = { phase:'idle' };
+let queue = [];         // leads to trickle
+let visible = [];       // rendered ids
+let inflight=false;
+let sse=null;           // EventSource
+let leadsPoll=null;
 
-/* ---------- quota ---------- */
-async function refreshStatus(){
+/* ---------- helpers ---------- */
+function setEnginePhase(ph, sub=''){
+  engine.phase = ph;
+  elEngine.textContent = 'engine: ' + ph;
+  elStatus.classList.toggle('working', ph!=='idle');
+  elStatus.innerHTML = `<span class="dot"></span>${sub || (ph==='idle'?'Idle':'Running')}`;
+}
+function pushes(arr){ for(const x of arr) queue.push(x); runQueue(); }
+function runQueue(){
+  if(inflight || queue.length===0) return;
+  inflight=true;
+  setTimeout(()=>{ const next = queue.shift(); if(next) addCard(next); inflight=false; if(queue.length) runQueue(); }, 1000+Math.random()*900);
+}
+function maskTitle(t){ return t.replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.8 ? '•' : c)); }
+function safeHost(u){ try{ return new URL(u).hostname; }catch{ return 'source'; } }
+
+/* ---------- API thin wrappers (from api-base.js) ---------- */
+async function apiGet(path){ return API.get(path); }
+async function apiPost(path, body){ return API.post(path, body); }
+
+/* ---------- quotas ---------- */
+async function refreshQuotaNote(){
   try{
-    const r = await fetch('/api/v1/status').then(r=>r.json());
-    if(r?.ok){
-      elQuota.textContent = `Free: ${r.free.findsLeft} searches left  •  ${r.free.revealsLeft} reveals left`;
+    const s = await apiGet('/api/v1/status');
+    if(s?.ok){
+      elQuota.textContent = `Free: ${s.free.findsLeft} searches left • ${s.free.revealsLeft} reveals left`;
     }
-  }catch{}
+  }catch{ elQuota.textContent = 'Free: …'; }
+}
+refreshQuotaNote();
+
+/* ---------- poll leads ---------- */
+async function pollLeadsOnce(){
+  try{
+    const r = await apiGet('/api/v1/leads');
+    if(r?.ok && Array.isArray(r.leads)){
+      // only stage unseen ids
+      const unseen = r.leads.filter(L => !visible.includes(L.id));
+      if(unseen.length){
+        elNew.style.display='inline-flex';
+        pushes(unseen.map(L => ({...L, _locked:true})));
+      }
+    }
+  }catch(e){}
 }
 
-/* ---------- API helpers (already patched by api-base.js) ---------- */
-async function post(path, body){ const r = await fetch(path, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body||{}) }); return r.json(); }
-async function get(path){ const r = await fetch(path); return r.json(); }
-
-/* ---------- cards ---------- */
-function maskTitle(t){ return t.replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.8 ? '•' : c)); }
-function host(u){ try{ return new URL(u).hostname; } catch { return 'source'; } }
-function roughSpend(lead){ const h=Number(lead.heat||60); const lo=2000, hi=12000; return Math.round(lo + (hi-lo)*(h/100)).toLocaleString(); }
-
+/* ---------- cards & reveal ---------- */
 function cardEl(lead){
-  const d=document.createElement('div'); d.className='card locked'; d.dataset.id=lead.id;
-  const conf = Math.max(48, Math.min(92, Number(lead.heat||60)));
+  const d=document.createElement('div'); d.className='card locked'; d.dataset.id = lead.id;
+  const conf = Math.max(48, Math.min(92, Number(lead.heat || 60)));
   d.innerHTML = `
     <div class="meta">
-      <span class="pill">${lead.cat||'signal'}</span>
+      <span class="pill">${lead.cat || 'signal'}</span>
       <span class="pill">Confidence ${conf}%</span>
     </div>
     <div class="title">${maskTitle(lead.title||'New buyer signal')}</div>
@@ -241,113 +279,147 @@ function cardEl(lead){
       <button class="btn" data-a="why" disabled>Why this?</button>
       <button class="btn primary" data-a="own" disabled>Own</button>
     </div>`;
-  let t=null, revealed=false;
-  const start=()=>{ t=setTimeout(()=>reveal(), 1400); };
-  const stop=()=>{ clearTimeout(t); t=null; };
-  d.addEventListener('pointerdown', start);
-  d.addEventListener('pointerup', stop);
-  d.addEventListener('pointerleave', stop);
+  let timer=null, revealed=false;
+  const press = ()=> {
+    // optimistic front-end guard; backend still enforces
+    if(elQuota.textContent.includes('0 reveals')){ d.querySelector('.hold').innerHTML='<span style="color:#f6ba6a">Daily reveal limit reached. Upgrade to continue.</span>'; return; }
+    timer = setTimeout(()=> revealLead(), 1400);
+  };
+  const cancel = ()=> { clearTimeout(timer); timer=null; };
+  d.addEventListener('pointerdown', press);
+  d.addEventListener('pointerup', cancel);
+  d.addEventListener('pointerleave', cancel);
 
-  async function reveal(){
-    if(revealed) return;
-    const r=await post('/api/v1/reveal', {});
-    if(r?.ok){
-      revealed=true;
-      d.classList.remove('locked');
-      d.querySelector('.hold').remove();
-      d.querySelector('[data-a=why]').disabled=false;
-      d.querySelector('[data-a=own]').disabled=false;
-      d.querySelector('.title').textContent = lead.title || 'Buyer signal';
-      const meta = d.querySelector('.meta');
-      meta.insertAdjacentHTML('beforeend', `<span class="pill">${host(lead.source_url)}</span>`);
-      refreshStatus();
-    }else{
-      d.querySelector('.hold').innerHTML = `<span style="color:${getComputedStyle(document.documentElement).getPropertyValue('--warn')||'#f7c46a'}">Daily reveal limit reached. Upgrade to continue.</span>`;
-    }
+  async function revealLead(){
+    if(revealed) return; revealed=true;
+    // ask backend to count the reveal
+    try{ await apiPost('/api/v1/reveal', { leadId: lead.id }); refreshQuotaNote(); }catch{}
+    d.classList.remove('locked'); d.querySelector('.hold').remove();
+    d.querySelector('[data-a=why]').disabled=false;
+    d.querySelector('[data-a=own]').disabled=false;
+    d.querySelector('.title').textContent = lead.title || 'Buyer signal';
+    const meta = d.querySelector('.meta');
+    meta.insertAdjacentHTML('beforeend', `<span class="pill">${safeHost(lead.source_url)}</span>`);
   }
-
-  d.querySelector('[data-a=own]').onclick = ()=> post('/api/v1/claim',{leadId:lead.id}).then(()=>post('/api/v1/own',{windowId:lead._windowId||null}).catch(()=>{}));
+  d.querySelector('[data-a=own]').onclick = async ()=> {
+    try{
+      await apiPost('/api/v1/claim',{leadId:lead.id});
+      await apiPost('/api/v1/own',{windowId:lead._windowId||null});
+    }catch{}
+  };
   d.querySelector('[data-a=why]').onclick = ()=> openWhy(lead);
   return d;
 }
-function addCards(leads){ for(const L of leads){ elList.appendChild(cardEl(L)); } }
+function addCard(lead){ visible.push(lead.id); elList.appendChild(cardEl(lead)); }
 
 /* ---------- WHY modal ---------- */
 const modal = document.getElementById('whyModal');
 document.getElementById('mClose').onclick = ()=> modal.classList.remove('in');
-document.getElementById('mConfirm').onclick = ()=> modal.classList.remove('in');
+document.getElementById('mConfirm').onclick = ()=> { modal.classList.remove('in'); };
 function openWhy(lead){
-  document.getElementById('whyTitle').textContent = lead.title || host(lead.source_url);
+  document.getElementById('whyTitle').textContent = (lead.title||safeHost(lead.source_url));
   document.getElementById('whyBullets').innerHTML = `
     <ul style="margin:0 0 6px 18px;">
-      <li>Paid reach ≈ <strong>$${roughSpend(lead)}/mo</strong> → indicates active demand generation for their products.</li>
-      <li>Recent product or restock activity → likely packaging throughput required soon.</li>
-      <li>Category/region match your profile → higher reply odds.</li>
+      <li>Paid reach ≈ <strong>$${roughSpend(lead)} / mo</strong> → indicates active demand generation for your category.</li>
+      <li>Recent product / restock activity observed → packaging throughput likely up.</li>
+      <li>Category & region match your profile. Queue window open.</li>
     </ul>`;
-  document.getElementById('whyProof').textContent = JSON.stringify({ source: host(lead.source_url), id: lead.id, confidence: lead.heat||60 }, null, 2);
+  const proof = {
+    source: safeHost(lead.source_url), id: lead.id,
+    observed: lead.platform || 'signal', confidence: lead.heat||60
+  };
+  document.getElementById('whyProof').textContent = JSON.stringify(proof, null, 2);
   modal.classList.add('in');
 }
+function roughSpend(lead){
+  const h = Number(lead.heat||60); // simple proxy → $2k–$12k/mo
+  const lo=2000, hi=12000; return Math.round(lo + (hi-lo)*(h/100)).toLocaleString();
+}
 
-/* ---------- Signals preview (SSE stream) ---------- */
-let es=null;
-function startPreview(){
+/* ---------- Signals preview via SSE ---------- */
+function startSSE(vendor, industries, regions){
+  stopSSE();
+  const url = API.sseURL(`/api/v1/progress.sse?vendor=${encodeURIComponent(vendor||'')}&industries=${encodeURIComponent(industries.join(','))}&regions=${encodeURIComponent(regions.join(','))}`);
+  sse = new EventSource(url);
   elPreview.textContent=''; elPreviewTip.textContent=''; elBar.style.width='0%'; elSigState.textContent='0%';
-  if (es) { try{ es.close(); }catch{} }
-  es = new EventSource('/api/v1/progress.sse?sid='+encodeURIComponent(UID));
-  setEngine('running');
-  es.addEventListener('step', (e)=>{
-    const d = JSON.parse(e.data||'{}'); elPreview.textContent += `• [${d.cap}] ${d.label} — computed\n`;
-    const p = Math.min(1, d.index/Math.max(1,d.of)); elBar.style.width = (p*100)+'%'; elSigState.textContent = Math.round(p*100)+'%';
+  setEnginePhase('running', 'Scanning…');
+
+  sse.addEventListener('hello', e=>{ /* handshake */ });
+  sse.addEventListener('step', e=>{
+    try{
+      const d = JSON.parse(e.data);
+      elPreview.textContent += `• [${d.cap}] ${d.label} — computed\n`;
+      const pct = Math.min(100, Math.round( (d.index / d.of) * 100 ));
+      elBar.style.width = pct + '%'; elSigState.textContent = pct + '%';
+      setEnginePhase('running', `Scanning: ${d.cap}…`);
+    }catch{}
   });
-  es.addEventListener('halt', (_e)=>{ elPreviewTip.innerHTML='Free plan stops early. Enable <strong>full signals</strong> to unlock the remaining rules.'; setEngine('ready'); });
-  es.onerror = ()=>{ setEngine('ready'); };
+  sse.addEventListener('halt', e=>{
+    try{
+      const d = JSON.parse(e.data);
+      elPreviewTip.innerHTML = `Free plan stops early. Enable <strong>${d.upsell?.title||'full signals'}</strong> to unlock the remaining rules.`;
+    }catch{}
+    stopSSE(true);
+  });
+  sse.onerror = ()=> stopSSE(true);
+}
+function stopSSE(done=false){
+  if(sse){ try{sse.close();}catch{} sse=null; }
+  if(done){ setEnginePhase('ready','Ready'); elNew.style.display='inline-flex'; }
 }
 
-/* ---------- find flow ---------- */
-async function fetchLeadsOnce(){
-  const r = await get('/api/v1/leads');
-  if(r?.ok && Array.isArray(r.leads)){
-    if(!r.leads.length){ elNew.style.display='none'; return; }
-    elNew.style.display='inline-flex';
-    addCards(r.leads);
-  }
-}
-async function run(){
-  // wipe list, show star + status
-  elList.innerHTML='';
-  setEngine('running');
-  // persist snapshot for prefill next time
+/* ---------- run (Find now / Dry run) ---------- */
+document.getElementById('btnDry').onclick = ()=> run(false);
+document.getElementById('btnFind').onclick = ()=> run(true);
+
+async function run(persist){
+  // clear UI
+  elList.innerHTML=''; visible=[]; queue=[]; elNew.style.display='none';
+  clearInterval(leadsPoll);
+
+  // gather form
   const body = {
-    vendorDomain: (document.getElementById('vendor') as HTMLInputElement).value.trim(),
-    buyers: (document.getElementById('buyers') as HTMLInputElement).value.split(',').map(s=>s.trim()).filter(Boolean),
-    industries: (document.getElementById('industries') as HTMLInputElement).value.split(',').map(s=>s.trim()).filter(Boolean),
-    regions: (document.getElementById('regions') as HTMLInputElement).value.split(',').map(s=>s.trim()).filter(Boolean),
-    describe: (document.getElementById('describe') as HTMLTextAreaElement).value.trim(),
-    listMe: (document.getElementById('listMe') as HTMLInputElement).checked === true
+    vendorDomain: document.getElementById('vendor').value.trim(),
+    buyers: document.getElementById('buyers').value.split(',').map(s=>s.trim()).filter(Boolean),
+    industries: document.getElementById('industries').value.split(',').map(s=>s.trim()).filter(Boolean),
+    regions: document.getElementById('regions').value.split(',').map(s=>s.trim()).filter(Boolean),
+    describe: document.getElementById('describe').value.trim(),
+    listMe: document.getElementById('listMe').checked === true
   };
-  localStorage.setItem('onboard', JSON.stringify(body));
-  startPreview();
+  // persist onboarding snapshot
+  localStorage.setItem('onboard', JSON.stringify({
+    vendorDomain: body.vendorDomain, buyers: body.buyers,
+    industries: body.industries, regions: body.regions,
+    describe: body.describe, listMe: body.listMe
+  }));
+
+  // kick SSE stream (slow, educational)
+  startSSE(body.vendorDomain, body.industries, body.regions);
+
+  // fire backend find (non-blocking for UI)
   try{
-    const res = await post('/api/v1/find-now', body);
-    if(res?.ok){
-      refreshStatus();
-      setTimeout(fetchLeadsOnce, 2000);
-      setTimeout(fetchLeadsOnce, 7000);
-      setTimeout(fetchLeadsOnce, 12000);
-    }
-  }catch(e){ console.warn(e); }
+    document.getElementById('btnFind').disabled = true;
+    await apiPost('/api/v1/find-now', body);
+    refreshQuotaNote(); // backend will decrement Finds
+  }catch(e){ /* still allow preview to run */ }
+  finally{ document.getElementById('btnFind').disabled = false; }
+
+  // poll leads every 5s for a minute
+  await pollLeadsOnce();
+  let ticks=0;
+  leadsPoll = setInterval(async ()=>{
+    ticks++; await pollLeadsOnce();
+    if(ticks>12) clearInterval(leadsPoll);
+  }, 5000);
 }
 
-document.getElementById('btnDry').onclick = ()=> { startPreview(); };
-document.getElementById('btnFind').onclick = run;
-
-setEngine('idle');
-refreshStatus();
-
-/* ---------- keep scroll confined to panes ---------- */
-document.querySelectorAll('.scroller').forEach(el=>{
-  el.addEventListener('wheel', (ev)=>{ ev.stopPropagation(); }, {passive:true});
-});
+/* ---------- init ---------- */
+setEnginePhase('idle','Idle');
+(function onlyPaneScrolls(){
+  document.querySelectorAll('.scroller').forEach(el=>{
+    el.addEventListener('wheel', (ev)=>{ ev.stopPropagation(); }, {passive:true});
+  });
+})();
 </script>
 </body>
 </html>
