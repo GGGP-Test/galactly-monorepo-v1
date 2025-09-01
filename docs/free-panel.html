@@ -10,44 +10,39 @@
 <style>
 :root{
   --ink:#e9eef7; --mut:#a7b0c3; --line:#202838; --card:#0f1420; --panel:#0b101a;
-  --accent:#89ffd8; --accent2:#68a7ff; --warn:#f7c46a;
+  --accent:#89ffd8; --accent2:#68a7ff; --warn:#f7c46a; --ok:#7fffd4;
   --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
-  --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0; color:var(--ink);
-  background:
+  margin:0; color:var(--ink); background:
    radial-gradient(1000px 600px at 10% 0%, rgba(120,180,255,.08), rgba(0,0,0,0) 60%),
    radial-gradient(900px 700px at 115% 20%, rgba(150,255,220,.08), rgba(0,0,0,0) 50%),
    linear-gradient(180deg,#0a0e16,#06080e 60%);
-  font-family:var(--inter); line-height:1.55; overflow:hidden;
+  font-family:var(--inter); line-height:1.55; overflow:hidden;  /* page itself doesn’t scroll */
 }
 header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px}
 .brand{display:flex; align-items:center; gap:8px; font:800 15px var(--mont); color:#fff; text-decoration:none}
 .brand svg{width:20px;height:20px}
 .badge{display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:#cdd6ea; background:#0c1220}
 .badge.ok{color:#b8ffd8}
-.badge.warn{color:#f7c46a}
-.row{height:calc(100% - 56px); display:grid; grid-template-columns:minmax(420px,48%) 1fr; gap:16px; padding:16px}
+.row{height:calc(100% - 56px); display:grid; grid-template-columns: minmax(460px, 48%) 1fr; gap:16px; padding:16px}
 @media (max-width:1120px){ .row{grid-template-columns:1fr} }
+
 .col{background:var(--panel); border:1px solid var(--line); border-radius:16px; display:flex; flex-direction:column; min-height:0}
 .section{padding:14px 16px; border-bottom:1px solid var(--line); font:700 14px var(--mont); opacity:.9}
 .scroller{padding:12px 12px 14px; overflow:auto; min-height:0}
 
-/* Left hero */
 .leftHero{position:relative; height:220px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#0b0f19,#0a0e17)}
 #star{width:100%; height:100%}
-.engine-status{
-  position:absolute; left:16px; bottom:12px; font-size:12px; opacity:.85; color:#cfd7e6; pointer-events:none;
-}
-.engine-status .dot{ display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6); }
-.engine-status.idle .dot{ background:#64708a; box-shadow:none; }
-.engine-status.working .dot{ animation:pulse 1.8s ease-in-out infinite; }
-@keyframes pulse{ 0%{transform:scale(.9); opacity:.6} 50%{transform:scale(1.2); opacity:1} 100%{transform:scale(.9); opacity:.6} }
+.engine-status{position:absolute; left:16px; bottom:12px; font-size:12px; opacity:.85; color:#cfd7e6; pointer-events:none}
+.engine-status .dot{display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#64708a}
+.engine-status.working .dot{background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6); animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%{transform:scale(.9);opacity:.6}50%{transform:scale(1.2);opacity:1}100%{transform:scale(.9);opacity:.6}}
 
-/* cards */
+/* card list */
 .list{display:flex; flex-direction:column; gap:10px}
 .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px}
 .card.locked{opacity:.85; filter:saturate(.85)}
@@ -67,11 +62,18 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 .form .full{grid-column:1 / -1}
 .input{background:#0e1523; border:1px solid var(--line); border-radius:10px; color:#e8eef7; padding:10px 12px; width:100%}
 .note{opacity:.7; font-size:12px; margin-top:6px}
-.preview{font-family:ui-monospace,Menlo,Consolas,monospace; background:#0d1320; border:1px dashed var(--line); border-radius:12px; padding:10px; font-size:12px; line-height:1.45}
+.preview{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; background:#0d1320; border:1px dashed var(--line); border-radius:12px; padding:10px; font-size:12px; line-height:1.45}
 .progress{height:6px; background:#0c1220; border:1px solid var(--line); border-radius:999px; overflow:hidden; margin:10px 0 2px}
 .progress > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2))}
 .tip{opacity:.75; font-size:12px}
-.quota-note{ font-size:12px; opacity:.8; margin-left:8px; align-self:center; }
+.quota-note{ font-size:12px; opacity:.78; margin-top:6px; }
+
+/* modal for Why */
+.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55)}
+.modal.in{display:flex}
+.modal .box{width:min(680px,92vw); background:#0f1524; border:1px solid var(--line); border-radius:16px; padding:16px}
+.modal h3{margin:4px 0 10px; font:800 16px var(--mont)}
+.code{background:#0a0f1d; border:1px solid var(--line); border-radius:10px; padding:10px; overflow:auto; max-height:260px; font-size:12px}
 </style>
 </head>
 <body>
@@ -85,7 +87,7 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 </header>
 
 <div class="row">
-  <!-- LEFT -->
+  <!-- LEFT: Live results (single column) -->
   <div class="col" id="col-left">
     <div class="section">Live results <span id="newBadge" class="badge" style="margin-left:6px; display:none">new results ready</span></div>
     <div class="leftHero">
@@ -97,7 +99,7 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
     </div>
   </div>
 
-  <!-- RIGHT -->
+  <!-- RIGHT: Customize + Signals preview (stacked) -->
   <div class="col" id="col-right">
     <div class="section">Customize your AI</div>
     <div class="scroller" id="pane-form">
@@ -111,10 +113,10 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
       <label style="display:flex; align-items:center; gap:8px; margin-top:10px">
         <input type="checkbox" id="listMe"/> <span>List my company for inbound opportunities</span>
       </label>
-      <div style="display:flex; gap:10px; margin-top:10px; align-items:center">
+      <div style="display:flex; gap:10px; align-items:center; margin-top:10px">
         <button id="btnDry" class="btn ghost" title="Simulate, don’t store">Dry run</button>
         <button id="btnFind" class="btn primary">Find now</button>
-        <div class="quota-note" id="quotaNote">…</div>
+        <span class="quota-note" id="findQuota">—</span>
       </div>
       <div class="note">Tip: we’ll add 1–2 leads at a time, and stream the reasoning below. Hold to reveal. Free plan allows 2 deep reveals/day.</div>
     </div>
@@ -129,11 +131,11 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 </div>
 
 <!-- WHY modal -->
-<div id="whyModal" class="modal" role="dialog" aria-modal="true" style="position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55)">
-  <div class="box" style="width:min(680px,92vw); background:#0f1524; border:1px solid var(--line); border-radius:16px; padding:16px">
-    <h3 id="whyTitle" style="margin:4px 0 10px; font:800 16px var(--mont)">Why this lead</h3>
+<div id="whyModal" class="modal" role="dialog" aria-modal="true">
+  <div class="box">
+    <h3 id="whyTitle">Why this lead</h3>
     <div id="whyBullets" style="margin:8px 0 12px"></div>
-    <div class="code" id="whyProof" style="background:#0a0f1d; border:1px solid var(--line); border-radius:10px; padding:10px; overflow:auto; max-height:260px; font-size:12px"></div>
+    <div class="code" id="whyProof"></div>
     <div style="display:flex; gap:8px; margin-top:10px; justify-content:flex-end">
       <button class="btn ghost" id="mClose">Close</button>
       <button class="btn" id="mConfirm">Looks right</button>
@@ -143,13 +145,8 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 
 <script src="./api-base.js"></script>
 <script>
-/* ---------- sticky user + API label ---------- */
-const uidKey='galactly_uid';
-let UID = localStorage.getItem(uidKey) || ('u-'+Math.random().toString(36).slice(2));
-localStorage.setItem(uidKey, UID);
-document.getElementById('apiBaseLabel').textContent = (window.API_BASE||'').replace(/^https?:\/\//,'');
-
-/* ---------- seed from onboarding / query ---------- */
+/* ---------- bootstrap ---------- */
+const UID = API.uid;
 const qs = new URLSearchParams(location.search);
 const onboard = JSON.parse(localStorage.getItem('onboard')||'{}');
 const seed = {
@@ -160,40 +157,29 @@ const seed = {
   describe: qs.get('describe') || (onboard.describe||''),
   listMe: onboard.listMe === true
 };
-['vendor','buyers','industries','regions','describe'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value = seed[id]||''; });
+for (const id of ['vendor','buyers','industries','regions','describe']) {
+  const el = document.getElementById(id); if (el) el.value = seed[id] || '';
+}
 document.getElementById('listMe').checked = !!seed.listMe;
 
-/* ---------- neutron-star ---------- */
+document.getElementById('apiBaseLabel').textContent = API.base.replace(/^https?:\/\//,'');
+
+/* ---------- neutron-star canvas ---------- */
 const cvs = document.getElementById('star'); const DPR = Math.min(2, window.devicePixelRatio||1);
 let ctx=null;
 function resizeStar(){ const r=cvs.getBoundingClientRect(); cvs.width=r.width*DPR; cvs.height=r.height*DPR; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
-function drawStar(ts){
-  if(!ctx) return; const w=cvs.clientWidth, h=cvs.clientHeight, cx=w*0.5, cy=h*0.5;
-  ctx.clearRect(0,0,w,h);
-  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.42);
-  g.addColorStop(0,'rgba(255,255,255,.04)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g;
-  ctx.beginPath(); ctx.arc(cx,cy,Math.min(w,h)*0.42,0,Math.PI*2); ctx.fill();
-  const pulse = 1 + 0.12*Math.sin(ts*0.002); const coreR = 22*pulse;
-  const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,coreR*2.2);
-  cg.addColorStop(0,'rgba(255,255,255,.95)'); cg.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.arc(cx,cy,coreR*2.2,0,Math.PI*2); ctx.fillStyle=cg; ctx.fill(); ctx.globalCompositeOperation='source-over';
-  const a = ts*0.0005, off = Math.PI/2.8;
-  for(const k of [0,off]){
-    const ang=a+k, len=Math.min(w,h)*0.5;
-    ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang);
-    const grad=ctx.createLinearGradient(-len/2,0,len/2,0);
-    grad.addColorStop(0,'rgba(136,255,216,0)');
-    grad.addColorStop(0.48,'rgba(136,255,216,.22)');
-    grad.addColorStop(0.52,'rgba(104,167,255,.22)');
-    grad.addColorStop(1,'rgba(104,167,255,0)');
-    ctx.fillStyle=grad; ctx.fillRect(-len/2,-1.2,len,2.4);
-    ctx.restore();
-  }
+function drawStar(ts){ if(!ctx) return; const w=cvs.clientWidth, h=cvs.clientHeight, cx=w*0.5, cy=h*0.5; ctx.clearRect(0,0,w,h);
+  // outer glow
+  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.42); g.addColorStop(0,'rgba(255,255,255,.04)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,Math.min(w,h)*0.42,0,Math.PI*2); ctx.fill();
+  // core pulse
+  const pulse = 1 + 0.12*Math.sin(ts*0.002); const coreR = 22*pulse; const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,coreR*2.2); cg.addColorStop(0,'rgba(255,255,255,.95)'); cg.addColorStop(1,'rgba(255,255,255,0)'); ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.arc(cx,cy,coreR*2.2,0,Math.PI*2); ctx.fillStyle=cg; ctx.fill(); ctx.globalCompositeOperation='source-over';
+  // two faint beams slowly precessing
+  const a = ts*0.0005, off = Math.PI/2.8; for(const k of [0,off]){ const ang=a+k, len=Math.min(w,h)*0.5; ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang); const grad=ctx.createLinearGradient(-len/2,0,len/2,0); grad.addColorStop(0,'rgba(136,255,216,0)'); grad.addColorStop(0.48,'rgba(136,255,216,.22)'); grad.addColorStop(0.52,'rgba(104,167,255,.22)'); grad.addColorStop(1,'rgba(104,167,255,0)'); ctx.fillStyle=grad; ctx.fillRect(-len/2,-1.2,len,2.4); ctx.restore(); }
   requestAnimationFrame(drawStar);
 }
 addEventListener('resize', resizeStar); resizeStar(); requestAnimationFrame(drawStar);
 
-/* ---------- DOM refs ---------- */
+/* ---------- elements ---------- */
 const elEngine=document.getElementById('engine');
 const elBar=document.getElementById('bar');
 const elPreview=document.getElementById('preview');
@@ -201,54 +187,39 @@ const elPreviewTip=document.getElementById('previewTip');
 const elNew=document.getElementById('newBadge');
 const elList=document.getElementById('list');
 const elStatus = document.getElementById('engineStatus');
-const elQuota = document.getElementById('quotaNote');
-const btnFind = document.getElementById('btnFind');
-
-/* ---------- helpers ---------- */
-function setEngineBadge(text, ok=true){ elEngine.textContent = 'engine: '+text; elEngine.className = 'badge ' + (ok?'ok':'warn'); }
-function setEngineStatus(state, text){
-  elStatus.classList.remove('idle','working');
-  elStatus.classList.add(state); // 'idle' | 'working'
-  elStatus.innerHTML = `<span class="dot"></span>${text}`;
-}
-async function post(path, body){
-  const r = await fetch((window.API_BASE||'')+path, { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body:JSON.stringify(body||{}) });
-  return r.json();
-}
-async function get(path){
-  const r = await fetch((window.API_BASE||'')+path, { headers:{'x-galactly-user':UID} });
-  return r.json();
-}
+const elFindQuota = document.getElementById('findQuota');
+const elSigState = document.getElementById('sigState');
 
 /* ---------- quotas ---------- */
-let findsLeft=0, revealsLeft=0, resetsAt='';
-function updateQuotaUi(){
-  const next = new Date(resetsAt||'').toISOString().slice(11,16)+'Z';
-  elQuota.textContent = `Free: ${findsLeft} searches left • ${reveal sLeft} reveals left • reset ${next}`;
-  btnFind.disabled = findsLeft<=0;
-}
-async function refreshStatus(){
+async function refreshQuota(){
   try{
-    const s = await get('/api/v1/status');
-    if(s?.ok){
-      findsLeft = Number(s.free?.findsLeft||0);
-      revealsLeft = Number(s.free?.revealsLeft||0);
-      resetsAt = s.free?.resetsAt || '';
-      updateQuotaUi();
-      setEngineBadge('ready', true);
-    } else {
-      setEngineBadge('error', false);
-    }
-  }catch{ setEngineBadge('error', false); }
+    const s = await API.get('/api/v1/status');
+    if (s && s.free){ elFindQuota.textContent = `Free: ${s.free.findsLeft} searches left • ${s.free.revealsLeft} reveals left`; }
+  }catch{ elFindQuota.textContent = 'Free: 2 searches • 2 reveals left'; }
 }
+refreshQuota();
 
-/* ---------- lead list ---------- */
-function maskTitle(t){ return t.replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.8 ? '•' : c)); }
+/* ---------- engine status ---------- */
+function setEnginePhase(text, working){ elEngine.textContent = 'engine: ' + text; elStatus.classList.toggle('working', !!working); elStatus.textContent=''; const s=document.createElement('span'); s.className='dot'; elStatus.appendChild(s); elStatus.append(''+text.charAt(0).toUpperCase()+text.slice(1)); }
+setEnginePhase('idle', false);
+
+/* ---------- API helpers ---------- */
+async function post(path, body){ return API.post(path, body); }
+async function get(path){ return API.get(path); }
+
+/* ---------- Leads fetch ---------- */
+let queue=[]; let inflight=false; let visible=[];
+function stageLeads(list){ queue.push(...list); runQueue(); }
+function runQueue(){ if(inflight || queue.length===0) return; inflight=true; setTimeout(()=>{ const next=queue.shift(); if(next) addCard(next); inflight=false; if(queue.length) runQueue(); }, 1000+Math.random()*1100); }
+async function pollLeadsOnce(){ try{ const r = await get('/api/v1/leads'); if(r?.ok && Array.isArray(r.leads)){ if(visible.length===0){ elNew.style.display='inline-flex'; } stageLeads(r.leads.map(L=>({...L,_locked:true}))); } }catch(e){} }
+
+/* ---------- Card UI ---------- */
+function maskTitle(t){ return (t||'').replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.8 ? '•' : c)); }
 function safeHost(u){ try{ return new URL(u).hostname; }catch{ return 'source'; } }
 
 function cardEl(lead){
-  const d=document.createElement('div'); d.className='card locked'; d.dataset.id = lead.id;
-  const conf = Math.max(48, Math.min(92, Number(lead.heat || 60)));
+  const d=document.createElement('div'); d.className='card locked'; d.dataset.id=lead.id;
+  const conf=Math.max(48, Math.min(92, Number(lead.heat||60)));
   d.innerHTML = `
     <div class="meta">
       <span class="pill">${lead.cat||'signal'}</span>
@@ -261,115 +232,57 @@ function cardEl(lead){
       <button class="btn primary" data-a="own" disabled>Own</button>
     </div>`;
   let timer=null, revealed=false;
-  const press = ()=> {
-    if(revealsLeft<=0){ d.querySelector('.hold').innerHTML='<span style="color:#f6ba6a">Daily reveal limit reached. Upgrade to continue.</span>'; return; }
-    timer = setTimeout(()=> revealLead(), 1400);
-  };
-  const cancel = ()=> { clearTimeout(timer); timer=null; };
-  d.addEventListener('pointerdown', press);
-  d.addEventListener('pointerup', cancel);
-  d.addEventListener('pointerleave', cancel);
+  const press=()=>{ timer=setTimeout(()=>revealLead(), 1400); };
+  const cancel=()=>{ clearTimeout(timer); timer=null; };
+  d.addEventListener('pointerdown', press); d.addEventListener('pointerup', cancel); d.addEventListener('pointerleave', cancel);
 
   async function revealLead(){
-    if(revealed) return; revealed=true;
-    // server-side decrement
-    try{
-      const rr = await post('/api/v1/reveal', { leadId: lead.id });
-      if(rr?.ok){ revealsLeft = Math.max(0, revealsLeft-1); updateQuotaUi(); }
-      else if(rr?.error==='free_limit_reached'){ return; }
-    }catch{}
-
-    d.classList.remove('locked'); d.querySelector('.hold').remove();
-    d.querySelector('[data-a=why]').disabled=false;
-    d.querySelector('[data-a=own]').disabled=false;
-    d.querySelector('.title').textContent = lead.title || 'Buyer signal';
-    const meta = d.querySelector('.meta');
-    meta.insertAdjacentHTML('beforeend', `<span class="pill">${safeHost(lead.source_url)}</span>`);
-  }
+    if(revealed) return; // try server quota first
+    try{ await post('/api/v1/reveal', { leadId: lead.id }); }catch{ /* fall back to local if endpoint missing */ }
+    revealed=true; d.classList.remove('locked'); d.querySelector('.hold').remove(); d.querySelector('[data-a=why]').disabled=false; d.querySelector('[data-a=own]').disabled=false; d.querySelector('.title').textContent = lead.title || 'Buyer signal'; const meta=d.querySelector('.meta'); const host=safeHost(lead.source_url); meta.insertAdjacentHTML('beforeend', `<span class="pill">${host}</span>`); refreshQuota(); }
 
   d.querySelector('[data-a=own]').onclick = ()=> {
-    post('/api/v1/claim',{leadId:lead.id}).then(r=> {
-      if(r?.ok && r.windowId){ post('/api/v1/own',{windowId:r.windowId}).catch(()=>{}); }
-    });
+    post('/api/v1/claim',{leadId:lead.id}).then(r=>{ if(r?.ok){ return post('/api/v1/own',{windowId:r.windowId}).catch(()=>{}); } });
   };
   d.querySelector('[data-a=why]').onclick = ()=> openWhy(lead);
   return d;
 }
-function addCard(lead){ document.getElementById('list').appendChild(cardEl(lead)); }
+function addCard(lead){ visible.push(lead); elList.appendChild(cardEl(lead)); }
 
 /* ---------- WHY modal ---------- */
 const modal = document.getElementById('whyModal');
-document.getElementById('mClose').onclick = ()=> modal.style.display='none';
-document.getElementById('mConfirm').onclick = ()=> { modal.style.display='none'; };
-
+document.getElementById('mClose').onclick = ()=> modal.classList.remove('in');
+document.getElementById('mConfirm').onclick = ()=> { modal.classList.remove('in'); };
+function roughSpend(lead){ const h = Number(lead.heat||60); const lo=2000, hi=12000; return Math.round(lo + (hi-lo)*(h/100)).toLocaleString(); }
 function openWhy(lead){
   document.getElementById('whyTitle').textContent = (lead.title||safeHost(lead.source_url));
   document.getElementById('whyBullets').innerHTML = `
     <ul style="margin:0 0 6px 18px;">
-      <li>Paid reach ≈ <strong>$${roughSpend(lead)} / mo</strong> → indicates active demand generation (so packaging throughput).</li>
-      <li>Recent product/restock activity → likely pack movement now.</li>
-      <li>Category + region match your profile.</li>
+      <li>Paid reach ≈ <strong>$${roughSpend(lead)} / mo</strong> → indicates active demand generation for their products → likely packaging throughput.</li>
+      <li>Recent product / restock activity observed → case/pack movement likely.</li>
+      <li>Category & region match your profile. Use this lead now while competitors see it too.</li>
     </ul>`;
-  document.getElementById('whyProof').textContent = JSON.stringify({source: safeHost(lead.source_url), id: lead.id, confidence: (lead.heat||60)}, null, 2);
-  modal.style.display='flex';
-}
-function roughSpend(lead){
-  const h = Number(lead.heat||60); const lo=2000, hi=12000; return Math.round(lo + (hi-lo)*(h/100)).toLocaleString();
+  document.getElementById('whyProof').textContent = JSON.stringify({source: safeHost(lead.source_url), id: lead.id, observed: 'ad/procurement/pdp', confidence: (lead.heat||60)}, null, 2);
+  modal.classList.add('in');
 }
 
-/* ---------- Signals preview (slow) ---------- */
-const RULES = [
-  '[Normalization] Input cleanup · vendor/seed/region bias',
-  '[Demand] Paid reach probes · Meta • Google',
-  '[Commerce] Restock/post cadence · vendor stores',
-  '[Procurement] Supplier / intake pages',
-  '[Mentions] Retailer pages & planograms',
-  '[Seasonality] Event & promo windows',
-  '[Units] Convert spend → traffic → orders → packs',
-  '[Queue] Convert units → packaging windows',
-  '[Confidence] Blend scores & de-dup domains'
-];
-let ticker=null;
-function startPreview(seconds=60, truncateTo=7){
-  clearInterval(ticker);
-  elPreview.textContent=''; elPreviewTip.textContent='';
-  document.getElementById('sigState').textContent='0%';
-  elBar.style.width='0%';
-  setEngineBadge('running');
-  setEngineStatus('working','Scanning public signals…');
-
-  let i=0; const totalTicks = Math.max(truncateTo, Math.min(RULES.length, Math.round(seconds/4)));
-  ticker = setInterval(()=>{
-    const msg = RULES[i % RULES.length] + ' — computed';
-    elPreview.textContent += '• '+msg+'\n';
-    i++;
-    const p = Math.min(1, i/totalTicks);
-    elBar.style.width = (p*100)+'%'; document.getElementById('sigState').textContent = Math.round(p*100)+'%';
-    if(i>=totalTicks){
-      clearInterval(ticker);
-      elPreviewTip.innerHTML = 'Free plan stops early. Enable <strong>full signals</strong> to unlock the remaining rules.';
-      setEngineBadge('ready');
-      setEngineStatus('idle','Ready — new results will appear below');
-      elNew.style.display='inline-flex';
-    }
-  }, 4000);
-}
-
-/* ---------- fetch leads ---------- */
-async function pollLeadsOnce(){
-  const r = await get('/api/v1/leads');
-  if(r?.ok && Array.isArray(r.leads)){
-    const list = document.getElementById('list'); list.innerHTML = ''; // reset list
-    // trickle them in
-    let idx = 0;
-    setEngineStatus('working', 'Adding results…');
-    function pushOne(){
-      if(idx >= r.leads.length){ setEngineStatus('idle','Ready'); return; }
-      addCard(r.leads[idx++]);
-      setTimeout(pushOne, 900 + Math.random()*600);
-    }
-    pushOne();
-  }
+/* ---------- Signals preview via SSE ---------- */
+let sse;
+function startPreviewSSE(params){
+  if (sse) { try{sse.close();}catch{} }
+  elPreview.textContent=''; elPreviewTip.textContent=''; elSigState.textContent='0%'; elBar.style.width='0%'; setEnginePhase('running', true);
+  const url = new URL(API.sseURL('/api/v1/progress.sse'));
+  if (params.vendor) url.searchParams.set('vendor', params.vendor);
+  if (params.industries?.length) url.searchParams.set('industries', params.industries.join(','));
+  if (params.regions?.length) url.searchParams.set('regions', params.regions.join(','));
+  sse = new EventSource(url.toString());
+  let shown=0, total=32;
+  sse.addEventListener('hello', (ev)=>{ try{ const d=JSON.parse(ev.data); }catch{} });
+  sse.addEventListener('step', (ev)=>{
+    try{ const d=JSON.parse(ev.data); shown=d.index; total=d.of||total; elPreview.textContent += `• [${d.cap}] ${d.label} — computed\n`; const p=Math.min(1, shown/total); elBar.style.width=(p*100)+'%'; elSigState.textContent=Math.round(p*100)+'%'; }catch{}
+  });
+  sse.addEventListener('halt', (ev)=>{ try{ const d=JSON.parse(ev.data); elPreviewTip.innerHTML = 'Free plan stops early. Enable <strong>full signals</strong> to unlock the remaining rules.'; setEnginePhase('ready', false); }catch{} sse.close(); });
+  sse.addEventListener('error', ()=>{ setEnginePhase('ready', false); sse.close(); });
 }
 
 /* ---------- run buttons ---------- */
@@ -377,33 +290,23 @@ document.getElementById('btnDry').onclick = ()=> run(false);
 document.getElementById('btnFind').onclick = ()=> run(true);
 
 async function run(persist){
-  // store form
-  const body = {
-    vendorDomain: document.getElementById('vendor').value.trim(),
-    buyers: document.getElementById('buyers').value.split(',').map(s=>s.trim()).filter(Boolean),
-    industries: document.getElementById('industries').value.split(',').map(s=>s.trim()).filter(Boolean),
-    regions: document.getElementById('regions').value.split(',').map(s=>s.trim()).filter(Boolean),
-    describe: document.getElementById('describe').value.trim(),
-    listMe: document.getElementById('listMe').checked === true
-  };
+  // wipe current list, keep star visible
+  elList.innerHTML=''; visible=[]; queue=[]; elNew.style.display='none';
+  // gather form
+  const body={ vendorDomain: document.getElementById('vendor').value.trim(), buyers: document.getElementById('buyers').value.split(',').map(s=>s.trim()).filter(Boolean), industries: document.getElementById('industries').value.split(',').map(s=>s.trim()).filter(Boolean), regions: document.getElementById('regions').value.split(',').map(s=>s.trim()).filter(Boolean), describe: document.getElementById('describe').value.trim(), listMe: document.getElementById('listMe').checked===true };
   localStorage.setItem('onboard', JSON.stringify(body));
-
-  if(findsLeft<=0){ setEngineBadge('limit', false); return; }
-
-  startPreview(60, 7);
-  setEngineStatus('working', 'Searching brands & public feeds…');
-
+  // start slow preview stream
+  startPreviewSSE({ vendor: body.vendorDomain, industries: body.industries, regions: body.regions });
   try{
-    const res = await post('/api/v1/find-now', body);
-    if(res?.ok){
-      findsLeft = Math.max(0, findsLeft-1); updateQuotaUi();
-      setTimeout(pollLeadsOnce, 2000);
-      setTimeout(pollLeadsOnce, 7000);
-    } else if(res?.error==='free_limit_reached'){
-      await refreshStatus();
-    }
-  }catch(e){ setEngineBadge('error', false); }
+    await post('/api/v1/find-now', body);
+    refreshQuota();
+    setTimeout(pollLeadsOnce, 2500); setTimeout(pollLeadsOnce, 8000); setTimeout(pollLeadsOnce, 14000);
+  }catch(e){ console.warn(e); setTimeout(pollLeadsOnce, 3000); }
 }
 
-/* ---------- init ---------- */
-refreshStatus(); // pulls real remaining tries
+/* ---------- ensure inner panes scroll only ---------- */
+document.querySelectorAll('.scroller').forEach(el=>{ el.addEventListener('wheel', ev=>ev.stopPropagation(), {passive:true}); });
+
+</script>
+</body>
+</html>
