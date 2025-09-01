@@ -1,34 +1,32 @@
-export type Region = 'US' | 'Canada' | 'Other';
-export type LeadState = 'available' | 'reserved' | 'owned' | 'expired' | 'returned';
-export type Heat = 'HOT' | 'WARM' | 'OK';
+export type VendorProfile = {
+vendorDomain?: string;
+industries?: string[];
+regions?: string[];
+buyers?: string[]; // seed buyer domains
+};
 
-export interface LeadRow {
-  id: number;
-  cat: string;
-  kw: string;
-  platform: string;
-  region: Region;
-  fit_user: number;
-  fit_competition: number;
-  heat: Heat;
-  source_url?: string;
-  evidence_snippet?: string;
-  generated_at: number; // epoch ms
-  expires_at: number;   // epoch ms
-  state: LeadState;
-  reserved_by?: string | null; // userId
-  reserved_until?: number | null; // epoch ms
-  company?: string | null;
-  person_handle?: string | null;
-  contact_email?: string | null;
+
+export type ProgressKind =
+| 'start' // job accepted
+| 'status' // general heartbeat / spinner text
+| 'metric' // a metric started/completed (for preview rail)
+| 'lead' // a lead candidate was produced
+| 'warn' // soft warning
+| 'error' // hard error (job will complete next)
+| 'done'; // job finished (success or partial)
+
+
+export interface ProgressEvent {
+t: number; // epoch ms
+kind: ProgressKind;
+msg?: string;
+data?: any; // {ruleId, ruleName, step, of} etc.
 }
 
-export interface UserRow {
-  id: string; // device/user id
-  email?: string | null;
-  region: Region;
-  fp: number;
-  multipliers_json: string; // JSON
-  verified_at?: number | null;
-  created_at: number;
+
+export interface JobMeta {
+id: string;
+userId: string | null;
+startedAt: number;
+vendor: VendorProfile;
 }
