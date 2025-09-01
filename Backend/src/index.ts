@@ -9,6 +9,25 @@ import { findAdvertisersFree } from './connectors/adlib_free';
 import { scanPDP } from './connectors/pdp';
 import { scanBrandIntake } from './brandintake';
 import { deriveBuyersFromVendorSite } from './connectors/derivebuyersfromvendorsite';
+import { startProgress, getProgress, stopProgress } from './progress';
+
+app.post('/api/v1/progress/start', (req, res) => {
+  const userId = (req as any).userId || 'anon';
+  const out = startProgress(userId, req.body || {});
+  res.json({ ok: true, ...out });
+});
+
+app.get('/api/v1/progress/:id', (req, res) => {
+  const snap = getProgress(req.params.id);
+  if (!snap) return res.status(404).json({ ok:false, error:'not found' });
+  res.json({ ok:true, ...snap });
+});
+
+app.post('/api/v1/progress/:id/stop', (req, res) => {
+  stopProgress(req.params.id);
+  res.json({ ok:true });
+});
+
 
 const app = express();
 app.use(express.json({ limit: '300kb' }));
