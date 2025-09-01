@@ -88,6 +88,7 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
     <div class="leftHero"><canvas id="star"></canvas></div>
     <div class="scroller">
       <div id="list" class="list"></div>
+    <div class="engine-status" id="engineStatus">Lead Engine • idle</div>
     </div>
   </div>
 
@@ -108,6 +109,8 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
       <div style="display:flex; gap:10px; margin-top:10px">
         <button id="btnDry" class="btn ghost" title="Simulate, don’t store">Dry run</button>
         <button id="btnFind" class="btn primary">Find now</button>
+        <div class="quota-note" id="quotaNote">Free: 2 searches left • 2 reveals left</div>
+
       </div>
       <div class="note">Tip: we’ll add 1–2 leads at a time, and stream the reasoning below. Hold to reveal. Free plan allows 2 deep reveals/day.</div>
     </div>
@@ -162,6 +165,17 @@ function resizeStar(){ const r=cvs.getBoundingClientRect(); cvs.width=r.width*DP
 function drawStar(ts){
   if(!ctx) return; const w=cvs.clientWidth, h=cvs.clientHeight, cx=w*0.5, cy=h*0.5;
   ctx.clearRect(0,0,w,h);
+
+.engine-status{
+  position:absolute; left:16px; bottom:12px;
+  font-size:12px; opacity:.8; color:#cfd7e6;
+  pointer-events:none;
+}
+.engine-status .dot{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6); }
+.engine-status.idle .dot{ background:#64708a; box-shadow:none; }
+.engine-status.working .dot{ animation:pulse 1.8s ease-in-out infinite; }
+@keyframes pulse{ 0%{transform:scale(.9); opacity:.6} 50%{transform:scale(1.2); opacity:1} 100%{transform:scale(.9); opacity:.6} }
+
   // outer glow
   const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.42);
   g.addColorStop(0,'rgba(255,255,255,.04)'); g.addColorStop(1,'rgba(255,255,255,0)');
@@ -217,6 +231,14 @@ function runQueue(){ if(inflight || engine.phase!=='running') return; if(queue.l
 }
 function revealsUsed(){ return Number(localStorage.getItem(revealKey)||'0'); }
 function incReveal(){ const n=revealsUsed()+1; localStorage.setItem(revealKey,String(n)); return n; }
+
+const elStatus = document.getElementById('engineStatus');
+function setEngineStatus(state, text){
+  elStatus.classList.remove('idle','working');
+  elStatus.classList.add(state); // 'idle' | 'working'
+  elStatus.innerHTML = `<span class="dot"></span>${text}`;
+}
+
 
 /* ---------- API ---------- */
 async function post(path, body){
@@ -341,6 +363,7 @@ function startPreview(seconds=45, truncateTo=6){
 /* ---------- buttons ---------- */
 document.getElementById('btnDry').onclick = ()=> run(false);
 document.getElementById('btnFind').onclick = ()=> run(true);
+.quota-note{ font-size:12px; opacity:.75; margin-top:6px; }
 
 async function run(persist){
   // wipe current list & show star only until results trickle
