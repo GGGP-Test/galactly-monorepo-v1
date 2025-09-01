@@ -72,7 +72,64 @@ app.get('/__routes', (_req, res) => {
     { path: '/api/v1/progress.sse', methods: ['get'] },
   ]);
 });
-app.get('/api/v1/status', (_req, res) => res.json({ ok: true, mode: 'vendor-signals' }));
+
+app.get('/api/v1/status', async (req, res) => {
+  const userId = (req as any).userId || 'anon';
+  const freeFindsPerDay   = Number(process.env.FREE_FINDS_PER_DAY   || 2);
+  const freeRevealsPerDay = Number(process.env.FREE_REVEALS_PER_DAY || 2);
+
+  let quota: Quota = { date: TODAY(), findsUsed: 0, revealsUsed: 0 };
+  if (userId && userId !== 'anon') quota = await getQuota(userId);
+
+  const findsLeft   = Math.max(0, freeFindsPerDay   - quota.findsUsed);
+  const revealsLeft = Math.max(0, freeRevealsPerDay - quota.revealsUsed);
+
+  res.json({
+    ok: true,
+    engine: 'ready',
+    free: {
+      findsLeft,
+      revealsLeft,
+      resetsAt: resetAtUtc(quota.date),
+      perDay: { finds: freeFindsPerDay, reveals: freeRevealsPerDay }
+    }
+  });
+});
+
+
+// --- Quota helpers (JSONB inside app_user.user_prefs) ---
+type Quota = { date: string, findsUsed: number, revealsUsed: number };
+const TODAY = () => new Date().toISOString().slice(0,10); // YYYY-MM-DD
+
+async function getQuota(userId: string): Promise<Quota> {
+  const r = await q<{ user_prefs: any }>(`SELECT user_prefs FROM app_user WHERE id=$1`, [userId]);
+  const prefs = r.rows[0]?.user_prefs || {};
+  const qn = prefs.quota || {};
+  const today = TODAY();
+  if (qn.date !== today) return { date: today, findsUsed: 0, revealsUsed: 0 };
+  return { date: String(qn.date), findsUsed: Number(qn.findsUsed||0), revealsUsed: Number(qn.revealsUsed||0) };
+}
+
+async function saveQuota(userId: string, qn: Quota) {
+  await q(
+    `UPDATE app_user
+       SET user_prefs = jsonb_set(
+         COALESCE(user_prefs,'{}'::jsonb),
+         '{quota}',
+         to_jsonb($2::jsonb)
+       )
+     WHERE id=$1`,
+    [userId, qn as any]
+  );
+}
+
+function resetAtUtc(dateStr: string): string {
+  // midnight rollover for the *next* day in UTC (free plan resets daily)
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate()+1);
+  return d.toISOString();
+}
+
 
 // -------------------- presence (soft) --------------------
 const online: Record<string, number> = {};
@@ -210,6 +267,17 @@ app.get('/api/v1/debug/peek', async (_req, res) => {
 app.post('/api/v1/find-now', async (req, res) => {
   const started = Date.now();
   const body = req.body || {};
+  const userId = (req as any).userId || null;
+if (userId) {
+  const freeFindsPerDay = Number(process.env.FREE_FINDS_PER_DAY || 2);
+  let quota = await getQuota(userId);
+  if (quota.date !== TODAY()) quota = { date: TODAY(), findsUsed: 0, revealsUsed: 0 };
+  if (quota.findsUsed >= freeFindsPerDay) {
+    return res.status(429).json({ ok:false, error:'free_limit_reached', message:'Daily free searches used.' });
+  }
+  quota.findsUsed += 1;
+  await saveQuota(userId, quota);
+}
   const buyersRaw: string[] = Array.isArray(body.buyers) ? body.buyers : [];
   const industries: string[] = Array.isArray(body.industries) ? body.industries : [];
   const regions: string[] = Array.isArray(body.regions) ? body.regions : [];
@@ -261,7 +329,20 @@ app.post('/api/v1/find-now', async (req, res) => {
     checked++;
   }
 
-  res.json({ ok:true, checked, created, advertisers: advertisers.length, tookMs: Date.now()-started });
+  app.post('/api/v1/reveal', async (req, res) => {
+  const userId = (req as any).userId || null;
+  if (userId) {
+    const freeRevealsPerDay = Number(process.env.FREE_REVEALS_PER_DAY || 2);
+    let quota = await getQuota(userId);
+    if (quota.date !== TODAY()) quota = { date: TODAY(), findsUsed: 0, revealsUsed: 0 };
+    if (quota.revealsUsed >= freeRevealsPerDay) {
+      return res.status(429).json({ ok:false, error:'free_limit_reached', message:'Daily free reveals used.' });
+    }
+    quota.revealsUsed += 1;
+    await saveQuota(userId, quota);
+  }
+    
+  res.json({ ok:true, reveal: {/* ... */} });
 });
 
 // -------------------- NEW: /api/v1/progress.sse (Server-Sent Events for right-column metric preview) --------------------
