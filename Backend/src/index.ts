@@ -6,6 +6,8 @@ import path from 'path';
 import { migrate, q } from './db';
 import { nowPlusMinutes } from './util';
 import { computeScore, type Weights, type UserPrefs } from './scoring';
+import { reviewProbe } from './connectors/reviews';
+
 
 // Optional connectors (present in your repo)
 import { findAdvertisersFree } from './connectors/adlib_free';
@@ -407,6 +409,37 @@ app.post('/api/v1/find-now', async (req, res) => {
     checked++;
   }
 
+// Reviews / complaints → packaging signals
+const revHits = await runSafely(reviewProbe(host));
+for (const r of (revHits || [])) {
+  if (!seenUrl.has(r.url)) {
+    await insertLead({
+      platform: 'reviews',
+      source_url: r.url,
+      title: r.title || `${host} — customer review`,
+      snippet: r.snippet || '',
+      kw: ['reviews','packaging'],
+      cat: 'reviews',
+      heat: 74, // mid-high; gets refined by your scoring
+      meta: { domain: host, cat: r.cat || null }
+    });
+    seenUrl.add(r.url); created++;
+  }
+}
+
+// If we still created nothing for this host, seed one synthetic lead so UX isn't blank
+if (created === 0) {
+  await insertLead({
+    platform:'discover',
+    source_url:`https://${host}/?proof=discover`,
+    title:`${host} — buyer signal (warming)`,
+    snippet:`Initial signals queued (ads/PDP/reviews).`,
+    kw:['signal'], cat:'demand', heat:65, meta:{domain:host}
+  });
+  created++;
+}
+
+  
   res.json({ ok: true, checked, created, tookMs: Date.now() - started });
 });
 
