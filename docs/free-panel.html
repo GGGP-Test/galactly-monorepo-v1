@@ -1,345 +1,384 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Galactly — Live Results</title>
-  <style>
-    :root{
-      --bg:#070a10; --panel:#0e1420; --ink:#e9eef6; --mut:#94a3b8; --line:#1d2533;
-      --accent:#86f7d6; --accent2:#57a4ff; --good:#76f7a4; --warn:#ffd166; --bad:#ff6b6b;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;background:radial-gradient(1200px 700px at 85% -10%,rgba(120,160,255,.10),rgba(0,0,0,0) 60%), radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.07), rgba(0,0,0,0) 60%), linear-gradient(180deg,#0b0e18,#06070c 55%); color:var(--ink); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; overflow:hidden}
-    a{color:inherit}
-    header{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 18px; border-bottom:1px solid var(--line); backdrop-filter: blur(10px) saturate(1.05); background:rgba(5,7,12,.55); position:sticky; top:0; z-index:20}
-    .brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:#fff}
-    .brand svg{width:22px;height:22px}
-    .brand b{font-weight:800}
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Galactly — Live results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#e9eef7; --mut:#a7b0c3; --line:#202838; --card:#0f1420; --panel:#0b101a;
+  --accent:#89ffd8; --accent2:#68a7ff; --warn:#f7c46a; --ok:#7fffd4;
+  --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; color:var(--ink); background:
+   radial-gradient(1000px 600px at 10% 0%, rgba(120,180,255,.08), rgba(0,0,0,0) 60%),
+   radial-gradient(900px 700px at 115% 20%, rgba(150,255,220,.08), rgba(0,0,0,0) 50%),
+   linear-gradient(180deg,#0a0e16,#06080e 60%);
+  font-family:var(--inter); line-height:1.55; overflow:hidden;  /* page itself doesn’t scroll */
+}
+header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px}
+.brand{display:flex; align-items:center; gap:8px; font:800 15px var(--mont); color:#fff; text-decoration:none}
+.brand svg{width:20px;height:20px}
+.badge{display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:#cdd6ea; background:#0c1220}
+.badge.ok{color:#b8ffd8}
+.row{height:calc(100% - 56px); display:grid; grid-template-columns: minmax(420px, 48%) 1fr; gap:16px; padding:16px}
+@media (max-width:1120px){ .row{grid-template-columns:1fr} }
 
-    .shell{display:grid; grid-template-columns: 1.1fr 0.9fr; gap:16px; height:calc(100% - 60px); padding:16px; max-width:1400px; margin:0 auto}
-    @media (max-width:1100px){ .shell{grid-template-columns:1fr; height:auto; overflow:auto} }
+.col{background:var(--panel); border:1px solid var(--line); border-radius:16px; display:flex; flex-direction:column; min-height:0}
+.section{padding:14px 16px; border-bottom:1px solid var(--line); font:700 14px var(--mont); opacity:.9}
+.scroller{padding:12px 12px 14px; overflow:auto; min-height:0}
 
-    .pane{background:var(--panel); border:1px solid var(--line); border-radius:14px; display:flex; flex-direction:column; min-height:0; box-shadow:0 8px 30px rgba(0,0,0,.35)}
-    .pane h3{margin:0; padding:12px 14px; border-bottom:1px solid var(--line); font-weight:800; letter-spacing:.2px}
-    .pane .content{padding:12px; display:flex; flex-direction:column; gap:12px; min-height:0}
+.leftHero{position:relative; height:220px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#0b0f19,#0a0e17)}
+#star{width:100%; height:100%}
 
-    /* Left column: Live Results */
-    .liveHead{display:flex; align-items:center; justify-content:space-between; gap:10px}
-    .pill{border:1px solid var(--line); background:#0b1320; padding:4px 9px; border-radius:999px; font-size:12px; opacity:.9}
+/* card list */
+.list{display:flex; flex-direction:column; gap:10px}
+.card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px}
+.card.locked{opacity:.85; filter:saturate(.85)}
+.meta{display:flex; gap:8px; flex-wrap:wrap; font-size:11px; opacity:.8}
+.meta .pill{border:1px solid var(--line); border-radius:999px; padding:2px 8px}
+.title{font:700 14px var(--inter); margin-top:6px}
+.hold{margin-top:10px; display:flex; align-items:center; gap:8px; opacity:.9}
+.hold kbd{border:1px solid var(--line); padding:6px 10px; border-radius:10px; background:rgba(255,255,255,.03); font:700 12px var(--inter)}
+.actions{margin-top:8px; display:flex; gap:8px}
+.btn{background:#131c2b; border:1px solid var(--line); border-radius:10px; color:var(--ink); padding:8px 10px; font:700 12px var(--inter); cursor:pointer}
+.btn.primary{background:linear-gradient(90deg,#fff,#e6efff); color:#10131a; border-color:transparent}
+.btn.ghost{background:rgba(255,255,255,.06)}
+.btn:disabled{opacity:.6; cursor:not-allowed}
 
-    .starWrap{position:relative; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:linear-gradient(180deg,#09111b,#0b0f19); height:220px}
-    canvas#neutron{display:block; width:100%; height:100%}
+/* right column */
+.form{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.form .full{grid-column:1 / -1}
+.input{background:#0e1523; border:1px solid var(--line); border-radius:10px; color:#e8eef7; padding:10px 12px; width:100%}
+.note{opacity:.7; font-size:12px; margin-top:6px}
+.preview{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; background:#0d1320; border:1px dashed var(--line); border-radius:12px; padding:10px; font-size:12px; line-height:1.45}
+.progress{height:6px; background:#0c1220; border:1px solid var(--line); border-radius:999px; overflow:hidden; margin:10px 0 2px}
+.progress > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.tip{opacity:.75; font-size:12px}
 
-    .feed{display:flex; flex-direction:column; gap:10px; min-height:0; overflow:auto; padding-right:2px}
-    .card{position:relative; border:1px solid var(--line); background:#0d1524; border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px}
-    .cardHead{display:flex; align-items:center; justify-content:space-between; gap:8px}
-    .brandDot{width:8px;height:8px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent2)); display:inline-block; margin-right:8px}
-    .h{font-weight:700}
-    .meta{font-size:12px; color:var(--mut)}
-    .badges{display:flex; flex-wrap:wrap; gap:6px}
-    .badge{border:1px solid var(--line); border-radius:999px; padding:3px 8px; font-size:12px; opacity:.9}
-    .hot{background:rgba(134,247,214,.12); border-color:rgba(134,247,214,.28)}
-    .warm{background:rgba(255,209,102,.10); border-color:rgba(255,209,102,.22)}
-
-    .holdMask{position:absolute; inset:0; background:linear-gradient(180deg,rgba(6,8,12,.35),rgba(6,8,12,.55)); display:flex; align-items:center; justify-content:center; border-radius:12px; backdrop-filter: blur(2px)}
-    .holdBtn{display:flex; align-items:center; gap:8px; border:1px dashed var(--line); background:rgba(255,255,255,.04); padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer}
-
-    /* Right column: Customize + Metrics */
-    .section{border:1px solid var(--line); border-radius:12px; background:#0c1322}
-    .section h4{margin:0; padding:10px 12px; border-bottom:1px solid var(--line)}
-    .section .body{padding:12px; display:flex; flex-direction:column; gap:10px}
-    .row{display:grid; grid-template-columns:120px 1fr; gap:10px; align-items:center}
-    .row label{font-size:12px; color:var(--mut)}
-    input[type=text], textarea{width:100%; background:#0b111c; color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-family:inherit}
-    textarea{min-height:80px; resize:vertical}
-    .actions{display:flex; align-items:center; gap:10px; justify-content:flex-end}
-    .btn{border:1px solid var(--line); background:linear-gradient(90deg,#fff,#eef3ff); color:#0a0d12; padding:10px 16px; border-radius:12px; font-weight:800; cursor:pointer}
-    .btnGhost{border:1px solid var(--line); background:rgba(255,255,255,.06); color:#fff; padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer}
-    .hint{font-size:12px; color:var(--mut)}
-
-    .metrics{border:1px solid var(--line); border-radius:12px; background:#0b111c; min-height:220px; display:flex; flex-direction:column}
-    .meter{height:6px; background:#0a1220; border-bottom:1px solid var(--line)}
-    .bar{height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2)); box-shadow:0 0 12px rgba(134,247,214,.45) inset; transition:width .6s ease}
-    .log{flex:1; overflow:auto; padding:10px 12px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12.5px}
-    .logLine{opacity:.95; padding:6px 0; border-bottom:1px dashed rgba(255,255,255,.06)}
-    .lock{opacity:.6}
-
-    .apiBox{display:flex; align-items:center; gap:8px}
-    .apiBox input{width:360px}
-
-    /* Scroll only inside panes */
-    .content.scroll{overflow:auto}
-  </style>
+/* modal for Why */
+.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55)}
+.modal.in{display:flex}
+.modal .box{width:min(680px,92vw); background:#0f1524; border:1px solid var(--line); border-radius:16px; padding:16px}
+.modal h3{margin:4px 0 10px; font:800 16px var(--mont)}
+.code{background:#0a0f1d; border:1px solid var(--line); border-radius:10px; padding:10px; overflow:auto; max-height:260px; font-size:12px}
+</style>
 </head>
 <body>
-  <header>
-    <a class="brand" href="./index.html">
-      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/><path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
-      <b>Galactly</b>
-    </a>
-    <div class="apiBox">
-      <span class="pill" id="status">engine: idle</span>
-      <label class="hint">API</label>
-      <input id="apiBase" type="text" placeholder="https://your-northflank.app"/>
-      <button class="btnGhost" id="saveApi">Save</button>
+<header>
+  <a class="brand" href="./index.html">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/><path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
+    <span>Galactly</span>
+  </a>
+  <span class="badge" id="engine">engine: idle</span>
+  <span class="badge" id="api">API: <span id="apiBaseLabel">—</span></span>
+</header>
+
+<div class="row">
+  <!-- LEFT: Live results (single column) -->
+  <div class="col" id="col-left">
+    <div class="section">Live results <span id="newBadge" class="badge" style="margin-left:6px; display:none">new results ready</span></div>
+    <div class="leftHero"><canvas id="star"></canvas></div>
+    <div class="scroller">
+      <div id="list" class="list"></div>
     </div>
-  </header>
+  </div>
 
-  <main class="shell">
-    <!-- Left: Live Results (single column list) -->
-    <section class="pane" id="live">
-      <h3 class="liveHead">
-        <span>Live results</span>
-        <span class="pill" id="liveNote">waiting for your AI to scan…</span>
-      </h3>
-      <div class="content">
-        <div class="starWrap"><canvas id="neutron"></canvas></div>
-        <div class="feed content scroll" id="feed"></div>
+  <!-- RIGHT: Customize + Signals preview (stacked) -->
+  <div class="col" id="col-right">
+    <div class="section">Customize your AI</div>
+    <div class="scroller" id="pane-form">
+      <div class="form">
+        <input id="vendor" class="input full" placeholder="Vendor site (optional) e.g. yourcompany.com"/>
+        <input id="buyers" class="input full" placeholder="Seed buyers (comma separated domains)"/>
+        <input id="industries" class="input" placeholder="Industries e.g. beverage, confectionery"/>
+        <input id="regions" class="input" placeholder="Regions e.g. US, CA"/>
+        <textarea id="describe" rows="4" class="input full" placeholder="Describe your ideal customers in plain words. Products, pack types, order sizes, retailer channels, and any exclusions."></textarea>
       </div>
-    </section>
-
-    <!-- Right: Customize Your AI + Metrics Preview -->
-    <section class="pane" id="rightCol">
-      <h3>Customize your AI</h3>
-      <div class="content" style="gap:12px;">
-        <div class="section">
-          <h4>Profile & targeting</h4>
-          <div class="body">
-            <div class="row"><label>Vendor site</label><input id="fVendor" type="text" placeholder="https://yourpackagingco.com"/></div>
-            <div class="row"><label>Industries</label><input id="fIndustries" type="text" placeholder="beverage, confectionery"/></div>
-            <div class="row"><label>Regions</label><input id="fRegions" type="text" placeholder="US, CA"/></div>
-            <div class="row"><label>Example buyers</label><input id="fBuyers" type="text" placeholder="soylent.com, liquiddeath.com"/></div>
-            <div class="row" style="grid-template-columns:120px 1fr; align-items:start">
-              <label>Describe ideal buyer</label>
-              <textarea id="fPrompt" placeholder="Short, specific. e.g. ‘DTC beverage brands in US with retail presence, launching 4+ flavors/yr, cans or pouches, MOQ 10k+.’"></textarea>
-            </div>
-            <label style="display:flex; gap:8px; align-items:center; font-size:13px; opacity:.95">
-              <input id="fListInbound" type="checkbox"/> List my company for inbound opportunities
-            </label>
-            <div class="actions">
-              <button class="btnGhost" id="testRun">Dry run</button>
-              <button class="btn" id="doRun">Find now</button>
-            </div>
-            <div class="hint" id="runHint">Tip: we’ll add 1–2 leads at a time. Press‑and‑hold a card to reveal details.</div>
-          </div>
-        </div>
-
-        <div class="metrics">
-          <div class="meter"><div class="bar" id="mBar"></div></div>
-          <div class="log" id="mLog"></div>
-        </div>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:10px">
+        <input type="checkbox" id="listMe"/> <span>List my company for inbound opportunities</span>
+      </label>
+      <div style="display:flex; gap:10px; margin-top:10px">
+        <button id="btnDry" class="btn ghost" title="Simulate, don’t store">Dry run</button>
+        <button id="btnFind" class="btn primary">Find now</button>
       </div>
-    </section>
-  </main>
+      <div class="note">Tip: we’ll add 1–2 leads at a time, and stream the reasoning below. Hold to reveal. Free plan allows 2 deep reveals/day.</div>
+    </div>
 
-  <script>
-  // ---------- API base + session ----------
-  (function initApi(){
-    const DEFAULT = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
-    const q = new URLSearchParams(location.search);
-    let base = q.get('api') || localStorage.getItem('apiBase') || DEFAULT;
-    function normalize(v){ if(!v) return DEFAULT; v=String(v).trim().replace(/\/+$/,''); if(!/^https?:\/\//i.test(v)) v='https://'+v; return v; }
-    base = normalize(base);
-    window.API_BASE = base;
-    try{ localStorage.setItem('apiBase', base); }catch{}
-    const apiInput = document.getElementById('apiBase'); if(apiInput){ apiInput.value = base; document.getElementById('saveApi').onclick = ()=>{ const n=normalize(apiInput.value); localStorage.setItem('apiBase', n); window.API_BASE=n; document.getElementById('status').textContent='api saved'; setTimeout(()=>location.reload(), 350); }; }
-  })();
+    <div class="section">Signals preview <small id="sigState" style="opacity:.6;font-weight:600;margin-left:8px">idle</small></div>
+    <div class="scroller" id="pane-preview">
+      <div class="progress"><i id="bar"></i></div>
+      <div id="preview" class="preview"></div>
+      <div class="tip" id="previewTip"></div>
+    </div>
+  </div>
+</div>
 
-  const uidKey='galactly_uid';
-  let UID = localStorage.getItem(uidKey); if(!UID){ UID='u-'+Math.random().toString(36).slice(2); localStorage.setItem(uidKey, UID); }
-  const headers = ()=> ({ 'content-type':'application/json', 'x-galactly-user': UID });
+<!-- WHY modal -->
+<div id="whyModal" class="modal" role="dialog" aria-modal="true">
+  <div class="box">
+    <h3 id="whyTitle">Why this lead</h3>
+    <div id="whyBullets" style="margin:8px 0 12px"></div>
+    <div class="code" id="whyProof"></div>
+    <div style="display:flex; gap:8px; margin-top:10px; justify-content:flex-end">
+      <button class="btn ghost" id="mClose">Close</button>
+      <button class="btn" id="mConfirm">Looks right</button>
+    </div>
+  </div>
+</div>
 
-  // ---------- Helper ----------
-  async function $get(path){ const r=await fetch(window.API_BASE+path, { headers: headers() }); return r.json(); }
-  async function $post(path, body){ const r=await fetch(window.API_BASE+path, { method:'POST', headers: headers(), body: JSON.stringify(body||{}) }); return r.json(); }
-  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-  function host(url){ try{ return new URL(url).hostname.replace(/^www\./,''); }catch{return ''} }
-  function el(tag, cls, html){ const d=document.createElement(tag); if(cls) d.className=cls; if(html!=null) d.innerHTML=html; return d; }
+<script src="./api-base.js"></script>
+<script>
+/* ---------- globals & helpers ---------- */
+const uidKey='galactly_uid';
+let UID = localStorage.getItem(uidKey) || ('u-'+Math.random().toString(36).slice(2));
+localStorage.setItem(uidKey, UID);
+document.getElementById('apiBaseLabel').textContent = (window.API_BASE||'').replace(/^https?:\/\//,'');
 
-  // ---------- Gate (register user) ----------
-  (async()=>{ try{ await $post('/api/v1/gate', { region:'US', alerts:false }); }catch(e){} })();
+const qs = new URLSearchParams(location.search);
+const onboard = JSON.parse(localStorage.getItem('onboard')||'{}');
+const seed = {
+  vendor: qs.get('vendor') || onboard.vendorDomain || '',
+  buyers: qs.get('buyers') || (Array.isArray(onboard.buyers)?onboard.buyers.join(', '):''),
+  industries: qs.get('industries') || (onboard.industries||''),
+  regions: qs.get('regions') || (onboard.regions||'US, CA'),
+  describe: qs.get('describe') || (onboard.describe||''),
+  listMe: onboard.listMe === true
+};
+['vendor','buyers','industries','regions','describe'].forEach(id=>{ const el=document.getElementById(id); el.value = seed[id]||''; });
+document.getElementById('listMe').checked = !!seed.listMe;
 
-  // ---------- Live feed ----------
-  const feedEl = document.getElementById('feed');
-  const liveNote = document.getElementById('liveNote');
-  let seen = new Set();
-  let allowAppend = true;
-  let polling = false;
+/* ---------- neutron-star canvas ---------- */
+const cvs = document.getElementById('star'); const DPR = Math.min(2, window.devicePixelRatio||1);
+let ctx=null, t0=0;
+function resizeStar(){ const r=cvs.getBoundingClientRect(); cvs.width=r.width*DPR; cvs.height=r.height*DPR; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
+function drawStar(ts){
+  if(!ctx) return; const w=cvs.clientWidth, h=cvs.clientHeight, cx=w*0.5, cy=h*0.5;
+  ctx.clearRect(0,0,w,h);
+  // outer glow
+  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.42);
+  g.addColorStop(0,'rgba(255,255,255,.04)'); g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,Math.min(w,h)*0.42,0,Math.PI*2); ctx.fill();
 
-  function confidenceHeat(lead){ const h = Number(lead.heat||60); return h>=80? 'hot' : 'warm'; }
+  // neutron core
+  const pulse = 1 + 0.12*Math.sin(ts*0.002);
+  const coreR = 22*pulse;
+  const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,coreR*2.2);
+  cg.addColorStop(0,'rgba(255,255,255,.95)'); cg.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.globalCompositeOperation='lighter';
+  ctx.beginPath(); ctx.arc(cx,cy,coreR*2.2,0,Math.PI*2); ctx.fillStyle=cg; ctx.fill();
+  ctx.globalCompositeOperation='source-over';
 
-  function renderCard(lead){
-    const brand = (lead.title||'').split(' — ')[0] || host(lead.source_url) || 'Buyer';
-    const c = el('div','card');
-    const head = el('div','cardHead');
-    head.appendChild(el('div','h',`<span class="brandDot"></span>${brand}`));
-    head.appendChild(el('div','meta', new Date(lead.created_at||Date.now()).toLocaleString()))
-    c.appendChild(head);
-    const badges = el('div','badges');
-    const conf = el('span',`badge ${confidenceHeat(lead)}`, `Confidence ${Math.max(55, Math.min(95, lead.heat||68))}%`); badges.appendChild(conf);
-    if(lead.cat) badges.appendChild(el('span','badge', lead.cat));
-    if(Array.isArray(lead.kw)) badges.appendChild(el('span','badge', lead.kw.slice(0,2).join(' • ')));
-    c.appendChild(badges);
+  // two faint beams slowly precessing
+  const a = ts*0.0005, off = Math.PI/2.8;
+  for(const k of [0,off]){
+    const ang=a+k, len=Math.min(w,h)*0.5;
+    ctx.save();
+    ctx.translate(cx,cy); ctx.rotate(ang);
+    const grad=ctx.createLinearGradient(-len/2,0,len/2,0);
+    grad.addColorStop(0,'rgba(136,255,216,0)'); grad.addColorStop(0.48,'rgba(136,255,216,.22)'); grad.addColorStop(0.52,'rgba(104,167,255,.22)'); grad.addColorStop(1,'rgba(104,167,255,0)');
+    ctx.fillStyle=grad; ctx.fillRect(-len/2,-1.2,len,2.4);
+    ctx.restore();
+  }
+  requestAnimationFrame(drawStar);
+}
+addEventListener('resize', resizeStar); resizeStar(); requestAnimationFrame(drawStar);
 
-    const overlay = el('div','holdMask');
-    const btn = el('div','holdBtn','<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-width="2"/><path d="M12 7v5l4 2" stroke-width="2"/></svg> Press & hold to reveal');
-    overlay.appendChild(btn); c.appendChild(overlay);
+/* ---------- state ---------- */
+const elEngine=document.getElementById('engine');
+const elBar=document.getElementById('bar');
+const elPreview=document.getElementById('preview');
+const elPreviewTip=document.getElementById('previewTip');
+const elNew=document.getElementById('newBadge');
+const elList=document.getElementById('list');
 
-    let pressT=null, holding=false, revealed=false, claimOk=false; let timer;
-    const THOLD = 700; // ms
-    function onDown(e){ if(revealed) return; holding=true; pressT=Date.now(); timer=setTimeout(async()=>{ if(!holding) return; // claim
-        try{ const r = await $post('/api/v1/claim', { leadId: lead.id }); if(r?.ok){ claimOk=true; overlay.remove(); revealed=true; liveNote.textContent = 'reserved 120s — click to own';
-            // add quick reveal details
-            const hint = el('div','meta', 'Reserved for you. Click card to open proof (where available).'); c.appendChild(hint);
-            c.onclick = ()=>{ if(lead.source_url) window.open(lead.source_url,'_blank','noopener'); };
-          } else { btn.textContent='Already taken'; }
-        }catch(err){ btn.textContent='Hold again'; }
-    }, THOLD); }
-    function onUp(){ holding=false; clearTimeout(timer); }
-    overlay.addEventListener('pointerdown', onDown); overlay.addEventListener('pointerup', onUp); overlay.addEventListener('pointerleave', onUp);
+const DAILY_MAX = 2;
+const revealKey = 'reveals_'+new Date().toISOString().slice(0,10);
+if(localStorage.getItem(revealKey)===null) localStorage.setItem(revealKey,'0');
 
-    return c;
+let engine = { phase:'idle', progress:0 };
+let queue = [];         // leads waiting to appear
+let visible = [];       // leads rendered
+let ticker=null;        // preview stream timer
+let inflight=false;
+
+/* ---------- helpers ---------- */
+function setEngine(p){ engine = {...engine, ...p}; elEngine.textContent = 'engine: '+engine.phase; }
+function pushes(arr){ for(const x of arr) queue.push(x); runQueue(); }
+function runQueue(){ if(inflight || engine.phase!=='running') return; if(queue.length===0) return; inflight=true;
+  setTimeout(()=>{ const next = queue.shift(); if(next) addCard(next); inflight=false; runQueue(); }, 1200 + Math.random()*900);
+}
+function revealsUsed(){ return Number(localStorage.getItem(revealKey)||'0'); }
+function incReveal(){ const n=revealsUsed()+1; localStorage.setItem(revealKey,String(n)); return n; }
+
+/* ---------- API ---------- */
+async function post(path, body){
+  const r = await fetch((window.API_BASE||'')+path, { method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body:JSON.stringify(body||{}) });
+  return r.json();
+}
+async function get(path){
+  const r = await fetch((window.API_BASE||'')+path, { headers:{'x-galactly-user':UID} });
+  return r.json();
+}
+async function pollLeadsOnce(){
+  const r = await get('/api/v1/leads');
+  if(r?.ok && Array.isArray(r.leads)){
+    if(visible.length===0){ elNew.style.display='inline-flex'; }
+    // Only stage them; queue will trickle render
+    pushes(r.leads.map(L => ({...L, _locked:true})));
+  }
+}
+
+/* ---------- UI: cards ---------- */
+function cardEl(lead){
+  const d=document.createElement('div'); d.className='card locked'; d.dataset.id = lead.id;
+  const conf = Math.max(48, Math.min(92, Number(lead.heat || 60)));
+  d.innerHTML = `
+    <div class="meta">
+      <span class="pill">${lead.cat||'signal'}</span>
+      <span class="pill">Confidence ${conf}%</span>
+    </div>
+    <div class="title">${maskTitle(lead.title||'New buyer signal')}</div>
+    <div class="hold"><kbd>Press & hold to reveal</kbd></div>
+    <div class="actions">
+      <button class="btn" data-a="why" disabled>Why this?</button>
+      <button class="btn primary" data-a="own" disabled>Own</button>
+    </div>`;
+  let timer=null, revealed=false;
+  const press = ()=> {
+    if(revealsUsed()>=DAILY_MAX){ d.querySelector('.hold').innerHTML='<span style="color:#f6ba6a">Daily reveal limit reached. Upgrade to continue.</span>'; return; }
+    timer = setTimeout(()=> revealLead(), 1400);
+  };
+  const cancel = ()=> { clearTimeout(timer); timer=null; };
+  d.addEventListener('pointerdown', press);
+  d.addEventListener('pointerup', cancel);
+  d.addEventListener('pointerleave', cancel);
+
+  async function revealLead(){
+    if(revealed) return; revealed=true;
+    d.classList.remove('locked'); d.querySelector('.hold').remove();
+    d.querySelector('[data-a=why]').disabled=false;
+    d.querySelector('[data-a=own]').disabled=false;
+    d.querySelector('.title').textContent = lead.title || 'Buyer signal';
+    const meta = d.querySelector('.meta');
+    const host = safeHost(lead.source_url);
+    meta.insertAdjacentHTML('beforeend', `<span class="pill">${host}</span>`);
+    incReveal();
   }
 
-  async function refreshFeed(){
-    if(polling) return; polling=true;
-    try{
-      const data = await $get('/api/v1/leads');
-      const list = Array.isArray(data?.leads)? data.leads : [];
-      const fresh = list.filter(L => !seen.has(String(L.id))).slice(0, 2); // append at most 2 at a time
-      if(fresh.length){ liveNote.textContent = 'new results ready'; }
-      for(const L of fresh){
-        seen.add(String(L.id));
-        const card = renderCard(L);
-        feedEl.insertBefore(card, feedEl.firstChild);
-        // limit visible cards
-        while(feedEl.children.length>6) feedEl.lastElementChild.remove();
-        await sleep(600); // staggered reveal
-      }
-    }catch(e){ /* ignore */ }
-    finally{ polling=false; }
-  }
+  d.querySelector('[data-a=own]').onclick = ()=> {
+    post('/api/v1/claim',{leadId:lead.id}).then(()=> post('/api/v1/own',{windowId:lead._windowId||null}).catch(()=>{}));
+  };
+  d.querySelector('[data-a=why]').onclick = ()=> openWhy(lead);
+  return d;
+}
+function addCard(lead){
+  visible.push(lead);
+  elList.appendChild(cardEl(lead));
+}
+function maskTitle(t){ return t.replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.8 ? '•' : c)); }
+function safeHost(u){ try{ return new URL(u).hostname; }catch{ return 'source'; } }
 
-  async function pollLoop(){ while(true){ await refreshFeed(); await sleep(8000); } }
-  pollLoop();
+/* ---------- WHY modal ---------- */
+const modal = document.getElementById('whyModal');
+document.getElementById('mClose').onclick = ()=> modal.classList.remove('in');
+document.getElementById('mConfirm').onclick = ()=> { modal.classList.remove('in'); };
 
-  // ---------- Neutron star (gentle) ----------
-  (function(){
-    const cvs=document.getElementById('neutron'); if(!cvs) return; const DPR=Math.min(2, window.devicePixelRatio||1); let ctx, W=0, H=0; let t=0; let stop=false;
-    function resize(){ const r=cvs.getBoundingClientRect(); W=r.width; H=r.height; cvs.width=Math.floor(W*DPR); cvs.height=Math.floor(H*DPR); ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
-    function ring(x,y,r,alpha){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.strokeStyle=`rgba(134,247,214,${alpha})`; ctx.lineWidth=1; ctx.stroke(); }
-    function beam(cx,cy,r,ang,len){ const x1=cx + Math.cos(ang)*r*0.2; const y1=cy + Math.sin(ang)*r*0.2; const x2=cx + Math.cos(ang)*(r*len); const y2=cy + Math.sin(ang)*(r*len); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
-    function draw(){ if(stop) return; requestAnimationFrame(draw); if(!ctx) return; t+=0.014; ctx.clearRect(0,0,W,H); const cx=W*0.5, cy=H*0.52, r=Math.min(W,H)*0.26;
-      const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,r*2); grad.addColorStop(0,'rgba(255,255,255,.08)'); grad.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(cx,cy,r*2.2,0,Math.PI*2); ctx.fill();
-      ctx.save(); ctx.globalAlpha=0.9; ctx.strokeStyle='rgba(134,247,214,.28)'; for(let i=0;i<3;i++) ring(cx,cy,r*(0.6+i*0.35), 0.14-i*0.04); ctx.restore();
-      // rotating spokes (minimal motion)
-      ctx.save(); ctx.lineWidth=1.4; for(let i=0;i<10;i++){ const a=t*0.6 + i*(Math.PI*2/10); ctx.strokeStyle= i%2? 'rgba(134,247,214,.28)':'rgba(87,164,255,.22)'; beam(cx,cy,r*0.2,a,1.25); }
-      ctx.restore();
-      // core pulse
-      const p=1+0.06*Math.sin(t*2.2); ctx.beginPath(); ctx.arc(cx,cy,r*0.32*p,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,.75)'; ctx.fill();
-      // slow rotation halo
-      ctx.beginPath(); ctx.arc(cx,cy,r*0.55,0,Math.PI*2); ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.stroke();
+function openWhy(lead){
+  document.getElementById('whyTitle').textContent = (lead.title||safeHost(lead.source_url));
+  document.getElementById('whyBullets').innerHTML = `
+    <ul style="margin:0 0 6px 18px;">
+      <li>Paid reach ≈ <strong>$${roughSpend(lead)} / mo</strong> → indicates active demand generation.</li>
+      <li>Recent product / restock activity observed → likely packaging throughput.</li>
+      <li>Category fit and region match your profile.</li>
+    </ul>`;
+  document.getElementById('whyProof').textContent = `{"source": "${safeHost(lead.source_url)}", "id": ${lead.id}, "observed":"ad/procurement/pdp", "confidence": ${lead.heat||60}}`;
+  modal.classList.add('in');
+}
+function roughSpend(lead){
+  const h = Number(lead.heat||60); // simple proxy → $2k–$12k/mo
+  const lo=2000, hi=12000; return Math.round(lo + (hi-lo)*(h/100)).toLocaleString();
+}
+
+/* ---------- Signals preview (slow stream) ---------- */
+const RULES = [
+  '[Normalization] Input cleanup · vendor/seed/region bias',
+  '[Demand] Paid reach probes · platforms: Meta, Google',
+  '[Commerce] Restock/post cadence · vendor stores',
+  '[Procurement] Supplier / intake pages',
+  '[Mentions] Retailer pages & planograms',
+  '[Seasonality] Event & promo windows',
+  '[Units] Convert spend → traffic → orders → packs',
+  '[Queue] Convert units → packaging windows',
+  '[Confidence] Blend scores & de-dup domains'
+];
+function startPreview(seconds=45, truncateTo=6){
+  clearInterval(ticker);
+  elPreview.textContent=''; elPreviewTip.textContent='';
+  setEngine({phase:'running', progress:0}); elNew.style.display='none';
+  let i=0; const totalTicks = Math.max(truncateTo, Math.min(RULES.length, Math.round(seconds/4)));
+  ticker = setInterval(()=>{
+    const msg = RULES[i % RULES.length] + '  —  computed';
+    elPreview.textContent += '• '+msg+'\n';
+    i++;
+    const p = Math.min(1, i/totalTicks); elBar.style.width = (p*100)+'%'; document.getElementById('sigState').textContent = Math.round(p*100)+'%';
+    if(i>=totalTicks){
+      clearInterval(ticker);
+      elPreviewTip.innerHTML = 'Free plan stops early. Enable <strong>full signals</strong> to unlock the remaining rules.';
+      setEngine({phase:'ready', progress:100});
+      elNew.style.display='inline-flex';
     }
-    function start(){ stop=false; resize(); draw(); }
-    function halt(){ stop=true; }
-    document.addEventListener('visibilitychange', ()=>{ if(document.hidden) halt(); else start(); });
-    window.addEventListener('resize', resize); start();
-  })();
+  }, 4000);
+}
 
-  // ---------- Customize form + Metrics preview ----------
-  const fVendor = document.getElementById('fVendor');
-  const fIndustries = document.getElementById('fIndustries');
-  const fRegions = document.getElementById('fRegions');
-  const fBuyers = document.getElementById('fBuyers');
-  const fPrompt = document.getElementById('fPrompt');
-  const fListInbound = document.getElementById('fListInbound');
-  const btnRun = document.getElementById('doRun');
-  const btnTest = document.getElementById('testRun');
-  const statusPill = document.getElementById('status');
+/* ---------- buttons ---------- */
+document.getElementById('btnDry').onclick = ()=> run(false);
+document.getElementById('btnFind').onclick = ()=> run(true);
 
-  // Prefill from onboarding deep‑link
-  (function prefill(){
-    const q = new URLSearchParams(location.search);
-    const vendor = q.get('vendor')||''; if(vendor) fVendor.value = vendor;
-    const inds = q.get('industries')||''; if(inds) fIndustries.value = inds;
-    const regs = q.get('regions')||''; if(regs) fRegions.value = regs;
-    const buyers = q.get('buyers')||''; if(buyers) fBuyers.value = buyers;
-    const prompt = q.get('prompt')||''; if(prompt) fPrompt.value = prompt;
-    const listme = q.get('listme'); if(listme==='1'||listme==='true') fListInbound.checked = true;
-    if(vendor || inds || buyers){ btnRun.textContent='Save'; document.getElementById('runHint').textContent='Loaded your onboarding answers. Hit Save to update the engine.'; }
-  })();
+async function run(persist){
+  // wipe current list & show star only until results trickle
+  elList.innerHTML=''; visible=[]; queue=[];
+  elNew.style.display='none';
+  // gather form
+  const body = {
+    vendorDomain: document.getElementById('vendor').value.trim(),
+    buyers: document.getElementById('buyers').value.split(',').map(s=>s.trim()).filter(Boolean),
+    industries: document.getElementById('industries').value.split(',').map(s=>s.trim()).filter(Boolean),
+    regions: document.getElementById('regions').value.split(',').map(s=>s.trim()).filter(Boolean),
+    describe: document.getElementById('describe').value.trim(),
+    listMe: document.getElementById('listMe').checked === true
+  };
+  // persist onboarding snapshot
+  localStorage.setItem('onboard', JSON.stringify(body));
 
-  btnTest.addEventListener('click', (e)=>{ e.preventDefault(); startMetrics(true); });
-  btnRun.addEventListener('click', async (e)=>{
-    e.preventDefault();
-    statusPill.textContent='engine: running';
-    liveNote.textContent='scanning buyers…';
-    const body = {
-      vendorDomain: fVendor.value.trim()||undefined,
-      industries: fIndustries.value.split(',').map(s=>s.trim()).filter(Boolean),
-      regions: fRegions.value.split(',').map(s=>s.trim()).filter(Boolean),
-      buyers: fBuyers.value.split(',').map(s=>s.trim()).filter(Boolean),
-      listInbound: !!fListInbound.checked,
-      prompt: fPrompt.value.trim()||undefined
-    };
-    try{
-      // kick the engine
-      await $post('/api/v1/find-now', body);
-      // start slow metrics preview (educational, partial)
-      startMetrics(false);
-      // pull fresh leads a few times
-      for(let i=0;i<4;i++){ await sleep(3500); await refreshFeed(); }
-      statusPill.textContent='engine: ok';
-    }catch(err){ statusPill.textContent='engine: error'; console.error(err); }
+  // kick the slow preview first
+  startPreview(60, 7);
+
+  try{
+    // fire the backend find (non-blocking from UI perspective)
+    const res = await post('/api/v1/find-now', body);
+    // poll once after a short delay, then queue future polls based on how many were reported
+    setTimeout(pollLeadsOnce, 2000);
+    if(res?.ok && res.checked>0){ setTimeout(pollLeadsOnce, 7000); setTimeout(pollLeadsOnce, 12000); }
+  }catch(e){ console.warn(e); }
+}
+
+/* ---------- kick: just prefill; don’t run automatically ---------- */
+document.getElementById('engine').textContent = 'engine: idle';
+
+/* ---------- tiny hardening ---------- */
+(function ensurePaneScrollsOnly(){
+  document.querySelectorAll('.scroller').forEach(el=>{
+    el.addEventListener('wheel', (ev)=>{ ev.stopPropagation(); }, {passive:true});
   });
-
-  // Metrics typing log (proprietary names; partial on free)
-  const M = document.getElementById('mLog'); const MB = document.getElementById('mBar');
-  const RULES = [
-    ['Demand Index','Paid Reach Velocity','✓ computed'],
-    ['Demand Index','Channel Mix Confirmation','✓ computed'],
-    ['Demand Index','Geo Heat Clusters','✓ computed'],
-    ['Product Movement','Multi‑SKU Momentum','✓ computed'],
-    ['Product Movement','Pack‑Size Tilt','✓ computed'],
-    ['Product Movement','Restock Pulse','✓ computed'],
-    ['Supply Timing','Vendor Portal Open','✓ computed'],
-    ['Supply Timing','Shelf‑Reset Window','✓ computed'],
-    ['Supply Timing','Seasonal Pull','✓ computed'],
-    ['Timing Windows','11‑day Lift', '✓ computed'],
-    ['Timing Windows','2‑5pm Answer Band','✓ computed'],
-    ['Packaging Math','Units→Cases Estimator','✓ computed'],
-    ['Packaging Math','Primary→Secondary Map','✓ computed'],
-    ['Packaging Math','Outbound Palletization','✓ computed'],
-    // locks shown for FOMO
-    ['Pro Signals','Trade Import Events','🔒 Pro'],
-    ['Pro Signals','Retailer Price/Promo Cadence','🔒 Pro'],
-    ['Pro Signals','Competitor Cannibalization','🔒 Pro'],
-    ['Pro AI','Real Ad Spend Attribution','🔒 Pro'],
-    ['Pro AI','Store‑level Velocity','🔒 Pro'],
-    ['Pro AI','Cohort LTV/CPA Fit','🔒 Pro']
-  ];
-
-  let typing=false;
-  async function startMetrics(dry){ if(typing){ return; } typing=true; M.innerHTML=''; MB.style.width='0%';
-    const slow = (new URLSearchParams(location.search)).has('fast')? 60 : (dry? 120 : 280);
-    for(let i=0;i<RULES.length;i++){
-      const [cat,name,state] = RULES[i];
-      const line = el('div','logLine'+(state.includes('🔒')?' lock':''), `<strong>[${cat}]</strong> ${name} — <em>${state}</em>`);
-      M.appendChild(line); M.scrollTop = M.scrollHeight;
-      const pct = Math.min(100, Math.round(((i+1)/1126)*100)); MB.style.width = pct+'%';
-      await sleep(slow + Math.round(Math.random()*slow*0.6));
-      if(i===12 && !dry){ // stop early for free plan
-        const more = el('div','logLine lock', '… 1,114 additional rules held on free tier'); M.appendChild(more); MB.style.width = Math.min(100, Math.round(((i+1)/1126)*100))+'%'; break;
-      }
-    }
-    typing=false;
-  }
-
-  // ---------- Kick things on load ----------
-  liveNote.textContent='ready — configure the right panel and press Find now';
-  document.getElementById('status').textContent='api: connected';
-  </script>
+})();
+</script>
 </body>
 </html>
