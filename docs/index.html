@@ -1,139 +1,300 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Galactly — Live Packaging Leads</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
   <style>
-    :root{--ink:#fff;--mut:#cfd3df;--line:rgba(255,255,255,.12);--accent:#86f7d6;--accent2:#57a4ff;--mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;--inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif}
+    :root{
+      --ink:#fff;--mut:#cfd3df;--line:rgba(255,255,255,.12);
+      --accent:#86f7d6;--accent2:#57a4ff;
+      --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
+      --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif
+    }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;color:var(--ink);font-family:var(--inter);line-height:1.55;background:
-      radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%),
-      radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%),
-      linear-gradient(180deg,#0b0e18,#06070c 55%)}
-    header{position:sticky;top:0;z-index:10;backdrop-filter:blur(10px) saturate(1.05);background:rgba(5,7,12,.55);border-bottom:1px solid var(--line)}
+    body{
+      margin:0;color:var(--ink);font-family:var(--inter);line-height:1.55;overflow-x:hidden;
+      background:
+        radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%),
+        radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%),
+        linear-gradient(180deg,#0b0e18,#06070c 55%)
+    }
+    header{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px) saturate(1.05);background:rgba(5,7,12,.55);border-bottom:1px solid var(--line)}
     .nav{max-width:1240px;margin:auto;padding:10px 18px;display:flex;align-items:center;justify-content:space-between}
     .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none}
+    .brand svg{width:26px;height:26px}
     .brand b{font:800 16px var(--mont)}
-    .hero{min-height:720px;border-bottom:1px solid var(--line)}
+    nav a{color:#fff;text-decoration:none;padding:8px 10px;border-radius:12px}
+    nav a:hover{background:rgba(255,255,255,.06)}
+
+    .hero{position:relative;min-height:720px;border-bottom:1px solid var(--line)}
     .wrap{max-width:1240px;margin:auto;display:grid;grid-template-columns:1fr min(780px,52%);gap:44px;align-items:center;padding:44px 28px}
     @media (max-width:1100px){.wrap{grid-template-columns:1fr}}
+
     .copy h1{font:800 clamp(32px,6.2vw,66px) var(--mont);line-height:1.05;margin:0 0 12px}
     .copy .accent{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
     .copy p{opacity:.94;margin:16px 0 0}
-    .sub{opacity:.86;font-size:14px;margin-top:12px}
-    .cta{display:flex;gap:14px;margin-top:28px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);padding:12px 18px;border-radius:14px;text-decoration:none;font:800 14px var(--inter);transition:transform .08s ease, box-shadow .18s ease, background .18s ease,color .18s ease}
+    .copy .sub{opacity:.86;font-size:14px;margin-top:12px}
+
+    .copy .cta{display:flex;gap:14px;margin-top:28px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);padding:12px 18px;border-radius:14px;text-decoration:none;font:800 14px var(--inter);transition:transform .08s ease, box-shadow .18s ease, background .18s ease,color .18s ease; cursor:pointer}
     .btn--primary{background:linear-gradient(90deg,#ffffff,#e9f0ff);color:#0b0c12;border-color:transparent;box-shadow:0 10px 30px rgba(120,160,255,.18), inset 0 0 0 1px rgba(255,255,255,.35)}
     .btn--primary:hover{transform:translateY(-1px);box-shadow:0 14px 36px rgba(120,160,255,.28), inset 0 0 0 1px rgba(255,255,255,.5)}
     .btn--ghost{background:rgba(255,255,255,.06);color:#fff;border-color:rgba(255,255,255,.18)}
     .btn--ghost:hover{background:rgba(255,255,255,.10)}
-    /* simple right visual */
-    .viz{position:relative;background:linear-gradient(180deg,#0b0b10,#07080d);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.38);min-height:420px}
-    .viz .glass{position:relative;border-radius:16px;background:radial-gradient(120% 130% at 65% 35%,rgba(255,255,255,.06),rgba(255,255,255,.02)),radial-gradient(90% 120% at 20% 80%,rgba(255,255,255,.05),rgba(255,255,255,.01));overflow:hidden;min-height:360px}
-    .viz .glass::before{content:"";display:block;padding-top:56.25%}
-    #heroCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:16px}
+    .btn svg{width:16px;height:16px;vertical-align:-2px}
 
-    /* modal */
-    .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);backdrop-filter:blur(6px)}
-    .modal.on{display:grid}
-    .card{width:min(720px,92vw);background:#0e1220;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 30px 60px rgba(0,0,0,.5);padding:18px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .row>label{display:flex;flex-direction:column;font-size:12px;opacity:.9}
-    input,textarea{background:#0b0f1c;border:1px solid rgba(255,255,255,.14);color:#fff;border-radius:12px;padding:10px;margin-top:6px}
-    textarea{min-height:86px}
+    .flow{position:relative;background:linear-gradient(180deg,#0b0b10,#07080d);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.38)}
+    .flow .glass{position:relative;border-radius:16px;background:
+      radial-gradient(120% 130% at 65% 35%,rgba(255,255,255,.06),rgba(255,255,255,.02)),
+      radial-gradient(90% 120% at 20% 80%,rgba(255,255,255,.05),rgba(255,255,255,.01));
+      overflow:hidden;min-height:400px}
+    .flow .glass::before{content:"";display:block;padding-top:56.25%}
+    #flowCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:16px}
+
+    .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+    .badge{background:#0b0d14;border:1px dashed var(--line);border-radius:12px;padding:7px 11px;font:700 12px var(--mont);display:flex;gap:6px;align-items:center}
+    .badge small{opacity:.75;font-weight:600}
+    .ticker{margin-top:14px;max-height:108px;overflow:auto;border-top:1px solid var(--line);padding-top:10px;scrollbar-width:none;-ms-overflow-style:none}
+    .ti{font-size:12px;opacity:.95;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.06)} .ti:last-child{border-bottom:none}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:60;padding:18px}
+    .modal.on{display:flex}
+    .sheet{width:min(920px,96vw);background:#0b0d14;border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 60px rgba(0,0,0,.5);display:grid;grid-template-columns:1.1fr 1fr}
+    @media (max-width:960px){.sheet{grid-template-columns:1fr}}
+    .pane{padding:22px;border-right:1px solid var(--line)}
+    .pane:last-child{border-right:none}
+    .pane h3{margin:0 0 8px;font:800 18px var(--mont)}
+    .hint{opacity:.8;font-size:13px}
+    .row{margin:12px 0}
+    label{display:block;font-weight:700;font-size:13px;margin-bottom:6px;opacity:.9}
+    input,select,textarea{width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:#0f1320;color:#e9eef5;outline:none}
+    textarea{min-height:84px;resize:vertical}
+    .checkbox{display:flex;align-items:center;gap:10px;margin-top:10px}
+    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{border:1px solid rgba(255,255,255,.18);background:#0f1320;border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer}
+    .chip.on{background:linear-gradient(90deg,#ffffff,#e9f0ff);color:#0b0c12}
   </style>
 </head>
 <body>
 <header>
   <div class="nav">
-    <a class="brand" href="#"><b>Galactly</b></a>
-    <nav><a class="btn btn--ghost" href="./free-panel.html">Open Feed</a></nav>
+    <a class="brand" href="#">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs>
+        <circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/>
+        <path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/>
+        <circle cx="20" cy="20" r="6" fill="url(#g)"/>
+      </svg>
+      <b>Galactly</b>
+    </a>
+    <nav><a href="#hero">Hero</a></nav>
   </div>
 </header>
+
 <section class="hero" id="hero">
   <div class="wrap">
     <div class="copy">
-      <h1>Find US &amp; Canada <span class="accent">Packaging</span> Buyers in <span class="accent">≈30s</span></h1>
-      <p>Real buyer signals (ads, product velocity, procurement). Free viewer → paid automations.</p>
-      <p class="sub">Built for packaging owners &amp; sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates.</p>
+      <h1>Find US &amp; Canada <span class="accent">Packaging</span> Buyers in <span class="accent">&lt;30s</span></h1>
+      <p>Real signals from public data. Free viewer; paid automations, priority, CRM &amp; reporting.</p>
+      <p class="sub">Built for packaging owners &amp; sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding. Just clicks.</p>
       <div class="cta">
-        <a id="btnStart" class="btn btn--primary" href="#">Start Free</a>
-        <a class="btn btn--ghost" href="./free-panel.html">Skip → Feed</a>
+        <button id="startFree" class="btn btn--primary">Start free</button>
+        <a class="btn btn--ghost" href="#" id="watchDemo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch 90s demo</a>
       </div>
     </div>
-    <div class="viz"><div class="glass"><canvas id="heroCanvas"></canvas></div></div>
+
+    <div class="flow">
+      <div class="glass"><canvas id="flowCanvas"></canvas></div>
+      <div class="meta">
+        <div class="badge"><small>Leads / 30s</small><span id="b-leads">0</span></div>
+        <div class="badge"><small>First connection</small><span id="b-first">—</span></div>
+        <div class="badge"><small>Ready now</small><span id="b-ready">—</span></div>
+        <div class="badge"><small>Quoted</small><span id="b-quote">—</span></div>
+        <div class="badge"><small>AI closed</small><span id="b-ai">—</span></div>
+        <div class="badge"><small>Rep closed</small><span id="b-human">—</span></div>
+        <div class="badge"><small>Saved / mo</small><span id="b-saved">—</span></div>
+      </div>
+      <div class="ticker" id="ticker"></div>
+    </div>
   </div>
 </section>
 
 <!-- Onboarding modal -->
-<div id="onboard" class="modal">
-  <div class="card">
-    <h3 style="margin:6px 6px 14px 6px;font:800 18px var(--mont)">Tell us who to find</h3>
-    <div class="row">
-      <label>Vendor website (yours)
-        <input id="vnd" placeholder="acme-packaging.com"/>
-      </label>
-      <label>Industries (comma‑separated)
-        <input id="ind" placeholder="beverage, food"/>
-      </label>
-      <label>Regions (comma‑separated)
-        <input id="reg" placeholder="US, CA"/>
-      </label>
-      <label>Example buyer domains (one per line)
-        <textarea id="buy" placeholder="liquiddeath.com\nsoylent.com"></textarea>
-      </label>
+<div class="modal" id="obModal" aria-hidden="true">
+  <div class="sheet">
+    <div class="pane">
+      <h3>Pick how you want to start</h3>
+      <p class="hint">You can paste your own site (we'll infer ICP), or give us specifics.</p>
+
+      <div class="row">
+        <label for="vendorDomain">Your website (auto‑detect ICP)</label>
+        <input id="vendorDomain" placeholder="acme-packaging.com" autocomplete="off" />
+      </div>
+
+      <div class="row checkbox">
+        <input id="listMe" type="checkbox" />
+        <label for="listMe" style="margin:0">List my business as an inbound opportunity (buyers can discover me)</label>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn--primary" id="goVendor">Continue with my site</button>
+        <button class="btn" id="switchToCustom">I'll enter details instead</button>
+        <button class="btn btn--ghost" id="skipToFeed">Skip → Live feed</button>
+      </div>
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
-      <a id="cancel" class="btn btn--ghost" href="#">Cancel</a>
-      <a id="go" class="btn btn--primary" href="#">Save & Go</a>
+
+    <div class="pane" id="customPane" style="display:none">
+      <h3>Custom details</h3>
+      <div class="row">
+        <label>Industries</label>
+        <div class="chips" id="chipIndustries"></div>
+      </div>
+      <div class="row">
+        <label>Regions</label>
+        <div class="chips" id="chipRegions"></div>
+      </div>
+      <div class="row">
+        <label for="buyers">Example buyers (domains, comma‑sep)</label>
+        <input id="buyers" placeholder="liquiddeath.com, soylent.com" />
+      </div>
+      <div class="row">
+        <label for="notes">(Optional) Tell our AI what you make</label>
+        <textarea id="notes" placeholder="e.g., We make recyclable shrink + paper labels for beverage and gummy brands; MOQ 10k; lead time 10 days."></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn--primary" id="goCustom">Find buyers now</button>
+        <button class="btn" id="backToVendor">Back</button>
+      </div>
     </div>
   </div>
 </div>
 
-<script src="./api-base.js"></script>
 <script>
-  // simple ambient pulsing on right (lightweight)
-  (function(){
-    const c = document.getElementById('heroCanvas'); if(!c) return; const ctx = c.getContext('2d');
-    function resize(){ const r=c.parentElement.getBoundingClientRect(); c.width=r.width*2; c.height=r.height*2; c.style.width=r.width+'px'; c.style.height=r.height+'px'; ctx.setTransform(2,0,0,2,0,0);} window.addEventListener('resize',resize); resize();
-    function loop(t){ ctx.clearRect(0,0,c.width, c.height); const w=c.width/2,h=c.height/2; const r=Math.min(w,h)*0.35; const p=1+0.12*Math.sin(t/700);
-      const g=ctx.createRadialGradient(w,h,0,w,h,r*2.2); g.addColorStop(0,'rgba(134,247,214,.35)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(w,h,r*2.2,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(w,h,r*p,0,Math.PI*2); ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.lineWidth=2; ctx.stroke();
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
-  })();
+// ---------- hero canvas (same look/feel as your original) ----------
+const cvs=document.getElementById('flowCanvas');const DPR=Math.min(2.2,window.devicePixelRatio||1);let ctx=null,started=false;
+const K={leads:document.getElementById('b-leads'),first:document.getElementById('b-first'),ready:document.getElementById('b-ready'),quote:document.getElementById('b-quote'),ai:document.getElementById('b-ai'),human:document.getElementById('b-human'),saved:document.getElementById('b-saved')};
+const ticker=document.getElementById('ticker');
+let cx=0,cy=0,R=0,coreX=0,coreY=0,coreR=22;let chips=[];
+const CHANNELS=[{name:'Email',color:'rgba(134,247,214,0.85)'},{name:'SMS',color:'rgba(160,255,160,0.85)'},{name:'Call',color:'rgba(159,208,255,0.85)'},{name:'LinkedIn',color:'rgba(120,200,255,0.85)'},{name:'Quote',color:'rgba(255,210,140,0.90)'},{name:'ERP',color:'rgba(200,170,255,0.90)'}];
+const FIRST="Ava,Noah,Sophia,Liam,Isabella,Elijah,Mia,Lucas,Amelia,Mason,Harper,Logan,Evelyn,James,Abigail,Oliver,Emily".split(',');
+const LAST="Smith,Johnson,Williams,Brown,Jones,Miller,Davis,Garcia,Wilson,Moore,Taylor,Anderson".split(',');
+const pick=a=>a[(Math.random()*a.length)|0];
+function resize(){const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(resize,60);return}
+  cvs.width=Math.floor(r.width*DPR);cvs.height=Math.floor(r.height*DPR);cvs.style.width=r.width+'px';cvs.style.height=r.height+'px';
+  ctx=cvs.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);
+  cx=r.width*0.28;cy=r.height*0.56;R=Math.min(r.width*0.30,r.height*0.46);
+  coreX=r.width*0.56;coreY=r.height*0.56;coreR=Math.max(18,Math.min(24,r.width*0.03));
+  const baseX=r.width*0.83,baseY=coreY,rad=Math.min(110,r.height*0.20),a0=-Math.PI/3,a1=Math.PI/3;
+  chips=CHANNELS.map((c,i)=>{const a=CHANNELS.length>1?a0+(a1-a0)*(i/(CHANNELS.length-1)):0;return{x:baseX+rad*Math.cos(a),y:baseY+rad*Math.sin(a),r:12,label:c.name,color:c.color}})
+}
+window.addEventListener('resize',resize);
+function draw(){ctx.clearRect(0,0,cvs.width/DPR,cvs.height/DPR);
+  // soft globe
+  const g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,R*1.1);g.addColorStop(0,'rgba(255,255,255,.05)');g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+  // core pulse
+  const cg=ctx.createRadialGradient(coreX,coreY,0,coreX,coreY,coreR*2.6);cg.addColorStop(0,'rgba(255,255,255,.04)');cg.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=cg;ctx.beginPath();ctx.arc(coreX,coreY,coreR*2.6,0,Math.PI*2);ctx.fill();
+  // beams
+  for(const chip of chips){
+    ctx.save();ctx.globalAlpha=0.25;ctx.lineWidth=6;ctx.strokeStyle=chip.color;
+    ctx.beginPath();ctx.moveTo(coreX,coreY);const mx=(coreX+chip.x)/2,my=(coreY+chip.y)/2;ctx.quadraticCurveTo(mx,my*1.02,chip.x,chip.y);ctx.stroke();
+    ctx.globalAlpha=0.9;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(coreX,coreY);ctx.quadraticCurveTo(mx,my*1.02,chip.x,chip.y);ctx.stroke();
+    ctx.restore();
+  }
+}
+let last=0;function loop(ts){requestAnimationFrame(loop);if(!last)last=ts;const dt=(ts-last)/1000;last=ts;draw();}
+function init(){if(started)return;started=true;resize();requestAnimationFrame(loop);
+  // playful counters
+  setInterval(()=>{ document.getElementById('b-leads').textContent = String((Math.random()*300|0)); }, 1200);
+}
+document.addEventListener('DOMContentLoaded',init);
 
-  const $ = (s)=>document.querySelector(s);
-  const modal = $('#onboard');
-  $('#btnStart').addEventListener('click', e=>{ e.preventDefault(); modal.classList.add('on');
-    // preload from last
-    try{ const last = JSON.parse(sessionStorage.getItem('galactly_onboard')||'null'); if(last){
-      $('#vnd').value = last.vendorDomain||''; $('#ind').value=(last.industries||[]).join(', ');
-      $('#reg').value=(last.regions||[]).join(', '); $('#buy').value=(last.buyers||[]).join('\n');
-    }}catch{}
-  });
-  $('#cancel').addEventListener('click', e=>{ e.preventDefault(); modal.classList.remove('on'); });
-  $('#go').addEventListener('click', e=>{
-    e.preventDefault();
-    const vendorDomain = $('#vnd').value.trim();
-    const industries = $('#ind').value.split(',').map(s=>s.trim()).filter(Boolean);
-    const regions = $('#reg').value.split(',').map(s=>s.trim()).filter(Boolean);
-    const buyers = $('#buy').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    const payload = { vendorDomain, industries, regions, buyers };
-    sessionStorage.setItem('galactly_onboard', JSON.stringify(payload));
-    const q = new URLSearchParams();
-    if(vendorDomain) q.set('vendorDomain', vendorDomain);
-    if(industries.length) q.set('industries', industries.join(','));
-    if(regions.length) q.set('regions', regions.join(','));
-    if(buyers.length) q.set('buyers', buyers.join(','));
-    location.href = './free-panel.html?' + q.toString();
-  });
+// ---------- onboarding modal & deep-link ----------
+const modal=document.getElementById('obModal');
+const btnStart=document.getElementById('startFree');
+const btnVendor=document.getElementById('goVendor');
+const btnCustom=document.getElementById('goCustom');
+const btnSwitch=document.getElementById('switchToCustom');
+const btnBack=document.getElementById('backToVendor');
+const btnSkip=document.getElementById('skipToFeed');
+const customPane=document.getElementById('customPane');
+const vendorInput=document.getElementById('vendorDomain');
+const buyersInput=document.getElementById('buyers');
+const notesInput=document.getElementById('notes');
+const listMe=document.getElementById('listMe');
+
+// chips data
+const INDUSTRIES=['beverage','food','supplements','cosmetics','household','cpg','industrial'];
+const REGIONS=['US','CA'];
+function chipify(id, items){
+  const root=document.getElementById(id); root.innerHTML='';
+  items.forEach(v=>{ const el=document.createElement('button'); el.type='button'; el.className='chip'; el.textContent=v; el.onclick=()=>{ el.classList.toggle('on'); }; root.appendChild(el); });
+}
+chipify('chipIndustries', INDUSTRIES); chipify('chipRegions', REGIONS);
+function selectedChips(rootId){ return Array.from(document.getElementById(rootId).querySelectorAll('.chip.on')).map(el=>el.textContent.trim()); }
+
+function openModal(){ modal.classList.add('on'); vendorInput.focus(); }
+function closeModal(){ modal.classList.remove('on'); }
+
+btnStart.addEventListener('click', openModal);
+btnSwitch.addEventListener('click', ()=>{ customPane.style.display='block'; });
+btnBack.addEventListener('click', ()=>{ customPane.style.display='none'; });
+btnSkip.addEventListener('click', ()=>{ window.location.href = withApi('free-panel.html'); });
+
+function withApi(baseHref){
+  const q=new URLSearchParams(location.search); const api=q.get('api');
+  return api ? `${baseHref}?api=${encodeURIComponent(api)}`: baseHref;
+}
+
+// If we arrived with prefill (?vendor=..&buyers=..), preload into modal
+(function preloadFromQuery(){
+  const qs=new URLSearchParams(location.search);
+  const v=qs.get('vendor')||''; if(v){ vendorInput.value=v; }
+  const b=qs.get('buyers')||''; if(b){ buyersInput.value=b; customPane.style.display='block'; }
+  const inds=(qs.get('industries')||'').split(',').filter(Boolean);
+  const regs=(qs.get('regions')||'').split(',').filter(Boolean);
+  for(const i of inds){ const el=[...document.querySelectorAll('#chipIndustries .chip')].find(x=>x.textContent===i); if(el) el.classList.add('on'); }
+  for(const r of regs){ const el=[...document.querySelectorAll('#chipRegions .chip')].find(x=>x.textContent===r); if(el) el.classList.add('on'); }
+})();
+
+function goToFreePanel(params){
+  const url = new URL(withApi('free-panel.html'), location.href);
+  Object.entries(params).forEach(([k,v])=>{ if(v==null) return; if(Array.isArray(v)){ if(v.length) url.searchParams.set(k, v.join(',')); } else if(String(v).trim()!==''){ url.searchParams.set(k, String(v).trim()); }});
+  // tag this navigation as onboarding → free
+  url.searchParams.set('via','hero-onboarding');
+  window.location.href = url.toString();
+}
+
+btnVendor.addEventListener('click', ()=>{
+  const vendor = vendorInput.value.trim(); const list = listMe.checked? '1': '';
+  if(!vendor){ vendorInput.focus(); return; }
+  goToFreePanel({ vendor, listme:list });
+});
+
+btnCustom.addEventListener('click', ()=>{
+  const inds = selectedChips('chipIndustries');
+  const regs = selectedChips('chipRegions');
+  const buyers = buyersInput.value.split(',').map(s=>s.trim()).filter(Boolean);
+  const vendor = vendorInput.value.trim();
+  const list = listMe.checked? '1': '';
+  // Notes go as hint for AI (optional)
+  const hint = notesInput.value.trim();
+  goToFreePanel({ vendor, buyers, industries:inds, regions:regs, hint, listme:list });
+});
+</script>
+<script>
+// optional tiny demo ticker
+const ticker=document.getElementById('ticker');
+function pushTick(html){const d=document.createElement('div');d.className='ti';d.innerHTML=html;ticker.insertBefore(d,ticker.firstChild);while(ticker.children.length>6)ticker.lastElementChild.remove()}
+setInterval(()=>{ const names=['Ava','Noah','Sophia','Liam','Isabella','Elijah']; const cities=['Toronto','Dallas','Miami','Seattle','LA']; const ch=['Email','SMS','Call','Quote']; const n=names[Math.random()*names.length|0]; const c=cities[Math.random()*cities.length|0]; const k=ch[Math.random()*ch.length|0]; pushTick(`<strong>${n}</strong> · ${c} → <em>${k}</em>`); }, 1800);
 </script>
 </body>
 </html>
