@@ -16,39 +16,32 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{
-  margin:0; color:var(--ink);
-  background:
-   radial-gradient(1000px 600px at 10% 0%, rgba(120,180,255,.08), rgba(0,0,0,0) 60%),
-   radial-gradient(900px 700px at 115% 20%, rgba(150,255,220,.08), rgba(0,0,0,0) 50%),
-   linear-gradient(180deg,#0a0e16,#06080e 60%);
-  font-family:var(--inter); line-height:1.55; overflow:hidden;
-}
+body{margin:0;color:var(--ink);background:
+  radial-gradient(1000px 600px at 10% 0%, rgba(120,180,255,.08), rgba(0,0,0,0) 60%),
+  radial-gradient(900px 700px at 115% 20%, rgba(150,255,220,.08), rgba(0,0,0,0) 50%),
+  linear-gradient(180deg,#0a0e16,#06080e 60%);
+  font-family:var(--inter); line-height:1.55; overflow:hidden}
 header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px}
 .brand{display:flex; align-items:center; gap:8px; font:800 15px var(--mont); color:#fff; text-decoration:none}
 .brand svg{width:20px;height:20px}
 .badge{display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:#cdd6ea; background:#0c1220}
-.badge.ok{color:#b8ffd8}
 .row{height:calc(100% - 56px); display:grid; grid-template-columns: minmax(420px, 48%) 1fr; gap:16px; padding:16px}
 @media (max-width:1120px){ .row{grid-template-columns:1fr} }
-
 .col{background:var(--panel); border:1px solid var(--line); border-radius:16px; display:flex; flex-direction:column; min-height:0}
 .section{padding:14px 16px; border-bottom:1px solid var(--line); font:700 14px var(--mont); opacity:.9}
 .scroller{padding:12px 12px 14px; overflow:auto; min-height:0}
 
-/* left hero (neutron star + status line) */
+/* left hero */
 .leftHero{position:relative; height:220px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#0b0f19,#0a0e17)}
 #star{width:100%; height:100%}
-.engine-status{position:absolute; left:16px; bottom:12px; font-size:12px; opacity:.8; color:#cfd7e6}
-.engine-status .dot{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6)}
-.engine-status.idle .dot{ background:#64708a; box-shadow:none }
-.engine-status.working .dot{ animation:pulse 1.8s ease-in-out infinite }
-@keyframes pulse{ 0%{transform:scale(.9); opacity:.6} 50%{transform:scale(1.2); opacity:1} 100%{transform:scale(.9); opacity:.6} }
+.engine-status{position:absolute; left:16px; bottom:12px; font-size:12px; opacity:.85; color:#cfd7e6;}
+.engine-status .dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6)}
+.engine-status.idle .dot{background:#64708a; box-shadow:none}
 
-/* card list */
+/* list */
 .list{display:flex; flex-direction:column; gap:10px}
 .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px}
-.card.locked{opacity:.85; filter:saturate(.9)}
+.card.locked{opacity:.85; filter:saturate(.85)}
 .meta{display:flex; gap:8px; flex-wrap:wrap; font-size:11px; opacity:.8}
 .meta .pill{border:1px solid var(--line); border-radius:999px; padding:2px 8px}
 .title{font:700 14px var(--inter); margin-top:6px}
@@ -69,7 +62,9 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 .progress{height:6px; background:#0c1220; border:1px solid var(--line); border-radius:999px; overflow:hidden; margin:10px 0 2px}
 .progress > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2))}
 .tip{opacity:.75; font-size:12px}
-.quota-note{ font-size:12px; opacity:.75; margin-left:6px }
+.quota-note{ font-size:12px; opacity:.8; margin:6px 0 0 6px; }
+
+/* modal: Why */
 .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55)}
 .modal.in{display:flex}
 .modal .box{width:min(680px,92vw); background:#0f1524; border:1px solid var(--line); border-radius:16px; padding:16px}
@@ -89,33 +84,35 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 
 <div class="row">
   <!-- LEFT -->
-  <div class="col" id="col-left">
+  <div class="col">
     <div class="section">Live results <span id="newBadge" class="badge" style="margin-left:6px; display:none">new results ready</span></div>
     <div class="leftHero">
       <canvas id="star"></canvas>
       <div id="engineStatus" class="engine-status idle"><span class="dot"></span>Idle</div>
     </div>
-    <div class="scroller"><div id="list" class="list"></div></div>
+    <div class="scroller">
+      <div id="list" class="list"></div>
+    </div>
   </div>
 
   <!-- RIGHT -->
-  <div class="col" id="col-right">
+  <div class="col">
     <div class="section">Customize your AI</div>
     <div class="scroller" id="pane-form">
       <div class="form">
         <input id="vendor" class="input full" placeholder="Vendor site (optional) e.g. yourcompany.com"/>
         <input id="buyers" class="input full" placeholder="Seed buyers (comma separated domains)"/>
         <input id="industries" class="input" placeholder="Industries e.g. beverage, confectionery"/>
-        <input id="regions" class="input" placeholder="Regions e.g. US, CA"/>
-        <textarea id="describe" rows="4" class="input full" placeholder="Describe your ideal customers in plain words. Products, pack types, order sizes, retailer channels, and any exclusions."></textarea>
+        <input id="regions" class="input" placeholder="Regions e.g. US, CA" value="US, CA"/>
+        <textarea id="describe" rows="4" class="input full" placeholder="Describe ideal customers. Products, pack types, order sizes, retail channels, exclusions."></textarea>
       </div>
       <label style="display:flex; align-items:center; gap:8px; margin-top:10px">
         <input type="checkbox" id="listMe"/> <span>List my company for inbound opportunities</span>
       </label>
-      <div style="display:flex; gap:10px; align-items:center; margin-top:10px">
+      <div style="display:flex; align-items:center; gap:10px; margin-top:10px">
         <button id="btnDry" class="btn ghost" title="Simulate, don’t store">Dry run</button>
         <button id="btnFind" class="btn primary">Find now</button>
-        <span id="quotaNote" class="quota-note"></span>
+        <span id="quotaNote" class="quota-note">Free: …</span>
       </div>
       <div class="note">Tip: we’ll add 1–2 leads at a time, and stream the reasoning below. Hold to reveal. Free plan allows 2 deep reveals/day.</div>
     </div>
@@ -144,12 +141,13 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 
 <script src="./api-base.js"></script>
 <script>
-/* ---------- globals ---------- */
+/* ---------- sticky uid + API label ---------- */
 const uidKey='galactly_uid';
 let UID = localStorage.getItem(uidKey) || ('u-'+Math.random().toString(36).slice(2));
 localStorage.setItem(uidKey, UID);
 document.getElementById('apiBaseLabel').textContent = (window.API_BASE||'').replace(/^https?:\/\//,'');
 
+/* ---------- form prefill from onboarding query/localStorage ---------- */
 const qs = new URLSearchParams(location.search);
 const onboard = JSON.parse(localStorage.getItem('onboard')||'{}');
 const seed = {
@@ -160,72 +158,78 @@ const seed = {
   describe: qs.get('describe') || (onboard.describe||''),
   listMe: onboard.listMe === true
 };
-['vendor','buyers','industries','regions','describe'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value = seed[id]||''; });
+for (const [k,v] of Object.entries(seed)) {
+  const el = document.getElementById(k);
+  if (el && 'value' in el) el.value = v as any;
+}
 document.getElementById('listMe').checked = !!seed.listMe;
 
-/* ---------- neutron-star ---------- */
-const cvs = document.getElementById('star'); const DPR = Math.min(2, window.devicePixelRatio||1);
+/* ---------- neutron star (minimal perf) ---------- */
+const cvs = document.getElementById('star'); const DPR=Math.min(2, window.devicePixelRatio||1);
 let ctx=null;
 function resizeStar(){ const r=cvs.getBoundingClientRect(); cvs.width=r.width*DPR; cvs.height=r.height*DPR; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
 function drawStar(ts){
-  if(!ctx) return; const w=cvs.clientWidth, h=cvs.clientHeight, cx=w*0.5, cy=h*0.5;
+  if(!ctx){ requestAnimationFrame(drawStar); return;}
+  const w=cvs.clientWidth, h=cvs.clientHeight, cx=w*0.5, cy=h*0.5;
   ctx.clearRect(0,0,w,h);
   const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.42);
-  g.addColorStop(0,'rgba(255,255,255,.04)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,Math.min(w,h)*0.42,0,Math.PI*2); ctx.fill();
-  const pulse = 1 + 0.12*Math.sin(ts*0.002); const coreR = 22*pulse;
-  const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,coreR*2.2); cg.addColorStop(0,'rgba(255,255,255,.95)'); cg.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.arc(cx,cy,coreR*2.2,0,Math.PI*2); ctx.fillStyle=cg; ctx.fill(); ctx.globalCompositeOperation='source-over';
+  g.addColorStop(0,'rgba(255,255,255,.04)'); g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,Math.min(w,h)*0.42,0,Math.PI*2); ctx.fill();
+  const pulse = 1 + 0.12*Math.sin(ts*0.002);
+  const coreR = 22*pulse;
+  const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,coreR*2.2);
+  cg.addColorStop(0,'rgba(255,255,255,.95)'); cg.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.globalCompositeOperation='lighter';
+  ctx.beginPath(); ctx.arc(cx,cy,coreR*2.2,0,Math.PI*2); ctx.fillStyle=cg; ctx.fill();
+  ctx.globalCompositeOperation='source-over';
   const a = ts*0.0005, off = Math.PI/2.8;
   for(const k of [0,off]){
-    const ang=a+k, len=Math.min(w,h)*0.5; ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang);
+    const ang=a+k, len=Math.min(w,h)*0.5;
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang);
     const grad=ctx.createLinearGradient(-len/2,0,len/2,0);
     grad.addColorStop(0,'rgba(136,255,216,0)'); grad.addColorStop(0.48,'rgba(136,255,216,.22)'); grad.addColorStop(0.52,'rgba(104,167,255,.22)'); grad.addColorStop(1,'rgba(104,167,255,0)');
-    ctx.fillStyle=grad; ctx.fillRect(-len/2,-1.2,len,2.4); ctx.restore();
+    ctx.fillStyle=grad; ctx.fillRect(-len/2,-1.2,len,2.4);
+    ctx.restore();
   }
   requestAnimationFrame(drawStar);
 }
 addEventListener('resize', resizeStar); resizeStar(); requestAnimationFrame(drawStar);
 
-/* ---------- state ---------- */
+/* ---------- UI/State ---------- */
 const elEngine=document.getElementById('engine');
-const elStatus = document.getElementById('engineStatus');
+const elEngineDot=document.getElementById('engineStatus');
+const elNew=document.getElementById('newBadge');
+const elList=document.getElementById('list');
 const elBar=document.getElementById('bar');
 const elPreview=document.getElementById('preview');
 const elPreviewTip=document.getElementById('previewTip');
-const elNew=document.getElementById('newBadge');
-const elList=document.getElementById('list');
+const elSigState=document.getElementById('sigState');
 const elQuota=document.getElementById('quotaNote');
 
-const DAILY_MAX = 2;
-const revealKey = 'reveals_'+new Date().toISOString().slice(0,10);
-if(localStorage.getItem(revealKey)===null) localStorage.setItem(revealKey,'0');
+function setEngine(status){ elEngine.textContent='engine: '+status; elEngineDot.classList.toggle('idle', status!=='running'); elEngineDot.innerHTML = `<span class="dot"></span>${status[0].toUpperCase()+status.slice(1)}`; }
 
-let queue = []; let visible = []; let ticker=null; let inflight=false;
-
-/* ---------- helpers ---------- */
-function setEnginePhase(p,label){ elEngine.textContent='engine: '+p; elStatus.classList.remove('idle','working'); elStatus.classList.add(p==='running'?'working':'idle'); elStatus.innerHTML='<span class="dot"></span>'+label; }
-function revealsUsed(){ return Number(localStorage.getItem(revealKey)||'0'); }
-function incReveal(){ const n=revealsUsed()+1; localStorage.setItem(revealKey,String(n)); return n; }
-function pushes(arr){ for(const x of arr) queue.push(x); runQueue(); }
-function runQueue(){ if(inflight||queue.length===0) return; inflight=true; setTimeout(()=>{ const next = queue.shift(); if(next) addCard(next); inflight=false; runQueue(); }, 900 + Math.random()*900); }
-
-/* ---------- API helpers ---------- */
-async function GET(path){ const r = await fetch((window.API_BASE||'')+path,{headers:{'x-galactly-user':UID}}); return r.json(); }
-async function POST(path, body){ const r = await fetch((window.API_BASE||'')+path,{method:'POST',headers:{'content-type':'application/json','x-galactly-user':UID},body:JSON.stringify(body||{})}); return r.json(); }
-
-async function refreshQuota(){
+/* ---------- quota ---------- */
+async function refreshStatus(){
   try{
-    const s = await GET('/api/v1/status');
-    if(s?.ok || s.free){ const f = s.free || s; const finds=f.findsLeft??f.perDay?.finds; const revs=f.revealsLeft??f.perDay?.reveals;
-      elQuota.textContent = `Free: ${finds} searches left  •  ${revs} reveals left`;
+    const r = await fetch('/api/v1/status').then(r=>r.json());
+    if(r?.ok){
+      elQuota.textContent = `Free: ${r.free.findsLeft} searches left  •  ${r.free.revealsLeft} reveals left`;
     }
-  }catch(e){ /* noop */ }
+  }catch{}
 }
 
+/* ---------- API helpers (already patched by api-base.js) ---------- */
+async function post(path, body){ const r = await fetch(path, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body||{}) }); return r.json(); }
+async function get(path){ const r = await fetch(path); return r.json(); }
+
 /* ---------- cards ---------- */
+function maskTitle(t){ return t.replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.8 ? '•' : c)); }
+function host(u){ try{ return new URL(u).hostname; } catch { return 'source'; } }
+function roughSpend(lead){ const h=Number(lead.heat||60); const lo=2000, hi=12000; return Math.round(lo + (hi-lo)*(h/100)).toLocaleString(); }
+
 function cardEl(lead){
-  const d=document.createElement('div'); d.className='card locked'; d.dataset.id = lead.id;
-  const conf = Math.max(48, Math.min(92, Number(lead.heat || 60)));
+  const d=document.createElement('div'); d.className='card locked'; d.dataset.id=lead.id;
+  const conf = Math.max(48, Math.min(92, Number(lead.heat||60)));
   d.innerHTML = `
     <div class="meta">
       <span class="pill">${lead.cat||'signal'}</span>
@@ -237,112 +241,113 @@ function cardEl(lead){
       <button class="btn" data-a="why" disabled>Why this?</button>
       <button class="btn primary" data-a="own" disabled>Own</button>
     </div>`;
-  let timer=null, revealed=false;
-  const press = ()=> {
-    if(revealsUsed()>=DAILY_MAX){ d.querySelector('.hold').innerHTML='<span style="color:var(--warn)">Daily reveal limit reached. Upgrade to continue.</span>'; return; }
-    timer = setTimeout(()=> revealLead(), 1400);
-  };
-  const cancel = ()=> { clearTimeout(timer); timer=null; };
-  d.addEventListener('pointerdown', press); d.addEventListener('pointerup', cancel); d.addEventListener('pointerleave', cancel);
+  let t=null, revealed=false;
+  const start=()=>{ t=setTimeout(()=>reveal(), 1400); };
+  const stop=()=>{ clearTimeout(t); t=null; };
+  d.addEventListener('pointerdown', start);
+  d.addEventListener('pointerup', stop);
+  d.addEventListener('pointerleave', stop);
 
-  async function revealLead(){
-    if(revealed) return; revealed=true;
-    d.classList.remove('locked'); d.querySelector('.hold').remove();
-    d.querySelector('[data-a=why]').disabled=false; d.querySelector('[data-a=own]').disabled=false;
-    d.querySelector('.title').textContent = lead.title || 'Buyer signal';
-    const meta = d.querySelector('.meta'); meta.insertAdjacentHTML('beforeend', `<span class="pill">${safeHost(lead.source_url)}</span>`);
-    incReveal(); refreshQuota();
+  async function reveal(){
+    if(revealed) return;
+    const r=await post('/api/v1/reveal', {});
+    if(r?.ok){
+      revealed=true;
+      d.classList.remove('locked');
+      d.querySelector('.hold').remove();
+      d.querySelector('[data-a=why]').disabled=false;
+      d.querySelector('[data-a=own]').disabled=false;
+      d.querySelector('.title').textContent = lead.title || 'Buyer signal';
+      const meta = d.querySelector('.meta');
+      meta.insertAdjacentHTML('beforeend', `<span class="pill">${host(lead.source_url)}</span>`);
+      refreshStatus();
+    }else{
+      d.querySelector('.hold').innerHTML = `<span style="color:${getComputedStyle(document.documentElement).getPropertyValue('--warn')||'#f7c46a'}">Daily reveal limit reached. Upgrade to continue.</span>`;
+    }
   }
-  d.querySelector('[data-a=own]').onclick = ()=> { POST('/api/v1/claim',{leadId:lead.id}).then(()=> POST('/api/v1/own',{windowId:lead._windowId||null}).catch(()=>{})); };
+
+  d.querySelector('[data-a=own]').onclick = ()=> post('/api/v1/claim',{leadId:lead.id}).then(()=>post('/api/v1/own',{windowId:lead._windowId||null}).catch(()=>{}));
   d.querySelector('[data-a=why]').onclick = ()=> openWhy(lead);
   return d;
 }
-function addCard(lead){ visible.push(lead); elList.appendChild(cardEl(lead)); }
-function maskTitle(t){ return t.replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.8 ? '•' : c)); }
-function safeHost(u){ try{ return new URL(u).hostname; }catch{ return 'source'; } }
+function addCards(leads){ for(const L of leads){ elList.appendChild(cardEl(L)); } }
 
 /* ---------- WHY modal ---------- */
 const modal = document.getElementById('whyModal');
 document.getElementById('mClose').onclick = ()=> modal.classList.remove('in');
-document.getElementById('mConfirm').onclick = ()=> { modal.classList.remove('in'); };
-function roughSpend(lead){ const h = Number(lead.heat||60); const lo=2000, hi=12000; return Math.round(lo + (hi-lo)*(h/100)).toLocaleString(); }
+document.getElementById('mConfirm').onclick = ()=> modal.classList.remove('in');
 function openWhy(lead){
-  document.getElementById('whyTitle').textContent = (lead.title||safeHost(lead.source_url));
-  const proof = {"source": safeHost(lead.source_url), "id": lead.id, "observed": lead.cat||"signal", "confidence": Number(lead.heat||60)};
+  document.getElementById('whyTitle').textContent = lead.title || host(lead.source_url);
   document.getElementById('whyBullets').innerHTML = `
     <ul style="margin:0 0 6px 18px;">
-      <li>Paid reach ≈ <strong>$${roughSpend(lead)}/mo</strong> → they’re investing in growth.</li>
-      <li>Recent product / restock or review activity → packaging throughput & quality needs.</li>
-      <li>Category fit + region match your profile.</li>
+      <li>Paid reach ≈ <strong>$${roughSpend(lead)}/mo</strong> → indicates active demand generation for their products.</li>
+      <li>Recent product or restock activity → likely packaging throughput required soon.</li>
+      <li>Category/region match your profile → higher reply odds.</li>
     </ul>`;
-  document.getElementById('whyProof').textContent = JSON.stringify(proof,null,2);
+  document.getElementById('whyProof').textContent = JSON.stringify({ source: host(lead.source_url), id: lead.id, confidence: lead.heat||60 }, null, 2);
   modal.classList.add('in');
 }
 
-/* ---------- preview stream (slow) ---------- */
-const RULES = [
-  '[Normalization] Input cleanup',
-  '[Demand] Paid reach probes',
-  '[Commerce] Restock cadence',
-  '[Procurement] Supplier/intake pages',
-  '[Mentions] Retailers/planograms',
-  '[Seasonality] Promo windows',
-  '[Units] Spend → traffic → orders → packs',
-  '[Queue] Units → packaging windows',
-  '[Confidence] Blend & dedup',
-  '[Reviews] Packaging complaints mining' // new
-];
-let ticker=null;
-function startPreview(seconds=60, truncateTo=8){
-  clearInterval(ticker); elPreview.textContent=''; elPreviewTip.textContent='';
-  setEnginePhase('running','Running'); document.getElementById('sigState').textContent='0%'; elNew.style.display='none';
-  let i=0; const totalTicks = Math.max(truncateTo, Math.min(RULES.length, Math.round(seconds/4)));
-  ticker = setInterval(()=>{
-    const msg = RULES[i % RULES.length] + '  —  computed';
-    elPreview.textContent += '• '+msg+'\n'; i++;
-    const p = Math.min(1, i/totalTicks); elBar.style.width = (p*100)+'%'; document.getElementById('sigState').textContent = Math.round(p*100)+'%';
-    if(i>=totalTicks){ clearInterval(ticker); elPreviewTip.innerHTML = 'Free plan stops early. Enable <strong>full signals</strong> to unlock the remaining rules.'; setEnginePhase('idle','Ready'); elNew.style.display='inline-flex'; }
-  }, 4000);
+/* ---------- Signals preview (SSE stream) ---------- */
+let es=null;
+function startPreview(){
+  elPreview.textContent=''; elPreviewTip.textContent=''; elBar.style.width='0%'; elSigState.textContent='0%';
+  if (es) { try{ es.close(); }catch{} }
+  es = new EventSource('/api/v1/progress.sse?sid='+encodeURIComponent(UID));
+  setEngine('running');
+  es.addEventListener('step', (e)=>{
+    const d = JSON.parse(e.data||'{}'); elPreview.textContent += `• [${d.cap}] ${d.label} — computed\n`;
+    const p = Math.min(1, d.index/Math.max(1,d.of)); elBar.style.width = (p*100)+'%'; elSigState.textContent = Math.round(p*100)+'%';
+  });
+  es.addEventListener('halt', (_e)=>{ elPreviewTip.innerHTML='Free plan stops early. Enable <strong>full signals</strong> to unlock the remaining rules.'; setEngine('ready'); });
+  es.onerror = ()=>{ setEngine('ready'); };
 }
 
-/* ---------- backend calls ---------- */
-async function pollLeadsOnce(){
-  try{
-    const r = await GET('/api/v1/leads');
-    if(r?.ok && Array.isArray(r.leads)){ if(visible.length===0){ elNew.style.display='inline-flex'; } pushes(r.leads.map(L=>({...L,_locked:true}))); }
-  }catch(e){}
+/* ---------- find flow ---------- */
+async function fetchLeadsOnce(){
+  const r = await get('/api/v1/leads');
+  if(r?.ok && Array.isArray(r.leads)){
+    if(!r.leads.length){ elNew.style.display='none'; return; }
+    elNew.style.display='inline-flex';
+    addCards(r.leads);
+  }
 }
-
-/* ---------- buttons ---------- */
-document.getElementById('btnDry').onclick = ()=> run(false);
-document.getElementById('btnFind').onclick = ()=> run(true);
-
-async function run(persist){
-  elList.innerHTML=''; visible=[]; queue=[]; elNew.style.display='none';
+async function run(){
+  // wipe list, show star + status
+  elList.innerHTML='';
+  setEngine('running');
+  // persist snapshot for prefill next time
   const body = {
-    vendorDomain: document.getElementById('vendor').value.trim(),
-    buyers: document.getElementById('buyers').value.split(',').map(s=>s.trim()).filter(Boolean),
-    industries: document.getElementById('industries').value.split(',').map(s=>s.trim()).filter(Boolean),
-    regions: document.getElementById('regions').value.split(',').map(s=>s.trim()).filter(Boolean),
-    describe: document.getElementById('describe').value.trim(),
-    listMe: document.getElementById('listMe').checked === true
+    vendorDomain: (document.getElementById('vendor') as HTMLInputElement).value.trim(),
+    buyers: (document.getElementById('buyers') as HTMLInputElement).value.split(',').map(s=>s.trim()).filter(Boolean),
+    industries: (document.getElementById('industries') as HTMLInputElement).value.split(',').map(s=>s.trim()).filter(Boolean),
+    regions: (document.getElementById('regions') as HTMLInputElement).value.split(',').map(s=>s.trim()).filter(Boolean),
+    describe: (document.getElementById('describe') as HTMLTextAreaElement).value.trim(),
+    listMe: (document.getElementById('listMe') as HTMLInputElement).checked === true
   };
   localStorage.setItem('onboard', JSON.stringify(body));
-  startPreview(60, 8);
-  setEnginePhase('running','Scanning ads, PDPs, reviews…');
+  startPreview();
   try{
-    await POST('/api/v1/find-now', body);
-  }catch(e){}
-  // Poll a few times to trickle results even if ingest is slow
-  setTimeout(pollLeadsOnce, 2000);
-  setTimeout(pollLeadsOnce, 7000);
-  setTimeout(pollLeadsOnce, 12000);
+    const res = await post('/api/v1/find-now', body);
+    if(res?.ok){
+      refreshStatus();
+      setTimeout(fetchLeadsOnce, 2000);
+      setTimeout(fetchLeadsOnce, 7000);
+      setTimeout(fetchLeadsOnce, 12000);
+    }
+  }catch(e){ console.warn(e); }
 }
 
-/* ---------- init ---------- */
-refreshQuota();
-document.getElementById('engine').textContent = 'engine: idle';
-document.querySelectorAll('.scroller').forEach(el=> el.addEventListener('wheel',(ev)=>ev.stopPropagation(),{passive:true}));
+document.getElementById('btnDry').onclick = ()=> { startPreview(); };
+document.getElementById('btnFind').onclick = run;
+
+setEngine('idle');
+refreshStatus();
+
+/* ---------- keep scroll confined to panes ---------- */
+document.querySelectorAll('.scroller').forEach(el=>{
+  el.addEventListener('wheel', (ev)=>{ ev.stopPropagation(); }, {passive:true});
+});
 </script>
 </body>
 </html>
