@@ -8,97 +8,56 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@800&display=swap" rel="stylesheet">
 <style>
-/* ===== Design tokens ===== */
 :root{
-  --ink:#eaf0ff;
-  --mut:#a6b2c9;
-  --line:#1e2737;
-  --card:#0f1420;
-  --panel:#0b101a;
-  --pill:#10182a;
-  --accent:#86f7d6;
-  --accent2:#6fb3ff;
-  --ok:#7fffd4;
-  --bad:#ff8a8a;
+  --ink:#eaf0ff; --mut:#a6b2c9; --line:#1e2737; --card:#0f1420; --panel:#0b101a; --pill:#10182a;
+  --accent:#86f7d6; --accent2:#6fb3ff; --ok:#7fffd4; --bad:#ff8a8a;
   --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
   --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
 }
-
-/* ===== Reset / base ===== */
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0;
-  color:var(--ink);
+  margin:0; color:var(--ink);
   background:
     radial-gradient(1200px 700px at 85% -10%, rgba(40,70,140,.28), transparent 40%),
     linear-gradient(180deg, #0a0e16, #06080e 60%);
   font-family:var(--inter);
 }
 
-/* ===== Header ===== */
-header{
-  height:64px;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:0 20px; border-bottom:1px solid var(--line);
-  background:linear-gradient(180deg,#0b111b,#0a0e15);
-}
+/* Header */
+header{height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 18px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0b111b,#0a0e15)}
 .brand{display:flex; gap:10px; align-items:center; font:800 16px var(--mont)}
 .brand svg{width:22px;height:22px}
-.badge{
-  display:inline-flex; align-items:center; gap:8px;
-  padding:8px 12px; border:1px solid var(--line); border-radius:999px;
-  color:#c9d6f0; background:#0c1322; font-size:12px;
-}
+.badge{display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--line); border-radius:999px; color:#c9d6f0; background:#0c1322; font-size:12px}
 .badge .dot{width:8px;height:8px;border-radius:50%;background:#43e5b7;box-shadow:0 0 10px rgba(67,229,183,.7);display:inline-block}
 
-/* ===== Hero layout ===== */
-.wrap{max-width:1280px; margin:0 auto; padding:28px 20px 24px}
-.hero{
-  display:grid; grid-template-columns: minmax(420px, 52%) 1fr; gap:26px; align-items:center;
-}
+/* Hero layout */
+.wrap{max-width:1280px; margin:0 auto; padding:26px 18px}
+.hero{display:grid; grid-template-columns:minmax(420px, 52%) 1fr; gap:26px; align-items:center}
 @media (max-width:1080px){ .hero{grid-template-columns:1fr} }
 
-/* Left content */
-.h1{
-  font:800 clamp(32px, 6vw, 54px) var(--mont);
-  letter-spacing:-.02em; line-height:1.08; margin:0 0 12px 0;
-}
-.h1 span{ color:var(--accent); }
+/* Left copy */
+.h1{font:800 clamp(34px,6vw,56px) var(--mont); letter-spacing:-.02em; line-height:1.06; margin:0 0 12px}
+.h1 .hi{color:var(--accent)}
+.h1 .t{color:#9ec8ff}
 .sub{color:#cfdbff; opacity:.9; font-size:15px; margin:0 0 12px}
-.cta{margin-top:18px; display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-.btn{
-  border-radius:14px; padding:12px 16px; font:700 14px var(--inter);
-  background:var(--pill); border:1px solid var(--line); color:var(--ink); cursor:pointer
-}
-.btn.primary{
-  background:linear-gradient(90deg,#fff,#e6efff); color:#0b111b; border-color:transparent;
-  box-shadow:0 6px 18px rgba(208,228,255,.08);
-}
-.kv{margin-top:12px; font-size:12px; color:#c6d5f3; opacity:.9}
+.cta{margin-top:16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.btn{border-radius:14px; padding:12px 16px; font:700 14px var(--inter); background:var(--pill); border:1px solid var(--line); color:var(--ink); cursor:pointer}
+.btn.primary{background:linear-gradient(90deg,#fff,#e6efff); color:#0b111b; border-color:transparent; box-shadow:0 6px 18px rgba(208,228,255,.08)}
+.btn.ghost{background:#0f1626}
+.kv{margin-top:10px; font-size:12px; color:#c6d5f3; opacity:.95}
 
-/* Right visual panel */
-.heroVis{
-  position:relative; height:520px; border:1px solid var(--line); border-radius:18px;
-  background:radial-gradient(600px 380px at 40% 55%, rgba(120,160,255,.15), rgba(10,14,22,1) 65%);
-  overflow:hidden; box-shadow:inset 0 0 0 1px rgba(255,255,255,.02), 0 18px 70px rgba(0,0,0,.45);
+/* Right visual */
+.heroVis{position:relative; height:520px; border:1px solid var(--line); border-radius:18px; overflow:hidden;
+  background:radial-gradient(600px 380px at 43% 55%, rgba(120,160,255,.14), rgba(10,14,22,1) 65%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.02), 0 18px 70px rgba(0,0,0,.45);
 }
-#funnel{width:100%; height:100%; display:block}
-
-/* KPI chips */
-.kpi{
-  position:absolute; left:18px; right:18px; bottom:14px;
-  display:flex; gap:10px; flex-wrap:wrap;
-}
-.chip{
-  display:inline-flex; align-items:center; gap:8px;
-  padding:7px 10px; border:1px solid #26314a; border-radius:999px;
-  background:rgba(10,16,28,.8); color:#cfe0ff; font-size:12px;
-  backdrop-filter: blur(6px);
-}
+#funnel{width:100%; height:100%; display:block; pointer-events:none} /* no click-blocking */
+.kpi{position:absolute; left:18px; right:18px; bottom:14px; display:flex; gap:10px; flex-wrap:wrap}
+.chip{display:inline-flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid #26314a; border-radius:999px; background:rgba(10,16,28,.82); color:#cfe0ff; font-size:12px; backdrop-filter: blur(6px)}
 .chip strong{color:#fff}
 
-/* ===== Onboarding modal (same structure, tuned spacing) ===== */
+/* Modal */
 .modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50}
 .modal.in{display:flex}
 .box{width:min(920px,95vw); background:#0b101a; border:1px solid var(--line); border-radius:16px; overflow:hidden}
@@ -118,6 +77,12 @@ header{
 .ok{color:#a7ffde; font-size:12px; margin-top:6px; display:none}
 .small{font-size:12px; opacity:.85}
 .hr{height:1px; background:linear-gradient(90deg,transparent,#243048,transparent); margin:12px 0}
+
+/* Video modal (demo) */
+.vmodal .box{width:min(1000px,96vw); padding:0}
+.vhead{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line)}
+.vbody{position:relative; padding-bottom:56.25%; height:0}
+.vbody iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
 </style>
 </head>
 <body>
@@ -131,22 +96,20 @@ header{
 
 <div class="wrap">
   <section class="hero">
-    <!-- LEFT COPY -->
     <div>
-      <h1 class="h1">Find US &amp; Canada <span>Packaging</span> Buyers in &lt;30s</h1>
-      <p class="sub">Real signals from public data. Free viewer; paid automations, priority, CRM &amp; reporting. We show visible reasoning and packaging math (ad → orders → units → SKUs → queue).</p>
+      <h1 class="h1">Find US &amp; Canada <span class="hi">Packaging</span> Buyers in <span class="t">&lt;30s</span></h1>
+      <p class="sub">Real posts &amp; tenders from public feeds. Free viewer; paid automations, priority, CRM &amp; reporting.</p>
+      <p class="sub">Built for packaging owners &amp; sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding. Just clicks.</p>
       <div class="cta">
-        <button class="btn primary" id="start">Start free</button>
-        <a class="btn" href="./free-panel.html">Open the Live Feed</a>
-        <span class="kv">No credit card • Free plan: 2 finds/day, 2 reveals/day</span>
+        <a class="btn primary" id="openFeed" href="./free-panel.html">Open the Live Feed</a>
+        <button class="btn ghost" id="watchDemo">▸ Watch 90s demo</button>
+        <span class="kv">AI closed <strong>16%</strong> • Rep closed <strong>21%</strong> • Saved / mo <strong>$20,678</strong></span>
       </div>
-      <div class="kv"><strong>Promise:</strong> time-variant intelligence (if–then windows) + packaging math.</div>
     </div>
 
-    <!-- RIGHT VISUAL -->
-    <div class="heroVis">
+    <div class="heroVis" aria-hidden="true">
       <canvas id="funnel"></canvas>
-      <div class="kpi" aria-hidden="true">
+      <div class="kpi">
         <div class="chip">Leads / 30s <strong id="k_leads">0</strong></div>
         <div class="chip">First connection <strong id="k_first">6 sec</strong></div>
         <div class="chip">Ready now <strong id="k_ready">54%</strong></div>
@@ -158,7 +121,7 @@ header{
   </section>
 </div>
 
-<!-- ===== Onboarding modal (same behavior) ===== -->
+<!-- Onboarding modal (Path A/B) -->
 <div class="modal" id="onb">
   <div class="box">
     <div class="head">
@@ -174,12 +137,8 @@ header{
         <div class="card" id="paneA">
           <div class="label">Preferred — we’ll auto-derive ICPs, buyers, and regions.</div>
           <div class="grid2">
-            <div>
-              <div class="label">Business email *</div>
-              <input id="a_email" class="input" placeholder="you@yourcompany.com"/>
-            </div>
-            <div>
-              <div class="label">Your role *</div>
+            <div><div class="label">Business email *</div><input id="a_email" class="input" placeholder="you@yourcompany.com"/></div>
+            <div><div class="label">Your role *</div>
               <select id="a_role" class="input">
                 <option value="supplier">Supplier</option>
                 <option value="distributor">Distributor/Wholesaler</option>
@@ -190,36 +149,21 @@ header{
           <div class="label" style="margin-top:8px">Company website *</div>
           <input id="a_site" class="input" placeholder="yourcompany.com"/>
           <div class="grid2" style="margin-top:8px">
-            <div>
-              <div class="label">Region</div>
-              <input id="a_region" class="input" placeholder="e.g., US, EU"/>
-            </div>
-            <div>
-              <label style="display:flex; align-items:center; gap:8px; margin-top:22px">
-                <input type="checkbox" id="a_list"/> <span>List my company for inbound opportunities</span>
-              </label>
-            </div>
+            <div><div class="label">Region</div><input id="a_region" class="input" placeholder="e.g., US, CA"/></div>
+            <div><label style="display:flex; align-items:center; gap:8px; margin-top:22px"><input type="checkbox" id="a_list"/> <span>List my company for inbound opportunities</span></label></div>
           </div>
           <div class="hr"></div>
-          <div class="small">We only serve <strong>packaging</strong> companies and buyers with real physical products. Business email domain must match your company site.</div>
-          <div class="err" id="a_err"></div>
-          <div class="ok" id="a_ok"></div>
-          <div class="actions">
-            <button class="btn" id="a_cancel">Cancel</button>
-            <button class="btn primary" id="a_continue">Continue</button>
-          </div>
+          <div class="small">We only serve <strong>packaging</strong>. Business email domain must match your company site.</div>
+          <div class="err" id="a_err"></div><div class="ok" id="a_ok"></div>
+          <div class="actions"><button class="btn" id="a_cancel">Cancel</button><button class="btn primary" id="a_continue">Continue</button></div>
         </div>
 
         <!-- PATH B -->
         <div class="card" id="paneB" style="display:none">
           <div class="label">Manual — precise filters if you prefer to steer.</div>
           <div class="grid2">
-            <div>
-              <div class="label">Business email *</div>
-              <input id="b_email" class="input" placeholder="you@yourcompany.com"/>
-            </div>
-            <div>
-              <div class="label">Your role *</div>
+            <div><div class="label">Business email *</div><input id="b_email" class="input" placeholder="you@yourcompany.com"/></div>
+            <div><div class="label">Your role *</div>
               <select id="b_role" class="input">
                 <option value="supplier">Supplier</option>
                 <option value="distributor">Distributor/Wholesaler</option>
@@ -230,53 +174,51 @@ header{
           <div class="label" style="margin-top:8px">Company website *</div>
           <input id="b_site" class="input" placeholder="yourcompany.com"/>
           <div class="grid2" style="margin-top:8px">
-            <div>
-              <div class="label">Industries</div>
-              <input id="b_industries" class="input" placeholder="beverage, confectionery"/>
-            </div>
-            <div>
-              <div class="label">Regions</div>
-              <input id="b_regions" class="input" placeholder="US, CA, EU"/>
-            </div>
+            <div><div class="label">Industries</div><input id="b_industries" class="input" placeholder="beverage, confectionery"/></div>
+            <div><div class="label">Regions</div><input id="b_regions" class="input" placeholder="US, CA, EU"/></div>
           </div>
           <div class="label" style="margin-top:8px">Seed buyers (domains)</div>
           <input id="b_buyers" class="input" placeholder="brand1.com, brand2.com"/>
           <div class="label" style="margin-top:8px">Describe your ideal customers</div>
-          <textarea id="b_desc" class="input" rows="4" placeholder="categories, packaging materials, order sizes, retailer channels, exclusions"></textarea>
-          <label style="display:flex; align-items:center; gap:8px; margin-top:10px">
-            <input type="checkbox" id="b_list"/> <span>List my company for inbound opportunities</span>
-          </label>
+          <textarea id="b_desc" rows="4" class="input" placeholder="categories, packaging materials, order sizes, retailer channels, exclusions"></textarea>
+          <label style="display:flex; align-items:center; gap:8px; margin-top:10px"><input type="checkbox" id="b_list"/> <span>List my company for inbound opportunities</span></label>
           <div class="hr"></div>
-          <div class="small">We only serve <strong>packaging</strong>. Business email domain must match your company site.</div>
-          <div class="err" id="b_err"></div>
-          <div class="ok" id="b_ok"></div>
-          <div class="actions">
-            <button class="btn" id="b_cancel">Cancel</button>
-            <button class="btn primary" id="b_continue">Continue</button>
-          </div>
+          <div class="small">We only serve <strong>packaging</strong>.</div>
+          <div class="err" id="b_err"></div><div class="ok" id="b_ok"></div>
+          <div class="actions"><button class="btn" id="b_cancel">Cancel</button><button class="btn primary" id="b_continue">Continue</button></div>
         </div>
       </div>
 
-      <!-- Micro-guide -->
       <div>
         <div class="card">
           <div class="label"><strong>Tips to get great signals</strong></div>
           <ul class="small" style="margin:0 0 8px 16px; padding:0">
             <li>Use your company domain to calibrate fit and block scrapers.</li>
-            <li>Focus on physical packaging (corrugate, film, shrink, label, tray, case-of-N).</li>
-            <li>Seed 3–6 buyers you admire to nudge our platform rotation.</li>
+            <li>Focus on physical packaging: corrugate, film, shrink, label, tray, case-of-N.</li>
+            <li>Seed 3–6 buyers you admire to nudge platform rotation.</li>
           </ul>
           <div class="hr"></div>
-          <div class="small">Privacy: Free plan hides raw sources on cards; Pro shows full checks. We log per-user proof confirmations but do not bump global heat on Free.</div>
+          <div class="small">Privacy: Free hides raw sources on cards; Pro shows full checks. We log per-user proof confirmations only.</div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Video modal -->
+<div class="modal vmodal" id="vid">
+  <div class="box">
+    <div class="vhead"><div style="font:800 14px var(--mont)">90s demo</div><button class="btn" id="vclose">Close</button></div>
+    <div class="vbody">
+      <!-- Replace src with your video URL -->
+      <iframe id="vframe" src="https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
 <script>
-/* ===== API base ===== */
-(function ensureApiBase(){
+/* API base + sticky user */
+(function(){
   if (window.API && window.API.base) return;
   const DEFAULT=(window.API_DEFAULT||'').replace(/\/$/,'') || location.origin;
   const qs=new URLSearchParams(location.search);
@@ -294,225 +236,185 @@ header{
   window.API={ get base(){return base;}, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
 })();
 
-/* ===== presence badge ===== */
-async function loadPresence(){
-  try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presenceTxt').textContent = (j.total||0)+' online'; }
-  catch{}
-}
+/* Presence badge */
+async function loadPresence(){ try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{} }
 setInterval(loadPresence, 12000); loadPresence();
 
-/* ===== Professional hero animation (particles → core → beams) ===== */
+/* HERO CANVAS — particles → core → beams + continents + travel path */
 (function(){
-  const c = document.getElementById('funnel'); if(!c || !c.getContext) return;
-  const ctx = c.getContext('2d', { alpha:true });
+  const c=document.getElementById('funnel'); const ctx=c.getContext && c.getContext('2d'); if(!ctx) return;
   let w=0,h=0,dpr=1,cx=0,cy=0,R=0;
-  const endpoints = [
-    { label:'Email',    a:-0.22, color:'rgba(180,220,255,0.9)' },
-    { label:'SMS',      a:-0.08, color:'rgba(130,255,210,0.9)' },
-    { label:'Call',     a: 0.06, color:'rgba(200,220,255,0.9)' },
-    { label:'LinkedIn', a: 0.18, color:'rgba(160,210,255,0.9)' },
-    { label:'Quote',    a: 0.30, color:'rgba(255,235,160,0.9)' },
-    { label:'ERP',      a: 0.42, color:'rgba(210,190,255,0.9)' }
+  const endpoints=[
+    {label:'Email',a:-0.22,color:'rgba(180,220,255,0.9)'},
+    {label:'SMS',a:-0.08,color:'rgba(130,255,210,0.9)'},
+    {label:'Call',a:0.06,color:'rgba(200,220,255,0.9)'},
+    {label:'LinkedIn',a:0.18,color:'rgba(160,210,255,0.9)'},
+    {label:'Quote',a:0.30,color:'rgba(255,235,160,0.9)'},
+    {label:'ERP',a:0.42,color:'rgba(210,190,255,0.9)'}
   ];
+  let beamGrads=[];
   function resize(){
-    dpr = Math.max(1, Math.min(2, window.devicePixelRatio||1));
-    w = c.clientWidth; h = c.clientHeight;
-    c.width = Math.floor(w*dpr); c.height = Math.floor(h*dpr);
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-    cx = w*0.55; cy = h*0.56; R = Math.min(w,h)*0.095;
-    endpoints.forEach((e,i)=>{
-      const len = Math.min(240 + i*26, Math.min(w,h)*0.52);
-      e.x = cx + Math.cos(e.a)*len; e.y = cy + Math.sin(e.a)*len;
-    });
-    cacheGradients();
+    dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+    w=c.clientWidth; h=c.clientHeight; c.width=Math.floor(w*dpr); c.height=Math.floor(h*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    cx=w*0.70; cy=h*0.56; R=Math.min(w,h)*0.095;
+    endpoints.forEach((e,i)=>{ const len=Math.min(240+i*26,Math.min(w,h)*0.52); e.x=cx+Math.cos(e.a)*len; e.y=cy+Math.sin(e.a)*len; });
+    beamGrads=endpoints.map(e=>{ const g=ctx.createLinearGradient(cx,cy,e.x,e.y); g.addColorStop(0,'rgba(255,255,255,0.9)'); g.addColorStop(1,e.color.replace(/0\.9\)/,'0.35)')); return g; });
   }
-  window.addEventListener('resize', resize); resize();
+  window.addEventListener('resize',resize); resize();
 
-  // cached gradients
-  let beamGradients = [];
-  function cacheGradients(){
-    beamGradients = endpoints.map(e=>{
-      const g = ctx.createLinearGradient(cx,cy, e.x,e.y);
-      g.addColorStop(0, 'rgba(255,255,255,0.9)');
-      g.addColorStop(1, e.color.replace(/0\.9\)/,'0.35)'));
-      return g;
-    });
-  }
-
-  // particles
-  const inbound=[]; const outbound=[];
-  const MAX_IN=90; const MAX_OUT=70;
+  const inbound=[], outbound=[];
+  const MAX_IN=90, MAX_OUT=70;
   function spawnInbound(){
-    const ring = Math.max(w,h)*0.58;
-    const a = Math.PI + (Math.random()*Math.PI*0.8 - Math.PI*0.4);
-    inbound.push({
-      x: cx + Math.cos(a)*ring,
-      y: cy + Math.sin(a)*ring,
-      vx: 0, vy: 0,
-      life: 360 + Math.random()*260,
-      hue: 190 + Math.random()*40
-    });
+    const ring=Math.max(w,h)*0.6; const a=Math.PI+(Math.random()*Math.PI*0.85 - Math.PI*0.425);
+    inbound.push({ x:cx+Math.cos(a)*ring, y:cy+Math.sin(a)*ring, vx:0, vy:0, life:360+Math.random()*260, hue:190+Math.random()*40 });
   }
-  function spawnOutbound(){
-    const e = endpoints[Math.floor(Math.random()*endpoints.length)];
-    outbound.push({
-      e, t: 0, spd: 0.008 + Math.random()*0.006,
-      jx: (Math.random()-.5)*0.6, jy: (Math.random()-.5)*0.6
-    });
+  function spawnOutbound(){ const e=endpoints[Math.floor(Math.random()*endpoints.length)]; outbound.push({e,t:0,spd:0.008+Math.random()*0.006,jx:(Math.random()-.5)*0.6,jy:(Math.random()-.5)*0.6}); }
+
+  /* continents (simple polygons) */
+  function drawContinents(){
+    ctx.save();
+    ctx.translate(w*0.38, h*0.46);
+    ctx.rotate(-0.08);
+    ctx.fillStyle='rgba(160,190,220,0.08)';
+    ctx.strokeStyle='rgba(160,190,220,0.12)'; ctx.lineWidth=1;
+
+    // North America-ish
+    ctx.beginPath();
+    ctx.moveTo(-120,-40); ctx.lineTo(-90,-80); ctx.lineTo(-30,-90); ctx.lineTo(20,-70); ctx.lineTo(10,-30);
+    ctx.lineTo(-40,-10); ctx.lineTo(-80,10); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    // South America-ish
+    ctx.beginPath();
+    ctx.moveTo(10,0); ctx.lineTo(50,10); ctx.lineTo(80,40); ctx.lineTo(60,100); ctx.lineTo(20,130); ctx.lineTo(0,90); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    // orbit rings
+    ctx.strokeStyle='rgba(140,170,220,0.12)'; ctx.lineWidth=1;
+    for(let i=1;i<=3;i++){ ctx.beginPath(); ctx.arc(cx,cy,R*(2+i*1.12),0,Math.PI*2); ctx.stroke(); }
   }
 
-  // background décor
-  function drawRings(){
-    ctx.save();
-    ctx.strokeStyle='rgba(140,170,220,0.12)';
-    ctx.lineWidth=1;
-    for(let i=1;i<=3;i++){
-      ctx.beginPath(); ctx.arc(cx,cy, R*(2+i*1.15), 0, Math.PI*2); ctx.stroke();
-    }
-    ctx.restore();
+  /* travel path from map → core */
+  let travelT=0;
+  function drawTravelPath(){
+    const sx=w*0.43, sy=h*0.42; // start around NA shape
+    const cp1x=w*0.56, cp1y=h*0.40, cp2x=w*0.62, cp2y=h*0.52, ex=cx, ey=cy;
+    // path
+    ctx.strokeStyle='rgba(170,200,255,0.18)'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(sx,sy); ctx.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,ex,ey); ctx.stroke();
+    // moving dot
+    travelT=(travelT+0.012)%1;
+    const t=travelT, it=1-t;
+    const x=it*it*it*sx + 3*it*it*t*cp1x + 3*it*t*t*cp2x + t*t*t*ex;
+    const y=it*it*it*sy + 3*it*it*t*cp1y + 3*it*t*t*cp2y + t*t*t*ey;
+    ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.arc(x,y,1.8,0,Math.PI*2); ctx.fill();
   }
+
   function drawCore(){
-    const g = ctx.createRadialGradient(cx,cy,0, cx,cy, R*2.4);
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R*2.4);
     g.addColorStop(0,'rgba(255,255,255,0.9)');
     g.addColorStop(0.2,'rgba(200,230,255,0.55)');
     g.addColorStop(1,'rgba(120,160,255,0.02)');
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='rgba(210,235,255,0.45)'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.arc(cx,cy,R*1.18,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='rgba(210,235,255,0.45)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(cx,cy,R*1.18,0,Math.PI*2); ctx.stroke();
   }
   function drawBeams(){
     endpoints.forEach((e,i)=>{
-      ctx.strokeStyle = beamGradients[i]; ctx.lineWidth=2;
+      ctx.strokeStyle=beamGrads[i]; ctx.lineWidth=2;
       ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(e.x,e.y); ctx.stroke();
-
-      ctx.fillStyle='rgba(160,200,255,0.35)';
-      ctx.beginPath(); ctx.arc(e.x,e.y, 12, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.85)';
-      ctx.beginPath(); ctx.arc(e.x,e.y, 3.2, 0, Math.PI*2); ctx.fill();
-
-      ctx.font='12px Inter,system-ui'; ctx.textBaseline='middle';
-      ctx.fillStyle='rgba(225,235,255,0.95)';
+      ctx.fillStyle='rgba(160,200,255,0.35)'; ctx.beginPath(); ctx.arc(e.x,e.y,12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(e.x,e.y,3.2,0,Math.PI*2); ctx.fill();
+      ctx.font='12px Inter,system-ui'; ctx.textBaseline='middle'; ctx.fillStyle='rgba(225,235,255,0.95)';
       ctx.fillText(e.label, e.x+16, e.y);
     });
   }
 
+  function drawBgVignette(){
+    const g=ctx.createRadialGradient(cx-120, cy, R*0.6, cx, cy, Math.max(w,h)*0.9);
+    g.addColorStop(0,'rgba(72,100,160,0.08)'); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  }
+
   function tickInbound(){
     for(let i=inbound.length-1;i>=0;i--){
-      const p=inbound[i];
-      const dx = cx - p.x, dy = cy - p.y;
-      const dist = Math.hypot(dx,dy) || 1;
-      const ax = (dx/dist) * 0.11;
-      const ay = (dy/dist) * 0.11;
-      const swirl=0.035;
-      p.vx = (p.vx + ax + (-dy/dist)*swirl) * 0.986;
-      p.vy = (p.vy + ay + ( dx/dist)*swirl) * 0.986;
-      p.x += p.vx; p.y += p.vy; p.life--;
-
-      // trail
-      ctx.strokeStyle = `hsla(${p.hue}, 80%, 75%, ${Math.max(.06, 0.18 - 0.0004*(360 - p.life))})`;
-      ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx*3, p.y - p.vy*3); ctx.stroke();
-      ctx.fillStyle='rgba(255,255,255,0.95)';
-      ctx.beginPath(); ctx.arc(p.x,p.y,1.15,0,Math.PI*2); ctx.fill();
-
+      const p=inbound[i], dx=cx-p.x, dy=cy-p.y, dist=Math.hypot(dx,dy)||1;
+      const ax=(dx/dist)*0.11, ay=(dy/dist)*0.11, swirl=0.035;
+      p.vx=(p.vx+ax+(-dy/dist)*swirl)*0.986; p.vy=(p.vy+ay+(dx/dist)*swirl)*0.986;
+      p.x+=p.vx; p.y+=p.vy; p.life--;
+      ctx.strokeStyle=`hsla(${p.hue},80%,75%,${Math.max(.06,0.18-0.0004*(360-p.life))})`;
+      ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-p.vx*3,p.y-p.vy*3); ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.arc(p.x,p.y,1.15,0,Math.PI*2); ctx.fill();
       if(dist<R*0.95 || p.life<=0){ inbound.splice(i,1); spawnOutbound(); }
     }
     while(inbound.length<MAX_IN) spawnInbound();
   }
   function tickOutbound(){
     for(let i=outbound.length-1;i>=0;i--){
-      const o=outbound[i]; o.t += o.spd; if(o.t>=1){ outbound.splice(i,1); continue; }
-      const bx = cx + (o.e.x-cx)*o.t + Math.sin(o.t*10)*o.jx*5;
-      const by = cy + (o.e.y-cy)*o.t + Math.cos(o.t*10)*o.jy*5;
-      const sz = 1.1 + Math.sin(o.t*Math.PI)*1.3;
-      ctx.fillStyle='rgba(255,255,255,0.96)';
-      ctx.beginPath(); ctx.arc(bx,by,sz,0,Math.PI*2); ctx.fill();
+      const o=outbound[i]; o.t+=o.spd; if(o.t>=1){ outbound.splice(i,1); continue; }
+      const bx=cx+(o.e.x-cx)*o.t + Math.sin(o.t*10)*o.jx*5;
+      const by=cy+(o.e.y-cy)*o.t + Math.cos(o.t*10)*o.jy*5;
+      const sz=1.1+Math.sin(o.t*Math.PI)*1.3;
+      ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.beginPath(); ctx.arc(bx,by,sz,0,Math.PI*2); ctx.fill();
     }
     while(outbound.length<MAX_OUT) spawnOutbound();
-  }
-
-  function drawBgVignette(){
-    const g = ctx.createRadialGradient(cx-120, cy, R*0.6, cx, cy, Math.max(w,h)*0.9);
-    g.addColorStop(0, 'rgba(72,100,160,0.08)');
-    g.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
   }
 
   function frame(){
     ctx.clearRect(0,0,w,h);
     drawBgVignette();
+    drawContinents();
     drawBeams();
+    drawTravelPath();
     tickInbound();
     drawCore();
-    drawRings();
-    tickOutbound();
     requestAnimationFrame(frame);
   }
   frame();
 
-  // KPI motion (subtle)
-  const k = { leads:0, t:0 };
-  setInterval(()=>{
-    k.t++;
-    if(k.leads<207) k.leads += 1 + (Math.random()<.35?1:0);
+  // KPI gently moves
+  const k={leads:0,t:0}; setInterval(()=>{ k.t++; if(k.leads<207) k.leads+=1+(Math.random()<.35?1:0);
     const el=(id,v)=>document.getElementById(id).textContent=v;
-    el('k_leads', k.leads);
-    el('k_ready', (54 + Math.round(Math.sin(k.t/7)*4)) + '%');
-    el('k_quoted', (67 + Math.round(Math.cos(k.t/11)*3)) + '%');
-    el('k_rep', (21 + Math.round(Math.sin(k.t/5)*2)) + '%');
-    const saved=20678 + Math.round(Math.sin(k.t/3)*620);
-    el('k_saved', '$'+saved.toLocaleString());
-  }, 900);
+    el('k_leads',k.leads); el('k_ready',(54+Math.round(Math.sin(k.t/7)*4))+'%'); el('k_quoted',(67+Math.round(Math.cos(k.t/11)*3))+'%'); el('k_rep',(21+Math.round(Math.sin(k.t/5)*2))+'%');
+    const saved=20678+Math.round(Math.sin(k.t/3)*620); el('k_saved','$'+saved.toLocaleString());
+  },900);
 })();
 
-/* ===== modal logic ===== */
-const modal=document.getElementById('onb');
-document.getElementById('start').onclick=()=>modal.classList.add('in');
-document.getElementById('a_cancel').onclick=()=>modal.classList.remove('in');
-document.getElementById('b_cancel').onclick=()=>modal.classList.remove('in');
+/* CTA behavior */
+const onb=document.getElementById('onb');
+document.getElementById('watchDemo').onclick=()=>{ document.getElementById('vid').classList.add('in'); };
+document.getElementById('vclose').onclick=()=>{ document.getElementById('vid').classList.remove('in'); document.getElementById('vframe').src=document.getElementById('vframe').src; };
 
 const tabA=document.getElementById('tabA'), tabB=document.getElementById('tabB');
 const paneA=document.getElementById('paneA'), paneB=document.getElementById('paneB');
 tabA.onclick=()=>{ tabA.classList.add('active'); tabB.classList.remove('active'); paneA.style.display='block'; paneB.style.display='none'; };
 tabB.onclick=()=>{ tabB.classList.add('active'); tabA.classList.remove('active'); paneB.style.display='block'; paneA.style.display='none'; };
 
-/* ===== gating helpers ===== */
+/* Gating helpers */
 function bareHost(url){ let s=String(url||'').trim(); s=s.replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./i,''); return s.toLowerCase(); }
 function emailDomain(email){ const m=String(email||'').trim().toLowerCase().match(/^[^@]+@([^@]+)$/); return m? m[1].replace(/^www\./,'') : ''; }
 function domainsMatch(emailDom, siteDom){ if(!emailDom || !siteDom) return false; if(emailDom===siteDom) return true; return emailDom.endsWith('.'+siteDom); }
 function isPackagingRole(role){ return role==='supplier' || role==='distributor' || role==='buyer'; }
-
-/* ===== API helpers ===== */
 async function post(path,body){ const r=await fetch((window.API_BASE||'')+path,{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body||{}) }); return r.json(); }
 
-/* ===== Path A continue ===== */
-document.getElementById('a_continue').onclick = async ()=>{
+/* Path A */
+document.getElementById('a_continue').onclick=async ()=>{
   const email=(document.getElementById('a_email').value||'').trim();
   const role =(document.getElementById('a_role').value||'supplier').trim();
   const site =(document.getElementById('a_site').value||'').trim();
   const region=(document.getElementById('a_region').value||'').trim();
   const list =!!document.getElementById('a_list').checked;
-  const errEl=document.getElementById('a_err'); const okEl=document.getElementById('a_ok');
-  errEl.style.display='none'; okEl.style.display='none';
-
+  const err=document.getElementById('a_err'); const ok=document.getElementById('a_ok'); err.style.display='none'; ok.style.display='none';
   const eDom=emailDomain(email), sDom=bareHost(site);
-  if(!email || !sDom){ errEl.textContent='Please provide business email and company website.'; errEl.style.display='block'; return; }
-  if(!domainsMatch(eDom,sDom)){ errEl.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; errEl.style.display='block'; return; }
-  if(!isPackagingRole(role)){ errEl.textContent='We only serve packaging suppliers, distributors, and buyers with real products.'; errEl.style.display='block'; return; }
-
-  localStorage.setItem('onb_vendor', sDom);
-  localStorage.setItem('onb_role', role);
-  localStorage.setItem('onb_regions', region);
-
-  try{
-    await post('/api/v1/gate', { region, email, alerts:true });
-    await post('/api/v1/vault', { role, traits:{ vendorDomain:sDom, industries:[], regions: region? region.split(',').map(s=>s.trim()):[], buyers:[] } });
-    okEl.textContent='Validated. Redirecting…'; okEl.style.display='block';
-  }catch{}
+  if(!email||!sDom){ err.textContent='Please provide business email and company website.'; err.style.display='block'; return; }
+  if(!domainsMatch(eDom,sDom)){ err.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; err.style.display='block'; return; }
+  if(!isPackagingRole(role)){ err.textContent='We only serve packaging suppliers, distributors, and buyers.'; err.style.display='block'; return; }
+  localStorage.setItem('onb_vendor', sDom); localStorage.setItem('onb_role', role); localStorage.setItem('onb_regions', region);
+  try{ await post('/api/v1/gate',{region,email,alerts:true}); await post('/api/v1/vault',{role,traits:{vendorDomain:sDom,industries:[],regions:region?region.split(',').map(s=>s.trim()):[],buyers:[]}}); ok.textContent='Validated. Opening feed…'; ok.style.display='block'; }catch{}
   location.href='./free-panel.html';
 };
+document.getElementById('a_cancel').onclick=()=> onb.classList.remove('in');
 
-/* ===== Path B continue ===== */
-document.getElementById('b_continue').onclick = async ()=>{
+/* Path B */
+document.getElementById('b_continue').onclick=async ()=>{
   const email=(document.getElementById('b_email').value||'').trim();
   const role =(document.getElementById('b_role').value||'supplier').trim();
   const site =(document.getElementById('b_site').value||'').trim();
@@ -521,41 +423,23 @@ document.getElementById('b_continue').onclick = async ()=>{
   const buyers=(document.getElementById('b_buyers').value||'').trim();
   const desc =(document.getElementById('b_desc').value||'').trim();
   const list =!!document.getElementById('b_list').checked;
-  const errEl=document.getElementById('b_err'); const okEl=document.getElementById('b_ok');
-  errEl.style.display='none'; okEl.style.display='none';
-
+  const err=document.getElementById('b_err'); const ok=document.getElementById('b_ok'); err.style.display='none'; ok.style.display='none';
   const eDom=emailDomain(email), sDom=bareHost(site);
-  if(!email || !sDom){ errEl.textContent='Please provide business email and company website.'; errEl.style.display='block'; return; }
-  if(!domainsMatch(eDom,sDom)){ errEl.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; errEl.style.display='block'; return; }
-  if(!isPackagingRole(role)){ errEl.textContent='We only serve packaging suppliers, distributors, and buyers with real products.'; errEl.style.display='block'; return; }
-
-  localStorage.setItem('onb_vendor', sDom);
-  localStorage.setItem('onb_role', role);
-  localStorage.setItem('onb_industries', inds);
-  localStorage.setItem('onb_regions', regs);
-  localStorage.setItem('onb_buyers', buyers);
-  localStorage.setItem('onb_desc', desc);
-  localStorage.setItem('onb_list', String(list));
-
-  try{
-    await post('/api/v1/gate', { region:regs, email, alerts:true });
-    await post('/api/v1/vault', { role, traits:{
-      vendorDomain:sDom,
-      industries: inds? inds.split(',').map(s=>s.trim()): [],
-      regions: regs? regs.split(',').map(s=>s.trim()): [],
-      buyers: buyers? buyers.split(',').map(s=>s.trim()): [],
-      notes: desc || null
-    }, listMe:list });
-    okEl.textContent='Validated. Redirecting…'; okEl.style.display='block';
-  }catch{}
+  if(!email||!sDom){ err.textContent='Please provide business email and company website.'; err.style.display='block'; return; }
+  if(!domainsMatch(eDom,sDom)){ err.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; err.style.display='block'; return; }
+  if(!isPackagingRole(role)){ err.textContent='We only serve packaging suppliers, distributors, and buyers.'; err.style.display='block'; return; }
+  localStorage.setItem('onb_vendor', sDom); localStorage.setItem('onb_role', role); localStorage.setItem('onb_industries', inds); localStorage.setItem('onb_regions', regs); localStorage.setItem('onb_buyers', buyers); localStorage.setItem('onb_desc', desc); localStorage.setItem('onb_list', String(list));
+  try{ await post('/api/v1/gate',{region:regs,email,alerts:true}); await post('/api/v1/vault',{role,traits:{vendorDomain:sDom,industries:inds?inds.split(',').map(s=>s.trim()):[],regions:regs?regs.split(',').map(s=>s.trim()):[],buyers:buyers?buyers.split(',').map(s=>s.trim()):[],notes:desc||null},listMe:list}); ok.textContent='Validated. Opening feed…'; ok.style.display='block'; }catch{}
   location.href='./free-panel.html';
 };
+document.getElementById('b_cancel').onclick=()=> onb.classList.remove('in');
 
-/* presence heartbeat */
-setInterval(()=>{ fetch('/presence/beat',{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ role: 'supplier' }) }).catch(()=>{}) }, 15000);
+/* “Open the Live Feed” should open the feed; start free = open modal */
+document.getElementById('openFeed').onclick=(e)=>{ /* anchor already links; keep for future tracking */ };
+document.getElementById('watchDemo').addEventListener('click', ()=> document.getElementById('vid').classList.add('in'));
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.getElementById('vid').classList.remove('in'); onb.classList.remove('in'); } });
 
-/* esc closes modal */
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.getElementById('onb').classList.remove('in'); });
+/* For completeness: you can also show the onboarding explicitly if you prefer */
 </script>
 </body>
 </html>
