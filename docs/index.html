@@ -4,85 +4,60 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Galactly — Live packaging buyer signals</title>
-
-<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%2386f7d6"/><stop offset="1" stop-color="%2357a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" fill="none" stroke="url(%23g)" stroke-width="4"/></svg>'/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@800&display=swap" rel="stylesheet">
-
 <style>
 :root{
-  --ink:#eaf0ff; --mut:#a6b2c9; --line:#1e2737; --pill:#10182a;
-  --accent:#86f7d6; --accent2:#6fb3ff;
+  --ink:#eaf0ff; --mut:#a6b2c9; --line:#1e2737; --card:#0f1420; --panel:#0b101a; --pill:#10182a;
+  --accent:#86f7d6; --accent2:#6fb3ff; --ok:#7fffd4; --bad:#ff8a8a;
   --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
   --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
 }
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0; color:var(--ink);
-  background:
-    radial-gradient(1200px 700px at 85% -10%, rgba(40,70,140,.28), transparent 40%),
-    linear-gradient(180deg, #0a0e16, #06080e 60%);
-  font-family:var(--inter);
-}
-
-/* Header */
-header{height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 18px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0b111b,#0a0e15)}
-.brand{display:flex; gap:10px; align-items:center; font:800 16px var(--mont)}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;color:var(--ink);background:linear-gradient(180deg,#0a0e16,#06080e 60%);font-family:var(--inter)}
+header{height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0b111b,#0a0e15)}
+.brand{display:flex;gap:10px;align-items:center;font:800 16px var(--mont)}
 .brand svg{width:22px;height:22px}
-.badge{display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--line); border-radius:999px; color:#c9d6f0; background:#0c1322; font-size:12px}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#0c1322;color:#c9d6f0;font-size:12px}
 .badge .dot{width:8px;height:8px;border-radius:50%;background:#43e5b7;box-shadow:0 0 10px rgba(67,229,183,.7);display:inline-block}
 
-/* Hero layout */
-.wrap{max-width:1280px; margin:0 auto; padding:26px 18px}
-.hero{display:grid; grid-template-columns:minmax(420px, 52%) 1fr; gap:26px; align-items:center}
+.wrap{max-width:1280px;margin:0 auto;padding:26px 18px}
+.hero{display:grid;grid-template-columns:minmax(420px, 52%) 1fr;gap:26px;align-items:center}
 @media (max-width:1080px){ .hero{grid-template-columns:1fr} }
+.h1{font:800 clamp(34px,6vw,56px) var(--mont);letter-spacing:-.02em;line-height:1.06;margin:0 0 12px}
+.h1 .hi{color:var(--accent)} .h1 .t{color:#9ec8ff}
+.sub{color:#cfdbff;opacity:.9;font-size:15px;margin:0 0 12px}
+.cta{margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border-radius:14px;padding:12px 16px;font:700 14px var(--inter);background:var(--pill);border:1px solid var(--line);color:var(--ink);cursor:pointer}
+.btn.primary{background:linear-gradient(90deg,#fff,#e6efff);color:#0b111b;border-color:transparent}
+.kv{margin-top:10px;font-size:12px;color:#c6d5f3;opacity:.95}
 
-/* Left copy */
-.h1{font:800 clamp(34px,6vw,56px) var(--mont); letter-spacing:-.02em; line-height:1.06; margin:0 0 12px}
-.h1 .hi{color:var(--accent)}
-.h1 .t{color:#9ec8ff}
-.sub{color:#cfdbff; opacity:.9; font-size:15px; margin:0 0 12px}
-.cta{margin-top:16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-.btn{border-radius:14px; padding:12px 16px; font:700 14px var(--inter); background:var(--pill); border:1px solid var(--line); color:var(--ink); cursor:pointer}
-.btn.primary{background:linear-gradient(90deg,#fff,#e6efff); color:#0b111b; border-color:transparent; box-shadow:0 6px 18px rgba(208,228,255,.08)}
-.btn.ghost{background:#0f1626}
-.kv{margin-top:10px; font-size:12px; color:#c6d5f3; opacity:.95}
+.hright{position:relative;height:520px;border:1px solid #1e2737;border-radius:18px;overflow:hidden;background:radial-gradient(600px 380px at 43% 55%, rgba(120,160,255,.14), rgba(10,14,22,1) 65%)}
+#hero-right-canvas{width:100%;height:100%;display:block;pointer-events:none}
+.hright-kpis{position:absolute;left:18px;right:18px;bottom:14px;display:flex;gap:10px;flex-wrap:wrap}
+.hright-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #26314a;border-radius:999px;background:rgba(10,16,28,.82);color:#cfe0ff;font-size:12px;backdrop-filter: blur(6px)}
 
-/* Right hero container */
-.hright{
-  position:relative; height:520px;
-  border:1px solid #1e2737; border-radius:18px; overflow:hidden;
-  background:
-    radial-gradient(900px 520px at 30% 58%, rgba(80,120,220,.14), transparent 62%),
-    radial-gradient(600px 420px at 70% 58%, rgba(120,160,255,.12), rgba(10,14,22,1) 80%);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.02), 0 18px 70px rgba(0,0,0,.45);
-}
-#hero-canvas{width:100%; height:100%; display:block}
-
-/* KPI chips */
-.hright-kpis{
-  position:absolute; left:18px; right:18px; bottom:14px;
-  display:flex; gap:10px; flex-wrap:wrap;
-}
-.hright-chip{
-  display:inline-flex; align-items:center; gap:8px;
-  padding:7px 10px; border:1px solid #26314a; border-radius:999px;
-  background:rgba(10,16,28,.82); color:#cfe0ff; font-size:12px;
-  backdrop-filter: blur(6px);
-}
-.hright-chip strong{ color:#fff; }
-
-@media (max-width:1080px){ .hright{height:420px} }
-
-/* Video modal */
-.modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50}
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50}
 .modal.in{display:flex}
-.vmodal .box{width:min(1000px,96vw); padding:0; background:#0b101a; border:1px solid var(--line); border-radius:16px; overflow:hidden}
-.vhead{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line)}
-.vbody{position:relative; padding-bottom:56.25%; height:0}
-.vbody iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
+.box{width:min(920px,95vw);background:#0b101a;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.box .head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
+.box h3{margin:0;font:800 16px var(--mont)}
+.seg{display:flex;gap:6px}
+.tab{padding:8px 10px;border:1px solid var(--line);border-radius:999px;font:700 12px var(--inter);cursor:pointer}
+.tab.active{background:linear-gradient(90deg,#fff,#e6efff);color:#10131a;border-color:transparent}
+.pane{display:grid;grid-template-columns:1.08fr 1fr;gap:16px;padding:14px}
+@media (max-width: 900px){ .pane{grid-template-columns:1fr} }
+.card{background:#0f1420;border:1px solid var(--line);border-radius:14px;padding:12px}
+.label{font-size:12px;opacity:.9;margin-bottom:6px}
+.input, select, textarea{width:100%;background:#0f1420;border:1px solid var(--line);color:#e9eef7;border-radius:10px;padding:10px 12px;font:500 13px var(--inter)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.actions{display:flex;gap:10px;align-items:center;padding:12px 0 0}
+.err{color:var(--bad);font-size:12px;margin-top:6px;display:none}
+.ok{color:#a7ffde;font-size:12px;margin-top:6px;display:none}
+.small{font-size:12px;opacity:.85}
+.hr{height:1px;background:linear-gradient(90deg,transparent,#243048,transparent);margin:12px 0}
 </style>
 </head>
 <body>
@@ -101,317 +76,211 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
       <p class="sub">Real posts &amp; tenders from public feeds. Free viewer; paid automations, priority, CRM &amp; reporting.</p>
       <p class="sub">Built for packaging owners &amp; sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding. Just clicks.</p>
       <div class="cta">
-        <a class="btn primary" href="./free-panel.html">Open the Live Feed</a>
-        <button class="btn ghost" id="watchDemo">▸ Watch 90s demo</button>
+        <button class="btn primary" id="startFree">Start free</button>
+        <a class="btn" id="openFeed" href="./free-panel.html">Open the Live Feed</a>
         <span class="kv">AI closed <strong>16%</strong> • Rep closed <strong>21%</strong> • Saved / mo <strong>$20,678</strong></span>
       </div>
     </div>
 
-    <!-- RIGHT HERO -->
-    <div class="hright" aria-hidden="true">
-      <canvas id="hero-canvas"></canvas>
+    <div id="hero-right" class="hright">
+      <canvas id="hero-right-canvas" aria-hidden="true"></canvas>
       <div class="hright-kpis">
-        <div class="hright-chip">Leads / 30s <strong id="k_leads">0</strong></div>
+        <div class="hright-chip">Leads / 30s <strong id="hr_k_leads">0</strong></div>
         <div class="hright-chip">First connection <strong>6 sec</strong></div>
-        <div class="hright-chip">Ready now <strong id="k_ready">54%</strong></div>
-        <div class="hright-chip">Quoted <strong id="k_quoted">67%</strong></div>
-        <div class="hright-chip">Rep closed <strong id="k_rep">21%</strong></div>
-        <div class="hright-chip">Saved / mo <strong id="k_saved">$20,678</strong></div>
+        <div class="hright-chip">Ready now <strong id="hr_k_ready">54%</strong></div>
+        <div class="hright-chip">Quoted <strong id="hr_k_quoted">67%</strong></div>
+        <div class="hright-chip">Rep closed <strong id="hr_k_rep">21%</strong></div>
+        <div class="hright-chip">Saved / mo <strong id="hr_k_saved">$20,678</strong></div>
       </div>
     </div>
   </section>
 </div>
 
-<!-- Video modal -->
-<div class="modal vmodal" id="vid">
+<!-- Onboarding modal -->
+<div class="modal" id="onb">
   <div class="box">
-    <div class="vhead"><div style="font:800 14px var(--mont)">90s demo</div><button class="btn" id="vclose">Close</button></div>
-    <div class="vbody">
-      <iframe id="vframe" src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1"
-        allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen
-        sandbox="allow-scripts allow-same-origin allow-presentation" referrerpolicy="no-referrer"></iframe>
+    <div class="head">
+      <h3>Onboarding</h3>
+      <div class="seg">
+        <button class="tab active" id="tabA">Path A — Enter your website</button>
+        <button class="tab" id="tabB">Path B — Customize from scratch</button>
+      </div>
+    </div>
+    <div class="pane">
+      <div>
+        <!-- PATH A -->
+        <div class="card" id="paneA">
+          <div class="label">Preferred — derive ICPs, buyers, and regions from your vendor site.</div>
+          <div class="grid2">
+            <div><div class="label">Business email *</div><input id="a_email" class="input" placeholder="you@yourcompany.com"/></div>
+            <div><div class="label">Your role *</div>
+              <select id="a_role" class="input">
+                <option value="supplier">Supplier</option>
+                <option value="distributor">Distributor/Wholesaler</option>
+                <option value="buyer">Packaging Buyer</option>
+              </select>
+            </div>
+          </div>
+          <div class="label" style="margin-top:8px">Company website *</div>
+          <input id="a_site" class="input" placeholder="yourcompany.com"/>
+          <div class="grid2" style="margin-top:8px">
+            <div><div class="label">Regions</div><input id="a_region" class="input" placeholder="US, CA"/></div>
+            <div><label style="display:flex;align-items:center;gap:8px;margin-top:22px"><input type="checkbox" id="a_list"/> <span>List my company for inbound opportunities</span></label></div>
+          </div>
+          <div class="hr"></div>
+          <div class="small">We only serve <strong>packaging</strong>. Business email domain must match your company site.</div>
+          <div class="err" id="a_err"></div><div class="ok" id="a_ok"></div>
+          <div class="actions"><button class="btn" id="a_cancel">Cancel</button><button class="btn primary" id="a_continue">Continue</button></div>
+        </div>
+
+        <!-- PATH B -->
+        <div class="card" id="paneB" style="display:none">
+          <div class="label">Manual — precise filters if you prefer to steer.</div>
+          <div class="grid2">
+            <div><div class="label">Business email *</div><input id="b_email" class="input" placeholder="you@yourcompany.com"/></div>
+            <div><div class="label">Your role *</div>
+              <select id="b_role" class="input">
+                <option value="supplier">Supplier</option>
+                <option value="distributor">Distributor/Wholesaler</option>
+                <option value="buyer">Packaging Buyer</option>
+              </select>
+            </div>
+          </div>
+          <div class="label" style="margin-top:8px">Company website *</div>
+          <input id="b_site" class="input" placeholder="yourcompany.com"/>
+          <div class="grid2" style="margin-top:8px">
+            <div><div class="label">Industries</div><input id="b_industries" class="input" placeholder="beverage, confectionery"/></div>
+            <div><div class="label">Regions</div><input id="b_regions" class="input" placeholder="US, CA, EU"/></div>
+          </div>
+          <div class="label" style="margin-top:8px">Seed buyers (domains)</div>
+          <input id="b_buyers" class="input" placeholder="brand1.com, brand2.com"/>
+          <div class="label" style="margin-top:8px">Describe your ideal customers</div>
+          <textarea id="b_desc" rows="4" class="input" placeholder="materials, order sizes, channels, exclusions"></textarea>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><input type="checkbox" id="b_list"/> <span>List my company for inbound opportunities</span></label>
+          <div class="hr"></div>
+          <div class="small">We only serve <strong>packaging</strong>.</div>
+          <div class="err" id="b_err"></div><div class="ok" id="b_ok"></div>
+          <div class="actions"><button class="btn" id="b_cancel">Cancel</button><button class="btn primary" id="b_continue">Continue</button></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="label"><strong>Tips to get great signals</strong></div>
+          <ul class="small" style="margin:0 0 8px 16px;padding:0">
+            <li>Use your company domain to calibrate fit and block scrapers.</li>
+            <li>Focus on physical packaging: corrugate, film, shrink, label, tray, case-of-N.</li>
+            <li>Seed 3–6 buyers you admire to nudge platform rotation.</li>
+          </ul>
+          <div class="hr"></div>
+          <div class="small">Privacy: Free hides raw sources on cards; Pro shows full checks. We log per-user proof confirmations only.</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-/* Presence label only (no network calls to avoid 404s) */
-document.getElementById('presenceTxt').textContent='0 online';
-
-/* ====== HERO: US → Core → Platforms (optimized & slow) ====== */
-(() => {
-  const c = document.getElementById('hero-canvas');
-  const ctx = c.getContext('2d');
-
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const MOTION = reduce ? 0 : 1;
-
-  const SPEED = { sweep:0.0024, ping:0.0010, core:0.0009, out:0.00085 };
-  const LIMIT = { pings:10, core:12, out:14, stars:10, pop:5 };
-
-  let w=0,h=0,dpr=1;
-  let mapX=0,mapY=0,mapW=0,mapH=0;
-  let coreA={x:0,y:0,r:0}, coreB={x:0,y:0,r:0}, coreC={x:0,y:0,r:0};
-  let curveR=0, curveCX=0, curveCY=0;
-
-  const ENDPOINTS=[
-    {label:'Email',    ang: 0.02, col:'rgba(180,220,255,0.9)'},
-    {label:'SMS',      ang: 0.08, col:'rgba(130,255,210,0.9)'},
-    {label:'Call',     ang: 0.15, col:'rgba(200,220,255,0.9)'},
-    {label:'LinkedIn', ang: 0.22, col:'rgba(160,210,255,0.9)'},
-    {label:'Quote',    ang: 0.30, col:'rgba(255,235,160,0.9)'},
-    {label:'ERP',      ang: 0.38, col:'rgba(210,190,255,0.9)'}
-  ];
-  const epPos = i => {
-    const e=ENDPOINTS[i], len = mapW*0.50 + i*mapW*0.055;
-    return { x: coreC.x + Math.cos(e.ang)*len, y: coreC.y + Math.sin(e.ang)*len };
+/* --------------------- API base + sticky user --------------------- */
+(function(){
+  const qs=new URLSearchParams(location.search);
+  const saved=localStorage.getItem('apiBase');
+  const explicit=qs.get('api');
+  const isFile = location.protocol==='file:';
+  const fallback = 'http://localhost:8080';
+  const base = (explicit||saved||(isFile?fallback:(location.origin||fallback))).replace(/\/$/,'');
+  localStorage.setItem('apiBase', base);
+  const _fetch=window.fetch.bind(window);
+  const uidKey='galactly_uid'; const uid=localStorage.getItem(uidKey)||('u_'+Math.random().toString(36).slice(2)); localStorage.setItem(uidKey, uid);
+  window.fetch=function(input,init){
+    let url=(typeof input==='string')?input:input.url; const headers=new Headers((init&&init.headers)||(typeof input!=='string'&&input.headers)||undefined);
+    headers.set('x-galactly-user', uid);
+    if(url && (url.startsWith('/api/')||url.startsWith('api/')||url.startsWith('/presence/')||url.startsWith('presence/'))){
+      url = base + (url.startsWith('/')? '': '/') + url;
+    }
+    return _fetch(typeof input==='string'?url:new Request(url,{...(init||{}),headers}));
   };
-
-  // --- US outline segments MUST be defined BEFORE drawStatic/resize (fix) ---
-  const US_SEG=[
-    [-0.98,0.15, -0.95,0.28, -0.90,0.34, -0.82,0.44],
-    [-0.70,0.52, -0.54,0.54, -0.40,0.49, -0.30,0.46],
-    [-0.18,0.39, -0.06,0.32,  0.08,0.22,  0.18,0.10],
-    [ 0.26,0.02,  0.30,-0.04, 0.31,-0.10, 0.28,-0.20],
-    [ 0.16,-0.30, 0.00,-0.40,-0.18,-0.44,-0.32,-0.43],
-    [-0.48,-0.38,-0.64,-0.32,-0.78,-0.16,-0.90,0.00],
-    [-0.98,0.10,-0.99,0.12,-0.99,0.13,-0.98,0.15]
-  ];
-
-  const STATES=[["WA",-0.96,0.52],["OR",-0.92,0.30],["CA",-0.96,-0.05],["NV",-0.86,0.02],["ID",-0.86,0.36],["MT",-0.80,0.58],
-  ["WY",-0.76,0.33],["UT",-0.83,0.08],["AZ",-0.90,-0.22],["CO",-0.73,0.05],["NM",-0.78,-0.28],["ND",-0.62,0.56],
-  ["SD",-0.61,0.32],["NE",-0.58,0.10],["KS",-0.55,-0.08],["OK",-0.50,-0.28],["TX",-0.45,-0.55],["MN",-0.48,0.58],
-  ["IA",-0.50,0.20],["MO",-0.45,0.04],["AR",-0.42,-0.14],["LA",-0.40,-0.48],["WI",-0.40,0.48],["IL",-0.37,0.24],
-  ["MS",-0.35,-0.33],["MI",-0.27,0.48],["IN",-0.30,0.20],["KY",-0.25,0.04],["TN",-0.24,-0.14],["AL",-0.30,-0.38],
-  ["GA",-0.20,-0.38],["FL",-0.10,-0.62],["SC",-0.15,-0.27],["NC",-0.05,-0.18],["VA",0,0],["WV",-0.08,0.10],
-  ["OH",-0.15,0.24],["PA",0.05,0.25],["NY",0.16,0.40],["VT",0.18,0.53],["NH",0.23,0.54],["ME",0.34,0.58],
-  ["MA",0.22,0.40],["RI",0.25,0.38],["CT",0.20,0.36],["NJ",0.12,0.26],["DE",0.10,0.14],["MD",0.08,0.12],
-  ["AK",-0.96,-0.84],["HI",-0.74,-0.78]];
-
-  const DEMANDS=[
-    "“Need 10,000 corrugated boxes”","“Urgent: custom mailers next week”",
-    "“RFQ: 5oz stand-up pouch + valve”","“Need 1 packaging automation unit (Markem X-250)”",
-    "“Quote: 16oz cartons (retail)”","“Need 30k labels (thermal)”",
-    "“Restock: 2-ply shrink film 18in”","“Switching shrink → flow wrap”","“Quote: kraft mailers 10×13”"
-  ];
-  const USAGES=["Usage = 8k mailers/day","Usage = 12k trays/day","Usage = 6.5k labels/day","Usage = 2.2k cartons/day"];
-
-  const sCan=document.createElement('canvas'); const sCtx=sCan.getContext('2d');
-
-  const toXY=(nx,ny)=>[ mapX + mapW*(nx+1)/2, mapY + mapH*(ny+0.6)/1.2 ];
-
-  function drawStatic(g){
-    g.clearRect(0,0,w,h);
-
-    // stars
-    g.save(); g.globalAlpha=0.45;
-    for(let i=0;i<LIMIT.stars;i++){
-      const x = Math.random()*w*0.9 + w*0.05;
-      const y = Math.random()*h*0.9 + h*0.05;
-      const s = Math.random()*1 + 0.5;
-      g.fillStyle='rgba(210,228,255,0.75)'; g.fillRect(x,y,s,s);
-    }
-    g.restore();
-
-    // planet curvature
-    g.strokeStyle='rgba(150,180,230,0.30)'; g.lineWidth=1.25;
-    for(let i=0;i<6;i++){ g.beginPath(); g.arc(curveCX,curveCY,curveR*(0.84+i*0.035), -Math.PI*0.70, -Math.PI*0.03); g.stroke(); }
-
-    // US border
-    let [sx,sy]=toXY(US_SEG[0][0],US_SEG[0][1]);
-    g.save(); g.fillStyle='rgba(170,200,240,0.08)'; g.strokeStyle='rgba(200,225,255,0.42)'; g.lineWidth=1.6;
-    g.beginPath(); g.moveTo(sx,sy);
-    for(const s of US_SEG){ const p1=toXY(s[2],s[3]), p2=toXY(s[4],s[5]), p3=toXY(s[6],s[7]); g.bezierCurveTo(p1[0],p1[1],p2[0],p2[1],p3[0],p3[1]); }
-    g.closePath(); g.fill(); g.stroke(); g.restore();
-
-    // inner guides (clipped)
-    g.save();
-    g.beginPath(); [sx,sy]=toXY(US_SEG[0][0],US_SEG[0][1]); g.moveTo(sx,sy);
-    for(const s of US_SEG){ const p1=toXY(s[2],s[3]), p2=toXY(s[4],s[5]), p3=toXY(s[6],s[7]); g.bezierCurveTo(p1[0],p1[1],p2[0],p2[1],p3[0],p3[1]); }
-    g.closePath(); g.clip();
-    g.strokeStyle='rgba(120,160,220,0.16)'; g.lineWidth=1;
-    for(let t=-0.45;t<=0.45;t+=0.10){ g.beginPath();
-      for(let a=-1;a<=1;a+=0.02){ const X=mapX + mapW*(a+1)/2; const Y=mapY + mapH*((t+0.03*Math.sin(a*3))+0.6)/1.2; (a===-1)?g.moveTo(X,Y):g.lineTo(X,Y); }
-      g.stroke();
-    }
-    for(let j=-0.8;j<=0.6;j+=0.22){ g.beginPath();
-      for(let t=-0.6;t<=0.6;t+=0.02){ const X=mapX + mapW*((0.95*Math.cos(j)*Math.cos(t))+1)/2; const Y=mapY + mapH*(t+0.6)/1.2; (t===-0.6)?g.moveTo(X,Y):g.lineTo(X,Y); }
-      g.stroke();
-    }
-    g.restore();
-
-    // state labels
-    g.font='11px Inter,system-ui'; g.textAlign='center'; g.textBaseline='middle';
-    for(const [abbr,nx,ny] of STATES){
-      const [x,y]=toXY(nx,ny);
-      const glow=g.createRadialGradient(x,y,0,x,y,9);
-      glow.addColorStop(0,'rgba(255,255,255,0.35)'); glow.addColorStop(1,'rgba(255,255,255,0)');
-      g.fillStyle=glow; g.beginPath(); g.arc(x,y,7.5,0,Math.PI*2); g.fill();
-      g.fillStyle='rgba(225,235,255,0.94)'; g.fillText(abbr,x,y);
-    }
-    // AK/HI inset
-    inset("AK",-0.96,-0.84); inset("HI",-0.74,-0.78);
-    function inset(abbr,nx,ny){ const [x,y]=toXY(nx,ny); g.strokeStyle='rgba(90,120,170,0.55)'; g.strokeRect(x-18,y-12,36,24); g.fillStyle='rgba(215,235,255,0.92)'; g.font='10px Inter,system-ui'; g.fillText(abbr,x,y); }
-  }
-
-  function resize(){
-    dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
-    c.width = Math.floor(c.clientWidth*dpr);
-    c.height= Math.floor(c.clientHeight*dpr);
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-
-    w=c.clientWidth; h=c.clientHeight;
-
-    mapW = Math.min(w*0.78, h*0.80);
-    mapH = mapW*0.66;
-    mapX = w*0.56 - mapW*0.58;
-    mapY = h*0.54 - mapH*0.50;
-
-    curveR = Math.max(w,h)*0.70; curveCX = w*1.02; curveCY = h*0.50;
-
-    coreA = { x: mapX + mapW*0.55, y: mapY + mapH*0.46, r: mapW*0.055 };
-    coreB = { x: mapX + mapW*0.68, y: mapY + mapH*0.44, r: mapW*0.065 };
-    coreC = { x: mapX + mapW*0.83, y: mapY + mapH*0.48, r: mapW*0.055 };
-
-    sCan.width=w; sCan.height=h;
-    drawStatic(sCtx);
-  }
-  new ResizeObserver(resize).observe(c);
-  resize();
-
-  // particles
-  const pings=[], coreBeads=[], outBeads=[], popups=[];
-  function spawnPing(){
-    const pool=STATES.filter(s=>s[0]!=="AK"&&s[0]!=="HI");
-    const [abbr,nx,ny]=pool[(Math.random()*pool.length)|0];
-    const jx=(Math.random()-0.5)*0.06, jy=(Math.random()-0.5)*0.05;
-    const [sx,sy]=toXY(nx+jx, ny+jy);
-    const c1x=(sx+coreA.x)/2, c1y=sy - mapH*0.05;
-    const c2x=(sx+coreA.x)/2 + mapW*0.018, c2y=coreA.y - mapH*0.045;
-    const ping={sx,sy,c1x,c1y,c2x,c2y,t:0,spd:SPEED.ping*(0.9+Math.random()*0.15),x:sx,y:sy};
-    pings.push(ping);
-
-    if(popups.length>=LIMIT.pop) popups.shift();
-    const text = (Math.random()<0.7) ? DEMANDS[(Math.random()*DEMANDS.length)|0] : USAGES[(Math.random()*USAGES.length)|0];
-    popups.push({ping,text,life:6800+Math.random()*2000,offY:0,w:0,h:22});
-  }
-  const spawnCore=(a,b)=> coreBeads.push({ax:a.x,ay:a.y,bx:b.x,by:b.y,t:0,spd:SPEED.core*(0.85+Math.random()*0.3)});
-  const spawnOut =i=>{ const p=epPos(i); outBeads.push({ax:coreC.x,ay:coreC.y,bx:p.x,by:p.y,t:0,spd:SPEED.out*(0.85+Math.random()*0.25),j:(Math.random()-.5)*0.4}); };
-
-  // radar sweep
-  let sweep=-Math.PI*0.3;
-
-  // KPIs
-  const k={ leads:document.getElementById('k_leads'), ready:document.getElementById('k_ready'),
-            quoted:document.getElementById('k_quoted'), rep:document.getElementById('k_rep'),
-            saved:document.getElementById('k_saved') };
-  let kTick=0, kLeads=0;
-
-  // visibility throttle
-  let running=true;
-  document.addEventListener('visibilitychange', ()=>{ running=!document.hidden; });
-  const io=new IntersectionObserver(([e])=>{ running=!!e.isIntersecting; }); io.observe(c);
-
-  // loop
-  let last=performance.now();
-  function frame(now){
-    const dt=Math.min(40, now-last); last=now;
-    if(!running){ requestAnimationFrame(frame); return; }
-
-    ctx.clearRect(0,0,w,h);
-    ctx.drawImage(sCan,0,0);
-
-    // radar
-    const rx = mapX + mapW*0.38, ry = mapY + mapH*0.42, rr = mapW*0.46;
-    const rg = ctx.createRadialGradient(rx,ry,0,rx,ry,rr);
-    rg.addColorStop(0,'rgba(120,180,255,0.038)');
-    rg.addColorStop(1,'rgba(120,180,255,0)');
-    ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(rx,ry,rr, sweep-0.16, sweep+0.16); ctx.lineTo(rx,ry); ctx.fill();
-    sweep += SPEED.sweep*(dt/16)*MOTION;
-
-    if(MOTION && pings.length<LIMIT.pings && Math.random()<0.008) spawnPing();
-
-    // pings
-    for(let i=pings.length-1;i>=0;i--){
-      const p=pings[i]; p.t+=p.spd*(dt/16)*MOTION; const it=1-p.t;
-      const x = it*it*it*p.sx + 3*it*it*p.t*p.c1x + 3*it*p.t*p.t*p.c2x + p.t*p.t*p.t*coreA.x;
-      const y = it*it*it*p.sy + 3*it*it*p.t*p.c1y + 3*it*p.t*p.t*p.c2y + p.t*p.t*p.t*coreA.y;
-      p.x=x; p.y=y;
-      ctx.strokeStyle='rgba(210,235,255,0.12)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-5,y-3); ctx.stroke();
-      ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.beginPath(); ctx.arc(x,y,1.05,0,Math.PI*2); ctx.fill();
-      if(p.t>=1){ pings.splice(i,1); if(coreBeads.length<LIMIT.core) spawnCore(coreA,coreB); }
-    }
-
-    // popups (de-overlap)
-    const rects=[];
-    for(let i=popups.length-1;i>=0;i--){
-      const pp=popups[i]; pp.life-=dt; if(pp.life<=0||!pp.ping){ popups.splice(i,1); continue; }
-      let px=pp.ping.x+10, py=pp.ping.y-18+pp.offY;
-      if(!pp.w){ const m=document.createElement('canvas').getContext('2d'); m.font='12px Inter,system-ui'; pp.w=Math.min(280,18+m.measureText(pp.text).width+16); }
-      const r={x:px,y:py,w:pp.w,h:pp.h};
-      for(const q of rects){ if(!(r.x>q.x+q.w || r.x+r.w<q.x || r.y>q.y+q.h || r.y+r.h<q.y)){ r.y=q.y+q.h+4; } }
-      pp.offY = r.y - (pp.ping.y-18); rects.push(r);
-      const alpha=Math.max(0,Math.min(1,pp.life/2300));
-      ctx.save(); ctx.globalAlpha=alpha*0.95;
-      ctx.fillStyle='rgba(14,20,34,0.78)'; ctx.strokeStyle='rgba(60,90,140,0.50)';
-      roundRect(ctx,r.x,r.y,pp.w,pp.h,8); ctx.fill(); ctx.stroke();
-      ctx.font='12px Inter,system-ui'; ctx.fillStyle='rgba(215,235,255,0.96)'; ctx.fillText(pp.text,r.x+10,r.y+14);
-      ctx.restore();
-    }
-
-    // cores + links
-    drawCore(coreA,0.66); drawCore(coreB,0.82); drawCore(coreC,0.68);
-    drawLink(coreA,coreB); drawLink(coreB,coreC);
-
-    // beads
-    for(let i=coreBeads.length-1;i>=0;i--){
-      const b=coreBeads[i]; b.t+=b.spd*(dt/16)*MOTION;
-      const x=b.ax+(b.bx-b.ax)*b.t, y=b.ay+(b.by-b.ay)*b.t;
-      ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.beginPath(); ctx.arc(x,y,1.0,0,Math.PI*2); ctx.fill();
-      if(b.t>=1){
-        coreBeads.splice(i,1);
-        if(Math.random()<0.65) coreBeads.push({ax:coreB.x,ay:coreB.y,bx:coreC.x,by:coreC.y,t:0,spd:SPEED.core*(0.85+Math.random()*0.3)});
-        else if(outBeads.length<LIMIT.out) spawnOut((Math.random()*ENDPOINTS.length)|0);
-      }
-    }
-
-    // beams + endpoint dots
-    drawBeams();
-
-    // outbound beads
-    for(let i=outBeads.length-1;i>=0;i--){
-      const o=outBeads[i]; o.t+=o.spd*(dt/16)*MOTION; if(o.t>=1){ outBeads.splice(i,1); continue; }
-      const jx=Math.sin(o.t*8)*o.j*5, jy=Math.cos(o.t*8)*o.j*5;
-      const x=o.ax+(o.bx-o.ax)*o.t + jx, y=o.ay+(o.by-o.ay)*o.t + jy;
-      const s=1.0+Math.sin(o.t*Math.PI)*1.0;
-      ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.beginPath(); ctx.arc(x,y,s,0,Math.PI*2); ctx.fill();
-    }
-
-    // KPIs drift
-    kTick++; if(kLeads<207 && Math.random()<0.07) kLeads++;
-    if(k.leads) k.leads.textContent=kLeads;
-    if(k.ready) k.ready.textContent=(54+Math.round(Math.sin(kTick/260)*2))+'%';
-    if(k.quoted)k.quoted.textContent=(67+Math.round(Math.cos(kTick/300)*2))+'%';
-    if(k.rep)   k.rep.textContent   =(21+Math.round(Math.sin(kTick/280)*2))+'%';
-    if(k.saved){ const v=20678+Math.round(Math.sin(kTick/320)*480); k.saved.textContent='$'+v.toLocaleString(); }
-
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-
-  // helpers
-  function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.lineTo(x+w-r,y); g.quadraticCurveTo(x+w,y,x+w,y+r); g.lineTo(x+w,y+h-r); g.quadraticCurveTo(x+w,y+h,x+w-r,y+h); g.lineTo(x+r,y+h); g.quadraticCurveTo(x,y+h,x,y+h-r); g.lineTo(x,y+r); g.quadraticCurveTo(x,y,x+r,y); g.closePath(); }
-  function drawCore(c,p){ const g=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,c.r*3.0); g.addColorStop(0,`rgba(255,255,255,${0.70*p})`); g.addColorStop(0.25,`rgba(200,230,255,${0.38*p})`); g.addColorStop(1,'rgba(120,160,255,0.02)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(c.x,c.y,c.r,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='rgba(210,235,255,0.45)'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(c.x,c.y,c.r*1.16,0,Math.PI*2); ctx.stroke(); }
-  function drawLink(a,b){ const g=ctx.createLinearGradient(a.x,a.y,b.x,b.y); g.addColorStop(0,'rgba(255,255,255,0.80)'); g.addColorStop(1,'rgba(180,210,255,0.24)'); ctx.strokeStyle=g; ctx.lineWidth=1.7; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); }
-  function drawBeams(){ for(let i=0;i<ENDPOINTS.length;i++){ const e=ENDPOINTS[i], p=epPos(i); const g=ctx.createLinearGradient(coreC.x,coreC.y,p.x,p.y); g.addColorStop(0,'rgba(255,255,255,0.90)'); g.addColorStop(1,e.col.replace(/0\.9\)/,'0.28)')); ctx.strokeStyle=g; ctx.lineWidth=1.8; ctx.beginPath(); ctx.moveTo(coreC.x,coreC.y); ctx.lineTo(p.x,p.y); ctx.stroke(); ctx.fillStyle='rgba(160,200,255,0.30)'; ctx.beginPath(); ctx.arc(p.x,p.y,10.5,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,0.88)'; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill(); ctx.font='12px Inter,system-ui'; ctx.textBaseline='middle'; ctx.fillStyle='rgba(225,235,255,0.92)'; ctx.fillText(e.label,p.x+14,p.y); } }
+  window.API={ base, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
 })();
-</script>
 
-<script>
-/* video modal */
-document.getElementById('watchDemo').onclick=()=> document.getElementById('vid').classList.add('in');
-document.getElementById('vclose').onclick=()=>{ document.getElementById('vid').classList.remove('in'); document.getElementById('vframe').src=document.getElementById('vframe').src; };
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.getElementById('vid').classList.remove('in'); } });
+/* presence */
+async function loadPresence(){ try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{} }
+setInterval(loadPresence, 12000); loadPresence();
+
+/* modal open/close + tabs */
+const onb=document.getElementById('onb');
+document.getElementById('startFree').onclick=()=> onb.classList.add('in');
+document.getElementById('a_cancel').onclick=()=> onb.classList.remove('in');
+document.getElementById('b_cancel').onclick=()=> onb.classList.remove('in');
+const tabA=document.getElementById('tabA'), tabB=document.getElementById('tabB');
+const paneA=document.getElementById('paneA'), paneB=document.getElementById('paneB');
+tabA.onclick=()=>{ tabA.classList.add('active'); tabB.classList.remove('active'); paneA.style.display='block'; paneB.style.display='none'; };
+tabB.onclick=()=>{ tabB.classList.add('active'); tabA.classList.remove('active'); paneB.style.display='block'; paneA.style.display='none'; };
+
+/* helpers */
+function bareHost(url){ let s=String(url||'').trim(); s=s.replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./i,''); return s.toLowerCase(); }
+function emailDomain(email){ const m=String(email||'').trim().toLowerCase().match(/^[^@]+@([^@]+)$/); return m? m[1].replace(/^www\./,'') : ''; }
+function domainsMatch(emailDom, siteDom){ if(!emailDom || !siteDom) return false; if(emailDom===siteDom) return true; return emailDom.endsWith('.'+siteDom); }
+function isPackagingRole(role){ return role==='supplier' || role==='distributor' || role==='buyer'; }
+async function post(path,body){ const r=await fetch((window.API.base||'')+path,{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body||{}) }); return r.json(); }
+
+/* Path A → save + navigate */
+document.getElementById('a_continue').onclick=async ()=>{
+  const email=(document.getElementById('a_email').value||'').trim();
+  const role =(document.getElementById('a_role').value||'supplier').trim();
+  const site =(document.getElementById('a_site').value||'').trim();
+  const regions=(document.getElementById('a_region').value||'').trim();
+  const list =!!document.getElementById('a_list').checked;
+  const err=document.getElementById('a_err'); const ok=document.getElementById('a_ok'); err.style.display='none'; ok.style.display='none';
+  const eDom=emailDomain(email), sDom=bareHost(site);
+  if(!email||!sDom){ err.textContent='Please provide business email and company website.'; err.style.display='block'; return; }
+  if(!domainsMatch(eDom,sDom)){ err.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; err.style.display='block'; return; }
+  if(!isPackagingRole(role)){ err.textContent='We only serve packaging suppliers, distributors, and buyers.'; err.style.display='block'; return; }
+
+  // persist onboarding to prefill free-panel
+  localStorage.setItem('onb_role', role);
+  localStorage.setItem('onb_site', sDom);
+  localStorage.setItem('onb_regions', regions);
+
+  try{
+    await post('/api/v1/gate',{region:regions,email,alerts:true});
+    await post('/api/v1/vault',{role,traits:{vendorDomain:sDom,industries:[],regions:regions?regions.split(',').map(s=>s.trim()):[],buyers:[]},listMe:list});
+    ok.textContent='Validated. Opening feed…'; ok.style.display='block';
+  }catch{}
+  location.href='./free-panel.html';
+};
+
+/* Path B → save + navigate */
+document.getElementById('b_continue').onclick=async ()=>{
+  const email=(document.getElementById('b_email').value||'').trim();
+  const role =(document.getElementById('b_role').value||'supplier').trim();
+  const site =(document.getElementById('b_site').value||'').trim();
+  const inds =(document.getElementById('b_industries').value||'').trim();
+  const regs =(document.getElementById('b_regions').value||'').trim();
+  const buyers=(document.getElementById('b_buyers').value||'').trim();
+  const desc =(document.getElementById('b_desc').value||'').trim();
+  const list =!!document.getElementById('b_list').checked;
+  const err=document.getElementById('b_err'); const ok=document.getElementById('b_ok'); err.style.display='none'; ok.style.display='none';
+
+  const eDom=emailDomain(email), sDom=bareHost(site);
+  if(!email||!sDom){ err.textContent='Please provide business email and company website.'; err.style.display='block'; return; }
+  if(!domainsMatch(eDom,sDom)){ err.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; err.style.display='block'; return; }
+  if(!isPackagingRole(role)){ err.textContent='We only serve packaging suppliers, distributors, and buyers.'; err.style.display='block'; return; }
+
+  localStorage.setItem('onb_role', role);
+  localStorage.setItem('onb_site', sDom);
+  localStorage.setItem('onb_industries', inds);
+  localStorage.setItem('onb_regions', regs);
+  localStorage.setItem('onb_buyers', buyers);
+  localStorage.setItem('onb_desc', desc);
+
+  try{
+    await post('/api/v1/gate',{region:regs,email,alerts:true});
+    await post('/api/v1/vault',{role,traits:{vendorDomain:sDom,industries:inds?inds.split(',').map(s=>s.trim()):[],regions:regs?regs.split(',').map(s=>s.trim()):[],buyers:buyers?buyers.split(',').map(s=>s.trim()):[],notes:desc||null},listMe:list});
+    ok.textContent='Validated. Opening feed…'; ok.style.display='block';
+  }catch{}
+  location.href='./free-panel.html';
+};
 </script>
 </body>
 </html>
