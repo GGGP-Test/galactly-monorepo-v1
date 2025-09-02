@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Galactly — Live packaging buyer signals</title>
 
-<!-- Inline favicon to avoid 404 -->
+<!-- inline favicon to avoid 404 -->
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%2386f7d6"/><stop offset="1" stop-color="%2357a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" fill="none" stroke="url(%23g)" stroke-width="4"/></svg>'/>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,7 +14,7 @@
 
 <style>
 :root{
-  --ink:#eaf0ff; --mut:#a6b2c9; --line:#1e2737; --card:#0f1420; --panel:#0b101a; --pill:#10182a;
+  --ink:#eaf0ff; --mut:#a6b2c9; --line:#1e2737; --pill:#10182a;
   --accent:#86f7d6; --accent2:#6fb3ff;
   --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
   --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -52,13 +52,13 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 .btn.ghost{background:#0f1626}
 .kv{margin-top:10px; font-size:12px; color:#c6d5f3; opacity:.95}
 
-/* ===== Right hero container ===== */
+/* Right hero */
 .hright{
   position:relative; height:520px;
   border:1px solid #1e2737; border-radius:18px; overflow:hidden;
   background:
-    radial-gradient(800px 520px at 36% 58%, rgba(80,120,220,.18), transparent 60%),
-    radial-gradient(600px 380px at 70% 58%, rgba(120,160,255,.16), rgba(10,14,22,1) 70%);
+    radial-gradient(900px 520px at 30% 58%, rgba(80,120,220,.18), transparent 62%),
+    radial-gradient(600px 420px at 70% 58%, rgba(120,160,255,.16), rgba(10,14,22,1) 80%);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.02), 0 18px 70px rgba(0,0,0,.45);
 }
 #hero-right-canvas{width:100%; height:100%; display:block}
@@ -137,90 +137,95 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 </div>
 
 <script>
-/* Presence badge (best-effort) */
+/* presence (best-effort) */
 (async function presence(){
   try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{}
   setTimeout(presence, 15000);
 })();
 
-/* ================== CINEMATIC HERO ================== */
+/* ================== HERO: US-FOCUSED, VERY SLOW ================== */
 (function(){
-  const root = document.getElementById('hero-right');
-  const canvas = document.getElementById('hero-right-canvas');
-  if(!root || !canvas || !canvas.getContext) return;
-  const ctx = canvas.getContext('2d');
+  const root=document.getElementById('hero-right');
+  const canvas=document.getElementById('hero-right-canvas');
+  if(!root||!canvas||!canvas.getContext) return;
+  const ctx=canvas.getContext('2d');
 
-  /* ---- Tunables (slow) ---- */
-  const SPEED = { sweep:0.0075, ping:0.0038, coreCore:0.0032, bead:0.0030 };
-  const LIMITS = { pings:22, coreBeads:24, outBeads:36, stars:60 };
-  const TAU = Math.PI*2;
+  /* pace (slower) */
+  const SPEED={ sweep:0.0045, ping:0.0022, core:0.0020, bead:0.0018 };
+  const LIMITS={ pings:18, coreBeads:16, outBeads:24, stars:48 };
 
-  /* ---- Sizes / layout ---- */
+  /* sizes */
   let w=0,h=0,dpr=1;
-  let globeX=0, globeY=0, globeR=0;
-  let coreCollect={x:0,y:0,r:0}, coreReason={x:0,y:0,r:0}, coreDispatch={x:0,y:0,r:0};
+  let mapX=0,mapY=0,mapW=0,mapH=0; // US map rect
+  let coreA={x:0,y:0,r:0}, coreB={x:0,y:0,r:0}, coreC={x:0,y:0,r:0}; // collect, reason, dispatch
+  let curveR=0, curveCX=0, curveCY=0; // big subtle curvature
 
-  /* ---- Static layer (globe) ---- */
-  const staticLayer = document.createElement('canvas');
-  const sctx = staticLayer.getContext('2d');
-
-  /* ---- USA polygon (define BEFORE any use) ---- */
-  const USA = [
-    {x:-0.48,y:0.04},{x:-0.38,y:-0.08},{x:-0.20,y:-0.18},{x:0.02,y:-0.20},
-    {x:0.18,y:-0.10},{x:0.22,y:0.02},{x:0.05,y:0.10},{x:-0.18,y:0.16},{x:-0.38,y:0.12}
+  /* 50 state labels (normalized to US box: x ∈ [-1,1], y ∈ [-0.6,0.6]) */
+  const STATES=[
+    ["WA",-0.96, 0.52],["OR",-0.92, 0.30],["CA",-0.96,-0.05],["NV",-0.86, 0.02],["ID",-0.86, 0.36],["MT",-0.80, 0.58],
+    ["WY",-0.76, 0.33],["UT",-0.83, 0.08],["AZ",-0.90,-0.22],["CO",-0.73, 0.05],["NM",-0.78,-0.28],
+    ["ND",-0.62, 0.56],["SD",-0.61, 0.32],["NE",-0.58, 0.10],["KS",-0.55,-0.08],["OK",-0.50,-0.28],["TX",-0.45,-0.55],
+    ["MN",-0.48, 0.58],["IA",-0.50, 0.20],["MO",-0.45, 0.04],["AR",-0.42,-0.14],["LA",-0.40,-0.48],
+    ["WI",-0.40, 0.48],["IL",-0.37, 0.24],["MS",-0.35,-0.33],["MI",-0.27, 0.48],["IN",-0.30, 0.20],["KY",-0.25, 0.04],
+    ["TN",-0.24,-0.14],["AL",-0.30,-0.38],["GA",-0.20,-0.38],["FL",-0.10,-0.62],["SC",-0.15,-0.27],["NC",-0.05,-0.18],
+    ["VA", 0.00, 0.00],["WV",-0.08, 0.10],["OH",-0.15, 0.24],["PA", 0.05, 0.25],["NY", 0.16, 0.40],["VT", 0.18, 0.53],
+    ["NH", 0.23, 0.54],["ME", 0.34, 0.58],["MA", 0.22, 0.40],["RI", 0.25, 0.38],["CT", 0.20, 0.36],["NJ", 0.12, 0.26],
+    ["DE", 0.10, 0.14],["MD", 0.08, 0.12],["AK",-0.96,-0.84],["HI",-0.74,-0.78]
   ];
+  const TAU=Math.PI*2;
+
+  /* platforms (fan-out) */
+  const ENDPOINTS=[
+    {label:'Email',    ang: 0.02, col:'rgba(180,220,255,0.9)'},
+    {label:'SMS',      ang: 0.08, col:'rgba(130,255,210,0.9)'},
+    {label:'Call',     ang: 0.15, col:'rgba(200,220,255,0.9)'},
+    {label:'LinkedIn', ang: 0.22, col:'rgba(160,210,255,0.9)'},
+    {label:'Quote',    ang: 0.30, col:'rgba(255,235,160,0.9)'},
+    {label:'ERP',      ang: 0.38, col:'rgba(210,190,255,0.9)'}
+  ];
+  function epPos(i){
+    const e=ENDPOINTS[i]; const len = mapW*0.55 + i*mapW*0.06;
+    return { x: coreC.x + Math.cos(e.ang)*len, y: coreC.y + Math.sin(e.ang)*len };
+  }
+
+  /* static layer */
+  const sCan=document.createElement('canvas'); const sCtx=sCan.getContext('2d');
 
   function resize(){
-    dpr = Math.max(1, Math.min(2, window.devicePixelRatio||1));
-    w = canvas.clientWidth; h = canvas.clientHeight;
-    canvas.width = Math.floor(w*dpr); canvas.height = Math.floor(h*dpr);
+    dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+    canvas.width=Math.floor(canvas.clientWidth*dpr);
+    canvas.height=Math.floor(canvas.clientHeight*dpr);
     ctx.setTransform(dpr,0,0,dpr,0,0);
 
-    globeX = w*0.55; globeY = h*0.54; globeR = Math.min(w,h)*0.33;
+    w=canvas.clientWidth; h=canvas.clientHeight;
 
-    coreCollect = { x: globeX - globeR*0.10, y: globeY - globeR*0.05, r: globeR*0.11 };
-    coreReason  = { x: globeX + globeR*0.10, y: globeY + globeR*0.00, r: globeR*0.13 };
-    coreDispatch= { x: globeX + globeR*0.32, y: globeY + globeR*0.04, r: globeR*0.10 };
+    // US map rectangle (close-up; right side curvature visible)
+    mapW = Math.min(w*0.78, h*0.78);
+    mapH = mapW*0.66;
+    mapX = w*0.56 - mapW*0.55;    // push map left within panel
+    mapY = h*0.54 - mapH*0.48;
 
-    staticLayer.width = w; staticLayer.height = h;
-    drawStatic(sctx);  // safe now; USA is already defined
+    // subtle curvature arc on right (planet edge)
+    curveR = Math.max(w,h)*0.76;
+    curveCX = w*1.05;
+    curveCY = h*0.52;
+
+    // cores (Collect → Reason → Dispatch)
+    coreA = { x: mapX + mapW*0.55, y: mapY + mapH*0.46, r: mapW*0.06 };
+    coreB = { x: mapX + mapW*0.68, y: mapY + mapH*0.44, r: mapW*0.07 };
+    coreC = { x: mapX + mapW*0.83, y: mapY + mapH*0.48, r: mapW*0.06 };
+
+    sCan.width=w; sCan.height=h;
+    drawStatic(sCtx);
   }
-  if (window.ResizeObserver) new ResizeObserver(resize).observe(root);
+  if(window.ResizeObserver) new ResizeObserver(resize).observe(root);
   window.addEventListener('resize', resize); resize();
 
-  /* ---- helpers ---- */
-  function clamp01(x){ return Math.max(0,Math.min(1,x)); }
-  function ptInPoly(px,py, poly){
-    let c=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){
-      const xi=poly[i].x, yi=poly[i].y, xj=poly[j].x, yj=poly[j].y;
-      const intersect=((yi>py)!==(yj>py)) && (px < (xj-xi)*(py-yi)/(yj-yi)+xi);
-      if(intersect) c=!c;
-    } return c;
-  }
-  function rndUSLocal(){
-    for(let k=0;k<60;k++){
-      const x = (Math.random()*0.90 - 0.55);
-      const y = (Math.random()*0.55 - 0.28);
-      if(ptInPoly(x,y,USA)) return {x,y};
-    }
-    return {x:-0.1,y:-0.1};
-  }
-  function roundRect(c,x,y,w,h,r){
-    c.beginPath();
-    c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.quadraticCurveTo(x+w,y,x+w,y+r);
-    c.lineTo(x+w,y+h-r); c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-    c.lineTo(x+r,y+h); c.quadraticCurveTo(x,y+h,x,y+h-r);
-    c.lineTo(x,y+r); c.quadraticCurveTo(x,y,x+r,y); c.closePath();
-  }
-
-  /* ---- draw the static globe ---- */
+  /* draw static: stars, curvature, US silhouette, state dots+labels, AK/HI insets */
   function drawStatic(c){
-    // background vignette
-    const vg=c.createRadialGradient(globeX-140,globeY, globeR*0.5, globeX,globeY, Math.max(w,h)*0.9);
-    vg.addColorStop(0,'rgba(72,100,160,0.10)'); vg.addColorStop(1,'rgba(0,0,0,0)');
-    c.fillStyle=vg; c.fillRect(0,0,w,h);
+    c.clearRect(0,0,w,h);
 
-    // static stars
+    // starfield (subtle)
     c.save(); c.globalAlpha=0.6;
     for(let i=0;i<LIMITS.stars;i++){
       const x = Math.random()*w*0.9 + w*0.05;
@@ -231,191 +236,208 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
     }
     c.restore();
 
-    // planet glow
-    const g1=c.createRadialGradient(globeX,globeY,globeR*0.2, globeX,globeY,globeR*1.25);
-    g1.addColorStop(0,'rgba(200,230,255,0.08)');
-    g1.addColorStop(1,'rgba(0,0,0,0)');
-    c.fillStyle=g1; c.beginPath(); c.arc(globeX,globeY,globeR*1.25,0,TAU); c.fill();
+    // curvature glow
+    c.strokeStyle='rgba(150,180,230,0.14)';
+    c.lineWidth=1.2;
+    for(let i=0;i<4;i++){ c.beginPath(); c.arc(curveCX,curveCY,curveR*(0.88+i*0.04), -Math.PI*0.65, -Math.PI*0.05); c.stroke(); }
 
-    // globe body
-    const g2=c.createRadialGradient(globeX-globeR*0.25,globeY-globeR*0.35,globeR*0.2, globeX,globeY,globeR);
-    g2.addColorStop(0,'rgba(220,240,255,0.10)');
-    g2.addColorStop(0.5,'rgba(160,190,230,0.12)');
-    g2.addColorStop(1,'rgba(60,80,120,0.22)');
-    c.fillStyle=g2; c.beginPath(); c.arc(globeX,globeY,globeR,0,TAU); c.fill();
+    // US silhouette (stylized, contiguous)
+    c.save();
+    c.fillStyle='rgba(170,200,240,0.10)';
+    c.strokeStyle='rgba(170,200,240,0.18)'; c.lineWidth=1;
+    c.beginPath();
+    const P=[
+      [-0.98,0.15],[-0.92,0.32],[-0.75,0.45],[-0.58,0.52],[-0.42,0.48],[-0.30,0.46],[-0.20,0.38],[-0.02,0.30],[0.10,0.18],
+      [0.20,0.06],[0.26,0.02],[0.30,-0.02],[0.32,-0.12],[0.26,-0.22],[0.14,-0.32],[0.00,-0.40],[-0.18,-0.44],[-0.32,-0.43],
+      [-0.50,-0.38],[-0.66,-0.30],[-0.78,-0.16],[-0.90,0.00],[-0.98,0.10]
+    ];
+    // scale into map rect
+    for(let i=0;i<P.length;i++){
+      const x=mapX + mapW*(P[i][0]+1)/2;
+      const y=mapY + mapH*(P[i][1]+0.6)/1.2;
+      if(i===0) c.moveTo(x,y); else c.lineTo(x,y);
+    }
+    c.closePath(); c.fill(); c.stroke();
+    c.restore();
 
-    // parallels/meridians
-    c.strokeStyle='rgba(160,190,230,0.12)'; c.lineWidth=1;
-    for(let i=-3;i<=3;i++){ const r=globeR*(0.35+(i+3)*0.09); c.beginPath(); c.arc(globeX,globeY,r,0,TAU); c.stroke(); }
-    for(let j=0;j<6;j++){
-      const a=-0.8 + j*0.32; c.beginPath();
-      for(let t=-1;t<=1;t+=0.02){
-        const x = globeX + globeR*Math.cos(a)*Math.cos(t);
-        const y = globeY + globeR*Math.sin(t);
-        if(t===-1) c.moveTo(x,y); else c.lineTo(x,y);
-      } c.stroke();
+    // state dots + labels
+    c.font='11px Inter,system-ui'; c.textAlign='center'; c.textBaseline='middle';
+    for(const [abbr, nx, ny] of STATES){
+      const x = mapX + mapW*(nx+1)/2;
+      const y = mapY + mapH*(ny+0.6)/1.2;
+      const glow=c.createRadialGradient(x,y,0,x,y,10);
+      glow.addColorStop(0,'rgba(255,255,255,0.45)'); glow.addColorStop(1,'rgba(255,255,255,0)');
+      c.fillStyle=glow; c.beginPath(); c.arc(x,y,9,0,TAU); c.fill();
+      c.fillStyle='rgba(215,235,255,0.95)'; c.fillText(abbr, x, y);
     }
 
-    // USA polygon
-    c.save(); c.translate(globeX,globeY); c.rotate(-0.10); c.scale(globeR,globeR);
-    c.fillStyle='rgba(170,200,240,0.10)'; c.strokeStyle='rgba(170,200,240,0.18)'; c.lineWidth=0.004*globeR;
-    c.beginPath(); c.moveTo(USA[0].x,USA[0].y); for(let i=1;i<USA.length;i++) c.lineTo(USA[i].x,USA[i].y);
-    c.closePath(); c.fill(); c.stroke(); c.restore();
+    // AK/HI inset frames
+    drawInset(c, "AK", -0.96,-0.84);
+    drawInset(c, "HI", -0.74,-0.78);
+
+    function drawInset(c,abbr,nx,ny){
+      const x = mapX + mapW*(nx+1)/2;
+      const y = mapY + mapH*(ny+0.6)/1.2;
+      c.strokeStyle='rgba(90,120,170,0.5)'; c.strokeRect(x-18,y-12,36,24);
+      c.fillStyle='rgba(215,235,255,0.9)'; c.font='10px Inter,system-ui'; c.textAlign='center';
+      c.fillText(abbr, x, y);
+    }
   }
 
-  /* ---- Endpoints (platforms) ---- */
-  const endpoints = [
-    {label:'Email',    ang: 0.00, col:'rgba(180,220,255,0.9)'},
-    {label:'SMS',      ang: 0.07, col:'rgba(130,255,210,0.9)'},
-    {label:'Call',     ang: 0.13, col:'rgba(200,220,255,0.9)'},
-    {label:'LinkedIn', ang: 0.20, col:'rgba(160,210,255,0.9)'},
-    {label:'Quote',    ang: 0.28, col:'rgba(255,235,160,0.9)'},
-    {label:'ERP',      ang: 0.36, col:'rgba(210,190,255,0.9)'}
-  ];
-  function epPos(i){
-    const len = globeR*1.10 + i*globeR*0.12;
-    const e=endpoints[i]; return { x: coreDispatch.x + Math.cos(e.ang)*len, y: coreDispatch.y + Math.sin(e.ang)*len };
-  }
-
-  /* ---- Particles & popups ---- */
+  /* particles & popups */
   const pings=[], coreBeads=[], outBeads=[], popups=[];
-  const POPUP_TEXTS=[
-    "Need 10k corrugate boxes","Custom mailers (poly + film)","RSC, die-cut, labels",
-    "Shrink wrap for 12-pack","Pouches • 5000/mo","Pack-out stress → restock",
-    "Tray + sleeve (retail)","Sachets, fin-seal","Cartons: 8oz / 16oz",
-    "Insert cards (digital)","MOQ relax? urgent","3-ply kraft, double wall"
+  const POPUPS=[
+    "Need 10k corrugate boxes","Custom mailers (poly + film)","RSC / die-cut / labels",
+    "Shrink wrap 12-pack","Pouches • 5k/mo","Restock surge • ops",
+    "Tray + sleeve (retail)","Sachets • fin-seal","Cartons: 8oz / 16oz",
+    "Insert cards (digital)","MOQ flex? urgent","3-ply kraft • double wall"
   ];
+
   function spawnPing(){
-    const p=rndUSLocal();
-    const sx=globeX+p.x*globeR*1.05, sy=globeY+p.y*globeR*1.05;
-    const c1x=(sx+coreCollect.x)/2, c1y=sy-globeR*0.08;
-    const c2x=(sx+coreCollect.x)/2+globeR*0.04, c2y=coreCollect.y-globeR*0.05;
-    const ping={sx,sy,c1x,c1y,c2x,c2y,t:0,spd:SPEED.ping*(0.85+Math.random()*0.3),x:sx,y:sy};
+    // pick a random contiguous state (skip AK/HI for sweep)
+    const pool=STATES.filter(s=>s[0]!=="AK"&&s[0]!=="HI");
+    const [abbr, nx, ny]=pool[Math.floor(Math.random()*pool.length)];
+    // jitter around label
+    const jx=(Math.random()-0.5)*0.08, jy=(Math.random()-0.5)*0.06;
+    const sx=mapX + mapW*((nx+jx)+1)/2;
+    const sy=mapY + mapH*((ny+jy)+0.6)/1.2;
+
+    const c1x=(sx+coreA.x)/2, c1y=sy - mapH*0.06;
+    const c2x=(sx+coreA.x)/2 + mapW*0.02, c2y=coreA.y - mapH*0.05;
+
+    const ping={sx,sy,c1x,c1y,c2x,c2y,t:0,spd:SPEED.ping*(0.9+Math.random()*0.25),x:sx,y:sy};
     pings.push(ping);
-    const label=POPUP_TEXTS[Math.floor(Math.random()*POPUP_TEXTS.length)];
+
+    const label=POPUPS[Math.floor(Math.random()*POPUPS.length)];
     popups.push({ping,text:label,life:5200+Math.random()*1800});
   }
-  function spawnCoreBead(a,b){ coreBeads.push({ax:a.x,ay:a.y,bx:b.x,by:b.y,t:0,spd:SPEED.coreCore*(0.8+Math.random()*0.4)}); }
-  function spawnOutBead(i){ const pos=epPos(i); outBeads.push({ax:coreDispatch.x,ay:coreDispatch.y,bx:pos.x,by:pos.y,t:0,spd:SPEED.bead*(0.8+Math.random()*0.4),jitter:(Math.random()-.5)*0.5,i}); }
 
-  /* ---- Radar ---- */
-  let sweepA=-Math.PI*0.25;
+  function spawnCoreBead(a,b){ coreBeads.push({ax:a.x,ay:a.y,bx:b.x,by:b.y,t:0,spd:SPEED.core*(0.85+Math.random()*0.4)}); }
+  function spawnOutBead(i){
+    const pos=epPos(i);
+    outBeads.push({ax:coreC.x,ay:coreC.y,bx:pos.x,by:pos.y,t:0,spd:SPEED.bead*(0.8+Math.random()*0.4),j:(Math.random()-.5)*0.5,i});
+  }
 
-  /* ---- KPI drift ---- */
-  const kEl={leads:hr_k_leads,ready:hr_k_ready,quoted:hr_k_quoted,rep:hr_k_rep,saved:hr_k_saved};
-  let kTick=0,kLeads=0;
+  /* radar */
+  let sweepA=-Math.PI*0.3;
 
-  /* ---- Main loop ---- */
+  /* KPI drift (subtle) */
+  const k={leads:document.getElementById('hr_k_leads'),ready:hr_k_ready,quoted:hr_k_quoted,rep:hr_k_rep,saved:hr_k_saved};
+  let kTick=0, kLeads=0;
+
+  const TAU2=Math.PI*2;
   let last=performance.now();
   function frame(now){
-    const dt=Math.min(40,now-last); last=now;
+    const dt=Math.min(40, now-last); last=now;
 
     ctx.clearRect(0,0,w,h);
-    ctx.drawImage(staticLayer,0,0);
+    ctx.drawImage(sCan,0,0);
 
-    // Radar sweep
-    const rx=globeX-globeR*0.05, ry=globeY-globeR*0.02, rr=globeR*0.56;
-    const rg=ctx.createRadialGradient(rx,ry,0,rx,ry,rr);
-    rg.addColorStop(0,'rgba(120,180,255,0.055)'); rg.addColorStop(1,'rgba(120,180,255,0)');
-    ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(rx,ry,rr, sweepA-0.28, sweepA+0.28); ctx.lineTo(rx,ry); ctx.fill();
+    // radar (slow)
+    const rx = mapX + mapW*0.38, ry = mapY + mapH*0.42, rr = mapW*0.46;
+    const rg = ctx.createRadialGradient(rx,ry,0,rx,ry,rr);
+    rg.addColorStop(0,'rgba(120,180,255,0.045)');
+    rg.addColorStop(1,'rgba(120,180,255,0)');
+    ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(rx,ry,rr, sweepA-0.22, sweepA+0.22); ctx.lineTo(rx,ry); ctx.fill();
     sweepA += SPEED.sweep*(dt/16);
 
-    if(pings.length<LIMITS.pings && Math.random()<0.02) spawnPing();
+    if(pings.length<LIMITS.pings && Math.random()<0.012) spawnPing();
 
-    // Pings (US → Collect)
+    // pings US → coreA
     for(let i=pings.length-1;i>=0;i--){
       const p=pings[i]; p.t+=p.spd*(dt/16); const it=1-p.t;
-      const x=it*it*it*p.sx + 3*it*it*p.t*p.c1x + 3*it*p.t*p.t*p.c2x + p.t*p.t*p.t*coreCollect.x;
-      const y=it*it*it*p.sy + 3*it*it*p.t*p.c1y + 3*it*p.t*p.t*p.c2y + p.t*p.t*p.t*coreCollect.y;
+      const x=it*it*it*p.sx + 3*it*it*p.t*p.c1x + 3*it*p.t*p.t*p.c2x + p.t*p.t*p.t*coreA.x;
+      const y=it*it*it*p.sy + 3*it*it*p.t*p.c1y + 3*it*p.t*p.t*p.c2y + p.t*p.t*p.t*coreA.y;
       p.x=x; p.y=y;
-      ctx.strokeStyle='rgba(210,235,255,0.18)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-7,y-3); ctx.stroke();
-      ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.arc(x,y,1.5,0,TAU); ctx.fill();
-      if(p.t>=1){ pings.splice(i,1); if(coreBeads.length<LIMITS.coreBeads) spawnCoreBead(coreCollect,coreReason); }
+      ctx.strokeStyle='rgba(210,235,255,0.16)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-6,y-3); ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.beginPath(); ctx.arc(x,y,1.4,0,TAU2); ctx.fill();
+      if(p.t>=1){ pings.splice(i,1); if(coreBeads.length<LIMITS.coreBeads) spawnCoreBead(coreA,coreB); }
     }
 
-    // Popups
+    // popups follow pings
     for(let i=popups.length-1;i>=0;i--){
       const pp=popups[i]; pp.life-=dt;
       if(!pp.ping || pp.life<=0){ popups.splice(i,1); continue; }
-      const alpha=clamp01(pp.life/1600), px=pp.ping.x+10, py=pp.ping.y-18;
+      const alpha=Math.max(0,Math.min(1,pp.life/1600));
+      const px=pp.ping.x+10, py=pp.ping.y-18;
       ctx.save(); ctx.globalAlpha=alpha*0.95;
       const wB=Math.min(220,18+pp.text.length*6.5), hB=22;
       ctx.fillStyle='rgba(14,20,34,0.78)'; ctx.strokeStyle='rgba(60,90,140,0.55)';
       roundRect(ctx,px,py,wB,hB,8); ctx.fill(); ctx.stroke();
-      ctx.font='12px Inter,system-ui'; ctx.fillStyle='rgba(215,235,255,0.95)'; ctx.fillText(pp.text,px+10,py+14);
+      ctx.font='12px Inter,system-ui'; ctx.fillStyle='rgba(215,235,255,0.96)'; ctx.fillText(pp.text,px+10,py+14);
       ctx.restore();
     }
 
-    // Cores + links
-    drawCore(coreCollect,0.70); drawCore(coreReason,0.85); drawCore(coreDispatch,0.70);
-    drawLink(coreCollect,coreReason); drawLink(coreReason,coreDispatch);
+    // cores + links
+    drawCore(coreA,0.70); drawCore(coreB,0.86); drawCore(coreC,0.72);
+    drawLink(coreA,coreB); drawLink(coreB,coreC);
 
-    // Core beads (Collect→Reason / Reason→Dispatch)
+    // core beads (A→B then B→C)
     for(let i=coreBeads.length-1;i>=0;i--){
       const b=coreBeads[i]; b.t+=b.spd*(dt/16);
       const x=b.ax+(b.bx-b.ax)*b.t, y=b.ay+(b.by-b.ay)*b.t;
-      ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.beginPath(); ctx.arc(x,y,1.3,0,TAU); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.beginPath(); ctx.arc(x,y,1.2,0,TAU2); ctx.fill();
       if(b.t>=1){
         coreBeads.splice(i,1);
-        if(Math.random()<0.55){
-          if(Math.random()<0.5) coreBeads.push({ax:coreReason.x,ay:coreReason.y,bx:coreDispatch.x,by:coreDispatch.y,t:0,spd:SPEED.coreCore*(0.8+Math.random()*0.5)});
-          else if(outBeads.length<LIMITS.outBeads){ spawnOutBead(Math.floor(Math.random()*endpoints.length)); }
-        }
+        if(Math.random()<0.6) coreBeads.push({ax:coreB.x,ay:coreB.y,bx:coreC.x,by:coreC.y,t:0,spd:SPEED.core*(0.85+Math.random()*0.4)});
+        else if(outBeads.length<LIMITS.outBeads) spawnOutBead(Math.floor(Math.random()*ENDPOINTS.length));
       }
     }
 
-    // Beams + endpoints
-    drawBeamsAndEndpoints();
+    // beams + labels
+    drawBeams();
 
-    // Outbound beads (Dispatch→Endpoints)
+    // outbound beads
     for(let i=outBeads.length-1;i>=0;i--){
       const o=outBeads[i]; o.t+=o.spd*(dt/16); if(o.t>=1){ outBeads.splice(i,1); continue; }
-      const jx=Math.sin(o.t*8)*o.jitter*5, jy=Math.cos(o.t*8)*o.jitter*5;
+      const jx=Math.sin(o.t*8)*o.j*5, jy=Math.cos(o.t*8)*o.j*5;
       const x=o.ax+(o.bx-o.ax)*o.t + jx, y=o.ay+(o.by-o.ay)*o.t + jy;
       const s=1.0+Math.sin(o.t*Math.PI)*1.2;
-      ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.beginPath(); ctx.arc(x,y,s,0,TAU); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.beginPath(); ctx.arc(x,y,s,0,TAU2); ctx.fill();
     }
 
-    // KPIs (subtle)
-    kTick++; if(kLeads<207 && Math.random()<0.15) kLeads++;
-    if(kEl.leads)  kEl.leads.textContent=kLeads;
-    if(kEl.ready)  kEl.ready.textContent=(54+Math.round(Math.sin(kTick/150)*3))+'%';
-    if(kEl.quoted) kEl.quoted.textContent=(67+Math.round(Math.cos(kTick/210)*3))+'%';
-    if(kEl.rep)    kEl.rep.textContent=(21+Math.round(Math.sin(kTick/170)*2))+'%';
-    if(kEl.saved){ const v=20678+Math.round(Math.sin(kTick/120)*620); kEl.saved.textContent='$'+v.toLocaleString(); }
+    // KPI drift
+    kTick++; if(kLeads<207 && Math.random()<0.11) kLeads++;
+    if(k.leads) k.leads.textContent=kLeads;
+    if(k.ready) k.ready.textContent=(54+Math.round(Math.sin(kTick/190)*3))+'%';
+    if(k.quoted)k.quoted.textContent=(67+Math.round(Math.cos(kTick/250)*3))+'%';
+    if(k.rep)   k.rep.textContent   =(21+Math.round(Math.sin(kTick/210)*2))+'%';
+    if(k.saved){ const v=20678+Math.round(Math.sin(kTick/180)*620); k.saved.textContent='$'+v.toLocaleString(); }
 
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 
-  /* ---- drawing helpers ---- */
-  function drawCore(c,power){
-    const g=ctx.createRadialGradient(c.x,c.y,0, c.x,c.y,c.r*3.2);
-    g.addColorStop(0,`rgba(255,255,255,${0.70*power})`);
-    g.addColorStop(0.25,`rgba(200,230,255,${0.42*power})`);
+  /* helpers */
+  function roundRect(c,x,y,w,h,r){
+    c.beginPath();
+    c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.quadraticCurveTo(x+w,y,x+w,y+r);
+    c.lineTo(x+w,y+h-r); c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    c.lineTo(x+r,y+h); c.quadraticCurveTo(x,y+h,x,y+h-r);
+    c.lineTo(x,y+r); c.quadraticCurveTo(x,y,x+r,y); c.closePath();
+  }
+  function drawCore(c,pow){
+    const g=ctx.createRadialGradient(c.x,c.y,0, c.x,c.y,c.r*3.0);
+    g.addColorStop(0,`rgba(255,255,255,${0.70*pow})`);
+    g.addColorStop(0.25,`rgba(200,230,255,${0.42*pow})`);
     g.addColorStop(1,'rgba(120,160,255,0.02)');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(c.x,c.y,c.r,0,TAU); ctx.fill();
-    ctx.strokeStyle='rgba(210,235,255,0.45)'; ctx.lineWidth=1.4;
-    ctx.beginPath(); ctx.arc(c.x,c.y,c.r*1.20,0,TAU); ctx.stroke();
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(c.x,c.y,c.r,0,TAU2); ctx.fill();
+    ctx.strokeStyle='rgba(210,235,255,0.45)'; ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(c.x,c.y,c.r*1.18,0,TAU2); ctx.stroke();
   }
   function drawLink(a,b){
     const grad=ctx.createLinearGradient(a.x,a.y,b.x,b.y);
-    grad.addColorStop(0,'rgba(255,255,255,0.85)');
-    grad.addColorStop(1,'rgba(180,210,255,0.30)');
-    ctx.strokeStyle=grad; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    grad.addColorStop(0,'rgba(255,255,255,0.85)'); grad.addColorStop(1,'rgba(180,210,255,0.30)');
+    ctx.strokeStyle=grad; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
   }
-  function drawBeamsAndEndpoints(){
-    for(let i=0;i<endpoints.length;i++){
-      const e=endpoints[i], pos=epPos(i);
-      const grd=ctx.createLinearGradient(coreDispatch.x,coreDispatch.y,pos.x,pos.y);
-      grd.addColorStop(0,'rgba(255,255,255,0.95)');
-      grd.addColorStop(1,e.col.replace(/0\.9\)/,'0.35)'));
-      ctx.strokeStyle=grd; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(coreDispatch.x,coreDispatch.y); ctx.lineTo(pos.x,pos.y); ctx.stroke();
+  function drawBeams(){
+    for(let i=0;i<ENDPOINTS.length;i++){
+      const e=ENDPOINTS[i], pos=epPos(i);
+      const grd=ctx.createLinearGradient(coreC.x,coreC.y,pos.x,pos.y);
+      grd.addColorStop(0,'rgba(255,255,255,0.95)'); grd.addColorStop(1,e.col.replace(/0\.9\)/,'0.35)'));
+      ctx.strokeStyle=grd; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(coreC.x,coreC.y); ctx.lineTo(pos.x,pos.y); ctx.stroke();
 
-      ctx.fillStyle='rgba(160,200,255,0.35)'; ctx.beginPath(); ctx.arc(pos.x,pos.y,12,0,TAU); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(pos.x,pos.y,3.1,0,TAU); ctx.fill();
+      ctx.fillStyle='rgba(160,200,255,0.35)'; ctx.beginPath(); ctx.arc(pos.x,pos.y,12,0,TAU2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(pos.x,pos.y,3.1,0,TAU2); ctx.fill();
 
       ctx.font='12px Inter,system-ui'; ctx.textBaseline='middle'; ctx.fillStyle='rgba(225,235,255,0.96)';
       ctx.fillText(e.label, pos.x+16, pos.y);
@@ -425,7 +447,7 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 </script>
 
 <script>
-/* Video modal controls */
+/* video modal */
 document.getElementById('watchDemo').onclick=()=> document.getElementById('vid').classList.add('in');
 document.getElementById('vclose').onclick=()=>{ document.getElementById('vid').classList.remove('in'); document.getElementById('vframe').src=document.getElementById('vframe').src; };
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.getElementById('vid').classList.remove('in'); } });
