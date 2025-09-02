@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Galactly — Live packaging buyer signals</title>
 
-<!-- inline favicon to remove 404 -->
+<!-- inline favicon to avoid /favicon.ico 404 -->
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%2386f7d6"/><stop offset="1" stop-color="%2357a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" fill="none" stroke="url(%23g)" stroke-width="4"/></svg>'/>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,14 +52,19 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 .btn.ghost{background:#0f1626}
 .kv{margin-top:10px; font-size:12px; color:#c6d5f3; opacity:.95}
 
-/* ===== Right hero (namespaced) ===== */
+/* ===== Right hero ===== */
 .hright{
-  position:relative; height:520px;
-  border:1px solid #1e2737; border-radius:18px; overflow:hidden;
-  background:radial-gradient(600px 380px at 43% 55%, rgba(120,160,255,.14), rgba(10,14,22,1) 65%);
+  position:relative;
+  height:520px;
+  border:1px solid #1e2737;
+  border-radius:18px;
+  overflow:hidden;
+  background:
+    radial-gradient(800px 520px at 36% 58%, rgba(80,120,220,.18), transparent 60%),
+    radial-gradient(600px 380px at 70% 58%, rgba(120,160,255,.16), rgba(10,14,22,1) 70%);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.02), 0 18px 70px rgba(0,0,0,.45);
 }
-#hero-right-canvas{width:100%; height:100%; display:block; pointer-events:none}
+#hero-right-canvas{width:100%; height:100%; display:block;}
 
 /* KPI chips */
 .hright-kpis{
@@ -74,31 +79,12 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 }
 .hright-chip strong{ color:#fff; }
 
-/* Optional small-screen tweak */
 @media (max-width:1080px){ .hright{height:420px} }
 
-/* Modal */
+/* Modal (kept minimal for this file) */
 .modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50}
 .modal.in{display:flex}
 .box{width:min(920px,95vw); background:#0b101a; border:1px solid var(--line); border-radius:16px; overflow:hidden}
-.box .head{display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--line)}
-.box h3{margin:0; font:800 16px var(--mont)}
-.seg{display:flex; gap:6px}
-.tab{padding:8px 10px; border:1px solid var(--line); border-radius:999px; font:700 12px var(--inter); cursor:pointer}
-.tab.active{background:linear-gradient(90deg,#fff,#e6efff); color:#10131a; border-color:transparent}
-.pane{display:grid; grid-template-columns:1.08fr 1fr; gap:16px; padding:14px}
-@media (max-width:900px){ .pane{grid-template-columns:1fr} }
-.card{background:#0f1420; border:1px solid var(--line); border-radius:14px; padding:12px}
-.label{font-size:12px; opacity:.9; margin-bottom:6px}
-.input, select, textarea{width:100%; background:#0f1420; border:1px solid var(--line); color:#e9eef7; border-radius:10px; padding:10px 12px; font:500 13px var(--inter)}
-.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.actions{display:flex; gap:10px; align-items:center; padding:12px 0 0}
-.err{color:var(--bad); font-size:12px; margin-top:6px; display:none}
-.ok{color:#a7ffde; font-size:12px; margin-top:6px; display:none}
-.small{font-size:12px; opacity:.85}
-.hr{height:1px; background:linear-gradient(90deg,transparent,#243048,transparent); margin:12px 0}
-
-/* Video modal (demo) */
 .vmodal .box{width:min(1000px,96vw); padding:0}
 .vhead{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line)}
 .vbody{position:relative; padding-bottom:56.25%; height:0}
@@ -121,15 +107,15 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
       <p class="sub">Real posts &amp; tenders from public feeds. Free viewer; paid automations, priority, CRM &amp; reporting.</p>
       <p class="sub">Built for packaging owners &amp; sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding. Just clicks.</p>
       <div class="cta">
-        <a class="btn primary" id="openFeed" href="./free-panel.html">Open the Live Feed</a>
+        <a class="btn primary" href="./free-panel.html">Open the Live Feed</a>
         <button class="btn ghost" id="watchDemo">▸ Watch 90s demo</button>
         <span class="kv">AI closed <strong>16%</strong> • Rep closed <strong>21%</strong> • Saved / mo <strong>$20,678</strong></span>
       </div>
     </div>
 
     <!-- RIGHT HERO -->
-    <div id="hero-right" class="hright">
-      <canvas id="hero-right-canvas" aria-hidden="true"></canvas>
+    <div id="hero-right" class="hright" aria-hidden="true">
+      <canvas id="hero-right-canvas"></canvas>
       <div class="hright-kpis">
         <div class="hright-chip">Leads / 30s <strong id="hr_k_leads">0</strong></div>
         <div class="hright-chip">First connection <strong>6 sec</strong></div>
@@ -142,357 +128,252 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
   </section>
 </div>
 
-<!-- Onboarding modal (Path A/B) -->
-<div class="modal" id="onb">
-  <div class="box">
-    <div class="head">
-      <h3>Onboarding</h3>
-      <div class="seg">
-        <button class="tab active" id="tabA">Path A — Enter your website</button>
-        <button class="tab" id="tabB">Path B — Customize from scratch</button>
-      </div>
-    </div>
-    <div class="pane">
-      <div>
-        <!-- PATH A -->
-        <div class="card" id="paneA">
-          <div class="label">Preferred — we’ll auto-derive ICPs, buyers, and regions.</div>
-          <div class="grid2">
-            <div><div class="label">Business email *</div><input id="a_email" class="input" placeholder="you@yourcompany.com"/></div>
-            <div><div class="label">Your role *</div>
-              <select id="a_role" class="input">
-                <option value="supplier">Supplier</option>
-                <option value="distributor">Distributor/Wholesaler</option>
-                <option value="buyer">Packaging Buyer</option>
-              </select>
-            </div>
-          </div>
-          <div class="label" style="margin-top:8px">Company website *</div>
-          <input id="a_site" class="input" placeholder="yourcompany.com"/>
-          <div class="grid2" style="margin-top:8px">
-            <div><div class="label">Region</div><input id="a_region" class="input" placeholder="e.g., US, CA"/></div>
-            <div><label style="display:flex; align-items:center; gap:8px; margin-top:22px"><input type="checkbox" id="a_list"/> <span>List my company for inbound opportunities</span></label></div>
-          </div>
-          <div class="hr"></div>
-          <div class="small">We only serve <strong>packaging</strong>. Business email domain must match your company site.</div>
-          <div class="err" id="a_err"></div><div class="ok" id="a_ok"></div>
-          <div class="actions"><button class="btn" id="a_cancel">Cancel</button><button class="btn primary" id="a_continue">Continue</button></div>
-        </div>
-
-        <!-- PATH B -->
-        <div class="card" id="paneB" style="display:none">
-          <div class="label">Manual — precise filters if you prefer to steer.</div>
-          <div class="grid2">
-            <div><div class="label">Business email *</div><input id="b_email" class="input" placeholder="you@yourcompany.com"/></div>
-            <div><div class="label">Your role *</div>
-              <select id="b_role" class="input">
-                <option value="supplier">Supplier</option>
-                <option value="distributor">Distributor/Wholesaler</option>
-                <option value="buyer">Packaging Buyer</option>
-              </select>
-            </div>
-          </div>
-          <div class="label" style="margin-top:8px">Company website *</div>
-          <input id="b_site" class="input" placeholder="yourcompany.com"/>
-          <div class="grid2" style="margin-top:8px">
-            <div><div class="label">Industries</div><input id="b_industries" class="input" placeholder="beverage, confectionery"/></div>
-            <div><div class="label">Regions</div><input id="b_regions" class="input" placeholder="US, CA, EU"/></div>
-          </div>
-          <div class="label" style="margin-top:8px">Seed buyers (domains)</div>
-          <input id="b_buyers" class="input" placeholder="brand1.com, brand2.com"/>
-          <div class="label" style="margin-top:8px">Describe your ideal customers</div>
-          <textarea id="b_desc" rows="4" class="input" placeholder="categories, packaging materials, order sizes, retailer channels, exclusions"></textarea>
-          <label style="display:flex; align-items:center; gap:8px; margin-top:10px"><input type="checkbox" id="b_list"/> <span>List my company for inbound opportunities</span></label>
-          <div class="hr"></div>
-          <div class="small">We only serve <strong>packaging</strong>.</div>
-          <div class="err" id="b_err"></div><div class="ok" id="b_ok"></div>
-          <div class="actions"><button class="btn" id="b_cancel">Cancel</button><button class="btn primary" id="b_continue">Continue</button></div>
-        </div>
-      </div>
-
-      <div>
-        <div class="card">
-          <div class="label"><strong>Tips to get great signals</strong></div>
-          <ul class="small" style="margin:0 0 8px 16px; padding:0">
-            <li>Use your company domain to calibrate fit and block scrapers.</li>
-            <li>Focus on physical packaging: corrugate, film, shrink, label, tray, case-of-N.</li>
-            <li>Seed 3–6 buyers you admire to nudge platform rotation.</li>
-          </ul>
-          <div class="hr"></div>
-          <div class="small">Privacy: Free hides raw sources on cards; Pro shows full checks. We log per-user proof confirmations only.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Video modal -->
 <div class="modal vmodal" id="vid">
   <div class="box">
     <div class="vhead"><div style="font:800 14px var(--mont)">90s demo</div><button class="btn" id="vclose">Close</button></div>
     <div class="vbody">
-      <!-- switched to youtube-nocookie to avoid ad calls -->
       <iframe id="vframe" src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1"
         allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen
-        sandbox="allow-scripts allow-same-origin allow-presentation"
-        referrerpolicy="no-referrer"></iframe>
+        sandbox="allow-scripts allow-same-origin allow-presentation" referrerpolicy="no-referrer"></iframe>
     </div>
   </div>
 </div>
 
 <script>
-/* API base + sticky user */
-(function(){
-  if (window.API && window.API.base) return;
-  const DEFAULT=(window.API_DEFAULT||'').replace(/\/$/,'') || location.origin;
-  const qs=new URLSearchParams(location.search);
-  function normalize(v){ if(!v) return DEFAULT; let s=String(v).trim().replace(/\/$/,''); if(!/^https?:\/\//i.test(s)) s='https://'+s; return s; }
-  const saved=localStorage.getItem('apiBase'); const base=normalize(qs.get('api')||saved||DEFAULT);
-  window.API_BASE=base;
-  const _fetch=window.fetch.bind(window);
-  const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey)||('u_'+Math.random().toString(36).slice(2)); localStorage.setItem(uidKey, uid);
-  window.fetch=function(input,init){
-    let url=(typeof input==='string')?input:input.url; const headers=new Headers((init&&init.headers)||(typeof input!=='string'&&input.headers)||undefined);
-    try{ headers.set('x-galactly-user', uid);}catch{}
-    if(url && (url.startsWith('/api/')||url.startsWith('api/'))){ url = base + (url.startsWith('/')? '': '/') + url; }
-    return _fetch(typeof input==='string'?url:new Request(url,{...(init||{}),headers}));
-  };
-  window.API={ get base(){return base;}, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
+/* ===== Presence (best-effort; safe if endpoint missing) ===== */
+(async function presence(){
+  try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{}
+  setInterval(presence, 15000);
 })();
 
-/* Presence badge (best-effort) */
-async function loadPresence(){ try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{} }
-setInterval(loadPresence, 12000); loadPresence();
-
-/* ===== RIGHT HERO CANVAS ===== */
+/* ===== HERO STORY ANIMATION (US → Core → Platforms) ===== */
 (function(){
   const root = document.getElementById('hero-right');
   const canvas = document.getElementById('hero-right-canvas');
   if(!root || !canvas || !canvas.getContext) return;
-  const ctx = canvas.getContext('2d', { alpha:true });
+  const ctx = canvas.getContext('2d');
 
-  const CONFIG = {
-    centerBiasX: 0.70, centerBiasY: 0.56, coreRadiusPct: 0.095,
-    inboundMax: 90, outboundMax: 70, spawnArcWidth: 0.85,
-    speeds: { inboundAccel: 0.11, swirl: 0.035, friction: 0.986, outboundMin: 0.008, outboundJitter: 0.6 },
-    endpoints: [
-      { label:'Email',    angle:-0.22, tint:'rgba(180,220,255,0.9)' },
-      { label:'SMS',      angle:-0.08, tint:'rgba(130,255,210,0.9)' },
-      { label:'Call',     angle: 0.06, tint:'rgba(200,220,255,0.9)' },
-      { label:'LinkedIn', angle: 0.18, tint:'rgba(160,210,255,0.9)' },
-      { label:'Quote',    angle: 0.30, tint:'rgba(255,235,160,0.9)' },
-      { label:'ERP',      angle: 0.42, tint:'rgba(210,190,255,0.9)' }
-    ]
-  };
-
-  let w=0,h=0,dpr=1,cx=0,cy=0,R=0, grads=[];
+  /* Layout + DPR */
+  let w=0,h=0,dpr=1,cx=0,cy=0,R=0;
   function resize(){
     dpr = Math.max(1, Math.min(2, window.devicePixelRatio||1));
     w = canvas.clientWidth; h = canvas.clientHeight;
     canvas.width = Math.floor(w*dpr); canvas.height = Math.floor(h*dpr);
     ctx.setTransform(dpr,0,0,dpr,0,0);
-    cx = w*CONFIG.centerBiasX; cy = h*CONFIG.centerBiasY;
-    R  = Math.min(w,h)*CONFIG.coreRadiusPct;
-
-    CONFIG.endpoints.forEach((e,i)=>{
-      const len = Math.min(240 + i*26, Math.min(w,h)*0.52);
-      e.x = cx + Math.cos(e.angle)*len;
-      e.y = cy + Math.sin(e.angle)*len;
-      const g = ctx.createLinearGradient(cx,cy, e.x,e.y);
-      g.addColorStop(0, 'rgba(255,255,255,0.9)');
-      g.addColorStop(1, e.tint.replace(/0\.9\)/,'0.35)'));
-      grads[i] = g;
-    });
+    cx = w*0.70;           // core x (to the right)
+    cy = h*0.56;           // core y
+    R  = Math.min(w,h)*0.095;
   }
   if (window.ResizeObserver) new ResizeObserver(resize).observe(root);
   window.addEventListener('resize', resize); resize();
 
-  /* ✅ declare ONCE and correctly initialized */
-  const inbound = [], outbound = [];
-
-  function spawnInbound(){
-    const ring = Math.max(w,h)*0.6;
-    const arc  = CONFIG.spawnArcWidth * Math.PI;
-    const a = Math.PI + (Math.random()*arc - arc/2);
-    inbound.push({ x: cx + Math.cos(a)*ring, y: cy + Math.sin(a)*ring, vx:0, vy:0, life:360 + Math.random()*260, hue:190 + Math.random()*40 });
+  /* Endpoints (beams) */
+  const endpoints = [
+    {label:'Email',    angle:-0.22, color:'rgba(180,220,255,0.9)'},
+    {label:'SMS',      angle:-0.08, color:'rgba(130,255,210,0.9)'},
+    {label:'Call',     angle: 0.06, color:'rgba(200,220,255,0.9)'},
+    {label:'LinkedIn', angle: 0.18, color:'rgba(160,210,255,0.9)'},
+    {label:'Quote',    angle: 0.30, color:'rgba(255,235,160,0.9)'},
+    {label:'ERP',      angle: 0.42, color:'rgba(210,190,255,0.9)'}
+  ];
+  function endpointPos(e,i){
+    const len = Math.min(240 + i*26, Math.min(w,h)*0.52);
+    return { x: cx + Math.cos(e.angle)*len, y: cy + Math.sin(e.angle)*len };
   }
-  function spawnOutbound(){
-    const e = CONFIG.endpoints[Math.floor(Math.random()*CONFIG.endpoints.length)];
-    outbound.push({ e, t:0, spd: CONFIG.speeds.outboundMin + Math.random()*0.006, jx:(Math.random()-.5)*CONFIG.speeds.outboundJitter, jy:(Math.random()-.5)*CONFIG.speeds.outboundJitter });
-  }
 
-  function drawContinents(){
-    ctx.save(); ctx.translate(w*0.38, h*0.46); ctx.rotate(-0.08);
-    ctx.fillStyle='rgba(160,190,220,0.08)'; ctx.strokeStyle='rgba(160,190,220,0.12)'; ctx.lineWidth=1;
+  /* USA silhouette (stylized) */
+  function drawUSA(){
+    ctx.save();
+    ctx.translate(w*0.40, h*0.52);   // place it left-of-center
+    ctx.scale(Math.min(w,h)/520, Math.min(w,h)/520);
+    ctx.rotate(-0.06);
 
+    ctx.fillStyle='rgba(150,185,235,0.08)';
+    ctx.strokeStyle='rgba(150,185,235,0.18)';
+    ctx.lineWidth=1.2;
+
+    // rough, elegant outline (hand-tuned)
     ctx.beginPath();
-    ctx.moveTo(-120,-40); ctx.lineTo(-90,-80); ctx.lineTo(-30,-90); ctx.lineTo(20,-70);
-    ctx.lineTo(10,-30); ctx.lineTo(-40,-10); ctx.lineTo(-80,10); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.moveTo(-220,-40); ctx.bezierCurveTo(-180,-95,-80,-120,20,-95);
+    ctx.bezierCurveTo(80,-80,150,-30,190,20);
+    ctx.bezierCurveTo(120,30,90,40,50,60);
+    ctx.bezierCurveTo(10,75,-30,85,-80,70);
+    ctx.bezierCurveTo(-130,55,-190,10,-210,-20);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
 
-    ctx.beginPath();
-    ctx.moveTo(10,0); ctx.lineTo(50,10); ctx.lineTo(80,40); ctx.lineTo(60,100); ctx.lineTo(20,130); ctx.lineTo(0,90); ctx.closePath();
-    ctx.fill(); ctx.stroke();
+    // subtle lat/long rings
+    ctx.strokeStyle='rgba(140,170,220,0.10)';
+    for(let r=120;r<=220;r+=32){ ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke(); }
     ctx.restore();
-
-    ctx.strokeStyle='rgba(140,170,220,0.12)'; ctx.lineWidth=1;
-    for(let i=1;i<=3;i++){ ctx.beginPath(); ctx.arc(cx,cy,R*(2+i*1.12),0,Math.PI*2); ctx.stroke(); }
   }
 
-  let travelT=0;
-  function drawTravelPath(){
-    const sx=w*0.43, sy=h*0.42;
-    const cp1x=w*0.56, cp1y=h*0.40, cp2x=w*0.62, cp2y=h*0.52, ex=cx, ey=cy;
-    ctx.strokeStyle='rgba(170,200,255,0.18)'; ctx.lineWidth=1.2;
-    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,ex,ey); ctx.stroke();
+  /* Radar sweep over USA area */
+  let sweepA = -Math.PI*0.15;
+  function drawRadar(){
+    const ux=w*0.40, uy=h*0.52, rad=Math.min(w,h)*0.20;
+    const grad = ctx.createRadialGradient(ux,uy,0,ux,uy,rad*1.1);
+    grad.addColorStop(0,'rgba(120,180,255,0.05)');
+    grad.addColorStop(1,'rgba(120,180,255,0)');
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(ux,uy,rad, sweepA-0.35, sweepA+0.35); ctx.lineTo(ux,uy); ctx.fill();
 
-    travelT=(travelT+0.012)%1;
-    const t=travelT, it=1-t;
-    const x=it*it*it*sx + 3*it*it*t*cp1x + 3*it*t*t*cp2x + t*t*t*ex;
-    const y=it*it*it*sy + 3*it*it*t*cp1y + 3*it*t*t*cp2y + t*t*t*ey;
-    ctx.fillStyle='rgba(255,255,255,0.96)';
-    ctx.beginPath(); ctx.arc(x,y,1.8,0,Math.PI*2); ctx.fill();
+    sweepA += 0.01; if(sweepA>Math.PI*0.85) sweepA = -Math.PI*0.15;
   }
 
-  function drawCore(){
-    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R*2.4);
-    g.addColorStop(0,'rgba(255,255,255,0.9)');
-    g.addColorStop(0.2,'rgba(200,230,255,0.55)');
+  /* Particles */
+  const inbound = [];  // pings in US flying to core
+  const outbound = []; // beads flying out to endpoints
+  const sparks  = [];  // tiny core bursts
+
+  function spawnUSPing(){
+    // random point within USA bounding ellipse (good-enough visual)
+    const ux=w*0.40, uy=h*0.52, rx=Math.min(w,h)*0.20, ry=Math.min(w,h)*0.13;
+    const t=2*Math.PI*Math.random(), r=Math.sqrt(Math.random());
+    const sx=ux+rx*Math.cos(t)*r, sy=uy+ry*Math.sin(t)*r;
+
+    // bias spawns near sweep direction for "scanning" illusion
+    const ang=Math.atan2(sy-uy, sx-ux);
+    const near= Math.abs(((ang - sweepA + Math.PI*3)%(Math.PI*2)) - Math.PI);
+    if(near>0.5) return; // only spawn if under the sweep (~cone)
+
+    const cp1x=(sx+cx)/2, cp1y=sy - 40; // soft bezier to core
+    const cp2x=(sx+cx)/2 + 30, cp2y=cy - 10;
+    inbound.push({ sx,sy, cp1x,cp1y, cp2x,cp2y, t:0, spd:0.008+Math.random()*0.004 });
+  }
+
+  function drawInbound(){
+    for(let i=inbound.length-1;i>=0;i--){
+      const p=inbound[i]; p.t+=p.spd;
+      const it=1-p.t;
+      const x=it*it*it*p.sx + 3*it*it*p.t*p.cp1x + 3*it*p.t*p.t*p.cp2x + p.t*p.t*p.t*cx;
+      const y=it*it*it*p.sy + 3*it*it*p.t*p.cp1y + 3*it*p.t*p.t*p.cp2y + p.t*p.t*p.t*cy;
+      // trail
+      ctx.strokeStyle='rgba(200,235,255,0.18)';
+      ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-6,y-3); ctx.stroke();
+      // head
+      ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.arc(x,y,1.5,0,Math.PI*2); ctx.fill();
+      if(p.t>=1){
+        inbound.splice(i,1);
+        // core spark + schedule outbound
+        for(let s=0;s<3;s++) sparks.push({x:cx,y:cy, vx:(Math.random()-.5)*1.2, vy:(Math.random()-.5)*1.2, life:20+Math.random()*20});
+        if(phase>=2) spawnOutbound();
+      }
+    }
+  }
+
+  function spawnOutbound(){
+    const e=endpoints[Math.floor(Math.random()*endpoints.length)];
+    const pos=endpointPos(e, endpoints.indexOf(e));
+    outbound.push({ ex:pos.x, ey:pos.y, t:0, spd:0.010+Math.random()*0.006, jitter:(Math.random()-.5)*0.6, e });
+  }
+  function drawOutbound(){
+    for(let i=outbound.length-1;i>=0;i--){
+      const o=outbound[i]; o.t+=o.spd; if(o.t>=1){ outbound.splice(i,1); continue; }
+      const jx=Math.sin(o.t*10)*o.jitter*5, jy=Math.cos(o.t*10)*o.jitter*5;
+      const bx=cx+(o.ex-cx)*o.t + jx, by=cy+(o.ey-cy)*o.t + jy;
+      const sz=1.2+Math.sin(o.t*Math.PI)*1.6;
+      ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.beginPath(); ctx.arc(bx,by,sz,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  function drawCore(intensity){
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R*2.6);
+    g.addColorStop(0,`rgba(255,255,255,${0.75+0.2*intensity})`);
+    g.addColorStop(0.25,`rgba(200,230,255,${0.45+0.25*intensity})`);
     g.addColorStop(1,'rgba(120,160,255,0.02)');
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='rgba(210,235,255,0.45)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(cx,cy,R*1.18,0,Math.PI*2); ctx.stroke();
+
+    ctx.strokeStyle='rgba(210,235,255,0.45)'; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.arc(cx,cy,R*1.18,0,Math.PI*2); ctx.stroke();
+
+    // sparks
+    for(let i=sparks.length-1;i>=0;i--){
+      const s=sparks[i]; s.x+=s.vx; s.y+=s.vy; s.life--;
+      ctx.fillStyle=`rgba(255,255,255,${0.6*Math.max(0,s.life/40)})`;
+      ctx.fillRect(s.x,s.y,1.1,1.1);
+      if(s.life<=0) sparks.splice(i,1);
+    }
   }
+
   function drawBeams(){
-    CONFIG.endpoints.forEach((e,i)=>{
-      ctx.strokeStyle = grads[i]; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(e.x,e.y); ctx.stroke();
+    endpoints.forEach((e,i)=>{
+      const pos=endpointPos(e,i);
+      const grad=ctx.createLinearGradient(cx,cy,pos.x,pos.y);
+      grad.addColorStop(0,'rgba(255,255,255,0.95)');
+      grad.addColorStop(1, e.color.replace(/0\.9\)/,'0.35)'));
+      ctx.strokeStyle=grad; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(pos.x,pos.y); ctx.stroke();
 
-      ctx.fillStyle='rgba(160,200,255,0.35)'; ctx.beginPath(); ctx.arc(e.x,e.y,12,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(e.x,e.y,3.2,0,Math.PI*2); ctx.fill();
+      // endpoint glow
+      ctx.fillStyle='rgba(160,200,255,0.35)'; ctx.beginPath(); ctx.arc(pos.x,pos.y,12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(pos.x,pos.y,3.1,0,Math.PI*2); ctx.fill();
 
-      ctx.font='12px Inter,system-ui'; ctx.textBaseline='middle'; ctx.fillStyle='rgba(225,235,255,0.95)';
-      ctx.fillText(e.label, e.x+16, e.y);
+      // label
+      ctx.font='12px Inter,system-ui'; ctx.textBaseline='middle'; ctx.fillStyle='rgba(225,235,255,0.96)';
+      ctx.fillText(e.label, pos.x+16, pos.y);
     });
   }
 
-  function drawBg(){
-    const g=ctx.createRadialGradient(cx-120, cy, R*0.6, cx, cy, Math.max(w,h)*0.9);
-    g.addColorStop(0,'rgba(72,100,160,0.08)'); g.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
-  }
-
-  function tickInbound(){
-    while(inbound.length<CONFIG.inboundMax) spawnInbound();
-    for(let i=inbound.length-1;i>=0;i--){
-      const p=inbound[i], dx=cx-p.x, dy=cy-p.y, dist=Math.hypot(dx,dy)||1;
-      const ax=(dx/dist)*CONFIG.speeds.inboundAccel, ay=(dy/dist)*CONFIG.speeds.inboundAccel;
-      const swirl=CONFIG.speeds.swirl;
-      p.vx=(p.vx+ax+(-dy/dist)*swirl)*CONFIG.speeds.friction;
-      p.vy=(p.vy+ay+( dx/dist)*swirl)*CONFIG.speeds.friction;
-      p.x+=p.vx; p.y+=p.vy; p.life--;
-
-      ctx.strokeStyle=`hsla(${p.hue},80%,75%,${Math.max(.06,0.18-0.0004*(360-p.life))})`;
-      ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-p.vx*3,p.y-p.vy*3); ctx.stroke();
-      ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.arc(p.x,p.y,1.15,0,Math.PI*2); ctx.fill();
-
-      if(dist<R*0.95 || p.life<=0){ inbound.splice(i,1); spawnOutbound(); }
-    }
-  }
-  function tickOutbound(){
-    while(outbound.length<CONFIG.outboundMax) spawnOutbound();
-    for(let i=outbound.length-1;i>=0;i--){
-      const o=outbound[i]; o.t+=o.spd; if(o.t>=1){ outbound.splice(i,1); continue; }
-      const bx=cx+(o.e.x-cx)*o.t + Math.sin(o.t*10)*o.jx*5;
-      const by=cy+(o.e.y-cy)*o.t + Math.cos(o.t*10)*o.jy*5;
-      const sz=1.1+Math.sin(o.t*Math.PI)*1.3;
-      ctx.fillStyle='rgba(255,255,255,0.96)';
-      ctx.beginPath(); ctx.arc(bx,by,sz,0,Math.PI*2); ctx.fill();
-    }
-  }
-
-  function frame(){
+  /* Phases: 0=scan, 1=gather (same as scan but ramp intensity), 2=fanout */
+  let phase=0, tPhase=0, coreInt=0, kLeads=0, tGlobal=0;
+  function step(){
     ctx.clearRect(0,0,w,h);
-    drawBg(); drawContinents(); drawBeams(); drawTravelPath();
-    tickInbound(); drawCore(); tickOutbound();
-    requestAnimationFrame(frame);
-  }
-  frame();
 
-  // KPI motion
-  const kEls={
-    leads:document.getElementById('hr_k_leads'),
-    ready:document.getElementById('hr_k_ready'),
-    quoted:document.getElementById('hr_k_quoted'),
-    rep:document.getElementById('hr_k_rep'),
-    saved:document.getElementById('hr_k_saved')
-  };
-  const k={leads:0,t:0};
-  setInterval(()=>{
-    k.t++; if(k.leads<207) k.leads += 1 + (Math.random()<.35?1:0);
-    if(kEls.leads)  kEls.leads.textContent = k.leads;
-    if(kEls.ready)  kEls.ready.textContent = (54 + Math.round(Math.sin(k.t/7)*4)) + '%';
-    if(kEls.quoted) kEls.quoted.textContent= (67 + Math.round(Math.cos(k.t/11)*3)) + '%';
-    if(kEls.rep)    kEls.rep.textContent   = (21 + Math.round(Math.sin(k.t/5)*2)) + '%';
-    if(kEls.saved){ const v=20678 + Math.round(Math.sin(k.t/3)*620); kEls.saved.textContent = '$'+v.toLocaleString(); }
-  }, 900);
+    // background vignette
+    const bg=ctx.createRadialGradient(cx-140,cy, R*0.6, cx,cy, Math.max(w,h)*0.9);
+    bg.addColorStop(0,'rgba(72,100,160,0.08)'); bg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
+
+    drawUSA();                 // US silhouette
+    if(phase<=1) drawRadar();  // sweep only in scan/gather
+
+    // spawn US pings slowly (scan vibe)
+    if(phase<=1 && Math.random()<0.25) spawnUSPing();
+
+    drawInbound();
+
+    // core intensity follows inbound activity
+    coreInt = Math.min(1, 0.92*coreInt + 0.08*(1 - Math.exp(-inbound.length/12)));
+    drawCore(coreInt);
+
+    if(phase===2){
+      drawBeams();
+      if(Math.random()<0.35) spawnOutbound();
+      drawOutbound();
+    }
+
+    // subtle KPI motion (not tied to backend)
+    tGlobal++;
+    kLeads = Math.min(207, kLeads + (Math.random()<.25?1:0));
+    const els = {
+      leads: document.getElementById('hr_k_leads'),
+      ready: document.getElementById('hr_k_ready'),
+      quoted: document.getElementById('hr_k_quoted'),
+      rep: document.getElementById('hr_k_rep'),
+      saved: document.getElementById('hr_k_saved'),
+    };
+    if(els.leads)  els.leads.textContent = kLeads;
+    if(els.ready)  els.ready.textContent = (54 + Math.round(Math.sin(tGlobal/80)*4)) + '%';
+    if(els.quoted) els.quoted.textContent= (67 + Math.round(Math.cos(tGlobal/110)*3)) + '%';
+    if(els.rep)    els.rep.textContent   = (21 + Math.round(Math.sin(tGlobal/60)*2)) + '%';
+    if(els.saved){ const v=20678 + Math.round(Math.sin(tGlobal/36)*620); els.saved.textContent = '$'+v.toLocaleString(); }
+
+    // phase timing
+    tPhase += 1/60; // ~frames
+    const DUR_SCAN=8, DUR_GATHER=4, DUR_FAN=7;
+    if(phase===0 && tPhase>DUR_SCAN){ phase=1; tPhase=0; }
+    else if(phase===1 && tPhase>DUR_GATHER){ phase=2; tPhase=0; }
+    else if(phase===2 && tPhase>DUR_FAN){ phase=0; tPhase=0; coreInt=0; inbound.length=0; outbound.length=0; sparks.length=0; kLeads=0; }
+
+    requestAnimationFrame(step);
+  }
+  step();
 })();
 
-/* Video modal + escape */
+/* Video modal */
 document.getElementById('watchDemo').onclick=()=> document.getElementById('vid').classList.add('in');
 document.getElementById('vclose').onclick=()=>{ document.getElementById('vid').classList.remove('in'); document.getElementById('vframe').src=document.getElementById('vframe').src; };
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.getElementById('vid').classList.remove('in'); document.getElementById('onb').classList.remove('in'); } });
-
-/* Gating helpers + onboarding posts */
-function bareHost(url){ let s=String(url||'').trim(); s=s.replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./i,''); return s.toLowerCase(); }
-function emailDomain(email){ const m=String(email||'').trim().toLowerCase().match(/^[^@]+@([^@]+)$/); return m? m[1].replace(/^www\./,'') : ''; }
-function domainsMatch(emailDom, siteDom){ if(!emailDom || !siteDom) return false; if(emailDom===siteDom) return true; return emailDom.endsWith('.'+siteDom); }
-function isPackagingRole(role){ return role==='supplier' || role==='distributor' || role==='buyer'; }
-async function post(path,body){ const r=await fetch((window.API_BASE||'')+path,{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body||{}) }); return r.json(); }
-
-document.getElementById('a_continue').onclick=async ()=>{
-  const email=a_email.value.trim();
-  const role =a_role.value.trim();
-  const site =a_site.value.trim();
-  const region=a_region.value.trim();
-  a_err.style.display='none'; a_ok.style.display='none';
-  const eDom=emailDomain(email), sDom=bareHost(site);
-  if(!email||!sDom){ a_err.textContent='Please provide business email and company website.'; a_err.style.display='block'; return; }
-  if(!domainsMatch(eDom,sDom)){ a_err.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; a_err.style.display='block'; return; }
-  if(!isPackagingRole(role)){ a_err.textContent='We only serve packaging suppliers, distributors, and buyers.'; a_err.style.display='block'; return; }
-  localStorage.setItem('onb_vendor', sDom);
-  localStorage.setItem('onb_role', role);
-  localStorage.setItem('onb_regions', region);
-  try{ await post('/api/v1/gate',{region,email,alerts:true}); }catch{}
-  try{ await post('/api/v1/vault',{role,traits:{vendorDomain:sDom,industries:[],regions:region?region.split(',').map(s=>s.trim()):[],buyers:[]}}); a_ok.textContent='Validated. Opening feed…'; a_ok.style.display='block'; }catch{}
-  location.href='./free-panel.html';
-};
-document.getElementById('a_cancel').onclick=()=> document.getElementById('onb').classList.remove('in');
-
-document.getElementById('b_continue').onclick=async ()=>{
-  const email=b_email.value.trim();
-  const role =b_role.value.trim();
-  const site =b_site.value.trim();
-  const inds =b_industries.value.trim();
-  const regs =b_regions.value.trim();
-  const buyers=b_buyers.value.trim();
-  const desc =b_desc.value.trim();
-  const list =b_list.checked;
-  b_err.style.display='none'; b_ok.style.display='none';
-  const eDom=emailDomain(email), sDom=bareHost(site);
-  if(!email||!sDom){ b_err.textContent='Please provide business email and company website.'; b_err.style.display='block'; return; }
-  if(!domainsMatch(eDom,sDom)){ b_err.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; b_err.style.display='block'; return; }
-  if(!isPackagingRole(role)){ b_err.textContent='We only serve packaging suppliers, distributors, and buyers.'; b_err.style.display='block'; return; }
-  localStorage.setItem('onb_vendor', sDom);
-  localStorage.setItem('onb_role', role);
-  localStorage.setItem('onb_industries', inds);
-  localStorage.setItem('onb_regions', regs);
-  localStorage.setItem('onb_buyers', buyers);
-  localStorage.setItem('onb_desc', desc);
-  localStorage.setItem('onb_list', String(list));
-  try{ await post('/api/v1/gate',{region:regs,email,alerts:true}); }catch{}
-  try{ await post('/api/v1/vault',{role,traits:{vendorDomain:sDom,industries:inds?inds.split(',').map(s=>s.trim()):[],regions:regs?regs.split(',').map(s=>s.trim()):[],buyers:buyers?buyers.split(',').map(s=>s.trim()):[],notes:desc||null},listMe:list}); b_ok.textContent='Validated. Opening feed…'; b_ok.style.display='block'; }catch{}
-  location.href='./free-panel.html';
-};
-document.getElementById('b_cancel').onclick=()=> document.getElementById('onb').classList.remove('in');
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.getElementById('vid').classList.remove('in'); } });
 </script>
 </body>
 </html>
