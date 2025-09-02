@@ -264,7 +264,7 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 async function loadPresence(){ try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{} }
 setInterval(loadPresence, 12000); loadPresence();
 
-/* ===== RIGHT HERO CANVAS — single declaration of inbound/outbound ===== */
+/* ===== RIGHT HERO CANVAS ===== */
 (function(){
   const root = document.getElementById('hero-right');
   const canvas = document.getElementById('hero-right-canvas');
@@ -307,8 +307,8 @@ setInterval(loadPresence, 12000); loadPresence();
   if (window.ResizeObserver) new ResizeObserver(resize).observe(root);
   window.addEventListener('resize', resize); resize();
 
-  /* declare ONCE */
-  const inbound=[], outbound[];
+  /* ✅ declare ONCE and correctly initialized */
+  const inbound = [], outbound = [];
 
   function spawnInbound(){
     const ring = Math.max(w,h)*0.6;
@@ -418,7 +418,13 @@ setInterval(loadPresence, 12000); loadPresence();
   frame();
 
   // KPI motion
-  const kEls={leads:hr_k_leads,ready:hr_k_ready,quoted:hr_k_quoted,rep:hr_k_rep,saved:hr_k_saved};
+  const kEls={
+    leads:document.getElementById('hr_k_leads'),
+    ready:document.getElementById('hr_k_ready'),
+    quoted:document.getElementById('hr_k_quoted'),
+    rep:document.getElementById('hr_k_rep'),
+    saved:document.getElementById('hr_k_saved')
+  };
   const k={leads:0,t:0};
   setInterval(()=>{
     k.t++; if(k.leads<207) k.leads += 1 + (Math.random()<.35?1:0);
@@ -431,24 +437,22 @@ setInterval(loadPresence, 12000); loadPresence();
 })();
 
 /* Video modal + escape */
-watchDemo.onclick=()=> vid.classList.add('in');
-vclose.onclick=()=>{ vid.classList.remove('in'); vframe.src=vframe.src; };
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ vid.classList.remove('in'); onb.classList.remove('in'); } });
+document.getElementById('watchDemo').onclick=()=> document.getElementById('vid').classList.add('in');
+document.getElementById('vclose').onclick=()=>{ document.getElementById('vid').classList.remove('in'); document.getElementById('vframe').src=document.getElementById('vframe').src; };
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.getElementById('vid').classList.remove('in'); document.getElementById('onb').classList.remove('in'); } });
 
-/* Gating helpers */
+/* Gating helpers + onboarding posts */
 function bareHost(url){ let s=String(url||'').trim(); s=s.replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./i,''); return s.toLowerCase(); }
 function emailDomain(email){ const m=String(email||'').trim().toLowerCase().match(/^[^@]+@([^@]+)$/); return m? m[1].replace(/^www\./,'') : ''; }
 function domainsMatch(emailDom, siteDom){ if(!emailDom || !siteDom) return false; if(emailDom===siteDom) return true; return emailDom.endsWith('.'+siteDom); }
 function isPackagingRole(role){ return role==='supplier' || role==='distributor' || role==='buyer'; }
 async function post(path,body){ const r=await fetch((window.API_BASE||'')+path,{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body||{}) }); return r.json(); }
 
-/* Path A */
-a_continue.onclick=async ()=>{
+document.getElementById('a_continue').onclick=async ()=>{
   const email=a_email.value.trim();
   const role =a_role.value.trim();
   const site =a_site.value.trim();
   const region=a_region.value.trim();
-  const list =a_list.checked;
   a_err.style.display='none'; a_ok.style.display='none';
   const eDom=emailDomain(email), sDom=bareHost(site);
   if(!email||!sDom){ a_err.textContent='Please provide business email and company website.'; a_err.style.display='block'; return; }
@@ -461,10 +465,9 @@ a_continue.onclick=async ()=>{
   try{ await post('/api/v1/vault',{role,traits:{vendorDomain:sDom,industries:[],regions:region?region.split(',').map(s=>s.trim()):[],buyers:[]}}); a_ok.textContent='Validated. Opening feed…'; a_ok.style.display='block'; }catch{}
   location.href='./free-panel.html';
 };
-a_cancel.onclick=()=> onb.classList.remove('in');
+document.getElementById('a_cancel').onclick=()=> document.getElementById('onb').classList.remove('in');
 
-/* Path B */
-b_continue.onclick=async ()=>{
+document.getElementById('b_continue').onclick=async ()=>{
   const email=b_email.value.trim();
   const role =b_role.value.trim();
   const site =b_site.value.trim();
@@ -489,7 +492,7 @@ b_continue.onclick=async ()=>{
   try{ await post('/api/v1/vault',{role,traits:{vendorDomain:sDom,industries:inds?inds.split(',').map(s=>s.trim()):[],regions:regs?regs.split(',').map(s=>s.trim()):[],buyers:buyers?buyers.split(',').map(s=>s.trim()):[],notes:desc||null},listMe:list}); b_ok.textContent='Validated. Opening feed…'; b_ok.style.display='block'; }catch{}
   location.href='./free-panel.html';
 };
-b_cancel.onclick=()=> onb.classList.remove('in');
+document.getElementById('b_cancel').onclick=()=> document.getElementById('onb').classList.remove('in');
 </script>
 </body>
 </html>
