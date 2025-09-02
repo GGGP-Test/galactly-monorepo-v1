@@ -39,55 +39,26 @@ app.use((req, _res, next) => {
 });
 
 /* ---------------- utilities ---------------- */
-function isAdmin(req: express.Request) {
-  const t = (req.query.token as string) || req.header('x-admin-token') || '';
-  return !!ADMIN_TOKEN && t === ADMIN_TOKEN;
-}
-function normHost(s?: string) {
-  if (!s) return '';
-  let h = s.trim();
-  if (!h) return '';
-  h = h.replace(/^https?:\/\//i, '').replace(/\/$/, '');
-  const i = h.indexOf('/');
-  return i > 0 ? h.slice(0, i) : h;
-}
-async function insertLead(row: {
-  platform: string;
-  source_url: string;
-  title?: string | null;
-  snippet?: string | null;
-  kw?: string[];
-  cat?: string;
-  heat?: number;
-  meta?: any;
-}) {
-  const cat = row.cat || 'demand';
-  const kw = row.kw || [];
-  const heat = Math.max(30, Math.min(95, Number(row.heat ?? 70)));
-  await q(
-    `INSERT INTO lead_pool (cat, kw, platform, heat, source_url, title, snippet, state, created_at, meta)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,'available', now(), $8)
-     ON CONFLICT (source_url) DO NOTHING`,
-    [cat, kw, row.platform, heat, row.source_url, row.title ?? null, row.snippet ?? null, row.meta ?? null]
-  );
+function isAdmin(r: express.Request) {
+  const tok = r.header('x-admin-token') || '';
+  return ADMIN_TOKEN && tok === ADMIN_TOKEN;
 }
 async function runSafely<T>(p: Promise<T>): Promise<T | null> {
-  try {
-    return await p;
-  } catch {
-    return null;
-  }
+  try { return await p; } catch { return null; }
 }
 
-/* ---------------- basics ---------------- */
-app.get('/healthz', (_req, res) => res.json({ ok: true }));
-app.get('/whoami', (_req, res) => res.send('galactly-api'));
-
+/* ---------------- healthz + routes listing ---------------- */
+app.get('/api/v1/healthz', async (_req, res) => {
+  try {
+    const ok = await q('SELECT 1 as ok');
+    res.json({ ok: ok.rows?.[0]?.ok === 1 });
+  } catch {
+    res.status(500).json({ ok: false });
+  }
+});
 app.get('/__routes', (_req, res) =>
   res.json([
-    { path: '/healthz', methods: ['get'] },
-    { path: '/__routes', methods: ['get'] },
-    { path: '/whoami', methods: ['get'] },
+    { path: '/api/v1/healthz', methods: ['get'] },
     { path: '/api/v1/status', methods: ['get'] },
     { path: '/api/v1/gate', methods: ['post'] },
     { path: '/api/v1/leads', methods: ['get'] },
@@ -98,7 +69,13 @@ app.get('/__routes', (_req, res) =>
     { path: '/api/v1/admin/ingest', methods: ['post'] },
     { path: '/api/v1/find-now', methods: ['post'] },
     { path: '/api/v1/reveal', methods: ['post'] },
-    { path: '/api/v1/progress.sse', methods: ['get'] }
+    { path: '/api/v1/progress.sse', methods: ['get'] },
+    { path: '/presence/online', methods: ['get'] },
+    { path: '/presence/beat', methods: ['post'] },
+    { path: '/api/v1/presence/online', methods: ['get'] },
+    { path: '/api/v1/presence/beat', methods: ['post'] },
+    { path: '/api/v1/lead-viewers', methods: ['get','post'] },
+    { path: '/api/v1/vault', methods: ['get','post'] },
   ])
 );
 
@@ -130,7 +107,8 @@ async function saveQuota(userId: string, qn: Quota) {
          COALESCE(user_prefs,'{}'::jsonb),
          '{quota}',
          to_jsonb($2::jsonb)
-       )
+       ),
+           updated_at = now()
      WHERE id=$1`,
     [userId, qn as any]
   );
@@ -143,10 +121,68 @@ function resetAtUtc(dateStr: string): string {
 }
 
 /* ---------------- presence (soft signal) ---------------- */
-const online: Record<string, number> = {};
+// In-memory presence map: userId -> { ts, role }
+type Role = 'supplier'|'distributor'|'buyer'|undefined;
+const PRESENCE_TTL_MS = 30_000;
+const online: Record<string, { ts: number, role?: Role }> = {};
+const leadViewers: Record<string, Set<string>> = Object.create(null); // leadId -> userIds viewing
+
 app.post('/api/v1/presence/beat', (req, res) => {
   const id = (req as any).userId || randomUUID();
-  online[id] = Date.now();
+  const role = (req.body && (req.body.role as Role)) || undefined;
+  online[id] = { ts: Date.now(), role };
+  res.json({ ok: true });
+});
+
+// non-versioned alias for static frontends
+app.post('/presence/beat', (req, res) => {
+  const id = (req as any).userId || randomUUID();
+  const role = (req.body && (req.body.role as Role)) || undefined;
+  online[id] = { ts: Date.now(), role };
+  res.json({ ok: true });
+});
+
+function presenceCounts() {
+  const now = Date.now();
+  let total = 0, suppliers = 0, distributors = 0, buyers = 0;
+  for (const [uid, rec] of Object.entries(online)) {
+    if (!rec || (rec.ts + PRESENCE_TTL_MS) < now) { delete online[uid]; continue; }
+    total++;
+    if (rec.role === 'supplier') suppliers++;
+    else if (rec.role === 'distributor') distributors++;
+    else if (rec.role === 'buyer') buyers++;
+  }
+  return { total, suppliers, distributors, buyers };
+}
+
+app.get('/api/v1/presence/online', (_req, res) => {
+  res.json(presenceCounts());
+});
+
+// non-versioned alias to match free-panel.html
+app.get('/presence/online', (_req, res) => {
+  res.json(presenceCounts());
+});
+
+/* --- lightweight viewers endpoint (best-effort) --- */
+app.get('/api/v1/lead-viewers', (req, res) => {
+  const leadId = String(req.query.leadId || '');
+  const counts = presenceCounts();
+  if (!leadId) return res.json({ ok: true, others: Math.round(counts.total*0.08), competitors: Math.max(0, counts.suppliers + counts.distributors - 1) });
+  const set = leadViewers[leadId];
+  const others = set ? Math.max(0, set.size - 1) : Math.round(counts.total*0.06);
+  const competitors = Math.max(0, Math.min(others, counts.suppliers + counts.distributors - 1));
+  res.json({ ok: true, others, competitors });
+});
+
+// optional: record viewer pings (front-end may ignore)
+// POST /api/v1/lead-viewers { leadId }
+app.post('/api/v1/lead-viewers', (req, res) => {
+  const userId = (req as any).userId || randomUUID();
+  const { leadId } = req.body || {};
+  if (!leadId) return res.status(400).json({ ok: false, error: 'missing leadId' });
+  if (!leadViewers[leadId]) leadViewers[leadId] = new Set();
+  leadViewers[leadId].add(userId);
   res.json({ ok: true });
 });
 
@@ -155,68 +191,40 @@ app.post('/api/v1/gate', async (req, res) => {
   const userId = (req as any).userId;
   if (!userId)
     return res.status(400).json({ ok: false, error: 'missing x-galactly-user' });
+
   const { region, email, alerts } = req.body || {};
   await q(
-    `INSERT INTO app_user(id,region,email,alerts)
-     VALUES ($1,$2,$3,COALESCE($4,false))
+    `INSERT INTO app_user(id, region, email, alerts)
+       VALUES ($1,$2,$3,$4)
      ON CONFLICT (id) DO UPDATE
-     SET region=EXCLUDED.region, email=EXCLUDED.email, alerts=EXCLUDED.alerts, updated_at=now()`,
-    [userId, region || null, email || null, alerts === true]
+       SET region=COALESCE(EXCLUDED.region, app_user.region),
+           email=COALESCE(EXCLUDED.email, app_user.email),
+           alerts=COALESCE(EXCLUDED.alerts, app_user.alerts),
+           updated_at=now()`,
+    [userId, region || null, email || null, !!alerts]
   );
-  res.json({ ok: true });
-});
-
-/* ---------------- status (engine + free quotas) ---------------- */
-app.get('/api/v1/status', async (req, res) => {
-  const userId = (req as any).userId || 'anon';
-  const freeFindsPerDay = Number(process.env.FREE_FINDS_PER_DAY || 2);
-  const freeRevealsPerDay = Number(process.env.FREE_REVEALS_PER_DAY || 2);
-
-  let quota: Quota = { date: TODAY(), findsUsed: 0, revealsUsed: 0 };
-  if (userId && userId !== 'anon') quota = await getQuota(userId);
-
-  const findsLeft = Math.max(0, freeFindsPerDay - quota.findsUsed);
-  const revealsLeft = Math.max(0, freeRevealsPerDay - quota.revealsUsed);
-
+  const quota = await getQuota(userId);
   res.json({
     ok: true,
-    engine: 'ready',
-    free: {
-      findsLeft,
-      revealsLeft,
-      resetsAt: resetAtUtc(quota.date),
-      perDay: { finds: freeFindsPerDay, reveals: freeRevealsPerDay }
-    }
+    userId,
+    nextResetAt: resetAtUtc(quota.date),
+    free: { finds: 2, reveals: 2 }
   });
 });
 
-/* ---------------- events (like / dislike / mute / confirm) ---------------- */
-app.post('/api/v1/events', async (req, res) => {
+/* ---------------- status ---------------- */
+app.get('/api/v1/status', async (req, res) => {
   const userId = (req as any).userId || null;
-  const { leadId, type, meta } = req.body || {};
-  if (!leadId || !type)
-    return res.status(400).json({ ok: false, error: 'bad request' });
-  await q(
-    `INSERT INTO event_log(user_id, lead_id, event_type, meta)
-     VALUES ($1,$2,$3,$4)`,
-    [userId, leadId, String(type), meta || {}]
-  );
-
-  if (String(type) === 'mute_domain' && userId && meta?.domain) {
-    await q(
-      `UPDATE app_user
-       SET user_prefs = jsonb_set(
-         COALESCE(user_prefs,'{}'::jsonb),
-         '{muteDomains}',
-         COALESCE(user_prefs->'muteDomains','[]'::jsonb) || to_jsonb($2::text)
-       ) WHERE id=$1`,
-      [userId, String(meta.domain)]
-    );
+  let findsLeft = 2, revealsLeft = 2;
+  if (userId) {
+    const qn = await getQuota(userId);
+    findsLeft = Math.max(0, 2 - qn.findsUsed);
+    revealsLeft = Math.max(0, 2 - qn.revealsUsed);
   }
-  res.json({ ok: true });
+  res.json({ ok: true, findsLeft, revealsLeft });
 });
 
-/* ---------------- feed ---------------- */
+/* ---------------- leads (pool) ---------------- */
 app.get('/api/v1/leads', async (req, res) => {
   const userId = (req as any).userId || null;
   const r = await q(
@@ -262,22 +270,8 @@ app.get('/api/v1/leads', async (req, res) => {
   // fallback demo if empty
   if (!leads.length) {
     leads = [
-      {
-        id: -1,
-        cat: 'demo',
-        kw: ['packaging'],
-        platform: 'demo',
-        fit_user: 60,
-        heat: 80,
-        source_url: 'https://example.com/proof',
-        title: 'Demo HOT lead (signals warming up)',
-        snippet:
-          'This placeholder disappears once your collectors seed real signals.',
-        ttl: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        state: 'available',
-        created_at: new Date().toISOString(),
-        _score: 0
-      }
+      { id: -1, cat: 'Demand', kw: ['promo'], platform: 'adlib', fit_user: 1, heat: 68, source_url: 'https://example.com/promo', title: 'D2C beverage promo cadence ↑', snippet: 'Weekly cadence indicates stable corrugate/film usage', ttl: null, state: 'available', created_at: new Date().toISOString() },
+      { id: -2, cat: 'Procurement', kw: ['forms'], platform: 'brandintake', fit_user: 1, heat: 74, source_url: 'https://example.com/forms', title: 'Procurement intake updated', snippet: 'Packaging categories changed', ttl: null, state: 'available', created_at: new Date().toISOString() },
     ];
   }
 
@@ -311,15 +305,10 @@ app.post('/api/v1/claim', async (req, res) => {
     return res.status(409).json({ ok: false, error: 'not available' });
   await q(
     `INSERT INTO claim_window(window_id, lead_id, user_id, reserved_until)
-     VALUES($1,$2,$3,$4)`,
+     VALUES ($1,$2,$3,$4)`,
     [windowId, leadId, userId, reservedUntil]
   );
-  await q(
-    `INSERT INTO event_log(user_id, lead_id, event_type, meta)
-     VALUES ($1,$2,'claim','{}')`,
-    [userId, leadId]
-  );
-  res.json({ ok: true, windowId, reservedForSec: 120, reveal: {} });
+  res.json({ ok: true, windowId, reservedUntil });
 });
 
 app.post('/api/v1/own', async (req, res) => {
@@ -327,23 +316,280 @@ app.post('/api/v1/own', async (req, res) => {
   const { windowId } = req.body || {};
   if (!userId || !windowId)
     return res.status(400).json({ ok: false, error: 'bad request' });
-  const r = await q<any>(
-    `SELECT lead_id FROM claim_window
-     WHERE window_id=$1 AND user_id=$2 AND reserved_until>now()`,
+
+  const r = await q<{ lead_id: number }>(
+    `SELECT lead_id FROM claim_window 
+      WHERE window_id=$1 AND user_id=$2 AND reserved_until>now()`,
     [windowId, userId]
   );
   const leadId = r.rows[0]?.lead_id;
-  if (!leadId) return res.status(410).json({ ok: false, error: 'window expired' });
+  if (!leadId) return res.status(409).json({ ok: false, error: 'expired' });
+
   await q(
-    `UPDATE lead_pool SET state='owned', owned_by=$1, owned_at=now() WHERE id=$2`,
+    `UPDATE lead_pool
+       SET state='owned', owned_by=$1, owned_at=now()
+     WHERE id=$2`,
     [userId, leadId]
   );
+  res.json({ ok: true, leadId });
+});
+
+/* ---------------- events (like/dislike/mute/confirm) ---------------- */
+app.post('/api/v1/events', async (req, res) => {
+  const userId = (req as any).userId || null;
+  const { leadId, type, meta } = req.body || {};
+  if (!leadId || !type)
+    return res.status(400).json({ ok: false, error: 'bad request' });
   await q(
     `INSERT INTO event_log(user_id, lead_id, event_type, meta)
-     VALUES ($1,$2,'own','{}')`,
-    [userId, leadId]
+     VALUES ($1,$2,$3,$4)`,
+    [userId, leadId, String(type), meta || {}]
   );
+
+  if (String(type) === 'mute_domain' && userId && meta?.domain) {
+    await q(
+      `UPDATE app_user
+       SET user_prefs = jsonb_set(
+         COALESCE(user_prefs,'{}'::jsonb),
+         '{muteDomains}',
+         COALESCE(user_prefs->'muteDomains','[]'::jsonb) || to_jsonb($2::text)
+       ) WHERE id=$1`,
+      [userId, String(meta.domain)]
+    );
+  }
   res.json({ ok: true });
+});
+
+/* ---------------- user vault ---------------- */
+// GET /api/v1/vault — profile, quotas, traits, capabilities, owned/recent/muted/proofs
+app.get('/api/v1/vault', async (req, res) => {
+  const userId = (req as any).userId;
+  if (!userId) return res.status(400).json({ ok:false, error:'missing x-galactly-user' });
+
+  const u = await q<{ email: string|null, user_prefs: any, region: string|null }>(
+    'SELECT email, user_prefs, region FROM app_user WHERE id=$1',
+    [userId]
+  );
+  const prefs = u.rows[0]?.user_prefs || {};
+  const profile = { email: u.rows[0]?.email || null, role: prefs.role || null, region: u.rows[0]?.region || null, plan: (prefs.plan || 'free') };
+
+  // quotas
+  const qn = prefs.quota || {};
+  const quota = { date: String(qn.date || new Date().toISOString().slice(0,10)), findsUsed: Number(qn.findsUsed||0), revealsUsed: Number(qn.revealsUsed||0) };
+
+  // traits + capabilities
+  const traits = prefs.traits || { vendorDomain: prefs.vendorDomain||null, industries: prefs.industries||[], regions: prefs.regions||[], buyers: prefs.buyers||[], notes: prefs.notes||null };
+  const capabilities = { connectors: prefs.connectors || ['adlib','reviews','pdp'], pro: profile.plan === 'pro' };
+
+  // owned + recent leads
+  const ownedRows = await q(
+    `SELECT id, title, source_url, cat, owned_at
+       FROM lead_pool WHERE owned_by=$1 ORDER BY owned_at DESC LIMIT 200`,
+    [userId]
+  );
+  const recentRows = await q(
+    `SELECT id, title, source_url, cat, created_at
+       FROM lead_pool WHERE state='available' ORDER BY created_at DESC LIMIT 50`
+  );
+
+  const out = {
+    ok: true,
+    profile,
+    quota,
+    traits,
+    capabilities,
+    leads: {
+      owned: ownedRows.rows,
+      recent: recentRows.rows,
+      mutedDomains: prefs.muteDomains || [],
+      confirmedProofs: prefs.confirmedProofs || []
+    }
+  };
+  res.json(out);
+});
+
+// POST /api/v1/vault — partial updates to user_prefs
+app.post('/api/v1/vault', async (req, res) => {
+  const userId = (req as any).userId;
+  if (!userId) return res.status(400).json({ ok:false, error:'missing x-galactly-user' });
+
+  const up = req.body || {};
+  // Merge into user_prefs at top-level keys we recognize
+  const allowed = ['role','traits','muteDomains','confirmedProofs','plan','connectors'];
+  // fetch current
+  const cur = await q<{ user_prefs: any }>('SELECT user_prefs FROM app_user WHERE id=$1', [userId]);
+  const prefs = cur.rows[0]?.user_prefs || {};
+  for (const k of allowed) {
+    if (up[k] !== undefined) prefs[k] = up[k];
+  }
+  await q(
+    `UPDATE app_user SET user_prefs=$2, updated_at=now() WHERE id=$1`,
+    [userId, JSON.stringify(prefs)]
+  );
+  res.json({ ok:true, user_prefs: prefs });
+});
+
+/* ---------------- find-now ---------------- */
+app.post('/api/v1/find-now', async (req, res) => {
+  const userId = (req as any).userId || null;
+  const body = req.body || {};
+  const vendor = String(body.vendor || body.vendorDomain || body.website || '').trim();
+  const buyers = String(body.buyers || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+  const industries = String(body.industries || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+  const regions = String(body.regions || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+
+  if (userId) {
+    const qn = await getQuota(userId);
+    qn.findsUsed = Math.min(2, qn.findsUsed + 1);
+    await saveQuota(userId, qn);
+  }
+
+  let created = 0, checked = 0;
+  const seenUrl = new Set<string>();
+  async function insertLead(L: any) {
+    try {
+      await q(
+        `INSERT INTO lead_pool(cat,kw,platform,fit_user,heat,source_url,title,snippet,ttl,state,created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now()+interval '3 days','available',now())
+         ON CONFLICT (source_url) DO NOTHING`,
+        [L.cat || null, L.kw || [], L.platform || null, 1, Math.max(50, Math.min(92, Number(L.heat || 60))), L.source_url, L.title || null, L.snippet || null]
+      );
+    } catch {}
+  }
+
+  // Vendor-derived buyers (fast, safe)
+  if (vendor) {
+    const d = await runSafely(deriveBuyersFromVendorSite(vendor));
+    if (d?.domains?.length) buyers.push(...d.domains);
+  }
+
+  // Basic sources (free tier friendly)
+  for (const host of buyers.slice(0, 6)) {
+    // Ad library (public EU/UK profiles)
+    const ads = (await runSafely(findAdvertisersFree(host))) || [];
+    for (const a of ads) {
+      if (!seenUrl.has(a.url)) {
+        await insertLead({
+          platform: 'adlib',
+          source_url: a.url,
+          title: a.title || `${host} ad activity`,
+          snippet: a.snippet || '',
+          kw: ['ad','burst','promo'],
+          cat: 'demand',
+          heat: 72,
+          meta: { domain: host }
+        });
+        seenUrl.add(a.url); created++;
+      }
+    }
+    // PDP deltas (if connector returns something)
+    const pdp = (await runSafely(scanPDP(host))) || [];
+    for (const p of pdp) {
+      if (!seenUrl.has(p.url)) {
+        await insertLead({
+          platform: 'pdp',
+          source_url: p.url,
+          title: p.title || `${host} product`,
+          snippet: p.snippet || '',
+          kw: ['case', 'pack', 'dims'],
+          cat: 'product',
+          heat: p.type === 'restock_post' ? 78 : 68,
+          meta: { domain: host }
+        });
+        seenUrl.add(p.url); created++;
+      }
+    }
+    checked++;
+  }
+  
+// Reviews / complaints (packaging-related signals)
+const revHits = await runSafely(scanReviews(host)) || [];
+for (const r of revHits) {
+  if (!seenUrl.has(r.url)) {
+    const heatBase = 62; // reviews are medium-hot by default
+    const heat = Math.max(50, Math.min(92, Math.round(heatBase + (r.severity * 20) - ((r.ratingApprox || 3.2) - 3) * 4)));
+    await insertLead({
+      platform: 'reviews',
+      source_url: r.url,
+      title: `${host} — customer review (packaging)`,
+      snippet: r.snippet || r.title,
+      kw: ['reviews','packaging','complaint', ...(r.terms.slice(0,3))],
+      cat: 'voice',
+      heat,
+      meta: { domain: host, source: r.source, rating: r.ratingApprox, terms: r.terms }
+    });
+    seenUrl.add(r.url); created++;
+  }
+}
+
+  res.json({ ok: true, created, checked });
+});
+
+/* ---------------- reveal (hold-to-reveal context) ---------------- */
+app.post('/api/v1/reveal', async (req, res) => {
+  const userId = (req as any).userId || null;
+  const { leadId } = req.body || {};
+  if (!leadId)
+    return res.status(400).json({ ok: false, error: 'bad request' });
+
+  if (userId) {
+    const qn = await getQuota(userId);
+    qn.revealsUsed = Math.min(2, qn.revealsUsed + 1);
+    await saveQuota(userId, qn);
+  }
+  const r = await q(
+    `SELECT id, title, source_url, cat, platform, heat 
+       FROM lead_pool WHERE id=$1`,
+    [leadId]
+  );
+  const L = r.rows[0] || null;
+  res.json({
+    ok: true,
+    lead: L,
+    why: [
+      `Paid reach ≈ $${(L?.heat ? L.heat * 90 : 5400).toLocaleString()}/mo → steady demand`,
+      `Orders → units → ${Math.max(2, Math.round((L?.heat || 60)/30))} SKUs/mo → queue window next 7–14d`
+    ],
+    proof: { redacted: true, path: ['adlib','pdp','reviews'], ts: new Date().toISOString() }
+  });
+});
+
+/* ---------------- progress.sse (slow Signals Preview) ---------------- */
+app.get('/api/v1/progress.sse', async (req, res) => {
+  res.header('Content-Type', 'text/event-stream');
+  res.header('Cache-Control', 'no-cache');
+  res.header('Connection', 'keep-alive');
+
+  function send(type: string, data: any) {
+    res.write(`event: ${type}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  }
+
+  const STEPS = [
+    { id: 'demand', cap: 'Demand', label: 'creative burst + reach' },
+    { id: 'product', cap: 'Product', label: 'SKU/restock/dims' },
+    { id: 'proc', cap: 'Procurement', label: 'supplier portals' },
+    { id: 'retail', cap: 'Retail', label: 'PDP/promo cadence' },
+    { id: 'ops', cap: 'Ops', label: 'job posts/shift adds' },
+    { id: 'events', cap: 'Events', label: 'trade calendar' },
+    { id: 'reviews', cap: 'Reviews', label: 'packaging complaints' },
+    { id: 'timing', cap: 'Timing', label: 'if-then windows' },
+    { id: 'queue', cap: 'Queue', label: 'window forecast' },
+  ];
+
+  let i = 0;
+  const timer = setInterval(() => {
+    if (i >= STEPS.length) {
+      clearInterval(timer);
+      res.write(`event: halt\ndata: {}\n\n`);
+      return;
+    }
+    const S = STEPS[i++];
+    send('step', { index: i, of: STEPS.length, cap: S.cap, label: S.label, id: S.id, ts: Date.now() });
+  }, 1800);
+
+  const hb = setInterval(() => send('ping', { t: Date.now() }), 15000);
+  req.on('close', () => { clearInterval(timer); clearInterval(hb); });
 });
 
 /* ---------------- admin: seed + ingest (legacy helpers) ---------------- */
@@ -388,206 +634,6 @@ app.post('/api/v1/admin/seed-brands', async (req, res) => {
 app.post('/api/v1/admin/ingest', async (req, res) => {
   if (!isAdmin(req)) return res.status(401).json({ ok: false, error: 'unauthorized' });
   res.json({ ok: true, did: 'noop' });
-});
-
-/* ---------------- find-now (increments free search quota) ---------------- */
-app.post('/api/v1/find-now', async (req, res) => {
-  const started = Date.now();
-  const body = req.body || {};
-  const userId = (req as any).userId || null;
-
-  if (userId) {
-    const freeFindsPerDay = Number(process.env.FREE_FINDS_PER_DAY || 2);
-    let quota = await getQuota(userId);
-    if (quota.date !== TODAY())
-      quota = { date: TODAY(), findsUsed: 0, revealsUsed: 0 };
-    if (quota.findsUsed >= freeFindsPerDay) {
-      return res
-        .status(429)
-        .json({ ok: false, error: 'free_limit_reached', message: 'Daily free searches used.' });
-    }
-    quota.findsUsed += 1;
-    await saveQuota(userId, quota);
-  }
-
-  const buyersRaw: string[] = Array.isArray(body.buyers) ? body.buyers : [];
-  const industries: string[] = Array.isArray(body.industries) ? body.industries : [];
-  const regions: string[] = Array.isArray(body.regions) ? body.regions : [];
-  let seedDomains = buyersRaw.map(normHost).filter(Boolean);
-
-  if ((!seedDomains.length) && body.vendorDomain) {
-    const icp = await runSafely(deriveBuyersFromVendorSite(String(body.vendorDomain)));
-    const derived = (icp?.buyers || [])
-      .map((b: any) => normHost(b.domain))
-      .filter(Boolean);
-    seedDomains = Array.from(new Set([...seedDomains, ...derived])).slice(0, 20);
-  }
-
-  const advertisers = (await runSafely(
-    findAdvertisersFree({ industries, regions, seedDomains })
-  )) || [];
-  const advDomains = advertisers.map((a: any) => normHost(a.domain)).filter(Boolean);
-  const domainSet = new Set<string>([...seedDomains, ...advDomains]);
-  const domains = Array.from(domainSet).slice(0, Number(process.env.FIND_MAX_DOMAINS || 40));
-
-  let created = 0, checked = 0; const seenUrl = new Set<string>();
-
-  for (const host of domains) {
-    // ad proof
-    for (const a of advertisers.filter((x: any) => normHost(x.domain) === host)) {
-      if (a.proofUrl && !seenUrl.has(a.proofUrl)) {
-        await insertLead({
-          platform: 'adlib_free',
-          source_url: a.proofUrl,
-          title: `${host} — ad transparency search`,
-          snippet: `Source: ${a.source || 'ads'} • Last seen: ${a.lastSeen || 'recent'} • ~${a.adCount ?? '?' } creatives`,
-          kw: ['ads', 'buyer', 'spend'],
-          cat: 'demand',
-          heat: 70,
-          meta: { domain: host, platform: a.source || 'ads' }
-        });
-        seenUrl.add(a.proofUrl); created++;
-      }
-    }
-    // intake
-    const intakeHits = (await runSafely(scanBrandIntake(host))) || [];
-    for (const h of intakeHits) {
-      if (!seenUrl.has(h.url)) {
-        await insertLead({
-          platform: 'brandintake',
-          source_url: h.url,
-          title: h.title || `${host} — Supplier/Procurement`,
-          snippet: h.snippet || host,
-          kw: ['procurement', 'supplier', 'packaging'],
-          cat: 'procurement',
-          heat: 82,
-          meta: { domain: host }
-        });
-        seenUrl.add(h.url); created++;
-      }
-    }
-    // pdp
-    const pdpHits = (await runSafely(scanPDP(host))) || [];
-    for (const p of pdpHits) {
-      if (!seenUrl.has(p.url)) {
-        await insertLead({
-          platform: p.type || 'pdp',
-          source_url: p.url,
-          title: p.title || `${host} product`,
-          snippet: p.snippet || '',
-          kw: ['case', 'pack', 'dims'],
-          cat: 'product',
-          heat: p.type === 'restock_post' ? 78 : 68,
-          meta: { domain: host }
-        });
-        seenUrl.add(p.url); created++;
-      }
-    }
-    checked++;
-  }
-  
-// Reviews / complaints (packaging-related signals)
-const revHits = await runSafely(scanReviews(host)) || [];
-for (const r of revHits) {
-  if (!seenUrl.has(r.url)) {
-    const heatBase = 62; // reviews are medium-hot by default
-    const heat = Math.max(50, Math.min(92, Math.round(heatBase + (r.severity * 20) - ((r.ratingApprox || 3.2) - 3) * 4)));
-    await insertLead({
-      platform: 'reviews',
-      source_url: r.url,
-      title: `${host} — customer review (packaging)`,
-      snippet: r.snippet || r.title,
-      kw: ['reviews','packaging','complaint', ...(r.terms.slice(0,3))],
-      cat: 'voice',
-      heat,
-      meta: { domain: host, source: r.source, rating: r.ratingApprox, terms: r.terms }
-    });
-    seenUrl.add(r.url); created++;
-  }
-}
-
-  // if no leads got created, drop one demo so UX shows movement
-  if (!created) {
-    await insertLead({
-      platform: 'demo',
-      source_url: `https://example.com/demo-${Date.now()}`,
-      title: 'Demo signal (collectors warming up)',
-      snippet: 'This disappears once real signals are inserted.',
-      kw: ['demo'],
-      cat: 'demand',
-      heat: 65
-    });
-    created = 1;
-  }
-
-  res.json({ ok: true, checked, created, tookMs: Date.now() - started });
-});
-
-/* ---------------- reveal (increments free reveal quota) ---------------- */
-app.post('/api/v1/reveal', async (req, res) => {
-  const userId = (req as any).userId || null;
-  if (userId) {
-    const freeRevealsPerDay = Number(process.env.FREE_REVEALS_PER_DAY || 2);
-    let quota = await getQuota(userId);
-    if (quota.date !== TODAY())
-      quota = { date: TODAY(), findsUsed: 0, revealsUsed: 0 };
-    if (quota.revealsUsed >= freeRevealsPerDay) {
-      return res
-        .status(429)
-        .json({ ok: false, error: 'free_limit_reached', message: 'Daily free reveals used.' });
-    }
-    quota.revealsUsed += 1;
-    await saveQuota(userId, quota);
-  }
-  res.json({ ok: true, reveal: { allowed: true } });
-});
-
-/* ---------------- progress.sse (signals preview stream) ---------------- */
-app.get('/api/v1/progress.sse', async (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders?.();
-
-  const sid = (req.query.sid as string) || randomUUID();
-
-  function send(ev: string, data: any) {
-    res.write(`event: ${ev}\n`);
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
-  }
-
-  send('hello', { sid, startedAt: Date.now() });
-
-  const CAPS: [string, string][] = [
-    ['Demand', 'Paid reach probes (Meta, Google)'],
-    ['Product', 'SKU & restock cadence'],
-    ['Procurement', 'Supplier / intake changes'],
-    ['Wholesale', 'B2B case-pack shifts'],
-    ['Retail', 'Retail PDP deltas, promos'],
-    ['Ops', 'Hiring/shift spikes'],
-    ['Events', 'Trade / promo calendar']
-  ];
-
-  const STEPS: { id: string; cap: string; label: string }[] = [];
-  for (const [cap, label] of CAPS) {
-    for (let i = 0; i < 4; i++) STEPS.push({ id: `${cap.toLowerCase()}_${i+1}`, cap, label });
-  }
-
-  let i = 0;
-  const maxFree = Math.min(24, STEPS.length);
-  const timer = setInterval(() => {
-    if (i >= maxFree) {
-      send('halt', { reason: 'free_cap', shown: i, total: STEPS.length });
-      clearInterval(timer);
-      setTimeout(() => { try { res.end(); } catch { /* noop */ } }, 1200);
-      return;
-    }
-    const S = STEPS[i++];
-    send('step', { index: i, of: STEPS.length, cap: S.cap, label: S.label, id: S.id, ts: Date.now() });
-  }, 1800);
-
-  const hb = setInterval(() => send('ping', { t: Date.now() }), 15000);
-  req.on('close', () => { clearInterval(timer); clearInterval(hb); });
 });
 
 /* ---------------- start ---------------- */
