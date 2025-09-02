@@ -37,6 +37,7 @@ header{height:54px;display:flex;align-items:center;justify-content:space-between
 .statusDot{width:7px;height:7px;border-radius:50%;background:#86f7d6;display:inline-block;margin-right:6px;box-shadow:0 0 10px rgba(134,247,214,.6)}
 
 .card{background:#0f1420;border:1px solid var(--line);border-radius:12px;margin:12px;padding:12px}
+.mask{filter:blur(2.5px);opacity:.75}
 .tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 .tag{padding:4px 8px;border:1px solid #2a3552;border-radius:999px;background:#0f1626;color:#cfe0ff;font-size:12px}
 .title{font-weight:600}
@@ -66,6 +67,16 @@ label{font-size:12px;color:#9fb2d6;margin-bottom:6px;display:block}
 .counts{margin-left:auto;font-size:12px;color:#a9bbda}
 .locked{opacity:.78;filter:saturate(.84)}
 .upsell{margin:12px;padding:12px;border:1px dashed #38509a;border-radius:12px;background:rgba(20,28,46,.6)}
+
+/* verify modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50}
+.modal.in{display:flex}
+.box{width:min(560px,95vw);background:#0b101a;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.box .head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
+.box h3{margin:0;font:800 14px var(--mont)}
+.boxInner{padding:12px}
+.err{color:#ffb3b3;font-size:12px;margin-top:6px;display:none}
+.ok{color:#a7ffde;font-size:12px;margin-top:6px;display:none}
 </style>
 </head>
 <body>
@@ -91,11 +102,11 @@ label{font-size:12px;color:#9fb2d6;margin-bottom:6px;display:block}
         <div class="liveTicker"><span class="statusDot"></span><span id="liveTickerTxt">engine: ready</span></div>
       </div>
 
-      <div id="onboardBanner" class="banner" style="display:none;">
-        Create your free Vault to save and revisit leads.
-        <button class="btn small" id="goSignup">Sign up</button>
+      <div id="verifyBanner" class="banner" style="display:none;">
+        Verify your company to <strong>unlock free reveals</strong>. Use a business email that matches your website domain.
+        <button class="btn small" id="openVerify">Verify now</button>
       </div>
-      <div id="apiErr" class="banner error" style="display:none;">Couldn’t reach the API. Open from your API host (http://localhost:8080) or append <code>?api=YOUR_API</code>.</div>
+      <div id="apiErr" class="banner error" style="display:none;">Couldn’t reach the API. Open from your API host or append <code>?api=YOUR_API</code>.</div>
 
       <div class="scroller" id="leadList"></div>
     </div>
@@ -104,7 +115,7 @@ label{font-size:12px;color:#9fb2d6;margin-bottom:6px;display:block}
     <div class="panel">
       <div class="head">
         <div style="font:700 14px var(--inter)">Train your AI</div>
-        <div class="hint"><span id="searchesLeft">0</span> searches left • <span id="revealsLeft">0</span> reveals left</div>
+        <div class="hint"><span id="searchesLeft">—</span> searches left • <span id="revealsLeft">—</span> reveals left</div>
       </div>
 
       <div style="padding:12px">
@@ -151,6 +162,35 @@ label{font-size:12px;color:#9fb2d6;margin-bottom:6px;display:block}
   </div>
 </div>
 
+<!-- Verify modal -->
+<div class="modal" id="verifyModal">
+  <div class="box">
+    <div class="head"><h3>Verify your company</h3><button class="btn small" id="vClose">Close</button></div>
+    <div class="boxInner">
+      <div class="formRow">
+        <div>
+          <label>Business email</label>
+          <input id="v_email" class="input" placeholder="you@yourcompany.com">
+        </div>
+        <div>
+          <label>Company website</label>
+          <input id="v_site" class="input" placeholder="yourcompany.com">
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <label>Regions (optional)</label>
+        <input id="v_regions" class="input" placeholder="US, CA">
+      </div>
+      <div class="err" id="v_err"></div>
+      <div class="ok" id="v_ok"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn" id="vSave">Verify now</button>
+      </div>
+      <div class="hint" style="margin-top:10px">Your email domain must match your website (e.g., <em>you@acme.com</em> ↔ <em>acme.com</em>). This unlocks free reveals.</div>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ------- API base + sticky user ------- */
 (function(){
@@ -175,48 +215,59 @@ label{font-size:12px;color:#9fb2d6;margin-bottom:6px;display:block}
   window.API={ base, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
 })();
 
-/* Presence + reachability */
-async function reachAPI(){ try{ const r=await fetch('/api/v1/status'); if(!r.ok) throw 0; return true; }catch{return false;} }
+/* Presence + API reachability */
+async function reachAPI(){ try{ const r=await fetch('/api/v1/status'); return r.ok; }catch{return false;} }
 (async()=>{ const ok=await reachAPI(); if(!ok) document.getElementById('apiErr').style.display='block'; })();
 async function loadPresence(){ try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presence').textContent=(j.total||0)+' online'; }catch{} }
 setInterval(loadPresence, 10000); loadPresence();
 
-/* Status / quotas / onboarding gate */
-const state={ onboarded:false, plan:'free', findsLeft:0, revealsLeft:0 };
-async function loadStatus(){
+/* Local gate/tier calculation */
+const gate={ email:localStorage.getItem('onb_email')||'', site:localStorage.getItem('onb_site')||'' };
+function emailDomain(e){ const m=String(e||'').toLowerCase().match(/^[^@]+@([^@]+)$/); return m? m[1].replace(/^www\./,''):''; }
+function bareHost(u){ return String(u||'').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase(); }
+function isDomainMatch(){ const ed=emailDomain(gate.email); const sd=bareHost(gate.site); return !!(ed && sd && (ed===sd || ed.endsWith('.'+sd))); }
+
+/* Status / quotas / prefill */
+const state={ plan:'free', findsLeft:null, revealsLeft:null, verified:false, sse:null, sseOpen:false };
+async function loadStatusAndPrefill(){
   try{
     const r=await fetch('/api/v1/status'); const j=await r.json();
-    state.plan=j.user?.plan||'free'; state.onboarded=!!j.onboarded;
-    state.findsLeft=j.quota?.findsLeft||0; state.revealsLeft=j.quota?.revealsLeft||0;
-    document.getElementById('searchesLeft').textContent=state.findsLeft;
-    document.getElementById('revealsLeft').textContent=state.revealsLeft;
-    document.getElementById('onboardBanner').style.display = state.onboarded? 'none':'block';
+    state.plan=j.user?.plan||'free';
+    state.findsLeft = Number.isFinite(j.quota?.findsLeft)? j.quota.findsLeft : null;
+    state.revealsLeft = Number.isFinite(j.quota?.revealsLeft)? j.quota.revealsLeft : null;
+    // Prefer server gate flags if present
+    const srvMatch = j.gate?.domainMatch;
+    if(srvMatch===true || srvMatch===false){ state.verified = srvMatch; }
+    else{ state.verified = isDomainMatch(); }
+
+    document.getElementById('searchesLeft').textContent = state.findsLeft===null?'—':state.findsLeft;
+    document.getElementById('revealsLeft').textContent   = state.revealsLeft===null?'—':state.revealsLeft;
+
+    // Prefill Train-your-AI
+    const site = j.traits?.vendorDomain || localStorage.getItem('onb_site') || '';
+    const regions = j.traits?.regions?.join(', ') || localStorage.getItem('onb_regions') || '';
+    const inds = j.traits?.industries?.join(', ') || localStorage.getItem('onb_industries') || '';
+    const buyers = j.traits?.buyers?.join(', ') || localStorage.getItem('onb_buyers') || '';
+    const desc = j.traits?.notes || localStorage.getItem('onb_desc') || '';
+    if(site) document.getElementById('f_site').value = site;
+    if(regions) document.getElementById('f_regions').value = regions;
+    if(inds) document.getElementById('f_industries').value = inds;
+    if(buyers) document.getElementById('f_buyers').value = buyers;
+    if(desc) document.getElementById('f_desc').value = desc;
+
+    document.getElementById('verifyBanner').style.display = state.verified? 'none':'block';
   }catch{}
 }
-loadStatus();
+loadStatusAndPrefill();
 
-/* Prefill Train-your-AI from onboarding storage */
-(function prefillFromOnboarding(){
-  const site = localStorage.getItem('onb_site') || '';
-  const regions = localStorage.getItem('onb_regions') || '';
-  const inds = localStorage.getItem('onb_industries') || '';
-  const buyers = localStorage.getItem('onb_buyers') || '';
-  const desc = localStorage.getItem('onb_desc') || '';
-  if(site) document.getElementById('f_site').value = site;
-  if(regions) document.getElementById('f_regions').value = regions;
-  if(inds) document.getElementById('f_industries').value = inds;
-  if(buyers) document.getElementById('f_buyers').value = buyers;
-  if(desc) document.getElementById('f_desc').value = desc;
-})();
-
-/* --- neutron star --- */
+/* Neutron star animation */
 (function(){
   const c=document.getElementById('nsCanvas'); const ctx=c.getContext && c.getContext('2d'); if(!ctx) return;
   let w=0,h=0,dpr=1,t=0; const spokes=9;
   const pts=Array.from({length:120},()=>({a:Math.random()*Math.PI*2,s:0.05+Math.random()*0.2}));
   function resize(){ dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1)); w=c.clientWidth; h=c.clientHeight; c.width=Math.floor(w*dpr); c.height=Math.floor(h*dpr); ctx.setTransform(dpr,0,0,dpr,0,0); }
   new ResizeObserver(resize).observe(c); resize();
-  function frame(){ t+=0.0035; ctx.clearRect(0,0,w,h);
+  function frame(){ t+=0.003; ctx.clearRect(0,0,w,h);
     const cx=w*0.72, cy=h*0.57, R=Math.min(w,h)*0.14;
     const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R*3); g.addColorStop(0,'rgba(255,255,255,.55)'); g.addColorStop(1,'rgba(60,90,140,.02)');
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R*1.2,0,Math.PI*2); ctx.fill();
@@ -229,15 +280,29 @@ loadStatus();
   } frame();
 })();
 
-/* Lead list (minimal demo; connects when /find-now used) */
+/* Lead list + gating */
 const leadList=document.getElementById('leadList'); const statusLine=document.getElementById('statusLine');
 const q=[]; let drip=null;
-function pushLeads(ls){ ls.forEach(l=>q.push(l)); if(!drip){ drip=setInterval(()=>{ if(!q.length){ clearInterval(drip); drip=null; return; } addLeadCard(q.shift()); },2000); } }
-function addLeadCard(L){ const el=document.createElement('div'); el.className='card';
-  const tags=document.createElement('div'); tags.className='tags'; (L.tags||[]).forEach(t=>{const s=document.createElement('span'); s.className='tag'; s.textContent=t; tags.appendChild(s);});
-  const title=document.createElement('div'); title.className='title'; title.textContent=L.title||'Potential buyer';
-  const actions=document.createElement('div'); actions.className='actions'; const why=document.createElement('button'); why.className='btn'; why.textContent='Why this?'; const own=document.createElement('button'); own.className='btn own'; own.textContent='Own';
-  actions.appendChild(why); actions.appendChild(own); el.appendChild(tags); el.appendChild(title); el.appendChild(actions); leadList.prepend(el);
+function pushLeads(ls){ ls.forEach(l=>q.push(l)); if(!drip){ drip=setInterval(()=>{ if(!q.length){ clearInterval(drip); drip=null; return; } addLeadCard(q.shift()); },1800); } }
+function requireVerified(){ if(state.verified) return true; document.getElementById('verifyModal').classList.add('in'); return false; }
+
+function addLeadCard(L){
+  const el=document.createElement('div'); el.className='card';
+  const masked = !state.verified; // unverified → mask
+  const tags=document.createElement('div'); tags.className='tags';
+  (L.tags||['demand']).forEach(t=>{const s=document.createElement('span'); s.className='tag'; s.textContent=t; tags.appendChild(s);});
+  const title=document.createElement('div'); title.className='title'; title.textContent=masked ? '•••• ••••• — lead locked (verify to reveal)' : (L.title||'Potential buyer');
+  if(masked) title.classList.add('mask');
+
+  const actions=document.createElement('div'); actions.className='actions';
+  const why=document.createElement('button'); why.className='btn'; why.textContent='Why this?';
+  const own=document.createElement('button'); own.className='btn own'; own.textContent='Own';
+  why.onclick=()=>{ if(!requireVerified()) return; alert('Proof bullets… (stub)'); };
+  own.onclick=()=>{ if(!requireVerified()) return; alert('Reserved for you for 2 minutes (stub)'); };
+
+  actions.appendChild(why); actions.appendChild(own);
+  el.appendChild(tags); el.appendChild(title); el.appendChild(actions);
+  leadList.prepend(el);
 }
 
 /* Save AI traits */
@@ -249,23 +314,30 @@ document.getElementById('saveAI').onclick=async ()=>{
     buyers:(document.getElementById('f_buyers').value||'').split(',').map(s=>s.trim()).filter(Boolean),
     notes:(document.getElementById('f_desc').value||'').trim()||null
   };
-  try{ const r=await fetch('/api/v1/vault',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({traits})}); if(r.status===401){ banner('Please sign up to create your free Vault.',()=>location.href='./index.html'); } }catch{}
+  try{ await fetch('/api/v1/vault',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({traits})}); }catch{}
 };
 
-/* Find-now */
+/* Find-now → always attempt, set quota only if API says so; start SSE */
 document.getElementById('findNow').onclick=async ()=>{
-  if(state.findsLeft<=0){ statusLine.textContent='Daily search quota reached'; return; }
+  statusLine.textContent='scanning…';
   try{
-    const r=await fetch('/api/v1/find-now',{method:'POST'}); const j=await r.json(); if(!j.ok){ statusLine.textContent='Quota reached'; return; }
-    state.findsLeft=Math.max(0,state.findsLeft-1); document.getElementById('searchesLeft').textContent=state.findsLeft; statusLine.textContent='scanning…';
-    const lr=await fetch('/api/v1/leads'); const lj=await lr.json(); if(lj.ok){ pushLeads(lj.leads||[]); }
-  }catch{}
+    const r=await fetch('/api/v1/find-now',{method:'POST'});
+    const j=await r.json().catch(()=>({}));
+    if(j && j.ok){
+      // refresh quotas if returned
+      if(typeof j.findsLeft==='number') { state.findsLeft=j.findsLeft; document.getElementById('searchesLeft').textContent=state.findsLeft; }
+      connectSSE(); // start preview stream
+      // pull leads & drip
+      const lr=await fetch('/api/v1/leads'); const lj=await lr.json(); if(lj.ok){ pushLeads(lj.leads||[]); }
+      statusLine.textContent='results incoming…';
+    }else{
+      statusLine.textContent='Daily search quota reached';
+    }
+  }catch{ statusLine.textContent='Network error'; }
 };
 
-document.getElementById('goSignup').onclick=()=> location.href='./index.html';
-
-/* Signals Preview (SSE) */
-const report=document.getElementById('report'); const bySection=new Map(); let freeSeen=0, proSeen=0, total=0, haltShown=false;
+/* SSE (Signals Preview) — start only after Find now */
+const report=document.getElementById('report'); const bySection=new Map(); let freeSeen=0, proSeen=0, total=0, halted=false;
 function section(cat){ if(bySection.has(cat)) return bySection.get(cat); const wrap=document.createElement('div'); wrap.className='section';
   const head=document.createElement('div'); head.className='titleRow'; const h3=document.createElement('h3'); h3.textContent=cat; const right=document.createElement('div'); right.className='hint';
   head.appendChild(h3); head.appendChild(right); const rows=document.createElement('div'); rows.className='rows'; wrap.appendChild(head); wrap.appendChild(rows); report.appendChild(wrap); const o={wrap,head,right,rows,counts:{free:0,pro:0,total:0}}; bySection.set(cat,o); return o; }
@@ -274,13 +346,51 @@ function addRow(cat,lane,chain,counts,locked){ const sec=section(cat); sec.count
   const row=document.createElement('div'); row.className='row'+(locked?' locked':''); const A=document.createElement('div'); A.className='lane'; A.textContent=lane==='free'?'Free':'Pro';
   const B=document.createElement('div'); B.className='chain'; chain.forEach((t,i)=>{ const s=document.createElement('span'); s.className='step'; s.textContent=t; B.appendChild(s); if(i!==chain.length-1){ const arr=document.createElement('span'); arr.className='arrow'; arr.textContent='→'; B.appendChild(arr); }});
   const cnt=document.createElement('span'); cnt.className='counts'; cnt.textContent=`${counts.done}/${counts.total}`; B.appendChild(cnt); row.appendChild(A); row.appendChild(B); sec.rows.appendChild(row); }
-function showUpsell(payload){ if(haltShown) return; haltShown=true; const box=document.createElement('div'); box.className='upsell';
+function showUpsell(payload){ if(halted) return; halted=true; const box=document.createElement('div'); box.className='upsell';
   box.innerHTML=`<strong>Free scan paused.</strong> We processed ${payload.freeDone}/${payload.total}. Pro continues with full checks, auto-verification, JSON export, and queue window forecasting.`; const btn=document.createElement('button'); btn.className='btn small'; btn.textContent='Unlock Pro ($39/mo)'; btn.onclick=()=>location.href=payload.checkout||'/checkout/stripe?plan=pro'; box.appendChild(document.createElement('br')); box.appendChild(btn); report.prepend(box); }
-(function connectSSE(){ const es=new EventSource(API.url('/api/v1/progress.sse')); es.addEventListener('tick', ev=>{ const j=JSON.parse(ev.data); total=j.total||total; if(j.lane==='free'){ freeSeen=j.done; } else { proSeen=j.done; } addRow(j.category, j.lane, j.chain, {done:j.done,total:j.total}, j.locked===true);
-  document.getElementById('freeCount').textContent=`Free ${freeSeen}/${total}`; document.getElementById('proCount').textContent=`Pro ${proSeen}/${total}${j.locked?' 🔒':''}`; }); es.addEventListener('halt', ev=>showUpsell(JSON.parse(ev.data))); es.addEventListener('done', ()=>es.close()); })();
+function connectSSE(){ if(state.sseOpen) return; const es=new EventSource(API.url('/api/v1/progress.sse')); state.sse=es; state.sseOpen=true;
+  es.addEventListener('tick', ev=>{ const j=JSON.parse(ev.data); total=j.total||total; if(j.lane==='free'){ freeSeen=j.done; } else { proSeen=j.done; } addRow(j.category, j.lane, j.chain, {done:j.done,total:j.total}, j.locked===true);
+    document.getElementById('freeCount').textContent=`Free ${freeSeen}/${total}`; document.getElementById('proCount').textContent=`Pro ${proSeen}/${total}${j.locked?' 🔒':''}`; });
+  es.addEventListener('halt', ev=>showUpsell(JSON.parse(ev.data)));
+  es.addEventListener('done', ()=>es.close());
+}
 
-/* tiny helpers */
-function banner(text,action){ const b=document.createElement('div'); b.className='banner'; b.innerHTML=text+' '; if(action){ const btn=document.createElement('button'); btn.className='btn small'; btn.textContent='Continue'; btn.onclick=action; b.appendChild(btn);} document.getElementById('leadList').prepend(b); }
+/* Verify modal wiring */
+const vModal=document.getElementById('verifyModal'); document.getElementById('openVerify').onclick=()=> vModal.classList.add('in');
+document.getElementById('vClose').onclick=()=> vModal.classList.remove('in');
+document.getElementById('vSave').onclick=async ()=>{
+  const email=(document.getElementById('v_email').value||'').trim();
+  const site =(document.getElementById('v_site').value||'').trim();
+  const regs =(document.getElementById('v_regions').value||'').trim();
+  const vErr=document.getElementById('v_err'); const vOk=document.getElementById('v_ok'); vErr.style.display='none'; vOk.style.display='none';
+  const ed=emailDomain(email), sd=bareHost(site);
+  if(!email||!sd){ vErr.textContent='Please provide business email and company website.'; vErr.style.display='block'; return; }
+  if(!(ed && sd && (ed===sd || ed.endsWith('.'+sd)))){ vErr.textContent=`Email domain (${ed||'—'}) must match company site (${sd||'—'}).`; vErr.style.display='block'; return; }
+
+  // Persist locally for gating immediately
+  localStorage.setItem('onb_email', email);
+  localStorage.setItem('onb_site', sd);
+  if(regs) localStorage.setItem('onb_regions', regs);
+
+  // Notify backend (best-effort)
+  try{
+    await fetch('/api/v1/gate',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email,region:regs||'',alerts:true})});
+    await fetch('/api/v1/vault',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({traits:{vendorDomain:sd,regions:regs?regs.split(',').map(s=>s.trim()):[]}})});
+  }catch{}
+  vOk.textContent='Verified. Unlocking…'; vOk.style.display='block';
+  state.verified=true; document.getElementById('verifyBanner').style.display='none';
+  setTimeout(()=> vModal.classList.remove('in'), 600);
+};
+
+/* Small helper banner for redirect to signup if someone arrived without any email at all */
+(function enforceSignup(){
+  const hasAnyEmail = !!(gate.email || emailDomain(localStorage.getItem('last_email')));
+  if(!hasAnyEmail){
+    const b=document.createElement('div'); b.className='banner'; b.innerHTML='Create your free Vault to save & revisit leads. ';
+    const btn=document.createElement('button'); btn.className='btn small'; btn.textContent='Sign up'; btn.onclick=()=> location.href='./index.html?onb=1';
+    b.appendChild(btn); document.getElementById('leadList').appendChild(b);
+  }
+})();
 </script>
 </body>
 </html>
