@@ -216,19 +216,16 @@ function $(sel, root){ return (root||document).querySelector(sel); }
 function safeHost(u){ try{ return new URL(u).hostname; }catch{ return 'source'; } }
 function maskTitle(t){ return (t||'').replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.82?'•':c)); }
 
-/* ===== role & presence heartbeat ===== */
-const ROLE_KEY='gal_role';
-let USER_ROLE = localStorage.getItem(ROLE_KEY) || 'supplier';
-async function maybeLoadRole(){
+/* ===== role/plan & presence heartbeat ===== */
+let USER_ROLE='supplier', IS_PRO=false;
+async function loadProfileAndPlan(){
   try{
-    const r = await fetch('/api/v1/vault');
-    if(!r.ok) return;
-    const j = await r.json();
-    if(j?.profile?.role){ USER_ROLE = j.profile.role; localStorage.setItem(ROLE_KEY, USER_ROLE); }
-    // Plan check → show upsell if not pro
-    const isPro = (j?.profile?.plan === 'pro');
-    document.getElementById('upsell').style.display = isPro ? 'none' : 'block';
+    const v = await fetch('/api/v1/vault'); if(v.ok){ const j=await v.json(); if(j?.profile?.role) USER_ROLE=j.profile.role; IS_PRO = (j?.profile?.plan==='pro'); }
+    else{
+      const p = await fetch('/api/v1/plan'); if(p.ok){ const j=await p.json(); IS_PRO = (j.plan==='pro'); }
+    }
   }catch{}
+  document.getElementById('upsell').style.display = IS_PRO ? 'none':'block';
 }
 async function beatPresence(){
   try{
@@ -282,7 +279,6 @@ function setEnginePhase(phase,msg){ elEngine.textContent='engine: '+phase; elEng
 /* ===== accuracy & viewers ===== */
 function accuracyBand(p){ if(p<60) return 'cautious'; if(p<75) return 'solid'; return 'strong'; }
 function ifThenBadge(){ const rules=['Launch week + heavy UGC → contact 48–72h post-promo','Frequent PDP promo → call Tue 10–12','Shift adds Fri → quote Mon morning','New SKU sizes → tray/corrugate change in 7–14d']; return rules[Math.floor(Math.random()*rules.length)]; }
-
 async function updateViewersDisplay(leadId, subEl){
   try{
     const r = await fetch(`/api/v1/lead-viewers?leadId=${encodeURIComponent(leadId)}`);
@@ -333,7 +329,7 @@ function cardEl(lead){
     const meta=d.querySelector('.meta'); meta.insertAdjacentHTML('beforeend', `<span class="pill">${safeHost(lead.source_url||'')}</span>`);
   }
   d.querySelector('[data-a=why]').onclick=()=>openWhy(lead);
-  d.querySelector('[data-a=own]').onclick=()=>{ /* claim/own flow could go here */ };
+  d.querySelector('[data-a=own]').onclick=()=>{ /* claim/own flow here if desired */ };
   return d;
 }
 function addCards(arr){ for(const L of arr){ const el = cardEl(L); elList.appendChild(el); } }
@@ -368,12 +364,12 @@ const head=$('#formHead'), paneForm=$('#pane-form');
 let closed=false; function setClosed(v){ closed=v; paneForm.style.display=v?'none':'block'; head.classList.toggle('closed', v); }
 head.onclick=()=> setClosed(!closed);
 
-/* ===== Signals preview: Free + Pro tracks per category ===== */
+/* ===== Signals preview (Free → Pro auto-detect) ===== */
 const elBar=$('#bar'), elCount=$('#countDone'), elTotal=$('#countTotal'), elListPrev=$('#listPrev'), elNote=$('#note');
-const FREE_CAP=60 + Math.floor(Math.random()*20);
 const TOTAL_METRICS=1126;
-elTotal.textContent = String(TOTAL_METRICS);
-$('#countProTotal').textContent = String(TOTAL_METRICS);
+const FREE_CAP=60 + Math.floor(Math.random()*20);
+let MAX_CAP = FREE_CAP;
+elTotal.textContent = String(TOTAL_METRICS); $('#countProTotal').textContent = String(TOTAL_METRICS);
 
 function newLine(cap, freeTxt, proTxt, locked=true){
   const d=document.createElement('div'); d.className='line';
@@ -416,7 +412,9 @@ function proTextFor(cap){
 let running=false, done=0, sse=null;
 function startPreview(){
   if(running){ try{sse && sse.close();}catch{} }
-  running=true; done=0; elListPrev.innerHTML=''; elBar.style.width='0%'; elCount.textContent='0'; elNote.textContent='Streaming signals...';
+  MAX_CAP = IS_PRO ? TOTAL_METRICS : FREE_CAP;
+  running=true; done=0; elListPrev.innerHTML=''; elBar.style.width='0%'; elCount.textContent='0';
+  elNote.textContent = IS_PRO ? 'Pro: streaming full reasoning…' : 'Streaming signals...';
   setEnginePhase('working','Scanning demand → procurement → reviews…');
 
   try{
@@ -427,38 +425,42 @@ function startPreview(){
     if(regions) url.searchParams.set('regions', regions);
     if(buyers) url.searchParams.set('buyers', buyers);
     sse = new EventSource(url.toString());
-    sse.addEventListener('step', (ev)=>{
-      const data = JSON.parse(ev.data||'{}');
-      pushStep({cap:data.cap||'Signal'});
-    });
-    sse.addEventListener('halt', ()=> finishEarly());
+    sse.addEventListener('step', (ev)=>{ const data = JSON.parse(ev.data||'{}'); pushStep({cap:data.cap||'Signal'}); });
+    sse.addEventListener('halt', ()=> { if(!IS_PRO) finishEarly(); });
     sse.onerror = ()=>{ try{sse.close();}catch{}; fallbackTimer(); };
   }catch{ fallbackTimer(); }
 
-  setClosed(true);  // collapse form
-  maybeStartProBurst();
+  setClosed(true);
+  if(!IS_PRO) maybeStartProBurst();
 }
 function fallbackTimer(){
   let idx=0;
   const caps = PRIORITY_ORDER.slice();
-  const timer = setInterval(()=>{ if(!running){ clearInterval(timer); return; } pushStep({cap: caps[idx % caps.length]}); idx++; }, 1200);
+  const timer = setInterval(()=>{ if(!running){ clearInterval(timer); return; } pushStep({cap: caps[idx % caps.length]}); idx++; }, IS_PRO? 650 : 1200);
 }
 function pushStep(step){
   if(!running) return;
-  newLine(step.cap, freeTextFor(step.cap), proTextFor(step.cap), true);
+  newLine(step.cap, freeTextFor(step.cap), proTextFor(step.cap), !IS_PRO);
   done++; elCount.textContent=String(done); elBar.style.width = Math.min(100, (done/TOTAL_METRICS)*100)+'%';
-  if(done >= FREE_CAP){
+  if(IS_PRO){
+    // also tick the Pro counter
+    const cp = Number($('#countPro').textContent.replace(/[^0-9]/g,''))||0;
+    $('#countPro').textContent = String(cp + 1);
+  }
+  if(done >= MAX_CAP){
     running=false; try{sse && sse.close();}catch{};
-    elNote.innerHTML = `Free scan finished at <strong>${FREE_CAP}</strong>. <strong>Unlock full scan & auto-enrichment</strong> to compute the remaining ${(TOTAL_METRICS-FREE_CAP).toLocaleString()} rules in real time.`;
-    document.getElementById('upsell').style.display = 'block';
+    if(IS_PRO){
+      elNote.innerHTML = `Full scan complete.`;
+    }else{
+      elNote.innerHTML = `Free scan finished at <strong>${MAX_CAP}</strong>. <strong>Unlock full scan & auto-enrichment</strong> to compute the remaining ${(TOTAL_METRICS-MAX_CAP).toLocaleString()} rules in real time.`;
+      document.getElementById('upsell').style.display = 'block';
+    }
     setEnginePhase('idle','Ready');
   }
 }
-function finishEarly(){
-  running=false; try{sse && sse.close();}catch{};
-  elNote.innerHTML = `Free scan finished at <strong>${done}</strong>. <strong>Unlock full scan & auto-enrichment</strong> to complete ${(TOTAL_METRICS-done).toLocaleString()} rules.`;
-  document.getElementById('upsell').style.display = 'block';
-  setEnginePhase('idle','Ready');
+function finishEarly(){ running=false; try{sse && sse.close();}catch{}; if(!IS_PRO){ elNote.innerHTML = `Free scan finished at <strong>${done}</strong>. <strong>Unlock full scan & auto-enrichment</strong> to complete ${(TOTAL_METRICS-done).toLocaleString()} rules.`; document.getElementById('upsell').style.display = 'block'; } setEnginePhase('idle','Ready'); }
+function unlockExistingProTracks(){
+  document.querySelectorAll('.track.pro.locked').forEach(el=>{ el.classList.remove('locked'); el.insertAdjacentHTML('beforeend','<span class="badgeMini" style="margin-left:auto">✅ Pro check</span>'); });
 }
 
 /* ===== lead fetching & find-now ===== */
@@ -495,9 +497,9 @@ async function findNow(dry=false){
   startPreview();
 }
 
-/* ===== Pro Burst (one-time taste) ===== */
+/* ===== Pro Burst (taste) ===== */
 function maybeStartProBurst(){
-  const key='pro_burst_done_v2';
+  const key='pro_burst_done_v3';
   if(localStorage.getItem(key)==='1') return;
   localStorage.setItem(key,'1');
   $('#proBurstBadge').style.display='inline-flex';
@@ -512,16 +514,9 @@ function maybeStartProBurst(){
   };
   let steps=0;
   const timer = setInterval(()=>{ unlock(); steps++; if(steps>=8){ clearInterval(timer); $('#proBurstBadge').style.display='none'; } }, 800);
-  document.addEventListener('click', (ev)=>{
-    const btn = (ev.target && ev.target.closest && ev.target.closest('[data-a="why"]'))? ev.target.closest('[data-a="why"]'): null;
-    if(btn && !btn.dataset.burst){
-      btn.dataset.burst='1';
-      btn.insertAdjacentHTML('afterend', '<span class="badgeMini">✅ Pro verified sample</span>');
-    }
-  }, { once:true, capture:true });
 }
 
-/* ===== hero anim ===== */
+/* ===== hero anim (left neutron star) ===== */
 function initHero(){
   const c=document.getElementById('star'); const ctx=c.getContext('2d'); let w=0,h=0,t=0;
   function resize(){ w=c.width=c.clientWidth; h=c.height=c.clientHeight; } window.addEventListener('resize',resize); resize();
@@ -544,6 +539,24 @@ async function upgrade(){
   }catch{ alert('Checkout request failed.'); }
 }
 
+/* ===== Plan polling (auto-detect upgrade) ===== */
+let PLAN_POLL_IV=null;
+async function pollPlan(){
+  try{
+    const r = await fetch('/api/v1/plan');
+    if(!r.ok) return;
+    const j = await r.json();
+    if(j.plan==='pro' && !IS_PRO){
+      IS_PRO=true;
+      document.getElementById('upsell').style.display='none';
+      unlockExistingProTracks();
+      // If preview previously halted at free cap or not running, restart as Pro
+      if(!running || done>=FREE_CAP){ startPreview(); }
+      else { MAX_CAP = TOTAL_METRICS; elNote.textContent='Pro unlocked — continuing full run…'; }
+    }
+  }catch{}
+}
+
 /* ===== Onboarding prefill ===== */
 function useOnboardingPrefill(){
   const vendor = localStorage.getItem('onb_vendor') || '';
@@ -558,14 +571,13 @@ function useOnboardingPrefill(){
   if(buyers) $('#buyers').value = buyers;
   if(desc) $('#describe').value = desc;
   if(list) $('#listMe').checked = (list === 'true');
-  // clear after first use
   ['onb_vendor','onb_industries','onb_regions','onb_buyers','onb_desc','onb_list'].forEach(k=> localStorage.removeItem(k));
 }
 
 /* ===== init ===== */
 document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('engine').textContent='engine: idle';
-  await maybeLoadRole();
+  await loadProfileAndPlan();
   beatPresence();
   refreshPresence();
   refreshQuota();
@@ -578,6 +590,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   $('#btnDry').onclick=()=> findNow(true);
   $('#btnFind').onclick=()=> findNow(false);
   $('#btnUpgrade').onclick=upgrade;
+
+  // plan polling every 4s
+  PLAN_POLL_IV = setInterval(pollPlan, 4000);
 });
 </script>
 </body>
