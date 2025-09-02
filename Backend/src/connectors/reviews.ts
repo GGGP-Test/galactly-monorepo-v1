@@ -1,135 +1,191 @@
 /**
- * connectors/reviews.ts
- * Lightweight public-reviews aggregator with graceful fallbacks.
- *
- * Uses Google CSE if GOOGLE_API_KEY + GOOGLE_CX_* are present;
- * otherwise returns null (so callers can skip or cache last known).
- *
- * Output is intentionally compact & vendor-agnostic so free users
- * see capability without reverse-engineering your source list.
+ * reviews.ts
+ * Free-tier safe packaging-complaint signal collector (Trustpilot + Reddit).
+ * - NO Google scraping.
+ * - Returns normalized hits with packaging lexicon matches.
  */
 
-import fetch from "node-fetch";
-
-type ReviewSource = {
-  source: "trustpilot" | "google" | "yelp" | "site_reviews" | "web";
-  url?: string;
-  rating?: number;   // 0..5
-  count?: number;    // # of reviews
-  pkgMentions?: number; // packaging-related mentions (rough)
+export type ReviewHit = {
+  url: string;
+  title: string;
+  snippet: string;
+  source: 'trustpilot'|'reddit';
+  terms: string[];        // matched packaging terms
+  ratingApprox?: number;  // 1..5 when known
+  severity: number;       // 0..1 (used to bump heat)
 };
 
-export type ReviewSignals = {
-  domain: string;
-  rating?: number;         // weighted avg 0..5
-  count?: number;          // total reviews observed
-  pkgMentions?: number;    // count of packaging/damage terms in snippets
-  updatedAt: string;
-  sources: ReviewSource[];
-};
+const PACKAGING_LEXICON = [
+  // damage/strength
+  'box crushed','crushed box','dented box','carton dent','carton crushed',
+  'bottle broke','broken bottle','jar cracked','cap loose','seal broken','seal failed',
+  'leaking','leak','spillage','spilled','pouch leaking','burst','rupture','tearing','tear',
+  'weak shrink','shrink wrap','film tear','film ripped','seal integrity','tamper seal',
+  // fulfillment/quantity/pack
+  'wrong pack','underfilled','overfilled','case pack','moq','minimum order quantity',
+  'tray pack','sleeve','corrugate','corrugated','carton','mailer',
+  // labeling/print
+  'label misprint','label peeled','smudged label','ink rub-off','mislabel',
+  // misc
+  'packaging damaged','damaged packaging','poor packaging','bad packaging','packaging issue'
+].map(s => s.toLowerCase());
 
-const sleep = (ms:number)=> new Promise(r=>setTimeout(r,ms));
-
-// --- tiny CSE helper (no external dependency on your cse.ts) ---
-async function cseSearch(q: string, num = 5): Promise<Array<{title:string,snippet:string,link:string}>> {
-  const key = process.env.GOOGLE_API_KEY;
-  const cxCandidates = Object.keys(process.env)
-    .filter(k => /^GOOGLE_CX_/i.test(k) && process.env[k])
-    .map(k => String(process.env[k]));
-  if (!key || !cxCandidates.length) return [];
-  const cx = cxCandidates[Math.floor(Math.random()*cxCandidates.length)];
-  const url = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(key)}&cx=${encodeURIComponent(cx)}&q=${encodeURIComponent(q)}&num=${num}`;
-  const r = await fetch(url, { timeout: 12000 as any }).catch(() => null);
-  if (!r || !r.ok) return [];
-  const data = await r.json().catch(() => ({}));
-  const items = Array.isArray(data.items) ? data.items : [];
-  return items.map((it:any)=>({ title: String(it.title||''), snippet: String(it.snippet||''), link: String(it.link||'') }));
+/** utility: normalize domain to bare host */
+function toHost(input: string): string {
+  try {
+    let s = input.trim();
+    s = s.replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+    s = s.replace(/^www\./i, '');
+    return s;
+  } catch { return input; }
 }
 
-// --- parsing helpers ---
-const NUM = /([0-9][0-9,\.]*)/;
-function parseRating(snippet: string): number|undefined {
-  // e.g. "Rating 4.3 · 1,204 reviews" or "4.1 stars"
-  const s = snippet.toLowerCase();
-  const m = s.match(/([0-9]\.?[0-9]?)\s*(?:out of|\/)\s*5|([0-9]\.?[0-9]?)\s*stars?/);
-  if (!m) return undefined;
-  const val = Number((m[1] ?? m[2])?.replace(/,/g,''));
-  return Number.isFinite(val) ? Math.max(0, Math.min(5, val)) : undefined;
-}
-function parseCount(snippet: string): number|undefined {
-  const m = snippet.toLowerCase().match(NUM.source + "\\s*reviews");
-  if (!m) return undefined;
-  const val = Number(String(m[1]).replace(/,/g,''));
-  return Number.isFinite(val) ? Math.max(0, val) : undefined;
-}
-function packagingHits(text: string): number {
-  const s = text.toLowerCase();
-  const keys = [
-    "packaging", "damaged", "broken seal", "leaked", "leaking",
-    "dented", "ripped", "torn box", "poorly packed", "bottle broke",
-    "spilled", "seal broken", "arrived crushed", "shattered"
-  ];
-  return keys.reduce((n,k)=> n + (s.includes(k) ? 1 : 0), 0);
-}
-function hostFromDomain(domain: string) {
-  return domain.replace(/^https?:\/\//i, "").replace(/\/.+$/,"");
-}
-
-// --- main ---
-export async function fetchReviewSignals(domain: string): Promise<ReviewSignals|null> {
-  const host = hostFromDomain(domain);
-  if (!host) return null;
-
-  const brandGuess = host.split(".")[0]; // crude but works surprisingly well
-
-  const queries = [
-    // prioritized sources
-    `${brandGuess} reviews site:trustpilot.com`,
-    `${brandGuess} reviews site:google.com/maps`,
-    `${brandGuess} reviews site:yelp.com`,
-    // generic web fallback
-    `${brandGuess} reviews`
-  ];
-
-  const sources: ReviewSource[] = [];
-  let totalW = 0, sum = 0, count = 0, pkg = 0;
-
-  for (const q of queries) {
-    const items = await cseSearch(q, 5);
-    await sleep(250);
-
-    for (const it of items) {
-      const rating = parseRating(it.snippet);
-      const c = parseCount(it.snippet);
-      const hits = packagingHits(it.snippet + " " + it.title);
-
-      let source: ReviewSource["source"] = "web";
-      if (/trustpilot\.com/i.test(it.link)) source = "trustpilot";
-      else if (/google\./i.test(it.link) && /maps/.test(it.link)) source = "google";
-      else if (/yelp\.com/i.test(it.link)) source = "yelp";
-
-      sources.push({ source, url: it.link, rating, count: c, pkgMentions: hits });
-
-      if (typeof rating === "number") {
-        const w = Math.max(1, Math.min(10, (c ?? 1) ** 0.25)); // softly weight by count
-        sum += rating * w;
-        totalW += w;
+/** utility: timeout fetch */
+async function fetchText(url: string, timeoutMs = 8000): Promise<string> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        'user-agent': 'GalactlyBot/1.0 (+https://galactly.app; contact: support@galactly.app)'
       }
-      if (typeof c === "number") count += c;
-      pkg += hits;
+    } as any);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.text();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** lexicon match */
+function matchTerms(text: string): string[] {
+  const lo = text.toLowerCase();
+  const set = new Set<string>();
+  for (const term of PACKAGING_LEXICON) {
+    if (lo.includes(term)) set.add(term);
+  }
+  return Array.from(set);
+}
+
+/** simple severity score from terms + coarse heuristics */
+function severityFrom(terms: string[], rating?: number, votes?: number): number {
+  let s = Math.min(1, terms.length * 0.18); // more distinct terms -> higher
+  if (typeof rating === 'number') s += (3 - Math.min(3, rating)) * 0.08; // worse rating -> bump
+  if (typeof votes === 'number') s += Math.min(0.2, Math.log10(1 + Math.max(0, votes)) * 0.08);
+  return Math.max(0, Math.min(1, s));
+}
+
+/** ---- Trustpilot scraper (public HTML) ----
+ * We attempt https://www.trustpilot.com/review/<host> first,
+ * then fallback to .co.uk if .com 404s.
+ */
+async function scanTrustpilot(host: string): Promise<ReviewHit[]> {
+  const h = toHost(host);
+  const urls = [
+    `https://www.trustpilot.com/review/${encodeURIComponent(h)}`,
+    `https://www.trustpilot.co.uk/review/${encodeURIComponent(h)}`
+  ];
+  for (const url of urls) {
+    try {
+      const html = await fetchText(url, 9000);
+      // coarse parse: each review card usually has data-service-review-text-typography / review-content__text
+      const cards = Array.from(html.matchAll(/<article[^>]+?review-card[^>]*>([\s\S]*?)<\/article>/gi));
+      if (!cards.length) continue;
+
+      const hits: ReviewHit[] = [];
+      for (const m of cards) {
+        const block = m[1] || '';
+        const title = (block.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i)?.[1] || '')
+          .replace(/<[^>]+>/g,'')
+          .trim();
+        const body = (block.match(/<p[^>]*>([\s\S]*?)<\/p>/i)?.[1] || '')
+          .replace(/<[^>]+>/g,'')
+          .trim();
+        const text = `${title} ${body}`.trim();
+        const terms = matchTerms(text);
+        if (!terms.length) continue;
+
+        // rating approx: data-service-review-rating="X" or aria-label="Rated X out of 5"
+        let rating: number | undefined = undefined;
+        const m1 = block.match(/data-service-review-rating="([0-9.]+)"/i)?.[1];
+        const m2 = block.match(/Rated\s+([0-9.]+)\s+out of 5/i)?.[1];
+        if (m1) rating = Number(m1);
+        else if (m2) rating = Number(m2);
+
+        hits.push({
+          url,
+          title: title || 'Trustpilot review',
+          snippet: body || text.slice(0, 200),
+          source: 'trustpilot',
+          terms,
+          ratingApprox: rating,
+          severity: severityFrom(terms, rating)
+        });
+        if (hits.length >= 10) break; // cap
+      }
+      if (hits.length) return hits;
+    } catch {
+      // try next TLD
     }
   }
+  return [];
+}
 
-  if (!sources.length) return null;
+/** ---- Reddit search (JSON API) ---- */
+async function scanReddit(hostOrBrand: string): Promise<ReviewHit[]> {
+  const q = `${toHost(hostOrBrand)} packaging OR box OR bottle OR label OR pouch`;
+  const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(q)}&sort=new&limit=15`;
+  try {
+    const r = await fetch(url, {
+      headers: { 'user-agent': 'GalactlyBot/1.0' }
+    } as any);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j: any = await r.json();
+    const out: ReviewHit[] = [];
+    for (const c of (j?.data?.children || [])) {
+      const d = c?.data || {};
+      const title = String(d.title || '');
+      const body = String(d.selftext || '');
+      const text = `${title}\n${body}`;
+      const terms = matchTerms(text);
+      if (!terms.length) continue;
+      const votes = Number(d.ups || d.score || 0);
+      out.push({
+        url: `https://www.reddit.com${d.permalink || ''}`,
+        title: title || 'Reddit post',
+        snippet: (body || title).slice(0, 220),
+        source: 'reddit',
+        terms,
+        ratingApprox: undefined,
+        severity: severityFrom(terms, undefined, votes)
+      });
+      if (out.length >= 10) break;
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
 
-  const rating = totalW > 0 ? (sum / totalW) : undefined;
-  const out: ReviewSignals = {
-    domain: host,
-    rating,
-    count: count || undefined,
-    pkgMentions: pkg || undefined,
-    updatedAt: new Date().toISOString(),
-    sources
-  };
-  return out;
+/**
+ * Public API — scanReviews(host)
+ * Usage: const hits = await scanReviews('brand.com')
+ */
+export async function scanReviews(host: string): Promise<ReviewHit[]> {
+  const [tp, rd] = await Promise.allSettled([
+    scanTrustpilot(host),
+    scanReddit(host)
+  ]);
+  const a: ReviewHit[] = [];
+  if (tp.status === 'fulfilled' && Array.isArray(tp.value)) a.push(...tp.value);
+  if (rd.status === 'fulfilled' && Array.isArray(rd.value)) a.push(...rd.value);
+  // de-dup by URL
+  const seen = new Set<string>();
+  return a.filter(h => {
+    if (!h.url) return false;
+    if (seen.has(h.url)) return false;
+    seen.add(h.url);
+    return true;
+  }).slice(0, 12);
 }
