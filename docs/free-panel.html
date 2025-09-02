@@ -188,10 +188,10 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 </div>
 
 <script>
-/* ===== API base (compatible with existing api-base.js) ===== */
+/* ===== API base ===== */
 (function ensureApiBase(){
   if (window.API && window.API.base) return;
-  const DEFAULT=(window.API_DEFAULT||'https://p01--animated-cellar--vz4ftkwrzdfs.code.run').replace(/\/$/,'');
+  const DEFAULT=(window.API_DEFAULT||'').replace(/\/$/,'') || location.origin;
   const qs=new URLSearchParams(location.search);
   function normalize(v){ if(!v) return DEFAULT; let s=String(v).trim().replace(/\/$/,''); if(!/^https?:\/\//i.test(s)) s='https://'+s; return s; }
   const saved=localStorage.getItem('apiBase'); const base=normalize(qs.get('api')||saved||DEFAULT);
@@ -207,25 +207,43 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
   window.API={ get base(){return base;}, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
 })();
 
-/* ===== small helpers ===== */
+/* ===== helpers ===== */
 const UID = (window.API && window.API.uid) || (localStorage.getItem('galactly_uid')||'u_'+Math.random().toString(36).slice(2));
 function $(sel, root){ return (root||document).querySelector(sel); }
 function safeHost(u){ try{ return new URL(u).hostname; }catch{ return 'source'; } }
 function maskTitle(t){ return (t||'').replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.82?'•':c)); }
 
-/* ===== header: online presence ===== */
+/* ===== role & presence heartbeat ===== */
+const ROLE_KEY='gal_role';
+let USER_ROLE = localStorage.getItem(ROLE_KEY) || 'supplier';
+async function maybeLoadRole(){
+  try{
+    const r = await fetch('/api/v1/vault');
+    if(!r.ok) return;
+    const j = await r.json();
+    if(j?.profile?.role){ USER_ROLE = j.profile.role; localStorage.setItem(ROLE_KEY, USER_ROLE); }
+  }catch{}
+}
+async function beatPresence(){
+  try{
+    await fetch('/presence/beat', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ role: USER_ROLE }) });
+  }catch{
+    try{ await fetch('/api/v1/presence/beat', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ role: USER_ROLE }) }); }catch{}
+  }
+}
+setInterval(beatPresence, 15000);
+
+/* ===== header presence & quotas ===== */
 const presence = { total: 0, suppliers:0, distributors:0, buyers:0 };
 async function refreshPresence(){
   try{
     const r = await fetch('/presence/online');
-    if(!r.ok) throw new Error('no presence api');
     const data = await r.json();
     presence.total = Number(data.total||0);
     presence.suppliers = Number(data.suppliers||0);
     presence.distributors = Number(data.distributors||0);
     presence.buyers = Number(data.buyers||0);
   }catch(e){
-    // fallback: synthesize believable numbers
     const base = Math.max(8, Math.floor( (Date.now()/60000)%5 )*7 + 18);
     presence.total = base + Math.floor(Math.random()*6);
     presence.suppliers = Math.round(presence.total*0.55);
@@ -237,34 +255,42 @@ async function refreshPresence(){
   $('#pDist').textContent = presence.distributors;
   $('#pBuy').textContent = presence.buyers;
 }
-setInterval(refreshPresence, 12000); refreshPresence();
+setInterval(refreshPresence, 12000);
 
-/* ===== Quotas (FREE_FIND=2, FREE_REVEAL=2) ===== */
-const DAILY_REVEALS=2; const revealKey='reveals_'+new Date().toISOString().slice(0,10);
-if(localStorage.getItem(revealKey)===null) localStorage.setItem(revealKey,'0');
-function revealsUsed(){ return Number(localStorage.getItem(revealKey)||'0'); }
-function incReveal(){ localStorage.setItem(revealKey,String(revealsUsed()+1)); }
-async function refreshQuota(){ try{ const r=await fetch('/api/v1/status'); const j=await r.json(); $('#quotaNote').textContent = `Free: ${j.findsLeft||2} searches • ${Math.max(0,DAILY_REVEALS-revealsUsed())} reveals`; $('#quotaTxt').textContent=`${j.findsLeft||2} finds • ${Math.max(0,DAILY_REVEALS-revealsUsed())} reveals`; }catch{ $('#quotaNote').textContent=`Free: ${Math.max(0,DAILY_REVEALS-revealsUsed())} reveals left`; $('#quotaTxt').textContent=`${Math.max(0,DAILY_REVEALS-revealsUsed())} reveals`; }}
+async function refreshQuota(){
+  try{
+    const r=await fetch('/api/v1/status'); const j=await r.json();
+    $('#quotaNote').textContent = `Free: ${j.findsLeft||2} searches • ${j.revealsLeft||2} reveals`;
+    $('#quotaTxt').textContent = `${j.findsLeft||2} finds • ${j.revealsLeft||2} reveals`;
+  }catch{
+    $('#quotaNote').textContent=`Free: 2 reveals left`;
+    $('#quotaTxt').textContent=`2 finds • 2 reveals`;
+  }
+}
 
-/* ===== Left: hero anim + engine state ===== */
+/* ===== engine status ===== */
 const elEngine=$('#engine'), elEngineStatus=$('#engineStatus');
 const elList=$('#list');
 function setEnginePhase(phase,msg){ elEngine.textContent='engine: '+phase; elEngineStatus.className='engine-status '+(phase==='working'?'working':'idle'); elEngineStatus.innerHTML='<span class="dot"></span>'+(msg||''); }
 
-/* ===== Render lead card (overrides) ===== */
+/* ===== accuracy & viewers ===== */
 function accuracyBand(p){ if(p<60) return 'cautious'; if(p<75) return 'solid'; return 'strong'; }
-function viewersNow(){ // derive viewers from presence
-  const others = Math.max(0, Math.floor(presence.total*0.08) + Math.floor(Math.random()*3) - 1);
-  // treat "competitors" as suppliers+distributors
-  const competitors = Math.max(0, Math.min(others, presence.suppliers + presence.distributors - 1));
-  return { others, competitors };
-}
 function ifThenBadge(){ const rules=['Launch week + heavy UGC → contact 48–72h post-promo','Frequent PDP promo → call Tue 10–12','Shift adds Fri → quote Mon morning','New SKU sizes → tray/corrugate change in 7–14d']; return rules[Math.floor(Math.random()*rules.length)]; }
 
+async function updateViewersDisplay(leadId, subEl){
+  try{
+    const r = await fetch(`/api/v1/lead-viewers?leadId=${encodeURIComponent(leadId)}`);
+    const j = await r.json();
+    if(j && subEl){
+      subEl.innerHTML = `Shown <strong>now</strong> to <strong>${j.others}</strong> others on Galactly • <strong>${j.competitors}</strong> competitors`;
+    }
+  }catch{}
+}
+
+/* ===== Render lead card ===== */
 function cardEl(lead){
   const d=document.createElement('div'); d.className='card locked'; d.dataset.id=lead.id;
   const conf=Math.max(48, Math.min(92, Number(lead.heat||60)));
-  const v = viewersNow();
   d.innerHTML=`
     <div class="meta">
       <span class="pill">${lead.cat||'signal'}</span>
@@ -272,30 +298,42 @@ function cardEl(lead){
       <span class="pill">${ifThenBadge()}</span>
     </div>
     <div class="title">${maskTitle(lead.title||'New buyer signal')}</div>
-    <div class="sub">Shown <strong>now</strong> to <strong>${v.others}</strong> others on Galactly • <strong>${v.competitors}</strong> competitors</div>
+    <div class="sub" data-sub>Shown <strong>now</strong> to <strong>—</strong> others on Galactly • <strong>—</strong> competitors</div>
     <div class="hold"><kbd>Press & hold 1.4s to reveal</kbd></div>
     <div class="actions">
       <button class="btn" data-a="why" disabled>Why this?</button>
       <button class="btn primary" data-a="own" disabled>Own</button>
     </div>`;
+
+  const subEl = d.querySelector('[data-sub]');
+  // post viewer presence for this lead
+  try{ fetch('/api/v1/lead-viewers', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ leadId: lead.id }) }); }catch{}
+  updateViewersDisplay(lead.id, subEl);
+  // refresh viewers every 15s while element is in DOM
+  const iv = setInterval(()=>{ if(!document.body.contains(d)) { clearInterval(iv); return; } updateViewersDisplay(lead.id, subEl); }, 15000);
+
   let timer=null, revealed=false;
-  const start=()=>{ if(revealsUsed()>=DAILY_REVEALS){ d.querySelector('.hold').innerHTML='<span class="mut">Daily reveal limit reached. Upgrade to continue.</span>'; return; } timer=setTimeout(reveal,1400); };
+  const start=()=>{ timer=setTimeout(reveal,1400); };
   const stop =()=>{ clearTimeout(timer); timer=null; };
   d.addEventListener('pointerdown',start); d.addEventListener('pointerup',stop); d.addEventListener('pointerleave',stop);
 
   async function reveal(){
-    if(revealed) return; revealed=true; incReveal();
-    d.classList.remove('locked'); d.querySelector('.hold').remove();
-    d.querySelector('[data-a=why]').disabled=false;
-    d.querySelector('[data-a=own]').disabled=false;
+    if(revealed) return; revealed=true;
+    // server-side reveal for quota/accounting
+    try{ await fetch('/api/v1/reveal', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ leadId: lead.id }) }); }catch{}
+    refreshQuota();
+    d.classList.remove('locked');
+    const hold = d.querySelector('.hold'); if(hold) hold.remove();
+    const btnWhy = d.querySelector('[data-a=why]'); if(btnWhy) btnWhy.disabled=false;
+    const btnOwn = d.querySelector('[data-a=own]'); if(btnOwn) btnOwn.disabled=false;
     d.querySelector('.title').textContent = lead.title || 'Buyer signal';
     const meta=d.querySelector('.meta'); meta.insertAdjacentHTML('beforeend', `<span class="pill">${safeHost(lead.source_url||'')}</span>`);
   }
   d.querySelector('[data-a=why]').onclick=()=>openWhy(lead);
-  d.querySelector('[data-a=own]').onclick=()=>{ /* claim/own flow here (calls /api/v1/claim then /own) */ };
+  d.querySelector('[data-a=own]').onclick=()=>{ /* call /api/v1/claim then /own in your flow (kept minimal) */ };
   return d;
 }
-function addCards(arr){ for(const L of arr){ elList.appendChild(cardEl(L)); } }
+function addCards(arr){ for(const L of arr){ const el = cardEl(L); elList.appendChild(el); } }
 
 /* ===== WHY modal ===== */
 const modal=$('#whyModal'); $('#mClose').onclick=()=>modal.classList.remove('in'); $('#mConfirm').onclick=()=>modal.classList.remove('in');
@@ -345,7 +383,6 @@ function newLine(cap, freeTxt, proTxt, locked=true){
   elListPrev.appendChild(d);
   d.scrollIntoView({block:'end'});
 }
-
 const PRIORITY_ORDER=['Demand','Product','Procurement','Retail','Ops','Events','Reviews','Timing','Queue'];
 function arrows(parts){ return parts.map((p,i)=> i?('<span class="arrow">→</span>'+p):p).join(' '); }
 function freeTextFor(cap){
@@ -379,7 +416,6 @@ function startPreview(){
   running=true; done=0; elListPrev.innerHTML=''; elBar.style.width='0%'; elCount.textContent='0'; elNote.textContent='Streaming signals...';
   setEnginePhase('working','Scanning demand → procurement → reviews…');
 
-  // SSE attempt
   try{
     const url = new URL((window.API_BASE||'') + '/api/v1/progress.sse');
     const vendor=$('#vendor').value.trim(); const industries=$('#industries').value.trim(); const regions=$('#regions').value.trim(); const buyers=$('#buyers').value.trim();
@@ -396,19 +432,14 @@ function startPreview(){
     sse.onerror = ()=>{ try{sse.close();}catch{}; fallbackTimer(); };
   }catch{ fallbackTimer(); }
 
-  // collapse the form
-  setClosed(true);
-
-  // start Pro Burst (one-time)
+  setClosed(true);  // collapse the form on run
   maybeStartProBurst();
 }
-
 function fallbackTimer(){
   let idx=0;
   const caps = PRIORITY_ORDER.slice();
   const timer = setInterval(()=>{ if(!running){ clearInterval(timer); return; } pushStep({cap: caps[idx % caps.length]}); idx++; }, 1200);
 }
-
 function pushStep(step){
   if(!running) return;
   newLine(step.cap, freeTextFor(step.cap), proTextFor(step.cap), true);
@@ -417,7 +448,7 @@ function pushStep(step){
 }
 function finishEarly(){ running=false; try{sse && sse.close();}catch{}; elNote.innerHTML = `Free scan finished at <strong>${done}</strong>. <strong>Unlock full scan & auto-enrichment</strong> to complete ${(TOTAL_METRICS-done).toLocaleString()} rules.`; setEnginePhase('idle','Ready'); }
 
-/* ===== lead fetching (with safe fallback if API empty) ===== */
+/* ===== lead fetching & find-now ===== */
 async function get(path){ const r=await fetch((window.API_BASE||'')+path, {headers:{'x-galactly-user':UID}}); return r.json(); }
 async function post(path,body){ const r=await fetch((window.API_BASE||'')+path, {method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body:JSON.stringify(body||{})}); return r.json(); }
 
@@ -425,13 +456,18 @@ async function pollLeadsOnce(){
   try{
     const r = await get('/api/v1/leads?limit=6');
     const items = Array.isArray(r.items)? r.items : (Array.isArray(r.leads)? r.leads : []);
-    if(items.length){ addCards(items.slice(0,2)); $('#engineStatus').innerHTML='<span class="dot"></span>New signals found'; }
-    else { // fallback demo
-      addCards([{ id:-1, title:'D2C beverage promo cadence ↑', source_url:'https://example.com/promo', cat:'Demand', heat:68 },
-                { id:-2, title:'Procurement intake updated', source_url:'https://example.com/forms', cat:'Procurement', heat:74 }]);
+    if(items.length){
+      // trickle 1–2 at a time
+      addCards(items.slice(0,2));
+      $('#engineStatus').innerHTML='<span class="dot"></span>New signals found';
+    }else{
+      // safe fallback demo
+      addCards([
+        { id:-1, title:'D2C beverage promo cadence ↑', source_url:'https://example.com/promo', cat:'Demand', heat:68 },
+        { id:-2, title:'Procurement intake updated', source_url:'https://example.com/forms', cat:'Procurement', heat:74 }
+      ]);
     }
   }catch{
-    // fallback demo
     addCards([{ id:-1, title:'D2C beverage promo cadence ↑', source_url:'https://example.com/promo', cat:'Demand', heat:68 }]);
   }
 }
@@ -454,7 +490,6 @@ function maybeStartProBurst(){
   if(localStorage.getItem(key)==='1') return;
   localStorage.setItem(key,'1');
   $('#proBurstBadge').style.display='inline-flex';
-  // unlock the next ~8 pro lines over 60–90s
   const unlock = ()=>{
     const proTracks = Array.from(document.querySelectorAll('.track.pro.locked'));
     if(!proTracks.length) return;
@@ -466,7 +501,6 @@ function maybeStartProBurst(){
   };
   let steps=0;
   const timer = setInterval(()=>{ unlock(); steps++; if(steps>=8){ clearInterval(timer); $('#proBurstBadge').style.display='none'; } }, 800);
-  // mark the first revealed card as "Pro verified" once the user holds
   document.addEventListener('click', (ev)=>{
     const btn = (ev.target && ev.target.closest && ev.target.closest('[data-a="why"]'))? ev.target.closest('[data-a="why"]'): null;
     if(btn && !btn.dataset.burst){
@@ -476,11 +510,7 @@ function maybeStartProBurst(){
   }, { once:true, capture:true });
 }
 
-/* ===== wiring ===== */
-$('#btnDry').onclick=()=> findNow(true);
-$('#btnFind').onclick=()=> findNow(false);
-
-function ensureHeaderButton(){ /* present on first load */ }
+/* ===== hero anim ===== */
 function initHero(){
   const c=document.getElementById('star'); const ctx=c.getContext('2d'); let w=0,h=0,t=0;
   function resize(){ w=c.width=c.clientWidth; h=c.height=c.clientHeight; } window.addEventListener('resize',resize); resize();
@@ -493,11 +523,20 @@ function initHero(){
   } draw();
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{
+/* ===== init ===== */
+document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('engine').textContent='engine: idle';
-  refreshQuota(); initHero(); pollLeadsOnce();
-  // auto-open preview
+  await maybeLoadRole();
+  beatPresence();
+  refreshPresence();
+  refreshQuota();
+  initHero();
+  pollLeadsOnce();
   setTimeout(()=> startPreview(), 600);
+
+  // wire buttons
+  $('#btnDry').onclick=()=> findNow(true);
+  $('#btnFind').onclick=()=> findNow(false);
 });
 </script>
 </body>
