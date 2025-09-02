@@ -97,6 +97,8 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 
 .quota-note{font-size:12px; opacity:.8}
 .engine-badges{margin-left:auto; display:flex; gap:8px; align-items:center}
+
+#upsell{display:none; margin-top:10px}
 </style>
 </head>
 <body>
@@ -153,6 +155,7 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
           <div class="quota-note" id="quotaNote">Free: …</div>
         </div>
         <div class="note">Tip: we’ll add 1–2 leads at a time, and rotate platforms. Hold to reveal. Free plan allows 2 deep reveals/day.</div>
+        <div id="upsell"><button id="btnUpgrade" class="btn primary">Unlock full scan & auto-enrichment ($39)</button></div>
       </div>
     </div>
 
@@ -222,6 +225,9 @@ async function maybeLoadRole(){
     if(!r.ok) return;
     const j = await r.json();
     if(j?.profile?.role){ USER_ROLE = j.profile.role; localStorage.setItem(ROLE_KEY, USER_ROLE); }
+    // Plan check → show upsell if not pro
+    const isPro = (j?.profile?.plan === 'pro');
+    document.getElementById('upsell').style.display = isPro ? 'none' : 'block';
   }catch{}
 }
 async function beatPresence(){
@@ -306,10 +312,8 @@ function cardEl(lead){
     </div>`;
 
   const subEl = d.querySelector('[data-sub]');
-  // post viewer presence for this lead
   try{ fetch('/api/v1/lead-viewers', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ leadId: lead.id }) }); }catch{}
   updateViewersDisplay(lead.id, subEl);
-  // refresh viewers every 15s while element is in DOM
   const iv = setInterval(()=>{ if(!document.body.contains(d)) { clearInterval(iv); return; } updateViewersDisplay(lead.id, subEl); }, 15000);
 
   let timer=null, revealed=false;
@@ -319,7 +323,6 @@ function cardEl(lead){
 
   async function reveal(){
     if(revealed) return; revealed=true;
-    // server-side reveal for quota/accounting
     try{ await fetch('/api/v1/reveal', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ leadId: lead.id }) }); }catch{}
     refreshQuota();
     d.classList.remove('locked');
@@ -330,7 +333,7 @@ function cardEl(lead){
     const meta=d.querySelector('.meta'); meta.insertAdjacentHTML('beforeend', `<span class="pill">${safeHost(lead.source_url||'')}</span>`);
   }
   d.querySelector('[data-a=why]').onclick=()=>openWhy(lead);
-  d.querySelector('[data-a=own]').onclick=()=>{ /* call /api/v1/claim then /own in your flow (kept minimal) */ };
+  d.querySelector('[data-a=own]').onclick=()=>{ /* claim/own flow could go here */ };
   return d;
 }
 function addCards(arr){ for(const L of arr){ const el = cardEl(L); elList.appendChild(el); } }
@@ -432,7 +435,7 @@ function startPreview(){
     sse.onerror = ()=>{ try{sse.close();}catch{}; fallbackTimer(); };
   }catch{ fallbackTimer(); }
 
-  setClosed(true);  // collapse the form on run
+  setClosed(true);  // collapse form
   maybeStartProBurst();
 }
 function fallbackTimer(){
@@ -444,9 +447,19 @@ function pushStep(step){
   if(!running) return;
   newLine(step.cap, freeTextFor(step.cap), proTextFor(step.cap), true);
   done++; elCount.textContent=String(done); elBar.style.width = Math.min(100, (done/TOTAL_METRICS)*100)+'%';
-  if(done >= FREE_CAP){ running=false; try{sse && sse.close();}catch{}; elNote.innerHTML = `Free scan finished at <strong>${FREE_CAP}</strong>. <strong>Unlock full scan & auto-enrichment</strong> to compute the remaining ${(TOTAL_METRICS-FREE_CAP).toLocaleString()} rules in real time.`; setEnginePhase('idle','Ready'); }
+  if(done >= FREE_CAP){
+    running=false; try{sse && sse.close();}catch{};
+    elNote.innerHTML = `Free scan finished at <strong>${FREE_CAP}</strong>. <strong>Unlock full scan & auto-enrichment</strong> to compute the remaining ${(TOTAL_METRICS-FREE_CAP).toLocaleString()} rules in real time.`;
+    document.getElementById('upsell').style.display = 'block';
+    setEnginePhase('idle','Ready');
+  }
 }
-function finishEarly(){ running=false; try{sse && sse.close();}catch{}; elNote.innerHTML = `Free scan finished at <strong>${done}</strong>. <strong>Unlock full scan & auto-enrichment</strong> to complete ${(TOTAL_METRICS-done).toLocaleString()} rules.`; setEnginePhase('idle','Ready'); }
+function finishEarly(){
+  running=false; try{sse && sse.close();}catch{};
+  elNote.innerHTML = `Free scan finished at <strong>${done}</strong>. <strong>Unlock full scan & auto-enrichment</strong> to complete ${(TOTAL_METRICS-done).toLocaleString()} rules.`;
+  document.getElementById('upsell').style.display = 'block';
+  setEnginePhase('idle','Ready');
+}
 
 /* ===== lead fetching & find-now ===== */
 async function get(path){ const r=await fetch((window.API_BASE||'')+path, {headers:{'x-galactly-user':UID}}); return r.json(); }
@@ -457,11 +470,9 @@ async function pollLeadsOnce(){
     const r = await get('/api/v1/leads?limit=6');
     const items = Array.isArray(r.items)? r.items : (Array.isArray(r.leads)? r.leads : []);
     if(items.length){
-      // trickle 1–2 at a time
       addCards(items.slice(0,2));
       $('#engineStatus').innerHTML='<span class="dot"></span>New signals found';
     }else{
-      // safe fallback demo
       addCards([
         { id:-1, title:'D2C beverage promo cadence ↑', source_url:'https://example.com/promo', cat:'Demand', heat:68 },
         { id:-2, title:'Procurement intake updated', source_url:'https://example.com/forms', cat:'Procurement', heat:74 }
@@ -523,6 +534,34 @@ function initHero(){
   } draw();
 }
 
+/* ===== Upgrade to Pro (Stripe) ===== */
+async function upgrade(){
+  try{
+    const r = await fetch('/api/v1/checkout', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ plan: 'pro' }) });
+    const j = await r.json();
+    if(j?.url){ location.href = j.url; return; }
+    alert('Checkout unavailable right now.');
+  }catch{ alert('Checkout request failed.'); }
+}
+
+/* ===== Onboarding prefill ===== */
+function useOnboardingPrefill(){
+  const vendor = localStorage.getItem('onb_vendor') || '';
+  const inds   = localStorage.getItem('onb_industries') || '';
+  const regs   = localStorage.getItem('onb_regions') || '';
+  const buyers = localStorage.getItem('onb_buyers') || '';
+  const desc   = localStorage.getItem('onb_desc') || '';
+  const list   = localStorage.getItem('onb_list') || '';
+  if(vendor) $('#vendor').value = vendor;
+  if(inds) $('#industries').value = inds;
+  if(regs) $('#regions').value = regs;
+  if(buyers) $('#buyers').value = buyers;
+  if(desc) $('#describe').value = desc;
+  if(list) $('#listMe').checked = (list === 'true');
+  // clear after first use
+  ['onb_vendor','onb_industries','onb_regions','onb_buyers','onb_desc','onb_list'].forEach(k=> localStorage.removeItem(k));
+}
+
 /* ===== init ===== */
 document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('engine').textContent='engine: idle';
@@ -531,12 +570,14 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   refreshPresence();
   refreshQuota();
   initHero();
+  useOnboardingPrefill();
   pollLeadsOnce();
   setTimeout(()=> startPreview(), 600);
 
   // wire buttons
   $('#btnDry').onclick=()=> findNow(true);
   $('#btnFind').onclick=()=> findNow(false);
+  $('#btnUpgrade').onclick=upgrade;
 });
 </script>
 </body>
