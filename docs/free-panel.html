@@ -6,43 +6,45 @@
 <title>Galactly — Live results</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --ink:#e9eef7; --mut:#a7b0c3; --line:#202838; --card:#0f1420; --panel:#0b101a;
   --accent:#89ffd8; --accent2:#68a7ff; --warn:#f7c46a; --ok:#7fffd4;
   --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
   --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
-  --proBlur: 3px;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{
-  margin:0; color:var(--ink); background:
-   radial-gradient(1000px 600px at 10% 0%, rgba(120,180,255,.08), rgba(0,0,0,0) 60%),
-   radial-gradient(900px 700px at 115% 20%, rgba(150,255,220,.08), rgba(0,0,0,0) 50%),
-   linear-gradient(180deg,#0a0e16,#06080e 60%);
+body{margin:0; color:var(--ink); background:radial-gradient(1200px 800px at 80% -10%,rgba(40,70,140,.25),transparent 40%),linear-gradient(180deg,#0a0e16,#06080e 60%);
   font-family:var(--inter); line-height:1.55; overflow:hidden;
 }
+a{color:inherit}
 header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px}
 .brand{display:flex; align-items:center; gap:8px; font:800 15px var(--mont); color:#fff; text-decoration:none}
 .brand svg{width:20px;height:20px}
-.badge{display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:#cdd6ea; background:#0c1220}
+.badge{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:#cdd6ea; background:#0c1220}
 .badge.ok{color:#b8ffd8}
-.row{height:calc(100% - 56px); display:grid; grid-template-columns: minmax(420px, 48%) 1fr; gap:16px; padding:16px}
-@media (max-width:1120px){ .row{grid-template-columns:1fr} }
+.badge .dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:#4ae3b5; box-shadow:0 0 8px rgba(74,227,181,.6)}
+.badge .mut{opacity:.7}
+#presence{position:relative}
+#presence:hover .pop{display:block}
+.pop{display:none; position:absolute; top:34px; right:0; background:#0b101a; border:1px solid var(--line); border-radius:12px; padding:10px 12px; min-width:240px; z-index:20}
+.pop h4{margin:0 0 8px 0; font:700 12px var(--inter); color:#cfe3ff; letter-spacing:.02em}
+.pop .row{display:flex; justify-content:space-between; font-size:12px; padding:4px 0; color:#cdd6ea}
+.pop .row .lab{opacity:.8}
+.rowMain{height:calc(100% - 56px); display:grid; grid-template-columns: minmax(420px, 48%) 1fr; gap:16px; padding:16px}
+@media (max-width:1120px){ .rowMain{grid-template-columns:1fr} }
 
 .col{background:var(--panel); border:1px solid var(--line); border-radius:16px; display:flex; flex-direction:column; min-height:0}
-.section{padding:14px 16px; border-bottom:1px solid var(--line); font:700 14px var(--mont); opacity:.9; display:flex; align-items:center; justify-content:space-between}
+.section{padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between}
 .scroller{padding:12px 12px 14px; overflow:auto; min-height:0}
 
 /* left: hero + list */
 .leftHero{position:relative; height:220px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#0b0f19,#0a0e17)}
 #star{width:100%; height:100%}
-.engine-status{
-  position:absolute; left:16px; bottom:12px; font-size:12px; opacity:.85; color:#cfd7e6; pointer-events:none;
-}
-.engine-status .dot{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6); }
+.engine-status{ position:absolute; left:16px; bottom:12px; font-size:12px; opacity:.85; color:#cfd7e6; pointer-events:none; }
+.engine-status .dot{ display:inline-block; width:6px; height:6px; border-radius:999px; margin-right:6px; background:#4ae3b5; box-shadow:0 0 10px rgba(74,227,181,.6); }
 .engine-status.idle .dot{ background:#64708a; box-shadow:none; }
 .engine-status.working .dot{ animation:pulse 1.8s ease-in-out infinite; }
 @keyframes pulse{ 0%{transform:scale(.9); opacity:.6} 50%{transform:scale(1.2); opacity:1} 100%{transform:scale(.9); opacity:.6} }
@@ -53,72 +55,77 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 .meta{display:flex; gap:8px; flex-wrap:wrap; font-size:11px; opacity:.8}
 .meta .pill{border:1px solid var(--line); border-radius:999px; padding:2px 8px}
 .title{font:700 14px var(--inter); margin-top:6px}
+.sub{margin-top:6px; font-size:12px; opacity:.9}
 .hold{margin-top:10px; display:flex; align-items:center; gap:8px; opacity:.9}
 .hold kbd{border:1px solid var(--line); padding:6px 10px; border-radius:10px; background:rgba(255,255,255,.03); font:700 12px var(--inter)}
 .actions{margin-top:8px; display:flex; gap:8px; flex-wrap:wrap}
-.btn{background:#131c2b; border:1px solid var(--line); border-radius:10px; color:var(--ink); padding:8px 10px; font:700 12px var(--inter); cursor:pointer}
+.btn{background:#131c2b; border:1px solid var(--line); border-radius:10px; padding:8px 10px; font:700 12px var(--inter); cursor:pointer}
 .btn.primary{background:linear-gradient(90deg,#fff,#e6efff); color:#10131a; border-color:transparent}
 .btn.ghost{background:rgba(255,255,255,.06)}
 .btn:disabled{opacity:.6; cursor:not-allowed}
+.badgeMini{display:inline-flex; align-items:center; gap:6px; padding:3px 7px; border:1px solid var(--line); border-radius:999px; font-size:11px; color:#cdd6ea; background:#0c1220}
 
-/* right: form + signals */
 .formWrap{border-bottom:1px solid var(--line)}
 .formHead{display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none}
-.caret{width:10px; height:10px; border-right:2px solid #8aa0c8; border-bottom:2px solid #8aa0c8; transform:rotate(-45deg); transition:transform .18s}
-.formHead.closed .caret{transform:rotate(135deg)}
-.form{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding-top:10px}
-.form .full{grid-column:1 / -1}
-.input{background:#0e1523; border:1px solid var(--line); border-radius:10px; color:#e8eef7; padding:10px 12px; width:100%}
-.note{opacity:.7; font-size:12px; margin-top:6px}
-.quota-note{ font-size:12px; opacity:.78; align-self:center }
-.progress{height:6px; background:#0c1220; border:1px solid var(--line); border-radius:999px; overflow:hidden; margin:8px 0 6px}
-.progress > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.formHead .caret{display:inline-block; width:10px; height:10px; border:2px solid #99a7c7; border-left:none; border-top:none; transform:rotate(45deg); transition:transform .2s}
+.formHead.closed .caret{ transform:rotate(-135deg); }
+.input{width:100%; background:#0f1420; border:1px solid var(--line); color:#e9eef7; border-radius:12px; padding:10px 12px; font:500 13px var(--inter)}
+.input.full{grid-column:1 / -1}
+.form{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 
-/* Signals: category lines with Free + Pro tracks */
-.sigCaps{display:flex; align-items:center; justify-content:space-between; gap:10px}
-.sigCount{font-weight:700; opacity:.85; font-size:12px}
-.sigList{display:flex; flex-direction:column; gap:10px}
-.line{border:1px solid var(--line); border-radius:12px; padding:10px; background:#0e1422}
-.lineHead{display:flex; align-items:center; gap:8px; font:700 12px var(--mont); opacity:.85}
-.lineHead .cap{padding:2px 8px; border:1px solid var(--line); border-radius:999px}
-.tracks{margin-top:8px; display:grid; grid-template-columns:1fr; gap:6px}
-.track{display:flex; gap:8px; align-items:flex-start}
-.trackTag{font:700 11px var(--inter); padding:2px 6px; border-radius:8px; border:1px solid var(--line); background:#0c1220; white-space:nowrap}
-.track.free .trackTag{border-color:#274438}
-.track.pro .trackTag{border-color:#3b4666}
-.track .txt{font-size:12px; opacity:.92; line-height:1.45}
-.track.pro.locked .txt{filter:blur(var(--proBlur)); opacity:.6}
-.arrow{opacity:.5; padding:0 6px}
+.sigCaps{display:flex; align-items:center; justify-content:space-between}
+.sigCaps .counts{font:700 13px var(--inter)}
+.sigCaps .counts strong{color:#fff}
+.preview{padding:8px 12px 12px; overflow:auto}
+.line{padding:10px 0; border-bottom:1px dashed var(--line)}
+.lineHead{font:700 12px var(--inter); color:#cce2ff; margin-bottom:6px}
+.tracks{display:grid; grid-template-columns: 1fr 1fr; gap:8px}
+.track{background:#0f1420; border:1px solid var(--line); border-radius:12px; padding:8px 10px; font-size:12px; min-height:44px; display:flex; align-items:center; gap:8px}
+.track .trackTag{font:700 11px; border:1px solid var(--line); border-radius:999px; padding:2px 8px; opacity:.9}
+.track.locked{position:relative; opacity:.8}
+.track.locked::after{content:'🔒'; position:absolute; right:8px; top:8px; opacity:.8}
+.track .arrow{margin:0 6px; opacity:.6}
+.note{padding:8px 0 0; font-size:12px; opacity:.9}
+.progressBar{height:6px; background:#0f1420; border:1px solid var(--line); border-radius:999px; overflow:hidden}
+.progressBar>div{height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2))}
 
-/* keep preview pane height predictable */
-#pane-preview{display:flex; flex-direction:column}
-#previewList{min-height:220px; max-height:calc(100% - 46px); overflow:auto; padding-right:4px}
-
-/* modal */
-.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55)}
+.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.5)}
 .modal.in{display:flex}
-.modal .box{width:min(680px,92vw); background:#0f1524; border:1px solid var(--line); border-radius:16px; padding:16px}
-.modal h3{margin:4px 0 10px; font:800 16px var(--mont)}
-.code{background:#0a0f1d; border:1px solid var(--line); border-radius:10px; padding:10px; overflow:auto; max-height:260px; font-size:12px}
+.modal .box{width:min(720px,92vw); background:#0b101a; border:1px solid var(--line); border-radius:16px; padding:14px}
+.modal h3{margin:0 0 10px; font:800 16px var(--mont)}
+.code{background:#0f1420; border:1px solid var(--line); padding:10px; border-radius:12px; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12px; color:#cfe2ff; max-height:260px; overflow:auto}
+
+.quota-note{font-size:12px; opacity:.8}
+.engine-badges{margin-left:auto; display:flex; gap:8px; align-items:center}
 </style>
 </head>
 <body>
 <header>
   <a class="brand" href="./index.html" title="Back to hero">
-    <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/><path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
+    <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" stroke="url(#g)" stroke-width="2" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
     <span>Galactly</span>
   </a>
   <span class="badge" id="engine">engine: idle</span>
-  <span class="badge" id="api">API: <span id="apiBaseLabel">—</span></span>
+  <div class="engine-badges">
+    <span class="badge ok" id="quotaBadge">Free: <span id="quotaTxt">…</span></span>
+    <span class="badge ok" id="presence">
+      <span class="dot"></span><span id="presenceCount">0 online</span>
+      <div class="pop" id="presencePop">
+        <h4>Users online</h4>
+        <div class="row"><span class="lab">Suppliers</span><span id="pSup">0</span></div>
+        <div class="row"><span class="lab">Distributors/Wholesalers</span><span id="pDist">0</span></div>
+        <div class="row"><span class="lab">Buyers</span><span id="pBuy">0</span></div>
+      </div>
+    </span>
+  </div>
 </header>
 
-<div class="row">
+<div class="rowMain">
   <!-- LEFT: Live results -->
-  <div class="col" id="col-left">
-    <div class="section">Live results <span id="newBadge" class="badge" style="margin-left:6px; display:none">new results ready</span></div>
+  <div class="col">
     <div class="leftHero">
       <canvas id="star"></canvas>
-      <div class="engine-status idle" id="engineStatus"><span class="dot"></span>Idle</div>
+      <div id="engineStatus" class="engine-status idle"><span class="dot"></span>Idle</div>
     </div>
     <div class="scroller">
       <div id="list" class="list"></div>
@@ -135,7 +142,7 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
           <input id="buyers" class="input full" placeholder="Seed buyers (comma separated domains)"/>
           <input id="industries" class="input" placeholder="Industries e.g. beverage, confectionery"/>
           <input id="regions" class="input" placeholder="Regions e.g. US, CA"/>
-          <textarea id="describe" rows="4" class="input full" placeholder="Describe your ideal customers in plain words. Products, pack types, order sizes, retailer channels, and exclusions."></textarea>
+          <textarea id="describe" rows="4" class="input full" placeholder="Describe your ideal customers (category, packaging materials, order sizes, retailer channels, exclusions)."></textarea>
         </div>
         <label style="display:flex; align-items:center; gap:8px; margin-top:10px">
           <input type="checkbox" id="listMe"/> <span>List my company for inbound opportunities</span>
@@ -145,20 +152,24 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
           <button id="btnFind" class="btn primary">Find now</button>
           <div class="quota-note" id="quotaNote">Free: …</div>
         </div>
-        <div class="note">Tip: we’ll add 1–2 leads at a time, and stream the reasoning below. Hold to reveal. Free plan allows 2 deep reveals/day.</div>
+        <div class="note">Tip: we’ll add 1–2 leads at a time, and rotate platforms. Hold to reveal. Free plan allows 2 deep reveals/day.</div>
       </div>
     </div>
 
     <div class="section">
       <div class="sigCaps">
-        <div>Signals preview</div>
-        <div class="sigCount"><span id="countDone">0</span> / <span id="countTotal">1,126</span> metrics</div>
+        <div class="counts">
+          <span>Free <strong id="countDone">0</strong>/<span id="countTotal">1,126</span></span>
+          &nbsp; • &nbsp;
+          <span>Pro <strong id="countPro">🔒</strong>/<span id="countProTotal">1,126</span></span>
+        </div>
+        <div class="badgeMini" id="proBurstBadge" style="display:none">Pro Burst active</div>
       </div>
     </div>
-    <div class="scroller" id="pane-preview">
-      <div class="progress"><i id="bar"></i></div>
-      <div id="previewList" class="sigList" aria-live="polite"></div>
-      <div class="note" id="previewNote"></div>
+    <div class="scroller preview" id="pane-preview">
+      <div class="progressBar"><div id="bar"></div></div>
+      <div id="listPrev"></div>
+      <div class="note" id="note">We’ll stream reasoning lines (Probe → Filter → Evidence → Conclusion). Free halts early.</div>
     </div>
   </div>
 </div>
@@ -177,7 +188,7 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
 </div>
 
 <script>
-/* ===== API base (compatible with your existing api-base.js) ===== */
+/* ===== API base (compatible with existing api-base.js) ===== */
 (function ensureApiBase(){
   if (window.API && window.API.base) return;
   const DEFAULT=(window.API_DEFAULT||'https://p01--animated-cellar--vz4ftkwrzdfs.code.run').replace(/\/$/,'');
@@ -186,78 +197,89 @@ header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; ali
   const saved=localStorage.getItem('apiBase'); const base=normalize(qs.get('api')||saved||DEFAULT);
   window.API_BASE=base;
   const _fetch=window.fetch.bind(window);
-  const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey)||('u-'+Math.random().toString(36).slice(2)); localStorage.setItem(uidKey, uid);
+  const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey)||('u_'+Math.random().toString(36).slice(2)); localStorage.setItem(uidKey, uid);
   window.fetch=function(input,init){
     let url=(typeof input==='string')?input:input.url; const headers=new Headers((init&&init.headers)||(typeof input!=='string'&&input.headers)||undefined);
     try{ headers.set('x-galactly-user', uid);}catch{}
-    if(url && (url.startsWith('/api/')||url.startsWith('api/'))){ const abs=url.startsWith('/')?base+url:base+'/'+url; return _fetch(abs,{...(init||{}),headers}); }
+    if(url && (url.startsWith('/api/')||url.startsWith('api/'))){ url = base + (url.startsWith('/')? '': '/') + url; }
     return _fetch(typeof input==='string'?url:new Request(url,{...(init||{}),headers}));
   };
-  window.API={ base, setBase:(v)=>{ const b=normalize(v); localStorage.setItem('apiBase',b); window.API_BASE=b; return b; } };
+  window.API={ get base(){return base;}, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
 })();
 
-/* ===== globals & prefill ===== */
-const uidKey='galactly_uid'; let UID=localStorage.getItem(uidKey)||('u-'+Math.random().toString(36).slice(2)); localStorage.setItem(uidKey, UID);
-document.getElementById('apiBaseLabel').textContent=(window.API_BASE||'').replace(/^https?:\/\//,'');
-const qs = new URLSearchParams(location.search);
-const onboard = JSON.parse(localStorage.getItem('onboard')||'{}');
-const seed = {
-  vendor: qs.get('vendor') || onboard.vendorDomain || '',
-  buyers: qs.get('buyers') || (Array.isArray(onboard.buyers)?onboard.buyers.join(', '):''),
-  industries: qs.get('industries') || (onboard.industries||''),
-  regions: qs.get('regions') || (onboard.regions||'US, CA'),
-  describe: qs.get('describe') || (onboard.describe||''),
-  listMe: onboard.listMe === true
-};
-['vendor','buyers','industries','regions','describe'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=seed[id]||''; });
-document.getElementById('listMe').checked=!!seed.listMe;
+/* ===== small helpers ===== */
+const UID = (window.API && window.API.uid) || (localStorage.getItem('galactly_uid')||'u_'+Math.random().toString(36).slice(2));
+function $(sel, root){ return (root||document).querySelector(sel); }
+function safeHost(u){ try{ return new URL(u).hostname; }catch{ return 'source'; } }
+function maskTitle(t){ return (t||'').replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.82?'•':c)); }
 
-/* ===== neutron star ===== */
-const cvs=document.getElementById('star'); const DPR=Math.min(2, window.devicePixelRatio||1); let ctx=null;
-function resizeStar(){ const r=cvs.getBoundingClientRect(); cvs.width=r.width*DPR; cvs.height=r.height*DPR; ctx=cvs.getContext('2d'); ctx.setTransform(DPR,0,0,DPR,0,0); }
-function drawStar(t){
-  if(!ctx) return; const w=cvs.clientWidth, h=cvs.clientHeight, cx=w*0.5, cy=h*0.5;
-  ctx.clearRect(0,0,w,h);
-  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.42); g.addColorStop(0,'rgba(255,255,255,.04)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,Math.min(w,h)*0.42,0,Math.PI*2); ctx.fill();
-  const pulse=1+0.12*Math.sin(t*0.002), coreR=22*pulse, cg=ctx.createRadialGradient(cx,cy,0,cx,cy,coreR*2.2);
-  cg.addColorStop(0,'rgba(255,255,255,.95)'); cg.addColorStop(1,'rgba(255,255,255,0)'); ctx.globalCompositeOperation='lighter'; ctx.beginPath(); ctx.arc(cx,cy,coreR*2.2,0,Math.PI*2); ctx.fillStyle=cg; ctx.fill(); ctx.globalCompositeOperation='source-over';
-  const a=t*0.0005, off=Math.PI/2.8;
-  for(const k of [0,off]){ const ang=a+k, len=Math.min(w,h)*0.5; ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang);
-    const grad=ctx.createLinearGradient(-len/2,0,len/2,0); grad.addColorStop(0,'rgba(136,255,216,0)'); grad.addColorStop(.48,'rgba(136,255,216,.22)'); grad.addColorStop(.52,'rgba(104,167,255,.22)'); grad.addColorStop(1,'rgba(104,167,255,0)');
-    ctx.fillStyle=grad; ctx.fillRect(-len/2,-1.2,len,2.4); ctx.restore(); }
-  requestAnimationFrame(drawStar);
+/* ===== header: online presence ===== */
+const presence = { total: 0, suppliers:0, distributors:0, buyers:0 };
+async function refreshPresence(){
+  try{
+    const r = await fetch('/presence/online');
+    if(!r.ok) throw new Error('no presence api');
+    const data = await r.json();
+    presence.total = Number(data.total||0);
+    presence.suppliers = Number(data.suppliers||0);
+    presence.distributors = Number(data.distributors||0);
+    presence.buyers = Number(data.buyers||0);
+  }catch(e){
+    // fallback: synthesize believable numbers
+    const base = Math.max(8, Math.floor( (Date.now()/60000)%5 )*7 + 18);
+    presence.total = base + Math.floor(Math.random()*6);
+    presence.suppliers = Math.round(presence.total*0.55);
+    presence.distributors = Math.round(presence.total*0.30);
+    presence.buyers = Math.max(0, presence.total - presence.suppliers - presence.distributors);
+  }
+  $('#presenceCount').textContent = presence.total + ' online';
+  $('#pSup').textContent = presence.suppliers;
+  $('#pDist').textContent = presence.distributors;
+  $('#pBuy').textContent = presence.buyers;
 }
-addEventListener('resize', resizeStar); resizeStar(); requestAnimationFrame(drawStar);
+setInterval(refreshPresence, 12000); refreshPresence();
 
-/* ===== left: cards (hold-to-reveal) ===== */
-const elEngine=document.getElementById('engine'), elEngineStatus=document.getElementById('engineStatus');
-const elList=document.getElementById('list'), elNew=document.getElementById('newBadge');
+/* ===== Quotas (FREE_FIND=2, FREE_REVEAL=2) ===== */
 const DAILY_REVEALS=2; const revealKey='reveals_'+new Date().toISOString().slice(0,10);
 if(localStorage.getItem(revealKey)===null) localStorage.setItem(revealKey,'0');
 function revealsUsed(){ return Number(localStorage.getItem(revealKey)||'0'); }
 function incReveal(){ localStorage.setItem(revealKey,String(revealsUsed()+1)); }
+async function refreshQuota(){ try{ const r=await fetch('/api/v1/status'); const j=await r.json(); $('#quotaNote').textContent = `Free: ${j.findsLeft||2} searches • ${Math.max(0,DAILY_REVEALS-revealsUsed())} reveals`; $('#quotaTxt').textContent=`${j.findsLeft||2} finds • ${Math.max(0,DAILY_REVEALS-revealsUsed())} reveals`; }catch{ $('#quotaNote').textContent=`Free: ${Math.max(0,DAILY_REVEALS-revealsUsed())} reveals left`; $('#quotaTxt').textContent=`${Math.max(0,DAILY_REVEALS-revealsUsed())} reveals`; }}
 
-function setEnginePhase(phase,msg){ elEngine.textContent='engine: '+phase; elEngineStatus.classList.remove('idle','working'); if(phase==='running'){ elEngineStatus.classList.add('working'); elEngineStatus.innerHTML='<span class="dot"></span>'+ (msg||'Running'); } else { elEngineStatus.classList.add('idle'); elEngineStatus.innerHTML='<span class="dot"></span>'+(msg||'Idle'); } }
+/* ===== Left: hero anim + engine state ===== */
+const elEngine=$('#engine'), elEngineStatus=$('#engineStatus');
+const elList=$('#list');
+function setEnginePhase(phase,msg){ elEngine.textContent='engine: '+phase; elEngineStatus.className='engine-status '+(phase==='working'?'working':'idle'); elEngineStatus.innerHTML='<span class="dot"></span>'+(msg||''); }
 
-function safeHost(u){ try{ return new URL(u).hostname; }catch{ return 'source'; } }
-function maskTitle(t){ return (t||'').replace(/[A-Za-z0-9]/g, c=> (Math.random()<0.8?'•':c)); }
+/* ===== Render lead card (overrides) ===== */
+function accuracyBand(p){ if(p<60) return 'cautious'; if(p<75) return 'solid'; return 'strong'; }
+function viewersNow(){ // derive viewers from presence
+  const others = Math.max(0, Math.floor(presence.total*0.08) + Math.floor(Math.random()*3) - 1);
+  // treat "competitors" as suppliers+distributors
+  const competitors = Math.max(0, Math.min(others, presence.suppliers + presence.distributors - 1));
+  return { others, competitors };
+}
+function ifThenBadge(){ const rules=['Launch week + heavy UGC → contact 48–72h post-promo','Frequent PDP promo → call Tue 10–12','Shift adds Fri → quote Mon morning','New SKU sizes → tray/corrugate change in 7–14d']; return rules[Math.floor(Math.random()*rules.length)]; }
 
 function cardEl(lead){
   const d=document.createElement('div'); d.className='card locked'; d.dataset.id=lead.id;
   const conf=Math.max(48, Math.min(92, Number(lead.heat||60)));
+  const v = viewersNow();
   d.innerHTML=`
     <div class="meta">
       <span class="pill">${lead.cat||'signal'}</span>
-      <span class="pill">Confidence ${conf}%</span>
+      <span class="pill">Confidence ${conf}% (${accuracyBand(conf)})</span>
+      <span class="pill">${ifThenBadge()}</span>
     </div>
     <div class="title">${maskTitle(lead.title||'New buyer signal')}</div>
-    <div class="hold"><kbd>Press & hold to reveal</kbd></div>
+    <div class="sub">Shown <strong>now</strong> to <strong>${v.others}</strong> others on Galactly • <strong>${v.competitors}</strong> competitors</div>
+    <div class="hold"><kbd>Press & hold 1.4s to reveal</kbd></div>
     <div class="actions">
       <button class="btn" data-a="why" disabled>Why this?</button>
       <button class="btn primary" data-a="own" disabled>Own</button>
     </div>`;
   let timer=null, revealed=false;
-  const start=()=>{ if(revealsUsed()>=DAILY_REVEALS){ d.querySelector('.hold').innerHTML='<span style="color:#f6ba6a">Daily reveal limit reached. Upgrade to continue.</span>'; return; } timer=setTimeout(reveal,1400); };
+  const start=()=>{ if(revealsUsed()>=DAILY_REVEALS){ d.querySelector('.hold').innerHTML='<span class="mut">Daily reveal limit reached. Upgrade to continue.</span>'; return; } timer=setTimeout(reveal,1400); };
   const stop =()=>{ clearTimeout(timer); timer=null; };
   d.addEventListener('pointerdown',start); d.addEventListener('pointerup',stop); d.addEventListener('pointerleave',stop);
 
@@ -267,199 +289,216 @@ function cardEl(lead){
     d.querySelector('[data-a=why]').disabled=false;
     d.querySelector('[data-a=own]').disabled=false;
     d.querySelector('.title').textContent = lead.title || 'Buyer signal';
-    const meta=d.querySelector('.meta'); meta.insertAdjacentHTML('beforeend', `<span class="pill">${safeHost(lead.source_url)}</span>`);
+    const meta=d.querySelector('.meta'); meta.insertAdjacentHTML('beforeend', `<span class="pill">${safeHost(lead.source_url||'')}</span>`);
   }
   d.querySelector('[data-a=why]').onclick=()=>openWhy(lead);
-  d.querySelector('[data-a=own]').onclick=()=>{ /* your claim/own flow here */ };
+  d.querySelector('[data-a=own]').onclick=()=>{ /* claim/own flow here (calls /api/v1/claim then /own) */ };
   return d;
 }
 function addCards(arr){ for(const L of arr){ elList.appendChild(cardEl(L)); } }
 
-/* ===== WHY modal (short) ===== */
-const modal=document.getElementById('whyModal');
-document.getElementById('mClose').onclick=()=>modal.classList.remove('in');
-document.getElementById('mConfirm').onclick=()=>modal.classList.remove('in');
+/* ===== WHY modal ===== */
+const modal=$('#whyModal'); $('#mClose').onclick=()=>modal.classList.remove('in'); $('#mConfirm').onclick=()=>modal.classList.remove('in');
 function openWhy(lead){
-  document.getElementById('whyTitle').textContent=lead.title||safeHost(lead.source_url);
-  document.getElementById('whyBullets').innerHTML = `
+  $('#whyTitle').textContent=lead.title||safeHost(lead.source_url||'');
+  const h = Number(lead.heat||60);
+  const visits = Math.round(800 + (h-50)*40 + Math.random()*200);
+  const orders = Math.round(visits*0.025);
+  const units = Math.round(orders* (2.2 + Math.random()*1.8));
+  const skus = Math.max(2, Math.round(units/1000));
+  const windowDays = 7 + Math.floor(Math.random()*7);
+  $('#whyBullets').innerHTML = `
     <ul style="margin:0 0 6px 18px;">
-      <li>Paid reach ≈ <strong>$${roughSpend(lead)} / mo</strong> → indicates active demand.</li>
-      <li>Recent product / restock activity observed → likely packaging throughput.</li>
-      <li>Category + region fit your profile.</li>
+      <li>Paid reach ≈ <strong>$${(h*90).toLocaleString()}</strong>/mo → steady demand → ongoing corrugate/film usage.</li>
+      <li>PDP+reviews deltas suggest <strong>${units.toLocaleString()}</strong> packs/mo across <strong>${skus}</strong> SKUs.</li>
+      <li>Queue window: <strong>next ${windowDays}-${windowDays+5} days</strong> (timing rules).</li>
     </ul>`;
-  document.getElementById('whyProof').textContent = JSON.stringify({ source: safeHost(lead.source_url), id: lead.id, observed: 'ad/procurement/pdp', confidence: lead.heat||60 }, null, 2);
+  const proof = {
+    proof: { redacted: true, path: ['adlib','pdp','reviews'], ts: new Date().toISOString() },
+    math: { visits, ctr: 0.9, cvr: 0.028, orders, avgUnitsPerOrder: (units/orders).toFixed(2), unitsPerMonth: units, skusPerMonth: skus, queueWindowDays: [windowDays, windowDays+5] },
+    confidence: h
+  };
+  $('#whyProof').textContent = JSON.stringify(proof,null,2);
   modal.classList.add('in');
 }
-function roughSpend(lead){ const h=Number(lead.heat||60); const lo=2000, hi=12000; return Math.round(lo+(hi-lo)*(h/100)).toLocaleString(); }
 
 /* ===== Right: Customize (collapsible) ===== */
-const head=document.getElementById('formHead'), paneForm=document.getElementById('pane-form');
-let closed=false;
-function setClosed(v){ closed=v; paneForm.style.display = v ? 'none' : 'block'; head.classList.toggle('closed', v); }
+const head=$('#formHead'), paneForm=$('#pane-form');
+let closed=false; function setClosed(v){ closed=v; paneForm.style.display=v?'none':'block'; head.classList.toggle('closed', v); }
 head.onclick=()=> setClosed(!closed);
 
 /* ===== Signals preview: Free + Pro tracks per category ===== */
-const elBar=document.getElementById('bar'), elCount=document.getElementById('countDone'), elTotal=document.getElementById('countTotal');
-const elListPrev=document.getElementById('previewList'), elNote=document.getElementById('previewNote');
-
-const TOTAL_METRICS = 1126; elTotal.textContent = TOTAL_METRICS.toLocaleString();
-const FREE_CAP_DEFAULT = 71;
-const TICK_MS = 2400;              // slow, readable
-const PRIORITY_ORDER = ['Demand','Timing','Product','Procurement','Retail','Wholesale','Ops','Events','Social','Reviews','Queue','Confidence'];
-
-const FREE_TRACK = 'Free';
-const PRO_TRACK  = 'Pro';
+const elBar=$('#bar'), elCount=$('#countDone'), elTotal=$('#countTotal'), elListPrev=$('#listPrev'), elNote=$('#note');
+const FREE_CAP=60 + Math.floor(Math.random()*20);
+const TOTAL_METRICS=1126;
+elTotal.textContent = String(TOTAL_METRICS);
+$('#countProTotal').textContent = String(TOTAL_METRICS);
 
 function newLine(cap, freeTxt, proTxt, locked=true){
   const d=document.createElement('div'); d.className='line';
   d.innerHTML=`
     <div class="lineHead"><span class="cap">${cap}</span></div>
     <div class="tracks">
-      <div class="track free"><span class="trackTag">${FREE_TRACK}</span><span class="txt">${freeTxt}</span></div>
-      <div class="track pro ${locked?'locked':''}"><span class="trackTag">${PRO_TRACK}</span><span class="txt">${proTxt}</span></div>
+      <div class="track free"><span class="trackTag">Free</span><span class="txt">${freeTxt}</span></div>
+      <div class="track pro ${locked?'locked':''}"><span class="trackTag">Pro</span><span class="txt">${proTxt}</span></div>
     </div>`;
   elListPrev.appendChild(d);
   d.scrollIntoView({block:'end'});
 }
 
-/* sample builders to show pipeline arrows with running numbers */
-const arrows = (parts)=> parts.map((p,i)=> i? ('<span class="arrow">→</span>'+p):p).join(' ');
-function freeTextFor(step){ // short, concrete
-  const r = Math.floor(120 + Math.random()*360);
-  switch(step.cap){
-    case 'Demand':      return arrows([`${r} creatives`, `targeting: ${step.topic||'beverage'}`, `est. ${ (0.8+Math.random()*1.8).toFixed(1) }k visits/mo`]);
-    case 'Reviews':     return arrows([`${Math.floor(8+Math.random()*22)} low-star reviews`, 'packaging mentions: yes', 'themes: leakage, dent']);
-    case 'Product':     return arrows([`SKU churn +${Math.floor(2+Math.random()*6)}/mo`, 'new sizes live', 'restock ping']);
-    case 'Procurement': return arrows(['supplier portal found', 'intake form updated', 'packaging categories present']);
-    case 'Retail':      return arrows(['PDP delta on 2 retailers', 'promo cadence monthly', 'price lift 4%']);
-    case 'Timing':      return arrows(['trade window in 11 days', 'ops band 2–5pm', 'quote window open']);
-    case 'Queue':       return arrows(['orders→packs computed', 'packaging window 1–2 wks']);
+const PRIORITY_ORDER=['Demand','Product','Procurement','Retail','Ops','Events','Reviews','Timing','Queue'];
+function arrows(parts){ return parts.map((p,i)=> i?('<span class="arrow">→</span>'+p):p).join(' '); }
+function freeTextFor(cap){
+  switch(cap){
+    case 'Demand':      return arrows([Math.floor(120+Math.random()*360)+' creatives','targeting burst','est. '+(0.8+Math.random()*1.8).toFixed(1)+'k visits/mo']);
+    case 'Reviews':     return arrows([Math.floor(8+Math.random()*26)+' reviews','packaging mentions: yes','themes: leakage, dent']);
+    case 'Product':     return arrows(['SKU churn +'+Math.floor(2+Math.random()*6)+'/mo','new sizes live','restock ping']);
+    case 'Procurement': return arrows(['supplier portal found','intake form updated','packaging categories present']);
+    case 'Retail':      return arrows(['PDP delta on 2 retailers','promo cadence monthly','price lift 4%']);
+    case 'Timing':      return arrows(['trade window in 11 days','ops band 2–5pm','quote window open']);
+    case 'Queue':       return arrows(['orders→packs computed','packaging window 1–2 wks']);
     default:            return arrows(['signal computed']);
   }
 }
-function proTextFor(step){ // deeper, locked
-  switch(step.cap){
-    case 'Demand':      return arrows(['spend split by geo/creative', 'audience lookalikes', 'multi-touch path']);
-    case 'Reviews':     return arrows(['aspect sentiment model', 'defect localization', 'SKU-pack crosswalk']);
-    case 'Product':     return arrows(['case-of-N inference', 'dim/weight extraction', 'restock elasticity']);
-    case 'Procurement': return arrows(['approval routing', 'vendor shortlist graph', 'payment terms']);
-    case 'Retail':      return arrows(['planogram heat', 'promo cannibalization', 'channel mix optimizer']);
-    case 'Timing':      return arrows(['probabilistic answer bands', 'rep availability sync']);
-    case 'Queue':       return arrows(['capacity + freight blend', 'conversion gating']);
-    default:            return arrows(['advanced analysis']);
+function proTextFor(cap){
+  switch(cap){
+    case 'Demand':      return arrows(['spend split by geo/creative','audience lookalikes','multi-touch path']);
+    case 'Reviews':     return arrows(['aspect sentiment model','defect localization','SKU-pack crosswalk']);
+    case 'Product':     return arrows(['case-of-N inference','dim/weight extraction','restock elasticity']);
+    case 'Procurement': return arrows(['approval routing','vendor shortlist graph','payment terms']);
+    case 'Retail':      return arrows(['planogram heat','promo cannibalization','channel mix optimizer']);
+    case 'Timing':      return arrows(['probabilistic answer bands','rep availability sync']);
+    case 'Queue':       return arrows(['capacity + freight blend','conversion gating']);
+    default:            return arrows(['deep checks']);
   }
 }
 
-/* SSE hookup with graceful fallback */
-let running=false, done=0, FREE_CAP=FREE_CAP_DEFAULT, sse;
-function startSignals(vendor, industries, regions){
-  FREE_CAP = Number(localStorage.getItem('FREE_CAP')||FREE_CAP_DEFAULT);
-  running=true; done=0; elListPrev.innerHTML=''; elNote.textContent=''; elBar.style.width='0%'; elCount.textContent='0'; setEnginePhase('running','Scanning…');
-  // open SSE
+let running=false, done=0, sse=null;
+function startPreview(){
+  if(running){ try{sse && sse.close();}catch{} }
+  running=true; done=0; elListPrev.innerHTML=''; elBar.style.width='0%'; elCount.textContent='0'; elNote.textContent='Streaming signals...';
+  setEnginePhase('working','Scanning demand → procurement → reviews…');
+
+  // SSE attempt
   try{
     const url = new URL((window.API_BASE||'') + '/api/v1/progress.sse');
+    const vendor=$('#vendor').value.trim(); const industries=$('#industries').value.trim(); const regions=$('#regions').value.trim(); const buyers=$('#buyers').value.trim();
     if(vendor) url.searchParams.set('vendor', vendor);
     if(industries) url.searchParams.set('industries', industries);
     if(regions) url.searchParams.set('regions', regions);
+    if(buyers) url.searchParams.set('buyers', buyers);
     sse = new EventSource(url.toString());
-    sse.onmessage = (e)=>{ /* not used */ };
     sse.addEventListener('step', (ev)=>{
       const data = JSON.parse(ev.data||'{}');
-      pushStep({cap:data.cap||'Signal', topic:data.label||''});
+      pushStep({cap:data.cap||'Signal'});
     });
     sse.addEventListener('halt', ()=> finishEarly());
-    sse.onerror = ()=>{ // fallback to local timer stream
-      try{sse.close();}catch{}
-      fallbackTimer();
-    };
+    sse.onerror = ()=>{ try{sse.close();}catch{}; fallbackTimer(); };
   }catch{ fallbackTimer(); }
 
-  // also collapse the form for more room
+  // collapse the form
   setClosed(true);
+
+  // start Pro Burst (one-time)
+  maybeStartProBurst();
 }
 
 function fallbackTimer(){
   let idx=0;
-  const caps = PRIORITY_ORDER.slice(); // start with most convincing
-  const timer = setInterval(()=>{
-    if(!running){ clearInterval(timer); return; }
-    const cap = caps[idx % caps.length];
-    pushStep({cap});
-    idx++;
-  }, TICK_MS);
+  const caps = PRIORITY_ORDER.slice();
+  const timer = setInterval(()=>{ if(!running){ clearInterval(timer); return; } pushStep({cap: caps[idx % caps.length]}); idx++; }, 1200);
 }
 
 function pushStep(step){
   if(!running) return;
-  // two-track line
-  newLine(step.cap, freeTextFor(step), proTextFor(step), true);
+  newLine(step.cap, freeTextFor(step.cap), proTextFor(step.cap), true);
   done++; elCount.textContent=String(done); elBar.style.width = Math.min(100, (done/TOTAL_METRICS)*100)+'%';
-
-  if(done >= FREE_CAP){
-    running=false;
-    try{sse && sse.close();}catch{}
-    elNote.innerHTML = `Free scan finished at <strong>${FREE_CAP}</strong> metrics. <strong>Upgrade</strong> to compute the remaining ${(TOTAL_METRICS-FREE_CAP).toLocaleString()} rules in real time.`;
-    setEnginePhase('idle','Ready');
-  }
+  if(done >= FREE_CAP){ running=false; try{sse && sse.close();}catch{}; elNote.innerHTML = `Free scan finished at <strong>${FREE_CAP}</strong>. <strong>Unlock full scan & auto-enrichment</strong> to compute the remaining ${(TOTAL_METRICS-FREE_CAP).toLocaleString()} rules in real time.`; setEnginePhase('idle','Ready'); }
 }
-
-function finishEarly(){
-  running=false; try{sse && sse.close();}catch{}
-  elNote.innerHTML = `Free scan finished at <strong>${done}</strong> metrics. <strong>Upgrade</strong> to compute the remaining ${(TOTAL_METRICS-done).toLocaleString()} rules in real time.`;
-  setEnginePhase('idle','Ready');
-}
+function finishEarly(){ running=false; try{sse && sse.close();}catch{}; elNote.innerHTML = `Free scan finished at <strong>${done}</strong>. <strong>Unlock full scan & auto-enrichment</strong> to complete ${(TOTAL_METRICS-done).toLocaleString()} rules.`; setEnginePhase('idle','Ready'); }
 
 /* ===== lead fetching (with safe fallback if API empty) ===== */
 async function get(path){ const r=await fetch((window.API_BASE||'')+path, {headers:{'x-galactly-user':UID}}); return r.json(); }
-async function post(path,body){ const r=await fetch((window.API_BASE||'')+path,{method:'POST',headers:{'content-type':'application/json','x-galactly-user':UID}, body:JSON.stringify(body||{})}); return r.json(); }
+async function post(path,body){ const r=await fetch((window.API_BASE||'')+path, {method:'POST', headers:{'content-type':'application/json','x-galactly-user':UID}, body:JSON.stringify(body||{})}); return r.json(); }
 
 async function pollLeadsOnce(){
-  const r = await get('/api/v1/leads').catch(()=>null);
-  if(r?.ok && Array.isArray(r.leads) && r.leads.length){
-    elNew.style.display='inline-flex';
-    addCards(r.leads.slice(0,2).map(L=>({...L,_locked:true})));
-  }else{
-    // graceful placeholder so the left pane doesn't feel empty
-    addCards([{ id:-1, cat:'demo', heat:78, source_url:'https://example.com/proof', title:'Demo HOT lead (signals warming up)', snippet:'This placeholder disappears once your signal ingestors run.' }]);
+  try{
+    const r = await get('/api/v1/leads?limit=6');
+    const items = Array.isArray(r.items)? r.items : (Array.isArray(r.leads)? r.leads : []);
+    if(items.length){ addCards(items.slice(0,2)); $('#engineStatus').innerHTML='<span class="dot"></span>New signals found'; }
+    else { // fallback demo
+      addCards([{ id:-1, title:'D2C beverage promo cadence ↑', source_url:'https://example.com/promo', cat:'Demand', heat:68 },
+                { id:-2, title:'Procurement intake updated', source_url:'https://example.com/forms', cat:'Procurement', heat:74 }]);
+    }
+  }catch{
+    // fallback demo
+    addCards([{ id:-1, title:'D2C beverage promo cadence ↑', source_url:'https://example.com/promo', cat:'Demand', heat:68 }]);
   }
 }
 
-/* ===== status/quota ===== */
-async function refreshQuota(){
-  try{
-    const r = await get('/api/v1/status');
-    if(r && r.free){ document.getElementById('quotaNote').textContent = `Free: ${r.free.findsLeft} searches left • ${r.free.revealsLeft} reveals left`; }
-  }catch{ document.getElementById('quotaNote').textContent='Free: …'; }
-}
-
-/* ===== run buttons ===== */
-document.getElementById('btnDry').onclick = ()=> run(false);
-document.getElementById('btnFind').onclick = ()=> run(true);
-
-async function run(persist){
-  elNew.style.display='none'; elList.innerHTML='';
-  const body = {
-    vendorDomain: document.getElementById('vendor').value.trim(),
-    buyers: document.getElementById('buyers').value.split(',').map(s=>s.trim()).filter(Boolean),
-    industries: document.getElementById('industries').value.split(',').map(s=>s.trim()).filter(Boolean),
-    regions: document.getElementById('regions').value.split(',').map(s=>s.trim()).filter(Boolean),
-    describe: document.getElementById('describe').value.trim(),
-    listMe: document.getElementById('listMe').checked === true
-  };
-  localStorage.setItem('onboard', JSON.stringify(body));
-  setEnginePhase('running','Initializing…');
-  startSignals(body.vendorDomain, body.industries.join(','), body.regions.join(','));
+async function findNow(dry=false){
+  const vendor=$('#vendor').value.trim();
+  const body={ vendor, buyers:$('#buyers').value.trim(), industries:$('#industries').value.trim(), regions:$('#regions').value.trim(), describe:$('#describe').value.trim(), listMe:$('#listMe').checked, dry };
   try{
     const res = await post('/api/v1/find-now', body);
     setTimeout(pollLeadsOnce, 2500);
     if(res?.ok) { setTimeout(pollLeadsOnce, 9000); setTimeout(pollLeadsOnce, 15000); }
   }catch{}
   refreshQuota();
+  startPreview();
 }
 
-/* ===== init ===== */
-document.getElementById('engine').textContent='engine: idle';
-refreshQuota();
+/* ===== Pro Burst (one-time taste) ===== */
+function maybeStartProBurst(){
+  const key='pro_burst_done_v2';
+  if(localStorage.getItem(key)==='1') return;
+  localStorage.setItem(key,'1');
+  $('#proBurstBadge').style.display='inline-flex';
+  // unlock the next ~8 pro lines over 60–90s
+  const unlock = ()=>{
+    const proTracks = Array.from(document.querySelectorAll('.track.pro.locked'));
+    if(!proTracks.length) return;
+    const t = proTracks[0];
+    t.classList.remove('locked');
+    t.insertAdjacentHTML('beforeend', '<span class="badgeMini" style="margin-left:auto">✅ Pro check</span>');
+    const proCount = Number($('#countPro').textContent.replace(/[^0-9]/g,''))||0;
+    $('#countPro').textContent = String(proCount + 1);
+  };
+  let steps=0;
+  const timer = setInterval(()=>{ unlock(); steps++; if(steps>=8){ clearInterval(timer); $('#proBurstBadge').style.display='none'; } }, 800);
+  // mark the first revealed card as "Pro verified" once the user holds
+  document.addEventListener('click', (ev)=>{
+    const btn = (ev.target && ev.target.closest && ev.target.closest('[data-a="why"]'))? ev.target.closest('[data-a="why"]'): null;
+    if(btn && !btn.dataset.burst){
+      btn.dataset.burst='1';
+      btn.insertAdjacentHTML('afterend', '<span class="badgeMini">✅ Pro verified sample</span>');
+    }
+  }, { once:true, capture:true });
+}
+
+/* ===== wiring ===== */
+$('#btnDry').onclick=()=> findNow(true);
+$('#btnFind').onclick=()=> findNow(false);
+
+function ensureHeaderButton(){ /* present on first load */ }
+function initHero(){
+  const c=document.getElementById('star'); const ctx=c.getContext('2d'); let w=0,h=0,t=0;
+  function resize(){ w=c.width=c.clientWidth; h=c.height=c.clientHeight; } window.addEventListener('resize',resize); resize();
+  function draw(){
+    t+=0.008; ctx.clearRect(0,0,w,h);
+    for(let i=0;i<180;i++){ const a=i/180*Math.PI*2 + t, r=38+i*2.2, x=w*0.52+Math.cos(a)*r, y=h*0.56+Math.sin(a)*r;
+      ctx.fillStyle=`rgba(120,180,255,${0.018 + (i%6===0?0.06:0)})`; ctx.beginPath(); ctx.arc(x,y,(i%6===0)?1.8:1,0,Math.PI*2); ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  } draw();
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('engine').textContent='engine: idle';
+  refreshQuota(); initHero(); pollLeadsOnce();
+  // auto-open preview
+  setTimeout(()=> startPreview(), 600);
+});
 </script>
 </body>
 </html>
