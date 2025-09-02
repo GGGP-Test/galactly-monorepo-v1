@@ -14,14 +14,18 @@
   --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
   --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
 }
-*{box-sizing:border-box} html,body{height:100%}
+*{box-sizing:border-box}
+html,body{height:100%}
 body{margin:0;color:var(--ink);background:linear-gradient(180deg,#0a0e16,#06080e 60%);font-family:var(--inter)}
+/* header */
 header{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0b111b,#0a0e15)}
 .brand{display:flex;gap:10px;align-items:center;font:800 16px var(--mont)}
 .brand svg{width:20px;height:20px}
 .badge{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:#0c1322;color:#c9d6f0;font-size:12px}
 .badge .dot{width:8px;height:8px;border-radius:50%;background:#43e5b7;box-shadow:0 0 10px rgba(67,229,183,.7);display:inline-block}
+.apiChip{margin-left:8px;opacity:.7}
 
+/* layout */
 .wrap{max-width:1280px;margin:14px auto;padding:0 16px}
 .grid{display:grid;grid-template-columns:1.08fr 1fr;gap:16px}
 @media (max-width:1100px){ .grid{grid-template-columns:1fr} }
@@ -30,6 +34,12 @@ header{height:54px;display:flex;align-items:center;justify-content:space-between
 .head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
 .hint{font-size:12px;color:#9fb2d6;opacity:.9}
 .scroller{height:calc(100vh - 152px);overflow:auto}
+
+/* left: live results */
+.heroBox{position:relative;height:260px;border-bottom:1px solid var(--line);background:radial-gradient(500px 300px at 70% 40%,rgba(110,150,255,.16),rgba(10,14,20,1) 70%)}
+#nsCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.liveTicker{position:absolute;left:12px;bottom:12px;padding:6px 10px;border:1px solid #243048;border-radius:10px;background:rgba(12,18,30,.7);font-size:12px;color:#cfe0ff;backdrop-filter:blur(6px)}
+.statusDot{width:7px;height:7px;border-radius:50%;background:#86f7d6;display:inline-block;margin-right:6px;box-shadow:0 0 10px rgba(134,247,214,.6)}
 
 .card{background:#0f1420;border:1px solid var(--line);border-radius:12px;margin:12px;padding:12px}
 .tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
@@ -45,7 +55,15 @@ header{height:54px;display:flex;align-items:center;justify-content:space-between
 .hold{position:relative}
 .hold .bar{position:absolute;left:0;bottom:-6px;height:3px;background:linear-gradient(90deg,#86f7d6,#6fb3ff);width:0;border-radius:6px}
 
-/* Report (Signals Preview) */
+/* banners */
+.banner{background:#0f1626;border:1px dashed #314367;margin:10px 12px;padding:10px;border-radius:12px;color:#cfe0ff}
+.banner .btn{margin-left:10px}
+.error{border-color:#6b1d2b;color:#ffd5d5;background:rgba(70,16,24,.4)}
+
+/* right: train AI + report */
+.formRow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.input, textarea, select{width:100%;background:#0f1420;border:1px solid var(--line);color:#e9eef7;border-radius:10px;padding:10px 12px;font:500 13px var(--inter)}
+label{font-size:12px;color:#9fb2d6;margin-bottom:6px;display:block}
 .section{border-top:1px dashed #223048}
 .section:first-child{border-top:0}
 .section .titleRow{display:flex;align-items:center;justify-content:space-between;padding:10px 12px}
@@ -58,20 +76,9 @@ header{height:54px;display:flex;align-items:center;justify-content:space-between
 .step{padding:4px 8px;border:1px solid #2a3552;border-radius:8px;background:#0f1626;color:#cfe0ff;font-size:12px;white-space:nowrap}
 .arrow{opacity:.6}
 .counts{margin-left:auto;font-size:12px;color:#a9bbda}
-.locked{opacity:.75;filter:saturate(.8)}
+.locked{opacity:.78;filter:saturate(.84)}
 .upsell{margin:12px;padding:12px;border:1px dashed #38509a;border-radius:12px;background:rgba(20,28,46,.6)}
 .upsell strong{color:#fff}
-
-/* Banners */
-.banner{background:#0f1626;border:1px dashed #314367;margin:10px 12px;padding:10px;border-radius:12px;color:#cfe0ff}
-.banner .btn{margin-left:10px}
-
-/* Modal */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50}
-.modal.in{display:flex}
-.box{width:min(860px,96vw);background:#0b101a;border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.box .head{padding:10px 12px;border-bottom:1px solid var(--line)}
-.box .body{padding:12px}
 </style>
 </head>
 <body>
@@ -80,7 +87,10 @@ header{height:54px;display:flex;align-items:center;justify-content:space-between
     <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" stroke="url(#g)" stroke-width="2" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
     <span>Galactly</span>
   </div>
-  <div class="badge"><span class="dot"></span><span id="presence">0 online</span></div>
+  <div class="badge">
+    <span class="dot"></span><span id="presence">0 online</span>
+    <span class="apiChip" id="apiChip"></span>
+  </div>
 </header>
 
 <div class="wrap">
@@ -91,22 +101,60 @@ header{height:54px;display:flex;align-items:center;justify-content:space-between
         <div style="font:700 14px var(--inter)">Live results</div>
         <div class="hint" id="statusLine">probing demand → scanning procurement → reading reviews…</div>
       </div>
-      <div id="onboardBanner" class="banner" style="display:none;">
-        Create your free Vault to save and revisit leads. <button class="btn small" id="goSignup">Sign up</button>
+
+      <!-- neutron-star / activity -->
+      <div class="heroBox">
+        <canvas id="nsCanvas" aria-hidden="true"></canvas>
+        <div class="liveTicker"><span class="statusDot"></span><span id="liveTickerTxt">engine: idle</span></div>
       </div>
+
+      <div id="onboardBanner" class="banner" style="display:none;">
+        Create your free Vault to save and revisit leads.
+        <button class="btn small" id="goSignup">Sign up</button>
+      </div>
+
+      <div id="apiErr" class="banner error" style="display:none;">Couldn’t reach the API. Make sure you open this page from your API host (e.g. http://localhost:8080/free-panel.html) or set ?api=YOUR_API_BASE.</div>
+
       <div class="scroller" id="leadList"></div>
     </div>
 
     <!-- RIGHT -->
     <div class="panel">
       <div class="head">
-        <div style="font:700 14px var(--inter)">Customize your AI</div>
+        <div style="font:700 14px var(--inter)">Train your AI</div>
         <div class="hint"><span id="searchesLeft">0</span> searches left • <span id="revealsLeft">0</span> reveals left</div>
       </div>
-      <div style="padding:10px 12px;">
-        <div class="kv">Loaded from onboarding. Tweak then <button class="btn" id="findNow">Find now</button></div>
+
+      <div style="padding:12px">
+        <div class="formRow">
+          <div>
+            <label>Industries</label>
+            <input id="f_industries" class="input" placeholder="beverage, confectionery"/>
+          </div>
+          <div>
+            <label>Regions</label>
+            <input id="f_regions" class="input" placeholder="US, CA"/>
+          </div>
+        </div>
+        <div class="formRow" style="margin-top:10px">
+          <div>
+            <label>Seed buyers (domains)</label>
+            <input id="f_buyers" class="input" placeholder="brand1.com, brand2.com"/>
+          </div>
+          <div>
+            <label>Describe ideal customers</label>
+            <input id="f_desc" class="input" placeholder="materials, order sizes, channels, exclusions"/>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn" id="saveAI">Save</button>
+          <button class="btn" id="findNow">Find now</button>
+        </div>
+        <div class="kv" style="margin-top:6px">Loaded from onboarding. Tweak & run.</div>
       </div>
+
       <div class="sep"></div>
+
       <div class="head">
         <div style="font:700 14px var(--inter)">Signals Preview (report)</div>
         <div class="hint"><span id="freeCount">Free 0/0</span> • <span id="proCount">Pro 0/0</span></div>
@@ -116,92 +164,129 @@ header{height:54px;display:flex;align-items:center;justify-content:space-between
   </div>
 </div>
 
-<!-- WHY modal -->
-<div class="modal" id="why">
-  <div class="box">
-    <div class="head">
-      <div style="font:700 14px var(--inter)">Why this lead?</div>
-      <button class="btn small" id="whyClose">Close</button>
-    </div>
-    <div class="body">
-      <div class="kv">Packaging-specific reasons:</div>
-      <ul id="whyBullets" style="margin:8px 0 12px 18px;padding:0">
-        <li>Paid reach ≈ $5.4k/mo → sustained demand → ongoing corrugate & film usage.</li>
-        <li>PDP deltas: new 12-pack SKU → cartons per order rising.</li>
-        <li>Reviews: “box crushed” surge last 14 days → packaging switch timing.</li>
-      </ul>
-      <div class="kv">Packaging math:</div>
-      <div style="font-size:13px;color:#cfe0ff;margin:6px 0 10px">
-        ad-spend → visits → CTR/CVR → orders → avg units/order → packaging SKUs/mo → <b>Queue window</b> (next 1–2 weeks).
-      </div>
-      <button class="btn" id="confirmProof">Confirm proof</button>
-    </div>
-  </div>
-</div>
-
 <script>
-/* ---------- API bootstrap: base + sticky user ---------- */
+/* -------------------------------------------------------
+   API bootstrap: robust base detection + sticky user
+   ------------------------------------------------------- */
 (function(){
-  if (window.API && window.API.base) return;
-  const DEFAULT=(window.API_DEFAULT||'').replace(/\/$/,'') || location.origin;
   const qs=new URLSearchParams(location.search);
-  function normalize(v){ if(!v) return DEFAULT; let s=String(v).trim().replace(/\/$/,''); if(!/^https?:\/\//i.test(s)) s='https://'+s; return s; }
-  const saved=localStorage.getItem('apiBase'); const base=normalize(qs.get('api')||saved||DEFAULT);
-  window.API_BASE=base;
-  const _fetch=window.fetch.bind(window);
-  const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey)||('u_'+Math.random().toString(36).slice(2)); localStorage.setItem(uidKey, uid);
+  const saved=localStorage.getItem('apiBase');
+  const explicit=qs.get('api');
+  const isFile = location.protocol==='file:';
+  const fallback = 'http://localhost:8080';
+  let base = explicit || saved || (isFile ? fallback : (location.origin || fallback));
+  base = String(base).replace(/\/$/,'');
+  localStorage.setItem('apiBase', base);
+  // show chip so you always know where we point
+  document.getElementById('apiChip').textContent = base.replace(/^https?:\/\//,'');
+  const _fetch = window.fetch.bind(window);
+  const uidKey='galactly_uid';
+  const uid=localStorage.getItem(uidKey)||('u_'+Math.random().toString(36).slice(2)); localStorage.setItem(uidKey, uid);
   window.fetch=function(input,init){
-    let url=(typeof input==='string')?input:input.url; const headers=new Headers((init&&init.headers)||(typeof input!=='string'&&input.headers)||undefined);
-    try{ headers.set('x-galactly-user', uid);}catch{}
+    let url=(typeof input==='string')?input:input.url;
+    const headers=new Headers((init&&init.headers)||(typeof input!=='string'&&input.headers)||undefined);
+    headers.set('x-galactly-user', uid);
     if(url && (url.startsWith('/api/')||url.startsWith('api/')||url.startsWith('/presence/')||url.startsWith('presence/'))){
       url = base + (url.startsWith('/')? '': '/') + url;
     }
     return _fetch(typeof input==='string'?url:new Request(url,{...(init||{}),headers}));
   };
-  window.API={ get base(){return base;}, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
+  window.API={ base, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
 })();
 
-/* ---------- Presence ---------- */
+/* -------------------------------------------------------
+   Presence + API reachability banner
+   ------------------------------------------------------- */
+async function reachAPI(){
+  try{ const r=await fetch('/api/v1/status'); if(!r.ok) throw 0; return true; }catch{ return false; }
+}
+(async()=>{
+  const ok = await reachAPI();
+  if(!ok){ document.getElementById('apiErr').style.display='block'; }
+})();
 async function loadPresence(){ try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presence').textContent=(j.total||0)+' online'; }catch{} }
 setInterval(loadPresence, 10000); loadPresence();
 setInterval(()=>{ fetch('/presence/beat',{method:'POST'}).catch(()=>{}); }, 20000);
 
-/* ---------- Status / quotas ---------- */
+/* -------------------------------------------------------
+   Status / quotas / onboarding gate
+   ------------------------------------------------------- */
 const state={ onboarded:false, plan:'free', findsLeft:0, revealsLeft:0 };
 async function loadStatus(){
-  const r=await fetch('/api/v1/status'); const j=await r.json();
-  state.plan=j.user?.plan||'free'; state.onboarded=!!j.onboarded;
-  state.findsLeft=j.quota?.findsLeft||0; state.revealsLeft=j.quota?.revealsLeft||0;
-  document.getElementById('searchesLeft').textContent=state.findsLeft;
-  document.getElementById('revealsLeft').textContent=state.revealsLeft;
-  document.getElementById('onboardBanner').style.display = state.onboarded? 'none':'block';
+  try{
+    const r=await fetch('/api/v1/status'); const j=await r.json();
+    state.plan=j.user?.plan||'free'; state.onboarded=!!j.onboarded;
+    state.findsLeft=j.quota?.findsLeft||0; state.revealsLeft=j.quota?.revealsLeft||0;
+    document.getElementById('searchesLeft').textContent=state.findsLeft;
+    document.getElementById('revealsLeft').textContent=state.revealsLeft;
+    document.getElementById('onboardBanner').style.display = state.onboarded? 'none':'block';
+    setTicker('engine: ' + (j.engine||'ready'));
+  }catch(e){ /* shown above */ }
 }
 loadStatus();
 
-/* ---------- LEFT: leads drip & interactions ---------- */
+/* -------------------------------------------------------
+   Neutron-star canvas (slow, minimal)
+   ------------------------------------------------------- */
+(function(){
+  const c=document.getElementById('nsCanvas'); const ctx=c.getContext && c.getContext('2d'); if(!ctx) return;
+  let w=0,h=0,dpr=1,t=0;
+  const spokes=9;
+  const particles = Array.from({length:120},()=>({x:0,y:0,a:Math.random()*Math.PI*2,r:0.2+Math.random()*0.8,s:0.1+Math.random()*0.3}));
+  function resize(){ dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1)); w=c.clientWidth; h=c.clientHeight; c.width=Math.floor(w*dpr); c.height=Math.floor(h*dpr); ctx.setTransform(dpr,0,0,dpr,0,0); }
+  new ResizeObserver(resize).observe(c); resize();
+  function frame(){
+    t+=0.0035;
+    ctx.clearRect(0,0,w,h);
+    const cx=w*0.72, cy=h*0.57, R=Math.min(w,h)*0.14;
+    // glow
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R*3);
+    g.addColorStop(0,'rgba(255,255,255,.55)'); g.addColorStop(1,'rgba(60,90,140,.02)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R*1.2,0,Math.PI*2); ctx.fill();
+    // ring
+    ctx.strokeStyle='rgba(200,230,255,.2)'; ctx.lineWidth=1.2;
+    for(let k=1;k<=3;k++){ ctx.beginPath(); ctx.arc(cx,cy,R*(1+k*0.64),0,Math.PI*2); ctx.stroke(); }
+    // spokes (very slow spin)
+    ctx.strokeStyle='rgba(180,210,255,.35)'; ctx.lineWidth=1.5;
+    for(let i=0;i<spokes;i++){
+      const a=t+i*(Math.PI*2/spokes);
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a)*R*2.3, cy+Math.sin(a)*R*2.3); ctx.stroke();
+    }
+    // inbound dust
+    particles.forEach(p=>{
+      p.a += 0.001 + p.s*0.0007;
+      const rr = R*(1.8 + Math.sin(t*0.6+p.r)*1.1);
+      p.x = cx + Math.cos(p.a)*rr; p.y = cy + Math.sin(p.a)*rr;
+      ctx.fillStyle='rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(p.x,p.y,0.8,0,Math.PI*2); ctx.fill();
+    });
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+function setTicker(txt){ document.getElementById('liveTickerTxt').textContent = txt; }
+
+/* -------------------------------------------------------
+   Left column: leads drip & interactions
+   ------------------------------------------------------- */
 const leadList=document.getElementById('leadList');
 const statusLine=document.getElementById('statusLine');
-
-const demoQueue=[]; // will be filled by /find-now + /leads
-let dripTimer=null;
+const demoQueue=[]; let dripTimer=null;
 
 function enqueue(leads){
-  leads.forEach(L=>{
-    demoQueue.push(L);
-  });
+  leads.forEach(L=> demoQueue.push(L));
   if(!dripTimer){
     dripTimer=setInterval(()=>{
       if(demoQueue.length===0){ clearInterval(dripTimer); dripTimer=null; return; }
       addLeadCard(demoQueue.shift());
-    }, 2000);
+    }, 2000); // trickle
   }
 }
 
 function addLeadCard(L){
   const el=document.createElement('div'); el.className='card';
   const tags=document.createElement('div'); tags.className='tags';
-  L.tags.forEach(t=>{ const s=document.createElement('span'); s.className='tag'; s.textContent=t; tags.appendChild(s); });
-  const title=document.createElement('div'); title.className='title hold'; title.textContent=L.title;
+  (L.tags||[]).forEach(t=>{ const s=document.createElement('span'); s.className='tag'; s.textContent=t; tags.appendChild(s); });
+  const title=document.createElement('div'); title.className='title hold'; title.textContent=L.title||'Potential buyer';
   const bar=document.createElement('div'); bar.className='bar'; title.appendChild(bar);
   const actions=document.createElement('div'); actions.className='actions';
   const why=document.createElement('button'); why.className='btn'; why.textContent='Why this?';
@@ -210,7 +295,7 @@ function addLeadCard(L){
   el.appendChild(tags); el.appendChild(title); el.appendChild(actions);
   leadList.prepend(el);
 
-  // hold-to-reveal (consumes reveal quota)
+  // hold-to-reveal
   let tId=null, start=0; const DUR=1400;
   function resetBar(){ cancelAnimationFrame(tId); bar.style.width='0%'; }
   title.addEventListener('pointerdown', ()=>{
@@ -230,73 +315,75 @@ function addLeadCard(L){
   why.onclick=()=>openWhy(L);
   own.onclick=()=>ownLead(L, el);
 }
+function banner(text, action){
+  const b=document.createElement('div'); b.className='banner'; b.innerHTML=text+' ';
+  if(action){ const btn=document.createElement('button'); btn.className='btn small'; btn.textContent='Continue'; btn.onclick=action; b.appendChild(btn); }
+  leadList.prepend(b);
+}
+function needOnboarding(){ banner(`Please sign up to create your free Vault and continue.`, ()=> location.href = './index.html'); }
+function needPro(){ banner(`This is a Pro feature. Unlock full scan & ownership.`, ()=> location.href = '/checkout/stripe?plan=pro'); }
 
 async function ownLead(L, el){
   try{
-    // Claim then own; backend enforces plan & onboarding.
     const c=await fetch('/api/v1/claim',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({leadId:L.id})});
     if(c.status===401){ return needOnboarding(); }
     if(c.status===402){ return needPro(); }
     const o=await fetch('/api/v1/own',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({leadId:L.id,title:L.title,tags:L.tags})});
     if(o.status===401){ return needOnboarding(); }
     if(o.status===402){ return needPro(); }
-    const j=await o.json();
-    if(j.ok){ el.style.opacity=.6; }
+    const j=await o.json(); if(j.ok){ el.style.opacity=.6; }
   }catch(e){}
 }
 
-function needOnboarding(){
-  banner(`Please sign up to create your free Vault and continue.`, ()=> location.href = './index.html');
-}
-function needPro(){
-  banner(`This is a Pro feature. Unlock full scan & ownership.`, ()=> location.href = '/checkout/stripe?plan=pro');
-}
-function banner(text, action){
-  const b=document.createElement('div'); b.className='banner'; b.innerHTML=text+' ';
-  const btn=document.createElement('button'); btn.className='btn small'; btn.textContent='Continue';
-  btn.onclick=action; b.appendChild(btn); leadList.prepend(b);
-}
-
-/* Find now flow */
+/* run find-now, then poll leads once */
 document.getElementById('findNow').onclick=async ()=>{
   if(state.findsLeft<=0){ statusLine.textContent='Daily search quota reached'; return; }
   const r=await fetch('/api/v1/find-now',{method:'POST'}); const j=await r.json();
   if(!j.ok){ statusLine.textContent='Quota reached'; return; }
   state.findsLeft=Math.max(0,state.findsLeft-1);
   document.getElementById('searchesLeft').textContent=state.findsLeft;
-  statusLine.textContent='scanning…';
-  // poll leads once
+  statusLine.textContent='scanning…'; setTicker('collectors: running');
   try{ const lr=await fetch('/api/v1/leads'); const lj=await lr.json(); if(lj.ok){ enqueue(lj.leads||[]); } }catch{}
+};
+
+/* Save AI prefs (to vault; requires onboarding) */
+document.getElementById('saveAI').onclick=async ()=>{
+  const traits={
+    industries: (document.getElementById('f_industries').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    regions: (document.getElementById('f_regions').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    buyers: (document.getElementById('f_buyers').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    notes: (document.getElementById('f_desc').value||'').trim() || null
+  };
+  try{
+    const r=await fetch('/api/v1/vault',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({traits})});
+    if(r.status===401){ return needOnboarding(); }
+    const j=await r.json(); if(j.ok){ banner('Saved to your Vault.'); }
+  }catch(e){}
 };
 
 /* Onboard banner button */
 document.getElementById('goSignup').onclick=()=> location.href='./index.html';
 
-/* ---------- WHY modal ---------- */
-const whyModal=document.getElementById('why');
-document.getElementById('whyClose').onclick=()=> whyModal.classList.remove('in');
-
+/* -------------------------------------------------------
+   WHY modal (inline, minimalist)
+   ------------------------------------------------------- */
 function openWhy(L){
-  const ul=document.getElementById('whyBullets'); ul.innerHTML='';
-  const items=[
-    'Paid reach ≈ $5.4k/mo → sustained demand → ongoing corrugate & film usage.',
-    'PDP delta: new 12-pack → cartons/order uptrend.',
-    'Reviews surge: “box crushed” (14d) → switch timing.'
-  ];
-  items.forEach(t=>{ const li=document.createElement('li'); li.textContent=t; ul.appendChild(li); });
-  whyModal.classList.add('in');
+  alert(
+`Packaging-specific reasons:
+• Paid reach ≈ $5.4k/mo → sustained demand → ongoing corrugate & film usage
+• PDP delta: new 12-pack → cartons/order uptrend
+• Reviews surge: “box crushed” (14d) → switch timing
+
+Packaging math:
+ad-spend → visits → CTR/CVR → orders → avg units/order → packaging SKUs/mo → Queue window (next 1–2 weeks)`
+  );
 }
 
-document.getElementById('confirmProof').onclick=async ()=>{
-  await fetch('/api/v1/events',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type:'confirm',host:location.host})});
-  whyModal.classList.remove('in');
-};
-
-/* ---------- Signals Preview (report via SSE) ---------- */
-const report=document.getElementById('report');
-const bySection=new Map();
+/* -------------------------------------------------------
+   Signals Preview (report via SSE)
+   ------------------------------------------------------- */
+const report=document.getElementById('report'); const bySection=new Map();
 let freeSeen=0, proSeen=0, total=0, haltShown=false;
-
 function section(cat){
   if(bySection.has(cat)) return bySection.get(cat);
   const wrap=document.createElement('div'); wrap.className='section';
@@ -306,15 +393,12 @@ function section(cat){
   head.appendChild(h3); head.appendChild(right);
   const rows=document.createElement('div'); rows.className='rows';
   wrap.appendChild(head); wrap.appendChild(rows); report.appendChild(wrap);
-  const o={wrap,head,right,rows, counts:{free:0,pro:0,total:0}};
-  bySection.set(cat,o); return o;
+  const o={wrap,head,right,rows, counts:{free:0,pro:0,total:0}}; bySection.set(cat,o); return o;
 }
-
 function addRow(cat,lane,chain,counts,locked){
   const sec=section(cat); sec.counts.total=counts.total;
   if(lane==='free') sec.counts.free=counts.done; else sec.counts.pro=counts.done;
   sec.right.textContent=`Free ${sec.counts.free}/${sec.counts.total} • Pro ${sec.counts.pro}/${sec.counts.total}${locked?' 🔒':''}`;
-
   const row=document.createElement('div'); row.className='row'+(locked?' locked':'');
   const A=document.createElement('div'); A.className='lane'; A.textContent=lane==='free'?'Free':'Pro';
   const B=document.createElement('div'); B.className='chain';
@@ -324,18 +408,17 @@ function addRow(cat,lane,chain,counts,locked){
   const cnt=document.createElement('span'); cnt.className='counts'; cnt.textContent=`${counts.done}/${counts.total}`; B.appendChild(cnt);
   row.appendChild(A); row.appendChild(B); sec.rows.appendChild(row);
 }
-
 function showUpsell(payload){
   if(haltShown) return; haltShown=true;
   const box=document.createElement('div'); box.className='upsell';
-  box.innerHTML=`<strong>Free scan paused.</strong> We processed ${payload.freeDone}/${payload.total} items. Pro continues with full checks, auto-verification, JSON export, and Queue Window forecasting.`;
+  box.innerHTML=`<strong>Free scan paused.</strong> We processed ${payload.freeDone}/${payload.total}. Pro continues with full checks, auto-verification, JSON export, and queue window forecasting.`;
   const btn=document.createElement('button'); btn.className='btn small'; btn.textContent='Unlock Pro ($39/mo)'; btn.onclick=()=>location.href=payload.checkout||'/checkout/stripe?plan=pro';
   box.appendChild(document.createElement('br')); box.appendChild(btn);
   report.prepend(box);
 }
-
 function connectSSE(){
-  const es = new EventSource(API.url('/api/v1/progress.sse'));
+  const url = API.url('/api/v1/progress.sse');
+  const es = new EventSource(url);
   es.addEventListener('tick', ev=>{
     const j=JSON.parse(ev.data);
     total=j.total||total;
@@ -346,6 +429,7 @@ function connectSSE(){
   });
   es.addEventListener('halt', ev=> showUpsell(JSON.parse(ev.data)));
   es.addEventListener('done', ()=> es.close());
+  es.onerror = ()=> { /* keep quiet; EventSource auto-retries */ };
 }
 connectSSE();
 </script>
