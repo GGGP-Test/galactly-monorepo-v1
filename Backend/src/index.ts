@@ -1,6 +1,7 @@
 // backend/src/Index.ts
-// Galactly API bootstrap — plan gating, quotas, presence, vault (profile/saved/owned),
-// and streaming preview mount. Zero-cost friendly (in-memory) until you swap to Neon.
+// Galactly API — plan gating, quotas, presence, vault (profile/saved/owned),
+// streaming preview mount. Free users must SIGN UP to access the vault.
+// Zero-cost friendly (in-memory) until you swap to Neon.
 
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
@@ -52,7 +53,7 @@ type User = {
   id: string;                  // x-galactly-user
   plan: Plan;
   role?: "supplier" | "distributor" | "buyer";
-  email?: string;
+  email?: string;              // set on signup/onboarding
   company?: string;
   region?: string;
   createdAt: number;
@@ -78,6 +79,7 @@ const DEMO_LEADS: Lead[] = [
 
 // ---------- Helpers ----------
 const UTCday = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+const isOnboarded = (u: User) => Boolean(u.email); // minimal: email indicates signup
 
 function ensureUser(id: string): User {
   let u = USERS.get(id);
@@ -100,31 +102,38 @@ function ensureUser(id: string): User {
   if (u.quota.date !== today) {
     u.quota = { date: today, findsUsed: 0, revealsUsed: 0 };
   }
-  // normalize prefs arrays
   if (!u.prefs.muteDomains) u.prefs.muteDomains = [];
   return u;
 }
 
 declare global {
-  namespace Express {
-    interface Request { user?: User }
-  }
+  namespace Express { interface Request { user?: User } }
 }
 
+// attach user to request for /api and /presence
 function withUser(req: Request, _res: Response, next: NextFunction) {
   const uid = String(req.header("x-galactly-user") || "").trim();
   if (!uid) {
-    // anonymous still gets an ephemeral user
     const temp = "anon_" + crypto.randomBytes(6).toString("hex");
     req.user = ensureUser(temp);
   } else {
     req.user = ensureUser(uid);
   }
-  // Optional dev override: x-galactly-plan
+  // optional dev override
   const planOverride = req.header("x-galactly-plan");
-  if (planOverride === "free" || planOverride === "pro") {
-    req.user!.plan = planOverride;
-  }
+  if (planOverride === "free" || planOverride === "pro") req.user!.plan = planOverride;
+  next();
+}
+
+function requireOnboarded(req: Request, res: Response, next: NextFunction) {
+  const u = req.user!;
+  if (!isOnboarded(u)) return res.status(401).json({ ok: false, error: "needs_onboarding" });
+  next();
+}
+
+function requirePro(req: Request, res: Response, next: NextFunction) {
+  const u = req.user!;
+  if (u.plan !== "pro") return res.status(402).json({ ok: false, error: "pro_required" });
   next();
 }
 
@@ -133,10 +142,47 @@ const app = express();
 app.disable("x-powered-by");
 app.use(cors());
 
-// Use JSON by default. Stripe webhook below uses raw body.
+// IMPORTANT: Stripe webhook FIRST (raw body), before express.json()
+app.post("/api/v1/stripe/webhook", express.raw({ type: "*/*" }), (req: Request, res: Response) => {
+  try {
+    let event: any;
+
+    if (STRIPE_WEBHOOK_SECRET) {
+      const sig = req.header("stripe-signature");
+      if (!sig) return res.status(400).send("Missing signature");
+      const payload = req.body as Buffer;
+      // Soft dev check; for prod use Stripe SDK verify
+      const computed = crypto.createHmac("sha256", STRIPE_WEBHOOK_SECRET).update(payload).digest("hex");
+      if (!String(sig).includes(computed.slice(0, 16))) {
+        console.warn("Webhook HMAC prefix mismatch (dev-mode soft check).");
+      }
+      event = JSON.parse(payload.toString("utf8"));
+    } else {
+      // Dev: accept JSON body
+      event = JSON.parse((req.body as Buffer).toString("utf8"));
+    }
+
+    if (event?.type === "checkout.session.completed") {
+      const uid = event?.data?.object?.metadata?.galactly_user;
+      if (uid && USERS.has(uid)) {
+        const u = USERS.get(uid)!;
+        u.plan = "pro";
+        u.quota = { date: UTCday(), findsUsed: 0, revealsUsed: 0 };
+        console.log(`User ${uid} upgraded to PRO via Stripe webhook.`);
+      }
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error(err);
+    res.status(400).send("Webhook error");
+  }
+});
+
+// Now parse JSON for the rest
 app.use(express.json());
 
-// Attach user to /api and /presence
+// Attach user on /api and /presence
 app.use((req, res, next) => {
   if (req.path.startsWith("/api/") || req.path.startsWith("/presence/")) withUser(req, res, next);
   else next();
@@ -153,6 +199,7 @@ app.get("/api/v1/status", (req, res) => {
     ok: true,
     engine: "ready",
     user: { id: u.id, plan: u.plan, role: u.role || null, email: u.email || null, company: u.company || null },
+    onboarded: isOnboarded(u),
     quota: {
       findsLeft: Math.max(0, limits.findsPerDay - u.quota.findsUsed),
       revealsLeft: Math.max(0, limits.revealsPerDay - u.quota.revealsUsed),
@@ -173,7 +220,7 @@ app.get("/api/v1/user", (req, res) => {
   });
 });
 
-// Upsert gate from onboarding
+// Upsert gate from onboarding — this is the "signup" that unlocks the Vault
 app.post("/api/v1/gate", (req, res) => {
   const u = req.user!;
   const { email, region, role, company } = req.body || {};
@@ -181,11 +228,11 @@ app.post("/api/v1/gate", (req, res) => {
   if (typeof email === "string") u.email = email;
   if (typeof company === "string") u.company = company;
   if (typeof region === "string") u.region = region;
-  res.json({ ok: true, user: { id: u.id, plan: u.plan, role: u.role || null } });
+  res.json({ ok: true, onboarded: isOnboarded(u), user: { id: u.id, plan: u.plan, role: u.role || null } });
 });
 
-// ---------- Vault (profile, prefs, saved/owned) ----------
-app.get("/api/v1/vault", (req, res) => {
+// ---------- Vault (profile, prefs, saved/owned) — requires signup ----------
+app.get("/api/v1/vault", requireOnboarded, (req, res) => {
   const u = req.user!;
   res.json({
     ok: true,
@@ -201,7 +248,7 @@ app.get("/api/v1/vault", (req, res) => {
   });
 });
 
-app.post("/api/v1/vault", (req, res) => {
+app.post("/api/v1/vault", requireOnboarded, (req, res) => {
   const u = req.user!;
   const { role, traits, prefs } = req.body || {};
   if (role && ["supplier", "distributor", "buyer"].includes(role)) u.role = role;
@@ -231,15 +278,15 @@ app.post("/api/v1/vault", (req, res) => {
   res.json({ ok: true, traits: u.traits, prefs: u.prefs });
 });
 
-// Saved/Owned leads APIs
-app.get("/api/v1/vault/leads", (req, res) => {
+// Vault leads
+app.get("/api/v1/vault/leads", requireOnboarded, (req, res) => {
   const u = req.user!;
   const kind = String(req.query.kind || "saved"); // saved | owned
   const src = kind === "owned" ? u.ownedLeads : u.savedLeads;
   res.json({ ok: true, kind, leads: Array.from(src.values()).sort((a,b)=>b.createdAt-a.createdAt) });
 });
 
-app.post("/api/v1/vault/save", (req, res) => {
+app.post("/api/v1/vault/save", requireOnboarded, (req, res) => {
   const u = req.user!;
   const lead = req.body?.lead as Partial<Lead>;
   if (!lead?.id || !lead?.title) return res.status(400).json({ ok: false, error: "invalid_lead" });
@@ -254,7 +301,7 @@ app.post("/api/v1/vault/save", (req, res) => {
   res.json({ ok: true });
 });
 
-app.post("/api/v1/vault/remove", (req, res) => {
+app.post("/api/v1/vault/remove", requireOnboarded, (req, res) => {
   const u = req.user!;
   const { leadId } = req.body || {};
   if (!leadId) return res.status(400).json({ ok: false, error: "missing_leadId" });
@@ -298,9 +345,9 @@ app.post("/api/v1/events", (req, res) => {
   res.json({ ok: true });
 });
 
-// claim/own (2-min window simulated)
+// claim/own — PRO ONLY (exclusive window)
 const CLAIMS = new Map<string, { by: string; at: number }>(); // leadId -> claim
-app.post("/api/v1/claim", (req, res) => {
+app.post("/api/v1/claim", requireOnboarded, requirePro, (req, res) => {
   const u = req.user!;
   const { leadId } = req.body || {};
   if (!leadId) return res.status(400).json({ ok: false, error: "missing_leadId" });
@@ -314,7 +361,7 @@ app.post("/api/v1/claim", (req, res) => {
   res.json({ ok: true, reservedForSec: 120 });
 });
 
-app.post("/api/v1/own", (req, res) => {
+app.post("/api/v1/own", requireOnboarded, requirePro, (req, res) => {
   const u = req.user!;
   const { leadId, title, tags } = req.body || {};
   if (!leadId) return res.status(400).json({ ok: false, error: "missing_leadId" });
@@ -332,10 +379,9 @@ app.post("/api/v1/own", (req, res) => {
   res.json({ ok: true, owned: true });
 });
 
-// ---------- Metrics snapshot (for Vault graphs) ----------
-app.get("/api/v1/metrics/summary", (req, res) => {
+// ---------- Metrics snapshot (for Vault graphs) — requires signup ----------
+app.get("/api/v1/metrics/summary", requireOnboarded, (req, res) => {
   const u = req.user!;
-  // lightweight synthetic metrics; replace with DB aggregations later
   const days = Number(req.query.days || 7);
   const points = Math.max(7, Math.min(30, days));
   const rand = (n:number, base:number) => Math.max(0, Math.round(base + (Math.random()*n - n/2)));
@@ -352,9 +398,7 @@ app.get("/api/v1/metrics/summary", (req, res) => {
     seen:a.seen+c.seen, reveals:a.reveals+c.reveals, saved:a.saved+c.saved, owned:a.owned+c.owned, confirms:a.confirms+c.confirms
   }), { seen:0,reveals:0,saved:0,owned:0,confirms:0 });
 
-  res.json({
-    ok:true, period:`${points}d`, totals, spark
-  });
+  res.json({ ok:true, period:`${points}d`, totals, spark });
 });
 
 // ---------- Presence ----------
@@ -372,43 +416,6 @@ app.get("/presence/online", (_req, res) => {
 
 // ---------- Streaming preview (SSE) ----------
 app.use("/api/v1", progressRouter); // /api/v1/progress.sse
-
-// ---------- Stripe webhook (instant plan flip) ----------
-app.post("/api/v1/stripe/webhook", express.raw({ type: "*/*" }), (req: Request, res: Response) => {
-  try {
-    let event: any;
-
-    if (STRIPE_WEBHOOK_SECRET) {
-      const sig = req.header("stripe-signature");
-      if (!sig) return res.status(400).send("Missing signature");
-      const payload = req.body as Buffer;
-      const computed = crypto.createHmac("sha256", STRIPE_WEBHOOK_SECRET).update(payload).digest("hex");
-      // NOTE: For production use Stripe SDK verify. Here, we only do a soft check for dev.
-      if (!String(sig).includes(computed.slice(0, 16))) {
-        console.warn("Webhook HMAC prefix mismatch (dev-mode soft check).");
-      }
-      event = JSON.parse(payload.toString("utf8"));
-    } else {
-      // Dev: accept JSON
-      event = JSON.parse((req.body as Buffer).toString("utf8"));
-    }
-
-    if (event?.type === "checkout.session.completed") {
-      const uid = event?.data?.object?.metadata?.galactly_user;
-      if (uid && USERS.has(uid)) {
-        const u = USERS.get(uid)!;
-        u.plan = "pro";
-        u.quota = { date: UTCday(), findsUsed: 0, revealsUsed: 0 };
-        console.log(`User ${uid} upgraded to PRO via Stripe webhook.`);
-      }
-    }
-
-    res.json({ received: true });
-  } catch (err) {
-    console.error(err);
-    res.status(400).send("Webhook error");
-  }
-});
 
 // Dev helper: flip plan without Stripe
 if (NODE_ENV !== "production") {
