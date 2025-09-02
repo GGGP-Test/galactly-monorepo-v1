@@ -1,6 +1,6 @@
 // backend/src/Index.ts
-// Galactly API bootstrap — plan gating, quotas, presence, stubs.
-// Zero-cost friendly: everything runs in-memory until you switch to Neon.
+// Galactly API bootstrap — plan gating, quotas, presence, vault (profile/saved/owned),
+// and streaming preview mount. Zero-cost friendly (in-memory) until you swap to Neon.
 
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
@@ -10,7 +10,7 @@ import crypto from "crypto";
 
 import progressRouter from "./routes/progress";
 
-// ---------- Config (env or sensible defaults) ----------
+// ---------- Config ----------
 const PORT = Number(process.env.PORT || 8080);
 const NODE_ENV = process.env.NODE_ENV || "development";
 
@@ -20,13 +20,36 @@ const FREE_REVEALS_PER_DAY = Number(process.env.FREE_REVEALS_PER_DAY || 2);
 const PRO_FINDS_PER_DAY = Number(process.env.PRO_FINDS_PER_DAY || 40);
 const PRO_REVEALS_PER_DAY = Number(process.env.PRO_REVEALS_PER_DAY || 200);
 
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || ""; // optional during dev
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || ""; // optional in dev
 
-// ---------- In-memory data (swap to Neon later) ----------
+// ---------- Types / In-memory state ----------
 type Plan = "free" | "pro";
 type Quota = { date: string; findsUsed: number; revealsUsed: number };
+
+type Lead = {
+  id: string;
+  title: string;
+  tags: string[];
+  confidence?: number;     // 0..1
+  createdAt: number;
+};
+
+type Traits = {
+  vendorDomain?: string;
+  industries?: string[];
+  regions?: string[];
+  buyers?: string[];
+  notes?: string | null;
+};
+
+type Prefs = {
+  theme?: "dark" | "light";
+  alerts?: { email?: boolean; sms?: boolean };
+  muteDomains?: string[];
+};
+
 type User = {
-  id: string;            // x-galactly-user
+  id: string;                  // x-galactly-user
   plan: Plan;
   role?: "supplier" | "distributor" | "buyer";
   email?: string;
@@ -34,8 +57,11 @@ type User = {
   region?: string;
   createdAt: number;
   quota: Quota;
+  traits: Traits;
+  prefs: Prefs;
   confirmedProofs: Array<{ at: number; host: string }>;
-  muteDomains: Set<string>;
+  savedLeads: Map<string, Lead>;
+  ownedLeads: Map<string, Lead>;
 };
 
 const USERS = new Map<string, User>();
@@ -44,10 +70,10 @@ const USERS = new Map<string, User>();
 const PRESENCE = new Map<string, number>(); // userId -> lastBeatMs
 
 // demo lead pool (rotated)
-const DEMO_LEADS = [
-  { id: "L1", tags: ["demand", "Confidence 80% (strong)"], title: "•l••••••,••• — •• ••••pa••••• s••••" },
-  { id: "L2", tags: ["demand", "Confidence 70% (solid)"],   title: "g•••••,c• — •• ••••s••nc• •••••" },
-  { id: "L3", tags: ["procurement", "Confidence 65%"],       title: "••••••• ••— •••••• — •• ••••" },
+const DEMO_LEADS: Lead[] = [
+  { id: "L1", tags: ["demand", "Confidence 80% (strong)"], title: "•l••••••,••• — •• ••••pa••••• s••••", createdAt: Date.now() },
+  { id: "L2", tags: ["demand", "Confidence 70% (solid)"],   title: "g•••••,c• — •• ••••s••nc• •••••", createdAt: Date.now() },
+  { id: "L3", tags: ["procurement", "Confidence 65%"],       title: "••••••• ••— •••••• — •• ••••", createdAt: Date.now() },
 ];
 
 // ---------- Helpers ----------
@@ -61,8 +87,11 @@ function ensureUser(id: string): User {
       plan: "free",
       createdAt: Date.now(),
       quota: { date: UTCday(), findsUsed: 0, revealsUsed: 0 },
+      traits: {},
+      prefs: { theme: "dark", alerts: { email: true, sms: false }, muteDomains: [] },
       confirmedProofs: [],
-      muteDomains: new Set(),
+      savedLeads: new Map(),
+      ownedLeads: new Map(),
     };
     USERS.set(id, u);
   }
@@ -71,15 +100,14 @@ function ensureUser(id: string): User {
   if (u.quota.date !== today) {
     u.quota = { date: today, findsUsed: 0, revealsUsed: 0 };
   }
+  // normalize prefs arrays
+  if (!u.prefs.muteDomains) u.prefs.muteDomains = [];
   return u;
 }
 
 declare global {
-  // augment Request for TS
   namespace Express {
-    interface Request {
-      user?: User;
-    }
+    interface Request { user?: User }
   }
 }
 
@@ -103,19 +131,18 @@ function withUser(req: Request, _res: Response, next: NextFunction) {
 // ---------- Express ----------
 const app = express();
 app.disable("x-powered-by");
-
-// Allow JSON for normal routes;
-// Stripe webhook (raw body) is handled on that route specifically.
 app.use(cors());
+
+// Use JSON by default. Stripe webhook below uses raw body.
 app.use(express.json());
 
-// Attach user to every /api and /presence route
+// Attach user to /api and /presence
 app.use((req, res, next) => {
   if (req.path.startsWith("/api/") || req.path.startsWith("/presence/")) withUser(req, res, next);
   else next();
 });
 
-// ---------- Status & Gating ----------
+// ---------- Status & Basic Profile ----------
 app.get("/api/v1/status", (req, res) => {
   const u = req.user!;
   const limits = u.plan === "pro"
@@ -125,7 +152,7 @@ app.get("/api/v1/status", (req, res) => {
   res.json({
     ok: true,
     engine: "ready",
-    user: { id: u.id, plan: u.plan, role: u.role || null },
+    user: { id: u.id, plan: u.plan, role: u.role || null, email: u.email || null, company: u.company || null },
     quota: {
       findsLeft: Math.max(0, limits.findsPerDay - u.quota.findsUsed),
       revealsLeft: Math.max(0, limits.revealsPerDay - u.quota.revealsUsed),
@@ -134,7 +161,19 @@ app.get("/api/v1/status", (req, res) => {
   });
 });
 
-// Upsert gate (email/domain/region). Light validation only.
+app.get("/api/v1/user", (req, res) => {
+  const u = req.user!;
+  res.json({
+    ok: true,
+    user: {
+      id: u.id, plan: u.plan, role: u.role || null,
+      email: u.email || null, company: u.company || null, region: u.region || null,
+      traits: u.traits, prefs: u.prefs, createdAt: u.createdAt
+    }
+  });
+});
+
+// Upsert gate from onboarding
 app.post("/api/v1/gate", (req, res) => {
   const u = req.user!;
   const { email, region, role, company } = req.body || {};
@@ -143,6 +182,84 @@ app.post("/api/v1/gate", (req, res) => {
   if (typeof company === "string") u.company = company;
   if (typeof region === "string") u.region = region;
   res.json({ ok: true, user: { id: u.id, plan: u.plan, role: u.role || null } });
+});
+
+// ---------- Vault (profile, prefs, saved/owned) ----------
+app.get("/api/v1/vault", (req, res) => {
+  const u = req.user!;
+  res.json({
+    ok: true,
+    plan: u.plan,
+    quota: u.quota,
+    traits: u.traits,
+    prefs: u.prefs,
+    counts: {
+      saved: u.savedLeads.size,
+      owned: u.ownedLeads.size,
+      confirmedProofs: u.confirmedProofs.length
+    }
+  });
+});
+
+app.post("/api/v1/vault", (req, res) => {
+  const u = req.user!;
+  const { role, traits, prefs } = req.body || {};
+  if (role && ["supplier", "distributor", "buyer"].includes(role)) u.role = role;
+
+  if (traits && typeof traits === "object") {
+    const t: Traits = {
+      vendorDomain: typeof traits.vendorDomain === "string" ? traits.vendorDomain : u.traits.vendorDomain,
+      industries: Array.isArray(traits.industries) ? traits.industries : u.traits.industries,
+      regions: Array.isArray(traits.regions) ? traits.regions : u.traits.regions,
+      buyers: Array.isArray(traits.buyers) ? traits.buyers : u.traits.buyers,
+      notes: typeof traits.notes === "string" || traits.notes === null ? traits.notes : u.traits.notes,
+    };
+    u.traits = t;
+  }
+  if (prefs && typeof prefs === "object") {
+    u.prefs.theme = prefs.theme === "light" ? "light" : "dark";
+    if (prefs.alerts) {
+      u.prefs.alerts = {
+        email: typeof prefs.alerts.email === "boolean" ? prefs.alerts.email : (u.prefs.alerts?.email ?? true),
+        sms: typeof prefs.alerts.sms === "boolean" ? prefs.alerts.sms : (u.prefs.alerts?.sms ?? false),
+      };
+    }
+    if (Array.isArray(prefs.muteDomains)) {
+      u.prefs.muteDomains = prefs.muteDomains.filter((x: any) => typeof x === "string");
+    }
+  }
+  res.json({ ok: true, traits: u.traits, prefs: u.prefs });
+});
+
+// Saved/Owned leads APIs
+app.get("/api/v1/vault/leads", (req, res) => {
+  const u = req.user!;
+  const kind = String(req.query.kind || "saved"); // saved | owned
+  const src = kind === "owned" ? u.ownedLeads : u.savedLeads;
+  res.json({ ok: true, kind, leads: Array.from(src.values()).sort((a,b)=>b.createdAt-a.createdAt) });
+});
+
+app.post("/api/v1/vault/save", (req, res) => {
+  const u = req.user!;
+  const lead = req.body?.lead as Partial<Lead>;
+  if (!lead?.id || !lead?.title) return res.status(400).json({ ok: false, error: "invalid_lead" });
+  const L: Lead = {
+    id: String(lead.id),
+    title: String(lead.title),
+    tags: Array.isArray(lead.tags) ? lead.tags.map(String) : [],
+    confidence: typeof lead.confidence === "number" ? lead.confidence : undefined,
+    createdAt: Date.now(),
+  };
+  u.savedLeads.set(L.id, L);
+  res.json({ ok: true });
+});
+
+app.post("/api/v1/vault/remove", (req, res) => {
+  const u = req.user!;
+  const { leadId } = req.body || {};
+  if (!leadId) return res.status(400).json({ ok: false, error: "missing_leadId" });
+  u.savedLeads.delete(String(leadId));
+  res.json({ ok: true });
 });
 
 // ---------- Leads / Find-now (stubs; no paid calls) ----------
@@ -157,14 +274,12 @@ app.post("/api/v1/find-now", (req, res) => {
   }
   u.quota.findsUsed += 1;
 
-  // Seed the lead pool "server side"; the UI will poll /leads and trickle.
   const created = Math.floor(1 + Math.random() * 3);
   res.json({ ok: true, created });
 });
 
 app.get("/api/v1/leads", (req, res) => {
   const u = req.user!;
-  // Rotate a few demo leads; platform rotation is server-side in real impl.
   const out = DEMO_LEADS.slice(0, 2 + (u.plan === "pro" ? 1 : 0));
   res.json({ ok: true, leads: out });
 });
@@ -177,7 +292,8 @@ app.post("/api/v1/events", (req, res) => {
     u.confirmedProofs.push({ at: Date.now(), host });
   }
   if (type === "mute" && typeof host === "string") {
-    u.muteDomains.add(host);
+    if (!u.prefs.muteDomains) u.prefs.muteDomains = [];
+    if (!u.prefs.muteDomains.includes(host)) u.prefs.muteDomains.push(host);
   }
   res.json({ ok: true });
 });
@@ -200,7 +316,7 @@ app.post("/api/v1/claim", (req, res) => {
 
 app.post("/api/v1/own", (req, res) => {
   const u = req.user!;
-  const { leadId } = req.body || {};
+  const { leadId, title, tags } = req.body || {};
   if (!leadId) return res.status(400).json({ ok: false, error: "missing_leadId" });
 
   const existing = CLAIMS.get(leadId);
@@ -208,8 +324,37 @@ app.post("/api/v1/own", (req, res) => {
     return res.status(409).json({ ok: false, error: "not_claimed_by_you" });
   }
   CLAIMS.delete(leadId);
-  // In real impl: persist ownership to DB.
+
+  const L: Lead = { id: String(leadId), title: String(title || "Owned lead"), tags: Array.isArray(tags)? tags.map(String):[], createdAt: Date.now() };
+  u.ownedLeads.set(L.id, L);
+  u.savedLeads.delete(L.id);
+
   res.json({ ok: true, owned: true });
+});
+
+// ---------- Metrics snapshot (for Vault graphs) ----------
+app.get("/api/v1/metrics/summary", (req, res) => {
+  const u = req.user!;
+  // lightweight synthetic metrics; replace with DB aggregations later
+  const days = Number(req.query.days || 7);
+  const points = Math.max(7, Math.min(30, days));
+  const rand = (n:number, base:number) => Math.max(0, Math.round(base + (Math.random()*n - n/2)));
+
+  const spark = Array.from({length: points}, () => ({
+    seen: rand(12, 18),
+    reveals: rand(4, 6),
+    saved: rand(3, 5),
+    owned: rand(1, 2),
+    confirms: rand(1, 2),
+  }));
+
+  const totals = spark.reduce((a,c)=>({
+    seen:a.seen+c.seen, reveals:a.reveals+c.reveals, saved:a.saved+c.saved, owned:a.owned+c.owned, confirms:a.confirms+c.confirms
+  }), { seen:0,reveals:0,saved:0,owned:0,confirms:0 });
+
+  res.json({
+    ok:true, period:`${points}d`, totals, spark
+  });
 });
 
 // ---------- Presence ----------
@@ -227,43 +372,32 @@ app.get("/presence/online", (_req, res) => {
 
 // ---------- Streaming preview (SSE) ----------
 app.use("/api/v1", progressRouter); // /api/v1/progress.sse
-// The router reads req.user.plan for Free vs Pro behavior.
 
-// ---------- Stripe (optional during dev) ----------
-// Create Checkout sessions on the frontend using Stripe.js if you like.
-// Webhook below flips plan instantly when payment succeeds.
+// ---------- Stripe webhook (instant plan flip) ----------
 app.post("/api/v1/stripe/webhook", express.raw({ type: "*/*" }), (req: Request, res: Response) => {
   try {
     let event: any;
 
     if (STRIPE_WEBHOOK_SECRET) {
-      // Verify signature
       const sig = req.header("stripe-signature");
       if (!sig) return res.status(400).send("Missing signature");
       const payload = req.body as Buffer;
-      const header = String(sig);
-      // Minimal verifier for dev: HMAC check (for real use, use stripe SDK)
-      const computed = crypto
-        .createHmac("sha256", STRIPE_WEBHOOK_SECRET)
-        .update(payload)
-        .digest("hex");
-      if (!header.includes(computed.slice(0, 16))) {
-        // Not a full verification—use official Stripe library in prod.
-        console.warn("Webhook HMAC prefix mismatch (dev mode).");
+      const computed = crypto.createHmac("sha256", STRIPE_WEBHOOK_SECRET).update(payload).digest("hex");
+      // NOTE: For production use Stripe SDK verify. Here, we only do a soft check for dev.
+      if (!String(sig).includes(computed.slice(0, 16))) {
+        console.warn("Webhook HMAC prefix mismatch (dev-mode soft check).");
       }
       event = JSON.parse(payload.toString("utf8"));
     } else {
-      // Dev-friendly: accept JSON and flip plan if id present
+      // Dev: accept JSON
       event = JSON.parse((req.body as Buffer).toString("utf8"));
     }
 
-    // Handle only 'checkout.session.completed' (dev)
     if (event?.type === "checkout.session.completed") {
       const uid = event?.data?.object?.metadata?.galactly_user;
       if (uid && USERS.has(uid)) {
         const u = USERS.get(uid)!;
         u.plan = "pro";
-        // bump quotas immediately
         u.quota = { date: UTCday(), findsUsed: 0, revealsUsed: 0 };
         console.log(`User ${uid} upgraded to PRO via Stripe webhook.`);
       }
@@ -276,7 +410,7 @@ app.post("/api/v1/stripe/webhook", express.raw({ type: "*/*" }), (req: Request, 
   }
 });
 
-// Dev helper: flip plan without Stripe (disabled in prod)
+// Dev helper: flip plan without Stripe
 if (NODE_ENV !== "production") {
   app.post("/api/v1/admin/flip-plan", (req, res) => {
     const u = req.user!;
@@ -290,7 +424,7 @@ if (NODE_ENV !== "production") {
   });
 }
 
-// ---------- Misc ----------
+// ---------- Utilities ----------
 app.get("/__routes", (_req, res) => {
   const routes: string[] = [];
   app._router.stack.forEach((m: any) => {
