@@ -1,11 +1,28 @@
 // backend/src/Index.ts
 import express from "express";
-import cors from "cors";
 import crypto from "crypto";
 import type { Request, Response } from "express";
 
 const app = express();
-app.use(cors());
+
+/* -------------------- Minimal CORS (no package) -------------------- */
+app.use((req, res, next) => {
+  const origin = req.headers.origin || "*";
+  res.setHeader("Access-Control-Allow-Origin", origin as string);
+  res.setHeader("Vary", "Origin");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, x-galactly-user"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, OPTIONS"
+  );
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
 app.use(express.json({ limit: "1mb" }));
 
 /* -------------------- Config -------------------- */
@@ -15,7 +32,7 @@ const ENV = {
   FREE_REVEALS_PER_DAY: Number(process.env.FREE_REVEALS_PER_DAY || 2),
   PRO_FINDS_PER_DAY: Number(process.env.PRO_FINDS_PER_DAY || 40),
   PRO_REVEALS_PER_DAY: Number(process.env.PRO_REVEALS_PER_DAY || 120),
-  DEMO_TOTAL_STEPS: 1126, // preview stream denominator
+  DEMO_TOTAL_STEPS: 1126,
 };
 
 function todayUTC(): string {
@@ -41,7 +58,7 @@ type User = {
   email?: string;
   quota: Quota;
   traits: Traits;
-  verified?: boolean; // cached result of domain match (email vs vendorDomain)
+  verified?: boolean;
 };
 type Lead = {
   id: string;
@@ -53,8 +70,11 @@ type Lead = {
 };
 
 const USERS = new Map<string, User>();
-const LEAD_POOL = new Map<string, Lead[]>(); // per-user
-let ONLINE = 0;
+const LEAD_POOL = new Map<string, Lead[]>();
+
+/* Presence: simple heartbeat (last-seen timestamps) */
+const PRESENCE = new Map<string, number>();
+const PRESENCE_TTL_MS = 60_000;
 
 /* -------------------- Helpers -------------------- */
 function uidFromReq(req: Request): string {
@@ -106,7 +126,6 @@ function emailDomain(email?: string): string {
 function planLimits(user: User) {
   const isPro = user.plan === "pro";
   const findsLimit = isPro ? ENV.PRO_FINDS_PER_DAY : ENV.FREE_FINDS_PER_DAY;
-  // reveals: free users must be verified first
   const revealsBase = isPro ? ENV.PRO_REVEALS_PER_DAY : ENV.FREE_REVEALS_PER_DAY;
   const revealsLimit = user.plan === "free" && !user.verified ? 0 : revealsBase;
   return { findsLimit, revealsLimit };
@@ -140,17 +159,31 @@ function ensureLeadPool(user: User) {
   }
 }
 
-/* -------------------- Routes -------------------- */
-
-// Basic health
-app.get("/api/v1/healthz", (_req, res) => res.json({ ok: true }));
-
-// Presence (very simple)
-app.get("/presence/online", (_req, res) => {
-  res.json({ total: ONLINE });
+/* Middleware to update presence on every request */
+app.use((req, _res, next) => {
+  const id = uidFromReq(req);
+  PRESENCE.set(id, Date.now());
+  next();
 });
 
-// Status: return plan, quotas, traits, and gate info
+/* -------------------- Routes -------------------- */
+
+app.get("/api/v1/healthz", (_req, res) => res.json({ ok: true }));
+
+app.get("/presence/online", (_req, res) => {
+  const now = Date.now();
+  let total = 0;
+  for (const [_, ts] of PRESENCE) if (now - ts < PRESENCE_TTL_MS) total++;
+  res.json({ total });
+});
+
+/* Optional beat endpoint if you want to ping from the client */
+app.post("/presence/beat", (req, res) => {
+  const id = uidFromReq(req);
+  PRESENCE.set(id, Date.now());
+  res.json({ ok: true });
+});
+
 app.get("/api/v1/status", (req, res) => {
   const id = uidFromReq(req);
   const u = getOrInitUser(id);
@@ -159,25 +192,22 @@ app.get("/api/v1/status", (req, res) => {
     ok: true,
     user: { id: u.id, plan: u.plan },
     quota: { findsLeft, revealsLeft, date: u.quota.date },
-    gate: {
-      email: u.email || null,
-      domainMatch: !!u.verified,
-    },
+    gate: { email: u.email || null, domainMatch: !!u.verified },
     traits: u.traits,
   });
 });
 
-// Gate: save email / region (best-effort)
 app.post("/api/v1/gate", (req, res) => {
   const id = uidFromReq(req);
   const u = getOrInitUser(id);
   const { email, region } = req.body || {};
   if (email) u.email = String(email).trim();
-  if (region && !u.traits.regions) u.traits.regions = String(region)
-    .split(",")
-    .map((s: string) => s.trim())
-    .filter(Boolean);
-  // Verify immediately if vendorDomain already set
+  if (region && !u.traits.regions) {
+    u.traits.regions = String(region)
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean);
+  }
   if (u.email && u.traits.vendorDomain) {
     const ed = emailDomain(u.email);
     const sd = bareHost(u.traits.vendorDomain);
@@ -186,7 +216,6 @@ app.post("/api/v1/gate", (req, res) => {
   res.json({ ok: true, verified: !!u.verified });
 });
 
-// Vault: store traits (and optionally verify if email present)
 app.post("/api/v1/vault", (req, res) => {
   const id = uidFromReq(req);
   const u = getOrInitUser(id);
@@ -202,7 +231,6 @@ app.post("/api/v1/vault", (req, res) => {
     if (typeof traits.notes === "string") t.notes = traits.notes || null;
     u.traits = t;
   }
-  // recompute verification
   if (u.email && u.traits.vendorDomain) {
     const ed = emailDomain(u.email);
     const sd = bareHost(u.traits.vendorDomain);
@@ -211,20 +239,20 @@ app.post("/api/v1/vault", (req, res) => {
   res.json({ ok: true, traits: u.traits, verified: !!u.verified });
 });
 
-// Find-now: enforce quota, increment on success
 app.post("/api/v1/find-now", (req, res) => {
   const id = uidFromReq(req);
   const u = getOrInitUser(id);
   const { findsLeft } = countsLeft(u);
 
   if (findsLeft <= 0) {
-    return res.status(200).json({ ok: false, reason: "quota", findsLeft: 0, created: 0 });
+    return res
+      .status(200)
+      .json({ ok: false, reason: "quota", findsLeft: 0, created: 0 });
   }
 
-  // Simulate collectors; increment counter
   u.quota.findsUsed += 1;
   ensureLeadPool(u);
-  const created = Math.max(3, Math.floor(Math.random() * 6)); // pretend 3..8 new leads
+  const created = Math.max(3, Math.floor(Math.random() * 6));
   return res.json({
     ok: true,
     created,
@@ -232,28 +260,19 @@ app.post("/api/v1/find-now", (req, res) => {
   });
 });
 
-// Leads: return (rotated) deduped list
 app.get("/api/v1/leads", (req, res) => {
   const id = uidFromReq(req);
   const u = getOrInitUser(id);
   ensureLeadPool(u);
-  // rotate platforms as a very light “server rotates platforms”
   const list = (LEAD_POOL.get(u.id) || []).slice().sort((a, b) => a.createdAt - b.createdAt);
   res.json({ ok: true, leads: list });
 });
 
-// Events: like/dislike/mute/confirm (stub)
-app.post("/api/v1/events", (req, res) => {
-  const id = uidFromReq(req);
-  getOrInitUser(id); // ensure exists
-  res.json({ ok: true });
-});
+app.post("/api/v1/events", (_req, res) => res.json({ ok: true }));
+app.post("/api/v1/claim", (_req, res) => res.json({ ok: true, reservedForSec: 120 }));
+app.post("/api/v1/own", (_req, res) => res.json({ ok: true }));
 
-// Claim/Own (stubs)
-app.post("/api/v1/claim", (req, res) => res.json({ ok: true, reservedForSec: 120 }));
-app.post("/api/v1/own", (req, res) => res.json({ ok: true }));
-
-/* ---------- Signals Preview (SSE) ---------- */
+/* ---------- SSE: Signals Preview ---------- */
 type Tick = {
   category: string;
   lane: "free" | "pro";
@@ -264,19 +283,18 @@ type Tick = {
 };
 
 const PREVIEW: Array<Pick<Tick, "category" | "chain">> = [
-  { category: "Demand", chain: ["Ad libraries", "Probe", "Filter", "Conclusion"] },
-  { category: "Product", chain: ["PDP deltas", "Probe", "Evidence", "Conclusion"] },
-  { category: "Procurement", chain: ["Supplier portals", "Probe", "Evidence", "Conclusion"] },
-  { category: "Retail", chain: ["Price cadence", "Probe", "Evidence", "Conclusion"] },
-  { category: "Wholesale", chain: ["MOQ signals", "Probe", "Evidence", "Conclusion"] },
-  { category: "Ops", chain: ["Job posts", "Probe", "Evidence", "Conclusion"] },
-  { category: "Events", chain: ["Calendars", "Probe", "Evidence", "Conclusion"] },
-  { category: "Reviews", chain: ["Public reviews", "Lexicon", "Evidence", "Conclusion"] },
-  { category: "Timing", chain: ["If–then rules", "Probe", "Evidence", "Queue window"] },
+  { category: "Demand", chain: ["Probe", "Filter", "Evidence", "Conclusion"] },
+  { category: "Product", chain: ["Probe", "Filter", "Evidence", "Conclusion"] },
+  { category: "Procurement", chain: ["Probe", "Filter", "Evidence", "Conclusion"] },
+  { category: "Retail", chain: ["Probe", "Filter", "Evidence", "Conclusion"] },
+  { category: "Wholesale", chain: ["Probe", "Filter", "Evidence", "Conclusion"] },
+  { category: "Ops", chain: ["Probe", "Filter", "Evidence", "Conclusion"] },
+  { category: "Events", chain: ["Probe", "Filter", "Evidence", "Conclusion"] },
+  { category: "Reviews", chain: ["Probe", "Filter", "Evidence", "Conclusion"] },
+  { category: "Timing", chain: ["Probe", "Filter", "Evidence", "Queue window"] },
 ];
 
 app.get("/api/v1/progress.sse", (req: Request, res: Response) => {
-  // SSE headers
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -293,37 +311,31 @@ app.get("/api/v1/progress.sse", (req: Request, res: Response) => {
     res.write(`data: ${JSON.stringify(payload)}\n\n`);
   };
 
-  // slow, readable cadence
   let catIdx = 0;
   const timer = setInterval(() => {
     const def = PREVIEW[catIdx % PREVIEW.length];
     catIdx++;
 
-    // Increment a small slice
     freeDone = Math.min(total, freeDone + Math.floor(total * 0.012) + 1);
-    const freeTick: Tick = {
+    send("tick", {
       category: def.category,
       lane: "free",
       chain: ["Probe", "Filter", "Evidence", "Conclusion"],
       done: freeDone,
       total,
-    };
-    send("tick", freeTick);
+    });
 
-    // Pro shows extra checks (unlocked if plan is pro)
     const isPro = u.plan === "pro";
     proDone = Math.min(total, proDone + Math.floor(total * 0.018) + 2);
-    const proTick: Tick = {
+    send("tick", {
       category: def.category,
       lane: "pro",
       chain: ["Probe", "Filter", "Evidence", "Conclusion", "Auto-verify", "Queue window"],
       done: proDone,
       total,
       locked: !isPro,
-    };
-    send("tick", proTick);
+    });
 
-    // Free halts early 50–80 items (upsell)
     if (freeDone >= Math.min(80, Math.floor(total * 0.07))) {
       send("halt", { freeDone, total, checkout: "/checkout/stripe?plan=pro" });
       clearInterval(timer);
@@ -332,12 +344,6 @@ app.get("/api/v1/progress.sse", (req: Request, res: Response) => {
   }, 1200);
 
   req.on("close", () => clearInterval(timer));
-});
-
-/* -------------------- Presence counters -------------------- */
-app.use((_req, _res, next) => {
-  ONLINE = Math.max(0, ONLINE);
-  next();
 });
 
 /* -------------------- Start -------------------- */
