@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Galactly — Vault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#e9eef7; --mut:#a7b0c3; --line:#202838; --card:#0f1420; --panel:#0b101a;
+  --accent:#89ffd8; --accent2:#68a7ff; --warn:#f7c46a; --ok:#7fffd4;
+  --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;
+  --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box} body{margin:0; background:linear-gradient(180deg,#0a0e16,#06080e); color:var(--ink); font-family:var(--inter);}
+header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px}
+.brand{display:flex; align-items:center; gap:8px; font:800 15px var(--mont); color:#fff; text-decoration:none}
+.brand svg{width:20px;height:20px}
+.nav{margin-left:auto; display:flex; gap:8px; align-items:center}
+.btn{background:#131c2b; border:1px solid var(--line); border-radius:10px; padding:8px 10px; font:700 12px var(--inter); color:#e8eefb; cursor:pointer}
+.btn.primary{background:linear-gradient(90deg,#fff,#e6efff); color:#10131a; border-color:transparent}
+.badge{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:#cdd6ea; background:#0c1220}
+.badge .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4ae3b5;box-shadow:0 0 8px rgba(74,227,181,.6)}
+.wrap{display:grid; grid-template-columns: 280px 1fr; gap:16px; padding:16px}
+@media (max-width: 980px){ .wrap{grid-template-columns:1fr} }
+.col{background:var(--panel); border:1px solid var(--line); border-radius:16px; min-height:0}
+.section{padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between}
+.pane{padding:12px 14px; overflow:auto; max-height:calc(100vh - 100px)}
+.h{font:800 14px var(--mont)}
+.kv{display:grid; grid-template-columns: 140px 1fr; gap:8px; padding:8px 0; border-bottom:1px dashed var(--line)}
+.kv b{opacity:.9} .mut{opacity:.8}
+.input, select, textarea{width:100%; background:#0f1420; border:1px solid var(--line); color:#e9eef7; border-radius:10px; padding:8px 10px; font:500 13px var(--inter)}
+.list{display:flex; flex-direction:column; gap:10px}
+.card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px}
+.small{font-size:12px; opacity:.85}
+.table{width:100%; border-collapse:collapse; font-size:12px}
+.table th,.table td{padding:8px 6px; border-bottom:1px solid var(--line); text-align:left}
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="./index.html">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" stroke="url(#g)" stroke-width="2" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
+    <span>Galactly</span>
+  </a>
+  <span class="badge" id="presence"><span class="dot"></span><span id="presenceTxt">0 online</span></span>
+  <div class="nav">
+    <a class="btn" href="./free-panel.html">Free Panel</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="col">
+    <div class="section"><span class="h">Profile</span></div>
+    <div class="pane">
+      <div class="kv"><b>Email</b><span id="vEmail" class="mut">—</span></div>
+      <div class="kv"><b>Plan</b><span id="vPlan" class="mut">free</span></div>
+      <div class="kv"><b>Role</b>
+        <select id="fRole">
+          <option value="">—</option>
+          <option value="supplier">Supplier</option>
+          <option value="distributor">Distributor/Wholesaler</option>
+          <option value="buyer">Packaging Buyer</option>
+        </select>
+      </div>
+      <div class="kv"><b>Quota</b><span id="vQuota" class="mut">0 finds • 0 reveals today</span></div>
+      <div class="kv"><b>Vendor site</b><input id="fVendor" class="input"/></div>
+      <div class="kv"><b>Industries</b><input id="fIndustries" class="input" placeholder="comma separated"/></div>
+      <div class="kv"><b>Regions</b><input id="fRegions" class="input" placeholder="comma separated"/></div>
+      <div class="kv"><b>Seed buyers</b><input id="fBuyers" class="input" placeholder="comma separated domains"/></div>
+      <div class="kv" style="grid-template-columns: 1fr"><textarea id="fNotes" rows="4" class="input" placeholder="Describe your ideal customers"></textarea></div>
+      <div style="display:flex; gap:8px; margin-top:8px">
+        <button id="btnSave" class="btn primary">Save</button>
+        <button id="btnRefresh" class="btn">Refresh</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="section"><span class="h">Leads & Settings</span></div>
+    <div class="pane">
+      <div class="card">
+        <div class="h">Owned leads</div>
+        <table class="table" id="tblOwned"><thead><tr><th>ID</th><th>Title</th><th>Category</th><th>Owned at</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="h">Recent pool</div>
+        <table class="table" id="tblRecent"><thead><tr><th>ID</th><th>Title</th><th>Category</th><th>Created</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="h">Muted domains</div>
+        <div id="listMuted" class="small">—</div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="h">Confirmed proofs</div>
+        <div id="listProofs" class="small">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function ensureApiBase(){
+  if (window.API && window.API.base) return;
+  const DEFAULT=(window.API_DEFAULT||'').replace(/\/$/,'') || location.origin;
+  const qs=new URLSearchParams(location.search);
+  function normalize(v){ if(!v) return DEFAULT; let s=String(v).trim().replace(/\/$/,''); if(!/^https?:\/\//i.test(s)) s='https://'+s; return s; }
+  const saved=localStorage.getItem('apiBase'); const base=normalize(qs.get('api')||saved||DEFAULT);
+  window.API_BASE=base;
+  const _fetch=window.fetch.bind(window);
+  const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey)||('u_'+Math.random().toString(36).slice(2)); localStorage.setItem(uidKey, uid);
+  window.fetch=function(input,init){
+    let url=(typeof input==='string')?input:input.url; const headers=new Headers((init&&init.headers)||(typeof input!=='string'&&input.headers)||undefined);
+    try{ headers.set('x-galactly-user', uid);}catch{}
+    if(url && (url.startsWith('/api/')||url.startsWith('api/'))){ url = base + (url.startsWith('/')? '': '/') + url; }
+    return _fetch(typeof input==='string'?url:new Request(url,{...(init||{}),headers}));
+  };
+  window.API={ get base(){return base;}, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
+})();
+function $(s,r){ return (r||document).querySelector(s); }
+async function loadPresence(){
+  try{ const r=await fetch('/presence/online'); const j=await r.json(); $('#presenceTxt').textContent = (j.total||0)+' online'; }catch{ $('#presenceTxt').textContent='—'; }
+}
+async function loadVault(){
+  const r = await fetch('/api/v1/vault'); const j = await r.json();
+  if(!j.ok){ alert('Vault unavailable'); return; }
+  $('#vEmail').textContent = j.profile.email || '—';
+  $('#vPlan').textContent = j.profile.plan || 'free';
+  $('#fRole').value = j.profile.role || '';
+  $('#vQuota').textContent = (j.quota ? ((j.quota.findsUsed||0)+' finds • '+(j.quota.revealsUsed||0)+' reveals today') : '—');
+
+  // traits
+  const t = j.traits || {};
+  $('#fVendor').value = t.vendorDomain || '';
+  $('#fIndustries').value = (t.industries||[]).join(', ');
+  $('#fRegions').value = (t.regions||[]).join(', ');
+  $('#fBuyers').value = (t.buyers||[]).join(', ');
+  $('#fNotes').value = t.notes || '';
+
+  // owned
+  const o = j.leads.owned||[]; const tbO = $('#tblOwned tbody'); tbO.innerHTML='';
+  for(const x of o){ const tr=document.createElement('tr'); tr.innerHTML = '<td>'+x.id+'</td><td>'+escapeHtml(x.title||'')+'</td><td>'+ (x.cat||'') +'</td><td>'+ (x.owned_at||'') +'</td>'; tbO.appendChild(tr); }
+  // recent
+  const rc = j.leads.recent||[]; const tbR = $('#tblRecent tbody'); tbR.innerHTML='';
+  for(const x of rc){ const tr=document.createElement('tr'); tr.innerHTML = '<td>'+x.id+'</td><td>'+escapeHtml(x.title||'')+'</td><td>'+ (x.cat||'') +'</td><td>'+ (x.created_at||'') +'</td>'; tbR.appendChild(tr); }
+  // muted
+  const m = j.leads.mutedDomains||[]; $('#listMuted').textContent = m.length? m.join(', ') : '—';
+  // proofs
+  const p = j.leads.confirmedProofs||[]; $('#listProofs').textContent = p.length? JSON.stringify(p,null,2) : '—';
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+$('#btnRefresh').onclick = ()=> loadVault();
+$('#btnSave').onclick = async ()=>{
+  const role = $('#fRole').value || null;
+  const traits = {
+    vendorDomain: $('#fVendor').value.trim() || null,
+    industries: ($('#fIndustries').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    regions:    ($('#fRegions').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    buyers:     ($('#fBuyers').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    notes: $('#fNotes').value || null
+  };
+  const r = await fetch('/api/v1/vault', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ role, traits }) });
+  const j = await r.json();
+  if(j.ok){ alert('Saved.'); loadVault(); } else { alert('Save failed: '+ (j.error||'unknown')); }
+};
+
+document.addEventListener('DOMContentLoaded', ()=>{ loadPresence(); loadVault(); });
+</script>
+</body>
+</html>
