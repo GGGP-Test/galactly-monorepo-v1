@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Galactly — Live packaging buyer signals</title>
 
-<!-- inline favicon to avoid /favicon.ico 404 -->
+<!-- Inline favicon (avoids /favicon 404) -->
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%2386f7d6"/><stop offset="1" stop-color="%2357a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" fill="none" stroke="url(%23g)" stroke-width="4"/></svg>'/>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,7 +15,7 @@
 <style>
 :root{
   --ink:#eaf0ff; --mut:#a6b2c9; --line:#1e2737; --card:#0f1420; --panel:#0b101a; --pill:#10182a;
-  --accent:#86f7d6; --accent2:#6fb3ff; --ok:#7fffd4; --bad:#ff8a8a;
+  --accent:#86f7d6; --accent2:#6fb3ff;
   --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
   --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
 }
@@ -52,7 +52,7 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 .btn.ghost{background:#0f1626}
 .kv{margin-top:10px; font-size:12px; color:#c6d5f3; opacity:.95}
 
-/* ===== Right hero ===== */
+/* ===== Right hero container ===== */
 .hright{
   position:relative;
   height:520px;
@@ -64,7 +64,7 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
     radial-gradient(600px 380px at 70% 58%, rgba(120,160,255,.16), rgba(10,14,22,1) 70%);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.02), 0 18px 70px rgba(0,0,0,.45);
 }
-#hero-right-canvas{width:100%; height:100%; display:block;}
+#hero-right-canvas{width:100%; height:100%; display:block}
 
 /* KPI chips */
 .hright-kpis{
@@ -79,16 +79,15 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 }
 .hright-chip strong{ color:#fff; }
 
-@media (max-width:1080px){ .hright{height:420px} }
-
-/* Modal (kept minimal for this file) */
+/* Video modal (demo) */
 .modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50}
 .modal.in{display:flex}
-.box{width:min(920px,95vw); background:#0b101a; border:1px solid var(--line); border-radius:16px; overflow:hidden}
-.vmodal .box{width:min(1000px,96vw); padding:0}
+.vmodal .box{width:min(1000px,96vw); padding:0; background:#0b101a; border:1px solid var(--line); border-radius:16px; overflow:hidden}
 .vhead{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line)}
 .vbody{position:relative; padding-bottom:56.25%; height:0}
 .vbody iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
+
+@media (max-width:1080px){ .hright{height:420px} }
 </style>
 </head>
 <body>
@@ -113,7 +112,7 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
       </div>
     </div>
 
-    <!-- RIGHT HERO -->
+    <!-- RIGHT HERO: Globe → Core → Beams -->
     <div id="hero-right" class="hright" aria-hidden="true">
       <canvas id="hero-right-canvas"></canvas>
       <div class="hright-kpis">
@@ -141,236 +140,360 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 </div>
 
 <script>
-/* ===== Presence (best-effort; safe if endpoint missing) ===== */
+/* Presence badge (best-effort; safe if endpoint missing) */
 (async function presence(){
-  try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{}
-  setInterval(presence, 15000);
+  try{
+    const r=await fetch('/presence/online'); const j=await r.json();
+    document.getElementById('presenceTxt').textContent=(j.total||0)+' online';
+  }catch{}
+  setTimeout(presence,15000);
 })();
 
-/* ===== HERO STORY ANIMATION (US → Core → Platforms) ===== */
+/* ====================== HERO ANIMATION ======================
+   Story:
+   1) A premium globe with the US visible (stylized geometry + parallels).
+   2) A slow radar sweep illuminates pings across the US.
+   3) Pings tether into a bright core near the US east side.
+   4) Core fans beams to Email / SMS / Call / LinkedIn / Quote / ERP.
+   5) Beads travel along the beams. Loop smoothly.
+================================================================ */
 (function(){
   const root = document.getElementById('hero-right');
   const canvas = document.getElementById('hero-right-canvas');
   if(!root || !canvas || !canvas.getContext) return;
   const ctx = canvas.getContext('2d');
 
-  /* Layout + DPR */
-  let w=0,h=0,dpr=1,cx=0,cy=0,R=0;
+  /* Layout/DPR */
+  let w=0,h=0,dpr=1;
+  let globeX=0, globeY=0, globeR=0;
+  let coreX=0, coreY=0, coreR=0;
+
   function resize(){
     dpr = Math.max(1, Math.min(2, window.devicePixelRatio||1));
     w = canvas.clientWidth; h = canvas.clientHeight;
     canvas.width = Math.floor(w*dpr); canvas.height = Math.floor(h*dpr);
     ctx.setTransform(dpr,0,0,dpr,0,0);
-    cx = w*0.70;           // core x (to the right)
-    cy = h*0.56;           // core y
-    R  = Math.min(w,h)*0.095;
-  }
-  if (window.ResizeObserver) new ResizeObserver(resize).observe(root);
-  window.addEventListener('resize', resize); resize();
 
-  /* Endpoints (beams) */
+    // Globe placement (left inside the right panel)
+    globeX = w*0.58;
+    globeY = h*0.52;
+    globeR = Math.min(w,h)*0.33;
+
+    // Core sits inside the globe, east side
+    coreX = globeX + globeR*0.38;
+    coreY = globeY + globeR*0.08;
+    coreR = globeR*0.18;
+  }
+  if(window.ResizeObserver) new ResizeObserver(resize).observe(root);
+  window.addEventListener('resize', resize);
+  resize();
+
+  /* Utility */
+  const TAU = Math.PI*2;
+  const rnd = (a,b)=> a + Math.random()*(b-a);
+
+  /* Endpoints (fan-out) */
   const endpoints = [
-    {label:'Email',    angle:-0.22, color:'rgba(180,220,255,0.9)'},
-    {label:'SMS',      angle:-0.08, color:'rgba(130,255,210,0.9)'},
-    {label:'Call',     angle: 0.06, color:'rgba(200,220,255,0.9)'},
-    {label:'LinkedIn', angle: 0.18, color:'rgba(160,210,255,0.9)'},
-    {label:'Quote',    angle: 0.30, color:'rgba(255,235,160,0.9)'},
-    {label:'ERP',      angle: 0.42, color:'rgba(210,190,255,0.9)'}
+    {label:'Email',    ang: 0.00, col:'rgba(180,220,255,0.9)'},
+    {label:'SMS',      ang: 0.06, col:'rgba(130,255,210,0.9)'},
+    {label:'Call',     ang: 0.12, col:'rgba(200,220,255,0.9)'},
+    {label:'LinkedIn', ang: 0.20, col:'rgba(160,210,255,0.9)'},
+    {label:'Quote',    ang: 0.28, col:'rgba(255,235,160,0.9)'},
+    {label:'ERP',      ang: 0.36, col:'rgba(210,190,255,0.9)'}
   ];
-  function endpointPos(e,i){
-    const len = Math.min(240 + i*26, Math.min(w,h)*0.52);
-    return { x: cx + Math.cos(e.angle)*len, y: cy + Math.sin(e.angle)*len };
+  function endpointPos(i){
+    const e=endpoints[i];
+    const len = globeR*1.15 + i*globeR*0.10;
+    return { x: coreX + Math.cos(e.ang)*len, y: coreY + Math.sin(e.ang)*len };
   }
 
-  /* USA silhouette (stylized) */
-  function drawUSA(){
-    ctx.save();
-    ctx.translate(w*0.40, h*0.52);   // place it left-of-center
-    ctx.scale(Math.min(w,h)/520, Math.min(w,h)/520);
-    ctx.rotate(-0.06);
-
-    ctx.fillStyle='rgba(150,185,235,0.08)';
-    ctx.strokeStyle='rgba(150,185,235,0.18)';
-    ctx.lineWidth=1.2;
-
-    // rough, elegant outline (hand-tuned)
-    ctx.beginPath();
-    ctx.moveTo(-220,-40); ctx.bezierCurveTo(-180,-95,-80,-120,20,-95);
-    ctx.bezierCurveTo(80,-80,150,-30,190,20);
-    ctx.bezierCurveTo(120,30,90,40,50,60);
-    ctx.bezierCurveTo(10,75,-30,85,-80,70);
-    ctx.bezierCurveTo(-130,55,-190,10,-210,-20);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-
-    // subtle lat/long rings
-    ctx.strokeStyle='rgba(140,170,220,0.10)';
-    for(let r=120;r<=220;r+=32){ ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke(); }
-    ctx.restore();
+  /* Stylized USA region (for pings) within globe coords */
+  // We'll approximate via a polygon mask in "globe local space"
+  // globe local: origin at globe center, radius ~ 1.0 (we scale to globeR)
+  const USApoly = [
+    {x:-0.45, y:-0.12},{x:-0.32, y:-0.25},{x:-0.10, y:-0.30},{x:0.10, y:-0.22},
+    {x:0.20, y:-0.08},{x:0.10, y:0.02},{x:-0.12, y:0.08},{x:-0.30, y:0.12},{x:-0.48, y:0.04}
+  ];
+  function ptInPoly(px,py, poly){
+    // ray-cast
+    let c=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+      const xi=poly[i].x, yi=poly[i].y, xj=poly[j].x, yj=poly[j].y;
+      const intersect = ((yi>py)!==(yj>py)) && (px < (xj-xi)*(py-yi)/(yj-yi)+xi);
+      if(intersect) c=!c;
+    } return c;
   }
-
-  /* Radar sweep over USA area */
-  let sweepA = -Math.PI*0.15;
-  function drawRadar(){
-    const ux=w*0.40, uy=h*0.52, rad=Math.min(w,h)*0.20;
-    const grad = ctx.createRadialGradient(ux,uy,0,ux,uy,rad*1.1);
-    grad.addColorStop(0,'rgba(120,180,255,0.05)');
-    grad.addColorStop(1,'rgba(120,180,255,0)');
-    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(ux,uy,rad, sweepA-0.35, sweepA+0.35); ctx.lineTo(ux,uy); ctx.fill();
-
-    sweepA += 0.01; if(sweepA>Math.PI*0.85) sweepA = -Math.PI*0.15;
+  function rndUSPoint(){
+    // Pick random point in bounding box until inside polygon
+    for(let k=0;k<40;k++){
+      const x=rnd(-0.55,0.30), y=rnd(-0.32,0.18);
+      if(ptInPoly(x,y,USApoly)) return {x,y};
+    }
+    // fallback
+    return {x:-0.1,y:-0.1};
   }
 
   /* Particles */
-  const inbound = [];  // pings in US flying to core
-  const outbound = []; // beads flying out to endpoints
-  const sparks  = [];  // tiny core bursts
+  const stars  = [];
+  const inbound = [];
+  const outbound = [];
+  const sparks = [];
+
+  function seedStars(){
+    stars.length=0;
+    const N = 90;
+    for(let i=0;i<N;i++){
+      stars.push({
+        x:rnd(w*0.15,w*0.95),
+        y:rnd(h*0.05,h*0.95),
+        l:rnd(0.25,0.8),
+        s:rnd(0.6,1.3),
+        dx:rnd(-0.05,0.05),
+        dy:rnd(-0.05,0.05)
+      });
+    }
+  }
+  seedStars();
+
+  /* Radar sweep */
+  let sweepA = -Math.PI*0.15;
+
+  /* Phases (scan → gather → fanout) */
+  let phase=0, tPhase=0, corePulse=0;
 
   function spawnUSPing(){
-    // random point within USA bounding ellipse (good-enough visual)
-    const ux=w*0.40, uy=h*0.52, rx=Math.min(w,h)*0.20, ry=Math.min(w,h)*0.13;
-    const t=2*Math.PI*Math.random(), r=Math.sqrt(Math.random());
-    const sx=ux+rx*Math.cos(t)*r, sy=uy+ry*Math.sin(t)*r;
+    const p = rndUSPoint();
+    // convert from globe local to canvas
+    const sx = globeX + p.x*globeR*1.05;
+    const sy = globeY + p.y*globeR*1.05;
 
-    // bias spawns near sweep direction for "scanning" illusion
-    const ang=Math.atan2(sy-uy, sx-ux);
-    const near= Math.abs(((ang - sweepA + Math.PI*3)%(Math.PI*2)) - Math.PI);
-    if(near>0.5) return; // only spawn if under the sweep (~cone)
+    // elegant cubic to core
+    const cp1x = (sx+coreX)/2 + rnd(-globeR*0.05, globeR*0.05);
+    const cp1y = sy - globeR*0.10;
+    const cp2x = (sx+coreX)/2 + rnd(-globeR*0.03, globeR*0.03);
+    const cp2y = coreY - globeR*0.08;
 
-    const cp1x=(sx+cx)/2, cp1y=sy - 40; // soft bezier to core
-    const cp2x=(sx+cx)/2 + 30, cp2y=cy - 10;
-    inbound.push({ sx,sy, cp1x,cp1y, cp2x,cp2y, t:0, spd:0.008+Math.random()*0.004 });
+    inbound.push({ sx,sy, cp1x,cp1y, cp2x,cp2y, t:0, spd:rnd(0.007,0.010) });
+  }
+
+  function spawnOutbound(){
+    const idx = Math.floor(Math.random()*endpoints.length);
+    const pos = endpointPos(idx);
+    outbound.push({
+      ex:pos.x, ey:pos.y, t:0, spd:rnd(0.010,0.016),
+      jitter:rnd(-0.6,0.6), idx
+    });
+  }
+
+  /* Drawing — Globe */
+  function drawGlobeBase(){
+    // planet glow
+    const g1=ctx.createRadialGradient(globeX,globeY,globeR*0.2, globeX,globeY,globeR*1.2);
+    g1.addColorStop(0,'rgba(200,230,255,0.08)');
+    g1.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g1; ctx.beginPath(); ctx.arc(globeX,globeY,globeR*1.2,0,TAU); ctx.fill();
+
+    // sphere
+    const g2=ctx.createRadialGradient(globeX-globeR*0.25,globeY-globeR*0.35,globeR*0.2, globeX,globeY,globeR);
+    g2.addColorStop(0,'rgba(220,240,255,0.10)');
+    g2.addColorStop(0.5,'rgba(160,190,230,0.12)');
+    g2.addColorStop(1,'rgba(60,80,120,0.22)');
+    ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(globeX,globeY,globeR,0,TAU); ctx.fill();
+
+    // parallels/meridians
+    ctx.strokeStyle='rgba(160,190,230,0.16)'; ctx.lineWidth=1;
+    for(let i=-3;i<=3;i++){
+      const r = globeR*(0.35 + (i+3)*0.09);
+      ctx.beginPath(); ctx.arc(globeX,globeY,r,0,TAU); ctx.stroke();
+    }
+    for(let j=0;j<5;j++){
+      const a = -0.7 + j*0.35;
+      ctx.beginPath();
+      for(let t=-1;t<=1;t+=0.02){
+        const x = globeX + globeR*Math.cos(a)*Math.cos(t);
+        const y = globeY + globeR*Math.sin(t);
+        if(t===-1) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  function drawUSA(){
+    // draw inside sphere via clip
+    ctx.save();
+    ctx.beginPath(); ctx.arc(globeX,globeY,globeR,0,TAU); ctx.clip();
+
+    ctx.save();
+    ctx.translate(globeX,globeY);
+    ctx.rotate(-0.12); // slight tilt
+    ctx.scale(globeR,globeR);
+
+    // North America-ish
+    ctx.fillStyle='rgba(170,200,240,0.10)';
+    ctx.strokeStyle='rgba(170,200,240,0.20)'; ctx.lineWidth=0.004*globeR;
+    ctx.beginPath();
+    ctx.moveTo(-0.48,0.04);
+    for(const p of USApoly) ctx.lineTo(p.x,p.y);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    // South America-ish (soft hint)
+    ctx.beginPath();
+    ctx.moveTo(0.18,0.05); ctx.lineTo(0.34,0.10); ctx.lineTo(0.42,0.24);
+    ctx.lineTo(0.36,0.42); ctx.lineTo(0.24,0.55); ctx.lineTo(0.16,0.36);
+    ctx.closePath(); ctx.fill();
+
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function drawRadar(){
+    // center radar approx West/Central US
+    const rx = globeX - globeR*0.08;
+    const ry = globeY - globeR*0.02;
+    const rr = globeR*0.55;
+
+    const grad = ctx.createRadialGradient(rx,ry,0,rx,ry,rr);
+    grad.addColorStop(0,'rgba(120,180,255,0.06)');
+    grad.addColorStop(1,'rgba(120,180,255,0)');
+    ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(rx,ry,rr, sweepA-0.32, sweepA+0.32); ctx.lineTo(rx,ry); ctx.fill();
+
+    sweepA += 0.010; if(sweepA>Math.PI*0.95) sweepA = -Math.PI*0.25;
+  }
+
+  /* Drawing — Particles */
+  function drawStars(){
+    for(const s of stars){
+      s.x += s.dx; s.y += s.dy;
+      if(s.x<0) s.x=w; if(s.x>w) s.x=0; if(s.y<0) s.y=h; if(s.y>h) s.y=0;
+      ctx.globalAlpha = s.l;
+      ctx.fillStyle='#dce8ff'; ctx.fillRect(s.x,s.y,s.s,s.s);
+      ctx.globalAlpha = 1;
+    }
   }
 
   function drawInbound(){
     for(let i=inbound.length-1;i>=0;i--){
       const p=inbound[i]; p.t+=p.spd;
       const it=1-p.t;
-      const x=it*it*it*p.sx + 3*it*it*p.t*p.cp1x + 3*it*p.t*p.t*p.cp2x + p.t*p.t*p.t*cx;
-      const y=it*it*it*p.sy + 3*it*it*p.t*p.cp1y + 3*it*p.t*p.t*p.cp2y + p.t*p.t*p.t*cy;
-      // trail
-      ctx.strokeStyle='rgba(200,235,255,0.18)';
-      ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-6,y-3); ctx.stroke();
-      // head
-      ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.arc(x,y,1.5,0,Math.PI*2); ctx.fill();
+      const x=it*it*it*p.sx + 3*it*it*p.t*p.cp1x + 3*it*p.t*p.t*p.cp2x + p.t*p.t*p.t*coreX;
+      const y=it*it*it*p.sy + 3*it*it*p.t*p.cp1y + 3*it*p.t*p.t*p.cp2y + p.t*p.t*p.t*coreY;
+      ctx.strokeStyle='rgba(210,235,255,0.20)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-6,y-3); ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.arc(x,y,1.6,0,TAU); ctx.fill();
       if(p.t>=1){
         inbound.splice(i,1);
-        // core spark + schedule outbound
-        for(let s=0;s<3;s++) sparks.push({x:cx,y:cy, vx:(Math.random()-.5)*1.2, vy:(Math.random()-.5)*1.2, life:20+Math.random()*20});
-        if(phase>=2) spawnOutbound();
+        // core sparks + schedule outbound when in fanout
+        for(let s=0;s<3;s++) sparks.push({x:coreX,y:coreY, vx:rnd(-1.0,1.0), vy:rnd(-1.0,1.0), life:rnd(18,28)});
+        if(phase===2 && Math.random()<0.6) spawnOutbound();
       }
     }
   }
 
-  function spawnOutbound(){
-    const e=endpoints[Math.floor(Math.random()*endpoints.length)];
-    const pos=endpointPos(e, endpoints.indexOf(e));
-    outbound.push({ ex:pos.x, ey:pos.y, t:0, spd:0.010+Math.random()*0.006, jitter:(Math.random()-.5)*0.6, e });
+  function drawCore(){
+    // pulsing glow
+    const pulse = 0.85 + 0.15*Math.sin(corePulse);
+    const g=ctx.createRadialGradient(coreX,coreY,0, coreX,coreY,coreR*3.0);
+    g.addColorStop(0,`rgba(255,255,255,${0.75*pulse})`);
+    g.addColorStop(0.25,`rgba(200,230,255,${0.45*pulse})`);
+    g.addColorStop(1,'rgba(120,160,255,0.02)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(coreX,coreY,coreR,0,TAU); ctx.fill();
+
+    ctx.strokeStyle='rgba(210,235,255,0.45)'; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.arc(coreX,coreY,coreR*1.25,0,TAU); ctx.stroke();
+
+    for(let i=sparks.length-1;i>=0;i--){
+      const s=sparks[i]; s.x+=s.vx; s.y+=s.vy; s.life--;
+      ctx.globalAlpha = Math.max(0, s.life/28)*0.8;
+      ctx.fillStyle='#ffffff'; ctx.fillRect(s.x,s.y,1.2,1.2);
+      ctx.globalAlpha = 1;
+      if(s.life<=0) sparks.splice(i,1);
+    }
+
+    corePulse += 0.06;
   }
+
+  function drawBeamsAndEndpoints(){
+    for(let i=0;i<endpoints.length;i++){
+      const pos=endpointPos(i);
+      const e=endpoints[i];
+      const grd=ctx.createLinearGradient(coreX,coreY,pos.x,pos.y);
+      grd.addColorStop(0,'rgba(255,255,255,0.95)');
+      grd.addColorStop(1, e.col.replace(/0\.9\)/,'0.35)'));
+      ctx.strokeStyle=grd; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(coreX,coreY); ctx.lineTo(pos.x,pos.y); ctx.stroke();
+
+      // endpoint glow
+      ctx.fillStyle='rgba(160,200,255,0.35)'; ctx.beginPath(); ctx.arc(pos.x,pos.y,12,0,TAU); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(pos.x,pos.y,3.1,0,TAU); ctx.fill();
+
+      ctx.font='12px Inter,system-ui'; ctx.textBaseline='middle'; ctx.fillStyle='rgba(225,235,255,0.96)';
+      ctx.fillText(e.label, pos.x+16, pos.y);
+    }
+  }
+
   function drawOutbound(){
     for(let i=outbound.length-1;i>=0;i--){
       const o=outbound[i]; o.t+=o.spd; if(o.t>=1){ outbound.splice(i,1); continue; }
       const jx=Math.sin(o.t*10)*o.jitter*5, jy=Math.cos(o.t*10)*o.jitter*5;
-      const bx=cx+(o.ex-cx)*o.t + jx, by=cy+(o.ey-cy)*o.t + jy;
-      const sz=1.2+Math.sin(o.t*Math.PI)*1.6;
-      ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.beginPath(); ctx.arc(bx,by,sz,0,Math.PI*2); ctx.fill();
+      const x = coreX + (o.ex-coreX)*o.t + jx;
+      const y = coreY + (o.ey-coreY)*o.t + jy;
+      const s = 1.2 + Math.sin(o.t*Math.PI)*1.6;
+      ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.beginPath(); ctx.arc(x,y,s,0,TAU); ctx.fill();
     }
   }
 
-  function drawCore(intensity){
-    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R*2.6);
-    g.addColorStop(0,`rgba(255,255,255,${0.75+0.2*intensity})`);
-    g.addColorStop(0.25,`rgba(200,230,255,${0.45+0.25*intensity})`);
-    g.addColorStop(1,'rgba(120,160,255,0.02)');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+  /* KPI motion (subtle, offline) */
+  const kEls = {
+    leads: document.getElementById('hr_k_leads'),
+    ready: document.getElementById('hr_k_ready'),
+    quoted: document.getElementById('hr_k_quoted'),
+    rep:   document.getElementById('hr_k_rep'),
+    saved: document.getElementById('hr_k_saved'),
+  };
+  let kTick=0, kLeads=0;
 
-    ctx.strokeStyle='rgba(210,235,255,0.45)'; ctx.lineWidth=1.4;
-    ctx.beginPath(); ctx.arc(cx,cy,R*1.18,0,Math.PI*2); ctx.stroke();
-
-    // sparks
-    for(let i=sparks.length-1;i>=0;i--){
-      const s=sparks[i]; s.x+=s.vx; s.y+=s.vy; s.life--;
-      ctx.fillStyle=`rgba(255,255,255,${0.6*Math.max(0,s.life/40)})`;
-      ctx.fillRect(s.x,s.y,1.1,1.1);
-      if(s.life<=0) sparks.splice(i,1);
-    }
-  }
-
-  function drawBeams(){
-    endpoints.forEach((e,i)=>{
-      const pos=endpointPos(e,i);
-      const grad=ctx.createLinearGradient(cx,cy,pos.x,pos.y);
-      grad.addColorStop(0,'rgba(255,255,255,0.95)');
-      grad.addColorStop(1, e.color.replace(/0\.9\)/,'0.35)'));
-      ctx.strokeStyle=grad; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(pos.x,pos.y); ctx.stroke();
-
-      // endpoint glow
-      ctx.fillStyle='rgba(160,200,255,0.35)'; ctx.beginPath(); ctx.arc(pos.x,pos.y,12,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(pos.x,pos.y,3.1,0,Math.PI*2); ctx.fill();
-
-      // label
-      ctx.font='12px Inter,system-ui'; ctx.textBaseline='middle'; ctx.fillStyle='rgba(225,235,255,0.96)';
-      ctx.fillText(e.label, pos.x+16, pos.y);
-    });
-  }
-
-  /* Phases: 0=scan, 1=gather (same as scan but ramp intensity), 2=fanout */
-  let phase=0, tPhase=0, coreInt=0, kLeads=0, tGlobal=0;
-  function step(){
+  /* Main loop */
+  function frame(){
     ctx.clearRect(0,0,w,h);
 
-    // background vignette
-    const bg=ctx.createRadialGradient(cx-140,cy, R*0.6, cx,cy, Math.max(w,h)*0.9);
-    bg.addColorStop(0,'rgba(72,100,160,0.08)'); bg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
+    drawStars();
+    drawGlobeBase();
+    drawUSA();
 
-    drawUSA();                 // US silhouette
-    if(phase<=1) drawRadar();  // sweep only in scan/gather
-
-    // spawn US pings slowly (scan vibe)
-    if(phase<=1 && Math.random()<0.25) spawnUSPing();
+    if(phase<=1){
+      drawRadar();
+      if(Math.random()<0.28) spawnUSPing();
+    }
 
     drawInbound();
-
-    // core intensity follows inbound activity
-    coreInt = Math.min(1, 0.92*coreInt + 0.08*(1 - Math.exp(-inbound.length/12)));
-    drawCore(coreInt);
+    drawCore();
 
     if(phase===2){
-      drawBeams();
-      if(Math.random()<0.35) spawnOutbound();
+      drawBeamsAndEndpoints();
+      if(Math.random()<0.40) spawnOutbound();
       drawOutbound();
     }
 
-    // subtle KPI motion (not tied to backend)
-    tGlobal++;
-    kLeads = Math.min(207, kLeads + (Math.random()<.25?1:0));
-    const els = {
-      leads: document.getElementById('hr_k_leads'),
-      ready: document.getElementById('hr_k_ready'),
-      quoted: document.getElementById('hr_k_quoted'),
-      rep: document.getElementById('hr_k_rep'),
-      saved: document.getElementById('hr_k_saved'),
-    };
-    if(els.leads)  els.leads.textContent = kLeads;
-    if(els.ready)  els.ready.textContent = (54 + Math.round(Math.sin(tGlobal/80)*4)) + '%';
-    if(els.quoted) els.quoted.textContent= (67 + Math.round(Math.cos(tGlobal/110)*3)) + '%';
-    if(els.rep)    els.rep.textContent   = (21 + Math.round(Math.sin(tGlobal/60)*2)) + '%';
-    if(els.saved){ const v=20678 + Math.round(Math.sin(tGlobal/36)*620); els.saved.textContent = '$'+v.toLocaleString(); }
-
     // phase timing
-    tPhase += 1/60; // ~frames
-    const DUR_SCAN=8, DUR_GATHER=4, DUR_FAN=7;
+    tPhase += 1/60;
+    const DUR_SCAN=7.5, DUR_GATHER=4.0, DUR_FAN=8.0;
     if(phase===0 && tPhase>DUR_SCAN){ phase=1; tPhase=0; }
     else if(phase===1 && tPhase>DUR_GATHER){ phase=2; tPhase=0; }
-    else if(phase===2 && tPhase>DUR_FAN){ phase=0; tPhase=0; coreInt=0; inbound.length=0; outbound.length=0; sparks.length=0; kLeads=0; }
+    else if(phase===2 && tPhase>DUR_FAN){ phase=0; tPhase=0; inbound.length=0; outbound.length=0; sparks.length=0; kLeads=0; }
 
-    requestAnimationFrame(step);
+    // KPIs
+    kTick++;
+    if(kEls.leads){ if(kLeads<207 && Math.random()<.25) kLeads++; kEls.leads.textContent=kLeads; }
+    if(kEls.ready)  kEls.ready.textContent  = (54 + Math.round(Math.sin(kTick/80)*4)) + '%';
+    if(kEls.quoted) kEls.quoted.textContent = (67 + Math.round(Math.cos(kTick/110)*3)) + '%';
+    if(kEls.rep)    kEls.rep.textContent    = (21 + Math.round(Math.sin(kTick/60)*2)) + '%';
+    if(kEls.saved){ const v=20678 + Math.round(Math.sin(kTick/36)*620); kEls.saved.textContent = '$'+v.toLocaleString(); }
+
+    requestAnimationFrame(frame);
   }
-  step();
+  frame();
 })();
 
-/* Video modal */
+/* Demo modal */
 document.getElementById('watchDemo').onclick=()=> document.getElementById('vid').classList.add('in');
 document.getElementById('vclose').onclick=()=>{ document.getElementById('vid').classList.remove('in'); document.getElementById('vframe').src=document.getElementById('vframe').src; };
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.getElementById('vid').classList.remove('in'); } });
