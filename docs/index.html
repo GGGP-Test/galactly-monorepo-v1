@@ -1,300 +1,524 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Galactly — Live Packaging Leads</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --ink:#fff;--mut:#cfd3df;--line:rgba(255,255,255,.12);
-      --accent:#86f7d6;--accent2:#57a4ff;
-      --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
-      --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;color:var(--ink);font-family:var(--inter);line-height:1.55;overflow-x:hidden;
-      background:
-        radial-gradient(1200px 700px at 85% -10%, rgba(120,160,255,.12), rgba(0,0,0,0) 60%),
-        radial-gradient(900px 500px at 15% 110%, rgba(120,200,255,.08), rgba(0,0,0,0) 60%),
-        linear-gradient(180deg,#0b0e18,#06070c 55%)
-    }
-    header{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px) saturate(1.05);background:rgba(5,7,12,.55);border-bottom:1px solid var(--line)}
-    .nav{max-width:1240px;margin:auto;padding:10px 18px;display:flex;align-items:center;justify-content:space-between}
-    .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none}
-    .brand svg{width:26px;height:26px}
-    .brand b{font:800 16px var(--mont)}
-    nav a{color:#fff;text-decoration:none;padding:8px 10px;border-radius:12px}
-    nav a:hover{background:rgba(255,255,255,.06)}
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Galactly — Live packaging buyer signals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#e9eef7; --mut:#a7b0c3; --line:#202838; --card:#0f1420; --panel:#0b101a;
+  --accent:#89ffd8; --accent2:#68a7ff; --warn:#f7c46a; --ok:#7fffd4; --bad:#ff7f7f;
+  --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;
+  --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0; background:radial-gradient(1200px 700px at 80% -10%,rgba(40,70,140,.25),transparent 40%),linear-gradient(180deg,#0a0e16,#06080e 60%); color:var(--ink); font-family:var(--inter)}
+a{color:inherit; text-decoration:none}
+header{display:flex; align-items:center; justify-content:space-between; padding:14px 18px}
+.brand{display:flex; gap:10px; align-items:center; font:800 16px var(--mont)}
+.brand svg{width:22px; height:22px}
+.hero{display:grid; grid-template-columns: 1.2fr 1fr; gap:28px; padding:40px 18px 24px; align-items:center}
+@media (max-width: 960px){ .hero{grid-template-columns:1fr; padding-top:18px} }
+.h1{font:800 clamp(28px,5vw,42px) var(--mont); letter-spacing:-.02em; line-height:1.15}
+.sub{margin-top:10px; font-size:14px; opacity:.9}
+.cta{margin-top:16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.btn{background:#131c2b; border:1px solid var(--line); color:#e9eef7; border-radius:12px; padding:12px 14px; font:700 14px var(--inter); cursor:pointer}
+.btn.primary{background:linear-gradient(90deg,#fff,#e6efff); color:#10131a; border-color:transparent}
+.badge{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid var(--line); border-radius:999px; font-size:12px; color:#cdd6ea; background:#0c1220}
+.badge .dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:#4ae3b5; box-shadow:0 0 8px rgba(74,227,181,.6)}
+.kv{display:flex; align-items:center; gap:8px; margin-top:10px; opacity:.85; font-size:12px}
 
-    .hero{position:relative;min-height:720px;border-bottom:1px solid var(--line)}
-    .wrap{max-width:1240px;margin:auto;display:grid;grid-template-columns:1fr min(780px,52%);gap:44px;align-items:center;padding:44px 28px}
-    @media (max-width:1100px){.wrap{grid-template-columns:1fr}}
+.right{position:relative; height:420px; border:1px solid var(--line); border-radius:16px; background:linear-gradient(180deg,#0b0f19,#0a0e17); overflow:hidden; box-shadow:0 6px 40px rgba(0,0,0,.35) inset;}
+#funnel{width:100%; height:100%; display:block}
 
-    .copy h1{font:800 clamp(32px,6.2vw,66px) var(--mont);line-height:1.05;margin:0 0 12px}
-    .copy .accent{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
-    .copy p{opacity:.94;margin:16px 0 0}
-    .copy .sub{opacity:.86;font-size:14px;margin-top:12px}
+/* mini KPI strip below canvas */
+.kpi{position:absolute; left:18px; right:18px; bottom:14px; display:flex; gap:8px; flex-wrap:wrap; opacity:.95}
+.chip{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid #2a3246; background:#0f1523; border-radius:999px; font-size:12px; color:#cfe0ff}
+.chip strong{color:#fff}
 
-    .copy .cta{display:flex;gap:14px;margin-top:28px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);padding:12px 18px;border-radius:14px;text-decoration:none;font:800 14px var(--inter);transition:transform .08s ease, box-shadow .18s ease, background .18s ease,color .18s ease; cursor:pointer}
-    .btn--primary{background:linear-gradient(90deg,#ffffff,#e9f0ff);color:#0b0c12;border-color:transparent;box-shadow:0 10px 30px rgba(120,160,255,.18), inset 0 0 0 1px rgba(255,255,255,.35)}
-    .btn--primary:hover{transform:translateY(-1px);box-shadow:0 14px 36px rgba(120,160,255,.28), inset 0 0 0 1px rgba(255,255,255,.5)}
-    .btn--ghost{background:rgba(255,255,255,.06);color:#fff;border-color:rgba(255,255,255,.18)}
-    .btn--ghost:hover{background:rgba(255,255,255,.10)}
-    .btn svg{width:16px;height:16px;vertical-align:-2px}
-
-    .flow{position:relative;background:linear-gradient(180deg,#0b0b10,#07080d);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.38)}
-    .flow .glass{position:relative;border-radius:16px;background:
-      radial-gradient(120% 130% at 65% 35%,rgba(255,255,255,.06),rgba(255,255,255,.02)),
-      radial-gradient(90% 120% at 20% 80%,rgba(255,255,255,.05),rgba(255,255,255,.01));
-      overflow:hidden;min-height:400px}
-    .flow .glass::before{content:"";display:block;padding-top:56.25%}
-    #flowCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:16px}
-
-    .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
-    .badge{background:#0b0d14;border:1px dashed var(--line);border-radius:12px;padding:7px 11px;font:700 12px var(--mont);display:flex;gap:6px;align-items:center}
-    .badge small{opacity:.75;font-weight:600}
-    .ticker{margin-top:14px;max-height:108px;overflow:auto;border-top:1px solid var(--line);padding-top:10px;scrollbar-width:none;-ms-overflow-style:none}
-    .ti{font-size:12px;opacity:.95;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.06)} .ti:last-child{border-bottom:none}
-
-    /* Modal */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:60;padding:18px}
-    .modal.on{display:flex}
-    .sheet{width:min(920px,96vw);background:#0b0d14;border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 60px rgba(0,0,0,.5);display:grid;grid-template-columns:1.1fr 1fr}
-    @media (max-width:960px){.sheet{grid-template-columns:1fr}}
-    .pane{padding:22px;border-right:1px solid var(--line)}
-    .pane:last-child{border-right:none}
-    .pane h3{margin:0 0 8px;font:800 18px var(--mont)}
-    .hint{opacity:.8;font-size:13px}
-    .row{margin:12px 0}
-    label{display:block;font-weight:700;font-size:13px;margin-bottom:6px;opacity:.9}
-    input,select,textarea{width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:#0f1320;color:#e9eef5;outline:none}
-    textarea{min-height:84px;resize:vertical}
-    .checkbox{display:flex;align-items:center;gap:10px;margin-top:10px}
-    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
-    .chips{display:flex;flex-wrap:wrap;gap:8px}
-    .chip{border:1px solid rgba(255,255,255,.18);background:#0f1320;border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer}
-    .chip.on{background:linear-gradient(90deg,#ffffff,#e9f0ff);color:#0b0c12}
-  </style>
+/* modal */
+.modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:40}
+.modal.in{display:flex}
+.box{width:min(920px,95vw); background:#0b101a; border:1px solid var(--line); border-radius:16px; overflow:hidden}
+.box .head{display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--line)}
+.box h3{margin:0; font:800 16px var(--mont)}
+.seg{display:flex; gap:6px}
+.tab{padding:8px 10px; border:1px solid var(--line); border-radius:999px; font:700 12px var(--inter); cursor:pointer}
+.tab.active{background:linear-gradient(90deg,#fff,#e6efff); color:#10131a; border-color:transparent}
+.pane{display:grid; grid-template-columns:1.1fr 1fr; gap:16px; padding:14px}
+@media (max-width: 900px){ .pane{grid-template-columns:1fr} }
+.card{background:#0f1420; border:1px solid var(--line); border-radius:14px; padding:12px}
+.label{font-size:12px; opacity:.9; margin-bottom:6px}
+.input, select, textarea{width:100%; background:#0f1420; border:1px solid var(--line); color:#e9eef7; border-radius:10px; padding:10px 12px; font:500 13px var(--inter)}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.actions{display:flex; gap:10px; align-items:center; padding:12px 0 0}
+.err{color:var(--bad); font-size:12px; margin-top:6px; display:none}
+.ok{color:#a7ffde; font-size:12px; margin-top:6px; display:none}
+.small{font-size:12px; opacity:.85}
+.hr{height:1px; background:linear-gradient(90deg,transparent,#243048,transparent); margin:12px 0}
+</style>
 </head>
 <body>
 <header>
-  <div class="nav">
-    <a class="brand" href="#">
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs>
-        <circle cx="32" cy="32" r="30" fill="black" stroke="white" stroke-opacity=".15" stroke-width="2"/>
-        <path d="M12 36c8 8 18 12 28 12 4 0 8-1 12-2" stroke="url(#g)" stroke-width="4" fill="none"/>
-        <circle cx="20" cy="20" r="6" fill="url(#g)"/>
-      </svg>
-      <b>Galactly</b>
-    </a>
-    <nav><a href="#hero">Hero</a></nav>
-  </div>
+  <a class="brand" href="#">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" stroke="url(#g)" stroke-width="2" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
+    <span>Galactly</span>
+  </a>
+  <span class="badge"><span class="dot"></span><span id="presenceTxt">0 online</span></span>
 </header>
 
-<section class="hero" id="hero">
-  <div class="wrap">
-    <div class="copy">
-      <h1>Find US &amp; Canada <span class="accent">Packaging</span> Buyers in <span class="accent">&lt;30s</span></h1>
-      <p>Real signals from public data. Free viewer; paid automations, priority, CRM &amp; reporting.</p>
-      <p class="sub">Built for packaging owners &amp; sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding. Just clicks.</p>
-      <div class="cta">
-        <button id="startFree" class="btn btn--primary">Start free</button>
-        <a class="btn btn--ghost" href="#" id="watchDemo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 5v14l11-7z"/></svg>Watch 90s demo</a>
-      </div>
+<section class="hero">
+  <div>
+    <div class="h1">Find US &amp; Canada <br/> <span style="color:#86f7d6">Packaging</span> Buyers in &lt;30s</div>
+    <div class="sub">Real signals from public data. Free viewer; paid automations, priority, CRM &amp; reporting. We show visible reasoning and packaging math (ad → orders → units → SKUs → queue).</div>
+    <div class="cta">
+      <button class="btn primary" id="start">Start free</button>
+      <a class="btn" href="./free-panel.html">Open the Live Feed</a>
+      <span class="small">No credit card • Free plan: 2 finds/day, 2 reveals/day</span>
     </div>
+    <div class="kv"><strong>Promise:</strong> time-variant intelligence (if–then windows) + packaging math.</div>
+  </div>
 
-    <div class="flow">
-      <div class="glass"><canvas id="flowCanvas"></canvas></div>
-      <div class="meta">
-        <div class="badge"><small>Leads / 30s</small><span id="b-leads">0</span></div>
-        <div class="badge"><small>First connection</small><span id="b-first">—</span></div>
-        <div class="badge"><small>Ready now</small><span id="b-ready">—</span></div>
-        <div class="badge"><small>Quoted</small><span id="b-quote">—</span></div>
-        <div class="badge"><small>AI closed</small><span id="b-ai">—</span></div>
-        <div class="badge"><small>Rep closed</small><span id="b-human">—</span></div>
-        <div class="badge"><small>Saved / mo</small><span id="b-saved">—</span></div>
-      </div>
-      <div class="ticker" id="ticker"></div>
+  <!-- RIGHT: animated funnel canvas -->
+  <div class="right">
+    <canvas id="funnel"></canvas>
+    <div class="kpi" aria-hidden="true">
+      <div class="chip">Leads / 30s <strong id="k_leads">0</strong></div>
+      <div class="chip">First connection <strong id="k_first">6 sec</strong></div>
+      <div class="chip">Ready now <strong id="k_ready">54%</strong></div>
+      <div class="chip">Quoted <strong id="k_quoted">67%</strong></div>
+      <div class="chip">Rep closed <strong id="k_rep">21%</strong></div>
+      <div class="chip">Saved / mo <strong id="k_saved">$20,678</strong></div>
     </div>
   </div>
 </section>
 
 <!-- Onboarding modal -->
-<div class="modal" id="obModal" aria-hidden="true">
-  <div class="sheet">
-    <div class="pane">
-      <h3>Pick how you want to start</h3>
-      <p class="hint">You can paste your own site (we'll infer ICP), or give us specifics.</p>
-
-      <div class="row">
-        <label for="vendorDomain">Your website (auto‑detect ICP)</label>
-        <input id="vendorDomain" placeholder="acme-packaging.com" autocomplete="off" />
-      </div>
-
-      <div class="row checkbox">
-        <input id="listMe" type="checkbox" />
-        <label for="listMe" style="margin:0">List my business as an inbound opportunity (buyers can discover me)</label>
-      </div>
-
-      <div class="actions">
-        <button class="btn btn--primary" id="goVendor">Continue with my site</button>
-        <button class="btn" id="switchToCustom">I'll enter details instead</button>
-        <button class="btn btn--ghost" id="skipToFeed">Skip → Live feed</button>
+<div class="modal" id="onb">
+  <div class="box">
+    <div class="head">
+      <h3>Onboarding</h3>
+      <div class="seg">
+        <button class="tab active" id="tabA">Path A — Enter your website</button>
+        <button class="tab" id="tabB">Path B — Customize from scratch</button>
       </div>
     </div>
+    <div class="pane">
+      <!-- Left: Path forms -->
+      <div>
+        <!-- PATH A -->
+        <div class="card" id="paneA">
+          <div class="label">Preferred — we’ll auto-derive ICPs, buyers, and regions.</div>
+          <div class="grid2">
+            <div>
+              <div class="label">Business email *</div>
+              <input id="a_email" class="input" placeholder="you@yourcompany.com"/>
+            </div>
+            <div>
+              <div class="label">Your role *</div>
+              <select id="a_role" class="input">
+                <option value="supplier">Supplier</option>
+                <option value="distributor">Distributor/Wholesaler</option>
+                <option value="buyer">Packaging Buyer</option>
+              </select>
+            </div>
+          </div>
+          <div class="label" style="margin-top:8px">Company website *</div>
+          <input id="a_site" class="input" placeholder="yourcompany.com"/>
+          <div class="grid2" style="margin-top:8px">
+            <div>
+              <div class="label">Region</div>
+              <input id="a_region" class="input" placeholder="e.g., US, EU"/>
+            </div>
+            <div>
+              <label style="display:flex; align-items:center; gap:8px; margin-top:22px">
+                <input type="checkbox" id="a_list"/> <span>List my company for inbound opportunities</span>
+              </label>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <div class="small">We only serve <strong>packaging</strong> companies and buyers with real physical products. Business email domain must match your company site.</div>
+          <div class="err" id="a_err"></div>
+          <div class="ok" id="a_ok"></div>
+          <div class="actions">
+            <button class="btn" id="a_cancel">Cancel</button>
+            <button class="btn primary" id="a_continue">Continue</button>
+          </div>
+        </div>
 
-    <div class="pane" id="customPane" style="display:none">
-      <h3>Custom details</h3>
-      <div class="row">
-        <label>Industries</label>
-        <div class="chips" id="chipIndustries"></div>
+        <!-- PATH B -->
+        <div class="card" id="paneB" style="display:none">
+          <div class="label">Manual — precise filters if you prefer to steer.</div>
+          <div class="grid2">
+            <div>
+              <div class="label">Business email *</div>
+              <input id="b_email" class="input" placeholder="you@yourcompany.com"/>
+            </div>
+            <div>
+              <div class="label">Your role *</div>
+              <select id="b_role" class="input">
+                <option value="supplier">Supplier</option>
+                <option value="distributor">Distributor/Wholesaler</option>
+                <option value="buyer">Packaging Buyer</option>
+              </select>
+            </div>
+          </div>
+          <div class="label" style="margin-top:8px">Company website *</div>
+          <input id="b_site" class="input" placeholder="yourcompany.com"/>
+          <div class="grid2" style="margin-top:8px">
+            <div>
+              <div class="label">Industries</div>
+              <input id="b_industries" class="input" placeholder="beverage, confectionery"/>
+            </div>
+            <div>
+              <div class="label">Regions</div>
+              <input id="b_regions" class="input" placeholder="US, CA, EU"/>
+            </div>
+          </div>
+          <div class="label" style="margin-top:8px">Seed buyers (domains)</div>
+          <input id="b_buyers" class="input" placeholder="brand1.com, brand2.com"/>
+          <div class="label" style="margin-top:8px">Describe your ideal customers</div>
+          <textarea id="b_desc" class="input" rows="4" placeholder="categories, packaging materials, order sizes, retailer channels, exclusions"></textarea>
+          <label style="display:flex; align-items:center; gap:8px; margin-top:10px">
+            <input type="checkbox" id="b_list"/> <span>List my company for inbound opportunities</span>
+          </label>
+          <div class="hr"></div>
+          <div class="small">We only serve <strong>packaging</strong>. Business email domain must match your company site.</div>
+          <div class="err" id="b_err"></div>
+          <div class="ok" id="b_ok"></div>
+          <div class="actions">
+            <button class="btn" id="b_cancel">Cancel</button>
+            <button class="btn primary" id="b_continue">Continue</button>
+          </div>
+        </div>
       </div>
-      <div class="row">
-        <label>Regions</label>
-        <div class="chips" id="chipRegions"></div>
-      </div>
-      <div class="row">
-        <label for="buyers">Example buyers (domains, comma‑sep)</label>
-        <input id="buyers" placeholder="liquiddeath.com, soylent.com" />
-      </div>
-      <div class="row">
-        <label for="notes">(Optional) Tell our AI what you make</label>
-        <textarea id="notes" placeholder="e.g., We make recyclable shrink + paper labels for beverage and gummy brands; MOQ 10k; lead time 10 days."></textarea>
-      </div>
-      <div class="actions">
-        <button class="btn btn--primary" id="goCustom">Find buyers now</button>
-        <button class="btn" id="backToVendor">Back</button>
+
+      <!-- Right: micro-guide -->
+      <div>
+        <div class="card">
+          <div class="label"><strong>Tips to get great signals</strong></div>
+          <ul class="small" style="margin:0 0 8px 16px; padding:0">
+            <li>Use your **company domain** so we can calibrate fit and block scrapers.</li>
+            <li>Focus on **physical packaging** needs (corrugate, film, shrink, label, tray, case-of-N).</li>
+            <li>Seed 3–6 buyers you admire to nudge our platform rotation.</li>
+          </ul>
+          <div class="hr"></div>
+          <div class="small">Privacy: Free plan hides raw sources on cards; Pro shows full checks. We log **per-user** proof confirmations but do not bump global heat on Free.</div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-// ---------- hero canvas (same look/feel as your original) ----------
-const cvs=document.getElementById('flowCanvas');const DPR=Math.min(2.2,window.devicePixelRatio||1);let ctx=null,started=false;
-const K={leads:document.getElementById('b-leads'),first:document.getElementById('b-first'),ready:document.getElementById('b-ready'),quote:document.getElementById('b-quote'),ai:document.getElementById('b-ai'),human:document.getElementById('b-human'),saved:document.getElementById('b-saved')};
-const ticker=document.getElementById('ticker');
-let cx=0,cy=0,R=0,coreX=0,coreY=0,coreR=22;let chips=[];
-const CHANNELS=[{name:'Email',color:'rgba(134,247,214,0.85)'},{name:'SMS',color:'rgba(160,255,160,0.85)'},{name:'Call',color:'rgba(159,208,255,0.85)'},{name:'LinkedIn',color:'rgba(120,200,255,0.85)'},{name:'Quote',color:'rgba(255,210,140,0.90)'},{name:'ERP',color:'rgba(200,170,255,0.90)'}];
-const FIRST="Ava,Noah,Sophia,Liam,Isabella,Elijah,Mia,Lucas,Amelia,Mason,Harper,Logan,Evelyn,James,Abigail,Oliver,Emily".split(',');
-const LAST="Smith,Johnson,Williams,Brown,Jones,Miller,Davis,Garcia,Wilson,Moore,Taylor,Anderson".split(',');
-const pick=a=>a[(Math.random()*a.length)|0];
-function resize(){const r=cvs.getBoundingClientRect();if(!r.width||!r.height){setTimeout(resize,60);return}
-  cvs.width=Math.floor(r.width*DPR);cvs.height=Math.floor(r.height*DPR);cvs.style.width=r.width+'px';cvs.style.height=r.height+'px';
-  ctx=cvs.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);
-  cx=r.width*0.28;cy=r.height*0.56;R=Math.min(r.width*0.30,r.height*0.46);
-  coreX=r.width*0.56;coreY=r.height*0.56;coreR=Math.max(18,Math.min(24,r.width*0.03));
-  const baseX=r.width*0.83,baseY=coreY,rad=Math.min(110,r.height*0.20),a0=-Math.PI/3,a1=Math.PI/3;
-  chips=CHANNELS.map((c,i)=>{const a=CHANNELS.length>1?a0+(a1-a0)*(i/(CHANNELS.length-1)):0;return{x:baseX+rad*Math.cos(a),y:baseY+rad*Math.sin(a),r:12,label:c.name,color:c.color}})
-}
-window.addEventListener('resize',resize);
-function draw(){ctx.clearRect(0,0,cvs.width/DPR,cvs.height/DPR);
-  // soft globe
-  const g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,R*1.1);g.addColorStop(0,'rgba(255,255,255,.05)');g.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
-  // core pulse
-  const cg=ctx.createRadialGradient(coreX,coreY,0,coreX,coreY,coreR*2.6);cg.addColorStop(0,'rgba(255,255,255,.04)');cg.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=cg;ctx.beginPath();ctx.arc(coreX,coreY,coreR*2.6,0,Math.PI*2);ctx.fill();
-  // beams
-  for(const chip of chips){
-    ctx.save();ctx.globalAlpha=0.25;ctx.lineWidth=6;ctx.strokeStyle=chip.color;
-    ctx.beginPath();ctx.moveTo(coreX,coreY);const mx=(coreX+chip.x)/2,my=(coreY+chip.y)/2;ctx.quadraticCurveTo(mx,my*1.02,chip.x,chip.y);ctx.stroke();
-    ctx.globalAlpha=0.9;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(coreX,coreY);ctx.quadraticCurveTo(mx,my*1.02,chip.x,chip.y);ctx.stroke();
-    ctx.restore();
-  }
-}
-let last=0;function loop(ts){requestAnimationFrame(loop);if(!last)last=ts;const dt=(ts-last)/1000;last=ts;draw();}
-function init(){if(started)return;started=true;resize();requestAnimationFrame(loop);
-  // playful counters
-  setInterval(()=>{ document.getElementById('b-leads').textContent = String((Math.random()*300|0)); }, 1200);
-}
-document.addEventListener('DOMContentLoaded',init);
-
-// ---------- onboarding modal & deep-link ----------
-const modal=document.getElementById('obModal');
-const btnStart=document.getElementById('startFree');
-const btnVendor=document.getElementById('goVendor');
-const btnCustom=document.getElementById('goCustom');
-const btnSwitch=document.getElementById('switchToCustom');
-const btnBack=document.getElementById('backToVendor');
-const btnSkip=document.getElementById('skipToFeed');
-const customPane=document.getElementById('customPane');
-const vendorInput=document.getElementById('vendorDomain');
-const buyersInput=document.getElementById('buyers');
-const notesInput=document.getElementById('notes');
-const listMe=document.getElementById('listMe');
-
-// chips data
-const INDUSTRIES=['beverage','food','supplements','cosmetics','household','cpg','industrial'];
-const REGIONS=['US','CA'];
-function chipify(id, items){
-  const root=document.getElementById(id); root.innerHTML='';
-  items.forEach(v=>{ const el=document.createElement('button'); el.type='button'; el.className='chip'; el.textContent=v; el.onclick=()=>{ el.classList.toggle('on'); }; root.appendChild(el); });
-}
-chipify('chipIndustries', INDUSTRIES); chipify('chipRegions', REGIONS);
-function selectedChips(rootId){ return Array.from(document.getElementById(rootId).querySelectorAll('.chip.on')).map(el=>el.textContent.trim()); }
-
-function openModal(){ modal.classList.add('on'); vendorInput.focus(); }
-function closeModal(){ modal.classList.remove('on'); }
-
-btnStart.addEventListener('click', openModal);
-btnSwitch.addEventListener('click', ()=>{ customPane.style.display='block'; });
-btnBack.addEventListener('click', ()=>{ customPane.style.display='none'; });
-btnSkip.addEventListener('click', ()=>{ window.location.href = withApi('free-panel.html'); });
-
-function withApi(baseHref){
-  const q=new URLSearchParams(location.search); const api=q.get('api');
-  return api ? `${baseHref}?api=${encodeURIComponent(api)}`: baseHref;
-}
-
-// If we arrived with prefill (?vendor=..&buyers=..), preload into modal
-(function preloadFromQuery(){
+/* ===== API base (shared) ===== */
+(function ensureApiBase(){
+  if (window.API && window.API.base) return;
+  const DEFAULT=(window.API_DEFAULT||'').replace(/\/$/,'') || location.origin;
   const qs=new URLSearchParams(location.search);
-  const v=qs.get('vendor')||''; if(v){ vendorInput.value=v; }
-  const b=qs.get('buyers')||''; if(b){ buyersInput.value=b; customPane.style.display='block'; }
-  const inds=(qs.get('industries')||'').split(',').filter(Boolean);
-  const regs=(qs.get('regions')||'').split(',').filter(Boolean);
-  for(const i of inds){ const el=[...document.querySelectorAll('#chipIndustries .chip')].find(x=>x.textContent===i); if(el) el.classList.add('on'); }
-  for(const r of regs){ const el=[...document.querySelectorAll('#chipRegions .chip')].find(x=>x.textContent===r); if(el) el.classList.add('on'); }
+  function normalize(v){ if(!v) return DEFAULT; let s=String(v).trim().replace(/\/$/,''); if(!/^https?:\/\//i.test(s)) s='https://'+s; return s; }
+  const saved=localStorage.getItem('apiBase'); const base=normalize(qs.get('api')||saved||DEFAULT);
+  window.API_BASE=base;
+  const _fetch=window.fetch.bind(window);
+  const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey)||('u_'+Math.random().toString(36).slice(2)); localStorage.setItem(uidKey, uid);
+  window.fetch=function(input,init){
+    let url=(typeof input==='string')?input:input.url; const headers=new Headers((init&&init.headers)||(typeof input!=='string'&&input.headers)||undefined);
+    try{ headers.set('x-galactly-user', uid);}catch{}
+    if(url && (url.startsWith('/api/')||url.startsWith('api/'))){ url = base + (url.startsWith('/')? '': '/') + url; }
+    return _fetch(typeof input==='string'?url:new Request(url,{...(init||{}),headers}));
+  };
+  window.API={ get base(){return base;}, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
 })();
 
-function goToFreePanel(params){
-  const url = new URL(withApi('free-panel.html'), location.href);
-  Object.entries(params).forEach(([k,v])=>{ if(v==null) return; if(Array.isArray(v)){ if(v.length) url.searchParams.set(k, v.join(',')); } else if(String(v).trim()!==''){ url.searchParams.set(k, String(v).trim()); }});
-  // tag this navigation as onboarding → free
-  url.searchParams.set('via','hero-onboarding');
-  window.location.href = url.toString();
+/* ===== presence badge ===== */
+async function loadPresence(){
+  try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presenceTxt').textContent = (j.total||0)+' online'; }
+  catch{ /* ignore */ }
 }
+setInterval(loadPresence, 12000); loadPresence();
 
-btnVendor.addEventListener('click', ()=>{
-  const vendor = vendorInput.value.trim(); const list = listMe.checked? '1': '';
-  if(!vendor){ vendorInput.focus(); return; }
-  goToFreePanel({ vendor, listme:list });
-});
+/* ===== Hero canvas animation: particles → core → beams ===== */
+(function initFunnel(){
+  const c = document.getElementById('funnel');
+  if(!c.getContext) return;
+  const ctx = c.getContext('2d');
+  let w=0, h=0, dpr=1, cx=0, cy=0, R=0;
+  function resize(){
+    dpr = Math.max(1, Math.min(2, window.devicePixelRatio||1));
+    w = c.clientWidth; h = c.clientHeight;
+    c.width = Math.floor(w*dpr); c.height = Math.floor(h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    cx=w*0.62; cy=h*0.54; R=Math.min(w,h)*0.085; // core radius
+    computeEndpoints();
+  }
+  window.addEventListener('resize', resize); resize();
 
-btnCustom.addEventListener('click', ()=>{
-  const inds = selectedChips('chipIndustries');
-  const regs = selectedChips('chipRegions');
-  const buyers = buyersInput.value.split(',').map(s=>s.trim()).filter(Boolean);
-  const vendor = vendorInput.value.trim();
-  const list = listMe.checked? '1': '';
-  // Notes go as hint for AI (optional)
-  const hint = notesInput.value.trim();
-  goToFreePanel({ vendor, buyers, industries:inds, regions:regs, hint, listme:list });
-});
-</script>
-<script>
-// optional tiny demo ticker
-const ticker=document.getElementById('ticker');
-function pushTick(html){const d=document.createElement('div');d.className='ti';d.innerHTML=html;ticker.insertBefore(d,ticker.firstChild);while(ticker.children.length>6)ticker.lastElementChild.remove()}
-setInterval(()=>{ const names=['Ava','Noah','Sophia','Liam','Isabella','Elijah']; const cities=['Toronto','Dallas','Miami','Seattle','LA']; const ch=['Email','SMS','Call','Quote']; const n=names[Math.random()*names.length|0]; const c=cities[Math.random()*cities.length|0]; const k=ch[Math.random()*ch.length|0]; pushTick(`<strong>${n}</strong> · ${c} → <em>${k}</em>`); }, 1800);
+  // Beam endpoints (Email, SMS, Call, LinkedIn, Quote, ERP) to the right
+  const endpoints = [
+    { label:'Email',    a:-0.18, len: Math.min(220, w*0.26) },
+    { label:'SMS',      a:-0.06, len: Math.min(240, w*0.285) },
+    { label:'Call',     a: 0.06, len: Math.min(260, w*0.31) },
+    { label:'LinkedIn', a: 0.18, len: Math.min(280, w*0.335) },
+    { label:'Quote',    a: 0.30, len: Math.min(300, w*0.36) },
+    { label:'ERP',      a: 0.42, len: Math.min(320, w*0.385) },
+  ];
+  function computeEndpoints(){
+    const base = Math.min(w,h);
+    endpoints.forEach((e,i)=>{
+      const len = Math.min(220 + i*18, base*0.44);
+      e.x = cx + Math.cos(e.a)*len;
+      e.y = cy + Math.sin(e.a)*len;
+      e.len = len;
+    });
+  }
+
+  // Particles: inbound (from periphery) and outbound (along beams)
+  const inbound=[], outbound=[];
+  const MAX_IN=120, MAX_OUT=65;
+
+  function spawnInbound(){
+    // spawn around a ring to the left
+    const ringR = Math.max(w,h)*0.58;
+    const a = Math.PI + (Math.random()*Math.PI*0.9 - Math.PI*0.45); // spawn left arc
+    const x = cx + Math.cos(a)*ringR;
+    const y = cy + Math.sin(a)*ringR;
+    const speed = 0.6 + Math.random()*0.7;
+    const vx = Math.cos(-a)*speed*0.15; // initial nudge towards center-ish
+    const vy = Math.sin(-a)*speed*0.15;
+    inbound.push({x,y,vx,vy,life: 300+Math.random()*240});
+  }
+
+  function spawnOutbound(){
+    const e = endpoints[Math.floor(Math.random()*endpoints.length)];
+    outbound.push({ t:0, spd: 0.008 + Math.random()*0.006, e, jitter:(Math.random()*0.7-0.35) });
+  }
+
+  // KPI counters
+  const k = {
+    leads: 0, first: 6, ready: 54, quoted: 67, rep: 21, saved: 20678,
+    t:0
+  };
+
+  function drawBackground(){
+    // vignette
+    const g = ctx.createRadialGradient(cx,cy, R*0.5, cx,cy, Math.max(w,h)*0.7);
+    g.addColorStop(0, 'rgba(255,255,255,0.05)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.rect(0,0,w,h); ctx.fill();
+
+    // orbits
+    ctx.strokeStyle='rgba(140,170,220,0.12)'; ctx.lineWidth=1;
+    for(let i=1;i<=3;i++){
+      ctx.beginPath();
+      ctx.arc(cx,cy,R*(2+i*1.1),0,Math.PI*2);
+      ctx.stroke();
+    }
+  }
+  function drawCore(){
+    // glow
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R*2.2);
+    g.addColorStop(0,'rgba(255,255,255,0.85)');
+    g.addColorStop(0.2,'rgba(200,230,255,0.55)');
+    g.addColorStop(1,'rgba(120,160,255,0.02)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+    // core ring
+    ctx.strokeStyle='rgba(200,230,255,0.4)'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(cx,cy,R*1.15,0,Math.PI*2); ctx.stroke();
+  }
+  function drawBeams(){
+    endpoints.forEach((e,i)=>{
+      const grad = ctx.createLinearGradient(cx,cy, e.x,e.y);
+      grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+      grad.addColorStop(1, 'rgba(120,180,255,0.35)');
+      ctx.strokeStyle=grad; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(e.x,e.y); ctx.stroke();
+
+      // endpoint nodes
+      ctx.fillStyle='rgba(160,200,255,0.35)';
+      ctx.beginPath(); ctx.arc(e.x,e.y, 12, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.8)';
+      ctx.beginPath(); ctx.arc(e.x,e.y, 3.2, 0, Math.PI*2); ctx.fill();
+
+      // labels
+      ctx.font='12px Inter,system-ui'; ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(220,235,255,0.95)';
+      const off = 16;
+      ctx.fillText(e.label, e.x+off, e.y);
+    });
+  }
+
+  function tickInbound(){
+    for(let i=inbound.length-1;i>=0;i--){
+      const p = inbound[i];
+      // gravity-like pull to core + slight curl
+      const dx = cx - p.x, dy = cy - p.y;
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      const ax = (dx/dist) * 0.08;
+      const ay = (dy/dist) * 0.08;
+      // swirl
+      const swirl = 0.035;
+      p.vx += ax + (-dy/dist)*swirl;
+      p.vy += ay + ( dx/dist)*swirl;
+      // friction
+      p.vx *= 0.985; p.vy *= 0.985;
+      p.x += p.vx; p.y += p.vy; p.life--;
+
+      // draw
+      const alpha = Math.min(0.8, 0.15 + 140/dist);
+      ctx.strokeStyle = `rgba(150,200,255,${Math.max(0.05, Math.min(0.35, alpha))})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx*3, p.y - p.vy*3); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(p.x,p.y, 1.2, 0, Math.PI*2); ctx.fill();
+
+      if (dist < R*0.9 || p.life<=0){
+        inbound.splice(i,1);
+        spawnOutbound();
+      }
+    }
+    // keep population
+    while(inbound.length < MAX_IN) spawnInbound();
+  }
+
+  function tickOutbound(){
+    for(let i=outbound.length-1;i>=0;i--){
+      const o = outbound[i];
+      o.t += o.spd;
+      if (o.t>=1){
+        outbound.splice(i,1);
+        continue;
+      }
+      // path along beam from core to endpoint with mild jitter
+      const bx = cx + (o.e.x - cx)*o.t + Math.sin(o.t*10)*o.jitter*4;
+      const by = cy + (o.e.y - cy)*o.t + Math.cos(o.t*10)*o.jitter*4;
+      const sz = 1.2 + Math.sin(o.t*Math.PI)*1.0;
+      ctx.fillStyle='rgba(255,255,255,0.95)';
+      ctx.beginPath(); ctx.arc(bx,by, sz, 0, Math.PI*2); ctx.fill();
+    }
+    while(outbound.length < MAX_OUT) spawnOutbound();
+  }
+
+  function animate(){
+    ctx.clearRect(0,0,w,h);
+    drawBackground();
+    drawBeams();
+    tickInbound();
+    drawCore();
+    tickOutbound();
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  // KPI gentle motion
+  setInterval(()=>{
+    k.t++;
+    if (k.leads < 207) k.leads += 1 + Math.floor(Math.random()*3);
+    const el = (id,v)=> document.getElementById(id).textContent = v;
+    el('k_leads', k.leads);
+    el('k_ready', (54 + Math.floor(Math.sin(k.t/7)*5)) + '%');
+    el('k_quoted', (67 + Math.floor(Math.cos(k.t/11)*4)) + '%');
+    el('k_rep', (21 + Math.floor(Math.sin(k.t/5)*3)) + '%');
+    const saved = 20678 + Math.floor(Math.sin(k.t/3)*800);
+    el('k_saved', '$' + saved.toLocaleString());
+  }, 900);
+})();
+
+/* ===== modal logic ===== */
+const modal = document.getElementById('onb');
+document.getElementById('start').onclick = ()=> modal.classList.add('in');
+document.getElementById('a_cancel').onclick = ()=> modal.classList.remove('in');
+document.getElementById('b_cancel').onclick = ()=> modal.classList.remove('in');
+
+const tabA=document.getElementById('tabA'), tabB=document.getElementById('tabB');
+const paneA=document.getElementById('paneA'), paneB=document.getElementById('paneB');
+tabA.onclick=()=>{ tabA.classList.add('active'); tabB.classList.remove('active'); paneA.style.display='block'; paneB.style.display='none'; };
+tabB.onclick=()=>{ tabB.classList.add('active'); tabA.classList.remove('active'); paneB.style.display='block'; paneA.style.display='none'; };
+
+/* ===== gating helpers ===== */
+function bareHost(url){ let s=String(url||'').trim(); s=s.replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./i,''); return s.toLowerCase(); }
+function emailDomain(email){ const m=String(email||'').trim().toLowerCase().match(/^[^@]+@([^@]+)$/); return m? m[1].replace(/^www\./,'') : ''; }
+function domainsMatch(emailDom, siteDom){ if(!emailDom || !siteDom) return false; if(emailDom===siteDom) return true; return emailDom.endsWith('.'+siteDom); }
+function isPackagingRole(role){ return role==='supplier' || role==='distributor' || role==='buyer'; }
+
+/* ===== API helpers ===== */
+async function post(path,body){ const r=await fetch((window.API_BASE||'')+path,{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body||{}) }); return r.json(); }
+
+/* ===== Path A continue ===== */
+document.getElementById('a_continue').onclick = async ()=>{
+  const email = (document.getElementById('a_email').value||'').trim();
+  const role  = (document.getElementById('a_role').value||'supplier').trim();
+  const site  = (document.getElementById('a_site').value||'').trim();
+  const region= (document.getElementById('a_region').value||'').trim();
+  const list  = !!document.getElementById('a_list').checked;
+  const errEl = document.getElementById('a_err'); const okEl=document.getElementById('a_ok');
+  errEl.style.display='none'; okEl.style.display='none';
+
+  const eDom=emailDomain(email), sDom=bareHost(site);
+  if(!email || !sDom){ errEl.textContent='Please provide business email and company website.'; errEl.style.display='block'; return; }
+  if(!domainsMatch(eDom, sDom)){ errEl.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; errEl.style.display='block'; return; }
+  if(!isPackagingRole(role)){ errEl.textContent='We only serve packaging suppliers, distributors, and buyers with real products.'; errEl.style.display='block'; return; }
+
+  // save prefill for Free Panel
+  localStorage.setItem('onb_vendor', sDom);
+  localStorage.setItem('onb_role', role);
+  localStorage.setItem('onb_regions', region);
+
+  try{
+    await post('/api/v1/gate', { region, email, alerts: true });
+    await post('/api/v1/vault', { role, traits: { vendorDomain: sDom, industries: [], regions: region? region.split(',').map(s=>s.trim()): [], buyers: [] } });
+    okEl.textContent='Validated. Redirecting…'; okEl.style.display='block';
+  }catch{}
+
+  location.href = './free-panel.html';
+};
+
+/* ===== Path B continue ===== */
+document.getElementById('b_continue').onclick = async ()=>{
+  const email = (document.getElementById('b_email').value||'').trim();
+  const role  = (document.getElementById('b_role').value||'supplier').trim();
+  const site  = (document.getElementById('b_site').value||'').trim();
+  const inds  = (document.getElementById('b_industries').value||'').trim();
+  const regs  = (document.getElementById('b_regions').value||'').trim();
+  const buyers= (document.getElementById('b_buyers').value||'').trim();
+  const desc  = (document.getElementById('b_desc').value||'').trim();
+  const list  = !!document.getElementById('b_list').checked;
+  const errEl = document.getElementById('b_err'); const okEl=document.getElementById('b_ok');
+  errEl.style.display='none'; okEl.style.display='none';
+
+  const eDom=emailDomain(email), sDom=bareHost(site);
+  if(!email || !sDom){ errEl.textContent='Please provide business email and company website.'; errEl.style.display='block'; return; }
+  if(!domainsMatch(eDom, sDom)){ errEl.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; errEl.style.display='block'; return; }
+  if(!isPackagingRole(role)){ errEl.textContent='We only serve packaging suppliers, distributors, and buyers with real products.'; errEl.style.display='block'; return; }
+
+  localStorage.setItem('onb_vendor', sDom);
+  localStorage.setItem('onb_role', role);
+  localStorage.setItem('onb_industries', inds);
+  localStorage.setItem('onb_regions', regs);
+  localStorage.setItem('onb_buyers', buyers);
+  localStorage.setItem('onb_desc', desc);
+  localStorage.setItem('onb_list', String(list));
+
+  try{
+    await post('/api/v1/gate', { region: regs, email, alerts: true });
+    await post('/api/v1/vault', { role, traits:{
+      vendorDomain: sDom,
+      industries: inds? inds.split(',').map(s=>s.trim()): [],
+      regions: regs? regs.split(',').map(s=>s.trim()): [],
+      buyers: buyers? buyers.split(',').map(s=>s.trim()): [],
+      notes: desc || null
+    }, listMe: list });
+    okEl.textContent='Validated. Redirecting…'; okEl.style.display='block';
+  }catch{}
+
+  location.href='./free-panel.html';
+};
+
+/* ===== presence heartbeat for header ===== */
+setInterval(()=>{ fetch('/presence/beat',{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ role: 'supplier' }) }).catch(()=>{}) }, 15000);
+
+/* ===== keyboard: Escape ===== */
+document.addEventListener('keydown',(e)=>{ if(e.key==='Escape'){ document.getElementById('onb').classList.remove('in'); }});
 </script>
 </body>
 </html>
