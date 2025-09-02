@@ -1,459 +1,346 @@
 // backend/src/Index.ts
-// Galactly API — plan gating, quotas, presence, vault (profile/saved/owned),
-// streaming preview mount. Free users must SIGN UP to access the vault.
-// Zero-cost friendly (in-memory) until you swap to Neon.
-
-import express, { Request, Response, NextFunction } from "express";
+import express from "express";
 import cors from "cors";
-import http from "http";
-import path from "path";
 import crypto from "crypto";
+import type { Request, Response } from "express";
 
-import progressRouter from "./routes/progress";
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: "1mb" }));
 
-// ---------- Config ----------
-const PORT = Number(process.env.PORT || 8080);
-const NODE_ENV = process.env.NODE_ENV || "development";
+/* -------------------- Config -------------------- */
+const ENV = {
+  PORT: Number(process.env.PORT || 8080),
+  FREE_FINDS_PER_DAY: Number(process.env.FREE_FINDS_PER_DAY || 2),
+  FREE_REVEALS_PER_DAY: Number(process.env.FREE_REVEALS_PER_DAY || 2),
+  PRO_FINDS_PER_DAY: Number(process.env.PRO_FINDS_PER_DAY || 40),
+  PRO_REVEALS_PER_DAY: Number(process.env.PRO_REVEALS_PER_DAY || 120),
+  DEMO_TOTAL_STEPS: 1126, // preview stream denominator
+};
 
-const FREE_FINDS_PER_DAY = Number(process.env.FREE_FINDS_PER_DAY || 2);
-const FREE_REVEALS_PER_DAY = Number(process.env.FREE_REVEALS_PER_DAY || 2);
+function todayUTC(): string {
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
-const PRO_FINDS_PER_DAY = Number(process.env.PRO_FINDS_PER_DAY || 40);
-const PRO_REVEALS_PER_DAY = Number(process.env.PRO_REVEALS_PER_DAY || 200);
-
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || ""; // optional in dev
-
-// ---------- Types / In-memory state ----------
-type Plan = "free" | "pro";
+/* -------------------- Types & store -------------------- */
 type Quota = { date: string; findsUsed: number; revealsUsed: number };
-
+type Traits = {
+  vendorDomain?: string | null;
+  regions?: string[];
+  industries?: string[];
+  buyers?: string[];
+  notes?: string | null;
+};
+type User = {
+  id: string;
+  plan: "free" | "pro";
+  email?: string;
+  quota: Quota;
+  traits: Traits;
+  verified?: boolean; // cached result of domain match (email vs vendorDomain)
+};
 type Lead = {
   id: string;
   title: string;
   tags: string[];
-  confidence?: number;     // 0..1
+  confidence: number;
+  platform: string;
   createdAt: number;
-};
-
-type Traits = {
-  vendorDomain?: string;
-  industries?: string[];
-  regions?: string[];
-  buyers?: string[];
-  notes?: string | null;
-};
-
-type Prefs = {
-  theme?: "dark" | "light";
-  alerts?: { email?: boolean; sms?: boolean };
-  muteDomains?: string[];
-};
-
-type User = {
-  id: string;                  // x-galactly-user
-  plan: Plan;
-  role?: "supplier" | "distributor" | "buyer";
-  email?: string;              // set on signup/onboarding
-  company?: string;
-  region?: string;
-  createdAt: number;
-  quota: Quota;
-  traits: Traits;
-  prefs: Prefs;
-  confirmedProofs: Array<{ at: number; host: string }>;
-  savedLeads: Map<string, Lead>;
-  ownedLeads: Map<string, Lead>;
 };
 
 const USERS = new Map<string, User>();
+const LEAD_POOL = new Map<string, Lead[]>(); // per-user
+let ONLINE = 0;
 
-// presence (soft)
-const PRESENCE = new Map<string, number>(); // userId -> lastBeatMs
-
-// demo lead pool (rotated)
-const DEMO_LEADS: Lead[] = [
-  { id: "L1", tags: ["demand", "Confidence 80% (strong)"], title: "•l••••••,••• — •• ••••pa••••• s••••", createdAt: Date.now() },
-  { id: "L2", tags: ["demand", "Confidence 70% (solid)"],   title: "g•••••,c• — •• ••••s••nc• •••••", createdAt: Date.now() },
-  { id: "L3", tags: ["procurement", "Confidence 65%"],       title: "••••••• ••— •••••• — •• ••••", createdAt: Date.now() },
-];
-
-// ---------- Helpers ----------
-const UTCday = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-const isOnboarded = (u: User) => Boolean(u.email); // minimal: email indicates signup
-
-function ensureUser(id: string): User {
+/* -------------------- Helpers -------------------- */
+function uidFromReq(req: Request): string {
+  return (req.header("x-galactly-user") || req.ip || "anon").slice(0, 120);
+}
+function resetIfNeeded(q: Quota) {
+  const t = todayUTC();
+  if (q.date !== t) {
+    q.date = t;
+    q.findsUsed = 0;
+    q.revealsUsed = 0;
+  }
+}
+function getOrInitUser(id: string): User {
   let u = USERS.get(id);
   if (!u) {
     u = {
       id,
       plan: "free",
-      createdAt: Date.now(),
-      quota: { date: UTCday(), findsUsed: 0, revealsUsed: 0 },
+      quota: { date: todayUTC(), findsUsed: 0, revealsUsed: 0 },
       traits: {},
-      prefs: { theme: "dark", alerts: { email: true, sms: false }, muteDomains: [] },
-      confirmedProofs: [],
-      savedLeads: new Map(),
-      ownedLeads: new Map(),
+      verified: false,
     };
     USERS.set(id, u);
   }
-  // reset quotas at UTC midnight
-  const today = UTCday();
-  if (u.quota.date !== today) {
-    u.quota = { date: today, findsUsed: 0, revealsUsed: 0 };
+  resetIfNeeded(u.quota);
+  // recompute verified if both sides present
+  if (u.email && u.traits.vendorDomain) {
+    const ed = emailDomain(u.email);
+    const sd = bareHost(u.traits.vendorDomain);
+    u.verified = !!(ed && sd && (ed === sd || ed.endsWith("." + sd)));
   }
-  if (!u.prefs.muteDomains) u.prefs.muteDomains = [];
   return u;
 }
-
-declare global {
-  namespace Express { interface Request { user?: User } }
+function bareHost(url?: string | null): string {
+  if (!url) return "";
+  return String(url)
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/.*$/, "")
+    .replace(/^www\./i, "")
+    .toLowerCase();
 }
-
-// attach user to request for /api and /presence
-function withUser(req: Request, _res: Response, next: NextFunction) {
-  const uid = String(req.header("x-galactly-user") || "").trim();
-  if (!uid) {
-    const temp = "anon_" + crypto.randomBytes(6).toString("hex");
-    req.user = ensureUser(temp);
-  } else {
-    req.user = ensureUser(uid);
+function emailDomain(email?: string): string {
+  if (!email) return "";
+  const m = String(email).trim().toLowerCase().match(/^[^@]+@([^@]+)$/);
+  return m ? m[1].replace(/^www\./, "") : "";
+}
+function planLimits(user: User) {
+  const isPro = user.plan === "pro";
+  const findsLimit = isPro ? ENV.PRO_FINDS_PER_DAY : ENV.FREE_FINDS_PER_DAY;
+  // reveals: free users must be verified first
+  const revealsBase = isPro ? ENV.PRO_REVEALS_PER_DAY : ENV.FREE_REVEALS_PER_DAY;
+  const revealsLimit = user.plan === "free" && !user.verified ? 0 : revealsBase;
+  return { findsLimit, revealsLimit };
+}
+function countsLeft(user: User) {
+  const limits = planLimits(user);
+  resetIfNeeded(user.quota);
+  return {
+    findsLeft: Math.max(0, limits.findsLimit - user.quota.findsUsed),
+    revealsLeft: Math.max(0, limits.revealsLimit - user.quota.revealsUsed),
+  };
+}
+function ensureLeadPool(user: User) {
+  if (!LEAD_POOL.has(user.id)) {
+    const now = Date.now();
+    const platforms = ["reddit", "linkedin", "google", "procurement", "job-board", "pdp"];
+    const sample: Lead[] = Array.from({ length: 14 }).map((_, i) => ({
+      id: crypto.randomUUID(),
+      title:
+        i % 3 === 0
+          ? "“Need 10k corrugate shippers (RSC)”"
+          : i % 3 === 1
+          ? "“Quote: 16oz cartons (retail)”"
+          : "“Shrink film: 12u rolls — urgent”",
+      tags: ["demand", i % 2 ? "ops" : "product"],
+      confidence: 70 + Math.floor(Math.random() * 21),
+      platform: platforms[i % platforms.length],
+      createdAt: now - i * 3600_000,
+    }));
+    LEAD_POOL.set(user.id, sample);
   }
-  // optional dev override
-  const planOverride = req.header("x-galactly-plan");
-  if (planOverride === "free" || planOverride === "pro") req.user!.plan = planOverride;
-  next();
 }
 
-function requireOnboarded(req: Request, res: Response, next: NextFunction) {
-  const u = req.user!;
-  if (!isOnboarded(u)) return res.status(401).json({ ok: false, error: "needs_onboarding" });
-  next();
-}
+/* -------------------- Routes -------------------- */
 
-function requirePro(req: Request, res: Response, next: NextFunction) {
-  const u = req.user!;
-  if (u.plan !== "pro") return res.status(402).json({ ok: false, error: "pro_required" });
-  next();
-}
+// Basic health
+app.get("/api/v1/healthz", (_req, res) => res.json({ ok: true }));
 
-// ---------- Express ----------
-const app = express();
-app.disable("x-powered-by");
-app.use(cors());
-
-// IMPORTANT: Stripe webhook FIRST (raw body), before express.json()
-app.post("/api/v1/stripe/webhook", express.raw({ type: "*/*" }), (req: Request, res: Response) => {
-  try {
-    let event: any;
-
-    if (STRIPE_WEBHOOK_SECRET) {
-      const sig = req.header("stripe-signature");
-      if (!sig) return res.status(400).send("Missing signature");
-      const payload = req.body as Buffer;
-      // Soft dev check; for prod use Stripe SDK verify
-      const computed = crypto.createHmac("sha256", STRIPE_WEBHOOK_SECRET).update(payload).digest("hex");
-      if (!String(sig).includes(computed.slice(0, 16))) {
-        console.warn("Webhook HMAC prefix mismatch (dev-mode soft check).");
-      }
-      event = JSON.parse(payload.toString("utf8"));
-    } else {
-      // Dev: accept JSON body
-      event = JSON.parse((req.body as Buffer).toString("utf8"));
-    }
-
-    if (event?.type === "checkout.session.completed") {
-      const uid = event?.data?.object?.metadata?.galactly_user;
-      if (uid && USERS.has(uid)) {
-        const u = USERS.get(uid)!;
-        u.plan = "pro";
-        u.quota = { date: UTCday(), findsUsed: 0, revealsUsed: 0 };
-        console.log(`User ${uid} upgraded to PRO via Stripe webhook.`);
-      }
-    }
-
-    res.json({ received: true });
-  } catch (err) {
-    console.error(err);
-    res.status(400).send("Webhook error");
-  }
+// Presence (very simple)
+app.get("/presence/online", (_req, res) => {
+  res.json({ total: ONLINE });
 });
 
-// Now parse JSON for the rest
-app.use(express.json());
-
-// Attach user on /api and /presence
-app.use((req, res, next) => {
-  if (req.path.startsWith("/api/") || req.path.startsWith("/presence/")) withUser(req, res, next);
-  else next();
-});
-
-// ---------- Status & Basic Profile ----------
+// Status: return plan, quotas, traits, and gate info
 app.get("/api/v1/status", (req, res) => {
-  const u = req.user!;
-  const limits = u.plan === "pro"
-    ? { findsPerDay: PRO_FINDS_PER_DAY, revealsPerDay: PRO_REVEALS_PER_DAY }
-    : { findsPerDay: FREE_FINDS_PER_DAY, revealsPerDay: FREE_REVEALS_PER_DAY };
-
+  const id = uidFromReq(req);
+  const u = getOrInitUser(id);
+  const { findsLeft, revealsLeft } = countsLeft(u);
   res.json({
     ok: true,
-    engine: "ready",
-    user: { id: u.id, plan: u.plan, role: u.role || null, email: u.email || null, company: u.company || null },
-    onboarded: isOnboarded(u),
-    quota: {
-      findsLeft: Math.max(0, limits.findsPerDay - u.quota.findsUsed),
-      revealsLeft: Math.max(0, limits.revealsPerDay - u.quota.revealsUsed),
-      date: u.quota.date,
+    user: { id: u.id, plan: u.plan },
+    quota: { findsLeft, revealsLeft, date: u.quota.date },
+    gate: {
+      email: u.email || null,
+      domainMatch: !!u.verified,
     },
-  });
-});
-
-app.get("/api/v1/user", (req, res) => {
-  const u = req.user!;
-  res.json({
-    ok: true,
-    user: {
-      id: u.id, plan: u.plan, role: u.role || null,
-      email: u.email || null, company: u.company || null, region: u.region || null,
-      traits: u.traits, prefs: u.prefs, createdAt: u.createdAt
-    }
-  });
-});
-
-// Upsert gate from onboarding — this is the "signup" that unlocks the Vault
-app.post("/api/v1/gate", (req, res) => {
-  const u = req.user!;
-  const { email, region, role, company } = req.body || {};
-  if (role && ["supplier", "distributor", "buyer"].includes(role)) u.role = role;
-  if (typeof email === "string") u.email = email;
-  if (typeof company === "string") u.company = company;
-  if (typeof region === "string") u.region = region;
-  res.json({ ok: true, onboarded: isOnboarded(u), user: { id: u.id, plan: u.plan, role: u.role || null } });
-});
-
-// ---------- Vault (profile, prefs, saved/owned) — requires signup ----------
-app.get("/api/v1/vault", requireOnboarded, (req, res) => {
-  const u = req.user!;
-  res.json({
-    ok: true,
-    plan: u.plan,
-    quota: u.quota,
     traits: u.traits,
-    prefs: u.prefs,
-    counts: {
-      saved: u.savedLeads.size,
-      owned: u.ownedLeads.size,
-      confirmedProofs: u.confirmedProofs.length
-    }
   });
 });
 
-app.post("/api/v1/vault", requireOnboarded, (req, res) => {
-  const u = req.user!;
-  const { role, traits, prefs } = req.body || {};
-  if (role && ["supplier", "distributor", "buyer"].includes(role)) u.role = role;
+// Gate: save email / region (best-effort)
+app.post("/api/v1/gate", (req, res) => {
+  const id = uidFromReq(req);
+  const u = getOrInitUser(id);
+  const { email, region } = req.body || {};
+  if (email) u.email = String(email).trim();
+  if (region && !u.traits.regions) u.traits.regions = String(region)
+    .split(",")
+    .map((s: string) => s.trim())
+    .filter(Boolean);
+  // Verify immediately if vendorDomain already set
+  if (u.email && u.traits.vendorDomain) {
+    const ed = emailDomain(u.email);
+    const sd = bareHost(u.traits.vendorDomain);
+    u.verified = !!(ed && sd && (ed === sd || ed.endsWith("." + sd)));
+  }
+  res.json({ ok: true, verified: !!u.verified });
+});
 
+// Vault: store traits (and optionally verify if email present)
+app.post("/api/v1/vault", (req, res) => {
+  const id = uidFromReq(req);
+  const u = getOrInitUser(id);
+  const { traits } = req.body || {};
   if (traits && typeof traits === "object") {
-    const t: Traits = {
-      vendorDomain: typeof traits.vendorDomain === "string" ? traits.vendorDomain : u.traits.vendorDomain,
-      industries: Array.isArray(traits.industries) ? traits.industries : u.traits.industries,
-      regions: Array.isArray(traits.regions) ? traits.regions : u.traits.regions,
-      buyers: Array.isArray(traits.buyers) ? traits.buyers : u.traits.buyers,
-      notes: typeof traits.notes === "string" || traits.notes === null ? traits.notes : u.traits.notes,
-    };
+    const t: Traits = u.traits || {};
+    if (typeof traits.vendorDomain === "string" && traits.vendorDomain.trim()) {
+      t.vendorDomain = bareHost(traits.vendorDomain);
+    }
+    if (Array.isArray(traits.regions)) t.regions = traits.regions.filter(Boolean);
+    if (Array.isArray(traits.industries)) t.industries = traits.industries.filter(Boolean);
+    if (Array.isArray(traits.buyers)) t.buyers = traits.buyers.filter(Boolean);
+    if (typeof traits.notes === "string") t.notes = traits.notes || null;
     u.traits = t;
   }
-  if (prefs && typeof prefs === "object") {
-    u.prefs.theme = prefs.theme === "light" ? "light" : "dark";
-    if (prefs.alerts) {
-      u.prefs.alerts = {
-        email: typeof prefs.alerts.email === "boolean" ? prefs.alerts.email : (u.prefs.alerts?.email ?? true),
-        sms: typeof prefs.alerts.sms === "boolean" ? prefs.alerts.sms : (u.prefs.alerts?.sms ?? false),
-      };
-    }
-    if (Array.isArray(prefs.muteDomains)) {
-      u.prefs.muteDomains = prefs.muteDomains.filter((x: any) => typeof x === "string");
-    }
+  // recompute verification
+  if (u.email && u.traits.vendorDomain) {
+    const ed = emailDomain(u.email);
+    const sd = bareHost(u.traits.vendorDomain);
+    u.verified = !!(ed && sd && (ed === sd || ed.endsWith("." + sd)));
   }
-  res.json({ ok: true, traits: u.traits, prefs: u.prefs });
+  res.json({ ok: true, traits: u.traits, verified: !!u.verified });
 });
 
-// Vault leads
-app.get("/api/v1/vault/leads", requireOnboarded, (req, res) => {
-  const u = req.user!;
-  const kind = String(req.query.kind || "saved"); // saved | owned
-  const src = kind === "owned" ? u.ownedLeads : u.savedLeads;
-  res.json({ ok: true, kind, leads: Array.from(src.values()).sort((a,b)=>b.createdAt-a.createdAt) });
-});
-
-app.post("/api/v1/vault/save", requireOnboarded, (req, res) => {
-  const u = req.user!;
-  const lead = req.body?.lead as Partial<Lead>;
-  if (!lead?.id || !lead?.title) return res.status(400).json({ ok: false, error: "invalid_lead" });
-  const L: Lead = {
-    id: String(lead.id),
-    title: String(lead.title),
-    tags: Array.isArray(lead.tags) ? lead.tags.map(String) : [],
-    confidence: typeof lead.confidence === "number" ? lead.confidence : undefined,
-    createdAt: Date.now(),
-  };
-  u.savedLeads.set(L.id, L);
-  res.json({ ok: true });
-});
-
-app.post("/api/v1/vault/remove", requireOnboarded, (req, res) => {
-  const u = req.user!;
-  const { leadId } = req.body || {};
-  if (!leadId) return res.status(400).json({ ok: false, error: "missing_leadId" });
-  u.savedLeads.delete(String(leadId));
-  res.json({ ok: true });
-});
-
-// ---------- Leads / Find-now (stubs; no paid calls) ----------
+// Find-now: enforce quota, increment on success
 app.post("/api/v1/find-now", (req, res) => {
-  const u = req.user!;
-  const limits = u.plan === "pro"
-    ? { findsPerDay: PRO_FINDS_PER_DAY }
-    : { findsPerDay: FREE_FINDS_PER_DAY };
+  const id = uidFromReq(req);
+  const u = getOrInitUser(id);
+  const { findsLeft } = countsLeft(u);
 
-  if (u.quota.findsUsed >= limits.findsPerDay) {
-    return res.status(429).json({ ok: false, error: "quota_exceeded" });
+  if (findsLeft <= 0) {
+    return res.status(200).json({ ok: false, reason: "quota", findsLeft: 0, created: 0 });
   }
+
+  // Simulate collectors; increment counter
   u.quota.findsUsed += 1;
-
-  const created = Math.floor(1 + Math.random() * 3);
-  res.json({ ok: true, created });
+  ensureLeadPool(u);
+  const created = Math.max(3, Math.floor(Math.random() * 6)); // pretend 3..8 new leads
+  return res.json({
+    ok: true,
+    created,
+    findsLeft: countsLeft(u).findsLeft,
+  });
 });
 
+// Leads: return (rotated) deduped list
 app.get("/api/v1/leads", (req, res) => {
-  const u = req.user!;
-  const out = DEMO_LEADS.slice(0, 2 + (u.plan === "pro" ? 1 : 0));
-  res.json({ ok: true, leads: out });
+  const id = uidFromReq(req);
+  const u = getOrInitUser(id);
+  ensureLeadPool(u);
+  // rotate platforms as a very light “server rotates platforms”
+  const list = (LEAD_POOL.get(u.id) || []).slice().sort((a, b) => a.createdAt - b.createdAt);
+  res.json({ ok: true, leads: list });
 });
 
-// confirm/mute/etc. (kept per-user; no global heat bump)
+// Events: like/dislike/mute/confirm (stub)
 app.post("/api/v1/events", (req, res) => {
-  const u = req.user!;
-  const { type, host } = req.body || {};
-  if (type === "confirm" && typeof host === "string") {
-    u.confirmedProofs.push({ at: Date.now(), host });
-  }
-  if (type === "mute" && typeof host === "string") {
-    if (!u.prefs.muteDomains) u.prefs.muteDomains = [];
-    if (!u.prefs.muteDomains.includes(host)) u.prefs.muteDomains.push(host);
-  }
+  const id = uidFromReq(req);
+  getOrInitUser(id); // ensure exists
   res.json({ ok: true });
 });
 
-// claim/own — PRO ONLY (exclusive window)
-const CLAIMS = new Map<string, { by: string; at: number }>(); // leadId -> claim
-app.post("/api/v1/claim", requireOnboarded, requirePro, (req, res) => {
-  const u = req.user!;
-  const { leadId } = req.body || {};
-  if (!leadId) return res.status(400).json({ ok: false, error: "missing_leadId" });
+// Claim/Own (stubs)
+app.post("/api/v1/claim", (req, res) => res.json({ ok: true, reservedForSec: 120 }));
+app.post("/api/v1/own", (req, res) => res.json({ ok: true }));
 
-  const now = Date.now();
-  const existing = CLAIMS.get(leadId);
-  if (existing && now - existing.at < 120_000 && existing.by !== u.id) {
-    return res.status(409).json({ ok: false, error: "already_claimed" });
-  }
-  CLAIMS.set(leadId, { by: u.id, at: now });
-  res.json({ ok: true, reservedForSec: 120 });
-});
+/* ---------- Signals Preview (SSE) ---------- */
+type Tick = {
+  category: string;
+  lane: "free" | "pro";
+  chain: string[];
+  done: number;
+  total: number;
+  locked?: boolean;
+};
 
-app.post("/api/v1/own", requireOnboarded, requirePro, (req, res) => {
-  const u = req.user!;
-  const { leadId, title, tags } = req.body || {};
-  if (!leadId) return res.status(400).json({ ok: false, error: "missing_leadId" });
+const PREVIEW: Array<Pick<Tick, "category" | "chain">> = [
+  { category: "Demand", chain: ["Ad libraries", "Probe", "Filter", "Conclusion"] },
+  { category: "Product", chain: ["PDP deltas", "Probe", "Evidence", "Conclusion"] },
+  { category: "Procurement", chain: ["Supplier portals", "Probe", "Evidence", "Conclusion"] },
+  { category: "Retail", chain: ["Price cadence", "Probe", "Evidence", "Conclusion"] },
+  { category: "Wholesale", chain: ["MOQ signals", "Probe", "Evidence", "Conclusion"] },
+  { category: "Ops", chain: ["Job posts", "Probe", "Evidence", "Conclusion"] },
+  { category: "Events", chain: ["Calendars", "Probe", "Evidence", "Conclusion"] },
+  { category: "Reviews", chain: ["Public reviews", "Lexicon", "Evidence", "Conclusion"] },
+  { category: "Timing", chain: ["If–then rules", "Probe", "Evidence", "Queue window"] },
+];
 
-  const existing = CLAIMS.get(leadId);
-  if (!existing || existing.by !== u.id) {
-    return res.status(409).json({ ok: false, error: "not_claimed_by_you" });
-  }
-  CLAIMS.delete(leadId);
+app.get("/api/v1/progress.sse", (req: Request, res: Response) => {
+  // SSE headers
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
 
-  const L: Lead = { id: String(leadId), title: String(title || "Owned lead"), tags: Array.isArray(tags)? tags.map(String):[], createdAt: Date.now() };
-  u.ownedLeads.set(L.id, L);
-  u.savedLeads.delete(L.id);
+  const id = uidFromReq(req);
+  const u = getOrInitUser(id);
 
-  res.json({ ok: true, owned: true });
-});
+  let total = ENV.DEMO_TOTAL_STEPS;
+  let freeDone = 0;
+  let proDone = 0;
 
-// ---------- Metrics snapshot (for Vault graphs) — requires signup ----------
-app.get("/api/v1/metrics/summary", requireOnboarded, (req, res) => {
-  const u = req.user!;
-  const days = Number(req.query.days || 7);
-  const points = Math.max(7, Math.min(30, days));
-  const rand = (n:number, base:number) => Math.max(0, Math.round(base + (Math.random()*n - n/2)));
+  const send = (event: string, payload: any) => {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
 
-  const spark = Array.from({length: points}, () => ({
-    seen: rand(12, 18),
-    reveals: rand(4, 6),
-    saved: rand(3, 5),
-    owned: rand(1, 2),
-    confirms: rand(1, 2),
-  }));
+  // slow, readable cadence
+  let catIdx = 0;
+  const timer = setInterval(() => {
+    const def = PREVIEW[catIdx % PREVIEW.length];
+    catIdx++;
 
-  const totals = spark.reduce((a,c)=>({
-    seen:a.seen+c.seen, reveals:a.reveals+c.reveals, saved:a.saved+c.saved, owned:a.owned+c.owned, confirms:a.confirms+c.confirms
-  }), { seen:0,reveals:0,saved:0,owned:0,confirms:0 });
+    // Increment a small slice
+    freeDone = Math.min(total, freeDone + Math.floor(total * 0.012) + 1);
+    const freeTick: Tick = {
+      category: def.category,
+      lane: "free",
+      chain: ["Probe", "Filter", "Evidence", "Conclusion"],
+      done: freeDone,
+      total,
+    };
+    send("tick", freeTick);
 
-  res.json({ ok:true, period:`${points}d`, totals, spark });
-});
+    // Pro shows extra checks (unlocked if plan is pro)
+    const isPro = u.plan === "pro";
+    proDone = Math.min(total, proDone + Math.floor(total * 0.018) + 2);
+    const proTick: Tick = {
+      category: def.category,
+      lane: "pro",
+      chain: ["Probe", "Filter", "Evidence", "Conclusion", "Auto-verify", "Queue window"],
+      done: proDone,
+      total,
+      locked: !isPro,
+    };
+    send("tick", proTick);
 
-// ---------- Presence ----------
-app.post("/presence/beat", (req, res) => {
-  const u = req.user!;
-  PRESENCE.set(u.id, Date.now());
-  res.json({ ok: true });
-});
-app.get("/presence/online", (_req, res) => {
-  const now = Date.now();
-  let total = 0;
-  for (const [, at] of PRESENCE) if (now - at < 60_000) total++;
-  res.json({ ok: true, total });
-});
-
-// ---------- Streaming preview (SSE) ----------
-app.use("/api/v1", progressRouter); // /api/v1/progress.sse
-
-// Dev helper: flip plan without Stripe
-if (NODE_ENV !== "production") {
-  app.post("/api/v1/admin/flip-plan", (req, res) => {
-    const u = req.user!;
-    const { plan } = req.body || {};
-    if (plan === "free" || plan === "pro") {
-      u.plan = plan;
-      u.quota = { date: UTCday(), findsUsed: 0, revealsUsed: 0 };
-      return res.json({ ok: true, plan: u.plan });
+    // Free halts early 50–80 items (upsell)
+    if (freeDone >= Math.min(80, Math.floor(total * 0.07))) {
+      send("halt", { freeDone, total, checkout: "/checkout/stripe?plan=pro" });
+      clearInterval(timer);
+      send("done", { ok: true });
     }
-    res.status(400).json({ ok: false, error: "invalid_plan" });
-  });
-}
+  }, 1200);
 
-// ---------- Utilities ----------
-app.get("/__routes", (_req, res) => {
-  const routes: string[] = [];
-  app._router.stack.forEach((m: any) => {
-    if (m.route && m.route.path) {
-      const methods = Object.keys(m.route.methods).join(",").toUpperCase();
-      routes.push(`${methods} ${m.route.path}`);
-    } else if (m.name === "router" && m.handle?.stack) {
-      m.handle.stack.forEach((h: any) => {
-        if (h.route) {
-          const methods = Object.keys(h.route.methods).join(",").toUpperCase();
-          routes.push(`${methods} ${h.route.path}`);
-        }
-      });
-    }
-  });
-  res.type("text/plain").send(routes.sort().join("\n"));
+  req.on("close", () => clearInterval(timer));
 });
 
-// Static hosting for quick local preview (optional)
-app.use("/", express.static(path.join(process.cwd(), "frontend")));
+/* -------------------- Presence counters -------------------- */
+app.use((_req, _res, next) => {
+  ONLINE = Math.max(0, ONLINE);
+  next();
+});
 
-const server = http.createServer(app);
-server.listen(PORT, () => {
-  console.log(`Galactly API listening on :${PORT} [${NODE_ENV}]`);
+/* -------------------- Start -------------------- */
+app.listen(ENV.PORT, () => {
+  console.log(`API listening on :${ENV.PORT}`);
 });
