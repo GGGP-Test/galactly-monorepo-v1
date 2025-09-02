@@ -5,16 +5,14 @@ import fs from 'fs';
 import { migrate, q } from './db';
 import { computeScore, type Weights, type UserPrefs } from './scoring';
 import { scanReviews } from './connectors/reviews';
-
-// Optional free connectors (keep even if stubbed)
 import { findAdvertisersFree } from './connectors/adlib_free';
 import { scanPDP } from './connectors/pdp';
 import { deriveBuyersFromVendorSite } from './connectors/derivebuyersfromvendorsite';
+import { mountStripeWebhook, mountStripeApi } from './stripe';
 
 const app = express();
-app.use(express.json({ limit: '300kb' }));
 
-// CORS for static frontends
+/* ---------- CORS (allow static frontends) ---------- */
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers','Content-Type, x-galactly-user, x-admin-token');
@@ -23,10 +21,17 @@ app.use((req, res, next) => {
   next();
 });
 
+/* ---------- Attach webhook BEFORE json parser ---------- */
+mountStripeWebhook(app);
+
+/* ---------- JSON body parser ---------- */
+app.use(express.json({ limit: '300kb' }));
+
 const PORT = Number(process.env.PORT || 8787);
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const BRANDS_FILE = process.env.BRANDS_FILE || '';
 
+/* ---------- attach pseudo user id ---------- */
 app.use((req,_res,next)=>{ (req as any).userId = req.header('x-galactly-user') || null; next(); });
 
 /* ---------- utils ---------- */
@@ -38,6 +43,7 @@ app.get('/api/v1/healthz', async (_req,res)=>{ try{ const ok=await q('SELECT 1 a
 app.get('/__routes', (_req,res)=> res.json([
   { path:'/api/v1/healthz', methods:['get'] },
   { path:'/api/v1/status', methods:['get'] },
+  { path:'/api/v1/plan', methods:['get'] },
   { path:'/api/v1/gate', methods:['post'] },
   { path:'/api/v1/leads', methods:['get'] },
   { path:'/api/v1/claim', methods:['post'] },
@@ -54,12 +60,13 @@ app.get('/__routes', (_req,res)=> res.json([
   { path:'/api/v1/presence/beat', methods:['post'] },
   { path:'/api/v1/lead-viewers', methods:['get','post'] },
   { path:'/api/v1/vault', methods:['get','post'] },
+  { path:'/api/v1/checkout', methods:['post'] },
+  { path:'/api/v1/stripe/webhook', methods:['post (raw)'] },
 ]));
 
-/* ---------- quotas in user_prefs ---------- */
+/* ---------- quotas ---------- */
 type Quota = { date:string; findsUsed:number; revealsUsed:number };
 const TODAY = ()=> new Date().toISOString().slice(0,10);
-
 async function getQuota(userId:string): Promise<Quota>{
   const r = await q<{user_prefs:any}>('SELECT user_prefs FROM app_user WHERE id=$1',[userId]);
   const prefs = r.rows[0]?.user_prefs || {};
@@ -100,7 +107,7 @@ app.get('/api/v1/lead-viewers', (req,res)=>{ const leadId=String(req.query.leadI
 });
 app.post('/api/v1/lead-viewers', (req,res)=>{ const userId=(req as any).userId || randomUUID(); const { leadId } = req.body||{}; if(!leadId) return res.status(400).json({ok:false,error:'missing leadId'}); if(!leadViewers[leadId]) leadViewers[leadId]=new Set(); leadViewers[leadId].add(userId); res.json({ok:true}); });
 
-/* ---------- gate/status ---------- */
+/* ---------- gate/status/plan ---------- */
 app.post('/api/v1/gate', async (req,res)=>{
   const userId=(req as any).userId; if(!userId) return res.status(400).json({ ok:false, error:'missing x-galactly-user' });
   const { region, email, alerts } = req.body||{};
@@ -115,7 +122,18 @@ app.post('/api/v1/gate', async (req,res)=>{
   const quota = await getQuota(userId);
   res.json({ ok:true, userId, nextResetAt: resetAtUtc(quota.date), free:{ finds:2, reveals:2 } });
 });
-app.get('/api/v1/status', async (req,res)=>{ const userId=(req as any).userId||null; let findsLeft=2, revealsLeft=2; if(userId){ const qn=await getQuota(userId); findsLeft=Math.max(0,2-qn.findsUsed); revealsLeft=Math.max(0,2-qn.revealsUsed); } res.json({ ok:true, findsLeft, revealsLeft }); });
+app.get('/api/v1/status', async (req,res)=>{ const userId=(req as any).userId||null;
+  let findsLeft=2, revealsLeft=2;
+  if(userId){ const qn=await getQuota(userId); findsLeft=Math.max(0,2-qn.findsUsed); revealsLeft=Math.max(0,2-qn.revealsUsed); }
+  res.json({ ok:true, findsLeft, revealsLeft });
+});
+app.get('/api/v1/plan', async (req,res)=>{
+  const userId=(req as any).userId||null;
+  if(!userId) return res.json({ ok:true, plan:'free' });
+  const r = await q<{ user_prefs:any }>('SELECT user_prefs FROM app_user WHERE id=$1',[userId]);
+  const plan = r.rows[0]?.user_prefs?.plan || 'free';
+  res.json({ ok:true, plan });
+});
 
 /* ---------- leads ---------- */
 app.get('/api/v1/leads', async (req,res)=>{
@@ -233,12 +251,9 @@ app.post('/api/v1/find-now', async (req,res)=>{
     }catch{}
   }
 
-  // derive buyers from vendor site (free path A)
   if (vendor){ const d = await safe(deriveBuyersFromVendorSite(vendor)); if(d?.domains?.length) buyers.push(...d.domains); }
 
-  // Process a limited set per request to keep it snappy on free tier
   for (const host of buyers.slice(0,6)) {
-    // Ad libs
     const ads = (await safe(findAdvertisersFree(host))) || [];
     for (const a of ads) {
       if (a.url && !seenUrl.has(a.url)) {
@@ -246,7 +261,6 @@ app.post('/api/v1/find-now', async (req,res)=>{
         seenUrl.add(a.url); created++;
       }
     }
-    // PDP deltas (if any)
     const pdp = (await safe(scanPDP(host))) || [];
     for (const p of pdp) {
       if (p.url && !seenUrl.has(p.url)) {
@@ -254,7 +268,6 @@ app.post('/api/v1/find-now', async (req,res)=>{
         seenUrl.add(p.url); created++;
       }
     }
-    // Reviews / complaints (packaging lexicon)
     const revHits = (await safe(scanReviews(host))) || [];
     for (const r of revHits) {
       if (r.url && !seenUrl.has(r.url)) {
@@ -264,14 +277,13 @@ app.post('/api/v1/find-now', async (req,res)=>{
         seenUrl.add(r.url); created++;
       }
     }
-
     checked++;
   }
 
   res.json({ ok:true, created, checked, buyers: buyers.slice(0,6) });
 });
 
-/* ---------- reveal (hold-to-reveal) ---------- */
+/* ---------- reveal ---------- */
 app.post('/api/v1/reveal', async (req,res)=>{
   const userId=(req as any).userId||null;
   const { leadId } = req.body||{};
@@ -286,7 +298,7 @@ app.post('/api/v1/reveal', async (req,res)=>{
     proof:{ redacted:true, path:['adlib','pdp','reviews'], ts:new Date().toISOString() } });
 });
 
-/* ---------- progress.sse (slow preview) ---------- */
+/* ---------- progress.sse ---------- */
 app.get('/api/v1/progress.sse', async (req,res)=>{
   res.header('Content-Type','text/event-stream');
   res.header('Cache-Control','no-cache');
@@ -324,6 +336,9 @@ app.post('/api/v1/admin/seed-brands', async (req,res)=>{
   res.json({ ok:true, inserted, skipped, total: lines.length });
 });
 app.post('/api/v1/admin/ingest', async (req,res)=>{ if(!isAdmin(req)) return res.status(401).json({ ok:false, error:'unauthorized' }); res.json({ ok:true, did:'noop' }); });
+
+/* ---------- Stripe JSON endpoints AFTER json parser ---------- */
+mountStripeApi(app);
 
 /* ---------- start ---------- */
 migrate().then(()=>{ app.listen(PORT,'0.0.0.0', ()=> console.log(`galactly-api listening on :${PORT}`)); });
