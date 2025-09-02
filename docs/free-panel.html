@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Galactly — Live Feed</title>
+<title>Galactly — Live feed</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@800&display=swap" rel="stylesheet">
@@ -19,29 +19,38 @@ body{margin:0;color:var(--ink);background:linear-gradient(180deg,#0a0e16,#06080e
 header{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0b111b,#0a0e15)}
 .brand{display:flex;gap:10px;align-items:center;font:800 16px var(--mont)}
 .brand svg{width:20px;height:20px}
-.grid{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;max-width:1280px;margin:14px auto;padding:0 16px}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:#0c1322;color:#c9d6f0;font-size:12px}
+.badge .dot{width:8px;height:8px;border-radius:50%;background:#43e5b7;box-shadow:0 0 10px rgba(67,229,183,.7);display:inline-block}
+
+.wrap{max-width:1280px;margin:14px auto;padding:0 16px}
+.grid{display:grid;grid-template-columns:1.08fr 1fr;gap:16px}
 @media (max-width:1100px){ .grid{grid-template-columns:1fr} }
-.left,.right{background:#0b101a;border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.left .head,.right .head{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+
+.panel{background:#0b101a;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
 .hint{font-size:12px;color:#9fb2d6;opacity:.9}
-.scroller{height:calc(100vh - 140px);overflow:auto}
+.scroller{height:calc(100vh - 152px);overflow:auto}
+
 .card{background:#0f1420;border:1px solid var(--line);border-radius:12px;margin:12px;padding:12px}
 .tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 .tag{padding:4px 8px;border:1px solid #2a3552;border-radius:999px;background:#0f1626;color:#cfe0ff;font-size:12px}
-.lead-title{font-weight:600}
-.actions{display:flex;gap:8px;margin-top:8px}
+.title{font-weight:600}
+.actions{display:flex;gap:8px;margin-top:10px}
 .btn{padding:8px 10px;border:1px solid #26314a;border-radius:10px;background:#111a2b;color:#eaf0ff;cursor:pointer;font-weight:600}
 .btn.own{background:linear-gradient(90deg,#fff,#eaf1ff);color:#0b111b;border-color:transparent}
-.lock{opacity:.7}
-.mini{font-size:12px;color:#9fb2d6}
-.separator{height:1px;background:linear-gradient(90deg,transparent,#253049,transparent);margin:8px 0}
+.btn.small{font-size:12px;padding:6px 8px}
+.kv{font-size:12px;color:#9fb2d6}
+.sep{height:1px;background:linear-gradient(90deg,transparent,#26324c,transparent);margin:10px 0}
 
-/* Preview (report style) */
+.hold{position:relative}
+.hold .bar{position:absolute;left:0;bottom:-6px;height:3px;background:linear-gradient(90deg,#86f7d6,#6fb3ff);width:0;border-radius:6px}
+
+/* Report (Signals Preview) */
 .section{border-top:1px dashed #223048}
 .section:first-child{border-top:0}
-.section .title{display:flex;align-items:center;justify-content:space-between;padding:10px 12px}
-.title h3{margin:0;font:700 14px var(--inter);letter-spacing:.02em;color:#dfe9ff}
-.rows{padding:0 12px 12px 12px}
+.section .titleRow{display:flex;align-items:center;justify-content:space-between;padding:10px 12px}
+.section h3{margin:0;font:700 14px var(--inter);letter-spacing:.02em;color:#dfe9ff}
+.rows{padding:0 12px 12px}
 .row{display:grid;grid-template-columns:58px 1fr;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid rgba(40,60,90,.35)}
 .row:first-child{border-top:0}
 .lane{font:700 12px var(--inter); padding:4px 8px; border:1px solid #2a3552; border-radius:999px; background:#0f1626; color:#cfe0ff; text-align:center}
@@ -49,14 +58,20 @@ header{height:54px;display:flex;align-items:center;justify-content:space-between
 .step{padding:4px 8px;border:1px solid #2a3552;border-radius:8px;background:#0f1626;color:#cfe0ff;font-size:12px;white-space:nowrap}
 .arrow{opacity:.6}
 .counts{margin-left:auto;font-size:12px;color:#a9bbda}
-.locked{opacity:.7;filter:saturate(.75)}
+.locked{opacity:.75;filter:saturate(.8)}
 .upsell{margin:12px;padding:12px;border:1px dashed #38509a;border-radius:12px;background:rgba(20,28,46,.6)}
 .upsell strong{color:#fff}
-.upsell .btn{margin-top:8px}
 
-/* Press-and-hold */
-.hold{position:relative}
-.hold .bar{position:absolute;left:0;bottom:-6px;height:3px;background:linear-gradient(90deg,#86f7d6,#6fb3ff);width:0;border-radius:6px}
+/* Banners */
+.banner{background:#0f1626;border:1px dashed #314367;margin:10px 12px;padding:10px;border-radius:12px;color:#cfe0ff}
+.banner .btn{margin-left:10px}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50}
+.modal.in{display:flex}
+.box{width:min(860px,96vw);background:#0b101a;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.box .head{padding:10px 12px;border-bottom:1px solid var(--line)}
+.box .body{padding:12px}
 </style>
 </head>
 <body>
@@ -65,153 +80,274 @@ header{height:54px;display:flex;align-items:center;justify-content:space-between
     <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" stroke="url(#g)" stroke-width="2" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
     <span>Galactly</span>
   </div>
-  <div class="hint">Free: <span id="quotaFinds">2</span> finds • <span id="quotaReveals">2</span> reveals &nbsp;•&nbsp; <span id="presence">0 online</span></div>
+  <div class="badge"><span class="dot"></span><span id="presence">0 online</span></div>
 </header>
 
-<div class="grid">
-  <!-- LEFT: Live results -->
-  <div class="left">
-    <div class="head">
-      <div style="font:700 14px var(--inter)">Live results</div>
-      <div class="hint" id="liveStatus">probing demand → scanning procurement → reading reviews…</div>
+<div class="wrap">
+  <div class="grid">
+    <!-- LEFT -->
+    <div class="panel">
+      <div class="head">
+        <div style="font:700 14px var(--inter)">Live results</div>
+        <div class="hint" id="statusLine">probing demand → scanning procurement → reading reviews…</div>
+      </div>
+      <div id="onboardBanner" class="banner" style="display:none;">
+        Create your free Vault to save and revisit leads. <button class="btn small" id="goSignup">Sign up</button>
+      </div>
+      <div class="scroller" id="leadList"></div>
     </div>
-    <div class="scroller" id="liveList"></div>
-  </div>
 
-  <!-- RIGHT: Customize + Preview -->
-  <div class="right">
+    <!-- RIGHT -->
+    <div class="panel">
+      <div class="head">
+        <div style="font:700 14px var(--inter)">Customize your AI</div>
+        <div class="hint"><span id="searchesLeft">0</span> searches left • <span id="revealsLeft">0</span> reveals left</div>
+      </div>
+      <div style="padding:10px 12px;">
+        <div class="kv">Loaded from onboarding. Tweak then <button class="btn" id="findNow">Find now</button></div>
+      </div>
+      <div class="sep"></div>
+      <div class="head">
+        <div style="font:700 14px var(--inter)">Signals Preview (report)</div>
+        <div class="hint"><span id="freeCount">Free 0/0</span> • <span id="proCount">Pro 0/0</span></div>
+      </div>
+      <div class="scroller" id="report"></div>
+    </div>
+  </div>
+</div>
+
+<!-- WHY modal -->
+<div class="modal" id="why">
+  <div class="box">
     <div class="head">
-      <div style="font:700 14px var(--inter)">Customize your AI</div>
-      <div class="hint"><span id="searchesLeft">2</span> searches left • <span id="revealsLeft">2</span> reveals left</div>
+      <div style="font:700 14px var(--inter)">Why this lead?</div>
+      <button class="btn small" id="whyClose">Close</button>
     </div>
-    <div style="padding:10px 12px;">
-      <div class="mini">Loaded from onboarding. Tweak then <button class="btn" id="findNow">Find now</button></div>
+    <div class="body">
+      <div class="kv">Packaging-specific reasons:</div>
+      <ul id="whyBullets" style="margin:8px 0 12px 18px;padding:0">
+        <li>Paid reach ≈ $5.4k/mo → sustained demand → ongoing corrugate & film usage.</li>
+        <li>PDP deltas: new 12-pack SKU → cartons per order rising.</li>
+        <li>Reviews: “box crushed” surge last 14 days → packaging switch timing.</li>
+      </ul>
+      <div class="kv">Packaging math:</div>
+      <div style="font-size:13px;color:#cfe0ff;margin:6px 0 10px">
+        ad-spend → visits → CTR/CVR → orders → avg units/order → packaging SKUs/mo → <b>Queue window</b> (next 1–2 weeks).
+      </div>
+      <button class="btn" id="confirmProof">Confirm proof</button>
     </div>
-    <div class="separator"></div>
-    <div class="head">
-      <div style="font:700 14px var(--inter)">Signals Preview (report)</div>
-      <div class="hint"><span id="freeCount">Free 0/0</span> • <span id="proCount">Pro 0/0</span></div>
-    </div>
-    <div class="scroller" id="report"></div>
   </div>
 </div>
 
 <script>
-const API_BASE = (window.API_BASE || '').replace(/\/$/,'') || '';
-const uidKey='galactly_uid'; let UID = localStorage.getItem(uidKey)||('u_'+Math.random().toString(36).slice(2)); localStorage.setItem(uidKey,UID);
+/* ---------- API bootstrap: base + sticky user ---------- */
+(function(){
+  if (window.API && window.API.base) return;
+  const DEFAULT=(window.API_DEFAULT||'').replace(/\/$/,'') || location.origin;
+  const qs=new URLSearchParams(location.search);
+  function normalize(v){ if(!v) return DEFAULT; let s=String(v).trim().replace(/\/$/,''); if(!/^https?:\/\//i.test(s)) s='https://'+s; return s; }
+  const saved=localStorage.getItem('apiBase'); const base=normalize(qs.get('api')||saved||DEFAULT);
+  window.API_BASE=base;
+  const _fetch=window.fetch.bind(window);
+  const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey)||('u_'+Math.random().toString(36).slice(2)); localStorage.setItem(uidKey, uid);
+  window.fetch=function(input,init){
+    let url=(typeof input==='string')?input:input.url; const headers=new Headers((init&&init.headers)||(typeof input!=='string'&&input.headers)||undefined);
+    try{ headers.set('x-galactly-user', uid);}catch{}
+    if(url && (url.startsWith('/api/')||url.startsWith('api/')||url.startsWith('/presence/')||url.startsWith('presence/'))){
+      url = base + (url.startsWith('/')? '': '/') + url;
+    }
+    return _fetch(typeof input==='string'?url:new Request(url,{...(init||{}),headers}));
+  };
+  window.API={ get base(){return base;}, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
+})();
 
-// Mock presence (avoid 404s while backend grows)
-document.getElementById('presence').textContent = (10+Math.floor(Math.random()*30))+' online';
+/* ---------- Presence ---------- */
+async function loadPresence(){ try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presence').textContent=(j.total||0)+' online'; }catch{} }
+setInterval(loadPresence, 10000); loadPresence();
+setInterval(()=>{ fetch('/presence/beat',{method:'POST'}).catch(()=>{}); }, 20000);
 
-// quotas
-const quota = { finds:2, reveals:2 };
-document.getElementById('quotaFinds').textContent = quota.finds;
-document.getElementById('quotaReveals').textContent = quota.reveals;
-document.getElementById('searchesLeft').textContent = quota.finds;
-document.getElementById('revealsLeft').textContent = quota.reveals;
+/* ---------- Status / quotas ---------- */
+const state={ onboarded:false, plan:'free', findsLeft:0, revealsLeft:0 };
+async function loadStatus(){
+  const r=await fetch('/api/v1/status'); const j=await r.json();
+  state.plan=j.user?.plan||'free'; state.onboarded=!!j.onboarded;
+  state.findsLeft=j.quota?.findsLeft||0; state.revealsLeft=j.quota?.revealsLeft||0;
+  document.getElementById('searchesLeft').textContent=state.findsLeft;
+  document.getElementById('revealsLeft').textContent=state.revealsLeft;
+  document.getElementById('onboardBanner').style.display = state.onboarded? 'none':'block';
+}
+loadStatus();
 
-// Left list (demo drip)
-const liveList = document.getElementById('liveList');
-const demoLeads = [
-  { title:'•l••••••,••• — •• ••••pa••••• s••••', tags:['demand','Confidence 80% (strong)','Shift adds Fri → quote Mon morning'] },
-  { title:'g•••••,c• — •• ••••s••nc• •••••', tags:['demand','Confidence 70% (solid)','Launch week + heavy UGC → contact 48–72h post-promo'] },
-  { title:'••••••• ••— •••••• — •• ••••', tags:['procurement','Confidence 65% (fair)','Portal open + intake form change'] },
-];
-let drip = 0;
-function addLead() {
-  if (drip >= demoLeads.length) return;
-  const L = demoLeads[drip++];
-  const el = document.createElement('div'); el.className='card';
-  const tags = document.createElement('div'); tags.className='tags';
+/* ---------- LEFT: leads drip & interactions ---------- */
+const leadList=document.getElementById('leadList');
+const statusLine=document.getElementById('statusLine');
+
+const demoQueue=[]; // will be filled by /find-now + /leads
+let dripTimer=null;
+
+function enqueue(leads){
+  leads.forEach(L=>{
+    demoQueue.push(L);
+  });
+  if(!dripTimer){
+    dripTimer=setInterval(()=>{
+      if(demoQueue.length===0){ clearInterval(dripTimer); dripTimer=null; return; }
+      addLeadCard(demoQueue.shift());
+    }, 2000);
+  }
+}
+
+function addLeadCard(L){
+  const el=document.createElement('div'); el.className='card';
+  const tags=document.createElement('div'); tags.className='tags';
   L.tags.forEach(t=>{ const s=document.createElement('span'); s.className='tag'; s.textContent=t; tags.appendChild(s); });
-  const title = document.createElement('div'); title.className='lead-title hold'; title.textContent=L.title;
+  const title=document.createElement('div'); title.className='title hold'; title.textContent=L.title;
   const bar=document.createElement('div'); bar.className='bar'; title.appendChild(bar);
   const actions=document.createElement('div'); actions.className='actions';
   const why=document.createElement('button'); why.className='btn'; why.textContent='Why this?';
   const own=document.createElement('button'); own.className='btn own'; own.textContent='Own';
   actions.appendChild(why); actions.appendChild(own);
   el.appendChild(tags); el.appendChild(title); el.appendChild(actions);
-  liveList.prepend(el);
+  leadList.prepend(el);
 
-  // press & hold
-  let tId=null, start=0;
-  const DUR=1400;
+  // hold-to-reveal (consumes reveal quota)
+  let tId=null, start=0; const DUR=1400;
+  function resetBar(){ cancelAnimationFrame(tId); bar.style.width='0%'; }
   title.addEventListener('pointerdown', ()=>{
-    start=performance.now(); bar.style.width='0%'; tId=requestAnimationFrame(function tick(now){
+    if(state.revealsLeft<=0){ title.title='No reveals left today'; return; }
+    start=performance.now(); tId=requestAnimationFrame(function tick(now){
       const pct=Math.min(1,(now-start)/DUR); bar.style.width=(pct*100)+'%';
-      if(pct<1){ tId=requestAnimationFrame(tick); } else { title.textContent='Acme Pantry Co. — WA • corrugate • trays'; }
+      if(pct<1){ tId=requestAnimationFrame(tick); } else {
+        title.textContent='Acme Pantry Co. — WA • corrugate • trays';
+        state.revealsLeft=Math.max(0,state.revealsLeft-1);
+        document.getElementById('revealsLeft').textContent=state.revealsLeft;
+      }
     });
   });
-  title.addEventListener('pointerup', ()=>{ cancelAnimationFrame(tId); bar.style.width='0%'; });
-}
-setInterval(addLead, 2500); addLead();
+  title.addEventListener('pointerup', resetBar);
+  title.addEventListener('pointerleave', resetBar);
 
-// Signals Preview (SSE)
-const report = document.getElementById('report');
-const bySection = new Map();
+  why.onclick=()=>openWhy(L);
+  own.onclick=()=>ownLead(L, el);
+}
+
+async function ownLead(L, el){
+  try{
+    // Claim then own; backend enforces plan & onboarding.
+    const c=await fetch('/api/v1/claim',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({leadId:L.id})});
+    if(c.status===401){ return needOnboarding(); }
+    if(c.status===402){ return needPro(); }
+    const o=await fetch('/api/v1/own',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({leadId:L.id,title:L.title,tags:L.tags})});
+    if(o.status===401){ return needOnboarding(); }
+    if(o.status===402){ return needPro(); }
+    const j=await o.json();
+    if(j.ok){ el.style.opacity=.6; }
+  }catch(e){}
+}
+
+function needOnboarding(){
+  banner(`Please sign up to create your free Vault and continue.`, ()=> location.href = './index.html');
+}
+function needPro(){
+  banner(`This is a Pro feature. Unlock full scan & ownership.`, ()=> location.href = '/checkout/stripe?plan=pro');
+}
+function banner(text, action){
+  const b=document.createElement('div'); b.className='banner'; b.innerHTML=text+' ';
+  const btn=document.createElement('button'); btn.className='btn small'; btn.textContent='Continue';
+  btn.onclick=action; b.appendChild(btn); leadList.prepend(b);
+}
+
+/* Find now flow */
+document.getElementById('findNow').onclick=async ()=>{
+  if(state.findsLeft<=0){ statusLine.textContent='Daily search quota reached'; return; }
+  const r=await fetch('/api/v1/find-now',{method:'POST'}); const j=await r.json();
+  if(!j.ok){ statusLine.textContent='Quota reached'; return; }
+  state.findsLeft=Math.max(0,state.findsLeft-1);
+  document.getElementById('searchesLeft').textContent=state.findsLeft;
+  statusLine.textContent='scanning…';
+  // poll leads once
+  try{ const lr=await fetch('/api/v1/leads'); const lj=await lr.json(); if(lj.ok){ enqueue(lj.leads||[]); } }catch{}
+};
+
+/* Onboard banner button */
+document.getElementById('goSignup').onclick=()=> location.href='./index.html';
+
+/* ---------- WHY modal ---------- */
+const whyModal=document.getElementById('why');
+document.getElementById('whyClose').onclick=()=> whyModal.classList.remove('in');
+
+function openWhy(L){
+  const ul=document.getElementById('whyBullets'); ul.innerHTML='';
+  const items=[
+    'Paid reach ≈ $5.4k/mo → sustained demand → ongoing corrugate & film usage.',
+    'PDP delta: new 12-pack → cartons/order uptrend.',
+    'Reviews surge: “box crushed” (14d) → switch timing.'
+  ];
+  items.forEach(t=>{ const li=document.createElement('li'); li.textContent=t; ul.appendChild(li); });
+  whyModal.classList.add('in');
+}
+
+document.getElementById('confirmProof').onclick=async ()=>{
+  await fetch('/api/v1/events',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type:'confirm',host:location.host})});
+  whyModal.classList.remove('in');
+};
+
+/* ---------- Signals Preview (report via SSE) ---------- */
+const report=document.getElementById('report');
+const bySection=new Map();
 let freeSeen=0, proSeen=0, total=0, haltShown=false;
 
-function ensureSection(cat){
+function section(cat){
   if(bySection.has(cat)) return bySection.get(cat);
-  const wrapper=document.createElement('div'); wrapper.className='section';
-  const head=document.createElement('div'); head.className='title';
-  const h3=document.createElement('h3'); h3.textContent=cat; const right=document.createElement('div'); right.className='hint';
+  const wrap=document.createElement('div'); wrap.className='section';
+  const head=document.createElement('div'); head.className='titleRow';
+  const h3=document.createElement('h3'); h3.textContent=cat;
+  const right=document.createElement('div'); right.className='hint';
   head.appendChild(h3); head.appendChild(right);
   const rows=document.createElement('div'); rows.className='rows';
-  wrapper.appendChild(head); wrapper.appendChild(rows);
-  report.appendChild(wrapper);
-  const obj={ wrapper, head, right, rows, counts:{free:0,pro:0,total:0} };
-  bySection.set(cat,obj);
-  return obj;
+  wrap.appendChild(head); wrap.appendChild(rows); report.appendChild(wrap);
+  const o={wrap,head,right,rows, counts:{free:0,pro:0,total:0}};
+  bySection.set(cat,o); return o;
 }
 
-function addRow(cat, lane, chain, counts, locked){
-  const sec = ensureSection(cat);
-  sec.counts.total = counts.total;
-  if(lane==='free'){ sec.counts.free = counts.done; } else { sec.counts.pro = counts.done; }
-  sec.right.textContent = `Free ${sec.counts.free}/${sec.counts.total} • Pro ${sec.counts.pro}/${sec.counts.total}${locked?' 🔒':''}`;
+function addRow(cat,lane,chain,counts,locked){
+  const sec=section(cat); sec.counts.total=counts.total;
+  if(lane==='free') sec.counts.free=counts.done; else sec.counts.pro=counts.done;
+  sec.right.textContent=`Free ${sec.counts.free}/${sec.counts.total} • Pro ${sec.counts.pro}/${sec.counts.total}${locked?' 🔒':''}`;
 
   const row=document.createElement('div'); row.className='row'+(locked?' locked':'');
-  const colA=document.createElement('div'); colA.className='lane'; colA.textContent=lane==='free'?'Free':'Pro';
-  const colB=document.createElement('div'); colB.className='chain';
-  chain.forEach((t,i)=>{
-    const step=document.createElement('span'); step.className='step'; step.textContent=t; colB.appendChild(step);
-    if(i!==chain.length-1){ const arrow=document.createElement('span'); arrow.className='arrow'; arrow.textContent='→'; colB.appendChild(arrow); }
+  const A=document.createElement('div'); A.className='lane'; A.textContent=lane==='free'?'Free':'Pro';
+  const B=document.createElement('div'); B.className='chain';
+  chain.forEach((t,i)=>{ const s=document.createElement('span'); s.className='step'; s.textContent=t; B.appendChild(s);
+    if(i!==chain.length-1){ const arr=document.createElement('span'); arr.className='arrow'; arr.textContent='→'; B.appendChild(arr); }
   });
-  const cnt=document.createElement('span'); cnt.className='counts'; cnt.textContent=`${counts.done}/${counts.total}`;
-  colB.appendChild(cnt);
-  row.appendChild(colA); row.appendChild(colB);
-  sec.rows.appendChild(row);
+  const cnt=document.createElement('span'); cnt.className='counts'; cnt.textContent=`${counts.done}/${counts.total}`; B.appendChild(cnt);
+  row.appendChild(A); row.appendChild(B); sec.rows.appendChild(row);
 }
 
 function showUpsell(payload){
   if(haltShown) return; haltShown=true;
   const box=document.createElement('div'); box.className='upsell';
-  box.innerHTML=`<div><strong>Free scan paused.</strong> We processed ${payload.freeDone}/${payload.total} items. Pro continues with full checks, auto-verification, JSON export, and Queue Window forecasting.</div>`;
-  const btn=document.createElement('button'); btn.className='btn'; btn.textContent='Unlock full scan ($39/mo)';
-  btn.onclick=()=>{ window.location.href = payload.checkout || '#'; };
-  box.appendChild(btn);
+  box.innerHTML=`<strong>Free scan paused.</strong> We processed ${payload.freeDone}/${payload.total} items. Pro continues with full checks, auto-verification, JSON export, and Queue Window forecasting.`;
+  const btn=document.createElement('button'); btn.className='btn small'; btn.textContent='Unlock Pro ($39/mo)'; btn.onclick=()=>location.href=payload.checkout||'/checkout/stripe?plan=pro';
+  box.appendChild(document.createElement('br')); box.appendChild(btn);
   report.prepend(box);
 }
 
 function connectSSE(){
-  const es = new EventSource((API_BASE||'') + '/api/v1/progress.sse', { withCredentials:false });
-  es.addEventListener('open', ()=>{/* no-op */});
-  es.addEventListener('tick', (ev)=>{
+  const es = new EventSource(API.url('/api/v1/progress.sse'));
+  es.addEventListener('tick', ev=>{
     const j=JSON.parse(ev.data);
     total=j.total||total;
-    if(j.lane==='free'){ freeSeen=j.done; } else if(j.lane==='pro'){ proSeen=j.done; }
+    if(j.lane==='free'){ freeSeen=j.done; } else { proSeen=j.done; }
     addRow(j.category, j.lane, j.chain, {done:j.done,total:j.total}, j.locked===true);
-    document.getElementById('freeCount').textContent = `Free ${freeSeen}/${total}`;
-    document.getElementById('proCount').textContent = `Pro ${proSeen}/${total}${j.locked?' 🔒':''}`;
+    document.getElementById('freeCount').textContent=`Free ${freeSeen}/${total}`;
+    document.getElementById('proCount').textContent=`Pro ${proSeen}/${total}${j.locked?' 🔒':''}`;
   });
-  es.addEventListener('halt', (ev)=>{ const j=JSON.parse(ev.data); showUpsell(j); });
-  es.addEventListener('done', ()=>{ es.close(); });
+  es.addEventListener('halt', ev=> showUpsell(JSON.parse(ev.data)));
+  es.addEventListener('done', ()=> es.close());
 }
 connectSSE();
-
-// Find now triggers a fresh stream (simple reload for demo)
-document.getElementById('findNow').onclick=()=>{ window.location.reload(); };
 </script>
 </body>
 </html>
