@@ -4,9 +4,14 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Galactly — Live packaging buyer signals</title>
+
+<!-- inline favicon to remove 404 -->
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%2386f7d6"/><stop offset="1" stop-color="%2357a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" fill="none" stroke="url(%23g)" stroke-width="4"/></svg>'/>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@800&display=swap" rel="stylesheet">
+
 <style>
 :root{
   --ink:#eaf0ff; --mut:#a6b2c9; --line:#1e2737; --card:#0f1420; --panel:#0b101a; --pill:#10182a;
@@ -49,18 +54,12 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 
 /* ===== Right hero (namespaced) ===== */
 .hright{
-  position:relative;
-  height:520px;
-  border:1px solid #1e2737;
-  border-radius:18px;
-  overflow:hidden;
+  position:relative; height:520px;
+  border:1px solid #1e2737; border-radius:18px; overflow:hidden;
   background:radial-gradient(600px 380px at 43% 55%, rgba(120,160,255,.14), rgba(10,14,22,1) 65%);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.02), 0 18px 70px rgba(0,0,0,.45);
 }
-#hero-right-canvas{
-  width:100%; height:100%; display:block;
-  pointer-events:none; /* prevents click-blocking over your CTAs */
-}
+#hero-right-canvas{width:100%; height:100%; display:block; pointer-events:none}
 
 /* KPI chips */
 .hright-kpis{
@@ -76,9 +75,7 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 .hright-chip strong{ color:#fff; }
 
 /* Optional small-screen tweak */
-@media (max-width: 1080px){
-  .hright{ height:420px; }
-}
+@media (max-width:1080px){ .hright{height:420px} }
 
 /* Modal */
 .modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50}
@@ -90,7 +87,7 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 .tab{padding:8px 10px; border:1px solid var(--line); border-radius:999px; font:700 12px var(--inter); cursor:pointer}
 .tab.active{background:linear-gradient(90deg,#fff,#e6efff); color:#10131a; border-color:transparent}
 .pane{display:grid; grid-template-columns:1.08fr 1fr; gap:16px; padding:14px}
-@media (max-width: 900px){ .pane{grid-template-columns:1fr} }
+@media (max-width:900px){ .pane{grid-template-columns:1fr} }
 .card{background:#0f1420; border:1px solid var(--line); border-radius:14px; padding:12px}
 .label{font-size:12px; opacity:.9; margin-bottom:6px}
 .input, select, textarea{width:100%; background:#0f1420; border:1px solid var(--line); color:#e9eef7; border-radius:10px; padding:10px 12px; font:500 13px var(--inter)}
@@ -234,7 +231,11 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
   <div class="box">
     <div class="vhead"><div style="font:800 14px var(--mont)">90s demo</div><button class="btn" id="vclose">Close</button></div>
     <div class="vbody">
-      <iframe id="vframe" src="https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      <!-- switched to youtube-nocookie to avoid ad calls -->
+      <iframe id="vframe" src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1"
+        allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen
+        sandbox="allow-scripts allow-same-origin allow-presentation"
+        referrerpolicy="no-referrer"></iframe>
     </div>
   </div>
 </div>
@@ -259,11 +260,11 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
   window.API={ get base(){return base;}, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
 })();
 
-/* Presence badge */
+/* Presence badge (best-effort) */
 async function loadPresence(){ try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{} }
 setInterval(loadPresence, 12000); loadPresence();
 
-/* ===== RIGHT HERO CANVAS ===== */
+/* ===== RIGHT HERO CANVAS — single declaration of inbound/outbound ===== */
 (function(){
   const root = document.getElementById('hero-right');
   const canvas = document.getElementById('hero-right-canvas');
@@ -304,10 +305,11 @@ setInterval(loadPresence, 12000); loadPresence();
     });
   }
   if (window.ResizeObserver) new ResizeObserver(resize).observe(root);
-  window.addEventListener('resize', resize);
-  resize();
+  window.addEventListener('resize', resize); resize();
 
-  const inbound=[], outbound=[];
+  /* declare ONCE */
+  const inbound=[], outbound[];
+
   function spawnInbound(){
     const ring = Math.max(w,h)*0.6;
     const arc  = CONFIG.spawnArcWidth * Math.PI;
@@ -378,7 +380,6 @@ setInterval(loadPresence, 12000); loadPresence();
     ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
   }
 
-  const inbound=[], outbound=[];
   function tickInbound(){
     while(inbound.length<CONFIG.inboundMax) spawnInbound();
     for(let i=inbound.length-1;i>=0;i--){
@@ -389,7 +390,7 @@ setInterval(loadPresence, 12000); loadPresence();
       p.vy=(p.vy+ay+( dx/dist)*swirl)*CONFIG.speeds.friction;
       p.x+=p.vx; p.y+=p.vy; p.life--;
 
-      ctx.strokeStyle=`hsla(${p.hue}, 80%, 75%, ${Math.max(.06, 0.18-0.0004*(360-p.life))})`;
+      ctx.strokeStyle=`hsla(${p.hue},80%,75%,${Math.max(.06,0.18-0.0004*(360-p.life))})`;
       ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-p.vx*3,p.y-p.vy*3); ctx.stroke();
       ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.arc(p.x,p.y,1.15,0,Math.PI*2); ctx.fill();
 
@@ -410,29 +411,17 @@ setInterval(loadPresence, 12000); loadPresence();
 
   function frame(){
     ctx.clearRect(0,0,w,h);
-    drawBg();
-    drawContinents();
-    drawBeams();
-    drawTravelPath();
-    tickInbound();
-    drawCore();
-    tickOutbound();
+    drawBg(); drawContinents(); drawBeams(); drawTravelPath();
+    tickInbound(); drawCore(); tickOutbound();
     requestAnimationFrame(frame);
   }
   frame();
 
   // KPI motion
-  const kEls={
-    leads:document.getElementById('hr_k_leads'),
-    ready:document.getElementById('hr_k_ready'),
-    quoted:document.getElementById('hr_k_quoted'),
-    rep:document.getElementById('hr_k_rep'),
-    saved:document.getElementById('hr_k_saved')
-  };
+  const kEls={leads:hr_k_leads,ready:hr_k_ready,quoted:hr_k_quoted,rep:hr_k_rep,saved:hr_k_saved};
   const k={leads:0,t:0};
   setInterval(()=>{
-    k.t++;
-    if(k.leads<207) k.leads += 1 + (Math.random()<.35?1:0);
+    k.t++; if(k.leads<207) k.leads += 1 + (Math.random()<.35?1:0);
     if(kEls.leads)  kEls.leads.textContent = k.leads;
     if(kEls.ready)  kEls.ready.textContent = (54 + Math.round(Math.sin(k.t/7)*4)) + '%';
     if(kEls.quoted) kEls.quoted.textContent= (67 + Math.round(Math.cos(k.t/11)*3)) + '%';
@@ -441,10 +430,10 @@ setInterval(loadPresence, 12000); loadPresence();
   }, 900);
 })();
 
-/* CTA & modal behavior */
-document.getElementById('watchDemo').onclick=()=> document.getElementById('vid').classList.add('in');
-document.getElementById('vclose').onclick=()=>{ document.getElementById('vid').classList.remove('in'); document.getElementById('vframe').src=document.getElementById('vframe').src; };
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.getElementById('vid').classList.remove('in'); document.getElementById('onb').classList.remove('in'); } });
+/* Video modal + escape */
+watchDemo.onclick=()=> vid.classList.add('in');
+vclose.onclick=()=>{ vid.classList.remove('in'); vframe.src=vframe.src; };
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ vid.classList.remove('in'); onb.classList.remove('in'); } });
 
 /* Gating helpers */
 function bareHost(url){ let s=String(url||'').trim(); s=s.replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./i,''); return s.toLowerCase(); }
@@ -454,41 +443,41 @@ function isPackagingRole(role){ return role==='supplier' || role==='distributor'
 async function post(path,body){ const r=await fetch((window.API_BASE||'')+path,{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body||{}) }); return r.json(); }
 
 /* Path A */
-document.getElementById('a_continue').onclick=async ()=>{
-  const email=(document.getElementById('a_email').value||'').trim();
-  const role =(document.getElementById('a_role').value||'supplier').trim();
-  const site =(document.getElementById('a_site').value||'').trim();
-  const region=(document.getElementById('a_region').value||'').trim();
-  const list =!!document.getElementById('a_list').checked;
-  const err=document.getElementById('a_err'); const ok=document.getElementById('a_ok'); err.style.display='none'; ok.style.display='none';
+a_continue.onclick=async ()=>{
+  const email=a_email.value.trim();
+  const role =a_role.value.trim();
+  const site =a_site.value.trim();
+  const region=a_region.value.trim();
+  const list =a_list.checked;
+  a_err.style.display='none'; a_ok.style.display='none';
   const eDom=emailDomain(email), sDom=bareHost(site);
-  if(!email||!sDom){ err.textContent='Please provide business email and company website.'; err.style.display='block'; return; }
-  if(!domainsMatch(eDom,sDom)){ err.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; err.style.display='block'; return; }
-  if(!isPackagingRole(role)){ err.textContent='We only serve packaging suppliers, distributors, and buyers.'; err.style.display='block'; return; }
+  if(!email||!sDom){ a_err.textContent='Please provide business email and company website.'; a_err.style.display='block'; return; }
+  if(!domainsMatch(eDom,sDom)){ a_err.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; a_err.style.display='block'; return; }
+  if(!isPackagingRole(role)){ a_err.textContent='We only serve packaging suppliers, distributors, and buyers.'; a_err.style.display='block'; return; }
   localStorage.setItem('onb_vendor', sDom);
   localStorage.setItem('onb_role', role);
   localStorage.setItem('onb_regions', region);
   try{ await post('/api/v1/gate',{region,email,alerts:true}); }catch{}
-  try{ await post('/api/v1/vault',{role,traits:{vendorDomain:sDom,industries:[],regions:region?region.split(',').map(s=>s.trim()):[],buyers:[]}}); ok.textContent='Validated. Opening feed…'; ok.style.display='block'; }catch{}
+  try{ await post('/api/v1/vault',{role,traits:{vendorDomain:sDom,industries:[],regions:region?region.split(',').map(s=>s.trim()):[],buyers:[]}}); a_ok.textContent='Validated. Opening feed…'; a_ok.style.display='block'; }catch{}
   location.href='./free-panel.html';
 };
-document.getElementById('a_cancel').onclick=()=> document.getElementById('onb').classList.remove('in');
+a_cancel.onclick=()=> onb.classList.remove('in');
 
 /* Path B */
-document.getElementById('b_continue').onclick=async ()=>{
-  const email=(document.getElementById('b_email').value||'').trim();
-  const role =(document.getElementById('b_role').value||'supplier').trim();
-  const site =(document.getElementById('b_site').value||'').trim();
-  const inds =(document.getElementById('b_industries').value||'').trim();
-  const regs =(document.getElementById('b_regions').value||'').trim();
-  const buyers=(document.getElementById('b_buyers').value||'').trim();
-  const desc =(document.getElementById('b_desc').value||'').trim();
-  const list =!!document.getElementById('b_list').checked;
-  const err=document.getElementById('b_err'); const ok=document.getElementById('b_ok'); err.style.display='none'; ok.style.display='none';
+b_continue.onclick=async ()=>{
+  const email=b_email.value.trim();
+  const role =b_role.value.trim();
+  const site =b_site.value.trim();
+  const inds =b_industries.value.trim();
+  const regs =b_regions.value.trim();
+  const buyers=b_buyers.value.trim();
+  const desc =b_desc.value.trim();
+  const list =b_list.checked;
+  b_err.style.display='none'; b_ok.style.display='none';
   const eDom=emailDomain(email), sDom=bareHost(site);
-  if(!email||!sDom){ err.textContent='Please provide business email and company website.'; err.style.display='block'; return; }
-  if(!domainsMatch(eDom,sDom)){ err.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; err.style.display='block'; return; }
-  if(!isPackagingRole(role)){ err.textContent='We only serve packaging suppliers, distributors, and buyers.'; err.style.display='block'; return; }
+  if(!email||!sDom){ b_err.textContent='Please provide business email and company website.'; b_err.style.display='block'; return; }
+  if(!domainsMatch(eDom,sDom)){ b_err.textContent=`Email domain (${eDom}) must match company site (${sDom}).`; b_err.style.display='block'; return; }
+  if(!isPackagingRole(role)){ b_err.textContent='We only serve packaging suppliers, distributors, and buyers.'; b_err.style.display='block'; return; }
   localStorage.setItem('onb_vendor', sDom);
   localStorage.setItem('onb_role', role);
   localStorage.setItem('onb_industries', inds);
@@ -497,10 +486,10 @@ document.getElementById('b_continue').onclick=async ()=>{
   localStorage.setItem('onb_desc', desc);
   localStorage.setItem('onb_list', String(list));
   try{ await post('/api/v1/gate',{region:regs,email,alerts:true}); }catch{}
-  try{ await post('/api/v1/vault',{role,traits:{vendorDomain:sDom,industries:inds?inds.split(',').map(s=>s.trim()):[],regions:regs?regs.split(',').map(s=>s.trim()):[],buyers:buyers?buyers.split(',').map(s=>s.trim()):[],notes:desc||null},listMe:list}); ok.textContent='Validated. Opening feed…'; ok.style.display='block'; }catch{}
+  try{ await post('/api/v1/vault',{role,traits:{vendorDomain:sDom,industries:inds?inds.split(',').map(s=>s.trim()):[],regions:regs?regs.split(',').map(s=>s.trim()):[],buyers:buyers?buyers.split(',').map(s=>s.trim()):[],notes:desc||null},listMe:list}); b_ok.textContent='Validated. Opening feed…'; b_ok.style.display='block'; }catch{}
   location.href='./free-panel.html';
 };
-document.getElementById('b_cancel').onclick=()=> document.getElementById('onb').classList.remove('in');
+b_cancel.onclick=()=> onb.classList.remove('in');
 </script>
 </body>
 </html>
