@@ -47,15 +47,52 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 .btn.ghost{background:#0f1626}
 .kv{margin-top:10px; font-size:12px; color:#c6d5f3; opacity:.95}
 
-/* Right visual */
-.heroVis{position:relative; height:520px; border:1px solid var(--line); border-radius:18px; overflow:hidden;
+/* ===== Right hero (namespaced) ===== */
+.hright{
+  position:relative;
+  height:520px;
+  border:1px solid #1e2737;
+  border-radius:18px;
+  overflow:hidden;
   background:radial-gradient(600px 380px at 43% 55%, rgba(120,160,255,.14), rgba(10,14,22,1) 65%);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.02), 0 18px 70px rgba(0,0,0,.45);
 }
-#funnel{width:100%; height:100%; display:block; pointer-events:none} /* no click-blocking */
-.kpi{position:absolute; left:18px; right:18px; bottom:14px; display:flex; gap:10px; flex-wrap:wrap}
-.chip{display:inline-flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid #26314a; border-radius:999px; background:rgba(10,16,28,.82); color:#cfe0ff; font-size:12px; backdrop-filter: blur(6px)}
-.chip strong{color:#fff}
+#hero-right-canvas{
+  width:100%;
+  height:100%;
+  display:block;
+  pointer-events:none; /* prevents click-blocking over your CTAs */
+}
+
+/* KPI chips */
+.hright-kpis{
+  position:absolute;
+  left:18px;
+  right:18px;
+  bottom:14px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.hright-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 10px;
+  border:1px solid #26314a;
+  border-radius:999px;
+  background:rgba(10,16,28,.82);
+  color:#cfe0ff;
+  font-size:12px;
+  backdrop-filter: blur(6px);
+}
+.hright-chip strong{ color:#fff; }
+
+/* Optional small-screen tweak */
+@media (max-width: 1080px){
+  .hright{ height:420px; }
+}
+
 
 /* Modal */
 .modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50}
@@ -85,6 +122,218 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
 .vbody iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
 </style>
 </head>
+  <script>
+/* Galactly Hero Right v3 — particles → core → beams + geo + travel path
+   Tunables live in CONFIG below so you can refine angles/lengths/speed quickly. */
+
+(function(){
+  const root = document.getElementById('hero-right');
+  const canvas = document.getElementById('hero-right-canvas');
+  if(!root || !canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d', { alpha:true });
+
+  /* ===== CONFIG you can tweak ===== */
+  const CONFIG = {
+    centerBiasX: 0.70,   // 0..1 across width (move core horizontally)
+    centerBiasY: 0.56,   // 0..1 down height
+    coreRadiusPct: 0.095, // of min(w,h)
+    inboundMax: 90,
+    outboundMax: 70,
+    spawnArcWidth: 0.85, // inbound spawn arc fraction of PI on left
+    speeds: { inboundAccel: 0.11, swirl: 0.035, friction: 0.986, outboundMin: 0.008, outboundJitter: 0.6 },
+    endpoints: [
+      { label:'Email',    angle:-0.22, tint:'rgba(180,220,255,0.9)' },
+      { label:'SMS',      angle:-0.08, tint:'rgba(130,255,210,0.9)' },
+      { label:'Call',     angle: 0.06, tint:'rgba(200,220,255,0.9)' },
+      { label:'LinkedIn', angle: 0.18, tint:'rgba(160,210,255,0.9)' },
+      { label:'Quote',    angle: 0.30, tint:'rgba(255,235,160,0.9)' },
+      { label:'ERP',      angle: 0.42, tint:'rgba(210,190,255,0.9)' }
+    ]
+  };
+
+  /* ===== layout & retina ===== */
+  let w=0,h=0,dpr=1,cx=0,cy=0,R=0, grads=[];
+  function resize(){
+    dpr = Math.max(1, Math.min(2, window.devicePixelRatio||1));
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    canvas.width = Math.floor(w*dpr); canvas.height = Math.floor(h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    cx = w*CONFIG.centerBiasX; cy = h*CONFIG.centerBiasY;
+    R  = Math.min(w,h)*CONFIG.coreRadiusPct;
+
+    // compute endpoints & gradients
+    CONFIG.endpoints.forEach((e,i)=>{
+      const len = Math.min(240 + i*26, Math.min(w,h)*0.52);
+      e.x = cx + Math.cos(e.angle)*len;
+      e.y = cy + Math.sin(e.angle)*len;
+      const g = ctx.createLinearGradient(cx,cy, e.x,e.y);
+      g.addColorStop(0, 'rgba(255,255,255,0.9)');
+      g.addColorStop(1, e.tint.replace(/0\.9\)/,'0.35)'));
+      grads[i] = g;
+    });
+  }
+  new ResizeObserver(resize).observe(root); resize();
+
+  /* ===== particles ===== */
+  const inbound=[], outbound=[];
+  function spawnInbound(){
+    const ring = Math.max(w,h)*0.6;
+    const arc  = CONFIG.spawnArcWidth * Math.PI;
+    const a = Math.PI + (Math.random()*arc - arc/2); // left arc
+    inbound.push({
+      x: cx + Math.cos(a)*ring, y: cy + Math.sin(a)*ring,
+      vx: 0, vy: 0, life: 360 + Math.random()*260, hue: 190 + Math.random()*40
+    });
+  }
+  function spawnOutbound(){
+    const e = CONFIG.endpoints[Math.floor(Math.random()*CONFIG.endpoints.length)];
+    outbound.push({
+      e, t: 0,
+      spd: CONFIG.speeds.outboundMin + Math.random()*0.006,
+      jx: (Math.random()-.5)*CONFIG.speeds.outboundJitter,
+      jy: (Math.random()-.5)*CONFIG.speeds.outboundJitter
+    });
+  }
+
+  /* ===== geo shapes + orbits ===== */
+  function drawContinents(){
+    ctx.save(); ctx.translate(w*0.38, h*0.46); ctx.rotate(-0.08);
+    ctx.fillStyle='rgba(160,190,220,0.08)'; ctx.strokeStyle='rgba(160,190,220,0.12)'; ctx.lineWidth=1;
+
+    // North America-ish
+    ctx.beginPath();
+    ctx.moveTo(-120,-40); ctx.lineTo(-90,-80); ctx.lineTo(-30,-90); ctx.lineTo(20,-70);
+    ctx.lineTo(10,-30); ctx.lineTo(-40,-10); ctx.lineTo(-80,10); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    // South America-ish
+    ctx.beginPath();
+    ctx.moveTo(10,0); ctx.lineTo(50,10); ctx.lineTo(80,40); ctx.lineTo(60,100); ctx.lineTo(20,130); ctx.lineTo(0,90); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    // orbit rings
+    ctx.strokeStyle='rgba(140,170,220,0.12)'; ctx.lineWidth=1;
+    for(let i=1;i<=3;i++){ ctx.beginPath(); ctx.arc(cx,cy,R*(2+i*1.12),0,Math.PI*2); ctx.stroke(); }
+  }
+
+  /* ===== travel path map → core ===== */
+  let travelT=0;
+  function drawTravelPath(){
+    const sx=w*0.43, sy=h*0.42;
+    const cp1x=w*0.56, cp1y=h*0.40, cp2x=w*0.62, cp2y=h*0.52, ex=cx, ey=cy;
+    ctx.strokeStyle='rgba(170,200,255,0.18)'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,ex,ey); ctx.stroke();
+
+    travelT=(travelT+0.012)%1;
+    const t=travelT, it=1-t;
+    const x=it*it*it*sx + 3*it*it*t*cp1x + 3*it*t*t*cp2x + t*t*t*ex;
+    const y=it*it*it*sy + 3*it*it*t*cp1y + 3*it*t*t*cp2y + t*t*t*ey;
+    ctx.fillStyle='rgba(255,255,255,0.96)';
+    ctx.beginPath(); ctx.arc(x,y,1.8,0,Math.PI*2); ctx.fill();
+  }
+
+  /* ===== core + beams ===== */
+  function drawCore(){
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R*2.4);
+    g.addColorStop(0,'rgba(255,255,255,0.9)');
+    g.addColorStop(0.2,'rgba(200,230,255,0.55)');
+    g.addColorStop(1,'rgba(120,160,255,0.02)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(210,235,255,0.45)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(cx,cy,R*1.18,0,Math.PI*2); ctx.stroke();
+  }
+  function drawBeams(){
+    CONFIG.endpoints.forEach((e,i)=>{
+      ctx.strokeStyle = grads[i]; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(e.x,e.y); ctx.stroke();
+
+      // endpoint dots
+      ctx.fillStyle='rgba(160,200,255,0.35)'; ctx.beginPath(); ctx.arc(e.x,e.y,12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(e.x,e.y,3.2,0,Math.PI*2); ctx.fill();
+
+      // label
+      ctx.font='12px Inter,system-ui'; ctx.textBaseline='middle'; ctx.fillStyle='rgba(225,235,255,0.95)';
+      ctx.fillText(e.label, e.x+16, e.y);
+    });
+  }
+
+  /* ===== background vignette ===== */
+  function drawBg(){
+    const g=ctx.createRadialGradient(cx-120, cy, R*0.6, cx, cy, Math.max(w,h)*0.9);
+    g.addColorStop(0,'rgba(72,100,160,0.08)'); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  }
+
+  /* ===== particle ticks ===== */
+  function tickInbound(){
+    while(inbound.length<CONFIG.inboundMax) spawnInbound();
+    for(let i=inbound.length-1;i>=0;i--){
+      const p=inbound[i], dx=cx-p.x, dy=cy-p.y, dist=Math.hypot(dx,dy)||1;
+      const ax=(dx/dist)*CONFIG.speeds.inboundAccel, ay=(dy/dist)*CONFIG.speeds.inboundAccel;
+      const swirl=CONFIG.speeds.swirl;
+      p.vx=(p.vx+ax+(-dy/dist)*swirl)*CONFIG.speeds.friction;
+      p.vy=(p.vy+ay+( dx/dist)*swirl)*CONFIG.speeds.friction;
+      p.x+=p.vx; p.y+=p.vy; p.life--;
+
+      ctx.strokeStyle=`hsla(${p.hue}, 80%, 75%, ${Math.max(.06, 0.18-0.0004*(360-p.life))})`;
+      ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-p.vx*3,p.y-p.vy*3); ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.arc(p.x,p.y,1.15,0,Math.PI*2); ctx.fill();
+
+      if(dist<R*0.95 || p.life<=0){ inbound.splice(i,1); spawnOutbound(); }
+    }
+  }
+  function tickOutbound(){
+    while(outbound.length<CONFIG.outboundMax) spawnOutbound();
+    for(let i=outbound.length-1;i>=0;i--){
+      const o=outbound[i]; o.t+=o.spd; if(o.t>=1){ outbound.splice(i,1); continue; }
+      const bx=cx+(o.e.x-cx)*o.t + Math.sin(o.t*10)*o.jx*5;
+      const by=cy+(o.e.y-cy)*o.t + Math.cos(o.t*10)*o.jy*5;
+      const sz=1.1+Math.sin(o.t*Math.PI)*1.3;
+      ctx.fillStyle='rgba(255,255,255,0.96)';
+      ctx.beginPath(); ctx.arc(bx,by,sz,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  /* ===== main loop ===== */
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function frame(){
+    ctx.clearRect(0,0,w,h);
+    drawBg();
+    drawContinents();
+    drawBeams();
+    drawTravelPath();
+    if(!reduceMotion){
+      tickInbound();
+      drawCore(); // drawn after inbound for nicer layering
+      tickOutbound();
+    }else{
+      drawCore();
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+
+  /* KPI counters (subtle motion) */
+  const kEls={
+    leads:document.getElementById('hr_k_leads'),
+    ready:document.getElementById('hr_k_ready'),
+    quoted:document.getElementById('hr_k_quoted'),
+    rep:document.getElementById('hr_k_rep'),
+    saved:document.getElementById('hr_k_saved')
+  };
+  const k={leads:0,t:0};
+  setInterval(()=>{
+    k.t++;
+    if(k.leads<207) k.leads += 1 + (Math.random()<.35?1:0);
+    if(kEls.leads)  kEls.leads.textContent = k.leads;
+    if(kEls.ready)  kEls.ready.textContent = (54 + Math.round(Math.sin(k.t/7)*4)) + '%';
+    if(kEls.quoted) kEls.quoted.textContent= (67 + Math.round(Math.cos(k.t/11)*3)) + '%';
+    if(kEls.rep)    kEls.rep.textContent   = (21 + Math.round(Math.sin(k.t/5)*2)) + '%';
+    if(kEls.saved){ const v=20678 + Math.round(Math.sin(k.t/3)*620); kEls.saved.textContent = '$'+v.toLocaleString(); }
+  }, 900);
+})();
+</script>
+
 <body>
 <header>
   <a class="brand" href="#">
@@ -106,18 +355,18 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
         <span class="kv">AI closed <strong>16%</strong> • Rep closed <strong>21%</strong> • Saved / mo <strong>$20,678</strong></span>
       </div>
     </div>
-
-    <div class="heroVis" aria-hidden="true">
-      <canvas id="funnel"></canvas>
-      <div class="kpi">
-        <div class="chip">Leads / 30s <strong id="k_leads">0</strong></div>
-        <div class="chip">First connection <strong id="k_first">6 sec</strong></div>
-        <div class="chip">Ready now <strong id="k_ready">54%</strong></div>
-        <div class="chip">Quoted <strong id="k_quoted">67%</strong></div>
-        <div class="chip">Rep closed <strong id="k_rep">21%</strong></div>
-        <div class="chip">Saved / mo <strong id="k_saved">$20,678</strong></div>
-      </div>
-    </div>
+    
+<div id="hero-right" class="hright">
+  <canvas id="hero-right-canvas" aria-hidden="true"></canvas>
+    <div class="hright-kpis">
+    <div class="hright-chip">Leads / 30s <strong id="hr_k_leads">0</strong></div>
+    <div class="hright-chip">First connection <strong>6 sec</strong></div>
+    <div class="hright-chip">Ready now <strong id="hr_k_ready">54%</strong></div>
+    <div class="hright-chip">Quoted <strong id="hr_k_quoted">67%</strong></div>
+    <div class="hright-chip">Rep closed <strong id="hr_k_rep">21%</strong></div>
+    <div class="hright-chip">Saved / mo <strong id="hr_k_saved">$20,678</strong></div>
+  </div>
+</div>
   </section>
 </div>
 
