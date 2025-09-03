@@ -1,8 +1,8 @@
 /* Backend/src/index.ts
-   Galactly dev backend — job-based progress stream (fixed signature).
-   - /api/v1/find-now        -> { ok:true, jobId }
-   - /api/v1/progress.sse    -> streams only that job’s events
-   - /api/v1/status, /presence/*, /vault are included
+   Galactly API — healthz + job-scoped progress stream
+   Providers mode is controlled by env:
+     PROVIDERS_MODE=fake | real   (default: fake)
+     DEV_FAKE=true/false          (legacy switch; true forces fake)
 */
 
 import express from 'express';
@@ -13,23 +13,29 @@ import { EventEmitter } from 'events';
 const app = express();
 const PORT = process.env.PORT || 8787;
 
+/* ---------- middleware ---------- */
 app.use(express.json());
-app.use(cors()); // permissive for dev; tighten in prod
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'x-galactly-user', 'x-dev-unlim'],
+    methods: ['GET', 'POST', 'OPTIONS'],
+  }),
+);
 
-/* ---------- small helpers ---------- */
+/* ---------- health ---------- */
+app.get('/healthz', (_req, res) => res.status(200).send('ok'));
+app.get('/api/v1/healthz', (_req, res) => res.json({ ok: true }));
 
-function route<T extends 'get' | 'post'>(method: T, path: string, handler: any) {
-  // always mounts under /api/v1
+/* ---------- tiny helpers ---------- */
+const id = (p: string) => p + randomBytes(6).toString('hex');
+function route<T extends 'get' | 'post'>(m: T, p: string, h: any) {
   // @ts-ignore
-  app[method](`/api/v1${path}`, handler);
-}
-
-function newId(prefix: string) {
-  return prefix + randomBytes(6).toString('hex');
+  app[m](`/api/v1${p}`, h);
 }
 
 /* ---------- types ---------- */
-
 type LeadEvt = {
   type: 'lead';
   site?: string;
@@ -40,45 +46,23 @@ type LeadEvt = {
   at: number;
 };
 
-type StepEvt = {
-  type: 'step';
-  freeDone: number;
-  freeTotal: number;
-  proDone: number;
-  proTotal: number;
-};
-
+type StepEvt = { type: 'step'; freeDone: number; freeTotal: number; proDone: number; proTotal: number };
 type PreviewEvt = { type: 'preview'; line: string };
 type HaltEvt = { type: 'halt' };
-
 type ProgressEvt = LeadEvt | StepEvt | PreviewEvt | HaltEvt;
 
-type JobParams = {
-  website?: string;
-  regions?: string;
-  industries?: string;
-  buyers?: string;
-  notes?: string;
-};
+type JobParams = { website?: string; regions?: string; industries?: string; buyers?: string; notes?: string };
+type JobState = { id: string; params: JobParams; em: EventEmitter; done: boolean; createdAt: number };
 
-type JobState = {
-  id: string;
-  params: JobParams;
-  em: EventEmitter;
-  done: boolean;
-  createdAt: number;
-};
-
-/* ---------- in-memory stores ---------- */
-
+/* ---------- stores ---------- */
 const JOBS = new Map<string, JobState>();
 const VAULT = new Map<string, JobParams>();
 
 /* ---------- presence / status ---------- */
+let ONLINE = 1;
 
 route('get', '/status', (req, res) => {
   const devUnlimited = req.headers['x-dev-unlim'] === 'true';
-
   res.json({
     ok: true,
     uid: String(req.headers['x-galactly-user'] || 'u-dev'),
@@ -90,7 +74,6 @@ route('get', '/status', (req, res) => {
   });
 });
 
-let ONLINE = 1;
 route('get', '/presence/online', (_req, res) => res.json({ total: ONLINE }));
 route('post', '/presence/beat', (_req, res) => {
   ONLINE = Math.max(1, ONLINE);
@@ -98,7 +81,6 @@ route('post', '/presence/beat', (_req, res) => {
 });
 
 /* ---------- vault ---------- */
-
 route('post', '/vault', (req, res) => {
   const uid = String(req.headers['x-galactly-user'] || 'u-dev');
   const b = req.body || {};
@@ -112,32 +94,16 @@ route('post', '/vault', (req, res) => {
   res.json({ ok: true });
 });
 
-/* ---------- job system ---------- */
+/* ---------- providers switch ---------- */
+const MODE = (process.env.PROVIDERS_MODE || '').toLowerCase(); // 'fake' | 'real'
+const LEGACY_FAKE = (process.env.DEV_FAKE || '').toLowerCase() === 'true';
+const USE_FAKE = MODE ? MODE === 'fake' : LEGACY_FAKE || true; // default fake
 
-function createJob(params: JobParams): JobState {
-  const job: JobState = {
-    id: newId('j_'),
-    params,
-    em: new EventEmitter(),
-    done: false,
-    createdAt: Date.now(),
-  };
-  JOBS.set(job.id, job);
-  return job;
-}
+route('get', '/providers-mode', (_req, res) => {
+  res.json({ ok: true, mode: USE_FAKE ? 'fake' : 'real' });
+});
 
-function endJob(job: JobState) {
-  job.done = true;
-  try {
-    job.em.emit('evt', <HaltEvt>{ type: 'halt' });
-  } catch {}
-  setTimeout(() => JOBS.delete(job.id), 60_000);
-}
-
-/* ---------- fake provider (optional for dev) ---------- */
-
-const DEV_FAKE = String(process.env.DEV_FAKE ?? 'true').toLowerCase() === 'true';
-
+/* ---------- fake provider (dev) ---------- */
 const US = ['CA','TX','NY','FL','IL','PA','OH','GA','NC','MI','NJ','VA','WA','AZ','MA','TN','IN','MO','MD','WI','MN','CO','AL','SC','LA','KY','OR','OK','CT','UT','IA','NV','AR','MS','KS','NM','NE','WV','ID','HI','ME','NH','MT','RI','DE','SD','ND','AK','DC','VT','WY'];
 const CH = ['Email', 'LinkedIn DM', 'ERP', 'SMS', 'Call'];
 const DN = [
@@ -147,25 +113,21 @@ const DN = [
   { title: '"Pouches 5k/mo"', detail: '8oz / 16oz • matte + zipper' },
   { title: '"Stretch wrap pallets"', detail: '80g • 18″ × 1500’' },
 ];
-
-function previewLine(n: number) {
-  const L = [
-    'Demand: ad-spend → purchases → “box” tokens',
-    'Timing: promo cadence → restock windows',
-    'Product: PDP deltas → new pack sizes',
-    'Reviews: failure tokens → “crushed”, “leak”',
-    'Ops: hiring feed → inbound ops → carton throughput',
-    'Finance: turns ↑ → wrap usage ↑',
-  ];
-  return L[n % L.length];
-}
+const PREV = [
+  'Demand: ad-spend → purchases → “box” tokens',
+  'Timing: promo cadence → restock windows',
+  'Product: PDP deltas → new pack sizes',
+  'Reviews: failure tokens → “crushed”, “leak”',
+  'Ops: hiring feed → inbound ops → carton throughput',
+  'Finance: turns ↑ → wrap usage ↑',
+];
 
 async function* fakeProvider(params: JobParams) {
   const site = (params.website || 'example.com').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
   for (let k = 0; k < 16; k++) {
-    await new Promise((r) => setTimeout(r, 1100 + Math.random() * 450));
+    await new Promise((r) => setTimeout(r, 1000 + Math.random() * 500));
     const d = DN[(Math.random() * DN.length) | 0];
-    const ev: LeadEvt = {
+    yield <LeadEvt>{
       type: 'lead',
       site,
       state: US[(Math.random() * US.length) | 0],
@@ -174,78 +136,83 @@ async function* fakeProvider(params: JobParams) {
       detail: `${d.detail} • ${site}`,
       at: Date.now(),
     };
-    yield ev;
   }
 }
 
-/* ---------- run scan ---------- */
+/* ---------- real provider placeholder ---------- */
+async function* realProvider(_params: JobParams) {
+  // Wire your real sources here; yielding no events by default.
+  // eslint-disable-next-line no-empty
+  for (;;) break;
+}
 
-async function runScan(job: JobState) {
+/* ---------- job runner ---------- */
+function createJob(params: JobParams): JobState {
+  const j: JobState = { id: id('j_'), params, em: new EventEmitter(), done: false, createdAt: Date.now() };
+  JOBS.set(j.id, j);
+  return j;
+}
+function endJob(j: JobState) {
+  j.done = true;
+  try { j.em.emit('evt', <HaltEvt>{ type: 'halt' }); } catch {}
+  setTimeout(() => JOBS.delete(j.id), 60_000);
+}
+
+async function runScan(j: JobState) {
   let i = 0;
   const tick = setInterval(() => {
-    const step: StepEvt = {
+    j.em.emit('evt', <StepEvt>{
       type: 'step',
       freeDone: Math.min(60, 2 * i + 3),
       freeTotal: 1126,
       proDone: Math.min(840, 14 * i + 20),
       proTotal: 1126,
-    };
-    job.em.emit('evt', step);
-    if (i % 2 === 0) job.em.emit('evt', <PreviewEvt>{ type: 'preview', line: previewLine(i / 2) });
+    });
+    if (i % 2 === 0) j.em.emit('evt', <PreviewEvt>{ type: 'preview', line: PREV[(i / 2) % PREV.length] });
     i++;
   }, 900);
 
   try {
-    if (DEV_FAKE) {
-      for await (const ev of fakeProvider(job.params)) job.em.emit('evt', ev as ProgressEvt);
-    } else {
-      // TODO: wire real providers here:
-      // for await (const ev of aggregateProviders(job.params)) job.em.emit('evt', ev);
-    }
-  } catch {
-    // swallow in dev
-  } finally {
-    clearInterval(tick);
-    endJob(job);
-  }
+    const src = USE_FAKE ? fakeProvider(j.params) : realProvider(j.params);
+    for await (const ev of src) j.em.emit('evt', ev as ProgressEvt);
+  } catch {}
+  clearInterval(tick);
+  endJob(j);
 }
 
 /* ---------- routes ---------- */
-
 route('post', '/find-now', (req, res) => {
   const b = (req.body || {}) as JobParams;
-  const job = createJob({
+  const j = createJob({
     website: (b.website || '').toString(),
     regions: (b.regions || '').toString(),
     industries: (b.industries || '').toString(),
     buyers: (b.buyers || '').toString(),
     notes: (b.notes || '').toString(),
   });
-  // fire-and-forget
-  runScan(job);
-  res.json({ ok: true, jobId: job.id });
+  runScan(j);
+  res.json({ ok: true, jobId: j.id });
 });
 
 route('get', '/progress.sse', (req, res) => {
   const jobId = String((req.query as any).job || '');
-  const job = JOBS.get(jobId);
+  const j = JOBS.get(jobId);
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
-  if (!job) {
+  if (!j) {
     res.write(`data: ${JSON.stringify(<HaltEvt>{ type: 'halt' })}\n\n`);
     return res.end();
   }
 
-  const onEvt = (payload: ProgressEvt) => res.write(`data: ${JSON.stringify(payload)}\n\n`);
-  job.em.on('evt', onEvt);
-  req.on('close', () => job.em.off('evt', onEvt));
+  const onEvt = (p: ProgressEvt) => res.write(`data: ${JSON.stringify(p)}\n\n`);
+  j.em.on('evt', onEvt);
+  req.on('close', () => j.em.off('evt', onEvt));
 });
 
 /* ---------- boot ---------- */
-
 app.listen(PORT, () => {
   console.log(`API listening on ${PORT}`);
 });
