@@ -218,7 +218,7 @@ label{font-size:12px;color:#9fb2d6;margin-bottom:6px;display:block}
 /* Presence + API reachability */
 async function reachAPI(){ try{ const r=await fetch('/api/v1/status'); return r.ok; }catch{return false;} }
 (async()=>{ const ok=await reachAPI(); if(!ok) document.getElementById('apiErr').style.display='block'; })();
-async function loadPresence(){ try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presence').textContent=(j.total||0)+' online'; }catch{} }
+async function loadPresence(){ try{ const r=await fetch(window.API.url('/presence/online')); const j=await r.json(); document.getElementById('presence').textContent=(j.total||0)+' online'; }catch{} }
 setInterval(loadPresence, 10000); loadPresence();
 
 /* Local gate/tier calculation */
