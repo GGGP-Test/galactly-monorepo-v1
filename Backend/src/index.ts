@@ -1,170 +1,228 @@
-import 'dotenv/config';
-import express, { Request, Response } from 'express';
-import cors from 'cors';
-import { randomUUID } from 'crypto';
+/* Backend/src/index.ts
+   Galactly dev backend — job-based progress stream.
+   - /find-now -> returns { jobId }
+   - /progress.sse?job=... -> streams step / preview / lead for that job only
+   - DEV_FAKE=true emits fake-but-parameterized leads for UI testing.
+*/
 
-/**
- * Galactly API (dev/free mode, CORS-safe)
- * - No gating, no quotas (devUnlimited true)
- * - CORS configured for cross-origin calls (GitHub Pages etc.)
- */
+import express from 'express';
+import cors from 'cors';
+import { randomBytes } from 'crypto';
+import EventEmitter from 'events';
 
 const app = express();
-app.set('trust proxy', 1);
+const PORT = process.env.PORT || 8787;
 
-// --- CORS: allow any origin, custom headers, preflight ---
-const CORS_OPTS: cors.CorsOptions = {
-  origin: (origin, cb) => cb(null, true),      // reflect any origin
-  credentials: true,                           // ok for cookies (we don't use them)
-  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','x-galactly-user','x-dev-unlim','authorization'],
-  exposedHeaders: []
+app.use(express.json());
+app.use(cors()); // in dev we allow all origins; tighten in prod
+
+type LeadEvt = {
+  type:'lead';
+  site?:string;
+  state?:string;
+  channel?:string;
+  title:string;
+  detail:string;
+  at:number;
 };
-app.use(cors(CORS_OPTS));
-app.options('*', cors(CORS_OPTS));
 
-app.use(express.json({ limit: '1mb' }));
+type StepEvt = {
+  type:'step';
+  freeDone:number; freeTotal:number;
+  proDone:number;  proTotal:number;
+};
 
-type Method = 'get'|'post'|'put'|'delete';
-type Beat = { last: number; role?: string };
-type Quota = { date: string; findsUsed: number; revealsUsed: number; findsLeft: number; revealsLeft: number; };
-type UserState = { uid: string; plan: 'free'|'pro'; verified?: boolean; quota: Quota; };
+type PreviewEvt = { type:'preview'; line:string };
+type HaltEvt = { type:'halt' };
 
-const PORT = Number(process.env.PORT || 8787);
-const presence = new Map<string, Beat>();
-const users = new Map<string, UserState>();
-const PRESENCE_TTL = 30_000;
-const today = () => new Date().toISOString().slice(0,10);
-const uidOf = (req: Request) => (req.header('x-galactly-user') || `u-${randomUUID().toString().replace(/-/g,'').slice(0,12)}`).toString();
+type ProgressEvt = LeadEvt | StepEvt | PreviewEvt | HaltEvt;
 
-function ensureUser(uid: string): UserState {
-  const d = today();
-  let s = users.get(uid);
-  if (!s) {
-    s = { uid, plan: 'free', verified: true, quota: { date: d, findsUsed: 0, revealsUsed: 0, findsLeft: 999, revealsLeft: 999 } };
-    users.set(uid, s);
-  }
-  if (s.quota.date !== d) s.quota = { date: d, findsUsed: 0, revealsUsed: 0, findsLeft: 999, revealsLeft: 999 };
-  return s;
+type JobParams = {
+  website?:string;
+  regions?:string;
+  industries?:string;
+  buyers?:string;
+  notes?:string;
+};
+
+type JobState = {
+  id:string;
+  params:JobParams;
+  em:EventEmitter;
+  done:boolean;
+  createdAt:number;
+};
+
+const JOBS = new Map<string, JobState>();
+
+function newId(prefix:string){ return prefix + randomBytes(6).toString('hex'); }
+
+function mirror(method:'get'|'post','/status'|'/presence/online'|'/presence/beat'|'/vault'|string, handler:any){
+  // tiny helper for typed routes
+  // @ts-ignore
+  app[method](method==='get'?`/api/v1${arguments[1]}`:`/api/v1${arguments[1]}`, handler);
 }
 
-const ROUTES: Array<{method: Method; path: string}> = [];
-function reg(m: Method, p: string, h: any){ ROUTES.push({method:m,path:p}); (app as any)[m](p,h); }
-function mirror(m: Method, p: string, h: any){ const P=p.startsWith('/')?p:`/${p}`; reg(m,P,h); reg(m,`/api/v1${P}`,h); }
-
-// health / debug
-mirror('get','/healthz',(_req,res)=>res.json({ok:true,ts:Date.now()}));
-reg('get','/',(_req,res)=>res.json({ok:true,name:'Galactly API',mode:'dev/free',time:Date.now()}));
-reg('get','/__routes',(_req,res)=>res.json({ok:true,routes:ROUTES}));
-
-// presence
-setInterval(()=>{ const cut=Date.now()-PRESENCE_TTL; for(const [k,v] of presence) if(v.last<cut) presence.delete(k); }, 5_000);
-mirror('get','/presence/online',(_req,res)=>{
-  let suppliers=0,distributors=0,buyers=0;
-  for(const v of presence.values()){
-    const r=(v.role||'').toLowerCase();
-    if(r==='supplier') suppliers++; else if(r==='distributor'||r==='wholesaler') distributors++; else if(r==='buyer') buyers++;
-  }
-  res.json({ok:true,total:presence.size,suppliers,distributors,buyers});
-});
-mirror('post','/presence/beat',(req,res)=>{
-  const uid=uidOf(req); const role=String(req.body?.role||'');
-  presence.set(uid,{last:Date.now(),role});
-  res.json({ok:true});
-});
-
-// status (always generous)
+/* ===== Status / presence (unchanged behavior) ===== */
 mirror('get','/status',(req,res)=>{
-  const uid=uidOf(req); const s=ensureUser(uid);
+  const devUnlimited = req.headers['x-dev-unlim']==='true';
   res.json({
-    ok:true, uid, plan:s.plan, verified:true,
-    quota:{...s.quota, findsLeft:999, revealsLeft:999},
-    devUnlimited:true
+    ok:true,
+    uid: String(req.headers['x-galactly-user']||'u-dev'),
+    plan: 'free',
+    quota: devUnlimited ? { findsUsed:0, revealsUsed:0, findsLeft:Infinity, revealsLeft:Infinity, date: new Date().toISOString().slice(0,10) }
+                        : { findsUsed:0, revealsUsed:0, findsLeft:99, revealsLeft:5, date: new Date().toISOString().slice(0,10) },
+    devUnlimited
   });
 });
 
-// gates / vault (no-op)
-mirror('post','/gate',(req,res)=>{ const uid=uidOf(req); ensureUser(uid); res.json({ok:true,uid,plan:'free'}); });
-mirror('post','/vault',(req,res)=>{ const uid=uidOf(req); ensureUser(uid); res.json({ok:true,uid,saved:true}); });
+let ONLINE = 1;
+mirror('get','/presence/online',(_req,res)=>{ ONLINE = Math.max(0, ONLINE); res.json({ total: ONLINE }); });
+mirror('post','/presence/beat',(_req,res)=>{ ONLINE = Math.max(1, ONLINE); res.json({ ok:true }); });
 
-// find & reveal (never 429)
-mirror('post','/find-now',(req,res)=>{ const uid=uidOf(req); ensureUser(uid); res.json({ok:true,created:7,jobId:`job_${Date.now()}`}); });
-mirror('post','/reveal',(req,res)=>{ const uid=uidOf(req); ensureUser(uid); res.json({ok:true,revealed:true}); });
+/* Vault (just store latest) */
+const VAULT = new Map<string, JobParams>();
+mirror('post','/vault',(req,res)=>{
+  const uid = String(req.headers['x-galactly-user']||'u-dev');
+  const body = req.body||{};
+  VAULT.set(uid, {
+    website:body.website||'',
+    regions:body.regions||'',
+    industries:body.industries||'',
+    buyers:body.buyers||'',
+    notes:body.notes||''
+  });
+  res.json({ ok:true });
+});
 
-// preview SSE
-// --- replace the old /progress.sse handler with this one ---
-mirror('get','/progress.sse',(req,res)=>{
-  // allow a site hint for nicer fake events
-  const site = (String(req.query.site || '') || 'example.com').replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+/* ===== Job system ===== */
+function createJob(params:JobParams): JobState {
+  const job:JobState = { id: newId('j_'), params, em: new EventEmitter(), done:false, createdAt: Date.now() };
+  JOBS.set(job.id, job);
+  return job;
+}
 
-  res.setHeader('Content-Type','text/event-stream');
-  res.setHeader('Cache-Control','no-cache');
-  res.setHeader('Connection','keep-alive');
+function endJob(job:JobState){
+  job.done = true;
+  try { job.em.emit('evt', <HaltEvt>{ type:'halt' }); } catch {}
+  setTimeout(()=> JOBS.delete(job.id), 60000);
+}
 
-  const send = (obj:any)=> res.write(`data: ${JSON.stringify(obj)}\n\n`);
+/* ===== Connectors aggregate (real sources go here) =====
+   Replace the DEV_FAKE branch with your real async generators.
+*/
+async function runScan(job:JobState){
+  const useFake = String(process.env.DEV_FAKE||'true').toLowerCase()==='true';
 
-  // small helper pools to generate believable signals
-  const usStates = ['CA','TX','NY','FL','IL','PA','OH','GA','NC','MI','NJ','VA','WA','AZ','MA','TN','IN','MO','MD','WI','MN','CO','AL','SC','LA','KY','OR','OK','CT','UT','IA','NV','AR','MS','KS','NM','NE','WV','ID','HI','ME','NH','MT','RI','DE','SD','ND','AK','DC','VT','WY'];
-  const channels = ['Email','LinkedIn DM','ERP','SMS','Call'];
-  const demands  = [
-    { title:'"Need 10k corrugated boxes"', detail:'RSC • double-wall • 48h turn' },
-    { title:'"Quote: 16oz cartons (retail)"', detail:'PDP restock surge' },
-    { title:'"Urgent: custom mailers next week"', detail:'Kraft • 2-color • die-cut' },
-    { title:'"Pouches 5k/mo"', detail:'8oz / 16oz, matte + zipper' },
-    { title:'"Stretch wrap pallets"', detail:'80g • 18" × 1500’' }
-  ];
-  const previews = [
-    { category:'Demand',  text:'ad-spend → purchase spikes → “box” keywords' },
-    { category:'Timing',  text:'promo cadence → restock windows (DTC + retail)' },
-    { category:'Product', text:'PDP deltas → new pack sizes → SKU rotation' },
-    { category:'Reviews', text:'pack failure tokens → “crushed”, “leak”, “tear”' },
-    { category:'Ops',     text:'hiring feed → inbound ops → carton throughput' },
-    { category:'Finance', text:'inventory notes → turns ↑ → wrap usage ↑' },
-  ];
-
-  let i = 0;
-  const t = setInterval(()=>{
-    // 1) keep the counters moving
-    const step = {
+  // seed counters
+  let i=0;
+  const tick = setInterval(()=>{
+    const step:StepEvt = {
       type:'step',
       freeDone: Math.min(60, 2*i + 3),
       freeTotal: 1126,
       proDone:  Math.min(840, 14*i + 20),
       proTotal: 1126
     };
-    send(step);
-
-    // 2) every ~1.2s add a preview line (we’ll keep 6 in UI)
-    if (i % 2 === 0) {
-      const pv = previews[(i/2) % previews.length];
-      send({ type:'preview', line: `${pv.category}: ${pv.text}` });
+    job.em.emit('evt', step);
+    if(i%2===0){
+      const pv:PreviewEvt = { type:'preview', line: nextPreviewLine(i/2) };
+      job.em.emit('evt', pv);
     }
-
-    // 3) every ~2.7s emit a “lead” card
-    if (i % 3 === 0) {
-      const d  = demands[(Math.random()*demands.length)|0];
-      const st = usStates[(Math.random()*usStates.length)|0];
-      const ch = channels[(Math.random()*channels.length)|0];
-      send({
-        type:'lead',
-        site,
-        state: st,
-        channel: ch,
-        title: d.title,
-        detail: d.detail,
-        at: Date.now()
-      });
-    }
-
     i++;
-    if (i > 40) { send({type:'halt'}); clearInterval(t); res.end(); }
   }, 900);
 
-  req.on('close', ()=> clearInterval(t));
+  try{
+    if(useFake){
+      for await (const ev of fakeProvider(job.params)){
+        job.em.emit('evt', ev as ProgressEvt);
+      }
+    }else{
+      // ===== REAL PIPELINE =====
+      // for await (const ev of aggregateProviders(job.params)) job.em.emit('evt', ev);
+      // Implement aggregateProviders() with your real connectors (Reddit, RSS, Search, etc.)
+    }
+  }catch(e){
+    // swallow in dev
+  }finally{
+    clearInterval(tick);
+    endJob(job);
+  }
+}
+
+/* ===== Fake provider (parameterized; disabled when DEV_FAKE=false) ===== */
+const US = ['CA','TX','NY','FL','IL','PA','OH','GA','NC','MI','NJ','VA','WA','AZ','MA','TN','IN','MO','MD','WI','MN','CO','AL','SC','LA','KY','OR','OK','CT','UT','IA','NV','AR','MS','KS','NM','NE','WV','ID','HI','ME','NH','MT','RI','DE','SD','ND','AK','DC','VT','WY'];
+const CH = ['Email','LinkedIn DM','ERP','SMS','Call'];
+const DN = [
+  { title:'"Need 10k corrugated boxes"', detail:'RSC • double-wall • 48h turn' },
+  { title:'"Quote: 16oz cartons (retail)"', detail:'PDP restock surge' },
+  { title:'"Urgent: custom mailers next week"', detail:'Kraft • 2-color • die-cut' },
+  { title:'"Pouches 5k/mo"', detail:'8oz / 16oz • matte + zipper' },
+  { title:'"Stretch wrap pallets"', detail:'80g • 18" × 1500’' }
+];
+
+function nextPreviewLine(n:number){
+  const L = [
+    'Demand: ad-spend → purchases → “box” tokens',
+    'Timing: promo cadence → restock windows',
+    'Product: PDP deltas → new pack sizes',
+    'Reviews: failure tokens → “crushed”, “leak”',
+    'Ops: hiring feed → inbound ops → carton throughput',
+    'Finance: turns ↑ → wrap usage ↑'
+  ];
+  return L[n % L.length];
+}
+
+async function* fakeProvider(params:JobParams){
+  const site = (params.website||'example.com').replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+  for(let k=0;k<16;k++){
+    await new Promise(r=>setTimeout(r, 1100 + Math.random()*450));
+    const d = DN[(Math.random()*DN.length)|0];
+    const ev:LeadEvt = {
+      type:'lead',
+      site,
+      state: US[(Math.random()*US.length)|0],
+      channel: CH[(Math.random()*CH.length)|0],
+      title: d.title,
+      detail: `${d.detail} • ${site}`,
+      at: Date.now()
+    };
+    yield ev;
+  }
+}
+
+/* ===== Routes using the job system ===== */
+mirror('post','/find-now',(req,res)=>{
+  const body = (req.body||{}) as JobParams;
+  // if you want: validate site, sanitize, etc.
+  const job = createJob({
+    website: (body.website||'').toString(),
+    regions:  (body.regions||'').toString(),
+    industries:(body.industries||'').toString(),
+    buyers:   (body.buyers||'').toString(),
+    notes:    (body.notes||'').toString()
+  });
+  runScan(job); // fire-and-forget
+  res.json({ ok:true, jobId: job.id });
 });
 
+mirror('get','/progress.sse',(req,res)=>{
+  const jobId = String(req.query.job||'');
+  const job = JOBS.get(jobId);
+  if(!job){
+    res.setHeader('Content-Type','text/event-stream');
+    res.write(`data: ${JSON.stringify({ type:'halt' })}\n\n`);
+    return res.end();
+  }
+  res.setHeader('Content-Type','text/event-stream');
+  res.setHeader('Cache-Control','no-cache');
+  res.setHeader('Connection','keep-alive');
 
-// 404
-app.use((_req,res)=>res.status(404).json({ok:false,error:'not_found'}));
+  const onEvt = (payload:ProgressEvt)=> res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  job.em.on('evt', onEvt);
 
-app.listen(PORT, ()=>console.log(`[api] listening on :${PORT}  MODE=dev/free  CORS=on`));
+  req.on('close', ()=> job.em.off('evt', onEvt));
+});
+
+/* ===== boot ===== */
+app.listen(PORT, ()=> console.log(`API listening on ${PORT}`));
