@@ -1,36 +1,13 @@
 {
   "compilerOptions": {
-    /* Output */
-    "rootDir": "src",
+    "target": "ES2020",
+    "module": "CommonJS",
     "outDir": "dist",
-    "sourceMap": true,
-    "declaration": false,
-
-    /* Language & runtime */
-    "target": "ES2022",
-    "lib": ["ES2022"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "types": ["node"],
-
-    /* Interop & DX */
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "importHelpers": true,
-    "skipLibCheck": true,
-
-    /* Strictness */
+    "rootDir": "src",
     "strict": true,
-    "noImplicitAny": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUnusedLocals": false,
-    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-
-    /* Output format */
-    "newLine": "lf"
+    "skipLibCheck": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/__tests__/**"]
+  "include": ["src/**/*.ts"]
 }
