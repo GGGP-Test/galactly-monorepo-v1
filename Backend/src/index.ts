@@ -1,34 +1,41 @@
-// /Backend/src/index.ts
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { randomUUID } from 'crypto';
 
 /**
- * Galactly API (dev/free mode)
- * - NO GATING, NO QUOTAS (always shows big quota + allows actions)
- * - No DB required (in-memory)
- * - Endpoints mirrored under / and /api/v1 to avoid 404s
+ * Galactly API (dev/free mode, CORS-safe)
+ * - No gating, no quotas (devUnlimited true)
+ * - CORS configured for cross-origin calls (GitHub Pages etc.)
  */
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(cors());
+
+// --- CORS: allow any origin, custom headers, preflight ---
+const CORS_OPTS: cors.CorsOptions = {
+  origin: (origin, cb) => cb(null, true),      // reflect any origin
+  credentials: true,                           // ok for cookies (we don't use them)
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','x-galactly-user','x-dev-unlim','authorization'],
+  exposedHeaders: []
+};
+app.use(cors(CORS_OPTS));
+app.options('*', cors(CORS_OPTS));
+
 app.use(express.json({ limit: '1mb' }));
 
-// ---- helpers/state ----
-const PORT = Number(process.env.PORT || 8787);
 type Method = 'get'|'post'|'put'|'delete';
 type Beat = { last: number; role?: string };
 type Quota = { date: string; findsUsed: number; revealsUsed: number; findsLeft: number; revealsLeft: number; };
 type UserState = { uid: string; plan: 'free'|'pro'; verified?: boolean; quota: Quota; };
 
-const users = new Map<string, UserState>();
+const PORT = Number(process.env.PORT || 8787);
 const presence = new Map<string, Beat>();
+const users = new Map<string, UserState>();
 const PRESENCE_TTL = 30_000;
-
 const today = () => new Date().toISOString().slice(0,10);
-const uidOf = (req: Request) => (req.header('x-galactly-user') || `u-${randomUUID().replace(/-/g,'').slice(0,12)}`).toString();
+const uidOf = (req: Request) => (req.header('x-galactly-user') || `u-${randomUUID().toString().replace(/-/g,'').slice(0,12)}`).toString();
 
 function ensureUser(uid: string): UserState {
   const d = today();
@@ -41,17 +48,16 @@ function ensureUser(uid: string): UserState {
   return s;
 }
 
-// mirror register
 const ROUTES: Array<{method: Method; path: string}> = [];
 function reg(m: Method, p: string, h: any){ ROUTES.push({method:m,path:p}); (app as any)[m](p,h); }
 function mirror(m: Method, p: string, h: any){ const P=p.startsWith('/')?p:`/${p}`; reg(m,P,h); reg(m,`/api/v1${P}`,h); }
 
-// ---- health/debug ----
+// health / debug
 mirror('get','/healthz',(_req,res)=>res.json({ok:true,ts:Date.now()}));
 reg('get','/',(_req,res)=>res.json({ok:true,name:'Galactly API',mode:'dev/free',time:Date.now()}));
 reg('get','/__routes',(_req,res)=>res.json({ok:true,routes:ROUTES}));
 
-// ---- presence ----
+// presence
 setInterval(()=>{ const cut=Date.now()-PRESENCE_TTL; for(const [k,v] of presence) if(v.last<cut) presence.delete(k); }, 5_000);
 mirror('get','/presence/online',(_req,res)=>{
   let suppliers=0,distributors=0,buyers=0;
@@ -67,8 +73,8 @@ mirror('post','/presence/beat',(req,res)=>{
   res.json({ok:true});
 });
 
-// ---- status (always generous) ----
-mirror('get','/status',(req:Request,res:Response)=>{
+// status (always generous)
+mirror('get','/status',(req,res)=>{
   const uid=uidOf(req); const s=ensureUser(uid);
   res.json({
     ok:true, uid, plan:s.plan, verified:true,
@@ -77,15 +83,15 @@ mirror('get','/status',(req:Request,res:Response)=>{
   });
 });
 
-// ---- vault/gate (no-op, always ok) ----
+// gates / vault (no-op)
 mirror('post','/gate',(req,res)=>{ const uid=uidOf(req); ensureUser(uid); res.json({ok:true,uid,plan:'free'}); });
 mirror('post','/vault',(req,res)=>{ const uid=uidOf(req); ensureUser(uid); res.json({ok:true,uid,saved:true}); });
 
-// ---- find/reveal (never 429) ----
+// find & reveal (never 429)
 mirror('post','/find-now',(req,res)=>{ const uid=uidOf(req); ensureUser(uid); res.json({ok:true,created:7,jobId:`job_${Date.now()}`}); });
 mirror('post','/reveal',(req,res)=>{ const uid=uidOf(req); ensureUser(uid); res.json({ok:true,revealed:true}); });
 
-// ---- preview SSE ----
+// preview SSE
 mirror('get','/progress.sse',(req,res)=>{
   res.setHeader('Content-Type','text/event-stream');
   res.setHeader('Cache-Control','no-cache');
@@ -106,8 +112,7 @@ mirror('get','/progress.sse',(req,res)=>{
   req.on('close',()=>clearInterval(t));
 });
 
-// ---- 404 ----
+// 404
 app.use((_req,res)=>res.status(404).json({ok:false,error:'not_found'}));
 
-// ---- start ----
-app.listen(PORT, ()=>console.log(`[api] listening on :${PORT}  MODE=dev/free (no gating, no quotas)`));
+app.listen(PORT, ()=>console.log(`[api] listening on :${PORT}  MODE=dev/free  CORS=on`));
