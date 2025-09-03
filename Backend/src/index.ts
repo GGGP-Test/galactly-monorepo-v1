@@ -1,231 +1,222 @@
-import express from "express";
-import cors from "cors";
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Galactly • Free Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root{ --bg:#0b1117; --panel:#0f1620; --text:#e8eef7; --muted:#97a6b6;
+         --line:#152233; --chip:#182233; --chipb:#203044; --ok:#3ddc97; --accent:#7ee2ff; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui}
+  .wrap{max-width:1240px;margin:24px auto;padding:0 16px}
+  .grid{display:grid;grid-template-columns:1fr 430px;gap:20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .card h3{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700}
+  .counter{position:absolute;right:16px;top:16px;font-size:12px;color:var(--muted)}
 
-const app = express();
-const PORT = Number(process.env.PORT || 8787);
+  .live{padding:16px;position:relative;min-height:520px}
+  #space{position:absolute;inset:16px 16px 220px 16px;border-radius:12px;background:radial-gradient(1200px 600px at 20% 40%,#0c121a 0,#0a0f16 60%,#0a0f16 100%);overflow:hidden;border:1px solid #142233}
+  #star{position:absolute;inset:0}
+  .hud{position:absolute;left:16px;bottom:12px;display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .api{opacity:.85}
 
-// ===== config =====
-const DEV_UNLIMITED =
-  process.env.DEV_UNLIMITED === "1" ||
-  process.env.DEV_UNLIMITED === "true" ||
-  false;
+  .list{position:absolute;left:16px;right:16px;bottom:16px;max-height:180px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+  .item{border:1px solid #1a2b3c;background:linear-gradient(180deg,#0f1620,#0f1823);border-radius:14px;padding:12px;position:relative}
+  .t{font-weight:700;font-size:15px;margin-bottom:6px}
+  .row{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font-size:12px;color:#b8c7d6;background:var(--chip);border:1px solid var(--chipb);padding:4px 8px;border-radius:999px}
+  .muted{color:var(--muted)}
+  .exp{margin-top:8px;background:#0b1219;border:1px dashed #26384f;border-radius:10px;padding:8px;color:#cde0f2;font-size:12px;display:none}
+  .exp-btn{margin-top:6px;font-size:12px;cursor:pointer;color:#8fd7ff}
 
-// ===== middleware =====
-app.use(
-  cors({
-    origin: true,
-    credentials: false,
-    allowedHeaders: ["content-type", "x-galactly-user"]
-  })
-);
-app.use(express.json({ limit: "1mb" }));
+  /* Pro blur */
+  .locked .veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,20,.25),rgba(10,14,20,.55));backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;border-radius:14px}
+  .locked .veil span{background:#101b28;border:1px solid #1f3550;color:#cfe6ff;padding:6px 10px;border-radius:10px;font-size:12px}
+  .locked .content{filter:blur(3px)}
 
-app.use((req, _res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-});
+  .side{padding:16px}
+  .f{display:flex;flex-direction:column;gap:10px}
+  label{font-size:12px;color:var(--muted)}
+  input,textarea{width:100%;background:#0b121a;border:1px solid #1c2a3d;color:var(--text);border-radius:10px;padding:10px;font:inherit}
+  textarea{min-height:90px;resize:vertical}
+  .row2{display:flex;gap:10px}
+  .btn{padding:10px 12px;border-radius:10px;border:1px solid #23415a;background:#0f1e2b;color:#d9f1ff;font-weight:700;cursor:pointer}
+  .btn.primary{background:#10364c;border-color:#1f5c83}
+  .sub{font-size:12px;color:var(--muted);margin-top:6px}
+  .log{display:flex;flex-direction:column;gap:8px;max-height:240px;overflow:auto;margin-top:10px}
+  .log .line{font-size:12px;color:#bcd0e0;background:#0b1219;border:1px solid #142234;border-radius:8px;padding:8px}
 
-type Beat = { at: number };
-const presence = new Map<string, Beat>();
-const uidFrom = (req: express.Request) =>
-  (req.header("x-galactly-user") || "anon").toString();
+  .empty{color:var(--muted);text-align:center;margin-top:80px}
+  .modal{position:fixed;inset:0;background:rgba(2,8,14,.65);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal.in{display:flex}
+  .box{width:520px;border-radius:14px;background:#0f1620;border:1px solid #152233;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+  .box h4{margin:0 0 6px}
+  .steps{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .step{display:flex;gap:8px;align-items:center;font-size:14px}
+  .b{width:8px;height:8px;border-radius:50%;background:#203244;box-shadow:inset 0 0 0 2px #325574}
+  .b.on{background:#44cdf7;box-shadow:0 0 10px #44cdf7}
+</style>
+<!-- fixed API base + dev unlimited (can be removed in prod) -->
+<script>
+  window.API_DEFAULT = (localStorage.getItem('apiBase') || 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1');
+  window.DEV_UNLIMITED = true; localStorage.setItem('gal_unlim','true');
+</script>
+</head>
+<body>
+<div class="wrap">
+  <div class="grid">
+    <!-- LEFT -->
+    <div class="card">
+      <h3>Live results <span id="quotaTxt" class="counter">—</span></h3>
+      <div class="live">
+        <div id="space"><canvas id="star"></canvas></div>
+        <div id="liveList" class="list"></div>
+        <div id="emptyNote" class="empty">No live results yet. Run a search on the right.</div>
+        <div class="hud">
+          <span class="dot" id="engineDot"></span>
+          <span id="engineTxt">engine: ready</span>
+          <span class="api" id="apiTxt"></span>
+        </div>
+      </div>
+    </div>
 
-// ---------- health ----------
-app.get("/healthz", (_req, res) => res.status(200).send("ok"));
+    <!-- RIGHT -->
+    <div class="card">
+      <h3>Train your AI</h3>
+      <div class="side">
+        <div class="f">
+          <div><label>Website</label><input id="fWebsite" placeholder="yourcompany.com"/></div>
+          <div class="row2">
+            <div style="flex:1"><label>Regions</label><input id="fRegions" placeholder="US, CA"/></div>
+            <div style="flex:1"><label>Industries</label><input id="fIndustries" placeholder="beverage, confectionery"/></div>
+          </div>
+          <div><label>Seed buyers (domains)</label><input id="fSeeds" placeholder="brand1.com, brand2.com"/></div>
+          <div><label>Describe ideal customers</label><textarea id="fNotes" placeholder="materials, order sizes, channels, exclusions"></textarea></div>
+          <div class="row2"><button class="btn" id="btnSave">Save</button><button class="btn primary" id="btnFind">Find now</button></div>
+          <div class="sub" id="bizBio"></div>
+          <div class="sub">Loaded from onboarding. Tweak &amp; run.</div>
+        </div>
 
-// ---------- mount /api/v1 ----------
-const api = express.Router();
-app.use("/api/v1", api);
+        <h3 style="margin:18px 0 0;border:none;padding:0 16px 0;font-size:16px">Signals Preview (report)</h3>
+        <div class="sub" id="counts" style="padding:0 16px">Free 0/0 • Pro 0/0</div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-// ---------- presence ----------
-api.get("/presence/online", (req, res) => {
-  const uid = uidFrom(req);
-  presence.set(uid, { at: Date.now() });
-  res.json({ ok: true, uid, online: true });
-});
+<!-- Launching modal -->
+<div class="modal" id="launchModal">
+  <div class="box">
+    <h4>Launching real-time intent search…</h4>
+    <div class="steps" id="steps">
+      <div class="step"><span class="b" data-i="0"></span> Probing public feeds</div>
+      <div class="step"><span class="b" data-i="1"></span> Reading procurement + RFPs</div>
+      <div class="step"><span class="b" data-i="2"></span> Scanning retailer pages</div>
+      <div class="step"><span class="b" data-i="3"></span> Extracting quantities &amp; materials</div>
+      <div class="step"><span class="b" data-i="4"></span> Cross-checking signals</div>
+      <div class="step"><span class="b" data-i="5"></span> Ranking by fit</div>
+    </div>
+    <div class="sub" style="margin-top:8px">Tip: upgrade to keep this running 24/7 in the background.</div>
+  </div>
+</div>
 
-api.get("/presence/beat", (req, res) => {
-  const uid = uidFrom(req);
-  presence.set(uid, { at: Date.now() });
-  res.json({ ok: true, uid, beat: Date.now() });
-});
+<script>
+(() => {
+  const $ = q => document.querySelector(q);
+  const apiBase = window.API_DEFAULT;
+  const uid = localStorage.getItem('gal_uid') || `u-${Math.random().toString(16).slice(2)}`;
+  localStorage.setItem('gal_uid', uid);
+  $('#apiTxt').textContent = `[api] ${apiBase.replace('/api/v1','')}`;
 
-// ---------- status (quota banner) ----------
-api.get("/status", (req, res) => {
-  const uid = uidFrom(req);
-  const today = new Date().toISOString().slice(0, 10);
-  res.json({
-    ok: true,
-    uid,
-    plan: "free",
-    quota: {
-      date: today,
-      findsUsed: 0,
-      revealsUsed: 0,
-      findsLeft: DEV_UNLIMITED ? 999999 : 99,
-      revealsLeft: DEV_UNLIMITED ? 999999 : 5
-    },
-    devUnlimited: DEV_UNLIMITED,
-    counts: { free: 0, pro: 0 }
-  });
-});
+  // neutron star (kept minimal)
+  const cvs = $('#star'), ctx = cvs.getContext('2d'); let W,H,t=0; const stars=[];
+  function resize(){ const r=$('#space').getBoundingClientRect(); W=cvs.width=r.width; H=cvs.height=r.height; stars.length=0; for(let i=0;i<120;i++){ stars.push({r:Math.random()*Math.min(W,H)/2*0.95,a:Math.random()*Math.PI*2,s:0.0008+Math.random()*0.0016}); } }
+  window.addEventListener('resize',resize); resize();
+  (function draw(){ ctx.clearRect(0,0,W,H); const cx=W/2, cy=H/2;
+    ctx.strokeStyle='rgba(126,226,255,.08)'; for(let i=1;i<=6;i++){ ctx.beginPath(); ctx.arc(cx,cy,(i/6)*Math.min(W,H)/2,0,Math.PI*2); ctx.stroke(); }
+    const grd=ctx.createRadialGradient(cx,cy,0,cx,cy,60); grd.addColorStop(0,'rgba(126,226,255,.55)'); grd.addColorStop(1,'rgba(126,226,255,0)'); ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(cx,cy,60,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(126,226,255,.25)'; ctx.beginPath(); const L=Math.min(W,H)/2*0.85; ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(t*0.25)*L, cy+Math.sin(t*0.25)*L); ctx.stroke();
+    ctx.fillStyle='rgba(158,246,255,.9)'; stars.forEach(s=>{ s.a+=s.s; const x=cx+Math.cos(s.a)*s.r, y=cy+Math.sin(s.a)*s.r; ctx.fillRect(x,y,1.2,1.2); }); t+=0.5; requestAnimationFrame(draw);
+  })();
 
-/* ------------------------------------------------------------------
-   Simple, deterministic “catalog” so the UI shows real cards now.
-   (Swap this with real scrapers later.)
-------------------------------------------------------------------- */
-
-type CatalogItem = {
-  buyer: string;
-  domain: string;
-  state: string;                 // US state code
-  product: string;               // “corrugated”, “stretch wrap”, …
-  title: string;                 // card headline
-  tags: string[];                // small chips under title
-  channels: ("email" | "sms" | "call" | "linkedin_dm")[];
-  why: string[];                 // “why we think it’s a live need”
-  link?: string;                 // optional detail link
-};
-
-const CATALOG: CatalogItem[] = [
-  {
-    buyer: "Riverbend Snacks",
-    domain: "riverbendsnacks.com",
-    state: "GA",
-    product: "corrugated",
-    title: '“Need 10k corrugated boxes”',
-    tags: ["RSC", "double-wall", "48h turn"],
-    channels: ["linkedin_dm", "email", "call"],
-    why: [
-      "RFP post mentions ‘10k corrugated’ (last 72h)",
-      "Product pages add 3 new SKUs in snack family",
-      "Ops role hiring includes ‘case pack change’"
-    ],
-    link: "https://riverbendsnacks.com/procurement/rfp"
-  },
-  {
-    buyer: "Peak Outfitters",
-    domain: "peakoutfitters.com",
-    state: "VT",
-    product: "stretch wrap",
-    title: "Stretch wrap pallets",
-    tags: ["80g", "18″ × 1500′"],
-    channels: ["sms", "call", "email"],
-    why: [
-      "Warehouse expansion press release (14d)",
-      "Palletized freight volume up (carrier feeds)"
-    ]
-  },
-  {
-    buyer: "Marathon Labs",
-    domain: "marathonlabs.com",
-    state: "MD",
-    product: "mailers",
-    title: "Urgent: custom mailers next week",
-    tags: ["Kraft", "2-color", "die-cut"],
-    channels: ["email", "call", "linkedin_dm"],
-    why: [
-      "Marketing launch date in 10 days",
-      "Creative brief uploaded with dieline ref"
-    ]
-  },
-  {
-    buyer: "Pioneer Pantry",
-    domain: "pioneerpantry.com",
-    state: "PA",
-    product: "cartons",
-    title: 'Quote: 16oz cartons (retail)',
-    tags: ["PDP restock surge"],
-    channels: ["linkedin_dm", "email"],
-    why: [
-      "Retail PDP shows ‘low stock’ on 16oz 4-pack",
-      "Sell-through velocity spike in last 7d"
-    ]
-  },
-  {
-    buyer: "Harbor Pet",
-    domain: "harborpet.com",
-    state: "WV",
-    product: "pouches",
-    title: "Pouches 5k/mo",
-    tags: ["8oz / 16oz", "matte + zipper"],
-    channels: ["call", "sms", "email"],
-    why: [
-      "Ingredient COGS report suggests size split 8/16oz",
-      "Private label brief references zipper closure"
-    ]
-  }
-];
-
-// Filter helper: crude region and product fit
-function filterCatalog(regions: string | undefined, industries: string | undefined) {
-  const regionSet = new Set(
-    (regions || "")
-      .split(/[,\s]+/)
-      .map((s) => s.trim().toUpperCase())
-      .filter(Boolean)
-  );
-
-  const wantsCorr = /\bcorrugat|beverage|confection/i.test(industries || "");
-  return CATALOG.filter((c) => {
-    const regionOK = regionSet.size === 0 || regionSet.has("US") || regionSet.has(c.state);
-    if (!regionOK) return false;
-    if (wantsCorr) return true; // demo: allow all for now but keep knob
-    return true;
-  });
-}
-
-// ---------- find-now ----------
-api.post("/find-now", (req, res) => {
-  const uid = uidFrom(req);
-  const body = (req.body || {}) as {
-    website?: string;
-    regions?: string;
-    industries?: string;
-    seed_buyers?: string;
-    notes?: string;
+  // form defaults
+  const qs = k => new URLSearchParams(location.search).get(k) || '';
+  $('#fWebsite').value    = qs('site') || localStorage.getItem('site') || '';
+  $('#fRegions').value    = localStorage.getItem('regions') || 'US, CA';
+  $('#fIndustries').value = localStorage.getItem('industries') || 'beverage, confectionery';
+  $('#fSeeds').value      = localStorage.getItem('seeds') || 'brand1.com, brand2.com';
+  $('#fNotes').value      = localStorage.getItem('notes') || 'materials, order sizes, channels, exclusions';
+  $('#btnSave').onclick = () => {
+    localStorage.setItem('site',$('#fWebsite').value.trim());
+    localStorage.setItem('regions',$('#fRegions').value.trim());
+    localStorage.setItem('industries',$('#fIndustries').value.trim());
+    localStorage.setItem('seeds',$('#fSeeds').value.trim());
+    localStorage.setItem('notes',$('#fNotes').value.trim());
+    log('Saved profile.');
   };
 
-  const preview: string[] = [
-    "Probing public feeds ✓",
-    "Reading procurement + RFPs ✓",
-    "Scanning retailer pages ✓",
-    "Extracting quantities & materials ✓",
-    "Cross-checking signals ✓",
-    `Parsed site: ${body.website || "—"}`,
-    `Regions: ${body.regions || "—"}`,
-    `Industries: ${body.industries || "—"}`,
-    `Seeds: ${body.seed_buyers || "—"}`,
-    `Notes: ${body.notes || "—"}`
-  ];
+  // helpers
+  async function jfetch(path, opt={}) {
+    const url = path.startsWith('http') ? path : `${apiBase}${path}`;
+    const res = await fetch(url, { headers: { 'x-galactly-user': uid, 'content-type':'application/json' }, cache:'no-cache', credentials:'omit', ...opt }).catch(()=>null);
+    if(!res) return {ok:false,error:'network'}; if(!res.ok){ return {ok:false,error:String(res.status)}; }
+    try { return await res.json(); } catch { return {ok:false,error:'bad_json'}; }
+  }
+  const log = t => { const d=document.createElement('div'); d.className='line'; d.textContent=t; const L=$('#log'); L.prepend(d); while(L.children.length>8)L.removeChild(L.lastChild); };
+  const setQuota = s => { if(!s){ $('#quotaTxt').textContent='—'; return; } $('#quotaTxt').textContent = (s.devUnlimited?'∞':s.quota?.findsLeft||'—') + ' searches left • ' + (s.devUnlimited?'∞':s.quota?.revealsLeft||'—') + ' reveals left'; };
 
-  // Build items from catalog
-  const items = filterCatalog(body.regions, body.industries).map((c) => ({
-    title: c.title,
-    buyer: c.buyer,
-    domain: c.domain,
-    state: c.state,
-    tags: c.tags,
-    channels: c.channels,
-    why: c.why,
-    link: c.link
-  }));
+  // render results
+  const chip = t => t ? `<span class="chip">${String(t).replace(/[&<>]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[s]))}</span>` : '';
+  function render(items){
+    const box = $('#liveList'); box.innerHTML=''; $('#emptyNote').style.display = items?.length ? 'none':'block';
+    (items||[]).forEach(it=>{
+      const li = document.createElement('div'); li.className='item'+(it.locked?' locked':'');
+      li.innerHTML = `
+        <div class="content">
+          <div class="t">${it.title.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>
+          <div class="row">${chip(it.state)} ${chip(it.channel)} ${chip(it.intent)}</div>
+          <div class="muted" style="margin-top:6px">${it.company_domain}</div>
+          <div class="exp-btn">Explain</div>
+          <div class="exp"><b>Why:</b> ${it.why || '—'}</div>
+        </div>
+        ${it.locked ? `<div class="veil"><span>Pro lead — upgrade to unlock</span></div>` : ``}
+      `;
+      li.querySelector('.exp-btn').onclick = ()=> {
+        const e = li.querySelector('.exp'); e.style.display = e.style.display==='none'?'block':'none';
+      };
+      box.appendChild(li);
+    });
+  }
 
-  // Free vs Pro split (free shows first 5)
-  const freeItems = items.slice(0, 5);
-  const proItemsCount = Math.max(items.length - freeItems.length, 0);
+  // status/presence tick
+  async function refresh(){ const s = await jfetch('/status'); setQuota(s); }
+  refresh(); setInterval(refresh, 15_000); setInterval(()=>jfetch('/presence/online'), 20_000);
 
-  res.json({
-    ok: true,
-    uid,
-    preview,
-    counts: { free: freeItems.length, pro: proItemsCount },
-    items: freeItems
-  });
-});
+  // launch overlay
+  const launch = ms => { const m=$('#launchModal'); m.classList.add('in'); const dots=[...document.querySelectorAll('.b')]; let i=0; const iv=setInterval(()=>{ dots.forEach(d=>d.classList.remove('on')); dots[i%dots.length].classList.add('on'); i++; },650); setTimeout(()=>{ clearInterval(iv); m.classList.remove('in'); }, ms); };
 
-// ---------- api 404 ----------
-api.use((_req, res) => res.status(404).json({ ok: false, error: "not_found" }));
+  // run search
+  $('#btnFind').onclick = async () => {
+    const body = {
+      website: $('#fWebsite').value.trim(),
+      regions: $('#fRegions').value.trim(),
+      industries: $('#fIndustries').value.trim(),
+      seed_buyers: $('#fSeeds').value.trim(),
+      notes: $('#fNotes').value.trim(),
+    };
+    const dur = 7000 + Math.floor(Math.random()*8000); launch(dur);
 
-// ---------- start ----------
-app.listen(PORT, () => console.log(`API listening on :${PORT}`));
+    const r = await jfetch('/find-now', { method:'POST', body: JSON.stringify(body) });
+    if (!r || r.ok === false) { log(`Search error: ${r?.error || 'temporary'}`); return; }
+    if (r.bio) $('#bizBio').textContent = r.bio;
+    if (r.preview?.counts) $('#counts').textContent = `Free ${r.preview.counts.free} • Pro ${r.preview.counts.pro}`;
+    if (Array.isArray(r.items)) render(r.items);
+    log('Submitting your search…');
+  };
+})();
+</script>
+</body>
+</html>
