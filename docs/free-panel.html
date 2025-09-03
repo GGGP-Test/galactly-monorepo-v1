@@ -6,12 +6,12 @@
 <title>Galactly • Free Panel</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-
 <style>
   :root{
     --bg:#0c1116; --panel:#0f1620; --muted:#95a3b3; --text:#e8eef7;
     --accent:#7ee2ff; --accent2:#9dffa8; --chip:#192233; --chipb:#213247;
     --ring:#122033; --ok:#3ddc97; --warn:#ffd166; --err:#ef476f;
+    --blur:#0a0f16cc;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
@@ -20,19 +20,31 @@
   .card{background:var(--panel);border:1px solid #152233;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
   .card h3{margin:0;padding:14px 16px;border-bottom:1px solid #152233;font-weight:600}
   .counter{position:absolute;right:16px;top:16px;font-size:12px;color:var(--muted)}
-  .live{padding:16px;position:relative;min-height:480px}
-  #space{position:absolute;inset:16px 16px 170px 16px;border-radius:12px;background:radial-gradient(1200px 600px at 20% 40%,#0c121a 0,#0a0f16 60%,#0a0f16 100%);overflow:hidden;border:1px solid #142233}
+  .live{padding:16px;position:relative;min-height:520px}
+  /* star area has fixed height so list never hides behind it */
+  #space{height:260px;border-radius:12px;background:radial-gradient(1200px 600px at 20% 40%,#0c121a 0,#0a0f16 60%,#0a0f16 100%);overflow:hidden;border:1px solid #142233;margin-bottom:12px;position:relative}
   #star{position:absolute;inset:0}
   .hud{position:absolute;left:16px;bottom:16px;display:flex;gap:12px;align-items:center;color:var(--muted);font-size:12px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
   .api{opacity:.8}
 
-  .list{display:flex;flex-direction:column;gap:12px;margin-top:12px;max-height:330px;overflow:auto;position:relative;z-index:3}
-  .item{border:1px solid #1a2b3c;background:linear-gradient(180deg,#0f1620,#0f1823);border-radius:14px;padding:12px}
+  .list{display:flex;flex-direction:column;gap:12px;max-height:210px;overflow:auto}
+  .item{border:1px solid #1a2b3c;background:linear-gradient(180deg,#0f1620,#0f1823);border-radius:14px;padding:12px;position:relative}
   .t{font-weight:650;font-size:16px;margin-bottom:6px}
   .row{display:flex;flex-wrap:wrap;gap:8px}
   .chip{font-size:12px;color:#b8c7d6;background:var(--chip);border:1px solid var(--chipb);padding:4px 8px;border-radius:999px}
   .muted{color:var(--muted)}
+  .exp-btn{margin-top:8px;font-size:12px;color:#8fd7ff;cursor:pointer}
+  .exp{margin-top:6px;background:#0b1219;border:1px dashed #26384f;border-radius:10px;padding:8px;color:#cde0f2;font-size:12px}
+
+  /* pro lock blur */
+  .blurred::after{
+    content:"Pro • unlock";
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:var(--blur);backdrop-filter:blur(2px);border-radius:14px;
+    color:#cfe7ff;font-weight:700;letter-spacing:.3px;
+    border:1px dashed #2a4b70;
+  }
 
   .side{padding:16px}
   .f{display:flex;flex-direction:column;gap:10px}
@@ -43,38 +55,30 @@
   .btn{padding:10px 12px;border-radius:10px;border:1px solid #23415a;background:#0f1e2b;color:#d9f1ff;font-weight:600;cursor:pointer}
   .btn.primary{background:#10364c;border-color:#1f5c83}
   .sub{font-size:12px;color:var(--muted);margin-top:6px}
-  .log{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;margin-top:10px}
-  .log .line{font-size:12px;color:#bcd0e0;background:#0b1219;border:1px solid #142234;border-radius:8px;padding:8px}
 
   .legend{margin-top:10px;font-size:12px;color:#a9bacb}
   details{background:#0b1219;border:1px solid #142234;border-radius:10px;padding:8px}
   details summary{cursor:pointer;color:#cfe6ff}
 
-  .empty{color:var(--muted);text-align:center;margin-top:80px}
+  .log{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;margin-top:10px}
+  .log .line{font-size:12px;color:#bcd0e0;background:#0b1219;border:1px solid #142234;border-radius:8px;padding:8px}
 
-  .modal{position:fixed;inset:0;background:rgba(2,8,14,.65);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:50}
-  .modal.in{display:flex}
-  .box{width:520px;border-radius:14px;background:#0f1620;border:1px solid #152233;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
-  .box h4{margin:0 0 6px 0}
-  .steps{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-  .step{display:flex;gap:8px;align-items:center;font-size:14px}
-  .b{width:8px;height:8px;border-radius:50%;background:#203244;box-shadow:inset 0 0 0 2px #325574}
-  .b.on{background:#44cdf7;box-shadow:0 0 10px #44cdf7}
-
-  .exp{margin-top:8px;background:#0b1219;border:1px dashed #26384f;border-radius:10px;padding:8px;color:#cde0f2;font-size:12px}
-  .exp-btn{margin-top:8px;font-size:12px;cursor:pointer;color:#8fd7ff}
-
-  /* keep neutron behind the list */
-  #space canvas{z-index:1;pointer-events:none}
+  /* free vs pro grid in preview */
+  .kv{display:grid;grid-template-columns:140px 1fr 1fr;gap:6px;align-items:start}
+  .kv .k{color:#a8bacb;font-size:12px;padding:6px 0}
+  .kv .v{background:#0b1219;border:1px solid #142234;border-radius:8px;padding:6px 8px;font-size:12px}
+  .lock{opacity:.5}
+  .tag{display:inline-block;margin:2px 6px 2px 0;padding:3px 8px;border-radius:999px;border:1px solid #24364a;background:#0c141d;font-size:12px;color:#cfe2f7}
+  .good{border-color:#1e5f40;background:#0e1d17;color:#b9ffd6}
+  .warn{border-color:#6c4d1a;background:#19150c;color:#ffe1a9}
 </style>
 
-<!-- Force API base + dev unlimited -->
+<!-- If you use config.js, it will override these; this fallback keeps things working -->
 <script>
-  window.API_DEFAULT = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1';
-  window.DEV_UNLIMITED = true; // set false for production
+  window.API_DEFAULT = window.API_DEFAULT || 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1';
+  window.DEV_UNLIMITED = (localStorage.getItem('gal_unlim') === 'true') || window.DEV_UNLIMITED || false;
   try{
-    localStorage.setItem('apiBase', window.API_DEFAULT);
-    if(window.DEV_UNLIMITED) localStorage.setItem('gal_unlim','true');
+    if(!localStorage.getItem('apiBase')) localStorage.setItem('apiBase', window.API_DEFAULT);
   }catch(e){}
 </script>
 </head>
@@ -87,12 +91,12 @@
       <div class="live">
         <div id="space"><canvas id="star"></canvas></div>
         <div id="liveList" class="list"></div>
-        <div id="emptyNote" class="empty">No live results yet. Run a search on the right.</div>
+
         <div class="legend">
           <details>
             <summary>Legend</summary>
             <div style="margin-top:6px">
-              <div><b>State</b> (e.g., <code>GA</code>) → US state of the buyer.</div>
+              <div><b>State</b> (GA, VT…) → US state of the buyer.</div>
               <div><b>Channel</b> (LinkedIn DM / Email / SMS / Call) → best first contact route.</div>
               <div><b>Intent</b> → short material/packaging need distilled from the signal.</div>
               <div>Click <i>Explain</i> on a card to see “why you’re seeing this”.</div>
@@ -143,6 +147,7 @@
 
         <h3 style="margin:18px 0 0;border:none;padding:0;font-size:16px">Signals Preview (report)</h3>
         <div class="sub" id="counts">Free 0/0 • Pro 0/0</div>
+        <div id="preview" class="kv" style="margin-top:8px"></div>
         <div class="log" id="log"></div>
       </div>
     </div>
@@ -150,10 +155,10 @@
 </div>
 
 <!-- Launching modal -->
-<div class="modal" id="launchModal">
-  <div class="box">
-    <h4>Launching real-time intent search…</h4>
-    <div class="steps" id="steps">
+<div class="modal" id="launchModal" style="display:none;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(2,8,14,.6);backdrop-filter:blur(2px);z-index:50">
+  <div class="box" style="width:520px;border-radius:14px;background:#0f1620;border:1px solid #152233;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.4)">
+    <h4 style="margin:0 0 6px 0">Launching real-time intent search…</h4>
+    <div class="steps" id="steps" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
       <div class="step"><span class="b" data-i="0"></span> Probing public feeds</div>
       <div class="step"><span class="b" data-i="1"></span> Reading procurement + RFPs</div>
       <div class="step"><span class="b" data-i="2"></span> Scanning retailer pages</div>
@@ -176,37 +181,41 @@
   $('#apiTxt').textContent = `[api] ${apiBase.replace('/api/v1','')}`;
 
   // ---------- fetch wrapper ----------
-  async function jfetch(path, opt={}){
+  async function jfetch(path, opt={}) {
     const url = path.startsWith('http') ? path : `${apiBase}${path}`;
-    const method = opt.method || (opt.body ? 'POST' : 'GET');
     const res = await fetch(url, {
-      method,
+      method: opt.method || 'GET',
       headers: {'x-galactly-user': uid, 'content-type':'application/json'},
       credentials: 'omit',
       cache: 'no-cache',
       ...opt
-    }).catch(()=>null);
-    if(!res) return {ok:false,error:'network'};
-    if(!res.ok) return {ok:false,error:`${res.status}`};
+    }).catch(() => null);
+    if(!res) return {ok:false, error:'network'};
+    if(!res.ok){
+      // surface HTTP code for preview
+      return {ok:false, error:`${res.status}`};
+    }
     try { return await res.json(); } catch { return {ok:false,error:'bad_json'}; }
   }
 
   // ---------- UI helpers ----------
   function logLine(t){
-    const d=document.createElement('div'); d.className='line'; d.textContent=t;
-    const L=$('#log'); L.prepend(d); while(L.children.length>12)L.removeChild(L.lastChild);
+    const d=document.createElement('div');
+    d.className='line';
+    d.textContent=t;
+    const L=$('#log'); L.prepend(d);
+    while(L.children.length>6)L.removeChild(L.lastChild);
   }
   function setQuota(s){
     if(!s){ $('#quotaTxt').textContent = devUnlim ? '∞ searches left • ∞ reveals left' : '—'; return; }
     if(s.devUnlimited || devUnlim){ $('#quotaTxt').textContent = '∞ searches left • ∞ reveals left'; return; }
-    const finds = (s.quota && s.quota.findsLeft!=null) ? s.quota.findsLeft : '—';
-    const revs  = (s.quota && s.quota.revealsLeft!=null) ? s.quota.revealsLeft : '—';
-    $('#quotaTxt').textContent = `${finds} searches left • ${revs} reveals left`;
+    const f = s.quota?.findsLeft ?? '—';
+    const r = s.quota?.revealsLeft ?? '—';
+    $('#quotaTxt').textContent = `${f} searches left • ${r} reveals left`;
   }
 
-  // ---------- map raw signal -> UI ----------
-  const STATE_MAP = {"AL":"Alabama","AK":"Alaska","AZ":"Arizona","AR":"Arkansas","CA":"California","CO":"Colorado","CT":"Connecticut","DE":"Delaware","FL":"Florida","GA":"Georgia","HI":"Hawaii","ID":"Idaho","IL":"Illinois","IN":"Indiana","IA":"Iowa","KS":"Kansas","KY":"Kentucky","LA":"Louisiana","ME":"Maine","MD":"Maryland","MA":"Massachusetts","MI":"Michigan","MN":"Minnesota","MS":"Mississippi","MO":"Missouri","MT":"Montana","NE":"Nebraska","NV":"Nevada","NH":"New Hampshire","NJ":"New Jersey","NM":"New Mexico","NY":"New York","NC":"North Carolina","ND":"North Dakota","OH":"Ohio","OK":"Oklahoma","OR":"Oregon","PA":"Pennsylvania","RI":"Rhode Island","SC":"South Carolina","SD":"South Dakota","TN":"Tennessee","TX":"Texas","UT":"Utah","VT":"Vermont","VA":"Virginia","WA":"Washington","WV":"West Virginia","WI":"Wisconsin","WY":"Wyoming","DC":"District of Columbia"};
-  const esc = (s)=>String(s||'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  // ---------- mapping ----------
+  const STATE = {"AL":"Alabama","AK":"Alaska","AZ":"Arizona","AR":"Arkansas","CA":"California","CO":"Colorado","CT":"Connecticut","DE":"Delaware","FL":"Florida","GA":"Georgia","HI":"Hawaii","ID":"Idaho","IL":"Illinois","IN":"Indiana","IA":"Iowa","KS":"Kansas","KY":"Kentucky","LA":"Louisiana","ME":"Maine","MD":"Maryland","MA":"Massachusetts","MI":"Michigan","MN":"Minnesota","MS":"Mississippi","MO":"Missouri","MT":"Montana","NE":"Nebraska","NV":"Nevada","NH":"New Hampshire","NJ":"New Jersey","NM":"New Mexico","NY":"New York","NC":"North Carolina","ND":"North Dakota","OH":"Ohio","OK":"Oklahoma","OR":"Oregon","PA":"Pennsylvania","RI":"Rhode Island","SC":"South Carolina","SD":"South Dakota","TN":"Tennessee","TX":"Texas","UT":"Utah","VT":"Vermont","VA":"Virginia","WA":"Washington","WV":"West Virginia","WI":"Wisconsin","WY":"Wyoming","DC":"District of Columbia"};
 
   function pickChannel(sig){
     const c = (sig.channel||'').toLowerCase();
@@ -214,7 +223,7 @@
     if(c.includes('sms')) return 'SMS';
     if(c.includes('call') || c.includes('phone')) return 'Call';
     if(c.includes('email')) return 'Email';
-    const src = (sig.source || '').toLowerCase();
+    const src = (sig.source||'').toLowerCase();
     if(src.includes('linkedin')) return 'LinkedIn DM';
     if(src.includes('rfp') || src.includes('procure')) return 'Email';
     return 'Email';
@@ -223,55 +232,91 @@
     const parts = [];
     if(sig.reason) parts.push(sig.reason);
     if(sig.qty) parts.push(`Quantity: ${sig.qty}`);
-    if(sig.material) parts.push(`Material/format: ${sig.material}`);
+    if(sig.material) parts.push(`Material: ${sig.material}`);
     if(sig.deadline) parts.push(`Timeline: ${sig.deadline}`);
     if(sig.url) parts.push(`Source: ${sig.url}`);
     if(!parts.length && sig.source) parts.push(`Matched by ${sig.source}`);
     return parts.join(' • ');
   }
-  function mapRawSignal(sig){
-    const buyerDomain = sig.company_domain || sig.domain || sig.brand || sig.company || 'unknown';
-    const state = (sig.state || sig.region || '').toUpperCase();
-    const niceState = STATE_MAP[state] ? state : '';
-    const intent = sig.intent || sig.material || sig.package || sig.category || '';
-    const need = sig.need ? `"${sig.need}"` : '';
-    const title = need || (intent ? `${intent} — ${buyerDomain}` : `Lead — ${buyerDomain}`);
+  function mapRaw(sig){
+    const buyer = sig.company_domain || sig.domain || sig.brand || sig.company || 'unknown';
+    const state = ((sig.state || sig.region || '')+'').toUpperCase();
+    const showState = STATE[state] ? state : '';
+    const intent = sig.intent || sig.need || sig.material || sig.package || '';
+    const title = (sig.need ? `“${sig.need}”` : (intent ? `${intent}` : 'Lead')) + (buyer ? ` — ${buyer}` : '');
     return {
       title,
-      buyer: buyerDomain,
-      state: niceState,
+      buyer,
+      state: showState,
       channel: pickChannel(sig),
-      intent: String(intent||''),
+      intent: (intent||'').toString(),
       why: buildWhy(sig),
-      source: sig.source || ''
+      source: sig.source || '',
+      url: sig.url || ''
     };
   }
 
   // ---------- render ----------
-  function chip(t){ return t ? `<span class="chip">${esc(t)}</span>` : ''; }
+  function chip(t){ return t?`<span class="chip">${escapeHtml(t)}</span>`:''; }
+  function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
   function renderResults(items){
     const box = $('#liveList'); box.innerHTML='';
-    $('#emptyNote').style.display = (items && items.length) ? 'none':'block';
-    (items||[]).forEach(it=>{
+    (items||[]).forEach((it,idx)=>{
       const li = document.createElement('div'); li.className='item';
+      if(idx>=2) li.classList.add('blurred'); // lock after first 2
       li.innerHTML = `
-        <div class="t">${esc(it.title)}</div>
+        <div class="t">${escapeHtml(it.title)}</div>
         <div class="row">
           ${chip(it.state)} ${chip(it.channel)} ${chip(it.intent)}
         </div>
-        <div class="muted" style="margin-top:6px">${esc(it.buyer||'')}</div>
+        <div class="muted" style="margin-top:6px">${escapeHtml(it.buyer||'')}</div>
         <div class="exp-btn">Explain</div>
         <div class="exp" style="display:none">
-          <div><b>Why:</b> ${esc(it.why || '—')}</div>
-          ${it.source ? `<div style="margin-top:6px"><b>Source:</b> ${esc(it.source)}</div>` : ''}
+          <div><b>Why:</b> ${escapeHtml(it.why || '—')}</div>
+          ${it.source || it.url ? `<div style="margin-top:6px"><b>Source:</b> <a href="${escapeHtml(it.url||'#')}" target="_blank" rel="noreferrer">${escapeHtml(it.source || it.url)}</a></div>`:''}
         </div>
       `;
-      li.querySelector('.exp-btn').onclick = ()=>{
+      li.querySelector('.exp-btn').onclick=()=> {
         const e=li.querySelector('.exp'); e.style.display = e.style.display==='none'?'block':'none';
       };
       box.appendChild(li);
     });
+  }
+
+  function row(label, freeVal, proVal, proLocked=false){
+    const p = $('#preview');
+    const k = document.createElement('div'); k.className='k'; k.textContent=label;
+    const v1 = document.createElement('div'); v1.className='v'; v1.innerHTML = freeVal || '—';
+    const v2 = document.createElement('div'); v2.className='v'; v2.innerHTML = proLocked ? `<span class="lock">Pro — unlock</span>` : (proVal || '—');
+    p.append(k,v1,v2);
+  }
+  function clearPreview(){ $('#preview').innerHTML=''; }
+
+  function renderPreview(pre){
+    clearPreview();
+    // counts header
+    const fC = pre?.counts?.free || '0/0';
+    const pC = pre?.counts?.pro || '0/0';
+    $('#counts').textContent = `Free ${fC} • Pro ${pC}`;
+
+    // Free side uses pre.free or derived; Pro shows locked if not provided
+    const F = pre?.free || {};
+    const P = pre?.pro || {};
+
+    const tags = arr => (arr||[]).map(x=>`<span class="tag">${escapeHtml(x)}</span>`).join(' ');
+    const tagsGood = arr => (arr||[]).map(x=>`<span class="tag good">${escapeHtml(x)}</span>`).join(' ');
+    const tagsWarn = arr => (arr||[]).map(x=>`<span class="tag warn">${escapeHtml(x)}</span>`).join(' ');
+
+    row('Notes', escapeHtml(F.notes||'—'), escapeHtml(P.notes||''), !P.notes);
+    row('Seeds', tags(F.seeds||[]), tags(P.seeds||[]), !(P.seeds||[]).length);
+    row('Industries', tags(F.industries||[]), tags(P.industries||[]), !(P.industries||[]).length);
+    row('Regions', tags(F.regions||[]), tags(P.regions||[]), !(P.regions||[]).length);
+    row('Parsed site', escapeHtml(F.site||'—'), escapeHtml(P.site||''), !P.site);
+    row('Channels', tagsGood(F.channels||[]), tagsGood(P.channels||[]), !(P.channels||[]).length);
+    row('Exclusions', tagsWarn(F.exclusions||[]), tagsWarn(P.exclusions||[]), !(P.exclusions||[]).length);
+    row('Est. volume', escapeHtml(F.volume||'—'), escapeHtml(P.volume||''), !P.volume);
+    row('Confidence', escapeHtml(F.confidence||'—'), escapeHtml(P.confidence||''), !P.confidence);
   }
 
   // ---------- status & presence ----------
@@ -284,13 +329,9 @@
   setInterval(()=>{ jfetch('/presence/online'); }, 15_000);
 
   // ---------- neutron star ----------
-  const canvas=$('#star'), ctx=canvas.getContext('2d'); let W,H,t=0; const stars=[];
-  function resize(){
-    const r=$('#space').getBoundingClientRect(); canvas.width=W=r.width; canvas.height=H=r.height;
-    stars.length=0; const N=130;
-    for(let i=0;i<N;i++){ stars.push({r:Math.random()*Math.min(W,H)/2*0.95,a:Math.random()*Math.PI*2,s:0.0008+Math.random()*0.0016}); }
-  }
-  window.addEventListener('resize',resize); resize();
+  const canvas=$('#star'), ctx=canvas.getContext('2d'); let W=0,H=0,t=0; const stars=[];
+  function sizeStar(){ const r=$('#space').getBoundingClientRect(); W=canvas.width=r.width; H=canvas.height=r.height; stars.length=0; const N=140; const R=Math.min(W,H)/2*0.95; for(let i=0;i<N;i++){ stars.push({r:Math.random()*R,a:Math.random()*Math.PI*2,s:0.0007+Math.random()*0.0015}); } }
+  window.addEventListener('resize',sizeStar); sizeStar();
   (function draw(){
     ctx.clearRect(0,0,W,H); const cx=W/2, cy=H/2;
     ctx.strokeStyle='rgba(126,226,255,.08)';
@@ -304,14 +345,13 @@
     t+=0.5; requestAnimationFrame(draw);
   })();
 
-  // ---------- form defaults ----------
-  const qs=(k)=> new URLSearchParams(location.search).get(k) || '';
+  // ---------- defaults ----------
+  const qs=(k)=> new URLSearchParams(location.search).get(k)||'';
   $('#fWebsite').value = qs('site') || localStorage.getItem('site') || '';
   $('#fRegions').value = localStorage.getItem('regions') || 'US, CA';
   $('#fIndustries').value = localStorage.getItem('industries') || 'beverage, confectionery';
   $('#fSeeds').value = localStorage.getItem('seeds') || 'brand1.com, brand2.com';
   $('#fNotes').value = localStorage.getItem('notes') || 'materials, order sizes, channels, exclusions';
-
   $('#btnSave').onclick = ()=>{
     localStorage.setItem('site',$('#fWebsite').value.trim());
     localStorage.setItem('regions',$('#fRegions').value.trim());
@@ -321,12 +361,12 @@
     logLine('Saved.');
   };
 
-  // launching overlay
+  // ---------- launching overlay ----------
   function launchOverlay(ms){
-    const m=$('#launchModal'); m.classList.add('in');
-    const dots=[...document.querySelectorAll('.b')];
-    let i=0; const iv=setInterval(()=>{ dots.forEach(d=>d.classList.remove('on')); dots[i%dots.length].classList.add('on'); i++; },650);
-    setTimeout(()=>{ clearInterval(iv); m.classList.remove('in'); }, ms);
+    const m=$('#launchModal'); m.style.display='flex';
+    const dotsIdx = [0,1,2,3,4,5]; let i=0;
+    const iv=setInterval(()=>{ i=(i+1)%dotsIdx.length; },650);
+    setTimeout(()=>{ clearInterval(iv); m.style.display='none'; }, ms);
   }
 
   // ---------- find now ----------
@@ -347,25 +387,17 @@
       logLine(`Search error: ${r?.error || 'temporary'}`);
       return;
     }
-    logLine('Submitting your search…');
+    // preview: expect r.preview.free / r.preview.pro / r.preview.counts
+    renderPreview(r.preview || null);
 
-    // Fill preview/status counters if present; otherwise show rough counts
-    const freeCnt = (r.counts && r.counts.free) || (r.preview && r.preview.free) || 0;
-    const proCnt  = (r.counts && r.counts.pro ) || (r.preview && r.preview.pro ) || 0;
-    $('#counts').textContent = `Free ${freeCnt}/0 • Pro ${proCnt}/0`;
-
-    if(Array.isArray(r.preview)){
-      r.preview.slice(-6).forEach(p=>logLine(p));
-    } else if (r.preview && typeof r.preview === 'object'){
-      Object.entries(r.preview).forEach(([k,v])=>{
-        logLine(`${k}: ${Array.isArray(v)? v.join(', '): v}`);
-      });
-    }
-
-    const items = (r.items || []).map(mapRawSignal);
-    if(items.length) renderResults(items);
+    // results
+    const items = (r.items || []).map(mapRaw);
+    renderResults(items);
     refreshStatus();
   };
+
+  // initial status
+  logLine('Standing by for results…');
 })();
 </script>
 </body>
