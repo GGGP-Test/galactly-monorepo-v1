@@ -35,6 +35,9 @@ function route<T extends 'get' | 'post'>(m: T, p: string, h: any) {
   app[m](`/api/v1${p}`, h);
 }
 
+// backend/src/index.ts  (add near other routes)
+app.post('/find-now', (req,res)=> findNowHandler(req,res));
+
 /* ---------- types ---------- */
 type LeadEvt = {
   type: 'lead';
