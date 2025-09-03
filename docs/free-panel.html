@@ -162,6 +162,28 @@
 </div>
 
 <script>
+<script>
+  // Do not change layout — just ensure the list element gets the styling hook
+  (function () {
+    const candidates = [
+      document.querySelector('.live-results .live-list'),
+      document.querySelector('.live-results [data-live-list]'),
+      document.getElementById('live-list'),
+      // last-resort: first non-canvas child inside live box
+      (function () {
+        const box = document.querySelector('.live-results');
+        if (!box) return null;
+        return [...box.children].find(n => n.tagName !== 'CANVAS') || null;
+      })()
+    ].filter(Boolean);
+
+    const list = candidates[0];
+    if (list) list.classList.add('live-list'); // Styling only
+  })();
+</script>
+
+
+  
 (() => {
   // ---------- base ----------
   const $ = (q)=>document.querySelector(q);
