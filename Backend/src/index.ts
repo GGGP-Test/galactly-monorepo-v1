@@ -134,9 +134,9 @@ async function runScan(job:JobState){
 
   try{
     if(useFake){
-      for await (const ev of fakeProvider(job.params)){
-        job.em.emit('evt', ev as ProgressEvt);
-      }
+      for await (const ev of aggregateProviders(job.params)) {
+  job.em.emit('evt', ev); // ev should be {type:'lead', title, detail, site, state, channel, at}
+}
     }else{
       // ===== REAL PIPELINE =====
       // for await (const ev of aggregateProviders(job.params)) job.em.emit('evt', ev);
