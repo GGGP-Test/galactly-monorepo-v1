@@ -1,22 +1,34 @@
+// /Backend/src/index.ts
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { randomUUID } from 'crypto';
 
 /**
- * Galactly API bootstrap (minimal, self-contained)
- * - Fixes 404s for /healthz and /presence/online
- * - Returns non-zero quotas for /api/v1/status
- * - Provides /api/v1/find-now to decrement quotas
- * - Mirrors routes under both / and /api/v1 prefixes
+ * Galactly API — self-contained dev-friendly server
+ * - DEV_UNLIMITED (default: true) forces large quotas so the UI never blocks
+ * - No DB required; in-memory state for quotas & presence
+ * - Mounts both /... and /api/v1/... to avoid path mismatches
  */
 
-const PORT = Number(process.env.PORT || 8787);
-const DEV_UNLIM =
-  String(process.env.DEV_UNLIM || '').toLowerCase() === 'true' ||
-  String(process.env.NODE_ENV || '').toLowerCase() === 'development';
+const app = express();
+app.set('trust proxy', 1);
+app.use(cors());
+app.use(express.json({ limit: '1mb' }));
 
-// --------- In-memory stores (ok for MVP) ----------
+// ----------------------- ENV & flags -----------------------
+function flag(name: string, def = false): boolean {
+  const v = String(process.env[name] ?? '').trim().toLowerCase();
+  if (!v) return def;
+  return ['1','true','yes','y','on'].includes(v);
+}
+const PORT = Number(process.env.PORT || 8787);
+
+// Default ON during build so you can test easily.
+// Turn OFF later by setting DEV_UNLIMITED=false in your service env.
+let DEV_UNLIMITED = flag('DEV_UNLIMITED', true);
+
+// ----------------------- Helpers -----------------------
 type Quota = {
   date: string;        // UTC YYYY-MM-DD
   findsUsed: number;
@@ -29,27 +41,16 @@ type UserState = {
   role?: string;
   plan: 'free'|'pro';
   quota: Quota;
+  verified?: boolean;    // for future gating
 };
 
 const users = new Map<string, UserState>();
 
-// presence: heartbeat registry
-type Beat = { last: number; role?: string };
-const presence = new Map<string, Beat>();
-const PRESENCE_TTL = 30_000; // 30s online window
-setInterval(() => {
-  const cutoff = Date.now() - PRESENCE_TTL;
-  for (const [k, v] of presence) if (v.last < cutoff) presence.delete(k);
-}, 5_000);
-
-// ---------- helpers ----------
 function todayUTC(): string {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
+  return new Date().toISOString().slice(0, 10);
 }
 function getUID(req: Request): string {
-  // sticky uid from header or generate a session one
-  const h = (req.header('x-galactly-user') || '').trim();
+  const h = (req.header('x-galactly-user') || req.header('x-user-id') || '').trim();
   return h || `u-${randomUUID().replace(/-/g, '').slice(0, 12)}`;
 }
 function ensureUser(uid: string): UserState {
@@ -63,168 +64,190 @@ function ensureUser(uid: string): UserState {
         date: now,
         findsUsed: 0,
         revealsUsed: 0,
-        findsLimit: DEV_UNLIM ? 9999 : Number(process.env.FREE_FINDS_PER_DAY || 2),
-        revealsLimit: DEV_UNLIM ? 9999 : Number(process.env.FREE_REVEALS_PER_DAY || 2),
+        findsLimit: DEV_UNLIMITED ? 999 : Number(process.env.FREE_FINDS_PER_DAY || 2),
+        revealsLimit: DEV_UNLIMITED ? 999 : Number(process.env.FREE_REVEALS_PER_DAY || 2),
       },
+      verified: false
     };
     users.set(uid, s);
   }
-  // reset quota at UTC midnight
+  // rollover at UTC midnight
   if (s.quota.date !== now) {
     s.quota = {
       date: now,
       findsUsed: 0,
       revealsUsed: 0,
       findsLimit: s.plan === 'pro'
-        ? Number(process.env.PRO_FINDS_PER_DAY || 50)
-        : (DEV_UNLIM ? 9999 : Number(process.env.FREE_FINDS_PER_DAY || 2)),
+        ? (DEV_UNLIMITED ? 999 : Number(process.env.PRO_FINDS_PER_DAY || 50))
+        : (DEV_UNLIMITED ? 999 : Number(process.env.FREE_FINDS_PER_DAY || 2)),
       revealsLimit: s.plan === 'pro'
-        ? Number(process.env.PRO_REVEALS_PER_DAY || 100)
-        : (DEV_UNLIM ? 9999 : Number(process.env.FREE_REVEALS_PER_DAY || 2)),
+        ? (DEV_UNLIMITED ? 999 : Number(process.env.PRO_REVEALS_PER_DAY || 100))
+        : (DEV_UNLIMITED ? 999 : Number(process.env.FREE_REVEALS_PER_DAY || 2)),
     };
   }
   return s;
 }
-function searchesLeft(s: UserState): number {
+function searchesLeft(s: UserState) {
   return Math.max(0, s.quota.findsLimit - s.quota.findsUsed);
 }
-function revealsLeft(s: UserState): number {
+function revealsLeft(s: UserState) {
   return Math.max(0, s.quota.revealsLimit - s.quota.revealsUsed);
 }
+function unlimitedFromReq(req: Request) {
+  // env OR header OR query can flip unlim for testing
+  return DEV_UNLIMITED ||
+    ['true','1','yes','on'].includes(String(req.header('x-dev-unlim') || '').toLowerCase()) ||
+    ['true','1','yes','on'].includes(String(req.query.dev || '').toLowerCase());
+}
 
-// ---------- express ----------
-const app = express();
-app.set('trust proxy', 1);
-app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+// ----------------------- Presence (in-memory) -----------------------
+type Beat = { last: number; role?: string };
+const presence = new Map<string, Beat>();
+const PRESENCE_TTL = 30_000;
 
-// route registry for /__routes
-const ROUTES: Array<{ method: string; path: string }> = [];
-function reg(method: string, path: string, handler: any) {
+setInterval(() => {
+  const cutoff = Date.now() - PRESENCE_TTL;
+  for (const [k,v] of presence) if (v.last < cutoff) presence.delete(k);
+}, 5_000);
+
+// mount helper to register and also mirror under /api/v1
+type Method = 'get'|'post'|'put'|'delete';
+const ROUTES: Array<{ method: Method; path: string }> = [];
+function reg(method: Method, path: string, handler: any) {
   ROUTES.push({ method, path });
-  // @ts-ignore
-  app[method](path, handler);
+  (app as any)[method](path, handler);
 }
-function mirror(method: string, path: string, handler: any) {
-  reg(method, path, handler);
-  // also under /api/v1
+function mirror(method: Method, path: string, handler: any) {
   const p = path.startsWith('/') ? path : `/${path}`;
-  const api = '/api/v1' + p;
-  if (api !== path) reg(method, api, handler);
+  reg(method, p, handler);
+  reg(method, `/api/v1${p}`, handler);
 }
 
-// ---------- health ----------
-mirror('get', '/healthz', (_req: Request, res: Response) => {
-  res.json({ ok: true, ts: Date.now() });
-});
-
-// ---------- root + routes ----------
-reg('get', '/', (_req, res) => {
-  res.json({ ok: true, name: 'Galactly API', version: '1', time: Date.now() });
-});
+// ----------------------- Health & debug -----------------------
+mirror('get', '/healthz', (_req, res) => res.json({ ok: true, ts: Date.now() }));
+reg('get', '/', (_req, res) => res.json({ ok: true, name: 'Galactly API', version: 'dev', time: Date.now() }));
 reg('get', '/__routes', (_req, res) => res.json({ ok: true, routes: ROUTES }));
 
-// ---------- presence ----------
-mirror('get', '/presence/online', (req: Request, res: Response) => {
-  // return counts by role + total
-  const total = presence.size;
-  let suppliers = 0, distributors = 0, buyers = 0;
+// ----------------------- Presence routes -----------------------
+mirror('get', '/presence/online', (_req, res) => {
+  let suppliers=0, distributors=0, buyers=0;
   for (const v of presence.values()) {
     const r = (v.role || '').toLowerCase();
     if (r === 'supplier') suppliers++;
-    else if (r === 'distributor' || r === 'wholesaler') distributors++;
+    else if (r==='distributor'||r==='wholesaler') distributors++;
     else if (r === 'buyer') buyers++;
   }
-  res.json({ ok: true, total, suppliers, distributors, buyers });
+  res.json({ ok:true, total: presence.size, suppliers, distributors, buyers });
 });
-
-mirror('post', '/presence/beat', (req: Request, res: Response) => {
+mirror('post', '/presence/beat', (req, res) => {
   const uid = getUID(req);
   const role = String((req.body?.role || '')).toLowerCase();
   presence.set(uid, { last: Date.now(), role: role || undefined });
   res.json({ ok: true });
 });
 
-// ---------- status (quotas + plan) ----------
-mirror('get', '/api/v1/status', (req: Request, res: Response) => {
+// ----------------------- Status / gate / vault -----------------------
+mirror('get', '/status', (req: Request, res: Response) => {
   const uid = getUID(req);
   const s = ensureUser(uid);
+  const devUnlim = unlimitedFromReq(req);
+  // reflect dev flag in response
   res.json({
     ok: true,
     uid,
     plan: s.plan,
+    verified: !!s.verified,
     quota: {
       date: s.quota.date,
       findsUsed: s.quota.findsUsed,
       revealsUsed: s.quota.revealsUsed,
-      findsLeft: searchesLeft(s),
-      revealsLeft: revealsLeft(s),
+      findsLeft: devUnlim ? 999 : searchesLeft(s),
+      revealsLeft: devUnlim ? 999 : revealsLeft(s),
     },
-    devUnlimited: DEV_UNLIM,
+    devUnlimited: devUnlim
   });
 });
 
-// ---------- gate (sign-up / upsert) ----------
-mirror('post', '/api/v1/gate', (req: Request, res: Response) => {
+mirror('post', '/gate', (req: Request, res: Response) => {
   const uid = getUID(req);
-  const { email, role, website } = req.body || {};
   const s = ensureUser(uid);
+  const { email, role, website } = req.body || {};
   if (role && typeof role === 'string') s.role = role;
-  // If a website is provided, you could snapshot its domain here
-  res.json({ ok: true, uid, plan: s.plan });
+  // If you want to mark verified when email domain == website domain, do it here later.
+  res.json({ ok: true, uid, plan: s.plan, role: s.role || null, website: website || null });
 });
 
-// ---------- vault upsert minimal (so Train Your AI can save) ----------
-mirror('post', '/api/v1/vault', (req: Request, res: Response) => {
+mirror('post', '/vault', (req: Request, res: Response) => {
   const uid = getUID(req);
   ensureUser(uid);
-  // Accept and ack – storage is optional for now
+  // Accept & ack; can store later.
   res.json({ ok: true, uid });
 });
 
-// ---------- find-now (decrement daily finds unless DEV_UNLIM) ----------
-mirror('post', '/api/v1/find-now', (req: Request, res: Response) => {
+// ----------------------- Find / Reveal (quota-aware, but dev-friendly) -----------------------
+mirror('post', '/find-now', (req: Request, res: Response) => {
   const uid = getUID(req);
   const s = ensureUser(uid);
+  const unlim = unlimitedFromReq(req);
 
-  // dev override
-  const devHeader = String(req.header('x-dev-unlim') || '').toLowerCase() === 'true';
-  const devParam = String(req.query.dev || '').toLowerCase() === '1';
-  const unlimited = DEV_UNLIM || devHeader || devParam;
-
-  if (!unlimited && searchesLeft(s) <= 0) {
-    return res.status(429).json({ ok: false, error: 'quota', message: 'Daily search quota reached' });
+  if (!unlim && searchesLeft(s) <= 0) {
+    return res.status(429).json({ ok:false, error:'quota', message:'Daily search quota reached' });
   }
-  if (!unlimited) s.quota.findsUsed++;
+  if (!unlim) s.quota.findsUsed++;
 
-  // Immediately respond with synthetic counts so UI can show progress
-  res.json({ ok: true, created: 7, queued: 0 });
+  // kick a synthetic preview job id if you want to poll or SSE
+  res.json({ ok:true, created: 7, jobId: `job_${Date.now()}` });
 });
 
-// ---------- reveals mock ----------
-mirror('post', '/api/v1/reveal', (req: Request, res: Response) => {
+mirror('post', '/reveal', (req: Request, res: Response) => {
   const uid = getUID(req);
   const s = ensureUser(uid);
+  const unlim = unlimitedFromReq(req);
 
-  const unlimited =
-    DEV_UNLIM ||
-    String(req.header('x-dev-unlim') || '').toLowerCase() === 'true' ||
-    String(req.query.dev || '').toLowerCase() === '1';
-
-  if (!unlimited && revealsLeft(s) <= 0) {
-    return res.status(429).json({ ok: false, error: 'quota', message: 'Reveal quota reached' });
+  if (!unlim && revealsLeft(s) <= 0) {
+    return res.status(429).json({ ok:false, error:'quota', message:'Reveal quota reached' });
   }
-  if (!unlimited) s.quota.revealsUsed++;
-
-  res.json({ ok: true, revealed: true });
+  if (!unlim) s.quota.revealsUsed++;
+  res.json({ ok:true, revealed:true });
 });
 
-// ---------- 404 fallback ----------
-app.use((_req, res) => {
-  res.status(404).json({ ok: false, error: 'not_found' });
+// ----------------------- Simple SSE for Signals Preview -----------------------
+mirror('get', '/progress.sse', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const send = (obj: any) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+  // few synthetic steps so UI can animate
+  let i = 0;
+  const steps = [
+    { lane: 'free', category:'Demand',    probe:'ad libs',     filter:'packaging terms', evidence:'spend proxy', conclusion:'corrugate usage' },
+    { lane: 'free', category:'Product',   probe:'PDP deltas',  filter:'size packs',      evidence:'variants ↑',  conclusion:'SKU restock'   },
+    { lane: 'pro',  category:'Timing',    probe:'promo cad.',  filter:'price drops',     evidence:'retailer feed', conclusion:'queue window' },
+    { lane: 'pro',  category:'Reviews',   probe:'complaints',  filter:'pack lexicon',    evidence:'“box crushed”', conclusion:'switch risk'  }
+  ];
+
+  const t = setInterval(() => {
+    const s = steps[i % steps.length];
+    const freeDone = Math.min(60, i * 2 + 3);
+    const freeTotal = 1126;
+    const proDone = Math.min(840, i * 14 + 20);
+    const proTotal = 1126;
+    send({ type:'step', lane:s.lane, category:s.category, probe:s.probe, filter:s.filter, evidence:s.evidence, conclusion:s.conclusion, freeDone, freeTotal, proDone, proTotal });
+    i++;
+    if (i > 32) {
+      send({ type:'halt' }); // free lane halts early
+      clearInterval(t);
+      res.end();
+    }
+  }, 900);
+  req.on('close', () => { clearInterval(t); });
 });
 
-// ---------- start ----------
+// ----------------------- 404 -----------------------
+app.use((_req, res) => res.status(404).json({ ok:false, error:'not_found' }));
+
+// ----------------------- Start -----------------------
 app.listen(PORT, () => {
-  console.log(`[api] listening on :${PORT} (dev-unlim=${DEV_UNLIM})`);
+  console.log(`[api] listening on :${PORT}  DEV_UNLIMITED=${DEV_UNLIMITED}`);
 });
