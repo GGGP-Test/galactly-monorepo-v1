@@ -2,423 +2,199 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Live feed</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Galactly • Free Panel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#eaf0ff; --mut:#a9b6cc; --line:#1f2836; --card:#0e1420; --panel:#0b111b; --pill:#101827;
-  --accent:#87f6d7; --accent2:#6eb1ff; --warn:#ffcc66; --bad:#ff8c8c; --ok:#8ff0c8;
+  --ink:#eaf0ff; --mut:#a6b2c9; --line:#223047; --panel:#0b121d; --card:#0f1624; --pill:#0f1726; --ok:#89ffd9; --warn:#ffd78a;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0; color:var(--ink); background:radial-gradient(1400px 900px at 75% -10%,rgba(50,80,140,.25),transparent 40%),linear-gradient(180deg,#0a0e16,#060811 60%); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-a{color:#cfe2ff; text-decoration:none}
-small, .mut{color:var(--mut)}
-.badge{display:inline-flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid var(--line); border-radius:999px; background:#0c1322; color:#cfe2ff; font-size:12px}
-.badge .dot{width:8px;height:8px;border-radius:50%;background:#43e5b7;box-shadow:0 0 12px rgba(67,229,183,.7)}
-.badge .bad{background:#ff6b6b; box-shadow:0 0 12px rgba(255,107,107,.7)}
-.wrap{max-width:1250px; margin:0 auto; padding:18px}
-header{height:58px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); padding:0 12px; background:linear-gradient(180deg,#0b111b,#0a0e15)}
-.brand{display:flex;gap:10px;align-items:center; font-weight:800}
-.brand svg{width:22px;height:22px}
-.host{opacity:.8; font-size:12px}
-.grid{display:grid; grid-template-columns:minmax(520px, 55%) 1fr; gap:16px; margin-top:12px}
-@media (max-width:1100px){ .grid{grid-template-columns:1fr} }
-
-/* Left: Live */
-.card{background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden}
-.head{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line); font-weight:700}
-.section{padding:12px}
-.kv{font-size:12px; color:#cfe2ff}
-.subtle{opacity:.7}
-
-.liveShell{position:relative; height:460px; background:radial-gradient(560px 360px at 50% 40%, rgba(130,160,240,.11), transparent 65%)}
-#nsCanvas{position:absolute; inset:16px 16px 78px 16px; width:calc(100% - 32px); height:calc(100% - 94px); display:block}
-.liveTicker{position:absolute; left:12px; bottom:10px}
-.kbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
-.kchip{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); background:#0c1423; border-radius:999px; padding:7px 10px; color:#cfe2ff; font-size:12px}
-.kchip b{color:#fff}
-
-/* verify + vault banners */
-.banner{border:1px dashed #2a3750; background:#0d1526; padding:12px; border-radius:12px; display:flex; align-items:center; justify-content:space-between; margin-top:12px}
-.btn{border-radius:12px; padding:10px 14px; border:1px solid var(--line); background:#101a2d; color:#eaf0ff; font-weight:700; cursor:pointer}
-.btn.primary{background:linear-gradient(90deg,#fff,#e5efff); color:#0b111b; border-color:transparent}
-.btn.ghost{background:#0f1626}
-.btn.small{padding:7px 10px; font-size:12px}
-
-/* Right: Train + Preview + BYLI */
-.input, textarea{width:100%; background:#0f1420; border:1px solid var(--line); color:#eaf0ff; border-radius:10px; padding:10px 12px; font:500 13px/1.2 Inter}
-.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.hint{font-size:12px; color:#cfe2ff; opacity:.85}
-.row{display:flex; align-items:center; gap:10px}
-.lock{opacity:.65}
-.lock:before{content:"🔒"; margin-right:6px}
-.oktext{color:var(--ok)}
-.warn{color:var(--warn)}
-.err{color:#ff8c8c}
-
-/* Signals Preview */
-.preview{min-height:240px; background:#0c121e}
-.pItem{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-top:1px solid var(--line); font-size:13px}
-.pPath{opacity:.9}
-.pCounts{font-weight:700}
-.pLane{display:flex; gap:6px; align-items:center}
-.pFree{opacity:.95}
-.pPro{opacity:.95}
-.badgelite{border:1px solid var(--line); padding:3px 8px; border-radius:999px; font-size:12px; background:#0f1626}
-
-/* My Targets card (Pro only, upsell) */
-.targets{background:#0b121f}
-
-/* company summary pill */
-.summary{margin-top:8px; font-size:12px; color:#cfe2ff; background:#0d1628; border:1px solid var(--line); padding:10px 12px; border-radius:10px}
-
+body{margin:0; font:500 14px Inter,system-ui; color:var(--ink);
+  background: radial-gradient(1200px 700px at 70% -10%, rgba(70,110,180,.22), transparent 40%), #070b12;}
+.wrap{max-width:1300px;margin:0 auto;padding:16px}
+.header{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:8px}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--pill);color:#cfe0ff}
+.badge .dot{width:8px;height:8px;border-radius:50%;background:#39e2b1;box-shadow:0 0 10px rgba(57,226,177,.7)}
+.kv{color:#cfe0ff;opacity:.85}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+@media (max-width:1100px){.grid{grid-template-columns:1fr;}}
+/* left: live */
+.live{height:520px;display:flex;flex-direction:column}
+.live-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.live-canvas{flex:1;border:1px solid var(--line);border-radius:14px;background:radial-gradient(320px 220px at 50% 40%, rgba(220,236,255,.06), transparent 60%), #0a111b;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.neutron{width:280px;height:280px;border-radius:50%;background:radial-gradient(circle at 50% 50%, #fff, #9fb6ff 45%, rgba(159,182,255,.06) 46%, transparent 48%), radial-gradient(circle, rgba(200,230,255,.25) 30%, transparent 31%);
+  box-shadow:0 0 40px rgba(180,210,255,.18) inset;position:relative}
+.neutron:before,.neutron:after{content:"";position:absolute;inset:-2px;border-radius:50%;border:1px dashed rgba(200,220,255,.15);animation:spin 24s linear infinite}
+.neutron:after{inset:-24px;animation-duration:38s;opacity:.7}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status-pill{position:absolute;left:12px;bottom:12px;background:rgba(7,12,20,.75);border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:#cfe0ff;backdrop-filter:blur(6px)}
+/* right: form + preview */
+.h{font:700 14px/1.1 Inter;letter-spacing:.02em}
+.row{display:flex;gap:8px;align-items:center;margin:8px 0}
+.lbl{width:120px;color:#cfe0ff;opacity:.85}
+.input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:10px 12px}
+.btn{border-radius:12px;padding:10px 14px;border:1px solid var(--line);background:var(--pill);color:var(--ink);font-weight:700;cursor:pointer}
+.btn.primary{background:linear-gradient(90deg,#fff,#e6f0ff);color:#0a0e15;border-color:transparent}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;padding-top:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:rgba(10,16,28,.85)}
+.lock{font-size:12px;color:#97a8c7}
+.small{font-size:12px;opacity:.85}
+hr.sep{height:1px;border:0;background:linear-gradient(90deg,transparent,#25314a,transparent);margin:10px 0}
 </style>
 </head>
 <body>
-<!-- must come first -->
-<script src="./api-base.js"></script>
-
-<header class="wrap">
-  <div class="brand">
-    <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" stroke="url(#g)" stroke-width="2" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
-    <div>Galactly</div>
-    <div class="host mut" id="apiHost"></div>
-  </div>
-  <div class="badge" id="presence"><span class="dot"></span><span id="presenceTxt">0 online</span></div>
-</header>
-
-<div class="wrap grid">
-  <!-- LEFT: Live -->
-  <div class="card">
-    <div class="head">
-      <div>Live results</div>
-      <div class="kv" id="quotaTop">— searches left • — reveals left</div>
-    </div>
-    <div class="liveShell">
-      <canvas id="nsCanvas" aria-hidden="true"></canvas>
-      <div class="liveTicker">
-        <div class="kbar">
-          <div class="kchip"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:#47e2b5;box-shadow:0 0 10px rgba(71,226,181,.7)"></span> <span id="engine">engine: starting…</span></div>
-          <div class="kchip subtle" id="statusLine">probing demand → scanning procurement → reading reviews…</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- verify banner (only for unverified or email/site mismatch) -->
-    <div class="section">
-      <div class="banner" id="verifyBanner" style="display:none">
-        <div>
-          <div><b>Verify your company to <span class="oktext">unlock free reveals</span>.</b> Use a business email that matches your website domain.</div>
-        </div>
-        <button class="btn small" id="verifyBtn">Verify now</button>
-      </div>
-      <!-- vault banner always visible until user has a vault -->
-      <div class="banner" id="vaultBanner">
-        <div><b>Create your free Vault</b> to save & revisit leads.</div>
-        <button class="btn small" id="vaultBtn">Sign up</button>
-      </div>
-      <div id="companySummary" class="summary" style="display:none"></div>
-    </div>
+<div class="wrap">
+  <div class="header">
+    <div class="badge"><span class="dot"></span><span id="presenceTxt">0 online</span></div>
+    <div class="kv" id="quotaTopRight">— searches left • — reveals left</div>
   </div>
 
-  <!-- RIGHT: Train + Preview + BYLI -->
-  <div class="card">
-    <div class="head">
-      <div>Train your AI</div>
-      <div class="kv"><span id="quotaSide">— searches left • — reveals left</span></div>
-    </div>
-    <div class="section">
-      <div class="grid2" style="margin-bottom:8px">
-        <div>
-          <div class="hint">Website</div>
-          <input id="f_site" class="input" placeholder="yourcompany.com">
-        </div>
-        <div>
-          <div class="hint">Regions</div>
-          <input id="f_regions" class="input" placeholder="US, CA">
-        </div>
+  <div class="grid">
+    <!-- LEFT: Live -->
+    <div class="box live">
+      <div class="live-head">
+        <div class="h">Live results</div>
+        <div class="kv" id="quotaTopLeft">— searches left • — reveals left</div>
       </div>
-      <div>
-        <div class="hint">Industries</div>
-        <input id="f_industries" class="input" placeholder="beverage, confectionery">
+      <div class="live-canvas">
+        <div class="neutron" aria-hidden="true"></div>
+        <div class="status-pill" id="enginePill"><span style="color:#89ffd9">●</span> engine: ready</div>
       </div>
-      <div style="margin-top:8px">
-        <div class="hint">Seed buyers (domains)</div>
-        <input id="f_buyers" class="input" placeholder="brand1.com, brand2.com">
-      </div>
-      <div style="margin-top:8px">
-        <div class="hint">Describe ideal customers</div>
-        <textarea id="f_desc" class="input" rows="3" placeholder="materials, order sizes, channels, exclusions"></textarea>
-      </div>
-      <div class="row" style="margin-top:10px">
-        <button class="btn" id="saveBtn">Save</button>
-        <button class="btn primary" id="findBtn">Find now</button>
-        <div class="mut" id="saveMsg"></div>
-      </div>
-      <div class="hint" style="margin-top:6px">Loaded from onboarding. Tweak & run.</div>
+      <div style="margin-top:10px" class="small">Verify your company to <b>unlock free reveals</b>. Use a business email that matches your website domain.</div>
     </div>
 
-    <div class="head">
-      <div>Signals Preview (report)</div>
-      <div class="kv">Free <b id="freeCount">0/0</b> • Pro <b id="proCount">0/0</b> <span id="proLock">🔒</span></div>
-    </div>
-    <div class="preview" id="previewBox">
-      <!-- lines appended here -->
-    </div>
+    <!-- RIGHT: Train your AI -->
+    <div class="box">
+      <div class="h" style="margin-bottom:4px">Train your AI</div>
 
-    <div class="head">
-      <div>My Targets (BYLI)</div>
-      <div class="kv">Pro only</div>
-    </div>
-    <div class="section targets">
-      <div class="row">
-        <input class="input lock" readonly placeholder="Upload targets (CSV/XLSX) or paste domains — Pro gets this free">
-        <button class="btn small lock" id="byliUpsell">See Pro plans</button>
+      <div class="row"><div class="lbl">Website</div><input id="f_site" class="input" placeholder="yourcompany.com"></div>
+      <div class="row"><div class="lbl">Regions</div><input id="f_regions" class="input" placeholder="US, CA"></div>
+      <div class="row"><div class="lbl">Industries</div><input id="f_inds" class="input" placeholder="beverage, confectionery"></div>
+      <div class="row"><div class="lbl">Seed buyers</div><input id="f_buyers" class="input" placeholder="brand1.com, brand2.com"></div>
+      <div class="row"><div class="lbl">Ideal customers</div><input id="f_desc" class="input" placeholder="materials, order sizes, channels, exclusions"></div>
+
+      <div class="row" style="justify-content:flex-end">
+        <button class="btn" id="btnSave">Save</button>
+        <button class="btn primary" id="btnFind">Find now</button>
       </div>
-      <div class="hint" style="margin-top:6px">We watch your list for packaging-specific signals and forecast queue windows. Upload up to 100k+ targets on Pro.</div>
+
+      <div class="small">Loaded from onboarding. Tweak &amp; run.</div>
+
+      <hr class="sep">
+
+      <div class="h" style="margin-bottom:6px">Signals Preview (report)</div>
+      <div class="kpis">
+        <div class="chip">Free <span class="lock" id="freeCount">0/0</span></div>
+        <div class="chip">Pro <span class="lock" id="proCount">0/0</span> <span class="lock">🔒</span></div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-/* ---------- helpers ---------- */
-const $ = (id) => document.getElementById(id);
-function fmtHost(h){ try{const u=new URL(h); return u.hostname;}catch{return h;} }
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-function bareHost(s){ return String(s||'').replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase(); }
-function emailDomain(email){ const m=String(email||'').toLowerCase().match(/^[^@]+@([^@]+)$/); return m?m[1].replace(/^www\./,'') : ''; }
-function domainsMatch(a,b){ if(!a||!b) return false; if(a===b) return true; return a.endsWith('.'+b); }
+/* ---------------- API bootstrap with sticky UID ---------------- */
+(function(){
+  const uidKey = 'gal_uid';
+  let UID = localStorage.getItem(uidKey);
+  if(!UID){ UID = 'u-' + Math.random().toString(36).slice(2,12); localStorage.setItem(uidKey, UID); }
 
-/* Packaging roles/site sanity (client-side coarse) */
-const PACKAGING_LEX = {
-  vendor:['packag','corrugat','carton','box','label','shrink','film','tray','case pack','mailer','pouch','wrap','clamshell','bottle','cap','lid','jar'],
-  supplier:['converter','manufacturer','factory','extrusion','printing','die cut','co-packer','distributor','wholesale','logistics'],
-  buyer:['coffee','beverage','snack','cosmetic','supplement','pet','cleaning','hardware','retail','apparel','ecommerce','brand']
-};
-function quickRoleCheck(role, site, desc){
-  const h = (site||'').toLowerCase() + ' ' + (desc||'').toLowerCase();
-  let hit = 0;
-  if(role==='supplier' || role==='distributor'){ PACKAGING_LEX.supplier.forEach(k=>{ if(h.includes(k)) hit++; }); }
-  else if(role==='buyer'){ PACKAGING_LEX.buyer.forEach(k=>{ if(h.includes(k)) hit++; }); }
-  else{ PACKAGING_LEX.vendor.forEach(k=>{ if(h.includes(k)) hit++; }); }
-  return hit>=1; // coarse allow; server still guards
-}
+  // API base: ?api= override, else same origin
+  const qs = new URLSearchParams(location.search);
+  const apiFromQS = qs.get('api');
+  const BASE = (apiFromQS ? (apiFromQS.replace(/\/$/,'') ) : location.origin) + '/api/v1';
 
-/* AI summary (very short) */
-function summarizeCompany(site, inds, desc){
-  const host = bareHost(site);
-  const seg = (inds||'').split(',').map(s=>s.trim()).filter(Boolean).slice(0,2).join(' & ');
-  const what = desc ? desc.split(',')[0].trim() : '';
-  return `We help ${seg||'consumer & CPG'} brands source packaging. Focus: ${what||'corrugate & films'}. Site: ${host}`;
-}
+  async function api(path, opt){
+    const o = opt || {};
+    const headers = new Headers(o.headers || {});
+    headers.set('x-galactly-user', UID);
+    // dev-unlimited toggle: set localStorage.gal_dev_unlim="1" for testing
+    if(localStorage.getItem('gal_dev_unlim') === '1') headers.set('x-dev-unlim','true');
+    const res = await fetch(BASE + path, { ...o, headers, credentials:'include' });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return res.json();
+  }
+  window.__API__ = { BASE, UID, api };
+  console.log('[API] base =', BASE, 'uid =', UID, 'dev-unlim =', localStorage.getItem('gal_dev_unlim')==='1');
+})();
 
-/* API + presence */
-$('apiHost').textContent = fmtHost(API.base);
-
+/* ---------------- Presence badge ---------------- */
 async function loadPresence(){
   try{
-    const r = await fetch('/presence/online');
-    const j = await r.json();
-    $('presenceTxt').textContent = (j.total||0)+' online';
-    $('presence').querySelector('.dot').classList.toggle('bad', !j.ok);
-  }catch{
-    $('presenceTxt').textContent = 'offline';
-    $('presence').querySelector('.dot').classList.add('bad');
-  }
+    const j = await fetch('/api/v1/presence/online').then(r=>r.ok?r.json():Promise.reject());
+    document.getElementById('presenceTxt').textContent = (j.total||0)+' online';
+  }catch{ /* ignore */ }
 }
-setInterval(loadPresence, 12000); loadPresence();
+setInterval(loadPresence, 8000); loadPresence();
 
-/* ---------- status boot ---------- */
-let STATE = {
-  plan:'free', verified:false, searchesLeft:0, revealsLeft:0, engine:'idle', org:null, vault:false
-};
+/* ---------------- Quotas (status) ---------------- */
+let STATUS = null;
+function renderQuotas(){
+  const L = document.getElementById('quotaTopLeft');
+  const R = document.getElementById('quotaTopRight');
+  if(!STATUS){ L.textContent = '— searches left • — reveals left'; R.textContent = L.textContent; return; }
+  const inf = (STATUS.devUnlimited? '∞':'');
+  const finds = STATUS.quota?.findsLeft ?? 0;
+  const reveals = STATUS.quota?.revealsLeft ?? 0;
+  const txt = `${inf || finds} searches left • ${inf || reveals} reveals left`;
+  L.textContent = txt;
+  R.textContent = txt;
+}
 async function loadStatus(){
   try{
-    const r = await fetch('/api/v1/status');
-    const j = await r.json();
-    STATE = Object.assign(STATE, j||{});
-    $('engine').textContent = `engine: ${STATE.engine||'ready'}`;
-    const qtxt = `${STATE.searchesLeft} searches left • ${STATE.revealsLeft} reveals left`;
-    $('quotaTop').textContent = qtxt; $('quotaSide').textContent = qtxt;
-
-    // banners
-    $('verifyBanner').style.display = (STATE.verified? 'none':'flex');
-    $('vaultBanner').style.display  = (STATE.vault? 'none':'flex');
-
-    // summary visible for verified
-    if(STATE.verified){
-      const s = localStorage.getItem('onb_vendor') || $('f_site').value;
-      const inds = $('f_industries').value;
-      const desc = $('f_desc').value;
-      $('companySummary').textContent = summarizeCompany(s,inds,desc);
-      $('companySummary').style.display='block';
-    }else{
-      $('companySummary').style.display='none';
-    }
-
-    // conservative: only show "Daily search quota reached" when status explicitly 0 and not dev
-    $('statusLine').textContent = (STATE.searchesLeft>0 || API.devUnlim) ? 'engine: ready' : 'Daily search quota reached.';
+    const j = await __API__.api('/status');
+    STATUS = j;
   }catch(e){
-    $('quotaTop').textContent='— searches left • — reveals left';
-    $('quotaSide').textContent='— searches left • — reveals left';
-    $('statusLine').textContent='Connecting to engine…';
+    STATUS = null;
   }
+  renderQuotas();
 }
+setInterval(loadStatus, 10000);
 loadStatus();
 
-/* ---------- prefill from onboarding ---------- */
-(function prefill(){
-  const site = localStorage.getItem('onb_vendor') || '';
-  const role = localStorage.getItem('onb_role') || 'supplier';
-  const inds = localStorage.getItem('onb_industries') || '';
-  const regs = localStorage.getItem('onb_regions') || '';
-  const buyers = localStorage.getItem('onb_buyers') || '';
-  const desc = localStorage.getItem('onb_desc') || '';
+/* ---------------- Train your AI – Save / Find ---------------- */
+function val(id){ return (document.getElementById(id).value||'').trim(); }
 
-  if(site) $('f_site').value = site;
-  if(inds) $('f_industries').value = inds;
-  if(regs) $('f_regions').value = regs;
-  if(buyers) $('f_buyers').value = buyers;
-  if(desc) $('f_desc').value = desc;
-
-  // keep role for gating checks
-  STATE.role = role;
-})();
-
-/* ---------- Save + Find now ---------- */
-$('saveBtn').onclick = async ()=>{
-  const site=$('f_site').value.trim(), inds=$('f_industries').value.trim(), regs=$('f_regions').value.trim(),
-        buyers=$('f_buyers').value.trim(), desc=$('f_desc').value.trim();
-  if(!site){ $('saveMsg').textContent='Enter your website.'; return; }
-
-  // light client-side guard; server still enforces
-  if(!quickRoleCheck(STATE.role||'supplier', site, desc)){
-    $('saveMsg').innerHTML = '<span class="warn">This site/role may not be packaging-fit. Update details or verify to continue.</span>';
-    return;
-  }
-  $('saveMsg').textContent='Saving…';
+document.getElementById('btnSave').onclick = async ()=>{
   try{
-    await fetch('/api/v1/vault',{method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify({ role: STATE.role||'supplier', traits: {
-        vendorDomain: bareHost(site),
-        industries: inds? inds.split(',').map(s=>s.trim()):[],
-        regions: regs? regs.split(',').map(s=>s.trim()):[],
-        buyers: buyers? buyers.split(',').map(s=>s.trim()):[],
-        notes: desc||null
-      } })
-    });
-    $('saveMsg').textContent='Saved.';
+    await __API__.api('/vault',{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({
+      website: val('f_site'), industries: val('f_inds'), regions: val('f_regions'),
+      buyers: val('f_buyers'), notes: val('f_desc')
+    }) });
+  }catch{}
+};
+
+document.getElementById('btnFind').onclick = async ()=>{
+  try{
+    // create a presence beat so your badge updates while user clicks
+    fetch('/api/v1/presence/beat',{ method:'POST', headers:{'content-type':'application/json','x-galactly-user': __API__.UID }, body: JSON.stringify({ role:'supplier' }) });
+    const j = await __API__.api('/find-now',{ method:'POST', headers:{'content-type':'application/json'} });
+    // decrement reflected in next status poll; force refresh now
     loadStatus();
-  }catch{
-    $('saveMsg').innerHTML='<span class="err">Save failed.</span>';
+  }catch(e){
+    // if quota, show subtle nudge
+    alert('Daily search quota reached for your plan.');
   }
 };
 
-$('findBtn').onclick = async ()=>{
-  // quota guards
-  if(!(API.devUnlim) && STATE.searchesLeft<=0){
-    $('statusLine').textContent='Daily search quota reached.';
-    return;
-  }
-  $('statusLine').textContent='probing demand → scanning procurement → reading reviews…';
-  try{
-    const r = await fetch('/api/v1/find-now',{method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify({ site: $('f_site').value.trim() })
-    });
-    const j = await r.json();
-    if(!j || !j.ok){ $('statusLine').textContent='Engine busy. Try again.'; return; }
-    // after kick, start progress stream
-    startPreviewStream();
-    loadStatus();
-  }catch{ $('statusLine').textContent='Engine error.'; }
-};
-
-/* ---------- banners actions ---------- */
-$('verifyBtn').onclick = ()=> { location.href = './index.html#onboarding'; };
-$('vaultBtn').onclick  = ()=> { location.href = './index.html#onboarding'; };
-$('byliUpsell').onclick= ()=> { location.href = './index.html#pro'; };
-
-/* ---------- Signals Preview (SSE) ---------- */
-let evtSrc=null;
-function addPreviewLine({lane, category, path, freeDone, freeTotal, proDone, proTotal}){
-  const row = document.createElement('div');
-  row.className='pItem';
-  row.innerHTML = `
-    <div class="pLane"><span class="badgelite">${lane}</span> <span class="pPath">${category} — ${path}</span></div>
-    <div class="pCounts">${freeDone}/${freeTotal} • <span class="${STATE.plan==='pro'?'':'lock'}">${proDone}/${proTotal}</span></div>
-  `;
-  $('previewBox').appendChild(row);
-  $('previewBox').scrollTop = $('previewBox').scrollHeight;
-
-  $('freeCount').textContent = `${freeDone}/${freeTotal}`;
-  $('proCount').textContent  = `${proDone}/${proTotal}`;
-}
-
-function startPreviewStream(){
-  if(evtSrc) try{ evtSrc.close(); }catch{}
-  $('previewBox').innerHTML='';
-  evtSrc = new EventSource(API.url('/api/v1/progress.sse'));
-  evtSrc.onmessage = (ev)=>{
-    try{
-      const j = JSON.parse(ev.data);
-      if(j.type==='step'){
-        addPreviewLine({
-          lane: j.lane==='free'?'Free':'Pro',
-          category: j.category || 'Signal',
-          path: `${j.probe||'Probe'} → ${j.filter||'Filter'} → ${j.evidence||'Evidence'} → ${j.conclusion||'Conclusion'}`,
-          freeDone: j.freeDone||0, freeTotal:j.freeTotal||0,
-          proDone: j.proDone||0, proTotal:j.proTotal||0
-        });
-      }
-      if(j.type==='done'){ evtSrc.close(); loadStatus(); }
-      if(j.type==='halt'){ evtSrc.close(); /* Free halts early with upsell payload */ }
-    }catch{}
-  };
-  evtSrc.onerror = ()=>{ try{evtSrc.close();}catch{} };
-}
-
-/* ---------- Neutron star animation (slow, minimal) ---------- */
+/* ---------------- Prefill from onboarding (if present) ---------------- */
 (function(){
-  const c=$('nsCanvas'); const ctx=c.getContext('2d');
-  let w=0,h=0,dpr=1,t=0;
-  function resize(){
-    dpr= Math.max(1, Math.min(2, window.devicePixelRatio||1));
-    w=c.clientWidth; h=c.clientHeight; c.width=Math.floor(w*dpr); c.height=Math.floor(h*dpr);
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-  }
-  new ResizeObserver(resize).observe(c); resize();
-  const dots = Array.from({length:120},()=>({a:Math.random()*Math.PI*2, r: 40+Math.random()*Math.min(w,h)/3, sp:0.0006+Math.random()*0.0008 }));
-  function frame(){
-    ctx.clearRect(0,0,w,h);
-    const cx=w/2, cy=h/2;
-    // rings
-    ctx.strokeStyle='rgba(170,200,255,0.12)'; ctx.lineWidth=1;
-    for(let i=1;i<=4;i++){ ctx.beginPath(); ctx.arc(cx,cy, i* (Math.min(w,h)/8), 0,Math.PI*2); ctx.stroke(); }
-    // core
-    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,60);
-    g.addColorStop(0,'rgba(255,255,255,0.95)');
-    g.addColorStop(1,'rgba(140,170,220,0)');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,30,0,Math.PI*2); ctx.fill();
-    // dots
-    ctx.fillStyle='rgba(255,255,255,0.8)';
-    dots.forEach(p=>{
-      p.a += p.sp; const x=cx+Math.cos(p.a)*p.r, y=cy+Math.sin(p.a)*p.r;
-      ctx.beginPath(); ctx.arc(x,y,1.1,0,Math.PI*2); ctx.fill();
-    });
-    t+=0.5;
-    requestAnimationFrame(frame);
-  }
-  frame();
+  function g(k){ return localStorage.getItem(k)||''; }
+  const site = g('onb_vendor') || g('onb_site') || '';
+  if(site) document.getElementById('f_site').value = site;
+  const inds = g('onb_industries') || '';
+  if(inds) document.getElementById('f_inds').value = inds;
+  const regs = g('onb_regions') || '';
+  if(regs) document.getElementById('f_regions').value = regs;
+  const buyers = g('onb_buyers') || '';
+  if(buyers) document.getElementById('f_buyers').value = buyers;
+  const desc = g('onb_desc') || '';
+  if(desc) document.getElementById('f_desc').value = desc;
 })();
-
-/* initial boot once DOM ready */
-document.addEventListener('DOMContentLoaded', async ()=>{
-  await loadStatus();
-});
 </script>
 </body>
 </html>
