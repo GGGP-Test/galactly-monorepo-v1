@@ -1,69 +1,157 @@
-import { Router, Request, Response } from 'express';
+// backend/src/routes/status.ts
+// Returns plan + quota + devUnlimited so the Free Panel can show searches/reveals left.
+// Wire up in index.ts with:  registerStatusRoutes(app, ctx)
 
-const router = Router();
+import type { Express, Request, Response } from 'express';
 
-/**
- * Simple helper to read a boolean env
- */
-function flag(name: string, def = false): boolean {
-  const v = String(process.env[name] ?? '').trim().toLowerCase();
-  if (!v) return def;
-  return ['1', 'true', 'yes', 'y', 'on'].includes(v);
+/** Context shared across routes (kept minimal) */
+export type Ctx = {
+  users?: Map<string, { plan?: 'free' | 'pro' | 'custom'; email?: string; domain?: string }>;
+  quotaStore?: Map<string, { date: string; findsUsed: number; revealsUsed: number }>;
+  limits?: {
+    freeFindsPerDay: number;
+    freeRevealsPerDay: number;
+    proFindsPerDay: number;
+    proRevealsPerDay: number;
+  };
+  /** If true, UI should display ∞ for quota (used for dev/testing). */
+  devUnlimited?: boolean;
+};
+
+/** Helpers */
+function todayUTC(): string {
+  // YYYY-MM-DD in UTC
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
 }
 
-/**
- * GET /api/v1/status
- * Always returns an OK object with plan + quota.
- * In dev (or when DEV_UNLIMITED=1/true) we report huge quota so the UI never blocks.
- */
-router.get('/status', (req: Request, res: Response) => {
-  // Identify caller (for logs; not strictly required)
-  const uid =
-    (req.header('x-galactly-user') || 'anon')
-      .toString()
-      .slice(0, 64);
+function ensureMaps(ctx: Ctx) {
+  if (!ctx.users) ctx.users = new Map();
+  if (!ctx.quotaStore) ctx.quotaStore = new Map();
+  if (!ctx.limits) {
+    ctx.limits = {
+      freeFindsPerDay: numFromEnv('FREE_FINDS_PER_DAY', 2),
+      freeRevealsPerDay: numFromEnv('FREE_REVEALS_PER_DAY', 2),
+      proFindsPerDay: numFromEnv('PRO_FINDS_PER_DAY', 100),
+      proRevealsPerDay: numFromEnv('PRO_REVEALS_PER_DAY', 100),
+    };
+  }
+  if (ctx.devUnlimited === undefined) {
+    ctx.devUnlimited = (process.env.DEV_UNLIMITED || '').toLowerCase() === 'true';
+  }
+}
 
-  // If you want to pretend pro in the UI you can pass x-galactly-plan: pro
-  const plan =
-    (req.header('x-galactly-plan') || 'free')
-      .toString()
-      .toLowerCase() === 'pro'
-      ? 'pro'
-      : 'free';
+function numFromEnv(key: string, fallback: number): number {
+  const v = process.env[key];
+  if (!v) return fallback;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
 
-  // Dev switch: default ON while you’re building.
-  // Set DEV_UNLIMITED=false in your service env to re-enable real quota later.
-  const devUnlimited =
-    flag('DEV_UNLIMITED', true) ||
-    // opt-in via query if you ever want to force it from the browser: ?dev=1
-    ['1', 'true'].includes(String(req.query.dev || '').toLowerCase());
+function getPlan(ctx: Ctx, userId: string): 'free' | 'pro' | 'custom' {
+  const p = ctx.users?.get(userId)?.plan;
+  return (p as any) || 'free';
+}
 
-  // For now we don’t look up real usage – just report a generous budget
-  const today = new Date().toISOString().slice(0, 10);
-  const quota = devUnlimited
-    ? {
-        date: today,
-        findsUsed: 0,
-        revealsUsed: 0,
-        findsLeft: 999,
-        revealsLeft: 999
-      }
-    : {
-        // When you’re ready to enforce, swap these with real counters
-        date: today,
-        findsUsed: 0,
-        revealsUsed: 0,
-        findsLeft: 5,      // <- realistic free budget
-        revealsLeft: 1
+function ensureQuotaRow(ctx: Ctx, userId: string, plan: 'free' | 'pro' | 'custom') {
+  const row = ctx.quotaStore!.get(userId);
+  const today = todayUTC();
+  if (!row) {
+    const fresh = { date: today, findsUsed: 0, revealsUsed: 0 };
+    ctx.quotaStore!.set(userId, fresh);
+    return fresh;
+  }
+  if (row.date !== today) {
+    row.date = today;
+    row.findsUsed = 0;
+    row.revealsUsed = 0;
+  }
+  return row;
+}
+
+function calcLeft(ctx: Ctx, plan: 'free' | 'pro' | 'custom', findsUsed: number, revealsUsed: number) {
+  const L = ctx.limits!;
+  const pf = plan === 'pro' || plan === 'custom';
+  const findsCap = pf ? L.proFindsPerDay : L.freeFindsPerDay;
+  const revealsCap = pf ? L.proRevealsPerDay : L.freeRevealsPerDay;
+  const findsLeft = Math.max(0, findsCap - findsUsed);
+  const revealsLeft = Math.max(0, revealsCap - revealsUsed);
+  return { findsLeft, revealsLeft, findsCap, revealsCap };
+}
+
+/** Optional: attach simple quota helpers so other routes (e.g., find-now) can consume them. */
+export function attachQuotaHelpers(ctx: Ctx) {
+  ensureMaps(ctx);
+  (ctx as any).quota = {
+    status: async (userId: string) => {
+      const plan = getPlan(ctx, userId);
+      const row = ensureQuotaRow(ctx, userId, plan);
+      const left = calcLeft(ctx, plan, row.findsUsed, row.revealsUsed);
+      return {
+        date: row.date,
+        findsUsed: row.findsUsed,
+        revealsUsed: row.revealsUsed,
+        findsLeft: ctx.devUnlimited ? left.findsCap : left.findsLeft,
+        revealsLeft: ctx.devUnlimited ? left.revealsCap : left.revealsLeft,
       };
+    },
+    take: async (userId: string, kind: 'find' | 'reveal') => {
+      ensureMaps(ctx);
+      if (ctx.devUnlimited) return; // no-op in dev-unlimited
+      const plan = getPlan(ctx, userId);
+      const row = ensureQuotaRow(ctx, userId, plan);
+      if (kind === 'find') row.findsUsed += 1;
+      else row.revealsUsed += 1;
+    },
+    reset: async (userId: string) => {
+      const today = todayUTC();
+      ctx.quotaStore!.set(userId, { date: today, findsUsed: 0, revealsUsed: 0 });
+    },
+  };
+}
 
-  res.json({
-    ok: true,
-    uid,
-    plan,
-    quota,
-    devUnlimited
+/** Registers the /status endpoint and a dev-only /quota/reset endpoint. */
+export default function registerStatusRoutes(app: Express, ctx: Ctx) {
+  ensureMaps(ctx);
+
+  // GET /api/v1/status
+  app.get('/api/v1/status', async (req: Request, res: Response) => {
+    try {
+      const userId = (req.header('x-galactly-user') || '').toString() || 'anon';
+      const plan = getPlan(ctx, userId);
+      const row = ensureQuotaRow(ctx, userId, plan);
+      const left = calcLeft(ctx, plan, row.findsUsed, row.revealsUsed);
+      const devUnlimited = ctx.devUnlimited === true;
+
+      res.json({
+        ok: true,
+        uid: userId,
+        plan,
+        quota: {
+          date: row.date,
+          findsUsed: row.findsUsed,
+          revealsUsed: row.revealsUsed,
+          findsLeft: devUnlimited ? left.findsCap : left.findsLeft,
+          revealsLeft: devUnlimited ? left.revealsCap : left.revealsLeft,
+        },
+        devUnlimited,
+      });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: 'status_failed' });
+    }
   });
-});
 
-export default router;
+  // POST /api/v1/quota/reset  (dev-only helper for testing)
+  app.post('/api/v1/quota/reset', async (req: Request, res: Response) => {
+    if ((process.env.NODE_ENV || '').toLowerCase() === 'production') {
+      return res.status(403).json({ ok: false, error: 'forbidden' });
+    }
+    const userId = (req.header('x-galactly-user') || '').toString() || 'anon';
+    const today = todayUTC();
+    ctx.quotaStore!.set(userId, { date: today, findsUsed: 0, revealsUsed: 0 });
+    res.json({ ok: true, reset: true });
+  });
+}
