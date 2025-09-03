@@ -1,46 +1,56 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Galactly • Free Panel</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
   :root{
     --bg:#0c1116; --panel:#0f1620; --muted:#95a3b3; --text:#e8eef7;
-    --accent:#7ee2ff; --accent-2:#9dffa8; --chip:#1a2230; --chip-b:#1e2a3b;
+    --accent:#7ee2ff; --accent2:#9dffa8; --chip:#192233; --chipb:#213247;
     --ring:#122033; --ok:#3ddc97; --warn:#ffd166; --err:#ef476f;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
-  .wrap{max-width:1200px;margin:24px auto;padding:0 16px;}
-  .grid{display:grid;grid-template-columns:1fr 420px;gap:20px}
+  .wrap{max-width:1240px;margin:24px auto;padding:0 16px}
+  .grid{display:grid;grid-template-columns:1fr 430px;gap:20px}
   .card{background:var(--panel);border:1px solid #152233;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
   .card h3{margin:0;padding:14px 16px;border-bottom:1px solid #152233;font-weight:600}
-  .live-body{padding:16px;position:relative;min-height:440px}
+  .counter{position:absolute;right:16px;top:16px;font-size:12px;color:var(--muted)}
+  .live{padding:16px;position:relative;min-height:480px}
+  #space{position:absolute;inset:16px 16px 170px 16px;border-radius:12px;background:radial-gradient(1200px 600px at 20% 40%,#0c121a 0,#0a0f16 60%,#0a0f16 100%);overflow:hidden;border:1px solid #142233}
+  #star{position:absolute;inset:0}
   .hud{position:absolute;left:16px;bottom:16px;display:flex;gap:12px;align-items:center;color:var(--muted);font-size:12px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
   .api{opacity:.8}
-  .list{display:flex;flex-direction:column;gap:10px;margin-top:14px;max-height:310px;overflow:auto}
+
+  .list{display:flex;flex-direction:column;gap:12px;margin-top:12px;max-height:330px;overflow:auto}
   .item{border:1px solid #1a2b3c;background:linear-gradient(180deg,#0f1620,#0f1823);border-radius:14px;padding:12px}
-  .t{font-weight:650;font-size:16px;margin-bottom:8px}
+  .t{font-weight:650;font-size:16px;margin-bottom:6px}
   .row{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{font-size:12px;color:#b8c7d6;background:var(--chip);border:1px solid var(--chip-b);padding:4px 8px;border-radius:999px}
+  .chip{font-size:12px;color:#b8c7d6;background:var(--chip);border:1px solid var(--chipb);padding:4px 8px;border-radius:999px}
   .muted{color:var(--muted)}
+
   .side{padding:16px}
   .f{display:flex;flex-direction:column;gap:10px}
   label{font-size:12px;color:var(--muted)}
   input,textarea{width:100%;background:#0b121a;border:1px solid #1c2a3d;color:var(--text);border-radius:10px;padding:10px;font:inherit}
-  textarea{min-height:88px;resize:vertical}
+  textarea{min-height:90px;resize:vertical}
   .row2{display:flex;gap:10px}
   .btn{padding:10px 12px;border-radius:10px;border:1px solid #23415a;background:#0f1e2b;color:#d9f1ff;font-weight:600;cursor:pointer}
   .btn.primary{background:#10364c;border-color:#1f5c83}
   .sub{font-size:12px;color:var(--muted);margin-top:6px}
-  .counter{position:absolute;right:16px;top:16px;font-size:12px;color:var(--muted)}
   .log{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;margin-top:10px}
   .log .line{font-size:12px;color:#bcd0e0;background:#0b1219;border:1px solid #142234;border-radius:8px;padding:8px}
+
+  .legend{margin-top:10px;font-size:12px;color:#a9bacb}
+  details{background:#0b1219;border:1px solid #142234;border-radius:10px;padding:8px}
+  details summary{cursor:pointer;color:#cfe6ff}
+
   .empty{color:var(--muted);text-align:center;margin-top:80px}
+
   .modal{position:fixed;inset:0;background:rgba(2,8,14,.65);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:50}
   .modal.in{display:flex}
   .box{width:520px;border-radius:14px;background:#0f1620;border:1px solid #152233;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
@@ -49,12 +59,12 @@
   .step{display:flex;gap:8px;align-items:center;font-size:14px}
   .b{width:8px;height:8px;border-radius:50%;background:#203244;box-shadow:inset 0 0 0 2px #325574}
   .b.on{background:#44cdf7;box-shadow:0 0 10px #44cdf7}
-  /* canvas area */
-  #space{position:absolute;inset:16px 16px 160px 16px;border-radius:12px;background:radial-gradient(1200px 600px at 20% 40%,#0c121a 0,#0a0f16 60%,#0a0f16 100%);overflow:hidden;border:1px solid #142233}
-  #star{position:absolute;inset:0}
+
+  .exp{margin-top:8px;background:#0b1219;border:1px dashed #26384f;border-radius:10px;padding:8px;color:#cde0f2;font-size:12px}
+  .exp-btn{margin-top:8px;font-size:12px;cursor:pointer;color:#8fd7ff}
 </style>
 
-<!-- Force API base + dev unlimited (no console needed) -->
+<!-- Force API base + dev unlimited -->
 <script>
   window.API_DEFAULT = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1';
   window.DEV_UNLIMITED = true; // set false for production
@@ -65,99 +75,103 @@
 </script>
 </head>
 <body>
-  <div class="wrap">
-    <div class="grid">
-      <!-- LEFT: live results -->
-      <div class="card">
-        <h3>
-          Live results
-          <span class="counter" id="quotaTxt">—</span>
-        </h3>
-        <div class="live-body">
-          <div id="space">
-            <canvas id="star"></canvas>
-          </div>
-
-          <div class="list" id="liveList"></div>
-          <div class="empty" id="emptyNote">No live results yet. Run a search on the right.</div>
-
-          <div class="hud">
-            <span class="dot" id="engineDot"></span>
-            <span id="engineTxt">engine: ready</span>
-            <span class="api" id="apiTxt"></span>
-          </div>
+<div class="wrap">
+  <div class="grid">
+    <!-- LEFT -->
+    <div class="card">
+      <h3>Live results <span id="quotaTxt" class="counter">—</span></h3>
+      <div class="live">
+        <div id="space"><canvas id="star"></canvas></div>
+        <div id="liveList" class="list"></div>
+        <div id="emptyNote" class="empty">No live results yet. Run a search on the right.</div>
+        <div class="legend">
+          <details>
+            <summary>Legend</summary>
+            <div style="margin-top:6px">
+              <div><b>State</b> (e.g., <code>GA</code>) → US state of the buyer.</div>
+              <div><b>Channel</b> (LinkedIn DM / Email / SMS / Call) → best first contact route.</div>
+              <div><b>Intent</b> → short material/packaging need distilled from the signal.</div>
+              <div>Click <i>Explain</i> on a card to see “why you’re seeing this”.</div>
+            </div>
+          </details>
         </div>
-      </div>
-
-      <!-- RIGHT: train your AI -->
-      <div class="card">
-        <h3>Train your AI</h3>
-        <div class="side">
-          <div class="f">
-            <div>
-              <label>Website</label>
-              <input id="fWebsite" placeholder="yourcompany.com" />
-            </div>
-            <div class="row2">
-              <div style="flex:1">
-                <label>Regions</label>
-                <input id="fRegions" placeholder="US, CA" />
-              </div>
-              <div style="flex:1">
-                <label>Industries</label>
-                <input id="fIndustries" placeholder="beverage, confectionery" />
-              </div>
-            </div>
-            <div>
-              <label>Seed buyers (domains)</label>
-              <input id="fSeeds" placeholder="brand1.com, brand2.com" />
-            </div>
-            <div>
-              <label>Describe ideal customers</label>
-              <textarea id="fNotes" placeholder="materials, order sizes, channels, exclusions"></textarea>
-            </div>
-            <div class="row2">
-              <button class="btn" id="btnSave">Save</button>
-              <button class="btn primary" id="btnFind">Find now</button>
-            </div>
-            <div class="sub">Loaded from onboarding. Tweak &amp; run.</div>
-          </div>
-
-          <h3 style="margin:18px 0 0 0;border:none;padding:0;font-size:16px">Signals Preview (report)</h3>
-          <div class="sub" id="counts">Free 0/0 • Pro 0/0</div>
-          <div class="log" id="log"></div>
+        <div class="hud">
+          <span class="dot" id="engineDot"></span>
+          <span id="engineTxt">engine: ready</span>
+          <span class="api" id="apiTxt"></span>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- launching modal -->
-  <div class="modal" id="launchModal">
-    <div class="box">
-      <h4>Launching real-time intent search…</h4>
-      <div class="steps" id="steps">
-        <div class="step"><span class="b" data-i="0"></span> Probing public feeds</div>
-        <div class="step"><span class="b" data-i="1"></span> Reading procurement + RFPs</div>
-        <div class="step"><span class="b" data-i="2"></span> Scanning retailer pages</div>
-        <div class="step"><span class="b" data-i="3"></span> Extracting quantities & materials</div>
-        <div class="step"><span class="b" data-i="4"></span> Cross-checking signals</div>
-        <div class="step"><span class="b" data-i="5"></span> Ranking by fit</div>
+    <!-- RIGHT -->
+    <div class="card">
+      <h3>Train your AI</h3>
+      <div class="side">
+        <div class="f">
+          <div>
+            <label>Website</label>
+            <input id="fWebsite" placeholder="yourcompany.com"/>
+          </div>
+          <div class="row2">
+            <div style="flex:1">
+              <label>Regions</label>
+              <input id="fRegions" placeholder="US, CA"/>
+            </div>
+            <div style="flex:1">
+              <label>Industries</label>
+              <input id="fIndustries" placeholder="beverage, confectionery"/>
+            </div>
+          </div>
+          <div>
+            <label>Seed buyers (domains)</label>
+            <input id="fSeeds" placeholder="brand1.com, brand2.com"/>
+          </div>
+          <div>
+            <label>Describe ideal customers</label>
+            <textarea id="fNotes" placeholder="materials, order sizes, channels, exclusions"></textarea>
+          </div>
+          <div class="row2">
+            <button class="btn" id="btnSave">Save</button>
+            <button class="btn primary" id="btnFind">Find now</button>
+          </div>
+          <div class="sub">Loaded from onboarding. Tweak &amp; run.</div>
+        </div>
+
+        <h3 style="margin:18px 0 0;border:none;padding:0;font-size:16px">Signals Preview (report)</h3>
+        <div class="sub" id="counts">Free 0/0 • Pro 0/0</div>
+        <div class="log" id="log"></div>
       </div>
-      <div class="sub" style="margin-top:8px">Tip: upgrade to keep this running 24/7 in the background.</div>
     </div>
   </div>
+</div>
+
+<!-- Launching modal -->
+<div class="modal" id="launchModal">
+  <div class="box">
+    <h4>Launching real-time intent search…</h4>
+    <div class="steps" id="steps">
+      <div class="step"><span class="b" data-i="0"></span> Probing public feeds</div>
+      <div class="step"><span class="b" data-i="1"></span> Reading procurement + RFPs</div>
+      <div class="step"><span class="b" data-i="2"></span> Scanning retailer pages</div>
+      <div class="step"><span class="b" data-i="3"></span> Extracting quantities &amp; materials</div>
+      <div class="step"><span class="b" data-i="4"></span> Cross-checking signals</div>
+      <div class="step"><span class="b" data-i="5"></span> Ranking by fit</div>
+    </div>
+    <div class="sub" style="margin-top:8px">Tip: upgrade to keep this running 24/7 in the background.</div>
+  </div>
+</div>
 
 <script>
 (() => {
-  // -------------- helpers --------------
+  // ---------- base ----------
   const $ = (q)=>document.querySelector(q);
   const apiBase = localStorage.getItem('apiBase') || window.API_DEFAULT || '';
   const devUnlim = localStorage.getItem('gal_unlim') === 'true' || !!window.DEV_UNLIMITED;
   const uid = (localStorage.getItem('gal_uid') || `u-${Math.random().toString(16).slice(2)}`);
   localStorage.setItem('gal_uid', uid);
-
   $('#apiTxt').textContent = `[api] ${apiBase.replace('/api/v1','')}`;
 
+  // ---------- fetch wrapper ----------
   async function jfetch(path, opt={}) {
     const url = path.startsWith('http') ? path : `${apiBase}${path}`;
     const res = await fetch(url, {
@@ -169,114 +183,125 @@
     }).catch(() => null);
     if(!res) return {ok:false, error:'network'};
     if(!res.ok){
-      // convert hard errors to soft JSON so UI never throws
       return {ok:false, error:`${res.status}`};
     }
     try { return await res.json(); } catch { return {ok:false,error:'bad_json'}; }
   }
 
-  function logLine(t){ const d=document.createElement('div'); d.className='line'; d.textContent=t; $('#log').prepend(d); }
-  function setQuota(q){
-    if(q && q.devUnlimited) { $('#quotaTxt').textContent = '∞ searches left • ∞ reveals left'; return; }
-    if(!q) { $('#quotaTxt').textContent = devUnlim ? '∞ searches left • ∞ reveals left' : '—'; return; }
-    $('#quotaTxt').textContent = `${q.findsLeft ?? '—'} searches left • ${q.revealsLeft ?? '—'} reveals left`;
+  // ---------- UI helpers ----------
+  function logLine(t){ const d=document.createElement('div'); d.className='line'; d.textContent=t; const L=$('#log'); L.prepend(d); while(L.children.length>6)L.removeChild(L.lastChild); }
+  function setQuota(s){
+    if(!s){ $('#quotaTxt').textContent = devUnlim ? '∞ searches left • ∞ reveals left' : '—'; return; }
+    if(s.devUnlimited || devUnlim){ $('#quotaTxt').textContent = '∞ searches left • ∞ reveals left'; return; }
+    $('#quotaTxt').textContent = `${s.quota?.findsLeft ?? '—'} searches left • ${s.quota?.revealsLeft ?? '—'} reveals left`;
   }
 
-  // -------------- status/presence --------------
-  async function refreshStatus(){
-    const s = await jfetch('/status');
-    if(s && s.ok) setQuota(s.quota); else setQuota(null);
+  // ---------- map raw signal -> UI model ----------
+  const STATE_MAP = {"AL":"Alabama","AK":"Alaska","AZ":"Arizona","AR":"Arkansas","CA":"California","CO":"Colorado","CT":"Connecticut","DE":"Delaware","FL":"Florida","GA":"Georgia","HI":"Hawaii","ID":"Idaho","IL":"Illinois","IN":"Indiana","IA":"Iowa","KS":"Kansas","KY":"Kentucky","LA":"Louisiana","ME":"Maine","MD":"Maryland","MA":"Massachusetts","MI":"Michigan","MN":"Minnesota","MS":"Mississippi","MO":"Missouri","MT":"Montana","NE":"Nebraska","NV":"Nevada","NH":"New Hampshire","NJ":"New Jersey","NM":"New Mexico","NY":"New York","NC":"North Carolina","ND":"North Dakota","OH":"Ohio","OK":"Oklahoma","OR":"Oregon","PA":"Pennsylvania","RI":"Rhode Island","SC":"South Carolina","SD":"South Dakota","TN":"Tennessee","TX":"Texas","UT":"Utah","VT":"Vermont","VA":"Virginia","WA":"Washington","WV":"West Virginia","WI":"Wisconsin","WY":"Wyoming","DC":"District of Columbia"};
+  function first(v){ return Array.isArray(v)? v[0] : v; }
+  function pickChannel(sig){
+    // prefer declared contact routes, fallback by source
+    const c = (sig.channel||'').toLowerCase();
+    if(c.includes('linkedin')) return 'LinkedIn DM';
+    if(c.includes('sms')) return 'SMS';
+    if(c.includes('call')||c.includes('phone')) return 'Call';
+    if(c.includes('email')) return 'Email';
+    const src = (sig.source||'').toLowerCase();
+    if(src.includes('linkedin')) return 'LinkedIn DM';
+    if(src.includes('rfp')||src.includes('procure')) return 'Email';
+    return 'Email';
   }
-  refreshStatus();
-  setInterval(refreshStatus, 20_000);
+  function buildWhy(sig){
+    const parts = [];
+    if(sig.reason) parts.push(sig.reason);
+    if(sig.qty) parts.push(`Quantity mentioned: ${sig.qty}`);
+    if(sig.material) parts.push(`Material/format: ${sig.material}`);
+    if(sig.deadline) parts.push(`Timeline: ${sig.deadline}`);
+    if(sig.url) parts.push(`Source: ${sig.url}`);
+    if(!parts.length && sig.source) parts.push(`Matched by ${sig.source}`);
+    return parts.join(' • ');
+  }
+  function mapRawSignal(sig, profile){
+    // expected flexible fields from backend
+    const buyerDomain = sig.company_domain || sig.domain || sig.brand || 'unknown';
+    const state = (sig.state || sig.region || '').toUpperCase();
+    const niceState = STATE_MAP[state] ? state : ''; // show code chip only if valid
+    const intent = sig.intent || sig.material || sig.package || sig.category || '';
+    const title = sig.title
+      || (sig.need ? `"${sig.need}"` : '')
+      || (intent ? `${intent} — ${buyerDomain}` : `Lead — ${buyerDomain}`);
+    return {
+      title,
+      buyer: buyerDomain,
+      state: niceState,
+      channel: pickChannel(sig),
+      intent: (intent || '').toString(),
+      why: buildWhy(sig),
+      source: sig.source || '',
+    };
+  }
 
-  // heartbeat (ignore errors)
-  setInterval(()=>{ jfetch('/presence/online'); }, 15_000);
+  // ---------- render ----------
+  function chip(t){ return t?`<span class="chip">${escapeHtml(t)}</span>`:''; }
+  function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
-  // -------------- live results render --------------
   function renderResults(items){
     const box = $('#liveList'); box.innerHTML='';
     $('#emptyNote').style.display = items?.length ? 'none':'block';
     (items||[]).forEach(it=>{
       const li = document.createElement('div'); li.className='item';
       li.innerHTML = `
-        <div class="t">${escapeHtml(it.title || 'Lead')}</div>
+        <div class="t">${escapeHtml(it.title)}</div>
         <div class="row">
           ${chip(it.state)} ${chip(it.channel)} ${chip(it.intent)}
         </div>
-        <div class="muted" style="margin-top:6px">${escapeHtml(it.why || '')}</div>
+        <div class="muted" style="margin-top:6px">${escapeHtml(it.buyer || '')}</div>
+        <div class="exp-btn">Explain</div>
+        <div class="exp" style="display:none">
+          <div><b>Why:</b> ${escapeHtml(it.why || '—')}</div>
+          ${it.source?`<div style="margin-top:6px"><b>Source:</b> ${escapeHtml(it.source)}</div>`:''}
+        </div>
       `;
+      li.querySelector('.exp-btn').onclick=()=> {
+        const e=li.querySelector('.exp'); e.style.display = e.style.display==='none'?'block':'none';
+      };
       box.appendChild(li);
     });
   }
-  const chip=(t)=> t?`<span class="chip">${escapeHtml(t)}</span>`:'';
-  const escapeHtml=(s)=>String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
 
-  // -------------- neutron star --------------
-  const canvas = $('#star'), ctx = canvas.getContext('2d');
-  let W,H, t=0;
-  const stars = [];
-  function resize(){
-    const r = $('#space').getBoundingClientRect();
-    canvas.width = W = r.width;
-    canvas.height = H = r.height;
-    stars.length=0;
-    const N = 130;
-    for(let i=0;i<N;i++){
-      stars.push({
-        r: Math.random()*Math.min(W,H)/2*0.95,
-        a: Math.random()*Math.PI*2,
-        s: 0.0008 + Math.random()*0.0016,
-      });
-    }
+  // ---------- status & presence ----------
+  async function refreshStatus(){
+    const s = await jfetch('/status');
+    setQuota(s);
   }
+  refreshStatus();
+  setInterval(refreshStatus, 20_000);
+  setInterval(()=>{ jfetch('/presence/online'); }, 15_000);
+
+  // ---------- neutron star ----------
+  const canvas=$('#star'), ctx=canvas.getContext('2d'); let W,H,t=0; const stars=[];
+  function resize(){ const r=$('#space').getBoundingClientRect(); canvas.width=W=r.width; canvas.height=H=r.height; stars.length=0; const N=130; for(let i=0;i<N;i++){ stars.push({r:Math.random()*Math.min(W,H)/2*0.95,a:Math.random()*Math.PI*2,s:0.0008+Math.random()*0.0016}); } }
   window.addEventListener('resize',resize); resize();
   function draw(){
-    ctx.clearRect(0,0,W,H);
-    const cx=W/2, cy=H/2;
-    // rings
+    ctx.clearRect(0,0,W,H); const cx=W/2, cy=H/2;
     ctx.strokeStyle='rgba(126,226,255,.08)';
-    for(let i=1;i<=6;i++){
-      ctx.beginPath();
-      ctx.arc(cx,cy,(i/6)*Math.min(W,H)/2,0,Math.PI*2);
-      ctx.stroke();
-    }
-    // glow core
+    for(let i=1;i<=6;i++){ ctx.beginPath(); ctx.arc(cx,cy,(i/6)*Math.min(W,H)/2,0,Math.PI*2); ctx.stroke(); }
     const grd=ctx.createRadialGradient(cx,cy,0,cx,cy,60);
-    grd.addColorStop(0,'rgba(126,226,255,.55)');
-    grd.addColorStop(1,'rgba(126,226,255,0)');
-    ctx.fillStyle=grd;
-    ctx.beginPath(); ctx.arc(cx,cy,60,0,Math.PI*2); ctx.fill();
-
-    // pulse beam (slow)
-    ctx.strokeStyle='rgba(126,226,255,.25)';
-    ctx.lineWidth=2;
-    ctx.beginPath();
-    const beamLen = Math.min(W,H)/2 * 0.85;
-    ctx.moveTo(cx,cy);
-    ctx.lineTo(cx + Math.cos(t*0.25)*beamLen, cy + Math.sin(t*0.25)*beamLen);
-    ctx.stroke();
-
-    // stars
+    grd.addColorStop(0,'rgba(126,226,255,.55)'); grd.addColorStop(1,'rgba(126,226,255,0)'); ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(cx,cy,60,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(126,226,255,.25)'; ctx.lineWidth=2; ctx.beginPath();
+    const beamLen=Math.min(W,H)/2*0.85; ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(t*0.25)*beamLen, cy+Math.sin(t*0.25)*beamLen); ctx.stroke();
     ctx.fillStyle='rgba(158,246,255,.9)';
-    stars.forEach(s=>{
-      s.a += s.s; const x=cx+Math.cos(s.a)*s.r, y=cy+Math.sin(s.a)*s.r;
-      ctx.fillRect(x,y,1.2,1.2);
-    });
+    stars.forEach(s=>{ s.a+=s.s; const x=cx+Math.cos(s.a)*s.r, y=cy+Math.sin(s.a)*s.r; ctx.fillRect(x,y,1.2,1.2); });
+    t+=0.5; requestAnimationFrame(draw);
+  } draw();
 
-    t+=0.5;
-    requestAnimationFrame(draw);
-  }
-  draw();
-
-  // -------------- form defaults --------------
+  // ---------- form defaults ----------
   const qs=(k)=> new URLSearchParams(location.search).get(k)||'';
   $('#fWebsite').value = qs('site') || localStorage.getItem('site') || '';
   $('#fRegions').value = localStorage.getItem('regions') || 'US, CA';
   $('#fIndustries').value = localStorage.getItem('industries') || 'beverage, confectionery';
   $('#fSeeds').value = localStorage.getItem('seeds') || 'brand1.com, brand2.com';
   $('#fNotes').value = localStorage.getItem('notes') || 'materials, order sizes, channels, exclusions';
-
   $('#btnSave').onclick = ()=>{
     localStorage.setItem('site',$('#fWebsite').value.trim());
     localStorage.setItem('regions',$('#fRegions').value.trim());
@@ -286,7 +311,15 @@
     logLine('Saved.');
   };
 
-  // -------------- find now --------------
+  // ---------- launching overlay ----------
+  function launchOverlay(ms){
+    const m=$('#launchModal'); m.classList.add('in');
+    const dots=[...document.querySelectorAll('.b')];
+    let i=0; const iv=setInterval(()=>{ dots.forEach(d=>d.classList.remove('on')); dots[i%dots.length].classList.add('on'); i++; },650);
+    setTimeout(()=>{ clearInterval(iv); m.classList.remove('in'); }, ms);
+  }
+
+  // ---------- find now ----------
   $('#btnFind').onclick = async ()=>{
     const body = {
       website: $('#fWebsite').value.trim(),
@@ -296,39 +329,29 @@
       notes: $('#fNotes').value.trim(),
     };
 
-    // launching overlay for 7–15s
+    // launch
     const dur = 7000 + Math.floor(Math.random()*8000);
     launchOverlay(dur);
 
-    // post
-    const r = await jfetch('/find-now', {
-      method:'POST',
-      body: JSON.stringify(body)
-    });
-
+    // submit
+    const r = await jfetch('/find-now', { method:'POST', body: JSON.stringify(body) });
     if(!r || r.ok === false){
       logLine(`Search error: ${r?.error || 'temporary'}`);
       return;
     }
     logLine('Submitting your search…');
 
-    // If backend returns live items, render them. Otherwise keep empty state clean.
-    if (Array.isArray(r.items) && r.items.length){
-      renderResults(r.items);
-    } else {
-      // keep previous results (if any); otherwise stay empty
-      logLine('Standing by for results…');
+    // preview stream
+    if(Array.isArray(r.preview)){
+      r.preview.slice(-6).forEach(p=>logLine(p));
     }
+
+    // map results (real only)
+    const profile = {site: body.website, industries: body.industries, regions: body.regions};
+    const items = (r.items||[]).map(s=>mapRawSignal(s, profile));
+    if(items.length) renderResults(items);
     refreshStatus();
   };
-
-  function launchOverlay(ms){
-    const m = $('#launchModal'); m.classList.add('in');
-    const dots = [...document.querySelectorAll('.b')];
-    let i=0; const iv=setInterval(()=>{ dots.forEach(d=>d.classList.remove('on')); dots[i%dots.length].classList.add('on'); i++; }, 650);
-    setTimeout(()=>{ clearInterval(iv); m.classList.remove('in'); }, ms);
-  }
-
 })();
 </script>
 </body>
