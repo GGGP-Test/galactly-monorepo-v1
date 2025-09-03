@@ -1,114 +1,77 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <script src="./config.js?v=1756906057"></script>
-  
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Galactly — Live packaging buyer signals</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@800&display=swap" rel="stylesheet">
-<style>
-:root{
-  --ink:#eaf0ff; --mut:#a6b2c9; --line:#1e2737; --card:#0f1420; --panel:#0b101a; --pill:#10182a;
-  --accent:#86f7d6; --accent2:#6fb3ff; --ok:#7fffd4; --bad:#ff8a8a;
-  --mont:Montserrat,Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
-  --inter:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
-}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0; color:var(--ink);
-  background:
-    radial-gradient(1200px 700px at 85% -10%, rgba(40,70,140,.28), transparent 40%),
-    linear-gradient(180deg, #0a0e16, #06080e 60%);
-  font-family:var(--inter);
-}
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Galactly — Live packaging buyer signals</title>
+  <!-- MUST load first so API host + dev flags are available -->
+  <script src="./config.js"></script>
 
-/* Header */
-header{height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 18px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0b111b,#0a0e15)}
-.brand{display:flex; gap:10px; align-items:center; font:800 16px var(--mont)}
-.brand svg{width:22px;height:22px}
-.badge{display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--line); border-radius:999px; color:#c9d6f0; background:#0c1322; font-size:12px}
-.badge .dot{width:8px;height:8px;border-radius:50%;background:#43e5b7;box-shadow:0 0 10px rgba(67,229,183,.7);display:inline-block}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#eaf0ff; --mut:#a6b2c9; --line:#1f2a3e; --panel:#0b121d; --card:#0f1624; --pill:#101a2c;
+      --accent:#86f7d6; --accent2:#6fb3ff; --ok:#89ffd9; --bad:#ff8a8a;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; font:500 14px Inter,system-ui; color:var(--ink);
+      background: radial-gradient(1200px 700px at 80% -10%, rgba(70,110,180,.22), transparent 40%), #070b12;}
+    a{color:inherit; text-decoration:none}
 
-/* Hero layout */
-.wrap{max-width:1280px; margin:0 auto; padding:26px 18px}
-.hero{display:grid; grid-template-columns:minmax(420px, 52%) 1fr; gap:26px; align-items:center}
-@media (max-width:1080px){ .hero{grid-template-columns:1fr} }
+    header{height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0b111b,#0a0e15)}
+    .brand{display:flex; gap:10px; align-items:center; font-weight:800}
+    .brand svg{width:22px; height:22px}
+    .badge{display:inline-flex; gap:8px; align-items:center; padding:8px 12px; border:1px solid var(--line); border-radius:999px; background:var(--pill); color:#cfe0ff}
+    .badge .dot{width:8px; height:8px; border-radius:50%; background:#3ae0b4; box-shadow:0 0 10px rgba(58,224,180,.7)}
 
-/* Left copy */
-.h1{font:800 clamp(34px,6vw,56px) var(--mont); letter-spacing:-.02em; line-height:1.06; margin:0 0 12px}
-.h1 .hi{color:var(--accent)}
-.h1 .t{color:#9ec8ff}
-.sub{color:#cfdbff; opacity:.9; font-size:15px; margin:0 0 12px}
-.cta{margin-top:16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-.btn{border-radius:14px; padding:12px 16px; font:700 14px var(--inter); background:var(--pill); border:1px solid var(--line); color:var(--ink); cursor:pointer}
-.btn.primary{background:linear-gradient(90deg,#fff,#e6efff); color:#0b111b; border-color:transparent; box-shadow:0 6px 18px rgba(208,228,255,.08)}
-.btn.ghost{background:#0f1626}
-.kv{margin-top:10px; font-size:12px; color:#c6d5f3; opacity:.95}
+    .wrap{max-width:1280px; margin:0 auto; padding:24px 16px}
+    .hero{display:grid; grid-template-columns:minmax(420px, 52%) 1fr; gap:24px; align-items:center}
+    @media (max-width:1080px){ .hero{grid-template-columns:1fr} }
+    .h1{font-weight:800; font-size:clamp(34px,6vw,56px); line-height:1.06; letter-spacing:-.01em; margin:0 0 10px}
+    .h1 .hi{color:var(--accent)}
+    .h1 .t{color:#9ec8ff}
+    .sub{color:#cfdbff; opacity:.9; margin:0 0 12px}
+    .cta{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px}
+    .btn{border-radius:14px; padding:12px 16px; font-weight:700; background:var(--pill); border:1px solid var(--line); color:var(--ink); cursor:pointer}
+    .btn.primary{background:linear-gradient(90deg,#fff,#e6efff); color:#0b111b; border-color:transparent; box-shadow:0 6px 18px rgba(208,228,255,.08)}
+    .kv{font-size:12px; color:#c6d5f3}
 
-/* ===== Right hero (namespaced) ===== */
-.hright{
-  position:relative;
-  height:520px;
-  border:1px solid #1e2737;
-  border-radius:18px;
-  overflow:hidden;
-  background:radial-gradient(600px 380px at 43% 55%, rgba(120,160,255,.14), rgba(10,14,22,1) 65%);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.02), 0 18px 70px rgba(0,0,0,.45);
-}
-#hero-right-canvas{
-  width:100%;
-  height:100%;
-  display:block;
-  pointer-events:none;
-}
+    /* Right visual (minimal, performant) */
+    .right{position:relative; height:520px; border:1px solid var(--line); border-radius:18px; overflow:hidden;
+      background: radial-gradient(600px 380px at 50% 55%, rgba(120,160,255,.12), rgba(10,14,22,1) 70%);}
+    .core{position:absolute; left:50%; top:52%; width:220px; height:220px; margin:-110px 0 0 -110px;
+      border-radius:50%; background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.95), rgba(200,230,255,.4) 45%, rgba(140,170,220,.06) 65%, transparent 70%);
+      box-shadow:0 0 40px rgba(180,210,255,.12) inset;}
+    .beam{position:absolute; left:50%; top:52%; width:2px; height:1px; background:linear-gradient(180deg,rgba(255,255,255,.9),transparent); transform-origin:0 0}
+    .chips{position:absolute; left:12px; right:12px; bottom:12px; display:flex; gap:8px; flex-wrap:wrap}
+    .chip{display:inline-flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid #27324a; border-radius:999px; background:rgba(10,16,28,.85); color:#cfe0ff; font-size:12px}
 
-/* KPI chips */
-.hright-kpis{
-  position:absolute;
-  left:18px; right:18px; bottom:14px;
-  display:flex; gap:10px; flex-wrap:wrap;
-}
-.hright-chip{
-  display:inline-flex; align-items:center; gap:8px;
-  padding:7px 10px; border:1px solid #26314a; border-radius:999px;
-  background:rgba(10,16,28,.82); color:#cfe0ff; font-size:12px; backdrop-filter: blur(6px);
-}
-.hright-chip strong{ color:#fff; }
+    /* Modal */
+    .modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50}
+    .modal.in{display:flex}
+    .box{width:min(920px,95vw); background:#0b101a; border:1px solid var(--line); border-radius:16px; overflow:hidden}
+    .box .head{display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--line)}
+    .box h3{margin:0; font-weight:800}
+    .seg{display:flex; gap:6px}
+    .tab{padding:8px 10px; border:1px solid var(--line); border-radius:999px; font-weight:700; cursor:pointer}
+    .tab.active{background:linear-gradient(90deg,#fff,#e6efff); color:#10131a; border-color:transparent}
+    .pane{display:grid; grid-template-columns:1.08fr 1fr; gap:16px; padding:14px}
+    @media (max-width: 900px){ .pane{grid-template-columns:1fr} }
+    .card{background:#0f1420; border:1px solid var(--line); border-radius:14px; padding:12px}
+    .label{font-size:12px; opacity:.9; margin-bottom:6px}
+    .input, select, textarea{width:100%; background:#0f1420; border:1px solid var(--line); color:#e9eef7; border-radius:10px; padding:10px 12px; font:500 13px Inter,system-ui}
+    .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .actions{display:flex; gap:10px; align-items:center; padding:12px 0 0}
+    .err{color:var(--bad); font-size:12px; margin-top:6px; display:none}
+    .ok{color:#a7ffde; font-size:12px; margin-top:6px; display:none}
+    .small{font-size:12px; opacity:.85}
+    .hr{height:1px; background:linear-gradient(90deg,transparent,#243048,transparent); margin:12px 0}
 
-/* Onboarding modal */
-.modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50}
-.modal.in{display:flex}
-.box{width:min(920px,95vw); background:#0b101a; border:1px solid var(--line); border-radius:16px; overflow:hidden}
-.box .head{display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--line)}
-.box h3{margin:0; font:800 16px var(--mont)}
-.seg{display:flex; gap:6px}
-.tab{padding:8px 10px; border:1px solid var(--line); border-radius:999px; font:700 12px var(--inter); cursor:pointer}
-.tab.active{background:linear-gradient(90deg,#fff,#e6efff); color:#10131a; border-color:transparent}
-.pane{display:grid; grid-template-columns:1.08fr 1fr; gap:16px; padding:14px}
-@media (max-width: 900px){ .pane{grid-template-columns:1fr} }
-.card{background:#0f1420; border:1px solid var(--line); border-radius:14px; padding:12px}
-.label{font-size:12px; opacity:.9; margin-bottom:6px}
-.input, select, textarea{width:100%; background:#0f1420; border:1px solid var(--line); color:#e9eef7; border-radius:10px; padding:10px 12px; font:500 13px var(--inter)}
-.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.actions{display:flex; gap:10px; align-items:center; padding:12px 0 0}
-.err{color:var(--bad); font-size:12px; margin-top:6px; display:none}
-.ok{color:#a7ffde; font-size:12px; margin-top:6px; display:none}
-.small{font-size:12px; opacity:.85}
-.hr{height:1px; background:linear-gradient(90deg,transparent,#243048,transparent); margin:12px 0}
-
-/* Video modal */
-.vmodal .box{width:min(1000px,96vw); padding:0}
-.vhead{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line)}
-.vbody{position:relative; padding-bottom:56.25%; height:0}
-.vbody iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
-
-/* Small-screen tweak */
-@media (max-width:1080px){ .hright{height:420px} }
-</style>
+    .debug{font-size:11px; color:#9ab2d9; opacity:.9; margin-top:8px}
+  </style>
 </head>
 <body>
 <header>
@@ -116,7 +79,7 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
     <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" stroke="url(#g)" stroke-width="2" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
     <span>Galactly</span>
   </a>
-  <span class="badge"><span class="dot"></span><span id="presenceTxt">0 online</span></span>
+  <span class="badge" title="online now"><span class="dot"></span><span id="presenceTxt">0 online</span></span>
 </header>
 
 <div class="wrap">
@@ -124,33 +87,35 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
     <div>
       <h1 class="h1">Find US &amp; Canada <span class="hi">Packaging</span> Buyers in <span class="t">&lt;30s</span></h1>
       <p class="sub">Real posts &amp; tenders from public feeds. Free viewer; paid automations, priority, CRM &amp; reporting.</p>
-      <p class="sub">Built for packaging owners &amp; sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates. No coding. Just clicks.</p>
+      <p class="sub">Built for packaging owners &amp; sales teams. Outputs: Quote • Email • SMS • Call • LinkedIn DM • ERP updates.</p>
       <div class="cta">
-        <button class="btn primary" id="startFree">Start free</button>
-        <a class="btn ghost" id="openFeed" href="./free-panel.html">Open the Live Feed</a>
-        <span class="kv">AI closed <strong>16%</strong> • Rep closed <strong>21%</strong> • Saved / mo <strong>$20,678</strong></span>
+        <button id="startFree" class="btn primary">Start Free</button>
+        <a class="btn" id="openFeed" href="./free-panel.html">Open Live Feed</a>
+        <span class="kv" id="quotaKv">— searches • — reveals</span>
       </div>
+      <div class="debug" id="dbg"></div>
     </div>
 
-    <div id="hero-right" class="hright" aria-hidden="true">
-      <canvas id="hero-right-canvas"></canvas>
-      <div class="hright-kpis">
-        <div class="hright-chip">Leads / 30s <strong id="hr_k_leads">0</strong></div>
-        <div class="hright-chip">First connection <strong>6 sec</strong></div>
-        <div class="hright-chip">Ready now <strong id="hr_k_ready">54%</strong></div>
-        <div class="hright-chip">Quoted <strong id="hr_k_quoted">67%</strong></div>
-        <div class="hright-chip">Rep closed <strong id="hr_k_rep">21%</strong></div>
-        <div class="hright-chip">Saved / mo <strong id="hr_k_saved">$20,678</strong></div>
+    <div class="right" aria-hidden="true">
+      <div class="core"></div>
+      <div class="beam" style="transform:rotate(-8deg) scale(260)"></div>
+      <div class="beam" style="transform:rotate(12deg) scale(240)"></div>
+      <div class="beam" style="transform:rotate(26deg) scale(200)"></div>
+      <div class="chips">
+        <div class="chip">Leads / 30s <strong id="k_leads">—</strong></div>
+        <div class="chip">Ready now <strong id="k_ready">—</strong></div>
+        <div class="chip">Quoted <strong id="k_quoted">—</strong></div>
+        <div class="chip">Rep closed <strong id="k_rep">—</strong></div>
       </div>
     </div>
   </section>
 </div>
 
-<!-- Onboarding modal -->
+<!-- Onboarding modal (mandatory) -->
 <div class="modal" id="onb">
   <div class="box">
     <div class="head">
-      <h3>Onboarding</h3>
+      <h3>Sign up (free) to start</h3>
       <div class="seg">
         <button class="tab active" id="tabA">Path A — Enter your website</button>
         <button class="tab" id="tabB">Path B — Customize from scratch</button>
@@ -160,7 +125,7 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
       <div>
         <!-- PATH A -->
         <div class="card" id="paneA">
-          <div class="label">Preferred — we’ll auto-derive ICPs, buyers, and regions.</div>
+          <div class="label">We’ll auto-derive ICPs, buyers, and regions. Business email required.</div>
           <div class="grid2">
             <div><div class="label">Business email *</div><input id="a_email" class="input" placeholder="you@yourcompany.com"/></div>
             <div><div class="label">Your role *</div>
@@ -171,21 +136,21 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
               </select>
             </div>
           </div>
-          <div class="label" style="margin-top:8px">Company website (optional)</div>
+          <div class="label" style="margin-top:8px">Company website (optional at sign-up)</div>
           <input id="a_site" class="input" placeholder="yourcompany.com"/>
           <div class="grid2" style="margin-top:8px">
-            <div><div class="label">Region (optional)</div><input id="a_region" class="input" placeholder="e.g., US, CA"/></div>
+            <div><div class="label">Region</div><input id="a_region" class="input" placeholder="US, CA"/></div>
             <div><label style="display:flex; align-items:center; gap:8px; margin-top:22px"><input type="checkbox" id="a_list"/> <span>List my company for inbound opportunities</span></label></div>
           </div>
           <div class="hr"></div>
-          <div class="small">We only serve <strong>packaging</strong>. We’ll let you in right away; domain verification unlocks reveals later.</div>
+          <div class="small">We only serve <strong>packaging</strong>. You can verify domain ownership later to unlock reveals.</div>
           <div class="err" id="a_err"></div><div class="ok" id="a_ok"></div>
           <div class="actions"><button class="btn" id="a_cancel">Cancel</button><button class="btn primary" id="a_continue">Continue</button></div>
         </div>
 
         <!-- PATH B -->
         <div class="card" id="paneB" style="display:none">
-          <div class="label">Manual — precise filters if you prefer to steer.</div>
+          <div class="label">Manual filters (optional now — can edit later).</div>
           <div class="grid2">
             <div><div class="label">Business email *</div><input id="b_email" class="input" placeholder="you@yourcompany.com"/></div>
             <div><div class="label">Your role *</div>
@@ -196,7 +161,7 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
               </select>
             </div>
           </div>
-          <div class="label" style="margin-top:8px">Company website (optional)</div>
+          <div class="label" style="margin-top:8px">Company website</div>
           <input id="b_site" class="input" placeholder="yourcompany.com"/>
           <div class="grid2" style="margin-top:8px">
             <div><div class="label">Industries</div><input id="b_industries" class="input" placeholder="beverage, confectionery"/></div>
@@ -208,7 +173,7 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
           <textarea id="b_desc" rows="4" class="input" placeholder="materials, order sizes, channels, exclusions"></textarea>
           <label style="display:flex; align-items:center; gap:8px; margin-top:10px"><input type="checkbox" id="b_list"/> <span>List my company for inbound opportunities</span></label>
           <div class="hr"></div>
-          <div class="small">We only serve <strong>packaging</strong>. You can verify your domain later to unlock reveals.</div>
+          <div class="small">We only serve <strong>packaging</strong>.</div>
           <div class="err" id="b_err"></div><div class="ok" id="b_ok"></div>
           <div class="actions"><button class="btn" id="b_cancel">Cancel</button><button class="btn primary" id="b_continue">Continue</button></div>
         </div>
@@ -223,193 +188,102 @@ header{height:60px; display:flex; align-items:center; justify-content:space-betw
             <li>Seed 3–6 buyers you admire to nudge platform rotation.</li>
           </ul>
           <div class="hr"></div>
-          <div class="small">Privacy: Free hides raw sources on cards; Pro shows full checks. We log per-user proof confirmations only.</div>
+          <div class="small">Privacy: Free hides raw sources; Pro shows full checks. Proof confirmations are per-user only.</div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Video modal -->
-<div class="modal vmodal" id="vid">
-  <div class="box">
-    <div class="vhead"><div style="font:800 14px var(--mont)">90s demo</div><button class="btn" id="vclose">Close</button></div>
-    <div class="vbody">
-      <iframe id="vframe" src="https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-    </div>
-  </div>
-</div>
-
 <script>
-/* ---------------- API base + sticky user + dev-unlim header (scoped) ---------------- */
+/* -------- API bootstrap with sticky UID & base host -------- */
 (function(){
-  if (window.API && window.API.base) return;
-  const DEFAULT=(window.API_DEFAULT||'').replace(/\/$/,'') || location.origin;
-  const qs=new URLSearchParams(location.search);
-  function normalize(v){ if(!v) return DEFAULT; let s=String(v).trim().replace(/\/$/,''); if(!/^https?:\/\//i.test(s)) s='https://'+s; return s; }
-  const saved=localStorage.getItem('apiBase'); const base=normalize(qs.get('api')||saved||DEFAULT);
-  window.API_BASE=base; localStorage.setItem('apiBase', base);
+  const uidKey='gal_uid';
+  let UID = localStorage.getItem(uidKey);
+  if(!UID){ UID = 'u-' + Math.random().toString(36).slice(2,12); localStorage.setItem(uidKey, UID); }
 
-  const _fetch=window.fetch.bind(window);
-  const uidKey='galactly_uid'; let uid=localStorage.getItem(uidKey)||('u_'+Math.random().toString(36).slice(2)); localStorage.setItem(uidKey, uid);
+  function normalizeHost(v){
+    let s = (v || window.API_DEFAULT || location.origin).toString().trim();
+    // if someone put /api/v1 in config, strip it
+    s = s.replace(/\/api\/v1\/?$/,'').replace(/\/$/,'');
+    return s;
+  }
+  const HOST = normalizeHost(localStorage.getItem('apiBase') || window.API_DEFAULT);
+  localStorage.setItem('apiBase', HOST); // persist corrected host
+  const API_BASE = HOST + '/api/v1';
 
-  window.fetch=function(input,init){
-    let url=(typeof input==='string')?input:input.url;
-    const headers=new Headers((init&&init.headers)||(typeof input!=='string'&&input.headers)||undefined);
-    try{ headers.set('x-galactly-user', uid);}catch{}
-    try{ if(localStorage.getItem('DEV_UNLIM')==='1') headers.set('x-galactly-dev','unlim'); }catch{}
-    if(url && (url.startsWith('/api/')||url.startsWith('api/'))){ url = base + (url.startsWith('/')? '': '/') + url; }
-    return _fetch(typeof input==='string'?url:new Request(url,{...(init||{}),headers}));
-  };
-  window.API={ get base(){return base;}, uid, url:(p)=> (base + (p.startsWith('/')?p:'/'+p)) };
+  async function api(path, opt){
+    const o = opt || {};
+    const headers = new Headers(o.headers || {});
+    headers.set('x-galactly-user', UID);
+    if(localStorage.getItem('gal_unlim') === 'true') headers.set('x-dev-unlim','true');
+    const url = API_BASE + (path.startsWith('/')? path : ('/'+path));
+    const res = await fetch(url, { ...o, headers, credentials:'include' });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return res.json();
+  }
+  window.__API__ = { HOST, API_BASE, UID, api };
+  document.getElementById('dbg').textContent = `[api] ${HOST}  uid=${UID}  unlim=${localStorage.getItem('gal_unlim')==='true'}`;
 })();
 
-/* ---------------- Presence badge ---------------- */
-async function loadPresence(){ try{ const r=await fetch('/presence/online'); const j=await r.json(); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{} }
-setInterval(loadPresence, 12000); loadPresence();
+/* Presence */
+async function loadPresence(){ try{ const j=await __API__.api('/presence/online'); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{} }
+setInterval(loadPresence, 10000); loadPresence();
 
-/* ---------------- HERO CANVAS (neutron star) — fully scoped ---------------- */
-(function(){
-  const root=document.getElementById('hero-right');
-  const c=document.getElementById('hero-right-canvas');
-  if(!root||!c||!c.getContext) return;
-  const ctx=c.getContext('2d');
-  let w=0,h=0,dpr=1,cx=0,cy=0,R=0;
-  const rings=4, pts=120;
+/* Quota preview in hero */
+async function loadStatus(){ try{ const j=await __API__.api('/status'); const q=j.quota||{}; const s=(j.devUnlimited?'∞':q.findsLeft??'—'); const r=(j.devUnlimited?'∞':q.revealsLeft??'—'); document.getElementById('quotaKv').textContent=`${s} searches • ${r} reveals`; }catch{ document.getElementById('quotaKv').textContent='— searches • — reveals'; } }
+setInterval(loadStatus, 12000); loadStatus();
 
-  function resize(){
-    dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
-    w=c.clientWidth; h=c.clientHeight; c.width=Math.floor(w*dpr); c.height=Math.floor(h*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
-    cx=w*0.58; cy=h*0.56; R=Math.min(w,h)*0.16;
-  }
-  new ResizeObserver(resize).observe(root); resize();
+/* CTA behavior */
+const onb=document.getElementById('onb');
+document.getElementById('startFree').onclick=()=> onb.classList.add('in');
+document.getElementById('a_cancel').onclick=()=> onb.classList.remove('in');
+document.getElementById('b_cancel').onclick=()=> onb.classList.remove('in');
 
-  const dots=new Array(pts).fill(0).map(()=>({
-    a:Math.random()*Math.PI*2,
-    r:R*0.9 + Math.random()*R*0.65,
-    s:0.0008+Math.random()*0.0015
-  }));
+const tabA=document.getElementById('tabA'), tabB=document.getElementById('tabB');
+const paneA=document.getElementById('paneA'), paneB=document.getElementById('paneB');
+tabA.onclick=()=>{ tabA.classList.add('active'); tabB.classList.remove('active'); paneA.style.display='block'; paneB.style.display='none'; };
+tabB.onclick=()=>{ tabB.classList.add('active'); tabA.classList.remove('active'); paneB.style.display='block'; paneA.style.display='none'; };
 
-  function bg(){
-    const g=ctx.createRadialGradient(cx-120,cy,R*0.4,cx,cy,Math.max(w,h)*0.9);
-    g.addColorStop(0,'rgba(72,100,160,0.08)'); g.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
-  }
-  function star(){
-    // subtle concentric rings
-    ctx.strokeStyle='rgba(140,170,220,0.15)'; ctx.lineWidth=1;
-    for(let i=1;i<=rings;i++){ ctx.beginPath(); ctx.arc(cx,cy,R*(0.6+i*0.35),0,Math.PI*2); ctx.stroke(); }
-    // core
-    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R*1.2);
-    g.addColorStop(0,'rgba(255,255,255,0.9)'); g.addColorStop(0.25,'rgba(200,230,255,0.5)'); g.addColorStop(1,'rgba(120,160,255,0.02)');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R*0.62,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='rgba(210,235,255,0.4)'; ctx.beginPath(); ctx.arc(cx,cy,R*0.78,0,Math.PI*2); ctx.stroke();
-  }
-  function frame(){
-    ctx.clearRect(0,0,w,h); bg(); star();
-    // orbiting dots
-    dots.forEach(p=>{
-      p.a+=p.s; const x=cx+Math.cos(p.a)*p.r, y=cy+Math.sin(p.a)*p.r;
-      ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(x,y,1.1,0,Math.PI*2); ctx.fill();
-    });
-    requestAnimationFrame(frame);
-  }
-  frame();
+function bareHost(url){ let s=String(url||'').trim(); s=s.replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./i,''); return s.toLowerCase(); }
+function emailDomain(email){ const m=String(email||'').trim().toLowerCase().match(/^[^@]+@([^@]+)$/); return m? m[1].replace(/^www\./,'') : ''; }
+function isPackagingRole(role){ return role==='supplier' || role==='distributor' || role==='buyer'; }
 
-  // small KPI counters
-  const els={leads:'hr_k_leads',ready:'hr_k_ready',quoted:'hr_k_quoted',rep:'hr_k_rep',saved:'hr_k_saved'};
-  const k={t:0,leads:0};
-  setInterval(()=>{k.t++; if(k.leads<207) k.leads+=1+(Math.random()<.35?1:0);
-    const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
-    set(els.leads,k.leads);
-    set(els.ready,(54+Math.round(Math.sin(k.t/7)*4))+'%');
-    set(els.quoted,(67+Math.round(Math.cos(k.t/11)*3))+'%');
-    set(els.rep,(21+Math.round(Math.sin(k.t/5)*2))+'%');
-    const saved=20678+Math.round(Math.sin(k.t/3)*620); set(els.saved,'$'+saved.toLocaleString());
-  },900);
-})();
+async function post(path,body){ return __API__.api(path,{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body||{}) }); }
 
-/* ---------------- Onboarding logic (allows email-only pass-through) ---------------- */
-(function(){
-  const onb=document.getElementById('onb');
-  document.getElementById('startFree').onclick=()=> onb.classList.add('in');
+/* Path A continue (email required, website optional at signup) */
+document.getElementById('a_continue').onclick=async ()=>{
+  const email=(document.getElementById('a_email').value||'').trim();
+  const role =(document.getElementById('a_role').value||'supplier').trim();
+  const site =(document.getElementById('a_site').value||'').trim();
+  const region=(document.getElementById('a_region').value||'').trim();
+  const list =!!document.getElementById('a_list').checked;
+  const err=document.getElementById('a_err'); const ok=document.getElementById('a_ok'); err.style.display='none'; ok.style.display='none';
+  if(!email){ err.textContent='Business email is required.'; err.style.display='block'; return; }
+  if(!isPackagingRole(role)){ err.textContent='We only serve packaging suppliers, distributors, and buyers.'; err.style.display='block'; return; }
+  localStorage.setItem('onb_vendor', bareHost(site)); localStorage.setItem('onb_role', role); localStorage.setItem('onb_regions', region); localStorage.setItem('onb_email', email);
+  try{ await post('/gate',{email, role, website: site}); ok.textContent='Validated. Opening feed…'; ok.style.display='block'; }catch{}
+  location.href='./free-panel.html';
+};
 
-  // tabs
-  const tabA=document.getElementById('tabA'), tabB=document.getElementById('tabB');
-  const paneA=document.getElementById('paneA'), paneB=document.getElementById('paneB');
-  tabA.onclick=()=>{ tabA.classList.add('active'); tabB.classList.remove('active'); paneA.style.display='block'; paneB.style.display='none'; };
-  tabB.onclick=()=>{ tabB.classList.add('active'); tabA.classList.remove('active'); paneB.style.display='block'; paneA.style.display='none'; };
-  document.getElementById('a_cancel').onclick=()=> onb.classList.remove('in');
-  document.getElementById('b_cancel').onclick=()=> onb.classList.remove('in');
-
-  function bareHost(url){ let s=String(url||'').trim(); s=s.replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./i,''); return s.toLowerCase(); }
-  function emailDom(email){ const m=String(email||'').trim().toLowerCase().match(/^[^@]+@([^@]+)$/); return m? m[1].replace(/^www\./,'') : ''; }
-  function splitCSV(s){ return (String(s||'').split(',').map(v=>v.trim()).filter(Boolean)); }
-  async function post(path,body){ const r=await fetch((window.API_BASE||'')+path,{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body||{}) }); return r.json(); }
-
-  // PATH A submit
-  document.getElementById('a_continue').onclick=async ()=>{
-    const email=(document.getElementById('a_email').value||'').trim();
-    const role =(document.getElementById('a_role').value||'supplier').trim();
-    const site =(document.getElementById('a_site').value||'').trim();
-    const region=(document.getElementById('a_region').value||'').trim();
-    const err=document.getElementById('a_err'); const ok=document.getElementById('a_ok'); err.style.display='none'; ok.style.display='none';
-    if(!email){ err.textContent='Please provide a business email.'; err.style.display='block'; return; }
-
-    const vDom=bareHost(site)||null;
-    try{
-      await post('/api/v1/gate',{ email, region });
-      await post('/api/v1/vault',{ traits:{ vendorDomain:vDom, regions: splitCSV(region), industries:[], buyers:[], notes:null }});
-    }catch{}
-
-    localStorage.setItem('onb_email', email);
-    if(vDom) localStorage.setItem('onb_vendor', vDom);
-    if(region) localStorage.setItem('onb_regions', region);
-    localStorage.setItem('onb_role', role);
-    ok.textContent='Saved. Opening feed…'; ok.style.display='block';
-    location.href='./free-panel.html';
-  };
-
-  // PATH B submit
-  document.getElementById('b_continue').onclick=async ()=>{
-    const email=(document.getElementById('b_email').value||'').trim();
-    const role =(document.getElementById('b_role').value||'supplier').trim();
-    const site =(document.getElementById('b_site').value||'').trim();
-    const inds =(document.getElementById('b_industries').value||'').trim();
-    const regs =(document.getElementById('b_regions').value||'').trim();
-    const buyers=(document.getElementById('b_buyers').value||'').trim();
-    const desc =(document.getElementById('b_desc').value||'').trim();
-    const err=document.getElementById('b_err'); const ok=document.getElementById('b_ok'); err.style.display='none'; ok.style.display='none';
-    if(!email){ err.textContent='Please provide a business email.'; err.style.display='block'; return; }
-    const vDom=bareHost(site)||null;
-    try{
-      await post('/api/v1/gate',{ email, region: regs });
-      await post('/api/v1/vault',{ traits:{
-        vendorDomain:vDom,
-        industries: splitCSV(inds),
-        regions: splitCSV(regs),
-        buyers: splitCSV(buyers),
-        notes: desc||null
-      }});
-    }catch{}
-
-    localStorage.setItem('onb_email', email);
-    if(vDom) localStorage.setItem('onb_vendor', vDom);
-    if(regs) localStorage.setItem('onb_regions', regs);
-    if(inds) localStorage.setItem('onb_industries', inds);
-    if(buyers) localStorage.setItem('onb_buyers', buyers);
-    if(desc) localStorage.setItem('onb_desc', desc);
-    localStorage.setItem('onb_role', role);
-    ok.textContent='Saved. Opening feed…'; ok.style.display='block';
-    location.href='./free-panel.html';
-  };
-
-  // Esc closes
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ onb.classList.remove('in'); }});
-})();
-
-/* Demo modal controls (optional) */
-document.getElementById('vclose')?.addEventListener('click', ()=>{ document.getElementById('vid').classList.remove('in'); const f=document.getElementById('vframe'); f.src=f.src; });
+/* Path B continue */
+document.getElementById('b_continue').onclick=async ()=>{
+  const email=(document.getElementById('b_email').value||'').trim();
+  const role =(document.getElementById('b_role').value||'supplier').trim();
+  const site =(document.getElementById('b_site').value||'').trim();
+  const inds =(document.getElementById('b_industries').value||'').trim();
+  const regs =(document.getElementById('b_regions').value||'').trim();
+  const buyers=(document.getElementById('b_buyers').value||'').trim();
+  const desc =(document.getElementById('b_desc').value||'').trim();
+  const err=document.getElementById('b_err'); const ok=document.getElementById('b_ok'); err.style.display='none'; ok.style.display='none';
+  if(!email){ err.textContent='Business email is required.'; err.style.display='block'; return; }
+  if(!isPackagingRole(role)){ err.textContent='We only serve packaging suppliers, distributors, and buyers.'; err.style.display='block'; return; }
+  localStorage.setItem('onb_vendor', bareHost(site)); localStorage.setItem('onb_role', role);
+  localStorage.setItem('onb_industries', inds); localStorage.setItem('onb_regions', regs);
+  localStorage.setItem('onb_buyers', buyers); localStorage.setItem('onb_desc', desc); localStorage.setItem('onb_email', email);
+  try{ await post('/gate',{email, role, website: site}); }catch{}
+  location.href='./free-panel.html';
+};
 </script>
 </body>
 </html>
