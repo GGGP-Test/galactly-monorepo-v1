@@ -6,6 +6,7 @@
 <title>Galactly • Free Panel</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
 <style>
   :root{
     --bg:#0c1116; --panel:#0f1620; --muted:#95a3b3; --text:#e8eef7;
@@ -26,7 +27,7 @@
   .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
   .api{opacity:.8}
 
-  .list{display:flex;flex-direction:column;gap:12px;margin-top:12px;max-height:330px;overflow:auto}
+  .list{display:flex;flex-direction:column;gap:12px;margin-top:12px;max-height:330px;overflow:auto;position:relative;z-index:3}
   .item{border:1px solid #1a2b3c;background:linear-gradient(180deg,#0f1620,#0f1823);border-radius:14px;padding:12px}
   .t{font-weight:650;font-size:16px;margin-bottom:6px}
   .row{display:flex;flex-wrap:wrap;gap:8px}
@@ -62,6 +63,9 @@
 
   .exp{margin-top:8px;background:#0b1219;border:1px dashed #26384f;border-radius:10px;padding:8px;color:#cde0f2;font-size:12px}
   .exp-btn{margin-top:8px;font-size:12px;cursor:pointer;color:#8fd7ff}
+
+  /* keep neutron behind the list */
+  #space canvas{z-index:1;pointer-events:none}
 </style>
 
 <!-- Force API base + dev unlimited -->
@@ -162,125 +166,108 @@
 </div>
 
 <script>
-
-(function () {
-    const candidates = [
-      document.querySelector('.live-results .live-list'),
-      document.querySelector('.live-results [data-live-list]'),
-      document.getElementById('live-list'),
-      // last-resort: first non-canvas child inside live box
-      (function () {
-        const box = document.querySelector('.live-results');
-        if (!box) return null;
-        return [...box.children].find(n => n.tagName !== 'CANVAS') || null;
-      })()
-    ].filter(Boolean);
-
-    const list = candidates[0];
-    if (list) list.classList.add('live-list'); // Styling only
-  })();
-  
 (() => {
   // ---------- base ----------
   const $ = (q)=>document.querySelector(q);
   const apiBase = localStorage.getItem('apiBase') || window.API_DEFAULT || '';
-  const devUnlim = localStorage.getItem('gal_unlim') === 'true' || !!window.DEV_UNLIMITED;
+  const devUnlim = (localStorage.getItem('gal_unlim') === 'true') || !!window.DEV_UNLIMITED;
   const uid = (localStorage.getItem('gal_uid') || `u-${Math.random().toString(16).slice(2)}`);
   localStorage.setItem('gal_uid', uid);
   $('#apiTxt').textContent = `[api] ${apiBase.replace('/api/v1','')}`;
 
   // ---------- fetch wrapper ----------
-  async function jfetch(path, opt={}) {
+  async function jfetch(path, opt={}){
     const url = path.startsWith('http') ? path : `${apiBase}${path}`;
+    const method = opt.method || (opt.body ? 'POST' : 'GET');
     const res = await fetch(url, {
-      method: 'GET',
+      method,
       headers: {'x-galactly-user': uid, 'content-type':'application/json'},
       credentials: 'omit',
       cache: 'no-cache',
       ...opt
-    }).catch(() => null);
-    if(!res) return {ok:false, error:'network'};
-    if(!res.ok){
-      return {ok:false, error:`${res.status}`};
-    }
+    }).catch(()=>null);
+    if(!res) return {ok:false,error:'network'};
+    if(!res.ok) return {ok:false,error:`${res.status}`};
     try { return await res.json(); } catch { return {ok:false,error:'bad_json'}; }
   }
 
   // ---------- UI helpers ----------
-  function logLine(t){ const d=document.createElement('div'); d.className='line'; d.textContent=t; const L=$('#log'); L.prepend(d); while(L.children.length>6)L.removeChild(L.lastChild); }
+  function logLine(t){
+    const d=document.createElement('div'); d.className='line'; d.textContent=t;
+    const L=$('#log'); L.prepend(d); while(L.children.length>12)L.removeChild(L.lastChild);
+  }
   function setQuota(s){
     if(!s){ $('#quotaTxt').textContent = devUnlim ? '∞ searches left • ∞ reveals left' : '—'; return; }
     if(s.devUnlimited || devUnlim){ $('#quotaTxt').textContent = '∞ searches left • ∞ reveals left'; return; }
-    $('#quotaTxt').textContent = `${s.quota?.findsLeft ?? '—'} searches left • ${s.quota?.revealsLeft ?? '—'} reveals left`;
+    const finds = (s.quota && s.quota.findsLeft!=null) ? s.quota.findsLeft : '—';
+    const revs  = (s.quota && s.quota.revealsLeft!=null) ? s.quota.revealsLeft : '—';
+    $('#quotaTxt').textContent = `${finds} searches left • ${revs} reveals left`;
   }
 
-  // ---------- map raw signal -> UI model ----------
+  // ---------- map raw signal -> UI ----------
   const STATE_MAP = {"AL":"Alabama","AK":"Alaska","AZ":"Arizona","AR":"Arkansas","CA":"California","CO":"Colorado","CT":"Connecticut","DE":"Delaware","FL":"Florida","GA":"Georgia","HI":"Hawaii","ID":"Idaho","IL":"Illinois","IN":"Indiana","IA":"Iowa","KS":"Kansas","KY":"Kentucky","LA":"Louisiana","ME":"Maine","MD":"Maryland","MA":"Massachusetts","MI":"Michigan","MN":"Minnesota","MS":"Mississippi","MO":"Missouri","MT":"Montana","NE":"Nebraska","NV":"Nevada","NH":"New Hampshire","NJ":"New Jersey","NM":"New Mexico","NY":"New York","NC":"North Carolina","ND":"North Dakota","OH":"Ohio","OK":"Oklahoma","OR":"Oregon","PA":"Pennsylvania","RI":"Rhode Island","SC":"South Carolina","SD":"South Dakota","TN":"Tennessee","TX":"Texas","UT":"Utah","VT":"Vermont","VA":"Virginia","WA":"Washington","WV":"West Virginia","WI":"Wisconsin","WY":"Wyoming","DC":"District of Columbia"};
-  function first(v){ return Array.isArray(v)? v[0] : v; }
+  const esc = (s)=>String(s||'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
   function pickChannel(sig){
-    // prefer declared contact routes, fallback by source
     const c = (sig.channel||'').toLowerCase();
     if(c.includes('linkedin')) return 'LinkedIn DM';
     if(c.includes('sms')) return 'SMS';
-    if(c.includes('call')||c.includes('phone')) return 'Call';
+    if(c.includes('call') || c.includes('phone')) return 'Call';
     if(c.includes('email')) return 'Email';
-    const src = (sig.source||'').toLowerCase();
+    const src = (sig.source || '').toLowerCase();
     if(src.includes('linkedin')) return 'LinkedIn DM';
-    if(src.includes('rfp')||src.includes('procure')) return 'Email';
+    if(src.includes('rfp') || src.includes('procure')) return 'Email';
     return 'Email';
   }
   function buildWhy(sig){
     const parts = [];
     if(sig.reason) parts.push(sig.reason);
-    if(sig.qty) parts.push(`Quantity mentioned: ${sig.qty}`);
+    if(sig.qty) parts.push(`Quantity: ${sig.qty}`);
     if(sig.material) parts.push(`Material/format: ${sig.material}`);
     if(sig.deadline) parts.push(`Timeline: ${sig.deadline}`);
     if(sig.url) parts.push(`Source: ${sig.url}`);
     if(!parts.length && sig.source) parts.push(`Matched by ${sig.source}`);
     return parts.join(' • ');
   }
-  function mapRawSignal(sig, profile){
-    // expected flexible fields from backend
-    const buyerDomain = sig.company_domain || sig.domain || sig.brand || 'unknown';
+  function mapRawSignal(sig){
+    const buyerDomain = sig.company_domain || sig.domain || sig.brand || sig.company || 'unknown';
     const state = (sig.state || sig.region || '').toUpperCase();
-    const niceState = STATE_MAP[state] ? state : ''; // show code chip only if valid
+    const niceState = STATE_MAP[state] ? state : '';
     const intent = sig.intent || sig.material || sig.package || sig.category || '';
-    const title = sig.title
-      || (sig.need ? `"${sig.need}"` : '')
-      || (intent ? `${intent} — ${buyerDomain}` : `Lead — ${buyerDomain}`);
+    const need = sig.need ? `"${sig.need}"` : '';
+    const title = need || (intent ? `${intent} — ${buyerDomain}` : `Lead — ${buyerDomain}`);
     return {
       title,
       buyer: buyerDomain,
       state: niceState,
       channel: pickChannel(sig),
-      intent: (intent || '').toString(),
+      intent: String(intent||''),
       why: buildWhy(sig),
-      source: sig.source || '',
+      source: sig.source || ''
     };
   }
 
   // ---------- render ----------
-  function chip(t){ return t?`<span class="chip">${escapeHtml(t)}</span>`:''; }
-  function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function chip(t){ return t ? `<span class="chip">${esc(t)}</span>` : ''; }
 
   function renderResults(items){
     const box = $('#liveList'); box.innerHTML='';
-    $('#emptyNote').style.display = items?.length ? 'none':'block';
+    $('#emptyNote').style.display = (items && items.length) ? 'none':'block';
     (items||[]).forEach(it=>{
       const li = document.createElement('div'); li.className='item';
       li.innerHTML = `
-        <div class="t">${escapeHtml(it.title)}</div>
+        <div class="t">${esc(it.title)}</div>
         <div class="row">
           ${chip(it.state)} ${chip(it.channel)} ${chip(it.intent)}
         </div>
-        <div class="muted" style="margin-top:6px">${escapeHtml(it.buyer || '')}</div>
+        <div class="muted" style="margin-top:6px">${esc(it.buyer||'')}</div>
         <div class="exp-btn">Explain</div>
         <div class="exp" style="display:none">
-          <div><b>Why:</b> ${escapeHtml(it.why || '—')}</div>
-          ${it.source?`<div style="margin-top:6px"><b>Source:</b> ${escapeHtml(it.source)}</div>`:''}
+          <div><b>Why:</b> ${esc(it.why || '—')}</div>
+          ${it.source ? `<div style="margin-top:6px"><b>Source:</b> ${esc(it.source)}</div>` : ''}
         </div>
       `;
-      li.querySelector('.exp-btn').onclick=()=> {
+      li.querySelector('.exp-btn').onclick = ()=>{
         const e=li.querySelector('.exp'); e.style.display = e.style.display==='none'?'block':'none';
       };
       box.appendChild(li);
@@ -298,9 +285,13 @@
 
   // ---------- neutron star ----------
   const canvas=$('#star'), ctx=canvas.getContext('2d'); let W,H,t=0; const stars=[];
-  function resize(){ const r=$('#space').getBoundingClientRect(); canvas.width=W=r.width; canvas.height=H=r.height; stars.length=0; const N=130; for(let i=0;i<N;i++){ stars.push({r:Math.random()*Math.min(W,H)/2*0.95,a:Math.random()*Math.PI*2,s:0.0008+Math.random()*0.0016}); } }
+  function resize(){
+    const r=$('#space').getBoundingClientRect(); canvas.width=W=r.width; canvas.height=H=r.height;
+    stars.length=0; const N=130;
+    for(let i=0;i<N;i++){ stars.push({r:Math.random()*Math.min(W,H)/2*0.95,a:Math.random()*Math.PI*2,s:0.0008+Math.random()*0.0016}); }
+  }
   window.addEventListener('resize',resize); resize();
-  function draw(){
+  (function draw(){
     ctx.clearRect(0,0,W,H); const cx=W/2, cy=H/2;
     ctx.strokeStyle='rgba(126,226,255,.08)';
     for(let i=1;i<=6;i++){ ctx.beginPath(); ctx.arc(cx,cy,(i/6)*Math.min(W,H)/2,0,Math.PI*2); ctx.stroke(); }
@@ -311,15 +302,16 @@
     ctx.fillStyle='rgba(158,246,255,.9)';
     stars.forEach(s=>{ s.a+=s.s; const x=cx+Math.cos(s.a)*s.r, y=cy+Math.sin(s.a)*s.r; ctx.fillRect(x,y,1.2,1.2); });
     t+=0.5; requestAnimationFrame(draw);
-  } draw();
+  })();
 
   // ---------- form defaults ----------
-  const qs=(k)=> new URLSearchParams(location.search).get(k)||'';
+  const qs=(k)=> new URLSearchParams(location.search).get(k) || '';
   $('#fWebsite').value = qs('site') || localStorage.getItem('site') || '';
   $('#fRegions').value = localStorage.getItem('regions') || 'US, CA';
   $('#fIndustries').value = localStorage.getItem('industries') || 'beverage, confectionery';
   $('#fSeeds').value = localStorage.getItem('seeds') || 'brand1.com, brand2.com';
   $('#fNotes').value = localStorage.getItem('notes') || 'materials, order sizes, channels, exclusions';
+
   $('#btnSave').onclick = ()=>{
     localStorage.setItem('site',$('#fWebsite').value.trim());
     localStorage.setItem('regions',$('#fRegions').value.trim());
@@ -329,7 +321,7 @@
     logLine('Saved.');
   };
 
-  // ---------- launching overlay ----------
+  // launching overlay
   function launchOverlay(ms){
     const m=$('#launchModal'); m.classList.add('in');
     const dots=[...document.querySelectorAll('.b')];
@@ -347,11 +339,9 @@
       notes: $('#fNotes').value.trim(),
     };
 
-    // launch
     const dur = 7000 + Math.floor(Math.random()*8000);
     launchOverlay(dur);
 
-    // submit
     const r = await jfetch('/find-now', { method:'POST', body: JSON.stringify(body) });
     if(!r || r.ok === false){
       logLine(`Search error: ${r?.error || 'temporary'}`);
@@ -359,14 +349,20 @@
     }
     logLine('Submitting your search…');
 
-    // preview stream
+    // Fill preview/status counters if present; otherwise show rough counts
+    const freeCnt = (r.counts && r.counts.free) || (r.preview && r.preview.free) || 0;
+    const proCnt  = (r.counts && r.counts.pro ) || (r.preview && r.preview.pro ) || 0;
+    $('#counts').textContent = `Free ${freeCnt}/0 • Pro ${proCnt}/0`;
+
     if(Array.isArray(r.preview)){
       r.preview.slice(-6).forEach(p=>logLine(p));
+    } else if (r.preview && typeof r.preview === 'object'){
+      Object.entries(r.preview).forEach(([k,v])=>{
+        logLine(`${k}: ${Array.isArray(v)? v.join(', '): v}`);
+      });
     }
 
-    // map results (real only)
-    const profile = {site: body.website, industries: body.industries, regions: body.regions};
-    const items = (r.items||[]).map(s=>mapRawSignal(s, profile));
+    const items = (r.items || []).map(mapRawSignal);
     if(items.length) renderResults(items);
     refreshStatus();
   };
