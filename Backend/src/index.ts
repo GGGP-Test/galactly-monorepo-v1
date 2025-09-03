@@ -5,6 +5,11 @@ import type { Request, Response } from "express";
 
 const app = express();
 
+// in backend/src/Index.ts, right after:  const app = express();
+app.set('etag', false);
+app.use((req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
+
+
 /* -------------------- Minimal CORS (no package) -------------------- */
 app.use((req, res, next) => {
   const origin = req.headers.origin || "*";
