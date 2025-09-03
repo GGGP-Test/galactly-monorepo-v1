@@ -1,10 +1,16 @@
 /* Galactly runtime config injected from repo (no console needed) */
-window.API_DEFAULT = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1';
-window.DEV_UNLIMITED = true;  // set to false before going live
+(function () {
+  var API = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1';
+  var UNLIM = true; // set to false before going live
 
-try {
-  localStorage.setItem('apiBase', window.API_DEFAULT);
-  if (window.DEV_UNLIMITED) localStorage.setItem('gal_unlim','true');
-} catch (e) {}
+  // Expose for our fetch wrapper
+  window.API_DEFAULT = API;
+  window.DEV_UNLIMITED = UNLIM;
 
-console.log('[config] api =', window.API_DEFAULT, 'unlim =', window.DEV_UNLIMITED);
+  try {
+    localStorage.setItem('apiBase', API);
+    if (UNLIM) localStorage.setItem('gal_unlim','true');
+  } catch (e) {}
+
+  console.log('[config] api =', API, 'unlim =', UNLIM);
+})();
