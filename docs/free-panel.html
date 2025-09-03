@@ -1,392 +1,335 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Galactly • Free Panel</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg: #0c121a;
-      --panel: #0f1621;
-      --muted: #9fb2c7;
-      --text: #e7f1ff;
-      --line: #233244;
-      --primary: #86f3ff;
-      --pill: #152231;
-      --good: #77ffb0;
-      --badge: #13283b;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background: radial-gradient(1200px 700px at 50% 0%, #0c141e 0%, #0c121a 60%, #090f16 100%);
-      color: var(--text); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-    }
-    .wrap { max-width: 1220px; margin: 32px auto 90px; padding: 0 20px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
-    .panel { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border: 1px solid var(--line); border-radius: 18px; position: relative; overflow: clip; }
-    .head { padding: 14px 16px; border-bottom: 1px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
-    h3 { margin: 0; font-size: 16px; letter-spacing:.2px }
-    .muted { color: var(--muted); font-size: 13px }
-    .canvasBox{ position:relative; height:300px; display:flex; align-items:center; justify-content:center; }
-    #neutron { width: 100%; height: 100%; display:block; }
-    .engineDot{ position:absolute; left:14px; bottom:14px; display:flex; gap:8px; align-items:center; font-size:12px; color:var(--muted) }
-    .engineDot .dot{ width:8px; height:8px; border-radius:999px; background:#27ffb1; box-shadow:0 0 12px #27ffb1aa }
-    .apibase { position:absolute; right:14px; bottom:14px; font-size:11px; color:#6fa1b8 }
-    .body { padding: 12px 14px 16px; }
-    .pill { background: var(--pill); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin:10px 0; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-    .btn { border:1px solid var(--line); background:#122132; color:var(--text); padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer; }
-    .btn.primary{ background:#123041; border-color:#1d5165; box-shadow: inset 0 0 0 1px #2a7d93; }
-    .btn:disabled{ opacity:.6; cursor:not-allowed }
-    .inputs{ display:grid; grid-template-columns: 1fr 140px; gap:10px; margin-top:10px }
-    .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-    label{ font-size:12px; color:var(--muted); margin-bottom:6px; display:block }
-    input, textarea {
-      width:100%; background:#0c1520; color:var(--text); border:1px solid var(--line);
-      border-radius:10px; padding:10px 12px; outline:none;
-    }
-    textarea{ min-height:82px; resize:vertical }
-    .list{ display:flex; flex-direction:column; gap:10px }
-    .card{
-      background: #0e1723; border:1px solid var(--line); border-radius:14px; padding:12px 12px 10px; position:relative;
-    }
-    .title{ font-weight:700; font-size:16px; margin-bottom:6px }
-    .line{ font-size:13px; color:var(--muted); margin-bottom:6px }
-    .target{ font-size:13px; color:#a6c7dc; margin-bottom:8px; }
-    .tags{ display:flex; gap:6px; flex-wrap:wrap }
-    .tag{ font-size:12px; padding:5px 8px; background:#0c1b2a; border:1px solid #1b3147; border-radius:999px; }
-    .link{ color:var(--primary); text-decoration:none }
-    .badge { padding:2px 8px; border-radius:999px; background:var(--badge); border:1px solid var(--line); margin-left:10px; font-size:11px; color:#9fd0ea }
-    .loaderMask{
-      position:fixed; inset:0; background:rgba(6,10,15,.72); backdrop-filter: blur(3px);
-      display:none; align-items:center; justify-content:center; z-index:999;
-    }
-    .loader{ width:460px; max-width:92vw; background:#0f1825; border:1px solid var(--line); border-radius:16px; padding:16px 16px 12px; }
-    .loader h4{ margin:0 0 10px 0; }
-    .steps{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
-    .step{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted) }
-    .dotStep{ width:8px; height:8px; border-radius:999px; background:#28495e; box-shadow:0 0 0 0 transparent; transition:.25s }
-    .step.active .dotStep{ background:#79f0ff; box-shadow:0 0 14px #79f0ff; }
-    .sticky{text-align:right; margin-top:10px}
-    .note { font-size:12px; color:#8cb3c6; margin-top:8px; }
-    @media (max-width: 1000px){
-      .wrap{ grid-template-columns: 1fr; }
-      .inputs{ grid-template-columns: 1fr; }
-      .grid2{ grid-template-columns: 1fr; }
-    }
-  </style>
-  <!-- pulls API_DEFAULT / DEV_UNLIMITED if you committed config.js -->
-  <script src="./config.js"></script>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Galactly • Free Panel</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0c1116; --panel:#0f1620; --muted:#95a3b3; --text:#e8eef7;
+    --accent:#7ee2ff; --accent-2:#9dffa8; --chip:#1a2230; --chip-b:#1e2a3b;
+    --ring:#122033; --ok:#3ddc97; --warn:#ffd166; --err:#ef476f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+  .wrap{max-width:1200px;margin:24px auto;padding:0 16px;}
+  .grid{display:grid;grid-template-columns:1fr 420px;gap:20px}
+  .card{background:var(--panel);border:1px solid #152233;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .card h3{margin:0;padding:14px 16px;border-bottom:1px solid #152233;font-weight:600}
+  .live-body{padding:16px;position:relative;min-height:440px}
+  .hud{position:absolute;left:16px;bottom:16px;display:flex;gap:12px;align-items:center;color:var(--muted);font-size:12px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .api{opacity:.8}
+  .list{display:flex;flex-direction:column;gap:10px;margin-top:14px;max-height:310px;overflow:auto}
+  .item{border:1px solid #1a2b3c;background:linear-gradient(180deg,#0f1620,#0f1823);border-radius:14px;padding:12px}
+  .t{font-weight:650;font-size:16px;margin-bottom:8px}
+  .row{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font-size:12px;color:#b8c7d6;background:var(--chip);border:1px solid var(--chip-b);padding:4px 8px;border-radius:999px}
+  .muted{color:var(--muted)}
+  .side{padding:16px}
+  .f{display:flex;flex-direction:column;gap:10px}
+  label{font-size:12px;color:var(--muted)}
+  input,textarea{width:100%;background:#0b121a;border:1px solid #1c2a3d;color:var(--text);border-radius:10px;padding:10px;font:inherit}
+  textarea{min-height:88px;resize:vertical}
+  .row2{display:flex;gap:10px}
+  .btn{padding:10px 12px;border-radius:10px;border:1px solid #23415a;background:#0f1e2b;color:#d9f1ff;font-weight:600;cursor:pointer}
+  .btn.primary{background:#10364c;border-color:#1f5c83}
+  .sub{font-size:12px;color:var(--muted);margin-top:6px}
+  .counter{position:absolute;right:16px;top:16px;font-size:12px;color:var(--muted)}
+  .log{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;margin-top:10px}
+  .log .line{font-size:12px;color:#bcd0e0;background:#0b1219;border:1px solid #142234;border-radius:8px;padding:8px}
+  .empty{color:var(--muted);text-align:center;margin-top:80px}
+  .modal{position:fixed;inset:0;background:rgba(2,8,14,.65);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal.in{display:flex}
+  .box{width:520px;border-radius:14px;background:#0f1620;border:1px solid #152233;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+  .box h4{margin:0 0 6px 0}
+  .steps{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .step{display:flex;gap:8px;align-items:center;font-size:14px}
+  .b{width:8px;height:8px;border-radius:50%;background:#203244;box-shadow:inset 0 0 0 2px #325574}
+  .b.on{background:#44cdf7;box-shadow:0 0 10px #44cdf7}
+  /* canvas area */
+  #space{position:absolute;inset:16px 16px 160px 16px;border-radius:12px;background:radial-gradient(1200px 600px at 20% 40%,#0c121a 0,#0a0f16 60%,#0a0f16 100%);overflow:hidden;border:1px solid #142233}
+  #star{position:absolute;inset:0}
+</style>
+
+<!-- Force API base + dev unlimited (no console needed) -->
+<script>
+  window.API_DEFAULT = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1';
+  window.DEV_UNLIMITED = true; // set false for production
+  try{
+    localStorage.setItem('apiBase', window.API_DEFAULT);
+    if(window.DEV_UNLIMITED) localStorage.setItem('gal_unlim','true');
+  }catch(e){}
+</script>
 </head>
 <body>
   <div class="wrap">
-    <!-- LEFT: Live results -->
-    <section class="panel" id="livePanel">
-      <div class="head">
-        <h3>Live results <span class="badge" id="quotaBadge">∞ searches left • ∞ reveals left</span></h3>
-      </div>
-      <div class="canvasBox">
-        <canvas id="neutron"></canvas>
-        <div class="engineDot"><span class="dot"></span><span id="engineTxt">engine: ready</span></div>
-        <div class="apibase" id="apiBaseTxt"></div>
-      </div>
-      <div class="body">
-        <div class="list" id="liveList"></div>
-      </div>
-    </section>
+    <div class="grid">
+      <!-- LEFT: live results -->
+      <div class="card">
+        <h3>
+          Live results
+          <span class="counter" id="quotaTxt">—</span>
+        </h3>
+        <div class="live-body">
+          <div id="space">
+            <canvas id="star"></canvas>
+          </div>
 
-    <!-- RIGHT: Train your AI + Preview -->
-    <section class="panel">
-      <div class="head">
+          <div class="list" id="liveList"></div>
+          <div class="empty" id="emptyNote">No live results yet. Run a search on the right.</div>
+
+          <div class="hud">
+            <span class="dot" id="engineDot"></span>
+            <span id="engineTxt">engine: ready</span>
+            <span class="api" id="apiTxt"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: train your AI -->
+      <div class="card">
         <h3>Train your AI</h3>
-        <span class="muted" id="quotaTop">—</span>
-      </div>
-      <div class="body">
-        <div class="grid2">
-          <div>
-            <label>Website</label>
-            <input id="f_site" placeholder="yourcompany.com" />
+        <div class="side">
+          <div class="f">
+            <div>
+              <label>Website</label>
+              <input id="fWebsite" placeholder="yourcompany.com" />
+            </div>
+            <div class="row2">
+              <div style="flex:1">
+                <label>Regions</label>
+                <input id="fRegions" placeholder="US, CA" />
+              </div>
+              <div style="flex:1">
+                <label>Industries</label>
+                <input id="fIndustries" placeholder="beverage, confectionery" />
+              </div>
+            </div>
+            <div>
+              <label>Seed buyers (domains)</label>
+              <input id="fSeeds" placeholder="brand1.com, brand2.com" />
+            </div>
+            <div>
+              <label>Describe ideal customers</label>
+              <textarea id="fNotes" placeholder="materials, order sizes, channels, exclusions"></textarea>
+            </div>
+            <div class="row2">
+              <button class="btn" id="btnSave">Save</button>
+              <button class="btn primary" id="btnFind">Find now</button>
+            </div>
+            <div class="sub">Loaded from onboarding. Tweak &amp; run.</div>
           </div>
-          <div>
-            <label>Regions</label>
-            <input id="f_regions" placeholder="US, CA" />
-          </div>
-          <div>
-            <label>Industries</label>
-            <input id="f_inds" placeholder="beverage, confectionery" />
-          </div>
-          <div>
-            <label>Seed buyers (domains)</label>
-            <input id="f_seeds" placeholder="brand1.com, brand2.com" />
-          </div>
-          <div style="grid-column:1 / -1">
-            <label>Describe ideal customers</label>
-            <textarea id="f_notes" placeholder="materials, order sizes, channels, exclusions"></textarea>
-          </div>
-        </div>
-        <div class="sticky">
-          <button class="btn" id="btnSave">Save</button>
-          <button class="btn primary" id="btnFind">Find now</button>
-        </div>
 
-        <div style="margin-top:18px">
-          <div class="head" style="border:none; padding:0 0 8px 0">
-            <h3>Signals Preview (report)</h3>
-            <span class="muted" id="counts">Free 0/0 • Pro 0/0</span>
-          </div>
-          <div class="list" id="previewList"></div>
+          <h3 style="margin:18px 0 0 0;border:none;padding:0;font-size:16px">Signals Preview (report)</h3>
+          <div class="sub" id="counts">Free 0/0 • Pro 0/0</div>
+          <div class="log" id="log"></div>
         </div>
       </div>
-    </section>
-  </div>
-
-  <!-- LAUNCHER -->
-  <div class="loaderMask" id="launchMask" aria-hidden="true">
-    <div class="loader">
-      <h4>Launching real-time intent search…</h4>
-      <div class="steps" id="launchSteps">
-        <div class="step"><span class="dotStep"></span> Probing public feeds</div>
-        <div class="step"><span class="dotStep"></span> Reading procurement + RFPs</div>
-        <div class="step"><span class="dotStep"></span> Scanning retailer pages</div>
-        <div class="step"><span class="dotStep"></span> Extracting quantities & materials</div>
-        <div class="step"><span class="dotStep"></span> Cross-checking signals</div>
-        <div class="step"><span class="dotStep"></span> Ranking by fit</div>
-      </div>
-      <div class="note" id="launchNote">Tip: upgrade to keep this running 24/7 in the background.</div>
     </div>
   </div>
 
-  <script>
+  <!-- launching modal -->
+  <div class="modal" id="launchModal">
+    <div class="box">
+      <h4>Launching real-time intent search…</h4>
+      <div class="steps" id="steps">
+        <div class="step"><span class="b" data-i="0"></span> Probing public feeds</div>
+        <div class="step"><span class="b" data-i="1"></span> Reading procurement + RFPs</div>
+        <div class="step"><span class="b" data-i="2"></span> Scanning retailer pages</div>
+        <div class="step"><span class="b" data-i="3"></span> Extracting quantities & materials</div>
+        <div class="step"><span class="b" data-i="4"></span> Cross-checking signals</div>
+        <div class="step"><span class="b" data-i="5"></span> Ranking by fit</div>
+      </div>
+      <div class="sub" style="margin-top:8px">Tip: upgrade to keep this running 24/7 in the background.</div>
+    </div>
+  </div>
 
 <script>
-  window.API_DEFAULT = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1';
-  window.DEV_UNLIMITED = true;  // turn false for production
+(() => {
+  // -------------- helpers --------------
+  const $ = (q)=>document.querySelector(q);
+  const apiBase = localStorage.getItem('apiBase') || window.API_DEFAULT || '';
+  const devUnlim = localStorage.getItem('gal_unlim') === 'true' || !!window.DEV_UNLIMITED;
+  const uid = (localStorage.getItem('gal_uid') || `u-${Math.random().toString(16).slice(2)}`);
+  localStorage.setItem('gal_uid', uid);
 
-  try {
-    localStorage.setItem('apiBase', window.API_DEFAULT);
-    if (window.DEV_UNLIMITED) localStorage.setItem('gal_unlim','true');
-  } catch(e){}
-</script>
+  $('#apiTxt').textContent = `[api] ${apiBase.replace('/api/v1','')}`;
 
-    // ---------- API base ----------
-    const API =
-      (window.API_DEFAULT ?? localStorage.getItem('apiBase')) ||
-      `${location.origin.replace(/\/$/, '')}/api/v1`;
-    document.getElementById('apiBaseTxt').textContent = `[api] ${API}`;
-
-    const uid = (localStorage.getItem('uid') || `u-${Math.random().toString(16).slice(2)}`);
-    localStorage.setItem('uid', uid);
-
-    // ---------- helpers ----------
-    const $ = (sel) => document.querySelector(sel);
-    const elLive = $('#liveList');
-    const elPrev = $('#previewList');
-    const quotaBadge = $('#quotaBadge');
-    const quotaTop = $('#quotaTop');
-    const counts = $('#counts');
-    const mask = $('#launchMask');
-    const steps = Array.from(document.querySelectorAll('#launchSteps .step'));
-
-    function showLaunch(seconds){
-      mask.style.display = 'flex';
-      let i = 0;
-      const total = steps.length;
-      steps.forEach(s=>s.classList.remove('active'));
-      const tick = () => {
-        if (i<total) steps[i].classList.add('active');
-        i++;
-      };
-      tick();
-      const per = Math.max(1, Math.floor(seconds*1000/total));
-      const t = setInterval(()=>{
-        if(i>=total){ clearInterval(t); return; }
-        tick();
-      }, per);
-      return () => { clearInterval(t); mask.style.display='none'; };
+  async function jfetch(path, opt={}) {
+    const url = path.startsWith('http') ? path : `${apiBase}${path}`;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {'x-galactly-user': uid, 'content-type':'application/json'},
+      credentials: 'omit',
+      cache: 'no-cache',
+      ...opt
+    }).catch(() => null);
+    if(!res) return {ok:false, error:'network'};
+    if(!res.ok){
+      // convert hard errors to soft JSON so UI never throws
+      return {ok:false, error:`${res.status}`};
     }
+    try { return await res.json(); } catch { return {ok:false,error:'bad_json'}; }
+  }
 
-    function fmtCount(q){
-      if(!q) return '— searches left • — reveals left';
-      if (q.findsLeft === Infinity) return '∞ searches left • ∞ reveals left';
-      return `${q.findsLeft} searches left • ${q.revealsLeft} reveals left`;
-    }
+  function logLine(t){ const d=document.createElement('div'); d.className='line'; d.textContent=t; $('#log').prepend(d); }
+  function setQuota(q){
+    if(q && q.devUnlimited) { $('#quotaTxt').textContent = '∞ searches left • ∞ reveals left'; return; }
+    if(!q) { $('#quotaTxt').textContent = devUnlim ? '∞ searches left • ∞ reveals left' : '—'; return; }
+    $('#quotaTxt').textContent = `${q.findsLeft ?? '—'} searches left • ${q.revealsLeft ?? '—'} reveals left`;
+  }
 
-    // ---------- neutron star ----------
-    (function neutron(){
-      const c = document.getElementById('neutron');
-      const ctx = c.getContext('2d');
-      let w=0,h=0; const DPR = devicePixelRatio||1;
-      function resize(){
-        w = c.clientWidth; h = c.clientHeight;
-        c.width = Math.floor(w*DPR); c.height = Math.floor(h*DPR);
-        ctx.setTransform(DPR,0,0,DPR,0,0);
-      }
-      window.addEventListener('resize', resize); resize();
-      const dots = Array.from({length:180}).map(()=>({
+  // -------------- status/presence --------------
+  async function refreshStatus(){
+    const s = await jfetch('/status');
+    if(s && s.ok) setQuota(s.quota); else setQuota(null);
+  }
+  refreshStatus();
+  setInterval(refreshStatus, 20_000);
+
+  // heartbeat (ignore errors)
+  setInterval(()=>{ jfetch('/presence/online'); }, 15_000);
+
+  // -------------- live results render --------------
+  function renderResults(items){
+    const box = $('#liveList'); box.innerHTML='';
+    $('#emptyNote').style.display = items?.length ? 'none':'block';
+    (items||[]).forEach(it=>{
+      const li = document.createElement('div'); li.className='item';
+      li.innerHTML = `
+        <div class="t">${escapeHtml(it.title || 'Lead')}</div>
+        <div class="row">
+          ${chip(it.state)} ${chip(it.channel)} ${chip(it.intent)}
+        </div>
+        <div class="muted" style="margin-top:6px">${escapeHtml(it.why || '')}</div>
+      `;
+      box.appendChild(li);
+    });
+  }
+  const chip=(t)=> t?`<span class="chip">${escapeHtml(t)}</span>`:'';
+  const escapeHtml=(s)=>String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+
+  // -------------- neutron star --------------
+  const canvas = $('#star'), ctx = canvas.getContext('2d');
+  let W,H, t=0;
+  const stars = [];
+  function resize(){
+    const r = $('#space').getBoundingClientRect();
+    canvas.width = W = r.width;
+    canvas.height = H = r.height;
+    stars.length=0;
+    const N = 130;
+    for(let i=0;i<N;i++){
+      stars.push({
+        r: Math.random()*Math.min(W,H)/2*0.95,
         a: Math.random()*Math.PI*2,
-        r: 30 + Math.random()*120,
-        s: 0.0007 + Math.random()*0.0015
-      }));
-      let t0=performance.now();
-      function draw(now){
-        const dt = now - t0; t0 = now;
-        ctx.clearRect(0,0,w,h);
-        ctx.save();
-        ctx.translate(w/2, h/2);
-        // rings
-        ctx.strokeStyle='#1e2b3b'; ctx.lineWidth=1;
-        for(let r=40;r<=150;r+=22){ ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke(); }
-        // core
-        const grd = ctx.createRadialGradient(0,0,0,0,0,36);
-        grd.addColorStop(0,'#bfeaff'); grd.addColorStop(1,'#7ac8ff0a');
-        ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(0,0,36,0,7); ctx.fill();
-        // beams
-        ctx.globalCompositeOperation='lighter';
-        ctx.strokeStyle='#7de9ff22'; ctx.lineWidth=8;
-        ctx.beginPath(); ctx.moveTo(-36,0); ctx.lineTo(-180,0); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(36,0); ctx.lineTo(180,0); ctx.stroke();
-        // stars
-        ctx.fillStyle='#aee9ff';
-        dots.forEach(d=>{
-          d.a += d.s*dt;
-          const x = Math.cos(d.a)*d.r, y=Math.sin(d.a)*d.r;
-          ctx.globalAlpha = 0.55;
-          ctx.fillRect(x,y,1.8,1.8);
-        });
-        ctx.restore();
-        requestAnimationFrame(draw);
-      }
-      requestAnimationFrame(draw);
-    })();
-
-    // ---------- renderers ----------
-    function pushPreview(text){
-      const item = document.createElement('div');
-      item.className = 'pill';
-      item.innerHTML = `<span class="muted">${text}</span>`;
-      elPrev.prepend(item);
-      // keep only 6 rolling lines
-      while (elPrev.children.length > 6) elPrev.lastChild.remove();
-    }
-
-    function renderLive(leads){
-      if(!Array.isArray(leads)) return;
-      leads.forEach(lead=>{
-        const card = document.createElement('div');
-        card.className = 'card';
-
-        // Buyer/source domain (not the seller site)
-        const buyer = lead.buyer_domain || lead.domain || lead.source_domain || 'unknown';
-        const href  = lead.url || lead.source_url || '#';
-
-        const title = lead.title || lead.need || 'Potential packaging need';
-        const specs = lead.specs || lead.details || '';
-        const why   = lead.why || lead.reason || '';
-
-        const tags = [];
-        if (lead.region) tags.push(`${lead.region} • region`);
-        if (lead.channel) tags.push(lead.channel.toUpperCase());
-        if (lead.contact) tags.push(lead.contact);
-        if (lead.quantity) tags.push(`${lead.quantity}`);
-
-        card.innerHTML = `
-          <div class="title">"${title}"</div>
-          ${specs ? `<div class="line">${specs}</div>` : ``}
-          <div class="target"><a class="link" href="${href}" target="_blank" rel="noopener">${buyer}</a></div>
-          ${why ? `<div class="line">${why}</div>` : ``}
-          <div class="tags">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-        `;
-        elLive.prepend(card);
-        // keep list manageable
-        while (elLive.children.length > 24) elLive.lastChild.remove();
+        s: 0.0008 + Math.random()*0.0016,
       });
     }
-
-    // ---------- API calls ----------
-    async function api(path, opt){
-      const res = await fetch(`${API}${path}`, {
-        credentials: 'omit',
-        headers: { 'content-type':'application/json', 'x-galactly-user': uid },
-        ...opt
-      });
-      if (!res.ok) throw new Error(`${res.status} ${path}`);
-      return res.json();
+  }
+  window.addEventListener('resize',resize); resize();
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const cx=W/2, cy=H/2;
+    // rings
+    ctx.strokeStyle='rgba(126,226,255,.08)';
+    for(let i=1;i<=6;i++){
+      ctx.beginPath();
+      ctx.arc(cx,cy,(i/6)*Math.min(W,H)/2,0,Math.PI*2);
+      ctx.stroke();
     }
+    // glow core
+    const grd=ctx.createRadialGradient(cx,cy,0,cx,cy,60);
+    grd.addColorStop(0,'rgba(126,226,255,.55)');
+    grd.addColorStop(1,'rgba(126,226,255,0)');
+    ctx.fillStyle=grd;
+    ctx.beginPath(); ctx.arc(cx,cy,60,0,Math.PI*2); ctx.fill();
 
-    async function refreshStatus(){
-      try{
-        const s = await api('/status');
-        quotaBadge.textContent = fmtCount(s.quota);
-        quotaTop.textContent = fmtCount(s.quota);
-        if (Array.isArray(s.hints)) s.hints.forEach(pushPreview);
-      }catch(e){
-        quotaBadge.textContent = '—';
-        quotaTop.textContent = '—';
-        pushPreview('Status: temporarily unavailable');
-      }
-    }
+    // pulse beam (slow)
+    ctx.strokeStyle='rgba(126,226,255,.25)';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    const beamLen = Math.min(W,H)/2 * 0.85;
+    ctx.moveTo(cx,cy);
+    ctx.lineTo(cx + Math.cos(t*0.25)*beamLen, cy + Math.sin(t*0.25)*beamLen);
+    ctx.stroke();
 
-    async function setOnline(){
-      try{ await api('/presence/online', {method:'GET'}); }catch{}
-    }
-
-    function getForm(){
-      return {
-        website: $('#f_site').value.trim(),
-        regions: $('#f_regions').value.trim(),
-        industries: $('#f_inds').value.trim(),
-        seed_buyers: $('#f_seeds').value.trim(),
-        notes: $('#f_notes').value.trim()
-      };
-    }
-
-    // main Search
-    async function runFind(){
-      const stop = showLaunch(8 + Math.random()*7); // 7-15s
-      const payload = getForm();
-      try{
-        pushPreview('Submitting your search…');
-        const r = await api('/find-now', { method:'POST', body: JSON.stringify(payload) });
-        // counts (if provided)
-        if (r.counts) counts.textContent = `Free ${r.counts.free} • Pro ${r.counts.pro}`;
-        // stream or batch
-        if (Array.isArray(r.leads)) renderLive(r.leads);
-        if (Array.isArray(r.preview)) r.preview.forEach(pushPreview);
-        if (r.message) pushPreview(r.message);
-      }catch(e){
-        pushPreview(`Search error: ${e.message}`);
-        alert('Unexpected error.');
-      }finally{
-        stop();
-        refreshStatus();
-      }
-    }
-
-    // ---------- wire ----------
-    document.getElementById('btnFind').addEventListener('click', runFind);
-    document.getElementById('btnSave').addEventListener('click', ()=>{
-      const v = getForm();
-      localStorage.setItem('train', JSON.stringify(v));
-      pushPreview('Saved. Tweak & run.');
+    // stars
+    ctx.fillStyle='rgba(158,246,255,.9)';
+    stars.forEach(s=>{
+      s.a += s.s; const x=cx+Math.cos(s.a)*s.r, y=cy+Math.sin(s.a)*s.r;
+      ctx.fillRect(x,y,1.2,1.2);
     });
 
-    // restore saved training prefs
-    (function restore(){
-      const v = JSON.parse(localStorage.getItem('train')||'{}');
-      if (v.website) $('#f_site').value = v.website;
-      if (v.regions) $('#f_regions').value = v.regions;
-      if (v.industries) $('#f_inds').value = v.industries;
-      if (v.seed_buyers) $('#f_seeds').value = v.seed_buyers;
-      if (v.notes) $('#f_notes').value = v.notes;
-    })();
+    t+=0.5;
+    requestAnimationFrame(draw);
+  }
+  draw();
 
-    // initial
-    setOnline();
+  // -------------- form defaults --------------
+  const qs=(k)=> new URLSearchParams(location.search).get(k)||'';
+  $('#fWebsite').value = qs('site') || localStorage.getItem('site') || '';
+  $('#fRegions').value = localStorage.getItem('regions') || 'US, CA';
+  $('#fIndustries').value = localStorage.getItem('industries') || 'beverage, confectionery';
+  $('#fSeeds').value = localStorage.getItem('seeds') || 'brand1.com, brand2.com';
+  $('#fNotes').value = localStorage.getItem('notes') || 'materials, order sizes, channels, exclusions';
+
+  $('#btnSave').onclick = ()=>{
+    localStorage.setItem('site',$('#fWebsite').value.trim());
+    localStorage.setItem('regions',$('#fRegions').value.trim());
+    localStorage.setItem('industries',$('#fIndustries').value.trim());
+    localStorage.setItem('seeds',$('#fSeeds').value.trim());
+    localStorage.setItem('notes',$('#fNotes').value.trim());
+    logLine('Saved.');
+  };
+
+  // -------------- find now --------------
+  $('#btnFind').onclick = async ()=>{
+    const body = {
+      website: $('#fWebsite').value.trim(),
+      regions: $('#fRegions').value.trim(),
+      industries: $('#fIndustries').value.trim(),
+      seed_buyers: $('#fSeeds').value.trim(),
+      notes: $('#fNotes').value.trim(),
+    };
+
+    // launching overlay for 7–15s
+    const dur = 7000 + Math.floor(Math.random()*8000);
+    launchOverlay(dur);
+
+    // post
+    const r = await jfetch('/find-now', {
+      method:'POST',
+      body: JSON.stringify(body)
+    });
+
+    if(!r || r.ok === false){
+      logLine(`Search error: ${r?.error || 'temporary'}`);
+      return;
+    }
+    logLine('Submitting your search…');
+
+    // If backend returns live items, render them. Otherwise keep empty state clean.
+    if (Array.isArray(r.items) && r.items.length){
+      renderResults(r.items);
+    } else {
+      // keep previous results (if any); otherwise stay empty
+      logLine('Standing by for results…');
+    }
     refreshStatus();
+  };
 
-    // fail-safe: ALSO accept root endpoints if your backend exposes them
-    // (no code here; we just call /api/v1/* properly)
-  </script>
+  function launchOverlay(ms){
+    const m = $('#launchModal'); m.classList.add('in');
+    const dots = [...document.querySelectorAll('.b')];
+    let i=0; const iv=setInterval(()=>{ dots.forEach(d=>d.classList.remove('on')); dots[i%dots.length].classList.add('on'); i++; }, 650);
+    setTimeout(()=>{ clearInterval(iv); m.classList.remove('in'); }, ms);
+  }
+
+})();
+</script>
 </body>
 </html>
