@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Galactly — Live packaging buyer signals</title>
   <script src="./config.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root{ --ink:#eaf0ff; --mut:#a6b2c9; --line:#1f2a3e; --panel:#0b121d; --pill:#101a2c; }
@@ -44,8 +42,8 @@
   <section class="hero">
     <div>
       <h1 class="h1">Find US &amp; Canada Packaging Buyers in &lt;30s</h1>
-      <p class="sub">Free dev mode: no sign-up needed, no quotas. Flip back later when you launch.</p>
-      <div class="cta" style="display:flex;gap:10px;align-items:center">
+      <p class="sub">Dev mode is fully open (no sign-up, no quotas). Flip it back when you launch.</p>
+      <div style="display:flex;gap:10px">
         <a class="btn primary" href="./free-panel.html">Open Live Feed</a>
         <a class="btn" href="./free-panel.html">Try a scan</a>
       </div>
@@ -71,32 +69,27 @@
   let UID = localStorage.getItem(uidKey);
   if(!UID){ UID = 'u-' + Math.random().toString(36).slice(2,12); localStorage.setItem(uidKey, UID); }
 
-  function normalizeHost(v){
-    let s = (v || window.API_DEFAULT || location.origin).toString().trim();
-    s = s.replace(/\/api\/v1\/?$/,'').replace(/\/$/,'');
-    return s;
-  }
-  const HOST = normalizeHost(localStorage.getItem('apiBase') || window.API_DEFAULT);
+  function normalizeHost(v){ let s=(v||window.API_DEFAULT||location.origin).toString().trim(); s=s.replace(/\/api\/v1\/?$/,'').replace(/\/$/,''); return s; }
+  const HOST   = normalizeHost(localStorage.getItem('apiBase') || window.API_DEFAULT);
+  const API    = HOST + '/api/v1';
   localStorage.setItem('apiBase', HOST);
-  const API_BASE = HOST + '/api/v1';
 
-  async function api(path, opt){
-    const o = opt || {};
-    const headers = new Headers(o.headers || {});
+  async function api(path,opt){
+    const o=opt||{}; const headers=new Headers(o.headers||{});
     headers.set('x-galactly-user', UID);
-    if(localStorage.getItem('gal_unlim') === 'true') headers.set('x-dev-unlim','true');
-    const res = await fetch(API_BASE + path, { ...o, headers });
+    if(localStorage.getItem('gal_unlim')==='true') headers.set('x-dev-unlim','true');
+    const res = await fetch(API + path, { ...o, headers, mode:'cors' });   // ← NO credentials
     if(!res.ok) throw new Error('HTTP '+res.status);
     return res.json();
   }
 
   document.getElementById('dbg').textContent = `[api] ${HOST}  uid=${UID}  unlim=${localStorage.getItem('gal_unlim')==='true'}`;
 
-  async function loadPresence(){ try{ const j=await api('/presence/online'); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{} }
-  async function loadStatus(){ try{ const j=await api('/status'); const q=j.quota||{}; const s=(j.devUnlimited?'∞':q.findsLeft??'—'); const r=(j.devUnlimited?'∞':q.revealsLeft??'—'); document.getElementById('quotaKv').textContent=`${s} searches • ${r} reveals`; }catch{} }
+  async function presence(){ try{ const j=await api('/presence/online'); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{} }
+  async function status(){ try{ const j=await api('/status'); const q=j.quota||{}; const s=(j.devUnlimited?'∞':q.findsLeft??'—'); const r=(j.devUnlimited?'∞':q.revealsLeft??'—'); document.getElementById('quotaKv').textContent=`${s} searches • ${r} reveals`; }catch{} }
 
-  loadPresence(); setInterval(loadPresence, 10000);
-  loadStatus();   setInterval(loadStatus, 12000);
+  presence(); setInterval(presence, 10000);
+  status();   setInterval(status,   12000);
 })();
 </script>
 </body>
