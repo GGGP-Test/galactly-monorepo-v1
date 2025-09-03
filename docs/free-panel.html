@@ -1,58 +1,58 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <script src="./config.js?v=1756906057"></script>
-  
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Galactly • Free Panel</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --ink:#eaf0ff; --mut:#a6b2c9; --line:#223047; --panel:#0b121d; --card:#0f1624; --pill:#0f1726; --ok:#89ffd9; --warn:#ffd78a;
-}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0; font:500 14px Inter,system-ui; color:var(--ink);
-  background: radial-gradient(1200px 700px at 70% -10%, rgba(70,110,180,.22), transparent 40%), #070b12;}
-.wrap{max-width:1300px;margin:0 auto;padding:16px}
-.header{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:8px}
-.badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--pill);color:#cfe0ff}
-.badge .dot{width:8px;height:8px;border-radius:50%;background:#39e2b1;box-shadow:0 0 10px rgba(57,226,177,.7)}
-.kv{color:#cfe0ff;opacity:.85}
-.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
-.grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
-@media (max-width:1100px){.grid{grid-template-columns:1fr;}}
-/* left: live */
-.live{height:520px;display:flex;flex-direction:column}
-.live-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.live-canvas{flex:1;border:1px solid var(--line);border-radius:14px;background:radial-gradient(320px 220px at 50% 40%, rgba(220,236,255,.06), transparent 60%), #0a111b;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
-.neutron{width:280px;height:280px;border-radius:50%;background:radial-gradient(circle at 50% 50%, #fff, #9fb6ff 45%, rgba(159,182,255,.06) 46%, transparent 48%), radial-gradient(circle, rgba(200,230,255,.25) 30%, transparent 31%);
-  box-shadow:0 0 40px rgba(180,210,255,.18) inset;position:relative}
-.neutron:before,.neutron:after{content:"";position:absolute;inset:-2px;border-radius:50%;border:1px dashed rgba(200,220,255,.15);animation:spin 24s linear infinite}
-.neutron:after{inset:-24px;animation-duration:38s;opacity:.7}
-@keyframes spin{to{transform:rotate(360deg)}}
-.status-pill{position:absolute;left:12px;bottom:12px;background:rgba(7,12,20,.75);border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:#cfe0ff;backdrop-filter:blur(6px)}
-/* right: form + preview */
-.h{font:700 14px/1.1 Inter;letter-spacing:.02em}
-.row{display:flex;gap:8px;align-items:center;margin:8px 0}
-.lbl{width:120px;color:#cfe0ff;opacity:.85}
-.input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:10px 12px}
-.btn{border-radius:12px;padding:10px 14px;border:1px solid var(--line);background:var(--pill);color:var(--ink);font-weight:700;cursor:pointer}
-.btn.primary{background:linear-gradient(90deg,#fff,#e6f0ff);color:#0a0e15;border-color:transparent}
-.kpis{display:flex;gap:10px;flex-wrap:wrap;padding-top:8px}
-.chip{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:rgba(10,16,28,.85)}
-.lock{font-size:12px;color:#97a8c7}
-.small{font-size:12px;opacity:.85}
-hr.sep{height:1px;border:0;background:linear-gradient(90deg,transparent,#25314a,transparent);margin:10px 0}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Galactly • Free Panel</title>
+  <!-- MUST load first so API host + dev flags are available -->
+  <script src="./config.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{ --ink:#eaf0ff; --mut:#a6b2c9; --line:#223047; --panel:#0b121d; --card:#0f1624; --pill:#0f1726; --ok:#89ffd9; --warn:#ffd78a; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; font:500 14px Inter,system-ui; color:var(--ink);
+      background: radial-gradient(1200px 700px at 70% -10%, rgba(70,110,180,.22), transparent 40%), #070b12;}
+    .wrap{max-width:1300px;margin:0 auto;padding:16px}
+    .header{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:8px}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--pill);color:#cfe0ff}
+    .badge .dot{width:8px;height:8px;border-radius:50%;background:#39e2b1;box-shadow:0 0 10px rgba(57,226,177,.7)}
+    .kv{color:#cfe0ff;opacity:.85}
+    .grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+    @media (max-width:1100px){.grid{grid-template-columns:1fr;}}
+    .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+    /* live */
+    .live{height:520px;display:flex;flex-direction:column}
+    .live-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .live-canvas{flex:1;border:1px solid var(--line);border-radius:14px;background:radial-gradient(320px 220px at 50% 40%, rgba(220,236,255,.06), transparent 60%), #0a111b;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+    .neutron{width:280px;height:280px;border-radius:50%;background:radial-gradient(circle at 50% 50%, #fff, #9fb6ff 45%, rgba(159,182,255,.06) 46%, transparent 48%), radial-gradient(circle, rgba(200,230,255,.25) 30%, transparent 31%);
+      box-shadow:0 0 40px rgba(180,210,255,.18) inset;position:relative}
+    .neutron:before,.neutron:after{content:"";position:absolute;inset:-2px;border-radius:50%;border:1px dashed rgba(200,220,255,.15);animation:spin 28s linear infinite}
+    .neutron:after{inset:-24px;animation-duration:44s;opacity:.7}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .status-pill{position:absolute;left:12px;bottom:12px;background:rgba(7,12,20,.75);border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:#cfe0ff;backdrop-filter:blur(6px)}
+    /* right */
+    .h{font:700 14px/1.1 Inter;letter-spacing:.02em}
+    .row{display:flex;gap:8px;align-items:center;margin:8px 0}
+    .lbl{width:120px;color:#cfe0ff;opacity:.85}
+    .input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:10px 12px}
+    .btn{border-radius:12px;padding:10px 14px;border:1px solid var(--line);background:var(--pill);color:var(--ink);font-weight:700;cursor:pointer}
+    .btn.primary{background:linear-gradient(90deg,#fff,#e6f0ff);color:#0a0e15;border-color:transparent}
+    .small{font-size:12px;opacity:.85}
+    hr.sep{height:1px;border:0;background:linear-gradient(90deg,transparent,#25314a,transparent);margin:10px 0}
+    .kpis{display:flex;gap:10px;flex-wrap:wrap;padding-top:8px}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:rgba(10,16,28,.85)}
+    .lock{font-size:12px;color:#97a8c7}
+    .debug{font-size:11px;color:#9ab2d9;opacity:.9;margin-top:6px}
+  </style>
 </head>
 <body>
 <div class="wrap">
   <div class="header">
-    <div class="badge"><span class="dot"></span><span id="presenceTxt">0 online</span></div>
+    <div class="badge" title="online now"><span class="dot"></span><span id="presenceTxt">0 online</span></div>
     <div class="kv" id="quotaTopRight">— searches left • — reveals left</div>
   </div>
 
@@ -68,12 +68,12 @@ hr.sep{height:1px;border:0;background:linear-gradient(90deg,transparent,#25314a,
         <div class="status-pill" id="enginePill"><span style="color:#89ffd9">●</span> engine: ready</div>
       </div>
       <div style="margin-top:10px" class="small">Verify your company to <b>unlock free reveals</b>. Use a business email that matches your website domain.</div>
+      <div class="debug" id="dbg"></div>
     </div>
 
-    <!-- RIGHT: Train your AI -->
+    <!-- RIGHT: Train your AI + Preview -->
     <div class="box">
       <div class="h" style="margin-bottom:4px">Train your AI</div>
-
       <div class="row"><div class="lbl">Website</div><input id="f_site" class="input" placeholder="yourcompany.com"></div>
       <div class="row"><div class="lbl">Regions</div><input id="f_regions" class="input" placeholder="US, CA"></div>
       <div class="row"><div class="lbl">Industries</div><input id="f_inds" class="input" placeholder="beverage, confectionery"></div>
@@ -86,7 +86,6 @@ hr.sep{height:1px;border:0;background:linear-gradient(90deg,transparent,#25314a,
       </div>
 
       <div class="small">Loaded from onboarding. Tweak &amp; run.</div>
-
       <hr class="sep">
 
       <div class="h" style="margin-bottom:6px">Signals Preview (report)</div>
@@ -94,6 +93,7 @@ hr.sep{height:1px;border:0;background:linear-gradient(90deg,transparent,#25314a,
         <div class="chip">Free <span class="lock" id="freeCount">0/0</span></div>
         <div class="chip">Pro <span class="lock" id="proCount">0/0</span> <span class="lock">🔒</span></div>
       </div>
+      <div class="small" id="previewLine" style="margin-top:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
     </div>
   </div>
 </div>
@@ -105,31 +105,35 @@ hr.sep{height:1px;border:0;background:linear-gradient(90deg,transparent,#25314a,
   let UID = localStorage.getItem(uidKey);
   if(!UID){ UID = 'u-' + Math.random().toString(36).slice(2,12); localStorage.setItem(uidKey, UID); }
 
-  // API base: ?api= override, else same origin
-  const qs = new URLSearchParams(location.search);
-  const apiFromQS = qs.get('api');
-  const BASE = (apiFromQS ? (apiFromQS.replace(/\/$/,'') ) : location.origin) + '/api/v1';
+  function normalizeHost(v){
+    let s = (v || window.API_DEFAULT || location.origin).toString().trim();
+    s = s.replace(/\/api\/v1\/?$/,'').replace(/\/$/,'');
+    return s;
+  }
+  const HOST = normalizeHost(localStorage.getItem('apiBase') || window.API_DEFAULT);
+  localStorage.setItem('apiBase', HOST);
+  const API_BASE = HOST + '/api/v1';
 
   async function api(path, opt){
     const o = opt || {};
     const headers = new Headers(o.headers || {});
     headers.set('x-galactly-user', UID);
-    // dev-unlimited toggle: set localStorage.gal_dev_unlim="1" for testing
-    if(localStorage.getItem('gal_dev_unlim') === '1') headers.set('x-dev-unlim','true');
-    const res = await fetch(BASE + path, { ...o, headers, credentials:'include' });
+    if(localStorage.getItem('gal_unlim') === 'true') headers.set('x-dev-unlim','true');
+    const url = API_BASE + (path.startsWith('/')? path : ('/'+path));
+    const res = await fetch(url, { ...o, headers, credentials:'include' });
     if(!res.ok) throw new Error('HTTP '+res.status);
     return res.json();
   }
-  window.__API__ = { BASE, UID, api };
-  console.log('[API] base =', BASE, 'uid =', UID, 'dev-unlim =', localStorage.getItem('gal_dev_unlim')==='1');
+  window.__API__ = { HOST, API_BASE, UID, api };
+  document.getElementById('dbg').textContent = `[api] ${HOST}  uid=${UID}  unlim=${localStorage.getItem('gal_unlim')==='true'}`;
 })();
 
 /* ---------------- Presence badge ---------------- */
 async function loadPresence(){
   try{
-    const j = await fetch('/api/v1/presence/online').then(r=>r.ok?r.json():Promise.reject());
+    const j = await __API__.api('/presence/online');
     document.getElementById('presenceTxt').textContent = (j.total||0)+' online';
-  }catch{ /* ignore */ }
+  }catch{}
 }
 setInterval(loadPresence, 8000); loadPresence();
 
@@ -143,20 +147,13 @@ function renderQuotas(){
   const finds = STATUS.quota?.findsLeft ?? 0;
   const reveals = STATUS.quota?.revealsLeft ?? 0;
   const txt = `${inf || finds} searches left • ${inf || reveals} reveals left`;
-  L.textContent = txt;
-  R.textContent = txt;
+  L.textContent = txt; R.textContent = txt;
 }
 async function loadStatus(){
-  try{
-    const j = await __API__.api('/status');
-    STATUS = j;
-  }catch(e){
-    STATUS = null;
-  }
+  try{ STATUS = await __API__.api('/status'); }catch{ STATUS = null; }
   renderQuotas();
 }
-setInterval(loadStatus, 10000);
-loadStatus();
+setInterval(loadStatus, 10000); loadStatus();
 
 /* ---------------- Train your AI – Save / Find ---------------- */
 function val(id){ return (document.getElementById(id).value||'').trim(); }
@@ -172,13 +169,12 @@ document.getElementById('btnSave').onclick = async ()=>{
 
 document.getElementById('btnFind').onclick = async ()=>{
   try{
-    // create a presence beat so your badge updates while user clicks
-    fetch('/api/v1/presence/beat',{ method:'POST', headers:{'content-type':'application/json','x-galactly-user': __API__.UID }, body: JSON.stringify({ role:'supplier' }) });
+    // presence beat so the badge updates
+    fetch(__API__.API_BASE + '/presence/beat',{ method:'POST', headers:{'content-type':'application/json','x-galactly-user': __API__.UID }, body: JSON.stringify({ role:'supplier' }) });
     const j = await __API__.api('/find-now',{ method:'POST', headers:{'content-type':'application/json'} });
-    // decrement reflected in next status poll; force refresh now
-    loadStatus();
+    loadStatus(); // refresh counters immediately
+    startSSE();   // start/refresh preview stream
   }catch(e){
-    // if quota, show subtle nudge
     alert('Daily search quota reached for your plan.');
   }
 };
@@ -197,6 +193,29 @@ document.getElementById('btnFind').onclick = async ()=>{
   const desc = g('onb_desc') || '';
   if(desc) document.getElementById('f_desc').value = desc;
 })();
+
+/* ---------------- SSE Preview ---------------- */
+let es;
+function startSSE(){
+  try{ if(es) es.close(); }catch{}
+  const url = __API__.API_BASE + '/progress.sse';
+  es = new EventSource(url);
+  es.onmessage = (ev)=>{
+    try{
+      const d = JSON.parse(ev.data);
+      if(d.type==='step'){
+        document.getElementById('freeCount').textContent = `${d.freeDone}/${d.freeTotal}`;
+        document.getElementById('proCount').textContent  = `${d.proDone}/${d.proTotal} 🔒`;
+        document.getElementById('previewLine').textContent =
+          `${d.category}: ${d.probe} → ${d.filter} → ${d.evidence} → ${d.conclusion}`;
+      }
+      if(d.type==='halt'){ es && es.close(); }
+    }catch{}
+  };
+  es.onerror = ()=>{ try{ es.close(); }catch{} };
+}
+// auto-start once on load
+startSSE();
 </script>
 </body>
 </html>
