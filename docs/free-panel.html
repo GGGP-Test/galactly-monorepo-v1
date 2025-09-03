@@ -2,268 +2,423 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Galactly — Live panel</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Galactly — Live feed</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#eaf0ff; --mut:#a6b2c9; --line:#1e2737; --card:#0f1420; --panel:#0b101a; --pill:#10182a;
-  --accent:#86f7d6; --accent2:#6fb3ff; --bad:#ff8a8a; --ok:#9af1da;
+  --ink:#eaf0ff; --mut:#a9b6cc; --line:#1f2836; --card:#0e1420; --panel:#0b111b; --pill:#101827;
+  --accent:#87f6d7; --accent2:#6eb1ff; --warn:#ffcc66; --bad:#ff8c8c; --ok:#8ff0c8;
 }
 *{box-sizing:border-box}
-body{margin:0; color:var(--ink); background:linear-gradient(180deg,#0a0e16,#06080e 60%); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif}
-header{height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0b111b,#0a0e15)}
-.brand{display:flex; gap:10px; align-items:center; font:700 15px Inter}
-.brand svg{width:20px;height:20px}
-.badge{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--line); border-radius:999px; color:#c9d6f0; background:#0c1322; font-size:12px}
-.badge .dot{width:8px;height:8px;border-radius:50%;background:#43e5b7;box-shadow:0 0 10px rgba(67,229,183,.7);display:inline-block}
-.wrap{max-width:1280px; margin:0 auto; padding:16px}
-.grid{display:grid; grid-template-columns:1fr 420px; gap:16px}
+html,body{height:100%}
+body{margin:0; color:var(--ink); background:radial-gradient(1400px 900px at 75% -10%,rgba(50,80,140,.25),transparent 40%),linear-gradient(180deg,#0a0e16,#060811 60%); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+a{color:#cfe2ff; text-decoration:none}
+small, .mut{color:var(--mut)}
+.badge{display:inline-flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid var(--line); border-radius:999px; background:#0c1322; color:#cfe2ff; font-size:12px}
+.badge .dot{width:8px;height:8px;border-radius:50%;background:#43e5b7;box-shadow:0 0 12px rgba(67,229,183,.7)}
+.badge .bad{background:#ff6b6b; box-shadow:0 0 12px rgba(255,107,107,.7)}
+.wrap{max-width:1250px; margin:0 auto; padding:18px}
+header{height:58px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); padding:0 12px; background:linear-gradient(180deg,#0b111b,#0a0e15)}
+.brand{display:flex;gap:10px;align-items:center; font-weight:800}
+.brand svg{width:22px;height:22px}
+.host{opacity:.8; font-size:12px}
+.grid{display:grid; grid-template-columns:minmax(520px, 55%) 1fr; gap:16px; margin-top:12px}
 @media (max-width:1100px){ .grid{grid-template-columns:1fr} }
-.card{background:#0f1420; border:1px solid var(--line); border-radius:16px; padding:12px}
-.h{font:700 14px/1.2 Inter; color:#dfe8ff; margin:2px 0 10px}
-.kv{font-size:12px; color:#c6d5f3; opacity:.95}
-.btn{border-radius:12px; padding:10px 14px; font:700 14px Inter; background:var(--pill); border:1px solid var(--line); color:var(--ink); cursor:pointer}
-.btn.primary{background:linear-gradient(90deg,#fff,#e6efff); color:#09121b; border-color:transparent}
-.input,textarea{width:100%; background:#0f1420; border:1px solid var(--line); color:#e9eef7; border-radius:10px; padding:10px 12px; font:500 13px Inter}
-.row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.pill{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid #26314a; border-radius:999px; background:rgba(10,16,28,.82); color:#cfe0ff; font-size:12px; backdrop-filter: blur(6px); margin-right:8px}
-.help{font-size:12px; color:#9fb0d1}
-.warn{color:var(--bad)}
-.ok{color:var(--ok)}
-.banner{margin-top:10px; padding:10px 12px; border-radius:12px; border:1px dashed #2b3954; background:rgba(16,24,40,.35); font-size:13px}
-.rightNote{float:right; opacity:.7}
-.center{display:flex; align-items:center; justify-content:center}
-.canvasWrap{height:360px; border-radius:16px; border:1px solid var(--line); background:radial-gradient(600px 380px at 50% 45%, rgba(120,160,255,.10), rgba(10,14,22,1) 65%)}
-.small{font-size:12px}
-.counts{font-size:12px; color:#9fb0d1}
-.devbar{position:fixed; bottom:10px; right:10px; display:none; gap:8px}
-.devbar.in{display:flex}
+
+/* Left: Live */
+.card{background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden}
+.head{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line); font-weight:700}
+.section{padding:12px}
+.kv{font-size:12px; color:#cfe2ff}
+.subtle{opacity:.7}
+
+.liveShell{position:relative; height:460px; background:radial-gradient(560px 360px at 50% 40%, rgba(130,160,240,.11), transparent 65%)}
+#nsCanvas{position:absolute; inset:16px 16px 78px 16px; width:calc(100% - 32px); height:calc(100% - 94px); display:block}
+.liveTicker{position:absolute; left:12px; bottom:10px}
+.kbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.kchip{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); background:#0c1423; border-radius:999px; padding:7px 10px; color:#cfe2ff; font-size:12px}
+.kchip b{color:#fff}
+
+/* verify + vault banners */
+.banner{border:1px dashed #2a3750; background:#0d1526; padding:12px; border-radius:12px; display:flex; align-items:center; justify-content:space-between; margin-top:12px}
+.btn{border-radius:12px; padding:10px 14px; border:1px solid var(--line); background:#101a2d; color:#eaf0ff; font-weight:700; cursor:pointer}
+.btn.primary{background:linear-gradient(90deg,#fff,#e5efff); color:#0b111b; border-color:transparent}
+.btn.ghost{background:#0f1626}
+.btn.small{padding:7px 10px; font-size:12px}
+
+/* Right: Train + Preview + BYLI */
+.input, textarea{width:100%; background:#0f1420; border:1px solid var(--line); color:#eaf0ff; border-radius:10px; padding:10px 12px; font:500 13px/1.2 Inter}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.hint{font-size:12px; color:#cfe2ff; opacity:.85}
+.row{display:flex; align-items:center; gap:10px}
+.lock{opacity:.65}
+.lock:before{content:"🔒"; margin-right:6px}
+.oktext{color:var(--ok)}
+.warn{color:var(--warn)}
+.err{color:#ff8c8c}
+
+/* Signals Preview */
+.preview{min-height:240px; background:#0c121e}
+.pItem{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-top:1px solid var(--line); font-size:13px}
+.pPath{opacity:.9}
+.pCounts{font-weight:700}
+.pLane{display:flex; gap:6px; align-items:center}
+.pFree{opacity:.95}
+.pPro{opacity:.95}
+.badgelite{border:1px solid var(--line); padding:3px 8px; border-radius:999px; font-size:12px; background:#0f1626}
+
+/* My Targets card (Pro only, upsell) */
+.targets{background:#0b121f}
+
+/* company summary pill */
+.summary{margin-top:8px; font-size:12px; color:#cfe2ff; background:#0d1628; border:1px solid var(--line); padding:10px 12px; border-radius:10px}
+
 </style>
 </head>
 <body>
-<header>
+<!-- must come first -->
+<script src="./api-base.js"></script>
+
+<header class="wrap">
   <div class="brand">
     <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86f7d6"/><stop offset="1" stop-color="#57a4ff"/></linearGradient></defs><circle cx="32" cy="32" r="28" stroke="url(#g)" stroke-width="2" fill="none"/><circle cx="20" cy="20" r="6" fill="url(#g)"/></svg>
-    Galactly
+    <div>Galactly</div>
+    <div class="host mut" id="apiHost"></div>
   </div>
-  <span class="badge"><span class="dot"></span><span id="presenceTxt">0 online</span></span>
+  <div class="badge" id="presence"><span class="dot"></span><span id="presenceTxt">0 online</span></div>
 </header>
 
-<div class="wrap">
-  <div class="grid">
-    <!-- LEFT -->
-    <div class="card">
-      <div class="h">Live results <span class="rightNote counts" id="quotaNote">— searches left • — reveals left</span></div>
-      <div class="canvasWrap center"><canvas id="ns" width="600" height="340" aria-hidden="true"></canvas></div>
-      <div class="banner small" id="quotaBanner" style="display:none">Daily search quota reached.</div>
-
-      <div class="banner small" id="verifyBanner" style="margin-top:12px">
-        Verify your company to <strong>unlock free reveals</strong>. Use a business email that matches your website domain.
-        <button class="btn" id="openVerify" style="margin-left:10px">Verify now</button>
-      </div>
-
-      <div class="banner small" style="margin-top:12px">
-        Create your free Vault to save & revisit leads. <button class="btn" id="openSignup" style="margin-left:10px">Sign up</button>
+<div class="wrap grid">
+  <!-- LEFT: Live -->
+  <div class="card">
+    <div class="head">
+      <div>Live results</div>
+      <div class="kv" id="quotaTop">— searches left • — reveals left</div>
+    </div>
+    <div class="liveShell">
+      <canvas id="nsCanvas" aria-hidden="true"></canvas>
+      <div class="liveTicker">
+        <div class="kbar">
+          <div class="kchip"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:#47e2b5;box-shadow:0 0 10px rgba(71,226,181,.7)"></span> <span id="engine">engine: starting…</span></div>
+          <div class="kchip subtle" id="statusLine">probing demand → scanning procurement → reading reviews…</div>
+        </div>
       </div>
     </div>
 
-    <!-- RIGHT -->
-    <div class="card">
-      <div class="h">Train your AI</div>
-      <div class="row" style="grid-template-columns: 1fr 160px;">
+    <!-- verify banner (only for unverified or email/site mismatch) -->
+    <div class="section">
+      <div class="banner" id="verifyBanner" style="display:none">
         <div>
-          <div class="small help">Website</div>
-          <input class="input" id="f_site" placeholder="yourcompany.com">
+          <div><b>Verify your company to <span class="oktext">unlock free reveals</span>.</b> Use a business email that matches your website domain.</div>
+        </div>
+        <button class="btn small" id="verifyBtn">Verify now</button>
+      </div>
+      <!-- vault banner always visible until user has a vault -->
+      <div class="banner" id="vaultBanner">
+        <div><b>Create your free Vault</b> to save & revisit leads.</div>
+        <button class="btn small" id="vaultBtn">Sign up</button>
+      </div>
+      <div id="companySummary" class="summary" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Train + Preview + BYLI -->
+  <div class="card">
+    <div class="head">
+      <div>Train your AI</div>
+      <div class="kv"><span id="quotaSide">— searches left • — reveals left</span></div>
+    </div>
+    <div class="section">
+      <div class="grid2" style="margin-bottom:8px">
+        <div>
+          <div class="hint">Website</div>
+          <input id="f_site" class="input" placeholder="yourcompany.com">
         </div>
         <div>
-          <div class="small help">Regions</div>
-          <input class="input" id="f_regions" placeholder="US, CA">
+          <div class="hint">Regions</div>
+          <input id="f_regions" class="input" placeholder="US, CA">
         </div>
       </div>
-      <div class="row" style="margin-top:8px">
-        <div>
-          <div class="small help">Industries</div>
-          <input class="input" id="f_industries" placeholder="beverage, confectionery">
-        </div>
-        <div>
-          <div class="small help">Seed buyers (domains)</div>
-          <input class="input" id="f_buyers" placeholder="brand1.com, brand2.com">
-        </div>
+      <div>
+        <div class="hint">Industries</div>
+        <input id="f_industries" class="input" placeholder="beverage, confectionery">
       </div>
       <div style="margin-top:8px">
-        <div class="small help">Describe ideal customers</div>
-        <textarea class="input" id="f_desc" rows="3" placeholder="materials, order sizes, channels, exclusions"></textarea>
+        <div class="hint">Seed buyers (domains)</div>
+        <input id="f_buyers" class="input" placeholder="brand1.com, brand2.com">
       </div>
-      <div style="margin-top:10px; display:flex; gap:8px">
-        <button class="btn" id="btnSave">Save</button>
-        <button class="btn primary" id="btnFind">Find now</button>
-        <div class="small help" id="saveMsg" style="margin-left:8px"></div>
+      <div style="margin-top:8px">
+        <div class="hint">Describe ideal customers</div>
+        <textarea id="f_desc" class="input" rows="3" placeholder="materials, order sizes, channels, exclusions"></textarea>
       </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="saveBtn">Save</button>
+        <button class="btn primary" id="findBtn">Find now</button>
+        <div class="mut" id="saveMsg"></div>
+      </div>
+      <div class="hint" style="margin-top:6px">Loaded from onboarding. Tweak & run.</div>
+    </div>
 
-      <div class="h" style="margin-top:16px">Signals Preview (report)
-        <span class="rightNote counts"><span id="freeCt">Free 0/0</span> • <span id="proCt">Pro 0/0</span></span>
+    <div class="head">
+      <div>Signals Preview (report)</div>
+      <div class="kv">Free <b id="freeCount">0/0</b> • Pro <b id="proCount">0/0</b> <span id="proLock">🔒</span></div>
+    </div>
+    <div class="preview" id="previewBox">
+      <!-- lines appended here -->
+    </div>
+
+    <div class="head">
+      <div>My Targets (BYLI)</div>
+      <div class="kv">Pro only</div>
+    </div>
+    <div class="section targets">
+      <div class="row">
+        <input class="input lock" readonly placeholder="Upload targets (CSV/XLSX) or paste domains — Pro gets this free">
+        <button class="btn small lock" id="byliUpsell">See Pro plans</button>
       </div>
-      <div id="preview" class="card" style="background:#0b101a; border-color:#1b273e; height:280px; overflow:auto"></div>
+      <div class="hint" style="margin-top:6px">We watch your list for packaging-specific signals and forecast queue windows. Upload up to 100k+ targets on Pro.</div>
     </div>
   </div>
 </div>
 
-<!-- Dev bar -->
-<div id="devbar" class="devbar">
-  <button class="btn" id="devReset">Dev: reset quota</button>
-  <button class="btn" id="devUnlimited">Dev: toggle unlimited</button>
-</div>
-
-<!-- API helper -->
-<script src="./api-base.js"></script>
 <script>
-/* ---------- small utils ---------- */
-const $ = sel => document.querySelector(sel);
-const on = (el, ev, fn) => el && el.addEventListener(ev, fn);
-const LS = localStorage;
+/* ---------- helpers ---------- */
+const $ = (id) => document.getElementById(id);
+function fmtHost(h){ try{const u=new URL(h); return u.hostname;}catch{return h;} }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function bareHost(s){ return String(s||'').replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase(); }
+function emailDomain(email){ const m=String(email||'').toLowerCase().match(/^[^@]+@([^@]+)$/); return m?m[1].replace(/^www\./,'') : ''; }
+function domainsMatch(a,b){ if(!a||!b) return false; if(a===b) return true; return a.endsWith('.'+b); }
 
-function csvToArr(v){ return (String(v||'').split(',').map(s=>s.trim()).filter(Boolean)); }
-function bareHost(u){ return String(u||'').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./i,''); }
-
-/* ---------- presence (use API host!) ---------- */
-async function tickPresence() {
-  try{
-    const r=await fetch(window.API.url('/presence/online'), {cache:'no-store'});
-    const j=await r.json();
-    $('#presenceTxt').textContent = (j.total||0)+' online';
-  }catch{}
+/* Packaging roles/site sanity (client-side coarse) */
+const PACKAGING_LEX = {
+  vendor:['packag','corrugat','carton','box','label','shrink','film','tray','case pack','mailer','pouch','wrap','clamshell','bottle','cap','lid','jar'],
+  supplier:['converter','manufacturer','factory','extrusion','printing','die cut','co-packer','distributor','wholesale','logistics'],
+  buyer:['coffee','beverage','snack','cosmetic','supplement','pet','cleaning','hardware','retail','apparel','ecommerce','brand']
+};
+function quickRoleCheck(role, site, desc){
+  const h = (site||'').toLowerCase() + ' ' + (desc||'').toLowerCase();
+  let hit = 0;
+  if(role==='supplier' || role==='distributor'){ PACKAGING_LEX.supplier.forEach(k=>{ if(h.includes(k)) hit++; }); }
+  else if(role==='buyer'){ PACKAGING_LEX.buyer.forEach(k=>{ if(h.includes(k)) hit++; }); }
+  else{ PACKAGING_LEX.vendor.forEach(k=>{ if(h.includes(k)) hit++; }); }
+  return hit>=1; // coarse allow; server still guards
 }
-setInterval(tickPresence, 12000); tickPresence();
 
-/* ---------- neutron star (simple) ---------- */
-(function(){
-  const c=$('#ns'); if(!c||!c.getContext) return; const ctx=c.getContext('2d');
-  let t=0; function frame(){
-    const w=c.width,h=c.height; ctx.clearRect(0,0,w,h);
-    ctx.strokeStyle='rgba(180,210,255,0.12)'; for(let i=1;i<=4;i++){ ctx.beginPath(); ctx.arc(w/2,h/2,40*i,0,Math.PI*2); ctx.stroke();}
-    ctx.strokeStyle='rgba(210,235,255,0.45)'; ctx.beginPath(); ctx.arc(w/2,h/2,35,0,Math.PI*2); ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(w/2,h/2,24,0,Math.PI*2); ctx.fill();
-    ctx.save(); ctx.translate(w/2,h/2); ctx.rotate(t/90); ctx.strokeStyle='rgba(160,200,255,0.25)';
-    for(let i=0;i<6;i++){ ctx.rotate(Math.PI/3); ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-80); ctx.stroke(); }
-    ctx.restore();
-    ctx.fillStyle='rgba(255,255,255,0.9)'; for(let i=0;i<80;i++){ const a=i/80*Math.PI*2 + t/220; const r=100+40*Math.sin(i+t/30); const x=w/2+Math.cos(a)*r, y=h/2+Math.sin(a)*r; ctx.fillRect(x,y,1,1); }
-    t++; requestAnimationFrame(frame);
-  } frame();
-})();
+/* AI summary (very short) */
+function summarizeCompany(site, inds, desc){
+  const host = bareHost(site);
+  const seg = (inds||'').split(',').map(s=>s.trim()).filter(Boolean).slice(0,2).join(' & ');
+  const what = desc ? desc.split(',')[0].trim() : '';
+  return `We help ${seg||'consumer & CPG'} brands source packaging. Focus: ${what||'corrugate & films'}. Site: ${host}`;
+}
 
-/* ---------- prefill Train-your-AI from onboarding ---------- */
+/* API + presence */
+$('apiHost').textContent = fmtHost(API.base);
+
+async function loadPresence(){
+  try{
+    const r = await fetch('/presence/online');
+    const j = await r.json();
+    $('presenceTxt').textContent = (j.total||0)+' online';
+    $('presence').querySelector('.dot').classList.toggle('bad', !j.ok);
+  }catch{
+    $('presenceTxt').textContent = 'offline';
+    $('presence').querySelector('.dot').classList.add('bad');
+  }
+}
+setInterval(loadPresence, 12000); loadPresence();
+
+/* ---------- status boot ---------- */
+let STATE = {
+  plan:'free', verified:false, searchesLeft:0, revealsLeft:0, engine:'idle', org:null, vault:false
+};
+async function loadStatus(){
+  try{
+    const r = await fetch('/api/v1/status');
+    const j = await r.json();
+    STATE = Object.assign(STATE, j||{});
+    $('engine').textContent = `engine: ${STATE.engine||'ready'}`;
+    const qtxt = `${STATE.searchesLeft} searches left • ${STATE.revealsLeft} reveals left`;
+    $('quotaTop').textContent = qtxt; $('quotaSide').textContent = qtxt;
+
+    // banners
+    $('verifyBanner').style.display = (STATE.verified? 'none':'flex');
+    $('vaultBanner').style.display  = (STATE.vault? 'none':'flex');
+
+    // summary visible for verified
+    if(STATE.verified){
+      const s = localStorage.getItem('onb_vendor') || $('f_site').value;
+      const inds = $('f_industries').value;
+      const desc = $('f_desc').value;
+      $('companySummary').textContent = summarizeCompany(s,inds,desc);
+      $('companySummary').style.display='block';
+    }else{
+      $('companySummary').style.display='none';
+    }
+
+    // conservative: only show "Daily search quota reached" when status explicitly 0 and not dev
+    $('statusLine').textContent = (STATE.searchesLeft>0 || API.devUnlim) ? 'engine: ready' : 'Daily search quota reached.';
+  }catch(e){
+    $('quotaTop').textContent='— searches left • — reveals left';
+    $('quotaSide').textContent='— searches left • — reveals left';
+    $('statusLine').textContent='Connecting to engine…';
+  }
+}
+loadStatus();
+
+/* ---------- prefill from onboarding ---------- */
 (function prefill(){
-  const site  = LS.getItem('onb_vendor') || '';
-  const regs  = LS.getItem('onb_regions') || '';
-  const inds  = LS.getItem('onb_industries') || '';
-  const buys  = LS.getItem('onb_buyers') || '';
-  const desc  = LS.getItem('onb_desc') || '';
-  $('#f_site').value = site;
-  $('#f_regions').value = regs;
-  $('#f_industries').value = inds || 'beverage, confectionery';
-  $('#f_buyers').value = buys;
-  $('#f_desc').value = desc;
+  const site = localStorage.getItem('onb_vendor') || '';
+  const role = localStorage.getItem('onb_role') || 'supplier';
+  const inds = localStorage.getItem('onb_industries') || '';
+  const regs = localStorage.getItem('onb_regions') || '';
+  const buyers = localStorage.getItem('onb_buyers') || '';
+  const desc = localStorage.getItem('onb_desc') || '';
+
+  if(site) $('f_site').value = site;
+  if(inds) $('f_industries').value = inds;
+  if(regs) $('f_regions').value = regs;
+  if(buyers) $('f_buyers').value = buyers;
+  if(desc) $('f_desc').value = desc;
+
+  // keep role for gating checks
+  STATE.role = role;
 })();
 
-/* ---------- status & quotas (no-store) ---------- */
-let STATE = { findsLeft: 0, revealsLeft: 0, proTotal:1126, freeDone:0, proDone:0 };
-async function refreshStatus(){
-  const r = await fetch(window.API.url('/api/v1/status'), {cache:'no-store'});
-  const j = await r.json();
-  const q = j.quota||{};
-  STATE.findsLeft = q.findsLeft|0; STATE.revealsLeft = q.revealsLeft|0;
-  $('#quotaNote').textContent = `${STATE.findsLeft} searches left • ${STATE.revealsLeft} reveals left`;
-  $('#quotaBanner').style.display = STATE.findsLeft<=0 ? 'block':'none';
-  // Show verify banner only when not domainMatch
-  $('#verifyBanner').style.display = (j.gate && j.gate.domainMatch) ? 'none' : 'block';
-}
-refreshStatus();
+/* ---------- Save + Find now ---------- */
+$('saveBtn').onclick = async ()=>{
+  const site=$('f_site').value.trim(), inds=$('f_industries').value.trim(), regs=$('f_regions').value.trim(),
+        buyers=$('f_buyers').value.trim(), desc=$('f_desc').value.trim();
+  if(!site){ $('saveMsg').textContent='Enter your website.'; return; }
 
-/* ---------- save & find ---------- */
-on($('#btnSave'),'click', async ()=>{
-  const traits = {
-    vendorDomain: bareHost($('#f_site').value),
-    regions: csvToArr($('#f_regions').value),
-    industries: csvToArr($('#f_industries').value),
-    buyers: csvToArr($('#f_buyers').value),
-    notes: $('#f_desc').value||null
-  };
-  // persist also to localStorage
-  LS.setItem('onb_vendor', traits.vendorDomain||'');
-  LS.setItem('onb_regions', traits.regions.join(', '));
-  LS.setItem('onb_industries', traits.industries.join(', '));
-  LS.setItem('onb_buyers', traits.buyers.join(', '));
-  LS.setItem('onb_desc', traits.notes||'');
+  // light client-side guard; server still enforces
+  if(!quickRoleCheck(STATE.role||'supplier', site, desc)){
+    $('saveMsg').innerHTML = '<span class="warn">This site/role may not be packaging-fit. Update details or verify to continue.</span>';
+    return;
+  }
+  $('saveMsg').textContent='Saving…';
   try{
-    await fetch(window.API.url('/api/v1/vault'), {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({traits})});
-    $('#saveMsg').textContent='Saved.';
-    setTimeout(()=>$('#saveMsg').textContent='', 1500);
-  }catch(e){ $('#saveMsg').textContent='Save failed'; }
-});
+    await fetch('/api/v1/vault',{method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ role: STATE.role||'supplier', traits: {
+        vendorDomain: bareHost(site),
+        industries: inds? inds.split(',').map(s=>s.trim()):[],
+        regions: regs? regs.split(',').map(s=>s.trim()):[],
+        buyers: buyers? buyers.split(',').map(s=>s.trim()):[],
+        notes: desc||null
+      } })
+    });
+    $('saveMsg').textContent='Saved.';
+    loadStatus();
+  }catch{
+    $('saveMsg').innerHTML='<span class="err">Save failed.</span>';
+  }
+};
 
-on($('#btnFind'),'click', async ()=>{
-  await refreshStatus();
-  if(STATE.findsLeft<=0){ $('#quotaBanner').style.display='block'; return; }
+$('findBtn').onclick = async ()=>{
+  // quota guards
+  if(!(API.devUnlim) && STATE.searchesLeft<=0){
+    $('statusLine').textContent='Daily search quota reached.';
+    return;
+  }
+  $('statusLine').textContent='probing demand → scanning procurement → reading reviews…';
   try{
-    const r=await fetch(window.API.url('/api/v1/find-now'), {method:'POST', headers:{'content-type':'application/json'}, cache:'no-store', body:'{}'});
-    const j=await r.json();
-    if(!j.ok){ $('#quotaBanner').style.display='block'; return; }
-    await refreshStatus();
-    startPreviewSSE();
-  }catch(e){}
-});
+    const r = await fetch('/api/v1/find-now',{method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ site: $('f_site').value.trim() })
+    });
+    const j = await r.json();
+    if(!j || !j.ok){ $('statusLine').textContent='Engine busy. Try again.'; return; }
+    // after kick, start progress stream
+    startPreviewStream();
+    loadStatus();
+  }catch{ $('statusLine').textContent='Engine error.'; }
+};
 
-/* ---------- signals preview (SSE) ---------- */
-let es=null;
-function line(txt){ const el=document.createElement('div'); el.className='pill'; el.textContent=txt; return el; }
-function startPreviewSSE(){
-  if(es){ es.close(); es=null; }
-  $('#preview').innerHTML='';
-  es = new EventSource(window.API.url('/api/v1/progress.sse'));
-  es.addEventListener('tick', ev=>{
-    const t=JSON.parse(ev.data);
-    const lanes = t.lane==='free' ? '#freeCt' : '#proCt';
-    if(t.lane==='free') $('#freeCt').textContent = `Free ${t.done}/${t.total}`;
-    else $('#proCt').textContent = `Pro ${t.done}/${t.total}${t.locked?' 🔒':''}`;
-    const div = document.createElement('div'); div.style.margin='6px 0';
-    const hd = document.createElement('div'); hd.className='small help'; hd.textContent = `${t.category} → ${t.lane}`;
-    div.appendChild(hd);
-    const wrap = document.createElement('div'); t.chain.forEach(s=>wrap.appendChild(line(s))); div.appendChild(wrap);
-    $('#preview').appendChild(div);
-    $('#preview').scrollTop = 1e6;
-  });
-  es.addEventListener('halt', ev=>{
-    const d=JSON.parse(ev.data);
-    const ups=document.createElement('div'); ups.className='banner small'; ups.innerHTML = `Free run paused. Unlock full scan & auto-enrichment. <a class="btn" href="/checkout/stripe?plan=pro" style="margin-left:8px">Upgrade</a>`;
-    $('#preview').appendChild(ups);
-  });
-  es.addEventListener('done', ()=>{ /* no-op */ });
+/* ---------- banners actions ---------- */
+$('verifyBtn').onclick = ()=> { location.href = './index.html#onboarding'; };
+$('vaultBtn').onclick  = ()=> { location.href = './index.html#onboarding'; };
+$('byliUpsell').onclick= ()=> { location.href = './index.html#pro'; };
+
+/* ---------- Signals Preview (SSE) ---------- */
+let evtSrc=null;
+function addPreviewLine({lane, category, path, freeDone, freeTotal, proDone, proTotal}){
+  const row = document.createElement('div');
+  row.className='pItem';
+  row.innerHTML = `
+    <div class="pLane"><span class="badgelite">${lane}</span> <span class="pPath">${category} — ${path}</span></div>
+    <div class="pCounts">${freeDone}/${freeTotal} • <span class="${STATE.plan==='pro'?'':'lock'}">${proDone}/${proTotal}</span></div>
+  `;
+  $('previewBox').appendChild(row);
+  $('previewBox').scrollTop = $('previewBox').scrollHeight;
+
+  $('freeCount').textContent = `${freeDone}/${freeTotal}`;
+  $('proCount').textContent  = `${proDone}/${proTotal}`;
 }
 
-/* ---------- sign up / verify actions ---------- */
-on($('#openSignup'),'click', ()=>{ location.href = './index.html?openOnb=1'; });
-on($('#openVerify'),'click', ()=>{ location.href = './index.html?openOnb=1&verify=1'; });
-
-/* ---------- Dev testing (no quota pain) ---------- */
-(function dev(){
-  const url = new URL(location.href);
-  if(url.searchParams.get('debug')==='1') LS.setItem('DEBUG','1');
-  if(LS.getItem('DEBUG')==='1'){ $('#devbar').classList.add('in'); }
-  on($('#devReset'),'click', async ()=>{
+function startPreviewStream(){
+  if(evtSrc) try{ evtSrc.close(); }catch{}
+  $('previewBox').innerHTML='';
+  evtSrc = new EventSource(API.url('/api/v1/progress.sse'));
+  evtSrc.onmessage = (ev)=>{
     try{
-      const r=await fetch(window.API.url('/api/v1/debug/reset'), {method:'POST'}); 
-      if(r.ok){ await refreshStatus(); alert('quota reset'); } else { alert('reset endpoint disabled'); }
-    }catch{ alert('reset endpoint disabled'); }
-  });
-  on($('#devUnlimited'),'click', async ()=>{
-    // toggle a client-side flag that server can read from header if you want to implement unlimited per-user
-    if(LS.getItem('DEV_UNLIM')==='1'){ LS.removeItem('DEV_UNLIM'); alert('unlimited OFF'); }
-    else { LS.setItem('DEV_UNLIM','1'); alert('unlimited ON (requires server support)'); }
-  });
+      const j = JSON.parse(ev.data);
+      if(j.type==='step'){
+        addPreviewLine({
+          lane: j.lane==='free'?'Free':'Pro',
+          category: j.category || 'Signal',
+          path: `${j.probe||'Probe'} → ${j.filter||'Filter'} → ${j.evidence||'Evidence'} → ${j.conclusion||'Conclusion'}`,
+          freeDone: j.freeDone||0, freeTotal:j.freeTotal||0,
+          proDone: j.proDone||0, proTotal:j.proTotal||0
+        });
+      }
+      if(j.type==='done'){ evtSrc.close(); loadStatus(); }
+      if(j.type==='halt'){ evtSrc.close(); /* Free halts early with upsell payload */ }
+    }catch{}
+  };
+  evtSrc.onerror = ()=>{ try{evtSrc.close();}catch{} };
+}
+
+/* ---------- Neutron star animation (slow, minimal) ---------- */
+(function(){
+  const c=$('nsCanvas'); const ctx=c.getContext('2d');
+  let w=0,h=0,dpr=1,t=0;
+  function resize(){
+    dpr= Math.max(1, Math.min(2, window.devicePixelRatio||1));
+    w=c.clientWidth; h=c.clientHeight; c.width=Math.floor(w*dpr); c.height=Math.floor(h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  new ResizeObserver(resize).observe(c); resize();
+  const dots = Array.from({length:120},()=>({a:Math.random()*Math.PI*2, r: 40+Math.random()*Math.min(w,h)/3, sp:0.0006+Math.random()*0.0008 }));
+  function frame(){
+    ctx.clearRect(0,0,w,h);
+    const cx=w/2, cy=h/2;
+    // rings
+    ctx.strokeStyle='rgba(170,200,255,0.12)'; ctx.lineWidth=1;
+    for(let i=1;i<=4;i++){ ctx.beginPath(); ctx.arc(cx,cy, i* (Math.min(w,h)/8), 0,Math.PI*2); ctx.stroke(); }
+    // core
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,60);
+    g.addColorStop(0,'rgba(255,255,255,0.95)');
+    g.addColorStop(1,'rgba(140,170,220,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,30,0,Math.PI*2); ctx.fill();
+    // dots
+    ctx.fillStyle='rgba(255,255,255,0.8)';
+    dots.forEach(p=>{
+      p.a += p.sp; const x=cx+Math.cos(p.a)*p.r, y=cy+Math.sin(p.a)*p.r;
+      ctx.beginPath(); ctx.arc(x,y,1.1,0,Math.PI*2); ctx.fill();
+    });
+    t+=0.5;
+    requestAnimationFrame(frame);
+  }
+  frame();
 })();
+
+/* initial boot once DOM ready */
+document.addEventListener('DOMContentLoaded', async ()=>{
+  await loadStatus();
+});
 </script>
 </body>
 </html>
