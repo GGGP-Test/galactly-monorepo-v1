@@ -6,6 +6,7 @@
 <title>Galactly • Free Panel</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
 <style>
   :root{
     --bg:#0b1117; --panel:#0f1620; --muted:#95a3b3; --text:#e8eef7;
@@ -15,31 +16,25 @@
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
-  a{color:#9addff;text-decoration:none}
+
   .wrap{max-width:1240px;margin:24px auto;padding:0 16px}
   .grid{display:grid;grid-template-columns:1fr 430px;gap:20px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden}
-  .card h3{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700}
-  .subhead{color:var(--muted);font-size:12px}
-  .counter{position:absolute;right:16px;top:16px;font-size:12px;color:var(--muted)}
-  .divider{height:1px;background:var(--line);margin:10px 0}
 
-  /* Live pane */
-  .live{padding:16px;position:relative;min-height:560px}
-  #space{position:absolute;inset:16px 16px 260px 16px;border-radius:12px;background:radial-gradient(1200px 600px at 20% 40%,#0c121a 0,#0a0f16 60%,#0a0f16 100%);overflow:hidden;border:1px solid #142233}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden}
+  .card h3{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700;position:relative}
+  .counter{position:absolute;right:16px;top:16px;font-size:12px;color:var(--muted)}
+
+  /* LEFT */
+  .live{padding:16px;position:relative;min-height:600px}
+  #space{position:absolute;inset:16px 16px 280px 16px;border-radius:12px;background:radial-gradient(1200px 600px at 20% 40%,#0c121a 0,#0a0f16 60%,#0a0f16 100%);overflow:hidden;border:1px solid #142233}
   #star{position:absolute;inset:0}
 
   .hud{position:absolute;left:16px;bottom:16px;display:flex;gap:12px;align-items:center;color:var(--muted);font-size:12px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
-  .api{opacity:.8}
+  .api{opacity:.75}
 
-  .legend{margin-top:8px}
-  details{background:#0b1219;border:1px solid #142234;border-radius:10px;padding:8px}
-  details summary{cursor:pointer;color:#cfe6ff;font-weight:600}
-
-  /* Results list anchors at bottom of live box */
-  .list{position:absolute;left:16px;right:16px;bottom:58px;max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:12px;padding-right:4px}
-  .empty{position:absolute;left:16px;right:16px;bottom:120px;text-align:center;color:var(--muted)}
+  .empty{position:absolute;left:16px;right:16px;bottom:128px;text-align:center;color:var(--muted)}
+  .list{position:absolute;left:16px;right:16px;bottom:64px;max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:12px}
 
   .item{border:1px solid #1a2b3c;background:linear-gradient(180deg,#0f1620,#0f1823);border-radius:14px;padding:12px;position:relative}
   .content{position:relative}
@@ -53,7 +48,10 @@
   .locked .veil{position:absolute;inset:0;border-radius:14px;background:linear-gradient(180deg,rgba(10,14,20,.25),rgba(10,14,20,.6));backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center}
   .locked .veil span{background:#101b28;border:1px solid #1f3550;color:#cfe6ff;padding:6px 10px;border-radius:10px;font-size:12px}
 
-  /* Right pane */
+  details{background:#0b1219;border:1px solid #142234;border-radius:10px;padding:8px;margin-top:10px}
+  details summary{cursor:pointer;color:#cfe6ff;font-weight:600}
+
+  /* RIGHT */
   .side{padding:16px}
   .f{display:flex;flex-direction:column;gap:10px}
   label{font-size:12px;color:var(--muted)}
@@ -65,16 +63,21 @@
   .small{font-size:12px;color:var(--muted)}
   .bio{margin-top:8px;color:#d6f2ff;font-size:12px}
 
-  /* Preview blocks */
-  .preview{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}
-  .psec{background:#0b1219;border:1px solid #142234;border-radius:10px;padding:10px}
-  .psec h4{margin:0 0 6px 0;font-size:13px}
-  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px;font-size:12px;color:#cdd9e6}
-  .kv .k{color:#9fb1c6}
-  .tagrow{display:flex;flex-wrap:wrap;gap:6px}
-  .tag{border:1px solid #22364d;background:#132033;color:#cfe2ff;border-radius:999px;font-size:11px;padding:3px 8px}
+  .divider{height:1px;background:var(--line);margin:12px 0}
 
-  /* Launching modal */
+  /* PREVIEW REPORT */
+  .report{display:grid;grid-template-columns:1fr;gap:12px}
+  .metric{background:#0b1219;border:1px solid #142234;border-radius:12px;padding:10px}
+  .metric h4{margin:0 0 6px 0;font-size:13px}
+  .lane{display:grid;grid-template-columns:86px 1fr 1fr;gap:8px;align-items:start}
+  .lane .k{font-size:11px;color:#9fb1c6;text-transform:uppercase}
+  .lane .v{font-size:12px;color:#cdd9e6}
+  .badge{display:inline-block;border:1px solid #22364d;background:#132033;color:#cfe2ff;border-radius:999px;font-size:11px;padding:3px 8px;margin-right:6px}
+  .bar{height:6px;background:#132033;border-radius:6px;overflow:hidden}
+  .bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .dim{opacity:.55}
+
+  /* LAUNCH */
   .modal{position:fixed;inset:0;background:rgba(2,8,14,.65);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:50}
   .modal.in{display:flex}
   .box{width:540px;border-radius:14px;background:#0f1620;border:1px solid #152233;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
@@ -85,7 +88,7 @@
   .b.on{background:#44cdf7;box-shadow:0 0 10px #44cdf7}
 </style>
 
-<!-- Force API + unlimited in dev -->
+<!-- runtime config -->
 <script>
   window.API_DEFAULT = localStorage.getItem('apiBase') || 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1';
   window.DEV_UNLIMITED = true; localStorage.setItem('gal_unlim','true');
@@ -95,29 +98,26 @@
 <div class="wrap">
   <div class="grid">
     <!-- LEFT -->
-    <div class="card" id="leftCard">
+    <div class="card">
       <h3>Live results <span id="quotaTxt" class="counter">—</span></h3>
       <div class="live">
         <div id="space"><canvas id="star"></canvas></div>
 
-        <div id="liveList" class="list"></div>
-        <div id="emptyNote" class="empty">No live results yet. Run a search on the right.</div>
+        <div id="liveList" class="list" style="display:none"></div>
+        <div id="emptyNote" class="empty">Click <b>Find now</b> to start a real-time scan.</div>
 
-        <div class="legend">
-          <details>
-            <summary>Legend</summary>
-            <div style="margin-top:6px">
-              <div><b>State</b> (e.g., <code>GA</code>) → US state of the buyer.</div>
-              <div><b>Channel</b> (LinkedIn DM / Email / SMS / Call) → best first contact route.</div>
-              <div><b>Intent</b> → material/format need we detected (e.g., stretch film, labels).</div>
-              <div>Click <i>Explain</i> on a card to see “why you’re seeing this”.</div>
-            </div>
-          </details>
-        </div>
+        <details>
+          <summary>Legend</summary>
+          <div style="margin-top:6px">
+            <div><b>State</b> (e.g., <code>GA</code>) → buyer’s US state.</div>
+            <div><b>Channel</b> → best first contact (Email / SMS / Call / LinkedIn DM).</div>
+            <div><b>Intent</b> → distilled need (e.g., stretch film, cartons, labels).</div>
+            <div>Tap <i>Explain</i> to see “why you’re seeing this”.</div>
+          </div>
+        </details>
 
         <div class="hud">
-          <span class="dot" id="engineDot"></span>
-          <span id="engineTxt">engine: ready</span>
+          <span class="dot"></span><span id="engineTxt">engine: ready</span>
           <span class="api" id="apiTxt"></span>
         </div>
       </div>
@@ -139,48 +139,28 @@
             <button class="btn" id="btnSave">Save</button>
             <button class="btn primary" id="btnFind">Find now</button>
           </div>
-          <div class="bio" id="bizBio"></div>
+          <div id="bizBio" class="bio"></div>
           <div class="small">Loaded from onboarding. Tweak &amp; run.</div>
         </div>
 
         <div class="divider"></div>
-        <div style="padding:0 16px 10px"><span class="subhead">Signals Preview (report)</span> <span class="small" id="counts" style="float:right">Free 0/0 • Pro 0/0</span></div>
+        <div style="padding:0 16px 8px"><span class="small">Signals Preview (report)</span> <span id="counts" class="small" style="float:right">Free 0/0 • Pro 0/0</span></div>
 
-        <div class="preview" id="previewBox" style="padding:0 16px 16px">
-          <div class="psec" id="prev-free">
-            <h4>Free</h4>
-            <div class="kv"><div class="k">Notes</div><div id="pf-notes">—</div></div>
-            <div class="kv"><div class="k">Seeds</div><div id="pf-seeds" class="tagrow"></div></div>
-            <div class="kv"><div class="k">Industries</div><div id="pf-ind" class="tagrow"></div></div>
-            <div class="kv"><div class="k">Regions</div><div id="pf-reg" class="tagrow"></div></div>
-            <div class="kv"><div class="k">Channels</div><div id="pf-ch" class="tagrow"></div></div>
-            <div class="kv"><div class="k">Volume</div><div id="pf-vol">—</div></div>
-            <div class="kv"><div class="k">Confidence</div><div id="pf-conf">—</div></div>
-          </div>
-
-          <div class="psec" id="prev-pro">
-            <h4>Pro</h4>
-            <div class="kv"><div class="k">Notes</div><div id="pp-notes">—</div></div>
-            <div class="kv"><div class="k">Seeds</div><div id="pp-seeds" class="tagrow"></div></div>
-            <div class="kv"><div class="k">Industries</div><div id="pp-ind" class="tagrow"></div></div>
-            <div class="kv"><div class="k">Regions</div><div id="pp-reg" class="tagrow"></div></div>
-            <div class="kv"><div class="k">Channels</div><div id="pp-ch" class="tagrow"></div></div>
-            <div class="kv"><div class="k">Volume</div><div id="pp-vol">—</div></div>
-            <div class="kv"><div class="k">Confidence</div><div id="pp-conf">—</div></div>
-          </div>
+        <div id="report" class="report" style="padding:0 16px 16px">
+          <!-- metrics will be injected here -->
         </div>
 
         <div class="divider"></div>
         <div style="padding:0 16px 12px">
           <div class="small">Log</div>
-          <div class="log" id="log" style="border:1px solid #142234;border-radius:10px;padding:8px;max-height:180px"></div>
+          <div id="log" style="border:1px solid #142234;border-radius:10px;padding:8px;max-height:180px;overflow:auto"></div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Launch modal -->
+<!-- Launch -->
 <div class="modal" id="launchModal">
   <div class="box">
     <h4>Launching real-time intent search…</h4>
@@ -199,33 +179,30 @@
 <script>
 (() => {
   const $ = q => document.querySelector(q);
-  const apiBase = window.API_DEFAULT;
+  const api = window.API_DEFAULT;
   const uid = localStorage.getItem('gal_uid') || `u-${Math.random().toString(16).slice(2)}`;
   localStorage.setItem('gal_uid', uid);
-  $('#apiTxt').textContent = `[api] ${apiBase.replace('/api/v1','')}`;
+  $('#apiTxt').textContent = `[api] ${api.replace('/api/v1','')}`;
 
-  // ---------- neutron star ----------
+  /* ----------------- Star field ----------------- */
   const cvs=$('#star'), ctx=cvs.getContext('2d'); let W,H,t=0; const stars=[];
   function resize(){ const r=$('#space').getBoundingClientRect(); W=cvs.width=r.width; H=cvs.height=r.height; stars.length=0; for(let i=0;i<130;i++){ stars.push({r:Math.random()*Math.min(W,H)/2*0.95,a:Math.random()*Math.PI*2,s:0.0008+Math.random()*0.0016}); } }
   window.addEventListener('resize',resize); resize();
   (function draw(){ ctx.clearRect(0,0,W,H); const cx=W/2, cy=H/2;
     ctx.strokeStyle='rgba(126,226,255,.08)'; for(let i=1;i<=6;i++){ ctx.beginPath(); ctx.arc(cx,cy,(i/6)*Math.min(W,H)/2,0,Math.PI*2); ctx.stroke(); }
-    const grd=ctx.createRadialGradient(cx,cy,0,cx,cy,60); grd.addColorStop(0,'rgba(126,226,255,.55)'); grd.addColorStop(1,'rgba(126,226,255,0)'); ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(cx,cy,60,0,Math.PI*2); ctx.fill();
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,60); g.addColorStop(0,'rgba(126,226,255,.55)'); g.addColorStop(1,'rgba(126,226,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,60,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle='rgba(126,226,255,.25)'; ctx.beginPath(); const L=Math.min(W,H)/2*0.85; ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(t*0.25)*L, cy+Math.sin(t*0.25)*L); ctx.stroke();
     ctx.fillStyle='rgba(158,246,255,.9)'; stars.forEach(s=>{ s.a+=s.s; const x=cx+Math.cos(s.a)*s.r, y=cy+Math.sin(s.a)*s.r; ctx.fillRect(x,y,1.2,1.2); }); t+=0.5; requestAnimationFrame(draw);
   })();
 
-  // ---------- helpers ----------
+  /* ----------------- helpers ----------------- */
   const escapeHtml = s => String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const chip = t => t ? `<span class="chip">${escapeHtml(t)}</span>` : '';
-  const log = t => { const d=document.createElement('div'); d.style.fontSize='12px'; d.style.color='#bcd0e0'; d.textContent=t; const L=$('#log'); L.prepend(d); while(L.children.length>12)L.removeChild(L.lastChild); };
+  const log = t => { const d=document.createElement('div'); d.style.fontSize='12px'; d.style.color='#bcd0e0'; d.textContent=t; const L=$('#log'); L.prepend(d); while(L.children.length>14)L.removeChild(L.lastChild); };
 
   async function jfetch(path, opt={}) {
-    const url = path.startsWith('http') ? path : `${apiBase}${path}`;
-    const res = await fetch(url, {
-      headers:{'x-galactly-user':uid,'content-type':'application/json'},
-      cache:'no-cache', credentials:'omit', ...opt
-    }).catch(()=>null);
+    const url = path.startsWith('http') ? path : `${api}${path}`;
+    const res = await fetch(url, {headers:{'x-galactly-user':uid,'content-type':'application/json'},cache:'no-cache',credentials:'omit',...opt}).catch(()=>null);
     if(!res) return {ok:false,error:'network'};
     if(!res.ok) return {ok:false,error:String(res.status)};
     try { return await res.json(); } catch { return {ok:false,error:'bad_json'}; }
@@ -237,73 +214,128 @@
     const b = s.devUnlimited ? '∞' : (s.quota?.revealsLeft ?? '—');
     $('#quotaTxt').textContent = `${a} searches left • ${b} reveals left`;
   }
-
-  // ---------- status / presence ----------
   async function tick(){ const s = await jfetch('/status'); setQuota(s); }
-  tick(); setInterval(tick, 15000); setInterval(()=>jfetch('/presence/online'), 20000);
+  tick(); setInterval(tick,15000); setInterval(()=>jfetch('/presence/online'),20000);
 
-  // ---------- render results ----------
-  function render(items){
-    const box = $('#liveList'); box.innerHTML='';
-    $('#emptyNote').style.display = items?.length ? 'none':'block';
-    (items||[]).forEach(it=>{
-      const li = document.createElement('div'); li.className = 'item' + (it.locked ? ' locked':'');
+  /* ----------------- Report skeleton ----------------- */
+  const METRICS = [
+    {id:'demand',     name:'Demand'},
+    {id:'buysigs',    name:'Buy signals'},
+    {id:'rfps',       name:'Procurement & RFPs'},
+    {id:'retail',     name:'Retail velocity'},
+    {id:'hiring',     name:'Hiring hints'},
+    {id:'ops',        name:'Tech / Ops stack'},
+    {id:'budget',     name:'Budget posture'}
+  ];
+  const reportBox = $('#report');
+  const reportState = {};
+  function buildReport(){
+    reportBox.innerHTML='';
+    METRICS.forEach(m=>{
+      const div=document.createElement('div'); div.className='metric'; div.id=`metric-${m.id}`;
+      div.innerHTML = `
+        <h4>${m.name}</h4>
+        <div class="lane">
+          <div class="k">FREE</div>
+          <div class="v" id="${m.id}-free-v">—</div>
+          <div class="v dim" id="${m.id}-pro-v">locked (Pro)</div>
+        </div>
+        <div class="lane" style="margin-top:6px">
+          <div class="k"></div>
+          <div class="bar"><span id="${m.id}-free-bar" style="width:0%"></span></div>
+          <div class="bar dim"><span id="${m.id}-pro-bar" style="width:0%"></span></div>
+        </div>`;
+      reportBox.appendChild(div);
+      reportState[m.id]={free:{score:0,text:'—'},pro:{score:0,text:'—'}};
+    });
+  }
+  buildReport();
+
+  function updMetric(id,tier,score,text){
+    const s = Math.max(0,Math.min(100,Number(score)||0));
+    const v = document.getElementById(`${id}-${tier}-v`);
+    const b = document.getElementById(`${id}-${tier}-bar`);
+    if(v) v.textContent = text || `${s}%`;
+    if(b) b.style.width = `${s}%`;
+    reportState[id][tier] = {score:s,text:v?v.textContent:text};
+  }
+
+  function fillCounts(pv){
+    if(pv?.counts) $('#counts').textContent = `Free ${pv.counts.free||0} • Pro ${pv.counts.pro||0}`;
+  }
+
+  /* ----------------- Leads render ----------------- */
+  const STATE_MAP = {"AL":"Alabama","AK":"Alaska","AZ":"Arizona","AR":"Arkansas","CA":"California","CO":"Colorado","CT":"Connecticut","DE":"Delaware","FL":"Florida","GA":"Georgia","HI":"Hawaii","ID":"Idaho","IL":"Illinois","IN":"Indiana","IA":"Iowa","KS":"Kansas","KY":"Kentucky","LA":"Louisiana","ME":"Maine","MD":"Maryland","MA":"Massachusetts","MI":"Michigan","MN":"Minnesota","MS":"Mississippi","MO":"Missouri","MT":"Montana","NE":"Nebraska","NV":"Nevada","NH":"New Hampshire","NJ":"New Jersey","NM":"New Mexico","NY":"New York","NC":"North Carolina","ND":"North Dakota","OH":"Ohio","OK":"Oklahoma","OR":"Oregon","PA":"Pennsylvania","RI":"Rhode Island","SC":"South Carolina","SD":"South Dakota","TN":"Tennessee","TX":"Texas","UT":"Utah","VT":"Vermont","VA":"Virginia","WA":"Washington","WV":"West Virginia","WI":"Wisconsin","WY":"Wyoming","DC":"District of Columbia"};
+  function pickChannel(sig){
+    const c = (sig.channel||sig.contact||'').toLowerCase();
+    if(c.includes('linkedin')) return 'LinkedIn DM';
+    if(c.includes('sms')) return 'SMS';
+    if(c.includes('call')||c.includes('phone')) return 'Call';
+    if(c.includes('email')) return 'Email';
+    const src = (sig.source||'').toLowerCase();
+    if(src.includes('linkedin')) return 'LinkedIn DM';
+    if(src.includes('rfp')||src.includes('procure')) return 'Email';
+    return 'Email';
+  }
+  function whyFrom(sig){
+    const parts=[];
+    if(sig.reason) parts.push(sig.reason);
+    if(sig.qty) parts.push(`Qty noted: ${sig.qty}`);
+    if(sig.material) parts.push(`Material: ${sig.material}`);
+    if(sig.deadline) parts.push(`Timeline: ${sig.deadline}`);
+    if(sig.url) parts.push(`Source: ${sig.url}`);
+    if(!parts.length && sig.source) parts.push(`Matched by ${sig.source}`);
+    return parts.join(' • ');
+  }
+  function mapLead(sig, profile){
+    const buyer = sig.company_domain || sig.domain || sig.brand || '';
+    const buyerClean = String(buyer).replace(/^https?:\/\//,'').replace(/\/.*$/,'').toLowerCase();
+    const profileSite = (profile.site||'').replace(/^https?:\/\//,'').replace(/\/.*$/,'').toLowerCase();
+    if(buyerClean && profileSite && buyerClean === profileSite) return null; // never echo back user site
+
+    const state = (sig.state||sig.region||'').toUpperCase();
+    const intent = sig.intent || sig.material || sig.package || sig.category || '';
+    const title = sig.title || (sig.need ? `"${sig.need}"` : (intent ? `${intent}` : 'Lead')) ;
+    return {
+      title,
+      company_domain: buyerClean,
+      state: STATE_MAP[state] ? state : '',
+      channel: pickChannel(sig),
+      intent: intent,
+      why: whyFrom(sig),
+      locked: !!sig.locked
+    };
+  }
+  function renderLeads(raw,profile){
+    const items = (raw||[]).map(s=>mapLead(s,profile)).filter(Boolean);
+    const list = $('#liveList');
+    list.innerHTML='';
+    if(!items.length){
+      $('#liveList').style.display='none';
+      $('#emptyNote').style.display='block';
+      return;
+    }
+    $('#emptyNote').style.display='none';
+    $('#liveList').style.display='flex';
+    items.forEach((it,idx)=>{
+      const li=document.createElement('div');
+      li.className = 'item' + (it.locked || idx>1 ? ' locked' : '');
       li.innerHTML = `
         <div class="content">
-          <div class="t">${escapeHtml(it.title || `Lead — ${it.company_domain||''}`)}</div>
+          <div class="t">${escapeHtml(it.title)}</div>
           <div class="row">${chip(it.state)} ${chip(it.channel)} ${chip(it.intent)}</div>
-          <div class="muted" style="margin-top:6px">${escapeHtml(it.company_domain||'')}</div>
+          <div class="muted" style="margin-top:6px">${escapeHtml(it.company_domain)}</div>
           <div class="exp-btn">Explain</div>
           <div class="exp"><b>Why:</b> ${escapeHtml(it.why||'—')}</div>
         </div>
-        ${it.locked ? `<div class="veil"><span>Pro lead — upgrade to unlock</span></div>`:''}
+        ${ (it.locked || idx>1) ? `<div class="veil"><span>Pro lead — upgrade to unlock</span></div>`:''}
       `;
       li.querySelector('.exp-btn').onclick=()=>{ const e=li.querySelector('.exp'); e.style.display = e.style.display==='none'?'block':'none'; };
-      box.appendChild(li);
+      list.appendChild(li);
     });
   }
 
-  // ---------- render preview ----------
-  function tags(node, arr){ node.innerHTML=''; (arr||[]).forEach(v=>{ const s=document.createElement('span'); s.className='tag'; s.textContent=v; node.appendChild(s); }); }
-  function fillPreview(pv){
-    if(!pv){ $('#counts').textContent='Free 0/0 • Pro 0/0'; return; }
-    if(pv.counts) $('#counts').textContent = `Free ${pv.counts.free} • Pro ${pv.counts.pro}`;
-
-    $('#pf-notes').textContent = pv.free?.notes || '—';
-    tags($('#pf-seeds'), pv.free?.seeds);
-    tags($('#pf-ind'), pv.free?.industries);
-    tags($('#pf-reg'), pv.free?.regions);
-    tags($('#pf-ch'), pv.free?.channels);
-    $('#pf-vol').textContent = pv.free?.volume || '—';
-    $('#pf-conf').textContent = pv.free?.confidence || '—';
-
-    $('#pp-notes').textContent = pv.pro?.notes || '—';
-    tags($('#pp-seeds'), pv.pro?.seeds);
-    tags($('#pp-ind'), pv.pro?.industries);
-    tags($('#pp-reg'), pv.pro?.regions);
-    tags($('#pp-ch'), pv.pro?.channels);
-    $('#pp-vol').textContent = pv.pro?.volume || '—';
-    $('#pp-conf').textContent = pv.pro?.confidence || '—';
-  }
-
-  // ---------- form defaults ----------
-  const qs = k => new URLSearchParams(location.search).get(k) || '';
-  $('#fWebsite').value    = qs('site') || localStorage.getItem('site') || '';
-  $('#fRegions').value    = localStorage.getItem('regions') || 'US, CA';
-  $('#fIndustries').value = localStorage.getItem('industries') || 'beverage, confectionery';
-  $('#fSeeds').value      = localStorage.getItem('seeds') || 'brand1.com, brand2.com';
-  $('#fNotes').value      = localStorage.getItem('notes') || 'materials, order sizes, channels, exclusions';
-
-  $('#btnSave').onclick = ()=>{
-    localStorage.setItem('site',$('#fWebsite').value.trim());
-    localStorage.setItem('regions',$('#fRegions').value.trim());
-    localStorage.setItem('industries',$('#fIndustries').value.trim());
-    localStorage.setItem('seeds',$('#fSeeds').value.trim());
-    localStorage.setItem('notes',$('#fNotes').value.trim());
-    log('Saved profile.');
-  };
-
-  // ---------- launching overlay ----------
+  /* ----------------- Launch overlay ----------------- */
   function launchOverlay(ms){
     const m=$('#launchModal'); m.classList.add('in');
     const dots=[...document.querySelectorAll('.b')];
@@ -311,28 +343,107 @@
     setTimeout(()=>{ clearInterval(iv); m.classList.remove('in'); }, ms);
   }
 
-  // ---------- find now ----------
+  /* ----------------- profile save ----------------- */
+  const qs = k => new URLSearchParams(location.search).get(k) || '';
+  $('#fWebsite').value    = qs('site') || localStorage.getItem('site') || '';
+  $('#fRegions').value    = localStorage.getItem('regions') || 'US, CA';
+  $('#fIndustries').value = localStorage.getItem('industries') || 'beverage, confectionery';
+  $('#fSeeds').value      = localStorage.getItem('seeds') || 'brand1.com, brand2.com';
+  $('#fNotes').value      = localStorage.getItem('notes') || 'materials, order sizes, channels, exclusions';
+
+  function setBio(p){
+    const regs = p.regions || 'US';
+    const inds = (p.industries||'').split(',').map(s=>s.trim()).filter(Boolean).slice(0,2).join(' & ');
+    const goals = (p.notes||'').split(',').map(s=>s.trim()).slice(0,2).join(', ');
+    const seeds = (p.seed_buyers||'').split(',').map(s=>s.trim()).filter(Boolean).slice(0,2).join(', ');
+    const line = `Packaging supplier focused on ${inds||'packaging'} serving ${regs}. Targets similar buyers to ${seeds||'your sample brands'} with needs around ${goals||'materials & order sizes'}.`;
+    $('#bizBio').textContent = line;
+  }
+
+  $('#btnSave').onclick = ()=>{
+    localStorage.setItem('site',$('#fWebsite').value.trim());
+    localStorage.setItem('regions',$('#fRegions').value.trim());
+    localStorage.setItem('industries',$('#fIndustries').value.trim());
+    localStorage.setItem('seeds',$('#fSeeds').value.trim());
+    localStorage.setItem('notes',$('#fNotes').value.trim());
+    setBio({
+      regions: $('#fRegions').value.trim(),
+      industries: $('#fIndustries').value.trim(),
+      seed_buyers: $('#fSeeds').value.trim(),
+      notes: $('#fNotes').value.trim()
+    });
+    log('Saved profile.');
+  };
+
+  /* ----------------- SSE helper ----------------- */
+  function sse(url, onMsg){
+    try{
+      const es = new EventSource(url);
+      es.onmessage = (e)=>{ try{ onMsg(JSON.parse(e.data)); }catch{} };
+      es.onerror = ()=>{}; // silent
+      return ()=>es.close();
+    }catch{ return ()=>{} }
+  }
+
+  /* ----------------- Find now ----------------- */
   $('#btnFind').onclick = async ()=>{
-    const body = {
+    const profile = {
       website: $('#fWebsite').value.trim(),
       regions: $('#fRegions').value.trim(),
       industries: $('#fIndustries').value.trim(),
       seed_buyers: $('#fSeeds').value.trim(),
-      notes: $('#fNotes').value.trim(),
+      notes: $('#fNotes').value.trim()
     };
+    setBio(profile);
 
+    // reset UI
+    buildReport();
+    $('#counts').textContent = 'Free 0/0 • Pro 0/0';
+    renderLeads([],profile);
+    $('#emptyNote').textContent = 'Scanning… please wait';
+
+    // show launch
     const dur = 7000 + Math.floor(Math.random()*8000);
     launchOverlay(dur);
 
-    const r = await jfetch('/find-now', { method:'POST', body: JSON.stringify(body) });
-    if(!r || r.ok === false){ log(`Search error: ${r?.error || 'temporary'}`); return; }
+    // kick task
+    const r = await jfetch('/find-now', {method:'POST', body: JSON.stringify(profile)});
+    if(!r || r.ok===false){ log(`Search error: ${r?.error||'temporary'}`); return; }
+    if(r.bio) $('#bizBio').textContent = r.bio;
+    if(r.preview?.counts) fillCounts(r.preview);
+    if(Array.isArray(r.items)) renderLeads(r.items, profile); // immediate batch if provided
 
-    if (r.bio) $('#bizBio').textContent = r.bio;
-    if (r.preview) fillPreview(r.preview);
-    if (Array.isArray(r.items)) render(r.items);
+    // stream preview (report)
+    const tid = r.task || r.taskId || r.id || '';
+    const closePrev = sse(`${api}/stream/preview?task=${encodeURIComponent(tid)}&uid=${encodeURIComponent(uid)}`, msg=>{
+      if(msg.type==='counts'){ fillCounts(msg); return; }
+      if(msg.type==='metric' && msg.metric && msg.tier){
+        updMetric(msg.metric, msg.tier, msg.score, msg.text);
+      }
+    });
 
-    log('Submitting your search…');
-    tick();
+    // stream leads
+    const closeLeads = sse(`${api}/stream/leads?task=${encodeURIComponent(tid)}&uid=${encodeURIComponent(uid)}`, msg=>{
+      if(Array.isArray(msg.batch)) renderLeads(msg.batch, profile);
+      if(msg.done){ closeLeads(); closePrev(); tick(); }
+    });
+
+    // fallback pollers (if SSE not available)
+    setTimeout(async ()=>{
+      if(!tid) return;
+      const poll = async()=>{
+        const a=await jfetch(`/leads/poll?task=${encodeURIComponent(tid)}`);
+        if(a?.batch) renderLeads(a.batch, profile);
+        const b=await jfetch(`/preview/poll?task=${encodeURIComponent(tid)}`);
+        if(Array.isArray(b?.metrics)){
+          b.metrics.forEach(m=>updMetric(m.id,m.tier,m.score,m.text));
+          fillCounts(b.counts);
+        }
+        if(!(a?.done) && !(b?.done)) setTimeout(poll,1500);
+        else tick();
+      };
+      poll();
+    }, 2500);
   };
 })();
 </script>
