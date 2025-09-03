@@ -1,16 +1,18 @@
-/* Galactly runtime config injected from repo (no console needed) */
+/* docs/config.js — runtime config (no console needed) */
 (function () {
-  var API = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1';
-  var UNLIM = true; // set to false before going live
+  // IMPORTANT: host-only base (NO /api/v1 here)
+  var HOST_BASE = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
+  var DEV_UNLIMITED = true; // UI-side dev flag (keep true while testing)
 
-  // Expose for our fetch wrapper
-  window.API_DEFAULT = API;
-  window.DEV_UNLIMITED = UNLIM;
+  // Export for any page scripts that use API_DEFAULT
+  window.API_DEFAULT = HOST_BASE;
+  window.DEV_UNLIMITED = DEV_UNLIMITED;
 
   try {
-    localStorage.setItem('apiBase', API);
-    if (UNLIM) localStorage.setItem('gal_unlim','true');
+    // Persist for any fetch wrapper that reads from localStorage
+    localStorage.setItem('apiBase', HOST_BASE);
+    if (DEV_UNLIMITED) localStorage.setItem('gal_unlim','true');
   } catch (e) {}
 
-  console.log('[config] api =', API, 'unlim =', UNLIM);
+  console.log('[config] api host =', HOST_BASE, 'unlim =', DEV_UNLIMITED);
 })();
