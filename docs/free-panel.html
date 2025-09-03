@@ -162,9 +162,8 @@
 </div>
 
 <script>
-<script>
-  // Do not change layout — just ensure the list element gets the styling hook
-  (function () {
+
+(function () {
     const candidates = [
       document.querySelector('.live-results .live-list'),
       document.querySelector('.live-results [data-live-list]'),
@@ -180,9 +179,6 @@
     const list = candidates[0];
     if (list) list.classList.add('live-list'); // Styling only
   })();
-</script>
-
-
   
 (() => {
   // ---------- base ----------
