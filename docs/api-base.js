@@ -1,59 +1,82 @@
-// api-base.js — resolve API base and always attach x-galactly-user
+/* api-base.js
+   - Sets API_BASE from ?api=... or localStorage('apiBase') or window.API_DEFAULT or location.origin
+   - Adds sticky x-galactly-user and optional x-galactly-dev: unlim
+   - Rewrites requests for /api/* and /presence/* to API_BASE
+*/
 (function () {
-  const DEFAULT = (window.API_DEFAULT || '').replace(/\/$/, '') ||
-                  'https://p01--animated-cellar--vz4ftkwrzdfs.code.run';
+  if (window.API && window.API.__ready) return;
+
+  function normalizeBase(v) {
+    if (!v) return null;
+    let s = String(v).trim();
+    if (!/^https?:\/\//i.test(s)) s = 'https://' + s.replace(/^\/+/, '');
+    return s.replace(/\/+$/, '');
+  }
 
   const qs = new URLSearchParams(location.search);
-  function normalize(v) {
-    if (!v) return DEFAULT;
-    let s = String(v).trim().replace(/\/$/, '');
-    if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
-    return s;
-  }
+  const qsApi   = normalizeBase(qs.get('api'));
+  const saved   = normalizeBase(localStorage.getItem('apiBase') || '');
+  const deflt   = normalizeBase(window.API_DEFAULT || '');
+  const base    = qsApi || saved || deflt || normalizeBase(location.origin);
 
-  let apiBase = normalize(qs.get('api') || localStorage.getItem('apiBase') || DEFAULT);
-  window.API_BASE = apiBase;
+  // persist so all pages use the same API host
+  localStorage.setItem('apiBase', base);
 
+  // sticky uid
   const UID_KEY = 'galactly_uid';
   let uid = localStorage.getItem(UID_KEY);
-  if (!uid) { uid = 'u-' + Math.random().toString(36).slice(2); localStorage.setItem(UID_KEY, uid); }
-
-  const _fetch = window.fetch.bind(window);
-  window.fetch = function(input, init){
-    let url, headers;
-    if (typeof input === 'string') {
-      url = input;
-      headers = new Headers((init && init.headers) || undefined);
-    } else {
-      url = input && input.url;
-      headers = new Headers((init && init.headers) || (input && input.headers) || undefined);
-    }
-    try { headers.set('x-galactly-user', uid); } catch {}
-
-    const needsRewrite = url && (url.startsWith('/api/') || url.startsWith('api/'));
-    if (needsRewrite) {
-      const abs = url.startsWith('/') ? apiBase + url : apiBase + '/' + url;
-      return _fetch(abs, { ...(init||{}), headers });
-    }
-    return _fetch(typeof input === 'string' ? url : new Request(url, { ...(init||{}), headers }));
-  };
-
-  function setBase(v) {
-    apiBase = normalize(v);
-    window.API_BASE = apiBase;
-    try { localStorage.setItem('apiBase', apiBase); } catch {}
-    return apiBase;
+  if (!uid) {
+    uid = 'u_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(UID_KEY, uid);
   }
 
+  // dev-unlimited toggle
+  const DEV_UNLIM = (localStorage.getItem('DEV_UNLIM') || '').toString() === '1';
+
+  // wrap fetch
+  const _fetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    let url, opts;
+
+    if (typeof input === 'string') {
+      url = input;
+      opts = init || {};
+    } else {
+      url = input.url;
+      opts = Object.assign({}, init || {});
+      // merge headers from Request + provided init
+      opts.headers = Object.assign({}, Object.fromEntries(input.headers || []), opts.headers || {});
+    }
+
+    // rewrite to API_BASE for both /api/* and /presence/*
+    if (url.startsWith('/api/')) {
+      url = base + url;
+    } else if (url.startsWith('/presence/')) {
+      url = base + url;
+    }
+
+    const headers = new Headers(opts.headers || {});
+    try { headers.set('x-galactly-user', uid); } catch {}
+    if (DEV_UNLIM) {
+      try { headers.set('x-galactly-dev', 'unlim'); } catch {}
+    }
+
+    opts.headers = headers;
+    return _fetch(url, opts);
+  };
+
   window.API = {
-    get base(){ return apiBase; },
-    setBase,
+    __ready: true,
+    base,
     uid,
-    url: (p)=> (apiBase + (p.startsWith('/') ? p : '/' + p)),
-    sseURL: (p)=> {
-      const u = new URL(apiBase + (p.startsWith('/') ? p : '/' + p));
-      u.searchParams.set('uid', uid);
-      return u.toString();
+    devUnlim: DEV_UNLIM,
+    url(p) { return base + (p.startsWith('/') ? p : '/' + p); },
+    setDevUnlim(on) {
+      localStorage.setItem('DEV_UNLIM', on ? '1' : '0');
+      location.reload();
     }
   };
+
+  // tiny helper to show where we're pointing (optional)
+  console.log('[API] base =', base, 'uid =', uid, 'dev-unlim =', DEV_UNLIM);
 })();
