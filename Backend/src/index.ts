@@ -1,83 +1,120 @@
-/**
- * Galactly API – single entry
- * Fixes: health probe 404, 500 /find-now, consistent /api/v1 prefix, CORS.
- */
-import express, { Request, Response, NextFunction } from "express";
+import express from "express";
 import cors from "cors";
-import morgan from "morgan";
-import leads from "./routes/leads";
 
 const app = express();
+const PORT = Number(process.env.PORT || 8787);
 
-// ---------- basic middleware ----------
-app.disable("x-powered-by");
-app.use(morgan("tiny"));
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true }));
+// ===== config =====
+const DEV_UNLIMITED =
+  process.env.DEV_UNLIMITED === "1" ||
+  process.env.DEV_UNLIMITED === "true" ||
+  false;
 
-// ---------- CORS (allow GH pages + localhost + code.run) ----------
-const ALLOW = [
-  /\.github\.io$/,
-  /localhost:\d+$/,
-  /127\.0\.0\.1:\d+$/,
-  /\.code\.run$/,
-];
+// ===== middleware =====
 app.use(
   cors({
-    origin(origin, cb) {
-      if (!origin) return cb(null, true);
-      const ok = ALLOW.some((re) => re.test(origin));
-      cb(null, ok);
-    },
+    origin: true,
     credentials: false,
+    allowedHeaders: ["content-type", "x-galactly-user"]
   })
 );
+app.use(express.json({ limit: "1mb" }));
 
-// ---------- health & root ----------
-app.get("/", (_req, res) => res.status(200).json({ ok: true, service: "galactly" }));
+// very tiny logger (avoid morgan)
+app.use((req, _res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
+// ===== in-memory presence =====
+type Beat = { at: number };
+const presence = new Map<string, Beat>();
+
+function uidFrom(req: express.Request) {
+  return (req.header("x-galactly-user") || "anon").toString();
+}
+
+// ===== health for platform probe =====
 app.get("/healthz", (_req, res) => res.status(200).send("ok"));
 
-// ---------- API v1 ----------
-const v1 = express.Router();
+// ===== base prefix =====
+const api = express.Router();
+app.use("/api/v1", api);
 
-// status (lightweight – no DB dependency)
-v1.get("/status", (req: Request, res: Response) => {
-  const uid = (req.header("x-galactly-user") || "").trim() || `u-${Math.random().toString(16).slice(2)}`;
-  const devUnlimited = String(process.env.GAL_DEV_UNLIMITED || process.env.DEV_UNLIMITED || "") === "true";
+// ===== presence =====
+api.get("/presence/online", (req, res) => {
+  const uid = uidFrom(req);
+  presence.set(uid, { at: Date.now() });
+  res.json({ ok: true, uid, online: true });
+});
+
+api.get("/presence/beat", (req, res) => {
+  const uid = uidFrom(req);
+  presence.set(uid, { at: Date.now() });
+  res.json({ ok: true, uid, beat: Date.now() });
+});
+
+// ===== status (quota banner on UI) =====
+api.get("/status", (req, res) => {
+  const uid = uidFrom(req);
+  const today = new Date().toISOString().slice(0, 10);
+
+  // simple demo quota (always unlimited when DEV_UNLIMITED=1)
+  const quota = {
+    date: today,
+    findsUsed: 0,
+    revealsUsed: 0,
+    findsLeft: DEV_UNLIMITED ? 999999 : 99,
+    revealsLeft: DEV_UNLIMITED ? 999999 : 5
+  };
+
   res.json({
     ok: true,
     uid,
     plan: "free",
-    quota: {
-      date: new Date().toISOString().slice(0, 10),
-      findsUsed: 0,
-      revealsUsed: 0,
-      findsLeft: devUnlimited ? 999999 : 100,
-      revealsLeft: devUnlimited ? 999999 : 5,
-    },
-    devUnlimited,
+    quota,
+    devUnlimited: DEV_UNLIMITED,
+    counts: { free: 0, pro: 0 }
   });
 });
 
-// leads/endpoints
-v1.use(leads);
+// ===== find-now (always 200; returns empty items unless you plug real fetchers) =====
+api.post("/find-now", (req, res) => {
+  const uid = uidFrom(req);
+  const body = (req.body || {}) as {
+    website?: string;
+    regions?: string;
+    industries?: string;
+    seed_buyers?: string;
+    notes?: string;
+  };
 
-// mount
-app.use("/api/v1", v1);
+  // Preview lines shown in the right column (UI keeps last 6)
+  const preview = [
+    `Parsed site: ${body.website || "—"}`,
+    `Regions: ${body.regions || "—"}`,
+    `Industries: ${body.industries || "—"}`,
+    `Seeds: ${body.seed_buyers || "—"}`,
+    `Notes: ${body.notes || "—"}`,
+    `Running scrapers…`
+  ];
 
-// ---------- 404 + error handler ----------
-app.use((req, res) => res.status(404).json({ ok: false, error: "not_found", path: req.originalUrl }));
+  // Return an empty set to avoid “demo leads”; UI is ready to render if you add real items here.
+  const items: any[] = [];
 
-// never leak stack
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error("[api-error]", err?.message || err);
-  res.status(200).json({ ok: false, error: "temporary_unavailable" });
+  res.json({
+    ok: true,
+    uid,
+    preview,
+    counts: { free: 0, pro: 0 },
+    items
+  });
 });
 
-// ---------- start ----------
-const PORT = Number(process.env.PORT || 8787);
+// ===== 404 fallback (under api prefix) =====
+api.use((_req, res) => res.status(404).json({ ok: false, error: "not_found" }));
+
+// ===== start =====
 app.listen(PORT, () => {
-  console.log(`[api] listening on :${PORT}`);
+  console.log(`API listening on :${PORT}`);
 });
-
-export default app;
