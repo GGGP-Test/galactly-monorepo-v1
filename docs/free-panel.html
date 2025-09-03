@@ -158,6 +158,17 @@
   </div>
 
   <script>
+
+<script>
+  window.API_DEFAULT = 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1';
+  window.DEV_UNLIMITED = true;  // turn false for production
+
+  try {
+    localStorage.setItem('apiBase', window.API_DEFAULT);
+    if (window.DEV_UNLIMITED) localStorage.setItem('gal_unlim','true');
+  } catch(e){}
+</script>
+
     // ---------- API base ----------
     const API =
       (window.API_DEFAULT ?? localStorage.getItem('apiBase')) ||
