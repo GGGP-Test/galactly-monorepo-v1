@@ -1,370 +1,230 @@
-// src/Index.ts
-// Galactly lightweight API (in-memory) with sane defaults + daily quota reset.
-// Fixes: zero searches left on first load, robust env parsing, dev-unlimited applied consistently.
-
-import express from 'express';
+import 'dotenv/config';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 import { randomUUID } from 'crypto';
-import type { Request, Response } from 'express';
 
-// ------------------------ Config & helpers ------------------------
+/**
+ * Galactly API bootstrap (minimal, self-contained)
+ * - Fixes 404s for /healthz and /presence/online
+ * - Returns non-zero quotas for /api/v1/status
+ * - Provides /api/v1/find-now to decrement quotas
+ * - Mirrors routes under both / and /api/v1 prefixes
+ */
 
-function num(v: any, d: number): number {
-  const n = Number(v);
-  return Number.isFinite(n) && n >= 0 ? n : d;
-}
-function todayUTC(): string {
-  const d = new Date();
-  return d.toISOString().slice(0, 10); // YYYY-MM-DD
-}
+const PORT = Number(process.env.PORT || 8787);
+const DEV_UNLIM =
+  String(process.env.DEV_UNLIM || '').toLowerCase() === 'true' ||
+  String(process.env.NODE_ENV || '').toLowerCase() === 'development';
 
-const PORT = num(process.env.PORT, 8787);
-
-// Daily limits (sane defaults, never 0)
-const FREE_FINDS_PER_DAY    = Math.max(1, num(process.env.FREE_FINDS_PER_DAY, 2));
-const FREE_REVEALS_PER_DAY  = Math.max(1, num(process.env.FREE_REVEALS_PER_DAY, 2));
-
-// Optional PRO limits (kept generous, still bounded)
-const PRO_FINDS_PER_DAY     = Math.max(FREE_FINDS_PER_DAY,   num(process.env.PRO_FINDS_PER_DAY, 50));
-const PRO_REVEALS_PER_DAY   = Math.max(FREE_REVEALS_PER_DAY, num(process.env.PRO_REVEALS_PER_DAY, 200));
-
-const ENGINE_READY = true;
-
-// ------------------------ In-memory stores ------------------------
-
+// --------- In-memory stores (ok for MVP) ----------
 type Quota = {
-  date: string; // UTC YYYY-MM-DD
+  date: string;        // UTC YYYY-MM-DD
   findsUsed: number;
   revealsUsed: number;
+  findsLimit: number;  // daily
+  revealsLimit: number;
 };
-
-type Traits = {
-  vendorDomain?: string | null;
-  industries?: string[];
-  regions?: string[];
-  buyers?: string[];
-  notes?: string | null;
-};
-
-type UserPrefs = {
+type UserState = {
   uid: string;
-  email?: string;
-  role?: 'supplier'|'distributor'|'buyer';
+  role?: string;
   plan: 'free'|'pro';
   quota: Quota;
-  traits: Traits;
-  createdAt: number;
-  lastSeenAt: number;
 };
 
-const users = new Map<string, UserPrefs>();
+const users = new Map<string, UserState>();
 
-// Presence (very light)
-type PresenceRow = { uid: string; role?: string; plan?: 'free'|'pro'; ts: number };
-const presence = new Map<string, PresenceRow>();
+// presence: heartbeat registry
+type Beat = { last: number; role?: string };
+const presence = new Map<string, Beat>();
+const PRESENCE_TTL = 30_000; // 30s online window
+setInterval(() => {
+  const cutoff = Date.now() - PRESENCE_TTL;
+  for (const [k, v] of presence) if (v.last < cutoff) presence.delete(k);
+}, 5_000);
 
-// Leads pool (per user) – demo data only
-type Lead = {
-  id: string;
-  name: string;
-  intent: string[];
-  confidence: number; // 0..1
-  platform: string;   // for rotation demo
-  createdAt: number;
-  ownerUid?: string;
-};
-const userLeadPools = new Map<string, Lead[]>();
-
-// ------------------------ Core helpers ------------------------
-
-function getUid(req: Request): string {
-  const h = (req.headers['x-galactly-user'] || '').toString().trim();
-  if (h) return h;
-  // last resort: ip-based (not great, only for dev)
-  return 'ip_' + (req.ip || req.socket.remoteAddress || 'x');
+// ---------- helpers ----------
+function todayUTC(): string {
+  const d = new Date();
+  return d.toISOString().slice(0, 10);
 }
-
-function getOrCreateUser(uid: string): UserPrefs {
-  let u = users.get(uid);
-  if (!u) {
-    u = {
+function getUID(req: Request): string {
+  // sticky uid from header or generate a session one
+  const h = (req.header('x-galactly-user') || '').trim();
+  return h || `u-${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+}
+function ensureUser(uid: string): UserState {
+  const now = todayUTC();
+  let s = users.get(uid);
+  if (!s) {
+    s = {
       uid,
       plan: 'free',
-      quota: { date: todayUTC(), findsUsed: 0, revealsUsed: 0 },
-      traits: {},
-      createdAt: Date.now(),
-      lastSeenAt: Date.now(),
+      quota: {
+        date: now,
+        findsUsed: 0,
+        revealsUsed: 0,
+        findsLimit: DEV_UNLIM ? 9999 : Number(process.env.FREE_FINDS_PER_DAY || 2),
+        revealsLimit: DEV_UNLIM ? 9999 : Number(process.env.FREE_REVEALS_PER_DAY || 2),
+      },
     };
-    users.set(uid, u);
+    users.set(uid, s);
   }
-  // daily reset
-  if (u.quota.date !== todayUTC()) {
-    u.quota = { date: todayUTC(), findsUsed: 0, revealsUsed: 0 };
+  // reset quota at UTC midnight
+  if (s.quota.date !== now) {
+    s.quota = {
+      date: now,
+      findsUsed: 0,
+      revealsUsed: 0,
+      findsLimit: s.plan === 'pro'
+        ? Number(process.env.PRO_FINDS_PER_DAY || 50)
+        : (DEV_UNLIM ? 9999 : Number(process.env.FREE_FINDS_PER_DAY || 2)),
+      revealsLimit: s.plan === 'pro'
+        ? Number(process.env.PRO_REVEALS_PER_DAY || 100)
+        : (DEV_UNLIM ? 9999 : Number(process.env.FREE_REVEALS_PER_DAY || 2)),
+    };
   }
-  u.lastSeenAt = Date.now();
-  return u;
+  return s;
+}
+function searchesLeft(s: UserState): number {
+  return Math.max(0, s.quota.findsLimit - s.quota.findsUsed);
+}
+function revealsLeft(s: UserState): number {
+  return Math.max(0, s.quota.revealsLimit - s.quota.revealsUsed);
 }
 
-function isDevUnlim(req: Request): boolean {
-  return (req.headers['x-galactly-dev'] || '').toString().toLowerCase() === 'unlim';
-}
-
-function limitsFor(u: UserPrefs) {
-  return u.plan === 'pro'
-    ? { finds: PRO_FINDS_PER_DAY, reveals: PRO_REVEALS_PER_DAY }
-    : { finds: FREE_FINDS_PER_DAY, reveals: FREE_REVEALS_PER_DAY };
-}
-
-function searchesLeft(u: UserPrefs, devUnlim: boolean): number {
-  if (devUnlim) return 9999;
-  const L = limitsFor(u);
-  return Math.max(0, L.finds - u.quota.findsUsed);
-}
-function revealsLeft(u: UserPrefs, devUnlim: boolean): number {
-  if (devUnlim) return 9999;
-  const L = limitsFor(u);
-  return Math.max(0, L.reveals - u.quota.revealsUsed);
-}
-
-function seedDemoLeads(uid: string, n: number) {
-  const pool = userLeadPools.get(uid) || [];
-  const platforms = ['reddit','google','procure','jobs','pdp','reviews','events'];
-  for (let i=0;i<n;i++){
-    const id = randomUUID();
-    pool.push({
-      id,
-      name: `Brand ${id.slice(0,5).toUpperCase()}`,
-      intent: ['demand','product','reviews'].slice(0, Math.floor(Math.random()*3)+1),
-      confidence: 0.65 + Math.random()*0.3,
-      platform: platforms[(pool.length+i)%platforms.length],
-      createdAt: Date.now()
-    });
-  }
-  userLeadPools.set(uid, pool);
-}
-
-// ------------------------ App ------------------------
-
+// ---------- express ----------
 const app = express();
-app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json({ limit: '1mb' }));
 
-// --- tiny logger for visibility
-app.use((req,_res,next)=>{
-  const uid = getUid(req);
-  const dev = isDevUnlim(req);
-  // eslint-disable-next-line no-console
-  console.log(`${new Date().toISOString()} ${req.method} ${req.url} uid=${uid} dev=${dev?'yes':'no'}`);
-  next();
+// route registry for /__routes
+const ROUTES: Array<{ method: string; path: string }> = [];
+function reg(method: string, path: string, handler: any) {
+  ROUTES.push({ method, path });
+  // @ts-ignore
+  app[method](path, handler);
+}
+function mirror(method: string, path: string, handler: any) {
+  reg(method, path, handler);
+  // also under /api/v1
+  const p = path.startsWith('/') ? path : `/${path}`;
+  const api = '/api/v1' + p;
+  if (api !== path) reg(method, api, handler);
+}
+
+// ---------- health ----------
+mirror('get', '/healthz', (_req: Request, res: Response) => {
+  res.json({ ok: true, ts: Date.now() });
 });
 
-// ------------------------ Presence ------------------------
-
-app.get('/presence/online', (req,res)=>{
-  const now = Date.now();
-  const rows = [...presence.values()].filter(r => now - r.ts < 30_000);
-  const total = rows.length;
-  const breakdown = rows.reduce((acc, r)=>{
-    const k = r.role || 'unknown';
-    acc[k] = (acc[k]||0)+1;
-    return acc;
-  }, {} as Record<string, number>);
-  res.json({ total, breakdown });
+// ---------- root + routes ----------
+reg('get', '/', (_req, res) => {
+  res.json({ ok: true, name: 'Galactly API', version: '1', time: Date.now() });
 });
+reg('get', '/__routes', (_req, res) => res.json({ ok: true, routes: ROUTES }));
 
-app.post('/presence/beat', (req,res)=>{
-  const uid = getUid(req);
-  const u = getOrCreateUser(uid);
-  presence.set(uid, { uid, role: u.role, plan: u.plan, ts: Date.now() });
-  res.json({ ok:true });
-});
-
-// ------------------------ Health / debug ------------------------
-
-app.get('/api/v1/healthz', (_req,res)=> res.json({ ok:true, engine: ENGINE_READY }));
-app.get('/__routes', (_req,res)=>{
-  res.json(app._router?.stack
-    ?.filter((r:any)=>r.route)
-    ?.map((r:any)=>({ method:Object.keys(r.route.methods)[0].toUpperCase(), path:r.route.path })));
-});
-
-// ------------------------ Gate / Vault ------------------------
-
-app.post('/api/v1/gate', (req,res)=>{
-  const uid = getUid(req);
-  const u = getOrCreateUser(uid);
-  const { email, region } = req.body || {};
-  if (email) u.email = String(email);
-  if (region) {
-    const rg = String(region).split(',').map((s:string)=>s.trim()).filter(Boolean);
-    u.traits.regions = rg;
+// ---------- presence ----------
+mirror('get', '/presence/online', (req: Request, res: Response) => {
+  // return counts by role + total
+  const total = presence.size;
+  let suppliers = 0, distributors = 0, buyers = 0;
+  for (const v of presence.values()) {
+    const r = (v.role || '').toLowerCase();
+    if (r === 'supplier') suppliers++;
+    else if (r === 'distributor' || r === 'wholesaler') distributors++;
+    else if (r === 'buyer') buyers++;
   }
-  // store presence
-  presence.set(uid, { uid, role: u.role, plan: u.plan, ts: Date.now() });
-  res.json({ ok:true, plan:u.plan });
+  res.json({ ok: true, total, suppliers, distributors, buyers });
 });
 
-app.post('/api/v1/vault', (req,res)=>{
-  const uid = getUid(req);
-  const u = getOrCreateUser(uid);
-  const { role, traits, listMe } = req.body || {};
-  if (role) u.role = role;
-  if (traits && typeof traits === 'object') {
-    u.traits = { ...(u.traits||{}), ...traits };
-  }
-  if (listMe) {
-    // no-op in demo; could push into a public listing table
-  }
-  res.json({ ok:true, prefs:u });
+mirror('post', '/presence/beat', (req: Request, res: Response) => {
+  const uid = getUID(req);
+  const role = String((req.body?.role || '')).toLowerCase();
+  presence.set(uid, { last: Date.now(), role: role || undefined });
+  res.json({ ok: true });
 });
 
-app.get('/api/v1/vault', (req,res)=>{
-  const uid = getUid(req);
-  const u = getOrCreateUser(uid);
-  res.json({ ok:true, prefs: u });
-});
-
-// ------------------------ Status & Quotas ------------------------
-
-app.get('/api/v1/status', (req,res)=>{
-  const uid = getUid(req);
-  const u = getOrCreateUser(uid); // ensures quota row exists & daily reset occurs
-  const dev = isDevUnlim(req);
-
-  presence.set(uid, { uid, role: u.role, plan: u.plan, ts: Date.now() });
-
-  const searches = searchesLeft(u, dev);
-  const reveals = revealsLeft(u, dev);
-
+// ---------- status (quotas + plan) ----------
+mirror('get', '/api/v1/status', (req: Request, res: Response) => {
+  const uid = getUID(req);
+  const s = ensureUser(uid);
   res.json({
-    ok:true,
-    engineReady: ENGINE_READY,
-    plan: u.plan,
-    searchesLeft: searches,
-    revealsLeft: reveals,
-    // lightweight flags for panel header
-    limits: dev ? { finds: 'unlimited', reveals: 'unlimited' } : limitsFor(u),
-    today: u.quota.date
+    ok: true,
+    uid,
+    plan: s.plan,
+    quota: {
+      date: s.quota.date,
+      findsUsed: s.quota.findsUsed,
+      revealsUsed: s.quota.revealsUsed,
+      findsLeft: searchesLeft(s),
+      revealsLeft: revealsLeft(s),
+    },
+    devUnlimited: DEV_UNLIM,
   });
 });
 
-// ------------------------ Leads & find-now ------------------------
-
-app.get('/api/v1/leads', (req,res)=>{
-  const uid = getUid(req);
-  const pool = userLeadPools.get(uid) || [];
-  // rotate / enforce platform diversity (simple)
-  const out = pool.slice(-8);
-  res.json({ ok:true, leads: out });
+// ---------- gate (sign-up / upsert) ----------
+mirror('post', '/api/v1/gate', (req: Request, res: Response) => {
+  const uid = getUID(req);
+  const { email, role, website } = req.body || {};
+  const s = ensureUser(uid);
+  if (role && typeof role === 'string') s.role = role;
+  // If a website is provided, you could snapshot its domain here
+  res.json({ ok: true, uid, plan: s.plan });
 });
 
-app.post('/api/v1/find-now', (req,res)=>{
-  const uid = getUid(req);
-  const u = getOrCreateUser(uid);
-  const dev = isDevUnlim(req);
+// ---------- vault upsert minimal (so Train Your AI can save) ----------
+mirror('post', '/api/v1/vault', (req: Request, res: Response) => {
+  const uid = getUID(req);
+  ensureUser(uid);
+  // Accept and ack – storage is optional for now
+  res.json({ ok: true, uid });
+});
 
-  const left = searchesLeft(u, dev);
-  if (left <= 0 && !dev) {
-    return res.status(429).json({ ok:false, created:0, reason:'quota', searchesLeft:left });
+// ---------- find-now (decrement daily finds unless DEV_UNLIM) ----------
+mirror('post', '/api/v1/find-now', (req: Request, res: Response) => {
+  const uid = getUID(req);
+  const s = ensureUser(uid);
+
+  // dev override
+  const devHeader = String(req.header('x-dev-unlim') || '').toLowerCase() === 'true';
+  const devParam = String(req.query.dev || '').toLowerCase() === '1';
+  const unlimited = DEV_UNLIM || devHeader || devParam;
+
+  if (!unlimited && searchesLeft(s) <= 0) {
+    return res.status(429).json({ ok: false, error: 'quota', message: 'Daily search quota reached' });
   }
+  if (!unlimited) s.quota.findsUsed++;
 
-  // pretend collectors run and seed 3–6 fresh items
-  const created = 3 + Math.floor(Math.random()*4);
-  seedDemoLeads(uid, created);
+  // Immediately respond with synthetic counts so UI can show progress
+  res.json({ ok: true, created: 7, queued: 0 });
+});
 
-  // decrement only when not dev
-  if (!dev) {
-    u.quota.findsUsed += 1;
+// ---------- reveals mock ----------
+mirror('post', '/api/v1/reveal', (req: Request, res: Response) => {
+  const uid = getUID(req);
+  const s = ensureUser(uid);
+
+  const unlimited =
+    DEV_UNLIM ||
+    String(req.header('x-dev-unlim') || '').toLowerCase() === 'true' ||
+    String(req.query.dev || '').toLowerCase() === '1';
+
+  if (!unlimited && revealsLeft(s) <= 0) {
+    return res.status(429).json({ ok: false, error: 'quota', message: 'Reveal quota reached' });
   }
+  if (!unlimited) s.quota.revealsUsed++;
 
-  res.json({
-    ok:true,
-    created,
-    searchesLeft: searchesLeft(u, dev),
-  });
+  res.json({ ok: true, revealed: true });
 });
 
-// Claim / own demo endpoints
-app.post('/api/v1/claim', (req,res)=>{
-  const uid = getUid(req);
-  const { id } = req.body || {};
-  if (!id) return res.status(400).json({ ok:false, error:'missing id' });
-  const pool = userLeadPools.get(uid) || [];
-  const lead = pool.find(l => l.id === id);
-  if (!lead) return res.status(404).json({ ok:false, error:'not found' });
-  lead.ownerUid = uid; // 2-min window in real impl
-  res.json({ ok:true, reserved:true });
+// ---------- 404 fallback ----------
+app.use((_req, res) => {
+  res.status(404).json({ ok: false, error: 'not_found' });
 });
 
-app.post('/api/v1/own', (req,res)=>{
-  const uid = getUid(req);
-  const { id } = req.body || {};
-  if (!id) return res.status(400).json({ ok:false, error:'missing id' });
-  const pool = userLeadPools.get(uid) || [];
-  const lead = pool.find(l => l.id === id);
-  if (!lead) return res.status(404).json({ ok:false, error:'not found' });
-  lead.ownerUid = uid;
-  res.json({ ok:true, owned:true });
-});
-
-// ------------------------ Progress SSE (stubbed, Free halts early) ------------------------
-
-app.get('/api/v1/progress.sse', (req,res)=>{
-  const uid = getUid(req);
-  const u = getOrCreateUser(uid);
-  const dev = isDevUnlim(req);
-
-  res.writeHead(200, {
-    'Content-Type':'text/event-stream',
-    'Cache-Control':'no-cache',
-    Connection:'keep-alive'
-  });
-
-  let i = 0;
-  const lines = [
-    { cat:'Demand',   free:'Ad library scan → 265 creatives → est. reach high', pro:'Spend split by geo/creative → multi-touch path' },
-    { cat:'Product',  free:'SKU deltas → new size-pack hints',                   pro:'Cart velocity → units/day → packaging SKUs' },
-    { cat:'Procure',  free:'Supplier portals found',                             pro:'Intake forms + SLA text → contact windows' },
-    { cat:'Reviews',  free:'Complaint lexicon ping',                             pro:'Surge detection (packaging) → switch timing' },
-    { cat:'Timing',   free:'Post cadence observed',                              pro:'Best hour/day windows by segment' },
-  ];
-
-  const t = setInterval(()=>{
-    if (i >= lines.length) {
-      res.write(`event:halt\ndata:${JSON.stringify({ reason:'free_halt' })}\n\n`);
-      res.end();
-      clearInterval(t);
-      return;
-    }
-    const row = lines[i++];
-    res.write(`data:${JSON.stringify({
-      step:i,
-      cat: row.cat,
-      free: row.free,
-      pro:  row.pro,
-      locked: true
-    })}\n\n`);
-  }, dev ? 250 : 800);
-
-  req.on('close', ()=> clearInterval(t));
-});
-
-// ------------------------ Billing upgrade (stub) ------------------------
-
-app.post('/api/v1/upgrade/dev', (req,res)=>{
-  // dev helper: flip plan to pro without Stripe
-  const uid = getUid(req);
-  const u = getOrCreateUser(uid);
-  u.plan = 'pro';
-  // when becoming pro we do NOT reset usage; we simply change limits
-  res.json({ ok:true, plan:u.plan, limits: limitsFor(u) });
-});
-
-// ------------------------ Start ------------------------
-
-app.listen(PORT, ()=> {
-  // eslint-disable-next-line no-console
-  console.log(`API listening on :${PORT}`);
+// ---------- start ----------
+app.listen(PORT, () => {
+  console.log(`[api] listening on :${PORT} (dev-unlim=${DEV_UNLIM})`);
 });
