@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Galactly • Free Panel (Dev Free)</title>
   <script src="./config.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root{ --ink:#eaf0ff; --mut:#a6b2c9; --line:#223047; --panel:#0b121d; --card:#0f1624; --pill:#0f1726; --ok:#89ffd9; }
@@ -21,7 +19,6 @@
     .grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
     @media (max-width:1100px){.grid{grid-template-columns:1fr;}}
     .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
-    /* live */
     .live{height:520px;display:flex;flex-direction:column}
     .live-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
     .live-canvas{flex:1;border:1px solid var(--line);border-radius:14px;background:radial-gradient(320px 220px at 50% 40%, rgba(220,236,255,.06), transparent 60%), #0a111b;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
@@ -30,7 +27,6 @@
     .neutron:after{inset:-24px;animation-duration:44s;opacity:.7}
     @keyframes spin{to{transform:rotate(360deg)}}
     .status-pill{position:absolute;left:12px;bottom:12px;background:rgba(7,12,20,.75);border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:#cfe0ff;backdrop-filter:blur(6px)}
-    /* right */
     .h{font:700 14px/1.1 Inter;letter-spacing:.02em}
     .row{display:flex;gap:8px;align-items:center;margin:8px 0}
     .lbl{width:120px;color:#cfe0ff;opacity:.85}
@@ -53,7 +49,6 @@
   </div>
 
   <div class="grid">
-    <!-- LEFT: Live -->
     <div class="box live">
       <div class="live-head">
         <div class="h">Live results</div>
@@ -66,7 +61,6 @@
       <div class="debug" id="dbg"></div>
     </div>
 
-    <!-- RIGHT: Train your AI + Preview -->
     <div class="box">
       <div class="h" style="margin-bottom:4px">Train your AI</div>
       <div class="row"><div class="lbl">Website</div><input id="f_site" class="input" placeholder="yourcompany.com"></div>
@@ -74,14 +68,11 @@
       <div class="row"><div class="lbl">Industries</div><input id="f_inds" class="input" placeholder="beverage, confectionery"></div>
       <div class="row"><div class="lbl">Seed buyers</div><input id="f_buyers" class="input" placeholder="brand1.com, brand2.com"></div>
       <div class="row"><div class="lbl">Ideal customers</div><input id="f_desc" class="input" placeholder="materials, order sizes, channels, exclusions"></div>
-
       <div class="row" style="justify-content:flex-end">
         <button class="btn" id="btnSave">Save</button>
         <button class="btn primary" id="btnFind">Find now</button>
       </div>
-
       <hr class="sep">
-
       <div class="h" style="margin-bottom:6px">Signals Preview (report)</div>
       <div class="kpis">
         <div class="chip">Free <span class="lock" id="freeCount">0/0</span></div>
@@ -93,17 +84,12 @@
 </div>
 
 <script>
-/* API bootstrap */
 (function(){
   const uidKey='gal_uid';
   let UID = localStorage.getItem(uidKey);
   if(!UID){ UID = 'u-' + Math.random().toString(36).slice(2,12); localStorage.setItem(uidKey, UID); }
 
-  function normalizeHost(v){
-    let s = (v || window.API_DEFAULT || location.origin).toString().trim();
-    s = s.replace(/\/api\/v1\/?$/,'').replace(/\/$/,'');
-    return s;
-  }
+  function normalizeHost(v){ let s=(v||window.API_DEFAULT||location.origin).toString().trim(); s=s.replace(/\/api\/v1\/?$/,'').replace(/\/$/,''); return s; }
   const HOST = normalizeHost(localStorage.getItem('apiBase') || window.API_DEFAULT);
   localStorage.setItem('apiBase', HOST);
   const API_BASE = HOST + '/api/v1';
@@ -112,10 +98,9 @@
     const o = opt || {};
     const headers = new Headers(o.headers || {});
     headers.set('x-galactly-user', UID);
-    // in dev, always attach x-dev-unlim
-    headers.set('x-dev-unlim','true');
+    headers.set('x-dev-unlim','true');          // dev free
     const url = API_BASE + (path.startsWith('/')? path : ('/'+path));
-    const res = await fetch(url, { ...o, headers, credentials:'include' });
+    const res = await fetch(url, { ...o, headers, mode:'cors' });   // ← NO credentials
     if(!res.ok) throw new Error('HTTP '+res.status);
     return res.json();
   }
@@ -124,33 +109,30 @@
   document.getElementById('dbg').textContent = `[api] ${HOST}  uid=${UID}  DEV=free`;
 })();
 
-/* Presence */
 async function loadPresence(){ try{ const j=await __API__.api('/presence/online'); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{} }
 setInterval(loadPresence, 8000); loadPresence();
 
-/* Quotas */
-let STATUS = null;
+let STATUS=null;
 function renderQuotas(){
-  const L = document.getElementById('quotaTopLeft');
-  const R = document.getElementById('quotaTopRight');
+  const L=document.getElementById('quotaTopLeft'), R=document.getElementById('quotaTopRight');
   if(!STATUS){ L.textContent='— searches left • — reveals left'; R.textContent=L.textContent; return; }
-  const s = STATUS.devUnlimited ? '∞' : (STATUS.quota?.findsLeft ?? 0);
-  const r = STATUS.devUnlimited ? '∞' : (STATUS.quota?.revealsLeft ?? 0);
-  const txt = `${s} searches left • ${r} reveals left`;
-  L.textContent=txt; R.textContent=txt;
+  const s=STATUS.devUnlimited?'∞':(STATUS.quota?.findsLeft??0);
+  const r=STATUS.devUnlimited?'∞':(STATUS.quota?.revealsLeft??0);
+  const txt=`${s} searches left • ${r} reveals left`; L.textContent=txt; R.textContent=txt;
 }
 async function loadStatus(){ try{ STATUS=await __API__.api('/status'); }catch{ STATUS=null; } renderQuotas(); }
 setInterval(loadStatus, 10000); loadStatus();
 
-/* Vault + Find */
 function val(id){ return (document.getElementById(id).value||'').trim(); }
 
-document.getElementById('btnSave').onclick = async ()=>{ try{
-  await __API__.api('/vault',{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({
-    website: val('f_site'), industries: val('f_inds'), regions: val('f_regions'),
-    buyers: val('f_buyers'), notes: val('f_desc')
-  }) });
-} catch{} };
+document.getElementById('btnSave').onclick = async ()=>{
+  try{
+    await __API__.api('/vault',{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({
+      website: val('f_site'), industries: val('f_inds'), regions: val('f_regions'),
+      buyers: val('f_buyers'), notes: val('f_desc')
+    })});
+  }catch(e){}
+};
 
 document.getElementById('btnFind').onclick = async ()=>{
   try{
@@ -160,18 +142,7 @@ document.getElementById('btnFind').onclick = async ()=>{
   }catch(e){ alert('Unexpected error.'); }
 };
 
-/* Prefill (optional) */
-(function(){
-  function g(k){ return localStorage.getItem(k)||''; }
-  if(g('onb_site'))     document.getElementById('f_site').value = g('onb_site');
-  if(g('onb_vendor'))   document.getElementById('f_site').value = g('onb_vendor');
-  if(g('onb_industries')) document.getElementById('f_inds').value = g('onb_industries');
-  if(g('onb_regions'))    document.getElementById('f_regions').value = g('onb_regions');
-  if(g('onb_buyers'))     document.getElementById('f_buyers').value = g('onb_buyers');
-  if(g('onb_desc'))       document.getElementById('f_desc').value = g('onb_desc');
-})();
-
-/* SSE preview */
+/* SSE */
 let es;
 function startSSE(){
   try{ if(es) es.close(); }catch{}
