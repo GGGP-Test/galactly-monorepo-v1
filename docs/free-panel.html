@@ -3,23 +3,20 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Galactly • Free Panel</title>
-  <!-- MUST load first so API host + dev flags are available -->
+  <title>Galactly • Free Panel (Dev Free)</title>
   <script src="./config.js"></script>
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{ --ink:#eaf0ff; --mut:#a6b2c9; --line:#223047; --panel:#0b121d; --card:#0f1624; --pill:#0f1726; --ok:#89ffd9; --warn:#ffd78a; }
-    *{box-sizing:border-box}
-    html,body{height:100%}
+    :root{ --ink:#eaf0ff; --mut:#a6b2c9; --line:#223047; --panel:#0b121d; --card:#0f1624; --pill:#0f1726; --ok:#89ffd9; }
+    *{box-sizing:border-box} html,body{height:100%}
     body{margin:0; font:500 14px Inter,system-ui; color:var(--ink);
       background: radial-gradient(1200px 700px at 70% -10%, rgba(70,110,180,.22), transparent 40%), #070b12;}
     .wrap{max-width:1300px;margin:0 auto;padding:16px}
     .header{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:8px}
     .badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--pill);color:#cfe0ff}
-    .badge .dot{width:8px;height:8px;border-radius:50%;background:#39e2b1;box-shadow:0 0 10px rgba(57,226,177,.7)}
+    .badge .dot{width:8px;height:8px;border-radius:50%;background:#39bfa2;box-shadow:0 0 10px rgba(57,191,162,.7)}
     .kv{color:#cfe0ff;opacity:.85}
     .grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
     @media (max-width:1100px){.grid{grid-template-columns:1fr;}}
@@ -28,8 +25,7 @@
     .live{height:520px;display:flex;flex-direction:column}
     .live-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
     .live-canvas{flex:1;border:1px solid var(--line);border-radius:14px;background:radial-gradient(320px 220px at 50% 40%, rgba(220,236,255,.06), transparent 60%), #0a111b;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
-    .neutron{width:280px;height:280px;border-radius:50%;background:radial-gradient(circle at 50% 50%, #fff, #9fb6ff 45%, rgba(159,182,255,.06) 46%, transparent 48%), radial-gradient(circle, rgba(200,230,255,.25) 30%, transparent 31%);
-      box-shadow:0 0 40px rgba(180,210,255,.18) inset;position:relative}
+    .neutron{width:280px;height:280px;border-radius:50%;background:radial-gradient(circle at 50% 50%, #fff, #9fb6ff 45%, rgba(159,182,255,.06) 46%, transparent 48%), radial-gradient(circle, rgba(200,230,255,.25) 30%, transparent 31%); box-shadow:0 0 40px rgba(180,210,255,.18) inset;position:relative}
     .neutron:before,.neutron:after{content:"";position:absolute;inset:-2px;border-radius:50%;border:1px dashed rgba(200,220,255,.15);animation:spin 28s linear infinite}
     .neutron:after{inset:-24px;animation-duration:44s;opacity:.7}
     @keyframes spin{to{transform:rotate(360deg)}}
@@ -52,7 +48,7 @@
 <body>
 <div class="wrap">
   <div class="header">
-    <div class="badge" title="online now"><span class="dot"></span><span id="presenceTxt">0 online</span></div>
+    <div class="badge"><span class="dot"></span><span id="presenceTxt">0 online</span></div>
     <div class="kv" id="quotaTopRight">— searches left • — reveals left</div>
   </div>
 
@@ -67,7 +63,6 @@
         <div class="neutron" aria-hidden="true"></div>
         <div class="status-pill" id="enginePill"><span style="color:#89ffd9">●</span> engine: ready</div>
       </div>
-      <div style="margin-top:10px" class="small">Verify your company to <b>unlock free reveals</b>. Use a business email that matches your website domain.</div>
       <div class="debug" id="dbg"></div>
     </div>
 
@@ -85,7 +80,6 @@
         <button class="btn primary" id="btnFind">Find now</button>
       </div>
 
-      <div class="small">Loaded from onboarding. Tweak &amp; run.</div>
       <hr class="sep">
 
       <div class="h" style="margin-bottom:6px">Signals Preview (report)</div>
@@ -99,9 +93,9 @@
 </div>
 
 <script>
-/* ---------------- API bootstrap with sticky UID ---------------- */
+/* API bootstrap */
 (function(){
-  const uidKey = 'gal_uid';
+  const uidKey='gal_uid';
   let UID = localStorage.getItem(uidKey);
   if(!UID){ UID = 'u-' + Math.random().toString(36).slice(2,12); localStorage.setItem(uidKey, UID); }
 
@@ -118,83 +112,66 @@
     const o = opt || {};
     const headers = new Headers(o.headers || {});
     headers.set('x-galactly-user', UID);
-    if(localStorage.getItem('gal_unlim') === 'true') headers.set('x-dev-unlim','true');
+    // in dev, always attach x-dev-unlim
+    headers.set('x-dev-unlim','true');
     const url = API_BASE + (path.startsWith('/')? path : ('/'+path));
     const res = await fetch(url, { ...o, headers, credentials:'include' });
     if(!res.ok) throw new Error('HTTP '+res.status);
     return res.json();
   }
+
   window.__API__ = { HOST, API_BASE, UID, api };
-  document.getElementById('dbg').textContent = `[api] ${HOST}  uid=${UID}  unlim=${localStorage.getItem('gal_unlim')==='true'}`;
+  document.getElementById('dbg').textContent = `[api] ${HOST}  uid=${UID}  DEV=free`;
 })();
 
-/* ---------------- Presence badge ---------------- */
-async function loadPresence(){
-  try{
-    const j = await __API__.api('/presence/online');
-    document.getElementById('presenceTxt').textContent = (j.total||0)+' online';
-  }catch{}
-}
+/* Presence */
+async function loadPresence(){ try{ const j=await __API__.api('/presence/online'); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{} }
 setInterval(loadPresence, 8000); loadPresence();
 
-/* ---------------- Quotas (status) ---------------- */
+/* Quotas */
 let STATUS = null;
 function renderQuotas(){
   const L = document.getElementById('quotaTopLeft');
   const R = document.getElementById('quotaTopRight');
-  if(!STATUS){ L.textContent = '— searches left • — reveals left'; R.textContent = L.textContent; return; }
-  const inf = (STATUS.devUnlimited? '∞':'');
-  const finds = STATUS.quota?.findsLeft ?? 0;
-  const reveals = STATUS.quota?.revealsLeft ?? 0;
-  const txt = `${inf || finds} searches left • ${inf || reveals} reveals left`;
-  L.textContent = txt; R.textContent = txt;
+  if(!STATUS){ L.textContent='— searches left • — reveals left'; R.textContent=L.textContent; return; }
+  const s = STATUS.devUnlimited ? '∞' : (STATUS.quota?.findsLeft ?? 0);
+  const r = STATUS.devUnlimited ? '∞' : (STATUS.quota?.revealsLeft ?? 0);
+  const txt = `${s} searches left • ${r} reveals left`;
+  L.textContent=txt; R.textContent=txt;
 }
-async function loadStatus(){
-  try{ STATUS = await __API__.api('/status'); }catch{ STATUS = null; }
-  renderQuotas();
-}
+async function loadStatus(){ try{ STATUS=await __API__.api('/status'); }catch{ STATUS=null; } renderQuotas(); }
 setInterval(loadStatus, 10000); loadStatus();
 
-/* ---------------- Train your AI – Save / Find ---------------- */
+/* Vault + Find */
 function val(id){ return (document.getElementById(id).value||'').trim(); }
 
-document.getElementById('btnSave').onclick = async ()=>{
-  try{
-    await __API__.api('/vault',{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({
-      website: val('f_site'), industries: val('f_inds'), regions: val('f_regions'),
-      buyers: val('f_buyers'), notes: val('f_desc')
-    }) });
-  }catch{}
-};
+document.getElementById('btnSave').onclick = async ()=>{ try{
+  await __API__.api('/vault',{ method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({
+    website: val('f_site'), industries: val('f_inds'), regions: val('f_regions'),
+    buyers: val('f_buyers'), notes: val('f_desc')
+  }) });
+} catch{} };
 
 document.getElementById('btnFind').onclick = async ()=>{
   try{
-    // presence beat so the badge updates
     fetch(__API__.API_BASE + '/presence/beat',{ method:'POST', headers:{'content-type':'application/json','x-galactly-user': __API__.UID }, body: JSON.stringify({ role:'supplier' }) });
-    const j = await __API__.api('/find-now',{ method:'POST', headers:{'content-type':'application/json'} });
-    loadStatus(); // refresh counters immediately
-    startSSE();   // start/refresh preview stream
-  }catch(e){
-    alert('Daily search quota reached for your plan.');
-  }
+    await __API__.api('/find-now',{ method:'POST', headers:{'content-type':'application/json'} });
+    loadStatus(); startSSE();
+  }catch(e){ alert('Unexpected error.'); }
 };
 
-/* ---------------- Prefill from onboarding (if present) ---------------- */
+/* Prefill (optional) */
 (function(){
   function g(k){ return localStorage.getItem(k)||''; }
-  const site = g('onb_vendor') || g('onb_site') || '';
-  if(site) document.getElementById('f_site').value = site;
-  const inds = g('onb_industries') || '';
-  if(inds) document.getElementById('f_inds').value = inds;
-  const regs = g('onb_regions') || '';
-  if(regs) document.getElementById('f_regions').value = regs;
-  const buyers = g('onb_buyers') || '';
-  if(buyers) document.getElementById('f_buyers').value = buyers;
-  const desc = g('onb_desc') || '';
-  if(desc) document.getElementById('f_desc').value = desc;
+  if(g('onb_site'))     document.getElementById('f_site').value = g('onb_site');
+  if(g('onb_vendor'))   document.getElementById('f_site').value = g('onb_vendor');
+  if(g('onb_industries')) document.getElementById('f_inds').value = g('onb_industries');
+  if(g('onb_regions'))    document.getElementById('f_regions').value = g('onb_regions');
+  if(g('onb_buyers'))     document.getElementById('f_buyers').value = g('onb_buyers');
+  if(g('onb_desc'))       document.getElementById('f_desc').value = g('onb_desc');
 })();
 
-/* ---------------- SSE Preview ---------------- */
+/* SSE preview */
 let es;
 function startSSE(){
   try{ if(es) es.close(); }catch{}
@@ -214,7 +191,6 @@ function startSSE(){
   };
   es.onerror = ()=>{ try{ es.close(); }catch{} };
 }
-// auto-start once on load
 startSSE();
 </script>
 </body>
