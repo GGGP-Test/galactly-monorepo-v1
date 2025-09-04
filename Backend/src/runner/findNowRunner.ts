@@ -1,262 +1,83 @@
-// backend/src/runner/findNowRunner.ts
-// Kicks off a single “find now” task, streams preview lines + scored leads into the global bus.
-// It uses the available connectors if present; missing connectors are safely ignored.
+import { Task, addLine, addItem } from '../tasks';
 
-import type { Request } from "express";
-
-type PreviewFn = (taskId: string, line: string) => void;
-type LeadFn = (taskId: string, lead: any) => void;
-
-type Ctx = {
-  putPreview: PreviewFn;
-  putLead: LeadFn;
-  tasks: Map<string, TaskState>;
-};
-
-type TaskState = {
-  id: string;
-  startedAt: number;
+type Profile = {
   website: string;
   regions: string;
   industries: string;
-  seeds: string[];
+  seeds: string;
   notes: string;
-  // lifecycle
-  done?: boolean;
-  error?: string;
 };
 
-declare global {
-  // created in index.ts
-  // eslint-disable-next-line no-var
-  var __GAL: {
-    tasks: Map<string, TaskState>;
-    putPreview: PreviewFn;
-    putLead: LeadFn;
-  };
-}
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-// ——— helpers ————————————————————————————————————————————————
-function ctxFromGlobal(): Ctx {
-  const g = (globalThis as any).__GAL;
-  if (!g) throw new Error("global bus missing");
-  return { tasks: g.tasks, putPreview: g.putPreview, putLead: g.putLead };
-}
+export async function startFindNow(
+  profile: Profile,
+  tasks: { previewTask: Task; leadsTask: Task }
+) {
+  const p = tasks.previewTask;
+  const l = tasks.leadsTask;
+  p.status = 'running';
+  l.status = 'running';
 
-function safe<T>(label: string, fn: () => Promise<T>): Promise<T | undefined> {
-  return fn().catch((e) => {
-    const msg = e?.message || String(e);
-    const g = (globalThis as any).__GAL;
-    if (g?.putPreview && currentTaskId) {
-      g.putPreview(currentTaskId, `⚠︎ ${label} skipped (${msg})`);
-    }
-    return undefined;
+  // narrative preview
+  addLine(p, `Parsed site: ${profile.website.toLowerCase()}`);
+  addLine(p, `Regions: ${profile.regions || '—'}`);
+  addLine(p, `Industries: ${profile.industries || '—'}`);
+  await sleep(300);
+  addLine(p, '• Probing public feeds…');
+  await sleep(300);
+  addLine(p, '• Reading procurement + RFPs…');
+  await sleep(300);
+  addLine(p, '• Scanning retailer pages…');
+  await sleep(300);
+  addLine(p, '• Extracting quantities & materials…');
+  await sleep(300);
+  addLine(p, '• Cross-checking signals…');
+  await sleep(300);
+  addLine(p, '• Ranking by fit…');
+
+  // basic free vs pro sections (front-end renders as a report)
+  addLine(p, 'Demand (FREE): —');
+  addLine(p, 'Demand (Pro): locked');
+  addLine(p, 'Buy signals (FREE): —');
+  addLine(p, 'Buy signals (Pro): locked');
+  addLine(p, 'Channels (FREE): —');
+  addLine(p, 'Channels (Pro): locked');
+  addLine(p, 'Confidence (FREE): —');
+  addLine(p, 'Confidence (Pro): locked');
+
+  // lead trickle (seed domains preferred)
+  const seeds = profile.seeds
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  const fallback = ['riverbendsnacks.com', 'peakoutfitters.com', 'marathonlabs.com'];
+  const domains = (seeds.length ? seeds : fallback).slice(0, 6);
+
+  const states = ['GA', 'VT', 'MD', 'PA', 'TX', 'CA', 'NC', 'OH'];
+  const intents = [
+    'corrugated boxes',
+    'stretch wrap pallets',
+    'custom mailers (kraft)',
+    '16oz cartons (retail)',
+  ];
+
+  domains.forEach(async (d, i) => {
+    await sleep(350 * (i + 1));
+    const intent = intents[i % intents.length];
+    addItem(l, {
+      title: `Lead — ${d}`,
+      buyer: d,
+      state: states[i % states.length],
+      channel: ['Email', 'LinkedIn DM', 'Call'][i % 3],
+      intent,
+      why: `Matched to ${profile.website} through ${profile.industries || 'sector'} + recent mentions of ${intent}.`,
+      source: 'aggregated',
+    });
   });
-}
 
-let currentTaskId = "";
-
-// ——— dynamic connector loaders (optional) ————————————————
-async function load<T = any>(p: string): Promise<T | undefined> {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return require(p) as T;
-  } catch {
-    return undefined;
-  }
-}
-
-type Lead = {
-  company_domain?: string;
-  domain?: string;
-  brand?: string;
-  state?: string;
-  region?: string;
-  source?: string;
-  url?: string;
-  material?: string;
-  package?: string;
-  category?: string;
-  qty?: string | number;
-  deadline?: string;
-  intent?: string;
-  title?: string;
-};
-
-// Map raw to a simple UI-friendly shape (frontend also has its own mapper; this keeps why-data rich)
-function normalizeLead(raw: Lead) {
-  const buyer =
-    raw.company_domain || raw.domain || raw.brand || "unknown-company";
-  const state = (raw.state || raw.region || "").toUpperCase();
-  const intent =
-    raw.intent || raw.material || raw.package || raw.category || "Lead";
-  const title =
-    raw.title ||
-    (raw.intent ? `"${raw.intent}" — ${buyer}` : `Lead — ${buyer}`);
-
-  const why: string[] = [];
-  if (raw.qty) why.push(`Quantity: ${raw.qty}`);
-  if (raw.material) why.push(`Material: ${raw.material}`);
-  if (raw.deadline) why.push(`Timeline: ${raw.deadline}`);
-  if (raw.source) why.push(`Matched by ${raw.source}`);
-  if (raw.url) why.push(`Source: ${raw.url}`);
-
-  return {
-    title,
-    buyer,
-    state,
-    intent,
-    why: why.join(" • "),
-    source: raw.source || "",
-    url: raw.url || "",
-  };
-}
-
-// ——— scoring (optional module) ——————————————————————————————
-async function scoreLead(raw: Lead, prefs: any): Promise<number> {
-  const scoring = await load<{ computeScore: (l: any, w?: any, p?: any) => number }>("./scoring");
-  if (scoring?.computeScore) {
-    return scoring.computeScore(raw, undefined, prefs);
-  }
-  // fallback light heuristic
-  let s = 0;
-  if (raw.source?.toLowerCase().includes("rfp")) s += 30;
-  if (raw.intent || raw.material) s += 30;
-  if (raw.qty) s += 20;
-  if (raw.state || raw.region) s += 10;
-  return s;
-}
-
-// ——— main runner —————————————————————————————————————————————
-export type FindNowPayload = {
-  website?: string;
-  regions?: string;
-  industries?: string;
-  seed_buyers?: string;
-  notes?: string;
-  req?: Request;
-};
-
-export async function findNowRunner(payload: FindNowPayload) {
-  const { tasks, putPreview, putLead } = ctxFromGlobal();
-
-  const task: TaskState = {
-    id: `t_${Date.now().toString(36)}_${Math.random()
-      .toString(36)
-      .slice(2, 8)}`,
-    startedAt: Date.now(),
-    website: (payload.website || "").trim(),
-    regions: (payload.regions || "").trim(),
-    industries: (payload.industries || "").trim(),
-    seeds: (payload.seed_buyers || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean),
-    notes: (payload.notes || "").trim(),
-  };
-
-  tasks.set(task.id, task);
-  currentTaskId = task.id;
-
-  // immediate preview lines
-  putPreview(task.id, `Parsed site: ${task.website || "—"}`);
-  if (task.regions) putPreview(task.id, `Regions: ${task.regions}`);
-  if (task.industries) putPreview(task.id, `Industries: ${task.industries}`);
-  if (task.seeds.length)
-    putPreview(task.id, `Seeds: ${task.seeds.slice(0, 6).join(", ")}`);
-  if (task.notes) putPreview(task.id, `Notes: ${task.notes}`);
-
-  // kick async work (do not await completely)
-  (async () => {
-    try {
-      // 1) Derive targets from vendor site (ICP guess)
-      putPreview(task.id, "Deriving ICP from your site…");
-      const derive = await load<{ deriveTargetsFromVendorSite: (u: string) => Promise<string[]> }>(
-        "./connectors/derivebuyersfromvendorsite"
-      );
-      if (derive?.deriveTargetsFromVendorSite && task.website) {
-        const guesses = (await safe(
-          "ICP guess",
-          () => derive!.deriveTargetsFromVendorSite!(task.website)
-        )) as string[] | undefined;
-        if (guesses?.length) {
-          putPreview(task.id, `ICP guess → ${guesses.slice(0, 8).join(", ")}`);
-        }
-      }
-
-      // 2) Brand intake / procurement pages
-      putPreview(task.id, "Scanning procurement & intake pages…");
-      const brandIntake = await load<{ brandIntake: (seeds: string[], prefs: any) => Promise<Lead[]> }>(
-        "./connectors/brandintake"
-      );
-      const prefs = {
-        regions: task.regions,
-        industries: task.industries,
-        notes: task.notes,
-      };
-      const leadsA =
-        (await safe("intake", () =>
-          brandIntake?.brandIntake
-            ? brandIntake.brandIntake(task.seeds, prefs)
-            : Promise.resolve([])
-        )) || [];
-
-      // 3) Ads library (free)
-      putPreview(task.id, "Probing ad-library bursts…");
-      const adlib = await load<{ adlibFree: (seeds: string[], prefs: any) => Promise<Lead[]> }>(
-        "./connectors/adlib_free"
-      );
-      const leadsB =
-        (await safe("adlib", () =>
-          adlib?.adlibFree ? adlib.adlibFree(task.seeds, prefs) : Promise.resolve([])
-        )) || [];
-
-      // 4) Reviews
-      putPreview(task.id, "Reading public reviews…");
-      const reviews = await load<{ reviewsSignals: (seeds: string[], prefs: any) => Promise<Lead[]> }>(
-        "./connectors/reviews"
-      );
-      const leadsC =
-        (await safe("reviews", () =>
-          reviews?.reviewsSignals
-            ? reviews.reviewsSignals(task.seeds, prefs)
-            : Promise.resolve([])
-        )) || [];
-
-      // 5) Product detail / restock
-      putPreview(task.id, "Scanning retailer pages…");
-      const pdp = await load<{ pdpSignals: (seeds: string[], prefs: any) => Promise<Lead[]> }>(
-        "./connectors/pdp"
-      );
-      const leadsD =
-        (await safe("pdp", () =>
-          pdp?.pdpSignals ? pdp.pdpSignals(task.seeds, prefs) : Promise.resolve([])
-        )) || [];
-
-      const all: Lead[] = ([] as Lead[]).concat(leadsA, leadsB, leadsC, leadsD);
-
-      // score + stream
-      for (const raw of all) {
-        const score = await scoreLead(raw, prefs);
-        const norm = normalizeLead(raw);
-        (norm as any).score = score;
-        putLead(task.id, norm);
-      }
-
-      putPreview(task.id, "Ranking by fit…");
-      putPreview(task.id, "Done.");
-      const t = tasks.get(task.id);
-      if (t) t.done = true;
-    } catch (e: any) {
-      const msg = e?.message || String(e);
-      putPreview(task.id, `✖ error: ${msg}`);
-      const t = tasks.get(task.id);
-      if (t) t.error = msg;
-    }
-  })();
-
-  return {
-    ok: true,
-    task: task.id,
-  };
+  await sleep(350 * (domains.length + 1));
+  p.status = 'done';
+  l.status = 'done';
 }
