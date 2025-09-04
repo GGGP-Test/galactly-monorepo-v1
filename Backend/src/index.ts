@@ -1,3 +1,4 @@
+// backend/src/index.ts
 import express from 'express';
 import compression from 'compression';
 import cors from 'cors';
@@ -14,15 +15,26 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 app.use(compression());
 
-// readiness probe for your host
+// readiness probe for your host (Render/Fly/etc read this)
 app.get('/healthz', (_req, res) => res.status(200).json({ ok: true }));
 
-// api v1
+// ---- v1 router (single source of truth) ----
 const v1 = express.Router();
-v1.use(healthRouter);
-v1.use(presenceRouter);
-v1.use(jobsRouter);
+v1.use(healthRouter);     // /status
+v1.use(presenceRouter);   // /presence/online , /presence/beat
+v1.use(jobsRouter);       // /find-now , /preview/poll , /leads/poll
+
+// expose under /api/v1/*
 app.use('/api/v1', v1);
+
+// ALSO expose the same routes at the root so frontends that call
+// https://.../status or /find-now (without /api/v1) keep working.
+app.use('/', v1);
+
+// default 404 (helps debugging if something slips through)
+app.use((_req, res) => {
+  res.status(404).json({ ok: false, error: 'not_found' });
+});
 
 // boot
 const PORT = Number(process.env.PORT || 8787);
