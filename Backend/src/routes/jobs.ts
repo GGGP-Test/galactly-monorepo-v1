@@ -1,30 +1,29 @@
 import { Router } from 'express';
-import { startFindNow, getTask, createTask } from '../tasks';
+import { createTask, getTask } from '../tasks';
+import { startFindNow } from '../runner/findNowRunner';
 
 export const router = Router();
 
-/**
- * POST /api/v1/find-now
- * body: { website, regions, industries, seed_buyers, notes }
- * returns: { ok, previewTask, leadsTask, preview }
- */
+/** submit a search */
 router.post('/find-now', async (req, res) => {
   const uid = String(req.header('x-galactly-user') || 'u-anon');
+
   const profile = {
     website: String(req.body?.website || ''),
     regions: String(req.body?.regions || ''),
     industries: String(req.body?.industries || ''),
     seeds: String(req.body?.seed_buyers || ''),
-    notes: String(req.body?.notes || '')
+    notes: String(req.body?.notes || ''),
   };
 
   const previewTask = createTask(uid, 'preview');
   const leadsTask = createTask(uid, 'leads');
 
+  // fire & forget
   startFindNow(profile, { previewTask, leadsTask }).catch(err => {
     previewTask.status = 'error';
-    leadsTask.status = 'error';
     previewTask.error = String(err?.message || err);
+    leadsTask.status = 'error';
     leadsTask.error = String(err?.message || err);
   });
 
@@ -32,14 +31,11 @@ router.post('/find-now', async (req, res) => {
     ok: true,
     previewTask: previewTask.id,
     leadsTask: leadsTask.id,
-    preview: previewTask.lines.slice(-6)
+    preview: previewTask.lines.slice(-6),
   });
 });
 
-/**
- * GET /api/v1/preview/poll?task=ID&cursor=N
- * returns incremental lines
- */
+/** long-poll preview text */
 router.get('/preview/poll', (req, res) => {
   const id = String(req.query.task || '');
   const cur = Math.max(0, Number(req.query.cursor || 0));
@@ -51,14 +47,11 @@ router.get('/preview/poll', (req, res) => {
     done: t.status === 'done' || t.status === 'error',
     cursor: cur + lines.length,
     lines,
-    error: t.error
+    error: t.error,
   });
 });
 
-/**
- * GET /api/v1/leads/poll?task=ID&cursor=N
- * returns incremental leads
- */
+/** long-poll leads */
 router.get('/leads/poll', (req, res) => {
   const id = String(req.query.task || '');
   const cur = Math.max(0, Number(req.query.cursor || 0));
@@ -70,6 +63,6 @@ router.get('/leads/poll', (req, res) => {
     done: t.status === 'done' || t.status === 'error',
     cursor: cur + items.length,
     items,
-    error: t.error
+    error: t.error,
   });
 });
