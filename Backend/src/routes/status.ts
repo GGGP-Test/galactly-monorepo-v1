@@ -1,6 +1,5 @@
-// backend/src/routes/status.ts
+// Backend/src/routes/SourceRouteStatus.ts
 // Returns plan + quota + devUnlimited so the Free Panel can show searches/reveals left.
-// Wire up in index.ts with:  registerStatusRoutes(app, ctx)
 
 import type { Express, Request, Response } from 'express';
 
@@ -20,7 +19,6 @@ export type Ctx = {
 
 /** Helpers */
 function todayUTC(): string {
-  // YYYY-MM-DD in UTC
   const d = new Date();
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, '0');
@@ -56,7 +54,7 @@ function getPlan(ctx: Ctx, userId: string): 'free' | 'pro' | 'custom' {
   return (p as any) || 'free';
 }
 
-function ensureQuotaRow(ctx: Ctx, userId: string, plan: 'free' | 'pro' | 'custom') {
+function ensureQuotaRow(ctx: Ctx, userId: string, _plan: 'free' | 'pro' | 'custom') {
   const row = ctx.quotaStore!.get(userId);
   const today = todayUTC();
   if (!row) {
@@ -100,7 +98,7 @@ export function attachQuotaHelpers(ctx: Ctx) {
     },
     take: async (userId: string, kind: 'find' | 'reveal') => {
       ensureMaps(ctx);
-      if (ctx.devUnlimited) return; // no-op in dev-unlimited
+      if (ctx.devUnlimited) return;
       const plan = getPlan(ctx, userId);
       const row = ensureQuotaRow(ctx, userId, plan);
       if (kind === 'find') row.findsUsed += 1;
@@ -139,7 +137,7 @@ export default function registerStatusRoutes(app: Express, ctx: Ctx) {
         },
         devUnlimited,
       });
-    } catch (e) {
+    } catch {
       res.status(500).json({ ok: false, error: 'status_failed' });
     }
   });
