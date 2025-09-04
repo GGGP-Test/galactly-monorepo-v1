@@ -1,92 +1,104 @@
-// backend/src/index.ts
+// Backend/src/index.ts
 import express from 'express';
 import cors from 'cors';
 
+// Routers we generated/keep
+import registerFindNowRoutes from './routes/findnow';
+import registerStreamRoutes from './routes/stream';
+import { router as presenceRouter } from './routes/presence';
+import registerStatusRoutes, { attachQuotaHelpers, type Ctx as StatusCtx } from './routes/status';
+
+// Task store + runner types
+import { createTaskStore } from './source-tasks';
+
 const PORT = Number(process.env.PORT || 8787);
 
-// allow your GitHub Pages origin (and local dev)
-const ALLOWED = (process.env.ALLOWED_ORIGIN || '')
+// ---------- CORS ----------
+const allowList = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
-if (!ALLOWED.length) {
-  ALLOWED.push('https://gggp-test.github.io', 'http://localhost:4173', 'http://127.0.0.1:4173');
-}
 
+// default: permissive for dev
+const corsOpts: cors.CorsOptions = {
+  origin(origin, cb) {
+    if (!origin) return cb(null, true);
+    if (!allowList.length) return cb(null, true);
+    cb(null, allowList.includes(origin));
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-galactly-user', 'x-dev-unlim'],
+  credentials: false,
+  maxAge: 86400,
+};
+
+// ---------- App ----------
 const app = express();
 app.set('trust proxy', true);
+app.use(cors(corsOpts));
 app.use(express.json({ limit: '1mb' }));
-app.use(
-  cors({
-    origin(origin, cb) {
-      if (!origin) return cb(null, true);
-      const ok = ALLOWED.some(a => origin === a || (a.endsWith('.github.io') && origin.endsWith('.github.io')));
-      cb(null, ok);
-    },
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'x-galactly-user'],
-    maxAge: 86400,
-    credentials: false,
-  })
-);
+app.use(express.text({ type: ['text/*', 'application/csv'], limit: '1mb' }));
 
-// ------------ shared router (mounted at "/" and "/api/v1") -------------
-function buildRouter() {
-  const r = express.Router();
+// Attach a simple user-id for convenience
+app.use((req, _res, next) => {
+  (req as any).userId = (req.header('x-galactly-user') || 'anon').toString();
+  next();
+});
 
-  // health
-  r.get('/healthz', (_req, res) => res.json({ ok: true }));
+// ---------- Shared context ----------
+const tasks = createTaskStore();
+const ctx: StatusCtx & {
+  tasks: Map<string, any>;
+  quota?: any;
+} = {
+  tasks,
+  users: new Map(),
+  quotaStore: new Map(),
+  devUnlimited: (process.env.DEV_UNLIMITED || '').toLowerCase() === 'true',
+};
+attachQuotaHelpers(ctx);
 
-  // simple status for quotas (dev-unlimited via env)
-  r.get('/status', (req, res) => {
-    const devUnlimited = process.env.DEV_UNLIMITED === 'true';
-    const uid = (req.headers['x-galactly-user'] as string) || '1000';
+// ---------- Health ----------
+app.get('/healthz', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
+app.get('/api/v1/healthz', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
+
+// ---------- Presence (mount at both / and /api/v1 so both paths work) ----------
+app.use('/', presenceRouter);
+app.use('/api/v1', presenceRouter);
+
+// ---------- Status (official under /api/v1/status) ----------
+registerStatusRoutes(app, ctx);
+
+// Alias for older frontends that call /status
+app.get('/status', async (req, res) => {
+  try {
+    const userId = (req.header('x-galactly-user') || 'anon').toString();
+    const quota = await (ctx as any).quota.status(userId);
     res.json({
       ok: true,
-      uid,
+      uid: userId,
       plan: 'free',
-      quota: { date: new Date().toISOString().slice(0, 10), findsUsed: 0, revealsUsed: 0, findsLeft: 99, revealsLeft: 5 },
-      devUnlimited,
+      quota,
+      devUnlimited: !!ctx.devUnlimited,
     });
-  });
+  } catch {
+    res.json({ ok: true, uid: 'anon', plan: 'free', quota: { findsLeft: 0, revealsLeft: 0 }, devUnlimited: !!ctx.devUnlimited });
+  }
+});
 
-  // presence pings used by UI
-  r.get('/presence/online', (_req, res) => res.json({ ok: true, t: Date.now() }));
-  r.get('/presence/beat', (_req, res) => res.json({ ok: true, t: Date.now() }));
+// ---------- Find-now + Streams ----------
+registerFindNowRoutes(app, {
+  tasks,
+  // expose quota helpers to route (optional)
+  quota: (ctx as any).quota,
+});
 
-  // find-now: echo preview + fake task ids (your real worker can pick these up)
-  r.post('/find-now', (req, res) => {
-    const body = req.body || {};
-    const site = String(body.website || body.site || '').replace(/^https?:\/\//, '');
-    const regions = body.regions || 'US';
-    const industries = body.industries || '';
-    res.json({
-      ok: true,
-      previewTask: 't_preview_' + Math.random().toString(16).slice(2),
-      leadsTask: 't_leads_' + Math.random().toString(16).slice(2),
-      preview: [
-        `Parsed site: ${site || '—'}`,
-        `Regions: ${regions}`,
-        `Industries: ${industries || '—'}`,
-      ],
-      items: [], // your lead worker can append later; keeping shape compatible
-    });
-  });
+registerStreamRoutes(app, { tasks });
 
-  // optional polling stubs so the UI never 404s
-  r.get('/preview/poll', (_req, res) => res.json({ ok: true, lines: [] }));
-  r.get('/leads/poll', (_req, res) => res.json({ ok: true, items: [] }));
-
-  return r;
-}
-
-const router = buildRouter();
-app.use('/', router);
-app.use('/api/v1', router); // <— compatibility alias so /api/v1/* also works
-
-// fallback for unknown routes (helps debugging)
+// ---------- Fallback ----------
 app.use((_req, res) => res.status(404).json({ ok: false, error: 'not_found' }));
 
+// ---------- Listen ----------
 app.listen(PORT, () => {
-  console.log(`API listening on :${PORT}`);
+  console.log(`[api] listening on :${PORT}`);
 });
