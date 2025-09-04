@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 
 // Routers we generated/keep
-import registerFindNowRoutes from './routes/findnow';
+import registerFindNowRoutes from './routes/find-now';
 import registerStreamRoutes from './routes/stream';
 import { router as presenceRouter } from './routes/presence';
 import registerStatusRoutes, { attachQuotaHelpers, type Ctx as StatusCtx } from './routes/status';
