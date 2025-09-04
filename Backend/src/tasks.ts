@@ -6,28 +6,34 @@ export type Task = {
   uid: string;
   kind: TaskKind;
   status: 'pending' | 'running' | 'done' | 'error';
-  lines: string[];   // preview log lines
-  items: any[];      // leads
+  lines: string[]; // preview text lines
+  items: any[];    // lead objects
   error?: string;
 };
 
 const tasks = new Map<string, Task>();
 
 export function createTask(uid: string, kind: TaskKind): Task {
-  const id = `t_${crypto.randomBytes(8).toString('hex')}`;
-  const t: Task = { id, uid, kind, status: 'pending', lines: [], items: [] };
-  tasks.set(id, t);
+  const t: Task = {
+    id: 't_' + crypto.randomBytes(8).toString('hex'),
+    uid,
+    kind,
+    status: 'pending',
+    lines: [],
+    items: [],
+  };
+  tasks.set(t.id, t);
   return t;
 }
 
-export function getTask(id: string): Task | undefined {
+export function getTask(id: string) {
   return tasks.get(id);
 }
 
-/** tiny helpers used by the runner */
-export function appendLine(t: Task, s: string) {
+export function addLine(t: Task, s: string) {
   t.lines.push(s);
 }
-export function pushItem(t: Task, v: any) {
+
+export function addItem(t: Task, v: any) {
   t.items.push(v);
 }
