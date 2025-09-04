@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 export const router = Router();
 
-/** simple status for the header counters */
+/** counters/status used by header */
 router.get('/status', (req, res) => {
   const devUnlimited = !!process.env.DEV_UNLIMITED || false;
   res.json({
@@ -13,9 +13,9 @@ router.get('/status', (req, res) => {
       date: new Date().toISOString().slice(0, 10),
       findsUsed: 0,
       revealsUsed: 0,
-      findsLeft: devUnlimited ? 9_999 : 99,
-      revealsLeft: devUnlimited ? 9_999 : 5
+      findsLeft: devUnlimited ? 9999 : 99,
+      revealsLeft: devUnlimited ? 9999 : 5,
     },
-    devUnlimited
+    devUnlimited,
   });
 });
