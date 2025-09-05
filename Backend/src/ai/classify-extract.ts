@@ -102,7 +102,7 @@ export const PACKAGING_BUYER_TAXONOMY: string[] = [
   "automotive_aftermarket",
   "sports_and_outdoors",
   "beverages_alcohol_free",
-  "beverages_alcoholic", // used for glass/corrugate heavy buyers
+  "beverages_alcoholic",
   "cannabis_and_cbd",
   "hardware_tools",
   "books_media_and_edu",
