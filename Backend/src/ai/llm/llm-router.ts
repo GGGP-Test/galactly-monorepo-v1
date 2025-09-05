@@ -1,139 +1,180 @@
-// src/ai/llm/llm-router.ts
-// Plan-aware LLM router with fallbacks across Gemini (free), HF (free), OpenAI (paid).
-// Minimal clients with fetch; swap to official SDKs if preferred.
+// src/ai/runtime/llm-router.ts
+/**
+ * LLM Router — routes tasks to OpenAI, Anthropic (Claude), Grok (via OpenRouter), or OpenRouter models.
+ * Free plan can be wired to Gemini Flash if you set GOOGLE_API_KEY (optional).
+ *
+ * Env:
+ *  - OPENAI_API_KEY
+ *  - ANTHROPIC_API_KEY
+ *  - OPENROUTER_API_KEY  (used for OpenRouter + Grok via openrouter)
+ *  - GOOGLE_API_KEY      (optional, for Gemini Flash on free)
+ *  - OPENROUTER_API_URL  (default: https://openrouter.ai/api/v1/chat/completions)
+ */
+export type Plan = "free" | "pro" | "scale";
+export type Task =
+  | "classify"      // light taxonomy, scoring, labels
+  | "extract"       // structured JSON from text
+  | "summarize"     // concise summaries
+  | "reason"        // multi-hop reasoning
+  | "outreach_copy" // short persuasive drafts
+  | "rerank";       // ranking short items by relevance
 
-import { Flags, FeatureContext } from "../core/feature-flags";
+export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+export type ChatResult = { text: string; model: string; provider: string; usage?: any };
 
-export type ModelKind = "classify" | "extract" | "rewrite" | "reason" | "embed";
-
-export interface LLMRequest {
-  kind: ModelKind;
-  prompt: string;
-  maxTokens?: number;
-  temperature?: number;
-  json?: boolean;
+export interface LLMRouterOptions {
+  plan: Plan;
+  region?: "us" | "eu" | "global";
 }
 
-export interface LLMResponse { text?: string; json?: any; tokens?: number; model?: string; }
+const OPENROUTER_URL = process.env.OPENROUTER_API_URL || "https://openrouter.ai/api/v1/chat/completions";
 
-export interface LLMClient {
-  name: string;
-  call(req: LLMRequest): Promise<LLMResponse>;
-  supports(kind: ModelKind): boolean;
-  costHint?: "free" | "low" | "high";
-}
-
-// ---------------- Gemini (free-tier friendly) ----------------
-class GeminiClient implements LLMClient {
-  name = "gemini-pro";
-  costHint: "free" | "low" | "high" = "free";
-  constructor(private key = process.env.GOOGLE_API_KEY) {}
-  supports(kind: ModelKind) { return ["classify", "extract", "rewrite", "embed"].includes(kind); }
-  async call(req: LLMRequest): PromiseLLMResponse> {
-    if (!this.key) throw new Error("Missing GOOGLE_API_KEY");
-    const model = req.kind === "embed" ? "text-embedding-004" : "gemini-1.5-pro";
-    const url = req.kind === "embed"
-      ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:embedContent?key=${this.key}`
-      : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.key}`;
-
-    if (req.kind === "embed") {
-      const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: { parts: [{ text: req.prompt }] } }) });
-      const j = await r.json();
-      return { json: j, model };
-    }
-
-    const body = {
-      contents: [{ role: "user", parts: [{ text: req.prompt }] }],
-      generationConfig: { temperature: req.temperature ?? 0.2, maxOutputTokens: req.maxTokens ?? 512, responseMimeType: req.json ? "application/json" : undefined },
-    };
-    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const j = await r.json();
-    const text = j.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    return req.json ? { json: safeJson(text), model } : { text, model };
-  }
-}
-
-// ---------------- HuggingFace Inference (free-tier friendly) ----------------
-class HFClient implements LLMClient {
-  name = "hf-inference";
-  costHint: "free" | "low" | "high" = "free";
-  constructor(private token = process.env.HF_API_TOKEN, private model = "mistralai/Mistral-7B-Instruct-v0.3") {}
-  supports(kind: ModelKind) { return ["classify", "extract", "rewrite", "embed"].includes(kind); }
-  async call(req: LLMRequest): PromiseLLMResponse> {
-    if (!this.token) throw new Error("Missing HF_API_TOKEN");
-    if (req.kind === "embed") {
-      const r = await fetch("https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2", {
-        method: "POST", headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ inputs: req.prompt })
-      });
-      return { json: await r.json(), model: "all-MiniLM-L6-v2" };
-    }
-    const r = await fetch(`https://api-inference.huggingface.co/models/${this.model}`, {
-      method: "POST", headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ inputs: req.prompt, options: { wait_for_model: true } })
-    });
-    const j = await r.json();
-    const txt = Array.isArray(j) ? j.map((x: any) => x.generated_text).join("\n") : (j.generated_text ?? JSON.stringify(j));
-    return req.json ? { json: safeJson(txt), model: this.model } : { text: txt, model: this.model };
-  }
-}
-
-// ---------------- OpenAI (paid/high) ----------------
-class OpenAIClient implements LLMClient {
-  name = "openai";
-  costHint: "free" | "low" | "high" = "high";
-  constructor(private key = process.env.OPENAI_API_KEY, private model = "gpt-4o-mini") {}
-  supports(kind: ModelKind) { return true; }
-  async call(req: LLMRequest): PromiseLLMResponse> {
-    if (!this.key) throw new Error("Missing OPENAI_API_KEY");
-    const url = "https://api.openai.com/v1/chat/completions";
-    const r = await fetch(url, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${this.key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: this.model,
-        messages: [{ role: "user", content: req.prompt }],
-        temperature: req.temperature ?? 0.2,
-        max_tokens: req.maxTokens ?? 512,
-        response_format: req.json ? { type: "json_object" } : undefined,
-      })
-    });
-    const j = await r.json();
-    const msg = j.choices?.[0]?.message?.content ?? "";
-    return req.json ? { json: safeJson(msg), model: this.model } : { text: msg, model: this.model };
-  }
-}
-
-// ---------------- Router ----------------
 export class LLMRouter {
-  private gemini = new GeminiClient();
-  private hf = new HFClient();
-  private openai = new OpenAIClient();
+  constructor(private readonly opts: LLMRouterOptions) {}
 
-  async route(ctx: FeatureContext, req: LLMRequest): Promise<LLMResponse> {
-    const chain: LLMClient[] = [];
-
-    // Free tier defaults
-    if (Flags.geminiFree(ctx)) chain.push(this.gemini);
-    if (Flags.hfMini(ctx)) chain.push(this.hf);
-
-    // Paid tier augmentation
-    if (Flags.openaiPaid(ctx)) chain.unshift(this.openai); // prefer OpenAI first on paid
-
-    // Fallback across chain
-    let lastErr: any;
-    for (const c of chain) {
-      if (!c.supports(req.kind)) continue;
-      try { return await c.call(req); } catch (e) { lastErr = e; continue; }
+  /** High-level chat entrypoint */
+  async chat(task: Task, messages: ChatMessage[], json?: boolean): Promise<ChatResult> {
+    const choice = chooseModel(task, this.opts);
+    switch (choice.provider) {
+      case "openai":
+        return callOpenAI(choice.model, messages, json);
+      case "anthropic":
+        return callAnthropic(choice.model, messages, json);
+      case "openrouter":
+        return callOpenRouter(choice.model, messages, json);
+      case "gemini":
+        return callGemini(choice.model, messages, json);
+      default:
+        throw new Error(`Unknown provider: ${choice.provider}`);
     }
-    throw lastErr ?? new Error("No LLM available");
   }
 }
 
-// ---------------- Utils ----------------
-function safeJson(txt: string) {
-  try { return JSON.parse(txt); } catch { return { text: txt }; }
+/** Decide model per task & plan. You can tweak this matrix anytime. */
+function chooseModel(task: Task, { plan }: LLMRouterOptions): { provider: "openai" | "anthropic" | "openrouter" | "gemini"; model: string } {
+  // Default matrix
+  const M: Record<Plan, Record<Task, { provider: any; model: string }>> = {
+    free: {
+      classify: { provider: "gemini", model: "gemini-1.5-flash" },
+      extract: { provider: "gemini", model: "gemini-1.5-flash" },
+      summarize:{ provider: "gemini", model: "gemini-1.5-flash" },
+      reason:   { provider: "openrouter", model: "google/gemma-2-9b-it:free" },
+      outreach_copy: { provider: "openrouter", model: "google/gemma-2-9b-it:free" },
+      rerank:   { provider: "openrouter", model: "cohere/command-r-plus-08-2024" }, // via OpenRouter
+    },
+    pro: {
+      classify: { provider: "openai", model: "gpt-4o-mini" },
+      extract:  { provider: "anthropic", model: "claude-3-5-sonnet" },
+      summarize:{ provider: "openai", model: "gpt-4o-mini" },
+      reason:   { provider: "anthropic", model: "claude-3-5-sonnet" },
+      outreach_copy: { provider: "openai", model: "gpt-4o-mini" },
+      rerank:   { provider: "openrouter", model: "cohere/rerank-3" },
+    },
+    scale: {
+      classify: { provider: "openai", model: "gpt-4o" },
+      extract:  { provider: "anthropic", model: "claude-3-5-sonnet" },
+      summarize:{ provider: "openai", model: "gpt-4o" },
+      reason:   { provider: "anthropic", model: "claude-3-5-sonnet" },
+      outreach_copy: { provider: "openrouter", model: "xai/grok-2" }, // Grok via OpenRouter
+      rerank:   { provider: "openrouter", model: "cohere/rerank-3" },
+    },
+  };
+  // If GOOGLE_API_KEY missing, free falls back to OpenRouter free model
+  if (plan === "free" && !process.env.GOOGLE_API_KEY) {
+    return { provider: "openrouter", model: "google/gemma-2-9b-it:free" };
+  }
+  return M[plan][task];
 }
 
-type PromiseLLMResponse = Promise<LLMResponse>;
+// -------------------- Providers --------------------
+
+async function callOpenAI(model: string, messages: ChatMessage[], json?: boolean): Promise<ChatResult> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("OPENAI_API_KEY missing");
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages,
+      ...(json ? { response_format: { type: "json_object" } } : {}),
+      temperature: 0.2,
+    }),
+  });
+  const data = await r.json();
+  const text = data?.choices?.[0]?.message?.content || "";
+  return { text, model, provider: "openai", usage: data?.usage };
+}
+
+async function callAnthropic(model: string, messages: ChatMessage[], json?: boolean): Promise<ChatResult> {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error("ANTHROPIC_API_KEY missing");
+  const sys = messages.find(m => m.role === "system")?.content;
+  const userMsgs = messages.filter(m => m.role !== "system").map(m => ({ role: m.role, content: m.content }));
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      system: sys,
+      messages: userMsgs,
+      temperature: 0.2,
+      ...(json ? { response_format: { type: "json_object" } } : {}),
+      max_tokens: 1000,
+    }),
+  });
+  const data = await r.json();
+  const text = data?.content?.[0]?.text || "";
+  return { text, model, provider: "anthropic", usage: data?.usage };
+}
+
+/** OpenRouter also serves Grok (xai/*), Cohere, etc. */
+async function callOpenRouter(model: string, messages: ChatMessage[], json?: boolean): Promise<ChatResult> {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) throw new Error("OPENROUTER_API_KEY missing");
+  const r = await fetch(OPENROUTER_URL, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${key}`,
+      "HTTP-Referer": process.env.OPENROUTER_SITE || "https://yourapp.example",
+      "X-Title": process.env.OPENROUTER_APP || "Lead AI",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.2,
+      ...(json ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
+  const data = await r.json();
+  const text = data?.choices?.[0]?.message?.content || "";
+  return { text, model, provider: model.startsWith("xai/") ? "grok" : "openrouter", usage: data?.usage };
+}
+
+/** Optional: Gemini Flash for free plan */
+
+async function callGemini(model: string, messages: ChatMessage[], json?: boolean): Promise<ChatResult> {
+  const key = process.env.GOOGLE_API_KEY;
+  if (!key) throw new Error("GOOGLE_API_KEY missing");
+  // Collapse to a single prompt; treat system as prefix
+  const sys = messages.find(m => m.role === "system")?.content || "";
+  const user = messages.filter(m => m.role !== "system").map(m => m.content).join("\n\n");
+  const prompt = sys ? `${sys}\n\n${user}` : user;
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }]}],
+      generationConfig: { temperature: 0.2 },
+      ...(json ? { response_mime_type: "application/json" } : {}),
+    }),
+  });
+  const data = await r.json();
+  const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") || "";
+  return { text, model, provider: "gemini", usage: data?.usageMetadata };
+}
