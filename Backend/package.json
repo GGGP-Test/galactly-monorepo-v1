@@ -3,7 +3,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.json",
+    "seed:import": "node dist/scripts/c-verticals.js",
+    "seed:csv": "node dist/scripts/c-import.js",        // optional csv importer
+    "job:route": "node dist/jobs/route.js", 
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts"
   },
