@@ -1,17 +1,16 @@
+# Dockerfile
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
 FROM node:20-alpine
 WORKDIR /app
-
-
-# deps first
-COPY package*.json ./
-RUN if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
-
-
-# src
-COPY . .
-RUN npm run build && cp -f src/schema.sql dist/schema.sql || true
-
-
-EXPOSE 8787
-CMD ["node","dist/index.js"]
-
+ENV NODE_ENV=production
+COPY --from=build /app/package*.json ./
+RUN npm ci --omit=dev
+COPY --from=build /app/dist ./dist
+# default CMD is a no-op; the Job will override it
+CMD ["node", "-e", "console.log('image ready')"]
