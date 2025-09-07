@@ -1,7 +1,8 @@
 {
   "name": "packlead",
   "private": true,
-  "type": "module",
+  "type": "commonjs",
+  "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
