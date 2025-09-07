@@ -13,4 +13,4 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
-CMD ["node","dist/index.js"]    # the job can override this if you prefer
+CMD ["node","dist/index.js"]   # your Job can override this
