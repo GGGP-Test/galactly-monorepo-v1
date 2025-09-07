@@ -1,27 +1,16 @@
-# -------- build stage --------
+# ---------- build ----------
 FROM node:20-alpine AS build
 WORKDIR /app
-
-# optional: native modules support
-RUN apk add --no-cache python3 make g++ pkgconfig
-
-# install deps (works with or without package-lock.json)
-COPY package.json package-lock.json* ./
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
-
-# copy source and build
+COPY package*.json ./
+RUN npm ci
 COPY . .
 RUN npm run build
 
-# -------- runtime stage --------
+# ---------- runtime ----------
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-
-COPY package.json package-lock.json* ./
-RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
-
+COPY package*.json ./
+RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
-
-# default is a no-op; Jobs override the command
-CMD ["node", "-e", "console.log('image ready')"]
+CMD ["node","dist/index.js"]    # the job can override this if you prefer
