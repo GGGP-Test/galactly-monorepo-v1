@@ -1,0 +1,42 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "outDir": "dist",
+    "rootDir": "src",
+    "noEmitOnError": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/index.ts",
+    "src/lib/cors.ts",
+    "src/routes/presence.ts",
+    "src/routes/status.ts",
+    "src/routes/find-now.ts",
+    "src/routes/stream.ts",
+    "src/routes/ai.ts",
+    "src/routes/gate.ts",
+    "src/routes/reviews.ts",
+    "src/ui/api/routes.score.ts",
+    "src/server/routes.public.ts",
+    "src/types.ts"
+  ],
+  "exclude": [
+    "**/*.spec.ts",
+    "src/ai/**",
+    "src/connectors/**",
+    "src/core/**",
+    "src/data/**",
+    "src/leadgen/**",
+    "src/model-adapters/**",
+    "src/ops/**",
+    "src/pipelines/**",
+    "src/router/**",
+    "src/scheduler/**",
+    "src/search-providers.ts",
+    "src/security/**",
+    "src/source-runner-find-now-runner.ts",
+    "src/targets.ts",
+    "src/stripe.ts"
+  ]
+}
