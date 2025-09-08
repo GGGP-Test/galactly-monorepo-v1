@@ -1,38 +1,31 @@
-# -------- build stage --------
+# ---------- build ----------
 FROM node:20-alpine AS build
+ARG APP_DIR=.
 WORKDIR /app
 
-# copy only this service's package files
-COPY package.json ./
-# If you actually have a lockfile in THIS folder, uncomment the next line
-# COPY package-lock.json ./
-
-# Install deps — use npm install because there's no lockfile in this folder
+# Install deps (no lockfile required) to build TS
+COPY ${APP_DIR}/package*.json ./
 RUN npm install
 
-# bring in the rest of the source
-COPY . .
+# Copy the rest of the source
+COPY ${APP_DIR}/ ./
 
-# compile TypeScript -> dist/
+# Compile TS -> CJS in dist/
 RUN npm run build
 
-# prune dev deps to keep the runtime small
-RUN npm prune --omit=dev
-
-# -------- runtime stage --------
+# ---------- runtime ----------
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
-# copy runtime assets
+# Keep the app package.json that declares "type":"commonjs"
 COPY --from=build /app/package.json ./package.json
+
+# Use the deps from build and prune dev
 COPY --from=build /app/node_modules ./node_modules
+RUN npm prune --omit=dev
+
+# Copy compiled JS only
 COPY --from=build /app/dist ./dist
 
-# hard-set type to commonjs INSIDE the image (guards against parent monorepo "type":"module")
-RUN node -e "const fs=require('fs');const p=require('./package.json');p.type='commonjs';fs.writeFileSync('package.json',JSON.stringify(p,null,2))"
-
-# helpful source maps in prod logs
-ENV NODE_OPTIONS=--enable-source-maps
-
-CMD ["node","dist/index.js"]
+CMD ["node", "dist/index.js"]
