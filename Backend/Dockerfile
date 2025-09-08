@@ -2,11 +2,11 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Install deps to build TS (works with or without a lockfile)
+# Install deps to build TS (lockfile optional)
 COPY package*.json ./
 RUN npm install
 
-# Copy source and compile TS -> CJS in dist/
+# Bring the source and compile TS -> dist/
 COPY . .
 RUN npm run build
 
@@ -15,12 +15,17 @@ FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Bring only what we need
+# Only what's needed to run
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 
-# Force CommonJS at runtime (do NOT copy repo package.json)
-RUN printf '{\n  "name": "packlead-runtime",\n  "private": true,\n  "type": "commonjs",\n  "main": "dist/index.js"\n}\n' > package.json \
- && node -e "console.log('runtime package.type =', require('./package.json').type)"
+# Force CJS at runtime: never copy the repo package.json
+RUN rm -f package.json \
+ && printf '{\n  "name": "packlead-runtime",\n  "private": true,\n  "type": "commonjs",\n  "main": "dist/index.cjs"\n}\n' > package.json \
+ && echo "runtime package.json written (type=commonjs)"
 
-CMD ["node", "dist/index.js"]
+# Belt-and-braces: make all compiled files .cjs
+RUN find dist -type f -name "*.js" -exec sh -c 'for f; do mv "$f" "${f%.js}.cjs"; done' sh {} + \
+ && echo "renamed dist/*.js -> *.cjs"
+
+CMD ["node", "dist/index.cjs"]
