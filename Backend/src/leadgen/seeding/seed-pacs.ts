@@ -1,4 +1,4 @@
-// src/leadgen/seeding/c-pacs.ts
+// src/leadgen/seeding/seed-pacs.ts
 /**
  * c-pacs.ts — Curated Packs loader (CSV/JSON) + utilities
  * Use this to seed vertical/region lead lists created by OPAL or manual curation.
