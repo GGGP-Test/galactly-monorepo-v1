@@ -2,34 +2,37 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# copy ONLY the app's package files (no monorepo root lockfile required)
+# copy only this service's package files
 COPY package.json ./
-# if you have package-lock.json, COPY it too; otherwise npm install is fine
+# If you actually have a lockfile in THIS folder, uncomment the next line
 # COPY package-lock.json ./
 
-# install deps to build TypeScript
+# Install deps — use npm install because there's no lockfile in this folder
 RUN npm install
 
-# bring in the rest of your source
+# bring in the rest of the source
 COPY . .
 
-# compile TS -> CJS in dist/
+# compile TypeScript -> dist/
 RUN npm run build
+
+# prune dev deps to keep the runtime small
+RUN npm prune --omit=dev
 
 # -------- runtime stage --------
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
-# copy the app's package.json that sets "type":"commonjs"
+# copy runtime assets
 COPY --from=build /app/package.json ./package.json
-
-# copy runtime deps + compiled JS only
 COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist         ./dist
+COPY --from=build /app/dist ./dist
 
-# sanity: show what Node thinks the module type is at runtime
-# (uncomment once to verify if you still hit ESM/CJS mismatch)
-# RUN node -e "console.log('package type:', require('./package.json').type)"
+# hard-set type to commonjs INSIDE the image (guards against parent monorepo "type":"module")
+RUN node -e "const fs=require('fs');const p=require('./package.json');p.type='commonjs';fs.writeFileSync('package.json',JSON.stringify(p,null,2))"
 
-CMD ["node", "dist/index.js"]
+# helpful source maps in prod logs
+ENV NODE_OPTIONS=--enable-source-maps
+
+CMD ["node","dist/index.js"]
