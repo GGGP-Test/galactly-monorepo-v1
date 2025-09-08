@@ -2,7 +2,6 @@
 import express from 'express';
 import cors from 'cors';
 
-// Routers we generated/keep
 import registerFindNowRoutes from './routes/find-now';
 import registerStreamRoutes from './routes/stream';
 import { router as presenceRouter } from './routes/presence';
@@ -10,6 +9,16 @@ import registerStatusRoutes, { attachQuotaHelpers, type Ctx as StatusCtx } from 
 
 // Task store + runner types
 import { createTaskStore } from './source-tasks';
+import createScoreRouter from './ui/api/routes.score';
+import { registerStripeWebhook } from './stripe';
+const app = express();
+app.use(express.json());
+app.use(createScoreRouter());
+registerStripeWebhook(app);
+app.listen(process.env.PORT || 8080, () => console.log('up'));
+
+// Routers we generated/keep
+
 
 const PORT = Number(process.env.PORT || 8787);
 
