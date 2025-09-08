@@ -8,18 +8,13 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "job:cron": "node dist/cron.js",
-    "job:seed": "node dist/scripts/c/verticals.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "csv-parse": "^5.5.6",
-    "csv-stringify": "^6.4.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "node-fetch": "^3.3.2",
-    "pino": "^9.0.0",
-    "stripe": "^16.0.0",
     "express": "^4.19.2",
+    "stripe": "^16.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
