@@ -2,31 +2,24 @@
 import type express from 'express';
 import { q } from '../db';
 
-/** minimal scoring evidence item */
 type WhyItem = { label: string; kind: 'meta'|'signal'|'platform'; score: number; detail?: string };
-
-/** clamp helper */
 const clamp = (n: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, n));
 
-/** extract hostname from a URL (safe) */
 function hostOf(url?: string | null): string | null {
   if (!url) return null;
   try { return new URL(url).hostname.toLowerCase(); } catch { return null; }
 }
 
-/** Local buildWhy so we don't depend on ../why exports */
 function buildWhy(lead: any): { host: string | null; why: WhyItem[] } {
   const why: WhyItem[] = [];
   const host = hostOf(lead?.source_url);
 
-  // Domain quality (very simple prior)
   if (host) {
     const tld = host.split('.').pop() || '';
     const dq = ['com','ca','co','io','ai','net','org'].includes(tld) ? 0.65 : 0.35;
     why.push({ label: 'Domain quality', kind: 'meta', score: dq, detail: `${host} (.${tld})` });
   }
 
-  // Platform signal prior
   const pf = String(lead?.platform || '').toLowerCase();
   if (pf) {
     const base =
@@ -38,7 +31,6 @@ function buildWhy(lead: any): { host: string | null; why: WhyItem[] } {
     why.push({ label: 'Platform fit', kind: 'platform', score: base, detail: pf });
   }
 
-  // Keyword intent bumps (crude)
   const kws: string[] = Array.isArray(lead?.kw) ? lead.kw : [];
   const intentWords = ['rfp','rfq','packaging','carton','boxes','labels','supplier','quote','sourcing'];
   const hits = kws.map(k => String(k).toLowerCase()).filter(k => intentWords.some(w => k.includes(w)));
@@ -50,7 +42,6 @@ function buildWhy(lead: any): { host: string | null; why: WhyItem[] } {
   return { host, why };
 }
 
-/** basic per-user rate gate using event_log */
 async function checkRate(userId: string) {
   const lim = Number(process.env.REVEAL_LIMIT_10M ?? 3);
   const winMin = Number(process.env.REVEAL_WINDOW_MIN ?? 10);
@@ -72,26 +63,21 @@ async function checkRate(userId: string) {
 }
 
 export function mountReveal(app: express.Express) {
-  // quick ping
   app.get('/api/v1/reveal/ping', (_req, res) => {
     res.json({ ok: true, time: new Date().toISOString() });
   });
 
-  // main reveal
   app.post('/api/v1/reveal', async (req, res) => {
     try {
       const userId = (req as any).userId || 'anon';
       const { leadId, holdMs } = (req.body ?? {}) as { leadId?: number | string; holdMs?: number };
-
       if (!leadId) return res.status(400).json({ ok: false, error: 'missing leadId' });
 
-      // Hold-to-reveal guard
       const minHold = Number(process.env.REVEAL_MIN_HOLD_MS ?? 1100);
       if (typeof holdMs === 'number' && holdMs < minHold) {
         return res.status(400).json({ ok: false, error: 'hold too short', minHoldMs: minHold });
       }
 
-      // Rate limit
       const gate = await checkRate(userId);
       if (!gate.ok) {
         return res.status(429).json({
@@ -101,7 +87,6 @@ export function mountReveal(app: express.Express) {
         });
       }
 
-      // Fetch the lead
       const r = await q<any>(`
         SELECT id, cat, kw, platform, source_url, title, snippet, created_at
         FROM lead_pool
@@ -111,15 +96,11 @@ export function mountReveal(app: express.Express) {
       const lead = r.rows[0];
       if (!lead) return res.status(404).json({ ok: false, error: 'lead not found' });
 
-      // Build evidence
       const { host, why } = buildWhy(lead);
       const evidenceScore = why.length ? clamp(why.reduce((a, w) => a + w.score, 0) / why.length, 0, 1) : 0.4;
-
-      // Simple temperature: >=0.72 hot, >=0.55 warm, else cold
       const temperature: 'hot' | 'warm' | 'cold' =
         evidenceScore >= 0.72 ? 'hot' : evidenceScore >= 0.55 ? 'warm' : 'cold';
 
-      // Lightweight packaging math (no external calls)
       const packagingMath = {
         spendPerMonth: null as number | null,
         estOrdersPerMonth: null as number | null,
@@ -130,11 +111,9 @@ export function mountReveal(app: express.Express) {
         confidence: evidenceScore
       };
 
-      // Log the event (for rate limiting analytics)
       await q('INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,$3,$4)',
         [userId, Number(leadId), 'reveal', { holdMs: Number(holdMs || 0) } as any]);
 
-      // Response – keep raw URL out of the card by default
       res.json({
         ok: true,
         temperature,
@@ -149,6 +128,17 @@ export function mountReveal(app: express.Express) {
         why,
         packagingMath
       });
+    } catch (e: any) {
+      res.status(500).json({ ok: false, error: String(e?.message || e) });
+    }
+  });
+
+  // ---- TEMP DEBUG (to verify DB binding) ----
+  app.get('/api/v1/reveal/_debug/dbinfo', async (_req, res) => {
+    try {
+      const info = await q<any>(`SELECT current_database() AS db, current_user AS "user", current_schema AS schema`);
+      const has = await q<any>(`SELECT EXISTS(SELECT 1 FROM lead_pool WHERE id=123) AS has_123`);
+      res.json({ ok: true, db: info.rows[0], has_123: !!has.rows[0]?.has_123 });
     } catch (e: any) {
       res.status(500).json({ ok: false, error: String(e?.message || e) });
     }
