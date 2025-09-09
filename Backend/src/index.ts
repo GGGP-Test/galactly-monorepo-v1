@@ -2,8 +2,8 @@
 import express from 'express';
 import cors from 'cors';
 
-import { mountReveal } from './api/reveal';
 import { mountPublic } from './routes/public';
+import { mountReveal } from './api/reveal';
 
 const app = express();
 
@@ -15,8 +15,8 @@ const allowList = (process.env.ALLOWED_ORIGINS ?? '')
 
 const corsOpts: cors.CorsOptions = {
   origin(origin, cb) {
-    if (!origin) return cb(null, true);            // no Origin header (curl, server-to-server)
-    if (!allowList.length) return cb(null, true);  // permissive by default when unset
+    if (!origin) return cb(null, true);
+    if (!allowList.length) return cb(null, true);
     cb(null, allowList.includes(origin));
   },
   methods: ['GET', 'POST', 'OPTIONS'],
@@ -25,25 +25,15 @@ const corsOpts: cors.CorsOptions = {
   maxAge: 86400,
 };
 
-// ---------- App middleware ----------
+// ---------- App ----------
 app.set('trust proxy', true);
 app.use(cors(corsOpts));
 app.use(express.json({ limit: '1mb' }));
-app.use(express.text({ type: ['text/*', 'application/csv'], limit: '1mb' }));
-
-// Attach a simple user-id for convenience/rate-limits
-app.use((req, _res, next) => {
-  (req as any).userId = (req.header('x-galactly-user') ?? 'anon').toString();
-  next();
-});
 
 // ---------- Health & meta ----------
 app.get('/healthz', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
-app.get('/api/v1/healthz', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 app.get('/readyz', (_req, res) => res.json({ ok: true, ready: true, time: new Date().toISOString() }));
 app.get('/version', (_req, res) => res.json({ ok: true, version: process.env.APP_VERSION ?? 'dev' }));
-
-// public config (used by frontends)
 app.get('/api/v1/config', (_req, res) => {
   res.json({
     ok: true,
@@ -55,9 +45,15 @@ app.get('/api/v1/config', (_req, res) => {
   });
 });
 
-// ---------- Routes ----------
-mountPublic(app);
-mountReveal(app);
+// attach a simple user id for convenience
+app.use((req, _res, next) => {
+  (req as any).userId = (req.header('x-galactly-user') ?? 'anon').toString();
+  next();
+});
+
+// ---------- Routers ----------
+mountPublic(app);       // /api/v1/public/*
+mountReveal(app);       // /api/v1/reveal/*
 
 // ---------- Fallback ----------
 app.use((_req, res) => res.status(404).json({ ok: false, error: 'not_found' }));
@@ -65,6 +61,5 @@ app.use((_req, res) => res.status(404).json({ ok: false, error: 'not_found' }));
 // ---------- Listen ----------
 const PORT = Number(process.env.PORT ?? 8787);
 app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`api listening on :${PORT}`);
+  console.log(`[api] listening on :${PORT}`);
 });
