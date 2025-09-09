@@ -13,6 +13,7 @@
     "dump:src": "node scripts/dump-src.cjs"
   },
   "dependencies": {
+    "pg": "^8.12.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
