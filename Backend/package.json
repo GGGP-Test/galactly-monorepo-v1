@@ -6,10 +6,10 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.runtime.json",
     "build:runtime": "tsc -p tsconfig.runtime.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit"
+    "build": "tsc -p tsconfig.json",
   },
   "dependencies": {
     "cors": "^2.8.5",
