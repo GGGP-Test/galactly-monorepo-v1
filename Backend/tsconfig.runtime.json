@@ -15,8 +15,9 @@
   },
   "files": [
     "src/index.ts",
+    "src/auth.ts",
     "src/routes/public.ts",
-    "src/api/reveal.ts",
-    "src/db.ts"
+    "src/routes/leads.ts",
+    "src/api/reveal.ts"
   ]
 }
