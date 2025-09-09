@@ -1,179 +1,176 @@
 // Backend/src/api/reveal.ts
 import type express from 'express';
-import { q } from '../db';
+import { Pool } from 'pg';
 
-type LeadRow = {
-  id: number | string;
-  cat: string | null;
-  kw?: string[] | null;
-  platform?: string | null;
-  source_url?: string | null;
-  title?: string | null;
-  snippet?: string | null;
-  created_at?: string | Date | null;
-};
+// --- DB helper --------------------------------------------------------------
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
-type Why = { label: string; kind: 'meta'|'platform'|'signal'; score: number; detail: string };
-
-function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)); }
-
-function domainOf(u?: string | null): string | null {
-  if (!u) return null;
-  try { return new URL(u).hostname || null; } catch { return null; }
+async function q<T = any>(text: string, params: any[] = []) {
+  const c = await pool.connect();
+  try {
+    const r = await c.query<T>(text, params as any);
+    return r as any;
+  } finally {
+    c.release();
+  }
 }
 
-function buildWhy(lead: LeadRow): { host: string | null; why: Why[] } {
-  const host = domainOf(lead.source_url);
+// --- small utils ------------------------------------------------------------
+const clamp = (n: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, n));
+const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+
+function hostFromUrl(u?: string | null): string | null {
+  try {
+    if (!u) return null;
+    const h = new URL(u).hostname;
+    return h || null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+type Why = { label: string; kind: 'meta' | 'platform' | 'signal'; score: number; detail?: string };
+
+function buildWhy(lead: any) {
   const why: Why[] = [];
 
-  // Domain quality
+  const host = hostFromUrl(lead?.source_url) || null;
   if (host) {
-    const tld = host.split('.').pop() ?? '';
-    const dq = ['com','ca','co','io','ai','dev','net','org'].includes(tld) ? 0.65 : 0.35;
+    const tld = host.split('.').pop() || '';
+    const dq = ['com', 'ca', 'co', 'io', 'ai', 'net', 'org'].includes(tld) ? 0.65 : 0.35;
     why.push({ label: 'Domain quality', kind: 'meta', score: dq, detail: `${host} (.${tld})` });
   }
 
-  // Platform fit
-  const platform = (lead.platform ?? '').toLowerCase();
+  const platform = String(lead?.platform || '').toLowerCase();
   if (platform) {
-    const pf = platform === 'shopify' ? 0.75
-             : ['woocommerce','bigcommerce','magento'].includes(platform) ? 0.6
-             : 0.4;
+    const pf = ['shopify', 'woocommerce', 'bigcommerce'].includes(platform) ? 0.75 : 0.4;
     why.push({ label: 'Platform fit', kind: 'platform', score: pf, detail: platform });
   }
 
-  // Intent keywords
-  const kw = (lead.kw ?? []) as string[];
+  const kw: string[] = Array.isArray(lead?.kw) ? lead.kw : [];
+  const hasIntent = kw.some(k => ['packaging', 'carton', 'rfp', 'rfq', 'labels'].includes(String(k).toLowerCase()));
   if (kw.length) {
-    const intent = ['packaging','carton','rfp','rfq','labels','shipping','fulfillment'];
-    const hits = kw.filter(k => intent.includes(k.toLowerCase()));
-    const score = clamp(hits.length / Math.max(kw.length, 1), 0.3, 0.9);
-    why.push({ label: 'Intent keywords', kind: 'signal', score, detail: kw.join(', ') });
+    why.push({
+      label: 'Intent keywords',
+      kind: 'signal',
+      score: hasIntent ? 0.9 : 0.5,
+      detail: kw.join(', ')
+    });
   }
 
   return { host, why };
 }
 
-function temperatureOf(why: Why[]): 'hot'|'warm' {
-  const avg = why.reduce((a, w) => a + w.score, 0) / Math.max(why.length, 1);
-  return avg >= 0.65 ? 'hot' : 'warm';
+function temperatureFromWhy(why: Why[]): 'hot' | 'warm' | 'cold' {
+  const s = avg(why.map(w => clamp(w.score)));
+  if (s >= 0.75) return 'hot';
+  if (s >= 0.5) return 'warm';
+  return 'cold';
 }
 
-async function checkRate(userId: string) {
-  const lim = Number(process.env.REVEAL_LIMIT_10M ?? 3);
-  const winMin = Number(process.env.REVEAL_WINDOW_MIN ?? 10);
-  const r = await q<{ cnt: string; wait_sec: number }>(
-    `WITH recent AS (
-       SELECT created_at FROM event_log
-       WHERE user_id=$1 AND event_type='reveal' AND created_at> now() - ($2::text||' minutes')::interval
-     )
-     SELECT COUNT(*)::text AS cnt,
-            GREATEST(0, CEIL(EXTRACT(EPOCH FROM ((MIN(created_at) + ($2::text||' minutes')::interval) - now())))) AS wait_sec
-       FROM recent`,
-    [userId, String(winMin)]
+// --- handlers ---------------------------------------------------------------
+async function fetchLeadById(id: number) {
+  const r = await q(
+    'SELECT id, cat, kw, platform, source_url, title, snippet, created_at FROM lead_pool WHERE id=$1 LIMIT 1',
+    [id]
   );
-  const count = Number(r.rows[0]?.cnt ?? 0);
-  const waitSec = Number(r.rows[0]?.wait_sec ?? 0);
-  return { ok: count < lim, count, lim, waitSec, winMin };
-}
-
-async function loadLeadById(id: number) {
-  const r = await q<LeadRow>(
-    `SELECT id, cat, kw, platform, source_url, title, snippet, created_at
-       FROM lead_pool
-      WHERE id=$1 LIMIT 1`, [id]
-  );
-  return r.rows[0];
-}
-
-async function makeRevealPayload(userId: string, id: number, holdMs?: number) {
-  // optional hold-to-reveal
-  const minHold = Number(process.env.REVEAL_MIN_HOLD_MS ?? 1100);
-  if (typeof holdMs === 'number' && holdMs < minHold) {
-    return { status: 400, body: { ok: false, error: 'hold too short', minHoldMs: minHold } };
-  }
-
-  // rate limit
-  const gate = await checkRate(userId);
-  if (!gate.ok) {
-    return { status: 429, body: { ok: false, softBlock: true, nextInSec: gate.waitSec, windowMin: gate.winMin, used: gate.count, limit: gate.lim } };
-  }
-
-  const lead = await loadLeadById(id);
-  if (!lead) return { status: 404, body: { ok: false, error: 'lead not found' } };
-
-  const { host, why } = buildWhy(lead);
-  const temperature = temperatureOf(why);
-
-  const packagingMath = {
-    spendPerMonth: null as number | null,
-    estOrdersPerMonth: null as number | null,
-    estUnitsPerMonth: null as number | null,
-    packagingTypeHint: lead.cat === 'product' ? 'cartons/labels' : (lead.cat === 'procurement' ? 'general packaging' : 'mixed'),
-    confidence: clamp(why.reduce((a,w)=>a+w.score,0)/(why.length||1), 0, 1),
-  };
-
-  // log event (best effort)
-  await q('INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,$3,$4)',
-          [userId, Number(lead.id), 'reveal', { holdMs: Number(holdMs||0) } as any]).catch(()=>{});
-
-  return {
-    status: 200,
-    body: {
-      ok: true,
-      temperature,
-      lead: {
-        id: String(lead.id),
-        platform: lead.platform ?? null,
-        cat: lead.cat ?? null,
-        host,
-        title: lead.title ?? host ?? null,
-        created_at: lead.created_at ? new Date(lead.created_at as any).toISOString() : null,
-      },
-      why,
-      packagingMath,
-    }
-  };
+  return (r.rows && (r as any).rows[0]) || null;
 }
 
 export function mountReveal(app: express.Express) {
-  // basic ping
+  // health for this group
   app.get('/api/v1/reveal/ping', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
-  // debug: show DB info + check seed id
+  // debug db info (safe)
   app.get('/api/v1/reveal/_debug/dbinfo', async (_req, res) => {
     try {
-      const meta = await q<{ db: string; user: string; schema: string }>(
-        `SELECT current_database() AS db, current_user AS user, current_schema() AS schema`
+      const info = await q<{ current_database: string; current_user: string; current_schema: string }>(
+        'SELECT current_database(), current_user, current_schema'
       );
-      const r123 = await q('SELECT 1 FROM lead_pool WHERE id=123 LIMIT 1');
-      res.json({ ok: true, db: meta.rows[0], has_123: !!r123.rowCount });
+      const has123 = await q('SELECT 1 FROM lead_pool WHERE id=123 LIMIT 1');
+      res.json({
+        ok: true,
+        db: {
+          db: (info as any).rows?.[0]?.current_database || null,
+          user: (info as any).rows?.[0]?.current_user || null,
+          schema: (info as any).rows?.[0]?.current_schema || null
+        },
+        has_123: !!(has123 as any).rowCount
+      });
     } catch (e: any) {
       res.status(500).json({ ok: false, error: String(e?.message || e) });
     }
   });
 
-  // NEW: GET by id
-  app.get('/api/v1/reveal/:id', async (req, res) => {
-    try {
-      const userId = (req as any).userId ?? 'anon';
-      const id = Number(req.params.id);
-      if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: 'bad id' });
-      const r = await makeRevealPayload(userId, id);
-      res.status(r.status).json(r.body);
-    } catch (e: any) {
-      res.status(500).json({ ok: false, error: String(e?.message || e) });
-    }
-  });
-
-  // POST (existing): { leadId, holdMs }
+  // POST /reveal
   app.post('/api/v1/reveal', async (req, res) => {
     try {
-      const userId = (req as any).userId ?? 'anon';
-      const { leadId, holdMs } = (req.body ?? {}) as { leadId?: number; holdMs?: number };
-      if (!Number.isFinite(Number(leadId))) return res.status(400).json({ ok: false, error: 'missing leadId' });
-      const r = await makeRevealPayload(userId, Number(leadId), holdMs);
-      res.status(r.status).json(r.body);
+      const leadId = Number(req.body?.leadId);
+      const holdMs = Number(req.body?.holdMs || 0);
+      if (!leadId) return res.status(400).json({ ok: false, error: 'missing leadId' });
+
+      const minHold = Number(process.env.REVEAL_MIN_HOLD_MS || 1100);
+      if (holdMs && holdMs < minHold) {
+        return res.status(400).json({ ok: false, error: 'hold too short', minHoldMs: minHold });
+      }
+
+      const lead = await fetchLeadById(leadId);
+      if (!lead) return res.status(404).json({ ok: false, error: 'lead not found' });
+
+      const { host, why } = buildWhy(lead);
+      const temperature = temperatureFromWhy(why);
+
+      const packagingMath = {
+        spendPerMonth: null as number | null,
+        estOrdersPerMonth: null as number | null,
+        estUnitsPerMonth: null as number | null,
+        packagingTypeHint:
+          lead.cat === 'product'
+            ? 'cartons/labels'
+            : lead.cat === 'procurement'
+            ? 'general packaging'
+            : 'mixed',
+        confidence: clamp(avg(why.map(w => w.score)), 0, 1)
+      };
+
+      res.json({
+        ok: true,
+        temperature,
+        lead: {
+          id: String(lead.id),
+          platform: lead.platform,
+          cat: lead.cat,
+          host,
+          title: lead.title || host,
+          created_at: lead.created_at
+        },
+        why,
+        packagingMath
+      });
+    } catch (e: any) {
+      res.status(500).json({ ok: false, error: String(e?.message || e) });
+    }
+  });
+
+  // GET /reveal/:id  (convenience)
+  app.get('/api/v1/reveal/:id', async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!id) return res.status(400).json({ ok: false, error: 'bad id' });
+
+      // call the same logic as POST
+      const fakeReq: any = { body: { leadId: id, holdMs: Number(req.query.holdMs || 1500) } };
+      // @ts-ignore reuse handler
+      return (app._router.stack
+        ?.flatMap((l: any) => [l.route]?.filter(Boolean))
+        ?.find((r: any) => r?.path === '/api/v1/reveal' && r?.methods?.post)
+        ?.stack?.[0]?.handle || ((_rq: any, rs: any) => rs.status(500).json({ ok: false, error: 'handler missing' })))(
+        fakeReq,
+        res
+      );
     } catch (e: any) {
       res.status(500).json({ ok: false, error: String(e?.message || e) });
     }
