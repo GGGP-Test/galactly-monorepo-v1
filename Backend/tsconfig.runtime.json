@@ -1,37 +1,23 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
-    "module": "CommonJS",
     "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "rootDir": "src",
+    "outDir": "dist",
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "noEmitOnError": false,
+    "strict": false,
     "sourceMap": true
   },
-  "include": [
+
+  // Compile ONLY the pieces used by this runtime image
+  "files": [
     "src/index.ts",
-    "src/routes/**/*.ts",
-    "src/api/**/*.ts",
-    "src/db.ts"
-  ],
-  "exclude": [
-    "src/**/__tests__/**",
-    "src/ai/**",
-    "src/connectors/**",
-    "src/runner/**",
-    "src/ui/**",
-    "src/server/**",
-    "src/security/**",
-    "src/stores/**",
-    "src/core/**",
-    "src/data/**",
-    "src/leadgen/**",
-    "src/scripts/**",
-    "src/pipelines/**",
-    "src/providers/**"
+    "src/routes/public.ts",
+    "src/api/reveal.ts",
+    "src/db.ts",
+    "src/why.ts"
   ]
 }
