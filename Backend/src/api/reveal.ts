@@ -1,126 +1,156 @@
-import express from 'express';
+// Backend/src/api/reveal.ts
+import type express from 'express';
 import { q } from '../db';
-import { clamp } from '../util';
 
-type WhyItem = { label: string; kind: 'intent' | 'fit' | 'platform' | 'meta' | string; score: number; detail?: string };
-type LeadRow = {
-  id: number; cat: string | null; kw: string[] | null; platform: string | null;
-  source_url: string | null; title: string | null; snippet: string | null; created_at: string;
-};
+/** minimal scoring evidence item */
+type WhyItem = { label: string; kind: 'meta'|'signal'|'platform'; score: number; detail?: string };
 
-function hostnameOf(url?: string | null){ if(!url) return null; try{ const h=new URL(url).hostname; return h.startsWith('www.')?h.slice(4):h; }catch{return null;} }
+/** clamp helper */
+const clamp = (n: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, n));
 
-function buildEvidence(lead: LeadRow){
-  const host = hostnameOf(lead.source_url);
+/** extract hostname from a URL (safe) */
+function hostOf(url?: string | null): string | null {
+  if (!url) return null;
+  try { return new URL(url).hostname.toLowerCase(); } catch { return null; }
+}
+
+/** Local buildWhy so we don't depend on ../why exports */
+function buildWhy(lead: any): { host: string | null; why: WhyItem[] } {
   const why: WhyItem[] = [];
-  const hay = [lead.title ?? '', lead.snippet ?? ''].join(' ').toLowerCase();
-  const kws = (Array.isArray(lead.kw) ? lead.kw : []).map(s => (s ?? '').toLowerCase());
+  const host = hostOf(lead?.source_url);
 
-  const intentTerms = [
-    'rfp','request for proposal','request for quote','rfq',
-    'packaging','carton','boxes','labels','mailers','shipper',
-    'fulfillment','3pl','warehouse','dc','distribution center',
-    'rebrand','new product launch','sku expansion','co-packer'
-  ];
-  let intentScore = 0;
-  for (const t of intentTerms) if (hay.includes(t)) intentScore += 0.12;
-  for (const k of kws) if (intentTerms.some(t => k.includes(t))) intentScore += 0.1;
-  intentScore = clamp(intentScore, 0, 1);
-  if (intentScore > 0) why.push({ label: 'Intent evidence', kind: 'intent', score: intentScore });
-
-  const platform = (lead.platform ?? '').toLowerCase();
-  const ecomPlatforms = ['shopify','woocommerce','amazon','bigcommerce','magento','wix','squarespace'];
-  const platformScore = ecomPlatforms.includes(platform) ? 0.6 : (platform ? 0.35 : 0);
-  if (platformScore > 0) why.push({ label: 'Platform', kind: 'platform', score: platformScore, detail: platform || undefined });
-
-  const cat = (lead.cat ?? '').toLowerCase();
-  const fitScore = cat === 'product' ? 0.5 : cat === 'procurement' ? 0.4 : 0.25;
-  why.push({ label: 'Category fit', kind: 'fit', score: fitScore, detail: cat || undefined });
-
-  if (host){
+  // Domain quality (very simple prior)
+  if (host) {
     const tld = host.split('.').pop() || '';
-    const dq = ['com','co','io','ai'].includes(tld) ? 0.6 : 0.3;
+    const dq = ['com','ca','co','io','ai','net','org'].includes(tld) ? 0.65 : 0.35;
     why.push({ label: 'Domain quality', kind: 'meta', score: dq, detail: `${host} (.${tld})` });
   }
+
+  // Platform signal prior
+  const pf = String(lead?.platform || '').toLowerCase();
+  if (pf) {
+    const base =
+      pf.includes('shopify') ? 0.75 :
+      pf.includes('reddit')  ? 0.55 :
+      pf.includes('youtube') ? 0.5  :
+      pf.includes('pdp')     ? 0.7  :
+      0.5;
+    why.push({ label: 'Platform fit', kind: 'platform', score: base, detail: pf });
+  }
+
+  // Keyword intent bumps (crude)
+  const kws: string[] = Array.isArray(lead?.kw) ? lead.kw : [];
+  const intentWords = ['rfp','rfq','packaging','carton','boxes','labels','supplier','quote','sourcing'];
+  const hits = kws.map(k => String(k).toLowerCase()).filter(k => intentWords.some(w => k.includes(w)));
+  if (hits.length) {
+    const bonus = clamp(0.15 + 0.05 * Math.min(hits.length, 5));
+    why.push({ label: 'Intent keywords', kind: 'signal', score: clamp(0.6 + bonus), detail: hits.join(', ') });
+  }
+
   return { host, why };
 }
 
-function classifyTemperature(why: WhyItem[]): 'hot' | 'warm' {
-  const intent = why.filter(w => w.kind==='intent').reduce((a,w)=>a+w.score,0);
-  const support = why.filter(w => w.kind!=='intent').reduce((a,w)=>a+w.score,0);
-  return intent >= 0.75 && support >= 0.6 ? 'hot' : 'warm';
-}
-
-async function checkRate(userId: string){
+/** basic per-user rate gate using event_log */
+async function checkRate(userId: string) {
   const lim = Number(process.env.REVEAL_LIMIT_10M ?? 3);
   const winMin = Number(process.env.REVEAL_WINDOW_MIN ?? 10);
-  const r = await q<{ cnt: string; wait_sec: number }>(
-    `WITH recent AS (
-       SELECT created_at FROM event_log
-       WHERE user_id=$1 AND event_type='reveal'
-         AND created_at> now() - ($2::text||' minutes')::interval
-     )
-     SELECT COUNT(*)::text AS cnt,
-            GREATEST(0, CEIL(EXTRACT(EPOCH FROM ((MIN(created_at) + ($2::text||' minutes')::interval) - now())))) AS wait_sec
-     FROM recent`,
-    [userId, String(winMin)]
-  );
+  const r = await q<{ cnt: string; wait_sec: string }>(`
+    WITH recent AS (
+      SELECT created_at
+      FROM event_log
+      WHERE user_id = $1
+        AND event_type = 'reveal'
+        AND created_at > now() - ($2::text || ' minutes')::interval
+    )
+    SELECT COUNT(*)::text AS cnt,
+           GREATEST(0, CEIL(EXTRACT(EPOCH FROM ((MIN(created_at) + ($2::text||' minutes')::interval) - now()))))::text AS wait_sec
+    FROM recent
+  `, [userId, String(winMin)]);
   const count = Number(r.rows[0]?.cnt ?? 0);
   const waitSec = Number(r.rows[0]?.wait_sec ?? 0);
   return { ok: count < lim, count, lim, waitSec, winMin };
 }
 
-export function mountReveal(app: express.Express){
-  app.get('/api/v1/reveal/ping', (_req, res) => res.json({ ok:true, time: new Date().toISOString() }));
+export function mountReveal(app: express.Express) {
+  // quick ping
+  app.get('/api/v1/reveal/ping', (_req, res) => {
+    res.json({ ok: true, time: new Date().toISOString() });
+  });
 
+  // main reveal
   app.post('/api/v1/reveal', async (req, res) => {
-    try{
-      const userId = ((req as any).userId || req.header('x-galactly-user') || 'anon').toString();
+    try {
+      const userId = (req as any).userId || 'anon';
       const { leadId, holdMs } = (req.body ?? {}) as { leadId?: number | string; holdMs?: number };
 
-      const id = Number(leadId);
-      if (!id || Number.isNaN(id)) return res.status(400).json({ ok:false, error:'missing or invalid leadId' });
+      if (!leadId) return res.status(400).json({ ok: false, error: 'missing leadId' });
 
+      // Hold-to-reveal guard
       const minHold = Number(process.env.REVEAL_MIN_HOLD_MS ?? 1100);
-      if (typeof holdMs === 'number' && holdMs < minHold){
-        return res.status(400).json({ ok:false, error:'hold too short', minHoldMs: minHold });
+      if (typeof holdMs === 'number' && holdMs < minHold) {
+        return res.status(400).json({ ok: false, error: 'hold too short', minHoldMs: minHold });
       }
 
+      // Rate limit
       const gate = await checkRate(userId);
-      if (!gate.ok){
-        return res.status(429).json({ ok:false, softBlock:true, nextInSec: gate.waitSec || 30,
-          windowMin: gate.winMin, used: gate.count, limit: gate.lim });
+      if (!gate.ok) {
+        return res.status(429).json({
+          ok: false, softBlock: true,
+          nextInSec: gate.waitSec || 30, windowMin: gate.winMin,
+          used: gate.count, limit: gate.lim
+        });
       }
 
-      const r = await q<LeadRow>(
-        `SELECT id, cat, kw, platform, source_url, title, snippet, created_at
-           FROM lead_pool
-          WHERE id=$1
-          LIMIT 1`, [id]);
+      // Fetch the lead
+      const r = await q<any>(`
+        SELECT id, cat, kw, platform, source_url, title, snippet, created_at
+        FROM lead_pool
+        WHERE id = $1
+        LIMIT 1
+      `, [Number(leadId)]);
       const lead = r.rows[0];
-      if (!lead) return res.status(404).json({ ok:false, error:'lead not found' });
+      if (!lead) return res.status(404).json({ ok: false, error: 'lead not found' });
 
-      const { host, why } = buildEvidence(lead);
-      const confidence = clamp(why.reduce((a,w)=>a+(w.score||0),0) / Math.max(why.length||1,1), 0, 1);
-      const temperature = classifyTemperature(why);
+      // Build evidence
+      const { host, why } = buildWhy(lead);
+      const evidenceScore = why.length ? clamp(why.reduce((a, w) => a + w.score, 0) / why.length, 0, 1) : 0.4;
 
-      await q(`INSERT INTO event_log(user_id, lead_id, event_type, meta)
-               VALUES ($1,$2,'reveal',$3::jsonb)`,
-              [userId, id, JSON.stringify({ holdMs: Number(holdMs||0), temperature })]);
+      // Simple temperature: >=0.72 hot, >=0.55 warm, else cold
+      const temperature: 'hot' | 'warm' | 'cold' =
+        evidenceScore >= 0.72 ? 'hot' : evidenceScore >= 0.55 ? 'warm' : 'cold';
 
+      // Lightweight packaging math (no external calls)
+      const packagingMath = {
+        spendPerMonth: null as number | null,
+        estOrdersPerMonth: null as number | null,
+        estUnitsPerMonth: null as number | null,
+        packagingTypeHint:
+          lead.cat === 'product' ? 'cartons/labels' :
+          lead.cat === 'procurement' ? 'general packaging' : 'mixed',
+        confidence: evidenceScore
+      };
+
+      // Log the event (for rate limiting analytics)
+      await q('INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,$3,$4)',
+        [userId, Number(leadId), 'reveal', { holdMs: Number(holdMs || 0) } as any]);
+
+      // Response – keep raw URL out of the card by default
       res.json({
-        ok:true,
+        ok: true,
         temperature,
-        lead: { id: lead.id, platform: lead.platform, cat: lead.cat, host, title: lead.title || host, created_at: lead.created_at },
+        lead: {
+          id: lead.id,
+          platform: lead.platform,
+          cat: lead.cat,
+          host,
+          title: lead.title || host,
+          created_at: lead.created_at
+        },
         why,
-        packagingMath: {
-          spendPerMonth: null, estOrdersPerMonth: null, estUnitsPerMonth: null,
-          packagingTypeHint: lead.cat === 'product' ? 'cartons/labels' : (lead.cat === 'procurement' ? 'general packaging' : 'mixed'),
-          confidence
-        }
+        packagingMath
       });
-    }catch(e:any){
-      res.status(500).json({ ok:false, error: String(e?.message||e) });
+    } catch (e: any) {
+      res.status(500).json({ ok: false, error: String(e?.message || e) });
     }
   });
 }
