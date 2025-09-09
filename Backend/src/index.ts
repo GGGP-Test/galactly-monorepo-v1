@@ -1,12 +1,15 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+
 import { log } from './logger';
 import presenceRouter from './routes/presence';
 import registerStatusRoutes, { attachQuotaHelpers, type Ctx } from './routes/status';
 import readyRouter from './routes/ready';
 import metricsRouter from './routes/metrics';
-import fs from 'fs';
-import path from 'path';
+import registerConfigRoutes from './routes/config';
+import { errorHandler } from './middleware/errors';
 
 // ---- Process-level safety ---------------------------------------------------
 process.on('uncaughtException', (err) => log.error({ err }, '[fatal] uncaughtException'));
@@ -37,7 +40,7 @@ app.use(cors(corsOpts));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.text({ type: ['text/*', 'application/csv'], limit: '1mb' }));
 
-// Request id (cheap) + user id
+// Request id + user id
 app.use((req, _res, next) => {
   (req as any).rid = Math.random().toString(36).slice(2);
   (req as any).userId = (req.header('x-galactly-user') || 'anon').toString();
@@ -70,10 +73,13 @@ const ctx: Ctx = {
 attachQuotaHelpers(ctx);
 registerStatusRoutes(app, ctx);
 
+// ---- Config -----------------------------------------------------------------
+registerConfigRoutes(app);
+
 // ---- Metrics ----------------------------------------------------------------
 app.use('/', metricsRouter);
 
-// ---- Optional mounts: only if files exist (so we never break green) --------
+// ---- Optional mounts: only if files exist ----------------------------------
 function mountIfExists(rel: string, mount: (m: any) => void) {
   const full = path.join(__dirname, rel);
   if (fs.existsSync(full) || fs.existsSync(full + '.js')) {
@@ -86,17 +92,18 @@ function mountIfExists(rel: string, mount: (m: any) => void) {
   }
 }
 
-// Example: if you have api/reveal.ts compiled to dist/api/reveal.js
+// If present, mount your existing public routes file (your repo uses this name)
+mountIfExists('./server.route.public', (m) => m?.default?.(app));
+
+// If present (or use the skeleton we provided), mount reveal endpoints
 mountIfExists('./api/reveal', (m) => m?.mountReveal?.(app));
 
-// Add more of your optional routes here later:
-// mountIfExists('./routes/ai', (m) => m?.default?.(app));
+// Add more optional mounts later when we’re ready:
 // mountIfExists('./routes/reviews', (m) => m?.default?.(app));
 // mountIfExists('./routes/targets', (m) => m?.default?.(app));
 
 // ---- 404 & error handling ---------------------------------------------------
 app.use((_req, res) => res.status(404).json({ ok: false, error: 'not_found' }));
-import { errorHandler } from './middleware/errors';
 app.use(errorHandler);
 
 // ---- Listen -----------------------------------------------------------------
