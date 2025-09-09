@@ -1,82 +1,110 @@
-import type express from 'express';
-import { Pool } from 'pg';
+// Backend/src/routes/leads.ts
+import express from 'express';
+import { q } from '../db';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+type LeadRow = {
+  id: number;
+  cat: string;
+  kw: string[] | null;
+  platform: string | null;
+  source_url: string | null;
+  title: string | null;
+  created_at: string;
+};
+
+function hostFrom(url?: string | null) {
+  try { return url ? new URL(url).host || null : null; } catch { return null; }
+}
+function tldScore(host: string | null) {
+  if (!host) return 0.3;
+  const tld = host.split('.').pop()?.toLowerCase() ?? '';
+  return ['com','co','io','ai','ca'].includes(tld) ? 0.65 : 0.3;
+}
+function platformScore(p?: string | null) {
+  if (!p) return 0.4;
+  const m: Record<string, number> = { shopify: 0.75, woocommerce: 0.6, magento: 0.6 };
+  return m[String(p).toLowerCase()] ?? 0.5;
+}
+const INTENT = ['rfp','rfq','packaging','carton','labels','mailer','mailers','box','boxes'];
+function intentScore(kw: string[] | null | undefined) {
+  const hay = (kw || []).map(s => String(s).toLowerCase());
+  const hits = INTENT.filter(w => hay.includes(w)).length;
+  if (hits >= 3) return 0.9;
+  if (hits === 2) return 0.8;
+  if (hits === 1) return 0.6;
+  return 0.2;
+}
+function buildWhy(row: LeadRow) {
+  const host = hostFrom(row.source_url);
+  const why = [
+    { label: 'Domain quality', kind: 'meta',     score: tldScore(host),                 detail: host ? `${host} (.${host.split('.').pop()})` : 'n/a' },
+    { label: 'Platform fit',   kind: 'platform', score: platformScore(row.platform),    detail: String(row.platform || '') },
+    { label: 'Intent keywords',kind: 'signal',   score: intentScore(row.kw || []),      detail: (row.kw || []).join(', ') }
+  ];
+  const confidence = Math.max(0, Math.min(1, why.reduce((a, w) => a + w.score, 0) / (why.length || 1)));
+  const temperature = confidence >= 0.75 ? 'hot' : (confidence >= 0.5 ? 'warm' : 'cold');
+  return { host, why, confidence, temperature: temperature as 'hot' | 'warm' | 'cold' };
+}
+
+const router = express.Router();
+
+// ---- STATIC ROUTES FIRST ----
+router.get('/hot', async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(Number(req.query.limit ?? 20), 100));
+    const r = await q<LeadRow>('SELECT id, cat, kw, platform, source_url, title, created_at FROM lead_pool ORDER BY created_at DESC LIMIT $1', [limit * 5]);
+    const items = r.rows
+      .map(row => {
+        const s = buildWhy(row);
+        return { id: String(row.id), platform: row.platform, cat: row.cat, host: s.host, title: row.title || s.host, created_at: row.created_at, temperature: s.temperature, why: s.why };
+      })
+      .filter(it => it.temperature === 'hot')
+      .slice(0, limit);
+    res.json({ ok: true, items });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
+  }
 });
 
-async function q<T = any>(text: string, params: any[] = []) {
-  const c = await pool.connect();
-  try { return (await c.query<T>(text, params as any)) as any; }
-  finally { c.release(); }
-}
-
-type Why = { label: string; kind: 'meta' | 'platform' | 'signal'; score: number; detail?: string };
-const clamp = (n: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, n));
-const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
-
-function hostFromUrl(u?: string | null): string | null {
-  try { return u ? new URL(u).hostname : null; } catch { return null; }
-}
-
-function buildWhy(lead: any) {
-  const why: Why[] = [];
-  const host = hostFromUrl(lead?.source_url);
-  if (host) {
-    const tld = host.split('.').pop() || '';
-    const dq = ['com','ca','co','io','ai','net','org'].includes(tld) ? 0.65 : 0.35;
-    why.push({ label: 'Domain quality', kind: 'meta', score: dq, detail: `${host} (.${tld})` });
+router.get('/warm', async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(Number(req.query.limit ?? 20), 100));
+    const r = await q<LeadRow>('SELECT id, cat, kw, platform, source_url, title, created_at FROM lead_pool ORDER BY created_at DESC LIMIT $1', [limit * 5]);
+    const items = r.rows
+      .map(row => {
+        const s = buildWhy(row);
+        return { id: String(row.id), platform: row.platform, cat: row.cat, host: s.host, title: row.title || s.host, created_at: row.created_at, temperature: s.temperature, why: s.why };
+      })
+      .filter(it => it.temperature === 'warm')
+      .slice(0, limit);
+    res.json({ ok: true, items });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
-  const platform = String(lead?.platform || '').toLowerCase();
-  if (platform) {
-    const pf = ['shopify','woocommerce','bigcommerce'].includes(platform) ? 0.75 : 0.4;
-    why.push({ label: 'Platform fit', kind: 'platform', score: pf, detail: platform });
+});
+
+// ---- PARAM ROUTE LAST ----
+router.get('/:id', async (req, res) => {
+  const idStr = String(req.params.id || '').trim();
+  if (!/^\d+$/.test(idStr)) return res.status(404).json({ ok: false, error: 'not_found' });
+
+  try {
+    const r = await q<LeadRow>('SELECT id, cat, kw, platform, source_url, title, created_at FROM lead_pool WHERE id=$1 LIMIT 1', [Number(idStr)]);
+    const row = r.rows[0];
+    if (!row) return res.status(404).json({ ok: false, error: 'not_found' });
+
+    const s = buildWhy(row);
+    res.json({
+      ok: true,
+      temperature: s.temperature,
+      lead: { id: String(row.id), platform: row.platform, cat: row.cat, host: s.host, title: row.title || s.host, created_at: row.created_at },
+      why: s.why
+    });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
-  const kw: string[] = Array.isArray(lead?.kw) ? lead.kw : [];
-  const hasIntent = kw.some(k => ['packaging','carton','rfp','rfq','labels'].includes(String(k).toLowerCase()));
-  if (kw.length) why.push({ label: 'Intent keywords', kind: 'signal', score: hasIntent ? 0.9 : 0.5, detail: kw.join(', ') });
-  return { host: host || null, why };
-}
+});
 
-function temperatureFromWhy(why: Why[]): 'hot'|'warm'|'cold' {
-  const s = avg(why.map(w => clamp(w.score)));
-  return s >= 0.75 ? 'hot' : s >= 0.5 ? 'warm' : 'cold';
-}
-
-export function mountLeads(app: express.Express) {
-  // single lead (scored)
-  app.get('/api/v1/leads/:id', async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      if (!id) return res.status(400).json({ ok: false, error: 'bad id' });
-      const r = await q('SELECT id, cat, kw, platform, source_url, title, snippet, created_at FROM lead_pool WHERE id=$1 LIMIT 1', [id]);
-      const lead = (r as any).rows?.[0];
-      if (!lead) return res.status(404).json({ ok: false, error: 'lead not found' });
-
-      const { host, why } = buildWhy(lead);
-      const temperature = temperatureFromWhy(why);
-      res.json({ ok: true, temperature, lead: { id: String(lead.id), platform: lead.platform, cat: lead.cat, host, title: lead.title || host, created_at: lead.created_at }, why });
-    } catch (e: any) {
-      res.status(500).json({ ok: false, error: String(e?.message || e) });
-    }
-  });
-
-  // list hot/warm
-  app.get('/api/v1/leads/hot', async (req, res) => {
-    try {
-      const limit = Math.min(100, Math.max(1, Number(req.query.limit || 20)));
-      const r = await q('SELECT id, cat, kw, platform, source_url, title, snippet, created_at FROM lead_pool ORDER BY created_at DESC LIMIT $1', [limit * 3]);
-      const rows: any[] = (r as any).rows || [];
-      const scored = rows.map(lead => {
-        const { host, why } = buildWhy(lead);
-        const temperature = temperatureFromWhy(why);
-        return { temperature, lead: { id: String(lead.id), platform: lead.platform, cat: lead.cat, host, title: lead.title || host, created_at: lead.created_at }, why };
-      });
-      const filtered = scored.filter(s => s.temperature === 'hot' || s.temperature === 'warm').slice(0, limit);
-      res.json({ ok: true, count: filtered.length, items: filtered });
-    } catch (e: any) {
-      res.status(500).json({ ok: false, error: String(e?.message || e) });
-    }
-  });
-}
+export const leadsRouter = router;
+export default router;
+export function mountLeads(app: express.Express) { app.use('/api/v1/leads', router); }
