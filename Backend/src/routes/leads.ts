@@ -1,133 +1,254 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { q } from '../db';
-import { clamp } from '../util';
 
-function hostFrom(url?: string | null): string | null {
-  if (!url) return null;
-  try { return new URL(String(url)).host || null; } catch { return null; }
-}
 type LeadRow = {
-  id: number; cat: string | null; kw: string[] | null; platform: string | null;
-  source_url: string | null; title: string | null; snippet: string | null; created_at: string;
+  id: number;
+  cat: string;
+  kw: string[] | null;
+  platform: string | null;
+  source_url: string | null;
+  title: string | null;
+  created_at: string;
 };
-type Why = { label: string; kind: 'meta'|'platform'|'signal'; score: number; detail: string };
 
-function buildWhy(lead: LeadRow){ 
-  const host = hostFrom(lead.source_url);
-  const tld = host?.split('.').pop()?.toLowerCase();
-  const domainScore = ['com','co','ca','io','ai'].includes(String(tld)) ? 0.65 : 0.3;
-  const platform = (lead.platform||'').toLowerCase();
-  const platformScore = platform === 'shopify' ? 0.75 : platform === 'woocommerce' ? 0.6 : 0.4;
-  const kws = (lead.kw||[]).map(k=>k.toLowerCase());
-  const intent = ['packaging','carton','labels','rfp','rfq','mailers'];
-  const hit = kws.filter(k => intent.includes(k));
-  const intentScore = clamp(hit.length ? 0.7 + Math.min(0.3, hit.length*0.1) : 0.4, 0, 0.95);
-  const why: Why[] = [
-    { label:'Domain quality', kind:'meta',     score: domainScore,  detail: host ? `${host} (.${tld})` : 'n/a' },
-    { label:'Platform fit',   kind:'platform', score: platformScore, detail: platform || 'n/a' },
-    { label:'Intent keywords',kind:'signal',   score: intentScore,   detail: (lead.kw||[]).join(', ') || 'n/a' }
-  ];
-  return { host: host||null, why };
+type Why = { label: string; kind: 'meta' | 'platform' | 'signal'; score: number; detail: string };
+
+function safeHost(u?: string | null) {
+  try {
+    return u ? new URL(u).host : null;
+  } catch {
+    return null;
+  }
 }
-function temperatureFrom(why: Why[]): 'hot'|'warm' {
-  const avg = why.reduce((a,w)=>a+w.score,0) / (why.length||1);
-  return avg >= 0.7 ? 'hot' : 'warm';
+
+function scoreLead(row: LeadRow) {
+  const host = safeHost(row.source_url);
+  const why: Why[] = [];
+
+  if (host) {
+    const tld = host.split('.').pop()?.toLowerCase() || '';
+    const dq = ['com', 'ca', 'co', 'io', 'ai'].includes(tld) ? 0.65 : 0.3;
+    why.push({ label: 'Domain quality', kind: 'meta', score: dq, detail: `${host} (.${tld})` });
+  }
+
+  if (row.platform) {
+    const pf = row.platform === 'shopify' ? 0.75 : row.platform === 'woocommerce' ? 0.6 : 0.5;
+    why.push({ label: 'Platform fit', kind: 'platform', score: pf, detail: row.platform });
+  }
+
+  const kws = (row.kw || []).map(k => (k || '').toLowerCase());
+  const intent = ['packaging', 'carton', 'labels', 'rfq', 'rfp', 'mailers'];
+  if (kws.length > 0) {
+    const hasIntent = intent.some(k => kws.includes(k));
+    why.push({
+      label: 'Intent keywords',
+      kind: 'signal',
+      score: hasIntent ? 0.9 : 0.6,
+      detail: kws.join(', ')
+    });
+  }
+
+  const avg = why.reduce((a, w) => a + w.score, 0) / Math.max(1, why.length);
+  const temperature: 'hot' | 'warm' = avg >= 0.7 ? 'hot' : 'warm';
+
+  return { host, why, temperature, confidence: avg };
 }
-function adminOrApiOk(req: express.Request): boolean {
-  const k = (req.headers['x-api-key'] || req.headers['x-admin-key'] || req.headers['authorization']) as string | undefined;
-  const envK = process.env.API_KEY || process.env.ADMIN_TOKEN || process.env.ADMIN_KEY;
-  if (!envK) return true; if (!k) return false;
-  const token = k.startsWith('Bearer ') ? k.slice(7) : k;
-  return token === envK;
+
+function requireApiKey(req: Request, res: Response) {
+  const key = req.header('x-api-key');
+  const expected = process.env.ADMIN_TOKEN || process.env.API_KEY;
+  if (!key || key !== expected) {
+    res.status(401).json({ ok: false, error: 'unauthorized' });
+    return null;
+  }
+  return key;
 }
-async function getLead(id: number){ const r = await q<LeadRow>(
-  'SELECT id,cat,kw,platform,source_url,title,snippet,created_at FROM lead_pool WHERE id=$1 LIMIT 1',[id]); return r.rows[0]||null; }
-async function listRecent(limit: number){ const r = await q<LeadRow>(
-  'SELECT id,cat,kw,platform,source_url,title,snippet,created_at FROM lead_pool ORDER BY created_at DESC LIMIT $1',[limit]); return r.rows; }
 
-export function mountLeads(app: express.Express){
-  app.get('/api/v1/leads/:id', async (req,res)=>{
-    const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ok:false,error:'bad id'});
-    const lead = await getLead(id);   if (!lead) return res.status(404).json({ok:false,error:'not_found'});
-    const { host, why } = buildWhy(lead); const temperature = temperatureFrom(why);
-    res.json({ ok:true, temperature, lead:{ id:String(lead.id), platform:lead.platform, cat:lead.cat, host, title:lead.title||host, created_at:lead.created_at }, why });
+async function ensureAuxTables() {
+  await q(
+    `CREATE TABLE IF NOT EXISTS lead_meta(
+       lead_id bigint PRIMARY KEY,
+       stage text,
+       updated_at timestamptz DEFAULT now()
+     )`
+  );
+  await q(
+    `CREATE TABLE IF NOT EXISTS lead_notes(
+       id bigserial PRIMARY KEY,
+       lead_id bigint NOT NULL,
+       note text NOT NULL,
+       created_at timestamptz DEFAULT now()
+     )`
+  );
+}
+
+export function mountLeads(app: express.Express) {
+  const r = express.Router();
+
+  // GET /api/v1/leads/:id
+  r.get('/:id', async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: 'bad id' });
+
+    const rs = await q<LeadRow>(
+      'SELECT id, cat, kw, platform, source_url, title, created_at FROM lead_pool WHERE id=$1 LIMIT 1',
+      [id]
+    );
+    const row = rs.rows[0];
+    if (!row) return res.status(404).json({ ok: false, error: 'not_found' });
+
+    const s = scoreLead(row);
+    res.json({
+      ok: true,
+      temperature: s.temperature,
+      lead: {
+        id: String(row.id),
+        platform: row.platform,
+        cat: row.cat,
+        host: s.host,
+        title: row.title || s.host,
+        created_at: row.created_at
+      },
+      why: s.why
+    });
   });
 
-  app.get('/api/v1/leads/:temp(hot|warm)', async (req,res)=>{
-    const want = req.params.temp as 'hot'|'warm';
-    const limit = Math.max(1, Math.min(200, Number(req.query.limit||10)));
-    const rows = await listRecent(limit*5);
-    const items:any[] = [];
-    for (const r of rows){
-      const { host, why } = buildWhy(r); const temp = temperatureFrom(why);
-      if (temp===want){ items.push({ id:String(r.id), platform:r.platform, cat:r.cat, host, title:r.title||host, created_at:r.created_at, temperature:temp, why });
-        if (items.length>=limit) break; }
+  async function listByTemp(temp: 'hot' | 'warm', limit: number) {
+    const rs = await q<LeadRow>(
+      'SELECT id, cat, kw, platform, source_url, title, created_at FROM lead_pool ORDER BY created_at DESC LIMIT $1',
+      [Math.min(100, Math.max(1, limit * 3))]
+    );
+    return rs.rows
+      .map(row => ({ row, s: scoreLead(row) }))
+      .filter(x => x.s.temperature === temp)
+      .slice(0, limit)
+      .map(({ row, s }) => ({
+        id: String(row.id),
+        platform: row.platform,
+        cat: row.cat,
+        host: s.host,
+        title: row.title || s.host,
+        created_at: row.created_at,
+        temperature: s.temperature,
+        why: s.why
+      }));
+  }
+
+  // GET /api/v1/leads/hot|warm
+  r.get('/hot', async (req, res) => {
+    const limit = Number(req.query.limit || 10);
+    res.json({ ok: true, items: await listByTemp('hot', limit) });
+  });
+  r.get('/warm', async (req, res) => {
+    const limit = Number(req.query.limit || 10);
+    res.json({ ok: true, items: await listByTemp('warm', limit) });
+  });
+
+  // POST /api/v1/leads/ingest
+  r.post('/ingest', async (req, res) => {
+    if (!requireApiKey(req, res)) return;
+    const b = req.body || {};
+    const kw = Array.isArray(b.kw) ? b.kw : [];
+    const ins = await q<LeadRow>(
+      'INSERT INTO lead_pool(cat, kw, platform, source_url, title) VALUES ($1,$2,$3,$4,$5) RETURNING id, cat, kw, platform, source_url, title, created_at',
+      [b.cat || 'product', kw, b.platform || null, b.source_url || null, b.title || null]
+    );
+    const row = ins.rows[0];
+    const s = scoreLead(row);
+    res.json({
+      ok: true,
+      temperature: s.temperature,
+      lead: {
+        id: String(row.id),
+        platform: row.platform,
+        cat: row.cat,
+        host: s.host,
+        title: row.title || s.host,
+        created_at: row.created_at
+      },
+      why: s.why
+    });
+  });
+
+  // POST /api/v1/leads/ingest/bulk
+  r.post('/ingest/bulk', async (req, res) => {
+    if (!requireApiKey(req, res)) return;
+    const items = Array.isArray(req.body) ? req.body : [];
+    const out: any[] = [];
+    for (const it of items) {
+      const kw = Array.isArray(it.kw) ? it.kw : [];
+      const ins = await q<LeadRow>(
+        'INSERT INTO lead_pool(cat, kw, platform, source_url, title) VALUES ($1,$2,$3,$4,$5) RETURNING id, cat, kw, platform, source_url, title, created_at',
+        [it.cat || 'product', kw, it.platform || null, it.source_url || null, it.title || null]
+      );
+      const row = ins.rows[0];
+      const s = scoreLead(row);
+      out.push({
+        id: String(row.id),
+        platform: row.platform,
+        cat: row.cat,
+        host: s.host,
+        title: row.title || s.host,
+        created_at: row.created_at,
+        temperature: s.temperature,
+        why: s.why
+      });
     }
-    res.json({ ok:true, items });
+    res.json({ ok: true, inserted: out.length, items: out });
   });
 
-  app.patch('/api/v1/leads/:id/stage', async (req,res)=>{
-    if (!adminOrApiOk(req)) return res.status(401).json({ok:false,error:'unauthorized'});
-    const id = Number(req.params.id); const stage = String(req.body?.stage||'').toLowerCase().trim();
-    if (!Number.isFinite(id) || !stage) return res.status(400).json({ok:false,error:'bad request'});
-    const lead = await getLead(id); if (!lead) return res.status(404).json({ok:false,error:'not_found'});
-    await q('INSERT INTO event_log(user_id,lead_id,event_type,meta) VALUES ($1,$2,$3,$4)', ['api',id,'stage',{stage} as any]);
-    res.json({ ok:true, id:String(id), stage });
+  // PATCH /api/v1/leads/:id/stage
+  r.patch('/:id/stage', async (req, res) => {
+    if (!requireApiKey(req, res)) return;
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: 'bad id' });
+    const stage = String((req.body?.stage || '').toString());
+    if (!stage) return res.status(400).json({ ok: false, error: 'missing stage' });
+    await ensureAuxTables();
+    await q(
+      'INSERT INTO lead_meta(lead_id, stage) VALUES($1,$2) ON CONFLICT (lead_id) DO UPDATE SET stage=EXCLUDED.stage, updated_at=now()',
+      [id, stage]
+    );
+    res.json({ ok: true, leadId: id, stage });
   });
 
-  app.post('/api/v1/leads/:id/notes', async (req,res)=>{
-    if (!adminOrApiOk(req)) return res.status(401).json({ok:false,error:'unauthorized'});
-    const id = Number(req.params.id); const note = String(req.body?.note||'').trim();
-    if (!Number.isFinite(id) || !note) return res.status(400).json({ok:false,error:'bad request'});
-    const lead = await getLead(id); if (!lead) return res.status(404).json({ok:false,error:'not_found'});
-    await q('INSERT INTO event_log(user_id,lead_id,event_type,meta) VALUES ($1,$2,$3,$4)', ['api',id,'note',{note} as any]);
-    res.json({ ok:true, id:String(id) });
+  // POST /api/v1/leads/:id/notes
+  r.post('/:id/notes', async (req, res) => {
+    if (!requireApiKey(req, res)) return;
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: 'bad id' });
+    const note = String((req.body?.note || '').toString());
+    if (!note) return res.status(400).json({ ok: false, error: 'missing note' });
+    await ensureAuxTables();
+    await q('INSERT INTO lead_notes(lead_id, note) VALUES($1,$2)', [id, note]);
+    res.json({ ok: true, leadId: id });
   });
 
-  app.get('/api/v1/leads/export.csv', async (req,res)=>{
-    const want = String(req.query.temperature||'hot').toLowerCase() as 'hot'|'warm';
-    const limit = Math.max(1, Math.min(1000, Number(req.query.limit||200)));
-    const rows = await listRecent(limit*5);
-    const lines:string[] = ['id,platform,cat,host,title,created_at,temperature'];
-    let cnt=0;
-    for (const r of rows){
-      const { host, why } = buildWhy(r); const temp = temperatureFrom(why);
-      if (temp!==want) continue;
-      const safeTitle = (r.title||host||'').replaceAll('"','""');
-      lines.push([r.id, r.platform||'', r.cat||'', host||'', `"${safeTitle}"`, r.created_at, temp].join(','));
-      if (++cnt>=limit) break;
-    }
-    res.setHeader('Content-Type','text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="leads_${want}.csv"`);
-    res.end(lines.join('\n'));
+  // GET /api/v1/leads/export.csv
+  r.get('/export.csv', async (req, res) => {
+    const temp = (String(req.query.temperature || 'hot').toLowerCase() === 'warm') ? 'warm' : 'hot';
+    const limit = Number(req.query.limit || 100);
+    const items = await listByTemp(temp as 'hot' | 'warm', limit);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="leads_${temp}.csv"`);
+
+    const header = 'id,platform,cat,host,title,created_at,temperature\n';
+    const rows = items
+      .map(it => [
+        it.id,
+        it.platform || '',
+        it.cat || '',
+        it.host || '',
+        (it.title || '').replace(/"/g, '""'),
+        it.created_at,
+        it.temperature
+      ])
+      .map(cols => `${cols[0]},"${cols[1]}","${cols[2]}","${cols[3]}","${cols[4]}","${cols[5]}","${cols[6]}"`)
+      .join('\n');
+
+    res.send(header + rows + (rows ? '\n' : ''));
   });
 
-  app.post('/api/v1/leads/ingest', async (req,res)=>{
-    if (!adminOrApiOk(req)) return res.status(401).json({ok:false,error:'unauthorized'});
-    const b = req.body||{}; const kw = Array.isArray(b.kw)? b.kw.map(String) : [];
-    const r = await q<LeadRow>(
-      `INSERT INTO lead_pool(cat,kw,platform,source_url,title,snippet)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       RETURNING id,cat,kw,platform,source_url,title,snippet,created_at`,
-      [String(b.cat||''), kw, String(b.platform||''), String(b.source_url||''), String(b.title||''), String(b.snippet||'')]);
-    const lead = r.rows[0]; const { host, why } = buildWhy(lead); const temperature = temperatureFrom(why);
-    res.json({ ok:true, temperature, lead:{ id:String(lead.id), platform:lead.platform, cat:lead.cat, host, title:lead.title||host, created_at:lead.created_at }, why });
-  });
-
-  app.post('/api/v1/leads/ingest/bulk', async (req,res)=>{
-    if (!adminOrApiOk(req)) return res.status(401).json({ok:false,error:'unauthorized'});
-    const items = Array.isArray(req.body)? req.body : []; const out:any[]=[]; let inserted=0;
-    for (const b of items){
-      const kw = Array.isArray(b.kw)? b.kw.map(String) : [];
-      const r = await q<LeadRow>(
-        `INSERT INTO lead_pool(cat,kw,platform,source_url,title,snippet)
-         VALUES ($1,$2,$3,$4,$5,$6)
-         RETURNING id,cat,kw,platform,source_url,title,snippet,created_at`,
-        [String(b.cat||''), kw, String(b.platform||''), String(b.source_url||''), String(b.title||''), String(b.snippet||'')]);
-      const lead = r.rows[0]; const { host, why } = buildWhy(lead); const temperature = temperatureFrom(why);
-      out.push({ id:String(lead.id), platform:lead.platform, cat:lead.cat, host, title:lead.title||host, created_at:lead.created_at, temperature, why });
-      inserted++;
-    }
-    res.json({ ok:true, inserted, items: out });
-  });
+  app.use('/api/v1/leads', r);
 }
