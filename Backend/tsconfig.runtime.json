@@ -1,34 +1,38 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": ["ES2020"],
-    "module": "CommonJS",
+    "module": "commonjs",
     "moduleResolution": "node",
     "outDir": "dist",
     "rootDir": "src",
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "strict": false,
     "skipLibCheck": true,
-    "types": ["node"]
+    "noEmitOnError": false,
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
     "src/index.ts",
-    "src/api/**/*.ts",
-    "src/routes/**/*.ts",
-    "src/db.ts",
-    "src/util.ts",
     "src/auth.ts",
-    "src/session.ts",
-    "src/signals.ts"
+    "src/types.ts",
+    "src/util.ts",
+    "src/db.ts",
+    "src/api/reveal.ts",
+    "src/routes/public.ts",
+    "src/routes/leads.ts"
   ],
   "exclude": [
-    "**/*.test.ts",
-    "src/guards.ts",
-    "src/guard.ts",
-    "src/source-*",
-    "src/utils/seeds-loader.ts",
-    "scripts/**",
-    "node_modules/**"
+    "src/**/*.test.ts",
+    "src/**/__tests__/**",
+    "src/ops/**",
+    "src/workflows/**",
+    "src/search-providers/**",
+    "src/connectors/**",
+    "src/reviews/**",
+    "src/routes/pipeline.ts",
+    "src/gate.ts",
+    "src/cost-tracker.ts"
   ]
 }
