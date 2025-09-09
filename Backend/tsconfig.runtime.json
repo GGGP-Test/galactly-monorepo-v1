@@ -3,20 +3,20 @@
     "target": "ES2020",
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "rootDir": "src",
     "outDir": "dist",
+    "rootDir": "src",
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true,
     "strict": false,
-    "sourceMap": true
+    "skipLibCheck": true,
+    "noEmitOnError": false,
+    "types": ["node"],
+    "forceConsistentCasingInFileNames": true
   },
-
   "files": [
     "src/index.ts",
     "src/routes/public.ts",
     "src/api/reveal.ts",
-    "src/db.ts",
-    "src/why.ts"
+    "src/db.ts"
   ]
 }
