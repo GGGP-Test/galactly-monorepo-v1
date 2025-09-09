@@ -1,5 +1,5 @@
 {
-  "name": "packlead",
+  "name": "galactly-backend",
   "private": true,
   "type": "commonjs",
   "main": "dist/index.js",
