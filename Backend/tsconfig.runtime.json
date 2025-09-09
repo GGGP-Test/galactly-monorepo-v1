@@ -1,39 +1,34 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
     "target": "ES2020",
+    "lib": ["ES2020"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "rootDir": "src",
     "esModuleInterop": true,
     "resolveJsonModule": true,
+    "strict": false,
     "skipLibCheck": true,
-    "noEmitOnError": false,
-    "declaration": false,
-    "sourceMap": false,
     "types": ["node"]
   },
   "include": [
     "src/index.ts",
-    "src/auth.ts",
     "src/api/**/*.ts",
-    "src/routes/public.ts",
-    "src/routes/leads.ts",
+    "src/routes/**/*.ts",
     "src/db.ts",
-    "src/guard.ts",
-    "src/types.ts",
-    "src/util.ts"
+    "src/util.ts",
+    "src/auth.ts",
+    "src/session.ts",
+    "src/signals.ts"
   ],
   "exclude": [
     "**/*.test.ts",
+    "src/guards.ts",
+    "src/guard.ts",
+    "src/source-*",
+    "src/utils/seeds-loader.ts",
     "scripts/**",
-    "src/ai/**",
-    "src/connectors/**",
-    "src/ops/**",
-    "src/search-**",
-    "src/server/**",
-    "src/source-**",
-    "src/stripe.ts",
-    "src/ui/**"
+    "node_modules/**"
   ]
 }
