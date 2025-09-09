@@ -10,7 +10,7 @@
     "build:runtime": "tsc -p tsconfig.runtime.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "dump:src": "tsx scripts/dump-src.ts"
+    "dump:src": "node scripts/dump-src.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
