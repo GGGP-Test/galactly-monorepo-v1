@@ -1,4 +1,3 @@
-// Backend/src/routes/public.ts
 import type express from 'express';
 
 export function mountPublic(app: express.Express) {
