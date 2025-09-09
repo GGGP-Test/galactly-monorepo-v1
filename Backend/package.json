@@ -17,8 +17,14 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+<<<<<<< HEAD
     "pino": "^9.0.0",
     "zod": "^3.23.8"
+=======
+    "pg": "^8.16.3",
+    "stripe": "^14.21.0",
+    "uuid": "^9.0.1"
+>>>>>>> c209847 (fix(build): add pg for db.ts)
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
