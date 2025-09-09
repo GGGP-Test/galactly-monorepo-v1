@@ -1,11 +1,7 @@
-// Backend/src/routes/leads.ts
-// Full file — mounts all /api/v1/leads routes (list, get, ingest, bulk, stage, notes, export.csv)
+import express from "express";
+import { q } from "../db";
+import { requireApiKey } from "../auth";
 
-import express from 'express';
-import { q } from '../db';
-import { requireApiKey } from '../auth';
-
-// ---------- types ----------
 type LeadRow = {
   id: number;
   cat: string | null;
@@ -13,330 +9,241 @@ type LeadRow = {
   platform: string | null;
   source_url: string | null;
   title: string | null;
-  snippet?: string | null;
+  snippet: string | null;
   created_at: string;
 };
 
-type Why = { label: string; kind: 'meta' | 'platform' | 'signal'; score: number; detail?: string };
+type Why = { label: string; kind: "meta"|"platform"|"signal"; score: number; detail: string };
 
-type Scored = {
-  temperature: 'hot' | 'warm';
-  why: Why[];
-  packagingMath?: {
-    spendPerMonth: number | null;
-    estOrdersPerMonth: number | null;
-    estUnitsPerMonth: number | null;
-    packagingTypeHint: string | null;
-    confidence: number;
-  };
-};
-
-const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
-
-// ---------- small helpers ----------
-function hostFrom(url?: string | null): string | null {
-  if (!url) return null;
-  try {
-    const u = new URL(url);
-    return u.host || null;
-  } catch {
-    return null;
-  }
+function hostOf(u?: string | null): string | null {
+  try { return u ? new URL(u).host : null; } catch { return null; }
 }
 
-function scoreLead(row: LeadRow): Scored {
-  const why: Why[] = [];
-  const host = hostFrom(row.source_url) || 'example.com';
+function clamp(n: number, lo = 0, hi = 1){ return Math.max(lo, Math.min(hi, n)); }
 
-  // Domain quality (very rough)
-  const tld = host.split('.').pop() || '';
-  const dq = ['com', 'co', 'io', 'ai', 'ca'].includes(tld.toLowerCase()) ? 0.65 : 0.3;
-  why.push({ label: 'Domain quality', kind: 'meta', score: dq, detail: `${host} (.${tld})` });
+function scoreLead(row: LeadRow){
+  const host = hostOf(row.source_url) || hostOf("https://example.com")!;
+
+  // Domain quality (very simple)
+  const tld = host.includes(".") ? host.split(".").pop()!.toLowerCase() : "";
+  const dq = ["com","ca","co","io","ai"].includes(tld) ? 0.65 : 0.30;
 
   // Platform fit
-  const p = (row.platform || '').toLowerCase();
-  const pScore = p === 'shopify' ? 0.75 : p === 'woocommerce' ? 0.6 : p ? 0.5 : 0.4;
-  if (p) why.push({ label: 'Platform fit', kind: 'platform', score: pScore, detail: p });
+  const platform = (row.platform||"").toLowerCase();
+  const pf = platform === "shopify" ? 0.75
+          : platform === "woocommerce" ? 0.60
+          : platform === "magento" ? 0.55
+          : 0.50;
 
   // Intent keywords
-  const kws = (row.kw || []).map(k => k.toLowerCase());
-  const hasRfp = kws.some(k => /rfp|rfq/.test(k));
-  const hasPkg = kws.some(k => /(packaging|carton|poly|mailers|labels?)/.test(k));
-  const kScore = hasRfp && hasPkg ? 0.9 : hasPkg ? 0.8 : hasRfp ? 0.75 : 0.5;
-  if (kws.length) {
-    why.push({ label: 'Intent keywords', kind: 'signal', score: kScore, detail: kws.join(', ') });
-  }
+  const kws = (row.kw||[]).map(k => (k||"").toLowerCase());
+  const hasRfx = kws.some(k => k.includes("rfp") || k.includes("rfq"));
+  const hasPack = kws.some(k => ["packaging","carton","mailers","labels"].includes(k));
+  const intent = hasRfx ? 0.90 : hasPack ? 0.80 : 0.55;
 
-  // Temperature
-  const avg = why.reduce((a, b) => a + b.score, 0) / (why.length || 1);
-  const temperature: 'hot' | 'warm' = avg >= 0.7 ? 'hot' : 'warm';
+  const why: Why[] = [
+    { label:"Domain quality", kind:"meta",     score: dq,     detail: `${host} (.${tld||"?"})` },
+    { label:"Platform fit",   kind:"platform", score: pf,     detail: platform||"unknown" },
+    { label:"Intent keywords",kind:"signal",   score: intent, detail: kws.join(", ") || "n/a" },
+  ];
 
-  // Packaging math (placeholder estimates but deterministic & non-null for confidence)
-  const packagingMath = {
-    spendPerMonth: null,
-    estOrdersPerMonth: null,
-    estUnitsPerMonth: null,
-    packagingTypeHint:
-      row.cat === 'product'
-        ? 'cartons/labels'
-        : row.cat === 'procurement'
-        ? 'general packaging'
-        : null,
-    confidence: clamp(avg, 0, 1),
+  const avg = clamp((dq + pf + intent) / 3);
+  const temperature: "hot" | "warm" | "cold" =
+    (intent >= 0.85 && pf >= 0.70) ? "hot"
+    : (intent >= 0.75) ? "warm"
+    : "cold";
+
+  return {
+    temperature,
+    why,
+    host,
+    confidence: avg
   };
-
-  return { temperature, why, packagingMath };
 }
 
-function shape(row: LeadRow) {
-  const host = hostFrom(row.source_url) || 'example.com';
+function shapeLead(row: LeadRow){
   const s = scoreLead(row);
   return {
+    id: String(row.id),
+    platform: row.platform || "unknown",
+    cat: row.cat || "unknown",
+    host: s.host,
+    title: row.title || s.host,
+    created_at: row.created_at,
     temperature: s.temperature,
-    why: s.why,
-    packagingMath: s.packagingMath,
-    lead: {
-      id: String(row.id),
-      platform: row.platform || null,
-      cat: row.cat || null,
-      host,
-      title: row.title || host,
-      created_at: row.created_at,
-    },
+    why: s.why
   };
 }
 
-// ---------- schema helpers ----------
-async function ensureLeadPool() {
-  await q(`
-    CREATE TABLE IF NOT EXISTS lead_pool(
-      id BIGSERIAL PRIMARY KEY,
-      cat TEXT,
-      kw TEXT[],
-      platform TEXT,
-      source_url TEXT,
-      title TEXT,
-      snippet TEXT,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    CREATE INDEX IF NOT EXISTS idx_lead_pool_time ON lead_pool(created_at DESC);
-  `);
+function parseLimit(v: any, dflt = 20){
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 200) : dflt;
 }
 
-async function ensureAuxTables() {
-  await q(`
-    CREATE TABLE IF NOT EXISTS lead_meta(
-      lead_id BIGINT PRIMARY KEY REFERENCES lead_pool(id) ON DELETE CASCADE,
-      stage TEXT NOT NULL DEFAULT 'new',
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    CREATE TABLE IF NOT EXISTS lead_notes(
-      id BIGSERIAL PRIMARY KEY,
-      lead_id BIGINT NOT NULL REFERENCES lead_pool(id) ON DELETE CASCADE,
-      note TEXT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    CREATE INDEX IF NOT EXISTS idx_lead_notes_lead ON lead_notes(lead_id, created_at DESC);
-  `);
-}
+const router = express.Router();
 
-// ---------- core queries ----------
-async function fetchLatest(limit: number): Promise<LeadRow[]> {
-  await ensureLeadPool();
-  const rs = await q<LeadRow>(
-    `SELECT id, cat, kw, platform, source_url, title, snippet, created_at
-     FROM lead_pool
-     ORDER BY created_at DESC
-     LIMIT $1`,
-    [limit]
-  );
-  return rs.rows;
-}
+/* ---------- LISTS FIRST (to avoid shadowing by "/:id") ---------- */
 
-async function fetchById(id: number): Promise<LeadRow | null> {
-  await ensureLeadPool();
-  const rs = await q<LeadRow>(
-    `SELECT id, cat, kw, platform, source_url, title, snippet, created_at
-     FROM lead_pool WHERE id=$1 LIMIT 1`,
-    [id]
-  );
-  return rs.rows[0] || null;
-}
-
-// ---------- mounting ----------
-export function mountLeads(app: express.Express) {
-  const r = express.Router();
-
-  // GET /api/v1/leads/hot?limit=10
-  r.get('/hot', async (req, res) => {
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 10)));
-    const rows = await fetchLatest(limit * 4); // overfetch, then filter
-    const items = rows
-      .map(shape)
-      .filter(x => x.temperature === 'hot')
-      .slice(0, limit)
-      .map(x => ({
-        ...x.lead,
-        temperature: x.temperature,
-        why: x.why,
-      }));
-    res.json({ ok: true, items });
-  });
-
-  // GET /api/v1/leads/warm?limit=10
-  r.get('/warm', async (req, res) => {
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 10)));
-    const rows = await fetchLatest(limit * 6);
-    const items = rows
-      .map(shape)
-      .filter(x => x.temperature === 'warm')
-      .slice(0, limit)
-      .map(x => ({
-        ...x.lead,
-        temperature: x.temperature,
-        why: x.why,
-      }));
-    res.json({ ok: true, items });
-  });
-
-  // GET /api/v1/leads/:id
-  r.get('/:id', async (req, res) => {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: 'bad id' });
-    const row = await fetchById(id);
-    if (!row) return res.status(404).json({ ok: false, error: 'not_found' });
-    res.json({ ok: true, ...shape(row) });
-  });
-
-  // POST /api/v1/leads/ingest  (requires x-api-key)
-  r.post('/ingest', requireApiKey, express.json(), async (req, res) => {
-    const { cat, kw, platform, source_url, title, snippet } = req.body || {};
-    if (!source_url || !title)
-      return res.status(400).json({ ok: false, error: 'missing fields: source_url, title' });
-
-    await ensureLeadPool();
-    const rs = await q<{ id: number }>(
-      `INSERT INTO lead_pool(cat, kw, platform, source_url, title, snippet)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       RETURNING id`,
-      [cat || null, Array.isArray(kw) ? kw : null, platform || null, source_url, title, snippet || null]
-    );
-    const id = rs.rows[0].id;
-    const row = await fetchById(id);
-    res.json({ ok: true, ...(row ? shape(row) : { id: String(id) }) });
-  });
-
-  // POST /api/v1/leads/ingest/bulk  (requires x-api-key)
-  r.post('/ingest/bulk', requireApiKey, express.json(), async (req, res) => {
-    const items = Array.isArray(req.body) ? req.body : [];
-    await ensureLeadPool();
-    let inserted = 0;
-    const out: any[] = [];
-    for (const it of items) {
-      if (!it?.source_url || !it?.title) continue;
-      const rs = await q<{ id: number }>(
-        `INSERT INTO lead_pool(cat, kw, platform, source_url, title, snippet)
-         VALUES ($1,$2,$3,$4,$5,$6)
-         RETURNING id`,
-        [it.cat || null, Array.isArray(it.kw) ? it.kw : null, it.platform || null, it.source_url, it.title, it.snippet || null]
-      );
-      const id = rs.rows[0].id;
-      const row = await fetchById(id);
-      if (row) {
-        const shaped = shape(row);
-        out.push({
-          id: shaped.lead.id,
-          platform: shaped.lead.platform,
-          cat: shaped.lead.cat,
-          host: shaped.lead.host,
-          title: shaped.lead.title,
-          created_at: shaped.lead.created_at,
-          temperature: shaped.temperature,
-          why: shaped.why,
-        });
-      }
-      inserted++;
-    }
-    res.json({ ok: true, inserted, items: out });
-  });
-
-  // PATCH /api/v1/leads/:id/stage   (requires x-api-key)
-  r.patch('/:id/stage', requireApiKey, express.json(), async (req, res) => {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: 'bad id' });
-    const { stage } = req.body || {};
-    if (!stage || typeof stage !== 'string') {
-      return res.status(400).json({ ok: false, error: 'missing stage' });
-    }
-    await ensureAuxTables();
-    await q(
-      `INSERT INTO lead_meta(lead_id, stage, updated_at)
-       VALUES ($1,$2,now())
-       ON CONFLICT (lead_id) DO UPDATE SET stage=EXCLUDED.stage, updated_at=now()`,
-      [id, stage]
-    );
-    res.json({ ok: true, leadId: id, stage });
-  });
-
-  // POST /api/v1/leads/:id/notes   (requires x-api-key)
-  r.post('/:id/notes', requireApiKey, express.json(), async (req, res) => {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: 'bad id' });
-    const { note } = req.body || {};
-    if (!note || typeof note !== 'string') {
-      return res.status(400).json({ ok: false, error: 'missing note' });
-    }
-    await ensureAuxTables();
-    await q(`INSERT INTO lead_notes(lead_id, note) VALUES ($1,$2)`, [id, note]);
-    res.json({ ok: true, leadId: id });
-  });
-
-  // GET /api/v1/leads/:id/notes
-  r.get('/:id/notes', async (req, res) => {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: 'bad id' });
-    await ensureAuxTables();
-    const rs = await q<{ id: number; note: string; created_at: string }>(
-      `SELECT id, note, created_at
-       FROM lead_notes
-       WHERE lead_id=$1
+router.get("/hot", async (req, res) => {
+  try{
+    const limit = parseLimit(req.query.limit);
+    const r = await q<LeadRow>(`
+      SELECT id, cat, kw, platform, source_url, title, snippet, created_at
+        FROM lead_pool
        ORDER BY created_at DESC
-       LIMIT 100`,
-      [id]
-    );
-    res.json({ ok: true, items: rs.rows });
-  });
+       LIMIT $1
+    `, [limit*3]); // grab a bit more then filter
+    const items = r.rows.map(shapeLead).filter(x => x.temperature === "hot").slice(0, limit);
+    res.json({ ok:true, items });
+  }catch(e:any){
+    res.status(500).json({ ok:false, error: String(e?.message||e) });
+  }
+});
 
-  // GET /api/v1/leads/export.csv?temperature=hot|warm|all&limit=50
-  r.get('/export.csv', async (req, res) => {
-    const temp = String(req.query.temperature || 'hot').toLowerCase();
-    const limit = Math.min(1000, Math.max(1, Number(req.query.limit || 200)));
-    const rows = await fetchLatest(limit * 10).then(rs => rs.map(shape));
+router.get("/warm", async (req, res) => {
+  try{
+    const limit = parseLimit(req.query.limit);
+    const r = await q<LeadRow>(`
+      SELECT id, cat, kw, platform, source_url, title, snippet, created_at
+        FROM lead_pool
+       ORDER BY created_at DESC
+       LIMIT $1
+    `, [limit*3]);
+    const items = r.rows.map(shapeLead).filter(x => x.temperature === "warm").slice(0, limit);
+    res.json({ ok:true, items });
+  }catch(e:any){
+    res.status(500).json({ ok:false, error: String(e?.message||e) });
+  }
+});
 
-    const filtered =
-      temp === 'all' ? rows : rows.filter(r => r.temperature === (temp === 'warm' ? 'warm' : 'hot')).slice(0, limit);
+router.get("/export.csv", requireApiKey, async (req, res) => {
+  try{
+    const temp = (String(req.query.temperature||"").toLowerCase());
+    if (!["hot","warm"].includes(temp)) return res.status(400).json({ ok:false, error:"bad temperature" });
+    const limit = parseLimit(req.query.limit, 50);
 
-    const header = 'id,host,platform,cat,title,created_at,temperature\n';
-    const lines = filtered.map(r => {
-      // basic CSV escaping
-      const esc = (v: any) =>
-        v == null ? '' : String(v).includes(',') || String(v).includes('"') ? `"${String(v).replace(/"/g, '""')}"` : String(v);
-      const { lead, temperature } = r;
-      return [
-        esc(lead.id),
-        esc(lead.host),
-        esc(lead.platform),
-        esc(lead.cat),
-        esc(lead.title),
-        esc(lead.created_at),
-        esc(temperature),
-      ].join(',');
-    });
+    const r = await q<LeadRow>(`
+      SELECT id, cat, kw, platform, source_url, title, snippet, created_at
+        FROM lead_pool
+       ORDER BY created_at DESC
+       LIMIT $1
+    `, [limit*3]);
 
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="leads_export.csv"');
-    res.send(header + lines.join('\n'));
-  });
+    const rows = r.rows.map(shapeLead).filter(x => x.temperature === temp).slice(0, limit);
 
-  app.use('/api/v1/leads', r);
+    const header = ["id","host","platform","cat","title","created_at","temperature"];
+    const lines = [header.join(",")].concat(rows.map(row => {
+      const fields = [
+        row.id, row.host, row.platform, row.cat, row.title||"", row.created_at, row.temperature
+      ].map(v => `"${String(v??"").replace(/"/g,'""')}"`);
+      return fields.join(",");
+    }));
+
+    res.set("Content-Type","text/csv");
+    res.set("Content-Disposition", `attachment; filename="leads_${temp}.csv"`);
+    res.send(lines.join("\n"));
+  }catch(e:any){
+    res.status(500).json({ ok:false, error: String(e?.message||e) });
+  }
+});
+
+/* ---------- Ingest endpoints (admin) ---------- */
+
+router.post("/ingest", requireApiKey, express.json(), async (req, res) => {
+  try{
+    const b = req.body || {};
+    const kw = Array.isArray(b.kw) ? b.kw.map((s:any)=>String(s)) : [];
+    const r = await q<LeadRow>(`
+      INSERT INTO lead_pool(cat, kw, platform, source_url, title, snippet)
+      VALUES ($1,$2,$3,$4,$5,$6)
+      RETURNING id, cat, kw, platform, source_url, title, snippet, created_at
+    `, [String(b.cat||""), kw, String(b.platform||""), String(b.source_url||""), String(b.title||""), String(b.snippet||"")]);
+    const lead = shapeLead(r.rows[0]);
+    res.json({ ok:true, temperature: lead.temperature, lead, why: lead.why });
+  }catch(e:any){
+    res.status(500).json({ ok:false, error: String(e?.message||e) });
+  }
+});
+
+router.post("/ingest/bulk", requireApiKey, express.json(), async (req, res) => {
+  try{
+    const a = Array.isArray(req.body) ? req.body : [];
+    const out:any[] = [];
+    for (const b of a){
+      const kw = Array.isArray(b.kw) ? b.kw.map((s:any)=>String(s)) : [];
+      const r = await q<LeadRow>(`
+        INSERT INTO lead_pool(cat, kw, platform, source_url, title, snippet)
+        VALUES ($1,$2,$3,$4,$5,$6)
+        RETURNING id, cat, kw, platform, source_url, title, snippet, created_at
+      `, [String(b.cat||""), kw, String(b.platform||""), String(b.source_url||""), String(b.title||""), String(b.snippet||"")]);
+      out.push(shapeLead(r.rows[0]));
+    }
+    res.json({ ok:true, inserted: out.length, items: out });
+  }catch(e:any){
+    res.status(500).json({ ok:false, error: String(e?.message||e) });
+  }
+});
+
+/* ---------- Per-lead actions (admin) ---------- */
+
+router.patch("/:id/stage", requireApiKey, express.json(), async (req, res) => {
+  try{
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ ok:false, error:"bad id" });
+
+    const stage = String(req.body?.stage||"").toLowerCase();
+    const allowed = new Set(["new","qualified","contacted","proposal","won","lost"]);
+    if (!allowed.has(stage)) return res.status(400).json({ ok:false, error:"bad stage" });
+
+    await q(`INSERT INTO event_log(user_id, lead_id, event_type, meta)
+             VALUES ($1,$2,$3,$4)`,
+      ["api", id, "stage", { stage } as any]);
+    res.json({ ok:true, leadId:id, stage });
+  }catch(e:any){
+    res.status(500).json({ ok:false, error: String(e?.message||e) });
+  }
+});
+
+router.post("/:id/notes", requireApiKey, express.json(), async (req, res) => {
+  try{
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ ok:false, error:"bad id" });
+
+    const note = String(req.body?.note||"").trim();
+    if (!note) return res.status(400).json({ ok:false, error:"empty note" });
+
+    await q(`INSERT INTO event_log(user_id, lead_id, event_type, meta)
+             VALUES ($1,$2,$3,$4)`,
+      ["api", id, "note", { note } as any]);
+    res.json({ ok:true, leadId:id });
+  }catch(e:any){
+    res.status(500).json({ ok:false, error: String(e?.message||e) });
+  }
+});
+
+/* ---------- Get one (keep LAST) ---------- */
+
+router.get("/:id", async (req, res) => {
+  try{
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ ok:false, error:"bad id" });
+
+    const r = await q<LeadRow>(`
+      SELECT id, cat, kw, platform, source_url, title, snippet, created_at
+        FROM lead_pool WHERE id=$1 LIMIT 1
+    `, [id]);
+    const row = r.rows[0];
+    if (!row) return res.status(404).json({ ok:false, error:"not_found" });
+
+    const lead = shapeLead(row);
+    res.json({ ok:true, temperature: lead.temperature, lead, why: lead.why });
+  }catch(e:any){
+    res.status(500).json({ ok:false, error: String(e?.message||e) });
+  }
+});
+
+/* ---------- mount ---------- */
+
+export function mountLeads(app: express.Express){
+  app.use("/api/v1/leads", router);
 }
