@@ -1,20 +1,16 @@
 // Backend/src/routes/public.ts
-import express from 'express';
+import type express from 'express';
 
 export function mountPublic(app: express.Express) {
-  const r = express.Router();
+  app.get('/api/v1/public/ping', (_req, res) =>
+    res.json({ ok: true, pong: true, time: new Date().toISOString() })
+  );
 
-  r.get('/ping', (_req, res) => {
-    res.json({ ok: true, time: new Date().toISOString() });
-  });
-
-  r.get('/echo', (req, res) => {
-    res.json({ ok: true, query: req.query });
-  });
-
-  r.post('/echo', (req, res) => {
-    res.json({ ok: true, body: req.body });
-  });
-
-  app.use('/api/v1/public', r);
+  // Simple echo (GET & POST)
+  app.get('/api/v1/public/echo', (req, res) =>
+    res.json({ ok: true, method: 'GET', query: req.query })
+  );
+  app.post('/api/v1/public/echo', (req, res) =>
+    res.json({ ok: true, method: 'POST', body: req.body })
+  );
 }
