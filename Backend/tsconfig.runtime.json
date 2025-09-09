@@ -12,7 +12,6 @@
     "sourceMap": true
   },
 
-  // Compile ONLY the pieces used by this runtime image
   "files": [
     "src/index.ts",
     "src/routes/public.ts",
