@@ -1,3 +1,4 @@
+// Backend/src/api/reveal.ts
 import express from 'express';
 import { q } from '../db';
 
@@ -64,10 +65,7 @@ function buildWhy(lead: LeadRow) {
   return { host, why };
 }
 
-async function checkRate(userId: string) {
-  const lim = Number(process.env.REVEAL_LIMIT_10M ?? 3);
-  const winMin = Number(process.env.REVEAL_WINDOW_MIN ?? 10);
-
+async function ensureEventLog() {
   await q(`
     CREATE TABLE IF NOT EXISTS event_log(
       id BIGSERIAL PRIMARY KEY,
@@ -80,6 +78,13 @@ async function checkRate(userId: string) {
     CREATE INDEX IF NOT EXISTS idx_event_time ON event_log(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_event_user ON event_log(user_id);
   `);
+}
+
+async function checkRate(userId: string) {
+  await ensureEventLog();
+
+  const lim = Number(process.env.REVEAL_LIMIT_10M ?? 3);
+  const winMin = Number(process.env.REVEAL_WINDOW_MIN ?? 10);
 
   const r = await q<{ cnt: string; wait_sec: number }>(
     `WITH recent AS (
@@ -111,64 +116,68 @@ async function fetchLead(id: number): Promise<LeadRow | undefined> {
   return r.rows[0];
 }
 
+async function respondForLead(req: express.Request, res: express.Response, leadId: number, holdMs?: number) {
+  try {
+    const userId = (req as any).userId ?? 'anon';
+    if (!leadId) return res.status(400).json({ ok: false, error: 'missing leadId' });
+
+    const minHold = Number(process.env.REVEAL_MIN_HOLD_MS ?? 1100);
+    if (typeof holdMs === 'number' && holdMs < minHold) {
+      return res.status(400).json({ ok: false, error: 'hold too short', minHoldMs: minHold });
+    }
+
+    const gate = await checkRate(userId);
+    if (!gate.ok) {
+      return res.status(429).json({ ok: false, softBlock: true, nextInSec: gate.waitSec || 30, windowMin: gate.winMin, used: gate.count, limit: gate.lim });
+    }
+
+    const lead = await fetchLead(Number(leadId));
+    if (!lead) return res.status(404).json({ ok: false, error: 'lead not found' });
+
+    const { host, why } = buildWhy(lead);
+    const avg = why.reduce((a, w) => a + w.score, 0) / (why.length || 1);
+
+    const packagingMath = {
+      spendPerMonth: null as number | null,
+      estOrdersPerMonth: null as number | null,
+      estUnitsPerMonth: null as number | null,
+      packagingTypeHint: lead.cat === 'product' ? 'cartons/labels' : (lead.cat === 'procurement' ? 'general packaging' : 'mixed'),
+      confidence: clamp(avg, 0, 1),
+    };
+
+    await q('INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,$3,$4)', [userId, Number(lead.id), 'reveal', { holdMs: Number(holdMs || 0) } as any]);
+
+    res.json({
+      ok: true,
+      temperature: avg >= 0.7 ? 'hot' : 'warm',
+      lead: {
+        id: String(lead.id),
+        platform: lead.platform,
+        cat: lead.cat,
+        host,
+        title: lead.title || host,
+        created_at: lead.created_at,
+      },
+      why,
+      packagingMath,
+    });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
+  }
+}
+
 export function mountReveal(app: express.Express) {
   const r = express.Router();
 
-  // POST /api/v1/reveal  (existing behavior)
+  // POST /api/v1/reveal
   r.post('/', async (req, res) => {
-    try {
-      const userId = (req as any).userId ?? 'anon';
-      const { leadId, holdMs } = (req.body ?? {}) as { leadId?: number; holdMs?: number };
-      if (!leadId) return res.status(400).json({ ok: false, error: 'missing leadId' });
-
-      const minHold = Number(process.env.REVEAL_MIN_HOLD_MS ?? 1100);
-      if (typeof holdMs === 'number' && holdMs < minHold) {
-        return res.status(400).json({ ok: false, error: 'hold too short', minHoldMs: minHold });
-      }
-
-      const gate = await checkRate(userId);
-      if (!gate.ok) {
-        return res.status(429).json({ ok: false, softBlock: true, nextInSec: gate.waitSec || 30, windowMin: gate.winMin, used: gate.count, limit: gate.lim });
-      }
-
-      const lead = await fetchLead(Number(leadId));
-      if (!lead) return res.status(404).json({ ok: false, error: 'lead not found' });
-
-      const { host, why } = buildWhy(lead);
-      const avg = why.reduce((a, w) => a + w.score, 0) / (why.length || 1);
-      const packagingMath = {
-        spendPerMonth: null as number | null,
-        estOrdersPerMonth: null as number | null,
-        estUnitsPerMonth: null as number | null,
-        packagingTypeHint: lead.cat === 'product' ? 'cartons/labels' : (lead.cat === 'procurement' ? 'general packaging' : 'mixed'),
-        confidence: clamp(avg, 0, 1),
-      };
-
-      await q('INSERT INTO event_log(user_id, lead_id, event_type, meta) VALUES ($1,$2,$3,$4)', [userId, Number(lead.id), 'reveal', { holdMs: Number(holdMs || 0) } as any]);
-
-      res.json({
-        ok: true,
-        temperature: temperature(avg),
-        lead: {
-          id: String(lead.id),
-          platform: lead.platform,
-          cat: lead.cat,
-          host,
-          title: lead.title || host,
-          created_at: lead.created_at,
-        },
-        why,
-        packagingMath,
-      });
-    } catch (e: any) {
-      res.status(500).json({ ok: false, error: String(e?.message || e) });
-    }
+    const { leadId, holdMs } = (req.body ?? {}) as { leadId?: number; holdMs?: number };
+    return respondForLead(req, res, Number(leadId), holdMs);
   });
 
-  // GET /api/v1/reveal/:id (convenience form)
-  r.get('/:id', async (req, res) => {
-    req.body = { leadId: Number(req.params.id), holdMs: 1500 };
-    return (r as any).handle(req, res); // reuse POST handler
+  // GET /api/v1/reveal/:id (digits only so it won't catch /_debug/*)
+  r.get('/:id(\\d+)', async (req, res) => {
+    return respondForLead(req, res, Number(req.params.id), 1500);
   });
 
   // POST /api/v1/reveal/batch { ids: number[] }
@@ -185,7 +194,7 @@ export function mountReveal(app: express.Express) {
         out.push({
           id,
           ok: true,
-          temperature: temperature(avg),
+          temperature: avg >= 0.7 ? 'hot' : 'warm',
           lead: { id: String(lead.id), platform: lead.platform, cat: lead.cat, host, title: lead.title || host, created_at: lead.created_at },
           why,
         });
