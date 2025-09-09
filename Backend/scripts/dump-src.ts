@@ -1,22 +1,32 @@
-import { promises as fs } from 'fs';
-import * as path from 'path';
-const ROOT = path.resolve(__dirname, '..', 'src');
-const OUT  = path.resolve(__dirname, '..', 'src-dump.txt');
-const EXT = new Set(['.ts', '.json', '.sql']);
-async function* walk(dir: string): AsyncGenerator<string> {
-  for (const e of await fs.readdir(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) yield* walk(p);
-    else if (EXT.has(path.extname(e.name))) yield p;
+// Concatenate repo source into one file for sharing/debugging
+import fs from 'fs';
+import path from 'path';
+
+const REPO_ROOT = path.resolve(__dirname, '..');
+const SRC_ROOT  = path.join(REPO_ROOT, 'src');
+const OUT_FILE  = path.join(REPO_ROOT, 'dump-src.txt');
+
+const keep = new Set(['.ts', '.tsx', '.js', '.json', '.sql', '.md']);
+const ignoreDirs = new Set(['node_modules', 'dist', '.git']);
+
+function* walk(dir: string): Generator<string> {
+  for (const name of fs.readdirSync(dir)) {
+    const full = path.join(dir, name);
+    const rel = path.relative(REPO_ROOT, full);
+    const stat = fs.statSync(full);
+    if (stat.isDirectory()) {
+      if (!ignoreDirs.has(name)) yield* walk(full);
+    } else {
+      if (keep.has(path.extname(name))) yield rel;
+    }
   }
 }
-(async () => {
-  const parts: string[] = [];
-  for await (const file of walk(ROOT)) {
-    const rel = path.relative(path.resolve(__dirname, '..'), file).replace(/\\/g, '/');
-    const txt = await fs.readFile(file, 'utf8');
-    parts.push(`\n\n// FILE: ${rel}\n\n${txt}`);
-  }
-  await fs.writeFile(OUT, parts.join('\n'), 'utf8');
-  console.log('Wrote', OUT);
-})();
+
+let output = `# Dump created ${new Date().toISOString()}\n`;
+for (const rel of walk(SRC_ROOT)) {
+  const full = path.join(REPO_ROOT, rel);
+  const content = fs.readFileSync(full, 'utf8');
+  output += `\n\n/* ===== ${rel.replace(/\\/g, '/')} ===== */\n${content}\n`;
+}
+fs.writeFileSync(OUT_FILE, output);
+console.log(`Wrote ${OUT_FILE}`);
