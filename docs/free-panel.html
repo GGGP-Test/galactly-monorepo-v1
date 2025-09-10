@@ -1,451 +1,354 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly • Free Panel</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-
-<style>
-  :root{
-    --bg:#0b1117; --panel:#0f1620; --muted:#95a3b3; --text:#e8eef7;
-    --accent:#7ee2ff; --accent2:#9dffa8; --chip:#192233; --chipb:#213247;
-    --ring:#122033; --ok:#3ddc97; --warn:#ffd166; --err:#ef476f; --line:#152233;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
-
-  .wrap{max-width:1240px;margin:24px auto;padding:0 16px}
-  .grid{display:grid;grid-template-columns:1fr 430px;gap:20px}
-
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden}
-  .card h3{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700;position:relative}
-  .counter{position:absolute;right:16px;top:16px;font-size:12px;color:var(--muted)}
-
-  /* LEFT */
-  .live{padding:16px;position:relative;min-height:600px}
-  #space{position:absolute;inset:16px 16px 280px 16px;border-radius:12px;background:radial-gradient(1200px 600px at 20% 40%,#0c121a 0,#0a0f16 60%,#0a0f16 100%);overflow:hidden;border:1px solid #142233}
-  #star{position:absolute;inset:0}
-
-  .hud{position:absolute;left:16px;bottom:16px;display:flex;gap:12px;align-items:center;color:var(--muted);font-size:12px}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
-  .api{opacity:.75}
-
-  .empty{position:absolute;left:16px;right:16px;bottom:128px;text-align:center;color:var(--muted)}
-  .list{position:absolute;left:16px;right:16px;bottom:64px;max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:12px}
-
-  .item{border:1px solid #1a2b3c;background:linear-gradient(180deg,#0f1620,#0f1823);border-radius:14px;padding:12px;position:relative}
-  .content{position:relative}
-  .t{font-weight:700;font-size:16px;margin:0 0 6px}
-  .row{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{font-size:12px;color:#b8c7d6;background:var(--chip);border:1px solid var(--chipb);padding:4px 8px;border-radius:999px}
-  .muted{color:var(--muted)}
-  .exp{margin-top:8px;background:#0b1219;border:1px dashed #26384f;border-radius:10px;padding:8px;color:#cde0f2;font-size:12px;display:none}
-  .exp-btn{margin-top:6px;font-size:12px;cursor:pointer;color:#8fd7ff}
-  .locked .content{filter:blur(3px)}
-  .locked .veil{position:absolute;inset:0;border-radius:14px;background:linear-gradient(180deg,rgba(10,14,20,.25),rgba(10,14,20,.6));backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center}
-  .locked .veil span{background:#101b28;border:1px solid #1f3550;color:#cfe6ff;padding:6px 10px;border-radius:10px;font-size:12px}
-
-  details{background:#0b1219;border:1px solid #142234;border-radius:10px;padding:8px;margin-top:10px}
-  details summary{cursor:pointer;color:#cfe6ff;font-weight:600}
-
-  /* RIGHT */
-  .side{padding:16px}
-  .f{display:flex;flex-direction:column;gap:10px}
-  label{font-size:12px;color:var(--muted)}
-  input,textarea{width:100%;background:#0b121a;border:1px solid #1c2a3d;color:var(--text);border-radius:10px;padding:10px;font:inherit}
-  textarea{min-height:90px;resize:vertical}
-  .row2{display:flex;gap:10px}
-  .btn{padding:10px 12px;border-radius:10px;border:1px solid #23415a;background:#0f1e2b;color:#d9f1ff;font-weight:700;cursor:pointer}
-  .btn.primary{background:#10364c;border-color:#1f5c83}
-  .small{font-size:12px;color:var(--muted)}
-  .bio{margin-top:8px;color:#d6f2ff;font-size:12px}
-
-  .divider{height:1px;background:var(--line);margin:12px 0}
-
-  /* PREVIEW REPORT */
-  .report{display:grid;grid-template-columns:1fr;gap:12px}
-  .metric{background:#0b1219;border:1px solid #142234;border-radius:12px;padding:10px}
-  .metric h4{margin:0 0 6px 0;font-size:13px}
-  .lane{display:grid;grid-template-columns:86px 1fr 1fr;gap:8px;align-items:start}
-  .lane .k{font-size:11px;color:#9fb1c6;text-transform:uppercase}
-  .lane .v{font-size:12px;color:#cdd9e6}
-  .badge{display:inline-block;border:1px solid #22364d;background:#132033;color:#cfe2ff;border-radius:999px;font-size:11px;padding:3px 8px;margin-right:6px}
-  .bar{height:6px;background:#132033;border-radius:6px;overflow:hidden}
-  .bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
-  .dim{opacity:.55}
-
-  /* LAUNCH */
-  .modal{position:fixed;inset:0;background:rgba(2,8,14,.65);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:50}
-  .modal.in{display:flex}
-  .box{width:540px;border-radius:14px;background:#0f1620;border:1px solid #152233;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
-  .box h4{margin:0 0 6px 0}
-  .steps{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-  .step{display:flex;gap:8px;align-items:center;font-size:14px}
-  .b{width:8px;height:8px;border-radius:50%;background:#203244;box-shadow:inset 0 0 0 2px #325574}
-  .b.on{background:#44cdf7;box-shadow:0 0 10px #44cdf7}
-</style>
-
-<!-- runtime config -->
-<script>
-  window.API_DEFAULT = localStorage.getItem('apiBase') || 'https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1';
-  window.DEV_UNLIMITED = true; localStorage.setItem('gal_unlim','true');
-</script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Leads Console</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --text:#e5e7eb; --muted:#9ca3af; --accent:#3b82f6; --ok:#10b981; --warn:#f59e0b; --bad:#ef4444; }
+    * { box-sizing: border-box; }
+    body { margin:0; font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:var(--text); background:var(--bg); }
+    header { display:flex; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid #1f2937; position:sticky; top:0; background:var(--bg); z-index:1; }
+    header .right { margin-left:auto; display:flex; gap:8px; align-items:center; }
+    input, select, button, textarea { background:#0b1220; color:var(--text); border:1px solid #1f2937; border-radius:8px; padding:8px 10px; outline:none; }
+    input::placeholder, textarea::placeholder { color:var(--muted); }
+    button { background:#0b1220; cursor:pointer; }
+    button.primary { background:var(--accent); border-color:transparent; color:white; }
+    button.ghost { background:transparent; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    main { display:grid; gap:16px; grid-template-columns: 2fr 1.3fr 1.2fr; padding:16px; }
+    .card { background:var(--panel); border:1px solid #1f2937; border-radius:12px; padding:12px; min-height:420px; }
+    .card h3 { margin:4px 0 10px; font-size:15px; color:#cbd5e1; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { text-align:left; padding:8px 6px; border-top:1px solid #1f2937; font-size:13px; }
+    tr:hover { background:#0b1220; }
+    tr.sel { outline:1px solid var(--accent); background:#0b1220; }
+    code.k { background:#0b1220; border:1px solid #1f2937; padding:2px 6px; border-radius:6px; }
+    small.muted { color:var(--muted); }
+    .why { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+    .why .chip { display:inline-flex; gap:6px; align-items:center; background:#0b1220; border:1px solid #1f2937; border-radius:999px; padding:4px 8px; font-size:12px; width:max-content; }
+    .grid { display:grid; gap:8px; }
+    .grid.cols2 { grid-template-columns:1fr 1fr; }
+    .grid.cols3 { grid-template-columns:1fr 1fr 1fr; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; }
+    .tip { color:var(--muted); font-size:12px; }
+    .status { padding:3px 8px; border-radius:999px; font-size:12px; border:1px solid #1f2937; width:max-content; }
+    .status.hot { color:#ef4444; border-color:#ef4444; }
+    .status.warm { color:#f59e0b; border-color:#f59e0b; }
+    .status.cold { color:#60a5fa; border-color:#60a5fa; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .error { color:#fecaca; background:#450a0a; border:1px solid #7f1d1d; padding:6px 8px; border-radius:8px; }
+    .ok { color:#dcfce7; background:#052e1a; border:1px solid #14532d; padding:6px 8px; border-radius:8px; }
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="grid">
-    <!-- LEFT -->
-    <div class="card">
-      <h3>Live results <span id="quotaTxt" class="counter">—</span></h3>
-      <div class="live">
-        <div id="space"><canvas id="star"></canvas></div>
+  <header>
+    <div class="row" style="gap:10px">
+      <strong>Leads Console</strong>
+      <span class="tip">Base URL</span>
+      <input id="baseUrl" size="46" placeholder="https://…code.run" />
+      <button id="applyBase" class="ghost">Apply</button>
+      <small class="tip">Tip: host this file from the same domain as the API to avoid CORS.</small>
+    </div>
+    <div class="right">
+      <span class="tip">API key</span>
+      <input id="apiKey" size="46" placeholder="x-api-key…" />
+      <button id="saveKey" class="primary">Save</button>
+      <button id="clearKey" class="ghost">Clear</button>
+    </div>
+  </header>
 
-        <div id="liveList" class="list" style="display:none"></div>
-        <div id="emptyNote" class="empty">Click <b>Find now</b> to start a real-time scan.</div>
-
-        <details>
-          <summary>Legend</summary>
-          <div style="margin-top:6px">
-            <div><b>State</b> (e.g., <code>GA</code>) → buyer’s US state.</div>
-            <div><b>Channel</b> → best first contact (Email / SMS / Call / LinkedIn DM).</div>
-            <div><b>Intent</b> → distilled need (e.g., stretch film, cartons, labels).</div>
-            <div>Tap <i>Explain</i> to see “why you’re seeing this”.</div>
-          </div>
-        </details>
-
-        <div class="hud">
-          <span class="dot"></span><span id="engineTxt">engine: ready</span>
-          <span class="api" id="apiTxt"></span>
-        </div>
+  <main>
+    <!-- Hot/Warm -->
+    <section class="card" id="hotWarmCard">
+      <div class="row" style="justify-content:space-between">
+        <h3>Hot / Warm</h3>
+        <span class="tip">press <code class="k">R</code> to refresh hot</span>
       </div>
-    </div>
-
-    <!-- RIGHT -->
-    <div class="card">
-      <h3>Train your AI</h3>
-      <div class="side">
-        <div class="f">
-          <div><label>Website</label><input id="fWebsite" placeholder="yourcompany.com"/></div>
-          <div class="row2">
-            <div style="flex:1"><label>Regions</label><input id="fRegions" placeholder="US, CA"/></div>
-            <div style="flex:1"><label>Industries</label><input id="fIndustries" placeholder="beverage, confectionery"/></div>
-          </div>
-          <div><label>Seed buyers (domains)</label><input id="fSeeds" placeholder="brand1.com, brand2.com"/></div>
-          <div><label>Describe ideal customers</label><textarea id="fNotes" placeholder="materials, order sizes, channels, exclusions"></textarea></div>
-          <div class="row2">
-            <button class="btn" id="btnSave">Save</button>
-            <button class="btn primary" id="btnFind">Find now</button>
-          </div>
-          <div id="bizBio" class="bio"></div>
-          <div class="small">Loaded from onboarding. Tweak &amp; run.</div>
-        </div>
-
-        <div class="divider"></div>
-        <div style="padding:0 16px 8px"><span class="small">Signals Preview (report)</span> <span id="counts" class="small" style="float:right">Free 0/0 • Pro 0/0</span></div>
-
-        <div id="report" class="report" style="padding:0 16px 16px">
-          <!-- metrics will be injected here -->
-        </div>
-
-        <div class="divider"></div>
-        <div style="padding:0 16px 12px">
-          <div class="small">Log</div>
-          <div id="log" style="border:1px solid #142234;border-radius:10px;padding:8px;max-height:180px;overflow:auto"></div>
-        </div>
+      <div class="row" style="margin-bottom:8px">
+        <button id="btnHot" class="primary">Refresh Hot</button>
+        <button id="btnWarm">Refresh Warm</button>
+        <div id="listMsg" class="tip"></div>
       </div>
-    </div>
-  </div>
-</div>
+      <div style="overflow:auto; max-height:64vh; border:1px solid #1f2937; border-radius:10px;">
+        <table id="tbl">
+          <thead>
+            <tr><th>ID</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why</th></tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
 
-<!-- Launch -->
-<div class="modal" id="launchModal">
-  <div class="box">
-    <h4>Launching real-time intent search…</h4>
-    <div class="steps">
-      <div class="step"><span class="b" data-i="0"></span> Probing public feeds</div>
-      <div class="step"><span class="b" data-i="1"></span> Reading procurement + RFPs</div>
-      <div class="step"><span class="b" data-i="2"></span> Scanning retailer pages</div>
-      <div class="step"><span class="b" data-i="3"></span> Extracting quantities &amp; materials</div>
-      <div class="step"><span class="b" data-i="4"></span> Cross-checking signals</div>
-      <div class="step"><span class="b" data-i="5"></span> Ranking by fit</div>
-    </div>
-    <div class="small" style="margin-top:8px">Tip: upgrade to keep this running 24/7 in the background.</div>
-  </div>
-</div>
+    <!-- Details -->
+    <section class="card">
+      <h3>Details</h3>
+      <div id="details"><small class="muted">Select a lead…</small></div>
+    </section>
 
-<script>
-(() => {
-  const $ = q => document.querySelector(q);
-  const api = window.API_DEFAULT;
-  const uid = localStorage.getItem('gal_uid') || `u-${Math.random().toString(16).slice(2)}`;
-  localStorage.setItem('gal_uid', uid);
-  $('#apiTxt').textContent = `[api] ${api.replace('/api/v1','')}`;
+    <!-- Ingest / CSV -->
+    <section class="card">
+      <h3>Ingest (single)</h3>
+      <div class="grid">
+        <input id="ingCat" placeholder="cat e.g. product" />
+        <input id="ingKw"  placeholder="kw (comma-separated) e.g. packaging,rfp" />
+        <input id="ingPlatform" placeholder="platform e.g. shopify" />
+        <input id="ingUrl" placeholder="source_url https://…" />
+        <input id="ingTitle" placeholder="title e.g. RFP: mailers" />
+        <button id="btnIngest" class="primary">Ingest</button>
+        <div id="ingMsg" class="tip"></div>
+      </div>
 
-  /* ----------------- Star field ----------------- */
-  const cvs=$('#star'), ctx=cvs.getContext('2d'); let W,H,t=0; const stars=[];
-  function resize(){ const r=$('#space').getBoundingClientRect(); W=cvs.width=r.width; H=cvs.height=r.height; stars.length=0; for(let i=0;i<130;i++){ stars.push({r:Math.random()*Math.min(W,H)/2*0.95,a:Math.random()*Math.PI*2,s:0.0008+Math.random()*0.0016}); } }
-  window.addEventListener('resize',resize); resize();
-  (function draw(){ ctx.clearRect(0,0,W,H); const cx=W/2, cy=H/2;
-    ctx.strokeStyle='rgba(126,226,255,.08)'; for(let i=1;i<=6;i++){ ctx.beginPath(); ctx.arc(cx,cy,(i/6)*Math.min(W,H)/2,0,Math.PI*2); ctx.stroke(); }
-    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,60); g.addColorStop(0,'rgba(126,226,255,.55)'); g.addColorStop(1,'rgba(126,226,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,60,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='rgba(126,226,255,.25)'; ctx.beginPath(); const L=Math.min(W,H)/2*0.85; ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(t*0.25)*L, cy+Math.sin(t*0.25)*L); ctx.stroke();
-    ctx.fillStyle='rgba(158,246,255,.9)'; stars.forEach(s=>{ s.a+=s.s; const x=cx+Math.cos(s.a)*s.r, y=cy+Math.sin(s.a)*s.r; ctx.fillRect(x,y,1.2,1.2); }); t+=0.5; requestAnimationFrame(draw);
-  })();
+      <h3 style="margin-top:18px">Download CSV</h3>
+      <div class="row">
+        <button id="csvHot">Download CSV (hot)</button>
+        <button id="csvWarm">Download CSV (warm)</button>
+      </div>
+      <div id="csvMsg" class="tip" style="margin-top:6px"></div>
+    </section>
+  </main>
 
-  /* ----------------- helpers ----------------- */
-  const escapeHtml = s => String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const chip = t => t ? `<span class="chip">${escapeHtml(t)}</span>` : '';
-  const log = t => { const d=document.createElement('div'); d.style.fontSize='12px'; d.style.color='#bcd0e0'; d.textContent=t; const L=$('#log'); L.prepend(d); while(L.children.length>14)L.removeChild(L.lastChild); };
-
-  async function jfetch(path, opt={}) {
-    const url = path.startsWith('http') ? path : `${api}${path}`;
-    const res = await fetch(url, {headers:{'x-galactly-user':uid,'content-type':'application/json'},cache:'no-cache',credentials:'omit',...opt}).catch(()=>null);
-    if(!res) return {ok:false,error:'network'};
-    if(!res.ok) return {ok:false,error:String(res.status)};
-    try { return await res.json(); } catch { return {ok:false,error:'bad_json'}; }
-  }
-
-  function setQuota(s){
-    if(!s){ $('#quotaTxt').textContent='—'; return; }
-    const a = s.devUnlimited ? '∞' : (s.quota?.findsLeft ?? '—');
-    const b = s.devUnlimited ? '∞' : (s.quota?.revealsLeft ?? '—');
-    $('#quotaTxt').textContent = `${a} searches left • ${b} reveals left`;
-  }
-  async function tick(){ const s = await jfetch('/status'); setQuota(s); }
-  tick(); setInterval(tick,15000); setInterval(()=>jfetch('/presence/online'),20000);
-
-  /* ----------------- Report skeleton ----------------- */
-  const METRICS = [
-    {id:'demand',     name:'Demand'},
-    {id:'buysigs',    name:'Buy signals'},
-    {id:'rfps',       name:'Procurement & RFPs'},
-    {id:'retail',     name:'Retail velocity'},
-    {id:'hiring',     name:'Hiring hints'},
-    {id:'ops',        name:'Tech / Ops stack'},
-    {id:'budget',     name:'Budget posture'}
-  ];
-  const reportBox = $('#report');
-  const reportState = {};
-  function buildReport(){
-    reportBox.innerHTML='';
-    METRICS.forEach(m=>{
-      const div=document.createElement('div'); div.className='metric'; div.id=`metric-${m.id}`;
-      div.innerHTML = `
-        <h4>${m.name}</h4>
-        <div class="lane">
-          <div class="k">FREE</div>
-          <div class="v" id="${m.id}-free-v">—</div>
-          <div class="v dim" id="${m.id}-pro-v">locked (Pro)</div>
-        </div>
-        <div class="lane" style="margin-top:6px">
-          <div class="k"></div>
-          <div class="bar"><span id="${m.id}-free-bar" style="width:0%"></span></div>
-          <div class="bar dim"><span id="${m.id}-pro-bar" style="width:0%"></span></div>
-        </div>`;
-      reportBox.appendChild(div);
-      reportState[m.id]={free:{score:0,text:'—'},pro:{score:0,text:'—'}};
-    });
-  }
-  buildReport();
-
-  function updMetric(id,tier,score,text){
-    const s = Math.max(0,Math.min(100,Number(score)||0));
-    const v = document.getElementById(`${id}-${tier}-v`);
-    const b = document.getElementById(`${id}-${tier}-bar`);
-    if(v) v.textContent = text || `${s}%`;
-    if(b) b.style.width = `${s}%`;
-    reportState[id][tier] = {score:s,text:v?v.textContent:text};
-  }
-
-  function fillCounts(pv){
-    if(pv?.counts) $('#counts').textContent = `Free ${pv.counts.free||0} • Pro ${pv.counts.pro||0}`;
-  }
-
-  /* ----------------- Leads render ----------------- */
-  const STATE_MAP = {"AL":"Alabama","AK":"Alaska","AZ":"Arizona","AR":"Arkansas","CA":"California","CO":"Colorado","CT":"Connecticut","DE":"Delaware","FL":"Florida","GA":"Georgia","HI":"Hawaii","ID":"Idaho","IL":"Illinois","IN":"Indiana","IA":"Iowa","KS":"Kansas","KY":"Kentucky","LA":"Louisiana","ME":"Maine","MD":"Maryland","MA":"Massachusetts","MI":"Michigan","MN":"Minnesota","MS":"Mississippi","MO":"Missouri","MT":"Montana","NE":"Nebraska","NV":"Nevada","NH":"New Hampshire","NJ":"New Jersey","NM":"New Mexico","NY":"New York","NC":"North Carolina","ND":"North Dakota","OH":"Ohio","OK":"Oklahoma","OR":"Oregon","PA":"Pennsylvania","RI":"Rhode Island","SC":"South Carolina","SD":"South Dakota","TN":"Tennessee","TX":"Texas","UT":"Utah","VT":"Vermont","VA":"Virginia","WA":"Washington","WV":"West Virginia","WI":"Wisconsin","WY":"Wyoming","DC":"District of Columbia"};
-  function pickChannel(sig){
-    const c = (sig.channel||sig.contact||'').toLowerCase();
-    if(c.includes('linkedin')) return 'LinkedIn DM';
-    if(c.includes('sms')) return 'SMS';
-    if(c.includes('call')||c.includes('phone')) return 'Call';
-    if(c.includes('email')) return 'Email';
-    const src = (sig.source||'').toLowerCase();
-    if(src.includes('linkedin')) return 'LinkedIn DM';
-    if(src.includes('rfp')||src.includes('procure')) return 'Email';
-    return 'Email';
-  }
-  function whyFrom(sig){
-    const parts=[];
-    if(sig.reason) parts.push(sig.reason);
-    if(sig.qty) parts.push(`Qty noted: ${sig.qty}`);
-    if(sig.material) parts.push(`Material: ${sig.material}`);
-    if(sig.deadline) parts.push(`Timeline: ${sig.deadline}`);
-    if(sig.url) parts.push(`Source: ${sig.url}`);
-    if(!parts.length && sig.source) parts.push(`Matched by ${sig.source}`);
-    return parts.join(' • ');
-  }
-  function mapLead(sig, profile){
-    const buyer = sig.company_domain || sig.domain || sig.brand || '';
-    const buyerClean = String(buyer).replace(/^https?:\/\//,'').replace(/\/.*$/,'').toLowerCase();
-    const profileSite = (profile.site||'').replace(/^https?:\/\//,'').replace(/\/.*$/,'').toLowerCase();
-    if(buyerClean && profileSite && buyerClean === profileSite) return null; // never echo back user site
-
-    const state = (sig.state||sig.region||'').toUpperCase();
-    const intent = sig.intent || sig.material || sig.package || sig.category || '';
-    const title = sig.title || (sig.need ? `"${sig.need}"` : (intent ? `${intent}` : 'Lead')) ;
-    return {
-      title,
-      company_domain: buyerClean,
-      state: STATE_MAP[state] ? state : '',
-      channel: pickChannel(sig),
-      intent: intent,
-      why: whyFrom(sig),
-      locked: !!sig.locked
+  <script>
+    // ---- storage + config ----
+    const S = {
+      get baseUrl(){ return localStorage.getItem('baseUrl') || inferDefaultBase(); },
+      set baseUrl(v){ localStorage.setItem('baseUrl', v); },
+      get apiKey(){ return localStorage.getItem('apiKey') || ''; },
+      set apiKey(v){ localStorage.setItem('apiKey', v); },
     };
-  }
-  function renderLeads(raw,profile){
-    const items = (raw||[]).map(s=>mapLead(s,profile)).filter(Boolean);
-    const list = $('#liveList');
-    list.innerHTML='';
-    if(!items.length){
-      $('#liveList').style.display='none';
-      $('#emptyNote').style.display='block';
-      return;
+    function inferDefaultBase() {
+      // If opened from same origin as API, location.origin works. If opened from file://, leave empty.
+      return (location.origin && location.origin !== 'null') ? location.origin : '';
     }
-    $('#emptyNote').style.display='none';
-    $('#liveList').style.display='flex';
-    items.forEach((it,idx)=>{
-      const li=document.createElement('div');
-      li.className = 'item' + (it.locked || idx>1 ? ' locked' : '');
-      li.innerHTML = `
-        <div class="content">
-          <div class="t">${escapeHtml(it.title)}</div>
-          <div class="row">${chip(it.state)} ${chip(it.channel)} ${chip(it.intent)}</div>
-          <div class="muted" style="margin-top:6px">${escapeHtml(it.company_domain)}</div>
-          <div class="exp-btn">Explain</div>
-          <div class="exp"><b>Why:</b> ${escapeHtml(it.why||'—')}</div>
-        </div>
-        ${ (it.locked || idx>1) ? `<div class="veil"><span>Pro lead — upgrade to unlock</span></div>`:''}
-      `;
-      li.querySelector('.exp-btn').onclick=()=>{ const e=li.querySelector('.exp'); e.style.display = e.style.display==='none'?'block':'none'; };
-      list.appendChild(li);
-    });
-  }
 
-  /* ----------------- Launch overlay ----------------- */
-  function launchOverlay(ms){
-    const m=$('#launchModal'); m.classList.add('in');
-    const dots=[...document.querySelectorAll('.b')];
-    let i=0; const iv=setInterval(()=>{ dots.forEach(d=>d.classList.remove('on')); dots[i%dots.length].classList.add('on'); i++; },650);
-    setTimeout(()=>{ clearInterval(iv); m.classList.remove('in'); }, ms);
-  }
+    // ---- DOM helpers ----
+    const $ = sel => document.querySelector(sel);
+    const tbody   = $('#tbody');
+    const details = $('#details');
+    const listMsg = $('#listMsg');
+    const ingMsg  = $('#ingMsg');
+    const csvMsg  = $('#csvMsg');
 
-  /* ----------------- profile save ----------------- */
-  const qs = k => new URLSearchParams(location.search).get(k) || '';
-  $('#fWebsite').value    = qs('site') || localStorage.getItem('site') || '';
-  $('#fRegions').value    = localStorage.getItem('regions') || 'US, CA';
-  $('#fIndustries').value = localStorage.getItem('industries') || 'beverage, confectionery';
-  $('#fSeeds').value      = localStorage.getItem('seeds') || 'brand1.com, brand2.com';
-  $('#fNotes').value      = localStorage.getItem('notes') || 'materials, order sizes, channels, exclusions';
-
-  function setBio(p){
-    const regs = p.regions || 'US';
-    const inds = (p.industries||'').split(',').map(s=>s.trim()).filter(Boolean).slice(0,2).join(' & ');
-    const goals = (p.notes||'').split(',').map(s=>s.trim()).slice(0,2).join(', ');
-    const seeds = (p.seed_buyers||'').split(',').map(s=>s.trim()).filter(Boolean).slice(0,2).join(', ');
-    const line = `Packaging supplier focused on ${inds||'packaging'} serving ${regs}. Targets similar buyers to ${seeds||'your sample brands'} with needs around ${goals||'materials & order sizes'}.`;
-    $('#bizBio').textContent = line;
-  }
-
-  $('#btnSave').onclick = ()=>{
-    localStorage.setItem('site',$('#fWebsite').value.trim());
-    localStorage.setItem('regions',$('#fRegions').value.trim());
-    localStorage.setItem('industries',$('#fIndustries').value.trim());
-    localStorage.setItem('seeds',$('#fSeeds').value.trim());
-    localStorage.setItem('notes',$('#fNotes').value.trim());
-    setBio({
-      regions: $('#fRegions').value.trim(),
-      industries: $('#fIndustries').value.trim(),
-      seed_buyers: $('#fSeeds').value.trim(),
-      notes: $('#fNotes').value.trim()
-    });
-    log('Saved profile.');
-  };
-
-  /* ----------------- SSE helper ----------------- */
-  function sse(url, onMsg){
-    try{
-      const es = new EventSource(url);
-      es.onmessage = (e)=>{ try{ onMsg(JSON.parse(e.data)); }catch{} };
-      es.onerror = ()=>{}; // silent
-      return ()=>es.close();
-    }catch{ return ()=>{} }
-  }
-
-  /* ----------------- Find now ----------------- */
-  $('#btnFind').onclick = async ()=>{
-    const profile = {
-      website: $('#fWebsite').value.trim(),
-      regions: $('#fRegions').value.trim(),
-      industries: $('#fIndustries').value.trim(),
-      seed_buyers: $('#fSeeds').value.trim(),
-      notes: $('#fNotes').value.trim()
-    };
-    setBio(profile);
-
-    // reset UI
-    buildReport();
-    $('#counts').textContent = 'Free 0/0 • Pro 0/0';
-    renderLeads([],profile);
-    $('#emptyNote').textContent = 'Scanning… please wait';
-
-    // show launch
-    const dur = 7000 + Math.floor(Math.random()*8000);
-    launchOverlay(dur);
-
-    // kick task
-    const r = await jfetch('/find-now', {method:'POST', body: JSON.stringify(profile)});
-    if(!r || r.ok===false){ log(`Search error: ${r?.error||'temporary'}`); return; }
-    if(r.bio) $('#bizBio').textContent = r.bio;
-    if(r.preview?.counts) fillCounts(r.preview);
-    if(Array.isArray(r.items)) renderLeads(r.items, profile); // immediate batch if provided
-
-    // stream preview (report)
-    const tid = r.task || r.taskId || r.id || '';
-    const closePrev = sse(`${api}/stream/preview?task=${encodeURIComponent(tid)}&uid=${encodeURIComponent(uid)}`, msg=>{
-      if(msg.type==='counts'){ fillCounts(msg); return; }
-      if(msg.type==='metric' && msg.metric && msg.tier){
-        updMetric(msg.metric, msg.tier, msg.score, msg.text);
+    // ---- network helper ----
+    async function jget(path, opts = {}) {
+      const base = $('#baseUrl').value.trim();
+      if (!base) throw new Error('Base URL is empty. Set it at the top.');
+      const url = base.replace(/\/+$/,'') + path;
+      const headers = { ...(opts.headers||{}), 'Accept':'application/json' };
+      if (opts.auth && S.apiKey) headers['x-api-key'] = S.apiKey;
+      const res = await fetch(url, { ...opts, headers });
+      const ct = res.headers.get('content-type') || '';
+      const isJson = ct.includes('application/json');
+      if (!res.ok) {
+        const body = isJson ? await res.json().catch(()=>({})) : await res.text();
+        const err  = isJson ? (body.error || JSON.stringify(body)) : body;
+        throw new Error(`${res.status} ${res.statusText} — ${err}`);
       }
-    });
+      return isJson ? res.json() : res.text();
+    }
 
-    // stream leads
-    const closeLeads = sse(`${api}/stream/leads?task=${encodeURIComponent(tid)}&uid=${encodeURIComponent(uid)}`, msg=>{
-      if(Array.isArray(msg.batch)) renderLeads(msg.batch, profile);
-      if(msg.done){ closeLeads(); closePrev(); tick(); }
-    });
+    // ---- list rendering ----
+    let rows = [];
+    function renderList(items) {
+      rows = items || [];
+      tbody.innerHTML = '';
+      for (const it of rows) {
+        const tr = document.createElement('tr');
+        tr.dataset.id = it.id;
+        tr.innerHTML = `
+          <td class="mono">${it.id}</td>
+          <td>${it.host||''}</td>
+          <td>${it.platform||''}</td>
+          <td>${it.title||''}</td>
+          <td>${new Date(it.created_at).toLocaleString()}</td>
+          <td><span class="status ${it.temperature||''}">${it.temperature||''}</span></td>
+          <td><small class="muted">${(it.why||[]).map(w=>w.label).join(', ')}</small></td>`;
+        tr.addEventListener('click', () => selectRow(tr, it.id));
+        tbody.appendChild(tr);
+      }
+    }
 
-    // fallback pollers (if SSE not available)
-    setTimeout(async ()=>{
-      if(!tid) return;
-      const poll = async()=>{
-        const a=await jfetch(`/leads/poll?task=${encodeURIComponent(tid)}`);
-        if(a?.batch) renderLeads(a.batch, profile);
-        const b=await jfetch(`/preview/poll?task=${encodeURIComponent(tid)}`);
-        if(Array.isArray(b?.metrics)){
-          b.metrics.forEach(m=>updMetric(m.id,m.tier,m.score,m.text));
-          fillCounts(b.counts);
-        }
-        if(!(a?.done) && !(b?.done)) setTimeout(poll,1500);
-        else tick();
+    async function load(kind='hot') {
+      try {
+        listMsg.textContent = 'Loading…';
+        const data = await jget(`/api/v1/leads/${kind}?limit=50`);
+        renderList(data.items||[]);
+        listMsg.textContent = `Loaded ${rows.length} ${kind} lead(s).`;
+      } catch (e) {
+        listMsg.textContent = `Error: ${e.message}`;
+      }
+    }
+
+    // ---- details panel ----
+    function renderDetails(model) {
+      const L = model.lead || model;
+      const why = model.why || L.why || [];
+      details.innerHTML = `
+        <div class="grid">
+          <div><div class="tip">ID</div><div class="mono">${L.id}</div></div>
+          <div><div class="tip">Host</div><div>${L.host||''}</div></div>
+          <div><div class="tip">Platform</div><div>${L.platform||''}</div></div>
+          <div><div class="tip">Created</div><div>${new Date(L.created_at).toLocaleString()}</div></div>
+          <div><div class="tip">Title</div><div>${L.title||''}</div></div>
+          <div><div class="tip">Temp</div><div><span class="status ${model.temperature||''}">${model.temperature||''}</span></div></div>
+        </div>
+        <div class="why">
+          ${why.map(w => `<div class="chip"><strong>${w.label}</strong><span class="tip">(${w.kind})</span><span class="mono">${w.score}</span></div>`).join('')}
+        </div>
+
+        <hr style="border:none;border-top:1px solid #1f2937;margin:12px 0" />
+
+        <div class="grid cols2">
+          <div>
+            <div class="tip" style="margin-bottom:6px">Set stage</div>
+            <div class="row">
+              <select id="stageSel">
+                <option value="new">new</option>
+                <option value="qualified">qualified</option>
+                <option value="contacted">contacted</option>
+                <option value="proposal">proposal</option>
+                <option value="won">won</option>
+                <option value="lost">lost</option>
+              </select>
+              <button id="btnStage" class="primary">Save</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="tip" style="margin-bottom:6px">Add note</div>
+            <div class="row" style="gap:6px">
+              <input id="noteText" placeholder="e.g. First call done; decision next week" style="flex:1" />
+              <button id="btnNote">Add</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="detailMsg" style="margin-top:8px" class="tip"></div>
+      `;
+
+      $('#btnStage').onclick = async () => {
+        const stage = $('#stageSel').value;
+        await doStage(L.id, stage);
       };
-      poll();
-    }, 2500);
-  };
-})();
-</script>
+      $('#btnNote').onclick = async () => {
+        const note = $('#noteText').value.trim();
+        if (!note) return msg('#detailMsg','Note cannot be empty','error');
+        await doNote(L.id, note);
+        $('#noteText').value = '';
+      };
+    }
+
+    async function selectRow(tr, id) {
+      for (const r of tbody.querySelectorAll('tr')) r.classList.remove('sel');
+      tr.classList.add('sel');
+      try {
+        const data = await jget(`/api/v1/leads/${id}`);
+        renderDetails(data);
+      } catch (e) {
+        msg('#detailMsg', e.message, 'error');
+      }
+    }
+
+    function msg(sel, text, kind='tip') {
+      const el = document.querySelector(sel);
+      if (!el) return;
+      el.className = kind === 'error' ? 'error' : (kind === 'ok' ? 'ok':'tip');
+      el.textContent = text;
+    }
+
+    // ---- stage + notes (auth) ----
+    async function doStage(id, stage) {
+      try {
+        await jget(`/api/v1/leads/${id}/stage`, {
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ stage }),
+          auth: true
+        });
+        msg('#detailMsg','Stage saved.','ok');
+      } catch (e) {
+        msg('#detailMsg', e.message, 'error');
+      }
+    }
+    async function doNote(id, note) {
+      try {
+        await jget(`/api/v1/leads/${id}/notes`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ note }),
+          auth: true
+        });
+        msg('#detailMsg','Note added.','ok');
+      } catch (e) {
+        msg('#detailMsg', e.message, 'error');
+      }
+    }
+
+    // ---- ingest (auth) ----
+    async function ingestOne() {
+      const cat = $('#ingCat').value.trim();
+      const kw  = $('#ingKw').value.trim();
+      const platform = $('#ingPlatform').value.trim();
+      const source_url = $('#ingUrl').value.trim();
+      const title = $('#ingTitle').value.trim();
+      if (!cat || !platform || !source_url || !title) {
+        msg('#ingMsg','cat, platform, source_url, title are required','error'); return;
+      }
+      const payload = { cat, kw: kw ? kw.split(',').map(s=>s.trim()).filter(Boolean):[], platform, source_url, title };
+      try {
+        const data = await jget(`/api/v1/leads/ingest`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+          auth: true
+        });
+        msg('#ingMsg',`Ingested id=${data.lead?.id || 'ok'}`,'ok');
+      } catch (e) {
+        msg('#ingMsg', e.message, 'error');
+      }
+    }
+
+    // ---- csv ----
+    function downloadCsv(kind) {
+      const base = $('#baseUrl').value.trim();
+      const url = `${base.replace(/\/+$/,'')}/api/v1/leads/export.csv?temperature=${encodeURIComponent(kind)}&limit=50`;
+      // Let browser do the file navigation. (Auth not required.)
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leads_${kind}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      msg('#csvMsg', `Requested CSV (${kind}).`);
+    }
+
+    // ---- bootstrap ----
+    function init() {
+      $('#baseUrl').value = S.baseUrl;
+      $('#apiKey').value  = S.apiKey;
+
+      $('#applyBase').onclick = () => {
+        S.baseUrl = $('#baseUrl').value.trim();
+        msg('#listMsg', `Base URL set to ${S.baseUrl || '(empty)'}`);
+      };
+
+      $('#saveKey').onclick = () => { S.apiKey = $('#apiKey').value.trim(); msg('#listMsg','API key saved.'); };
+      $('#clearKey').onclick = () => { S.apiKey = ''; $('#apiKey').value=''; msg('#listMsg','API key cleared.'); };
+
+      $('#btnHot').onclick = () => load('hot');
+      $('#btnWarm').onclick = () => load('warm');
+      $('#btnIngest').onclick = ingestOne;
+      $('#csvHot').onclick = ()=>downloadCsv('hot');
+      $('#csvWarm').onclick = ()=>downloadCsv('warm');
+
+      // keyboard shortcut: R → refresh hot
+      window.addEventListener('keydown', e => { if (e.key.toLowerCase()==='r') load('hot'); });
+
+      // initial load if base is present
+      if ($('#baseUrl').value) load('hot');
+    }
+    init();
+  </script>
 </body>
 </html>
