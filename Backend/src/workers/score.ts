@@ -1,34 +1,46 @@
-import { getLLM, ClassifyResult, ExtractResult, Signal, Temperature, parseJSON } from "../ai/llm";
+// Backend/src/workers/score.ts
 
-export type { ClassifyResult, ExtractResult, Signal, Temperature };
+import { getLLM, ClassifyResult, Temperature, Signal } from "../ai/llm";
 
-// Optional patch type (some routes import this)
+export type { ClassifyResult, Temperature, Signal };
+
+export interface LeadLite {
+  id: string | number;
+  host: string;
+  platform?: string;
+  cat?: string;
+  title?: string;
+  created_at?: string;
+}
+
 export interface ScorePatch {
   temperature?: Temperature;
   why?: Signal[];
+  packagingMath?: ClassifyResult["packagingMath"];
 }
 
-const SYSTEM = `You are a lead-scoring assistant for packaging suppliers.
-Given a JSON lead with fields {platform, cat, host, title, kw?}, return JSON:
-{"temperature":"hot|warm|cold","why":[{"label":"...","kind":"meta|platform|signal","score":0.0-1.0,"detail":"..."}]}
-Only output strict JSON without extra text.`;
+/**
+ * Produce a ScorePatch for a lead using the configured LLM
+ * with a safe heuristic fallback inside the LLM router.
+ */
+export async function scoreLead(lead: LeadLite): Promise<ScorePatch> {
+  const text = [
+    `Lead #${lead.id}`,
+    lead.title ?? "",
+    `host: ${lead.host}`,
+    lead.platform ? `platform: ${lead.platform}` : "",
+    lead.cat ? `category: ${lead.cat}` : "",
+    lead.created_at ? `created_at: ${lead.created_at}` : "",
+  ].filter(Boolean).join("\n");
 
-export async function scoreLeadLLM(lead: {
-  platform?: string;
-  cat?: string;
-  host?: string;
-  title?: string;
-  kw?: string[];
-}): Promise<ClassifyResult> {
   const llm = getLLM();
-  const prompt = `Lead:\n${JSON.stringify(lead)}\nReturn JSON exactly as instructed.`;
-  const out = await llm.chat(prompt, { system: SYSTEM, maxTokens: 256, temperature: 0.2 });
-  const parsed = parseJSON<ClassifyResult>(out?.trim());
-  if (parsed?.temperature && parsed?.why) return parsed;
-
-  // Conservative fallback if the model returns non-JSON text
+  const result = await llm.classify(text);
   return {
-    temperature: "warm",
-    why: [{ label: "Heuristic fallback", kind: "signal", score: 0.5, detail: "LLM returned unparseable JSON" }]
+    temperature: result.temperature,
+    why: result.why,
+    packagingMath: result.packagingMath,
   };
 }
+
+// Alias to match older imports seen in routes
+export const scoreLeadLLM = scoreLead;
