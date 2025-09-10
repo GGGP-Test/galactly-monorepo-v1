@@ -1,291 +1,279 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import express, { Router } from "express";
+// Backend/src/routes/leads.ts
+import type { Express, Request, Response } from "express";
+import { Router } from "express";
 import { requireApiKey } from "../auth";
-import { scoreLeadLLM, type ScorePatch } from "../workers/score";
 
-type Temperature = "hot" | "warm" | "cold";
-type SignalKind = "meta" | "platform" | "signal" | "ai" | "extract";
+// -------- Types --------
+type Temperature = "hot" | "warm";
+type Stage = "new" | "qualified" | "contacted" | "won" | "lost";
+type WhyItem = { label: string; kind: "meta" | "platform" | "signal"; score: number; detail: string };
 
-interface Signal {
-  label: string;
-  kind: SignalKind;
-  score: number; // 0..1
-  detail?: string;
-}
-interface Lead {
-  id: string;
-  platform: string;
-  cat: string;
-  host: string;
+export type Lead = {
+  id: string;                 // keep as string for API stability
+  platform: "shopify" | "woocommerce" | "other";
+  cat: "product" | "service" | "other";
+  host: string;               // domain only
   title: string;
-  created_at: string;
-  temperature?: Temperature;
-  why?: Signal[];
-}
-interface LeadRow extends Lead {
-  notes?: { text: string; created_at: string }[];
-  stage?: string;
-}
+  created_at: string;         // ISO
+  temperature?: Temperature;  // set by simple rules here
+  stage?: Stage;              // operator-controlled
+  why?: WhyItem[];            // scoring explanation
+  notes?: { text: string; at: string }[];
+};
 
-// In-memory pool (same fixtures you’ve been seeing)
-const LEADS_POOL: LeadRow[] = [
-  { id: "123", platform: "shopify", cat: "product", host: "example.com", title: "RFP: e-com packaging project", created_at: "2025-09-09T15:42:16.505Z",
-    temperature: "hot",
-    why: [
-      { label: "Domain quality", kind: "meta", score: 0.65, detail: "example.com (.com)" },
-      { label: "Platform fit", kind: "platform", score: 0.75, detail: "shopify" },
-      { label: "Intent keywords", kind: "signal", score: 0.9, detail: "packaging, carton, rfp" },
-    ]
-  },
-  { id: "4", platform: "shopify", cat: "product", host: "example.com", title: "RFP: e-com packaging project", created_at: "2025-09-09T15:33:38.257Z",
-    temperature: "hot",
-    why: [
-      { label: "Domain quality", kind: "meta", score: 0.65, detail: "example.com (.com)" },
-      { label: "Platform fit", kind: "platform", score: 0.75, detail: "shopify" },
-      { label: "Intent keywords", kind: "signal", score: 0.9, detail: "packaging, carton, rfp" },
-    ]
-  },
-  { id: "3", platform: "shopify", cat: "product", host: "example.com", title: "RFP: e-com packaging project", created_at: "2025-09-09T15:24:30.105Z",
-    temperature: "hot",
-    why: [
-      { label: "Domain quality", kind: "meta", score: 0.65, detail: "example.com (.com)" },
-      { label: "Platform fit", kind: "platform", score: 0.75, detail: "shopify" },
-      { label: "Intent keywords", kind: "signal", score: 0.9, detail: "packaging, carton, rfp" },
-    ]
-  },
-  { id: "5", platform: "shopify", cat: "product", host: "brand-a.com", title: "RFQ: label refresh", created_at: "2025-09-09T19:51:45.318Z",
-    temperature: "warm",
-    why: [
-      { label: "Domain quality", kind: "meta", score: 0.65, detail: "brand-a.com (.com)" },
-      { label: "Platform fit", kind: "platform", score: 0.75, detail: "shopify" },
-      { label: "Intent keywords", kind: "signal", score: 0.8, detail: "labels, rfq" },
-    ]
-  },
-  { id: "6", platform: "woocommerce", cat: "product", host: "store-b.com", title: "RFP: poly mailers", created_at: "2025-09-09T19:51:45.595Z",
-    temperature: "warm",
-    why: [
-      { label: "Domain quality", kind: "meta", score: 0.65, detail: "store-b.com (.com)" },
-      { label: "Platform fit", kind: "platform", score: 0.6, detail: "woocommerce" },
-      { label: "Intent keywords", kind: "signal", score: 0.8, detail: "packaging, mailers" },
-    ]
-  },
-  { id: "7", platform: "shopify", cat: "product", host: "brand-x.com", title: "RFQ: label refresh", created_at: "2025-09-09T20:23:13.988Z",
-    temperature: "hot",
-    why: [
-      { label: "Domain quality", kind: "meta", score: 0.65, detail: "brand-x.com (.com)" },
-      { label: "Platform fit", kind: "platform", score: 0.75, detail: "shopify" },
-      { label: "Intent keywords", kind: "signal", score: 0.9, detail: "labels, rfq" },
-    ]
-  },
-  { id: "8", platform: "woocommerce", cat: "product", host: "store-y.com", title: "RFP: poly mailers", created_at: "2025-09-09T20:24:05.637Z",
-    temperature: "warm",
-    why: [
-      { label: "Domain quality", kind: "meta", score: 0.65, detail: "store-y.com (.com)" },
-      { label: "Platform fit", kind: "platform", score: 0.6, detail: "woocommerce" },
-      { label: "Intent keywords", kind: "signal", score: 0.8, detail: "mailers, packaging" },
-    ]
-  },
-];
+// -------- In-memory store (replace with DB later) --------
+const LEADS = new Map<string, Lead>();
+let nextId = 1;
 
-function byTemp(t: Temperature) {
-  return LEADS_POOL.filter(x => (x.temperature || "warm") === t);
-}
-function getById(id: string) {
-  return LEADS_POOL.find(x => x.id === id);
-}
-function toCSVRow(l: LeadRow): string[] {
-  return [
-    l.id, l.host, l.platform, l.cat, l.title,
-    new Date(l.created_at).toString(), l.temperature || ""
-  ].map(v => `"${(v ?? "").toString().replace(/"/g,'""')}"`);
+// Optional: enable seeding only if explicitly asked (not by default)
+const SEED_DEMO = process.env.SEED_DEMO === "1";
+if (SEED_DEMO) {
+  seed([
+    mkLead({
+      host: "brand-x.com",
+      platform: "shopify",
+      cat: "product",
+      title: "RFQ: label refresh",
+      temperature: "hot",
+      why: [
+        m("Domain quality", "meta", 0.65, "brand-x.com (.com)"),
+        m("Platform fit", "platform", 0.75, "shopify"),
+        m("Intent keywords", "signal", 0.9, "labels, rfq"),
+      ],
+    }),
+    mkLead({
+      host: "brand-a.com",
+      platform: "shopify",
+      cat: "product",
+      title: "RFQ: label refresh",
+      temperature: "hot",
+      why: [
+        m("Domain quality", "meta", 0.65, "brand-a.com (.com)"),
+        m("Platform fit", "platform", 0.75, "shopify"),
+        m("Intent keywords", "signal", 0.9, "labels, rfq"),
+      ],
+    }),
+  ]);
 }
 
-// -------------------------------------
-// Router
-// -------------------------------------
-const router = Router();
+// -------- Helpers --------
+function m(label: string, kind: WhyItem["kind"], score: number, detail: string): WhyItem {
+  return { label, kind, score, detail };
+}
 
-// Lists
-router.get("/hot", (_req, res) => {
-  res.json({ ok: true, items: byTemp("hot") });
-});
-router.get("/warm", (_req, res) => {
-  res.json({ ok: true, items: byTemp("warm") });
-});
-
-// One lead
-router.get("/:id", (req, res) => {
-  const id = String(req.params.id || "");
-  const row = getById(id);
-  if (!row) return res.status(404).json({ ok: false, error: "bad id" });
-  const { temperature, why, ...lead } = row;
-  res.json({ ok: true, temperature, lead, why: row.why || [] });
-});
-
-// Stage & notes (require API key)
-router.patch("/:id/stage", requireApiKey, (req, res) => {
-  const id = String(req.params.id || "");
-  const row = getById(id);
-  if (!row) return res.status(404).json({ ok: false, error: "bad id" });
-  const stage = String(req.body?.stage || "new");
-  row.stage = stage;
-  res.json({ ok: true, leadId: Number(id) || id, stage });
-});
-
-router.post("/:id/notes", requireApiKey, (req, res) => {
-  const id = String(req.params.id || "");
-  const row = getById(id);
-  if (!row) return res.status(404).json({ ok: false, error: "bad id" });
-  const note = String(req.body?.note || "");
-  if (!note) return res.status(400).json({ ok: false, error: "note_required" });
-  row.notes = row.notes || [];
-  row.notes.push({ text: note, created_at: new Date().toISOString() });
-  res.json({ ok: true, leadId: Number(id) || id });
-});
-
-// CSV export (no auth)
-router.get("/export.csv", async (req, res) => {
-  const temp = (String(req.query.temperature || "hot").toLowerCase() as Temperature);
-  const items = byTemp(temp);
-  const rows = [
-    ["id","host","platform","cat","title","created_at","temperature"],
-    ...items.map(toCSVRow)
-  ].map(cols => cols.join(",")).join("\n");
-
-  res.setHeader("Content-Type", "text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition", `attachment; filename="leads_${temp}.csv"`);
-  res.send(rows + "\n");
-});
-
-// Ingest (single) — auth, then AI score (if configured)
-router.post("/ingest", requireApiKey, async (req, res) => {
-  const { cat, kw, platform, source_url, title } = req.body || {};
-  if (!cat || !platform || !source_url || !title) {
-    return res.status(400).json({ ok: false, error: "missing_fields" });
-  }
-  const host = tryHost(source_url);
-  const id = String(nextId());
+function mkLead(p: Partial<Lead>): Lead {
+  const id = String(nextId++);
   const created_at = new Date().toISOString();
+  return {
+    id,
+    platform: p.platform ?? "other",
+    cat: p.cat ?? "other",
+    host: p.host ?? "unknown",
+    title: p.title ?? "Untitled",
+    created_at,
+    temperature: p.temperature,
+    stage: "new",
+    why: p.why ?? [],
+    notes: [],
+  };
+}
 
-  // basic signals
-  const why: Signal[] = [
-    { label: "Domain quality", kind: "meta", score: 0.65, detail: `${host} (.${host.split(".").pop()})` },
-    { label: "Platform fit", kind: "platform", score: platformScore(platform), detail: platform },
-    { label: "Intent keywords", kind: "signal", score: kwScore(kw), detail: Array.isArray(kw)?kw.join(", "):String(kw||"") }
+function scoreFromKw(kw: string[]): { temperature: Temperature; why: WhyItem[] } {
+  const text = kw.join(" ").toLowerCase();
+  const signal =
+    /rfq|rfp|tender|quote|packaging|carton|mailer|label|stretch|shrink|poly|box|corrugate/.test(text) ? 0.8 : 0.5;
+  const temp: Temperature = signal >= 0.75 ? "hot" : "warm";
+  return {
+    temperature: temp,
+    why: [
+      m("Domain quality", "meta", 0.65, "derived from TLD"),
+      m("Platform fit", "platform", 0.7, "heuristic"),
+      m("Intent keywords", "signal", signal, kw.join(", ")),
+    ],
+  };
+}
+
+function hostFrom(urlOrDomain: string): string | null {
+  let s = urlOrDomain.trim();
+  if (!/^https?:\/\//i.test(s)) s = `https://${s}`;
+  try {
+    const u = new URL(s);
+    return u.hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function pick<T>(arr: T[], limit?: number): T[] {
+  const n = typeof limit === "number" && limit > 0 ? Math.min(limit, arr.length) : arr.length;
+  return arr.slice(0, n);
+}
+
+function asCSV(leads: Lead[]): string {
+  const rows = [
+    ["id", "host", "platform", "cat", "title", "created_at", "temperature"].join(","),
+    ...leads.map((l) =>
+      [
+        JSON.stringify(l.id),
+        JSON.stringify(l.host),
+        JSON.stringify(l.platform),
+        JSON.stringify(l.cat),
+        JSON.stringify(l.title),
+        JSON.stringify(new Date(l.created_at).toString()),
+        JSON.stringify(l.temperature ?? ""),
+      ].join(","),
+    ),
   ];
+  return rows.join("\n");
+}
 
-  let temperature: Temperature = kwScore(kw) >= 0.85 ? "hot" : "warm";
-  let packagingMath: ScorePatch["packagingMath"] | undefined;
+function viewOf(l: Lead) {
+  return {
+    id: l.id,
+    platform: l.platform,
+    cat: l.cat,
+    host: l.host,
+    title: l.title,
+    created_at: l.created_at,
+    temperature: l.temperature,
+    why: l.why ?? [],
+  };
+}
 
-  // AI scoring if configured
-  try {
-    const patch = await scoreLeadLLM({ id, title, host, platform, cat, created_at });
-    if (patch) {
-      temperature = patch.temperature || temperature;
-      packagingMath = patch.packagingMath;
-      (patch.why || []).forEach(s => why.push(s));
+function indexByTemp(temp: Temperature): Lead[] {
+  return Array.from(LEADS.values())
+    .filter((l) => l.temperature === temp)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+}
+
+function parseLimit(req: Request): number | undefined {
+  const s = String(req.query.limit ?? "");
+  const n = Number(s);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+function bad(res: Response, error: string, code = 400) {
+  return res.status(code).json({ ok: false, error });
+}
+
+// -------- Router --------
+export function mountLeads(app: Express, base = "/api/v1/leads") {
+  const r = Router();
+
+  // list hot / warm (no auth)
+  r.get("/hot", (req, res) => {
+    const items = pick(indexByTemp("hot").map(viewOf), parseLimit(req));
+    res.json({ ok: true, items });
+  });
+
+  r.get("/warm", (req, res) => {
+    const items = pick(indexByTemp("warm").map(viewOf), parseLimit(req));
+    res.json({ ok: true, items });
+  });
+
+  // get one (no auth)
+  r.get("/:id", (req, res) => {
+    const id = String(req.params.id);
+    const lead = LEADS.get(id);
+    if (!lead) return bad(res, "bad id", 404);
+    const payload = { ok: true, temperature: lead.temperature, lead: viewOf(lead), why: lead.why ?? [] };
+    res.json(payload);
+  });
+
+  // set stage (requires API key)
+  r.patch("/:id/stage", requireApiKey, (req, res) => {
+    const id = String(req.params.id);
+    const lead = LEADS.get(id);
+    if (!lead) return bad(res, "bad id", 404);
+    const stage = String(req.body?.stage ?? "") as Stage;
+    if (!stage) return bad(res, "missing stage");
+    lead.stage = stage;
+    res.json({ ok: true, leadId: Number(id), stage });
+  });
+
+  // add note (requires API key)
+  r.post("/:id/notes", requireApiKey, (req, res) => {
+    const id = String(req.params.id);
+    const lead = LEADS.get(id);
+    if (!lead) return bad(res, "bad id", 404);
+    const text = String(req.body?.note ?? "").trim();
+    if (!text) return bad(res, "missing note");
+    lead.notes = lead.notes ?? [];
+    lead.notes.push({ text, at: new Date().toISOString() });
+    res.json({ ok: true, leadId: Number(id) });
+  });
+
+  // CSV export (no auth; UI already uses this)
+  r.get("/export.csv", (req, res) => {
+    const temperature = String(req.query.temperature ?? "").toLowerCase() as Temperature;
+    if (temperature !== "hot" && temperature !== "warm") return bad(res, "temperature must be hot|warm");
+    const rows = asCSV(indexByTemp(temperature));
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.send(rows);
+  });
+
+  // ingest single (requires API key)
+  r.post("/ingest", requireApiKey, (req, res) => {
+    const body = req.body ?? {};
+    const cat = String(body.cat ?? "").toLowerCase() as Lead["cat"];
+    const platform = String(body.platform ?? "").toLowerCase() as Lead["platform"];
+    const title = String(body.title ?? "").trim();
+    const kw = Array.isArray(body.kw)
+      ? body.kw.map((s: any) => String(s))
+      : String(body.kw ?? "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+    const host = hostFrom(String(body.source_url ?? ""));
+
+    if (!cat || !platform || !title || !host) {
+      return bad(res, "cat, platform, source_url, title are required");
     }
-  } catch { /* non-fatal */ }
 
-  const lead: LeadRow = { id, platform, cat, host, title, created_at, temperature, why };
-  LEADS_POOL.push(lead);
+    const { temperature, why } = scoreFromKw(kw);
+    const lead = mkLead({ cat, platform, title, host, temperature, why });
+    LEADS.set(lead.id, lead);
 
-  res.json({ ok: true, temperature, lead: copyLead(lead), why, packagingMath });
-});
+    res.json({ ok: true, temperature: lead.temperature, lead: viewOf(lead), why: lead.why });
+  });
 
-// Ingest (bulk) — array of single payloads
-router.post("/ingest/bulk", requireApiKey, async (req, res) => {
-  const arr = Array.isArray(req.body) ? req.body : [];
-  let inserted = 0;
-  const items: any[] = [];
-  for (const x of arr) {
-    const body = { ...x };
-    // simulate calling the single endpoint logic without extra HTTP hop
-    const fakeReq: any = { body };
-    const fakeRes: any = {
-      statusCode: 200,
-      status: (_: number) => fakeRes,
-      json: (o: any) => items.push(o)
-    };
-    // small inline mimic
-    if (!body.cat || !body.platform || !body.source_url || !body.title) continue;
-    const host = tryHost(body.source_url);
-    const id = String(nextId());
-    const created_at = new Date().toISOString();
-    const why: Signal[] = [
-      { label: "Domain quality", kind: "meta", score: 0.65, detail: `${host} (.${host.split(".").pop()})` },
-      { label: "Platform fit", kind: "platform", score: platformScore(body.platform), detail: body.platform },
-      { label: "Intent keywords", kind: "signal", score: kwScore(body.kw), detail: Array.isArray(body.kw)?body.kw.join(", "):String(body.kw||"") }
-    ];
-    let temperature: Temperature = kwScore(body.kw) >= 0.85 ? "hot" : "warm";
-    let packagingMath: ScorePatch["packagingMath"] | undefined;
+  // ingest bulk (requires API key)
+  r.post("/ingest/bulk", requireApiKey, (req, res) => {
+    const arr = Array.isArray(req.body) ? req.body : [];
+    const items: ReturnType<typeof viewOf>[] = [];
+    let inserted = 0;
 
-    try {
-      const patch = await scoreLeadLLM({ id, title: body.title, host, platform: body.platform, cat: body.cat, created_at });
-      if (patch) {
-        temperature = patch.temperature || temperature;
-        packagingMath = patch.packagingMath;
-        (patch.why || []).forEach(s => why.push(s));
-      }
-    } catch {}
+    for (const it of arr) {
+      const cat = String(it.cat ?? "").toLowerCase() as Lead["cat"];
+      const platform = String(it.platform ?? "").toLowerCase() as Lead["platform"];
+      const title = String(it.title ?? "").trim();
+      const kw = Array.isArray(it.kw)
+        ? it.kw.map((s: any) => String(s))
+        : String(it.kw ?? "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+      const host = hostFrom(String(it.source_url ?? ""));
 
-    const lead: LeadRow = { id, platform: body.platform, cat: body.cat, host, title: body.title, created_at, temperature, why };
-    LEADS_POOL.push(lead);
-    inserted++;
-    items.push({ ...copyLead(lead), temperature, why, packagingMath });
+      if (!cat || !platform || !title || !host) continue;
+
+      const { temperature, why } = scoreFromKw(kw);
+      const lead = mkLead({ cat, platform, title, host, temperature, why });
+      LEADS.set(lead.id, lead);
+      items.push(viewOf(lead));
+      inserted += 1;
+    }
+
+    res.json({ ok: true, inserted, items });
+  });
+
+  app.use(base, r);
+}
+
+// internal seed helper
+function seed(leads: Lead[]) {
+  for (const l of leads) {
+    const id = String(nextId++);
+    LEADS.set(id, { ...l, id });
   }
-  res.json({ ok: true, inserted, items });
-});
-
-// Re-score an existing lead (auth)
-router.post("/:id/score", requireApiKey, async (req, res) => {
-  const id = String(req.params.id || "");
-  const row = getById(id);
-  if (!row) return res.status(404).json({ ok: false, error: "bad id" });
-
-  try {
-    const patch = await scoreLeadLLM(row);
-    if (!patch) return res.status(501).json({ ok: false, error: "ai_not_configured" });
-
-    // merge
-    row.temperature = patch.temperature || row.temperature;
-    row.why = (row.why || []).concat(patch.why || []);
-    const { temperature, why } = row;
-    res.json({ ok: true, temperature, lead: copyLead(row), why, packagingMath: patch.packagingMath });
-  } catch (e: any) {
-    res.status(500).json({ ok: false, error: String(e?.message || e) });
-  }
-});
-
-// -------------------------------------
-// helpers
-// -------------------------------------
-function kwScore(kw: any): number {
-  const s = (Array.isArray(kw) ? kw.join(" ") : String(kw || "")).toLowerCase();
-  let score = 0.5;
-  if (/rfp|rfq|tender|bid/.test(s)) score = Math.max(score, 0.9);
-  if (/packaging|carton|label|mailer/.test(s)) score = Math.max(score, 0.8);
-  return Math.min(1, score);
-}
-function platformScore(p: any): number {
-  const s = String(p || "").toLowerCase();
-  if (s.includes("shopify")) return 0.75;
-  if (s.includes("woocommerce")) return 0.6;
-  return 0.5;
-}
-function tryHost(url: string): string {
-  try { return new URL(url).host; } catch { return "unknown"; }
-}
-let _id = 9;
-function nextId() { return _id++; }
-function copyLead(l: LeadRow) {
-  const { temperature, why, notes, stage, ...lead } = l;
-  return lead;
-}
-
-// -------------------------------------
-// mount
-// -------------------------------------
-export function mountLeads(app: express.Express) {
-  app.use("/api/v1/leads", router);
 }
