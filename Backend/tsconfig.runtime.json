@@ -1,38 +1,28 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "target": "ES2020",
+    "outDir": "./dist",
     "module": "commonjs",
+    "target": "ES2020",
     "moduleResolution": "node",
-    "outDir": "dist",
-    "rootDir": "src",
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "strict": false,
     "skipLibCheck": true,
-    "noEmitOnError": false,
-    "forceConsistentCasingInFileNames": true
+    "sourceMap": false
   },
   "include": [
     "src/index.ts",
     "src/auth.ts",
-    "src/types.ts",
-    "src/util.ts",
-    "src/db.ts",
-    "src/api/reveal.ts",
-    "src/routes/public.ts",
-    "src/routes/leads.ts"
+    "src/api/**/*.ts",
+    "src/routes/**/*.ts",
+    "src/workers/**/*.ts",
+    "src/ai/**/*.ts",
+    "src/**/*.d.ts"
   ],
   "exclude": [
-    "src/**/*.test.ts",
-    "src/**/__tests__/**",
-    "src/ops/**",
-    "src/workflows/**",
-    "src/search-providers/**",
-    "src/connectors/**",
-    "src/reviews/**",
-    "src/routes/pipeline.ts",
-    "src/gate.ts",
-    "src/cost-tracker.ts"
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/__tests__/**"
   ]
 }
