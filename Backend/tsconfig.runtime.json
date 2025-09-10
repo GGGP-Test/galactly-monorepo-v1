@@ -8,24 +8,13 @@
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "lib": ["ES2020", "DOM"],
+    "lib": ["ES2020"],
     "types": ["node"]
   },
   "include": [
     "src/index.ts",
     "src/auth.ts",
-    "src/api/**/*.ts",
-    "src/routes/public.ts",
-    "src/routes/leads.ts",
-    "src/ai/**/*.ts",
-    "src/workers/**/*.ts"
+    "src/routes/leads.ts"
   ],
-  "exclude": [
-    "src/ops/**",
-    "src/connectors/**",
-    "src/routes/**/gate.ts",
-    "src/routes/**/reviews.ts",
-    "src/routes/**/targets.ts",
-    "src/routes/**/cost-tracker.ts"
-  ]
+  "exclude": ["**/*"]
 }
