@@ -1,42 +1,43 @@
-import express from 'express';
-import cors from 'cors';
-import { mountPublic } from './routes/public';
-import { mountReveal } from './api/reveal';
-import { mountLeads } from './routes/leads';
+import express from "express";
+import cors from "cors";
+
+import { mountPublic } from "./routes/public";
+import { mountLeads } from "./routes/leads";
+import { mountAdmin } from "./routes/admin";   // ⬅ new
 
 const app = express();
-app.disable('x-powered-by');
+
+// core middleware
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: "1mb" }));
+app.disable("x-powered-by");
 
-// basic meta
-app.get('/healthz', (_req, res) =>
-  res.json({ ok: true, time: new Date().toISOString() })
-);
-app.get('/readyz', (_req, res) =>
-  res.json({ ok: true, ready: true, time: new Date().toISOString() })
-);
-app.get('/version', (_req, res) =>
-  res.json({ ok: true, version: process.env.VERSION || 'dev' })
-);
-app.get('/api/v1/config', (_req, res) =>
-  res.json({
-    ok: true,
-    env: process.env.NODE_ENV || 'production',
-    devUnlimited: false,
-    allowList: [],
-    version: process.env.VERSION || 'dev',
-    time: new Date().toISOString()
-  })
-);
+// minimal security headers for JSON APIs (the /admin route overrides CSP itself)
+app.use((_req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  // Default CSP: safest for API JSON. The /admin page will override to allow inline script.
+  res.setHeader("Content-Security-Policy", "default-src 'none'");
+  next();
+});
 
-// routes
+// health
+app.get("/healthz", (_req, res) => {
+  res.json({ ok: true, time: new Date().toISOString() });
+});
+
+// mount routes
 mountPublic(app);
 mountLeads(app);
-mountReveal(app);
+mountAdmin(app); // ⬅ serve the operator console at /admin
 
-// 404
-app.use((_req, res) => res.status(404).json({ ok: false, error: 'not_found' }));
+// start if run directly (in Northflank we run the compiled JS)
+if (require.main === module) {
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => {
+    // eslint-disable-next-line no-console
+    console.log(`API listening on :${port}`);
+  });
+}
 
-const port = Number(process.env.PORT || 3000);
-app.listen(port, () => console.log(`Backend listening on :${port}`));
+export default app;
