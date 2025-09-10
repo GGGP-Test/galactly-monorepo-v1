@@ -1,221 +1,190 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import type { RequestInit } from "node-fetch"; // Node 20 has global fetch; this is just for types.
+// Backend/src/ai/llm.ts
+// Minimal, dependency-free LLM router with time-budget + fallbacks.
+// Node 20+ provides global fetch – no 'node-fetch' needed.
 
-export type Temperature = "hot" | "warm" | "cold";
-export type SignalKind = "meta" | "platform" | "signal" | "ai" | "extract";
+export type Provider = 'gemini' | 'groq' | 'openrouter';
 
-export interface Signal {
-  label: string;
-  kind: SignalKind;
-  score: number;      // 0..1
-  detail?: string;
+export interface LeadLite {
+  id?: string | number;
+  host?: string;
+  platform?: string;
+  cat?: string;
+  title?: string;
+  kw?: string[];
+  created_at?: string;
 }
 
-export interface ClassifyResult {
-  temperature: Temperature;
-  why: Signal[];
+export interface LLMResult {
+  provider: Provider;
+  model: string;
+  notes: string;           // short, human friendly rationale
+  demandScore: number;     // 0..1
+  tags: string[];          // e.g., ['rfp','packaging','labels']
+  raw?: any;
 }
 
-export interface ExtractResult {
-  packagingTypes: string[];      // e.g. ["cartons","labels","mailers"]
-  estOrdersPerMonth?: number | null;
-  estUnitsPerMonth?: number | null;
-  spendPerMonth?: number | null;
-  platformHint?: string | null;  // e.g. "shopify"|"woocommerce"|...
-  confidence?: number;           // 0..1
+const env = {
+  geminiKey: process.env.GEMINI_API_KEY || '',
+  groqKey: process.env.GROQ_API_KEY || '',
+  openrouterKey: process.env.OPENROUTER_API_KEY || '',
+  defaultProv: (process.env.LLM_DEFAULT as Provider) || 'gemini',
+  timeBudgetMs: Number(process.env.LLM_TIME_BUDGET_MS || 2500),
+};
+
+function promptFor(lead: LeadLite) {
+  const kw = lead.kw?.join(', ') || '—';
+  return [
+    `You are ranking packaging sales leads.`,
+    `Return JSON with fields: demandScore (0..1), tags (array of short tokens), notes (<=160 chars).`,
+    `Lead:`,
+    `title: ${lead.title || ''}`,
+    `host: ${lead.host || ''}`,
+    `platform: ${lead.platform || ''}`,
+    `category: ${lead.cat || ''}`,
+    `keywords: ${kw}`,
+  ].join('\n');
 }
 
-export interface DuplicateResult {
-  duplicate: boolean;
-  confidence: number; // 0..1
+function withTimeout<T>(p: Promise<T>, ms: number, onTimeout: () => T | Promise<T>): Promise<T> {
+  let done = false;
+  return new Promise((resolve) => {
+    const t = setTimeout(async () => {
+      if (done) return;
+      done = true;
+      resolve(await onTimeout());
+    }, ms);
+    p.then((v) => {
+      if (done) return;
+      done = true;
+      clearTimeout(t);
+      resolve(v);
+    }).catch(async () => {
+      if (done) return;
+      done = true;
+      clearTimeout(t);
+      resolve(await onTimeout());
+    });
+  });
 }
 
-export interface LLMClient {
-  classifyLead(text: string): Promise<ClassifyResult>;
-  extractFields(text: string): Promise<ExtractResult>;
-  isDuplicate(aText: string, bText: string): Promise<DuplicateResult>;
+// ---------- Providers ----------
+
+async function callGemini(prompt: string): Promise<LLMResult> {
+  if (!env.geminiKey) throw new Error('Missing GEMINI_API_KEY');
+  // Default to a widely-available text model; you can change via env later.
+  const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(env.geminiKey)}`;
+  const body = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.2, maxOutputTokens: 256 },
+  };
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error(`gemini http ${res.status}`);
+  const data: any = await res.json();
+  const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const parsed = safeParse(text);
+  return { provider: 'gemini', model, ...parsed, raw: data };
 }
 
-// --------------------------
-// Provider selection
-// --------------------------
-const PROVIDER = (process.env.AI_PROVIDER || "google").toLowerCase(); // "google" | "groq" | "openrouter"
-// Keys (configure any subset you’ll use)
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.GOOGLE_APIKEY || "";
-const GROQ_API_KEY   = process.env.GROQ_API_KEY   || "";
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || process.env.OPEN_ROUTER_API_KEY || "";
+async function callGroq(prompt: string): Promise<LLMResult> {
+  if (!env.groqKey) throw new Error('Missing GROQ_API_KEY');
+  const model = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+  const url = 'https://api.groq.com/openai/v1/chat/completions';
+  const body = {
+    model,
+    messages: [{ role: 'system', content: 'Return only JSON as instructed.' }, { role: 'user', content: prompt }],
+    temperature: 0.2,
+    max_tokens: 256,
+  };
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.groqKey}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`groq http ${res.status}`);
+  const data: any = await res.json();
+  const text = data?.choices?.[0]?.message?.content || '';
+  const parsed = safeParse(text);
+  return { provider: 'groq', model, ...parsed, raw: data };
+}
 
-// Models (safe defaults)
-const GOOGLE_MODEL = process.env.GOOGLE_MODEL || "gemini-1.5-flash"; // JSON mode supported
-const GROQ_MODEL   = process.env.GROQ_MODEL   || "llama3-70b-8192";
-const OR_MODEL     = process.env.OPENROUTER_MODEL || "meta-llama/llama-3.1-70b-instruct";
+async function callOpenRouter(prompt: string): Promise<LLMResult> {
+  if (!env.openrouterKey) throw new Error('Missing OPENROUTER_API_KEY');
+  const model = process.env.OPENROUTER_MODEL || 'openrouter/auto';
+  const url = 'https://openrouter.ai/api/v1/chat/completions';
+  const body = {
+    model,
+    messages: [{ role: 'system', content: 'Return only JSON as instructed.' }, { role: 'user', content: prompt }],
+    temperature: 0.2,
+    max_tokens: 256,
+  };
+  const headers: Record<string,string> = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${env.openrouterKey}`,
+    // (Optional but nice) Helps OpenRouter attribute traffic:
+    'HTTP-Referer': 'https://gggp-test.github.io/galactly-monorepo-v1/',
+    'X-Title': 'Galactly Leads Intelligence'
+  };
+  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error(`openrouter http ${res.status}`);
+  const data: any = await res.json();
+  const text = data?.choices?.[0]?.message?.content || '';
+  const parsed = safeParse(text);
+  return { provider: 'openrouter', model, ...parsed, raw: data };
+}
 
-// --------------------------
-// Shared prompts
-// --------------------------
-const SYS_CLASSIFY = `You are a strict lead triage system for packaging industry opportunities.
-Return JSON with keys: temperature ("hot"|"warm"|"cold"), why (array of {label,kind,score,detail}).
-Scoring rules:
-- "hot" when there's clear intent (RFP/RFQ, buying now/recent), or strong fit (platform + keywords).
-- "warm" when possible intent or partial fit.
-- "cold" if irrelevant or no intent.
-Scores 0..1. Be concise in "detail". Respond ONLY JSON.`;
+function safeParse(text: string): Pick<LLMResult,'notes'|'demandScore'|'tags'> {
+  // Try to find a JSON object in the text; fall back to a simple guess.
+  try {
+    const m = text.match(/\{[\s\S]*\}$/);
+    const obj = JSON.parse(m ? m[0] : text);
+    const demandScore = clamp(Number(obj.demandScore ?? obj.score ?? 0.5), 0, 1);
+    const tags = Array.isArray(obj.tags) ? obj.tags.map(String) : [];
+    const notes = String(obj.notes ?? '').slice(0, 200);
+    return { demandScore, tags, notes };
+  } catch {
+    return { demandScore: 0.5, tags: [], notes: text.slice(0, 200) };
+  }
+}
 
-const SYS_EXTRACT = `You extract structured fields from messy text about potential packaging leads.
-Return JSON with:
-- packagingTypes: string[] (like ["cartons","labels","mailers","tape","void fill"])
-- estOrdersPerMonth?: number|null
-- estUnitsPerMonth?: number|null
-- spendPerMonth?: number|null
-- platformHint?: string|null
-- confidence: number (0..1)
-Respond ONLY JSON.`;
+function clamp(n: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, Number.isFinite(n) ? n : lo));
+}
 
-const SYS_DUPLICATE = `You decide if two leads describe the same company/opportunity.
-Return JSON { "duplicate": boolean, "confidence": number }. Respond ONLY JSON.`;
+// ---------- Public API ----------
 
-// --------------------------
-// Utilities
-// --------------------------
-function sloppyJson<T=any>(s: string): T {
-  // best-effort parse: trim fences & whitespace
-  const t = (s || "").trim()
-    .replace(/^```(?:json)?/i, "").replace(/```$/,"").trim();
-  try { return JSON.parse(t) as T; } catch {
-    // try to salvage JSON object substring
-    const start = t.indexOf("{"); const end = t.lastIndexOf("}");
-    if (start >= 0 && end > start) {
-      const sub = t.slice(start, end+1);
-      try { return JSON.parse(sub) as T; } catch { /* fallthrough */ }
+export async function rankLeadWithLLM(lead: LeadLite): Promise<LLMResult> {
+  const prompt = promptFor(lead);
+
+  // Provider order: default → groq → openrouter
+  const order: Provider[] = (() => {
+    const d = env.defaultProv;
+    return d === 'gemini' ? ['gemini','groq','openrouter']
+         : d === 'groq' ? ['groq','gemini','openrouter']
+         : ['openrouter','gemini','groq'];
+  })();
+
+  async function attempt(p: Provider): Promise<LLMResult> {
+    if (p === 'gemini') return callGemini(prompt);
+    if (p === 'groq') return callGroq(prompt);
+    return callOpenRouter(prompt);
+  }
+
+  // Ultra-fast fallback: if the first attempt exceeds the time budget,
+  // immediately resolve to Groq (very low latency) while the first may continue.
+  const first = attempt(order[0]);
+  const fast = withTimeout(first, env.timeBudgetMs, async () => {
+    // If the primary didn’t finish in time, try Groq quickly:
+    if (order[0] !== 'groq') {
+      try { return await attempt('groq'); } catch { /* ignore */ }
     }
-    throw new Error("LLM returned non-JSON content");
-  }
-}
+    // otherwise try the remaining provider(s)
+    for (let i = 1; i < order.length; i++) {
+      try { return await attempt(order[i]); } catch { /* keep falling back */ }
+    }
+    // final fallback if everything fails
+    return { provider: order[0], model: 'none', demandScore: 0.5, tags: [], notes: 'LLM unavailable' };
+  });
 
-async function httpJSON(url: string, init: RequestInit): Promise<any> {
-  const res = await fetch(url, init as any);
-  const ct = res.headers.get("content-type") || "";
-  const body = ct.includes("application/json") ? await res.json() : await res.text();
-  if (!res.ok) {
-    const msg = typeof body === "string" ? body : JSON.stringify(body);
-    throw new Error(`${res.status} ${res.statusText} — ${msg}`);
-  }
-  return body;
-}
-
-// --------------------------
-// Google (Gemini) client
-// --------------------------
-class GoogleClient implements LLMClient {
-  private endpoint(model: string) {
-    return `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(GOOGLE_API_KEY)}`;
-  }
-
-  private async call(system: string, user: string, wantJson = true): Promise<any> {
-    const body = {
-      contents: [{ role: "user", parts: [{ text: `${system}\n\n---\n${user}` }]}],
-      generationConfig: wantJson ? { temperature: 0.2, response_mime_type: "application/json" } : { temperature: 0.2 }
-    };
-    const data = await httpJSON(this.endpoint(GOOGLE_MODEL), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    if (wantJson) return sloppyJson(text);
-    return text;
-  }
-
-  async classifyLead(text: string): Promise<ClassifyResult> {
-    const out = await this.call(SYS_CLASSIFY, text, true);
-    return out as ClassifyResult;
-  }
-  async extractFields(text: string): Promise<ExtractResult> {
-    const out = await this.call(SYS_EXTRACT, text, true);
-    return out as ExtractResult;
-  }
-  async isDuplicate(a: string, b: string): Promise<DuplicateResult> {
-    const out = await this.call(SYS_DUPLICATE, JSON.stringify({ a, b }), true);
-    return out as DuplicateResult;
-  }
-}
-
-// --------------------------
-// Groq (OpenAI compat)
-// --------------------------
-class GroqClient implements LLMClient {
-  private async call(system: string, user: string, wantJson = true): Promise<any> {
-    const body = {
-      model: GROQ_MODEL,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user }
-      ],
-      temperature: 0.2,
-      ...(wantJson ? { response_format: { type: "json_object" } } : {})
-    };
-    const data = await httpJSON("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
-    const text = data?.choices?.[0]?.message?.content ?? "";
-    if (wantJson) return sloppyJson(text);
-    return text;
-  }
-  classifyLead = async (t: string) => this.call(SYS_CLASSIFY, t, true) as Promise<ClassifyResult>;
-  extractFields = async (t: string) => this.call(SYS_EXTRACT, t, true) as Promise<ExtractResult>;
-  isDuplicate = async (a: string, b: string) => this.call(SYS_DUPLICATE, JSON.stringify({ a, b }), true) as Promise<DuplicateResult>;
-}
-
-// --------------------------
-// OpenRouter (OpenAI compat)
-// --------------------------
-class OpenRouterClient implements LLMClient {
-  private async call(system: string, user: string, wantJson = true): Promise<any> {
-    const body = {
-      model: OR_MODEL,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user }
-      ],
-      temperature: 0.2,
-      ...(wantJson ? { response_format: { type: "json_object" } } : {})
-    };
-    const data = await httpJSON("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://galactly.local", // optional, helps OR analytics
-        "X-Title": "Lead Intelligence"
-      },
-      body: JSON.stringify(body)
-    });
-    const text = data?.choices?.[0]?.message?.content ?? "";
-    if (wantJson) return sloppyJson(text);
-    return text;
-  }
-  classifyLead = async (t: string) => this.call(SYS_CLASSIFY, t, true) as Promise<ClassifyResult>;
-  extractFields = async (t: string) => this.call(SYS_EXTRACT, t, true) as Promise<ExtractResult>;
-  isDuplicate = async (a: string, b: string) => this.call(SYS_DUPLICATE, JSON.stringify({ a, b }), true) as Promise<DuplicateResult>;
-}
-
-// --------------------------
-// Factory
-// --------------------------
-export function getLLM(): LLMClient | null {
-  if (PROVIDER === "google" && GOOGLE_API_KEY) return new GoogleClient();
-  if (PROVIDER === "groq"   && GROQ_API_KEY)   return new GroqClient();
-  if (PROVIDER === "openrouter" && OPENROUTER_API_KEY) return new OpenRouterClient();
-
-  // Soft fallback order if provider not explicitly set but some key exists:
-  if (GOOGLE_API_KEY) return new GoogleClient();
-  if (GROQ_API_KEY)   return new GroqClient();
-  if (OPENROUTER_API_KEY) return new OpenRouterClient();
-
-  return null; // no provider configured
+  return fast;
 }
