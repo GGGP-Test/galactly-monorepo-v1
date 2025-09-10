@@ -1,12 +1,13 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "target": "ES2020",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
-    "rootDir": "src",
-    "outDir": "dist",
-    "resolveJsonModule": true,
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src",
     "esModuleInterop": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -21,13 +22,16 @@
     "src/workers/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "dist",
     "src/ops/**",
     "src/connectors/**",
-    "src/clients/**",
+    "src/reviews/**",
+    "src/gate.ts",
+    "src/targets.ts",
     "src/ui/**",
-    "src/scripts/**",
-    "src/**/*.test.ts"
+    "src/db/**",
+    "src/orchestrator/**",
+    "src/cost-tracker/**",
+    "node_modules",
+    "dist"
   ]
 }
