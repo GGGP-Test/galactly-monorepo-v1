@@ -1,28 +1,33 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "module": "commonjs",
     "target": "ES2020",
-    "moduleResolution": "node",
-    "esModuleInterop": true,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "rootDir": "src",
+    "outDir": "dist",
     "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "strict": true,
     "skipLibCheck": true,
-    "sourceMap": false
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["ES2020", "DOM"]
   },
   "include": [
     "src/index.ts",
     "src/auth.ts",
     "src/api/**/*.ts",
     "src/routes/**/*.ts",
-    "src/workers/**/*.ts",
     "src/ai/**/*.ts",
-    "src/**/*.d.ts"
+    "src/workers/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "**/*.test.ts",
-    "**/__tests__/**"
+    "src/ops/**",
+    "src/connectors/**",
+    "src/clients/**",
+    "src/ui/**",
+    "src/scripts/**",
+    "src/**/*.test.ts"
   ]
 }
