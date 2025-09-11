@@ -1,8 +1,7 @@
 import express, { Express, Request, Response } from "express";
 import cors from "cors";
-import path from "path";
 
-// IMPORTANT: routes/leads exports mountLeads as the DEFAULT export
+// routes/leads exports a ZERO-ARG factory that returns an Express Router
 import mountLeads from "./routes/leads";
 
 const PORT = Number(process.env.PORT || 8787);
@@ -10,23 +9,18 @@ const PORT = Number(process.env.PORT || 8787);
 export function createServer(): Express {
   const app = express();
 
-  // Basic hardening & JSON
   app.set("trust proxy", true);
   app.use(cors());
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true }));
 
-  // Health endpoints for Northflank
-  app.get("/healthz", (_req: Request, res: Response) =>
-    res.status(200).send("ok")
-  );
-  app.get("/readyz", (_req: Request, res: Response) =>
-    res.status(200).send("ok")
-  );
+  // Health checks for Northflank
+  app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
+  app.get("/readyz", (_req: Request, res: Response) => res.status(200).send("ok"));
 
-  // Mount API routes
-  // NOTE: mountLeads is a default export function (app: Express) => void
-  mountLeads(app);
+  // Mount the leads API:
+  // mountLeads() -> Express.Router with all /api/v1/leads/* endpoints inside
+  app.use(mountLeads());
 
   // Root info
   app.get("/", (_req: Request, res: Response) => {
