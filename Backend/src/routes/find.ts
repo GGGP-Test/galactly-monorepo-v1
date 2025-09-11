@@ -1,22 +1,36 @@
-// src/routes/find.ts
-import type { App } from "../index";
+import { Application, Request, Response } from "express";
+import * as webscout from "../ai/webscout";
 
-export function mountFind(app: App) {
-  // Canonical endpoint
-  app.post("/api/v1/find", async (req, res) => {
-    const { domain, region = "us", radiusMi = 50, keywords = "" } = req.body || {};
-    if (!domain) return res.status(400).json({ ok: false, error: "domain is required" });
-
-    // Pipeline stub: enqueue or call webscout + rankers here
-    const started = Date.now();
-    // Return immediately; UI will refresh lists via /api/v1/leads
-    return res.status(202).json({ ok: true, started, domain, region, radiusMi, keywords });
+/**
+ * Lightweight "find" routes.
+ * - POST /api/v1/find/buyers  (alias of /api/v1/leads/find-buyers)
+ * - GET  /api/v1/find/ping    (debug)
+ */
+export function mountFind(app: Application): void {
+  // Alias to buyers endpoint for legacy/front-end compatibility.
+  app.post("/api/v1/find/buyers", async (req: Request, res: Response) => {
+    try {
+      const hasFind = (webscout as any)?.findBuyers && typeof (webscout as any).findBuyers === "function";
+      if (!hasFind) {
+        return res.status(501).json({
+          ok: false,
+          error: "Buyers scout is not available on this build.",
+          hint: "Ensure ../ai/webscout.ts exports async function findBuyers(params).",
+        });
+      }
+      const output = await (webscout as any).findBuyers(req.body ?? {});
+      return res.status(200).json({ ok: true, ...output });
+    } catch (err: any) {
+      return res.status(Number(err?.status || 500)).json({
+        ok: false,
+        error: err?.message || "Failed to find buyers.",
+      });
+    }
   });
 
-  // Backwards compat alias
-  app.post("/api/v1/find-now", (req, res) => {
-    (req as any).url = "/api/v1/find";
-    (app as any)._router.handle(req, res, () => {});
+  // Simple probe
+  app.get("/api/v1/find/ping", (_req: Request, res: Response) => {
+    res.status(200).json({ ok: true, route: "find", time: new Date().toISOString() });
   });
 }
 
