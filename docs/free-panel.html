@@ -1,281 +1,459 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>Leads Console</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>
-  :root { --bg:#0b0e12; --card:#121720; --muted:#9aa4b2; --chip:#1a2130; --green:#1f7a4c; --pill:#212a3a; --hot:#a33; --warm:#a36; }
-  *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
-  body{margin:0;background:var(--bg);color:#e6edf3}
-  .wrap{max-width:1180px;margin:24px auto;padding:0 16px}
-  .row{display:flex;gap:16px}
-  .card{background:var(--card);border:1px solid #1e2633;border-radius:10px;padding:14px}
-  .title{font-weight:700;margin-bottom:8px}
-  .input{background:#0e141c;border:1px solid #243044;border-radius:8px;color:#e6edf3;height:36px;padding:0 10px}
-  .btn{height:36px;padding:0 12px;border-radius:8px;border:1px solid #2a3750;background:#132033;color:#e6edf3;cursor:pointer}
-  .btn:active{transform:translateY(1px)}
-  .btn.primary{background:#244463}
-  .btn.good{background:#1e3f31}
-  .btn.warn{background:#3c2222}
-  .grid{width:100%;border-collapse:collapse}
-  .grid th,.grid td{padding:8px;border-bottom:1px solid #1e2633;font-size:13px}
-  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--pill);font-size:12px}
-  .pill.hot{background:#3a1a1a}
-  .pill.warm{background:#2f1e35}
-  .why-row{margin:6px 0;padding:8px;border-radius:6px;background:#0f141e}
-  .why-label{font-weight:600}
-  .why-score{opacity:.8;border-bottom:1px dotted #666;cursor:help}
-  .chip{display:inline-block;padding:3px 8px;border-radius:999px;background:#1a2333;margin-right:6px;font-size:12px}
-  .muted{color:var(--muted);font-size:12px}
-  .bar{margin-top:8px;padding:10px;border-radius:8px;background:#132033}
-  .ok{background:#0f2d22}
-  .err{background:#331a1a}
-  #left{flex:1}
-  #right{width:380px}
-</style>
+  <meta charset="utf-8" />
+  <title>Leads Console</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f1720;
+      --panel: #121b26;
+      --muted: #6b869b;
+      --text: #e6f0f8;
+      --chip: #1a2532;
+      --chip-border: #203043;
+      --ok: #1f9d55;
+      --warn: #d97706;
+      --hot: #e11d48;
+      --btn: #2563eb;
+      --btn2: #334155;
+      --input: #0e1621;
+      --input-border: #223347;
+      --shadow: rgba(0,0,0,.35);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    h1 { font-size: 18px; margin: 0 0 8px; }
+    .wrap { max-width: 1200px; margin: 28px auto; padding: 0 16px; }
+    .row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; align-items: center; }
+    .block {
+      background: var(--panel); border: 1px solid #162336; border-radius: 10px; padding: 14px;
+      box-shadow: 0 10px 24px var(--shadow);
+    }
+    .top { display: grid; grid-template-columns: 1fr 420px; gap: 14px; }
+    .cols { display: grid; grid-template-columns: 1fr 420px; gap: 14px; margin-top: 14px; }
+
+    input, select, button, textarea {
+      border-radius: 8px; border: 1px solid var(--input-border);
+      background: var(--input); color: var(--text); padding: 10px 12px; outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #3b82f6; }
+    button { background: var(--btn); border: 1px solid #2b57c8; cursor: pointer; }
+    button.secondary { background: var(--btn2); border-color: #2a3a4f; }
+    button.small { padding: 6px 9px; font-size: 12px; }
+    .muted { color: var(--muted); }
+    .row-inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid #1a2738; }
+    th { text-align: left; color: #9fb6c8; font-weight: 600; position: sticky; top: 0; background: var(--panel); z-index: 1; }
+    tr:hover { background: #0f1b2a; }
+    .list { height: 520px; overflow: auto; border-radius: 10px; border: 1px solid #162336; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--chip); border: 1px solid var(--chip-border);
+      padding: 6px 8px; border-radius: 999px; margin: 0 6px 6px 0;
+      white-space: nowrap;
+    }
+    .temp { font-weight: 700; padding: 4px 8px; border-radius: 999px; display: inline-block; }
+    .temp.hot { background: #3a0b15; color: #ff95b0; border: 1px solid #702435; }
+    .temp.warm { background: #30210a; color: #ffd08a; border: 1px solid #5a3a10; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; background: #0c1420; padding: 2px 6px; border: 1px solid #1e2a3d; border-radius: 6px; }
+    .error { background: #3a0b15; border: 1px solid #702435; color: #ffb3c3; padding: 10px 12px; border-radius: 8px; }
+    .success { background: #082016; border: 1px solid #104434; color: #9ff1c7; padding: 10px 12px; border-radius: 8px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+    .divider { height: 1px; background: #18263a; margin: 10px 0; }
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="title" style="font-size:20px;margin-bottom:10px">Leads Console</div>
+  <div class="wrap">
+    <h1>Leads Console</h1>
 
-  <div class="card" style="margin-bottom:12px">
-    <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
-      <div style="min-width:340px;display:flex;gap:8px;flex:1">
-        <input id="base" class="input" placeholder="https://p01--your-service.code.run" />
-        <button id="apply" class="btn primary">Apply</button>
-        <span class="muted">Tip: host this file from the same domain as the API to avoid CORS.</span>
-      </div>
-      <div style="min-width:340px;display:flex;gap:8px">
-        <input id="apikey" class="input" placeholder="API key (for write)" />
-        <button id="savekey" class="btn">Save</button>
-        <button id="clearkey" class="btn">Clear</button>
-        <button id="usca" class="btn">US/CA only</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="row">
-    <div id="left" class="card">
-      <div class="row" style="gap:8px;align-items:center;margin-bottom:8px">
-        <button id="hotBtn" class="btn">Refresh Hot</button>
-        <button id="warmBtn" class="btn">Refresh Warm</button>
-        <div class="muted">press <b>R</b> to refresh hot</div>
-        <div class="muted" id="apiLabel" style="margin-left:auto">API: /api/v1/leads</div>
-      </div>
-      <table class="grid" id="grid">
-        <thead>
-          <tr>
-            <th style="width:60px">ID</th>
-            <th>Host</th>
-            <th>Platform</th>
-            <th>Title</th>
-            <th>Created</th>
-            <th>Temp</th>
-            <th>Why</th>
-          </tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </div>
-
-    <div id="right" class="card">
-      <div id="details" class="muted">Select a lead...</div>
-
-      <div style="margin-top:14px;border-top:1px solid #1e2633;padding-top:10px">
-        <div class="title" style="margin-bottom:8px">Find buyers (from supplier)</div>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <input id="supplier" class="input" placeholder="stretchandshrink.com" style="flex:1" />
+    <!-- Controls -->
+    <div class="top">
+      <div class="block">
+        <div class="row">
+          <label class="muted">Base URL</label>
+          <div></div><div></div><div></div>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <select id="region" class="input" style="width:120px">
-            <option value="us">us</option>
-            <option value="ca">ca</option>
-          </select>
-          <select id="radius" class="input" style="width:120px">
+        <div class="row" style="margin-top:6px;">
+          <input id="baseUrl" placeholder="https://your-backend.code.run" />
+          <button id="applyBtn" class="small">Apply</button>
+          <span class="muted">Tip: host this file from the same domain as the API to avoid CORS.</span>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <label class="muted">API key</label>
+          <div></div><div></div><div></div>
+        </div>
+        <div class="row" style="margin-top:6px;">
+          <input id="apiKey" placeholder="x-api-key value for write actions" />
+          <button id="saveKey" class="small secondary">Save</button>
+          <button id="clearKey" class="small secondary">Clear</button>
+          <button id="regionToggle" class="small secondary">US/CA only</button>
+        </div>
+      </div>
+
+      <!-- Details & actions -->
+      <div class="block">
+        <div id="detailEmpty" class="muted">Select a lead…</div>
+        <div id="detail" style="display:none;">
+          <div class="row-inline" style="justify-content:space-between">
+            <div><span class="muted">ID</span> <span id="d_id" class="mono"></span></div>
+            <div id="d_temp" class="temp warm">warm</div>
+          </div>
+          <div class="divider"></div>
+          <div class="row-inline"><span class="muted">Host</span><span id="d_host" class="mono"></span></div>
+          <div class="row-inline"><span class="muted">Platform</span><span id="d_platform" class="mono"></span></div>
+          <div class="row-inline"><span class="muted">Created</span><span id="d_created" class="mono"></span></div>
+          <div class="row-inline"><span class="muted">Title</span><span id="d_title" class="mono"></span></div>
+
+          <div style="margin:10px 0 6px;"><span class="muted">Why</span></div>
+          <div id="d_why"></div>
+
+          <div class="divider"></div>
+
+          <div class="row-inline">
+            <label class="muted">Set stage</label>
+            <select id="stageSel">
+              <option value="new">new</option>
+              <option value="qualified">qualified</option>
+              <option value="contacted">contacted</option>
+              <option value="won">won</option>
+              <option value="lost">lost</option>
+            </select>
+            <button id="setStage" class="small">Save</button>
+          </div>
+
+          <div class="row-inline" style="margin-top:8px;">
+            <input id="noteInput" placeholder="e.g. First call done; decision next week" style="flex:1;" />
+            <button id="addNote" class="small">Add</button>
+          </div>
+
+          <div id="detailMsg" style="margin-top:8px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lists + Find buyers -->
+    <div class="cols">
+      <div class="block">
+        <div class="row-inline" style="justify-content:space-between;">
+          <div class="row-inline" style="gap:8px;">
+            <button id="btnHot" class="small">Refresh Hot</button>
+            <button id="btnWarm" class="small secondary">Refresh Warm</button>
+            <span class="muted">press <span class="kbd">R</span> to refresh hot</span>
+          </div>
+          <div class="muted mono">API: <span id="apiPath">/api/v1/leads</span></div>
+        </div>
+
+        <div class="list" style="margin-top:10px;">
+          <table id="tbl">
+            <thead>
+              <tr>
+                <th style="width:70px;">ID</th>
+                <th>Host</th>
+                <th style="width:120px;">Platform</th>
+                <th>Title</th>
+                <th style="width:160px;">Created</th>
+                <th style="width:70px;">Temp</th>
+                <th style="width:200px;">Why</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="muted">Find buyers (from supplier)</div>
+        <div class="row-inline" style="margin-top:6px;">
+          <input id="supplier" placeholder="supplier domain e.g. stretchandshrink.com" style="flex:1;" />
+        </div>
+        <div class="row-inline" style="margin-top:6px;">
+          <input id="region" placeholder="us | ca | us-ca | City, ST (US/CA only)" style="width: 210px;" />
+          <select id="radius" style="width:110px;">
+            <option value="10">10 mi</option>
             <option value="25">25 mi</option>
             <option value="50" selected>50 mi</option>
             <option value="100">100 mi</option>
-            <option value="250">250 mi</option>
+            <option value="200">200 mi</option>
           </select>
-          <button id="find" class="btn good">Find buyers</button>
+          <button id="findBtn">Find buyers</button>
         </div>
-        <div id="findMsg" class="bar muted">No keywords needed. We’ll infer persona and start near your city/HQ (still US/CA only).</div>
+        <div class="muted" style="margin-top:6px;">
+          No keywords needed. We’ll infer persona and start near your city/HQ (still US/CA only).
+        </div>
+        <div id="findMsg" style="margin-top:10px;"></div>
 
-        <div style="margin-top:12px">
-          <div class="title" style="margin-bottom:6px">Download CSV</div>
-          <button id="csvHot" class="btn">Download CSV (hot)</button>
-          <button id="csvWarm" class="btn">Download CSV (warm)</button>
+        <div class="divider"></div>
+        <div class="muted">Download CSV</div>
+        <div class="row-inline" style="margin-top:6px;">
+          <button id="csvHot" class="small">Download CSV (hot)</button>
+          <button id="csvWarm" class="small secondary">Download CSV (warm)</button>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<script>
-(function(){
-  const $ = (q)=>document.querySelector(q);
-  const base = $("#base");
-  const apiKey = $("#apikey");
-  const apiLabel = $("#apiLabel");
-  const rowsT = $("#rows");
-  const details = $("#details");
-  const findMsg = $("#findMsg");
+  <script>
+    // ------------------------ state ------------------------
+    const els = {
+      baseUrl: document.getElementById('baseUrl'),
+      applyBtn: document.getElementById('applyBtn'),
+      apiKey: document.getElementById('apiKey'),
+      saveKey: document.getElementById('saveKey'),
+      clearKey: document.getElementById('clearKey'),
+      regionToggle: document.getElementById('regionToggle'),
+      btnHot: document.getElementById('btnHot'),
+      btnWarm: document.getElementById('btnWarm'),
+      apiPath: document.getElementById('apiPath'),
+      rows: document.getElementById('rows'),
+      tbl: document.getElementById('tbl'),
+      // details
+      detail: document.getElementById('detail'),
+      detailEmpty: document.getElementById('detailEmpty'),
+      d_id: document.getElementById('d_id'),
+      d_host: document.getElementById('d_host'),
+      d_platform: document.getElementById('d_platform'),
+      d_created: document.getElementById('d_created'),
+      d_title: document.getElementById('d_title'),
+      d_temp: document.getElementById('d_temp'),
+      d_why: document.getElementById('d_why'),
+      stageSel: document.getElementById('stageSel'),
+      setStage: document.getElementById('setStage'),
+      noteInput: document.getElementById('noteInput'),
+      addNote: document.getElementById('addNote'),
+      detailMsg: document.getElementById('detailMsg'),
+      // find buyers
+      supplier: document.getElementById('supplier'),
+      region: document.getElementById('region'),
+      radius: document.getElementById('radius'),
+      findBtn: document.getElementById('findBtn'),
+      findMsg: document.getElementById('findMsg'),
+      // csv
+      csvHot: document.getElementById('csvHot'),
+      csvWarm: document.getElementById('csvWarm'),
+    };
 
-  function save(k,v){ try{ localStorage.setItem(k,v) }catch{} }
-  function load(k,d){ try{ return localStorage.getItem(k) || d }catch{ return d } }
+    const LS = {
+      baseUrl: 'leads.baseUrl',
+      apiKey: 'leads.apiKey',
+      region: 'leads.region',
+      supplier: 'leads.supplier',
+    };
 
-  // state
-  let BASE = load("lead_base", "");
-  let KEY  = load("lead_key", "");
-  let USCA_ONLY = true;
+    const API = {
+      base() { return (els.baseUrl.value || '').replace(/\/+$/,''); },
+      leads: () => API.base() + '/api/v1/leads',
+      hot: (limit=50) => `${API.leads()}/hot?limit=${limit}`,
+      warm: (limit=50) => `${API.leads()}/warm?limit=${limit}`,
+      csv: (temp='hot', limit=500) => `${API.leads()}/export.csv?temperature=${temp}&limit=${limit}`,
+      findBuyers: () => `${API.leads()}/find-buyers`,
+      stage: (id) => `${API.leads()}/${id}/stage`,
+      notes: (id) => `${API.leads()}/${id}/notes`,
+      health: () => API.base() + '/healthz',
+    };
 
-  function setBase(url){
-    BASE = url.replace(/\/+$/,"");
-    apiLabel.textContent = "API: /api/v1/leads";
-    save("lead_base", BASE);
-  }
-  function setKey(k){
-    KEY = k;
-    save("lead_key", KEY);
-  }
+    // ------------------------ utils ------------------------
+    function fmtWhen(iso) {
+      try { return new Date(iso).toLocaleString(); } catch { return iso; }
+    }
+    const whyText = {
+      meta: 'Domain quality',
+      platform: 'Platform fit',
+      signal: 'Intent keywords',
+      persona: 'Persona match',
+      geo: 'Near you',
+      pmath: 'Packaging math'
+    };
+    function whyChip(w) {
+      const label = w.label || whyText[w.kind] || 'Why';
+      const score = (w.score ?? '').toString();
+      const detail = w.detail ? ` — ${w.detail}` : '';
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.title = `${label}${detail} • score ${score}`;
+      chip.innerHTML = `<strong>${label}</strong> <span class="muted">${score}</span>`;
+      return chip;
+    }
+    function setTemp(el, t) {
+      el.className = 'temp ' + (t === 'hot' ? 'hot' : 'warm');
+      el.textContent = t || 'warm';
+    }
+    function ok(msg) { return `<div class="success">${msg}</div>`; }
+    function err(msg) { return `<div class="error">${msg}</div>`; }
 
-  base.value = BASE || "https://p01--animated-cellar--vz4ftkwrzdfs.code.run";
-  apiKey.value = KEY;
-
-  $("#apply").onclick = ()=> setBase(base.value.trim());
-  $("#savekey").onclick = ()=> setKey(apiKey.value.trim());
-  $("#clearkey").onclick = ()=> { apiKey.value=""; setKey("") };
-
-  $("#usca").onclick = ()=>{
-    USCA_ONLY = !USCA_ONLY;
-    $("#usca").textContent = USCA_ONLY ? "US/CA only" : "All regions";
-  };
-
-  document.addEventListener("keydown", (e)=>{
-    if(e.key.toLowerCase()==="r") loadHot();
-  });
-
-  $("#hotBtn").onclick = loadHot;
-  $("#warmBtn").onclick = loadWarm;
-
-  $("#csvHot").onclick = ()=> window.open(`${BASE}/api/v1/leads/hot.csv`, "_blank");
-  $("#csvWarm").onclick = ()=> window.open(`${BASE}/api/v1/leads/warm.csv`, "_blank");
-
-  $("#find").onclick = async ()=>{
-    const supplier = $("#supplier").value.trim();
-    const region = $("#region").value;
-    const radius = $("#radius").value;
-    findMsg.className = "bar";
-    findMsg.textContent = "Finding…";
-    try{
-      const r = await fetch(`${BASE}/api/v1/leads/find`, {
-        method:"POST",
-        headers: {
-          "Content-Type":"application/json",
-          ...(KEY ? {"x-api-key": KEY} : {})
-        },
-        body: JSON.stringify({ supplier, region, radiusMi: Number(radius), uscaOnly: USCA_ONLY })
-      });
-      if(!r.ok){
-        const t = await r.text();
-        findMsg.className = "bar err";
-        findMsg.textContent = `HTTP ${r.status} — ${t.slice(0,120)}`;
-        return;
+    async function apiFetch(url, opts={}) {
+      const res = await fetch(url, opts);
+      const ct = res.headers.get('content-type') || '';
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`HTTP ${res.status} — ${text.slice(0,400)}`);
       }
-      const j = await r.json();
-      findMsg.className = "bar ok";
-      findMsg.textContent = `Loaded ${j.hot || 0} hot & ${j.warm || 0} warm lead(s).`;
-      // refresh warm (most results will be warm)
-      loadWarm();
-    }catch(err){
-      findMsg.className = "bar err";
-      findMsg.textContent = "Failed to fetch";
+      if (ct.includes('application/json')) return res.json();
+      return res.text();
     }
-  };
-
-  function fmtDate(iso){
-    try{ const d = new Date(iso); return d.toLocaleString() }catch{ return iso }
-  }
-
-  function explainWhy(why){
-    if(!why || !why.length) return "<div class='muted'>No evidence yet.</div>";
-    return why.map(w=>`
-      <div class="why-row">
-        <div class="why-label">${w.label}</div>
-        <div class="why-text">${w.text}${(w.score!=null)?` — <span class="why-score" title="0 to 1">${Number(w.score).toFixed(2)}</span>`:""}</div>
-      </div>
-    `).join("");
-  }
-
-  function renderPersona(p){
-    if(!p) return "";
-    const chips = (p.roles||[]).map(r=>`<span class="chip">${r}</span>`).join(" ");
-    return `
-      <div style="margin-top:6px">
-        <div style="font-weight:700">${p.title}</div>
-        <div class="muted" style="margin:6px 0">${p.summary}</div>
-        <div>${chips}</div>
-      </div>`;
-  }
-
-  function onSelect(lead){
-    details.innerHTML = `
-      <div class="muted">ID ${lead.id}</div>
-      <div><b>Host</b> ${lead.host}</div>
-      <div><b>Platform</b> ${lead.platform||"unknown"}</div>
-      <div><b>Created</b> ${fmtDate(lead.created_at)}</div>
-      <div style="margin:6px 0"><span class="pill ${lead.temperature}">${lead.temperature}</span></div>
-      <h4 style="margin:10px 0 4px 0">Why we think this is a fit</h4>
-      ${explainWhy(lead.why)}
-      <h4 style="margin:10px 0 4px 0">Who to contact</h4>
-      ${renderPersona(lead.persona)}
-    `;
-  }
-
-  function render(list){
-    rowsT.innerHTML = "";
-    for(const lead of list){
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${lead.id}</td>
-        <td><a href="https://${lead.host}" target="_blank" rel="noopener">${lead.host}</a></td>
-        <td>${lead.platform || "unknown"}</td>
-        <td>${lead.title}</td>
-        <td>${fmtDate(lead.created_at)}</td>
-        <td><span class="pill ${lead.temperature}">${lead.temperature}</span></td>
-        <td>${(lead.why && lead.why.length)? lead.why.map(w=>w.label).slice(0,3).join(", "): "<span class='muted'>—</span>"}</td>
-      `;
-      tr.onclick = ()=> onSelect(lead);
-      rowsT.appendChild(tr);
+    function authHeaders() {
+      const k = (els.apiKey.value || '').trim();
+      const h = { 'Content-Type':'application/json' };
+      if (k) h['x-api-key'] = k;
+      return h;
     }
-  }
 
-  async function loadHot(){
-    try{
-      const r = await fetch(`${BASE}/api/v1/leads/hot?limit=200`);
-      const j = await r.json();
-      render(j.items||[]);
-      if((j.items||[])[0]) onSelect(j.items[0]);
-    }catch{
-      rowsT.innerHTML = `<tr><td colspan="7" class="muted">Error: Failed to fetch</td></tr>`;
+    // ------------------------ rendering ------------------------
+    let currentList = [];
+    function renderRows(items=[]) {
+      els.rows.innerHTML = '';
+      items.forEach(it => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono">${it.id ?? ''}</td>
+          <td><a class="mono" href="https://${it.host}" target="_blank" rel="noreferrer noopener">${it.host}</a></td>
+          <td class="mono">${it.platform ?? ''}</td>
+          <td class="mono">${it.title ?? ''}</td>
+          <td class="mono">${fmtWhen(it.created_at || it.created || '')}</td>
+          <td><span class="temp ${it.temperature==='hot'?'hot':'warm'}">${it.temperature || 'warm'}</span></td>
+          <td class="mono">${(it.why || []).map(w => (w.label || w.kind)).join(', ')}</td>
+        `;
+        tr.addEventListener('click', () => showDetail(it));
+        els.rows.appendChild(tr);
+      });
     }
-  }
-  async function loadWarm(){
-    try{
-      const r = await fetch(`${BASE}/api/v1/leads/warm?limit=200`);
-      const j = await r.json();
-      render(j.items||[]);
-      if((j.items||[])[0]) onSelect(j.items[0]);
-    }catch{
-      rowsT.innerHTML = `<tr><td colspan="7" class="muted">Error: Failed to fetch</td></tr>`;
-    }
-  }
 
-  // initial
-  setBase(base.value.trim());
-  loadWarm();
-})();
-</script>
+    function showDetail(it) {
+      els.detailEmpty.style.display = 'none';
+      els.detail.style.display = 'block';
+      els.d_id.textContent = it.id ?? '';
+      els.d_host.textContent = it.host ?? '';
+      els.d_platform.textContent = it.platform ?? 'unknown';
+      els.d_created.textContent = fmtWhen(it.created_at || it.created || '');
+      els.d_title.textContent = it.title || '';
+      setTemp(els.d_temp, it.temperature || 'warm');
+      els.d_why.innerHTML = '';
+      (it.why || []).forEach(w => els.d_why.appendChild(whyChip(w)));
+      els.detailMsg.innerHTML = '';
+
+      // bind stage/note to this id
+      els.setStage.onclick = async () => {
+        try {
+          const body = JSON.stringify({ stage: els.stageSel.value });
+          const data = await apiFetch(API.stage(it.id), { method:'PATCH', headers:authHeaders(), body });
+          els.detailMsg.innerHTML = ok(`Stage saved for #${data.leadId} → ${data.stage}`);
+        } catch (e) {
+          els.detailMsg.innerHTML = err(e.message);
+        }
+      };
+      els.addNote.onclick = async () => {
+        try {
+          const note = (els.noteInput.value || '').trim();
+          if (!note) { els.detailMsg.innerHTML = err('Note is empty.'); return; }
+          const data = await apiFetch(API.notes(it.id), { method:'POST', headers:authHeaders(), body: JSON.stringify({ note }) });
+          els.noteInput.value = '';
+          els.detailMsg.innerHTML = ok(`Note added to #${data.leadId}.`);
+        } catch (e) {
+          els.detailMsg.innerHTML = err(e.message);
+        }
+      };
+    }
+
+    // ------------------------ actions ------------------------
+    async function loadHot(limit=50) {
+      try {
+        const data = await apiFetch(API.hot(limit));
+        const items = data.items || [];
+        currentList = items;
+        renderRows(items);
+      } catch (e) {
+        els.rows.innerHTML = `<tr><td colspan="7">${err(e.message)}</td></tr>`;
+      }
+    }
+    async function loadWarm(limit=50) {
+      try {
+        const data = await apiFetch(API.warm(limit));
+        const items = data.items || [];
+        currentList = items;
+        renderRows(items);
+      } catch (e) {
+        els.rows.innerHTML = `<tr><td colspan="7">${err(e.message)}</td></tr>`;
+      }
+    }
+    async function findBuyers() {
+      const supplier = (els.supplier.value || '').trim();
+      const region = (els.region.value || '').trim() || 'us';
+      const radiusMi = parseInt(els.radius.value, 10) || 50;
+      if (!supplier) { els.findMsg.innerHTML = err('Supplier domain is required.'); return; }
+      try {
+        const body = { supplier, region, radiusMi, limit: 50, keywords: [] };
+        const data = await apiFetch(API.findBuyers(), {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(body),
+        });
+        const list = (data.items || data.candidates || []);
+        currentList = list;
+        renderRows(list);
+        els.findMsg.innerHTML = ok(`Loaded ${list.length} ${data.temperature || ''} lead(s).`);
+      } catch (e) {
+        els.findMsg.innerHTML = err(e.message);
+      }
+    }
+
+    function downloadCsv(temp) {
+      const url = API.csv(temp, 1000);
+      window.open(url, '_blank');
+    }
+
+    // ------------------------ init ------------------------
+    function hydrate() {
+      els.baseUrl.value = localStorage.getItem(LS.baseUrl) || '';
+      els.apiKey.value = localStorage.getItem(LS.apiKey) || '';
+      els.region.value = localStorage.getItem(LS.region) || 'us';
+      els.supplier.value = localStorage.getItem(LS.supplier) || '';
+      els.apiPath.textContent = '/api/v1/leads';
+    }
+
+    function wire() {
+      els.applyBtn.onclick = () => {
+        localStorage.setItem(LS.baseUrl, (els.baseUrl.value || '').trim());
+        els.findMsg.innerHTML = ok('Base URL saved.');
+      };
+      els.saveKey.onclick = () => {
+        localStorage.setItem(LS.apiKey, (els.apiKey.value || '').trim());
+        els.findMsg.innerHTML = ok('API key saved.');
+      };
+      els.clearKey.onclick = () => {
+        localStorage.removeItem(LS.apiKey);
+        els.apiKey.value = '';
+        els.findMsg.innerHTML = ok('API key cleared.');
+      };
+      els.regionToggle.onclick = () => {
+        const v = els.region.value.trim();
+        els.region.value = (v.toLowerCase() === 'us-ca' ? 'us' : 'us-ca');
+        localStorage.setItem(LS.region, els.region.value);
+      };
+
+      els.btnHot.onclick = () => loadHot();
+      els.btnWarm.onclick = () => loadWarm();
+      document.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'r') { loadHot(); }
+      });
+
+      els.findBtn.onclick = () => {
+        localStorage.setItem(LS.supplier, (els.supplier.value || '').trim());
+        localStorage.setItem(LS.region, (els.region.value || '').trim());
+        findBuyers();
+      };
+      els.csvHot.onclick = () => downloadCsv('hot');
+      els.csvWarm.onclick = () => downloadCsv('warm');
+    }
+
+    hydrate();
+    wire();
+  </script>
 </body>
 </html>
