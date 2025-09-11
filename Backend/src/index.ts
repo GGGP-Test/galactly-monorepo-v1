@@ -1,29 +1,39 @@
-import express from "express";
-import cors from "cors";
+/**
+ * PackLead API entrypoint
+ * - Health:        GET /healthz
+ * - Leads routes:  mounted under /api/v1
+ */
+
+import express, { Express, Request, Response, NextFunction } from "express";
 import { mountLeads } from "./routes/leads";
 
-const app = express();
+const app: Express = express();
 
-// JSON + forms
-app.use(cors()); // keep if panel is on a different domain; otherwise you can remove
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true }));
+// Minimal CORS (avoid bringing extra deps into the build)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
 
-// Health for Northflank
+app.use(express.json());
+
+app.get("/", (_req, res) => {
+  res.json({ ok: true, service: "packlead", base: "/api/v1" });
+});
+
 app.get("/healthz", (_req, res) => {
-  res.status(200).json({ ok: true, service: "packlead-runtime" });
+  res.status(200).json({ ok: true });
 });
 
-// Mount lead routes (base path is handled inside mountLeads)
-mountLeads(app);
+// Mount feature routes
+mountLeads(app, "/api/v1");
 
-// 404 guard
-app.use((_req, res) => {
-  res.status(404).json({ ok: false, error: "Route not found" });
-});
-
+// Start server (Northflank defaults to 8787)
 const PORT = Number(process.env.PORT || 8787);
 app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`packlead runtime listening on :${PORT}`);
+  // keep this console.log; Northflank shows it in logs and it's useful
+  console.log(`PackLead API listening on :${PORT}`);
 });
