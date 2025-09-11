@@ -1,228 +1,416 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Leads Console</title>
-<style>
-  :root { --bg:#0e1420; --panel:#121a2a; --muted:#8aa0c3; --text:#e7eefc; --chip:#1e2a41; --ok:#1f8842; --warn:#8a6a00; --hot:#b84848; --btn:#2a66ff; }
-  html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-  .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
-  .row{display:flex;gap:16px;align-items:flex-start}
-  .card{background:var(--panel);border:1px solid #2a3854;border-radius:10px;padding:14px}
-  .w-2{flex:2} .w-1{flex:1} .w-3{flex:3}
-  input,select,button,textarea{background:#0a1220;border:1px solid #2a3854;border-radius:8px;color:var(--text);padding:8px 10px}
-  button{cursor:pointer} button.primary{background:var(--btn);border-color:#3a73ff}
-  .table{width:100%;border-collapse:collapse} .table th,.table td{padding:8px;border-bottom:1px solid #24344f}
-  .muted{color:var(--muted)} .chips{display:flex;flex-wrap:wrap;gap:8px} .chip{background:var(--chip);border-radius:100px;padding:4px 10px}
-  .temp.hot{background:var(--hot)} .temp.warm{background:#6a5e2a}
-  .pill{display:inline-block;border-radius:999px;padding:2px 8px;background:#1d2b45}
-  .mb8{margin-bottom:8px} .mb12{margin-bottom:12px} .mb16{margin-bottom:16px}
-  .stack{display:flex;flex-direction:column;gap:8px}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-</style>
+  <meta charset="utf-8" />
+  <title>Galactly – Find Buyers (Free Panel)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f1220;
+      --panel: #171a2a;
+      --panel-2: #1e2236;
+      --ink: #e9ecf5;
+      --ink-dim: #aeb6d4;
+      --ok: #31d0aa;
+      --warn: #ffb020;
+      --hot: #ff5a5f;
+      --chip: #2a3150;
+      --chip-2: #333b60;
+      --accent: #6ea8fe;
+    }
+    html,body { margin:0; background:var(--bg); color:var(--ink); font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    a { color: var(--accent); text-decoration: none; }
+    .wrap { max-width: 1120px; margin: 24px auto 64px; padding: 0 16px; }
+    header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 16px;}
+    h1 { font-size: 20px; margin:0; }
+    .sub { color: var(--ink-dim); font-size: 12px; }
+    .row { display:flex; gap:16px; flex-wrap: wrap; }
+    .col { background: var(--panel); border: 1px solid #232846; border-radius: 10px; padding: 16px; }
+    .col-33 { flex: 1 1 320px; }
+    .col-66 { flex: 2 1 520px; }
+    .col-100 { flex: 1 1 100%; }
+
+    label { display:block; font-weight:600; margin: 12px 0 6px; }
+    input[type="text"], input[type="search"], input[type="number"], textarea, select {
+      width:100%; box-sizing:border-box; padding:10px 12px; border-radius:8px; border:1px solid #2a3150;
+      background:#0b0e1a; color:var(--ink); outline:none;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    .row2 { display:flex; gap:8px; }
+    .btn {
+      display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius: 8px; border:1px solid #2a3150;
+      background: #222848; color:#fff; cursor:pointer; user-select:none;
+    }
+    .btn.primary { background: #3451b2; border-color:#475cc7; }
+    .btn:disabled { opacity:.55; cursor:not-allowed; }
+    .hint { color: var(--ink-dim); font-size: 12px; margin-top:6px; }
+
+    .stack { display:flex; flex-direction:column; gap:10px; }
+    .lead-card {
+      background: var(--panel-2); border: 1px solid #2a3150; border-radius:10px; padding:12px;
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .lead-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .lead-title { font-weight:700; font-size: 14px; }
+    .muted { color: var(--ink-dim); }
+    .chips { display:flex; flex-wrap: wrap; gap:6px; }
+    .chip {
+      background: var(--chip); border:1px solid #3a4574; color:#eaf0ff; padding:4px 8px; border-radius:1000px; font-size:12px;
+    }
+    .chip.badge { background:#243053; }
+    .chip.src-seed { border-color:#5b7cff; }
+    .chip.src-web { border-color:#31d0aa; }
+    .chip.temp-hot { border-color: var(--hot); }
+    .chip.temp-warm { border-color: var(--warn); }
+    .why { background:#12162a; border:1px dashed #2a3150; border-radius:8px; padding:8px; }
+    .why li { margin: 4px 0; }
+    .ok { color: var(--ok); }
+    .warn { color: var(--warn); }
+    .err { color: #ff5a5f; }
+    .section-title { font-weight:800; margin: 0 0 6px; }
+
+    .tabs { display:flex; gap:8px; margin-bottom:8px; }
+    .tabs .tab { padding:8px 12px; border-radius: 999px; border:1px solid #2a3150; background:#0d1124; cursor:pointer; }
+    .tabs .tab.active { background:#2a3150; }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 900px){ .grid2{ grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <h2>Leads Console</h2>
-
-  <div class="row mb16">
-    <div class="card w-3">
-      <div class="grid2">
-        <label>Base URL
-          <input id="base" value="" placeholder="https://…code.run">
-        </label>
-        <label>API key
-          <input id="apikey" value="">
-        </label>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Galactly • Find Buyers</h1>
+        <div class="sub">Real-time US/Canada buyers with plain-English evidence.</div>
       </div>
-      <div class="mb12">
-        <button class="primary" onclick="saveCfg()">Save</button>
-        <span class="muted">Tip: host this file from the same domain as the API to avoid CORS.</span>
+      <div id="status" class="sub">Ready.</div>
+    </header>
+
+    <!-- Supplier + Persona -->
+    <div class="row">
+      <div class="col col-33">
+        <div class="section-title">1) Your company</div>
+        <label>Website (your domain)</label>
+        <input id="supplier" type="search" placeholder="e.g. stretchandshrink.com" />
+        <div class="hint">We’ll learn your product & who it helps from your site.</div>
+
+        <div class="row2" style="margin-top:12px;">
+          <button class="btn" id="loadPersona">Load persona</button>
+          <button class="btn" id="savePersona">Save persona</button>
+        </div>
+
+        <label style="margin-top:12px;">Offer (what you sell)</label>
+        <input id="p_offer" type="text" placeholder="Stretch film & pallet protection" />
+
+        <label>Solves (plain English)</label>
+        <input id="p_solves" type="text" placeholder="Keeps pallets secure for storage/shipping" />
+
+        <label>Buyer titles (comma separated)</label>
+        <input id="p_titles" type="text" placeholder="Warehouse Manager, Purchasing Manager, COO" />
+        <div class="hint">We use this to aim your search (you can tweak anytime).</div>
+      </div>
+
+      <div class="col col-66">
+        <div class="section-title">2) Where to look</div>
+        <div class="grid2">
+          <div>
+            <label>Region / City (optional)</label>
+            <input id="region" type="text" placeholder="Default: US/CA • e.g. “Austin, TX”" />
+            <div class="hint">If empty, we prefer US/Canada and your HQ proximity.</div>
+          </div>
+          <div>
+            <label>Radius (miles)</label>
+            <input id="radius" type="number" min="10" max="500" value="50" />
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <label><input id="uscaOnly" type="checkbox" checked /> Prefer US & Canada only</label>
+        </div>
+
+        <div class="row2" style="margin-top:12px;">
+          <button class="btn primary" id="findBtn">Find buyers</button>
+          <button class="btn" id="refreshBtn">Refresh lists</button>
+        </div>
+
+        <div class="hint" id="lastOp"></div>
       </div>
     </div>
 
-    <div class="card w-2">
-      <div class="stack">
-        <div>Select a supplier to find buyers</div>
-        <input id="supplier" placeholder="stretchandshrink.com"/>
-        <div class="grid2">
-          <select id="region">
-            <option value="us/ca">US/CA</option>
-            <option value="us">US only</option>
-            <option value="ca">Canada only</option>
-          </select>
-          <select id="radius">
-            <option>25</option><option selected>50</option><option>100</option><option>250</option>
-          </select>
-        </div>
-        <button class="primary" onclick="findBuyers()">Find buyers</button>
-        <div id="findMsg" class="muted"></div>
+    <!-- Results -->
+    <div class="row" style="margin-top:16px;">
+      <div class="col col-33">
+        <div class="section-title">Persona summary (readable)</div>
+        <div id="personaReadable" class="muted">No supplier loaded yet.</div>
       </div>
-    </div>
 
-    <div class="card w-3" id="personaCard">
-      <div class="stack">
-        <div><b>Supplier persona</b> (human-editable)</div>
-        <div class="grid2">
-          <label>Product/offer <input id="p_product" placeholder="e.g., Stretch film & pallet protection"></label>
-          <label>Solves <input id="p_solves" placeholder="e.g., Keeps pallets secure for transport"></label>
+      <div class="col col-66">
+        <div class="tabs">
+          <div class="tab active" data-tab="hot">Hot</div>
+          <div class="tab" data-tab="warm">Warm</div>
         </div>
-        <label>Buyer titles (comma-separated)
-          <input id="p_buyers" placeholder="Warehouse Manager, Purchasing Manager, COO">
-        </label>
-        <div>
-          <button onclick="loadPersona()" class="">Reload</button>
-          <button onclick="savePersona()" class="primary">Save persona</button>
-          <span id="personaMsg" class="muted"></span>
-        </div>
+        <div id="listHot" class="stack"></div>
+        <div id="listWarm" class="stack" style="display:none;"></div>
+      </div>
+
+      <div class="col col-100">
+        <div class="section-title">What the “Why” means</div>
+        <ul class="muted" style="margin:6px 0 0 18px;">
+          <li><b>Domain quality</b> – the website looks legit (good host/TLD).</li>
+          <li><b>Intent</b> – we spotted buy signals (e.g. “RFQ”, “request a quote”, tenders, procurement/news).</li>
+          <li><b>Platform</b> – tech fit (e-commerce/WMS/etc. helpful for packaging flows).</li>
+          <li><b>Geo</b> – evidence the company is in US/Canada or near your chosen region.</li>
+          <li><b>Context/Evidence</b> – simple sentences explaining the match (“They posted X in the last 3 days”).</li>
+        </ul>
       </div>
     </div>
   </div>
-
-  <div class="row">
-    <div class="card w-3">
-      <div class="mb8">
-        <button onclick="loadHot()">Refresh Hot</button>
-        <button onclick="loadWarm()">Refresh Warm</button>
-        <span class="muted">API: <code>/api/v1/leads</code></span>
-      </div>
-      <table class="table" id="list">
-        <thead><tr><th>ID</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <div class="card w-2" id="details">
-      <div class="muted">Select a lead…</div>
-    </div>
-  </div>
-</div>
 
 <script>
-/* ------------ config ------------ */
-const $ = (id)=>document.getElementById(id);
-function cfg(){ return { base: $('base').value.trim().replace(/\/$/,''), key: $('apikey').value.trim() }; }
-function saveCfg(){ localStorage.setItem('pl.base',$('base').value); localStorage.setItem('pl.key',$('apikey').value); loadPersona(); }
-(function init(){
-  $('base').value = localStorage.getItem('pl.base') || '';
-  $('apikey').value = localStorage.getItem('pl.key') || '';
-  $('supplier').value = localStorage.getItem('pl.supplier') || 'stretchandshrink.com';
-  loadWarm();
-  loadPersona();
-})();
+const $ = (id) => document.getElementById(id);
+const by = (sel, node=document) => Array.from(node.querySelectorAll(sel));
+const setStatus = (s) => { $('status').textContent = s; };
 
-/* ------------ fetch helpers ------------ */
-async function jget(path){
-  const {base} = cfg();
-  const r = await fetch(base + path);
-  if(!r.ok) throw new Error(await r.text());
-  return r.json();
-}
-async function jpost(path, body, needKey=true){
-  const {base,key} = cfg();
-  const r = await fetch(base + path, {
-    method: 'POST',
-    headers: { 'Content-Type':'application/json', ...(needKey?{'x-api-key':key}:{}) },
-    body: JSON.stringify(body || {})
-  });
-  if(!r.ok) throw new Error(await r.text());
-  return r.json();
-}
-async function jpatch(path, body){
-  const {base,key} = cfg();
-  const r = await fetch(base + path, {
-    method: 'PATCH',
-    headers: { 'Content-Type':'application/json', 'x-api-key':key },
-    body: JSON.stringify(body || {})
-  });
-  if(!r.ok) throw new Error(await r.text());
-  return r.json();
-}
-
-/* ------------ lists ------------ */
-function renderList(items){
-  const tb = $('list').querySelector('tbody');
-  tb.innerHTML = '';
-  for(const l of items){
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${l.id}</td><td>${l.host}</td><td>${l.platform}</td><td>${l.title}</td><td>${new Date(l.created_at).toLocaleString()}</td><td><span class="pill temp ${l.temperature}">${l.temperature}</span></td>`;
-    tr.onclick = ()=>showLead(l);
-    tb.appendChild(tr);
+const API = {
+  async getPersona(supplier){
+    const r = await fetch(`/api/v1/persona/${encodeURIComponent(supplier)}`);
+    if(!r.ok) throw new Error(`persona GET ${r.status}`);
+    return r.json();
+  },
+  async savePersona(payload){
+    const r = await fetch(`/api/v1/persona`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(!r.ok) throw new Error(`persona POST ${r.status}`);
+    return r.json();
+  },
+  async findBuyers(payload){
+    const r = await fetch(`/api/v1/leads/find-buyers`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(!r.ok){
+      const t = await r.text().catch(()=> '');
+      throw new Error(`find-buyers ${r.status}: ${t}`);
+    }
+    return r.json();
+  },
+  async listHot(limit=10){
+    // Try new shape first
+    let r = await fetch(`/api/v1/leads?hot=1`);
+    if(r.ok){
+      const j = await r.json();
+      if(j && j.hot) return j.hot.slice(0, limit);
+    }
+    // Fallback to legacy /hot
+    r = await fetch(`/api/v1/leads/hot?limit=${limit}`);
+    if(r.ok){ const j = await r.json(); return j.items || []; }
+    return [];
+  },
+  async listWarm(limit=10){
+    let r = await fetch(`/api/v1/leads?warm=1`);
+    if(r.ok){
+      const j = await r.json();
+      if(j && j.warm) return j.warm.slice(0, limit);
+    }
+    r = await fetch(`/api/v1/leads/warm?limit=${limit}`);
+    if(r.ok){ const j = await r.json(); return j.items || []; }
+    return [];
   }
-}
-async function loadHot(){ const r = await jget('/api/v1/leads/hot'); renderList(r.items); }
-async function loadWarm(){ const r = await jget('/api/v1/leads/warm'); renderList(r.items); }
+};
 
-/* ------------ lead details ------------ */
-function showLead(l){
-  const box = $('details');
-  const chips = (l.why||[]).map(w=>`<span class="chip"><b>${w.label}</b>${w.score!=null?` ${w.score}`:""}${w.detail?` — ${w.detail}`:""}</span>`).join(' ');
-  box.innerHTML = `
-    <div class="mb8"><b>ID ${l.id}</b> — ${l.host}</div>
-    <div class="mb8">Title: ${l.title}</div>
-    <div class="mb8">Created: ${new Date(l.created_at).toLocaleString()}</div>
-    <div class="mb12 chips">${chips}</div>
-    <div class="stack">
-      <label>Add note
-        <input id="note_${l.id}" placeholder="e.g., First call done; decision next week">
-      </label>
-      <div>
-        <button onclick="addNote(${l.id})">Add</button>
-        <select id="stage_${l.id}">
-          <option value="new">new</option><option value="qualified">qualified</option><option value="won">won</option><option value="lost">lost</option>
-        </select>
-        <button onclick="saveStage(${l.id})" class="primary">Save stage</button>
-      </div>
-    </div>
-  `;
-}
-async function saveStage(id){ const st = $('stage_'+id).value; await jpatch('/api/v1/leads/'+id+'/stage',{stage:st}); }
-async function addNote(id){
-  const el = $('note_'+id); const text = el.value.trim(); if(!text) return;
-  await jpost('/api/v1/leads/'+id+'/notes',{text}); el.value='';
+// ---------- persona UI ----------
+
+function readSupplier(){
+  return ($('supplier').value || '').trim().toLowerCase();
 }
 
-/* ------------ buyers ------------ */
-async function findBuyers(){
-  const supplier = $('supplier').value.trim();
-  localStorage.setItem('pl.supplier', supplier);
-  const region = $('region').value;
-  const radiusMi = Number($('radius').value);
-  $('findMsg').textContent = 'Working…';
-  try {
-    const r = await jpost('/api/v1/leads/find-buyers', { supplier, region, radiusMi });
-    $('findMsg').textContent = `Created ${r.created} lead(s). Refresh lists to view.`;
-    await loadWarm();
-  } catch(e){ $('findMsg').textContent = String(e); }
+function fillPersonaForm(p){
+  $('p_offer').value  = p.offer || '';
+  $('p_solves').value = p.solves || '';
+  $('p_titles').value = (p.buyerTitles || []).join(', ');
+  renderPersonaReadable(p);
 }
 
-/* ------------ persona (editable) ------------ */
-async function loadPersona(){
-  const supplier = $('supplier').value.trim();
-  if(!supplier) return;
-  try {
-    const r = await jget(`/api/v1/leads/persona?supplier=${encodeURIComponent(supplier)}`);
-    $('p_product').value = r.persona.product || '';
-    $('p_solves').value  = r.persona.solves || '';
-    $('p_buyers').value  = (r.persona.idealBuyers||[]).join(', ');
-    $('personaMsg').textContent = `Loaded (${r.source}).`;
-  } catch(e){
-    $('personaMsg').textContent = 'Not found; a default will be created after you save.';
+function currentPersona(){
+  const offer = $('p_offer').value.trim();
+  const solves = $('p_solves').value.trim();
+  const buyerTitles = $('p_titles').value.split(',').map(s=>s.trim()).filter(Boolean);
+  return { offer, solves, buyerTitles };
+}
+
+function renderPersonaReadable(p){
+  const text =
+    `You sell “${p.offer}”. This helps customers because “${p.solves}”. ` +
+    `The people who usually say yes are: ${p.buyerTitles.join(', ')}.`;
+  $('personaReadable').textContent = text;
+}
+
+// ---------- leads UI ----------
+
+function chip(text, classes=''){
+  const div = document.createElement('span');
+  div.className = `chip ${classes}`;
+  div.textContent = text;
+  return div;
+}
+
+function plainWhy(why){
+  // Map chips into simple bullet lines
+  const lines = [];
+  for(const w of (why||[])){
+    if(w.kind === 'meta'){
+      lines.push(`Looks like a legitimate site: ${w.detail || ''}`);
+    }else if(w.kind === 'signal'){
+      lines.push(`Buying signal spotted: ${w.detail || ''}`);
+    }else if(w.kind === 'platform'){
+      lines.push(`Tech/platform fit: ${w.detail || ''}`);
+    }else if(w.kind === 'geo'){
+      lines.push(`US/Canada proximity evidence: ${w.detail || ''}`);
+    }else if(w.kind === 'context' || w.kind === 'evidence'){
+      lines.push(w.detail || 'Relevant context found');
+    }else{
+      lines.push(w.detail || w.label);
+    }
   }
+  return lines;
 }
-async function savePersona(){
-  const supplier = $('supplier').value.trim();
-  const updates = {
-    product: $('p_product').value.trim(),
-    solves:  $('p_solves').value.trim(),
-    idealBuyers: $('p_buyers').value.split(',').map(s=>s.trim()).filter(Boolean)
+
+function renderLeadCard(node, lead){
+  node.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'lead-card';
+
+  const head = document.createElement('div');
+  head.className = 'lead-head';
+
+  const title = document.createElement('div');
+  title.className = 'lead-title';
+  title.textContent = lead.title || lead.host || 'Lead';
+
+  const right = document.createElement('div');
+  right.className = 'chips';
+
+  const source = (lead.source || '').toLowerCase();
+  right.appendChild(chip(source === 'web' ? 'From Web' : 'From Seed', source==='web'?'src-web':'src-seed'));
+
+  const t = (lead.temperature || '').toLowerCase();
+  right.appendChild(chip(t === 'hot' ? 'HOT' : 'WARM', t==='hot'?'temp-hot':'temp-warm'));
+
+  card.appendChild(head);
+  head.appendChild(title);
+  head.appendChild(right);
+
+  const row2 = document.createElement('div');
+  row2.className = 'chips';
+  row2.appendChild(chip(lead.host || '', 'badge'));
+  if(lead.platform) row2.appendChild(chip(`platform: ${lead.platform}`, 'badge'));
+  card.appendChild(row2);
+
+  if(lead.why && lead.why.length){
+    const box = document.createElement('div');
+    box.className = 'why';
+    const ul = document.createElement('ul');
+    for(const line of plainWhy(lead.why)){
+      const li = document.createElement('li');
+      li.textContent = line;
+      ul.appendChild(li);
+    }
+    box.appendChild(ul);
+    card.appendChild(box);
+  }
+
+  node.appendChild(card);
+}
+
+async function refreshLists(){
+  setStatus('Loading lists…');
+  const [hot, warm] = await Promise.all([API.listHot(20), API.listWarm(20)]);
+  const hotList = $('listHot'); const warmList = $('listWarm');
+  hotList.innerHTML = ''; warmList.innerHTML = '';
+  for(const l of hot)  { const div = document.createElement('div'); renderLeadCard(div, l); hotList.appendChild(div); }
+  for(const l of warm) { const div = document.createElement('div'); renderLeadCard(div, l); warmList.appendChild(div); }
+  setStatus(`Lists updated • hot:${hot.length} warm:${warm.length}`);
+}
+
+// ---------- actions ----------
+
+$('loadPersona').onclick = async ()=>{
+  const supplier = readSupplier();
+  if(!supplier){ alert('Enter your website first'); return; }
+  setStatus('Loading persona…');
+  try{
+    const j = await API.getPersona(supplier);
+    fillPersonaForm(j.persona || {});
+    setStatus('Persona loaded.');
+  }catch(e){
+    setStatus('Could not load persona (using defaults).');
+    // Leave the form as-is (user can fill)
+  }
+};
+
+$('savePersona').onclick = async ()=>{
+  const supplier = readSupplier();
+  if(!supplier){ alert('Enter your website first'); return; }
+  const persona = currentPersona();
+  setStatus('Saving persona…');
+  try{
+    await API.savePersona({ supplierDomain: supplier, ...persona });
+    renderPersonaReadable(persona);
+    setStatus('Persona saved.');
+  }catch(e){
+    setStatus('Save failed.');
+    alert('Could not save persona. Check backend logs.');
+  }
+};
+
+$('findBtn').onclick = async ()=>{
+  const supplier = readSupplier();
+  if(!supplier){ alert('Enter your website first'); return; }
+  const persona = currentPersona();
+  const region = ($('region').value || '').trim();
+  const radiusMi = Number($('radius').value || 50);
+  const uscaOnly = $('uscaOnly').checked;
+
+  setStatus('Finding buyers…');
+  $('lastOp').textContent = 'Searching… this usually returns seeds immediately and adds web results as they come online.';
+
+  try{
+    // Save persona first (helps the search)
+    await API.savePersona({ supplierDomain: supplier, ...persona }).catch(()=>{});
+
+    const payload = {
+      supplierDomain: supplier,
+      region: region || 'US/CA',
+      radiusMi,
+      uscaOnly
+    };
+    const j = await API.findBuyers(payload);
+    $('lastOp').textContent = `Created ${j.added || 0} candidates (hot:${j.hot||0} warm:${j.warm||0}). Showing latest lists below.`;
+    await refreshLists();
+    setStatus('Done.');
+  }catch(e){
+    console.error(e);
+    setStatus('Search failed.');
+    alert('The server rejected the request. Double-check that Backend is green.');
+  }
+};
+
+$('refreshBtn').onclick = refreshLists;
+
+// tabs
+by('.tab').forEach(t => {
+  t.onclick = ()=>{
+    by('.tab').forEach(n => n.classList.remove('active'));
+    t.classList.add('active');
+    const name = t.getAttribute('data-tab');
+    $('listHot').style.display = (name==='hot') ? '' : 'none';
+    $('listWarm').style.display = (name==='warm') ? '' : 'none';
   };
-  try {
-    const r = await jpost('/api/v1/leads/persona', { supplier, ...updates });
-    $('personaMsg').textContent = 'Saved (user).';
-  } catch(e){ $('personaMsg').textContent = String(e); }
-}
+});
+
+// initial
+refreshLists().catch(()=>{});
 </script>
 </body>
 </html>
