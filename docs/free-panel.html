@@ -1,459 +1,228 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8" />
-  <title>Leads Console</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    :root {
-      --bg: #0f1720;
-      --panel: #121b26;
-      --muted: #6b869b;
-      --text: #e6f0f8;
-      --chip: #1a2532;
-      --chip-border: #203043;
-      --ok: #1f9d55;
-      --warn: #d97706;
-      --hot: #e11d48;
-      --btn: #2563eb;
-      --btn2: #334155;
-      --input: #0e1621;
-      --input-border: #223347;
-      --shadow: rgba(0,0,0,.35);
-    }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0; background: var(--bg); color: var(--text);
-      font: 14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    }
-    h1 { font-size: 18px; margin: 0 0 8px; }
-    .wrap { max-width: 1200px; margin: 28px auto; padding: 0 16px; }
-    .row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; align-items: center; }
-    .block {
-      background: var(--panel); border: 1px solid #162336; border-radius: 10px; padding: 14px;
-      box-shadow: 0 10px 24px var(--shadow);
-    }
-    .top { display: grid; grid-template-columns: 1fr 420px; gap: 14px; }
-    .cols { display: grid; grid-template-columns: 1fr 420px; gap: 14px; margin-top: 14px; }
-
-    input, select, button, textarea {
-      border-radius: 8px; border: 1px solid var(--input-border);
-      background: var(--input); color: var(--text); padding: 10px 12px; outline: none;
-    }
-    input:focus, select:focus, textarea:focus { border-color: #3b82f6; }
-    button { background: var(--btn); border: 1px solid #2b57c8; cursor: pointer; }
-    button.secondary { background: var(--btn2); border-color: #2a3a4f; }
-    button.small { padding: 6px 9px; font-size: 12px; }
-    .muted { color: var(--muted); }
-    .row-inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px 8px; border-bottom: 1px solid #1a2738; }
-    th { text-align: left; color: #9fb6c8; font-weight: 600; position: sticky; top: 0; background: var(--panel); z-index: 1; }
-    tr:hover { background: #0f1b2a; }
-    .list { height: 520px; overflow: auto; border-radius: 10px; border: 1px solid #162336; }
-
-    .chip {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: var(--chip); border: 1px solid var(--chip-border);
-      padding: 6px 8px; border-radius: 999px; margin: 0 6px 6px 0;
-      white-space: nowrap;
-    }
-    .temp { font-weight: 700; padding: 4px 8px; border-radius: 999px; display: inline-block; }
-    .temp.hot { background: #3a0b15; color: #ff95b0; border: 1px solid #702435; }
-    .temp.warm { background: #30210a; color: #ffd08a; border: 1px solid #5a3a10; }
-    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; background: #0c1420; padding: 2px 6px; border: 1px solid #1e2a3d; border-radius: 6px; }
-    .error { background: #3a0b15; border: 1px solid #702435; color: #ffb3c3; padding: 10px 12px; border-radius: 8px; }
-    .success { background: #082016; border: 1px solid #104434; color: #9ff1c7; padding: 10px 12px; border-radius: 8px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
-    .divider { height: 1px; background: #18263a; margin: 10px 0; }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Leads Console</title>
+<style>
+  :root { --bg:#0e1420; --panel:#121a2a; --muted:#8aa0c3; --text:#e7eefc; --chip:#1e2a41; --ok:#1f8842; --warn:#8a6a00; --hot:#b84848; --btn:#2a66ff; }
+  html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+  .row{display:flex;gap:16px;align-items:flex-start}
+  .card{background:var(--panel);border:1px solid #2a3854;border-radius:10px;padding:14px}
+  .w-2{flex:2} .w-1{flex:1} .w-3{flex:3}
+  input,select,button,textarea{background:#0a1220;border:1px solid #2a3854;border-radius:8px;color:var(--text);padding:8px 10px}
+  button{cursor:pointer} button.primary{background:var(--btn);border-color:#3a73ff}
+  .table{width:100%;border-collapse:collapse} .table th,.table td{padding:8px;border-bottom:1px solid #24344f}
+  .muted{color:var(--muted)} .chips{display:flex;flex-wrap:wrap;gap:8px} .chip{background:var(--chip);border-radius:100px;padding:4px 10px}
+  .temp.hot{background:var(--hot)} .temp.warm{background:#6a5e2a}
+  .pill{display:inline-block;border-radius:999px;padding:2px 8px;background:#1d2b45}
+  .mb8{margin-bottom:8px} .mb12{margin-bottom:12px} .mb16{margin-bottom:16px}
+  .stack{display:flex;flex-direction:column;gap:8px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Leads Console</h1>
+<div class="wrap">
+  <h2>Leads Console</h2>
 
-    <!-- Controls -->
-    <div class="top">
-      <div class="block">
-        <div class="row">
-          <label class="muted">Base URL</label>
-          <div></div><div></div><div></div>
-        </div>
-        <div class="row" style="margin-top:6px;">
-          <input id="baseUrl" placeholder="https://your-backend.code.run" />
-          <button id="applyBtn" class="small">Apply</button>
-          <span class="muted">Tip: host this file from the same domain as the API to avoid CORS.</span>
-        </div>
-        <div class="row" style="margin-top:10px;">
-          <label class="muted">API key</label>
-          <div></div><div></div><div></div>
-        </div>
-        <div class="row" style="margin-top:6px;">
-          <input id="apiKey" placeholder="x-api-key value for write actions" />
-          <button id="saveKey" class="small secondary">Save</button>
-          <button id="clearKey" class="small secondary">Clear</button>
-          <button id="regionToggle" class="small secondary">US/CA only</button>
-        </div>
+  <div class="row mb16">
+    <div class="card w-3">
+      <div class="grid2">
+        <label>Base URL
+          <input id="base" value="" placeholder="https://…code.run">
+        </label>
+        <label>API key
+          <input id="apikey" value="">
+        </label>
       </div>
-
-      <!-- Details & actions -->
-      <div class="block">
-        <div id="detailEmpty" class="muted">Select a lead…</div>
-        <div id="detail" style="display:none;">
-          <div class="row-inline" style="justify-content:space-between">
-            <div><span class="muted">ID</span> <span id="d_id" class="mono"></span></div>
-            <div id="d_temp" class="temp warm">warm</div>
-          </div>
-          <div class="divider"></div>
-          <div class="row-inline"><span class="muted">Host</span><span id="d_host" class="mono"></span></div>
-          <div class="row-inline"><span class="muted">Platform</span><span id="d_platform" class="mono"></span></div>
-          <div class="row-inline"><span class="muted">Created</span><span id="d_created" class="mono"></span></div>
-          <div class="row-inline"><span class="muted">Title</span><span id="d_title" class="mono"></span></div>
-
-          <div style="margin:10px 0 6px;"><span class="muted">Why</span></div>
-          <div id="d_why"></div>
-
-          <div class="divider"></div>
-
-          <div class="row-inline">
-            <label class="muted">Set stage</label>
-            <select id="stageSel">
-              <option value="new">new</option>
-              <option value="qualified">qualified</option>
-              <option value="contacted">contacted</option>
-              <option value="won">won</option>
-              <option value="lost">lost</option>
-            </select>
-            <button id="setStage" class="small">Save</button>
-          </div>
-
-          <div class="row-inline" style="margin-top:8px;">
-            <input id="noteInput" placeholder="e.g. First call done; decision next week" style="flex:1;" />
-            <button id="addNote" class="small">Add</button>
-          </div>
-
-          <div id="detailMsg" style="margin-top:8px;"></div>
-        </div>
+      <div class="mb12">
+        <button class="primary" onclick="saveCfg()">Save</button>
+        <span class="muted">Tip: host this file from the same domain as the API to avoid CORS.</span>
       </div>
     </div>
 
-    <!-- Lists + Find buyers -->
-    <div class="cols">
-      <div class="block">
-        <div class="row-inline" style="justify-content:space-between;">
-          <div class="row-inline" style="gap:8px;">
-            <button id="btnHot" class="small">Refresh Hot</button>
-            <button id="btnWarm" class="small secondary">Refresh Warm</button>
-            <span class="muted">press <span class="kbd">R</span> to refresh hot</span>
-          </div>
-          <div class="muted mono">API: <span id="apiPath">/api/v1/leads</span></div>
-        </div>
-
-        <div class="list" style="margin-top:10px;">
-          <table id="tbl">
-            <thead>
-              <tr>
-                <th style="width:70px;">ID</th>
-                <th>Host</th>
-                <th style="width:120px;">Platform</th>
-                <th>Title</th>
-                <th style="width:160px;">Created</th>
-                <th style="width:70px;">Temp</th>
-                <th style="width:200px;">Why</th>
-              </tr>
-            </thead>
-            <tbody id="rows"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="muted">Find buyers (from supplier)</div>
-        <div class="row-inline" style="margin-top:6px;">
-          <input id="supplier" placeholder="supplier domain e.g. stretchandshrink.com" style="flex:1;" />
-        </div>
-        <div class="row-inline" style="margin-top:6px;">
-          <input id="region" placeholder="us | ca | us-ca | City, ST (US/CA only)" style="width: 210px;" />
-          <select id="radius" style="width:110px;">
-            <option value="10">10 mi</option>
-            <option value="25">25 mi</option>
-            <option value="50" selected>50 mi</option>
-            <option value="100">100 mi</option>
-            <option value="200">200 mi</option>
+    <div class="card w-2">
+      <div class="stack">
+        <div>Select a supplier to find buyers</div>
+        <input id="supplier" placeholder="stretchandshrink.com"/>
+        <div class="grid2">
+          <select id="region">
+            <option value="us/ca">US/CA</option>
+            <option value="us">US only</option>
+            <option value="ca">Canada only</option>
           </select>
-          <button id="findBtn">Find buyers</button>
+          <select id="radius">
+            <option>25</option><option selected>50</option><option>100</option><option>250</option>
+          </select>
         </div>
-        <div class="muted" style="margin-top:6px;">
-          No keywords needed. We’ll infer persona and start near your city/HQ (still US/CA only).
-        </div>
-        <div id="findMsg" style="margin-top:10px;"></div>
+        <button class="primary" onclick="findBuyers()">Find buyers</button>
+        <div id="findMsg" class="muted"></div>
+      </div>
+    </div>
 
-        <div class="divider"></div>
-        <div class="muted">Download CSV</div>
-        <div class="row-inline" style="margin-top:6px;">
-          <button id="csvHot" class="small">Download CSV (hot)</button>
-          <button id="csvWarm" class="small secondary">Download CSV (warm)</button>
+    <div class="card w-3" id="personaCard">
+      <div class="stack">
+        <div><b>Supplier persona</b> (human-editable)</div>
+        <div class="grid2">
+          <label>Product/offer <input id="p_product" placeholder="e.g., Stretch film & pallet protection"></label>
+          <label>Solves <input id="p_solves" placeholder="e.g., Keeps pallets secure for transport"></label>
+        </div>
+        <label>Buyer titles (comma-separated)
+          <input id="p_buyers" placeholder="Warehouse Manager, Purchasing Manager, COO">
+        </label>
+        <div>
+          <button onclick="loadPersona()" class="">Reload</button>
+          <button onclick="savePersona()" class="primary">Save persona</button>
+          <span id="personaMsg" class="muted"></span>
         </div>
       </div>
     </div>
   </div>
 
-  <script>
-    // ------------------------ state ------------------------
-    const els = {
-      baseUrl: document.getElementById('baseUrl'),
-      applyBtn: document.getElementById('applyBtn'),
-      apiKey: document.getElementById('apiKey'),
-      saveKey: document.getElementById('saveKey'),
-      clearKey: document.getElementById('clearKey'),
-      regionToggle: document.getElementById('regionToggle'),
-      btnHot: document.getElementById('btnHot'),
-      btnWarm: document.getElementById('btnWarm'),
-      apiPath: document.getElementById('apiPath'),
-      rows: document.getElementById('rows'),
-      tbl: document.getElementById('tbl'),
-      // details
-      detail: document.getElementById('detail'),
-      detailEmpty: document.getElementById('detailEmpty'),
-      d_id: document.getElementById('d_id'),
-      d_host: document.getElementById('d_host'),
-      d_platform: document.getElementById('d_platform'),
-      d_created: document.getElementById('d_created'),
-      d_title: document.getElementById('d_title'),
-      d_temp: document.getElementById('d_temp'),
-      d_why: document.getElementById('d_why'),
-      stageSel: document.getElementById('stageSel'),
-      setStage: document.getElementById('setStage'),
-      noteInput: document.getElementById('noteInput'),
-      addNote: document.getElementById('addNote'),
-      detailMsg: document.getElementById('detailMsg'),
-      // find buyers
-      supplier: document.getElementById('supplier'),
-      region: document.getElementById('region'),
-      radius: document.getElementById('radius'),
-      findBtn: document.getElementById('findBtn'),
-      findMsg: document.getElementById('findMsg'),
-      // csv
-      csvHot: document.getElementById('csvHot'),
-      csvWarm: document.getElementById('csvWarm'),
-    };
+  <div class="row">
+    <div class="card w-3">
+      <div class="mb8">
+        <button onclick="loadHot()">Refresh Hot</button>
+        <button onclick="loadWarm()">Refresh Warm</button>
+        <span class="muted">API: <code>/api/v1/leads</code></span>
+      </div>
+      <table class="table" id="list">
+        <thead><tr><th>ID</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-    const LS = {
-      baseUrl: 'leads.baseUrl',
-      apiKey: 'leads.apiKey',
-      region: 'leads.region',
-      supplier: 'leads.supplier',
-    };
+    <div class="card w-2" id="details">
+      <div class="muted">Select a lead…</div>
+    </div>
+  </div>
+</div>
 
-    const API = {
-      base() { return (els.baseUrl.value || '').replace(/\/+$/,''); },
-      leads: () => API.base() + '/api/v1/leads',
-      hot: (limit=50) => `${API.leads()}/hot?limit=${limit}`,
-      warm: (limit=50) => `${API.leads()}/warm?limit=${limit}`,
-      csv: (temp='hot', limit=500) => `${API.leads()}/export.csv?temperature=${temp}&limit=${limit}`,
-      findBuyers: () => `${API.leads()}/find-buyers`,
-      stage: (id) => `${API.leads()}/${id}/stage`,
-      notes: (id) => `${API.leads()}/${id}/notes`,
-      health: () => API.base() + '/healthz',
-    };
+<script>
+/* ------------ config ------------ */
+const $ = (id)=>document.getElementById(id);
+function cfg(){ return { base: $('base').value.trim().replace(/\/$/,''), key: $('apikey').value.trim() }; }
+function saveCfg(){ localStorage.setItem('pl.base',$('base').value); localStorage.setItem('pl.key',$('apikey').value); loadPersona(); }
+(function init(){
+  $('base').value = localStorage.getItem('pl.base') || '';
+  $('apikey').value = localStorage.getItem('pl.key') || '';
+  $('supplier').value = localStorage.getItem('pl.supplier') || 'stretchandshrink.com';
+  loadWarm();
+  loadPersona();
+})();
 
-    // ------------------------ utils ------------------------
-    function fmtWhen(iso) {
-      try { return new Date(iso).toLocaleString(); } catch { return iso; }
-    }
-    const whyText = {
-      meta: 'Domain quality',
-      platform: 'Platform fit',
-      signal: 'Intent keywords',
-      persona: 'Persona match',
-      geo: 'Near you',
-      pmath: 'Packaging math'
-    };
-    function whyChip(w) {
-      const label = w.label || whyText[w.kind] || 'Why';
-      const score = (w.score ?? '').toString();
-      const detail = w.detail ? ` — ${w.detail}` : '';
-      const chip = document.createElement('span');
-      chip.className = 'chip';
-      chip.title = `${label}${detail} • score ${score}`;
-      chip.innerHTML = `<strong>${label}</strong> <span class="muted">${score}</span>`;
-      return chip;
-    }
-    function setTemp(el, t) {
-      el.className = 'temp ' + (t === 'hot' ? 'hot' : 'warm');
-      el.textContent = t || 'warm';
-    }
-    function ok(msg) { return `<div class="success">${msg}</div>`; }
-    function err(msg) { return `<div class="error">${msg}</div>`; }
+/* ------------ fetch helpers ------------ */
+async function jget(path){
+  const {base} = cfg();
+  const r = await fetch(base + path);
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function jpost(path, body, needKey=true){
+  const {base,key} = cfg();
+  const r = await fetch(base + path, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', ...(needKey?{'x-api-key':key}:{}) },
+    body: JSON.stringify(body || {})
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function jpatch(path, body){
+  const {base,key} = cfg();
+  const r = await fetch(base + path, {
+    method: 'PATCH',
+    headers: { 'Content-Type':'application/json', 'x-api-key':key },
+    body: JSON.stringify(body || {})
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
 
-    async function apiFetch(url, opts={}) {
-      const res = await fetch(url, opts);
-      const ct = res.headers.get('content-type') || '';
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`HTTP ${res.status} — ${text.slice(0,400)}`);
-      }
-      if (ct.includes('application/json')) return res.json();
-      return res.text();
-    }
-    function authHeaders() {
-      const k = (els.apiKey.value || '').trim();
-      const h = { 'Content-Type':'application/json' };
-      if (k) h['x-api-key'] = k;
-      return h;
-    }
+/* ------------ lists ------------ */
+function renderList(items){
+  const tb = $('list').querySelector('tbody');
+  tb.innerHTML = '';
+  for(const l of items){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${l.id}</td><td>${l.host}</td><td>${l.platform}</td><td>${l.title}</td><td>${new Date(l.created_at).toLocaleString()}</td><td><span class="pill temp ${l.temperature}">${l.temperature}</span></td>`;
+    tr.onclick = ()=>showLead(l);
+    tb.appendChild(tr);
+  }
+}
+async function loadHot(){ const r = await jget('/api/v1/leads/hot'); renderList(r.items); }
+async function loadWarm(){ const r = await jget('/api/v1/leads/warm'); renderList(r.items); }
 
-    // ------------------------ rendering ------------------------
-    let currentList = [];
-    function renderRows(items=[]) {
-      els.rows.innerHTML = '';
-      items.forEach(it => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="mono">${it.id ?? ''}</td>
-          <td><a class="mono" href="https://${it.host}" target="_blank" rel="noreferrer noopener">${it.host}</a></td>
-          <td class="mono">${it.platform ?? ''}</td>
-          <td class="mono">${it.title ?? ''}</td>
-          <td class="mono">${fmtWhen(it.created_at || it.created || '')}</td>
-          <td><span class="temp ${it.temperature==='hot'?'hot':'warm'}">${it.temperature || 'warm'}</span></td>
-          <td class="mono">${(it.why || []).map(w => (w.label || w.kind)).join(', ')}</td>
-        `;
-        tr.addEventListener('click', () => showDetail(it));
-        els.rows.appendChild(tr);
-      });
-    }
+/* ------------ lead details ------------ */
+function showLead(l){
+  const box = $('details');
+  const chips = (l.why||[]).map(w=>`<span class="chip"><b>${w.label}</b>${w.score!=null?` ${w.score}`:""}${w.detail?` — ${w.detail}`:""}</span>`).join(' ');
+  box.innerHTML = `
+    <div class="mb8"><b>ID ${l.id}</b> — ${l.host}</div>
+    <div class="mb8">Title: ${l.title}</div>
+    <div class="mb8">Created: ${new Date(l.created_at).toLocaleString()}</div>
+    <div class="mb12 chips">${chips}</div>
+    <div class="stack">
+      <label>Add note
+        <input id="note_${l.id}" placeholder="e.g., First call done; decision next week">
+      </label>
+      <div>
+        <button onclick="addNote(${l.id})">Add</button>
+        <select id="stage_${l.id}">
+          <option value="new">new</option><option value="qualified">qualified</option><option value="won">won</option><option value="lost">lost</option>
+        </select>
+        <button onclick="saveStage(${l.id})" class="primary">Save stage</button>
+      </div>
+    </div>
+  `;
+}
+async function saveStage(id){ const st = $('stage_'+id).value; await jpatch('/api/v1/leads/'+id+'/stage',{stage:st}); }
+async function addNote(id){
+  const el = $('note_'+id); const text = el.value.trim(); if(!text) return;
+  await jpost('/api/v1/leads/'+id+'/notes',{text}); el.value='';
+}
 
-    function showDetail(it) {
-      els.detailEmpty.style.display = 'none';
-      els.detail.style.display = 'block';
-      els.d_id.textContent = it.id ?? '';
-      els.d_host.textContent = it.host ?? '';
-      els.d_platform.textContent = it.platform ?? 'unknown';
-      els.d_created.textContent = fmtWhen(it.created_at || it.created || '');
-      els.d_title.textContent = it.title || '';
-      setTemp(els.d_temp, it.temperature || 'warm');
-      els.d_why.innerHTML = '';
-      (it.why || []).forEach(w => els.d_why.appendChild(whyChip(w)));
-      els.detailMsg.innerHTML = '';
+/* ------------ buyers ------------ */
+async function findBuyers(){
+  const supplier = $('supplier').value.trim();
+  localStorage.setItem('pl.supplier', supplier);
+  const region = $('region').value;
+  const radiusMi = Number($('radius').value);
+  $('findMsg').textContent = 'Working…';
+  try {
+    const r = await jpost('/api/v1/leads/find-buyers', { supplier, region, radiusMi });
+    $('findMsg').textContent = `Created ${r.created} lead(s). Refresh lists to view.`;
+    await loadWarm();
+  } catch(e){ $('findMsg').textContent = String(e); }
+}
 
-      // bind stage/note to this id
-      els.setStage.onclick = async () => {
-        try {
-          const body = JSON.stringify({ stage: els.stageSel.value });
-          const data = await apiFetch(API.stage(it.id), { method:'PATCH', headers:authHeaders(), body });
-          els.detailMsg.innerHTML = ok(`Stage saved for #${data.leadId} → ${data.stage}`);
-        } catch (e) {
-          els.detailMsg.innerHTML = err(e.message);
-        }
-      };
-      els.addNote.onclick = async () => {
-        try {
-          const note = (els.noteInput.value || '').trim();
-          if (!note) { els.detailMsg.innerHTML = err('Note is empty.'); return; }
-          const data = await apiFetch(API.notes(it.id), { method:'POST', headers:authHeaders(), body: JSON.stringify({ note }) });
-          els.noteInput.value = '';
-          els.detailMsg.innerHTML = ok(`Note added to #${data.leadId}.`);
-        } catch (e) {
-          els.detailMsg.innerHTML = err(e.message);
-        }
-      };
-    }
-
-    // ------------------------ actions ------------------------
-    async function loadHot(limit=50) {
-      try {
-        const data = await apiFetch(API.hot(limit));
-        const items = data.items || [];
-        currentList = items;
-        renderRows(items);
-      } catch (e) {
-        els.rows.innerHTML = `<tr><td colspan="7">${err(e.message)}</td></tr>`;
-      }
-    }
-    async function loadWarm(limit=50) {
-      try {
-        const data = await apiFetch(API.warm(limit));
-        const items = data.items || [];
-        currentList = items;
-        renderRows(items);
-      } catch (e) {
-        els.rows.innerHTML = `<tr><td colspan="7">${err(e.message)}</td></tr>`;
-      }
-    }
-    async function findBuyers() {
-      const supplier = (els.supplier.value || '').trim();
-      const region = (els.region.value || '').trim() || 'us';
-      const radiusMi = parseInt(els.radius.value, 10) || 50;
-      if (!supplier) { els.findMsg.innerHTML = err('Supplier domain is required.'); return; }
-      try {
-        const body = { supplier, region, radiusMi, limit: 50, keywords: [] };
-        const data = await apiFetch(API.findBuyers(), {
-          method: 'POST',
-          headers: authHeaders(),
-          body: JSON.stringify(body),
-        });
-        const list = (data.items || data.candidates || []);
-        currentList = list;
-        renderRows(list);
-        els.findMsg.innerHTML = ok(`Loaded ${list.length} ${data.temperature || ''} lead(s).`);
-      } catch (e) {
-        els.findMsg.innerHTML = err(e.message);
-      }
-    }
-
-    function downloadCsv(temp) {
-      const url = API.csv(temp, 1000);
-      window.open(url, '_blank');
-    }
-
-    // ------------------------ init ------------------------
-    function hydrate() {
-      els.baseUrl.value = localStorage.getItem(LS.baseUrl) || '';
-      els.apiKey.value = localStorage.getItem(LS.apiKey) || '';
-      els.region.value = localStorage.getItem(LS.region) || 'us';
-      els.supplier.value = localStorage.getItem(LS.supplier) || '';
-      els.apiPath.textContent = '/api/v1/leads';
-    }
-
-    function wire() {
-      els.applyBtn.onclick = () => {
-        localStorage.setItem(LS.baseUrl, (els.baseUrl.value || '').trim());
-        els.findMsg.innerHTML = ok('Base URL saved.');
-      };
-      els.saveKey.onclick = () => {
-        localStorage.setItem(LS.apiKey, (els.apiKey.value || '').trim());
-        els.findMsg.innerHTML = ok('API key saved.');
-      };
-      els.clearKey.onclick = () => {
-        localStorage.removeItem(LS.apiKey);
-        els.apiKey.value = '';
-        els.findMsg.innerHTML = ok('API key cleared.');
-      };
-      els.regionToggle.onclick = () => {
-        const v = els.region.value.trim();
-        els.region.value = (v.toLowerCase() === 'us-ca' ? 'us' : 'us-ca');
-        localStorage.setItem(LS.region, els.region.value);
-      };
-
-      els.btnHot.onclick = () => loadHot();
-      els.btnWarm.onclick = () => loadWarm();
-      document.addEventListener('keydown', (e) => {
-        if (e.key.toLowerCase() === 'r') { loadHot(); }
-      });
-
-      els.findBtn.onclick = () => {
-        localStorage.setItem(LS.supplier, (els.supplier.value || '').trim());
-        localStorage.setItem(LS.region, (els.region.value || '').trim());
-        findBuyers();
-      };
-      els.csvHot.onclick = () => downloadCsv('hot');
-      els.csvWarm.onclick = () => downloadCsv('warm');
-    }
-
-    hydrate();
-    wire();
-  </script>
+/* ------------ persona (editable) ------------ */
+async function loadPersona(){
+  const supplier = $('supplier').value.trim();
+  if(!supplier) return;
+  try {
+    const r = await jget(`/api/v1/leads/persona?supplier=${encodeURIComponent(supplier)}`);
+    $('p_product').value = r.persona.product || '';
+    $('p_solves').value  = r.persona.solves || '';
+    $('p_buyers').value  = (r.persona.idealBuyers||[]).join(', ');
+    $('personaMsg').textContent = `Loaded (${r.source}).`;
+  } catch(e){
+    $('personaMsg').textContent = 'Not found; a default will be created after you save.';
+  }
+}
+async function savePersona(){
+  const supplier = $('supplier').value.trim();
+  const updates = {
+    product: $('p_product').value.trim(),
+    solves:  $('p_solves').value.trim(),
+    idealBuyers: $('p_buyers').value.split(',').map(s=>s.trim()).filter(Boolean)
+  };
+  try {
+    const r = await jpost('/api/v1/leads/persona', { supplier, ...updates });
+    $('personaMsg').textContent = 'Saved (user).';
+  } catch(e){ $('personaMsg').textContent = String(e); }
+}
+</script>
 </body>
 </html>
