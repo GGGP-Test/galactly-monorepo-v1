@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import type { Express, Request, Response } from "express";
 import { mountLeads } from "./routes/leads"; // expects a named export mountLeads(app)
-
+import { targetsRouter } from "./routes/targets";
 const PORT = Number(process.env.PORT || 8787);
 
 function createApp(): Express {
@@ -12,6 +12,7 @@ function createApp(): Express {
   // Core middleware
   app.use(express.json({ limit: "1mb" }));
   app.use(cors()); // allow GitHub Pages (and others)
+  app.use("/api/v1/targets", targetsRouter);
 
   // Health/readiness/liveness
   app.get("/", (_req: Request, res: Response) => {
