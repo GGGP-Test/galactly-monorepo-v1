@@ -1,67 +1,34 @@
-import type { App } from "../index";
-import { inferPersonaAndTargets } from "../ai/webscout";
+/* backend/src/routes/find.ts */
+import type { Express } from 'express';
+import { z } from 'zod';
+import { inferPersonaAndTargets } from '../ai/webscout';
 
-// Compatibility helper – normalize region/radius
-function parseFindBody(body: any) {
-  const supplierDomain = String(body.supplierDomain || body.domain || body.host || "").trim();
-  const region = String(body.region || body.country || "US/CA").toLowerCase();
-  const radiusMi = Number(body.radiusMi || body.radius || 50);
-  return { supplierDomain, region, radiusMi };
-}
+const bodySchema = z.object({
+  supplierDomain: z.string().min(3),
+  region: z.string().optional(),    // e.g. "us" | "ca" | "San Francisco, CA"
+  radiusMiles: z.number().int().min(1).max(500).optional(),
+});
 
-// Minimal in-memory “results”; in real code this calls external adapters.
-function fakeMatchHosts(personaCats: string[], region: string) {
-  const catalog = [
-    "homebrewsupply.com",
-    "globallogistics.com",
-    "sustainchem.com",
-    "peakperform.com",
-    "brightfuture.com",
-    "urbangreens.com",
-  ];
-  return catalog.map((host, i) => ({
-    id: i + 1,
-    host,
-    platform: "unknown",
-    title: `Lead: ${host}`,
-    created: new Date().toISOString(),
-    temperature: personaCats.some(c => /3pl|dc|warehouse/i.test(c)) ? "hot" : "warm",
-    why: [
-      { label: "Domain quality", kind: "meta", score: 0.65, detail: `${host} (.com)` },
-      { label: "Platform fit", kind: "platform", score: 0.5, detail: "unknown" },
-      { label: "Context", kind: "context", score: 0.6, detail: `Region focus: ${region}` },
-    ],
-  }));
-}
+export function mountFind(app: Express) {
+  app.post('/api/v1/leads/find', async (req, res) => {
+    const parse = bodySchema.safeParse(req.body);
+    if (!parse.success) return res.status(400).json({ error: 'bad_request', details: parse.error.flatten() });
 
-export function mountFind(app: App) {
-  // Legacy aliases accepted by Free Panel
-  const paths = [
-    "/api/v1/leads/find-buyers",
-    "/api/v1/find-buyers",
-    "/api/v1/find",
-  ];
+    const { supplierDomain, region, radiusMiles } = parse.data;
 
-  for (const p of paths) {
-    app.post(p, async (req, res) => {
-      const { supplierDomain, region, radiusMi } = parseFindBody(req.body);
-      if (!supplierDomain) return res.status(400).json({ ok: false, error: "supplierDomain required" });
+    // 1) persona + targets from supplier
+    const persona = await inferPersonaAndTargets({ supplierDomain });
 
-      try {
-        const persona = await inferPersonaAndTargets(supplierDomain, region);
-        const rows = fakeMatchHosts(persona.categories, region);
-        res.json({
-          ok: true,
-          supplierDomain,
-          region,
-          radiusMi,
-          persona,
-          rows,
-          count: rows.length,
-        });
-      } catch (err: any) {
-        res.status(500).json({ ok: false, error: err?.message || "find failed" });
-      }
+    // 2) return a stubbed list (the panel expects structure). Real-time web scout hooks in buyers route.
+    res.json({
+      ok: true,
+      persona,
+      // empty result set here by design; panel refreshes from /find-buyers which actually collects candidates
+      candidates: [],
+      region: region ?? 'us/ca',
+      radiusMiles: radiusMiles ?? 50,
     });
-  }
+  });
 }
+
+export default { mountFind };
