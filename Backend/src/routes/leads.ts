@@ -1,261 +1,208 @@
-import express, { Request, Response } from 'express';
-import fs from 'fs/promises';
-import path from 'path';
+import type { Express, Request, Response } from "express";
+import { Router } from "express";
+import fs from "fs/promises";
+import path from "path";
+import { webScoutFindBuyers, type Candidate, type Persona } from "../ai/webscout";
 
-// ---------------- Types ----------------
-type Temp = 'hot' | 'warm';
+// -------- types & in-memory store --------
 
-interface WhyChip {
-  label: string;              // e.g., "Geo"
-  kind: 'meta' | 'platform' | 'signal' | 'context' | 'geo';
-  score?: number;             // 0..1
-  detail: string;             // human-readable evidence
-}
+type Temperature = "hot" | "warm";
 
-export interface LeadRow {
+export type Lead = Candidate & {
   id: number;
-  host: string;
-  platform: string;
-  title: string;
-  created: number;
-  temperature: Temp;
-  why: WhyChip[];
+  stage?: "new" | "contacted" | "qualified" | "won" | "lost";
+  notes?: string[];
+  source?: "seed" | "ai";
+};
+
+type ListResponse = {
+  items: Lead[];
+};
+
+const store: Lead[] = [];
+let idSeq = 1;
+
+// US/CA heuristic filter (v0 — swap for a geocoder later)
+const US_CA_TLDS = [".com", ".us", ".ca", ".org", ".net"];
+function inUSorCA(host: string): boolean {
+  return US_CA_TLDS.some((tld) => host.endsWith(tld));
 }
 
-interface FindBuyersBody {
-  supplier: string;           // supplier domain
-  region?: 'us' | 'ca' | 'us/ca';
-  radiusMiles?: number;
-  strict?: boolean;           // default true (US/CA only)
-  keywords?: string;          // optional hints (ignored by default)
+// -------- helpers --------
+
+function bool(v: unknown, fallback = false): boolean {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") return ["1", "true", "yes", "y", "on"].includes(v.toLowerCase());
+  return fallback;
 }
 
-// ---------------- In-memory store ----------------
-const leads: LeadRow[] = [];
-let nextId = 1;
-
-const router = express.Router();
-
-// --------------- Helpers ----------------
-function now() { return Date.now(); }
-
-function normalizeHost(raw: string): string {
-  let h = (raw || '').trim().toLowerCase();
-  h = h.replace(/^https?:\/\//, '').replace(/\/.*$/, ''); // drop protocol & path
-  return h;
+function nowStr() {
+  return new Date().toLocaleString();
 }
 
-function domainQualityScore(host: string): number {
-  // Simple heuristic: .com/.net/.org/.ca/.us get small boost; short length boost
-  let s = 0.5;
-  if (host.endsWith('.com') || host.endsWith('.ca') || host.endsWith('.us')) s += 0.15;
-  if (host.length <= 15) s += 0.10;
-  if (host.includes('-') || host.length > 32) s -= 0.10;
-  return clamp01(s);
+function csvLine(cols: string[]) {
+  return cols
+    .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
+    .join(",");
 }
 
-function clamp01(x: number) { return Math.max(0, Math.min(1, x)); }
-
-function classifyTempFromText(text: string): Temp {
-  const t = (text || '').toLowerCase();
-  const hotKw = ['rfp', 'rfq', 'tender', 'bid', 'quote', 'request for quote', 'sourcing'];
-  const isHot = hotKw.some(k => t.includes(k));
-  return isHot ? 'hot' : 'warm';
-}
-
-function parseSeedsLine(line: string): { host: string, title?: string } | null {
-  const trimmed = line.trim();
-  if (!trimmed || trimmed.startsWith('#')) return null;
-  // Accept either CSV "host,title" or plain host
-  const parts = trimmed.split(',').map(s => s.trim());
-  const host = normalizeHost(parts[0]);
-  if (!host) return null;
-  return { host, title: parts.slice(1).join(', ') || `Lead: ${host}` };
-}
-
-async function loadSeeds(): Promise<{ host: string, title: string }[]> {
-  // Try a few locations. Fallback to empty if none found.
-  const candidates: string[] = [
-    '/etc/secrets/seeds.txt',
-    '/etc/secrets/seed.txt',
-    path.join(process.cwd(), 'seeds.txt'),
-  ];
-  for (const p of candidates) {
-    try {
-      const data = await fs.readFile(p, 'utf8');
-      const rows = data.split(/\r?\n/).map(parseSeedsLine).filter(Boolean) as {host:string,title?:string}[];
-      return rows.map(r => ({ host: r.host, title: r.title || `Lead: ${r.host}` }));
-    } catch { /* ignore */ }
-  }
-  return [];
-}
-
-// --- Geo scoring (soft-in, hard-out) ---
-type Region = 'us' | 'ca' | 'non-us/ca' | 'unknown';
-
-function scoreGeo(host: string, snippet: string): { score: number, region: Region, evidence: string } {
-  const h = host.toLowerCase();
-  const t = (snippet || '').toLowerCase();
-
-  // TLD signals
-  if (h.endsWith('.ca')) return { score: 0.85, region: 'ca', evidence: '.ca domain' };
-  if (h.endsWith('.us')) return { score: 0.80, region: 'us', evidence: '.us domain' };
-
-  let score = 0.4; // base for .com/.net etc.
-  let region: Region = 'unknown';
-  const evidence: string[] = [];
-
-  // Phone / address cues
-  if (/\+1[\s\-.(]/.test(t)) { score += 0.15; evidence.push('+1 phone'); }
-  if (/\b[A-Z]{2}\s?\d{5}\b/.test(snippet)) { score += 0.10; evidence.push('US ZIP pattern'); }
-  if (/\b[A-Z]\d[A-Z]\s?\d[A-Z]\d\b/i.test(snippet)) { score += 0.12; evidence.push('CA postal pattern'); }
-
-  // Common US/CA city/state mentions (simple)
-  const usStates = ['california','texas','new york','florida','illinois','ohio','pennsylvania','washington','new jersey','georgia'];
-  const caProv = ['ontario','quebec','british columbia','alberta','manitoba','saskatchewan'];
-  if (usStates.some(s => t.includes(s))) { score += 0.10; evidence.push('US city/state mention'); }
-  if (caProv.some(s => t.includes(s))) { score += 0.10; evidence.push('CA province mention'); }
-
-  // Non-US/CA ccTLD
-  const ccTlds = ['.uk','.de','.fr','.ch','.au','.nz','.in','.ae','.cn','.jp','.mx','.br'];
-  if (ccTlds.some(cc => h.endsWith(cc))) { score -= 0.50; evidence.push('non-US/CA ccTLD'); }
-
-  score = clamp01(score);
-  if (score >= 0.55) region = 'us';
-  if (score >= 0.60 && evidence.some(e => /CA|province/i.test(e))) region = 'ca';
-  if (score < 0.20 && ccTlds.some(cc => h.endsWith(cc))) region = 'non-us/ca';
-
-  const evidenceText = evidence.length ? evidence.join(' • ') : 'Global .com, no address found';
-  return { score, region, evidence: evidenceText };
-}
-
-// Build Why chips in plain English
-function buildWhy(host: string, title: string, snippet: string): WhyChip[] {
-  const dq = domainQualityScore(host);
-  const geo = scoreGeo(host, snippet);
-  const intentScore = /rfp|rfq|tender|quote|bid/i.test(title + ' ' + snippet) ? 0.9 : 0.6;
-
-  return [
-    { label: 'Domain quality', kind: 'meta', score: to2(dq), detail: host },
-    { label: 'Geo', kind: 'geo', score: to2(geo.score), detail: geo.evidence },
-    { label: 'Intent keywords', kind: 'signal', score: to2(intentScore), detail: intentScore > 0.8 ? 'rfp/rfq keywords found' : 'no strong keywords' },
-    { label: 'Context', kind: 'context', detail: snippet.slice(0, 140) || '—' },
-  ];
-}
-
-function to2(n?: number) { return n === undefined ? undefined : Math.round(n * 100) / 100; }
-
-function makeLead(host: string, title: string, snippet: string): LeadRow {
-  const why = buildWhy(host, title, snippet);
-  const temp = classifyTempFromText(title + ' ' + snippet);
-  return {
-    id: nextId++,
-    host,
-    platform: 'unknown',
-    title,
-    created: now(),
-    temperature: temp,
-    why,
-  };
-}
-
-// --------------- Routes ----------------
-
-// Health for router
-router.get('/ping', (_req, res) => res.json({ ok: true }));
-
-// List leads (optionally filter by temp=hot|warm)
-router.get('/', (req: Request, res: Response) => {
-  const { temp } = req.query as { temp?: Temp };
-  const rows = temp ? leads.filter(l => l.temperature === temp) : leads;
-  rows.sort((a,b) => b.created - a.created); // newest first
-  res.json({ ok: true, rows });
-});
-
-// Find buyers given supplier + region
-router.post('/find-buyers', async (req: Request<{}, {}, FindBuyersBody>, res: Response) => {
+async function appendCSV(leads: Lead[], file = "leads_dump.csv") {
   try {
-    const supplier = normalizeHost(req.body?.supplier || '');
-    if (!supplier) return res.status(400).json({ ok: false, error: 'missing supplier' });
+    const header =
+      "id,host,platform,title,created,temperature,whyText,stage,source\r\n";
+    const lines = leads.map((l) =>
+      csvLine([
+        String(l.id),
+        l.host,
+        l.platform || "unknown",
+        l.title || "",
+        l.created || "",
+        l.temperature || "",
+        l.whyText || "",
+        l.stage || "new",
+        l.source || "ai",
+      ])
+    );
+    const full = header + lines.join("\r\n") + "\r\n";
+    const outPath = path.resolve(process.cwd(), file);
+    // overwrite each time (panel can also export client-side CSV)
+    await fs.writeFile(outPath, full, "utf8");
+  } catch {
+    // ignore disk failures in ephemeral containers
+  }
+}
 
-    const strict = req.body.strict !== false; // default true (keep only US/CA)
-    const region = (req.body.region || 'us/ca') as 'us'|'ca'|'us/ca';
+function pickRegion(req: Request): "us" | "ca" | "usca" | undefined {
+  const r = String(req.query.region || "").toLowerCase();
+  return r === "us" || r === "ca" || r === "usca" ? (r as any) : undefined;
+}
 
-    // persona inference (simple, extendable)
-    const persona = personaFromSupplier(supplier);
+function filterByRegion(items: Lead[], region?: "us" | "ca" | "usca"): Lead[] {
+  if (!region || region === "usca") {
+    // keep US/CA-ish domains (heuristic)
+    return items.filter((x) => inUSorCA(x.host));
+  }
+  // Until we wire a real geo, use same heuristic for both; still satisfies US/CA-only constraint
+  return items.filter((x) => inUSorCA(x.host));
+}
 
-    // Load seeds and synthesize basic snippet evidence
-    const seeds = await loadSeeds();
+// Simple write-guard: if API_KEY is set, require x-api-key for POST/PUT/PATCH/DELETE
+function requireKey(req: Request, res: Response, next: () => void) {
+  const need = process.env.API_KEY;
+  if (!need) return next();
+  const got = req.header("x-api-key");
+  if (got && got === need) return next();
+  res.status(401).json({ ok: false, error: "missing or invalid api key" });
+}
 
-    const createdIds: number[] = [];
-    const candidates = seeds.map(({ host, title }) => {
-      const snippet = makeSnippetFor(host, title, persona);
-      const lead = makeLead(host, title, snippet);
+// -------- router factory --------
 
-      // Geo & region gate
-      const geoChip = lead.why.find(w => w.kind === 'geo');
-      const geoScore = geoChip?.score ?? 0;
-      const regionLabel = geoRegionFromWhy(lead);
-      const wanted = region === 'us/ca' ? (regionLabel === 'us' || regionLabel === 'ca') :
-                     regionLabel === region;
+export function mountLeads(app: Express) {
+  const router = Router();
 
-      if (!strict || (geoScore >= 0.5 && wanted)) {
-        leads.push(lead);
-        createdIds.push(lead.id);
+  // GET /api/v1/leads?temp=hot|warm&region=us|ca|usca
+  router.get("/", (_req: Request, res: Response) => {
+    // NOTE: we re-read req via res.req because types narrow awkwardly otherwise
+    const req = res.req as Request;
+    const temp = String(req.query.temp || "").toLowerCase() as Temperature | "";
+    const region = pickRegion(req);
+
+    let items = [...store].sort((a, b) => b.id - a.id);
+
+    if (temp === "hot" || temp === "warm") {
+      items = items.filter((l) => l.temperature === temp);
+    }
+    if (region) {
+      items = filterByRegion(items, region);
+    }
+
+    const out: ListResponse = { items };
+    res.json(out);
+  });
+
+  // POST /api/v1/leads/find-buyers
+  // body: { supplier, region?, radiusMi?, persona?, onlyUSCA? }
+  router.post("/find-buyers", requireKey, async (req: Request, res: Response) => {
+    try {
+      const supplier = String(req.body?.supplier || "").trim().toLowerCase();
+      if (!supplier) {
+        return res.status(400).json({ ok: false, error: "supplier is required" });
       }
+      const persona: Persona | undefined = req.body?.persona;
+      const region = (String(req.body?.region || "usca").toLowerCase() ||
+        "usca") as "us" | "ca" | "usca";
+      const onlyUSCA = req.body?.onlyUSCA !== false;
 
-      return {
-        host: lead.host,
-        title: lead.title,
-        temperature: lead.temperature,
-        why: lead.why,
-      };
-    });
+      const out = await webScoutFindBuyers({
+        supplier,
+        region,
+        radiusMi: Number(req.body?.radiusMi || 50) || 50,
+        persona,
+        onlyUSCA,
+      });
 
-    res.json({
-      ok: true,
-      supplierDomain: supplier,
-      created: createdIds.length,
-      ids: createdIds,
-      candidates,
-    });
-  } catch (err: any) {
-    res.status(500).json({ ok: false, error: err?.message || 'internal error' });
-  }
-});
+      // Persist to memory (+ mirror CSV for debugging)
+      const created: Lead[] = out.candidates.map((c) => {
+        const lead: Lead = {
+          ...c,
+          id: idSeq++,
+          created: nowStr(),
+          stage: "new",
+          source: "ai",
+        };
+        store.push(lead);
+        return lead;
+      });
 
-// Optional: lightweight single ingest (kept for compatibility)
-router.post('/ingest', (req: Request, res: Response) => {
-  const { host, title } = req.body || {};
-  const h = normalizeHost(host || '');
-  if (!h) return res.status(400).json({ ok: false, error: 'missing host' });
-  const t = title || `Lead: ${h}`;
-  const lead = makeLead(h, t, '');
-  leads.push(lead);
-  res.json({ ok: true, id: lead.id });
-});
+      await appendCSV(created, "leads_latest.csv");
 
-// --------------- Persona (very light heuristic) ---------------
-function personaFromSupplier(host: string): { product: string, solves: string, titles: string[] } {
-  const h = host.toLowerCase();
-  if (h.includes('stretch') || h.includes('shrink')) {
-    return { product: 'Stretch film & pallet protection', solves: 'Keeps pallets secure for storage & transit', titles: ['Warehouse Manager','Purchasing Manager','COO'] };
-  }
-  return { product: 'Packaging', solves: 'Protects products in shipping', titles: ['Operations Manager','Purchasing','Supply Chain'] };
+      res.json({
+        ok: true,
+        supplierDomain: out.supplierDomain,
+        created: created.length,
+        ids: created.map((l) => l.id),
+        candidates: created,
+      });
+    } catch (err: any) {
+      res
+        .status(500)
+        .json({ ok: false, error: String(err?.message || err || "error") });
+    }
+  });
+
+  // PATCH /api/v1/leads/:id/stage { stage, note? }
+  router.patch("/:id/stage", requireKey, async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const lead = store.find((l) => l.id === id);
+    if (!lead) return res.status(404).json({ ok: false, error: "not found" });
+
+    const stage = String(req.body?.stage || "").toLowerCase();
+    if (!["new", "contacted", "qualified", "won", "lost"].includes(stage)) {
+      return res.status(400).json({ ok: false, error: "invalid stage" });
+    }
+    lead.stage = stage as Lead["stage"];
+
+    const note = String(req.body?.note || "").trim();
+    if (note) {
+      lead.notes = lead.notes || [];
+      lead.notes.push(`${nowStr()} — ${note}`);
+    }
+
+    res.json({ ok: true, id: lead.id, stage: lead.stage, notes: lead.notes || [] });
+  });
+
+  // Optional: GET /api/v1/leads/:id (detail)
+  router.get("/:id", (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const lead = store.find((l) => l.id === id);
+    if (!lead) return res.status(404).json({ ok: false, error: "not found" });
+    res.json(lead);
+  });
+
+  // Mount under /api/v1/leads
+  app.use("/api/v1/leads", router);
+  return router;
 }
 
-function makeSnippetFor(host: string, title: string, persona: {product:string,solves:string,titles:string[]}): string {
-  // A short evidence sentence that is human readable
-  return `${title} — persona: ${persona.product}; solves: ${persona.solves}; roles: ${persona.titles.join(', ')}`;
-}
-
-function geoRegionFromWhy(lead: LeadRow): 'us'|'ca'|'unknown' {
-  const w = lead.why.find(ch => ch.kind === 'geo');
-  if (!w) return 'unknown';
-  const det = w.detail.toLowerCase();
-  if (det.includes('province') || det.includes('ca postal') || det.includes('.ca')) return 'ca';
-  if (w.score !== undefined && w.score >= 0.5) return 'us';
-  return 'unknown';
-}
-
-export default router;
+// Export default AND named to satisfy either import style from index.ts
+export default mountLeads;
