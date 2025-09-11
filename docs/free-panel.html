@@ -1,229 +1,280 @@
-<!-- docs/free-panel.html
-     Leads Console — human-friendly "Why", Find buyers, optional City/Radius,
-     US/CA locked. Works against your running API base URL.
--->
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Leads Console</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root {
-      --bg: #0f172a; --panel: #111827; --text: #e5e7eb; --muted:#9ca3af; --accent:#3b82f6; --ok:#10b981; --bad:#ef4444; --chip:#1f2937;
-    }
-    html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    .wrap { max-width:1200px; margin:24px auto; padding:0 16px; }
-    h1 { font-size:18px; margin:0 0 12px 0; }
-    .row { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
-    .panel { background:var(--panel); border:1px solid #1f2937; border-radius:8px; padding:12px; }
-    input, select { background:#0b1220; color:var(--text); border:1px solid #334155; border-radius:6px; padding:8px; }
-    button { background:var(--accent); color:white; border:none; border-radius:6px; padding:8px 12px; cursor:pointer; }
-    button.secondary { background:#374151; }
-    button.ok { background:var(--ok); }
-    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
-    .list { max-height:520px; overflow:auto; }
-    table { width:100%; border-collapse:collapse; }
-    th, td { padding:8px; border-bottom:1px solid #1f2937; text-align:left; }
-    .temp { display:inline-block; padding:2px 8px; border-radius:999px; background:#7c3aed22; border:1px solid #7c3aed55; font-size:12px; }
-    .temp.hot { background:#ef444422; border-color:#ef4444aa; }
-    .temp.warm { background:#f59e0b22; border-color:#f59e0baa; }
-    .chip { display:inline-block; background:var(--chip); border:1px solid #334155; border-radius:999px; padding:2px 8px; margin:2px 6px 2px 0; font-size:12px; color:var(--muted); }
-    .why { margin-top:6px; }
-    .muted { color:var(--muted); }
-    .hint { font-size:12px; color:var(--muted); margin-left:8px; }
-    .okmsg { background:#0b3b2b; border:1px solid #14532d; color:#d1fae5; padding:6px 8px; border-radius:6px; margin-top:8px; display:none; }
-    .errmsg { background:#3b0b0b; border:1px solid #7f1d1d; color:#fecaca; padding:6px 8px; border-radius:6px; margin-top:8px; display:none; }
-    .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #334155; color:#93c5fd; }
-  </style>
+<meta charset="utf-8" />
+<title>Leads Console</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { --bg:#0b0e12; --card:#121720; --muted:#9aa4b2; --chip:#1a2130; --green:#1f7a4c; --pill:#212a3a; --hot:#a33; --warm:#a36; }
+  *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  body{margin:0;background:var(--bg);color:#e6edf3}
+  .wrap{max-width:1180px;margin:24px auto;padding:0 16px}
+  .row{display:flex;gap:16px}
+  .card{background:var(--card);border:1px solid #1e2633;border-radius:10px;padding:14px}
+  .title{font-weight:700;margin-bottom:8px}
+  .input{background:#0e141c;border:1px solid #243044;border-radius:8px;color:#e6edf3;height:36px;padding:0 10px}
+  .btn{height:36px;padding:0 12px;border-radius:8px;border:1px solid #2a3750;background:#132033;color:#e6edf3;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:#244463}
+  .btn.good{background:#1e3f31}
+  .btn.warn{background:#3c2222}
+  .grid{width:100%;border-collapse:collapse}
+  .grid th,.grid td{padding:8px;border-bottom:1px solid #1e2633;font-size:13px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--pill);font-size:12px}
+  .pill.hot{background:#3a1a1a}
+  .pill.warm{background:#2f1e35}
+  .why-row{margin:6px 0;padding:8px;border-radius:6px;background:#0f141e}
+  .why-label{font-weight:600}
+  .why-score{opacity:.8;border-bottom:1px dotted #666;cursor:help}
+  .chip{display:inline-block;padding:3px 8px;border-radius:999px;background:#1a2333;margin-right:6px;font-size:12px}
+  .muted{color:var(--muted);font-size:12px}
+  .bar{margin-top:8px;padding:10px;border-radius:8px;background:#132033}
+  .ok{background:#0f2d22}
+  .err{background:#331a1a}
+  #left{flex:1}
+  #right{width:380px}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Leads Console</h1>
+<div class="wrap">
+  <div class="title" style="font-size:20px;margin-bottom:10px">Leads Console</div>
 
-    <!-- Top controls -->
-    <div class="panel row">
-      <div>
-        <div class="muted">Base URL</div>
-        <div class="row">
-          <input id="baseUrl" style="width:420px" placeholder="https://p01--animated-cellar--xxx.code.run" />
-          <button id="apply">Apply</button>
-          <span class="hint">Tip: host this file from the same domain as the API to avoid CORS.</span>
-        </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="min-width:340px;display:flex;gap:8px;flex:1">
+        <input id="base" class="input" placeholder="https://p01--your-service.code.run" />
+        <button id="apply" class="btn primary">Apply</button>
+        <span class="muted">Tip: host this file from the same domain as the API to avoid CORS.</span>
       </div>
-      <div>
-        <div class="muted">API key</div>
-        <div class="row">
-          <input id="apiKey" style="width:420px" placeholder="your API key" />
-          <button id="saveKey" class="secondary">Save</button>
-          <button id="clearKey" class="secondary">Clear</button>
-        </div>
-      </div>
-      <div title="We will only show US/CA leads" class="pill">US/CA only</div>
-    </div>
-
-    <div class="grid">
-      <!-- Hot/Warm list -->
-      <div class="panel">
-        <div class="row" style="justify-content:space-between; margin-bottom:8px">
-          <div class="row">
-            <button id="btnHot">Refresh Hot</button>
-            <button id="btnWarm" class="secondary">Refresh Warm</button>
-            <span class="hint">press R to refresh hot</span>
-          </div>
-          <div class="muted">API: <code>/api/v1/leads</code></div>
-        </div>
-        <div class="list">
-          <table id="tbl">
-            <thead>
-              <tr><th>ID</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why</th></tr>
-            </thead>
-            <tbody id="rows"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Details + Find buyers -->
-      <div class="panel">
-        <div id="details" class="muted">Select a lead...</div>
-        <hr style="border-color:#1f2937; margin:12px 0">
-        <div>
-          <div class="muted" style="margin-bottom:6px">Find buyers (from supplier)</div>
-          <div class="row" style="gap:8px; margin-bottom:6px">
-            <input id="supplierDomain" style="width:260px" placeholder="stretchandshrink.com (domain only)" />
-            <input id="city" style="width:220px" placeholder="City or ZIP (optional)" />
-            <select id="radius">
-              <option value="25">25 mi</option>
-              <option value="50" selected>50 mi</option>
-              <option value="100">100 mi</option>
-            </select>
-            <button id="find" class="ok">Find buyers</button>
-          </div>
-          <div class="hint">No keywords needed. We’ll infer persona and start near your city/HQ (still US/CA only).</div>
-          <div id="ok" class="okmsg"></div>
-          <div id="err" class="errmsg"></div>
-        </div>
-
-        <hr style="border-color:#1f2937; margin:12px 0">
-        <div>
-          <div class="muted" style="margin-bottom:6px">Download CSV</div>
-          <div class="row" style="gap:8px">
-            <button id="csvHot" class="secondary">Download CSV (hot)</button>
-            <button id="csvWarm" class="secondary">Download CSV (warm)</button>
-          </div>
-        </div>
+      <div style="min-width:340px;display:flex;gap:8px">
+        <input id="apikey" class="input" placeholder="API key (for write)" />
+        <button id="savekey" class="btn">Save</button>
+        <button id="clearkey" class="btn">Clear</button>
+        <button id="usca" class="btn">US/CA only</button>
       </div>
     </div>
   </div>
 
+  <div class="row">
+    <div id="left" class="card">
+      <div class="row" style="gap:8px;align-items:center;margin-bottom:8px">
+        <button id="hotBtn" class="btn">Refresh Hot</button>
+        <button id="warmBtn" class="btn">Refresh Warm</button>
+        <div class="muted">press <b>R</b> to refresh hot</div>
+        <div class="muted" id="apiLabel" style="margin-left:auto">API: /api/v1/leads</div>
+      </div>
+      <table class="grid" id="grid">
+        <thead>
+          <tr>
+            <th style="width:60px">ID</th>
+            <th>Host</th>
+            <th>Platform</th>
+            <th>Title</th>
+            <th>Created</th>
+            <th>Temp</th>
+            <th>Why</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <div id="right" class="card">
+      <div id="details" class="muted">Select a lead...</div>
+
+      <div style="margin-top:14px;border-top:1px solid #1e2633;padding-top:10px">
+        <div class="title" style="margin-bottom:8px">Find buyers (from supplier)</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="supplier" class="input" placeholder="stretchandshrink.com" style="flex:1" />
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <select id="region" class="input" style="width:120px">
+            <option value="us">us</option>
+            <option value="ca">ca</option>
+          </select>
+          <select id="radius" class="input" style="width:120px">
+            <option value="25">25 mi</option>
+            <option value="50" selected>50 mi</option>
+            <option value="100">100 mi</option>
+            <option value="250">250 mi</option>
+          </select>
+          <button id="find" class="btn good">Find buyers</button>
+        </div>
+        <div id="findMsg" class="bar muted">No keywords needed. We’ll infer persona and start near your city/HQ (still US/CA only).</div>
+
+        <div style="margin-top:12px">
+          <div class="title" style="margin-bottom:6px">Download CSV</div>
+          <button id="csvHot" class="btn">Download CSV (hot)</button>
+          <button id="csvWarm" class="btn">Download CSV (warm)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
-  const $ = (id) => document.getElementById(id);
-  const state = {
-    baseUrl: localStorage.getItem("baseUrl") || "",
-    apiKey: localStorage.getItem("apiKey") || "",
-    hot: [], warm: [], selected: null,
-  };
+  const $ = (q)=>document.querySelector(q);
+  const base = $("#base");
+  const apiKey = $("#apikey");
+  const apiLabel = $("#apiLabel");
+  const rowsT = $("#rows");
+  const details = $("#details");
+  const findMsg = $("#findMsg");
 
-  const baseUrl = $("baseUrl"), apiKey = $("apiKey");
-  baseUrl.value = state.baseUrl; apiKey.value = state.apiKey;
+  function save(k,v){ try{ localStorage.setItem(k,v) }catch{} }
+  function load(k,d){ try{ return localStorage.getItem(k) || d }catch{ return d } }
 
-  function setOK(msg){ const el=$("ok"); el.textContent=msg; el.style.display="block"; $("err").style.display="none"; }
-  function setErr(msg){ const el=$("err"); el.textContent=msg; el.style.display="block"; $("ok").style.display="none"; }
+  // state
+  let BASE = load("lead_base", "");
+  let KEY  = load("lead_key", "");
+  let USCA_ONLY = true;
 
-  $("apply").onclick = () => {
-    state.baseUrl = baseUrl.value.trim().replace(/\/+$/,"");
-    localStorage.setItem("baseUrl", state.baseUrl);
-    setOK("Base URL saved.");
-  };
-  $("saveKey").onclick = () => {
-    state.apiKey = apiKey.value.trim();
-    localStorage.setItem("apiKey", state.apiKey);
-    setOK("API key saved.");
-  };
-  $("clearKey").onclick = () => {
-    state.apiKey = ""; apiKey.value = "";
-    localStorage.removeItem("apiKey");
-    setOK("API key cleared.");
-  };
-
-  async function call(path, opts = {}) {
-    if (!state.baseUrl) throw new Error("Set Base URL first.");
-    const url = state.baseUrl + path;
-    const headers = { "Content-Type": "application/json" };
-    if (state.apiKey) headers["x-api-key"] = state.apiKey;
-    const res = await fetch(url, { ...opts, headers: { ...headers, ...(opts.headers||{}) }});
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+  function setBase(url){
+    BASE = url.replace(/\/+$/,"");
+    apiLabel.textContent = "API: /api/v1/leads";
+    save("lead_base", BASE);
+  }
+  function setKey(k){
+    KEY = k;
+    save("lead_key", KEY);
   }
 
-  function renderList(items) {
-    const rows = $("rows");
-    rows.innerHTML = "";
-    for (const it of items) {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${it.id}</td>
-        <td>${it.host}</td>
-        <td>${it.platform||"unknown"}</td>
-        <td>${it.title||""}</td>
-        <td>${new Date(it.created_at).toLocaleString()}</td>
-        <td><span class="temp ${it.temperature}">${it.temperature}</span></td>
-        <td><div class="why">${(it.why||[]).map(w => `<span class="chip" title="${w.label}">${w.text}</span>`).join(" ")}</div></td>`;
-      tr.onclick = () => renderDetails(it);
-      rows.appendChild(tr);
+  base.value = BASE || "https://p01--animated-cellar--vz4ftkwrzdfs.code.run";
+  apiKey.value = KEY;
+
+  $("#apply").onclick = ()=> setBase(base.value.trim());
+  $("#savekey").onclick = ()=> setKey(apiKey.value.trim());
+  $("#clearkey").onclick = ()=> { apiKey.value=""; setKey("") };
+
+  $("#usca").onclick = ()=>{
+    USCA_ONLY = !USCA_ONLY;
+    $("#usca").textContent = USCA_ONLY ? "US/CA only" : "All regions";
+  };
+
+  document.addEventListener("keydown", (e)=>{
+    if(e.key.toLowerCase()==="r") loadHot();
+  });
+
+  $("#hotBtn").onclick = loadHot;
+  $("#warmBtn").onclick = loadWarm;
+
+  $("#csvHot").onclick = ()=> window.open(`${BASE}/api/v1/leads/hot.csv`, "_blank");
+  $("#csvWarm").onclick = ()=> window.open(`${BASE}/api/v1/leads/warm.csv`, "_blank");
+
+  $("#find").onclick = async ()=>{
+    const supplier = $("#supplier").value.trim();
+    const region = $("#region").value;
+    const radius = $("#radius").value;
+    findMsg.className = "bar";
+    findMsg.textContent = "Finding…";
+    try{
+      const r = await fetch(`${BASE}/api/v1/leads/find`, {
+        method:"POST",
+        headers: {
+          "Content-Type":"application/json",
+          ...(KEY ? {"x-api-key": KEY} : {})
+        },
+        body: JSON.stringify({ supplier, region, radiusMi: Number(radius), uscaOnly: USCA_ONLY })
+      });
+      if(!r.ok){
+        const t = await r.text();
+        findMsg.className = "bar err";
+        findMsg.textContent = `HTTP ${r.status} — ${t.slice(0,120)}`;
+        return;
+      }
+      const j = await r.json();
+      findMsg.className = "bar ok";
+      findMsg.textContent = `Loaded ${j.hot || 0} hot & ${j.warm || 0} warm lead(s).`;
+      // refresh warm (most results will be warm)
+      loadWarm();
+    }catch(err){
+      findMsg.className = "bar err";
+      findMsg.textContent = "Failed to fetch";
     }
+  };
+
+  function fmtDate(iso){
+    try{ const d = new Date(iso); return d.toLocaleString() }catch{ return iso }
   }
 
-  function renderDetails(it) {
-    state.selected = it;
-    const d = $("details");
-    const why = (it.why||[]).map(w => `<div class="chip"><b>${w.label}:</b> ${w.text}</div>`).join(" ");
-    d.innerHTML = `
-      <div><b>ID</b> ${it.id}</div>
-      <div><b>Host</b> ${it.host}</div>
-      <div><b>Platform</b> ${it.platform||"unknown"}</div>
-      <div><b>Created</b> ${new Date(it.created_at).toLocaleString()}</div>
-      <div><b>Temp</b> <span class="temp ${it.temperature}">${it.temperature}</span></div>
-      <div style="margin-top:6px"><b>Why</b> ${why || '<span class="muted">—</span>'}</div>
+  function explainWhy(why){
+    if(!why || !why.length) return "<div class='muted'>No evidence yet.</div>";
+    return why.map(w=>`
+      <div class="why-row">
+        <div class="why-label">${w.label}</div>
+        <div class="why-text">${w.text}${(w.score!=null)?` — <span class="why-score" title="0 to 1">${Number(w.score).toFixed(2)}</span>`:""}</div>
+      </div>
+    `).join("");
+  }
+
+  function renderPersona(p){
+    if(!p) return "";
+    const chips = (p.roles||[]).map(r=>`<span class="chip">${r}</span>`).join(" ");
+    return `
+      <div style="margin-top:6px">
+        <div style="font-weight:700">${p.title}</div>
+        <div class="muted" style="margin:6px 0">${p.summary}</div>
+        <div>${chips}</div>
+      </div>`;
+  }
+
+  function onSelect(lead){
+    details.innerHTML = `
+      <div class="muted">ID ${lead.id}</div>
+      <div><b>Host</b> ${lead.host}</div>
+      <div><b>Platform</b> ${lead.platform||"unknown"}</div>
+      <div><b>Created</b> ${fmtDate(lead.created_at)}</div>
+      <div style="margin:6px 0"><span class="pill ${lead.temperature}">${lead.temperature}</span></div>
+      <h4 style="margin:10px 0 4px 0">Why we think this is a fit</h4>
+      ${explainWhy(lead.why)}
+      <h4 style="margin:10px 0 4px 0">Who to contact</h4>
+      ${renderPersona(lead.persona)}
     `;
   }
 
-  async function refresh(kind) {
-    try {
-      const out = await call(`/api/v1/leads/${kind}?limit=50`);
-      const items = out.items || [];
-      // Keep human-readable "why" inline with each row if backend returns it
-      renderList(items);
-      setOK(`Loaded ${items.length} ${kind} lead(s).`);
-    } catch (e) {
-      setErr(`Failed to fetch`);
+  function render(list){
+    rowsT.innerHTML = "";
+    for(const lead of list){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${lead.id}</td>
+        <td><a href="https://${lead.host}" target="_blank" rel="noopener">${lead.host}</a></td>
+        <td>${lead.platform || "unknown"}</td>
+        <td>${lead.title}</td>
+        <td>${fmtDate(lead.created_at)}</td>
+        <td><span class="pill ${lead.temperature}">${lead.temperature}</span></td>
+        <td>${(lead.why && lead.why.length)? lead.why.map(w=>w.label).slice(0,3).join(", "): "<span class='muted'>—</span>"}</td>
+      `;
+      tr.onclick = ()=> onSelect(lead);
+      rowsT.appendChild(tr);
     }
   }
 
-  $("btnHot").onclick = () => refresh("hot");
-  $("btnWarm").onclick = () => refresh("warm");
-  document.addEventListener("keydown", (e) => { if (e.key.toLowerCase()==="r") $("btnHot").click(); });
-
-  $("find").onclick = async () => {
-    try {
-      const supplierDomain = $("supplierDomain").value.trim().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
-      if (!supplierDomain) { setErr("Enter your company’s domain (no https://)"); return; }
-      const city = $("city").value.trim();
-      const radiusMiles = Number($("radius").value);
-      const body = JSON.stringify({ supplierDomain, city: city || undefined, radiusMiles });
-      const out = await call("/api/v1/leads/buyers", { method: "POST", body });
-      setOK(`Created ${out.created} candidate(s). Refresh lists to view.`);
-    } catch (e) {
-      setErr(String(e.message || e));
+  async function loadHot(){
+    try{
+      const r = await fetch(`${BASE}/api/v1/leads/hot?limit=200`);
+      const j = await r.json();
+      render(j.items||[]);
+      if((j.items||[])[0]) onSelect(j.items[0]);
+    }catch{
+      rowsT.innerHTML = `<tr><td colspan="7" class="muted">Error: Failed to fetch</td></tr>`;
     }
-  };
+  }
+  async function loadWarm(){
+    try{
+      const r = await fetch(`${BASE}/api/v1/leads/warm?limit=200`);
+      const j = await r.json();
+      render(j.items||[]);
+      if((j.items||[])[0]) onSelect(j.items[0]);
+    }catch{
+      rowsT.innerHTML = `<tr><td colspan="7" class="muted">Error: Failed to fetch</td></tr>`;
+    }
+  }
 
-  $("csvHot").onclick = () => { window.open(state.baseUrl + "/api/v1/leads/export.csv?temperature=hot&limit=500", "_blank"); };
-  $("csvWarm").onclick = () => { window.open(state.baseUrl + "/api/v1/leads/export.csv?temperature=warm&limit=500", "_blank"); };
-
-  // auto-load lists
-  if (state.baseUrl) refresh("warm");
+  // initial
+  setBase(base.value.trim());
+  loadWarm();
 })();
 </script>
 </body>
