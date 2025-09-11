@@ -1,218 +1,262 @@
-import type { Application, Request, Response } from "express";
-import express from "express";
+import type { Express, Request, Response } from "express";
 import { requireApiKey } from "../auth";
 
-// ---------------- types & in-memory store ----------------
+// ----------------- types -----------------
+type Temperature = "hot" | "warm";
+type WhyItem = { label: string; kind: "meta" | "platform" | "signal"; score: number; detail: string };
 
-type Temperature = "hot" | "warm" | "cold";
-
-type Why = {
-  label: string;
-  kind: "meta" | "platform" | "signal";
-  score: number;      // 0..1
-  detail?: string;
-};
-
-type Lead = {
+interface Lead {
   id: number;
-  platform: string;   // 'shopify' | 'woocommerce' | 'unknown'
-  cat: string;        // 'product' | 'service'
-  host: string;       // normalized domain (no scheme)
-  title: string;
-  created_at: string; // ISO
+  platform: string;     // e.g., "shopify" | "woocommerce" | "unknown"
+  cat: string;          // e.g., "product" | "service" | ""
+  host: string;         // e.g., "brand-x.com"
+  title: string;        // e.g., "RFP: mailers"
+  created_at: string;   // ISO string
   temperature: Temperature;
-  why: Why[];
-  stage?: "new" | "qualified" | "talking" | "won" | "lost";
-  notes?: Array<{ at: string; text: string }>;
-};
-
-const leads = new Map<number, Lead>();
-let idSeq = 1;
-
-// ---------------- helpers ----------------
-
-function isoNow() { return new Date().toISOString(); }
-
-function normHost(raw?: string | null): string | null {
-  if (!raw) return null;
-  let s = String(raw).trim();
-  if (!s) return null;
-  if (/^https?:\/\//i.test(s)) {
-    try { s = new URL(s).host; } catch { return null; }
-  }
-  return s.replace(/^www\./i, "").toLowerCase();
+  why: WhyItem[];
+  stage?: string;       // "new" | "qualified" | ...
+  notes?: { ts: string; text: string }[];
 }
 
-function detectPlatform(text: string): string {
-  const t = text.toLowerCase();
-  if (t.includes("shopify")) return "shopify";
-  if (t.includes("woocommerce") || t.includes("woo")) return "woocommerce";
-  return "unknown";
+// ----------------- in-memory store -----------------
+const leads: Lead[] = [];
+let nextId = 1;
+
+// ----------------- helpers -----------------
+function nowISO() {
+  return new Date().toISOString();
 }
 
-// self-contained initial scoring: no external imports
-function initialScore(blob: string): { temperature: Temperature; why: Why[] } {
-  const t = blob.toLowerCase();
-  const why: Why[] = [];
-  if (/\.(com|net|org|io|co)\b/.test(t)) {
-    why.push({ label: "Domain quality", kind: "meta", score: 0.65, detail: "domain present" });
+function parseHost(input: string): string {
+  if (!input) return "";
+  const trimmed = input.trim();
+  try {
+    const u = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
+    return (u.host || "").replace(/^www\./i, "");
+  } catch {
+    // not a valid URL; treat as host-ish string
+    return trimmed.replace(/^https?:\/\//i, "").replace(/^www\./i, "").split("/")[0];
   }
-  if (t.includes("shopify")) {
-    why.push({ label: "Platform fit", kind: "platform", score: 0.75, detail: "shopify" });
-  } else if (/(woocommerce|wp\-?commerce|woo)/.test(t)) {
-    why.push({ label: "Platform fit", kind: "platform", score: 0.6, detail: "woocommerce" });
-  }
-  if (/\brfp\b|\brfq\b|\btender\b|\bbid\b|\bproposal\b/.test(t) || /packaging|labels?|cartons?|mailers?/.test(t)) {
-    why.push({ label: "Intent keywords", kind: "signal", score: 0.8, detail: "rfp/rfq/packaging" });
-  }
-  const temp: Temperature = why.some(w => w.kind === "signal") ? "hot" : why.length ? "warm" : "cold";
-  return { temperature: temp, why };
 }
 
-function pub(l: Lead) {
-  const { id, platform, cat, host, title, created_at, temperature, why } = l;
-  return { id, platform, cat, host, title, created_at, temperature, why };
+function scoreDomainQuality(host: string): WhyItem {
+  // super simple heuristic
+  const tld = host.split(".").pop() || "";
+  const len = host.length;
+  let score = 0.5;
+  if (tld === "com") score += 0.15;
+  if (len >= 8) score += 0.0; // neutral length bump
+  return { label: "Domain quality", kind: "meta", score: Number(score.toFixed(2)), detail: `${host} (.${tld || "?"})` };
 }
 
-// ---------------- core logic ----------------
+function scorePlatformFit(platform: string): WhyItem {
+  const map: Record<string, number> = { shopify: 0.75, woocommerce: 0.6 };
+  const p = (platform || "unknown").toLowerCase();
+  const score = map[p] ?? 0.5;
+  return { label: "Platform fit", kind: "platform", score, detail: p || "unknown" };
+}
 
-async function ingestOne(payload: any): Promise<Lead> {
-  const host = normHost(payload.host ?? payload.source_url);
-  if (!host) {
-    const err: any = new Error("host or source_url required");
-    err.status = 400;
-    throw err;
-  }
+const INTENT = ["rfp", "rfq", "packaging", "carton", "labels", "mailers", "stretch", "poly", "pouch", "box", "film"];
 
-  const title = (payload.title ? String(payload.title) : "Untitled").trim();
-  const platform = (payload.platform ? String(payload.platform) : detectPlatform(`${title} ${host}`));
-  const cat = (payload.cat ? String(payload.cat) : "product");
+function scoreIntent(keywords: string[], title: string): WhyItem {
+  const hay = [title, ...(keywords || [])].join(" ").toLowerCase();
+  const hits = INTENT.filter(k => hay.includes(k));
+  // 0.9 if strong signals present, else 0.8 if some, else 0.6
+  const score = hits.length >= 2 ? 0.9 : hits.length === 1 ? 0.8 : 0.6;
+  const detail = hits.length ? hits.join(", ") : "no strong keywords";
+  return { label: "Intent keywords", kind: "signal", score, detail };
+}
 
-  const id = idSeq++;
-  const scored = initialScore([title, host, platform, (Array.isArray(payload.kw) ? payload.kw.join(",") : "")].join(" | "));
+function decideTemperature(why: WhyItem[]): Temperature {
+  const meta = why.find(w => w.kind === "meta")?.score ?? 0;
+  const plat = why.find(w => w.kind === "platform")?.score ?? 0;
+  const sig = why.find(w => w.kind === "signal")?.score ?? 0;
+  const total = meta + plat + sig;
+  if (sig >= 0.85 || total >= 2.05) return "hot";
+  return "warm";
+}
 
-  const lead: Lead = {
-    id,
-    platform,
-    cat,
-    host,
-    title,
-    created_at: isoNow(),
-    temperature: scored.temperature,
-    why: scored.why,
-    stage: "new",
-    notes: []
+function serializeLead(l: Lead) {
+  // for single lead endpoint
+  return {
+    ok: true,
+    temperature: l.temperature,
+    lead: {
+      id: String(l.id),
+      platform: l.platform,
+      cat: l.cat,
+      host: l.host,
+      title: l.title,
+      created_at: l.created_at
+    },
+    why: l.why
   };
-
-  leads.set(id, lead);
-  return lead;
 }
 
-// ---------------- router ----------------
+function toCSV(rows: Lead[]) {
+  const header = `id,host,platform,cat,title,created_at,temperature`;
+  const lines = rows.map(l =>
+    [
+      JSON.stringify(String(l.id)),
+      JSON.stringify(l.host),
+      JSON.stringify(l.platform),
+      JSON.stringify(l.cat),
+      JSON.stringify(l.title),
+      JSON.stringify(new Date(l.created_at).toString()),
+      JSON.stringify(l.temperature)
+    ].join(",")
+  );
+  return [header, ...lines].join("\n");
+}
 
-export function mountLeads(app: Application) {
-  const r = express.Router();
+// ----------------- routes -----------------
+export function mountLeads(app: Express) {
+  const base = "/api/v1/leads";
 
-  // Lists
-  r.get("/leads/hot", (req: Request, res: Response) => {
+  // list by temperature
+  app.get(`${base}/hot`, (req: Request, res: Response) => {
     const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
-    const items = [...leads.values()]
-      .filter(l => l.temperature === "hot")
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, limit)
-      .map(pub);
+    const items = leads.filter(l => l.temperature === "hot").slice(-limit).reverse();
     res.json({ ok: true, items });
   });
 
-  r.get("/leads/warm", (req: Request, res: Response) => {
+  app.get(`${base}/warm`, (req: Request, res: Response) => {
     const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
-    const items = [...leads.values()]
-      .filter(l => l.temperature === "warm")
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, limit)
-      .map(pub);
+    const items = leads.filter(l => l.temperature === "warm").slice(-limit).reverse();
     res.json({ ok: true, items });
   });
 
-  // CSV export (optional temperature=hot|warm)
-  r.get("/leads/export.csv", (req: Request, res: Response) => {
-    const temp = String(req.query.temperature || "").toLowerCase() as Temperature | "";
-    const pick = [...leads.values()]
-      .filter(l => (temp ? l.temperature === temp : true))
-      .sort((a, b) => b.created_at.localeCompare(a.created_at));
-
-    const rows = [
-      "id,host,platform,cat,title,created_at,temperature",
-      ...pick.map(l => [
-        JSON.stringify(l.id),
-        JSON.stringify(l.host),
-        JSON.stringify(l.platform),
-        JSON.stringify(l.cat),
-        JSON.stringify(l.title),
-        JSON.stringify(new Date(l.created_at).toString()),
-        JSON.stringify(l.temperature)
-      ].join(","))
-    ].join("\n");
-
-    res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", "attachment; filename=leads.csv");
-    res.send(rows);
-  });
-
-  // Get one
-  r.get("/leads/:id", (req: Request, res: Response) => {
+  // single lead
+  app.get(`${base}/:id`, (req: Request, res: Response) => {
     const id = Number(req.params.id);
-    const lead = leads.get(id);
-    if (!lead) return res.status(404).json({ ok: false, error: "bad id" });
-    res.json({ ok: true, temperature: lead.temperature, lead: pub(lead), why: lead.why });
+    const lead = leads.find(l => l.id === id);
+    if (!lead) return res.json({ ok: false, error: "bad id" });
+    return res.json(serializeLead(lead));
   });
 
-  // Ingest (single): only host/source_url is required
-  r.post("/leads/ingest", requireApiKey, async (req: Request, res: Response) => {
-    try {
-      const lead = await ingestOne(req.body || {});
-      res.json({ ok: true, temperature: lead.temperature, lead: pub(lead), why: lead.why });
-    } catch (e: any) {
-      res.status(e?.status || 400).json({ ok: false, error: e?.message || "bad request" });
-    }
-  });
-
-  // Ingest (bulk)
-  r.post("/leads/ingest/bulk", requireApiKey, async (req: Request, res: Response) => {
-    const body = Array.isArray(req.body) ? req.body : [];
-    const items: Lead[] = [];
-    for (const p of body) {
-      try { items.push(await ingestOne(p)); } catch { /* skip bad rows */ }
-    }
-    res.json({ ok: true, inserted: items.length, items: items.map(pub) });
-  });
-
-  // PATCH stage
-  r.patch("/leads/:id/stage", requireApiKey, (req: Request, res: Response) => {
+  // set stage
+  app.patch(`${base}/:id/stage`, requireApiKey, (req: Request, res: Response) => {
     const id = Number(req.params.id);
-    const lead = leads.get(id);
-    if (!lead) return res.status(404).json({ ok: false, error: "bad id" });
-    const next = String(req.body?.stage || "").toLowerCase();
-    if (!["new", "qualified", "talking", "won", "lost"].includes(next)) {
-      return res.status(400).json({ ok: false, error: "invalid stage" });
-    }
-    lead.stage = next as Lead["stage"];
-    res.json({ ok: true, leadId: id, stage: lead.stage });
+    const lead = leads.find(l => l.id === id);
+    if (!lead) return res.json({ ok: false, error: "bad id" });
+    const stage = String(req.body?.stage || "").trim() || "new";
+    lead.stage = stage;
+    res.json({ ok: true, leadId: id, stage });
   });
 
-  // notes
-  r.post("/leads/:id/notes", requireApiKey, (req: Request, res: Response) => {
+  // add note
+  app.post(`${base}/:id/notes`, requireApiKey, (req: Request, res: Response) => {
     const id = Number(req.params.id);
-    const lead = leads.get(id);
-    if (!lead) return res.status(404).json({ ok: false, error: "bad id" });
+    const lead = leads.find(l => l.id === id);
+    if (!lead) return res.json({ ok: false, error: "bad id" });
     const text = String(req.body?.note || "").trim();
-    if (!text) return res.status(400).json({ ok: false, error: "note required" });
-    if (!lead.notes) lead.notes = [];
-    lead.notes.push({ at: new Date().toISOString(), text });
+    if (!text) return res.status(400).json({ ok: false, error: "note is required" });
+    lead.notes = lead.notes || [];
+    lead.notes.push({ ts: nowISO(), text });
     res.json({ ok: true, leadId: id });
   });
 
-  app.use("/api/v1", r);
-}
+  // export CSV
+  app.get(`${base}/export.csv`, (req: Request, res: Response) => {
+    const temp = (String(req.query.temperature || "").toLowerCase() as Temperature) || undefined;
+    const limit = Math.max(1, Math.min(500, Number(req.query.limit) || 50));
+    let rows = leads.slice().reverse();
+    if (temp === "hot" || temp === "warm") rows = rows.filter(l => l.temperature === temp);
+    rows = rows.slice(0, limit).reverse();
+    const csv = toCSV(rows);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.send(csv);
+  });
 
-export default mountLeads;
+  // ingest (single) — accepts JUST a domain/url; other fields optional
+  app.post(`${base}/ingest`, requireApiKey, (req: Request, res: Response) => {
+    const body = req.body || {};
+    const host = parseHost(body.source_url || body.host || "");
+    if (!host) return res.status(400).json({ ok: false, error: "source_url or host is required" });
+
+    const platform = String(body.platform || "unknown").toLowerCase();
+    const cat = String(body.cat || "").toLowerCase() || "product";
+    const title = String(body.title || `Lead: ${host}`).trim();
+    const kw: string[] = Array.isArray(body.kw) ? body.kw.map((s: any) => String(s)) : [];
+
+    const why: WhyItem[] = [
+      scoreDomainQuality(host),
+      scorePlatformFit(platform),
+      scoreIntent(kw, title)
+    ];
+    const temperature = decideTemperature(why);
+
+    const lead: Lead = {
+      id: nextId++,
+      platform,
+      cat,
+      host,
+      title,
+      created_at: nowISO(),
+      temperature,
+      why,
+      stage: "new",
+      notes: []
+    };
+    leads.push(lead);
+
+    res.json({
+      ok: true,
+      temperature,
+      lead: {
+        id: String(lead.id),
+        platform: lead.platform,
+        cat: lead.cat,
+        host: lead.host,
+        title: lead.title,
+        created_at: lead.created_at
+      },
+      why
+    });
+  });
+
+  // ingest (bulk) — array of items; each can be domain-only
+  app.post(`${base}/ingest/bulk`, requireApiKey, (req: Request, res: Response) => {
+    const items = Array.isArray(req.body) ? req.body : [];
+    let inserted = 0;
+    const out: Lead[] = [];
+
+    for (const raw of items) {
+      const host = parseHost(raw?.source_url || raw?.host || "");
+      if (!host) continue;
+      const platform = String(raw.platform || "unknown").toLowerCase();
+      const cat = String(raw.cat || "").toLowerCase() || "product";
+      const title = String(raw.title || `Lead: ${host}`).trim();
+      const kw: string[] = Array.isArray(raw.kw) ? raw.kw.map((s: any) => String(s)) : [];
+
+      const why: WhyItem[] = [
+        scoreDomainQuality(host),
+        scorePlatformFit(platform),
+        scoreIntent(kw, title)
+      ];
+      const temperature = decideTemperature(why);
+
+      const lead: Lead = {
+        id: nextId++,
+        platform,
+        cat,
+        host,
+        title,
+        created_at: nowISO(),
+        temperature,
+        why,
+        stage: "new",
+        notes: []
+      };
+      leads.push(lead);
+      out.push(lead);
+      inserted++;
+    }
+
+    res.json({
+      ok: true,
+      inserted,
+      items: out
+    });
+  });
+}
