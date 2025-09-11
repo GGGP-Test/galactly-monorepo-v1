@@ -1,46 +1,60 @@
-import type { Application, Request, Response } from "express";
+// src/routes/leads.ts
+import type { App } from "../index";
 
-/**
- * Mount all lead-related endpoints onto the provided Express app.
- * We use a named export to match the import in index.ts.
- */
-export function mountLeads(app: Application): void {
-  const base = "/api/v1/leads";
+type WhyItem = { label: string; kind: "meta" | "platform" | "signal" | "context"; score: number; detail?: string };
+export type Lead = {
+  id: number;
+  host: string;
+  platform: string;
+  title: string;
+  created: number;
+  temperature: "hot" | "warm";
+  why: WhyItem[];
+};
 
-  // List leads (hot/warm). For now returns an empty list if nothing is loaded.
-  app.get(base, (req: Request, res: Response) => {
-    // you can add filtering by req.query.temp === 'hot' | 'warm' later
-    res.json({ ok: true, items: [] });
+// very small in-mem seed (Northflank keeps container in memory per instance)
+const hot: Lead[] = [];
+const warm: Lead[] = [];
+
+function toCSV(rows: Lead[]) {
+  const header = "id,host,platform,title,created,temperature,why\n";
+  const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
+  const lines = rows.map(r =>
+    [r.id, r.host, r.platform, r.title, new Date(r.created).toISOString(), r.temperature,
+     r.why.map(w => `${w.label}:${w.score}`).join("|")]
+    .map(v => (typeof v === "string" ? esc(v) : String(v))).join(",")
+  );
+  return header + lines.join("\n");
+}
+
+export function mountLeads(app: App) {
+  // list
+  app.get("/api/v1/leads", (req, res) => {
+    const t = (req.query.temp as string)?.toLowerCase();
+    const data = t === "hot" ? hot : warm;
+    res.json({ ok: true, items: data });
   });
 
-  // Find buyers from a supplier (panel calls this).
-  app.post(`${base}/find-buyers`, (req: Request, res: Response) => {
-    // minimal echo so the panel stops seeing 404/405:
-    // expected body: { supplier: string, region?: string, radiusMi?: number }
-    const { supplier, region, radiusMi } = req.body || {};
-    if (!supplier || typeof supplier !== "string") {
-      res.status(400).json({ ok: false, error: "supplier (domain) is required" });
-      return;
-    }
-
-    // stub response; wire real logic next
-    res.json({
-      ok: true,
-      supplier,
-      region: region ?? "us/ca",
-      radiusMi: typeof radiusMi === "number" ? radiusMi : 50,
-      created: Date.now(),
-      candidates: [], // fill with real matches later
-      skipped: 0,
-      errors: 0
-    });
-  });
-
-  // Optional: warm/hot CSV downloads
-  app.get(`${base}/csv/:kind`, (req: Request, res: Response) => {
-    const kind = req.params.kind === "hot" ? "hot" : "warm";
+  // csv
+  app.get("/api/v1/leads.csv", (req, res) => {
+    const t = (req.query.temp as string)?.toLowerCase();
+    const data = t === "hot" ? hot : warm;
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="leads_${kind}.csv"`);
-    res.send("id,host,platform,title,created,temp,why\n"); // empty CSV header stub
+    res.setHeader("Content-Disposition", `attachment; filename="${t || "warm"}-leads.csv"`);
+    res.send(toCSV(data));
+  });
+
+  // Find buyers for a supplier
+  // body: { domain: string; region?: string; radiusMi?: number; keywords?: string }
+  app.post("/api/v1/leads/find-buyers", (req, res) => {
+    const { domain, region = "us", radiusMi = 50, keywords = "" } = req.body || {};
+    if (!domain || typeof domain !== "string") {
+      return res.status(400).json({ ok: false, error: "domain is required" });
+    }
+    // Stubbed result — your webscout/find pipeline will fill this in
+    const created: Lead[] = [];
+    res.json({ ok: true, supplierDomain: domain, region, radiusMi, keywords, created });
   });
 }
+
+export default mountLeads;
