@@ -1,17 +1,20 @@
-import type { App } from "../index";
-import { inferPersonaAndTargets } from "../ai/webscout";
+/* backend/src/routes/webscout.ts */
+import type { Express } from 'express';
+import { z } from 'zod';
+import { inferPersonaAndTargets } from '../ai/webscout';
 
-export function mountWebscout(app: App) {
-  // POST /api/v1/webscout/infer { supplierDomain, region? }
-  app.post("/api/v1/webscout/infer", async (req, res) => {
-    const supplierDomain = String(req.body.supplierDomain || "").trim();
-    if (!supplierDomain) return res.status(400).json({ ok: false, error: "supplierDomain required" });
+const bodySchema = z.object({
+  supplierDomain: z.string().min(3),
+});
 
-    try {
-      const persona = await inferPersonaAndTargets(supplierDomain, req.body.region);
-      res.json({ ok: true, persona });
-    } catch (err: any) {
-      res.status(500).json({ ok: false, error: err?.message || "infer failed" });
-    }
+export function mountWebscout(app: Express) {
+  app.post('/api/v1/webscout', async (req, res) => {
+    const parse = bodySchema.safeParse(req.body);
+    if (!parse.success) return res.status(400).json({ error: 'bad_request', details: parse.error.flatten() });
+
+    const persona = await inferPersonaAndTargets({ supplierDomain: parse.data.supplierDomain });
+    res.json({ ok: true, persona });
   });
 }
+
+export default { mountWebscout };
