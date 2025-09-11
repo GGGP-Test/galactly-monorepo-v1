@@ -1,348 +1,185 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Leads Console</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root {
-      --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#60a5fa;
-      --ok:#16a34a; --warn:#f59e0b; --err:#ef4444; --hot:#ef4444; --warm:#f59e0b; --chip:#1f2937;
-      font-synthesis-weight:none;
-    }
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-    .wrap{max-width:1200px;margin:18px auto;padding:0 14px}
+    :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#3b82f6;--ok:#16a34a;--warn:#f59e0b;--hot:#ef4444}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+    .row{display:flex;gap:16px}
+    .card{background:var(--card);border-radius:10px;padding:14px;border:1px solid #1f2937}
+    .grow{flex:1} .right{width:380px}
     h1{font-size:18px;margin:0 0 10px}
-    .bar{display:flex;gap:10px;align-items:center;margin:8px 0 12px}
-    .bar input[type=text]{background:#0b1220;border:1px solid #1f2937;color:var(--text);padding:8px 10px;border-radius:8px;min-width:420px}
-    .bar small{color:var(--muted)}
-    .btn{background:#1f2937;border:1px solid #273247;color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer}
-    .btn.primary{background:var(--accent);border-color:#4f94f6;color:#04152b}
-    .btn.ghost{background:#0b1220}
-    .btn:disabled{opacity:.6;cursor:not-allowed}
-    .grid{display:grid;grid-template-columns:1.2fr .9fr;gap:14px}
-    .card{background:var(--panel);border:1px solid #1f2937;border-radius:12px;overflow:hidden}
-    .card h3{margin:0;padding:12px 14px;border-bottom:1px solid #1f2937;font-size:14px;font-weight:600}
-    .pad{padding:12px 14px}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid #1f2937;text-align:left;vertical-align:top}
-    th{color:var(--muted);font-weight:600}
-    tr:hover{background:#0b1220}
-    tr.sel{background:#0b1628}
-    .k{color:var(--muted)}
-    .row{display:flex;gap:10px;align-items:center;margin:8px 0}
-    .row input,.row textarea,.row select{flex:1;background:#0b1220;border:1px solid #1f2937;color:var(--text);padding:8px 10px;border-radius:8px}
-    .row textarea{min-height:70px}
-    .chips{display:flex;flex-wrap:wrap;gap:6px}
-    .chip{background:var(--chip);border:1px solid #273247;border-radius:999px;padding:4px 8px;color:var(--muted);font-size:12px}
-    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #273247;background:#0b1220;margin-left:6px}
-    .pill.hot{border-color:var(--hot);color:var(--hot)} .pill.warm{border-color:var(--warm);color:var(--warm)}
-    .status{margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid #1f2937}
-    .status.ok{border-color:#1f3b27;background:#0b1d13;color:#9be7b1}
-    .status.err{border-color:#3b1f27;background:#1a0b10;color:#f2a1b3}
-    .help{color:var(--muted);font-size:12px}
-    .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .right{display:grid;grid-template-rows:auto auto 1fr;gap:12px}
-    .link{color:#9bd0ff;text-decoration:none}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+    input,button,select,textarea{border-radius:8px;border:1px solid #334155;background:#0b1220;color:var(--text);padding:8px 10px}
+    input,select,textarea{width:100%}
+    button{cursor:pointer} button.primary{background:var(--accent);border-color:#1d4ed8}
+    button.good{background:var(--ok);border-color:#166534}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:8px;border-bottom:1px solid #222}
+    th{color:var(--muted);text-align:left;font-weight:600}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #374151}
+    .pill.hot{background:#2b0b0b;color:#fecaca;border-color:#7f1d1d}
+    .pill.warm{background:#231a09;color:#fde68a;border-color:#854d0e}
+    .muted{color:var(--muted)}
+    .rowline{display:flex;gap:8px}
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Leads Console</h1>
-    <div class="bar">
-      <span>Base URL</span>
-      <input id="base" type="text" placeholder="https://<your-service>.code.run" />
-      <button class="btn" id="apply">Apply</button>
-      <small>Tip: host this file from the <b>same domain</b> as the API to avoid CORS.</small>
-      <span style="flex:1"></span>
-      <span>API key</span>
-      <input id="apikey" type="text" placeholder="x-api-key value (optional for write)" style="min-width:320px"/>
-      <button class="btn" id="saveKey">Save</button>
-      <button class="btn ghost" id="clearKey">Clear</button>
-    </div>
 
-    <div class="grid">
-      <!-- left: lists -->
-      <div class="card">
-        <h3>Hot / Warm &nbsp; <span class="help">press <b>R</b> to refresh hot</span></h3>
-        <div class="pad">
-          <div class="row" style="justify-content:flex-start;gap:8px">
-            <button class="btn primary" id="btnHot">Refresh Hot</button>
-            <button class="btn" id="btnWarm">Refresh Warm</button>
-            <div class="help" id="listInfo"></div>
-          </div>
-          <div style="overflow:auto;max-height:460px">
-            <table id="tbl">
-              <thead>
-                <tr>
-                  <th style="width:56px">ID</th>
-                  <th>Host</th>
-                  <th>Platform</th>
-                  <th>Title</th>
-                  <th>Created</th>
-                  <th>Temp</th>
-                  <th>Why</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
+    <div class="card row">
+      <div class="grow">
+        <label>Base URL</label>
+        <div class="rowline">
+          <input id="base" value="https://p01--animated-cellar--vz4ftkwrzdfs.code.run"/>
+          <button id="apply" class="primary">Apply</button>
+          <div class="muted">Tip: host this file from the same domain as the API to avoid CORS.</div>
         </div>
       </div>
-
-      <!-- right: details + ingest + csv -->
       <div class="right">
-        <div class="card">
-          <h3>Details</h3>
-          <div class="pad" id="details">
-            <div class="help">Select a lead…</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3>Ingest (single)</h3>
-          <div class="pad">
-            <div class="help" style="margin-bottom:6px">
-              You can enter <b>just a domain or URL</b>. All other fields are optional.
-            </div>
-            <div class="cols">
-              <input id="in_cat" placeholder="cat e.g. product (optional)"/>
-              <input id="in_kw"  placeholder="kw (comma-separated) e.g. packaging,rfp (optional)"/>
-            </div>
-            <div class="cols">
-              <input id="in_platform" placeholder="platform e.g. shopify (optional)"/>
-              <input id="in_source"   placeholder="domain or URL e.g. brand.com or https://brand.com/path" />
-            </div>
-            <input id="in_title" style="width:100%" placeholder="title e.g. RFP: mailers (optional)"/>
-            <div class="row" style="justify-content:flex-start">
-              <button class="btn primary" id="btnIngest">Ingest</button>
-              <div class="help" id="ingMsg">Requires API key for write actions.</div>
-            </div>
-            <div id="ingStatus"></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3>Download CSV</h3>
-          <div class="pad">
-            <div class="row" style="gap:8px">
-              <button class="btn" id="csvHot">Download CSV (hot)</button>
-              <button class="btn" id="csvWarm">Download CSV (warm)</button>
-            </div>
-          </div>
+        <label>API key</label>
+        <div class="rowline">
+          <input id="token" placeholder="paste API key"/>
+          <button id="saveKey" class="primary">Save</button>
+          <button id="clearKey">Clear</button>
         </div>
       </div>
     </div>
 
-    <p class="help" style="margin:12px 4px 40px">
-      API: <a class="link" id="apiDoc" target="_blank" rel="noopener">/api/v1/leads</a>
-    </p>
+    <div class="row" style="margin-top:16px">
+      <div class="card grow">
+        <div class="rowline" style="align-items:center;gap:12px">
+          <h2 style="margin:0;font-size:16px">Hot / Warm</h2>
+          <button id="btnHot" class="primary">Refresh Hot</button>
+          <button id="btnWarm">Refresh Warm</button>
+          <div id="status" class="muted"></div>
+        </div>
+        <table id="tbl">
+          <thead>
+            <tr><th>ID</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="muted" style="margin-top:6px">API: <code id="apiPath">/api/v1/leads</code></div>
+      </div>
+
+      <div class="card right">
+        <div>
+          <label>Details</label>
+          <div id="details" class="muted">Select a lead...</div>
+        </div>
+
+        <div style="margin-top:16px">
+          <label>Find buyers (from supplier)</label>
+          <input id="supplier" placeholder="supplier website or domain e.g. stretchandshrink.com"/>
+          <input id="kw" placeholder="keywords (optional) e.g. rfp, packaging"/>
+          <button id="find" class="good" style="width:100%;margin-top:6px">Find buyers</button>
+          <div id="findMsg" class="muted" style="margin-top:6px"></div>
+        </div>
+
+        <div style="margin-top:16px">
+          <label>Download CSV</label>
+          <div class="rowline">
+            <button id="csvHot">Download CSV (hot)</button>
+            <button id="csvWarm">Download CSV (warm)</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
 <script>
-(function(){
-  // ----- state -----
-  const $ = sel => document.querySelector(sel);
-  const baseEl = $('#base'), keyEl = $('#apikey'), infoEl = $('#listInfo');
-  const tbody = $('#tbl tbody'), details = $('#details');
-  let BASE = localStorage.getItem('leads.base') || '';
-  let APIKEY = localStorage.getItem('leads.key') || '';
-  let currentList = 'hot';
-  let selectedId = null;
+(function() {
+  const qs = (sel) => document.querySelector(sel);
+  const base = qs("#base");
+  const token = qs("#token");
+  const status = qs("#status");
+  const apiPath = qs("#apiPath");
+  const tbody = qs("#tbl tbody");
+  const details = qs("#details");
+  const findMsg = qs("#findMsg");
 
-  baseEl.value = BASE; keyEl.value = APIKEY;
-
-  $('#apply').onclick = () => {
-    BASE = baseEl.value.trim().replace(/\/+$/,'');
-    localStorage.setItem('leads.base', BASE);
-    $('#apiDoc').href = (BASE || '') + '/api/v1/leads';
-    flashOk('Applied base URL');
+  // Persist base + token in localStorage
+  const LS = {
+    base: "packlead.base",
+    token: "packlead.token",
   };
-  $('#saveKey').onclick = () => { APIKEY = keyEl.value.trim(); localStorage.setItem('leads.key', APIKEY); flashOk('Saved API key'); };
-  $('#clearKey').onclick = () => { APIKEY = ''; keyEl.value=''; localStorage.removeItem('leads.key'); flashOk('Cleared key'); };
+  base.value = localStorage.getItem(LS.base) || base.value;
+  token.value = localStorage.getItem(LS.token) || "";
 
-  $('#apiDoc').href = (BASE || '') + '/api/v1/leads';
+  qs("#apply").onclick = () => { localStorage.setItem(LS.base, base.value.trim()); ping(); };
+  qs("#saveKey").onclick = () => { localStorage.setItem(LS.token, token.value.trim()); findMsg.textContent = "Saved API key."; };
+  qs("#clearKey").onclick = () => { localStorage.removeItem(LS.token); token.value=""; };
 
-  document.addEventListener('keydown', (e)=>{ if(e.key.toLowerCase()==='r') $('#btnHot').click(); });
+  function url(p){ return (base.value.replace(/\/+$/,"") + p); }
 
-  $('#btnHot').onclick = () => { currentList='hot'; loadList('hot'); };
-  $('#btnWarm').onclick = () => { currentList='warm'; loadList('warm'); };
-
-  $('#btnIngest').onclick = ingestOne;
-  $('#csvHot').onclick = () => downloadCSV('hot');
-  $('#csvWarm').onclick = () => downloadCSV('warm');
-
-  // ----- utils -----
-  function flashOk(msg){ showStatus(msg, 'ok'); }
-  function flashErr(msg){ showStatus(msg, 'err'); }
-  function showStatus(msg, kind){
-    const d = document.createElement('div');
-    d.className = 'status '+kind;
-    d.textContent = msg;
-    set($('#ingStatus'), d);
-    setTimeout(()=>{ d.remove(); }, 3800);
-  }
-  function fmtDate(s){
-    try { const d = new Date(s); return d.toLocaleString(); } catch { return s; }
-  }
-  function set(el, child){ el.innerHTML=''; if(child) el.appendChild(child); }
-  function needBase(){ if(!BASE){ flashErr('Set Base URL first.'); return true } return false; }
-
-  function hdrs(json=true){
-    const h = json ? {'Content-Type':'application/json'} : {};
-    if(APIKEY) h['x-api-key'] = APIKEY;
-    return h;
+  async function ping(){
+    apiPath.textContent = "/api/v1/leads";
+    status.textContent = " ";
   }
 
-  async function api(path, opts={}){
-    if(needBase()) throw new Error('no-base');
-    const url = BASE + path;
-    const res = await fetch(url, opts);
-    const ct = res.headers.get('content-type') || '';
-    const data = ct.includes('application/json') ? await res.json() : await res.text();
-    if(!res.ok){ const msg = typeof data==='string'?data:(data && data.error)||res.statusText; throw new Error(msg); }
-    return data;
-  }
-
-  // ----- list + details -----
-  async function loadList(kind){
-    try{
-      const data = await api(`/api/v1/leads/${kind}?limit=50`);
-      infoEl.textContent = `Loaded ${data.items.length} ${kind} lead(s).`;
-      renderRows(data.items);
-    }catch(err){ infoEl.textContent = `Error: ${err.message || err}`; }
-  }
-
-  function renderRows(items){
-    tbody.innerHTML = '';
-    for(const l of items){
-      const tr = document.createElement('tr');
-      tr.onclick = ()=> selectRow(tr, l.id);
+  async function load(kind){
+    status.textContent = "Loading " + kind + "...";
+    const r = await fetch(url(`/api/v1/leads/${kind}?limit=50`));
+    const j = await r.json().catch(()=>({ok:false,error:"bad_json"}));
+    tbody.innerHTML = "";
+    if(!j.ok){ status.textContent = "Error: " + (j.error || "failed to fetch"); return; }
+    status.textContent = `Loaded ${j.items.length} ${kind} lead(s).`;
+    for(const it of j.items){
+      const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${l.id}</td>
-        <td>${esc(l.host)}</td>
-        <td>${esc(l.platform)}</td>
-        <td>${esc(l.title)}</td>
-        <td>${fmtDate(l.created_at)}</td>
-        <td><span class="pill ${l.temperature}">${l.temperature}</span></td>
-        <td>${(l.why||[]).map(w=>esc(w.label)).join(', ')}</td>
+        <td>${it.id}</td>
+        <td>${it.host}</td>
+        <td>${it.platform||""}</td>
+        <td>${it.title||""}</td>
+        <td>${new Date(it.created_at||it.createdAt||Date.now()).toLocaleString()}</td>
+        <td><span class="pill ${it.temperature||it.temp}">${it.temperature||it.temp||""}</span></td>
+        <td class="muted">${(it.why||[]).map(w=>w.label).join(", ")}</td>
       `;
+      tr.onclick = ()=> show(it);
       tbody.appendChild(tr);
     }
-    selectedId = null;
-    set(details, divHelp('Select a lead…'));
   }
 
-  function esc(s){ return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function divHelp(t){ const d=document.createElement('div'); d.className='help'; d.textContent=t; return d; }
-
-  async function selectRow(tr, id){
-    [...tbody.querySelectorAll('tr')].forEach(n=>n.classList.remove('sel'));
-    tr.classList.add('sel');
-    selectedId = id;
-    try{
-      const d = await api(`/api/v1/leads/${id}`);
-      renderDetails(d);
-    }catch(err){ set(details, divHelp('Error: '+err.message)); }
-  }
-
-  function whyItem(w){
-    const li = document.createElement('div');
-    li.className='row';
-    li.style.margin='0 0 4px';
-    li.innerHTML = `<div class="chip">${esc(w.label)} <span class="k">(${w.kind})</span></div><div class="k">${esc(w.detail)}</div><div class="pill" style="margin-left:auto">${w.score}</div>`;
-    return li;
-  }
-
-  function renderDetails(d){
-    const l = d.lead || {};
-    const box = document.createElement('div');
-    box.innerHTML = `
-      <div class="row"><div class="k">ID</div><div>${l.id}</div></div>
-      <div class="row"><div class="k">Host</div><div>${esc(l.host)}</div></div>
-      <div class="row"><div class="k">Platform</div><div>${esc(l.platform)}</div></div>
-      <div class="row"><div class="k">Created</div><div>${fmtDate(l.created_at)}</div></div>
-      <div class="row"><div class="k">Title</div><div>${esc(l.title)}</div></div>
-      <div class="row"><div class="k">Temp</div><div><span class="pill ${d.temperature}">${d.temperature}</span></div></div>
-      <div class="row" style="display:block"><div class="k" style="margin-bottom:6px">Why</div><div id="why" class="chips"></div></div>
-      <hr style="border:none;border-top:1px solid #1f2937;margin:10px 0">
-      <div class="row">
-        <div class="k">Set stage</div>
-        <select id="st">
-          <option value="new">new</option>
-          <option value="qualified">qualified</option>
-          <option value="won">won</option>
-          <option value="lost">lost</option>
-        </select>
-        <button class="btn" id="stSave">Save</button>
-      </div>
-      <div class="row">
-        <input id="note" placeholder="e.g. First call done; decision next week">
-        <button class="btn" id="addNote">Add</button>
-      </div>
-      <div id="dmsg"></div>
+  function show(it){
+    details.innerHTML = `
+      <div><strong>ID</strong> ${it.id}</div>
+      <div><strong>Host</strong> ${it.host}</div>
+      <div><strong>Platform</strong> ${it.platform||"unknown"}</div>
+      <div><strong>Created</strong> ${new Date(it.created_at||it.createdAt||Date.now()).toLocaleString()}</div>
+      <div><strong>Title</strong> ${it.title||""}</div>
+      <div style="margin-top:6px"><span class="pill ${it.temperature||"warm"}">${it.temperature||"warm"}</span></div>
+      <div style="margin-top:6px">${(it.why||[]).map(w=>`<div class="muted">${w.label} (${w.kind}) ${w.score?.toFixed?.(2) ?? ""} — ${w.detail||""}</div>`).join("")}</div>
     `;
-    set(details, box);
-    const why = box.querySelector('#why');
-    (d.why || []).forEach(w => why.appendChild(whyItem(w)));
-    box.querySelector('#stSave').onclick = async ()=>{
-      try{
-        const stage = box.querySelector('#st').value;
-        const resp = await api(`/api/v1/leads/${l.id}/stage`, {method:'PATCH',headers:hdrs(),body:JSON.stringify({stage})});
-        setMsg(box, `Stage saved: ${resp.stage}`, true);
-      }catch(err){ setMsg(box, err.message || 'error', false); }
-    };
-    box.querySelector('#addNote').onclick = async ()=>{
-      try{
-        const text = box.querySelector('#note').value.trim();
-        if(!text) return setMsg(box,'Enter note text.', false);
-        await api(`/api/v1/leads/${l.id}/notes`, {method:'POST',headers:hdrs(),body:JSON.stringify({note:text})});
-        box.querySelector('#note').value = '';
-        setMsg(box,'Note added.', true);
-      }catch(err){ setMsg(box, err.message || 'error', false); }
-    };
   }
 
-  function setMsg(box, msg, ok){
-    const d = box.querySelector('#dmsg');
-    d.className = 'status ' + (ok ? 'ok':'err');
-    d.textContent = msg;
-  }
+  // New: Find buyers → /targets/discover
+  qs("#find").onclick = async ()=>{
+    const s = qs("#supplier").value.trim();
+    const kw = qs("#kw").value.trim();
+    findMsg.textContent = "";
+    if(!s){ findMsg.textContent = "Enter a supplier website/domain."; return; }
+    const params = new URLSearchParams({ domain: s });
+    if(kw) params.set("kw", kw);
+    const t = (token.value||"").trim();
+    if(!t){ findMsg.textContent = "Paste API key and click Save."; return; }
+    params.set("api_key", t);
+    findMsg.textContent = "Finding buyers...";
+    const r = await fetch(url(`/api/v1/targets/discover?${params.toString()}`));
+    const j = await r.json().catch(()=>({ok:false,error:"bad_json"}));
+    if(!j.ok){ findMsg.textContent = "Error: " + (j.error||"failed"); return; }
+    findMsg.textContent = `Created ${j.created} candidate(s). Refresh lists to view.`;
+  };
 
-  // ----- ingest -----
-  async function ingestOne(){
-    try{
-      const source = $('#in_source').value.trim();
-      if(!source){ flashErr('Please enter a domain or URL.'); return; }
-      const cat  = $('#in_cat').value.trim();
-      const platform = $('#in_platform').value.trim();
-      const title = $('#in_title').value.trim();
-      const kw = $('#in_kw').value.trim();
-      const payload = { source_url: source };
-      if(cat) payload.cat = cat;
-      if(platform) payload.platform = platform;
-      if(title) payload.title = title;
-      if(kw) payload.kw = kw.split(',').map(s=>s.trim()).filter(Boolean);
+  qs("#btnHot").onclick = ()=> load("hot");
+  qs("#btnWarm").onclick = ()=> load("warm");
+  document.addEventListener("keydown",(e)=>{ if(e.key.toLowerCase()==="r") load("hot"); });
 
-      const data = await api(`/api/v1/leads/ingest`, { method:'POST', headers:hdrs(), body:JSON.stringify(payload) });
-      flashOk(`Ingested id=${(data.lead && data.lead.id) || 'ok'}`);
-      // refresh current list so you see it
-      loadList(currentList);
-    }catch(err){ flashErr(err.message || 'ingest failed'); }
-  }
-
-  // ----- csv -----
-  async function downloadCSV(temp){
-    try{
-      if(needBase()) return;
-      const url = `${BASE}/api/v1/leads/export.csv?temperature=${encodeURIComponent(temp)}&limit=200`;
-      const a = document.createElement('a');
-      a.href = url; a.download = `leads_${temp}.csv`; document.body.appendChild(a); a.click(); a.remove();
-    }catch(err){ flashErr(err.message || 'csv error'); }
-  }
-
-  // initial load (if base set)
-  if(BASE){ $('#btnHot').click(); }
+  ping();
 })();
 </script>
 </body>
