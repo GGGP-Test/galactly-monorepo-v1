@@ -5,129 +5,116 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Leads Console</title>
   <style>
-    :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#3b82f6;--ok:#16a34a;--warn:#f59e0b;--hot:#ef4444}
+    :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#3b82f6;--ok:#16a34a;--hot:#ef4444}
     *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial}
     .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
-    .row{display:flex;gap:16px}
+    .row{display:flex;gap:16px} .grow{flex:1} .right{width:420px}
     .card{background:var(--card);border-radius:10px;padding:14px;border:1px solid #1f2937}
-    .grow{flex:1} .right{width:380px}
     h1{font-size:18px;margin:0 0 10px}
     label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
-    input,button,select,textarea{border-radius:8px;border:1px solid #334155;background:#0b1220;color:var(--text);padding:8px 10px}
-    input,select,textarea{width:100%}
-    button{cursor:pointer} button.primary{background:var(--accent);border-color:#1d4ed8}
+    input,button,select{border-radius:8px;border:1px solid #334155;background:#0b1220;color:var(--text);padding:8px 10px}
+    input,select{width:100%} button{cursor:pointer}
+    button.primary{background:var(--accent);border-color:#1d4ed8}
     button.good{background:var(--ok);border-color:#166534}
     table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{padding:8px;border-bottom:1px solid #222}
-    th{color:var(--muted);text-align:left;font-weight:600}
+    th,td{padding:8px;border-bottom:1px solid #222} th{color:var(--muted);text-align:left;font-weight:600}
     .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #374151}
     .pill.hot{background:#2b0b0b;color:#fecaca;border-color:#7f1d1d}
     .pill.warm{background:#231a09;color:#fde68a;border-color:#854d0e}
     .muted{color:var(--muted)}
-    .rowline{display:flex;gap:8px}
+    .rowline{display:flex;gap:8px;align-items:center}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Leads Console</h1>
+<div class="wrap">
+  <h1>Leads Console</h1>
 
-    <div class="card row">
-      <div class="grow">
-        <label>Base URL</label>
-        <div class="rowline">
-          <input id="base" value="https://p01--animated-cellar--vz4ftkwrzdfs.code.run"/>
-          <button id="apply" class="primary">Apply</button>
-          <div class="muted">Tip: host this file from the same domain as the API to avoid CORS.</div>
-        </div>
-      </div>
-      <div class="right">
-        <label>API key</label>
-        <div class="rowline">
-          <input id="token" placeholder="paste API key"/>
-          <button id="saveKey" class="primary">Save</button>
-          <button id="clearKey">Clear</button>
-        </div>
+  <div class="card row">
+    <div class="grow">
+      <label>Base URL</label>
+      <div class="rowline">
+        <input id="base" value="https://p01--animated-cellar--vz4ftkwrzdfs.code.run"/>
+        <button id="apply" class="primary">Apply</button>
+        <div class="muted">Tip: host this file from the same domain as the API to avoid CORS.</div>
       </div>
     </div>
-
-    <div class="row" style="margin-top:16px">
-      <div class="card grow">
-        <div class="rowline" style="align-items:center;gap:12px">
-          <h2 style="margin:0;font-size:16px">Hot / Warm</h2>
-          <button id="btnHot" class="primary">Refresh Hot</button>
-          <button id="btnWarm">Refresh Warm</button>
-          <div id="status" class="muted"></div>
-        </div>
-        <table id="tbl">
-          <thead>
-            <tr><th>ID</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <div class="muted" style="margin-top:6px">API: <code id="apiPath">/api/v1/leads</code></div>
-      </div>
-
-      <div class="card right">
-        <div>
-          <label>Details</label>
-          <div id="details" class="muted">Select a lead...</div>
-        </div>
-
-        <div style="margin-top:16px">
-          <label>Find buyers (from supplier)</label>
-          <input id="supplier" placeholder="supplier website or domain e.g. stretchandshrink.com"/>
-          <input id="kw" placeholder="keywords (optional) e.g. rfp, packaging"/>
-          <button id="find" class="good" style="width:100%;margin-top:6px">Find buyers</button>
-          <div id="findMsg" class="muted" style="margin-top:6px"></div>
-        </div>
-
-        <div style="margin-top:16px">
-          <label>Download CSV</label>
-          <div class="rowline">
-            <button id="csvHot">Download CSV (hot)</button>
-            <button id="csvWarm">Download CSV (warm)</button>
-          </div>
-        </div>
+    <div class="right">
+      <label>API key</label>
+      <div class="rowline">
+        <input id="token" placeholder="paste API key"/>
+        <button id="saveKey" class="primary">Save</button>
+        <button id="clearKey">Clear</button>
       </div>
     </div>
   </div>
 
-<script>
-(function() {
-  const qs = (sel) => document.querySelector(sel);
-  const base = qs("#base");
-  const token = qs("#token");
-  const status = qs("#status");
-  const apiPath = qs("#apiPath");
-  const tbody = qs("#tbl tbody");
-  const details = qs("#details");
-  const findMsg = qs("#findMsg");
+  <div class="row" style="margin-top:16px">
+    <div class="card grow">
+      <div class="rowline">
+        <h2 style="margin:0;font-size:16px">Hot / Warm</h2>
+        <button id="btnHot" class="primary">Refresh Hot</button>
+        <button id="btnWarm">Refresh Warm</button>
+        <div id="status" class="muted"></div>
+      </div>
+      <table id="tbl">
+        <thead><tr><th>ID</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="muted" style="margin-top:6px">API: <code>/api/v1/leads</code></div>
+    </div>
 
-  // Persist base + token in localStorage
-  const LS = {
-    base: "packlead.base",
-    token: "packlead.token",
-  };
-  base.value = localStorage.getItem(LS.base) || base.value;
+    <div class="card right">
+      <div>
+        <label>Details</label>
+        <div id="details" class="muted">Select a lead...</div>
+      </div>
+
+      <div style="margin-top:16px">
+        <label>Find buyers (from supplier)</label>
+        <input id="supplier" placeholder="supplier website or domain e.g. stretchandshrink.com"/>
+        <input id="kw" placeholder="keywords (optional) e.g. rfp, packaging"/>
+        <button id="find" class="good" style="width:100%;margin-top:6px">Find buyers</button>
+        <div id="findMsg" class="muted" style="margin-top:6px"></div>
+        <div class="muted" style="margin-top:4px">Tip: include <strong>rfp</strong> or <strong>rfq</strong> to create HOT leads; otherwise results are WARM.</div>
+      </div>
+
+      <div style="margin-top:16px">
+        <label>Download CSV</label>
+        <div class="rowline">
+          <button id="csvHot">Download CSV (hot)</button>
+          <button id="csvWarm">Download CSV (warm)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const qs = s => document.querySelector(s);
+  const base   = qs("#base");
+  const token  = qs("#token");
+  const status = qs("#status");
+  const tbody  = qs("#tbl tbody");
+  const details= qs("#details");
+  const findMsg= qs("#findMsg");
+
+  const LS = { base: "packlead.base", token: "packlead.token" };
+  base.value  = localStorage.getItem(LS.base)  || base.value;
   token.value = localStorage.getItem(LS.token) || "";
 
-  qs("#apply").onclick = () => { localStorage.setItem(LS.base, base.value.trim()); ping(); };
-  qs("#saveKey").onclick = () => { localStorage.setItem(LS.token, token.value.trim()); findMsg.textContent = "Saved API key."; };
-  qs("#clearKey").onclick = () => { localStorage.removeItem(LS.token); token.value=""; };
+  qs("#apply").onclick  = () => localStorage.setItem(LS.base, base.value.trim());
+  qs("#saveKey").onclick= () => { localStorage.setItem(LS.token, token.value.trim()); findMsg.textContent="Saved API key."; };
+  qs("#clearKey").onclick=()=> { localStorage.removeItem(LS.token); token.value=""; };
 
-  function url(p){ return (base.value.replace(/\/+$/,"") + p); }
-
-  async function ping(){
-    apiPath.textContent = "/api/v1/leads";
-    status.textContent = " ";
-  }
+  function url(p){ return (base.value.replace(/\/+$/,"")+p); }
 
   async function load(kind){
     status.textContent = "Loading " + kind + "...";
     const r = await fetch(url(`/api/v1/leads/${kind}?limit=50`));
     const j = await r.json().catch(()=>({ok:false,error:"bad_json"}));
-    tbody.innerHTML = "";
-    if(!j.ok){ status.textContent = "Error: " + (j.error || "failed to fetch"); return; }
+    tbody.innerHTML="";
+    if(!j.ok){ status.textContent = "Error: "+(j.error||"fetch failed"); return; }
     status.textContent = `Loaded ${j.items.length} ${kind} lead(s).`;
     for(const it of j.items){
       const tr = document.createElement("tr");
@@ -138,9 +125,8 @@
         <td>${it.title||""}</td>
         <td>${new Date(it.created_at||it.createdAt||Date.now()).toLocaleString()}</td>
         <td><span class="pill ${it.temperature||it.temp}">${it.temperature||it.temp||""}</span></td>
-        <td class="muted">${(it.why||[]).map(w=>w.label).join(", ")}</td>
-      `;
-      tr.onclick = ()=> show(it);
+        <td class="muted">${(it.why||[]).map(w=>w.label).join(", ")}</td>`;
+      tr.onclick=()=> show(it);
       tbody.appendChild(tr);
     }
   }
@@ -153,33 +139,33 @@
       <div><strong>Created</strong> ${new Date(it.created_at||it.createdAt||Date.now()).toLocaleString()}</div>
       <div><strong>Title</strong> ${it.title||""}</div>
       <div style="margin-top:6px"><span class="pill ${it.temperature||"warm"}">${it.temperature||"warm"}</span></div>
-      <div style="margin-top:6px">${(it.why||[]).map(w=>`<div class="muted">${w.label} (${w.kind}) ${w.score?.toFixed?.(2) ?? ""} — ${w.detail||""}</div>`).join("")}</div>
-    `;
+      <div style="margin-top:6px">${(it.why||[]).map(w=>`<div class="muted">${w.label} (${w.kind}) ${w.score?.toFixed?.(2) ?? ""} — ${w.detail||""}</div>`).join("")}</div>`;
   }
 
-  // New: Find buyers → /targets/discover
-  qs("#find").onclick = async ()=>{
-    const s = qs("#supplier").value.trim();
-    const kw = qs("#kw").value.trim();
-    findMsg.textContent = "";
-    if(!s){ findMsg.textContent = "Enter a supplier website/domain."; return; }
-    const params = new URLSearchParams({ domain: s });
-    if(kw) params.set("kw", kw);
-    const t = (token.value||"").trim();
-    if(!t){ findMsg.textContent = "Paste API key and click Save."; return; }
-    params.set("api_key", t);
-    findMsg.textContent = "Finding buyers...";
-    const r = await fetch(url(`/api/v1/targets/discover?${params.toString()}`));
-    const j = await r.json().catch(()=>({ok:false,error:"bad_json"}));
-    if(!j.ok){ findMsg.textContent = "Error: " + (j.error||"failed"); return; }
-    findMsg.textContent = `Created ${j.created} candidate(s). Refresh lists to view.`;
-  };
-
-  qs("#btnHot").onclick = ()=> load("hot");
+  qs("#btnHot").onclick  = ()=> load("hot");
   qs("#btnWarm").onclick = ()=> load("warm");
   document.addEventListener("keydown",(e)=>{ if(e.key.toLowerCase()==="r") load("hot"); });
 
-  ping();
+  qs("#find").onclick = async ()=>{
+    const dom = qs("#supplier").value.trim();
+    const kw  = qs("#kw").value.trim();
+    findMsg.textContent="";
+    if(!dom){ findMsg.textContent="Enter a supplier website/domain."; return; }
+    const t = (token.value||"").trim();
+    if(!t){ findMsg.textContent="Paste API key and click Save."; return; }
+
+    const params = new URLSearchParams({ domain: dom, api_key: t });
+    if(kw) params.set("kw", kw);
+    findMsg.textContent="Finding buyers...";
+    const r = await fetch(url(`/api/v1/targets/discover?${params.toString()}`));
+    const j = await r.json().catch(()=>({ok:false,error:"bad_json"}));
+    if(!j.ok){ findMsg.textContent = "Error: "+(j.error||"failed"); return; }
+
+    const created = j.created || 0;
+    const skipped = (j.skipped||[]).length;
+    const errors  = (j.errors ||[]).length;
+    findMsg.textContent = `Created ${created} candidate(s). Skipped ${skipped} duplicate(s). Errors ${errors}. Refresh lists to view.`;
+  };
 })();
 </script>
 </body>
