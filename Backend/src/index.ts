@@ -1,22 +1,30 @@
-// Backend/src/index.ts
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
+import { json, urlencoded } from "express";
 import { mountLeads } from "./routes/leads";
 
 const app = express();
 
-// basic middleware
-app.use(cors());
-app.use(express.json({ limit: "1mb" }));
+// Basic hardening + JSON
+app.use(cors()); // you can remove this if you host panel + API on same domain
+app.use(json({ limit: "1mb" }));
+app.use(urlencoded({ extended: true }));
 
-// root + health
-app.get("/", (_req, res) => res.status(200).send("ok"));
-// /healthz is also registered inside mountLeads, but keeping root helps quick checks
+// Health for Northflank
+app.get("/healthz", (_req: Request, res: Response) => {
+  res.status(200).json({ ok: true, service: "packlead-runtime" });
+});
 
-// IMPORTANT: just call the function; do NOT pass its return into app.use(...)
-mountLeads(app);
+// Mount all lead routes at /api/v1/leads
+mountLeads(app, "/api/v1/leads");
+
+// 404 guard (helps you see wrong paths)
+app.use((_req, res) => {
+  res.status(404).json({ ok: false, error: "Route not found" });
+});
 
 const PORT = Number(process.env.PORT || 8787);
 app.listen(PORT, () => {
-  console.log(`[api] listening on ${PORT}`);
+  // eslint-disable-next-line no-console
+  console.log(`packlead runtime listening on :${PORT}`);
 });
