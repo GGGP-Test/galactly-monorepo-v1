@@ -1,319 +1,398 @@
-import { Router, Request, Response } from "express";
+// Backend/src/routes/leads.ts
+import type { Express, Request, Response } from "express";
 import fs from "fs";
+import path from "path";
+import crypto from "crypto";
 
-// ---------- Types ----------
-type Temp = "hot" | "warm";
-type Stage = "new" | "qualified" | "contacted" | "won" | "lost";
-type WhyKind = "meta" | "platform" | "signal" | "activity" | "geo" | "persona";
-type Why = { label: string; kind: WhyKind; score: number; detail: string };
+/**
+ * Simple in-memory store. Northflank restarts will clear this —
+ * which is fine for the free panel and for incremental testing.
+ */
+type Temperature = "hot" | "warm";
+type WhyItem = { label: string; text: string; score?: number };
+type Persona = { title: string; summary: string; roles: string[] };
 
-type Lead = {
-  id: string;
+export type LeadRow = {
+  id: number;
   host: string;
   platform: string;
-  cat: string;
   title: string;
-  created_at: string;
-  temperature: Temp;
-  why: Why[];
-  stage?: Stage;
-  notes?: { ts: string; text: string }[];
+  created_at: string; // ISO
+  temperature: Temperature;
+  why: WhyItem[];
+  persona?: Persona;
 };
 
-type BuyerRequest = {
-  supplier?: string;   // supplier domain (required)
-  region?: string;     // us|ca|city/state text
-  radiusMi?: number;   // miles
-  keywords?: string;   // optional boosts
-};
-
-// ---------- In-memory store ----------
+const LEADS: LeadRow[] = [];
 let NEXT_ID = 1;
-const byId = new Map<string, Lead>();
-const hot: Lead[] = [];
-const warm: Lead[] = [];
 
-// ---------- Seeds (from /etc/secrets/seeds.txt) ----------
-const SEED_FILE = "/etc/secrets/seeds.txt";
-let SEEDS_RAW: string[] = [];
-try {
-  if (fs.existsSync(SEED_FILE)) {
-    SEEDS_RAW = fs
-      .readFileSync(SEED_FILE, "utf8")
-      .split(/\r?\n/)
-      .map(s => s.trim())
-      .filter(Boolean);
+/* -------------------------- utilities (no deps) -------------------------- */
+
+function nowISO() {
+  return new Date().toISOString();
+}
+
+function normalizeHost(input: string): string {
+  let x = input.trim();
+  if (x.startsWith("http://") || x.startsWith("https://")) {
+    try {
+      const u = new URL(x);
+      x = u.hostname;
+    } catch {}
   }
-} catch {
-  // ignore
+  // drop starting www.
+  x = x.replace(/^www\./i, "");
+  return x.toLowerCase();
 }
 
-// ---------- Helpers ----------
-const DOMAIN_RE =
-  /([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:com|net|org|co|io|ai|ca|us|store|shop|biz|me)/i;
-
-function normalizeDomain(input: unknown): string | null {
-  if (input === undefined || input === null) return null;
-  const s = String(input).toLowerCase();
-  const m = s.match(DOMAIN_RE);
-  return m ? m[0].replace(/^https?:\/\//, "") : null;
-}
-
-// Safe coalesce without using ?? (avoids TS2881 under strict settings)
-function firstDefined<T = any>(...vals: any[]): T | undefined {
-  for (const v of vals) {
-    if (v !== undefined && v !== null && String(v).trim() !== "") return v as T;
+function onlyUSCA(host: string, regionHint?: string): boolean {
+  const tld = (host.split(".").pop() || "").toLowerCase();
+  if (regionHint && regionHint.toLowerCase() === "ca") return tld === "ca";
+  if (regionHint && regionHint.toLowerCase() === "us") {
+    // allow common US TLDs
+    return tld === "com" || tld === "us" || tld === "net" || tld === "org";
   }
-  return undefined;
+  // default: US/CA only
+  return tld === "ca" || tld === "com" || tld === "us" || tld === "net" || tld === "org";
 }
 
-const NON_US_CA_HINTS =
-  /(dubai|uae|saudi|uk\b|london|europe|eu\b|de\b|germany|france|italy|spain|aus|australia|nz\b|india|pakistan|mexico|brazil|singapore|hong ?kong|china|\.cn\b|japan|korea|turkey|thailand|vietnam|philippines|ph\b)/i;
-
-function isUSorCA(seedRow: string, domain: string): boolean {
-  if (domain.endsWith(".ca")) return true;
-  if (NON_US_CA_HINTS.test(seedRow)) return false;
-  return true; // default accept .com as US unless hints say otherwise
+function sha(x: string) {
+  return crypto.createHash("sha1").update(x).digest("hex");
 }
 
-const PACKAGING_KWS =
-  /(rfp|rfq|tender|bid|packaging|mailers?|poly mailers?|cartons?|boxes?|labels?|shrink|stretch|pallet|fulfillment|warehouse|3pl)/i;
-
-const nowISO = () => new Date().toISOString();
-
-function makeLead(host: string, temperature: Temp, extraWhy: Why[] = []): Lead {
-  const id = String(NEXT_ID++);
-  const why: Why[] = [
-    {
-      label: "Domain quality",
-      kind: "meta",
-      score: host.endsWith(".com") ? 0.65 : 0.6,
-      detail: `${host} (.${host.split(".").pop()})`,
-    },
-    { label: "Platform fit", kind: "platform", score: 0.5, detail: "unknown" },
-    ...extraWhy,
-  ];
-  const lead: Lead = {
-    id,
-    host,
-    platform: "unknown",
-    cat: "product",
-    title: `Lead: ${host}`,
-    created_at: nowISO(),
-    temperature,
-    why,
-    stage: "new",
-    notes: [],
-  };
-  byId.set(id, lead);
-  (temperature === "hot" ? hot : warm).unshift(lead);
-  return lead;
-}
-
-function seedsAsLeads(opts: BuyerRequest) {
-  const supplierHost = opts.supplier ? normalizeDomain(opts.supplier) : null;
-  const boost = (opts.keywords || "").toLowerCase();
-  const out: Lead[] = [];
-
-  for (const row of SEEDS_RAW) {
-    const domain = normalizeDomain(row);
-    if (!domain) continue;
-    if (supplierHost && domain === supplierHost) continue; // skip self
-    if (!isUSorCA(row, domain)) continue;
-
-    const rowLower = row.toLowerCase();
-    const isHot = PACKAGING_KWS.test(rowLower) || (boost && rowLower.includes(boost));
-
-    const reasons: Why[] = [
-      {
-        label: "Intent keywords",
-        kind: "signal",
-        score: isHot ? 0.9 : 0.6,
-        detail: isHot ? (rowLower.match(PACKAGING_KWS)?.[0] || boost || "packaging") : "no strong keywords",
-      },
-    ];
-    if (opts.region) {
-      reasons.push({ label: "Near your region", kind: "geo", score: 0.7, detail: String(opts.region) });
-    }
-
-    out.push(makeLead(domain, isHot ? "hot" : "warm", reasons));
+async function fetchHTML(host: string): Promise<string> {
+  const url = `https://${host}`;
+  const g: any = globalThis as any;
+  const fetchFn: any = (g && g.fetch) ? g.fetch : null;
+  if (!fetchFn) return "";
+  try {
+    const r = await fetchFn(url, { redirect: "follow" });
+    if (!r || !r.text) return "";
+    const t = await r.text();
+    return typeof t === "string" ? t : "";
+  } catch {
+    return "";
   }
-
-  // de-dupe by host
-  const seen = new Set<string>();
-  return out.filter(l => (seen.has(l.host) ? false : (seen.add(l.host), true)));
 }
 
-function toCSV(rows: Lead[]): string {
-  const header = "id,host,platform,cat,title,created_at,temperature";
-  const body = rows
-    .map(l =>
-      [
-        JSON.stringify(l.id),
-        JSON.stringify(l.host),
-        JSON.stringify(l.platform),
-        JSON.stringify(l.cat),
-        JSON.stringify(l.title),
-        JSON.stringify(new Date(l.created_at).toString()),
-        JSON.stringify(l.temperature),
-      ].join(","),
-    )
-    .join("\n");
-  return `${header}\n${body}`;
+/* -------------------------- lightweight detectors ----------------------- */
+
+function detectPlatform(html: string): string {
+  const h = html;
+  if (/(cdn\.shopify\.com|x-shopify|Shopify\.theme|\/cart\.js)/i.test(h)) return "shopify";
+  if (/(woocommerce|wp-content\/plugins\/woocommerce|wc-add-to-cart)/i.test(h)) return "woocommerce";
+  if (/(bigcommerce|stencil-bootstrap|cdn\.bcapp)/i.test(h)) return "bigcommerce";
+  if (/(squarespace|Static\.sqs-assets)/i.test(h)) return "squarespace";
+  if (/(wix-code|wix-static|wix\.apps|wixBiSession)/i.test(h)) return "wix";
+  if (/(webflow\.io|data-wf-site|webflow\.js)/i.test(h)) return "webflow";
+  return "unknown";
 }
 
-// ---------- Parse buyer request (no ?? operators) ----------
-function parseBuyerRequest(req: Request): BuyerRequest {
-  const q = (req.query || {}) as Record<string, any>;
-  const bRaw = (req.body as any) ?? {};
-  let b: Record<string, any>;
-  if (typeof bRaw === "string") {
-    try { b = JSON.parse(bRaw); } catch { b = { raw: bRaw }; }
-  } else {
-    b = bRaw || {};
-  }
+type PWhy =
+  | { label: "They sell physical products"; detail: string; score: number }
+  | { label: "Has cart / checkout"; detail: string; score: number }
+  | { label: "Shipping & returns policy"; detail: string; score: number }
+  | { label: "Product schema detected"; detail: string; score: number }
+  | { label: "Recent activity"; detail: string; score: number };
 
-  const supplierAny = firstDefined(
-    b.supplier, q.supplier,
-    b.domain, q.domain,
-    b.supplierDomain, q.supplierDomain,
-    b.host, q.host,
-    b.website, q.website,
-    b.url, q.url,
-    b.source, q.source,
-    b.source_url, q.source_url,
-    b.supplier_url, q.supplier_url,
-    b.d, q.d
-  );
+function packagingMath(html: string): { score: number; parts: PWhy[] } {
+  const h = html;
+  const parts: PWhy[] = [];
 
-  const regionAny = firstDefined(
-    b.region, q.region,
-    b.geo, q.geo,
-    b.us_only ? "us" : undefined,
-    q.us_only ? "us" : undefined,
-    b.usca ? "us/ca" : undefined,
-    q.usca ? "us/ca" : undefined
-  );
-
-  const radiusAny = firstDefined(b.radiusMi, q.radiusMi, b.radius, q.radius, b.mi, q.mi, 50);
-  const keywordsAny = firstDefined(b.keywords, q.keywords, b.kw, q.kw, "");
-
-  const supplier = normalizeDomain(supplierAny);
-  const region = regionAny ? String(regionAny).toLowerCase().trim() : undefined;
-  const radiusMi = Number(radiusAny || 50) || 50;
-  const keywords = String(keywordsAny || "").trim();
-
-  return { supplier: supplier || undefined, region, radiusMi, keywords };
-}
-
-// ---------- Router ----------
-export default function mountLeads(): Router {
-  const router = Router();
-
-  // Index
-  router.get("/api/v1/leads", (_req, res) => {
-    res.json({
-      ok: true,
-      endpoints: [
-        "/api/v1/leads/hot",
-        "/api/v1/leads/warm",
-        "/api/v1/leads/:id",
-        "/api/v1/leads/buyers",
-        "/api/v1/leads/export.csv"
-      ],
+  // Physical products
+  if (/(add to cart|add-to-cart|buy now|in stock|sku)/i.test(h)) {
+    parts.push({
+      label: "They sell physical products",
+      detail: "Found “Add to cart/Buy now/SKU” markers.",
+      score: 0.25,
     });
+  }
+  // Cart/checkout
+  if (/(\/cart|cart\.js|checkout)/i.test(h)) {
+    parts.push({
+      label: "Has cart / checkout",
+      detail: "Cart or checkout endpoints present.",
+      score: 0.20,
+    });
+  }
+  // Policies
+  if (/(shipping|delivery|returns|return policy)/i.test(h)) {
+    parts.push({
+      label: "Shipping & returns policy",
+      detail: "Policy pages mention shipping/returns.",
+      score: 0.20,
+    });
+  }
+  // Product schema
+  if (/"@type"\s*:\s*"(Product|Offer)"/i.test(h)) {
+    parts.push({
+      label: "Product schema detected",
+      detail: "Structured data has Product/Offer.",
+      score: 0.20,
+    });
+  }
+  // Activity
+  if (/(new arrivals|just in|new collection)/i.test(h)) {
+    parts.push({
+      label: "Recent activity",
+      detail: "Mentions “New arrivals/Just in”.",
+      score: 0.15,
+    });
+  }
+
+  let score = 0;
+  for (const p of parts) score += p.score;
+  if (score > 1) score = 1;
+  return { score, parts };
+}
+
+function detectAdSignals(html: string): string[] {
+  const h = html;
+  const out: string[] = [];
+  if (/googleads\.g\.doubleclick\.net|AW-\d/i.test(h)) out.push("Google Ads");
+  if (/facebook\.net\/en_US\/fbevents\.js|fbq\(/i.test(h)) out.push("Meta Pixel");
+  if (/tiktok\.com\/i18n\/pixel|ttq\.track/i.test(h)) out.push("TikTok Pixel");
+  if (/snap\.licdn\.com\/li_lms|linkedin/i.test(h)) out.push("LinkedIn Insight");
+  return out;
+}
+
+function intentKeywords(text: string): { keywords: string[]; score: number } {
+  const terms = ["rfp", "rfq", "tender", "request for proposal", "request for quote", "co-packer", "3pl", "packaging supplier"];
+  const hits: string[] = [];
+  for (const t of terms) {
+    const re = new RegExp("\\b" + t.replace(/\s+/g, "\\s+") + "\\b", "i");
+    if (re.test(text)) hits.push(t);
+  }
+  let s = hits.length * 0.25;
+  if (s > 1) s = 1;
+  return { keywords: hits, score: s };
+}
+
+async function enrich(host: string): Promise<Pick<LeadRow, "platform" | "why" | "temperature" | "persona">> {
+  const html = await fetchHTML(host);
+  const platform = detectPlatform(html);
+  const pm = packagingMath(html);
+  const ads = detectAdSignals(html);
+  const ik = intentKeywords(html);
+
+  const tld = (host.split(".").pop() || "").toLowerCase();
+  const tldScore = (tld === "com" || tld === "ca" || tld === "net" || tld === "org" || tld === "us") ? 0.65 : 0.4;
+
+  const why: WhyItem[] = [
+    { label: "Domain quality", text: `${host} (.${tld}) — decent domain.`, score: tldScore },
+    { label: "Platform fit", text: platform === "unknown" ? "Platform unknown" : `Runs on ${platform}.`, score: platform === "unknown" ? 0.5 : 0.75 },
+    { label: "They likely buy packaging", text: pm.parts.map(p => p.label).join("; "), score: pm.score },
+  ];
+
+  if (ads.length) {
+    why.push({ label: "Growth signals", text: `Pixels detected: ${ads.join(", ")}.`, score: 0.6 });
+  }
+  if (ik.keywords.length) {
+    const s = ik.score > 0.7 ? ik.score : 0.7;
+    why.push({ label: "Intent keywords", text: ik.keywords.join(", "), score: s });
+  }
+
+  const persona: Persona = {
+    title: "Purchasing / Ops / Warehouse Manager",
+    summary:
+      "Based on products and operations signals, best first contact is Purchasing Manager, Operations Manager, or Warehouse Manager.",
+    roles: ["Purchasing Manager", "Operations Manager", "Warehouse Manager"],
+  };
+
+  const hot = ik.keywords.length > 0 || pm.score >= 0.8 || (pm.score >= 0.6 && ads.length > 0);
+
+  return {
+    platform,
+    why,
+    temperature: hot ? "hot" : "warm",
+    persona,
+  };
+}
+
+/* -------------------------- seeds loader (US/CA only) -------------------- */
+
+function readSeeds(): string[] {
+  // Allow both absolute (Northflank secret mount) and repo local during dev
+  const candidates = [
+    "/etc/secrets/seeds.txt",
+    "/etc/secrets/seed.txt",
+    path.join(process.cwd(), "seeds.txt"),
+  ];
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) {
+        const raw = fs.readFileSync(p, "utf8");
+        const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        const hosts: string[] = [];
+        for (const line of lines) {
+          // extract first domain-like token
+          const m = line.match(/([a-z0-9.-]+\.[a-z]{2,})/i);
+          if (m && m[1]) hosts.push(normalizeHost(m[1]));
+        }
+        return hosts;
+      }
+    } catch {}
+  }
+  // Fallback minimal demo list (US/CA style TLDs to pass filter)
+  return [
+    "brightearth.com",
+    "sunbasket.com",
+    "homebrewsupply.com",
+    "globallogistics.com",
+    "peakperform.com",
+    "greentrails.ca",
+  ].map(normalizeHost);
+}
+
+/* -------------------------- API key (write actions) ---------------------- */
+
+function requireApiKey(req: Request, res: Response, next: Function) {
+  const need = process.env.API_KEY || process.env.ADMIN_KEY || process.env.APP_KEY || "";
+  if (!need) return next(); // nothing configured -> allow (free panel)
+  const got = String(req.header("x-api-key") || "");
+  if (got && got === need) return next();
+  res.status(401).json({ ok: false, error: "missing_or_invalid_api_key" });
+}
+
+/* -------------------------- CSV helpers ---------------------------------- */
+
+function toCSV(rows: LeadRow[]) {
+  const header = ["id","host","platform","title","created_at","temperature","why"];
+  const lines = [header.join(",")];
+  for (const r of rows) {
+    const why = r.why.map(w => `${w.label}:${w.text}`).join(" | ");
+    const line = [
+      r.id,
+      r.host,
+      r.platform,
+      r.title.replace(/,/g, " "),
+      r.created_at,
+      r.temperature,
+      why.replace(/,/g, " "),
+    ].join(",");
+    lines.push(line);
+  }
+  return lines.join("\n");
+}
+
+/* -------------------------- public endpoints ----------------------------- */
+
+async function listByTemp(temp: Temperature, limit: number): Promise<LeadRow[]> {
+  const rows = LEADS.filter(x => x.temperature === temp)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  return rows.slice(0, limit);
+}
+
+async function handleFind(req: Request, res: Response) {
+  const body = (req.body && typeof req.body === "object") ? req.body as any : {};
+  const supplierDomain = normalizeHost(String(body.supplier || body.domain || body.host || ""));
+  const region = String(body.region || "us").toLowerCase();
+  const radius = Number(body.radiusMi || body.radius || 50);
+
+  if (!supplierDomain) {
+    return res.status(400).json({ ok: false, error: "missing_supplier_domain" });
+  }
+
+  const seeds = readSeeds().filter(h => onlyUSCA(h, region));
+  // If the seed list includes the supplier itself, skip it
+  const uniq = new Set<string>();
+  const candidates: string[] = [];
+  for (const h of seeds) {
+    if (h === supplierDomain) continue;
+    if (!uniq.has(h)) {
+      uniq.add(h);
+      candidates.push(h);
+    }
+    if (candidates.length >= 60) break; // keep it snappy
+  }
+
+  // Enrich in parallel with soft timeouts
+  const withMeta: LeadRow[] = [];
+  const tasks = candidates.map(async (host) => {
+    const rich = await enrich(host);
+    const row: LeadRow = {
+      id: NEXT_ID++,
+      host,
+      platform: rich.platform,
+      title: `Lead: ${host}`,
+      created_at: nowISO(),
+      temperature: rich.temperature,
+      why: rich.why,
+      persona: rich.persona,
+    };
+    withMeta.push(row);
+    LEADS.push(row);
   });
 
-  // Lists
-  router.get("/api/v1/leads/hot", (req, res) => {
-    const limitStr = (req.query && (req.query as any).limit) ? String((req.query as any).limit) : "50";
-    const lim = Math.max(0, Number(limitStr) || 50);
-    res.json({ ok: true, items: hot.slice(0, lim) });
+  // Wait with a hard cap (10s)
+  await Promise.race([
+    Promise.allSettled(tasks),
+    new Promise((r) => setTimeout(r, 10000)),
+  ]);
+
+  // Basic “proximity” simulation: currently unused, but we accept and echo it
+  const meta = { region, radiusMi: radius };
+
+  const hotN = withMeta.filter(r => r.temperature === "hot").length;
+  const warmN = withMeta.filter(r => r.temperature === "warm").length;
+  res.json({
+    ok: true,
+    meta,
+    created: withMeta.length,
+    hot: hotN,
+    warm: warmN,
+  });
+}
+
+/* -------------------------- route mount ---------------------------------- */
+
+export function mountLeads(app: Express) {
+  const base = "/api/v1/leads";
+
+  // Health probe used by Northflank
+  app.get("/healthz", (_req, res) => res.status(200).send("ok"));
+
+  // LIST
+  app.get(`${base}/hot`, async (req, res) => {
+    const limit = Math.max(1, Math.min(500, Number(req.query.limit || 50)));
+    const out = await listByTemp("hot", limit);
+    res.json({ ok: true, items: out });
   });
 
-  router.get("/api/v1/leads/warm", (req, res) => {
-    const limitStr = (req.query && (req.query as any).limit) ? String((req.query as any).limit) : "50";
-    const lim = Math.max(0, Number(limitStr) || 50);
-    res.json({ ok: true, items: warm.slice(0, lim) });
+  app.get(`${base}/warm`, async (req, res) => {
+    const limit = Math.max(1, Math.min(500, Number(req.query.limit || 50)));
+    const out = await listByTemp("warm", limit);
+    res.json({ ok: true, items: out });
   });
 
-  // One lead
-  router.get("/api/v1/leads/:id", (req, res) => {
-    const lead = byId.get(String(req.params.id));
-    if (!lead) return res.status(404).json({ ok: false, error: "bad id" });
-    res.json({ ok: true, temperature: lead.temperature, lead, why: lead.why });
-  });
+  // FIND buyers from a supplier (write-ish action)
+  app.post(`${base}/find`, requireApiKey, handleFind);
 
-  // Stage
-  router.patch("/api/v1/leads/:id/stage", (req, res) => {
-    const lead = byId.get(String(req.params.id));
-    if (!lead) return res.status(404).json({ ok: false, error: "bad id" });
-    const stageStr = req.body ? (req.body.stage ?? (req as any).stage) : undefined;
-    const stage = String(stageStr || "").toLowerCase() as Stage;
-    if (!stage || !["new", "qualified", "contacted", "won", "lost"].includes(stage))
-      return res.status(400).json({ ok: false, error: "bad stage" });
-    lead.stage = stage;
-    res.json({ ok: true, leadId: Number(lead.id), stage: lead.stage });
-  });
-
-  // Note
-  router.post("/api/v1/leads/:id/note", (req, res) => {
-    const lead = byId.get(String(req.params.id));
-    if (!lead) return res.status(404).json({ ok: false, error: "bad id" });
-    const text = req.body ? (req.body.text ?? (req as any).text) : "";
-    const t = String(text || "").trim();
-    if (!t) return res.status(400).json({ ok: false, error: "empty" });
-    (lead.notes ??= []).push({ ts: nowISO(), text: t });
-    res.json({ ok: true, leadId: Number(lead.id) });
+  // Simple stage setter (kept for curl compatibility)
+  app.patch(`${base}/:id/stage`, requireApiKey, (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const stage = String((req.body as any)?.stage || "").toLowerCase();
+    const row = LEADS.find(r => r.id === id);
+    if (!row) return res.status(404).json({ ok: false, error: "not_found" });
+    // Store as a why-note so user can see it in panel
+    row.why.push({ label: "Stage", text: stage });
+    res.json({ ok: true, leadId: id, stage });
   });
 
   // CSV
-  router.get("/api/v1/leads/export.csv", (req, res) => {
-    const tempStr = (req.query && (req.query as any).temperature) ? String((req.query as any).temperature) : "hot";
-    const limitStr = (req.query && (req.query as any).limit) ? String((req.query as any).limit) : "50";
-    const temp = (tempStr === "warm" ? "warm" : "hot") as Temp;
-    const lim = Math.max(0, Number(limitStr) || 50);
-    const rows = (temp === "warm" ? warm : hot).slice(0, lim);
+  app.get(`${base}/hot.csv`, async (_req, res) => {
+    const out = await listByTemp("hot", 500);
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.send(toCSV(rows));
+    res.send(toCSV(out));
   });
+  app.get(`${base}/warm.csv`, async (_req, res) => {
+    const out = await listByTemp("warm", 500);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.send(toCSV(out));
+  });
+}
 
-  // ----- Buyer Finder (POST or GET; many field aliases) -----
-  function handleBuyerFind(req: Request, res: Response) {
-    const parsed = parseBuyerRequest(req);
-    if (!parsed.supplier) {
-      return res.status(400).json({
-        ok: false,
-        error: "supplier (domain) required",
-        hint: "Use supplier=stretchandshrink.com (or supplierDomain/domain/host/url)",
-      });
-    }
-    const before = NEXT_ID;
-    const candidates = seedsAsLeads(parsed);
-    const created = NEXT_ID - before;
-
-    res.json({
-      ok: true,
-      supplierDomain: parsed.supplier,
-      created,
-      ids: candidates.map(l => Number(l.id)),
-      candidates: candidates.map(l => ({
-        cat: l.cat,
-        platform: l.platform,
-        host: l.host,
-        title: l.title,
-        keywords: l.why.find(w => w.kind === "signal")?.detail || "",
-        temperature: l.temperature,
-        why: l.why,
-      })),
-      tip: "Filtered to US/CA. Add region to bias toward a city or state.",
-    });
-  }
-
-  router.post("/api/v1/leads/buyers", handleBuyerFind);
-  router.get("/api/v1/leads/buyers", handleBuyerFind);
-  router.post("/api/v1/leads/find-buyers", handleBuyerFind); // legacy alias
-  router.get("/api/v1/leads/find-buyers", handleBuyerFind);  // legacy alias
-
-  return router;
+// Export default **and** named (fixes “no exported member mountLeads”)
+export default function mountLeadsDefault(app: Express) {
+  return mountLeads(app);
 }
