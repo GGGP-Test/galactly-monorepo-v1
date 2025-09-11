@@ -299,3 +299,6 @@ export async function runWebScout(input: SupplierInput): Promise<Candidate[]> {
 
   return list.slice(0, limit);
 }
+
+export function mountLeads(app: Express) { /* ... */ } // (or mountBuyers, etc.)
+export default mountLeads;
