@@ -2,415 +2,340 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Galactly – Find Buyers (Free Panel)</title>
+  <title>Leads Console — Free Panel (V2)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root {
-      --bg: #0f1220;
-      --panel: #171a2a;
-      --panel-2: #1e2236;
-      --ink: #e9ecf5;
-      --ink-dim: #aeb6d4;
-      --ok: #31d0aa;
-      --warn: #ffb020;
-      --hot: #ff5a5f;
-      --chip: #2a3150;
-      --chip-2: #333b60;
-      --accent: #6ea8fe;
+    :root{
+      --bg:#0f172a; --panel:#111827; --muted:#6b7280; --text:#e5e7eb;
+      --chip:#1f2937; --chipBadge:#374151; --ok:#10b981; --warn:#f59e0b; --err:#ef4444;
+      --btn:#2563eb; --btnHover:#1d4ed8; --line:#1f2937;
+      --shadow: 0 8px 24px rgba(0,0,0,.25);
+      --radius:10px;
     }
-    html,body { margin:0; background:var(--bg); color:var(--ink); font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    a { color: var(--accent); text-decoration: none; }
-    .wrap { max-width: 1120px; margin: 24px auto 64px; padding: 0 16px; }
-    header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 16px;}
-    h1 { font-size: 20px; margin:0; }
-    .sub { color: var(--ink-dim); font-size: 12px; }
-    .row { display:flex; gap:16px; flex-wrap: wrap; }
-    .col { background: var(--panel); border: 1px solid #232846; border-radius: 10px; padding: 16px; }
-    .col-33 { flex: 1 1 320px; }
-    .col-66 { flex: 2 1 520px; }
-    .col-100 { flex: 1 1 100%; }
-
-    label { display:block; font-weight:600; margin: 12px 0 6px; }
-    input[type="text"], input[type="search"], input[type="number"], textarea, select {
-      width:100%; box-sizing:border-box; padding:10px 12px; border-radius:8px; border:1px solid #2a3150;
-      background:#0b0e1a; color:var(--ink); outline:none;
-    }
-    textarea { min-height: 80px; resize: vertical; }
-    .row2 { display:flex; gap:8px; }
-    .btn {
-      display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius: 8px; border:1px solid #2a3150;
-      background: #222848; color:#fff; cursor:pointer; user-select:none;
-    }
-    .btn.primary { background: #3451b2; border-color:#475cc7; }
-    .btn:disabled { opacity:.55; cursor:not-allowed; }
-    .hint { color: var(--ink-dim); font-size: 12px; margin-top:6px; }
-
-    .stack { display:flex; flex-direction:column; gap:10px; }
-    .lead-card {
-      background: var(--panel-2); border: 1px solid #2a3150; border-radius:10px; padding:12px;
-      display:flex; flex-direction:column; gap:8px;
-    }
-    .lead-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    .lead-title { font-weight:700; font-size: 14px; }
-    .muted { color: var(--ink-dim); }
-    .chips { display:flex; flex-wrap: wrap; gap:6px; }
-    .chip {
-      background: var(--chip); border:1px solid #3a4574; color:#eaf0ff; padding:4px 8px; border-radius:1000px; font-size:12px;
-    }
-    .chip.badge { background:#243053; }
-    .chip.src-seed { border-color:#5b7cff; }
-    .chip.src-web { border-color:#31d0aa; }
-    .chip.temp-hot { border-color: var(--hot); }
-    .chip.temp-warm { border-color: var(--warn); }
-    .why { background:#12162a; border:1px dashed #2a3150; border-radius:8px; padding:8px; }
-    .why li { margin: 4px 0; }
-    .ok { color: var(--ok); }
-    .warn { color: var(--warn); }
-    .err { color: #ff5a5f; }
-    .section-title { font-weight:800; margin: 0 0 6px; }
-
-    .tabs { display:flex; gap:8px; margin-bottom:8px; }
-    .tabs .tab { padding:8px 12px; border-radius: 999px; border:1px solid #2a3150; background:#0d1124; cursor:pointer; }
-    .tabs .tab.active { background:#2a3150; }
-    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    @media (max-width: 900px){ .grid2{ grid-template-columns: 1fr; } }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    h1{font-size:18px;margin:0 0 10px}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:1.2fr .9fr;gap:16px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card .head{display:flex;gap:8px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+    .card .body{padding:14px 16px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .row > *{flex:0 0 auto}
+    .fill{flex:1 1 auto}
+    input,select,textarea{width:100%;background:#0b1220;color:var(--text);border:1px solid #223;outline:none;border-radius:8px;padding:10px}
+    input.small{padding:8px}
+    button{background:var(--btn);border:none;color:#fff;border-radius:8px;padding:10px 14px;cursor:pointer}
+    button.secondary{background:#374151}
+    button.warn{background:var(--warn);color:#111}
+    button:hover{background:var(--btnHover)}
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:4px 10px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-size:12px}
+    .pill .badge{padding:2px 6px;border-radius:999px;background:var(--chipBadge);font-weight:600}
+    .pill.ok{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25)}
+    .pill.warn{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.25)}
+    .pill.err{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25)}
+    .temp{padding:2px 8px;border-radius:999px;font-weight:700}
+    .hot{background:rgba(239,68,68,.18);color:#fecaca;border:1px solid rgba(239,68,68,.35)}
+    .warm{background:rgba(245,158,11,.18);color:#fde68a;border:1px solid rgba(245,158,11,.35)}
+    .muted{color:var(--muted)}
+    .list{max-height:62vh;overflow:auto;border-top:1px solid var(--line)}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{position:sticky;top:0;background:rgba(17,24,39,.95);backdrop-filter:saturate(140%) blur(6px);text-align:left}
+    tr:hover td{background:rgba(255,255,255,.02)}
+    .why{display:flex;flex-wrap:wrap;gap:6px}
+    .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .note{font-size:12px;margin-top:4px}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .notice{padding:10px 12px;border-radius:8px;background:#0b1220;border:1px dashed #223}
+    .error{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4)}
+    .success{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.4)}
+    .link{color:#93c5fd;text-decoration:none}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <div>
-        <h1>Galactly • Find Buyers</h1>
-        <div class="sub">Real-time US/Canada buyers with plain-English evidence.</div>
-      </div>
-      <div id="status" class="sub">Ready.</div>
-    </header>
+    <h1>Leads Console — Free Panel (V2)</h1>
 
-    <!-- Supplier + Persona -->
-    <div class="row">
-      <div class="col col-33">
-        <div class="section-title">1) Your company</div>
-        <label>Website (your domain)</label>
-        <input id="supplier" type="search" placeholder="e.g. stretchandshrink.com" />
-        <div class="hint">We’ll learn your product & who it helps from your site.</div>
-
-        <div class="row2" style="margin-top:12px;">
-          <button class="btn" id="loadPersona">Load persona</button>
-          <button class="btn" id="savePersona">Save persona</button>
-        </div>
-
-        <label style="margin-top:12px;">Offer (what you sell)</label>
-        <input id="p_offer" type="text" placeholder="Stretch film & pallet protection" />
-
-        <label>Solves (plain English)</label>
-        <input id="p_solves" type="text" placeholder="Keeps pallets secure for storage/shipping" />
-
-        <label>Buyer titles (comma separated)</label>
-        <input id="p_titles" type="text" placeholder="Warehouse Manager, Purchasing Manager, COO" />
-        <div class="hint">We use this to aim your search (you can tweak anytime).</div>
-      </div>
-
-      <div class="col col-66">
-        <div class="section-title">2) Where to look</div>
-        <div class="grid2">
-          <div>
-            <label>Region / City (optional)</label>
-            <input id="region" type="text" placeholder="Default: US/CA • e.g. “Austin, TX”" />
-            <div class="hint">If empty, we prefer US/Canada and your HQ proximity.</div>
+    <div class="grid">
+      <!-- LEFT: Hot/Warm lists -->
+      <div class="card">
+        <div class="head row">
+          <div class="row fill">
+            <input id="baseUrl" class="fill" placeholder="Base URL (e.g. https://p01--animated-cellar--xxxxx.code.run)" />
+            <button id="apply">Apply</button>
           </div>
-          <div>
-            <label>Radius (miles)</label>
-            <input id="radius" type="number" min="10" max="500" value="50" />
+          <div class="row fill">
+            <input id="apiKey" class="fill" placeholder="API key (optional for read; required for write)" />
+            <button id="saveKey" class="secondary">Save</button>
+            <button id="onlyUSCA" class="secondary">US/CA only</button>
           </div>
         </div>
-        <div style="margin-top:8px;">
-          <label><input id="uscaOnly" type="checkbox" checked /> Prefer US & Canada only</label>
+        <div class="body row">
+          <button id="refreshHot" class="secondary">Refresh Hot</button>
+          <button id="refreshWarm" class="secondary">Refresh Warm</button>
+          <div class="muted mono">press <b>R</b> to refresh hot</div>
+          <div class="fill"></div>
+          <div class="muted mono">API: <span id="apiPath">/api/v1/leads</span></div>
+        </div>
+        <div class="list">
+          <table id="leads">
+            <thead>
+              <tr>
+                <th style="width:60px">ID</th>
+                <th>Host</th>
+                <th style="width:120px">Platform</th>
+                <th>Title</th>
+                <th style="width:120px">Created</th>
+                <th style="width:80px">Temp</th>
+                <th style="width:28%">Why (human-readable)</th>
+              </tr>
+            </thead>
+            <tbody id="leadRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RIGHT: Details, “Find buyers”, Persona editor -->
+      <div class="card">
+        <div class="head"><div class="row"><div class="pill"><span class="badge">Details</span> Select a lead…</div></div></div>
+        <div class="body" id="details">
+          <div class="muted">No lead selected.</div>
         </div>
 
-        <div class="row2" style="margin-top:12px;">
-          <button class="btn primary" id="findBtn">Find buyers</button>
-          <button class="btn" id="refreshBtn">Refresh lists</button>
+        <div class="head"><div class="row"><div class="pill"><span class="badge">Action</span> Find buyers (from supplier)</div></div></div>
+        <div class="body">
+          <div class="row">
+            <input id="supplier" class="fill" placeholder="supplier domain e.g. stretchandshrink.com" />
+          </div>
+          <div class="row">
+            <select id="region" style="width:160px">
+              <option value="us">US</option>
+              <option value="ca">CA</option>
+              <option value="usca" selected>US/CA</option>
+            </select>
+            <select id="radius" style="width:120px">
+              <option value="25">25 mi</option>
+              <option value="50" selected>50 mi</option>
+              <option value="100">100 mi</option>
+              <option value="250">250 mi</option>
+            </select>
+            <button id="find" style="min-width:120px">Find buyers</button>
+          </div>
+          <div id="findMsg" class="note muted"></div>
         </div>
 
-        <div class="hint" id="lastOp"></div>
+        <div class="head"><div class="row"><div class="pill"><span class="badge">Supplier persona</span> (human-editable)</div></div></div>
+        <div class="body">
+          <div class="split">
+            <div>
+              <label class="muted">Product/offer</label>
+              <input id="p_offer" placeholder="e.g. Stretch film & pallet protection" />
+            </div>
+            <div>
+              <label class="muted">Solves</label>
+              <input id="p_solves" placeholder="e.g. Keeps pallets secure for storage/transport" />
+            </div>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <input id="p_titles" class="fill" placeholder="Buyer titles (comma-separated), e.g. Warehouse Manager, Purchasing Manager, COO" />
+            <button id="personaSave" class="secondary">Save persona (local)</button>
+          </div>
+          <div class="note muted">Tip: we’ll use this persona to infer intent automatically. You can tweak wording anytime.</div>
+        </div>
+
+        <div class="head"><div class="row"><div class="pill"><span class="badge">Downloads</span> CSV</div></div></div>
+        <div class="body row">
+          <button id="dlHot" class="secondary">Download CSV (hot)</button>
+          <button id="dlWarm" class="secondary">Download CSV (warm)</button>
+        </div>
       </div>
     </div>
 
-    <!-- Results -->
-    <div class="row" style="margin-top:16px;">
-      <div class="col col-33">
-        <div class="section-title">Persona summary (readable)</div>
-        <div id="personaReadable" class="muted">No supplier loaded yet.</div>
-      </div>
-
-      <div class="col col-66">
-        <div class="tabs">
-          <div class="tab active" data-tab="hot">Hot</div>
-          <div class="tab" data-tab="warm">Warm</div>
-        </div>
-        <div id="listHot" class="stack"></div>
-        <div id="listWarm" class="stack" style="display:none;"></div>
-      </div>
-
-      <div class="col col-100">
-        <div class="section-title">What the “Why” means</div>
-        <ul class="muted" style="margin:6px 0 0 18px;">
-          <li><b>Domain quality</b> – the website looks legit (good host/TLD).</li>
-          <li><b>Intent</b> – we spotted buy signals (e.g. “RFQ”, “request a quote”, tenders, procurement/news).</li>
-          <li><b>Platform</b> – tech fit (e-commerce/WMS/etc. helpful for packaging flows).</li>
-          <li><b>Geo</b> – evidence the company is in US/Canada or near your chosen region.</li>
-          <li><b>Context/Evidence</b> – simple sentences explaining the match (“They posted X in the last 3 days”).</li>
-        </ul>
-      </div>
-    </div>
+    <div id="toast" class="notice" style="margin-top:16px;display:none"></div>
   </div>
 
-<script>
-const $ = (id) => document.getElementById(id);
-const by = (sel, node=document) => Array.from(node.querySelectorAll(sel));
-const setStatus = (s) => { $('status').textContent = s; };
-
-const API = {
-  async getPersona(supplier){
-    const r = await fetch(`/api/v1/persona/${encodeURIComponent(supplier)}`);
-    if(!r.ok) throw new Error(`persona GET ${r.status}`);
-    return r.json();
-  },
-  async savePersona(payload){
-    const r = await fetch(`/api/v1/persona`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-    if(!r.ok) throw new Error(`persona POST ${r.status}`);
-    return r.json();
-  },
-  async findBuyers(payload){
-    const r = await fetch(`/api/v1/leads/find-buyers`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-    if(!r.ok){
-      const t = await r.text().catch(()=> '');
-      throw new Error(`find-buyers ${r.status}: ${t}`);
-    }
-    return r.json();
-  },
-  async listHot(limit=10){
-    // Try new shape first
-    let r = await fetch(`/api/v1/leads?hot=1`);
-    if(r.ok){
-      const j = await r.json();
-      if(j && j.hot) return j.hot.slice(0, limit);
-    }
-    // Fallback to legacy /hot
-    r = await fetch(`/api/v1/leads/hot?limit=${limit}`);
-    if(r.ok){ const j = await r.json(); return j.items || []; }
-    return [];
-  },
-  async listWarm(limit=10){
-    let r = await fetch(`/api/v1/leads?warm=1`);
-    if(r.ok){
-      const j = await r.json();
-      if(j && j.warm) return j.warm.slice(0, limit);
-    }
-    r = await fetch(`/api/v1/leads/warm?limit=${limit}`);
-    if(r.ok){ const j = await r.json(); return j.items || []; }
-    return [];
-  }
-};
-
-// ---------- persona UI ----------
-
-function readSupplier(){
-  return ($('supplier').value || '').trim().toLowerCase();
-}
-
-function fillPersonaForm(p){
-  $('p_offer').value  = p.offer || '';
-  $('p_solves').value = p.solves || '';
-  $('p_titles').value = (p.buyerTitles || []).join(', ');
-  renderPersonaReadable(p);
-}
-
-function currentPersona(){
-  const offer = $('p_offer').value.trim();
-  const solves = $('p_solves').value.trim();
-  const buyerTitles = $('p_titles').value.split(',').map(s=>s.trim()).filter(Boolean);
-  return { offer, solves, buyerTitles };
-}
-
-function renderPersonaReadable(p){
-  const text =
-    `You sell “${p.offer}”. This helps customers because “${p.solves}”. ` +
-    `The people who usually say yes are: ${p.buyerTitles.join(', ')}.`;
-  $('personaReadable').textContent = text;
-}
-
-// ---------- leads UI ----------
-
-function chip(text, classes=''){
-  const div = document.createElement('span');
-  div.className = `chip ${classes}`;
-  div.textContent = text;
-  return div;
-}
-
-function plainWhy(why){
-  // Map chips into simple bullet lines
-  const lines = [];
-  for(const w of (why||[])){
-    if(w.kind === 'meta'){
-      lines.push(`Looks like a legitimate site: ${w.detail || ''}`);
-    }else if(w.kind === 'signal'){
-      lines.push(`Buying signal spotted: ${w.detail || ''}`);
-    }else if(w.kind === 'platform'){
-      lines.push(`Tech/platform fit: ${w.detail || ''}`);
-    }else if(w.kind === 'geo'){
-      lines.push(`US/Canada proximity evidence: ${w.detail || ''}`);
-    }else if(w.kind === 'context' || w.kind === 'evidence'){
-      lines.push(w.detail || 'Relevant context found');
-    }else{
-      lines.push(w.detail || w.label);
-    }
-  }
-  return lines;
-}
-
-function renderLeadCard(node, lead){
-  node.innerHTML = '';
-  const card = document.createElement('div');
-  card.className = 'lead-card';
-
-  const head = document.createElement('div');
-  head.className = 'lead-head';
-
-  const title = document.createElement('div');
-  title.className = 'lead-title';
-  title.textContent = lead.title || lead.host || 'Lead';
-
-  const right = document.createElement('div');
-  right.className = 'chips';
-
-  const source = (lead.source || '').toLowerCase();
-  right.appendChild(chip(source === 'web' ? 'From Web' : 'From Seed', source==='web'?'src-web':'src-seed'));
-
-  const t = (lead.temperature || '').toLowerCase();
-  right.appendChild(chip(t === 'hot' ? 'HOT' : 'WARM', t==='hot'?'temp-hot':'temp-warm'));
-
-  card.appendChild(head);
-  head.appendChild(title);
-  head.appendChild(right);
-
-  const row2 = document.createElement('div');
-  row2.className = 'chips';
-  row2.appendChild(chip(lead.host || '', 'badge'));
-  if(lead.platform) row2.appendChild(chip(`platform: ${lead.platform}`, 'badge'));
-  card.appendChild(row2);
-
-  if(lead.why && lead.why.length){
-    const box = document.createElement('div');
-    box.className = 'why';
-    const ul = document.createElement('ul');
-    for(const line of plainWhy(lead.why)){
-      const li = document.createElement('li');
-      li.textContent = line;
-      ul.appendChild(li);
-    }
-    box.appendChild(ul);
-    card.appendChild(box);
-  }
-
-  node.appendChild(card);
-}
-
-async function refreshLists(){
-  setStatus('Loading lists…');
-  const [hot, warm] = await Promise.all([API.listHot(20), API.listWarm(20)]);
-  const hotList = $('listHot'); const warmList = $('listWarm');
-  hotList.innerHTML = ''; warmList.innerHTML = '';
-  for(const l of hot)  { const div = document.createElement('div'); renderLeadCard(div, l); hotList.appendChild(div); }
-  for(const l of warm) { const div = document.createElement('div'); renderLeadCard(div, l); warmList.appendChild(div); }
-  setStatus(`Lists updated • hot:${hot.length} warm:${warm.length}`);
-}
-
-// ---------- actions ----------
-
-$('loadPersona').onclick = async ()=>{
-  const supplier = readSupplier();
-  if(!supplier){ alert('Enter your website first'); return; }
-  setStatus('Loading persona…');
-  try{
-    const j = await API.getPersona(supplier);
-    fillPersonaForm(j.persona || {});
-    setStatus('Persona loaded.');
-  }catch(e){
-    setStatus('Could not load persona (using defaults).');
-    // Leave the form as-is (user can fill)
-  }
-};
-
-$('savePersona').onclick = async ()=>{
-  const supplier = readSupplier();
-  if(!supplier){ alert('Enter your website first'); return; }
-  const persona = currentPersona();
-  setStatus('Saving persona…');
-  try{
-    await API.savePersona({ supplierDomain: supplier, ...persona });
-    renderPersonaReadable(persona);
-    setStatus('Persona saved.');
-  }catch(e){
-    setStatus('Save failed.');
-    alert('Could not save persona. Check backend logs.');
-  }
-};
-
-$('findBtn').onclick = async ()=>{
-  const supplier = readSupplier();
-  if(!supplier){ alert('Enter your website first'); return; }
-  const persona = currentPersona();
-  const region = ($('region').value || '').trim();
-  const radiusMi = Number($('radius').value || 50);
-  const uscaOnly = $('uscaOnly').checked;
-
-  setStatus('Finding buyers…');
-  $('lastOp').textContent = 'Searching… this usually returns seeds immediately and adds web results as they come online.';
-
-  try{
-    // Save persona first (helps the search)
-    await API.savePersona({ supplierDomain: supplier, ...persona }).catch(()=>{});
-
-    const payload = {
-      supplierDomain: supplier,
-      region: region || 'US/CA',
-      radiusMi,
-      uscaOnly
+  <script>
+    const $ = s=>document.querySelector(s);
+    const $$ = s=>document.querySelectorAll(s);
+    const S = {
+      baseUrl: localStorage.getItem('baseUrl') || '',
+      apiKey:  localStorage.getItem('apiKey')  || '',
+      onlyUSCA: JSON.parse(localStorage.getItem('onlyUSCA')||'true'),
+      persona: JSON.parse(localStorage.getItem('persona')||'{"offer":"","solves":"","titles":""}')
     };
-    const j = await API.findBuyers(payload);
-    $('lastOp').textContent = `Created ${j.added || 0} candidates (hot:${j.hot||0} warm:${j.warm||0}). Showing latest lists below.`;
-    await refreshLists();
-    setStatus('Done.');
-  }catch(e){
-    console.error(e);
-    setStatus('Search failed.');
-    alert('The server rejected the request. Double-check that Backend is green.');
-  }
-};
+    const UI = {
+      baseUrl: $('#baseUrl'), apiKey: $('#apiKey'), onlyUSCA: $('#onlyUSCA'),
+      refreshHot: $('#refreshHot'), refreshWarm: $('#refreshWarm'), leadRows: $('#leadRows'),
+      details: $('#details'), region: $('#region'), radius: $('#radius'), supplier: $('#supplier'),
+      find: $('#find'), findMsg: $('#findMsg'), toast: $('#toast'),
+      p_offer: $('#p_offer'), p_solves: $('#p_solves'), p_titles: $('#p_titles'),
+      personaSave: $('#personaSave'), saveKey: $('#saveKey'), apply: $('#apply'),
+      dlHot: $('#dlHot'), dlWarm: $('#dlWarm')
+    };
 
-$('refreshBtn').onclick = refreshLists;
+    // init
+    UI.baseUrl.value = S.baseUrl;
+    UI.apiKey.value = S.apiKey;
+    UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA);
+    UI.onlyUSCA.textContent = S.onlyUSCA ? 'US/CA only' : 'All regions';
+    UI.p_offer.value  = S.persona.offer || '';
+    UI.p_solves.value = S.persona.solves || '';
+    UI.p_titles.value = S.persona.titles || '';
 
-// tabs
-by('.tab').forEach(t => {
-  t.onclick = ()=>{
-    by('.tab').forEach(n => n.classList.remove('active'));
-    t.classList.add('active');
-    const name = t.getAttribute('data-tab');
-    $('listHot').style.display = (name==='hot') ? '' : 'none';
-    $('listWarm').style.display = (name==='warm') ? '' : 'none';
-  };
-});
+    function toast(msg, ok=false, err=false){
+      UI.toast.textContent = msg;
+      UI.toast.className = 'notice ' + (ok?'success':(err?'error':''));
+      UI.toast.style.display = 'block';
+      setTimeout(()=>UI.toast.style.display='none', 3000);
+    }
 
-// initial
-refreshLists().catch(()=>{});
-</script>
+    function api(path){
+      const base = (S.baseUrl || '').replace(/\/+$/,'');
+      return base + path;
+    }
+
+    async function call(method, path, body){
+      const headers = {'Content-Type':'application/json'};
+      if (S.apiKey) headers['x-api-key'] = S.apiKey;
+      const r = await fetch(api(path), {method, headers, body: body?JSON.stringify(body):undefined});
+      const text = await r.text();
+      try{
+        return { ok:r.ok, status:r.status, data: JSON.parse(text) };
+      }catch{
+        return { ok:r.ok, status:r.status, data: text };
+      }
+    }
+
+    function nlWhy(why){
+      // Turn our machine-ish structure into plain language chips
+      const chips = [];
+      if (!why) return chips;
+      if (why.meta){
+        chips.push(`<span class="pill">${why.meta.label || 'Domain quality'} <span class="badge">${(why.meta.score??'').toFixed?why.meta.score.toFixed(2):why.meta.score}</span> <span class="muted">${why.meta.detail||''}</span></span>`);
+      }
+      if (why.platform){
+        chips.push(`<span class="pill">${why.platform.label || 'Platform fit'} <span class="badge">${(why.platform.score??'').toFixed?why.platform.score.toFixed(2):why.platform.score}</span> <span class="muted">${why.platform.detail||''}</span></span>`);
+      }
+      if (why.signal){
+        chips.push(`<span class="pill">${why.signal.label || 'Intent keywords'} <span class="badge">${(why.signal.score??'').toFixed?why.signal.score.toFixed(2):why.signal.score}</span> <span class="muted">${why.signal.detail||''}</span></span>`);
+      }
+      if (why.context){
+        chips.push(`<span class="pill">${why.context.label || 'Context'} <span class="badge">${(why.context.score??'').toFixed?why.context.score.toFixed(2):why.context.score}</span> <span class="muted">${why.context.detail||''}</span></span>`);
+      }
+      return chips;
+    }
+
+    function renderList(items){
+      UI.leadRows.innerHTML = '';
+      items.forEach(it=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono">${it.id ?? ''}</td>
+          <td><a class="link mono" href="https://${it.host}" target="_blank">${it.host}</a></td>
+          <td>${it.platform||'unknown'}</td>
+          <td class="mono">${it.title||''}</td>
+          <td>${it.created||''}</td>
+          <td><span class="temp ${it.temperature||'warm'}">${it.temperature||'warm'}</span></td>
+          <td><div class="why">${nlWhy(it.why).join('')}</div><div class="note muted">${it.whyText||''}</div></td>
+        `;
+        tr.onclick = ()=>renderDetails(it);
+        UI.leadRows.appendChild(tr);
+      });
+    }
+
+    function renderDetails(it){
+      UI.details.innerHTML = `
+        <div class="split">
+          <div>
+            <div class="pill"><span class="badge">ID</span> ${it.id??''}</div>
+            <div class="pill"><span class="badge">Host</span> <a class="link mono" href="https://${it.host}" target="_blank">${it.host}</a></div>
+            <div class="pill"><span class="badge">Temp</span> <span class="temp ${it.temperature||'warm'}">${it.temperature||'warm'}</span></div>
+          </div>
+          <div>
+            <div class="pill"><span class="badge">Platform</span> ${it.platform||'unknown'}</div>
+            <div class="pill"><span class="badge">Title</span> <span class="mono">${it.title||''}</span></div>
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="pill"><span class="badge">Why</span> Human-readable evidence</div>
+          <div class="why" style="margin-top:8px">${nlWhy(it.why).join('')}</div>
+          ${it.whyText ? `<div class="notice" style="margin-top:8px">${it.whyText}</div>`:''}
+        </div>
+      `;
+      // auto-fill supplier box from selected lead's host (handy for quick testing)
+      UI.supplier.value ||= (it && it.host) || '';
+    }
+
+    async function refresh(kind){
+      const qp = new URLSearchParams();
+      qp.set('temp', kind);
+      if (S.onlyUSCA) qp.set('region','usca');
+      const r = await call('GET', `/api/v1/leads?${qp}`);
+      if (!r.ok){ toast(`HTTP ${r.status} — failed to load ${kind} leads`, false, true); return; }
+      renderList(r.data?.items||[]);
+      toast(`Loaded ${ (r.data?.items||[]).length } ${kind} lead(s)`, true);
+    }
+
+    function csv(items){
+      const cols = ['id','host','platform','title','created','temperature','whyText'];
+      const head = cols.join(',');
+      const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+      const rows = items.map(it=>cols.map(c=>esc(it[c])).join(','));
+      return [head, ...rows].join('\r\n');
+    }
+
+    function download(name, text){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+      a.download = name;
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+    }
+
+    // events
+    UI.apply.onclick = ()=>{ S.baseUrl = UI.baseUrl.value.trim(); localStorage.setItem('baseUrl', S.baseUrl); toast('Base URL applied', true); };
+    UI.saveKey.onclick = ()=>{ S.apiKey = UI.apiKey.value.trim(); localStorage.setItem('apiKey', S.apiKey); toast('API key saved', true); };
+    UI.onlyUSCA.onclick = ()=>{ S.onlyUSCA=!S.onlyUSCA; localStorage.setItem('onlyUSCA', JSON.stringify(S.onlyUSCA)); UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA); UI.onlyUSCA.textContent = S.onlyUSCA ? 'US/CA only' : 'All regions'; };
+    UI.refreshHot.onclick = ()=>refresh('hot');
+    UI.refreshWarm.onclick = ()=>refresh('warm');
+    document.addEventListener('keydown', e=>{ if (e.key==='r' || e.key==='R') refresh('hot'); });
+
+    UI.personaSave.onclick = ()=>{
+      S.persona = { offer:UI.p_offer.value.trim(), solves:UI.p_solves.value.trim(), titles:UI.p_titles.value.trim() };
+      localStorage.setItem('persona', JSON.stringify(S.persona));
+      toast('Persona saved locally', true);
+    };
+
+    UI.find.onclick = async ()=>{
+      const supplier = UI.supplier.value.trim().toLowerCase();
+      if (!supplier){ toast('Enter a supplier domain', false, true); return; }
+      const body = {
+        supplier,
+        region: UI.region.value,
+        radiusMi: Number(UI.radius.value||'50')||50,
+        persona: {
+          offer: UI.p_offer.value.trim(),
+          solves: UI.p_solves.value.trim(),
+          titles: UI.p_titles.value.trim()
+        },
+        onlyUSCA: S.onlyUSCA
+      };
+      UI.find.disabled = true;
+      UI.findMsg.textContent = 'Finding buyers…';
+      const r = await call('POST','/api/v1/leads/find-buyers', body);
+      UI.find.disabled = false;
+      if (!r.ok){ UI.findMsg.innerHTML = `<div class="notice error mono">HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}</div>`; return; }
+      const nHot  = (r.data?.candidates||[]).filter(x=>x.temperature==='hot').length;
+      const nWarm = (r.data?.candidates||[]).filter(x=>x.temperature!=='hot').length;
+      UI.findMsg.innerHTML = `<div class="notice success mono">Created ${r.data?.created||0} candidate(s). Hot:${nHot} Warm:${nWarm}. Refresh lists to view.</div>`;
+    };
+
+    UI.dlHot.onclick  = async ()=>{ const r=await call('GET','/api/v1/leads?temp=hot');  if(!r.ok) return toast('Failed to load hot leads',false,true); download('leads_hot.csv', csv(r.data.items||[])); };
+    UI.dlWarm.onclick = async ()=>{ const r=await call('GET','/api/v1/leads?temp=warm'); if(!r.ok) return toast('Failed to load warm leads',false,true); download('leads_warm.csv', csv(r.data.items||[])); };
+
+    // default auto-load
+    if (S.baseUrl) refresh('warm');
+  </script>
 </body>
 </html>
