@@ -1,24 +1,23 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import cors from "cors";
-import { json, urlencoded } from "express";
 import { mountLeads } from "./routes/leads";
 
 const app = express();
 
-// Basic hardening + JSON
-app.use(cors()); // you can remove this if you host panel + API on same domain
-app.use(json({ limit: "1mb" }));
-app.use(urlencoded({ extended: true }));
+// JSON + forms
+app.use(cors()); // keep if panel is on a different domain; otherwise you can remove
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true }));
 
 // Health for Northflank
-app.get("/healthz", (_req: Request, res: Response) => {
+app.get("/healthz", (_req, res) => {
   res.status(200).json({ ok: true, service: "packlead-runtime" });
 });
 
-// Mount all lead routes at /api/v1/leads
-mountLeads(app, "/api/v1/leads");
+// Mount lead routes (base path is handled inside mountLeads)
+mountLeads(app);
 
-// 404 guard (helps you see wrong paths)
+// 404 guard
 app.use((_req, res) => {
   res.status(404).json({ ok: false, error: "Route not found" });
 });
