@@ -1,65 +1,52 @@
-// Backend/src/index.ts
-import express from "express";
+import express, { Express, Request, Response } from "express";
 import cors from "cors";
-import type { Express, Request, Response } from "express";
-import { mountLeads } from "./routes/leads"; // expects a named export mountLeads(app)
-import { targetsRouter } from "./routes/targets";
+import path from "path";
+
+// IMPORTANT: routes/leads exports mountLeads as the DEFAULT export
+import mountLeads from "./routes/leads";
+
 const PORT = Number(process.env.PORT || 8787);
 
-function createApp(): Express {
+export function createServer(): Express {
   const app = express();
 
-  // Core middleware
+  // Basic hardening & JSON
+  app.set("trust proxy", true);
+  app.use(cors());
   app.use(express.json({ limit: "1mb" }));
-  app.use(cors()); // allow GitHub Pages (and others)
-  app.use("/api/v1/targets", targetsRouter);
+  app.use(express.urlencoded({ extended: true }));
 
-  // Health/readiness/liveness
-  app.get("/", (_req: Request, res: Response) => {
-    res.type("text/plain").send("ok");
-  });
+  // Health endpoints for Northflank
+  app.get("/healthz", (_req: Request, res: Response) =>
+    res.status(200).send("ok")
+  );
+  app.get("/readyz", (_req: Request, res: Response) =>
+    res.status(200).send("ok")
+  );
 
-  // Northflank readiness probe (your probe calls /healthz)
-  app.get("/healthz", (_req: Request, res: Response) => {
-    res.status(200).json({ ok: true, ts: new Date().toISOString() });
-  });
-
-  // Optional liveness alias
-  app.get("/health", (_req: Request, res: Response) => {
-    res.status(200).json({ ok: true });
-  });
-
-  // Mount API (leads routes register under /api/v1/...)
+  // Mount API routes
+  // NOTE: mountLeads is a default export function (app: Express) => void
   mountLeads(app);
 
-  // 404 handler (after all routes)
-  app.use((req, res) => {
-    res.status(404).json({ ok: false, error: "not_found", path: req.path });
+  // Root info
+  app.get("/", (_req: Request, res: Response) => {
+    res.json({
+      ok: true,
+      service: "packlead-runtime",
+      ts: new Date().toISOString(),
+      docs: "/api/v1/leads",
+    });
   });
-
-  // Basic error handler
-  app.use(
-    (
-      err: any,
-      _req: Request,
-      res: Response,
-      _next: (e?: any) => void // eslint-disable-line @typescript-eslint/no-unused-vars
-    ) => {
-      console.error("Unhandled error:", err);
-      res
-        .status(500)
-        .json({ ok: false, error: "internal_error", detail: String(err?.message || err) });
-    }
-  );
 
   return app;
 }
 
 if (require.main === module) {
-  const app = createApp();
+  const app = createServer();
   app.listen(PORT, () => {
-    console.log(`[api] listening on :${PORT}`);
+    // eslint-disable-next-line no-console
+    console.log(`[server] listening on :${PORT}`);
   });
 }
 
-export { createApp };
+export default createServer;
