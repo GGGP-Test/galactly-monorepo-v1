@@ -1,350 +1,297 @@
-// Backend/src/routes/leads.ts
-//
-// Leads API — US/CA filtering, simple buyer-finder, human-readable "Why".
-// No external AI calls here yet (keeps builds green). Adds a POST /buyers
-// endpoint that accepts a supplier domain and optional city/radius.
-//
-// Write actions (creating leads, setting stage, adding notes) require x-api-key.
-
 import { Router, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
-import url from "url";
 import { requireApiKey } from "../auth";
 
-type Temperature = "hot" | "warm";
-type Stage = "new" | "qualified" | "contacted" | "won" | "lost";
-
-type WhySentence = {
-  label: string;            // e.g., "Recent activity"
-  text: string;             // human-readable sentence
-  weight?: number;          // internal ranking hint (not shown)
-};
+// ---------- Types ----------
+type Temp = "hot" | "warm";
+type WhyKind = "meta" | "platform" | "signal" | "activity" | "geo" | "persona";
+type Why = { label: string; kind: WhyKind; score: number; detail: string };
 
 type Lead = {
   id: string;
-  platform: string;
-  cat: string;
   host: string;
+  platform: string; // "shopify" | "woocommerce" | "unknown"
+  cat: string; // "product" etc.
   title: string;
-  created_at: string;       // ISO
-  temperature: Temperature;
-  stage?: Stage;
-  notes?: string[];
-  why?: WhySentence[];      // human-readable evidence
+  created_at: string; // ISO
+  temperature: Temp;
+  why: Why[];
+  stage?: "new" | "qualified" | "contacted" | "won" | "lost";
+  notes?: { ts: string; text: string }[];
 };
 
-type BuyersRequest = {
-  supplierDomain: string;
-  city?: string;            // "San Francisco, CA" or ZIP
-  radiusMiles?: number;     // 25/50/100
-  keywords?: string;        // optional hint (e.g., "rfp, corrugate")
+type BuyerRequest = {
+  supplier?: string; // supplier domain (required)
+  region?: string; // "us" | "ca" | city/region hint (optional)
+  radiusMi?: number; // radius miles (optional)
+  keywords?: string; // optional, comma-separated, we can boost by it
 };
 
-// ----- in-memory store (persists for container lifetime) -----
-const leads: Lead[] = [];
-let nextId = 1;
+// ---------- In-memory store (ephemeral) ----------
+let NEXT_ID = 1;
+const store = new Map<string, Lead>();
+const hot: Lead[] = [];
+const warm: Lead[] = [];
 
-// ----- utilities -----
-const nowISO = () => new Date().toISOString();
+// ---------- Seed list (optional, best-effort) ----------
+const SEED_FILE = "/etc/secrets/seeds.txt";
+let SEEDS_RAW: string[] = [];
+try {
+  if (fs.existsSync(SEED_FILE)) {
+    const raw = fs.readFileSync(SEED_FILE, "utf8");
+    SEEDS_RAW = raw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+  }
+} catch {
+  // ignore — runtime can work without seeds
+}
 
-function addLead(l: Omit<Lead, "id" | "created_at">): Lead {
-  const lead: Lead = { ...l, id: String(nextId++), created_at: nowISO() };
-  leads.unshift(lead); // newest first
+// very light domain extractor (handles lines like "brand-x.com,https:" too)
+const DOMAIN_RE =
+  /([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:com|net|org|co|io|ai|ca|us|store|shop|biz|me)/i;
+
+function pickDomain(input: string): string | null {
+  const m = input.toLowerCase().match(DOMAIN_RE);
+  return m ? m[0].replace(/^https?:\/\//, "") : null;
+}
+
+const NON_US_CA_HINTS =
+  /(dubai|uae|saudi|uk\b|london|europe|eu\b|de\b|germany|france|italy|spain|aus|australia|nz\b|india|pakistan|mexico|brazil|singapore|hong ?kong|china|\.cn\b|japan|korea|turkey|thailand|vietnam|philippines|ph\b)/i;
+
+function isUSorCA(line: string, domain: string): boolean {
+  if (domain.endsWith(".ca")) return true;
+  // if any clear non-US/CA hints exist in the seed row, drop it
+  if (NON_US_CA_HINTS.test(line)) return false;
+  // default accept .com/.us/.store/etc. as US unless hints say otherwise
+  return true;
+}
+
+// quick packaging keyword detector to mark HOT
+const PACKAGING_KWS =
+  /(rfp|rfq|tender|bid|packaging|mailers?|poly mailers?|cartons?|boxes?|labels?|shrink|stretch|pallet|fulfillment|warehouse|3pl)/i;
+
+// ---------- Helpers ----------
+function nowISO(): string {
+  return new Date().toISOString();
+}
+
+function makeLead(host: string, temperature: Temp, extraWhy: Why[] = []): Lead {
+  const id = String(NEXT_ID++);
+  const why: Why[] = [
+    { label: "Domain quality", kind: "meta", score: host.endsWith(".com") ? 0.65 : 0.6, detail: `${host} (${host.split(".").pop()})` },
+    { label: "Platform fit", kind: "platform", score: 0.5, detail: "unknown" },
+    ...extraWhy,
+  ];
+  const lead: Lead = {
+    id,
+    host,
+    platform: "unknown",
+    cat: "product",
+    title: `Lead: ${host}`,
+    created_at: nowISO(),
+    temperature,
+    why,
+    stage: "new",
+    notes: [],
+  };
+  store.set(id, lead);
+  (temperature === "hot" ? hot : warm).unshift(lead);
   return lead;
 }
 
-function csvEscape(s: string) {
-  const needs = /[,"\n]/.test(s);
-  return needs ? `"${s.replace(/"/g, '""')}"` : s;
-}
+function seedsAsLeads(options: { supplier?: string; region?: string; radiusMi?: number; keywords?: string }) {
+  const { supplier, region, keywords } = options;
+  const keywordBoost = (keywords || "").toLowerCase();
 
-function toCSV(rows: Array<Record<string, string>>) {
-  if (rows.length === 0) return "id,host,platform,cat,title,created_at,temperature\n";
-  const headers = Object.keys(rows[0]);
-  const head = headers.join(",");
-  const body = rows
-    .map((r) => headers.map((h) => csvEscape(String(r[h] ?? ""))).join(","))
-    .join("\n");
-  return `${head}\n${body}\n`;
-}
+  const supplierHost = supplier ? pickDomain(supplier) : null;
 
-// ----- seeds loader (US/CA only) -----
-// File: /etc/secrets/seeds.txt   (one per line; we accept flexible formats)
-// Accepted line shapes (comma or tab separated):
-//   domain[,region][,industry][,name]
-//   brand-x.com,US,food,Brand X
-//   brand-x.com
-// Any non-US/CA region gets filtered out by default.
-type Seed = { host: string; region?: string; industry?: string; name?: string };
+  const out: Lead[] = [];
+  for (const row of SEEDS_RAW) {
+    const domain = pickDomain(row);
+    if (!domain) continue;
 
-function parseSeedLine(line: string): Seed | null {
-  const raw = line.trim();
-  if (!raw || raw.startsWith("#")) return null;
-  const parts = raw.split(/[\t,]+/).map((p) => p.trim()).filter(Boolean);
-  const host = parts[0]?.toLowerCase();
-  if (!host || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host)) return null;
-  const region = parts[1]?.toUpperCase();
-  const industry = parts[2];
-  const name = parts[3];
-  return { host, region, industry, name };
-}
+    // skip supplier's own domain
+    if (supplierHost && domain === supplierHost) continue;
 
-function loadSeeds(): Seed[] {
-  const candidatePaths = [
-    "/etc/secrets/seeds.txt",
-    "/etc/secrets/seed.txt",
-    path.join(process.cwd(), "seeds.txt"),
-  ];
-  for (const p of candidatePaths) {
-    try {
-      if (fs.existsSync(p)) {
-        const lines = fs.readFileSync(p, "utf8").split(/\r?\n/);
-        const all = lines.map(parseSeedLine).filter((x): x is Seed => !!x);
-        // US/CA only
-        const usca = all.filter((s) => !s.region || s.region === "US" || s.region === "CA");
-        return usca;
-      }
-    } catch {
-      // ignore
+    // US/CA only
+    if (!isUSorCA(row, domain)) continue;
+
+    // temperature based on packaging keywords in the seed row or keywordBoost
+    const rowLower = row.toLowerCase();
+    const isHot = PACKAGING_KWS.test(rowLower) || (keywordBoost && rowLower.includes(keywordBoost));
+
+    const activityWhy: Why[] = [];
+    if (isHot) {
+      activityWhy.push({ label: "Intent keywords", kind: "signal", score: 0.9, detail: (rowLower.match(PACKAGING_KWS)?.[0] || "packaging") });
+    } else {
+      activityWhy.push({ label: "Intent keywords", kind: "signal", score: 0.6, detail: "no strong keywords" });
     }
+
+    // simple geo note: when region hint is provided by user, attach it as a reason
+    if (region) {
+      activityWhy.push({ label: "Near your region", kind: "geo", score: 0.7, detail: region });
+    }
+
+    const lead = makeLead(domain, isHot ? "hot" : "warm", activityWhy);
+    out.push(lead);
   }
-  // tiny fallback list (US-only) to keep API usable if no seeds file exists
-  return [
-    { host: "brilliantearth.com", region: "US", industry: "retail" },
-    { host: "sunbasket.com", region: "US", industry: "food" },
-    { host: "gobble.com", region: "US", industry: "food" },
-    { host: "dropps.com", region: "US", industry: "cpG" },
-    { host: "wayfair.com", region: "US", industry: "retail" },
-  ];
+  return out;
 }
 
-// ----- light heuristics (no external calls) -----
-function domainQualitySentence(host: string): WhySentence {
-  const tldOk = /\.(com|net|org|io|co)$/.test(host) ? "trusted TLD" : "valid domain";
-  return {
-    label: "Domain quality",
-    text: `${host} looks like a real brand (${tldOk}).`,
-    weight: 0.4,
-  };
+// CSV helper
+function toCSV(rows: Lead[]): string {
+  const header = "id,host,platform,cat,title,created_at,temperature";
+  const body = rows
+    .map((l) =>
+      [
+        JSON.stringify(l.id),
+        JSON.stringify(l.host),
+        JSON.stringify(l.platform),
+        JSON.stringify(l.cat),
+        JSON.stringify(l.title),
+        JSON.stringify(new Date(l.created_at).toString()),
+        JSON.stringify(l.temperature),
+      ].join(","),
+    )
+    .join("\n");
+  return `${header}\n${body}`;
 }
 
-function packagingFamilyFromSupplier(hostOrText: string): "palletizing" | "labels" | "corrugate" | "mailers" | "protective" | "generic" {
-  const h = hostOrText.toLowerCase();
-  if (/(stretch|shrink|film)/.test(h)) return "palletizing";
-  if (/(label|sticker)/.test(h)) return "labels";
-  if (/(box|corrug|carton)/.test(h)) return "corrugate";
-  if (/(mailer|poly|envelope)/.test(h)) return "mailers";
-  if (/(foam|bubble|void|cushion)/.test(h)) return "protective";
-  return "generic";
-}
-
-function packagingMathSentence(host: string): WhySentence {
-  // Friendly explanation instead of numbers/jargon
-  // (Heuristic: well-known brands/cart/retailers get this sentence)
-  const plain = `They sell and ship products online — that means they already use packaging.`;
-  return { label: "Business check", text: plain, weight: 0.5 };
-}
-
-function personaSentence(family: ReturnType<typeof packagingFamilyFromSupplier>): WhySentence {
-  // Very simple, human-readable sentence
-  const map: Record<string, string> = {
-    palletizing: "Best matches warehouses, 3PLs and retail distribution centers (roles like Warehouse Manager or COO).",
-    labels: "Best matches e-commerce brands and co-packers (roles like Purchasing or Ops Manager).",
-    corrugate: "Best matches omni-channel brands and fulfillment centers (Purchasing / Packaging Engineer).",
-    mailers: "Best matches DTC e-commerce brands and subscription services (E-commerce Ops / Procurement).",
-    protective: "Best matches fragile goods brands and 3PLs (Ops / Packaging Engineer).",
-    generic: "Best matches growing e-commerce brands and fulfillment centers.",
-  };
-  return { label: "Who this fits", text: map[family], weight: 0.4 };
-}
-
-function localitySentence(city?: string, radius?: number): WhySentence | undefined {
-  if (!city) return undefined;
-  return {
-    label: "Location focus",
-    text: `We’ll start near ${city} (about ${radius ?? 50} miles) and expand as needed — still US/CA only.`,
-    weight: 0.3,
-  };
-}
-
-function intentSentence(seed: Seed): WhySentence | undefined {
-  // Without crawling, we can only add a generic hint when keywords are provided later.
-  // Keep it simple for now:
-  return undefined;
-}
-
-function toHotOrWarm(seed: Seed, family: ReturnType<typeof packagingFamilyFromSupplier>): Temperature {
-  // Until we wire "recent activity" and RFQ detection, keep conservative:
-  return "warm";
-}
-
-// create candidates from seeds, filtered by US/CA and lightly ranked by name/industry/heuristic family
-function findBuyerCandidates(req: BuyersRequest): Lead[] {
-  const seeds = loadSeeds();
-
-  const family = packagingFamilyFromSupplier(req.supplierDomain);
-  const city = req.city?.trim();
-  const radius = req.radiusMiles ?? 50;
-
-  // rank function: rough match of family to industry keywords (if present)
-  const rank = (s: Seed) => {
-    let r = 0;
-    const h = `${s.host} ${s.industry ?? ""}`.toLowerCase();
-    if (family === "palletizing" && /(3pl|warehouse|fulfill|distribution|logistic|retail)/.test(h)) r += 3;
-    if (family === "labels" && /(beauty|food|supplement|beverage|retail|apparel)/.test(h)) r += 2;
-    if (family === "corrugate" && /(retail|furniture|appliance|food|beverage)/.test(h)) r += 2;
-    if (family === "mailers" && /(dtc|subscription|apparel|accessories)/.test(h)) r += 2;
-    if (family === "protective" && /(fragile|glass|electronics|appliance)/.test(h)) r += 2;
-    // domain looks brandy
-    if (/\.(com)$/.test(s.host)) r += 1;
-    return r;
-  };
-
-  const selected = seeds
-    .filter((s) => !s.region || s.region === "US" || s.region === "CA")
-    // (City/Radius is advisory in this phase — we don’t geocode; we’ll reflect it in a Why sentence.)
-    .sort((a, b) => rank(b) - rank(a))
-    .slice(0, 12); // keep it small for the panel
-
-  const friendlyWhyCommon: WhySentence[] = [
-    domainQualitySentence(req.supplierDomain),
-    packagingMathSentence(req.supplierDomain),
-    personaSentence(family),
-    ...(localitySentence(city, radius) ? [localitySentence(city, radius)!] : []),
-  ];
-
-  const created: Lead[] = [];
-  for (const s of selected) {
-    const temp: Temperature = toHotOrWarm(s, family);
-
-    const why: WhySentence[] = [
-      { label: "Match", text: `This looks like a likely buyer for your ${family === "generic" ? "packaging" : family.replace(/^\w/, c => c.toUpperCase())} products.` },
-      ...friendlyWhyCommon,
-    ];
-
-    const lead = addLead({
-      platform: "unknown",
-      cat: "product",
-      host: s.host,
-      title: `Lead: ${s.name ?? s.host}`,
-      temperature: temp,
-      why,
-    });
-
-    created.push(lead);
-  }
-  return created;
-}
-
-// ----- router -----
-export default function leadsRouter(): Router {
+// ---------- Router ----------
+export default function mountLeads(): Router {
   const router = Router();
 
-  // Health (used by Northflank readiness probe)
-  router.get("/healthz", (_req, res) => res.status(200).json({ ok: true }));
-
-  // Lists
-  router.get("/hot", (req: Request, res: Response) => {
-    const limit = Math.max(0, Math.min(100, Number(req.query.limit ?? 20)));
-    const items = leads.filter((l) => l.temperature === "hot").slice(0, limit);
-    res.json({ ok: true, items });
+  // Simple docs
+  router.get("/api/v1/leads", (_req, res) => {
+    res.json({ ok: true, endpoints: ["/api/v1/leads/hot", "/api/v1/leads/warm", "/api/v1/leads/:id", "/api/v1/leads/buyers"] });
   });
 
-  router.get("/warm", (req: Request, res: Response) => {
-    const limit = Math.max(0, Math.min(100, Number(req.query.limit ?? 20)));
-    const items = leads.filter((l) => l.temperature === "warm").slice(0, limit);
-    res.json({ ok: true, items });
+  // Lists
+  router.get("/api/v1/leads/hot", (req, res) => {
+    const lim = Math.max(0, Number(req.query.limit ?? 50));
+    res.json({ ok: true, items: hot.slice(0, lim || 50) });
+  });
+
+  router.get("/api/v1/leads/warm", (req, res) => {
+    const lim = Math.max(0, Number(req.query.limit ?? 50));
+    res.json({ ok: true, items: warm.slice(0, lim || 50) });
   });
 
   // One lead
-  router.get("/:id", (req: Request, res: Response) => {
-    const lead = leads.find((l) => l.id === String(req.params.id));
-    if (!lead) return res.status(404).json({ ok: false, error: "not found" });
+  router.get("/api/v1/leads/:id", (req, res) => {
+    const lead = store.get(String(req.params.id));
+    if (!lead) return res.status(404).json({ ok: false, error: "bad id" });
     res.json({
       ok: true,
       temperature: lead.temperature,
       lead,
-      why: lead.why ?? [],
+      why: lead.why,
     });
   });
 
-  // Stage (requires API key)
-  router.patch("/:id/stage", requireApiKey, (req: Request, res: Response) => {
-    const lead = leads.find((l) => l.id === String(req.params.id));
-    if (!lead) return res.status(404).json({ ok: false, error: "not found" });
-    const stage = (req.body?.stage ?? "new") as Stage;
-    lead.stage = stage;
-    res.json({ ok: true, leadId: Number(lead.id), stage });
+  // Stage + Notes (require key)
+  router.patch("/api/v1/leads/:id/stage", requireApiKey, (req, res) => {
+    const lead = store.get(String(req.params.id));
+    if (!lead) return res.status(404).json({ ok: false, error: "bad id" });
+    const s = String((req.body?.stage ?? "").toString().toLowerCase());
+    if (!s || !["new", "qualified", "contacted", "won", "lost"].includes(s)) {
+      return res.status(400).json({ ok: false, error: "bad stage" });
+    }
+    lead.stage = s as Lead["stage"];
+    res.json({ ok: true, leadId: Number(lead.id), stage: lead.stage });
   });
 
-  // Notes (requires API key)
-  router.post("/:id/notes", requireApiKey, (req: Request, res: Response) => {
-    const lead = leads.find((l) => l.id === String(req.params.id));
-    if (!lead) return res.status(404).json({ ok: false, error: "not found" });
-    const note = String(req.body?.note ?? "").trim();
-    if (!note) return res.status(400).json({ ok: false, error: "note required" });
-    if (!lead.notes) lead.notes = [];
-    lead.notes.push(note);
+  router.post("/api/v1/leads/:id/notes", requireApiKey, (req, res) => {
+    const lead = store.get(String(req.params.id));
+    if (!lead) return res.status(404).json({ ok: false, error: "bad id" });
+    const text = String(req.body?.note ?? "").trim();
+    if (!text) return res.status(400).json({ ok: false, error: "note required" });
+    lead.notes = lead.notes || [];
+    lead.notes.push({ ts: nowISO(), text });
     res.json({ ok: true, leadId: Number(lead.id) });
   });
 
   // CSV export
-  router.get("/export.csv", (req: Request, res: Response) => {
-    const temperature = String(req.query.temperature ?? "").toLowerCase() as Temperature | "";
-    const limit = Math.max(0, Math.min(1000, Number(req.query.limit ?? 200)));
-    const pool =
-      temperature === "hot"
-        ? leads.filter((l) => l.temperature === "hot")
-        : temperature === "warm"
-        ? leads.filter((l) => l.temperature === "warm")
-        : leads;
-
-    const pick = pool.slice(0, limit);
-    const rows = pick.map((l) => ({
-      id: l.id,
-      host: l.host,
-      platform: l.platform,
-      cat: l.cat,
-      title: l.title,
-      created_at: new Date(l.created_at).toString(),
-      temperature: l.temperature,
-    }));
+  router.get("/api/v1/leads/export.csv", (req, res) => {
+    const temp = String(req.query.temperature ?? "hot") as Temp;
+    const lim = Math.max(0, Number(req.query.limit ?? 50));
+    const rows = (temp === "warm" ? warm : hot).slice(0, lim || 50);
     const csv = toCSV(rows);
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="leads_${temperature || "all"}.csv"`);
     res.send(csv);
   });
 
-  // NEW: Find buyers (requires API key)
-  router.post("/buyers", requireApiKey, (req: Request, res: Response) => {
-    const body = (req.body ?? {}) as BuyersRequest;
+  // Back-compat single ingest (kept for the right-side form if used)
+  router.post("/api/v1/leads/ingest", requireApiKey, (req, res) => {
+    const host = pickDomain(String(req.body?.source_url ?? req.body?.host ?? ""));
+    const cat = String(req.body?.cat ?? "product");
+    const title = String(req.body?.title ?? ("Lead: " + (host || "unknown")));
+    if (!host) return res.status(400).json({ ok: false, error: "host/source_url required" });
 
-    const supplierDomain = String(body.supplierDomain ?? "").trim().toLowerCase();
-    if (!supplierDomain || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(supplierDomain)) {
-      return res.status(400).json({ ok: false, error: "supplierDomain is required (plain domain, no https://)" });
-    }
+    const kw = String(req.body?.kw ?? "").toLowerCase();
+    const isHot = PACKAGING_KWS.test(kw);
 
-    const city = body.city?.toString();
-    const radiusMiles = Number(body.radiusMiles ?? 50);
-    const created = findBuyerCandidates({ supplierDomain, city, radiusMiles, keywords: body.keywords });
+    const why: Why[] = [
+      { label: "Intent keywords", kind: "signal", score: isHot ? 0.9 : 0.6, detail: kw || (isHot ? "packaging" : "no strong keywords") },
+    ];
+
+    const lead = makeLead(host, isHot ? "hot" : "warm", why);
+    lead.cat = cat;
+    lead.title = title;
+
+    res.json({ ok: true, id: Number(lead.id) });
+  });
+
+  // --------- NEW: Buyer Finder (front-end "Find buyers") ----------
+  function parseBuyerRequest(req: Request): BuyerRequest {
+    const body = (req.body || {}) as any;
+    const q = req.query || {};
+    const supplier = String(body.supplier ?? q.supplier ?? "").trim() || String(body.domain ?? q.domain ?? "").trim();
+    const region = String(body.region ?? q.region ?? "").trim().toLowerCase();
+    const radiusMi = Number(body.radiusMi ?? q.radiusMi ?? 50) || 50;
+    const keywords = String(body.keywords ?? q.keywords ?? "").trim();
+    return { supplier, region, radiusMi, keywords };
+  }
+
+  function handleBuyerFind(req: Request, res: Response) {
+    const { supplier, region, radiusMi, keywords } = parseBuyerRequest(req);
+    if (!supplier) return res.status(400).json({ ok: false, error: "supplier (domain) required" });
+
+    const createdBefore = NEXT_ID;
+    const candidates = seedsAsLeads({ supplier, region, radiusMi, keywords });
+    // basic dedupe: if we already have a lead with same host in memory, skip it
+    const seenHosts = new Set<string>();
+    const unique = candidates.filter((c) => {
+      if (seenHosts.has(c.host)) return false;
+      seenHosts.add(c.host);
+      return true;
+    });
+
+    // Partition back into hot/warm arrays is already done in makeLead()
+    const createdCount = NEXT_ID - createdBefore;
 
     res.json({
       ok: true,
-      supplierDomain,
-      created: created.length,
-      ids: created.map((c) => c.id),
+      supplierDomain: pickDomain(supplier),
+      created: createdCount,
+      ids: unique.map((l) => Number(l.id)),
+      candidates: unique.map((l) => ({
+        cat: l.cat,
+        platform: l.platform,
+        host: l.host,
+        title: l.title,
+        keywords: (l.why.find((w) => w.kind === "signal")?.detail || ""),
+        temperature: l.temperature,
+        why: l.why,
+      })),
+      tip: "US/CA only filter is applied by default. Provide region to bias toward your city/state.",
     });
-  });
+  }
 
-  // (Optional compatibility) keep simple ingest for older panel versions
-  router.post("/ingest", requireApiKey, (req: Request, res: Response) => {
-    const source = String(req.body?.source_url ?? req.body?.source ?? req.body?.domain ?? "").trim().toLowerCase();
-    if (!source) return res.status(400).json({ ok: false, error: "domain/source_url required" });
-    const supplierDomain = source.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-    const created = findBuyerCandidates({ supplierDomain, radiusMiles: 50 });
-    res.json({ ok: true, supplierDomain, created: created.length, ids: created.map((c) => c.id) });
-  });
+  // Preferred endpoint
+  router.post("/api/v1/leads/buyers", handleBuyerFind);
+  // Alias to avoid 404 from older/free-panel code
+  router.post("/api/v1/leads/find-buyers", handleBuyerFind);
 
   return router;
 }
