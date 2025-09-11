@@ -1,11 +1,9 @@
-// Backend/src/index.ts
 import express from "express";
-import { mountLeads } from "./routes/leads";
-import { requireApiKey } from "./auth";
+import { mountLeads } from "./routes/leads"; // mountLeads(app) — takes ONE arg
 
 const app = express();
 
-// Minimal CORS (no extra deps)
+// Tiny CORS so GitHub Pages panel can talk to the API
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
@@ -14,21 +12,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Body parser
 app.use(express.json({ limit: "1mb" }));
 
-// Health & ping (no auth)
+// Health & ping (used by Northflank)
 app.get("/health", (_req, res) => res.status(200).type("text/plain").send("ok"));
-app.get("/ping", (_req, res) => res.status(200).json({ ok: true, time: new Date().toISOString() }));
+app.get("/ping", (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
 // API routes
-mountLeads(app, { requireApiKey });
+mountLeads(app); // <-- single argument
 
-// Start server
+// Start
 const port = Number(process.env.PORT || 8787);
-app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Backend listening on :${port}`);
-});
+app.listen(port, () => console.log(`Backend listening on :${port}`));
 
 export default app;
