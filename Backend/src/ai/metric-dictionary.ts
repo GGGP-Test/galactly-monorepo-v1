@@ -1,109 +1,172 @@
-// src/ai/metric-dictionary.ts
-// Canonical packaging metrics + lightweight trigger phrases.
-// Expand here freely; engine will auto-use anything you add.
+/**
+ * Canonical packaging signals and seed phrases.
+ * This is intentionally small; persona-engine can expand these with LLM help.
+ */
 
-export interface MetricDef {
-  key: string;             // short code
-  label: string;           // human readable
-  desc: string;            // 1-line description
-  triggers: string[];      // phrases that indicate this pressure/need
+export type MetricId =
+  | "ILL"  // Irregular Load Likelihood (non-square pallets, mixed SKUs)
+  | "CCI"  // Cold Chain Intensity
+  | "DFS"  // Digital Fulfillment Stack (D2C, carts, returns)
+  | "RPI"  // Rate/Parcel/Dim-Weight Sensitivity
+  | "FEI"  // Fragility/Edge/Impact sensitivity
+  | "SUS"  // Sustainability orientation
+  | "CWB"  // Corrugated/Boxes dependency
+  | "STR"  // Stretch-film automation (turntable, pre-stretch)
+  | "TAP"  // Tape/banding sealing ops
+  | "FNB"  // Food & Bev markers
+  | "HCP"  // Health & personal care markers
+  | "3PL"  // Multi-node 3PL / DC footprint
+  | "HAZ"  // Hazmat / compliance markers
+  | "BUL"  // Bulk/industrial bags, FIBC, liners
+  | "LTL"  // LTL/FTL shipping heavy use
+  | "ECO"; // Economy/cost-first posture
+
+export interface MetricSeed {
+  id: MetricId;
+  weight: number;             // default prior (0..1), used as Bayesian prior
+  phrases: string[];          // seed keywords/phrases to detect
 }
 
-export const METRICS: MetricDef[] = [
+export const METRIC_SEEDS: MetricSeed[] = [
   {
-    key: "DCS",
-    label: "Distributed fulfillment (3PL/DC heavy)",
-    desc: "Buyer runs multiple DCs/3PLs, cares about throughput + standardization.",
-    triggers: [
-      "3pl","fulfillment","distribution center","multi-node","dc","node",
-      "ship from store","sfs","wms","warehouse network","omnichannel"
+    id: "ILL",
+    weight: 0.35,
+    phrases: [
+      "mixed sku", "assorted", "odd", "irregular", "non-square", "unstable",
+      "pallet", "palletizing", "palletisation", "case mix", "rainbow pallet",
+      "ecommerce assortment", "small order", "batch pick", "broken case"
     ]
   },
   {
-    key: "ILL",
-    label: "Irregular/mixed loads",
-    desc: "Non-square pallets, heterogeneous cases, unstable stacks.",
-    triggers: [
-      "mixed pallet","irregular load","non square","odd size","assorted",
-      "unstable","heterogeneous","case mix","palletizing challenges"
+    id: "CCI",
+    weight: 0.25,
+    phrases: [
+      "cold chain", "refrigerated", "frozen", "gel pack", "phase-change",
+      "temperature control", "thermal", "insulated shipper", "vaccine", "ice brick"
     ]
   },
   {
-    key: "RPI",
-    label: "Right-size / DIM-weight pressure",
-    desc: "Small-parcel cost pressure; right-sizing/corrugate optimization.",
-    triggers: [
-      "dim weight","dimensional weight","right size","cartonization",
-      "small parcel","carrier surcharge","zone skipping","rate shop"
+    id: "DFS",
+    weight: 0.30,
+    phrases: [
+      "shopify", "woocommerce", "bigcommerce", "checkout", "returns", "rma",
+      "subscription", "last mile", "parcel", "pick and pack", "fulfillment app"
     ]
   },
   {
-    key: "CCI",
-    label: "Cold chain integrity",
-    desc: "Refrigerated/frozen shipments; thermal/insulated packaging.",
-    triggers: [
-      "cold chain","refrigerated","frozen","insulated","thermal",
-      "phase change","vaccine","perishable","temperature control"
+    id: "RPI",
+    weight: 0.30,
+    phrases: [
+      "dim", "dimensional", "right-size", "cartonization", "rate shop", "carrier mix",
+      "zebra printer", "shipstation", "packsize", "void reduction"
     ]
   },
   {
-    key: "FEI",
-    label: "Fragility/ISTA compliance",
-    desc: "Breakage risk; drop/shock protection; lab testing/ISTA.",
-    triggers: [
-      "ista","drop test","shock","fragile","breakage","cushion",
-      "void fill","foam-in-place","pulp","air pillow"
+    id: "FEI",
+    weight: 0.20,
+    phrases: [
+      "fragile", "drop test", "ISTA", "shock", "impact", "edge crush", "cushion",
+      "void fill", "bubble", "foam-in-bag", "air pillow"
     ]
   },
   {
-    key: "AUTO",
-    label: "Automation readiness",
-    desc: "Conveyor, wrappers, carton erectors, palletizers.",
-    triggers: [
-      "automation","palletizer","pre-stretch","turntable","infeed",
-      "conveyor","semi-automatic","automatic","throughput"
+    id: "SUS",
+    weight: 0.15,
+    phrases: [
+      "recyclable", "recycled", "less plastic", "lightweight", "compostable",
+      "sustainable", "paper mailer", "reusable", "circular"
     ]
   },
   {
-    key: "SUS",
-    label: "Sustainability/EPR",
-    desc: "Recycled content, lightweighting, EPR compliance.",
-    triggers: [
-      "recycled content","recyclable","compostable","epr","lightweight",
-      "reduce material","less plastic","post-consumer","pcw"
+    id: "CWB",
+    weight: 0.30,
+    phrases: [
+      "corrugated", "rsc", "fefco", "die-cut", "carton", "boxboard", "flute",
+      "e-flute", "b-flute", "kdf", "bundling", "pallet box"
     ]
   },
   {
-    key: "LABEL",
-    label: "Labeling & traceability",
-    desc: "High volumes of shipping/lot labels; scan reliability matters.",
-    triggers: [
-      "labeling","barcode","thermal transfer","gs1","lot traceability",
-      "serialization","print and apply","rfid"
+    id: "STR",
+    weight: 0.25,
+    phrases: [
+      "turntable", "pre-stretch", "prestretch", "automatic", "semi-automatic",
+      "conveyor", "wrapping machine", "film carriage", "load securement"
     ]
   },
   {
-    key: "FOOD",
-    label: "Food & beverage format",
-    desc: "Cased beverage, multipack, can/bottle, shrink/bundle.",
-    triggers: [
-      "bottling","brewery","beverage","casing","multipack","bundling",
-      "tray shrink","sleeve","haccp"
+    id: "TAP",
+    weight: 0.20,
+    phrases: [
+      "case sealer", "carton sealer", "water-activated tape", "gummed tape",
+      "OPP tape", "hand tape", "strap", "poly strapping", "steel strapping"
     ]
   },
   {
-    key: "PHARMA",
-    label: "Pharma/medical compliance",
-    desc: "GxP/ISO, cleanroom, tamper-evident, pedigree.",
-    triggers: [
-      "gxp","gmp","iso 13485","cleanroom","tamper evident",
-      "pedigree","serialization","21 cfr part 11"
+    id: "FNB",
+    weight: 0.25,
+    phrases: [
+      "FDA", "USDA", "SQF", "HACCP", "food grade", "beverage", "brewery",
+      "dairy", "produce", "meat processing"
+    ]
+  },
+  {
+    id: "HCP",
+    weight: 0.20,
+    phrases: [
+      "cosmetics", "personal care", "skincare", "pharma", "lot traceability",
+      "clean room", "sterile", "tamper evident"
+    ]
+  },
+  {
+    id: "3PL",
+    weight: 0.35,
+    phrases: [
+      "3pl", "fulfillment center", "multinode", "dc", "distribution center",
+      "ship-from-store", "micro-fulfillment", "node", "sla", "same-day"
+    ]
+  },
+  {
+    id: "HAZ",
+    weight: 0.20,
+    phrases: [
+      "hazmat", "dangerous goods", "un38.3", "orm-d", "tdg", "imdg",
+      "msds", "sds", "combustible", "corrosive"
+    ]
+  },
+  {
+    id: "BUL",
+    weight: 0.20,
+    phrases: [
+      "fibc", "bulk bag", "super sack", "liner", "poly liner", "gaylord",
+      "resin", "powder", "granule", "pellet", "valve bag"
+    ]
+  },
+  {
+    id: "LTL",
+    weight: 0.20,
+    phrases: [
+      "ltl", "ftl", "pallet rate", "nmfc", "class", "freight", "tl carrier",
+      "dock", "cross-dock", "bill of lading"
+    ]
+  },
+  {
+    id: "ECO",
+    weight: 0.10,
+    phrases: [
+      "cost down", "reduce cost", "lower spend", "rfx", "rfq", "rebate", "benchmark"
     ]
   }
 ];
 
-// Simple list of generic role/title terms we like to seed into queries.
-export const DEFAULT_TITLES = [
-  "purchasing manager","warehouse manager","operations manager","supply chain manager",
-  "procurement","vp operations","plant manager","logistics manager"
-];
+/** lightweight lookup for phrase -> metric ids */
+export const PHRASE_TO_METRICS: Record<string, MetricId[]> = (() => {
+  const map: Record<string, MetricId[]> = {};
+  for (const s of METRIC_SEEDS) {
+    for (const p of s.phrases) {
+      const k = p.toLowerCase();
+      if (!map[k]) map[k] = [];
+      if (!map[k].includes(s.id)) map[k].push(s.id);
+    }
+  }
+  return map;
+})();
