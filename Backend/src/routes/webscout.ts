@@ -1,9 +1,15 @@
 // src/routes/webscout.ts
-// WebScout v0: minimal, dependency-free route with a /find alias.
-// NOTE: Keep imports as namespace to avoid esModuleInterop issues.
+// WebScout routes with wide compatibility:
+// - Paths:  /api/v1/webscout, /api/v1/find, /api/v1/leads (alias for the panel)
+// - Inputs: supplierDomain | domain | website, plus optional regions/keywords
+// - Output: both {candidates: [...] } and {items: [...]} for table UIs.
+//
+// No external deps; safe for tsconfig.runtime.json (no esModuleInterop needed).
 
 import * as express from 'express';
 import type { Express, Request, Response } from 'express';
+
+// ---------- Types ----------
 
 type Temperature = 'warm' | 'hot';
 type WhyKind = 'persona' | 'region' | 'meta' | 'signal';
@@ -11,7 +17,7 @@ type WhyKind = 'persona' | 'region' | 'meta' | 'signal';
 interface WhyChip {
   label: string;
   kind: WhyKind;
-  score: number;      // 0..1
+  score: number; // 0..1
   detail: string;
 }
 
@@ -21,6 +27,7 @@ interface Candidate {
   platform: 'shopify' | 'woocommerce' | 'bigcommerce' | 'custom' | 'unknown';
   title: string;
   temperature: Temperature;
+  created: string;
   why: WhyChip[];
 }
 
@@ -31,11 +38,11 @@ interface Persona {
 }
 
 interface WebScoutRequest {
-  supplierDomain: string;        // required
-  regions?: string[];            // preferred regions; default to US/CA bias
-  verticals?: string[];          // optional (e.g., retail, food, DTC)
-  keywords?: string[];           // optional; if omitted, we infer
-  sampleDomains?: string[];      // optional example buyers the user might provide
+  supplierDomain: string;
+  regions?: string[];
+  verticals?: string[];
+  keywords?: string[];
+  sampleDomains?: string[];
 }
 
 interface WebScoutResponse {
@@ -46,62 +53,71 @@ interface WebScoutResponse {
     inferredFrom: string[];
   };
   candidates: Candidate[];
+  // table-friendly alias (same data, flattened)
+  items: Array<{
+    id: string;
+    host: string;
+    platform: Candidate['platform'];
+    title: string;
+    created: string;
+    temp: Candidate['temperature'];
+    why: string;
+  }>;
+}
+
+// ---------- Helpers ----------
+
+function nowIso(): string {
+  return new Date().toISOString();
 }
 
 function isUSCA(reg?: string): boolean {
   if (!reg) return false;
   const s = reg.toLowerCase();
   return (
-    s.includes('united states') ||
-    s.includes('usa') ||
-    s.includes('us') ||
-    s.includes('canada') ||
-    s.includes('ca') ||
-    // city/state shorthands that often show up
+    s.includes('united states') || s === 'us' || s === 'usa' ||
+    s.includes('canada') || s === 'ca' ||
     /\b(ny|sf|la|tx|il|nj|on|bc|qc|ab|mb)\b/.test(s)
   );
 }
 
-// Very light domain -> persona inference so users see something coherent immediately.
 function inferPersona(domain: string): { persona: Persona; clues: string[] } {
   const d = domain.toLowerCase();
   const clues: string[] = [];
-
   let persona: Persona = {
     productOffer: 'protective & shipping packaging',
-    solves: 'reduce damage in transit and speed outbound ops',
+    solves: 'reduce transit damage; speed pick/pack',
     buyerTitles: ['Operations Manager', 'Procurement Manager', 'COO'],
   };
 
   if (d.includes('stretch') || d.includes('shrink')) {
     persona = {
-      productOffer: 'palletizing & protective stretch/shrink film',
-      solves: 'secure pallets, reduce load shift, cut film waste',
+      productOffer: 'palletizing stretch/shrink film',
+      solves: 'secure pallets, reduce film waste',
       buyerTitles: ['Warehouse Manager', 'Logistics Manager', 'COO'],
     };
-    clues.push('domain suggests stretch/shrink film');
+    clues.push('domain suggests stretch/shrink');
   } else if (d.includes('label')) {
     persona = {
       productOffer: 'product & shipping labels',
-      solves: 'compliant labeling and faster pick/pack',
+      solves: 'compliant labeling and faster fulfillment',
       buyerTitles: ['E-commerce Ops', 'Plant Manager', 'Procurement'],
     };
     clues.push('domain suggests labels');
   } else if (d.includes('mailer') || d.includes('poly')) {
     persona = {
       productOffer: 'poly mailers & e-com packaging',
-      solves: 'lower DIM weight and protect parcels',
+      solves: 'lower DIM weight; protect parcels',
       buyerTitles: ['E-commerce Ops', 'Fulfillment Lead', 'Procurement'],
     };
     clues.push('domain suggests mailers');
   } else {
-    clues.push('generic packaging supplier heuristics');
+    clues.push('generic packaging heuristics');
   }
 
   return { persona, clues };
 }
 
-// Tiny platform guesser (string heuristics only; safe for v0)
 function guessPlatform(host: string): Candidate['platform'] {
   const h = host.toLowerCase();
   if (h.includes('myshopify') || h.includes('shopify')) return 'shopify';
@@ -110,7 +126,6 @@ function guessPlatform(host: string): Candidate['platform'] {
   return 'unknown';
 }
 
-// Domain quality: .com/.ca and length heuristic only
 function domainQuality(host: string): number {
   const h = host.toLowerCase();
   let s = 0.5;
@@ -120,11 +135,14 @@ function domainQuality(host: string): number {
   return Math.min(1, Math.max(0, s));
 }
 
-// Build human-readable why chips
-function buildWhyChips(persona: Persona, regions: string[] | undefined, host: string, intent: 'generic' | 'mailers' | 'labels' | 'palletizing'): WhyChip[] {
+function buildWhyChips(
+  persona: Persona,
+  regions: string[] | undefined,
+  host: string,
+  intent: 'generic' | 'mailers' | 'labels' | 'palletizing'
+): WhyChip[] {
   const chips: WhyChip[] = [];
 
-  // Persona fit (simple)
   chips.push({
     label: 'Persona fit',
     kind: 'persona',
@@ -132,30 +150,28 @@ function buildWhyChips(persona: Persona, regions: string[] | undefined, host: st
     detail: `${persona.productOffer} → ${persona.buyerTitles.join(', ')}`,
   });
 
-  // Region bias to US/CA unless regions explicitly include others
-  const regionList = (regions && regions.length ? regions : ['US', 'CA']).map(r => r.toString());
-  const hasUSCA = regionList.some((r) => isUSCA(r));
+  const regionList = (regions && regions.length ? regions : ['US', 'CA']).map(String);
+  const hasUSCA = regionList.some(isUSCA);
   chips.push({
     label: 'Region match',
     kind: 'region',
     score: hasUSCA ? 0.9 : 0.5,
-    detail: hasUSCA ? 'United States / Canada focus' : `Preferred regions: ${regionList.join(', ')}`,
+    detail: hasUSCA ? 'United States / Canada focus' : `Preferred: ${regionList.join(', ')}`,
   });
 
-  // Domain quality
   chips.push({
     label: 'Domain quality',
     kind: 'meta',
     score: domainQuality(host),
-    detail: `${host}`,
+    detail: host,
   });
 
-  // Intent keyword (light)
   const intentDetail =
     intent === 'palletizing' ? 'pallet, stretch, shrink' :
     intent === 'labels'      ? 'labels, UPC, GS1' :
     intent === 'mailers'     ? 'poly mailers, satchels' :
                                'packaging, shipping';
+
   chips.push({
     label: 'Intent keywords',
     kind: 'signal',
@@ -166,38 +182,85 @@ function buildWhyChips(persona: Persona, regions: string[] | undefined, host: st
   return chips;
 }
 
-// produce a couple of deterministic demo candidates using supplierDomain as salt
+function chipsToText(chips: WhyChip[]): string {
+  return chips
+    .sort((a, b) => b.score - a.score)
+    .map(c => `${c.label}: ${c.detail}`)
+    .join(' • ');
+}
+
 function demoCandidates(supplierDomain: string, persona: Persona, regions?: string[]): Candidate[] {
-  // We keep these deterministic and simple so UX remains predictable while we wire real providers later.
   const seeds = [
     { host: 'brand-a.com', title: 'RFP: label refresh', intent: 'labels' as const },
     { host: 'brand-x.com', title: 'RFP: poly mailers',  intent: 'mailers' as const },
     { host: 'example.com', title: 'RFP: palletizing project', intent: 'palletizing' as const },
   ];
 
-  // lightweight “temperature”: labels/mailers/palletizing map to hot; generic to warm
-  return seeds.map((s, i) => ({
-    id: String(100 + i),
-    host: s.host,
-    platform: guessPlatform(s.host),
-    title: s.title,
-    temperature: (s.intent === 'labels' || s.intent === 'mailers' || s.intent === 'palletizing') ? 'hot' : 'warm',
-    why: buildWhyChips(persona, regions, s.host, s.intent),
-  }));
+  return seeds.map((s, i) => {
+    const why = buildWhyChips(persona, regions, s.host, s.intent);
+    return {
+      id: String(100 + i),
+      host: s.host,
+      platform: guessPlatform(s.host),
+      title: s.title,
+      temperature: (s.intent === 'labels' || s.intent === 'mailers' || s.intent === 'palletizing') ? 'hot' : 'warm',
+      created: nowIso(),
+      why,
+    };
+  });
+}
+
+// Accept JSON body, form body, or query params; normalize to WebScoutRequest
+function readInput(req: Request): WebScoutRequest | { error: string } {
+  const src: any = { ...(req.query || {}), ...(req.body || {}) };
+
+  const rawDomain: unknown =
+    src.supplierDomain ?? src.domain ?? src.website ?? src.host ?? src.url ?? '';
+
+  const supplierDomain = String(rawDomain || '').trim().toLowerCase();
+
+  if (!supplierDomain) return { error: 'supplierDomain/domain is required' };
+
+  const regions = Array.isArray(src.regions)
+    ? (src.regions as string[])
+    : (typeof src.regions === 'string' && src.regions.length
+        ? String(src.regions).split(/[,\s/]+/).filter(Boolean)
+        : (typeof src.geo === 'string' ? String(src.geo).split(/[,\s/]+/).filter(Boolean) : undefined));
+
+  const verticals = Array.isArray(src.verticals)
+    ? (src.verticals as string[])
+    : (typeof src.verticals === 'string' ? String(src.verticals).split(/[,\s/]+/).filter(Boolean) : undefined);
+
+  const keywords = Array.isArray(src.keywords)
+    ? (src.keywords as string[])
+    : (typeof src.keywords === 'string' ? String(src.keywords).split(/[,\s/]+/).filter(Boolean) : undefined);
+
+  const sampleDomains = Array.isArray(src.sampleDomains)
+    ? (src.sampleDomains as string[])
+    : (typeof src.sampleDomains === 'string' ? String(src.sampleDomains).split(/[,\s/]+/).filter(Boolean) : undefined);
+
+  return { supplierDomain, regions, verticals, keywords, sampleDomains };
 }
 
 function handleWebscout(req: Request, res: Response) {
-  const body = (req.body || {}) as WebScoutRequest;
-  const supplierDomain = String(body.supplierDomain || '').trim().toLowerCase();
-
-  if (!supplierDomain) {
-    return res.status(400).json({ ok: false, error: 'supplierDomain is required' });
+  const parsed = readInput(req);
+  if ('error' in parsed) {
+    return res.status(400).json({ ok: false, error: parsed.error });
   }
 
-  // Infer persona purely from supplierDomain for v0
+  const supplierDomain = parsed.supplierDomain;
   const { persona, clues } = inferPersona(supplierDomain);
+  const candidates = demoCandidates(supplierDomain, persona, parsed.regions);
 
-  const candidates = demoCandidates(supplierDomain, persona, body.regions);
+  const items = candidates.map(c => ({
+    id: c.id,
+    host: c.host,
+    platform: c.platform,
+    title: c.title,
+    created: c.created,
+    temp: c.temperature,
+    why: chipsToText(c.why),
+  }));
 
   const payload: WebScoutResponse = {
     ok: true,
@@ -207,22 +270,32 @@ function handleWebscout(req: Request, res: Response) {
       inferredFrom: clues,
     },
     candidates,
+    items,
   };
 
   return res.json(payload);
 }
 
+// ---------- Mount ----------
+
 export default function mountWebscout(app: Express): void {
   const router = express.Router();
 
-  // health for this module
-  router.get('/webscout/ping', (_req, res) => res.json({ ok: true, pong: true, time: new Date().toISOString() }));
+  router.get('/webscout/ping', (_req, res) =>
+    res.json({ ok: true, pong: true, time: nowIso() })
+  );
 
-  // primary endpoint
+  // Accept both JSON and URL-encoded forms
+  router.use(express.json({ limit: '256kb' }));
+  router.use(express.urlencoded({ extended: true }));
+
+  // Primary + aliases
   router.post('/webscout', handleWebscout);
-
-  // alias used by panel code (so we don’t need to change index.ts): same handler
+  router.get('/webscout', handleWebscout); // allow GET with query for testing
   router.post('/find', handleWebscout);
+  router.get('/find', handleWebscout);
+  router.post('/leads', handleWebscout);   // panel legacy path
+  router.get('/leads', handleWebscout);
 
   app.use('/api/v1', router);
 }
