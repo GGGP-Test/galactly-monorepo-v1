@@ -1,47 +1,10 @@
-import type { Express } from "express";
-import { Router } from "express";
-import {
-  inferPersonaAndTargets,
-  scoreAndLabelCandidates
-} from "../ai/webscout";
+import type { Request, Response } from 'express';
+import type { App } from '../index';
 
-export const mountWebscout = (app: Express) => {
-  const r = Router();
-
-  // POST /api/v1/leads/find-buyers  (Free Panel V2 uses this)
-  r.post("/find-buyers", async (req, res) => {
-    const body = (req.body ?? {}) as Record<string, any>;
-
-    const supplierDomain =
-      body.supplierDomain || body.domain || (req.query.domain as string);
-
-    if (!supplierDomain || typeof supplierDomain !== "string") {
-      return res.status(400).json({ ok: false, error: "domain is required" });
-    }
-
-    const region = (body.region ?? body.geo ?? "US/CA")
-      .toString()
-      .trim()
-      .toUpperCase();
-    const radiusMi = Number(body.radiusMi ?? body.radius ?? 50);
-
-    const personaTargets = await inferPersonaAndTargets(supplierDomain);
-    const candidates = await scoreAndLabelCandidates(supplierDomain, {
-      region,
-      radiusMi
-    });
-
-    return res.json({
-      ok: true,
-      supplierDomain,
-      region,
-      radiusMi,
-      ...personaTargets,
-      candidates
-    });
+function mountWebscout(app: App) {
+  app.post('/api/v1/webscout', async (req: Request, res: Response) => {
+    res.json({ ok: true, leads: [] });
   });
-
-  app.use("/api/v1/leads", r);
-};
+}
 
 export default mountWebscout;
