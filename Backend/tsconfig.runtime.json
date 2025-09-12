@@ -1,21 +1,25 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2019",
+    "lib": ["ES2019"],
     "outDir": "build-runtime",
     "rootDir": "src",
-    "types": ["node"],
-    "skipLibCheck": true
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "downlevelIteration": true,
+    "types": ["node"]
   },
-  "include": [
+  "files": [
     "src/index.ts",
-    "src/routes/**/*.ts",
-    "src/ai/**/*.ts",
-    "src/types/**/*.d.ts"
-  ],
-  "exclude": [
-    "src/workers/**",
-    "src/core/**",
-    "src/search-providers.ts",
-    "src/**/*.test.ts"
+    "src/routes/index.ts",
+    "src/routes/find.ts",
+    "src/routes/buyers.ts",
+    "src/routes/webscout.ts",
+    "src/ai/llm.ts",
+    "src/ai/webscout.ts"
   ]
 }
