@@ -1,28 +1,25 @@
-// backend/src/index.ts
-import express, { Application, json, urlencoded } from "express";
+import express from "express";
 import cors from "cors";
 
-// Use local shim instead of external "morgan" package to avoid runtime dep.
-import morgan from "./shims/morgan";
+export const app = express();
+app.use(cors());
+app.use(express.json());
 
-// Export a named App type so routes can `import { App } from "../index"`
-export type App = Application;
+// tiny log so we don't need `morgan`
+app.use((req, _res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+});
 
-export function createApp(): App {
-  const app = express();
+// ---- routes ----
+import mountFind from "./routes/find";
+import mountBuyers from "./routes/buyers";
+import mountWebscout from "./routes/webscout";
 
-  app.disable("x-powered-by");
-  app.use(cors());
-  app.use(json({ limit: "1mb" }));
-  app.use(urlencoded({ extended: true }));
-  app.use(morgan("tiny"));
+mountFind(app);
+mountBuyers(app);
+mountWebscout(app);
 
-  // Health
-  app.get("/healthz", (_req, res) => res.status(200).send("ok"));
-
-  return app;
-}
-
-// Optional default app (some callers expect it)
-const app = createApp();
+// keep both default and named export to satisfy various imports
+export type App = typeof app;
 export default app;
