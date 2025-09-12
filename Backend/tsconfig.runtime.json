@@ -1,30 +1,22 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
+    "target": "ES2020",
     "module": "CommonJS",
-    "target": "ES2019",
-    "outDir": "dist",
+    "moduleResolution": "Node",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+
+    "types": ["node"],
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "strict": true
+
+    "strict": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": false
   },
-  "include": [
-    "src/index.ts",
-    "src/routes/**/*.ts"
-  ],
-  "exclude": [
-    "**/*.test.ts",
-    "node_modules",
-    "src/scripts/**",
-    "src/workers/**",
-    "src/ai/**",
-    "src/leadgen/**",
-    "src/core/**",
-    "src/ops/**",
-    "src/security/**",
-    "src/ui/**",
-    "src/server/**",
-    "src/connectors/**"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/ui/**", "**/__tests__/**", "node_modules"]
 }
