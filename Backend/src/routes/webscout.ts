@@ -1,24 +1,50 @@
-/* backend/src/routes/webscout.ts */
-import type { App } from '../index';
-import { inferPersonaAndTargets } from '../ai/webscout';
+import type { Express } from "express";
+import { Router } from "express";
+import {
+  inferPersonaAndTargets,
+  scoreAndLabelCandidates,
+} from "../ai/webscout";
 
-export function mountWebscout(app: App) {
-  // POST /api/v1/webscout/persona
-  app.post('/api/v1/webscout/persona', async (req, res) => {
-    try {
-      const supplierDomain = String(req.body?.domain || '').trim();
-      const region = String(req.body?.region || '').trim() || undefined;
-      const radiusMi = Number(req.body?.radiusMi || 50);
+export default function mountWebscout(app: Express) {
+  const r = Router();
 
-      if (!supplierDomain) {
-        return res.status(400).json({ ok: false, error: 'domain required' });
-      }
+  // POST /api/v1/leads/find-buyers
+  r.post("/find-buyers", async (req, res) => {
+    const body = (req.body ?? {}) as Record<string, any>;
 
-      const data = await inferPersonaAndTargets(supplierDomain, { region, radiusMi });
-      return res.json({ ok: true, supplierDomain, ...data });
-    } catch (err: any) {
-      console.error('webscout/persona error', err);
-      return res.status(500).json({ ok: false, error: 'internal_error' });
+    // accept either `supplierDomain` (from the panel) or `domain` (older clients)
+    const supplierDomain =
+      body.supplierDomain || body.domain || (req.query.domain as string);
+
+    if (!supplierDomain || typeof supplierDomain !== "string") {
+      return res.status(400).json({ ok: false, error: "domain is required" });
     }
+
+    const region =
+      (body.region ?? body.geo ?? "US/CA").toString().trim().toUpperCase(); // US, CA, or US/CA
+    const radiusMi = Number(body.radiusMi ?? body.radius ?? 50);
+
+    // persona (human-editable summary block)
+    const persona = await inferPersonaAndTargets(supplierDomain);
+
+    // candidates (leads list)
+    const candidates = await scoreAndLabelCandidates(supplierDomain, {
+      region,
+      radiusMi,
+    });
+
+    return res.json({
+      ok: true,
+      supplierDomain,
+      region,
+      radiusMi,
+      created: Date.now(),
+      ids: [],
+      persona,
+      candidates,
+      errors: 0,
+    });
   });
+
+  app.use("/api/v1/leads", r);
 }
