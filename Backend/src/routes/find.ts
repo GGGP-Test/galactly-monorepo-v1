@@ -1,149 +1,163 @@
-import type { Request, Response } from "express";
-import { PersonaEngine } from "../ai/persona-engine";
+// src/routes/find.ts
+//
+// Robust "find buyers" route.
+// - Accepts domain from many places: body.domain | body.supplierDomain | body.supplier | body.host | body.website | body.url | query.* | header x-supplier-domain
+// - Normalizes to bare hostname (no scheme, no www).
+// - CORS for browser calls (x-api-key + JSON).
+// - Does not hard-fail if orchestrator is not present; returns a harmless empty result instead.
 
-/**
- * POST /api/v1/leads/find-buyers
- * Body: { domain: string, region?: string, radiusMi?: number, snapshotHTML?: string, hints?: string[] }
- *
- * Behavior:
- *  - Validates input + CORS headers (incl. x-api-key).
- *  - Builds a Persona for the supplier.
- *  - Synthesizes 3–6 buyer “candidate queries” based on top metrics (hot/warm).
- *  - (Optionally) stores in-memory "created leads" so the Free Panel can show something.
- *  - Returns { ok, created, hot, warm, persona, candidates }.
- */
+import type { Request, Response, NextFunction } from "express";
+import express from "express";
 
-type Candidate = {
-  q: string;             // search intent / query
-  why: string[];         // short reasons
-  temp: "hot" | "warm";
-};
+const router = express.Router();
 
-const createdLeads: {
-  id: string;
-  host: string;
-  platform: "web";
-  title: string;
-  created: string;
-  temp: "hot" | "warm";
-  why: string;
-}[] = [];
+// ---- tiny utils -------------------------------------------------------------
 
-// crude id
-function rid() {
-  return "L_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
-}
-
-// Very small generator mapping persona metrics -> candidate intents
-function candidatesFromPersona(p: Awaited<ReturnType<PersonaEngine["infer"]>>, region: string) : Candidate[] {
-  const out: Candidate[] = [];
-  const add = (q: string, why: string[], temp: "hot" | "warm" = "warm") => {
-    out.push({ q, why, temp });
-  };
-
-  const top = new Set(p.top);
-
-  if (top.has("3PL")) {
-    add(`("${p.domain}" OR packaging) buyers 3PL fulfillment ${region}`, ["3PL signals", "multinode/DC"], "hot");
-    add(`third party logistics warehouse manager packaging ${region}`, ["3PL roles"]);
-  }
-  if (top.has("ILL") || top.has("STR")) {
-    add(`warehouse irregular pallets stretch film turntable ${region}`, ["irregular load / stretch"]);
-    add(`pallet wrapping automation buyer ${region}`, ["automation buyer"]);
-  }
-  if (top.has("CCI")) {
-    add(`cold chain insulated shipper buyer ${region}`, ["cold chain intensity"], "hot");
-  }
-  if (top.has("DFS")) {
-    add(`ecommerce fulfillment packaging manager ${region}`, ["D2C tech stack"]);
-  }
-  if (top.has("CWB")) {
-    add(`corrugated box engineer / packaging engineer ${region}`, ["heavy corrugated use"]);
-  }
-  if (top.has("FNB")) {
-    add(`food & beverage packaging manager ${region}`, ["F&B compliance"]);
-  }
-  if (out.length < 3) {
-    add(`warehouse packaging buyer ${region}`, ["generic fallback"]);
-  }
-  return out.slice(0, 6);
-}
-
-function allowCors(res: Response) {
+function setCors(res: Response) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
 }
 
-export default function mountFind(app: any) {
-  // For health-style logging parity with your other routes
-  console.log("[routes] mounted find from ./routes/find");
+function normalizeDomain(input?: string): string {
+  if (!input) return "";
+  let s = input.trim();
+  if (!s) return "";
+  if (!/^https?:\/\//i.test(s)) s = `http://${s}`;
+  try {
+    const u = new URL(s);
+    let h = u.hostname.toLowerCase();
+    if (h.startsWith("www.")) h = h.slice(4);
+    return h;
+  } catch {
+    return "";
+  }
+}
 
-  app.options("/api/v1/leads/find-buyers", (req: Request, res: Response) => {
-    allowCors(res);
-    res.status(204).end();
-  });
+function firstNonEmpty(...vals: Array<unknown>): string {
+  for (const v of vals) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+    if (Array.isArray(v) && v.length && typeof v[0] === "string") return v[0].trim();
+  }
+  return "";
+}
 
-  app.post("/api/v1/leads/find-buyers", async (req: Request, res: Response) => {
-    allowCors(res);
+// ---- optional orchestrator (don’t crash if absent) --------------------------
 
-    try {
-      const { domain, region, radiusMi, snapshotHTML } = (req.body || {}) as {
-        domain?: string;
+type Orchestrator =
+  | {
+      findBuyersForSupplier: (args: {
+        domain: string;
         region?: string;
         radiusMi?: number;
-        snapshotHTML?: string;
-      };
-
-      if (!domain || typeof domain !== "string" || domain.trim() === "") {
-        return res.status(400).json({ ok: false, error: "domain is required" });
-      }
-
-      const engine = new PersonaEngine({
-        openRouterKey: process.env.OPENROUTER_API_KEY,
-        openRouterModel: process.env.OPENROUTER_MODEL
-      });
-
-      const persona = await engine.infer(domain, snapshotHTML);
-      const candidates = candidatesFromPersona(persona, region || "US/CA");
-
-      // materialize a few “leads” locally so the Free Panel has rows to show
-      let hot = 0, warm = 0, created = 0;
-      for (const c of candidates) {
-        const item = {
-          id: rid(),
-          host: persona.domain,
-          platform: "web" as const,
-          title: c.q,
-          created: new Date().toISOString(),
-          temp: c.temp,
-          why: c.why.join(", ")
-        };
-        createdLeads.unshift(item);
-        created++;
-        if (c.temp === "hot") hot++; else warm++;
-      }
-
-      return res.status(200).json({
-        ok: true,
-        created,
-        hot,
-        warm,
-        persona,
-        candidates
-      });
-    } catch (err: any) {
-      return res.status(500).json({ ok: false, error: String(err?.message || err || "internal error") });
+        personaHint?: unknown;
+        apiKey?: string | null;
+      }) => Promise<{ created: number; hot: number; warm: number; candidates?: unknown[] }>;
     }
-  });
+  | undefined;
 
-  // Lenient public listing so the Free Panel can GET /leads and see what we just created
-  app.get("/leads", (_req: Request, res: Response) => {
-    allowCors(res);
-    const region = (_req.query?.region as string) || "US/CA";
-    const temp = (_req.query?.temp as string) || "warm";
-    // very simple filter facade; your panel only checks counts & rows
-    const rows = createdLeads.filter(() => true);
-    res.status(200).json({ ok: true, region, temp, count: rows.length, rows });
-  });
+let orchestrator: Orchestrator;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  orchestrator = require("../ai/orchestrator");
+} catch {
+  orchestrator = undefined;
+}
+
+// ---- route handlers ---------------------------------------------------------
+
+router.options("/find-buyers", (req, res) => {
+  setCors(res);
+  return res.sendStatus(204);
+});
+
+router.post("/find-buyers", express.json(), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    setCors(res);
+
+    const tried: Record<string, string | undefined> = {
+      "body.domain": req.body?.domain,
+      "body.supplierDomain": req.body?.supplierDomain,
+      "body.supplier": req.body?.supplier,
+      "body.host": req.body?.host,
+      "body.website": req.body?.website,
+      "body.url": req.body?.url,
+      "query.domain": req.query?.domain as string | undefined,
+      "query.supplier": req.query?.supplier as string | undefined,
+      "header.x-supplier-domain": (req.headers["x-supplier-domain"] as string | undefined) ?? undefined,
+    };
+
+    const raw =
+      firstNonEmpty(
+        tried["body.domain"],
+        tried["body.supplierDomain"],
+        tried["body.supplier"],
+        tried["body.host"],
+        tried["body.website"],
+        tried["body.url"],
+        tried["query.domain"],
+        tried["query.supplier"],
+        tried["header.x-supplier-domain"]
+      ) || "";
+
+    const domain = normalizeDomain(raw);
+
+    if (!domain) {
+      return res.status(400).json({
+        ok: false,
+        error: "domain is required",
+        tried,
+      });
+    }
+
+    const region =
+      (typeof req.body?.region === "string" && req.body.region) ||
+      (typeof req.query?.region === "string" && (req.query.region as string)) ||
+      undefined;
+
+    let radiusMi: number | undefined;
+    const rBody = req.body?.radiusMi ?? req.body?.radius ?? req.query?.radiusMi ?? req.query?.radius;
+    if (typeof rBody === "string" && rBody.trim()) radiusMi = Number(rBody);
+    if (typeof rBody === "number") radiusMi = rBody;
+    if (Number.isNaN(radiusMi as number)) radiusMi = undefined;
+
+    const personaHint = req.body?.persona ?? req.body?.supplierPersona ?? undefined;
+    const apiKey = (req.headers["x-api-key"] as string | undefined) ?? null;
+
+    // Call orchestrator if present; otherwise return an OK empty result so the UI never sees a 400/500 here.
+    let result = { created: 0, hot: 0, warm: 0, candidates: [] as unknown[] };
+
+    if (orchestrator?.findBuyersForSupplier) {
+      try {
+        const r = await orchestrator.findBuyersForSupplier({
+          domain,
+          region,
+          radiusMi,
+          personaHint,
+          apiKey,
+        });
+        result = { created: r.created ?? 0, hot: r.hot ?? 0, warm: r.warm ?? 0, candidates: r.candidates ?? [] };
+      } catch (err) {
+        // Don’t kill the request—surface a soft error and keep response shape stable.
+        console.error("[find-buyers] orchestrator error:", err);
+        result = { created: 0, hot: 0, warm: 0, candidates: [] };
+      }
+    }
+
+    return res.status(200).json({
+      ok: true,
+      domain,
+      region: region ?? null,
+      radiusMi: radiusMi ?? null,
+      ...result,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// Export a mount function so index.ts can `mountFind(app)`
+export default function mountFind(app: import("express").Express) {
+  app.use("/api/v1/leads", router);
+  console.log("[routes] mounted find from ./routes/find");
 }
