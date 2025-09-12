@@ -1,388 +1,390 @@
 // Backend/src/routes/find.ts
 //
-// POST /api/v1/leads/find-buyers
-// One-file, self-contained route that:
-//  1) Accepts supplier domain (supplierDomain | domain | website).
-//  2) Runs a free, deterministic heuristic to infer a supplier persona.
-//  3) Optionally refines that persona with a single cheap LLM call via OpenRouter
-//     (only if OPENROUTER_API_KEY is set; otherwise it skips).
-//  4) Returns the persona (human-readable, compact) + debug crumbs.
-//  5) Keeps a simple in-memory store so repeat clicks don’t re-run work.
+// One-file “finder” that turns a supplierDomain (+ optional user hints)
+// into a persona, micro-metrics, a calibrated score, and human-friendly WHY.
+// No external deps; no fs reads; no LLM call here.
 //
-// Notes:
-//  - No external imports beyond Express types.
-//  - No DB/FS side-effects in this step (we’ll wire your PII Vault next).
-//  - Designed to compile cleanly with strict TS and no esModuleInterop hassles.
-//
-// Env (optional):
-//   OPENROUTER_API_KEY = <your key>
-//   OPENROUTER_MODEL   = google/gemini-1.5-flash  (default)
+// Endpoint: POST /api/v1/leads/find-buyers
+// Exports:  named mountFind(app: Express)
 
 import type { Express, Request, Response } from "express";
 
-type RegionCode = "US/CA" | "EU" | "APAC" | "LATAM" | "GLOBAL";
+// ----------------------------- Types ---------------------------------
 
-interface SupplierPersona {
-  domain: string;
-  sectors: string[];
-  productOffer: string;
-  solves: string;
-  buyerTitles: string[];
-  regions?: RegionCode[];
-  keywords: string[];
-  confidence: number;     // 0..1
-  explains: string[];     // short human reasons
-  createdAt: string;      // ISO
-  source: "heuristic" | "heuristic+llm";
-}
+type Temperature = "warm" | "hot";
 
-interface EnsureOpts {
-  tenantId: string;
-  domain: string;
-  force?: boolean;
-  allowLLM?: boolean;
-  llmModel?: string;
-}
+type MetricKey =
+  | "RPI"  // Right-size Pressure Index (dim weight, cartonization)
+  | "DFS"  // DTC Footprint Score (ecom ops footprint)
+  | "FEI"  // Fragility Exposure Index (damage risk/ISTA)
+  | "CCI"  // Cold-Chain Indicator
+  | "ST"   // Sustainability Tone
+  | "ILL"  // Irregular Load Likelihood (pallet shapes, mixed SKUs)
+  | "MWI"  // Machine-Wrap Index (throughput / automation language)
+  | "NB"   // New Business momentum (launches, “new arrivals” tone)
+  | "DCS"; // Distributed Cap Ship (multi-node, 3PL hints)
 
-interface StoredPersona extends SupplierPersona {
-  tenantId: string;
-  updatedAt: string;
-}
+type Metric = {
+  key: MetricKey;
+  value: number;          // 0..1
+  evidence: string[];     // tokens/phrases that triggered it
+};
 
-const mem = new Map<string, StoredPersona>(); // key = `${tenantId}:${domain}`
+type Features = Record<MetricKey, Metric>;
 
-// ---------- mount (exported) ----------
+type Persona = {
+  productOffer: string;   // e.g., "Right-size corrugated programs"
+  solves: string;         // e.g., "Cut DIM weight and damage"
+  buyerTitles: string[];  // e.g., ["Fulfillment Ops Manager", ...]
+  verticals?: string[];   // optional user hints
+  regions?: string[];     // optional user hints
+};
 
-export function mountFind(app: Express) {
-  app.post("/api/v1/leads/find-buyers", async (req: Request, res: Response) => {
-    try {
-      const body: any = (req as any).body || {};
-      const supplierDomain: string =
-        body.supplierDomain || body.domain || body.website || "";
+type WhyChip = {
+  label: string;          // short label users can skim
+  detail: string;         // plain-language explanation
+  score?: number;         // optional: show metric value if relevant
+};
 
-      if (!supplierDomain || typeof supplierDomain !== "string") {
-        res.status(400).json({ ok: false, error: "supplierDomain (or domain) is required" });
-        return;
-      }
+type FindRequestBody = {
+  supplierDomain: string;
+  custom?: {
+    productOffer?: string;
+    solves?: string;
+    buyerTitles?: string[];
+    verticals?: string[];
+    regions?: string[];
+    knownCustomers?: string[]; // domains or names the user claims
+    sampleLeads?: string[];    // optional pre-picked lead domains
+  };
+};
 
-      // In your stack you likely carry tenant on auth/session; for now derive a stable default.
-      const tenantId = (req.headers["x-tenant-id"] as string) || "t_default";
+type FindResponse = {
+  ok: true;
+  supplierDomain: string;
+  persona: Persona;
+  features: Features;
+  score: number;                // 0..1 calibrated
+  temperature: Temperature;
+  why: WhyChip[];
+  // Finder does not return lead list; downstream “webscout” uses persona+features
+};
 
-      const persona = await ensureSupplierPersona({
-        tenantId,
-        domain: supplierDomain,
-        force: !!body.force,
-        allowLLM: process.env.OPENROUTER_API_KEY ? true : false,
-        llmModel: process.env.OPENROUTER_MODEL || "google/gemini-1.5-flash",
-      });
+// ------------------------ Utility: safe parsing ----------------------
 
-      // Return in the shape the panel can consume immediately
-      res.json({
-        ok: true,
-        supplierDomain: persona.domain,
-        persona: {
-          productOffer: persona.productOffer,
-          solves: persona.solves,
-          buyerTitles: persona.buyerTitles,
-          sectors: persona.sectors,
-          regions: persona.regions || ["US/CA"],
-          keywords: persona.keywords,
-          confidence: persona.confidence,
-          explains: persona.explains,
-          source: persona.source,
-        },
-        // leads are populated by downstream search providers; keep empty for now
-        leads: [],
-      });
-    } catch (err: any) {
-      res.status(500).json({ ok: false, error: String(err?.message || err) });
+function parseBody(req: Request): FindRequestBody | null {
+  try {
+    const b = req.body as any;
+    if (!b || typeof b !== "object") return null;
+    if (typeof b.supplierDomain !== "string" || !b.supplierDomain.trim()) return null;
+    const body: FindRequestBody = {
+      supplierDomain: b.supplierDomain.trim().toLowerCase(),
+      custom: undefined,
+    };
+    if (b.custom && typeof b.custom === "object") {
+      const c = b.custom;
+      body.custom = {
+        productOffer: typeof c.productOffer === "string" ? c.productOffer.trim() : undefined,
+        solves: typeof c.solves === "string" ? c.solves.trim() : undefined,
+        buyerTitles: Array.isArray(c.buyerTitles) ? c.buyerTitles.filter((x: any) => typeof x === "string") : undefined,
+        verticals: Array.isArray(c.verticals) ? c.verticals.filter((x: any) => typeof x === "string") : undefined,
+        regions: Array.isArray(c.regions) ? c.regions.filter((x: any) => typeof x === "string") : undefined,
+        knownCustomers: Array.isArray(c.knownCustomers) ? c.knownCustomers.filter((x: any) => typeof x === "string") : undefined,
+        sampleLeads: Array.isArray(c.sampleLeads) ? c.sampleLeads.filter((x: any) => typeof x === "string") : undefined,
+      };
     }
+    return body;
+  } catch {
+    return null;
+  }
+}
+
+// --------------- Heuristics: tokenize + detect cues ------------------
+
+function tokensFromText(...texts: (string | undefined)[]): string[] {
+  const joined = texts.filter(Boolean).join(" ").toLowerCase();
+  // Split on non-letters/digits, keep simple tokens
+  return joined.split(/[^a-z0-9+]+/g).filter(Boolean);
+}
+
+function hasAny(tokens: string[], patterns: (string | RegExp)[]): string[] {
+  const hits: string[] = [];
+  for (const p of patterns) {
+    if (typeof p === "string") {
+      if (tokens.includes(p)) hits.push(p);
+    } else {
+      const m = tokens.join(" ").match(p);
+      if (m) hits.push(m[0]);
+    }
+  }
+  return hits;
+}
+
+// ------------------------ Metric builders (independent) --------------
+
+function buildIndependentFeatures(tokens: string[]): Features {
+  // Define canonical patterns per metric
+  const P = {
+    RPI: ["dim", "dimensional", "dim-weight", "dimensionalweight", "right-size", "rightsize", "cartonization", "cartonize"],
+    DFS: ["shopify", "woocommerce", "bigcommerce", "checkout", "returns", "rma", "subscription", "dtc", "direct-to-consumer"],
+    FEI: ["ista", "drop", "shock", "fragile", "damage", "breakage", "cushion", "void", "void-fill"],
+    CCI: ["cold", "frozen", "refrigerated", "thermal", "insulated", "gel", "phase-change", "vaccine", "perishable"],
+    ST:  ["recyclable", "recycled", "less", "reduce", "lightweight", "compostable", "sustainable", "lca"],
+    ILL: ["mixed", "assorted", "odd", "irregular", "non-square", "unstable", "pallet", "palletizing", "palletized"],
+    MWI: ["turntable", "pre-stretch", "prestretch", "automatic", "semi-automatic", "conveyor", "throughput", "cpm", "wrapping"],
+    NB:  ["launch", "new", "now live", "grand", "opening", "just added", "now shipping"],
+    DCS: ["3pl", "fulfillment", "node", "multi-node", "dc", "distribution", "ship-from-store", "micro-fulfillment"],
+  };
+
+  function metric(key: MetricKey, pats: string[], weight = 1): Metric {
+    const hits = hasAny(tokens, pats);
+    // value is a soft clip of unique hits; 1–2 hits = 0.35–0.6; 3+ = 0.8–1.0
+    const uniq = Array.from(new Set(hits));
+    const base =
+      uniq.length === 0 ? 0 :
+      uniq.length === 1 ? 0.35 :
+      uniq.length === 2 ? 0.6 :
+      uniq.length === 3 ? 0.8 : Math.min(1, 0.8 + 0.08 * (uniq.length - 3));
+    return { key, value: Math.max(0, Math.min(1, base * weight)), evidence: uniq };
+  }
+
+  const features: Features = {
+    RPI: metric("RPI", P.RPI),
+    DFS: metric("DFS", P.DFS),
+    FEI: metric("FEI", P.FEI),
+    CCI: metric("CCI", P.CCI),
+    ST:  metric("ST",  P.ST),
+    ILL: metric("ILL", P.ILL),
+    MWI: metric("MWI", P.MWI),
+    NB:  metric("NB",  P.NB, 0.8), // tone-y; cap its influence
+    DCS: metric("DCS", P.DCS),
+  };
+
+  // Interaction bonus examples (Olympiad-style “together it matters”)
+  if (features.DFS.value > 0.5 && features.RPI.value > 0.5) {
+    features.RPI.value = Math.min(1, features.RPI.value + 0.1); // DTC + right-size = stronger pressure
+  }
+  if (features.MWI.value > 0.4 && features.ILL.value > 0.4) {
+    features.MWI.value = Math.min(1, features.MWI.value + 0.1); // machine wrap + irregular loads
+  }
+
+  return features;
+}
+
+// ----------------------- Metric builders (user hints) ----------------
+
+function buildUserHintFeatures(custom: NonNullable<FindRequestBody["custom"]>): Features {
+  const tokens = tokensFromText(
+    custom.productOffer,
+    custom.solves,
+    ...(custom.buyerTitles || []),
+    ...(custom.verticals || [])
+  );
+  const f = buildIndependentFeatures(tokens);
+
+  // Light nudges from user titles/verticals:
+  if (custom.buyerTitles?.some(t => /engineer|packaging/i.test(t))) {
+    f.FEI.value = Math.min(1, f.FEI.value + 0.1);
+  }
+  if (custom.buyerTitles?.some(t => /(ops|operations|fulfillment)/i.test(t))) {
+    f.DFS.value = Math.min(1, f.DFS.value + 0.1);
+    f.MWI.value = Math.min(1, f.MWI.value + 0.05);
+  }
+  return f;
+}
+
+// -------------------------- Blending logic ---------------------------
+
+// By default, we respect user hints (they know their biz) but leave room
+// for independent signals to overrule strong mistakes.
+const USER_WEIGHT = 0.90;
+const INDEP_WEIGHT = 0.10;
+
+// If independent evidence is very strong (>0.85) and user is weak (<0.25),
+// allow a hard override up to this cap:
+const OVERRIDE_DELTA = 0.35;
+
+function blendFeatures(userF: Features | null, indepF: Features): Features {
+  const out = {} as Features;
+  (Object.keys(indepF) as MetricKey[]).forEach((k) => {
+    const u = userF ? userF[k].value : 0;
+    const i = indepF[k].value;
+    let blended = USER_WEIGHT * u + INDEP_WEIGHT * i;
+
+    // “Overrule” when independent is loud and user is quiet
+    if (i > 0.85 && u < 0.25) {
+      blended = Math.min(1, Math.max(blended, i - (1 - USER_WEIGHT) + OVERRIDE_DELTA));
+    }
+
+    out[k] = {
+      key: k,
+      value: Math.max(0, Math.min(1, blended)),
+      evidence: Array.from(new Set([...(userF ? userF[k].evidence : []), ...indepF[k].evidence])),
+    };
   });
-
-  console.log("[routes] mounted find from ./routes/find");
-}
-
-// Provide default export too (so either import style works)
-export default mountFind;
-
-// ---------- persona ensure (heuristic + optional LLM via OpenRouter) ----------
-
-async function ensureSupplierPersona(opts: EnsureOpts): Promise<SupplierPersona> {
-  const domain = normalizeDomain(opts.domain);
-  const k = key(opts.tenantId, domain);
-  const existing = mem.get(k);
-  if (existing && !opts.force) {
-    return stripTenant(existing);
-  }
-
-  const html = await safeFetchHTML(domain);
-  let persona = html
-    ? buildHeuristicPersona(domain, html)
-    : fallbackPersona(domain, "Homepage fetch failed — using conservative default persona");
-
-  if (opts.allowLLM && html) {
-    persona = await maybeRefineWithOpenRouter(persona, stripTags(html).slice(0, 6000), opts.llmModel || "google/gemini-1.5-flash");
-  }
-
-  const rec = stamp(opts.tenantId, persona);
-  mem.set(k, rec);
-  return persona;
-}
-
-// ---------- heuristics (free & deterministic) ----------
-
-const FETCH_TIMEOUT_MS = 12000;
-
-function normalizeDomain(raw: string): string {
-  try {
-    const s = raw.trim();
-    const url = s.includes("://") ? new URL(s) : new URL(`https://${s}`);
-    let host = url.hostname.toLowerCase();
-    if (host.startsWith("www.")) host = host.slice(4);
-    return host;
-  } catch {
-    return raw.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0].toLowerCase();
-  }
-}
-
-async function safeFetchHTML(host: string): Promise<string | "" > {
-  try {
-    const url = `https://${host}/`;
-    const controller = new AbortController();
-    const to = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    const res = await fetch(url, { signal: controller.signal, redirect: "follow" });
-    clearTimeout(to);
-    if (!res.ok) return "";
-    const html = await res.text();
-    return html.slice(0, 500_000);
-  } catch {
-    return "";
-  }
-}
-
-function pickTitle(html: string): string {
-  const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  return m ? decodeEntities(m[1]).trim().replace(/\s+/g, " ").slice(0, 140) : "";
-}
-
-function pickMetaDesc(html: string): string {
-  const m = html.match(/<meta[^>]+name=["']description["'][^>]+>/i);
-  if (!m) return "";
-  const c = m[0].match(/content=["']([\s\S]*?)["']/i);
-  return c ? decodeEntities(c[1]).trim().replace(/\s+/g, " ").slice(0, 200) : "";
-}
-
-function pickH1H2(html: string): string[] {
-  const out: string[] = [];
-  const re = /<(h1|h2)[^>]*>([\s\S]*?)<\/\1>/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(html))) {
-    const txt = stripTags(m[2]);
-    if (txt) out.push(txt.slice(0, 160));
-    if (out.length >= 10) break;
-  }
   return out;
 }
 
-function stripTags(s: string) {
-  return decodeEntities(s.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
+// -------------------------- Scoring math -----------------------------
+
+// Global base weights (can be learned later; hand-tuned now)
+const W: Record<MetricKey, number> = {
+  RPI: 1.20,
+  DFS: 1.05,
+  FEI: 0.75,
+  CCI: 0.70,
+  ST:  0.40,
+  ILL: 0.95,
+  MWI: 0.90,
+  NB:  0.35,
+  DCS: 0.85,
+};
+
+function logistic(z: number): number {
+  return 1 / (1 + Math.exp(-z));
 }
 
-function decodeEntities(s: string) {
-  return s
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
+function score(features: Features): number {
+  // Interactions: DFS×RPI, ILL×MWI, FEI×DFS (small)
+  const inter =
+    0.60 * features.DFS.value * features.RPI.value +
+    0.50 * features.ILL.value * features.MWI.value +
+    0.25 * features.FEI.value * features.DFS.value;
+
+  const lin =
+    W.RPI * features.RPI.value +
+    W.DFS * features.DFS.value +
+    W.FEI * features.FEI.value +
+    W.CCI * features.CCI.value +
+    W.ST  * features.ST.value  +
+    W.ILL * features.ILL.value +
+    W.MWI * features.MWI.value +
+    W.NB  * features.NB.value  +
+    W.DCS * features.DCS.value;
+
+  // Bias chosen so “neutral” lands ~0.45–0.55
+  const z = -2.0 + lin + inter;
+  return Number(logistic(z).toFixed(4));
 }
 
-function tokenize(s: string): string[] {
-  return (s.toLowerCase().match(/[a-z0-9][a-z0-9\-\+\/\.]{1,}/g) || []).slice(0, 10000);
+function toTemperature(p: number): Temperature {
+  return p >= 0.72 ? "hot" : "warm";
 }
 
-function scoreKeywords(tokens: string[]) {
-  const counts = new Map<string, number>();
-  for (const t of tokens) counts.set(t, (counts.get(t) || 0) + 1);
-  const inc = (...words: string[]) => words.reduce((sum, w) => sum + (counts.get(w) || 0), 0);
+// -------------------------- Persona build ----------------------------
 
-  // Broad packaging taxonomy — extend over time
-  const signals = {
-    stretch: inc("stretch", "film", "wrap", "pre-stretch"),
-    shrink: inc("shrink", "film", "tunnel"),
-    corrugate: inc("box", "carton", "corrugate", "corrugated"),
-    mailers: inc("mailer", "poly", "bubble", "padded"),
-    voidfill: inc("void", "fill", "air", "pillows", "paper"),
-    tape: inc("tape", "adhesive"),
-    labels: inc("label", "labels"),
-    pallets: inc("pallet", "pallets"),
-    warehouse: inc("warehouse", "warehousing", "3pl", "fulfillment", "distribution"),
-    logistics: inc("logistics", "supply", "freight", "shipping", "carrier"),
-    machinery: inc("machine", "automatic", "wrapper", "turntable", "case", "sealer"),
-    sustainability: inc("recycl", "eco", "green", "footprint", "waste"),
-    coldchain: inc("cold", "insulated", "gel", "ice", "refrigerated"),
-    ecom: inc("ecom", "e-commerce", "shopify", "woocommerce", "marketplace"),
-    food: inc("food", "beverage", "fda", "usda"),
-    pharma: inc("pharma", "gmp", "medical", "health"),
-  };
+function buildPersona(domain: string, custom?: FindRequestBody["custom"]): Persona {
+  // Start generic; overlay custom; overlay domain heuristics
+  let productOffer = "Packaging programs";
+  let solves = "Lower costs and damage; speed fulfillment";
+  let buyerTitles = ["Operations Manager", "Procurement Manager"];
 
-  return { counts, signals };
-}
+  if (custom?.productOffer) productOffer = custom.productOffer;
+  if (custom?.solves) solves = custom.solves;
+  if (custom?.buyerTitles?.length) buyerTitles = custom.buyerTitles;
 
-function buildHeuristicPersona(domain: string, html: string): SupplierPersona {
-  const title = pickTitle(html);
-  const desc = pickMetaDesc(html);
-  const heads = pickH1H2(html);
-  const bag = [title, desc, ...heads].join(" • ");
-  const tokens = tokenize(bag);
-  const { signals } = scoreKeywords(tokens);
-
-  const explains: string[] = [];
-  const keywords: string[] = [];
-  const sectors = new Set<string>(["Packaging"]);
-  const buyerTitles = new Set<string>(["Purchasing Manager"]);
-
-  let productOffer = "Packaging supplies";
-  let solves = "Secure shipments; efficient operations";
-  let confidence = 0.50;
-
-  if (signals.warehouse) { sectors.add("Logistics"); buyerTitles.add("Warehouse Manager"); buyerTitles.add("Operations Manager"); confidence += 0.06; }
-  if (signals.logistics) { sectors.add("Logistics"); buyerTitles.add("COO"); confidence += 0.04; }
-  if (signals.machinery) { keywords.push("machinery"); buyerTitles.add("Maintenance Manager"); confidence += 0.03; }
-  if (signals.sustainability) { keywords.push("sustainability"); confidence += 0.02; }
-  if (signals.ecom) { sectors.add("E-commerce"); buyerTitles.add("Fulfillment Manager"); confidence += 0.04; }
-  if (signals.food) { sectors.add("Food & Bev"); keywords.push("FDA/GMP"); confidence += 0.03; }
-  if (signals.pharma) { sectors.add("Healthcare"); keywords.push("GMP/Validation"); confidence += 0.03; }
-
-  // Product specialization (pick the strongest)
-  const specialties: Array<{score:number; offer:string; solve:string; kw:string[]}> = [
-    { score: signals.stretch, offer: "Stretch film & pallet wrap", solve: "Stabilize pallets; reduce damage", kw: ["stretch-film","pallet-wrap"] },
-    { score: signals.shrink, offer: "Shrink film & systems", solve: "Tight retail-ready bundling", kw: ["shrink-film"] },
-    { score: signals.corrugate, offer: "Corrugated boxes & cartons", solve: "Right-size shipping protection", kw: ["corrugate","cartons"] },
-    { score: signals.mailers, offer: "Mailers & protective bags", solve: "Low-weight DTC protection", kw: ["mailers","poly","bubble"] },
-    { score: signals.voidfill, offer: "Void fill (air/paper)", solve: "Prevent in-box movement", kw: ["void-fill"] },
-    { score: signals.tape, offer: "Carton sealing tapes", solve: "Secure closures; fewer opens", kw: ["tape"] },
-    { score: signals.labels, offer: "Labels & print", solve: "Inventory/brand identification", kw: ["labels"] },
-    { score: signals.coldchain, offer: "Cold-chain packaging", solve: "Maintain temp in transit", kw: ["cold-chain"] },
-  ];
-  specialties.sort((a,b)=>b.score-a.score);
-  if (specialties[0].score > 0) {
-    productOffer = specialties[0].offer;
-    solves = specialties[0].solve;
-    keywords.push(...specialties[0].kw);
-    confidence += Math.min(0.12, 0.02 * specialties[0].score); // bounded bump
+  // Domain-based nuance (tiny heuristics, safe & deterministic)
+  if (domain.includes("stretch")) {
+    productOffer = custom?.productOffer || "Stretch film & pallet protection";
+    solves = custom?.solves || "Stabilize loads and cut film waste";
+    buyerTitles = custom?.buyerTitles || ["Warehouse Manager", "COO", "Procurement Manager"];
+  }
+  if (domain.includes("box") || domain.includes("pack") || domain.includes("corr")) {
+    productOffer = custom?.productOffer || "Right-size corrugated & pack-out";
+    solves = custom?.solves || "Reduce DIM weight, damage, and materials";
+    buyerTitles = custom?.buyerTitles || ["Fulfillment Ops Manager", "Packaging Engineer", "Supply Chain Manager"];
   }
 
-  if (title) explains.push(`<title> hints: ${title.slice(0, 80)}`);
-  if (desc) explains.push(`<meta description> mentions: ${desc.slice(0, 80)}`);
-  if (heads.length) explains.push(`Headings sample: ${heads[0].slice(0, 80)}`);
-
-  const persona: SupplierPersona = {
-    domain,
-    sectors: Array.from(sectors),
+  return {
     productOffer,
     solves,
-    buyerTitles: Array.from(buyerTitles),
-    regions: ["US/CA"],
-    keywords: dedupe(keywords),
-    confidence: Math.max(0.45, Math.min(0.9, confidence)),
-    explains,
-    createdAt: new Date().toISOString(),
-    source: "heuristic",
-  };
-  return persona;
-}
-
-function fallbackPersona(domain: string, reason: string): SupplierPersona {
-  return {
-    domain,
-    sectors: ["Packaging"],
-    productOffer: "Packaging supplies",
-    solves: "Protects shipments; basic ops fit",
-    buyerTitles: ["Purchasing Manager", "Warehouse Manager"],
-    regions: ["US/CA"],
-    keywords: [],
-    confidence: 0.45,
-    explains: [reason],
-    createdAt: new Date().toISOString(),
-    source: "heuristic",
+    buyerTitles,
+    verticals: custom?.verticals,
+    regions: custom?.regions,
   };
 }
 
-function dedupe(arr: string[]): string[] {
-  const s = new Set(arr.filter(Boolean).map(x => x.trim()).filter(Boolean));
-  return Array.from(s);
-}
+// ---------------------- WHY (plain-language) -------------------------
 
-// ---------- OpenRouter (optional) ----------
+function whyFor(features: Features, persona: Persona): WhyChip[] {
+  const chips: WhyChip[] = [];
 
-async function maybeRefineWithOpenRouter(persona: SupplierPersona, pageText: string, model: string): Promise<SupplierPersona> {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) return persona;
+  const push = (label: string, detail: string, score?: number) =>
+    chips.push({ label, detail, score: score !== undefined ? Number(score.toFixed(2)) : undefined });
 
-  const prompt = `
-You are an analyst that classifies B2B packaging suppliers from a home-page snippet.
-Given a DRAFT persona and SNIPPET, return a COMPACT JSON patch (no prose) with:
-- productOffer (<= 8 words)
-- solves (<= 12 words)
-- buyerTitles (<= 4 concise titles)
-- sectors (<= 3)
-- keywords (<= 6)
-Return ONLY JSON with those keys. If uncertain, keep draft values.
+  // Show top-5 metrics by value, in friendly language
+  const top = Object.values(features)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
 
-DRAFT:
-${JSON.stringify(persona)}
-
-SNIPPET:
-${pageText}
-`.trim();
-
-  try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: model || "google/gemini-1.5-flash",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.1,
-        max_tokens: 320,
-        response_format: { type: "json_object" },
-      }),
-    });
-    if (!res.ok) throw new Error(`OpenRouter HTTP ${res.status}`);
-    const data: any = await res.json();
-    const content = data?.choices?.[0]?.message?.content || "{}";
-    const patch = JSON.parse(content);
-
-    const refined: SupplierPersona = {
-      ...persona,
-      productOffer: (patch.productOffer || persona.productOffer)?.toString()?.slice(0, 80),
-      solves: (patch.solves || persona.solves)?.toString()?.slice(0, 120),
-      buyerTitles: dedupe((patch.buyerTitles || persona.buyerTitles) as string[]),
-      sectors: dedupe((patch.sectors || persona.sectors) as string[]),
-      keywords: dedupe([...(persona.keywords || []), ...((patch.keywords || []) as string[])]),
-      confidence: Math.min(0.98, Math.max(persona.confidence, 0.65)),
-      source: "heuristic+llm",
-    };
-    refined.explains = [...persona.explains, "LLM refinement applied (OpenRouter)"];
-    return refined;
-  } catch (e) {
-    persona.explains = [...(persona.explains || []), `LLM skipped/fail: ${String(e).slice(0, 80)}`];
-    return persona;
+  for (const m of top) {
+    if (m.key === "RPI") push("Right-size signals", "We see language about carton sizes / DIM weight. Those teams usually buy custom corrugate and pack-out services.", m.value);
+    if (m.key === "DFS") push("DTC operations", "E-commerce and returns language suggests a direct-to-consumer flow needing steady packaging supply.", m.value);
+    if (m.key === "MWI") push("Automation throughput", "Mentions of automatic/semi-auto wrap or conveyors indicate higher-volume ops that value machine-compatible materials.", m.value);
+    if (m.key === "ILL") push("Irregular pallets", "Clues about mixed or unstable loads point to irregular pallets, which favors certain films and techniques.", m.value);
+    if (m.key === "FEI") push("Fragile handling", "Fragility and test language (ISTA, drop, cushioning) means protection and box design matter more.", m.value);
+    if (m.key === "DCS") push("Distributed shipping", "3PL or multi-node fulfillment cues mean they care about consistent supply across sites.", m.value);
+    if (m.key === "CCI") push("Cold chain", "Cold/thermal keywords imply temperature-sensitive goods that need specialized materials.", m.value);
+    if (m.key === "ST")  push("Sustainability pressure", "Claims about recycled/less material suggest sustainability goals you can support.", m.value);
+    if (m.key === "NB")  push("Momentum", "‘New’/‘launch’ tone hints at growth or changes that often trigger packaging buys.", m.value);
   }
+
+  // Tie back to persona in one clear sentence
+  push(
+    "Who to contact",
+    `Based on the signals, your ideal contacts look like ${persona.buyerTitles.join(", ")}.`
+  );
+
+  return chips;
 }
 
-// ---------- small utils ----------
+// ---------------------------- Route ----------------------------------
 
-function key(tenantId: string, domain: string) {
-  return `${tenantId}:${domain}`;
-}
-function stamp(tenantId: string, p: SupplierPersona): StoredPersona {
-  return { ...p, tenantId, updatedAt: new Date().toISOString() };
-}
-function stripTags(s: string): string {
-  return decodeEntities(s.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
+export function mountFind(app: Express) {
+  app.post("/api/v1/leads/find-buyers", (req: Request, res: Response) => {
+    const body = parseBody(req);
+    if (!body) {
+      return res.status(400).json({ ok: false, error: "bad request" });
+    }
+
+    const { supplierDomain, custom } = body;
+
+    // Tokenize only the user-provided hints (independent evidence will come from webscout later).
+    const userTokens = custom
+      ? tokensFromText(
+          custom.productOffer,
+          custom.solves,
+          ...(custom.buyerTitles || []),
+          ...(custom.verticals || []),
+          ...(custom.regions || [])
+        )
+      : [];
+
+    // Build feature sets
+    const indepFeatures = buildIndependentFeatures(userTokens); // for now, independent = structural language in hints
+    const userFeatures = custom ? buildUserHintFeatures(custom) : null;
+    const blended = blendFeatures(userFeatures, indepFeatures);
+
+    // Persona
+    const persona = buildPersona(supplierDomain, custom);
+
+    // Score & temperature
+    const p = score(blended);
+    const temperature = toTemperature(p);
+
+    // WHY chips
+    const why = whyFor(blended, persona);
+
+    const payload: FindResponse = {
+      ok: true,
+      supplierDomain,
+      persona,
+      features: blended,
+      score: p,
+      temperature,
+      why,
+    };
+
+    return res.json(payload);
+  });
 }
