@@ -1,27 +1,39 @@
 // src/index.ts
-import express, { Application } from "express";
+// Minimal server that mounts the WebScout v0 route. No external deps.
 
-// Route mount points — match each module’s export style
-import mountWebscout from "./routes/webscout";   // default export
-import { mountFind } from "./routes/find";       // named export
-import { mountBuyers } from "./routes/buyers";   // named export
+import * as express from 'express';
+import type { Request, Response } from 'express';
+import mountWebscout from './routes/webscout';
 
-const app: Application = express();
-app.use(express.json());
+const app = express();
 
-// Each mount function should accept only the app (no extra args)
+// Basic hardening + JSON body
+app.disable('x-powered-by');
+app.use(express.json({ limit: '1mb' }));
+
+// Lightweight CORS (no external package)
+app.use((req: Request, res: Response, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
+// Health checks
+app.get('/healthz', (_req, res) => res.json({ ok: true, uptime: process.uptime() }));
+app.get('/', (_req, res) => res.type('text/plain').send('OK'));
+
+// Mount WebScout (v0 stub already in src/routes/webscout.ts)
 mountWebscout(app);
-mountFind(app);
-mountBuyers(app);
 
-// Simple health probe (optional but harmless)
-app.get("/healthz", (_req, res) => res.status(200).send("ok"));
+// Bind
+const port = Number(process.env.PORT || 8080);
+const host = '0.0.0.0';
+app.listen(port, host, () => {
+  // console output is fine for Northflank logs
+  console.log(`[api] listening on http://${host}:${port} (PORT=${port})`);
+});
 
-// Expose both a default export and a named `App` so imports like
-//   import App from "../../index"
-// and
-//   import { App } from "../../index"
-// both succeed.
-export { app as App };
-export type { Application as AppType };
+// Optional export for tests (harmless at runtime)
 export default app;
