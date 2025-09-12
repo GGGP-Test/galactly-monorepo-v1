@@ -1,39 +1,38 @@
 // src/index.ts
-// Minimal server that mounts the WebScout v0 route. No external deps.
+/**
+ * Minimal bootstrap to keep the service running reliably under tsx/Node20.
+ * - Uses CJS-compatible require for Express to avoid "express is not a function".
+ * - Provides /healthz for readiness probes.
+ * - Wires a placeholder /api/v1/leads/find-buyers that validates input
+ *   (keeps current 400 for missing `domain` so UI behavior remains consistent).
+ */
 
-import * as express from 'express';
-import type { Request, Response } from 'express';
-import mountWebscout from './routes/webscout';
+import http from "http";
 
+// --- Express import (interop-safe) ---
+const _express = require("express"); // CJS require works under tsx too
+const express: any = _express?.default ?? _express;
+
+// --- App wiring ---
 const app = express();
+app.use(express.json());
 
-// Basic hardening + JSON body
-app.disable('x-powered-by');
-app.use(express.json({ limit: '1mb' }));
+// Health endpoint for probes
+app.get("/healthz", (_req: any, res: any) => res.status(200).send("ok"));
 
-// Lightweight CORS (no external package)
-app.use((req: Request, res: Response, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
-  next();
+// Keep current behavior for the panel (400 if domain is missing)
+app.post("/api/v1/leads/find-buyers", (req: any, res: any) => {
+  const { domain } = req.body || {};
+  if (!domain || typeof domain !== "string" || !domain.includes(".")) {
+    return res.status(400).json({ ok: false, error: "domain is required" });
+  }
+
+  // TODO: later we’ll connect to the real buyer-finder flow.
+  return res.status(501).json({ ok: false, error: "not implemented yet" });
 });
 
-// Health checks
-app.get('/healthz', (_req, res) => res.json({ ok: true, uptime: process.uptime() }));
-app.get('/', (_req, res) => res.type('text/plain').send('OK'));
-
-// Mount WebScout (v0 stub already in src/routes/webscout.ts)
-mountWebscout(app);
-
-// Bind
-const port = Number(process.env.PORT || 8080);
-const host = '0.0.0.0';
-app.listen(port, host, () => {
-  // console output is fine for Northflank logs
-  console.log(`[api] listening on http://${host}:${port} (PORT=${port})`);
+// Start server
+const port = Number(process.env.PORT || 8787);
+app.listen(port, () => {
+  console.log(`[server] listening on :${port}`);
 });
-
-// Optional export for tests (harmless at runtime)
-export default app;
