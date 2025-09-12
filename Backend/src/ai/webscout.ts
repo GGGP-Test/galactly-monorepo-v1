@@ -1,43 +1,58 @@
-/* backend/src/ai/webscout.ts */
+// backend/src/ai/webscout.ts
+// Webscout primitives used by routes. Lean + synchronous defaults so build passes.
 
-// Minimal types; extend as needed.
-export type PersonaGuess = {
-  productOffer: string;          // e.g., "Stretch film & pallet protection"
-  solves: string;                // e.g., "Keeps pallets secure for storage & transit"
-  buyerTitles: string[];         // e.g., ["Warehouse Manager", "Purchasing Manager", "COO"]
-  regionsSeededFrom?: string;    // where we start the geo search (city/state)
+export type Persona = {
+  productOrOffer: string;   // e.g., "Stretch film & pallet protection"
+  solves: string;           // e.g., "Keeps pallets secure for storage/shipping"
+  buyerTitles: string[];    // e.g., ["Warehouse Manager","Purchasing Manager","COO"]
 };
 
-export type TargetsGuess = {
-  industries: string[];          // e.g., ["3PL", "Retail DCs", "E-commerce Fulfillment"]
-  intentSignals: string[];       // human-readable signals we found
+export type Candidate = {
+  host: string;
+  title: string;
+  temperature: "hot" | "warm";
+  why: { label: string; kind: "meta" | "platform" | "signal" | "context"; score: number; detail?: string }[];
 };
 
-// Export the symbol your route is importing.
+export type ScoutOptions = {
+  supplierDomain: string;
+  region?: "us" | "ca" | "US/CA" | string;
+  radiusMi?: number;
+  keywords?: string[];
+};
+
+// Human-readable persona/targets inference.
+// Accepts both a simple domain string and an options object (to match existing route calls).
 export async function inferPersonaAndTargets(
-  supplierDomain: string,
-  opts?: { region?: string; radiusMi?: number }
-): Promise<{ persona: PersonaGuess; targets: TargetsGuess }> {
-  // NOTE: keep this lightweight in v0; you can wire real scorers/fetchers next.
-  const domain = supplierDomain?.toLowerCase() ?? '';
+  input: string | ScoutOptions
+): Promise<{ persona: Persona; inferredFrom: string[] }> {
+  const opts: ScoutOptions = typeof input === "string" ? { supplierDomain: input } : input;
 
-  const persona: PersonaGuess = {
-    productOffer: 'Stretch film & pallet protection',
-    solves: 'Keeps pallets secure for storage & transit',
-    buyerTitles: ['Warehouse Manager', 'Purchasing Manager', 'COO'],
-    regionsSeededFrom: opts?.region || 'US/CA',
+  // naive inference from supplier domain (replace with real AI later)
+  const lower = opts.supplierDomain.toLowerCase();
+  let productOrOffer = "Packaging";
+  let solves = "Protects goods in transit";
+  let buyerTitles = ["Procurement Manager", "Operations Manager"];
+
+  if (lower.includes("stretch") || lower.includes("shrink")) {
+    productOrOffer = "Stretch film & pallet protection";
+    solves = "Keeps pallets secure for storage/shipping";
+    buyerTitles = ["Warehouse Manager", "Purchasing Manager", "COO"];
+  }
+
+  return {
+    persona: { productOrOffer, solves, buyerTitles },
+    inferredFrom: [opts.supplierDomain],
   };
+}
 
-  // Very simple domain-based hints (replace with real detectors later)
-  const targets: TargetsGuess = {
-    industries: domain.includes('shrink') || domain.includes('stretch')
-      ? ['3PL', 'Retail Distribution Centers', 'Manufacturing (light assembly)']
-      : ['General Warehousing', 'E-commerce Fulfillment', 'CPG'],
-    intentSignals: [
-      'Catalog + shipping + returns detected',
-      'Recent product/category updates (last 30–90 days)',
-    ],
-  };
+// Score and label candidates (warm/hot). Accept string OR object to match callers.
+export async function scoreAndLabelCandidates(
+  input: string | ScoutOptions
+): Promise<{ candidates: Candidate[] }> {
+  const opts: ScoutOptions = typeof input === "string" ? { supplierDomain: input } : input;
 
-  return { persona, targets };
+  // Placeholder: return empty set; routes handle empty safely.
+  // (You can wire real-time web search here later.)
+  return { candidates: [] };
 }
