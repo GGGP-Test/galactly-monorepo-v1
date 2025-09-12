@@ -1,29 +1,12 @@
-import express, { type Application } from "express";
-import { mountFind } from "./routes/find";
-import { mountBuyers } from "./routes/buyers";
-import mountWebscout from "./routes/webscout";
+import express from "express";
 
-export type App = Application;
+const app = express();
+app.disable("x-powered-by");
+app.use(express.json());
 
-export function createApp(): Application {
-  const app = express();
-  app.use(express.json());
+// health probe so the container has something to serve
+app.get("/health", (_req, res) => {
+  res.status(200).json({ ok: true });
+});
 
-  // Mount minimal routes
-  mountFind(app);
-  mountBuyers(app);
-  mountWebscout(app);
-
-  // Simple health endpoint for sanity
-  app.get("/health", (_req, res) => res.json({ ok: true }));
-
-  return app;
-}
-
-// Allow running as a standalone server (optional)
-if (require.main === module) {
-  const port = Number(process.env.PORT ?? 3000);
-  createApp().listen(port, () => {
-    console.log(`Server listening on ${port}`);
-  });
-}
+export default app;
