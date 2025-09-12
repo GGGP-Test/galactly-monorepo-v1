@@ -22,7 +22,6 @@
   ],
   "exclude": [
     "src/ui/**",
-    "src/scripts/**",          // seed/import scripts – not needed at runtime
     "src/**/__tests__/**",
     "dist",
     "node_modules"
