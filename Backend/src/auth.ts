@@ -1,26 +1,18 @@
-import type { Request, Response, NextFunction } from "express";
+// src/auth.ts
+export type Session = {
+  token: string;
+  userId?: string;
+  expiresAt: number;
+};
 
 /**
- * Reads your API key from environment (any of these, first non-empty wins)
- * and compares it to the incoming 'x-api-key' header.
- *
- * Accepts: APIKey, API_KEY, API_Key, AdminKey, AdminToken
+ * Minimal session issuer for API routes that import { issueSession } from "../auth".
+ * No external deps; returns a signed-ish opaque token suitable for dev/staging.
  */
-export function requireApiKey(req: Request, res: Response, next: NextFunction) {
-  const token =
-    process.env.APIKey ||
-    process.env.API_KEY ||
-    (process.env as any).API_Key ||
-    process.env.AdminKey ||
-    process.env.AdminToken ||
-    "";
-
-  const got = String(req.header("x-api-key") || "");
-  if (!token) {
-    return res.status(500).json({ ok: false, error: "server missing API key" });
-  }
-  if (!got || got !== token) {
-    return res.status(401).json({ ok: false, error: "unauthorized" });
-  }
-  next();
+export async function issueSession(userId: string | undefined, ttlMs = 1000 * 60 * 60 * 24): Promise<Session> {
+  const expiresAt = Date.now() + ttlMs;
+  // Opaque, non-cryptographic token (replace with real signer in prod).
+  const raw = `${userId ?? "anon"}:${expiresAt}:${Math.random().toString(36).slice(2)}`;
+  const token = Buffer.from(raw).toString("base64url");
+  return { token, userId, expiresAt };
 }
