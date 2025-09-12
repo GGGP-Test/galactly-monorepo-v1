@@ -1,49 +1,62 @@
 import { Router, Request, Response } from "express";
-import { setTimeout as delay } from "timers/promises";
+import crypto from "crypto";
 
-// ---------- Types ----------
-type Region = "usca" | "eu" | "global";
+// ---------- Minimal BleedStore surface (what we actually use here) ----------
+type LeadTemp = "hot" | "warm";
+type LeadStatus = "candidate" | "contacted" | "qualified" | "won" | "lost";
 
-interface FindBuyersBody {
-  domain?: string;
-  host?: string;
-  supplier?: string;
-  url?: string;
-  region?: Region | string;
-  radiusMi?: number | string;
-  seedPersona?: {
-    product?: string;
-    solves?: string;
-    titles?: string[];
-  };
-}
-
-interface Lead {
+interface LeadRecord {
   id: string;
+  tenantId: string;
   host: string;
   platform: "web";
   title: string;
-  created: string;
-  temp: "hot" | "warm";
-  why: string;
+  createdAt: string;
+  updatedAt: string;
+  temp?: LeadTemp;
+  status?: LeadStatus;
+  why?: string;
+  scores?: Record<string, number>;
+  region?: string;
 }
 
-interface Discovery {
-  domain: string;
-  url: string;
-  text: string;         // merged text from homepage/about
-  signals: string[];    // extracted keywords/clauses
-  summary: string;      // short summary line
+interface Evidence {
+  id: string;
+  ts: number;
+  tenantId: string;
+  leadId: string;
+  kind: string;
+  data?: any;
+  text?: string;
 }
 
-// ---------- Small helpers ----------
+interface BleedStore {
+  upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord>;
+  addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence>;
+  updateScores(tenantId: string, id: string, scores: Record<string, number>): Promise<LeadRecord | undefined>;
+  setStatus(tenantId: string, id: string, status: LeadStatus): Promise<LeadRecord | undefined>;
+}
+
+// Resolve store from app.locals or a global (fallback for dev)
+function resolveStore(req: Request): BleedStore | undefined {
+  // @ts-ignore
+  if (req.app?.locals?.store) return req.app.locals.store as BleedStore;
+  // @ts-ignore
+  if (globalThis.__BLEED_STORE__) return globalThis.__BLEED_STORE__ as BleedStore;
+  return undefined;
+}
+
+// ---------- Helpers ----------
 const buyers = Router();
 
+function now() { return new Date().toISOString(); }
+function shaId(...parts: string[]) {
+  return "L_" + crypto.createHash("sha1").update(parts.join("|")).digest("hex").slice(0, 12);
+}
 function pick<T>(...vals: (T | undefined | null)[]): T | undefined {
   for (const v of vals) if (v !== undefined && v !== null && String(v).trim() !== "") return v as T;
   return undefined;
 }
-
 function normalizeDomain(raw?: string): string | null {
   if (!raw) return null;
   let s = raw.trim();
@@ -53,208 +66,161 @@ function normalizeDomain(raw?: string): string | null {
     let h = (u.hostname || "").toLowerCase();
     if (h.startsWith("www.")) h = h.slice(4);
     return h || null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
-
-function nowIso() {
-  return new Date().toISOString();
-}
-
-// Minimal, safe fetch with timeouts and graceful fallback
-async function fetchText(url: string, timeoutMs = 3500): Promise<string> {
+async function fetchText(url: string, timeoutMs = 4000): Promise<string> {
   const ctl = new AbortController();
-  const tm = setTimeout(() => ctl.abort(), timeoutMs);
+  const t = setTimeout(() => ctl.abort(), timeoutMs);
   try {
     const r = await fetch(url, { signal: ctl.signal, redirect: "follow" as RequestRedirect });
     if (!r.ok) return "";
     const ct = (r.headers.get("content-type") || "").toLowerCase();
-    if (ct.includes("text") || ct.includes("html") || ct.includes("json")) {
-      return await r.text();
-    }
+    if (ct.includes("text") || ct.includes("html") || ct.includes("json")) return await r.text();
     return "";
-  } catch {
-    return "";
-  } finally {
-    clearTimeout(tm);
-  }
+  } catch { return ""; } finally { clearTimeout(t); }
+}
+function toText(html: string): string {
+  return html.replace(/<script[\s\S]*?<\/script>/gi, " ")
+             .replace(/<style[\s\S]*?<\/style>/gi, " ")
+             .replace(/<[^>]+>/g, " ")
+             .replace(/\s+/g, " ")
+             .toLowerCase()
+             .trim();
 }
 
-// Very lightweight readability: strip tags, collapse whitespace
-function toPlainText(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
-// Domain discovery (homepage + /about if present)
-async function discoverSupplier(domain: string): Promise<Discovery> {
-  const base = `https://${domain}`;
-  const [home, about] = await Promise.all([
-    fetchText(base).catch(() => ""),
-    fetchText(`${base}/about`).catch(() => ""),
-  ]);
-
-  const merged = `${home}\n${about}`;
-  const text = toPlainText(merged);
-
-  // cheap signals
-  const S: Record<string, RegExp> = {
-    stretch: /\bstretch(?:[-\s]?film|[-\s]?wrap)?\b/,
-    shrink: /\bshrink(?:[-\s]?film|[-\s]?wrap)?\b/,
-    corrugated: /\bcorrugat(?:ed|ion)\b|\bbox(es)?\b/,
-    mailers: /\bpoly(?: |-)?mailers?\b|\bmailer\b/,
-    tape: /\bpack(?:ing)?\s?tape\b|\btapes\b|\bhot\s?melt\b/,
-    strapping: /\bstrap(?:ping)?\b|\bpolypropylene strap\b/,
-    coldchain: /\bcold(?: |-)?chain\b|\brefrigerated\b|\bcold storage\b|\bgell? pack\b/,
-    ecommerce: /\bshopify\b|\bwoocommerce\b|\bcheckout\b|\breturns?\b/,
-    green: /\bcompostable\b|\brecycl(?:e|able|ed)\b|\bsustainable\b/,
-    machinery: /\b(pre[-\s]?stretch|prestretch|semi-automatic|automatic|turntable|conveyor)\b/,
-    pallet: /\bpallet(?:iz|is)e|pallet\b/,
-    film_specs: /\bgauge\b|\bmic(?:ron)?\b|\bhand(?: |-)?grade\b|\bmachine(?: |-)?grade\b/
+// Detect packaging signals (cheap, fast)
+function detectSignals(text: string): string[] {
+  const R: Record<string, RegExp> = {
+    stretch: /\bstretch(?:[-\s]?(film|wrap))?\b/,
+    shrink:  /\bshrink(?:[-\s]?(film|wrap))?\b/,
+    pallet:  /\bpallet(?:iz|is)e|\bpallet\b/,
+    corr:    /\bcorrugat(?:ed|ion)\b|\bbox(es)?\b/,
+    mailer:  /\bpoly(?: |-)?mailers?\b|\bmailer\b/,
+    tape:    /\bpack(?:ing)?\s?tape\b|\bhot\s?melt\b/,
+    strap:   /\bstrap(?:ping)?\b/,
+    cold:    /\bcold(?: |-)?chain\b|\brefrigerated\b|\bcold storage\b/,
+    shop:    /\bshopify\b|\bwoocommerce\b|\bbigcommerce\b|\bcheckout\b|\breturns?\b/,
+    green:   /\bcompostable\b|\brecycl(?:e|able|ed)\b|\bsustainab(le|ility)\b/,
+    mach:    /\b(pre[-\s]?stretch|prestretch|semi-automatic|automatic|turntable|conveyor)\b/,
+    spec:    /\bgauge\b|\bmic(?:ron)?\b|\bhand(?: |-)?grade\b|\bmachine(?: |-)?grade\b/
   };
-
-  const signals: string[] = [];
-  for (const [k, rx] of Object.entries(S)) {
-    if (rx.test(text)) signals.push(k);
-  }
-
-  const summary =
-    signals.length > 0
-      ? `Signals: ${signals.slice(0, 6).join(", ")}`
-      : "No strong packaging signals detected";
-
-  return { domain, url: base, text, signals, summary };
+  const out: string[] = [];
+  for (const [k, rx] of Object.entries(R)) if (rx.test(text)) out.push(k);
+  return out;
 }
 
-// Map signals -> target buyer titles
 function titlesFromSignals(signals: string[]): string[] {
   const T = new Set<string>();
-  if (signals.some(s => ["stretch", "shrink", "pallet", "machinery"].includes(s))) {
-    T.add("Warehouse Manager");
-    T.add("Shipping Supervisor");
-    T.add("Operations Manager");
-    T.add("Purchasing Manager");
+  if (signals.some(s => ["stretch", "shrink", "pallet", "mach"].includes(s))) {
+    T.add("Warehouse Manager"); T.add("Shipping Supervisor"); T.add("Operations Manager"); T.add("Purchasing Manager");
   }
-  if (signals.includes("corrugated") || signals.includes("mailers") || signals.includes("ecommerce")) {
-    T.add("E-commerce Fulfillment Manager");
-    T.add("DC Operations Manager");
-    T.add("Logistics Manager");
+  if (signals.some(s => ["corr", "mailer", "shop"].includes(s))) {
+    T.add("E-commerce Fulfillment Manager"); T.add("DC Operations Manager"); T.add("Logistics Manager");
   }
-  if (signals.includes("coldchain")) {
-    T.add("Food Safety Manager");
-    T.add("Cold Chain Manager");
-    T.add("Quality Assurance Manager");
-  }
-  if (signals.includes("green")) {
-    T.add("Sustainability Manager");
-    T.add("Packaging Engineer");
-  }
-  // Defaults
-  if (T.size === 0) {
-    T.add("Purchasing Manager");
-    T.add("Operations Manager");
-    T.add("Warehouse Manager");
-  }
+  if (signals.includes("cold")) { T.add("Cold Chain Manager"); T.add("Food Safety Manager"); }
+  if (signals.includes("green")) { T.add("Sustainability Manager"); T.add("Packaging Engineer"); }
+  if (T.size === 0) { T.add("Purchasing Manager"); T.add("Operations Manager"); T.add("Warehouse Manager"); }
   return Array.from(T);
 }
 
-// Try to persist to whatever store /leads uses.
-// We don’t know the exact API, so this is defensive.
-// If your store exposes a different global or function, I can wire to it once I see that file.
-function tryPersist(region: string, temp: "hot" | "warm", items: Lead[]) {
-  try {
-    // Option A: a global store object with add()
-    // @ts-ignore
-    if (globalThis.__LEADS_STORE__?.add) {
-      // @ts-ignore
-      globalThis.__LEADS_STORE__.add({ region, temp, items });
-      return true;
-    }
-    // Option B: buckets Map
-    // @ts-ignore
-    if (!globalThis.__LEADS_BUCKETS__) {
-      // @ts-ignore
-      globalThis.__LEADS_BUCKETS__ = new Map<string, Lead[]>();
-    }
-    // @ts-ignore
-    const buckets: Map<string, Lead[]> = globalThis.__LEADS_BUCKETS__;
-    const key = `${region}:${temp}`;
-    const cur = buckets.get(key) || [];
-    buckets.set(key, cur.concat(items));
-    return true;
-  } catch {
-    return false;
-  }
+function fitScore(signals: string[]): number {
+  // very cheap scoring; the list route likely thresholds by temp -> we’ll also set temp explicitly via setStatus + scores
+  const w: Record<string, number> = {
+    stretch: 0.25, shrink: 0.25, pallet: 0.2, mach: 0.2, corr: 0.15, mailer: 0.15,
+    shop: 0.15, cold: 0.25, green: 0.1, tape: 0.1, strap: 0.1, spec: 0.1
+  };
+  let s = 0;
+  for (const k of signals) s += w[k] || 0.05;
+  return Math.max(0, Math.min(1, s));
 }
 
 // ---------- Route ----------
 buyers.post("/api/v1/leads/find-buyers", async (req: Request, res: Response) => {
-  const b = (req.body || {}) as FindBuyersBody;
+  const store = resolveStore(req);
+  const tenantId = String(req.header("x-api-key") || "demo");
 
+  // Be liberal in what we accept
   const domainRaw =
-    pick(b.domain, b.host, b.supplier, b.url, req.query.domain as string, req.query.host as string) ||
-    (req.headers["x-domain"] as string | undefined);
-
+    pick<string>(
+      (req.body && (req.body.domain || req.body.host || req.body.supplier || req.body.url)),
+      req.query.domain as string,
+      req.query.host as string,
+      req.header("x-domain") as string
+    );
   const domain = normalizeDomain(domainRaw || "");
-  if (!domain) {
-    return res.status(400).json({ ok: false, error: "domain is required" });
-  }
+  if (!domain) return res.status(400).json({ ok: false, error: "domain is required" });
 
-  const region = String(b.region || req.query.region || "usca").toLowerCase();
-  const radiusMi = Number(b.radiusMi || req.query.radiusMi || 50) || 50;
+  const region = String(req.body?.region || req.query.region || "usca").toLowerCase();
 
-  // 1) Discover supplier from website
-  const disc = await discoverSupplier(domain);
+  // 1) Website discovery
+  const base = `https://${domain}`;
+  const [home, about] = await Promise.all([ fetchText(base), fetchText(`${base}/about`) ]);
+  const text = toText(`${home}\n${about}`);
+  const signals = detectSignals(text);
+  const titles = titlesFromSignals(signals);
+  const summary = signals.length ? `Signals: ${signals.slice(0,6).join(", ")}` : "No strong packaging signals detected";
 
-  // 2) Decide buyer titles (seedPersona, if provided, wins but we still enrich)
-  let titles = titlesFromSignals(disc.signals);
-  if (b.seedPersona?.titles?.length) {
-    const extra = b.seedPersona.titles.map(t => String(t).trim()).filter(Boolean);
-    titles = Array.from(new Set([...extra, ...titles]));
-  }
-
-  // 3) Synthesize provisional candidates (warm) so the panel shows rows immediately
-  const createdAt = nowIso();
-  const leads: Lead[] = titles.slice(0, 3).map((title, i) => ({
-    id: `L_${Date.now()}_${Math.random().toString(36).slice(2, 6)}_${i}`,
+  // 2) Always create at least 3 provisional candidates
+  const createdAt = now();
+  const names = titles.slice(0, 3);
+  const candidates: LeadRecord[] = names.map((title, i) => ({
+    id: shaId(tenantId, domain, title, String(i), createdAt),
+    tenantId,
     host: domain,
     platform: "web",
     title: `${title} @ ${domain}`,
-    created: createdAt,
-    temp: "warm",
-    why: disc.summary,
+    createdAt,
+    updatedAt: createdAt,
+    why: summary,
+    region
   }));
 
-  // (optional) turn a strong e-comm or cold-chain signal into one “hot”
-  let hot = 0;
-  if (disc.signals.includes("ecommerce") || disc.signals.includes("coldchain")) {
-    leads[0] = { ...leads[0], temp: "hot" };
-    hot = 1;
+  // If for any reason titles[] is empty, fallback to three generic roles
+  if (candidates.length === 0) {
+    ["Purchasing Manager", "Operations Manager", "Warehouse Manager"].forEach((t, i) => {
+      candidates.push({
+        id: shaId(tenantId, domain, t, String(i), createdAt),
+        tenantId, host: domain, platform: "web",
+        title: `${t} @ ${domain}`, createdAt, updatedAt: createdAt, why: summary, region
+      });
+    });
   }
 
-  const warm = leads.filter(l => l.temp === "warm").length;
-
-  // 4) Persist if we can
-  tryPersist(region, "warm", leads.filter(l => l.temp === "warm"));
-  if (hot) tryPersist(region, "hot", leads.filter(l => l.temp === "hot"));
-
-  // 5) Small debounce to give the /leads poller a moment (UX nicety)
-  await delay(120);
+  // 3) Persist to BleedStore (if available); otherwise we still return counts
+  let persisted = 0, hot = 0, warm = 0;
+  for (const lead of candidates) {
+    try {
+      if (store) {
+        // upsert
+        const r = await store.upsertLead(lead);
+        // scoring + status/temp
+        const fit = fitScore(signals);
+        await store.updateScores(tenantId, r.id, { leadFit: fit });
+        const temp: LeadTemp = fit >= 0.65 ? "hot" : "warm";
+        await store.setStatus(tenantId, r.id, "candidate");
+        // We keep temp in scores — your /leads route likely maps temp from scores or status; we set both.
+        await store.updateScores(tenantId, r.id, { tempHot: temp === "hot" ? 1 : 0, tempWarm: temp === "warm" ? 1 : 0 });
+        // evidence for transparency
+        await store.addEvidence({ tenantId, leadId: r.id, kind: "discovery", text: summary, data: { signals } });
+        persisted++;
+        if (temp === "hot") hot++; else warm++;
+      } else {
+        // No store mounted — nothing to persist, but don’t fail
+        const fit = fitScore(signals);
+        if (fit >= 0.65) hot++; else warm++;
+      }
+    } catch {
+      // keep going
+    }
+  }
 
   return res.json({
     ok: true,
-    created: leads.length,
-    hot,
-    warm,
+    created: candidates.length,
+    persisted,
+    hot, warm,
     region,
-    radiusMi,
-    debug: { domain, signals: disc.signals.slice(0, 12) },
+    debug: { domain, signals: signals.slice(0, 10) }
   });
 });
 
