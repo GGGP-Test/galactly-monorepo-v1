@@ -1,45 +1,27 @@
 // src/index.ts
 import express, { Application } from "express";
-import type { Request, Response } from "express";
 
-// ---- create app ----
-const app = express();
+// Route mount points — match each module’s export style
+import mountWebscout from "./routes/webscout";   // default export
+import { mountFind } from "./routes/find";       // named export
+import { mountBuyers } from "./routes/buyers";   // named export
+
+const app: Application = express();
 app.use(express.json());
 
-// ---- health/ping ----
-app.get("/api/health", (_req: Request, res: Response) => {
-  res.status(200).json({ ok: true });
-});
+// Each mount function should accept only the app (no extra args)
+mountWebscout(app);
+mountFind(app);
+mountBuyers(app);
 
-// ---- mount routes (named exports expected) ----
-// These imports match your code that uses named mounts.
-try {
-  // If these modules exist, they’ll be mounted; if not, the app still compiles.
-  // Keep them commented or remove if you don’t want them yet.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const buyers = require("./routes/buyers");
-  if (buyers?.mountBuyers) buyers.mountBuyers(app);
-} catch {}
+// Simple health probe (optional but harmless)
+app.get("/healthz", (_req, res) => res.status(200).send("ok"));
 
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const find = require("./routes/find");
-  if (find?.mountFind) find.mountFind(app);
-} catch {}
-
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const webscout = require("./routes/webscout");
-  if (webscout?.mountWebscout) webscout.mountWebscout(app);
-} catch {}
-
-// ---- exports ----
-// Type-only name for your routes’ type imports:
-export type App = Application;
-
-// Default export for runtime usage:
-export default app;
-
-// Also export a value named App in case any code imports it as a value.
-// (Type/value merging lets both “type App” and value “App” coexist.)
+// Expose both a default export and a named `App` so imports like
+//   import App from "../../index"
+// and
+//   import { App } from "../../index"
+// both succeed.
 export { app as App };
+export type { Application as AppType };
+export default app;
