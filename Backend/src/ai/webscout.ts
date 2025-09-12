@@ -1,73 +1,43 @@
 /* backend/src/ai/webscout.ts */
 
-// Minimal, synchronous heuristics so the build runs green.
-// Wire your real adapters (SERP, site fetch, catalog detection, ads JSON, etc.) here.
-
-export type Persona = {
-  productOffer: string;             // e.g., "Stretch film & pallet protection"
-  solves: string;                    // e.g., "Keeps pallets secure for storage & transit"
-  buyerTitles: string[];            // e.g., ["Warehouse Manager", "Purchasing Manager", "COO"]
-  verticals: string[];              // e.g., ["3PL", "Retail DC", "E-commerce Fulfillment"]
+// Minimal types; extend as needed.
+export type PersonaGuess = {
+  productOffer: string;          // e.g., "Stretch film & pallet protection"
+  solves: string;                // e.g., "Keeps pallets secure for storage & transit"
+  buyerTitles: string[];         // e.g., ["Warehouse Manager", "Purchasing Manager", "COO"]
+  regionsSeededFrom?: string;    // where we start the geo search (city/state)
 };
 
-export async function inferPersonaAndTargets(input: { supplierDomain: string }): Promise<Persona> {
-  const host = input.supplierDomain.toLowerCase();
+export type TargetsGuess = {
+  industries: string[];          // e.g., ["3PL", "Retail DCs", "E-commerce Fulfillment"]
+  intentSignals: string[];       // human-readable signals we found
+};
 
-  // crude rules to keep API functional; replace with real detectors later
-  if (host.includes('stretch') || host.includes('shrink')) {
-    return {
-      productOffer: 'Stretch film & pallet protection',
-      solves: 'Keeps pallets secure for storage & transit',
-      buyerTitles: ['Warehouse Manager', 'Purchasing Manager', 'COO'],
-      verticals: ['3PL', 'Retail DC', 'E-commerce Fulfillment'],
-    };
-  }
+// Export the symbol your route is importing.
+export async function inferPersonaAndTargets(
+  supplierDomain: string,
+  opts?: { region?: string; radiusMi?: number }
+): Promise<{ persona: PersonaGuess; targets: TargetsGuess }> {
+  // NOTE: keep this lightweight in v0; you can wire real scorers/fetchers next.
+  const domain = supplierDomain?.toLowerCase() ?? '';
 
-  return {
-    productOffer: 'Packaging & shipping supplies',
-    solves: 'Protects goods and reduces damage in transit',
-    buyerTitles: ['Operations Manager', 'Purchasing Manager'],
-    verticals: ['E-commerce', 'Retail', 'Manufacturing'],
+  const persona: PersonaGuess = {
+    productOffer: 'Stretch film & pallet protection',
+    solves: 'Keeps pallets secure for storage & transit',
+    buyerTitles: ['Warehouse Manager', 'Purchasing Manager', 'COO'],
+    regionsSeededFrom: opts?.region || 'US/CA',
   };
-}
 
-export type LabeledCandidate = {
-  host: string;
-  platform: string;
-  title: string;
-  created: string; // ISO
-  temperature: 'hot' | 'warm';
-  why: Array<{ label: string; kind: 'meta' | 'platform' | 'signal' | 'context'; score: number; detail: string }>;
-};
-
-// Offline-ish scoring wrapper. Plug your real-time rows here.
-export async function scoreAndLabelCandidates(args: {
-  supplierDomain: string;
-  persona: Persona;
-  regionHint: string;       // "us/ca" or "us" or city, state
-  radiusMiles: number;
-  rows: Array<{ host: string; title?: string }>;
-  max: number;
-}): Promise<LabeledCandidate[]> {
-  const now = new Date().toISOString();
-  const take = args.rows.slice(0, args.max);
-  if (take.length === 0) {
-    // seed two example rows so the panel shows data
-    take.push({ host: 'brilliantearth.com', title: 'Lead: brilliantearth.com' });
-    take.push({ host: 'gobble.com', title: 'Lead: gobble.com' });
-  }
-
-  return take.map((r, i) => ({
-    host: r.host,
-    platform: 'unknown',
-    title: r.title ?? `Lead: ${r.host}`,
-    created: now,
-    temperature: i % 3 === 0 ? 'hot' : 'warm',
-    why: [
-      { label: 'Domain quality', kind: 'meta', score: 0.65, detail: `${r.host} (.com)` },
-      { label: 'Platform fit',  kind: 'platform', score: 0.50, detail: 'unknown' },
-      { label: 'Intent keywords', kind: 'signal', score: i % 3 === 0 ? 0.9 : 0.6, detail: i % 3 === 0 ? 'rfp, packaging' : '—' },
-      { label: 'Context', kind: 'context', score: 0.6, detail: 'US/CA preference applied' },
+  // Very simple domain-based hints (replace with real detectors later)
+  const targets: TargetsGuess = {
+    industries: domain.includes('shrink') || domain.includes('stretch')
+      ? ['3PL', 'Retail Distribution Centers', 'Manufacturing (light assembly)']
+      : ['General Warehousing', 'E-commerce Fulfillment', 'CPG'],
+    intentSignals: [
+      'Catalog + shipping + returns detected',
+      'Recent product/category updates (last 30–90 days)',
     ],
-  }));
+  };
+
+  return { persona, targets };
 }
