@@ -1,6 +1,6 @@
 // src/routes/webscout.ts
-// Accepts multiple legacy/modern endpoints and payload shapes for "find buyers".
-// No esModuleInterop required.
+// Universal "find buyers" route: very forgiving domain extraction + legacy paths.
+// Works with JSON, x-www-form-urlencoded, text/plain, missing content-type, and query strings.
 
 import * as express from 'express';
 import type { Express, Request, Response } from 'express';
@@ -8,11 +8,15 @@ import type { Express, Request, Response } from 'express';
 // ---------- Types ----------
 type Temperature = 'warm' | 'hot';
 type WhyKind = 'persona' | 'region' | 'meta' | 'signal';
-
 interface WhyChip { label: string; kind: WhyKind; score: number; detail: string; }
 interface Candidate {
-  id: string; host: string; platform: 'shopify'|'woocommerce'|'bigcommerce'|'custom'|'unknown';
-  title: string; temperature: Temperature; created: string; why: WhyChip[];
+  id: string;
+  host: string;
+  platform: 'shopify'|'woocommerce'|'bigcommerce'|'custom'|'unknown';
+  title: string;
+  temperature: Temperature;
+  created: string;
+  why: WhyChip[];
 }
 interface Persona { productOffer: string; solves: string; buyerTitles: string[]; }
 interface WebScoutResponse {
@@ -24,7 +28,6 @@ interface WebScoutResponse {
 
 // ---------- Small utils ----------
 const nowIso = () => new Date().toISOString();
-const looksLikeDomain = (s: string) => /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(s);
 const guessPlatform = (h: string): Candidate['platform'] => {
   const x = h.toLowerCase();
   if (x.includes('shopify')) return 'shopify';
@@ -40,6 +43,8 @@ const domainQuality = (h: string) => {
   if (!/[^a-z0-9.-]/i.test(h)) s += 0.1;
   return Math.min(1, Math.max(0, s));
 };
+const chipsToText = (chips: WhyChip[]) =>
+  chips.sort((a, b) => b.score - a.score).map(c => `${c.label}: ${c.detail}`).join(' • ');
 
 // ---------- Persona heuristics ----------
 function inferPersona(domain: string): { persona: Persona; clues: string[] } {
@@ -76,7 +81,6 @@ function inferPersona(domain: string): { persona: Persona; clues: string[] } {
   }
   return { persona, clues };
 }
-
 function buildWhy(host: string, persona: Persona): WhyChip[] {
   return [
     { label: 'Persona fit', kind: 'persona', score: 0.7, detail: `${persona.productOffer} → ${persona.buyerTitles.join(', ')}` },
@@ -85,33 +89,40 @@ function buildWhy(host: string, persona: Persona): WhyChip[] {
     { label: 'Intent keywords', kind: 'signal', score: 0.8, detail: 'pallet, stretch, shrink / labels / mailers' },
   ];
 }
-const chipsToText = (chips: WhyChip[]) =>
-  chips.sort((a, b) => b.score - a.score).map(c => `${c.label}: ${c.detail}`).join(' • ');
 
-// ---------- Domain extraction (very forgiving) ----------
+// ---------- Domain extraction (ultra-forgiving) ----------
+const DOMAIN_RX = /([a-z0-9-]+(?:\.[a-z0-9-]+)+)/i;
+function looksLikeDomain(s: string): string | undefined {
+  // Accept hostnames and full URLs; return hostname if found.
+  const t = s.trim();
+  try {
+    const u = new URL(t);
+    return u.hostname.toLowerCase();
+  } catch {/* not a full URL */}
+  const m = t.match(DOMAIN_RX);
+  return m ? m[1].toLowerCase() : undefined;
+}
+
 function pluckDomain(src: unknown): string | undefined {
   if (!src) return undefined;
 
-  if (typeof src === 'string') {
-    const s = src.trim();
-    if (looksLikeDomain(s)) return s.toLowerCase();
-    // tolerate raw URL
-    try {
-      const u = new URL(s);
-      if (looksLikeDomain(u.hostname)) return u.hostname.toLowerCase();
-    } catch {}
-    return undefined;
-  }
+  if (typeof src === 'string') return looksLikeDomain(src);
 
   if (typeof src === 'object') {
     const obj = src as Record<string, unknown>;
-    const primaryKeys = ['supplierDomain','domain','website','host','url'];
-    for (const k of primaryKeys) {
-      const v = obj[k];
-      const got = pluckDomain(v);
-      if (got) return got;
+    // cover all likely keys sent by various panels
+    const keys = [
+      'supplierDomain','domain','website','host','url',
+      'supplier','company','companyDomain','brand',
+      'text','value','q','query','search','keyword','keywords'
+    ];
+    for (const k of keys) {
+      if (k in obj) {
+        const got = pluckDomain(obj[k]);
+        if (got) return got;
+      }
     }
-    // search nested
+    // if nested unknown, scan values
     for (const v of Object.values(obj)) {
       const got = pluckDomain(v);
       if (got) return got;
@@ -121,17 +132,34 @@ function pluckDomain(src: unknown): string | undefined {
 }
 
 function readDomain(req: Request): string | undefined {
-  // 1) text/plain bodies
-  if (typeof (req as any).body === 'string') {
-    const got = pluckDomain((req as any).body);
-    if (got) return got;
-  }
-  // 2) JSON / urlencoded body
-  const fromBody = pluckDomain((req as any).body);
+  // 1) headers (allow X-Domain for simple testing)
+  const hd = (req.headers['x-domain'] || req.headers['x-website'] || '') as string;
+  const fromHeader = looksLikeDomain(hd || '');
+  if (fromHeader) return fromHeader;
+
+  // 2) any parsed body (json / urlencoded / text parsers)
+  const bodyAny = (req as any).body;
+  const fromBody = pluckDomain(bodyAny);
   if (fromBody) return fromBody;
-  // 3) query string
+
+  // 3) raw body if no parser matched (missing/odd content-type)
+  const raw = (req as any).rawBody as string | undefined;
+  const fromRaw = raw ? looksLikeDomain(raw) : undefined;
+  if (fromRaw) return fromRaw;
+
+  // 4) query string and even the whole originalUrl
   const fromQuery = pluckDomain(req.query as any);
   if (fromQuery) return fromQuery;
+  const qs = req.originalUrl.includes('?') ? req.originalUrl.split('?')[1] : '';
+  if (qs) {
+    const got = looksLikeDomain(decodeURIComponent(qs));
+    if (got) return got;
+    const sp = new URLSearchParams(qs);
+    for (const [, v] of sp) {
+      const d = looksLikeDomain(v);
+      if (d) return d;
+    }
+  }
   return undefined;
 }
 
@@ -181,32 +209,43 @@ function handleFind(req: Request, res: Response) {
   return res.json(payload);
 }
 
-// ---------- Mount ----------
+// ---------- Mount (with robust body intake) ----------
 export default function mountWebscout(app: Express): void {
   const router = express.Router();
 
-  // Accept JSON, URL-encoded forms, and text/plain (some panels send raw text)
-  router.use(express.text({ type: ['text/*'] }));
+  // Capture raw body for any content-type (fallback)
+  router.use((req, _res, next) => {
+    if ((req as any)._rawCaptured) return next();
+    (req as any)._rawCaptured = true;
+
+    // If body already parsed by prior middleware, skip
+    if ((req as any).body !== undefined) return next();
+
+    let data = '';
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => { data += chunk; });
+    req.on('end', () => {
+      (req as any).rawBody = data;
+      // Best-effort: if it parses as JSON, expose it on req.body, else leave as string
+      try { (req as any).body = data ? JSON.parse(data) : undefined; } catch { (req as any).body = data; }
+      next();
+    });
+  });
+
+  // Also accept typical body types
+  router.use(express.text({ type: ['text/*', 'application/octet-stream'] }));
   router.use(express.json({ limit: '256kb' }));
   router.use(express.urlencoded({ extended: true }));
 
   router.get('/webscout/ping', (_req, res) => res.json({ ok: true, pong: true, time: nowIso() }));
 
-  // Primary and aliases used by various panel builds
-  router.post('/webscout', handleFind);
-  router.get('/webscout', handleFind);
-
-  router.post('/find', handleFind);
-  router.get('/find', handleFind);
-
-  router.post('/leads', handleFind);
-  router.get('/leads', handleFind);
-
-  // Panels that call nested actions:
-  router.post('/leads/find', handleFind);
-  router.get('/leads/find', handleFind);
-  router.post('/leads/find-buyers', handleFind);
-  router.get('/leads/find-buyers', handleFind);
+  // Primary and legacy aliases used by panels
+  const attach = (p: string) => { router.post(p, handleFind); router.get(p, handleFind); };
+  attach('/webscout');
+  attach('/find');
+  attach('/leads');
+  attach('/leads/find');
+  attach('/leads/find-buyers');
 
   app.use('/api/v1', router);
 }
