@@ -1,34 +1,34 @@
 /* backend/src/routes/find.ts */
-import type { Express } from 'express';
-import { z } from 'zod';
+import type { App } from '../index';
 import { inferPersonaAndTargets } from '../ai/webscout';
 
-const bodySchema = z.object({
-  supplierDomain: z.string().min(3),
-  region: z.string().optional(),    // e.g. "us" | "ca" | "San Francisco, CA"
-  radiusMiles: z.number().int().min(1).max(500).optional(),
-});
-
-export function mountFind(app: Express) {
+export function mountFind(app: App) {
+  // POST /api/v1/leads/find   – kick off a real-time scout for buyers
   app.post('/api/v1/leads/find', async (req, res) => {
-    const parse = bodySchema.safeParse(req.body);
-    if (!parse.success) return res.status(400).json({ error: 'bad_request', details: parse.error.flatten() });
+    try {
+      const supplier = String(req.body?.supplier || req.body?.domain || '').trim();
+      const region = String(req.body?.region || '').trim() || undefined;
+      const radiusMi = Number(req.body?.radiusMi || 50);
 
-    const { supplierDomain, region, radiusMiles } = parse.data;
+      if (!supplier) {
+        return res.status(400).json({ ok: false, error: 'supplier (domain) required' });
+      }
 
-    // 1) persona + targets from supplier
-    const persona = await inferPersonaAndTargets({ supplierDomain });
+      // v0: return persona/targets immediately to prove value; next step wires fetchers.
+      const { persona, targets } = await inferPersonaAndTargets(supplier, { region, radiusMi });
 
-    // 2) return a stubbed list (the panel expects structure). Real-time web scout hooks in buyers route.
-    res.json({
-      ok: true,
-      persona,
-      // empty result set here by design; panel refreshes from /find-buyers which actually collects candidates
-      candidates: [],
-      region: region ?? 'us/ca',
-      radiusMiles: radiusMiles ?? 50,
-    });
+      // NOTE: In the next iteration, call your fetchers to produce hot/warm candidates.
+      return res.json({
+        ok: true,
+        supplier,
+        persona,
+        targets,
+        candidates: [],
+        note: 'WebScout v0: persona/targets returned; real-time fetchers to be wired next.',
+      });
+    } catch (err: any) {
+      console.error('leads/find error', err);
+      return res.status(500).json({ ok: false, error: 'internal_error' });
+    }
   });
 }
-
-export default { mountFind };
