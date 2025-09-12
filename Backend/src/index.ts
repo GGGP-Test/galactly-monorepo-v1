@@ -1,72 +1,50 @@
 // src/index.ts
-import express, { type Express, type Request, type Response, type NextFunction } from "express";
+import express, { type Express, type Request, type Response, NextFunction } from "express";
 
-const PORT = Number(process.env.PORT || 8787);
+const app: Express = express();
+app.set("trust proxy", true);
+app.use(express.json({ limit: "1mb" }));
 
-// Allowed UI origins (comma-separated). Default = your GitHub Pages.
-const ALLOW = (process.env.CORS_ALLOW_ORIGIN || "https://gggp-test.github.io")
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean);
-
-function corsMw(req: Request, res: Response, next: NextFunction) {
-  const origin = String(req.headers.origin || "");
-  const allowed = ALLOW.includes("*") || (origin && ALLOW.includes(origin));
-
-  if (allowed) {
-    res.setHeader("Access-Control-Allow-Origin", origin || "*");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-  }
-  // Methods are fine to always allow
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-
-  // Reflect *requested* headers so things like x-api-key are accepted.
-  const reqHeaders = req.header("access-control-request-headers");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    reqHeaders || "Content-Type, Authorization, X-Requested-With, x-api-key"
-  );
-
-  // Help caches/CDNs vary correctly and cache preflights for a bit
-  res.setHeader("Vary", "Origin, Access-Control-Request-Headers");
-  res.setHeader("Access-Control-Max-Age", "600");
-
-  if (req.method === "OPTIONS") {
-    res.status(204).end();
-    return;
-  }
+// ---- Global CORS (for the panel on github.io) ----
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // Allow the GitHub Pages UI and other tools; loosen during dev
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Vary", "Origin");
+  // Allow custom API key header used by the panel
+  res.header("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  // Fast-path preflight
+  if (req.method === "OPTIONS") return res.status(204).end();
   next();
-}
+});
 
-const app = express();
-app.use(corsMw);
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true }));
+// Simple health
+app.get("/healthz", (_req, res) => res.status(200).json({ ok: true }));
 
-// health
-app.get("/healthz", (_req, res) => res.json({ ok: true }));
-
-// Safe route mounting (keeps this change single-file)
-async function safeMount(path: string, name: string, fnName: string, app: Express) {
+// ---- Mount routes (default export OR named fallback) ----
+async function mount(modPath: string, fallbackName: string, label: string) {
   try {
-    const mod = await import(path);
-    const fn = (mod as any)[fnName] ?? (mod as any).default;
+    const mod = await import(modPath);
+    const fn =
+      (mod as any).default ??
+      (typeof (mod as any)[fallbackName] === "function" ? (mod as any)[fallbackName] : undefined);
     if (typeof fn === "function") {
       fn(app);
-      console.log(`[routes] mounted ${name} from ${path}`);
+      console.log(`[routes] mounted ${label} from ${modPath}`);
     } else {
-      console.log(`[routes] skipped ${name}: no function export in ${path}`);
+      console.warn(`[routes] skipped ${label}: no mount function exported from ${modPath}`);
     }
-  } catch (err: any) {
-    console.log(`[routes] not found: ${path} (${err?.message || err})`);
+  } catch (err) {
+    console.error(`[routes] failed to mount ${label} from ${modPath}`, err);
   }
 }
 
 (async () => {
-  await safeMount("./routes/public", "public", "mountPublic", app);
-  await safeMount("./routes/find", "find", "mountFind", app);
-  await safeMount("./routes/buyers", "buyers", "mountBuyers", app);
-  await safeMount("./routes/webscout", "webscout", "mountWebscout", app);
+  await mount("./routes/public", "mountPublic", "public");
+  await mount("./routes/find", "mountFind", "find");
+  await mount("./routes/buyers", "mountBuyers", "buyers");
+  await mount("./routes/webscout", "mountWebscout", "webscout");
 
-  app.listen(PORT, () => console.log(`[server] listening on :${PORT}`));
+  const port = Number(process.env.PORT) || 8787;
+  app.listen(port, () => console.log(`[server] listening on :${port}`));
 })();
