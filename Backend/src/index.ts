@@ -1,18 +1,9 @@
-import express from "express";
-import cors from "cors";
-import mountRoutes from "./routes";
+import express from 'express';
 
-export const app = express();
-app.use(cors());
-app.use(express.json());
+export type App = express.Application;
 
-// tiny logger (no morgan needed)
-app.use((req, _res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  next();
-});
-
-mountRoutes(app);
-
-export type App = typeof app;
-export default app;
+export function createApp(): App {
+  const app = express();
+  app.use(express.json());
+  return app;
+}
