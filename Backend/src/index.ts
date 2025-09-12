@@ -1,25 +1,18 @@
 import express from "express";
 import cors from "cors";
+import mountRoutes from "./routes";
 
 export const app = express();
 app.use(cors());
 app.use(express.json());
 
-// tiny log so we don't need `morgan`
+// tiny logger (no morgan needed)
 app.use((req, _res, next) => {
   console.log(`${req.method} ${req.url}`);
   next();
 });
 
-// ---- routes ----
-import mountFind from "./routes/find";
-import mountBuyers from "./routes/buyers";
-import mountWebscout from "./routes/webscout";
+mountRoutes(app);
 
-mountFind(app);
-mountBuyers(app);
-mountWebscout(app);
-
-// keep both default and named export to satisfy various imports
 export type App = typeof app;
 export default app;
