@@ -18,6 +18,21 @@
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts", "src/**/__tests__/**"]
+  "files": [
+    "src/index.ts"
+  ],
+  "include": [
+    "src/routes/**/*.ts"
+  ],
+  "exclude": [
+    "src/ui/**",
+    "src/server/**",
+    "src/scripts/**",
+    "src/security/**",
+    "src/data/**",
+    "src/ai/**",
+    "src/ops/**",
+    "src/**/__tests__/**",
+    "src/**/*.test.ts"
+  ]
 }
