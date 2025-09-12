@@ -1,9 +1,8 @@
-import type { Request, Response } from 'express';
-import type { App } from '../index';
+import type { Application, Request, Response } from "express";
 
-export function mountBuyers(app: App) {
-  app.post('/api/v1/buyers', async (req: Request, res: Response) => {
-    const { supplierDomain } = (req.body || {}) as { supplierDomain?: string };
-    res.json({ ok: true, supplierDomain: supplierDomain ?? null, buyers: [] });
+export function mountBuyers(app: Application) {
+  app.post("/api/v1/buyers", async (req: Request, res: Response) => {
+    // Stubbed; replace with real buyer discovery later.
+    res.json({ ok: true, action: "buyers", received: req.body ?? null, buyers: [] });
   });
 }
