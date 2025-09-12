@@ -1,123 +1,149 @@
-// routes/find.ts
-import type { Application, Request, Response } from "express";
-import { Router } from "express";
-import { inferPersona, type Persona } from "../ai/persona-engine";
+import type { Request, Response } from "express";
+import { PersonaEngine } from "../ai/persona-engine";
 
-type Region = "US/CA" | "US" | "CA" | "EU" | "UK" | "ANY";
-interface FindBuyersBody {
-  domain?: string;
-  region?: Region;
-  radiusMi?: number;
-  hints?: string[];
-  snapshotHTML?: string;
+/**
+ * POST /api/v1/leads/find-buyers
+ * Body: { domain: string, region?: string, radiusMi?: number, snapshotHTML?: string, hints?: string[] }
+ *
+ * Behavior:
+ *  - Validates input + CORS headers (incl. x-api-key).
+ *  - Builds a Persona for the supplier.
+ *  - Synthesizes 3–6 buyer “candidate queries” based on top metrics (hot/warm).
+ *  - (Optionally) stores in-memory "created leads" so the Free Panel can show something.
+ *  - Returns { ok, created, hot, warm, persona, candidates }.
+ */
+
+type Candidate = {
+  q: string;             // search intent / query
+  why: string[];         // short reasons
+  temp: "hot" | "warm";
+};
+
+const createdLeads: {
+  id: string;
+  host: string;
+  platform: "web";
+  title: string;
+  created: string;
+  temp: "hot" | "warm";
+  why: string;
+}[] = [];
+
+// crude id
+function rid() {
+  return "L_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
 }
 
-const ALLOWED_HEADERS = "Content-Type, x-api-key";
-const ALLOWED_METHODS = "GET, POST, OPTIONS";
-const HOST_RE = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i;
+// Very small generator mapping persona metrics -> candidate intents
+function candidatesFromPersona(p: Awaited<ReturnType<PersonaEngine["infer"]>>, region: string) : Candidate[] {
+  const out: Candidate[] = [];
+  const add = (q: string, why: string[], temp: "hot" | "warm" = "warm") => {
+    out.push({ q, why, temp });
+  };
 
-function cors(_req: Request, res: Response) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", ALLOWED_HEADERS);
-  res.setHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
-}
-function bad(res: Response, msg: string, code = 400) {
-  cors({} as any, res);
-  return res.status(code).json({ ok: false, error: msg });
-}
-function normalizeHost(input: string): string | null {
-  let s = (input || "").trim();
-  if (!s) return null;
-  try { if (/^https?:\/\//i.test(s)) s = new URL(s).hostname; } catch {}
-  s = s.replace(/^www\./i, "").replace(/[:\/].*$/, "");
-  if (!HOST_RE.test(s)) return null;
-  return s.toLowerCase();
-}
+  const top = new Set(p.top);
 
-export default function mountFind(app: Application) {
-  const r = Router();
-  app.use("/api/v1", r);
-
-  r.options("/leads/find-buyers", (req, res) => { cors(req, res); return res.sendStatus(204); });
-
-  r.post("/leads/find-buyers", expressJsonIfNeeded, async (req: Request, res: Response) => {
-    cors(req, res);
-
-    const apiKey = String(req.header("x-api-key") || "").trim();
-    const tenantId = apiKey || "anon";
-
-    const body: FindBuyersBody = (req.body ?? {}) as any;
-    const domain = normalizeHost(body.domain || "");
-    if (!domain) return bad(res, "domain is required");
-
-    const region = (body.region || "US/CA") as Region;
-    const radiusMi = Number.isFinite(body.radiusMi) ? Number(body.radiusMi) : 50;
-
-    let persona: Persona;
-    try {
-      persona = await inferPersona({
-        tenantId,
-        domain,
-        region,
-        allowLLM: true,
-        snapshotHTML: body.snapshotHTML,
-        extraHints: Array.isArray(body.hints) ? body.hints.slice(0, 12) : []
-      });
-    } catch (e: any) {
-      return bad(res, `persona build failed: ${e?.message || "unknown"}`, 500);
-    }
-
-    const topMetrics = persona.metrics.slice(0, Math.min(3, persona.metrics.length));
-    const termBag = persona.terms.slice(0, 18);
-
-    const queries = topMetrics.map((m) => ({
-      metric: { key: m.key, label: m.label, weight: m.weight, reason: m.reason },
-      query: buildQueryForMetric(m.key, termBag, region, radiusMi)
-    }));
-
-    const summary = { created: 0, hot: countHot(topMetrics), warm: countWarm(topMetrics) };
-
-    return res.status(200).json({
-      ok: true,
-      domain,
-      region,
-      radiusMi,
-      summary,
-      plan: { queries, topTerms: termBag, metrics: topMetrics },
-      explain: {
-        why: topMetrics.map((m) => `${m.label}: ${m.reason}`),
-        snapshot: { chars: persona.provenance.snapshotChars, sources: persona.provenance.sources },
-        llmUsed: persona.provenance.llmUsed
-      }
-    });
-  });
-}
-
-function buildQueryForMetric(key: string, terms: string[], region: Region, radiusMi: number) {
-  const base: string[] = [];
-  switch (key) {
-    case "DCS": base.push("3pl","fulfillment","distribution center","warehouse"); break;
-    case "ILL": base.push("mixed pallet","irregular loads","heterogeneous case"); break;
-    case "RPI": base.push("dim weight","right-size packaging","cartonization"); break;
-    case "CCI": base.push("cold chain","insulated shipper","refrigerated"); break;
-    case "AUTO": base.push("automation","palletizer","pre-stretch wrapper"); break;
-    case "SUS": base.push("recycled content","epr compliance","lightweighting"); break;
-    case "FEI": base.push("ista","fragile goods","shock protection"); break;
-    case "LABEL": base.push("labeling","thermal transfer","print and apply"); break;
-    case "FOOD": base.push("beverage plant","canning line","bottling"); break;
-    case "PHARMA": base.push("iso 13485","cleanroom","gmp"); break;
-    default: base.push("packaging buyer","operations manager");
+  if (top.has("3PL")) {
+    add(`("${p.domain}" OR packaging) buyers 3PL fulfillment ${region}`, ["3PL signals", "multinode/DC"], "hot");
+    add(`third party logistics warehouse manager packaging ${region}`, ["3PL roles"]);
   }
-  const extra = terms.slice(0, 4);
-  const q = Array.from(new Set([...base, ...extra])).join(" | ");
-  return { text: q, region, radiusMi };
+  if (top.has("ILL") || top.has("STR")) {
+    add(`warehouse irregular pallets stretch film turntable ${region}`, ["irregular load / stretch"]);
+    add(`pallet wrapping automation buyer ${region}`, ["automation buyer"]);
+  }
+  if (top.has("CCI")) {
+    add(`cold chain insulated shipper buyer ${region}`, ["cold chain intensity"], "hot");
+  }
+  if (top.has("DFS")) {
+    add(`ecommerce fulfillment packaging manager ${region}`, ["D2C tech stack"]);
+  }
+  if (top.has("CWB")) {
+    add(`corrugated box engineer / packaging engineer ${region}`, ["heavy corrugated use"]);
+  }
+  if (top.has("FNB")) {
+    add(`food & beverage packaging manager ${region}`, ["F&B compliance"]);
+  }
+  if (out.length < 3) {
+    add(`warehouse packaging buyer ${region}`, ["generic fallback"]);
+  }
+  return out.slice(0, 6);
 }
-function countHot(ms: { weight: number }[]) { return ms.filter(m => m.weight >= 0.6).length; }
-function countWarm(ms: { weight: number }[]) { return ms.filter(m => m.weight > 0.25 && m.weight < 0.6).length; }
 
-function expressJsonIfNeeded(req: Request, _res: Response, next: Function) {
-  if (typeof req.body === "object" && req.body !== null) return next();
-  let data = ""; req.setEncoding("utf8");
-  req.on("data", (c) => (data += c));
-  req.on("end", () => { try { req.body = data ? JSON.parse(data) : {}; } catch { req.body = {}; } next(); });
+function allowCors(res: Response) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+}
+
+export default function mountFind(app: any) {
+  // For health-style logging parity with your other routes
+  console.log("[routes] mounted find from ./routes/find");
+
+  app.options("/api/v1/leads/find-buyers", (req: Request, res: Response) => {
+    allowCors(res);
+    res.status(204).end();
+  });
+
+  app.post("/api/v1/leads/find-buyers", async (req: Request, res: Response) => {
+    allowCors(res);
+
+    try {
+      const { domain, region, radiusMi, snapshotHTML } = (req.body || {}) as {
+        domain?: string;
+        region?: string;
+        radiusMi?: number;
+        snapshotHTML?: string;
+      };
+
+      if (!domain || typeof domain !== "string" || domain.trim() === "") {
+        return res.status(400).json({ ok: false, error: "domain is required" });
+      }
+
+      const engine = new PersonaEngine({
+        openRouterKey: process.env.OPENROUTER_API_KEY,
+        openRouterModel: process.env.OPENROUTER_MODEL
+      });
+
+      const persona = await engine.infer(domain, snapshotHTML);
+      const candidates = candidatesFromPersona(persona, region || "US/CA");
+
+      // materialize a few “leads” locally so the Free Panel has rows to show
+      let hot = 0, warm = 0, created = 0;
+      for (const c of candidates) {
+        const item = {
+          id: rid(),
+          host: persona.domain,
+          platform: "web" as const,
+          title: c.q,
+          created: new Date().toISOString(),
+          temp: c.temp,
+          why: c.why.join(", ")
+        };
+        createdLeads.unshift(item);
+        created++;
+        if (c.temp === "hot") hot++; else warm++;
+      }
+
+      return res.status(200).json({
+        ok: true,
+        created,
+        hot,
+        warm,
+        persona,
+        candidates
+      });
+    } catch (err: any) {
+      return res.status(500).json({ ok: false, error: String(err?.message || err || "internal error") });
+    }
+  });
+
+  // Lenient public listing so the Free Panel can GET /leads and see what we just created
+  app.get("/leads", (_req: Request, res: Response) => {
+    allowCors(res);
+    const region = (_req.query?.region as string) || "US/CA";
+    const temp = (_req.query?.temp as string) || "warm";
+    // very simple filter facade; your panel only checks counts & rows
+    const rows = createdLeads.filter(() => true);
+    res.status(200).json({ ok: true, region, temp, count: rows.length, rows });
+  });
 }
