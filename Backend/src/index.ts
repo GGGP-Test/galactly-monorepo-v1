@@ -1,38 +1,62 @@
 // src/index.ts
-/**
- * Minimal bootstrap to keep the service running reliably under tsx/Node20.
- * - Uses CJS-compatible require for Express to avoid "express is not a function".
- * - Provides /healthz for readiness probes.
- * - Wires a placeholder /api/v1/leads/find-buyers that validates input
- *   (keeps current 400 for missing `domain` so UI behavior remains consistent).
- */
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 
-import http from "http";
+const PORT = Number(process.env.PORT || 8787);
 
-// --- Express import (interop-safe) ---
-const _express = require("express"); // CJS require works under tsx too
-const express: any = _express?.default ?? _express;
+// Allow the GitHub Pages UI by default; set CORS_ALLOW_ORIGIN="*"
+// or a comma list if you need more.
+const ALLOW = (process.env.CORS_ALLOW_ORIGIN || "https://gggp-test.github.io")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
 
-// --- App wiring ---
-const app = express();
-app.use(express.json());
-
-// Health endpoint for probes
-app.get("/healthz", (_req: any, res: any) => res.status(200).send("ok"));
-
-// Keep current behavior for the panel (400 if domain is missing)
-app.post("/api/v1/leads/find-buyers", (req: any, res: any) => {
-  const { domain } = req.body || {};
-  if (!domain || typeof domain !== "string" || !domain.includes(".")) {
-    return res.status(400).json({ ok: false, error: "domain is required" });
+function corsMw(req: Request, res: Response, next: NextFunction) {
+  const origin = String(req.headers.origin || "");
+  const allowed = ALLOW.includes("*") || (origin && ALLOW.includes(origin));
+  if (allowed) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
   }
+  // allow JSON fetches from the UI
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  if (req.method === "OPTIONS") {
+    res.status(204).end();
+    return;
+  }
+  next();
+}
 
-  // TODO: later we’ll connect to the real buyer-finder flow.
-  return res.status(501).json({ ok: false, error: "not implemented yet" });
-});
+const app = express();
+app.use(corsMw);
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-// Start server
-const port = Number(process.env.PORT || 8787);
-app.listen(port, () => {
-  console.log(`[server] listening on :${port}`);
-});
+// simple health
+app.get("/healthz", (_req, res) => res.json({ ok: true }));
+
+// ---- Safe mounting of existing route modules (no breakage if absent) ----
+async function safeMount(path: string, name: string, fnName: string, app: Express) {
+  try {
+    const mod = await import(path);
+    const fn = (mod as any)[fnName] ?? (mod as any).default;
+    if (typeof fn === "function") {
+      fn(app);
+      console.log(`[routes] mounted ${name} from ${path}`);
+    } else {
+      console.log(`[routes] skipped ${name}: no function export in ${path}`);
+    }
+  } catch (err: any) {
+    console.log(`[routes] not found: ${path} (${err?.message || err})`);
+  }
+}
+
+(async () => {
+  await safeMount("./routes/public", "public", "mountPublic", app);
+  await safeMount("./routes/find", "find", "mountFind", app);
+  await safeMount("./routes/buyers", "buyers", "mountBuyers", app);
+  await safeMount("./routes/webscout", "webscout", "mountWebscout", app);
+
+  app.listen(PORT, () => console.log(`[server] listening on :${PORT}`));
+})();
