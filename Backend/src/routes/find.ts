@@ -1,27 +1,18 @@
-import type { Request, Response } from 'express';
-import type { App } from '../index';
+import type { Application, Request, Response } from "express";
 
-type FindBody = {
-  productOffer?: string;
-  solves?: string;
-  buyerTitles?: string[];
-  persona?: {
-    productOffer?: string;
-    solves?: string;
-    buyerTitles?: string[];
-  };
-  targets?: string[];
-};
+export function mountFind(app: Application) {
+  app.post("/api/v1/find", async (req: Request, res: Response) => {
+    const body = (req.body ?? {}) as any;
 
-export function mountFind(app: App) {
-  app.post('/api/v1/find', async (req: Request<unknown, unknown, FindBody>, res: Response) => {
-    const { productOffer, solves, buyerTitles, persona, targets } = req.body || {};
-    res.json({
-      ok: true,
-      productOffer: productOffer ?? persona?.productOffer ?? null,
-      solves: solves ?? persona?.solves ?? null,
-      buyerTitles: buyerTitles ?? persona?.buyerTitles ?? [],
-      targets: targets ?? []
-    });
+    const payload = {
+      productOffer: body.productOffer ?? null,
+      solves: body.solves ?? null,
+      buyerTitles: Array.isArray(body.buyerTitles) ? body.buyerTitles : [],
+      persona: body.persona ?? null,
+      targets: Array.isArray(body.targets) ? body.targets : []
+    };
+
+    // Stubbed; replace with pipeline call later.
+    res.json({ ok: true, action: "find", received: payload });
   });
 }
