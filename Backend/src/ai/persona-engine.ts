@@ -1,251 +1,254 @@
-// src/ai/persona-engine.ts
-// Builds a supplier Persona from a domain using heuristics + (optional) OpenRouter JSON output.
-// No external npm deps. Node 20 fetch only.
-
-import { METRICS, DEFAULT_TITLES, type MetricDef } from "./metric-dictionary";
+import { METRIC_SEEDS, PHRASE_TO_METRICS, MetricId } from "./metric-dictionary";
 
 export interface PersonaMetric {
-  key: string;
-  label: string;
-  weight: number;     // 0..1 confidence/importance
-  reason: string;     // one-liner
+  id: MetricId;
+  prior: number;          // prior belief (0..1)
+  evidence: number;       // observed signal strength (0..1)
+  posterior: number;      // fused score
+  why: string[];          // snippets/keywords that triggered it
 }
 
 export interface Persona {
   domain: string;
   metrics: PersonaMetric[];
-  terms: string[];    // keywords for query planners
-  provenance: {
-    snapshotChars: number;
-    sources: string[];      // e.g. ["https://example.com/"]
-    llmUsed?: string;       // openrouter model if used
-  };
+  top: MetricId[];          // sorted by posterior
+  tags: string[];           // human-readable hints
+  version: string;
 }
 
-interface Input {
-  tenantId: string;
+export interface Snapshot {
   domain: string;
-  region: string;
-  allowLLM?: boolean;
-  snapshotHTML?: string;
-  extraHints?: string[];
+  title?: string;
+  meta?: string[];
+  text: string[];           // tokenized visible text (lowercased)
+  links: string[];          // visible outbound links/hostnames (lowercased)
 }
 
-// ---------- tiny TTL cache (in-memory) ----------
-const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-const cache = new Map<string, { t: number; p: Persona }>();
-function keyOf(i: Input) { return `${i.tenantId}::${i.domain.toLowerCase()}`; }
-
-// ---------- public API ----------
-export async function inferPersona(i: Input): Promise<Persona> {
-  const k = keyOf(i);
-  const hit = cache.get(k);
-  if (hit && Date.now() - hit.t < TTL_MS) return hit.p;
-
-  const { html, src } = await getSnapshot(i);
-  const heur = scoreByHeuristics(html);
-
-  let llmMetrics: PersonaMetric[] = [];
-  let llmTerms: string[] = [];
-  let llmUsed: string | undefined;
-
-  if (i.allowLLM && process.env.OPENROUTER_API_KEY) {
-    try {
-      const llm = await llmSuggest(html, i.extraHints || []);
-      llmMetrics = llm.metrics;
-      llmTerms = llm.terms;
-      llmUsed = llm.model;
-    } catch { /* swallow LLM errors – heuristics still work */ }
-  }
-
-  const merged = mergeHeurAndLLM(heur.metrics, llmMetrics);
-  const terms = dedupe([
-    ...heur.terms.slice(0, 24),
-    ...llmTerms.slice(0, 24),
-    ...DEFAULT_TITLES
-  ]).slice(0, 40);
-
-  const persona: Persona = {
-    domain: i.domain.toLowerCase(),
-    metrics: merged.slice(0, 6),
-    terms,
-    provenance: {
-      snapshotChars: html.length,
-      sources: [src],
-      llmUsed
+/** Utility: normalize hostname from input */
+export function normalizeDomain(input: string): string {
+  try {
+    const trimmed = input.trim().toLowerCase();
+    if (!trimmed) return "";
+    if (trimmed.includes("://")) {
+      const u = new URL(trimmed);
+      return u.hostname.replace(/^www\./, "");
     }
-  };
-
-  cache.set(k, { t: Date.now(), p: persona });
-  return persona;
-}
-
-// ---------- snapshot fetch ----------
-async function getSnapshot(i: Input): Promise<{ html: string; src: string }> {
-  if (i.snapshotHTML && i.snapshotHTML.trim().length > 200) {
-    return { html: sanitize(i.snapshotHTML).slice(0, 80_000), src: `inline:${i.domain}` };
+    return trimmed.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
+  } catch {
+    return input.trim().toLowerCase();
   }
-  const urls = [`https://${i.domain}/`, `http://${i.domain}/`];
-  for (const u of urls) {
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 7000);
-      const r = await fetch(u, { signal: ctrl.signal, headers: { "accept": "text/html,*/*" } as any });
-      clearTimeout(timer);
-      if (r.ok) {
-        const text = sanitize(await r.text());
-        if (text.length > 200) return { html: text.slice(0, 80_000), src: u };
-      }
-    } catch { /* try next */ }
-  }
-  // Last resort – empty snapshot (engine will still rely on hints)
-  return { html: "", src: `none:${i.domain}` };
 }
 
-function sanitize(s: string) {
-  // strip scripts/styles to reduce LLM tokens & noise
-  return s
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/\s+/g, " ");
-}
+/** Very cheap HTML→Snapshot reducer (no external deps). */
+export function htmlToSnapshot(domain: string, html?: string): Snapshot {
+  const text: string[] = [];
+  const links: string[] = [];
+  const meta: string[] = [];
 
-// ---------- heuristic scoring ----------
-function scoreByHeuristics(html: string): { metrics: PersonaMetric[]; terms: string[] } {
-  const text = html.toLowerCase();
-  const metrics: PersonaMetric[] = [];
+  if (html) {
+    const lower = html.toLowerCase();
 
-  for (const m of METRICS) {
-    const hits = countHits(text, m.triggers);
-    if (hits > 0) {
-      const weight = Math.max(0.1, Math.min(1, Math.log10(1 + hits) / 1.2)); // smooth scale
-      metrics.push({
-        key: m.key,
-        label: m.label,
-        weight,
-        reason: `Found ${hits} mention(s) across: ${m.triggers.slice(0, 4).join(", ")}…`
-      });
+    // strip script/style quickly
+    const stripped = lower
+      .replace(/<script[\s\S]*?<\/script>/g, " ")
+      .replace(/<style[\s\S]*?<\/style>/g, " ");
+
+    // meta tags
+    const metaMatches = stripped.match(/<meta[^>]+(name|property)="[^"]+"[^>]+content="[^"]+"[^>]*>/g) || [];
+    for (const m of metaMatches) {
+      const c = (m.match(/content="([^"]+)"/) || [])[1];
+      if (c) meta.push(c);
+    }
+
+    // visible text (very rough)
+    stripped
+      .replace(/<[^>]+>/g, " ")
+      .split(/\s+/g)
+      .filter(Boolean)
+      .forEach((w) => text.push(w));
+
+    // links
+    const hrefs = stripped.match(/href="([^"]+)"/g) || [];
+    for (const h of hrefs) {
+      const url = h.slice(6, -1);
+      try {
+        const u = new URL(url, "https://" + domain);
+        links.push(u.hostname.replace(/^www\./, ""));
+      } catch { /* ignore */ }
     }
   }
 
-  // crude keywords extraction: title, h1, meta content words > 3 chars
-  const kw = extractKeywords(html);
-  return { metrics: metrics.sort((a,b)=>b.weight-a.weight), terms: kw };
+  return { domain, text, links, meta };
 }
 
-function countHits(text: string, phrases: string[]) {
-  let c = 0;
-  for (const p of phrases) {
-    const re = new RegExp(`\\b${escapeRegex(p)}\\b`, "gi");
-    c += (text.match(re) || []).length;
-  }
-  return c;
-}
+/** Heuristic scoring: count phrase hits, combine with priors via simple fusion. */
+function scoreWithHeuristics(snap: Snapshot) {
+  const counts: Record<MetricId, number> = Object.create(null);
+  const why: Record<MetricId, string[]> = Object.create(null);
 
-function extractKeywords(html: string): string[] {
-  const m = html.match(/<(title|h1|meta)[^>]*(content="[^"]*"|[^>]*)>/gi) || [];
-  const bag = new Map<string, number>();
-  for (const tag of m) {
-    const chunk = tag.toLowerCase().replace(/<[^>]+>/g, " ").replace(/content="([^"]*)"/, "$1");
-    for (const w of chunk.split(/[^a-z0-9+/-]+/g)) {
-      if (w.length < 4 || w.length > 24) continue;
-      if (/^(home|about|contact|policy|terms|copyright)$/.test(w)) continue;
-      bag.set(w, (bag.get(w) || 0) + 1);
+  const corpus: string[] = [
+    ...(snap.meta || []),
+    ...snap.text,
+    ...snap.links
+  ].map((t) => t.toLowerCase());
+
+  // exact phrase matches (cheap)
+  for (const token of corpus) {
+    const metrics = PHRASE_TO_METRICS[token];
+    if (!metrics) continue;
+    for (const m of metrics) {
+      counts[m] = (counts[m] || 0) + 1;
+      if (!why[m]) why[m] = [];
+      if (why[m].length < 8) why[m].push(token);
     }
   }
-  return Array.from(bag.entries()).sort((a,b)=>b[1]-a[1]).map(([w])=>w).slice(0, 40);
-}
 
-// ---------- OpenRouter JSON suggester ----------
-async function llmSuggest(snapshot: string, hints: string[]) {
-  const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
-  const prompt = [
-    {
-      role: "system",
-      content:
-        "You analyze a supplier website snapshot and return STRICT JSON. " +
-        "Goal: identify top packaging buyer metrics and relevant search terms. " +
-        "Return ONLY JSON with fields: metrics[{key,label,weight,reason}], terms[]. " +
-        "Weights in [0,1]. Keep metrics<=6, terms<=24."
-    },
-    {
-      role: "user",
-      content:
-        JSON.stringify({
-          snapshot: snapshot.slice(0, 16_000),
-          hints
-        })
-    }
-  ];
-
-  const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://your.app (persona-engine)",
-      "X-Title": "persona-engine"
-    } as any,
-    body: JSON.stringify({
-      model,
-      temperature: 0.1,
-      max_tokens: 600,
-      response_format: { type: "json_object" },
-      messages: prompt
-    })
+  // convert to [0..1] evidence with log dampening
+  const metrics = METRIC_SEEDS.map((seed) => {
+    const c = counts[seed.id] || 0;
+    const evidence = c === 0 ? 0 : 1 - Math.exp(-c / 3);
+    const prior = seed.weight;
+    // a cheap Bayesian-ish fusion (not rigorous, but monotonic and bounded)
+    const posterior = 1 - (1 - prior) * (1 - evidence);
+    return {
+      id: seed.id,
+      prior,
+      evidence,
+      posterior,
+      why: (why[seed.id] || []).slice(0, 8)
+    };
   });
 
-  if (!r.ok) throw new Error(`openrouter ${r.status}`);
-  const data = await r.json();
+  metrics.sort((a, b) => b.posterior - a.posterior);
+  const top = metrics.slice(0, 5).map((m) => m.id);
 
-  const raw = (data?.choices?.[0]?.message?.content || "").trim();
-  const parsed = safeParse(raw, { metrics: [], terms: [] });
-
-  // Coerce to known shape, clip, sanitize weights
-  const metrics: PersonaMetric[] = (parsed.metrics || []).slice(0, 6).map((m: any) => ({
-    key: String(m.key || "").slice(0, 12),
-    label: String(m.label || "").slice(0, 80),
-    weight: clamp(Number(m.weight), 0, 1),
-    reason: String(m.reason || "").slice(0, 140)
-  }));
-
-  const terms: string[] = (parsed.terms || []).map((t: any)=>String(t)).filter(Boolean).slice(0, 24);
-
-  return { metrics, terms, model };
-}
-
-function safeParse(s: string, d: any) { try { return JSON.parse(s); } catch { return d; } }
-function clamp(x: number, a: number, b: number) { return Math.max(a, Math.min(b, isFinite(x)?x:0)); }
-function dedupe<T>(arr: T[]) { return Array.from(new Set(arr)); }
-function escapeRegex(s: string){ return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
-
-// ---------- merge logic ----------
-function mergeHeurAndLLM(heur: PersonaMetric[], llm: PersonaMetric[]): PersonaMetric[] {
-  const byKey = new Map<string, PersonaMetric>();
-
-  const add = (m: PersonaMetric, w: number) => {
-    const prev = byKey.get(m.key);
-    if (!prev) {
-      byKey.set(m.key, { ...m, weight: clamp(m.weight * w, 0, 1) });
-    } else {
-      prev.weight = clamp(prev.weight + m.weight * w, 0, 1);
-      if (!prev.reason && m.reason) prev.reason = m.reason;
-      if (!prev.label && m.label) prev.label = m.label;
-    }
-  };
-
-  // Heuristics have strong prior; LLM adds/modulates.
-  heur.forEach(m => add(m, 0.8));
-  llm.forEach(m => add(m, 0.5));
-
-  // If LLM produced a key we don't know, keep it (prefix AI:)
-  for (const m of llm) {
-    if (!METRICS.find(x => x.key === m.key)) {
-      const k = `AI:${m.key}`.slice(0, 12);
-      const existing = byKey.get(k);
-      if (!existing) byKey.set(k, { ...m, key: k, label: m.label || "AI metric" });
-    }
+  // lightweight tags
+  const tags: string[] = [];
+  for (const m of metrics.slice(0, 5)) {
+    if (m.posterior >= 0.35) tags.push(`${m.id}:${m.posterior.toFixed(2)}`);
   }
 
-  return Array.from(byKey.values()).sort((a,b)=>b.weight-a.weight);
+  return { metrics, top, tags };
+}
+
+/** Optional OpenRouter refinement with JSON output, guarded and budgeted. */
+async function refineWithOpenRouter(
+  persona: ReturnType<typeof scoreWithHeuristics>,
+  snap: Snapshot,
+  opts: { apiKey?: string; model?: string; timeoutMs?: number }
+) {
+  if (!opts.apiKey) return persona; // skip if not configured
+
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 3500);
+
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${opts.apiKey}`,
+        // Optional best-practice headers for OpenRouter
+        "HTTP-Referer": "https://gggp-test.github.io",
+        "X-Title": "Galactly Persona Engine"
+      },
+      body: JSON.stringify({
+        model: opts.model || "openai/gpt-4o-mini",
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an industrial packaging signal detector. " +
+              "Return ONLY JSON with {boosts:[{id,delta,why[]}]} where id is one of " +
+              "[ILL,CCI,DFS,RPI,FEI,SUS,CWB,STR,TAP,FNB,HCP,3PL,HAZ,BUL,LTL,ECO]. " +
+              "delta in [-0.2, +0.2]. Don't invent new ids."
+          },
+          {
+            role: "user",
+            content:
+              `Domain: ${snap.domain}\n` +
+              `Top heuristic metrics: ${persona.top.join(",")}\n` +
+              `Meta: ${(snap.meta || []).slice(0, 10).join(" | ")}\n` +
+              `Links: ${snap.links.slice(0, 10).join(",")}\n` +
+              `Sample text: ${snap.text.slice(0, 80).join(" ")}`
+          }
+        ]
+      })
+    });
+
+    clearTimeout(t);
+    if (!res.ok) return persona;
+
+    const data = await res.json() as any;
+    const boosts: { id: string; delta: number; why?: string[] }[] =
+      data?.choices?.[0]?.message?.content
+        ? JSON.parse(data.choices[0].message.content).boosts || []
+        : (data?.boosts || []);
+
+    if (!Array.isArray(boosts)) return persona;
+
+    // apply bounded deltas
+    const byId: Record<string, number> = Object.create(null);
+    const why: Record<string, string[]> = Object.create(null);
+    for (const b of boosts) {
+      if (!b || typeof b.id !== "string") continue;
+      const id = b.id as MetricId;
+      const delta = Math.max(-0.2, Math.min(0.2, Number(b.delta) || 0));
+      byId[id] = (byId[id] || 0) + delta;
+      if (b.why && Array.isArray(b.why)) {
+        why[id] = (why[id] || []).concat(b.why).slice(0, 8);
+      }
+    }
+
+    const metrics = persona.metrics.map((m) => {
+      const adj = Math.max(0, Math.min(1, m.posterior + (byId[m.id] || 0)));
+      const whyMerged = m.why.concat(why[m.id] || []);
+      return { ...m, posterior: adj, why: whyMerged.slice(0, 8) };
+    });
+
+    metrics.sort((a, b) => b.posterior - a.posterior);
+    const top = metrics.slice(0, 5).map((m) => m.id);
+    const tags = metrics.slice(0, 5).map((m) => `${m.id}:${m.posterior.toFixed(2)}`);
+    return { metrics, top, tags };
+  } catch {
+    clearTimeout(t);
+    return persona;
+  }
+}
+
+export class PersonaEngine {
+  private cache = new Map<string, Persona>(); // in-memory; swap to DB later
+
+  constructor(private opts?: { openRouterKey?: string; openRouterModel?: string }) {}
+
+  /** Snapshot HTML (if provided), score heuristically, then optionally refine with LLM. */
+  async infer(domainInput: string, html?: string): Promise<Persona> {
+    const domain = normalizeDomain(domainInput);
+    if (!domain) throw new Error("domain is required");
+
+    const cached = this.cache.get(domain);
+    if (cached) return cached;
+
+    const snap = htmlToSnapshot(domain, html);
+    const base = scoreWithHeuristics(snap);
+    const refined = await refineWithOpenRouter(base, snap, {
+      apiKey: this.opts?.openRouterKey || process.env.OPENROUTER_API_KEY,
+      model: this.opts?.openRouterModel || process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
+      timeoutMs: 3500
+    });
+
+    const persona: Persona = {
+      domain,
+      metrics: refined.metrics,
+      top: refined.top,
+      tags: refined.tags,
+      version: "v1"
+    };
+
+    this.cache.set(domain, persona);
+    return persona;
+  }
 }
