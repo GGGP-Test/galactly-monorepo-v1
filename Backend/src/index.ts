@@ -2,46 +2,45 @@
 import express, { type Express } from 'express';
 import cors from 'cors';
 
-// Optional logger without forcing dependency:
-// - avoids build errors if 'morgan' isn't installed
-function tryMorgan() {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const m = require('morgan'); // typed via stub; present or not, build won't fail
-    return typeof m === 'function' ? m : (m?.default ?? null);
-  } catch {
-    return null;
-  }
+// NOTE: make morgan optional so TypeScript doesn't require its types.
+// This also avoids "Cannot find module 'morgan'" at compile time.
+let morganFn: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  morganFn = require('morgan');
+} catch {
+  morganFn = null;
 }
 
-export function createApp(): Express {
-  const app = express();
+export type App = Express;
 
-  app.use(cors());
-  app.use(express.json({ limit: '1mb' }));
+export const app: App = express();
+app.use(cors());
+app.use(express.json());
 
-  const morgan = tryMorgan();
-  if (morgan) {
-    app.use(morgan('tiny'));
-  }
-
-  // mount routes
-  const { mountRoutes } = require('./routes'); // avoid circular types
-  mountRoutes(app);
-
-  // health
-  app.get('/healthz', (_req, res) => res.status(200).json({ ok: true }));
-
-  return app;
-}
-
-// If we're executed directly, start a server (for local / dev)
-if (require.main === module) {
-  const app = createApp();
-  const port = process.env.PORT ? Number(process.env.PORT) : 8787;
-  app.listen(port, () => {
-    console.log(`[server] listening on http://0.0.0.0:${port}`);
+if (morganFn) {
+  app.use(morganFn('dev'));
+} else {
+  // Tiny fallback logger if morgan isn't installed.
+  app.use((req, _res, next) => {
+    console.log(`${req.method} ${req.url}`);
+    next();
   });
 }
 
-export default createApp;
+/** Mount helpers (imported below) register their own routes on the app */
+import { mountFind } from './routes/find';
+import { mountBuyers } from './routes/buyers';
+import { mountWebscout } from './routes/webscout';
+import { mountLeads } from './routes/leads';
+
+mountFind(app);
+mountBuyers(app);
+mountWebscout(app);
+mountLeads(app); // keep whatever you already had under /api/v1/leads
+
+// Healthz for platform checks
+app.get('/healthz', (_req, res) => res.status(200).send('ok'));
+
+// Export default for server bootstrap or tests
+export default app;
