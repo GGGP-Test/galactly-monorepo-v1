@@ -1,20 +1,27 @@
-import type { Application, Request, Response } from "express";
+import type { Request, Response } from 'express';
+import type { App } from '../index';
 
-// Minimal shape so the file compiles cleanly.
-// We intentionally do not rely on persona/targets here yet.
-type FindRequestBody = {
+type FindBody = {
   productOffer?: string;
   solves?: string;
   buyerTitles?: string[];
-  supplierDomain?: string;
+  persona?: {
+    productOffer?: string;
+    solves?: string;
+    buyerTitles?: string[];
+  };
+  targets?: string[];
 };
 
-export function mountFind(app: Application) {
-  // Stub endpoint to keep the build green. Replace with real implementation later.
-  app.post("/api/v1/leads/find", (req: Request<unknown, unknown, FindRequestBody>, res: Response) => {
-    return res.status(501).json({ ok: false, error: "find: not implemented yet" });
+export function mountFind(app: App) {
+  app.post('/api/v1/find', async (req: Request<unknown, unknown, FindBody>, res: Response) => {
+    const { productOffer, solves, buyerTitles, persona, targets } = req.body || {};
+    res.json({
+      ok: true,
+      productOffer: productOffer ?? persona?.productOffer ?? null,
+      solves: solves ?? persona?.solves ?? null,
+      buyerTitles: buyerTitles ?? persona?.buyerTitles ?? [],
+      targets: targets ?? []
+    });
   });
 }
-
-// Export default too, so either import style works.
-export default mountFind;
