@@ -9,10 +9,11 @@
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultExports": true,
+    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "downlevelIteration": true,
     "types": ["node"],
+    "forceConsistentCasingInFileNames": true,
     "noEmit": false,
     "declaration": false,
     "sourceMap": false
