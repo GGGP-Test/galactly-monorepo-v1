@@ -6,7 +6,16 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "fs";
 import { dirname } from "path";
 
-export type LeadStatus = "new" | "enriched" | "qualified" | "routed" | "contacted" | "won" | "lost" | "archived";
+// ----------------- Types -----------------
+export type LeadStatus =
+  | "new"
+  | "enriched"
+  | "qualified"
+  | "routed"
+  | "contacted"
+  | "won"
+  | "lost"
+  | "archived";
 
 export interface ContactRef {
   name?: string;
@@ -20,15 +29,15 @@ export interface ContactRef {
 export interface LeadRecord {
   id: string;
   tenantId: string;
-  source: string; // "opal" | "google" | "dir:c-pacs" | "seed" | ...
+  source: string; // "opal" | "google" | "dir:c-pacs" | "seed" | "web:ddg" | ...
   company?: string;
   domain?: string;
   website?: string;
   country?: string;
   region?: string;
   verticals?: string[];
-  signals?: Record<string, number>; // e.g., "hiring_ops": 0.8
-  scores?: Record<string, number>; // "intent", "fit", "timing", "trust"
+  signals?: Record<string, number | string>;
+  scores?: Record<string, number>; // "intent", "fit", "timing", "trust"...
   contacts?: ContactRef[];
   status: LeadStatus;
   createdAt: number;
@@ -73,7 +82,10 @@ export interface Decision {
 export interface BleedStore {
   upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord>;
   getLead(tenantId: string, id: string): Promise<LeadRecord | undefined>;
-  listLeads(tenantId: string, opts?: { status?: LeadStatus; limit?: number; search?: string }): Promise<LeadRecord[]>;
+  listLeads(
+    tenantId: string,
+    opts?: { status?: LeadStatus; limit?: number; search?: string }
+  ): Promise<LeadRecord[]>;
   addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence>;
   listEvidence(leadId: string, limit?: number): Promise<Evidence[]>;
   addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision>;
@@ -83,25 +95,44 @@ export interface BleedStore {
   exportTenant(tenantId: string): Promise<{ leads: LeadRecord[]; evidence: Evidence[]; decisions: Decision[] }>;
 }
 
+// ----------------- utils -----------------
 function now() {
   return Date.now();
 }
-function id() {
+function genId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
+function uniq<T>(arr: T[]) {
+  return Array.from(new Set(arr));
+}
+function mergeContacts(a?: ContactRef[], b?: ContactRef[]) {
+  if (!a || a.length === 0) return b || [];
+  if (!b || b.length === 0) return a;
+  const out: ContactRef[] = [...a];
+  for (const c of b) {
+    const key = c.emailHash || c.phoneHash || c.linkedin || (c.name ? c.name.toLowerCase() : "");
+    const exists = out.find(
+      (x) => (x.emailHash || x.phoneHash || x.linkedin || (x.name ? x.name.toLowerCase() : "")) === key
+    );
+    if (!exists) out.push(c);
+  }
+  return out;
+}
 
+// ----------------- In-memory store -----------------
 export class MemoryBleedStore implements BleedStore {
-  private leads = new Map<string, LeadRecord>(); // key leadId
-  private evByLead = new Map<string, Evidence[]>();
-  private decByLead = new Map<string, Decision[]>();
+  protected leads = new Map<string, LeadRecord>(); // key leadId
+  protected evByLead = new Map<string, Evidence[]>();
+  protected decByLead = new Map<string, Decision[]>();
 
   async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord> {
-    // naive key by domain or id
+    // merge by (tenantId + domain) or explicit id
     const existing = lead.id
       ? this.leads.get(lead.id)
       : [...this.leads.values()].find(
-          (l) => l.tenantId === lead.tenantId && l.domain && l.domain === lead.domain
+          (l) => l.tenantId === lead.tenantId && l.domain && lead.domain && l.domain === lead.domain
         );
+
     if (existing) {
       const merged: LeadRecord = {
         ...existing,
@@ -116,8 +147,9 @@ export class MemoryBleedStore implements BleedStore {
       this.leads.set(merged.id, merged);
       return merged;
     }
+
     const record: LeadRecord = {
-      id: lead.id || id(),
+      id: lead.id || genId(),
       tenantId: lead.tenantId,
       source: lead.source || "unknown",
       company: lead.company,
@@ -142,7 +174,10 @@ export class MemoryBleedStore implements BleedStore {
     return this.leads.get(id);
   }
 
-  async listLeads(tenantId: string, opts?: { status?: LeadStatus; limit?: number; search?: string }): Promise<LeadRecord[]> {
+  async listLeads(
+    tenantId: string,
+    opts?: { status?: LeadStatus; limit?: number; search?: string }
+  ): Promise<LeadRecord[]> {
     let arr = [...this.leads.values()].filter((l) => l.tenantId === tenantId);
     if (opts?.status) arr = arr.filter((l) => l.status === opts.status);
     if (opts?.search) {
@@ -154,7 +189,7 @@ export class MemoryBleedStore implements BleedStore {
   }
 
   async addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence> {
-    const e: Evidence = { ...ev, id: id(), ts: ev.ts || now() };
+    const e: Evidence = { ...ev, id: genId(), ts: ev.ts || now() };
     if (!this.evByLead.has(e.leadId)) this.evByLead.set(e.leadId, []);
     this.evByLead.get(e.leadId)!.push(e);
     return e;
@@ -166,7 +201,7 @@ export class MemoryBleedStore implements BleedStore {
   }
 
   async addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision> {
-    const dec: Decision = { ...d, id: id(), ts: d.ts || now() };
+    const dec: Decision = { ...d, id: genId(), ts: d.ts || now() };
     if (!this.decByLead.has(dec.leadId)) this.decByLead.set(dec.leadId, []);
     this.decByLead.get(dec.leadId)!.push(dec);
     return dec;
@@ -207,23 +242,27 @@ export class MemoryBleedStore implements BleedStore {
   }
 }
 
+// ----------------- File-backed store -----------------
 export class FileBleedStore extends MemoryBleedStore {
   constructor(
-    private basePath: string // will create three files: .leads.json, .evidence.jsonl, .decisions.jsonl
+    private basePath: string // creates three files: .leads.json, .evidence.jsonl, .decisions.jsonl
   ) {
     super();
     const dir = dirname(basePath);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    const leadsPath = this.leadsPath();
-    if (!existsSync(leadsPath)) writeFileSync(leadsPath, JSON.stringify([]));
+    if (!existsSync(this.leadsPath())) writeFileSync(this.leadsPath(), JSON.stringify([]));
     if (!existsSync(this.evPath())) writeFileSync(this.evPath(), "");
     if (!existsSync(this.decPath())) writeFileSync(this.decPath(), "");
-    // warm load leads into memory
+
+    // Warm-load leads synchronously (no async/await here)
     try {
-      const leads = JSON.parse(readFileSync(leadsPath, "utf8")) as LeadRecord[];
-      for (const l of leads) await super.upsertLead(l);
+      const leads = JSON.parse(readFileSync(this.leadsPath(), "utf8")) as LeadRecord[];
+      for (const l of leads) {
+        // upsertLead is async, but for warm-load we don't need to await
+        super.upsertLead(l);
+      }
     } catch {
-      /* ignore */
+      /* ignore corrupt file on startup */
     }
   }
 
@@ -239,11 +278,18 @@ export class FileBleedStore extends MemoryBleedStore {
 
   override async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord> {
     const r = await super.upsertLead(lead);
-    const leads = JSON.parse(readFileSync(this.leadsPath(), "utf8"));
-    const i = leads.findIndex((x: LeadRecord) => x.id === r.id);
-    if (i >= 0) leads[i] = r;
-    else leads.push(r);
-    writeFileSync(this.leadsPath(), JSON.stringify(leads, null, 2));
+    // rewrite leads file atomically-ish (small volumes)
+    try {
+      const existing = JSON.parse(readFileSync(this.leadsPath(), "utf8")) as LeadRecord[];
+      const i = existing.findIndex((x) => x.id === r.id);
+      if (i >= 0) existing[i] = r;
+      else existing.push(r);
+      writeFileSync(this.leadsPath(), JSON.stringify(existing, null, 2));
+    } catch {
+      // rebuild file from memory snapshot if parse fails
+      const snapshot = [...(this as any).leads.values()] as LeadRecord[];
+      writeFileSync(this.leadsPath(), JSON.stringify(snapshot, null, 2));
+    }
     return r;
   }
 
@@ -258,21 +304,4 @@ export class FileBleedStore extends MemoryBleedStore {
     appendFileSync(this.decPath(), JSON.stringify(dec) + "\n");
     return dec;
   }
-}
-
-// helpers
-function uniq<T>(arr: T[]) {
-  return Array.from(new Set(arr));
-}
-function mergeContacts(a?: ContactRef[], b?: ContactRef[]) {
-  if (!a || a.length === 0) return b || [];
-  if (!b || b.length === 0) return a;
-  const out: ContactRef[] = [...a];
-  for (const c of b) {
-    const key = c.emailHash || c.phoneHash || c.linkedin || (c.name ? c.name.toLowerCase() : "");
-    if (!out.find((x) => (x.emailHash || x.phoneHash || x.linkedin || (x.name ? x.name.toLowerCase() : "")) === key)) {
-      out.push(c);
-    }
-  }
-  return out;
 }
