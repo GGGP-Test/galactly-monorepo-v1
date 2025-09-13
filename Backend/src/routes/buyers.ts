@@ -1,78 +1,61 @@
 // src/routes/buyers.ts
-import type { Express, Request, Response } from "express";
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 
-// ————— helpers —————
-function sanitizeDomain(input?: unknown): string {
-  if (!input) return "";
-  let s = String(Array.isArray(input) ? input[0] : input).trim().toLowerCase();
-  s = s.replace(/^https?:\/\//, "").replace(/^www\./, "");
-  s = s.split("/")[0].split("?")[0].split("#")[0];
-  return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s) ? s : "";
-}
+const router = Router();
 
-function safeBody(req: Request): Record<string, unknown> {
-  const b = (req as any).body;
-  if (b && typeof b === "object") return b as Record<string, unknown>;
-  if (typeof b === "string" && b.trim()) {
-    try { return JSON.parse(b); } catch { /* ignore */ }
-  }
-  return {};
-}
+/**
+ * POST /api/v1/leads/find-buyers
+ * Body: { domain: string, region?: string, radiusMi?: number, persona?: any }
+ * NOTE: This is the thin transport layer only. It validates input and returns a JSON result.
+ *       The discovery/lead-gen engine can be wired here later (buyer-discovery.ts).
+ */
+router.post("/leads/find-buyers", async (req: Request, res: Response) => {
+  try {
+    // CORS preflight is already handled by top-level middleware in index.ts
+    // Validate body
+    const body = req.body ?? {};
+    const domainRaw = (body.domain ?? "").toString().trim();
+    const region = (body.region ?? "").toString().trim() || undefined;
+    const radiusMi = Number(body.radiusMi ?? body.radius ?? 50) || 50;
 
-function extractDomain(req: Request): string {
-  const b = safeBody(req);
-  const q = req.query as Record<string, unknown>;
-  const candidates = [
-    b.domain, b.host, b.hostname, b.website, b.supplier, (b as any).supplierDomain,
-    q.domain, q.host, q.hostname, q.website, q.supplier, (q as any).supplierDomain,
-  ];
-  for (const v of candidates) {
-    const d = sanitizeDomain(v);
-    if (d) return d;
-  }
-  return "";
-}
-
-// ————— router —————
-export default function mountBuyers(app: Express) {
-  const router = Router();
-
-  // Extra safety: if global parsers are ever removed, keep local ones here too
-  router.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", process.env.ALLOW_ORIGIN || "https://gggp-test.github.io");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
-    if (req.method === "OPTIONS") return res.status(204).end();
-    next();
-  });
-
-  // POST /api/v1/leads/find-buyers
-  router.post("/find-buyers", async (req: Request, res: Response) => {
-    // debug breadcrumbs to verify what the server receives
-    const ct = req.headers["content-type"] || "";
-    const keys = Object.keys(safeBody(req));
-    const domain = extractDomain(req);
+    // normalize domain
+    const domain = domainRaw
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/.*$/, "")
+      .toLowerCase();
 
     if (!domain) {
-      return res.status(400).json({
-        ok: false,
-        error: "domain is required",
-        debug: { contentType: ct, bodyKeys: keys, query: req.query },
-        hint: `Send JSON {"domain":"example.com"}`,
-      });
+      return res.status(400).json({ ok: false, error: "domain is required" });
     }
 
-    // Stub response for now; wire discovery next
-    return res.json({
+    // TODO: plug in buyer-discovery here.
+    // For now, return an empty-but-successful result so the panel stops 500'ing.
+    // Keep the shape stable with future engine’s response.
+    const result = {
       ok: true,
-      accepted: { domain },
+      supplier: { domain, region, radiusMi },
       created: 0,
-      counts: { hot: 0, warm: 0 },
-      note: "buyers endpoint healthy; discovery not wired in this commit.",
-    });
-  });
+      hot: 0,
+      warm: 0,
+      candidates: [] as Array<any>,
+      message: "Created 0 candidate(s). Hot:0 Warm:0. Refresh lists to view.",
+    };
 
-  app.use("/api/v1/leads", router);
-  console.log("[routes] mounted buyers from ./routes/buyers");
-}
+    return res.status(200).json(result);
+  } catch (err: any) {
+    console.error("[buyers] find-buyers error:", err);
+    return res
+      .status(500)
+      .json({ ok: false, error: err?.message || "internal_error" });
+  }
+});
+
+/**
+ * Optional quick ping to verify the router is mounted.
+ * GET /api/v1/leads/_buyers-ping
+ */
+router.get("/leads/_buyers-ping", (_req: Request, res: Response) => {
+  res.json({ ok: true, where: "buyers", mounted: true });
+});
+
+export default router;
