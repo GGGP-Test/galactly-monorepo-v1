@@ -1,49 +1,45 @@
-import { Router } from "express";
+// src/routes/public.ts
+import express, { Router, json, urlencoded } from "express";
+import cors from "cors";
+import path from "path";
 
-export default function mountPublic(app) {
-  const r = Router();
+/**
+ * Public-facing plumbing:
+ *  - /healthz
+ *  - CORS preflight
+ *  - body parsers
+ *  - static assets under /assets
+ */
+const router = Router();
 
-  // permissive CORS for the free panel
-  r.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
-    if (req.method === "OPTIONS") return res.status(204).end();
-    next();
-  });
+// 1) health
+router.get("/healthz", (_req, res) => res.type("text/plain").send("ok"));
 
-  r.get("/healthz", (_req, res) => res.status(200).json({ ok: true }));
+// 2) CORS (allow panel on GitHub Pages)
+router.use(
+  cors({
+    origin: true,
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "x-api-key"],
+  })
+);
+router.options("*", cors());
 
-  // List leads from the in-memory/global BLEED store, split by "temp"
-  r.get("/leads", async (req, res) => {
-    try {
-      const g = globalThis;
-      const store = g && g.__BLEED_STORE__;
-      const apiKey = String(req.headers["x-api-key"] || "");
-      const tenantId = apiKey ? `t_${apiKey.slice(0, 8)}` : "t_public";
+// 3) body parsers (pass options INSIDE the factory)
+router.use(json({ limit: "1mb" }));
+router.use(urlencoded({ extended: true, limit: "1mb" }));
 
-      const temp = String(req.query.temp || "warm").toLowerCase();  // 'hot' | 'warm'
-      const region = String(req.query.region || "").toLowerCase();
+// 4) static assets (put your files in ./public)
+const staticDir = path.join(process.cwd(), "public");
+router.use(
+  "/assets",
+  express.static(staticDir, {
+    maxAge: "7d",
+    setHeaders(res) {
+      // avoids transform error: this must be inside setHeaders, not as a separate arg to app.use
+      res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+    },
+  })
+);
 
-      let items = [];
-      if (store && typeof store.listLeads === "function") {
-        items = await store.listLeads(tenantId, { limit: 200 });
-      }
-
-      if (region) items = items.filter((l) => (l.region || "").toLowerCase() === region);
-      const isHot = (l) => ((l && l.scores && l.scores.intent) || 0) >= 0.7;
-      items = temp === "hot" ? items.filter(isHot) : items.filter((l) => !isHot(l));
-
-      console.log(`[public] GET /leads -> 200 temp=${temp} region=${region || "-"} count=${items.length}`);
-      res.status(200).json({ ok: true, items, count: items.length });
-    } catch (err) {
-      console.error("[public] /leads error", err);
-      // keep lenient so the panel doesn't break
-      res.status(200).json({ ok: true, items: [], count: 0 });
-    }
-  });
-
-  app.use("/api/v1", r);
-  console.log("[routes] mounted public from ./routes/public");
-  return r;
-}
+export default router;
