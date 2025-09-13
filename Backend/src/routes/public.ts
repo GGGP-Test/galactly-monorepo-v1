@@ -1,52 +1,68 @@
 // src/routes/public.ts
-import type { Request, Response } from "express";
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 
 /**
- * Public, lenient endpoints used by the free panel.
- * Defensive: do not assume the host has .use()/.delete().
+ * Public, lenient endpoints:
+ *  - GET /api/v1/healthz
+ *  - GET /api/v1/leads   (reads from global BLEED store if present)
+ *
+ * This mounts defensively: if the host isn't an Express app, we just return the router.
  */
 export default function mountPublic(host: unknown) {
   const r = Router();
 
-  // ---- health ----
-  r.get("/healthz", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
+  // Healthcheck
+  r.get("/healthz", (_req: Request, res: Response) => {
+    res.status(200).json({ ok: true });
+  });
 
-  // ---- leads list (hot/warm) ----
-  r.get("/leads", (req: Request, res: Response) => {
-    const temp = String(req.query.temp || "warm");
-    const region = String(req.query.region || "usca");
-    const payload = { ok: true, items: [] as any[], count: 0 };
-    // best-effort log for panel visibility
+  // Leads list (hot/warm) – reads from global BLEED store populated by buyers.ts
+  r.get("/leads", async (req: Request, res: Response) => {
     try {
-      console.log(`[public] GET /leads -> 200 temp=${temp} region=${region} count=${payload.count}`);
-    } catch {}
-    res.status(200).json(payload);
+      const g = globalThis as any;
+      const store = g.__BLEED_STORE__;
+      const apiKey = (req.headers["x-api-key"] || "").toString();
+      const tenantId = apiKey ? t_${apiKey.slice(0, 8)} : "t_public";
+
+      const temp = String(req.query.temp || "warm").toLowerCase(); // 'hot' | 'warm'
+      const region = String(req.query.region || "").toLowerCase();
+
+      let items: any[] = [];
+      if (store && typeof store.listLeads === "function") {
+        items = await store.listLeads(tenantId, { limit: 200 });
+      }
+
+      if (region) {
+        items = items.filter((l) => (l.region || "").toLowerCase() === region);
+      }
+
+      // simple temp split on intent score
+      const isHot = (l: any) => (l?.scores?.intent ?? 0) >= 0.7;
+      items = temp === "hot" ? items.filter(isHot) : items.filter((l) => !isHot(l));
+
+      console.log(
+        [public] GET /leads -> 200 temp=${temp} region=${region || "-"} count=${items.length}
+      );
+      res.status(200).json({ ok: true, items, count: items.length });
+    } catch (err: any) {
+      console.error("[public] /leads error", err?.stack || err);
+      res.status(200).json({ ok: true, items: [], count: 0 }); // lenient
+    }
   });
 
-  // ---- optional purge (no-op; keep POST to avoid .delete()) ----
-  r.post("/leads/_purge", (_req: Request, res: Response) => {
-    res.status(200).json({ ok: true, purged: 0 });
+  // CORS preflight helper (keeps the panel happy)
+  r.options("*", (_req: Request, res: Response) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+    res.status(204).end();
   });
 
-  // ---- safe stub for /leads/find-buyers so panel never hard-fails ----
-  // The real buyers route (./routes/buyers) will take precedence if mounted earlier/specific.
-  r.post("/leads/find-buyers", (_req: Request, res: Response) => {
-    res.status(200).json({ ok: true, created: 0, hot: 0, warm: 0, note: "public stub" });
-  });
-
-  // ---- mount defensively ----
-  const hasUse =
-    host && typeof (host as any).use === "function"; // Express app or Router
-  if (hasUse) {
+  // Mount defensively
+  if (host && typeof (host as any).use === "function") {
     (host as any).use("/api/v1", r);
   } else {
-    // No .use(): return the router so the caller *could* mount it,
-    // but never throw here — crashing would hide other routes.
-    try {
-      console.warn("[routes] public: host has no .use(); returning router (not mounted).");
-    } catch {}
+    console.warn("[routes] public: host has no .use(); returning router.");
   }
-
   return r;
 }
