@@ -1,26 +1,36 @@
 // src/routes/public.ts
-import { Router, type Request, type Response } from "express";
+import { Router } from "express";
+import type { Request, Response } from "express";
 
 /**
- * Public, lenient endpoints:
- *  - GET /api/v1/healthz
- *  - GET /api/v1/leads   (reads from global BLEED store if present)
+ * Public, lenient endpoints under /api/v1
+ * - GET /api/v1/healthz
+ * - GET /api/v1/leads?temp=hot|warm&region=usca
  *
- * This mounts defensively: if the host isn't an Express app, we just return the router.
+ * Reads from global BLEED store if present (populated by buyers.ts).
  */
 export default function mountPublic(host: unknown) {
   const r = Router();
 
-  // Healthcheck
+  // permissive CORS for the free panel
+  r.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+    if (req.method === "OPTIONS") return res.status(204).end();
+    next();
+  });
+
   r.get("/healthz", (_req: Request, res: Response) => {
     res.status(200).json({ ok: true });
   });
 
-  // Leads list (hot/warm) – reads from global BLEED store populated by buyers.ts
   r.get("/leads", async (req: Request, res: Response) => {
     try {
       const g = globalThis as any;
-      const store = g.__BLEED_STORE__;
+      const store = g && g.__BLEED_STORE__;
+
+      // tenant derived from API key (same convention used elsewhere)
       const apiKey = (req.headers["x-api-key"] || "").toString();
       const tenantId = apiKey ? t_${apiKey.slice(0, 8)} : "t_public";
 
@@ -44,25 +54,18 @@ export default function mountPublic(host: unknown) {
         [public] GET /leads -> 200 temp=${temp} region=${region || "-"} count=${items.length}
       );
       res.status(200).json({ ok: true, items, count: items.length });
-    } catch (err: any) {
-      console.error("[public] /leads error", err?.stack || err);
-      res.status(200).json({ ok: true, items: [], count: 0 }); // lenient
+    } catch (err) {
+      console.error("[public] /leads error", err);
+      // keep it lenient for the panel even on error
+      res.status(200).json({ ok: true, items: [], count: 0 });
     }
   });
 
-  // CORS preflight helper (keeps the panel happy)
-  r.options("*", (_req: Request, res: Response) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
-    res.status(204).end();
-  });
-
-  // Mount defensively
+  // mount defensively (works whether caller passes an app or just imports the router)
   if (host && typeof (host as any).use === "function") {
     (host as any).use("/api/v1", r);
   } else {
-    console.warn("[routes] public: host has no .use(); returning router.");
+    console.warn("[routes] public: host has no .use(); returning router only.");
   }
   return r;
 }
