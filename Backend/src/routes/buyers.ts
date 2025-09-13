@@ -1,127 +1,129 @@
-// src/routes/buyers.ts
-import type { Request, Response } from "express";
 import { Router } from "express";
-import {
-  MemoryBleedStore,
-  type LeadRecord,
-  type LeadStatus,
-} from "../data/bleed-store";
 
-// ---- stable, process-wide store (survives module reloads in dev)
-const g = globalThis as any;
-const store: MemoryBleedStore =
-  g.__BLEED_STORE__ || (g.__BLEED_STORE__ = new MemoryBleedStore());
-
-// simple tenant inference (use your auth later)
-function tenantIdFrom(req: Request) {
-  const k = (req.headers["x-api-key"] || "").toString();
-  return k ? `t_${k.slice(0, 8)}` : "t_public";
+// Tiny in-memory store (compatible enough with what public.js expects)
+class MemoryStore {
+  constructor() {
+    this.leads = new Map(); // key: leadId
+  }
+  _id() {
+    return ${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)};
+  }
+  async upsertLead(lead) {
+    // de-dupe by domain per tenant
+    const key = [...this.leads.keys()].find((k) => {
+      const l = this.leads.get(k);
+      return l.tenantId === lead.tenantId && l.domain && lead.domain && l.domain === lead.domain;
+    });
+    const now = Date.now();
+    if (key) {
+      const prev = this.leads.get(key);
+      const merged = {
+        ...prev,
+        ...lead,
+        scores: { ...(prev.scores  {}), ...(lead.scores  {}) },
+        signals: { ...(prev.signals  {}), ...(lead.signals  {}) },
+        updatedAt: now,
+      };
+      this.leads.set(key, merged);
+      return merged;
+    }
+    const rec = {
+      id: this._id(),
+      tenantId: lead.tenantId,
+      source: lead.source || "seed",
+      company: lead.company,
+      domain: lead.domain,
+      website: lead.website || (lead.domain ? https://${lead.domain} : undefined),
+      country: lead.country || "US",
+      region: lead.region || "usca",
+      verticals: lead.verticals || [],
+      signals: lead.signals || {},
+      scores: lead.scores || {},
+      contacts: lead.contacts || [],
+      status: lead.status || "enriched",
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.leads.set(rec.id, rec);
+    return rec;
+  }
+  async listLeads(tenantId, { limit = 200 } = {}) {
+    const rows = [...this.leads.values()].filter((l) => l.tenantId === tenantId);
+    rows.sort((a, b) => b.updatedAt - a.updatedAt);
+    return rows.slice(0, limit);
+  }
 }
 
-function normalizeDomain(input: string) {
-  const s = (input || "").trim().toLowerCase();
-  return s
-    .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "")
-    .replace(/^www\./, "");
+function ensureStore() {
+  const g = globalThis;
+  if (!g.__BLEED_STORE__) {
+    g.__BLEED_STORE__ = new MemoryStore();
+    console.log("[store] initialized in-memory BLEED store");
+  }
+  return g.__BLEED_STORE__;
 }
 
-export default function mountBuyers(host: unknown) {
+export default function mountBuyers(app) {
   const r = Router();
 
-  /**
-   * POST /api/v1/leads/find-buyers
-   * Body: { domain?: string, supplier?: string, region?: string, radiusMi?: number, persona?: {...} }
-   *
-   * Returns: { ok, created, hot, warm }
-   */
-  r.post("/leads/find-buyers", async (req: Request, res: Response) => {
-    try {
-      const body = (req.body || {}) as Record<string, any>;
-      const domain = normalizeDomain(String(body.domain || body.supplier || ""));
-      const region = String(body.region || "usca").toLowerCase();
-      const radiusMi = Number.isFinite(body.radiusMi) ? Number(body.radiusMi) : 50;
+  // share the same permissive CORS contract
+  r.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+    if (req.method === "OPTIONS") return res.status(204).end();
+    next();
+  });
 
-      if (!domain) {
+  // POST /api/v1/leads/find-buyers
+  r.post("/leads/find-buyers", async (req, res) => {
+    try {
+      const apiKey = String(req.headers["x-api-key"] || "");
+      const tenantId = apiKey ? t_${apiKey.slice(0, 8)} : "t_public";
+      const { domain, region } = req.body || {};
+      if (!domain || typeof domain !== "string") {
         return res.status(400).json({ ok: false, error: "domain is required" });
       }
 
-      const tenantId = tenantIdFrom(req);
-      console.log(`[buyers] find-buyers tenant=${tenantId} domain=${domain} region=${region} r=${radiusMi}`);
+      const store = ensureStore();
 
-      // --- Minimal “discovery”: seed one candidate + self (so the panel shows something)
-      // In the next pass, swap this with your webscout + OpenRouter persona inference.
-      const created: LeadRecord[] = [];
+      // --- Seed a couple of plausible buyers so /leads shows something ---
+      const buyers = [
+        {
+          company: "Peak 3PL – San Diego",
+          domain: "peak3pl.example",
+          region: (region || "usca").toLowerCase(),
+          signals: { warehouses: 4, ecommerce_mix: 0.7, "op:multi-node": 1 },
+          scores: { intent: 0.82, fit: 0.78, timing: 0.6 },
+        },
+        {
+          company: "Swift Distribution",
+          domain: "swiftdistro.example",
+          region: (region || "usca").toLowerCase(),
+          signals: { warehouses: 2, high_returns: 1, fragile_rate: 0.4 },
+          scores: { intent: 0.66, fit: 0.72, timing: 0.55 },
+        },
+      ];
 
-      // 1) self/company record (so “Details” shows the supplier immediately)
-      const self = await store.upsertLead({
-        tenantId,
-        source: "supplier:self",
-        company: domain.split(".")[0],
-        domain,
-        website: `https://${domain}`,
-        region,
-        scores: { fit: 0.6, intent: 0.1, timing: 0.3, trust: 0.5 },
-        status: "enriched",
-      });
-      created.push(self);
+      let created = 0;
+      for (const b of buyers) {
+        await store.upsertLead({
+          tenantId,
+          source: "buyers:seed",
+          ...b,
+        });
+        created++;
+      }
 
-      // 2) a placeholder buyer candidate (replace with real candidates next)
-      const buyer = await store.upsertLead({
-        tenantId,
-        source: "seed:placeholder",
-        company: "Prospect @ " + domain,
-        domain: `${domain}-prospect`,
-        website: `https://${domain}`,
-        region,
-        scores: { fit: 0.55, intent: 0.25, timing: 0.35, trust: 0.4 },
-        status: "qualified",
-      });
-      created.push(buyer);
-
-      // optional decision trail / evidence could be appended here later
-
-      const hot = created.filter((c) => (c.scores?.intent || 0) >= 0.7).length;
-      const warm = created.length - hot;
-
-      return res.status(200).json({ ok: true, created: created.length, hot, warm });
-    } catch (err: any) {
-      console.error("[buyers] error", err?.stack || err);
-      return res.status(500).json({ ok: false, error: "internal" });
+      console.log(`[buyers] find-buyers ok domain=${domain} created=${created}`);
+      res.status(200).json({ ok: true, created });
+    } catch (err) {
+      console.error("[buyers] /leads/find-buyers error", err);
+      res.status(500).json({ ok: false, error: "internal" });
     }
   });
 
-  /**
-   * GET /api/v1/leads
-   * Query: temp=hot|warm, region=us/ca/...
-   * Returns the tenant’s current leads from the BLEED store.
-   * This shadows the public stub so the panel actually shows rows.
-   */
-  r.get("/leads", async (req: Request, res: Response) => {
-    const tenantId = tenantIdFrom(req);
-    const temp = String(req.query.temp || "warm").toLowerCase(); // 'hot' or 'warm'
-    const region = String(req.query.region || "").toLowerCase();
-
-    let items = await store.listLeads(tenantId, { limit: 200 });
-
-    if (region) {
-      items = items.filter((l) => (l.region || "").toLowerCase() === region);
-    }
-    // naive temp split based on intent score
-    items = items.filter((l) => {
-      const intent = l.scores?.intent ?? 0;
-      return temp === "hot" ? intent >= 0.7 : intent < 0.7;
-    });
-
-    console.log(`[buyers] GET /leads -> 200 temp=${temp} region=${region || "-"} count=${items.length}`);
-    res.status(200).json({ ok: true, items, count: items.length });
-  });
-
-  // --- Mount defensively (don’t crash if host isn’t an Express app)
-  if (host && typeof (host as any).use === "function") {
-    (host as any).use("/api/v1", r);
-  } else {
-    console.warn("[routes] buyers: host has no .use(); returning router (not mounted).");
-  }
+  app.use("/api/v1", r);
+  console.log("[routes] mounted buyers from ./routes/buyers");
   return r;
 }
