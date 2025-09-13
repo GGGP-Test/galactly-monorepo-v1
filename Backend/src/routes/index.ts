@@ -1,10 +1,22 @@
-import type { App } from '../index';
-import mountWebscout from './webscout';
-import { mountFind } from './find';
-import { mountBuyers } from './buyers';
+// src/index.ts
+import express from "express";
+import buyers from "./routes/buyers";
+import pub from "./routes/public";
+import find from "./routes/find"; // keep your existing file; it should export a Router
 
-export function mountRoutes(app: App) {
-  mountWebscout(app);
-  mountFind(app);
-  mountBuyers(app);
-}
+const app = express();
+const PORT = process.env.PORT || 8787;
+
+// mount order: public (health/CORS/parsers), buyers, find, then any other routes
+app.use(pub);
+console.log("[routes] mounted public from ./routes/public");
+
+app.use(buyers);
+console.log("[routes] mounted buyers from ./routes/buyers");
+
+app.use(find);
+console.log("[routes] mounted find from ./routes/find");
+
+app.listen(PORT, () => {
+  console.log(`[server] listening on :${PORT}`);
+});
