@@ -1,3 +1,4 @@
+
 // src/routes/buyers.ts
 import type { Request, Response } from "express";
 import { Router } from "express";
@@ -15,7 +16,7 @@ const store: MemoryBleedStore =
 // simple tenant inference (use your auth later)
 function tenantIdFrom(req: Request) {
   const k = (req.headers["x-api-key"] || "").toString();
-  return k ? `t_${k.slice(0, 8)}` : "t_public";
+  return k ? t_${k.slice(0, 8)} : "t_public";
 }
 
 function normalizeDomain(input: string) {
@@ -38,7 +39,7 @@ export default function mountBuyers(host: unknown) {
   r.post("/leads/find-buyers", async (req: Request, res: Response) => {
     try {
       const body = (req.body || {}) as Record<string, any>;
-      const domain = normalizeDomain(String(body.domain || body.supplier || ""));
+      const domain = normalizeDomain(String(body.domain  body.supplier  ""));
       const region = String(body.region || "usca").toLowerCase();
       const radiusMi = Number.isFinite(body.radiusMi) ? Number(body.radiusMi) : 50;
 
@@ -59,7 +60,7 @@ export default function mountBuyers(host: unknown) {
         source: "supplier:self",
         company: domain.split(".")[0],
         domain,
-        website: `https://${domain}`,
+        website: https://${domain},
         region,
         scores: { fit: 0.6, intent: 0.1, timing: 0.3, trust: 0.5 },
         status: "enriched",
@@ -71,8 +72,8 @@ export default function mountBuyers(host: unknown) {
         tenantId,
         source: "seed:placeholder",
         company: "Prospect @ " + domain,
-        domain: `${domain}-prospect`,
-        website: `https://${domain}`,
+        domain: ${domain}-prospect,
+        website: https://${domain},
         region,
         scores: { fit: 0.55, intent: 0.25, timing: 0.35, trust: 0.4 },
         status: "qualified",
@@ -113,7 +114,10 @@ export default function mountBuyers(host: unknown) {
       return temp === "hot" ? intent >= 0.7 : intent < 0.7;
     });
 
-    console.log(`[buyers] GET /leads -> 200 temp=${temp} region=${region || "-"} count=${items.length}`);
+    console.
+
+Ali Hosseinioun, [9/13/2025 10:29 PM]
+log(`[buyers] GET /leads -> 200 temp=${temp} region=${region || "-"} count=${items.length}`);
     res.status(200).json({ ok: true, items, count: items.length });
   });
 
