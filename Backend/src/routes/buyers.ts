@@ -1,96 +1,96 @@
 // src/routes/buyers.ts
-import { Router, Request, Response, NextFunction } from "express";
+import type { Express, Request, Response } from "express";
+import express, { Router } from "express";
 
-// --- tiny CORS helper (kept local so we don't depend on external middleware)
-function allowCors(req: Request, res: Response, next: NextFunction) {
-  const origin = req.headers.origin || "*";
-  res.header("Access-Control-Allow-Origin", origin as string);
-  res.header("Vary", "Origin");
-  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, x-api-key");
-  if (req.method === "OPTIONS") return res.status(204).end();
-  next();
+/** Normalize domain: strip scheme, www, paths; validate looks like a host */
+function sanitizeDomain(input?: unknown): string {
+  if (!input) return "";
+  let s = String(Array.isArray(input) ? input[0] : input).trim().toLowerCase();
+  s = s.replace(/^https?:\/\//, "").replace(/^www\./, "");
+  s = s.split("/")[0].split("?")[0].split("#")[0];
+  // simple host check: a.b / a.b.c with TLD 2+ chars
+  return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s) ? s : "";
 }
 
-// --- minimal in-memory store so the panel can render lists without 404s
-type Temp = "hot" | "warm";
-interface PanelLead {
-  id: string;
-  host: string;
-  platform: "web";
-  title: string;
-  created: number;
-  temp: Temp;
-  why?: string;
-}
-const leadsStore: PanelLead[] = []; // will stay empty until discovery is wired
-
-const router = Router();
-router.use(allowCors);
-
-// Health check (useful for readiness probes)
-router.get("/healthz", (_req, res) => res.status(200).send("ok"));
-
-// Panel list endpoint expected by the UI: GET /api/v1/leads?temp=warm&region=usca
-router.get("/leads", (req, res) => {
-  const temp = ((req.query.temp as string) || "").toLowerCase() as Temp | "";
-  const region = (req.query.region as string) || "";
-  // We currently ignore region; temp filter is applied if provided.
-  let items = leadsStore.slice().sort((a, b) => b.created - a.created);
-  if (temp === "hot" || temp === "warm") items = items.filter((x) => x.temp === temp);
-
-  const count = items.length;
-  // Optional debug log that mirrors what you've seen in logs earlier
-  console.log(
-    `[public] GET /leads -> 200 temp=${temp || "-"} region=${region || "-"} count=${count}`
-  );
-
-  res.status(200).json(items);
-});
-
-// Action endpoint expected by the UI: POST /api/v1/leads/find-buyers
-// Body: { domain: string, region?: string, radiusMi?: number }
-router.post("/leads/find-buyers", expressJsonSafe, (req, res) => {
-  const { domain, region, radiusMi } = req.body || {};
-
-  if (!domain || typeof domain !== "string" || !domain.trim()) {
-    return res.status(400).json({ ok: false, error: "domain is required" });
-  }
-
-  // For now we only ACK the request so the UI flow is unblocked.
-  // The next step will plug in the buyer-discovery engine and push
-  // created leads into `leadsStore`.
-  const created: PanelLead[] = [];
-  console.log(
-    `[buyers] find-buyers accepted domain=${domain} region=${region || "-"} radius=${radiusMi || "-"}`
-  );
-
-  return res.status(200).json({
-    ok: true,
-    created,
-    hot: created.filter((x) => x.temp === "hot").length,
-    warm: created.filter((x) => x.temp === "warm").length,
-  });
-});
-
-// --- local JSON body parser with error guard (avoids raw-body explosions)
-function expressJsonSafe(req: Request, res: Response, next: NextFunction) {
-  let raw = "";
-  req.setEncoding("utf8");
-  req.on("data", (chunk) => (raw += chunk));
-  req.on("end", () => {
-    if (!raw) {
-      req.body = {};
-      return next();
-    }
+/** Try to read body in every shape (JSON, urlencoded, raw string) */
+function safeBody(req: Request): Record<string, unknown> {
+  const b = (req as any).body;
+  if (b && typeof b === "object") return b as Record<string, unknown>;
+  if (typeof b === "string" && b.trim()) {
     try {
-      req.body = JSON.parse(raw);
-      next();
-    } catch (e) {
-      console.error("[buyers] JSON parse error:", e);
-      res.status(400).json({ ok: false, error: "invalid json" });
+      return JSON.parse(b);
+    } catch {
+      try {
+        const m = Object.fromEntries(new URLSearchParams(b));
+        return m;
+      } catch {
+        /* ignore */
+      }
     }
-  });
+  }
+  return {};
 }
 
-export default router;
+/** Accept domain from body or query, across common key names */
+function extractDomain(req: Request): string {
+  const b = safeBody(req);
+  const q = req.query as Record<string, unknown>;
+  const candidates = [
+    b.domain, b.host, b.hostname, b.website, b.supplier, (b as any).supplierDomain,
+    q.domain, q.host, q.hostname, q.website, q.supplier, (q as any).supplierDomain,
+  ];
+  for (const v of candidates) {
+    const d = sanitizeDomain(v);
+    if (d) return d;
+  }
+  return "";
+}
+
+export default function mountBuyers(app: Express) {
+  const router = Router();
+
+  // CORS (restrict origin if you like via env)
+  router.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", process.env.ALLOW_ORIGIN || "https://gggp-test.github.io");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+    if (req.method === "OPTIONS") return res.status(204).end();
+    next();
+  });
+
+  // Body parsers for this router (kept local so it can’t be missed)
+  router.use(express.json({ limit: "1mb", strict: false }));
+  router.use(express.urlencoded({ extended: true }));
+
+  /**
+   * POST /api/v1/leads/find-buyers
+   * Body: { domain: "example.com", region?, radiusMi?, persona? }
+   * Also accepts { host|website|supplier|supplierDomain } or same via querystring.
+   */
+  router.post("/find-buyers", async (req: Request, res: Response) => {
+    const domain = extractDomain(req);
+
+    if (!domain) {
+      // Echo a little context to help debugging from the panel
+      return res.status(400).json({
+        ok: false,
+        error: "domain is required",
+        receivedKeys: Object.keys(safeBody(req)),
+        hint: `Send JSON like {"domain":"example.com"}`,
+      });
+    }
+
+    // ——— Stub response for now; actual discovery will fill these ———
+    // You can later plug in buyer-discovery and BLEED store here.
+    return res.json({
+      ok: true,
+      accepted: { domain },
+      created: 0,
+      counts: { hot: 0, warm: 0 },
+      note: "Endpoint healthy; discovery not wired in this commit.",
+    });
+  });
+
+  app.use("/api/v1/leads", router);
+  console.log("[routes] mounted buyers from ./routes/buyers");
+}
