@@ -1,45 +1,54 @@
-// src/routes/public.ts
-import express, { Router, json, urlencoded } from "express";
-import cors from "cors";
-import path from "path";
+import { Router, Request, Response } from "express";
 
-/**
- * Public-facing plumbing:
- *  - /healthz
- *  - CORS preflight
- *  - body parsers
- *  - static assets under /assets
- */
+// If you already have a BLEED store instance elsewhere, we read it from global.
+// This avoids circular imports and keeps this file self-contained.
+type LeadRecord = {
+  id: string;
+  tenantId: string;
+  source: string;
+  company?: string;
+  domain?: string;
+  website?: string;
+  country?: string;
+  region?: string;
+  verticals?: string[];
+  signals?: Record<string, number>;
+  scores?: Record<string, number>;
+  contacts?: any[];
+  status: string;
+  createdAt: number;
+  updatedAt: number;
+  meta?: Record<string, unknown>;
+};
+
 const router = Router();
 
-// 1) health
-router.get("/healthz", (_req, res) => res.type("text/plain").send("ok"));
+// Healthcheck used by the platform
+router.get("/healthz", (_req: Request, res: Response) => {
+  res.status(200).send("ok");
+});
 
-// 2) CORS (allow panel on GitHub Pages)
-router.use(
-  cors({
-    origin: true,
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "x-api-key"],
-  })
-);
-router.options("*", cors());
+// Read-only leads list for the Free Panel (kept lenient)
+router.get("/leads", async (req: Request, res: Response) => {
+  try {
+    const tenantId = (req.headers["x-tenant-id"] as string) || "t_demo";
+    const temp = String(req.query.temp || "warm");   // warm|hot (UI sends this)
+    const region = String(req.query.region || "usca");
 
-// 3) body parsers (pass options INSIDE the factory)
-router.use(json({ limit: "1mb" }));
-router.use(urlencoded({ extended: true, limit: "1mb" }));
+    const store: any = (globalThis as any).__BLEED_STORE;
+    let items: LeadRecord[] = [];
 
-// 4) static assets (put your files in ./public)
-const staticDir = path.join(process.cwd(), "public");
-router.use(
-  "/assets",
-  express.static(staticDir, {
-    maxAge: "7d",
-    setHeaders(res) {
-      // avoids transform error: this must be inside setHeaders, not as a separate arg to app.use
-      res.setHeader("Cache-Control", "public, max-age=604800, immutable");
-    },
-  })
-);
+    if (store?.listLeads) {
+      // Best-effort; ignore temp/region in this stub unless your store tracks them.
+      items = await store.listLeads(tenantId, { limit: 100 });
+    }
+
+    console.log(`[public] GET /leads -> 200 temp=${temp} region=${region} count=${items.length}`);
+    res.status(200).json({ ok: true, items });
+  } catch (err: any) {
+    console.error("[public] /leads error:", err?.message || err);
+    res.status(200).json({ ok: true, items: [] }); // fail leniently for the panel
+  }
+});
 
 export default router;
