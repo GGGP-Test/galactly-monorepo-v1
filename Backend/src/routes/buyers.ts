@@ -6,7 +6,7 @@ class MemoryStore {
     this.leads = new Map(); // key: leadId
   }
   _id() {
-    return ${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)};
+    return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
   }
   async upsertLead(lead) {
     // de-dupe by domain per tenant
@@ -20,8 +20,8 @@ class MemoryStore {
       const merged = {
         ...prev,
         ...lead,
-        scores: { ...(prev.scores  {}), ...(lead.scores  {}) },
-        signals: { ...(prev.signals  {}), ...(lead.signals  {}) },
+        scores: { ...(prev.scores || {}), ...(lead.scores || {}) },
+        signals: { ...(prev.signals || {}), ...(lead.signals || {}) },
         updatedAt: now,
       };
       this.leads.set(key, merged);
@@ -33,7 +33,7 @@ class MemoryStore {
       source: lead.source || "seed",
       company: lead.company,
       domain: lead.domain,
-      website: lead.website || (lead.domain ? https://${lead.domain} : undefined),
+      website: lead.website || (lead.domain ? `https://${lead.domain}` : undefined),
       country: lead.country || "US",
       region: lead.region || "usca",
       verticals: lead.verticals || [],
@@ -79,7 +79,7 @@ export default function mountBuyers(app) {
   r.post("/leads/find-buyers", async (req, res) => {
     try {
       const apiKey = String(req.headers["x-api-key"] || "");
-      const tenantId = apiKey ? t_${apiKey.slice(0, 8)} : "t_public";
+      const tenantId = apiKey ? `t_${apiKey.slice(0, 8)}` : "t_public";
       const { domain, region } = req.body || {};
       if (!domain || typeof domain !== "string") {
         return res.status(400).json({ ok: false, error: "domain is required" });
