@@ -20,7 +20,7 @@ export default function mountPublic(app) {
       const g = globalThis;
       const store = g && g.__BLEED_STORE__;
       const apiKey = String(req.headers["x-api-key"] || "");
-      const tenantId = apiKey ? t_${apiKey.slice(0, 8)} : "t_public";
+      const tenantId = apiKey ? `t_${apiKey.slice(0, 8)}` : "t_public";
 
       const temp = String(req.query.temp || "warm").toLowerCase();  // 'hot' | 'warm'
       const region = String(req.query.region || "").toLowerCase();
