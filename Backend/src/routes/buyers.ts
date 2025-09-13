@@ -1,161 +1,96 @@
 // src/routes/buyers.ts
-import type { Request, Response } from "express";
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
+
+// --- tiny CORS helper (kept local so we don't depend on external middleware)
+function allowCors(req: Request, res: Response, next: NextFunction) {
+  const origin = req.headers.origin || "*";
+  res.header("Access-Control-Allow-Origin", origin as string);
+  res.header("Vary", "Origin");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+  if (req.method === "OPTIONS") return res.status(204).end();
+  next();
+}
+
+// --- minimal in-memory store so the panel can render lists without 404s
+type Temp = "hot" | "warm";
+interface PanelLead {
+  id: string;
+  host: string;
+  platform: "web";
+  title: string;
+  created: number;
+  temp: Temp;
+  why?: string;
+}
+const leadsStore: PanelLead[] = []; // will stay empty until discovery is wired
 
 const router = Router();
+router.use(allowCors);
 
-// ---- tiny helpers ----------------------------------------------------------
+// Health check (useful for readiness probes)
+router.get("/healthz", (_req, res) => res.status(200).send("ok"));
 
-function normalizeDomain(raw: unknown): string | null {
-  if (typeof raw !== "string") return null;
-  let s = raw.trim().toLowerCase();
-  s = s.replace(/^https?:\/\//, "").replace(/^www\./, "");
-  // strip path/query if user pasted a full URL
-  const slash = s.indexOf("/");
-  if (slash >= 0) s = s.slice(0, slash);
-  // very lenient domain check; server-side hardening can be added later
-  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(s)) return null;
-  return s;
-}
+// Panel list endpoint expected by the UI: GET /api/v1/leads?temp=warm&region=usca
+router.get("/leads", (req, res) => {
+  const temp = ((req.query.temp as string) || "").toLowerCase() as Temp | "";
+  const region = (req.query.region as string) || "";
+  // We currently ignore region; temp filter is applied if provided.
+  let items = leadsStore.slice().sort((a, b) => b.created - a.created);
+  if (temp === "hot" || temp === "warm") items = items.filter((x) => x.temp === temp);
 
-function ok(res: Response, body: Record<string, unknown>) {
-  return res.status(200).json(body);
-}
-function bad(res: Response, msg: string) {
-  return res.status(400).json({ ok: false, error: msg });
-}
+  const count = items.length;
+  // Optional debug log that mirrors what you've seen in logs earlier
+  console.log(
+    `[public] GET /leads -> 200 temp=${temp || "-"} region=${region || "-"} count=${count}`
+  );
 
-// Optional: BLEED store shim so we can run even if nothing injected in app
-type LeadStatus = "new" | "enriched" | "qualified" | "routed" | "contacted" | "won" | "lost" | "archived";
-interface LeadRecord {
-  id: string;
-  tenantId: string;
-  source: string;
-  company?: string;
-  domain?: string;
-  website?: string;
-  country?: string;
-  region?: string;
-  verticals?: string[];
-  signals?: Record<string, number>;
-  scores?: Record<string, number>;
-  contacts?: any[];
-  status: LeadStatus;
-  createdAt: number;
-  updatedAt: number;
-  meta?: Record<string, unknown>;
-}
-interface BleedStore {
-  upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord>;
-}
-
-const memoryStore = (() => {
-  const leads = new Map<string, LeadRecord>();
-  const id = () => `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
-  const now = () => Date.now();
-  const obj: BleedStore = {
-    async upsertLead(l) {
-      // naive merge by tenant+domain
-      const existing = [...leads.values()].find(
-        (x) => x.tenantId === l.tenantId && x.domain && l.domain && x.domain === l.domain,
-      );
-      if (existing) {
-        const merged: LeadRecord = {
-          ...existing,
-          ...l,
-          id: existing.id,
-          updatedAt: now(),
-        };
-        leads.set(merged.id, merged);
-        return merged;
-      }
-      const rec: LeadRecord = {
-        id: id(),
-        tenantId: l.tenantId,
-        source: l.source ?? "buyers.find",
-        company: l.company,
-        domain: l.domain,
-        website: l.website,
-        country: l.country,
-        region: l.region,
-        verticals: l.verticals ?? [],
-        signals: l.signals ?? {},
-        scores: l.scores ?? {},
-        contacts: l.contacts ?? [],
-        status: l.status ?? "new",
-        createdAt: now(),
-        updatedAt: now(),
-        meta: l.meta ?? {},
-      };
-      leads.set(rec.id, rec);
-      return rec;
-    },
-  };
-  return obj;
-})();
-
-function getStore(req: Request): BleedStore {
-  // If index.ts attached a store: app.set('bleedStore', store)
-  const injected = req.app.get("bleedStore");
-  if (injected) return injected as BleedStore;
-  if (!req.app.get("__buyers_store_warned")) {
-    console.log("[buyers] using in-memory shim store");
-    req.app.set("__buyers_store_warned", true);
-  }
-  return memoryStore;
-}
-
-// ---- route -----------------------------------------------------------------
-
-/**
- * POST /api/v1/leads/find-buyers
- * body: { domain: string; region?: string; radiusMi?: number; persona?: object }
- * Also accepts supplierDomain|host|website for robustness.
- */
-router.post("/leads/find-buyers", async (req: Request, res: Response) => {
-  try {
-    const body = (req.body ?? {}) as Record<string, unknown>;
-
-    // tolerate various client keys, then normalize
-    const domRaw =
-      body.domain ?? body.supplierDomain ?? body.host ?? body.website ?? body.hostname ?? body.url ?? null;
-    const domain = normalizeDomain(domRaw);
-
-    if (!domain) {
-      return bad(res, "domain is required");
-    }
-
-    const region = typeof body.region === "string" && body.region.trim() ? (body.region as string) : "US/CA";
-    const radiusMi =
-      typeof body.radiusMi === "number"
-        ? (body.radiusMi as number)
-        : Number.parseInt(String(body.radiusMi ?? "50"), 10) || 50;
-
-    // Optionally persist a seed record for the supplier itself so the UI has a context row
-    const store = getStore(req);
-    const tenantId = (req as any).tenantId ?? "t_demo";
-    await store.upsertLead({
-      tenantId,
-      source: "supplier",
-      company: domain.split(".")[0],
-      domain,
-      website: `https://${domain}`,
-      region,
-      meta: { radiusMi },
-    });
-
-    // At this stage we only return a summary; the candidate discovery runs async (or is no-op stub)
-    return ok(res, {
-      ok: true,
-      created: 0,
-      hot: 0,
-      warm: 0,
-      info: `accepted domain=${domain} region=${region} radiusMi=${radiusMi}`,
-    });
-  } catch (err: any) {
-    console.error("[buyers] find-buyers failed:", err?.stack || err);
-    return res.status(500).json({ ok: false, error: "internal" });
-  }
+  res.status(200).json(items);
 });
+
+// Action endpoint expected by the UI: POST /api/v1/leads/find-buyers
+// Body: { domain: string, region?: string, radiusMi?: number }
+router.post("/leads/find-buyers", expressJsonSafe, (req, res) => {
+  const { domain, region, radiusMi } = req.body || {};
+
+  if (!domain || typeof domain !== "string" || !domain.trim()) {
+    return res.status(400).json({ ok: false, error: "domain is required" });
+  }
+
+  // For now we only ACK the request so the UI flow is unblocked.
+  // The next step will plug in the buyer-discovery engine and push
+  // created leads into `leadsStore`.
+  const created: PanelLead[] = [];
+  console.log(
+    `[buyers] find-buyers accepted domain=${domain} region=${region || "-"} radius=${radiusMi || "-"}`
+  );
+
+  return res.status(200).json({
+    ok: true,
+    created,
+    hot: created.filter((x) => x.temp === "hot").length,
+    warm: created.filter((x) => x.temp === "warm").length,
+  });
+});
+
+// --- local JSON body parser with error guard (avoids raw-body explosions)
+function expressJsonSafe(req: Request, res: Response, next: NextFunction) {
+  let raw = "";
+  req.setEncoding("utf8");
+  req.on("data", (chunk) => (raw += chunk));
+  req.on("end", () => {
+    if (!raw) {
+      req.body = {};
+      return next();
+    }
+    try {
+      req.body = JSON.parse(raw);
+      next();
+    } catch (e) {
+      console.error("[buyers] JSON parse error:", e);
+      res.status(400).json({ ok: false, error: "invalid json" });
+    }
+  });
+}
 
 export default router;
