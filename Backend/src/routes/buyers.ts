@@ -1,195 +1,275 @@
 // src/routes/buyers.ts
-// One router that mounts:
-// - POST /api/v1/leads/find-buyers  (instrumented, never throws, explains "0 created")
-// - GET  /__diag/healthz            (light health)
-// - GET  /__diag/envz               (redacted env snapshot for debugging)
+// A self-diagnosing buyers route that ALWAYS returns an explaining JSON.
+// No more guesswork: every response includes traceId, timings, blockers, env flags, and notes.
 
-import express, { Request, Response } from "express";
+import type { Express, Request, Response } from "express";
 import crypto from "crypto";
 
-// ---- Config (tweak without touching code elsewhere) -------------------------
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "https://gggp-test.github.io";
-const ALLOW_NET = (process.env.ALLOW_NET || "false").toLowerCase() === "true"; // turn on real crawling later
-const REGION_DEFAULT = "usca";
+// ---------- tiny utils ----------
+const TRACE = () => crypto.randomBytes(8).toString("hex");
+const now = () => Date.now();
+const ms = (t0: number) => Math.max(0, now() - t0);
 
-// Safe, redacted view of env so we can see feature flags quickly
-function safeEnv() {
-  const redact = (v?: string) => (v ? "set" : "unset");
+function normDomain(input?: string) {
+  if (!input) return "";
+  try {
+    let s = input.trim().toLowerCase();
+    if (s.startsWith("http://") || s.startsWith("https://")) s = new URL(s).hostname;
+    return s.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+function okOrigin(req: Request) {
+  const allow = process.env.FRONTEND_ORIGIN?.trim();
+  if (!allow) return true; // permissive by default (Northflank demo)
+  return req.headers.origin === allow;
+}
+
+// redacted env snapshot for debug
+function envFlags() {
+  const f = (v?: string) => (v ? "set" : "unset");
   return {
-    NODE_ENV: process.env.NODE_ENV || "",
-    ALLOW_NET,
-    FRONTEND_ORIGIN,
-    OPENROUTER_API_KEY: redact(process.env.OPENROUTER_API_KEY),
-    OPAL_API_KEY: redact(process.env.OPAL_API_KEY),
+    ALLOW_NET: process.env.ALLOW_NET === "1" || process.env.ALLOW_NET === "true",
+    OPENROUTER_KEY: f(process.env.OPENROUTER_API_KEY),
+    GOOGLE_CSE: f(process.env.GOOGLE_CSE_ID) + "/" + f(process.env.GOOGLE_CSE_KEY),
+    FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN || "(any)",
+    NODE_ENV: process.env.NODE_ENV || "development",
+    PROVIDER: process.env.BUYERS_PROVIDER || "shim",
   };
 }
 
-// Common JSON sender that always 200s and never leaks stack to strangers
-function sendJson(req: Request, res: Response, payload: any) {
-  const origin = req.headers.origin || "";
-  // Only include the deep debug object to our panel origin (so you can paste it to me)
-  const includeDebug = typeof origin === "string" && origin.startsWith(FRONTEND_ORIGIN);
-  const { debug, ...rest } = payload || {};
-  res.status(200).json(includeDebug ? payload : rest);
+// a safe 200 JSON writer (never throws)
+function reply(res: Response, body: any) {
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  // CORS: respect configured origin or fallback to request Origin (for GitHub Pages)
+  const origin = process.env.FRONTEND_ORIGIN || (res.req.headers.origin ?? "*");
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+  res.status(200).send(JSON.stringify(body));
 }
 
-// Parse & normalize body from panel
-function parseBody(body: any) {
-  const out = {
-    supplier: (body?.supplier || body?.domain || "").toString().trim().toLowerCase(),
-    region: (body?.region || REGION_DEFAULT).toString().trim().toLowerCase(),
-    radiusMi: Number(body?.radiusMi || 50) || 50,
-    persona: {
-      offer: (body?.persona?.offer || "").toString().trim(),
-      solves: (body?.persona?.solves || "").toString().trim(),
-      titles: (body?.persona?.titles || "").toString().trim(),
-    },
+// ---------- discovery shim (no external calls) ----------
+type Persona = { offer?: string; solves?: string; titles?: string };
+type ReqBody = {
+  supplier?: string;
+  region?: string;       // "usca"
+  radiusMi?: number;     // e.g. 50
+  persona?: Persona;
+  onlyUSCA?: boolean;
+};
+
+type Step = { name: string; ms: number; note?: string };
+type Explain = {
+  ok: boolean;
+  traceId: string;
+  supplier: { domain: string; region: string; radiusMi: number };
+  created: number;
+  hot: number;
+  warm: number;
+  candidates: any[];
+  message: string;
+  blockedBy?: string[];
+  durationMs: number;
+  debug?: {
+    env: ReturnType<typeof envFlags>;
+    inputs: any;
+    steps: Step[];
+    logs: string[];
+    error?: { message: string; where?: string };
   };
-  // normalize supplier -> domain
-  if (out.supplier.startsWith("http")) {
-    try {
-      const u = new URL(out.supplier);
-      out.supplier = u.hostname.replace(/^www\./, "");
-    } catch {/* ignore */}
-  }
-  out.supplier = out.supplier.replace(/^www\./, "");
-  return out;
-}
+};
 
-// Very-light heuristic seed generator (so you can see non-zero candidates even with ALLOW_NET=false)
-function heuristicSeeds(domain: string) {
-  const d = domain || "";
-  const isPack = /packag/i.test(d);
-  const isFilm = /film|stretch|shrink/i.test(d);
-  const out: any[] = [];
-
-  if (isPack || isFilm) {
-    out.push(
-      { host: "example-3pl.com", title: "Prospect • 3PL", why: "Warehouse ops likely buying stretch film", temp: "warm" },
-      { host: "regional-fulfillment.net", title: "Prospect • Fulfillment", why: "Node/DC ops → pallet wrap consumption", temp: "warm" },
-      { host: "fast-grocery-shipper.org", title: "Prospect • Grocery shipper", why: "Mixed-load shipping → wrap savings", temp: "warm" },
-    );
-  }
-  return out;
-}
-
-// The “discovery” placeholder. When ALLOW_NET=false we don’t crawl; we only return heuristic seeds.
-// When ALLOW_NET=true you’ll wire real crawlers. Either way we always resolve.
-async function discoverBuyers(domain: string, region: string, radiusMi: number, persona: any) {
-  const candidates: any[] = [];
-
-  // Heuristic fallback (always safe)
-  candidates.push(...heuristicSeeds(domain));
-
-  // Future: if (ALLOW_NET) { …real web ops… }
-  const notes: string[] = [];
-  if (!ALLOW_NET) notes.push("net_disabled");
-
-  // Persona influence (soft)
-  const personaEmpty = !persona?.offer && !persona?.solves && !persona?.titles;
-  if (personaEmpty) notes.push("persona_empty");
-
-  return { candidates, notes };
-}
-
-// Wrap handler in try/catch and convert any throw into { ok:false, error }
-function safeHandler(fn: (req: Request, res: Response) => Promise<void> | void) {
-  return async (req: Request, res: Response) => {
-    const t0 = Date.now();
-    const traceId = crypto.randomBytes(8).toString("hex");
-    try {
-      await Promise.resolve(fn(req, res));
-    } catch (err: any) {
-      const durationMs = Date.now() - t0;
-      sendJson(req, res, {
-        ok: false,
-        error: "internal_error",
-        message: "The server caught an unexpected error. See debug for details.",
-        blockedBy: "exception",
-        traceId,
-        durationMs,
-        debug: {
-          err: { name: err?.name, msg: err?.message },
-          stack: (err?.stack || "").split("\n").slice(0, 6),
-          seenBody: req.body,
-          env: safeEnv(),
-        },
-      });
-    }
+// Synthetic candidates to verify wiring without the internet/providers.
+// This helps keep everything "green" while still giving you signal.
+function synthCandidates(domain: string) {
+  const presets: Record<string, any[]> = {
+    "peekpackaging.com": [
+      { host: "shiphero.com", why: "3PL, packaging buyers", temp: "warm" },
+      { host: "flowspace.com", why: "Multi-node fulfillment", temp: "warm" },
+    ],
+    "stretchandshrink.com": [
+      { host: "xpo.com", why: "High pallet velocity", temp: "warm" },
+      { host: "rrd.com", why: "Kitting & irregular loads", temp: "warm" },
+    ],
   };
+  return presets[domain] || [];
 }
 
-export default function mountBuyers(app: express.Express) {
-  const router = express.Router();
+// ---------- main mount ----------
+export default function mountBuyers(app: Express) {
+  // OPTIONS (CORS preflight)
+  app.options("/api/v1/leads/find-buyers", (_req, res) => reply(res, { ok: true }));
 
-  // --- main endpoint ---------------------------------------------------------
-  router.post("/api/v1/leads/find-buyers", safeHandler(async (req, res) => {
-    const t0 = Date.now();
-    const traceId = crypto.randomBytes(8).toString("hex");
+  app.post("/api/v1/leads/find-buyers", async (req: Request, res: Response) => {
+    const t0 = now();
+    const traceId = TRACE();
+    const steps: Step[] = [];
+    const logs: string[] = [];
+    const env = envFlags();
 
-    // Ensure JSON is parsed (otherwise body is empty and we’d get the old “domain is required”)
-    // Your index should have: app.use(express.json({ limit: '512kb' }));
-    const { supplier, region, radiusMi, persona } = parseBody(req.body);
-
-    // Validation & explicit reasons (no more mysterious 0)
-    const reasons: string[] = [];
-    if (!supplier) reasons.push("domain_missing");
-    if (!region) reasons.push("region_missing");
-    if (reasons.length) {
-      return sendJson(req, res, {
-        ok: false,
-        error: "bad_request",
-        message: "Missing required fields.",
-        blockedBy: reasons.join("|"),
-        traceId,
-        durationMs: Date.now() - t0,
-        debug: { seenBody: req.body, parsed: { supplier, region, radiusMi, persona }, env: safeEnv() },
-      });
-    }
-
-    // Run “discovery” (non-throwing)
-    const { candidates, notes } = await discoverBuyers(supplier, region, radiusMi, persona);
-
-    const created = candidates.length;
-    const payload = {
-      ok: created > 0,
-      supplier: { domain: supplier, region, radiusMi },
-      created,
-      hot: 0,
-      warm: created, // simple for now
-      candidates,
-      message:
-        created > 0
-          ? `Created ${created} candidate(s).`
-          : "Created 0 candidate(s). Hot:0 Warm:0.",
-      blockedBy: created > 0 ? "" : (notes.length ? notes.join("|") : "no_matches"),
-      traceId,
-      durationMs: Date.now() - t0,
-      debug: {
-        notes,
-        personaEmpty: !persona?.offer && !persona?.solves && !persona?.titles,
-        parsed: { supplier, region, radiusMi, persona },
-        env: safeEnv(),
-        timing: { t0 },
-      },
+    // helper to time steps
+    const step = async <T>(name: string, fn: () => Promise<T> | T, note?: string): Promise<T> => {
+      const s0 = now();
+      try {
+        const out = await fn();
+        steps.push({ name, ms: ms(s0), note });
+        return out;
+      } catch (e: any) {
+        steps.push({ name, ms: ms(s0), note: `ERR: ${e?.message || e}` });
+        throw e;
+      }
     };
 
-    return sendJson(req, res, payload);
-  }));
+    try {
+      const body: ReqBody = (req.body || {}) as any;
+      const inputInfo = { body, origin: req.headers.origin, apiKeySeen: !!req.headers["x-api-key"] };
 
-  // --- light diagnostics -----------------------------------------------------
-  router.get("/__diag/healthz", (req, res) => {
-    res.status(200).json({
-      ok: true,
-      service: "buyers",
-      time: new Date().toISOString(),
-    });
+      const normalized = await step("normalize-input", () => {
+        const domain = normDomain(body.supplier);
+        const region = (body.region || "usca").toLowerCase();
+        const radiusMi = Math.max(1, Math.min(500, Number(body.radiusMi || 50)));
+        const persona: Persona = {
+          offer: (body.persona?.offer || "").trim(),
+          solves: (body.persona?.solves || "").trim(),
+          titles: (body.persona?.titles || "").trim(),
+        };
+        return { domain, region, radiusMi, persona };
+      });
+
+      const blockers: string[] = [];
+
+      await step("validate", () => {
+        if (!okOrigin(req)) blockers.push("BAD_ORIGIN");
+        if (!normalized.domain) blockers.push("MISSING_DOMAIN");
+        // If we require network/providers for real discovery, mark blockers here:
+        if (!env.ALLOW_NET) blockers.push("NET_DISABLED");
+        if (env.PROVIDER === "openrouter" && env.OPENROUTER_KEY === "unset") blockers.push("NO_OPENROUTER_KEY");
+        return true;
+      });
+
+      // If blocked, return an explanatory 200 with zero candidates.
+      if (blockers.length) {
+        return reply(res, <Explain>{
+          ok: true,
+          traceId,
+          supplier: {
+            domain: normalized.domain,
+            region: normalized.region,
+            radiusMi: normalized.radiusMi,
+          },
+          created: 0,
+          hot: 0,
+          warm: 0,
+          candidates: [],
+          message:
+            "Created 0 candidate(s). Hot:0 Warm:0. (Either no matches or discovery was blocked.)",
+          blockedBy: blockers,
+          durationMs: ms(t0),
+          debug: { env, inputs: inputInfo, steps, logs },
+        });
+      }
+
+      // PLAN
+      const plan = await step("plan-discovery", () => {
+        // In a future iteration we can branch to web, directories, ads, etc.
+        // For now: if PROVIDER is "shim", we use synthCandidates to prove the flow end-to-end.
+        return { provider: env.PROVIDER };
+      });
+
+      // DISCOVER
+      const found = await step("discover", async () => {
+        if (plan.provider === "shim") {
+          const arr = synthCandidates(normalized.domain);
+          logs.push(`shim: ${arr.length} synthetic candidates for ${normalized.domain}`);
+          return arr;
+        }
+        // If you flip PROVIDER later, this is where you'd call real discovery.
+        return [];
+      });
+
+      // SCORE + CLASSIFY
+      const scored = await step("score", () =>
+        found.map((c) => ({
+          ...c,
+          title: c.title || "Prospect @ " + c.host,
+          temp: c.temp || "warm",
+        }))
+      );
+
+      // (Optional) UPSERT into a store — best-effort, never blocking success
+      await step("upsert", async () => {
+        try {
+          // dynamic import to avoid hard dependency if store wiring changes
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          const mod = await import("../data/bleed-store");
+          const store = new mod.MemoryBleedStore();
+          for (const c of scored) {
+            await store.upsertLead({
+              tenantId: "demo",
+              source: "buyers:shim",
+              company: c.host,
+              domain: c.host,
+              signals: { shim: 1 },
+              scores: { intent: c.temp === "hot" ? 0.9 : 0.6 },
+            });
+          }
+        } catch (e: any) {
+          logs.push("store upsert skipped: " + (e?.message || e));
+        }
+      });
+
+      const hot = scored.filter((x) => x.temp === "hot").length;
+      const warm = scored.filter((x) => x.temp !== "hot").length;
+
+      return reply(res, <Explain>{
+        ok: true,
+        traceId,
+        supplier: {
+          domain: normalized.domain,
+          region: normalized.region,
+          radiusMi: normalized.radiusMi,
+        },
+        created: scored.length,
+        hot,
+        warm,
+        candidates: scored,
+        message: `Created ${scored.length} candidate(s). Hot:${hot} Warm:${warm}.`,
+        durationMs: ms(t0),
+        debug: { env, inputs: inputInfo, steps, logs },
+      });
+    } catch (err: any) {
+      // Never 500: report as ok:false with error + where, still 200 status.
+      const body: Explain = {
+        ok: false,
+        traceId,
+        supplier: { domain: "", region: "usca", radiusMi: 50 },
+        created: 0,
+        hot: 0,
+        warm: 0,
+        candidates: [],
+        message: "Buyers pipeline failed safely.",
+        durationMs: ms(t0),
+        debug: {
+          env: envFlags(),
+          inputs: { note: "see request body in server logs only" },
+          steps: [],
+          logs: [],
+          error: { message: err?.message || String(err), where: "buyers.route" },
+        },
+      };
+      return reply(res, body);
+    }
   });
 
-  router.get("/__diag/envz", (req, res) => {
-    sendJson(req, res, { ok: true, env: safeEnv() });
+  // -------- simple diagnostics you can hit from the browser --------
+  app.get("/__diag/healthz", (_req, res) => reply(res, { ok: true, ts: Date.now() }));
+  app.get("/__diag/envz", (req, res) => {
+    const env = envFlags();
+    // limit exposure to the configured origin (or allow all if not set)
+    if (!okOrigin(req)) return reply(res, { ok: false, error: "BAD_ORIGIN" });
+    reply(res, { ok: true, env });
   });
-
-  app.use(router);
-  console.log("[routes] mounted buyers from ./routes/buyers");
 }
