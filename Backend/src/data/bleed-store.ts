@@ -3,10 +3,10 @@
  * BLEED Store = Business Lead Evidence, Events & Decisions
  * Central append-only store for lead records + supporting evidence + decision trail.
  */
+
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "fs";
 import { dirname } from "path";
 
-// ----------------- Types -----------------
 export type LeadStatus =
   | "new"
   | "enriched"
@@ -29,15 +29,15 @@ export interface ContactRef {
 export interface LeadRecord {
   id: string;
   tenantId: string;
-  source: string; // "opal" | "google" | "dir:c-pacs" | "seed" | "web:ddg" | ...
+  source: string; // "opal" | "google" | "dir:c-pacs" | "seed" | ...
   company?: string;
   domain?: string;
   website?: string;
   country?: string;
   region?: string;
   verticals?: string[];
-  signals?: Record<string, number | string>;
-  scores?: Record<string, number>; // "intent", "fit", "timing", "trust"...
+  signals?: Record<string, number>; // e.g., "hiring_ops": 0.8
+  scores?: Record<string, number>; // "intent", "fit", "timing", "trust"
   contacts?: ContactRef[];
   status: LeadStatus;
   createdAt: number;
@@ -95,42 +95,26 @@ export interface BleedStore {
   exportTenant(tenantId: string): Promise<{ leads: LeadRecord[]; evidence: Evidence[]; decisions: Decision[] }>;
 }
 
-// ----------------- utils -----------------
 function now() {
   return Date.now();
 }
-function genId() {
+function rid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
-function uniq<T>(arr: T[]) {
-  return Array.from(new Set(arr));
-}
-function mergeContacts(a?: ContactRef[], b?: ContactRef[]) {
-  if (!a || a.length === 0) return b || [];
-  if (!b || b.length === 0) return a;
-  const out: ContactRef[] = [...a];
-  for (const c of b) {
-    const key = c.emailHash || c.phoneHash || c.linkedin || (c.name ? c.name.toLowerCase() : "");
-    const exists = out.find(
-      (x) => (x.emailHash || x.phoneHash || x.linkedin || (x.name ? x.name.toLowerCase() : "")) === key
-    );
-    if (!exists) out.push(c);
-  }
-  return out;
-}
 
-// ----------------- In-memory store -----------------
+// --------------------- In-memory store ---------------------
+
 export class MemoryBleedStore implements BleedStore {
   protected leads = new Map<string, LeadRecord>(); // key leadId
   protected evByLead = new Map<string, Evidence[]>();
   protected decByLead = new Map<string, Decision[]>();
 
   async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord> {
-    // merge by (tenantId + domain) or explicit id
+    // key by id or (tenantId+domain)
     const existing = lead.id
       ? this.leads.get(lead.id)
       : [...this.leads.values()].find(
-          (l) => l.tenantId === lead.tenantId && l.domain && lead.domain && l.domain === lead.domain
+          (l) => l.tenantId === lead.tenantId && !!l.domain && l.domain === lead.domain
         );
 
     if (existing) {
@@ -149,7 +133,7 @@ export class MemoryBleedStore implements BleedStore {
     }
 
     const record: LeadRecord = {
-      id: lead.id || genId(),
+      id: lead.id || rid(),
       tenantId: lead.tenantId,
       source: lead.source || "unknown",
       company: lead.company,
@@ -161,7 +145,7 @@ export class MemoryBleedStore implements BleedStore {
       signals: lead.signals || {},
       scores: lead.scores || {},
       contacts: lead.contacts || [],
-      status: lead.status || "new",
+      status: (lead.status as LeadStatus) || "new",
       createdAt: now(),
       updatedAt: now(),
       meta: lead.meta || {},
@@ -189,7 +173,7 @@ export class MemoryBleedStore implements BleedStore {
   }
 
   async addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence> {
-    const e: Evidence = { ...ev, id: genId(), ts: ev.ts || now() };
+    const e: Evidence = { ...ev, id: rid(), ts: ev.ts || now() };
     if (!this.evByLead.has(e.leadId)) this.evByLead.set(e.leadId, []);
     this.evByLead.get(e.leadId)!.push(e);
     return e;
@@ -201,7 +185,7 @@ export class MemoryBleedStore implements BleedStore {
   }
 
   async addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision> {
-    const dec: Decision = { ...d, id: genId(), ts: d.ts || now() };
+    const dec: Decision = { ...d, id: rid(), ts: d.ts || now() };
     if (!this.decByLead.has(dec.leadId)) this.decByLead.set(dec.leadId, []);
     this.decByLead.get(dec.leadId)!.push(dec);
     return dec;
@@ -242,7 +226,8 @@ export class MemoryBleedStore implements BleedStore {
   }
 }
 
-// ----------------- File-backed store -----------------
+// --------------------- File-backed store ---------------------
+
 export class FileBleedStore extends MemoryBleedStore {
   constructor(
     private basePath: string // creates three files: .leads.json, .evidence.jsonl, .decisions.jsonl
@@ -254,16 +239,19 @@ export class FileBleedStore extends MemoryBleedStore {
     if (!existsSync(this.evPath())) writeFileSync(this.evPath(), "");
     if (!existsSync(this.decPath())) writeFileSync(this.decPath(), "");
 
-    // Warm-load leads synchronously (no async/await here)
-    try {
-      const leads = JSON.parse(readFileSync(this.leadsPath(), "utf8")) as LeadRecord[];
-      for (const l of leads) {
-        // upsertLead is async, but for warm-load we don't need to await
-        super.upsertLead(l);
+    // Warm-load leads asynchronously (do NOT await in constructor)
+    void (async () => {
+      try {
+        const data = readFileSync(this.leadsPath(), "utf8");
+        const leads = data ? (JSON.parse(data) as LeadRecord[]) : [];
+        for (const l of leads) {
+          await super.upsertLead(l);
+        }
+        console.log("[bleed] warm-load ok:", leads.length);
+      } catch (e: any) {
+        console.warn("[bleed] warm-load failed:", e?.message || e);
       }
-    } catch {
-      /* ignore corrupt file on startup */
-    }
+    })();
   }
 
   private leadsPath() {
@@ -278,30 +266,58 @@ export class FileBleedStore extends MemoryBleedStore {
 
   override async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord> {
     const r = await super.upsertLead(lead);
-    // rewrite leads file atomically-ish (small volumes)
     try {
-      const existing = JSON.parse(readFileSync(this.leadsPath(), "utf8")) as LeadRecord[];
-      const i = existing.findIndex((x) => x.id === r.id);
-      if (i >= 0) existing[i] = r;
-      else existing.push(r);
-      writeFileSync(this.leadsPath(), JSON.stringify(existing, null, 2));
-    } catch {
-      // rebuild file from memory snapshot if parse fails
-      const snapshot = [...(this as any).leads.values()] as LeadRecord[];
-      writeFileSync(this.leadsPath(), JSON.stringify(snapshot, null, 2));
+      const raw = readFileSync(this.leadsPath(), "utf8");
+      const arr: LeadRecord[] = raw ? JSON.parse(raw) : [];
+      const i = arr.findIndex((x) => x.id === r.id);
+      if (i >= 0) arr[i] = r;
+      else arr.push(r);
+      writeFileSync(this.leadsPath(), JSON.stringify(arr, null, 2));
+    } catch (e: any) {
+      console.warn("[bleed] upsertLead write failed:", e?.message || e);
     }
     return r;
   }
 
   override async addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence> {
     const e = await super.addEvidence(ev);
-    appendFileSync(this.evPath(), JSON.stringify(e) + "\n");
+    try {
+      appendFileSync(this.evPath(), JSON.stringify(e) + "\n");
+    } catch (err: any) {
+      console.warn("[bleed] addEvidence append failed:", err?.message || err);
+    }
     return e;
   }
 
   override async addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision> {
     const dec = await super.addDecision(d);
-    appendFileSync(this.decPath(), JSON.stringify(dec) + "\n");
+    try {
+      appendFileSync(this.decPath(), JSON.stringify(dec) + "\n");
+    } catch (err: any) {
+      console.warn("[bleed] addDecision append failed:", err?.message || err);
+    }
     return dec;
   }
+}
+
+// --------------------- helpers ---------------------
+
+function uniq<T>(arr: T[]) {
+  return Array.from(new Set(arr));
+}
+
+function mergeContacts(a?: ContactRef[], b?: ContactRef[]) {
+  if (!a || a.length === 0) return b || [];
+  if (!b || b.length === 0) return a;
+  const out: ContactRef[] = [...a];
+  for (const c of b) {
+    const key = (c.emailHash || "") + (c.phoneHash || "") + (c.linkedin || "") + (c.name ? c.name.toLowerCase() : "");
+    const exists = out.find((x) => {
+      const k =
+        (x.emailHash || "") + (x.phoneHash || "") + (x.linkedin || "") + (x.name ? x.name.toLowerCase() : "");
+      return k === key;
+    });
+    if (!exists) out.push(c);
+  }
+  return out;
 }
