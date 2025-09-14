@@ -1,325 +1,93 @@
-// Backend/src/data/bleed-store.ts
+// Node 20+. One-file diagnostic for /api/v1/leads/find-buyers
+import dns from "node:dns/promises";
+import { URL } from "node:url";
 
-/**
- * BLEED Store = Business Lead Evidence, Events & Decisions
- * Central append-only store for lead records + supporting evidence + decision trail.
- */
+const API = process.env.API_URL || "";
+const KEY = process.env.API_KEY || process.env.X_API_KEY || "";
+const domain = (process.env.SUPPLIER || process.argv[2] || "").trim();
+const region = (process.env.REGION || "usca").toLowerCase();
+const radiusMi = Number(process.env.RADIUS_MI || "50");
+const verbose = (process.env.VERBOSE || "").toLowerCase() === "true";
+const insecure = (process.env.INSECURE || "") === "1";
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "fs";
-import { dirname } from "path";
-
-/* ---------- Types ---------- */
-
-export type LeadStatus =
-  | "new"
-  | "enriched"
-  | "qualified"
-  | "routed"
-  | "contacted"
-  | "won"
-  | "lost"
-  | "archived";
-
-export interface ContactRef {
-  name?: string;
-  role?: string;
-  emailHash?: string; // hashed; raw PII should live in pii-vault
-  phoneHash?: string;
-  linkedin?: string;
-  confidence?: number; // 0..1
+if (!API || !API.startsWith("http")) {
+  console.error(JSON.stringify({ ok:false, err:"set API_URL to https://<nf-host>/api/v1/leads/find-buyers" }, null, 2));
+  process.exit(2);
+}
+if (!domain) {
+  console.error(JSON.stringify({ ok:false, err:"set SUPPLIER or pass argv[2] (e.g. peekpackaging.com)" }, null, 2));
+  process.exit(2);
 }
 
-export interface LeadRecord {
-  id: string;
-  tenantId: string;
-  source: string; // "opal" | "google" | "dir:c-pacs" | "seed" | ...
-  company?: string;
-  domain?: string;
-  website?: string;
-  country?: string;
-  region?: string;
-  verticals?: string[];
-  signals?: Record<string, number>; // e.g., "hiring_ops": 0.8
-  scores?: Record<string, number>; // "intent", "fit", "timing", "trust"
-  contacts?: ContactRef[];
-  status: LeadStatus;
-  createdAt: number;
-  updatedAt: number;
-  meta?: Record<string, unknown>;
+if (insecure) {
+  // allow TLS to self-signed if you ever need to debug proxies
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 }
 
-export interface Evidence {
-  id: string;
-  leadId: string;
-  ts: number;
-  kind:
-    | "ad_snapshot"
-    | "pricing_page"
-    | "careers_posting"
-    | "tech_tag"
-    | "news"
-    | "review"
-    | "social_post"
-    | "directory_row"
-    | "catalog_listing"
-    | "email_bounce"
-    | "reply_positive"
-    | "reply_negative";
-  url?: string;
-  snippet?: string; // short extract
-  weight?: number; // 0..1 effect toward intent/fit/…
-  meta?: Record<string, unknown>;
-}
-
-export interface Decision {
-  id: string;
-  leadId: string;
-  ts: number;
-  by: "system" | "user";
-  actorId?: string;
-  type: "ROUTE" | "APPROVE" | "REJECT" | "PAUSE" | "RESCORE" | "ARCHIVE";
-  reason?: string;
-  meta?: Record<string, unknown>;
-}
-
-export interface BleedStore {
-  upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord>;
-  getLead(tenantId: string, id: string): Promise<LeadRecord | undefined>;
-  listLeads(
-    tenantId: string,
-    opts?: { status?: LeadStatus; limit?: number; search?: string }
-  ): Promise<LeadRecord[]>;
-  addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence>;
-  listEvidence(leadId: string, limit?: number): Promise<Evidence[]>;
-  addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision>;
-  listDecisions(leadId: string, limit?: number): Promise<Decision[]>;
-  updateScores(tenantId: string, id: string, scores: Record<string, number>): Promise<LeadRecord | undefined>;
-  setStatus(tenantId: string, id: string, status: LeadStatus): Promise<LeadRecord | undefined>;
-  exportTenant(tenantId: string): Promise<{ leads: LeadRecord[]; evidence: Evidence[]; decisions: Decision[] }>;
-}
-
-/* ---------- Utils ---------- */
-
-function now() {
-  return Date.now();
-}
-function newid() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-/* ---------- In-memory implementation ---------- */
-
-export class MemoryBleedStore implements BleedStore {
-  private leads = new Map<string, LeadRecord>(); // key: leadId
-  private evByLead = new Map<string, Evidence[]>();
-  private decByLead = new Map<string, Decision[]>();
-
-  async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord> {
-    // naive key by domain or id
-    const existing = lead.id
-      ? this.leads.get(lead.id)
-      : [...this.leads.values()].find(
-          (l) => l.tenantId === lead.tenantId && !!l.domain && l.domain === lead.domain
-        );
-
-    if (existing) {
-      const merged: LeadRecord = {
-        ...existing,
-        ...lead,
-        id: existing.id,
-        signals: { ...(existing.signals ?? {}), ...(lead.signals ?? {}) },
-        scores: { ...(existing.scores ?? {}), ...(lead.scores ?? {}) },
-        contacts: mergeContacts(existing.contacts, lead.contacts),
-        verticals: uniq([...(existing.verticals ?? []), ...(lead.verticals ?? [])]),
-        updatedAt: now(),
-      };
-      this.leads.set(merged.id, merged);
-      return merged;
-    }
-
-    const record: LeadRecord = {
-      id: lead.id ?? newid(),
-      tenantId: lead.tenantId,
-      source: lead.source ?? "unknown",
-      company: lead.company,
-      domain: lead.domain,
-      website: lead.website,
-      country: lead.country,
-      region: lead.region,
-      verticals: lead.verticals ?? [],
-      signals: lead.signals ?? {},
-      scores: lead.scores ?? {},
-      contacts: lead.contacts ?? [],
-      status: lead.status ?? "new",
-      createdAt: now(),
-      updatedAt: now(),
-      meta: lead.meta ?? {},
-    };
-    this.leads.set(record.id, record);
-    return record;
+const u = new URL(API);
+const body = {
+  supplier: domain,
+  region,
+  radiusMi,
+  persona: {
+    offer: process.env.OFFER || "",
+    solves: process.env.SOLVES || "",
+    titles: process.env.TITLES || ""
   }
+};
 
-  async getLead(_tenantId: string, id: string): Promise<LeadRecord | undefined> {
-    return this.leads.get(id);
-  }
+const out = { ok:false, at: 0, api: API, host: u.host, env: { region, radiusMi, domain }, steps:{} };
 
-  async listLeads(
-    tenantId: string,
-    opts?: { status?: LeadStatus; limit?: number; search?: string }
-  ): Promise<LeadRecord[]> {
-    let arr = [...this.leads.values()].filter((l) => l.tenantId === tenantId);
-    if (opts?.status) arr = arr.filter((l) => l.status === opts.status);
-    if (opts?.search) {
-      const s = opts.search.toLowerCase();
-      arr = arr.filter((l) => (l.company ?? "").toLowerCase().includes(s) || (l.domain ?? "").includes(s));
-    }
-    arr.sort((a, b) => b.updatedAt - a.updatedAt);
-    return arr.slice(0, opts?.limit ?? 200);
-  }
+try {
+  // DNS
+  const addrs = await dns.lookup(u.hostname, { all:true }).catch(e => ({ error:String(e) }));
+  out.steps.dns = addrs;
 
-  async addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence> {
-    const e: Evidence = { ...ev, id: newid(), ts: ev.ts ?? now() };
-    if (!this.evByLead.has(e.leadId)) this.evByLead.set(e.leadId, []);
-    this.evByLead.get(e.leadId)!.push(e);
-    return e;
-  }
+  // /healthz
+  const healthzURL = `${u.origin}/healthz`;
+  const h = await fetch(healthzURL).catch(e => ({ ok:false, status:0, text: async()=>String(e), headers:new Headers() }));
+  out.steps.healthz = {
+    status: h.status || 0,
+    ct: (h.headers?.get?.("content-type") || ""),
+    body: await (h.text?.() ?? Promise.resolve(""))
+  };
 
-  async listEvidence(leadId: string, limit = 100): Promise<Evidence[]> {
-    const arr = this.evByLead.get(leadId) ?? [];
-    return arr.slice(-limit);
-  }
+  // POST
+  const t0 = Date.now();
+  const res = await fetch(API, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(KEY ? { "x-api-key": KEY } : {})
+    },
+    body: JSON.stringify(body)
+  }).catch(e => ({ ok:false, status:0, headers:new Headers(), text: async()=>String(e) }));
+  const ms = Date.now() - t0;
+  const text = await (res.text?.() ?? Promise.resolve(""));
+  const isJSON = (res.headers?.get?.("content-type") || "").includes("application/json");
+  const payload = isJSON ? safeJSON(text) : { raw:text };
 
-  async addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision> {
-    const dec: Decision = { ...d, id: newid(), ts: d.ts ?? now() };
-    if (!this.decByLead.has(dec.leadId)) this.decByLead.set(dec.leadId, []);
-    this.decByLead.get(dec.leadId)!.push(dec);
-    return dec;
-  }
+  out.steps.call = { status: res.status || 0, ms, sent: body, received: payload };
 
-  async listDecisions(leadId: string, limit = 100): Promise<Decision[]> {
-    const arr = this.decByLead.get(leadId) ?? [];
-    return arr.slice(-limit);
-  }
-
-  async updateScores(_tenantId: string, id: string, scores: Record<string, number>): Promise<LeadRecord | undefined> {
-    const lead = this.leads.get(id);
-    if (!lead) return;
-    lead.scores = { ...(lead.scores ?? {}), ...scores };
-    lead.updatedAt = now();
-    this.leads.set(id, lead);
-    return lead;
-  }
-
-  async setStatus(_tenantId: string, id: string, status: LeadStatus): Promise<LeadRecord | undefined> {
-    const lead = this.leads.get(id);
-    if (!lead) return;
-    lead.status = status;
-    lead.updatedAt = now();
-    this.leads.set(id, lead);
-    return lead;
-  }
-
-  async exportTenant(tenantId: string) {
-    const leads = [...this.leads.values()].filter((l) => l.tenantId === tenantId);
-    const evidence: Evidence[] = [];
-    const decisions: Decision[] = [];
-    for (const l of leads) {
-      evidence.push(...(this.evByLead.get(l.id) ?? []));
-      decisions.push(...(this.decByLead.get(l.id) ?? []));
-    }
-    return { leads, evidence, decisions };
-  }
-}
-
-/* ---------- File-backed implementation ---------- */
-
-export class FileBleedStore extends MemoryBleedStore {
-  constructor(
-    private basePath: string // will create three files: .leads.json, .evidence.jsonl, .decisions.jsonl
-  ) {
-    super();
-    const dir = dirname(basePath);
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    const leadsPath = this.leadsPath();
-    if (!existsSync(leadsPath)) writeFileSync(leadsPath, JSON.stringify([]));
-    if (!existsSync(this.evPath())) writeFileSync(this.evPath(), "");
-    if (!existsSync(this.decPath())) writeFileSync(this.decPath(), "");
-
-    // warm load leads into memory (NO await in constructor)
-    try {
-      const leads = JSON.parse(readFileSync(leadsPath, "utf8") || "[]") as LeadRecord[];
-      // fire-and-forget; we don't block the constructor
-      this.warmLoad(leads).catch(() => {});
-    } catch {
-      /* ignore */
+  // Verdict
+  if ((res.status || 0) >= 500) { out.ok = false; out.at = 500; }
+  else if ((res.status || 0) === 404) { out.ok = false; out.at = 404; }
+  else if ((res.status || 0) === 400) { out.ok = false; out.at = 400; }
+  else {
+    const created = Number(payload?.created || 0);
+    const cands = Array.isArray(payload?.candidates) ? payload.candidates.length : 0;
+    out.ok = true;
+    out.at = (created === 0 && cands === 0) ? 10 : 200;
+    if (out.at === 10 && verbose) {
+      out.note = "ok=true but empty (discovery disabled / persona empty / filters removed everything)";
     }
   }
-
-  private leadsPath() {
-    return this.basePath + ".leads.json";
-  }
-  private evPath() {
-    return this.basePath + ".evidence.jsonl";
-  }
-  private decPath() {
-    return this.basePath + ".decisions.jsonl";
-  }
-
-  private async warmLoad(leads: LeadRecord[]) {
-    for (const l of leads) await super.upsertLead(l);
-  }
-
-  override async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord> {
-    const r = await super.upsertLead(lead);
-    const json = readFileSync(this.leadsPath(), "utf8") || "[]";
-    const leads: LeadRecord[] = JSON.parse(json);
-    const i = leads.findIndex((x) => x.id === r.id);
-    if (i >= 0) leads[i] = r;
-    else leads.push(r);
-    writeFileSync(this.leadsPath(), JSON.stringify(leads, null, 2));
-    return r;
-  }
-
-  override async addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence> {
-    const e = await super.addEvidence(ev);
-    appendFileSync(this.evPath(), JSON.stringify(e) + "\n");
-    return e;
-  }
-
-  override async addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision> {
-    const dec = await super.addDecision(d);
-    appendFileSync(this.decPath(), JSON.stringify(dec) + "\n");
-    return dec;
-  }
+} catch (e) {
+  out.ok = false;
+  out.err = String(e);
 }
 
-/* ---------- helpers ---------- */
+console.log(JSON.stringify(out, null, 2));
+process.exit(out.ok ? 0 : 1);
 
-function uniq<T>(arr: T[]) {
-  return Array.from(new Set(arr));
-}
-
-function mergeContacts(a?: ContactRef[], b?: ContactRef[]) {
-  if (!a || a.length === 0) return b ?? [];
-  if (!b || b.length === 0) return a;
-  const out: ContactRef[] = [...a];
-  for (const c of b) {
-    const key =
-      c.emailHash ??
-      c.phoneHash ??
-      c.linkedin ??
-      (c.name ? c.name.toLowerCase() : "");
-    if (
-      !out.find(
-        (x) =>
-          (x.emailHash ??
-            x.phoneHash ??
-            x.linkedin ??
-            (x.name ? x.name.toLowerCase() : "")) === key
-      )
-    ) {
-      out.push(c);
-    }
-  }
-  return out;
-}
+function safeJSON(t) { try { return JSON.parse(t); } catch { return { parseError:true, raw:t }; } }
