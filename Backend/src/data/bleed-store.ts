@@ -1,319 +1,157 @@
-// src/data/bleed-store.ts
 /**
- * BLEED Store = Business Lead Evidence, Events & Decisions
- * - In-memory implementation for speed
- * - File-backed implementation for persistence
+ * Lightweight in-memory “bleed” (debug/telemetry) store.
+ * - No top-level await, no filesystem, no network.
+ * - Designed to NEVER throw; all methods are safe no-ops when disabled.
+ * - Ring buffer to avoid unbounded memory growth.
  *
- * NOTE: Constructors are synchronous. Any hydration from disk is done fire-and-forget
- * (no top-level await inside constructors), which avoids the esbuild error you saw.
+ * Typical usage elsewhere:
+ *   import bleed, { bleedFor } from "../data/bleed-store";
+ *   bleed.info("buyers", "starting discovery", { supplier, region });
+ *   const b = bleedFor("buyers"); b.debug("step", "parsed page", { url });
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "fs";
-import { dirname } from "path";
+export type BleedLevel = "debug" | "info" | "warn" | "error";
 
-// -------- Types
-
-export type LeadStatus =
-  | "new"
-  | "enriched"
-  | "qualified"
-  | "routed"
-  | "contacted"
-  | "won"
-  | "lost"
-  | "archived";
-
-export interface ContactRef {
-  name?: string;
-  role?: string;
-  emailHash?: string; // hashed; raw PII should live in pii-vault
-  phoneHash?: string;
-  linkedin?: string;
-  confidence?: number; // 0..1
+export interface BleedEvent<T = unknown> {
+  t: number;               // epoch ms
+  ns: string;              // namespace (e.g. "buyers")
+  level: BleedLevel;
+  msg: string;
+  data?: T;                // arbitrary payload
 }
 
-export interface LeadRecord {
-  id: string;
-  tenantId: string;
-  source: string; // "opal" | "google" | "dir:c-pacs" | "seed" | ...
-  company?: string;
-  domain?: string;
-  website?: string;
-  country?: string;
-  region?: string;
-  verticals?: string[];
-  signals?: Record<string, number>; // e.g., "hiring_ops": 0.8
-  scores?: Record<string, number>; // e.g., "intent", "fit", "timing", "trust"
-  contacts?: ContactRef[];
-  status: LeadStatus;
-  createdAt: number;
-  updatedAt: number;
-  meta?: Record<string, unknown>;
+export interface BleedStoreOptions {
+  max?: number;            // ring buffer size
+  enabled?: boolean;       // default on/off
 }
 
-export interface Evidence {
-  id: string;
-  leadId: string;
-  ts: number;
-  kind:
-    | "ad_snapshot"
-    | "pricing_page"
-    | "careers_posting"
-    | "tech_tag"
-    | "news"
-    | "review"
-    | "social_post"
-    | "directory_row"
-    | "catalog_listing"
-    | "email_bounce"
-    | "reply_positive"
-    | "reply_negative";
-  url?: string;
-  snippet?: string; // short extract
-  weight?: number; // 0..1 effect toward intent/fit/…
-  meta?: Record<string, unknown>;
-}
+class BleedStore {
+  private buf: BleedEvent[] = [];
+  private head = 0;
+  private _size = 0;
+  private readonly max: number;
+  private _enabled: boolean;
 
-export interface Decision {
-  id: string;
-  leadId: string;
-  ts: number;
-  by: "system" | "user";
-  actorId?: string;
-  type: "ROUTE" | "APPROVE" | "REJECT" | "PAUSE" | "RESCORE" | "ARCHIVE";
-  reason?: string;
-  meta?: Record<string, unknown>;
-}
-
-export interface BleedStore {
-  upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord>;
-  getLead(tenantId: string, id: string): Promise<LeadRecord | undefined>;
-  listLeads(
-    tenantId: string,
-    opts?: { status?: LeadStatus; limit?: number; search?: string }
-  ): Promise<LeadRecord[]>;
-  addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence>;
-  listEvidence(leadId: string, limit?: number): Promise<Evidence[]>;
-  addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision>;
-  listDecisions(leadId: string, limit?: number): Promise<Decision[]>;
-  updateScores(tenantId: string, id: string, scores: Record<string, number>): Promise<LeadRecord | undefined>;
-  setStatus(tenantId: string, id: string, status: LeadStatus): Promise<LeadRecord | undefined>;
-  exportTenant(tenantId: string): Promise<{ leads: LeadRecord[]; evidence: Evidence[]; decisions: Decision[] }>;
-}
-
-// -------- Utils
-
-function now() {
-  return Date.now();
-}
-function rid() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-function uniq<T>(arr: T[]) {
-  return Array.from(new Set(arr));
-}
-function mergeContacts(a?: ContactRef[], b?: ContactRef[]) {
-  if (!a || a.length === 0) return b || [];
-  if (!b || b.length === 0) return a;
-  const out: ContactRef[] = [...a];
-  for (const c of b) {
-    const key = c.emailHash || c.phoneHash || c.linkedin || (c.name ? c.name.toLowerCase() : "");
-    if (!out.find((x) => (x.emailHash || x.phoneHash || x.linkedin || (x.name ? x.name.toLowerCase() : "")) === key)) {
-      out.push(c);
-    }
-  }
-  return out;
-}
-
-// -------- In-memory impl
-
-export class MemoryBleedStore implements BleedStore {
-  protected leads = new Map<string, LeadRecord>(); // key leadId
-  protected evByLead = new Map<string, Evidence[]>();
-  protected decByLead = new Map<string, Decision[]>();
-
-  async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord> {
-    // naive key by domain or explicit id
-    const existing = lead.id
-      ? this.leads.get(lead.id)
-      : [...this.leads.values()].find((l) => l.tenantId === lead.tenantId && l.domain && l.domain === lead.domain);
-
-    if (existing) {
-      const merged: LeadRecord = {
-        ...existing,
-        ...lead,
-        id: existing.id,
-        signals: { ...(existing.signals || {}), ...(lead.signals || {}) },
-        scores: { ...(existing.scores || {}), ...(lead.scores || {}) },
-        contacts: mergeContacts(existing.contacts, lead.contacts),
-        verticals: uniq([...(existing.verticals || []), ...(lead.verticals || [])]),
-        updatedAt: now(),
-      };
-      this.leads.set(merged.id, merged);
-      return merged;
-    }
-
-    const record: LeadRecord = {
-      id: lead.id || rid(),
-      tenantId: lead.tenantId,
-      source: lead.source || "unknown",
-      company: lead.company,
-      domain: lead.domain,
-      website: lead.website,
-      country: lead.country,
-      region: lead.region,
-      verticals: lead.verticals || [],
-      signals: lead.signals || {},
-      scores: lead.scores || {},
-      contacts: lead.contacts || [],
-      status: lead.status || "new",
-      createdAt: now(),
-      updatedAt: now(),
-      meta: lead.meta || {},
-    };
-    this.leads.set(record.id, record);
-    return record;
+  constructor(opts: BleedStoreOptions = {}) {
+    this.max = Math.max(50, Math.floor(opts.max ?? 2000));
+    this._enabled = opts.enabled ?? true;
   }
 
-  async getLead(_tenantId: string, id: string): Promise<LeadRecord | undefined> {
-    return this.leads.get(id);
-  }
+  /** enable/disable logging */
+  enable(on = true): void { this._enabled = !!on; }
+  disable(): void { this._enabled = false; }
+  get enabled(): boolean { return this._enabled; }
 
-  async listLeads(
-    tenantId: string,
-    opts?: { status?: LeadStatus; limit?: number; search?: string }
-  ): Promise<LeadRecord[]> {
-    let arr = [...this.leads.values()].filter((l) => l.tenantId === tenantId);
-    if (opts?.status) arr = arr.filter((l) => l.status === opts.status);
-    if (opts?.search) {
-      const s = opts.search.toLowerCase();
-      arr = arr.filter((l) => (l.company || "").toLowerCase().includes(s) || (l.domain || "").includes(s));
-    }
-    arr.sort((a, b) => b.updatedAt - a.updatedAt);
-    return arr.slice(0, opts?.limit || 200);
-  }
+  /** number of events retained */
+  get size(): number { return this._size; }
+  /** capacity of the ring buffer */
+  get capacity(): number { return this.max; }
 
-  async addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence> {
-    const e: Evidence = { ...ev, id: rid(), ts: ev.ts || now() };
-    if (!this.evByLead.has(e.leadId)) this.evByLead.set(e.leadId, []);
-    this.evByLead.get(e.leadId)!.push(e);
-    return e;
-  }
-
-  async listEvidence(leadId: string, limit = 100): Promise<Evidence[]> {
-    const arr = this.evByLead.get(leadId) || [];
-    return arr.slice(-limit);
-  }
-
-  async addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision> {
-    const dec: Decision = { ...d, id: rid(), ts: d.ts || now() };
-    if (!this.decByLead.has(dec.leadId)) this.decByLead.set(dec.leadId, []);
-    this.decByLead.get(dec.leadId)!.push(dec);
-    return dec;
-  }
-
-  async listDecisions(leadId: string, limit = 100): Promise<Decision[]> {
-    const arr = this.decByLead.get(leadId) || [];
-    return arr.slice(-limit);
-  }
-
-  async updateScores(_tenantId: string, id: string, scores: Record<string, number>): Promise<LeadRecord | undefined> {
-    const lead = this.leads.get(id);
-    if (!lead) return;
-    lead.scores = { ...(lead.scores || {}), ...scores };
-    lead.updatedAt = now();
-    this.leads.set(id, lead);
-    return lead;
-  }
-
-  async setStatus(_tenantId: string, id: string, status: LeadStatus): Promise<LeadRecord | undefined> {
-    const lead = this.leads.get(id);
-    if (!lead) return;
-    lead.status = status;
-    lead.updatedAt = now();
-    this.leads.set(id, lead);
-    return lead;
-  }
-
-  async exportTenant(tenantId: string) {
-    const leads = [...this.leads.values()].filter((l) => l.tenantId === tenantId);
-    const evidence: Evidence[] = [];
-    const decisions: Decision[] = [];
-    for (const l of leads) {
-      evidence.push(...(this.evByLead.get(l.id) || []));
-      decisions.push(...(this.decByLead.get(l.id) || []));
-    }
-    return { leads, evidence, decisions };
-  }
-}
-
-// -------- File-backed impl
-
-export class FileBleedStore extends MemoryBleedStore {
-  constructor(
-    private basePath: string // will create three files: .leads.json, .evidence.jsonl, .decisions.jsonl
-  ) {
-    super();
-    const dir = dirname(basePath);
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    if (!existsSync(this.leadsPath())) writeFileSync(this.leadsPath(), JSON.stringify([]));
-    if (!existsSync(this.evPath())) writeFileSync(this.evPath(), "");
-    if (!existsSync(this.decPath())) writeFileSync(this.decPath(), "");
-
-    // Fire-and-forget hydration (no await in constructor)
-    try {
-      const leads = JSON.parse(readFileSync(this.leadsPath(), "utf8")) as LeadRecord[];
-      void this.hydrateFromDisk(leads);
-    } catch {
-      /* ignore corrupted disk state */
+  /** push a prebuilt event (used internally) */
+  push(ev: BleedEvent): void {
+    if (!this._enabled) return;
+    if (this._size < this.max) {
+      this.buf[this._size++] = ev;
+    } else {
+      this.buf[this.head] = ev;
+      this.head = (this.head + 1) % this.max;
     }
   }
 
-  private leadsPath() {
-    return this.basePath + ".leads.json";
-  }
-  private evPath() {
-    return this.basePath + ".evidence.jsonl";
-  }
-  private decPath() {
-    return this.basePath + ".decisions.jsonl";
+  /** generic log */
+  log<T = unknown>(ns: string, level: BleedLevel, msg: string, data?: T): void {
+    this.push({ t: Date.now(), ns, level, msg, data });
   }
 
-  private async hydrateFromDisk(leads: LeadRecord[]) {
-    for (const l of leads) {
-      try {
-        await super.upsertLead(l);
-      } catch {
-        // ignore a single bad row
-      }
+  debug<T = unknown>(ns: string, msg: string, data?: T): void { this.log(ns, "debug", msg, data); }
+  info<T = unknown>(ns: string, msg: string, data?: T): void  { this.log(ns, "info",  msg, data); }
+  warn<T = unknown>(ns: string, msg: string, data?: T): void  { this.log(ns, "warn",  msg, data); }
+  error<T = unknown>(ns: string, msg: string, data?: T): void { this.log(ns, "error", msg, data); }
+
+  /** get all events (optionally filtered) in chronological order */
+  all(filter?: { ns?: string; level?: BleedLevel }): BleedEvent[] {
+    const out: BleedEvent[] = [];
+    if (this._size === 0) return out;
+
+    // reconstruct chronology from ring buffer
+    const start = this._size === this.max ? this.head : 0;
+    for (let i = 0; i < this._size; i++) {
+      const idx = (start + i) % this.max;
+      const ev = this.buf[idx];
+      if (!ev) continue;
+
+      if (filter?.ns && ev.ns !== filter.ns) continue;
+      if (filter?.level && ev.level !== filter.level) continue;
+      out.push(ev);
     }
+    return out;
   }
 
-  override async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord> {
-    const r = await super.upsertLead(lead);
-    try {
-      const arr = JSON.parse(readFileSync(this.leadsPath(), "utf8")) as LeadRecord[];
-      const i = arr.findIndex((x) => x.id === r.id);
-      if (i >= 0) arr[i] = r;
-      else arr.push(r);
-      writeFileSync(this.leadsPath(), JSON.stringify(arr, null, 2));
-    } catch {
-      // regen from memory if file unreadable
-      const all = [...this.leads.values()];
-      writeFileSync(this.leadsPath(), JSON.stringify(all, null, 2));
-    }
-    return r;
+  /** last N events (default 100) */
+  tail(n = 100, filter?: { ns?: string; level?: BleedLevel }): BleedEvent[] {
+    const all = this.all(filter);
+    return all.slice(Math.max(0, all.length - n));
   }
 
-  override async addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence> {
-    const e = await super.addEvidence(ev);
-    appendFileSync(this.evPath(), JSON.stringify(e) + "\n");
-    return e;
+  /** remove all retained events */
+  clear(): void {
+    this.buf = [];
+    this.head = 0;
+    this._size = 0;
   }
 
-  override async addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision> {
-    const dec = await super.addDecision(d);
-    appendFileSync(this.decPath(), JSON.stringify(dec) + "\n");
-    return dec;
+  /** minimal status snapshot (handy for /healthz) */
+  status(): { enabled: boolean; size: number; capacity: number } {
+    return { enabled: this._enabled, size: this._size, capacity: this.max };
   }
 }
+
+/**
+ * Multiple named stores (so features can keep their own logs):
+ *   const buyers = bleedFor("buyers");
+ *   buyers.info("start", "fetching …");
+ */
+class BleedDirectory {
+  private stores = new Map<string, BleedStore>();
+
+  get(name = "default"): BleedStore {
+    let s = this.stores.get(name);
+    if (!s) {
+      s = new BleedStore({ max: 2000, enabled: true });
+      this.stores.set(name, s);
+    }
+    return s;
+  }
+
+  /** convenience passthroughs */
+  info(ns: string, msg: string, data?: unknown): void { this.get(ns).info(ns, msg, data); }
+  debug(ns: string, msg: string, data?: unknown): void { this.get(ns).debug(ns, msg, data); }
+  warn(ns: string, msg: string, data?: unknown): void { this.get(ns).warn(ns, msg, data); }
+  error(ns: string, msg: string, data?: unknown): void { this.get(ns).error(ns, msg, data); }
+
+  /** toggle all */
+  enableAll(on = true): void { for (const s of this.stores.values()) s.enable(on); }
+  clearAll(): void { for (const s of this.stores.values()) s.clear(); }
+}
+
+export const directory = new BleedDirectory();
+
+/** Default shared store (ns="default"). */
+export const bleedStore: BleedStore = directory.get("default");
+
+/** Backward-compat convenience aliases that many codebases use. */
+export const bleed = bleedStore;
+export const Bleed = bleedStore;
+
+/** Get a named store (e.g., `bleedFor("buyers")`). */
+export function bleedFor(ns = "default"): BleedStore {
+  return directory.get(ns);
+}
+
+/** Common helpers (exported for convenience). */
+export function logInfo(ns: string, msg: string, data?: unknown) { directory.info(ns, msg, data); }
+export function logWarn(ns: string, msg: string, data?: unknown) { directory.warn(ns, msg, data); }
+export function logError(ns: string, msg: string, data?: unknown) { directory.error(ns, msg, data); }
+export function logDebug(ns: string, msg: string, data?: unknown) { directory.debug(ns, msg, data); }
+
+export default bleedStore;
