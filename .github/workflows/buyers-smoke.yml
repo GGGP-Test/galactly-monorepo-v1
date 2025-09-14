@@ -1,0 +1,38 @@
+name: Buyers Smoke
+on:
+  workflow_dispatch:
+    inputs:
+      supplier:
+        description: Supplier domain
+        required: true
+        default: peekpackaging.com
+      region:
+        description: Region code
+        required: true
+        default: usca
+      radius:
+        description: Radius (mi)
+        required: true
+        default: "50"
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Run smoke
+        env:
+          API_URL: ${{ secrets.API_URL }} # e.g. https://p01--...code.run/api/v1/leads/find-buyers
+          API_KEY: ${{ secrets.API_KEY }}
+          SUPPLIER: ${{ github.event.inputs.supplier }}
+          REGION:   ${{ github.event.inputs.region }}
+          RADIUS_MI: ${{ github.event.inputs.radius }}
+          VERBOSE: "true"
+        run: |
+          node Backend/devtools/smoke/find-buyers.mjs | tee smoke.json
+      - name: Attach result
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-result
+          path: smoke.json
