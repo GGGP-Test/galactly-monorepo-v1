@@ -1,35 +1,49 @@
 // src/data/bleed-store.ts
 /**
  * BLEED Store = Business Lead Evidence, Events & Decisions
- * Central append-only store for lead records + supporting evidence + decision trail.
+ * - In-memory implementation for speed
+ * - File-backed implementation for persistence
+ *
+ * NOTE: Constructors are synchronous. Any hydration from disk is done fire-and-forget
+ * (no top-level await inside constructors), which avoids the esbuild error you saw.
  */
+
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "fs";
 import { dirname } from "path";
 
+// -------- Types
+
 export type LeadStatus =
-  | "new" | "enriched" | "qualified" | "routed" | "contacted" | "won" | "lost" | "archived";
+  | "new"
+  | "enriched"
+  | "qualified"
+  | "routed"
+  | "contacted"
+  | "won"
+  | "lost"
+  | "archived";
 
 export interface ContactRef {
   name?: string;
   role?: string;
-  emailHash?: string;   // hashed; raw PII should live in pii-vault
+  emailHash?: string; // hashed; raw PII should live in pii-vault
   phoneHash?: string;
   linkedin?: string;
-  confidence?: number;  // 0..1
+  confidence?: number; // 0..1
 }
 
 export interface LeadRecord {
   id: string;
   tenantId: string;
-  source: string;                 // "opal" | "google" | "dir:c-pacs" | "seed" | ...
+  source: string; // "opal" | "google" | "dir:c-pacs" | "seed" | ...
   company?: string;
   domain?: string;
   website?: string;
   country?: string;
   region?: string;
   verticals?: string[];
-  signals?: Record<string, number>;  // e.g., "hiring_ops": 0.8
-  scores?: Record<string, number>;   // "intent", "fit", "timing", "trust"
+  signals?: Record<string, number>; // e.g., "hiring_ops": 0.8
+  scores?: Record<string, number>; // e.g., "intent", "fit", "timing", "trust"
   contacts?: ContactRef[];
   status: LeadStatus;
   createdAt: number;
@@ -42,12 +56,21 @@ export interface Evidence {
   leadId: string;
   ts: number;
   kind:
-    | "ad_snapshot" | "pricing_page" | "careers_posting" | "tech_tag"
-    | "news" | "review" | "social_post" | "directory_row" | "catalog_listing"
-    | "email_bounce" | "reply_positive" | "reply_negative";
+    | "ad_snapshot"
+    | "pricing_page"
+    | "careers_posting"
+    | "tech_tag"
+    | "news"
+    | "review"
+    | "social_post"
+    | "directory_row"
+    | "catalog_listing"
+    | "email_bounce"
+    | "reply_positive"
+    | "reply_negative";
   url?: string;
-  snippet?: string;       // short extract
-  weight?: number;        // 0..1 effect toward intent/fit/…
+  snippet?: string; // short extract
+  weight?: number; // 0..1 effect toward intent/fit/…
   meta?: Record<string, unknown>;
 }
 
@@ -78,20 +101,42 @@ export interface BleedStore {
   exportTenant(tenantId: string): Promise<{ leads: LeadRecord[]; evidence: Evidence[]; decisions: Decision[] }>;
 }
 
-function now() { return Date.now(); }
-function newid() { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`; }
+// -------- Utils
+
+function now() {
+  return Date.now();
+}
+function rid() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+function uniq<T>(arr: T[]) {
+  return Array.from(new Set(arr));
+}
+function mergeContacts(a?: ContactRef[], b?: ContactRef[]) {
+  if (!a || a.length === 0) return b || [];
+  if (!b || b.length === 0) return a;
+  const out: ContactRef[] = [...a];
+  for (const c of b) {
+    const key = c.emailHash || c.phoneHash || c.linkedin || (c.name ? c.name.toLowerCase() : "");
+    if (!out.find((x) => (x.emailHash || x.phoneHash || x.linkedin || (x.name ? x.name.toLowerCase() : "")) === key)) {
+      out.push(c);
+    }
+  }
+  return out;
+}
+
+// -------- In-memory impl
 
 export class MemoryBleedStore implements BleedStore {
-  protected leads = new Map<string, LeadRecord>();   // key: leadId
+  protected leads = new Map<string, LeadRecord>(); // key leadId
   protected evByLead = new Map<string, Evidence[]>();
   protected decByLead = new Map<string, Decision[]>();
 
   async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord> {
+    // naive key by domain or explicit id
     const existing = lead.id
       ? this.leads.get(lead.id)
-      : [...this.leads.values()].find(
-          (l) => l.tenantId === lead.tenantId && !!l.domain && l.domain === lead.domain
-        );
+      : [...this.leads.values()].find((l) => l.tenantId === lead.tenantId && l.domain && l.domain === lead.domain);
 
     if (existing) {
       const merged: LeadRecord = {
@@ -99,7 +144,7 @@ export class MemoryBleedStore implements BleedStore {
         ...lead,
         id: existing.id,
         signals: { ...(existing.signals || {}), ...(lead.signals || {}) },
-        scores:  { ...(existing.scores  || {}), ...(lead.scores  || {}) },
+        scores: { ...(existing.scores || {}), ...(lead.scores || {}) },
         contacts: mergeContacts(existing.contacts, lead.contacts),
         verticals: uniq([...(existing.verticals || []), ...(lead.verticals || [])]),
         updatedAt: now(),
@@ -109,7 +154,7 @@ export class MemoryBleedStore implements BleedStore {
     }
 
     const record: LeadRecord = {
-      id: lead.id || newid(),
+      id: lead.id || rid(),
       tenantId: lead.tenantId,
       source: lead.source || "unknown",
       company: lead.company,
@@ -119,7 +164,7 @@ export class MemoryBleedStore implements BleedStore {
       region: lead.region,
       verticals: lead.verticals || [],
       signals: lead.signals || {},
-      scores:  lead.scores  || {},
+      scores: lead.scores || {},
       contacts: lead.contacts || [],
       status: lead.status || "new",
       createdAt: now(),
@@ -130,7 +175,9 @@ export class MemoryBleedStore implements BleedStore {
     return record;
   }
 
-  async getLead(_tenantId: string, id: string) { return this.leads.get(id); }
+  async getLead(_tenantId: string, id: string): Promise<LeadRecord | undefined> {
+    return this.leads.get(id);
+  }
 
   async listLeads(
     tenantId: string,
@@ -147,30 +194,30 @@ export class MemoryBleedStore implements BleedStore {
   }
 
   async addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence> {
-    const e: Evidence = { ...ev, id: newid(), ts: ev.ts || now() };
+    const e: Evidence = { ...ev, id: rid(), ts: ev.ts || now() };
     if (!this.evByLead.has(e.leadId)) this.evByLead.set(e.leadId, []);
     this.evByLead.get(e.leadId)!.push(e);
     return e;
   }
 
-  async listEvidence(leadId: string, limit = 100) {
+  async listEvidence(leadId: string, limit = 100): Promise<Evidence[]> {
     const arr = this.evByLead.get(leadId) || [];
     return arr.slice(-limit);
   }
 
   async addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision> {
-    const dec: Decision = { ...d, id: newid(), ts: d.ts || now() };
+    const dec: Decision = { ...d, id: rid(), ts: d.ts || now() };
     if (!this.decByLead.has(dec.leadId)) this.decByLead.set(dec.leadId, []);
     this.decByLead.get(dec.leadId)!.push(dec);
     return dec;
   }
 
-  async listDecisions(leadId: string, limit = 100) {
+  async listDecisions(leadId: string, limit = 100): Promise<Decision[]> {
     const arr = this.decByLead.get(leadId) || [];
     return arr.slice(-limit);
   }
 
-  async updateScores(_tenantId: string, id: string, scores: Record<string, number>) {
+  async updateScores(_tenantId: string, id: string, scores: Record<string, number>): Promise<LeadRecord | undefined> {
     const lead = this.leads.get(id);
     if (!lead) return;
     lead.scores = { ...(lead.scores || {}), ...scores };
@@ -179,7 +226,7 @@ export class MemoryBleedStore implements BleedStore {
     return lead;
   }
 
-  async setStatus(_tenantId: string, id: string, status: LeadStatus) {
+  async setStatus(_tenantId: string, id: string, status: LeadStatus): Promise<LeadRecord | undefined> {
     const lead = this.leads.get(id);
     if (!lead) return;
     lead.status = status;
@@ -200,74 +247,73 @@ export class MemoryBleedStore implements BleedStore {
   }
 }
 
+// -------- File-backed impl
+
 export class FileBleedStore extends MemoryBleedStore {
   constructor(
-    private basePath: string // creates three files: .leads.json, .evidence.jsonl, .decisions.jsonl
+    private basePath: string // will create three files: .leads.json, .evidence.jsonl, .decisions.jsonl
   ) {
     super();
     const dir = dirname(basePath);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     if (!existsSync(this.leadsPath())) writeFileSync(this.leadsPath(), JSON.stringify([]));
-    if (!existsSync(this.evPath()))    writeFileSync(this.evPath(), "");
-    if (!existsSync(this.decPath()))   writeFileSync(this.decPath(), "");
+    if (!existsSync(this.evPath())) writeFileSync(this.evPath(), "");
+    if (!existsSync(this.decPath())) writeFileSync(this.decPath(), "");
 
-    // Warm load leads into memory (no await in constructor)
+    // Fire-and-forget hydration (no await in constructor)
     try {
       const leads = JSON.parse(readFileSync(this.leadsPath(), "utf8")) as LeadRecord[];
-      // Fire-and-forget so constructor stays sync
-      queueMicrotask(() => {
-        for (const l of leads) {
-          // Ignore rejections; this is best-effort hydration
-          super.upsertLead(l as any).catch(() => {});
-        }
-      });
+      void this.hydrateFromDisk(leads);
     } catch {
-      // ignore parse/hydration errors
+      /* ignore corrupted disk state */
     }
   }
 
-  private leadsPath() { return this.basePath + ".leads.json"; }
-  private evPath()    { return this.basePath + ".evidence.jsonl"; }
-  private decPath()   { return this.basePath + ".decisions.jsonl"; }
+  private leadsPath() {
+    return this.basePath + ".leads.json";
+  }
+  private evPath() {
+    return this.basePath + ".evidence.jsonl";
+  }
+  private decPath() {
+    return this.basePath + ".decisions.jsonl";
+  }
 
-  override async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }) {
+  private async hydrateFromDisk(leads: LeadRecord[]) {
+    for (const l of leads) {
+      try {
+        await super.upsertLead(l);
+      } catch {
+        // ignore a single bad row
+      }
+    }
+  }
+
+  override async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord> {
     const r = await super.upsertLead(lead);
-    const list: LeadRecord[] = existsSync(this.leadsPath())
-      ? JSON.parse(readFileSync(this.leadsPath(), "utf8"))
-      : [];
-    const i = list.findIndex((x) => x.id === r.id);
-    if (i >= 0) list[i] = r; else list.push(r);
-    writeFileSync(this.leadsPath(), JSON.stringify(list, null, 2));
+    try {
+      const arr = JSON.parse(readFileSync(this.leadsPath(), "utf8")) as LeadRecord[];
+      const i = arr.findIndex((x) => x.id === r.id);
+      if (i >= 0) arr[i] = r;
+      else arr.push(r);
+      writeFileSync(this.leadsPath(), JSON.stringify(arr, null, 2));
+    } catch {
+      // regen from memory if file unreadable
+      const all = [...this.leads.values()];
+      writeFileSync(this.leadsPath(), JSON.stringify(all, null, 2));
+    }
     return r;
   }
 
-  override async addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }) {
+  override async addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence> {
     const e = await super.addEvidence(ev);
     appendFileSync(this.evPath(), JSON.stringify(e) + "\n");
     return e;
   }
 
-  override async addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }) {
+  override async addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision> {
     const dec = await super.addDecision(d);
     appendFileSync(this.decPath(), JSON.stringify(dec) + "\n");
     return dec;
   }
-}
-
-// helpers
-function uniq<T>(arr: T[]) { return Array.from(new Set(arr)); }
-
-function mergeContacts(a?: ContactRef[], b?: ContactRef[]) {
-  if (!a || a.length === 0) return b || [];
-  if (!b || b.length === 0) return a;
-  const out: ContactRef[] = [...a];
-  for (const c of b) {
-    const key = (c.emailHash || c.phoneHash || c.linkedin || (c.name ? c.name.toLowerCase() : "")) || "";
-    if (!out.find((x) =>
-      (x.emailHash || x.phoneHash || x.linkedin || (x.name ? x.name.toLowerCase() : "")) === key
-    )) {
-      out.push(c);
-    }
-  }
-  return out;
 }
