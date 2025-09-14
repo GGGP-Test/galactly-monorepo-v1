@@ -1,140 +1,99 @@
-// Node 18+/20+. Verbose smoke for /api/v1/leads/find-buyers.
-// Prints clear diagnostics for network, health, and response reasons.
+// Robust smoke: proves outbound net, DNS, TLS, then hits /find-buyers with rich diagnostics.
+// Run: node Backend/devtools/smoke/find-buyers.mjs
 
-import dns from "node:dns/promises";
-import { URL } from "node:url";
+import { execSync } from "node:child_process";
+import https from "node:https";
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Env / args
 const API = process.env.API_URL || "";
-const KEY = process.env.API_KEY || process.env.X_API_KEY || "";
-const supplier = process.env.SUPPLIER || process.argv[2] || "";
+const KEY = process.env.X_API_KEY || process.env.API_KEY || "";
+const supplier = process.env.SUPPLIER || "peekpackaging.com";
 const region = (process.env.REGION || "usca").toLowerCase();
 const radiusMi = Number(process.env.RADIUS_MI || "50");
-const verbose = (process.env.VERBOSE || "true").toLowerCase() === "true";
-
 const persona = {
   offer: process.env.OFFER || "",
   solves: process.env.SOLVES || "",
-  titles: process.env.TITLES || "",
+  titles: process.env.TITLES || ""
 };
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Helpers
-const t0 = Date.now();
-const timems = () => Date.now() - t0;
-
-function bail(code, msg, extra = {}) {
-  const out = { ok: false, at: timems(), error: msg, ...extra };
-  console.error(JSON.stringify(out, null, 2));
-  process.exit(code);
+function out(label, obj) {
+  console.log(label + ":\n" + JSON.stringify(obj, null, 2) + "\n");
 }
 
-function safeJSON(text) {
-  try { return JSON.parse(text); } catch { return { parseError: true, raw: text }; }
+function sh(cmd) {
+  try { return { ok: true, cmd, out: execSync(cmd, { stdio: "pipe" }).toString() }; }
+  catch (e) { return { ok: false, cmd, code: e.status, out: e.stdout?.toString() || "", err: e.stderr?.toString() || String(e) }; }
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Validate input
-if (!API || !API.startsWith("http")) {
-  bail(2, "Missing/invalid API_URL (e.g. https://<northflank>/api/v1/leads/find-buyers)", { API });
-}
-if (!supplier) {
-  bail(2, "Missing SUPPLIER (env) or argv[2], e.g. peekpackaging.com");
-}
+(async () => {
+  const summary = { ok: false, at: 0 };
 
-let postURL;
-try {
-  const u = new URL(API);
-  if (!u.pathname.endsWith("/api/v1/leads/find-buyers")) {
-    // be forgiving: append the route if user gave base origin
-    if (u.pathname === "/" || u.pathname === "") u.pathname = "/api/v1/leads/find-buyers";
+  // Basic input guard
+  if (!API.startsWith("https://")) {
+    out("SMOKE", { ok:false, error:"API_URL missing/invalid", want:"https://<host>/api/v1/leads/find-buyers", API });
+    process.exit(2);
   }
-  // tack on debug=1 so the server can include reasons if it supports it
-  u.searchParams.set("debug", "1");
-  postURL = u.toString();
-} catch (e) {
-  bail(2, "API_URL is not a valid URL", { API, error: String(e) });
-}
 
-// ────────────────────────────────────────────────────────────────────────────────
-// DNS diagnostics
-let dnsInfo = { host: "", addrs: [] };
-try {
-  const host = new URL(postURL).hostname;
-  const addrs = await dns.lookup(host, { all: true });
-  dnsInfo = { host, addrs };
-} catch (e) {
-  if (verbose) console.error("DNS lookup failed:", String(e));
-}
+  // Derive host for DNS/TLS probes
+  const host = new URL(API).host;
 
-// Optional health check on /healthz
-let health = { ok: false, status: 0 };
-try {
-  const base = new URL(postURL); base.pathname = "/healthz"; base.search = "";
-  const r = await fetch(base.toString(), { method: "GET" });
-  health = { ok: r.ok, status: r.status };
-} catch (e) {
-  health = { ok: false, status: 0 };
-}
+  // 1) Quick external reachability (proves internet)
+  const ext = sh("curl -sS https://api.ipify.org");
+  summary.internet = { ok: ext.ok, ip: ext.ok ? ext.out.trim() : undefined, err: ext.ok ? undefined : ext.err };
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Build request body
-const body = {
-  supplier,
-  region,
-  radiusMi,
-  persona,            // let server decide if empty persona is ok
-};
+  // 2) DNS for your host
+  const dig = sh(`getent ahosts ${host} || nslookup ${host} || host ${host}`);
+  summary.dns = { ok: dig.ok, out: dig.out, err: dig.err };
 
-// POST find-buyers
-let res, text = "", ctype = "";
-try {
-  res = await fetch(postURL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(KEY ? { "x-api-key": KEY } : {}),
-    },
-    body: JSON.stringify(body),
-  });
-  ctype = res.headers?.get?.("content-type") || "";
-  text = await res.text();
-} catch (e) {
-  // Network fail → status 0
-  bail(7, "fetch failed (network/SSL/firewall)", {
-    postURL, dnsInfo, health, detail: String(e),
-    hint: "In Codex environment, ensure Agent internet access = On.",
-  });
-}
+  // 3) TLS handshake (proves cert/SNI)
+  const tls = sh(`echo | openssl s_client -servername ${host} -connect ${host}:443 2>/dev/null | openssl x509 -noout -issuer -subject -dates`);
+  summary.tls = { ok: tls.ok, out: tls.out, err: tls.err };
 
-const payload = ctype.includes("application/json") ? safeJSON(text) : { raw: text };
+  // 4) Healthz (if present)
+  const health = sh(`curl -sS -I https://${host}/healthz || true`);
+  summary.healthz = { out: health.out };
 
-const summary = {
-  api: postURL,
-  supplier,
-  sent: body,
-  dns: dnsInfo,
-  health,
-  http: { status: res.status, ok: res.ok, contentType: ctype },
-  received: payload,
-  ms: timems(),
-};
+  // 5) Real POST to /find-buyers
+  const body = { supplier, region, radiusMi, persona };
+  const t0 = Date.now();
+  let res, txt = "", json;
 
-console.log("=== BUYERS SMOKE ===");
-console.log(JSON.stringify(summary, null, 2));
+  try {
+    res = await fetch(API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(KEY ? { "x-api-key": KEY } : {})
+      },
+      body: JSON.stringify(body),
+      // If you see CERT errors and need to confirm that’s the failure path, temporarily uncomment:
+      // agent: new https.Agent({ rejectUnauthorized: false })
+    });
+    try { txt = await res.text(); } catch {}
+    try { json = JSON.parse(txt); } catch { json = { raw: txt } }
+    summary.call = {
+      status: res.status,
+      ms: Date.now() - t0,
+      sent: body,
+      headers: Object.fromEntries(res.headers.entries()),
+      payload: json
+    };
+    summary.ok = res.ok;
+  } catch (e) {
+    summary.call = { error: String(e) };
+  }
 
-// Exit codes (so CI/Codex can gate on them)
-if (res.status >= 500) process.exit(5);              // server error
-if (res.status === 404) process.exit(4);             // route missing
-if (res.status === 400) process.exit(3);             // bad request (missing domain, etc.)
+  out("SMOKE SUMMARY", summary);
 
-// ok but empty → flag logic hole (helps us differentiate transport vs business logic)
-const created = Number(payload?.created || 0);
-const cands = Array.isArray(payload?.candidates) ? payload.candidates.length : 0;
-if (created === 0 && cands === 0) {
-  // Prefer the server to tell us WHY in payload.note / payload.reasons if debug=1 is honored.
-  process.exit(10);
-}
-
-process.exit(0);
+  // Exit codes to make CI/Codex task red with a useful reason
+  if (!summary.internet?.ok) process.exit(91);            // no outbound internet
+  if (!summary.dns?.ok) process.exit(92);                 // DNS failure for host
+  if (!summary.tls?.ok) process.exit(93);                 // TLS handshake failed
+  if (!summary.call) process.exit(94);                    // fetch threw
+  if ((summary.call.status || 0) >= 500) process.exit(95);// server error
+  if ((summary.call.status || 0) === 404) process.exit(94);// route missing
+  if ((summary.call.status || 0) === 400) process.exit(90);// bad request (payload)
+  const created = Number(summary.call?.payload?.created || 0);
+  const cands = Array.isArray(summary.call?.payload?.candidates) ? summary.call.payload.candidates.length : 0;
+  if (created === 0 && cands === 0) process.exit(10);     // ok=true but empty → logic block
+  process.exit(0);
+})();
