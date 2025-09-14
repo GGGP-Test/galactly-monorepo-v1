@@ -1,99 +1,325 @@
-// Robust smoke: proves outbound net, DNS, TLS, then hits /find-buyers with rich diagnostics.
-// Run: node Backend/devtools/smoke/find-buyers.mjs
+// Backend/src/data/bleed-store.ts
 
-import { execSync } from "node:child_process";
-import https from "node:https";
+/**
+ * BLEED Store = Business Lead Evidence, Events & Decisions
+ * Central append-only store for lead records + supporting evidence + decision trail.
+ */
 
-const API = process.env.API_URL || "";
-const KEY = process.env.X_API_KEY || process.env.API_KEY || "";
-const supplier = process.env.SUPPLIER || "peekpackaging.com";
-const region = (process.env.REGION || "usca").toLowerCase();
-const radiusMi = Number(process.env.RADIUS_MI || "50");
-const persona = {
-  offer: process.env.OFFER || "",
-  solves: process.env.SOLVES || "",
-  titles: process.env.TITLES || ""
-};
+import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "fs";
+import { dirname } from "path";
 
-function out(label, obj) {
-  console.log(label + ":\n" + JSON.stringify(obj, null, 2) + "\n");
+/* ---------- Types ---------- */
+
+export type LeadStatus =
+  | "new"
+  | "enriched"
+  | "qualified"
+  | "routed"
+  | "contacted"
+  | "won"
+  | "lost"
+  | "archived";
+
+export interface ContactRef {
+  name?: string;
+  role?: string;
+  emailHash?: string; // hashed; raw PII should live in pii-vault
+  phoneHash?: string;
+  linkedin?: string;
+  confidence?: number; // 0..1
 }
 
-function sh(cmd) {
-  try { return { ok: true, cmd, out: execSync(cmd, { stdio: "pipe" }).toString() }; }
-  catch (e) { return { ok: false, cmd, code: e.status, out: e.stdout?.toString() || "", err: e.stderr?.toString() || String(e) }; }
+export interface LeadRecord {
+  id: string;
+  tenantId: string;
+  source: string; // "opal" | "google" | "dir:c-pacs" | "seed" | ...
+  company?: string;
+  domain?: string;
+  website?: string;
+  country?: string;
+  region?: string;
+  verticals?: string[];
+  signals?: Record<string, number>; // e.g., "hiring_ops": 0.8
+  scores?: Record<string, number>; // "intent", "fit", "timing", "trust"
+  contacts?: ContactRef[];
+  status: LeadStatus;
+  createdAt: number;
+  updatedAt: number;
+  meta?: Record<string, unknown>;
 }
 
-(async () => {
-  const summary = { ok: false, at: 0 };
+export interface Evidence {
+  id: string;
+  leadId: string;
+  ts: number;
+  kind:
+    | "ad_snapshot"
+    | "pricing_page"
+    | "careers_posting"
+    | "tech_tag"
+    | "news"
+    | "review"
+    | "social_post"
+    | "directory_row"
+    | "catalog_listing"
+    | "email_bounce"
+    | "reply_positive"
+    | "reply_negative";
+  url?: string;
+  snippet?: string; // short extract
+  weight?: number; // 0..1 effect toward intent/fit/…
+  meta?: Record<string, unknown>;
+}
 
-  // Basic input guard
-  if (!API.startsWith("https://")) {
-    out("SMOKE", { ok:false, error:"API_URL missing/invalid", want:"https://<host>/api/v1/leads/find-buyers", API });
-    process.exit(2);
-  }
+export interface Decision {
+  id: string;
+  leadId: string;
+  ts: number;
+  by: "system" | "user";
+  actorId?: string;
+  type: "ROUTE" | "APPROVE" | "REJECT" | "PAUSE" | "RESCORE" | "ARCHIVE";
+  reason?: string;
+  meta?: Record<string, unknown>;
+}
 
-  // Derive host for DNS/TLS probes
-  const host = new URL(API).host;
+export interface BleedStore {
+  upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord>;
+  getLead(tenantId: string, id: string): Promise<LeadRecord | undefined>;
+  listLeads(
+    tenantId: string,
+    opts?: { status?: LeadStatus; limit?: number; search?: string }
+  ): Promise<LeadRecord[]>;
+  addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence>;
+  listEvidence(leadId: string, limit?: number): Promise<Evidence[]>;
+  addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision>;
+  listDecisions(leadId: string, limit?: number): Promise<Decision[]>;
+  updateScores(tenantId: string, id: string, scores: Record<string, number>): Promise<LeadRecord | undefined>;
+  setStatus(tenantId: string, id: string, status: LeadStatus): Promise<LeadRecord | undefined>;
+  exportTenant(tenantId: string): Promise<{ leads: LeadRecord[]; evidence: Evidence[]; decisions: Decision[] }>;
+}
 
-  // 1) Quick external reachability (proves internet)
-  const ext = sh("curl -sS https://api.ipify.org");
-  summary.internet = { ok: ext.ok, ip: ext.ok ? ext.out.trim() : undefined, err: ext.ok ? undefined : ext.err };
+/* ---------- Utils ---------- */
 
-  // 2) DNS for your host
-  const dig = sh(`getent ahosts ${host} || nslookup ${host} || host ${host}`);
-  summary.dns = { ok: dig.ok, out: dig.out, err: dig.err };
+function now() {
+  return Date.now();
+}
+function newid() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
-  // 3) TLS handshake (proves cert/SNI)
-  const tls = sh(`echo | openssl s_client -servername ${host} -connect ${host}:443 2>/dev/null | openssl x509 -noout -issuer -subject -dates`);
-  summary.tls = { ok: tls.ok, out: tls.out, err: tls.err };
+/* ---------- In-memory implementation ---------- */
 
-  // 4) Healthz (if present)
-  const health = sh(`curl -sS -I https://${host}/healthz || true`);
-  summary.healthz = { out: health.out };
+export class MemoryBleedStore implements BleedStore {
+  private leads = new Map<string, LeadRecord>(); // key: leadId
+  private evByLead = new Map<string, Evidence[]>();
+  private decByLead = new Map<string, Decision[]>();
 
-  // 5) Real POST to /find-buyers
-  const body = { supplier, region, radiusMi, persona };
-  const t0 = Date.now();
-  let res, txt = "", json;
+  async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord> {
+    // naive key by domain or id
+    const existing = lead.id
+      ? this.leads.get(lead.id)
+      : [...this.leads.values()].find(
+          (l) => l.tenantId === lead.tenantId && !!l.domain && l.domain === lead.domain
+        );
 
-  try {
-    res = await fetch(API, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(KEY ? { "x-api-key": KEY } : {})
-      },
-      body: JSON.stringify(body),
-      // If you see CERT errors and need to confirm that’s the failure path, temporarily uncomment:
-      // agent: new https.Agent({ rejectUnauthorized: false })
-    });
-    try { txt = await res.text(); } catch {}
-    try { json = JSON.parse(txt); } catch { json = { raw: txt } }
-    summary.call = {
-      status: res.status,
-      ms: Date.now() - t0,
-      sent: body,
-      headers: Object.fromEntries(res.headers.entries()),
-      payload: json
+    if (existing) {
+      const merged: LeadRecord = {
+        ...existing,
+        ...lead,
+        id: existing.id,
+        signals: { ...(existing.signals ?? {}), ...(lead.signals ?? {}) },
+        scores: { ...(existing.scores ?? {}), ...(lead.scores ?? {}) },
+        contacts: mergeContacts(existing.contacts, lead.contacts),
+        verticals: uniq([...(existing.verticals ?? []), ...(lead.verticals ?? [])]),
+        updatedAt: now(),
+      };
+      this.leads.set(merged.id, merged);
+      return merged;
+    }
+
+    const record: LeadRecord = {
+      id: lead.id ?? newid(),
+      tenantId: lead.tenantId,
+      source: lead.source ?? "unknown",
+      company: lead.company,
+      domain: lead.domain,
+      website: lead.website,
+      country: lead.country,
+      region: lead.region,
+      verticals: lead.verticals ?? [],
+      signals: lead.signals ?? {},
+      scores: lead.scores ?? {},
+      contacts: lead.contacts ?? [],
+      status: lead.status ?? "new",
+      createdAt: now(),
+      updatedAt: now(),
+      meta: lead.meta ?? {},
     };
-    summary.ok = res.ok;
-  } catch (e) {
-    summary.call = { error: String(e) };
+    this.leads.set(record.id, record);
+    return record;
   }
 
-  out("SMOKE SUMMARY", summary);
+  async getLead(_tenantId: string, id: string): Promise<LeadRecord | undefined> {
+    return this.leads.get(id);
+  }
 
-  // Exit codes to make CI/Codex task red with a useful reason
-  if (!summary.internet?.ok) process.exit(91);            // no outbound internet
-  if (!summary.dns?.ok) process.exit(92);                 // DNS failure for host
-  if (!summary.tls?.ok) process.exit(93);                 // TLS handshake failed
-  if (!summary.call) process.exit(94);                    // fetch threw
-  if ((summary.call.status || 0) >= 500) process.exit(95);// server error
-  if ((summary.call.status || 0) === 404) process.exit(94);// route missing
-  if ((summary.call.status || 0) === 400) process.exit(90);// bad request (payload)
-  const created = Number(summary.call?.payload?.created || 0);
-  const cands = Array.isArray(summary.call?.payload?.candidates) ? summary.call.payload.candidates.length : 0;
-  if (created === 0 && cands === 0) process.exit(10);     // ok=true but empty → logic block
-  process.exit(0);
-})();
+  async listLeads(
+    tenantId: string,
+    opts?: { status?: LeadStatus; limit?: number; search?: string }
+  ): Promise<LeadRecord[]> {
+    let arr = [...this.leads.values()].filter((l) => l.tenantId === tenantId);
+    if (opts?.status) arr = arr.filter((l) => l.status === opts.status);
+    if (opts?.search) {
+      const s = opts.search.toLowerCase();
+      arr = arr.filter((l) => (l.company ?? "").toLowerCase().includes(s) || (l.domain ?? "").includes(s));
+    }
+    arr.sort((a, b) => b.updatedAt - a.updatedAt);
+    return arr.slice(0, opts?.limit ?? 200);
+  }
+
+  async addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence> {
+    const e: Evidence = { ...ev, id: newid(), ts: ev.ts ?? now() };
+    if (!this.evByLead.has(e.leadId)) this.evByLead.set(e.leadId, []);
+    this.evByLead.get(e.leadId)!.push(e);
+    return e;
+  }
+
+  async listEvidence(leadId: string, limit = 100): Promise<Evidence[]> {
+    const arr = this.evByLead.get(leadId) ?? [];
+    return arr.slice(-limit);
+  }
+
+  async addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision> {
+    const dec: Decision = { ...d, id: newid(), ts: d.ts ?? now() };
+    if (!this.decByLead.has(dec.leadId)) this.decByLead.set(dec.leadId, []);
+    this.decByLead.get(dec.leadId)!.push(dec);
+    return dec;
+  }
+
+  async listDecisions(leadId: string, limit = 100): Promise<Decision[]> {
+    const arr = this.decByLead.get(leadId) ?? [];
+    return arr.slice(-limit);
+  }
+
+  async updateScores(_tenantId: string, id: string, scores: Record<string, number>): Promise<LeadRecord | undefined> {
+    const lead = this.leads.get(id);
+    if (!lead) return;
+    lead.scores = { ...(lead.scores ?? {}), ...scores };
+    lead.updatedAt = now();
+    this.leads.set(id, lead);
+    return lead;
+  }
+
+  async setStatus(_tenantId: string, id: string, status: LeadStatus): Promise<LeadRecord | undefined> {
+    const lead = this.leads.get(id);
+    if (!lead) return;
+    lead.status = status;
+    lead.updatedAt = now();
+    this.leads.set(id, lead);
+    return lead;
+  }
+
+  async exportTenant(tenantId: string) {
+    const leads = [...this.leads.values()].filter((l) => l.tenantId === tenantId);
+    const evidence: Evidence[] = [];
+    const decisions: Decision[] = [];
+    for (const l of leads) {
+      evidence.push(...(this.evByLead.get(l.id) ?? []));
+      decisions.push(...(this.decByLead.get(l.id) ?? []));
+    }
+    return { leads, evidence, decisions };
+  }
+}
+
+/* ---------- File-backed implementation ---------- */
+
+export class FileBleedStore extends MemoryBleedStore {
+  constructor(
+    private basePath: string // will create three files: .leads.json, .evidence.jsonl, .decisions.jsonl
+  ) {
+    super();
+    const dir = dirname(basePath);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    const leadsPath = this.leadsPath();
+    if (!existsSync(leadsPath)) writeFileSync(leadsPath, JSON.stringify([]));
+    if (!existsSync(this.evPath())) writeFileSync(this.evPath(), "");
+    if (!existsSync(this.decPath())) writeFileSync(this.decPath(), "");
+
+    // warm load leads into memory (NO await in constructor)
+    try {
+      const leads = JSON.parse(readFileSync(leadsPath, "utf8") || "[]") as LeadRecord[];
+      // fire-and-forget; we don't block the constructor
+      this.warmLoad(leads).catch(() => {});
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private leadsPath() {
+    return this.basePath + ".leads.json";
+  }
+  private evPath() {
+    return this.basePath + ".evidence.jsonl";
+  }
+  private decPath() {
+    return this.basePath + ".decisions.jsonl";
+  }
+
+  private async warmLoad(leads: LeadRecord[]) {
+    for (const l of leads) await super.upsertLead(l);
+  }
+
+  override async upsertLead(lead: Partial<LeadRecord> & { tenantId: string }): Promise<LeadRecord> {
+    const r = await super.upsertLead(lead);
+    const json = readFileSync(this.leadsPath(), "utf8") || "[]";
+    const leads: LeadRecord[] = JSON.parse(json);
+    const i = leads.findIndex((x) => x.id === r.id);
+    if (i >= 0) leads[i] = r;
+    else leads.push(r);
+    writeFileSync(this.leadsPath(), JSON.stringify(leads, null, 2));
+    return r;
+  }
+
+  override async addEvidence(ev: Omit<Evidence, "id" | "ts"> & { ts?: number }): Promise<Evidence> {
+    const e = await super.addEvidence(ev);
+    appendFileSync(this.evPath(), JSON.stringify(e) + "\n");
+    return e;
+  }
+
+  override async addDecision(d: Omit<Decision, "id" | "ts"> & { ts?: number }): Promise<Decision> {
+    const dec = await super.addDecision(d);
+    appendFileSync(this.decPath(), JSON.stringify(dec) + "\n");
+    return dec;
+  }
+}
+
+/* ---------- helpers ---------- */
+
+function uniq<T>(arr: T[]) {
+  return Array.from(new Set(arr));
+}
+
+function mergeContacts(a?: ContactRef[], b?: ContactRef[]) {
+  if (!a || a.length === 0) return b ?? [];
+  if (!b || b.length === 0) return a;
+  const out: ContactRef[] = [...a];
+  for (const c of b) {
+    const key =
+      c.emailHash ??
+      c.phoneHash ??
+      c.linkedin ??
+      (c.name ? c.name.toLowerCase() : "");
+    if (
+      !out.find(
+        (x) =>
+          (x.emailHash ??
+            x.phoneHash ??
+            x.linkedin ??
+            (x.name ? x.name.toLowerCase() : "")) === key
+      )
+    ) {
+      out.push(c);
+    }
+  }
+  return out;
+}
