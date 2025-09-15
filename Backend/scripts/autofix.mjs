@@ -12,21 +12,21 @@ import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 
-// --- repo geometry
-const repoRoot = path.resolve(process.cwd(), ".."); // workflow runs with working-directory: backend
+// --- repo geometry (workflow runs with working-directory: Backend)
+const repoRoot = path.resolve(process.cwd(), "..");
 const paths = {
   smoke1: path.join(repoRoot, "artifacts", "smoke.json"),
   smoke2: path.join(repoRoot, "artifacts", "run", "smoke.json"),
-  autonomy: path.join(repoRoot, "backend", "AUTONOMY.md"),
-  discovery: path.join(repoRoot, "backend", "src", "buyers", "discovery.ts"),
-  pipeline: path.join(repoRoot, "backend", "src", "buyers", "pipeline.ts"),
-  leadsRoute: path.join(repoRoot, "backend", "src", "routes", "leads.ts"),
-  google: path.join(repoRoot, "backend", "src", "connectors", "google.ts"),
-  kompass: path.join(repoRoot, "backend", "src", "connectors", "kompass.ts"),
-  thomasnet: path.join(repoRoot, "backend", "src", "connectors", "thomasnet.ts"),
+  autonomy: path.join(repoRoot, "Backend", "AUTONOMY.md"),
+  discovery: path.join(repoRoot, "Backend", "src", "buyers", "discovery.ts"),
+  pipeline: path.join(repoRoot, "Backend", "src", "buyers", "pipeline.ts"),
+  leadsRoute: path.join(repoRoot, "Backend", "src", "routes", "leads.ts"),
+  google: path.join(repoRoot, "Backend", "src", "connectors", "google.ts"),
+  kompass: path.join(repoRoot, "Backend", "src", "connectors", "kompass.ts"),
+  thomasnet: path.join(repoRoot, "Backend", "src", "connectors", "thomasnet.ts"),
 };
 
-// --- allowlist (kept tight on purpose)
+// --- allowlist (tight on purpose)
 const ALLOW = new Set([
   rel(paths.discovery),
   rel(paths.pipeline),
@@ -78,7 +78,7 @@ async function callOpenRouter(prompt) {
         { role: "system", content:
 `You are a surgical code patcher.
 Constraints:
-- Only output STRICT JSON: {"files":[{"path":"...","content":"..."}]}
+- Output STRICT JSON: {"files":[{"path":"...","content":"..."}]}
 - Touch ONLY files listed in "ALLOWLIST".
 - Keep changes small. No new deps. Prefer heuristics over LLM calls.
 - Goal: return >=3 non-demo US packaging leads with evidence.` },
@@ -111,11 +111,11 @@ Smoke summary (if any):
 ${JSON.stringify(ctx.smoke || {}, null, 2)}
 
 Current files:
---- backend/src/buyers/discovery.ts ---
+--- Backend/src/buyers/discovery.ts ---
 ${ctx.discovery}
---- backend/src/buyers/pipeline.ts ---
+--- Backend/src/buyers/pipeline.ts ---
 ${ctx.pipeline}
---- backend/src/routes/leads.ts ---
+--- Backend/src/routes/leads.ts ---
 ${ctx.leads}
 
 Task:
@@ -169,7 +169,7 @@ async function main() {
   }
 
   if (changed === 0) {
-    const notePath = path.join(repoRoot, "backend", "AUTOFIX-NOTES.md");
+    const notePath = path.join(repoRoot, "Backend", "AUTOFIX-NOTES.md");
     fs.writeFileSync(
       notePath,
       `# Autofix Attempt\n\nNo allowed changes produced.\n\nSmoke:\n\`\`\`json\n${JSON.stringify(smoke || {}, null, 2)}\n\`\`\`\n`,
