@@ -1,40 +1,60 @@
-name: AutoFix Buyers
+name: buyers-autofix
 
 on:
-  workflow_dispatch:
   workflow_run:
-    workflows: ["Buyers Smoke — animated-cellar (NF p01)"]
-    types: [completed]
+    workflows: [ "buyers-smoke" ]
+    types: [ completed ]
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   autofix:
-    if: ${{ github.event.workflow_run.conclusion == 'failure' || github.event_name == 'workflow_dispatch' }}
+    if: always()
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    env:
-      # LLM selection
-      LLM_PROVIDER: openrouter
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      LLM_MODEL: anthropic/claude-3.5-sonnet
-      # Guardrails
-      ALLOW_PATHS: Backend/src,Backend/routes,Backend/devtools
-      MAX_PATCH_LINES: 800
     steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+      - name: Checkout (full history for patch/PR)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+      - name: Download buyers-smoke artifact from triggering run
+        uses: actions/download-artifact@v4
+        with:
+          name: buyers-smoke
+          # This special input picks artifacts from the triggering workflow_run
+          run-id: ${{ github.event.workflow_run.id }}
+          path: _smoke
 
-      # optional: pull the last smoke json into smoke-output.json if you publish it
-      # - name: Download last smoke artifact (optional)
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: buyers-smoke-usca-50
-      #     path: .
-      # - run: mv buyers-smoke.json smoke-output.json || true
+      - name: Show smoke
+        run: |
+          echo "Contents of _smoke:"
+          ls -la _smoke || true
+          echo "smoke.json:"
+          cat _smoke/smoke.json || true
 
-      - name: Run autofix
-        run: node scripts/auto-fix.mjs
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run fixer (backend/scripts/autofix.mjs)
+        env:
+          SMOKE_JSON: _smoke/smoke.json
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node backend/scripts/autofix.mjs
+
+      - name: Create PR with changes (if any)
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: bot/autofix-${{ github.event.workflow_run.id }}
+          title: "Autofix: buyers-smoke ${{ github.event.workflow_run.id }}"
+          commit-message: "autofix: buyers-smoke ${{ github.event.workflow_run.id }}"
+          body: |
+            Automated fixes based on buyers-smoke artifact.
+            Trigger run: ${{ github.event.workflow_run.html_url }}
+          labels: autofix
