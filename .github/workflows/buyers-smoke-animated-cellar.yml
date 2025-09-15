@@ -4,40 +4,24 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-    paths:
-      - "Backend/devtools/smoke/find-buyers.mjs"
-      - "Backend/src/**"
-      - ".github/workflows/buyers-smoke-animated-cellar.yml"
 
 jobs:
   smoke:
-    name: smoke (${{ matrix.supplier }}, ${{ matrix.region }}, r=${{ matrix.radius }}, expect=${{ matrix.expect }})
+    name: smoke (peekpackaging.com, usca, r=50, expect=200)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
-    # Use ONE run per parameter set; artifact names are unique via run_id
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { supplier: "peekpackaging.com", region: "usca", radius: 50,  expect: 200 }
-
-    # Hard-wire what you already shared so you don't have to type secrets anywhere.
-    # (Yes, this puts them in the workflow env on purpose, per your request.)
-  env:
-  API_URL: https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1/leads/find-buyers
-  API_KEY: ${{ secrets.NF_API_KEY }}   # keep as-is if you already set it
-  REGION: us            # broaden from usca → us
-  RADIUS_MI: 300        # widen from 50 → 300
-  SUPPLIER: peekpackaging.com
-  VERBOSE: "true"
-  # New: persona (these feed the query generator)
-  OFFER: "custom packaging & corrugated boxes"
-  SOLVES: "reduce shipping damage; faster fulfillment; lower material cost"
-  TITLES: "packaging engineer, procurement manager, operations manager"
+    env:
+      API_URL: https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1/leads/find-buyers
+      # Use your working key here if your API enforces it. If not required, leave blank.
+      API_KEY: ${{ secrets.NF_API_KEY }}
+      REGION: usca
+      RADIUS_MI: 50
+      SUPPLIER: peekpackaging.com
+      VERBOSE: "true"
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Node 20
         uses: actions/setup-node@v4
@@ -45,22 +29,24 @@ jobs:
           node-version: 20
 
       - name: Run smoke
+        id: run
+        shell: bash
         run: |
           set -euo pipefail
-          mkdir -p .smoke
-          echo "Running buyers smoke…"
-          SUPPLIER="${{ matrix.supplier }}" \
-          REGION="${{ matrix.region }}" \
-          RADIUS_MI="${{ matrix.radius }}" \
-          API_URL="${API_URL}" \
-          API_KEY="${API_KEY}" \
-          VERBOSE="${VERBOSE}" \
-          node Backend/devtools/smoke/find-buyers.mjs | tee ".smoke/out-${{ matrix.supplier }}-${{ matrix.region }}-${{ matrix.radius }}.json"
+          node Backend/devtools/smoke/find-buyers.mjs \
+            | tee smoke-result.json
 
-      - name: Upload result (unique)
-        if: always()
+          # derive a tiny status for downstream (success if status==200)
+          STATUS=$(jq -r '.steps.call.status // 0' smoke-result.json || echo 0)
+          OK=false
+          if [ "$STATUS" = "200" ]; then OK=true; fi
+
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "ok=$OK"       >> "$GITHUB_OUTPUT"
+
+      - name: Upload smoke artifact (unique name per run)
         uses: actions/upload-artifact@v4
         with:
-          name: buyers-smoke-${{ github.run_id }}-${{ matrix.supplier }}-${{ matrix.region }}-${{ matrix.radius }}-expect${{ matrix.expect }}
-          path: .smoke/out-${{ matrix.supplier }}-${{ matrix.region }}-${{ matrix.radius }}.json
-          retention-days: 7
+          name: buyers-smoke-animated-cellar-${{ github.run_id }}
+          path: smoke-result.json
+          if-no-files-found: error
