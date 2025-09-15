@@ -1,11 +1,10 @@
 import { Router } from "express";
-import { z } from "zod";
 import runDiscovery from "../buyers/discovery";
 import runPipeline from "../buyers/pipeline";
 
 const router = Router();
 
-// Optional API key guard. If no key set, it's a no-op (keeps local/dev easy).
+// Optional API key guard. If no key set, it's a no-op.
 router.use((req, res, next) => {
   const need = process.env.API_KEY || process.env.X_API_KEY;
   if (!need) return next();
@@ -14,28 +13,27 @@ router.use((req, res, next) => {
   next();
 });
 
-const FindBuyersReq = z.object({
-  supplier: z.string().min(3, "supplier domain is required"),
-  region: z.string().min(2).default("us"),
-  radiusMi: z.number().int().nonnegative().default(50),
-  persona: z
-    .object({
-      offer: z.string().optional().default(""),
-      solves: z.string().optional().default(""),
-      titles: z.string().optional().default(""),
-    })
-    .partial()
-    .optional(),
-});
-
 // POST /api/v1/leads/find-buyers
 router.post("/find-buyers", async (req, res) => {
   try {
-    const parsed = FindBuyersReq.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ ok: false, error: parsed.error.flatten() });
+    const body = (req.body || {}) as {
+      supplier?: string;
+      region?: string;
+      radiusMi?: number;
+      persona?: any;
+    };
+
+    if (!body.supplier || body.supplier.length < 3) {
+      return res.status(400).json({ ok: false, error: "supplier domain is required" });
     }
-    const { supplier, region, radiusMi, persona } = parsed.data;
+
+    const supplier = body.supplier.trim();
+    const region = (body.region || "us").trim();
+    const radiusMi =
+      typeof body.radiusMi === "number" && Number.isFinite(body.radiusMi) && body.radiusMi >= 0
+        ? Math.floor(body.radiusMi)
+        : 50;
+    const persona = body.persona;
 
     // 1) Discovery: infer persona/latents + sources (cheap; cached inside module)
     const discovery = await runDiscovery({ supplier, region, persona });
@@ -43,20 +41,15 @@ router.post("/find-buyers", async (req, res) => {
     // 2) Pipeline: hit public directories/search and rank
     const { candidates } = await runPipeline(discovery, { region, radiusMi });
 
-    // Normalize to panel-friendly shape
-    const mapped = (candidates || []).map((c) => ({
-      name: (c as any).company || (c as any).name || (c as any).domain,
-      website: (c as any).domain
-        ? ((c as any).domain.startsWith("http") ? (c as any).domain : `https://${(c as any).domain}`)
-        : undefined,
-      region: (c as any).region || region,
-      score: typeof (c as any).score === "number" ? (c as any).score : 0.5,
-      temperature: (typeof (c as any).score === "number" ? (c as any).score : 0.5) >= 0.65 ? "hot" : "warm",
-      source: (c as any).source || "UNKNOWN",
-      reason:
-        (c as any).evidence && (c as any).evidence.length
-          ? ((c as any).evidence[0].detail?.title || (c as any).evidence[0].topic || "evidence")
-          : undefined,
+    // Normalize for the docs/ panel
+    const mapped = (candidates || []).map((c: any) => ({
+      name: c.company || c.name || c.domain,
+      website: c.domain ? (c.domain.startsWith("http") ? c.domain : `https://${c.domain}`) : undefined,
+      region: c.region || region,
+      score: typeof c.score === "number" ? c.score : 0.5,
+      temperature: typeof c.score === "number" && c.score >= 0.65 ? "hot" : "warm",
+      source: c.source || "UNKNOWN",
+      reason: c?.evidence?.[0]?.detail?.title || c?.evidence?.[0]?.topic,
     }));
 
     const okReal = mapped.some((x) => x.source !== "DEMO_SOURCE");
