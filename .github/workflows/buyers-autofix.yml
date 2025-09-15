@@ -33,15 +33,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install backend deps
-        working-directory: Backend
-        run: |
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci --prefer-offline --no-audit --fund=false
-          else
-            npm i --prefer-offline --no-audit --fund=false
-          fi
-
+      # No npm install here on purpose — we must run even if package.json is broken.
       - name: Run autofix
         working-directory: Backend
         env:
