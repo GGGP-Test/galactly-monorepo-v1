@@ -1,0 +1,61 @@
+name: AutoFix Buyers (NF p01)
+
+on:
+  workflow_run:
+    workflows: ["Buyers Smoke — animated-cellar (NF p01)"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+env:
+  # Northflank (already in your repo secrets per your screenshots)
+  API_URL: ${{ secrets.NF_API_URL }}
+  API_KEY: ${{ secrets.NF_API_KEY }}
+  SUPPLIER: peekpackaging.com
+
+jobs:
+  autofix:
+    if: ${{ github.event.workflow_run.conclusion != 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Re-run the same smoke locally to capture fresh failing JSON + logs
+      - name: Run smoke (capture)
+        env:
+          REGION: usca
+          RADIUS_MI: 50
+          VERBOSE: "true"
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          # never fail the step here; we WANT the JSON even when it fails
+          node Backend/devtools/smoke/find-buyers.mjs > artifacts/smoke.json || true
+          echo "------ smoke.json ------"
+          head -c 2000 artifacts/smoke.json || true
+          echo
+          echo "------------------------"
+
+      - name: Install gh
+        run: sudo apt-get update -y && sudo apt-get install -y jq git
+
+      - name: Auto-fix with LLM
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # add this secret once
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node scripts/auto-fix.mjs
+
+      - name: Show result
+        run: |
+          echo "Auto-fix step finished. If a PR was created, it will appear on this run page."
