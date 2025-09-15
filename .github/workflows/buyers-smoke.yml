@@ -1,0 +1,79 @@
+name: buyers-smoke
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *" # every 30 minutes
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with: { node-version: "20" }
+
+      # Write inline smoke runner and produce a canonical artifact.
+      - name: Write smoke runner (Backend/scripts/buyers-smoke.mjs)
+        run: |
+          mkdir -p Backend/scripts artifacts
+          cat > Backend/scripts/buyers-smoke.mjs <<'EOF'
+          #!/usr/bin/env node
+          import fs from "node:fs";
+          import path from "node:path";
+
+          const NF_API_URL = process.env.NF_API_URL;
+          const NF_API_KEY = process.env.NF_API_KEY;
+
+          const out = { ok:false, empty:true, nonDemoCount:0, url:NF_API_URL||null, startedAt:new Date().toISOString() };
+          const outDir = path.resolve(process.cwd(), "artifacts");
+          fs.mkdirSync(outDir, { recursive:true });
+
+          async function main() {
+            if (!NF_API_URL) { out.error = "NF_API_URL missing"; return finish(); }
+            try {
+              const body = { supplier:"peakpackaging.com", region:"us", radiusMi:100 };
+              const res = await fetch(`${NF_API_URL}/api/v1/leads/find-buyers`, {
+                method:"POST",
+                headers:{ "content-type":"application/json", "x-api-key": NF_API_KEY || "" },
+                body: JSON.stringify(body)
+              });
+              const text = await res.text();
+              let json; try { json = JSON.parse(text); } catch { json = { raw:text }; }
+              out.http = { status: res.status };
+              out.response = json;
+              const list = Array.isArray(json?.candidates) ? json.candidates : [];
+              const nonDemo = list.filter(x => x?.source !== "DEMO_SOURCE");
+              out.nonDemoCount = nonDemo.length;
+              out.empty = nonDemo.length === 0;
+              out.ok = !!json?.ok;
+            } catch (e) {
+              out.error = e?.message || String(e);
+            } finally { finish(); }
+          }
+          function finish() {
+            out.finishedAt = new Date().toISOString();
+            fs.writeFileSync(path.join("artifacts","smoke.json"), JSON.stringify(out,null,2));
+            console.log("SMOKE:", JSON.stringify({ ok:out.ok, nonDemo:out.nonDemoCount, empty:out.empty, error:out.error }));
+          }
+          await main();
+          EOF
+          chmod +x Backend/scripts/buyers-smoke.mjs
+
+      - name: Run smoke
+        env:
+          NF_API_URL: ${{ secrets.NF_API_URL }}
+          NF_API_KEY: ${{ secrets.NF_API_KEY }}
+        run: node Backend/scripts/buyers-smoke.mjs
+
+      - name: Upload canonical artifact (buyers-smoke)
+        uses: actions/upload-artifact@v4
+        with:
+          name: buyers-smoke
+          path: artifacts/smoke.json
