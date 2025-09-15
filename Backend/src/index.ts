@@ -4,24 +4,20 @@ import leadsRouter from "./routes/leads";
 
 const app = express();
 
-// Core middleware
+// CORS + JSON (no app.options(...))
+app.use(cors());
 app.use(express.json({ limit: "1mb" }));
-app.use(cors({ origin: true })); // allow GitHub Pages, Codex env, etc.
-
-// Explicit preflight handler (no app.options errors)
-app.use((req, res, next) => {
-  if (req.method === "OPTIONS") return res.status(204).end();
-  return next();
-});
 
 // Health
-app.get("/healthz", (_req, res) => res.type("text/plain").send("ok"));
+app.get("/healthz", (_req, res) => res.status(200).json({ ok: true }));
 
-// API routes
+// API
 app.use("/api/v1/leads", leadsRouter);
 
 // Start
-const port = Number(process.env.PORT || 8787);
-app.listen(port, () => console.log(`[server] listening on :${port}`));
+const PORT = Number(process.env.PORT || 8080);
+app.listen(PORT, () => {
+  console.log(JSON.stringify({ msg: "server_started", port: PORT }));
+});
 
 export default app;
