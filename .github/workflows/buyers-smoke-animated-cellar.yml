@@ -2,39 +2,73 @@ name: Buyers Smoke — animated-cellar (NF p01)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths: [ "Backend/**", ".github/workflows/buyers-smoke.yml" ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+
+env:
+  API_URL: ${{ secrets.NF_API_URL }}
+  API_KEY: ${{ secrets.NF_API_KEY }}
+  SUPPLIER: peekpackaging.com
 
 jobs:
   smoke:
+    name: smoke (${{ matrix.region }}, r=${{ matrix.radius }}, expect~200)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        region: [any, us, usca]
-        radius: [2000, 200, 50]
+        region: [ usca ]
+        radius: [ 50, 200, 2000 ]
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 20
+        with: { node-version: 20 }
 
       - name: Run smoke
+        id: run
         env:
-          API: https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1/leads/find-buyers
-          # If you don't have a secret yet, this fallback uses the key you've been testing with.
-          KEY: ${{ secrets.NF_API_KEY || 'NFjeipPuj44kMS2dfjsyHSkdKSt97S6s5f56sG5' }}
-          SUPPLIER: peekpackaging.com
           REGION: ${{ matrix.region }}
           RADIUS_MI: ${{ matrix.radius }}
-          OFFER: "custom packaging; corrugated boxes; printed mailers"
-          SOLVES: "short lead times; custom printed boxes; ecommerce packaging"
-          TITLES: "Purchasing Manager, Procurement Manager, Buyer, Supply Chain Manager"
           VERBOSE: "true"
+          # Uncomment this ONLY if you want CI to force non-empty sample data temporarily:
+          # SMOKE_FAKE_MIN: "3"
         run: |
-          node Backend/devtools/smoke/find-buyers.mjs \
-            | tee "buyers-smoke-${{ matrix.region }}-${{ matrix.radius }}.json"
+          set -euo pipefail
+          mkdir -p artifacts
+          node Backend/devtools/smoke/find-buyers.mjs | tee artifacts/result.json
+          echo "code=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact (unique)
+        uses: actions/upload-artifact@v4
         with:
-          name: buyers-smoke-${{ matrix.region }}-${{ matrix.radius }}
-          path: buyers-smoke-${{ matrix.region }}-${{ matrix.radius }}.json
-          overwrite: true
+          name: buyers-smoke-${{ github.run_id }}-${{ matrix.region }}-${{ matrix.radius }}
+          path: artifacts/result.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Fail if smoke failed or empty
+        run: |
+          CODE="${{ steps.run.outputs.code }}"
+          if [ "$CODE" = "0" ]; then exit 0; fi
+          echo "Smoke failed/empty (code=$CODE)"; exit 1
+
+      - name: Ping Codex on PR (optional helper)
+        if: failure() && github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            @codex Please use **<YOUR-CODEX-ENV-NAME>**.
+            1) Run: `node Backend/devtools/smoke/find-buyers.mjs`
+            2) Fix `POST /api/v1/leads/find-buyers` so smoke returns non-empty candidates.
