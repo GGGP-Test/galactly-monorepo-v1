@@ -2,8 +2,11 @@ name: buyers-autofix
 
 on:
   workflow_run:
-    workflows: [ "buyers-smoke" ]
-    types: [ completed ]
+    workflows: ["buyers-smoke", "buyers-smoke-animated-cellar"]
+    types: [completed]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -11,50 +14,39 @@ permissions:
 
 jobs:
   autofix:
-    if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (full history for patch/PR)
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Download buyers-smoke artifact from triggering run
+      - name: Download smoke artifacts (if any)
         uses: actions/download-artifact@v4
         with:
           name: buyers-smoke
-          # This special input picks artifacts from the triggering workflow_run
-          run-id: ${{ github.event.workflow_run.id }}
-          path: _smoke
+          path: artifacts
+        continue-on-error: true
 
-      - name: Show smoke
-        run: |
-          echo "Contents of _smoke:"
-          ls -la _smoke || true
-          echo "smoke.json:"
-          cat _smoke/smoke.json || true
-
-      - name: Use Node 20
+      - name: Setup Node 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Run fixer (backend/scripts/autofix.mjs)
+      - name: Install backend deps
+        working-directory: Backend
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci --prefer-offline --no-audit --fund=false
+          else
+            npm i --prefer-offline --no-audit --fund=false
+          fi
+
+      - name: Run autofix
+        working-directory: Backend
         env:
-          SMOKE_JSON: _smoke/smoke.json
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          node backend/scripts/autofix.mjs
-
-      - name: Create PR with changes (if any)
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: bot/autofix-${{ github.event.workflow_run.id }}
-          title: "Autofix: buyers-smoke ${{ github.event.workflow_run.id }}"
-          commit-message: "autofix: buyers-smoke ${{ github.event.workflow_run.id }}"
-          body: |
-            Automated fixes based on buyers-smoke artifact.
-            Trigger run: ${{ github.event.workflow_run.html_url }}
-          labels: autofix
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: node scripts/autofix.mjs
