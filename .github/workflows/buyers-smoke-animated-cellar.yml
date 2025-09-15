@@ -2,69 +2,51 @@ name: Buyers Smoke — animated-cellar (NF p01)
 
 on:
   workflow_dispatch:
-    inputs:
-      domain:
-        description: Supplier domain
-        required: true
-        default: peekpackaging.com
-      region:
-        description: Region filter (usca = USA+Canada)
-        required: true
-        default: usca
-      radius:
-        description: Radius miles around supplier HQ (proximity filter)
-        required: true
-        default: "50"
-      titles:
-        description: Buyer titles (comma-separated)
-        required: true
-        default: "Packaging Manager, Purchasing Manager, Supply Chain Manager"
-      offer:
-        description: What the supplier sells
-        required: false
-        default: "Custom packaging, boxes, cartons"
-      solves:
-        description: Problems it solves
-        required: false
-        default: "short lead times; custom sizes; inventory mgmt"
 
 jobs:
   smoke:
+    name: smoke (peekpackaging.com, ${ { matrix.region } }, r=${ { matrix.radius } }, expect=${ { matrix.expect } })
     runs-on: ubuntu-latest
-    env:
-      # 🔗 Your NF p01 endpoint (animated-cellar)
-      API_URL: https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1/leads/find-buyers
-      # ⚠️ Using the same key you’ve been sending from the panel (you said OK to keep it loose)
-      API_KEY: NFjeipPuj44kMS2dfjsyHSkdKSt97S6s5f56sG5
-
-      SUPPLIER: ${{ inputs.domain }}
-      REGION:   ${{ inputs.region }}
-      RADIUS_MI: ${{ inputs.radius }}
-      TITLES:   ${{ inputs.titles }}
-      OFFER:    ${{ inputs.offer }}
-      SOLVES:   ${{ inputs.solves }}
-      VERBOSE:  "true"
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        supplier: [ "peekpackaging.com" ]
+        # try broad → narrow to see where it starts failing
+        region: [ "any", "us", "usca" ]
+        radius: [ 0, 200, 2000 ]
+        expect: [ 200 ]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Node 20
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: 20
 
       - name: Run smoke
-        run: |
-          set -euo pipefail
-          cd Backend/devtools/smoke
-          node --version
-          # Run the harness and tee output to a uniquely named file
-          OUT="$GITHUB_WORKSPACE/smoke-${{ github.run_id }}-${{ github.run_attempt }}.json"
-          node find-buyers.mjs | tee "$OUT"
+        env:
+          # your Northflank URL (kept explicit to avoid any ambiguity)
+          API_URL: "https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1/leads/find-buyers"
+          # prefer a GitHub secret if you later store it there; falls back to the literal env if not set
+          API_KEY: ${{ secrets.NF_API_KEY || vars.API_KEY || '' }}
 
-      - name: Upload result (unique name; no 409s)
+          SUPPLIER: ${{ matrix.supplier }}
+          REGION:   ${{ matrix.region }}
+          RADIUS_MI: ${{ matrix.radius }}
+          VERBOSE: "true"
+
+          # Put a non-empty persona to avoid persona-related pruning
+          OFFER:  "Custom packaging, boxes, cartons"
+          SOLVES: "short lead times; custom sizes; inventory mgmt"
+          TITLES: "Packaging Manager, Purchasing Manager, Supply Chain Manager"
+        run: |
+          node Backend/devtools/smoke/find-buyers.mjs \
+            | tee "smoke-${{ github.run_id }}-${{ matrix.region }}-${{ matrix.radius }}.json"
+
+      - name: Upload results (unique names per matrix leg)
         uses: actions/upload-artifact@v4
         with:
-          name: buyers-smoke-${{ github.run_id }}-${{ github.run_attempt }}
-          path: smoke-${{ github.run_id }}-${{ github.run_attempt }}.json
+          name: buyers-smoke-${{ github.run_id }}-${{ matrix.region }}-${{ matrix.radius }}
+          path: smoke-${{ github.run_id }}-${{ matrix.region }}-${{ matrix.radius }}*.json
+          if-no-files-found: error
