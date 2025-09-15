@@ -24,9 +24,16 @@ jobs:
     # Hard-wire what you already shared so you don't have to type secrets anywhere.
     # (Yes, this puts them in the workflow env on purpose, per your request.)
     env:
-      API_URL: "https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1/leads/find-buyers"
-      API_KEY: "NFjeipPuj44kMS2dfjsyHSkdKSt97S6s5f56sG5"
-      VERBOSE: "true"
+  API_URL: https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1/leads/find-buyers
+  API_KEY: ${{ secrets.NF_API_KEY }}   # keep as-is if you already set it
+  REGION: us            # broaden from usca → us
+  RADIUS_MI: 300        # widen from 50 → 300
+  SUPPLIER: peekpackaging.com
+  VERBOSE: "true"
+  # New: persona (these feed the query generator)
+  OFFER: "custom packaging & corrugated boxes"
+  SOLVES: "reduce shipping damage; faster fulfillment; lower material cost"
+  TITLES: "packaging engineer, procurement manager, operations manager"
 
     steps:
       - name: Checkout
