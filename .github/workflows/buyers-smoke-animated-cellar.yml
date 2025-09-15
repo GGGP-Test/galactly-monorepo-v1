@@ -2,51 +2,69 @@ name: Buyers Smoke — animated-cellar (NF p01)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
+    inputs:
+      domain:
+        description: Supplier domain
+        required: true
+        default: peekpackaging.com
+      region:
+        description: Region filter (usca = USA+Canada)
+        required: true
+        default: usca
+      radius:
+        description: Radius miles around supplier HQ (proximity filter)
+        required: true
+        default: "50"
+      titles:
+        description: Buyer titles (comma-separated)
+        required: true
+        default: "Packaging Manager, Purchasing Manager, Supply Chain Manager"
+      offer:
+        description: What the supplier sells
+        required: false
+        default: "Custom packaging, boxes, cartons"
+      solves:
+        description: Problems it solves
+        required: false
+        default: "short lead times; custom sizes; inventory mgmt"
 
 jobs:
   smoke:
-    name: smoke (peekpackaging.com, usca, r=50, expect=200)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
     env:
+      # 🔗 Your NF p01 endpoint (animated-cellar)
       API_URL: https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1/leads/find-buyers
-      # Use your working key here if your API enforces it. If not required, leave blank.
-      API_KEY: ${{ secrets.NF_API_KEY }}
-      REGION: usca
-      RADIUS_MI: 50
-      SUPPLIER: peekpackaging.com
-      VERBOSE: "true"
+      # ⚠️ Using the same key you’ve been sending from the panel (you said OK to keep it loose)
+      API_KEY: NFjeipPuj44kMS2dfjsyHSkdKSt97S6s5f56sG5
+
+      SUPPLIER: ${{ inputs.domain }}
+      REGION:   ${{ inputs.region }}
+      RADIUS_MI: ${{ inputs.radius }}
+      TITLES:   ${{ inputs.titles }}
+      OFFER:    ${{ inputs.offer }}
+      SOLVES:   ${{ inputs.solves }}
+      VERBOSE:  "true"
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Node 20
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "20"
 
       - name: Run smoke
-        id: run
-        shell: bash
         run: |
           set -euo pipefail
-          node Backend/devtools/smoke/find-buyers.mjs \
-            | tee smoke-result.json
+          cd Backend/devtools/smoke
+          node --version
+          # Run the harness and tee output to a uniquely named file
+          OUT="$GITHUB_WORKSPACE/smoke-${{ github.run_id }}-${{ github.run_attempt }}.json"
+          node find-buyers.mjs | tee "$OUT"
 
-          # derive a tiny status for downstream (success if status==200)
-          STATUS=$(jq -r '.steps.call.status // 0' smoke-result.json || echo 0)
-          OK=false
-          if [ "$STATUS" = "200" ]; then OK=true; fi
-
-          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
-          echo "ok=$OK"       >> "$GITHUB_OUTPUT"
-
-      - name: Upload smoke artifact (unique name per run)
+      - name: Upload result (unique name; no 409s)
         uses: actions/upload-artifact@v4
         with:
-          name: buyers-smoke-animated-cellar-${{ github.run_id }}
-          path: smoke-result.json
-          if-no-files-found: error
+          name: buyers-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: smoke-${{ github.run_id }}-${{ github.run_attempt }}.json
