@@ -1,0 +1,59 @@
+name: Buyers Smoke — animated-cellar (NF p01)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - "Backend/devtools/smoke/find-buyers.mjs"
+      - "Backend/src/**"
+      - ".github/workflows/buyers-smoke-animated-cellar.yml"
+
+jobs:
+  smoke:
+    name: smoke (${{ matrix.supplier }}, ${{ matrix.region }}, r=${{ matrix.radius }}, expect=${{ matrix.expect }})
+    runs-on: ubuntu-latest
+
+    # Use ONE run per parameter set; artifact names are unique via run_id
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { supplier: "peekpackaging.com", region: "usca", radius: 50,  expect: 200 }
+
+    # Hard-wire what you already shared so you don't have to type secrets anywhere.
+    # (Yes, this puts them in the workflow env on purpose, per your request.)
+    env:
+      API_URL: "https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1/leads/find-buyers"
+      API_KEY: "NFjeipPuj44kMS2dfjsyHSkdKSt97S6s5f56sG5"
+      VERBOSE: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run smoke
+        run: |
+          set -euo pipefail
+          mkdir -p .smoke
+          echo "Running buyers smoke…"
+          SUPPLIER="${{ matrix.supplier }}" \
+          REGION="${{ matrix.region }}" \
+          RADIUS_MI="${{ matrix.radius }}" \
+          API_URL="${API_URL}" \
+          API_KEY="${API_KEY}" \
+          VERBOSE="${VERBOSE}" \
+          node Backend/devtools/smoke/find-buyers.mjs | tee ".smoke/out-${{ matrix.supplier }}-${{ matrix.region }}-${{ matrix.radius }}.json"
+
+      - name: Upload result (unique)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buyers-smoke-${{ github.run_id }}-${{ matrix.supplier }}-${{ matrix.region }}-${{ matrix.radius }}-expect${{ matrix.expect }}
+          path: .smoke/out-${{ matrix.supplier }}-${{ matrix.region }}-${{ matrix.radius }}.json
+          retention-days: 7
