@@ -1,16 +1,19 @@
 # AUTONOMY — Company Strategy & Guardrails
 
 ## Mission
-Generate live B2B leads for **US packaging suppliers** (distributors & converters) with evidence trails.
+Generate live B2B leads for **US & Canada packaging suppliers** (distributors & converters) with evidence trails.
 
-## What counts as a “lead”
-- Company operates in the **United States**
-- Domain appears active & business-grade (no social/link aggregators)
-- Relevant: packaging distributors, corrugated, films, tapes, void fill, cold-chain packaging, protective packaging
-- Exclude: **sam.gov**, RFP portals, agencies, job boards, marketplaces only, social profiles
+## Lead definition
+- Operates in **US or Canada**
+- Active business domain (no social-only / link hubs)
+- Relevant: packaging distributors, corrugated, films, tapes, shrink/stretch, void fill, cold-chain packaging, protective packaging
+- Exclude: **sam.gov**, RFP portals, agencies, job boards, marketplaces-only, social profiles
+
+## Geo preference
+- Start near the supplier's detected HQ/city (from website signals); widen to state/region → country if few results.
 
 ## Freshness
-- Prefer sources indexed/updated in the **last 90 days** if available
+- Prefer sources updated in the **last 90 days** when available.
 
 ## Success criteria (smoke)
 - Each run must return **≥ 3 candidates** where `source != "DEMO_SOURCE"`
@@ -18,16 +21,16 @@ Generate live B2B leads for **US packaging suppliers** (distributors & converter
 
 ## Cost policy
 - Use **OpenRouter free/cheap models**; **≤1 LLM call per supplier**; **≤600 tokens** response
-- Prefer rules/regex/heuristics over LLM where possible
+- Prefer regex/rules/heuristics over LLM where possible
 
 ## Edit policy (allowlist)
-The bot may only modify these paths without human approval:
-- backend/src/buyers/discovery.ts
-- backend/src/buyers/pipeline.ts
-- backend/src/routes/leads.ts
-- backend/src/connectors/google.ts
-- backend/src/connectors/kompass.ts
-- backend/src/connectors/thomasnet.ts
+Bot may modify only these paths without human approval:
+- Backend/src/buyers/discovery.ts
+- Backend/src/buyers/pipeline.ts
+- Backend/src/routes/leads.ts
+- Backend/src/connectors/google.ts
+- Backend/src/connectors/kompass.ts
+- Backend/src/connectors/thomasnet.ts
 
 ## Deploy/runtime
 - Runtime: Northflank Node 20 service (env: `NF_API_URL`, `NF_API_KEY`)
