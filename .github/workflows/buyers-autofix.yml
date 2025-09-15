@@ -2,7 +2,7 @@ name: buyers-autofix
 
 on:
   workflow_run:
-    workflows: ["buyers-smoke", "buyers-smoke-animated-cellar"]
+    workflows: ["buyers-smoke"]
     types: [completed]
   push:
     branches: [ main ]
@@ -18,8 +18,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
       - name: Download smoke artifacts (if any)
         uses: actions/download-artifact@v4
@@ -30,10 +29,9 @@ jobs:
 
       - name: Setup Node 20
         uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+        with: { node-version: "20" }
 
-      # No npm install here on purpose — we must run even if package.json is broken.
+      # No npm install. Script can repair core files without builds.
       - name: Run autofix
         working-directory: Backend
         env:
