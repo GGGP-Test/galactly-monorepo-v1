@@ -1,28 +1,25 @@
 {
   "name": "galactly-backend",
   "private": true,
-  "type": "commonjs",
-  "main": "dist/index.js",
+  "type": "module",
   "engines": { "node": ">=20" },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
-    "build:runtime": "tsc -p tsconfig.runtime.json",
-    "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "start": "node --enable-source-maps --no-warnings --loader tsx src/index.ts",
+    "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "pg": "^8.12.0",
-    "pino": "^9.0.0",
-    "zod": "^3.23.8"
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/node": "^20.14.12",
-    "tsx": "^4.16.2",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^20.12.12",
+    "tsx": "^4.20.5",
     "typescript": "^5.6.2"
   }
 }
