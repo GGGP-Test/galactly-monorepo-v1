@@ -1,0 +1,35 @@
+name: Summon Codex on Smoke Failure
+
+on:
+  workflow_run:
+    workflows: ["Buyers Smoke — animated-cellar (NF p01)"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  summon:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create PR (if none) from failure branch
+        id: pr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "Codex: fix buyers smoke"
+          body: "Automatically created after smoke failure. @codex please fix."
+          branch: "codex/fix-buyers-smoke-${{ github.run_id }}"
+          commit-message: "chore: codex entrypoint for buyers smoke"
+
+      - name: Comment to Codex
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ steps.pr.outputs.pull-request-number }}
+          body: |
+            @codex Use **<YOUR-CODEX-ENV-NAME>**.
+            Reproduce: `node Backend/devtools/smoke/find-buyers.mjs`.
+            Then fix the backend so the smoke returns non-empty candidates and push the fix to this PR.
