@@ -4,6 +4,7 @@
   "type": "module",
   "engines": { "node": ">=20" },
   "scripts": {
+    "smoke:buyers": "node Backend/devtools/smoke/find-buyers.mjs"
     "dev": "tsx watch src/index.ts",
     "start": "node --enable-source-maps --no-warnings --loader tsx src/index.ts",
     "build": "tsc -p tsconfig.json"
