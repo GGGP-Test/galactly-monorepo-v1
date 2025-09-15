@@ -30,6 +30,6 @@ jobs:
         with:
           issue-number: ${{ steps.pr.outputs.pull-request-number }}
           body: |
-            @codex Use **<YOUR-CODEX-ENV-NAME>**.
+            @codex Use **GGGP-Test/galactly-monorepo-v1**.
             Reproduce: `node Backend/devtools/smoke/find-buyers.mjs`.
             Then fix the backend so the smoke returns non-empty candidates and push the fix to this PR.
