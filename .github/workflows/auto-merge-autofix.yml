@@ -1,0 +1,30 @@
+name: auto-merge autofix PRs
+
+on:
+  pull_request_target:
+    types: [opened, labeled, synchronize, ready_for_review]
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  merge:
+    if: >
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (contains(github.event.pull_request.labels.*.name, 'autofix')
+       || startsWith(github.event.pull_request.head.ref, 'fix/'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-merge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request.number;
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr,
+              merge_method: "squash"
+            });
+            core.info(`Merged PR #${pr}`);
