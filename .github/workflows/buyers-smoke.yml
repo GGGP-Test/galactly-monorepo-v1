@@ -7,43 +7,50 @@ on:
     paths:
       - "Backend/devtools/smoke/find-buyers.mjs"
       - ".github/workflows/buyers-smoke.yml"
+      - "Backend/src/**"
 
 jobs:
   smoke:
+    name: smoke (${{ matrix.supplier }}, ${{ matrix.region }}, ${{ matrix.radius }}, expect=${{ matrix.expect }})
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
-        supplier: [ peekpackaging.com ]
-        region: [ usca, us ]
-        radiusMi: [ 50, 200 ]
         include:
-          - persona_offer: "packaging supplies"
-            persona_solves: "custom boxes, kitting, fulfillment"
-            persona_titles: "Procurement Manager, Operations Manager, Warehouse Manager"
+          - { supplier: "peekpackaging.com", region: "usca", radius: 50,  expect: 200 }
+          - { supplier: "peekpackaging.com", region: "usca", radius: 200, expect: 200 }
+          - { supplier: "peekpackaging.com", region: "us",   radius: 50,  expect: 400 }
+          - { supplier: "peekpackaging.com", region: "us",   radius: 200, expect: 400 }
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
 
       - name: Run smoke
+        id: smoke
         env:
-          API_URL: ${{ secrets.API_URL }}
-          API_KEY: ${{ secrets.API_KEY }}
+          API_URL: ${{ secrets.BUYERS_API_URL }}   # e.g. https://p01--animated-cellar--...code.run/api/v1/leads/find-buyers
+          API_KEY: ${{ secrets.BUYERS_API_KEY }}   # your x-api-key
           SUPPLIER: ${{ matrix.supplier }}
           REGION: ${{ matrix.region }}
-          RADIUS_MI: ${{ matrix.radiusMi }}
-          OFFER: ${{ matrix.persona_offer }}
-          SOLVES: ${{ matrix.persona_solves }}
-          TITLES: ${{ matrix.persona_titles }}
-          VERBOSE: 'true'
+          RADIUS_MI: ${{ matrix.radius }}
+          VERBOSE: "true"
         run: |
-          node Backend/devtools/smoke/find-buyers.mjs | tee "buyers-smoke-${{ matrix.region }}-${{ matrix.radiusMi }}.log"
+          set -euo pipefail
+          mkdir -p .smoke
+          node Backend/devtools/smoke/find-buyers.mjs | tee ".smoke/out.json"
+          # Optional check: non-zero exit means transport issue
+          echo "done"
 
-      - name: Upload logs
+      - name: Attach result (unique artifact per matrix)
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: buyers-smoke-logs
-          path: buyers-smoke-*.log
+          name: buyers-smoke-${{ matrix.supplier }}-${{ matrix.region }}-${{ matrix.radius }}-expect${{ matrix.expect }}
+          path: .smoke/out.json
+          if-no-files-found: warn
+          retention-days: 3
