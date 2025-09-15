@@ -5,48 +5,36 @@ on:
 
 jobs:
   smoke:
-    name: smoke (peekpackaging.com, ${ { matrix.region } }, r=${ { matrix.radius } }, expect=${ { matrix.expect } })
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        supplier: [ "peekpackaging.com" ]
-        # try broad → narrow to see where it starts failing
-        region: [ "any", "us", "usca" ]
-        radius: [ 0, 200, 2000 ]
-        expect: [ 200 ]
-
+        region: [any, us, usca]
+        radius: [2000, 200, 50]
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Run smoke
         env:
-          # your Northflank URL (kept explicit to avoid any ambiguity)
-          API_URL: "https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1/leads/find-buyers"
-          # prefer a GitHub secret if you later store it there; falls back to the literal env if not set
-          API_KEY: ${{ secrets.NF_API_KEY || vars.API_KEY || '' }}
-
-          SUPPLIER: ${{ matrix.supplier }}
-          REGION:   ${{ matrix.region }}
+          API: https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api/v1/leads/find-buyers
+          # If you don't have a secret yet, this fallback uses the key you've been testing with.
+          KEY: ${{ secrets.NF_API_KEY || 'NFjeipPuj44kMS2dfjsyHSkdKSt97S6s5f56sG5' }}
+          SUPPLIER: peekpackaging.com
+          REGION: ${{ matrix.region }}
           RADIUS_MI: ${{ matrix.radius }}
+          OFFER: "custom packaging; corrugated boxes; printed mailers"
+          SOLVES: "short lead times; custom printed boxes; ecommerce packaging"
+          TITLES: "Purchasing Manager, Procurement Manager, Buyer, Supply Chain Manager"
           VERBOSE: "true"
-
-          # Put a non-empty persona to avoid persona-related pruning
-          OFFER:  "Custom packaging, boxes, cartons"
-          SOLVES: "short lead times; custom sizes; inventory mgmt"
-          TITLES: "Packaging Manager, Purchasing Manager, Supply Chain Manager"
         run: |
           node Backend/devtools/smoke/find-buyers.mjs \
-            | tee "smoke-${{ github.run_id }}-${{ matrix.region }}-${{ matrix.radius }}.json"
+            | tee "buyers-smoke-${{ matrix.region }}-${{ matrix.radius }}.json"
 
-      - name: Upload results (unique names per matrix leg)
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: buyers-smoke-${{ github.run_id }}-${{ matrix.region }}-${{ matrix.radius }}
-          path: smoke-${{ github.run_id }}-${{ matrix.region }}-${{ matrix.radius }}*.json
-          if-no-files-found: error
+          name: buyers-smoke-${{ matrix.region }}-${{ matrix.radius }}
+          path: buyers-smoke-${{ matrix.region }}-${{ matrix.radius }}.json
+          overwrite: true
