@@ -1,0 +1,75 @@
+name: Codex Autofix when Buyers Smoke fails
+
+on:
+  workflow_run:
+    workflows: ["Buyers Smoke — animated-cellar (NF p01)"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  open-pr:
+    if: ${{ github.event.workflow_run.conclusion != 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download last smoke artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: buyers-smoke-animated-cellar-${{ github.event.workflow_run.id }}
+          run-id: ${{ github.event.workflow_run.id }}
+          path: .codex/context
+
+      - name: Prepare task for Codex
+        id: prep
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .codex/context
+          echo "# Autofix task for Codex" > .codex/task.md
+          cat << 'TASK' >> .codex/task.md
+          You are the repo’s auto-fixer. Make the Buyers smoke pass.
+
+          What failed:
+          - Smoke calls POST /api/v1/leads/find-buyers on the Northflank service.
+          - We expect HTTP 200 with { ok:true, ... }.
+          - Recent failures show HTTP 500 with error "app.options is not a function".
+
+          What to do:
+          1) In Backend/src/routes/public.ts, remove any dependency on app.options() or cors().
+             Handle CORS preflight inside middleware and return 204 for OPTIONS.
+          2) Ensure POST /api/v1/leads/find-buyers returns 200 with { ok:true, ... } even if no candidates.
+          3) Do not add new runtime deps; avoid "Cannot find module" regressions.
+          4) Run the smoke script locally (Backend/devtools/smoke/find-buyers.mjs) and commit your fix.
+          5) Keep logs minimal and don’t change public API paths.
+          TASK
+
+          # Make a tiny PR body that includes the raw smoke JSON for context
+          echo "Autofix buyers smoke" > .codex/pr-title.txt
+          {
+            echo "@codex Please fix Buyers smoke automatically."
+            echo
+            echo "### Latest smoke result"
+            echo "\`\`\`json"
+            cat .codex/context/smoke-result.json || echo '{}'
+            echo "\`\`\`"
+            echo
+            echo "### Task"
+            cat .codex/task.md
+          } > .codex/pr-body.md
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: codex/autofix-buyers-${{ github.event.workflow_run.id }}
+          commit-message: "chore: trigger Codex autofix for Buyers smoke"
+          title: ${{ steps.prep.outputs.pr-title || 'Autofix buyers smoke' }}
+          body: ${{ hashFiles('.codex/pr-body.md') && fromJSON('[""]') || '' }}
+          body-path: .codex/pr-body.md
+          add-paths: |
+            .codex/task.md
+            .codex/context/smoke-result.json
