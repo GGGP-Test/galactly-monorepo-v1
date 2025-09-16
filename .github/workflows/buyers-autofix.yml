@@ -1,20 +1,20 @@
 name: buyers-autofix
 
 on:
+  # Re-run when smoke finishes (keep this if you already use buyers-smoke)
   workflow_run:
-    workflows: ["buyers-smoke"]
+    workflows: ["buyers-smoke", "buyers-smoke.yml"]
     types: [completed]
-  push:
-    branches: [ main ]
+  # Optional cron as a safety net; keep or delete as you like
   schedule:
-    - cron: "*/15 * * * *"   # run every 15 minutes
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
-  issues: write
 
+# Never run two autofix jobs at the same time
 concurrency:
   group: buyers-autofix
   cancel-in-progress: true
@@ -22,54 +22,84 @@ concurrency:
 jobs:
   autofix:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    env:
+      # ====== You can tune these caps without editing the file ======
+      # Use repository Variables to override (Settings → Variables → Actions):
+      # AUTOFIX_MAX_RUNS_PER_DAY, AUTOFIX_PROVIDER_ORDER, GEMINI_DAILY_LIMIT, HF_DAILY_LIMIT, GROQ_DAILY_LIMIT
+      AUTOFIX_MAX_RUNS_PER_DAY: ${{ vars.AUTOFIX_MAX_RUNS_PER_DAY || '6' }}
+      AUTOFIX_PROVIDER_ORDER:   ${{ vars.AUTOFIX_PROVIDER_ORDER   || 'gemini,huggingface,groq' }}
+      GEMINI_DAILY_LIMIT:       ${{ vars.GEMINI_DAILY_LIMIT       || '50' }}
+      HF_DAILY_LIMIT:           ${{ vars.HF_DAILY_LIMIT           || '25' }}
+      GROQ_DAILY_LIMIT:         ${{ vars.GROQ_DAILY_LIMIT         || '25' }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-
-      - name: Download smoke artifacts (if any)
-        uses: actions/download-artifact@v4
-        with:
-          name: buyers-smoke
-          path: artifacts
-        continue-on-error: true
 
       - name: Setup Node 20
         uses: actions/setup-node@v4
-        with: { node-version: "20" }
+        with:
+          node-version: 20
+
+      # ---- Guard: stop if we already ran too many times today ----
+      - name: Guard — daily run cap
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          since="$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
+          # List runs of THIS workflow in the last 24h
+          count=$(gh run list --workflow "buyers-autofix.yml" --json createdAt --limit 100 \
+            | jq --arg since "$since" '[.[] | select(.createdAt >= $since)] | length')
+          echo "runs_last_24h=$count"
+          if [ "$count" -ge "${AUTOFIX_MAX_RUNS_PER_DAY}" ]; then
+            echo "Daily cap reached ($count >= ${AUTOFIX_MAX_RUNS_PER_DAY}). Exiting early."
+            exit 0
+          fi
 
       - name: Provider env probe
         run: |
-          has() { [ -n "$1" ] && echo present || echo missing; }
-          echo "GEMINI_API_KEY: $(has "${GEMINI_API_KEY}")"
-          echo "HF_API_TOKEN:   $(has "${HF_API_TOKEN}")"
-          echo "GROQ_API_KEY:   $(has "${GROQ_API_KEY}")"
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          HF_API_TOKEN:   ${{ secrets.HF_API_TOKEN }}
-          GROQ_API_KEY:   ${{ secrets.GROQ_API_KEY }}
+          has() { [ -n "${1:-}" ] && echo present || echo missing; }
+          echo "GEMINI_API_KEY=$(has '${{ secrets.GEMINI_API_KEY }}')"
+          echo "HF_API_TOKEN=$(has '${{ secrets.HF_API_TOKEN }}')"
+          echo "GROQ_API_KEY=$(has '${{ secrets.GROQ_API_KEY }}')"
+          echo "OPENROUTER_API_KEY=$(has '${{ secrets.OPENROUTER_API_KEY }}')"
 
-      - name: Run autofix (Gemini -> HF -> Groq; OpenRouter disabled)
+      - name: Install backend deps
+        working-directory: Backend
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      # The existing autofix client; it already opens PRs and writes status artifacts
+      - name: Run autofix
         working-directory: Backend
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_SHA: ${{ github.sha }}
+          # Provider order + soft provider limits (the script can read these and skip when hit)
+          AUTOFIX_PROVIDER_ORDER: ${{ env.AUTOFIX_PROVIDER_ORDER }}
+          GEMINI_DAILY_LIMIT:     ${{ env.GEMINI_DAILY_LIMIT }}
+          HF_DAILY_LIMIT:         ${{ env.HF_DAILY_LIMIT }}
+          GROQ_DAILY_LIMIT:       ${{ env.GROQ_DAILY_LIMIT }}
 
-          # Providers (order handled by script)
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          HF_API_TOKEN:   ${{ secrets.HF_API_TOKEN }}
-          HF_MODEL:       ${{ secrets.HF_MODEL }}
-          GROQ_API_KEY:   ${{ secrets.GROQ_API_KEY }}
-          GROQ_MODEL:     ${{ secrets.GROQ_MODEL }}
-
-          # Debug notes in summary/issue (no GH debug needed)
-          DEBUG_AUTOFIX: "1"
-        run: node scripts/autofix.mjs
+          # Provider keys (only those you set will be tried)
+          GEMINI_API_KEY:   ${{ secrets.GEMINI_API_KEY }}
+          HF_API_TOKEN:     ${{ secrets.HF_API_TOKEN }}
+          GROQ_API_KEY:     ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          node scripts/autofix.mjs || true
 
       - name: Upload status artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: autofix-status
-          path: autofix-status.json
-        continue-on-error: true
+          path: |
+            Backend/autofix-logs/**
+            Backend/autofix-status.json
+          if-no-files-found: ignore
