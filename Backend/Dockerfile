@@ -1,26 +1,23 @@
-# Root Dockerfile that builds the Backend/ service for Northflank
+# Build the Backend/ service on Northflank (robust COPY)
 FROM node:20-alpine
 
-# Quiet npm a bit
 ENV npm_config_loglevel=warn
 
-# Native build tools for any node-gyp deps (gets removed after install)
+# native build tools (removed later)
 RUN apk add --no-cache --virtual .build-deps python3 make g++
 
-# Work under /app/Backend so paths match your code
-WORKDIR /app/Backend
+# Work at /app
+WORKDIR /app
 
-# 1) Install dependencies from Backend/package.json
-# Try npm ci first (if lock exists), otherwise fallback to npm install.
-COPY Backend/package*.json ./
-RUN (npm ci --no-audit --no-fund --include=dev || npm install --no-audit --no-fund --include=dev)
+# 1) Bring in Backend package files and install deps inside /app/Backend
+COPY Backend/package*.json ./Backend/
+RUN cd Backend && (npm ci --no-audit --no-fund --include=dev || npm install --no-audit --no-fund --include=dev)
 
-# 2) Copy Backend source only (keeps build context small)
-COPY Backend/. .
+# 2) Copy the rest of Backend explicitly to /app/Backend
+COPY Backend ./Backend
 
-# We don't need build tools at runtime
+# 3) Drop build deps; run from Backend with tsx
 RUN apk del .build-deps
-
-# 3) Start the API with tsx (dev dep installed above)
+WORKDIR /app/Backend
 EXPOSE 8080
 CMD ["npx","tsx","src/index.ts"]
