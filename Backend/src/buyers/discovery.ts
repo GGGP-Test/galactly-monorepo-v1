@@ -1,6 +1,5 @@
 // Backend/src/buyers/discovery.ts
 // Cheap-first supplier discovery + persona builder with controllable phrasing.
-//
 
 export type Evidence = { kind: string; note: string; url?: string; ts: number };
 
@@ -70,7 +69,7 @@ function guessName(html: string, domain: string): string {
   return d0.charAt(0).toUpperCase() + d0.slice(1);
 }
 
-// ---------- very small heuristics ----------
+// ---------- heuristics ----------
 const OFFER_KEYWORDS: Record<string,string[]> = {
   "corrugated": ["corrugated", "boxes", "cartonization", "right-sizing", "right size"],
   "stretch/shrink film": ["stretch film", "shrink film", "pallet wrap", "turntable", "wrapper"],
@@ -113,13 +112,9 @@ function parseUserPersona(input: string | undefined) {
   if (!input) return null;
   const t = input.toLowerCase();
   const sectors: string[] = [];
-  for (const k of Object.keys(SECTOR_KEYWORDS)) {
-    if (scoreHits(t, SECTOR_KEYWORDS[k]) > 0) sectors.push(k);
-  }
+  for (const k of Object.keys(SECTOR_KEYWORDS)) if (scoreHits(t, SECTOR_KEYWORDS[k]) > 0) sectors.push(k);
   const titles: string[] = [];
-  for (const k of Object.keys(TITLES)) {
-    if (scoreHits(t, TITLES[k]) > 0) titles.push(k);
-  }
+  for (const k of Object.keys(TITLES)) if (scoreHits(t, TITLES[k]) > 0) titles.push(k);
   let offer = "";
   let offerScore = -1;
   for (const k of Object.keys(OFFER_KEYWORDS)) {
@@ -143,12 +138,10 @@ export async function discoverSupplier(opts: DiscoverOptions): Promise<Discovery
   const baseUrl = normUrl(opts.supplier);
   const domain = hostOnly(baseUrl);
 
-  // fetch homepage + about
   let html = "", aboutHtml = "";
   try { html = await get(baseUrl); evidence.push({ kind: "fetch", note: "homepage ok", url: baseUrl, ts: NOW() }); }
   catch (e:any) { evidence.push({ kind: "fetch", note: `homepage fail: ${e?.message||e}`, url: baseUrl, ts: NOW() }); }
 
-  // try /about or /company
   for (const path of ["/about", "/company", "/who-we-are"]) {
     try {
       const u = normUrl(`https://${domain}${path}`);
@@ -161,7 +154,7 @@ export async function discoverSupplier(opts: DiscoverOptions): Promise<Discovery
   const text = stripTags(html + "\n" + aboutHtml);
   const name = guessName(html || aboutHtml, domain);
 
-  // infer offer
+  // offer
   let bestOffer = "packaging";
   let bestScore = -1;
   for (const k of Object.keys(OFFER_KEYWORDS)) {
@@ -169,7 +162,7 @@ export async function discoverSupplier(opts: DiscoverOptions): Promise<Discovery
     if (s > bestScore) { bestScore = s; bestOffer = k; }
   }
 
-  // infer sectors / titles
+  // sectors / titles
   const sectorScores: [string, number][] = [];
   for (const k of Object.keys(SECTOR_KEYWORDS)) sectorScores.push([k, scoreHits(text, SECTOR_KEYWORDS[k])]);
   const titleScores: [string, number][] = [];
@@ -178,7 +171,7 @@ export async function discoverSupplier(opts: DiscoverOptions): Promise<Discovery
   let sectors = topN(sectorScores, 2).filter(Boolean);
   let titles  = topN(titleScores, 2).filter(Boolean);
 
-  // blend user input (90%) with discovery (10%)
+  // blend user input (90%)
   const user = parseUserPersona(opts.personaInput);
   if (user) {
     const blend = <T extends string>(userVals: T[], discVals: T[], take = 2) => {
@@ -197,17 +190,15 @@ export async function discoverSupplier(opts: DiscoverOptions): Promise<Discovery
   if (sectors.length)  why.push(`hints: ${sectors.join(", ")}`);
   if (titles.length)   why.push(`buyer roles: ${titles.join(", ")}`);
 
-  // simple confidence
   const conf = Math.min(0.95, 0.55 + (bestScore>0?0.15:0) + (sectors.length?0.1:0) + (titles.length?0.1:0));
 
-  // olympiad-ish toy metrics (rule-only here)
   const metrics = {
-    ILL: /irregular|mix sku|variety/i.test(text) ? 0.6 : 0.3,      // irregular-load likelihood
-    RPI: /right[- ]?size|cartonization/i.test(text) ? 0.55 : 0.35, // right-size pressure
-    DFS: /returns|sustainab|weight/i.test(text) ? 0.3 : 0.15,      // footprint score proxy
-    FEI: /fragile|shock|ista/i.test(text) ? 0.35 : 0.2,            // fragility exposure
-    SCP: /recycl|eco|green/i.test(text) ? 0.18 : 0.08,             // sustainability cost proxy
-    CCI: /cold|temperature|pharma|gmp/i.test(text) ? 0.25 : 0.05,  // cold-chain compliance
+    ILL: /irregular|mix sku|variety/i.test(text) ? 0.6 : 0.3,
+    RPI: /right[- ]?size|cartonization/i.test(text) ? 0.55 : 0.35,
+    DFS: /returns|sustainab|weight/i.test(text) ? 0.3 : 0.15,
+    FEI: /fragile|shock|ista/i.test(text) ? 0.35 : 0.2,
+    SCP: /recycl|eco|green/i.test(text) ? 0.18 : 0.08,
+    CCI: /cold|temperature|pharma|gmp/i.test(text) ? 0.25 : 0.05,
   };
 
   const oneLiner = composeOneLiner(
@@ -218,7 +209,6 @@ export async function discoverSupplier(opts: DiscoverOptions): Promise<Discovery
     titles
   );
 
-  // seed source queries for the pipeline
   const qBase = `${bestOffer} buyer procurement ${opts.region || "US"}`;
   const candidateSourceQueries = [
     { source: "duckduckgo" as const, q: `${sectors[0] || "3PL"} ${qBase}` },
