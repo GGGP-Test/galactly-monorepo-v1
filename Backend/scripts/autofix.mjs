@@ -1,18 +1,17 @@
 #!/usr/bin/env node
 /**
  * buyers-autofix: bootstrap core repairs + small targeted patches + status reporting
- * Provider order: Gemini -> Hugging Face -> Groq -> OpenRouter
+ * LLM order (only): Gemini -> Hugging Face -> Groq
  *
  * - Runs even if core files are invalid or smoke artifact is missing.
  * - Repairs Backend/package.json, Dockerfile, tsconfig.json, src/index.ts (no LLM).
  * - Tries free/cheap LLMs in the order above; all are optional.
  *   Env keys (any subset):
  *     GEMINI_API_KEY
- *     HF_API_TOKEN, HF_MODEL (optional, default Qwen2.5-7B-Instruct)
+ *     HF_API_TOKEN, HF_MODEL (optional, default Qwen/Qwen2.5-7B-Instruct)
  *     GROQ_API_KEY, GROQ_MODEL (optional, default llama-3.1-8b-instant)
- *     OPENROUTER_API_KEY, OPENROUTER_MODEL (optional, default openrouter/auto)
  * - Opens a PR labeled "autofix" (your auto-merge merges it).
- * - Writes ./autofix-status.json and updates/creates the GitHub Issue "Autonomy Status".
+ * - Writes ./autofix-status.json, adds a Job Summary, and updates/creates the GitHub Issue "Autonomy Status".
  * - Never fails the job; exits 0.
  */
 import fs from "node:fs";
@@ -57,7 +56,7 @@ const statusPath = path.join(repoRoot, "autofix-status.json");
 const RUN = {
   startedAt: new Date().toISOString(),
   provider: "none",
-  providersTried: [],
+  providersTried: [],         // e.g., ["gemini:present", "huggingface:missing", "groq:present"]
   smokeSeen: false,
   bootstrapChanges: 0,
   llmChanges: 0,
@@ -191,17 +190,14 @@ Do not add new deps or change runtime outside Backend/.
 `;
 }
 
-// ---------- LLM providers (Gemini -> HF -> Groq -> OpenRouter)
+// ---------- LLM providers (Gemini -> HF -> Groq)  — OpenRouter removed
 async function callGemini(prompt) {
   const key = process.env.GEMINI_API_KEY;
+  RUN.providersTried.push(`gemini:${key ? "present" : "missing"}`);
   if (!key) return null;
-  RUN.providersTried.push("gemini");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
   const body = {
-    contents: [{
-      role: "user",
-      parts: [{ text: prompt }]
-    }],
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: { temperature: 0.2, maxOutputTokens: 1400 }
   };
   const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -215,8 +211,8 @@ async function callGemini(prompt) {
 }
 async function callHF(prompt) {
   const token = process.env.HF_API_TOKEN;
+  RUN.providersTried.push(`huggingface:${token ? "present" : "missing"}`);
   if (!token) return null;
-  RUN.providersTried.push("huggingface");
   const model = process.env.HF_MODEL || "Qwen/Qwen2.5-7B-Instruct";
   const r = await fetch(`https://api-inference.huggingface.co/models/${encodeURIComponent(model)}`, {
     method: "POST",
@@ -239,8 +235,8 @@ ${prompt}`,
 }
 async function callGroq(prompt) {
   const key = process.env.GROQ_API_KEY;
+  RUN.providersTried.push(`groq:${key ? "present" : "missing"}`);
   if (!key) return null;
-  RUN.providersTried.push("groq");
   const model = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
   const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -264,44 +260,11 @@ async function callGroq(prompt) {
   if (out && Array.isArray(out.files)) RUN.provider = "groq";
   return out;
 }
-async function callOpenRouter(prompt) {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) return null;
-  RUN.providersTried.push("openrouter");
-  const model = process.env.OPENROUTER_MODEL || "openrouter/auto";
-  const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${key}`,
-      "content-type": "application/json",
-      "HTTP-Referer": "https://github.com/",
-      "X-Title": "buyers-autofix"
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content:
-"Output STRICT JSON only: {\"files\":[{\"path\":\"Backend/...\",\"content\":\"...\"}]}\nTouch only Backend/. Keep patches small; no new deps." },
-        { role: "user", content: prompt }
-      ],
-      temperature: 0.2,
-      max_tokens: 1600
-    })
-  });
-  if (!r.ok) return null;
-  const data = await r.json();
-  const text = data?.choices?.[0]?.message?.content?.trim() || "";
-  const m = text.match(/\{[\s\S]*\}$/);
-  const out = parseJSON(m ? m[0] : text);
-  if (out && Array.isArray(out.files)) RUN.provider = "openrouter";
-  return out;
-}
 async function callAnyModel(prompt) {
-  // Order: Gemini -> HF -> Groq -> OpenRouter
-  let out = await callGemini(prompt);       if (out && Array.isArray(out.files)) return out;
-  out = await callHF(prompt);               if (out && Array.isArray(out.files)) return out;
-  out = await callGroq(prompt);             if (out && Array.isArray(out.files)) return out;
-  out = await callOpenRouter(prompt);       if (out && Array.isArray(out.files)) return out;
+  // Order: Gemini -> HF -> Groq
+  let out = await callGemini(prompt); if (out && Array.isArray(out.files)) return out;
+  out = await callHF(prompt);         if (out && Array.isArray(out.files)) return out;
+  out = await callGroq(prompt);       if (out && Array.isArray(out.files)) return out;
   return null;
 }
 
@@ -315,7 +278,6 @@ async function upsertStatusIssue() {
   const repo = process.env.GITHUB_REPOSITORY;
   if (!token || !repo) return;
   const [owner, repoName] = repo.split("/");
-  // find existing issue titled "Autonomy Status"
   const list = await fetch(`https://api.github.com/repos/${owner}/${repoName}/issues?state=open&per_page=100`, {
     headers: { authorization: `Bearer ${token}`, "user-agent": "buyers-autofix-bot", accept: "application/vnd.github+json" }
   }).then(r => r.ok ? r.json() : []);
@@ -328,17 +290,15 @@ async function upsertStatusIssue() {
     `**Branch:** ${RUN.branch || "-"}`,
     `**PR:** ${RUN.prUrl || "-"}`,
     `**Result:** ${RUN.result}`,
-  ].join("\n");
+    RUN.notes.length ? `**Notes:** ${RUN.notes.join(" | ")}` : ""
+  ].filter(Boolean).join("\n");
   if (!target) {
-    // create
-    const createRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/issues`, {
+    await fetch(`https://api.github.com/repos/${owner}/${repoName}/issues`, {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "user-agent": "buyers-autofix-bot" },
       body: JSON.stringify({ title: "Autonomy Status", body: summary, labels: ["autofix"] })
     });
-    if (createRes.ok) return;
   } else {
-    // comment
     await fetch(`https://api.github.com/repos/${owner}/${repoName}/issues/${target.number}/comments`, {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "user-agent": "buyers-autofix-bot" },
@@ -407,6 +367,7 @@ async function main() {
         console.log("llm_patch:", r);
         RUN.llmChanges++;
       }
+      if (RUN.provider === "none") RUN.provider = "unknown"; // safety
     } else {
       RUN.notes.push("no LLM patch applied (keys missing/unavailable)");
     }
@@ -462,5 +423,4 @@ main().catch(e => {
   RUN.result = "error";
   RUN.notes.push("unexpected: " + (e?.stack || String(e)));
   writeStatusFile(); writeJobSummary(); upsertStatusIssue().finally(() => {});
-  // do not throw
 });
