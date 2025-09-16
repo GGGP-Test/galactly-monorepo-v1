@@ -1,28 +1,36 @@
-import express from "express";
+// Backend/src/index.ts
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import leadsRouter from "./routes/leads";
+import morgan from "morgan";
 import mountBuyerRoutes from "./routes/buyers";
 
 const app = express();
+const PORT = Number(process.env.PORT || process.env.APP_PORT || 8787);
 
-// CORS + JSON (no app.options(...))
-app.use(cors());
+app.disable("x-powered-by");
+app.use(cors({ origin: "*", maxAge: 600 }));
 app.use(express.json({ limit: "1mb" }));
+app.use(morgan("tiny"));
 
-// Health
-app.get("/healthz", (_req, res) => res.status(200).json({ ok: true }));
+// Health endpoints (both paths so UI/Scripts can pick either)
+app.get("/health", (_req: Request, res: Response) => res.status(200).send("OK"));
+app.get("/healthz", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// API
-app.use("/api/v1/leads", leadsRouter);
+// Root sanity
+app.get("/", (_req, res) => res.status(200).json({ service: "artemis-backend", ok: true }));
 
-// Start
-const app = express();
-app.use(express.json());
+// Business routes
 mountBuyerRoutes(app);
 
-const PORT = Number(process.env.PORT || 8080);
+// Error fence
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("[ERROR]", err?.stack || err);
+  res.status(500).json({ error: "internal_error", detail: String(err?.message || err) });
+});
+
 app.listen(PORT, () => {
-  console.log(JSON.stringify({ msg: "server_started", port: PORT }));
+  console.log(`[artemis] API listening on ${PORT}`);
 });
 
 export default app;
