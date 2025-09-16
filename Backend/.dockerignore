@@ -1,6 +1,26 @@
+# --- keep the build lean, but do NOT exclude Backend/ ---
+
+# Git & editor junk
 .git
-.github
-docs
-node_modules
-**/*.log
-artifacts
+.gitignore
+**/.git
+**/.idea
+**/.vscode
+**/.DS_Store
+
+# Node caches
+**/node_modules
+**/npm-debug.log*
+**/yarn-error.log*
+**/pnpm-lock.yaml
+**/package-lock.json.orig
+
+# Build outputs you don't want in context
+**/dist
+**/.next
+**/.cache
+**/coverage
+**/tmp
+
+# IMPORTANT: explicitly keep the app code
+!Backend/**
