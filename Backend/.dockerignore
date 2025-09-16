@@ -1,8 +1,6 @@
 .git
-**/.git
-**/.DS_Store
-**/node_modules
-docs
 .github
-*.tgz
+docs
+node_modules
+**/*.log
 artifacts
