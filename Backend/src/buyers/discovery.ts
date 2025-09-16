@@ -1,625 +1,515 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/**
- * Discovery module
- * - Fetches supplier homepage (server-side, Node 20 global fetch)
- * - Extracts low-cost signals (titles, headings, keywords, locations)
- * - Calls OpenRouter ONCE (cheap model) to hypothesize latent metrics + 3–5 buyer archetypes
- * - Produces a list of candidate directory sources (to be used by pipeline)
- * - Caches by supplier domain in-memory and to a small JSON file on disk
- * - Emits structured evidence logs via BleedStore (best-effort; no-throw)
+/* Buyer discovery (cheap-first with optional 1 LLM hop)
+ *
+ * Produces:
+ *  - persona one-liner (X sell to Y; talk to Z) with confidence
+ *  - latent metric estimates (ILL, FEI, DFS, SCP, CCI, RPI)
+ *  - signals & evidence trail
+ *  - candidate search queries for free directories/search (to be used by pipeline)
+ *
+ * LLM provider order (optional): Gemini -> HF -> Groq (0 or 1 call total, cached by hash)
+ * Env:
+ *   GEMINI_API_KEY, HF_API_TOKEN, GROQ_API_KEY
  */
 
-import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
+import crypto from "crypto";
 
-// ---- BleedStore (best-effort dynamic import, tolerant to API differences)
-type Evidence = {
-  at: string; // ISO time
-  stage: "discovery" | "pipeline";
-  supplier?: string;
-  topic: string;
-  detail: any;
-  source?: string;
-};
-
-type LeadLike = {
-  id?: string;
-  company?: string;
-  domain?: string;
-  region?: string;
-  score?: number;
-  source?: string;
-  evidence?: Evidence[];
-};
-
-let bleedStore: any | null = null;
-(function loadBleedStore() {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require("../data/bleed-store");
-    bleedStore =
-      (mod && (mod.getStore?.() || mod.store || mod.default || mod)) || null;
-  } catch {
-    bleedStore = null;
-  }
-})();
-
-function emitEvidence(ev: Evidence, lead?: LeadLike) {
-  try {
-    if (!bleedStore) {
-      console.log("[bleed:evidence]", JSON.stringify(ev));
-      return;
-    }
-    // Try common method names; swallow on failure (no-throw).
-    if (typeof bleedStore.appendEvidence === "function") {
-      bleedStore.appendEvidence(ev, lead);
-      return;
-    }
-    if (typeof bleedStore.addEvidence === "function") {
-      bleedStore.addEvidence(ev, lead);
-      return;
-    }
-    if (typeof bleedStore.recordEvidence === "function") {
-      bleedStore.recordEvidence(ev, lead);
-      return;
-    }
-    // As a last resort, attach to a synthetic lead so UI has something to render.
-    if (typeof bleedStore.upsertLead === "function") {
-      const sid = `DISCOVERY::${(lead?.domain || ev.supplier || ev.topic || "unknown")
-        .toString()
-        .slice(0, 128)}`;
-      bleedStore.upsertLead({
-        id: sid,
-        company: "Discovery Evidence",
-        domain: ev.supplier || lead?.domain || "n/a",
-        source: "DISCOVERY_EVIDENCE",
-        evidence: [ev],
-      });
-    }
-  } catch (e) {
-    console.warn("[bleed:evidence:error]", (e as Error).message);
-  }
-}
-
-// ---- Types
-
+// ----- Types -----
 export type DiscoveryInput = {
-  supplier: string; // domain or URL; e.g. "acme-packaging.com" or "https://acme.com"
-  region?: string; // optional geographic hint
-  persona?: any; // optional client-provided persona to pass-through
+  supplier: string;          // domain or URL (e.g. "peakpackaging.com" or "https://peakpackaging.com")
+  region?: string;           // "US" | "CA" | etc. (optional)
+  personaInput?: string;     // user-supplied persona text (we weight ~90% by default if present)
 };
 
-export type Signals = {
-  title?: string;
-  headings?: string[];
-  keywords?: Record<string, number>;
-  services?: string[];
-  locations?: string[];
-  skuHints?: string[];
-  hiringHints?: string[];
-  certifications?: string[];
-  siteTextSample?: string;
+export type Evidence = {
+  kind: string;              // "fetch","parse","metric","llm","assumption"
+  note: string;
+  url?: string;
+  ts: number;
 };
 
-export type Latents = {
-  IrregularLoadLikelihood?: number; // 0..1
-  ColdChainSensitivity?: number; // 0..1
-  FragilityRisk?: number; // 0..1
-  SustainabilityPriority?: number; // 0..1
-  Seasonality?: number; // 0..1
-  OrderSizeVariability?: number; // 0..1
-  Notes?: string;
+export type Persona = {
+  oneLiner: string;          // "You are <X>. You sell to <Y>. Talk to <Z>."
+  buyerTitles: string[];     // target titles
+  sectors: string[];         // e.g., ["e-commerce", "3PL", "DTC retail"]
+  why: string[];             // short bullets for UI
+  confidence: number;        // 0..1
 };
 
-export type Archetype = {
-  name: string;
-  description: string;
-  indicators: string[];
-  leadQuery: string; // short search query to find matching buyers
-};
-
-export type CandidateSource = {
-  id: string;
-  kind: "DIRECTORY" | "SEARCH";
-  description: string;
-  urlTemplate: string; // include tokens: {query}, {region}
-  query?: string; // default query to plug into urlTemplate
+export type Metrics = {
+  ILL?: number; // Irregular Load Likelihood
+  FEI?: number; // Fragility Exposure Index
+  DFS?: number; // DTC Footprint Score
+  SCP?: number; // Sustainability Cost Pressure
+  CCI?: number; // Cold-Chain Importance
+  RPI?: number; // Right-Size Pressure Index
 };
 
 export type DiscoveryOutput = {
   supplierDomain: string;
-  normalizedURL: string;
-  cached: boolean;
-  signals: Signals;
-  latents: Latents;
-  archetypes: Archetype[];
-  candidateSources: CandidateSource[];
-  persona?: any; // passthrough or inferred
+  persona: Persona;
+  metrics: Metrics;
+  signals: Record<string, any>;
+  candidateSourceQueries: Array<{ source: string; q: string; region?: string }>;
+  evidence: Evidence[];
 };
 
-// ---- Simple cache (in-memory + file)
-const CACHE_FILE = path.join(process.cwd(), "backend", ".cache.discovery.json");
-const memCache = new Map<string, DiscoveryOutput>();
+// -------- Utilities --------
 
-function readCacheFile(): Record<string, DiscoveryOutput> {
+const now = () => Date.now();
+
+function normalizeDomain(input: string): { url: string; domain: string } {
+  let t = input.trim();
+  if (!/^https?:\/\//i.test(t)) t = `https://${t}`;
   try {
-    const raw = fs.readFileSync(CACHE_FILE, "utf8");
-    return JSON.parse(raw);
+    const u = new URL(t);
+    const domain = (u.hostname || "").replace(/^www\./, "");
+    return { url: `https://${domain}`, domain };
   } catch {
-    return {};
-  }
-}
-function writeCacheFile(obj: Record<string, DiscoveryOutput>) {
-  try {
-    fs.mkdirSync(path.dirname(CACHE_FILE), { recursive: true });
-    fs.writeFileSync(CACHE_FILE, JSON.stringify(obj, null, 2), "utf8");
-  } catch (e) {
-    console.warn("[discovery:cache:write:error]", (e as Error).message);
+    // very broken input — treat as domain only
+    const domain = input.replace(/^https?:\/\//, "").replace(/^www\./, "");
+    return { url: `https://${domain}`, domain };
   }
 }
 
-function cacheGet(key: string): DiscoveryOutput | undefined {
-  if (memCache.has(key)) return memCache.get(key);
-  const file = readCacheFile();
-  const val = file[key];
-  if (val) memCache.set(key, val);
-  return val;
-}
-function cacheSet(key: string, val: DiscoveryOutput) {
-  memCache.set(key, val);
-  const file = readCacheFile();
-  file[key] = val;
-  writeCacheFile(file);
-}
-
-// ---- Helpers
-
-function normalizeSupplierURL(supplier: string): { domain: string; url: string } {
-  let s = supplier.trim();
-  if (!/^https?:\/\//i.test(s)) {
-    s = `https://${s}`;
-  }
-  let u: URL;
-  try {
-    u = new URL(s);
-  } catch {
-    // If still bad, assume domain-like
-    s = `https://${supplier}`;
-    u = new URL(s);
-  }
-  const domain = u.hostname.replace(/^www\./i, "");
-  return { domain, url: `https://${domain}` };
-}
-
-async function fetchText(url: string, timeoutMs = 10_000): Promise<string> {
-  const ctl = new AbortController();
-  const to = setTimeout(() => ctl.abort(), timeoutMs);
+async function safeFetch(url: string): Promise<{ ok: boolean; html: string; finalUrl: string; status?: number }> {
   try {
     const res = await fetch(url, {
-      signal: ctl.signal,
       headers: {
-        "user-agent":
-          "buyers-engine/1.0 (+https://github.com/; Node20 server fetch)",
-        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      } as any,
+        "User-Agent": "Mozilla/5.0 (compatible; ArtemisBot/1.0; +https://example.com/bot)",
+        "Accept": "text/html,application/xhtml+xml",
+      },
+      redirect: "follow",
     } as any);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.text();
-  } finally {
-    clearTimeout(to);
+    const html = await res.text();
+    return { ok: res.ok, html, finalUrl: res.url, status: res.status };
+  } catch {
+    return { ok: false, html: "", finalUrl: url };
   }
 }
 
-function extractBetween(html: string, tag: string): string[] {
-  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "gi");
-  const out: string[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(html))) {
-    const txt = m[1]
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (txt) out.push(txt);
-  }
-  return out;
+function stripTags(html: string): string {
+  const noScript = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ");
+  const text = noScript.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return text;
 }
 
-function countKeywords(text: string, kws: string[]): Record<string, number> {
-  const t = ` ${text.toLowerCase()} `;
-  const res: Record<string, number> = {};
-  for (const k of kws) {
-    const needle = ` ${k.toLowerCase()} `;
-    let idx = 0;
-    let c = 0;
-    while ((idx = t.indexOf(needle, idx)) !== -1) {
-      c++;
-      idx += needle.length;
-    }
-    if (c > 0) res[k] = c;
-  }
-  return res;
+function scoreBoolean(cond: boolean, w = 1): number {
+  return cond ? w : 0;
 }
 
-function deriveSignals(html: string): Signals {
-  const title = extractBetween(html, "title")[0];
-  const headings = [
-    ...extractBetween(html, "h1"),
-    ...extractBetween(html, "h2"),
-    ...extractBetween(html, "h3"),
-  ].slice(0, 20);
+function clamp01(x: number) {
+  return Math.max(0, Math.min(1, x));
+}
 
-  const textSample = extractBetween(html, "body")
-    .join(" ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .slice(0, 2000);
+// ---------- Signal extraction (cheap) ----------
 
-  const services: string[] = [];
-  const svcHintRegex =
-    /(services?|solutions?|capabilities?|what we do|our products?)[:\s]([^.]{0,200})/gi;
-  let ms: RegExpExecArray | null;
-  while ((ms = svcHintRegex.exec(html))) {
-    const snip = ms[2]
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (snip) services.push(snip);
-  }
+function extractSignals(finalUrl: string, html: string) {
+  const text = stripTags(html).toLowerCase();
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const metaDesc = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i)?.[1];
 
-  const locationHints: string[] = [];
-  const locRegex =
-    /\b([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)\s+(?:Office|Plant|Warehouse|Facility|HQ|Headquarters)\b/g;
-  let ml: RegExpExecArray | null;
-  while ((ml = locRegex.exec(html))) {
-    locationHints.push(ml[1]);
-  }
+  // Product/service cues
+  const cues = {
+    stretchFilm: /stretch\s*(film|wrap)/i.test(html),
+    shrink: /shrink\s*(wrap|film)/i.test(html),
+    corrugated: /corrugat(ed|ion|e)?\s*(box|carton|pack|sheet)?/i.test(html),
+    labels: /\blabels?\b/i.test(html),
+    flexible: /flexible\s*packaging/i.test(html),
+    rightSizing: /right-?siz(e|ing)/i.test(html),
+    cartonization: /cartoniz(e|ation)/i.test(html),
+    ista: /\bista-?\d\b/i.test(html),
+    coldChain: /(cold[-\s]?chain|refrigerated|temperature[-\s]?controlled|frozen)/i.test(html),
+    ecommerce: /(e-?com(merce)?|shopify|woocommerce|returns\s*portal)/i.test(html),
+    threePL: /\b3pl\b/i.test(html),
+    pallet: /\bpallet(izing|ization|s)?\b/i.test(html),
+    fragile: /\bfragile|glass|damage\s*reduction|shock\s*protection\b/i.test(html),
+    sustainability: /(eco|recyclable|sustainable|sustainability|post[-\s]?consumer)/i.test(html),
+    automation: /(auto(mat(?:ion|ic))|turntable|pre-?stretch|wrapper|wrapping\s*machine)/i.test(html),
+  };
 
-  const skuHints: string[] = [];
-  const liMatches = html.match(/<li[^>]*>[\s\S]*?<\/li>/gi) || [];
-  for (const li of liMatches.slice(0, 100)) {
-    const txt = li.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    if (/(sku|item|model|part)\s*[:#-]?\s*[A-Z0-9-]{3,}/i.test(txt)) {
-      skuHints.push(txt.slice(0, 100));
-    }
-  }
+  // Very rough geo/locations hint
+  const hasZip = /\b\d{5}(?:-\d{4})?\b/.test(text);
+  const hasState = /\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/.test(
+    text.toUpperCase()
+  );
+  const multiLocationMentions = /\b(locations|warehouses|distribution\s*centers)\b/i.test(text);
 
-  const hiringHints: string[] = [];
-  const careersPaths = ["/careers", "/jobs", "/join-us", "/join", "/about/careers"];
-  for (const p of careersPaths) {
-    if (html.toLowerCase().includes(p)) hiringHints.push(p);
-  }
+  // SKU-ish density (very rough): count of product cards by repeating words
+  const skuDensity =
+    (text.match(/\b(products?|catalog|sku|add\s*to\s*cart|case\s*study|datasheet)\b/gi) || []).length / 50;
 
-  const certs: string[] = [];
-  for (const c of ["ISO 9001", "ISO 14001", "BRC", "FSC", "GMP", "HACCP"]) {
-    if (new RegExp(c, "i").test(html)) certs.push(c);
-  }
-
-  const keywords = countKeywords(textSample, [
-    "cold",
-    "frozen",
-    "temperature",
-    "fragile",
-    "stretch film",
-    "pallet",
-    "3pl",
-    "warehouse",
-    "just-in-time",
-    "sustainability",
-    "recycl",
-    "biodegrad",
-    "corrugated",
-    "shrink",
-    "tape",
-    "void fill",
-    "foam",
-    "bubble",
-  ]);
+  const head = (titleMatch?.[1] || "").trim();
+  const desc = (metaDesc || "").trim();
 
   return {
-    title,
-    headings,
-    keywords,
-    services,
-    locations: [...new Set(locationHints)].slice(0, 20),
-    skuHints: skuHints.slice(0, 20),
-    hiringHints: hiringHints.slice(0, 10),
-    certifications: certs,
-    siteTextSample: textSample,
+    url: finalUrl,
+    title: head,
+    description: desc,
+    cues,
+    geo: { hasZip, hasState, multiLocationMentions },
+    skuDensity,
+    rawLength: html.length,
   };
 }
 
-function cheapHeuristicLatents(sig: Signals): Latents {
-  const kw = sig.keywords || {};
-  const score = (k: string, w = 1) => (kw[k] ? Math.min(1, 0.2 + 0.15 * kw[k] * w) : 0.15);
-  const lat: Latents = {
-    IrregularLoadLikelihood: Math.max(score("pallet"), score("stretch film"), score("corrugated")),
-    ColdChainSensitivity: Math.max(score("cold", 1.2), score("frozen", 1.2), score("temperature")),
-    FragilityRisk: Math.max(score("fragile"), score("foam"), score("bubble")),
-    SustainabilityPriority: Math.max(score("sustainability", 1.3), score("recycl"), score("biodegrad")),
-    Seasonality: 0.2,
-    OrderSizeVariability: sig.skuHints && sig.skuHints.length > 2 ? 0.55 : 0.25,
-    Notes: "Heuristic latents (no LLM).",
+// ---------- Heuristic persona & metrics ----------
+
+function heuristics(signals: ReturnType<typeof extractSignals>, userPersona?: string) {
+  // Latent metrics (0..1) from cues
+  const c = signals.cues;
+
+  const ILL = clamp01(
+    scoreBoolean(c.pallet, 0.25) +
+    scoreBoolean(c.automation, 0.25) +
+    scoreBoolean(c.threePL, 0.25) +
+    (signals.geo.multiLocationMentions ? 0.25 : 0)
+  );
+
+  const FEI = clamp01(
+    scoreBoolean(c.fragile, 0.4) + scoreBoolean(c.ista, 0.3) + scoreBoolean(c.rightSizing, 0.2)
+  );
+
+  const DFS = clamp01(scoreBoolean(c.ecommerce, 0.6) + (signals.skuDensity > 0.4 ? 0.3 : 0));
+
+  const SCP = clamp01(scoreBoolean(c.sustainability, 0.6));
+
+  const CCI = clamp01(scoreBoolean(c.coldChain, 0.8));
+
+  const RPI = clamp01(scoreBoolean(c.rightSizing, 0.6) + scoreBoolean(c.cartonization, 0.3));
+
+  // Buyer titles selection
+  const titles = new Set<string>();
+  if (c.ecommerce || RPI > 0.4) titles.add("Fulfillment Operations Manager");
+  if (ILL > 0.4 || c.pallet || c.automation) titles.add("Warehouse Operations Manager");
+  if (c.corrugated || RPI > 0.4) titles.add("Packaging Engineer");
+  if (DFS > 0.3 || c.ecommerce) titles.add("E-commerce Operations");
+  if (CCI > 0.3) titles.add("Cold-Chain Logistics Manager");
+  if (FEI > 0.3) titles.add("Quality / Damage Reduction Lead");
+  titles.add("Purchasing Manager");
+
+  // Sector guess
+  const sectors: string[] = [];
+  if (c.ecommerce) sectors.push("DTC / E-commerce");
+  if (c.threePL) sectors.push("3PL / Fulfillment");
+  if (c.coldChain) sectors.push("Cold-Chain");
+  if ((c.corrugated || c.labels || c.flexible) && sectors.length === 0) sectors.push("General Packaging");
+
+  // Company "offer" summary (cheap)
+  const offerBits: string[] = [];
+  if (c.corrugated) offerBits.push("corrugated");
+  if (c.flexible) offerBits.push("flexible packaging");
+  if (c.labels) offerBits.push("labels");
+  if (c.stretchFilm || c.shrink) offerBits.push("stretch/shrink film");
+  if (c.automation) offerBits.push("wrapping machines");
+  if (offerBits.length === 0) offerBits.push("packaging solutions");
+
+  // Persona one-liner template
+  const baseOneLiner = `You are a ${offerBits.join(", ")} supplier. You sell mostly to ${sectors[0] || "operations teams"}; talk to ${Array.from(titles)[0]}.`;
+
+  // If user provided persona, weight it at 90% and blend
+  const personaOneLiner = userPersona
+    ? blendOneLiner(userPersona, baseOneLiner, 0.9)
+    : baseOneLiner;
+
+  // Confidence from richness of cues
+  const cueHits = Object.values(c).filter(Boolean).length;
+  const confidence = clamp01(0.3 + 0.05 * cueHits + (signals.rawLength > 20000 ? 0.05 : 0));
+
+  const why: string[] = [];
+  if (c.ecommerce) why.push("site mentions e-commerce/Shopify/returns");
+  if (c.automation) why.push("mentions wrappers/turntables/automation");
+  if (c.corrugated) why.push("corrugated/case/carton keywords");
+  if (c.rightSizing) why.push("right-size/cartonization cues");
+  if (c.coldChain) why.push("cold-chain/temperature control");
+  if (c.ista) why.push("ISTA compliance named");
+  if (c.sustainability) why.push("sustainable/recyclable claims");
+
+  const persona: Persona = {
+    oneLiner: personaOneLiner,
+    buyerTitles: Array.from(titles),
+    sectors,
+    why,
+    confidence,
   };
-  return lat;
+
+  const metrics: Metrics = { ILL, FEI, DFS, SCP, CCI, RPI };
+
+  return { persona, metrics };
 }
 
-async function callOpenRouter(sig: Signals, supplierDomain: string): Promise<{
-  latents: Latents;
-  archetypes: Archetype[];
-}> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
+function blendOneLiner(user: string, auto: string, userWeight = 0.9) {
+  // Very simple: keep user's nouns if present; otherwise fall back to auto template.
+  // We also show "(auto-check: ...)" tail when we overrode.
+  const trimmed = user.trim();
+  if (!trimmed) return auto;
+  const tail = auto.replace(/^You are a\s*/i, "").trim();
+  return `${trimmed} (auto-check: ${tail})`;
+}
+
+// ---------- Optional: 1 cheap LLM hypothesis (JSON) ----------
+
+async function tryLLMOnce(
+  supplierDomain: string,
+  signals: ReturnType<typeof extractSignals>,
+  personaDraft: Persona,
+  metricsDraft: Metrics,
+  evidence: Evidence[]
+): Promise<{ persona?: Persona; metrics?: Metrics }> {
+  const payload = {
+    supplierDomain,
+    hints: {
+      title: signals.title,
+      description: signals.description,
+      cues: signals.cues,
+      geo: signals.geo,
+    },
+    draft: {
+      persona: personaDraft,
+      metrics: metricsDraft,
+    },
+    schema: {
+      type: "object",
+      properties: {
+        persona: {
+          type: "object",
+          properties: {
+            oneLiner: { type: "string" },
+            buyerTitles: { type: "array", items: { type: "string" } },
+            sectors: { type: "array", items: { type: "string" } },
+            why: { type: "array", items: { type: "string" } },
+            confidence: { type: "number" },
+          },
+          required: ["oneLiner", "buyerTitles", "confidence"],
+        },
+        metrics: {
+          type: "object",
+          properties: {
+            ILL: { type: "number" },
+            FEI: { type: "number" },
+            DFS: { type: "number" },
+            SCP: { type: "number" },
+            CCI: { type: "number" },
+            RPI: { type: "number" },
+          },
+        },
+      },
+      required: ["persona", "metrics"],
+    },
+  };
+
+  const prompt =
+    `You are helping infer a supplier's buyer persona and latent logistics metrics from website cues.\n` +
+    `Return STRICT JSON only (no prose). Improve the draft if needed, but keep it realistic and cheap.\n` +
+    `Be concise; one-liner should follow: "You are X. You sell to Y. Talk to Z."\n` +
+    `JSON keys: persona { oneLiner, buyerTitles[], sectors[], why[], confidence }, metrics {ILL,FEI,DFS,SCP,CCI,RPI}.\n` +
+    `Input:\n` + JSON.stringify(payload);
+
+  // Choose first available provider (Gemini -> HF -> Groq)
+  const gem = process.env.GEMINI_API_KEY;
+  const hf = process.env.HF_API_TOKEN;
+  const groq = process.env.GROQ_API_KEY;
+
+  let jsonText: string | null = null;
+
+  try {
+    if (gem) {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${gem}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.2, topK: 32, topP: 0.9, maxOutputTokens: 500 },
+          }),
+        } as any
+      );
+      const data: any = await res.json();
+      jsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+      evidence.push({ kind: "llm", note: `Gemini used: ${res.status}`, ts: now() });
+    } else if (hf) {
+      // HF Inference (text-generation; choose a free instruct model)
+      const model = process.env.HF_MODEL || "google/gemma-2-9b-it";
+      const res = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${hf}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ inputs: prompt, parameters: { max_new_tokens: 400, temperature: 0.2 } }),
+      } as any);
+      const data: any = await res.json();
+      jsonText = Array.isArray(data) ? data[0]?.generated_text : data?.generated_text || null;
+      evidence.push({ kind: "llm", note: `HF used: ${res.status}`, ts: now() });
+    } else if (groq) {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${groq}`,
+        },
+        body: JSON.stringify({
+          model: process.env.GROQ_MODEL || "llama-3.1-8b-instant",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.2,
+          max_tokens: 500,
+        }),
+      } as any);
+      const data: any = await res.json();
+      jsonText = data?.choices?.[0]?.message?.content || null;
+      evidence.push({ kind: "llm", note: `Groq used: ${res.status}`, ts: now() });
+    }
+  } catch (e: any) {
+    evidence.push({ kind: "llm", note: `provider error ${e?.message || e}`, ts: now() });
+  }
+
+  if (!jsonText) return {};
+
+  // Extract JSON from backticks or prose if provider added fluff
+  const jsonMatch = jsonText.match(/\{[\s\S]*\}$/);
+  const jsonStr = jsonMatch ? jsonMatch[0] : jsonText;
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    // Mild sanity
+    if (parsed?.persona?.oneLiner) {
+      return { persona: parsed.persona, metrics: parsed.metrics || {} };
+    }
+  } catch {
+    evidence.push({ kind: "llm", note: "failed to parse JSON", ts: now() });
+  }
+  return {};
+}
+
+// ---------- Candidate search queries (free-friendly) ----------
+
+function buildCandidateQueries(domain: string, persona: Persona, region?: string) {
+  const vendor = domain.replace(/^www\./, "");
+  const loc = region || "US";
+
+  // Directories/search we can scrape cheaply via HTML later (pipeline.ts will choose)
+  const queries = [
+    { source: "duckduckgo", q: `site:thomasnet.com buyers "${vendor}"`, region: loc },
+    { source: "duckduckgo", q: `("packaging buyer" OR "purchasing manager") (warehouse OR fulfillment) ${loc}` },
+    { source: "duckduckgo", q: `("procurement" OR "sourcing") packaging ${loc} ("${(persona.sectors[0] || "3PL").replace(/"/g, "")}")` },
+    { source: "duckduckgo", q: `("RFQ" OR "request for quote") packaging ${loc}` },
+    { source: "duckduckgo", q: `("distribution center" OR 3PL) "packaging" ${loc}` },
+  ];
+
+  return queries;
+}
+
+// ---------- (Optional) BleedStore integration (best-effort) ----------
+
+type BleedLike = {
+  appendDecision?: (e: any) => void;
+  appendEvidence?: (e: any) => void;
+};
+
+function pushEvidence(store: BleedLike | undefined, ev: Evidence) {
+  try {
+    store?.appendEvidence?.(ev);
+  } catch {
+    /* ignore */
+  }
+}
+
+// ---------- Cache key ----------
+
+function cacheKey(domain: string, html: string, personaInput?: string) {
+  const h = crypto.createHash("sha1");
+  h.update(domain);
+  h.update(String(html.length));
+  if (personaInput) h.update(personaInput);
+  return h.digest("hex");
+}
+
+// ---------- Public API ----------
+
+export async function discoverSupplier(
+  input: DiscoveryInput,
+  bleed?: BleedLike
+): Promise<DiscoveryOutput> {
+  const evidence: Evidence[] = [];
+  const { url, domain } = normalizeDomain(input.supplier);
+
+  const fetched = await safeFetch(url);
+  evidence.push({
+    kind: "fetch",
+    note: `GET ${fetched.finalUrl} -> ${fetched.status || 0}, ok=${fetched.ok}`,
+    url: fetched.finalUrl,
+    ts: now(),
+  });
+
+  if (!fetched.ok || !fetched.html) {
+    // Minimal fallback persona when site is unreachable
+    const fallbackPersona: Persona = {
+      oneLiner:
+        input.personaInput?.trim() ||
+        "You are a packaging supplier. You sell to operations teams; talk to Purchasing Manager.",
+      buyerTitles: ["Purchasing Manager", "Operations Manager"],
+      sectors: ["General Packaging"],
+      why: ["site unreachable; using safe fallback"],
+      confidence: 0.3,
+    };
+    const metrics: Metrics = { ILL: 0.2, DFS: 0.2, FEI: 0.2, SCP: 0.1, CCI: 0.1, RPI: 0.2 };
+    const queries = buildCandidateQueries(domain, fallbackPersona, input.region);
+
+    evidence.push({ kind: "assumption", note: "unreachable -> fallback persona", ts: now() });
+    pushEvidence(bleed, evidence[evidence.length - 1]);
+
     return {
-      latents: cheapHeuristicLatents(sig),
-      archetypes: [
-        {
-          name: "E-comm Fulfillment",
-          description: "3PLs and e-commerce warehouses needing high parcel throughput.",
-          indicators: ["mentions: 3PL, warehouse, pick/pack", "SKU variety high"],
-          leadQuery: '("3PL" OR "fulfillment center") packaging',
-        },
-        {
-          name: "Cold Chain",
-          description: "Food/pharma with temperature control requirements.",
-          indicators: ["mentions: cold, frozen, temperature", "certs: HACCP, GMP"],
-          leadQuery: '"cold chain" packaging',
-        },
-        {
-          name: "Fragile Goods",
-          description: "Electronics/glassware needing protective materials.",
-          indicators: ["mentions: fragile, foam, bubble"],
-          leadQuery: '"fragile goods" packaging',
-        },
-      ],
+      supplierDomain: domain,
+      persona: fallbackPersona,
+      metrics,
+      signals: {},
+      candidateSourceQueries: queries,
+      evidence,
     };
   }
 
-  const model =
-    process.env.OPENROUTER_MODEL ||
-    "meta-llama/llama-3.1-8b-instruct:free"; // prefer cheap/free tier
+  const signals = extractSignals(fetched.finalUrl, fetched.html);
 
-  const system = `You are a B2B buyer-persona inference engine.
-Return STRICT JSON matching this TypeScript type (no code fences):
-{
-  "latents": {
-    "IrregularLoadLikelihood": number, "ColdChainSensitivity": number, "FragilityRisk": number,
-    "SustainabilityPriority": number, "Seasonality": number, "OrderSizeVariability": number, "Notes": string
-  },
-  "archetypes": Array<{ "name": string, "description": string, "indicators": string[], "leadQuery": string }>
-}
-All numbers in [0,1]. Keep tokens short.`;
+  // Heuristic first (free)
+  const { persona: draftPersona, metrics: draftMetrics } = heuristics(signals, input.personaInput);
 
-  const user = {
-    supplierDomain,
-    title: sig.title,
-    headings: (sig.headings || []).slice(0, 8),
-    keywords: sig.keywords,
-    certifications: sig.certifications,
-    services: (sig.services || []).slice(0, 5),
-    hints: {
-      skuHints: (sig.skuHints || []).length,
-      locations: (sig.locations || []).length,
-      hiring: (sig.hiringHints || []).length,
-    },
-    sample: (sig.siteTextSample || "").slice(0, 400),
-  };
+  evidence.push({
+    kind: "parse",
+    note: `signals: ${JSON.stringify({ title: signals.title, cues: signals.cues })}`,
+    url: signals.url,
+    ts: now(),
+  });
+  pushEvidence(bleed, evidence[evidence.length - 1]);
 
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${apiKey}`,
-      "HTTP-Referer": "https://github.com/", // optional, helps dashboard
-      "X-Title": "buyers-autofix",
-    } as any,
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: system },
-        {
-          role: "user",
-          content:
-            "Supplier observables:\n" + JSON.stringify(user, null, 2) + "\nReturn JSON only.",
-        },
-      ],
-      temperature: 0.2,
-      max_tokens: 500,
-    }),
-  } as any);
+  // One optional LLM refinement (if keys exist)
+  let persona = draftPersona;
+  let metrics = draftMetrics;
 
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`OpenRouter HTTP ${res.status}: ${txt}`);
-  }
-  const data: any = await res.json();
-  const raw = data?.choices?.[0]?.message?.content?.trim() || "{}";
-  let parsed: any;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    // Try to salvage JSON substring
-    const match = raw.match(/\{[\s\S]*\}/);
-    parsed = match ? JSON.parse(match[0]) : {};
+  const anyProvider = process.env.GEMINI_API_KEY || process.env.HF_API_TOKEN || process.env.GROQ_API_KEY;
+  if (anyProvider) {
+    const { persona: p2, metrics: m2 } = await tryLLMOnce(domain, signals, draftPersona, draftMetrics, evidence);
+    if (p2?.oneLiner) {
+      persona = p2;
+      metrics = { ...metrics, ...(m2 || {}) };
+    }
   }
 
-  const latents: Latents = parsed.latents || cheapHeuristicLatents(sig);
-  const archetypes: Archetype[] =
-    parsed.archetypes && Array.isArray(parsed.archetypes) && parsed.archetypes.length
-      ? parsed.archetypes.slice(0, 5)
-      : [
-          {
-            name: "General Industrial",
-            description: "Factories needing corrugated, tape, and stretch film.",
-            indicators: ["mentions: pallet, corrugated, shrink"],
-            leadQuery: "industrial packaging supplier",
-          },
-        ];
+  // Candidate queries for the pipeline step
+  const candidateSourceQueries = buildCandidateQueries(domain, persona, input.region);
 
-  return { latents, archetypes };
-}
+  // Emit final evidence
+  evidence.push({
+    kind: "metric",
+    note: `metrics: ${JSON.stringify(metrics)}`,
+    ts: now(),
+  });
+  pushEvidence(bleed, evidence[evidence.length - 1]);
 
-function defaultCandidateSources(): CandidateSource[] {
-  return [
-    {
-      id: "DUCKDUCKGO",
-      kind: "SEARCH",
-      description: "DuckDuckGo HTML results (no API key).",
-      urlTemplate: "https://duckduckgo.com/html/?q={query}",
-      query: '("packaging" OR "packaging supplier" OR "packaging distributor") {region}',
-    },
-    {
-      id: "KOMPASS",
-      kind: "DIRECTORY",
-      description: "Kompass directory search (public pages).",
-      urlTemplate:
-        "https://www.kompass.com/en/searchCompanies/?searchType=SUPPLIER&text={query}",
-      query: "packaging",
-    },
-    {
-      id: "EUROPAGES",
-      kind: "DIRECTORY",
-      description: "EUROPAGES B2B directory.",
-      urlTemplate: "https://www.europages.co.uk/companies/{query}.html",
-      query: "packaging",
-    },
-    {
-      id: "THOMASNET",
-      kind: "DIRECTORY",
-      description: "Thomasnet (US) directory.",
-      urlTemplate: "https://www.thomasnet.com/search.html?what={query}",
-      query: "packaging",
-    },
-  ];
-}
-
-// ---- Public entry
-
-export async function runDiscovery(input: DiscoveryInput): Promise<DiscoveryOutput> {
-  const { supplier, region, persona } = input;
-  if (!supplier) {
-    throw new Error("supplier is required");
-  }
-  const { domain, url } = normalizeSupplierURL(supplier);
-
-  const cacheKey = crypto.createHash("sha1").update(`${domain}|${region || ""}`).digest("hex");
-  const cached = cacheGet(cacheKey);
-  if (cached) {
-    emitEvidence(
-      {
-        at: new Date().toISOString(),
-        stage: "discovery",
-        supplier: domain,
-        topic: "cache_hit",
-        detail: { cacheKey },
-        source: "DISCOVERY",
-      },
-      undefined
-    );
-    return { ...cached, cached: true, persona: persona ?? cached.persona };
-  }
-
-  // Fetch homepage
-  let html = "";
-  try {
-    html = await fetchText(url, 10_000);
-  } catch (e) {
-    emitEvidence(
-      {
-        at: new Date().toISOString(),
-        stage: "discovery",
-        supplier: domain,
-        topic: "fetch_error",
-        detail: { message: (e as Error).message, url },
-        source: "DISCOVERY",
-      },
-      undefined
-    );
-    // Continue with minimal HTML so we still produce something
-    html = `<html><title>${domain}</title><body>${domain}</body></html>`;
-  }
-
-  const signals = deriveSignals(html);
-  emitEvidence(
-    {
-      at: new Date().toISOString(),
-      stage: "discovery",
-      supplier: domain,
-      topic: "signals",
-      detail: {
-        title: signals.title,
-        hCount: signals.headings?.length || 0,
-        keywords: Object.keys(signals.keywords || {}),
-        locations: signals.locations,
-        certs: signals.certifications,
-      },
-      source: "DISCOVERY",
-    },
-    undefined
-  );
-
-  // LLM (cheap) hypothesis
-  let latents: Latents;
-  let archetypes: Archetype[];
-  try {
-    const out = await callOpenRouter(signals, domain);
-    latents = out.latents;
-    archetypes = out.archetypes;
-  } catch (e) {
-    emitEvidence(
-      {
-        at: new Date().toISOString(),
-        stage: "discovery",
-        supplier: domain,
-        topic: "openrouter_error",
-        detail: { message: (e as Error).message },
-        source: "DISCOVERY",
-      },
-      undefined
-    );
-    latents = cheapHeuristicLatents(signals);
-    archetypes = [
-      {
-        name: "General Industrial",
-        description: "Fallback archetype.",
-        indicators: [],
-        leadQuery: "industrial packaging supplier",
-      },
-    ];
-  }
-
-  const candidateSources = defaultCandidateSources();
-
-  const output: DiscoveryOutput = {
+  return {
     supplierDomain: domain,
-    normalizedURL: url,
-    cached: false,
+    persona,
+    metrics,
     signals,
-    latents,
-    archetypes,
-    candidateSources: candidateSources,
-    persona: persona ?? {
-      inferredFrom: domain,
-      latents,
-      archetypes: archetypes.map((a) => a.name),
-    },
+    candidateSourceQueries,
+    evidence,
   };
-
-  cacheSet(cacheKey, output);
-
-  emitEvidence(
-    {
-      at: new Date().toISOString(),
-      stage: "discovery",
-      supplier: domain,
-      topic: "persona_hypothesis",
-      detail: { latents, archetypes },
-      source: "DISCOVERY",
-    },
-    undefined
-  );
-
-  return output;
 }
 
-export default runDiscovery;
+export default { discoverSupplier };
