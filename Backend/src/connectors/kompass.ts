@@ -1,0 +1,1 @@
+// Placeholder - Kompass API integration would go here
