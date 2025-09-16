@@ -1,36 +1,37 @@
-// Backend/src/index.ts
-import express, { Request, Response, NextFunction } from "express";
+import express from "express";
 import cors from "cors";
-import morgan from "morgan";
-import mountBuyerRoutes from "./routes/buyers";
+import pino from "pino";
 
+const log = pino({ transport: { target: "pino-pretty" } });
 const app = express();
-const PORT = Number(process.env.PORT || process.env.APP_PORT || 8787);
 
-app.disable("x-powered-by");
-app.use(cors({ origin: "*", maxAge: 600 }));
-app.use(express.json({ limit: "1mb" }));
-app.use(morgan("tiny"));
+app.use(cors());
+app.use(express.json());
 
-// Health endpoints (both paths so UI/Scripts can pick either)
-app.get("/health", (_req: Request, res: Response) => res.status(200).send("OK"));
-app.get("/healthz", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
+app.get("/healthz", (_req, res) => res.status(200).send("ok"));
 
-// Root sanity
-app.get("/", (_req, res) => res.status(200).json({ service: "artemis-backend", ok: true }));
+/**
+ * Temporary stub endpoint. Your front-end can hit this now.
+ * We'll swap in the real lead-finder once the pipeline is green.
+ */
+app.post("/api/v1/leads/find-buyers", async (req, res) => {
+  const { supplierDomain, personaHint } = req.body ?? {};
+  log.info({ supplierDomain, personaHint }, "find-buyers called");
 
-// Business routes
-mountBuyerRoutes(app);
-
-// Error fence
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error("[ERROR]", err?.stack || err);
-  res.status(500).json({ error: "internal_error", detail: String(err?.message || err) });
+  // Minimal, valid shape so the UI can render something:
+  res.json({
+    supplierDomain,
+    persona: {
+      oneLiner: personaHint
+        ? `${supplierDomain} sells X to Y; best contact is Z`
+        : `You sell X to Y; best contact is Z`
+    },
+    leads: [],
+    status: "ok"
+  });
 });
 
-app.listen(PORT, () => {
-  console.log(`[artemis] API listening on ${PORT}`);
+const PORT = parseInt(process.env.PORT ?? "8787", 10);
+app.listen(PORT, "0.0.0.0", () => {
+  log.info({ PORT }, "Backend up");
 });
-
-export default app;
