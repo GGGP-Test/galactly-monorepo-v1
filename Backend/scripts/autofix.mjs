@@ -1,14 +1,18 @@
 #!/usr/bin/env node
 /**
- * buyers-autofix: self-healing + optional LLM with free fallbacks
+ * buyers-autofix: bootstrap core repairs + small targeted patches + status reporting
+ * Provider order: Gemini -> Hugging Face -> Groq -> OpenRouter
+ *
  * - Runs even if core files are invalid or smoke artifact is missing.
- * - Repairs Backend/package.json, Dockerfile, tsconfig.json, src/index.ts.
- * - Tries providers in this order, if keys exist:
- *     1) HF Inference API  (HF_API_TOKEN, HF_MODEL optional)
- *     2) Google Gemini     (GEMINI_API_KEY)
- *     3) OpenRouter        (OPENROUTER_API_KEY, OPENROUTER_MODEL optional)
- * - Works on detached HEAD; defaults base branch to "main".
- * - Labels PR "autofix" (your auto-merge flow merges it).
+ * - Repairs Backend/package.json, Dockerfile, tsconfig.json, src/index.ts (no LLM).
+ * - Tries free/cheap LLMs in the order above; all are optional.
+ *   Env keys (any subset):
+ *     GEMINI_API_KEY
+ *     HF_API_TOKEN, HF_MODEL (optional, default Qwen2.5-7B-Instruct)
+ *     GROQ_API_KEY, GROQ_MODEL (optional, default llama-3.1-8b-instant)
+ *     OPENROUTER_API_KEY, OPENROUTER_MODEL (optional, default openrouter/auto)
+ * - Opens a PR labeled "autofix" (your auto-merge merges it).
+ * - Writes ./autofix-status.json and updates/creates the GitHub Issue "Autonomy Status".
  * - Never fails the job; exits 0.
  */
 import fs from "node:fs";
@@ -33,10 +37,9 @@ const P = {
   pipeline: B("src", "buyers", "pipeline.ts"),
   google: B("src", "connectors", "google.ts"),
   kompass: B("src", "connectors", "kompass.ts"),
-  thomasnet: B("src", "connectors", "thomasnet.ts")
+  thomasnet: B("src", "connectors", "thomasnet.ts"),
 };
 
-// allow everything under Backend (you asked for no restrictions while bootstrapping)
 const isAllowed = (r) => r.startsWith("Backend/");
 
 // ---------- utils
@@ -44,13 +47,41 @@ const rd = (p) => (fs.existsSync(p) ? fs.readFileSync(p, "utf8") : null);
 const ensureDir = (p) => fs.mkdirSync(path.dirname(p), { recursive: true });
 function parseJSON(s) { try { return JSON.parse(s); } catch { return null; } }
 function git(cmd) { try { return execSync(`git ${cmd}`, { stdio: "pipe", encoding: "utf8" }).trim(); } catch { return ""; } }
-const baseBranch = git("rev-parse --abbrev-ref HEAD") || "main";
+const baseBranch = (() => {
+  const b = git("rev-parse --abbrev-ref HEAD");
+  return b && b !== "HEAD" ? b : "main";
+})();
+
+// ---------- run status (published at end)
+const statusPath = path.join(repoRoot, "autofix-status.json");
+const RUN = {
+  startedAt: new Date().toISOString(),
+  provider: "none",
+  providersTried: [],
+  smokeSeen: false,
+  bootstrapChanges: 0,
+  llmChanges: 0,
+  branch: "",
+  prUrl: "",
+  result: "started",
+  notes: []
+};
 
 // ---------- smoke (optional)
-function readSmoke() { const raw = rd(P.smoke1) || rd(P.smoke2); return raw ? parseJSON(raw) : null; }
-function shouldAutofix(smoke) { if (!smoke) return true; if (smoke.ok === false) return true; if ((smoke.nonDemoCount ?? 0) === 0) return true; return false; }
+function readSmoke() {
+  const raw = rd(P.smoke1) || rd(P.smoke2);
+  const js = raw ? parseJSON(raw) : null;
+  RUN.smokeSeen = !!js;
+  return js;
+}
+function shouldAutofix(smoke) {
+  if (!smoke) return true;
+  if (smoke.ok === false) return true;
+  if ((smoke.nonDemoCount ?? 0) === 0) return true;
+  return false;
+}
 
-// ---------- core file templates (no-LLM)
+// ---------- core file templates (LLM-free)
 function safePackageJson() {
   return JSON.stringify({
     name: "galactly-backend",
@@ -124,8 +155,7 @@ function proposeRepairs() {
   return fixes;
 }
 
-// ---------- LLM providers (all optional)
-// All prompts demand STRICT JSON: {"files":[{"path":"...","content":"..."}]}
+// ---------- prompt
 function buildPrompt(ctx) {
   const autonomy = rd(P.autonomy) || "";
   return `
@@ -152,74 +182,98 @@ ${ctx.leads}
 
 Task
 ----
+Output STRICT JSON only:
+{"files":[{"path":"Backend/...", "content":"..."}]}
+
 Improve discovery/pipeline/leads to yield >=3 non-demo US/CA packaging leads with evidence.
 Use public directories/search; 1 LLM call per supplier; keep tokens low.
-Return STRICT JSON only.`;
+Do not add new deps or change runtime outside Backend/.
+`;
 }
 
-async function callHF(prompt) {
-  const token = process.env.HF_API_TOKEN;
-  if (!token) return null;
-  const model = process.env.HF_MODEL || "Qwen/Qwen2.5-7B-Instruct";
-  const res = await fetch(`https://api-inference.huggingface.co/models/${encodeURIComponent(model)}`, {
-    method: "POST",
-    headers: { "authorization": `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({
-      inputs:
-`You are a code patcher. OUTPUT STRICT JSON ONLY:
-{"files":[{"path":"Backend/...", "content":"..."}]}
-Touch only files under Backend/.
-Goal: >=3 non-demo US/CA packaging leads with evidence from free/public sources.
-
-User prompt:
-${prompt}
-`,
-      parameters: { max_new_tokens: 1100, temperature: 0.2, return_full_text: false }
-    })
-  });
-  if (!res.ok) { console.log("[autofix] HF HTTP", res.status); return null; }
-  const data = await res.json();
-  const text = Array.isArray(data) ? (data[0]?.generated_text ?? "") : (data?.generated_text ?? data?.[0]?.generated_text ?? "");
-  if (typeof text !== "string" || !text.trim()) return null;
-  const m = text.match(/\{[\s\S]*\}$/);
-  return parseJSON(m ? m[0] : text);
-}
-
+// ---------- LLM providers (Gemini -> HF -> Groq -> OpenRouter)
 async function callGemini(prompt) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
+  RUN.providersTried.push("gemini");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
   const body = {
     contents: [{
       role: "user",
-      parts: [{ text:
-`Output STRICT JSON only:
-{"files":[{"path":"Backend/...", "content":"..."}]}
-Touch only files under Backend/.
-Keep patches small; no new deps.
-
-User prompt:
-${prompt}` }]
+      parts: [{ text: prompt }]
     }],
     generationConfig: { temperature: 0.2, maxOutputTokens: 1400 }
   };
-  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) { console.log("[autofix] Gemini HTTP", res.status); return null; }
-  const data = await res.json();
+  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) return null;
+  const data = await r.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
   const m = text.match(/\{[\s\S]*\}$/);
-  return parseJSON(m ? m[0] : text);
+  const out = parseJSON(m ? m[0] : text);
+  if (out && Array.isArray(out.files)) RUN.provider = "gemini";
+  return out;
 }
-
+async function callHF(prompt) {
+  const token = process.env.HF_API_TOKEN;
+  if (!token) return null;
+  RUN.providersTried.push("huggingface");
+  const model = process.env.HF_MODEL || "Qwen/Qwen2.5-7B-Instruct";
+  const r = await fetch(`https://api-inference.huggingface.co/models/${encodeURIComponent(model)}`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      inputs: `You are a code patcher. Output STRICT JSON only:
+{"files":[{"path":"Backend/...", "content":"..."}]}
+Touch only Backend/.
+${prompt}`,
+      parameters: { max_new_tokens: 1100, temperature: 0.2, return_full_text: false }
+    })
+  });
+  if (!r.ok) return null;
+  const data = await r.json();
+  const text = Array.isArray(data) ? (data[0]?.generated_text ?? "") : (data?.generated_text ?? data?.[0]?.generated_text ?? "");
+  const m = typeof text === "string" ? text.match(/\{[\s\S]*\}$/) : null;
+  const out = parseJSON(m ? m[0] : text);
+  if (out && Array.isArray(out.files)) RUN.provider = "huggingface";
+  return out;
+}
+async function callGroq(prompt) {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) return null;
+  RUN.providersTried.push("groq");
+  const model = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
+  const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content:
+"Output STRICT JSON only: {\"files\":[{\"path\":\"Backend/...\",\"content\":\"...\"}]}\nTouch only Backend/. Keep patches small; no new deps." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.2,
+      max_tokens: 1600
+    })
+  });
+  if (!r.ok) return null;
+  const data = await r.json();
+  const text = data?.choices?.[0]?.message?.content || "";
+  const m = text.match(/\{[\s\S]*\}$/);
+  const out = parseJSON(m ? m[0] : text);
+  if (out && Array.isArray(out.files)) RUN.provider = "groq";
+  return out;
+}
 async function callOpenRouter(prompt) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return null;
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) return null;
+  RUN.providersTried.push("openrouter");
   const model = process.env.OPENROUTER_MODEL || "openrouter/auto";
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
+      authorization: `Bearer ${key}`,
       "content-type": "application/json",
-      authorization: `Bearer ${apiKey}`,
       "HTTP-Referer": "https://github.com/",
       "X-Title": "buyers-autofix"
     },
@@ -227,57 +281,114 @@ async function callOpenRouter(prompt) {
       model,
       messages: [
         { role: "system", content:
-`Output STRICT JSON: {"files":[{"path":"Backend/...", "content":"..."}]}
-Touch only files under Backend/.
-Keep patches small; no new deps; prefer heuristics.` },
+"Output STRICT JSON only: {\"files\":[{\"path\":\"Backend/...\",\"content\":\"...\"}]}\nTouch only Backend/. Keep patches small; no new deps." },
         { role: "user", content: prompt }
       ],
       temperature: 0.2,
       max_tokens: 1600
     })
   });
-  if (!res.ok) { console.log("[autofix] OpenRouter HTTP", res.status); return null; }
-  const data = await res.json();
-  const c = data?.choices?.[0]?.message?.content?.trim() || "";
-  const m = c.match(/\{[\s\S]*\}$/);
-  return parseJSON(m ? m[0] : c);
+  if (!r.ok) return null;
+  const data = await r.json();
+  const text = data?.choices?.[0]?.message?.content?.trim() || "";
+  const m = text.match(/\{[\s\S]*\}$/);
+  const out = parseJSON(m ? m[0] : text);
+  if (out && Array.isArray(out.files)) RUN.provider = "openrouter";
+  return out;
+}
+async function callAnyModel(prompt) {
+  // Order: Gemini -> HF -> Groq -> OpenRouter
+  let out = await callGemini(prompt);       if (out && Array.isArray(out.files)) return out;
+  out = await callHF(prompt);               if (out && Array.isArray(out.files)) return out;
+  out = await callGroq(prompt);             if (out && Array.isArray(out.files)) return out;
+  out = await callOpenRouter(prompt);       if (out && Array.isArray(out.files)) return out;
+  return null;
 }
 
-async function callAnyModel(prompt) {
-  // Try HF → Gemini → OpenRouter. All optional.
-  let out = await callHF(prompt);
-  if (out && Array.isArray(out.files)) return out;
-  out = await callGemini(prompt);
-  if (out && Array.isArray(out.files)) return out;
-  out = await callOpenRouter(prompt);
-  if (out && Array.isArray(out.files)) return out;
-  return null;
+// ---------- status publishing
+function writeStatusFile() {
+  const body = { ...RUN, finishedAt: new Date().toISOString() };
+  fs.writeFileSync(statusPath, JSON.stringify(body, null, 2));
+}
+async function upsertStatusIssue() {
+  const token = process.env.GITHUB_TOKEN;
+  const repo = process.env.GITHUB_REPOSITORY;
+  if (!token || !repo) return;
+  const [owner, repoName] = repo.split("/");
+  // find existing issue titled "Autonomy Status"
+  const list = await fetch(`https://api.github.com/repos/${owner}/${repoName}/issues?state=open&per_page=100`, {
+    headers: { authorization: `Bearer ${token}`, "user-agent": "buyers-autofix-bot", accept: "application/vnd.github+json" }
+  }).then(r => r.ok ? r.json() : []);
+  let target = Array.isArray(list) ? list.find(i => i.title === "Autonomy Status") : null;
+  const summary = [
+    `**Run:** ${new Date().toISOString()}`,
+    `**Provider:** ${RUN.provider} (tried: ${RUN.providersTried.join(", ") || "none"})`,
+    `**Bootstrap changes:** ${RUN.bootstrapChanges}`,
+    `**LLM changes:** ${RUN.llmChanges}`,
+    `**Branch:** ${RUN.branch || "-"}`,
+    `**PR:** ${RUN.prUrl || "-"}`,
+    `**Result:** ${RUN.result}`,
+  ].join("\n");
+  if (!target) {
+    // create
+    const createRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/issues`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "user-agent": "buyers-autofix-bot" },
+      body: JSON.stringify({ title: "Autonomy Status", body: summary, labels: ["autofix"] })
+    });
+    if (createRes.ok) return;
+  } else {
+    // comment
+    await fetch(`https://api.github.com/repos/${owner}/${repoName}/issues/${target.number}/comments`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "user-agent": "buyers-autofix-bot" },
+      body: JSON.stringify({ body: summary })
+    });
+  }
+}
+function writeJobSummary() {
+  const f = process.env.GITHUB_STEP_SUMMARY;
+  if (!f) return;
+  const lines = [
+    `### buyers-autofix`,
+    `- Provider: **${RUN.provider}** (tried: ${RUN.providersTried.join(", ") || "none"})`,
+    `- Bootstrap changes: **${RUN.bootstrapChanges}**`,
+    `- LLM changes: **${RUN.llmChanges}**`,
+    `- Branch: ${RUN.branch || "-"}`,
+    `- PR: ${RUN.prUrl || "-"}`,
+    `- Result: **${RUN.result}**`,
+  ].join("\n");
+  fs.appendFileSync(f, lines + "\n");
 }
 
 // ---------- main
 async function main() {
   const smoke = readSmoke();
-  if (!shouldAutofix(smoke)) { console.log("Autofix not needed; exiting 0."); return; }
+  if (!shouldAutofix(smoke)) {
+    RUN.result = "skipped";
+    writeStatusFile(); writeJobSummary(); await upsertStatusIssue();
+    return;
+  }
 
   const repo = process.env.GITHUB_REPOSITORY || "";
   const ts = new Date().toISOString().replace(/[:.]/g, "-");
   const fixBranch = `fix/${ts}`;
+  RUN.branch = fixBranch;
+
   git("config user.name 'buyers-autofix[bot]'");
   git("config user.email 'buyers-autofix[bot]@users.noreply.github.com'");
   git(`checkout -b ${fixBranch}`);
 
-  let changed = 0;
-
-  // 1) Bootstrap core repairs
+  // 1) bootstrap core repairs
   for (const r of proposeRepairs()) {
     if (!isAllowed(r.path)) continue;
     const abs = path.join(repoRoot, r.path); ensureDir(abs);
     fs.writeFileSync(abs, r.content, "utf8");
     console.log("bootstrap:", r.path, "-", r.why);
-    changed++;
+    RUN.bootstrapChanges++;
   }
 
-  // 2) Optional LLM patches (free fallbacks first)
+  // 2) optional LLM patches
   const ctx = {
     smoke,
     discovery: rd(P.discovery) || "",
@@ -294,62 +405,62 @@ async function main() {
         const abs = path.join(repoRoot, r); ensureDir(abs);
         fs.writeFileSync(abs, f.content, "utf8");
         console.log("llm_patch:", r);
-        changed++;
+        RUN.llmChanges++;
       }
     } else {
-      console.log("[autofix] no LLM patch applied (keys missing or providers unavailable).");
+      RUN.notes.push("no LLM patch applied (keys missing/unavailable)");
     }
   } catch (e) {
-    console.log("[autofix] LLM step failed; continuing:", e?.message || String(e));
-  }
-
-  if (changed === 0) {
-    const notes = B("AUTOFIX-NOTES.md"); ensureDir(notes);
-    fs.writeFileSync(notes, `# Autofix\nNo changes produced.\nTime: ${new Date().toISOString()}\n`, "utf8");
+    RUN.notes.push("LLM step failed: " + (e?.message || String(e)));
   }
 
   git("add -A");
-  git(`commit -m "autofix: bootstrap + optional free-LLM patches [skip ci]"`);
+  git(`commit -m "autofix: bootstrap + targeted patches [skip ci]"`);
 
   const token = process.env.GITHUB_TOKEN || "";
   if (repo && token) {
-    try { git(`push https://x-access-token:${token}@github.com/${repo}.git HEAD:${fixBranch}`); }
-    catch (e) { console.log("push failed (continuing):", e?.message || String(e)); }
     try {
+      git(`push https://x-access-token:${token}@github.com/${repo}.git HEAD:${fixBranch}`);
+      console.log("pushed:", fixBranch);
       const prRes = await fetch(`https://api.github.com/repos/${repo}/pulls`, {
         method: "POST",
         headers: {
-          authorization: `Bearer ${token}`,
-          "content-type": "application/json",
-          "user-agent": "buyers-autofix-bot",
-          accept: "application/vnd.github+json"
+          authorization: `Bearer ${token}`, "content-type": "application/json",
+          "user-agent": "buyers-autofix-bot", accept: "application/vnd.github+json"
         },
         body: JSON.stringify({
-          title: "buyers-autofix: bootstrap + optional free-LLM patches",
-          head: fixBranch,
-          base: baseBranch && baseBranch !== "HEAD" ? baseBranch : "main",
-          body: "Automated PR. Includes bootstrap repairs and (if keys present) small patches using HF/Gemini/OpenRouter in that order.",
+          title: "buyers-autofix: bootstrap + targeted patches",
+          head: fixBranch, base: baseBranch,
+          body: "Automated PR. Includes bootstrap repairs and small patches per AUTONOMY.md.",
           maintainer_can_modify: true
         })
       });
       if (prRes.ok) {
         const pr = await prRes.json();
-        console.log("Opened PR:", pr.html_url || pr.number);
+        RUN.prUrl = pr.html_url || "";
         await fetch(`https://api.github.com/repos/${repo}/issues/${pr.number}/labels`, {
           method: "POST",
           headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "user-agent": "buyers-autofix-bot" },
           body: JSON.stringify({ labels: ["autofix"] })
         });
       } else {
-        console.log("PR create failed:", prRes.status, await prRes.text());
+        RUN.notes.push("PR create failed: " + (await prRes.text()));
       }
     } catch (e) {
-      console.log("PR step failed (continuing):", e?.message || String(e));
+      RUN.notes.push("push/PR step failed: " + (e?.message || String(e)));
     }
   } else {
-    console.log("no repo/token; skipped push/PR");
+    RUN.notes.push("no repo/token; skipped push/PR");
   }
 
+  RUN.result = "completed";
+  writeStatusFile(); writeJobSummary(); await upsertStatusIssue();
   console.log("autofix finished OK.");
 }
-main().catch(e => { console.log("autofix caught error but exiting 0:", e?.stack || String(e)); });
+
+main().catch(e => {
+  RUN.result = "error";
+  RUN.notes.push("unexpected: " + (e?.stack || String(e)));
+  writeStatusFile(); writeJobSummary(); upsertStatusIssue().finally(() => {});
+  // do not throw
+});
