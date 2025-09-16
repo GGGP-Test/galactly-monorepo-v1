@@ -1,53 +1,119 @@
-import type { Express, Router, Request, Response } from "express";
+// Backend/src/routes/buyers.ts
+import type { Express, Request, Response } from "express";
 import { discoverSupplier } from "../buyers/discovery";
-import { generateLeads } from "../buyers/pipeline";
 
-// Mounts POST /api/v1/leads/find-buyers
-export default function mountBuyerRoutes(appOrRouter: Express | Router) {
-  const post = (appOrRouter as any).post?.bind(appOrRouter);
-  if (typeof post !== "function") {
-    throw new Error("mountBuyerRoutes: app/router missing .post()");
+// Minimal HTML decode
+const decode = (s: string) => s
+  .replace(/&amp;/g, "&")
+  .replace(/&lt;/g, "<")
+  .replace(/&gt;/g, ">")
+  .replace(/&#39;/g, "'")
+  .replace(/&quot;/g, '"');
+
+type Lead = {
+  name: string;
+  url: string;
+  reason: string;
+  score: number;
+  source: "duckduckgo" | "heuristic";
+};
+
+async function ddg(query: string): Promise<{ title: string; url: string }[]> {
+  const u = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}&kl=us-en`;
+  const html = await fetch(u, {
+    headers: { "User-Agent": "Mozilla/5.0 (ArtemisBot/1.0)" }
+  }).then(r => r.text());
+
+  // Parse common DDG HTML result anchors
+  const out: { title: string; url: string }[] = [];
+  const re = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) && out.length < 10) {
+    out.push({ title: decode(m[2]).replace(/<[^>]+>/g, "").trim(), url: m[1] });
   }
+  return out;
+}
 
-  post("/api/v1/leads/find-buyers", async (req: Request, res: Response) => {
+function scoreLead(title: string, why: string[], metrics: Record<string, number>) {
+  const T = title.toLowerCase();
+  let s = 0;
+  if (/3pl|fulfillment|warehouse|dc/.test(T)) s += 0.4;
+  if (/procurement|purchasing|buyer|sourcing/.test(T)) s += 0.4;
+  if (/packaging|film|corrugat|carton/.test(T)) s += 0.3;
+  // nudge with metric pressure
+  s += (metrics.RPI || 0) * 0.2 + (metrics.ILL || 0) * 0.1;
+  if (why.length) s += 0.1;
+  return Math.min(1, Number(s.toFixed(3)));
+}
+
+export default function mountBuyerRoutes(app: Express) {
+  app.post("/api/v1/leads/find-buyers", async (req: Request, res: Response) => {
     try {
-      const { supplier, region, personaInput, pro } = (req.body || {}) as {
-        supplier: string;
-        region?: string;
-        personaInput?: string;
-        pro?: boolean;
-      };
-
+      const { supplier, region, personaInput, personaStyle } = req.body || {};
       if (!supplier || typeof supplier !== "string") {
-        return res.status(400).json({ ok: false, error: "supplier (domain or URL) is required" });
+        return res.status(400).json({ error: "bad_request", detail: "`supplier` is required" });
       }
 
-      // 1) Discover (cheap-first, 1 LLM hop max if keys present)
-      const discovery = await discoverSupplier({ supplier, region, personaInput });
-
-      // 2) Generate free-first leads (Pro ready)
-      const pipe = await generateLeads(discovery, { region, pro: !!pro });
-
-      // 3) Token hints for friendly UI chips
-      const offerTokens = (discovery.persona.oneLiner.match(/(corrugated|flexible packaging|labels|stretch\/shrink film|wrapping machines|packaging solutions)/gi) || []).map(x => x.trim());
-      const sectorTokens = discovery.persona.sectors;
-      const titleTokens = discovery.persona.buyerTitles;
-
-      return res.json({
-        ok: true,
-        supplierDomain: discovery.supplierDomain,
-        persona: discovery.persona,
-        personaTokens: {
-          offer: offerTokens,
-          sectors: sectorTokens,
-          titles: titleTokens,
-        },
-        metrics: discovery.metrics,
-        leads: pipe.leads,
-        evidence: [...discovery.evidence, ...pipe.evidence].slice(-200), // cap for payload size
+      // Step 1: discover supplier + persona (cheap, no LLM)
+      const disc = await discoverSupplier({
+        supplier,
+        region,
+        personaInput,
+        personaStyle
       });
-    } catch (e: any) {
-      return res.status(500).json({ ok: false, error: e?.message || String(e) });
+
+      // Step 2: fetch live candidates from DDG for each query
+      const leads: Lead[] = [];
+      for (const q of disc.candidateSourceQueries) {
+        const results = await ddg(q.q);
+        for (const r of results) {
+          leads.push({
+            name: r.title || r.url,
+            url: r.url,
+            reason: `matched query: ${q.q}`,
+            score: scoreLead(r.title, disc.persona.why, disc.metrics),
+            source: "duckduckgo"
+          });
+        }
+      }
+
+      // Step 3: fallback heuristics (guarantee at least something shows up)
+      if (leads.length === 0) {
+        const dom = disc.supplierDomain;
+        for (const prefix of ["purchasing", "procurement", "sourcing", "warehouse", "operations", "info", "sales"]) {
+          leads.push({
+            name: `${prefix}@${dom}`,
+            url: `mailto:${prefix}@${dom}`,
+            reason: "domain heuristic",
+            score: 0.25,
+            source: "heuristic"
+          });
+        }
+      }
+
+      // Deduplicate by URL, sort by score desc
+      const seen = new Set<string>();
+      const final = leads.filter(l => {
+        const key = l.url.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).sort((a, b) => b.score - a.score).slice(0, 25);
+
+      return res.status(200).json({
+        supplier: {
+          domain: disc.supplierDomain,
+          name: disc.supplierName,
+        },
+        persona: disc.persona,           // includes your one-liner in chosen style
+        metrics: disc.metrics,
+        evidence: disc.evidence,
+        sourceQueries: disc.candidateSourceQueries,
+        leads: final
+      });
+    } catch (err: any) {
+      console.error("[find-buyers] error", err);
+      return res.status(500).json({ error: "internal_error", detail: String(err?.message || err) });
     }
   });
 }
