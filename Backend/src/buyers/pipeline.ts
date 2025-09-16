@@ -1,319 +1,260 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/**
- * Pipeline module
- * - Consumes discovery output
- * - Queries 1–2 free/public sources (DuckDuckGo HTML + Kompass listing)
- * - Produces >= 3 candidate leads { company, domain, region }
- * - Upserts each candidate into BleedStore with evidence
- * - Always returns at least demo fallbacks if scraping yields nothing
+/* Lead pipeline (free-first; Pro-ready)
+ *
+ * Inputs: discovery output (persona, metrics, candidate queries)
+ * Output: ranked lead candidates + evidence
+ *
+ * Free sources now:
+ *   - DuckDuckGo HTML results (no API)
+ *   - Company "contact/procurement/purchasing" pages via DDG
+ *
+ * Pro-ready switch:
+ *   Pass {pro:true} to enable paid sources later (Apollo, Clearbit, Google CSE, People Data Labs, etc.).
  */
 
-import { DiscoveryOutput, CandidateSource, Archetype } from "./discovery";
+import crypto from "crypto";
+import { Persona, DiscoveryOutput, Evidence } from "./discovery";
 
-// ---- BleedStore best-effort
-let bleedStore: any | null = null;
-(function loadBleedStore() {
+// ---------- Types ----------
+
+export type Lead = {
+  id: string;
+  name: string;        // company or facility
+  url: string;         // canonical page
+  city?: string;
+  state?: string;
+  phone?: string;
+  emails?: string[];
+  tags: string[];
+  score: number;       // 0..1
+  reason: string;      // short why
+  source: string;      // "ddg" | "contact-page" | "fallback"
+};
+
+export type PipelineOptions = {
+  region?: string;     // "US" | "CA" ...
+  pro?: boolean;       // future: enable paid sources
+  maxLeads?: number;   // default 10
+  timeoutMs?: number;  // default 12_000
+};
+
+export type PipelineResult = {
+  leads: Lead[];
+  evidence: Evidence[];
+};
+
+// ---------- Helpers ----------
+
+const now = () => Date.now();
+
+function host(u: string) {
+  try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; }
+}
+
+function normUrl(u: string) {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require("../data/bleed-store");
-    bleedStore =
-      (mod && (mod.getStore?.() || mod.store || mod.default || mod)) || null;
-  } catch {
-    bleedStore = null;
-  }
-})();
-
-function upsertLeadSafe(lead: any) {
-  try {
-    if (bleedStore && typeof bleedStore.upsertLead === "function") {
-      bleedStore.upsertLead(lead);
-    } else {
-      console.log("[bleed:upsertLead]", JSON.stringify(lead));
-    }
-  } catch (e) {
-    console.warn("[bleed:upsert:error]", (e as Error).message);
-  }
+    const x = new URL(u);
+    x.hash = "";
+    return x.toString();
+  } catch { return u; }
 }
 
-function evidence(stage: "pipeline", supplier: string, topic: string, detail: any) {
-  return {
-    at: new Date().toISOString(),
-    stage,
-    supplier,
-    topic,
-    detail,
-    source: "PIPELINE",
-  };
+function ddgUrl(q: string) {
+  // HTML results (no JS). Use “kp=1” to prefer US/English layout.
+  const params = new URLSearchParams({ q, kl: "us-en", kp: "1" });
+  return `https://duckduckgo.com/html/?${params.toString()}`;
 }
 
-function extractDomain(u: string): string {
-  try {
-    const url = new URL(u);
-    return url.hostname.replace(/^www\./i, "");
-  } catch {
-    return u
-      .replace(/^https?:\/\//i, "")
-      .replace(/\/.*$/, "")
-      .replace(/^www\./i, "");
-  }
-}
-
-function textOnly(html: string): string {
-  return html.replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-async function fetchText(url: string, timeoutMs = 10_000): Promise<string> {
-  const ctl = new AbortController();
-  const to = setTimeout(() => ctl.abort(), timeoutMs);
+async function getText(url: string, timeoutMs = 12000): Promise<string> {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
-      signal: ctl.signal,
       headers: {
-        "user-agent": "buyers-engine/1.0 (+https://github.com/; Node20)",
-        accept: "text/html,*/*",
-      } as any,
+        "User-Agent": "Mozilla/5.0 (compatible; ArtemisLeadBot/1.0)",
+        "Accept": "text/html,application/xhtml+xml",
+      },
+      redirect: "follow",
+      signal: ac.signal as any,
     } as any);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.text();
   } finally {
-    clearTimeout(to);
+    clearTimeout(t);
   }
 }
 
-function buildQueries(archetypes: Archetype[], region?: string): string[] {
-  const base = archetypes.map((a) => a.leadQuery).slice(0, 3);
-  const withRegion = base.map((q) => `${q} ${region ?? ""}`.trim());
-  // Ensure a general packaging query is included
-  if (!withRegion.some((q) => /packaging/i.test(q))) {
-    withRegion.push(`packaging supplier ${region ?? ""}`.trim());
+function* parseDdgs(html: string): Generator<{ title: string; url: string; snippet: string }> {
+  // Very light parser for /html SERP. We avoid heavy DOM libs to stay small.
+  // Result blocks look like: <a class="result__a" href="URL">TITLE</a> ... <a class="result__snippet">...</a>
+  const blockRe = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/gi;
+  let m;
+  while ((m = blockRe.exec(html))) {
+    const url = m[1].replace(/&amp;/g, "&");
+    const title = m[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const snippet = m[3].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    yield { title, url, snippet };
   }
-  return [...new Set(withRegion)].slice(0, 4);
 }
 
-async function searchDuckDuckGo(query: string): Promise<{ title: string; url: string }[]> {
-  const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-  const html = await fetchText(url, 10_000);
-  // Extract generic anchors; filter out duckduckgo result redirectors and non-company domains
-  const anchors = [...html.matchAll(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi)]
-    .map((m) => ({ href: m[1], text: textOnly(m[2]).slice(0, 120) }))
-    .filter((a) => a.href.startsWith("http"))
-    .filter((a) => !/duckduckgo\.com|wikipedia\.org|facebook\.com|linkedin\.com|youtube\.com|github\.com/i.test(a.href))
-    .slice(0, 25);
+function scoreLead(p: Persona, title: string, snippet: string, url: string): { score: number; tags: string[]; reason: string } {
+  const T = (title + " " + snippet + " " + url).toLowerCase();
+  const tags: string[] = [];
 
-  // Deduplicate by domain
+  const hit = (re: RegExp, tag: string, w: number) => {
+    if (re.test(T)) { tags.push(tag); return w; }
+    return 0;
+  };
+
+  let s = 0;
+  s += hit(/\b(procurement|sourcing|purchasing)\b/, "procurement", 0.35);
+  s += hit(/\b(packaging)\b/, "packaging", 0.25);
+  s += hit(/\b(distribution center|warehouse|3pl)\b/, "ops", 0.2);
+  s += hit(/\b(rfq|request for quote)\b/, "rfq", 0.25);
+  s += hit(/\b(buyer|category manager)\b/, "buyer", 0.2);
+
+  // align with inferred sectors / titles
+  const want = (p.buyerTitles.join(" ") + " " + p.sectors.join(" ")).toLowerCase();
+  if (want) {
+    const overlap = want.split(/\W+/).filter(k => k && T.includes(k)).length;
+    s += Math.min(0.2, overlap * 0.03);
+  }
+
+  s = Math.min(1, s);
+  const reason = tags.length ? `keywords: ${tags.join(", ")}` : "SERP match";
+  return { score: s, tags, reason };
+}
+
+function pickName(title: string, url: string): string {
+  const h = host(url);
+  const domName = h.split(".")[0];
+  // Prefer page title words, fallback to domain
+  const t = title.replace(/\s*[-|•].*$/, "").trim();
+  return t.length >= 4 ? t : domName;
+}
+
+function idFor(u: string) {
+  return crypto.createHash("md5").update(normUrl(u)).digest("hex").slice(0, 12);
+}
+
+function uniqueBy<T>(arr: T[], key: (x: T)=>string) {
   const seen = new Set<string>();
-  const out: { title: string; url: string }[] = [];
-  for (const a of anchors) {
-    const d = extractDomain(a.href);
-    if (seen.has(d)) continue;
-    seen.add(d);
-    out.push({ title: a.text || d, url: a.href });
-    if (out.length >= 10) break;
+  const out: T[] = [];
+  for (const a of arr) {
+    const k = key(a);
+    if (!seen.has(k)) { seen.add(k); out.push(a); }
   }
   return out;
 }
 
-async function scrapeKompass(query: string): Promise<{ title: string; url: string }[]> {
-  const url = `https://www.kompass.com/en/searchCompanies/?searchType=SUPPLIER&text=${encodeURIComponent(
-    query
-  )}`;
-  const html = await fetchText(url, 10_000);
-  // Kompass listings often have <a class="company-name" href="...">Company</a>
-  const anchors =
-    [...html.matchAll(/<a[^>]+class="[^"]*company-name[^"]*"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi)] ||
-    [...html.matchAll(/<a[^>]+href="(\/en\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi)];
-  const out: { title: string; url: string }[] = [];
-  const seen = new Set<string>();
-  for (const m of anchors) {
-    const href = m[1].startsWith("http")
-      ? m[1]
-      : `https://www.kompass.com${m[1]}`;
-    const title = textOnly(m[2]).slice(0, 120);
-    const d = extractDomain(href);
-    if (seen.has(d)) continue;
-    seen.add(d);
-    out.push({ title, url: href });
-    if (out.length >= 10) break;
-  }
-  return out;
+function extractEmails(html: string): string[] {
+  const set = new Set<string>();
+  const re = /[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi;
+  let m;
+  while ((m = re.exec(html))) set.add(m[0].toLowerCase());
+  return [...set].slice(0, 5);
 }
 
-function scoreLead(title: string, latents: DiscoveryOutput["latents"]): number {
-  const t = title.toLowerCase();
-  let s = 0.4; // base
-  if (/(packaging|corrugated|stretch|tape|shrink|void fill|bubble|foam)/.test(t)) s += 0.2;
-  if (/(3pl|fulfillment|warehouse)/.test(t)) s += (latents.IrregularLoadLikelihood ?? 0.2) * 0.4;
-  if (/(cold|frozen|temperature)/.test(t)) s += (latents.ColdChainSensitivity ?? 0.2) * 0.4;
-  if (/(fragile|electronics|glass|medical)/.test(t)) s += (latents.FragilityRisk ?? 0.2) * 0.3;
-  return Math.min(1, s);
+function maybeRegionFilter(u: string, region?: string): boolean {
+  if (!region || region.toUpperCase() === "US") return true;
+  // Naive geo filter: allow if url hints region
+  const R = region.toLowerCase();
+  return new RegExp(`\\b${R}\\b`).test(u.toLowerCase());
 }
 
-export type PipelineInput = {
-  region?: string;
-  radiusMi?: number;
-};
+// ---------- Main pipeline ----------
 
-export type CandidateLead = {
-  company: string;
-  domain: string;
-  region?: string;
-  score: number;
-  source: string;
-  evidence: any[];
-};
-
-export async function runPipeline(
+export async function generateLeads(
   discovery: DiscoveryOutput,
-  input: PipelineInput
-): Promise<{ candidates: CandidateLead[] }> {
-  const { region } = input || {};
-  const queries = buildQueries(discovery.archetypes || [], region);
-  const supplier = discovery.supplierDomain;
+  opts: PipelineOptions = {}
+): Promise<PipelineResult> {
+  const evidence: Evidence[] = [];
+  const maxLeads = opts.maxLeads ?? 10;
+  const timeoutMs = opts.timeoutMs ?? 12_000;
 
-  const sourcesToUse: CandidateSource[] = discovery.candidateSources.filter((s) =>
-    ["DUCKDUCKGO", "KOMPASS"].includes(s.id)
-  );
+  const leads: Lead[] = [];
+  const push = (l: Lead) => { if (maybeRegionFilter(l.url, opts.region)) leads.push(l); };
 
-  const all: CandidateLead[] = [];
+  // 1) Run DDG queries
+  for (const q of discovery.candidateSourceQueries) {
+    if (q.source !== "duckduckgo") continue;
 
-  for (const q of queries) {
-    // DUCKDUCKGO
-    if (sourcesToUse.find((s) => s.id === "DUCKDUCKGO")) {
-      const ddgResults = await searchDuckDuckGo(q);
-      for (const r of ddgResults.slice(0, 5)) {
-        const domain = extractDomain(r.url);
-        const company = r.title || domain;
-        const score = scoreLead(company, discovery.latents);
-        const lead: CandidateLead = {
-          company,
-          domain,
-          region,
-          score,
-          source: "DUCKDUCKGO",
-          evidence: [
-            {
-              at: new Date().toISOString(),
-              stage: "pipeline",
-              supplier,
-              topic: "found",
-              detail: { query: q, title: r.title, url: r.url },
-              source: "DUCKDUCKGO",
-            },
-          ],
-        };
-        all.push(lead);
-        upsertLeadSafe({
-          id: `${domain}|DUCKDUCKGO`,
-          ...lead,
-        });
-      }
+    const url = ddgUrl(q.q);
+    let html = "";
+    try {
+      html = await getText(url, timeoutMs);
+      evidence.push({ kind: "fetch", note: `DDG q="${q.q}" ok`, url, ts: now() });
+    } catch (e: any) {
+      evidence.push({ kind: "fetch", note: `DDG q="${q.q}" failed: ${e?.message || e}`, url, ts: now() });
+      continue;
     }
 
-    // KOMPASS
-    if (sourcesToUse.find((s) => s.id === "KOMPASS")) {
+    for (const r of parseDdgs(html)) {
+      const sc = scoreLead(discovery.persona, r.title, r.snippet, r.url);
+      if (sc.score < 0.25) continue; // prune weak matches
+
+      push({
+        id: idFor(r.url),
+        name: pickName(r.title, r.url),
+        url: normUrl(r.url),
+        tags: sc.tags,
+        score: sc.score,
+        reason: sc.reason,
+        source: "ddg",
+      });
+    }
+  }
+
+  // 2) Try to enrich top host pages with “contact/procurement/purchasing”
+  const enrichTargets = uniqueBy(leads, l => host(l.url)).slice(0, 8);
+  const enrichQueries = ["contact", "purchasing", "procurement", "supplier", "rfq"];
+  for (const t of enrichTargets) {
+    const h = host(t.url);
+    if (!h) continue;
+    for (const k of enrichQueries) {
+      const q = `site:${h} (${k}) packaging`;
+      const url = ddgUrl(q);
       try {
-        const list = await scrapeKompass(q);
-        for (const r of list.slice(0, 5)) {
-          const domain = extractDomain(r.url);
-          const company = r.title || domain;
-          const score = scoreLead(company, discovery.latents) * 0.95; // slightly conservative
-          const lead: CandidateLead = {
-            company,
-            domain,
-            region,
-            score,
-            source: "KOMPASS",
-            evidence: [
-              {
-                at: new Date().toISOString(),
-                stage: "pipeline",
-                supplier,
-                topic: "found",
-                detail: { query: q, title: r.title, url: r.url },
-                source: "KOMPASS",
-              },
-            ],
-          };
-          all.push(lead);
-          upsertLeadSafe({
-            id: `${domain}|KOMPASS`,
-            ...lead,
+        const html = await getText(url, timeoutMs);
+        for (const r of parseDdgs(html)) {
+          const scoreBoost = /contact|rfq|purchas|procure/i.test(r.url) ? 0.2 : 0.1;
+          const sc = scoreLead(discovery.persona, r.title, r.snippet, r.url);
+          if (sc.score + scoreBoost < 0.35) continue;
+
+          push({
+            id: idFor(r.url),
+            name: pickName(r.title, r.url),
+            url: normUrl(r.url),
+            tags: [...new Set([...t.tags, ...sc.tags, "enriched"])],
+            score: Math.min(1, Math.max(t.score, sc.score + scoreBoost)),
+            reason: "host enrichment",
+            source: "contact-page",
           });
         }
-      } catch (e) {
-        // Non-fatal
-        upsertLeadSafe({
-          id: `KOMPASS_ERROR|${Date.now()}`,
-          company: "KOMPASS_ERROR",
-          domain: "kompass.com",
-          region,
-          score: 0,
-          source: "KOMPASS",
-          evidence: [
-            evidence("pipeline", supplier, "source_error", {
-              source: "KOMPASS",
-              message: (e as Error).message,
-              query: q,
-            }),
-          ],
-        });
-      }
+      } catch { /* ignore */ }
     }
   }
 
-  // Dedup by domain; keep best score
-  const byDomain = new Map<string, CandidateLead>();
-  for (const c of all) {
-    const prev = byDomain.get(c.domain);
-    if (!prev || c.score > prev.score) byDomain.set(c.domain, c);
-  }
-  let candidates = [...byDomain.values()];
+  // 3) Dedup & rank
+  const ranked = uniqueBy(leads, l => l.id)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxLeads);
 
-  // Fallbacks to ensure >=3
-  if (candidates.length < 3) {
-    const demoBase = [
-      { company: "Demo Packaging Co.", domain: "demo-packaging.example" },
-      { company: "Sample Corrugated Ltd.", domain: "sample-corrugated.example" },
-      { company: "Example Cold Chain Pack", domain: "example-coldpack.example" },
-    ];
-    for (const d of demoBase) {
-      candidates.push({
-        company: d.company,
-        domain: d.domain,
-        region,
-        score: 0.42,
-        source: "DEMO_SOURCE",
-        evidence: [
-          evidence("pipeline", supplier, "demo_fallback", {
-            reason: "Insufficient results; providing demo candidate.",
-          }),
-        ],
-      });
-      upsertLeadSafe({
-        id: `${d.domain}|DEMO`,
-        company: d.company,
-        domain: d.domain,
-        region,
-        score: 0.42,
-        source: "DEMO_SOURCE",
-        evidence: [
-          evidence("pipeline", supplier, "demo_fallback", {
-            reason: "Insufficient results; providing demo candidate.",
-          }),
-        ],
-      });
-      if (candidates.length >= 3) break;
-    }
+  // 4) Last-resort fallback so the UI always shows something
+  if (ranked.length === 0) {
+    const baseQ = `${discovery.persona.sectors[0] || "3PL"} packaging buyer ${opts.region || "US"}`;
+    const url = ddgUrl(baseQ);
+    evidence.push({ kind: "assumption", note: `fallback query`, url, ts: now() });
+    ranked.push({
+      id: idFor(url),
+      name: "Packaging buyer prospects",
+      url,
+      tags: ["fallback", "prospect-list"],
+      score: 0.3,
+      reason: "seed query",
+      source: "fallback",
+    });
   }
 
-  // Trim to reasonable size for MVP
-  candidates = candidates.slice(0, 12);
-
-  return { candidates };
+  return { leads: ranked, evidence };
 }
 
-export default runPipeline;
+export default { generateLeads };
