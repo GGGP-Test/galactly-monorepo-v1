@@ -1,19 +1,19 @@
-# Build the Backend app from the Backend/ folder
+# Root Dockerfile to build the Backend/ service on Northflank
 FROM node:20-alpine
 
-WORKDIR /app
-# keep npm quiet in CI
+# Keep logs terse and installs reproducible enough
 ENV npm_config_loglevel=warn
 
-# 1) Install deps (include dev so tsx is available)
+WORKDIR /app
+
+# 1) Install deps from Backend/package.json (not repo root)
 COPY Backend/package*.json ./
+# Include dev deps so we can run tsx directly in the container
 RUN npm install --no-audit --no-fund --include=dev
 
-# 2) Copy app source
+# 2) Copy the Backend source only (avoid copying CI and docs noise)
 COPY Backend/. .
 
-# 3) Runtime
-ENV NODE_ENV=production
+# 3) Expose HTTP port and start with tsx
 EXPOSE 8080
-# Run TypeScript directly with tsx (installed above)
 CMD ["npx","tsx","src/index.ts"]
