@@ -1,5 +1,8 @@
-node_modules
-dist
 .git
-.gitignore
-Dockerfile
+**/.git
+**/.DS_Store
+**/node_modules
+docs
+.github
+*.tgz
+artifacts
