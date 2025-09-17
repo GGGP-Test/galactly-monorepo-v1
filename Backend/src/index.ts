@@ -1,74 +1,186 @@
-import express from "express";
-import cors from "cors";
-import { RateLimiterMemory } from "rate-limiter-flexible";
-import { buildPersonaFromSupplier } from "./persona.js";
-import { findBuyerCandidates } from "./buyers.js";
+/* Minimal HTTP server (no external deps).
+ * Ports:
+ *   - Default: 8787 (matches your Northflank health check)
+ * Routes:
+ *   - GET  /healthz                      -> "ok"
+ *   - POST /api/v1/leads                 -> JSON { candidates: Candidate[] }
+ *   - GET  /api/v1/leads?supplier=...    -> same as POST (debug/manual)
+ */
+
+import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { parse as parseUrl } from 'url';
+import crawlBuyers, { type Persona } from './crawl';
 
 const PORT = Number(process.env.PORT || 8787);
-const BUDGET_PER_DAY = Number(process.env.TOKEN_BUDGET_PER_DAY || 200);
-const WINDOW_SEC = 24 * 60 * 60;
-const BURST_PER_MIN = Number(process.env.BURST_PER_MIN || 20);
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+// ---- utils ----
 
-const dailyLimiter = new RateLimiterMemory({ points: BUDGET_PER_DAY, duration: WINDOW_SEC, blockDuration: 60 });
-const burstLimiter = new RateLimiterMemory({ points: BURST_PER_MIN, duration: 60 });
-
-function tenantKey(req: express.Request) {
-  return (req.header("x-tenant-id") ||
-          req.header("x-api-key") ||
-          req.header("x-user-id") ||
-          req.ip ||
-          req.socket.remoteAddress ||
-          "anon").toString();
+function sendJson(res: ServerResponse, code: number, obj: unknown) {
+  const body = JSON.stringify(obj);
+  res.writeHead(code, {
+    'content-type': 'application/json; charset=utf-8',
+    'access-control-allow-origin': '*',
+    'access-control-allow-headers': 'content-type, authorization, x-token',
+    'access-control-allow-methods': 'GET, POST, OPTIONS'
+  });
+  res.end(body);
 }
 
-app.get("/healthz", (_req,res) => res.status(200).send("ok"));
+function sendText(res: ServerResponse, code: number, text: string) {
+  res.writeHead(code, {
+    'content-type': 'text/plain; charset=utf-8',
+    'access-control-allow-origin': '*'
+  });
+  res.end(text);
+}
 
-// ---------------- Persona ----------------
-app.post("/api/v1/persona/from-supplier", async (req, res) => {
-  const { supplierDomain } = req.body ?? {};
-  if (!supplierDomain) return res.status(400).json({ ok:false, error:"supplierDomain required" });
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+      if (data.length > 1_000_000) {
+        // 1 MB guard
+        req.destroy();
+        reject(new Error('payload_too_large'));
+      }
+    });
+    req.on('end', () => resolve(data || ''));
+    req.on('error', reject);
+  });
+}
 
-  const tenant = tenantKey(req);
-  try { await dailyLimiter.consume(tenant); } catch (e:any) {
-    return res.status(429).json({ ok:false, error:"budget_exhausted", retryInSec: Math.max(1, Math.floor(e.msBeforeNext/1000)) });
-  }
-  try { await burstLimiter.consume(req.ip || tenant); } catch {
-    return res.status(429).json({ ok:false, error:"too_many_requests" });
-  }
-
+function safeParse<T = any>(s: string): T | null {
   try {
-    const persona = await buildPersonaFromSupplier(supplierDomain);
-    return res.json({ ok:true, persona });
-  } catch (err:any) {
-    return res.status(500).json({ ok:false, error:"persona_failed", details: err?.message || "unknown" });
+    return s ? (JSON.parse(s) as T) : (null as any);
+  } catch {
+    return null;
   }
+}
+
+function log(...args: any[]) {
+  // light logging; avoid noisy stack traces
+  try {
+    console.log(new Date().toISOString(), ...args);
+  } catch {
+    /* noop */
+  }
+}
+
+// ---- router ----
+
+async function handleLeadsGET(req: IncomingMessage, res: ServerResponse) {
+  const url = parseUrl(req.url || '', true);
+  const supplierRaw = (url.query.supplier || url.query.host || url.query.domain || '') as string;
+  const supplierHost = (supplierRaw || '').toString().trim();
+  const country = ((url.query.country || url.query.gl || 'US') as string).toUpperCase() as 'US' | 'CA';
+  const radiusMi = Number(url.query.radiusMi || url.query.radius || 50);
+
+  if (!supplierHost) {
+    return sendJson(res, 400, { error: 'missing_supplier', message: 'Provide ?supplier=example.com' });
+  }
+
+  return leadWorkflow({ supplierHost, country, radiusMi, res });
+}
+
+async function handleLeadsPOST(req: IncomingMessage, res: ServerResponse) {
+  const raw = await readBody(req);
+  const body = safeParse<{
+    supplier?: string;
+    supplierHost?: string;
+    host?: string;
+    domain?: string;
+    country?: 'US' | 'CA' | string;
+    radiusMi?: number | string;
+    persona?: Persona;
+  }>(raw);
+
+  const supplierHost =
+    (body?.supplierHost ||
+      body?.supplier ||
+      body?.host ||
+      body?.domain ||
+      '').toString().trim();
+
+  const country = ((body?.country || 'US') as string).toUpperCase() as 'US' | 'CA';
+  const radiusMi = Number(body?.radiusMi ?? 50);
+  const persona = body?.persona;
+
+  if (!supplierHost) {
+    return sendJson(res, 400, { error: 'missing_supplier', message: 'Body must include supplierHost' });
+  }
+
+  return leadWorkflow({ supplierHost, country, radiusMi, persona, res });
+}
+
+async function leadWorkflow(params: {
+  supplierHost: string;
+  country: 'US' | 'CA';
+  radiusMi: number;
+  persona?: Persona;
+  res: ServerResponse;
+}) {
+  const { supplierHost, country, radiusMi, persona, res } = params;
+
+  // Hard timeout guard so requests never hang
+  const TIMEOUT_MS = Number(process.env.LEADS_TIMEOUT_MS || 28_000);
+
+  const work = crawlBuyers({ supplierHost, country, radiusMi, persona })
+    .then((candidates) => ({ ok: true, candidates }))
+    .catch((err) => {
+      log('crawl_error', { supplierHost, country, radiusMi, err: String(err?.message || err) });
+      return { ok: false, candidates: [] as any[], error: 'crawl_failed' };
+    });
+
+  const timeout = new Promise<{ ok: false; candidates: any[]; error: string }>((resolve) =>
+    setTimeout(() => resolve({ ok: false, candidates: [], error: 'timeout' }), TIMEOUT_MS)
+  );
+
+  const result = await Promise.race([work, timeout]);
+
+  // Always 200 so the UI can display "0 candidates" gracefully
+  return sendJson(res, 200, {
+    supplierHost,
+    country,
+    radiusMi,
+    count: (result as any).candidates?.length ?? 0,
+    ...result
+  });
+}
+
+// ---- server ----
+
+const server = createServer(async (req, res) => {
+  // CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'access-control-allow-origin': '*',
+      'access-control-allow-headers': 'content-type, authorization, x-token',
+      'access-control-allow-methods': 'GET, POST, OPTIONS',
+      'access-control-max-age': '600'
+    });
+    return res.end();
+  }
+
+  const url = parseUrl(req.url || '', true);
+  const path = (url.pathname || '').replace(/\/+$/, '') || '/';
+
+  if (req.method === 'GET' && path === '/healthz') {
+    return sendText(res, 200, 'ok');
+  }
+
+  if (path === '/api/v1/leads') {
+    if (req.method === 'GET') return handleLeadsGET(req, res);
+    if (req.method === 'POST') return handleLeadsPOST(req, res);
+    return sendJson(res, 405, { error: 'method_not_allowed' });
+  }
+
+  return sendJson(res, 404, { error: 'not_found', path });
 });
 
-// ---------------- Leads (buyers) ----------------
-app.post("/api/v1/leads/find-buyers", async (req, res) => {
-  const { supplierDomain, lat, lon, radiusMi } = req.body ?? {};
-  if (!supplierDomain) return res.status(400).json({ ok:false, error:"supplierDomain required" });
-
-  const tenant = tenantKey(req);
-  try { await dailyLimiter.consume(tenant); } catch (e:any) {
-    return res.status(429).json({ ok:false, error:"budget_exhausted", retryInSec: Math.max(1, Math.floor(e.msBeforeNext/1000)) });
-  }
-  try { await burstLimiter.consume(req.ip || tenant); } catch {
-    return res.status(429).json({ ok:false, error:"too_many_requests" });
-  }
-
-  try {
-    const buyers = await findBuyerCandidates({ supplierDomain, lat, lon, radiusMi });
-    const hot = buyers.filter(b => b.temp === "hot").length;
-    const warm = buyers.length - hot;
-    return res.json({ ok:true, supplierDomain, counts: { total: buyers.length, hot, warm }, buyers });
-  } catch (err:any) {
-    return res.status(500).json({ ok:false, error:"discovery_failed", details: err?.message || "unknown" });
-  }
+server.listen(PORT, () => {
+  log(`server_listening`, { port: PORT, health: '/healthz', leads: '/api/v1/leads' });
 });
 
-app.listen(PORT, () => console.log(`API listening on ${PORT}`));
+// Export for tests (optional)
+export default server;
