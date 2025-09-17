@@ -40,7 +40,7 @@ const HOT_RE = /\b(open|opens|opening|launched?|launches|debut|unveil(ed|s)?|gra
 const WAREHOUSE_TERMS =
   '(warehouse|distribution center|fulfillment center|cold storage|logistics|3pl)';
 
-// quick & tiny XML helpers (we don’t pull an XML lib to keep image small)
+// quick & tiny XML helpers
 function unescapeHtml(s: string) {
   return s
     .replace(/&amp;/g, '&')
@@ -57,26 +57,20 @@ function between(haystack: string, a: string, b: string) {
   return haystack.slice(i + a.length, j);
 }
 
-// Try to extract publisher URL from Google News link.
-//  - If link has ?url=… use that.
-//  - Otherwise, follow redirects once to get final URL (Node 20 has global fetch).
+// Extract publisher URL from Google News link (?url=… or final redirect)
 async function extractOutlink(googleLink: string): Promise<string> {
   try {
     const m = googleLink.match(/[?&]url=([^&]+)/i);
     if (m) return decodeURIComponent(m[1]);
 
-    // One lightweight follow (HEAD first to avoid body; fallback to GET).
     try {
       const r = await fetch(googleLink, { method: 'HEAD', redirect: 'follow' });
       if (r.ok && r.url) return r.url;
-    } catch {
-      /* ignore and try GET */
-    }
+    } catch { /* ignore */ }
+
     const r2 = await fetch(googleLink, { method: 'GET', redirect: 'follow' });
     if (r2.ok && r2.url) return r2.url;
-  } catch {
-    /* fall through */
-  }
+  } catch { /* ignore */ }
   return googleLink;
 }
 
@@ -95,44 +89,36 @@ function normalizeRegion(r?: Region): 'us' | 'ca' {
 }
 
 function mkWhy(title: string, pub: string) {
+  const hot = HOT_RE.test(title);
   return {
     signal: {
-      label: HOT_RE.test(title) ? 'Opening/launch signal' : 'Expansion signal',
-      score: HOT_RE.test(title) ? 1 : 0.33,
+      label: hot ? 'Opening/launch signal' : 'Expansion signal',
+      score: hot ? 1 : 0.33,
       detail: title,
     },
-    context: {
-      label: 'News (RSS)',
-      detail: 'news.google.com',
-    },
-    meta: {
-      publisher: pub,
-    },
+    context: { label: 'News (RSS)', detail: 'news.google.com' },
+    meta: { publisher: pub },
   };
 }
 
 function buildQuery(supplier: string, persona?: Persona) {
-  // Focus search on warehouse/logistics growth signals near the supplier intent
   const intentBits: string[] = [];
   if (persona?.offer) intentBits.push(persona.offer);
   if (persona?.solves) intentBits.push(persona.solves);
   const intent = intentBits.filter(Boolean).join(' ');
 
-  // Require warehouse-ish terms and opening/expansion language
   const must = `${WAREHOUSE_TERMS} (open|opening|opens|launch|launched|expand|expands)`;
   const siteHint = '-site:' + supplier.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
-  // Keep it compact — Google News likes clear queries.
   return [must, intent, siteHint].filter(Boolean).join(' ');
 }
 
-export default async function discoverFromNews(
+async function discoverFromNews(
   input: DiscoveryInput
 ): Promise<DiscoveryResult> {
   const region = normalizeRegion(input.region);
   const q = buildQuery(input.supplier, input.persona);
 
-  // US-focused feed (cleanest); we stamp the region ourselves.
   const feedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(
     q
   )}&hl=en-US&gl=US&ceid=US:en`;
@@ -141,32 +127,30 @@ export default async function discoverFromNews(
   try {
     const r = await fetch(feedUrl);
     xml = await r.text();
-  } catch (e) {
+  } catch {
     return { ok: false, created: 0, candidates: [] };
   }
 
   const items: Lead[] = [];
-  const chunks = xml.split('<item>').slice(1); // skip header
+  const chunks = xml.split('<item>').slice(1);
   for (const chunk of chunks) {
     const titleRaw = between(chunk, '<title>', '</title>');
     const linkRaw = between(chunk, '<link>', '</link>');
     const pubDateRaw = between(chunk, '<pubDate>', '</pubDate>');
-    const sourceTitle = between(chunk, '<source', '</source>'); // publisher name tag
+    const sourceTitle = between(chunk, '<source', '</source>');
 
     const title = unescapeHtml(titleRaw.trim());
     const googleLink = unescapeHtml(linkRaw.trim());
-
     if (!title || !googleLink) continue;
 
     const outlink = await extractOutlink(googleLink);
     const host = normalizeHost(outlink);
-
     const temperature: 'hot' | 'warm' = HOT_RE.test(title) ? 'hot' : 'warm';
 
-    const why = mkWhy(title, unescapeHtml(sourceTitle.replace(/^.*>/, '').trim()));
-    const whyText = `${title}${
-      pubDateRaw ? ` (${new Date(unescapeHtml(pubDateRaw)).toDateString()})` : ''
-    }`;
+    const publisher = unescapeHtml(sourceTitle.replace(/^.*>/, '').trim());
+    const why = mkWhy(title, publisher);
+    const whyText =
+      `${title}` + (pubDateRaw ? ` (${new Date(unescapeHtml(pubDateRaw)).toDateString()})` : '');
 
     items.push({
       host,
@@ -179,7 +163,6 @@ export default async function discoverFromNews(
     });
   }
 
-  // Lightweight de-duplication by host+title to keep store clean.
   const seen = new Set<string>();
   const candidates = items.filter((it) => {
     const key = `${it.host}::${it.title}`.toLowerCase();
@@ -189,4 +172,16 @@ export default async function discoverFromNews(
   });
 
   return { ok: true, created: candidates.length, candidates };
+}
+
+/* ------------------------------------------------------------------ */
+/* Exports                                                             */
+/* ------------------------------------------------------------------ */
+
+// default export (modern usage)
+export default discoverFromNews;
+
+// compatibility named export for existing route code
+export async function collectNews(input: DiscoveryInput): Promise<DiscoveryResult> {
+  return discoverFromNews(input);
 }
