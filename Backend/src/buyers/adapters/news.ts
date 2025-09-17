@@ -1,8 +1,9 @@
 // Backend/src/buyers/adapters/news.ts
-// Free warm/hot signal collector via Google News RSS (no API key).
-// Targets: openings/expansions of warehouses, DCs, fulfillment centers, 3PLs, cold storage, etc.
+// Free “warm/hot” collector using Google News RSS (no API key).
+// Produces non-generic signals: facility openings/expansions/etc.
+// Keeps output explainable via whyText + chips and avoids supplier domain.
 
-type Region = "us" | "ca" | "usca";
+export type Region = "us" | "ca" | "usca";
 
 export interface PersonaLite {
   offer?: string;
@@ -18,167 +19,257 @@ export interface Candidate {
   temperature?: "warm" | "hot";
   whyText?: string;
   why?: {
-    meta?: { label?: string; score?: number; detail?: string };
     signal?: { label?: string; score?: number; detail?: string };
-    context?: { label?: string; score?: number; detail?: string };
+    context?: { label?: string; detail?: string };
+    meta?: { label?: string; score?: number; detail?: string };
   };
   created?: string;
 }
 
 const NEWS_BASE = "https://news.google.com/rss/search";
-const NOW = () => new Date();
-const daysAgo = (n: number) => new Date(Date.now() - n * 86400_000);
 
-function regionParams(region: Region) {
-  // Google News regionization via hl/gl/ceid; keep it simple.
-  if (region === "us")  return "hl=en-US&gl=US&ceid=US:en";
-  if (region === "ca")  return "hl=en-CA&gl=CA&ceid=CA:en";
-  return "hl=en-US&gl=US&ceid=US:en"; // usca default to US english
-}
-
-function buildQuery(persona?: PersonaLite) {
-  // Core intent: openings/expansions of logistics-heavy operations.
-  const base =
-    '( "distribution center" OR "fulfillment center" OR "warehouse" OR "3PL" OR "cold storage" ) ' +
-    '( opens OR opening OR launch OR launches OR expansion OR expands OR "new facility" OR "new site" OR "starts shipping" )';
-  // Persona can add flavor but we keep it conservative to avoid generic noise.
-  const extras: string[] = [];
-  if (persona?.solves) extras.push(`"${persona.solves.replace(/"/g, "")}"`);
-  // Don’t force persona terms; optional signals only.
-  return [base, ...extras].join(" ");
-}
-
-function textBetween(xml: string, tag: string) {
-  const out: string[] = [];
-  const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, "gi");
-  let m;
-  while ((m = re.exec(xml))) out.push(m[1]);
-  return out;
-}
-
-function iso(dateStr?: string) {
-  try { return dateStr ? new Date(dateStr).toISOString() : new Date().toISOString(); }
-  catch { return new Date().toISOString(); }
-}
-
-function hostname(u: string) {
-  try { return new URL(u).hostname.replace(/^www\\./, ""); } catch { return ""; }
-}
-
-function looksHot(title: string, pub: string) {
-  const t = title.toLowerCase();
-  const hotWords = ["opens", "opening", "launches", "launch", "starts shipping", "grand opening"];
-  const isRecent = new Date(pub) >= daysAgo(14);
-  const keywordHit = hotWords.some(w => t.includes(w));
-  return isRecent && keywordHit;
-}
-
-function cleanTitle(t: string) {
-  return t.replace(/ - .*$/, "").trim();
-}
-
-function scoreFromRecency(pub: string) {
-  const ageDays = Math.max(0, Math.floor((NOW().getTime() - new Date(pub).getTime()) / 86400_000));
-  // 0d -> 1.0, 30d -> ~0.2
-  return Math.max(0.2, +(1 / Math.max(1, ageDays + 1)).toFixed(2));
-}
-
-const BLOCKLIST_HOSTS = new Set([
-  "news.google.com", "apnews.com", "reuters.com", "bloomberg.com",
-  "finance.yahoo.com", "youtube.com", "twitter.com", "x.com",
-  "facebook.com", "linkedin.com", "globenewswire.com", "prnewswire.com",
-  "businesswire.com", "marketwatch.com"
+const BLOCKLIST_HOSTS = new Set<string>([
+  "news.google.com",
+  "apnews.com",
+  "reuters.com",
+  "bloomberg.com",
+  "finance.yahoo.com",
+  "youtube.com",
+  "twitter.com",
+  "x.com",
+  "facebook.com",
+  "linkedin.com",
+  "globenewswire.com",
+  "prnewswire.com",
+  "businesswire.com",
+  "marketwatch.com"
 ]);
 
-async function fetchText(url: string, timeoutMs = 12_000): Promise<string> {
+function nowIso(): string {
+  return new Date().toISOString();
+}
+function daysAgo(n: number): Date {
+  return new Date(Date.now() - n * 86400_000);
+}
+function isRecent(pubDate: string, maxDays = 14): boolean {
+  const d = new Date(pubDate);
+  if (isNaN(d.getTime())) return false;
+  return d >= daysAgo(maxDays);
+}
+function toHostname(u: string): string {
+  try {
+    const h = new URL(u).hostname.toLowerCase();
+    return h.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+function regionParams(region: Region): string {
+  if (region === "us") return "hl=en-US&gl=US&ceid=US:en";
+  if (region === "ca") return "hl=en-CA&gl=CA&ceid=CA:en";
+  return "hl=en-US&gl=US&ceid=US:en"; // default for "usca"
+}
+
+function baseQuery(): string {
+  // Keep the query focused on logistics-relevant facility events.
+  return [
+    '(',
+    '"distribution center"',
+    'OR "fulfillment center"',
+    'OR "warehouse"',
+    'OR "3PL"',
+    'OR "cold storage"',
+    ')',
+    '(',
+    'opens',
+    'OR opening',
+    'OR launch',
+    'OR launches',
+    'OR expansion',
+    'OR expands',
+    'OR "new facility"',
+    'OR "new site"',
+    'OR "starts shipping"',
+    ')'
+  ].join(" ");
+}
+
+function buildQuery(persona?: PersonaLite): string {
+  // Persona terms are optional hints only (prevent generic drift).
+  const q = baseQuery();
+  const extras: string[] = [];
+  if (persona && persona.solves) {
+    const t = String(persona.solves).replace(/"/g, "");
+    if (t) extras.push('"' + t + '"');
+  }
+  return [q, ...extras].join(" ");
+}
+
+async function fetchText(url: string, timeoutMs = 12000): Promise<string> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const r = await fetch(url, { signal: ctrl.signal, headers: { "user-agent": "Mozilla/5.0 GGGP/LeadFinder" } });
+    const r = await fetch(url, {
+      signal: ctrl.signal,
+      headers: { "user-agent": "Mozilla/5.0 GGGP/LeadFinder" }
+    });
     return await r.text();
   } catch {
     return "";
-  } finally { clearTimeout(timer); }
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-// Try to find a probable company domain inside the article page (canonical/og:url or external company link).
-function extractCompanyDomainFromArticle(articleUrl: string, html: string): string {
-  const first = (re: RegExp) => (html.match(re)?.[1] || "").trim();
-  // Prefer canonical url or og:url
-  const canonical = first(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i);
-  const ogUrl     = first(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i);
-  const primary = hostname(canonical || ogUrl || articleUrl);
+// Tiny XML helpers (no DOMParser needed)
+function firstBetween(xml: string, tag: string): string {
+  const open = "<" + tag + ">";
+  const close = "</" + tag + ">";
+  const i = xml.indexOf(open);
+  if (i === -1) return "";
+  const j = xml.indexOf(close, i + open.length);
+  if (j === -1) return "";
+  return xml.slice(i + open.length, j).trim();
+}
+function itemsOf(xml: string): string[] {
+  const items: string[] = [];
+  let start = 0;
+  while (true) {
+    const i = xml.indexOf("<item>", start);
+    if (i === -1) break;
+    const j = xml.indexOf("</item>", i + 6);
+    if (j === -1) break;
+    items.push(xml.slice(i, j + 7));
+    start = j + 7;
+  }
+  return items;
+}
 
-  // If primary is a news site, scan for outbound links that look like company home pages.
-  if (!BLOCKLIST_HOSTS.has(primary)) return primary;
+function cleanTitle(t: string): string {
+  // remove " - Site" tail to keep title lean
+  const k = t.indexOf(" - ");
+  return k > 0 ? t.slice(0, k).trim() : t.trim();
+}
 
-  // Grab first external link that is not the article host and also not a known social/pr/news domain
-  const linkRe = /<a[^>]+href=["']([^"']+)["'][^>]*>/gi;
-  let m;
-  while ((m = linkRe.exec(html))) {
+function hotByTitleAndRecency(title: string, pub: string): boolean {
+  const t = title.toLowerCase();
+  const hotWords = ["opens", "opening", "launches", "launch", "starts shipping", "grand opening"];
+  const kw = hotWords.some(w => t.indexOf(w) >= 0);
+  return kw && isRecent(pub, 14);
+}
+
+function recencyScore(pub: string): number {
+  const dt = new Date(pub);
+  if (isNaN(dt.getTime())) return 0.3;
+  const ageDays = Math.max(0, Math.floor((Date.now() - dt.getTime()) / 86400_000));
+  const s = 1 / Math.max(1, ageDays + 1);
+  return Math.max(0.2, Math.min(1, +s.toFixed(2)));
+}
+
+// Try extracting a likely company domain from article HTML:
+// 1) <link rel="canonical" href="..."> or <meta property="og:url" content="...">
+// 2) if those are a news host, scan for the first external link that isn't a blocked host.
+function extractCompanyDomain(articleUrl: string, html: string): string {
+  const canonical = matchMetaLink(html, "link", "rel", "canonical", "href");
+  const ogUrl = matchMetaLink(html, "meta", "property", "og:url", "content");
+  const primary = toHostname(canonical || ogUrl || articleUrl);
+
+  if (primary && !BLOCKLIST_HOSTS.has(primary)) return primary;
+
+  // fallback: first outbound anchor that isn't the news domain or a known block
+  const re = /<a[^>]+href=["']([^"']+)["'][^>]*>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
     const href = m[1];
     if (!/^https?:/i.test(href)) continue;
-    const h = hostname(href);
+    const h = toHostname(href);
     if (!h || h === primary) continue;
     if (BLOCKLIST_HOSTS.has(h)) continue;
-    // Skip tracking / redirectors
-    if (/^lnkd\.in$|^t\.co$|^bit\.ly$|^goo\.gl$/.test(h)) continue;
+    // skip obvious shorteners
+    if (h === "lnkd.in" || h === "t.co" || h === "bit.ly" || h === "goo.gl") continue;
     return h;
   }
   return "";
 }
 
-export async function collectNews({
-  supplierDomain,
-  region = "usca",
-  radiusMi = 50, // not used by RSS, kept for interface parity
-  persona
-}: {
-  supplierDomain: string; region?: Region; radiusMi?: number; persona?: PersonaLite;
+function matchMetaLink(html: string, tag: "link" | "meta", k: string, v: string, attr: string): string {
+  // very basic attribute scan to avoid complex regex pitfalls
+  const lower = html.toLowerCase();
+  const open = "<" + tag;
+  let pos = 0;
+  while (true) {
+    const i = lower.indexOf(open, pos);
+    if (i === -1) return "";
+    const j = lower.indexOf(">", i + open.length);
+    if (j === -1) return "";
+    const frag = html.slice(i, j + 1);
+    const fragLower = lower.slice(i, j + 1);
+    if (fragLower.indexOf(k + '="' + v + '"') >= 0 || fragLower.indexOf(k + "='" + v + "'") >= 0) {
+      const hv = readAttr(frag, attr);
+      if (hv) return hv;
+    }
+    pos = j + 1;
+  }
+}
+
+function readAttr(tagHtml: string, attr: string): string {
+  const re = new RegExp(attr + '\\s*=\\s*["\']([^"\']+)["\']', "i");
+  const m = re.exec(tagHtml);
+  return m ? m[1] : "";
+}
+
+export async function collectNews(opts: {
+  supplierDomain: string;
+  region?: Region;
+  radiusMi?: number;   // unused for RSS; kept for interface parity
+  persona?: PersonaLite;
 }): Promise<Candidate[]> {
+  const supplier = String(opts.supplierDomain || "").toLowerCase().replace(/^www\./, "");
+  const region = (opts.region || "usca") as Region;
 
   const qp = new URLSearchParams();
-  qp.set("q", buildQuery(persona));
-  // Sorting by date is the default via RSS feed.
-  const params = regionParams(region as Region);
-  const url = `${NEWS_BASE}?${qp.toString()}&${params}`;
+  qp.set("q", buildQuery(opts.persona));
+  const url = NEWS_BASE + "?" + qp.toString() + "&" + regionParams(region);
 
-  const xml = await fetchText(url, 10_000);
+  const xml = await fetchText(url, 10000);
   if (!xml) return [];
 
-  const itemsXml = xml.match(/<item>[\\s\\S]*?<\\/item>/gi) || [];
+  const items = itemsOf(xml);
   const out: Candidate[] = [];
 
-  for (const it of itemsXml.slice(0, 20)) { // cap per call
-    const title = cleanTitle(textBetween(it, "title")[0] || "");
-    const link  = textBetween(it, "link")[0] || "";
-    const pub   = textBetween(it, "pubDate")[0] || "";
+  for (let idx = 0; idx < items.length && out.length < 20; idx++) {
+    const it = items[idx];
+    const titleRaw = firstBetween(it, "title");
+    const link = firstBetween(it, "link");
+    const pub = firstBetween(it, "pubDate");
+    const title = cleanTitle(titleRaw);
 
     if (!title || !link) continue;
 
-    const articleHtml = await fetchText(link, 10_000);
+    const articleHtml = await fetchText(link, 10000);
     if (!articleHtml) continue;
 
-    const domain = extractCompanyDomainFromArticle(link, articleHtml);
+    const domain = extractCompanyDomain(link, articleHtml);
     if (!domain) continue;
 
-    // Don’t suggest the supplier itself
-    if (domain === supplierDomain.replace(/^www\\./, "")) continue;
+    if (domain === supplier) continue; // never return the supplier itself
 
-    const hot = looksHot(title, pub);
-    const score = scoreFromRecency(pub);
+    const hot = hotByTitleAndRecency(title, pub);
 
     out.push({
       host: domain,
-      company: "", // unknown w/o enrichment; UI shows host link anyway
-      title,
+      title: title,
       temperature: hot ? "hot" : "warm",
-      whyText: `${title} (${new Date(pub).toDateString()})`,
+      whyText: title + " (" + new Date(pub).toDateString() + ")",
       why: {
-        signal: { label: hot ? "Opening/launch signal" : "Expansion signal", score, detail: title },
-        context: { label: "News (RSS)", detail: hostname(link) }
+        signal: {
+          label: hot ? "Opening/launch signal" : "Expansion signal",
+          score: recencyScore(pub),
+          detail: title
+        },
+        context: { label: "News (RSS)", detail: toHostname(link) }
       },
-      created: iso()
+      created: nowIso()
     });
   }
 
