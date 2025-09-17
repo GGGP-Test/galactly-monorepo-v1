@@ -1,91 +1,196 @@
-import { load as loadHtml } from "cheerio";
+// src/persona.ts
+// Lightweight persona inference for packaging suppliers.
+// No extra deps: uses built-in fetch + simple text heuristics.
 
 export type Persona = {
-  supplierDomain: string;
-  oneLiner: string;              // "Peak Packaging sells X to Y; best contact: Z"
-  offer: string[];               // products/services
-  solves: string[];              // problems solved
-  buyerTitles: string[];         // who to talk to
-  sectors: string[];             // verticals
-  confidence: number;            // 0..1
-};
-
-const OFFER_HINTS = [
-  "packaging", "corrugated", "boxes", "carton", "mailer", "poly mailer", "film",
-  "stretch", "wrap", "void fill", "dunnage", "labels", "tape", "strapping",
-  "kitting", "3pl", "fulfillment", "right-size", "cartonization", "ista-6"
-];
-
-const SOLVE_HINTS = [
-  "reduce damage", "reduce returns", "cut dim weight", "dim weight",
-  "sustainability", "eco", "recyclable", "save freight", "automation",
-  "cartonization", "right size", "right-size", "void reduction", "ISTA-6",
-];
-
-const TITLE_HINTS = [
-  "packaging engineer", "fulfillment", "supply chain", "operations",
-  "procurement", "purchasing", "logistics", "warehouse", "vp operations",
-  "director operations", "sustainability"
-];
-
-const SECTOR_HINTS = [
-  "dtc", "ecommerce", "retail", "subscription", "3pl", "cold chain",
-  "food", "beverage", "beauty", "apparel", "electronics", "health",
-];
-
-function anyIncludes(text: string, list: string[]) {
-  const t = text.toLowerCase();
-  return list.filter(w => t.includes(w));
+  host: string
+  company: string
+  productOffer: string[]
+  sectors: string[]
+  solves: string[]
+  buyerTitles: string[]
+  line: string
+  confidence: number // 0..1
+  why: Array<{ cue: string; weight: number }>
+  fetchedAt: string
 }
 
-async function fetchHtml(url: string) {
-  const res = await fetch(url, { headers: { "user-agent": "persona-crawler" }, redirect: "follow" });
-  if (!res.ok) throw new Error(`Fetch ${url} -> ${res.status}`);
-  return await res.text();
+const TIMEOUT_MS = 12000
+
+// Keyword banks (extendable). Weight ~ relative importance.
+const PRODUCTS: Array<[string, number]> = [
+  ['corrugated', 0.20],
+  ['boxes', 0.12],
+  ['right-size', 0.25],
+  ['mailers', 0.18],
+  ['poly mailer', 0.18],
+  ['bubble mailer', 0.16],
+  ['labels', 0.10],
+  ['tape', 0.10],
+  ['stretch film', 0.20],
+  ['shrink film', 0.16],
+  ['void fill', 0.16],
+  ['cushioning', 0.12],
+  ['pallet', 0.10],
+  ['automation', 0.12],
+  ['cartonization', 0.28],
+]
+
+const SECTORS: Array<[string, number]> = [
+  ['e-commerce', 0.25],
+  ['ecommerce', 0.25],
+  ['dtc', 0.22],
+  ['subscription', 0.16],
+  ['3pl', 0.18],
+  ['retail', 0.12],
+  ['grocery', 0.10],
+  ['cold chain', 0.14],
+  ['food', 0.10],
+  ['beverage', 0.10],
+  ['pharma', 0.10],
+  ['cosmetics', 0.10],
+  ['electronics', 0.10],
+]
+
+const SOLVES: Array<[string, number]> = [
+  ['dim weight', 0.24],
+  ['reduce damage', 0.24],
+  ['returns', 0.12],
+  ['right-size', 0.28],
+  ['sustainab', 0.14], // sustainability/sustainable
+  ['automation', 0.12],
+  ['throughput', 0.10],
+  ['ista', 0.10],
+  ['eco', 0.08],
+]
+
+const TITLES: Array<[string, number]> = [
+  ['fulfillment ops manager', 0.30],
+  ['packaging engineer', 0.28],
+  ['supply chain manager', 0.20],
+  ['operations manager', 0.18],
+  ['procurement', 0.14],
+  ['plant manager', 0.14],
+  ['warehouse manager', 0.16],
+]
+
+// Fallback titles if text gives no strong cues.
+const TITLE_DEFAULTS = [
+  'Fulfillment Ops Manager',
+  'Packaging Engineer',
+  'Supply Chain Manager',
+]
+
+// Very small in-memory cache (per host) to avoid re-fetching repeatedly.
+const cache = new Map<string, Persona>()
+
+function abortableFetch(url: string, ms = TIMEOUT_MS) {
+  const controller = new AbortController()
+  const t = setTimeout(() => controller.abort(), ms)
+  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(t))
 }
 
-function uniqTop(arr: string[], limit: number) {
-  const counts = new Map<string, number>();
-  for (const a of arr) counts.set(a, (counts.get(a) || 0) + 1);
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([k]) => k)
-    .slice(0, limit);
-}
+function pickCompanyFromHtml(html: string, host: string): string {
+  const og = html.match(/property=['"]og:site_name['"][^>]*content=['"]([^'"]+)['"]/i)?.[1]
+  if (og) return sanitize(og)
 
-export async function buildPersonaFromSupplier(supplierDomain: string): Promise<Persona> {
-  const base = `https://${supplierDomain.replace(/^https?:\/\//, "")}`;
-  // try a few obvious pages
-  const pages = ["/", "/about", "/solutions", "/products", "/services"];
-  const texts: string[] = [];
-
-  for (const p of pages) {
-    try {
-      const html = await fetchHtml(new URL(p, base).toString());
-      const $ = loadHtml(html);
-      const t = $("body").text().replace(/\s+/g, " ").trim();
-      texts.push(t.slice(0, 200000));
-    } catch {}
+  const title = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]
+  if (title) {
+    // Trim things like " | Company Name" or " – …"
+    const parts = title.split(/[\|\-–—]/).map(s => s.trim()).filter(Boolean)
+    const longest = parts.sort((a, b) => b.length - a.length)[0] || title
+    return sanitize(longest).slice(0, 60)
   }
-  const corpus = texts.join(" \n ");
 
-  const offer = uniqTop(anyIncludes(corpus, OFFER_HINTS), 6);
-  const solves = uniqTop(anyIncludes(corpus, SOLVE_HINTS), 6);
-  const buyerTitles = uniqTop(anyIncludes(corpus, TITLE_HINTS), 6);
-  const sectors = uniqTop(anyIncludes(corpus, SECTOR_HINTS), 6);
+  // Fallback: host without www + TLD split
+  const base = host.replace(/^www\./, '')
+  const stem = base.split('.')[0]
+  return stem.charAt(0).toUpperCase() + stem.slice(1)
+}
 
-  // heuristic confidence
-  const confidence = Math.min(1, (offer.length + buyerTitles.length + sectors.length) / 12);
+function sanitize(s: string) {
+  return s.replace(/\s+/g, ' ').trim()
+}
 
-  const who = buyerTitles[0] ? buyerTitles[0].replace(/\b\w/g, c => c.toUpperCase()) : "Operations";
-  const offerStr = offer.slice(0,2).join(", ") || "packaging solutions";
-  const sectorStr = sectors.slice(0,2).join(", ") || "e-commerce & retail";
-  const oneLiner =
-    `${supplierDomain} sells ${offerStr} to ${sectorStr}; best person to contact is ${who}.`;
+function scoreBank(html: string, bank: Array<[string, number]>) {
+  const text = html.toLowerCase()
+  let total = 0
+  const hits: Array<{k: string; w: number; c: number}> = []
+  for (const [k, w] of bank) {
+    const rx = new RegExp('\\b' + k.replace(/\s+/g, '\\s+') + '\\b', 'gi')
+    const c = (text.match(rx) || []).length
+    if (c > 0) {
+      total += w * Math.min(1, c) // cap each key’s contribution
+      hits.push({ k, w, c })
+    }
+  }
+  return { total, hits }
+}
 
-  return {
-    supplierDomain,
-    oneLiner,
-    offer, solves, buyerTitles, sectors, confidence
-  };
+function topKeys(hits: Array<{k:string;w:number;c:number}>, limit: number) {
+  return hits.sort((a,b)=> (b.w*b.c)-(a.w*a.c)).slice(0, limit).map(h => h.k)
+}
+
+function buildOneLiner(company: string, products: string[], sectors: string[], titles: string[]) {
+  const prod = products.slice(0, 2).join(' & ') || 'packaging'
+  const who  = sectors.slice(0, 2).join(' / ') || 'e-commerce operations'
+  const title = titles[0] || TITLE_DEFAULTS[0]
+  return `${company} sells ${prod} to ${who}; best first-contact: ${title}.`
+}
+
+export async function inferPersonaFromSite(url: string): Promise<Persona> {
+  const u = new URL(url)
+  const host = u.host.toLowerCase()
+  if (cache.has(host)) return cache.get(host)!
+
+  const res = await abortableFetch(url)
+  if (!res.ok) throw new Error(`Fetch failed (${res.status}) for ${url}`)
+  const html = await res.text()
+
+  const company = pickCompanyFromHtml(html, host)
+
+  const p = scoreBank(html, PRODUCTS)
+  const s = scoreBank(html, SECTORS)
+  const z = scoreBank(html, SOLVES)
+
+  // Titles are trickier; we’ll pull from copy if present, else defaults.
+  const titlesScore = scoreBank(html, TITLES)
+  const buyerTitles = titlesScore.hits.length
+    ? topKeys(titlesScore.hits, 3).map(capWords)
+    : TITLE_DEFAULTS
+
+  const productOffer = topKeys(p.hits, 5)
+  const sectors = topKeys(s.hits, 5)
+  const solves = topKeys(z.hits, 5)
+
+  // Very simple confidence: sigmoid over weighted totals.
+  const raw = p.total * 0.45 + s.total * 0.35 + z.total * 0.20
+  const confidence = 1 / (1 + Math.exp(-4 * (raw - 0.6))) // centered ~0.6
+
+  const why: Persona['why'] = []
+  for (const h of [...p.hits, ...s.hits, ...z.hits].slice(0, 10)) {
+    why.push({ cue: h.k, weight: +(h.w * Math.min(1, h.c)).toFixed(3) })
+  }
+
+  const line = buildOneLiner(company, productOffer, sectors, buyerTitles)
+
+  const persona: Persona = {
+    host,
+    company,
+    productOffer,
+    sectors,
+    solves,
+    buyerTitles,
+    line,
+    confidence: +confidence.toFixed(3),
+    why,
+    fetchedAt: new Date().toISOString(),
+  }
+
+  cache.set(host, persona)
+  return persona
+}
+
+function capWords(s: string) {
+  return s.replace(/\b\w+/g, m => m.charAt(0).toUpperCase() + m.slice(1))
 }
