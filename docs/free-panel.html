@@ -208,7 +208,6 @@
     }
 
     function nlWhy(why){
-      // Turn our machine-ish structure into plain language chips
       const chips = [];
       if (!why) return chips;
       if (why.meta){
@@ -229,10 +228,12 @@
     function renderList(items){
       UI.leadRows.innerHTML = '';
       items.forEach(it=>{
+        const host = (it.host||'').replace(/^https?:\/\//,'');
+        const href = host ? `https://${host}` : '#';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="mono">${it.id ?? ''}</td>
-          <td><a class="link mono" href="https://${it.host}" target="_blank">${it.host}</a></td>
+          <td><a class="link mono" href="${href}" target="_blank">${host}</a></td>
           <td>${it.platform||'unknown'}</td>
           <td class="mono">${it.title||''}</td>
           <td>${it.created||''}</td>
@@ -245,11 +246,13 @@
     }
 
     function renderDetails(it){
+      const host = (it.host||'').replace(/^https?:\/\//,'');
+      const href = host ? `https://${host}` : '#';
       UI.details.innerHTML = `
         <div class="split">
           <div>
             <div class="pill"><span class="badge">ID</span> ${it.id??''}</div>
-            <div class="pill"><span class="badge">Host</span> <a class="link mono" href="https://${it.host}" target="_blank">${it.host}</a></div>
+            <div class="pill"><span class="badge">Host</span> <a class="link mono" href="${href}" target="_blank">${host}</a></div>
             <div class="pill"><span class="badge">Temp</span> <span class="temp ${it.temperature||'warm'}">${it.temperature||'warm'}</span></div>
           </div>
           <div>
@@ -263,8 +266,20 @@
           ${it.whyText ? `<div class="notice" style="margin-top:8px">${it.whyText}</div>`:''}
         </div>
       `;
-      // auto-fill supplier box from selected lead's host (handy for quick testing)
       UI.supplier.value ||= (it && it.host) || '';
+    }
+
+    function toTableItems(cands){
+      return (cands||[]).map((c, i) => ({
+        id: i+1,
+        host: c.host || c.domain || '',
+        platform: c.source || 'news',
+        title: c.title || c.reason || '',
+        created: c.created || '',
+        temperature: c.temperature || (typeof c.score==='number' && c.score>=0.65 ? 'hot':'warm'),
+        why: c.why || null,
+        whyText: c.whyText || c.reason || ''
+      }));
     }
 
     async function refresh(kind){
@@ -325,10 +340,15 @@
       UI.findMsg.textContent = 'Finding buyers…';
       const r = await call('POST','/api/v1/leads/find-buyers', body);
       UI.find.disabled = false;
-      if (!r.ok){ UI.findMsg.innerHTML = `<div class="notice error mono">HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}</div>`; return; }
-      const nHot  = (r.data?.candidates||[]).filter(x=>x.temperature==='hot').length;
-      const nWarm = (r.data?.candidates||[]).filter(x=>x.temperature!=='hot').length;
-      UI.findMsg.innerHTML = `<div class="notice success mono">Created ${r.data?.created||0} candidate(s). Hot:${nHot} Warm:${nWarm}. Refresh lists to view.</div>`;
+      if (!r.ok){
+        UI.findMsg.innerHTML = `<div class="notice error mono">HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}</div>`;
+        return;
+      }
+      const items = toTableItems(r.data?.candidates||[]);
+      const nHot  = items.filter(x=>x.temperature==='hot').length;
+      const nWarm = items.length - nHot;
+      UI.findMsg.innerHTML = `<div class="notice success mono">Created ${items.length} candidate(s). Hot:${nHot} Warm:${nWarm}. Showing them below.</div>`;
+      renderList(items); // render immediately from POST response
     };
 
     UI.dlHot.onclick  = async ()=>{ const r=await call('GET','/api/v1/leads?temp=hot');  if(!r.ok) return toast('Failed to load hot leads',false,true); download('leads_hot.csv', csv(r.data.items||[])); };
