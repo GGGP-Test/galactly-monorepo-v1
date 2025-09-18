@@ -1,4 +1,4 @@
-// Buyers pipeline with last-resort Google News RSS fallback.
+// Buyers pipeline with resilient dual-RSS fallback (Google News + Bing News).
 // Node 20 has global fetch; no extra deps.
 
 type Discovery = {
@@ -9,8 +9,8 @@ type Discovery = {
 };
 
 type PipelineOpts = {
-  region?: "us" | "ca";
-  radiusMi?: number; // kept for API shape, not used by RSS fallback
+  region?: string;          // "us", "ca", or "usca"
+  radiusMi?: number;
 };
 
 type Candidate = {
@@ -19,10 +19,10 @@ type Candidate = {
   company?: string;
   name?: string;
   title?: string;
-  score?: number;           // 0..1 – used for hot/warm threshold
-  source?: string;          // adapter/source label
-  evidence?: any[];         // lightweight evidence for the UI
-  reason?: string;          // optional plain reason
+  score?: number;      // 0..1 – used by caller to mark hot/warm
+  source?: string;     // adapter/source label
+  evidence?: any[];    // lightweight evidence for UI
+  reason?: string;     // plain reason
 };
 
 // ---------------------------------------------------------------------------
@@ -45,103 +45,112 @@ function scoreFromTitle(t: string): number {
   if (/\b(open|opens|opening|launched|launches|debut|grand opening)\b/.test(s)) score += 0.35;
   if (/\b(expand|expands|expansion|adds|new facility)\b/.test(s)) score += 0.25;
   if (/\b(hire|hiring|jobs)\b/.test(s)) score += 0.1;
-  if (score > 1) score = 1;
-  return Math.max(0.1, score);
+  return Math.max(0.1, Math.min(1, score));
 }
 
-function rssEndpoint(region: "us" | "ca", q: string): string {
-  // Google News RSS search; keep it simple and reliable
-  const base = "https://news.google.com/rss/search";
-  const hl = region === "ca" ? "en-CA" : "en-US";
-  const gl = region === "ca" ? "CA" : "US";
-  const ceid = region === "ca" ? "CA:en" : "US:en";
-  const url = `${base}?q=${encodeURIComponent(q)}&hl=${hl}&gl=${gl}&ceid=${ceid}`;
-  return url;
-}
-
-function parseRssItems(xml: string): { title: string; link: string; pubDate?: string }[] {
-  const items: { title: string; link: string; pubDate?: string }[] = [];
-  const rxItem = /<item>([\s\S]*?)<\/item>/g;
-  let m: RegExpExecArray | null;
-  while ((m = rxItem.exec(xml))) {
-    const chunk = m[1];
-    const title = (chunk.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ??
-                   chunk.match(/<title>(.*?)<\/title>/)?.[1] ?? "").trim();
-    const link = (chunk.match(/<link>(.*?)<\/link>/)?.[1] ?? "").trim();
-    const pubDate = chunk.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]?.trim();
-    if (title && link) items.push({ title, link, pubDate });
-  }
-  return items;
-}
-
-// Pull a few orthogonal queries so we’re not brittle
 function buildQueries(discovery: Discovery): string[] {
-  const seeds: string[] = [];
   const personaTxt = [
     discovery?.persona?.offer,
     discovery?.persona?.solves,
     ...(Array.isArray(discovery?.latents) ? discovery!.latents! : []),
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+  ].filter(Boolean).join(" ").toLowerCase();
 
-  // Base signals relevant to packaging suppliers’ buyers
-  seeds.push(
+  const seeds = new Set<string>([
     // openings / launches
     '(warehouse OR "distribution center" OR "fulfillment center" OR "cold storage") (open OR opens OR opening OR launched OR launch)',
     // expansions
     '(warehouse OR "distribution center" OR "fulfillment center" OR "cold storage") (expand OR expansion OR adds OR "new facility")',
-    // retail / CPG activity (often packaging buyers)
-    '(retail OR e-commerce OR manufacturer) ("new warehouse" OR "new distribution center")'
-  );
+    // retail / manufacturer activity (often packaging buyers)
+    '(retail OR e-commerce OR manufacturer) ("new warehouse" OR "new distribution center")',
+  ]);
 
-  // If persona mentions corrugated, film, labels etc., bias words a bit
   if (personaTxt.includes("corrugated") || personaTxt.includes("box")) {
-    seeds.push('(corrugated OR boxes) (warehouse OR "distribution center") (open OR expand)');
+    seeds.add('(corrugated OR boxes) (warehouse OR "distribution center") (open OR expand)');
   }
   if (personaTxt.includes("film") || personaTxt.includes("stretch")) {
-    seeds.push('(stretch film OR pallet OR wrap) (warehouse OR "distribution center")');
+    seeds.add('(stretch film OR pallet OR wrap) (warehouse OR "distribution center")');
   }
   if (personaTxt.includes("label")) {
-    seeds.push('(labels OR labeling) (warehouse OR "distribution center") expansion');
+    seeds.add('(labels OR labeling) (warehouse OR "distribution center") expansion');
   }
-
-  // De-dup and cap
-  return Array.from(new Set(seeds)).slice(0, 5);
+  return Array.from(seeds).slice(0, 6);
 }
 
-async function fetchNews(region: "us" | "ca", q: string) {
-  const url = rssEndpoint(region, `${q} when:14d`);
-  const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (LeadsBot)" } });
-  if (!r.ok) {
-    // be nice to the endpoint
-    await sleep(300);
-    return [];
+function parseRss(xml: string) {
+  const out: { title: string; link: string; pubDate?: string }[] = [];
+  const rxItem = /<item>([\s\S]*?)<\/item>/g;
+  let m: RegExpExecArray | null;
+  while ((m = rxItem.exec(xml))) {
+    const chunk = m[1];
+    const title =
+      chunk.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]?.trim() ||
+      chunk.match(/<title>(.*?)<\/title>/)?.[1]?.trim() || "";
+    const link =
+      chunk.match(/<link>(.*?)<\/link>/)?.[1]?.trim() ||
+      chunk.match(/<guid.*?>(.*?)<\/guid>/)?.[1]?.trim() || "";
+    const pubDate = chunk.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]?.trim();
+    if (title && link) out.push({ title, link, pubDate });
   }
-  const xml = await r.text();
-  const items = parseRssItems(xml).slice(0, 12); // keep it small
+  return out;
+}
+
+async function fetchText(url: string) {
+  try {
+    const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (LeadsBot)" } });
+    if (!r.ok) return "";
+    return await r.text();
+  } catch {
+    return "";
+  }
+}
+
+function googleRssUrl(region: "us" | "ca", q: string) {
+  const hl = region === "ca" ? "en-CA" : "en-US";
+  const gl = region === "ca" ? "CA" : "US";
+  const ceid = region === "ca" ? "CA:en" : "US:en";
+  return `https://news.google.com/rss/search?q=${encodeURIComponent(q)}+when:30d&hl=${hl}&gl=${gl}&ceid=${ceid}`;
+}
+
+function bingRssUrl(q: string) {
+  // Bing News RSS
+  return `https://www.bing.com/news/search?q=${encodeURIComponent(q)}&format=RSS&setlang=en-US`;
+}
+
+async function collectFromGoogle(region: "us" | "ca", q: string) {
+  const xml = await fetchText(googleRssUrl(region, q));
+  const items = parseRss(xml).slice(0, 20);
   return items.map(it => {
-    const host = safeHostname(it.link);
-    const score = scoreFromTitle(it.title);
-    const cand: Candidate = {
+    const host = safeHostname(it.link) || "news.google.com";
+    return {
       domain: host,
       title: it.title,
-      score,
-      source: "News (RSS)",
+      score: scoreFromTitle(it.title),
+      source: "News (Google RSS)",
       evidence: [{ detail: { title: it.title }, topic: "news.google.com", pubDate: it.pubDate }],
-      reason: it.title
-    };
-    return cand;
+      reason: it.title,
+    } as Candidate;
   });
 }
 
-// ---------------------------------------------------------------------------
-// Try any registered adapters (if you have them). For this drop-in we keep a
-// tiny no-op list so the file compiles even if registry is empty.
-// ---------------------------------------------------------------------------
+async function collectFromBing(q: string) {
+  const xml = await fetchText(bingRssUrl(q));
+  const items = parseRss(xml).slice(0, 20);
+  return items.map(it => {
+    const host = safeHostname(it.link) || "bing.com";
+    return {
+      domain: host,
+      title: it.title,
+      score: scoreFromTitle(it.title),
+      source: "News (Bing RSS)",
+      evidence: [{ detail: { title: it.title }, topic: "bing.com", pubDate: it.pubDate }],
+      reason: it.title,
+    } as Candidate;
+  });
+}
+
+// Registered adapters (kept empty-safe)
 type Adapter = (d: Discovery, o: PipelineOpts) => Promise<Candidate[]>;
-const ADAPTERS: Adapter[] = []; // your existing adapters can be wired here later
+const ADAPTERS: Adapter[] = []; // wire your directory/search adapters here later
 
 async function runAdapters(discovery: Discovery, opts: PipelineOpts): Promise<Candidate[]> {
   const out: Candidate[] = [];
@@ -149,10 +158,7 @@ async function runAdapters(discovery: Discovery, opts: PipelineOpts): Promise<Ca
     try {
       const got = await a(discovery, opts);
       if (Array.isArray(got) && got.length) out.push(...got);
-    } catch (e) {
-      // swallow adapter errors to keep pipeline resilient
-      // console.warn("[adapter error]", e);
-    }
+    } catch { /* swallow */ }
   }
   return out;
 }
@@ -164,26 +170,38 @@ export default async function runPipeline(
   discovery: Discovery,
   opts: PipelineOpts = {}
 ): Promise<{ candidates: Candidate[] }> {
-  const region: "us" | "ca" = (opts.region === "ca" ? "ca" : "us");
+  // Normalize region: 'usca' => 'us' first; we can duplicate later if needed
+  const r = (opts.region || "us").toLowerCase();
+  const region: "us" | "ca" = r === "ca" ? "ca" : "us";
 
-  // 1) Try whatever adapters you already have configured.
-  let candidates: Candidate[] = await runAdapters(discovery, { ...opts, region });
+  // 1) Try your adapters
+  let candidates: Candidate[] = await runAdapters(discovery, opts);
 
-  // 2) Fallback: news RSS (guarantees time-sensitive signals)
+  // 2) Fallback: Google RSS
   if (!candidates.length) {
     const queries = buildQueries(discovery);
-    const chunks = await Promise.all(queries.map(q => fetchNews(region, q)));
-    const flattened = chunks.flat();
-
-    // light dedupe by title|domain
-    const seen = new Set<string>();
-    candidates = flattened.filter(c => {
-      const key = `${(c.domain || "").toLowerCase()}|${(c.title || "").toLowerCase()}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    const batches = await Promise.all(queries.map(q => collectFromGoogle(region, q)));
+    candidates = batches.flat();
   }
+
+  // 3) Secondary fallback: Bing RSS (in case Google yields thin results)
+  if (!candidates.length) {
+    const queries = buildQueries(discovery);
+    const batches = await Promise.all(queries.map(q => collectFromBing(q)));
+    candidates = batches.flat();
+  }
+
+  // Dedupe on domain|title
+  const seen = new Set<string>();
+  candidates = candidates.filter(c => {
+    const key = `${(c.domain || "").toLowerCase()}|${(c.title || "").toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // keep a reasonable batch
+  if (candidates.length > 24) candidates = candidates.slice(0, 24);
 
   return { candidates };
 }
