@@ -1,32 +1,31 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-
+    "target": "ES2020",
+    "module": "CommonJS",
     "rootDir": "src",
     "outDir": "dist",
-
-    "strict": false,
+    "strict": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-
-    "baseUrl": "."
+    "resolveJsonModule": true,
+    "skipLibCheck": true
   },
   "include": [
     "src/index.ts",
-    "src/routes/**/*.ts"
+    "src/routes/**/*.ts",
+    "src/buyers/**/*.ts",
+    "src/providers/**/*.ts",
+    "src/lib/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "tests",
+    "**/*.test.ts",
     "src/ui/**",
     "src/scripts/**",
+    "src/security/**",
     "src/scorecard/**",
-    "**/*.test.ts"
+    "src/ops/**"
   ]
 }
