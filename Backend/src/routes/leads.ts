@@ -13,14 +13,18 @@ router.use((req, res, next) => {
   next();
 });
 
+// ---------------------------------------------------------------------------
 // POST /api/v1/leads/find-buyers
+// Body: { supplier, region, radiusMi, persona, provider?, debug? }
 router.post("/find-buyers", async (req, res) => {
   try {
     const body = (req.body || {}) as {
       supplier?: string;
-      region?: string;
+      region?: string;       // "us", "ca", or "usca"
       radiusMi?: number;
       persona?: any;
+      provider?: "google" | "bing" | "both";
+      debug?: boolean;
     };
 
     if (!body.supplier || body.supplier.length < 3) {
@@ -29,20 +33,24 @@ router.post("/find-buyers", async (req, res) => {
 
     const supplier = body.supplier.trim();
     const regionRaw = (body.region || "us").trim().toLowerCase();
-    const region = regionRaw === "ca" ? "ca" : (regionRaw === "us" ? "us" : "us"); // normalize 'usca' => 'us'
-
+    const region = regionRaw === "ca" ? "ca" : "us"; // normalize 'usca' => 'us'
     const radiusMi =
       typeof body.radiusMi === "number" && Number.isFinite(body.radiusMi) && body.radiusMi >= 0
         ? Math.floor(body.radiusMi)
         : 50;
-    const persona = body.persona;
 
-    // 1) Discovery: infer persona/latents + sources (cheap; cached inside module)
-    const discovery = await runDiscovery({ supplier, region, persona });
+    // 1) Discovery (persona/latents)
+    const discovery = await runDiscovery({ supplier, region, persona: body.persona });
 
-    // 2) Pipeline: news/directories & rank
-    const { candidates } = await runPipeline(discovery, { region, radiusMi });
+    // 2) Pipeline (with debug + provider plan)
+    const { candidates, debug } = await runPipeline(discovery, {
+      region,
+      radiusMi,
+      provider: body.provider || "both",
+      debug: body.debug === true,
+    });
 
+    // Normalize for panel (optional; panel mostly uses created + candidates count)
     const mapped = (candidates || []).map((c: any) => ({
       name: c.company || c.name || c.domain,
       website: c.domain ? (String(c.domain).startsWith("http") ? c.domain : `https://${c.domain}`) : undefined,
@@ -57,17 +65,36 @@ router.post("/find-buyers", async (req, res) => {
       ok: true,
       created: mapped.length,
       supplier: discovery.supplierDomain || supplier,
-      persona: persona ?? discovery.persona,
+      persona: body.persona ?? discovery.persona,
       latents: discovery.latents,
       archetypes: discovery.archetypes,
       candidates: mapped,
       cached: (discovery as any).cached,
+      debug, // <— visible only if debug=true
       message: mapped.length
         ? "Candidates discovered."
         : "No live signals found right now; try a different supplier or region.",
     });
   } catch (e: any) {
     console.error("[find-buyers:error]", e?.stack || e?.message || String(e));
+    return res.status(500).json({ ok: false, error: e?.message || "internal error" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/leads/ping-news  (connectivity probe)
+// Optional query: provider=google|bing|both  region=us|ca
+router.get("/ping-news", async (req, res) => {
+  try {
+    const regionRaw = String(req.query.region || "us").toLowerCase();
+    const region = regionRaw === "ca" ? "ca" : "us";
+    const provider = (String(req.query.provider || "both").toLowerCase() as "google"|"bing"|"both") || "both";
+
+    const discovery = { supplierDomain: "probe", persona: {}, latents: ["warehouse", "distribution center"] } as any;
+    const { debug } = await runPipeline(discovery, { region, provider, debug: true, radiusMi: 50 });
+
+    return res.json({ ok: true, debug });
+  } catch (e: any) {
     return res.status(500).json({ ok: false, error: e?.message || "internal error" });
   }
 });
