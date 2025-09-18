@@ -1,5 +1,5 @@
-// Buyers pipeline with resilient dual-RSS fallback (Google News + Bing News).
-// Node 20 has global fetch; no extra deps.
+// Buyers pipeline with detailed debug/tracing.
+// Node 20 has global fetch.
 
 type Discovery = {
   supplierDomain?: string;
@@ -9,8 +9,10 @@ type Discovery = {
 };
 
 type PipelineOpts = {
-  region?: string;          // "us", "ca", or "usca"
+  region?: string;          // "us", "ca", "usca"
   radiusMi?: number;
+  provider?: "google" | "bing" | "both";
+  debug?: boolean;
 };
 
 type Candidate = {
@@ -25,11 +27,25 @@ type Candidate = {
   reason?: string;     // plain reason
 };
 
+export type PipelineDebug = {
+  region: "us" | "ca";
+  providerPlan: "google" | "bing" | "both";
+  queries: {
+    provider: "google" | "bing";
+    query: string;
+    url: string;
+    ms: number;
+    bytes: number;
+    itemsParsed: number;
+  }[];
+  totalCandidates: number;
+};
+
+export type PipelineResult = { candidates: Candidate[]; debug?: PipelineDebug };
+
 // ---------------------------------------------------------------------------
 // Utilities
 // ---------------------------------------------------------------------------
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-
 function safeHostname(urlLike?: string): string | undefined {
   if (!urlLike) return undefined;
   try {
@@ -56,11 +72,8 @@ function buildQueries(discovery: Discovery): string[] {
   ].filter(Boolean).join(" ").toLowerCase();
 
   const seeds = new Set<string>([
-    // openings / launches
     '(warehouse OR "distribution center" OR "fulfillment center" OR "cold storage") (open OR opens OR opening OR launched OR launch)',
-    // expansions
     '(warehouse OR "distribution center" OR "fulfillment center" OR "cold storage") (expand OR expansion OR adds OR "new facility")',
-    // retail / manufacturer activity (often packaging buyers)
     '(retail OR e-commerce OR manufacturer) ("new warehouse" OR "new distribution center")',
   ]);
 
@@ -78,6 +91,7 @@ function buildQueries(discovery: Discovery): string[] {
 
 function parseRss(xml: string) {
   const out: { title: string; link: string; pubDate?: string }[] = [];
+  if (!xml) return out;
   const rxItem = /<item>([\s\S]*?)<\/item>/g;
   let m: RegExpExecArray | null;
   while ((m = rxItem.exec(xml))) {
@@ -94,13 +108,16 @@ function parseRss(xml: string) {
   return out;
 }
 
-async function fetchText(url: string) {
+async function fetchText(url: string): Promise<{ text: string; bytes: number; ms: number }> {
+  const t0 = Date.now();
   try {
     const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (LeadsBot)" } });
-    if (!r.ok) return "";
-    return await r.text();
+    const text = r.ok ? await r.text() : "";
+    const ms = Date.now() - t0;
+    return { text, bytes: text.length, ms };
   } catch {
-    return "";
+    const ms = Date.now() - t0;
+    return { text: "", bytes: 0, ms };
   }
 }
 
@@ -112,86 +129,66 @@ function googleRssUrl(region: "us" | "ca", q: string) {
 }
 
 function bingRssUrl(q: string) {
-  // Bing News RSS
   return `https://www.bing.com/news/search?q=${encodeURIComponent(q)}&format=RSS&setlang=en-US`;
 }
 
-async function collectFromGoogle(region: "us" | "ca", q: string) {
-  const xml = await fetchText(googleRssUrl(region, q));
-  const items = parseRss(xml).slice(0, 20);
-  return items.map(it => {
-    const host = safeHostname(it.link) || "news.google.com";
-    return {
-      domain: host,
-      title: it.title,
-      score: scoreFromTitle(it.title),
-      source: "News (Google RSS)",
-      evidence: [{ detail: { title: it.title }, topic: "news.google.com", pubDate: it.pubDate }],
-      reason: it.title,
-    } as Candidate;
-  });
-}
-
-async function collectFromBing(q: string) {
-  const xml = await fetchText(bingRssUrl(q));
-  const items = parseRss(xml).slice(0, 20);
-  return items.map(it => {
-    const host = safeHostname(it.link) || "bing.com";
-    return {
-      domain: host,
-      title: it.title,
-      score: scoreFromTitle(it.title),
-      source: "News (Bing RSS)",
-      evidence: [{ detail: { title: it.title }, topic: "bing.com", pubDate: it.pubDate }],
-      reason: it.title,
-    } as Candidate;
-  });
-}
-
-// Registered adapters (kept empty-safe)
+// Registered adapters (keep empty-safe; wire later if needed)
 type Adapter = (d: Discovery, o: PipelineOpts) => Promise<Candidate[]>;
-const ADAPTERS: Adapter[] = []; // wire your directory/search adapters here later
-
-async function runAdapters(discovery: Discovery, opts: PipelineOpts): Promise<Candidate[]> {
-  const out: Candidate[] = [];
-  for (const a of ADAPTERS) {
-    try {
-      const got = await a(discovery, opts);
-      if (Array.isArray(got) && got.length) out.push(...got);
-    } catch { /* swallow */ }
-  }
-  return out;
-}
+const ADAPTERS: Adapter[] = [];
 
 // ---------------------------------------------------------------------------
-// Main export
+// Main
 // ---------------------------------------------------------------------------
 export default async function runPipeline(
   discovery: Discovery,
   opts: PipelineOpts = {}
-): Promise<{ candidates: Candidate[] }> {
-  // Normalize region: 'usca' => 'us' first; we can duplicate later if needed
+): Promise<PipelineResult> {
   const r = (opts.region || "us").toLowerCase();
   const region: "us" | "ca" = r === "ca" ? "ca" : "us";
+  const providerPlan: "google" | "bing" | "both" = opts.provider || "both";
 
-  // 1) Try your adapters
-  let candidates: Candidate[] = await runAdapters(discovery, opts);
+  const debug: PipelineDebug = { region, providerPlan, queries: [], totalCandidates: 0 };
 
-  // 2) Fallback: Google RSS
-  if (!candidates.length) {
-    const queries = buildQueries(discovery);
-    const batches = await Promise.all(queries.map(q => collectFromGoogle(region, q)));
-    candidates = batches.flat();
+  // 1) Adapters first (if you register any later)
+  let candidates: Candidate[] = [];
+  for (const a of ADAPTERS) {
+    try {
+      const got = await a(discovery, opts);
+      if (Array.isArray(got) && got.length) candidates.push(...got);
+    } catch { /* ignore */ }
   }
 
-  // 3) Secondary fallback: Bing RSS (in case Google yields thin results)
-  if (!candidates.length) {
-    const queries = buildQueries(discovery);
-    const batches = await Promise.all(queries.map(q => collectFromBing(q)));
-    candidates = batches.flat();
+  // 2) Build intent-driven queries
+  const queries = buildQueries(discovery);
+
+  // 3) Providers per plan
+  const providers: ("google" | "bing")[] =
+    providerPlan === "both" ? ["google", "bing"] : [providerPlan];
+
+  for (const provider of providers) {
+    for (const q of queries) {
+      const url = provider === "google" ? googleRssUrl(region, q) : bingRssUrl(q);
+      const { text, bytes, ms } = await fetchText(url);
+      const items = parseRss(text);
+      debug.queries.push({ provider, query: q, url, ms, bytes, itemsParsed: items.length });
+
+      // Map to candidates
+      for (const it of items.slice(0, 20)) {
+        const host = safeHostname(it.link) || (provider === "google" ? "news.google.com" : "bing.com");
+        const cand: Candidate = {
+          domain: host,
+          title: it.title,
+          score: scoreFromTitle(it.title),
+          source: provider === "google" ? "News (Google RSS)" : "News (Bing RSS)",
+          evidence: [{ detail: { title: it.title }, topic: provider, pubDate: it.pubDate }],
+          reason: it.title,
+        };
+        candidates.push(cand);
+      }
+    }
   }
 
-  // Dedupe on domain|title
+  // Dedupe
   const seen = new Set<string>();
   candidates = candidates.filter(c => {
     const key = `${(c.domain || "").toLowerCase()}|${(c.title || "").toLowerCase()}`;
@@ -200,8 +197,10 @@ export default async function runPipeline(
     return true;
   });
 
-  // keep a reasonable batch
+  // Limit
   if (candidates.length > 24) candidates = candidates.slice(0, 24);
 
-  return { candidates };
+  debug.totalCandidates = candidates.length;
+
+  return { candidates, debug: opts.debug ? debug : undefined };
 }
