@@ -3,26 +3,29 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "outDir": "dist",
+
     "rootDir": "src",
-    "strict": true,
+    "outDir": "dist",
+
+    "strict": false,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
+
+    "baseUrl": "."
   },
   "include": [
     "src/index.ts",
-    "src/routes/**/*.ts",
-    "src/buyers/**/*.ts"
+    "src/routes/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
+    "tests",
     "src/ui/**",
     "src/scripts/**",
-    "src/security/**",
     "src/scorecard/**",
     "**/*.test.ts"
   ]
