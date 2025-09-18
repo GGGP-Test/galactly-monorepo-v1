@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
@@ -12,18 +12,14 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true
   },
-  "include": [
-    "src/index.ts",
-    "src/routes/**/*.ts",
-    "src/buyers/**/*.ts"
-  ],
+  "include": ["src/**/*.ts"],
   "exclude": [
     "node_modules",
     "dist",
-    "src/ui/**",
-    "src/scripts/**",
-    "src/security/**",
-    "src/scorecard/**",
-    "**/*.test.ts"
+    "tests",
+    "devtools",
+    "scripts",
+    "pipeline",
+    "src/**/*.test.ts"
   ]
 }
