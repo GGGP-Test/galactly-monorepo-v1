@@ -1,87 +1,126 @@
-// Backend/src/buyers/discovery.ts
-// Orchestrates buyer discovery by calling free/paid adapters.
-// First adapter: news-based warm/hot signals (free, RSS).
+// src/buyers/discovery.ts
+// Lightweight persona discovery from supplier website (no LLM, no tokens).
+// Crawls a couple of pages and extracts product/offer, solves, titles, sectors.
 
-import { collectNews } from "./adapters/news";
+export type Persona = {
+  offer: string;
+  solves: string;
+  titles: string; // comma-separated
+  sectors: string[]; // normalized tags
+};
 
-type Region = "us" | "ca" | "usca";
+export type DiscoveryInput = {
+  supplier: string; // domain
+  region?: string;
+  persona?: Partial<Persona>;
+};
 
-export interface FindBuyersInput {
-  supplier: string;
-  region?: Region;
-  radiusMi?: number;
-  persona?: { offer?: string; solves?: string; titles?: string };
-  onlyUSCA?: boolean;
-}
+export type DiscoveryResult = {
+  supplierDomain: string;
+  persona: Persona;
+  latents: string[];      // keywords we inferred
+  archetypes: string[];   // coarse buckets (e.g., "corrugated", "labels", "film")
+  cached: boolean;
+};
 
-export interface Candidate {
-  host: string;
-  company?: string;
-  title?: string;
-  platform?: string;
-  temperature?: "warm" | "hot";
-  whyText?: string;
-  why?: any;
-  created?: string;
-}
+const TIMEOUT_MS = 6000;
 
-export interface FindBuyersResult {
-  ok: boolean;
-  created: number;
-  candidates: Candidate[];
-}
-
-async function persistCandidates(cands: Candidate[]): Promise<void> {
+async function fetchText(url: string): Promise<string> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const store = await import("../buyers/store"); // optional
-    const save =
-      (store as any).insertMany ||
-      (store as any).saveCandidates ||
-      (store as any).create ||
-      (store as any).default;
-    if (typeof save === "function" && cands.length) {
-      await save(cands);
-    }
-  } catch { /* optional */ }
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) return '';
+    const txt = await r.text();
+    return txt || '';
+  } catch {
+    return '';
+  } finally {
+    clearTimeout(t);
+  }
 }
 
-export async function findBuyers(input: FindBuyersInput): Promise<FindBuyersResult> {
-  const supplier = String(input?.supplier || "").trim().toLowerCase();
-  if (!supplier) return { ok: false, created: 0, candidates: [] };
+function norm(s: string) {
+  return s.toLowerCase();
+}
 
-  const region: Region = (input?.region as Region) || "usca";
-  const radiusMi = Number(input?.radiusMi || 50) || 50;
-  const persona = {
-    offer:  (input?.persona?.offer  || "").trim(),
-    solves: (input?.persona?.solves || "").trim(),
-    titles: (input?.persona?.titles || "").trim(),
+const OFFER_MAP = [
+  { k: /corrugated|rsc|fe[fc]co|boxes?|carton/i, tag: 'corrugated boxes' },
+  { k: /label|shrink sleeve|rfid/i, tag: 'labels & sleeves' },
+  { k: /stretch( |-)?film|shrink( |-)?film|pallet wrap/i, tag: 'film & wrap' },
+  { k: /pouch|rollstock|laminate|flexible packaging/i, tag: 'flexible packaging' },
+  { k: /foam|molded pulp|inserts?/i, tag: 'protective/void fill' },
+  { k: /display|pop/i, tag: 'retail displays' },
+];
+
+const TITLES_DEFAULT = [
+  'Packaging Engineer',
+  'Procurement Manager',
+  'Purchasing Manager',
+  'Supply Chain Manager',
+  'Fulfillment Manager',
+  'Warehouse Manager'
+];
+
+const SECTOR_MAP = [
+  { k: /food|beverage|snack|bakery/i, tag: 'food & beverage' },
+  { k: /cosmetic|beauty|personal care/i, tag: 'cosmetics & personal care' },
+  { k: /pharma|medical|nutra|sterile/i, tag: 'pharma & medical' },
+  { k: /electronic|device/i, tag: 'electronics' },
+  { k: /e-?comm|d2c|fulfillment|3pl/i, tag: 'e-commerce & 3PL' },
+  { k: /auto|industrial|hardware/i, tag: 'industrial' },
+  { k: /cold chain|refrigerated|frozen/i, tag: 'cold chain' },
+];
+
+function extractPersona(htmls: string[]): { offer: string; solves: string; titles: string; sectors: string[]; latents: string[]; archetypes: string[] } {
+  const txt = norm(htmls.join(' '));
+  const latents: string[] = [];
+
+  const offerTags = OFFER_MAP.filter(o => o.k.test(txt)).map(o => o.tag);
+  const offer = offerTags.slice(0, 3).join(', ') || 'packaging solutions';
+
+  const sectors = SECTOR_MAP.filter(s => s.k.test(txt)).map(s => s.tag);
+  if (sectors.length) latents.push(...sectors);
+
+  const solvesPieces: string[] = [];
+  if (/reduce damage|damage reduction|protect/i.test(txt)) solvesPieces.push('reduces damage');
+  if (/sustainab|recycl|fsc|pcr|eco|green/i.test(txt)) solvesPieces.push('meets sustainability goals');
+  if (/speed|lead time|quick|fast|rapid/i.test(txt)) solvesPieces.push('fast turnaround');
+  if (/cold chain|refrigerated|frozen/i.test(txt)) solvesPieces.push('cold chain capable');
+  const solves = (solvesPieces.length ? solvesPieces : ['keeps products protected in storage & transit']).join(', ');
+
+  const titles = TITLES_DEFAULT.join(', ');
+  const archetypes = offerTags.length ? offerTags : ['general packaging'];
+
+  return { offer, solves, titles, sectors, latents, archetypes };
+}
+
+export default async function runDiscovery(input: DiscoveryInput): Promise<DiscoveryResult> {
+  const supplierDomain = input.supplier.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  const base = `https://${supplierDomain}`;
+
+  // Try a few obvious pages; bail fast if they 404/time out.
+  const pages = await Promise.all([
+    fetchText(base),
+    fetchText(`${base}/about`),
+    fetchText(`${base}/products`),
+    fetchText(`${base}/capabilities`),
+    fetchText(`${base}/industries`)
+  ]);
+
+  const derived = extractPersona(pages);
+  const persona: Persona = {
+    offer: input.persona?.offer || derived.offer,
+    solves: input.persona?.solves || derived.solves,
+    titles: input.persona?.titles || derived.titles,
+    sectors: input.persona?.sectors?.length ? input.persona!.sectors! : derived.sectors
   };
 
-  // --- Adapters (free first) ---
-  // 1) News-based signals (free RSS). Avoid supplier and generic sources inside the adapter.
-  let candidates: Candidate[] = [];
-  try {
-    const news = await collectNews({ supplierDomain: supplier, region, radiusMi, persona });
-    candidates = candidates.concat(news);
-  } catch { /* if an adapter fails, continue */ }
-
-  // TODO (paid / optional): add Places, LinkedIn Jobs, Ads, Commerce feeds, etc.
-
-  // Deduplicate by host + title
-  const key = (c: Candidate) => `${c.host}||${(c.title || "").toLowerCase()}`;
-  const seen = new Set<string>();
-  const deduped = candidates.filter(c => {
-    const k = key(c);
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
-
-  await persistCandidates(deduped);
-
-  return { ok: true, created: deduped.length, candidates: deduped };
+  return {
+    supplierDomain,
+    persona,
+    latents: derived.latents,
+    archetypes: derived.archetypes,
+    cached: false
+  };
 }
-
-export const discover = findBuyers;
-export const run = findBuyers;
-export default findBuyers;
