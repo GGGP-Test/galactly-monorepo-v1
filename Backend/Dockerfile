@@ -1,14 +1,14 @@
 # ---- single-stage runtime image (no separate build step) ----
 FROM node:20-alpine
 
-# Work in /app
+# Work inside /app
 WORKDIR /app
 
-# Install ALL deps so tsx is available at runtime; skip optional natives to avoid build noise
+# Install ALL deps so tsx is present at runtime (skip optional native extras)
 COPY package*.json ./
 RUN npm ci --omit=optional
 
-# Bring tsconfig + source (tsx runs TS directly)
+# Bring tsconfig + source (tsx executes TS directly)
 COPY tsconfig.json ./
 COPY src ./src
 
@@ -23,5 +23,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     .then(r=>{if(r.ok)process.exit(0);process.exit(1)}) \
     .catch(()=>process.exit(1))"
 
-# Start via npm so Northflank's default override (docker-entrypoint.sh npm start) also works
+# Match Northflank’s default CMD override (docker-entrypoint.sh npm start)
 CMD ["npm","start"]
