@@ -1,206 +1,200 @@
-// Buyers pipeline with detailed debug/tracing.
-// Node 20 has global fetch.
+// src/buyers/pipeline.ts
+// Combines Google News RSS and user-supplied RSS feeds (ports/airports/regional biz).
+// Tokenless, small memory footprint, with packaging-relevance scoring and enterprise down-weighting.
 
-type Discovery = {
-  supplierDomain?: string;
-  persona?: any;
-  latents?: string[];
-  archetypes?: string[];
+export type PipelineOpts = {
+  region?: string;            // 'us' | 'ca' | 'usca' (used only for keyword bias)
+  radiusMi?: number;          // not applied in RSS, but kept for future geo
+  excludeEnterprise?: boolean;
+  hotThreshold?: number;      // default 0.65
+  maxPerSource?: number;      // default 25
 };
 
-type PipelineOpts = {
-  region?: string;          // "us", "ca", "usca"
-  radiusMi?: number;
-  provider?: "google" | "bing" | "both";
-  debug?: boolean;
-};
-
-type Candidate = {
+export type Candidate = {
   domain?: string;
-  website?: string;
   company?: string;
   name?: string;
-  title?: string;
-  score?: number;      // 0..1 – used by caller to mark hot/warm
-  source?: string;     // adapter/source label
-  evidence?: any[];    // lightweight evidence for UI
-  reason?: string;     // plain reason
+  region?: string;
+  score: number;
+  temperature: 'hot' | 'warm';
+  source: string;
+  evidence: Array<{ detail: { title: string; url?: string; date?: string }; topic?: string }>;
 };
 
-export type PipelineDebug = {
-  region: "us" | "ca";
-  providerPlan: "google" | "bing" | "both";
-  queries: {
-    provider: "google" | "bing";
-    query: string;
-    url: string;
-    ms: number;
-    bytes: number;
-    itemsParsed: number;
-  }[];
-  totalCandidates: number;
-};
+const BIG_BRANDS = [
+  'amazon', 'walmart', 'target', 'costco', 'fedex', 'ups', 'home depot', 'lowe\'s',
+  'apple', 'microsoft', 'google', 'alphabet', 'meta', 'tesla', 'pepsico', 'coca-cola',
+  'procter & gamble', 'p&g', 'nike', 'adidas', 'samsung', 'dhl', 'maersk'
+];
 
-export type PipelineResult = { candidates: Candidate[]; debug?: PipelineDebug };
+const NEWS_KEYWORDS = [
+  'warehouse', 'distribution center', 'fulfillment center', 'dc', 'cold storage',
+  'logistics center', 'facility', 'plant', 'manufacturing site', 'packaging facility'
+];
 
-// ---------------------------------------------------------------------------
-// Utilities
-// ---------------------------------------------------------------------------
-function safeHostname(urlLike?: string): string | undefined {
-  if (!urlLike) return undefined;
+const PACKAGING_TERMS = [
+  'packaging', 'carton', 'corrugated', 'box', 'label', 'stretch film', 'shrink film',
+  'pallet', 'void fill', 'molded pulp', 'foam', 'pouch', 'rollstock', 'laminate'
+];
+
+function nowIso() { return new Date().toISOString(); }
+
+function isEnterprise(title: string): boolean {
+  const t = title.toLowerCase();
+  return BIG_BRANDS.some(b => t.includes(b));
+}
+
+function packagingRelevance(h: string): number {
+  const t = h.toLowerCase();
+  let s = 0;
+  if (NEWS_KEYWORDS.some(k => t.includes(k))) s += 0.4;
+  if (PACKAGING_TERMS.some(k => t.includes(k))) s += 0.25;
+  if (/(opens|opening|launch|expand|expansion|invest)/i.test(t)) s += 0.25;
+  if (/(hiring|jobs|recruit)/i.test(t)) s += 0.1; // small bump only
+  return Math.min(1, s);
+}
+
+/** —— RSS helpers —— **/
+
+async function fetchXml(url: string, timeoutMs = 6000): Promise<string> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const u = urlLike.startsWith("http") ? new URL(urlLike) : new URL(`https://${urlLike}`);
-    return u.hostname;
-  } catch { return undefined; }
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) return '';
+    return await r.text();
+  } catch { return ''; } finally { clearTimeout(t); }
 }
 
-function scoreFromTitle(t: string): number {
-  const s = t.toLowerCase();
-  let score = 0.25;
-  if (/\b(warehouse|distribution center|fulfillment|dc|cold storage)\b/.test(s)) score += 0.2;
-  if (/\b(open|opens|opening|launched|launches|debut|grand opening)\b/.test(s)) score += 0.35;
-  if (/\b(expand|expands|expansion|adds|new facility)\b/.test(s)) score += 0.25;
-  if (/\b(hire|hiring|jobs)\b/.test(s)) score += 0.1;
-  return Math.max(0.1, Math.min(1, score));
+function extractLinksFromGoogleDesc(desc: string): string | undefined {
+  // Google News often puts a <a href="real-url"> inside description; try to pull it.
+  const m = desc.match(/href=\"(https?:[^"]+)\"/i);
+  return m?.[1];
 }
 
-function buildQueries(discovery: Discovery): string[] {
-  const personaTxt = [
-    discovery?.persona?.offer,
-    discovery?.persona?.solves,
-    ...(Array.isArray(discovery?.latents) ? discovery!.latents! : []),
-  ].filter(Boolean).join(" ").toLowerCase();
+type RssItem = { title: string; link?: string; pubDate?: string; description?: string };
 
-  const seeds = new Set<string>([
-    '(warehouse OR "distribution center" OR "fulfillment center" OR "cold storage") (open OR opens OR opening OR launched OR launch)',
-    '(warehouse OR "distribution center" OR "fulfillment center" OR "cold storage") (expand OR expansion OR adds OR "new facility")',
-    '(retail OR e-commerce OR manufacturer) ("new warehouse" OR "new distribution center")',
-  ]);
-
-  if (personaTxt.includes("corrugated") || personaTxt.includes("box")) {
-    seeds.add('(corrugated OR boxes) (warehouse OR "distribution center") (open OR expand)');
+function parseRss(xml: string, max = 50): RssItem[] {
+  if (!xml) return [];
+  const items: RssItem[] = [];
+  const parts = xml.split(/<item>/gi).slice(1);
+  for (let i = 0; i < Math.min(max, parts.length); i++) {
+    const block = parts[i];
+    const title = (block.match(/<title>([\s\S]*?)<\/title>/i)?.[1] || '').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+    const link  = (block.match(/<link>([\s\S]*?)<\/link>/i)?.[1]  || '').trim();
+    const pub   = (block.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)?.[1] || '').trim();
+    const desc  = (block.match(/<description>([\s\S]*?)<\/description>/i)?.[1] || '').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+    if (title) items.push({ title, link, pubDate: pub, description: desc });
   }
-  if (personaTxt.includes("film") || personaTxt.includes("stretch")) {
-    seeds.add('(stretch film OR pallet OR wrap) (warehouse OR "distribution center")');
-  }
-  if (personaTxt.includes("label")) {
-    seeds.add('(labels OR labeling) (warehouse OR "distribution center") expansion');
-  }
-  return Array.from(seeds).slice(0, 6);
+  return items;
 }
 
-function parseRss(xml: string) {
-  const out: { title: string; link: string; pubDate?: string }[] = [];
-  if (!xml) return out;
-  const rxItem = /<item>([\s\S]*?)<\/item>/g;
-  let m: RegExpExecArray | null;
-  while ((m = rxItem.exec(xml))) {
-    const chunk = m[1];
-    const title =
-      chunk.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]?.trim() ||
-      chunk.match(/<title>(.*?)<\/title>/)?.[1]?.trim() || "";
-    const link =
-      chunk.match(/<link>(.*?)<\/link>/)?.[1]?.trim() ||
-      chunk.match(/<guid.*?>(.*?)<\/guid>/)?.[1]?.trim() || "";
-    const pubDate = chunk.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]?.trim();
-    if (title && link) out.push({ title, link, pubDate });
+/** —— Sources —— **/
+
+async function googleNewsFeed(region?: string): Promise<Candidate[]> {
+  // Focus on warehouse/DC/opening signals; Google News RSS query.
+  const q = encodeURIComponent('(warehouse OR "distribution center" OR "cold storage") (opens OR opening OR expansion OR invest OR facility)');
+  const url = `https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`;
+  const xml = await fetchXml(url);
+  const items = parseRss(xml, 50);
+
+  const out: Candidate[] = [];
+  for (const it of items) {
+    const title = it.title || '';
+    let link = it.link || extractLinksFromGoogleDesc(it.description || '') || it.link || '';
+    const score = packagingRelevance(title);
+    if (score < 0.35) continue; // cut early
+
+    const temp: 'hot' | 'warm' = score >= 0.65 ? 'hot' : 'warm';
+    out.push({
+      domain: link ? new URL(link).hostname.replace(/^www\./, '') : undefined,
+      company: undefined,
+      name: undefined,
+      region,
+      score,
+      temperature: temp,
+      source: 'google-news',
+      evidence: [{ detail: { title, url: link, date: it.pubDate || nowIso() }, topic: 'News (Google RSS)' }]
+    });
   }
   return out;
 }
 
-async function fetchText(url: string): Promise<{ text: string; bytes: number; ms: number }> {
-  const t0 = Date.now();
-  try {
-    const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (LeadsBot)" } });
-    const text = r.ok ? await r.text() : "";
-    const ms = Date.now() - t0;
-    return { text, bytes: text.length, ms };
-  } catch {
-    const ms = Date.now() - t0;
-    return { text: "", bytes: 0, ms };
-  }
-}
+async function customRssFeeds(): Promise<Candidate[]> {
+  const env = (process.env.BUYERS_RSS_FEEDS || '').trim();
+  if (!env) return [];
+  const feeds = env.split(',').map(s => s.trim()).filter(Boolean);
+  const out: Candidate[] = [];
 
-function googleRssUrl(region: "us" | "ca", q: string) {
-  const hl = region === "ca" ? "en-CA" : "en-US";
-  const gl = region === "ca" ? "CA" : "US";
-  const ceid = region === "ca" ? "CA:en" : "US:en";
-  return `https://news.google.com/rss/search?q=${encodeURIComponent(q)}+when:30d&hl=${hl}&gl=${gl}&ceid=${ceid}`;
-}
+  // Fetch sequentially to avoid bursts on free dynos
+  for (const feed of feeds) {
+    const xml = await fetchXml(feed);
+    const items = parseRss(xml, 50);
+    for (const it of items) {
+      const title = it.title || '';
+      const link = it.link || extractLinksFromGoogleDesc(it.description || '') || '';
+      const score = packagingRelevance(title);
+      if (score < 0.35) continue;
 
-function bingRssUrl(q: string) {
-  return `https://www.bing.com/news/search?q=${encodeURIComponent(q)}&format=RSS&setlang=en-US`;
-}
-
-// Registered adapters (keep empty-safe; wire later if needed)
-type Adapter = (d: Discovery, o: PipelineOpts) => Promise<Candidate[]>;
-const ADAPTERS: Adapter[] = [];
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-export default async function runPipeline(
-  discovery: Discovery,
-  opts: PipelineOpts = {}
-): Promise<PipelineResult> {
-  const r = (opts.region || "us").toLowerCase();
-  const region: "us" | "ca" = r === "ca" ? "ca" : "us";
-  const providerPlan: "google" | "bing" | "both" = opts.provider || "both";
-
-  const debug: PipelineDebug = { region, providerPlan, queries: [], totalCandidates: 0 };
-
-  // 1) Adapters first (if you register any later)
-  let candidates: Candidate[] = [];
-  for (const a of ADAPTERS) {
-    try {
-      const got = await a(discovery, opts);
-      if (Array.isArray(got) && got.length) candidates.push(...got);
-    } catch { /* ignore */ }
-  }
-
-  // 2) Build intent-driven queries
-  const queries = buildQueries(discovery);
-
-  // 3) Providers per plan
-  const providers: ("google" | "bing")[] =
-    providerPlan === "both" ? ["google", "bing"] : [providerPlan];
-
-  for (const provider of providers) {
-    for (const q of queries) {
-      const url = provider === "google" ? googleRssUrl(region, q) : bingRssUrl(q);
-      const { text, bytes, ms } = await fetchText(url);
-      const items = parseRss(text);
-      debug.queries.push({ provider, query: q, url, ms, bytes, itemsParsed: items.length });
-
-      // Map to candidates
-      for (const it of items.slice(0, 20)) {
-        const host = safeHostname(it.link) || (provider === "google" ? "news.google.com" : "bing.com");
-        const cand: Candidate = {
-          domain: host,
-          title: it.title,
-          score: scoreFromTitle(it.title),
-          source: provider === "google" ? "News (Google RSS)" : "News (Bing RSS)",
-          evidence: [{ detail: { title: it.title }, topic: provider, pubDate: it.pubDate }],
-          reason: it.title,
-        };
-        candidates.push(cand);
-      }
+      out.push({
+        domain: link ? new URL(link).hostname.replace(/^www\./, '') : undefined,
+        score,
+        temperature: score >= 0.65 ? 'hot' : 'warm',
+        source: `rss:${new URL(feed).hostname}`,
+        evidence: [{ detail: { title, url: link, date: it.pubDate || nowIso() }, topic: 'News (RSS)' }]
+      });
     }
   }
+  return out;
+}
 
-  // Dedupe
+/** —— Merge, score, filter —— **/
+
+function dedupeByTitle(items: Candidate[]): Candidate[] {
   const seen = new Set<string>();
-  candidates = candidates.filter(c => {
-    const key = `${(c.domain || "").toLowerCase()}|${(c.title || "").toLowerCase()}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const res: Candidate[] = [];
+  for (const c of items) {
+    const k = (c.evidence?.[0]?.detail?.title || '').toLowerCase();
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    res.push(c);
+  }
+  return res;
+}
 
-  // Limit
-  if (candidates.length > 24) candidates = candidates.slice(0, 24);
+function applyEnterpriseRule(items: Candidate[], exclude: boolean): Candidate[] {
+  if (!exclude) return items;
+  return items
+    .map(c => {
+      const title = c.evidence?.[0]?.detail?.title || '';
+      if (!title) return c;
+      // strong down-weight on megacorps
+      const penalty = isEnterprise(title) ? 0.5 : 0;
+      const newScore = Math.max(0, c.score - penalty);
+      return { ...c, score: newScore, temperature: newScore >= 0.65 ? 'hot' : 'warm' } as Candidate;
+    })
+    .filter(c => c.score >= 0.35); // prune if became too weak
+}
 
-  debug.totalCandidates = candidates.length;
+export async function runPipeline(_discovery: any, opts: PipelineOpts): Promise<{ candidates: Candidate[] }> {
+  const hotThreshold = typeof opts.hotThreshold === 'number' ? opts.hotThreshold! : (Number(process.env.HOT_THRESHOLD || '0.65') || 0.65);
+  const maxPerSource = Number(process.env.MAX_ITEMS_PER_SOURCE || String(opts.maxPerSource || 25));
 
-  return { candidates, debug: opts.debug ? debug : undefined };
+  const [gn, rss] = await Promise.all([
+    googleNewsFeed(opts.region),
+    customRssFeeds()
+  ]);
+
+  // Cap per source
+  const cap = (arr: Candidate[]) => arr.slice(0, maxPerSource);
+  let merged = dedupeByTitle([...cap(gn), ...cap(rss)]);
+
+  // Enterprise rule
+  const exclude = String(process.env.EXCLUDE_ENTERPRISE || (opts.excludeEnterprise ? 'true' : 'false')).toLowerCase() === 'true';
+  merged = applyEnterpriseRule(merged, exclude);
+
+  // Normalize temperature by hotThreshold
+  merged = merged.map(c => ({ ...c, temperature: c.score >= hotThreshold ? 'hot' : 'warm' }));
+
+  return { candidates: merged };
 }
