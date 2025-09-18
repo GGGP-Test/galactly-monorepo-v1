@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20.0.0" },
+  "main": "dist/index.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build:backend": "tsc -p tsconfig.backend.json",
+    "build": "npm run build:backend",
     "start": "node dist/index.js",
-    "dev": "tsx --watch src/index.ts",
-    "postinstall": "node -e \"process.exit(0)\""
+    "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -16,8 +16,11 @@
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
-    "@types/node": "^20.11.30",
-    "tsx": "^4.19.1",
+    "@types/node": "^20.12.12",
+    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
