@@ -1,39 +1,10 @@
 import { Router } from "express";
-import { collectNews } from "../buyers/adapters/news";
-
-type Lead = {
-  id: string;
-  host: string;
-  title: string;
-  created: string;
-  temperature: "hot" | "warm";
-  platform?: string;
-  whyText?: string;
-  why?: any;
-};
-const mem = { hot: [] as Lead[], warm: [] as Lead[] };
-const MAX_KEEP = 300;
-
-function addLead(bucket: "hot" | "warm", lead: Lead) {
-  const key = `${lead.host}::${lead.title}`;
-  if (!mem[bucket].some((x) => `${x.host}::${x.title}` === key)) {
-    mem[bucket].unshift(lead);
-    if (mem[bucket].length > MAX_KEEP) mem[bucket].length = MAX_KEEP;
-  }
-}
-function listLeads(bucket: "hot" | "warm") {
-  return mem[bucket];
-}
-
-// Tighten signal quality
-const RE_FACILITY =
-  /\b(warehouse|distribution\s+center|fulfillment\s+center|cold\s+storage|distribution\s+centre)\b/i;
-const RE_ACTION =
-  /\b(open|opening|opens|launched|launch|expands|expansion|groundbreaking|ribbon\s+cutting|new\s+facility)\b/i;
+import { collectNews } from "../buyers/adapters/news"; // <-- uses your existing adapter
+import { saveLeads, listLeads } from "../data/leads.db";
 
 const router = Router();
 
-// ---- API key guard (unchanged) ----
+/** Optional API key guard. If no key is set, this is a no-op. */
 router.use((req, res, next) => {
   const need = process.env.API_KEY || process.env.X_API_KEY;
   if (!need) return next();
@@ -42,108 +13,116 @@ router.use((req, res, next) => {
   next();
 });
 
-// ---- NO-CACHE for this router (fixes 304 / empty list) ----
-router.use((req, res, next) => {
-  // Disable etag-based 304s and all caching on these endpoints
-  req.app.set("etag", false);
+/** Prevent browser/CDN caching of API responses (avoids 304 / stale UI). */
+router.use((_, res, next) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.set("Pragma", "no-cache");
   res.set("Expires", "0");
+  res.set("Surrogate-Control", "no-store");
   next();
 });
 
-// GET /api/v1/leads?temp=hot|warm  (used by Free Panel)
+/** GET /api/v1/leads?temp=hot|warm  — list persisted leads */
 router.get("/", (req, res) => {
   const temp = String(req.query.temp || "warm").toLowerCase();
   if (temp !== "hot" && temp !== "warm") {
     return res.status(400).json({ ok: false, error: "temp must be hot|warm" });
   }
-  const items = listLeads(temp as "hot" | "warm");
+  const items = listLeads(temp as "hot" | "warm").map((r) => ({
+    id: r.id,
+    host: r.host,
+    title: r.title,
+    created: r.created,
+    temperature: r.temp,
+    why: r.why,
+  }));
   return res.status(200).json({ ok: true, count: items.length, items });
 });
 
-// Simple probe: /api/v1/leads/ping-news?region=usca&q=...
-router.get("/ping-news", async (req, res) => {
-  try {
-    const region = String(req.query.region || "usca").toLowerCase() as "us" | "ca" | "usca";
-    const q =
-      (req.query.q as string) ||
-      '("warehouse" OR "distribution center" OR "fulfillment center" OR "cold storage") + (open OR opening OR opens OR launch OR launched OR expands OR expansion OR groundbreaking OR "ribbon cutting" OR "new facility")';
-    const raw = await collectNews({ region, query: q, limit: 15 });
-    const sample = raw.slice(0, 5);
-    res.status(200).json({ ok: true, region, query: q, adapterCount: raw.length, sample });
-  } catch (e: any) {
-    console.error("[ping-news:error]", e?.message || e);
-    res.status(500).json({ ok: false, error: e?.message || "ping failed" });
-  }
-});
+/** Lightweight heuristics to keep only real facility events. */
+const RE_FACILITY =
+  /\b(warehouse|distribution\s+center|distribution\s+centre|fulfillment\s+center|cold\s+storage)\b/i;
+const RE_ACTION =
+  /\b(open|opening|opens|launch|launched|expands|expansion|groundbreaking|ribbon\s+cutting|new\s+facility)\b/i;
 
-// POST /api/v1/leads/find-buyers  (called by “Find buyers”)
+/** POST /api/v1/leads/find-buyers  — discover & persist candidates */
 router.post("/find-buyers", async (req, res) => {
   try {
-    const body = (req.body || {}) as { supplier?: string; region?: string; radiusMi?: number; persona?: any };
-    if (!body.supplier || body.supplier.length < 3) {
-      return res.status(400).json({ ok: false, error: "supplier domain is required" });
-    }
+    const region = String(req.body?.region || "usca").toLowerCase() as "us" | "ca" | "usca";
 
-    const region = String(body.region || "usca").toLowerCase() as "us" | "ca" | "usca";
+    // Broad query; we’ll filter locally with RE_ heuristics.
     const query =
       '("warehouse" OR "distribution center" OR "fulfillment center" OR "cold storage") + (open OR opening OR opens OR launch OR launched OR expands OR expansion OR groundbreaking OR "ribbon cutting" OR "new facility")';
 
-    // Pull from Google News RSS
     const raw = await collectNews({ region, query, limit: 50 });
 
-    // Filter to keep only facility + action
-    const filtered = raw.filter((it) => {
-      const t = `${it.title} ${it.description || ""}`.toLowerCase();
+    // Keep only relevant signals
+    const kept = raw.filter((it: any) => {
+      const t = `${it.title || ""} ${it.description || ""}`;
       return RE_FACILITY.test(t) && RE_ACTION.test(t);
     });
 
-    let created = 0;
     const now = new Date().toISOString();
-    const candidates: Lead[] = [];
 
-    for (const it of filtered) {
+    const rows = kept.map((it: any) => {
       const title = it.title || "(untitled)";
       const text = `${title} ${it.description || ""}`.toLowerCase();
-      const isHot = /\b(open|opening|opens|launched|ribbon|groundbreaking)\b/.test(text);
-      const temp: "hot" | "warm" = isHot ? "hot" : "warm";
-      const host = (it.domain || it.host || "news.google.com").replace(/^www\./, "");
+      const hot = /\b(open|opening|opens|launched|ribbon|groundbreaking)\b/.test(text);
+      const host = String(it.domain || it.host || "news.google.com").replace(/^www\./, "");
+      const id = `${host}::${title}`.slice(0, 200); // simple deterministic id
 
-      const lead: Lead = {
-        id: `${host}::${title}`.slice(0, 200),
+      return {
+        id,
         host,
         title,
         created: now,
-        temperature: temp,
-        platform: "news",
-        whyText: `${title} (${it.date || ""})`,
+        temp: (hot ? "hot" : "warm") as const,
         why: {
           signal: {
-            label: isHot ? "Opening/launch signal" : "Expansion signal",
-            score: isHot ? 1 : 0.33,
+            label: hot ? "Opening/launch signal" : "Expansion signal",
+            score: hot ? 1 : 0.33,
             detail: title,
           },
           context: { label: "News (RSS)", detail: host },
         },
       };
+    });
 
-      addLead(temp, lead);
-      candidates.push(lead);
-      created++;
-    }
+    // Persist for later GETs (survives restarts and multi-replica)
+    saveLeads(rows);
+
+    const hotN = rows.filter((x) => x.temp === "hot").length;
+    const warmN = rows.length - hotN;
 
     return res.status(200).json({
       ok: true,
-      created,
-      candidates,
-      message:
-        created > 0 ? "Candidates created from news signals. Refresh lists to view." : "No qualifying signals found.",
-      debug: { region, query, adapterCount: raw.length, kept: filtered.length },
+      created: rows.length,
+      candidates: rows.map((x) => ({
+        host: x.host,
+        title: x.title,
+        created: x.created,
+        temperature: x.temp,
+        why: x.why,
+        whyText: x.why?.signal?.detail,
+      })),
+      message: `Candidates created. Hot:${hotN} Warm:${warmN}. Refresh lists to view.`,
+      debug: { region, kept: kept.length, pulled: raw.length },
     });
   } catch (e: any) {
-    console.error("[find-buyers:error]", e?.stack || e?.message || String(e));
+    console.error("[find-buyers:error]", e?.stack || e?.message || e);
     return res.status(500).json({ ok: false, error: e?.message || "internal error" });
+  }
+});
+
+/** GET /api/v1/leads/ping-news  — quick sanity check in the browser */
+router.get("/ping-news", async (req, res) => {
+  try {
+    const region = String(req.query.region || "usca").toLowerCase() as "us" | "ca" | "usca";
+    const q = '("warehouse" OR "distribution center" OR "fulfillment center" OR "cold storage")';
+    const sample = await collectNews({ region, query: q, limit: 10 });
+    res.json({ ok: true, region, pulled: sample.length, sample: sample.slice(0, 5) });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e?.message || "ping failed" });
   }
 });
 
