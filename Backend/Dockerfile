@@ -1,35 +1,30 @@
-# ---- builder ----
-FROM node:20-alpine AS builder
+# ---------- deps: install node modules ----------
+FROM node:20-alpine AS deps
 WORKDIR /app
 
-# install all deps (incl dev) to compile
+# copy manifests first to leverage layer cache
 COPY package*.json ./
-RUN npm ci
 
-# ts config + source
-COPY tsconfig.json ./
-COPY src ./src
+# prefer deterministic installs; fall back to install if lock mismatches
+RUN npm ci || npm install
 
-# compile TS -> dist
-RUN npm run build
-
-# ---- runner ----
+# ---------- runner: copy code + deps and run with tsx ----------
 FROM node:20-alpine AS runner
 WORKDIR /app
+
 ENV NODE_ENV=production
 ENV PORT=8787
 
-# only prod deps for runtime
-COPY package*.json ./
-RUN npm ci --omit=dev
+# bring installed node_modules (includes tsx in prod deps)
+COPY --from=deps /app/node_modules ./node_modules
 
-# bring compiled JS
-COPY --from=builder /app/dist ./dist
+# bring runtime sources
+COPY tsconfig.json ./tsconfig.json
+COPY src ./src
 
-# healthcheck hits /healthz on the internal port
-EXPOSE 8787
+# healthcheck against /healthz inside the container
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+ (process.env.PORT||8787) +'/healthz').then(r=>{if(r.ok)process.exit(0);process.exit(1)}).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/healthz').then(r=>{if(r.ok)process.exit(0);process.exit(1)}).catch(()=>process.exit(1))"
 
-# start
-CMD ["node","dist/index.js"]
+EXPOSE 8787
+CMD ["npm","start"]
