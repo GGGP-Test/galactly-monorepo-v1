@@ -53,5 +53,8 @@ RUN set -eux; \
 ENV PORT=8787
 EXPOSE 8787
 
+ENV DATA_DIR=/data
+RUN mkdir -p /data
+
 # Start script: cd into app dir and run src/index.ts with tsx
 CMD ["/bin/sh", "-lc", "APP_DIR=$(cat /app/.appdir) && cd \"$APP_DIR\" && npx tsx src/index.ts"]
