@@ -1,19 +1,21 @@
 import express from "express";
 import cors from "cors";
-import leadsRouter from "./routes/leads";
 
 const app = express();
-
 app.use(cors());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json());
 
-app.get("/healthz", (_req, res) => res.json({ ok: true, service: "buyers", ts: new Date().toISOString() }));
+app.get("/", (_req, res) => {
+  res.json({ ok: true, service: "buyers-api", message: "Hello from Backend!" });
+});
 
-app.use("/api/v1/leads", leadsRouter);
+app.get("/healthz", (_req, res) => {
+  // keep it boring so the container healthcheck always passes when the process is alive
+  res.status(200).json({ ok: true });
+});
 
-app.get("/", (_req, res) => res.status(200).send("OK"));
-
-const port = Number(process.env.PORT || 8787);
-app.listen(port, () => {
-  console.log(`[server] listening on :${port}`);
+const PORT = Number(process.env.PORT || 8787);
+app.listen(PORT, () => {
+  // eslint-disable-next-line no-console
+  console.log(`[buyers-api] listening on :${PORT}`);
 });
