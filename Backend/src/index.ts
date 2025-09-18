@@ -9,10 +9,8 @@ app.use(express.json({ limit: "1mb" }));
 
 app.get("/healthz", (_req, res) => res.json({ ok: true, service: "buyers", ts: new Date().toISOString() }));
 
-// Mount leads API
 app.use("/api/v1/leads", leadsRouter);
 
-// Root ping
 app.get("/", (_req, res) => res.status(200).send("OK"));
 
 const port = Number(process.env.PORT || 8787);
