@@ -1,10 +1,18 @@
-.git
-.vscode
+# keep the build context clean but DO NOT ignore package.json / tsconfig.json
 node_modules
 dist
+.git
+.github
+.gitignore
+Dockerfile*
+docker-compose*.yml
+*.log
+*.local
+.env
+.env.*
 coverage
-npm-debug.log*
-yarn-error.log*
-src/ui
-src/scripts
-src/tests
+.vscode
+.idea
+.DS_Store
+tests
+docs
