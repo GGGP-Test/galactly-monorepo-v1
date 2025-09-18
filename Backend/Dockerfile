@@ -1,30 +1,35 @@
-# ---------- deps: install node modules ----------
-FROM node:20-alpine AS deps
+# ---- builder ----
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# copy manifests first to leverage layer cache
+# install all deps (incl dev) so tsc can compile
 COPY package*.json ./
+RUN npm ci
 
-# prefer deterministic installs; fall back to install if lock mismatches
-RUN npm ci || npm install
+# ts config + source
+COPY tsconfig.json ./
+COPY src ./src
 
-# ---------- runner: copy code + deps and run with tsx ----------
+# compile TS -> dist
+RUN npm run build
+
+# ---- runner ----
 FROM node:20-alpine AS runner
 WORKDIR /app
-
 ENV NODE_ENV=production
 ENV PORT=8787
 
-# bring installed node_modules (includes tsx in prod deps)
-COPY --from=deps /app/node_modules ./node_modules
+# only prod deps for runtime
+COPY package*.json ./
+RUN npm ci --omit=dev
 
-# bring runtime sources
-COPY tsconfig.json ./tsconfig.json
-COPY src ./src
+# bring compiled JS
+COPY --from=builder /app/dist ./dist
 
-# healthcheck against /healthz inside the container
+# healthcheck hits /healthz on the internal port
+EXPOSE 8787
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/healthz').then(r=>{if(r.ok)process.exit(0);process.exit(1)}).catch(()=>process.exit(1))"
 
-EXPOSE 8787
-CMD ["npm","start"]
+# IMPORTANT: run compiled JS directly (no npm, no tsx)
+CMD ["node","dist/index.js"]
