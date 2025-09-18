@@ -1,18 +1,23 @@
-# keep the build context clean but DO NOT ignore package.json / tsconfig.json
+# node / build cruft
 node_modules
 dist
-.git
-.github
-.gitignore
-Dockerfile*
-docker-compose*.yml
-*.log
-*.local
-.env
-.env.*
-coverage
+npm-debug.log
+.yarn
+.pnpm-store
+
+# local noise
+.DS_Store
 .vscode
 .idea
-.DS_Store
+.git
+.gitignore
+
+# folders not needed in the image
+devtools
+pipeline
+scripts
 tests
-docs
+
+# test files anywhere
+**/*.test.ts
+**/*.spec.ts
