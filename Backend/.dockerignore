@@ -1,11 +1,10 @@
-# Keep context small; do NOT ignore your app folder(s)
 .git
-.gitignore
-**/node_modules
-**/dist
-**/build
-**/.next
-**/.cache
-**/*.log
-Dockerfile
-docker-compose.yml
+.vscode
+node_modules
+dist
+coverage
+npm-debug.log*
+yarn-error.log*
+src/ui
+src/scripts
+src/tests
