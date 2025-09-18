@@ -1,36 +1,30 @@
-# ---- builder ----
-FROM node:20-alpine AS builder
+# ---- runtime-only (no TS build step) ----
+FROM node:20-alpine
+
+# Work inside /app
 WORKDIR /app
 
-# install ALL deps (incl dev) so tsc can compile
+# Bring only the files needed to install deps (cache-friendly)
 COPY package*.json ./
-RUN npm ci
 
-# ts config + source
+# Install ALL deps (including dev so tsx is present),
+# but DO NOT run lifecycle scripts that might try to compile TS, etc.
+RUN npm ci --ignore-scripts
+
+# Bring the source + tsconfig
 COPY tsconfig.json ./
 COPY src ./src
 
-# compile TS -> dist
-RUN npm run build
-
-# strip dev deps so runtime only has production deps
-RUN npm prune --omit=dev
-
-# ---- runner ----
-FROM node:20-alpine AS runner
-WORKDIR /app
+# Env & port (Northflank will map this)
 ENV NODE_ENV=production
 ENV PORT=8787
-
-# bring compiled JS + pruned deps
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY package*.json ./
-
-# healthcheck hits /healthz on the internal port
 EXPOSE 8787
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+ (process.env.PORT||8787) +'/healthz').then(r=>{if(r.ok)process.exit(0);process.exit(1)}).catch(()=>process.exit(1))"
 
-# start the server directly (no tsx in runtime)
-CMD ["node","--enable-source-maps","dist/index.js"]
+# Healthcheck hits /healthz on the internal port
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+ (process.env.PORT || 8787) + '/healthz') \
+    .then(r=>{if(r.ok)process.exit(0);process.exit(1)}).catch(()=>process.exit(1))"
+
+# Start the server directly with tsx from node_modules
+# (works because we kept dev deps)
+CMD ["node","--enable-source-maps","./node_modules/tsx/dist/cli.js","src/index.ts"]
