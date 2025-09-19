@@ -3,7 +3,7 @@ export type Temp = 'hot' | 'warm';
 export interface SupplierPersona {
   offer?: string;
   solves?: string;
-  /** Comma-separated titles, e.g. "Purchasing Manager, Procurement Lead" */
+  /** Comma-separated titles, e.g., "Purchasing Manager, Procurement Lead" */
   titles?: string;
 }
 
@@ -12,7 +12,7 @@ export interface DiscoveryArgs {
   supplier: string;
   /** Region key, e.g. "usca" */
   region: string;
-  /** Radius miles (not enforced in this demo providers set) */
+  /** Miles radius (free panel may ignore for now) */
   radiusMi: number;
   persona?: SupplierPersona;
 }
@@ -20,15 +20,15 @@ export interface DiscoveryArgs {
 export type Platform = 'news' | 'company' | 'directory' | 'social' | 'review';
 
 export interface BuyerCandidate {
-  host: string;          // acmefoods.com
+  host: string;       // acmefoods.com
   platform: Platform;
-  title: string;         // e.g. "Purchasing Manager"
-  url?: string;          // optional proof URL
-  proof?: string;        // human-readable evidence
-  source: string;        // which provider produced it
-  createdAt?: string;    // ISO timestamp
-  score?: number;        // 0–100
-  temp?: Temp;           // 'hot' | 'warm'
+  title: string;      // "Purchasing Manager"
+  url?: string;
+  proof?: string;     // human-readable evidence
+  source: string;     // which provider
+  createdAt?: string; // ISO
+  score?: number;     // 0–100
+  temp?: Temp;        // 'hot' | 'warm'
 }
 
 export interface DiscoveryResult {
