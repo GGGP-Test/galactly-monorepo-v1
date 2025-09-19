@@ -2,6 +2,7 @@
 
 import { websearchProvider } from "./websearch";
 import { scoreCandidates } from "./scorer";
+import { seedCandidates } from "./seeds";
 
 export type Temp = "hot" | "warm";
 
@@ -57,14 +58,22 @@ export async function runProviders(input: FindBuyersInput): Promise<{
 }> {
   const results: ProviderResult[] = [];
 
-  // 1) Key-less web discovery
+  // 1) key-less web/news discovery (may return 0 if egress blocked)
   const web = await websearchProvider(input);
   results.push(web);
 
-  // 2) Merge & dedupe
-  const merged = dedupeByHost(results.flatMap(r => r.candidates));
+  // 2) merge & dedupe
+  let merged = dedupeByHost(results.flatMap(r => r.candidates));
 
-  // 3) Score -> hot/warm
+  // 3) if discovery came back thin, backfill with curated seeds
+  const MIN_TARGET = 12;
+  if (merged.length < MIN_TARGET) {
+    const seeds = seedCandidates(input);
+    const need = MIN_TARGET - merged.length;
+    merged = dedupeByHost([...merged, ...seeds.slice(0, Math.max(0, need))]);
+  }
+
+  // 4) hot/warm scoring
   const scored = await scoreCandidates(input, merged);
 
   return {
