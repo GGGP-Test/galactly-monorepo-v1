@@ -1,23 +1,23 @@
-# node / build cruft
+# node artifacts
 node_modules
-dist
-npm-debug.log
-.yarn
-.pnpm-store
+npm-debug.log*
+yarn.lock
+pnpm-lock.yaml
+package-lock.json
+# keep package*.json — they are copied explicitly in the Dockerfile
 
-# local noise
-.DS_Store
-.vscode
-.idea
+# build outputs (rebuilt inside the image)
+dist
+coverage
+
+# vcs & tooling
 .git
 .gitignore
+.vscode
+.idea
 
-# folders not needed in the image
-devtools
-pipeline
-scripts
-tests
-
-# test files anywhere
-**/*.test.ts
-**/*.spec.ts
+# env & misc
+.env
+.env.*
+*.tsbuildinfo
+.DS_Store
