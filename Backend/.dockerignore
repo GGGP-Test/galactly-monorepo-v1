@@ -1,4 +1,4 @@
-# keep the build context small; Dockerfile copies what it needs
+# keep the build context small; Dockerfile copies only what it needs
 .git
 .github
 .vscode
