@@ -1,10 +1,8 @@
 import { Candidate, FindBuyersInput, ProviderResult, normalizeHost } from "./index";
 
-// Simple, robust search that needs no API key.
-// Strategy:
-//  - Build a query around likely buyer titles + supplier category keyword(s)
-//  - Try Bing News RSS first (easy to parse), then fallback to Bing HTML.
-//  - Extract external hostnames, sanitize, dedupe at the caller level.
+// Simple search without API keys.
+// Uses Bing News RSS (fast to parse) + fallback to Bing Web HTML.
+// Extracts unique hostnames and returns lightweight candidates.
 
 export async function websearchProvider(input: FindBuyersInput): Promise<ProviderResult> {
   const supplierHost = normalizeHost(input.supplier);
@@ -13,55 +11,49 @@ export async function websearchProvider(input: FindBuyersInput): Promise<Provide
   const regionToken = regionToQuery(input.region);
 
   const core = [keyword, "packaging"].filter(Boolean).join(" ");
-  const query = [
+  const q = [
     `"${core}"`,
     `(${titles.split(",").map(t => t.trim()).filter(Boolean).join(" OR ") || "purchasing"})`,
     regionToken
-  ]
-  .filter(Boolean)
-  .join(" ");
+  ].filter(Boolean).join(" ");
 
-  const rssUrl = "https://www.bing.com/news/search?q=" + encodeURIComponent(query) + "&format=rss";
-  const htmlUrl = "https://www.bing.com/search?q=" + encodeURIComponent(query);
+  const rssUrl  = "https://www.bing.com/news/search?q=" + encodeURIComponent(q) + "&format=rss";
+  const htmlUrl = "https://www.bing.com/search?q=" + encodeURIComponent(q);
 
-  const urls: string[] = [];
+  const rssLinks = await tryFetchText(rssUrl).then(text =>
+    Array.from(text.matchAll(/<link>(https?:\/\/[^<]+)<\/link>/gi)).map(m => m[1])
+  ).catch(() => []);
 
-  // try RSS
+  const htmlLinks = rssLinks.length >= 6 ? [] : await tryFetchText(htmlUrl).then(text =>
+    Array.from(text.matchAll(/<a[^>]+href="(https?:\/\/[^"]+)"/gi)).map(m => m[1])
+  ).catch(() => []);
+
+  const rssHosts  = toHosts(rssLinks);
+  const htmlHosts = toHosts(htmlLinks);
+
+  const candidates: Candidate[] = [
+    ...rssHosts.map(h => ({
+      host: h, platform: "news", title: bestTitleFromPersona(titles),
+      why: `Mentioned with ${core} (news)`
+    })),
+    ...htmlHosts.map(h => ({
+      host: h, platform: "web", title: bestTitleFromPersona(titles),
+      why: `Found with ${core} (web)`
+    }))
+  ].filter(c => c.host && c.host !== supplierHost && !isBlocked(c.host));
+
+  return { name: "websearch", candidates, debug: { q, rssUrl, htmlUrl } };
+}
+
+async function tryFetchText(url: string): Promise<string> {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), 5000);
   try {
-    const rss = await fetch(rssUrl, { headers: UA_HEADERS });
-    const xml = await rss.text();
-    for (const m of xml.matchAll(/<link>(https?:\/\/[^<]+)<\/link>/gi)) {
-      urls.push(m[1]);
-    }
-  } catch {
-    // ignore, we’ll fallback to html below
+    const r = await fetch(url, { headers: UA_HEADERS, signal: ctrl.signal as any });
+    return await r.text();
+  } finally {
+    clearTimeout(id);
   }
-
-  // fallback to HTML if RSS was too sparse
-  if (urls.length < 6) {
-    try {
-      const htmlRes = await fetch(htmlUrl, { headers: UA_HEADERS });
-      const html = await htmlRes.text();
-      for (const m of html.matchAll(/<a[^>]+href="(https?:\/\/[^"]+)"/gi)) {
-        urls.push(m[1]);
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  const hosts = sanitizeToHosts(urls)
-    .filter(h => h && !h.endsWith("bing.com") && !h.includes("microsoft.com"))
-    .filter(h => h !== supplierHost);
-
-  const candidates: Candidate[] = hosts.map(h => ({
-    host: h,
-    platform: "web",
-    title: bestTitleFromPersona(titles),
-    why: `Mentioned with ${core} (${input.region.toUpperCase()})`
-  }));
-
-  return { name: "websearch", candidates, debug: { query, rssUrl, htmlUrl } };
 }
 
 const UA_HEADERS = {
@@ -70,30 +62,22 @@ const UA_HEADERS = {
   "Accept": "*/*"
 };
 
-function sanitizeToHosts(urls: string[]): string[] {
+function toHosts(urls: string[]): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   for (const u of urls) {
-    const h = toHost(u);
-    if (!h) continue;
-    if (seen.has(h)) continue;
-    seen.add(h);
-    out.push(h);
+    try {
+      const host = new URL(u).hostname.toLowerCase().replace(/^www\./, "");
+      if (!seen.has(host)) {
+        seen.add(host);
+        out.push(host);
+      }
+    } catch { /* ignore bad urls */ }
   }
   return out.slice(0, 50);
 }
 
-function toHost(u: string): string {
-  try {
-    const host = new URL(u).hostname.toLowerCase();
-    return host.replace(/^www\./, "");
-  } catch {
-    return "";
-  }
-}
-
 function inferKeywordFromHost(host: string): string {
-  // crude heuristics — safe, no external deps
   const name = host.split(".")[0]; // e.g., "peekpackaging"
   if (name.includes("pack")) return "packaging";
   if (name.includes("film")) return "film";
@@ -103,16 +87,24 @@ function inferKeywordFromHost(host: string): string {
 
 function regionToQuery(region: string): string {
   const r = (region || "").toLowerCase();
+  if (r.includes("us") && r.includes("ca")) return "(site:.com OR site:.us OR site:.ca)";
   if (r.startsWith("us")) return "(site:.com OR site:.us)";
   if (r.startsWith("ca")) return "(site:.ca)";
-  if (r.includes("usca")) return "(site:.com OR site:.us OR site:.ca)";
   return "";
 }
 
 function bestTitleFromPersona(titlesCsv: string): string {
   const list = (titlesCsv || "")
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
+    .split(",").map(s => s.trim()).filter(Boolean);
   return list[0] || "Purchasing Manager";
 }
+
+function isBlocked(host: string): boolean {
+  return BLOCK.some(b => host.endsWith(b) || host === b || host.includes(b));
+}
+
+const BLOCK = [
+  "bing.com","microsoft.com","google.com","news.google","facebook.com","twitter.com",
+  "linkedin.com","reddit.com","youtube.com","wikipedia.org","medium.com","github.com",
+  "npmjs.com","cloudflare.com"
+];
