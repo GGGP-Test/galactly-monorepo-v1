@@ -1,20 +1,21 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import handleFindBuyers from './handlers/find-buyers';
+import findBuyers from './services/find-buyers';
 
 const app = express();
 
-// middlewares
+// middleware
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
-// health
+// health endpoints
 app.get('/healthz', (_req: Request, res: Response) => res.status(200).send('ok'));
+app.get('/health', (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// legacy-stable endpoint used by the Free Panel
-app.post('/api/v1/leads/find-buyers', handleFindBuyers);
+// stable route used by the Free Panel & smoke test
+app.post('/api/v1/leads/find-buyers', findBuyers);
 
-// 404 for everything else (kept simple and JSON)
+// 404 handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     error: 'NOT_FOUND',
@@ -23,32 +24,17 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-// central error handler
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const status = typeof err?.status === 'number' ? err.status : 500;
-  const message = err?.message ?? 'Internal Server Error';
+// error handler
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  const anyErr = err as { status?: number; message?: string };
+  const status = typeof anyErr?.status === 'number' ? anyErr.status : 500;
+  const message = anyErr?.message ?? 'Internal Server Error';
   res.status(status).json({ error: 'INTERNAL_ERROR', message });
 });
 
 const port = Number(process.env.PORT) || 8787;
 app.listen(port, () => {
-  // compact route table log
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stack = (app as any)?._router?.stack ?? [];
-  const routes = stack
-    .flatMap((l: any) =>
-      l?.route
-        ? Object.keys(l.route.methods).map((m) => `${m.toUpperCase()} ${l.route.path}`)
-        : l?.name === 'router' && l.handle?.stack
-        ? l.handle.stack
-            .filter((s: any) => s.route)
-            .flatMap((s: any) => Object.keys(s.route.methods).map((m) => `${m.toUpperCase()} ${s.route.path}`))
-        : []
-    )
-    .filter(Boolean);
-
   console.log(`[server] listening on :${port}`);
-  console.log(`[server] routes:\n  ${routes.join('\n  ')}`);
 });
 
 export default app;
