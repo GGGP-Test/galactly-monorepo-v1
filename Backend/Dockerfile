@@ -1,36 +1,37 @@
 # ---- builder ----
-FROM node:20-alpine AS builder
-# toolchain for any optional native deps that may need to build
-RUN apk add --no-cache g++ make python3
+FROM node:20-slim AS builder
+ENV CI=true
 WORKDIR /app
 
-# Install ALL deps (incl dev) so tsx is present; skip optional native extras
+# Install deps (incl dev) so tsc can compile
 COPY package*.json ./
 RUN npm ci --omit=optional
 
-# Bring the source so tsx can execute TS directly (no TS build needed)
-COPY tsconfig.json ./tsconfig.json
+# Bring tsconfig + sources and compile TS -> JS
+COPY tsconfig.json ./
 COPY src ./src
+RUN npm run build
 
 # ---- runner ----
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8787
 
-# Minimal files required at runtime (includes node_modules with tsx)
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/node_modules ./node_modules
+# Only prod deps for runtime (clean, reproducible)
+COPY package*.json ./
+RUN npm ci --omit=dev --omit=optional && npm cache clean --force
 
-# healthcheck: GET /healthz on the internal port
+# Bring compiled JS
+COPY --from=builder /app/dist ./dist
+
+# Healthcheck uses Node's built-in fetch (no curl)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/healthz') \
-  .then(r=>{if(r.ok)process.exit(0);process.exit(1)}) \
-  .catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/healthz').then(r=>{if(r.ok)process.exit(0);process.exit(1)}).catch(()=>process.exit(1))"
 
 EXPOSE 8787
+CMD ["node","dist/index.js"]
 
-# Start the server via Node's loader for tsx (no brittle internal path)
-CMD ["node","--enable-source-maps","--loader","tsx","src/index.ts"]
+# If you use native deps (e.g. sharp, bcrypt) and they complain on slim,
+# uncomment the next lines in BOTH stages:
+# RUN apt-get update && apt-get install -y --no-install-recommends build-essential python3 && rm -rf /var/lib/apt/lists/*
