@@ -1,35 +1,32 @@
-import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import findBuyers from './services/find-buyers';
+import express, { Request, Response, NextFunction } from "express";
+import cors from "cors";
+import findBuyers from "./services/find-buyers";
 
+// create app
 const app = express();
 
 // middleware
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: "1mb" }));
 
-// health endpoints
-app.get('/healthz', (_req: Request, res: Response) => res.status(200).send('ok'));
-app.get('/health', (_req: Request, res: Response) => res.status(200).json({ ok: true }));
+// health
+app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
+app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// stable route used by the Free Panel & smoke test
-app.post('/api/v1/leads/find-buyers', findBuyers);
+// api (kept for Free Panel/backward-compat)
+app.post("/api/v1/leads/find-buyers", findBuyers);
 
-// 404 handler
+// 404
 app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    error: 'NOT_FOUND',
-    method: req.method,
-    path: req.path,
-  });
+  res.status(404).json({ error: "NOT_FOUND", method: req.method, path: req.path });
 });
 
-// error handler
+// error
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  const anyErr = err as { status?: number; message?: string };
-  const status = typeof anyErr?.status === 'number' ? anyErr.status : 500;
-  const message = anyErr?.message ?? 'Internal Server Error';
-  res.status(status).json({ error: 'INTERNAL_ERROR', message });
+  const any = err as { status?: number; message?: string };
+  const status = typeof any?.status === "number" ? any.status : 500;
+  const message = any?.message ?? "Internal Server Error";
+  res.status(status).json({ error: "INTERNAL_ERROR", message });
 });
 
 const port = Number(process.env.PORT) || 8787;
