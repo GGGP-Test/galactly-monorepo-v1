@@ -1,0 +1,98 @@
+[
+  {
+    "id": "pk-1001",
+    "company": "BlueBox Retail",
+    "website": "https://blueboxretail.com",
+    "titles": ["Purchasing Manager", "Packaging Engineer", "Supply Chain Manager"],
+    "regions": ["us", "us-ca"],
+    "tags": ["packaging", "corrugated", "boxes", "retail", "ecommerce"]
+  },
+  {
+    "id": "pk-1002",
+    "company": "Acme Foods",
+    "website": "https://acmefoods.com",
+    "titles": ["Procurement Lead", "Operations Manager", "Plant Manager"],
+    "regions": ["us"],
+    "tags": ["food", "cpg", "packaging", "pallet", "film", "stretch"]
+  },
+  {
+    "id": "pk-1003",
+    "company": "NorthWest Pallets",
+    "website": "https://nwpallets.ca",
+    "titles": ["Buyer", "Warehouse Manager", "Logistics Coordinator"],
+    "regions": ["ca"],
+    "tags": ["pallet", "lumber", "warehouse", "distribution"]
+  },
+  {
+    "id": "pk-1004",
+    "company": "LogiShip",
+    "website": "https://logiship.com",
+    "titles": ["Head of Ops", "Packaging Engineer", "Procurement Lead"],
+    "regions": ["us", "ca"],
+    "tags": ["3pl", "fulfillment", "packaging", "void fill", "labels"]
+  },
+  {
+    "id": "pk-1005",
+    "company": "FreshGrocer",
+    "website": "https://freshgrocer.com",
+    "titles": ["Sourcing Manager", "Packaging Sustainability Lead"],
+    "regions": ["us"],
+    "tags": ["grocery", "packaging", "sustainable", "film", "pallet"]
+  },
+  {
+    "id": "pk-1006",
+    "company": "Peak Outdoors",
+    "website": "https://peakoutdoors.ca",
+    "titles": ["Purchasing Manager", "Operations Manager"],
+    "regions": ["ca"],
+    "tags": ["ecommerce", "consumer", "boxes", "mailers", "tape"]
+  },
+  {
+    "id": "pk-1007",
+    "company": "Meditech Labs",
+    "website": "https://meditechlabs.com",
+    "titles": ["Supply Chain Manager", "Packaging Engineer"],
+    "regions": ["us"],
+    "tags": ["medical", "sterile", "packaging", "film", "labels"]
+  },
+  {
+    "id": "pk-1008",
+    "company": "Coastal Coffee Roasters",
+    "website": "https://coastalcoffee.com",
+    "titles": ["Procurement Lead", "Operations Manager"],
+    "regions": ["us", "us-ca"],
+    "tags": ["coffee", "cpg", "bags", "labels", "packaging"]
+  },
+  {
+    "id": "pk-1009",
+    "company": "Northern Gear",
+    "website": "https://northerngear.ca",
+    "titles": ["Buyer", "Supply Chain Manager"],
+    "regions": ["ca"],
+    "tags": ["industrial", "protective", "pallet", "wrap", "strapping"]
+  },
+  {
+    "id": "pk-1010",
+    "company": "SunCart",
+    "website": "https://suncart.com",
+    "titles": ["Packaging Engineer", "Purchasing Manager"],
+    "regions": ["us"],
+    "tags": ["ecommerce", "packaging", "mailers", "inserts", "void fill"]
+  },
+  {
+    "id": "pk-1011",
+    "company": "GreenHarvest Produce",
+    "website": "https://greenharvestproduce.com",
+    "titles": ["Sustainability Lead", "Sourcing Manager"],
+    "regions": ["us", "ca"],
+    "tags": ["produce", "packaging", "recyclable", "labels", "film"]
+  },
+  {
+    "id": "pk-1012",
+    "company": "MetroParts Distribution",
+    "website": "https://metroparts.com",
+    "titles": ["Warehouse Manager", "Procurement Lead"],
+    "regions": ["us"],
+    "tags": ["automotive", "distribution", "boxes", "pallet", "tape"]
+  }
+]
