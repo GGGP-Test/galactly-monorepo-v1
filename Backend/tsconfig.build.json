@@ -3,13 +3,13 @@
   "compilerOptions": {
     "noEmit": false
   },
-  "include": ["src/index.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": [
+    "src/ai/**",
     "src/ui/**",
     "src/scripts/**",
-    "src/**/__tests__/**",
-    "src/ai/**",
-    "dist",
-    "node_modules"
+    "**/__tests__/**",
+    "node_modules",
+    "dist"
   ]
 }
