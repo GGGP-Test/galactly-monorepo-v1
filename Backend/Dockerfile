@@ -7,8 +7,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=optional
 
-# Copy only the build tsconfig + sources, then compile TS -> JS
-COPY tsconfig.build.json ./
+# Copy both tsconfig files (build extends base) + sources, then compile
+COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 RUN npm run build
 
