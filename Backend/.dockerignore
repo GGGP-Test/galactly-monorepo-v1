@@ -1,23 +1,16 @@
-# node artifacts
-node_modules
-npm-debug.log*
-yarn.lock
-pnpm-lock.yaml
-package-lock.json
-# keep package*.json — they are copied explicitly in the Dockerfile
-
-# build outputs (rebuilt inside the image)
-dist
-coverage
-
-# vcs & tooling
+# keep the build context small; Dockerfile copies exactly what it needs
 .git
-.gitignore
+.github
 .vscode
-.idea
-
-# env & misc
+node_modules
+dist
+build
+coverage
+*.log
+*.tsbuildinfo
+Dockerfile
+.dockerignore
 .env
 .env.*
-*.tsbuildinfo
-.DS_Store
+tmp
+.cache
