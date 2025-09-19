@@ -9,7 +9,7 @@ type Persona = {
 
 type SupplierInput = {
   supplier?: string;
-  region?: string;     // "us", "ca", "usca"
+  region?: string;     // "us", "ca", "usca", etc.
   radiusMi?: number;
   persona?: Persona;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,7 +22,7 @@ type Candidate = {
   website: string;
   host: string;
   title: string;
-  score: number; // 0..1
+  score: number;
   why: string;
   contact?: string;
   email?: string;
