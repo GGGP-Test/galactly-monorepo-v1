@@ -9,7 +9,7 @@ type Persona = {
 
 type SupplierInput = {
   supplier?: string;
-  region?: string; // e.g., "usca", "us", "ca"
+  region?: string;     // "us", "ca", "usca"
   radiusMi?: number;
   persona?: Persona;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,13 +24,12 @@ type Candidate = {
   title: string;
   score: number; // 0..1
   why: string;
-  // optional contact placeholders for UI
   contact?: string;
   email?: string;
 };
 
 type ResponsePayload = {
-  created: number; // number of newly discovered solid matches (0 for seed/demo)
+  created: number;
   candidates: Candidate[];
   inferred?: { supplier?: string; region?: string; radiusMi?: number };
   note?: string;
@@ -40,18 +39,13 @@ type Seed = {
   id: string;
   company: string;
   website: string;
-  titles: string[]; // roles we might target there
-  regions: string[]; // ["us","ca","us-ca"] etc
-  tags: string[]; // keywords for matching
+  titles: string[];
+  regions: string[];
+  tags: string[];
 };
 
-// --- helpers ---
 function hostOf(url: string): string {
-  try {
-    return new URL(url).host || "";
-  } catch {
-    return "";
-  }
+  try { return new URL(url).host || ""; } catch { return ""; }
 }
 
 function tokenize(s: string): string[] {
@@ -70,10 +64,9 @@ function regionFilter(userRegion?: string) {
   return (s: Seed) => {
     const hasUS = s.regions.some((x) => x.includes("us"));
     const hasCA = s.regions.some((x) => x.includes("ca"));
-    if (wantUS && wantCA) return (hasUS || hasCA);
+    if (wantUS && wantCA) return hasUS || hasCA;
     if (wantUS) return hasUS;
     if (wantCA) return hasCA;
-    // fallback: any if unknown
     return true;
   };
 }
@@ -90,15 +83,11 @@ function scoreSeed(seed: Seed, persona?: Persona): { score: number; why: string 
   ]);
 
   let hits = 0;
-  for (const w of want) {
-    if (hay.has(w)) hits++;
-  }
+  for (const w of want) if (hay.has(w)) hits++;
 
-  // title overlaps count a little more
   let titleHits = 0;
-  for (const t of titlesT) {
-    if (seed.titles.map((x) => x.toLowerCase()).includes(t)) titleHits++;
-  }
+  const seedTitles = seed.titles.map((x) => x.toLowerCase());
+  for (const t of titlesT) if (seedTitles.includes(t)) titleHits++;
 
   const denom = Math.max(1, want.size);
   const raw = hits / denom;
@@ -113,7 +102,6 @@ function scoreSeed(seed: Seed, persona?: Persona): { score: number; why: string 
   return { score, why: whyParts.join(", ") };
 }
 
-// --- handler ---
 export default async function findBuyers(
   req: Request<unknown, unknown, SupplierInput>,
   res: Response
@@ -129,19 +117,14 @@ export default async function findBuyers(
       ? Number(body.radiusMi)
       : undefined;
 
-  // 1) filter by region
   const filtered = (seeds as Seed[]).filter(regionFilter(region));
 
-  // 2) score by persona
   const scored = filtered
     .map((s) => {
       const { score, why } = scoreSeed(s, body.persona);
-      // choose one representative title to surface
       const title =
         body.persona?.titles &&
-        s.titles.find((t) =>
-          tokenize(body.persona?.titles || "").includes(t.toLowerCase())
-        );
+        s.titles.find((t) => tokenize(body.persona?.titles || "").includes(t.toLowerCase()));
       return {
         id: s.id,
         company: s.company,
@@ -155,31 +138,27 @@ export default async function findBuyers(
     .sort((a, b) => b.score - a.score)
     .slice(0, 25);
 
-  // 3) shape response
-  const created = 0; // seed/demo mode (no net-new indexed records yet)
+  const created = 0;
   const candidates =
     scored.length > 0
       ? scored
-      : [
-          {
-            id: "seed-warm-1",
-            company: "Example Co.",
-            website: "https://example.com",
-            host: "example.com",
-            title: "Purchasing Manager",
-            score: 0.35,
-            why: "fallback demo",
-          },
-        ];
+      : [{
+          id: "seed-warm-1",
+          company: "Example Co.",
+          website: "https://example.com",
+          host: "example.com",
+          title: "Purchasing Manager",
+          score: 0.35,
+          why: "fallback demo"
+        }];
 
   const payload: ResponsePayload = {
     created,
     candidates,
     inferred: { supplier, region, radiusMi },
-    note:
-      created === 0 && candidates.length > 0
-        ? "seed-based matches (no external discovery yet)"
-        : undefined,
+    note: created === 0 && candidates.length > 0
+      ? "seed-based matches (no external discovery yet)"
+      : undefined
   };
 
   res.status(200).json(payload);
