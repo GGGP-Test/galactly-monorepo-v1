@@ -1,39 +1,32 @@
-// Backend/src/providers/seeds.ts
+import { nowISO, normalizeHost } from './shared';
+import type { BuyerCandidate, DiscoveryArgs } from './types';
 
-import type { Candidate, FindBuyersInput } from "./types";
-import { normalizeHost } from "./shared";
-
-const DEFAULT_TITLE = "Purchasing Manager";
-
-// Mirrors the kind of demo items you saw; safe to swap later.
-const SEED_HOSTS_NA = [
-  "blueboxretail.com",
-  "acmefoods.com",
-  "nwpallets.ca",
-  "logiship.com",
-  "freshgrocer.com",
-  "peakoutdoors.ca",
-  "maplefoods.ca",
-  "packoutdoors.com",
-  "coastalproduce.com",
-  "fairwaydistribution.com",
-  "urbanmercantile.com",
-  "harborhomegoods.com",
-  "sundialbrands.com",
-  "evergreenmarkets.com"
+/**
+ * Deterministic demo set so the Free Panel always shows something.
+ * Mirrors the vibe of your screenshot (12 warm candidates).
+ */
+const SEED_HOSTS: Array<[string, string]> = [
+  ['blueboxretail.com', 'Purchasing Manager'],
+  ['acmefoods.com', 'Procurement Lead'],
+  ['nwpallets.ca', 'Buyer'],
+  ['logiship.com', 'Head of Ops'],
+  ['freshgrocer.com', 'Sourcing Manager'],
+  ['peakoutdoors.ca', 'Purchasing Manager'],
+  ['blueboxpets.com', 'Category Buyer'],
+  ['grocermax.ca', 'Procurement Manager'],
+  ['palletpros.ca', 'Supply Manager'],
+  ['warehouselabs.io', 'Ops Manager'],
+  ['northcoastsupply.com', 'Purchasing Lead'],
+  ['greenpack.ca', 'Procurement Specialist'],
 ];
 
-export function seedCandidates(input: FindBuyersInput): Candidate[] {
-  const supplier = normalizeHost(input.supplier);
-  const region = (input.region || "").toLowerCase();
-  const base = (region.includes("us") || region.includes("ca")) ? SEED_HOSTS_NA : SEED_HOSTS_NA;
-
-  return base
-    .filter(h => h !== supplier)
-    .map(host => ({
-      host,
-      platform: "news",
-      title: DEFAULT_TITLE,
-      why: "Seed backfill (network-thin); replace via real discovery"
-    }));
+export async function seedsProvider(_args: DiscoveryArgs): Promise<BuyerCandidate[]> {
+  return SEED_HOSTS.map(([host, title]) => ({
+    host: normalizeHost(host),
+    platform: 'news',
+    title,
+    source: 'seeds',
+    createdAt: nowISO(),
+    proof: 'seed',
+  }));
 }
