@@ -1,3 +1,7 @@
+// Node 20+ has global fetch.
+// Set API_URL to the full endpoint, e.g. https://<northflank>/api/v1/leads/find-buyers
+// Optionally set API_KEY / X_API_KEY for auth headers.
+
 const API = process.env.API_URL || "";
 const KEY = process.env.API_KEY || process.env.X_API_KEY || "";
 const domain = process.env.SUPPLIER || process.argv[2] || "";
@@ -14,7 +18,16 @@ if (!domain) {
   process.exit(2);
 }
 
-const body = { supplier: domain, region, radiusMi, persona: { offer: process.env.OFFER || "", solves: process.env.SOLVES || "", titles: process.env.TITLES || "" } };
+const body = {
+  supplier: domain,
+  region,
+  radiusMi,
+  persona: {
+    offer: process.env.OFFER || "",
+    solves: process.env.SOLVES || "",
+    titles: process.env.TITLES || ""
+  }
+};
 
 (async () => {
   const t0 = Date.now();
