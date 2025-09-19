@@ -3,68 +3,41 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
- * Minimal, static-import version so TypeScript stops yelling.
- * We assume these files exist in the same folder:
- *   - ./seeds.ts
- *   - ./websearch.ts
- *   - ./scorer.ts
- * If any of them exports a default function, or a named one, we pick it.
+ * Single, safe registry + pipeline.
+ * Works whether ./seeds, ./websearch, ./scorer export default or named fns.
+ * Touch NOTHING else.
  */
 
 import * as SeedsMod from "./seeds";
 import * as SearchMod from "./websearch";
 import * as ScorerMod from "./scorer";
 
-export type Providers = {
-  seeds?: (...args: any[]) => Promise<any>;
-  websearch?: (...args: any[]) => Promise<any>;
-  scorer?: (...args: any[]) => Promise<any>;
-};
+type ProviderFn = (...args: any[]) => any | Promise<any>;
 
-const isFn = (v: any): v is (...a: any[]) => any => typeof v === "function";
-
-function pick(mod: any, keys: string[]): any | undefined {
+const isFn = (v: any): v is ProviderFn => typeof v === "function";
+const pick = (mod: any, names: string[]): ProviderFn | undefined => {
   if (!mod) return undefined;
-  // prefer default, but accept a few conventional names
-  for (const k of ["default", ...keys]) {
-    const v = (mod as any)[k];
+  for (const n of ["default", ...names]) {
+    const v = (mod as any)[n];
     if (isFn(v)) return v;
   }
-  // if the module itself is callable (rare), use it
   if (isFn(mod)) return mod;
   return undefined;
-}
-
-const seedsProvider =
-  pick(SeedsMod, ["seeds", "getSeeds", "provider"]) as Providers["seeds"];
-const websearchProvider =
-  pick(SearchMod, ["websearch", "search", "provider"]) as Providers["websearch"];
-const scorerProvider =
-  pick(ScorerMod, ["scorer", "score", "provider"]) as Providers["scorer"];
-
-let _providers: Providers = {
-  seeds: seedsProvider,
-  websearch: websearchProvider,
-  scorer: scorerProvider,
 };
 
-export function setProviders(p: Providers) {
-  _providers = p;
-}
+// Resolve provider functions (handles default or named exports)
+export const seeds = pick(SeedsMod, ["seeds", "getSeeds", "provider"]);
+export const websearch = pick(SearchMod, ["websearch", "search", "provider"]);
+export const scorer = pick(ScorerMod, ["scorer", "score", "provider"]);
 
-export function getProviders(): Providers {
-  return _providers;
-}
+// Public registry
+export const providers = { seeds, websearch, scorer };
 
-/**
- * Orchestrates the pipeline in-order:
- *   1) seeds -> 2) websearch -> 3) scorer
- * Returns scored candidates if a scorer exists, otherwise raw candidates.
- */
+// Minimal pipeline used by the app; safe if any step is missing.
 export async function generateAndScoreCandidates(ctx: any = {}): Promise<any[]> {
-  const { seeds, websearch, scorer } = _providers;
+  const limit = ctx?.limitPerSeed ?? 5;
 
-  // 1) get seeds
+  // 1) Seeds
   let seedItems: any[] = [];
   if (isFn(seeds)) {
     const out = await seeds(undefined, ctx);
@@ -72,8 +45,7 @@ export async function generateAndScoreCandidates(ctx: any = {}): Promise<any[]> 
     else if (Array.isArray(out)) seedItems = out;
   }
 
-  // 2) search for each seed
-  const limit = ctx?.limitPerSeed ?? 5;
+  // 2) Web search
   const candidates: any[] = [];
   if (isFn(websearch) && seedItems.length) {
     for (const s of seedItems) {
@@ -93,18 +65,13 @@ export async function generateAndScoreCandidates(ctx: any = {}): Promise<any[]> 
     }
   }
 
-  // 3) score (optional)
-  if (!isFn(scorer)) return candidates;
-  const scored = await scorer(candidates, ctx?.scoreOptions ?? undefined, ctx);
-  return Array.isArray(scored) ? scored : candidates;
+  // 3) Score (optional)
+  if (isFn(scorer)) {
+    const scored = await scorer(candidates, ctx?.scoreOptions ?? undefined, ctx);
+    if (Array.isArray(scored)) return scored;
+  }
+  return candidates;
 }
 
-// Re-export local types if present so external code can do `import {...} from "./providers"`
-export * from "./types";
-
-// Default export for convenience
-export default {
-  getProviders,
-  setProviders,
-  generateAndScoreCandidates,
-};
+// Default export (kept for existing imports)
+export default providers;
