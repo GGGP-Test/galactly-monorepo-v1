@@ -3,11 +3,11 @@ FROM node:20-slim AS builder
 ENV CI=true
 WORKDIR /app
 
-# Install deps (include dev so tsc can run)
+# Install deps (incl dev) so tsc can compile
 COPY package*.json ./
 RUN npm ci --omit=optional
 
-# Compile TS -> JS using the narrow build config
+# Copy tsconfigs + sources and compile TS -> JS
 COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 RUN npm run build
@@ -18,14 +18,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8787
 
-# Install only prod deps for runtime (small, reproducible)
+# Only prod deps for runtime (clean, reproducible)
 COPY package*.json ./
 RUN npm ci --omit=dev --omit=optional && npm cache clean --force
 
 # Bring compiled JS
 COPY --from=builder /app/dist ./dist
 
-# Healthcheck using Node's built-in fetch
+# Healthcheck uses Node's built-in fetch (no curl)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/healthz').then(r=>{if(r.ok)process.exit(0);process.exit(1)}).catch(()=>process.exit(1))"
 
