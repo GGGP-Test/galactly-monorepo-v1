@@ -3,7 +3,10 @@
   "compilerOptions": {
     "noEmit": false
   },
-  "include": ["src/**/*.ts"],
+  "include": [
+    "src/index.ts",
+    "src/**/*.d.ts"
+  ],
   "exclude": [
     "src/ai/**",
     "src/ui/**",
