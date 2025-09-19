@@ -1,142 +1,129 @@
-/**
- * Path: Backend/src/providers/index.ts
- * Aggregates provider modules with safe dynamic loading.
- * Works with the files in this folder:
- *   - types.ts
- *   - seeds.ts
- *   - websearch.ts
- *   - scorer.ts
- */
+/* Path: Backend/src/providers/index.ts
+   Purpose: Load providers (seeds, websearch, scorer) safely and orchestrate them.
+   NOTE: This file is self-contained and avoids strict type coupling. */
 
-import type {
-  ProviderContext,
-  Candidate,
-  ScoredCandidate,
-  ScoreOptions,
-  SearchRequest,
-  SearchResult,
-  SeedBatch,
-  WebSearchProvider,
-  SeedProvider,
-} from "./types";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export type Providers = {
-  seeds?: SeedProvider;
-  websearch?: WebSearchProvider;
-  scorer?: (
-    candidates: Candidate[],
-    options?: ScoreOptions,
-    ctx?: ProviderContext
-  ) => Promise<ScoredCandidate[]>;
+  seeds?: (...args: any[]) => Promise<any>;
+  websearch?: (...args: any[]) => Promise<any>;
+  scorer?: (...args: any[]) => Promise<any>;
 };
 
-let cached: Providers | null = null;
+let _providers: Providers | null = null;
 
-const isFn = (v: unknown): v is (...a: any[]) => any => typeof v === "function";
+const isFn = (v: any): v is (...a: any[]) => any => typeof v === "function";
 
-async function tryImport(path: string): Promise<any | null> {
-  try {
-    return await import(path);
-  } catch {
-    return null;
+/** Try multiple import patterns + require() fallback so it works in CJS/ESM and with .ts/.js builds. */
+async function tryImportAll(base: string): Promise<any | null> {
+  const candidates = [
+    base,
+    `${base}.ts`,
+    `${base}.js`,
+    `${base}/index`,
+    `${base}/index.ts`,
+    `${base}/index.js`,
+  ];
+  for (const p of candidates) {
+    try {
+      return await import(p);
+    } catch {
+      try {
+        const req = (0, eval)("typeof require !== 'undefined' ? require : null") as
+          | ((x: string) => any)
+          | null;
+        if (req) return req(p);
+      } catch {
+        /* ignore and try next */
+      }
+    }
   }
+  return null;
 }
 
-function pickSeedProvider(mod: any): SeedProvider | undefined {
+function pick(mod: any, keys: string[]): any | undefined {
   if (!mod) return undefined;
-  const cand = mod.default ?? mod.seeds ?? mod.getSeeds ?? mod.provider;
-  return isFn(cand) ? (cand as SeedProvider) : undefined;
+  for (const k of ["default", ...keys]) {
+    const v = mod[k];
+    if (isFn(v)) return v;
+  }
+  return undefined;
 }
 
-function pickWebSearchProvider(mod: any): WebSearchProvider | undefined {
-  if (!mod) return undefined;
-  const cand = mod.default ?? mod.websearch ?? mod.search ?? mod.provider;
-  return isFn(cand) ? (cand as WebSearchProvider) : undefined;
-}
-
-type ScorerFn = (
-  candidates: Candidate[],
-  options?: ScoreOptions,
-  ctx?: ProviderContext
-) => Promise<ScoredCandidate[]>;
-
-function pickScorer(mod: any): ScorerFn | undefined {
-  if (!mod) return undefined;
-  const cand = mod.default ?? mod.scorer ?? mod.score ?? mod.provider;
-  return isFn(cand) ? (cand as ScorerFn) : undefined;
-}
-
-/** Load and cache providers in this folder. */
+/** Load (and cache) providers that live in this folder. */
 export async function loadProviders(): Promise<Providers> {
-  if (cached) return cached;
+  if (_providers) return _providers;
 
   const [seedsMod, searchMod, scorerMod] = await Promise.all([
-    tryImport("./seeds"),
-    tryImport("./websearch"),
-    tryImport("./scorer"),
+    tryImportAll("./seeds"),
+    tryImportAll("./websearch"),
+    tryImportAll("./scorer"),
   ]);
 
-  cached = {
-    seeds: pickSeedProvider(seedsMod),
-    websearch: pickWebSearchProvider(searchMod),
-    scorer: pickScorer(scorerMod),
+  _providers = {
+    seeds: pick(seedsMod, ["seeds", "getSeeds", "provider"]),
+    websearch: pick(searchMod, ["websearch", "search", "provider"]),
+    scorer: pick(scorerMod, ["scorer", "score", "provider"]),
   };
 
-  return cached;
+  return _providers;
 }
 
-/** Manually inject/override providers (useful for tests). */
 export function setProviders(p: Providers) {
-  cached = p;
+  _providers = p;
 }
 
-/** Get currently loaded providers (loads on first call). */
 export async function getProviders(): Promise<Providers> {
   return loadProviders();
 }
 
 /**
- * Orchestrator used by the button flow:
- * 1) seeds -> 2) websearch -> 3) scorer
- * Returns an array of ScoredCandidate.
+ * Orchestrates the pipeline:
+ *   1) seeds -> 2) websearch -> 3) scorer
+ * Returns scored candidates if a scorer exists, otherwise raw candidates.
  */
-export async function generateAndScoreCandidates(
-  ctx: ProviderContext & { limitPerSeed?: number } = {}
-): Promise<ScoredCandidate[]> {
-  const providers = await loadProviders();
+export async function generateAndScoreCandidates(ctx: any = {}): Promise<any[]> {
+  const p = await loadProviders();
+  const seedsFn = p.seeds;
+  const searchFn = p.websearch;
+  const scoreFn = p.scorer;
 
-  const seedProv = providers.seeds;
-  const searchProv = providers.websearch;
-  const scoreProv = providers.scorer;
+  // 1) get seeds
+  let seeds: any[] = [];
+  if (isFn(seedsFn)) {
+    const batch = await seedsFn(undefined, ctx);
+    if (Array.isArray(batch?.seeds)) seeds = batch.seeds;
+    else if (Array.isArray(batch)) seeds = batch;
+  }
 
-  const batch: SeedBatch | undefined = seedProv ? await seedProv(undefined, ctx) : undefined;
-  const seeds = batch?.seeds ?? [];
-  const limitPerSeed = ctx?.limitPerSeed ?? 5;
-
-  const candidates: Candidate[] = [];
-  if (searchProv && seeds.length) {
+  // 2) search for each seed
+  const limit = ctx?.limitPerSeed ?? 5;
+  const candidates: any[] = [];
+  if (isFn(searchFn) && seeds.length) {
     for (const s of seeds) {
-      const results = await searchProv(
-        { query: s.query, limit: limitPerSeed } as SearchRequest,
-        ctx
-      );
-      for (const r of results as SearchResult[]) {
-        candidates.push({
-          host: r.host,
-          url: r.url,
-          title: r.title,
-          tags: s.tags,
-          extra: { snippet: r.snippet, source: "websearch" },
-        });
+      const q = s?.query ?? s;
+      const results = await searchFn({ query: q, limit }, ctx);
+      if (Array.isArray(results)) {
+        for (const r of results) {
+          candidates.push({
+            host: r.host ?? r.domain ?? null,
+            url: r.url ?? r.link ?? r.href ?? null,
+            title: r.title ?? r.pageTitle ?? null,
+            tags: s?.tags ?? [],
+            extra: { snippet: r.snippet ?? r.summary ?? null, source: "websearch" },
+          });
+        }
       }
     }
   }
 
-  if (!scoreProv) return [];
-  return scoreProv(candidates, undefined, ctx);
+  // 3) score
+  if (!isFn(scoreFn)) return candidates;
+  const scored = await scoreFn(candidates, ctx?.scoreOptions ?? undefined, ctx);
+  return Array.isArray(scored) ? scored : candidates;
 }
 
-/** Re-export types so external imports can do `from "./providers"` only. */
+/** Re-export types so external code can import from "./providers". */
 export * from "./types";
 
 /** Default export for convenience. */
