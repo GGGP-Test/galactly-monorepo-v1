@@ -1,12 +1,17 @@
-# keep the build context clean/small
+# keep the build context small; Dockerfile copies exactly what it needs
 .git
-.gitignore
+.github
+.vscode
 node_modules
 dist
+build
 coverage
 *.log
 *.tsbuildinfo
 Dockerfile
-docker-compose.yml
-.env*
+docker-compose*.yml
+.env
+.env.*
+tmp
+.cache
 README*
