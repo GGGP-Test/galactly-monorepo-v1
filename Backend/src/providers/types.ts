@@ -1,28 +1,39 @@
-// Backend/src/providers/types.ts
+export type Temp = 'hot' | 'warm';
 
-export type Temp = "hot" | "warm";
-
-export interface Candidate {
-  host: string;
-  platform?: string;  // "web" | "news" | etc.
-  title?: string;
-  why?: string;
-  temp?: Temp;
+export interface SupplierPersona {
+  offer?: string;
+  solves?: string;
+  /** Comma-separated titles, e.g. "Purchasing Manager, Procurement Lead" */
+  titles?: string;
 }
 
-export interface FindBuyersInput {
-  supplier: string;         // supplier domain, e.g. "peekpackaging.com"
-  region: string;           // "usca", "us", "ca", etc.
+export interface DiscoveryArgs {
+  /** Supplier's domain, e.g. "peekpackaging.com" */
+  supplier: string;
+  /** Region key, e.g. "usca" */
+  region: string;
+  /** Radius miles (not enforced in this demo providers set) */
   radiusMi: number;
-  persona: {
-    offer: string;
-    solves: string;
-    titles: string;         // CSV e.g. "Purchasing Manager, Buyer"
-  };
+  persona?: SupplierPersona;
 }
 
-export interface ProviderResult {
-  name: string;
-  candidates: Candidate[];
-  debug?: Record<string, unknown>;
+export type Platform = 'news' | 'company' | 'directory' | 'social' | 'review';
+
+export interface BuyerCandidate {
+  host: string;          // acmefoods.com
+  platform: Platform;
+  title: string;         // e.g. "Purchasing Manager"
+  url?: string;          // optional proof URL
+  proof?: string;        // human-readable evidence
+  source: string;        // which provider produced it
+  createdAt?: string;    // ISO timestamp
+  score?: number;        // 0–100
+  temp?: Temp;           // 'hot' | 'warm'
+}
+
+export interface DiscoveryResult {
+  created: number;
+  warm: number;
+  hot: number;
+  candidates: BuyerCandidate[];
 }
