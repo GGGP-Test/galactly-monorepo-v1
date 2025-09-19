@@ -1,31 +1,36 @@
-# ---- builder: install deps (incl dev) ---------------------------------------
-FROM node:20-alpine AS deps
+# ---- builder ----
+FROM node:20-alpine AS builder
+# toolchain for any optional native deps that may need to build
+RUN apk add --no-cache g++ make python3
 WORKDIR /app
 
-# Toolchain just in case some deps want to compile (safe to keep)
-RUN apk add --no-cache g++ make python3
-
-# Install ALL deps (we need dev deps because we run with tsx)
+# Install ALL deps (incl dev) so tsx is present; skip optional native extras
 COPY package*.json ./
-# Use install (not `ci`) to avoid lockfile mismatch; skip lifecycle scripts
-RUN npm install --omit=optional --no-audit --no-fund --ignore-scripts
+RUN npm ci --omit=optional
 
-# ---- runner: run TS directly with tsx (no tsc build) ------------------------
+# Bring the source so tsx can execute TS directly (no TS build needed)
+COPY tsconfig.json ./tsconfig.json
+COPY src ./src
+
+# ---- runner ----
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8787
 
-# Bring runtime pieces
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/package*.json ./
-COPY tsconfig.json ./tsconfig.json
-COPY src ./src
+# Minimal files required at runtime (includes node_modules with tsx)
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/node_modules ./node_modules
 
-# Healthcheck hits internal /healthz
-EXPOSE 8787
+# healthcheck: GET /healthz on the internal port
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/healthz').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/healthz') \
+  .then(r=>{if(r.ok)process.exit(0);process.exit(1)}) \
+  .catch(()=>process.exit(1))"
 
-# Start the server via tsx, skipping type-checking
-CMD ["node", "--enable-source-maps", "./node_modules/tsx/dist/cli.js", "--transpile-only", "src/index.ts"]
+EXPOSE 8787
+
+# Start the server via Node's loader for tsx (no brittle internal path)
+CMD ["node","--enable-source-maps","--loader","tsx","src/index.ts"]
