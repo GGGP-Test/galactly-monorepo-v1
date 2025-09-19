@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import findBuyers from "./services/find-buyers";
+import findBuyers from "./handlers/find-buyers";
 
 const app = express();
 
@@ -10,13 +10,15 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
 app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// Backward-compatible route used by the Free Panel
+// Free Panel endpoint (canonical)
 app.post("/api/v1/leads/find-buyers", findBuyers);
 
+// 404
 app.use((req: Request, res: Response) => {
   res.status(404).json({ error: "NOT_FOUND", method: req.method, path: req.path });
 });
 
+// error handler
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const any = err as { status?: number; message?: string };
   const status = typeof any?.status === "number" ? any.status : 500;
