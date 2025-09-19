@@ -36,11 +36,12 @@ export const providers = { seeds, websearch, scorer };
 // Minimal pipeline used by the app; safe if any step is missing.
 export async function generateAndScoreCandidates(ctx: any = {}): Promise<any[]> {
   const limit = ctx?.limitPerSeed ?? 5;
+  const nowISO = () => new Date().toISOString();
 
   // 1) Seeds
   let seedItems: any[] = [];
   if (isFn(seeds)) {
-    const out = await seeds(undefined, ctx);
+    const out = await seeds(ctx);
     if (Array.isArray(out?.seeds)) seedItems = out.seeds;
     else if (Array.isArray(out)) seedItems = out;
   }
@@ -49,15 +50,20 @@ export async function generateAndScoreCandidates(ctx: any = {}): Promise<any[]> 
   const candidates: any[] = [];
   if (isFn(websearch) && seedItems.length) {
     for (const s of seedItems) {
-      const q = s?.query ?? s;
-      const results = await websearch({ query: q, limit }, ctx);
+      const q = (s && typeof s === "object" ? s.query : s) ?? s;
+      const results = await websearch(
+        { query: q, limit, region: ctx.region, radiusMiles: ctx.radiusMiles },
+        ctx
+      );
       if (Array.isArray(results)) {
         for (const r of results) {
           candidates.push({
             host: r.host ?? r.domain ?? null,
             url: r.url ?? r.link ?? r.href ?? null,
             title: r.title ?? r.pageTitle ?? null,
+            platform: "web",
             tags: s?.tags ?? [],
+            createdAt: nowISO(),
             extra: { snippet: r.snippet ?? r.summary ?? null, source: "websearch" },
           });
         }
@@ -67,7 +73,7 @@ export async function generateAndScoreCandidates(ctx: any = {}): Promise<any[]> 
 
   // 3) Score (optional)
   if (isFn(scorer)) {
-    const scored = await scorer(candidates, ctx?.scoreOptions ?? undefined, ctx);
+    const scored = await scorer(candidates, ctx?.scoreOptions ?? {});
     if (Array.isArray(scored)) return scored;
   }
   return candidates;
