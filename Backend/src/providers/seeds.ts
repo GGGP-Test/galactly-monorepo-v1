@@ -2,8 +2,8 @@ import { nowISO, normalizeHost } from './shared';
 import type { BuyerCandidate, DiscoveryArgs } from './types';
 
 /**
- * Deterministic demo set so the Free Panel always shows something.
- * Mirrors the vibe of your screenshot (12 warm candidates).
+ * Deterministic seed output so the Free Panel never shows zero.
+ * Mirrors your screenshot (12 warm-ish candidates).
  */
 const SEED_HOSTS: Array<[string, string]> = [
   ['blueboxretail.com', 'Purchasing Manager'],
