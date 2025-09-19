@@ -1,16 +1,14 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmitOnError": false
+    "noEmit": false
   },
-  "include": [
-    "src/index.ts",
-    "src/**/*.d.ts"
-  ],
+  "include": ["src/index.ts"],
   "exclude": [
-    "**/__tests__/**",
     "src/ui/**",
     "src/scripts/**",
+    "src/**/__tests__/**",
+    "src/ai/**",
     "dist",
     "node_modules"
   ]
