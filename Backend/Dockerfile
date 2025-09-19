@@ -1,35 +1,31 @@
-# ---- builder ----
-FROM node:20-alpine AS builder
-
-# toolchain for any native optional deps that may need to build
-RUN apk add --no-cache g++ make python3
-
+# ---- builder: install deps (incl dev) ---------------------------------------
+FROM node:20-alpine AS deps
 WORKDIR /app
 
-# install ALL deps (incl dev) so tsx is present; skip optional native extras
-COPY package*.json ./
-RUN npm ci --omit=optional
+# Toolchain just in case some deps want to compile (safe to keep)
+RUN apk add --no-cache g++ make python3
 
-# bring the source so tsx can execute TS directly (no tsc build needed)
+# Install ALL deps (we need dev deps because we run with tsx)
+COPY package*.json ./
+# Use install (not `ci`) to avoid lockfile mismatch; skip lifecycle scripts
+RUN npm install --omit=optional --no-audit --no-fund --ignore-scripts
+
+# ---- runner: run TS directly with tsx (no tsc build) ------------------------
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=8787
+
+# Bring runtime pieces
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/package*.json ./
 COPY tsconfig.json ./tsconfig.json
 COPY src ./src
 
-# ---- runner ----
-FROM node:20-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production \
-    PORT=8787
-
-# minimal files required at runtime
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/node_modules ./node_modules
-
-# healthcheck: GET http://127.0.0.1:PORT/healthz
+# Healthcheck hits internal /healthz
 EXPOSE 8787
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/healthz').then(r=>{if(r.ok)process.exit(0);process.exit(1)}).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/healthz').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"
 
-# start the server with tsx (transpiles TS, no type-check, avoids tsc errors)
-CMD ["node","--enable-source-maps","./node_modules/tsx/dist/cli.js","src/index.ts"]
+# Start the server via tsx, skipping type-checking
+CMD ["node", "--enable-source-maps", "./node_modules/tsx/dist/cli.js", "--transpile-only", "src/index.ts"]
