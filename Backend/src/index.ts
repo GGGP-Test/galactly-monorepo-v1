@@ -4,15 +4,13 @@ import findBuyers from "./services/find-buyers";
 
 const app = express();
 
-// middleware
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
-// health
 app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
 app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// API (free panel calls this)
+// canonical route used by the Free Panel
 app.post("/api/v1/leads/find-buyers", findBuyers);
 
 // 404
