@@ -1,59 +1,26 @@
-// Backend/src/providers/shared.ts
+import type { BuyerCandidate } from './types';
 
-import type { Candidate } from "./types";
+export const nowISO = () => new Date().toISOString();
 
-export function normalizeHost(s: string): string {
+/** Normalize to host only (strip scheme/path/www) */
+export function normalizeHost(input: string): string {
   try {
-    const u = s.includes("://") ? new URL(s) : new URL("https://" + s);
-    return u.hostname.replace(/^www\./i, "");
+    const u = input.includes('://') ? new URL(input) : new URL(`https://${input}`);
+    return u.host.replace(/^www\./, '').toLowerCase();
   } catch {
-    return (s || "").replace(/^https?:\/\//i, "").replace(/^www\./i, "");
+    return input.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
   }
 }
 
-export function dedupeByHost<T extends { host: string }>(list: T[]): T[] {
+export function uniqueByHostAndTitle(arr: BuyerCandidate[]): BuyerCandidate[] {
   const seen = new Set<string>();
-  const out: T[] = [];
-  for (const c of list) {
-    const key = (c.host || "").toLowerCase();
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push(c);
-  }
-  return out;
-}
-
-export function csvToList(csv: string): string[] {
-  return (csv || "")
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
-}
-
-export function firstTitleFromCsv(csv: string, fallback = "Purchasing Manager"): string {
-  const list = csvToList(csv);
-  return list[0] || fallback;
-}
-
-export function regionToQuery(region: string): string {
-  const r = (region || "").toLowerCase();
-  if (r.includes("us") && r.includes("ca")) return "(site:.com OR site:.us OR site:.ca)";
-  if (r.startsWith("us")) return "(site:.com OR site:.us)";
-  if (r.startsWith("ca")) return "(site:.ca)";
-  return "";
-}
-
-export function toHosts(urls: string[]): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const u of urls) {
-    try {
-      const host = new URL(u).hostname.toLowerCase().replace(/^www\./, "");
-      if (!seen.has(host)) {
-        seen.add(host);
-        out.push(host);
-      }
-    } catch { /* ignore */ }
+  const out: BuyerCandidate[] = [];
+  for (const c of arr) {
+    const k = `${normalizeHost(c.host)}::${c.title.toLowerCase()}`;
+    if (!seen.has(k)) {
+      seen.add(k);
+      out.push({ ...c, host: normalizeHost(c.host) });
+    }
   }
   return out;
 }
