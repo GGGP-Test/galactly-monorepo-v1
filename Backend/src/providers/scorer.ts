@@ -1,9 +1,8 @@
 import type { BuyerCandidate, DiscoveryArgs } from './types';
 
 export interface ScoreConfig {
-  /** score ≥ hotMin → hot; otherwise if ≥ warmMin → warm */
-  hotMin: number;
-  warmMin: number;
+  hotMin: number;  // score >= hotMin => hot
+  warmMin: number; // else if >= warmMin => warm
 }
 
 export const defaultScoreConfig: ScoreConfig = { hotMin: 78, warmMin: 55 };
@@ -21,7 +20,7 @@ export function scoreOne(c: BuyerCandidate, args: DiscoveryArgs): number {
   if (c.platform === 'news') s += 6;
   if (c.platform === 'directory' || c.platform === 'review') s += 4;
 
-  // Persona title match
+  // Persona title match (exact substring)
   if (args.persona?.titles) {
     const want = args.persona.titles.toLowerCase().split(',').map(x => x.trim()).filter(Boolean);
     if (want.some(w => t.includes(w))) s += 10;
