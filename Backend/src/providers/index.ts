@@ -1,4 +1,5 @@
 import { websearchProvider } from "./websearch";
+import { scoreCandidates } from "./scorer";
 
 export type Temp = "hot" | "warm" | "cold";
 
@@ -45,14 +46,17 @@ export async function runProviders(input: FindBuyersInput): Promise<{
 }> {
   const results: ProviderResult[] = [];
 
-  // 1st provider: key-less web search (HTML/RSS)
+  // 1) key-less web search (HTML/RSS)
   results.push(await websearchProvider(input));
 
-  // merge & dedupe
+  // 2) merge + dedupe
   const merged = dedupeByHost(results.flatMap(r => r.candidates));
 
+  // 3) score => hot/warm (+why)
+  const scored = await scoreCandidates(input, merged);
+
   return {
-    candidates: merged,
+    candidates: scored,
     meta: {
       providerCounts: Object.fromEntries(results.map(r => [r.name, r.candidates.length])),
       supplierHost: normalizeHost(input.supplier),
