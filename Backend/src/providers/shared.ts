@@ -2,7 +2,6 @@ import type { BuyerCandidate } from './types';
 
 export const nowISO = () => new Date().toISOString();
 
-/** Normalize to host only (strip scheme/path/www) */
 export function normalizeHost(input: string): string {
   try {
     const u = input.includes('://') ? new URL(input) : new URL(`https://${input}`);
@@ -16,9 +15,9 @@ export function uniqueByHostAndTitle(arr: BuyerCandidate[]): BuyerCandidate[] {
   const seen = new Set<string>();
   const out: BuyerCandidate[] = [];
   for (const c of arr) {
-    const k = `${normalizeHost(c.host)}::${c.title.toLowerCase()}`;
-    if (!seen.has(k)) {
-      seen.add(k);
+    const key = `${normalizeHost(c.host)}::${c.title.toLowerCase()}`;
+    if (!seen.has(key)) {
+      seen.add(key);
       out.push({ ...c, host: normalizeHost(c.host) });
     }
   }
