@@ -2,12 +2,8 @@ import type { DiscoveryArgs, DiscoveryResult, BuyerCandidate } from './types';
 import { uniqueByHostAndTitle } from './shared';
 import { seedsProvider } from './seeds';
 import { websearchProvider } from './websearch';
-import { scoreOne, labelTemp, defaultScoreConfig } from './scoreRarer';
+import { scoreOne, labelTemp, defaultScoreConfig } from './scorer';
 
-/**
- * Orchestrates all providers, de-dupes, scores, and labels hot/warm.
- * Safe to call from /api/v1/leads/find-buyers.
- */
 export async function findBuyers(args: DiscoveryArgs): Promise<DiscoveryResult> {
   const batches: BuyerCandidate[][] = await Promise.all([
     seedsProvider(args),
