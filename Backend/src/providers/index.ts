@@ -1,8 +1,19 @@
-/* Path: Backend/src/providers/index.ts
-   Purpose: Load providers (seeds, websearch, scorer) safely and orchestrate them.
-   NOTE: This file is self-contained and avoids strict type coupling. */
+// Path: Backend/src/providers/index.ts
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+/**
+ * Minimal, static-import version so TypeScript stops yelling.
+ * We assume these files exist in the same folder:
+ *   - ./seeds.ts
+ *   - ./websearch.ts
+ *   - ./scorer.ts
+ * If any of them exports a default function, or a named one, we pick it.
+ */
+
+import * as SeedsMod from "./seeds";
+import * as SearchMod from "./websearch";
+import * as ScorerMod from "./scorer";
 
 export type Providers = {
   seeds?: (...args: any[]) => Promise<any>;
@@ -10,99 +21,64 @@ export type Providers = {
   scorer?: (...args: any[]) => Promise<any>;
 };
 
-let _providers: Providers | null = null;
-
 const isFn = (v: any): v is (...a: any[]) => any => typeof v === "function";
-
-/** Try multiple import patterns + require() fallback so it works in CJS/ESM and with .ts/.js builds. */
-async function tryImportAll(base: string): Promise<any | null> {
-  const candidates = [
-    base,
-    `${base}.ts`,
-    `${base}.js`,
-    `${base}/index`,
-    `${base}/index.ts`,
-    `${base}/index.js`,
-  ];
-  for (const p of candidates) {
-    try {
-      return await import(p);
-    } catch {
-      try {
-        const req = (0, eval)("typeof require !== 'undefined' ? require : null") as
-          | ((x: string) => any)
-          | null;
-        if (req) return req(p);
-      } catch {
-        /* ignore and try next */
-      }
-    }
-  }
-  return null;
-}
 
 function pick(mod: any, keys: string[]): any | undefined {
   if (!mod) return undefined;
+  // prefer default, but accept a few conventional names
   for (const k of ["default", ...keys]) {
-    const v = mod[k];
+    const v = (mod as any)[k];
     if (isFn(v)) return v;
   }
+  // if the module itself is callable (rare), use it
+  if (isFn(mod)) return mod;
   return undefined;
 }
 
-/** Load (and cache) providers that live in this folder. */
-export async function loadProviders(): Promise<Providers> {
-  if (_providers) return _providers;
+const seedsProvider =
+  pick(SeedsMod, ["seeds", "getSeeds", "provider"]) as Providers["seeds"];
+const websearchProvider =
+  pick(SearchMod, ["websearch", "search", "provider"]) as Providers["websearch"];
+const scorerProvider =
+  pick(ScorerMod, ["scorer", "score", "provider"]) as Providers["scorer"];
 
-  const [seedsMod, searchMod, scorerMod] = await Promise.all([
-    tryImportAll("./seeds"),
-    tryImportAll("./websearch"),
-    tryImportAll("./scorer"),
-  ]);
-
-  _providers = {
-    seeds: pick(seedsMod, ["seeds", "getSeeds", "provider"]),
-    websearch: pick(searchMod, ["websearch", "search", "provider"]),
-    scorer: pick(scorerMod, ["scorer", "score", "provider"]),
-  };
-
-  return _providers;
-}
+let _providers: Providers = {
+  seeds: seedsProvider,
+  websearch: websearchProvider,
+  scorer: scorerProvider,
+};
 
 export function setProviders(p: Providers) {
   _providers = p;
 }
 
-export async function getProviders(): Promise<Providers> {
-  return loadProviders();
+export function getProviders(): Providers {
+  return _providers;
 }
 
 /**
- * Orchestrates the pipeline:
+ * Orchestrates the pipeline in-order:
  *   1) seeds -> 2) websearch -> 3) scorer
  * Returns scored candidates if a scorer exists, otherwise raw candidates.
  */
 export async function generateAndScoreCandidates(ctx: any = {}): Promise<any[]> {
-  const p = await loadProviders();
-  const seedsFn = p.seeds;
-  const searchFn = p.websearch;
-  const scoreFn = p.scorer;
+  const { seeds, websearch, scorer } = _providers;
 
   // 1) get seeds
-  let seeds: any[] = [];
-  if (isFn(seedsFn)) {
-    const batch = await seedsFn(undefined, ctx);
-    if (Array.isArray(batch?.seeds)) seeds = batch.seeds;
-    else if (Array.isArray(batch)) seeds = batch;
+  let seedItems: any[] = [];
+  if (isFn(seeds)) {
+    const out = await seeds(undefined, ctx);
+    if (Array.isArray(out?.seeds)) seedItems = out.seeds;
+    else if (Array.isArray(out)) seedItems = out;
   }
 
   // 2) search for each seed
   const limit = ctx?.limitPerSeed ?? 5;
   const candidates: any[] = [];
-  if (isFn(searchFn) && seeds.length) {
-    for (const s of seeds) {
+  if (isFn(websearch) && seedItems.length) {
+    for (const s of seedItems) {
       const q = s?.query ?? s;
-      const results = await searchFn({ query: q, limit }, ctx);
+      const results = await websearch({ query: q, limit }, ctx);
       if (Array.isArray(results)) {
         for (const r of results) {
           candidates.push({
@@ -117,18 +93,17 @@ export async function generateAndScoreCandidates(ctx: any = {}): Promise<any[]> 
     }
   }
 
-  // 3) score
-  if (!isFn(scoreFn)) return candidates;
-  const scored = await scoreFn(candidates, ctx?.scoreOptions ?? undefined, ctx);
+  // 3) score (optional)
+  if (!isFn(scorer)) return candidates;
+  const scored = await scorer(candidates, ctx?.scoreOptions ?? undefined, ctx);
   return Array.isArray(scored) ? scored : candidates;
 }
 
-/** Re-export types so external code can import from "./providers". */
+// Re-export local types if present so external code can do `import {...} from "./providers"`
 export * from "./types";
 
-/** Default export for convenience. */
+// Default export for convenience
 export default {
-  loadProviders,
   getProviders,
   setProviders,
   generateAndScoreCandidates,
