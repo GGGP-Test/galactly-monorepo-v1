@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Providers barrel + tiny pipeline.
- * Works with either default or named exports in ./seeds, ./websearch, ./scorer.
- * Also re-exports commonly-used types.
+ * Safe with either default or named exports in ./seeds, ./websearch, ./scorer.
  */
 
 export type {
@@ -13,18 +12,20 @@ export type {
   ScoredCandidate,
   WebSearchQuery,
   WebSearchResult,
+  Seed,
+  SeedBatch,
   SeedsOutput,
-  RunProvidersMeta,
   RunProvidersOutput,
-  FindBuyersInput,
+  RunProvidersMeta,
 } from "./types";
 
 import type {
-  BuyerCandidate,
   DiscoveryArgs,
   ScoredCandidate,
   ScoreOptions,
+  WebSearchResult,
   RunProvidersOutput,
+  RunProvidersMeta,
 } from "./types";
 
 import * as SeedsMod from "./seeds";
@@ -45,73 +46,95 @@ function pick(mod: any, names: string[]): ProviderFn | undefined {
 }
 
 /* Resolve provider functions (accept default or named) */
-export const seeds     = pick(SeedsMod,  ["seeds", "getSeeds", "provider", "seedsProvider"]);
-export const websearch = pick(SearchMod, ["websearch", "search", "provider", "searchWeb"]);
-export const scorer    = pick(ScorerMod, ["scorer", "score", "provider", "scoreCandidates"]);
+export const seeds = pick(SeedsMod, ["seeds", "getSeeds", "provider"]);
+export const websearch = pick(SearchMod, ["websearch", "search", "provider"]);
+export const scorer = pick(ScorerMod, ["scorer", "score", "provider"]);
 
 /* Public registry (kept for compatibility) */
 export const providers = { seeds, websearch, scorer };
 
-/* Helpers */
-const isoNow = () => new Date().toISOString();
-
 /**
- * Primary pipeline used by services. Returns an envelope:
- * { candidates: ScoredCandidate[], meta: { started, finished, ... } }
+ * Main pipeline used by services:
+ * - seeds()   -> list of {host|query|title}
+ * - websearch -> list of WebSearchResult
+ * - scorer    -> ScoredCandidate[]
+ * Returns { candidates, meta } for the service layer.
  */
-export async function runProviders(ctx: DiscoveryArgs = {}): Promise<RunProvidersOutput> {
-  const started = isoNow();
-  const limit   = ctx?.limitPerSeed ?? 5;
+export async function runProviders(
+  args: Partial<DiscoveryArgs> = {}
+): Promise<RunProvidersOutput> {
+  const t0 = Date.now();
+  const limitPerSeed = args.limitPerSeed ?? 5;
+  const meta: RunProvidersMeta = { seeds: 0, searched: 0, scored: 0, notes: [] };
 
-  // ---- 1) seeds -------------------------------------------------------------
-  let seedItems: BuyerCandidate[] = [];
+  // 1) SEEDS
+  type SeedItem = { host?: string; query?: string; title?: string; tags?: string[] };
+  let seedItems: SeedItem[] = [];
   if (isFn(seeds)) {
-    const out = await seeds(undefined, ctx);
-    if (Array.isArray(out?.seeds)) seedItems = out.seeds as BuyerCandidate[];
-    else if (Array.isArray(out))    seedItems = out as BuyerCandidate[];
+    const out = await seeds(undefined, args);
+    const maybeSeeds: SeedItem[] =
+      Array.isArray(out?.seeds) ? out.seeds : Array.isArray(out) ? out : [];
+    seedItems = maybeSeeds;
+    meta.seeds = seedItems.length;
   }
 
-  // ---- 2) websearch -> candidates ------------------------------------------
-  const rawCandidates: any[] = [];
+  // 2) WEBSEARCH
+  const webDocs: WebSearchResult[] = [];
   if (isFn(websearch) && seedItems.length) {
     for (const s of seedItems) {
-      const q = (s as any)?.query ?? (s as any)?.host ?? s; // tolerate either seed shape
-      const results = await websearch({ query: q, limit }, ctx);
-      if (Array.isArray(results)) {
-        for (const r of results) {
-          rawCandidates.push({
-            host:  (r as any).host ?? (r as any).domain ?? null,
-            url:   (r as any).url  ?? (r as any).link   ?? (r as any).href ?? null,
-            title: (r as any).title ?? (s as any).title ?? null,
-            tags:  (s as any).tags ?? [],
-            extra: { snippet: (r as any).snippet ?? (r as any).summary ?? null, source: "websearch" },
-          });
-        }
-      }
+      const q = s.query ?? s.host ?? s.title ?? "";
+      if (!q) continue;
+      const results: WebSearchResult[] = await websearch(
+        { query: q, limit: limitPerSeed, region: args.region, radiusMi: args.radiusMi ?? args.radiusMiles },
+        args
+      );
+      if (Array.isArray(results)) webDocs.push(...results);
     }
   }
+  meta.searched = webDocs.length;
 
-  // ---- 3) score (optional) --------------------------------------------------
-  let candidates: ScoredCandidate[] = rawCandidates as unknown as ScoredCandidate[];
-  if (isFn(scorer)) {
-    const scored = await scorer(rawCandidates, (ctx?.scoreOptions ?? {}) as ScoreOptions, ctx);
-    if (Array.isArray(scored)) candidates = scored as ScoredCandidate[];
+  // 3) SCORE
+  let candidates: ScoredCandidate[] = [];
+  // We pass through extra fields (platform/temp/why/created) after scoring.
+  const baseForScoring = webDocs.map((d) => ({
+    host: d.host,
+    url: d.url,
+    title: d.title,
+    tags: sTags(d.title),
+    extra: { snippet: d.snippet },
+  }));
+
+  if (isFn(scorer) && baseForScoring.length) {
+    const opts: ScoreOptions | undefined = args.scoreOptions ?? undefined;
+    const scored: ScoredCandidate[] = await scorer(baseForScoring, opts, args);
+    candidates = scored.map((c, i) => ({
+      ...c,
+      platform: webDocs[i]?.platform ?? "web",
+      temp: webDocs[i]?.temp ?? c.label, // a decent default
+      why: webDocs[i]?.why,
+      created: webDocs[i]?.created,
+    }));
   }
 
-  const finished = isoNow();
-  return {
-    candidates,
-    meta: {
-      started,
-      finished,
-      seedCount: seedItems.length,
-      searchCount: rawCandidates.length,
-    },
-  };
+  meta.scored = candidates.length;
+  meta.tookMs = Date.now() - t0;
+
+  return { candidates, meta };
 }
 
-/* Back-compat alias used by some modules/tests */
-export const generateAndScoreCandidates = runProviders;
+/* Helper: tiny tagger */
+function sTags(title?: string): string[] {
+  const s = (title ?? "").toLowerCase();
+  const out: string[] = [];
+  if (/\bbox\b|\bboxes\b|carton|pallet|tape|label|mailer/.test(s)) out.push("packaging");
+  return out;
+}
+
+/* Backwards-compat alias some code may import */
+export const generateAndScoreCandidates = async (ctx?: Partial<DiscoveryArgs>) => {
+  const { candidates } = await runProviders(ctx ?? {});
+  return candidates;
+};
 
 /* Default export */
 export default providers;
