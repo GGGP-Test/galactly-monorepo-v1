@@ -3,12 +3,12 @@ FROM node:20-slim AS builder
 ENV CI=true
 WORKDIR /app
 
-# Install deps (incl dev) so tsc can compile
+# Install deps (include dev so tsc can run)
 COPY package*.json ./
 RUN npm ci --omit=optional
 
-# Bring tsconfig + sources and compile TS -> JS
-COPY tsconfig.json ./
+# Compile TS -> JS using the narrow build config
+COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 RUN npm run build
 
@@ -18,20 +18,16 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8787
 
-# Only prod deps for runtime (clean, reproducible)
+# Install only prod deps for runtime (small, reproducible)
 COPY package*.json ./
 RUN npm ci --omit=dev --omit=optional && npm cache clean --force
 
 # Bring compiled JS
 COPY --from=builder /app/dist ./dist
 
-# Healthcheck uses Node's built-in fetch (no curl)
+# Healthcheck using Node's built-in fetch
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/healthz').then(r=>{if(r.ok)process.exit(0);process.exit(1)}).catch(()=>process.exit(1))"
 
 EXPOSE 8787
 CMD ["node","dist/index.js"]
-
-# If you use native deps (e.g. sharp, bcrypt) and they complain on slim,
-# uncomment the next lines in BOTH stages:
-# RUN apt-get update && apt-get install -y --no-install-recommends build-essential python3 && rm -rf /var/lib/apt/lists/*
