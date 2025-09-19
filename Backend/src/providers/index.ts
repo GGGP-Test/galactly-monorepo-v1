@@ -1,45 +1,30 @@
-// Backend/src/providers/index.ts
+import type { DiscoveryArgs, DiscoveryResult, BuyerCandidate } from './types';
+import { uniqueByHostAndTitle } from './shared';
+import { seedsProvider } from './seeds';
+import { websearchProvider } from './websearch';
+import { scoreOne, labelTemp, defaultScoreConfig } from './scoreRarer';
 
-import type { Candidate, FindBuyersInput } from "./types";
-import { websearchProvider } from "./websearch";
-import { seedCandidates } from "./seeds";
-import { dedupeByHost, normalizeHost } from "./shared";
-import { scoreCandidates } from "./scorer";
+/**
+ * Orchestrates all providers, de-dupes, scores, and labels hot/warm.
+ * Safe to call from /api/v1/leads/find-buyers.
+ */
+export async function findBuyers(args: DiscoveryArgs): Promise<DiscoveryResult> {
+  const batches: BuyerCandidate[][] = await Promise.all([
+    seedsProvider(args),
+    websearchProvider(args),
+  ]);
 
-export async function runProviders(input: FindBuyersInput): Promise<{
-  candidates: Candidate[];
-  meta: { providerCounts: Record<string, number>; supplierHost: string; region: string };
-}> {
-  const results: { name: string; candidates: Candidate[] }[] = [];
+  let cands = uniqueByHostAndTitle(batches.flat());
 
-  // 1) Try key-less discovery (may return 0 if egress is blocked)
-  try {
-    const web = await websearchProvider(input);
-    results.push({ name: web.name, candidates: web.candidates });
-  } catch {
-    results.push({ name: "websearch", candidates: [] });
+  for (const c of cands) {
+    c.score = scoreOne(c, args);
+    c.temp = labelTemp(c.score, defaultScoreConfig);
   }
 
-  // 2) Merge & dedupe
-  let merged = dedupeByHost(results.flatMap(r => r.candidates));
+  const hot = cands.filter(c => c.temp === 'hot').length;
+  const warm = cands.filter(c => c.temp === 'warm').length;
 
-  // 3) Backfill so Free Panel never shows empty
-  const MIN_TARGET = 12;
-  if (merged.length < MIN_TARGET) {
-    const seeds = seedCandidates(input);
-    const need = MIN_TARGET - merged.length;
-    merged = dedupeByHost([...merged, ...seeds.slice(0, Math.max(0, need))]);
-  }
-
-  // 4) Hot/Warm scoring (deterministic + persona-aware)
-  const scored = await scoreCandidates(input, merged);
-
-  return {
-    candidates: scored,
-    meta: {
-      providerCounts: Object.fromEntries(results.map(r => [r.name, r.candidates.length])),
-      supplierHost: normalizeHost(input.supplier),
-      region: input.region
-    }
-  };
+  return { created: cands.length, hot, warm, candidates: cands };
 }
+
+export default { findBuyers };
