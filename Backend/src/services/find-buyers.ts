@@ -4,13 +4,13 @@ import { promises as fs } from "fs";
 import path from "path";
 import crypto from "crypto";
 
-// ---------- Config (tweak via env without code changes) ----------
+// ---------- Config ----------
 const CACHE_TTL_MS =
-  Number(process.env.FINDBUYERS_TTL_MS || "") || 10 * 60 * 1000; // 10 minutes
+  Number(process.env.FINDBUYERS_TTL_MS || "") || 10 * 60 * 1000; // 10 min
 const CACHE_DIR =
   process.env.CACHE_DIR || path.join(process.cwd(), "cache", "find-buyers");
 
-// ---------- Local input / output contracts (kept minimal & stable) ----------
+// ---------- Contracts ----------
 type Temp = "warm" | "hot";
 interface Persona {
   offer: string;
@@ -18,20 +18,20 @@ interface Persona {
   titles: string;
 }
 interface FindBuyersInput {
-  supplier: string;        // e.g. "peekpackaging.com"
-  region: string;          // e.g. "usca"
-  radiusMi: number;        // e.g. 50
-  onlyUSCA?: boolean;      // panel toggle
-  persona: Persona;        // free-text hints
+  supplier: string;
+  region: string;
+  radiusMi: number;
+  onlyUSCA?: boolean;
+  persona: Persona;
 }
 interface Candidate {
   id: string;
   host: string;
   platform: "web" | "news" | "social" | "other";
   title: string;
-  created: string;         // ISO
+  created: string; // ISO timestamp
   temp: Temp;
-  why: string;             // human-readable reason
+  why: string;
 }
 interface FindBuyersResult {
   ok: true;
@@ -40,17 +40,17 @@ interface FindBuyersResult {
   region: string;
   radiusMi: number;
   persona: Persona;
-  created: number;         // count created
+  created: number;
   hot: number;
   warm: number;
   candidates: Candidate[];
+  cache?: "hit" | "miss"; // visibility only
 }
 
-// ---------- Small helpers ----------
+// ---------- Helpers ----------
 const nowIso = () => new Date().toISOString();
 
 function stableKey(input: FindBuyersInput): string {
-  // Order & normalize fields for a deterministic cache key
   const payload = JSON.stringify({
     supplier: input.supplier.trim().toLowerCase(),
     region: input.region.trim().toLowerCase(),
@@ -69,10 +69,9 @@ async function readCache<T>(key: string): Promise<T | null> {
   try {
     await fs.mkdir(CACHE_DIR, { recursive: true });
     const file = path.join(CACHE_DIR, `${key}.json`);
-    const buf = await fs.readFile(file, "utf8");
-    const { ts, data } = JSON.parse(buf) as { ts: number; data: T };
+    const raw = await fs.readFile(file, "utf8");
+    const { ts, data } = JSON.parse(raw) as { ts: number; data: T };
     if (Date.now() - ts <= CACHE_TTL_MS) return data;
-    // stale -> ignore but try to unlink in the background
     fs.unlink(file).catch(() => {});
     return null;
   } catch {
@@ -84,32 +83,30 @@ async function writeCache<T>(key: string, data: T): Promise<void> {
   try {
     await fs.mkdir(CACHE_DIR, { recursive: true });
     const file = path.join(CACHE_DIR, `${key}.json`);
-    const payload = JSON.stringify({ ts: Date.now(), data });
-    await fs.writeFile(file, payload, "utf8");
+    await fs.writeFile(file, JSON.stringify({ ts: Date.now(), data }), "utf8");
   } catch {
-    // best-effort cache; ignore write errors
+    // best-effort; ignore
   }
 }
 
 function sanitize(input: any): FindBuyersInput {
   const supplier = String(input?.supplier ?? "").trim();
   const region = String(input?.region ?? "usca").trim().toLowerCase();
-  const radiusMiRaw = Number(input?.radiusMi);
-  const radiusMi = Number.isFinite(radiusMiRaw) ? radiusMiRaw : 50;
+  const r = Number(input?.radiusMi);
+  const radiusMi = Number.isFinite(r) ? r : 50;
   const onlyUSCA = Boolean(input?.onlyUSCA ?? true);
   const persona: Persona = {
     offer: String(input?.persona?.offer ?? ""),
     solves: String(input?.persona?.solves ?? ""),
     titles: String(input?.persona?.titles ?? ""),
   };
-
   if (!supplier) {
     throw Object.assign(new Error("supplier is required"), { status: 400 });
   }
   return { supplier, region, radiusMi, onlyUSCA, persona };
 }
 
-// Demo candidate generator (replace later with real providers)
+// Demo generator (swap later for real providers)
 function makeCandidates(supplier: string, count = 20): Candidate[] {
   const roles = [
     "Purchasing Manager",
@@ -123,20 +120,19 @@ function makeCandidates(supplier: string, count = 20): Candidate[] {
     "Warehouse Manager",
     "Materials Manager",
   ];
-  const list: Candidate[] = [];
+  const out: Candidate[] = [];
   for (let i = 0; i < count; i++) {
-    const title = roles[i % roles.length];
-    list.push({
+    out.push({
       id: `${supplier.replace(/\W+/g, "")}.${i + 1}`,
       host: supplier,
       platform: "web",
-      title,
+      title: roles[i % roles.length],
       created: nowIso(),
       temp: "warm",
       why: `demo match for ${supplier}`,
     });
   }
-  return list;
+  return out;
 }
 
 // ---------- Controller ----------
@@ -147,7 +143,6 @@ export default async function findBuyers(
 ) {
   const t0 = Date.now();
   try {
-    // Accept both POST body and (rare) GET with ?input={}
     const raw =
       req.method === "GET"
         ? JSON.parse(String(req.query.input ?? "{}"))
@@ -155,20 +150,20 @@ export default async function findBuyers(
     const input = sanitize(raw);
     const key = stableKey(input);
 
-    // Cache hit?
     const cached = await readCache<FindBuyersResult>(key);
     if (cached) {
+      res.setHeader("X-Cache", "HIT");
       return res.status(200).json({
         ...cached,
-        tookMs: Date.now() - t0, // refresh timing for UI even on cache hit
+        cache: "hit",
+        tookMs: Date.now() - t0,
       });
     }
 
-    // Compute (demo) candidates
+    // Compute (demo) results
     const candidates = makeCandidates(input.supplier, 20);
-
-    const warm = candidates.filter((c) => c.temp === "warm").length;
-    const hot = candidates.filter((c) => c.temp === "hot").length;
+    const warm = candidates.filter(c => c.temp === "warm").length;
+    const hot = candidates.filter(c => c.temp === "hot").length;
 
     const payload: FindBuyersResult = {
       ok: true,
@@ -181,11 +176,12 @@ export default async function findBuyers(
       hot,
       warm,
       candidates,
+      cache: "miss",
     };
 
-    // Best-effort cache write (don’t block response)
+    // write cache (best effort)
     writeCache(key, payload).catch(() => {});
-
+    res.setHeader("X-Cache", "MISS");
     return res.status(200).json(payload);
   } catch (err) {
     return next(err);
