@@ -1,67 +1,53 @@
-// src/middleware/ratelimit.ts
-import type { RequestHandler } from "express";
+// src/middleware/rateLimit.ts
+import { Request, Response, NextFunction } from "express";
 
 type Options = {
-  /** window in ms */
+  /** time window in milliseconds */
   windowMs?: number;
-  /** max requests per window */
+  /** max requests allowed within window per key (IP) */
   max?: number;
-  /** which header to use as key (fallbacks to ip) */
-  keyHeader?: string;
+  /** metrics key prefix */
+  keyPrefix?: string;
 };
 
 type Bucket = { count: number; resetAt: number };
 
-// Simple in-memory fixed-window limiter.
-// No external deps. Good enough for admin tools / demos.
-export function buyersRateLimit(opts: Options = {}): RequestHandler {
-  const windowMs =
-    typeof opts.windowMs === "number" && Number.isFinite(opts.windowMs)
-      ? opts.windowMs
-      : Number(process.env.RATE_WINDOW_MS ?? 15 * 60 * 1000);
+const buckets = new Map<string, Bucket>();
 
-  const max =
-    typeof opts.max === "number" && Number.isFinite(opts.max)
-      ? opts.max
-      : Number(process.env.RATE_MAX ?? 60);
+function clientIp(req: Request): string {
+  const xff = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim();
+  return xff ?? req.socket.remoteAddress ?? "unknown";
+}
 
-  const keyHeader = String(
-    (opts.keyHeader ?? process.env.RATE_KEY_HEADER ?? "x-api-key")
-  ).toLowerCase();
+export default function rateLimit(opts: Options = {}) {
+  const windowMs = Number(process.env.RATE_WINDOW_MS ?? opts.windowMs ?? 10_000);
+  const max = Number(process.env.RATE_MAX ?? opts.max ?? 8);
+  const keyPrefix = opts.keyPrefix ?? "rl";
 
-  const buckets = new Map<string, Bucket>();
-
-  return (req, res, next) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const key = `${keyPrefix}:${clientIp(req)}`;
     const now = Date.now();
+    let bucket = buckets.get(key);
 
-    // Always return a STRING key (no undefined)
-    const headerVal = req.get(keyHeader);
-    const key = headerVal ?? req.ip ?? "anon";
-
-    let b = buckets.get(key);
-    if (!b || b.resetAt <= now) {
-      b = { count: 0, resetAt: now + windowMs };
-      buckets.set(key, b);
+    if (!bucket || now >= bucket.resetAt) {
+      bucket = { count: 0, resetAt: now + windowMs };
+      buckets.set(key, bucket);
     }
 
-    b.count += 1;
+    if (bucket.count >= max) {
+      const retryMs = bucket.resetAt - now;
+      res.setHeader("Retry-After", String(Math.ceil(retryMs / 1000)));
+      res.setHeader("X-RateLimit-Limit", String(max));
+      res.setHeader("X-RateLimit-Remaining", "0");
+      res.setHeader("X-RateLimit-Reset", String(Math.ceil(bucket.resetAt / 1000)));
+      return res.status(429).json({ error: "RATE_LIMITED", retryMs });
+    }
 
-    // Standard rate-limit headers
-    const remaining = Math.max(0, max - b.count);
+    bucket.count += 1;
     res.setHeader("X-RateLimit-Limit", String(max));
-    res.setHeader("X-RateLimit-Remaining", String(remaining));
-    res.setHeader("X-RateLimit-Reset", String(Math.ceil(b.resetAt / 1000)));
-
-    if (b.count > max) {
-      const retryAfterSec = Math.ceil((b.resetAt - now) / 1000);
-      res.setHeader("Retry-After", String(retryAfterSec));
-      return res
-        .status(429)
-        .json({ error: "RATE_LIMIT", retryAfterSec, ok: false });
-    }
+    res.setHeader("X-RateLimit-Remaining", String(max - bucket.count));
+    res.setHeader("X-RateLimit-Reset", String(Math.ceil(bucket.resetAt / 1000)));
 
     next();
   };
 }
-
-export default buyersRateLimit;
