@@ -1,31 +1,34 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * Providers barrel + tiny pipeline.
- * Safe with either default or named exports in ./seeds, ./websearch, ./scorer.
+ * Providers registry + pipeline with a stable public API the rest of the app uses.
+ * It accepts either default or named exports from ./seeds, ./websearch, ./scorer.
  */
 
 export type {
   Candidate,
   BuyerCandidate,
   DiscoveryArgs,
+  FindBuyersInput,
   ScoreOptions,
   ScoredCandidate,
-  WebSearchQuery,
-  WebSearchResult,
+  SearchRequest,
+  SearchResult,
   Seed,
   SeedBatch,
-  SeedsOutput,
   RunProvidersOutput,
   RunProvidersMeta,
 } from "./types";
 
 import type {
-  DiscoveryArgs,
-  ScoredCandidate,
-  ScoreOptions,
-  WebSearchResult,
+  Candidate,
+  BuyerCandidate,
+  FindBuyersInput,
   RunProvidersOutput,
   RunProvidersMeta,
+  ScoreOptions,
+  ScoredCandidate,
+  SearchRequest,
+  SearchResult,
 } from "./types";
 
 import * as SeedsMod from "./seeds";
@@ -33,8 +36,10 @@ import * as SearchMod from "./websearch";
 import * as ScorerMod from "./scorer";
 
 type ProviderFn = (...args: any[]) => any | Promise<any>;
+
 const isFn = (v: any): v is ProviderFn => typeof v === "function";
 
+/** find a callable in a module (default or one of the common names) */
 function pick(mod: any, names: string[]): ProviderFn | undefined {
   if (!mod) return undefined;
   for (const n of ["default", ...names]) {
@@ -45,96 +50,112 @@ function pick(mod: any, names: string[]): ProviderFn | undefined {
   return undefined;
 }
 
-/* Resolve provider functions (accept default or named) */
-export const seeds = pick(SeedsMod, ["seeds", "getSeeds", "provider"]);
-export const websearch = pick(SearchMod, ["websearch", "search", "provider"]);
-export const scorer = pick(ScorerMod, ["scorer", "score", "provider"]);
+/* Accept multiple common names so we don't churn other files. */
+const seedsFn  = pick(SeedsMod,  ["seeds", "getSeeds", "provider", "seedsProvider"]);
+const searchFn = pick(SearchMod, ["websearch", "search", "searchWeb", "provider"]);
+const scoreFn  = pick(ScorerMod, ["scoreCandidates", "scorer", "score", "provider"]);
 
-/* Public registry (kept for compatibility) */
-export const providers = { seeds, websearch, scorer };
+/** Public registry (debugging convenience). */
+export const providers = { seeds: seedsFn, websearch: searchFn, scorer: scoreFn };
 
 /**
- * Main pipeline used by services:
- * - seeds()   -> list of {host|query|title}
- * - websearch -> list of WebSearchResult
- * - scorer    -> ScoredCandidate[]
- * Returns { candidates, meta } for the service layer.
+ * Main pipeline used by routes. It returns { candidates, meta } — NOT an array —
+ * so it matches your `src/services/find-buyers.ts` usage.
  */
-export async function runProviders(
-  args: Partial<DiscoveryArgs> = {}
-): Promise<RunProvidersOutput> {
+export async function runProviders(input: FindBuyersInput): Promise<RunProvidersOutput> {
   const t0 = Date.now();
-  const limitPerSeed = args.limitPerSeed ?? 5;
-  const meta: RunProvidersMeta = { seeds: 0, searched: 0, scored: 0, notes: [] };
+  const limitPerSeed = input?.limitPerSeed ?? 5;
 
-  // 1) SEEDS
-  type SeedItem = { host?: string; query?: string; title?: string; tags?: string[] };
-  let seedItems: SeedItem[] = [];
-  if (isFn(seeds)) {
-    const out = await seeds(undefined, args);
-    const maybeSeeds: SeedItem[] =
-      Array.isArray(out?.seeds) ? out.seeds : Array.isArray(out) ? out : [];
-    seedItems = maybeSeeds;
-    meta.seeds = seedItems.length;
-  }
-
-  // 2) WEBSEARCH
-  const webDocs: WebSearchResult[] = [];
-  if (isFn(websearch) && seedItems.length) {
-    for (const s of seedItems) {
-      const q = s.query ?? s.host ?? s.title ?? "";
-      if (!q) continue;
-      const results: WebSearchResult[] = await websearch(
-        { query: q, limit: limitPerSeed, region: args.region, radiusMi: args.radiusMi ?? args.radiusMiles },
-        args
-      );
-      if (Array.isArray(results)) webDocs.push(...results);
+  // 1) Seeds (optional)
+  let seeds: BuyerCandidate[] = [];
+  if (isFn(seedsFn)) {
+    try {
+      const out = await seedsFn(input);
+      if (Array.isArray(out)) seeds = out;
+      else if (Array.isArray(out?.seeds)) seeds = out.seeds;
+    } catch (err) {
+      // ignore seeds errors; continue pipeline
     }
   }
-  meta.searched = webDocs.length;
+  // Fallback seed if none
+  if (seeds.length === 0 && input?.supplier) {
+    seeds = [
+      {
+        host: input.supplier,
+        platform: "news",
+        title: "Buyer",
+        source: "seeds",
+        createdAt: new Date().toISOString(),
+        proof: "seed",
+      },
+    ];
+  }
 
-  // 3) SCORE
-  let candidates: ScoredCandidate[] = [];
-  // We pass through extra fields (platform/temp/why/created) after scoring.
-  const baseForScoring = webDocs.map((d) => ({
-    host: d.host,
-    url: d.url,
-    title: d.title,
-    tags: sTags(d.title),
-    extra: { snippet: d.snippet },
-  }));
+  // 2) Web search (optional)
+  let rawCandidates: Candidate[] = [];
+  if (isFn(searchFn)) {
+    for (const s of seeds) {
+      const q: SearchRequest = {
+        query: s.host,
+        limit: limitPerSeed,
+        region: input?.region,
+      };
+      try {
+        const results: SearchResult[] = await searchFn(q, input);
+        if (Array.isArray(results)) {
+          for (const r of results) {
+            rawCandidates.push({
+              host: r.host ?? s.host,
+              url: r.url,
+              title: r.title ?? s.title,
+              tags: s.tags ?? [],
+              extra: { snippet: r.snippet ?? "", source: "websearch" },
+              platform: "web",
+              source: "websearch",
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      } catch {
+        /* ignore this seed’s search errors */
+      }
+    }
+  } else {
+    // If no websearch provider, use seeds as raw candidates.
+    rawCandidates = seeds;
+  }
 
-  if (isFn(scorer) && baseForScoring.length) {
-    const opts: ScoreOptions | undefined = args.scoreOptions ?? undefined;
-    const scored: ScoredCandidate[] = await scorer(baseForScoring, opts, args);
-    candidates = scored.map((c, i) => ({
+  // 3) Score (optional; if missing, coerce into ScoredCandidate)
+  let scored: ScoredCandidate[] = [];
+  if (isFn(scoreFn)) {
+    const scoreOpts: ScoreOptions = input?.scoreOptions ?? { supplierDomain: input?.supplier };
+    scored = await scoreFn(rawCandidates, scoreOpts, input);
+  } else {
+    // Default naive scoring so the UI still shows temp/label.
+    scored = rawCandidates.map((c) => ({
       ...c,
-      platform: webDocs[i]?.platform ?? "web",
-      temp: webDocs[i]?.temp ?? c.label, // a decent default
-      why: webDocs[i]?.why,
-      created: webDocs[i]?.created,
+      score: 50,
+      label: "warm",
+      temp: "warm",
+      reasons: ["default scorer"],
     }));
   }
 
-  meta.scored = candidates.length;
-  meta.tookMs = Date.now() - t0;
+  // Mirror label -> temp to satisfy UI that reads c.temp
+  for (const c of scored) {
+    c.temp = c.label;
+  }
 
-  return { candidates, meta };
+  const meta: RunProvidersMeta = {
+    ms: Date.now() - t0,
+    seeds: seeds.length,
+    searched: rawCandidates.length,
+    scored: scored.length,
+  };
+
+  return { candidates: scored, meta };
 }
 
-/* Helper: tiny tagger */
-function sTags(title?: string): string[] {
-  const s = (title ?? "").toLowerCase();
-  const out: string[] = [];
-  if (/\bbox\b|\bboxes\b|carton|pallet|tape|label|mailer/.test(s)) out.push("packaging");
-  return out;
-}
-
-/* Backwards-compat alias some code may import */
-export const generateAndScoreCandidates = async (ctx?: Partial<DiscoveryArgs>) => {
-  const { candidates } = await runProviders(ctx ?? {});
-  return candidates;
-};
-
-/* Default export */
+/* Back-compat aliases some code paths might import */
+export const generateAndScoreCandidates = runProviders;
 export default providers;
