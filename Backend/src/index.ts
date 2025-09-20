@@ -1,61 +1,75 @@
-// src/index.ts
-import express from "express";
+import express, { Request, Response, NextFunction, RequestHandler } from "express";
 import cors from "cors";
-import { findWarmBuyers } from "./services/find-buyers";
+import findBuyers from "./services/find-buyers";
 
 const app = express();
-app.use(cors());
+
+// CORS for the GitHub panel (different origin)
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json({ limit: "1mb" }));
 
-// Healthcheck (your Dockerfile pings this)
-app.get("/healthz", (_req, res) => res.status(200).send("ok"));
+// Health
+app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
+app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// ---- Handlers ----
-const findBuyersHandler = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+// ---- Find Buyers ----
+// Canonical POST route you already had (keep it)
+app.post("/api/v1/leads/find-buyers", findBuyers);
+
+// Also accept POST at these simpler paths (panel variants)
+app.post("/find-buyers", findBuyers);
+app.post("/api/v1/find-buyers", findBuyers);
+
+// GET shim: map query params to the body the handler expects, then reuse the same handler
+const findBuyersGet: RequestHandler = (req, res, next) => {
   try {
-    const b = (req.body ?? {}) as {
-      supplier?: string; region?: string; radiusMiles?: number | string; personaTitles?: string[]; pro?: boolean;
+    const q = req.query as Record<string, unknown>;
+    (req as any).body = {
+      supplierDomain: String(q.site ?? q.supplier ?? q.domain ?? q.host ?? ""),
+      region: String(q.region ?? "US/CA"),
+      radiusMi: Number((q.radiusMi ?? q.radius ?? 50) as any),
+      personaTitles: Array.isArray(q.titles)
+        ? (q.titles as string[]).map(s => s.trim()).filter(Boolean)
+        : typeof q.titles === "string"
+          ? (q.titles as string).split(",").map(s => s.trim()).filter(Boolean)
+          : undefined,
     };
-    if (!b.supplier) return res.status(400).json({ error: "BadRequest", message: "Missing 'supplier'" });
-
-    const input = {
-      supplier: String(b.supplier),
-      region: (b.region ?? "US/CA") as string,
-      radiusMiles: Number(b.radiusMiles ?? 50),
-      personaTitles: Array.isArray(b.personaTitles) ? b.personaTitles : [],
-      pro: Boolean(b.pro),
-    };
-
-    const result = await findWarmBuyers(input);
-    res.json(result ?? { hot: [], warm: [], notes: [] });
+    return findBuyers(req, res, next);
   } catch (err) {
-    next(err);
+    return next(err);
   }
 };
 
-// Route aliases so the panel works even if a proxy adds prefixes
-app.post("/find-buyers", findBuyersHandler);
-app.post("/api/find-buyers", findBuyersHandler);
-app.post("/api/v1/find-buyers", findBuyersHandler);
-app.post("/buyers/find", findBuyersHandler);
+app.get("/find-buyers", findBuyersGet);
+app.get("/api/v1/find-buyers", findBuyersGet);
 
-// Stub for the panel’s Hot/Warm refresh list (returns empty for now)
-const leadsStub = (_req: express.Request, res: express.Response) => res.json({ items: [], next: null });
-app.get("/api/v1/leads", leadsStub);
-app.get("/api/leads", leadsStub);
-app.get("/leads", leadsStub);
-
-// Debug: see which routes are live
-app.get("/_debug", (_req, res) =>
-  res.json({ ok: true, routes: ["/find-buyers","/api/find-buyers","/api/v1/find-buyers","/buyers/find","/api/v1/leads"] })
-);
-
-// 404 + error handlers
-app.use((req, res) => res.status(404).json({ error: "NOT_FOUND", method: req.method, path: req.path }));
-app.use((err: any, _req: any, res: any, _next: any) => {
-  console.error("[buyers-api] error:", err);
-  res.status(500).json({ error: "INTERNAL", message: err?.message ?? "unknown" });
+// ---- Leads list used by Refresh Hot/Warm in the panel ----
+// Stub an empty list for now so the panel stops 404ing.
+// (We can wire this to your cache/store later.)
+app.get("/api/v1/leads", (_req: Request, res: Response) => {
+  res.status(200).json([]);
 });
 
-const port = Number(process.env.PORT ?? 8787);
-app.listen(port, () => console.log(`[buyers-api] listening on ${port}`));
+// 404
+app.use((req: Request, res: Response) => {
+  res.status(404).json({ error: "NOT_FOUND", method: req.method, path: req.path });
+});
+
+// Error handler
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  const any = err as { status?: number; message?: string };
+  const status = typeof any?.status === "number" ? any.status : 500;
+  const message = any?.message ?? "Internal Server Error";
+  res.status(status).json({ error: "INTERNAL_ERROR", message });
+});
+
+const port = Number(process.env.PORT) || 8787;
+app.listen(port, () => console.log(`[server] listening on :${port}`));
+
+export default app;
