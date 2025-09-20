@@ -1,24 +1,21 @@
 import { Router, Request, Response } from "express";
 import { runProviders } from "../providers";
+import { loadLeadsFromDisk, saveLeadsToDisk } from "../utils/fsCache";
 
 const router = Router();
 
 /** -------------------------
- *  Minimal in-memory store
+ *  Minimal rolling leads store
  *  -------------------------
- *  This exists only to make the Free Panel’s
- *  GET /api/v1/leads work. It keeps a rolling
- *  window of the most recent leads in memory.
  */
-
 type UICandidate = {
   id: number;
   host: string;
   platform: string;
   title: string;
-  created: string;                 // ISO
-  temp: string;                    // "hot" | "warm" | other
-  why: string;                     // short human reason
+  created: string;   // ISO string
+  temp: string;      // "hot" | "warm" | other
+  why: string;
   region?: string;
 };
 
@@ -38,6 +35,8 @@ function toHost(urlOrDomain: any): string {
 }
 
 function upsertLeads(candidates: any[], region: string) {
+  let changed = false;
+
   for (const c of candidates ?? []) {
     const host = toHost(c?.host ?? c?.domain ?? c?.url ?? c?.website);
     const title = String(c?.title ?? c?.label ?? "Buyer");
@@ -70,8 +69,27 @@ function upsertLeads(candidates: any[], region: string) {
       LEADS.push(rec);
       if (LEADS.length > MAX_LEADS) LEADS.splice(0, LEADS.length - MAX_LEADS);
     }
+    changed = true;
+  }
+
+  if (changed) {
+    // fire-and-forget; keep server fast
+    saveLeadsToDisk(LEADS).catch(() => void 0);
   }
 }
+
+// Try to load persisted leads on boot (fire-and-forget)
+loadLeadsFromDisk()
+  .then((arr) => {
+    if (Array.isArray(arr)) {
+      for (const r of arr) {
+        LEADS.push(r as UICandidate);
+        if (r.id && r.id >= NEXT_ID) NEXT_ID = r.id + 1;
+      }
+      if (LEADS.length > MAX_LEADS) LEADS.splice(0, LEADS.length - MAX_LEADS);
+    }
+  })
+  .catch(() => void 0);
 
 /** ------------------------------------
  *  POST /api/v1/leads/find-buyers
@@ -106,24 +124,18 @@ router.post("/api/v1/leads/find-buyers", async (req: Request, res: Response) => 
     const t0 = Date.now();
     const { candidates = [], meta = {} } = (await runProviders(input as any)) as any;
 
-    // Update in-memory store so GET /api/v1/leads can show results
     upsertLeads(candidates as any[], input.region);
 
     const hot = (candidates as any[]).filter((c) => c?.temp === "hot").length;
     const warm = (candidates as any[]).filter((c) => c?.temp === "warm").length;
 
-    const payload = {
+    return res.status(200).json({
       ok: true,
       created: Array.isArray(candidates) ? candidates.length : 0,
-      counts: { hot, warm },              // separate object to avoid duplicate keys
+      counts: { hot, warm },
       candidates,
-      meta: {
-        ms: Date.now() - t0,
-        ...(meta || {}),
-      },
-    };
-
-    return res.status(200).json(payload);
+      meta: { ms: Date.now() - t0, ...(meta || {}) },
+    });
   } catch (err: any) {
     return res.status(500).json({
       ok: false,
@@ -133,12 +145,11 @@ router.post("/api/v1/leads/find-buyers", async (req: Request, res: Response) => 
 });
 
 /** -------------------------------
- *  GET /api/v1/leads
+ *  GET /api/v1/leads  (+ synonyms)
  *  -------------------------------
  *  Query: temp=hot|warm|all, region=..., limit, offset
- *  Returns newest-first items that match.
  */
-router.get("/api/v1/leads", (req: Request, res: Response) => {
+function listLeads(req: Request, res: Response) {
   const q = req.query as Record<string, any>;
   const temp = String(q.temp ?? "all").toLowerCase();
   const region = q.region ? String(q.region).toLowerCase() : undefined;
@@ -146,18 +157,24 @@ router.get("/api/v1/leads", (req: Request, res: Response) => {
   const offset = Math.max(0, Number(q.offset ?? 0));
 
   let items = LEADS.slice().sort((a, b) => (a.created < b.created ? 1 : -1));
-
   if (temp !== "all") items = items.filter((x) => String(x.temp).toLowerCase() === temp);
   if (region) items = items.filter((x) => (x.region ?? "").toLowerCase() === region);
 
-  const total = items.length;
-  const page = items.slice(offset, offset + limit);
+  return res.status(200).json(items.slice(offset, offset + limit));
+}
 
-  // Keep response dead-simple for the Free Panel
-  return res.status(200).json(page);
+router.get("/api/v1/leads", listLeads);
+router.get("/api/v1/leads/", listLeads);          // trailing-slash tolerant
+router.get("/api/v1/leads/hot", (req, res) => {   // legacy-style
+  (req.query as any).temp = "hot";
+  return listLeads(req, res);
+});
+router.get("/api/v1/leads/warm", (req, res) => {
+  (req.query as any).temp = "warm";
+  return listLeads(req, res);
 });
 
-/** Optional tiny health endpoint (handy in local dev) */
+// tiny health check (useful locally)
 router.get("/healthz", (_req, res) => res.status(200).json({ ok: true }));
 
 export default router;
