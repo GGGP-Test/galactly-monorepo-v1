@@ -25,7 +25,10 @@ app.get("/api/v1/leads", (req: Request, res: Response) => {
 
 // canonical route used by the Free Panel
 app.post("/api/v1/leads/find-buyers", findBuyers);
-
+// accept both spellings + both verbs just to be bulletproof
+app.post("/find-buyers", findBuyers);
+app.get("/api/v1/leads/find-buyers", findBuyers);
+app.get("/find-buyers", findBuyers);
 // 404
 app.use((req: Request, res: Response) => {
   res.status(404).json({ error: "NOT_FOUND", method: req.method, path: req.path });
