@@ -1,92 +1,90 @@
-// src/services/find-buyers.ts
-import { runProviders, Candidate, FindBuyersInput } from "../providers";
-import { cacheGet, cacheSet, makeKey } from "../utils/fsCache";
+import { runProviders } from "../providers";
+import { UICandidate, FindBuyersInput } from "../providers/types";
+import { buildCacheKey, saveLeadsToDisk } from "../utils/fsCache";
 
-/** Response shape our UI expects. Adjust if your UI needs more fields. */
+// Public shape the router returns
 export type FindBuyersResponse = {
-  candidates: Candidate[];
-  meta: Record<string, unknown> & {
-    ms?: number;
-    seeds?: number;
-    searched?: number;
-    scored?: number;
-    hot?: number;
-    warm?: number;
-  };
+  ok: true;
+  created: number;
+  candidates: UICandidate[];
+  meta: Record<string, unknown>;
 };
 
-/**
- * Service wrapper:
- * - normalizes input
- * - optional tiny file cache
- * - no duplicate keys, no implicit any, no 'unknown' errors
- */
-export default async function findBuyers(
-  raw: FindBuyersInput,
-): Promise<FindBuyersResponse> {
-  // Normalize defensively (keeps types happy and consistent)
-  const input: FindBuyersInput = {
+// Normalize raw input → strong FindBuyersInput
+function normalize(raw: Partial<FindBuyersInput>): FindBuyersInput {
+  const personaRaw = raw.persona ?? { offer: "", solves: "", titles: "" };
+
+  const titles =
+    Array.isArray(personaRaw.titles)
+      ? personaRaw.titles
+      : String(personaRaw.titles || "")
+          .split(",")
+          .map(s => s.trim())
+          .filter(Boolean);
+
+  return {
     supplier: String(raw.supplier || "").trim(),
-    region: String(raw.region || "usca").toLowerCase() as FindBuyersInput["region"],
+    region: String(raw.region || "usca").toLowerCase(),
     radiusMi: Number(raw.radiusMi ?? 50),
     persona: {
-      offer: raw.persona?.offer ?? "",
-      solves: raw.persona?.solves ?? "",
-      titles: raw.persona?.titles ?? "",
+      offer: String(personaRaw.offer || ""),
+      solves: String(personaRaw.solves || ""),
+      titles,
     },
   };
+}
 
-  // Small cache key (no HTML hash in this minimal version)
-  const key = makeKey({
-    v: "v1",
-    supplier: input.supplier,
-    region: input.region,
-    radiusMi: input.radiusMi,
-    offer: input.persona.offer,
-    solves: input.persona.solves,
-    titles: input.persona.titles,
-  });
-
-  // Try cache first
-  const cached = await cacheGet<FindBuyersResponse>(key);
-  if (cached) return cached;
-
-  const t0 = Date.now();
-  try {
-    const { candidates, meta } = await runProviders(input);
-
-    // Derive hot/warm counts once – no duplicate object keys anywhere
-    const hot = candidates.filter((c: Candidate) => c.temp === "hot").length;
-    const warm = candidates.filter((c: Candidate) => c.temp === "warm").length;
-
-    const result: FindBuyersResponse = {
-      candidates,
-      meta: {
-        ms: Date.now() - t0,
-        hot,
-        warm,
-        ...meta,
-      },
-    };
-
-    // Save to cache (1 day is plenty; adjust if you want)
-    await cacheSet(key, result, 1000 * 60 * 60 * 24);
-
-    return result;
-  } catch (err: unknown) {
-    // Type-safe catch: never use bare `r` without typing
-    const message =
-      err instanceof Error ? err.message : `Unexpected error: ${String(err)}`;
-    throw new Error(`find-buyers failed: ${message}`);
+// Simple de-dup by host (keep first occurrence)
+function dedupeByHost(arr: UICandidate[]): UICandidate[] {
+  const seen = new Set<string>();
+  const out: UICandidate[] = [];
+  for (const c of arr) {
+    const h = (c.host || "").toLowerCase();
+    if (!seen.has(h)) {
+      seen.add(h);
+      out.push(c);
+    }
   }
+  return out;
 }
 
 /**
- * Small helper that previously caused "arr implicitly any".
- * Leaving an example here in case you need array utils.
+ * Main service used by the router. Wraps providers, cleans data,
+ * counts hot/warm, and writes a tiny cache to disk.
  */
-export function take<T>(arr: T[], n: number): T[] {
-  // n is clamped; arr is typed; no implicit 'any'
-  if (!Array.isArray(arr) || n <= 0) return [];
-  return arr.slice(0, n);
+export async function findBuyersService(
+  raw: Partial<FindBuyersInput>
+): Promise<FindBuyersResponse> {
+  const input = normalize(raw);
+  const key = buildCacheKey(input);
+
+  const t0 = Date.now();
+  const { candidates: fromProviders, meta: providerMeta = {} } = await runProviders(input);
+
+  const candidates = dedupeByHost(fromProviders);
+  const hotCount = candidates.filter(c => c.temp === "hot").length;
+  const warmCount = candidates.filter(c => c.temp === "warm").length;
+
+  // Persist last run (split to hot/warm arrays for convenience)
+  await saveLeadsToDisk(
+    key,
+    candidates.filter(c => c.temp === "hot"),
+    candidates.filter(c => c.temp === "warm"),
+    providerMeta
+  );
+
+  // No duplicate keys inside this object literal
+  const meta = {
+    ms: Date.now() - t0,
+    ...providerMeta,
+    hot: hotCount,
+    warm: warmCount,
+  };
+
+  return {
+    ok: true,
+    created: candidates.length,
+    candidates,
+    meta,
+  };
 }
