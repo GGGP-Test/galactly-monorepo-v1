@@ -1,85 +1,90 @@
-import express, { Request, Response, NextFunction, RequestHandler } from "express";
+// src/index.ts
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import findBuyers from "./services/find-buyers";
+import rateLimit from "./middleware/rateLimit";
 
-// ----------------- app bootstrap -----------------
+// --------------------
+// tiny in-process metrics (what you already expose)
+const metrics = {
+  requests: 0,
+  findBuyers: {
+    count: 0,
+    cache: { hit: 0, miss: 0 },
+    latencyMs: { samples: 0, last: 0, p50: 0, p90: 0, p95: 0, p99: 0, avg: 0 },
+  },
+};
+
+function observeLatency(ms: number) {
+  const m = metrics.findBuyers.latencyMs;
+  m.samples += 1;
+  m.last = ms;
+  // cheap rolling avg
+  m.avg = m.avg + (ms - m.avg) / m.samples;
+  // for demo we just push into a tiny array to compute rough percentiles
+  // without adding a dependency
+  (observeLatency as any)._buf = (observeLatency as any)._buf ?? [];
+  const buf: number[] = (observeLatency as any)._buf;
+  buf.push(ms);
+  while (buf.length > 200) buf.shift();
+  const sorted = [...buf].sort((a, b) => a - b);
+  const q = (p: number) =>
+    sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length))] : 0;
+  m.p50 = q(50);
+  m.p90 = q(90);
+  m.p95 = q(95);
+  m.p99 = q(99);
+}
+// --------------------
+
 const app = express();
+
+// CORS + JSON
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
-// ----------------- health -----------------
-app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
-app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
-
-// Silence browser favicon noise (was a 404 in Network tab)
-app.get("/favicon.ico", (_req: Request, res: Response) => res.status(204).end());
-
-// ----------------- minimal metrics -----------------
-type Lat = { avg: number; p50: number; p90: number; p95: number; p99: number; last: number; samples: number };
-const latencies: number[] = [];
-const cache = { hit: 0, miss: 0 };
-let totalRequests = 0;
-let findBuyersCount = 0;
-
-function percentile(arr: number[], p: number): number {
-  if (arr.length === 0) return 0;
-  const sorted = [...arr].sort((a, b) => a - b);
-  const idx = Math.floor((p / 100) * (sorted.length - 1));
-  return sorted[idx];
-}
-function computeLat(): Lat {
-  const n = latencies.length;
-  const avg = n ? Math.round(latencies.reduce((a, b) => a + b, 0) / n) : 0;
-  return {
-    avg,
-    p50: percentile(latencies, 50),
-    p90: percentile(latencies, 90),
-    p95: percentile(latencies, 95),
-    p99: percentile(latencies, 99),
-    last: n ? latencies[n - 1] : 0,
-    samples: n,
-  };
-}
-
-// count every request (cheap)
-app.use((_req, _res, next) => {
-  totalRequests += 1;
+// Request ID + simple access log
+app.use((req, res, next) => {
+  const id = Math.random().toString(36).slice(2, 10);
+  (res as any).locals = { ...(res as any).locals, reqId: id, t0: Date.now() };
+  res.setHeader("X-Request-Id", id);
+  res.on("finish", () => {
+    const t0 = (res as any).locals?.t0 ?? Date.now();
+    const ms = Date.now() - t0;
+    // terse, single-line JSON log (stdout)
+    console.log(
+      JSON.stringify({
+        evt: "req",
+        id,
+        m: req.method,
+        p: req.originalUrl,
+        s: res.statusCode,
+        ms,
+      })
+    );
+  });
   next();
 });
 
-// Wrap a handler to record latency + cache header
-const withMetrics = (h: RequestHandler): RequestHandler => {
-  return (req, res, next) => {
-    const t0 = Date.now();
-    res.once("finish", () => {
-      const ms = Date.now() - t0;
-      if (req.method === "POST" && req.path.endsWith("/find-buyers")) {
-        findBuyersCount += 1;
-        latencies.push(ms);
-        if (latencies.length > 200) latencies.shift(); // simple cap
+// Rate limit (per API key or IP)
+const WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS ?? "60000"); // 60s
+const MAX_REQS  = Number(process.env.RATE_LIMIT_MAX ?? "120");        // 120/min
+app.use(
+  rateLimit({
+    windowMs: WINDOW_MS,
+    max: MAX_REQS,
+    key: (req) => req.get("x-api-key") ?? req.ip,
+  })
+);
 
-        // try to read X-Cache the handler may set (HIT/MISS)
-        const headers = res.getHeaders?.() ?? {};
-        const xCache =
-          (res.getHeader && (res.getHeader("X-Cache") as string | undefined)) ||
-          (typeof headers["x-cache"] === "string" ? (headers["x-cache"] as string) : undefined);
+// Health
+app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
+app.get("/health",  (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-        if (typeof xCache === "string") {
-          const v = xCache.toLowerCase();
-          if (v.includes("hit")) cache.hit += 1;
-          else if (v.includes("miss")) cache.miss += 1;
-        }
-      }
-    });
-    h(req, res, next);
-  };
-};
-
-// ----------------- API routes -----------------
-
-// Legacy list endpoint the panel pings for warm/hot; keep UI happy.
+// Legacy list endpoint stub (keeps the panel happy)
 app.get("/api/v1/leads", (req: Request, res: Response) => {
-  const temp = req.query.temp === "hot" ? "hot" : "warm";
+  const temp =
+    req.query.temp === "hot" || req.query.temp === "warm" ? String(req.query.temp) : "warm";
   res.status(200).json({
     temp,
     region: req.query.region ?? null,
@@ -88,33 +93,49 @@ app.get("/api/v1/leads", (req: Request, res: Response) => {
   });
 });
 
-// Canonical route used by the Free Panel
-app.post("/api/v1/leads/find-buyers", withMetrics(findBuyers));
+// Find buyers with metrics wrapper
+app.post("/api/v1/leads/find-buyers", (req: Request, res: Response, next: NextFunction) => {
+  const t0 = Date.now();
+  // decorate res.json to peek at `cache` field if handler sets it
+  const json = res.json.bind(res);
+  (res as any).json = (body: any) => {
+    const ms = Date.now() - t0;
+    metrics.requests += 1;
+    metrics.findBuyers.count += 1;
+    const cache = (body && body.cache) as "hit" | "miss" | undefined;
+    if (cache === "hit") metrics.findBuyers.cache.hit += 1;
+    else if (cache === "miss") metrics.findBuyers.cache.miss += 1;
+    observeLatency(ms);
+    return json(body);
+  };
+  return (findBuyers as any)(req, res, next);
+});
 
-// Accept both spellings + both verbs for compatibility
-app.post("/find-buyers", withMetrics(findBuyers));
-app.get("/api/v1/leads/find-buyers", withMetrics(findBuyers));
-app.get("/find-buyers", withMetrics(findBuyers));
+// Accept both verbs and short path (backward compat)
+app.get ("/api/v1/leads/find-buyers", findBuyers);
+app.post("/find-buyers", findBuyers);
+app.get ("/find-buyers",  findBuyers);
 
-// Metrics snapshot (cheap and human-checkable)
+// Metrics
 app.get("/metrics", (_req: Request, res: Response) => {
   res.status(200).json({
     ok: true,
-    requests: totalRequests,
+    requests: metrics.requests,
     findBuyers: {
-      count: findBuyersCount,
-      cache,
-      latencyMs: computeLat(),
+      count: metrics.findBuyers.count,
+      cache: metrics.findBuyers.cache,
+      latencyMs: metrics.findBuyers.latencyMs,
     },
     now: new Date().toISOString(),
   });
 });
 
-// ----------------- 404 + error handling -----------------
+// 404
 app.use((req: Request, res: Response) => {
   res.status(404).json({ error: "NOT_FOUND", method: req.method, path: req.path });
 });
 
+// error handler
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const any = err as { status?: number; message?: string };
   const status = typeof any?.status === "number" ? any.status : 500;
@@ -122,7 +143,6 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ error: "INTERNAL_ERROR", message });
 });
 
-// ----------------- listen -----------------
 const port = Number(process.env.PORT) || 8787;
 app.listen(port, () => console.log(`[server] listening on :${port}`));
 
