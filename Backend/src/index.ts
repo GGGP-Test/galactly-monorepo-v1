@@ -1,54 +1,36 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import findBuyers from "./services/find-buyers";
-
-// Allow GET-based testing by mapping query -> the body the service expects
-function findBuyersFromQuery(req: Request, res: Response, next: NextFunction) {
-  const q = req.query as Record<string, any>;
-  (req as any).body = {
-    supplier: q.supplier ?? "",
-    region: (q.region as string) ?? "usca",
-    radiusMi: q.radiusMi ? Number(q.radiusMi) : 50,
-    onlyUSCA: q.onlyUSCA !== "false",
-    persona: {
-      offer: (q.offer as string) ?? "",
-      solves: (q.solves as string) ?? "",
-      titles: (q.titles as string) ?? "",
-    },
-  };
-  return (findBuyers as any)(req, res, next);
-}
+import { metricsMiddleware, metricsHandler } from "./metrics";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
+app.use(metricsMiddleware); // record request + latency metrics
 
 app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
 app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
+app.get("/metrics", metricsHandler);
 
-// Stub the list endpoint the panel pings for Hot/Warm to avoid 404s
+// Stub legacy list endpoint so the panel stops 404’ing when it probes it.
 app.get("/api/v1/leads", (req: Request, res: Response) => {
-  const temp = req.query.temp === "hot" ? "hot" : "warm";
-  const region = typeof req.query.region === "string" ? req.query.region : null;
+  const temp = (req.query.temp === "hot" || req.query.temp === "warm") ? String(req.query.temp) : "warm";
   res.status(200).json({
-    ok: true,
     temp,
-    region,
-    // include multiple shapes so the UI is happy regardless of reader
-    items: [],
+    region: req.query.region ?? null,
     warm: [],
-    hot: [],
+    hot: []
   });
 });
 
-// Canonical route used by the Free Panel button
+// Canonical route used by the Free Panel
 app.post("/api/v1/leads/find-buyers", findBuyers);
 
-// Convenience aliases (both verbs + short path)
+// Accept both spellings + both verbs to be bulletproof
 app.post("/find-buyers", findBuyers);
-app.get("/api/v1/leads/find-buyers", findBuyersFromQuery);
-app.get("/find-buyers", findBuyersFromQuery);
+app.get("/api/v1/leads/find-buyers", findBuyers);
+app.get("/find-buyers", findBuyers);
 
 // 404
 app.use((req: Request, res: Response) => {
