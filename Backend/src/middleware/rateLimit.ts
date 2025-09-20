@@ -1,53 +1,79 @@
-// src/middleware/rateLimit.ts
-import { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
 
-type Options = {
-  /** time window in milliseconds */
+/**
+ * Tiny, dependency-free token-bucket rate limiter.
+ * Defaults can be overridden via env or options.
+ *
+ * Env (optional):
+ *   RL_WINDOW_MS   – window size in ms (default 60000)
+ *   RL_MAX         – sustained requests per window (default 30)
+ *   RL_BURST       – extra burst capacity above RL_MAX (default 10)
+ */
+export type RateLimitOptions = {
   windowMs?: number;
-  /** max requests allowed within window per key (IP) */
   max?: number;
-  /** metrics key prefix */
-  keyPrefix?: string;
+  burst?: number;
+  key?: (req: Request) => string | undefined; // return custom key; fallback to X-Api-Key or IP
 };
 
-type Bucket = { count: number; resetAt: number };
+type Bucket = { tokens: number; last: number };
 
-const buckets = new Map<string, Bucket>();
+export default function rateLimit(opts: RateLimitOptions = {}) {
+  const windowMs =
+    Math.max(
+      1000,
+      Number.isFinite(opts.windowMs) ? Number(opts.windowMs) : Number(process.env.RL_WINDOW_MS) || 60_000
+    );
 
-function clientIp(req: Request): string {
-  const xff = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim();
-  return xff ?? req.socket.remoteAddress ?? "unknown";
-}
+  const max =
+    Math.max(1, Number.isFinite(opts.max) ? Number(opts.max) : Number(process.env.RL_MAX) || 30);
 
-export default function rateLimit(opts: Options = {}) {
-  const windowMs = Number(process.env.RATE_WINDOW_MS ?? opts.windowMs ?? 10_000);
-  const max = Number(process.env.RATE_MAX ?? opts.max ?? 8);
-  const keyPrefix = opts.keyPrefix ?? "rl";
+  const burst =
+    Math.max(0, Number.isFinite(opts.burst) ? Number(opts.burst) : Number(process.env.RL_BURST) || 10);
 
-  return (req: Request, res: Response, next: NextFunction) => {
-    const key = `${keyPrefix}:${clientIp(req)}`;
+  const capacity = max + burst;                 // maximum tokens a bucket can hold
+  const ratePerMs = max / windowMs;             // refill speed
+
+  const buckets = new Map<string, Bucket>();
+
+  const handler = (req: Request, res: Response, next: NextFunction) => {
     const now = Date.now();
-    let bucket = buckets.get(key);
 
-    if (!bucket || now >= bucket.resetAt) {
-      bucket = { count: 0, resetAt: now + windowMs };
-      buckets.set(key, bucket);
+    // Build a stable key: custom -> header -> IP
+    const custom = typeof opts.key === "function" ? opts.key(req) : undefined;
+    const fromHeader = (req.headers["x-api-key"] as string | undefined) ?? undefined;
+    const key = (custom && custom.trim()) || (fromHeader && fromHeader.trim()) || req.ip;
+
+    let b = buckets.get(key);
+    if (!b) {
+      b = { tokens: capacity, last: now };
+      buckets.set(key, b);
     }
 
-    if (bucket.count >= max) {
-      const retryMs = bucket.resetAt - now;
-      res.setHeader("Retry-After", String(Math.ceil(retryMs / 1000)));
-      res.setHeader("X-RateLimit-Limit", String(max));
-      res.setHeader("X-RateLimit-Remaining", "0");
-      res.setHeader("X-RateLimit-Reset", String(Math.ceil(bucket.resetAt / 1000)));
-      return res.status(429).json({ error: "RATE_LIMITED", retryMs });
+    // Refill tokens
+    const elapsed = now - b.last;
+    b.tokens = Math.min(capacity, b.tokens + elapsed * ratePerMs);
+    b.last = now;
+
+    // Enough budget?
+    if (b.tokens >= 1) {
+      b.tokens -= 1;
+      res.setHeader("X-RateLimit-Limit", String(capacity));
+      res.setHeader("X-RateLimit-Remaining", String(Math.floor(b.tokens)));
+      return next();
     }
 
-    bucket.count += 1;
-    res.setHeader("X-RateLimit-Limit", String(max));
-    res.setHeader("X-RateLimit-Remaining", String(max - bucket.count));
-    res.setHeader("X-RateLimit-Reset", String(Math.ceil(bucket.resetAt / 1000)));
-
-    next();
+    // Too many requests
+    const deficit = 1 - b.tokens;
+    const msUntilOneToken = Math.ceil(deficit / ratePerMs);
+    res.setHeader("Retry-After", String(Math.ceil(msUntilOneToken / 1000)));
+    res.setHeader("X-RateLimit-Limit", String(capacity));
+    res.setHeader("X-RateLimit-Remaining", "0");
+    return res.status(429).json({
+      error: "RATE_LIMITED",
+      retryAfterMs: msUntilOneToken
+    });
   };
+
+  return handler;
 }
