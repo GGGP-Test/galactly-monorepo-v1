@@ -1,64 +1,60 @@
-// Path: src/services/find-buyers.ts
 import { Router, Request, Response } from "express";
-import { runProviders, FindBuyersInput } from "../providers";
+import { runProviders } from "../providers";
+import type { FindBuyersInput } from "../providers/types";
 
 const router = Router();
 
 // POST /api/v1/leads/find-buyers
 router.post("/api/v1/leads/find-buyers", async (req: Request, res: Response) => {
   try {
-    const {
-      supplier = "",
-      region = "usca",
-      radiusMi = 50,
-      persona = { offer: "", solves: "", titles: "" },
-    } = (req.body || {}) as Partial<FindBuyersInput>;
+    const body = (req.body ?? {}) as Partial<FindBuyersInput>;
 
-    if (!supplier || typeof supplier !== "string") {
-      return res.status(400).json({ ok: false, error: "supplier (domain) is required" });
+    const supplier = String(body.supplier ?? "").trim();
+    if (!supplier) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "supplier (domain) is required" });
     }
 
-    const input: FindBuyersInput = {
-      supplier,
-      region: String(region || "usca").toLowerCase(),
-      radiusMi: Number(radiusMi || 50),
-      persona: {
-        offer: persona?.offer ?? "",
-        solves: persona?.solves ?? "",
-        titles: persona?.titles ?? "",
-      },
+    const region = String(body.region ?? "usca").toLowerCase();
+    const radiusMiNum = Number(body.radiusMi);
+    const radiusMi = Number.isFinite(radiusMiNum) ? radiusMiNum : 50;
+
+    const persona = {
+      offer: body.persona?.offer ?? "",
+      solves: body.persona?.solves ?? "",
+      // allow string or string[]
+      titles: Array.isArray(body.persona?.titles)
+        ? body.persona!.titles.join(", ")
+        : body.persona?.titles ?? ""
     };
+
+    const input: FindBuyersInput = { supplier, region, radiusMi, persona };
 
     const t0 = Date.now();
-    const { candidates = [], meta } = (await runProviders(input)) as {
-      candidates: unknown[];
-      meta?: Record<string, unknown>;
-    };
+    const out = await runProviders(input);
 
-    const hot = (candidates as any[]).filter((c: any) => c?.temp === "hot").length;
-    const warm = (candidates as any[]).filter((c: any) => c?.temp === "warm").length;
-
-    // Ensure we don't declare `ms` twice in the same literal (fixes TS2783)
-    const { ms: _ignored, ...metaRest } = (meta ?? {}) as Record<string, unknown>;
-    const ms = Date.now() - t0;
+    const candidates = out?.candidates ?? [];
+    const hot = candidates.filter(c => c.temp === "hot").length;
+    const warm = candidates.filter(c => c.temp === "warm").length;
 
     const payload = {
       ok: true,
-      created: (candidates as any[]).length,
+      created: candidates.length,
       candidates,
       meta: {
-        ...metaRest,
+        ...(out?.meta ?? {}),
         hot,
         warm,
-        ms,
-      },
+        ms: Date.now() - t0 // set ms last to avoid duplicate-key warnings
+      }
     };
 
     return res.status(200).json(payload);
   } catch (err: any) {
     return res.status(500).json({
       ok: false,
-      error: String(err?.message || err || "unexpected error"),
+      error: String(err?.message ?? err ?? "unexpected error")
     });
   }
 });
