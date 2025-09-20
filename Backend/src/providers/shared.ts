@@ -1,38 +1,40 @@
-import type { Candidate, PersonaInput } from "./types";
+/**
+ * Shared helpers for provider modules.
+ */
 
-export const nowISO = () => new Date().toISOString();
+import type { BuyerCandidate } from "./types";
 
+export const nowISO = (): string => new Date().toISOString();
+
+/** Normalize input like "https://www.Example.com/path" -> "example.com" */
 export function normalizeHost(input: string): string {
   try {
-    const u = input.includes("://") ? new URL(input) : new URL("https://" + input);
-    return (u.host || input).replace(/^www\./, "").toLowerCase();
+    const url = input.includes("://") ? new URL(input) : new URL(`https://${input}`);
+    return url.host.replace(/^www\./i, "").toLowerCase();
   } catch {
-    return input.replace(/^https?:\/\/(www\.)?/, "").toLowerCase();
+    return input
+      .replace(/^https?:\/\//i, "")
+      .replace(/^www\./i, "")
+      .replace(/\/+$/, "")
+      .toLowerCase();
   }
 }
 
-export function uniqueByHostAndTitle<T extends Candidate>(arr: T[]): T[] {
+/**
+ * Dedup by (host,title), safe if title is missing.
+ * Also re-normalizes host for consistency.
+ */
+export function uniqueByHostAndTitle(arr: BuyerCandidate[]): BuyerCandidate[] {
   const seen = new Set<string>();
-  const out: T[] = [];
+  const out: BuyerCandidate[] = [];
+
   for (const c of arr) {
-    const key = `${normalizeHost(c.host)}::${(c.title || "").toLowerCase()}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      out.push({ ...c, host: normalizeHost(c.host) });
-    }
+    const host = normalizeHost(c.host);
+    const title = (c.title ?? "").toLowerCase();
+    const key = `${host}::${title}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ ...c, host });
   }
   return out;
-}
-
-export function djb2Hash(s: string): string {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) + h) + s.charCodeAt(i);
-  return (h >>> 0).toString(36);
-}
-
-export function personaHash(p?: PersonaInput): string {
-  if (!p) return "none";
-  const titles = Array.isArray(p.titles) ? p.titles.join(",") : p.titles || "";
-  const s = `${p.offer}||${p.solves}||${titles}`.toLowerCase().trim();
-  return djb2Hash(s);
 }
