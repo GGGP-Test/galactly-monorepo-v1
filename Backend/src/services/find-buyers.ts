@@ -1,180 +1,92 @@
-import { Router, Request, Response } from "express";
-import { runProviders } from "../providers";
-import { loadLeadsFromDisk, saveLeadsToDisk } from "../utils/fsCache";
+// src/services/find-buyers.ts
+import { runProviders, Candidate, FindBuyersInput } from "../providers";
+import { cacheGet, cacheSet, makeKey } from "../utils/fsCache";
 
-const router = Router();
-
-/** -------------------------
- *  Minimal rolling leads store
- *  -------------------------
- */
-type UICandidate = {
-  id: number;
-  host: string;
-  platform: string;
-  title: string;
-  created: string;   // ISO string
-  temp: string;      // "hot" | "warm" | other
-  why: string;
-  region?: string;
+/** Response shape our UI expects. Adjust if your UI needs more fields. */
+export type FindBuyersResponse = {
+  candidates: Candidate[];
+  meta: Record<string, unknown> & {
+    ms?: number;
+    seeds?: number;
+    searched?: number;
+    scored?: number;
+    hot?: number;
+    warm?: number;
+  };
 };
 
-const LEADS: UICandidate[] = [];
-let NEXT_ID = 1;
-const MAX_LEADS = 1000;
-
-function toHost(urlOrDomain: any): string {
-  try {
-    if (!urlOrDomain) return "";
-    const s = String(urlOrDomain);
-    if (s.includes("://")) return new URL(s).hostname;
-    return s.replace(/^www\./, "");
-  } catch {
-    return String(urlOrDomain ?? "");
-  }
-}
-
-function upsertLeads(candidates: any[], region: string) {
-  let changed = false;
-
-  for (const c of candidates ?? []) {
-    const host = toHost(c?.host ?? c?.domain ?? c?.url ?? c?.website);
-    const title = String(c?.title ?? c?.label ?? "Buyer");
-    const temp = String(c?.temp ?? c?.heat ?? "warm");
-    const why =
-      String(c?.proof ?? c?.reason ?? c?.why ?? "").slice(0, 240) ||
-      "auto-detected buyer signals";
-    const platform = String(c?.source ?? c?.platform ?? "web");
-
-    // Simple de-dupe: host+title+platform
-    const key = `${host}|${title}|${platform}`;
-    const existingIdx = LEADS.findIndex(
-      (x) => `${x.host}|${x.title}|${x.platform}` === key
-    );
-
-    const rec: UICandidate = {
-      id: existingIdx >= 0 ? LEADS[existingIdx].id : NEXT_ID++,
-      host,
-      platform,
-      title,
-      temp,
-      why,
-      region,
-      created: new Date().toISOString(),
-    };
-
-    if (existingIdx >= 0) {
-      LEADS[existingIdx] = rec;
-    } else {
-      LEADS.push(rec);
-      if (LEADS.length > MAX_LEADS) LEADS.splice(0, LEADS.length - MAX_LEADS);
-    }
-    changed = true;
-  }
-
-  if (changed) {
-    // fire-and-forget; keep server fast
-    saveLeadsToDisk(LEADS).catch(() => void 0);
-  }
-}
-
-// Try to load persisted leads on boot (fire-and-forget)
-loadLeadsFromDisk()
-  .then((arr) => {
-    if (Array.isArray(arr)) {
-      for (const r of arr) {
-        LEADS.push(r as UICandidate);
-        if (r.id && r.id >= NEXT_ID) NEXT_ID = r.id + 1;
-      }
-      if (LEADS.length > MAX_LEADS) LEADS.splice(0, LEADS.length - MAX_LEADS);
-    }
-  })
-  .catch(() => void 0);
-
-/** ------------------------------------
- *  POST /api/v1/leads/find-buyers
- *  ------------------------------------
- *  Body: { supplier, region?, radiusMi?, persona?{offer?, solves?, titles?: string|string[]} }
+/**
+ * Service wrapper:
+ * - normalizes input
+ * - optional tiny file cache
+ * - no duplicate keys, no implicit any, no 'unknown' errors
  */
-router.post("/api/v1/leads/find-buyers", async (req: Request, res: Response) => {
+export default async function findBuyers(
+  raw: FindBuyersInput,
+): Promise<FindBuyersResponse> {
+  // Normalize defensively (keeps types happy and consistent)
+  const input: FindBuyersInput = {
+    supplier: String(raw.supplier || "").trim(),
+    region: String(raw.region || "usca").toLowerCase() as FindBuyersInput["region"],
+    radiusMi: Number(raw.radiusMi ?? 50),
+    persona: {
+      offer: raw.persona?.offer ?? "",
+      solves: raw.persona?.solves ?? "",
+      titles: raw.persona?.titles ?? "",
+    },
+  };
+
+  // Small cache key (no HTML hash in this minimal version)
+  const key = makeKey({
+    v: "v1",
+    supplier: input.supplier,
+    region: input.region,
+    radiusMi: input.radiusMi,
+    offer: input.persona.offer,
+    solves: input.persona.solves,
+    titles: input.persona.titles,
+  });
+
+  // Try cache first
+  const cached = await cacheGet<FindBuyersResponse>(key);
+  if (cached) return cached;
+
+  const t0 = Date.now();
   try {
-    const body = (req.body ?? {}) as Record<string, any>;
-    const supplier = body.supplier ?? "";
+    const { candidates, meta } = await runProviders(input);
 
-    if (!supplier || typeof supplier !== "string") {
-      return res.status(400).json({ ok: false, error: "supplier (domain) is required" });
-    }
+    // Derive hot/warm counts once – no duplicate object keys anywhere
+    const hot = candidates.filter((c: Candidate) => c.temp === "hot").length;
+    const warm = candidates.filter((c: Candidate) => c.temp === "warm").length;
 
-    const persona = body.persona ?? {};
-    const titles = Array.isArray(persona.titles)
-      ? persona.titles.join(", ")
-      : (persona.titles ?? "");
-
-    const input = {
-      supplier,
-      region: String(body.region ?? "usca").toLowerCase(),
-      radiusMi: Number(body.radiusMi ?? 50),
-      persona: {
-        offer: persona.offer ?? "",
-        solves: persona.solves ?? "",
-        titles,
+    const result: FindBuyersResponse = {
+      candidates,
+      meta: {
+        ms: Date.now() - t0,
+        hot,
+        warm,
+        ...meta,
       },
     };
 
-    const t0 = Date.now();
-    const { candidates = [], meta = {} } = (await runProviders(input as any)) as any;
+    // Save to cache (1 day is plenty; adjust if you want)
+    await cacheSet(key, result, 1000 * 60 * 60 * 24);
 
-    upsertLeads(candidates as any[], input.region);
-
-    const hot = (candidates as any[]).filter((c) => c?.temp === "hot").length;
-    const warm = (candidates as any[]).filter((c) => c?.temp === "warm").length;
-
-    return res.status(200).json({
-      ok: true,
-      created: Array.isArray(candidates) ? candidates.length : 0,
-      counts: { hot, warm },
-      candidates,
-      meta: { ms: Date.now() - t0, ...(meta || {}) },
-    });
-  } catch (err: any) {
-    return res.status(500).json({
-      ok: false,
-      error: String(err?.message ?? err ?? "unexpected error"),
-    });
+    return result;
+  } catch (err: unknown) {
+    // Type-safe catch: never use bare `r` without typing
+    const message =
+      err instanceof Error ? err.message : `Unexpected error: ${String(err)}`;
+    throw new Error(`find-buyers failed: ${message}`);
   }
-});
-
-/** -------------------------------
- *  GET /api/v1/leads  (+ synonyms)
- *  -------------------------------
- *  Query: temp=hot|warm|all, region=..., limit, offset
- */
-function listLeads(req: Request, res: Response) {
-  const q = req.query as Record<string, any>;
-  const temp = String(q.temp ?? "all").toLowerCase();
-  const region = q.region ? String(q.region).toLowerCase() : undefined;
-  const limit = Math.max(1, Math.min(100, Number(q.limit ?? 20)));
-  const offset = Math.max(0, Number(q.offset ?? 0));
-
-  let items = LEADS.slice().sort((a, b) => (a.created < b.created ? 1 : -1));
-  if (temp !== "all") items = items.filter((x) => String(x.temp).toLowerCase() === temp);
-  if (region) items = items.filter((x) => (x.region ?? "").toLowerCase() === region);
-
-  return res.status(200).json(items.slice(offset, offset + limit));
 }
 
-router.get("/api/v1/leads", listLeads);
-router.get("/api/v1/leads/", listLeads);          // trailing-slash tolerant
-router.get("/api/v1/leads/hot", (req, res) => {   // legacy-style
-  (req.query as any).temp = "hot";
-  return listLeads(req, res);
-});
-router.get("/api/v1/leads/warm", (req, res) => {
-  (req.query as any).temp = "warm";
-  return listLeads(req, res);
-});
-
-// tiny health check (useful locally)
-router.get("/healthz", (_req, res) => res.status(200).json({ ok: true }));
-
-export default router;
+/**
+ * Small helper that previously caused "arr implicitly any".
+ * Leaving an example here in case you need array utils.
+ */
+export function take<T>(arr: T[], n: number): T[] {
+  // n is clamped; arr is typed; no implicit 'any'
+  if (!Array.isArray(arr) || n <= 0) return [];
+  return arr.slice(0, n);
+}
