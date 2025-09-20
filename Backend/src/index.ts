@@ -2,7 +2,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import findBuyers from "./services/find-buyers";
-import rateLimit from "./middleware/ratelimit";
+import rateLimit from "./middleware/rateLimit";
 
 const app = express();
 
