@@ -1,90 +1,88 @@
-import { runProviders } from "../providers";
-import { UICandidate, FindBuyersInput } from "../providers/types";
-import { buildCacheKey, saveLeadsToDisk } from "../utils/fsCache";
+// src/services/find-buyers.ts
+import { runProviders, type FindBuyersInput, type Candidate } from "../providers";
+import { makeKey, cacheGet, cacheSet } from "../utils/fsCache";
 
-// Public shape the router returns
-export type FindBuyersResponse = {
-  ok: true;
-  created: number;
-  candidates: UICandidate[];
-  meta: Record<string, unknown>;
-};
+/**
+ * Normalize raw input into a strict FindBuyersInput that matches our provider contracts.
+ * - Ensures strings (no string[]) for persona.titles
+ * - Fills safe defaults for missing fields
+ */
+function normalizeInput(raw: Partial<FindBuyersInput>): FindBuyersInput {
+  const supplier = String(raw.supplier ?? "").trim().toLowerCase();
+  const region = String(raw.region ?? "usca").trim().toLowerCase();
+  const radiusMi = Number(raw.radiusMi ?? 50) || 50;
 
-// Normalize raw input → strong FindBuyersInput
-function normalize(raw: Partial<FindBuyersInput>): FindBuyersInput {
-  const personaRaw = raw.persona ?? { offer: "", solves: "", titles: "" };
-
+  const p = raw.persona ?? { offer: "", solves: "", titles: "" };
+  // titles can arrive as string or string[] — collapse to a single string
   const titles =
-    Array.isArray(personaRaw.titles)
-      ? personaRaw.titles
-      : String(personaRaw.titles || "")
-          .split(",")
-          .map(s => s.trim())
-          .filter(Boolean);
+    Array.isArray((p as any).titles) ? (p as any).titles.join(", ") : String(p.titles ?? "");
 
   return {
-    supplier: String(raw.supplier || "").trim(),
-    region: String(raw.region || "usca").toLowerCase(),
-    radiusMi: Number(raw.radiusMi ?? 50),
+    supplier,
+    region,
+    radiusMi,
     persona: {
-      offer: String(personaRaw.offer || ""),
-      solves: String(personaRaw.solves || ""),
+      offer: String(p.offer ?? ""),
+      solves: String(p.solves ?? ""),
       titles,
     },
   };
 }
 
-// Simple de-dup by host (keep first occurrence)
-function dedupeByHost(arr: UICandidate[]): UICandidate[] {
-  const seen = new Set<string>();
-  const out: UICandidate[] = [];
-  for (const c of arr) {
-    const h = (c.host || "").toLowerCase();
-    if (!seen.has(h)) {
-      seen.add(h);
-      out.push(c);
-    }
+function countByTemp(list: Candidate[]) {
+  let hot = 0;
+  let warm = 0;
+  for (const c of list) {
+    if (c.temp === "hot") hot++;
+    else if (c.temp === "warm") warm++;
   }
-  return out;
+  return { hot, warm };
 }
 
 /**
- * Main service used by the router. Wraps providers, cleans data,
- * counts hot/warm, and writes a tiny cache to disk.
+ * Main service — returns candidates and meta.
+ * Exported as default because some callers import default.
  */
-export async function findBuyersService(
-  raw: Partial<FindBuyersInput>
-): Promise<FindBuyersResponse> {
-  const input = normalize(raw);
-  const key = buildCacheKey(input);
+export default async function findBuyers(raw: Partial<FindBuyersInput>): Promise<{
+  candidates: Candidate[];
+  meta: Record<string, unknown>;
+}> {
+  const input = normalizeInput(raw);
+
+  // Tiny on-disk cache to avoid re-hitting LLMs/external services for identical queries
+  const key = makeKey({
+    supplier: input.supplier,
+    region: input.region,
+    radiusMi: input.radiusMi,
+    persona: input.persona, // already normalized
+  });
+
+  const cached = await cacheGet<{ candidates: Candidate[]; meta?: Record<string, unknown> }>(`fb:${key}`);
+  if (cached?.candidates?.length) {
+    const { hot, warm } = countByTemp(cached.candidates);
+    return {
+      candidates: cached.candidates,
+      meta: { ...(cached.meta ?? {}), fromCache: true, hot, warm },
+    };
+  }
 
   const t0 = Date.now();
-  const { candidates: fromProviders, meta: providerMeta = {} } = await runProviders(input);
+  const { candidates, meta } = await runProviders(input);
 
-  const candidates = dedupeByHost(fromProviders);
-  const hotCount = candidates.filter(c => c.temp === "hot").length;
-  const warmCount = candidates.filter(c => c.temp === "warm").length;
+  const { hot, warm } = countByTemp(candidates);
 
-  // Persist last run (split to hot/warm arrays for convenience)
-  await saveLeadsToDisk(
-    key,
-    candidates.filter(c => c.temp === "hot"),
-    candidates.filter(c => c.temp === "warm"),
-    providerMeta
-  );
-
-  // No duplicate keys inside this object literal
-  const meta = {
-    ms: Date.now() - t0,
-    ...providerMeta,
-    hot: hotCount,
-    warm: warmCount,
-  };
-
-  return {
-    ok: true,
-    created: candidates.length,
+  const payload = {
     candidates,
-    meta,
+    meta: {
+      ...(meta ?? {}),
+      ms: Date.now() - t0,
+      hot,
+      warm,
+    },
   };
+
+  // fire-and-forget; do not block the response
+  cacheSet(`fb:${key}`, payload).catch(() => void 0);
+
+  return payload;
 }
