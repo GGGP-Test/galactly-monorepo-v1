@@ -308,6 +308,30 @@
       setTimeout(()=>URL.revokeObjectURL(a.href), 500);
     }
 
+    // Cooldown helper (used when server returns 429)
+    function startCooldown(ms){
+      const btn = UI.find;
+      const original = 'Find buyers';
+      let remaining = Math.max(1, Math.ceil((Number(ms)||0)/1000));
+
+      btn.disabled = true;
+      btn.textContent = `Wait ${remaining}s`;
+      UI.findMsg.innerHTML = `<div class="notice error mono">Too fast — please wait ${remaining}s…</div>`;
+
+      const iv = setInterval(()=>{
+        remaining -= 1;
+        if (remaining <= 0){
+          clearInterval(iv);
+          btn.disabled = false;
+          btn.textContent = original;
+          UI.findMsg.textContent = '';
+        } else {
+          btn.textContent = `Wait ${remaining}s`;
+          UI.findMsg.innerHTML = `<div class="notice error mono">Too fast — please wait ${remaining}s…</div>`;
+        }
+      }, 1000);
+    }
+
     // events
     UI.apply.onclick = ()=>{ S.baseUrl = UI.baseUrl.value.trim(); localStorage.setItem('baseUrl', S.baseUrl); toast('Base URL applied', true); };
     UI.saveKey.onclick = ()=>{ S.apiKey = UI.apiKey.value.trim(); localStorage.setItem('apiKey', S.apiKey); toast('API key saved', true); };
@@ -322,6 +346,7 @@
       toast('Persona saved locally', true);
     };
 
+    // Find buyers with 429 cooldown handling
     UI.find.onclick = async ()=>{
       const supplier = UI.supplier.value.trim().toLowerCase();
       if (!supplier){ toast('Enter a supplier domain', false, true); return; }
@@ -338,8 +363,18 @@
       };
       UI.find.disabled = true;
       UI.findMsg.textContent = 'Finding buyers…';
+
       const r = await call('POST','/api/v1/leads/find-buyers', body);
+
+      // If rate-limited, show countdown and exit (button re-enabled by startCooldown)
+      if (r.status === 429){
+        const ms = (r.data && Number(r.data.retryAfterMs)) || 10_000;
+        startCooldown(ms);
+        return;
+      }
+
       UI.find.disabled = false;
+
       if (!r.ok){
         UI.findMsg.innerHTML = `<div class="notice error mono">HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}</div>`;
         return;
