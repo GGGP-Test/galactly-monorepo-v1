@@ -3,7 +3,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import findBuyers from "./services/find-buyers";
 import rateLimit from "./middleware/rateLimit";
-import { quota, resetQuota, snapshotQuota, type PlanLimits } from "./middleware/quota";
+import quota, { snapshotQuota, resetQuota } from "./middleware/quota";
 
 const app = express();
 
@@ -11,45 +11,29 @@ app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
-app.get("/health",  (_req: Request, res: Response) => res.status(200).json({ ok: true }));
+app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// Stub the legacy list endpoint so the panel never 404s
+// Legacy list endpoint stub — keeps the panel happy
 app.get("/api/v1/leads", (req: Request, res: Response) => {
   const temp = req.query.temp === "hot" || req.query.temp === "warm" ? String(req.query.temp) : "warm";
-  res.status(200).json({
-    temp,
-    region: req.query.region ?? null,
-    items: [],       // give the UI the shape it expects
-  });
+  res.status(200).json({ temp, region: req.query.region ?? null, items: [] });
 });
 
-// ---- Limits ----
-// Burst protection (4 clicks per 10s)
-const rl = rateLimit({ windowMs: 10_000, max: 4 });
+// --- Middlewares ---
+const rl = rateLimit({ windowMs: 10_000, max: 4 }); // 4 tries per 10s (panel UX)
+const q  = quota(); // free: 3/day by default; TEST_API_KEY bypasses
 
-// Daily quota (Free = 3/day; Pro big number; Internal unlimited)
-const planLimits: Record<"free"|"pro"|"internal", PlanLimits> = {
-  free:     { dailyFindBuyers: 3 },
-  pro:      { dailyFindBuyers: 1000 },
-  internal: { dailyFindBuyers: 100000 },
-};
-const qmw = quota({
-  windowDays: 1,
-  plans: planLimits,
-  testingBypassKey: process.env.TEST_BYPASS_KEY || "DEV-UNLIMITED",
-});
+// --- Find buyers endpoints (aliases included) ---
+app.post("/api/v1/leads/find-buyers", rl, q, findBuyers);
+app.post("/find-buyers",             rl, q, findBuyers);
+app.get ("/api/v1/leads/find-buyers", rl, q, findBuyers);
+app.get ("/find-buyers",              rl, q, findBuyers);
 
-// ---- Find buyers endpoints (guarded by rate limit + quota) ----
-app.post("/api/v1/leads/find-buyers", rl, qmw, findBuyers);
-
-// extra aliases to be bulletproof with the panel
-app.post("/find-buyers", rl, qmw, findBuyers);
-app.get ("/api/v1/leads/find-buyers", rl, qmw, findBuyers);
-app.get ("/find-buyers", rl, qmw, findBuyers);
-
-// ---- Minimal debug/admin helpers ----
-app.get("/quota", (_req: Request, res: Response) => res.status(200).json(snapshotQuota()));
-app.post("/__admin/quota/reset", (_req: Request, res: Response) => { resetQuota(); res.json({ ok: true }); });
+// --- Test helpers (enabled only if ALLOW_TEST_BYPASS=1) ---
+if (process.env.ALLOW_TEST_BYPASS === "1") {
+  app.get ("/__test/quota/snapshot", snapshotQuota);
+  app.post("/__test/quota/reset",    resetQuota); // optional ?key=<apiKeyOrIp>
+}
 
 // 404
 app.use((req: Request, res: Response) => {
