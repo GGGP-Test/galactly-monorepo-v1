@@ -1,123 +1,132 @@
 // src/middleware/quota.ts
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 
-/** Which plan a caller is on. */
-export type PlanId = "free" | "pro";
+export type Plan = "free" | "pro" | "internal";
 
-/** Per-plan limits for a single rolling window. */
-export type PlanLimits = {
-  /** Max number of /find-buyers calls in the window. */
-  callsPerWindow: number;
-};
-
-/** Config for the quota middleware. */
-export interface QuotaConfig {
-  /** Size of the rolling window, in whole days. Default: 1 (24h). */
-  windowDays: number;
-  /** Per-plan limits. */
-  plans: Record<PlanId, PlanLimits>;
-  /** Header that carries the API key. Default: x-api-key. */
-  keyHeader: string;
-  /** Header that, if present, bypasses quota for testing. Default: x-test-mode. */
-  testBypassHeader: string;
-  /** API keys that should be treated as PRO (optional). */
-  proKeys: string[];
-  /** Optionally allow a header to force plan (e.g., "pro" for testing). Default: x-plan. */
-  planHeader: string;
+export interface PlanLimits {
+  /** Max successful /find-buyers calls per UTC day */
+  dailyFindBuyers: number;
 }
 
-/** In-memory counters (OK for now; swap to Redis later). */
-type Bucket = { startedAt: number; used: number };
-const store = new Map<string, Bucket>();
+export interface QuotaConfig {
+  /** Window size in whole days (keep 1 unless you really want multi-day windows) */
+  windowDays: number;
+  /** Limits per plan */
+  plans: Record<Plan, PlanLimits>;
+  /**
+   * If the incoming x-api-key equals this value, we treat the caller as "internal"
+   * (unlimited) so you can test freely from the Free Panel.
+   */
+  testingBypassKey?: string | null;
+}
+
+type Counter = { day: string; used: number; plan: Plan };
+
+const findBuyersCounters = new Map<string, Counter>(); // key -> counter
+
+function startOfUtcDay(d = new Date()): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+function nextResetAtMs(windowDays: number): number {
+  const start = startOfUtcDay();
+  start.setUTCDate(start.getUTCDate() + windowDays);
+  return +start;
+}
+function bucketId(d = new Date()): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+function identityFrom(req: Request): string {
+  // Prefer API key; otherwise fall back to IP (Express sets req.ip; behind proxies it uses X-Forwarded-For if trust proxy is on)
+  return (req.get("x-api-key") || req.ip || "anon").trim().toLowerCase();
+}
+function planFrom(req: Request, cfg: QuotaConfig): Plan {
+  const key = (req.get("x-api-key") || "").trim();
+  if (cfg.testingBypassKey && key && key === cfg.testingBypassKey) return "internal";
+  const headerPlan = (req.get("x-plan") || "").toLowerCase();
+  if (headerPlan === "pro") return "pro";
+  if (/^pro_/i.test(key)) return "pro";
+  return "free";
+}
 
 const DEFAULTS: QuotaConfig = {
   windowDays: 1,
   plans: {
-    free: { callsPerWindow: 3 },        // <= Free plan: 3 calls / day
-    pro:  { callsPerWindow: 250 },      // <= Pro plan: plenty
+    free: { dailyFindBuyers: 3 },
+    pro: { dailyFindBuyers: 1000 },
+    internal: { dailyFindBuyers: 100000 },
   },
-  keyHeader: "x-api-key",
-  testBypassHeader: "x-test-mode",
-  proKeys: [],
-  planHeader: "x-plan",
+  testingBypassKey: "DEV-UNLIMITED",
 };
 
-function now() { return Date.now(); }
-
-/** Merge shallow config objects. */
-function merge<T extends object>(base: T, o?: Partial<T>): T {
-  return Object.assign({}, base, o ?? {}) as T;
-}
-
-/** Resolve caller plan from headers/config. */
-function resolvePlan(req: Request, cfg: QuotaConfig, apiKey: string): PlanId {
-  const forced = String(req.header(cfg.planHeader) || "").toLowerCase();
-  if (forced === "pro") return "pro";
-  if (cfg.proKeys.includes(apiKey)) return "pro";
-  return "free";
-}
-
-/** Public factory: returns an Express middleware that enforces per-plan quotas. */
-export function withQuota(partial?: Partial<QuotaConfig>): RequestHandler {
+export function quota(partial?: Partial<QuotaConfig>): RequestHandler {
   const cfg: QuotaConfig = {
     ...DEFAULTS,
     ...partial,
-    // deep-merge for `plans`
-    plans: merge(DEFAULTS.plans, partial?.plans),
+    plans: { ...DEFAULTS.plans, ...(partial?.plans || {}) },
   };
 
-  const windowMs = Math.max(1, Math.floor(cfg.windowDays)) * 24 * 60 * 60 * 1000;
+  return (req: Request, res: Response, next: NextFunction) => {
+    // Only guard POST/GET /find-buyers routes (mounted by index.ts)
+    // You’re using it only for those routes anyway.
+    const id = identityFrom(req);
+    const today = bucketId();
+    const plan = planFrom(req, cfg);
+    const limit = cfg.plans[plan]?.dailyFindBuyers ?? DEFAULTS.plans.free.dailyFindBuyers;
 
-  const mw: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
-    // Dev/test bypass
-    if (req.header(cfg.testBypassHeader)) return next();
-
-    const apiKey = String(req.header(cfg.keyHeader) || "").trim() || "anon";
-    const plan: PlanId = resolvePlan(req, cfg, apiKey);
-    const limit = cfg.plans[plan].callsPerWindow;
-
-    const bucketKey = `${plan}:${apiKey}`;
-    const b = store.get(bucketKey);
-    const t = now();
-
-    let bucket: Bucket;
-    if (!b || t - b.startedAt >= windowMs) {
-      bucket = { startedAt: t, used: 0 };
-      store.set(bucketKey, bucket);
-    } else {
-      bucket = b;
+    let ctr = findBuyersCounters.get(id);
+    if (!ctr || ctr.day !== today) {
+      ctr = { day: today, used: 0, plan };
+      findBuyersCounters.set(id, ctr);
+    } else if (ctr.plan !== plan) {
+      ctr.plan = plan; // keep latest
     }
 
-    // headers (helpful for UI)
-    res.setHeader("X-Quota-Plan", plan);
-    res.setHeader("X-Quota-Limit", String(limit));
-    res.setHeader("X-Quota-Used", String(bucket.used));
-    res.setHeader("X-Quota-Reset-At", new Date(bucket.startedAt + windowMs).toISOString());
-
-    if (bucket.used >= limit) {
-      const retryAfterMs = bucket.startedAt + windowMs - t;
+    if (ctr.used >= limit && plan !== "internal") {
       return res.status(429).json({
         ok: false,
-        error: "QUOTA_EXCEEDED",
+        error: "QUOTA",
         plan,
+        used: ctr.used,
         limit,
-        used: bucket.used,
-        retryAfterMs,
-        resetAt: new Date(bucket.startedAt + windowMs).toISOString(),
+        resetAtMs: nextResetAtMs(cfg.windowDays),
       });
     }
 
-    bucket.used += 1;
+    // Let the handler run; increment after it succeeds
+    // If you want to count every attempt (even failed), move this before next()
+    const done = (err?: unknown) => {
+      if (!err && plan !== "internal") ctr!.used += 1;
+    };
+
+    // Wrap res.json/end/send to catch successful completion
+    const origJson = res.json.bind(res);
+    const origSend = res.send.bind(res);
+    res.json = ((body?: any) => { done(); return origJson(body); }) as any;
+    res.send = ((body?: any) => { done(); return origSend(body as any); }) as any;
+
     next();
   };
-
-  return mw;
 }
 
-/** Small test helper so you can clear counters without restarting the pod. */
-export function _resetQuotaFor(keyOrPlanKey?: string) {
-  if (!keyOrPlanKey) { store.clear(); return; }
-  for (const k of Array.from(store.keys())) if (k.endsWith(`:${keyOrPlanKey}`) || k === keyOrPlanKey) store.delete(k);
+export function snapshotQuota() {
+  const items = Array.from(findBuyersCounters.entries()).map(([id, v]) => ({
+    id,
+    day: v.day,
+    plan: v.plan,
+    used: v.used,
+  }));
+  return {
+    quota: {
+      windowDays: DEFAULTS.windowDays,
+      resetAtMs: nextResetAtMs(DEFAULTS.windowDays),
+      counters: items,
+    },
+  };
 }
 
-export default withQuota;
+export function resetQuota() {
+  findBuyersCounters.clear();
+}
