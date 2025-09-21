@@ -66,7 +66,7 @@
             <button id="apply">Apply</button>
           </div>
           <div class="row fill">
-            <input id="apiKey" class="fill" placeholder="API key (optional for read; required for write)" />
+            <input id="apiKey" class="fill" placeholder="API key (required for free quota)" />
             <button id="saveKey" class="secondary">Save</button>
             <button id="onlyUSCA" class="secondary">US/CA only</button>
           </div>
@@ -308,7 +308,7 @@
       setTimeout(()=>URL.revokeObjectURL(a.href), 500);
     }
 
-    // Cooldown helper (used when server returns 429)
+    // Cooldown helper (for HTTP 429)
     function startCooldown(ms){
       const btn = UI.find;
       const original = 'Find buyers';
@@ -346,7 +346,7 @@
       toast('Persona saved locally', true);
     };
 
-    // Find buyers with 429 cooldown handling
+    // Find buyers with 429 cooldown + 402 free-quota handling
     UI.find.onclick = async ()=>{
       const supplier = UI.supplier.value.trim().toLowerCase();
       if (!supplier){ toast('Enter a supplier domain', false, true); return; }
@@ -366,10 +366,24 @@
 
       const r = await call('POST','/api/v1/leads/find-buyers', body);
 
-      // If rate-limited, show countdown and exit (button re-enabled by startCooldown)
+      // 429: rate limit (short cooldown)
       if (r.status === 429){
         const ms = (r.data && Number(r.data.retryAfterMs)) || 10_000;
         startCooldown(ms);
+        return;
+      }
+
+      // 402: free daily quota exceeded
+      if (r.status === 402 && r.data && r.data.error === 'FREE_QUOTA_EXCEEDED'){
+        const q = r.data.quota || {};
+        const limit = q.limit || {hot:1, warm:2, total:3};
+        const used  = q.used  || {hot:1, warm:2, total:3};
+        const resetAt = q.resetAt ? new Date(q.resetAt).toLocaleString() : 'tomorrow';
+        UI.find.disabled = true;
+        UI.findMsg.innerHTML =
+          `<div class="notice error mono">Free daily limit reached (${used.total}/${limit.total}). ` +
+          `Hot ${used.hot}/${limit.hot}, Warm ${used.warm}/${limit.warm}. ` +
+          `Come back after ${resetAt} or upgrade for higher limits.</div>`;
         return;
       }
 
