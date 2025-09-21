@@ -24,7 +24,7 @@ app.get("/api/v1/leads", (req: Request, res: Response) => {
 });
 
 // --- Find buyers endpoints (with rate limit) ---
-const rl: RequestHandler = rateLimit({ windowMs: 10_000, max: 8 });
+const rl: RequestHandler = rateLimit({ windowMs: 10_000, max: 4 });
 
 // canonical route used by the Free Panel
 app.post("/api/v1/leads/find-buyers", rl, findBuyers);
