@@ -1,132 +1,164 @@
 // src/middleware/quota.ts
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 
-export type Plan = "free" | "pro" | "internal";
-
-export interface PlanLimits {
-  /** Max successful /find-buyers calls per UTC day */
-  dailyFindBuyers: number;
+/** Per-plan daily limits (request-level; we count POST /find-buyers calls) */
+export interface PlanLimit {
+  /** Max number of find-buyers calls per window */
+  perDay: number;
+  /** After exceeding, how long to cool down before the next attempt is allowed */
+  cooldownMs: number;
 }
 
 export interface QuotaConfig {
-  /** Window size in whole days (keep 1 unless you really want multi-day windows) */
+  /** Rolling window size in days (default: 1) */
   windowDays: number;
-  /** Limits per plan */
-  plans: Record<Plan, PlanLimits>;
+  /** Limits for free and pro plans */
+  limits: {
+    free: PlanLimit;
+    pro: PlanLimit;
+  };
   /**
-   * If the incoming x-api-key equals this value, we treat the caller as "internal"
-   * (unlimited) so you can test freely from the Free Panel.
+   * Determine plan for this request. If not provided, uses header x-plan=pro|free,
+   * otherwise defaults to 'free'.
    */
-  testingBypassKey?: string | null;
+  detectPlan?: (req: Request) => "free" | "pro";
+  /** Return true to skip quota enforcement (e.g., for tests) */
+  bypass?: (req: Request) => boolean;
 }
 
-type Counter = { day: string; used: number; plan: Plan };
+/** In-memory store; fine for a single instance. */
+type Record = { windowStart: number; used: number; cooldownUntil: number };
+const STORE = new Map<string, Record>();
 
-const findBuyersCounters = new Map<string, Counter>(); // key -> counter
-
-function startOfUtcDay(d = new Date()): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-}
-function nextResetAtMs(windowDays: number): number {
-  const start = startOfUtcDay();
-  start.setUTCDate(start.getUTCDate() + windowDays);
-  return +start;
-}
-function bucketId(d = new Date()): string {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-}
-function identityFrom(req: Request): string {
-  // Prefer API key; otherwise fall back to IP (Express sets req.ip; behind proxies it uses X-Forwarded-For if trust proxy is on)
-  return (req.get("x-api-key") || req.ip || "anon").trim().toLowerCase();
-}
-function planFrom(req: Request, cfg: QuotaConfig): Plan {
-  const key = (req.get("x-api-key") || "").trim();
-  if (cfg.testingBypassKey && key && key === cfg.testingBypassKey) return "internal";
-  const headerPlan = (req.get("x-plan") || "").toLowerCase();
-  if (headerPlan === "pro") return "pro";
-  if (/^pro_/i.test(key)) return "pro";
-  return "free";
-}
+const DAY = 24 * 60 * 60 * 1000;
 
 const DEFAULTS: QuotaConfig = {
   windowDays: 1,
-  plans: {
-    free: { dailyFindBuyers: 3 },
-    pro: { dailyFindBuyers: 1000 },
-    internal: { dailyFindBuyers: 100000 },
+  limits: {
+    free: { perDay: 3, cooldownMs: 10_000 },
+    pro:  { perDay: 200, cooldownMs: 0 },
   },
-  testingBypassKey: "DEV-UNLIMITED",
 };
 
-export function quota(partial?: Partial<QuotaConfig>): RequestHandler {
-  const cfg: QuotaConfig = {
-    ...DEFAULTS,
-    ...partial,
-    plans: { ...DEFAULTS.plans, ...(partial?.plans || {}) },
+/** Key derivation: prefer API key; fallback to IP. */
+function keyFor(req: Request): string {
+  const apiKey = (req.header("x-api-key") || "").trim();
+  if (apiKey) return `k:${apiKey}`;
+  // trust proxy usually set; we still keep req.ip as fallback
+  return `ip:${req.ip || (req.headers["x-forwarded-for"] as string | undefined) || "unknown"}`;
+}
+
+function envBypass(req: Request): boolean {
+  // If TEST_API_KEY is set, any request carrying that x-api-key will bypass quota.
+  const testKey = (process.env.TEST_API_KEY || "").trim();
+  if (testKey && (req.header("x-api-key") || "").trim() === testKey) return true;
+
+  // Optional second bypass channel: header token, guarded by ALLOW_TEST_BYPASS.
+  if (process.env.ALLOW_TEST_BYPASS === "1") {
+    const token = (process.env.TEST_BYPASS_TOKEN || "").trim();
+    if (token && (req.header("x-test-bypass") || "").trim() === token) return true;
+  }
+  return false;
+}
+
+/** Merge config shallowly and keep shapes stable for TS */
+function normalize(partial?: Partial<QuotaConfig>): QuotaConfig {
+  const base = DEFAULTS;
+  const p = partial || {};
+  return {
+    windowDays: typeof p.windowDays === "number" ? p.windowDays : base.windowDays,
+    limits: {
+      free: {
+        perDay: p.limits?.free?.perDay ?? base.limits.free.perDay,
+        cooldownMs: p.limits?.free?.cooldownMs ?? base.limits.free.cooldownMs,
+      },
+      pro: {
+        perDay: p.limits?.pro?.perDay ?? base.limits.pro.perDay,
+        cooldownMs: p.limits?.pro?.cooldownMs ?? base.limits.pro.cooldownMs,
+      },
+    },
+    detectPlan: p.detectPlan ?? base.detectPlan,
+    bypass: p.bypass ?? base.bypass,
   };
+}
 
-  return (req: Request, res: Response, next: NextFunction) => {
-    // Only guard POST/GET /find-buyers routes (mounted by index.ts)
-    // You’re using it only for those routes anyway.
-    const id = identityFrom(req);
-    const today = bucketId();
-    const plan = planFrom(req, cfg);
-    const limit = cfg.plans[plan]?.dailyFindBuyers ?? DEFAULTS.plans.free.dailyFindBuyers;
+/**
+ * Quota middleware factory. Call with zero or one argument.
+ * - quota() -> use defaults (free: 3/day; pro: 200/day)
+ * - quota({ limits: { free: { perDay: 4, cooldownMs: 8_000 } } })
+ */
+export function quota(partial?: Partial<QuotaConfig>): RequestHandler {
+  const cfg = normalize(partial);
 
-    let ctr = findBuyersCounters.get(id);
-    if (!ctr || ctr.day !== today) {
-      ctr = { day: today, used: 0, plan };
-      findBuyersCounters.set(id, ctr);
-    } else if (ctr.plan !== plan) {
-      ctr.plan = plan; // keep latest
+  return function quotaMiddleware(req: Request, res: Response, next: NextFunction) {
+    // Bypass for tests/dev if configured
+    if (envBypass(req) || (cfg.bypass && cfg.bypass(req))) return next();
+
+    const plan: "free" | "pro" =
+      (cfg.detectPlan && cfg.detectPlan(req)) ||
+      ((req.header("x-plan") || "").toLowerCase() === "pro" ? "pro" : "free");
+
+    const limit = plan === "pro" ? cfg.limits.pro : cfg.limits.free;
+    const key = `${plan}:${keyFor(req)}`;
+    const now = Date.now();
+
+    const windowMs = cfg.windowDays * DAY;
+    let rec = STORE.get(key);
+    if (!rec || now - rec.windowStart >= windowMs) {
+      rec = { windowStart: now, used: 0, cooldownUntil: 0 };
+      STORE.set(key, rec);
     }
 
-    if (ctr.used >= limit && plan !== "internal") {
+    if (rec.cooldownUntil && now < rec.cooldownUntil) {
       return res.status(429).json({
         ok: false,
-        error: "QUOTA",
-        plan,
-        used: ctr.used,
-        limit,
-        resetAtMs: nextResetAtMs(cfg.windowDays),
+        error: "COOLDOWN",
+        retryAfterMs: rec.cooldownUntil - now,
+        windowEndsAt: new Date(rec.windowStart + windowMs).toISOString(),
       });
     }
 
-    // Let the handler run; increment after it succeeds
-    // If you want to count every attempt (even failed), move this before next()
-    const done = (err?: unknown) => {
-      if (!err && plan !== "internal") ctr!.used += 1;
-    };
+    if (rec.used >= limit.perDay) {
+      rec.cooldownUntil = now + (limit.cooldownMs || 0);
+      return res.status(429).json({
+        ok: false,
+        error: "QUOTA_EXCEEDED",
+        limit: limit.perDay,
+        used: rec.used,
+        retryAfterMs: limit.cooldownMs || 0,
+        windowEndsAt: new Date(rec.windowStart + windowMs).toISOString(),
+      });
+    }
 
-    // Wrap res.json/end/send to catch successful completion
-    const origJson = res.json.bind(res);
-    const origSend = res.send.bind(res);
-    res.json = ((body?: any) => { done(); return origJson(body); }) as any;
-    res.send = ((body?: any) => { done(); return origSend(body as any); }) as any;
-
-    next();
+    rec.used += 1;
+    return next();
   };
 }
 
-export function snapshotQuota() {
-  const items = Array.from(findBuyersCounters.entries()).map(([id, v]) => ({
-    id,
-    day: v.day,
-    plan: v.plan,
-    used: v.used,
-  }));
-  return {
-    quota: {
-      windowDays: DEFAULTS.windowDays,
-      resetAtMs: nextResetAtMs(DEFAULTS.windowDays),
-      counters: items,
-    },
-  };
-}
+/** Test-only: GET a snapshot of the in-memory counters. */
+export const snapshotQuota: RequestHandler = (req, res) => {
+  if (process.env.ALLOW_TEST_BYPASS !== "1") return res.status(404).end();
+  const out: Record<string, Record> = {};
+  for (const [k, v] of STORE.entries()) out[k] = { ...v };
+  res.json({ ok: true, store: out, size: STORE.size });
+};
 
-export function resetQuota() {
-  findBuyersCounters.clear();
-}
+/** Test-only: POST reset; clears all or a specific key by API key / IP */
+export const resetQuota: RequestHandler = (req, res) => {
+  if (process.env.ALLOW_TEST_BYPASS !== "1") return res.status(404).end();
+
+  const target = (req.query.key as string | undefined)?.trim();
+  if (!target) {
+    STORE.clear();
+    return res.json({ ok: true, cleared: "all", size: STORE.size });
+  }
+
+  // delete both free/pro variants for the given api key or ip
+  const candidates = [`free:k:${target}`, `pro:k:${target}`, `free:ip:${target}`, `pro:ip:${target}`];
+  let n = 0;
+  for (const c of candidates) if (STORE.delete(c)) n++;
+  res.json({ ok: true, cleared: n });
+};
+
+// also export default to permit `import quota from "./middleware/quota"`
+export default quota;
