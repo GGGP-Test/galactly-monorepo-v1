@@ -3,7 +3,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import findBuyers from "./services/find-buyers";
 import rateLimit from "./middleware/rateLimit";
-import quota from "./middleware/quota";
+import quota, { PlanLimits } from "./middleware/quota";
 
 const app = express();
 
@@ -13,32 +13,31 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
 app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// Stub the legacy list endpoint so the panel never 404s
+// Keep the panel list endpoint happy
 app.get("/api/v1/leads", (req: Request, res: Response) => {
   const temp = req.query.temp === "hot" || req.query.temp === "warm" ? String(req.query.temp) : "warm";
-  res.status(200).json({
-    temp,
-    region: req.query.region ?? null,
-    items: [],          // keep contract consistent with panel
-    warm: [],           // legacy fields (harmless)
-    hot: []
-  });
+  res.status(200).json({ temp, region: req.query.region ?? null, items: [], warm: [], hot: [] });
 });
 
-// --- Controls ---
-// Rate-limit: 4 tries / 10s per API key (you already set this)
+// ---- PLAN CONFIG (tweak here) ----
+const PLANS: Record<string, PlanLimits> = {
+  free:    { hot: 1,  warm: 2 },     // total=3
+  starter: { hot: 6,  warm: 24 },    // total=30
+  pro:     { hot: 30, warm: 120 },   // total=150
+  scale:   { hot: 120, warm: 480 },  // total=600
+};
+
+// Burst limiter (simple, same for all plans for now)
 const rl = rateLimit({ windowMs: 10_000, max: 4 });
-// Daily free quota: 1 hot + 2 warm per day per API key
-const freeQuota = quota({ freeHot: 1, freeWarm: 2 });
 
-// --- Find buyers endpoints (rate limit + daily quota) ---
-// canonical route used by the Free Panel
-app.post("/api/v1/leads/find-buyers", rl, freeQuota, findBuyers);
+// Daily quota by plan (read from x-plan header; defaults to "free")
+const planQuota = quota({ plans: PLANS });
 
-// extra aliases to be bulletproof
-app.post("/find-buyers", rl, freeQuota, findBuyers);
-app.get("/api/v1/leads/find-buyers", rl, freeQuota, findBuyers);
-app.get("/find-buyers", rl, freeQuota, findBuyers);
+// ---- Routes (rate limit + quota + handler) ----
+app.post("/api/v1/leads/find-buyers", rl, planQuota, findBuyers);
+app.post("/find-buyers", rl, planQuota, findBuyers);
+app.get("/api/v1/leads/find-buyers", rl, planQuota, findBuyers);
+app.get("/find-buyers", rl, planQuota, findBuyers);
 
 // 404
 app.use((req: Request, res: Response) => {
