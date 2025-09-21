@@ -1,158 +1,165 @@
-import { Request, Response, NextFunction, RequestHandler } from "express";
+// src/middleware/quota.ts
+import type { Request, Response, NextFunction } from "express";
 
-/** Plans supported by the backend. */
+/**
+ * Supported plans. Keep this tight so we don't fight types all day.
+ */
 export type Plan = "free" | "pro" | "internal";
 
-export interface PlanLimit {
-  /** Max allowed requests per calendar day (UTC-ish). */
-  dailyTotal: number;
-  /** Optional cooldown penalty (seconds) after a denial. */
-  cooldownSec?: number;
+export interface PlanLimits {
+  /** Max successful calls allowed per UTC day. */
+  dailyCalls: number;
+  /**
+   * Optional cooldown (ms). When a caller hits the daily cap, we can
+   * temporarily block further attempts instead of letting them spam.
+   */
+  cooldownMs?: number;
+}
+
+/** Explicit map instead of Record<> to avoid quirky TS lib issues. */
+export interface PlanMap {
+  free: PlanLimits;
+  pro: PlanLimits;
+  internal: PlanLimits;
 }
 
 export interface QuotaConfig {
-  windowDays: number; // currently fixed at 1 day
-  limits: {
-    free: PlanLimit;
-    pro: PlanLimit;
-    internal: PlanLimit;
-  };
-  /** Force-disable all quota checks (fail-open) — useful for emergency testing. */
-  disabled?: boolean;
-  /** API keys that should be treated as "internal" (unlimited) */
-  internalKeys: Set<string>;
+  defaultPlan: Plan;
+  limits: PlanMap;
 }
 
-const DEFAULTS: QuotaConfig = {
-  windowDays: 1,
-  limits: {
-    free: { dailyTotal: 3, cooldownSec: 600 },      // 3/day, 10 min cool-down after deny
-    pro: { dailyTotal: 250, cooldownSec: 30 },      // tune as needed
-    internal: { dailyTotal: 1_000_000 },            // effectively unlimited
-  },
-  disabled: false,
-  internalKeys: new Set<string>(),
+/** In-memory state per apiKey (or per-IP if no apiKey). */
+type KeyState = {
+  day: string;         // UTC yyyymmdd
+  used: number;        // successful calls today
+  cooldownUntil?: number;
 };
 
-let cfg: QuotaConfig = { ...DEFAULTS };
+const state = new Map<string, KeyState>();
 
-/** Programmatic config at boot. Call once from index.ts. */
-export function configureQuota(partial?: {
-  limits?: Partial<QuotaConfig["limits"]>;
-  disabled?: boolean;
-  internalKeys?: string[]; // easier to pass from env
-}) {
-  if (!partial) return;
-  cfg = {
-    ...cfg,
-    disabled: partial.disabled ?? cfg.disabled,
-    limits: { ...cfg.limits, ...(partial.limits || {}) } as QuotaConfig["limits"],
-    internalKeys: new Set(partial.internalKeys ?? Array.from(cfg.internalKeys)),
-  };
+/**
+ * Optional mapping: specific API keys -> explicit plan.
+ * Lets us grant "pro" or "internal" to demo/test keys without inventing a new plan.
+ */
+const planByApiKey = new Map<string, Plan>();
+
+/** Helpers */
+export function setPlanForApiKey(apiKey: string, plan: Plan) {
+  if (!apiKey) return;
+  planByApiKey.set(apiKey, plan);
 }
-
-/** In-memory map of API key -> explicit plan assignment. */
-const planByKey = new Map<string, Plan>();
-
-/** In-memory usage counters (per key). */
-type Usage = { day: number; total: number; blockedUntil?: number };
-const usageByKey = new Map<string, Usage>();
-
-function today(): number {
-  // day number since epoch; good enough for calendar-day buckets
-  return Math.floor(Date.now() / 86_400_000);
-}
-
-/** Set/override a plan for a given API key (e.g., promote a user to pro). */
-export function setPlanForApiKey(key: string, plan: Plan) {
-  if (!key) return;
-  planByKey.set(key, plan);
-}
-
-/** Inspect assigned plan for a key. Falls back to free; honors internalKeys. */
-export function getPlanForApiKey(key?: string): Plan {
-  if (!key) return "free";
-  if (cfg.internalKeys.has(key)) return "internal";
-  return planByKey.get(key) ?? "free";
-}
-
-function checkAndConsumeNow(key: string, plan: Plan) {
-  const now = Date.now();
-  let u = usageByKey.get(key);
-  if (!u) {
-    u = { day: today(), total: 0, blockedUntil: undefined };
-    usageByKey.set(key, u);
+export function resetQuota(apiKey?: string) {
+  if (apiKey) {
+    state.delete(apiKey);
+  } else {
+    state.clear();
   }
-  // New calendar day -> reset
-  if (u.day !== today()) {
-    u.day = today();
-    u.total = 0;
-    u.blockedUntil = undefined;
-  }
-
-  const limits = cfg.limits[plan];
-
-  // Short-circuits
-  if (cfg.disabled || plan === "internal") {
-    return { ok: true, remaining: Number.MAX_SAFE_INTEGER };
-  }
-
-  if (u.blockedUntil && now < u.blockedUntil) {
-    const retryAfterSec = Math.ceil((u.blockedUntil - now) / 1000);
-    return { ok: false, retryAfterSec, remaining: 0 };
-  }
-
-  if (u.total >= limits.dailyTotal) {
-    const cool = limits.cooldownSec ?? 60;
-    u.blockedUntil = now + cool * 1000;
-    usageByKey.set(key, u);
-    return { ok: false, retryAfterSec: cool, remaining: 0 };
-  }
-
-  // Consume one unit
-  u.total += 1;
-  usageByKey.set(key, u);
-  const remaining = Math.max(0, limits.dailyTotal - u.total);
-  return { ok: true, remaining };
 }
-
-/** Express middleware — no arguments. Reads global config. */
-export function quota(): RequestHandler {
-  return (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const key = String(req.header("x-api-key") || "");
-      const plan = getPlanForApiKey(key);
-      const verdict = checkAndConsumeNow(key, plan);
-
-      // Expose useful headers for the panel
-      res.setHeader("X-Plan", plan);
-      res.setHeader("X-Remaining", String(verdict.remaining ?? 0));
-
-      if (!verdict.ok) {
-        res.setHeader("Retry-After", String(verdict.retryAfterSec ?? 60));
-        return res
-          .status(429)
-          .json({ ok: false, error: "QUOTA", plan, retryAfterSec: verdict.retryAfterSec ?? 60 });
-      }
-      return next();
-    } catch {
-      // Fail-open if something goes sideways; better than locking everyone out.
-      return next();
-    }
-  };
-}
-
-/** Clear counters (all keys or a specific key). */
-export function resetQuota(key?: string) {
-  if (key) usageByKey.delete(key);
-  else usageByKey.clear();
-}
-
-/** Snapshot current counters (for debug/admin). */
 export function snapshotQuota() {
-  const rows: Array<{ key: string; day: number; total: number; plan: Plan }> = [];
-  for (const [key, u] of usageByKey) {
-    rows.push({ key, day: u.day, total: u.total, plan: getPlanForApiKey(key) });
-  }
-  return rows;
+  const out: Array<{ key: string; day: string; used: number; cooldownUntil?: number }> = [];
+  state.forEach((v, k) => out.push({ key: k, day: v.day, used: v.used, cooldownUntil: v.cooldownUntil }));
+  return out;
 }
+
+/** Small utils */
+const todayUTC = () => {
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}${m}${day}`;
+};
+const toNum = (v: any, fallback: number) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+};
+
+/**
+ * Build a quota middleware. If called with no args, we read env and use defaults.
+ * Env knobs (all optional):
+ *   QUOTA_FREE_DAILY, QUOTA_FREE_COOLDOWN_MS
+ *   QUOTA_PRO_DAILY,  QUOTA_PRO_COOLDOWN_MS
+ *   QUOTA_INTERNAL_DAILY
+ *   QUOTA_DEFAULT_PLAN  -> "free" | "pro" | "internal"  (default "free")
+ */
+export default function quota(partial?: Partial<QuotaConfig>) {
+  const cfg: QuotaConfig = {
+    defaultPlan: (process.env.QUOTA_DEFAULT_PLAN as Plan) || "free",
+    limits: {
+      free: {
+        dailyCalls: toNum(process.env.QUOTA_FREE_DAILY, 3),
+        cooldownMs: toNum(process.env.QUOTA_FREE_COOLDOWN_MS, 0),
+      },
+      pro: {
+        dailyCalls: toNum(process.env.QUOTA_PRO_DAILY, 250),
+        cooldownMs: toNum(process.env.QUOTA_PRO_COOLDOWN_MS, 0),
+      },
+      internal: {
+        dailyCalls: toNum(process.env.QUOTA_INTERNAL_DAILY, 100000),
+        cooldownMs: 0,
+      },
+    },
+  };
+
+  // Allow exact overrides (keep the shape identical so TS is happy).
+  if (partial?.defaultPlan) cfg.defaultPlan = partial.defaultPlan;
+  if (partial?.limits) {
+    cfg.limits = {
+      free: partial.limits.free ?? cfg.limits.free,
+      pro: partial.limits.pro ?? cfg.limits.pro,
+      internal: partial.limits.internal ?? cfg.limits.internal,
+    };
+  }
+
+  return function quotaMiddleware(req: Request, res: Response, next: NextFunction) {
+    const headerKey = String(req.header("x-api-key") || "").trim();
+    const ip =
+      (req.headers["cf-connecting-ip"] as string) ||
+      req.socket.remoteAddress ||
+      (req.ip || "unknown");
+
+    // Caller identity used for quota bookkeeping
+    const key = headerKey || `ip:${ip}`;
+
+    // Which plan applies?
+    const plan: Plan = (headerKey && planByApiKey.get(headerKey)) || cfg.defaultPlan;
+    const limits = cfg.limits[plan];
+
+    // Reset day boundary
+    const now = Date.now();
+    const utcDay = todayUTC();
+    let s = state.get(key);
+    if (!s || s.day !== utcDay) {
+      s = { day: utcDay, used: 0 };
+      state.set(key, s);
+    }
+
+    // Cooldown check
+    if (s.cooldownUntil && now < s.cooldownUntil) {
+      const retryAfterMs = s.cooldownUntil - now;
+      return res
+        .status(429)
+        .json({ ok: false, error: "QUOTA_COOLDOWN", plan, retryAfterMs });
+    }
+
+    // Daily budget check
+    if (s.used >= limits.dailyCalls) {
+      if (limits.cooldownMs && limits.cooldownMs > 0) {
+        s.cooldownUntil = now + limits.cooldownMs;
+      }
+      const msUntilMidnight =
+        Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1, 0, 0, 0) -
+        now;
+      return res
+        .status(429)
+        .json({ ok: false, error: "QUOTA_EXCEEDED", plan, retryAfterMs: Math.max(0, msUntilMidnight) });
+    }
+
+    // Reserve one unit; if downstream fails you can decrement here if you want
+    s.used += 1;
+    next();
+  };
+}
+
+// Also export helpers as named (already above).
+export { planByApiKey };
