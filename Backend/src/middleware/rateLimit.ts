@@ -1,96 +1,66 @@
+// src/middleware/rateLimit.ts
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 
-/**
- * Very small, dependency-free sliding window limiter.
- * Keys by API key header (if present) otherwise by client IP.
- * All envs are optional; sensible defaults are used.
- */
-
-const WINDOW_MS = toInt(process.env.RATE_LIMIT_WINDOW_MS, 60_000); // 60s
-const MAX_REQS  = toInt(process.env.RATE_LIMIT_MAX, 30);           // 30 reqs / window
-const KEY_HDR   = (process.env.RATE_LIMIT_KEY_HEADER ?? "x-api-key").toLowerCase();
-
-type Bucket = { remaining: number; resetAt: number };
-
-const buckets = new Map<string, Bucket>();
-
-function toInt(v: string | undefined, dflt: number): number {
-  const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : dflt;
-}
-
-/** Normalize various header shapes to a definite string. */
-function headerToString(h: string | string[] | undefined): string | undefined {
-  if (typeof h === "string") return h;
-  if (Array.isArray(h) && h.length) return h[0]!;
-  return undefined;
-}
-
-/** Pick a stable key for the caller (api key or ip), always a string. */
-function clientKey(req: Request): string {
-  // Prefer explicit API key if caller provides one.
-  const apiKey = headerToString(req.headers[KEY_HDR]);
-  if (apiKey && apiKey.trim().length) return apiKey.trim();
-
-  // Else use first IP we can find.
-  const xff = headerToString(req.headers["x-forwarded-for"]);
-  const ipFromXff = xff ? xff.split(",")[0]!.trim() : undefined;
-
-  const ip =
-    ipFromXff ||
-    req.ip ||
-    (req.socket && req.socket.remoteAddress) ||
-    // @ts-expect-error: older node types
-    (req.connection && (req.connection as any).remoteAddress) ||
-    "unknown";
-
-  return String(ip);
-}
-
-/** Periodic small cleanup so the Map doesn't grow forever. */
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, b] of buckets) {
-    if (b.resetAt <= now) buckets.delete(k);
-  }
-}, Math.max(30_000, WINDOW_MS)).unref?.();
-
-/** Default limiter middleware (global). */
-const rateLimit: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
-  const now = Date.now();
-  const key = clientKey(req); // <-- ALWAYS a string (fixes TS errors)
-
-  let b = buckets.get(key);
-  if (!b || b.resetAt <= now) {
-    b = { remaining: MAX_REQS, resetAt: now + WINDOW_MS };
-    buckets.set(key, b);
-  }
-
-  // If exhausted, reject
-  if (b.remaining <= 0) {
-    const retrySec = Math.max(1, Math.ceil((b.resetAt - now) / 1000));
-
-    res.setHeader("Retry-After", retrySec.toString());
-    res.setHeader("X-RateLimit-Limit", String(MAX_REQS));
-    res.setHeader("X-RateLimit-Remaining", "0");
-    res.setHeader("X-RateLimit-Reset", String(Math.floor(b.resetAt / 1000)));
-    res.status(429).json({
-      error: "RATE_LIMITED",
-      resetAt: new Date(b.resetAt).toISOString(),
-      key
-    });
-    return;
-  }
-
-  // Spend a token and continue
-  b.remaining -= 1;
-
-  res.setHeader("X-RateLimit-Limit", String(MAX_REQS));
-  res.setHeader("X-RateLimit-Remaining", String(b.remaining));
-  res.setHeader("X-RateLimit-Reset", String(Math.floor(b.resetAt / 1000)));
-
-  next();
+export type RateLimitOptions = {
+  /** time window in ms */
+  windowMs?: number;
+  /** max requests per key within the window */
+  max?: number;
+  /** derive the key (ip+route by default) */
+  key?: (req: Request) => string;
+  /** set X-RateLimit-* headers */
+  headers?: boolean;
 };
 
-export default rateLimit;
-export { rateLimit };
+// tiny in-memory store (per process)
+type Bucket = { count: number; resetAt: number };
+const store = new Map<string, Bucket>();
+
+function defaultKey(req: Request): string {
+  // prefer x-forwarded-for if present (behind proxies), else ip/remoteAddress
+  const fwd = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim();
+  const ip = fwd ?? req.ip ?? req.socket.remoteAddress ?? "unknown";
+  return `${ip}:${req.method}:${req.path}`;
+}
+
+/**
+ * Express-compatible rate limit middleware (no deps).
+ * Returns a RequestHandler so `app.get(..., rl, ...)` type-checks.
+ */
+export default function rateLimit(opts: RateLimitOptions = {}): RequestHandler {
+  const windowMs = opts.windowMs ?? 10_000;
+  const max = opts.max ?? 8;
+  const keyFn = opts.key ?? defaultKey;
+  const sendHeaders = opts.headers ?? true;
+
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const now = Date.now();
+    const key = keyFn(req);
+
+    let bucket = store.get(key);
+    if (!bucket || bucket.resetAt <= now) {
+      bucket = { count: 0, resetAt: now + windowMs };
+      store.set(key, bucket);
+    }
+
+    bucket.count += 1;
+
+    // headers must be strings – never pass undefined
+    if (sendHeaders) {
+      res.setHeader("X-RateLimit-Limit", String(max));
+      res.setHeader("X-RateLimit-Remaining", String(Math.max(0, max - bucket.count)));
+      // epoch seconds to match common convention
+      res.setHeader("X-RateLimit-Reset", String(Math.ceil(bucket.resetAt / 1000)));
+    }
+
+    if (bucket.count > max) {
+      const retryAfterMs = Math.max(0, bucket.resetAt - now);
+      // optional standard headers (also strings)
+      res.setHeader("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
+      res.status(429).json({ ok: false, error: "RATE_LIMIT", retryAfterMs });
+      return;
+    }
+
+    next();
+  };
+}
