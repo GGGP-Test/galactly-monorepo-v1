@@ -58,7 +58,7 @@
     <h1>Leads Console — Free Panel (V2)</h1>
 
     <div class="grid">
-      <!-- LEFT: Hot/Warm lists -->
+      <!-- LEFT -->
       <div class="card">
         <div class="head row">
           <div class="row fill">
@@ -66,7 +66,13 @@
             <button id="apply">Apply</button>
           </div>
           <div class="row fill">
-            <input id="apiKey" class="fill" placeholder="API key (required for free quota)" />
+            <input id="apiKey" class="fill" placeholder="API key" />
+            <select id="plan" style="width:160px">
+              <option value="free" selected>Free</option>
+              <option value="starter">Starter</option>
+              <option value="pro">Pro</option>
+              <option value="scale">Scale</option>
+            </select>
             <button id="saveKey" class="secondary">Save</button>
             <button id="onlyUSCA" class="secondary">US/CA only</button>
           </div>
@@ -96,12 +102,10 @@
         </div>
       </div>
 
-      <!-- RIGHT: Details, “Find buyers”, Persona editor -->
+      <!-- RIGHT -->
       <div class="card">
         <div class="head"><div class="row"><div class="pill"><span class="badge">Details</span> Select a lead…</div></div></div>
-        <div class="body" id="details">
-          <div class="muted">No lead selected.</div>
-        </div>
+        <div class="body" id="details"><div class="muted">No lead selected.</div></div>
 
         <div class="head"><div class="row"><div class="pill"><span class="badge">Action</span> Find buyers (from supplier)</div></div></div>
         <div class="body">
@@ -157,10 +161,10 @@
 
   <script>
     const $ = s=>document.querySelector(s);
-    const $$ = s=>document.querySelectorAll(s);
     const S = {
       baseUrl: localStorage.getItem('baseUrl') || '',
       apiKey:  localStorage.getItem('apiKey')  || '',
+      plan:    localStorage.getItem('plan')    || 'free',
       onlyUSCA: JSON.parse(localStorage.getItem('onlyUSCA')||'true'),
       persona: JSON.parse(localStorage.getItem('persona')||'{"offer":"","solves":"","titles":""}')
     };
@@ -171,12 +175,11 @@
       find: $('#find'), findMsg: $('#findMsg'), toast: $('#toast'),
       p_offer: $('#p_offer'), p_solves: $('#p_solves'), p_titles: $('#p_titles'),
       personaSave: $('#personaSave'), saveKey: $('#saveKey'), apply: $('#apply'),
-      dlHot: $('#dlHot'), dlWarm: $('#dlWarm')
+      dlHot: $('#dlHot'), dlWarm: $('#dlWarm'), plan: $('#plan')
     };
 
     // init
-    UI.baseUrl.value = S.baseUrl;
-    UI.apiKey.value = S.apiKey;
+    UI.baseUrl.value = S.baseUrl; UI.apiKey.value = S.apiKey; UI.plan.value = S.plan;
     UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA);
     UI.onlyUSCA.textContent = S.onlyUSCA ? 'US/CA only' : 'All regions';
     UI.p_offer.value  = S.persona.offer || '';
@@ -189,50 +192,37 @@
       UI.toast.style.display = 'block';
       setTimeout(()=>UI.toast.style.display='none', 3000);
     }
-
-    function api(path){
-      const base = (S.baseUrl || '').replace(/\/+$/,'');
-      return base + path;
-    }
+    function api(path){ return (S.baseUrl||'').replace(/\/+$/,'') + path; }
 
     async function call(method, path, body){
       const headers = {'Content-Type':'application/json'};
       if (S.apiKey) headers['x-api-key'] = S.apiKey;
+      if (S.plan)   headers['x-plan']    = S.plan;
       const r = await fetch(api(path), {method, headers, body: body?JSON.stringify(body):undefined});
       const text = await r.text();
-      try{
-        return { ok:r.ok, status:r.status, data: JSON.parse(text) };
-      }catch{
-        return { ok:r.ok, status:r.status, data: text };
-      }
+      try{ return { ok:r.ok, status:r.status, data: JSON.parse(text) }; }
+      catch{ return { ok:r.ok, status:r.status, data: text }; }
     }
 
     function nlWhy(why){
       const chips = [];
       if (!why) return chips;
-      if (why.meta){
-        chips.push(`<span class="pill">${why.meta.label || 'Domain quality'} <span class="badge">${(why.meta.score??'').toFixed?why.meta.score.toFixed(2):why.meta.score}</span> <span class="muted">${why.meta.detail||''}</span></span>`);
-      }
-      if (why.platform){
-        chips.push(`<span class="pill">${why.platform.label || 'Platform fit'} <span class="badge">${(why.platform.score??'').toFixed?why.platform.score.toFixed(2):why.platform.score}</span> <span class="muted">${why.platform.detail||''}</span></span>`);
-      }
-      if (why.signal){
-        chips.push(`<span class="pill">${why.signal.label || 'Intent keywords'} <span class="badge">${(why.signal.score??'').toFixed?why.signal.score.toFixed(2):why.signal.score}</span> <span class="muted">${why.signal.detail||''}</span></span>`);
-      }
-      if (why.context){
-        chips.push(`<span class="pill">${why.context.label || 'Context'} <span class="badge">${(why.context.score??'').toFixed?why.context.score.toFixed(2):why.context.score}</span> <span class="muted">${why.context.detail||''}</span></span>`);
-      }
+      const seg = (e:any, def:string) =>
+        `<span class="pill">${e.label||def} <span class="badge">${(e.score??'').toFixed?e.score.toFixed(2):e.score}</span> <span class="muted">${e.detail||''}</span></span>`;
+      if (why.meta)     chips.push(seg(why.meta,'Domain quality'));
+      if (why.platform) chips.push(seg(why.platform,'Platform fit'));
+      if (why.signal)   chips.push(seg(why.signal,'Intent keywords'));
+      if (why.context)  chips.push(seg(why.context,'Context'));
       return chips;
     }
 
     function renderList(items){
       UI.leadRows.innerHTML = '';
-      items.forEach(it=>{
-        const host = (it.host||'').replace(/^https?:\/\//,'');
-        const href = host ? `https://${host}` : '#';
+      items.forEach((it,i)=>{
+        const host = (it.host||'').replace(/^https?:\/\//,''); const href = host ? `https://${host}` : '#';
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="mono">${it.id ?? ''}</td>
+          <td class="mono">${it.id ?? (i+1)}</td>
           <td><a class="link mono" href="${href}" target="_blank">${host}</a></td>
           <td>${it.platform||'unknown'}</td>
           <td class="mono">${it.title||''}</td>
@@ -246,8 +236,7 @@
     }
 
     function renderDetails(it){
-      const host = (it.host||'').replace(/^https?:\/\//,'');
-      const href = host ? `https://${host}` : '#';
+      const host = (it.host||'').replace(/^https?:\/\//,''); const href = host ? `https://${host}` : '#';
       UI.details.innerHTML = `
         <div class="split">
           <div>
@@ -259,11 +248,6 @@
             <div class="pill"><span class="badge">Platform</span> ${it.platform||'unknown'}</div>
             <div class="pill"><span class="badge">Title</span> <span class="mono">${it.title||''}</span></div>
           </div>
-        </div>
-        <div style="margin-top:10px">
-          <div class="pill"><span class="badge">Why</span> Human-readable evidence</div>
-          <div class="why" style="margin-top:8px">${nlWhy(it.why).join('')}</div>
-          ${it.whyText ? `<div class="notice" style="margin-top:8px">${it.whyText}</div>`:''}
         </div>
       `;
       UI.supplier.value ||= (it && it.host) || '';
@@ -299,32 +283,21 @@
       const rows = items.map(it=>cols.map(c=>esc(it[c])).join(','));
       return [head, ...rows].join('\r\n');
     }
-
     function download(name, text){
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
-      a.download = name;
-      a.click();
+      a.download = name; a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href), 500);
     }
-
-    // Cooldown helper (for HTTP 429)
     function startCooldown(ms){
-      const btn = UI.find;
-      const original = 'Find buyers';
+      const btn = UI.find; const original = 'Find buyers';
       let remaining = Math.max(1, Math.ceil((Number(ms)||0)/1000));
-
-      btn.disabled = true;
-      btn.textContent = `Wait ${remaining}s`;
+      btn.disabled = true; btn.textContent = `Wait ${remaining}s`;
       UI.findMsg.innerHTML = `<div class="notice error mono">Too fast — please wait ${remaining}s…</div>`;
-
       const iv = setInterval(()=>{
         remaining -= 1;
         if (remaining <= 0){
-          clearInterval(iv);
-          btn.disabled = false;
-          btn.textContent = original;
-          UI.findMsg.textContent = '';
+          clearInterval(iv); btn.disabled = false; btn.textContent = original; UI.findMsg.textContent = '';
         } else {
           btn.textContent = `Wait ${remaining}s`;
           UI.findMsg.innerHTML = `<div class="notice error mono">Too fast — please wait ${remaining}s…</div>`;
@@ -333,11 +306,12 @@
     }
 
     // events
-    UI.apply.onclick = ()=>{ S.baseUrl = UI.baseUrl.value.trim(); localStorage.setItem('baseUrl', S.baseUrl); toast('Base URL applied', true); };
-    UI.saveKey.onclick = ()=>{ S.apiKey = UI.apiKey.value.trim(); localStorage.setItem('apiKey', S.apiKey); toast('API key saved', true); };
-    UI.onlyUSCA.onclick = ()=>{ S.onlyUSCA=!S.onlyUSCA; localStorage.setItem('onlyUSCA', JSON.stringify(S.onlyUSCA)); UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA); UI.onlyUSCA.textContent = S.onlyUSCA ? 'US/CA only' : 'All regions'; };
+    UI.apply.onclick   = ()=>{ S.baseUrl = UI.baseUrl.value.trim(); localStorage.setItem('baseUrl', S.baseUrl); toast('Base URL applied', true); };
+    UI.saveKey.onclick = ()=>{ S.apiKey = UI.apiKey.value.trim(); localStorage.setItem('apiKey', S.apiKey); S.plan = UI.plan.value; localStorage.setItem('plan', S.plan); toast('Auth saved', true); };
+    UI.plan.onchange   = ()=>{ S.plan = UI.plan.value; localStorage.setItem('plan', S.plan); };
+    UI.onlyUSCA.onclick= ()=>{ S.onlyUSCA=!S.onlyUSCA; localStorage.setItem('onlyUSCA', JSON.stringify(S.onlyUSCA)); UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA); UI.onlyUSCA.textContent = S.onlyUSCA ? 'US/CA only' : 'All regions'; };
     UI.refreshHot.onclick = ()=>refresh('hot');
-    UI.refreshWarm.onclick = ()=>refresh('warm');
+    UI.refreshWarm.onclick= ()=>refresh('warm');
     document.addEventListener('keydown', e=>{ if (e.key==='r' || e.key==='R') refresh('hot'); });
 
     UI.personaSave.onclick = ()=>{
@@ -346,7 +320,6 @@
       toast('Persona saved locally', true);
     };
 
-    // Find buyers with 429 cooldown + 402 free-quota handling
     UI.find.onclick = async ()=>{
       const supplier = UI.supplier.value.trim().toLowerCase();
       if (!supplier){ toast('Enter a supplier domain', false, true); return; }
@@ -354,36 +327,28 @@
         supplier,
         region: UI.region.value,
         radiusMi: Number(UI.radius.value||'50')||50,
-        persona: {
-          offer: UI.p_offer.value.trim(),
-          solves: UI.p_solves.value.trim(),
-          titles: UI.p_titles.value.trim()
-        },
+        persona: { offer: UI.p_offer.value.trim(), solves: UI.p_solves.value.trim(), titles: UI.p_titles.value.trim() },
         onlyUSCA: S.onlyUSCA
       };
-      UI.find.disabled = true;
-      UI.findMsg.textContent = 'Finding buyers…';
-
+      UI.find.disabled = true; UI.findMsg.textContent = 'Finding buyers…';
       const r = await call('POST','/api/v1/leads/find-buyers', body);
 
-      // 429: rate limit (short cooldown)
       if (r.status === 429){
         const ms = (r.data && Number(r.data.retryAfterMs)) || 10_000;
-        startCooldown(ms);
-        return;
+        startCooldown(ms); return;
       }
 
-      // 402: free daily quota exceeded
-      if (r.status === 402 && r.data && r.data.error === 'FREE_QUOTA_EXCEEDED'){
+      if (r.status === 402 && r.data && (r.data.error === 'QUOTA_EXCEEDED' || r.data.error === 'FREE_QUOTA_EXCEEDED')){
         const q = r.data.quota || {};
         const limit = q.limit || {hot:1, warm:2, total:3};
-        const used  = q.used  || {hot:1, warm:2, total:3};
+        const used  = q.used  || {hot:0, warm:0, total:0};
+        const plan  = (q.plan || S.plan || 'free').toUpperCase();
         const resetAt = q.resetAt ? new Date(q.resetAt).toLocaleString() : 'tomorrow';
         UI.find.disabled = true;
         UI.findMsg.innerHTML =
-          `<div class="notice error mono">Free daily limit reached (${used.total}/${limit.total}). ` +
+          `<div class="notice error mono">${plan} daily limit hit (${used.total}/${limit.total}). ` +
           `Hot ${used.hot}/${limit.hot}, Warm ${used.warm}/${limit.warm}. ` +
-          `Come back after ${resetAt} or upgrade for higher limits.</div>`;
+          `Come back after ${resetAt} or upgrade for more.</div>`;
         return;
       }
 
@@ -393,17 +358,36 @@
         UI.findMsg.innerHTML = `<div class="notice error mono">HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}</div>`;
         return;
       }
-      const items = toTableItems(r.data?.candidates||[]);
+      const items = (r.data?.candidates||[]).map((c,i)=>({
+        id: i+1,
+        host: c.host || c.domain || '',
+        platform: c.source || 'news',
+        title: c.title || c.reason || '',
+        created: c.created || '',
+        temperature: c.temperature || (typeof c.score==='number' && c.score>=0.65 ? 'hot':'warm'),
+        why: c.why || null,
+        whyText: c.whyText || c.reason || ''
+      }));
       const nHot  = items.filter(x=>x.temperature==='hot').length;
       const nWarm = items.length - nHot;
       UI.findMsg.innerHTML = `<div class="notice success mono">Created ${items.length} candidate(s). Hot:${nHot} Warm:${nWarm}. Showing them below.</div>`;
-      renderList(items); // render immediately from POST response
+      UI.leadRows.innerHTML = ''; items.forEach((it,i)=>{
+        const host=(it.host||'').replace(/^https?:\/\//,''); const href=host?`https://${host}`:'#';
+        const tr=document.createElement('tr'); tr.innerHTML = `
+          <td class="mono">${it.id}</td>
+          <td><a class="link mono" href="${href}" target="_blank">${host}</a></td>
+          <td>${it.platform||'unknown'}</td>
+          <td class="mono">${it.title||''}</td>
+          <td>${it.created||''}</td>
+          <td><span class="temp ${it.temperature||'warm'}">${it.temperature||'warm'}</span></td>
+          <td><div class="why"></div><div class="note muted">${it.whyText||''}</div></td>`;
+        document.querySelector('#leads tbody').appendChild(tr);
+      });
     };
 
-    UI.dlHot.onclick  = async ()=>{ const r=await call('GET','/api/v1/leads?temp=hot');  if(!r.ok) return toast('Failed to load hot leads',false,true); download('leads_hot.csv', csv(r.data.items||[])); };
-    UI.dlWarm.onclick = async ()=>{ const r=await call('GET','/api/v1/leads?temp=warm'); if(!r.ok) return toast('Failed to load warm leads',false,true); download('leads_warm.csv', csv(r.data.items||[])); };
+    UI.dlHot.onclick  = async ()=>{ const r=await call('GET','/api/v1/leads?temp=hot');  if(!r.ok) return toast('Failed to load hot leads',false,true); download('leads_hot.csv',  'id,host,platform,title,created,temperature,whyText\r\n'); };
+    UI.dlWarm.onclick = async ()=>{ const r=await call('GET','/api/v1/leads?temp=warm'); if(!r.ok) return toast('Failed to load warm leads',false,true); download('leads_warm.csv', 'id,host,platform,title,created,temperature,whyText\r\n'); };
 
-    // default auto-load
     if (S.baseUrl) refresh('warm');
   </script>
 </body>
