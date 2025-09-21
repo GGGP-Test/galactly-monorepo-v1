@@ -3,7 +3,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import findBuyers from "./services/find-buyers";
 import rateLimit from "./middleware/rateLimit";
-import quota, { PlanLimits } from "./middleware/quota";
+import quota from "./middleware/quota";
 
 const app = express();
 
@@ -13,31 +13,36 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
 app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// Keep the panel list endpoint happy
+// Stub the legacy list endpoint so the panel never 404s
 app.get("/api/v1/leads", (req: Request, res: Response) => {
   const temp = req.query.temp === "hot" || req.query.temp === "warm" ? String(req.query.temp) : "warm";
-  res.status(200).json({ temp, region: req.query.region ?? null, items: [], warm: [], hot: [] });
+  res.status(200).json({
+    temp,
+    region: req.query.region ?? null,
+    warm: [],
+    hot: [],
+  });
 });
 
-// ---- PLAN CONFIG (tweak here) ----
-const PLANS: Record<string, PlanLimits> = {
-  free:    { hot: 1,  warm: 2 },     // total=3
-  starter: { hot: 6,  warm: 24 },    // total=30
-  pro:     { hot: 30, warm: 120 },   // total=150
-  scale:   { hot: 120, warm: 480 },  // total=600
-};
+// --- Controls ---
+const rl = rateLimit({ windowMs: 10_000, max: 4 }); // 4 requests / 10s per API key
 
-// Burst limiter (simple, same for all plans for now)
-const rl = rateLimit({ windowMs: 10_000, max: 4 });
+// Daily quota: Free = 3 total/day, 1 hot/day; Pro very high
+const q = quota({
+  windowDays: 1,
+  freeTotal: 3,
+  freeHot: 1,
+  proTotal: 1000,
+  proHot: 999,
+});
 
-// Daily quota by plan (read from x-plan header; defaults to "free")
-const planQuota = quota({ plans: PLANS });
+// canonical route used by the Free Panel
+app.post("/api/v1/leads/find-buyers", rl, q, findBuyers);
 
-// ---- Routes (rate limit + quota + handler) ----
-app.post("/api/v1/leads/find-buyers", rl, planQuota, findBuyers);
-app.post("/find-buyers", rl, planQuota, findBuyers);
-app.get("/api/v1/leads/find-buyers", rl, planQuota, findBuyers);
-app.get("/find-buyers", rl, planQuota, findBuyers);
+// extra aliases to be bulletproof
+app.post("/find-buyers", rl, q, findBuyers);
+app.get("/api/v1/leads/find-buyers", rl, q, findBuyers);
+app.get("/find-buyers", rl, q, findBuyers);
 
 // 404
 app.use((req: Request, res: Response) => {
