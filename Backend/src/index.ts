@@ -13,47 +13,49 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
 app.get("/health",  (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// --- Legacy list endpoint (keep UI happy) ---
+/**
+ * Legacy list stub so the Free Panel never 404s.
+ * We return empty arrays – demo UI only needs shape + 200.
+ */
 app.get("/api/v1/leads", (req: Request, res: Response) => {
-  const temp = req.query.temp === "hot" || req.query.temp === "warm" ? String(req.query.temp) : "warm";
-  res.status(200).json({
-    temp,
-    region: req.query.region ?? null,
-    items: [],   // UI expects .items for CSV / renders; empty for now
-    warm: [],
-    hot: [],
-  });
+  const temp = (req.query.temp === "hot" || req.query.temp === "warm") ? String(req.query.temp) : "warm";
+  res.status(200).json({ temp, region: req.query.region ?? null, warm: [], hot: [] });
 });
 
-// --- Abuse controls ---
-// 1) short-burst rate limit (4 requests / 10s per IP or key)
-const rl = rateLimit({ windowMs: 10_000, max: 4 });
+/** --- Controls for local/dev testing (safe no-ops in prod) --- */
+if (process.env.TEST_API_KEY) {
+  // Put the TEST_API_KEY on "test" plan automatically (effectively unbounded for you)
+  setPlanForApiKey(process.env.TEST_API_KEY, "test");
+}
 
-// 2) daily quota (3 requests per day for FREE unless overridden)
-const qDaily = quota({ windowDays: 1, freeDaily: 3 });
-
-// --- Buyer finder endpoints ---
-app.post("/api/v1/leads/find-buyers", rl, qDaily, findBuyers);
-app.post("/find-buyers",                 rl, qDaily, findBuyers);
-app.get ("/api/v1/leads/find-buyers",    rl, qDaily, findBuyers);
-app.get ("/find-buyers",                 rl, qDaily, findBuyers);
-
-// --- Small ops/diagnostics (keep) ---
-app.get("/metrics", (_req: Request, res: Response) => res.status(200).json(snapshotQuota()));
-app.post("/_internal/reset-quota", (_req: Request, res: Response) => { resetQuota(); res.json({ ok: true }); });
-app.post("/_internal/set-plan", (req: Request, res: Response) => {
-  const { apiKey, plan } = (req.body || {}) as { apiKey?: string; plan?: "free" | "pro" | "internal" };
-  if (!apiKey || !plan) return res.status(400).json({ ok: false, error: "MISSING_PARAMS" });
-  setPlanForApiKey(apiKey, plan);
-  res.json({ ok: true });
+app.get("/metrics", (_req: Request, res: Response) => {
+  const snap = snapshotQuota();
+  res.status(200).json({ ok: true, findBuyers: snap });
 });
 
-// 404
+app.post("/__admin/quota/reset", (_req: Request, res: Response) => {
+  resetQuota();
+  res.status(200).json({ ok: true });
+});
+
+/** --- Request shaping: burst rate-limit + daily quota --- */
+const rl = rateLimit({ windowMs: 10_000, max: 4 }); // 4 tries / 10s (what you validated)
+const qd = quota(); // uses env defaults (FREE=3/day) + TEST_API_KEY bypass
+
+/** Canonical route used by the Free Panel */
+app.post("/api/v1/leads/find-buyers", rl, qd, findBuyers);
+
+/** Accept aliases (helps when wiring different panels/links) */
+app.post("/find-buyers", rl, qd, findBuyers);
+app.get("/api/v1/leads/find-buyers", rl, qd, findBuyers);
+app.get("/find-buyers", rl, qd, findBuyers);
+
+/** 404 */
 app.use((req: Request, res: Response) => {
   res.status(404).json({ error: "NOT_FOUND", method: req.method, path: req.path });
 });
 
-// error handler
+/** Error handler */
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const any = err as { status?: number; message?: string };
   const status = typeof any?.status === "number" ? any.status : 500;
