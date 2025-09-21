@@ -1,162 +1,158 @@
-// src/middleware/quota.ts
-import type { Request, Response, NextFunction, RequestHandler } from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
-/**
- * Plans we recognize. "test" is a built-in bypass for your own testing.
- */
-export type Plan = "free" | "pro" | "test";
+/** Plans supported by the backend. */
+export type Plan = "free" | "pro" | "internal";
 
-export interface PlanLimits {
-  /** requests per rolling window (we use day-long windows for now) */
-  daily: number;
+export interface PlanLimit {
+  /** Max allowed requests per calendar day (UTC-ish). */
+  dailyTotal: number;
+  /** Optional cooldown penalty (seconds) after a denial. */
+  cooldownSec?: number;
 }
 
 export interface QuotaConfig {
-  /** window size in days (integer). default 1 (i.e., per-day) */
-  windowDays: number;
-  /** per-plan limits */
+  windowDays: number; // currently fixed at 1 day
   limits: {
-    free: PlanLimits;
-    pro: PlanLimits;
-    test: PlanLimits;
+    free: PlanLimit;
+    pro: PlanLimit;
+    internal: PlanLimit;
+  };
+  /** Force-disable all quota checks (fail-open) — useful for emergency testing. */
+  disabled?: boolean;
+  /** API keys that should be treated as "internal" (unlimited) */
+  internalKeys: Set<string>;
+}
+
+const DEFAULTS: QuotaConfig = {
+  windowDays: 1,
+  limits: {
+    free: { dailyTotal: 3, cooldownSec: 600 },      // 3/day, 10 min cool-down after deny
+    pro: { dailyTotal: 250, cooldownSec: 30 },      // tune as needed
+    internal: { dailyTotal: 1_000_000 },            // effectively unlimited
+  },
+  disabled: false,
+  internalKeys: new Set<string>(),
+};
+
+let cfg: QuotaConfig = { ...DEFAULTS };
+
+/** Programmatic config at boot. Call once from index.ts. */
+export function configureQuota(partial?: {
+  limits?: Partial<QuotaConfig["limits"]>;
+  disabled?: boolean;
+  internalKeys?: string[]; // easier to pass from env
+}) {
+  if (!partial) return;
+  cfg = {
+    ...cfg,
+    disabled: partial.disabled ?? cfg.disabled,
+    limits: { ...cfg.limits, ...(partial.limits || {}) } as QuotaConfig["limits"],
+    internalKeys: new Set(partial.internalKeys ?? Array.from(cfg.internalKeys)),
   };
 }
 
-/**
- * Very conservative defaults:
- *  - free: 3/day (what you asked for)
- *  - pro: high enough to be a non-issue for now
- *  - test: "effectively unlimited" so you can click around
- *
- * You can override via env without touching code:
- *  QUOTA_FREE_DAILY, QUOTA_PRO_DAILY, QUOTA_TEST_DAILY, QUOTA_WINDOW_DAYS
- */
-function buildDefaultsFromEnv(): QuotaConfig {
-  const num = (v: string | undefined, d: number) => {
-    const n = Number(v);
-    return Number.isFinite(n) && n > 0 ? n : d;
-  };
-  return {
-    windowDays: num(process.env.QUOTA_WINDOW_DAYS, 1),
-    limits: {
-      free: { daily: num(process.env.QUOTA_FREE_DAILY, 3) },
-      pro: { daily: num(process.env.QUOTA_PRO_DAILY, 10000) },
-      test: { daily: num(process.env.QUOTA_TEST_DAILY, 1_000_000) }
-    }
-  };
+/** In-memory map of API key -> explicit plan assignment. */
+const planByKey = new Map<string, Plan>();
+
+/** In-memory usage counters (per key). */
+type Usage = { day: number; total: number; blockedUntil?: number };
+const usageByKey = new Map<string, Usage>();
+
+function today(): number {
+  // day number since epoch; good enough for calendar-day buckets
+  return Math.floor(Date.now() / 86_400_000);
 }
 
-/** in-memory usage store; resets with process restarts */
-interface Usage {
-  windowStartMs: number;
-  used: number;
-  plan: Plan;
-}
-const store: { [actorKey: string]: Usage } = {};
-/** Optional plan mapping for specific API keys */
-const planForApiKey: { [apiKey: string]: Plan } = {};
-
-/** Helpers */
-function now() { return Date.now(); }
-
-function getActorKey(req: Request): string {
-  const apiKey = (req.get("x-api-key") || "").trim();
-  // include plan in the actor key so a single key can be switched across plans safely
-  const plan = getPlan(req, apiKey);
-  const ip = (req.ip || req.socket.remoteAddress || "anon").toString();
-  return (apiKey ? `key:${apiKey}` : `ip:${ip}`) + `|plan:${plan}`;
+/** Set/override a plan for a given API key (e.g., promote a user to pro). */
+export function setPlanForApiKey(key: string, plan: Plan) {
+  if (!key) return;
+  planByKey.set(key, plan);
 }
 
-function getPlan(req: Request, apiKey: string): Plan {
-  // 1) explicit mapping (setPlanForApiKey)
-  if (apiKey && planForApiKey[apiKey]) return planForApiKey[apiKey];
-
-  // 2) TEST_API_KEY bypass
-  if (apiKey && process.env.TEST_API_KEY && apiKey === process.env.TEST_API_KEY) return "test";
-
-  // 3) allow overriding with header for admin/manual tests (not documented to users)
-  const h = (req.get("x-plan") || "").toLowerCase();
-  if (h === "test" || h === "pro" || h === "free") return h as Plan;
-
-  // 4) default everyone to FREE unless you wire real billing later
-  return "free";
+/** Inspect assigned plan for a key. Falls back to free; honors internalKeys. */
+export function getPlanForApiKey(key?: string): Plan {
+  if (!key) return "free";
+  if (cfg.internalKeys.has(key)) return "internal";
+  return planByKey.get(key) ?? "free";
 }
 
-/**
- * quota() returns an Express middleware that enforces a per-day request limit
- * by (api key || IP) and plan. Keep it simple and predictable.
- */
-export function quota(config?: Partial<QuotaConfig>): RequestHandler {
-  const defaults = buildDefaultsFromEnv();
-  const windowDays = config?.windowDays ?? defaults.windowDays;
-  const windowMs = windowDays * 24 * 60 * 60 * 1000;
+function checkAndConsumeNow(key: string, plan: Plan) {
+  const now = Date.now();
+  let u = usageByKey.get(key);
+  if (!u) {
+    u = { day: today(), total: 0, blockedUntil: undefined };
+    usageByKey.set(key, u);
+  }
+  // New calendar day -> reset
+  if (u.day !== today()) {
+    u.day = today();
+    u.total = 0;
+    u.blockedUntil = undefined;
+  }
 
-  const limits: QuotaConfig["limits"] = {
-    free: { daily: config?.limits?.free?.daily ?? defaults.limits.free.daily },
-    pro:  { daily: config?.limits?.pro?.daily  ?? defaults.limits.pro.daily  },
-    test: { daily: config?.limits?.test?.daily ?? defaults.limits.test.daily }
-  };
+  const limits = cfg.limits[plan];
 
+  // Short-circuits
+  if (cfg.disabled || plan === "internal") {
+    return { ok: true, remaining: Number.MAX_SAFE_INTEGER };
+  }
+
+  if (u.blockedUntil && now < u.blockedUntil) {
+    const retryAfterSec = Math.ceil((u.blockedUntil - now) / 1000);
+    return { ok: false, retryAfterSec, remaining: 0 };
+  }
+
+  if (u.total >= limits.dailyTotal) {
+    const cool = limits.cooldownSec ?? 60;
+    u.blockedUntil = now + cool * 1000;
+    usageByKey.set(key, u);
+    return { ok: false, retryAfterSec: cool, remaining: 0 };
+  }
+
+  // Consume one unit
+  u.total += 1;
+  usageByKey.set(key, u);
+  const remaining = Math.max(0, limits.dailyTotal - u.total);
+  return { ok: true, remaining };
+}
+
+/** Express middleware — no arguments. Reads global config. */
+export function quota(): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
-    const apiKey = (req.get("x-api-key") || "").trim();
-    const plan = getPlan(req, apiKey);
-    const limit = limits[plan].daily;
+    try {
+      const key = String(req.header("x-api-key") || "");
+      const plan = getPlanForApiKey(key);
+      const verdict = checkAndConsumeNow(key, plan);
 
-    // Test plan has effectively no limit
-    if (plan === "test") {
+      // Expose useful headers for the panel
+      res.setHeader("X-Plan", plan);
+      res.setHeader("X-Remaining", String(verdict.remaining ?? 0));
+
+      if (!verdict.ok) {
+        res.setHeader("Retry-After", String(verdict.retryAfterSec ?? 60));
+        return res
+          .status(429)
+          .json({ ok: false, error: "QUOTA", plan, retryAfterSec: verdict.retryAfterSec ?? 60 });
+      }
+      return next();
+    } catch {
+      // Fail-open if something goes sideways; better than locking everyone out.
       return next();
     }
-
-    const actorKey = getActorKey(req);
-    const u = store[actorKey];
-
-    if (!u || now() - u.windowStartMs >= windowMs) {
-      store[actorKey] = { windowStartMs: now(), used: 0, plan };
-    }
-
-    const usage = store[actorKey];
-    if (usage.used >= limit) {
-      const retryAfterMs = usage.windowStartMs + windowMs - now();
-      res.setHeader("Retry-After", Math.ceil(retryAfterMs / 1000));
-      return res.status(429).json({
-        ok: false,
-        error: "QUOTA_DAILY",
-        plan,
-        used: usage.used,
-        limit,
-        retryAfterMs
-      });
-    }
-
-    usage.used += 1;
-    return next();
   };
 }
 
-/** --- Testing/observability helpers (named exports on purpose) --- */
-
-/** Clear all counters (useful during local/dev testing) */
-export function resetQuota(): void {
-  for (const k in store) delete store[k];
+/** Clear counters (all keys or a specific key). */
+export function resetQuota(key?: string) {
+  if (key) usageByKey.delete(key);
+  else usageByKey.clear();
 }
 
-/** Take a lightweight snapshot for /metrics or debugging */
+/** Snapshot current counters (for debug/admin). */
 export function snapshotQuota() {
-  const out: Array<{ actor: string; used: number; plan: Plan; windowEndsInMs: number }> = [];
-  for (const k in store) {
-    const row = store[k];
-    out.push({
-      actor: k,
-      used: row.used,
-      plan: row.plan,
-      windowEndsInMs: Math.max(0, row.windowStartMs + 24 * 60 * 60 * 1000 - now())
-    });
+  const rows: Array<{ key: string; day: number; total: number; plan: Plan }> = [];
+  for (const [key, u] of usageByKey) {
+    rows.push({ key, day: u.day, total: u.total, plan: getPlanForApiKey(key) });
   }
-  return { ok: true, count: out.length, items: out };
-}
-
-/** Force a plan for a specific api key (for quick manual tests) */
-export function setPlanForApiKey(apiKey: string, plan: Plan): void {
-  if (!apiKey) return;
-  planForApiKey[apiKey] = plan;
+  return rows;
 }
