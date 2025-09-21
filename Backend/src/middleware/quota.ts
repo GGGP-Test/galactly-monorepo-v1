@@ -1,75 +1,59 @@
 // src/middleware/quota.ts
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
-type QuotaOpts = {
-  freeHot: number;   // e.g. 1
-  freeWarm: number;  // e.g. 2
-  // future: add pro limits, etc.
+export type PlanLimits = { hot: number; warm: number; total?: number };
+type Usage = { date: string; hot: number; warm: number; total: number };
+
+type QuotaConfig = {
+  plans: Record<string, PlanLimits>; // e.g. { free:{hot:1,warm:2}, pro:{hot:30,warm:120} }
 };
 
-type Usage = {
-  date: string;  // YYYY-MM-DD (UTC)
-  hot: number;
-  warm: number;
-  total: number;
-};
+const usageByKeyPlan = new Map<string, Usage>();
 
-const usageByKey = new Map<string, Usage>();
-
-function todayKeyUTC(): string {
-  // YYYY-MM-DD from UTC time
-  return new Date().toISOString().slice(0, 10);
+function todayUTC(): string {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 }
-
-function nextMidnightUTCISO(): string {
+function resetAtMidnightUTC(): string {
   const now = new Date();
   const reset = new Date(Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate() + 1,
-    0, 0, 0, 0
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0
   ));
   return reset.toISOString();
 }
-
-function getUsage(key: string): Usage {
-  const d = todayKeyUTC();
-  const prev = usageByKey.get(key);
+function getUsage(key: string, plan: string): Usage {
+  const k = `${plan}|${key}`;
+  const d = todayUTC();
+  const prev = usageByKeyPlan.get(k);
   if (!prev || prev.date !== d) {
     const fresh: Usage = { date: d, hot: 0, warm: 0, total: 0 };
-    usageByKey.set(key, fresh);
+    usageByKeyPlan.set(k, fresh);
     return fresh;
   }
   return prev;
 }
-
-function isHotCandidate(c: any): boolean {
-  const temp = String((c && c.temperature) || "").toLowerCase();
-  if (temp === "hot") return true;
-  const score = typeof c?.score === "number" ? c.score : undefined;
-  return typeof score === "number" && score >= 0.65;
+function isHot(c: any): boolean {
+  const t = String(c?.temperature || "").toLowerCase();
+  if (t === "hot") return true;
+  const s = typeof c?.score === "number" ? c.score : undefined;
+  return typeof s === "number" && s >= 0.65;
 }
 
 /**
- * Quota middleware:
- * - Defaults everyone to "free" (unlimited "pro" can be added later).
- * - Requires x-api-key for free tier (so we can count per user).
- * - Intercepts res.json for /find-buyers responses, clamps candidates to remaining allowance
- *   (max 1 hot + 2 warm / day now), and updates usage.
- * - If no remaining allowance, returns 402 with FREE_QUOTA_EXCEEDED.
+ * Plan-aware daily quota middleware.
+ * - Reads plan from `x-plan` (defaults to "free").
+ * - Requires `x-api-key` to count per user.
+ * - Intercepts res.json on find-buyers responses, clamps candidates, updates usage.
+ * - On empty allowance, sends 402 QUOTA_EXCEEDED with quota details.
  */
-export default function quota(opts: QuotaOpts) {
-  const freeDailyTotal = opts.freeHot + opts.freeWarm;
+export default function quota(config: QuotaConfig): RequestHandler {
+  const plans = config.plans;
 
-  return function quotaMiddleware(req: Request, res: Response, next: NextFunction) {
-    // Determine plan (future-ready). For now default to FREE.
-    const planHeader = String(req.header("x-plan") || "").toLowerCase();
-    const isPro = planHeader === "pro";
-
-    if (isPro) {
-      // Pro plan: pass-through, no quota.
-      return next();
-    }
+  return (req: Request, res: Response, next: NextFunction) => {
+    // Determine plan (defaults to free)
+    const planHeader = String(req.header("x-plan") || "free").toLowerCase();
+    const plan = plans[planHeader] ? planHeader : "free";
+    const limits = plans[plan];
+    const limitTotal = typeof limits.total === "number" ? limits.total : (limits.hot + limits.warm);
 
     const apiKey = String(req.header("x-api-key") || "").trim();
     if (!apiKey) {
@@ -77,84 +61,81 @@ export default function quota(opts: QuotaOpts) {
       return;
     }
 
-    // Wrap res.json so we can clamp the returned candidates.
+    // Expose plan on response headers for debugging
+    res.setHeader("x-plan", plan);
+
     const originalJson = res.json.bind(res) as (b: any) => Response;
 
     (res as any).json = (body: any) => {
-      // Only act on the expected success shape with candidates list
+      // only clamp the expected shape
       if (!body || typeof body !== "object" || !Array.isArray(body.candidates)) {
         return originalJson(body);
       }
 
-      const usage = getUsage(apiKey);
-      const remainingHot = Math.max(0, opts.freeHot  - usage.hot);
-      const remainingWarm = Math.max(0, opts.freeWarm - usage.warm);
-      const remainingTotal = Math.max(0, freeDailyTotal - usage.total);
+      const usage = getUsage(apiKey, plan);
+      const leftHot = Math.max(0, limits.hot  - usage.hot);
+      const leftWarm = Math.max(0, limits.warm - usage.warm);
+      const leftTotal = Math.max(0, limitTotal - usage.total);
 
-      if (remainingTotal <= 0 || (remainingHot <= 0 && remainingWarm <= 0)) {
-        const resetAt = nextMidnightUTCISO();
+      // No allowance left?
+      if (leftTotal <= 0 || (leftHot <= 0 && leftWarm <= 0)) {
+        const resetAt = resetAtMidnightUTC();
         return originalJson({
           ok: false,
-          error: "FREE_QUOTA_EXCEEDED",
+          error: "QUOTA_EXCEEDED",
           quota: {
-            plan: "free",
-            limit:  { hot: opts.freeHot, warm: opts.freeWarm, total: freeDailyTotal },
-            used:   { hot: usage.hot,   warm: usage.warm,   total: usage.total },
+            plan,
+            limit: { hot: limits.hot, warm: limits.warm, total: limitTotal },
+            used:  { hot: usage.hot,  warm: usage.warm,  total: usage.total },
             resetAt
           }
         });
       }
 
-      // Preserve original order, selecting up to remainingHot/remainingWarm.
+      // Select up to allowance, preserving order
       const chosen: any[] = [];
-      let pickedHot = 0;
-      let pickedWarm = 0;
-
+      let pickHot = 0, pickWarm = 0;
       for (const cand of body.candidates) {
-        const hot = isHotCandidate(cand);
-        if (hot && pickedHot < remainingHot) {
-          chosen.push(cand);
-          pickedHot += 1;
-        } else if (!hot && pickedWarm < remainingWarm) {
-          chosen.push(cand);
-          pickedWarm += 1;
+        const hot = isHot(cand);
+        if (hot && pickHot < leftHot) {
+          chosen.push(cand); pickHot++;
+        } else if (!hot && pickWarm < leftWarm) {
+          chosen.push(cand); pickWarm++;
         }
-        if (chosen.length >= remainingTotal) break;
-        if (pickedHot >= remainingHot && pickedWarm >= remainingWarm) break;
+        if (chosen.length >= leftTotal) break;
+        if (pickHot >= leftHot && pickWarm >= leftWarm) break;
       }
 
-      // If after clamping we have nothing left to return, report quota exceeded.
       if (chosen.length === 0) {
-        const resetAt = nextMidnightUTCISO();
+        const resetAt = resetAtMidnightUTC();
         return originalJson({
           ok: false,
-          error: "FREE_QUOTA_EXCEEDED",
+          error: "QUOTA_EXCEEDED",
           quota: {
-            plan: "free",
-            limit:  { hot: opts.freeHot, warm: opts.freeWarm, total: freeDailyTotal },
-            used:   { hot: usage.hot,   warm: usage.warm,   total: usage.total },
+            plan,
+            limit: { hot: limits.hot, warm: limits.warm, total: limitTotal },
+            used:  { hot: usage.hot,  warm: usage.warm,  total: usage.total },
             resetAt
           }
         });
       }
 
       // Update usage
-      usage.hot   += pickedHot;
-      usage.warm  += pickedWarm;
-      usage.total += pickedHot + pickedWarm;
-      usageByKey.set(apiKey, usage);
+      usage.hot += pickHot;
+      usage.warm += pickWarm;
+      usage.total += pickHot + pickWarm;
 
-      // Attach quota info to the success body and send clamped candidates
-      const resetAt = nextMidnightUTCISO();
+      // Attach quota to success body
+      const resetAt = resetAtMidnightUTC();
       body.candidates = chosen;
       body.quota = {
-        plan: "free",
-        limit:  { hot: opts.freeHot, warm: opts.freeWarm, total: freeDailyTotal },
-        used:   { hot: usage.hot,   warm: usage.warm,   total: usage.total },
+        plan,
+        limit: { hot: limits.hot, warm: limits.warm, total: limitTotal },
+        used:  { hot: usage.hot,  warm: usage.warm,  total: usage.total },
         remaining: {
-          hot: Math.max(0, opts.freeHot  - usage.hot),
-          warm:Math.max(0, opts.freeWarm - usage.warm),
-          total:Math.max(0, freeDailyTotal - usage.total)
+          hot: Math.max(0, limits.hot  - usage.hot),
+          warm:Math.max(0, limits.warm - usage.warm),
+          total:Math.max(0, limitTotal - usage.total)
         },
         resetAt
       };
