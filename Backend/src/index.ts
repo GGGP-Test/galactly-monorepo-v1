@@ -1,5 +1,5 @@
 // src/index.ts
-import express, { Request, Response, NextFunction } from "express";
+import express, { Request, Response, NextFunction, type RequestHandler } from "express";
 import cors from "cors";
 import findBuyers from "./services/find-buyers";
 import rateLimit from "./middleware/rateLimit";
@@ -24,7 +24,7 @@ app.get("/api/v1/leads", (req: Request, res: Response) => {
 });
 
 // --- Find buyers endpoints (with rate limit) ---
-const rl = rateLimit({ windowMs: 10_000, max: 8 });
+const rl: RequestHandler = rateLimit({ windowMs: 10_000, max: 8 });
 
 // canonical route used by the Free Panel
 app.post("/api/v1/leads/find-buyers", rl, findBuyers);
