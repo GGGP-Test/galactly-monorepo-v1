@@ -1,145 +1,123 @@
 // src/middleware/quota.ts
-import { Request, Response, NextFunction, RequestHandler } from "express";
+import type { Request, Response, NextFunction, RequestHandler } from "express";
 
-export type PlanName = "free" | "pro";
+/** Which plan a caller is on. */
+export type PlanId = "free" | "pro";
 
-type Limits = {
-  totalPerDay: number;   // max created candidates per day
-  hotPerDay: number;     // max hot per day
-  burstPerMin: number;   // max requests per minute
-  cooldownSec: number;   // cooldown after burst trip
+/** Per-plan limits for a single rolling window. */
+export type PlanLimits = {
+  /** Max number of /find-buyers calls in the window. */
+  callsPerWindow: number;
 };
 
+/** Config for the quota middleware. */
 export interface QuotaConfig {
+  /** Size of the rolling window, in whole days. Default: 1 (24h). */
   windowDays: number;
-  getPlan?: (req: Request) => PlanName;
-  limits: Record<PlanName, Limits>;
-  clock?: () => number;
+  /** Per-plan limits. */
+  plans: Record<PlanId, PlanLimits>;
+  /** Header that carries the API key. Default: x-api-key. */
+  keyHeader: string;
+  /** Header that, if present, bypasses quota for testing. Default: x-test-mode. */
+  testBypassHeader: string;
+  /** API keys that should be treated as PRO (optional). */
+  proKeys: string[];
+  /** Optionally allow a header to force plan (e.g., "pro" for testing). Default: x-plan. */
+  planHeader: string;
 }
 
-const defaultConfig: QuotaConfig = {
+/** In-memory counters (OK for now; swap to Redis later). */
+type Bucket = { startedAt: number; used: number };
+const store = new Map<string, Bucket>();
+
+const DEFAULTS: QuotaConfig = {
   windowDays: 1,
-  limits: {
-    free: { totalPerDay: 3, hotPerDay: 1, burstPerMin: 4, cooldownSec: 60 },
-    pro:  { totalPerDay: 200, hotPerDay: 9999, burstPerMin: 60, cooldownSec: 5 }
+  plans: {
+    free: { callsPerWindow: 3 },        // <= Free plan: 3 calls / day
+    pro:  { callsPerWindow: 250 },      // <= Pro plan: plenty
   },
-  getPlan: (req) => {
-    const key = (req.headers["x-api-key"] as string | undefined)?.trim();
-    return key && key.startsWith("NF") ? "free" : "pro";
-  },
-  clock: () => Date.now(),
+  keyHeader: "x-api-key",
+  testBypassHeader: "x-test-mode",
+  proKeys: [],
+  planHeader: "x-plan",
 };
 
-type Usage = {
-  dayKey: string;
-  total: number;
-  hot: number;
-  minuteStart: number;
-  minuteHits: number;
-  cooldownUntil?: number;
-};
+function now() { return Date.now(); }
 
-const store = new Map<string, Usage>();
-
-function dayKey(now: number, days: number) {
-  const d = new Date(now);
-  d.setUTCHours(0, 0, 0, 0);
-  return String(Math.floor(d.getTime() / (86_400_000 * days)));
+/** Merge shallow config objects. */
+function merge<T extends object>(base: T, o?: Partial<T>): T {
+  return Object.assign({}, base, o ?? {}) as T;
 }
 
-function keyFrom(req: Request, plan: PlanName) {
-  const raw = (req.headers["x-api-key"] as string | undefined) || (req.ip ?? "anon");
-  return `${plan}:${raw}`;
+/** Resolve caller plan from headers/config. */
+function resolvePlan(req: Request, cfg: QuotaConfig, apiKey: string): PlanId {
+  const forced = String(req.header(cfg.planHeader) || "").toLowerCase();
+  if (forced === "pro") return "pro";
+  if (cfg.proKeys.includes(apiKey)) return "pro";
+  return "free";
 }
 
-function ensureUsage(k: string, now: number, cfg: QuotaConfig) {
-  const dk = dayKey(now, cfg.windowDays);
-  const u = store.get(k);
-  if (!u || u.dayKey !== dk) {
-    const fresh: Usage = { dayKey: dk, total: 0, hot: 0, minuteStart: now, minuteHits: 0, cooldownUntil: undefined };
-    store.set(k, fresh);
-    return fresh;
-  }
-  return u;
-}
-
-// --- Admin helpers for testing ---
-export function resetQuota(key?: string): number {
-  if (!key) { const n = store.size; store.clear(); return n; }
-  return store.delete(key) ? 1 : 0;
-}
-export function snapshotQuota(): Record<string, Usage> {
-  const out: Record<string, Usage> = {};
-  store.forEach((v, k) => { out[k] = { ...v }; });
-  return out;
-}
-
-export default function quota(config?: Partial<QuotaConfig>): RequestHandler {
+/** Public factory: returns an Express middleware that enforces per-plan quotas. */
+export function withQuota(partial?: Partial<QuotaConfig>): RequestHandler {
   const cfg: QuotaConfig = {
-    ...defaultConfig,
-    ...config,
-    limits: { ...defaultConfig.limits, ...(config?.limits || {}) },
+    ...DEFAULTS,
+    ...partial,
+    // deep-merge for `plans`
+    plans: merge(DEFAULTS.plans, partial?.plans),
   };
-  const nowFn = cfg.clock ?? (() => Date.now());
 
-  const QUOTA_OFF = process.env.QUOTA_OFF === "1";
-  const ALLOW_TEST = process.env.ALLOW_TEST === "1";
+  const windowMs = Math.max(1, Math.floor(cfg.windowDays)) * 24 * 60 * 60 * 1000;
 
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (req.method !== "POST" || !/\/find-buyers$/.test(req.path)) return next();
+  const mw: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+    // Dev/test bypass
+    if (req.header(cfg.testBypassHeader)) return next();
 
-    // global off switch
-    if (QUOTA_OFF) return next();
+    const apiKey = String(req.header(cfg.keyHeader) || "").trim() || "anon";
+    const plan: PlanId = resolvePlan(req, cfg, apiKey);
+    const limit = cfg.plans[plan].callsPerWindow;
 
-    // dev bypass, only if explicitly allowed
-    if (ALLOW_TEST && req.headers["x-test-mode"] === "1") return next();
+    const bucketKey = `${plan}:${apiKey}`;
+    const b = store.get(bucketKey);
+    const t = now();
 
-    const now = nowFn();
-    const plan = (cfg.getPlan ? cfg.getPlan(req) : defaultConfig.getPlan!(req)) as PlanName;
-    const limits = cfg.limits[plan];
-    const k = keyFrom(req, plan);
-    const u = ensureUsage(k, now, cfg);
+    let bucket: Bucket;
+    if (!b || t - b.startedAt >= windowMs) {
+      bucket = { startedAt: t, used: 0 };
+      store.set(bucketKey, bucket);
+    } else {
+      bucket = b;
+    }
 
-    if (u.cooldownUntil && now < u.cooldownUntil) {
+    // headers (helpful for UI)
+    res.setHeader("X-Quota-Plan", plan);
+    res.setHeader("X-Quota-Limit", String(limit));
+    res.setHeader("X-Quota-Used", String(bucket.used));
+    res.setHeader("X-Quota-Reset-At", new Date(bucket.startedAt + windowMs).toISOString());
+
+    if (bucket.used >= limit) {
+      const retryAfterMs = bucket.startedAt + windowMs - t;
       return res.status(429).json({
-        ok: false, error: "COOLDOWN", retryAfterMs: u.cooldownUntil - now, plan,
-        remaining: { total: Math.max(0, limits.totalPerDay - u.total), hot: Math.max(0, limits.hotPerDay - u.hot) },
+        ok: false,
+        error: "QUOTA_EXCEEDED",
+        plan,
+        limit,
+        used: bucket.used,
+        retryAfterMs,
+        resetAt: new Date(bucket.startedAt + windowMs).toISOString(),
       });
     }
 
-    if (now - u.minuteStart >= 60_000) { u.minuteStart = now; u.minuteHits = 0; }
-    if (u.minuteHits >= limits.burstPerMin) {
-      u.cooldownUntil = now + limits.cooldownSec * 1000;
-      return res.status(429).json({ ok: false, error: "RATE_LIMIT", retryAfterMs: u.cooldownUntil - now, plan });
-    }
-
-    const resetAt = new Date(new Date(now).setUTCHours(24, 0, 0, 0)).toISOString();
-    if (u.total >= limits.totalPerDay) {
-      return res.status(429).json({ ok: false, error: "QUOTA_TOTAL", plan, resetAt,
-        remaining: { total: 0, hot: Math.max(0, limits.hotPerDay - u.hot) } });
-    }
-    if (u.hot >= limits.hotPerDay) {
-      return res.status(429).json({ ok: false, error: "QUOTA_HOT", plan, resetAt,
-        remaining: { total: Math.max(0, limits.totalPerDay - u.total), hot: 0 } });
-    }
-
-    u.minuteHits++;
-
-    const originalJson = res.json.bind(res);
-    res.json = ((body: any) => {
-      try {
-        if (body && body.ok !== false) {
-          const created = typeof body?.created === "number"
-            ? body.created
-            : Array.isArray(body?.candidates) ? body.candidates.length : 1;
-          const hot = typeof body?.hot === "number" ? body.hot : 0;
-          u.total += Number.isFinite(created) ? created : 1;
-          u.hot += Number.isFinite(hot) ? hot : 0;
-        }
-      } catch {}
-      return originalJson(body);
-    }) as any;
-
+    bucket.used += 1;
     next();
   };
+
+  return mw;
 }
+
+/** Small test helper so you can clear counters without restarting the pod. */
+export function _resetQuotaFor(keyOrPlanKey?: string) {
+  if (!keyOrPlanKey) { store.clear(); return; }
+  for (const k of Array.from(store.keys())) if (k.endsWith(`:${keyOrPlanKey}`) || k === keyOrPlanKey) store.delete(k);
+}
+
+export default withQuota;
