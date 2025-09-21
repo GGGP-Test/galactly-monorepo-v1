@@ -1,8 +1,9 @@
 // src/index.ts
-import express, { Request, Response, NextFunction, type RequestHandler } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import findBuyers from "./services/find-buyers";
 import rateLimit from "./middleware/rateLimit";
+import quota from "./middleware/quota";
 
 const app = express();
 
@@ -18,21 +19,26 @@ app.get("/api/v1/leads", (req: Request, res: Response) => {
   res.status(200).json({
     temp,
     region: req.query.region ?? null,
-    warm: [],
-    hot: [],
+    items: [],          // keep contract consistent with panel
+    warm: [],           // legacy fields (harmless)
+    hot: []
   });
 });
 
-// --- Find buyers endpoints (with rate limit) ---
-const rl: RequestHandler = rateLimit({ windowMs: 10_000, max: 4 });
+// --- Controls ---
+// Rate-limit: 4 tries / 10s per API key (you already set this)
+const rl = rateLimit({ windowMs: 10_000, max: 4 });
+// Daily free quota: 1 hot + 2 warm per day per API key
+const freeQuota = quota({ freeHot: 1, freeWarm: 2 });
 
+// --- Find buyers endpoints (rate limit + daily quota) ---
 // canonical route used by the Free Panel
-app.post("/api/v1/leads/find-buyers", rl, findBuyers);
+app.post("/api/v1/leads/find-buyers", rl, freeQuota, findBuyers);
 
 // extra aliases to be bulletproof
-app.post("/find-buyers", rl, findBuyers);
-app.get("/api/v1/leads/find-buyers", rl, findBuyers);
-app.get("/find-buyers", rl, findBuyers);
+app.post("/find-buyers", rl, freeQuota, findBuyers);
+app.get("/api/v1/leads/find-buyers", rl, freeQuota, findBuyers);
+app.get("/find-buyers", rl, freeQuota, findBuyers);
 
 // 404
 app.use((req: Request, res: Response) => {
