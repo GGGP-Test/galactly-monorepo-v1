@@ -19,13 +19,20 @@ app.get("/api/v1/leads", (req: Request, res: Response) => {
   res.status(200).json({ temp, region: req.query.region ?? null, items: [], warm: [], hot: [] });
 });
 
-// --- middleware: short-burst rate limit + daily quota ---
-const burstRL = rateLimit({ windowMs: 10_000, max: 4 }); // 4 clicks / 10s (adjust here)
+// --- middleware: short-burst limit + daily quota + abuse cooldown ---
+const burstRL = rateLimit({ windowMs: 10_000, max: 4 }); // change here for 4/10s
 const dailyQuota = quota({
   windowDays: 1,
   plans: {
-    free: { dailyCalls: 3 },   // <= change to 4 if you want
-    pro:  { dailyCalls: 200 },
+    free: { dailyCalls: 3 },   // Free plan: 3 successful find-buyers per day
+    pro:  { dailyCalls: 200 }, // Pro default (override with x-plan: pro)
+  },
+  penalty: {
+    threshold: 3,           // 3 violations inside 30s -> start cooldown
+    windowMs: 30_000,
+    baseCooldownMs: 60_000, // start with 60s cooldown
+    maxCooldownMs: 15 * 60_000,
+    // banAfter: 10,        // (optional) perma-ban after 10 cooldowns
   },
 });
 
