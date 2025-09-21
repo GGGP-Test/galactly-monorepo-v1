@@ -1,147 +1,198 @@
 // src/middleware/quota.ts
-import { Request, Response, NextFunction, RequestHandler } from "express";
+import type { Request, Response, NextFunction } from "express";
 
-export type PlanLimits = { hot: number; warm: number; total?: number };
-type Usage = { date: string; hot: number; warm: number; total: number };
+/**
+ * Flexible config that accepts the keys you used in index.ts.
+ * We'll normalize into a strict shape internally.
+ */
+export type QuotaConfig = Partial<{
+  windowDays: number;
 
-type QuotaConfig = {
-  plans: Record<string, PlanLimits>; // e.g. { free:{hot:1,warm:2}, pro:{hot:30,warm:120} }
+  // flat/synonym keys (supported for convenience)
+  free: number;       // same as freeTotal
+  pro: number;        // same as proTotal
+  freeTotal: number;
+  proTotal: number;
+  freeHot: number;
+  proHot: number;
+}>;
+
+type Plan = "free" | "pro";
+
+type StrictPlanCfg = { total: number; hot: number };
+type StrictCfg = {
+  windowDays: number;
+  plans: Record<Plan, StrictPlanCfg>;
 };
 
-const usageByKeyPlan = new Map<string, Usage>();
+type Counters = {
+  total: number;
+  hot: number;
+  resetAt: number; // epoch ms
+};
 
-function todayUTC(): string {
-  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+/**
+ * In-memory counter store: key = `${plan}:${apiKey}:${bucket}`
+ * bucket = UTC date (YYYY-MM-DD) when windowDays=1.
+ */
+const store = new Map<string, Counters>();
+
+function startOfNextWindow(now: Date, windowDays: number): number {
+  // reset to 00:00:00 UTC then add windowDays
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() + windowDays);
+  return d.getTime();
 }
-function resetAtMidnightUTC(): string {
-  const now = new Date();
-  const reset = new Date(Date.UTC(
-    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0
-  ));
-  return reset.toISOString();
+
+function bucketKey(now: Date, windowDays: number): string {
+  // one bucket per day window; if >1 day, we still name by start date
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  return d.toISOString().slice(0, 10); // YYYY-MM-DD
 }
-function getUsage(key: string, plan: string): Usage {
-  const k = `${plan}|${key}`;
-  const d = todayUTC();
-  const prev = usageByKeyPlan.get(k);
-  if (!prev || prev.date !== d) {
-    const fresh: Usage = { date: d, hot: 0, warm: 0, total: 0 };
-    usageByKeyPlan.set(k, fresh);
-    return fresh;
-  }
-  return prev;
+
+function detectPlan(req: Request): Plan {
+  // Simple heuristic:
+  // - Header x-plan=pro forces pro
+  // - API keys prefixed with "pro_" are pro
+  // - everything else = free
+  const xp = String(req.header("x-plan") || "").toLowerCase();
+  if (xp === "pro") return "pro";
+  const key = String(req.header("x-api-key") || "");
+  if (key.startsWith("pro_")) return "pro";
+  return "free";
 }
-function isHot(c: any): boolean {
-  const t = String(c?.temperature || "").toLowerCase();
-  if (t === "hot") return true;
-  const s = typeof c?.score === "number" ? c.score : undefined;
-  return typeof s === "number" && s >= 0.65;
+
+function apiKeyOf(req: Request): string {
+  return String(req.header("x-api-key") || "anon");
+}
+
+function normalize(cfg?: QuotaConfig): StrictCfg {
+  const windowDays = Math.max(1, Number(cfg?.windowDays ?? 1) | 0);
+
+  // resolve synonyms with sensible defaults
+  const freeTotal = Number(
+    cfg?.freeTotal ?? cfg?.free ?? 3  // default 3/day for free
+  );
+  const freeHot = Number(
+    cfg?.freeHot ?? 1                 // default 1 hot/day for free
+  );
+
+  const proTotal = Number(
+    cfg?.proTotal ?? cfg?.pro ?? 1000 // generous default for pro
+  );
+  const proHot = Number(
+    cfg?.proHot ?? 999                // effectively unlimited hot
+  );
+
+  return {
+    windowDays,
+    plans: {
+      free: { total: Math.max(0, freeTotal | 0), hot: Math.max(0, freeHot | 0) },
+      pro:  { total: Math.max(0, proTotal | 0),  hot: Math.max(0, proHot | 0)  },
+    },
+  };
+}
+
+function getCounters(key: string, now: Date, windowDays: number): Counters {
+  const k = key;
+  const c = store.get(k);
+  if (c && now.getTime() < c.resetAt) return c;
+
+  // expired or missing → reset
+  const resetAt = startOfNextWindow(now, windowDays);
+  const fresh: Counters = { total: 0, hot: 0, resetAt };
+  store.set(k, fresh);
+  return fresh;
+}
+
+function setQuotaHeaders(res: Response, plan: Plan, limit: StrictPlanCfg, counters: Counters) {
+  res.setHeader("X-Quota-Plan", plan);
+  res.setHeader("X-Quota-Limit", String(limit.total));
+  res.setHeader("X-Quota-Remaining", String(Math.max(0, limit.total - counters.total)));
+  res.setHeader("X-Quota-Reset", new Date(counters.resetAt).toISOString());
 }
 
 /**
- * Plan-aware daily quota middleware.
- * - Reads plan from `x-plan` (defaults to "free").
- * - Requires `x-api-key` to count per user.
- * - Intercepts res.json on find-buyers responses, clamps candidates, updates usage.
- * - On empty allowance, sends 402 QUOTA_EXCEEDED with quota details.
+ * Quota middleware factory.
+ *
+ * Enforces:
+ *  - daily TOTAL request cap per API key & plan (hard-block with 429)
+ * Tracks:
+ *  - daily HOT usage by inspecting response payload (candidates with temp/temperature === 'hot')
+ *
+ * When blocked, returns:
+ *  { ok:false, error:"QUOTA_EXCEEDED", plan, remaining, resetAt }
  */
-export default function quota(config: QuotaConfig): RequestHandler {
-  const plans = config.plans;
+export default function quota(userCfg?: QuotaConfig) {
+  const cfg = normalize(userCfg);
 
-  return (req: Request, res: Response, next: NextFunction) => {
-    // Determine plan (defaults to free)
-    const planHeader = String(req.header("x-plan") || "free").toLowerCase();
-    const plan = plans[planHeader] ? planHeader : "free";
-    const limits = plans[plan];
-    const limitTotal = typeof limits.total === "number" ? limits.total : (limits.hot + limits.warm);
+  return function quotaMw(req: Request, res: Response, next: NextFunction) {
+    const now = new Date();
+    const plan: Plan = detectPlan(req);
 
-    const apiKey = String(req.header("x-api-key") || "").trim();
-    if (!apiKey) {
-      res.status(401).json({ ok: false, error: "API_KEY_REQUIRED" });
-      return;
+    const apiKey = apiKeyOf(req);
+    const bucket = bucketKey(now, cfg.windowDays);
+    const storeKey = `${plan}:${apiKey}:${bucket}`;
+
+    const limit = cfg.plans[plan];
+    const counters = getCounters(storeKey, now, cfg.windowDays);
+
+    // Hard block if total quota consumed
+    if (counters.total >= limit.total) {
+      setQuotaHeaders(res, plan, limit, counters);
+      return res.status(429).json({
+        ok: false,
+        error: "QUOTA_EXCEEDED",
+        plan,
+        remaining: Math.max(0, limit.total - counters.total),
+        resetAt: new Date(counters.resetAt).toISOString(),
+      });
     }
 
-    // Expose plan on response headers for debugging
-    res.setHeader("x-plan", plan);
+    // We'll increment total only if the downstream handler returns 2xx.
+    // Keep a flag to adjust after the response finishes.
+    let incrementedTotal = false;
+    let addedHot = 0;
 
-    const originalJson = res.json.bind(res) as (b: any) => Response;
-
+    // Intercept res.json to count "hot" items from the outgoing body
+    const originalJson = res.json.bind(res);
     (res as any).json = (body: any) => {
-      // only clamp the expected shape
-      if (!body || typeof body !== "object" || !Array.isArray(body.candidates)) {
-        return originalJson(body);
+      // If request succeeded (we're inside json), increment total once.
+      if (!incrementedTotal) {
+        counters.total += 1;
+        incrementedTotal = true;
       }
 
-      const usage = getUsage(apiKey, plan);
-      const leftHot = Math.max(0, limits.hot  - usage.hot);
-      const leftWarm = Math.max(0, limits.warm - usage.warm);
-      const leftTotal = Math.max(0, limitTotal - usage.total);
+      try {
+        const candidates: any[] = Array.isArray(body?.candidates) ? body.candidates : [];
+        const hotCount = candidates.reduce((acc, c) => {
+          const t = (c?.temperature || c?.temp || "").toString().toLowerCase();
+          return acc + (t === "hot" ? 1 : 0);
+        }, 0);
 
-      // No allowance left?
-      if (leftTotal <= 0 || (leftHot <= 0 && leftWarm <= 0)) {
-        const resetAt = resetAtMidnightUTC();
-        return originalJson({
-          ok: false,
-          error: "QUOTA_EXCEEDED",
-          quota: {
-            plan,
-            limit: { hot: limits.hot, warm: limits.warm, total: limitTotal },
-            used:  { hot: usage.hot,  warm: usage.warm,  total: usage.total },
-            resetAt
-          }
-        });
-      }
-
-      // Select up to allowance, preserving order
-      const chosen: any[] = [];
-      let pickHot = 0, pickWarm = 0;
-      for (const cand of body.candidates) {
-        const hot = isHot(cand);
-        if (hot && pickHot < leftHot) {
-          chosen.push(cand); pickHot++;
-        } else if (!hot && pickWarm < leftWarm) {
-          chosen.push(cand); pickWarm++;
+        if (hotCount > 0) {
+          counters.hot += hotCount;
+          addedHot = hotCount;
         }
-        if (chosen.length >= leftTotal) break;
-        if (pickHot >= leftHot && pickWarm >= leftWarm) break;
+      } catch {
+        // ignore parse/count errors
       }
 
-      if (chosen.length === 0) {
-        const resetAt = resetAtMidnightUTC();
-        return originalJson({
-          ok: false,
-          error: "QUOTA_EXCEEDED",
-          quota: {
-            plan,
-            limit: { hot: limits.hot, warm: limits.warm, total: limitTotal },
-            used:  { hot: usage.hot,  warm: usage.warm,  total: usage.total },
-            resetAt
-          }
-        });
-      }
-
-      // Update usage
-      usage.hot += pickHot;
-      usage.warm += pickWarm;
-      usage.total += pickHot + pickWarm;
-
-      // Attach quota to success body
-      const resetAt = resetAtMidnightUTC();
-      body.candidates = chosen;
-      body.quota = {
-        plan,
-        limit: { hot: limits.hot, warm: limits.warm, total: limitTotal },
-        used:  { hot: usage.hot,  warm: usage.warm,  total: usage.total },
-        remaining: {
-          hot: Math.max(0, limits.hot  - usage.hot),
-          warm:Math.max(0, limits.warm - usage.warm),
-          total:Math.max(0, limitTotal - usage.total)
-        },
-        resetAt
-      };
-
+      setQuotaHeaders(res, plan, limit, counters);
       return originalJson(body);
     };
+
+    // If downstream fails (>=400), roll back the optimistic total increment (if any).
+    res.on("finish", () => {
+      try {
+        if (res.statusCode >= 400 && incrementedTotal) {
+          counters.total = Math.max(0, counters.total - 1);
+          // hot was only added inside json() path (2xx), so no hot rollback needed here.
+        }
+        // If we ever want to enforce hot caps strictly, we can compare counters.hot vs limit.hot here
+        // and emit a warning metric, but we don't block post-facto.
+      } catch {}
+    });
 
     next();
   };
