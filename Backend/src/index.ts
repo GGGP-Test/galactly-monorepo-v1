@@ -3,7 +3,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import findBuyers from "./services/find-buyers";
 import rateLimit from "./middleware/rateLimit";
-import quota from "./middleware/quota";
+import quota, { resetQuota, snapshotQuota } from "./middleware/quota";
 
 const app = express();
 
@@ -13,36 +13,50 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
 app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// List endpoint stub so the panel never 404s
+// Legacy list endpoint stub (keeps panel from 404-ing)
 app.get("/api/v1/leads", (req: Request, res: Response) => {
   const temp = req.query.temp === "hot" || req.query.temp === "warm" ? String(req.query.temp) : "warm";
   res.status(200).json({ temp, region: req.query.region ?? null, items: [], warm: [], hot: [] });
 });
 
-// --- middleware: short-burst limit + daily quota + abuse cooldown ---
-const burstRL = rateLimit({ windowMs: 10_000, max: 4 }); // change here for 4/10s
-const dailyQuota = quota({
-  windowDays: 1,
-  plans: {
-    free: { dailyCalls: 3 },   // Free plan: 3 successful find-buyers per day
-    pro:  { dailyCalls: 200 }, // Pro default (override with x-plan: pro)
-  },
-  penalty: {
-    threshold: 3,           // 3 violations inside 30s -> start cooldown
-    windowMs: 30_000,
-    baseCooldownMs: 60_000, // start with 60s cooldown
-    maxCooldownMs: 15 * 60_000,
-    // banAfter: 10,        // (optional) perma-ban after 10 cooldowns
+// --- Middleware: burst RL + daily quota
+const rl = rateLimit({ windowMs: 10_000, max: 4 }); // 4 tries / 10s
+const q = quota({
+  limits: {
+    free: { totalPerDay: 3, hotPerDay: 1, burstPerMin: 4, cooldownSec: 60 },
+    pro:  { totalPerDay: 200, hotPerDay: 9999, burstPerMin: 60, cooldownSec: 5 },
   },
 });
 
-// canonical route used by the Free Panel
-app.post("/api/v1/leads/find-buyers", burstRL, dailyQuota, findBuyers);
+// Canonical route used by the Free Panel
+app.post("/api/v1/leads/find-buyers", rl, q, findBuyers);
 
-// aliases to be bulletproof
-app.post("/find-buyers", burstRL, dailyQuota, findBuyers);
-app.get("/api/v1/leads/find-buyers", burstRL, dailyQuota, findBuyers);
-app.get("/find-buyers", burstRL, dailyQuota, findBuyers);
+// Extra aliases to be bulletproof
+app.post("/find-buyers", rl, q, findBuyers);
+app.get("/api/v1/leads/find-buyers", rl, q, findBuyers);
+app.get("/find-buyers", rl, q, findBuyers);
+
+// --- Dev/test admin (only when explicitly enabled)
+const ALLOW_TEST = process.env.ALLOW_TEST === "1";
+if (ALLOW_TEST) {
+  const check = (req: Request) => {
+    const token = (req.headers["x-admin-token"] as string | undefined) || "";
+    const expect = process.env.ADMIN_TOKEN || "dev";
+    return token === expect;
+  };
+
+  app.post("/__admin/reset-quota", (req: Request, res: Response) => {
+    if (!check(req)) return res.status(401).json({ ok: false, error: "UNAUTHORIZED" });
+    const key = (req.body && (req.body.key as string)) || undefined;
+    const n = resetQuota(key);
+    res.json({ ok: true, cleared: n, key: key ?? "*" });
+  });
+
+  app.get("/__admin/quota", (req: Request, res: Response) => {
+    if (!check(req)) return res.status(401).json({ ok: false, error: "UNAUTHORIZED" });
+    res.json({ ok: true, usage: snapshotQuota() });
+  });
+}
 
 // 404
 app.use((req: Request, res: Response) => {
