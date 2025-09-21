@@ -1,228 +1,145 @@
 // src/middleware/quota.ts
-import type { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
-/** One plan’s limits (we count successful find-buyer calls/day). */
-export type PlanSpec = {
-  /** Max number of POST /find-buyers calls within the window. */
-  dailyCalls: number;
+export type PlanName = "free" | "pro";
+
+type Limits = {
+  totalPerDay: number;   // max created candidates per day
+  hotPerDay: number;     // max hot per day
+  burstPerMin: number;   // max requests per minute
+  cooldownSec: number;   // cooldown after burst trip
 };
 
-/** Limits for each plan. */
-export type PlanLimits = {
-  free: PlanSpec;
-  pro: PlanSpec;
-};
-
-/** Cooldown / abuse controls (escalates on repeated violations). */
-export type PenaltyCfg = {
-  /** How many violations inside window trigger a cooldown. Default: 3 */
-  threshold: number;
-  /** Rolling window used for counting violations. Default: 30s */
-  windowMs: number;
-  /** Base cooldown applied after first threshold breach. Default: 60s */
-  baseCooldownMs: number;
-  /** Maximum cooldown cap. Default: 15 minutes */
-  maxCooldownMs: number;
-  /** Optional: permanently ban after this many cooldowns. */
-  banAfter?: number;
-};
-
-/** Quota window + plan limits. */
-export type QuotaConfig = {
-  /** Number of whole days in one window. Default: 1 */
+export interface QuotaConfig {
   windowDays: number;
-  /** Per-plan limits (preferred). */
-  plans: PlanLimits;
-  /** Abuse/cooldown settings. */
-  penalty?: PenaltyCfg;
+  getPlan?: (req: Request) => PlanName;
+  limits: Record<PlanName, Limits>;
+  clock?: () => number;
+}
 
-  // ---- legacy / compatibility keys (ignored but allowed) ----
-  free?: number;
-  pro?: number;
-  freeHot?: number;
-  proHot?: number;
-  freeTotal?: number;
-  proTotal?: number;
-};
-
-const DEFAULTS: Required<Pick<QuotaConfig, "windowDays" | "plans">> & {
-  penalty: PenaltyCfg;
-} = {
+const defaultConfig: QuotaConfig = {
   windowDays: 1,
-  plans: {
-    free: { dailyCalls: 3 },
-    pro: { dailyCalls: 200 },
+  limits: {
+    free: { totalPerDay: 3, hotPerDay: 1, burstPerMin: 4, cooldownSec: 60 },
+    pro:  { totalPerDay: 200, hotPerDay: 9999, burstPerMin: 60, cooldownSec: 5 }
   },
-  penalty: {
-    threshold: 3,
-    windowMs: 30_000,
-    baseCooldownMs: 60_000,
-    maxCooldownMs: 15 * 60_000,
-    banAfter: undefined,
+  getPlan: (req) => {
+    const key = (req.headers["x-api-key"] as string | undefined)?.trim();
+    return key && key.startsWith("NF") ? "free" : "pro";
   },
+  clock: () => Date.now(),
 };
 
-/** internal per-key daily bucket */
-type Bucket = { start: number; used: number };
-/** internal per-key abuse tracker */
-type Abuse = {
-  strikes: number;
-  windowStart: number;
-  cooldownUntil: number; // ms timestamp; 0 = none
-  cooldownCount: number; // how many cooldowns previously applied
+type Usage = {
+  dayKey: string;
+  total: number;
+  hot: number;
+  minuteStart: number;
+  minuteHits: number;
+  cooldownUntil?: number;
 };
 
-const buckets = new Map<string, Bucket>();
-const abuses = new Map<string, Abuse>();
+const store = new Map<string, Usage>();
 
-function nowMs() {
-  return Date.now();
+function dayKey(now: number, days: number) {
+  const d = new Date(now);
+  d.setUTCHours(0, 0, 0, 0);
+  return String(Math.floor(d.getTime() / (86_400_000 * days)));
 }
 
-function getBucket(key: string, windowDays: number) {
-  const t = nowMs();
-  const windowMs = Math.max(1, windowDays) * 24 * 60 * 60 * 1000;
-  let b = buckets.get(key);
-  if (!b || t - b.start >= windowMs) {
-    b = { start: t, used: 0 };
-    buckets.set(key, b);
+function keyFrom(req: Request, plan: PlanName) {
+  const raw = (req.headers["x-api-key"] as string | undefined) || (req.ip ?? "anon");
+  return `${plan}:${raw}`;
+}
+
+function ensureUsage(k: string, now: number, cfg: QuotaConfig) {
+  const dk = dayKey(now, cfg.windowDays);
+  const u = store.get(k);
+  if (!u || u.dayKey !== dk) {
+    const fresh: Usage = { dayKey: dk, total: 0, hot: 0, minuteStart: now, minuteHits: 0, cooldownUntil: undefined };
+    store.set(k, fresh);
+    return fresh;
   }
-  return { bucket: b, resetAt: b.start + windowMs };
+  return u;
 }
 
-function getAbuse(key: string, p: PenaltyCfg) {
-  const t = nowMs();
-  let a = abuses.get(key);
-  if (!a) {
-    a = { strikes: 0, windowStart: t, cooldownUntil: 0, cooldownCount: 0 };
-    abuses.set(key, a);
-  }
-  // roll the strike window
-  if (t - a.windowStart > p.windowMs) {
-    a.strikes = 0;
-    a.windowStart = t;
-  }
-  return a;
+// --- Admin helpers for testing ---
+export function resetQuota(key?: string): number {
+  if (!key) { const n = store.size; store.clear(); return n; }
+  return store.delete(key) ? 1 : 0;
+}
+export function snapshotQuota(): Record<string, Usage> {
+  const out: Record<string, Usage> = {};
+  store.forEach((v, k) => { out[k] = { ...v }; });
+  return out;
 }
 
-function resolvePlan(req: Request): keyof PlanLimits {
-  const hdr = String(req.headers["x-plan"] || "").toLowerCase().trim();
-  return hdr === "pro" ? "pro" : "free";
-}
-
-function keyFromReq(req: Request) {
-  const apiKey = String(req.headers["x-api-key"] || "").trim();
-  if (apiKey) return `key:${apiKey}`;
-  const ip =
-    (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
-    (req.socket as any)?.remoteAddress ||
-    req.ip ||
-    "unknown";
-  return `anon:${ip}`;
-}
-
-function clamp(n: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, n));
-}
-
-/** Quota middleware. Also applies an escalating cooldown when a client keeps
- *  calling after hitting limits. Cooldown doubles each time up to max. */
-export default function quota(opts: Partial<QuotaConfig> = {}) {
+export default function quota(config?: Partial<QuotaConfig>): RequestHandler {
   const cfg: QuotaConfig = {
-    ...DEFAULTS,
-    ...opts,
-    plans: {
-      ...DEFAULTS.plans,
-      ...(opts.plans || {}),
-      free: { ...DEFAULTS.plans.free, ...(opts.plans?.free || {}) },
-      pro: { ...DEFAULTS.plans.pro, ...(opts.plans?.pro || {}) },
-    },
-    penalty: { ...DEFAULTS.penalty, ...(opts.penalty || {}) },
+    ...defaultConfig,
+    ...config,
+    limits: { ...defaultConfig.limits, ...(config?.limits || {}) },
   };
+  const nowFn = cfg.clock ?? (() => Date.now());
+
+  const QUOTA_OFF = process.env.QUOTA_OFF === "1";
+  const ALLOW_TEST = process.env.ALLOW_TEST === "1";
 
   return (req: Request, res: Response, next: NextFunction) => {
-    // Only gate the creation endpoint
-    if (!(req.method === "POST" && /\/find-buyers$/.test(req.path))) {
-      return next();
+    if (req.method !== "POST" || !/\/find-buyers$/.test(req.path)) return next();
+
+    // global off switch
+    if (QUOTA_OFF) return next();
+
+    // dev bypass, only if explicitly allowed
+    if (ALLOW_TEST && req.headers["x-test-mode"] === "1") return next();
+
+    const now = nowFn();
+    const plan = (cfg.getPlan ? cfg.getPlan(req) : defaultConfig.getPlan!(req)) as PlanName;
+    const limits = cfg.limits[plan];
+    const k = keyFrom(req, plan);
+    const u = ensureUsage(k, now, cfg);
+
+    if (u.cooldownUntil && now < u.cooldownUntil) {
+      return res.status(429).json({
+        ok: false, error: "COOLDOWN", retryAfterMs: u.cooldownUntil - now, plan,
+        remaining: { total: Math.max(0, limits.totalPerDay - u.total), hot: Math.max(0, limits.hotPerDay - u.hot) },
+      });
     }
 
-    const plan = resolvePlan(req);
-    const key = keyFromReq(req);
-    const { bucket, resetAt } = getBucket(key, cfg.windowDays);
-    const limit = cfg.plans[plan].dailyCalls;
-    const remaining = Math.max(0, limit - bucket.used);
-
-    const abuse = getAbuse(key, cfg.penalty!);
-    const t = nowMs();
-
-    // if currently cooling down, block immediately
-    if (abuse.cooldownUntil > t) {
-      const retryAfterSec = Math.max(1, Math.ceil((abuse.cooldownUntil - t) / 1000));
-      setHeaders(res, plan, bucket.used, limit, remaining, resetAt, abuse.cooldownUntil);
-      return res.status(429).json({ ok: false, error: "COOLDOWN", retryAfterSec });
+    if (now - u.minuteStart >= 60_000) { u.minuteStart = now; u.minuteHits = 0; }
+    if (u.minuteHits >= limits.burstPerMin) {
+      u.cooldownUntil = now + limits.cooldownSec * 1000;
+      return res.status(429).json({ ok: false, error: "RATE_LIMIT", retryAfterMs: u.cooldownUntil - now, plan });
     }
 
-    if (remaining <= 0) {
-      // quota exceeded: count a strike and maybe start cooldown
-      abuse.strikes += 1;
-
-      let startCooldown = false;
-      if (abuse.strikes >= (cfg.penalty!.threshold ?? 3)) {
-        startCooldown = true;
-        abuse.strikes = 0; // reset strikes after applying cooldown
-        abuse.windowStart = t;
-        // exponential backoff: base * 2^(cooldownCount)
-        const ms = clamp(
-          cfg.penalty!.baseCooldownMs * Math.pow(2, abuse.cooldownCount),
-          cfg.penalty!.baseCooldownMs,
-          cfg.penalty!.maxCooldownMs
-        );
-        abuse.cooldownUntil = t + ms;
-        abuse.cooldownCount += 1;
-      }
-
-      const retryAfterSec = startCooldown
-        ? Math.max(1, Math.ceil((abuse.cooldownUntil - t) / 1000))
-        : Math.max(1, Math.ceil((resetAt - t) / 1000));
-
-      setHeaders(res, plan, bucket.used, limit, remaining, resetAt, abuse.cooldownUntil);
-      return res
-        .status(429)
-        .json({
-          ok: false,
-          error: startCooldown ? "COOLDOWN" : "QUOTA_EXCEEDED",
-          retryAfterSec,
-        });
+    const resetAt = new Date(new Date(now).setUTCHours(24, 0, 0, 0)).toISOString();
+    if (u.total >= limits.totalPerDay) {
+      return res.status(429).json({ ok: false, error: "QUOTA_TOTAL", plan, resetAt,
+        remaining: { total: 0, hot: Math.max(0, limits.hotPerDay - u.hot) } });
+    }
+    if (u.hot >= limits.hotPerDay) {
+      return res.status(429).json({ ok: false, error: "QUOTA_HOT", plan, resetAt,
+        remaining: { total: Math.max(0, limits.totalPerDay - u.total), hot: 0 } });
     }
 
-    // allowed: charge one unit and clear any minor strike history
-    bucket.used += 1;
-    if (abuse.strikes > 0) {
-      abuse.strikes = 0;
-      abuse.windowStart = t;
-    }
+    u.minuteHits++;
 
-    setHeaders(res, plan, bucket.used, limit, Math.max(0, limit - bucket.used), resetAt, abuse.cooldownUntil);
+    const originalJson = res.json.bind(res);
+    res.json = ((body: any) => {
+      try {
+        if (body && body.ok !== false) {
+          const created = typeof body?.created === "number"
+            ? body.created
+            : Array.isArray(body?.candidates) ? body.candidates.length : 1;
+          const hot = typeof body?.hot === "number" ? body.hot : 0;
+          u.total += Number.isFinite(created) ? created : 1;
+          u.hot += Number.isFinite(hot) ? hot : 0;
+        }
+      } catch {}
+      return originalJson(body);
+    }) as any;
+
     next();
   };
 }
-
-function setHeaders(
-  res: Response,
-  plan: string,
-  used: number,
-  limit: number,
-  remaining: number,
-  resetAt: number,
-  cooldownUntil: number
-) {
-  res.setHeader("X-Quota-Plan", plan);
-  res.setHeader("X-Quota-Used", String(used));
-  res.setHeader("X-Quota-Limit", String(limit));
-  res.setHeader("X-Quota-Remaining", String(remaining));
-  res.setHeader("X-Quota-Reset", new Date(resetAt).toISOString());
-  if (cooldownUntil > 0) res.setHeader("X-Cooldown-Until", new Date(cooldownUntil).toISOString());
-}
-
-// also export the types by name so named imports work
-export type { QuotaConfig as QuotaConfigType };
