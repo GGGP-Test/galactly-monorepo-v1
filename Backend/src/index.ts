@@ -1,63 +1,69 @@
 // src/index.ts
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+
+// NOTE: these modules already existed in your repo
 import findBuyers from "./services/find-buyers";
 import rateLimit from "./middleware/rateLimit";
-import { quota, configureQuota, setPlanForApiKey } from "./middleware/quota";
+
+// NEW quota middleware (default export + helpers)
+import quota, { configureQuota } from "./middleware/quota";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
+// --- health ---
 app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
 app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// --- Read-only stub for list so the panel never 404s
+// --- configure quotas safely from env (no code edits needed later) ---
+const FREE_DAILY = Number(process.env.FREE_DAILY || "3");          // you asked: 3/day on free
+const PRO_DAILY  = Number(process.env.PRO_DAILY  || "1000");       // generous default
+const TEST_DAILY = Number(process.env.TEST_DAILY || "10000");      // testing keys
+const INT_DAILY  = Number(process.env.INT_DAILY  || "1000000");    // internal keys
+const QUOTA_DAYS = Number(process.env.QUOTA_WINDOW_DAYS || "1");
+
+configureQuota({
+  windowDays: QUOTA_DAYS,
+  limits: {
+    free: { dailyFindBuyers: FREE_DAILY },
+    pro:  { dailyFindBuyers: PRO_DAILY  },
+    test: { dailyFindBuyers: TEST_DAILY },
+    internal: { dailyFindBuyers: INT_DAILY }
+  }
+});
+
+// --- stub legacy list endpoint so the panel never 404s ---
 app.get("/api/v1/leads", (req: Request, res: Response) => {
-  const temp = req.query.temp === "hot" || req.query.temp === "warm" ? String(req.query.temp) : "warm";
+  const temp =
+    req.query.temp === "hot" || req.query.temp === "warm" ? String(req.query.temp) : "warm";
   res.status(200).json({
     temp,
     region: req.query.region ?? null,
-    items: [], // keeping schema stable
+    items: [], // keep shape consistent for the panel
   });
 });
 
-// --- Rate limit: 4 calls per 10s per IP/API key (front-end already handles back-off)
-const rl = rateLimit({ windowMs: 10_000, max: 4 });
+// --- rate limit (per 10s), then quota (per day) ---
+const rl = rateLimit({ windowMs: 10_000, max: 4 }); // 4 tries / 10s as you set
+const q  = quota();
 
-// --- Quota: daily credit buckets by plan
-configureQuota({
-  windowDays: 1,
-  limits: {
-    free: { dailyRequests: 3 },      // Free plan: 3 "find-buyers" calls per day
-    pro: { dailyRequests: 10_000 },  // Pro plan: effectively uncapped
-    internal: { dailyRequests: Number.MAX_SAFE_INTEGER }, // bypass
-  },
-});
-
-// Optional: pre-load test/pro keys from env (comma-separated)
-for (const k of (process.env.TEST_API_KEYS || "").split(",").map(s => s.trim()).filter(Boolean)) {
-  setPlanForApiKey(k, "internal");
-}
-for (const k of (process.env.PRO_API_KEYS || "").split(",").map(s => s.trim()).filter(Boolean)) {
-  setPlanForApiKey(k, "pro");
-}
-
-const q = quota();
-
-// --- Find buyers endpoints (rl -> quota -> handler)
+// canonical route used by the Free Panel
 app.post("/api/v1/leads/find-buyers", rl, q, findBuyers);
+
+// extra aliases to be bulletproof with older panels
 app.post("/find-buyers", rl, q, findBuyers);
 app.get("/api/v1/leads/find-buyers", rl, q, findBuyers);
 app.get("/find-buyers", rl, q, findBuyers);
 
-// 404
+// --- 404 ---
 app.use((req: Request, res: Response) => {
   res.status(404).json({ error: "NOT_FOUND", method: req.method, path: req.path });
 });
 
-// error handler
+// --- error handler ---
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const any = err as { status?: number; message?: string };
   const status = typeof any?.status === "number" ? any.status : 500;
