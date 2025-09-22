@@ -1,102 +1,136 @@
 import { Router, Request, Response } from "express";
 
-export type Temp = "hot" | "warm" | "cold";
+/**
+ * Minimal, privacy-safe metrics + FOMO counters.
+ * - Never returns zero watchers (uses a soft, time-varying baseline).
+ * - Keeps everything in-memory (ephemeral) so it's safe to roll out now.
+ * - Can be swapped later for Redis/DB without changing the API.
+ */
 
-type Counters = {
-  views: number;   // user clicked/opened a lead
-  shows: number;   // we displayed a lead
-  hot: number;
-  warm: number;
-  cold: number;
-};
-
-const store: Record<string, Counters> = Object.create(null);
-
-// ---- FOMO knobs (never show 0) ----
-const FOMO_MIN = Number.parseInt(process.env.FOMO_MIN ?? "2", 10);   // hard floor
-const FOMO_MAX = Number.parseInt(process.env.FOMO_MAX ?? "17", 10);  // soft cap
-
-function seeded(host: string): number {
-  // tiny fast hash -> [0,1)
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < host.length; i++) {
-    h ^= host.charCodeAt(i);
-    h = Math.imul(h, 16777619) >>> 0;
-  }
-  return (h % 1000) / 1000;
-}
-
-function dayWeight(now = new Date()): number {
-  // daytime heavier; nights lighter (but non-zero)
-  const hr = now.getUTCHours();
-  if (hr >= 13 && hr <= 23) return 1.0;   // US daytime-ish
-  if (hr >= 0 && hr <= 5)   return 0.45;  // deep night
-  return 0.7;                              // shoulder hours
-}
-
-function demoWatchers(host: string, now = new Date()): number {
-  const base = FOMO_MIN + (FOMO_MAX - FOMO_MIN) * seeded(host) * dayWeight(now);
-  const jitter = Math.floor(seeded(host + now.getUTCHours()) * 3); // 0..2
-  return Math.max(FOMO_MIN, Math.min(FOMO_MAX, Math.round(base) + jitter));
-}
-
-// ---- Public helpers for other routes ----
-export function recordLeadShown(host: string, temp: Temp) {
-  const c = (store[host] ??= { views: 0, shows: 0, hot: 0, warm: 0, cold: 0 });
-  c.shows++;
-  c[temp]++;
-}
-
-export function recordLeadViewed(host: string) {
-  const c = (store[host] ??= { views: 0, shows: 0, hot: 0, warm: 0, cold: 0 });
-  c.views++;
-}
-
-export function getFomo(host: string) {
-  const real = store[host]?.views ?? 0;
-  return { watching: demoWatchers(host) + Math.min(5, real) };
-}
-
-export function getPublicMetrics() {
-  let totalHosts = 0, shows = 0, views = 0, hot = 0, warm = 0, cold = 0;
-  for (const k of Object.keys(store)) {
-    totalHosts++;
-    const c = store[k];
-    shows += c.shows;
-    views += c.views;
-    hot += c.hot; warm += c.warm; cold += c.cold;
-  }
-  return { totalHosts, shows, views, hot, warm, cold };
-}
-
-// ---- Express router (mounted under /api/v1) ----
 export const metricsRouter = Router();
 
+// --- Types (kept tiny & explicit) ---
+type Temp = "hot" | "warm";
+interface LeadEventBody {
+  host: string;           // canonical domain, e.g. "acme.com"
+  temp?: Temp;            // "hot" | "warm" (optional, used for bucketing)
+}
+
+// --- In-memory counters ---
+const shown = new Map<string, number>();  // key: host
+const viewed = new Map<string, number>(); // key: host
+
+// --- Helpers ---
+function inc(map: Map<string, number>, key: string, by = 1) {
+  map.set(key, (map.get(key) ?? 0) + by);
+}
+
+function clamp(n: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, n));
+}
+
 /**
+ * Non-zero, time-varying baseline so “watching” never displays 0.
+ * Roughly:
+ * - Higher during US daytime (15:00–02:00 UTC), lower overnight.
+ * - Adds a deterministic per-host jitter so different leads don’t all show the same number.
+ *
+ * Tunable by env:
+ *   FOMO_BASE_MIN (default 1)
+ *   FOMO_BASE_MAX (default 7)
+ */
+function softBaseline(host: string): number {
+  const min = Number(process.env.FOMO_BASE_MIN ?? 1);
+  const max = Number(process.env.FOMO_BASE_MAX ?? 7);
+
+  const hour = new Date().getUTCHours();
+  // US/CA busier ~15:00–02:00 UTC
+  const dayBoost = (hour >= 15 || hour <= 2) ? 1.0 : 0.5;
+
+  // Deterministic jitter per host (0..1)
+  let h = 2166136261;
+  for (let i = 0; i < host.length; i++) {
+    h ^= host.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const jitter01 = ((h >>> 0) % 1000) / 1000;
+
+  const base = min + (max - min) * (0.25 + 0.75 * jitter01); // bias away from exact min
+  return Math.max(1, Math.round(base * dayBoost));
+}
+
+/** Public-facing FOMO count: baseline + recent “viewed” + a small share of “shown”. */
+function watchingNow(host: string): number {
+  const b = softBaseline(host);
+  const v = viewed.get(host) ?? 0;
+  const s = shown.get(host) ?? 0;
+
+  // Don’t explode; keep lightweight.
+  const blended = b + Math.min(3, Math.floor(v * 0.5)) + Math.min(2, Math.floor(s * 0.25));
+  return clamp(blended, b, b + 10);
+}
+
+// --- Routes ---
+
+// Health for this router
+metricsRouter.get("/", (_req, res) => {
+  res.json({ ok: true, router: "metrics" });
+});
+
+/**
+ * Record: a lead was rendered in UI (table/list)
+ * POST /api/v1/metrics/lead-shown
+ * { host, temp? }
+ */
+metricsRouter.post("/lead-shown", (req: Request<unknown, unknown, LeadEventBody>, res: Response) => {
+  const host = (req.body?.host || "").toString().trim().toLowerCase();
+  if (!host) return res.status(400).json({ ok: false, error: "MISSING_HOST" });
+  inc(shown, host, 1);
+  res.json({ ok: true });
+});
+
+/**
+ * Record: a lead details panel / popup was opened
+ * POST /api/v1/metrics/lead-viewed
+ * { host, temp? }
+ */
+metricsRouter.post("/lead-viewed", (req: Request<unknown, unknown, LeadEventBody>, res: Response) => {
+  const host = (req.body?.host || "").toString().trim().toLowerCase();
+  if (!host) return res.status(400).json({ ok: false, error: "MISSING_HOST" });
+  inc(viewed, host, 1);
+  res.json({ ok: true });
+});
+
+/**
+ * Get the FOMO counter for a host.
+ * GET /api/v1/metrics/fomo?host=acme.com
+ * -> { watching: number }
+ */
+metricsRouter.get("/fomo", (req, res) => {
+  const host = (req.query.host || "").toString().trim().toLowerCase();
+  if (!host) return res.status(400).json({ ok: false, error: "MISSING_HOST" });
+  res.json({ ok: true, watching: watchingNow(host) });
+});
+
+/**
+ * Very small public snapshot (privacy-safe).
  * GET /api/v1/metrics/public
+ * -> { ok, totals: { hostsTracked, shown, viewed } }
  */
-metricsRouter.get("/metrics/public", (_req: Request, res: Response) => {
-  res.json({ ok: true, ...getPublicMetrics() });
+metricsRouter.get("/public", (_req, res) => {
+  let shownSum = 0;
+  let viewedSum = 0;
+  for (const v of shown.values()) shownSum += v;
+  for (const v of viewed.values()) viewedSum += v;
+
+  res.json({
+    ok: true,
+    totals: {
+      hostsTracked: new Set([...shown.keys(), ...viewed.keys()]).size,
+      shown: shownSum,
+      viewed: viewedSum,
+    },
+  });
 });
 
-/**
- * POST /api/v1/metrics/record
- * Body: { host: string, kind: "show"|"view", temp?: "hot"|"warm"|"cold" }
- */
-metricsRouter.post("/metrics/record", (req: Request, res: Response) => {
-  const { host, kind, temp } = req.body ?? {};
-  if (!host || typeof host !== "string") {
-    return res.status(400).json({ ok: false, error: "host required" });
-  }
-  if (kind === "show") {
-    recordLeadShown(host, (temp as Temp) || "warm");
-  } else if (kind === "view") {
-    recordLeadViewed(host);
-  } else {
-    return res.status(400).json({ ok: false, error: "kind must be 'show' or 'view'" });
-  }
-  res.json({ ok: true, fomo: getFomo(host) });
-});
-
-// Small facade for internal callers.
-export const metrics = { recordLeadShown, recordLeadViewed, getFomo, getPublicMetrics };
+export default metricsRouter; // also provide default for convenience
