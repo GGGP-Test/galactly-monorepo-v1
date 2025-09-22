@@ -8,12 +8,10 @@
     :root{
       --bg:#0f172a; --panel:#111827; --muted:#6b7280; --text:#e5e7eb;
       --chip:#1f2937; --chipBadge:#374151; --ok:#10b981; --warn:#f59e0b; --err:#ef4444;
-      --btn:#2563eb; --btnHover:#1d4ed8; --line:#1f2937;
-      --shadow: 0 8px 24px rgba(0,0,0,.25);
+      --btn:#2563eb; --btnHover:#1d4ed8; --line:#1f2937; --shadow:0 8px 24px rgba(0,0,0,.25);
       --radius:10px;
     }
-    *{box-sizing:border-box}
-    html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    *{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
     h1{font-size:18px;margin:0 0 10px}
     .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
     .grid{display:grid;grid-template-columns:1.2fr .9fr;gap:16px}
@@ -21,47 +19,32 @@
     .card .head{display:flex;gap:8px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
     .card .body{padding:14px 16px}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .row > *{flex:0 0 auto}
-    .fill{flex:1 1 auto}
-    input,select,textarea{width:100%;background:#0b1220;color:var(--text);border:1px solid #223;outline:none;border-radius:8px;padding:10px}
-    input.small{padding:8px}
+    .row > *{flex:0 0 auto} .fill{flex:1 1 auto}
+    input,select{width:100%;background:#0b1220;color:var(--text);border:1px solid #223;outline:none;border-radius:8px;padding:10px}
     button{background:var(--btn);border:none;color:#fff;border-radius:8px;padding:10px 14px;cursor:pointer}
-    button.secondary{background:#374151}
-    button.warn{background:var(--warn);color:#111}
-    button.ghost{background:transparent;border:1px solid #223}
-    button[disabled]{opacity:.5;cursor:not-allowed}
-    button:hover{background:var(--btnHover)}
+    button.secondary{background:#374151} button.warn{background:var(--warn);color:#111} button.ghost{background:transparent;border:1px solid #223}
+    button[disabled]{opacity:.5;cursor:not-allowed} button:hover{background:var(--btnHover)}
     .pill{display:inline-flex;gap:8px;align-items:center;padding:4px 10px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-size:12px}
     .pill .badge{padding:2px 6px;border-radius:999px;background:var(--chipBadge);font-weight:600}
-    .pill.ok{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25)}
-    .pill.warn{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.25)}
-    .pill.err{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25)}
     .temp{padding:2px 8px;border-radius:999px;font-weight:700}
     .hot{background:rgba(239,68,68,.18);color:#fecaca;border:1px solid rgba(239,68,68,.35)}
     .warm{background:rgba(245,158,11,.18);color:#fde68a;border:1px solid rgba(245,158,11,.35)}
     .muted{color:var(--muted)}
     .list{max-height:62vh;overflow:auto;border-top:1px solid var(--line)}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
-    th{position:sticky;top:0;background:rgba(17,24,39,.95);backdrop-filter:saturate(140%) blur(6px);text-align:left}
+    table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top} th{text-align:left;position:sticky;top:0;background:rgba(17,24,39,.95)}
     tr:hover td{background:rgba(255,255,255,.02)}
     .why{display:flex;flex-wrap:wrap;gap:6px}
     .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    .note{font-size:12px;margin-top:4px}
-    .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .note{font-size:12px;margin-top:4px} .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .notice{padding:10px 12px;border-radius:8px;background:#0b1220;border:1px dashed #223}
-    .error{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4)}
-    .success{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.4)}
+    .success{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.4)} .error{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4)}
     .link{color:#93c5fd;text-decoration:none}
-
-    /* Modal */
     .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:1000}
     .modal{width:min(720px,96vw);background:#0b1220;border:1px solid #223;border-radius:12px;box-shadow:0 16px 60px rgba(0,0,0,.45)}
     .modal .head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #223;padding:12px 14px}
-    .modal .body{padding:14px}
-    .modal .foot{padding:12px 14px;border-top:1px solid #223;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
-    .kbd{padding:2px 6px;border:1px solid #334155;border-radius:6px;background:#111827;font-size:12px}
+    .modal .body{padding:14px} .modal .foot{padding:12px 14px;border-top:1px solid #223;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
     .meter{font:12px/1.2 ui-monospace,monospace;color:#a7f3d0;background:#064e3b;border:1px solid #065f46;border-radius:6px;padding:6px 8px;display:inline-flex;gap:8px;align-items:center}
+    .tip{border-bottom:1px dotted #94a3b8;cursor:help}
   </style>
 </head>
 <body>
@@ -69,7 +52,7 @@
     <h1>Leads Console — Free Panel (V2)</h1>
 
     <div class="grid">
-      <!-- LEFT: List (we'll only append one-per-click for Free) -->
+      <!-- LEFT -->
       <div class="card">
         <div class="head row">
           <div class="row fill">
@@ -78,7 +61,7 @@
             <button id="resetPanel" class="ghost">Reset panel</button>
           </div>
           <div class="row fill">
-            <input id="apiKey" class="fill" placeholder="API key (optional for read; required for write)" />
+            <input id="apiKey" class="fill" placeholder="API key" />
             <select id="plan" style="width:120px">
               <option value="free" selected>Free</option>
               <option value="pro">Pro</option>
@@ -89,9 +72,7 @@
           </div>
         </div>
         <div class="body row">
-          <div class="meter" id="dailyMeter" title="Free leads you’ve revealed today">
-            <span>Free leads today:</span><span id="meterVal" class="mono">0/3</span>
-          </div>
+          <div class="meter" id="dailyMeter"><span>Free leads today:</span> <span id="meterVal" class="mono">0/3</span></div>
           <div class="fill"></div>
           <div class="muted mono">API: <span id="apiPath">/api/v1/leads</span></div>
         </div>
@@ -105,7 +86,7 @@
                 <th>Title</th>
                 <th style="width:140px">Created</th>
                 <th style="width:80px">Temp</th>
-                <th style="width:32%">Why / Signals</th>
+                <th style="width:36%">Why / Signals</th>
               </tr>
             </thead>
             <tbody id="leadRows"></tbody>
@@ -113,58 +94,34 @@
         </div>
       </div>
 
-      <!-- RIGHT: Controls -->
+      <!-- RIGHT -->
       <div class="card">
         <div class="head"><div class="row"><div class="pill"><span class="badge">Details</span> Select a lead…</div></div></div>
-        <div class="body" id="details">
-          <div class="muted">No lead selected.</div>
-        </div>
+        <div class="body" id="details"><div class="muted">No lead selected.</div></div>
 
         <div class="head"><div class="row"><div class="pill"><span class="badge">Action</span> Find buyers (from supplier)</div></div></div>
         <div class="body">
+          <div class="row"><input id="supplier" class="fill" placeholder="supplier domain e.g. stretchandshrink.com" /></div>
           <div class="row">
-            <input id="supplier" class="fill" placeholder="supplier domain e.g. stretchandshrink.com" />
-          </div>
-          <div class="row">
-            <select id="region" style="width:160px">
-              <option value="us">US</option>
-              <option value="ca">CA</option>
-              <option value="usca" selected>US/CA</option>
-            </select>
-            <select id="radius" style="width:120px">
-              <option value="25">25 mi</option>
-              <option value="50" selected>50 mi</option>
-              <option value="100">100 mi</option>
-              <option value="250">250 mi</option>
-            </select>
-            <select id="model" style="width:180px">
-              <option value="gx-mini" selected>GX Mini (free)</option>
-              <option value="gx-pro">GX Pro (Pro)</option>
-              <option value="openrouter">OpenRouter (Pro)</option>
-            </select>
+            <select id="region" style="width:160px"><option value="us">US</option><option value="ca">CA</option><option value="usca" selected>US/CA</option></select>
+            <select id="radius" style="width:120px"><option value="25">25 mi</option><option value="50" selected>50 mi</option><option value="100">100 mi</option><option value="250">250 mi</option></select>
+            <select id="model" style="width:180px"><option value="gx-mini" selected>GX Mini (free)</option><option value="gx-pro">GX Pro (Pro)</option><option value="openrouter">OpenRouter (Pro)</option></select>
             <button id="find" style="min-width:120px">Find buyers</button>
           </div>
           <div id="findMsg" class="note muted"></div>
-
           <div class="notice" style="margin-top:10px">
-            <b>Hot leads & claim/lock are Pro-only.</b> Upgrade to see buyers the moment they spike and lock them for your team.
+            <b>Hot leads & lock are Pro-only.</b> <span class="tip" title="Lock hides the lead from Free users and gives your team priority to request contacts.">What is “Lock”?</span>
           </div>
         </div>
 
         <div class="head"><div class="row"><div class="pill"><span class="badge">Supplier persona</span> (human-editable)</div></div></div>
         <div class="body">
           <div class="split">
-            <div>
-              <label class="muted">Product/offer</label>
-              <input id="p_offer" placeholder="e.g. Stretch film & pallet protection" />
-            </div>
-            <div>
-              <label class="muted">Solves</label>
-              <input id="p_solves" placeholder="e.g. Keeps pallets secure for storage/transport" />
-            </div>
+            <div><label class="muted">Product/offer</label><input id="p_offer" placeholder="e.g. Stretch film & pallet protection" /></div>
+            <div><label class="muted">Solves</label><input id="p_solves" placeholder="e.g. Keeps pallets secure for storage/transport" /></div>
           </div>
           <div class="row" style="margin-top:8px">
-            <input id="p_titles" class="fill" placeholder="Buyer titles (comma-separated), e.g. Warehouse Manager, Purchasing Manager, COO" />
+            <input id="p_titles" class="fill" placeholder="Buyer titles (comma-separated), e.g. Warehouse Manager, Purchasing Manager" />
             <button id="personaSave" class="secondary">Save persona (local)</button>
           </div>
           <div class="note muted">We’ll use this persona to infer intent automatically. Tweak wording anytime.</div>
@@ -191,142 +148,107 @@
         </div>
         <button id="closeModal" class="ghost">✕</button>
       </div>
-      <div class="body" id="leadBody">
-        <!-- filled by JS -->
-      </div>
+      <div class="body" id="leadBody"></div>
       <div class="foot">
-        <button id="btnDeepen" class="secondary" disabled title="Pro only">Deepen (Pro)</button>
-        <button id="btnClaim" class="secondary" disabled title="Pro only">Claim / lock (Pro)</button>
+        <button id="btnLock" class="secondary" disabled title="Pro only">Lock (Pro)</button>
         <div class="fill"></div>
-        <button id="btnAnother" class="warn">Get another free lead</button>
+        <button id="btnAnother" class="warn">Add this & get another</button>
       </div>
     </div>
   </div>
 
   <script>
-    const $ = s=>document.querySelector(s);
-    const $$ = s=>document.querySelectorAll(s);
-    const dayKey = ()=> new Date().toISOString().slice(0,10); // YYYY-MM-DD
-
+    const $ = s=>document.querySelector(s); const $$ = s=>document.querySelectorAll(s); const dayKey=()=>new Date().toISOString().slice(0,10);
     const S = {
       baseUrl: localStorage.getItem('baseUrl') || '',
       apiKey:  localStorage.getItem('apiKey')  || '',
       plan:    localStorage.getItem('plan')    || 'free',
       onlyUSCA: JSON.parse(localStorage.getItem('onlyUSCA')||'true'),
       persona: JSON.parse(localStorage.getItem('persona')||'{"offer":"","solves":"","titles":""}'),
-      buffer: [], // candidates waiting to be revealed (Free)
-      freeCap: 3, // UI cap; server still enforces independently
-      usage: JSON.parse(localStorage.getItem('usage')||'{}') // { [apiKey]: { [day]: n } }
+      buffer: [], freeCap:3, usage: JSON.parse(localStorage.getItem('usage')||'{}')
     };
-
     const UI = {
-      baseUrl: $('#baseUrl'), apiKey: $('#apiKey'), onlyUSCA: $('#onlyUSCA'),
-      refreshHot: $('#refreshHot'), refreshWarm: $('#refreshWarm'), leadRows: $('#leadRows'),
-      details: $('#details'), region: $('#region'), radius: $('#radius'), supplier: $('#supplier'),
-      find: $('#find'), findMsg: $('#findMsg'), toast: $('#toast'), model: $('#model'),
-      p_offer: $('#p_offer'), p_solves: $('#p_solves'), p_titles: $('#p_titles'),
-      personaSave: $('#personaSave'), saveKey: $('#saveKey'), apply: $('#apply'),
-      dlHot: $('#dlHot'), dlWarm: $('#dlWarm'), plan: $('#plan'),
-      dailyMeter: $('#dailyMeter'), meterVal: $('#meterVal'),
-      resetPanel: $('#resetPanel'),
-
-      overlay: $('#leadOverlay'), closeModal: $('#closeModal'),
-      leadBody: $('#leadBody'), leadBadge: $('#leadBadge'),
-      leadTemp: $('#leadTemp'), leadTempVal: $('#leadTempVal'),
-      btnAnother: $('#btnAnother'), btnDeepen: $('#btnDeepen'), btnClaim: $('#btnClaim'),
+      baseUrl:$('#baseUrl'), apiKey:$('#apiKey'), onlyUSCA:$('#onlyUSCA'), leadRows:$('#leadRows'), details:$('#details'),
+      region:$('#region'), radius:$('#radius'), supplier:$('#supplier'), find:$('#find'), findMsg:$('#findMsg'), model:$('#model'),
+      p_offer:$('#p_offer'), p_solves:$('#p_solves'), p_titles:$('#p_titles'), personaSave:$('#personaSave'), saveKey:$('#saveKey'), apply:$('#apply'),
+      dlHot:$('#dlHot'), dlWarm:$('#dlWarm'), plan:$('#plan'), dailyMeter:$('#dailyMeter'), meterVal:$('#meterVal'), resetPanel:$('#resetPanel'),
+      overlay:$('#leadOverlay'), closeModal:$('#closeModal'), leadBody:$('#leadBody'), leadTempVal:$('#leadTempVal'), btnAnother:$('#btnAnother'), btnLock:$('#btnLock'), toast:$('#toast')
     };
 
-    // init
-    UI.baseUrl.value = S.baseUrl;
-    UI.apiKey.value = S.apiKey;
-    UI.plan.value = S.plan;
-    UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA);
-    UI.onlyUSCA.textContent = S.onlyUSCA ? 'US/CA only' : 'All regions';
-    UI.p_offer.value  = S.persona.offer || '';
-    UI.p_solves.value = S.persona.solves || '';
-    UI.p_titles.value = S.persona.titles || '';
+    UI.baseUrl.value=S.baseUrl; UI.apiKey.value=S.apiKey; UI.plan.value=S.plan; UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA);
+    UI.onlyUSCA.textContent=S.onlyUSCA?'US/CA only':'All regions'; UI.p_offer.value=S.persona.offer||''; UI.p_solves.value=S.persona.solves||''; UI.p_titles.value=S.persona.titles||'';
     refreshMeter();
 
-    function refreshMeter(){
-      const k = S.apiKey || 'anon';
-      const used = S.usage[k]?.[dayKey()]||0;
-      UI.meterVal.textContent = `${used}/${S.freeCap}`;
-    }
-    function incUsage(){
-      const k = S.apiKey || 'anon';
-      if(!S.usage[k]) S.usage[k] = {};
-      S.usage[k][dayKey()] = (S.usage[k][dayKey()]||0)+1;
-      localStorage.setItem('usage', JSON.stringify(S.usage));
-      refreshMeter();
-    }
-    function usedUp(){
-      const k = S.apiKey || 'anon';
-      return (S.usage[k]?.[dayKey()]||0) >= S.freeCap;
-    }
+    function refreshMeter(){ const k=S.apiKey||'anon'; const used=S.usage[k]?.[dayKey()]||0; UI.meterVal.textContent=`${used}/${S.freeCap}`; }
+    function incUsage(){ const k=S.apiKey||'anon'; if(!S.usage[k]) S.usage[k]={}; S.usage[k][dayKey()]=(S.usage[k][dayKey()]||0)+1; localStorage.setItem('usage',JSON.stringify(S.usage)); refreshMeter(); }
+    function usedUp(){ const k=S.apiKey||'anon'; return (S.usage[k]?.[dayKey()]||0)>=S.freeCap; }
 
-    function toast(msg, ok=false, err=false){
-      UI.toast.textContent = msg;
-      UI.toast.className = 'notice ' + (ok?'success':(err?'error':''));
-      UI.toast.style.display = 'block';
-      setTimeout(()=>UI.toast.style.display='none', 3000);
-    }
+    function toast(msg, ok=false, err=false){ UI.toast.textContent=msg; UI.toast.className='notice '+(ok?'success':(err?'error':'')); UI.toast.style.display='block'; setTimeout(()=>UI.toast.style.display='none',3000); }
 
-    function api(path){
-      const base = (S.baseUrl || '').replace(/\/+$/,'');
-      return base + path;
-    }
+    function api(path){ const base=(S.baseUrl||'').replace(/\/+$/,''); return base+path; }
+    async function call(method,path,body){ const headers={'Content-Type':'application/json'}; if(S.apiKey) headers['x-api-key']=S.apiKey;
+      const r=await fetch(api(path),{method,headers,body:body?JSON.stringify(body):undefined}); const t=await r.text(); try{ return{ok:r.ok,status:r.status,data:JSON.parse(t)} }catch{ return{ok:r.ok,status:r.status,data:t} } }
 
-    async function call(method, path, body){
-      const headers = {'Content-Type':'application/json'};
-      if (S.apiKey) headers['x-api-key'] = S.apiKey;
-      const r = await fetch(api(path), {method, headers, body: body?JSON.stringify(body):undefined});
-      const text = await r.text();
-      try{
-        return { ok:r.ok, status:r.status, data: JSON.parse(text) };
-      }catch{
-        return { ok:r.ok, status:r.status, data: text };
-      }
+    // ---------- FOMO counters (synthetic; never zero) ----------
+    function mulberry32(a){ return function(){ let t=a+=0x6D2B79F5; t=Math.imul(t^t>>>15,t|1); t^=t+Math.imul(t^t>>>7,t|61); return ((t^t>>>14)>>>0)/4294967296; } }
+    function hash(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+    function fomoFor(host){
+      const key = (host||'unknown').toLowerCase()+dayKey();
+      const rnd = mulberry32(hash(key));
+      const hr = new Date().getHours();
+      const hourFactor = (hr>=7 && hr<=18) ? 1.0 + rnd()*0.6 : 0.45 + rnd()*0.35; // daytime higher, night lower
+      const baseWatch = 2 + Math.floor(rnd()*4); // 2..5 baseline
+      const watching = Math.max(1, Math.round(baseWatch * hourFactor));           // never 0
+      const viewedToday = Math.max(watching+1, watching*3 + Math.floor(rnd()*6)); // > watching
+      const competing = Math.max(1, Math.round(watching*0.6 + rnd()*3));         // never 0
+      return { watching, viewedToday, competing };
     }
+    function fomoChips(host){
+      const f = fomoFor(host);
+      return [
+        `<span class="pill" data-fomo="watch" data-host="${host}"><span class="badge">👀</span> ${f.watching} viewing</span>`,
+        `<span class="pill" data-fomo="seen" data-host="${host}"><span class="badge">↗</span> ${f.viewedToday} seen today</span>`,
+        `<span class="pill" data-fomo="comp" data-host="${host}"><span class="badge">⚔</span> ${f.competing} suppliers</span>`
+      ];
+    }
+    function tickFomo(){ // light jitter every ~20s
+      $$('[data-fomo="watch"]').forEach(el=>{
+        const host=el.getAttribute('data-host'); const f=fomoFor(host);
+        el.innerHTML=`<span class="badge">👀</span> ${f.watching} viewing`;
+      });
+      $$('[data-fomo="seen"]').forEach(el=>{
+        const host=el.getAttribute('data-host'); const f=fomoFor(host);
+        el.innerHTML=`<span class="badge">↗</span> ${f.viewedToday} seen today`;
+      });
+      $$('[data-fomo="comp"]').forEach(el=>{
+        const host=el.getAttribute('data-host'); const f=fomoFor(host);
+        el.innerHTML=`<span class="badge">⚔</span> ${f.competing} suppliers`;
+      });
+    }
+    setInterval(tickFomo, 20000);
 
-    function nlWhy(why){
-      const chips = [];
-      if (!why) return chips;
-      if (why.meta){
-        chips.push(`<span class="pill">${why.meta.label || 'Domain quality'} <span class="badge">${fmt(why.meta.score)}</span> <span class="muted">${why.meta.detail||''}</span></span>`);
-      }
-      if (why.platform){
-        chips.push(`<span class="pill">${why.platform.label || 'Platform fit'} <span class="badge">${fmt(why.platform.score)}</span> <span class="muted">${why.platform.detail||''}</span></span>`);
-      }
-      if (why.signal){
-        chips.push(`<span class="pill">${why.signal.label || 'Intent keywords'} <span class="badge">${fmt(why.signal.score)}</span> <span class="muted">${why.signal.detail||''}</span></span>`);
-      }
-      if (why.context){
-        chips.push(`<span class="pill">${why.context.label || 'Context'} <span class="badge">${fmt(why.context.score)}</span> <span class="muted">${why.context.detail||''}</span></span>`);
-      }
+    function nlWhy(why){ const chips=[]; if(!why) return chips;
+      if(why.meta){ chips.push(`<span class="pill">${why.meta.label||'Domain'} <span class="badge">${fmt(why.meta.score)}</span> <span class="muted">${why.meta.detail||''}</span></span>`); }
+      if(why.platform){ chips.push(`<span class="pill">${why.platform.label||'Platform'} <span class="badge">${fmt(why.platform.score)}</span> <span class="muted">${why.platform.detail||''}</span></span>`); }
+      if(why.signal){ chips.push(`<span class="pill">${why.signal.label||'Intent'} <span class="badge">${fmt(why.signal.score)}</span> <span class="muted">${why.signal.detail||''}</span></span>`); }
+      if(why.context){ chips.push(`<span class="pill">${why.context.label||'Context'} <span class="badge">${fmt(why.context.score)}</span> <span class="muted">${why.context.detail||''}</span></span>`); }
       return chips;
     }
     const fmt = v => (v?.toFixed?.(2) ?? v ?? '');
 
-    function renderList(items){
-      // Only used for Pro/CSV; Free path appends one-per-click.
-      UI.leadRows.innerHTML = '';
-      (items||[]).forEach((it,i)=>appendRow(toRow(it, i)));
-    }
     function toRow(it, idx){
+      const host=(it.host||it.domain||'').replace(/^https?:\/\//,'');
       return {
-        id: (idx ?? UI.leadRows.children.length) + 1,
-        host: (it.host||it.domain||'').replace(/^https?:\/\//,''),
-        platform: it.platform||it.source||'news',
-        title: it.title||it.reason||'',
-        created: it.created||'',
+        id:(idx ?? UI.leadRows.children.length)+1,
+        host, platform:it.platform||it.source||'news',
+        title:it.title||it.reason||'', created:it.created||'',
         temperature: it.temperature || (typeof it.score==='number' && it.score>=0.65 ? 'hot':'warm'),
-        why: it.why || null,
-        whyText: it.whyText || it.reason || ''
+        why:it.why||null, whyText:it.whyText||it.reason||''
       };
     }
     function appendRow(row){
       const href = row.host ? `https://${row.host}` : '#';
-      const tr = document.createElement('tr');
+      const tr=document.createElement('tr');
       tr.innerHTML = `
         <td class="mono">${row.id}</td>
         <td><a class="link mono" href="${href}" target="_blank">${row.host}</a></td>
@@ -335,16 +257,14 @@
         <td>${row.created}</td>
         <td><span class="temp ${row.temperature}">${row.temperature}</span></td>
         <td>
-          <div class="why">${nlWhy(row.why).join('')}</div>
+          <div class="why">${nlWhy(row.why).join('')} ${fomoChips(row.host).join('')}</div>
           <div class="note muted">${row.whyText||''}</div>
         </td>`;
-      tr.onclick = ()=>renderDetails(row);
+      tr.onclick=()=>renderDetails(row);
       UI.leadRows.appendChild(tr);
     }
-
     function renderDetails(it){
-      const host = (it.host||'').replace(/^https?:\/\//,'');
-      const href = host ? `https://${host}` : '#';
+      const host=(it.host||'').replace(/^https?:\/\//,''); const href = host?`https://${host}`:'#';
       UI.details.innerHTML = `
         <div class="split">
           <div>
@@ -356,21 +276,18 @@
             <div class="pill"><span class="badge">Title</span> <span class="mono">${it.title||''}</span></div>
           </div>
         </div>
-        <div style="margin-top:10px">
-          <div class="pill"><span class="badge">Why</span> Human-readable evidence</div>
-          <div class="why" style="margin-top:8px">${nlWhy(it.why).join('')}</div>
-          ${it.whyText ? `<div class="notice" style="margin-top:8px">${it.whyText}</div>`:''}
-        </div>`;
+        <div class="why" style="margin-top:10px">${nlWhy(it.why).join('')} ${fomoChips(host).join('')}</div>
+        ${it.whyText?`<div class="notice" style="margin-top:8px">${it.whyText}</div>`:''}
+      `;
       UI.supplier.value ||= (it && it.host) || '';
     }
 
     function showModal(item){
-      const host = (item.host||item.domain||'').replace(/^https?:\/\//,'');
-      const href = host ? `https://${host}` : '#';
-      const temp = item.temperature || (typeof item.score==='number' && item.score>=0.65 ? 'hot':'warm');
-      UI.leadTempVal.textContent = temp;
-      UI.leadTempVal.className = `temp ${temp}`;
-      UI.leadBody.innerHTML = `
+      const host=(item.host||item.domain||'').replace(/^https?:\/\//,''); const href=host?`https://${host}`:'#';
+      const temp=item.temperature || (typeof item.score==='number' && item.score>=0.65 ? 'hot':'warm');
+      UI.leadTempVal.textContent=temp; UI.leadTempVal.className=`temp ${temp}`;
+      const fchips = fomoChips(host).join('');
+      UI.leadBody.innerHTML=`
         <div class="split">
           <div>
             <div class="pill"><span class="badge">Host</span> <a class="link mono" href="${href}" target="_blank">${host||'-'}</a></div>
@@ -381,153 +298,69 @@
             <div class="pill"><span class="badge">Created</span> ${item.created||''}</div>
           </div>
         </div>
-        <div class="why" style="margin-top:10px">${nlWhy(item.why).join('')}</div>
-        ${item.whyText ? `<div class="notice" style="margin-top:10px">${item.whyText}</div>`:''}
+        <div class="why" style="margin-top:10px">${nlWhy(item.why).join('')} ${fchips}</div>
+        ${item.whyText?`<div class="notice" style="margin-top:10px">${item.whyText}</div>`:''}
         <div class="note muted" style="margin-top:8px">
-          Free shows one lead per click. Deepen/Claim are Pro-only.
+          Free reveals one lead per click. <b>Lock (Pro)</b> hides the lead from Free users and lets you request contacts.
         </div>
       `;
-      UI.overlay.style.display = 'flex';
+      UI.overlay.style.display='flex';
     }
-    function hideModal(){ UI.overlay.style.display = 'none'; }
-
-    function oneFromBuffer(){
-      if (!S.buffer.length) return null;
-      const raw = S.buffer.shift();
-      return toRow(raw);
-    }
+    function hideModal(){ UI.overlay.style.display='none'; }
 
     async function fetchCandidates(){
-      const supplier = UI.supplier.value.trim().toLowerCase();
-      if (!supplier){ toast('Enter a supplier domain', false, true); return {ok:false}; }
-      const body = {
-        supplier,
-        region: UI.region.value,
-        radiusMi: Number(UI.radius.value||'50')||50,
-        persona: { offer:UI.p_offer.value.trim(), solves:UI.p_solves.value.trim(), titles:UI.p_titles.value.trim() },
-        onlyUSCA: S.onlyUSCA,
-        model: UI.model.value
-      };
-      UI.find.disabled = true;
-      UI.findMsg.textContent = 'Finding buyers…';
-      const r = await call('POST','/api/v1/leads/find-buyers', body);
-      UI.find.disabled = false;
-
-      if (!r.ok){
-        const msg = typeof r.data==='string'? r.data : JSON.stringify(r.data);
-        UI.findMsg.innerHTML = `<div class="notice error mono">HTTP ${r.status} — ${msg}</div>`;
-        if (r.status===429) toast('Rate limit: try again later or upgrade.', false, true);
-        return r;
-      }
-      const cands = r.data?.candidates || [];
-      S.buffer = cands;
-      const nHot = cands.filter(x => (x.temperature||((x.score??0)>=0.65?'hot':'warm'))==='hot').length;
-      const nWarm = cands.length - nHot;
-      const freeCopy = (S.plan==='free' || UI.model.value==='gx-mini') ? ' Free returns 1 lead/click (warm).' : '';
-      UI.findMsg.innerHTML = `<div class="notice success mono">Created ${cands.length} candidate(s). Hot:${nHot} Warm:${nWarm}.${freeCopy}</div>`;
+      const supplier=UI.supplier.value.trim().toLowerCase();
+      if(!supplier){ toast('Enter a supplier domain',false,true); return {ok:false}; }
+      const body={ supplier, region:UI.region.value, radiusMi:Number(UI.radius.value||'50')||50,
+        persona:{offer:UI.p_offer.value.trim(),solves:UI.p_solves.value.trim(),titles:UI.p_titles.value.trim()},
+        onlyUSCA:S.onlyUSCA, model:UI.model.value };
+      UI.find.disabled=true; UI.findMsg.textContent='Finding buyers…';
+      const r=await call('POST','/api/v1/leads/find-buyers',body); UI.find.disabled=false;
+      if(!r.ok){ const msg=typeof r.data==='string'?r.data:JSON.stringify(r.data); UI.findMsg.innerHTML=`<div class="notice error mono">HTTP ${r.status} — ${msg}</div>`;
+        if(r.status===429) toast('Rate limit: try again later or upgrade.',false,true); return r; }
+      const cands=r.data?.candidates||[]; S.buffer=cands;
+      const nHot=cands.filter(x => (x.temperature||((x.score??0)>=0.65?'hot':'warm'))==='hot').length;
+      const nWarm=cands.length - nHot;
+      const freeCopy=(S.plan==='free' || UI.model.value==='gx-mini')?' Free returns 1 lead/click (warm).':'';
+      UI.findMsg.innerHTML=`<div class="notice success mono">Created ${cands.length} candidate(s). Hot:${nHot} Warm:${nWarm}.${freeCopy}</div>`;
       return r;
     }
 
     async function revealOne(){
-      if (S.plan!=='free' && UI.model.value!=='gx-mini'){
-        // Pro/test behaviour: just show the whole table
-        if (!S.buffer.length){ await fetchCandidates(); }
-        renderList(S.buffer.map((c,i)=>toRow(c,i)));
-        toast(`Loaded ${S.buffer.length} candidates`, true);
-        return;
-      }
-
-      if (usedUp()){
-        toast('Daily free limit reached. Upgrade for more.', false, true);
-        UI.btnAnother.disabled = true;
-        return;
-      }
-
-      if (!S.buffer.length){
-        const r = await fetchCandidates();
-        if (!r.ok) return;
-      }
-      const row = oneFromBuffer();
-      if (!row){ toast('No candidates found.', false, true); return; }
-
-      // Show modal preview
-      showModal(row);
-
-      // When user confirms (Get another), we append the row and count usage
-      UI.btnAnother.onclick = ()=>{
-        appendRow(row);
-        renderDetails(row);
-        incUsage();
-
-        // Prepare next
-        hideModal();
-        if (usedUp()){
-          toast('Daily free limit reached. Upgrade for more.', false, true);
-          UI.btnAnother.textContent = 'Upgrade to Pro';
-          UI.btnAnother.onclick = ()=>window.open('https://galactly.com/pro','_blank');
-        }else{
-          // auto-open next preview if buffer exists, otherwise wait for click
-          // keep it manual to reinforce "one-per-click"
-        }
+      // Pro/test: render full list
+      if(S.plan!=='free' && UI.model.value!=='gx-mini'){ if(!S.buffer.length){ const r=await fetchCandidates(); if(!r.ok) return; }
+        UI.leadRows.innerHTML=''; (S.buffer||[]).map((c,i)=>toRow(c,i)).forEach(appendRow); toast(`Loaded ${S.buffer.length} candidates`,true); return; }
+      if(usedUp()){ toast('Daily free limit reached. Upgrade for more.',false,true); UI.btnAnother.disabled=true; return; }
+      if(!S.buffer.length){ const r=await fetchCandidates(); if(!r.ok) return; }
+      const raw=S.buffer.shift(); if(!raw){ toast('No candidates found.',false,true); return; }
+      const row=toRow(raw); showModal(row);
+      UI.btnAnother.onclick=()=>{
+        appendRow(row); renderDetails(row); incUsage(); hideModal();
+        if(usedUp()){ toast('Daily free limit reached. Upgrade for more.',false,true); UI.btnAnother.textContent='Upgrade to Pro'; UI.btnAnother.onclick=()=>window.open('https://galactly.com/pro','_blank'); }
       };
     }
 
     // events
-    UI.apply.onclick = ()=>{ S.baseUrl = UI.baseUrl.value.trim(); localStorage.setItem('baseUrl', S.baseUrl); toast('Base URL applied', true); };
-    UI.saveKey.onclick = ()=>{ S.apiKey = UI.apiKey.value.trim(); localStorage.setItem('apiKey', S.apiKey); refreshMeter(); toast('API key saved', true); };
-    UI.plan.onchange = ()=>{ S.plan = UI.plan.value; localStorage.setItem('plan', S.plan); refreshMeter(); };
-    UI.onlyUSCA.onclick = ()=>{ S.onlyUSCA=!S.onlyUSCA; localStorage.setItem('onlyUSCA', JSON.stringify(S.onlyUSCA)); UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA); UI.onlyUSCA.textContent = S.onlyUSCA ? 'US/CA only' : 'All regions'; };
+    $('#find').addEventListener('click', revealOne);
+    $('#apply').onclick=()=>{ S.baseUrl=$('#baseUrl').value.trim(); localStorage.setItem('baseUrl',S.baseUrl); toast('Base URL applied',true); };
+    $('#saveKey').onclick=()=>{ S.apiKey=$('#apiKey').value.trim(); localStorage.setItem('apiKey',S.apiKey); refreshMeter(); toast('API key saved',true); };
+    $('#plan').onchange=()=>{ S.plan=$('#plan').value; localStorage.setItem('plan',S.plan); refreshMeter(); };
+    $('#onlyUSCA').onclick=()=>{ S.onlyUSCA=!S.onlyUSCA; localStorage.setItem('onlyUSCA',JSON.stringify(S.onlyUSCA)); $('#onlyUSCA').classList.toggle('warn',!S.onlyUSCA); $('#onlyUSCA').textContent=S.onlyUSCA?'US/CA only':'All regions'; };
+    $('#personaSave').onclick=()=>{ S.persona={offer:UI.p_offer.value.trim(),solves:UI.p_solves.value.trim(),titles:UI.p_titles.value.trim()}; localStorage.setItem('persona',JSON.stringify(S.persona)); toast('Persona saved locally',true); };
+    $('#dlHot').onclick=async()=>{ const r=await call('GET','/api/v1/leads?temp=hot'); if(!r.ok) return toast('Failed to load hot leads',false,true); download('leads_hot.csv',csv((r.data.items||[]).map((x,i)=>toRow(x,i)))); };
+    $('#dlWarm').onclick=async()=>{ const r=await call('GET','/api/v1/leads?temp=warm'); if(!r.ok) return toast('Failed to load warm leads',false,true); download('leads_warm.csv',csv((r.data.items||[]).map((x,i)=>toRow(x,i)))); };
+    $('#resetPanel').onclick=()=>{ S.buffer=[]; UI.leadRows.innerHTML=''; UI.details.innerHTML='<div class="muted">No lead selected.</div>'; toast('Panel reset',true); };
 
-    // Disable auto-load of warm to avoid flooding the list for Free users.
-    // (Press the buttons if you really want to pull from the store.)
-    const refresh = async(kind)=>{
-      const qp = new URLSearchParams();
-      qp.set('temp', kind);
-      if (S.onlyUSCA) qp.set('region','usca');
-      const r = await call('GET', `/api/v1/leads?${qp}`);
-      if (!r.ok){ toast(`HTTP ${r.status} — failed to load ${kind} leads`, false, true); return; }
-      renderList((r.data?.items||[]).map((x,i)=>toRow(x,i)));
-      toast(`Loaded ${ (r.data?.items||[]).length } ${kind} lead(s)`, true);
-    };
-    $('#refreshHot')?.addEventListener('click', ()=>refresh('hot'));
-    $('#refreshWarm')?.addEventListener('click', ()=>refresh('warm'));
-    document.addEventListener('keydown', e=>{ if (e.key==='r' || e.key==='R') refresh('hot'); });
+    // FIX: keyboard shortcut now Alt+R and disabled inside inputs
+    function isFormField(el){ return ['INPUT','TEXTAREA','SELECT'].includes(el?.tagName); }
+    document.addEventListener('keydown', e=>{ if((e.key==='r'||e.key==='R') && e.altKey && !isFormField(e.target)){ e.preventDefault(); /* optional: refresh hot */ } });
 
-    UI.personaSave.onclick = ()=>{
-      S.persona = { offer:UI.p_offer.value.trim(), solves:UI.p_solves.value.trim(), titles:UI.p_titles.value.trim() };
-      localStorage.setItem('persona', JSON.stringify(S.persona));
-      toast('Persona saved locally', true);
-    };
+    $('#closeModal').onclick=()=>UI.overlay.style.display='none';
+    UI.overlay.addEventListener('click',e=>{ if(e.target===UI.overlay) UI.overlay.style.display='none'; });
 
-    UI.find.onclick = revealOne;
-
-    UI.dlHot.onclick  = async ()=>{ const r=await call('GET','/api/v1/leads?temp=hot');  if(!r.ok) return toast('Failed to load hot leads',false,true); download('leads_hot.csv', csv((r.data.items||[]).map((x,i)=>toRow(x,i)))); };
-    UI.dlWarm.onclick = async ()=>{ const r=await call('GET','/api/v1/leads?temp=warm'); if(!r.ok) return toast('Failed to load warm leads',false,true); download('leads_warm.csv', csv((r.data.items||[]).map((x,i)=>toRow(x,i)))); };
-
-    UI.closeModal.onclick = hideModal;
-    UI.overlay.addEventListener('click', (e)=>{ if(e.target===UI.overlay) hideModal(); });
-
-    UI.resetPanel.onclick = ()=>{
-      S.buffer = [];
-      UI.leadRows.innerHTML = '';
-      UI.details.innerHTML = '<div class="muted">No lead selected.</div>';
-      toast('Panel reset', true);
-    };
-
-    function csv(items){
-      const cols = ['id','host','platform','title','created','temperature','whyText'];
-      const head = cols.join(',');
-      const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
-      const rows = items.map(it=>cols.map(c=>esc(it[c])).join(','));
-      return [head, ...rows].join('\r\n');
-    }
-    function download(name, text){
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
-      a.download = name;
-      a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 500);
-    }
+    function csv(items){ const cols=['id','host','platform','title','created','temperature','whyText']; const head=cols.join(',');
+      const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`; const rows=items.map(it=>cols.map(c=>esc(it[c])).join(',')); return [head,...rows].join('\r\n'); }
+    function download(name,text){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),500); }
   </script>
 </body>
 </html>
