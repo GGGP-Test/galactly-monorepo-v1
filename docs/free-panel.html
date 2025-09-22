@@ -3,537 +3,319 @@
 <head>
   <meta charset="utf-8" />
   <title>Leads Console — Free Panel (V3)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    :root{
-      --bg:#0f172a; --panel:#111827; --muted:#9ca3af; --text:#e5e7eb;
-      --chip:#1f2937; --chipBadge:#374151; --ok:#10b981; --warn:#f59e0b; --err:#ef4444;
-      --btn:#2563eb; --btnHover:#1d4ed8; --line:#1f2937; --shadow:0 8px 24px rgba(0,0,0,.25);
-      --radius:10px; --tooltip:#0b1220;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-    h1{font-size:18px;margin:0 0 10px}
-    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
-    .grid{display:grid;grid-template-columns:1.2fr .9fr;gap:16px}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
-    .card .head{display:flex;gap:8px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
-    .card .body{padding:14px 16px}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .fill{flex:1 1 auto}
-    input,select,textarea{width:100%;background:#0b1220;color:var(--text);border:1px solid #223;outline:none;border-radius:8px;padding:10px}
-    button{background:var(--btn);border:none;color:#fff;border-radius:8px;padding:10px 14px;cursor:pointer}
-    button.secondary{background:#374151}
-    button.warn{background:var(--warn);color:#111}
-    button:hover{background:var(--btnHover)}
+    :root { --bg:#0f172a; --panel:#111a2e; --muted:#9aa5b1; --text:#e5e7eb; --ok:#0ea5e9; --bad:#ef4444; --chip:#1f2a44; }
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial;}
+    .wrap{display:grid;grid-template-columns:420px 1fr;gap:18px;padding:18px;box-sizing:border-box;height:100%;}
+    .card{background:var(--panel);border-radius:10px;padding:14px;box-shadow:0 0 0 1px #1c2541 inset;}
+    .row{display:flex;gap:10px;align-items:center;margin:8px 0;}
+    label{display:block;margin:8px 0 4px 2px;color:var(--muted);}
+    input[type=text],select{width:100%;padding:9px 10px;border-radius:8px;border:1px solid #2a3558;background:#0b1224;color:var(--text);}
+    button{padding:9px 12px;border:0;border-radius:8px;background:#1d4ed8;color:#fff;cursor:pointer}
+    button.secondary{background:#334155}
+    button:disabled{opacity:.6;cursor:not-allowed}
     .muted{color:var(--muted)}
-    .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    .list{max-height:62vh;overflow:auto;border-top:1px solid var(--line)}
-    .pill{display:inline-flex;gap:8px;align-items:center;padding:4px 10px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-size:12px}
-    .pill .badge{padding:2px 6px;border-radius:999px;background:var(--chipBadge);font-weight:600}
-    .temp{padding:2px 8px;border-radius:999px;font-weight:700}
-    .hot{background:rgba(239,68,68,.18);color:#fecaca;border:1px solid rgba(239,68,68,.35)}
-    .warm{background:rgba(245,158,11,.18);color:#fde68a;border:1px solid rgba(245,158,11,.35)}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
-    th{position:sticky;top:0;background:rgba(17,24,39,.95);backdrop-filter:saturate(140%) blur(6px);text-align:left}
-    tr:hover td{background:rgba(255,255,255,.02)}
-    .why{display:flex;flex-wrap:wrap;gap:6px}
-    .notice{padding:10px 12px;border-radius:8px;background:#0b1220;border:1px dashed #223}
-    .error{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4)}
-    .success{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.4)}
-    .link{color:#93c5fd;text-decoration:none}
-
-    /* modal */
-    .modalMask{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
-    .modal{max-width:680px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
-    .modal .head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
-    .modal .body{padding:14px}
-    .close{cursor:pointer;padding:4px 8px;border-radius:8px;background:#374151}
-
-    /* tiny tooltip */
-    .tip{display:inline-flex;align-items:center;gap:4px}
-    .tip i{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#253047;color:#c7d2fe;font-style:normal;font-size:12px;cursor:help;position:relative}
-    .tip i:hover::after{
-      content: attr(data-tip);
-      position:absolute;left:50%;transform:translateX(-50%);bottom:22px;
-      white-space:nowrap;background:var(--tooltip);border:1px solid #223;color:var(--text);
-      padding:6px 8px;border-radius:8px;font-size:12px;z-index:60
-    }
+    .status{min-height:20px;margin-top:6px}
+    .status.ok{color:#86efac}
+    .status.err{color:#fca5a5}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:8px 10px;border-bottom:1px solid #1f2a44;vertical-align:top}
+    th{color:#93a3b8;text-align:left;position:sticky;top:0;background:var(--panel)}
+    .chips{display:flex;gap:6px;flex-wrap:wrap}
+    .chip{background:var(--chip);border-radius:999px;padding:3px 8px}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+    .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Leads Console — Free Panel (V3)</h1>
+    <!-- LEFT: controls -->
+    <div class="card">
+      <h3 style="margin:2px 0 10px">Leads Console — Free Panel (V3)</h3>
 
-    <div class="grid">
-      <!-- LEFT -->
-      <div class="card">
-        <div class="head row">
-          <div class="row fill">
-            <input id="baseUrl" class="fill" placeholder="Base URL (e.g. https://p01--…code.run)" />
-            <button id="apply">Apply</button>
-          </div>
-          <div class="row fill">
-            <input id="apiKey" class="fill" placeholder="API key (required for write ops)" />
-            <button id="saveKey" class="secondary">Save</button>
-          </div>
-        </div>
-        <div class="body row">
-          <button id="refreshHot" class="secondary">Refresh Hot</button>
-          <button id="refreshWarm" class="secondary">Refresh Warm</button>
-          <div class="fill"></div>
-          <div class="muted mono">API root: <span id="apiPath">auto</span></div>
-        </div>
-        <div class="list">
-          <table id="leads">
-            <thead>
-              <tr>
-                <th style="width:60px">#</th>
-                <th>Host</th>
-                <th style="width:120px">Platform</th>
-                <th>Title</th>
-                <th style="width:120px">Created</th>
-                <th style="width:80px">Temp</th>
-                <th style="width:28%">Why</th>
-              </tr>
-            </thead>
-            <tbody id="leadRows"></tbody>
-          </table>
-        </div>
+      <label for="base">API base</label>
+      <div class="row">
+        <input id="base" type="text" placeholder="https://p01-…code.run" />
+        <button id="apply">Apply</button>
       </div>
 
-      <!-- RIGHT -->
-      <div class="card">
-        <div class="head"><div class="row"><div class="pill"><span class="badge">Action</span> Find buyers (one per click)</div></div></div>
-        <div class="body">
-          <div class="row">
-            <input id="supplier" class="fill" placeholder="supplier domain e.g. stretchandshrink.com" />
-          </div>
-          <div class="row">
-            <select id="region" style="width:160px">
-              <option value="us">US</option>
-              <option value="ca">CA</option>
-              <option value="usca" selected>US/CA</option>
-            </select>
-            <select id="radius" style="width:120px">
-              <option value="25">25 mi</option>
-              <option value="50" selected>50 mi</option>
-              <option value="100">100 mi</option>
-              <option value="250">250 mi</option>
-            </select>
-            <button id="find" style="min-width:140px">Find buyers</button>
-          </div>
-          <div id="findMsg" class="notice muted" style="margin-top:8px"></div>
-        </div>
-
-        <div class="head"><div class="row"><div class="pill"><span class="badge">Supplier persona</span> (used to infer intent)</div></div></div>
-        <div class="body">
-          <div class="row">
-            <input id="p_offer" class="fill" placeholder="Product/offer (e.g. Stretch film & pallet protection)" />
-          </div>
-          <div class="row" style="margin-top:8px">
-            <input id="p_solves" class="fill" placeholder="Solves (e.g. Keeps pallets secure for storage/transport)" />
-          </div>
-          <div class="row" style="margin-top:8px">
-            <input id="p_titles" class="fill" placeholder="Buyer titles (comma-separated), e.g. Warehouse Manager, Purchasing Manager, COO" />
-            <button id="personaSave" class="secondary">Save persona (local)</button>
-          </div>
-          <div class="note muted" style="margin-top:6px">Editing persona won’t clear your list.</div>
-        </div>
-
-        <div class="head"><div class="row"><div class="pill"><span class="badge">Downloads</span> CSV</div></div></div>
-        <div class="body row">
-          <button id="dlHot" class="secondary">Download CSV (hot)</button>
-          <button id="dlWarm" class="secondary">Download CSV (warm)</button>
-        </div>
+      <label for="apikey">API key (optional for read; required for write)</label>
+      <div class="row">
+        <input id="apikey" type="text" class="mono" placeholder="paste key…" />
+        <button id="saveKey" class="secondary">Save</button>
       </div>
+
+      <div class="row toolbar">
+        <button id="refreshHot" class="secondary">Refresh Hot</button>
+        <button id="refreshWarm" class="secondary">Refresh Warm</button>
+        <span class="muted">API root: <span class="mono" id="apiRoot">/api/v1</span></span>
+      </div>
+
+      <hr style="border:0;border-top:1px solid #1f2a44;margin:12px 0" />
+
+      <div class="card" style="background:#0f162c">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div class="muted">Action</div>
+          <div class="chip">Find buyers (one per click)</div>
+        </div>
+
+        <label for="supplierHost">Supplier host</label>
+        <input id="supplierHost" type="text" placeholder="e.g. peekpackaging.com" />
+
+        <div class="row">
+          <select id="country">
+            <option value="US/CA">US/CA</option>
+            <option value="US">US</option>
+            <option value="CA">CA</option>
+            <option value="EU">EU</option>
+          </select>
+          <select id="radiusMi">
+            <option value="25">25 mi</option>
+            <option value="50" selected>50 mi</option>
+            <option value="100">100 mi</option>
+            <option value="250">250 mi</option>
+          </select>
+          <button id="find">Find buyers</button>
+        </div>
+
+        <div id="findMsg" class="status"></div>
+      </div>
+
+      <label>Supplier persona <span class="muted">(used to infer intent)</span></label>
+      <input id="p_offer" type="text" placeholder="Product/offer (e.g. Stretch film & pallet protection)" />
+      <input id="p_solves" type="text" placeholder="Solves (e.g. Keeps pallets secure for storage/transport)" />
+      <input id="p_titles" type="text" placeholder="Buyer titles (comma-separated), e.g. Warehouse Manager, Purchasing" />
+      <div class="row">
+        <button id="personaSave" class="secondary">Save persona (local)</button>
+      </div>
+
+      <div class="row toolbar">
+        <button id="csvHot"  class="secondary">Download CSV (hot)</button>
+        <button id="csvWarm" class="secondary">Download CSV (warm)</button>
+      </div>
+
+      <div id="status" class="status muted"></div>
     </div>
 
-    <div id="toast" class="notice" style="margin-top:16px;display:none"></div>
-  </div>
-
-  <!-- modal -->
-  <div id="modalMask" class="modalMask">
-    <div class="modal">
-      <div class="head">
-        <div class="row">
-          <div class="pill"><span class="badge">Lead</span> Preview</div>
-        </div>
-        <div class="close" id="modalClose">✕</div>
-      </div>
-      <div class="body" id="modalBody"></div>
+    <!-- RIGHT: list -->
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Host</th>
+            <th>Platform</th>
+            <th>Title</th>
+            <th>Created</th>
+            <th>Temp</th>
+            <th>Why (human-readable)</th>
+          </tr>
+        </thead>
+        <tbody id="listBody"></tbody>
+      </table>
     </div>
   </div>
 
   <script>
-    const $  = s => document.querySelector(s);
+  // ---- tiny state
+  const S = { base:'', apiKey:'', items:[], persona:null, root:'/api/v1' };
 
-    // --- state
-    const S = {
-      baseUrl: localStorage.getItem('baseUrl') || '',
-      apiKey:  localStorage.getItem('apiKey')  || '',
-      persona: JSON.parse(localStorage.getItem('persona')||'{"offer":"","solves":"","titles":""}'),
-      items:   JSON.parse(localStorage.getItem('items')||'[]'),
-      apiPrefix: localStorage.getItem('apiPrefix') || 'auto'  // 'auto' | '/api/v1' | ''
+  // ---- helpers
+  const $ = (id) => document.getElementById(id);
+
+  function toast(msg, ok=false) {
+    const el = $('#status'); if (!el) return console[ok?'log':'warn'](msg);
+    el.textContent = msg; el.classList.remove('ok','err'); el.classList.add(ok?'ok':'err');
+    if (ok) console.log(msg); else console.warn(msg);
+  }
+
+  function setFindMsg(msg, ok=false) {
+    const el = $('#findMsg'); if (!el) return;
+    el.textContent = msg; el.classList.remove('ok','err'); if (msg) el.classList.add(ok?'ok':'err');
+  }
+
+  function setBase(v) {
+    S.base = (v||'').trim().replace(/\/+$/,'');
+    $('#apiRoot').textContent = S.root;
+  }
+
+  // Robust fetch with JSON-or-text parsing
+  async function call(method, path, body=null, query=null) {
+    const base = S.base || '';
+    if (!base) return { ok:false, status:0, data:{ ok:false, error:'no base set' } };
+
+    const url = new URL(base + (path.startsWith('/') ? path : ('/'+path)));
+    if (query) Object.entries(query).forEach(([k,v]) => v!=null && v!=='' && url.searchParams.set(k,String(v)));
+
+    const headers = { 'Accept':'application/json' };
+    if (body!=null) headers['Content-Type'] = 'application/json';
+    if (S.apiKey) headers['x-api-key'] = S.apiKey;
+
+    let res;
+    try {
+      res = await fetch(url.toString(), { method, headers, body: body!=null ? JSON.stringify(body) : undefined });
+    } catch (e) {
+      return { ok:false, status:0, data:{ ok:false, error:String(e) } };
+    }
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+    return { ok: res.ok, status: res.status, data };
+  }
+
+  // ---- CSV utils
+  function toCSV(items){
+    const cols = ['host','platform','title','created','temp','why'];
+    const head = cols.join(',');
+    const esc = v => {
+      const s = String(v ?? '').replace(/"/g,'""').replace(/\r?\n/g,' ');
+      return /[",]/.test(s) ? `"${s}"` : s;
     };
+    const rows = (items||[]).map(it => cols.map(c => esc(it[c])).join(','));
+    return [head, ...rows].join('\r\n');
+  }
+  function download(name, text){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type:'text/csv;charset=utf-8;' }));
+    a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 0);
+  }
 
-    // --- bindings
-    const UI = {
-      baseUrl: $('#baseUrl'), apiKey: $('#apiKey'), apply: $('#apply'), saveKey: $('#saveKey'),
-      supplier: $('#supplier'), region: $('#region'), radius: $('#radius'), find: $('#find'),
-      findMsg: $('#findMsg'), leadRows: $('#leadRows'), apiPath: $('#apiPath'),
-      p_offer: $('#p_offer'), p_solves: $('#p_solves'), p_titles: $('#p_titles'), personaSave: $('#personaSave'),
-      refreshHot: $('#refreshHot'), refreshWarm: $('#refreshWarm'), dlHot: $('#dlHot'), dlWarm: $('#dlWarm'),
-      toast: $('#toast'), modalMask: $('#modalMask'), modalBody: $('#modalBody'), modalClose: $('#modalClose')
+  // ---- rendering
+  function renderList() {
+    const tbody = $('#listBody'); if (!tbody) return;
+    tbody.innerHTML = '';
+    (S.items||[]).forEach((it, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${it.host ?? ''}</td>
+        <td>${it.platform ?? ''}</td>
+        <td>${it.title ?? ''}</td>
+        <td>${it.created ?? ''}</td>
+        <td>${it.temp ?? ''}</td>
+        <td>${it.why ?? ''}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ---- actions
+  async function findOne(){
+    setFindMsg('');
+    const host    = ($('#supplierHost')?.value || '').trim();
+    const country = ($('#country')?.value || '').trim();
+    const radius  = ($('#radiusMi')?.value || '').trim();
+
+    if (!host) return setFindMsg('Enter supplier host');
+    if (!S.base) return setFindMsg('Set API base then Apply');
+
+    $('#find').disabled = true;
+    const r = await call('GET', `${S.root}/leads/find-buyers`, null, { host, country, radius });
+    $('#find').disabled = false;
+
+    if (!r.ok) return setFindMsg(`HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}`);
+
+    const items = (r.data && r.data.items) || [];
+    const seen = new Set((S.items||[]).map(x => `${x.host}::${x.title}`));
+    items.forEach(it => {
+      const item = normalizeItem(it);
+      const key = `${item.host}::${item.title}`;
+      if (!seen.has(key)) { seen.add(key); S.items.unshift(item); }
+    });
+    renderList();
+    setFindMsg(`Found ${items.length} candidate(s).`, true);
+  }
+
+  async function refreshHot(){
+    toast('Loading hot…');
+    const r = await call('GET', `${S.root}/leads`, null, { temp:'hot' });
+    if (!r.ok) return toast(`Failed (hot) HTTP ${r.status} — ${fmtErr(r.data)}`);
+    S.items = ((r.data && r.data.items) || []).map(normalizeItem);
+    renderList(); toast(`Loaded ${S.items.length} hot`, true);
+  }
+
+  async function refreshWarm(){
+    toast('Loading warm…');
+    const r = await call('GET', `${S.root}/leads`, null, { temp:'warm' });
+    if (!r.ok) return toast(`Failed (warm) HTTP ${r.status} — ${fmtErr(r.data)}`);
+    S.items = ((r.data && r.data.items) || []).map(normalizeItem);
+    renderList(); toast(`Loaded ${S.items.length} warm`, true);
+  }
+
+  function normalizeItem(raw){
+    // Accept slightly different shapes from backend and map to UI columns.
+    if (!raw || typeof raw !== 'object') return {};
+    return {
+      host: raw.host || raw.source || raw.domain || '',
+      platform: raw.platform || raw.type || '',
+      title: raw.title || raw.name || '',
+      created: raw.created || raw.createdAt || raw.ts || '',
+      temp: raw.temp || raw.temperature || '',
+      why: raw.why || raw.whyText || raw.reason || ''
     };
+  }
 
-    UI.baseUrl.value = S.baseUrl; UI.apiKey.value = S.apiKey;
-    UI.p_offer.value  = S.persona.offer || '';
-    UI.p_solves.value = S.persona.solves || '';
-    UI.p_titles.value = S.persona.titles || '';
-    UI.apiPath.textContent = S.apiPrefix === 'auto' ? 'auto' : (S.apiPrefix || '(none)');
+  const fmtErr = (d)=> typeof d==='string' ? d : JSON.stringify(d||{});
 
-    function toast(msg, ok=false, err=false){
-      UI.toast.textContent = msg;
-      UI.toast.className = 'notice ' + (ok?'success':(err?'error':''));
-      UI.toast.style.display = 'block';
-      setTimeout(()=>UI.toast.style.display='none', 2500);
-    }
-    function base(){ return (S.baseUrl || '').replace(/\/+$/,''); }
-
-    // --- universal API caller with automatic /api/v1 fallback
-    async function call(method, logicalPath, body){
-      const ensure = s => s.startsWith('/') ? s : '/'+s;
-      const tryPrefixes = S.apiPrefix==='auto' ? ['/api/v1',''] : [S.apiPrefix];
-
-      let last = null;
-      for (const pref of tryPrefixes){
-        const url = base() + ensure(pref) + ensure(logicalPath);
-        const headers = {'Content-Type':'application/json'};
-        if (S.apiKey) headers['x-api-key'] = S.apiKey;
-        const res  = await fetch(url, {method, headers, body: body?JSON.stringify(body):undefined});
-        const text = await res.text();
-        let data = null; try{ data = JSON.parse(text) }catch{ data = text }
-        last = { ok:res.ok, status:res.status, data, headers:res.headers, url };
-        // if not 404, we consider this the correct prefix
-        if (res.status !== 404){
-          if (S.apiPrefix==='auto'){
-            S.apiPrefix = pref;
-            localStorage.setItem('apiPrefix', S.apiPrefix);
-            UI.apiPath.textContent = S.apiPrefix || '(none)';
-          }
-          return last;
-        }
+  // ---- init & bindings
+  function bind(){
+    // restore saved stuff
+    const savedBase = localStorage.getItem('base');
+    const savedKey  = localStorage.getItem('apiKey');
+    const savedPersona = localStorage.getItem('persona');
+    if (savedBase) { $('#base').value = savedBase; setBase(savedBase); }
+    if (savedKey)  { $('#apikey').value = savedKey; S.apiKey = savedKey; }
+    if (savedPersona) {
+      try { S.persona = JSON.parse(savedPersona); } catch {}
+      if (S.persona) {
+        $('#p_offer').value  = S.persona.offer  || '';
+        $('#p_solves').value = S.persona.solves || '';
+        $('#p_titles').value = S.persona.titles || '';
       }
-      // still 404 across prefixes
-      return last;
     }
 
-    // --- list rendering
-    function nlWhy(why){
-      const chips = [];
-      if (!why) return chips;
-      if (why.signal){
-        const v = why.signal; chips.push(`<span class="pill">${v.label||'Signal'} <span class="badge">${v.score??''}</span> <span class="muted">${v.detail||''}</span></span>`);
-      }
-      if (why.context){
-        const v = why.context; chips.push(`<span class="pill">${v.label||'Context'} <span class="muted">${v.detail||''}</span></span>`);
-      }
-      return chips;
-    }
-    function renderList(){
-      UI.leadRows.innerHTML = '';
-      (S.items||[]).forEach((it,i)=>{
-        const host = (it.host||'').replace(/^https?:\/\//,'');
-        const href = host ? `https://${host}` : '#';
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="mono">${i+1}</td>
-          <td><a class="link mono" href="${href}" target="_blank">${host}</a></td>
-          <td>${it.platform||'unknown'}</td>
-          <td class="mono">${it.title||''}</td>
-          <td>${new Date(it.created).toLocaleString()||''}</td>
-          <td><span class="temp ${it.temperature||'warm'}">${it.temperature||'warm'}</span></td>
-          <td><div class="why">${nlWhy(it.why).join('')}</div><div class="muted">${it.whyText||''}</div></td>
-        `;
-        tr.onclick = ()=>openModal(it);
-        UI.leadRows.appendChild(tr);
-      });
-      localStorage.setItem('items', JSON.stringify(S.items||[]));
-    }
-
-    // --- modal & actions
-    function fomoFloor(host, apiCount){ if (apiCount>0) return apiCount; let h=0; for (let i=0;i<host.length;i++) h=(h*31 + host.charCodeAt(i))>>>0; const hour=new Date().getHours(); const base=(hour>=22||hour<=6)?1:2; return base + (h % 3); }
-
-    async function openModal(it){
-      let watchers = 0, competitors = 0;
-      try{
-        const r = await call('GET', `metrics/watchers?host=${encodeURIComponent(it.host)}`);
-        if (r.ok){
-          watchers = Number(r.data?.counts?.watchers||0);
-          competitors = Number(r.data?.counts?.competitors||0);
-        }
-      }catch{}
-      const fomo = fomoFloor(it.host, watchers+competitors);
-
-      UI.modalBody.innerHTML = `
-        <div class="row" style="justify-content:space-between">
-          <div class="pill"><span class="badge">Host</span> <a class="link mono" href="https://${it.host}" target="_blank">${it.host}</a></div>
-          <div class="pill"><span class="badge">Temp</span> <span class="temp ${it.temperature}">${it.temperature}</span></div>
-        </div>
-        <div style="margin-top:10px">
-          <div class="pill"><span class="badge">Why</span> Human-readable evidence</div>
-          <div class="why" style="margin-top:8px">${nlWhy(it.why).join('')}</div>
-          ${it.whyText ? `<div class="notice" style="margin-top:8px">${it.whyText}</div>`:''}
-        </div>
-        <div style="margin-top:12px" class="row">
-          <button id="btnLock">Save & Lock</button>
-          <span class="tip"><i data-tip="Locks this lead to you in the free panel and improves your future ranking. Others can still see it on free plan.">!</i></span>
-          <button id="btnDeepen" class="secondary">Deepen results</button>
-          <span class="tip"><i data-tip="Runs extra checks (news/RSS/keywords) and enriches the Why. Pro plan unlocks deeper signals.">!</i></span>
-          <div class="fill"></div>
-          <div class="muted">Others viewing now: <b>${fomo}</b></div>
-        </div>
-        <div class="row" style="margin-top:10px">
-          <button id="btnAnother" class="warn">Find another</button>
-        </div>
-      `;
-      $('#btnLock').onclick = async ()=>{
-        const r = await call('POST','metrics/claim',{ host: it.host, title: it.title, platform: it.platform, why: it.why, temperature: it.temperature });
-        toast(r.ok ? 'Saved & locked to you' : `Failed to lock (HTTP ${r.status})`, r.ok, !r.ok);
+    // buttons
+    $('#apply').onclick = () => {
+      const v = $('#base').value;
+      setBase(v);
+      localStorage.setItem('base', S.base || '');
+      toast(S.base ? `Base set: ${S.base}` : 'Base cleared', !!S.base);
+    };
+    $('#saveKey').onclick = () => {
+      S.apiKey = ($('#apikey').value || '').trim();
+      if (S.apiKey) localStorage.setItem('apiKey', S.apiKey);
+      else localStorage.removeItem('apiKey');
+      toast(S.apiKey ? 'API key saved' : 'API key cleared', !!S.apiKey);
+    };
+    $('#find').onclick = (e)=>{ e.preventDefault(); findOne(); };
+    $('#refreshHot').onclick = (e)=>{ e.preventDefault(); refreshHot(); };
+    $('#refreshWarm').onclick = (e)=>{ e.preventDefault(); refreshWarm(); };
+    $('#personaSave').onclick = ()=>{
+      const persona = {
+        offer:  $('#p_offer').value || '',
+        solves: $('#p_solves').value || '',
+        titles: $('#p_titles').value || ''
       };
-      $('#btnDeepen').onclick = async ()=>{
-        const r = await call('GET', `metrics/deepen?host=${encodeURIComponent(it.host)}`);
-        toast(r.ok ? 'Enriched (if data available)' : `No extra data yet (HTTP ${r.status})`, r.ok, !r.ok);
-      };
-      $('#btnAnother').onclick = async ()=>{ UI.modalMask.style.display='none'; await findOne(); };
-
-      UI.modalMask.style.display = 'flex';
-    }
-    UI.modalClose.onclick = ()=> UI.modalMask.style.display='none';
-    UI.modalMask.onclick = (e)=>{ if (e.target===UI.modalMask) UI.modalMask.style.display='none'; };
-
-    // --- find one lead (auto prefix)
-    async function findOne(){
-      const supplier = UI.supplier.value.trim().toLowerCase();
-      if (!supplier){ toast('Enter a supplier domain', false, true); return; }
-      const body = {
-        supplier,
-        region: UI.region.value,
-        radiusMi: Number(UI.radius.value||'50')||50,
-        persona: {
-          offer: UI.p_offer.value.trim(),
-          solves: UI.p_solves.value.trim(),
-          titles: UI.p_titles.value.trim()
-        }
-      };
-      UI.find.disabled = true;
-      UI.findMsg.textContent = 'Finding buyers…';
-
-      const r = await call('POST','leads/find-buyers', body);
-      UI.find.disabled = false;
-
-      if (r.status === 401){ UI.findMsg.innerHTML = `<div class="notice error mono">401 — API key required</div>`; return; }
-      if (r.status === 429){ UI.findMsg.innerHTML = `<div class="notice error mono">Too many tries — wait ~10s</div>`; return; }
-      if (!r.ok){ UI.findMsg.innerHTML = `<div class="notice error mono">HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}<div class="muted" style="margin-top:4px">${r.url}</div></div>`; return; }
-
-      const all = Array.isArray(r.data?.candidates) ? r.data.candidates : [];
-      if (!all.length){ UI.findMsg.innerHTML = `<div class="notice mono">No candidates found. Try widening radius or switching region.</div>`; return; }
-
-      const already = new Set((S.items||[]).map(x=>x.host));
-      const first = all.find(c=>!already.has(c.host)) || all[0];
-
-      const item = {
-        host: first.host || first.domain || '',
-        platform: first.source || 'news',
-        title: first.title || first.reason || '',
-        created: new Date().toISOString(),
-        temperature: first.temperature || (typeof first.score==='number' && first.score>=0.65 ? 'hot':'warm'),
-        why: first.why || {
-          signal: { label: first.score>=0.65 ? 'Opening/launch signal' : 'Expansion signal', score: Number((first.score||0).toFixed?first.score.toFixed(2):first.score||0), detail: first.title||'' },
-          context: { label: (first.source||'').startsWith('rss') ? 'News (RSS)' : 'News (Google)', detail: first.source||'' }
-        },
-        whyText: first.whyText || first.title || ''
-      };
-
-      S.items = S.items || [];
-      S.items.push(item);
-      localStorage.setItem('items', JSON.stringify(S.items));
-      renderList();
-      UI.findMsg.innerHTML = `<div class="notice success mono">1 candidate ready — preview opened.</div>`;
-      openModal(item);
-    }
-
-     // --- CSV utils
-    function toCSV(items) {
-      const cols = ['host','platform','title','created','temp','why'];
-      const head = cols.join(',');
-      const esc = (v) => {
-        const s = String(v ?? '')
-          .replace(/"/g, '""')
-          .replace(/\r?\n/g, ' ');
-        // wrap with quotes if it contains comma or quote
-        return /[",]/.test(s) ? `"${s}"` : s;
-      };
-      const rows = (items || []).map(it => cols.map(c => esc(it[c])).join(','));
-      return [head, ...rows].join('\r\n');
-    }
-
-    function download(name, text) {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8;' }));
-      a.download = name;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 0);
-    }
-
-    // --- helpers (safe selectors + minimal fetch wrapper)
-    const $ = (id) => document.getElementById(id);
-    const S = window.S || (window.S = {});
-    S.items = S.items || [];
-
-    // if the page above didn't define "call", make a tiny fallback so clicks still work
-    if (typeof window.call !== 'function') {
-      window.call = async function(method, path, body) {
-        const base = (S.base || '').replace(/\/+$/, '');
-        const url  = `${base}${path.startsWith('/') ? '' : '/'}${path}`;
-        const headers = { 'Content-Type': 'application/json' };
-        if (S.apiKey) headers['x-api-key'] = S.apiKey;
-        const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
-        let data = null; try { data = await res.json(); } catch { /* not json */ }
-        return { ok: res.ok, status: res.status, data };
-      };
-    }
-
-    function toast(msg, good=false) {
-      console[good ? 'log' : 'warn'](msg);
-      // (optional: you can also show a small inline banner element if the page has one)
-    }
-
-    // --- actions
-    async function findOne() {
-      // expects inputs with ids: supplierHost, country, radiusMi
-      const host = ($('#supplierHost')?.value || '').trim();
-      const country = ($('#country')?.value || '').trim();
-      const radius = ($('#radiusMi')?.value || '').trim();
-
-      if (!S.base)  return toast('Set the API base then click Apply.');
-      if (!S.apiKey) return toast('Paste API key and click Save.');
-
-      // backend route this UI calls:
-      // GET /api/v1/leads/find-buyers?host=...&country=...&radius=...
-      const q = new URLSearchParams({ host, country, radius });
-      const r = await call('GET', `/api/v1/leads/find-buyers?${q}`);
-
-      if (!r.ok) return toast(`HTTP ${r.status} — ${JSON.stringify(r.data || {})}`);
-
-      // expect r.data = { items: [...] }
-      const items = (r.data && r.data.items) || [];
-      // keep newest on top; de-dupe by host/title combo
-      const seen = new Set(S.items.map(x => `${x.host}::${x.title}`));
-      items.forEach(it => {
-        const key = `${it.host}::${it.title}`;
-        if (!seen.has(key)) { seen.add(key); S.items.unshift(it); }
-      });
-      renderList();
-      toast(`Found ${items.length} candidate(s).`, true);
-    }
-
-    async function refreshHot() {
-      if (!S.base) return toast('Set the API base then click Apply.');
-      const r = await call('GET', `/api/v1/leads?temp=hot`);
-      if (!r.ok) return toast(`Failed to load hot leads: HTTP ${r.status}`);
-      S.items = (r.data?.items) || [];
-      renderList();
-      toast(`Loaded ${S.items.length} hot leads`, true);
-    }
-
-    async function refreshWarm() {
-      if (!S.base) return toast('Set the API base then click Apply.');
-      const r = await call('GET', `/api/v1/leads?temp=warm`);
-      if (!r.ok) return toast(`Failed to load warm leads: HTTP ${r.status}`);
-      S.items = (r.data?.items) || [];
-      renderList();
-      toast(`Loaded ${S.items.length} warm leads`, true);
-    }
-
-    function savePersona() {
-      const p_offer   = $('#p_offer')?.value || '';
-      const p_solves  = $('#p_solves')?.value || '';
-      const p_titles  = $('#p_titles')?.value || '';
-      const persona = { offer: p_offer, solves: p_solves, titles: p_titles };
       localStorage.setItem('persona', JSON.stringify(persona));
       S.persona = persona;
       toast('Persona saved locally', true);
-    }
+    };
+    $('#csvHot').onclick  = ()=> download('hot.csv',  toCSV(S.items||[]));
+    $('#csvWarm').onclick = ()=> download('warm.csv', toCSV((S.items||[]).filter(x => (x.temp||'').toLowerCase()==='warm')));
 
-    // --- renderer (very lightweight)
-    function renderList() {
-      const tbody = document.querySelector('#listBody');
-      if (!tbody) return;
-      tbody.innerHTML = '';
-      (S.items || []).forEach((it, i) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${i+1}</td>
-          <td>${it.host || ''}</td>
-          <td>${it.platform || ''}</td>
-          <td>${it.title || ''}</td>
-          <td>${it.created || ''}</td>
-          <td>${it.temp || ''}</td>
-          <td>${it.why || ''}</td>`;
-        tbody.appendChild(tr);
-      });
-    }
+    // If URL has ?base=&key=, populate once
+    try {
+      const u = new URL(location.href);
+      const b = u.searchParams.get('base'); const k = u.searchParams.get('key');
+      if (b) { $('#base').value = b; setBase(b); localStorage.setItem('base', S.base); }
+      if (k) { $('#apikey').value = k; S.apiKey = k; localStorage.setItem('apiKey', k); }
+    } catch {}
 
-    // --- bind events safely after DOM ready
-    function bind() {
-      // inputs the page already has
-      S.baseUI  = $('#base');     // text input with API base URL
-      S.apiKeyUI= $('#apikey');   // text input with API key
+    renderList();
+  }
 
-      const UI = {
-        apply:       $('#apply'),
-        saveKey:     $('#saveKey'),
-        find:        $('#find'),
-        refreshHot:  $('#refreshHot'),
-        refreshWarm: $('#refreshWarm'),
-        personaSave: $('#personaSave'),
-        csvHot:      $('#csvHot'),
-        csvWarm:     $('#csvWarm')
-      };
-
-      // log missing ids so you can see instantly why clicks wouldn’t work
-      Object.entries(UI).forEach(([k, el]) => { if (!el) console.warn(`Missing element #${k}`); });
-
-      UI.apply?.addEventListener('click', () => {
-        S.base = (S.baseUI?.value || '').trim().replace(/\/+$/,'');
-        toast(`Base set to ${S.base || '(empty)'}`, !!S.base);
-      });
-
-      UI.saveKey?.addEventListener('click', () => {
-        S.apiKey = (S.apiKeyUI?.value || '').trim();
-        if (S.apiKey) localStorage.setItem('apiKey', S.apiKey);
-        toast(S.apiKey ? 'API key saved' : 'Empty API key', !!S.apiKey);
-      });
-
-      UI.find?.addEventListener('click', (e)=>{ e.preventDefault(); findOne(); });
-      UI.refreshHot?.addEventListener('click', (e)=>{ e.preventDefault(); refreshHot(); });
-      UI.refreshWarm?.addEventListener('click', (e)=>{ e.preventDefault(); refreshWarm(); });
-      UI.personaSave?.addEventListener('click', (e)=>{ e.preventDefault(); savePersona(); });
-
-      UI.csvHot?.addEventListener('click', () => download('hot.csv',  toCSV(S.items || [])));
-      UI.csvWarm?.addEventListener('click', () => download('warm.csv', toCSV((S.items || []).filter(x => x.temp === 'warm'))));
-
-      // restore saved values for convenience
-      const savedKey = localStorage.getItem('apiKey');
-      if (savedKey && S.apiKeyUI) S.apiKeyUI.value = savedKey, S.apiKey = savedKey;
-
-      try { renderList(); } catch (e) { console.warn('renderList error', e); }
-    }
-
-    document.addEventListener('DOMContentLoaded', bind);
+  document.addEventListener('DOMContentLoaded', bind);
   </script>
 </body>
 </html>
