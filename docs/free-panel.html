@@ -1,316 +1,340 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Leads Console — Free Panel (V3)</title>
-  <style>
-    :root{--bg:#0f172a;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#60a5fa;--ok:#10b981;--err:#ef4444}
-    *{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-    body{margin:0;background:var(--bg);color:var(--text)}
-    .wrap{max-width:1100px;margin:24px auto;padding:0 16px;display:flex;gap:18px}
-    .col{flex:1 1 50%;background:var(--panel);border:1px solid #1f2937;border-radius:10px;padding:16px}
-    h1{font-size:18px;margin:0 0 12px}
-    label{font-size:12px;color:var(--muted);display:block;margin:12px 0 6px}
-    input,select{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #374151;background:#0b1220;color:var(--text)}
-    .row{display:flex;gap:10px;align-items:center}
-    .row>*{flex:1}
-    button{padding:10px 14px;border:0;border-radius:8px;background:#1f2937;color:var(--text);cursor:pointer}
-    button.primary{background:var(--accent);color:#081018;font-weight:600}
-    button:disabled{opacity:.55;cursor:not-allowed}
-    .pill{padding:6px 10px;border:1px solid #1f2937;background:#0b1220;border-radius:999px;font-size:12px;color:#cbd5e1}
-    .tiny{font-size:11px;color:#9ca3af}
-    .msg{margin-top:10px;font-size:12px;padding:8px 10px;border-radius:8px;border:1px solid #263244}
-    .msg.ok{border-color:#064e3b;color:#a7f3d0}.msg.err{border-color:#3f1d1d;color:#fecaca}
-    table{width:100%;border-collapse:collapse;margin-top:12px}
-    th,td{border-bottom:1px solid #1f2937;text-align:left;padding:10px 8px;font-size:13px;vertical-align:top}
-    th{color:#cbd5e1;font-weight:600;background:#0b1322;position:sticky;top:0}
-    #debug{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:#0b1220;border:1px solid #1f2937;border-radius:8px;padding:8px;max-height:180px;overflow:auto;margin-top:8px;font-size:12px;color:#cbd5e1}
-    .toolbar{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
-  </style>
+<meta charset="utf-8" />
+<title>Leads Console — Free Panel (V3)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+:root{
+  --bg:#0f172a; --panel:#111827; --muted:#94a3b8;
+  --text:#e5e7eb; --accent:#3b82f6; --ok:#22c55e; --bad:#ef4444;
+  --chip:#1f2937; --chip-b:#334155;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.35 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto}
+.wrap{max-width:1440px;margin:0 auto;padding:18px;
+  display:grid;grid-template-columns:420px 1fr;gap:18px}
+.card{background:var(--panel);border:1px solid #1f2937;border-radius:12px;padding:14px}
+h2{margin:0 0 10px}
+label{display:block;margin:10px 0 6px;color:var(--muted);font-size:12px}
+input,select,button,textarea{
+  width:100%;background:#0b1220;color:var(--text);
+  border:1px solid #1f2937;border-radius:8px;padding:10px 12px;outline:none
+}
+button{cursor:pointer}
+.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.row{display:flex;gap:8px;align-items:center}
+.cols2{display:grid;grid-template-columns:1fr 140px;gap:8px}
+.cols3{display:grid;grid-template-columns:1fr 120px 120px;gap:8px}
+.small{font-size:12px}.muted{color:var(--muted)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--chip);
+  border:1px solid var(--chip-b);padding:6px 10px;border-radius:999px;font-size:12px}
+.msg{white-space:pre-wrap;background:#0b1220;border:1px solid #1f2937;border-radius:8px;
+  padding:10px;max-height:180px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
+.grid{overflow:auto;max-height:68vh}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid #1f2937;vertical-align:top}
+th{text-align:left;color:var(--muted);font-weight:600}
+thead th{position:sticky;top:0;background:var(--panel)}
+.right{display:flex;gap:8px;justify-content:flex-end}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <!-- Controls -->
-    <div class="col">
-      <h1>Leads Console — Free Panel (V3)</h1>
+<div class="wrap">
+  <!-- Controls -->
+  <div class="card">
+    <h2>Leads Console — Free Panel (V3)</h2>
 
-      <label>API base</label>
-      <div class="row">
-        <input id="apiBase" placeholder="https://your-app.code.run"/>
-        <button id="apply" class="primary">Apply</button>
-      </div>
-
-      <label>API key (optional for read; required for write)</label>
-      <div class="row">
-        <input id="apiKey" placeholder="x-api-key value (optional)"/>
-        <button id="saveKey">Save</button>
-      </div>
-
-      <div class="toolbar">
-        <button id="refreshHot">Refresh Hot</button>
-        <button id="refreshWarm">Refresh Warm</button>
-        <span class="pill">API root: <code>/api/v1</code></span>
-      </div>
-
-      <div id="status" class="msg" style="display:none"></div>
-
-      <hr style="border:0;border-top:1px solid #1f2937;margin:14px 0"/>
-
-      <label>Action</label>
-      <div class="pill">Find buyers (one per click)</div>
-
-      <label>Supplier host</label>
-      <input id="supplierHost" placeholder="e.g. peekpackaging.com"/>
-
-      <div class="row">
-        <select id="country">
-          <option value="US/CA">US/CA</option>
-          <option value="US">US</option>
-          <option value="CA">CA</option>
-          <option value="">Any</option>
-        </select>
-        <select id="radiusMi">
-          <option value="25">25 mi</option>
-          <option value="50" selected>50 mi</option>
-          <option value="100">100 mi</option>
-          <option value="200">200 mi</option>
-        </select>
-      </div>
-
-      <label>Find Buyers path (relative to API root)</label>
-      <div class="row">
-        <input id="findPath" value="/leads/find-buyers" />
-        <select id="findVerb" style="max-width:140px">
-          <option value="AUTO" selected>AUTO</option>
-          <option value="GET">GET</option>
-          <option value="POST">POST</option>
-        </select>
-        <button id="find" class="primary">Find buyers</button>
-      </div>
-      <div class="row" style="margin-top:6px">
-        <label style="display:flex;align-items:center;gap:8px">
-          <input id="useFallbacks" type="checkbox" checked style="width:auto"/> Try fallbacks if 404
-        </label>
-      </div>
-
-      <div id="findMsg" class="msg" style="display:none"></div>
-      <div id="debug" hidden></div>
-
-      <label style="margin-top:14px">Supplier persona (used to infer intent)</label>
-      <input id="p_offer"  placeholder="Product/offer (e.g. Stretch film & pallet protection)"/>
-      <input id="p_solves" placeholder="Solves (e.g. Keeps pallets secure for storage/transport)"/>
-      <input id="p_titles" placeholder="Buyer titles (comma-separated), e.g. Warehouse Manager, Purchasing"/>
-      <div class="row">
-        <button id="personaSave">Save persona (local)</button>
-        <button id="dlHot">Download CSV (hot)</button>
-        <button id="dlWarm">Download CSV (warm)</button>
-      </div>
-      <p class="tiny">Editing persona won’t clear your list.</p>
+    <label>API base</label>
+    <div class="row">
+      <input id="base" placeholder="https://p01-…code.run" />
+      <button id="apply" class="primary" style="width:120px">Apply</button>
     </div>
 
-    <!-- Results -->
-    <div class="col">
-      <div class="toolbar" style="justify-content:space-between">
-        <span class="pill">Results</span>
-        <span class="tiny" id="resultCount">0 items</span>
-      </div>
-      <div id="tableWrap" style="max-height:60vh;overflow:auto;margin-top:8px">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th><th>Host</th><th>Platform</th><th>Title</th>
-              <th>Created</th><th>Temp</th><th>Why (human-readable)</th>
-            </tr>
-          </thead>
-          <tbody id="listBody"></tbody>
-        </table>
-      </div>
+    <label>API root (prefix added to paths)</label>
+    <div class="row">
+      <input id="root" value="/api/v1" />
+      <button id="health" style="width:120px">Health</button>
     </div>
+
+    <label>API key (optional for read; required for write)</label>
+    <div class="row">
+      <input id="apiKey" placeholder="x-api-key / bearer…" />
+      <button id="saveKey" style="width:120px">Save</button>
+    </div>
+
+    <div class="row">
+      <button id="refreshHot" style="width:120px">Refresh Hot</button>
+      <button id="refreshWarm" style="width:120px">Refresh Warm</button>
+      <div class="chip">Root used: <code id="rootLbl" class="muted">/api/v1</code></div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #1f2937;margin:12px 0" />
+
+    <label>Action</label>
+    <div class="chip">Find buyers (one per click)</div>
+
+    <label style="margin-top:10px">Supplier host</label>
+    <input id="host" placeholder="peekpackaging.com" />
+
+    <label style="margin-top:8px">Region / Radius</label>
+    <div class="cols3">
+      <select id="region">
+        <option value="US/CA">US/CA</option>
+        <option value="US">US</option><option value="CA">CA</option>
+        <option value="EU">EU</option><option value="ALL">ALL</option>
+      </select>
+      <select id="radius">
+        <option value="25">25 mi</option><option value="50" selected>50 mi</option>
+        <option value="100">100 mi</option><option value="250">250 mi</option>
+      </select>
+      <button id="find" class="primary">Find buyers</button>
+    </div>
+
+    <label style="margin-top:12px">Find Buyers path (relative to API root)</label>
+    <div class="cols3">
+      <input id="path" value="/leads/find-buyers" />
+      <select id="method"><option>GET</option><option selected>POST</option></select>
+      <label class="chip" style="justify-content:center">
+        <input id="tryFallbacks" type="checkbox" checked style="margin-right:6px" />
+        Try fallbacks
+      </label>
+    </div>
+
+    <div id="msg" class="msg" style="margin-top:10px;min-height:64px">Ready.</div>
+
+    <label style="margin-top:12px">Supplier persona (used to infer intent)</label>
+    <input id="p_offer" placeholder="Product/offer" />
+    <input id="p_solves" placeholder="Solves (benefit)" />
+    <input id="p_titles" placeholder="Buyer titles (comma-separated)" />
+
+    <div class="right" style="margin-top:8px">
+      <button id="savePersona">Save persona (local)</button>
+    </div>
+
+    <div class="right" style="margin-top:8px">
+      <button id="dlHot">Download CSV (hot)</button>
+      <button id="dlWarm">Download CSV (warm)</button>
+    </div>
+
+    <div class="small muted" style="margin-top:6px">Editing persona won’t clear your list.</div>
   </div>
 
-  <script>
-  (function(){
-    const $ = id => document.getElementById(id);
-    const show = (el, on=true)=>{ el.style.display = on ? '' : 'none'; };
-    const toast = (msg, ok=false)=>{ const el=$('status'); el.classList.remove('ok','err'); el.classList.add(ok?'ok':'err'); el.textContent=msg; show(el,true); };
-    const setFindMsg = (msg, ok=false)=>{ const el=$('findMsg'); el.classList.remove('ok','err'); el.classList.add(ok?'ok':'err'); el.textContent=msg; show(el, !!msg); };
-    const log = (s)=>{ const d=$('debug'); d.hidden=false; d.textContent += s + "\n"; d.scrollTop = d.scrollHeight; };
+  <!-- Results -->
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div class="chip">Results</div>
+      <div class="muted small"><span id="count">0</span> items</div>
+    </div>
+    <div class="grid">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Host</th><th>Platform</th><th>Title</th>
+            <th>Created</th><th>Temp</th><th>Why (human-readable)</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-    const S = { root:'/api/v1', items:[], persona:{} };
-    const base = ()=> ($('apiBase').value||'').trim().replace(/\/+$/,'');
-    const key  = ()=> ($('apiKey').value||'').trim();
+<script>
+const $=id=>document.getElementById(id);
+const UI={
+  base:$('base'), root:$('root'), rootLbl:$('rootLbl'), apply:$('apply'),
+  apiKey:$('apiKey'), saveKey:$('saveKey'),
+  refreshHot:$('refreshHot'), refreshWarm:$('refreshWarm'),
+  host:$('host'), region:$('region'), radius:$('radius'),
+  path:$('path'), method:$('method'), tryFallbacks:$('tryFallbacks'),
+  find:$('find'), msg:$('msg'), count:$('count'),
+  rows:$('rows'),
+  p_offer:$('p_offer'), p_solves:$('p_solves'), p_titles:$('p_titles'),
+  savePersona:$('savePersona'), dlHot:$('dlHot'), dlWarm:$('dlWarm'),
+  health:$('health')
+};
+const S={ base:'', root:'/api/v1', key:'', items:[], persona:{offer:'',solves:'',titles:''} };
 
-    function saveLocal(){
-      localStorage.setItem('base', base());
-      localStorage.setItem('apiKey', key());
-      localStorage.setItem('persona', JSON.stringify(S.persona||{}));
-      localStorage.setItem('findPath', $('findPath').value||'');
-      localStorage.setItem('findVerb', $('findVerb').value||'AUTO');
-      localStorage.setItem('useFallbacks', $('useFallbacks').checked?'1':'0');
-    }
-    function loadLocal(){
-      const b=localStorage.getItem('base'); if(b) $('apiBase').value=b;
-      const k=localStorage.getItem('apiKey'); if(k) $('apiKey').value=k;
-      const fp=localStorage.getItem('findPath'); if(fp) $('findPath').value=fp;
-      const fv=localStorage.getItem('findVerb'); if(fv) $('findVerb').value=fv;
-      $('useFallbacks').checked = localStorage.getItem('useFallbacks')!=='0';
-      try{ S.persona = JSON.parse(localStorage.getItem('persona')||'{}'); }catch{ S.persona={}; }
-      $('p_offer').value=S.persona.offer||''; $('p_solves').value=S.persona.solves||''; $('p_titles').value=S.persona.titles||'';
-    }
+function toast(t,good){ UI.msg.textContent=String(t); if(good){UI.msg.style.borderColor='#166534'} }
+function saveLocal(){
+  localStorage.setItem('fp.base',S.base);
+  localStorage.setItem('fp.root',S.root);
+  localStorage.setItem('fp.key',S.key||'');
+  localStorage.setItem('fp.path',UI.path.value||'');
+  localStorage.setItem('fp.method',UI.method.value||'POST');
+  localStorage.setItem('fp.host',UI.host.value||'');
+  localStorage.setItem('fp.region',UI.region.value||'US/CA');
+  localStorage.setItem('fp.radius',UI.radius.value||'50');
+  localStorage.setItem('fp.persona',JSON.stringify(S.persona||{}));
+}
+function loadLocal(){
+  S.base=localStorage.getItem('fp.base')||'';
+  S.root=localStorage.getItem('fp.root')||'/api/v1';
+  S.key=localStorage.getItem('fp.key')||'';
+  UI.path.value=localStorage.getItem('fp.path')||'/leads/find-buyers';
+  UI.method.value=localStorage.getItem('fp.method')||'POST';
+  UI.host.value=localStorage.getItem('fp.host')||'';
+  UI.region.value=localStorage.getItem('fp.region')||'US/CA';
+  UI.radius.value=localStorage.getItem('fp.radius')||'50';
+  try{ S.persona=JSON.parse(localStorage.getItem('fp.persona')||'{}')||{} }catch{ S.persona={} }
+  UI.base.value=S.base; UI.root.value=S.root; UI.rootLbl.textContent=S.root; UI.apiKey.value=S.key;
+  UI.p_offer.value=S.persona.offer||''; UI.p_solves.value=S.persona.solves||''; UI.p_titles.value=S.persona.titles||'';
+}
+function urlJoin(base,root,path){
+  const b=(base||'').replace(/\/+$/,'');
+  const r=(''+(root||'')).replace(/\/+$/,'');
+  const p=(''+path).replace(/^\/+/,'');
+  return b+(r?'/'+p.replace(/^/,'').padStart(p.length,''):''), b+(r?'/'+r:'')+'/'+p;
+}
+function buildURL(base,root,path,qs){
+  const b=(base||'').replace(/\/+$/,'');
+  const r=(root||'').replace(/\/+$/,'');
+  const p=(''+path).replace(/^\/+/,'');
+  const u=new URL(b+(r?'/'+r:'')+'/'+p);
+  (qs&&Object.entries(qs).forEach(([k,v])=>{
+    if(v!==undefined&&v!==null&&String(v).length) u.searchParams.set(k,String(v));
+  }));
+  return u.toString();
+}
+async function req(method, base, root, path, query, body){
+  const url = buildURL(base, root, path, method==='GET'?query:undefined);
+  const headers = {
+    'content-type':'application/json',
+    ...(S.key?{'x-api-key':S.key,'x-apikey':S.key,'api-key':S.key,'authorization':'Bearer '+S.key}:{})
+  };
+  let res, data;
+  try{
+    res = await fetch(url,{method,headers,body:method==='GET'?undefined:JSON.stringify(body??query??{})});
+    try{ data = await res.json(); }catch{ data = { ok:res.ok, status:res.status }; }
+  }catch(e){
+    return { ok:false, status:0, url, data:{ ok:false, error:String(e) } };
+  }
+  const ok = res.ok && (data.ok!==false);
+  return { ok, status:res.status, url, data };
+}
+function renderList(){
+  UI.rows.innerHTML='';
+  (S.items||[]).forEach((x,i)=>{
+    const tr=document.createElement('tr');
+    const why=x.why||x.whyText||x.reason||'';
+    tr.innerHTML=`
+      <td class="muted">${i+1}</td>
+      <td>${x.host||x.domain||''}</td>
+      <td>${x.platform||x.platforms||''}</td>
+      <td>${x.title||x.name||''}</td>
+      <td class="muted small">${x.created||x.ts||''}</td>
+      <td><span class="chip">${x.temp||x.temperature||''}</span></td>
+      <td class="small">${typeof why==='string'?why:JSON.stringify(why)}</td>`;
+    UI.rows.appendChild(tr);
+  });
+  UI.count.textContent=String((S.items||[]).length);
+}
+function toCSV(items){
+  const cols=['host','platform','title','created','temp','why'];
+  const head=cols.join(',');
+  const esc=v=>`"${String(v??'').replace(/"/g,'""').replace(/\n/g,' ')}"`;
+  const rows=(items||[]).map(it=>cols.map(c=>{
+    const v=(c==='why')?(it.why||it.whyText||it.reason||''):it[c];
+    return esc(v);
+  }).join(','));
+  return [head,...rows].join('\r\n');
+}
+function download(name,text){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+  a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),800);
+}
 
-    async function http(method, path, {query=null, body=null}={}){
-      const b=base();
-      if(!b) return { ok:false, status:0, data:{ ok:false, error:'No API base set' }, url:path, method };
-      const full = path.startsWith('http') ? path : b + (path.startsWith('/')?path:'/'+path);
-      const url = new URL(full);
-      if(query) Object.entries(query).forEach(([k,v])=> v!=null && v!=='' && url.searchParams.set(k, String(v)));
-      const headers={ 'Accept':'application/json' };
-      if(body!=null) headers['Content-Type']='application/json';
-      if(key()) headers['x-api-key']=key();
-      let res, txt;
-      try{ res=await fetch(url.toString(), { method, headers, body: body!=null?JSON.stringify(body):undefined }); }
-      catch(e){ return { ok:false, status:0, data:{ ok:false, error:String(e) }, url:url.toString(), method }; }
-      try{ txt = await res.text(); }catch{ txt=''; }
-      let data; try{ data = txt ? JSON.parse(txt) : null; } catch{ data = txt; }
-      return { ok:res.ok, status:res.status, data, url:url.toString(), method, headers: Object.fromEntries(res.headers.entries()||[]) };
-    }
+async function findOne(){
+  S.base=(UI.base.value||'').trim(); S.root=(UI.root.value||'').trim()||'';
+  UI.rootLbl.textContent=S.root||'(none)';
+  S.persona={offer:UI.p_offer.value||'',solves:UI.p_solves.value||'',titles:(UI.p_titles.value||'').split(',').map(s=>s.trim()).filter(Boolean)};
+  saveLocal();
 
-    function normalizeItem(x){
-      return {
-        host: x?.host || x?.domain || x?.source || '',
-        platform: x?.platform || x?.type || '',
-        title: x?.title || x?.name || '',
-        created: x?.created || x?.createdAt || x?.ts || '',
-        temp: x?.temp || x?.temperature || x?.score || '',
-        why: x?.why || x?.whyText || x?.reason || x?.summary || ''
-      };
-    }
-    function renderList(){
-      const tb=$('listBody'); tb.innerHTML='';
-      (S.items||[]).forEach((it,i)=>{
-        const tr=document.createElement('tr');
-        tr.innerHTML = `
-          <td>${i+1}</td><td>${it.host||''}</td><td>${it.platform||''}</td>
-          <td>${it.title||''}</td><td>${it.created||''}</td>
-          <td>${it.temp||''}</td><td>${it.why||''}</td>`;
-        tb.appendChild(tr);
-      });
-      $('resultCount').textContent = `${S.items.length} item${S.items.length===1?'':'s'}`;
-    }
-    function toCSV(items){
-      const cols=['host','platform','title','created','temp','why'];
-      const esc=v=>`${String(v??'').replaceAll('"','""')}`;
-      const head=cols.join(',');
-      const rows=(items||[]).map(r=>cols.map(c=>`"${esc(r[c])}"`).join(','));
-      return [head,...rows].join('\r\n');
-    }
-    function download(name,text){
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));
-      a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
-    }
+  const host=(UI.host.value||'').trim().toLowerCase();
+  if(!host) return toast('Enter supplier host');
 
-    function buildCandidates(pathPref, verbPref, useFallbacks, params){
-      const P = [];
-      const q = { host: params.host, country: params.country, radius: params.radius };
-      const b = { host: params.host, country: params.country, radius: params.radius };
+  // Query/body variants
+  const qBase={ host, region:UI.region.value, radius:Number(UI.radius.value)||50, persona:S.persona };
+  const qAlts=[
+    qBase,
+    {...qBase, domain:host},              // some backends use "domain"
+    { supplier:host, region:qBase.region, radius:qBase.radius }, // very simple
+  ];
 
-      const add = (m,p,qmode)=>
-        P.push({ m, p, qmode, args: qmode==='query' ? { query:q } : { body:b } });
+  const chosenPath=(UI.path.value||'').trim()||'/leads/find-buyers';
+  const chosenMethod=UI.method.value||'POST';
 
-      const want = (m)=> verbPref==='AUTO' || verbPref===m;
+  const roots = (UI.tryFallbacks.checked
+    ? Array.from(new Set([S.root,'/api/v1','/api','/v1',''])) : [S.root]);
 
-      // user-specified first
-      const clean = (pathPref||'/leads/find-buyers').replace(/^\s*/,'').replace(/\s*$/,'');
-      if (want('GET'))  add('GET',  S.root + (clean.startsWith('/')?clean:'/'.concat(clean)), 'query');
-      if (want('POST')) add('POST', S.root + (clean.startsWith('/')?clean:'/'.concat(clean)), 'body');
+  const routes = (UI.tryFallbacks.checked
+    ? [
+        [chosenPath, chosenMethod, 'auto'],
+        ['/leads/find-buyers','POST','auto'], ['/leads/find-buyers','GET','auto'],
+        ['/leads/find-one','GET','auto'], ['/leads/find-one','POST','auto'],
+        ['/leads/find','POST','auto'], ['/leads/find','GET','auto'],
+        ['/buyers/find-one','GET','auto'], ['/buyers/find','GET','auto'], ['/buyers/find','POST','auto'],
+        ['/find-buyers','GET','auto'], ['/find-buyers','POST','auto'],
+        ['/find-one','GET','auto'], ['/find','POST','auto'],
+        ['/leads','POST','op'], ['/buyers','POST','op']
+      ]
+    : [[chosenPath, chosenMethod, 'auto']]
+  );
 
-      if (!useFallbacks) return P;
-
-      // smart fallbacks
-      const guesses = [
-        '/leads/find-buyers','/leads/find','/buyers/find','/find-buyers','/leads',
-        '/buyers','/find','/leads/one','/leads/find-one','/buyers/find-one'
-      ];
-      for (const g of guesses){
-        if (want('GET'))  add('GET',  S.root + g, 'query');
-        if (want('POST')) add('POST', S.root + g, 'body');
-        // also try without /api/v1 in case server is mounted at root
-        if (want('GET'))  add('GET',  g, 'query');
-        if (want('POST')) add('POST', g, 'body');
+  const attempts=[];
+  for(const root of roots){
+    for(const [path,method,mode] of routes){
+      for(const variant of qAlts){
+        attempts.push({root,path,method,mode,variant});
       }
-      return P;
     }
+  }
 
-    async function onFind(){
-      $('debug').hidden=true; $('debug').textContent='';
-      setFindMsg('');
-      const host=($('supplierHost').value||'').trim();
-      if(!host) return setFindMsg('Enter supplier host');
-      const country=$('country').value;
-      const radius=$('radiusMi').value;
-      const pathPref=$('findPath').value;
-      const verbPref=$('findVerb').value;
-      const useFallbacks=$('useFallbacks').checked;
-
-      const btn=$('find'); btn.disabled=true;
-
-      const candidates = buildCandidates(pathPref, verbPref, useFallbacks, {host,country,radius});
-      let last=null;
-      for (const c of candidates){
-        log(`→ ${c.m} ${c.p}`);
-        const r = await http(c.m, c.p, c.args);
-        last = r;
-        log(`  ← ${r.status} ${r.ok?'OK':'ERR'}  ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}`);
-        if (r.ok && r.data){
-          const items = (r.data && r.data.items) || [];
-          const seen = new Set((S.items||[]).map(x=>`${x.host}::${x.title}`));
-          items.forEach(raw=>{
-            const it=normalizeItem(raw);
-            const k=`${it.host}::${it.title}`;
-            if(!seen.has(k)){ seen.add(k); S.items.unshift(it); }
-          });
-          renderList();
-          setFindMsg(`Loaded ${items.length} new item(s).`, true);
-          btn.disabled=false;
-          return;
-        }
-        if (r.status===401 || r.status===403){ break; } // don't spam after auth issues
+  const lines=[];
+  for(const a of attempts){
+    const body = (a.mode==='op') ? {...a.variant, op:'find-buyers'} : a.variant;
+    const r = await req(a.method, S.base, a.root, a.path, a.variant, body);
+    lines.push(`${r.status} ${a.method} ${r.url}`);
+    if(r.ok){
+      let items = r.data.items || r.data.data || (Array.isArray(r.data)?r.data:[]);
+      if(!items.length && r.data.item) items=[r.data.item];
+      if(items.length){
+        S.items = items.concat(S.items||[]);
+        renderList();
+        toast(`OK ${a.method} ${a.root||'(no root)'}${a.path}\nAdded ${items.length} item(s).`, true);
+        return;
       }
-      btn.disabled=false;
-      const text = typeof last?.data==='string' ? last.data : JSON.stringify(last?.data);
-      setFindMsg(`HTTP ${last?.status ?? 0} — ${text || 'not found'}`);
     }
+  }
+  toast(`HTTP 404 — {"ok":false,"error":"not found"}\n\n`+lines.join('\n'));
+}
 
-    function bind(){
-      loadLocal();
+async function pingHealth(){
+  S.base=(UI.base.value||'').trim();
+  const roots = Array.from(new Set([(UI.root.value||'').trim(),'/api/v1','/api','/v1','']));
+  const tries=[];
+  for(const r of roots){
+    const res = await req('GET', S.base, r, '/healthz', null, null);
+    tries.push(`${res.status} GET ${res.url}`);
+    if(res.ok){ toast(`Health OK @ ${res.url}`, true); return; }
+  }
+  toast('Health checks:\n'+tries.join('\n'));
+}
 
-      $('apply').onclick=()=>{ const b=base(); toast(b?`Base set: ${b}`:'Base cleared', !!b); saveLocal(); };
-      $('saveKey').onclick=()=>{ toast(key()? 'API key saved':'API key cleared', !!key()); saveLocal(); };
-      $('personaSave').onclick=()=>{ S.persona={ offer:$('p_offer').value.trim(), solves:$('p_solves').value.trim(), titles:$('p_titles').value.trim() }; saveLocal(); toast('Persona saved locally', true); };
-      $('dlHot').onclick = ()=> download('leads_hot.csv',  toCSV(S.items.filter(x=>String(x.temp||'').toLowerCase()==='hot')));
-      $('dlWarm').onclick= ()=> download('leads_warm.csv', toCSV(S.items.filter(x=>String(x.temp||'').toLowerCase().includes('warm'))));
-      $('refreshHot').onclick = ()=> toast('Hot refresh is view-only in free panel');
-      $('refreshWarm').onclick= ()=> toast('Warm refresh is view-only in free panel');
-
-      $('find').onclick=(e)=>{ e.preventDefault(); onFind(); };
-
-      // Query-string overrides
-      try{
-        const u=new URL(location.href);
-        const b=u.searchParams.get('base'); if(b){ $('apiBase').value=b; }
-        const k=u.searchParams.get('key'); if(k){ $('apiKey').value=k; }
-        const h=u.searchParams.get('host'); if(h){ $('supplierHost').value=h; }
-        const p=u.searchParams.get('path'); if(p){ $('findPath').value=p; }
-        const m=u.searchParams.get('verb'); if(m){ $('findVerb').value=(m.toUpperCase()); }
-        if (b||k||p||m) saveLocal();
-      }catch{}
-
-      renderList();
-    }
-    document.addEventListener('DOMContentLoaded', bind);
-  })();
-  </script>
+function bind(){
+  UI.apply.onclick=()=>{ S.base=(UI.base.value||'').trim(); S.root=(UI.root.value||'').trim(); UI.rootLbl.textContent=S.root||'(none)'; saveLocal(); toast('Base/root applied',true); };
+  UI.health.onclick=pingHealth;
+  UI.saveKey.onclick=()=>{ S.key=(UI.apiKey.value||'').trim(); saveLocal(); toast('API key saved',true); };
+  UI.refreshHot.onclick=()=>{ S.items=[]; renderList(); toast('Hot list cleared',true); };
+  UI.refreshWarm.onclick=()=>toast('Warm refreshed',true);
+  UI.savePersona.onclick=()=>{ S.persona={offer:UI.p_offer.value||'',solves:UI.p_solves.value||'',titles:UI.p_titles.value||''}; saveLocal(); toast('Persona saved (local)',true); };
+  UI.find.onclick=findOne;
+  UI.dlHot.onclick=()=>download('hot.csv', toCSV(S.items||[]));
+  UI.dlWarm.onclick=()=>download('warm.csv', toCSV(S.items||[]));
+}
+loadLocal(); bind(); renderList();
+</script>
 </body>
 </html>
