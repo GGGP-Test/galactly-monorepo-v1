@@ -1,83 +1,85 @@
 // src/shared/memStore.ts
-// A tiny in-memory store shared by routes (leads + metrics).
+
+// Buckets + helpers shared by routes
 
 export type Temp = 'hot' | 'warm';
 
-export interface StoredLead {
+export type StoredLead = {
   id: number;
-  host: string;           // e.g. "news.google.com"
+  host: string;
   platform?: string;
   title: string;
-  created: string;        // ISO string
+  created: string;
   temperature: Temp;
   whyText?: string;
   why?: any;
-}
+};
 
-// ---- leads buckets (what the panel lists) ----
+let nextId = 1;
+
+// Public buckets used by routes/leads.ts and routes/metrics.ts
 export const buckets: { hot: StoredLead[]; warm: StoredLead[] } = {
   hot: [],
   warm: [],
 };
 
-let nextId = 1;
-const allocId = () => nextId++;
-
-/** wipe both buckets (used on new searches) */
-export function resetHotWarm() {
-  buckets.hot = [];
-  buckets.warm = [];
+export function resetHotWarm(): void {
+  buckets.hot.length = 0;
+  buckets.warm.length = 0;
   nextId = 1;
 }
 
-/** replace both buckets at once */
-export function replaceHotWarm(hot: StoredLead[], warm: StoredLead[]) {
-  buckets.hot = hot;
-  buckets.warm = warm;
+// Replace both buckets in one shot (used by leads flow)
+export function replaceHotWarm(
+  hot: StoredLead[] = [],
+  warm: StoredLead[] = []
+): void {
+  resetHotWarm();
+  for (const r of hot) {
+    buckets.hot.push({
+      id: nextId++,
+      created: r.created ?? new Date().toISOString(),
+      temperature: 'hot',
+      whyText: r.whyText ?? '',
+      ...r,
+    });
+  }
+  for (const r of warm) {
+    buckets.warm.push({
+      id: nextId++,
+      created: r.created ?? new Date().toISOString(),
+      temperature: 'warm',
+      whyText: r.whyText ?? '',
+      ...r,
+    });
+  }
 }
 
-/** find a lead by host in either bucket */
-export function findByHost(host: string): { bucket: 'hot' | 'warm'; index: number } | null {
-  const iHot = buckets.hot.findIndex(x => x.host === host);
-  if (iHot >= 0) return { bucket: 'hot', index: iHot };
-  const iWarm = buckets.warm.findIndex(x => x.host === host);
-  if (iWarm >= 0) return { bucket: 'warm', index: iWarm };
-  return null;
-}
-
-/** ensure a lead exists for this host (creates a minimal warm lead if missing) */
-export function ensureLeadForHost(host: string, patch: Partial<StoredLead> = {}): StoredLead {
-  const where = findByHost(host);
-  if (where) {
-    const row = buckets[where.bucket][where.index];
-    Object.assign(row, patch);
+// Minimal “upsert by host” used by the panel’s Lock & keep action
+export function saveByHost(
+  temp: Temp,
+  input: { host: string; title?: string; platform?: string; whyText?: string; why?: any }
+): StoredLead {
+  const list = temp === 'hot' ? buckets.hot : buckets.warm;
+  let row = list.find((r) => r.host === input.host);
+  if (row) {
+    row.title = input.title ?? row.title;
+    row.platform = input.platform ?? row.platform;
+    row.whyText = input.whyText ?? row.whyText;
+    row.why = input.why ?? row.why;
     return row;
   }
-  const row: StoredLead = {
-    id: allocId(),
-    host,
-    platform: 'news',
-    title: patch.title || (patch.whyText ?? '') || host,
-    created: new Date().toISOString(),
-    temperature: (patch.temperature as Temp) || 'warm',
-    whyText: patch.whyText,
-    why: patch.why,
+  const created = new Date().toISOString();
+  const item: StoredLead = {
+    id: nextId++,
+    host: input.host,
+    platform: input.platform ?? 'news',
+    title: input.title ?? '',
+    created,
+    temperature: temp,
+    whyText: input.whyText ?? '',
+    why: input.why,
   };
-  buckets[row.temperature].push(row);
-  return row;
-}
-
-// ---- very small key->value store used by /metrics routes ----
-const metricsByHost = new Map<string, any>();
-
-/** save (or merge) an arbitrary record by host. Used by /metrics/claim */
-export function saveByHost(host: string, value: any) {
-  const prev = metricsByHost.get(host) || {};
-  const merged = typeof value === 'object' && value ? { ...prev, ...value } : value;
-  metricsByHost.set(host, merged);
-  return merged;
-}
-
-export function getByHost(host: string) {
-  return metricsByHost.get(host) ?? null;
+  list.push(item);
+  return item;
 }
