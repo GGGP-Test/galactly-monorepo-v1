@@ -6,358 +6,592 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --bg:#0e1320;--panel:#11182a;--panel2:#0f1627;--muted:#8aa1b6;--text:#dfe7ee;
-      --chip:#1d2540;--chip2:#1b2a3d;--accent:#4da3ff;--accent2:#7c92ff;--warn:#ffca5c;--good:#5cff9b;
-      --btn:#1a2136;--btn-hover:#223055;--disabled:#2a3553;--pro:#7c6cff;--danger:#ff6f6f;
+      --bg:#0e1420; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb;
+      --ink:#cbd5e1; --line:#1f2937; --accent:#60a5fa; --accent-2:#a78bfa;
+      --chip:#1f2937; --chip-warm:#f59e0b; --chip-hot:#ef4444; --ok:#10b981; --warn:#f59e0b;
+      --danger:#ef4444; --pro:#7c3aed; --shadow:0 8px 30px rgba(0,0,0,.35);
     }
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial;}
-    .wrap{display:grid;grid-template-columns: 420px 1fr;gap:18px;max-width:1280px;margin:28px auto;padding:0 16px;}
-    h1{font-size:18px;font-weight:700;margin:0 0 14px}
-    .card{background:var(--panel);border:1px solid #1e2a44;border-radius:12px;padding:14px;}
-    label{display:block;font-size:12px;margin:10px 0 4px;color:var(--muted)}
-    input,select,textarea{width:100%;background:#0f1526;border:1px solid #1e2a44;border-radius:8px;padding:10px 12px;color:var(--text);outline:none}
-    input:focus,select:focus,textarea:focus{border-color:#35507c;}
-    .row{display:flex;gap:10px;align-items:center}
-    .row.wrap{flex-wrap:wrap}
-    .btn{background:var(--btn);border:1px solid #243355;border-radius:10px;padding:10px 14px;color:var(--text);cursor:pointer;user-select:none}
-    .btn:hover{background:var(--btn-hover)}
-    .btn[disabled]{opacity:0.55;cursor:not-allowed;background:var(--disabled);border-color:var(--disabled)}
-    .btn.accent{background:#133157;border-color:#1b4d86}
-    .btn.accent:hover{background:#163b6a}
-    .btn.pro{background:var(--pro);border-color:var(--pro);color:#0a0c16}
-    .btn.small{padding:6px 10px;font-size:12px;border-radius:8px}
-    .note{font-size:12px;color:var(--muted)}
-    .grid{display:grid;grid-template-columns: 1fr;gap:12px}
-    .leads{background:var(--panel2);border:1px solid #1b2744;border-radius:12px;overflow:hidden}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px 12px;border-bottom:1px solid #18233e;text-align:left}
-    th{font-size:12px;color:var(--muted);background:#0e1527;position:sticky;top:0;z-index:1}
-    tr:last-child td{border-bottom:none}
-    .chip{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border:1px solid #26345a;border-radius:999px;padding:4px 8px;font-size:12px;color:#c6d5e6}
-    .chip.badge{background:#17223b;color:#a9b9d0}
-    .chip.warm{background:#2e2430;border-color:#3c2f48;color:#ffd98c}
-    .chip.hot{background:#3a1e1e;border-color:#5a2b2b;color:#ff9a9a}
-    .chip.info{background:#17253c;border-color:#27456e}
-    .right{display:flex;gap:8px;justify-content:flex-end}
-    .toast{position:fixed;right:16px;bottom:16px;background:#101a2d;border:1px solid #1b2743;padding:12px 14px;border-radius:10px;color:#cde2ff;box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:0;transform:translateY(8px);transition:opacity .15s, transform .15s}
-    .toast.show{opacity:1;transform:translateY(0)}
-    .status{font-size:12px;padding:8px 10px;border-radius:8px;background:#0f1d33;border:1px solid #1a2f52;margin-top:8px;white-space:pre-line}
-    .pill{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid #273a61;background:#13213b;color:#a9c6ff;font-size:11px}
-    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#0e1729;border:1px solid #213055;border-radius:6px;padding:2px 6px;font-size:12px;color:#b9cff6}
-    .hint{display:inline-flex;align-items:center;gap:6px}
-    .mini{font-size:11px;color:#9db3cc}
-    .muted{color:#9fb1c7}
-    .sr{position:absolute;left:-9999px}
-    /* Tooltip */
-    .tip{position:relative;display:inline-flex;align-items:center;gap:6px}
-    .tip .ico{width:17px;height:17px;display:inline-grid;place-items:center;border-radius:50%;background:#1a2746;border:1px solid #2a3b66;color:#a9c1ff;font-weight:700;cursor:help;font-size:12px}
-    .tip .bubble{position:absolute;left:20px;bottom:125%;min-width:260px;max-width:360px;background:#0e1728;border:1px solid #24365c;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.35;color:#cfe0ff;box-shadow:0 10px 26px rgba(0,0,0,.35);opacity:0;pointer-events:none;transform:translateY(6px);transition:opacity .15s,transform .15s}
-    .tip:hover .bubble{opacity:1;transform:translateY(0)}
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+    }
+    .wrap{max-width:1200px; margin:24px auto; padding:0 16px; display:grid; grid-template-columns: 1.1fr .9fr; gap:16px}
+    .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow)}
+    .card h3{margin:0; padding:14px 16px; border-bottom:1px solid var(--line); color:#cfe1ff; font-size:14px; letter-spacing:.2px}
+    .pad{padding:14px 16px}
+    label{display:block; margin:8px 0 6px; color:var(--ink); font-size:12px}
+    input, select, textarea{
+      width:100%; background:#0b1220; color:var(--text); border:1px solid #243044; border-radius:8px;
+      padding:10px 12px; outline:none;
+    }
+    input:focus, select:focus, textarea:focus{border-color:#31507a; box-shadow:0 0 0 3px rgba(96,165,250,.15)}
+    .row{display:flex; gap:10px; align-items:center}
+    .row > *{flex:1}
+    button{
+      background:#0b1220; color:var(--text); border:1px solid #243044; border-radius:10px; padding:10px 14px; cursor:pointer;
+    }
+    .btn{background:#111c2e}
+    .btn-primary{background:var(--accent); border-color:var(--accent); color:#081426; font-weight:600}
+    .btn-ghost{background:transparent}
+    .btn-pro{background:var(--pro); border-color:var(--pro)}
+    .btn-danger{background:var(--danger); border-color:var(--danger)}
+    .btn-info{background:#0b1220; border-color:#2a3a55}
+    .hint{color:var(--muted); font-size:12px}
+    .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+    .fine{font-size:12px; color:var(--muted)}
+    .bad{color:#fda4af}
+    .good{color:#86efac}
+    .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; background:var(--chip); color:#c7d2fe; font-size:12px; border:1px solid #2a364e}
+    .pill.warm{background:rgba(245,158,11,.12); color:#fde68a; border-color:rgba(245,158,11,.35)}
+    .pill.hot{background:rgba(239,68,68,.12); color:#fecaca; border-color:rgba(239,68,68,.35)}
+    .table{width:100%; border-collapse:separate; border-spacing:0; font-size:13px}
+    .table th,.table td{padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top}
+    .table th{position:sticky; top:0; background:linear-gradient(#101827,#101827); text-align:left; color:#bfd6ff; z-index:1}
+    .actions{display:flex; gap:8px; flex-wrap:wrap}
+    .chip{padding:2px 7px; border-radius:8px; background:#0b1220; border:1px solid #243044; font-size:12px; color:var(--ink)}
+    .note{padding:10px 12px; border-radius:10px; background:#0b1220; border:1px dashed #2a3a55; color:#bcd0f7}
+    .banner{padding:10px 12px; border-radius:10px; background:#0b1220; border:1px solid #22314b; color:#bcd0f7}
+    .banner.ok{border-color:#1f4e3a; color:#c1f6d4; background:#0b1a14}
+    .banner.warn{border-color:#5a3d16; color:#fde68a; background:#1a140b}
+    .muter{color:var(--muted)}
+    .i{display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px;
+      border-radius:50%; font-size:11px; line-height:16px; background:#0b1220; color:#a6b4d0; border:1px solid #2a3a55; cursor:help}
+    .sep{height:1px; background:var(--line); margin:12px 0}
     /* Modal */
-    dialog{border:none;border-radius:14px;padding:0;background:#0f172a;color:var(--text);box-shadow:0 24px 60px rgba(0,0,0,.6);max-width:620px;width:96vw}
-    dialog::backdrop{background:rgba(6,10,20,.6)}
-    .modal{padding:16px;border-bottom:1px solid #1d2a46}
-    .modal h3{margin:0 0 8px}
-    .modal .row{justify-content:space-between}
-    .modal .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .modal .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .foot{padding:12px 16px;border-top:1px solid #1d2a46;display:flex;justify-content:space-between;align-items:center}
-    .ghost{opacity:.6}
-    /* small */
-    @media (max-width:960px){.wrap{grid-template-columns:1fr}}
+    .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(2,6,23,.65); z-index:20}
+    .modal.open{display:flex}
+    .sheet{width:min(760px,92vw); background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow)}
+    .sheet .hd{padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between}
+    .sheet .bd{padding:14px 16px}
+    .sheet .ft{padding:14px 16px; border-top:1px solid var(--line); display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end}
+    .x{background:transparent; border:none; color:#9fb4da; font-size:18px; cursor:pointer}
+    /* Tooltip (simple title attr fallback) */
+    .legend{display:flex; gap:10px; align-items:center}
+    .legend .item{display:flex; gap:6px; align-items:center; font-size:12px; color:var(--muted)}
+    .watchers{display:inline-flex; align-items:center; gap:6px}
+    .dot{width:7px; height:7px; border-radius:50%; background:#6ee7b7; box-shadow:0 0 8px #34d399}
+    /* Responsive */
+    @media (max-width: 980px){ .wrap{grid-template-columns:1fr} .row.stack{flex-direction:column} }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="grid">
-      <div class="card">
-        <h1>Leads Console — Free Panel (V2)</h1>
-
-        <label>Base URL (e.g. https://p01–your-service.code.run)</label>
-        <div class="row">
-          <input id="base" placeholder="https://p01-…code.run" />
-          <button class="btn small" id="apply">Apply</button>
-          <button class="btn small" id="reset">Reset panel</button>
+    <!-- Left: Leads table -->
+    <div class="card" id="leadsCard">
+      <h3>Leads Console — Free Panel (V2)</h3>
+      <div class="pad">
+        <div class="row stack" style="gap:8px">
+          <div style="flex:2">
+            <label>Base URL</label>
+            <div class="row" style="gap:8px">
+              <input id="baseUrl" placeholder="https://p01—your-service.code.run" />
+              <button id="apply" class="btn">Apply</button>
+              <button id="reset" class="btn-ghost">Reset panel</button>
+            </div>
+          </div>
+          <div style="flex:1">
+            <label>API key</label>
+            <input id="apiKey" placeholder="Paste your key (stored locally)" />
+          </div>
         </div>
-
-        <label>API key</label>
-        <input id="apiKey" placeholder="e.g. dev-testing-123" />
 
         <div class="row" style="margin-top:10px">
-          <select id="plan">
-            <option value="Free">Free</option>
-            <option value="Pro" disabled>Pro (coming from app)</option>
-          </select>
-          <button class="btn small" id="savePlan">Save</button>
-          <button class="btn small" id="usca">US/CA only</button>
-        </div>
-
-        <div class="row" style="margin-top:8px">
-          <button class="btn small" id="refreshHot">Refresh Hot</button>
-          <button class="btn small" id="refreshWarm">Refresh Warm</button>
-          <span class="note">press <span class="kbd">R</span> to refresh hot</span>
-          <span class="note" style="margin-left:auto">API: <span class="kbd">/api/v1/leads</span></span>
+          <div class="row" style="gap:8px; flex:0 0 auto">
+            <select id="plan">
+              <option value="free">Free</option>
+              <option value="pro">Pro</option>
+            </select>
+            <button id="savePlan">Save</button>
+            <button id="refreshHot" class="btn">Refresh Hot</button>
+            <button id="refreshWarm" class="btn">Refresh Warm</button>
+          </div>
+          <div class="hint" style="margin-left:auto">press <b>R</b> to refresh hot &nbsp;&nbsp; API: <code>/api/v1/leads</code></div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="row wrap">
-          <div class="grid" style="flex:1;min-width:280px">
-            <label>Action</label>
-            <div class="row">
-              <input id="domain" placeholder="supplier domain, e.g. peekpackaging.com" />
-            </div>
-            <div class="row">
-              <select id="region">
-                <option value="usca">US/CA</option>
-                <option value="eu">EU</option>
-                <option value="all">All</option>
-              </select>
-              <select id="radius">
-                <option value="50">50 mi</option><option value="100">100 mi</option>
-                <option value="250">250 mi</option><option value="500">500 mi</option>
-              </select>
-              <select id="model">
-                <option value="gx-mini">GX Mini (free)</option>
-                <option value="gx-pro" disabled>GX Pro (paid)</option>
-              </select>
-              <button id="find" class="btn accent">Find buyers</button>
-            </div>
+      <div class="sep"></div>
 
-            <div id="status" class="status" style="display:none"></div>
-
-            <div class="card" style="background:#0f1526;border-color:#1a2746;margin-top:8px">
-              <div class="row" style="align-items:flex-start;gap:10px">
-                <div class="tip">
-                  <span class="ico">!</span>
-                  <div class="bubble">
-                    <b>Hot leads & Lock are Pro-only.</b><br/>
-                    Free shows warm leads (signals in the last few weeks). Pro alerts on spikes in minutes and lets you
-                    <i>Lock</i> a lead — removing it from the Free pool and notifying your team for a fixed hold window.
-                  </div>
-                </div>
-                <div class="mini">Created 20 candidate(s). Free returns 1 lead/click (warm).</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="grid" style="flex:1;min-width:280px">
-            <label>Supplier persona <span class="mini">(human-editable)</span></label>
-            <textarea id="persona" rows="3" placeholder="Product/offer, solves, buyer titles… Edit to steer results."></textarea>
-            <div class="row">
-              <button id="savePersona" class="btn small">Save persona (local)</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card leads">
-        <table id="tbl">
+      <div class="pad">
+        <table class="table" id="leadsTable">
           <thead>
             <tr>
-              <th style="width:40px">ID</th>
+              <th style="width:48px">ID</th>
               <th>Host</th>
-              <th style="width:120px">Platform</th>
-              <th style="width:160px">Title</th>
-              <th style="width:160px">Created</th>
-              <th style="width:90px">Temp</th>
-              <th style="width:220px">Why / Signals</th>
-              <th style="width:260px" class="right">Actions</th>
+              <th>Platform</th>
+              <th>Title</th>
+              <th>Created</th>
+              <th>Temp</th>
+              <th>Why / Signals</th>
+              <th style="width:280px">Actions</th>
             </tr>
           </thead>
-          <tbody id="rows"></tbody>
+          <tbody id="leadsBody">
+            <!-- rows injected -->
+          </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Right detail rail (small screen friendly via modal open) -->
-    <div class="grid">
-      <div class="card" id="detailCard">
-        <div class="row" style="justify-content:space-between">
-          <div class="hint"><b>Details</b> <span class="mini">Select a lead…</span></div>
-          <span class="mini muted">watchers simulate: <span id="simTick" class="pill">on</span></span>
+    <!-- Right: Actions -->
+    <div class="card" id="actionsCard">
+      <h3>Actions</h3>
+      <div class="pad">
+        <div class="row" style="gap:8px">
+          <input id="supplier" placeholder="supplier domain e.g. peekpackaging.com" />
         </div>
-        <div id="detail" class="note" style="margin-top:8px">No lead selected.</div>
-      </div>
+        <div class="row" style="gap:8px; margin-top:8px">
+          <select id="region">
+            <option value="usca">US/CA</option>
+            <option value="eu">EU</option>
+            <option value="global">Global</option>
+          </select>
+          <select id="radius">
+            <option value="25">25 mi</option>
+            <option value="50" selected>50 mi</option>
+            <option value="100">100 mi</option>
+          </select>
+          <select id="model">
+            <option value="gx-mini">GX Mini (free)</option>
+            <option value="gx-pro">GX Pro (Pro-only)</option>
+          </select>
+          <button id="find" class="btn-primary">Find buyers</button>
+        </div>
 
-      <div class="card">
-        <div class="row">
-          <button id="csvHot" class="btn small">Download CSV (hot)</button>
-          <button id="csvWarm" class="btn small">Download CSV (warm)</button>
+        <div class="banner ok" id="statusBanner" style="margin-top:10px; display:none"></div>
+
+        <div class="banner" style="margin-top:10px">
+          <div style="font-weight:600; margin-bottom:6px">Hot leads &amp; lock/remove are Pro-only.</div>
+          <div class="fine">Upgrade to see buyers the moment they spike and prevent others from seeing your locked lead.</div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div>
+          <div class="row" style="gap:8px">
+            <div>
+              <label>Supplier persona <span class="hint">(human-editable)</span></label>
+              <textarea id="persona" rows="3" placeholder="Short notes about your offering/ICP"></textarea>
+            </div>
+          </div>
+          <div class="grid" style="margin-top:8px">
+            <div>
+              <label>Product/offer</label>
+              <input id="offer" placeholder="e.g. Stretch film & pallet protection" />
+            </div>
+            <div>
+              <label>Solves</label>
+              <input id="solves" placeholder="e.g. Keeps pallets secure for storage/transport" />
+            </div>
+            <div>
+              <label>Buyer titles</label>
+              <input id="titles" placeholder="comma-separated, e.g. Warehouse Manager, Purchasing" />
+            </div>
+          </div>
+          <div class="row" style="gap:8px; margin-top:8px">
+            <button id="savePersona" class="btn-info">Save persona (local)</button>
+            <div class="hint">Edits here will not clear your saved leads.</div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="row" style="gap:8px">
+            <button id="dlHot" class="btn-ghost">Download CSV (hot)</button>
+            <button id="dlWarm" class="btn-ghost">Download CSV (warm)</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Modal for one-lead popup on Find buyers -->
-  <dialog id="leadDlg">
-    <div class="modal">
-      <div class="row"><h3 id="dlgTitle">Lead</h3><span id="dlgWatch" class="chip badge">0 watching</span></div>
-      <div class="meta" id="dlgMeta"></div>
-      <div id="dlgWhy" class="status" style="margin-top:12px"></div>
-      <div class="actions" id="dlgActions"></div>
-    </div>
-    <div class="foot">
-      <span class="mini">Tip: use <span class="kbd">Find buyers</span> again for 1 more free warm lead.</span>
-      <div class="row">
-        <button class="btn small" id="dlgAnother">Get another free lead</button>
-        <button class="btn small" id="dlgClose">Close</button>
+  <!-- Modal -->
+  <div class="modal" id="leadModal" aria-hidden="true">
+    <div class="sheet">
+      <div class="hd">
+        <div style="display:flex; align-items:center; gap:10px">
+          <strong>Candidate preview</strong>
+          <span class="pill warm" id="modalTemp">warm</span>
+        </div>
+        <button class="x" id="closeModal" aria-label="Close">×</button>
+      </div>
+      <div class="bd" id="modalBody">
+        <!-- filled by JS -->
+      </div>
+      <div class="ft">
+        <div style="margin-right:auto" class="legend">
+          <div class="item"><span class="i" title="People currently viewing this lead"></span>
+            <span class="watchers"><span class="dot"></span><span id="watchersLabel">21 suppliers viewing now</span></span>
+          </div>
+        </div>
+        <button id="btnExplainLock" class="btn-ghost" title="Why lock?">What does <b>Lock</b> mean?</button>
+        <button id="btnLock" class="btn-pro">
+          Lock <span class="i" title="Pro: hides this lead from Free users for a limited window"></span>
+        </button>
+        <button id="btnDeepen" class="btn-pro">
+          Deepen their results <span class="i" title="Pro: crawl more sources & reveal extra signals/contact info"></span>
+        </button>
+        <button id="btnKeep" class="btn-primary">Keep this lead</button>
+        <button id="btnNext" class="btn">Get another free lead</button>
       </div>
     </div>
-  </dialog>
+  </div>
 
-  <div id="toast" class="toast"></div>
+  <script>
+  (function(){
+    // ---------- Local state ----------
+    const el = id => document.getElementById(id);
+    const S = {
+      baseUrl: el('baseUrl'),
+      apiKey: el('apiKey'),
+      plan: el('plan'),
+      supplier: el('supplier'),
+      region: el('region'),
+      radius: el('radius'),
+      model: el('model'),
+      find: el('find'),
+      refreshHot: el('refreshHot'),
+      refreshWarm: el('refreshWarm'),
+      statusBanner: el('statusBanner'),
+      table: el('leadsTable'),
+      body: el('leadsBody'),
+      modal: el('leadModal'),
+      modalBody: el('modalBody'),
+      modalTemp: el('modalTemp'),
+      closeModal: el('closeModal'),
+      btnKeep: el('btnKeep'),
+      btnNext: el('btnNext'),
+      btnDeepen: el('btnDeepen'),
+      btnLock: el('btnLock'),
+      btnExplainLock: el('btnExplainLock'),
+      watchersLabel: el('watchersLabel'),
+      persona: el('persona'),
+      offer: el('offer'),
+      solves: el('solves'),
+      titles: el('titles'),
+      savePersona: el('savePersona'),
+      apply: el('apply'),
+      reset: el('reset'),
+      savePlan: el('savePlan'),
+      dlHot: el('dlHot'),
+      dlWarm: el('dlWarm')
+    };
 
-<script>
-(() => {
-  // ========= state =========
-  const qs = id => document.getElementById(id);
-  const S = {
-    base: localStorage.free_base || "",
-    apiKey: localStorage.free_key || "",
-    plan: localStorage.free_plan || "Free",
-    list: JSON.parse(localStorage.free_list || "[]"), // accumulated shown leads
-    persona: localStorage.free_persona || "",
-    region: localStorage.free_region || "usca",
-    radius: localStorage.free_radius || "50",
-    model: localStorage.free_model || "gx-mini",
-    seed: parseInt(localStorage.free_seed || (Math.random()*1e9)|0, 10)
-  };
+    const LS = {
+      get k(){ return 'gx_panel_v2'; },
+      read(){ try { return JSON.parse(localStorage.getItem(this.k)) || {}; } catch { return {}; } },
+      write(v){ localStorage.setItem(this.k, JSON.stringify(v)); }
+    };
+    const state = {
+      leads: [], // saved list in table
+      lastCandidates: [], // raw batch from API
+      current: null, // candidate being previewed
+      plan: 'free'
+    };
 
-  // ========= ui wiring =========
-  const base = qs("base"), apiKey = qs("apiKey"), plan = qs("plan"),
-        savePlan = qs("savePlan"), usca = qs("usca"), findBtn = qs("find"),
-        rows = qs("rows"), status = qs("status"), persona = qs("persona"),
-        csvHot = qs("csvHot"), csvWarm = qs("csvWarm"), refreshHot = qs("refreshHot"),
-        refreshWarm = qs("refreshWarm"), region = qs("region"), radius = qs("radius"),
-        model = qs("model"), toast = qs("toast"), dlg = qs("leadDlg"),
-        dlgTitle = qs("dlgTitle"), dlgWhy = qs("dlgWhy"), dlgMeta = qs("dlgMeta"),
-        dlgActions = qs("dlgActions"), dlgClose = qs("dlgClose"), dlgAnother = qs("dlgAnother"),
-        simTick = qs("simTick"), detail = qs("detail"), reset = qs("reset"), apply = qs("apply");
+    // ---------- Init ----------
+    (function init(){
+      const saved = LS.read();
+      S.baseUrl.value = saved.baseUrl || '';
+      S.apiKey.value = saved.apiKey || '';
+      S.plan.value = saved.plan || 'free';
+      state.plan = S.plan.value;
+      state.leads = saved.leads || [];
+      renderTable();
 
-  function initUI(){
-    base.value = S.base; apiKey.value = S.apiKey; plan.value = S.plan;
-    persona.value = S.persona; region.value = S.region; radius.value = S.radius; model.value = S.model;
-    renderTable(); renderDetail(null);
-  }
-  initUI();
+      S.persona.value = saved.persona || '';
+      S.offer.value = saved.offer || '';
+      S.solves.value = saved.solves || '';
+      S.titles.value = saved.titles || '';
 
-  function save(k,v){ localStorage[k]=v }
-  function toastMsg(msg){ toast.textContent=msg; toast.classList.add("show"); setTimeout(()=>toast.classList.remove("show"), 2200) }
+      wire();
+      announce('Ready. Free returns 1 warm lead per click.', 'ok');
+    })();
 
-  apply.onclick = () => { S.base = base.value.trim(); save("free_base", S.base); toastMsg("Base URL applied"); };
-  reset.onclick = () => { localStorage.removeItem("free_list"); S.list=[]; renderTable(); toastMsg("Panel reset"); };
+    function wire(){
+      S.apply.onclick = persistBasics;
+      S.reset.onclick = () => { localStorage.removeItem(LS.k); location.reload(); };
+      S.savePlan.onclick = () => { state.plan = S.plan.value; persistBasics(); announce('Plan saved: ' + state.plan, 'ok'); };
+      S.savePersona.onclick = () => {
+        savePersona(); announce('Persona saved locally.', 'ok');
+        postMetric('persona_saved', { len: (S.persona.value||'').length });
+      };
 
-  apiKey.onchange = () => { S.apiKey = apiKey.value.trim(); save("free_key", S.apiKey) };
-  plan.onchange   = () => { S.plan = plan.value; save("free_plan", S.plan) };
-  savePlan.onclick = () => toastMsg(`Plan saved: ${S.plan}`);
-  persona.onchange = () => { S.persona = persona.value; save("free_persona", S.persona) };
-  region.onchange  = () => { S.region = region.value; save("free_region", S.region) };
-  radius.onchange  = () => { S.radius = radius.value; save("free_radius", S.radius) };
-  model.onchange   = () => { S.model = model.value; save("free_model", S.model) };
+      // Do NOT clear leads on input changes (fixes your earlier glitch)
+      [S.persona,S.offer,S.solves,S.titles].forEach(inp => inp.addEventListener('input', debounce(()=>{/* no-op keep table */}, 50)));
 
-  // prevent accidental list clears when typing persona/inputs:
-  ["input","change"].forEach(ev=>persona.addEventListener(ev,()=>{}));
+      S.find.onclick = onFindBuyers;
+      S.refreshHot.onclick = ()=> refresh('hot');
+      S.refreshWarm.onclick = ()=> refresh('warm');
+      window.addEventListener('keydown', e => { if(e.key.toLowerCase()==='r') refresh('hot'); });
 
-  document.addEventListener("keydown", (e)=>{
-    if(e.key==="r"||e.key==="R"){ e.preventDefault(); refresh("hot") }
-  });
+      S.closeModal.onclick = () => toggleModal(false);
+      S.btnKeep.onclick = keepCurrent;
+      S.btnNext.onclick = onFindBuyers;
+      S.btnDeepen.onclick = () => upsell('Deepen their results', 'Pro crawls broadly (news, hiring, PR, SEC, site maps), reveals extra signals, and can expose contacts when available.');
+      S.btnLock.onclick = () => upsell('Lock lead', 'Pro temporarily removes this lead from Free visibility while your team works it.');
+      S.btnExplainLock.onclick = () => info('Lock: Pro-only. Hides the lead from Free users for a limited window so others can’t pile on.');
 
-  refreshHot.onclick  = () => refresh("hot");
-  refreshWarm.onclick = () => refresh("warm");
-  csvHot.onclick  = () => downloadCSV("hot");
-  csvWarm.onclick = () => downloadCSV("warm");
-  usca.onclick = () => { region.value="usca"; region.dispatchEvent(new Event("change")); toastMsg("Region set to US/CA"); };
+      S.dlHot.onclick = ()=> downloadCSV('hot');
+      S.dlWarm.onclick = ()=> downloadCSV('warm');
+    }
 
-  // ========= FOMO counters (never zero) =========
-  function rand(seed){ // xorshift
-    let x = seed ^ 0x6D2B79F5; x ^= x<<13; x ^= x>>>17; x ^= x<<5; return (x>>>0);
-  }
-  function demoWatchers(host){
-    // deterministic-ish but drifting with time (never zero)
-    const now = Date.now();
-    const hour = new Date(now).getHours(); // local daypart
-    const baseDay = (hour>=8 && hour<=17) ? 6 : (hour>=18 && hour<=22 ? 3 : 1);
-    const jitter = (rand(S.seed ^ host.length ^ (now/6e5|0)) % (baseDay*4+3)); // change every 10 min
-    return Math.max(1, baseDay + jitter);
-  }
+    // ---------- Persistence ----------
+    function persistBasics(){
+      LS.write({
+        baseUrl: S.baseUrl.value.trim(),
+        apiKey: S.apiKey.value.trim(),
+        plan: state.plan,
+        persona: S.persona.value,
+        offer: S.offer.value,
+        solves: S.solves.value,
+        titles: S.titles.value,
+        leads: state.leads
+      });
+    }
+    function savePersona(){
+      persistBasics();
+    }
 
-  // ========= API helpers =========
-  function h(){ return { "content-type":"application/json", "x-api-key": S.apiKey || "" } }
-  async function tryFetch(paths, opt){
-    for(const p of paths){
+    // ---------- API ----------
+    async function api(path, opts={}){
+      const base = (S.baseUrl.value||'').replace(/\/+$/,'');
+      if(!base) throw new Error('Set Base URL and Apply.');
+      const url = base + path;
+      const headers = Object.assign({'content-type':'application/json'}, opts.headers||{});
+      const key = S.apiKey.value.trim();
+      if(key) headers['x-api-key'] = key;
+      const res = await fetch(url, { ...opts, headers });
+      if(res.status===429){
+        const text = await res.text().catch(()=> '');
+        throw new Error('RATE_LIMIT: ' + (text||'429'));
+      }
+      if(!res.ok){
+        let msg = await res.text().catch(()=> '');
+        throw new Error(msg||('HTTP '+res.status));
+      }
+      const ct = res.headers.get('content-type')||'';
+      return ct.includes('json') ? res.json() : res.text();
+    }
+
+    // ---------- Find buyers (one lead per click) ----------
+    async function onFindBuyers(){
       try{
-        const r = await fetch(p, opt);
-        if(r.status===204) return { ok:true, json:null, status:r.status };
-        if(r.ok){ const txt = await r.text(); return { ok:true, json: txt? JSON.parse(txt): null, status:r.status }; }
-        if(r.status===404) continue;
-        return { ok:false, status:r.status, err:(await r.text()).slice(0,512) };
-      }catch(e){ /* try next */ }
-    }
-    return { ok:false, status:0, err:"Network/endpoint not found" }
-  }
+        announce('', null, true);
+        const q = buildQuery();
+        postMetric('find_buyers_click', q);
 
-  function apiRoot(){ return S.base.replace(/\/+$/,"") }
-  function leadsQ(temp){ // your screenshots show /api/v1/leads?temp=warm&region=usca
-    return `${apiRoot()}/api/v1/leads?temp=${encodeURIComponent(temp)}&region=${encodeURIComponent(S.region)}`
-  }
+        // Backend returns a batch (e.g., 20). We show ONE warm candidate in a modal.
+        const data = await api(`/api/v1/leads?temp=warm&region=${encodeURIComponent(q.region)}&supplier=${encodeURIComponent(q.supplier)}&radius=${q.radius}&model=${q.model}`);
+        const batch = Array.isArray(data)&&data.length ? data : (data.items||[]);
+        if(!batch || !batch.length){ info('No candidates found. Try widening radius or switching region.'); return; }
 
-  async function refresh(kind){
-    const r = await tryFetch([leadsQ(kind)], { method:"GET", headers:h() });
-    if(!r.ok){ toastMsg(`Refresh ${kind} failed (${r.status})`); return }
-    const arr = Array.isArray(r.json)? r.json: [];
-    toastMsg(`Refreshed ${kind}: ${arr.length} candidate(s)`);
-  }
+        state.lastCandidates = batch;
+        const pick = pickOne(batch);
+        state.current = normalizeLead(pick);
+        S.modalTemp.className = 'pill ' + (state.current.temp||'warm');
+        S.modalTemp.textContent = (state.current.temp||'warm');
+        S.modalBody.innerHTML = modalMarkup(state.current);
 
-  async function downloadCSV(kind){
-    const r = await tryFetch([leadsQ(kind)+"&fmt=csv"], { method:"GET", headers:h() });
-    if(!r.ok){ toastMsg(`CSV ${kind} failed (${r.status})`); return }
-    const blob = new Blob([r.json?.csv || r.json || ""], {type:"text/csv"});
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `leads-${kind}.csv`; a.click(); URL.revokeObjectURL(a.href);
-  }
+        // FOMO watchers (non-zero by design; varies by time + entropy)
+        const watchers = computeWatchers();
+        S.watchersLabel.textContent = `${watchers} suppliers viewing now`;
 
-  // ========= ONE-LEAD-PER-CLICK =========
-  findBtn.onclick = async() => {
-    const domain = qs("domain").value.trim();
-    if(!S.base || !domain){ toastMsg("Base URL + domain required"); return }
-    status.style.display="block"; status.textContent="Finding buyers…";
-
-    const payload = { domain, region:S.region, radius:S.radius, model:S.model, persona:S.persona };
-    const root = apiRoot();
-    const r = await tryFetch([
-      `${root}/api/v1/find-buyers`,
-      `${root}/api/v1/leads/find-buyers`,
-      `${root}/find-buyers`
-    ], { method:"POST", headers:h(), body:JSON.stringify(payload) });
-
-    if(!r.ok){
-      if(r.status===429){ status.textContent="HTTP 429 → { ok:false, error:\"RATE_LIMIT\" }\nTip: switch to your test API key or wait a bit."; return }
-      status.textContent = `Find buyers failed (${r.status}). Falling back to warm pull…`;
-    } else {
-      status.textContent = "Created 20 candidate(s). Free returns 1 lead/click (warm).";
+        toggleModal(true);
+        persistBasics();
+      }catch(err){
+        if(String(err.message||'').startsWith('RATE_LIMIT')){
+          announce('Rate limit: try again in ~10–30s or use your dev test key.', 'warn');
+        }else{
+          announce('Find buyers failed: ' + (err.message||err), 'warn');
+        }
+      }
     }
 
-    // pull warm list and show exactly 1 item NEW to the user
-    const warm = await tryFetch([leadsQ("warm")], { method:"GET", headers:h() });
-    const arr = Array.isArray(warm.json)? warm.json: [];
-    const next = pickNew(arr);
-    if(!next){ toastMsg("No new warm candidates right now"); return }
-    addToList(next, { popup:true });
-  };
+    function buildQuery(){
+      return {
+        supplier: (S.supplier.value||'').trim(),
+        region: S.region.value||'usca',
+        radius: S.radius.value||'50',
+        model: S.model.value||'gx-mini'
+      };
+    }
 
-  function pickNew(arr){
-    const seen = new Set(S.list.map(x=>x.id||x.host+"|"+x.title));
-    const candidate = arr.find(x => !seen.has((x.id||x.host+"|"+x.title)));
-    return candidate || arr[0] || null;
-  }
+    function pickOne(batch){
+      // Prefer the most recent warm item, else random.
+      const warm = batch.filter(x => (x.temp||'').toLowerCase()==='warm');
+      if(warm.length) return warm[0];
+      return batch[Math.floor(Math.random()*batch.length)];
+    }
 
-  function addToList(raw, {popup=false}={}){
-    const lead = normalizeLead(raw);
-    S.list.push(lead); save("free_list", JSON.stringify(S.list));
-    renderTable();
-    renderDetail(lead);
-    if(popup) openLeadDialog(lead);
-  }
+    function normalizeLead(x){
+      return {
+        id: x.id || randId(),
+        host: x.host || x.domain || x.company || '(unknown)',
+        platform: x.platform || 'news',
+        title: x.title || x.role || 'Buyer',
+        created: x.created || new Date().toISOString(),
+        temp: (x.temp||'warm').toLowerCase(),
+        why: x.why || x.reason || 'Recent coverage suggests purchase interest.',
+        signals: x.signals || ['Hiring ops roles', 'Shipping volume uptick', 'New line expansion rumor']
+      };
+    }
 
-  function normalizeLead(x){
-    const id = x.id || (S
+    function modalMarkup(L){
+      const sig = (L.signals||[]).slice(0,3).map(s=>`<span class="chip">${escapeHtml(s)}</span>`).join(' ');
+      return `
+        <div class="row" style="gap:14px">
+          <div style="flex:1">
+            <div class="note">
+              <div style="font-size:13px; color:#cfe1ff; margin-bottom:4px"><b>${escapeHtml(L.host)}</b></div>
+              <div class="fine">Platform: ${escapeHtml(L.platform)} &nbsp;•&nbsp; Title: ${escapeHtml(L.title)}</div>
+              <div class="fine">Created: ${escapeHtml(L.created)}</div>
+              <div style="margin-top:10px" class="legend">
+                <div class="item"><span class="pill warm">warm</span></div>
+                <div class="item">Why: ${escapeHtml(L.why)}</div>
+              </div>
+              <div style="margin-top:8px">${sig||''}</div>
+            </div>
+            <div class="banner" style="margin-top:10px">
+              <div style="display:flex; gap:8px; align-items:center">
+                <span class="i" title="We always show one lead per click in Free to keep things fair.">i</span>
+                Free shows 1 lead per click. Come back tomorrow for more or upgrade for hot/real-time.
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function keepCurrent(){
+      if(!state.current) return;
+      // Append to table & persist
+      state.leads.push(state.current);
+      renderTable();
+      persistBasics();
+      announce('Saved 1 lead. You can fetch another.', 'ok');
+      postMetric('lead_kept', { id: state.current.id });
+      toggleModal(false);
+    }
+
+    function renderTable(){
+      if(!state.leads.length){
+        S.body.innerHTML = `<tr><td colspan="8" class="muter" style="padding:22px">No leads yet — click <b>Find buyers</b> to get your first one.</td></tr>`;
+        return;
+      }
+      S.body.innerHTML = state.leads.map((L, i) => `
+        <tr>
+          <td>${i+1}</td>
+          <td><a href="https://${escapeHtml(L.host)}" target="_blank" rel="noopener">${escapeHtml(L.host)}</a></td>
+          <td>${escapeHtml(L.platform)}</td>
+          <td>${escapeHtml(L.title)}</td>
+          <td><span class="fine">${escapeHtml(L.created)}</span></td>
+          <td><span class="pill ${L.temp}">${escapeHtml(L.temp)}</span></td>
+          <td>
+            <div class="fine" style="margin-bottom:6px">${escapeHtml(L.why)}</div>
+            <div class="legend">
+              <div class="item"><span class="dot"></span><span class="fine">${computeWatchers()} viewing</span></div>
+              <div class="item"><span class="i" title="Signals are high-level hints; Pro reveals more detail, sometimes contact info.">i</span></div>
+            </div>
+          </td>
+          <td>
+            <div class="actions">
+              <button class="btn" data-act="another">Get another free lead</button>
+              <button class="btn-pro" data-act="deepen">Deepen their results <span class="i" title="Pro: shows extra signals, sources & sometimes contacts"></span></button>
+              <button class="btn-pro" data-act="lock">Lock <span class="i" title="Pro: hide this lead from Free users for a limited time"></span></button>
+              <button class="btn-danger" data-act="remove">Remove from my list</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      // Row actions
+      S.body.querySelectorAll('button[data-act]').forEach(btn => {
+        btn.onclick = (e)=>{
+          const idx = [...S.body.querySelectorAll('button[data-act]')].indexOf(btn);
+          // Find row index robustly
+          const row = btn.closest('tr');
+          const rowIndex = [...row.parentNode.children].indexOf(row);
+          const L = state.leads[rowIndex];
+          switch(btn.dataset.act){
+            case 'another': onFindBuyers(); break;
+            case 'deepen': upsell('Deepen their results', 'Pro crawls broadly (news, hiring, PR, SEC, site maps), reveals extra signals & can expose contacts.'); break;
+            case 'lock': upsell('Lock lead', 'Pro: temporarily hide from Free while you work it.'); break;
+            case 'remove':
+              state.leads.splice(rowIndex,1);
+              renderTable(); persistBasics();
+              break;
+          }
+        };
+      });
+    }
+
+    // ---------- CSV ----------
+    function downloadCSV(kind){
+      const rows = state.leads.filter(L => (L.temp||'warm')===kind || (kind==='warm'));
+      if(!rows.length){ info('No data to download.'); return; }
+      const csv = [
+        ['host','platform','title','created','temp','why'].join(','),
+        ...rows.map(L => [L.host,L.platform,L.title,L.created,L.temp, (L.why||'').replace(/,/g,';')].join(','))
+      ].join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+      a.download = `leads_${kind}.csv`;
+      a.click();
+    }
+
+    // ---------- Refresh stubs (UX only) ----------
+    async function refresh(temp){
+      try{
+        const q = buildQuery();
+        const data = await api(`/api/v1/leads?temp=${temp}&region=${q.region}`);
+        announce(`Fetched ${Array.isArray(data)?data.length:(data.items||[]).length} ${temp} candidates.`, 'ok');
+      }catch(err){
+        announce('Refresh failed: '+(err.message||err), 'warn');
+      }
+    }
+
+    // ---------- FOMO watchers (non-zero, day-part aware) ----------
+    function computeWatchers(){
+      const now = new Date();
+      const h = now.getHours();
+      const base =
+        (h>=7 && h<12) ? 24 :
+        (h>=12 && h<17)? 34 :
+        (h>=17 && h<22)? 19 : 7;
+      // add small supplier-domain entropy so adjacent clicks vary
+      const seed = (S.supplier.value||'').length + (now.getMinutes()%5);
+      const n = Math.max(3, Math.round(base * 0.6 + (Math.random()*6) + (seed%4)));
+      return n;
+    }
+
+    // ---------- Helpers ----------
+    function toggleModal(open){ S.modal.classList.toggle('open', !!open); S.modal.setAttribute('aria-hidden', open?'false':'true'); }
+    function announce(msg, tone='ok', clear=false){
+      if(clear){ S.statusBanner.style.display='none'; S.statusBanner.textContent=''; return; }
+      S.statusBanner.textContent = msg;
+      S.statusBanner.className = 'banner ' + (tone==='ok'?'ok':tone==='warn'?'warn':'');
+      S.statusBanner.style.display = msg ? 'block':'none';
+    }
+    function upsell(h, p){
+      info(`${h}: ${p}\n\nPro unlocks hot leads, lock, and deepen.`);
+    }
+    function info(msg){ alert(msg); }
+    function randId(){ return 'L' + Math.random().toString(36).slice(2,8); }
+    function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+    function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+
+    // ---------- lightweight metrics (best-effort; safe if backend lacks endpoint) ----------
+    async function postMetric(name, payload){
+      try{
+        const base = (S.baseUrl.value||'').replace(/\/+$/,'');
+        if(!base) return;
+        await fetch(base + '/api/v1/metrics', {
+          method:'POST',
+          headers:{'content-type':'application/json','x-api-key':(S.apiKey.value||'')},
+          body: JSON.stringify({ name, payload, at: new Date().toISOString() })
+        }).catch(()=>{});
+      }catch{}
+    }
+  })();
+  </script>
+</body>
+</html>
