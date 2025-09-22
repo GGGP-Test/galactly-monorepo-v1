@@ -365,85 +365,175 @@
       openModal(item);
     }
 
-// --- CSV utils
-function toCSV(items){
-  const cols = ['host','platform','title','created','temp','why'];
-  const head = cols.join(',');
-  const esc = v => String(v ?? '')
-    .replace(/"/g,'""')
-    .replace(/\r?\n|\r/g,' ')
-    .trim();
+     // --- CSV utils
+    function toCSV(items) {
+      const cols = ['host','platform','title','created','temp','why'];
+      const head = cols.join(',');
+      const esc = (v) => {
+        const s = String(v ?? '')
+          .replace(/"/g, '""')
+          .replace(/\r?\n/g, ' ');
+        // wrap with quotes if it contains comma or quote
+        return /[",]/.test(s) ? `"${s}"` : s;
+      };
+      const rows = (items || []).map(it => cols.map(c => esc(it[c])).join(','));
+      return [head, ...rows].join('\r\n');
+    }
 
-  const rows = (items || []).map(it =>
-    cols.map(c => {
-      if (c === 'why')  return `"${esc(it.whyText || it.why || '')}"`;
-      if (c === 'temp') return `"${esc(it.temp || it.temperature || '')}"`;
-      return `"${esc(it[c])}"`;
-    }).join(',')
-  );
+    function download(name, text) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8;' }));
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 0);
+    }
 
-  return [head, ...rows].join('\r\n');
-}
+    // --- helpers (safe selectors + minimal fetch wrapper)
+    const $ = (id) => document.getElementById(id);
+    const S = window.S || (window.S = {});
+    S.items = S.items || [];
 
-function download(name, text){
-  const a = document.createElement('a');
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 0);
-}
+    // if the page above didn't define "call", make a tiny fallback so clicks still work
+    if (typeof window.call !== 'function') {
+      window.call = async function(method, path, body) {
+        const base = (S.base || '').replace(/\/+$/, '');
+        const url  = `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+        const headers = { 'Content-Type': 'application/json' };
+        if (S.apiKey) headers['x-api-key'] = S.apiKey;
+        const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+        let data = null; try { data = await res.json(); } catch { /* not json */ }
+        return { ok: res.ok, status: res.status, data };
+      };
+    }
 
-// --- events
-UI.apply.onclick = () => {
-  const base = (UI.base?.value || '').trim().replace(/\/+$/,'');
-  S.base = base;
-  localStorage.setItem('base', base);
-  toast?.('Base URL applied', true);
-};
+    function toast(msg, good=false) {
+      console[good ? 'log' : 'warn'](msg);
+      // (optional: you can also show a small inline banner element if the page has one)
+    }
 
-UI.saveKey.onclick = () => {
-  const k = (UI.apiKey?.value || '').trim();
-  S.apiKey = k;
-  localStorage.setItem('apiKey', k);
-  toast?.('API key saved locally', true);
-};
+    // --- actions
+    async function findOne() {
+      // expects inputs with ids: supplierHost, country, radiusMi
+      const host = ($('#supplierHost')?.value || '').trim();
+      const country = ($('#country')?.value || '').trim();
+      const radius = ($('#radiusMi')?.value || '').trim();
 
-UI.personaSave.onclick = () => {
-  S.persona = {
-    offer:  UI.p_offer?.value?.trim() || '',
-    solves: UI.p_solves?.value?.trim() || '',
-    titles: UI.p_titles?.value?.trim() || ''
-  };
-  localStorage.setItem('persona', JSON.stringify(S.persona));
-  toast?.('Persona saved locally', true);
-};
+      if (!S.base)  return toast('Set the API base then click Apply.');
+      if (!S.apiKey) return toast('Paste API key and click Save.');
 
-UI.find.onclick = findOne;
+      // backend route this UI calls:
+      // GET /api/v1/leads/find-buyers?host=...&country=...&radius=...
+      const q = new URLSearchParams({ host, country, radius });
+      const r = await call('GET', `/api/v1/leads/find-buyers?${q}`);
 
-UI.refreshHot.onclick = async () => {
-  const r = await call('GET', 'leads?temp=hot');
-  if (!r?.ok) return toast?.(`Failed to load hot leads: ${r?.error||'unknown'}`);
-  const seen = new Set((S.items||[]).map(x => x.id ?? x.host));
-  (r.data?.items || []).forEach(x => { if (!seen.has(x.id ?? x.host)) (S.items ||= []).push(x); });
-  renderList();
-  toast?.(`Loaded ${(r.data?.items||[]).length} hot lead(s)`);
-};
+      if (!r.ok) return toast(`HTTP ${r.status} — ${JSON.stringify(r.data || {})}`);
 
-UI.refreshWarm.onclick = async () => {
-  const r = await call('GET', 'leads?temp=warm');
-  if (!r?.ok) return toast?.(`Failed to load warm leads: ${r?.error||'unknown'}`);
-  const seen = new Set((S.items||[]).map(x => x.id ?? x.host));
-  (r.data?.items || []).forEach(x => { if (!seen.has(x.id ?? x.host)) (S.items ||= []).push(x); });
-  renderList();
-  toast?.(`Loaded ${(r.data?.items||[]).length} warm lead(s)`);
-};
+      // expect r.data = { items: [...] }
+      const items = (r.data && r.data.items) || [];
+      // keep newest on top; de-dupe by host/title combo
+      const seen = new Set(S.items.map(x => `${x.host}::${x.title}`));
+      items.forEach(it => {
+        const key = `${it.host}::${it.title}`;
+        if (!seen.has(key)) { seen.add(key); S.items.unshift(it); }
+      });
+      renderList();
+      toast(`Found ${items.length} candidate(s).`, true);
+    }
 
-UI.dlCSV  && (UI.dlCSV.onclick  = () => download('leads.csv',  toCSV(S.items||[])));
-UI.dlJSON && (UI.dlJSON.onclick = () => download('leads.json', JSON.stringify(S.items||[], null, 2)));
+    async function refreshHot() {
+      if (!S.base) return toast('Set the API base then click Apply.');
+      const r = await call('GET', `/api/v1/leads?temp=hot`);
+      if (!r.ok) return toast(`Failed to load hot leads: HTTP ${r.status}`);
+      S.items = (r.data?.items) || [];
+      renderList();
+      toast(`Loaded ${S.items.length} hot leads`, true);
+    }
 
-window.addEventListener('beforeunload', () => {
-  if (S.items) localStorage.setItem('items', JSON.stringify(S.items));
-});
+    async function refreshWarm() {
+      if (!S.base) return toast('Set the API base then click Apply.');
+      const r = await call('GET', `/api/v1/leads?temp=warm`);
+      if (!r.ok) return toast(`Failed to load warm leads: HTTP ${r.status}`);
+      S.items = (r.data?.items) || [];
+      renderList();
+      toast(`Loaded ${S.items.length} warm leads`, true);
+    }
+
+    function savePersona() {
+      const p_offer   = $('#p_offer')?.value || '';
+      const p_solves  = $('#p_solves')?.value || '';
+      const p_titles  = $('#p_titles')?.value || '';
+      const persona = { offer: p_offer, solves: p_solves, titles: p_titles };
+      localStorage.setItem('persona', JSON.stringify(persona));
+      S.persona = persona;
+      toast('Persona saved locally', true);
+    }
+
+    // --- renderer (very lightweight)
+    function renderList() {
+      const tbody = document.querySelector('#listBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      (S.items || []).forEach((it, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td>${it.host || ''}</td>
+          <td>${it.platform || ''}</td>
+          <td>${it.title || ''}</td>
+          <td>${it.created || ''}</td>
+          <td>${it.temp || ''}</td>
+          <td>${it.why || ''}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- bind events safely after DOM ready
+    function bind() {
+      // inputs the page already has
+      S.baseUI  = $('#base');     // text input with API base URL
+      S.apiKeyUI= $('#apikey');   // text input with API key
+
+      const UI = {
+        apply:       $('#apply'),
+        saveKey:     $('#saveKey'),
+        find:        $('#find'),
+        refreshHot:  $('#refreshHot'),
+        refreshWarm: $('#refreshWarm'),
+        personaSave: $('#personaSave'),
+        csvHot:      $('#csvHot'),
+        csvWarm:     $('#csvWarm')
+      };
+
+      // log missing ids so you can see instantly why clicks wouldn’t work
+      Object.entries(UI).forEach(([k, el]) => { if (!el) console.warn(`Missing element #${k}`); });
+
+      UI.apply?.addEventListener('click', () => {
+        S.base = (S.baseUI?.value || '').trim().replace(/\/+$/,'');
+        toast(`Base set to ${S.base || '(empty)'}`, !!S.base);
+      });
+
+      UI.saveKey?.addEventListener('click', () => {
+        S.apiKey = (S.apiKeyUI?.value || '').trim();
+        if (S.apiKey) localStorage.setItem('apiKey', S.apiKey);
+        toast(S.apiKey ? 'API key saved' : 'Empty API key', !!S.apiKey);
+      });
+
+      UI.find?.addEventListener('click', (e)=>{ e.preventDefault(); findOne(); });
+      UI.refreshHot?.addEventListener('click', (e)=>{ e.preventDefault(); refreshHot(); });
+      UI.refreshWarm?.addEventListener('click', (e)=>{ e.preventDefault(); refreshWarm(); });
+      UI.personaSave?.addEventListener('click', (e)=>{ e.preventDefault(); savePersona(); });
+
+      UI.csvHot?.addEventListener('click', () => download('hot.csv',  toCSV(S.items || [])));
+      UI.csvWarm?.addEventListener('click', () => download('warm.csv', toCSV((S.items || []).filter(x => x.temp === 'warm'))));
+
+      // restore saved values for convenience
+      const savedKey = localStorage.getItem('apiKey');
+      if (savedKey && S.apiKeyUI) S.apiKeyUI.value = savedKey, S.apiKey = savedKey;
+
+      try { renderList(); } catch (e) { console.warn('renderList error', e); }
+    }
+
+    document.addEventListener('DOMContentLoaded', bind);
+  </script>
+</body>
+</html>
