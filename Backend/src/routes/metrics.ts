@@ -1,78 +1,103 @@
 // src/routes/metrics.ts
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import {
   ensureLeadForHost,
   saveByHost,
   replaceHotWarm,
   resetHotWarm,
-  buckets as bucketize,
-  watchers as getWatcherInfo,
-  type Temp,
+  buckets,
+  watchers as getWatchers,
+  Temp,
+  StoredLead,
 } from "../shared/memStore";
-
-type Ok<T = Record<string, unknown>> = { ok: true } & T;
-type Err = { ok: false; error: string };
 
 export const metricsRouter = Router();
 
-// simple health for Dockerfile's HEALTHCHECK and smoke tests
+// health for this router
 metricsRouter.get("/healthz", (_req, res) => {
-  const b = bucketize();
-  res.json({ ok: true, cold: b.cold.length, warm: b.warm.length, hot: b.hot.length } satisfies Ok());
+  res.json({ ok: true });
 });
 
-// return watcher/competitor counts for a host
-// GET /api/v1/metrics/watchers?host=news.google.com
-metricsRouter.get("/watchers", (req, res) => {
-  const host = String(req.query.host ?? "");
-  if (!host) return res.status(400).json({ ok: false, error: "missing host" } satisfies Err);
+// GET /api/v1/metrics/watchers?host=example.com
+metricsRouter.get("/watchers", (req: Request, res: Response) => {
+  const host = (req.query.host as string) || "";
+  if (!host) return res.status(400).json({ ok: false, error: "missing host" });
 
-  const { watchers, competitors } = getWatcherInfo(host);
-  res.json({ ok: true, watchers: watchers.length, competitors: competitors.length } satisfies Ok);
-});
-
-// mark a lead as claimed/saved by host (panel hits this)
-// POST /api/v1/metrics/claim  { host: "news.google.com" }
-metricsRouter.post("/claim", (req, res) => {
-  const host = String(req.body?.host ?? "");
-  if (!host) return res.status(400).json({ ok: false, error: "missing host" } satisfies Err);
-
-  const lead = ensureLeadForHost(host);
-  // touch the lead so it appears in lists and has a created timestamp
-  saveByHost(host, { created: lead.created });
-
-  res.json({ ok: true } satisfies Ok);
-});
-
-// deepen a lead: nudge temperature or enrich minimal info
-// GET /api/v1/metrics/deepen?host=news.google.com&to=warm|hot|cold
-metricsRouter.get("/deepen", (req, res) => {
-  const host = String(req.query.host ?? "");
-  if (!host) return res.status(400).json({ ok: false, error: "missing host" } satisfies Err);
-
-  const to = String(req.query.to ?? "warm") as Temp | "reset";
-  const lead = ensureLeadForHost(host);
-
-  let newTemp: Temp;
-  if (to === "reset") {
-    newTemp = resetHotWarm(host).temperature ?? "cold";
-  } else {
-    newTemp = replaceHotWarm(host, to).temperature ?? "cold";
-  }
-
-  res.json({ ok: true, host, temperature: newTemp } satisfies Ok);
-});
-
-// buckets: quick counters for UI badges
-// GET /api/v1/metrics/buckets
-metricsRouter.get("/buckets", (_req, res) => {
-  const b = bucketize();
+  const w = getWatchers(host); // arrays (so .length works)
   res.json({
     ok: true,
-    hot: b.hot.length,
-    warm: b.warm.length,
-    cold: b.cold.length,
-  } satisfies Ok);
+    host,
+    counts: { watchers: w.watchers.length, competitors: w.competitors.length },
+    watchers: w.watchers,
+    competitors: w.competitors,
+  });
 });
 
-export default metricsRouter; // (harmless if imported by name; keeps both options working)
+// GET /api/v1/metrics/buckets
+metricsRouter.get("/buckets", (_req: Request, res: Response) => {
+  res.json({ ok: true, ...buckets() });
+});
+
+// POST /api/v1/metrics/claim
+// body: { host, title?, platform?, why?, temperature? }
+metricsRouter.post("/claim", (req: Request, res: Response) => {
+  const { host, title, platform, why, temperature } = req.body ?? {};
+  if (!host) return res.status(400).json({ ok: false, error: "missing host" });
+
+  // make sure a lead exists, then update it
+  ensureLeadForHost(host);
+
+  const patch: Partial<StoredLead> = {
+    title,
+    platform,
+    why,
+    saved: true,
+  };
+
+  // optional temperature bump
+  const t: Temp | undefined =
+    temperature === "hot" || temperature === "warm" || temperature === "cold"
+      ? temperature
+      : undefined;
+  if (t) patch.temperature = t;
+
+  const updated = saveByHost(host, patch);
+  return res.json({ ok: true, lead: updated });
+});
+
+// GET /api/v1/metrics/hot?host=...
+metricsRouter.get("/hot", (req: Request, res: Response) => {
+  const host = (req.query.host as string) || "";
+  if (!host) return res.status(400).json({ ok: false, error: "missing host" });
+  const lead = replaceHotWarm(host, "hot");
+  res.json({ ok: true, lead });
+});
+
+// GET /api/v1/metrics/warm?host=...
+metricsRouter.get("/warm", (req: Request, res: Response) => {
+  const host = (req.query.host as string) || "";
+  if (!host) return res.status(400).json({ ok: false, error: "missing host" });
+  const lead = replaceHotWarm(host, "warm");
+  res.json({ ok: true, lead });
+});
+
+// GET /api/v1/metrics/reset?host=...
+metricsRouter.get("/reset", (req: Request, res: Response) => {
+  const host = (req.query.host as string) || "";
+  if (!host) return res.status(400).json({ ok: false, error: "missing host" });
+  const lead = resetHotWarm(host);
+  res.json({ ok: true, lead });
+});
+
+// GET /api/v1/metrics/deepen?host=...
+// If you don’t have anything extra to add right now, return a
+// deliberate 404 with a friendly payload (the UI shows a small warning).
+metricsRouter.get("/deepen", (req: Request, res: Response) => {
+  const host = (req.query.host as string) || "";
+  if (!host) return res.status(400).json({ ok: false, error: "missing host" });
+
+  // Hook point: add enrichment here. For now, nothing additional.
+  return res.status(404).json({ ok: false, error: "nothing to deepen" });
+});
+
+export default metricsRouter;
