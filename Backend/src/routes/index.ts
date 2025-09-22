@@ -1,34 +1,85 @@
-import express from "express";
+// src/index.ts
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import morgan from "morgan";
-import metricsRouter, { metricsRouter as namedMetricsRouter } from "./routes/metrics";
-
-// Some platforms inject PORT; fall back to 8787 to match Dockerfile EXPOSE
-const PORT = Number(process.env.PORT || 8787);
-
-const app = express();
-
-// --- core middleware ---
-app.use(cors());
-app.use(express.json({ limit: "1mb" }));
-app.use(morgan(process.env.NODE_ENV === "production" ? "tiny" : "dev"));
-
-// --- health ---
-app.get("/healthz", (_req, res) => res.status(200).json({ ok: true }));
+import { metrics } from "./routes/metrics"; // <- named export (router)
 
 /**
- * Metrics/FOMO endpoints
- * We support both default and named import to avoid future import/export mismatches.
- * Mount at /api/v1/metrics
+ * Minimal, safe API bootstrap.
+ * - No imports from ./lib or ./services
+ * - Exposes /healthz for Docker healthcheck
+ * - Mounts metrics router at /api/v1/metrics
+ * - Optionally mounts a leads router if present (non-fatal if missing)
  */
-app.use("/api/v1/metrics", metricsRouter ?? namedMetricsRouter);
 
-// NOTE: keep your existing routers mounted below (buyers, leads, auth, etc.)
-// Example (do NOT add if you already mount these elsewhere):
-// import buyersRouter from "./routes/buyers";
-// app.use("/api/v1/leads", buyersRouter);
+const app = express();
+const PORT = Number(process.env.PORT || 8787);
 
+// Trust reverse proxies (useful on PaaS)
+app.set("trust proxy", 1);
+
+// Basic middleware
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: false }));
+
+// Liveness
+app.get("/healthz", (_req: Request, res: Response) => {
+  res.json({ ok: true });
+});
+
+// Metrics router
+app.use("/api/v1/metrics", metrics);
+
+// --- Optional leads router (mounted only if the module exists) ---
+void (async () => {
+  for (const candidate of [
+    "./routes/leads",
+    "./routes/lead",
+    "./routes/buyers",
+    "./routes/index",
+  ]) {
+    try {
+      const mod: any = await import(candidate);
+      const router =
+        mod?.default ||
+        mod?.leads ||
+        mod?.router ||
+        mod?.routes ||
+        mod?.buyersRouter;
+      if (router && typeof router === "function") {
+        app.use("/api/v1/leads", router);
+        // eslint-disable-next-line no-console
+        console.log(`[buyers-api] mounted leads router from ${candidate}`);
+        break;
+      }
+    } catch {
+      // ignore; try next candidate
+    }
+  }
+})();
+
+// 404 (JSON)
+app.use((req: Request, res: Response) => {
+  res.status(404).json({ ok: false, error: "Not found", path: req.path });
+});
+
+// Error handler (JSON)
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  // eslint-disable-next-line no-console
+  console.error("[buyers-api] error:", err);
+  res
+    .status(err?.status || 500)
+    .json({ ok: false, error: err?.message || "Internal error" });
+});
+
+// Start
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
-  console.log(`[api] listening on :${PORT}`);
+  console.log(`[buyers-api] listening on :${PORT}`);
 });
