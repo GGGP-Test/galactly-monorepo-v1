@@ -5,7 +5,7 @@
   <title>Leads Console — Free Panel (V3)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    :root { --bg:#0f172a; --panel:#111a2e; --muted:#9aa5b1; --text:#e5e7eb; --ok:#0ea5e9; --bad:#ef4444; --chip:#1f2a44; }
+    :root { --bg:#0f172a; --panel:#111a2e; --muted:#9aa5b1; --text:#e5e7eb; --chip:#1f2a44; }
     html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial;}
     .wrap{display:grid;grid-template-columns:420px 1fr;gap:18px;padding:18px;box-sizing:border-box;height:100%;}
     .card{background:var(--panel);border-radius:10px;padding:14px;box-shadow:0 0 0 1px #1c2541 inset;}
@@ -22,7 +22,6 @@
     table{width:100%;border-collapse:collapse;margin-top:10px}
     th,td{padding:8px 10px;border-bottom:1px solid #1f2a44;vertical-align:top}
     th{color:#93a3b8;text-align:left;position:sticky;top:0;background:var(--panel)}
-    .chips{display:flex;gap:6px;flex-wrap:wrap}
     .chip{background:var(--chip);border-radius:999px;padding:3px 8px}
     .toolbar{display:flex;gap:8px;flex-wrap:wrap}
     .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
@@ -30,7 +29,6 @@
 </head>
 <body>
   <div class="wrap">
-    <!-- LEFT: controls -->
     <div class="card">
       <h3 style="margin:2px 0 10px">Leads Console — Free Panel (V3)</h3>
 
@@ -83,7 +81,7 @@
       </div>
 
       <label>Supplier persona <span class="muted">(used to infer intent)</span></label>
-      <input id="p_offer" type="text" placeholder="Product/offer (e.g. Stretch film & pallet protection)" />
+      <input id="p_offer"  type="text" placeholder="Product/offer (e.g. Stretch film & pallet protection)" />
       <input id="p_solves" type="text" placeholder="Solves (e.g. Keeps pallets secure for storage/transport)" />
       <input id="p_titles" type="text" placeholder="Buyer titles (comma-separated), e.g. Warehouse Manager, Purchasing" />
       <div class="row">
@@ -98,18 +96,11 @@
       <div id="status" class="status muted"></div>
     </div>
 
-    <!-- RIGHT: list -->
     <div class="card">
       <table>
         <thead>
           <tr>
-            <th>#</th>
-            <th>Host</th>
-            <th>Platform</th>
-            <th>Title</th>
-            <th>Created</th>
-            <th>Temp</th>
-            <th>Why (human-readable)</th>
+            <th>#</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why (human-readable)</th>
           </tr>
         </thead>
         <tbody id="listBody"></tbody>
@@ -123,21 +114,20 @@
 
   // ---- helpers
   const $ = (id) => document.getElementById(id);
+  const setVal = (id, v) => { const el = $(id); if (el) el.value = v; };
+  const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
 
   function toast(msg, ok=false) {
     const el = $('#status'); if (!el) return console[ok?'log':'warn'](msg);
     el.textContent = msg; el.classList.remove('ok','err'); el.classList.add(ok?'ok':'err');
-    if (ok) console.log(msg); else console.warn(msg);
   }
-
   function setFindMsg(msg, ok=false) {
     const el = $('#findMsg'); if (!el) return;
     el.textContent = msg; el.classList.remove('ok','err'); if (msg) el.classList.add(ok?'ok':'err');
   }
-
   function setBase(v) {
     S.base = (v||'').trim().replace(/\/+$/,'');
-    $('#apiRoot').textContent = S.root;
+    const root = $('#apiRoot'); if (root) root.textContent = S.root;
   }
 
   // Robust fetch with JSON-or-text parsing
@@ -153,14 +143,11 @@
     if (S.apiKey) headers['x-api-key'] = S.apiKey;
 
     let res;
-    try {
-      res = await fetch(url.toString(), { method, headers, body: body!=null ? JSON.stringify(body) : undefined });
-    } catch (e) {
-      return { ok:false, status:0, data:{ ok:false, error:String(e) } };
-    }
+    try { res = await fetch(url.toString(), { method, headers, body: body!=null ? JSON.stringify(body) : undefined }); }
+    catch (e) { return { ok:false, status:0, data:{ ok:false, error:String(e) } }; }
+
     const text = await res.text();
-    let data = null;
-    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+    let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = text; }
     return { ok: res.ok, status: res.status, data };
   }
 
@@ -206,13 +193,12 @@
     const host    = ($('#supplierHost')?.value || '').trim();
     const country = ($('#country')?.value || '').trim();
     const radius  = ($('#radiusMi')?.value || '').trim();
-
     if (!host) return setFindMsg('Enter supplier host');
     if (!S.base) return setFindMsg('Set API base then Apply');
 
-    $('#find').disabled = true;
+    const btn = $('#find'); if (btn) btn.disabled = true;
     const r = await call('GET', `${S.root}/leads/find-buyers`, null, { host, country, radius });
-    $('#find').disabled = false;
+    if (btn) btn.disabled = false;
 
     if (!r.ok) return setFindMsg(`HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}`);
 
@@ -234,7 +220,6 @@
     S.items = ((r.data && r.data.items) || []).map(normalizeItem);
     renderList(); toast(`Loaded ${S.items.length} hot`, true);
   }
-
   async function refreshWarm(){
     toast('Loading warm…');
     const r = await call('GET', `${S.root}/leads`, null, { temp:'warm' });
@@ -244,7 +229,6 @@
   }
 
   function normalizeItem(raw){
-    // Accept slightly different shapes from backend and map to UI columns.
     if (!raw || typeof raw !== 'object') return {};
     return {
       host: raw.host || raw.source || raw.domain || '',
@@ -255,66 +239,71 @@
       why: raw.why || raw.whyText || raw.reason || ''
     };
   }
-
   const fmtErr = (d)=> typeof d==='string' ? d : JSON.stringify(d||{});
 
-  // ---- init & bindings
+  // ---- init & bindings (now fully null-safe)
   function bind(){
-    // restore saved stuff
-    const savedBase = localStorage.getItem('base');
-    const savedKey  = localStorage.getItem('apiKey');
-    const savedPersona = localStorage.getItem('persona');
-    if (savedBase) { $('#base').value = savedBase; setBase(savedBase); }
-    if (savedKey)  { $('#apikey').value = savedKey; S.apiKey = savedKey; }
-    if (savedPersona) {
-      try { S.persona = JSON.parse(savedPersona); } catch {}
-      if (S.persona) {
-        $('#p_offer').value  = S.persona.offer  || '';
-        $('#p_solves').value = S.persona.solves || '';
-        $('#p_titles').value = S.persona.titles || '';
-      }
-    }
-
-    // buttons
-    $('#apply').onclick = () => {
-      const v = $('#base').value;
-      setBase(v);
-      localStorage.setItem('base', S.base || '');
-      toast(S.base ? `Base set: ${S.base}` : 'Base cleared', !!S.base);
-    };
-    $('#saveKey').onclick = () => {
-      S.apiKey = ($('#apikey').value || '').trim();
-      if (S.apiKey) localStorage.setItem('apiKey', S.apiKey);
-      else localStorage.removeItem('apiKey');
-      toast(S.apiKey ? 'API key saved' : 'API key cleared', !!S.apiKey);
-    };
-    $('#find').onclick = (e)=>{ e.preventDefault(); findOne(); };
-    $('#refreshHot').onclick = (e)=>{ e.preventDefault(); refreshHot(); };
-    $('#refreshWarm').onclick = (e)=>{ e.preventDefault(); refreshWarm(); };
-    $('#personaSave').onclick = ()=>{
-      const persona = {
-        offer:  $('#p_offer').value || '',
-        solves: $('#p_solves').value || '',
-        titles: $('#p_titles').value || ''
-      };
-      localStorage.setItem('persona', JSON.stringify(persona));
-      S.persona = persona;
-      toast('Persona saved locally', true);
-    };
-    $('#csvHot').onclick  = ()=> download('hot.csv',  toCSV(S.items||[]));
-    $('#csvWarm').onclick = ()=> download('warm.csv', toCSV((S.items||[]).filter(x => (x.temp||'').toLowerCase()==='warm')));
-
-    // If URL has ?base=&key=, populate once
     try {
-      const u = new URL(location.href);
-      const b = u.searchParams.get('base'); const k = u.searchParams.get('key');
-      if (b) { $('#base').value = b; setBase(b); localStorage.setItem('base', S.base); }
-      if (k) { $('#apikey').value = k; S.apiKey = k; localStorage.setItem('apiKey', k); }
-    } catch {}
+      const savedBase = localStorage.getItem('base');
+      const savedKey  = localStorage.getItem('apiKey');
+      const savedPersona = localStorage.getItem('persona');
 
-    renderList();
+      if (savedBase) { setVal('base', savedBase); setBase(savedBase); }
+      if (savedKey)  { setVal('apikey', savedKey); S.apiKey = savedKey; }
+
+      if (savedPersona) {
+        try { S.persona = JSON.parse(savedPersona); } catch {}
+        if (S.persona) {
+          setVal('p_offer',  S.persona.offer  || '');
+          setVal('p_solves', S.persona.solves || '');
+          setVal('p_titles', S.persona.titles || '');
+        }
+      }
+
+      on('apply', 'click', () => {
+        const v = $('#base')?.value || '';
+        setBase(v);
+        localStorage.setItem('base', S.base || '');
+        toast(S.base ? `Base set: ${S.base}` : 'Base cleared', !!S.base);
+      });
+      on('saveKey', 'click', () => {
+        S.apiKey = ($('#apikey')?.value || '').trim();
+        if (S.apiKey) localStorage.setItem('apiKey', S.apiKey);
+        else localStorage.removeItem('apiKey');
+        toast(S.apiKey ? 'API key saved' : 'API key cleared', !!S.apiKey);
+      });
+
+      on('find','click', (e)=>{ e.preventDefault(); findOne(); });
+      on('refreshHot','click', (e)=>{ e.preventDefault(); refreshHot(); });
+      on('refreshWarm','click', (e)=>{ e.preventDefault(); refreshWarm(); });
+      on('personaSave','click', ()=>{
+        const persona = {
+          offer:  $('#p_offer')?.value || '',
+          solves: $('#p_solves')?.value || '',
+          titles: $('#p_titles')?.value || ''
+        };
+        localStorage.setItem('persona', JSON.stringify(persona));
+        S.persona = persona;
+        toast('Persona saved locally', true);
+      });
+
+      on('csvHot','click',  ()=> download('hot.csv',  toCSV(S.items||[])));
+      on('csvWarm','click', ()=> download('warm.csv', toCSV((S.items||[]).filter(x => (x.temp||'').toLowerCase()==='warm'))));
+
+      // optional ?base=&key= in URL
+      try {
+        const u = new URL(location.href);
+        const b = u.searchParams.get('base'); const k = u.searchParams.get('key');
+        if (b) { setVal('base', b); setBase(b); localStorage.setItem('base', S.base); }
+        if (k) { setVal('apikey', k); S.apiKey = k; localStorage.setItem('apiKey', k); }
+      } catch {}
+
+      renderList();
+    } catch (e) {
+      console.error('init failed', e);
+      toast('Init failed — check console', false);
+    }
   }
-
   document.addEventListener('DOMContentLoaded', bind);
   </script>
 </body>
