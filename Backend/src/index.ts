@@ -1,94 +1,66 @@
-import express, { Request, Response, NextFunction } from "express";
-import cors, { CorsOptions } from "cors";
-import path from "node:path";
-
-// Routers (your existing routes index that mounts /leads, /metrics, etc.)
+import express from "express";
+import cors from "cors";
+import compression from "compression";
+import morgan from "morgan";
 import routes from "./routes";
 
 const app = express();
-app.disable("x-powered-by");
 
-// ---- CORS ----------------------------------------------------
-// Allowed origins: set CORS_ORIGINS env as a comma-separated list,
-// e.g. "https://gggp-test.github.io, http://localhost:3000"
-const defaultOrigins = [
-  "https://gggp-test.github.io", // your free panel host
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-];
-const envOrigins = (process.env.CORS_ORIGINS || "")
+// -------- CORS --------
+const originEnv = process.env.CORS_ORIGIN || "";
+const allowedOrigins = originEnv
   .split(",")
   .map(s => s.trim())
   .filter(Boolean);
 
-const allowedOrigins = (envOrigins.length ? envOrigins : defaultOrigins);
+app.use(
+  cors({
+    origin: allowedOrigins.length ? allowedOrigins : true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-api-key",
+      "x-client",
+      "x-region"
+    ],
+    credentials: false,
+    maxAge: 86400
+  })
+);
 
-// If you want to temporarily open CORS to everything, set ALLOW_WEB=true
-const allowAll = String(process.env.ALLOW_WEB || "").toLowerCase() === "true";
+// Handle explicit OPTIONS (preflight)
+app.options("*", (_req, res) => res.sendStatus(204));
 
-const corsOptions: CorsOptions = {
-  origin: allowAll ? true : function (origin, callback) {
-    // no origin (e.g., curl) => allow
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "X-API-Key",       // <<< REQUIRED for your free panel
-    "Authorization",
-    "Accept",
-  ],
-  exposedHeaders: [],
-  credentials: false,
-  maxAge: 86400,
-  optionsSuccessStatus: 204,
-};
-
-app.use((req, res, next) => {
-  // Help caching CORS per-origin at proxies/CDNs
-  res.header("Vary", "Origin");
-  next();
-});
-
-app.use(cors(corsOptions));
-// Ensure all preflight requests are handled
-app.options("*", cors(corsOptions));
-
-// ---- Body parsers -------------------------------------------
+// -------- Core middleware --------
 app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
+app.use(compression());
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
-// ---- Healthcheck (Dockerfile calls this) --------------------
-app.get("/healthz", (_req: Request, res: Response) => {
-  res.status(200).json({ ok: true });
-});
-
-// ---- API (v1) -----------------------------------------------
+// -------- API mounting (with prefix aliases) --------
+// Canonical prefix:
 app.use("/api/v1", routes);
 
-// ---- 404 for unknown API routes (keeps logs clean) ----------
-app.use((req: Request, res: Response, _next: NextFunction) => {
-  if (req.path.startsWith("/api/")) {
-    return res.status(404).json({ ok: false, error: "Not found" });
-  }
-  res.status(404).send("Not found");
+// Alias to tolerate old/new frontend code:
+app.use("/api", routes);
+
+// Root health (for platform)
+app.get("/", (_req, res) => res.json({ ok: true, name: "buyers-api", status: "up" }));
+
+// 404 JSON
+app.use((_req, res) => res.status(404).json({ ok: false, error: "Not found" }));
+
+// Error JSON
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const code = typeof err?.status === "number" ? err.status : 500;
+  const message = err?.message || "Internal error";
+  res.status(code).json({ ok: false, error: message });
 });
 
-// ---- Error handler (ensures JSON for API) -------------------
-app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
-  const status = err?.status || 500;
-  const body =
-    req.path.startsWith("/api/")
-      ? { ok: false, error: err?.message || "Server error" }
-      : err?.message || "Server error";
-  if (status >= 500) console.error(err);
-  res.status(status).send(body);
-});
-
-// ---- Server start -------------------------------------------
-const PORT = Number(process.env.PORT || 8787);
-app.listen(PORT, () => {
-  console.log(`API listening on :${PORT}`);
+const port = Number(process.env.PORT || 8787);
+app.listen(port, () => {
+  // eslint-disable-next-line no-console
+  console.log(`API listening on :${port}`);
 });
