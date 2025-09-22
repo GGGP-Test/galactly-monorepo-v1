@@ -1,47 +1,71 @@
+// src/routes/metrics.ts
 import { Router } from "express";
-import crypto from "crypto";
+import { saveByHost } from "../shared/memStore";
 
 export const metricsRouter = Router();
 
-/**
- * Synthetic “who’s watching this lead” counter.
- * - Always >= 1 (never shows zero).
- * - Deterministic per host + minute bucket + secret salt.
- * - Scaled by time of day to feel quieter at night.
- */
-function watchersForHost(host: string): number {
-  const now = new Date();
-  const hour = now.getUTCHours(); // we don’t know user tz; UTC is fine for demo
-  const minuteBucket = Math.floor(now.getUTCMinutes() / 5); // 12 buckets/hour
-
-  const salt = process.env.ADMIN_TOKEN || "gx-salt";
-  const h = crypto
-    .createHash("sha256")
-    .update(`${host}|${hour}|${minuteBucket}|${salt}`)
-    .digest();
-
-  // base in [0..1)
-  const base = h[0] / 255;
-
-  // day-part scaling (quieter overnight UTC)
-  const dayScale = hour >= 6 && hour <= 20 ? 1.0 : 0.45;
-
-  // convert to a small integer range with jitter
-  const min = 1;
-  const max = 6; // keep modest for free panel
-  const val = Math.floor(min + base * (max - min + 1));
-
-  // tiny extra jitter from another byte so successive calls wiggle a bit
-  const jitter = (h[1] % 2); // 0 or 1
-
-  return Math.max(min, Math.round((val + jitter) * dayScale));
+// Simple key guard (writes only)
+function requireKey(req: any, res: any): boolean {
+  const need = process.env.API_KEY || process.env.X_API_KEY;
+  if (!need) return true;
+  const got = req.header("x-api-key") || req.header("X-Api-Key");
+  if (got !== need) {
+    res.status(401).json({ ok: false, error: "invalid api key" });
+    return false;
+  }
+  return true;
 }
 
+// --- helpers ---------------------------------------------------------------
+function hash(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+// Never show zero (FOMO). Stable-ish per host + time bucket.
+function demoWatchCounts(host: string) {
+  const now = new Date();
+  const bucket = Math.floor(now.getUTCMinutes() / 5); // 12 buckets/hour
+  const base = (hash(host + ":" + bucket) % 5) + 1;   // 1..5
+  const watching = base + (now.getUTCHours() % 2);    // 1..6, tiny day/night drift
+  const competing = Math.max(0, Math.floor(watching / 2));
+  return { watching, competing };
+}
+
+// --- routes ----------------------------------------------------------------
+
+// GET /api/v1/metrics/watchers?host=example.com
 metricsRouter.get("/watchers", (req, res) => {
-  const raw = String(req.query.host || "").trim();
-  const host = raw || "unknown";
-  const watching = watchersForHost(host);
-  res.json({ ok: true, watching });
+  const host = String(req.query.host || "").trim();
+  if (!host) return res.status(400).json({ ok: false, error: "host required" });
+  const { watching, competing } = demoWatchCounts(host);
+  res.json({ ok: true, watching, competing });
 });
 
-// future: public counters etc.
+// POST /api/v1/metrics/claim  { host, title? }
+metricsRouter.post("/claim", (req, res) => {
+  if (!requireKey(req, res)) return;
+  const host = String(req.body?.host || "").trim();
+  const title = req.body?.title ? String(req.body.title) : undefined;
+  if (!host) return res.status(400).json({ ok: false, error: "host required" });
+
+  const saved = saveByHost(host, title);
+  res.json({ ok: true, saved });
+});
+
+// GET /api/v1/metrics/deepen?host=...
+// Free returns soft "pro-only" message (200). You can flip to 403 later.
+metricsRouter.get("/deepen", (req, res) => {
+  const host = String(req.query.host || "").trim();
+  if (!host) return res.status(400).json({ ok: false, error: "host required" });
+
+  res.json({
+    ok: false,
+    proOnly: true,
+    message:
+      "Deepen results is Pro-only. We’ll crawl more sources, unlock extra metrics & notify you on spikes.",
+  });
+});
+
+export default metricsRouter;
