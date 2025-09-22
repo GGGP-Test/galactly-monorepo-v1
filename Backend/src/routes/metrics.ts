@@ -1,136 +1,131 @@
 import { Router, Request, Response } from "express";
+import crypto from "crypto";
 
 /**
- * Minimal, privacy-safe metrics + FOMO counters.
- * - Never returns zero watchers (uses a soft, time-varying baseline).
- * - Keeps everything in-memory (ephemeral) so it's safe to roll out now.
- * - Can be swapped later for Redis/DB without changing the API.
- */
-
-export const metricsRouter = Router();
-
-// --- Types (kept tiny & explicit) ---
-type Temp = "hot" | "warm";
-interface LeadEventBody {
-  host: string;           // canonical domain, e.g. "acme.com"
-  temp?: Temp;            // "hot" | "warm" (optional, used for bucketing)
-}
-
-// --- In-memory counters ---
-const shown = new Map<string, number>();  // key: host
-const viewed = new Map<string, number>(); // key: host
-
-// --- Helpers ---
-function inc(map: Map<string, number>, key: string, by = 1) {
-  map.set(key, (map.get(key) ?? 0) + by);
-}
-
-function clamp(n: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, n));
-}
-
-/**
- * Non-zero, time-varying baseline so “watching” never displays 0.
- * Roughly:
- * - Higher during US daytime (15:00–02:00 UTC), lower overnight.
- * - Adds a deterministic per-host jitter so different leads don’t all show the same number.
+ * Router: /api/v1/metrics
  *
- * Tunable by env:
- *   FOMO_BASE_MIN (default 1)
- *   FOMO_BASE_MAX (default 7)
+ * Endpoints
+ *   POST  /lead-shown      -> record that we displayed a lead row
+ *   POST  /lead-viewed     -> record that a lead row was opened
+ *   GET   /fomo?host=...   -> non-zero viewer count (demo-friendly)
+ *   GET   /public          -> small, sanitized counters used by the UI
+ *
+ * Notes
+ * - Everything is in-memory and safe for free/demo usage.
+ * - No imports from lib/ or services/ (you removed those dirs).
+ * - We export a *named* `metrics` to match `import { metrics } from "./routes/metrics"`.
  */
-function softBaseline(host: string): number {
-  const min = Number(process.env.FOMO_BASE_MIN ?? 1);
-  const max = Number(process.env.FOMO_BASE_MAX ?? 7);
 
-  const hour = new Date().getUTCHours();
-  // US/CA busier ~15:00–02:00 UTC
-  const dayBoost = (hour >= 15 || hour <= 2) ? 1.0 : 0.5;
+type Temp = "hot" | "warm" | "cold";
 
-  // Deterministic jitter per host (0..1)
-  let h = 2166136261;
-  for (let i = 0; i < host.length; i++) {
-    h ^= host.charCodeAt(i);
-    h = Math.imul(h, 16777619);
+interface Counter {
+  shown: number;
+  viewed: number;
+  last: number; // epoch ms
+}
+
+const leadCounters = new Map<string, Counter>();
+
+function upsertCounter(host: string): Counter {
+  const now = Date.now();
+  const c = leadCounters.get(host);
+  if (c) {
+    c.last = now;
+    return c;
   }
-  const jitter01 = ((h >>> 0) % 1000) / 1000;
-
-  const base = min + (max - min) * (0.25 + 0.75 * jitter01); // bias away from exact min
-  return Math.max(1, Math.round(base * dayBoost));
+  const created: Counter = { shown: 0, viewed: 0, last: now };
+  leadCounters.set(host, created);
+  return created;
 }
-
-/** Public-facing FOMO count: baseline + recent “viewed” + a small share of “shown”. */
-function watchingNow(host: string): number {
-  const b = softBaseline(host);
-  const v = viewed.get(host) ?? 0;
-  const s = shown.get(host) ?? 0;
-
-  // Don’t explode; keep lightweight.
-  const blended = b + Math.min(3, Math.floor(v * 0.5)) + Math.min(2, Math.floor(s * 0.25));
-  return clamp(blended, b, b + 10);
-}
-
-// --- Routes ---
-
-// Health for this router
-metricsRouter.get("/", (_req, res) => {
-  res.json({ ok: true, router: "metrics" });
-});
 
 /**
- * Record: a lead was rendered in UI (table/list)
+ * Stable-ish, non-zero watcher count for FOMO.
+ * - Time-of-day bumps (day > night)
+ * - Host-seeded jitter so the number isn't identical across hosts
+ * - Always >= 1 (you asked to never show zero)
+ */
+function fomoWatchers(host: string, now = new Date()): number {
+  // 0..23
+  const hour = now.getUTCHours();
+
+  // base: nights (0-6, 20-23) low; daytime higher
+  const base =
+    hour >= 7 && hour <= 19
+      ? 18 // daytime baseline
+      : 6; // night baseline
+
+  // host-seeded 0..12 jitter
+  const hash = crypto.createHash("sha1").update(host).digest();
+  const seed = hash[0] % 13; // 0..12
+
+  // minute wobble (keeps it moving a little)
+  const wobble = Math.floor((now.getUTCMinutes() % 10) / 2); // 0..4
+
+  const n = base + seed + wobble;
+
+  // Always at least 1, cap to something reasonable for UI
+  return Math.max(1, Math.min(n, 64));
+}
+
+export const metrics = Router();
+
+/**
  * POST /api/v1/metrics/lead-shown
- * { host, temp? }
+ * body: { host: string; temp?: "hot" | "warm" | "cold" }
  */
-metricsRouter.post("/lead-shown", (req: Request<unknown, unknown, LeadEventBody>, res: Response) => {
-  const host = (req.body?.host || "").toString().trim().toLowerCase();
-  if (!host) return res.status(400).json({ ok: false, error: "MISSING_HOST" });
-  inc(shown, host, 1);
-  res.json({ ok: true });
+metrics.post("/lead-shown", (req: Request, res: Response) => {
+  const { host, temp } = req.body as { host?: string; temp?: Temp };
+  if (!host || typeof host !== "string") {
+    return res.status(400).json({ ok: false, error: "host is required" });
+  }
+  upsertCounter(host).shown += 1;
+
+  // We don’t persist temp, but we could tally by temp later if you want.
+  return res.json({ ok: true, host, temp: temp ?? "warm" });
 });
 
 /**
- * Record: a lead details panel / popup was opened
  * POST /api/v1/metrics/lead-viewed
- * { host, temp? }
+ * body: { host: string }
  */
-metricsRouter.post("/lead-viewed", (req: Request<unknown, unknown, LeadEventBody>, res: Response) => {
-  const host = (req.body?.host || "").toString().trim().toLowerCase();
-  if (!host) return res.status(400).json({ ok: false, error: "MISSING_HOST" });
-  inc(viewed, host, 1);
-  res.json({ ok: true });
+metrics.post("/lead-viewed", (req: Request, res: Response) => {
+  const { host } = req.body as { host?: string };
+  if (!host || typeof host !== "string") {
+    return res.status(400).json({ ok: false, error: "host is required" });
+  }
+  upsertCounter(host).viewed += 1;
+  return res.json({ ok: true, host });
 });
 
 /**
- * Get the FOMO counter for a host.
- * GET /api/v1/metrics/fomo?host=acme.com
- * -> { watching: number }
+ * GET /api/v1/metrics/fomo?host=peekpackaging.com
+ * Returns a non-zero watcher count for the little “watching now” pill.
  */
-metricsRouter.get("/fomo", (req, res) => {
-  const host = (req.query.host || "").toString().trim().toLowerCase();
-  if (!host) return res.status(400).json({ ok: false, error: "MISSING_HOST" });
-  res.json({ ok: true, watching: watchingNow(host) });
+metrics.get("/fomo", (req: Request, res: Response) => {
+  const host = (req.query.host as string) || "";
+  if (!host) {
+    return res.status(400).json({ ok: false, error: "host query is required" });
+  }
+  const watching = fomoWatchers(host);
+  return res.json({ ok: true, watching });
 });
 
 /**
- * Very small public snapshot (privacy-safe).
  * GET /api/v1/metrics/public
- * -> { ok, totals: { hostsTracked, shown, viewed } }
+ * Very small, sanitized snapshot to power any tiny UI badges.
  */
-metricsRouter.get("/public", (_req, res) => {
-  let shownSum = 0;
-  let viewedSum = 0;
-  for (const v of shown.values()) shownSum += v;
-  for (const v of viewed.values()) viewedSum += v;
-
-  res.json({
-    ok: true,
-    totals: {
-      hostsTracked: new Set([...shown.keys(), ...viewed.keys()]).size,
-      shown: shownSum,
-      viewed: viewedSum,
-    },
-  });
+metrics.get("/public", (_req: Request, res: Response) => {
+  const now = Date.now();
+  // summarize only recent things (last 24h) to avoid unbounded growth feel
+  const DAY = 24 * 60 * 60 * 1000;
+  const recent: Record<string, { shown: number; viewed: number }> = {};
+  for (const [host, c] of leadCounters.entries()) {
+    if (now - c.last <= DAY) {
+      recent[host] = { shown: c.shown, viewed: c.viewed };
+    }
+  }
+  res.json({ ok: true, recent });
 });
 
-export default metricsRouter; // also provide default for convenience
+// Optional default export, harmless if unused
+export default metrics;
