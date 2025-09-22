@@ -1,170 +1,247 @@
 // src/middleware/quota.ts
-import { Request, Response, NextFunction, RequestHandler } from "express";
+import type { Request, Response, NextFunction } from "express";
 
-/**
- * Plans we recognize. Keep tiny & boring on purpose.
- */
-export type Plan = "free" | "pro" | "test" | "int";
+/** Plans we may see anywhere in this codebase. */
+export type Plan = "free" | "pro" | "test" | "internal";
 
-/**
- * Per-plan limits. We only rate-limit "find-buyers" daily counts right now.
- * Keeping the shape minimal avoids TS noise ("extra property" errors).
- */
+/** Per-plan limits. Extend as needed later. */
 export interface PlanLimits {
+  /** how many /find-buyers calls allowed per window */
   dailyFindBuyers: number;
 }
 
-/** Avoid Record<> to dodge "Record is not generic" shadowing in some repos. */
-type LimitsMap = { free: PlanLimits; pro: PlanLimits; test: PlanLimits; int: PlanLimits };
+/** A tiny mapped type to avoid relying on global `Record<>` */
+type PlanMap<T> = {
+  free: T;
+  pro: T;
+  test: T;
+  internal: T;
+};
 
+/** Config the middleware understands. */
 export interface QuotaConfig {
-  windowDays: number;            // rolling window size in days (effectively 1-day windows)
-  limits: LimitsMap;             // per-plan limits
-  testApiKey: string;            // special key allowed to use "test" plan when ALLOW_TEST=1
-  allowTest: boolean;            // if 1, allow the test plan when apiKey===testApiKey
-  disabled: boolean;             // if 1, bypasses all quota checks
+  /** sliding window in days (defaults to 1 day) */
+  windowDays: number;
+  /** plan -> limits */
+  limits: PlanMap<PlanLimits>;
+  /** hard off switch (1 = off) */
+  disabled?: boolean;
+  /** if ALLOW_TEST=1 and apiKey==testKey -> plan 'test' */
+  testKey?: string;
+  allowTestKey?: boolean;
 }
 
-/* ------------ env helpers ------------ */
+/** --- env helpers -------------------------------------------------------- */
 
-const env = (k: string, d?: string) => (process.env[k] ?? d ?? "").trim();
-const toInt = (v: string, d: number) => {
-  const n = parseInt(v, 10);
-  return Number.isFinite(n) ? n : d;
+function num(env: string | undefined, dflt: number): number {
+  const n = Number(env);
+  return Number.isFinite(n) ? n : dflt;
+}
+function flag(env: string | undefined): boolean {
+  return env === "1" || env === "true";
+}
+
+/** pull env once (values baked at boot) */
+const ENV = {
+  QUOTA_DISABLE: flag(process.env.QUOTA_DISABLE),
+  QUOTA_WINDOW_DAYS: num(process.env.QUOTA_WINDOW_DAYS, 1),
+
+  FREE_DAILY: num(process.env.FREE_DAILY, 3),
+  PRO_DAILY: num(process.env.PRO_DAILY, 25),
+  TEST_DAILY: num(process.env.TEST_DAILY, 100),
+  INT_DAILY: num(process.env.INT_DAILY, 1000),
+
+  ALLOW_TEST: flag(process.env.ALLOW_TEST),
+  TEST_API_KEY: (process.env.QUOTA_TEST_API_KEY || "").trim(),
 };
 
-function loadDefaultConfig(): QuotaConfig {
-  const windowDays = toInt(env("QUOTA_WINDOW_DAYS", "1"), 1);
+/** defaults derived from env (safe fallbacks baked in) */
+const DEFAULT_LIMITS: PlanMap<PlanLimits> = {
+  free: { dailyFindBuyers: ENV.FREE_DAILY },
+  pro: { dailyFindBuyers: ENV.PRO_DAILY },
+  test: { dailyFindBuyers: ENV.TEST_DAILY },
+  internal: { dailyFindBuyers: ENV.INT_DAILY },
+};
 
-  const cfg: QuotaConfig = {
-    windowDays,
-    limits: {
-      free: { dailyFindBuyers: toInt(env("FREE_DAILY", "3"), 3) },
-      pro:  { dailyFindBuyers: toInt(env("PRO_DAILY",  "50"), 50) },
-      test: { dailyFindBuyers: toInt(env("TEST_DAILY", "100"), 100) },
-      int:  { dailyFindBuyers: toInt(env("INT_DAILY",  "10"), 10) },
-    },
-    testApiKey: env("QUOTA_TEST_API_KEY", ""),
-    allowTest: env("ALLOW_TEST", "0") === "1",
-    disabled:  env("QUOTA_DISABLE", "0") === "1",
-  };
-  return cfg;
+/** global, mutable config (can be adjusted at runtime via helpers) */
+let CONFIG: QuotaConfig = {
+  windowDays: Math.max(1, ENV.QUOTA_WINDOW_DAYS),
+  limits: DEFAULT_LIMITS,
+  disabled: ENV.QUOTA_DISABLE,
+  testKey: ENV.TEST_API_KEY,
+  allowTestKey: ENV.ALLOW_TEST,
+};
+
+/** manual plan overrides per API key (tiny in-memory map for now) */
+const planForApiKey = new Map<string, Plan>();
+
+/** usage bucket:
+ *  key is `${apiKey}|${plan}|${bucket}|${epochDay}`  */
+type Usage = { used: number; resetAt: number };
+const usage = new Map<string, Usage>();
+
+/** epoch day index respecting windowDays */
+function windowIndex(ms: number, windowDays: number): number {
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Math.floor(ms / dayMs / windowDays);
+}
+function msUntilWindowEnd(nowMs: number, windowDays: number): number {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const w = windowIndex(nowMs, windowDays);
+  const end = (w + 1) * windowDays * dayMs;
+  return Math.max(0, end - nowMs);
+}
+function clientIp(req: Request): string {
+  const fwd = (req.headers["x-forwarded-for"] || "").toString();
+  return (fwd.split(",")[0] || req.socket.remoteAddress || "unknown").trim();
 }
 
-let CONFIG: QuotaConfig = loadDefaultConfig();
+/** figure out apiKey and plan for the request */
+function resolveIdentity(req: Request): { apiKey: string; plan: Plan } {
+  const hdrKey = (req.header("x-api-key") || "").trim();
+  const hdrPlan = (req.header("x-plan") || "").trim().toLowerCase();
 
-/* ------------ in-memory usage store ------------ */
-
-interface Usage {
-  startMs: number;     // window start
-  findBuyers: number;  // counter inside window
-  plan: Plan;
-}
-const usageByKey: { [apiKeyOrIp: string]: Usage } = Object.create(null);
-
-const DAY_MS = 86_400_000;
-const windowStart = (days: number) => {
-  if (days <= 1) {
-    const d = new Date(); d.setUTCHours(0, 0, 0, 0);
-    return d.getTime();
+  // explicit override first
+  if (hdrKey && planForApiKey.has(hdrKey)) {
+    return { apiKey: hdrKey, plan: planForApiKey.get(hdrKey)! };
   }
+
+  // special test key (if allowed)
+  if (ENV.ALLOW_TEST && hdrKey && ENV.TEST_API_KEY && hdrKey === ENV.TEST_API_KEY) {
+    return { apiKey: hdrKey, plan: "test" };
+  }
+
+  // honor x-plan when provided, but constrain to known values
+  const candidate =
+    hdrPlan === "pro" || hdrPlan === "test" || hdrPlan === "internal" ? (hdrPlan as Plan) : "free";
+
+  const key = hdrKey || `ip:${clientIp(req)}`;
+  return { apiKey: key, plan: candidate };
+}
+
+/** returns usage bucket key + current window reset time */
+function bucketKey(apiKey: string, plan: Plan, bucket: string, nowMs: number) {
+  const w = windowIndex(nowMs, CONFIG.windowDays);
+  const key = `${apiKey}|${plan}|${bucket}|${w}`;
+  const resetAt = nowMs + msUntilWindowEnd(nowMs, CONFIG.windowDays);
+  return { key, resetAt };
+}
+
+/** core check+count */
+function checkAndBump(apiKey: string, plan: Plan, bucket: string): { ok: true } | {
+  ok: false; resetAfterMs: number; used: number; limit: number; plan: Plan;
+} {
   const now = Date.now();
-  const span = Math.max(1, days) * DAY_MS;
-  return now - (now % span);
-};
+  const { key, resetAt } = bucketKey(apiKey, plan, bucket, now);
 
-/* ------------ helpers to infer the plan/key ------------ */
+  const limits = CONFIG.limits[plan] || CONFIG.limits.free;
+  const limit = Math.max(0, limits.dailyFindBuyers);
 
-function pickPlan(req: Request, apiKey: string): Plan {
-  // Admin/client cannot spoof plan — we derive from apiKey/flags to keep it simple & safe
-  if (CONFIG.allowTest && CONFIG.testApiKey && apiKey && apiKey === CONFIG.testApiKey) {
-    return "test";
+  if (limit === 0) {
+    return { ok: false, resetAfterMs: msUntilWindowEnd(now, CONFIG.windowDays), used: 0, limit, plan };
   }
-  // TODO later: look up apiKey in DB to decide "pro" vs "free".
-  return "free";
+
+  const cur = usage.get(key) || { used: 0, resetAt };
+  // window rollover guard
+  if (cur.resetAt !== resetAt) {
+    cur.used = 0;
+    cur.resetAt = resetAt;
+  }
+
+  if (cur.used >= limit) {
+    return { ok: false, resetAfterMs: Math.max(0, cur.resetAt - now), used: cur.used, limit, plan };
+  }
+
+  cur.used += 1;
+  usage.set(key, cur);
+  return { ok: true };
 }
 
-function clientKey(req: Request): string {
-  // Prefer API key; fall back to IP so unauth users don't share one bucket across the world.
-  const hdr = (req.headers["x-api-key"] || req.headers["X-API-Key"]) as string | undefined;
-  const key = (hdr ?? "").trim();
-  return key || (req.ip || req.socket.remoteAddress || "anon");
-}
-
-/* ------------ public admin-ish helpers (used in tests/ops) ------------ */
-
-// Merge partial updates; you can set limits.free.dailyFindBuyers etc.
-// We also accept flat overrides: { windowDays: 2 } etc.
-export function configureQuota(partial: Partial<QuotaConfig> & { limits?: Partial<LimitsMap> }) {
-  if (partial.windowDays !== undefined) CONFIG.windowDays = partial.windowDays;
-  if (partial.testApiKey !== undefined) CONFIG.testApiKey = partial.testApiKey;
-  if (partial.allowTest !== undefined) CONFIG.allowTest = partial.allowTest;
-  if (partial.disabled !== undefined) CONFIG.disabled = partial.disabled;
-
-  if (partial.limits) {
-    CONFIG.limits = {
-      free: { ...CONFIG.limits.free, ...(partial.limits.free ?? {}) },
-      pro:  { ...CONFIG.limits.pro,  ...(partial.limits.pro  ?? {}) },
-      test: { ...CONFIG.limits.test, ...(partial.limits.test ?? {}) },
-      int:  { ...CONFIG.limits.int,  ...(partial.limits.int  ?? {}) },
+/** -----------------------------------------------------------------------
+ *  middleware factory
+ *  - default export for `import quota from "./middleware/quota"`
+ *  - also available as a named export: `import { quota } from ...`
+ *  - accepts an optional partial config; `plans` alias is accepted too
+ * ----------------------------------------------------------------------*/
+export function quota(partial?: Partial<QuotaConfig> & { plans?: PlanMap<PlanLimits> }) {
+  // allow both `limits` and legacy `plans` names
+  if (partial && (partial as any).plans && !partial.limits) {
+    (partial as any).limits = (partial as any).plans;
+  }
+  if (partial) {
+    CONFIG = {
+      ...CONFIG,
+      ...partial,
+      limits: partial.limits ? { ...CONFIG.limits, ...partial.limits } : CONFIG.limits,
     };
   }
-}
 
-export function resetQuota() {
-  for (const k of Object.keys(usageByKey)) delete usageByKey[k];
-}
+  // express handler
+  return function quotaMiddleware(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (CONFIG.disabled) return next(); // hard-off
 
-export function snapshotQuota() {
-  // return a shallow copy for inspection
-  const out: any = {};
-  for (const k of Object.keys(usageByKey)) out[k] = { ...usageByKey[k] };
-  return { config: { ...CONFIG }, usage: out };
-}
+      const { apiKey, plan } = resolveIdentity(req);
 
-// Force a plan for a key (useful in integration/tests later)
-export function setPlanForApiKey(_apiKey: string, _plan: Plan) {
-  // No persistent mapping yet. Left as a future hook (kept for API surface compatibility).
-}
+      // 'internal' is effectively unlimited
+      if (plan === "internal") return next();
 
-/* ------------ the middleware factory itself ------------ */
+      // this middleware is intended to be mounted specifically on the
+      // /find-buyers route; still, keep the bucket name explicit:
+      const bucket = "find-buyers";
 
-/**
- * quota(): Express middleware for /find-buyers.
- * - Checks daily counter against limits for the caller's plan.
- * - Increments the counter if allowed.
- * - When blocked, returns 429 with { ok:false, error:"QUOTA", retryAfterMs }.
- *
- * You can pass an explicit plan ("free"/"pro"/"test"/"int") but normally you don't.
- */
-export function quota(forced?: Plan): RequestHandler {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (CONFIG.disabled) return next(); // global dev override
+      const r = checkAndBump(apiKey, plan, bucket);
+      if (r.ok) return next();
 
-    const apiKey = clientKey(req);
-    const plan: Plan = forced ?? pickPlan(req, apiKey);
-    const limit = CONFIG.limits[plan] || CONFIG.limits.free;
-
-    const nowStart = windowStart(CONFIG.windowDays);
-    const bucket = usageByKey[apiKey] && usageByKey[apiKey].startMs === nowStart
-      ? usageByKey[apiKey]
-      : (usageByKey[apiKey] = { startMs: nowStart, findBuyers: 0, plan });
-
-    // Only count POST /api/v1/leads/find-buyers (keep future-proof)
-    const isFindBuyers = req.method === "POST" && /\/leads\/find-buyers$/.test(req.path);
-    if (!isFindBuyers) return next();
-
-    if (bucket.findBuyers >= limit.dailyFindBuyers) {
-      const windowMs = Math.max(1, CONFIG.windowDays) * DAY_MS;
-      const retryAfterMs = Math.max(1, bucket.startMs + windowMs - Date.now());
-      res.status(429).json({ ok: false, error: "QUOTA", retryAfterMs, plan });
-      return;
+      res.status(429).json({
+        ok: false,
+        error: "DAILY_QUOTA",
+        plan: r.plan,
+        limit: r.limit,
+        retryAfterMs: r.resetAfterMs,
+      });
+    } catch (err) {
+      // never break the route because of quota bugs
+      next(err);
     }
-
-    bucket.findBuyers++;
-    next();
   };
 }
 
-/* Support both named and default import styles */
+/** default export for `import quota from ...` */
 export default quota;
+
+/** -------- optional admin/testing helpers (named exports) ---------------- */
+
+/** tweak config at runtime (e.g., from tests) */
+export function configureQuota(partial?: Partial<QuotaConfig> & { plans?: PlanMap<PlanLimits> }) {
+  quota(partial); // reuse merge logic
+}
+
+/** bind a plan to a specific API key */
+export function setPlanForApiKey(apiKey: string, plan: Plan) {
+  if (!apiKey) return;
+  planForApiKey.set(apiKey, plan);
+}
+
+/** drop all counters (or one apiKey if provided) */
+export function resetQuota(apiKey?: string) {
+  if (!apiKey) {
+    usage.clear();
+    return;
+  }
+  // remove only keys that start with given apiKey
+  const prefix = `${apiKey}|`;
+  for (const k of usage.keys()) {
+    if (k.startsWith(prefix)) usage.delete(k);
+  }
+}
+
+/** snapshot for debugging/observability */
+export function snapshotQuota() {
+  const out: Array<{ key: string; used: number; resetAt: number }> = [];
+  for (const [key, v] of usage.entries()) out.push({ key, used: v.used, resetAt: v.resetAt });
+  return {
+    config: CONFIG,
+    entries: out.sort((a, b) => a.key.localeCompare(b.key)),
+  };
+}
