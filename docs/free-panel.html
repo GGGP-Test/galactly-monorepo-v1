@@ -108,7 +108,7 @@
     </div>
   </div>
 
-  <script>
+<script>
   // ---- tiny state
   const S = { base:'', apiKey:'', items:[], persona:null, root:'/api/v1' };
 
@@ -130,17 +130,22 @@
     const root = $('#apiRoot'); if (root) root.textContent = S.root;
   }
 
-  // Robust fetch with JSON-or-text parsing
+  // Robust fetch that auto-reads Base + Key from inputs if missing
   async function call(method, path, body=null, query=null) {
-    const base = S.base || '';
+    // Prefer state, but fall back to input boxes so Apply/Save are optional
+    let base = S.base || ($('#base')?.value || '').trim();
+    if (base && !S.base) { setBase(base); localStorage.setItem('base', base); }
     if (!base) return { ok:false, status:0, data:{ ok:false, error:'no base set' } };
+
+    let key = S.apiKey || ($('#apikey')?.value || '').trim();
+    if (key && !S.apiKey) { S.apiKey = key; localStorage.setItem('apiKey', key); }
 
     const url = new URL(base + (path.startsWith('/') ? path : ('/'+path)));
     if (query) Object.entries(query).forEach(([k,v]) => v!=null && v!=='' && url.searchParams.set(k,String(v)));
 
     const headers = { 'Accept':'application/json' };
     if (body!=null) headers['Content-Type'] = 'application/json';
-    if (S.apiKey) headers['x-api-key'] = S.apiKey;
+    if (key) headers['x-api-key'] = key;
 
     let res;
     try { res = await fetch(url.toString(), { method, headers, body: body!=null ? JSON.stringify(body) : undefined }); }
@@ -188,16 +193,28 @@
   }
 
   // ---- actions
+  function normalizeItem(raw){
+    if (!raw || typeof raw !== 'object') return {};
+    return {
+      host: raw.host || raw.source || raw.domain || '',
+      platform: raw.platform || raw.type || '',
+      title: raw.title || raw.name || '',
+      created: raw.created || raw.createdAt || raw.ts || '',
+      temp: raw.temp || raw.temperature || '',
+      why: raw.why || raw.whyText || raw.reason || ''
+    };
+  }
+  const fmtErr = (d)=> typeof d==='string' ? d : JSON.stringify(d||{});
+
   async function findOne(){
     setFindMsg('');
     const host    = ($('#supplierHost')?.value || '').trim();
     const country = ($('#country')?.value || '').trim();
     const radius  = ($('#radiusMi')?.value || '').trim();
     if (!host) return setFindMsg('Enter supplier host');
-    if (!S.base) return setFindMsg('Set API base then Apply');
 
     const btn = $('#find'); if (btn) btn.disabled = true;
-    const r = await call('GET', `${S.root}/leads/find-buyers`, null, { host, country, radius });
+    const r = await call('GET', `/api/v1/leads/find-buyers`, null, { host, country, radius });
     if (btn) btn.disabled = false;
 
     if (!r.ok) return setFindMsg(`HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}`);
@@ -215,33 +232,20 @@
 
   async function refreshHot(){
     toast('Loading hot…');
-    const r = await call('GET', `${S.root}/leads`, null, { temp:'hot' });
+    const r = await call('GET', `/api/v1/leads`, null, { temp:'hot' });
     if (!r.ok) return toast(`Failed (hot) HTTP ${r.status} — ${fmtErr(r.data)}`);
     S.items = ((r.data && r.data.items) || []).map(normalizeItem);
     renderList(); toast(`Loaded ${S.items.length} hot`, true);
   }
   async function refreshWarm(){
     toast('Loading warm…');
-    const r = await call('GET', `${S.root}/leads`, null, { temp:'warm' });
+    const r = await call('GET', `/api/v1/leads`, null, { temp:'warm' });
     if (!r.ok) return toast(`Failed (warm) HTTP ${r.status} — ${fmtErr(r.data)}`);
     S.items = ((r.data && r.data.items) || []).map(normalizeItem);
     renderList(); toast(`Loaded ${S.items.length} warm`, true);
   }
 
-  function normalizeItem(raw){
-    if (!raw || typeof raw !== 'object') return {};
-    return {
-      host: raw.host || raw.source || raw.domain || '',
-      platform: raw.platform || raw.type || '',
-      title: raw.title || raw.name || '',
-      created: raw.created || raw.createdAt || raw.ts || '',
-      temp: raw.temp || raw.temperature || '',
-      why: raw.why || raw.whyText || raw.reason || ''
-    };
-  }
-  const fmtErr = (d)=> typeof d==='string' ? d : JSON.stringify(d||{});
-
-  // ---- init & bindings (now fully null-safe)
+  // ---- init & bindings
   function bind(){
     try {
       const savedBase = localStorage.getItem('base');
@@ -305,6 +309,6 @@
     }
   }
   document.addEventListener('DOMContentLoaded', bind);
-  </script>
+</script>
 </body>
 </html>
