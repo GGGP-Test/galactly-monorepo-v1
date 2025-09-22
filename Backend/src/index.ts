@@ -3,56 +3,53 @@ import cors from "cors";
 
 // Routers
 import leadsRouter from "./routes/leads";
-import metricsRouter from "./routes/metrics"; // default import to avoid named-export mismatch
+import { metricsRouter } from "./routes/metrics";
 
-// ----- app -----
+// ---- app ----
 const app = express();
 
-// trust proxy (if behind a proxy/load balancer)
-if (process.env.TRUST_PROXY) app.set("trust proxy", true);
+// Trust proxy if running behind a proxy (Fly, Render, etc.)
+app.set("trust proxy", 1);
 
-// body parsers
+// JSON + urlencoded
 app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 
-// -------- CORS (allow GitHub Pages + your custom origins) --------
-const originsEnv = (process.env.CORS_ORIGIN || "").trim();
-// support comma- or space-separated list
-const allowed = originsEnv
-  ? originsEnv.split(/[,\s]+/).filter(Boolean)
-  : ["*"]; // permissive if not set
+// CORS — allow GitHub Pages and any comma-separated origins in CORS_ORIGIN
+const originsEnv = (process.env.CORS_ORIGIN || "").split(",").map(s => s.trim()).filter(Boolean);
+const defaultOrigins = [
+  "https://gggp-test.github.io",
+  "https://gggp-test.github.io/galactly-monorepo-v1"
+];
+const allowList = [...new Set([...defaultOrigins, ...originsEnv])];
 
-const corsOptions: cors.CorsOptions = {
-  origin: function (origin, cb) {
-    // allow same-origin / server-to-server / curl (no origin header)
-    if (!origin) return cb(null, true);
-    if (allowed.includes("*")) return cb(null, true);
-    // exact match or startsWith match for convenience
-    const ok = allowed.some((o) => origin === o || origin.startsWith(o));
-    cb(ok ? null : new Error("CORS blocked"), ok);
-  },
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "x-api-key"],
-  maxAge: 3600,
-};
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (!origin) return cb(null, true); // allow curl/postman
+      if (allowList.some(o => origin.startsWith(o))) return cb(null, true);
+      return cb(null, false);
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "X-Api-Key", "x-api-key"],
+  })
+);
 
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // handle preflights
+// quick preflight
+app.options("*", cors());
 
-// ----- health -----
-app.get("/healthz", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+// Health
+app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
-// ----- api -----
+// API v1
 app.use("/api/v1/leads", leadsRouter);
 app.use("/api/v1/metrics", metricsRouter);
 
-// root (optional)
-app.get("/", (_req, res) => res.json({ ok: true }));
+// 404
+app.use((_req, res) => res.status(404).json({ ok: false, error: "Not found" }));
 
-// ----- start -----
+// ---- boot ----
 const PORT = Number(process.env.PORT || 8787);
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`[server] listening on :${PORT}`);
+app.listen(PORT, () => {
+  console.log(`[api] listening on ${PORT}`);
 });
-
-export default app;
