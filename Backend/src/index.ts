@@ -1,9 +1,8 @@
-// src/index.ts
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import findBuyers from "./services/find-buyers";
 import rateLimit from "./middleware/rateLimit";
-import quota from "./middleware/quota"; // default export supported (also available as { quota })
+import metrics from "./services/metrics"; // NEW
 
 const app = express();
 
@@ -13,22 +12,30 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
 app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// stub list endpoint so the panel never 404s
+// Legacy list stub so the panel never 404s
 app.get("/api/v1/leads", (req: Request, res: Response) => {
   const temp = req.query.temp === "hot" || req.query.temp === "warm" ? String(req.query.temp) : "warm";
-  res.status(200).json({ temp, region: req.query.region ?? null, warm: [], hot: [] });
+  res.status(200).json({
+    ok: true,
+    temp,
+    region: req.query.region ?? null,
+    items: [], // saved is client-side for Free Panel; this endpoint remains for compatibility
+  });
 });
 
-// ---- Find buyers (rate limit + quota) ----
-const rl = rateLimit({ windowMs: 10_000, max: 4 }); // you already tuned this
+// --- Find buyers endpoints (with rate limit) ---
+const rl = rateLimit({ windowMs: 10_000, max: 4 }); // 4 tries / 10s as agreed
 
 // canonical route used by the Free Panel
-app.post("/api/v1/leads/find-buyers", rl, quota(), findBuyers);
+app.post("/api/v1/leads/find-buyers", rl, findBuyers);
 
-// extra aliases just in case
-app.post("/find-buyers", rl, quota(), findBuyers);
-app.get("/api/v1/leads/find-buyers", rl, quota(), findBuyers);
-app.get("/find-buyers", rl, quota(), findBuyers);
+// extra aliases to be bulletproof
+app.post("/find-buyers", rl, findBuyers);
+app.get("/api/v1/leads/find-buyers", rl, findBuyers);
+app.get("/find-buyers", rl, findBuyers);
+
+// --- NEW: Metrics / FOMO counters / Deepen stubs ---
+app.use(metrics);
 
 // 404
 app.use((req: Request, res: Response) => {
