@@ -51,6 +51,7 @@
     .error{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4)}
     .success{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.4)}
     .link{color:#93c5fd;text-decoration:none}
+    .mini{font-size:12px; opacity:.85; cursor:pointer; text-decoration:underline}
   </style>
 </head>
 <body>
@@ -58,20 +59,21 @@
     <h1>Leads Console — Free Panel (V2)</h1>
 
     <div class="grid">
-      <!-- LEFT -->
+      <!-- LEFT: Hot/Warm lists -->
       <div class="card">
         <div class="head row">
           <div class="row fill">
             <input id="baseUrl" class="fill" placeholder="Base URL (e.g. https://p01--animated-cellar--xxxxx.code.run)" />
             <button id="apply">Apply</button>
+            <span id="reset" class="mini">Reset panel</span>
           </div>
           <div class="row fill">
-            <input id="apiKey" class="fill" placeholder="API key" />
-            <select id="plan" style="width:160px">
-              <option value="free" selected>Free</option>
-              <option value="starter">Starter</option>
+            <input id="apiKey" class="fill" placeholder="API key (optional for read; required for write)" />
+            <select id="plan" style="width:120px">
+              <option value="free">Free</option>
               <option value="pro">Pro</option>
-              <option value="scale">Scale</option>
+              <option value="test">Test</option>
+              <option value="int">Internal</option>
             </select>
             <button id="saveKey" class="secondary">Save</button>
             <button id="onlyUSCA" class="secondary">US/CA only</button>
@@ -102,7 +104,7 @@
         </div>
       </div>
 
-      <!-- RIGHT -->
+      <!-- RIGHT: Details + Find buyers -->
       <div class="card">
         <div class="head"><div class="row"><div class="pill"><span class="badge">Details</span> Select a lead…</div></div></div>
         <div class="body" id="details"><div class="muted">No lead selected.</div></div>
@@ -129,25 +131,6 @@
           <div id="findMsg" class="note muted"></div>
         </div>
 
-        <div class="head"><div class="row"><div class="pill"><span class="badge">Supplier persona</span> (human-editable)</div></div></div>
-        <div class="body">
-          <div class="split">
-            <div>
-              <label class="muted">Product/offer</label>
-              <input id="p_offer" placeholder="e.g. Stretch film & pallet protection" />
-            </div>
-            <div>
-              <label class="muted">Solves</label>
-              <input id="p_solves" placeholder="e.g. Keeps pallets secure for storage/transport" />
-            </div>
-          </div>
-          <div class="row" style="margin-top:8px">
-            <input id="p_titles" class="fill" placeholder="Buyer titles (comma-separated), e.g. Warehouse Manager, Purchasing Manager, COO" />
-            <button id="personaSave" class="secondary">Save persona (local)</button>
-          </div>
-          <div class="note muted">Tip: we’ll use this persona to infer intent automatically. You can tweak wording anytime.</div>
-        </div>
-
         <div class="head"><div class="row"><div class="pill"><span class="badge">Downloads</span> CSV</div></div></div>
         <div class="body row">
           <button id="dlHot" class="secondary">Download CSV (hot)</button>
@@ -160,31 +143,37 @@
   </div>
 
   <script>
+    // --- tiny utils ----------------------------------------------------------
     const $ = s=>document.querySelector(s);
+    const $$ = s=>document.querySelectorAll(s);
+    const safeJSON = (val, fallback) => {
+      try { if (val === null || val === undefined || val === '') return fallback; return JSON.parse(val); }
+      catch { return fallback; }
+    };
+
+    // persistent state (hardened against bad localStorage values)
     const S = {
       baseUrl: localStorage.getItem('baseUrl') || '',
       apiKey:  localStorage.getItem('apiKey')  || '',
       plan:    localStorage.getItem('plan')    || 'free',
-      onlyUSCA: JSON.parse(localStorage.getItem('onlyUSCA')||'true'),
-      persona: JSON.parse(localStorage.getItem('persona')||'{"offer":"","solves":"","titles":""}')
+      onlyUSCA: safeJSON(localStorage.getItem('onlyUSCA'), true)
     };
+
     const UI = {
-      baseUrl: $('#baseUrl'), apiKey: $('#apiKey'), onlyUSCA: $('#onlyUSCA'),
+      baseUrl: $('#baseUrl'), apiKey: $('#apiKey'), plan: $('#plan'), onlyUSCA: $('#onlyUSCA'),
       refreshHot: $('#refreshHot'), refreshWarm: $('#refreshWarm'), leadRows: $('#leadRows'),
       details: $('#details'), region: $('#region'), radius: $('#radius'), supplier: $('#supplier'),
       find: $('#find'), findMsg: $('#findMsg'), toast: $('#toast'),
-      p_offer: $('#p_offer'), p_solves: $('#p_solves'), p_titles: $('#p_titles'),
-      personaSave: $('#personaSave'), saveKey: $('#saveKey'), apply: $('#apply'),
-      dlHot: $('#dlHot'), dlWarm: $('#dlWarm'), plan: $('#plan')
+      saveKey: $('#saveKey'), apply: $('#apply'), reset: $('#reset'),
+      dlHot: $('#dlHot'), dlWarm: $('#dlWarm')
     };
 
-    // init
-    UI.baseUrl.value = S.baseUrl; UI.apiKey.value = S.apiKey; UI.plan.value = S.plan;
+    // init UI
+    UI.baseUrl.value = S.baseUrl;
+    UI.apiKey.value = S.apiKey;
+    UI.plan.value = S.plan;
     UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA);
     UI.onlyUSCA.textContent = S.onlyUSCA ? 'US/CA only' : 'All regions';
-    UI.p_offer.value  = S.persona.offer || '';
-    UI.p_solves.value = S.persona.solves || '';
-    UI.p_titles.value = S.persona.titles || '';
 
     function toast(msg, ok=false, err=false){
       UI.toast.textContent = msg;
@@ -192,38 +181,50 @@
       UI.toast.style.display = 'block';
       setTimeout(()=>UI.toast.style.display='none', 3000);
     }
-    function api(path){ return (S.baseUrl||'').replace(/\/+$/,'') + path; }
+
+    function api(path){
+      const base = (S.baseUrl || '').replace(/\/+$/,'');
+      return base + path;
+    }
 
     async function call(method, path, body){
+      if (!S.baseUrl) { toast('Set the Base URL and click Apply first.', false, true); throw new Error('NO_BASE_URL'); }
       const headers = {'Content-Type':'application/json'};
       if (S.apiKey) headers['x-api-key'] = S.apiKey;
-      if (S.plan)   headers['x-plan']    = S.plan;
-      const r = await fetch(api(path), {method, headers, body: body?JSON.stringify(body):undefined});
-      const text = await r.text();
-      try{ return { ok:r.ok, status:r.status, data: JSON.parse(text) }; }
-      catch{ return { ok:r.ok, status:r.status, data: text }; }
+      if (S.plan)   headers['x-plan']    = S.plan; // harmless if backend ignores it
+      const url = api(path);
+      try{
+        const r = await fetch(url, {method, headers, body: body ? JSON.stringify(body) : undefined});
+        const text = await r.text();
+        let data; try{ data = JSON.parse(text); }catch{ data = text; }
+        return { ok:r.ok, status:r.status, data };
+      }catch(err){
+        console.error('fetch failed', {url, method, body, err});
+        toast('Network error — check Base URL & CORS', false, true);
+        throw err;
+      }
     }
 
     function nlWhy(why){
       const chips = [];
       if (!why) return chips;
-      const seg = (e:any, def:string) =>
-        `<span class="pill">${e.label||def} <span class="badge">${(e.score??'').toFixed?e.score.toFixed(2):e.score}</span> <span class="muted">${e.detail||''}</span></span>`;
-      if (why.meta)     chips.push(seg(why.meta,'Domain quality'));
-      if (why.platform) chips.push(seg(why.platform,'Platform fit'));
-      if (why.signal)   chips.push(seg(why.signal,'Intent keywords'));
-      if (why.context)  chips.push(seg(why.context,'Context'));
+      for (const key of ['meta','platform','signal','context']) {
+        const w = why[key]; if (!w) continue;
+        const score = (w.score??'');
+        chips.push(`<span class="pill">${w.label||key} <span class="badge">${(score.toFixed?score.toFixed(2):score)}</span> <span class="muted">${w.detail||''}</span></span>`);
+      }
       return chips;
     }
 
     function renderList(items){
       UI.leadRows.innerHTML = '';
-      items.forEach((it,i)=>{
-        const host = (it.host||'').replace(/^https?:\/\//,''); const href = host ? `https://${host}` : '#';
+      items.forEach(it=>{
+        const host = (it.host||'').replace(/^https?:\/\//,'');
+        const href = host ? `https://${host}` : '#';
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="mono">${it.id ?? (i+1)}</td>
-          <td><a class="link mono" href="${href}" target="_blank">${host}</a></td>
+          <td class="mono">${it.id ?? ''}</td>
+          <td><a class="link mono" href="${href}" target="_blank" rel="noopener">${host}</a></td>
           <td>${it.platform||'unknown'}</td>
           <td class="mono">${it.title||''}</td>
           <td>${it.created||''}</td>
@@ -236,18 +237,24 @@
     }
 
     function renderDetails(it){
-      const host = (it.host||'').replace(/^https?:\/\//,''); const href = host ? `https://${host}` : '#';
+      const host = (it.host||'').replace(/^https?:\/\//,'');
+      const href = host ? `https://${host}` : '#';
       UI.details.innerHTML = `
         <div class="split">
           <div>
             <div class="pill"><span class="badge">ID</span> ${it.id??''}</div>
-            <div class="pill"><span class="badge">Host</span> <a class="link mono" href="${href}" target="_blank">${host}</a></div>
+            <div class="pill"><span class="badge">Host</span> <a class="link mono" href="${href}" target="_blank" rel="noopener">${host}</a></div>
             <div class="pill"><span class="badge">Temp</span> <span class="temp ${it.temperature||'warm'}">${it.temperature||'warm'}</span></div>
           </div>
           <div>
             <div class="pill"><span class="badge">Platform</span> ${it.platform||'unknown'}</div>
             <div class="pill"><span class="badge">Title</span> <span class="mono">${it.title||''}</span></div>
           </div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="pill"><span class="badge">Why</span> Human-readable evidence</div>
+          <div class="why" style="margin-top:8px">${nlWhy(it.why).join('')}</div>
+          ${it.whyText ? `<div class="notice" style="margin-top:8px">${it.whyText}</div>`:''}
         </div>
       `;
       UI.supplier.value ||= (it && it.host) || '';
@@ -270,10 +277,10 @@
       const qp = new URLSearchParams();
       qp.set('temp', kind);
       if (S.onlyUSCA) qp.set('region','usca');
-      const r = await call('GET', `/api/v1/leads?${qp}`);
+      const r = await call('GET', `/api/v1/leads?${qp}`, null);
       if (!r.ok){ toast(`HTTP ${r.status} — failed to load ${kind} leads`, false, true); return; }
       renderList(r.data?.items||[]);
-      toast(`Loaded ${ (r.data?.items||[]).length } ${kind} lead(s)`, true);
+      toast(`Loaded ${(r.data?.items||[]).length} ${kind} lead(s)`, true);
     }
 
     function csv(items){
@@ -283,42 +290,45 @@
       const rows = items.map(it=>cols.map(c=>esc(it[c])).join(','));
       return [head, ...rows].join('\r\n');
     }
+
     function download(name, text){
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
-      a.download = name; a.click();
+      a.download = name;
+      a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href), 500);
     }
-    function startCooldown(ms){
-      const btn = UI.find; const original = 'Find buyers';
-      let remaining = Math.max(1, Math.ceil((Number(ms)||0)/1000));
-      btn.disabled = true; btn.textContent = `Wait ${remaining}s`;
-      UI.findMsg.innerHTML = `<div class="notice error mono">Too fast — please wait ${remaining}s…</div>`;
-      const iv = setInterval(()=>{
-        remaining -= 1;
-        if (remaining <= 0){
-          clearInterval(iv); btn.disabled = false; btn.textContent = original; UI.findMsg.textContent = '';
-        } else {
-          btn.textContent = `Wait ${remaining}s`;
-          UI.findMsg.innerHTML = `<div class="notice error mono">Too fast — please wait ${remaining}s…</div>`;
-        }
-      }, 1000);
-    }
 
-    // events
-    UI.apply.onclick   = ()=>{ S.baseUrl = UI.baseUrl.value.trim(); localStorage.setItem('baseUrl', S.baseUrl); toast('Base URL applied', true); };
-    UI.saveKey.onclick = ()=>{ S.apiKey = UI.apiKey.value.trim(); localStorage.setItem('apiKey', S.apiKey); S.plan = UI.plan.value; localStorage.setItem('plan', S.plan); toast('Auth saved', true); };
-    UI.plan.onchange   = ()=>{ S.plan = UI.plan.value; localStorage.setItem('plan', S.plan); };
-    UI.onlyUSCA.onclick= ()=>{ S.onlyUSCA=!S.onlyUSCA; localStorage.setItem('onlyUSCA', JSON.stringify(S.onlyUSCA)); UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA); UI.onlyUSCA.textContent = S.onlyUSCA ? 'US/CA only' : 'All regions'; };
-    UI.refreshHot.onclick = ()=>refresh('hot');
-    UI.refreshWarm.onclick= ()=>refresh('warm');
-    document.addEventListener('keydown', e=>{ if (e.key==='r' || e.key==='R') refresh('hot'); });
-
-    UI.personaSave.onclick = ()=>{
-      S.persona = { offer:UI.p_offer.value.trim(), solves:UI.p_solves.value.trim(), titles:UI.p_titles.value.trim() };
-      localStorage.setItem('persona', JSON.stringify(S.persona));
-      toast('Persona saved locally', true);
+    // --- events --------------------------------------------------------------
+    UI.apply.onclick = ()=>{
+      S.baseUrl = UI.baseUrl.value.trim();
+      localStorage.setItem('baseUrl', S.baseUrl);
+      toast('Base URL applied', true);
     };
+    UI.saveKey.onclick = ()=>{
+      S.apiKey = UI.apiKey.value.trim();
+      S.plan   = UI.plan.value;
+      localStorage.setItem('apiKey', S.apiKey);
+      localStorage.setItem('plan',   S.plan);
+      toast('Auth saved', true);
+    };
+    UI.onlyUSCA.onclick = ()=>{
+      S.onlyUSCA=!S.onlyUSCA;
+      localStorage.setItem('onlyUSCA', JSON.stringify(S.onlyUSCA));
+      UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA);
+      UI.onlyUSCA.textContent = S.onlyUSCA ? 'US/CA only' : 'All regions';
+    };
+    UI.reset.onclick = ()=>{
+      localStorage.removeItem('baseUrl');
+      localStorage.removeItem('apiKey');
+      localStorage.removeItem('plan');
+      localStorage.removeItem('onlyUSCA');
+      location.reload();
+    };
+
+    UI.refreshHot.onclick = ()=>refresh('hot');
+    UI.refreshWarm.onclick = ()=>refresh('warm');
+    document.addEventListener('keydown', e=>{ if (e.key==='r' || e.key==='R') refresh('hot'); });
 
     UI.find.onclick = async ()=>{
       const supplier = UI.supplier.value.trim().toLowerCase();
@@ -327,67 +337,29 @@
         supplier,
         region: UI.region.value,
         radiusMi: Number(UI.radius.value||'50')||50,
-        persona: { offer: UI.p_offer.value.trim(), solves: UI.p_solves.value.trim(), titles: UI.p_titles.value.trim() },
+        persona: null, // keep it simple for now
         onlyUSCA: S.onlyUSCA
       };
-      UI.find.disabled = true; UI.findMsg.textContent = 'Finding buyers…';
-      const r = await call('POST','/api/v1/leads/find-buyers', body);
-
-      if (r.status === 429){
-        const ms = (r.data && Number(r.data.retryAfterMs)) || 10_000;
-        startCooldown(ms); return;
-      }
-
-      if (r.status === 402 && r.data && (r.data.error === 'QUOTA_EXCEEDED' || r.data.error === 'FREE_QUOTA_EXCEEDED')){
-        const q = r.data.quota || {};
-        const limit = q.limit || {hot:1, warm:2, total:3};
-        const used  = q.used  || {hot:0, warm:0, total:0};
-        const plan  = (q.plan || S.plan || 'free').toUpperCase();
-        const resetAt = q.resetAt ? new Date(q.resetAt).toLocaleString() : 'tomorrow';
-        UI.find.disabled = true;
-        UI.findMsg.innerHTML =
-          `<div class="notice error mono">${plan} daily limit hit (${used.total}/${limit.total}). ` +
-          `Hot ${used.hot}/${limit.hot}, Warm ${used.warm}/${limit.warm}. ` +
-          `Come back after ${resetAt} or upgrade for more.</div>`;
-        return;
-      }
-
+      UI.find.disabled = true;
+      UI.findMsg.textContent = 'Finding buyers…';
+      const r = await call('POST','/api/v1/leads/find-buyers', body).catch(()=>null);
       UI.find.disabled = false;
-
+      if (!r){ UI.findMsg.innerHTML = `<div class="notice error mono">Request failed. Check Base URL, plan, and API key.</div>`; return; }
       if (!r.ok){
         UI.findMsg.innerHTML = `<div class="notice error mono">HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}</div>`;
         return;
       }
-      const items = (r.data?.candidates||[]).map((c,i)=>({
-        id: i+1,
-        host: c.host || c.domain || '',
-        platform: c.source || 'news',
-        title: c.title || c.reason || '',
-        created: c.created || '',
-        temperature: c.temperature || (typeof c.score==='number' && c.score>=0.65 ? 'hot':'warm'),
-        why: c.why || null,
-        whyText: c.whyText || c.reason || ''
-      }));
+      const items = toTableItems(r.data?.candidates||[]);
       const nHot  = items.filter(x=>x.temperature==='hot').length;
       const nWarm = items.length - nHot;
       UI.findMsg.innerHTML = `<div class="notice success mono">Created ${items.length} candidate(s). Hot:${nHot} Warm:${nWarm}. Showing them below.</div>`;
-      UI.leadRows.innerHTML = ''; items.forEach((it,i)=>{
-        const host=(it.host||'').replace(/^https?:\/\//,''); const href=host?`https://${host}`:'#';
-        const tr=document.createElement('tr'); tr.innerHTML = `
-          <td class="mono">${it.id}</td>
-          <td><a class="link mono" href="${href}" target="_blank">${host}</a></td>
-          <td>${it.platform||'unknown'}</td>
-          <td class="mono">${it.title||''}</td>
-          <td>${it.created||''}</td>
-          <td><span class="temp ${it.temperature||'warm'}">${it.temperature||'warm'}</span></td>
-          <td><div class="why"></div><div class="note muted">${it.whyText||''}</div></td>`;
-        document.querySelector('#leads tbody').appendChild(tr);
-      });
+      renderList(items);
     };
 
-    UI.dlHot.onclick  = async ()=>{ const r=await call('GET','/api/v1/leads?temp=hot');  if(!r.ok) return toast('Failed to load hot leads',false,true); download('leads_hot.csv',  'id,host,platform,title,created,temperature,whyText\r\n'); };
-    UI.dlWarm.onclick = async ()=>{ const r=await call('GET','/api/v1/leads?temp=warm'); if(!r.ok) return toast('Failed to load warm leads',false,true); download('leads_warm.csv', 'id,host,platform,title,created,temperature,whyText\r\n'); };
+    UI.dlHot.onclick  = async ()=>{ const r=await call('GET','/api/v1/leads?temp=hot');  if(!r.ok) return toast('Failed to load hot leads',false,true); download('leads_hot.csv', csv(r.data.items||[])); };
+    UI.dlWarm.onclick = async ()=>{ const r=await call('GET','/api/v1/leads?temp=warm'); if(!r.ok) return toast('Failed to load warm leads',false,true); download('leads_warm.csv', csv(r.data.items||[])); };
 
+    // default auto-load (warm) if base URL present
     if (S.baseUrl) refresh('warm');
   </script>
 </body>
