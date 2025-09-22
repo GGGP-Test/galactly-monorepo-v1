@@ -1,127 +1,111 @@
 // src/shared/memStore.ts
-//
-// Minimal in-memory store used by the routes.
-// Exports are shaped to match how your routes already use them,
-// so you shouldn’t need to touch metrics.ts or leads.ts.
 
+// --- Types ---
 export type Temp = "cold" | "warm" | "hot";
 
 export interface StoredLead {
-  id: string;
   host: string;
+  id: string; // stable id (we'll use host)
   title?: string;
-  platform?: string;          // routes sometimes patch with { platform }
-  created: string;            // ISO date string
-  temperature?: Temp;         // optional; defaults to "cold" in helpers
-  why?: unknown;              // any extra metadata your UI shows
+  platform?: string;
+  created: string; // ISO
+  temperature: Temp;
+  why?: string;
+  saved?: boolean;
 }
 
-// --- internal state ---------------------------------------------------------
+// --- State ---
+const leadsByHost = new Map<string, StoredLead>();
 
-const byHost = new Map<string, StoredLead>();
+type WatchInfo = { watchers: Set<string>; competitors: Set<string> };
+const watchMap = new Map<string, WatchInfo>();
 
-// we keep watcher/competitor membership as Sets internally
-const _watchers = new Map<string, Set<string>>();
-const _competitors = new Map<string, Set<string>>();
-
-// --- helpers ---------------------------------------------------------------
-
-function asTemp(t?: string | Temp): Temp {
-  if (t === "hot" || t === "warm" || t === "cold") return t;
-  return "cold";
+// --- Helpers ---
+function nowISO() {
+  return new Date().toISOString();
 }
+
+function getWatchInfo(host: string): WatchInfo {
+  let wi = watchMap.get(host);
+  if (!wi) {
+    wi = { watchers: new Set<string>(), competitors: new Set<string>() };
+    watchMap.set(host, wi);
+  }
+  return wi;
+}
+
+// --- Lead primitives ---
+export function getByHost(host: string): StoredLead | undefined {
+  return leadsByHost.get(host);
+}
+export const findByHost = getByHost; // alias some code expects
 
 export function ensureLeadForHost(host: string): StoredLead {
-  let lead = byHost.get(host);
-  if (!lead) {
-    lead = {
-      id: host,
-      host,
-      created: new Date().toISOString(),
-      temperature: "cold",
-    };
-    byHost.set(host, lead);
-  }
-  return lead;
+  const existing = leadsByHost.get(host);
+  if (existing) return existing;
+
+  const fresh: StoredLead = {
+    host,
+    id: host,
+    created: nowISO(),
+    temperature: "cold",
+  };
+  leadsByHost.set(host, fresh);
+  return fresh;
 }
 
-export function getByHost(host: string): StoredLead | undefined {
-  return byHost.get(host);
-}
-
-// alias some projects use
-export const findByHost = getByHost;
-
-/**
- * Patch / upsert a lead by host. Accepts any subset of StoredLead fields.
- */
-export function saveByHost(host: string, patch: Partial<StoredLead>): StoredLead {
+export function saveByHost(host: string, patch: Partial<StoredLead> = {}): StoredLead {
   const lead = ensureLeadForHost(host);
-  if (patch.title !== undefined) lead.title = patch.title;
-  if (patch.platform !== undefined) lead.platform = patch.platform;
-  if (patch.created !== undefined) lead.created = patch.created;
-  if (patch.why !== undefined) lead.why = patch.why;
-  if (patch.temperature !== undefined) lead.temperature = asTemp(patch.temperature);
-  // never change id/host via patch
-  return lead;
+  const updated: StoredLead = {
+    ...lead,
+    ...patch,
+    host, // never allow host/id to drift
+    id: host,
+  };
+  leadsByHost.set(host, updated);
+  return updated;
 }
 
-/**
- * Set temperature for a host (routes sometimes call this with a string).
- */
-export function replaceHotWarm(host: string, next: Temp | string): StoredLead {
+export function replaceHotWarm(host: string, to: Temp): StoredLead {
   const lead = ensureLeadForHost(host);
-  lead.temperature = asTemp(next);
+  if (to !== "hot" && to !== "warm" && to !== "cold") to = "warm";
+  lead.temperature = to;
+  // mark as saved/touched so it shows up to UIs that depend on it
+  lead.saved = true;
+  leadsByHost.set(host, lead);
   return lead;
 }
 
-/**
- * Reset temperature back to "cold".
- */
 export function resetHotWarm(host: string): StoredLead {
   const lead = ensureLeadForHost(host);
   lead.temperature = "cold";
+  leadsByHost.set(host, lead);
   return lead;
 }
 
-/**
- * Buckets of leads by temperature, useful for metrics.
- */
-export function buckets(): Record<Temp, StoredLead[]> {
-  const out: Record<Temp, StoredLead[]> = { hot: [], warm: [], cold: [] };
-  for (const lead of byHost.values()) {
-    const t = asTemp(lead.temperature);
-    out[t].push(lead);
+// --- Buckets / counters ---
+export function buckets(): { hot: StoredLead[]; warm: StoredLead[]; cold: StoredLead[] } {
+  const out = { hot: [] as StoredLead[], warm: [] as StoredLead[], cold: [] as StoredLead[] };
+  for (const lead of leadsByHost.values()) {
+    out[lead.temperature].push(lead);
   }
   return out;
 }
 
-// --- watchers / competitors -------------------------------------------------
-// NOTE: metrics.ts uses `.length`, so we return arrays (not Sets).
-
-export function addWatcher(host: string, who: string): void {
-  const set = _watchers.get(host) ?? new Set<string>();
-  set.add(who);
-  _watchers.set(host, set);
-}
-
-export function addCompetitor(host: string, who: string): void {
-  const set = _competitors.get(host) ?? new Set<string>();
-  set.add(who);
-  _competitors.set(host, set);
-}
-
-/**
- * Return arrays so code can safely call `.length`.
- */
+// --- Watchers / competitors ---
+// Return arrays so callers can safely use `.length`
 export function watchers(host: string): { watchers: string[]; competitors: string[] } {
+  const wi = getWatchInfo(host);
   return {
-    watchers: Array.from(_watchers.get(host) ?? new Set<string>()),
-    competitors: Array.from(_competitors.get(host) ?? new Set<string>()),
+    watchers: Array.from(wi.watchers),
+    competitors: Array.from(wi.competitors),
   };
 }
 
-// convenience getters some routes reference
-export function getByHostOrCreate(host: string): StoredLead {
-  return ensureLeadForHost(host);
+// Optional mutators (not currently required by routes, but handy)
+export function addWatcher(host: string, id: string) {
+  getWatchInfo(host).watchers.add(id);
+}
+export function addCompetitor(host: string, id: string) {
+  getWatchInfo(host).competitors.add(id);
 }
