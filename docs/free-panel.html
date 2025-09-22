@@ -67,15 +67,15 @@
     <h1>Leads Console — Free Panel (V3)</h1>
 
     <div class="grid">
-      <!-- LEFT: saved leads list -->
+      <!-- LEFT -->
       <div class="card">
         <div class="head row">
           <div class="row fill">
-            <input id="baseUrl" class="fill" placeholder="Base URL (e.g. https://p01--animated-cellar--xxxxx.code.run)" />
+            <input id="baseUrl" class="fill" placeholder="Base URL (e.g. https://p01--…code.run)" />
             <button id="apply">Apply</button>
           </div>
           <div class="row fill">
-            <input id="apiKey" class="fill" placeholder="API key (required for Find buyers)" />
+            <input id="apiKey" class="fill" placeholder="API key (required for write ops)" />
             <button id="saveKey" class="secondary">Save</button>
           </div>
         </div>
@@ -83,7 +83,7 @@
           <button id="refreshHot" class="secondary">Refresh Hot</button>
           <button id="refreshWarm" class="secondary">Refresh Warm</button>
           <div class="fill"></div>
-          <div class="muted mono">API root: <span id="apiPath">/api/v1</span></div>
+          <div class="muted mono">API root: <span id="apiPath">auto</span></div>
         </div>
         <div class="list">
           <table id="leads">
@@ -103,7 +103,7 @@
         </div>
       </div>
 
-      <!-- RIGHT: find buyers + persona -->
+      <!-- RIGHT -->
       <div class="card">
         <div class="head"><div class="row"><div class="pill"><span class="badge">Action</span> Find buyers (one per click)</div></div></div>
         <div class="body">
@@ -167,15 +167,18 @@
   </div>
 
   <script>
-    // --- helpers / state
     const $  = s => document.querySelector(s);
+
+    // --- state
     const S = {
       baseUrl: localStorage.getItem('baseUrl') || '',
       apiKey:  localStorage.getItem('apiKey')  || '',
       persona: JSON.parse(localStorage.getItem('persona')||'{"offer":"","solves":"","titles":""}'),
-      items: JSON.parse(localStorage.getItem('items')||'[]') // persisted list of shown leads
+      items:   JSON.parse(localStorage.getItem('items')||'[]'),
+      apiPrefix: localStorage.getItem('apiPrefix') || 'auto'  // 'auto' | '/api/v1' | ''
     };
 
+    // --- bindings
     const UI = {
       baseUrl: $('#baseUrl'), apiKey: $('#apiKey'), apply: $('#apply'), saveKey: $('#saveKey'),
       supplier: $('#supplier'), region: $('#region'), radius: $('#radius'), find: $('#find'),
@@ -185,32 +188,49 @@
       toast: $('#toast'), modalMask: $('#modalMask'), modalBody: $('#modalBody'), modalClose: $('#modalClose')
     };
 
+    UI.baseUrl.value = S.baseUrl; UI.apiKey.value = S.apiKey;
+    UI.p_offer.value  = S.persona.offer || '';
+    UI.p_solves.value = S.persona.solves || '';
+    UI.p_titles.value = S.persona.titles || '';
+    UI.apiPath.textContent = S.apiPrefix === 'auto' ? 'auto' : (S.apiPrefix || '(none)');
+
     function toast(msg, ok=false, err=false){
       UI.toast.textContent = msg;
       UI.toast.className = 'notice ' + (ok?'success':(err?'error':''));
       UI.toast.style.display = 'block';
       setTimeout(()=>UI.toast.style.display='none', 2500);
     }
-    function api(path){
-      const base = (S.baseUrl || '').replace(/\/+$/,'');
-      return base + path;
-    }
-    async function call(method, path, body){
-      const headers = {'Content-Type':'application/json'};
-      if (S.apiKey) headers['x-api-key'] = S.apiKey;
-      const r = await fetch(api(path), {method, headers, body: body?JSON.stringify(body):undefined});
-      const text = await r.text();
-      let data = null; try{ data = JSON.parse(text) }catch{ data = text }
-      return { ok:r.ok, status:r.status, data, headers:r.headers };
+    function base(){ return (S.baseUrl || '').replace(/\/+$/,''); }
+
+    // --- universal API caller with automatic /api/v1 fallback
+    async function call(method, logicalPath, body){
+      const ensure = s => s.startsWith('/') ? s : '/'+s;
+      const tryPrefixes = S.apiPrefix==='auto' ? ['/api/v1',''] : [S.apiPrefix];
+
+      let last = null;
+      for (const pref of tryPrefixes){
+        const url = base() + ensure(pref) + ensure(logicalPath);
+        const headers = {'Content-Type':'application/json'};
+        if (S.apiKey) headers['x-api-key'] = S.apiKey;
+        const res  = await fetch(url, {method, headers, body: body?JSON.stringify(body):undefined});
+        const text = await res.text();
+        let data = null; try{ data = JSON.parse(text) }catch{ data = text }
+        last = { ok:res.ok, status:res.status, data, headers:res.headers, url };
+        // if not 404, we consider this the correct prefix
+        if (res.status !== 404){
+          if (S.apiPrefix==='auto'){
+            S.apiPrefix = pref;
+            localStorage.setItem('apiPrefix', S.apiPrefix);
+            UI.apiPath.textContent = S.apiPrefix || '(none)';
+          }
+          return last;
+        }
+      }
+      // still 404 across prefixes
+      return last;
     }
 
-    // --- init inputs
-    UI.baseUrl.value = S.baseUrl; UI.apiKey.value = S.apiKey; UI.apiPath.textContent = '/api/v1';
-    UI.p_offer.value  = S.persona.offer || '';
-    UI.p_solves.value = S.persona.solves || '';
-    UI.p_titles.value = S.persona.titles || '';
-
-    // --- table rendering
+    // --- list rendering
     function nlWhy(why){
       const chips = [];
       if (!why) return chips;
@@ -244,21 +264,12 @@
     }
 
     // --- modal & actions
-    function fomoFloor(host, apiCount){
-      // always show a non-zero demo floor
-      if (apiCount && apiCount > 0) return apiCount;
-      // small time-of-day + host-hash floor (1-4)
-      let h=0; for (let i=0;i<host.length;i++) h=(h*31 + host.charCodeAt(i))>>>0;
-      const hour = new Date().getHours(); // nights lower
-      const base = (hour>=22 || hour<=6) ? 1 : 2;
-      return base + (h % 3); // 1..4 or 2..5 daytime
-    }
+    function fomoFloor(host, apiCount){ if (apiCount>0) return apiCount; let h=0; for (let i=0;i<host.length;i++) h=(h*31 + host.charCodeAt(i))>>>0; const hour=new Date().getHours(); const base=(hour>=22||hour<=6)?1:2; return base + (h % 3); }
 
     async function openModal(it){
-      // fetch watchers
       let watchers = 0, competitors = 0;
       try{
-        const r = await call('GET', `/api/v1/metrics/watchers?host=${encodeURIComponent(it.host)}`);
+        const r = await call('GET', `metrics/watchers?host=${encodeURIComponent(it.host)}`);
         if (r.ok){
           watchers = Number(r.data?.counts?.watchers||0);
           competitors = Number(r.data?.counts?.competitors||0);
@@ -288,22 +299,22 @@
           <button id="btnAnother" class="warn">Find another</button>
         </div>
       `;
-      UI.modalMask.style.display = 'flex';
-
       $('#btnLock').onclick = async ()=>{
-        const r = await call('POST','/api/v1/metrics/claim',{ host: it.host, title: it.title, platform: it.platform, why: it.why, temperature: it.temperature });
-        if (r.ok){ toast('Saved & locked to you', true); } else { toast('Failed to lock', false, true); }
+        const r = await call('POST','metrics/claim',{ host: it.host, title: it.title, platform: it.platform, why: it.why, temperature: it.temperature });
+        toast(r.ok ? 'Saved & locked to you' : `Failed to lock (HTTP ${r.status})`, r.ok, !r.ok);
       };
       $('#btnDeepen').onclick = async ()=>{
-        const r = await call('GET', `/api/v1/metrics/deepen?host=${encodeURIComponent(it.host)}`);
-        if (!r.ok){ toast('No extra data yet (try Pro for deeper signals)', false, true); return; }
+        const r = await call('GET', `metrics/deepen?host=${encodeURIComponent(it.host)}`);
+        toast(r.ok ? 'Enriched (if data available)' : `No extra data yet (HTTP ${r.status})`, r.ok, !r.ok);
       };
       $('#btnAnother').onclick = async ()=>{ UI.modalMask.style.display='none'; await findOne(); };
+
+      UI.modalMask.style.display = 'flex';
     }
     UI.modalClose.onclick = ()=> UI.modalMask.style.display='none';
     UI.modalMask.onclick = (e)=>{ if (e.target===UI.modalMask) UI.modalMask.style.display='none'; };
 
-    // --- find one lead (one per click)
+    // --- find one lead (auto prefix)
     async function findOne(){
       const supplier = UI.supplier.value.trim().toLowerCase();
       if (!supplier){ toast('Enter a supplier domain', false, true); return; }
@@ -320,17 +331,16 @@
       UI.find.disabled = true;
       UI.findMsg.textContent = 'Finding buyers…';
 
-      const r = await call('POST','/api/v1/leads/find-buyers', body);
+      const r = await call('POST','leads/find-buyers', body);
       UI.find.disabled = false;
 
       if (r.status === 401){ UI.findMsg.innerHTML = `<div class="notice error mono">401 — API key required</div>`; return; }
       if (r.status === 429){ UI.findMsg.innerHTML = `<div class="notice error mono">Too many tries — wait ~10s</div>`; return; }
-      if (!r.ok){ UI.findMsg.innerHTML = `<div class="notice error mono">HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}</div>`; return; }
+      if (!r.ok){ UI.findMsg.innerHTML = `<div class="notice error mono">HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}<div class="muted" style="margin-top:4px">${r.url}</div></div>`; return; }
 
       const all = Array.isArray(r.data?.candidates) ? r.data.candidates : [];
       if (!all.length){ UI.findMsg.innerHTML = `<div class="notice mono">No candidates found. Try widening radius or switching region.</div>`; return; }
 
-      // pick the first candidate that isn't already shown; else first
       const already = new Set((S.items||[]).map(x=>x.host));
       const first = all.find(c=>!already.has(c.host)) || all[0];
 
@@ -347,7 +357,6 @@
         whyText: first.whyText || first.title || ''
       };
 
-      // append to list and persist; do NOT clear on persona edits
       S.items = S.items || [];
       S.items.push(item);
       localStorage.setItem('items', JSON.stringify(S.items));
@@ -356,50 +365,91 @@
       openModal(item);
     }
 
-    // --- CSV
-    function toCSV(items){
-      const cols = ['host','platform','title','created','temperature','whyText'];
-      const head = cols.join(',');
-      const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
-      const rows = items.map(it=>cols.map(c=>esc(it[c])).join(','));
-      return [head, ...rows].join('\r\n');
-    }
-    function download(name, text){
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
-      a.download = name; a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 500);
-    }
+    <!-- --- CSV utils -->
+<script>
+function toCSV(items){
+  const cols = ['host','platform','title','created','temp','why'];
+  const head = cols.join(',');
+  const esc = v => String(v ?? '')
+    .replace(/"/g,'""')
+    .replace(/\r?\n|\r/g,' ')
+    .trim();
 
-    // --- events
-    UI.apply.onclick = ()=>{ S.baseUrl = UI.baseUrl.value.trim(); localStorage.setItem('baseUrl', S.baseUrl); toast('Base URL applied', true); };
-    UI.saveKey.onclick = ()=>{ S.apiKey = UI.apiKey.value.trim(); localStorage.setItem('apiKey', S.apiKey); toast('API key saved', true); };
-    UI.personaSave.onclick = ()=>{
-      S.persona = { offer:UI.p_offer.value.trim(), solves:UI.p_solves.value.trim(), titles:UI.p_titles.value.trim() };
-      localStorage.setItem('persona', JSON.stringify(S.persona));
-      toast('Persona saved locally', true);
-    };
-    UI.find.onclick = findOne;
-    UI.refreshHot.onclick = async ()=>{
-      const r = await call('GET','/api/v1/leads?temp=hot');
-      if (!r.ok) return toast('Failed to load hot leads', false, true);
-      // merge unique
-      const seen = new Set((S.items||[]).map(x=>x.host));
-      (r.data?.items||[]).forEach(x=>{ if(!seen.has(x.host)){ S.items.push(x); seen.add(x.host);} });
-      renderList(); toast(`Loaded ${ (r.data?.items||[]).length } hot`, true);
-    };
-    UI.refreshWarm.onclick = async ()=>{
-      const r = await call('GET','/api/v1/leads?temp=warm');
-      if (!r.ok) return toast('Failed to load warm leads', false, true);
-      const seen = new Set((S.items||[]).map(x=>x.host));
-      (r.data?.items||[]).forEach(x=>{ if(!seen.has(x.host)){ S.items.push(x); seen.add(x.host);} });
-      renderList(); toast(`Loaded ${ (r.data?.items||[]).length } warm`, true);
-    };
-    UI.dlHot.onclick  = ()=> download('leads_hot.csv',  toCSV((S.items||[]).filter(x=>x.temperature==='hot')));
-    UI.dlWarm.onclick = ()=> download('leads_warm.csv', toCSV((S.items||[]).filter(x=>x.temperature!=='hot')));
+  const rows = (items||[]).map(it => cols.map(c => {
+    if (c === 'why')  return `"${esc(it.whyText || it.why || '')}"`;
+    if (c === 'temp') return `"${esc(it.temp || it.temperature || '')}"`;
+    return `"${esc(it[c])}"`;
+  }).join(','));
 
-    // --- first paint
-    renderList();
-  </script>
+  return [head, ...rows].join('\r\n');
+}
+
+function download(name, text){
+  const a = document.createElement('a');
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 0);
+}
+
+/* ---------- events & wiring ---------- */
+
+UI.apply.onclick = () => {
+  // save base URL shown in the left input
+  const base = (UI.base?.value || '').trim().replace(/\/+$/,'');
+  S.base = base;
+  localStorage.setItem('base', base);
+  toast?.('Base URL applied', true);
+};
+
+UI.saveKey.onclick = () => {
+  const k = (UI.apiKey?.value || '').trim();
+  S.apiKey = k;
+  localStorage.setItem('apiKey', k);
+  toast?.('API key saved locally', true);
+};
+
+UI.personaSave.onclick = () => {
+  S.persona = {
+    offer:  UI.p_offer?.value?.trim() || '',
+    solves: UI.p_solves?.value?.trim() || '',
+    titles: UI.p_titles?.value?.trim() || ''
+  };
+  localStorage.setItem('persona', JSON.stringify(S.persona));
+  toast?.('Persona saved locally', true);
+};
+
+// findOne is defined earlier; just wire the button
+UI.find.onclick = findOne;
+
+UI.refreshHot.onclick = async () => {
+  const r = await call('GET', 'leads?temp=hot');
+  if (!r?.ok) return toast?.(`Failed to load hot leads: ${r?.error||'unknown'}`);
+  const seen = new Set((S.items||[]).map(x => x.id ?? x.host));
+  (r.data?.items || []).forEach(x => { if (!seen.has(x.id ?? x.host)) (S.items ||= []).push(x); });
+  renderList();
+  toast?.(`Loaded ${ (r.data?.items||[]).length } hot lead(s)`);
+};
+
+UI.refreshWarm.onclick = async () => {
+  const r = await call('GET', 'leads?temp=warm');
+  if (!r?.ok) return toast?.(`Failed to load warm leads: ${r?.error||'unknown'}`);
+  const seen = new Set((S.items||[]).map(x => x.id ?? x.host));
+  (r.data?.items || []).forEach(x => { if (!seen.has(x.id ?? x.host)) (S.items ||= []).push(x); });
+  renderList();
+  toast?.(`Loaded ${ (r.data?.items||[]).length } warm lead(s)`);
+};
+
+UI.dlCSV.onclick  = () => download('leads.csv',  toCSV(S.items||[]));
+UI.dlJSON.onclick = () => download('leads.json', JSON.stringify(S.items||[], null, 2));
+
+/* optional: persist list immediately on load so refresh keeps state */
+window.addEventListener('beforeunload', () => {
+  if (S.items) localStorage.setItem('items', JSON.stringify(S.items));
+});
+</script>
 </body>
 </html>
