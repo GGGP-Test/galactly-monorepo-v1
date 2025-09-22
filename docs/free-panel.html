@@ -365,8 +365,7 @@
       openModal(item);
     }
 
-    <!-- --- CSV utils -->
-<script>
+// --- CSV utils
 function toCSV(items){
   const cols = ['host','platform','title','created','temp','why'];
   const head = cols.join(',');
@@ -375,11 +374,13 @@ function toCSV(items){
     .replace(/\r?\n|\r/g,' ')
     .trim();
 
-  const rows = (items||[]).map(it => cols.map(c => {
-    if (c === 'why')  return `"${esc(it.whyText || it.why || '')}"`;
-    if (c === 'temp') return `"${esc(it.temp || it.temperature || '')}"`;
-    return `"${esc(it[c])}"`;
-  }).join(','));
+  const rows = (items || []).map(it =>
+    cols.map(c => {
+      if (c === 'why')  return `"${esc(it.whyText || it.why || '')}"`;
+      if (c === 'temp') return `"${esc(it.temp || it.temperature || '')}"`;
+      return `"${esc(it[c])}"`;
+    }).join(',')
+  );
 
   return [head, ...rows].join('\r\n');
 }
@@ -395,10 +396,8 @@ function download(name, text){
   setTimeout(()=>URL.revokeObjectURL(url), 0);
 }
 
-/* ---------- events & wiring ---------- */
-
+// --- events
 UI.apply.onclick = () => {
-  // save base URL shown in the left input
   const base = (UI.base?.value || '').trim().replace(/\/+$/,'');
   S.base = base;
   localStorage.setItem('base', base);
@@ -422,7 +421,6 @@ UI.personaSave.onclick = () => {
   toast?.('Persona saved locally', true);
 };
 
-// findOne is defined earlier; just wire the button
 UI.find.onclick = findOne;
 
 UI.refreshHot.onclick = async () => {
@@ -431,7 +429,7 @@ UI.refreshHot.onclick = async () => {
   const seen = new Set((S.items||[]).map(x => x.id ?? x.host));
   (r.data?.items || []).forEach(x => { if (!seen.has(x.id ?? x.host)) (S.items ||= []).push(x); });
   renderList();
-  toast?.(`Loaded ${ (r.data?.items||[]).length } hot lead(s)`);
+  toast?.(`Loaded ${(r.data?.items||[]).length} hot lead(s)`);
 };
 
 UI.refreshWarm.onclick = async () => {
@@ -440,16 +438,12 @@ UI.refreshWarm.onclick = async () => {
   const seen = new Set((S.items||[]).map(x => x.id ?? x.host));
   (r.data?.items || []).forEach(x => { if (!seen.has(x.id ?? x.host)) (S.items ||= []).push(x); });
   renderList();
-  toast?.(`Loaded ${ (r.data?.items||[]).length } warm lead(s)`);
+  toast?.(`Loaded ${(r.data?.items||[]).length} warm lead(s)`);
 };
 
-UI.dlCSV.onclick  = () => download('leads.csv',  toCSV(S.items||[]));
-UI.dlJSON.onclick = () => download('leads.json', JSON.stringify(S.items||[], null, 2));
+UI.dlCSV  && (UI.dlCSV.onclick  = () => download('leads.csv',  toCSV(S.items||[])));
+UI.dlJSON && (UI.dlJSON.onclick = () => download('leads.json', JSON.stringify(S.items||[], null, 2)));
 
-/* optional: persist list immediately on load so refresh keeps state */
 window.addEventListener('beforeunload', () => {
   if (S.items) localStorage.setItem('items', JSON.stringify(S.items));
 });
-</script>
-</body>
-</html>
