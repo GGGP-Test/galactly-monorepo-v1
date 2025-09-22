@@ -1,71 +1,72 @@
 // src/index.ts
-import express from "express";
-import cors from "cors";
+import express, { Request, Response, NextFunction } from "express";
+import path from "path";
 
+// Routers
 import leadsRouter from "./routes/leads";
 import metricsRouter from "./routes/metrics";
 
+// ---- basic server setup (no extra deps) ----
 const app = express();
+const PORT = Number(process.env.PORT || 8787);
 
-// ---- CORS (allow GH Pages & any extra comma-separated origins in CORS_ORIGIN)
-const parseOrigins = (v?: string) =>
-  (v || "")
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
-
-const GH_PAGES = [
-  "https://gggp-test.github.io",
-  "https://gggp-test.github.io/galactly-monorepo-v1"
-];
-
-const extra = parseOrigins(process.env.CORS_ORIGIN);
-const allowList = new Set<string>([...GH_PAGES, ...extra]);
-
-const corsOpts: cors.CorsOptions = {
-  origin: (origin, cb) => {
-    // Allow same-origin / server-to-server / curl (no Origin header)
-    if (!origin) return cb(null, true);
-    if (allowList.has(origin)) return cb(null, true);
-    return cb(new Error("CORS: origin not allowed"));
-  },
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "x-api-key"],
-  maxAge: 600
-};
-
-app.use(cors(corsOpts));
-app.options("*", cors(corsOpts));
-
-// ---- basics
-app.disable("x-powered-by");
+// tiny JSON/body support
 app.use(express.json({ limit: "1mb" }));
 
-// ---- health
-app.get("/", (_req, res) => res.json({ ok: true }));
-app.get("/health", (_req, res) => res.json({ ok: true }));
-app.get("/healthz", (_req, res) => res.json({ ok: true }));
+// ---- CORS (manual; no 'cors' package required) ----
+const allowedCsv = (process.env.CORS_ORIGIN || "").trim();
+const allowedOrigins = allowedCsv
+  ? allowedCsv.split(",").map(s => s.trim()).filter(Boolean)
+  : [];
 
-// ---- API
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const origin = String(req.headers.origin || "");
+  const allow =
+    allowedOrigins.length === 0 ||
+    allowedOrigins.includes(origin) ||
+    allowedOrigins.includes("*");
+
+  if (allow && origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, x-api-key, x-requested-with"
+  );
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
+  next();
+});
+
+// ---- health ----
+app.get("/healthz", (_req, res) =>
+  res.json({ ok: true, ts: new Date().toISOString() })
+);
+
+// ---- api v1 ----
 app.use("/api/v1/leads", leadsRouter);
 app.use("/api/v1/metrics", metricsRouter);
 
-// ---- 404
+// Optional static (kept off unless ALLOW_WEB=true)
+if (String(process.env.ALLOW_WEB || "").toLowerCase() === "true") {
+  app.use(express.static(path.join(process.cwd(), "public")));
+}
+
+// ---- fallback & error handling ----
 app.use((_req, res) => res.status(404).json({ ok: false, error: "Not found" }));
 
-// ---- error handler
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  const msg = typeof err?.message === "string" ? err.message : "server error";
-  // For CORS origin denials, return 403 with a small JSON
-  if (msg.startsWith("CORS:")) {
-    return res.status(403).json({ ok: false, error: msg });
-  }
-  console.error("[server:error]", err?.stack || err);
-  res.status(500).json({ ok: false, error: msg });
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("[server:error]", err?.stack || err?.message || String(err));
+  res.status(500).json({ ok: false, error: "internal error" });
 });
 
-const PORT = parseInt(process.env.PORT || "8787", 10);
-app.listen(PORT, () => {
-  console.log(`[server] listening on ${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`[server] listening on :${PORT}`);
 });
