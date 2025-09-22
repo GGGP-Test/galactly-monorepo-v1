@@ -1,138 +1,58 @@
-import { Router } from "express";
-import runDiscovery from "../buyers/discovery";
-import { runPipeline } from "../buyers/pipeline";
+import { Router, Request, Response } from "express";
 
-const router = Router();
+export const leadsRouter = Router();
 
-// === very small in-memory store for panel ===
-type StoredLead = {
-  id: number;
+type FindBuyersParams = {
   host: string;
-  platform?: string;
-  title: string;
-  created: string;
-  temperature: 'hot' | 'warm';
-  whyText?: string;
-  why?: any;
+  country?: string;
+  radius?: number;
 };
 
-let nextId = 1;
-const store: { hot: StoredLead[]; warm: StoredLead[] } = { hot: [], warm: [] };
-function resetStore() { store.hot = []; store.warm = []; nextId = 1; }
+function parseParams(req: Request): FindBuyersParams {
+  const q = req.query ?? {};
+  const b: any = (req as any).body ?? {};
 
-// Optional API key guard for write routes.
-router.use((req, res, next) => {
-  (res as any).requireKey = () => {
-    const need = process.env.API_KEY || process.env.X_API_KEY;
-    if (!need) return true;
-    const got = req.header("x-api-key");
-    if (got !== need) {
-      res.status(401).json({ ok: false, error: "invalid api key" });
-      return false;
-    }
-    return true;
-  };
-  next();
+  const host =
+    (q.host ?? b.host ?? "").toString().trim().toLowerCase();
+
+  const country = (q.country ?? b.country ?? "").toString();
+  const radiusRaw = q.radius ?? b.radius;
+  const radius =
+    radiusRaw === undefined || radiusRaw === null
+      ? undefined
+      : Number(radiusRaw);
+
+  return { host, country, radius };
+}
+
+/**
+ * Simple health check so you (and CI) can verify the router is mounted.
+ * GET /api/v1/leads/healthz -> { ok: true, service: "leads" }
+ */
+leadsRouter.get("/healthz", (_req: Request, res: Response) => {
+  res.json({ ok: true, service: "leads" });
 });
 
-// Health & ping
-router.get("/ping", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
-
-// GET /api/v1/leads?temp=hot|warm&region=usca
-router.get("/", (req, res) => {
-  const temp = String(req.query.temp || 'warm').toLowerCase();
-  const items = temp === 'hot' ? store.hot : store.warm;
-  res.json({ ok: true, items });
-});
-
-// POST /api/v1/leads/find-buyers
-router.post("/find-buyers", async (req, res) => {
-  if (!(res as any).requireKey()) return; // key required if configured
-
-  try {
-    const body = (req.body || {}) as {
-      supplier?: string;
-      region?: string;
-      radiusMi?: number;
-      persona?: any;
-      onlyUSCA?: boolean;
-    };
-
-    if (!body.supplier || body.supplier.length < 3) {
-      return res.status(400).json({ ok: false, error: "supplier domain is required" });
-    }
-
-    // 1) Discovery (auto persona)
-    const discovery = await runDiscovery({
-      supplier: body.supplier.trim(),
-      region: (body.region || 'us').trim(),
-      persona: body.persona
-    });
-
-    // 2) Pipeline (Google News + targeted RSS feeds)
-    const excludeEnterprise = String(process.env.EXCLUDE_ENTERPRISE || 'true').toLowerCase() === 'true';
-    const { candidates } = await runPipeline(discovery, {
-      region: discovery ? (body.region || 'us') : body.region,
-      radiusMi: body.radiusMi || 50,
-      excludeEnterprise
-    });
-
-    // 3) Normalize & store (panel format)
-    const toLead = (c: any): StoredLead => {
-      const title = c?.evidence?.[0]?.detail?.title || '';
-      const link  = c?.evidence?.[0]?.detail?.url || '';
-      const host  = link ? new URL(link).hostname.replace(/^www\./, '') : (c.domain || 'unknown');
-      const why   = {
-        signal: { label: c.score >= 0.65 ? 'Opening/launch signal' : 'Expansion signal', score: Number(c.score.toFixed(2)), detail: title },
-        context: { label: c.source.startsWith('rss') ? 'News (RSS)' : 'News (Google)', detail: c.source }
-      };
-      return {
-        id: nextId++,
-        host,
-        platform: 'unknown',
-        title,
-        created: new Date().toISOString(),
-        temperature: c.temperature,
-        whyText: title,
-        why
-      };
-    };
-
-    // wipe only the bucket we’re about to refresh (keeps UX predictable)
-    store.hot = [];
-    store.warm = [];
-
-    const mapped = (candidates || []).map(toLead);
-    for (const m of mapped) {
-      if (m.temperature === 'hot') store.hot.push(m);
-      else store.warm.push(m);
-    }
-
-    const nHot = store.hot.length;
-    const nWarm = store.warm.length;
-
-    return res.json({
-      ok: true,
-      supplier: discovery.supplierDomain,
-      persona: discovery.persona,
-      latents: discovery.latents,
-      archetypes: discovery.archetypes,
-      candidates: mapped,
-      cached: discovery.cached,
-      created: mapped.length,
-      message: `Created ${mapped.length} candidate(s). Hot:${nHot} Warm:${nWarm}. Refresh lists to view.`
-    });
-  } catch (e: any) {
-    console.error("[find-buyers:error]", e?.stack || e?.message || String(e));
-    return res.status(500).json({ ok: false, error: e?.message || "internal error" });
+/**
+ * Canonical endpoint the free panel will call.
+ * Accepts GET (query) and POST (json body) with:
+ *   host (required), country (optional), radius (optional)
+ * Returns { ok: true, items: [] } for now so wiring is verified with 200.
+ * We'll plug in the real selection logic next.
+ */
+function handleFindBuyers(req: Request, res: Response) {
+  const p = parseParams(req);
+  if (!p.host) {
+    return res.status(400).json({ ok: false, error: "host required" });
   }
-});
 
-// (optional) clear
-router.post("/__clear", (req, res) => {
-  if (!(res as any).requireKey()) return;
-  resetStore();
-  res.json({ ok: true });
-});
+  // TODO: Replace this stub with your real logic that returns one (or more)
+  // leads for the given supplier host. Keep the response shape:
+  // { ok: true, items: Array<{ host, platform, title, created, temp, why }> }
+  const items: Array<Record<string, unknown>> = [];
 
-export default router;
+  return res.json({ ok: true, items });
+}
+
+leadsRouter.get("/find-buyers", handleFindBuyers);
+leadsRouter.post("/find-buyers", handleFindBuyers);
