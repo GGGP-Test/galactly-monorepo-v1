@@ -2,258 +2,340 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Leads Console — Free Panel (V3)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Leads Console — Free Panel (V3)</title>
   <style>
-    :root { --bg:#0f172a; --panel:#111a2e; --muted:#9aa5b1; --text:#e5e7eb; --chip:#1f2a44; }
-    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial;}
-    .wrap{display:grid;grid-template-columns:420px 1fr;gap:18px;padding:18px;box-sizing:border-box;height:100%;}
-    .card{background:var(--panel);border-radius:10px;padding:14px;box-shadow:0 0 0 1px #1c2541 inset;}
-    .row{display:flex;gap:10px;align-items:center;margin:8px 0;}
-    label{display:block;margin:8px 0 4px 2px;color:var(--muted);}
-    input[type=text],select{width:100%;padding:9px 10px;border-radius:8px;border:1px solid #2a3558;background:#0b1224;color:var(--text);}
-    button{padding:9px 12px;border:0;border-radius:8px;background:#1d4ed8;color:#fff;cursor:pointer}
-    button.secondary{background:#334155}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    .muted{color:var(--muted)}
-    .status{min-height:20px;margin-top:6px}
-    .status.ok{color:#86efac}
-    .status.err{color:#fca5a5}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{padding:8px 10px;border-bottom:1px solid #1f2a44;vertical-align:top}
-    th{color:#93a3b8;text-align:left;position:sticky;top:0;background:var(--panel)}
-    .chip{background:var(--chip);border-radius:999px;padding:3px 8px}
-    .toolbar{display:flex;gap:8px;flex-wrap:wrap}
-    .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#60a5fa; --ok:#10b981; --err:#ef4444; }
+    *{ box-sizing:border-box; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    body{ margin:0; background:var(--bg); color:var(--text); }
+    .wrap{ max-width:1100px; margin:24px auto; padding:0 16px; display:flex; gap:18px; }
+    .col{ flex:1 1 50%; background:var(--panel); border:1px solid #1f2937; border-radius:10px; padding:16px; }
+    h1{ font-size:18px; margin:0 0 12px; }
+    label{ font-size:12px; color:var(--muted); display:block; margin:12px 0 6px; }
+    input, select{ width:100%; padding:10px 12px; border-radius:8px; border:1px solid #374151; background:#0b1220; color:var(--text); }
+    .row{ display:flex; gap:10px; align-items:center; }
+    .row > *{ flex:1; }
+    button{ padding:10px 14px; border:0; border-radius:8px; background:#1f2937; color:var(--text); cursor:pointer; }
+    button.primary{ background:var(--accent); color:#081018; font-weight:600; }
+    button:disabled{ opacity:.55; cursor:not-allowed; }
+    .help{ font-size:12px; color:var(--muted); margin-top:6px; }
+    .msg{ margin-top:10px; font-size:12px; padding:8px 10px; border-radius:8px; border:1px solid #263244; }
+    .msg.ok{ border-color: #064e3b; color:#a7f3d0; }
+    .msg.err{ border-color:#3f1d1d; color:#fecaca; }
+    table{ width:100%; border-collapse:collapse; margin-top:12px; }
+    th,td{ border-bottom:1px solid #1f2937; text-align:left; padding:10px 8px; font-size:13px; vertical-align:top; }
+    th{ color:#cbd5e1; font-weight:600; background:#0b1322; position:sticky; top:0; }
+    .toolbar{ display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+    .pill{ padding:6px 10px; border:1px solid #1f2937; background:#0b1220; border-radius:999px; font-size:12px; color:#cbd5e1; }
+    .right{ text-align:right; }
+    .tiny{ font-size:11px; color:#9ca3af; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
-      <h3 style="margin:2px 0 10px">Leads Console — Free Panel (V3)</h3>
+    <!-- Left panel: controls -->
+    <div class="col">
+      <h1>Leads Console — Free Panel (V3)</h1>
 
-      <label for="base">API base</label>
+      <label>API base</label>
       <div class="row">
-        <input id="base" type="text" placeholder="https://p01-…code.run" />
-        <button id="apply">Apply</button>
+        <input id="apiBase" placeholder="https://your-app.code.run" />
+        <button id="apply" class="primary">Apply</button>
       </div>
 
-      <label for="apikey">API key (optional for read; required for write)</label>
+      <label>API key (optional for read; required for write)</label>
       <div class="row">
-        <input id="apikey" type="text" class="mono" placeholder="paste key…" />
-        <button id="saveKey" class="secondary">Save</button>
+        <input id="apiKey" placeholder="x-api-key value (optional)" />
+        <button id="saveKey">Save</button>
       </div>
 
-      <div class="row toolbar">
-        <button id="refreshHot" class="secondary">Refresh Hot</button>
-        <button id="refreshWarm" class="secondary">Refresh Warm</button>
-        <span class="muted">API root: <span class="mono" id="apiRoot">/api/v1</span></span>
+      <div class="toolbar">
+        <button id="refreshHot">Refresh Hot</button>
+        <button id="refreshWarm">Refresh Warm</button>
+        <span class="pill">API root: <code>/api/v1</code></span>
       </div>
 
-      <hr style="border:0;border-top:1px solid #1f2a44;margin:12px 0" />
+      <div class="msg" id="status" style="display:none;"></div>
 
-      <div class="card" style="background:#0f162c">
-        <div class="row" style="justify-content:space-between;align-items:center">
-          <div class="muted">Action</div>
-          <div class="chip">Find buyers (one per click)</div>
-        </div>
+      <hr style="border:0;border-top:1px solid #1f2937;margin:14px 0" />
 
-        <label for="supplierHost">Supplier host</label>
-        <input id="supplierHost" type="text" placeholder="e.g. peekpackaging.com" />
-
-        <div class="row">
-          <select id="country">
-            <option value="US/CA">US/CA</option>
-            <option value="US">US</option>
-            <option value="CA">CA</option>
-            <option value="EU">EU</option>
-          </select>
-          <select id="radiusMi">
-            <option value="25">25 mi</option>
-            <option value="50" selected>50 mi</option>
-            <option value="100">100 mi</option>
-            <option value="250">250 mi</option>
-          </select>
-          <button id="find">Find buyers</button>
-        </div>
-
-        <div id="findMsg" class="status"></div>
-      </div>
-
-      <label>Supplier persona <span class="muted">(used to infer intent)</span></label>
-      <input id="p_offer"  type="text" placeholder="Product/offer (e.g. Stretch film & pallet protection)" />
-      <input id="p_solves" type="text" placeholder="Solves (e.g. Keeps pallets secure for storage/transport)" />
-      <input id="p_titles" type="text" placeholder="Buyer titles (comma-separated), e.g. Warehouse Manager, Purchasing" />
+      <label>Action</label>
       <div class="row">
-        <button id="personaSave" class="secondary">Save persona (local)</button>
+        <span class="pill">Find buyers (one per click)</span>
       </div>
 
-      <div class="row toolbar">
-        <button id="csvHot"  class="secondary">Download CSV (hot)</button>
-        <button id="csvWarm" class="secondary">Download CSV (warm)</button>
+      <label>Supplier host</label>
+      <input id="supplierHost" placeholder="e.g. peekpackaging.com" />
+
+      <div class="row">
+        <select id="country">
+          <option value="US/CA">US/CA</option>
+          <option value="US">US</option>
+          <option value="CA">CA</option>
+          <option value="">Any</option>
+        </select>
+        <select id="radiusMi">
+          <option value="25">25 mi</option>
+          <option value="50" selected>50 mi</option>
+          <option value="100">100 mi</option>
+          <option value="200">200 mi</option>
+        </select>
+        <button id="find" class="primary">Find buyers</button>
       </div>
 
-      <div id="status" class="status muted"></div>
+      <div class="msg" id="findMsg" style="display:none;"></div>
+
+      <label>Supplier persona (used to infer intent)</label>
+      <input id="p_offer" placeholder="Product/offer (e.g. Stretch film & pallet protection)" />
+      <input id="p_solves" placeholder="Solves (e.g. Keeps pallets secure for storage/transport)" />
+      <input id="p_titles" placeholder="Buyer titles (comma-separated), e.g. Warehouse Manager, Purchasing" />
+      <div class="row">
+        <button id="personaSave">Save persona (local)</button>
+        <button id="dlHot">Download CSV (hot)</button>
+        <button id="dlWarm">Download CSV (warm)</button>
+      </div>
+      <p class="tiny">Editing persona won’t clear your list.</p>
     </div>
 
-    <div class="card">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why (human-readable)</th>
-          </tr>
-        </thead>
-        <tbody id="listBody"></tbody>
-      </table>
+    <!-- Right panel: results -->
+    <div class="col">
+      <div class="toolbar" style="justify-content:space-between">
+        <span class="pill">Results</span>
+        <span class="tiny" id="resultCount">0 items</span>
+      </div>
+      <div id="tableWrap" style="max-height:60vh; overflow:auto; margin-top:8px;">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Host</th>
+              <th>Platform</th>
+              <th>Title</th>
+              <th>Created</th>
+              <th>Temp</th>
+              <th>Why (human-readable)</th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
-<script>
-(() => {
-  // ---------- tiny utilities ----------
-  const $ = (id) => document.getElementById(id);
-  const firstEl = (ids) => ids.map($).find(Boolean) || null;
-  const setVal = (id, v) => { const el = $(id); if (el) el.value = v; };
+  <script>
+    (function(){
+      // ---------- helpers ----------
+      const $ = id => document.getElementById(id);
+      const show = (el, yes=true) => { el.style.display = yes ? '' : 'none'; };
+      const toast = (msg, ok=false) => {
+        const el = $('status'); if (!el) return;
+        el.classList.remove('ok','err');
+        el.classList.add(ok?'ok':'err');
+        el.textContent = msg;
+        show(el, true);
+      };
+      const setFindMsg = (msg, ok=false) => {
+        const el = $('findMsg'); if (!el) return;
+        el.classList.remove('ok','err');
+        el.classList.add(ok?'ok':'err');
+        el.textContent = msg;
+        show(el, !!msg);
+      };
 
-  // try many id variants so this works with any markup you have
-  const els = {
-    base:      () => firstEl(['base','apiBase','api_base','apiBaseUrl','api']),
-    apikey:    () => firstEl(['apikey','apiKey','key','api_key']),
-    apply:     () => firstEl(['apply','btnApply','setBase']),
-    saveKey:   () => firstEl(['saveKey','btnSaveKey','save']),
-    find:      () => firstEl(['find','findBtn','findbuyers','find-buyers','btnFind']),
-    host:      () => firstEl(['supplierHost','host','supplier','supplier_host']),
-    country:   () => firstEl(['country','countrySelect','region']),
-    radius:    () => firstEl(['radiusMi','radius','distance']),
-    listBody:  () => firstEl(['listBody','tbody','resultsBody']),
-    findMsg:   () => firstEl(['findMsg','actionMsg','msg']),
-    status:    () => firstEl(['status','toast','topMsg']),
-  };
+      const S = {
+        root: '/api/v1',
+        items: [],
+        persona: {}
+      };
 
-  const S = { root:'/api/v1', items:[] };
+      const base = () => ($('apiBase').value || '').trim().replace(/\/+$/,'');
+      const key  = () => ($('apiKey').value || '').trim();
 
-  const toast = (msg, ok=false) => {
-    const el = els.status(); if (!el) return console[ok?'log':'warn'](msg);
-    el.textContent = msg; el.classList.remove('ok','err'); el.classList.add(ok?'ok':'err');
-  };
-  const setFindMsg = (msg, ok=false) => {
-    const el = els.findMsg(); if (!el) return;
-    el.textContent = msg; el.classList.remove('ok','err'); if (msg) el.classList.add(ok?'ok':'err');
-  };
+      function saveLocal(){
+        localStorage.setItem('base', base());
+        localStorage.setItem('apiKey', key());
+        localStorage.setItem('persona', JSON.stringify(S.persona || {}));
+      }
+      function loadLocal(){
+        const b = localStorage.getItem('base'); if (b) $('apiBase').value = b;
+        const k = localStorage.getItem('apiKey'); if (k) $('apiKey').value = k;
+        try { S.persona = JSON.parse(localStorage.getItem('persona')||'{}'); } catch { S.persona = {}; }
+        $('p_offer').value = S.persona.offer || '';
+        $('p_solves').value = S.persona.solves || '';
+        $('p_titles').value = S.persona.titles || '';
+      }
 
-  const readBase = () => (els.base()?.value || '').trim().replace(/\/+$/,'');
-  const readKey  = () => (els.apikey()?.value || '').trim();
+      async function http(method, path, {query=null, body=null}={}){
+        const b = base();
+        if (!b) return { ok:false, status:0, data:{ ok:false, error:'No API base set' } };
+        const url = new URL(b + (path.startsWith('/')?path:'/'+path));
+        if (query) Object.entries(query).forEach(([k,v]) => v!=null && v!=='' && url.searchParams.set(k,String(v)));
+        const headers = { 'Accept':'application/json' };
+        if (body!=null) headers['Content-Type']='application/json';
+        if (key()) headers['x-api-key']=key();
+        let res;
+        try { res = await fetch(url.toString(), { method, headers, body: body!=null?JSON.stringify(body):undefined }); }
+        catch(e){ return { ok:false, status:0, data:{ ok:false, error:String(e) } }; }
+        const txt = await res.text(); let data;
+        try { data = txt ? JSON.parse(txt) : null; } catch { data = txt; }
+        return { ok:res.ok, status:res.status, data, url: url.toString(), method };
+      }
 
-  async function call(method, path, body=null, query=null){
-    const base = readBase();
-    const key  = readKey();
-    if (!base) return { ok:false, status:0, data:{ ok:false, error:'no base set' } };
+      function normalizeItem(x){
+        return {
+          host: x?.host || x?.domain || x?.source || '',
+          platform: x?.platform || x?.type || '',
+          title: x?.title || x?.name || '',
+          created: x?.created || x?.createdAt || x?.ts || '',
+          temp: x?.temp || x?.temperature || x?.score || '',
+          why: x?.why || x?.whyText || x?.reason || x?.summary || ''
+        };
+      }
 
-    const url = new URL(base + (path.startsWith('/') ? path : ('/'+path)));
-    if (query) Object.entries(query).forEach(([k,v]) => (v!=null && v!=='') && url.searchParams.set(k,String(v)));
+      function renderList(){
+        const tb = $('listBody'); tb.innerHTML='';
+        (S.items||[]).forEach((it, idx) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${idx+1}</td>
+            <td>${it.host||''}</td>
+            <td>${it.platform||''}</td>
+            <td>${it.title||''}</td>
+            <td>${it.created||''}</td>
+            <td>${it.temp||''}</td>
+            <td>${it.why||''}</td>
+          `;
+          tb.appendChild(tr);
+        });
+        $('resultCount').textContent = `${S.items.length} item${S.items.length===1?'':'s'}`;
+      }
 
-    const headers = { 'Accept':'application/json' };
-    if (body!=null) headers['Content-Type']='application/json';
-    if (key) headers['x-api-key']=key;
+      function toCSV(items){
+        const cols = ['host','platform','title','created','temp','why'];
+        const esc = v => `${String(v??'').replaceAll('"','""')}`;
+        const head = cols.join(',');
+        const rows = (items||[]).map(r => cols.map(c => `"${esc(r[c])}"`).join(','));
+        return [head, ...rows].join('\r\n');
+      }
+      function download(name, text){
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([text], {type:'text/csv'}));
+        a.download = name; a.click();
+        setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+      }
 
-    let res; try { res = await fetch(url.toString(), { method, headers, body: body!=null ? JSON.stringify(body) : undefined }); }
-    catch(e){ return { ok:false, status:0, data:{ ok:false, error:String(e) } }; }
+      // ---------- endpoint auto-discovery ----------
+      async function tryFindBuyers({host, country, radius}){
+        // Try GET endpoints first, then POST if needed
+        const candidates = [
+          // GETs
+          { m:'GET', p:`${S.root}/leads/find-buyers`, q:true },
+          { m:'GET', p:`${S.root}/leads/find`, q:true },
+          { m:'GET', p:`${S.root}/buyers/find`, q:true },
+          { m:'GET', p:`${S.root}/find-buyers`, q:true },
+          { m:'GET', p:`/leads/find-buyers`, q:true },
+          { m:'GET', p:`/buyers/find`, q:true },
+          { m:'GET', p:`/find-buyers`, q:true },
+          // POSTs (body payload)
+          { m:'POST', p:`${S.root}/leads/find-buyers`, q:false },
+          { m:'POST', p:`${S.root}/buyers/find`, q:false },
+          { m:'POST', p:`${S.root}/find-buyers`, q:false },
+          { m:'POST', p:`/leads/find-buyers`, q:false },
+          { m:'POST', p:`/buyers/find`, q:false },
+          { m:'POST', p:`/find-buyers`, q:false },
+        ];
 
-    const txt = await res.text(); let data; try { data = txt ? JSON.parse(txt) : null; } catch { data = txt; }
-    return { ok:res.ok, status:res.status, data };
-  }
+        let last = null;
+        for (const c of candidates){
+          const args = c.q
+            ? { query: { host, country, radius } }
+            : { body: { host, country, radius } };
+          const r = await http(c.m, c.p, args);
+          console.debug('find-buyers try:', r.method, r.url, r.status);
+          last = r;
+          if (r.ok && r.data) return r;
+          // Stop early on auth problems so user sees the message
+          if (r.status === 401 || r.status === 403) return r;
+          // On 404/405/415 keep trying
+        }
+        return last;
+      }
 
-  // ---------- render ----------
-  function normalizeItem(raw){
-    return {
-      host: raw?.host || raw?.source || raw?.domain || '',
-      platform: raw?.platform || raw?.type || '',
-      title: raw?.title || raw?.name || '',
-      created: raw?.created || raw?.createdAt || raw?.ts || '',
-      temp: raw?.temp || raw?.temperature || '',
-      why: raw?.why || raw?.whyText || raw?.reason || ''
-    };
-  }
-  function renderList(){
-    const tb = els.listBody(); if (!tb) return;
-    tb.innerHTML='';
-    (S.items||[]).forEach((it,i)=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${i+1}</td>
-        <td>${it.host||''}</td>
-        <td>${it.platform||''}</td>
-        <td>${it.title||''}</td>
-        <td>${it.created||''}</td>
-        <td>${it.temp||''}</td>
-        <td>${it.why||''}</td>`;
-      tb.appendChild(tr);
-    });
-  }
+      // ---------- actions ----------
+      async function onFind(){
+        setFindMsg('');
+        const host = ($('supplierHost').value || '').trim();
+        const country = $('country').value;
+        const radius = $('radiusMi').value;
+        if (!host) { setFindMsg('Enter supplier host'); return; }
 
-  // ---------- actions ----------
-  async function findOne(){
-    setFindMsg('');
-    const host = (els.host()?.value || '').trim();
-    const country = (els.country()?.value || '').trim();
-    const radius = (els.radius()?.value || '').trim();
-    if (!host) return setFindMsg('Enter supplier host');
+        const btn = $('find'); btn.disabled = true;
+        const r = await tryFindBuyers({ host, country, radius });
+        btn.disabled = false;
 
-    const btn = els.find(); if (btn) btn.disabled = true;
-    const r = await call('GET', `${S.root}/leads/find-buyers`, null, { host, country, radius });
-    if (btn) btn.disabled = false;
+        if (!r || !r.ok){
+          const detail = typeof r?.data === 'string' ? r.data : JSON.stringify(r?.data);
+          setFindMsg(`HTTP ${r?.status ?? 0} — ${detail || 'not found'}`);
+          return;
+        }
 
-    if (!r.ok) return setFindMsg(`HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}`);
-    const items = (r.data && r.data.items) || [];
-    const seen = new Set((S.items||[]).map(x => `${x.host}::${x.title}`));
-    items.forEach(it => {
-      const item = normalizeItem(it);
-      const key = `${item.host}::${item.title}`;
-      if (!seen.has(key)) { seen.add(key); S.items.unshift(item); }
-    });
-    renderList();
-    setFindMsg(`Found ${items.length} candidate(s).`, true);
-  }
+        const items = (r.data && r.data.items) || [];
+        const seen = new Set((S.items||[]).map(it => `${it.host}::${it.title}`));
+        items.forEach(raw => {
+          const it = normalizeItem(raw);
+          const k = `${it.host}::${it.title}`;
+          if (!seen.has(k)) { seen.add(k); S.items.unshift(it); }
+        });
+        renderList();
+        setFindMsg(`Loaded ${items.length} new item(s).`, true);
+      }
 
-  // ---------- bindings ----------
-  function bind(){
-    // hydrate from localStorage if present
-    const savedBase = localStorage.getItem('base');
-    const savedKey  = localStorage.getItem('apiKey');
-    if (savedBase) { const b=els.base(); if (b) b.value = savedBase; }
-    if (savedKey)  { const k=els.apikey(); if (k) k.value = savedKey; }
+      // ---------- bindings ----------
+      function bind(){
+        loadLocal();
 
-    // Apply / Save (still optional)
-    const apply = els.apply();
-    if (apply) apply.addEventListener('click', () => {
-      const v = readBase();
-      if (v) { localStorage.setItem('base', v); toast(`Base set: ${v}`, true); }
-      else   { localStorage.removeItem('base');  toast('Base cleared'); }
-    });
-    const saveKey = els.saveKey();
-    if (saveKey) saveKey.addEventListener('click', () => {
-      const v = readKey();
-      if (v) { localStorage.setItem('apiKey', v); toast('API key saved', true); }
-      else   { localStorage.removeItem('apiKey');  toast('API key cleared'); }
-    });
+        $('apply').onclick = () => {
+          const b = base();
+          if (b) toast(`Base set: ${b}`, true); else toast('Base cleared');
+          saveLocal();
+        };
+        $('saveKey').onclick = () => {
+          if (key()) toast('API key saved', true); else toast('API key cleared');
+          saveLocal();
+        };
+        $('personaSave').onclick = () => {
+          S.persona = {
+            offer: $('p_offer').value.trim(),
+            solves: $('p_solves').value.trim(),
+            titles: $('p_titles').value.trim()
+          };
+          saveLocal();
+          toast('Persona saved locally', true);
+        };
 
-    // Find buyers (main action)
-    const findBtn = els.find();
-    if (findBtn) findBtn.addEventListener('click', (e)=>{ e.preventDefault(); findOne(); });
+        $('find').onclick = (e) => { e.preventDefault(); onFind(); };
 
-    // auto-apply ?base=&key= from URL
-    try {
-      const u = new URL(location.href);
-      const b = u.searchParams.get('base'); const k = u.searchParams.get('key');
-      if (b) { if (els.base()) els.base().value = b; localStorage.setItem('base', b); }
-      if (k) { if (els.apikey()) els.apikey().value = k; localStorage.setItem('apiKey', k); }
-    } catch {}
+        $('dlHot').onclick  = () => download('leads_hot.csv',  toCSV(S.items.filter(x => (x.temp||'').toString().toLowerCase()==='hot')));
+        $('dlWarm').onclick = () => download('leads_warm.csv', toCSV(S.items.filter(x => (x.temp||'').toString().toLowerCase().includes('warm'))));
 
-    renderList();
-  }
+        // optional quick test buttons (not wired to backend here)
+        $('refreshHot').onclick  = () => toast('Hot refresh is view-only in free panel');
+        $('refreshWarm').onclick = () => toast('Warm refresh is view-only in free panel');
 
-  document.addEventListener('DOMContentLoaded', bind);
-})();
-</script>
+        // URL overrides (?base=&key=&host=)
+        try{
+          const u = new URL(location.href);
+          const b = u.searchParams.get('base'); if (b) { $('apiBase').value = b; }
+          const k = u.searchParams.get('key');  if (k) { $('apiKey').value  = k; }
+          const h = u.searchParams.get('host'); if (h) { $('supplierHost').value = h; }
+          if (b || k) saveLocal();
+        }catch{}
+
+        renderList();
+      }
+
+      document.addEventListener('DOMContentLoaded', bind);
+    })();
+  </script>
 </body>
 </html>
