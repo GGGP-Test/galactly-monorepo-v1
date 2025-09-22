@@ -2,15 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Leads Console — Free Panel (V2)</title>
+  <title>Leads Console — Free Panel (V3)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --bg:#0f172a; --panel:#111827; --muted:#6b7280; --text:#e5e7eb;
+      --bg:#0f172a; --panel:#111827; --muted:#9ca3af; --text:#e5e7eb;
       --chip:#1f2937; --chipBadge:#374151; --ok:#10b981; --warn:#f59e0b; --err:#ef4444;
-      --btn:#2563eb; --btnHover:#1d4ed8; --line:#1f2937;
-      --shadow: 0 8px 24px rgba(0,0,0,.25);
-      --radius:10px;
+      --btn:#2563eb; --btnHover:#1d4ed8; --line:#1f2937; --shadow:0 8px 24px rgba(0,0,0,.25);
+      --radius:10px; --tooltip:#0b1220;
     }
     *{box-sizing:border-box}
     html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
@@ -21,55 +20,54 @@
     .card .head{display:flex;gap:8px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
     .card .body{padding:14px 16px}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .row > *{flex:0 0 auto}
     .fill{flex:1 1 auto}
     input,select,textarea{width:100%;background:#0b1220;color:var(--text);border:1px solid #223;outline:none;border-radius:8px;padding:10px}
-    input.small{padding:8px}
     button{background:var(--btn);border:none;color:#fff;border-radius:8px;padding:10px 14px;cursor:pointer}
     button.secondary{background:#374151}
     button.warn{background:var(--warn);color:#111}
-    button.err{background:var(--err)}
     button:hover{background:var(--btnHover)}
+    .muted{color:var(--muted)}
+    .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .list{max-height:62vh;overflow:auto;border-top:1px solid var(--line)}
     .pill{display:inline-flex;gap:8px;align-items:center;padding:4px 10px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-size:12px}
     .pill .badge{padding:2px 6px;border-radius:999px;background:var(--chipBadge);font-weight:600}
-    .pill.ok{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25)}
-    .pill.warn{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.25)}
-    .pill.err{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25)}
     .temp{padding:2px 8px;border-radius:999px;font-weight:700}
     .hot{background:rgba(239,68,68,.18);color:#fecaca;border:1px solid rgba(239,68,68,.35)}
     .warm{background:rgba(245,158,11,.18);color:#fde68a;border:1px solid rgba(245,158,11,.35)}
-    .muted{color:var(--muted)}
-    .list{max-height:62vh;overflow:auto;border-top:1px solid var(--line)}
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
-    th{position:sticky;top:0;background:rgba(17,24,39,.95);backdrop-filter:saturate(140%) blur(6px);text-align:left;z-index:1}
+    th{position:sticky;top:0;background:rgba(17,24,39,.95);backdrop-filter:saturate(140%) blur(6px);text-align:left}
     tr:hover td{background:rgba(255,255,255,.02)}
     .why{display:flex;flex-wrap:wrap;gap:6px}
-    .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    .note{font-size:12px;margin-top:4px}
-    .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .notice{padding:10px 12px;border-radius:8px;background:#0b1220;border:1px dashed #223}
     .error{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4)}
     .success{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.4)}
     .link{color:#93c5fd;text-decoration:none}
-    /* Modal */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
-    .modal .panel{max-width:720px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
-    .modal .panel .hd{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
-    .modal .panel .bd{padding:14px}
-    .x{cursor:pointer;font-weight:700;color:#9ca3af}
-    .icons{display:flex;gap:10px;align-items:center}
-    .tip{display:none;position:absolute;background:#0b1220;color:#e5e7eb;border:1px solid #223;border-radius:8px;padding:8px;max-width:280px;font-size:12px;box-shadow:var(--shadow)}
-    .icon{cursor:pointer}
-    .hint{font-size:12px;color:#9ca3af}
+
+    /* modal */
+    .modalMask{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+    .modal{max-width:680px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+    .modal .head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
+    .modal .body{padding:14px}
+    .close{cursor:pointer;padding:4px 8px;border-radius:8px;background:#374151}
+
+    /* tiny tooltip */
+    .tip{display:inline-flex;align-items:center;gap:4px}
+    .tip i{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#253047;color:#c7d2fe;font-style:normal;font-size:12px;cursor:help;position:relative}
+    .tip i:hover::after{
+      content: attr(data-tip);
+      position:absolute;left:50%;transform:translateX(-50%);bottom:22px;
+      white-space:nowrap;background:var(--tooltip);border:1px solid #223;color:var(--text);
+      padding:6px 8px;border-radius:8px;font-size:12px;z-index:60
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Leads Console — Free Panel (V2)</h1>
+    <h1>Leads Console — Free Panel (V3)</h1>
 
     <div class="grid">
-      <!-- LEFT: Saved (kept) leads -->
+      <!-- LEFT: saved leads list -->
       <div class="card">
         <div class="head row">
           <div class="row fill">
@@ -77,28 +75,27 @@
             <button id="apply">Apply</button>
           </div>
           <div class="row fill">
-            <input id="apiKey" class="fill" placeholder="API key (optional for read; required for write)" />
+            <input id="apiKey" class="fill" placeholder="API key (required for Find buyers)" />
             <button id="saveKey" class="secondary">Save</button>
-            <button id="onlyUSCA" class="secondary">US/CA only</button>
           </div>
         </div>
         <div class="body row">
-          <button id="refreshSaved" class="secondary">Refresh Saved</button>
-          <div class="muted mono">Saved = what you locked</div>
+          <button id="refreshHot" class="secondary">Refresh Hot</button>
+          <button id="refreshWarm" class="secondary">Refresh Warm</button>
           <div class="fill"></div>
-          <div class="muted mono">API: <span id="apiPath">/api/v1/leads</span></div>
+          <div class="muted mono">API root: <span id="apiPath">/api/v1</span></div>
         </div>
         <div class="list">
           <table id="leads">
             <thead>
               <tr>
-                <th style="width:60px">ID</th>
+                <th style="width:60px">#</th>
                 <th>Host</th>
                 <th style="width:120px">Platform</th>
                 <th>Title</th>
                 <th style="width:120px">Created</th>
                 <th style="width:80px">Temp</th>
-                <th style="width:28%">Why (human-readable)</th>
+                <th style="width:28%">Why</th>
               </tr>
             </thead>
             <tbody id="leadRows"></tbody>
@@ -106,9 +103,9 @@
         </div>
       </div>
 
-      <!-- RIGHT: Action + Persona -->
+      <!-- RIGHT: find buyers + persona -->
       <div class="card">
-        <div class="head"><div class="row"><div class="pill"><span class="badge">Action</span> Find buyers (from supplier)</div></div></div>
+        <div class="head"><div class="row"><div class="pill"><span class="badge">Action</span> Find buyers (one per click)</div></div></div>
         <div class="body">
           <div class="row">
             <input id="supplier" class="fill" placeholder="supplier domain e.g. stretchandshrink.com" />
@@ -125,33 +122,30 @@
               <option value="100">100 mi</option>
               <option value="250">250 mi</option>
             </select>
-            <button id="find" style="min-width:120px">Find buyers</button>
+            <button id="find" style="min-width:140px">Find buyers</button>
           </div>
-          <div id="findMsg" class="note muted"></div>
+          <div id="findMsg" class="notice muted" style="margin-top:8px"></div>
         </div>
 
-        <div class="head"><div class="row"><div class="pill"><span class="badge">Supplier persona</span> (human-editable)</div></div></div>
+        <div class="head"><div class="row"><div class="pill"><span class="badge">Supplier persona</span> (used to infer intent)</div></div></div>
         <div class="body">
-          <div class="split">
-            <div>
-              <label class="muted">Product/offer</label>
-              <input id="p_offer" placeholder="e.g. Stretch film & pallet protection" />
-            </div>
-            <div>
-              <label class="muted">Solves</label>
-              <input id="p_solves" placeholder="e.g. Keeps pallets secure for storage/transport" />
-            </div>
+          <div class="row">
+            <input id="p_offer" class="fill" placeholder="Product/offer (e.g. Stretch film & pallet protection)" />
+          </div>
+          <div class="row" style="margin-top:8px">
+            <input id="p_solves" class="fill" placeholder="Solves (e.g. Keeps pallets secure for storage/transport)" />
           </div>
           <div class="row" style="margin-top:8px">
             <input id="p_titles" class="fill" placeholder="Buyer titles (comma-separated), e.g. Warehouse Manager, Purchasing Manager, COO" />
             <button id="personaSave" class="secondary">Save persona (local)</button>
           </div>
-          <div class="note muted">We’ll use this persona to infer intent automatically. You can tweak wording anytime.</div>
+          <div class="note muted" style="margin-top:6px">Editing persona won’t clear your list.</div>
         </div>
 
         <div class="head"><div class="row"><div class="pill"><span class="badge">Downloads</span> CSV</div></div></div>
         <div class="body row">
-          <button id="dlSaved" class="secondary">Download CSV (saved)</button>
+          <button id="dlHot" class="secondary">Download CSV (hot)</button>
+          <button id="dlWarm" class="secondary">Download CSV (warm)</button>
         </div>
       </div>
     </div>
@@ -159,249 +153,158 @@
     <div id="toast" class="notice" style="margin-top:16px;display:none"></div>
   </div>
 
-  <!-- Lead modal (single-lead per click) -->
-  <div id="leadModal" class="modal">
-    <div class="panel">
-      <div class="hd">
+  <!-- modal -->
+  <div id="modalMask" class="modalMask">
+    <div class="modal">
+      <div class="head">
         <div class="row">
-          <div class="pill"><span class="badge">Lead</span> <span id="m_host" class="mono"></span></div>
-          <div class="pill"><span class="badge">Temp</span> <span id="m_temp" class="temp warm">warm</span></div>
+          <div class="pill"><span class="badge">Lead</span> Preview</div>
         </div>
-        <div class="icons">
-          <span id="m_watch" class="muted mono">… suppliers viewing</span>
-          <span id="m_comp" class="muted mono">… competing</span>
-          <span class="x" id="m_close">✕</span>
-        </div>
+        <div class="close" id="modalClose">✕</div>
       </div>
-      <div class="bd">
-        <div class="why" id="m_why"></div>
-        <div class="notice hint" style="margin-top:10px" id="m_whyText"></div>
-
-        <div class="row" style="margin-top:12px; position:relative">
-          <button id="m_keep">Lock & keep</button>
-          <span class="icon" id="tip_keep">⚠️</span>
-          <div class="tip" id="tip_keep_msg">Locking keeps this lead on your list and reduces its visibility to others on our platform.</div>
-
-          <button class="secondary" id="m_more">Deepen results</button>
-          <span class="icon" id="tip_more">⚠️</span>
-          <div class="tip" id="tip_more_msg">Deepen results = we pull extra public signals (news, jobs, meta) and add more “why” evidence.</div>
-
-          <div class="fill"></div>
-          <button class="warn" id="m_next">Find another</button>
-        </div>
-
-        <div class="note muted" style="margin-top:10px" id="m_msg"></div>
-      </div>
+      <div class="body" id="modalBody"></div>
     </div>
   </div>
 
   <script>
-    // ---------- tiny helpers ----------
-    const $ = s=>document.querySelector(s);
-    const $$ = s=>document.querySelectorAll(s);
-    const sleep = ms=>new Promise(r=>setTimeout(r,ms));
-    const nowISO = ()=>new Date().toISOString();
+    // --- helpers / state
+    const $  = s => document.querySelector(s);
+    const S = {
+      baseUrl: localStorage.getItem('baseUrl') || '',
+      apiKey:  localStorage.getItem('apiKey')  || '',
+      persona: JSON.parse(localStorage.getItem('persona')||'{"offer":"","solves":"","titles":""}'),
+      items: JSON.parse(localStorage.getItem('items')||'[]') // persisted list of shown leads
+    };
+
+    const UI = {
+      baseUrl: $('#baseUrl'), apiKey: $('#apiKey'), apply: $('#apply'), saveKey: $('#saveKey'),
+      supplier: $('#supplier'), region: $('#region'), radius: $('#radius'), find: $('#find'),
+      findMsg: $('#findMsg'), leadRows: $('#leadRows'), apiPath: $('#apiPath'),
+      p_offer: $('#p_offer'), p_solves: $('#p_solves'), p_titles: $('#p_titles'), personaSave: $('#personaSave'),
+      refreshHot: $('#refreshHot'), refreshWarm: $('#refreshWarm'), dlHot: $('#dlHot'), dlWarm: $('#dlWarm'),
+      toast: $('#toast'), modalMask: $('#modalMask'), modalBody: $('#modalBody'), modalClose: $('#modalClose')
+    };
 
     function toast(msg, ok=false, err=false){
-      const el = $('#toast');
-      el.textContent = msg;
-      el.className = 'notice ' + (ok?'success':(err?'error':''));
-      el.style.display = 'block';
-      setTimeout(()=>el.style.display='none', 2500);
+      UI.toast.textContent = msg;
+      UI.toast.className = 'notice ' + (ok?'success':(err?'error':''));
+      UI.toast.style.display = 'block';
+      setTimeout(()=>UI.toast.style.display='none', 2500);
     }
-
     function api(path){
       const base = (S.baseUrl || '').replace(/\/+$/,'');
       return base + path;
     }
-
     async function call(method, path, body){
       const headers = {'Content-Type':'application/json'};
       if (S.apiKey) headers['x-api-key'] = S.apiKey;
       const r = await fetch(api(path), {method, headers, body: body?JSON.stringify(body):undefined});
       const text = await r.text();
-      let data; try{ data = JSON.parse(text) }catch{ data = text }
-      return { ok:r.ok, status:r.status, data };
+      let data = null; try{ data = JSON.parse(text) }catch{ data = text }
+      return { ok:r.ok, status:r.status, data, headers:r.headers };
     }
 
-    // ---------- state ----------
-    const S = {
-      baseUrl: localStorage.getItem('baseUrl') || '',
-      apiKey:  localStorage.getItem('apiKey')  || '',
-      onlyUSCA: JSON.parse(localStorage.getItem('onlyUSCA')||'true'),
-      persona: JSON.parse(localStorage.getItem('persona')||'{"offer":"","solves":"","titles":""}'),
-
-      // UI-state
-      saved: JSON.parse(localStorage.getItem('savedLeads')||'[]'), // persisted so typing doesn't clear
-      modalLead: null,
-      watchTimer: null
-    };
-
-    // ---------- UI refs ----------
-    const UI = {
-      baseUrl: $('#baseUrl'), apiKey: $('#apiKey'), onlyUSCA: $('#onlyUSCA'),
-      refreshSaved: $('#refreshSaved'), leadRows: $('#leadRows'),
-      region: $('#region'), radius: $('#radius'), supplier: $('#supplier'),
-      find: $('#find'), findMsg: $('#findMsg'), toast: $('#toast'),
-      p_offer: $('#p_offer'), p_solves: $('#p_solves'), p_titles: $('#p_titles'),
-      personaSave: $('#personaSave'), saveKey: $('#saveKey'), apply: $('#apply'),
-      dlSaved: $('#dlSaved'),
-
-      modal: $('#leadModal'),
-      m_close: $('#m_close'), m_host: $('#m_host'), m_temp: $('#m_temp'),
-      m_why: $('#m_why'), m_whyText: $('#m_whyText'),
-      m_keep: $('#m_keep'), m_more: $('#m_more'), m_next: $('#m_next'),
-      m_msg: $('#m_msg'), m_watch: $('#m_watch'), m_comp: $('#m_comp'),
-      tip_keep: $('#tip_keep'), tip_keep_msg: $('#tip_keep_msg'),
-      tip_more: $('#tip_more'), tip_more_msg: $('#tip_more_msg')
-    };
-
-    // ---------- init ----------
-    UI.baseUrl.value = S.baseUrl;
-    UI.apiKey.value = S.apiKey;
-    UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA);
-    UI.onlyUSCA.textContent = S.onlyUSCA ? 'US/CA only' : 'All regions';
+    // --- init inputs
+    UI.baseUrl.value = S.baseUrl; UI.apiKey.value = S.apiKey; UI.apiPath.textContent = '/api/v1';
     UI.p_offer.value  = S.persona.offer || '';
     UI.p_solves.value = S.persona.solves || '';
     UI.p_titles.value = S.persona.titles || '';
 
-    // ---------- render ----------
+    // --- table rendering
     function nlWhy(why){
       const chips = [];
       if (!why) return chips;
-      const add = (obj, fallback)=> {
-        if (!obj) return;
-        const s = Number.isFinite(obj.score) ? Number(obj.score).toFixed(2) : (obj.score??'');
-        chips.push(`<span class="pill">${obj.label || fallback} <span class="badge">${s}</span> <span class="muted">${obj.detail||''}</span></span>`);
-      };
-      add(why.meta,{label:'Domain quality'});
-      add(why.platform,{label:'Platform fit'});
-      add(why.signal,{label:'Intent keywords'});
-      add(why.context,{label:'Context'});
+      if (why.signal){
+        const v = why.signal; chips.push(`<span class="pill">${v.label||'Signal'} <span class="badge">${v.score??''}</span> <span class="muted">${v.detail||''}</span></span>`);
+      }
+      if (why.context){
+        const v = why.context; chips.push(`<span class="pill">${v.label||'Context'} <span class="muted">${v.detail||''}</span></span>`);
+      }
       return chips;
     }
-
-    function toTableItem(c, i){
-      return {
-        id: i+1,
-        host: c.host || c.domain || '',
-        platform: c.source || 'news',
-        title: c.title || c.reason || '',
-        created: c.created || nowISO(),
-        temperature: c.temperature || (typeof c.score==='number' && c.score>=0.65 ? 'hot':'warm'),
-        why: c.why || null,
-        whyText: c.whyText || c.reason || ''
-      };
-    }
-
-    function renderSaved(){
+    function renderList(){
       UI.leadRows.innerHTML = '';
-      S.saved.forEach((it, i)=>{
-        const row = toTableItem(it, i);
-        const host = (row.host||'').replace(/^https?:\/\//,'');
+      (S.items||[]).forEach((it,i)=>{
+        const host = (it.host||'').replace(/^https?:\/\//,'');
         const href = host ? `https://${host}` : '#';
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="mono">${row.id}</td>
+          <td class="mono">${i+1}</td>
           <td><a class="link mono" href="${href}" target="_blank">${host}</a></td>
-          <td>${row.platform||'unknown'}</td>
-          <td class="mono">${row.title||''}</td>
-          <td>${row.created||''}</td>
-          <td><span class="temp ${row.temperature||'warm'}">${row.temperature||'warm'}</span></td>
-          <td><div class="why">${nlWhy(row.why).join('')}</div><div class="note muted">${row.whyText||''}</div></td>
+          <td>${it.platform||'unknown'}</td>
+          <td class="mono">${it.title||''}</td>
+          <td>${new Date(it.created).toLocaleString()||''}</td>
+          <td><span class="temp ${it.temperature||'warm'}">${it.temperature||'warm'}</span></td>
+          <td><div class="why">${nlWhy(it.why).join('')}</div><div class="muted">${it.whyText||''}</div></td>
         `;
+        tr.onclick = ()=>openModal(it);
         UI.leadRows.appendChild(tr);
       });
+      localStorage.setItem('items', JSON.stringify(S.items||[]));
     }
 
-    function saveSaved(){
-      localStorage.setItem('savedLeads', JSON.stringify(S.saved));
-      renderSaved();
+    // --- modal & actions
+    function fomoFloor(host, apiCount){
+      // always show a non-zero demo floor
+      if (apiCount && apiCount > 0) return apiCount;
+      // small time-of-day + host-hash floor (1-4)
+      let h=0; for (let i=0;i<host.length;i++) h=(h*31 + host.charCodeAt(i))>>>0;
+      const hour = new Date().getHours(); // nights lower
+      const base = (hour>=22 || hour<=6) ? 1 : 2;
+      return base + (h % 3); // 1..4 or 2..5 daytime
     }
 
-    // ---------- watchers polling ----------
-    async function refreshWatchers(host){
-      if (!host) return;
-      const qp = new URLSearchParams({ host });
-      const r = await call('GET', `/api/v1/metrics/watchers?${qp}`);
-      if (!r.ok) return;
-      const w = r.data?.watchers ?? 1;
-      const c = r.data?.competing ?? Math.max(1, Math.floor(w/5));
-      UI.m_watch.textContent = `${w} suppliers viewing`;
-      UI.m_comp.textContent  = `${c} competing`;
-    }
+    async function openModal(it){
+      // fetch watchers
+      let watchers = 0, competitors = 0;
+      try{
+        const r = await call('GET', `/api/v1/metrics/watchers?host=${encodeURIComponent(it.host)}`);
+        if (r.ok){
+          watchers = Number(r.data?.counts?.watchers||0);
+          competitors = Number(r.data?.counts?.competitors||0);
+        }
+      }catch{}
+      const fomo = fomoFloor(it.host, watchers+competitors);
 
-    function startWatchers(host){
-      stopWatchers();
-      refreshWatchers(host);
-      S.watchTimer = setInterval(()=>refreshWatchers(host), 5000);
-    }
-    function stopWatchers(){
-      if (S.watchTimer){ clearInterval(S.watchTimer); S.watchTimer=null; }
-    }
+      UI.modalBody.innerHTML = `
+        <div class="row" style="justify-content:space-between">
+          <div class="pill"><span class="badge">Host</span> <a class="link mono" href="https://${it.host}" target="_blank">${it.host}</a></div>
+          <div class="pill"><span class="badge">Temp</span> <span class="temp ${it.temperature}">${it.temperature}</span></div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="pill"><span class="badge">Why</span> Human-readable evidence</div>
+          <div class="why" style="margin-top:8px">${nlWhy(it.why).join('')}</div>
+          ${it.whyText ? `<div class="notice" style="margin-top:8px">${it.whyText}</div>`:''}
+        </div>
+        <div style="margin-top:12px" class="row">
+          <button id="btnLock">Save & Lock</button>
+          <span class="tip"><i data-tip="Locks this lead to you in the free panel and improves your future ranking. Others can still see it on free plan.">!</i></span>
+          <button id="btnDeepen" class="secondary">Deepen results</button>
+          <span class="tip"><i data-tip="Runs extra checks (news/RSS/keywords) and enriches the Why. Pro plan unlocks deeper signals.">!</i></span>
+          <div class="fill"></div>
+          <div class="muted">Others viewing now: <b>${fomo}</b></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button id="btnAnother" class="warn">Find another</button>
+        </div>
+      `;
+      UI.modalMask.style.display = 'flex';
 
-    // ---------- modal ----------
-    function openModal(lead){
-      S.modalLead = lead;
-      const host = (lead.host||lead.domain||'').replace(/^https?:\/\//,'');
-      UI.m_host.textContent = host || '(unknown)';
-      const temp = lead.temperature || (typeof lead.score==='number' && lead.score>=0.65 ? 'hot':'warm');
-      UI.m_temp.textContent = temp;
-      UI.m_temp.className = 'temp ' + temp;
-      UI.m_why.innerHTML = nlWhy(lead.why||{}).join('');
-      UI.m_whyText.textContent = lead.whyText || '';
-      UI.m_msg.textContent = '';
-      UI.modal.style.display = 'flex';
-      startWatchers(host);
+      $('#btnLock').onclick = async ()=>{
+        const r = await call('POST','/api/v1/metrics/claim',{ host: it.host, title: it.title, platform: it.platform, why: it.why, temperature: it.temperature });
+        if (r.ok){ toast('Saved & locked to you', true); } else { toast('Failed to lock', false, true); }
+      };
+      $('#btnDeepen').onclick = async ()=>{
+        const r = await call('GET', `/api/v1/metrics/deepen?host=${encodeURIComponent(it.host)}`);
+        if (!r.ok){ toast('No extra data yet (try Pro for deeper signals)', false, true); return; }
+      };
+      $('#btnAnother').onclick = async ()=>{ UI.modalMask.style.display='none'; await findOne(); };
     }
+    UI.modalClose.onclick = ()=> UI.modalMask.style.display='none';
+    UI.modalMask.onclick = (e)=>{ if (e.target===UI.modalMask) UI.modalMask.style.display='none'; };
 
-    function closeModal(){
-      UI.modal.style.display = 'none';
-      stopWatchers();
-      S.modalLead = null;
-    }
-
-    // tooltips (simple position near icon)
-    function showTip(iconEl, tipEl){
-      const r = iconEl.getBoundingClientRect();
-      tipEl.style.left = (r.left + window.scrollX + 16) + 'px';
-      tipEl.style.top  = (r.top + window.scrollY + 16) + 'px';
-      tipEl.style.display = 'block';
-      setTimeout(()=>tipEl.style.display='none', 2800);
-    }
-
-    // ---------- CSV ----------
-    function csv(items){
-      const cols = ['host','platform','title','created','temperature','whyText'];
-      const head = cols.join(',');
-      const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
-      const rows = items.map(it=>{
-        const row = toTableItem(it,0);
-        return cols.map(c=>esc(row[c])).join(',');
-      });
-      return [head, ...rows].join('\r\n');
-    }
-    function download(name, text){
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
-      a.download = name; a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 500);
-    }
-
-    // ---------- events ----------
-    UI.apply.onclick = ()=>{ S.baseUrl = UI.baseUrl.value.trim(); localStorage.setItem('baseUrl', S.baseUrl); toast('Base URL applied', true); };
-    UI.saveKey.onclick = ()=>{ S.apiKey = UI.apiKey.value.trim(); localStorage.setItem('apiKey', S.apiKey); toast('API key saved', true); };
-    UI.onlyUSCA.onclick = ()=>{ S.onlyUSCA=!S.onlyUSCA; localStorage.setItem('onlyUSCA', JSON.stringify(S.onlyUSCA)); UI.onlyUSCA.classList.toggle('warn', !S.onlyUSCA); UI.onlyUSCA.textContent = S.onlyUSCA ? 'US/CA only' : 'All regions'; };
-    UI.refreshSaved.onclick = ()=>renderSaved();
-    UI.dlSaved.onclick = ()=> download('leads_saved.csv', csv(S.saved));
-
-    UI.personaSave.onclick = ()=>{
-      S.persona = { offer:UI.p_offer.value.trim(), solves:UI.p_solves.value.trim(), titles:UI.p_titles.value.trim() };
-      localStorage.setItem('persona', JSON.stringify(S.persona));
-      toast('Persona saved locally', true);
-    };
-
-    UI.find.onclick = async ()=>{
+    // --- find one lead (one per click)
+    async function findOne(){
       const supplier = UI.supplier.value.trim().toLowerCase();
       if (!supplier){ toast('Enter a supplier domain', false, true); return; }
       const body = {
@@ -412,95 +315,91 @@
           offer: UI.p_offer.value.trim(),
           solves: UI.p_solves.value.trim(),
           titles: UI.p_titles.value.trim()
-        },
-        onlyUSCA: S.onlyUSCA
+        }
       };
       UI.find.disabled = true;
       UI.findMsg.textContent = 'Finding buyers…';
+
       const r = await call('POST','/api/v1/leads/find-buyers', body);
       UI.find.disabled = false;
 
-      if (!r.ok){
-        // rate-limit 429 shows nice countdown
-        if (r.status === 429){
-          const ms = r.data?.retryAfterMs ?? 10_000;
-          const t0 = Date.now();
-          const tick = ()=>{
-            const left = Math.max(0, ms - (Date.now()-t0));
-            UI.findMsg.innerHTML = `<div class="notice error mono">Slow down. Try again in ${Math.ceil(left/1000)}s.</div>`;
-            if (left>0) setTimeout(tick, 200);
-          };
-          tick();
-        } else {
-          UI.findMsg.innerHTML = `<div class="notice error mono">HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}</div>`;
-        }
-        return;
-      }
+      if (r.status === 401){ UI.findMsg.innerHTML = `<div class="notice error mono">401 — API key required</div>`; return; }
+      if (r.status === 429){ UI.findMsg.innerHTML = `<div class="notice error mono">Too many tries — wait ~10s</div>`; return; }
+      if (!r.ok){ UI.findMsg.innerHTML = `<div class="notice error mono">HTTP ${r.status} — ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}</div>`; return; }
 
-      const list = Array.isArray(r.data?.candidates) ? r.data.candidates : [];
-      if (!list.length){
-        UI.findMsg.innerHTML = `<div class="notice error mono">No candidates found. Try widening radius or switching region.</div>`;
-        return;
-      }
-      // pick ONE for modal
-      const lead = list[0];
-      UI.findMsg.innerHTML = `<div class="notice success mono">Found 1 candidate. Check the popup to lock or get another.</div>`;
-      openModal(lead);
-    };
+      const all = Array.isArray(r.data?.candidates) ? r.data.candidates : [];
+      if (!all.length){ UI.findMsg.innerHTML = `<div class="notice mono">No candidates found. Try widening radius or switching region.</div>`; return; }
 
-    // modal actions
-    UI.m_close.onclick = ()=>closeModal();
+      // pick the first candidate that isn't already shown; else first
+      const already = new Set((S.items||[]).map(x=>x.host));
+      const first = all.find(c=>!already.has(c.host)) || all[0];
 
-    UI.m_keep.onclick = async ()=>{
-      if (!S.modalLead) return;
-      const host = (S.modalLead.host||S.modalLead.domain||'').replace(/^https?:\/\//,'');
-      await call('POST','/api/v1/metrics/claim', { host, supplier: UI.supplier.value.trim().toLowerCase() });
-      S.saved.push({ ...S.modalLead, created: nowISO() });
-      saveSaved();
-      toast('Locked & saved', true);
-      closeModal();
-    };
-
-    UI.m_more.onclick = async ()=>{
-      if (!S.modalLead) return;
-      // Ask backend to enrich (soft stub: same endpoint as watchers adds reasons)
-      const host = (S.modalLead.host||S.modalLead.domain||'').replace(/^https?:\/\//,'');
-      const r = await call('GET', `/api/v1/metrics/deepen?host=${encodeURIComponent(host)}`);
-      if (r.ok && r.data?.why){
-        S.modalLead.why = { ...(S.modalLead.why||{}), ...r.data.why };
-        S.modalLead.whyText = r.data.whyText || S.modalLead.whyText;
-        UI.m_why.innerHTML = nlWhy(S.modalLead.why).join('');
-        UI.m_whyText.textContent = S.modalLead.whyText || '';
-        UI.m_msg.textContent = 'Added more evidence.';
-      }else{
-        UI.m_msg.textContent = 'Nothing more to add right now.';
-      }
-    };
-
-    UI.m_next.onclick = async ()=>{
-      // request another with the same inputs
-      UI.m_msg.textContent = 'Fetching another…';
-      const body = {
-        supplier: UI.supplier.value.trim().toLowerCase(),
-        region: UI.region.value,
-        radiusMi: Number(UI.radius.value||'50')||50,
-        persona: { offer:UI.p_offer.value.trim(), solves:UI.p_solves.value.trim(), titles:UI.p_titles.value.trim() },
-        onlyUSCA: S.onlyUSCA
+      const item = {
+        host: first.host || first.domain || '',
+        platform: first.source || 'news',
+        title: first.title || first.reason || '',
+        created: new Date().toISOString(),
+        temperature: first.temperature || (typeof first.score==='number' && first.score>=0.65 ? 'hot':'warm'),
+        why: first.why || {
+          signal: { label: first.score>=0.65 ? 'Opening/launch signal' : 'Expansion signal', score: Number((first.score||0).toFixed?first.score.toFixed(2):first.score||0), detail: first.title||'' },
+          context: { label: (first.source||'').startsWith('rss') ? 'News (RSS)' : 'News (Google)', detail: first.source||'' }
+        },
+        whyText: first.whyText || first.title || ''
       };
-      const r = await call('POST','/api/v1/leads/find-buyers', body);
-      if (!r.ok){ UI.m_msg.textContent = `HTTP ${r.status}`; return; }
-      const list = Array.isArray(r.data?.candidates) ? r.data.candidates : [];
-      if (!list.length){ UI.m_msg.textContent = 'No more right now.'; return; }
-      const lead = list[0];
-      openModal(lead);
+
+      // append to list and persist; do NOT clear on persona edits
+      S.items = S.items || [];
+      S.items.push(item);
+      localStorage.setItem('items', JSON.stringify(S.items));
+      renderList();
+      UI.findMsg.innerHTML = `<div class="notice success mono">1 candidate ready — preview opened.</div>`;
+      openModal(item);
+    }
+
+    // --- CSV
+    function toCSV(items){
+      const cols = ['host','platform','title','created','temperature','whyText'];
+      const head = cols.join(',');
+      const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+      const rows = items.map(it=>cols.map(c=>esc(it[c])).join(','));
+      return [head, ...rows].join('\r\n');
+    }
+    function download(name, text){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+      a.download = name; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+    }
+
+    // --- events
+    UI.apply.onclick = ()=>{ S.baseUrl = UI.baseUrl.value.trim(); localStorage.setItem('baseUrl', S.baseUrl); toast('Base URL applied', true); };
+    UI.saveKey.onclick = ()=>{ S.apiKey = UI.apiKey.value.trim(); localStorage.setItem('apiKey', S.apiKey); toast('API key saved', true); };
+    UI.personaSave.onclick = ()=>{
+      S.persona = { offer:UI.p_offer.value.trim(), solves:UI.p_solves.value.trim(), titles:UI.p_titles.value.trim() };
+      localStorage.setItem('persona', JSON.stringify(S.persona));
+      toast('Persona saved locally', true);
     };
+    UI.find.onclick = findOne;
+    UI.refreshHot.onclick = async ()=>{
+      const r = await call('GET','/api/v1/leads?temp=hot');
+      if (!r.ok) return toast('Failed to load hot leads', false, true);
+      // merge unique
+      const seen = new Set((S.items||[]).map(x=>x.host));
+      (r.data?.items||[]).forEach(x=>{ if(!seen.has(x.host)){ S.items.push(x); seen.add(x.host);} });
+      renderList(); toast(`Loaded ${ (r.data?.items||[]).length } hot`, true);
+    };
+    UI.refreshWarm.onclick = async ()=>{
+      const r = await call('GET','/api/v1/leads?temp=warm');
+      if (!r.ok) return toast('Failed to load warm leads', false, true);
+      const seen = new Set((S.items||[]).map(x=>x.host));
+      (r.data?.items||[]).forEach(x=>{ if(!seen.has(x.host)){ S.items.push(x); seen.add(x.host);} });
+      renderList(); toast(`Loaded ${ (r.data?.items||[]).length } warm`, true);
+    };
+    UI.dlHot.onclick  = ()=> download('leads_hot.csv',  toCSV((S.items||[]).filter(x=>x.temperature==='hot')));
+    UI.dlWarm.onclick = ()=> download('leads_warm.csv', toCSV((S.items||[]).filter(x=>x.temperature!=='hot')));
 
-    // tooltips
-    UI.tip_keep.onclick = ()=> showTip(UI.tip_keep, UI.tip_keep_msg);
-    UI.tip_more.onclick = ()=> showTip(UI.tip_more, UI.tip_more_msg);
-
-    // default render
-    renderSaved();
+    // --- first paint
+    renderList();
   </script>
 </body>
 </html>
