@@ -1,74 +1,40 @@
 // src/routes/metrics.ts
-import { Router } from 'express';
-import {
-  buckets,
-  getByHost,
-  saveByHost,
-  ensureLeadForHost,
-  findByHost,
-} from '../shared/memStore';
+import { Router } from "express";
+import { saveByHost, buckets, Temp } from "../shared/memStore";
 
 const router = Router();
 
-/**
- * GET /api/v1/metrics/watchers?host=example.com
- * Very light heartbeat endpoint the panel polls.
- */
-router.get('/watchers', (req, res) => {
-  const host = String(req.query.host || '');
-  const data = host ? getByHost(host) : null;
-  res.json({ ok: true, host, data });
+// simple health/ping for the metrics group
+router.get("/ping", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+
+// Panel pings this with host=news.google.com etc. We just ACK it.
+router.get("/watchers", (req, res) => {
+  const host = String(req.query.host ?? "");
+  return res.json({ ok: true, host, viewers: 1 });
 });
 
-/**
- * POST /api/v1/metrics/claim  (panel “Lock & keep”)
- * Body (or query): { host: string }
- * Marks the host as claimed and moves it to HOT if it was in WARM.
- */
-router.post('/claim', (req, res) => {
-  const host = String((req.body && req.body.host) || req.query.host || '');
-  if (!host) return res.status(400).json({ ok: false, error: 'host required' });
+// Called when user clicks “Lock & keep”
+router.post("/claim", (req, res) => {
+  const body = req.body || {};
+  const host = String(body.host || req.query.host || body.domain || "");
+  const temp: Temp = String(body.temp || "warm").toLowerCase() === "hot" ? "hot" : "warm";
+  if (!host) return res.status(400).json({ ok: false, error: "host required" });
 
-  // record a tiny claim stamp for the host
-  const claimedAt = new Date().toISOString();
-  saveByHost(host, { claimedAt, claimedBy: 'panel' });
-
-  // If there’s a warm lead with this host, promote it to hot.
-  const where = findByHost(host);
-  if (where?.bucket === 'warm') {
-    const lead = buckets.warm.splice(where.index, 1)[0];
-    lead.temperature = 'hot';
-    buckets.hot.unshift(lead);
-  } else if (!where) {
-    // If nothing existed yet, at least ensure a lead row exists (warm).
-    ensureLeadForHost(host, { temperature: 'hot' });
-    const where2 = findByHost(host);
-    if (where2?.bucket === 'warm') {
-      const lead = buckets.warm.splice(where2.index, 1)[0];
-      lead.temperature = 'hot';
-      buckets.hot.unshift(lead);
-    }
-  }
-
-  return res.json({ ok: true, host, promotedTo: 'hot', claimedAt });
-});
-
-/**
- * GET /api/v1/metrics/deepen?host=example.com  (panel “Deepen results”)
- * Stub that returns 200 so the UI doesn’t 404. You can plug real logic later.
- */
-router.get('/deepen', (req, res) => {
-  const host = String(req.query.host || '');
-  if (!host) return res.status(400).json({ ok: false, error: 'host required' });
-
-  // No extra signals for now; just acknowledge.
-  return res.json({
-    ok: true,
+  const saved = saveByHost(temp, {
     host,
-    added: 0,
-    message: 'Nothing more to add right now.',
+    title: body.title,
+    platform: body.platform,
+    whyText: body.whyText,
+    why: body.why,
   });
+
+  return res.json({ ok: true, saved, counts: { hot: buckets.hot.length, warm: buckets.warm.length } });
 });
 
-export const metricsRouter = router;
+// Called when user clicks “Deepen results” (no-op stub that succeeds)
+router.get("/deepen", (req, res) => {
+  const host = String(req.query.host || "");
+  return res.json({ ok: true, host, added: 0 });
+});
+
 export default router;
