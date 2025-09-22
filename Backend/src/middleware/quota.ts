@@ -1,181 +1,172 @@
 // src/middleware/quota.ts
-import { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction, RequestHandler } from "express";
 
 /**
- * Plans we recognize. Keep "test" and "internal" so old calls in index.ts won't break.
+ * Plans we recognize. Add here first if you introduce a new one.
  */
-export type Plan = "free" | "pro" | "internal" | "test";
+export type Plan = "free" | "pro" | "test" | "internal";
 
 /**
- * Limits we enforce today. Add more metrics later without breaking callers.
+ * Per-plan limits (right now only daily).
  */
-export interface PlanLimit {
-  /** Max /day for find-buyers endpoint */
-  dailyFindBuyers: number;
+export interface PlanLimits {
+  daily: number;
 }
 
+/**
+ * Quota configuration (window + per-plan limits + flags).
+ */
 export interface QuotaConfig {
-  /** Number of rolling days for the window (1 = reset every UTC day). */
-  windowDays: number;
-  /** Per-plan limits. Keys optional so you can override just one plan. */
-  limits: {
-    free?: PlanLimit;
-    pro?: PlanLimit;
-    internal?: PlanLimit;
-    test?: PlanLimit;
+  windowDays: number;                              // e.g., 1 day rolling window
+  limits: { [P in Plan]: PlanLimits };             // avoid TS's Record<> to keep compilers happy
+  allowTest: boolean;                              // allow the special test key to work
+  testApiKey?: string;                             // value of QUOTA_TEST_API_KEY
+  disable?: boolean;                               // hard bypass
+}
+
+/** In-memory ledger entry. */
+interface Bucket {
+  count: number;
+  windowId: number; // day bucket id (windowDays granularity)
+}
+
+/** State */
+let CONFIG: QuotaConfig = defaultConfigFromEnv();
+const store = new Map<string, Bucket>();
+const planOverride = new Map<string, Plan>(); // apiKey -> plan
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
+
+/** Build sane defaults from env. */
+function defaultConfigFromEnv(): QuotaConfig {
+  const n = (v: string | undefined, d: number) => {
+    const x = Number(v);
+    return Number.isFinite(x) && x >= 0 ? x : d;
+  };
+  const bool = (v: string | undefined) => v === "1" || String(v).toLowerCase() === "true";
+
+  const windowDays = Math.max(1, n(process.env.QUOTA_WINDOW_DAYS, 1));
+
+  const limits: QuotaConfig["limits"] = {
+    free:     { daily: n(process.env.FREE_DAILY, 3) },
+    pro:      { daily: n(process.env.PRO_DAILY, 25) },
+    test:     { daily: n(process.env.TEST_DAILY, 100) },
+    internal: { daily: n(process.env.INT_DAILY, 1000) },
+  };
+
+  return {
+    windowDays,
+    limits,
+    allowTest: bool(process.env.ALLOW_TEST),
+    testApiKey: process.env.QUOTA_TEST_API_KEY || undefined,
+    disable: bool(process.env.QUOTA_DISABLE),
   };
 }
 
-/** In-memory counters (simple & fast) */
-type DayStamp = string; // e.g. "2025-09-21"
-interface UsageCounter {
-  used: number;
-  day: DayStamp;
-}
-interface UsageMap {
-  // metric -> { used, day }
-  [metric: string]: UsageCounter;
-}
-interface KeyUsage {
-  // apiKey -> usage per metric
-  [apiKey: string]: UsageMap;
-}
-
-/** Global, mutable state kept very simple on purpose */
-const STATE = {
-  cfg: <QuotaConfig>{
-    windowDays: 1,
-    limits: {
-      free: { dailyFindBuyers: 3 },
-      pro: { dailyFindBuyers: 1000 },
-      internal: { dailyFindBuyers: 1_000_000 },
-      test: { dailyFindBuyers: 10_000 }
-    }
-  },
-  usage: <KeyUsage>{},
-  plans: <{ [apiKey: string]: Plan }>{}
-};
-
-/** Utility: current UTC day stamp */
-function todayUTC(): DayStamp {
-  const d = new Date();
-  return d.toISOString().slice(0, 10); // YYYY-MM-DD
-}
-
-/** Configure quotas at runtime (idempotent) */
+/**
+ * Update configuration at runtime (idempotent).
+ * Pass only the keys you want to change.
+ */
 export function configureQuota(partial?: Partial<QuotaConfig>): void {
   if (!partial) return;
-  if (typeof partial.windowDays === "number" && partial.windowDays > 0) {
-    STATE.cfg.windowDays = partial.windowDays;
-  }
-  if (partial.limits) {
-    STATE.cfg.limits = {
-      ...STATE.cfg.limits,
-      ...partial.limits
-    };
-  }
+  CONFIG = {
+    ...CONFIG,
+    ...partial,
+    limits: partial.limits ? { ...CONFIG.limits, ...partial.limits } as QuotaConfig["limits"] : CONFIG.limits,
+  };
 }
 
-/** Force a plan for an api key (handy for tests or admin) */
+/** Admin/testing helpers (optional) */
 export function setPlanForApiKey(apiKey: string, plan: Plan): void {
-  STATE.plans[apiKey] = plan;
+  if (!apiKey) return;
+  planOverride.set(apiKey, plan);
 }
-
-/** Inspect current counters (for debugging) */
-export function snapshotQuota(apiKey?: string) {
-  if (apiKey) return { apiKey, usage: STATE.usage[apiKey] || {} };
-  return { usage: STATE.usage };
-}
-
-/** Reset counters for a key (or all) — useful in dev/test */
-export function resetQuota(apiKey?: string) {
-  if (apiKey) delete STATE.usage[apiKey];
-  else STATE.usage = {};
-}
-
-/** Extract an api key (or a stable anonymous surrogate) */
-function apiKeyFrom(req: Request): string {
-  const hdr = (req.headers["x-api-key"] || req.headers["x-apikey"] || "") as string;
-  if (hdr && typeof hdr === "string") return hdr.trim();
-  // Anonymous caller -> bind to ip+ua to prevent easy abuse
-  const ip = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "0.0.0.0";
-  const ua = (req.headers["user-agent"] as string) || "unknown";
-  return `anon:${ip}|${ua.slice(0, 40)}`;
-}
-
-/** Decide the plan for a key */
-function planFor(apiKey: string): Plan {
-  if (STATE.plans[apiKey]) return STATE.plans[apiKey];
-
-  // Env overrides:
-  // - QUOTA_DISABLE => treat everyone as internal (no cap)
-  // - QUOTA_TEST_API_KEYS=key1,key2 => mark those keys as "test"
-  if (process.env.QUOTA_DISABLE === "1") return "internal";
-  const testKeys = (process.env.QUOTA_TEST_API_KEYS || "").split(",").map(s => s.trim()).filter(Boolean);
-  if (testKeys.includes(apiKey)) return "test";
-
-  // Default free
-  return "free";
-}
-
-/** Core check/increment for a single metric */
-function take(apiKey: string, metric: string, maxPerDay: number) {
-  const today = todayUTC();
-  const usage = (STATE.usage[apiKey] ||= {});
-  const c = (usage[metric] ||= { used: 0, day: today });
-
-  // Reset if window crossed (simple: per-day reset)
-  if (c.day !== today) {
-    c.day = today;
-    c.used = 0;
-  }
-  c.used += 1;
-
-  const ok = c.used <= maxPerDay;
-  return { ok, used: c.used, day: c.day, limit: maxPerDay };
+export function resetQuota(): void { store.clear(); }
+export function snapshotQuota(): Array<{ key: string; count: number; windowId: number }> {
+  const arr: Array<{ key: string; count: number; windowId: number }> = [];
+  for (const [key, b] of store.entries()) arr.push({ key, count: b.count, windowId: b.windowId });
+  return arr;
 }
 
 /**
- * Quota middleware (default export).
- * It only gates the heavy route(s): /api/v1/leads/find-buyers
+ * Decide the plan for this request.
+ * Rules:
+ *  - Admin token (x-admin-token) -> "internal"
+ *  - If there is an override for this apiKey -> that plan
+ *  - If allowTest && apiKey == testApiKey -> "test"
+ *  - Else "pro" only if caller explicitly says x-plan: pro AND has apiKey (you can tighten later)
+ *  - Else "free"
  */
-export default function quota() {
+function resolvePlan(req: Request, apiKey: string | undefined): Plan {
+  const t = req.header("x-admin-token") || "";
+  if (t && ADMIN_TOKEN && t === ADMIN_TOKEN) return "internal";
+
+  if (apiKey && planOverride.has(apiKey)) return planOverride.get(apiKey)!;
+
+  if (CONFIG.allowTest && apiKey && CONFIG.testApiKey && apiKey === CONFIG.testApiKey) {
+    return "test";
+  }
+
+  const asked = (req.header("x-plan") || req.query.plan || "").toString().toLowerCase();
+  if (asked === "pro" && apiKey) return "pro";
+
+  return "free";
+}
+
+/** Compute the current window id (integer) for the rolling window. */
+function windowId(nowMs: number, windowDays: number): number {
+  const day = Math.floor(nowMs / 86_400_000); // 24h
+  return Math.floor(day / Math.max(1, windowDays));
+}
+
+/** Build a stable bucket id. */
+function bucketId(plan: Plan, apiKey: string | undefined, ip: string, wId: number): string {
+  // For free/no-key users, we bucket by IP to avoid unlimited anonymous spam.
+  const subject = apiKey || `ip:${ip}`;
+  return `${plan}:${subject}:w${wId}`;
+}
+
+/**
+ * Express middleware enforcing per-day quotas by plan.
+ * Sets helpful headers:
+ *   x-quota-plan, x-quota-remaining, x-quota-limit, x-quota-reset
+ */
+export function quota(): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
-    // Allow quota off for local/dev without code changes
-    if (process.env.QUOTA_DISABLE === "1") return next();
+    if (CONFIG.disable) return next();
 
-    const path = req.path || req.url || "";
-    const method = (req.method || "GET").toUpperCase();
+    const now = Date.now();
+    const wId = windowId(now, CONFIG.windowDays);
 
-    // Only meter the expensive endpoint to keep things cheap + predictable
-    const isFindBuyers =
-      (path.includes("/api/v1/leads/find-buyers") || path.endsWith("/find-buyers")) &&
-      (method === "POST" || method === "GET");
+    const rawKey = (req.header("x-api-key") || "").trim();
+    const apiKey = rawKey.length ? rawKey : undefined;
 
-    if (!isFindBuyers) return next();
+    const plan = resolvePlan(req, apiKey);
+    const limit = CONFIG.limits[plan]?.daily ?? 0;
 
-    const key = apiKeyFrom(req);
-    const plan = planFor(key);
+    const id = bucketId(plan, apiKey, req.ip || req.socket.remoteAddress || "0.0.0.0", wId);
+    let bucket = store.get(id);
+    if (!bucket || bucket.windowId !== wId) {
+      bucket = { count: 0, windowId: wId };
+      store.set(id, bucket);
+    }
 
-    // get limit
-    const limitCfg =
-      (STATE.cfg.limits[plan] ||
-        STATE.cfg.limits.free || { dailyFindBuyers: 3 }) as PlanLimit;
+    // write headers for observability
+    res.setHeader("x-quota-plan", plan);
+    res.setHeader("x-quota-limit", String(limit));
+    res.setHeader("x-quota-remaining", String(Math.max(0, limit - bucket.count)));
+    res.setHeader("x-quota-reset", String((wId + 1) * CONFIG.windowDays * 86_400_000)); // rough epoch ms
 
-    const { ok, used, day, limit } = take(key, "find-buyers", limitCfg.dailyFindBuyers);
+    if (bucket.count >= limit) {
+      return res.status(429).json({
+        ok: false,
+        error: "QUOTA_EXCEEDED",
+        plan,
+        remaining: 0,
+        resetAtMs: Number(res.getHeader("x-quota-reset")),
+      });
+    }
 
-    if (ok) return next();
-
-    // 429 with very explicit body (panel already understands this shape)
-    const resetAt = new Date(`${day}T23:59:59.999Z`).toISOString();
-    return res.status(429).json({
-      ok: false,
-      error: "QUOTA_EXCEEDED",
-      plan,
-      metric: "find-buyers",
-      used,
-      limit,
-      resetsAt: resetAt
-    });
+    bucket.count += 1;
+    next();
   };
 }
