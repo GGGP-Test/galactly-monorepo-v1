@@ -3,51 +3,29 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import findBuyers from "./services/find-buyers";
 import rateLimit from "./middleware/rateLimit";
-import { quota, configureQuota } from "./middleware/quota";
+import quota from "./middleware/quota"; // default export supported (also available as { quota })
 
 const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
-// ---- health
-app.get("/healthz", (_req, res) => res.status(200).send("ok"));
-app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
+app.get("/healthz", (_req: Request, res: Response) => res.status(200).send("ok"));
+app.get("/health", (_req: Request, res: Response) => res.status(200).json({ ok: true }));
 
-// ---- quota config from env (single place, no guessing)
-configureQuota({
-  windowDays: Number(process.env.QUOTA_WINDOW_DAYS || "1"),
-  limits: {
-    free:     { daily: Number(process.env.FREE_DAILY || "3") },
-    pro:      { daily: Number(process.env.PRO_DAILY || "25") },
-    test:     { daily: Number(process.env.TEST_DAILY || "100") },
-    internal: { daily: Number(process.env.INT_DAILY || "1000") },
-  },
-  allowTest: (process.env.ALLOW_TEST || "").toLowerCase() === "true" || process.env.ALLOW_TEST === "1",
-  testApiKey: process.env.QUOTA_TEST_API_KEY || undefined,
-  disable: (process.env.QUOTA_DISABLE || "").toLowerCase() === "true" || process.env.QUOTA_DISABLE === "1",
-});
-
-// ---- stub list endpoint so the panel never 404s
+// stub list endpoint so the panel never 404s
 app.get("/api/v1/leads", (req: Request, res: Response) => {
   const temp = req.query.temp === "hot" || req.query.temp === "warm" ? String(req.query.temp) : "warm";
-  res.status(200).json({
-    temp,
-    region: req.query.region ?? null,
-    items: [], // empty list until we plug real leads
-  });
+  res.status(200).json({ temp, region: req.query.region ?? null, warm: [], hot: [] });
 });
 
-// ---- rate limit (per 10s window) stays in place and is separate from quota
-const rl = rateLimit({
-  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || "10000"),
-  max: Number(process.env.RATE_LIMIT_MAX || "8"),
-});
+// ---- Find buyers (rate limit + quota) ----
+const rl = rateLimit({ windowMs: 10_000, max: 4 }); // you already tuned this
 
-// ---- find-buyers endpoints (protected by quota + rate limit)
+// canonical route used by the Free Panel
 app.post("/api/v1/leads/find-buyers", rl, quota(), findBuyers);
 
-// extra aliases to be bulletproof
+// extra aliases just in case
 app.post("/find-buyers", rl, quota(), findBuyers);
 app.get("/api/v1/leads/find-buyers", rl, quota(), findBuyers);
 app.get("/find-buyers", rl, quota(), findBuyers);
