@@ -4,57 +4,34 @@ import { runPipeline } from "../buyers/pipeline";
 
 const router = Router();
 
-/* ----------------------------- types & helpers ---------------------------- */
-
-type Temp = "hot" | "warm";
-
+/** ==== tiny in-memory store for the panel (stateless per pod) ==== */
 type StoredLead = {
   id: number;
   host: string;
   platform?: string;
   title: string;
   created: string;
-  temperature: Temp;
+  temperature: "hot" | "warm";
   whyText?: string;
   why?: any;
 };
 
-// very light shape for pipeline candidates so TS doesn’t complain on optional fields
-type PipelineCandidate = {
-  temperature: Temp;
-  source?: string;
-  score?: number;
-  domain?: string;
-  evidence?: Array<{ detail?: { title?: string; url?: string } }>;
-};
-
 let nextId = 1;
 const store: { hot: StoredLead[]; warm: StoredLead[] } = { hot: [], warm: [] };
+const saved: StoredLead[] = [];
 
-// per-caller saved (what the UI shows as “Saved = what you locked”)
-const savedByKey: Record<string, StoredLead[]> = Object.create(null);
-
-function resetBuckets() {
+function resetStore() {
   store.hot = [];
   store.warm = [];
   nextId = 1;
 }
 
-function getCallerKey(req: any): string {
-  // used as an identifier for the “saved” bucket
-  return (
-    req.header("x-api-key") ||
-    String(req.query.apiKey || "") ||
-    "anon"
-  );
-}
-
-// Optional API key guard for write routes (enforced only when configured)
+/** attach a helper on res to enforce x-api-key for write routes */
 router.use((req, res, next) => {
   (res as any).requireKey = () => {
     const need = process.env.API_KEY || process.env.X_API_KEY;
     if (!need) return true;
-    const got = req.header("x-api-key") || String(req.query.apiKey || "");
+    const got = req.header("x-api-key");
     if (got !== need) {
       res.status(401).json({ ok: false, error: "invalid api key" });
       return false;
@@ -64,49 +41,24 @@ router.use((req, res, next) => {
   next();
 });
 
-/* --------------------------------- health -------------------------------- */
+/** Health/ping */
+router.get("/ping", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
-router.get("/ping", (_req, res) =>
-  res.json({ ok: true, ts: new Date().toISOString() })
-);
-
-/* ------------------------------- read routes ------------------------------ */
-/**
- * GET /api/v1/leads
- *   - ?temp=hot|warm (default: warm)  -> returns working set (no auth)
- *   - ?saved=1                        -> returns caller’s saved leads (auth required if API_KEY is set)
- */
+/** List current warm/hot buckets (used by the panel’s table) */
 router.get("/", (req, res) => {
-  const wantSaved = String(req.query.saved || "") === "1";
-
-  if (wantSaved) {
-    const need = process.env.API_KEY || process.env.X_API_KEY;
-    if (need) {
-      // when a key is configured, require it for saved access
-      const ok = (res as any).requireKey();
-      if (!ok) return;
-    }
-    const caller = getCallerKey(req);
-    return res.json({
-      ok: true,
-      items: savedByKey[caller] || [],
-      saved: true,
-    });
-  }
-
-  const temp = String(req.query.temp || "warm").toLowerCase() as Temp;
+  const temp = String(req.query.temp || "warm").toLowerCase();
   const items = temp === "hot" ? store.hot : store.warm;
-  res.json({ ok: true, items, saved: false });
+  res.json({ ok: true, items });
 });
 
-/* ------------------------------- write routes ----------------------------- */
+/** List “saved” (what the user locked) */
+router.get("/saved", (_req, res) => {
+  res.json({ ok: true, items: saved });
+});
 
-/**
- * POST /api/v1/leads/find-buyers
- * body: { supplier, region?, radiusMi?, persona?, onlyUSCA? }
- */
+/** Find buyers from supplier (free returns 1 warm per click in the panel) */
 router.post("/find-buyers", async (req, res) => {
-  if (!(res as any).requireKey()) return; // key required if configured
+  if (!(res as any).requireKey()) return; // must have key to write/compute
 
   try {
     const body = (req.body || {}) as {
@@ -118,19 +70,17 @@ router.post("/find-buyers", async (req, res) => {
     };
 
     if (!body.supplier || body.supplier.length < 3) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "supplier domain is required" });
+      return res.status(400).json({ ok: false, error: "supplier domain is required" });
     }
 
-    // 1) discovery / auto-persona
+    // 1) Discovery (auto persona)
     const discovery = await runDiscovery({
       supplier: body.supplier.trim(),
       region: (body.region || "us").trim(),
       persona: body.persona,
     });
 
-    // 2) pipeline aggregation
+    // 2) Pipeline (Google News + targeted RSS feeds)
     const excludeEnterprise =
       String(process.env.EXCLUDE_ENTERPRISE || "true").toLowerCase() === "true";
 
@@ -140,49 +90,43 @@ router.post("/find-buyers", async (req, res) => {
       excludeEnterprise,
     });
 
-    // 3) normalize -> panel format
-    const toLead = (c: PipelineCandidate): StoredLead => {
-      const ev = (c.evidence && c.evidence[0]) || {};
-      const title = ev?.detail?.title || "";
-      const link = ev?.detail?.url || "";
+    // 3) Normalize & store (panel format)
+    const toLead = (c: any): StoredLead => {
+      const title = c?.evidence?.[0]?.detail?.title || "";
+      const link = c?.evidence?.[0]?.detail?.url || "";
       const host = link
         ? new URL(link).hostname.replace(/^www\./, "")
-        : c.domain || "unknown";
-
-      const score = typeof c.score === "number" ? c.score : 0;
+        : c?.domain || "unknown";
       const why = {
         signal: {
-          label: score >= 0.65 ? "Opening/launch signal" : "Expansion signal",
-          score: Number(score.toFixed(2)),
+          label: c?.score >= 0.65 ? "Opening/launch signal" : "Expansion signal",
+          score: Number((c?.score ?? 0).toFixed(2)),
           detail: title,
         },
         context: {
-          label: (c.source || "").startsWith("rss") ? "News (RSS)" : "News (Google)",
-          detail: c.source || "",
+          label: (c?.source || "").startsWith("rss") ? "News (RSS)" : "News (Google)",
+          detail: c?.source || "",
         },
       };
-
       return {
         id: nextId++,
         host,
         platform: "news",
         title,
         created: new Date().toISOString(),
-        temperature: c.temperature || "warm",
+        temperature: (c?.temperature as "hot" | "warm") || "warm",
         whyText: title,
         why,
       };
     };
 
-    // refresh buckets
+    // for a fresh click we replace the working set (keeps UX predictable)
     store.hot = [];
     store.warm = [];
 
-    const mapped: StoredLead[] = (candidates || []).map(toLead);
-
+    const mapped = (candidates || []).map(toLead);
     for (const m of mapped) {
-      if (m.temperature === "hot") store.hot.push(m);
-      else store.warm.push(m);
+      (m.temperature === "hot" ? store.hot : store.warm).push(m);
     }
 
     const nHot = store.hot.length;
@@ -190,90 +134,81 @@ router.post("/find-buyers", async (req, res) => {
 
     return res.json({
       ok: true,
-      supplier: discovery.supplierDomain,
-      persona: discovery.persona,
-      latents: discovery.latents,
-      archetypes: discovery.archetypes,
+      supplier: discovery?.supplierDomain || body.supplier,
+      persona: discovery?.persona,
+      latents: discovery?.latents,
+      archetypes: discovery?.archetypes,
       candidates: mapped,
-      cached: discovery.cached,
+      cached: !!discovery?.cached,
       created: mapped.length,
       message: `Created ${mapped.length} candidate(s). Hot:${nHot} Warm:${nWarm}.`,
     });
   } catch (e: any) {
     console.error("[find-buyers:error]", e?.stack || e?.message || String(e));
-    return res
-      .status(500)
-      .json({ ok: false, error: e?.message || "internal error" });
+    return res.status(500).json({ ok: false, error: e?.message || "internal error" });
   }
 });
 
-/**
- * POST /api/v1/leads/lock
- * body: { id?: number, lead?: Partial<StoredLead> }
- * - Copies the chosen lead into the caller’s saved bucket (does not “global-remove” on free).
- */
+/** Lock & keep (free users: cap at 3 per process; Pro would persist in DB) */
 router.post("/lock", (req, res) => {
-  if (!(res as any).requireKey()) return; // write requires key if configured
+  if (!(res as any).requireKey()) return;
 
-  const caller = getCallerKey(req);
-  const body = (req.body || {}) as { id?: number; lead?: Partial<StoredLead> };
-
-  let chosen: StoredLead | undefined;
-
-  if (typeof body.id === "number") {
-    chosen =
-      store.hot.find((l) => l.id === body.id) ||
-      store.warm.find((l) => l.id === body.id);
+  const { id } = (req.body || {}) as { id?: number };
+  if (!id || typeof id !== "number") {
+    return res.status(400).json({ ok: false, error: "id is required" });
   }
 
-  if (!chosen && body.lead) {
-    const base = body.lead;
-    chosen = {
-      id: nextId++,
-      host: base.host || "unknown",
-      platform: base.platform || "news",
-      title: base.title || "(untitled)",
-      created: base.created || new Date().toISOString(),
-      temperature: (base.temperature as Temp) || "warm",
-      whyText: base.whyText,
-      why: base.why,
-    };
+  const lead =
+    store.hot.find((x) => x.id === id) ||
+    store.warm.find((x) => x.id === id) ||
+    saved.find((x) => x.id === id);
+
+  if (!lead) {
+    return res.status(404).json({ ok: false, error: "lead not found" });
   }
 
-  if (!chosen) {
+  // simple free cap (in-memory)
+  const FREE_CAP = Number(process.env.FREE_LOCK_CAP || 3);
+  if (saved.length >= FREE_CAP) {
     return res
-      .status(400)
-      .json({ ok: false, error: "lead not found or not provided" });
+      .status(402)
+      .json({ ok: false, proOnly: true, error: "lock cap reached", cap: FREE_CAP });
   }
 
-  const bucket = (savedByKey[caller] ||= []);
-  bucket.push(chosen);
-
-  return res.json({
-    ok: true,
-    savedCount: bucket.length,
-    saved: chosen,
-  });
+  if (!saved.some((x) => x.id === id)) saved.push(lead);
+  return res.json({ ok: true, savedCount: saved.length, item: lead });
 });
 
-/* ------------------------------- maintenance ------------------------------ */
+/** Deepen results (Pro-only stub; used to drive the upgrade CTA) */
+router.post("/deepen", (req, res) => {
+  if (!(res as any).requireKey()) return;
 
-// dev helper to clear working buckets (requires key when configured)
+  const { id } = (req.body || {}) as { id?: number };
+  if (!id || typeof id !== "number") {
+    return res.status(400).json({ ok: false, error: "id is required" });
+  }
+
+  // We deliberately gate this behind Pro for now
+  return res
+    .status(402) // Payment Required — perfect for upgrade nudges
+    .json({
+      ok: false,
+      proOnly: true,
+      error: "Pro required to deepen this lead",
+      includes: [
+        "Source roll-up across 24h",
+        "Direct contact enrichment (titles & emails)",
+        "Competitive signals & recency spikes",
+      ],
+    });
+});
+
+/** internal clear (handy while iterating) */
 router.post("/__clear", (req, res) => {
   if (!(res as any).requireKey()) return;
-  resetBuckets();
+  resetStore();
+  saved.length = 0;
   res.json({ ok: true });
-});
-
-// explicit alias for saved list (same as GET /?saved=1)
-router.get("/saved", (req, res) => {
-  const need = process.env.API_KEY || process.env.X_API_KEY;
-  if (need) {
-    const ok = (res as any).requireKey();
-    if (!ok) return;
-  }
-  const caller = getCallerKey(req);
-  res.json({ ok: true, items: savedByKey[caller] || [], saved: true });
 });
 
 export default router;
