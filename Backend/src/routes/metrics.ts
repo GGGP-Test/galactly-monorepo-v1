@@ -1,40 +1,57 @@
 // src/routes/metrics.ts
-import { Router } from "express";
-import { saveByHost, buckets, Temp } from "../shared/memStore";
+import { Router } from 'express';
+import {
+  buckets,
+  getByHost,
+  ensureLeadForHost,
+  replaceHotWarm,
+  type Temp,
+  type StoredLead,
+} from '../shared/memStore';
 
-const router = Router();
+export const metricsRouter = Router();
 
-// simple health/ping for the metrics group
-router.get("/ping", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
-
-// Panel pings this with host=news.google.com etc. We just ACK it.
-router.get("/watchers", (req, res) => {
-  const host = String(req.query.host ?? "");
-  return res.json({ ok: true, host, viewers: 1 });
-});
-
-// Called when user clicks “Lock & keep”
-router.post("/claim", (req, res) => {
-  const body = req.body || {};
-  const host = String(body.host || req.query.host || body.domain || "");
-  const temp: Temp = String(body.temp || "warm").toLowerCase() === "hot" ? "hot" : "warm";
-  if (!host) return res.status(400).json({ ok: false, error: "host required" });
-
-  const saved = saveByHost(temp, {
-    host,
-    title: body.title,
-    platform: body.platform,
-    whyText: body.whyText,
-    why: body.why,
+/**
+ * GET /api/v1/metrics/watchers?host=...
+ * The panel polls this. We return sizes and arrays.
+ */
+metricsRouter.get('/watchers', (req, res) => {
+  const host = String(req.query.host ?? '');
+  const { watchers, competitors } = buckets(host);
+  res.json({
+    ok: true,
+    counts: { watchers: watchers.size, competitors: competitors.size },
+    watchers: Array.from(watchers),
+    competitors: Array.from(competitors),
   });
-
-  return res.json({ ok: true, saved, counts: { hot: buckets.hot.length, warm: buckets.warm.length } });
 });
 
-// Called when user clicks “Deepen results” (no-op stub that succeeds)
-router.get("/deepen", (req, res) => {
-  const host = String(req.query.host || "");
-  return res.json({ ok: true, host, added: 0 });
+/**
+ * GET /api/v1/metrics/deepen?host=...
+ * The panel calls this when you click “Deepen results”.
+ * For now we just echo whatever we have stored for that host.
+ */
+metricsRouter.get('/deepen', (req, res) => {
+  const host = String(req.query.host ?? '');
+  if (!host) return res.status(400).json({ ok: false, error: 'missing host' });
+  const leads = getByHost(host);
+  res.json({ ok: true, leads });
 });
 
-export default router;
+/**
+ * POST /api/v1/metrics/claim
+ * Body: { host, id, actor }
+ * The panel calls this when you “Lock & keep”.
+ * We’ll just mark the lead as "hot".
+ */
+metricsRouter.post('/claim', (req, res) => {
+  const { host, id } = req.body ?? {};
+  if (!host || !id) return res.status(400).json({ ok: false, error: 'missing host or id' });
+  replaceHotWarm(String(host), String(id), 'hot');
+  res.json({ ok: true, claimed: { host, id } });
+});
+
+/**
+ * Optional: a tiny health probe for the container’s HEALTHCHECK
+ */
+metricsRouter.get('/healthz', (_req, res) => res.json({ ok: true }));
