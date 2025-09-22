@@ -4,7 +4,7 @@ import { runPipeline } from "../buyers/pipeline";
 
 const router = Router();
 
-// === minimal in-memory store for panel ===
+// === tiny in-memory store for panel ===
 type StoredLead = {
   id: number;
   host: string;
@@ -39,10 +39,8 @@ router.use((req, res, next) => {
   next();
 });
 
-// Health & ping (for quick checks)
-router.get("/ping", (_req, res) =>
-  res.json({ ok: true, ts: new Date().toISOString() })
-);
+// Health & ping
+router.get("/ping", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
 // GET /api/v1/leads?temp=hot|warm
 router.get("/", (req, res) => {
@@ -53,7 +51,7 @@ router.get("/", (req, res) => {
 
 // POST /api/v1/leads/find-buyers
 router.post("/find-buyers", async (req, res) => {
-  if (!(res as any).requireKey()) return; // require API key if configured
+  if (!(res as any).requireKey()) return; // key required if configured
 
   try {
     const body = (req.body || {}) as {
@@ -65,13 +63,11 @@ router.post("/find-buyers", async (req, res) => {
     };
 
     if (!body.supplier || body.supplier.length < 3) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "supplier domain is required" });
+      return res.status(400).json({ ok: false, error: "supplier domain is required" });
     }
 
     // 1) Discovery (auto persona)
-    const discovery = await runDiscovery({
+    const discovery: any = await runDiscovery({
       supplier: body.supplier.trim(),
       region: (body.region || "us").trim(),
       persona: body.persona,
@@ -79,10 +75,9 @@ router.post("/find-buyers", async (req, res) => {
 
     // 2) Pipeline (Google News + targeted RSS feeds)
     const excludeEnterprise =
-      String(process.env.EXCLUDE_ENTERPRISE || "true").toLowerCase() ===
-      "true";
+      String(process.env.EXCLUDE_ENTERPRISE || "true").toLowerCase() === "true";
 
-    const { candidates } = await runPipeline(discovery, {
+    const { candidates }: any = await runPipeline(discovery, {
       region: discovery ? body.region || "us" : body.region,
       radiusMi: body.radiusMi || 50,
       excludeEnterprise,
@@ -90,36 +85,23 @@ router.post("/find-buyers", async (req, res) => {
 
     // 3) Normalize & store (panel format)
     const toLead = (c: any): StoredLead => {
-      // --- guard all nested access to keep TS happy ---
-      const evArr = Array.isArray((c as any).evidence)
-        ? ((c as any).evidence as any[])
-        : [];
-      const ev0 = evArr.length ? evArr[0] : undefined;
-      const detail = ev0 && typeof ev0 === "object" ? (ev0 as any).detail || {} : {};
-      const title =
-        detail && typeof detail.title === "string" ? detail.title : "";
-      const link =
-        detail && typeof detail.url === "string" ? detail.url : "";
+      const ev0 = c && c.evidence && c.evidence[0];
+      const detail = ev0 && (ev0 as any).detail ? (ev0 as any).detail : {};
+      const title = (detail as any).title || "";
+      const link = (detail as any).url || "";
       const host = link
         ? new URL(link).hostname.replace(/^www\./, "")
-        : (c.domain as string) || "unknown";
+        : c?.domain || "unknown";
 
       const why = {
         signal: {
-          label:
-            typeof c.score === "number" && c.score >= 0.65
-              ? "Opening/launch signal"
-              : "Expansion signal",
-          score:
-            typeof c.score === "number" ? Number(c.score.toFixed(2)) : 0,
+          label: c?.score >= 0.65 ? "Opening/launch signal" : "Expansion signal",
+          score: Number((c?.score ?? 0).toFixed(2)),
           detail: title,
         },
         context: {
-          label:
-            typeof c.source === "string" && c.source.startsWith("rss")
-              ? "News (RSS)"
-              : "News (Google)",
-          detail: c.source,
+          label: c?.source?.startsWith?.("rss") ? "News (RSS)" : "News (Google)",
+          detail: c?.source,
         },
       };
 
@@ -129,17 +111,17 @@ router.post("/find-buyers", async (req, res) => {
         platform: "news",
         title,
         created: new Date().toISOString(),
-        temperature: (c.temperature as "hot" | "warm") || "warm",
+        temperature: (c?.temperature as "hot" | "warm") || "warm",
         whyText: title,
         why,
       };
     };
 
-    // wipe buckets for a predictable UX each click
+    // wipe both buckets for a fresh view each click
     store.hot = [];
     store.warm = [];
 
-    const mapped = Array.isArray(candidates) ? candidates.map(toLead) : [];
+    const mapped: StoredLead[] = Array.isArray(candidates) ? candidates.map(toLead) : [];
     for (const m of mapped) {
       if (m.temperature === "hot") store.hot.push(m);
       else store.warm.push(m);
@@ -161,13 +143,11 @@ router.post("/find-buyers", async (req, res) => {
     });
   } catch (e: any) {
     console.error("[find-buyers:error]", e?.stack || e?.message || String(e));
-    return res
-      .status(500)
-      .json({ ok: false, error: e?.message || "internal error" });
+    return res.status(500).json({ ok: false, error: e?.message || "internal error" });
   }
 });
 
-// (optional) clear
+// clear (optional, guarded)
 router.post("/__clear", (req, res) => {
   if (!(res as any).requireKey()) return;
   resetStore();
