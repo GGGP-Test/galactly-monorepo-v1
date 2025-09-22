@@ -1,66 +1,88 @@
-import express from "express";
-import cors from "cors";
-import compression from "compression";
-import morgan from "morgan";
-import routes from "./routes";
+// src/index.ts
+import express, { Request, Response, NextFunction } from "express";
+import leadsRouter from "./routes/leads";
+
+// --- config ---
+const PORT = Number(process.env.PORT || 8787);
+
+/**
+ * Allowlist CORS (no external dep).
+ * CORS_ORIGIN can be a comma-separated list, "*", or empty (disables CORS).
+ * Always allow our health endpoints. Preflight supports x-api-key.
+ */
+function corsAllowlist() {
+  const raw = (process.env.CORS_ORIGIN || "").trim();
+  const allowAny = raw === "*" || raw.toLowerCase() === "true";
+  const list = allowAny
+    ? ["*"]
+    : raw
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean);
+
+  return function cors(req: Request, res: Response, next: NextFunction) {
+    const origin = req.headers.origin as string | undefined;
+
+    // If explicitly any, echo back the caller origin when present
+    // (so credentials can work in the future if you need them).
+    let allowed = allowAny ? origin ?? "*" : undefined;
+
+    if (!allowed && origin && list.length) {
+      // exact match against the allowlist entries
+      if (list.includes(origin)) allowed = origin;
+    }
+
+    if (allowed) {
+      res.setHeader("Access-Control-Allow-Origin", allowed);
+      res.setHeader("Vary", "Origin");
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, x-api-key"
+      );
+      res.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET, POST, OPTIONS"
+      );
+      // you can enable credentials later if you need:
+      // res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+
+    if (req.method === "OPTIONS") {
+      res.status(204).end();
+      return;
+    }
+    next();
+  };
+}
 
 const app = express();
-
-// -------- CORS --------
-const originEnv = process.env.CORS_ORIGIN || "";
-const allowedOrigins = originEnv
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean);
-
-app.use(
-  cors({
-    origin: allowedOrigins.length ? allowedOrigins : true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "x-api-key",
-      "x-client",
-      "x-region"
-    ],
-    credentials: false,
-    maxAge: 86400
-  })
-);
-
-// Handle explicit OPTIONS (preflight)
-app.options("*", (_req, res) => res.sendStatus(204));
-
-// -------- Core middleware --------
+app.disable("x-powered-by");
 app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true }));
-app.use(compression());
-app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+app.use(corsAllowlist());
 
-// -------- API mounting (with prefix aliases) --------
-// Canonical prefix:
-app.use("/api/v1", routes);
+// --- health/ping ---
+app.get("/", (_req, res) => res.json({ ok: true }));
+app.get("/health", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+app.get("/ping", (_req, res) => res.json({ ok: true, pong: true }));
 
-// Alias to tolerate old/new frontend code:
-app.use("/api", routes);
+// --- API v1 ---
+app.use("/api/v1/leads", leadsRouter);
 
-// Root health (for platform)
-app.get("/", (_req, res) => res.json({ ok: true, name: "buyers-api", status: "up" }));
-
-// 404 JSON
-app.use((_req, res) => res.status(404).json({ ok: false, error: "Not found" }));
-
-// Error JSON
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  const code = typeof err?.status === "number" ? err.status : 500;
-  const message = err?.message || "Internal error";
-  res.status(code).json({ ok: false, error: message });
+// 404 handler (JSON)
+app.use((_req, res) => {
+  res.status(404).json({ ok: false, error: "Not found" });
 });
 
-const port = Number(process.env.PORT || 8787);
-app.listen(port, () => {
+// error handler (JSON)
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   // eslint-disable-next-line no-console
-  console.log(`API listening on :${port}`);
+  console.error("[server:error]", err?.stack || err?.message || String(err));
+  res
+    .status(typeof err?.status === "number" ? err.status : 500)
+    .json({ ok: false, error: err?.message || "internal error" });
+});
+
+app.listen(PORT, () => {
+  // eslint-disable-next-line no-console
+  console.log(`API listening on :${PORT}`);
 });
