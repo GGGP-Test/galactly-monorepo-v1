@@ -1,105 +1,66 @@
 // src/shared/memStore.ts
 
-// ---- Types ----
-export type Temp = 'hot' | 'warm' | 'cold';
+export type Temp = 'cold' | 'warm' | 'hot';
 
 export interface StoredLead {
   id: string;
   host: string;
-  created: string;        // ISO timestamp
   title?: string;
+  platform?: string;
+  created?: string; // ISO timestamp
   temp?: Temp;
-  why?: any;
-  detail?: any;
+  // keep anything else flexible so other code doesn't type-error
+  [key: string]: any;
 }
 
-// ---- In-memory data ----
-const leadsByHost = new Map<string, StoredLead>();
+/**
+ * Very small in-memory store grouped by host.
+ * This is enough for the free-panel demo and to make the API compile+run.
+ */
+const byHost = new Map<string, StoredLead[]>();
 
-// We track which hosts are hot/warm/cold.  Keys are hosts.
-export const buckets: Record<Temp, Set<string>> = {
-  hot: new Set<string>(),
-  warm: new Set<string>(),
-  cold: new Set<string>(),
-};
-
-// ---- Helpers ----
-function nowISO(): string {
-  return new Date().toISOString();
+export function getByHost(host: string): StoredLead[] {
+  return byHost.get(host) ?? [];
 }
 
-function makeId(host: string): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}-${host}`;
+export function saveByHost(host: string, leads: StoredLead[]): void {
+  byHost.set(host, leads.slice());
 }
 
-// ---- API ----
-export function getByHost(host: string): StoredLead | undefined {
-  return leadsByHost.get(host);
-}
-
-// alias (some code calls findByHost)
-export const findByHost = getByHost;
-
-export function ensureLeadForHost(host: string): StoredLead {
-  const existing = leadsByHost.get(host);
-  if (existing) return existing;
-
-  const lead: StoredLead = {
-    id: makeId(host),
-    host,
-    created: nowISO(),
-    temp: 'warm',
-  };
-
-  leadsByHost.set(host, lead);
-  buckets.warm.add(host);
+export function ensureLeadForHost(host: string, lead: StoredLead): StoredLead {
+  const arr = getByHost(host);
+  const idx = arr.findIndex(l => l.id === lead.id);
+  if (idx >= 0) arr[idx] = { ...arr[idx], ...lead };
+  else arr.push(lead);
+  byHost.set(host, arr);
   return lead;
 }
 
-// merge/patch and keep bucket membership correct
-export function saveByHost(host: string, patch: Partial<StoredLead>): StoredLead {
-  const lead = ensureLeadForHost(host);
-
-  const before = lead.temp ?? 'warm';
-  Object.assign(lead, patch);
-
-  const after = lead.temp ?? before;
-  if (after !== before) {
-    buckets[before].delete(host);
-    buckets[after].add(host);
-  }
-
-  leadsByHost.set(host, lead);
-  return lead;
+/** Find first lead for a host that matches a predicate. */
+export function findByHost(
+  host: string,
+  predicate: (l: StoredLead) => boolean
+): StoredLead | undefined {
+  return getByHost(host).find(predicate);
 }
 
-// accept either the Temp union or any string (for loose callers)
-export function replaceHotWarm(host: string, next: Temp | string): void {
-  const lead = ensureLeadForHost(host);
-  const target: Temp = next === 'hot' || next === 'cold' ? next : 'warm';
-
-  const before = lead.temp ?? 'warm';
-  if (before !== target) {
-    buckets[before].delete(host);
-    buckets[target].add(host);
-  }
-  lead.temp = target;
+/** Change a lead’s temperature. */
+export function replaceHotWarm(host: string, id: string, next: Temp): void {
+  const updated = getByHost(host).map(l => (l.id === id ? { ...l, temp: next } : l));
+  byHost.set(host, updated);
 }
 
-// clear hot/warm buckets (used by metrics endpoints)
-export function resetHotWarm(): void {
-  buckets.hot.clear();
-  buckets.warm.clear();
+/** If a lead has no temp, set it to warm. Innocent no-op otherwise. */
+export function resetHotWarm(host: string): void {
+  const updated = getByHost(host).map(l => (l.temp ? l : { ...l, temp: 'warm' as Temp }));
+  byHost.set(host, updated);
 }
 
-// optional default export (so both default and named imports work)
-const api = {
-  buckets,
-  getByHost,
-  findByHost,
-  ensureLeadForHost,
-  saveByHost,
-  replaceHotWarm,
-  resetHotWarm,
-};
-export default api;
+/** Buckets are placeholders the panel asks for (watchers/competitors). */
+export function buckets(host: string): {
+  watchers: Set<string>;
+  competitors: Set<string>;
+} {
+  // Provide empty sets so metrics can safely compute .size, etc.
+  return { watchers: new Set<string>(), competitors: new Set<string>() };
+}
