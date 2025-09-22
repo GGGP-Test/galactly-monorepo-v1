@@ -1,55 +1,23 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
+import metricsRouter from "./metrics";
+// IMPORTANT: this must exist in your repo. If your leads router file is named
+// differently, rename the import below to match (e.g. "./leads", "./buyers", etc.)
+import leadsRouter from "./leads";
 
-/**
- * Flexible routes index.
- * If a concrete leads router exists (./leads or ./buyers), export that.
- * Otherwise, export a tiny placeholder that keeps the app compiling/running.
- *
- * We export both `default` and a couple of named aliases so whichever
- * import style the app uses, it won't break.
- */
+// Optional: if you have a separate health router file, import and use it.
+// Otherwise we expose a simple healthz here.
+const router = Router();
 
-const fallback = Router();
+// health
+router.get("/healthz", (_req, res) => res.json({ ok: true }));
 
-// Minimal “it works” endpoint (helps smoke-test mounting)
-fallback.get("/", (_req: Request, res: Response) => {
-  res.json({ ok: true, hint: "routes/index mounted", ns: "leads" });
-});
+// metrics (our minimal stub you’re already using)
+router.use("/metrics", metricsRouter);
 
-async function resolveRouter(): Promise<any> {
-  // Try common filenames in order
-  for (const p of ["./leads", "./buyers"]) {
-    try {
-      const mod: any = await import(p);
-      const candidate =
-        mod?.default ?? mod?.router ?? mod?.routes ?? mod?.leads ?? mod?.buyersRouter;
-      if (candidate && typeof candidate === "function") {
-        return candidate;
-      }
-    } catch {
-      // ignore and try next
-    }
-  }
-  return fallback;
-}
+// leads (this is what your Free Panel calls)
+router.use("/leads", leadsRouter);
 
-const routerPromise = resolveRouter();
+// Backward-compat alias in case any older panel points here:
+router.use("/buyers", leadsRouter);
 
-const proxy = Router();
-// Defer all requests to the resolved router once available.
-// This keeps export synchronous while still resolving at runtime.
-proxy.use(async (req, res, next) => {
-  try {
-    const real = await routerPromise;
-    return real(req, res, next);
-  } catch (e) {
-    return next(e);
-  }
-});
-
-// Export under multiple names to be import-proof
-export default proxy;
-export const router = proxy;
-export const routes = proxy;
-export const leads = proxy;
-export const buyersRouter = proxy;
+export default router;
