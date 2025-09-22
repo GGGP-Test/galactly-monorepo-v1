@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import findBuyers from "./services/find-buyers";
 import rateLimit from "./middleware/rateLimit";
-import metrics from "./services/metrics"; // NEW
+import metricsRouter from "./routes/metrics";
 
 const app = express();
 
@@ -35,7 +35,7 @@ app.get("/api/v1/leads/find-buyers", rl, findBuyers);
 app.get("/find-buyers", rl, findBuyers);
 
 // --- NEW: Metrics / FOMO counters / Deepen stubs ---
-app.use(metrics);
+app.use("/api/v1/metrics", metricsRouter);
 
 // 404
 app.use((req: Request, res: Response) => {
