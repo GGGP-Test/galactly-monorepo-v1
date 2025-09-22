@@ -1,60 +1,58 @@
 import express from "express";
 import cors from "cors";
 
+// Routers
 import leadsRouter from "./routes/leads";
-import { metricsRouter } from "./routes/metrics";
+import metricsRouter from "./routes/metrics"; // default import to avoid named-export mismatch
 
+// ----- app -----
 const app = express();
 
-// ---- CORS (allow list from env) ----
-const allow = String(process.env.CORS_ORIGIN || "")
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean);
+// trust proxy (if behind a proxy/load balancer)
+if (process.env.TRUST_PROXY) app.set("trust proxy", true);
 
-app.use(
-  cors({
-    origin(origin, cb) {
-      // no Origin (e.g. curl) -> allow
-      if (!origin) return cb(null, true);
-      if (allow.length === 0) return cb(null, true);
-      if (allow.includes(origin)) return cb(null, true);
-      return cb(null, false as any);
-    },
-    credentials: true,
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "x-api-key"],
-  })
-);
-
+// body parsers
 app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: false }));
 
-// ---- health ----
-app.get("/healthz", (_req, res) =>
-  res.json({ ok: true, ts: new Date().toISOString() })
-);
+// -------- CORS (allow GitHub Pages + your custom origins) --------
+const originsEnv = (process.env.CORS_ORIGIN || "").trim();
+// support comma- or space-separated list
+const allowed = originsEnv
+  ? originsEnv.split(/[,\s]+/).filter(Boolean)
+  : ["*"]; // permissive if not set
 
-// ---- API ----
+const corsOptions: cors.CorsOptions = {
+  origin: function (origin, cb) {
+    // allow same-origin / server-to-server / curl (no origin header)
+    if (!origin) return cb(null, true);
+    if (allowed.includes("*")) return cb(null, true);
+    // exact match or startsWith match for convenience
+    const ok = allowed.some((o) => origin === o || origin.startsWith(o));
+    cb(ok ? null : new Error("CORS blocked"), ok);
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "x-api-key"],
+  maxAge: 3600,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // handle preflights
+
+// ----- health -----
+app.get("/healthz", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+
+// ----- api -----
 app.use("/api/v1/leads", leadsRouter);
 app.use("/api/v1/metrics", metricsRouter);
 
-// ---- error handler ----
-app.use(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  (err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error("[server:error]", err?.stack || err?.message || String(err));
-    res.status(500).json({ ok: false, error: "internal" });
-  }
-);
+// root (optional)
+app.get("/", (_req, res) => res.json({ ok: true }));
 
+// ----- start -----
 const PORT = Number(process.env.PORT || 8787);
-
-// only start listener when run directly (Docker runs dist/index.js)
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`API listening on :${PORT}`);
-  });
-}
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`[server] listening on :${PORT}`);
+});
 
 export default app;
