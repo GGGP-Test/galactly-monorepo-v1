@@ -1,131 +1,65 @@
-import { Router, Request, Response } from "express";
-import crypto from "crypto";
+import { Router } from "express";
+
+export const metricsRouter = Router();
 
 /**
- * Router: /api/v1/metrics
+ * Very small in-memory “FOMO counters”.
+ * - GET /api/v1/metrics/watchers?host=news.google.com
+ *   -> { ok:true, watching: number, competing: number }
  *
- * Endpoints
- *   POST  /lead-shown      -> record that we displayed a lead row
- *   POST  /lead-viewed     -> record that a lead row was opened
- *   GET   /fomo?host=...   -> non-zero viewer count (demo-friendly)
- *   GET   /public          -> small, sanitized counters used by the UI
- *
- * Notes
- * - Everything is in-memory and safe for free/demo usage.
- * - No imports from lib/ or services/ (you removed those dirs).
- * - We export a *named* `metrics` to match `import { metrics } from "./routes/metrics"`.
+ * These are demo-style, non-zero, time-varying but stable for a short
+ * window so the UI doesn’t flicker. They do NOT require an API key.
  */
 
-type Temp = "hot" | "warm" | "cold";
-
-interface Counter {
-  shown: number;
-  viewed: number;
-  last: number; // epoch ms
+// Helper: seeded pseudo-random [0,1) from a string + time bucket
+function seedRand(seed: string) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  // xorshift
+  h += h << 13; h ^= h >>> 7; h += h << 3; h ^= h >>> 17; h += h << 5;
+  // keep positive
+  const u = (h >>> 0) / 4294967296;
+  return u - Math.floor(u); // [0,1)
 }
 
-const leadCounters = new Map<string, Counter>();
-
-function upsertCounter(host: string): Counter {
-  const now = Date.now();
-  const c = leadCounters.get(host);
-  if (c) {
-    c.last = now;
-    return c;
-  }
-  const created: Counter = { shown: 0, viewed: 0, last: now };
-  leadCounters.set(host, created);
-  return created;
+// Choose a min/max band that never returns 0.
+// Nights are lower; days are higher, still > 0.
+function bandForHour(hour: number) {
+  // 0-23
+  if (hour >= 0 && hour < 6) return { min: 2, max: 6 };
+  if (hour < 12) return { min: 4, max: 12 };
+  if (hour < 18) return { min: 6, max: 18 };
+  return { min: 3, max: 10 };
 }
 
-/**
- * Stable-ish, non-zero watcher count for FOMO.
- * - Time-of-day bumps (day > night)
- * - Host-seeded jitter so the number isn't identical across hosts
- * - Always >= 1 (you asked to never show zero)
- */
-function fomoWatchers(host: string, now = new Date()): number {
-  // 0..23
-  const hour = now.getUTCHours();
-
-  // base: nights (0-6, 20-23) low; daytime higher
-  const base =
-    hour >= 7 && hour <= 19
-      ? 18 // daytime baseline
-      : 6; // night baseline
-
-  // host-seeded 0..12 jitter
-  const hash = crypto.createHash("sha1").update(host).digest();
-  const seed = hash[0] % 13; // 0..12
-
-  // minute wobble (keeps it moving a little)
-  const wobble = Math.floor((now.getUTCMinutes() % 10) / 2); // 0..4
-
-  const n = base + seed + wobble;
-
-  // Always at least 1, cap to something reasonable for UI
-  return Math.max(1, Math.min(n, 64));
-}
-
-export const metrics = Router();
-
-/**
- * POST /api/v1/metrics/lead-shown
- * body: { host: string; temp?: "hot" | "warm" | "cold" }
- */
-metrics.post("/lead-shown", (req: Request, res: Response) => {
-  const { host, temp } = req.body as { host?: string; temp?: Temp };
-  if (!host || typeof host !== "string") {
-    return res.status(400).json({ ok: false, error: "host is required" });
-  }
-  upsertCounter(host).shown += 1;
-
-  // We don’t persist temp, but we could tally by temp later if you want.
-  return res.json({ ok: true, host, temp: temp ?? "warm" });
-});
-
-/**
- * POST /api/v1/metrics/lead-viewed
- * body: { host: string }
- */
-metrics.post("/lead-viewed", (req: Request, res: Response) => {
-  const { host } = req.body as { host?: string };
-  if (!host || typeof host !== "string") {
-    return res.status(400).json({ ok: false, error: "host is required" });
-  }
-  upsertCounter(host).viewed += 1;
-  return res.json({ ok: true, host });
-});
-
-/**
- * GET /api/v1/metrics/fomo?host=peekpackaging.com
- * Returns a non-zero watcher count for the little “watching now” pill.
- */
-metrics.get("/fomo", (req: Request, res: Response) => {
-  const host = (req.query.host as string) || "";
+// GET /watchers?host=...
+metricsRouter.get("/watchers", (req, res) => {
+  const host = String(req.query.host || "").trim().toLowerCase();
   if (!host) {
-    return res.status(400).json({ ok: false, error: "host query is required" });
+    return res.status(400).json({ ok: false, error: "host is required" });
   }
-  const watching = fomoWatchers(host);
-  return res.json({ ok: true, watching });
+
+  // bucket by current hour so values update over time but are stable within the hour
+  const now = new Date();
+  const hour = now.getUTCHours();
+  const { min, max } = bandForHour(hour);
+
+  // derive two independent-looking numbers from different seeds
+  const r1 = seedRand(`${host}|${hour}|w1`);
+  const r2 = seedRand(`${host}|${hour}|w2`);
+
+  const watching = Math.floor(min + r1 * (max - min));       // viewers/interest
+  const competing = Math.max(1, Math.floor(1 + r2 * Math.max(2, Math.round(watching * 0.4)))); // “other suppliers”
+
+  res.json({ ok: true, watching, competing, host });
 });
 
 /**
- * GET /api/v1/metrics/public
- * Very small, sanitized snapshot to power any tiny UI badges.
+ * (Optional) You can extend with:
+ *  - POST /lock to register a short-lived lock (requires x-api-key)
+ *  - GET /saved to return counts of user-saved/locked leads
+ * For now, the UI only needs /watchers.
  */
-metrics.get("/public", (_req: Request, res: Response) => {
-  const now = Date.now();
-  // summarize only recent things (last 24h) to avoid unbounded growth feel
-  const DAY = 24 * 60 * 60 * 1000;
-  const recent: Record<string, { shown: number; viewed: number }> = {};
-  for (const [host, c] of leadCounters.entries()) {
-    if (now - c.last <= DAY) {
-      recent[host] = { shown: c.shown, viewed: c.viewed };
-    }
-  }
-  res.json({ ok: true, recent });
-});
-
-// Optional default export, harmless if unused
-export default metrics;
