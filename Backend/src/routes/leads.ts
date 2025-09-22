@@ -1,42 +1,53 @@
-// src/routes/leads.ts
 import { Router } from "express";
 import runDiscovery from "../buyers/discovery";
 import { runPipeline } from "../buyers/pipeline";
-import {
-  StoredLead,
-  Temp,
-  buckets,
-  resetHotWarm,
-  replaceHotWarm,
-} from "../shared/memStore";
 
 const router = Router();
 
-// Health
+// === very small in-memory store for panel ===
+type StoredLead = {
+  id: number;
+  host: string;
+  platform?: string;
+  title: string;
+  created: string;
+  temperature: 'hot' | 'warm';
+  whyText?: string;
+  why?: any;
+};
+
+let nextId = 1;
+const store: { hot: StoredLead[]; warm: StoredLead[] } = { hot: [], warm: [] };
+function resetStore() { store.hot = []; store.warm = []; nextId = 1; }
+
+// Optional API key guard for write routes.
+router.use((req, res, next) => {
+  (res as any).requireKey = () => {
+    const need = process.env.API_KEY || process.env.X_API_KEY;
+    if (!need) return true;
+    const got = req.header("x-api-key");
+    if (got !== need) {
+      res.status(401).json({ ok: false, error: "invalid api key" });
+      return false;
+    }
+    return true;
+  };
+  next();
+});
+
+// Health & ping
 router.get("/ping", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
-// Optional API key guard (for write routes)
-function hasValidKey(req: any) {
-  const need = process.env.API_KEY || process.env.X_API_KEY;
-  if (!need) return true;
-  const got = req.header("x-api-key") || req.header("X-Api-Key");
-  return got === need;
-}
-
-// === GET /api/v1/leads?temp=hot|warm|saved ==================================
+// GET /api/v1/leads?temp=hot|warm&region=usca
 router.get("/", (req, res) => {
-  const temp = String(req.query.temp || "warm").toLowerCase();
-  let items: StoredLead[] = [];
-  if (temp === "hot") items = buckets.hot;
-  else if (temp === "saved") items = buckets.saved;
-  else items = buckets.warm;
+  const temp = String(req.query.temp || 'warm').toLowerCase();
+  const items = temp === 'hot' ? store.hot : store.warm;
   res.json({ ok: true, items });
 });
 
-// === POST /api/v1/leads/find-buyers  ========================================
+// POST /api/v1/leads/find-buyers
 router.post("/find-buyers", async (req, res) => {
-  // write requires key if configured
-  if (!hasValidKey(req)) return res.status(401).json({ ok: false, error: "invalid api key" });
+  if (!(res as any).requireKey()) return; // key required if configured
 
   try {
     const body = (req.body || {}) as {
@@ -44,69 +55,63 @@ router.post("/find-buyers", async (req, res) => {
       region?: string;
       radiusMi?: number;
       persona?: any;
+      onlyUSCA?: boolean;
     };
 
     if (!body.supplier || body.supplier.length < 3) {
       return res.status(400).json({ ok: false, error: "supplier domain is required" });
     }
 
-    // 1) discovery
+    // 1) Discovery (auto persona)
     const discovery = await runDiscovery({
       supplier: body.supplier.trim(),
-      region: (body.region || "us").trim(),
-      persona: body.persona,
+      region: (body.region || 'us').trim(),
+      persona: body.persona
     });
 
-    // 2) pipeline
-    const excludeEnterprise =
-      String(process.env.EXCLUDE_ENTERPRISE || "true").toLowerCase() === "true";
-
+    // 2) Pipeline (Google News + targeted RSS feeds)
+    const excludeEnterprise = String(process.env.EXCLUDE_ENTERPRISE || 'true').toLowerCase() === 'true';
     const { candidates } = await runPipeline(discovery, {
-      region: discovery ? (body.region || "us") : body.region,
+      region: discovery ? (body.region || 'us') : body.region,
       radiusMi: body.radiusMi || 50,
-      excludeEnterprise,
+      excludeEnterprise
     });
 
-    // 3) normalize
+    // 3) Normalize & store (panel format)
     const toLead = (c: any): StoredLead => {
-      const title = c?.evidence?.[0]?.detail?.title || "";
-      const link = c?.evidence?.[0]?.detail?.url || "";
-      const host = link
-        ? new URL(link).hostname.replace(/^www\./, "")
-        : c.domain || "unknown";
-      const why = {
-        signal: {
-          label: c.score >= 0.65 ? "Opening/launch signal" : "Expansion signal",
-          score: Number((c.score || 0).toFixed(2)),
-          detail: title,
-        },
-        context: {
-          label: c.source?.startsWith("rss") ? "News (RSS)" : "News (Google)",
-          detail: c.source || "google-news",
-        },
+      const title = c?.evidence?.[0]?.detail?.title || '';
+      const link  = c?.evidence?.[0]?.detail?.url || '';
+      const host  = link ? new URL(link).hostname.replace(/^www\./, '') : (c.domain || 'unknown');
+      const why   = {
+        signal: { label: c.score >= 0.65 ? 'Opening/launch signal' : 'Expansion signal', score: Number(c.score.toFixed(2)), detail: title },
+        context: { label: c.source.startsWith('rss') ? 'News (RSS)' : 'News (Google)', detail: c.source }
       };
-      const temp: Temp = c.temperature === "hot" ? "hot" : "warm";
       return {
-        id: 0, // will be ignored for hot/warm buckets
+        id: nextId++,
         host,
-        platform: "news",
+        platform: 'unknown',
         title,
         created: new Date().toISOString(),
-        temperature: temp,
+        temperature: c.temperature,
         whyText: title,
-        why,
+        why
       };
     };
 
-    // 4) store for panel
-    const mapped: StoredLead[] = (candidates || []).map(toLead);
-    resetHotWarm();
-    replaceHotWarm(mapped);
+    // wipe only the bucket we’re about to refresh (keeps UX predictable)
+    store.hot = [];
+    store.warm = [];
 
-    const nHot = buckets.hot.length;
-    const nWarm = buckets.warm.length;
+    const mapped = (candidates || []).map(toLead);
+    for (const m of mapped) {
+      if (m.temperature === 'hot') store.hot.push(m);
+      else store.warm.push(m);
+    }
 
-    res.json({
+    const nHot = store.hot.length;
+    const nWarm = store.warm.length;
+
+    return res.json({
       ok: true,
       supplier: discovery.supplierDomain,
       persona: discovery.persona,
@@ -115,18 +120,18 @@ router.post("/find-buyers", async (req, res) => {
       candidates: mapped,
       cached: discovery.cached,
       created: mapped.length,
-      message: `Created ${mapped.length} candidate(s). Hot:${nHot} Warm:${nWarm}.`,
+      message: `Created ${mapped.length} candidate(s). Hot:${nHot} Warm:${nWarm}. Refresh lists to view.`
     });
   } catch (e: any) {
     console.error("[find-buyers:error]", e?.stack || e?.message || String(e));
-    res.status(500).json({ ok: false, error: e?.message || "internal error" });
+    return res.status(500).json({ ok: false, error: e?.message || "internal error" });
   }
 });
 
-// (optional) clear everything but saved
+// (optional) clear
 router.post("/__clear", (req, res) => {
-  if (!hasValidKey(req)) return res.status(401).json({ ok: false, error: "invalid api key" });
-  resetHotWarm();
+  if (!(res as any).requireKey()) return;
+  resetStore();
   res.json({ ok: true });
 });
 
