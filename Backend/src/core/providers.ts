@@ -1,155 +1,173 @@
 // src/core/providers.ts
+// Minimal "provider engine" that buyers.ts uses.
+// No external APIs. Deterministic, fast, and safe for demos.
 //
-// Minimal provider framework for buyer discovery.
-// - Zero deps
-// - Safe to drop in without changing routes yet
-// - Exposes a default "shim" provider so behavior is stable today
-//
-// Next step (separate file): import { findBuyerLead } in routes/buyers.ts
-// and replace the local computeLead(...) call with it.
+// Exports:
+//   - listProviders(): string[]
+//   - findBuyerLead(host, region, radius): Promise<LeadItem>
+//   - runProviders({host, region, radius}, topK): Promise<LeadItem[]>
 
-export type Temp = 'hot' | 'warm' | 'cold';
-
-export type ProviderInput = {
-  host: string;        // supplier domain (e.g., "peekpackaging.com")
-  region: string;      // "US/CA", "US", etc.
-  radius: string;      // "50 mi"
-};
+export type Temp = "hot" | "warm" | "cold";
 
 export type LeadItem = {
   host: string;
-  platform?: 'web' | string;
+  platform?: string;
   title?: string;
-  created?: string;    // ISO
+  created?: string;     // ISO
   temp?: Temp | string;
   whyText?: string;
-  score?: number;      // optional ranking score for future providers
+  score?: number;       // 0..1 demo score
 };
 
-export type Provider = (input: ProviderInput) => Promise<LeadItem | LeadItem[] | null | undefined>;
+/* ------------------------------- utils ------------------------------- */
 
-type RegistryItem = {
-  id: string;
-  fn: Provider;
-  weight: number; // simple ordering; higher runs earlier
-};
-
-const REGISTRY: RegistryItem[] = [];
-
-/** Register a provider with an ID and optional weight (default 0). */
-export function registerProvider(id: string, fn: Provider, weight = 0) {
-  REGISTRY.push({ id, fn, weight });
-  REGISTRY.sort((a, b) => b.weight - a.weight);
+function nowISO() {
+  return new Date().toISOString();
 }
 
-/** Return current provider IDs (for diagnostics). */
+function normalizeHost(raw: string): string {
+  const h = String(raw || "").trim().toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "");
+  return h.replace(/^www\./, "");
+}
+
+// Tiny deterministic PRNG so the same host yields stable output.
+function seedFrom(str: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h || 1;
+}
+function rand01(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    // xorshift32
+    s ^= s << 13; s >>>= 0;
+    s ^= s >> 17; s >>>= 0;
+    s ^= s << 5;  s >>>= 0;
+    // scale to 0..1
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
+function pick<T>(rng: () => number, arr: T[]): T {
+  return arr[Math.floor(rng() * arr.length)]!;
+}
+
+/* -------------------------- demo scoring ----------------------------- */
+
+function scoreFor(host: string, region: string, radius: string): { score: number; temp: Temp; whyText: string; title: string } {
+  const base = host.includes("pack") || host.includes("wrap") || host.includes("film") ? 0.25 : 0.05;
+  const s = seedFrom(host + "::" + region + "::" + radius);
+  const r = rand01(s);
+  // add a few keyword bumps
+  const bumps = ["warehouse","fulfill","logistic","distrib","supply","pallet","ship"];
+  let bump = 0;
+  for (const b of bumps) if (host.includes(b)) bump += 0.05;
+
+  // deterministic jitter
+  const jitter = (r() * 0.4);
+  const score = Math.max(0, Math.min(1, base + bump + jitter));
+
+  let temp: Temp = "warm";
+  if (score >= 0.7) temp = "hot";
+  else if (score < 0.4) temp = "cold";
+
+  const titles = [
+    "Purchasing Manager",
+    "Warehouse Operations",
+    "Supply Chain Lead",
+    "Plant Manager",
+    "Materials Manager",
+    "Logistics Coordinator"
+  ];
+  const title = `${pick(r, titles)} @ ${host}`;
+
+  const whyText =
+    temp === "hot"
+      ? "Strong buying signals in your region (time-sensitive)."
+      : temp === "warm"
+        ? "Operational fit detected; likely periodic packaging needs."
+        : "Weak signals; might still be relevant for outreach.";
+
+  return { score, temp, whyText, title };
+}
+
+/* --------------------------- providers ------------------------------- */
+
+type ProviderCtx = { host: string; region: string; radius: string };
+
+type Provider = (ctx: ProviderCtx) => Promise<LeadItem[]>;
+
+const shimProvider: Provider = async ({ host, region, radius }) => {
+  // Deterministic single-item output for now (keeps “one-per-click” UX sane).
+  const h = normalizeHost(host);
+  const { score, temp, whyText, title } = scoreFor(h, region, radius);
+
+  const item: LeadItem = {
+    host: h,
+    platform: "web",
+    title,
+    created: nowISO(),
+    temp,
+    whyText,
+    score: Number(score.toFixed(3)),
+  };
+  return [item];
+};
+
+// Registry (easy to add real ones later without touching routes)
+const REGISTRY: Record<string, Provider> = {
+  shim: shimProvider,
+  // rss: rssProvider,         // (future)
+  // gnews: googleNewsProvider // (future)
+};
+
+/* -------------------------- public API -------------------------------- */
+
 export function listProviders(): string[] {
-  return REGISTRY.map(p => p.id);
-}
-
-/** Simple score fallback if a provider didn't set one. */
-function baselineScore(item: LeadItem): number {
-  // crude: bump 'hot' > 'warm' > 'cold', newer timestamps slightly higher
-  const tempScore = item.temp === 'hot' ? 0.9 : item.temp === 'warm' ? 0.6 : 0.3;
-  let recency = 0;
-  if (item.created) {
-    const t = Date.parse(item.created);
-    if (!Number.isNaN(t)) {
-      const ageH = (Date.now() - t) / 3_600_000; // hours
-      recency = Math.max(0, 1 - Math.min(ageH / 168, 1)) * 0.1; // <= +0.1 within a week
-    }
-  }
-  return (item.score ?? 0) * 0.7 + tempScore * 0.25 + recency * 0.05;
-}
-
-/** Normalize arbitrary provider outputs into a unique set by host. */
-function normalizeUnique(items: (LeadItem | null | undefined)[]): LeadItem[] {
-  const out: LeadItem[] = [];
-  const seen = new Set<string>();
-  for (const it of items) {
-    if (!it) continue;
-    const host = (it.host || '').trim().toLowerCase();
-    if (!host || seen.has(host)) continue;
-    seen.add(host);
-    out.push({
-      ...it,
-      host,
-      platform: it.platform ?? 'web',
-      created: it.created ?? new Date().toISOString(),
-      temp: it.temp ?? 'warm',
-      whyText: it.whyText ?? '',
-      score: typeof it.score === 'number' ? it.score : undefined,
-    });
-  }
-  return out;
+  return Object.keys(REGISTRY);
 }
 
 /**
- * Run providers in priority order, return a ranked list.
- * Today we return the best single lead (to match current UI), but callers
- * can request `topK` > 1 when we expand results per click.
+ * Return exactly one lead (best of available providers).
+ * Today: uses shim only; future: merge+rank across providers.
  */
-export async function runProviders(
-  input: ProviderInput,
-  topK = 1
-): Promise<LeadItem[]> {
-  if (REGISTRY.length === 0) {
-    // Ensure we always have *something* (shim registers below).
-    await ensureShimRegistered();
-  }
-
-  const collected: LeadItem[] = [];
-
-  for (const p of REGISTRY) {
+export async function findBuyerLead(host: string, region: string, radius: string): Promise<LeadItem> {
+  const ctx = { host, region, radius };
+  const all: LeadItem[] = [];
+  for (const name of Object.keys(REGISTRY)) {
     try {
-      const res = await p.fn(input);
-      const arr = Array.isArray(res) ? res : (res ? [res] : []);
-      collected.push(...arr);
-      // Fast path: if we already have enough, stop early
-      if (collected.length >= topK) break;
-    } catch (_e) {
-      // swallow provider errors; continue to next
-      // (we can add logging hook here later)
+      const out = await REGISTRY[name](ctx);
+      if (Array.isArray(out)) all.push(...out);
+    } catch {
+      // keep going; other providers may succeed
     }
   }
-
-  const unique = normalizeUnique(collected);
-  unique.sort((a, b) => baselineScore(b) - baselineScore(a));
-  return unique.slice(0, Math.max(1, topK));
+  // pick best by score, then hot > warm > cold
+  const ranked = all
+    .map(x => ({ ...x, _s: typeof x.score === "number" ? x.score : 0 }))
+    .sort((a, b) => (b._s - a._s) || rankTemp(b.temp) - rankTemp(a.temp));
+  return (ranked[0] ?? shimProvider(ctx).then(arr => arr[0]));
 }
 
-/** Convenience: return a single best lead (matches current buyers.ts shape). */
-export async function findBuyerLead(host: string, region: string, radius: string): Promise<LeadItem> {
-  const [best] = await runProviders({ host, region, radius }, 1);
-  return best;
+function rankTemp(t: any): number {
+  if (t === "hot") return 2;
+  if (t === "warm") return 1;
+  return 0;
 }
 
-// ---------------- Default "shim" provider ----------------
-
-let shimReady = false;
-
-async function ensureShimRegistered() {
-  if (shimReady) return;
-  registerProvider('shim', async ({ host, region, radius }) => {
-    return {
-      host,
-      platform: 'web',
-      title: `Buyer lead for ${host}`,
-      created: new Date().toISOString(),
-      temp: 'warm',
-      whyText: `Compat shim matched (${region}, ${radius})`,
-      score: 0.5,
-    };
-  }, -1000); // lowest priority once we add real providers
-  shimReady = true;
+/**
+ * Return up to topK leads (de-duplicated, stable per host).
+ * For now we just repeat the best single candidate (one provider),
+ * but the signature is stable for future multi-source merge.
+ */
+export async function runProviders(ctx: ProviderCtx, topK = 1): Promise<LeadItem[]> {
+  const one = await findBuyerLead(ctx.host, ctx.region, ctx.radius);
+  const k = Math.max(1, Math.min(3, Number(topK) || 1));
+  // If we only have one item, just return it; later, other providers will fill more.
+  return [one].slice(0, k);
 }
-
-// Pre-register on import so callers can use runProviders immediately.
-void ensureShimRegistered();
-
-export default {
-  registerProvider,
-  listProviders,
-  runProviders,
-  findBuyerLead,
-};
