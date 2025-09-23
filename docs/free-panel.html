@@ -42,11 +42,11 @@
   .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:8px}
   .grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
   .btn-primary{background:var(--accent); border-color:#1e72c2}
-  .btn-ok{background:#183224; border-color:#1f5a3f}
   .pill{display:inline-block; background:var(--pill); padding:4px 8px; border-radius:999px; color:#b9c9d9; font-size:12px; margin-right:6px}
   .muted{color:var(--muted)}
   .split{display:flex; gap:8px}
   .split > *{flex:1}
+  .right{ text-align:right }
 
   table{width:100%; border-collapse:collapse}
   thead th{
@@ -54,9 +54,9 @@
     text-align:left; padding:10px; font-weight:600; border-bottom:1px solid var(--border);
   }
   tbody td{padding:10px; border-bottom:1px solid var(--border); vertical-align:top}
+  tbody tr:hover{background:#0f1724}
   .temp-warm{color:#ffd479}
   .temp-hot{color:#ff8a5b}
-  .right{ text-align:right }
 
   .log{height:140px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; resize:vertical}
   .mini{font-size:12px}
@@ -66,6 +66,16 @@
 
   .bad{color:var(--bad)}
   .ok{color:var(--ok)}
+
+  /* modal */
+  .modal-back{
+    position:fixed; inset:0; background:#0008; display:none; align-items:center; justify-content:center;
+  }
+  .modal{ width:min(920px, calc(100vw - 40px)); max-height:80vh; background:#0e1520; border:1px solid var(--border); border-radius:10px; overflow:hidden; box-shadow:0 8px 40px #000c }
+  .modal header{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:#111a29; border-bottom:1px solid var(--border)}
+  .modal header h3{margin:0; font-size:14px}
+  .modal header button{width:auto; padding:6px 10px}
+  .modal pre{margin:0; padding:12px; overflow:auto; max-height:calc(80vh - 46px); color:#cfe1f7}
 </style>
 </head>
 <body>
@@ -103,7 +113,8 @@
 
       <label>Action</label>
       <select id="action">
-        <option value="find-buyers">Find buyers (one per click)</option>
+        <option value="find-buyers" selected>Find buyers (one per click)</option>
+        <option value="find-one">Find one (strict)</option>
       </select>
 
       <label>Supplier host</label>
@@ -121,7 +132,7 @@
         </select>
       </div>
 
-      <label>Find Buyers path <span class="muted mini">(relative to API root)</span></label>
+      <label>Path for action <span class="muted mini">(relative to API root)</span></label>
       <div class="grid-3">
         <input id="path" placeholder="/leads/find-buyers" />
         <select id="method">
@@ -130,7 +141,7 @@
         </select>
         <select id="fallbacks" title="Fallback strategy">
           <option value="none">No fallbacks</option>
-          <option value="auto" selected>Auto-probe on 404</option>
+          <option value="auto" selected>Auto-probe</option>
         </select>
       </div>
 
@@ -173,11 +184,21 @@
     </div>
   </div>
 
+  <!-- JSON modal -->
+  <div id="mb" class="modal-back" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal">
+      <header>
+        <h3 id="mh">Result</h3>
+        <button id="mc">Close</button>
+      </header>
+      <pre id="mp"></pre>
+    </div>
+  </div>
+
 <script>
 (function(){
   const UI = {
     base: qs('#base'), apply: qs('#apply'),
-    // FIX: map names match how we use them later
     health: qs('#health'), probe: qs('#probe'), clear: qs('#clear'),
     key: qs('#key'), saveKey: qs('#saveKey'),
     healthBadge: qs('#healthBadge'), routesBadge: qs('#routesBadge'),
@@ -187,12 +208,14 @@
     find: qs('#find'),
     log: qs('#log'),
     rows: qs('#rows'), count: qs('#count'), hint: qs('#hint'),
-    dlHot: qs('#dlHot'), dlWarm: qs('#dlWarm')
+    dlHot: qs('#dlHot'), dlWarm: qs('#dlWarm'),
+    mb: qs('#mb'), mh: qs('#mh'), mp: qs('#mp'), mc: qs('#mc')
   };
 
   const S = {
     base: '', root: '', key: '',
     items: [],
+    raw: [],
     routes: [],
     findTriedOnce: false
   };
@@ -210,9 +233,11 @@
     UI.host.value = store.get('host','peekpackaging.com');
     UI.region.value = store.get('region','US/CA');
     UI.radius.value = store.get('radius','50 mi');
-    UI.path.value = store.get('path','/leads/find-buyers');
+    UI.action.value = store.get('action','find-buyers');
+    UI.path.value = store.get('path', defaultPathFor(UI.action.value));
     UI.method.value = store.get('method','GET');
     UI.fallbacks.value = store.get('fallbacks','auto');
+    UI.find.textContent = labelForAction(UI.action.value);
     render();
   })();
 
@@ -220,8 +245,7 @@
   function qs(s,x=document){ return x.querySelector(s) }
   function now(){ return new Date().toTimeString().slice(0,8) }
   function log(line){
-    const msg = `[${now()}] ${line}`;
-    UI.log.value += (UI.log.value ? '\n' : '') + msg;
+    UI.log.value += (UI.log.value ? '\n' : '') + `[${now()}] ${line}`;
     UI.log.scrollTop = UI.log.scrollHeight;
   }
   function setPill(el, txt, cls=''){ el.textContent = txt; el.className = 'pill ' + (cls||'') }
@@ -231,21 +255,16 @@
     for(const [k,v] of Object.entries(params||{})) if(v!==undefined && v!=='') u.searchParams.set(k, v);
     return u.toString();
   }
-  function parseRoutes(r){
-    if (!r || !Array.isArray(r.routes)) return [];
-    return r.routes.map(s=>String(s)).filter(Boolean);
-  }
-  function pickPathFromRoutes(routes){
-    const want = [
-      /\/buyers\/find-buyers$/,
-      /\/leads\/find-buyers$/,
-      /\/find-buyers$/
-    ];
-    for(const rx of want){
-      const hit = routes.find(r => rx.test(r));
-      if (hit) return hit.replace(new RegExp(`^${S.root||''}`), '');
-    }
+  function parseRoutes(r){ return Array.isArray(r?.routes) ? r.routes.map(String) : [] }
+  function firstMatch(routes, want){
+    for(const rx of want){ const hit = routes.find(r=>rx.test(r)); if (hit) return hit }
     return null;
+  }
+  function defaultPathFor(action){
+    return action==='find-one' ? '/buyers/find-one' : '/leads/find-buyers';
+  }
+  function labelForAction(action){
+    return action==='find-one' ? 'Find one' : 'Find buyers';
   }
 
   async function call(method, path, data){
@@ -255,16 +274,12 @@
 
     const isAbs = /^https?:\/\//i.test(path);
     let url = isAbs ? path : base.replace(/\/+$/,'') + (root? `/${root.replace(/^\/+/,'')}`:'') + '/' + path.replace(/^\/+/,'');
-    let init = { method, headers: { 'accept':'application/json'} };
+    const init = { method, headers: { 'accept':'application/json'} };
 
     if (S.key) init.headers['x-api-key'] = S.key;
 
-    if (method === 'GET'){
-      url = withParams(url, data);
-    } else {
-      init.headers['content-type']='application/json';
-      init.body = JSON.stringify(data||{});
-    }
+    if (method === 'GET') url = withParams(url, data);
+    else { init.headers['content-type']='application/json'; init.body = JSON.stringify(data||{}); }
 
     let res, json, ok=false;
     try {
@@ -286,12 +301,12 @@
   }
 
   function toast(msg, bad){
-    log((bad?'✖️ ':'• ') + msg);
     UI.hint.textContent = msg;
     UI.hint.className = bad ? 'bad mini right' : 'mini muted right';
+    log((bad?'✖️ ':'• ') + msg);
   }
 
-  // ---------- network actions ----------
+  // ---------- health + probe ----------
   async function health(){
     const r = await call('GET','/healthz');
     setPill(UI.healthBadge, `health: ${r.status} — GET /healthz`, r.ok?'ok':'');
@@ -320,23 +335,31 @@
     S.routes = routes;
     setPill(UI.routesBadge, `routes: ${routes.length}`, 'ok');
 
-    const guessed = pickPathFromRoutes(routes);
-    if (guessed){
-      UI.path.value = guessed;
-      store.set('path', guessed);
-      toast(`path guessed → ${guessed}`);
+    // try guess path for current action
+    const action = UI.action.value;
+    const wants = action==='find-one'
+      ? [/\/buyers\/find-one$/, /\/leads\/find-one$/, /\/find-one$/]
+      : [/\/buyers\/find-buyers$/, /\/leads\/find-buyers$/, /\/find-buyers$/];
+
+    const hit = firstMatch(routes, wants);
+    if (hit){
+      const rel = hit.replace(new RegExp(`^${S.root||''}`), '');
+      UI.path.value = rel.startsWith('/') ? rel : '/' + rel;
+      store.set('path', UI.path.value);
+      toast(`path guessed → ${UI.path.value}`);
     } else {
       toast('could not guess path from routes', true);
     }
     return true;
   }
 
+  // ---------- find ----------
   async function findOnce(){
     const method = UI.method.value;
     const host = UI.host.value.trim();
     const region = UI.region.value;
     const radius = UI.radius.value;
-    const path = UI.path.value.trim() || '/leads/find-buyers';
+    const path = UI.path.value.trim() || defaultPathFor(UI.action.value);
 
     store.set('host',host); store.set('region',region);
     store.set('radius',radius); store.set('path',path); store.set('method',method);
@@ -347,13 +370,17 @@
       return r;
     }
 
+    // Normalize results
     let items = [];
     if (Array.isArray(r.data?.items)) items = r.data.items;
     else if (r.data?.item) items = [r.data.item];
     else if (r.data && (r.data.host || r.data.title)) items = [r.data];
 
     if (items.length){
-      for(const it of items){ S.items.push(sanitizeItem(it)); }
+      for(const it of items){
+        S.raw.push(it);
+        S.items.push(sanitizeItem(it));
+      }
       render();
       setPill(UI.lastBadge, `last OK: ${method} ${path} @ ${(S.root||'root')}`);
     } else {
@@ -377,7 +404,6 @@
   async function find(){
     S.findTriedOnce = false;
     let r = await findOnce();
-
     if (r.ok) return;
 
     if (UI.fallbacks.value!=='auto' || r.status!==404) return;
@@ -387,10 +413,15 @@
       const okProbe = await probe();
       if (!okProbe) return;
 
+      const action = UI.action.value;
       const alts = [];
-      const inRoutes = (p)=> S.routes.some(r=> r.endsWith(p.replace(/^\/+/,'')));
-      const want = ['/buyers/find-buyers', '/leads/find-buyers', '/find-buyers'];
-      for(const p of want) if (inRoutes(p)) alts.push(p);
+      const existsInRoutes = (p)=> S.routes.some(r=> r.endsWith(p.replace(/^\/+/,'')));
+
+      const want = action==='find-one'
+        ? ['/buyers/find-one','/leads/find-one','/find-one']
+        : ['/buyers/find-buyers','/leads/find-buyers','/find-buyers'];
+
+      for(const p of want) if (existsInRoutes(p)) alts.push(p);
       if (!alts.includes(UI.path.value.trim())) alts.unshift(UI.path.value.trim());
 
       for(const p of alts){
@@ -411,6 +442,7 @@
     UI.rows.innerHTML = '';
     S.items.forEach((x,i)=>{
       const tr = document.createElement('tr');
+      tr.dataset.index = String(i);
       tr.innerHTML = `
         <td>${i+1}</td>
         <td>${esc(x.host)}</td>
@@ -430,8 +462,8 @@
   function toCSV(items){
     const cols = ['host','platform','title','created','temp','whyText'];
     const head = cols.join(',');
-    const esc = v=> `"${String(v??'').replace(/"/g,'""')}"`;
-    const rows = items.map(it=> cols.map(c=>esc(it[c])).join(','));
+    const escv = v=> `"${String(v??'').replace(/"/g,'""')}"`;
+    const rows = items.map(it=> cols.map(c=>escv(it[c])).join(','));
     return [head, ...rows].join('\r\n');
   }
   function download(name, text){
@@ -440,6 +472,14 @@
     a.download = name; a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
   }
+
+  // ---------- modal ----------
+  function showModal(title, obj){
+    UI.mh.textContent = title;
+    UI.mp.textContent = JSON.stringify(obj, null, 2);
+    UI.mb.style.display = 'flex';
+  }
+  function hideModal(){ UI.mb.style.display = 'none' }
 
   // ---------- events ----------
   UI.apply.onclick = ()=>{
@@ -454,13 +494,32 @@
   };
   UI.health.onclick = health;
   UI.probe.onclick = probe;
-  UI.clear.onclick = ()=>{
-    S.items=[]; render(); toast('List cleared');
-  };
+  UI.clear.onclick = ()=>{ S.items=[]; S.raw=[]; render(); toast('List cleared') };
   UI.find.onclick = find;
 
   UI.dlHot.onclick = ()=> download('buyers-hot.csv', toCSV(S.items.filter(x=>x.temp==='hot')));
   UI.dlWarm.onclick = ()=> download('buyers-warm.csv', toCSV(S.items));
+
+  UI.action.onchange = ()=>{
+    const a = UI.action.value;
+    store.set('action', a);
+    UI.find.textContent = labelForAction(a);
+    if (!UI.path.value || UI.path.value === '/leads/find-buyers' || UI.path.value === '/buyers/find-one'){
+      UI.path.value = defaultPathFor(a);
+      store.set('path', UI.path.value);
+    }
+  };
+
+  // row click → JSON modal
+  UI.rows.addEventListener('click', (e)=>{
+    const tr = e.target.closest('tr'); if (!tr) return;
+    const i = Number(tr.dataset.index);
+    if (!Number.isFinite(i)) return;
+    showModal(`Result #${i+1} — ${S.items[i]?.host||''}`, S.raw[i] ?? S.items[i]);
+  });
+  UI.mc.onclick = hideModal;
+  UI.mb.addEventListener('click', (e)=>{ if (e.target===UI.mb) hideModal() });
+  window.addEventListener('keydown', (e)=>{ if (e.key==='Escape') hideModal() });
 
 })();
 </script>
