@@ -1,93 +1,98 @@
 // src/routes/buyers.ts
-import { Router, Request, Response } from 'express';
-import MemStore from '../core/memStore';
+import { Router, Request, Response } from "express";
+import { findBuyerLead, runProviders, listProviders } from "../core/providers";
 
-// ---- types (match the panel’s expectations) ----
-type Temp = 'hot' | 'warm' | 'cold';
+const router = Router();
+
+/* -------------------------- tiny helpers -------------------------- */
+
+type Temp = "hot" | "warm" | "cold";
 type LeadItem = {
   host: string;
-  platform?: 'web' | string;
+  platform?: string;
   title?: string;
-  created?: string;      // ISO
-  temp?: Temp | string;  // keep loose for forward-compat
+  created?: string;    // ISO
+  temp?: Temp | string;
   whyText?: string;
+  score?: number;
 };
 
 type ApiOk = { ok: true; items: LeadItem[] };
 type ApiErr = { ok: false; error: string };
 
-// ---- cache (TTL & LRU) ----
-const DEFAULT_TTL = Number(process.env.CACHE_TTL_MS ?? 5 * 60_000);   // 5 minutes
-const DEFAULT_MAX = Number(process.env.CACHE_MAX ?? 1_000);
-
-const cache = new MemStore<LeadItem>({
-  ttlMs: DEFAULT_TTL,
-  max: DEFAULT_MAX,
-});
-
-// ---- helpers ----
-function pickParams(req: Request) {
-  const q = Object.assign({}, req.query, req.body);
-  const host = String(q.host ?? '').trim();
-  const region = String(q.region ?? '').trim() || 'US/CA';
-  const radius = String(q.radius ?? '').trim() || '50 mi';
-  return { host, region, radius };
-}
-
-function bad(res: Response, error: string, code = 400) {
-  const body: ApiErr = { ok: false, error };
+function bad(res: Response, msg: string, code = 400) {
+  const body: ApiErr = { ok: false, error: msg };
   return res.status(code).json(body);
 }
 
-function cacheKey(host: string, region: string, radius: string) {
-  return `${host}|${region}|${radius}`;
+function pickParams(req: Request) {
+  const q = Object.assign({}, req.query, req.body);
+  const raw = String(q.host ?? q.supplier ?? "").trim().toLowerCase();
+  const host = raw.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const region = String(q.region ?? "US/CA").trim();
+  const radius = String(q.radius ?? q.radiusMi ?? "50 mi").trim();
+  const topK = Math.max(1, Math.min(3, Number(q.topK ?? 1) || 1)); // cap small for now
+  return { host, region, radius, topK };
 }
 
-// TEMP shim: replace with your real buyer-finder later.
-async function computeLead(host: string, region: string, radius: string): Promise<LeadItem> {
-  return {
-    host,
-    platform: 'web',
-    title: `Buyer lead for ${host}`,
-    created: new Date().toISOString(),
-    temp: 'warm',
-    whyText: `Compat shim matched (${region}, ${radius})`,
-  };
-}
+/* --------------------------- diagnostics -------------------------- */
 
-async function findOne(host: string, region: string, radius: string): Promise<LeadItem> {
-  const key = cacheKey(host, region, radius);
-  return cache.getOrCreate(key, () => computeLead(host, region, radius));
-}
+// GET /api/providers  ->  ["shim", "rss", ...]
+router.get("/providers", (_req, res) => {
+  res.json({ ok: true, providers: listProviders() });
+});
 
-async function handleFind(req: Request, res: Response) {
+/* -------------------------- find endpoints ------------------------ */
+/**
+ * All return the same shape: { ok: true, items: [LeadItem, ...] }
+ * We support both GET and POST and several path aliases so the panel
+ * and your probes always get a 2xx when correctly called.
+ */
+
+// /api/buyers/find-one  (single lead)
+router.get("/buyers/find-one", handleFindOne);
+router.post("/buyers/find-one", handleFindOne);
+
+// /api/buyers/find     (single lead; alias)
+router.get("/buyers/find", handleFindOne);
+router.post("/buyers/find", handleFindOne);
+
+// /api/buyers/find-buyers (topK leads; today defaults to 1)
+router.get("/buyers/find-buyers", handleFindMany);
+router.post("/buyers/find-buyers", handleFindMany);
+
+// Also expose short aliases at /api/find* so /routes probe remains happy
+router.get("/find-one", handleFindOne);
+router.post("/find-one", handleFindOne);
+router.get("/find", handleFindOne);
+router.post("/find", handleFindOne);
+router.get("/find-buyers", handleFindMany);
+router.post("/find-buyers", handleFindMany);
+
+/* ---------------------------- handlers ---------------------------- */
+
+async function handleFindOne(req: Request, res: Response) {
   const { host, region, radius } = pickParams(req);
-  if (!host) return bad(res, 'host is required');
-
+  if (!host) return bad(res, "host is required");
   try {
-    const item = await findOne(host, region, radius);
-    const body: ApiOk = { ok: true, items: [item] };
+    const lead = await findBuyerLead(host, region, radius);
+    const body: ApiOk = { ok: true as const, items: [lead] };
     return res.json(body);
   } catch (e: any) {
-    return bad(res, e?.message ?? 'internal error', 500);
+    return bad(res, e?.message ?? "internal error", 500);
   }
 }
 
-// ---- router & routes ----
-const r = Router();
-
-/**
- * We expose buyers endpoints here. Your index.ts already mounts broader
- * "compat" paths (including /leads/... and /find-... under multiple roots).
- * Keeping this router focused avoids duplicate handlers.
- */
-const BUYER_PATHS = ['/buyers/find', '/buyers/find-one', '/buyers/find-buyers'];
-for (const p of BUYER_PATHS) {
-  r.get(p, handleFind);
-  r.post(p, handleFind);
+async function handleFindMany(req: Request, res: Response) {
+  const { host, region, radius, topK } = pickParams(req);
+  if (!host) return bad(res, "host is required");
+  try {
+    const items = await runProviders({ host, region, radius }, topK);
+    const body: ApiOk = { ok: true as const, items };
+    return res.json(body);
+  } catch (e: any) {
+    return bad(res, e?.message ?? "internal error", 500);
+  }
 }
 
-// Optional: light diagnostics for cache (handy during dev; safe to leave)
-r.get('/buyers/cache/stats', (_req, res) => res.json({ ok: true, stats: cache.getStats() }));
-
-export default r;
+export default router;
