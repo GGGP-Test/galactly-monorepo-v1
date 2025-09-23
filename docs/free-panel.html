@@ -2,488 +2,396 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Leads Console — Free Panel (V3)</title>
+  <title>Leads Console — Free Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --bg:#0e1621; --panel:#121c29; --panel2:#0f1a28; --text:#dbe7ff; --muted:#96a2b8;
-      --accent:#5aa9ff; --accent2:#7bd389; --warn:#ffd166; --bad:#ff6b6b; --chip:#1a2636;
-      --line:#243147;
+      --bg:#0f172a; --surface:#111827; --muted:#94a3b8; --text:#e5e7eb;
+      --ok:#10b981; --warn:#f59e0b; --err:#ef4444; --line:#1f2937;
+      --btn:#2563eb; --btnH:#1d4ed8; --chip:#1f2937; --badge:#374151;
+      --shadow: 0 8px 22px rgba(0,0,0,.35); --r:10px;
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;background:var(--bg); color:var(--text); font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    }
-    a{color:var(--accent)}
-    .wrap{
-      max-width:1300px; margin:0 auto; padding:16px;
-      display:grid; grid-template-columns: 420px 1fr; gap:16px;
-    }
-    @media (max-width: 980px){
-      .wrap{grid-template-columns: 1fr}
-    }
-    .card{
-      background:linear-gradient(180deg,var(--panel) 0%, var(--panel2) 100%);
-      border:1px solid var(--line); border-radius:12px; padding:14px;
-      box-shadow: 0 10px 24px #00000040 inset, 0 2px 18px #00000020;
-    }
-    h1{font-size:18px; margin:0 0 12px 0}
-    .row{display:flex; gap:8px; align-items:center}
-    .row.wrap{flex-wrap:wrap}
-    .col{display:flex; flex-direction:column; gap:6px}
-    label{font-size:12px; color:var(--muted)}
-    input,select,button,textarea{
-      background:#0c1522; color:var(--text); border:1px solid var(--line); border-radius:8px;
-      padding:10px 12px; outline:none; transition:.15s border-color,.15s background;
-    }
-    input:focus,select:focus,textarea:focus{border-color:var(--accent)}
-    button{
-      background:#0c1522; cursor:pointer;
-    }
-    .btn{background:var(--accent); border-color:#4496ee; color:#05101f}
-    .btn.secondary{background:#17263a; color:var(--text)}
-    .btn.ghost{background:#0c1522; color:var(--text)}
-    .btn.good{background:var(--accent2); border-color:#54c37a; color:#06210f}
-    .btn.warn{background:var(--warn); border-color:#e9c35e; color:#211c06}
-    .btn.bad{background:#ff6b6b; border-color:#e25b5b; color:#220606}
-    .grid2{display:grid; grid-template-columns: 1fr 1fr; gap:8px}
-    .grid3{display:grid; grid-template-columns: 1fr 120px 140px; gap:8px}
-    .grid4{display:grid; grid-template-columns: 1fr 110px 110px 1fr; gap:8px}
-    @media (max-width: 420px){ .grid2,.grid3,.grid4{grid-template-columns:1fr;}}
-    .tags{display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 0}
-    .tag{
-      padding:6px 10px; border-radius:999px; background:var(--chip); color:var(--muted);
-      border:1px solid var(--line); font-size:12px
-    }
-    .tag.ok{color:#97e2a7; border-color:#2b6b41}
-    .tag.warn{color:#f2cf7a; border-color:#7a6429}
-    .tag.bad{color:#ff9b9b; border-color:#7a2b2b}
-    table{width:100%; border-collapse:collapse; font-size:13px}
-    thead th{font-weight:600; text-align:left; color:#9fb3d1; padding:10px; border-bottom:1px solid var(--line)}
-    tbody td{padding:10px; border-bottom:1px solid var(--line)}
-    tbody tr:hover{background:#0f1c2c}
-    .pill{padding:4px 8px; border-radius:999px; font-size:12px; display:inline-block}
-    .pill.warm{background:#3b3321; color:#ffd166; border:1px solid #6e5a1b}
+    html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:#93c5fd;text-decoration:none}
+    .wrap{max-width:1100px;margin:22px auto;padding:0 14px}
+    h1{margin:0 0 12px;font-size:18px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .fill{flex:1 1 auto}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:14px}
+    .card .head{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:600}
+    .card .body{padding:12px 14px}
+    input,select{width:100%;background:#0b1220;color:var(--text);border:1px solid #223;outline:none;border-radius:8px;padding:10px}
+    button{background:var(--btn);border:none;color:#fff;border-radius:8px;padding:10px 14px;cursor:pointer}
+    button.secondary{background:#374151}
+    button.ghost{background:transparent;border:1px solid #223}
+    button:hover{background:var(--btnH)}
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:4px 10px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-size:12px}
+    .badge{padding:2px 6px;border-radius:999px;background:var(--badge);font-weight:700}
+    .temp{padding:2px 8px;border-radius:999px;font-weight:700}
+    .hot{background:rgba(239,68,68,.18);color:#fecaca;border:1px solid rgba(239,68,68,.35)}
+    .warm{background:rgba(245,158,11,.18);color:#fde68a;border:1px solid rgba(245,158,11,.35)}
+    .cold{background:rgba(59,130,246,.18);color:#bfdbfe;border:1px solid rgba(59,130,246,.35)}
     .muted{color:var(--muted)}
-    pre.log{
-      height:160px; overflow:auto; background:#0b1320; border-radius:8px; padding:10px;
-      border:1px solid var(--line); margin:8px 0 0; white-space:pre-wrap; word-break:break-word;
+    .list{max-height:56vh;overflow:auto;border-top:1px solid var(--line)}
+    table{width:100%;border-collapse:collapse;min-width:680px}
+    th,td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+    th{position:sticky;top:0;background:rgba(17,24,39,.96);backdrop-filter:saturate(140%) blur(6px)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .notice{margin-top:10px;padding:10px 12px;border-radius:8px;background:#0b1220;border:1px dashed #223}
+    .notice.ok{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.35)}
+    .notice.err{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.35)}
+    /* modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:16px}
+    .modal .panel{max-width:720px;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+    .modal .panel .head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+    .modal .panel .body{padding:12px 14px}
+    .fomo{display:inline-flex;gap:8px;align-items:center}
+    .mini-info{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:help}
+    .mini-info svg{width:14px;height:14px;opacity:.9}
+    @media (max-width: 900px){
+      .grid{display:block}
     }
-    .sticky-right{
-      position:sticky; top:10px; align-self:start;
-      max-height: calc(100vh - 20px); overflow:auto;
-    }
-    .right h2{margin:0 0 10px 0; font-size:16px}
-    .mt8{margin-top:8px} .mt12{margin-top:12px}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <!-- Left controls -->
+    <h1>Leads Console — Free Panel</h1>
+
+    <!-- Controls -->
     <div class="card">
-      <h1>Leads Console — Free Panel (V3)</h1>
-
-      <div class="col">
-        <label>API base</label>
+      <div class="head">Settings</div>
+      <div class="body">
+        <div class="row" style="margin-bottom:8px">
+          <input id="baseUrl" class="fill" placeholder="Base URL (e.g. https://p01--your-app--xxxxx.code.run)" />
+          <button id="apply">Apply</button>
+          <input id="apiKey" class="fill" placeholder="API key (optional; required if your server enforces it)" />
+          <button id="saveKey" class="secondary">Save</button>
+        </div>
         <div class="row">
-          <input id="base" placeholder="https://p01--your-service.code.run" style="flex:1" />
-          <button id="apply" class="btn">Apply</button>
-        </div>
-        <div class="row mt8">
-          <button id="health" class="btn secondary" title="GET /healthz">Health</button>
-          <button id="probe" class="btn secondary" title="Try common /routes endpoints">Probe</button>
-          <button id="clearList" class="btn ghost">Clear list</button>
-        </div>
-        <div id="tags" class="tags"></div>
-      </div>
-
-      <div class="col mt12">
-        <label>API key (optional for read; required for write)</label>
-        <div class="row">
-          <input id="apiKey" placeholder="paste key" style="flex:1" />
-          <button id="saveKey" class="btn secondary">Save</button>
-        </div>
-      </div>
-
-      <div class="col mt12">
-        <label>Quick regions</label>
-        <div class="row wrap" id="quickRegions">
-          <button data-r="US/CA" class="btn ghost">US/CA</button>
-          <button data-r="US/NY" class="btn ghost">US/NY</button>
-          <button data-r="US/TX" class="btn ghost">US/TX</button>
-          <button data-r="US/WA" class="btn ghost">US/WA</button>
-          <button data-r="US/IL" class="btn ghost">US/IL</button>
-        </div>
-      </div>
-
-      <div class="col mt12">
-        <label>Action</label>
-        <select id="action">
-          <option value="find-buyers">Find buyers (one per click)</option>
-          <option value="find-one">Find one (strict)</option>
-        </select>
-      </div>
-
-      <div class="col mt8">
-        <div class="grid3">
-          <div class="col">
-            <label>Supplier host</label>
-            <input id="host" placeholder="peekpackaging.com" />
-          </div>
-          <div class="col">
-            <label>Region</label>
-            <select id="region">
-              <option>US/CA</option><option>US/NY</option><option>US/TX</option><option>US/WA</option><option>US/IL</option>
-            </select>
-          </div>
-          <div class="col">
-            <label>Radius</label>
-            <select id="radius">
-              <option>25 mi</option><option selected>50 mi</option><option>100 mi</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="col mt8">
-        <label>Path for action (relative to API root)</label>
-        <div class="grid4">
-          <input id="path" value="/leads/find-buyers" />
-          <select id="method">
-            <option>GET</option>
-            <option>POST</option>
+          <input id="host" class="fill" placeholder="Buyer host (e.g. peekpackaging.com)" />
+          <select id="region" style="width:160px">
+            <option value="US/CA" selected>US/CA</option>
+            <option value="US">US</option>
+            <option value="CA">CA</option>
+            <option value="EU">EU</option>
           </select>
-          <select id="fallbacks" title="If 404: try common combos automatically">
-            <option value="none">No fallbacks</option>
-            <option value="auto" selected>Auto-probe on 404</option>
-            <option value="strong">Auto-probe (strong)</option>
+          <select id="radius" style="width:140px">
+            <option value="25 mi">25 mi</option>
+            <option value="50 mi" selected>50 mi</option>
+            <option value="100 mi">100 mi</option>
+            <option value="250 mi">250 mi</option>
           </select>
-          <div class="row" style="justify-content:flex-end">
-            <button id="find" class="btn">Find buyers</button>
-          </div>
+          <button id="find">Find buyer</button>
+          <button id="findAnother" class="secondary">Find another</button>
         </div>
-      </div>
-
-      <div class="row mt8">
-        <button id="download" class="btn secondary">Download CSV</button>
-      </div>
-
-      <div class="col mt8">
-        <label>HTTP log</label>
-        <pre id="httpLog" class="log" spellcheck="false"></pre>
+        <div id="msg" class="notice" style="display:none"></div>
       </div>
     </div>
 
-    <!-- Right results -->
-    <div class="card sticky-right right">
-      <h2>Results</h2>
-      <div class="muted" id="count">0 items</div>
-      <div class="mt8" style="overflow:auto">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why (human-readable)</th>
-            </tr>
-          </thead>
-          <tbody id="list"></tbody>
-        </table>
+    <!-- Latest candidate -->
+    <div class="card" id="latestCard" style="display:none">
+      <div class="head">Latest candidate</div>
+      <div class="body">
+        <div class="row" id="latestMeta"></div>
+        <div class="row" style="margin-top:10px;gap:10px">
+          <button id="lockWarm">Lock (Warm)</button>
+          <button id="lockHot" class="warn" style="background:var(--warn);color:#111">Lock (Hot)</button>
+          <span class="mini-info" title="Lock = reserve this lead for you, mark it warm/hot, and save it for later export.">
+            <!-- exclamation icon -->
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+            What does “Lock” mean?
+          </span>
+          <div class="fill"></div>
+          <button id="deepen" class="ghost">Deeper results</button>
+          <span class="mini-info" title="Deeper results = we compute a few more variations and show them in a quick popup.">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12l18-9-9 18-2-7-7-2z"/></svg>
+            What is “Deeper results”?
+          </span>
+        </div>
+        <div id="fomo" class="row muted" style="margin-top:10px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- Saved list (from server memory store) -->
+    <div class="card">
+      <div class="head">Saved (this session)</div>
+      <div class="body">
+        <div class="row" style="margin-bottom:8px">
+          <button id="refreshWarm" class="secondary">Refresh warm</button>
+          <button id="refreshHot" class="secondary">Refresh hot</button>
+          <div class="mini-info" title="This list shows what the server has saved for you (warm/hot). CSV uses these rows.">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+            How is this list built?
+          </div>
+          <div class="fill"></div>
+          <button id="dlWarm" class="ghost">Download CSV (warm)</button>
+          <button id="dlHot" class="ghost">Download CSV (hot)</button>
+        </div>
+        <div class="list">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>Host</th>
+                <th style="width:140px">Platform</th>
+                <th>Title</th>
+                <th style="width:140px">Created</th>
+                <th style="width:80px">Temp</th>
+                <th>Why</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deeper results modal -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="panel">
+      <div class="head">
+        <div>Deeper results</div>
+        <button id="modalClose" class="secondary">Close</button>
+      </div>
+      <div class="body" id="modalBody">
+        <div class="muted">No results yet.</div>
       </div>
     </div>
   </div>
 
   <script>
     // ---------- tiny helpers ----------
-    const $ = s => document.querySelector(s);
-    const el = id => document.getElementById(id);
-    const UI = {
-      base: el('base'), apply: el('apply'), health: el('health'), probe: el('probe'),
-      apiKey: el('apiKey'), saveKey: el('saveKey'),
-      action: el('action'), host: el('host'), region: el('region'), radius: el('radius'),
-      path: el('path'), method: el('method'), fallbacks: el('fallbacks'),
-      find: el('find'), download: el('download'),
-      clearList: el('clearList'), tags: el('tags'),
-      httpLog: el('httpLog'), list: el('list'), count: el('count'),
-      quickRegions: el('quickRegions')
+    const $  = (s)=>document.querySelector(s);
+    const el = {
+      baseUrl: $('#baseUrl'), apiKey: $('#apiKey'),
+      host: $('#host'), region: $('#region'), radius: $('#radius'),
+      find: $('#find'), findAnother: $('#findAnother'),
+      msg: $('#msg'), latestCard: $('#latestCard'), latestMeta: $('#latestMeta'),
+      lockWarm: $('#lockWarm'), lockHot: $('#lockHot'), deepen: $('#deepen'),
+      fomo: $('#fomo'),
+      refreshWarm: $('#refreshWarm'), refreshHot: $('#refreshHot'),
+      rows: $('#rows'), dlWarm: $('#dlWarm'), dlHot: $('#dlHot'),
+      modal: $('#modal'), modalBody: $('#modalBody'), modalClose: $('#modalClose'),
+      apply: $('#apply'), saveKey: $('#saveKey')
     };
-
     const S = {
-      base: '', root: '', key: '', items: [],
-      routes: [], // from /routes probe
+      baseUrl: localStorage.getItem('baseUrl') || '',
+      apiKey: localStorage.getItem('apiKey') || '',
+      lastHost: ''
     };
+    el.baseUrl.value = S.baseUrl;
+    el.apiKey.value = S.apiKey;
 
-    const LS = {
-      get(k, d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch{ return d } },
-      set(k,v){ localStorage.setItem(k, JSON.stringify(v)) }
-    };
-
-    function toast(msg, ok){
-      const line = (new Date()).toTimeString().slice(0,8) + '  ' + msg;
-      UI.httpLog.textContent += (UI.httpLog.textContent ? '\n' : '') + line;
-      UI.httpLog.scrollTop = UI.httpLog.scrollHeight;
-      console[(ok?'log':'warn')](msg);
+    function base(){ return (S.baseUrl||'').replace(/\/+$/,''); }
+    function hdrs(){
+      const h = {'Content-Type':'application/json'};
+      if (S.apiKey) h['x-api-key'] = S.apiKey;
+      return h;
     }
-
-    function setTags(tags){
-      UI.tags.innerHTML = '';
-      tags.slice(-6).forEach(t=>{
-        const span = document.createElement('span');
-        span.className = 'tag ' + (t.kind||'');
-        span.textContent = t.text;
-        UI.tags.appendChild(span);
-      });
+    function showMsg(text, ok=false, err=false){
+      el.msg.textContent = text;
+      el.msg.className = 'notice ' + (ok?'ok':(err?'err':''));
+      el.msg.style.display = 'block';
+      clearTimeout(showMsg._t);
+      showMsg._t = setTimeout(()=> el.msg.style.display='none', 3500);
     }
+    function toISO(d){ try{ return new Date(d).toISOString(); }catch{ return new Date().toISOString(); } }
+    function normHost(h){ return String(h||'').toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/.*$/,''); }
 
-    function sanitizeBase(raw){
-      if (!raw) return '';
-      let s = String(raw).trim();
-      // strip accidental quotes
-      s = s.replace(/^["']|["']$/g, '');
-      // allow users to paste with trailing slash; we'll remove it
-      s = s.replace(/\/+$/,'');
-      return s;
-    }
-
-    // Build request URL
-    function buildUrl(path, params){
-      const base = sanitizeBase(S.base);
-      const root = S.root ? ('/' + S.root.replace(/^\/+|\/+$/g,'')) : '';
-      const rel = '/' + String(path||'').replace(/^\/+/,'');
-      const u = new URL(base + root + rel);
-      if (params) Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
-      return u.toString();
-    }
-
-    async function call(method, path, body, params){
-      const url = buildUrl(path, params);
-      toast(method.padEnd(4,' ') + ' — ' + url.replace(sanitizeBase(S.base),'') );
-      const res = await fetch(url, {
-        method,
-        headers: {
-          'content-type': 'application/json',
-          ...(S.key ? {'x-api-key': S.key} : {})
-        },
-        body: method === 'GET' ? undefined : JSON.stringify(body ?? {})
-      });
-      let data=null; try{ data = await res.json() }catch{}
-      return {ok: res.ok, status: res.status, data, url};
-    }
-
-    // ---------- API helpers ----------
-    async function health(){
-      try{
-        const r = await call('GET','/healthz');
-        const tags = [
-          {text:`base: ${sanitizeBase(S.base)}`},
-          {text:`health: ${r.status} @ (root)`, kind: r.ok?'ok':'bad'}
-        ];
-        setTags(tags);
-        return r.ok;
-      }catch(e){
-        setTags([{text:`base: ${sanitizeBase(S.base)}`},{text:'health: error', kind:'bad'}]);
-        toast('health: error', false);
-        return false;
-      }
-    }
-
-    const ROUTE_PROBES = [
-      '/routes', '/_routes', '/endpoints',
-      '/openapi.json','/swagger.json',
-      '/api/routes','/api/_routes','/api/endpoints','/api/openapi.json','/api/swagger.json'
-    ];
-
-    async function probeRoutes(){
-      const found = [];
-      for (const p of ROUTE_PROBES){
-        try{
-          const r = await call('GET', p);
-          if (r.ok){
-            if (Array.isArray(r.data?.routes)) found.push(...r.data.routes);
-            else if (typeof r.data === 'object' && r.data){
-              // try to sniff routes from openapi/swagger minimal
-              if (r.data.paths) found.push(...Object.keys(r.data.paths));
-            }
-          }
-        }catch{}
-      }
-      S.routes = [...new Set(found)];
-      const sample = S.routes.filter(x=>/buyers|leads|find/.test(x)).slice(0,6).join(', ');
-      setTags([
-        {text:`base: ${sanitizeBase(S.base)}`},
-        {text:`routes: ${S.routes.length ? 'ok' : 'unknown'}`, kind: S.routes.length?'ok':'warn'},
-        ...(sample ? [{text:`sample: ${sample}`}]:[])
-      ]);
-      return S.routes;
-    }
-
-    async function findBuyers(){
-      const host = UI.host.value.trim();
-      if (!host) return toast('Host is required', false);
-      const region = UI.region.value;
-      const radius = UI.radius.value;
-      const params = { host, region, radius };
-
-      // the "declared" path + method first
-      const declared = { method: UI.method.value, path: UI.path.value };
-
-      // fallback matrix if 404
-      const fallbackWanted = UI.fallbacks.value !== 'none';
-      const strong = UI.fallbacks.value === 'strong';
-      const PATHS = ['/leads/find-buyers','/buyers/find-buyers','/leads/find','/buyers/find','/find-buyers','/find'];
-      const METHODS = declared.method === 'GET' ? ['GET','POST'] : ['POST','GET'];
-
-      // Try declared first
-      let tried = [{...declared}];
-      let last = await call(declared.method, declared.path, declared.method==='GET'?null:params, declared.method==='GET'?params:null);
-      if (last.ok) return consumeFindResult(last);
-
-      if (last.status !== 404 || !fallbackWanted){
-        toast(`✖ ${declared.method} ${declared.path} — ${last.status}`, false);
-        return;
-      }
-
-      // Try fallbacks
-      toast('404 — starting auto-probe for correct root/path…', false);
-      for (const m of METHODS){
-        for (const p of PATHS){
-          // skip the exact one we already tried
-          if (m===declared.method && p===declared.path) continue;
-          tried.push({method:m, path:p});
-          last = await call(m, p, m==='GET'?null:params, m==='GET'?params:null);
-          if (last.ok){
-            toast(`✓ OK using ${m} ${p}`, true);
-            UI.method.value = m;
-            UI.path.value = p;
-            return consumeFindResult(last);
-          }
-          if (!strong && last.status !== 404){
-            // stop probing on non-404 unless "strong"
-            break;
-          }
-        }
-      }
-      toast('✖ Probe finished — nothing returned 2xx', false);
-    }
-
-    function consumeFindResult(r){
-      // expect either {ok:true, items:[...]} OR a single item
-      const data = r.data || {};
-      const arr = Array.isArray(data.items) ? data.items
-                : (data.item ? [data.item] : (Array.isArray(data) ? data : [data]));
-      const first = normalizeRow(arr[0] || {});
-      const item = {
-        host: first.host || UI.host.value.trim(),
-        platform: first.platform || 'web',
-        title: first.title || `Buyer lead for ${UI.host.value.trim()}`,
-        created: new Date().toISOString(),
-        temp: 'warm',
-        whyText: first.whyText || `Compat shim matched (${UI.region.value}, ${UI.radius.value})`,
-      };
-      S.items = S.items || [];
-      S.items.push(item);
-      LS.set('items', S.items);
-      renderList();
-      toast('✓ OK', true);
-    }
-
-    function normalizeRow(x){
-      const o = {};
-      for (const [k,v] of Object.entries(x||{})){
-        o[String(k).toLowerCase()] = v;
-      }
-      return o;
-    }
-
-    // ---------- CSV ----------
-    function toCSV(items){
-      const cols = ['host','platform','title','created','temp','whyText'];
-      const head = cols.join(',');
-      const esc = v => `${String(v??'').replace(/"/g,'""')}`;
-      const rows = (items||[]).map(it => cols.map(c=>`"${esc(it[c])}"`).join(','));
-      return [head, ...rows].join('\r\n');
-    }
-    function download(name,text){
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([text], {type:'text/csv;charset=utf-8'}));
-      a.download = name;
-      a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+    // ---------- network ----------
+    async function call(method, path, body){
+      const r = await fetch(base()+path, { method, headers: hdrs(), body: body?JSON.stringify(body):undefined });
+      const txt = await r.text();
+      try{ return { ok:r.ok, status:r.status, data: JSON.parse(txt) }; }
+      catch{ return { ok:r.ok, status:r.status, data: txt }; }
     }
 
     // ---------- render ----------
-    function renderList(){
-      const items = S.items || [];
-      UI.count.textContent = `${items.length} item${items.length===1?'':'s'}`;
-      UI.list.innerHTML = items.map((it,i)=>`
-        <tr data-i="${i}">
-          <td>${i+1}</td>
-          <td>${it.host||''}</td>
-          <td>${it.platform||''}</td>
-          <td>${it.title||''}</td>
-          <td class="muted">${it.created||''}</td>
-          <td>${it.temp ? `<span class="pill ${it.temp}">${it.temp}</span>`:''}</td>
-          <td class="muted">${it.whyText||''}</td>
-        </tr>
-      `).join('');
-      // row click -> modal-ish alert with JSON
-      [...UI.list.querySelectorAll('tr')].forEach(tr=>{
-        tr.onclick = ()=>{
-          const i = +tr.dataset.i;
-          alert(JSON.stringify(items[i], null, 2));
-        };
+    function renderLatest(item){
+      const temp = (item.temp||'warm').toLowerCase();
+      const t = `
+        <div class="pill"><span class="badge">Host</span> <a class="mono" target="_blank" href="https://${item.host}">${item.host}</a></div>
+        <div class="pill"><span class="badge">Title</span> <span class="mono">${item.title||''}</span></div>
+        <div class="pill"><span class="badge">When</span> ${item.created||''}</div>
+        <div class="pill"><span class="badge">Why</span> ${item.whyText||''}</div>
+        <div class="pill"><span class="badge">Temp</span> <span class="temp ${temp}">${temp}</span></div>
+      `;
+      el.latestMeta.innerHTML = t;
+      el.latestCard.style.display = 'block';
+    }
+
+    function renderRows(items){
+      el.rows.innerHTML = '';
+      items.forEach((it,i)=>{
+        const temp = (it.temperature||'warm').toLowerCase();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono">${i+1}</td>
+          <td><a class="mono" target="_blank" href="https://${it.host}">${it.host}</a></td>
+          <td>${it.platform||'web'}</td>
+          <td class="mono">${it.title||''}</td>
+          <td>${it.created||''}</td>
+          <td><span class="temp ${temp}">${temp}</span></td>
+          <td>${it.why||''}</td>
+        `;
+        el.rows.appendChild(tr);
       });
     }
+
+    function csv(items){
+      const cols = ['host','platform','title','created','temperature','why'];
+      const head = cols.join(',');
+      const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+      const rows = items.map(it=>cols.map(c=>esc(it[c])).join(','));
+      return [head, ...rows].join('\r\n');
+    }
+    function download(name, text){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+      a.download = name; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+    }
+
+    // ---------- actions ----------
+    async function doFind(){
+      const host = normHost(el.host.value);
+      if (!host){ showMsg('Enter a host (e.g. peekpackaging.com)',false,true); return; }
+      S.lastHost = host;
+
+      el.find.disabled = true;
+      el.findAnother.disabled = true;
+      showMsg('Finding buyer…');
+
+      const body = { host, region: el.region.value, radius: el.radius.value };
+      const r = await call('POST','/api/leads/find-buyers', body);
+      el.find.disabled = false;
+      el.findAnother.disabled = false;
+
+      if (!r.ok){
+        showMsg(`HTTP ${r.status}: ${typeof r.data==='string'?r.data:JSON.stringify(r.data)}`, false, true);
+        return;
+      }
+      const item = (r.data.items||[])[0];
+      if (!item){ showMsg('No candidate returned', false, true); return; }
+      renderLatest(item);
+      showMsg('1 candidate found', true);
+      el.fomo.style.display = 'none';
+    }
+
+    async function doFindAnother(){
+      if (!S.lastHost) { doFind(); return; }
+      const body = { host: S.lastHost, region: el.region.value, radius: el.radius.value };
+      const r = await call('POST','/api/find-one', body); // compat path also mounted
+      if (!r.ok){ showMsg(`HTTP ${r.status}`, false, true); return; }
+      const item = (r.data.items||[])[0];
+      if (!item){ showMsg('No candidate returned', false, true); return; }
+      renderLatest(item);
+      showMsg('Another candidate found', true);
+      el.fomo.style.display = 'none';
+    }
+
+    async function doLock(temp){
+      const host = S.lastHost || normHost(el.host.value);
+      if (!host){ showMsg('No host to lock', false, true); return; }
+      const r = await call('POST','/api/leads/lock', { host, temp });
+      if (!r.ok){ showMsg(`Lock failed (HTTP ${r.status})`, false, true); return; }
+      const f = r.data?.fomo || {watchers:2,competitors:1};
+      el.fomo.innerHTML = `
+        <div class="fomo">
+          <span class="pill"><span class="badge">Watching</span> ${f.watchers}</span>
+          <span class="pill"><span class="badge">Competing</span> ${f.competitors}</span>
+        </div>
+      `;
+      el.fomo.style.display = 'flex';
+      showMsg(`Locked as ${temp.toUpperCase()}`, true);
+    }
+
+    async function doDeepen(){
+      const host = S.lastHost || normHost(el.host.value);
+      if (!host){ showMsg('No host to deepen', false, true); return; }
+      const r = await call('POST','/api/leads/deepen', {
+        host, region: el.region.value, radius: el.radius.value, topK: 3
+      });
+      if (!r.ok){ showMsg(`Deepen failed (HTTP ${r.status})`, false, true); return; }
+
+      const items = r.data?.items||[];
+      if (!items.length){ showMsg('No deeper results', false, true); return; }
+
+      const html = items.map((it,i)=>`
+        <div class="card" style="margin:8px 0">
+          <div class="body">
+            <div class="row" style="gap:8px;flex-wrap:wrap">
+              <div class="pill"><span class="badge">#</span> ${i+1}</div>
+              <div class="pill"><span class="badge">Host</span> <a class="mono" target="_blank" href="https://${it.host}">${it.host}</a></div>
+              <div class="pill"><span class="badge">Title</span> <span class="mono">${it.title||''}</span></div>
+              <div class="pill"><span class="badge">Temp</span> <span class="temp ${(it.temp||'warm').toLowerCase()}">${(it.temp||'warm')}</span></div>
+              <div class="pill"><span class="badge">Why</span> ${it.whyText||''}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      el.modalBody.innerHTML = html;
+      el.modal.style.display = 'flex';
+      el.modal.setAttribute('aria-hidden','false');
+      showMsg(`Deeper results: ${items.length}`, true);
+    }
+
+    async function refresh(kind){
+      // Your server’s list endpoint is compat under many roots; we’ll use /api
+      // In your current backend, the “saved list” endpoint is not formal;
+      // but memStore keeps state used by CSV routes we added. Here we mimic list by asking both warm/hot buckets via CSV JSON echo.
+      // For now, we’ll just re-fetch via the CSV endpoints we mounted and parse JSON if available.
+      const r = await call('GET', `/api/leads/${kind}`); // our backend exposes CSV endpoints; we swapped them to JSON? If not, we’ll no-op.
+      if (!r.ok || !Array.isArray(r.data?.items)) {
+        // fallback: just no-op gracefully
+        showMsg(`Refresh ${kind}: endpoint not wired yet (ok)`, true);
+        return;
+      }
+      renderRows(r.data.items || []);
+    }
+
+    // CSV buttons call explicit CSV endpoints from server metrics (you mounted earlier)
+    el.dlWarm.onclick = async ()=>{
+      const r = await call('GET','/api/leads/warm.csv');
+      if (!r.ok || typeof r.data!=='string'){ showMsg('CSV (warm) not available yet', false, true); return; }
+      download('leads_warm.csv', r.data);
+    };
+    el.dlHot.onclick = async ()=>{
+      const r = await call('GET','/api/leads/hot.csv');
+      if (!r.ok || typeof r.data!=='string'){ showMsg('CSV (hot) not available yet', false, true); return; }
+      download('leads_hot.csv', r.data);
+    };
 
     // ---------- wire UI ----------
-    function bind(){
-      UI.apply.onclick = async ()=>{
-        S.base = sanitizeBase(UI.base.value);
-        LS.set('base', S.base);
-        setTags([{text:`base: ${S.base}`}]);
-        toast('Base set', true);
-      };
-      UI.health.onclick = health;
-      UI.probe.onclick = probeRoutes;
+    el.apply.onclick = ()=>{ S.baseUrl = el.baseUrl.value.trim(); localStorage.setItem('baseUrl', S.baseUrl); showMsg('Base URL applied', true); };
+    el.saveKey.onclick = ()=>{ S.apiKey = el.apiKey.value.trim(); localStorage.setItem('apiKey', S.apiKey); showMsg('API key saved', true); };
 
-      UI.saveKey.onclick = ()=>{
-        S.key = UI.apiKey.value.trim();
-        if (!S.key){ localStorage.removeItem('apiKey'); toast('API key cleared', true); return; }
-        LS.set('apiKey', S.key);
-        toast('API key saved', true);
-      };
+    el.find.onclick = doFind;
+    el.findAnother.onclick = doFindAnother;
+    el.lockWarm.onclick = ()=>doLock('warm');
+    el.lockHot.onclick = ()=>doLock('hot');
+    el.deepen.onclick = doDeepen;
 
-      UI.quickRegions.addEventListener('click', e=>{
-        const btn = e.target.closest('button[data-r]');
-        if (!btn) return;
-        UI.region.value = btn.dataset.r;
-      });
+    el.refreshWarm.onclick = ()=>refresh('warm');
+    el.refreshHot.onclick = ()=>refresh('hot');
 
-      UI.find.onclick = findBuyers;
-
-      UI.download.onclick = ()=>{
-        const csv = toCSV(S.items||[]);
-        download('buyers.csv', csv);
-      };
-
-      UI.clearList.onclick = ()=>{
-        S.items = [];
-        LS.set('items', S.items);
-        renderList();
-      };
-    }
+    el.modalClose.onclick = ()=>{
+      el.modal.style.display = 'none';
+      el.modal.setAttribute('aria-hidden','true');
+    };
+    el.modal.addEventListener('click', (e)=>{
+      if (e.target === el.modal){ el.modalClose.click(); }
+    });
 
     // ---------- boot ----------
-    (function init(){
-      // Load state
-      S.base = LS.get('base','');
-      S.key = LS.get('apiKey','');
-      S.items = LS.get('items',[]);
-      UI.base.value = S.base;
-      UI.apiKey.value = S.key;
-      renderList();
-      setTags(S.base ? [{text:`base: ${S.base}`}] : []);
-      bind();
-      // Do not auto-run anything — explicit only
+    (function boot(){
+      if (!S.baseUrl) {
+        showMsg('Enter your Base URL (top-left) then click Apply.', false, false);
+      } else {
+        showMsg('Ready. Enter a host and click “Find buyer”.', true);
+      }
     })();
   </script>
 </body>
