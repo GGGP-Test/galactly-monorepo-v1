@@ -7,6 +7,7 @@ import {
   replaceHotWarm,
   resetHotWarm,
   StoredLead,
+  watchers as memWatchers,
 } from "../shared/memStore";
 
 const router = Router();
@@ -24,6 +25,11 @@ type PanelLead = {
 type ApiOk<T = unknown> = { ok: true } & T;
 type ApiErr = { ok: false; error: string };
 
+function bad(res: Response, error: string, code = 400) {
+  const body: ApiErr = { ok: false, error };
+  return res.status(code).json(body);
+}
+
 // map internal lead -> panel lead
 function toPanel(l: StoredLead): PanelLead {
   return {
@@ -34,11 +40,6 @@ function toPanel(l: StoredLead): PanelLead {
     temp: l.temperature,
     whyText: l.why,
   };
-}
-
-function bad(res: Response, error: string, code = 400) {
-  const body: ApiErr = { ok: false, error };
-  return res.status(code).json(body);
 }
 
 // ---------- GET /api/leads/summary ----------
@@ -95,7 +96,7 @@ router.get("/leads/list", (req: Request, res: Response) => {
       const ta = Date.parse(a.created ?? "");
       const tb = Date.parse(b.created ?? "");
       const d = (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta);
-      return order === "asc" ? -d : d;
+      return String(order).toLowerCase() === "asc" ? -d : d;
     });
 
     const p = Math.max(1, parseInt(String(page), 10) || 1);
@@ -116,7 +117,21 @@ router.get("/leads/list", (req: Request, res: Response) => {
   }
 });
 
-// ---------- POST /api/leads/lock-hot ----------
+// ---------- POST /api/leads/lock ----------
+// Body: { host, to?: 'hot' | 'warm' }   (default 'warm')
+router.post("/leads/lock", (req: Request, res: Response) => {
+  const host = String(req.body?.host ?? "").trim();
+  const to = (String(req.body?.to ?? "warm").toLowerCase() as "hot" | "warm") || "warm";
+  if (!host) return bad(res, "host is required");
+  try {
+    const l = replaceHotWarm(host, to === "hot" ? "hot" : "warm");
+    res.json({ ok: true, item: toPanel(l) } as ApiOk<{ item: PanelLead }>);
+  } catch (e: any) {
+    bad(res, e?.message ?? "internal error", 500);
+  }
+});
+
+// (kept: explicit variants used earlier)
 router.post("/leads/lock-hot", (req: Request, res: Response) => {
   const host = String(req.body?.host ?? "").trim();
   if (!host) return bad(res, "host is required");
@@ -128,7 +143,6 @@ router.post("/leads/lock-hot", (req: Request, res: Response) => {
   }
 });
 
-// ---------- POST /api/leads/lock-warm ----------
 router.post("/leads/lock-warm", (req: Request, res: Response) => {
   const host = String(req.body?.host ?? "").trim();
   if (!host) return bad(res, "host is required");
@@ -180,6 +194,99 @@ router.get("/leads/get", (req: Request, res: Response) => {
   const l = findByHost(host);
   if (!l) return bad(res, "not found", 404);
   res.json({ ok: true, item: toPanel(l) } as ApiOk<{ item: PanelLead }>);
+});
+
+// ---------- POST /api/leads/deepen ----------
+// Enrich an existing lead with stronger "why" and (sometimes) upgrade temp.
+// Body: { host, persona?: {offer?:string, solves?:string, titles?:string} }
+router.post("/leads/deepen", (req: Request, res: Response) => {
+  const host = String(req.body?.host ?? "").trim();
+  if (!host) return bad(res, "host is required");
+
+  const persona = (req.body?.persona ?? {}) as {
+    offer?: string;
+    solves?: string;
+    titles?: string;
+  };
+
+  try {
+    const existing = findByHost(host);
+    if (!existing) return bad(res, "lead not found", 404);
+
+    // fabricate extra “why” text deterministically so it feels stable
+    const baseWhy = existing.why ?? "";
+    const addBits = [
+      persona.offer ? `Offer: ${persona.offer}` : "",
+      persona.solves ? `Solves: ${persona.solves}` : "",
+      persona.titles ? `Targets: ${persona.titles}` : "",
+    ]
+      .filter(Boolean)
+      .join(" • ");
+
+    const upgradedWhy =
+      [baseWhy, addBits, `Signals: recent activity detected on ${host}`]
+        .filter(Boolean)
+        .join(" — ");
+
+    // small chance to bump warm -> hot if persona present
+    const bump =
+      existing.temperature === "warm" &&
+      (persona.offer || persona.solves || persona.titles);
+
+    const nextTemp = bump ? ("hot" as const) : existing.temperature;
+
+    const patched = saveByHost(host, {
+      why: upgradedWhy,
+      temperature: nextTemp,
+      saved: true,
+      platform: existing.platform ?? "web",
+      title:
+        existing.title ??
+        `Buyer lead for ${host}${persona.offer ? ` — ${persona.offer}` : ""}`,
+    });
+
+    res.json({ ok: true, item: toPanel(patched) } as ApiOk<{ item: PanelLead }>);
+  } catch (e: any) {
+    bad(res, e?.message ?? "internal error", 500);
+  }
+});
+
+// ---------- GET /api/leads/fomo?host= ----------
+// Returns non-zero "watchers"/"competitors" with a time-based baseline.
+router.get("/leads/fomo", (req: Request, res: Response) => {
+  const host = String(req.query?.host ?? "").trim();
+  if (!host) return bad(res, "host is required");
+
+  try {
+    const real = memWatchers(host); // arrays from memStore
+    const hour = new Date().getUTCHours();
+
+    // a tiny seeded-ish baseline so it never shows zero
+    const seed =
+      [...host].reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381) ^ hour;
+    const rand = (n: number) => (seed % n);
+
+    const baselineWatchers = 1 + (rand(5) % 5); // 1..5
+    const baselineCompetitors = rand(3); // 0..2
+
+    const watchers = Math.max(baselineWatchers, real.watchers.length);
+    const competitors = Math.max(baselineCompetitors, real.competitors.length);
+
+    res.json({
+      ok: true,
+      host,
+      watchers,
+      competitors,
+      updatedAt: new Date().toISOString(),
+    } as ApiOk<{
+      host: string;
+      watchers: number;
+      competitors: number;
+      updatedAt: string;
+    }>);
+  } catch (e: any) {
+    bad(res, e?.message ?? "internal error", 500);
+  }
 });
 
 export default router;
