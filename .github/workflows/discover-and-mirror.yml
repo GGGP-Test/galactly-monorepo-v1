@@ -1,0 +1,75 @@
+name: Discover and Mirror External Repos
+
+on:
+  schedule: [{ cron: "7 * * * *" }]   # every hour at :07
+  workflow_dispatch: {}
+
+env:
+  SOURCE_USER: "zie619"               # <- change if needed
+  TARGET_ORG:  "galactyl-feeds"       # <- your private org for mirrors
+  VISIBILITY:  "private"              # private mirrors
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Install git & gh
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y git jq
+          type gh || (type curl && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+            | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
+            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+            | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+            sudo apt-get update -y && sudo apt-get install -y gh)
+
+      - name: Auth gh (to manage org repos)
+        env:
+          GH_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: gh auth status || gh auth login --with-token <<<"$GH_TOKEN"
+
+      - name: List repos from source user
+        id: list
+        env:
+          GH_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          gh api -H "Accept: application/vnd.github+json" \
+            /users/${SOURCE_USER}/repos?per_page=100 \
+            > repos.json
+          cat repos.json | jq -r '.[].name' > names.txt
+          echo "count=$(wc -l < names.txt)" >> $GITHUB_OUTPUT
+
+      - name: Ensure mirror repos exist in target org
+        env:
+          GH_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          while read -r NAME; do
+            if gh repo view "${TARGET_ORG}/${NAME}" >/dev/null 2>&1; then
+              echo "repo exists: ${TARGET_ORG}/${NAME}"
+            else
+              echo "creating: ${TARGET_ORG}/${NAME}"
+              gh repo create "${TARGET_ORG}/${NAME}" --private --confirm --disable-issues --disable-wiki
+            fi
+          done < names.txt
+
+      - name: Mirror push each repo (all branches/tags)
+        env:
+          GH_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          git config --global init.defaultBranch main
+          while read -r NAME; do
+            SRC="https://github.com/${SOURCE_USER}/${NAME}.git"
+            DST="https://${GH_TOKEN}@github.com/${TARGET_ORG}/${NAME}.git"
+            echo "::group::Mirroring $NAME"
+            rm -rf work && mkdir -p work && cd work
+            git clone --mirror "$SRC" repo || { echo "skip $NAME (clone failed)"; cd ..; echo "::endgroup::"; continue; }
+            cd repo
+            git remote set-url --push origin "$DST"
+            git push --mirror || echo "push failed for $NAME"
+            cd ../..; rm -rf work
+            echo "::endgroup::"
+          done < names.txt
