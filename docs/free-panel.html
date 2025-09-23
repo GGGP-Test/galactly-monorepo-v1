@@ -1,128 +1,183 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Leads Console — Free Panel (V3)</title>
-  <link rel="icon" href="data:,"><!-- prevent favicon 404 -->
   <style>
-    :root { --bg:#0e1621; --card:#131c26; --muted:#7e8a9a; --text:#e7eef7; --btn:#3a86ff; --ok:#16a34a; --warn:#f59e0b; }
+    :root{
+      --bg:#0f1720; --panel:#151e29; --muted:#9bb3c7; --text:#e9f0f7;
+      --accent:#4ea7ff; --accent-2:#67d4a6; --danger:#ff6b6b; --warn:#f6c667;
+      --line:#213042; --chip:#1d2a38;
+    }
     *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-    .wrap{display:grid;grid-template-columns:420px 1fr;gap:16px;padding:18px}
-    .panel{background:var(--card);border:1px solid #1f2b3a;border-radius:10px;padding:14px;min-width:0}
-    h1{margin:0 0 8px;font-size:18px}
-    label{display:block;margin:12px 0 6px;color:#9fb1c6;font-weight:600}
-    input,select,textarea{width:100%;background:#0b121a;color:var(--text);border:1px solid #223144;border-radius:8px;padding:10px 12px}
-    textarea{min-height:120px;resize:vertical;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
-    .row{display:grid;grid-template-columns:1fr auto auto;gap:8px}
-    .row-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .row-3{display:grid;grid-template-columns:1fr 120px 140px;gap:8px}
-    button{background:#1f2b3a;color:#dbe7f6;border:1px solid #2a3b53;border-radius:8px;padding:9px 12px;cursor:pointer}
-    button.primary{background:var(--btn);border-color:#2b5fd6;color:#fff}
-    button.ok{background:#14351e;border-color:#1f6f3e;color:#a7f3d0}
-    button.warn{background:#3c2e12;border-color:#a16207;color:#fde68a}
-    button:disabled{opacity:.55;cursor:not-allowed}
-    .tags{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 0}
-    .tag, .pill{font:12px/1.1 ui-monospace,monospace;background:#0b121a;border:1px dashed #2a3b53;color:#9fb1c6;padding:4px 8px;border-radius:999px}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px 8px;border-bottom:1px solid #1f2b3a;text-align:left}
-    th{color:#9fb1c6;font-weight:600;position:sticky;top:0;background:var(--card)}
-    .temp-warm{color:#fde68a}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--text); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      overflow-x:hidden;
+    }
+    a{color:var(--accent)}
+    .wrap{
+      max-width:1200px; margin:24px auto; padding:0 16px;
+      display:grid; grid-template-columns:360px 1fr; gap:16px;
+    }
+    @media (max-width:980px){ .wrap{ grid-template-columns:1fr; } }
+    .card{
+      background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px;
+      box-shadow:0 1px 0 #0002 inset, 0 1px 16px #0003;
+    }
+    .title{font-weight:600; margin-bottom:8px}
+    .row{display:flex; gap:8px; align-items:center; margin:8px 0}
+    .col{display:flex; flex-direction:column; gap:6px}
+    label{font-size:12px; color:var(--muted)}
+    input[type="text"], select, textarea{
+      width:100%; background:#0d1520; color:var(--text);
+      border:1px solid var(--line); border-radius:8px; padding:10px 12px; outline:none;
+    }
+    textarea{min-height:140px; resize:vertical}
+    .btn{
+      appearance:none; border:1px solid var(--line); background:#0d1520; color:var(--text);
+      padding:10px 12px; border-radius:10px; cursor:pointer; transition:background .15s, border-color .15s, opacity .15s;
+      user-select:none; white-space:nowrap;
+    }
+    .btn:hover{border-color:#2a415a}
+    .btn.primary{background:var(--accent); color:#04111d; border-color:#1a8be8}
+    .btn.success{background:var(--accent-2); color:#04110a; border-color:#3bbd8b}
+    .btn.warn{background:var(--warn); color:#1a1300; border-color:#d4a63b}
+    .btn.danger{background:var(--danger); color:#180707; border-color:#d85a5a}
+    .btn.ghost{background:#0d1520}
+    .btn:disabled{opacity:.6; cursor:not-allowed}
+    .chips{display:flex; gap:6px; flex-wrap:wrap}
+    .chip{background:var(--chip); border:1px solid var(--line); color:var(--muted); padding:6px 10px; border-radius:999px; font-size:12px; cursor:pointer}
+    .chip:hover{color:var(--text); border-color:#2a415a}
+    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px}
+    .pill{padding:3px 6px; border-radius:999px; font-size:12px; background:#102235; color:#9dc7ff; border:1px solid #2a415a}
+    .table{width:100%; border-collapse:collapse; overflow:hidden; border-radius:12px; border:1px solid var(--line)}
+    .table th, .table td{padding:10px 12px; border-bottom:1px solid var(--line); text-align:left}
+    .table th{background:#0d1520; color:#bcd0e0; font-weight:600}
+    .table tr:hover td{background:#101a26}
     .muted{color:var(--muted)}
-    @media (max-width:1000px){ .wrap{grid-template-columns:1fr} }
+    .right{margin-left:auto}
+    .tag-warm{background:#392a05; color:#ffd37a; border:1px solid #6a510e}
+    .row-split{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+    @media (max-width:520px){ .row-split{grid-template-columns:1fr} }
+    /* modal */
+    dialog{border:none; border-radius:12px; padding:0; width:min(720px,90vw); background:#0f1823; color:var(--text)}
+    dialog::backdrop{background:#0008}
+    .modal-hd{display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--line)}
+    .modal-bd{padding:12px 14px}
+    pre{margin:0; white-space:pre-wrap; word-break:break-word}
+    /* small spinner */
+    .spin{display:inline-block; width:14px; height:14px; border:2px solid #0000; border-top-color:#082742; border-right-color:#082742; border-radius:50%; animation:spin .7s linear infinite; vertical-align:-2px}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="panel" id="left">
-      <h1>Leads Console — Free Panel (V3)</h1>
+    <!-- Left: controls -->
+    <div class="card" id="left">
+      <div class="title">Leads Console — Free Panel (V3)</div>
 
-      <label for="base">API base</label>
-      <div class="row">
-        <input id="base" placeholder="https://p01--your-app.code.run"/>
-        <button id="apply" class="primary">Apply</button>
-        <button id="clearList">Clear list</button>
+      <div class="col">
+        <label>API base</label>
+        <div class="row">
+          <input id="base" type="text" placeholder="https://p01--animated-cellar--xxxxx.code.run" />
+          <button class="btn primary" id="apply">Apply</button>
+        </div>
+        <div class="row">
+          <button class="btn" id="health">Health</button>
+          <button class="btn" id="probe">Probe</button>
+          <button class="btn ghost right" id="clearList">Clear list</button>
+        </div>
+        <div class="chips muted kbd" id="crumbs"></div>
       </div>
 
-      <label for="root">API root (prefixed to paths)</label>
-      <div class="row">
-        <input id="root" placeholder="(blank for none, example: /api or /api/v1)"/>
-        <button id="health" class="ok">Health</button>
-        <button id="probe" class="warn">Probe</button>
-      </div>
-
-      <label for="key">API key (optional for read; required for write)</label>
-      <div class="row">
-        <input id="key" placeholder="paste key"/>
-        <button id="saveKey">Save</button>
-        <button id="clrKey">Clear</button>
-      </div>
-
-      <div class="tags" id="quickTags"></div>
-
-      <label>Action</label>
-      <select id="action">
-        <option value="find-buyers" selected>Find buyers (one per click)</option>
-        <option value="find-one">Find one (strict)</option>
-      </select>
-
-      <label for="host">Supplier host</label>
-      <input id="host" placeholder="peekpackaging.com"/>
-
-      <label>Region / Radius</label>
-      <div class="row-2">
-        <select id="region">
-          <option>US/CA</option><option>US/NY</option><option>US/WA</option><option>US/TX</option>
-        </select>
-        <select id="radius">
-          <option>25 mi</option><option selected>50 mi</option><option>100 mi</option>
-        </select>
-      </div>
-
-      <label>Path for action (relative to API root)</label>
-      <div class="row-3">
-        <input id="path" value="/leads/find-buyers"/>
-        <select id="method">
-          <option>GET</option><option>POST</option>
-        </select>
-        <select id="fallbacks">
-          <option value="auto">Auto-probe on 404</option>
-          <option value="none" selected>No fallbacks</option>
-        </select>
-      </div>
-
-      <div class="row" style="margin-top:10px">
-        <div></div>
-        <button id="find" class="primary">Find buyers</button>
-        <button id="dlCSV">Download CSV</button>
-      </div>
-
-      <label>HTTP log</label>
-      <textarea id="httpLog" readonly></textarea>
-    </div>
-
-    <div class="panel" id="right">
-      <div class="row" style="grid-template-columns:1fr auto;align-items:center">
-        <div class="muted" id="count">0 items</div>
-        <div>
-          <span class="pill" id="pillHealth">health: unknown</span>
-          <span class="pill" id="pillRoutes">routes: (tap Probe)</span>
-          <span class="pill" id="pillRoot">root: (auto)</span>
+      <div class="col" style="margin-top:12px">
+        <label>API key (optional for read; required for write)</label>
+        <div class="row">
+          <input id="apiKey" type="text" placeholder="paste key" />
+          <button class="btn" id="saveKey">Save</button>
         </div>
       </div>
-      <div style="overflow:auto; margin-top:10px; max-height:76vh;">
-        <table id="tbl">
+
+      <div class="col" style="margin-top:12px">
+        <label>Quick regions</label>
+        <div class="chips" id="quickRegions">
+          <div class="chip" data-r="US/CA">US/CA</div>
+          <div class="chip" data-r="US/NY">US/NY</div>
+          <div class="chip" data-r="US/TX">US/TX</div>
+          <div class="chip" data-r="US/WA">US/WA</div>
+          <div class="chip" data-r="US/IL">US/IL</div>
+        </div>
+      </div>
+
+      <div class="col" style="margin-top:12px">
+        <label>Action</label>
+        <select id="action">
+          <option value="find-buyers">Find buyers (one per click)</option>
+          <option value="find-one">Find one (strict)</option>
+        </select>
+      </div>
+
+      <div class="col row-split" style="margin-top:6px">
+        <div>
+          <label>Supplier host</label>
+          <input id="host" type="text" placeholder="example.com" />
+        </div>
+        <div>
+          <label>Region / Radius</label>
+          <div class="row">
+            <select id="region" style="min-width:120px">
+              <option>US/CA</option><option>US/NY</option><option>US/TX</option><option>US/WA</option><option>US/IL</option>
+            </select>
+            <select id="radius" style="min-width:90px">
+              <option>25 mi</option><option selected>50 mi</option><option>100 mi</option><option>200 mi</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="col" style="margin-top:6px">
+        <label>Path for action (relative to API root)</label>
+        <div class="row">
+          <input id="path" type="text" class="kbd" placeholder="/leads/find-buyers" />
+          <select id="method" style="min-width:90px">
+            <option>GET</option><option>POST</option>
+          </select>
+          <select id="fallbacks" title="If 404, try common roots/paths automatically">
+            <option value="auto">Auto-probe on 404</option>
+            <option value="none" selected>No fallbacks</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <button class="btn success" id="go"><span id="goSpin" class="spin" style="display:none"></span> <span id="goTxt">Find buyers</span></button>
+        <button class="btn" id="dlCsvHot" title="Download results as CSV">Download CSV</button>
+      </div>
+
+      <div class="col" style="margin-top:12px">
+        <label>HTTP log</label>
+        <textarea id="httpLog" class="kbd" spellcheck="false"></textarea>
+      </div>
+    </div>
+
+    <!-- Right: results -->
+    <div class="card" id="right">
+      <div class="title">Results</div>
+      <div class="muted kbd" id="summary" style="margin:6px 0 10px 0">0 items</div>
+      <div style="overflow:auto; border-radius:12px">
+        <table class="table" id="tbl">
           <thead>
-          <tr>
-            <th style="width:48px;">#</th>
-            <th>Host</th>
-            <th>Platform</th>
-            <th>Title</th>
-            <th>Created</th>
-            <th>Temp</th>
-            <th>Why (human-readable)</th>
-          </tr>
+            <tr>
+              <th style="width:48px">#</th>
+              <th>Host</th>
+              <th>Platform</th>
+              <th>Title</th>
+              <th>Created</th>
+              <th>Temp</th>
+              <th>Why (human-readable)</th>
+            </tr>
           </thead>
           <tbody id="rows"></tbody>
         </table>
@@ -130,259 +185,309 @@
     </div>
   </div>
 
-<script>
-(() => {
-  // ---------- state ----------
-  const S = { base:'', root:'', key:'', items:[], routes:null, lastOK:null };
+  <!-- inspect modal -->
+  <dialog id="inspector">
+    <div class="modal-hd">
+      <div class="kbd" id="inspectTitle">Result</div>
+      <button class="btn" id="inspectClose">Close</button>
+    </div>
+    <div class="modal-bd">
+      <pre id="inspectJson" class="kbd"></pre>
+    </div>
+  </dialog>
 
-  // ---------- dom ----------
-  const $ = s => document.querySelector(s);
-  const UI = {
-    base:$('#base'), apply:$('#apply'), clearList:$('#clearList'),
-    root:$('#root'), health:$('#health'), probe:$('#probe'),
-    key:$('#key'), saveKey:$('#saveKey'), clrKey:$('#clrKey'),
-    action:$('#action'), host:$('#host'), region:$('#region'), radius:$('#radius'),
-    path:$('#path'), method:$('#method'), fallbacks:$('#fallbacks'),
-    find:$('#find'), dlCSV:$('#dlCSV'),
-    log:$('#httpLog'), rows:$('#rows'), count:$('#count'),
-    pillHealth:$('#pillHealth'), pillRoutes:$('#pillRoutes'), pillRoot:$('#pillRoot'),
-    tags:$('#quickTags')
-  };
+  <script>
+    // ------- tiny helpers
+    const $ = sel => document.querySelector(sel);
+    const UI = {
+      base: $('#base'), apply: $('#apply'), health: $('#health'), probe: $('#probe'),
+      apiKey: $('#apiKey'), saveKey: $('#saveKey'),
+      action: $('#action'), host: $('#host'), region: $('#region'), radius: $('#radius'),
+      path: $('#path'), method: $('#method'), fallbacks: $('#fallbacks'),
+      go: $('#go'), goSpin: $('#goSpin'), goTxt: $('#goTxt'),
+      httpLog: $('#httpLog'), rows: $('#rows'), summary: $('#summary'),
+      clearList: $('#clearList'), dlCsvHot: $('#dlCsvHot'),
+      quickRegions: $('#quickRegions'), inspector: $('#inspector'),
+      inspectTitle: $('#inspectTitle'), inspectJson: $('#inspectJson'), inspectClose: $('#inspectClose'),
+      crumbs: $('#crumbs')
+    };
 
-  // ---------- utils ----------
-  const log = (line) => {
-    const ts = new Date().toLocaleTimeString('en-US',{hour12:false});
-    UI.log.value += `[${ts}] ${line}\n`; UI.log.scrollTop = UI.log.scrollHeight;
-  };
-  const stripQuotes = s => (s||'').trim().replace(/^["']+|["']+$/g,'');
-  const ensureScheme = s => /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s) ? s : (s ? `https://${s}` : s);
-  const trimSlashes = s => s.replace(/\/+$/,'');
-  const leadingSlash = s => s ? ('/' + s.replace(/^\/+/,'').replace(/\/+$/,'')) : '';
+    const S = { items: [], base:'', root:'', apiKey:'', last:{} };
 
-  function sanitizeBase(raw){ let s = stripQuotes(raw); s = ensureScheme(s); return trimSlashes(s); }
-  function sanitizeRoot(raw){ let r = stripQuotes(raw||''); return r ? leadingSlash(r) : ''; }
+    function sanitizeBase(str){
+      if(!str) return '';
+      // strip quotes/spaces
+      str = String(str).trim().replace(/^["']|["']$/g,'');
+      // allow copying with trailing slash or not
+      if (!/^https?:\/\//i.test(str)) return '';
+      try { const u = new URL(str); return u.origin + (u.pathname.endsWith('/') ? u.pathname.slice(0,-1) : u.pathname); }
+      catch { return ''; }
+    }
 
-  function buildURL(path){
-    const base = sanitizeBase(S.base);
-    if (!base) throw new Error('Missing API base');
-    const root = sanitizeRoot(S.root);
-    const p = ('/' + String(path||'').replace(/^\/+/, ''));
-    return new URL(root + p, base + '/').toString();
-  }
+    function log(line){
+      const t = new Date().toTimeString().slice(0,8);
+      UI.httpLog.value += `[${t}] ${line}\n`;
+      UI.httpLog.scrollTop = UI.httpLog.scrollHeight;
+    }
 
-  async function call(method, path, body){
-    try{
-      const url = buildURL(path);
-      const headers = {'Content-Type':'application/json'};
-      if (S.key) headers['Authorization'] = `Bearer ${S.key}`;
-      const init = { method, headers };
+    function setBusy(b){
+      UI.go.disabled = b;
+      UI.apply.disabled = b;
+      UI.goSpin.style.display = b ? '' : 'none';
+      UI.goTxt.textContent = b ? 'Working…' : (S.action==='find-one'?'Find one':'Find buyers');
+    }
 
-      if (method === 'GET'){
-        const u = new URL(url);
-        if (body && typeof body === 'object'){
-          for (const [k,v] of Object.entries(body)) u.searchParams.set(k, v);
+    function saveState(){
+      localStorage.setItem('fp.state', JSON.stringify({
+        base:S.base, root:S.root, apiKey:S.apiKey,
+        host:UI.host.value, region:UI.region.value, radius:UI.radius.value,
+        path:UI.path.value, method:UI.method.value, fallbacks:UI.fallbacks.value,
+        action:S.action
+      }));
+    }
+    function loadState(){
+      try{
+        const v = JSON.parse(localStorage.getItem('fp.state')||'{}');
+        if(v.base) UI.base.value = v.base;
+        if(v.apiKey) UI.apiKey.value = v.apiKey;
+        if(v.host) UI.host.value = v.host;
+        if(v.region) UI.region.value = v.region;
+        if(v.radius) UI.radius.value = v.radius;
+        if(v.path) UI.path.value = v.path;
+        if(v.method) UI.method.value = v.method;
+        if(v.fallbacks) UI.fallbacks.value = v.fallbacks;
+        if(v.action) UI.action.value = v.action;
+      }catch{}
+    }
+
+    function crumb(k,v){ const el=document.createElement('span'); el.className='pill'; el.textContent=`${k}: ${v}`; UI.crumbs.appendChild(el); }
+
+    function setBase(){
+      const b = sanitizeBase(UI.base.value);
+      if(!b){ log('✖️ Invalid base URL'); toast('Invalid base URL'); return false; }
+      S.base = b; crumb('base', S.base); saveState();
+      return true;
+    }
+
+    function setAction(){
+      S.action = UI.action.value;
+      UI.goTxt.textContent = (S.action==='find-one'?'Find one':'Find buyers');
+      if(S.action==='find-one' && UI.path.value.includes('find-buyers')){
+        UI.path.value = UI.path.value.replace('find-buyers','find-one');
+      }
+      if(S.action==='find-buyers' && UI.path.value.includes('find-one')){
+        UI.path.value = UI.path.value.replace('find-one','find-buyers');
+      }
+      saveState();
+    }
+
+    function toast(msg, ok=false){
+      log(`${ok?'✔️':'✖️'} ${msg}`);
+    }
+
+    async function call(method, path, bodyOrParams){
+      if(!setBase()) throw new Error('Invalid base');
+      const root = S.root || '';
+      const u = new URL((S.base + root + path).replace(/\/{2,}/g,'/').replace(':/','://'), S.base);
+      if(method==='GET' && bodyOrParams){
+        Object.entries(bodyOrParams).forEach(([k,v])=>u.searchParams.set(k, v));
+      }
+      const opt = { method, headers:{} };
+      if(S.apiKey) opt.headers['Authorization'] = `Bearer ${S.apiKey}`;
+      if(method!=='GET' && bodyOrParams){ opt.headers['Content-Type']='application/json'; opt.body=JSON.stringify(bodyOrParams); }
+      log(`${method} — ${u.pathname}${u.search||''}`);
+      const res = await fetch(u, opt);
+      let data=null; try{ data = await res.json(); }catch{}
+      return { ok: res.ok, status: res.status, data, url: u.toString() };
+    }
+
+    async function health(){
+      if(!setBase()) return;
+      UI.crumbs.innerHTML='';
+      crumb('base', S.base);
+      setBusy(true);
+      const rootsToTry = ['', '/api', '/api/v1'];
+      let goodRoot = '';
+      for(const r of rootsToTry){
+        S.root = r;
+        try{
+          const h = await call('GET', '/healthz');
+          if(h.ok){ crumb('health', `${h.status} @ ${r||'(root)'}`); goodRoot = r; break; }
+        }catch{}
+      }
+      if(!goodRoot){
+        crumb('health','unknown'); toast('Health check failed'); setBusy(false); return;
+      }
+      S.root = goodRoot;
+      saveState();
+
+      // probe routes
+      const rt = await call('GET','/routes').catch(()=>null);
+      if(rt && rt.ok){
+        crumb('routes', '200 — GET /routes');
+        const sample = rt.data && rt.data.routes ? JSON.stringify({ok:true, routes: rt.data.routes.slice(0,8)}) : '(no data)';
+        log(`routes sample: ${sample}`);
+        S.routes = rt.data && rt.data.routes || [];
+      }else{
+        crumb('routes','(tap Probe)');
+      }
+      crumb('root', goodRoot||'(auto)');
+      setBusy(false);
+    }
+
+    async function probe(){
+      if(!setBase()) return;
+      setBusy(true);
+      const roots = ['', '/api', '/api/v1'];
+      const paths = ['/routes', '/endpoints', '/openapi.json', '/swagger.json'];
+      let found = [];
+      for(const r of roots){
+        S.root = r;
+        for(const p of paths){
+          try{
+            const r1 = await call('GET', p);
+            if(r1.ok){ found.push(r+'/'+p.replace(/^\//,'')); }
+          }catch{}
         }
-        log(`${method}  —  ${u.pathname}${u.search}`);
-        const res = await fetch(u, {headers});
-        return wrap(res);
-      } else {
-        if (body) init.body = JSON.stringify(body);
-        log(`${method}  —  ${new URL(url).pathname}`);
-        const res = await fetch(url, init);
-        return wrap(res);
       }
-    } catch(err){
-      console.error(err); log(`ERR  —  ${err.message}`); return {ok:false,error:err.message};
-    }
-  }
-  async function wrap(res){
-    let data=null; try{ data=await res.json(); }catch{}
-    const ok = res.ok && (data?.ok ?? true);
-    if (ok) S.lastOK = `${res.status} — ${res.url}`;
-    return { ok, status:res.status, data, url:res.url };
-  }
-
-  // ---------- health/probe ----------
-  async function doHealth(){
-    const r = await call('GET','/healthz');
-    UI.pillHealth.textContent = `health: ${r.ok?'200':r.status} @ /healthz`;
-    UI.pillHealth.style.borderColor = r.ok ? '#1f6f3e' : '#a11';
-    return r.ok;
-  }
-  async function probeRoutes(){
-    const cand = ['/routes','/_routes','/endpoints','/openapi.json','/swagger.json'];
-    for (const p of cand){
-      const r = await call('GET', p);
-      if (r.ok){
-        S.routes = r.data?.routes || r.data;
-        UI.pillRoutes.textContent = `routes: 200 — GET ${p}`;
-        return true;
+      if(found.length){
+        log('Probe results: '+found.join(', '));
+        crumb('routes', 'probe ok');
+      }else{
+        log('Probe found nothing 2xx');
       }
-    }
-    UI.pillRoutes.textContent = `routes: none`; return false;
-  }
-
-  // ---------- results / rendering ----------
-  function normalizeLead(raw={}, q={}){
-    const pick = (...keys)=> keys.find(k=> raw[k]!==undefined);
-    let host = raw.host ?? raw.domain;
-    if (!host && raw.url){ try{ host=new URL(raw.url).hostname }catch{} }
-    host = host || q.host || '';
-
-    const title = raw.title ?? raw.label ?? raw.context?.label ?? `Buyer lead for ${host}`;
-    const created = raw.created ?? raw.date ?? raw.time ?? new Date().toISOString();
-    const temp = raw.temp ?? raw.temperature ?? raw.heat ?? 'warm';
-    const whyText = raw.whyText ?? raw.why ?? raw.reason ?? raw.context?.whyText ?? `API matched (${q.region}, ${q.radius})`;
-    const platform = raw.platform ?? 'web';
-
-    return { host, platform, title, created, temp, whyText };
-  }
-
-  function pushMany(items){
-    S.items = (items||[]).concat(S.items||[]);
-    S.items = S.items.slice(0, 200);
-    localStorage.setItem('items', JSON.stringify(S.items));
-    render();
-  }
-
-  function render(){
-    UI.rows.innerHTML='';
-    (S.items||[]).forEach((it,i)=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML = `
-        <td>${i+1}</td>
-        <td>${it.host||''}</td>
-        <td>${it.platform||''}</td>
-        <td>${it.title||''}</td>
-        <td>${it.created||''}</td>
-        <td class="temp-${it.temp||''}">${it.temp||''}</td>
-        <td>${it.whyText||''}</td>`;
-      tr.onclick=()=>alert(`Result #${i+1} — ${it.host}\n\n`+JSON.stringify(it,null,2));
-      UI.rows.appendChild(tr);
-    });
-    UI.count.textContent = `${(S.items||[]).length} item${S.items.length===1?'':'s'}`;
-  }
-
-  // ---------- actions ----------
-  async function findBuyers(){
-    if (!sanitizeBase(S.base)){ log('ERR — base is empty/invalid'); return; }
-
-    // choose default path when user switches the action
-    let path = UI.path.value.trim();
-    if (!path){
-      path = UI.action.value === 'find-one' ? '/buyers/find-one' : '/leads/find-buyers';
-      UI.path.value = path;
+      setBusy(false);
     }
 
-    const q = {
-      host: UI.host.value.trim(),
-      region: UI.region.value.trim(),
-      radius: UI.radius.value.trim()
-    };
-    const method = UI.method.value;
+    function render(){
+      UI.rows.innerHTML = '';
+      (S.items||[]).forEach((it, i)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="kbd">${i+1}</td>
+          <td class="kbd">${it.host||''}</td>
+          <td class="kbd muted">${it.platform||''}</td>
+          <td class="kbd">${it.title||''}</td>
+          <td class="kbd muted">${it.created||''}</td>
+          <td><span class="pill tag-warm">${it.temp||''}</span></td>
+          <td class="kbd muted">${it.whyText||''}</td>`;
+        tr.style.cursor='pointer';
+        tr.onclick = ()=>inspect(it);
+        UI.rows.appendChild(tr);
+      });
+      UI.summary.textContent = `${S.items.length} item${S.items.length===1?'':'s'}`;
+      localStorage.setItem('fp.items', JSON.stringify(S.items||[]));
+    }
 
-    let r = method==='GET' ? await call('GET', path, q) : await call('POST', path, q);
+    function inspect(it){
+      UI.inspectTitle.textContent = `Result — ${it.host||''}`;
+      UI.inspectJson.textContent = JSON.stringify(it, null, 2);
+      UI.inspector.showModal();
+    }
 
-    if (!r.ok && UI.fallbacks.value==='auto'){
-      const tries = [
-        ['/buyers/find-buyers', method],
-        ['/buyers/find-one', 'GET'],
-        ['/leads/find-one', 'GET'],
-        ['/find-one', 'GET'],
-        ['/find', 'GET'],
-      ];
-      for (const [p,m] of tries){
-        r = m==='GET' ? await call('GET', p, q) : await call(m, p, q);
-        if (r.ok) break;
+    function toCSV(items){
+      const cols = ['host','platform','title','created','temp','whyText'];
+      const head = cols.join(',');
+      const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+      const rows = (items||[]).map(it=>cols.map(c=>esc(it[c])).join(','));
+      return [head, ...rows].join('\r\n');
+    }
+    function download(name, text){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], {type:'text/csv'}));
+      a.download = name; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+    }
+
+    async function find(){
+      if(!setBase()) return toast('Set API base first');
+      setBusy(true);
+      const host = UI.host.value.trim();
+      if(!host){ setBusy(false); return toast('Enter supplier host'); }
+      const region = UI.region.value;
+      const radius = UI.radius.value;
+      const method = UI.method.value;
+      const chosenPath = UI.path.value.trim() || '/leads/find-buyers';
+      const isFindOne = (S.action==='find-one');
+      const params = { host, region, radius };
+
+      // try primary
+      let r = await call(method, chosenPath, method==='GET'?params:params).catch(()=>null);
+
+      // fallback matrix on 404 if selected
+      if((!r || r.status===404) && UI.fallbacks.value==='auto'){
+        const roots = [S.root||'', '/api', '/api/v1', ''];
+        const paths = isFindOne
+          ? [chosenPath, '/buyers/find-one', '/leads/find-one', '/find-one']
+          : [chosenPath, '/buyers/find-buyers', '/leads/find-buyers', '/find-buyers'];
+        const methods = [method, (method==='GET'?'POST':'GET')];
+
+        outer: for(const root of roots){
+          S.root = root;
+          for(const p of paths){
+            for(const m of methods){
+              log(`(fallback) trying ${m} ${root||'(root)'}${p}`);
+              r = await call(m, p, m==='GET'?params:params).catch(()=>null);
+              if(r && r.ok) break outer;
+            }
+          }
+        }
       }
-    }
 
-    if (!r.ok){ log(`${r.status} — request failed`); return; }
-
-    // ---- NEW: map real payloads if present
-    let rawItems = [];
-    const d = r.data;
-    if (Array.isArray(d?.items)) rawItems = d.items;
-    else if (d?.item) rawItems = [d.item];
-    else if (Array.isArray(d)) rawItems = d;
-
-    let items = rawItems.map(x => normalizeLead(x, q));
-
-    // fallback if server returned an ok without items
-    if (!items.length){
-      items = [normalizeLead({}, q)];
-      items[0].whyText = `Compat shim matched (${q.region}, ${q.radius})`;
-    }
-
-    pushMany(items);
-  }
-
-  function toCSV(items){
-    const cols = ['host','platform','title','created','temp','whyText'];
-    const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
-    const rows = (items||[]).map(it => cols.map(c => esc(it[c])).join(','));
-    return [cols.join(','), ...rows].join('\r\n');
-  }
-  function download(name, text){
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));
-    a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-  }
-
-  // ---------- bootstrap / persistence ----------
-  function applyBase(){
-    const sanitized = sanitizeBase(UI.base.value);
-    S.base = sanitized; UI.base.value = sanitized;
-    localStorage.setItem('base', sanitized);
-    const on = !!sanitized;
-    [UI.find, UI.health, UI.probe].forEach(b=>b.disabled=!on);
-    UI.pillRoot.textContent = `root: (auto)`;
-    log('Base applied');
-  }
-
-  function load(){
-    S.base = sanitizeBase(localStorage.getItem('base') || UI.base.value);
-    S.root = sanitizeRoot(localStorage.getItem('root') || UI.root.value);
-    S.key  = stripQuotes(localStorage.getItem('key') || '');
-
-    UI.base.value=S.base; UI.root.value=S.root; UI.key.value=S.key;
-
-    try{ S.items = JSON.parse(localStorage.getItem('items')||'[]')||[]; }catch{ S.items=[]; }
-
-    const on = !!S.base; [UI.find,UI.health,UI.probe].forEach(b=>b.disabled=!on);
-    render();
-  }
-
-  // ---------- wire ----------
-  function bind(){
-    UI.apply.onclick = applyBase;
-    UI.clearList.onclick = () => { S.items=[]; localStorage.removeItem('items'); render(); };
-    UI.saveKey.onclick = () => { S.key = UI.key.value.trim(); localStorage.setItem('key', S.key); log('API key saved'); };
-    UI.clrKey.onclick  = () => { S.key=''; UI.key.value=''; localStorage.removeItem('key'); log('API key cleared'); };
-
-    UI.health.onclick = async () => { if (!sanitizeBase(S.base)) return; await doHealth(); };
-    UI.probe.onclick  = async () => { if (!sanitizeBase(S.base)) return; await probeRoutes(); };
-
-    UI.find.onclick = findBuyers;
-    UI.dlCSV.onclick = () => download('leads.csv', toCSV(S.items));
-
-    // default path when action changes (don’t override a manual path)
-    UI.action.onchange = () => {
-      if (!UI.path.value.trim()){
-        UI.path.value = UI.action.value === 'find-one' ? '/buyers/find-one' : '/leads/find-buyers';
+      if(!r){ setBusy(false); return toast('Network error'); }
+      if(!r.ok){
+        toast(`${r.status} — ${r.url.split(S.base)[1]||r.url}`);
+        setBusy(false); return;
       }
-    };
 
-    // quick region tags
-    UI.tags.innerHTML='';
-    ['US/CA','US/NY','US/TX','US/WA'].forEach(x=>{
-      const b=document.createElement('button');
-      b.className='pill'; b.textContent=x; b.onclick=()=>UI.region.value=x; UI.tags.appendChild(b);
-    });
-  }
+      const obj = r.data||{};
+      // normalize to one item
+      const first = {
+        host: host,
+        platform: 'web',
+        title: `Buyer lead for ${host}`,
+        created: new Date().toISOString(),
+        temp: 'warm',
+        whyText: `Compat shim matched (${region}, ${radius})`
+      };
+      const item = Object.assign(first, obj.item||obj||{});
+      S.items = S.items || [];
+      S.items.unshift(item);
+      render();
+      setBusy(false);
+      toast('OK');
+    }
 
-  bind(); load();
-})();
-</script>
+    // ---------- wire up
+    function bind(){
+      // state
+      loadState();
+      S.base = sanitizeBase(UI.base.value||'');
+      S.apiKey = UI.apiKey.value||'';
+      S.action = UI.action.value||'find-buyers';
+      S.items = JSON.parse(localStorage.getItem('fp.items')||'[]');
+      render();
+
+      UI.apply.onclick = ()=>{ if(setBase()){ UI.crumbs.innerHTML=''; crumb('base',S.base); toast('Base set'); saveState(); } };
+      UI.saveKey.onclick = ()=>{ S.apiKey = UI.apiKey.value.trim(); saveState(); toast('API key saved', true); };
+      UI.health.onclick = health;
+      UI.probe.onclick = probe;
+      UI.clearList.onclick = ()=>{ S.items=[]; render(); toast('List cleared', true); };
+      UI.action.onchange = setAction;
+      UI.quickRegions.onclick = (e)=>{ const r=e.target.closest('.chip'); if(!r) return; UI.region.value = r.dataset.r; toast(`Region set: ${r.dataset.r}`, true); saveState(); };
+
+      UI.go.onclick = find;
+      UI.dlCsvHot.onclick = ()=>download('results.csv', toCSV(S.items||[]));
+
+      UI.inspectClose.onclick = ()=>UI.inspector.close();
+
+      // sensible defaults if empty
+      if(!UI.path.value) UI.path.value = '/leads/find-buyers';
+      saveState();
+    }
+
+    // fire
+    document.addEventListener('DOMContentLoaded', bind);
+  </script>
 </body>
 </html>
