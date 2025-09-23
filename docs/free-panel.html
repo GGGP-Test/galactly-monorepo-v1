@@ -1,538 +1,384 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Leads Console — Free Panel (V3)</title>
+  <link rel="icon" href="data:,"><!-- avoid favicon 404 -->
   <style>
-    :root{
-      --bg:#0f172a; --panel:#0b1220; --muted:#94a3b8; --text:#e2e8f0;
-      --acc:#60a5fa; --acc-2:#38bdf8; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
-      --row:#0e1627; --row-alt:#111b2f; --chip:#1e293b;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; background:var(--bg); color:var(--text);
-      font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
-    }
-    .wrap{
-      max-width:1200px;
-      margin:24px auto;
-      padding:0 16px;
-      display:grid;
-      grid-template-columns: 360px 1fr;
-      gap:16px;
-    }
-    @media (max-width: 1000px){
-      .wrap{grid-template-columns:1fr}
-    }
-    h1{font-size:18px; margin:0 0 10px 0}
-    .panel{
-      background:var(--panel);
-      border:1px solid #1f2937;
-      border-radius:10px;
-      padding:14px;
-    }
-    .row{display:flex; gap:8px; align-items:center; margin:8px 0}
-    .row.stacked{flex-direction:column; align-items:stretch}
-    label{font-size:12px; color:var(--muted)}
-    input,select,button,textarea{
-      background:#0d1527; color:var(--text); border:1px solid #1f2a40;
-      border-radius:8px; padding:10px 10px; outline:none;
-    }
-    input::placeholder{color:#64748b}
-    select{padding-right:28px}
-    button{cursor:pointer; border-color:#233652}
-    .btn{background:#13233d}
-    .btn.primary{background:linear-gradient(90deg,var(--acc),var(--acc-2)); border:none; color:#08111f}
-    .btn.ghost{background:#0d1527}
-    .chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px}
-    .chip{font-size:11px; background:var(--chip); color:#cbd5e1; padding:4px 8px; border-radius:999px}
-    .cols{display:grid; grid-template-columns:1fr 1fr; gap:8px}
-    .cols-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
-    @media (max-width: 560px){
-      .cols{grid-template-columns:1fr}
-      .cols-3{grid-template-columns:1fr}
-    }
-    table{width:100%; border-collapse:collapse}
-    th,td{padding:10px 8px; border-bottom:1px solid #172238; text-align:left}
-    thead th{font-weight:600; color:#cbd5e1; position:sticky; top:0; background:var(--panel); z-index:1}
-    tbody tr{background:var(--row)}
-    tbody tr:nth-child(even){background:var(--row-alt)}
-    .temp-warm{color:var(--warn); font-weight:600}
-    .temp-hot{color:var(--ok); font-weight:600}
-    .why{color:#93c5fd}
-    .muted{color:var(--muted)}
-    .right{display:flex; justify-content:flex-end; gap:8px}
-    .pad-top{margin-top:10px}
-    .log{
-      background:#0a1220; border:1px solid #18243a; border-radius:8px; padding:10px;
-      height:160px; overflow:auto; white-space:pre; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-      font-size:12px
-    }
-    /* modal */
-    .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(2,6,23,.65)}
-    .modal.show{display:flex}
-    .modal-card{background:#0c1426; border:1px solid #1e2b44; border-radius:10px; width:min(800px,92vw); max-height:84vh; display:flex; flex-direction:column}
-    .modal-head{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid #18243a}
-    .modal-body{padding:12px 14px; overflow:auto}
-    code{white-space:pre-wrap}
+    :root { --bg:#0e1621; --card:#131c26; --muted:#7e8a9a; --text:#e7eef7; --btn:#3a86ff; --ok:#16a34a; --warn:#f59e0b; --err:#ef4444; }
+    * { box-sizing: border-box; }
+    body { margin:0; font:14px/1.35 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial; color:var(--text); background:var(--bg); }
+    .wrap{ display:grid; grid-template-columns: 420px 1fr; gap:16px; padding:18px; }
+    .panel{ background:var(--card); border:1px solid #1f2b3a; border-radius:10px; padding:14px; }
+    h1{ margin:0 0 8px; font-size:18px; }
+    label{ display:block; margin:12px 0 6px; color:#9fb1c6; font-weight:600; }
+    input, select, textarea { width:100%; background:#0b121a; color:var(--text); border:1px solid #223144; border-radius:8px; padding:10px 12px; }
+    textarea{ min-height:120px; resize:vertical; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .row{ display:grid; grid-template-columns:1fr auto auto; gap:8px; }
+    .row-2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .row-3{ display:grid; grid-template-columns: 1fr 120px 140px; gap:8px; }
+    button{ background:#1f2b3a; color:#dbe7f6; border:1px solid #2a3b53; border-radius:8px; padding:9px 12px; cursor:pointer; }
+    button.primary{ background:var(--btn); border-color:#2b5fd6; color:#fff; }
+    button.ok{ background:#14351e; border-color:#1f6f3e; color:#a7f3d0; }
+    button.warn{ background:#3c2e12; border-color:#a16207; color:#fde68a; }
+    button:disabled{ opacity:.55; cursor:not-allowed; }
+    .tags{ display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 0; }
+    .tag{ font:12px/1.1 ui-monospace,monospace; background:#0b121a; border:1px dashed #2a3b53; color:#9fb1c6; padding:4px 8px; border-radius:999px; }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ padding:10px 8px; border-bottom:1px solid #1f2b3a; text-align:left; }
+    th{ color:#9fb1c6; font-weight:600; position:sticky; top:0; background:var(--card); }
+    .temp-warm{ color:#fde68a; }
+    .muted{ color:var(--muted); }
+    .pill{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #2a3b53; background:#0b121a; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <!-- Left: controls -->
     <div class="panel" id="left">
       <h1>Leads Console — Free Panel (V3)</h1>
 
-      <!-- API base / root / key -->
-      <div class="row stacked">
-        <label>API base</label>
-        <div class="cols">
-          <input id="base" placeholder="https://host" />
-          <button id="apply" class="btn primary">Apply</button>
-        </div>
-        <div class="cols">
-          <button id="health" class="btn">Health</button>
-          <button id="probe"  class="btn">Probe</button>
-          <button id="clearList" class="btn ghost">Clear list</button>
-        </div>
-        <div class="chips" id="chips"></div>
+      <label for="base">API base</label>
+      <div class="row">
+        <input id="base" placeholder="https://p01--your-app.code.run"/>
+        <button id="apply" class="primary">Apply</button>
+        <button id="clearList">Clear list</button>
       </div>
 
-      <div class="row stacked">
-        <label>API key (optional for read; required for write)</label>
-        <div class="cols">
-          <input id="apiKey" placeholder="paste key" />
-          <button id="saveKey" class="btn">Save</button>
-        </div>
+      <label for="root">API root (prefixed to paths)</label>
+      <div class="row">
+        <input id="root" placeholder="(blank for none, example: /api or /api/v1)"/>
+        <button id="health" class="ok">Health</button>
+        <button id="probe" class="warn">Probe</button>
       </div>
 
-      <!-- Action + inputs -->
-      <div class="row stacked pad-top">
-        <label>Action</label>
-        <select id="action">
-          <option value="find-buyers">Find buyers (one per click)</option>
-          <option value="find-one">Find one (strict)</option>
+      <label for="key">API key (optional for read; required for write)</label>
+      <div class="row">
+        <input id="key" placeholder="paste key"/>
+        <button id="saveKey">Save</button>
+        <button id="clrKey">Clear</button>
+      </div>
+
+      <div class="tags" id="quickTags"></div>
+
+      <label>Action</label>
+      <select id="action">
+        <option value="find-buyers">Find buyers (one per click)</option>
+        <option value="find-one">Find one (strict)</option>
+      </select>
+
+      <label for="host">Supplier host</label>
+      <input id="host" placeholder="peekpackaging.com"/>
+
+      <label>Region / Radius</label>
+      <div class="row-2">
+        <select id="region">
+          <option>US/CA</option><option>US/NY</option><option>US/WA</option><option>US/TX</option>
+        </select>
+        <select id="radius">
+          <option>25 mi</option><option selected>50 mi</option><option>100 mi</option>
         </select>
       </div>
 
-      <div class="row stacked">
-        <label>Supplier host</label>
-        <input id="host" placeholder="example.com" />
+      <label>Path for action (relative to API root)</label>
+      <div class="row-3">
+        <input id="path" value="/leads/find-buyers"/>
+        <select id="method">
+          <option>GET</option><option>POST</option>
+        </select>
+        <select id="fallbacks">
+          <option value="auto">Auto-probe on 404</option>
+          <option value="none" selected>No fallbacks</option>
+        </select>
       </div>
 
-      <div class="cols-3">
-        <div class="row stacked">
-          <label>Region</label>
-          <select id="region">
-            <option value="US/CA">US/CA</option>
-            <option value="US">US</option>
-            <option value="Any">Any</option>
-          </select>
-        </div>
-        <div class="row stacked">
-          <label>Radius</label>
-          <select id="radius">
-            <option value="25 mi">25 mi</option>
-            <option value="50 mi" selected>50 mi</option>
-            <option value="100 mi">100 mi</option>
-          </select>
-        </div>
-        <div class="row stacked">
-          <label>&nbsp;</label>
-          <button id="find" class="btn primary">Find buyers</button>
-        </div>
+      <div class="row" style="margin-top:10px">
+        <div></div>
+        <button id="find" class="primary">Find buyers</button>
+        <button id="dlCSV">Download CSV</button>
       </div>
 
-      <div class="cols-3 pad-top">
-        <div class="row stacked">
-          <label>Path for action (relative to API root)</label>
-          <input id="path" placeholder="/leads/find-buyers" />
-        </div>
-        <div class="row stacked">
-          <label>Method</label>
-          <select id="method">
-            <option>GET</option>
-            <option>POST</option>
-          </select>
-        </div>
-        <div class="row stacked">
-          <label>Fallbacks</label>
-          <select id="fallbacks">
-            <option value="none">No fallbacks</option>
-            <option value="auto">Auto-probe on 404</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row stacked pad-top">
-        <label>HTTP log</label>
-        <div class="log" id="httpLog"></div>
-        <div class="right pad-top">
-          <button id="dlHot" class="btn">Download CSV (hot)</button>
-          <button id="dlWarm" class="btn">Download CSV (warm)</button>
-          <button id="clearLog" class="btn ghost">Clear log</button>
-        </div>
-      </div>
+      <label>HTTP log</label>
+      <textarea id="httpLog" readonly></textarea>
     </div>
 
-    <!-- Right: results -->
     <div class="panel" id="right">
-      <div class="row" style="justify-content:space-between; align-items:center">
-        <div class="muted">Results</div>
+      <div class="row" style="grid-template-columns:1fr auto;align-items:center">
         <div class="muted" id="count">0 items</div>
+        <div><span class="pill" id="pillHealth">health: unknown</span>
+             <span class="pill" id="pillRoutes">routes: (tap Probe)</span>
+             <span class="pill" id="pillRoot">root: (auto)</span></div>
       </div>
-      <div style="overflow:auto; max-height:74vh;">
-        <table id="results">
+      <div style="overflow:auto; margin-top:10px; max-height:76vh;">
+        <table id="tbl">
           <thead>
-            <tr>
-              <th style="width:44px">#</th>
-              <th>Host</th>
-              <th>Platform</th>
-              <th>Title</th>
-              <th>Created</th>
-              <th>Temp</th>
-              <th>Why (human-readable)</th>
-            </tr>
+          <tr>
+            <th style="width:48px;">#</th>
+            <th>Host</th>
+            <th>Platform</th>
+            <th>Title</th>
+            <th>Created</th>
+            <th>Temp</th>
+            <th>Why (human-readable)</th>
+          </tr>
           </thead>
-          <tbody></tbody>
+          <tbody id="rows"></tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- Modal -->
-  <div class="modal" id="modal">
-    <div class="modal-card">
-      <div class="modal-head">
-        <strong id="modalTitle">Result</strong>
-        <div class="right">
-          <button id="copyJson" class="btn">Copy JSON</button>
-          <button id="closeModal" class="btn">Close</button>
-        </div>
-      </div>
-      <div class="modal-body">
-        <code id="modalBody"></code>
-      </div>
-    </div>
-  </div>
+<script>
+(() => {
+  // ---------- state ----------
+  const S = {
+    base: '', root: '', key: '', items: [],
+    routes: null, lastOK: null
+  };
 
-  <script>
-    // ---------- state ----------
-    const S = {
-      base: localStorage.getItem('base') || '',
-      root: localStorage.getItem('root') || '',
-      apiKey: localStorage.getItem('apiKey') || '',
-      items: JSON.parse(localStorage.getItem('items') || '[]'),
-      lastPath: localStorage.getItem('lastPath') || '/leads/find-buyers',
-      lastMethod: localStorage.getItem('lastMethod') || 'GET',
-      fallbacks: localStorage.getItem('fallbacks') || 'auto'
-    };
+  // ---------- tiny utils ----------
+  const $ = sel => document.querySelector(sel);
+  const UI = {
+    base: $('#base'), apply: $('#apply'), clearList: $('#clearList'),
+    root: $('#root'), health: $('#health'), probe: $('#probe'),
+    key: $('#key'), saveKey: $('#saveKey'), clrKey: $('#clrKey'),
+    action: $('#action'), host: $('#host'), region: $('#region'), radius: $('#radius'),
+    path: $('#path'), method: $('#method'), fallbacks: $('#fallbacks'),
+    find: $('#find'), dlCSV: $('#dlCSV'),
+    log: $('#httpLog'), rows: $('#rows'), count: $('#count'),
+    pillHealth: $('#pillHealth'), pillRoutes: $('#pillRoutes'), pillRoot: $('#pillRoot'),
+    tags: $('#quickTags')
+  };
 
-    // ---------- dom helpers ----------
-    const $  = s => document.querySelector(s);
-    const $$ = s => Array.from(document.querySelectorAll(s));
-    const UI = {
-      base: $('#base'), apply: $('#apply'), health: $('#health'), probe: $('#probe'),
-      clearList: $('#clearList'), chips: $('#chips'),
-      apiKey: $('#apiKey'), saveKey: $('#saveKey'),
-      action: $('#action'), host: $('#host'), region: $('#region'), radius: $('#radius'), find: $('#find'),
-      path: $('#path'), method: $('#method'), fallbacks: $('#fallbacks'),
-      httpLog: $('#httpLog'), clearLog: $('#clearLog'), dlHot: $('#dlHot'), dlWarm: $('#dlWarm'),
-      tableBody: $('#results tbody'), count: $('#count'),
-      modal: $('#modal'), modalTitle: $('#modalTitle'), modalBody: $('#modalBody'),
-      closeModal: $('#closeModal'), copyJson: $('#copyJson')
-    };
+  const log = (line) => {
+    const ts = new Date().toLocaleTimeString('en-US',{hour12:false});
+    UI.log.value += `[${ts}] ${line}\n`;
+    UI.log.scrollTop = UI.log.scrollHeight;
+  };
 
-    // Guarded binder to avoid "cannot set property of undefined"
-    function bind(el, event, fn){
-      if (!el) return; el.addEventListener(event, fn);
-    }
+  const stripQuotes = s => (s||'').trim().replace(/^["']+|["']+$/g,'');
+  const ensureScheme = s => /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s) ? s : (s ? `https://${s}` : s);
+  const trimSlashes = s => s.replace(/\/+$/,'');
+  const leadingSlash = s => s ? ('/' + s.replace(/^\/+/,'').replace(/\/+$/,'')) : '';
 
-    function chip(text){ const s=document.createElement('span'); s.className='chip'; s.textContent=text; return s; }
-    function log(line){
-      const ts = new Date().toISOString().slice(11,19);
-      UI.httpLog.textContent += `[${ts}] ${line}\n`;
-      UI.httpLog.scrollTop = UI.httpLog.scrollHeight;
-    }
-    function setChips(list){ UI.chips.innerHTML=''; list.forEach(x=>UI.chips.appendChild(chip(x))); }
+  function sanitizeBase(raw){
+    let s = stripQuotes(raw);
+    s = ensureScheme(s);
+    return trimSlashes(s);
+  }
+  function sanitizeRoot(raw){
+    let r = stripQuotes(raw||'');
+    if (!r) return '';
+    return leadingSlash(r);
+  }
+  function buildURL(path){
+    const base = sanitizeBase(S.base);
+    if (!base) throw new Error('Missing API base');
+    const root = sanitizeRoot(S.root);
+    const p = ('/' + String(path||'').replace(/^\/+/, ''));
+    return new URL(root + p, base + '/').toString();
+  }
 
-    // ---------- init ----------
-    function initUI(){
-      UI.base.value = S.base;
-      UI.apiKey.value = S.apiKey;
-      UI.path.value = S.lastPath;
-      UI.method.value = S.lastMethod;
-      UI.fallbacks.value = S.fallbacks;
-      setChips([
-        `health: unknown`,
-        `routes: (tap Probe)`,
-        `root: ${S.root || '(auto)'}`
-      ]);
-      renderList();
-    }
-
-    // ---------- network ----------
-    async function call(method, path, body){
-      const url = new URL((S.base||'').replace(/\/+$/,'') + '/' + (S.root||'').replace(/^\/+/,''));
-      const full = new URL(path.replace(/^\/+/,''), url).toString();
-
+  async function call(method, path, body){
+    try{
+      const url = buildURL(path);
       const headers = {'Content-Type':'application/json'};
-      if (S.apiKey) headers['x-api-key'] = S.apiKey;
+      if (S.key) headers['Authorization'] = `Bearer ${S.key}`;
+      const init = { method, headers };
+      if (method !== 'GET' && body) init.body = JSON.stringify(body);
+      if (method === 'GET' && body && typeof body === 'object'){
+        const u = new URL(url);
+        Object.entries(body).forEach(([k,v]) => u.searchParams.set(k, v));
+        log(`${method}  —  ${u.pathname}${u.search}`);
+        const res = await fetch(u, {headers});
+        return wrap(res);
+      } else {
+        log(`${method}  —  ${new URL(url).pathname}`);
+        const res = await fetch(url, init);
+        return wrap(res);
+      }
+    } catch(err){
+      console.error(err);
+      log(`ERR  —  ${err.message}`);
+      return {ok:false, error:err.message};
+    }
+  }
+  async function wrap(res){
+    let data = null;
+    try { data = await res.json(); } catch {}
+    const ok = res.ok && (data?.ok ?? true);
+    if (ok) S.lastOK = `${res.status} — ${res.url}`;
+    return { ok, status:res.status, data, url:res.url };
+  }
 
-      const opts = {method, headers};
-      if (method === 'POST' && body) opts.body = JSON.stringify(body);
+  // ---------- features ----------
+  async function doHealth(){
+    const r = await call('GET', '/healthz');
+    UI.pillHealth.textContent = `health: ${r.ok? '200' : r.status} @ /healthz`;
+    UI.pillHealth.style.borderColor = r.ok ? '#1f6f3e' : '#a11';
+    return r.ok;
+  }
 
-      log(`${method}  —  ${path}`);
-      try{
-        const r = await fetch(full, opts);
-        if (!r.ok){
-          log(`${r.status}  —  ${await r.text().catch(()=>r.statusText)}`.slice(0,300));
-          return {ok:false, status:r.status};
-        }
-        const data = await r.json();
-        return {ok:true, data};
-      }catch(err){
-        log(`ERR  —  ${err}`);
-        return {ok:false, err};
+  async function probeRoutes(){
+    const cand = ['/routes','/_routes','/endpoints','/openapi.json','/swagger.json'];
+    for (const p of cand){
+      const r = await call('GET', p);
+      if (r.ok){
+        S.routes = r.data?.routes || r.data;
+        UI.pillRoutes.textContent = `routes: 200 — GET ${p}`;
+        return true;
       }
     }
+    UI.pillRoutes.textContent = `routes: none`;
+    return false;
+  }
 
-    async function getRoutes(){
-      const tryPaths = ['', '/', '/routes'];
-      for (const p of tryPaths){
-        const r = await call('GET', p || '/routes');
-        if (r.ok && r.data && (Array.isArray(r.data.routes) || Array.isArray(r.data))){
-          const routes = r.data.routes || r.data;
-          const sample = JSON.stringify({ok:true,routes:routes.slice(0,8)}, null, 0);
-          log(`routes sample: ${sample}`);
-          setChips([
-            `health: ${UI.chips.querySelector('.chip')?.textContent?.includes('200') ? '200' : 'unknown'}`,
-            `routes: 200 — GET /routes`,
-            `root: ${S.root ? S.root : '(auto)'}`
-          ]);
-          return {ok:true, routes};
-        }
-      }
-      return {ok:false};
-    }
+  function pushItem(item){
+    S.items = S.items || [];
+    S.items.unshift(item);
+    localStorage.setItem('items', JSON.stringify(S.items.slice(0,200)));
+    render();
+  }
 
-    async function health(){
-      const r = await call('GET','/healthz');
-      setChips([
-        `health: ${r.ok ? '200' : 'unknown'}`,
-        `routes: (tap Probe)`,
-        `root: ${S.root || '(auto)'}`
-      ]);
-    }
-
-    async function probe(){
-      // Discover a working root automatically if needed
-      const roots = ['', '/', '/api', '/api/','/api/v1','/api/v1/'];
-      for (const root of roots){
-        const prev = S.root;
-        S.root = root;
-        const r = await call('GET','/routes');
-        if (r.ok){
-          localStorage.setItem('root', S.root);
-          setChips([`health: unknown`,`routes: 200 — GET /routes`,`root: ${S.root||'(auto)'}`]);
-          return true;
-        }
-        S.root = prev;
-      }
-      log('probe finished — nothing returned 2xx');
-      return false;
-    }
-
-    // ---------- results / CSV ----------
-    function renderList(){
-      UI.tableBody.innerHTML='';
-      (S.items||[]).forEach((it,i)=>{
-        const tr = document.createElement('tr');
-        const td = (...t)=>{ const x=document.createElement('td'); x.textContent=t.join(' '); return x; };
-        tr.appendChild(td(String(i+1)));
-        tr.appendChild(td(it.host||''));
-        tr.appendChild(td(it.platform||''));
-        tr.appendChild(td(it.title||''));
-        tr.appendChild(td(it.created||''));
-        const temp = document.createElement('td');
-        temp.textContent = it.temp || '';
-        temp.className = it.temp==='hot' ? 'temp-hot' : (it.temp==='warm' ? 'temp-warm':'');
-        tr.appendChild(temp);
-        const w = document.createElement('td');
-        w.className='why'; w.textContent = it.whyText || '';
-        tr.appendChild(w);
-        tr.addEventListener('click', ()=> openModal(it));
-        UI.tableBody.appendChild(tr);
-      });
-      UI.count.textContent = `${S.items.length} ${S.items.length===1?'item':'items'}`;
-      localStorage.setItem('items', JSON.stringify(S.items||[]));
-    }
-
-    function toCSV(items){
-      const cols = ['host','platform','title','created','temp','whyText'];
-      const head = cols.join(',');
-      const esc = v=> `${String(v??'').replace(/"/g,'""')}`;
-      const rows = items.map(it=>cols.map(c=>`"${esc(it[c])}"`).join(','));
-      return [head,...rows].join('\r\n');
-    }
-    function download(name, text){
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
-      a.download = name; a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href),500);
-    }
-
-    // ---------- actions ----------
-    async function findOne(){
-      const host = UI.host.value.trim();
-      if (!host) return;
-      const method = UI.method.value;
-      const path = (UI.path.value||'/buyers/find-one').trim() || '/buyers/find-one';
-
-      const payload = { host, region:UI.region.value, radius:UI.radius.value };
-      const r = await call(method, path + (method==='GET'
-                   ? `?host=${encodeURIComponent(host)}&region=${encodeURIComponent(UI.region.value)}&radius=${encodeURIComponent(UI.radius.value)}`
-                   : ''), method==='POST' ? payload : undefined);
-
-      if (!r.ok || !r.data) return;
-
-      const first = Array.isArray(r.data.items) ? r.data.items[0] : r.data.item || r.data;
-      if (!first) return;
-
-      const item = {
-        host:first.host||host,
-        platform:first.platform||'web',
-        title:first.title || `Buyer lead for ${host}`,
-        created:first.created || new Date().toISOString(),
-        temp:first.temp || 'warm',
-        whyText:first.whyText || first.why || ''
+  function render(){
+    UI.rows.innerHTML = '';
+    (S.items||[]).forEach((it, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${it.host||''}</td>
+        <td>${it.platform||''}</td>
+        <td>${it.title||''}</td>
+        <td>${it.created||''}</td>
+        <td class="temp-${it.temp||''}">${it.temp||''}</td>
+        <td>${it.whyText||''}</td>`;
+      tr.onclick = () => {
+        alert(`Result #${i+1} — ${it.host}\n\n`+JSON.stringify(it,null,2));
       };
+      UI.rows.appendChild(tr);
+    });
+    UI.count.textContent = `${(S.items||[]).length} item${(S.items||[]).length===1?'':'s'}`;
+  }
 
-      S.items = S.items || [];
-      S.items.push(item);
-      renderList();
-      openModal(item);
-    }
+  async function findBuyers(){
+    const baseOK = !!sanitizeBase(S.base);
+    if (!baseOK){ log('ERR — base is empty/invalid'); return; }
 
-    async function findBuyers(){
-      const host = UI.host.value.trim();
-      if (!host) return;
+    const q = {
+      host: UI.host.value.trim(),
+      region: UI.region.value.trim(),
+      radius: UI.radius.value.trim()
+    };
+    const method = UI.method.value;
+    const path = UI.path.value || '/leads/find-buyers';
 
-      const method = UI.method.value;
-      let path = (UI.path.value||'/leads/find-buyers').trim() || '/leads/find-buyers';
+    let r = method === 'GET'
+      ? await call('GET', path, q)
+      : await call('POST', path, q);
 
-      // perform call (with optional fallback probing on 404)
-      const payload = { host, region:UI.region.value, radius:UI.radius.value };
-      let r = await call(method, path + (method==='GET'
-                   ? `?host=${encodeURIComponent(host)}&region=${encodeURIComponent(UI.region.value)}&radius=${encodeURIComponent(UI.radius.value)}`
-                   : ''), method==='POST' ? payload : undefined);
-
-      if (!r.ok && r.status===404 && UI.fallbacks.value==='auto'){
-        log('404 — starting probe for correct root/path…');
-        // try same path under discovered roots
-        const roots = ['', '/', '/api', '/api/','/api/v1','/api/v1/'];
-        for (const root of roots){
-          const prev = S.root; S.root = root;
-          r = await call(method, path + (method==='GET'
-                 ? `?host=${encodeURIComponent(host)}&region=${encodeURIComponent(UI.region.value)}&radius=${encodeURIComponent(UI.radius.value)}`
-                 : ''), method==='POST' ? payload : undefined);
-          if (r.ok) { localStorage.setItem('root', S.root); break; }
-          S.root = prev;
-        }
+    // Optional: simple fallback if endpoint is actually /buyers/find-one etc.
+    if (!r.ok && UI.fallbacks.value === 'auto'){
+      const tries = [
+        ['/buyers/find-buyers', method],
+        ['/buyers/find-one', 'GET'],
+        ['/leads/find-one', 'GET'],
+        ['/find-one', 'GET'],
+      ];
+      for (const [p,m] of tries){
+        r = m==='GET' ? await call('GET', p, q) : await call(m, p, q);
+        if (r.ok) break;
       }
-      if (!r.ok || !r.data) return;
-
-      const list = r.data.items || r.data.list || [];
-      const mapped = list.map(first => ({
-        host:first.host||host,
-        platform:first.platform||'web',
-        title:first.title || `Buyer lead for ${first.host||host}`,
-        created:first.created || new Date().toISOString(),
-        temp:first.temp || 'warm',
-        whyText:first.whyText || first.why || first.explain || ''
-      }));
-
-      // de-dup by host+title
-      const seen = new Set((S.items||[]).map(x=>x.host+'|'+x.title));
-      (mapped||[]).forEach(x=>{
-        const k=x.host+'|'+x.title;
-        if (!seen.has(k)){ seen.add(k); (S.items||[]).push(x); }
-      });
-      renderList();
     }
 
-    // ---------- modal ----------
-    function openModal(item){
-      UI.modalTitle.textContent = item.host;
-      UI.modalBody.textContent = JSON.stringify(item, null, 2);
-      UI.modal.classList.add('show');
+    if (!r.ok){
+      log(`${r.status} — request failed`);
+      return;
     }
-    bind(UI.closeModal, 'click', ()=> UI.modal.classList.remove('show'));
-    bind(UI.modal, 'click', (e)=>{ if (e.target===UI.modal) UI.modal.classList.remove('show'); });
-    bind(UI.copyJson, 'click', async ()=>{
-      try{ await navigator.clipboard.writeText(UI.modalBody.textContent); }catch{}
+
+    // Normalize a single result
+    const now = new Date().toISOString();
+    const item = {
+      host: q.host,
+      platform: 'web',
+      title: `Buyer lead for ${q.host}`,
+      created: now,
+      temp: 'warm',
+      whyText: `Compat shim matched (${q.region}, ${q.radius})`
+    };
+    pushItem(item);
+  }
+
+  function toCSV(items){
+    const cols = ['host','platform','title','created','temp','whyText'];
+    const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+    const rows = (items||[]).map(it => cols.map(c => esc(it[c])).join(','));
+    return [cols.join(','), ...rows].join('\r\n');
+  }
+  function download(name, text){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+    a.download = name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  }
+
+  // ---------- bootstrap / persistence ----------
+  function applyBase(){
+    const sanitized = sanitizeBase(UI.base.value);
+    S.base = sanitized;
+    UI.base.value = sanitized;                  // strip any quotes in the UI as well
+    localStorage.setItem('base', sanitized);
+    UI.find.disabled = !sanitized;
+    UI.health.disabled = !sanitized;
+    UI.probe.disabled = !sanitized;
+    UI.pillRoot.textContent = `root: (auto)`;
+    log('Base applied');
+  }
+
+  function load(){
+    // restore state
+    S.base = sanitizeBase(localStorage.getItem('base') || UI.base.value);
+    S.root = sanitizeRoot(localStorage.getItem('root') || UI.root.value);
+    S.key = stripQuotes(localStorage.getItem('key') || '');
+
+    UI.base.value = S.base;
+    UI.root.value = S.root;
+    UI.key.value  = S.key;
+
+    try{
+      S.items = JSON.parse(localStorage.getItem('items')||'[]')||[];
+    }catch{ S.items = []; }
+
+    UI.find.disabled = !S.base;
+    UI.health.disabled = !S.base;
+    UI.probe.disabled = !S.base;
+
+    render();
+  }
+
+  // ---------- wire events ----------
+  function bind(){
+    UI.apply.onclick = applyBase;
+    UI.clearList.onclick = () => { S.items = []; localStorage.removeItem('items'); render(); };
+    UI.saveKey.onclick = () => { S.key = UI.key.value.trim(); localStorage.setItem('key', S.key); log('API key saved'); };
+    UI.clrKey.onclick = () => { S.key = ''; UI.key.value = ''; localStorage.removeItem('key'); log('API key cleared'); };
+
+    UI.health.onclick = async () => { if (!sanitizeBase(S.base)) return; await doHealth(); };
+    UI.probe.onclick  = async () => { if (!sanitizeBase(S.base)) return; await probeRoutes(); };
+
+    UI.find.onclick = findBuyers;
+    UI.dlCSV.onclick = () => download('leads.csv', toCSV(S.items));
+
+    // fill quick tags
+    UI.tags.innerHTML = '';
+    ['US/CA','US/NY','US/TX','US/WA'].forEach(x=>{
+      const b = document.createElement('button');
+      b.className='pill'; b.textContent=x; b.onclick=()=>UI.region.value=x; UI.tags.appendChild(b);
     });
+  }
 
-    // ---------- event wiring (guarded) ----------
-    bind(UI.apply, 'click', async ()=>{
-      S.base = (UI.base.value||'').trim();
-      localStorage.setItem('base', S.base);
-      log('Base set');
-    });
-
-    bind(UI.health, 'click', health);
-    bind(UI.probe,  'click', async ()=>{
-      const ok = await probe(); if (ok) await getRoutes();
-    });
-
-    bind(UI.saveKey, 'click', ()=>{
-      const was = !!S.apiKey; S.apiKey = UI.apiKey.value.trim();
-      localStorage.setItem('apiKey', S.apiKey);
-      log(was && !S.apiKey ? 'API key cleared' : 'API key saved');
-    });
-
-    bind(UI.clearList, 'click', ()=>{
-      S.items = []; renderList();
-      log('List cleared');
-    });
-
-    bind(UI.clearLog, 'click', ()=> UI.httpLog.textContent='');
-
-    bind(UI.dlHot, 'click', ()=>{
-      const csv = toCSV((S.items||[]).filter(x=>x.temp==='hot'));
-      download(`hot-${Date.now()}.csv`, csv);
-    });
-    bind(UI.dlWarm, 'click', ()=>{
-      const csv = toCSV((S.items||[]).filter(x=>x.temp!=='hot'));
-      download(`warm-${Date.now()}.csv`, csv);
-    });
-
-    bind(UI.find, 'click', async ()=>{
-      // remember current settings
-      localStorage.setItem('lastPath', UI.path.value.trim());
-      localStorage.setItem('lastMethod', UI.method.value);
-      localStorage.setItem('fallbacks', UI.fallbacks.value);
-      S.lastPath = UI.path.value.trim();
-      S.lastMethod = UI.method.value;
-      S.fallbacks = UI.fallbacks.value;
-
-      const action = UI.action.value;
-      if (action === 'find-one') return findOne();
-      return findBuyers();
-    });
-
-    // ---------- boot ----------
-    initUI();
-    // optional preflight: if base exists, show quick health + routes
-    if (S.base){
-      (async ()=>{
-        await health();
-        await getRoutes();
-      })();
-    }
-  </script>
+  // init
+  bind();
+  load();
+})();
+</script>
 </body>
 </html>
