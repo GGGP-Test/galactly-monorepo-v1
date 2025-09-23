@@ -1,527 +1,538 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Leads Console — Free Panel (V3)</title>
-<!-- silence favicon 404 -->
-<link rel="icon" href="data:,">
-<style>
-  :root{
-    --bg:#0e1520; --panel:#121a26; --muted:#8aa0b3; --text:#e6eef7; --accent:#3aa3ff;
-    --ok:#2ecc71; --warn:#f1c40f; --bad:#ff5c5c; --pill:#1b2636; --border:#223046;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; background:var(--bg); color:var(--text);
-    font:14px/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-  }
-  .page{
-    max-width:1200px; margin:0 auto; padding:16px;
-    display:grid; grid-template-columns: 380px 1fr; gap:16px;
-  }
-  @media (max-width: 980px){ .page{grid-template-columns:1fr} }
-
-  .card{
-    background:var(--panel); border:1px solid var(--border); border-radius:10px;
-    padding:14px; box-shadow:0 0 0 1px #00000022 inset;
-  }
-  h1{font-size:18px; margin:0 0 10px 0}
-  label{display:block; color:var(--muted); margin:10px 0 6px}
-  input, select, textarea, button{
-    width:100%; border-radius:8px; border:1px solid var(--border);
-    background:#0c131d; color:var(--text); padding:10px 12px;
-  }
-  input::placeholder, textarea::placeholder{color:#6c8093}
-  button{
-    background:var(--pill); cursor:pointer; transition:background .15s, border-color .15s;
-  }
-  button:hover{background:#223146}
-  .row{display:grid; grid-template-columns: 1fr auto; gap:8px}
-  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:8px}
-  .grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
-  .btn-primary{background:var(--accent); border-color:#1e72c2}
-  .pill{display:inline-block; background:var(--pill); padding:4px 8px; border-radius:999px; color:#b9c9d9; font-size:12px; margin-right:6px}
-  .muted{color:var(--muted)}
-  .split{display:flex; gap:8px}
-  .split > *{flex:1}
-  .right{ text-align:right }
-
-  table{width:100%; border-collapse:collapse}
-  thead th{
-    position:sticky; top:0; background:var(--panel); z-index:1;
-    text-align:left; padding:10px; font-weight:600; border-bottom:1px solid var(--border);
-  }
-  tbody td{padding:10px; border-bottom:1px solid var(--border); vertical-align:top}
-  tbody tr:hover{background:#0f1724}
-  .temp-warm{color:#ffd479}
-  .temp-hot{color:#ff8a5b}
-
-  .log{height:140px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; resize:vertical}
-  .mini{font-size:12px}
-
-  .toolbar{display:flex; gap:8px}
-  .toolbar > *{flex:1}
-
-  .bad{color:var(--bad)}
-  .ok{color:var(--ok)}
-
-  /* modal */
-  .modal-back{
-    position:fixed; inset:0; background:#0008; display:none; align-items:center; justify-content:center;
-  }
-  .modal{ width:min(920px, calc(100vw - 40px)); max-height:80vh; background:#0e1520; border:1px solid var(--border); border-radius:10px; overflow:hidden; box-shadow:0 8px 40px #000c }
-  .modal header{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:#111a29; border-bottom:1px solid var(--border)}
-  .modal header h3{margin:0; font-size:14px}
-  .modal header button{width:auto; padding:6px 10px}
-  .modal pre{margin:0; padding:12px; overflow:auto; max-height:calc(80vh - 46px); color:#cfe1f7}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Leads Console — Free Panel (V3)</title>
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#0b1220; --muted:#94a3b8; --text:#e2e8f0;
+      --acc:#60a5fa; --acc-2:#38bdf8; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+      --row:#0e1627; --row-alt:#111b2f; --chip:#1e293b;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+    }
+    .wrap{
+      max-width:1200px;
+      margin:24px auto;
+      padding:0 16px;
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:16px;
+    }
+    @media (max-width: 1000px){
+      .wrap{grid-template-columns:1fr}
+    }
+    h1{font-size:18px; margin:0 0 10px 0}
+    .panel{
+      background:var(--panel);
+      border:1px solid #1f2937;
+      border-radius:10px;
+      padding:14px;
+    }
+    .row{display:flex; gap:8px; align-items:center; margin:8px 0}
+    .row.stacked{flex-direction:column; align-items:stretch}
+    label{font-size:12px; color:var(--muted)}
+    input,select,button,textarea{
+      background:#0d1527; color:var(--text); border:1px solid #1f2a40;
+      border-radius:8px; padding:10px 10px; outline:none;
+    }
+    input::placeholder{color:#64748b}
+    select{padding-right:28px}
+    button{cursor:pointer; border-color:#233652}
+    .btn{background:#13233d}
+    .btn.primary{background:linear-gradient(90deg,var(--acc),var(--acc-2)); border:none; color:#08111f}
+    .btn.ghost{background:#0d1527}
+    .chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px}
+    .chip{font-size:11px; background:var(--chip); color:#cbd5e1; padding:4px 8px; border-radius:999px}
+    .cols{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+    .cols-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
+    @media (max-width: 560px){
+      .cols{grid-template-columns:1fr}
+      .cols-3{grid-template-columns:1fr}
+    }
+    table{width:100%; border-collapse:collapse}
+    th,td{padding:10px 8px; border-bottom:1px solid #172238; text-align:left}
+    thead th{font-weight:600; color:#cbd5e1; position:sticky; top:0; background:var(--panel); z-index:1}
+    tbody tr{background:var(--row)}
+    tbody tr:nth-child(even){background:var(--row-alt)}
+    .temp-warm{color:var(--warn); font-weight:600}
+    .temp-hot{color:var(--ok); font-weight:600}
+    .why{color:#93c5fd}
+    .muted{color:var(--muted)}
+    .right{display:flex; justify-content:flex-end; gap:8px}
+    .pad-top{margin-top:10px}
+    .log{
+      background:#0a1220; border:1px solid #18243a; border-radius:8px; padding:10px;
+      height:160px; overflow:auto; white-space:pre; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:12px
+    }
+    /* modal */
+    .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(2,6,23,.65)}
+    .modal.show{display:flex}
+    .modal-card{background:#0c1426; border:1px solid #1e2b44; border-radius:10px; width:min(800px,92vw); max-height:84vh; display:flex; flex-direction:column}
+    .modal-head{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid #18243a}
+    .modal-body{padding:12px 14px; overflow:auto}
+    code{white-space:pre-wrap}
+  </style>
 </head>
 <body>
-  <div class="page">
-    <!-- LEFT: controls -->
-    <div class="card" id="panel">
+  <div class="wrap">
+    <!-- Left: controls -->
+    <div class="panel" id="left">
       <h1>Leads Console — Free Panel (V3)</h1>
 
-      <label>API base</label>
-      <div class="row">
-        <input id="base" placeholder="https://p01--your-app.code.run" />
-        <button id="apply" class="btn-primary" style="width:110px">Apply</button>
+      <!-- API base / root / key -->
+      <div class="row stacked">
+        <label>API base</label>
+        <div class="cols">
+          <input id="base" placeholder="https://host" />
+          <button id="apply" class="btn primary">Apply</button>
+        </div>
+        <div class="cols">
+          <button id="health" class="btn">Health</button>
+          <button id="probe"  class="btn">Probe</button>
+          <button id="clearList" class="btn ghost">Clear list</button>
+        </div>
+        <div class="chips" id="chips"></div>
       </div>
 
-      <div class="grid-3">
-        <button id="health" title="GET /healthz">Health</button>
-        <button id="probe"  title="Find viable root + paths">Probe</button>
-        <button id="clear"  title="Clear results">Clear list</button>
+      <div class="row stacked">
+        <label>API key (optional for read; required for write)</label>
+        <div class="cols">
+          <input id="apiKey" placeholder="paste key" />
+          <button id="saveKey" class="btn">Save</button>
+        </div>
       </div>
 
-      <label>API key <span class="muted mini">(optional for read; required for write)</span></label>
-      <div class="row">
-        <input id="key" placeholder="paste key" />
-        <button id="saveKey" style="width:110px">Save</button>
-      </div>
-
-      <div style="margin-top:10px">
-        <span id="healthBadge" class="pill muted">health: unknown</span>
-        <span id="routesBadge" class="pill muted">routes: (tap Probe)</span>
-        <span id="rootBadge" class="pill muted">root: (auto)</span>
-        <span id="lastBadge" class="pill muted">last OK: —</span>
-      </div>
-
-      <hr style="border:none; border-top:1px solid var(--border); margin:14px 0">
-
-      <label>Action</label>
-      <select id="action">
-        <option value="find-buyers" selected>Find buyers (one per click)</option>
-        <option value="find-one">Find one (strict)</option>
-      </select>
-
-      <label>Supplier host</label>
-      <input id="host" placeholder="example.com" />
-
-      <div class="grid-2">
-        <select id="region">
-          <option value="US/CA">US/CA</option>
-          <option value="US/NY">US/NY</option>
-          <option value="US/TX">US/TX</option>
-          <option value="US/FL">US/FL</option>
-        </select>
-        <select id="radius">
-          <option>25 mi</option><option selected>50 mi</option><option>100 mi</option><option>250 mi</option>
+      <!-- Action + inputs -->
+      <div class="row stacked pad-top">
+        <label>Action</label>
+        <select id="action">
+          <option value="find-buyers">Find buyers (one per click)</option>
+          <option value="find-one">Find one (strict)</option>
         </select>
       </div>
 
-      <label>Path for action <span class="muted mini">(relative to API root)</span></label>
-      <div class="grid-3">
-        <input id="path" placeholder="/leads/find-buyers" />
-        <select id="method">
-          <option value="GET">GET</option>
-          <option value="POST">POST</option>
-        </select>
-        <select id="fallbacks" title="Fallback strategy">
-          <option value="none">No fallbacks</option>
-          <option value="auto" selected>Auto-probe</option>
-        </select>
+      <div class="row stacked">
+        <label>Supplier host</label>
+        <input id="host" placeholder="example.com" />
       </div>
 
-      <div class="row" style="margin-top:10px">
-        <div></div>
-        <button id="find" class="btn-primary" style="width:140px">Find buyers</button>
+      <div class="cols-3">
+        <div class="row stacked">
+          <label>Region</label>
+          <select id="region">
+            <option value="US/CA">US/CA</option>
+            <option value="US">US</option>
+            <option value="Any">Any</option>
+          </select>
+        </div>
+        <div class="row stacked">
+          <label>Radius</label>
+          <select id="radius">
+            <option value="25 mi">25 mi</option>
+            <option value="50 mi" selected>50 mi</option>
+            <option value="100 mi">100 mi</option>
+          </select>
+        </div>
+        <div class="row stacked">
+          <label>&nbsp;</label>
+          <button id="find" class="btn primary">Find buyers</button>
+        </div>
       </div>
 
-      <label style="margin-top:12px">HTTP log</label>
-      <textarea id="log" class="log" readonly></textarea>
+      <div class="cols-3 pad-top">
+        <div class="row stacked">
+          <label>Path for action (relative to API root)</label>
+          <input id="path" placeholder="/leads/find-buyers" />
+        </div>
+        <div class="row stacked">
+          <label>Method</label>
+          <select id="method">
+            <option>GET</option>
+            <option>POST</option>
+          </select>
+        </div>
+        <div class="row stacked">
+          <label>Fallbacks</label>
+          <select id="fallbacks">
+            <option value="none">No fallbacks</option>
+            <option value="auto">Auto-probe on 404</option>
+          </select>
+        </div>
+      </div>
 
-      <div class="toolbar" style="margin-top:10px">
-        <button id="dlHot">Download CSV (hot)</button>
-        <button id="dlWarm">Download CSV (warm)</button>
+      <div class="row stacked pad-top">
+        <label>HTTP log</label>
+        <div class="log" id="httpLog"></div>
+        <div class="right pad-top">
+          <button id="dlHot" class="btn">Download CSV (hot)</button>
+          <button id="dlWarm" class="btn">Download CSV (warm)</button>
+          <button id="clearLog" class="btn ghost">Clear log</button>
+        </div>
       </div>
     </div>
 
-    <!-- RIGHT: results -->
-    <div class="card">
-      <div class="split" style="align-items:center; margin-bottom:6px">
-        <div class="muted mini" id="count">0 items</div>
-        <div class="right mini muted" id="hint"></div>
+    <!-- Right: results -->
+    <div class="panel" id="right">
+      <div class="row" style="justify-content:space-between; align-items:center">
+        <div class="muted">Results</div>
+        <div class="muted" id="count">0 items</div>
       </div>
-      <div style="max-height:72vh; overflow:auto; border:1px solid var(--border); border-radius:8px">
-        <table>
+      <div style="overflow:auto; max-height:74vh;">
+        <table id="results">
           <thead>
             <tr>
-              <th style="width:56px">#</th>
+              <th style="width:44px">#</th>
               <th>Host</th>
-              <th style="width:120px">Platform</th>
+              <th>Platform</th>
               <th>Title</th>
-              <th style="width:170px">Created</th>
-              <th style="width:70px">Temp</th>
+              <th>Created</th>
+              <th>Temp</th>
               <th>Why (human-readable)</th>
             </tr>
           </thead>
-          <tbody id="rows"></tbody>
+          <tbody></tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- JSON modal -->
-  <div id="mb" class="modal-back" role="dialog" aria-modal="true" aria-hidden="true">
-    <div class="modal">
-      <header>
-        <h3 id="mh">Result</h3>
-        <button id="mc">Close</button>
-      </header>
-      <pre id="mp"></pre>
+  <!-- Modal -->
+  <div class="modal" id="modal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <strong id="modalTitle">Result</strong>
+        <div class="right">
+          <button id="copyJson" class="btn">Copy JSON</button>
+          <button id="closeModal" class="btn">Close</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <code id="modalBody"></code>
+      </div>
     </div>
   </div>
 
-<script>
-(function(){
-  const UI = {
-    base: qs('#base'), apply: qs('#apply'),
-    health: qs('#health'), probe: qs('#probe'), clear: qs('#clear'),
-    key: qs('#key'), saveKey: qs('#saveKey'),
-    healthBadge: qs('#healthBadge'), routesBadge: qs('#routesBadge'),
-    rootBadge: qs('#rootBadge'), lastBadge: qs('#lastBadge'),
-    action: qs('#action'), host: qs('#host'), region: qs('#region'), radius: qs('#radius'),
-    path: qs('#path'), method: qs('#method'), fallbacks: qs('#fallbacks'),
-    find: qs('#find'),
-    log: qs('#log'),
-    rows: qs('#rows'), count: qs('#count'), hint: qs('#hint'),
-    dlHot: qs('#dlHot'), dlWarm: qs('#dlWarm'),
-    mb: qs('#mb'), mh: qs('#mh'), mp: qs('#mp'), mc: qs('#mc')
-  };
+  <script>
+    // ---------- state ----------
+    const S = {
+      base: localStorage.getItem('base') || '',
+      root: localStorage.getItem('root') || '',
+      apiKey: localStorage.getItem('apiKey') || '',
+      items: JSON.parse(localStorage.getItem('items') || '[]'),
+      lastPath: localStorage.getItem('lastPath') || '/leads/find-buyers',
+      lastMethod: localStorage.getItem('lastMethod') || 'GET',
+      fallbacks: localStorage.getItem('fallbacks') || 'auto'
+    };
 
-  const S = {
-    base: '', root: '', key: '',
-    items: [],
-    raw: [],
-    routes: [],
-    findTriedOnce: false
-  };
+    // ---------- dom helpers ----------
+    const $  = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const UI = {
+      base: $('#base'), apply: $('#apply'), health: $('#health'), probe: $('#probe'),
+      clearList: $('#clearList'), chips: $('#chips'),
+      apiKey: $('#apiKey'), saveKey: $('#saveKey'),
+      action: $('#action'), host: $('#host'), region: $('#region'), radius: $('#radius'), find: $('#find'),
+      path: $('#path'), method: $('#method'), fallbacks: $('#fallbacks'),
+      httpLog: $('#httpLog'), clearLog: $('#clearLog'), dlHot: $('#dlHot'), dlWarm: $('#dlWarm'),
+      tableBody: $('#results tbody'), count: $('#count'),
+      modal: $('#modal'), modalTitle: $('#modalTitle'), modalBody: $('#modalBody'),
+      closeModal: $('#closeModal'), copyJson: $('#copyJson')
+    };
 
-  const store = {
-    get(k, d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } },
-    set(k, v){ localStorage.setItem(k, JSON.stringify(v)) }
-  };
-
-  // ---------- boot ----------
-  (function boot(){
-    S.base = store.get('base',''); UI.base.value = S.base;
-    S.root = store.get('root',''); updateRootBadge();
-    S.key = store.get('key',''); UI.key.value = S.key || '';
-    UI.host.value = store.get('host','peekpackaging.com');
-    UI.region.value = store.get('region','US/CA');
-    UI.radius.value = store.get('radius','50 mi');
-    UI.action.value = store.get('action','find-buyers');
-    UI.path.value = store.get('path', defaultPathFor(UI.action.value));
-    UI.method.value = store.get('method','GET');
-    UI.fallbacks.value = store.get('fallbacks','auto');
-    UI.find.textContent = labelForAction(UI.action.value);
-    render();
-  })();
-
-  // ---------- helpers ----------
-  function qs(s,x=document){ return x.querySelector(s) }
-  function now(){ return new Date().toTimeString().slice(0,8) }
-  function log(line){
-    UI.log.value += (UI.log.value ? '\n' : '') + `[${now()}] ${line}`;
-    UI.log.scrollTop = UI.log.scrollHeight;
-  }
-  function setPill(el, txt, cls=''){ el.textContent = txt; el.className = 'pill ' + (cls||'') }
-  function updateRootBadge(){ setPill(UI.rootBadge, `root: ${S.root||'(auto)'}`) }
-  function withParams(url, params){
-    const u = new URL(url);
-    for(const [k,v] of Object.entries(params||{})) if(v!==undefined && v!=='') u.searchParams.set(k, v);
-    return u.toString();
-  }
-  function parseRoutes(r){ return Array.isArray(r?.routes) ? r.routes.map(String) : [] }
-  function firstMatch(routes, want){
-    for(const rx of want){ const hit = routes.find(r=>rx.test(r)); if (hit) return hit }
-    return null;
-  }
-  function defaultPathFor(action){
-    return action==='find-one' ? '/buyers/find-one' : '/leads/find-buyers';
-  }
-  function labelForAction(action){
-    return action==='find-one' ? 'Find one' : 'Find buyers';
-  }
-
-  async function call(method, path, data){
-    const base = S.base?.trim();
-    const root = (S.root||'').trim();
-    if(!base){ toast('Set API base first', true); throw new Error('no base') }
-
-    const isAbs = /^https?:\/\//i.test(path);
-    let url = isAbs ? path : base.replace(/\/+$/,'') + (root? `/${root.replace(/^\/+/,'')}`:'') + '/' + path.replace(/^\/+/,'');
-    const init = { method, headers: { 'accept':'application/json'} };
-
-    if (S.key) init.headers['x-api-key'] = S.key;
-
-    if (method === 'GET') url = withParams(url, data);
-    else { init.headers['content-type']='application/json'; init.body = JSON.stringify(data||{}); }
-
-    let res, json, ok=false;
-    try {
-      res = await fetch(url, init);
-      const ct = res.headers.get('content-type')||'';
-      json = ct.includes('application/json') ? await res.json() : await res.text();
-      ok = res.ok;
-    } catch(err){
-      log(`${res?res.status:'ERR'}  — ${method} ${path}  (${err.message})`);
-      throw err;
+    // Guarded binder to avoid "cannot set property of undefined"
+    function bind(el, event, fn){
+      if (!el) return; el.addEventListener(event, fn);
     }
 
-    log(`${res.status}  — ${method} ${path}${method==='GET' ? ' ' + new URL(url).search : ''}`);
-    if (res.status===200 && path.match(/routes$/)){
-      const sample = JSON.stringify({ ok: json.ok, routes: (json.routes||[]).slice(0,8) });
-      log(`routes sample: ${sample}`);
+    function chip(text){ const s=document.createElement('span'); s.className='chip'; s.textContent=text; return s; }
+    function log(line){
+      const ts = new Date().toISOString().slice(11,19);
+      UI.httpLog.textContent += `[${ts}] ${line}\n`;
+      UI.httpLog.scrollTop = UI.httpLog.scrollHeight;
     }
-    return { ok, status: (res && res.status)||0, data: json };
-  }
+    function setChips(list){ UI.chips.innerHTML=''; list.forEach(x=>UI.chips.appendChild(chip(x))); }
 
-  function toast(msg, bad){
-    UI.hint.textContent = msg;
-    UI.hint.className = bad ? 'bad mini right' : 'mini muted right';
-    log((bad?'✖️ ':'• ') + msg);
-  }
+    // ---------- init ----------
+    function initUI(){
+      UI.base.value = S.base;
+      UI.apiKey.value = S.apiKey;
+      UI.path.value = S.lastPath;
+      UI.method.value = S.lastMethod;
+      UI.fallbacks.value = S.fallbacks;
+      setChips([
+        `health: unknown`,
+        `routes: (tap Probe)`,
+        `root: ${S.root || '(auto)'}`
+      ]);
+      renderList();
+    }
 
-  // ---------- health + probe ----------
-  async function health(){
-    const r = await call('GET','/healthz');
-    setPill(UI.healthBadge, `health: ${r.status} — GET /healthz`, r.ok?'ok':'');
-    return r.ok;
-  }
+    // ---------- network ----------
+    async function call(method, path, body){
+      const url = new URL((S.base||'').replace(/\/+$/,'') + '/' + (S.root||'').replace(/^\/+/,''));
+      const full = new URL(path.replace(/^\/+/,''), url).toString();
 
-  async function probe(){
-    toast('starting probe for correct root/path…');
-    const roots = ['', 'api', 'api/v1'];
-    let foundRoot = null, routes = [];
+      const headers = {'Content-Type':'application/json'};
+      if (S.apiKey) headers['x-api-key'] = S.apiKey;
 
-    for(const rt of roots){
-      S.root = rt; updateRootBadge();
-      const rr = await call('GET', '/routes');
-      if (rr.ok && Array.isArray(rr.data?.routes)) {
-        foundRoot = rt; routes = parseRoutes(rr.data); break;
+      const opts = {method, headers};
+      if (method === 'POST' && body) opts.body = JSON.stringify(body);
+
+      log(`${method}  —  ${path}`);
+      try{
+        const r = await fetch(full, opts);
+        if (!r.ok){
+          log(`${r.status}  —  ${await r.text().catch(()=>r.statusText)}`.slice(0,300));
+          return {ok:false, status:r.status};
+        }
+        const data = await r.json();
+        return {ok:true, data};
+      }catch(err){
+        log(`ERR  —  ${err}`);
+        return {ok:false, err};
       }
     }
-    if (!foundRoot){
-      setPill(UI.routesBadge, 'routes: (not found)', 'bad'); updateRootBadge();
-      toast('probe finished — no routes endpoint', true);
+
+    async function getRoutes(){
+      const tryPaths = ['', '/', '/routes'];
+      for (const p of tryPaths){
+        const r = await call('GET', p || '/routes');
+        if (r.ok && r.data && (Array.isArray(r.data.routes) || Array.isArray(r.data))){
+          const routes = r.data.routes || r.data;
+          const sample = JSON.stringify({ok:true,routes:routes.slice(0,8)}, null, 0);
+          log(`routes sample: ${sample}`);
+          setChips([
+            `health: ${UI.chips.querySelector('.chip')?.textContent?.includes('200') ? '200' : 'unknown'}`,
+            `routes: 200 — GET /routes`,
+            `root: ${S.root ? S.root : '(auto)'}`
+          ]);
+          return {ok:true, routes};
+        }
+      }
+      return {ok:false};
+    }
+
+    async function health(){
+      const r = await call('GET','/healthz');
+      setChips([
+        `health: ${r.ok ? '200' : 'unknown'}`,
+        `routes: (tap Probe)`,
+        `root: ${S.root || '(auto)'}`
+      ]);
+    }
+
+    async function probe(){
+      // Discover a working root automatically if needed
+      const roots = ['', '/', '/api', '/api/','/api/v1','/api/v1/'];
+      for (const root of roots){
+        const prev = S.root;
+        S.root = root;
+        const r = await call('GET','/routes');
+        if (r.ok){
+          localStorage.setItem('root', S.root);
+          setChips([`health: unknown`,`routes: 200 — GET /routes`,`root: ${S.root||'(auto)'}`]);
+          return true;
+        }
+        S.root = prev;
+      }
+      log('probe finished — nothing returned 2xx');
       return false;
     }
 
-    S.root = foundRoot; store.set('root', S.root); updateRootBadge();
-    S.routes = routes;
-    setPill(UI.routesBadge, `routes: ${routes.length}`, 'ok');
-
-    // try guess path for current action
-    const action = UI.action.value;
-    const wants = action==='find-one'
-      ? [/\/buyers\/find-one$/, /\/leads\/find-one$/, /\/find-one$/]
-      : [/\/buyers\/find-buyers$/, /\/leads\/find-buyers$/, /\/find-buyers$/];
-
-    const hit = firstMatch(routes, wants);
-    if (hit){
-      const rel = hit.replace(new RegExp(`^${S.root||''}`), '');
-      UI.path.value = rel.startsWith('/') ? rel : '/' + rel;
-      store.set('path', UI.path.value);
-      toast(`path guessed → ${UI.path.value}`);
-    } else {
-      toast('could not guess path from routes', true);
-    }
-    return true;
-  }
-
-  // ---------- find ----------
-  async function findOnce(){
-    const method = UI.method.value;
-    const host = UI.host.value.trim();
-    const region = UI.region.value;
-    const radius = UI.radius.value;
-    const path = UI.path.value.trim() || defaultPathFor(UI.action.value);
-
-    store.set('host',host); store.set('region',region);
-    store.set('radius',radius); store.set('path',path); store.set('method',method);
-
-    const r = await call(method, path, { host, region, radius });
-    if (!r.ok){
-      if (r.status===404) toast('404 — starting probe for correct root/path…'); else toast(`HTTP ${r.status}`, true);
-      return r;
+    // ---------- results / CSV ----------
+    function renderList(){
+      UI.tableBody.innerHTML='';
+      (S.items||[]).forEach((it,i)=>{
+        const tr = document.createElement('tr');
+        const td = (...t)=>{ const x=document.createElement('td'); x.textContent=t.join(' '); return x; };
+        tr.appendChild(td(String(i+1)));
+        tr.appendChild(td(it.host||''));
+        tr.appendChild(td(it.platform||''));
+        tr.appendChild(td(it.title||''));
+        tr.appendChild(td(it.created||''));
+        const temp = document.createElement('td');
+        temp.textContent = it.temp || '';
+        temp.className = it.temp==='hot' ? 'temp-hot' : (it.temp==='warm' ? 'temp-warm':'');
+        tr.appendChild(temp);
+        const w = document.createElement('td');
+        w.className='why'; w.textContent = it.whyText || '';
+        tr.appendChild(w);
+        tr.addEventListener('click', ()=> openModal(it));
+        UI.tableBody.appendChild(tr);
+      });
+      UI.count.textContent = `${S.items.length} ${S.items.length===1?'item':'items'}`;
+      localStorage.setItem('items', JSON.stringify(S.items||[]));
     }
 
-    // Normalize results
-    let items = [];
-    if (Array.isArray(r.data?.items)) items = r.data.items;
-    else if (r.data?.item) items = [r.data.item];
-    else if (r.data && (r.data.host || r.data.title)) items = [r.data];
+    function toCSV(items){
+      const cols = ['host','platform','title','created','temp','whyText'];
+      const head = cols.join(',');
+      const esc = v=> `${String(v??'').replace(/"/g,'""')}`;
+      const rows = items.map(it=>cols.map(c=>`"${esc(it[c])}"`).join(','));
+      return [head,...rows].join('\r\n');
+    }
+    function download(name, text){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+      a.download = name; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),500);
+    }
 
-    if (items.length){
-      for(const it of items){
-        S.raw.push(it);
-        S.items.push(sanitizeItem(it));
+    // ---------- actions ----------
+    async function findOne(){
+      const host = UI.host.value.trim();
+      if (!host) return;
+      const method = UI.method.value;
+      const path = (UI.path.value||'/buyers/find-one').trim() || '/buyers/find-one';
+
+      const payload = { host, region:UI.region.value, radius:UI.radius.value };
+      const r = await call(method, path + (method==='GET'
+                   ? `?host=${encodeURIComponent(host)}&region=${encodeURIComponent(UI.region.value)}&radius=${encodeURIComponent(UI.radius.value)}`
+                   : ''), method==='POST' ? payload : undefined);
+
+      if (!r.ok || !r.data) return;
+
+      const first = Array.isArray(r.data.items) ? r.data.items[0] : r.data.item || r.data;
+      if (!first) return;
+
+      const item = {
+        host:first.host||host,
+        platform:first.platform||'web',
+        title:first.title || `Buyer lead for ${host}`,
+        created:first.created || new Date().toISOString(),
+        temp:first.temp || 'warm',
+        whyText:first.whyText || first.why || ''
+      };
+
+      S.items = S.items || [];
+      S.items.push(item);
+      renderList();
+      openModal(item);
+    }
+
+    async function findBuyers(){
+      const host = UI.host.value.trim();
+      if (!host) return;
+
+      const method = UI.method.value;
+      let path = (UI.path.value||'/leads/find-buyers').trim() || '/leads/find-buyers';
+
+      // perform call (with optional fallback probing on 404)
+      const payload = { host, region:UI.region.value, radius:UI.radius.value };
+      let r = await call(method, path + (method==='GET'
+                   ? `?host=${encodeURIComponent(host)}&region=${encodeURIComponent(UI.region.value)}&radius=${encodeURIComponent(UI.radius.value)}`
+                   : ''), method==='POST' ? payload : undefined);
+
+      if (!r.ok && r.status===404 && UI.fallbacks.value==='auto'){
+        log('404 — starting probe for correct root/path…');
+        // try same path under discovered roots
+        const roots = ['', '/', '/api', '/api/','/api/v1','/api/v1/'];
+        for (const root of roots){
+          const prev = S.root; S.root = root;
+          r = await call(method, path + (method==='GET'
+                 ? `?host=${encodeURIComponent(host)}&region=${encodeURIComponent(UI.region.value)}&radius=${encodeURIComponent(UI.radius.value)}`
+                 : ''), method==='POST' ? payload : undefined);
+          if (r.ok) { localStorage.setItem('root', S.root); break; }
+          S.root = prev;
+        }
       }
-      render();
-      setPill(UI.lastBadge, `last OK: ${method} ${path} @ ${(S.root||'root')}`);
-    } else {
-      toast('no items returned');
+      if (!r.ok || !r.data) return;
+
+      const list = r.data.items || r.data.list || [];
+      const mapped = list.map(first => ({
+        host:first.host||host,
+        platform:first.platform||'web',
+        title:first.title || `Buyer lead for ${first.host||host}`,
+        created:first.created || new Date().toISOString(),
+        temp:first.temp || 'warm',
+        whyText:first.whyText || first.why || first.explain || ''
+      }));
+
+      // de-dup by host+title
+      const seen = new Set((S.items||[]).map(x=>x.host+'|'+x.title));
+      (mapped||[]).forEach(x=>{
+        const k=x.host+'|'+x.title;
+        if (!seen.has(k)){ seen.add(k); (S.items||[]).push(x); }
+      });
+      renderList();
     }
-    return r;
-  }
 
-  function sanitizeItem(x={}){
-    const first = Array.isArray(x.matches)? x.matches[0] : x;
-    return {
-      host: x.host || first?.host || '',
-      platform: x.platform || 'web',
-      title: x.title || first?.title || 'Buyer lead',
-      created: x.created || new Date().toISOString(),
-      temp: x.temp || 'warm',
-      whyText: x.whyText || `Compat shim matched (${UI.region.value}, ${UI.radius.value})`
-    };
-  }
+    // ---------- modal ----------
+    function openModal(item){
+      UI.modalTitle.textContent = item.host;
+      UI.modalBody.textContent = JSON.stringify(item, null, 2);
+      UI.modal.classList.add('show');
+    }
+    bind(UI.closeModal, 'click', ()=> UI.modal.classList.remove('show'));
+    bind(UI.modal, 'click', (e)=>{ if (e.target===UI.modal) UI.modal.classList.remove('show'); });
+    bind(UI.copyJson, 'click', async ()=>{
+      try{ await navigator.clipboard.writeText(UI.modalBody.textContent); }catch{}
+    });
 
-  async function find(){
-    S.findTriedOnce = false;
-    let r = await findOnce();
-    if (r.ok) return;
+    // ---------- event wiring (guarded) ----------
+    bind(UI.apply, 'click', async ()=>{
+      S.base = (UI.base.value||'').trim();
+      localStorage.setItem('base', S.base);
+      log('Base set');
+    });
 
-    if (UI.fallbacks.value!=='auto' || r.status!==404) return;
+    bind(UI.health, 'click', health);
+    bind(UI.probe,  'click', async ()=>{
+      const ok = await probe(); if (ok) await getRoutes();
+    });
 
-    if (!S.findTriedOnce){
-      S.findTriedOnce = true;
-      const okProbe = await probe();
-      if (!okProbe) return;
+    bind(UI.saveKey, 'click', ()=>{
+      const was = !!S.apiKey; S.apiKey = UI.apiKey.value.trim();
+      localStorage.setItem('apiKey', S.apiKey);
+      log(was && !S.apiKey ? 'API key cleared' : 'API key saved');
+    });
+
+    bind(UI.clearList, 'click', ()=>{
+      S.items = []; renderList();
+      log('List cleared');
+    });
+
+    bind(UI.clearLog, 'click', ()=> UI.httpLog.textContent='');
+
+    bind(UI.dlHot, 'click', ()=>{
+      const csv = toCSV((S.items||[]).filter(x=>x.temp==='hot'));
+      download(`hot-${Date.now()}.csv`, csv);
+    });
+    bind(UI.dlWarm, 'click', ()=>{
+      const csv = toCSV((S.items||[]).filter(x=>x.temp!=='hot'));
+      download(`warm-${Date.now()}.csv`, csv);
+    });
+
+    bind(UI.find, 'click', async ()=>{
+      // remember current settings
+      localStorage.setItem('lastPath', UI.path.value.trim());
+      localStorage.setItem('lastMethod', UI.method.value);
+      localStorage.setItem('fallbacks', UI.fallbacks.value);
+      S.lastPath = UI.path.value.trim();
+      S.lastMethod = UI.method.value;
+      S.fallbacks = UI.fallbacks.value;
 
       const action = UI.action.value;
-      const alts = [];
-      const existsInRoutes = (p)=> S.routes.some(r=> r.endsWith(p.replace(/^\/+/,'')));
-
-      const want = action==='find-one'
-        ? ['/buyers/find-one','/leads/find-one','/find-one']
-        : ['/buyers/find-buyers','/leads/find-buyers','/find-buyers'];
-
-      for(const p of want) if (existsInRoutes(p)) alts.push(p);
-      if (!alts.includes(UI.path.value.trim())) alts.unshift(UI.path.value.trim());
-
-      for(const p of alts){
-        UI.path.value = p; store.set('path', p);
-        r = await findOnce();
-        if (r.ok) return;
-      }
-
-      UI.method.value = (UI.method.value==='GET' ? 'POST' : 'GET');
-      store.set('method', UI.method.value);
-      r = await findOnce();
-      if (r.ok) return;
-    }
-  }
-
-  // ---------- render ----------
-  function render(){
-    UI.rows.innerHTML = '';
-    S.items.forEach((x,i)=>{
-      const tr = document.createElement('tr');
-      tr.dataset.index = String(i);
-      tr.innerHTML = `
-        <td>${i+1}</td>
-        <td>${esc(x.host)}</td>
-        <td>${esc(x.platform||'web')}</td>
-        <td>${esc(x.title||'')}</td>
-        <td class="mini">${esc(x.created||'')}</td>
-        <td class="${x.temp==='hot'?'temp-hot':'temp-warm'}">${esc(x.temp||'')}</td>
-        <td class="mini">${esc(x.whyText||'')}</td>
-      `;
-      UI.rows.appendChild(tr);
+      if (action === 'find-one') return findOne();
+      return findBuyers();
     });
-    UI.count.textContent = `${S.items.length} item${S.items.length===1?'':'s'}`;
-  }
-  function esc(s){ return String(s??'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])) }
 
-  // ---------- CSV ----------
-  function toCSV(items){
-    const cols = ['host','platform','title','created','temp','whyText'];
-    const head = cols.join(',');
-    const escv = v=> `"${String(v??'').replace(/"/g,'""')}"`;
-    const rows = items.map(it=> cols.map(c=>escv(it[c])).join(','));
-    return [head, ...rows].join('\r\n');
-  }
-  function download(name, text){
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
-    a.download = name; a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
-  }
-
-  // ---------- modal ----------
-  function showModal(title, obj){
-    UI.mh.textContent = title;
-    UI.mp.textContent = JSON.stringify(obj, null, 2);
-    UI.mb.style.display = 'flex';
-  }
-  function hideModal(){ UI.mb.style.display = 'none' }
-
-  // ---------- events ----------
-  UI.apply.onclick = ()=>{
-    S.base = UI.base.value.trim();
-    store.set('base', S.base);
-    toast('Base set');
-  };
-  UI.saveKey.onclick = ()=>{
-    S.key = UI.key.value.trim();
-    store.set('key', S.key||'');
-    toast(S.key ? 'API key saved' : 'API key cleared');
-  };
-  UI.health.onclick = health;
-  UI.probe.onclick = probe;
-  UI.clear.onclick = ()=>{ S.items=[]; S.raw=[]; render(); toast('List cleared') };
-  UI.find.onclick = find;
-
-  UI.dlHot.onclick = ()=> download('buyers-hot.csv', toCSV(S.items.filter(x=>x.temp==='hot')));
-  UI.dlWarm.onclick = ()=> download('buyers-warm.csv', toCSV(S.items));
-
-  UI.action.onchange = ()=>{
-    const a = UI.action.value;
-    store.set('action', a);
-    UI.find.textContent = labelForAction(a);
-    if (!UI.path.value || UI.path.value === '/leads/find-buyers' || UI.path.value === '/buyers/find-one'){
-      UI.path.value = defaultPathFor(a);
-      store.set('path', UI.path.value);
+    // ---------- boot ----------
+    initUI();
+    // optional preflight: if base exists, show quick health + routes
+    if (S.base){
+      (async ()=>{
+        await health();
+        await getRoutes();
+      })();
     }
-  };
-
-  // row click → JSON modal
-  UI.rows.addEventListener('click', (e)=>{
-    const tr = e.target.closest('tr'); if (!tr) return;
-    const i = Number(tr.dataset.index);
-    if (!Number.isFinite(i)) return;
-    showModal(`Result #${i+1} — ${S.items[i]?.host||''}`, S.raw[i] ?? S.items[i]);
-  });
-  UI.mc.onclick = hideModal;
-  UI.mb.addEventListener('click', (e)=>{ if (e.target===UI.mb) hideModal() });
-  window.addEventListener('keydown', (e)=>{ if (e.key==='Escape') hideModal() });
-
-})();
-</script>
+  </script>
 </body>
 </html>
