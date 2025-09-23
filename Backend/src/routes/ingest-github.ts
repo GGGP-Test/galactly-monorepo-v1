@@ -1,80 +1,80 @@
 // src/routes/ingest-github.ts
-import { Router, Request, Response } from "express";
-import {
-  ensureLeadForHost,
-  saveByHost,
-  replaceHotWarm,
-  type StoredLead,
-  type Temp,
-} from "../shared/memStore";
+import { Router, Request, Response } from 'express';
+import { saveByHost, replaceHotWarm, Temp } from '../shared/memStore';
 
-const r = Router();
+const router = Router();
 
-type ApiOk = { ok: true; items: Array<{
-  host: string; platform?: string; title?: string; created?: string;
-  temp?: string; whyText?: string;
-}>};
-type ApiErr = { ok: false; error: string };
-
-function bad(res: Response, msg: string, code = 400) {
-  const body: ApiErr = { ok: false, error: msg };
-  return res.status(code).json(body);
-}
-
-function toHost(urlLike?: string, fallbackText?: string): string | undefined {
-  if (!urlLike && !fallbackText) return;
-  const tryUrl = (s: string) => {
-    try {
-      const u = s.includes("://") ? new URL(s) : new URL("https://" + s);
-      const h = u.hostname.replace(/^www\./, "").toLowerCase();
-      if (h.endsWith("github.com") || h.endsWith("githubusercontent.com")) return undefined;
-      return h;
-    } catch { return undefined; }
-  };
-  const fromUrl = urlLike ? tryUrl(urlLike) : undefined;
-  if (fromUrl) return fromUrl;
-
-  if (fallbackText) {
-    const m = fallbackText.match(/\b([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b/i);
-    if (m && !m[1].endsWith("github.com")) return m[1].toLowerCase();
+// quick helpers
+function toHost(urlLike: string | undefined): string | undefined {
+  if (!urlLike) return undefined;
+  try {
+    const u = urlLike.includes('://') ? new URL(urlLike) : new URL('https://' + urlLike);
+    return u.hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    // fallback: try to spot a domain inside free text
+    const m = urlLike.match(/\b([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b/i);
+    return m ? m[1].toLowerCase() : undefined;
   }
 }
 
-function panelView(lead: StoredLead) {
-  return {
-    host: lead.host,
-    platform: lead.platform ?? "web",
-    title: lead.title ?? `Buyer lead for ${lead.host}`,
-    created: lead.created,
-    temp: lead.temperature,
-    whyText: lead.why ?? "",
-  };
-}
+type IngestBody = {
+  homepage?: string;
+  owner?: string;
+  name?: string;
+  description?: string;
+  topics?: string[] | string;
+  temp?: Temp | string;
+};
 
-/** POST /api/ingest/github
- * Body: { homepage, owner, name, description, topics, temp? }
- */
-r.post("/ingest/github", (req: Request, res: Response) => {
-  const { homepage, owner, name, description, temp } = req.body || {};
-  const host = toHost(String(homepage || ""), String(description || ""));
-  if (!host) return bad(res, "could not derive host from homepage/description");
+// POST /api/ingest/github
+router.post('/ingest/github', (req: Request, res: Response) => {
+  const b: IngestBody = req.body || {};
+  const host =
+    toHost(b.homepage) ||
+    (b.owner ? `${String(b.owner).toLowerCase()}.github.io` : undefined);
 
-  const when = new Date().toISOString();
-  const title = `Buyer lead for ${host}${owner && name ? ` (via ${owner}/${name})` : ""}`;
+  if (!host) {
+    return res.status(400).json({ ok: false, error: 'homepage (or owner) required' });
+  }
 
-  saveByHost(host, {
+  const title = b.name ? `Buyer lead for ${b.name}` : `Buyer lead for ${host}`;
+  const topics =
+    Array.isArray(b.topics) ? b.topics :
+    typeof b.topics === 'string' ? b.topics.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  // persist to our in-memory store (compatible with the panel)
+  const whyBits = [];
+  if (b.description) whyBits.push(b.description);
+  if (topics.length)  whyBits.push(`topics: ${topics.slice(0, 6).join(', ')}`);
+
+  const saved = saveByHost(host, {
+    host,
+    platform: 'web',
     title,
-    platform: "web",
-    created: when,
-    why: `mirrored repo: ${owner ?? ""}/${name ?? ""}`,
+    created: new Date().toISOString(),
+    temperature: 'warm',
+    why: whyBits.join(' • ').slice(0, 200),
+    saved: true,
   });
 
-  const t = (String(temp || "").toLowerCase() as Temp) || "warm";
-  if (["hot", "warm", "cold"].includes(t)) replaceHotWarm(host, t as Temp);
+  // honor requested temp if present
+  const t = String(b.temp || '').toLowerCase();
+  if (t === 'hot' || t === 'warm' || t === 'cold') replaceHotWarm(host, t as Temp);
 
-  return res.json({ ok: true, items: [panelView(ensureLeadForHost(host))] } as ApiOk);
+  return res.json({
+    ok: true,
+    item: {
+      host: saved.host,
+      platform: saved.platform,
+      title: saved.title,
+      created: saved.created,
+      temp: saved.temperature,
+      whyText: saved.why,
+    },
+  });
 });
 
-r.get("/ingest/health", (_req, res) => res.json({ ok: true }));
+// tiny health endpoint for pings/debug
+router.get('/ingest/github/health', (_req, res) => res.json({ ok: true }));
 
-export default r;
+export default router;
