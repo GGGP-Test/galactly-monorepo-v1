@@ -4,12 +4,15 @@ import {
   ensureLeadForHost,
   saveByHost,
   replaceHotWarm,
+  buckets,
   type StoredLead,
 } from "../shared/memStore";
 
 const router = Router();
 
-/** Parse a host from a URL-like or free text. */
+/** ---------------------------
+ * helpers
+ * --------------------------*/
 function toHost(input?: string): string | undefined {
   const s = String(input || "").trim();
   if (!s) return;
@@ -19,9 +22,9 @@ function toHost(input?: string): string | undefined {
     const h = (u.hostname || "").toLowerCase().replace(/^www\./, "");
     if (h && h.includes(".")) return h;
   } catch {
-    // fallthrough
+    // fallthrough to regex
   }
-  // Fallback: find domain-looking token in free text
+  // Fallback: find domain-like token
   const m = s.match(/\b([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b/i);
   if (m && !m[1].toLowerCase().endsWith("github.com")) {
     return m[1].toLowerCase();
@@ -33,13 +36,14 @@ function nowISO() {
   return new Date().toISOString();
 }
 
+type Temp = "hot" | "warm" | "cold";
 type IngestBody = {
-  homepage?: string;     // "https://example.com"
-  owner?: string;        // "Zie619"
-  name?: string;         // repo name
-  description?: string;  // repo description
-  topics?: string[];     // ["n8n","workflow"]
-  temp?: "hot" | "warm" | "cold";
+  homepage?: string;
+  owner?: string;
+  name?: string;
+  description?: string;
+  topics?: string[];
+  temp?: Temp;
 };
 
 function ok(res: Response, data: any) {
@@ -49,30 +53,45 @@ function bad(res: Response, msg = "bad request", code = 400) {
   return res.status(code).json({ ok: false, error: msg });
 }
 
-/**
- * POST /api/ingest/github
- * Body: IngestBody
- */
+/** Convert a StoredLead into the panel’s table item shape */
+function toPanelItem(lead: StoredLead) {
+  return {
+    id: lead.id,
+    host: lead.host,
+    platform: lead.platform || "web",
+    title: lead.title || "",
+    created: lead.created || "",
+    temperature: lead.temperature || "warm",
+    why: lead.why
+      ? {
+          signal: { label: "Discovery", score: 0.7, detail: lead.why },
+        }
+      : null,
+    whyText: lead.why || "",
+  };
+}
+
+/** ---------------------------
+ * POST /ingest/github
+ * Accepts items from Actions (Zie619 → our API)
+ * --------------------------*/
 async function handleGithubIngest(req: Request, res: Response) {
   const b: IngestBody = (req.body || {}) as any;
 
-  // pick a host from homepage first, then description
+  // Choose a host from homepage or description; fallback to owner.github.io
   let host = toHost(b.homepage) || toHost(b.description);
-  // last fallback: owner.github.io
   if (!host && b.owner) host = `${String(b.owner).toLowerCase()}.github.io`;
-
   if (!host) return bad(res, "no usable domain found (homepage/description/owner)");
 
-  // Create or update a lead for this host
+  // Create/update lead
   const lead0 = ensureLeadForHost(host);
-  const temp = (b.temp === "hot" || b.temp === "warm" || b.temp === "cold") ? b.temp : "warm";
+  const temp: Temp = b.temp === "hot" || b.temp === "cold" ? b.temp : "warm";
 
   const why =
     b.description
       ? `Found via GitHub (${b.owner ?? "unknown"}/${b.name ?? "repo"}): ${b.description}`
       : `Found via GitHub (${b.owner ?? "unknown"}/${b.name ?? "repo"})`;
 
-  // merge/update
   const updated: StoredLead = saveByHost(host, {
     platform: "github",
     title: lead0.title || (b.name ? `Repo: ${b.name}` : "Discovered repository"),
@@ -81,19 +100,43 @@ async function handleGithubIngest(req: Request, res: Response) {
     saved: true,
   });
 
-  // set temperature explicitly (also marks as saved)
+  // mark temperature
   replaceHotWarm(host, temp);
 
   return ok(res, { host, item: updated });
 }
 
-// health for this router
+/** Keep a tiny health for this router */
 router.get("/ingest/health", (_req, res) => ok(res, { scope: "ingest" }));
 
-// IMPORTANT: register relative path so that mounting at `/api` yields `/api/ingest/github`
+/** Primary ingest endpoint (relative); will end up as /api/ingest/github when mounted at /api */
 router.post("/ingest/github", handleGithubIngest);
 
-// Optional extra absolute path for belt-and-suspenders (works if mounted at '/')
+/** Also register absolute path for belt-and-suspenders if app mounts this router at root */
 router.post("/api/ingest/github", handleGithubIngest);
+
+/** ---------------------------
+ * READ endpoints for Free Panel
+ * The panel calls: GET /api/v1/leads?temp=hot|warm
+ * We’ll provide both /leads and /v1/leads for compatibility.
+ * --------------------------*/
+function handleList(req: Request, res: Response) {
+  const tempQ = String(req.query.temp || "").toLowerCase();
+  const { hot, warm, cold } = buckets();
+  let list = warm;
+  if (tempQ === "hot") list = hot;
+  else if (tempQ === "cold") list = cold;
+
+  const items = list.map(toPanelItem);
+  return ok(res, { items });
+}
+
+// canonical: /api/v1/leads
+router.get("/v1/leads", handleList);
+// alias: /api/leads
+router.get("/leads", handleList);
+// extra convenience paths
+router.get("/leads/hot", (_req, res) => ok(res, { items: buckets().hot.map(toPanelItem) }));
+router.get("/leads/warm", (_req, res) => ok(res, { items: buckets().warm.map(toPanelItem) }));
 
 export default router;
