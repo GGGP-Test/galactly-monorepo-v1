@@ -1,370 +1,392 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Leads Console — Free Panel (V3)</title>
-  <style>
-    :root { --bg:#0f1420; --card:#151e2c; --muted:#90a4ae; --text:#e6edf3; --accent:#2f81f7; --ok:#22c55e; --bad:#ef4444; --chip:#1f2a3a; }
-    html,body { height:100%; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; }
-    .wrap { max-width:1080px; margin:20px auto; padding:0 16px; display:grid; grid-template-columns: 1.2fr 1fr; gap:16px; }
-    .card { background:var(--card); border-radius:10px; padding:16px; box-shadow: 0 0 0 1px rgba(255,255,255,.04) inset; }
-    h1 { margin:0 0 8px; font-size:18px; }
-    label { display:block; font-size:12px; color:var(--muted); margin:10px 0 6px; }
-    input,select,button,textarea { font: inherit; border-radius:8px; border:1px solid rgba(255,255,255,.08); background:#0b1220; color:var(--text); padding:10px 12px; outline:none; width:100%; }
-    input:focus,select:focus,textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47,129,247,.25); }
-    .row { display:flex; gap:8px; align-items:center; }
-    .row > * { flex:1; }
-    .btn { background: var(--accent); border: none; cursor: pointer; }
-    .btn.alt { background:#253145; }
-    .btn.warn { background:#a16207; }
-    .btn.bad { background:#7f1d1d; }
-    .pill { display:inline-flex; gap:6px; align-items:center; background:var(--chip); border:1px solid rgba(255,255,255,.06); border-radius:999px; padding:6px 10px; font-size:12px; }
-    .grid { overflow:auto; border-radius:8px; border:1px solid rgba(255,255,255,.08); }
-    table { width:100%; border-collapse:collapse; font-size:12px; }
-    th,td { padding:10px; border-bottom:1px solid rgba(255,255,255,.06); }
-    th { text-align:left; color:var(--muted); position:sticky; top:0; background:var(--card); }
-    .muted { color:var(--muted); }
-    .ok { color: var(--ok); }
-    .bad { color: var(--bad); }
-    .log { height:160px; overflow:auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; background:#0b1220; border-radius:8px; border:1px solid rgba(255,255,255,.08); padding:8px 10px; }
-    .chips { display:flex; gap:8px; flex-wrap:wrap; }
-    .right { text-align:right; }
-    .small { font-size:11px; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Leads Console — Free Panel (V3)</title>
+<style>
+  :root{
+    --bg:#0f1520; --panel:#111927; --muted:#7a8aa0; --fg:#e6edf3; --accent:#4f8cff;
+    --ok:#1db954; --warn:#ffcf5a; --bad:#ff6b6b; --chip:#223047;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  a{color:var(--accent)}
+  .wrap{max-width:1200px;margin:0 auto;padding:16px}
+  h1{font-size:18px;margin:0 0 12px 0}
+  main{display:grid;grid-template-columns:minmax(340px,460px) 1fr;gap:16px;align-items:start}
+  .panel,.results{background:var(--panel);border-radius:8px;padding:14px}
+  label{display:block;margin:10px 0 6px;color:var(--muted);font-weight:600}
+  input,select,textarea{width:100%;padding:10px 12px;border:1px solid #203044;border-radius:8px;background:#0b1220;color:var(--fg);outline:none}
+  input:focus,select:focus,textarea:focus{border-color:#2d4766;box-shadow:0 0 0 2px #1b2b42}
+  textarea.log{min-height:130px;white-space:pre-wrap;font-family:ui-monospace,Consolas,Monaco,monospace}
+  .row{display:grid;grid-template-columns:1fr auto;gap:8px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}
+  .btn{padding:10px 14px;border-radius:8px;border:1px solid #254163;background:#152234;color:var(--fg);cursor:pointer}
+  .btn:hover{filter:brightness(1.05)}
+  .btn.primary{background:var(--accent);border-color:#4176d6}
+  .btn.ghost{background:#0b1220;border-color:#203044}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .chip{background:var(--chip);border-radius:999px;padding:4px 10px;color:#b9c6d7;font-size:12px}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid #203044;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  th{font-weight:700;color:#a9b7c7}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+  @media (max-width:900px){ main{grid-template-columns:1fr} }
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Leads Console — Free Panel (V3)</h1>
-
+<div class="wrap">
+  <h1>Leads Console — Free Panel (V3)</h1>
+  <main>
+    <!-- LEFT: controls -->
+    <section class="panel">
       <label>API base</label>
       <div class="row">
-        <input id="base" placeholder="https://p01-…code.run"/>
-        <button id="apply" class="btn" style="flex:0 0 auto;width:88px">Apply</button>
+        <input id="base" placeholder="https://p01--your-app.code.run" />
+        <button class="btn primary" id="apply">Apply</button>
       </div>
 
-      <label>API root (prefixed to paths)</label>
-      <div class="row">
-        <input id="root" placeholder="/api/v1"/>
-        <button id="health" class="btn alt" style="flex:0 0 auto;">Health</button>
-        <button id="routes" class="btn alt" style="flex:0 0 auto;">Routes</button>
-        <span id="rootUsed" class="pill small">Root used: <b>(none)</b></span>
+      <div class="grid2" style="margin-top:8px">
+        <div>
+          <label>API root (prefixed to paths)</label>
+          <input id="root" placeholder="(blank for /leads/* at root)" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <div class="toolbar">
+            <button class="btn ghost" id="health">Health</button>
+            <button class="btn ghost" id="probe">Probe</button>
+          </div>
+        </div>
       </div>
 
-      <label>API key (optional for read; required for write)</label>
-      <div class="row">
-        <input id="key" placeholder="paste key"/>
-        <button id="saveKey" class="btn" style="flex:0 0 auto;width:88px">Save</button>
+      <div class="grid2" style="margin-top:8px">
+        <div>
+          <label>API key (optional for read; required for write)</label>
+          <input id="apiKey" placeholder="paste key" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="btn" id="saveKey">Save</button>
+        </div>
       </div>
 
-      <div class="row">
-        <button id="refreshHot" class="btn alt">Refresh Hot</button>
-        <button id="refreshWarm" class="btn alt">Refresh Warm</button>
-      </div>
+      <div class="chips" id="chips"></div>
 
-      <hr style="border:none;border-top:1px solid rgba(255,255,255,.08); margin:16px 0"/>
+      <hr style="border:0;border-top:1px solid #203044;margin:16px 0" />
 
       <label>Action</label>
-      <div class="pill">Find buyers (one per click)</div>
+      <div class="muted" style="margin:-4px 0 8px">Find buyers (one per click)</div>
 
       <label>Supplier host</label>
-      <input id="host" placeholder="peekpackaging.com"/>
+      <input id="host" placeholder="example.com" />
 
-      <div class="row">
-        <select id="region">
-          <option>US/CA</option>
-          <option>US</option>
-          <option>EU</option>
-          <option>GLOBAL</option>
-        </select>
-        <select id="radius">
-          <option>50 mi</option>
-          <option>100 mi</option>
-          <option>200 mi</option>
-          <option>Nationwide</option>
-        </select>
-        <button id="find" class="btn" style="flex:0 0 auto;width:120px">Find buyers</button>
+      <div class="grid2">
+        <div>
+          <label>Region / Radius</label>
+          <div class="grid2">
+            <select id="region">
+              <option>US/CA</option><option>US/NY</option><option>US/TX</option>
+              <option>US/FL</option><option>US/IL</option>
+            </select>
+            <select id="radius">
+              <option>25 mi</option><option selected>50 mi</option><option>100 mi</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="btn primary" id="find">Find buyers</button>
+        </div>
       </div>
 
-      <label>Find Buyers path (relative to API root)</label>
-      <div class="row">
-        <input id="path" placeholder="/leads/find-buyers"/>
-        <select id="method" style="flex:0 0 auto;width:110px">
-          <option>GET</option>
-          <option>POST</option>
-        </select>
-        <select id="fallbackMode" title="When 404, try other roots/paths/methods" style="flex:0 0 auto;width:150px">
-          <option value="off">No fallbacks</option>
-          <option value="probe404" selected>Auto-probe on 404</option>
-        </select>
+      <div class="grid3" style="margin-top:8px">
+        <div>
+          <label>Find Buyers path (relative to API root)</label>
+          <input id="path" value="/leads/find-buyers" />
+        </div>
+        <div>
+          <label>Method</label>
+          <select id="method">
+            <option selected>GET</option>
+            <option>POST</option>
+          </select>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <select id="fallbackMode" title="When a request returns 404">
+            <option value="probe">Auto-probe on 404</option>
+            <option value="off" selected>No fallbacks</option>
+          </select>
+        </div>
       </div>
 
-      <div class="chips" style="margin-top:10px">
-        <span id="healthChip" class="pill small">health: <b class="muted">unknown</b></span>
-        <span id="routesChip" class="pill small">routes: <b class="muted">n/a</b></span>
-        <span id="lastOkChip" class="pill small">last OK: <b class="muted">—</b></span>
-      </div>
+      <label style="margin-top:12px">HTTP log</label>
+      <textarea class="log" id="log" readonly></textarea>
 
-      <label style="margin-top:14px">HTTP log</label>
-      <pre id="log" class="log"></pre>
-
-      <div class="row">
-        <button id="dlHot" class="btn alt">Download CSV (hot)</button>
-        <button id="dlWarm" class="btn alt">Download CSV (warm)</button>
+      <div class="toolbar" style="margin-top:8px">
+        <button class="btn" id="dlHot">Download CSV (hot)</button>
+        <button class="btn" id="dlWarm">Download CSV (warm)</button>
+        <button class="btn" id="clearList">Clear list</button>
       </div>
-    </div>
+    </section>
 
-    <div class="card">
-      <div class="row" style="justify-content:space-between; align-items:center">
-        <h1>Results</h1>
-        <div class="muted small"><span id="count">0</span> items</div>
+    <!-- RIGHT: results -->
+    <section class="results">
+      <div class="toolbar" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="muted">Results</div>
+        <div class="muted" id="count">0 items</div>
       </div>
-      <div class="grid" style="height:520px">
-        <table id="table">
+      <div style="overflow:auto">
+        <table>
           <thead>
             <tr>
-              <th>#</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why (human-readable)</th>
+              <th style="width:56px">#</th>
+              <th>Host</th>
+              <th>Platform</th>
+              <th>Title</th>
+              <th>Created</th>
+              <th>Temp</th>
+              <th>Why (human-readable)</th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
+</div>
 
 <script>
-(() => {
-  const UI = {
-    base:      document.getElementById('base'),
-    root:      document.getElementById('root'),
-    key:       document.getElementById('key'),
-    apply:     document.getElementById('apply'),
-    saveKey:   document.getElementById('saveKey'),
-    refreshHot:document.getElementById('refreshHot'),
-    refreshWarm:document.getElementById('refreshWarm'),
-    health:    document.getElementById('health'),
-    routesBtn: document.getElementById('routes'),
-    rootUsed:  document.getElementById('rootUsed').querySelector('b'),
-    healthChip:document.getElementById('healthChip').querySelector('b'),
-    routesChip:document.getElementById('routesChip').querySelector('b'),
-    lastOkChip:document.getElementById('lastOkChip').querySelector('b'),
-    host:      document.getElementById('host'),
-    region:    document.getElementById('region'),
-    radius:    document.getElementById('radius'),
-    find:      document.getElementById('find'),
-    path:      document.getElementById('path'),
-    method:    document.getElementById('method'),
-    fallback:  document.getElementById('fallbackMode'),
-    log:       document.getElementById('log'),
-    rows:      document.getElementById('rows'),
-    count:     document.getElementById('count'),
-    dlHot:     document.getElementById('dlHot'),
-    dlWarm:    document.getElementById('dlWarm'),
+/* ----------------- state & utils ----------------- */
+const UI = {
+  base:      document.getElementById('base'),
+  root:      document.getElementById('root'),
+  apiKey:    document.getElementById('apiKey'),
+  apply:     document.getElementById('apply'),
+  saveKey:   document.getElementById('saveKey'),
+  health:    document.getElementById('health'),
+  probe:     document.getElementById('probe'),
+  host:      document.getElementById('host'),
+  region:    document.getElementById('region'),
+  radius:    document.getElementById('radius'),
+  path:      document.getElementById('path'),
+  method:    document.getElementById('method'),
+  fallback:  document.getElementById('fallbackMode'),
+  find:      document.getElementById('find'),
+  log:       document.getElementById('log'),
+  chips:     document.getElementById('chips'),
+  count:     document.getElementById('count'),
+  rows:      document.getElementById('rows'),
+  dlHot:     document.getElementById('dlHot'),
+  dlWarm:    document.getElementById('dlWarm'),
+  clearList: document.getElementById('clearList'),
+};
+
+const S = {
+  items: JSON.parse(localStorage.getItem('items')||'[]')
+};
+
+function savePrefs(){
+  localStorage.setItem('base', UI.base.value.trim());
+  localStorage.setItem('root', UI.root.value.trim());
+  localStorage.setItem('path', UI.path.value.trim());
+  localStorage.setItem('method', UI.method.value);
+  localStorage.setItem('apiKey', UI.apiKey.value.trim());
+}
+
+function loadPrefs(){
+  UI.base.value   = localStorage.getItem('base')   || '';
+  UI.root.value   = localStorage.getItem('root')   || '';
+  UI.path.value   = localStorage.getItem('path')   || '/leads/find-buyers';
+  UI.method.value = localStorage.getItem('method') || 'GET';
+  UI.apiKey.value = localStorage.getItem('apiKey') || '';
+  renderChips();
+  renderList();
+}
+
+function logLine(s){ 
+  const now = new Date().toISOString().slice(11,19);
+  UI.log.value += (UI.log.value ? "\n" : "") + `[${now}] ${s}`;
+  UI.log.scrollTop = UI.log.scrollHeight;
+}
+
+function chip(txt, cls=''){ 
+  const el = document.createElement('span'); 
+  el.className = 'chip ' + cls; el.textContent = txt; 
+  return el;
+}
+function renderChips(){
+  UI.chips.innerHTML = '';
+  UI.chips.append(
+    chip(`health: ${S.health||'n/a'}`,(S.health||'').startsWith('200')?'ok':''),
+    chip(`routes: ${S.routes||'n/a'}`),
+    chip(`last OK: ${S.lastOK||'n/a'}`)
+  );
+}
+
+/* make absolute URL from base/root/path */
+function makeURL(path){
+  const base = (UI.base.value||'').replace(/\/+$/,'');
+  const root = (UI.root.value||'').replace(/^\/?/,'').replace(/\/+$/,'');
+  const p    = (path||'').replace(/^\/+/,'');
+  return root ? `${base}/${root}/${p}` : `${base}/${p}`;
+}
+
+/* GET/POST helper (adds apiKey header if present) */
+async function http(method, url, body){
+  const headers = {};
+  const key = UI.apiKey.value.trim();
+  if (key) headers['x-api-key'] = key;
+  if (method === 'POST') headers['content-type'] = 'application/json';
+  const r = await fetch(url, { method, headers, body });
+  return r;
+}
+
+/* CSV utils */
+function toCSV(items){
+  const cols = ['host','platform','title','created','temp','why'];
+  const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+  const head = cols.join(',');
+  const rows = items.map(it=>cols.map(c=>esc(it[c])).join(','));
+  return [head,...rows].join('\r\n');
+}
+function download(name, text){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+  a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+
+/* list render */
+function renderList(){
+  UI.rows.innerHTML = '';
+  S.items.forEach((x,i)=>{
+    const tr = document.createElement('tr');
+    const td = (...t)=>{ const d=document.createElement('td'); d.textContent=t[0]??''; return d; };
+    tr.append(td(i+1), td(x.host), td(x.platform||''), td(x.title||''), td(x.created||''), td(x.temp||''), td(x.why||''));
+    UI.rows.append(tr);
+  });
+  UI.count.textContent = `${S.items.length} items`;
+}
+
+/* normalize API response into list items */
+function normalize(resp, ctx){
+  const items = [];
+  const push = (h)=>items.push({
+    host:h.host||h.domain||h.site||ctx.host||'',
+    platform:h.platform||'web',
+    title:h.title||h.name||`Buyer lead for ${h.host||ctx.host||''}`,
+    created:h.created||new Date().toISOString(),
+    temp:h.temp||'warm',
+    why:h.why||`Compat shim matched (${ctx.region}, ${ctx.radius})`
+  });
+  if (Array.isArray(resp?.items)) resp.items.forEach(push);
+  else if (resp?.host || resp?.domain) push(resp);
+  return items;
+}
+
+/* ----------------- feature: health & probe ----------------- */
+async function runHealth(){
+  try{
+    const url = makeURL('healthz');
+    const r = await http('GET', url);
+    S.health = `${r.status}  — GET /healthz`;
+    logLine(S.health);
+    if (r.ok) { S.lastOK = 'GET /healthz @ (root)'; renderChips(); }
+  }catch(e){ logLine('health error: '+e.message); }
+}
+
+async function runRoutesSample(){
+  try{
+    const r = await http('GET', makeURL('routes'));
+    S.routes = `${r.status}  — GET /routes`;
+    logLine(S.routes);
+    if (r.ok){
+      const sample = await r.text();
+      logLine(`routes sample: ${sample.slice(0,120)}…`);
+      S.lastOK = 'GET /routes @ (root)';
+      renderChips();
+    }
+  }catch(e){ logLine('routes error: '+e.message); }
+}
+
+/* probe only when asked */
+async function probeRootsOnce(){
+  const roots = ['', 'api']; // minimal, quiet
+  for (const candidate of roots){
+    UI.root.value = candidate;
+    const r = await http('GET', makeURL('routes'));
+    logLine(`${r.status}  — GET /routes @ ${candidate?'/'+candidate:'(root)'}`);
+    if (r.ok){ 
+      S.lastOK = r.status+' OK @ '+(candidate?'/'+candidate:'(root)');
+      renderChips();
+      savePrefs();
+      return true;
+    }
+  }
+  return false;
+}
+
+/* ----------------- feature: find buyers (one per click) ----------------- */
+async function findOne(){
+  const host = UI.host.value.trim();
+  const region = UI.region.value;
+  const radius = UI.radius.value;
+  const path = UI.path.value.trim() || '/leads/find-buyers';
+  const method = UI.method.value;
+
+  const build = ()=> {
+    const url = new URL(makeURL(path));
+    if (method === 'GET'){
+      url.searchParams.set('host', host);
+      url.searchParams.set('region', region);
+      url.searchParams.set('radius', radius);
+    }
+    return url.toString();
   };
 
-  // state
-  let S = {
-    items: [],
-    base: localStorage.getItem('base') || '',
-    root: localStorage.getItem('root') || '',
-    key:  localStorage.getItem('key') || '',
-    path: localStorage.getItem('path') || '/leads/find-buyers',
-    method: localStorage.getItem('method') || 'GET'
+  const req = async ()=>{
+    const url = build();
+    let r = await http(method, url, method==='POST' ? JSON.stringify({host,region,radius}) : undefined);
+    if (r.status === 404 && UI.fallback.value === 'probe'){
+      logLine('404  — starting probe for correct root/path…');
+      const ok = await probeRootsOnce();
+      if (ok){ r = await http(method, build(), method==='POST' ? JSON.stringify({host,region,radius}) : undefined); }
+    }
+    return r;
   };
 
-  // init fields
-  UI.base.value = S.base;
-  UI.root.value = S.root;
-  UI.key.value = S.key;
-  UI.path.value = S.path;
-  UI.method.value = S.method;
-  UI.rootUsed.textContent = S.root || '(none)';
+  const r = await req();
+  logLine(`${r.status}  — ${method} ${new URL(build()).pathname}${method==='GET' ? ('?'+new URL(build()).searchParams.toString()) : ''}`);
+  if (!r.ok){ logLine(await r.text().catch(()=>'')); return; }
 
-  function toast(msg,isErr){
-    UI.log.textContent += (isErr ? '✖ ' : '• ') + msg + '\n';
-    UI.log.scrollTop = UI.log.scrollHeight;
-  }
-
-  function buildURL(base, root, path, q) {
-    const u = new URL((base||'').replace(/\/+$/,'') + (root?('/'+root.replace(/^\/+/,'').replace(/\/+$/,'')):'') + '/' + path.replace(/^\/+/,''));
-    if (q) for (const [k,v] of Object.entries(q)) if (v!=null) u.searchParams.set(k, String(v));
-    return u;
-  }
-
-  async function call({base,root,path,method='GET',q,body,key,timeoutMs=9000}) {
-    const url = buildURL(base,root,path, (method==='GET') ? {...q, apikey: key || undefined} : {apikey: key || undefined});
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort('timeout'), timeoutMs);
-    const headers = {'content-type':'application/json'};
-    if (key) {
-      headers['x-api-key'] = key;
-      headers['authorization'] = `Bearer ${key}`;
-    }
-    const opt = {method, headers, signal: ctrl.signal};
-    if (method !== 'GET') opt.body = JSON.stringify(body ?? q ?? {});
-    let res, data;
-    const ts = Date.now();
-    try {
-      res = await fetch(url, opt);
-      const ct = res.headers.get('content-type')||'';
-      data = ct.includes('application/json') ? await res.json() : await res.text();
-      toast(`${res.status} ${res.statusText} — ${method} ${url.pathname}${url.search}`);
-      return {ok: res.ok, status: res.status, url: String(url), data, ms: Date.now()-ts};
-    } catch (e) {
-      toast(`ERR ${method} ${url.pathname} — ${e}`, true);
-      return {ok:false, status:0, url:String(url), data:{error:String(e)}, ms: Date.now()-ts};
-    } finally {
-      clearTimeout(t);
-    }
-  }
-
-  async function probeHealth() {
-    const bases = [S.base];
-    const roots = ['', '/api', '/api/v1', '/v1', S.root || ''];
-    const paths = ['healthz','health','_health','/']; // try common
-    for (const root of roots) for (const p of paths) {
-      const r = await call({base:S.base,root, path:p, method:'GET', key:S.key, timeoutMs:4000});
-      if (r.ok || r.status===200) {
-        UI.healthChip.textContent = `${r.status} @ ${root || '(root)'} /${p}`;
-        UI.rootUsed.textContent = root || '(none)';
-        if (root && root !== S.root) {
-          S.root = root; UI.root.value = root; localStorage.setItem('root', root);
-        }
-        return r;
-      }
-    }
-    UI.healthChip.textContent = 'unhealthy';
-    return null;
-  }
-
-  async function probeRoutes() {
-    const roots = [S.root, '/api/v1', '/api', '/v1', ''];
-    const routePaths = ['routes','_routes','endpoints','openapi.json','swagger.json'];
-    for (const root of roots) for (const p of routePaths) {
-      const r = await call({base:S.base, root, path:p, method:'GET', key:S.key, timeoutMs:5000});
-      if (r.ok) {
-        const snippet = typeof r.data === 'string' ? r.data.slice(0,120) : JSON.stringify(r.data).slice(0,160);
-        UI.routesChip.textContent = `${root||'(root)'}/${p} ✓`;
-        toast(`routes sample: ${snippet}`);
-        if (root && root !== S.root) { S.root = root; UI.root.value=root; localStorage.setItem('root', root); UI.rootUsed.textContent = root; }
-        return r;
-      }
-    }
-    UI.routesChip.textContent = 'n/a';
-    return null;
-  }
-
-  function renderList() {
-    UI.rows.innerHTML = '';
-    (S.items || []).forEach((it, i) => {
-      const tr = document.createElement('tr');
-      const td = (...xs)=>{const c=document.createElement('td'); c.innerHTML=xs.join(''); return c;};
-      tr.append(
-        td(String(i+1)),
-        td(it.host||''),
-        td(it.platform||''),
-        td(it.title||''),
-        td(it.created || ''),
-        td(it.temp || ''),
-        td(it.whyText || it.why || '')
-      );
-      UI.rows.appendChild(tr);
-    });
-    UI.count.textContent = String(S.items?.length || 0);
-  }
-
-  function toCSV(items){
-    const cols = ['host','platform','title','created','temp','whyText'];
-    const head = cols.join(',');
-    const esc  = v => `"${String(v??'').replace(/"/g,'""')}"`;
-    const rows = (items||[]).map(it => cols.map(c=>esc(it[c])).join(','));
-    return [head, ...rows].join('\r\n');
-  }
-  function download(name,text){
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([text], {type:'text/csv'}));
-    a.download = name; a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-  }
-
-  async function findOneClick() {
-    const host   = (UI.host.value||'').trim();
-    const region = UI.region.value;
-    const radius = UI.radius.value;
-    if (!S.base) return toast('Set API base first', true);
-    if (!host)   return toast('Enter supplier host', true);
-
-    const primary = { base:S.base, root:S.root, path:(UI.path.value||'/leads/find-buyers').trim(), method:UI.method.value,
-                      q:{ host, region, radius }, body:{host,region,radius}, key:S.key };
-
-    // 1) Primary attempt
-    let r = await call(primary);
-    if (r.ok) return handleOk(r, primary);
-
-    // 2) Auto-probe on 404 (roots × paths × methods) until first 2xx
-    if (UI.fallback.value === 'probe404' && (r.status===404 || r.status===0)) {
-      toast('404 — starting probe for correct root/path…');
-
-      const roots = [ S.root, '/api/v1', '/api', '/v1', '' ].filter((v,i,a)=>v!=null && a.indexOf(v)===i);
-      const paths = [
-        '/leads/find-buyers','/buyers/find-buyers','/find-buyers',
-        '/leads/find','/buyers/find','/find',
-        '/leads/find-one','/buyers/find-one','/find-one'
-      ];
-      const methods = ['POST','GET'];
-
-      for (const root of roots) {
-        for (const path of paths) {
-          for (const method of methods) {
-            const attempt = { base:S.base, root, path, method,
-                              q:{ host, region, radius }, body:{host,region,radius}, key:S.key };
-            const rr = await call(attempt);
-            if (rr.ok) {
-              // adopt discovered working configuration
-              S.root = root; UI.root.value=root; localStorage.setItem('root', root); UI.rootUsed.textContent = root || '(none)';
-              S.path = path; UI.path.value=path; localStorage.setItem('path', path);
-              S.method = method; UI.method.value=method; localStorage.setItem('method', method);
-              toast(`✓ Using ${method} ${root||'(root)'}${path}`);
-              return handleOk(rr, attempt);
-            }
-          }
-        }
-      }
-      toast('Probe finished — nothing returned 2xx', true);
-    }
-  }
-
-  function handleOk(r, req) {
-    const data = (typeof r.data === 'string') ? (()=>{ try{return JSON.parse(r.data);}catch{return {raw:r.data}} })() : r.data;
-    UI.lastOkChip.textContent = `${req.method} ${req.path} @ ${req.root||'(root)'}`;
-    // Accept common shapes: {ok:bool,data:{items:[]}} or {items:[]} or []
-    const items = Array.isArray(data) ? data
-      : (data?.data?.items || data?.items || data?.data || []);
-    if (!Array.isArray(items)) {
-      toast('OK but response had no items array; showing raw in log');
-      toast(JSON.stringify(data).slice(0,400));
-      return;
-    }
-    S.items = items;
+  const data = await r.json().catch(()=>null);
+  const items = normalize(data, {host,region,radius});
+  if (items.length){
+    S.items.push(items[0]);
+    localStorage.setItem('items', JSON.stringify(S.items));
     renderList();
   }
+}
 
-  // events
-  UI.apply.onclick = () => { S.base = UI.base.value.trim(); localStorage.setItem('base', S.base); toast('Base set'); };
-  UI.saveKey.onclick = () => { S.key = UI.key.value.trim(); localStorage.setItem('key', S.key); toast('API key saved'); };
-  UI.refreshHot.onclick = () => { S.items=[]; renderList(); toast('Base cleared'); };
-  UI.refreshWarm.onclick = () => { S.items=[]; renderList(); toast('API key cleared'); UI.key.value=''; localStorage.removeItem('key'); };
-  UI.health.onclick = () => probeHealth();
-  UI.routesBtn.onclick = () => probeRoutes();
-  UI.find.onclick = findOneClick;
-  UI.dlHot.onclick = ()=> download('leads-hot.csv',  toCSV(S.items||[]));
-  UI.dlWarm.onclick= ()=> download('leads-warm.csv', toCSV(S.items||[]));
+/* ----------------- wire up ----------------- */
+UI.apply.onclick = ()=>{ savePrefs(); logLine('Base applied'); };
+UI.saveKey.onclick = ()=>{ savePrefs(); logLine('API key saved'); };
+UI.health.onclick = runHealth;
+UI.probe.onclick = probeRootsOnce;
+UI.find.onclick = findOne;
 
-  // try to detect health/routes on load (non-blocking)
-  if (S.base) { probeHealth(); setTimeout(probeRoutes, 400); }
+UI.dlHot.onclick = ()=> download(`buyers-hot-${Date.now()}.csv`, toCSV(S.items));
+UI.dlWarm.onclick = ()=> download(`buyers-warm-${Date.now()}.csv`, toCSV(S.items)); // same list here; warm cache would be backend-driven
+UI.clearList.onclick = ()=>{ S.items=[]; localStorage.setItem('items','[]'); renderList(); };
 
-})();
+loadPrefs();
+/* First-run: quick health + routes sample (quiet, single call each) */
+(async()=>{ await runHealth(); await runRoutesSample(); })();
 </script>
 </body>
 </html>
