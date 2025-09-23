@@ -1,189 +1,185 @@
 // src/routes/buyers.ts
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response } from "express";
 import {
-  ensureLeadForHost,
+  buckets,
+  findByHost,
   saveByHost,
   replaceHotWarm,
-  buckets,
-  watchers as getWatchers,
-  type StoredLead,
-  type Temp
-} from '../shared/memStore';
+  resetHotWarm,
+  StoredLead,
+} from "../shared/memStore";
 
 const router = Router();
 
-/* ----------------------------- helpers ----------------------------- */
-
-type LeadItem = {
+// ---- shapes the panel understands ----
+type PanelLead = {
   host: string;
   platform?: string;
   title?: string;
   created?: string;
-  temp?: 'hot' | 'warm' | 'cold' | string;
+  temp?: "hot" | "warm" | "cold" | string;
   whyText?: string;
 };
 
-type ApiOk<T = any> = { ok: true; items?: T; [k: string]: any };
+type ApiOk<T = unknown> = { ok: true } & T;
 type ApiErr = { ok: false; error: string };
 
-const ok = (res: Response, items?: any, extra: Record<string, any> = {}) =>
-  res.json({ ok: true, ...(items !== undefined ? { items } : {}), ...extra } as ApiOk);
-
-const bad = (res: Response, error: string, code = 400) =>
-  res.status(code).json({ ok: false, error } as ApiErr);
-
-const normHost = (s: string) =>
-  String(s || '')
-    .toLowerCase()
-    .replace(/^https?:\/\//, '')
-    .replace(/^www\./, '')
-    .replace(/\/.*$/, '');
-
-const toItem = (lead: StoredLead): LeadItem => ({
-  host: lead.host,
-  platform: lead.platform || 'web',
-  title: lead.title || `Buyer lead for ${lead.host}`,
-  created: lead.created,
-  temp: lead.temperature,
-  whyText: lead.why || 'Compat shim matched'
-});
-
-function toCSV(rows: StoredLead[]) {
-  const cols = ['host', 'platform', 'title', 'created', 'temp', 'whyText'] as const;
-  const head = cols.join(',');
-  const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const lines = rows.map((r) =>
-    [
-      r.host,
-      r.platform || 'web',
-      r.title || `Buyer lead for ${r.host}`,
-      r.created,
-      r.temperature,
-      r.why || ''
-    ].map(esc).join(',')
-  );
-  return [head, ...lines].join('\r\n');
+// map internal lead -> panel lead
+function toPanel(l: StoredLead): PanelLead {
+  return {
+    host: l.host,
+    platform: l.platform ?? "web",
+    title: l.title ?? `Buyer lead for ${l.host}`,
+    created: l.created,
+    temp: l.temperature,
+    whyText: l.why,
+  };
 }
 
-/* --------------------------- core endpoints --------------------------- */
+function bad(res: Response, error: string, code = 400) {
+  const body: ApiErr = { ok: false, error };
+  return res.status(code).json(body);
+}
 
-/**
- * Lock a lead as warm/hot and return simple FOMO counters.
- * POST /api/leads/lock  { host, temp: "warm" | "hot" }
- */
-router.post('/leads/lock', (req: Request, res: Response) => {
-  const host = normHost(req.body?.host);
-  const temp: Temp = (req.body?.temp === 'hot' ? 'hot' : req.body?.temp === 'cold' ? 'cold' : 'warm');
+// ---------- GET /api/leads/summary ----------
+router.get("/leads/summary", (_req, res) => {
+  try {
+    const b = buckets();
+    const all = [...b.hot, ...b.warm, ...b.cold];
+    const saved = all.reduce((n, x) => (x.saved ? n + 1 : n), 0);
 
-  if (!host) return bad(res, 'host is required');
-
-  // Ensure lead exists, then bump temperature
-  const lead = replaceHotWarm(host, temp);
-  if (!lead.title) lead.title = `Buyer lead for ${host}`;
-  if (!lead.platform) lead.platform = 'web';
-  if (!lead.why) lead.why = temp === 'hot' ? 'High-signal interest' : 'Compat shim matched';
-
-  // Faux FOMO numbers from mem store (never zero)
-  const w = getWatchers(host);
-  const fomo = {
-    watchers: Math.max(2, w.watchers.length || 0),
-    competitors: Math.max(1, w.competitors.length || 0)
-  };
-
-  // Save any updates back
-  saveByHost(host, lead);
-
-  return ok(res, undefined, { item: toItem(lead), fomo });
-});
-
-/**
- * Generate a few deeper variations (placeholder logic).
- * POST /api/leads/deepen  { host, region, radius, topK? }
- */
-router.post('/leads/deepen', (req: Request, res: Response) => {
-  const host = normHost(req.body?.host);
-  if (!host) return bad(res, 'host is required');
-
-  const topK = Math.max(1, Math.min(Number(req.body?.topK ?? 3), 5));
-
-  // base lead
-  const base = ensureLeadForHost(host);
-  if (!base.platform) base.platform = 'web';
-  if (!base.title) base.title = `Buyer lead for ${host}`;
-  if (!base.why) base.why = 'Compat shim matched';
-
-  // simple synthetic variants
-  const variants: StoredLead[] = Array.from({ length: topK }).map((_, i) => {
-    const titles = [
-      `Materials Manager @ ${host}`,
-      `Purchasing @ ${host}`,
-      `Operations @ ${host}`,
-      `Sourcing @ ${host}`,
-      `Supply Chain @ ${host}`
-    ];
-    const temps: Temp[] = ['warm', 'warm', 'cold', 'warm', 'hot'];
-    return {
-      ...base,
-      title: titles[i % titles.length],
-      temperature: temps[i % temps.length],
-      why: i === topK - 1 ? 'Recent activity + firmographic match' : base.why
+    const body: ApiOk<{
+      summary: {
+        total: number;
+        hot: number;
+        warm: number;
+        cold: number;
+        saved: number;
+        updatedAt: string;
+      };
+    }> = {
+      ok: true,
+      summary: {
+        total: all.length,
+        hot: b.hot.length,
+        warm: b.warm.length,
+        cold: b.cold.length,
+        saved,
+        updatedAt: new Date().toISOString(),
+      },
     };
-  });
-
-  return ok(res, variants.map(toItem));
+    res.json(body);
+  } catch (e: any) {
+    bad(res, e?.message ?? "internal error", 500);
+  }
 });
 
-/**
- * JSON lists for saved leads
- *   GET /api/leads/warm
- *   GET /api/leads/hot
- *   GET /api/leads/list?temp=warm|hot|cold|all
- */
-router.get('/leads/warm', (_req, res) => {
-  const b = buckets();
-  return ok(res, b.warm.map(toItem));
-});
-router.get('/leads/hot', (_req, res) => {
-  const b = buckets();
-  return ok(res, b.hot.map(toItem));
-});
-router.get('/leads/list', (req, res) => {
-  const t = String(req.query?.temp ?? 'warm').toLowerCase();
-  const b = buckets();
-  let rows: StoredLead[] = [];
-  if (t === 'all') rows = [...b.hot, ...b.warm, ...b.cold];
-  else if (t === 'hot') rows = b.hot;
-  else if (t === 'cold') rows = b.cold;
-  else rows = b.warm;
-  return ok(res, rows.map(toItem));
+// ---------- GET /api/leads/list ----------
+// Optional query: temp=(hot|warm|cold|all) page=1 size=50 order=(desc|asc)
+router.get("/leads/list", (req: Request, res: Response) => {
+  try {
+    const { temp = "all", page = "1", size = "50", order = "desc" } = req.query;
+
+    const b = buckets();
+    let pool =
+      temp === "hot"
+        ? b.hot
+        : temp === "warm"
+        ? b.warm
+        : temp === "cold"
+        ? b.cold
+        : [...b.hot, ...b.warm, ...b.cold];
+
+    // sort by created time (fallback: keep insertion)
+    pool = [...pool].sort((a, b) => {
+      const ta = Date.parse(a.created ?? "");
+      const tb = Date.parse(b.created ?? "");
+      const d = (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta);
+      return order === "asc" ? -d : d;
+    });
+
+    const p = Math.max(1, parseInt(String(page), 10) || 1);
+    const s = Math.max(1, Math.min(500, parseInt(String(size), 10) || 50));
+    const start = (p - 1) * s;
+    const items = pool.slice(start, start + s).map(toPanel);
+
+    const body: ApiOk<{
+      items: PanelLead[];
+      page: number;
+      size: number;
+      total: number;
+    }> = { ok: true, items, page: p, size: s, total: pool.length };
+
+    res.json(body);
+  } catch (e: any) {
+    bad(res, e?.message ?? "internal error", 500);
+  }
 });
 
-/**
- * CSV downloads
- *   GET /api/leads/warm.csv
- *   GET /api/leads/hot.csv
- */
-router.get('/leads/warm.csv', (_req, res) => {
-  const csv = toCSV(buckets().warm);
-  res.type('text/csv; charset=utf-8').send(csv);
-});
-router.get('/leads/hot.csv', (_req, res) => {
-  const csv = toCSV(buckets().hot);
-  res.type('text/csv; charset=utf-8').send(csv);
+// ---------- POST /api/leads/lock-hot ----------
+router.post("/leads/lock-hot", (req: Request, res: Response) => {
+  const host = String(req.body?.host ?? "").trim();
+  if (!host) return bad(res, "host is required");
+  try {
+    const l = replaceHotWarm(host, "hot");
+    res.json({ ok: true, item: toPanel(l) } as ApiOk<{ item: PanelLead }>);
+  } catch (e: any) {
+    bad(res, e?.message ?? "internal error", 500);
+  }
 });
 
-/* ------------------------ optional compat helpers ------------------------ */
-/* If your panel calls /api/find-one as a fallback, answer it here too. */
-router.post('/find-one', (req: Request, res: Response) => {
-  const host = normHost(req.body?.host);
-  if (!host) return bad(res, 'host is required');
+// ---------- POST /api/leads/lock-warm ----------
+router.post("/leads/lock-warm", (req: Request, res: Response) => {
+  const host = String(req.body?.host ?? "").trim();
+  if (!host) return bad(res, "host is required");
+  try {
+    const l = replaceHotWarm(host, "warm");
+    res.json({ ok: true, item: toPanel(l) } as ApiOk<{ item: PanelLead }>);
+  } catch (e: any) {
+    bad(res, e?.message ?? "internal error", 500);
+  }
+});
 
-  const lead = ensureLeadForHost(host);
-  if (!lead.platform) lead.platform = 'web';
-  if (!lead.title) lead.title = `Buyer lead for ${host}`;
-  if (!lead.why) lead.why = 'Compat shim matched';
+// ---------- POST /api/leads/reset ----------
+router.post("/leads/reset", (req: Request, res: Response) => {
+  const host = String(req.body?.host ?? "").trim();
+  if (!host) return bad(res, "host is required");
+  try {
+    const l = resetHotWarm(host);
+    res.json({ ok: true, item: toPanel(l) } as ApiOk<{ item: PanelLead }>);
+  } catch (e: any) {
+    bad(res, e?.message ?? "internal error", 500);
+  }
+});
 
-  return ok(res, [toItem(lead)]);
+// ---------- POST /api/leads/save ----------
+// Body: { host, title?, platform?, why?, temperature? }
+router.post("/leads/save", (req: Request, res: Response) => {
+  const host = String(req.body?.host ?? "").trim();
+  if (!host) return bad(res, "host is required");
+
+  try {
+    const patch: Partial<StoredLead> = {
+      title: req.body?.title,
+      platform: req.body?.platform,
+      why: req.body?.why,
+      temperature: req.body?.temperature,
+      saved: true,
+    };
+    const l = saveByHost(host, patch);
+    res.json({ ok: true, item: toPanel(l) } as ApiOk<{ item: PanelLead }>);
+  } catch (e: any) {
+    bad(res, e?.message ?? "internal error", 500);
+  }
+});
+
+// ---------- GET /api/leads/get?host= ----------
+router.get("/leads/get", (req: Request, res: Response) => {
+  const host = String(req.query?.host ?? "").trim();
+  if (!host) return bad(res, "host is required");
+  const l = findByHost(host);
+  if (!l) return bad(res, "not found", 404);
+  res.json({ ok: true, item: toPanel(l) } as ApiOk<{ item: PanelLead }>);
 });
 
 export default router;
