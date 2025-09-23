@@ -4,6 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Leads Console — Free Panel (V3)</title>
+<!-- silence favicon 404 -->
+<link rel="icon" href="data:,">
 <style>
   :root{
     --bg:#0e1520; --panel:#121a26; --muted:#8aa0b3; --text:#e6eef7; --accent:#3aa3ff;
@@ -175,7 +177,8 @@
 (function(){
   const UI = {
     base: qs('#base'), apply: qs('#apply'),
-    healthBtn: qs('#health'), probeBtn: qs('#probe'), clearBtn: qs('#clear'),
+    // FIX: map names match how we use them later
+    health: qs('#health'), probe: qs('#probe'), clear: qs('#clear'),
     key: qs('#key'), saveKey: qs('#saveKey'),
     healthBadge: qs('#healthBadge'), routesBadge: qs('#routesBadge'),
     rootBadge: qs('#rootBadge'), lastBadge: qs('#lastBadge'),
@@ -233,7 +236,6 @@
     return r.routes.map(s=>String(s)).filter(Boolean);
   }
   function pickPathFromRoutes(routes){
-    // Prefer buyers/find-buyers, then leads/find-buyers, then find-buyers
     const want = [
       /\/buyers\/find-buyers$/,
       /\/leads\/find-buyers$/,
@@ -241,10 +243,7 @@
     ];
     for(const rx of want){
       const hit = routes.find(r => rx.test(r));
-      if (hit) {
-        // hit might start with /api etc — strip current root for display in input
-        return hit.replace(new RegExp(`^${S.root||''}`), '');
-      }
+      if (hit) return hit.replace(new RegExp(`^${S.root||''}`), '');
     }
     return null;
   }
@@ -301,7 +300,6 @@
 
   async function probe(){
     toast('starting probe for correct root/path…');
-    // Try roots: '', 'api', 'api/v1'
     const roots = ['', 'api', 'api/v1'];
     let foundRoot = null, routes = [];
 
@@ -318,7 +316,6 @@
       return false;
     }
 
-    // Lock in root & maybe path
     S.root = foundRoot; store.set('root', S.root); updateRootBadge();
     S.routes = routes;
     setPill(UI.routesBadge, `routes: ${routes.length}`, 'ok');
@@ -350,16 +347,13 @@
       return r;
     }
 
-    // normalize single item result or array
     let items = [];
     if (Array.isArray(r.data?.items)) items = r.data.items;
     else if (r.data?.item) items = [r.data.item];
     else if (r.data && (r.data.host || r.data.title)) items = [r.data];
 
     if (items.length){
-      for(const it of items){
-        S.items.push(sanitizeItem(it));
-      }
+      for(const it of items){ S.items.push(sanitizeItem(it)); }
       render();
       setPill(UI.lastBadge, `last OK: ${method} ${path} @ ${(S.root||'root')}`);
     } else {
@@ -386,7 +380,6 @@
 
     if (r.ok) return;
 
-    // Only fallback when selected and 404
     if (UI.fallbacks.value!=='auto' || r.status!==404) return;
 
     if (!S.findTriedOnce){
@@ -394,7 +387,6 @@
       const okProbe = await probe();
       if (!okProbe) return;
 
-      // Try alternative common paths if current isn't in routes
       const alts = [];
       const inRoutes = (p)=> S.routes.some(r=> r.endsWith(p.replace(/^\/+/,'')));
       const want = ['/buyers/find-buyers', '/leads/find-buyers', '/find-buyers'];
@@ -407,7 +399,6 @@
         if (r.ok) return;
       }
 
-      // Flip method and try once more
       UI.method.value = (UI.method.value==='GET' ? 'POST' : 'GET');
       store.set('method', UI.method.value);
       r = await findOnce();
