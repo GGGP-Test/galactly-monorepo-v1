@@ -1,70 +1,107 @@
 // src/index.ts
+import express, { Request, Response } from 'express';
+import cors from 'cors';
 
-import express from "express";
-import cors from "cors";
+// --- types the panel expects back ---
+type LeadItem = {
+  host: string;
+  platform?: string;
+  title?: string;
+  created?: string;
+  temp?: 'hot'|'warm'|'cold'|string;
+  whyText?: string;
+};
+type ApiOk = { ok: true; items: LeadItem[] };
+type ApiErr = { ok: false; error: string };
 
-/**
- * Try to load a router from a module that may export either:
- *   - a named export (e.g. export const metricsRouter = Router())
- *   - a default export (e.g. export default Router())
- * If the module can't be loaded, returns undefined so we don't crash builds.
- */
-// eslint-disable-next-line @typescript-eslint/ban-types
-function loadRouter(modulePath: string, namedExport: string): import("express").Router | undefined {
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// keep a registry so /routes can show what's mounted
+const ROUTES: string[] = [];
+function reg(method: string, fullPath: string) {
+  ROUTES.push(`${method.toUpperCase()} ${fullPath}`);
+}
+
+// ---------- health ----------
+app.get('/healthz', (_req, res) => res.json({ ok: true, msg: 'healthy' }));
+
+app.get('/routes', (_req, res) => {
+  res.json({ ok: true, routes: ROUTES.sort() });
+});
+
+// ---------- helpers ----------
+function pickParams(req: Request) {
+  const q = Object.assign({}, req.query, req.body);
+  const host = String(q.host ?? '').trim();
+  const region = String(q.region ?? '').trim() || 'US/CA';
+  const radius = String(q.radius ?? '').trim() || '50 mi';
+  return { host, region, radius };
+}
+
+function sendBad(res: Response, error: string, code = 400) {
+  const body: ApiErr = { ok: false, error };
+  return res.status(code).json(body);
+}
+
+// This is the single place you can later swap with your real finder.
+async function findOneBuyer(host: string, region: string, radius: string): Promise<LeadItem> {
+  // TEMP compat response so the UI unblocks; replace with real lookup.
+  return {
+    host,
+    platform: 'web',
+    title: `Buyer lead for ${host}`,
+    created: new Date().toISOString(),
+    temp: 'warm',
+    whyText: `Compat shim matched (${region}, ${radius})`
+  };
+}
+
+async function handleFind(req: Request, res: Response) {
+  const { host, region, radius } = pickParams(req);
+  if (!host) return sendBad(res, 'host is required');
+
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require(modulePath);
-    const candidate = (mod && (mod[namedExport] || mod.default)) as import("express").Router | undefined;
-    return candidate;
-  } catch {
-    return undefined;
+    const item = await findOneBuyer(host, region, radius);
+    const body: ApiOk = { ok: true, items: [item] };
+    return res.json(body);
+  } catch (e: any) {
+    return sendBad(res, e?.message ?? 'internal error', 500);
   }
 }
 
-const app = express();
+// Mount a full set of compat paths under several possible roots.
+function mountCompat(root = '') {
+  const base = (p: string) => (root ? `/${root.replace(/^\/+|\/+$/g,'')}${p}` : p);
 
-// core middleware
-app.use(cors());
-app.use(express.json());
+  const paths = [
+    '/leads/find-buyers','/buyers/find-buyers','/find-buyers',
+    '/leads/find','/buyers/find','/find',
+    '/leads/find-one','/buyers/find-one','/find-one',
+  ];
 
-// optional request logger; don't crash if not installed
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const morgan = require("morgan");
-  if (typeof morgan === "function") app.use(morgan("tiny"));
-} catch {
-  /* morgan not installed — ignore */
+  for (const p of paths) {
+    app.get(base(p), handleFind);
+    reg('GET', base(p));
+    app.post(base(p), handleFind);
+    reg('POST', base(p));
+  }
+
+  // optional simple index to show it's alive under this root
+  app.get(base('/'), (_req, res) => res.json({ ok: true, root: root || '(root)' }));
+  reg('GET', base('/'));
 }
 
-// health check for Docker
-app.get("/healthz", (_req, res) => res.json({ ok: true }));
+// mount on common roots the panel probes
+mountCompat('');         // /
+mountCompat('api');      // /api
+mountCompat('api/v1');   // /api/v1
+mountCompat('v1');       // /v1
 
-// mount routers (works with named OR default exports)
-const leadsRouter   = loadRouter("./routes/leads", "leadsRouter");
-const metricsRouter = loadRouter("./routes/metrics", "metricsRouter");
-const buyersRouter  = loadRouter("./routes/buyers", "buyersRouter"); // present if your project has it
-
-if (leadsRouter)   app.use("/api/v1/leads",   leadsRouter);
-if (metricsRouter) app.use("/api/v1/metrics", metricsRouter);
-// some UIs call /api/v1/find-buyers or similar — keeping buyers under /api/v1
-if (buyersRouter)  app.use("/api/v1", buyersRouter);
-
-// 404 fallback (JSON)
-app.use((req, res) => {
-  res.status(404).json({ ok: false, error: "not found" });
-});
-
-// error handler (JSON)
-app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  // eslint-disable-next-line no-console
-  console.error(err);
-  res.status(500).json({ ok: false, error: "server error" });
-});
-
-const PORT = Number(process.env.PORT) || 8787;
+const PORT = Number(process.env.PORT || 8787);
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
-  console.log(`API listening on :${PORT}`);
+  console.log(`buyers-api compat listening on :${PORT}`);
 });
-
-export default app;
