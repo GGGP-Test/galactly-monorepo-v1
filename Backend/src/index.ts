@@ -1,6 +1,7 @@
 // src/index.ts
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import buyers from './routes/buyers';
 
 // --- types the panel expects back ---
 type LeadItem = {
@@ -13,6 +14,8 @@ type LeadItem = {
 };
 type ApiOk = { ok: true; items: LeadItem[] };
 type ApiErr = { ok: false; error: string };
+
+app.use('/api', buyers);
 
 const app = express();
 app.use(cors());
