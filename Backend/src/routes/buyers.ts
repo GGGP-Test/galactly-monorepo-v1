@@ -1,131 +1,93 @@
+// src/routes/buyers.ts
 import { Router, Request, Response } from 'express';
+import MemStore from '../core/memStore';
 
-type FindParams = {
+// ---- types (match the panel’s expectations) ----
+type Temp = 'hot' | 'warm' | 'cold';
+type LeadItem = {
   host: string;
-  region?: string;
-  radius?: string;
+  platform?: 'web' | string;
+  title?: string;
+  created?: string;      // ISO
+  temp?: Temp | string;  // keep loose for forward-compat
+  whyText?: string;
 };
 
-type Lead = {
-  host: string;
-  platform: 'web';
-  title: string;
-  created: string;
-  temp: 'warm' | 'cold' | 'hot';
-  whyText: string;
-};
+type ApiOk = { ok: true; items: LeadItem[] };
+type ApiErr = { ok: false; error: string };
 
-const router = Router();
+// ---- cache (TTL & LRU) ----
+const DEFAULT_TTL = Number(process.env.CACHE_TTL_MS ?? 5 * 60_000);   // 5 minutes
+const DEFAULT_MAX = Number(process.env.CACHE_MAX ?? 1_000);
 
-/* ------------------------------ helpers ------------------------------ */
+const cache = new MemStore<LeadItem>({
+  ttlMs: DEFAULT_TTL,
+  max: DEFAULT_MAX,
+});
 
-function send(res: Response, status: number, body: any) {
-  res.status(status).json(body);
-}
-
-function ok(res: Response, payload: Record<string, unknown>) {
-  send(res, 200, { ok: true, ...payload });
-}
-
-function bad(res: Response, msg: string) {
-  send(res, 400, { ok: false, error: msg });
-}
-
-function normHost(raw?: string): string {
-  if (!raw) return '';
-  let s = String(raw).trim();
-  s = s.replace(/^https?:\/\//i, ''); // strip scheme
-  s = s.replace(/\/.*$/, '');         // strip path
-  s = s.replace(/:\d+$/, '');         // strip port
-  return s.toLowerCase();
-}
-
-function parseParams(req: Request): FindParams | null {
-  const src = req.method === 'GET' ? req.query : (req.body ?? {});
-  const host = normHost(String(src.host ?? ''));
-  if (!host) return null;
-
-  // Region like "US/CA" (leave as-is if provided)
-  let region = src.region ? String(src.region) : undefined;
-
-  // Radius like "50 mi" — keep original text; consumers are tolerant
-  let radius = src.radius ? String(src.radius) : undefined;
-
+// ---- helpers ----
+function pickParams(req: Request) {
+  const q = Object.assign({}, req.query, req.body);
+  const host = String(q.host ?? '').trim();
+  const region = String(q.region ?? '').trim() || 'US/CA';
+  const radius = String(q.radius ?? '').trim() || '50 mi';
   return { host, region, radius };
 }
 
-function synthLead(p: FindParams): Lead {
-  const regionText = p.region ?? 'US/CA';
-  const radiusText = p.radius ?? '50 mi';
+function bad(res: Response, error: string, code = 400) {
+  const body: ApiErr = { ok: false, error };
+  return res.status(code).json(body);
+}
+
+function cacheKey(host: string, region: string, radius: string) {
+  return `${host}|${region}|${radius}`;
+}
+
+// TEMP shim: replace with your real buyer-finder later.
+async function computeLead(host: string, region: string, radius: string): Promise<LeadItem> {
   return {
-    host: p.host,
+    host,
     platform: 'web',
-    title: `Buyer lead for ${p.host}`,
+    title: `Buyer lead for ${host}`,
     created: new Date().toISOString(),
     temp: 'warm',
-    whyText: `Compat shim matched (${regionText}, ${radiusText})`,
+    whyText: `Compat shim matched (${region}, ${radius})`,
   };
 }
 
-/* ------------------------------ core handlers ------------------------------ */
+async function findOne(host: string, region: string, radius: string): Promise<LeadItem> {
+  const key = cacheKey(host, region, radius);
+  return cache.getOrCreate(key, () => computeLead(host, region, radius));
+}
 
 async function handleFind(req: Request, res: Response) {
-  const p = parseParams(req);
-  if (!p) return bad(res, 'Missing or invalid "host"');
+  const { host, region, radius } = pickParams(req);
+  if (!host) return bad(res, 'host is required');
 
-  // current behavior: one lead per click
-  const item = synthLead(p);
-  ok(res, { items: [item] });
+  try {
+    const item = await findOne(host, region, radius);
+    const body: ApiOk = { ok: true, items: [item] };
+    return res.json(body);
+  } catch (e: any) {
+    return bad(res, e?.message ?? 'internal error', 500);
+  }
 }
 
-async function handleFindOne(req: Request, res: Response) {
-  const p = parseParams(req);
-  if (!p) return bad(res, 'Missing or invalid "host"');
+// ---- router & routes ----
+const r = Router();
 
-  // strict single match (same synthesized shim for now)
-  const item = synthLead(p);
-  ok(res, { item });
-}
-
-/* ------------------------------ routing matrix ------------------------------ */
 /**
- * Supported paths (mounted under /api):
- *   GET/POST /buyers/find
- *   GET/POST /buyers/find-buyers
- *   GET/POST /buyers/find-one
- *   GET/POST /leads/find
- *   GET/POST /leads/find-buyers
- *   GET/POST /leads/find-one
- *   GET       /routes             -> introspection
- *   GET       /                   -> ping
+ * We expose buyers endpoints here. Your index.ts already mounts broader
+ * "compat" paths (including /leads/... and /find-... under multiple roots).
+ * Keeping this router focused avoids duplicate handlers.
  */
-
-const FIND_PATHS       = ['/buyers/find', '/leads/find', '/find'];
-const FIND_BUYERS      = ['/buyers/find-buyers', '/leads/find-buyers', '/find-buyers'];
-const FIND_ONE_PATHS   = ['/buyers/find-one', '/leads/find-one', '/find-one'];
-
-for (const p of [...FIND_PATHS, ...FIND_BUYERS]) {
-  router.get(p, handleFind);
-  router.post(p, handleFind);
+const BUYER_PATHS = ['/buyers/find', '/buyers/find-one', '/buyers/find-buyers'];
+for (const p of BUYER_PATHS) {
+  r.get(p, handleFind);
+  r.post(p, handleFind);
 }
 
-for (const p of FIND_ONE_PATHS) {
-  router.get(p, handleFindOne);
-  router.post(p, handleFindOne);
-}
+// Optional: light diagnostics for cache (handy during dev; safe to leave)
+r.get('/buyers/cache/stats', (_req, res) => res.json({ ok: true, stats: cache.getStats() }));
 
-// Lightweight ping for /api
-router.get('/', (_req, res) => ok(res, { service: 'buyers-api', version: '1.0' }));
-
-// Introspection used by the panel's probe
-router.get('/routes', (_req, res) => {
-  const lines: string[] = [];
-  const add = (m: string, p: string) => lines.push(`${m} ${p}`);
-  [...FIND_PATHS, ...FIND_BUYERS].forEach(p => (add('GET', p), add('POST', p)));
-  FIND_ONE_PATHS.forEach(p => (add('GET', p), add('POST', p)));
-  add('GET', '/');
-  add('GET', '/routes');
-  ok(res, { routes: lines });
-});
-
-export default router;
+export default r;
