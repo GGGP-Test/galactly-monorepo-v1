@@ -3,7 +3,7 @@ name: Ingest leads from Zie619 (public)
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "*/15 * * * *"  # every 15 minutes
+    - cron: "*/15 * * * *"   # every 15 minutes
 
 jobs:
   ingest:
@@ -11,69 +11,64 @@ jobs:
     permissions:
       contents: read
     env:
-      API_BASE: ${{ secrets.API_BASE }} # e.g. https://p01--animated-cellar--vz4ftkwrzdfs.code.run
+      API_BASE: ${{ secrets.API_BASE }}
     steps:
       - name: Install jq & python
-        run: sudo apt-get update -y && sudo apt-get install -y jq python3
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq python3
 
       - name: Fetch repos from Zie619
         run: |
           curl -sSL -H 'Accept: application/vnd.github+json' \
-            "https://api.github.com/users/Zie619/repos?per_page=100&sort=updated" > repos.json
-          jq 'map({name,homepage,description,topics:(.topics//[]), owner:(.owner.login)})' repos.json > rows.json
-          cat rows.json
+            "https://api.github.com/users/Zie619/repos?per_page=100&sort=updated" > rows.json
+          jq 'map({name,homepage,description,topics,owner:.owner.login})' rows.json > rows.min.json
+          cat rows.min.json
 
       - name: Extract domains
-        id: doms
+        id: d
         run: |
-          python3 - <<'PY' rows.json
-import json, re, sys, urllib.parse
-rows = json.load(open('rows.json'))
-def to_host(s):
-  if not s: return None
-  s = s.strip()
-  try:
-    u = urllib.parse.urlparse(s if '://' in s else f'https://{s}')
-    h = (u.hostname or '').lower()
-    if h.startswith('www.'): h = h[4:]
-    if h and h.endswith('github.com'): return None
-    return h if '.' in h else None
-  except: pass
-  m = re.search(r'\b([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b', s, re.I)
-  if m and not m.group(1).lower().endswith('github.com'):
-    return m.group(1).lower()
-  return None
+          python3 - <<'PY'
+          import json,re,sys,urllib.parse
+          rows=json.load(open('rows.min.json'))
+          out=[]
+          def host_from(s):
+              if not s: return None
+              s=s.strip()
+              try:
+                  if '://' not in s: s='https://'+s
+                  u=urllib.parse.urlparse(s)
+                  h=(u.hostname or '').lower()
+                  if h.startswith('www.'): h=h[4:]
+                  return h if '.' in h and not h.endswith('github.com') else None
+              except: return None
+          doms=set()
+          for r in rows:
+              h=host_from(r.get('homepage'))
+              if not h and r.get('description'):
+                  m=re.search(r'\b([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b', r['description'], re.I)
+                  if m:
+                      cand=m.group(1).lower()
+                      if not cand.endswith('github.com'): h=cand
+              if not h and r.get('owner'):
+                  h=f"{r['owner'].lower()}.github.io"
+              if h: doms.add(h)
+          print(json.dumps(sorted(doms)))
+          PY
 
-seen = set()
-out  = []
-for r in rows:
-  h = to_host(r.get('homepage')) or to_host(r.get('description'))
-  if not h and r.get('owner'):
-    h = f"{r['owner'].lower()}.github.io"
-  if not h: continue
-  if h in seen: continue
-  seen.add(h)
-  out.append({"host": h, "row": r})
-
-json.dump(out, open('domains.json','w'))
-print(json.dumps(out, indent=2))
-PY
-          echo "ready=1" >> $GITHUB_OUTPUT
-
-      - name: POST to API
-        if: ${{ steps.doms.outputs.ready == '1' }}
+      - name: POST to /api/ingest/github
         run: |
-          jq -c '.[]' domains.json | while read -r item; do
-            host=$(echo "$item" | jq -r '.host')
-            owner=$(echo "$item" | jq -r '.row.owner // ""')
-            name=$(echo "$item" | jq -r '.row.name // ""')
-            desc=$(echo "$item" | jq -r '.row.description // ""')
-            topics=$(echo "$item" | jq -c '.row.topics // []')
-            echo "POST $host"
+          DOMS=$(cat <<'JSON'
+          $(cat <<'EOD'
+          {"doms": $(cat <<'X' ; cat ; echo X)}
+          EOD
+          )
+          JSON
+          )
+          echo "$DOMS" | jq -c '.doms|.[]' | while read -r d; do
+            d=${d//\"/}
             curl -sS -X POST "$API_BASE/api/ingest/github" \
-              -H 'content-type: application/json' \
-              --data "{\"homepage\":\"https://$host\",\"owner\":\"$owner\",\"name\":\"$name\",\"description\":$(
-                printf %s "$(jq -Rn --arg d "$desc" '$d')" \
-              ),\"topics\":$topics,\"temp\":\"warm\"}" \
-              || true
+              -H 'Content-Type: application/json' \
+              --data "{\"homepage\":\"https://$d\",\"owner\":\"zie619\",\"name\":\"$d\",\"description\":\"from Zie619\",\"topics\":[],\"temp\":\"warm\"}" \
+              | jq -c .
           done
