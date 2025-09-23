@@ -5,35 +5,27 @@
 <title>Leads Console — Free Panel (V3)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
-:root{--bg:#0f172a;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;
---accent:#3b82f6;--ok:#22c55e;--bad:#ef4444;--chip:#1f2937;--chip-b:#334155}
+:root{--bg:#0f172a;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#3b82f6;--ok:#22c55e}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);
-  font:14px/1.35 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto}
-.wrap{max-width:1440px;margin:0 auto;padding:18px;
-  display:grid;grid-template-columns:420px 1fr;gap:18px}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto}
+.wrap{max-width:1440px;margin:0 auto;padding:18px;display:grid;grid-template-columns:420px 1fr;gap:18px}
 .card{background:var(--panel);border:1px solid #1f2937;border-radius:12px;padding:14px}
 h2{margin:0 0 10px}
 label{display:block;margin:10px 0 6px;color:var(--muted);font-size:12px}
-input,select,button,textarea{
-  width:100%;background:#0b1220;color:var(--text);
-  border:1px solid #1f2937;border-radius:8px;padding:10px 12px;outline:none}
+input,select,button,textarea{width:100%;background:#0b1220;color:var(--text);border:1px solid #1f2937;border-radius:8px;padding:10px 12px;outline:none}
 button{cursor:pointer}
 .primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .row{display:flex;gap:8px;align-items:center}
 .cols2{display:grid;grid-template-columns:1fr 140px;gap:8px}
 .cols3{display:grid;grid-template-columns:1fr 120px 120px;gap:8px}
-.small{font-size:12px}.muted{color:var(--muted)}
-.ok{color:var(--ok)}.bad{color:var(--bad)}
-.chip{display:inline-flex;align-items:center;gap:6px;background:var(--chip);
-  border:1px solid var(--chip-b);padding:6px 10px;border-radius:999px;font-size:12px}
-.msg{white-space:pre-wrap;background:#0b1220;border:1px solid #1f2937;border-radius:8px;
-  padding:10px;max-height:180px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
+.small{font-size:12px}.muted{color:var(--muted)}.ok{color:var(--ok)}
+.msg{white-space:pre-wrap;background:#0b1220;border:1px solid #1f2937;border-radius:8px;padding:10px;max-height:200px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
 .grid{overflow:auto;max-height:68vh}
 table{width:100%;border-collapse:collapse}
 th,td{padding:10px;border-bottom:1px solid #1f2937;vertical-align:top}
 th{text-align:left;color:var(--muted);font-weight:600}
 thead th{position:sticky;top:0;background:var(--panel)}
+.chip{display:inline-flex;gap:6px;align-items:center;border:1px solid #334155;background:#0b1220;border-radius:999px;padding:6px 10px;font-size:12px}
 .right{display:flex;gap:8px;justify-content:flex-end}
 </style>
 </head>
@@ -54,6 +46,7 @@ thead th{position:sticky;top:0;background:var(--panel)}
       <button id="health" style="width:120px">Health</button>
       <button id="probe" style="width:120px">Probe</button>
     </div>
+    <div class="chip">Root used: <code id="rootLbl" class="muted">/api/v1</code></div>
 
     <label>API key (optional for read; required for write)</label>
     <div class="row">
@@ -64,7 +57,6 @@ thead th{position:sticky;top:0;background:var(--panel)}
     <div class="row">
       <button id="refreshHot" style="width:120px">Refresh Hot</button>
       <button id="refreshWarm" style="width:120px">Refresh Warm</button>
-      <div class="chip">Root used: <code id="rootLbl" class="muted">/api/v1</code></div>
     </div>
 
     <hr style="border:none;border-top:1px solid #1f2937;margin:12px 0" />
@@ -78,13 +70,10 @@ thead th{position:sticky;top:0;background:var(--panel)}
     <label style="margin-top:8px">Region / Radius</label>
     <div class="cols3">
       <select id="region">
-        <option value="US/CA" selected>US/CA</option>
-        <option value="US">US</option><option value="CA">CA</option>
-        <option value="EU">EU</option><option value="ALL">ALL</option>
+        <option value="US/CA" selected>US/CA</option><option>US</option><option>CA</option><option>EU</option><option>ALL</option>
       </select>
       <select id="radius">
-        <option value="25">25 mi</option><option value="50" selected>50 mi</option>
-        <option value="100">100 mi</option><option value="250">250 mi</option>
+        <option value="25">25 mi</option><option value="50" selected>50 mi</option><option value="100">100 mi</option><option value="250">250 mi</option>
       </select>
       <button id="find" class="primary">Find buyers</button>
     </div>
@@ -93,10 +82,7 @@ thead th{position:sticky;top:0;background:var(--panel)}
     <div class="cols3">
       <input id="path" value="/leads/find-buyers" />
       <select id="method"><option>GET</option><option selected>POST</option></select>
-      <label class="chip" style="justify-content:center">
-        <input id="tryFallbacks" type="checkbox" checked style="margin-right:6px" />
-        Try fallbacks
-      </label>
+      <span class="chip">Auto-probe on 404</span>
     </div>
 
     <div id="msg" class="msg" style="margin-top:10px;min-height:64px">Ready.</div>
@@ -126,8 +112,7 @@ thead th{position:sticky;top:0;background:var(--panel)}
     <div class="grid">
       <table>
         <thead>
-          <tr><th>#</th><th>Host</th><th>Platform</th><th>Title</th>
-            <th>Created</th><th>Temp</th><th>Why (human-readable)</th></tr>
+          <tr><th>#</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why (human-readable)</th></tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
@@ -142,7 +127,7 @@ const UI={
   apiKey:$('apiKey'), saveKey:$('saveKey'),
   refreshHot:$('refreshHot'), refreshWarm:$('refreshWarm'),
   host:$('host'), region:$('region'), radius:$('radius'),
-  path:$('path'), method:$('method'), tryFallbacks:$('tryFallbacks'),
+  path:$('path'), method:$('method'),
   find:$('find'), msg:$('msg'), count:$('count'),
   rows:$('rows'),
   p_offer:$('p_offer'), p_solves:$('p_solves'), p_titles:$('p_titles'),
@@ -151,7 +136,7 @@ const UI={
 };
 const S={ base:'', root:'/api/v1', key:'', items:[], persona:{offer:'',solves:'',titles:''} };
 
-function toast(t,good){ UI.msg.textContent=String(t); UI.msg.style.borderColor=good?'#166534':'#1f2937' }
+function toast(t,good){ UI.msg.textContent=String(t); if(good){ UI.msg.style.borderColor='#166534'; } }
 function saveLocal(){
   localStorage.setItem('fp.base',S.base);
   localStorage.setItem('fp.root',S.root);
@@ -181,24 +166,23 @@ function buildURL(base,root,path,qs){
   const r=(root||'').replace(/\/+$/,'');
   const p=(''+path).replace(/^\/+/,'');
   const u=new URL(b+(r?'/'+r:'')+'/'+p);
-  (qs&&Object.entries(qs).forEach(([k,v])=>{
-    if(v!==undefined&&v!==null&&String(v).length) u.searchParams.set(k,String(v));
-  }));
+  if(qs) Object.entries(qs).forEach(([k,v])=>{ if(v!==undefined&&v!==null&&String(v).length) u.searchParams.set(k,String(v)); });
   return u.toString();
 }
 async function req(method, base, root, path, query, body){
   const url = buildURL(base, root, path, method==='GET'?query:undefined);
-  const headers = {
-    'content-type':'application/json',
-    ...(S.key?{'x-api-key':S.key,'x-apikey':S.key,'api-key':S.key,'authorization':'Bearer '+S.key}:{})
-  };
+  const headers = {'content-type':'application/json'};
+  if(S.key){
+    Object.assign(headers,{
+      'x-api-key':S.key, 'x-apikey':S.key, 'api-key':S.key,
+      'authorization':'Bearer '+S.key
+    });
+  }
   let res, data;
   try{
     res = await fetch(url,{method,headers,body:method==='GET'?undefined:JSON.stringify(body??query??{})});
     try{ data = await res.json(); }catch{ data = { ok:res.ok, status:res.status }; }
-  }catch(e){
-    return { ok:false, status:0, url, data:{ ok:false, error:String(e) } };
-  }
+  }catch(e){ return { ok:false, status:0, url, data:{ ok:false, error:String(e) } }; }
   const ok = res.ok && (data.ok!==false);
   return { ok, status:res.status, url, data };
 }
@@ -235,111 +219,95 @@ function download(name,text){
   a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),800);
 }
 
-function altQuery(host){
-  const persona={offer:UI.p_offer.value||'',solves:UI.p_solves.value||'',titles:(UI.p_titles.value||'').split(',').map(s=>s.trim()).filter(Boolean)};
-  const base={host, region:UI.region.value, radius:Number(UI.radius.value)||50, persona};
+function personaBlock(){
+  const titles=(UI.p_titles.value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  return { offer:UI.p_offer.value||'', solves:UI.p_solves.value||'', titles };
+}
+function queryVariants(host){
+  const base={ host, region:UI.region.value, radius:Number(UI.radius.value)||50, persona:personaBlock() };
   return [
     base,
-    {...base, domain:host},
-    { supplier:host, region:base.region, radius:base.radius },
+    {...base, supplier:host},           // supplier
+    {...base, domain:host},             // domain
+    {...base, website:host},            // website
+    { ...base, q:host },                // q
+    { ...base, op:'find-buyers' }       // op-style
   ];
 }
 
 const PROBE_PATHS=[
-  ['/leads/find-buyers','POST','auto'],
-  ['/leads/find-buyers','GET','auto'],
-  ['/leads/find-one','GET','auto'],
-  ['/leads/find-one','POST','auto'],
-  ['/leads/find','POST','auto'],
-  ['/leads/find','GET','auto'],
-  ['/buyers/find-one','GET','auto'],
-  ['/buyers/find','GET','auto'],
-  ['/buyers/find','POST','auto'],
-  ['/find-buyers','GET','auto'],
-  ['/find-buyers','POST','auto'],
-  ['/find-one','GET','auto'],
-  ['/find','POST','auto'],
-  ['/leads','POST','op'],
-  ['/buyers','POST','op']
+  '/leads/find-buyers','/leads/find-one','/leads/find',
+  '/buyers/find-buyers','/buyers/find-one','/buyers/find',
+  '/find-buyers','/find-one','/find',
+  '/leads','/buyers'
 ];
-const PROBE_ROOTSORDER = r => Array.from(new Set([r,'/api/v1','/api','/v1','']));
-
-async function probeOnce(base, root, host){
-  const lines=[];
-  const queries=altQuery(host);
-  for(const [p, m, mode] of PROBE_PATHS){
-    for(const q of queries){
-      const body = (mode==='op') ? {...q, op:'find-buyers'} : q;
-      const r = await req(m, base, root, p, q, body);
-      lines.push(`${r.status} ${m} ${r.url}`);
-      if([200,201,202,204,400,401,405].includes(r.status) && r.status!==404){
-        return { found:true, root, path:p, method:m, mode, lines, r };
-      }
-    }
-  }
-  return { found:false, root, lines };
-}
+const PROBE_METHODS=['POST','GET'];
+const PROBE_ROOTS = root => Array.from(new Set([root,'/api/v1','/api','/v1','']));
 
 async function probeAll(){
   const base=(UI.base.value||'').trim();
   const startRoot=(UI.root.value||'').trim();
   const host=(UI.host.value||'').trim().toLowerCase();
-  if(!base) return toast('Enter API base');
-  if(!host) return toast('Enter supplier host');
-  const roots=PROBE_ROOTSORDER(startRoot);
+  if(!base){ toast('Enter API base'); return; }
+  if(!host){ toast('Enter supplier host'); return; }
+
   const attempts=[];
-  for(const r of roots){
-    const res = await probeOnce(base, r, host);
-    attempts.push(...res.lines);
-    if(res.found){
-      UI.root.value=res.root; UI.path.value=res.path; UI.method.value=res.method;
-      S.root=res.root; UI.rootLbl.textContent=res.root||'(none)'; saveLocal();
-      toast(`Route discovered:\n${res.method} ${res.root}${res.path}\n\nTrying again…`, true);
-      // immediately try the successful one for data
-      const q=altQuery(host)[0];
-      const final = await req(res.method, base, res.root, res.path, q, (res.mode==='op'?{...q,op:'find-buyers'}:q));
-      if(final.ok){
-        let items = final.data.items || final.data.data || (Array.isArray(final.data)?final.data:[]);
-        if(!items.length && final.data.item) items=[final.data.item];
-        if(items.length){ S.items=items.concat(S.items||[]); renderList(); toast(`OK — added ${items.length} item(s).`, true); return; }
+
+  for(const r of PROBE_ROOTS(startRoot)){
+    for(const path of PROBE_PATHS){
+      for(const method of PROBE_METHODS){
+        for(const q of queryVariants(host)){
+          const r1 = await req(method, base, r, path, q, q);
+          attempts.push(`${r1.status} ${method} ${r1.url}`);
+          if([200,201,202,204,400,401,405].includes(r1.status) && r1.status!==404){
+            UI.root.value=r; S.root=r; UI.rootLbl.textContent=r||'(none)';
+            UI.path.value=path; UI.method.value=method; saveLocal();
+            toast(`Route discovered:\n${method} ${r}${path}\nRetrying…`, true);
+            // Try to fetch items immediately
+            const again = await req(method, base, r, path, q, q);
+            let items = again.data?.items || again.data?.data || (Array.isArray(again.data)?again.data:[]);
+            if(!items?.length && again.data?.item) items=[again.data.item];
+            if(items?.length){ S.items=items.concat(S.items||[]); renderList(); toast(`OK — added ${items.length} item(s).`, true); return; }
+            toast(`Matched route but no items yet.\n${again.status} ${again.url}`);
+            return;
+          }
+        }
       }
-      break;
     }
   }
-  toast('Probe could not find a non-404 route.\n\n'+attempts.join('\n'));
+  toast('Probe attempts (none matched):\n'+attempts.slice(-80).join('\n'));
 }
 
 async function findOne(){
   S.base=(UI.base.value||'').trim(); S.root=(UI.root.value||'').trim();
   UI.rootLbl.textContent=S.root||'(none)';
-  S.persona={offer:UI.p_offer.value||'',solves:UI.p_solves.value||'',titles:(UI.p_titles.value||'').split(',').map(s=>s.trim()).filter(Boolean)};
-  saveLocal();
+  S.persona=personaBlock(); saveLocal();
 
   const host=(UI.host.value||'').trim().toLowerCase();
-  if(!host) return toast('Enter supplier host');
+  if(!host){ toast('Enter supplier host'); return; }
 
-  const q=altQuery(host)[0];
+  const q=queryVariants(host)[0];                 // default shape
   const path=(UI.path.value||'/leads/find-buyers').trim();
   const method=UI.method.value||'POST';
 
-  const r = await req(method, S.base, S.root, path, q, q);
-  if(r.ok){
-    let items = r.data.items || r.data.data || (Array.isArray(r.data)?r.data:[]);
-    if(!items.length && r.data.item) items=[r.data.item];
+  const r1 = await req(method, S.base, S.root, path, q, q);
+  if(r1.ok){
+    let items = r1.data.items || r1.data.data || (Array.isArray(r1.data)?r1.data:[]);
+    if(!items.length && r1.data.item) items=[r1.data.item];
     if(items.length){ S.items=items.concat(S.items||[]); renderList(); toast(`OK — added ${items.length} item(s).`, true); return; }
   }
-
-  if(r.status===404 || UI.tryFallbacks.checked){
+  // Force probe on 404 (or when ok=false without items)
+  if(r1.status===404 || !r1.ok){
     toast('404 — starting probe for correct root/path…');
     await probeAll();
     return;
   }
-  toast(`${r.status} ${method} ${r.url}\n${JSON.stringify(r.data)}`);
+  toast(`${r1.status} ${method} ${r1.url}\n${JSON.stringify(r1.data)}`);
 }
 
 async function pingHealth(){
   S.base=(UI.base.value||'').trim();
-  const roots = PROBE_ROOTSORDER((UI.root.value||'').trim());
+  const roots = PROBE_ROOTS((UI.root.value||'').trim());
   const tries=[];
   for(const r of roots){
     const res = await req('GET', S.base, r, '/healthz', null, null);
@@ -356,12 +324,13 @@ function bind(){
   UI.saveKey.onclick=()=>{ S.key=(UI.apiKey.value||'').trim(); saveLocal(); toast('API key saved',true); };
   UI.refreshHot.onclick=()=>{ S.items=[]; renderList(); toast('Hot list cleared',true); };
   UI.refreshWarm.onclick=()=>toast('Warm refreshed',true);
-  UI.savePersona.onclick=()=>{ S.persona={offer:UI.p_offer.value||'',solves:UI.p_solves.value||'',titles:UI.p_titles.value||''}; saveLocal(); toast('Persona saved (local)',true); };
+  UI.savePersona.onclick=()=>{ S.persona=personaBlock(); saveLocal(); toast('Persona saved (local)',true); };
   UI.find.onclick=findOne;
   UI.dlHot.onclick=()=>download('hot.csv', toCSV(S.items||[]));
   UI.dlWarm.onclick=()=>download('warm.csv', toCSV(S.items||[]));
 }
-loadLocal(); bind(); renderList();
+function init(){ loadLocal(); bind(); renderList(); }
+init();
 </script>
 </body>
 </html>
