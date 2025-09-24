@@ -6,6 +6,7 @@
 // - Otherwise we fall back to a safe in-memory stub so TypeScript builds succeed
 //   and the service can run without a DB (writes become no-ops).
 //
+
 // This keeps CI/CD green while you decide between Neon vs Northflank PG.
 //
 // Exports:
