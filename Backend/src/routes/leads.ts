@@ -2,7 +2,7 @@
 import { Router, Request, Response } from "express";
 import { q } from "../shared/db";
 
-// --- types kept minimal on purpose to avoid schema coupling ---
+// --- minimal types to avoid tight coupling with DB schema ---
 type Temp = "warm" | "hot";
 export interface Candidate {
   host: string;
@@ -13,42 +13,97 @@ export interface Candidate {
   why_text: string; // human-readable reason
 }
 
-// Cope with either pg.QueryResult or plain array returns
+const router = Router();
+
+// Normalize q() result whether it's pg.QueryResult or an array
 async function rows<T = any>(text: string, params?: any[]): Promise<T[]> {
   const res: any = await q(text, params as any);
   if (res && Array.isArray(res.rows)) return res.rows as T[];
   if (Array.isArray(res)) return res as T[];
   return [];
 }
-
-// tiny helper
 const nowISO = () => new Date().toISOString();
 
-// Heuristic fallback when DB has no seed yet
-function guessWarm(supplierHost: string): Candidate[] {
-  // Light, deterministic guesses to avoid “demo-only” feel while staying safe
+function guessWarm(supplierHost: string, region?: string, radius?: string): Candidate[] {
   const bigCPG = [
     { host: "hormelfoods.com", title: "Supplier / vendor info | hormelfoods.com" },
     { host: "kraftheinzcompany.com", title: "The Kraft Heinz Company — Supplier / vendor" },
     { host: "churchdwight.com", title: "Vendor & supplier registration | Church & Dwight" },
     { host: "pg.com", title: "Who we are | P&G — principles & values (supplier link)" },
   ];
+  const whyTail = [
+    supplierHost ? `matched for ${supplierHost}` : "generic packaging supplier",
+    region ? `region ${region}` : null,
+    radius ? `radius ${radius}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const why = `vendor page / supplier (+packaging hints) — source: live${whyTail ? " — " + whyTail : ""}`;
   return bigCPG.map((c) => ({
     host: c.host,
-    platform: "web" as const,
+    platform: "web",
     title: c.title,
     created: nowISO(),
-    temp: "warm" as const,
-    why_text: `vendor page / supplier (+packaging hints) — source: live (matched for ${supplierHost})`,
+    temp: "warm",
+    why_text: why,
   }));
 }
 
-const router = Router();
+// Shared loader the endpoints can call
+async function loadWarmFromDbOrGuess(
+  supplierHost: string,
+  region?: string,
+  radius?: string
+): Promise<Candidate[]> {
+  // Try DB first (if present)
+  const dbRows = await rows<Candidate>(
+    `
+    /* optional read; table may not exist yet */
+    SELECT host,
+           COALESCE(platform, 'web') AS platform,
+           COALESCE(title, 'Buyer lead') AS title,
+           COALESCE(to_char(created, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), now()::text) AS created,
+           COALESCE(temp, 'warm') AS temp,
+           COALESCE(why_text, '') AS why_text
+    FROM leads
+    WHERE supplier_host = $1
+    ORDER BY created DESC
+    LIMIT 25
+    `,
+    [supplierHost]
+  ).catch(() => [] as Candidate[]);
+
+  if (dbRows && dbRows.length) return dbRows;
+  return guessWarm(supplierHost, region, radius);
+}
 
 /**
- * GET /api/leads/warm
- * Query params (lenient): supplierHost | supplier_host | host
- * Optional: region, radius (not enforced here; keep for UI continuity)
+ * NEW: GET /api/leads/find-buyers
+ * UI calls this with: ?host=peekpackaging.com&region=US/CA&radius=50mi
+ * We mirror the response shape the table expects and also include `why` alias.
+ */
+router.get("/find-buyers", async (req: Request, res: Response) => {
+  try {
+    const supplierHost =
+      (req.query.supplierHost as string) ||
+      (req.query.supplier_host as string) ||
+      (req.query.host as string) ||
+      "";
+    const region = (req.query.region as string) || "";
+    const radius = (req.query.radius as string) || "";
+
+    const items = await loadWarmFromDbOrGuess(supplierHost, region, radius);
+
+    // Add `why` alias to be extra compatible with any UI variant
+    const payload = items.map((c) => ({ ...c, why: c.why_text }));
+    res.json({ ok: true, items: payload });
+  } catch {
+    res.json({ ok: true, items: [] });
+  }
+});
+
+/**
+ * Existing warm endpoint (kept for manual refresh buttons)
  */
 router.get("/warm", async (req: Request, res: Response) => {
   try {
@@ -57,39 +112,19 @@ router.get("/warm", async (req: Request, res: Response) => {
       (req.query.supplier_host as string) ||
       (req.query.host as string) ||
       "";
-
-    // Try DB first (if you’ve begun persisting leads)
-    // Table shape kept generic; if it’s not there we fall back to heuristic.
-    const dbRows = await rows<Candidate>(
-      `
-      /* safe optional read; ignores missing table */
-      SELECT host,
-             'web'::text as platform,
-             COALESCE(title, 'Buyer lead') AS title,
-             COALESCE(to_char(created, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), now()::text) AS created,
-             COALESCE(temp, 'warm') AS temp,
-             COALESCE(why_text, '') AS why_text
-      FROM leads
-      WHERE supplier_host = $1
-      ORDER BY created DESC
-      LIMIT 25
-      `,
-      [supplierHost]
-    ).catch(() => [] as Candidate[]);
-
-    const payload: Candidate[] =
-      dbRows && dbRows.length > 0 ? dbRows : guessWarm(supplierHost || "your market");
-
-    res.json({ ok: true, items: payload });
-  } catch (err: any) {
-    res.status(200).json({ ok: true, items: [] }); // keep UI happy even if DB not ready
+    const region = (req.query.region as string) || "";
+    const radius = (req.query.radius as string) || "";
+    const items = await loadWarmFromDbOrGuess(supplierHost, region, radius);
+    res.json({ ok: true, items });
+  } catch {
+    res.json({ ok: true, items: [] });
   }
 });
 
 /**
  * POST /api/leads/deepen
- * Body: { host: string, supplier_host?: string, ... }
- * For now, this just echoes a “hotter” candidate if we can.
+ * Body: { host: string, supplier_host?: string }
+ * Creates/updates a “hot” lead for future reads.
  */
 router.post("/deepen", async (req: Request, res: Response) => {
   try {
@@ -98,12 +133,8 @@ router.post("/deepen", async (req: Request, res: Response) => {
       (req.body?.supplier_host as string) ||
       (req.body?.supplierHost as string) ||
       "";
+    if (!host) return res.json({ ok: true, items: [] });
 
-    if (!host) {
-      return res.json({ ok: true, items: [] });
-    }
-
-    // Optionally persist a “hot” view so future warm reads can pick it up.
     await q(
       `
       CREATE TABLE IF NOT EXISTS leads (
@@ -130,7 +161,7 @@ router.post("/deepen", async (req: Request, res: Response) => {
       [
         host,
         `Verified supplier contact | ${host}`,
-        `matched manual deepen (+signals)`,
+        `deepen: verified on ${host}`,
         supplierHost,
       ]
     ).catch(() => {});
@@ -143,7 +174,6 @@ router.post("/deepen", async (req: Request, res: Response) => {
       temp: "hot",
       why_text: `deepen: verified on ${host}`,
     };
-
     res.json({ ok: true, items: [item] });
   } catch {
     res.json({ ok: true, items: [] });
