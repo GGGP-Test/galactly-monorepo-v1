@@ -1,100 +1,90 @@
-// Backend/src/routes/leads.ts
-// Minimal router that backs the free panel today.
-// Endpoints:
-//   GET  /api/leads/warm         -> last 50 leads from lead_pool
-//   POST /api/leads/deepen       -> no-op (could enrich later)
-//   GET  /api/leads/find-buyers  -> creates a quick “buyer lead for <host>” row
-//   POST /api/ingest/github      -> bulk ingest from your GH Action
+// src/routes/leads.ts
+import { Router, Request, Response } from "express";
+import { q, ensureSchema } from "../shared/db";
 
-import { Router, Request, Response } from 'express';
-import { q } from '../shared/db';
+export type LeadRow = {
+  id: number;
+  host: string;
+  platform: string | null;
+  title: string | null;
+  why_text: string | null;
+  temp: string | null;
+  created: string;
+};
 
-export const router = Router();
-export default router;
+const leadsRouter = Router();
 
-// -- bootstrap schema once (safe to call many times)
-async function ensureSchema() {
-  await q(`
-    create table if not exists lead_pool (
-      id bigserial primary key,
-      host text not null,
-      platform text not null default 'web',
-      title text not null,
-      why_text text not null default '',
-      temp text not null default 'warm',
-      created timestamptz not null default now()
-    );
-    create index if not exists lead_pool_created_idx on lead_pool(created desc);
-    create index if not exists lead_pool_host_idx    on lead_pool(host);
-  `);
-}
-
-// ---- panel: warm list
-router.get('/api/leads/warm', async (_req: Request, res: Response) => {
-  await ensureSchema();
-  const r = await q<{host:string;platform:string;title:string;why_text:string;created:string;temp:string}>(
-    `select host, platform, title, why_text as "whyText", created, temp
-     from lead_pool order by created desc limit 50`
-  );
-  res.json({ ok: true, items: r.rows });
+/** Make sure the table exists (no-op if already created). */
+ensureSchema().catch((e) => {
+  // don't crash the process on start; surface in logs
+  console.error("[ensureSchema]", e);
 });
 
-// ---- panel: deepen (placeholder – returns current warm set)
-router.post('/api/leads/deepen', async (_req: Request, res: Response) => {
-  await ensureSchema();
-  const r = await q(
-    `select host, platform, title, why_text as "whyText", created, temp
-     from lead_pool order by created desc limit 50`
+/**
+ * GET /api/leads/warm
+ * Return recent leads we already have (what the panel expects after a find).
+ */
+leadsRouter.get("/warm", async (_req: Request, res: Response) => {
+  const { rows } = await q<LeadRow>(
+    `select id, host, platform, title, why_text, temp, created
+       from leads
+   order by created desc
+      limit 200`
   );
-  res.json({ ok: true, items: r.rows });
+  res.json({ ok: true, items: rows });
 });
 
-// ---- panel: one-off “find buyers” for a supplier host
-router.get('/api/leads/find-buyers', async (req: Request, res: Response) => {
-  const supplierHost = String(req.query.host || '').trim().toLowerCase();
-  if (!supplierHost || !supplierHost.includes('.')) {
-    return res.status(400).json({ ok:false, error:'missing ?host' });
-  }
-  await ensureSchema();
-
-  // Super fast seed: write one deterministic lead immediately so the UI shows “something”
-  // You’ll replace this with your richer multi-source fusion later.
-  const title = `Buyer lead for ${supplierHost}`;
-  const why   = 'Compact shim matched (US/CA, 50 mi) — source: live';
-
-  await q(
-    `insert into lead_pool (host, platform, title, why_text, temp)
-     values ($1,'web',$2,$3,'warm')
-     on conflict do nothing`,
-    [supplierHost, title, why]
-  );
-
-  const r = await q(
-    `select host, platform, title, why_text as "whyText", created, temp
-     from lead_pool where host=$1 order by created desc limit 10`,
-    [supplierHost]
-  );
-  res.json({ ok: true, items: r.rows });
-});
-
-// ---- bulk ingest from your public GH Action (ingest-zie619.yml)
-router.post('/api/ingest/github', async (req: Request, res: Response) => {
-  await ensureSchema();
+/**
+ * POST /api/leads/save
+ * Upsert a batch of leads coming from sweep/mirror/ingest.
+ * Body shape: { items: Array<{host, platform?, title?, why_text?, temp?, created?}> }
+ */
+leadsRouter.post("/save", async (req: Request, res: Response) => {
   const items = Array.isArray(req.body?.items) ? req.body.items : [];
+
   let saved = 0;
   for (const it of items) {
-    const host = (it.host || '').toLowerCase();
-    const title = it.title || `Repo ${host}`;
-    const why   = it.whyText || '(from GitHub live sweep)';
-    if (!host || !host.includes('.')) continue;
+    const host: string | undefined = it?.host;
+    if (!host) continue;
 
     await q(
-      `insert into lead_pool (host, platform, title, why_text, temp)
-       values ($1, $2, $3, $4, $5)
+      `insert into leads (host, platform, title, why_text, temp, created)
+       values ($1, $2, $3, $4, $5, coalesce($6::timestamptz, now()))
        on conflict do nothing`,
-      [host, it.platform || 'web', title, why, it.temp || 'warm']
+      [
+        host,
+        it.platform ?? null,
+        it.title ?? null,
+        // accept either why_text or whyText from different feeders
+        it.why_text ?? it.whyText ?? null,
+        it.temp ?? null,
+        it.created ?? null,
+      ]
     );
     saved++;
   }
+
   res.json({ ok: true, saved });
 });
+
+/**
+ * GET /api/leads/find-buyers
+ * Kick off discovery. For now, respond immediately (panel then calls /warm).
+ * Your background sweep/mirror can still push into /save.
+ */
+leadsRouter.get("/find-buyers", async (_req: Request, res: Response) => {
+  // no-op trigger for now — the panel only needs 200 OK quickly
+  res.json({ ok: true, started: true });
+});
+
+/**
+ * POST /api/leads/deepen
+ * Placeholder that succeeds so the UI flow doesn't break.
+ */
+leadsRouter.post("/deepen", async (_req: Request, res: Response) => {
+  res.json({ ok: true });
+});
+
+/** Export in ALL the ways index.ts might import it. */
+export default leadsRouter;
+export { leadsRouter as router, leadsRouter as leads };
