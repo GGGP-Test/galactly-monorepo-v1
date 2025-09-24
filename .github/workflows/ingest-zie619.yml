@@ -11,7 +11,7 @@ jobs:
     permissions:
       contents: read
     env:
-      API_BASE: ${{ secrets.API_BASE }}
+      API_BASE: ${{ secrets.API_BASE }}   # e.g. https://p01--animated-cellar--vz4ftkwrzdfs.code.run
     steps:
       - name: Install jq & python
         run: |
@@ -21,54 +21,69 @@ jobs:
       - name: Fetch repos from Zie619
         run: |
           curl -sSL -H 'Accept: application/vnd.github+json' \
-            "https://api.github.com/users/Zie619/repos?per_page=100&sort=updated" > rows.json
-          jq 'map({name,homepage,description,topics,owner:.owner.login})' rows.json > rows.min.json
-          cat rows.min.json
+            "https://api.github.com/users/Zie619/repos?per_page=100&type=owner&sort=updated" \
+            | jq '[ .[] | {name, homepage, description, topics:(.topics // []), owner:(.owner.login)} ]' \
+            > repos.json
+          echo "Fetched $(jq 'length' repos.json) repos"
 
-      - name: Extract domains
-        id: d
+      - name: Build payload.json (unique domains)
         run: |
           python3 - <<'PY'
-          import json,re,sys,urllib.parse
-          rows=json.load(open('rows.min.json'))
-          out=[]
-          def host_from(s):
-              if not s: return None
-              s=s.strip()
-              try:
-                  if '://' not in s: s='https://'+s
-                  u=urllib.parse.urlparse(s)
-                  h=(u.hostname or '').lower()
-                  if h.startswith('www.'): h=h[4:]
-                  return h if '.' in h and not h.endswith('github.com') else None
-              except: return None
-          doms=set()
-          for r in rows:
-              h=host_from(r.get('homepage'))
-              if not h and r.get('description'):
-                  m=re.search(r'\b([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b', r['description'], re.I)
-                  if m:
-                      cand=m.group(1).lower()
-                      if not cand.endswith('github.com'): h=cand
-              if not h and r.get('owner'):
-                  h=f"{r['owner'].lower()}.github.io"
-              if h: doms.add(h)
-          print(json.dumps(sorted(doms)))
+          import json, re, urllib.parse, sys
+          repos = json.load(open('repos.json'))
+
+          def to_host(s):
+            if not s: return None
+            s = s.strip()
+            try:
+              u = urllib.parse.urlparse(s if '://' in s else 'https://' + s)
+              h = (u.hostname or '').lower()
+              if h.startswith('www.'): h = h[4:]
+              return h if '.' in h else None
+            except Exception:
+              return None
+
+          def domain_from_text(txt):
+            if not txt: return None
+            m = re.search(r'\b([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b', txt, re.I)
+            if not m: return None
+            h = m.group(1).lower()
+            return None if h.endswith('github.com') else h
+
+          seen = set()
+          items = []
+          for r in repos:
+            homepage = r.get('homepage') or ''
+            host = to_host(homepage) or domain_from_text(r.get('description') or '')
+            if not host:
+              # guess a site from the username if needed
+              owner = (r.get('owner') or '').lower()
+              if owner: host = f"{owner}.github.io"
+            if not host or host in seen: continue
+            seen.add(host)
+            if not homepage:
+              homepage = 'https://' + host
+
+            items.append({
+              "homepage": homepage,
+              "owner": r.get("owner") or "",
+              "name": r.get("name") or "",
+              "description": r.get("description") or "",
+              "topics": r.get("topics") or [],
+              "temp": "warm"
+            })
+
+          with open('payload.json', 'w') as f:
+            json.dump(items, f)
+
+          print(f"Prepared {len(items)} unique domains")
           PY
 
       - name: POST to /api/ingest/github
+        if: ${{ env.API_BASE != '' }}
         run: |
-          DOMS=$(cat <<'JSON'
-          $(cat <<'EOD'
-          {"doms": $(cat <<'X' ; cat ; echo X)}
-          EOD
-          )
-          JSON
-          )
-          echo "$DOMS" | jq -c '.doms|.[]' | while read -r d; do
-            d=${d//\"/}
-            curl -sS -X POST "$API_BASE/api/ingest/github" \
-              -H 'Content-Type: application/json' \
-              --data "{\"homepage\":\"https://$d\",\"owner\":\"zie619\",\"name\":\"$d\",\"description\":\"from Zie619\",\"topics\":[],\"temp\":\"warm\"}" \
-              | jq -c .
-          done
+          set -e
+          echo "POSTing to ${API_BASE}/api/ingest/github"
+          curl -sS -X POST "${API_BASE}/api/ingest/github" \
+            -H 'Content-Type: application/json' \
+            --data-binary @payload.json | jq -C .
