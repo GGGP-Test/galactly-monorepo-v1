@@ -1,59 +1,52 @@
-// src/shared/db.ts
-// Northflank Postgres helper (with safe fallback if DB isn’t configured)
+// Backend/src/shared/db.ts
+import { Pool } from "pg";
 
-let Pool: any = null;
-try { ({ Pool } = require('pg')); } catch { /* optional dep */ }
+const {
+  DATABASE_URL,
+  PGHOST, PGDATABASE, PGUSER, PGPASSWORD, PGPORT, PGSSL
+} = process.env;
 
-const connFromEnv = () => {
-  const url = process.env.DATABASE_URL;
-  if (url) return { connectionString: url, ssl: { rejectUnauthorized: false } };
-  const host = process.env.PGHOST;
-  if (!host) return null;
-  return {
-    host,
-    port: Number(process.env.PGPORT || 5432),
-    database: process.env.PGDATABASE,
-    user: process.env.PGUSER,
-    password: process.env.PGPASSWORD,
-    ssl: { rejectUnauthorized: false },
-  };
-};
-
-const cfg = connFromEnv();
-const pool = (Pool && cfg) ? new Pool(cfg) : null;
-
-export async function q<T = any>(sql: string, params: any[] = []) {
-  if (!pool) return { rows: [] as T[], rowCount: 0 } as any;
-  return pool.query(sql, params);
+// Build a connection string if Northflank injects discrete vars
+let conn = DATABASE_URL;
+if (!conn && PGHOST && PGUSER && PGPASSWORD) {
+  const host = PGHOST;
+  const db   = PGDATABASE || "postgres";
+  const port = Number(PGPORT || "5432");
+  conn = `postgres://${encodeURIComponent(PGUSER)}:${encodeURIComponent(PGPASSWORD)}@${host}:${port}/${db}`;
 }
 
-// Minimal auto-migration (idempotent)
-export async function ensureTables() {
-  if (!pool) return;
-  const sql = `
-  create table if not exists candidate_hosts (
-    host text primary key,
-    seen_at timestamptz not null default now(),
-    source text not null default 'mirror'
-  );
+// Fail fast with a clear message
+if (!conn) {
+  throw new Error("DATABASE_URL (or PG* vars) are required for postgres.");
+}
 
-  create table if not exists buyer_leads (
-    id bigserial primary key,
-    supplier_host text not null,
-    buyer_host    text not null,
-    url           text not null,
-    title         text,
-    why           text,
-    platform      text not null default 'web',
-    temperature   text not null default 'warm',
-    score         int  not null default 0,
-    source        text not null default 'live',
-    created_at    timestamptz not null default now(),
-    unique (supplier_host, buyer_host, url)
-  );
+// Northflank uses TLS; allow sslmode=require strings too
+const sslNeeded =
+  /sslmode=require/i.test(conn) || (PGSSL || "").toLowerCase() === "require";
 
-  create index if not exists buyer_leads_recent_idx
-    on buyer_leads (created_at desc);
-  `;
-  await q(sql);
+export const pool = new Pool({
+  connectionString: conn,
+  ssl: sslNeeded ? { rejectUnauthorized: false } : undefined,
+});
+
+export async function q<T = any>(text: string, params?: any[]) {
+  const res = await pool.query(text, params);
+  return { rows: res.rows as T[], rowCount: (res as any).rowCount ?? res.rows.length };
+}
+
+export async function ensureSchema() {
+  await q(`
+    CREATE TABLE IF NOT EXISTS lead_pool (
+      id          BIGSERIAL PRIMARY KEY,
+      host        TEXT NOT NULL,
+      platform    TEXT NOT NULL DEFAULT 'web',
+      title       TEXT,
+      why         TEXT,
+      temp        TEXT NOT NULL DEFAULT 'warm',
+      created     TIMESTAMPTZ NOT NULL DEFAULT now(),
+      source_url  TEXT UNIQUE
+    );
+    CREATE INDEX IF NOT EXISTS lead_pool_host_created_idx
+      ON lead_pool(host, created DESC);
+  `);
 }
