@@ -1,248 +1,208 @@
-// src/routes/leads.ts
-import { Router, Request, Response } from 'express';
-import { q } from '../shared/db';
-import { addMirroredHosts, listCandidates } from '../shared/candidatePool';
-import { saveByHost, buckets, replaceHotWarm } from '../shared/memStore';
+// Backend/src/routes/leads.ts
+import { Router, Request, Response } from "express";
+import { q } from "../shared/db";
 
-const r = Router();
-
-/* ---------- knobs ---------- */
-type Found = { host: string; url: string; title: string; why: string; temp: 'warm'|'hot'; score: number };
-
-const TIMEOUT_MS = 4000;
-const MAX_CONCURRENCY = 12;
-const MAX_TEST = 28;
-const EARLY_HITS = 3;
-
-const PATHS_PRIMARY = [
-  '/supplier-registration','/vendor-registration',
-  '/supplier','/suppliers','/vendor','/vendors',
-  '/supplier-portal','/vendor-portal',
-  '/procurement','/purchasing','/sourcing',
-  '/doing-business-with','/partners','/partner','/rfq','/rfi'
-];
-const PATHS_SECONDARY = [
-  '/business','/company/suppliers','/about/suppliers','/supply-chain','/compliance/suppliers'
-];
-
-const INTENT = ['supplier','suppliers','vendor','vendors','procurement','purchasing','sourcing','registration','portal','rfq','rfi'];
-const PACK   = ['packaging','carton','corrugated','boxes','labels','pouch','mailers','display','case pack','folding carton','tray','sleeve'];
-
-/* ---------- utils ---------- */
-const toUrl = (host: string, path: string) => `https://${host.replace(/^https?:\/\//,'').replace(/\/.*/,'')}${path}`;
-
-async function fetchHtml(url: string): Promise<string|undefined> {
-  const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), TIMEOUT_MS);
-  try {
-    const r = await fetch(url, { redirect: 'follow', signal: ctl.signal } as any);
-    if (!r.ok) return;
-    const ct = (r.headers.get('content-type') || '').toLowerCase();
-    if (!ct.includes('text/html')) return;
-    return (await r.text()).slice(0, 200_000);
-  } catch { return; } finally { clearTimeout(t); }
-}
-const titleFrom = (html: string) => (html.match(/<title[^>]*>(.*?)<\/title>/i)?.[1] || 'Supplier / Vendor Portal')
-  .trim().replace(/\s+/g,' ').slice(0,160);
-
-function score(html: string) {
-  const h = html.toLowerCase();
-  let i=0, p=0;
-  for (const t of INTENT) if (h.includes(t)) i++;
-  for (const t of PACK)   if (h.includes(t)) p++;
-  return { intent: i, pack: p, total: i+p };
+// --- types we use on the wire ---
+type Temp = "cold" | "warm" | "hot";
+interface LeadItem {
+  host: string;
+  platform: string;
+  title?: string;
+  why?: string;
+  temp?: Temp;
+  created?: string;
+  source_url?: string;
 }
 
-async function extractSupplierKeywords(supplierHost: string): Promise<string[]> {
-  const html = await fetchHtml(`https://${supplierHost}`);
-  if (!html) return [];
-  const text = html.replace(/<script[\s\S]*?<\/script>/gi,' ')
-    .replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').toLowerCase();
-  const keys = ['packaging','flexible','labels','carton','corrugated','display','fulfillment','mailers','pouch','sleeve','shrink','foam','thermoform','bottle','cap','tube'];
-  const out = keys.filter(k => text.includes(k));
-  return Array.from(new Set(out)).slice(0,3);
-}
+export const router = Router();
 
-/* ---------- probe logic ---------- */
-async function probeBuyer(buyerHost: string, requirePack = true, secondary = false): Promise<Found|undefined> {
-  const PATHS = secondary ? PATHS_SECONDARY : PATHS_PRIMARY;
-  for (const p of PATHS) {
-    const url = toUrl(buyerHost, p);
-    const html = await fetchHtml(url);
-    if (!html) continue;
-    const s = score(html);
-    if ((s.intent >= 1 || s.total >= 2) && (!requirePack || s.pack >= 1)) {
-      const title = titleFrom(html);
-      const why = `vendor page ${p}${s.pack ? ' (+packaging hints)' : ''}`;
-      return { host: buyerHost, url, title, why, temp: 'warm', score: s.total + (s.pack ? 2 : 0) };
+/**
+ * POST /api/ingest/github
+ * Accepts items from GitHub Actions (mirror/ingest). Upserts into lead_pool.
+ * Body: { items: LeadItem[] }
+ */
+router.post(
+  "/ingest/github",
+  async (req: Request<unknown, unknown, { items?: LeadItem[] }>, res: Response) => {
+    try {
+      const items = Array.isArray(req.body?.items) ? req.body.items : [];
+      let saved = 0;
+      for (const it of items) {
+        if (!it?.host) continue;
+        const host = String(it.host).toLowerCase().trim();
+        const platform = it.platform || "web";
+        const title = it.title || null;
+        const why = it.why || (it as any).whyText || null;
+        const temp: Temp = (it.temp as Temp) || "warm";
+        const created = it.created ? new Date(it.created) : new Date();
+        const src = it.source_url || null;
+
+        await q(
+          `INSERT INTO lead_pool (host, platform, title, why, temp, created, source_url)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)
+           ON CONFLICT (source_url) DO UPDATE
+           SET host=EXCLUDED.host, platform=EXCLUDED.platform, title=COALESCE(EXCLUDED.title, lead_pool.title),
+               why=COALESCE(EXCLUDED.why, lead_pool.why), temp=EXCLUDED.temp`,
+          [host, platform, title, why, temp, created, src]
+        );
+        saved++;
+      }
+      res.json({ ok: true, saved });
+    } catch (err: any) {
+      console.error("ingest/github failed", err);
+      res.status(500).json({ ok: false, error: String(err?.message || err) });
     }
   }
-  return;
-}
+);
 
-async function findBuyersFast(supplierHost: string, region: string): Promise<Found[]> {
-  const kw = await extractSupplierKeywords(supplierHost);
-  let candidates = listCandidates(region, 64);
-
-  if (kw.length) {
-    candidates = candidates.sort((a,b) => {
-      const sa = kw.some(k => a.includes(k)) ? 1 : 0;
-      const sb = kw.some(k => b.includes(k)) ? 1 : 0;
-      return sb - sa;
-    });
+/**
+ * GET /api/leads/warm?host=peekpackaging.com
+ * Returns recent warm/hot leads we have for this host (persisted).
+ */
+router.get(
+  "/leads/warm",
+  async (req: Request<unknown, unknown, unknown, { host?: string; limit?: string }>, res: Response) => {
+    const host = (req.query.host || "").toLowerCase().trim();
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit || 25)));
+    try {
+      const rows = host
+        ? await q<LeadItem>(
+            `SELECT host, platform, title, why, temp, created, source_url
+             FROM lead_pool
+             WHERE host=$1
+             ORDER BY created DESC
+             LIMIT $2`,
+            [host, limit]
+          )
+        : await q<LeadItem>(
+            `SELECT host, platform, title, why, temp, created, source_url
+             FROM lead_pool
+             ORDER BY created DESC
+             LIMIT $1`,
+            [limit]
+          );
+      res.json({ ok: true, items: rows.rows });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, error: String(err?.message || err) });
+    }
   }
-  candidates = candidates.slice(0, MAX_TEST);
+);
 
-  const out: Found[] = [];
-  let i = 0, active = 0;
-  return await new Promise<Found[]>(resolve => {
-    const watchdog = setTimeout(()=>resolve(out), Math.max(5000, TIMEOUT_MS+1500));
-    const next = () => {
-      if (out.length >= EARLY_HITS || (i >= candidates.length && active === 0)) {
-        clearTimeout(watchdog); return resolve(out.sort((a,b)=>b.score-a.score));
-      }
-      while (active < MAX_CONCURRENCY && i < candidates.length && out.length < EARLY_HITS) {
-        const host = candidates[i++]; active++;
-        probeBuyer(host, true, false)
-          .then(f => { if (f) out.push(f); })
-          .finally(()=>{ active--; next(); });
-      }
-    };
-    next();
-  });
-}
+/**
+ * GET /api/leads/find-buyers?host=peekpackaging.com&region=US/CA&radius=50
+ * Fast "first hit" – returns 1..n candidates by probing a few canonical paths.
+ * This is the < 1 minute path the panel uses after user clicks Find.
+ */
+router.get(
+  "/leads/find-buyers",
+  async (req: Request<unknown, unknown, unknown, { host?: string }>, res: Response) => {
+    const host = (req.query.host || "").toLowerCase().trim();
+    if (!host) return res.status(400).json({ ok: false, error: "host required" });
 
-/* ---------- persistence helpers ---------- */
-async function persistLead(supplier: string, f: Found) {
-  // keep UI instant via mem, also write to DB
-  saveByHost(f.host, {
-    title: f.title, platform:'web', created: new Date().toISOString(),
-    temperature: f.temp, why: `${f.why} — source: live`, saved: true
-  });
-  await q(
-    `insert into buyer_leads (supplier_host,buyer_host,url,title,why,platform,temperature,score,source)
-     values ($1,$2,$3,$4,$5,'web',$6,$7,'live')
-     on conflict (supplier_host,buyer_host,url) do update
-       set title=excluded.title, why=excluded.why, temperature=excluded.temperature, score=excluded.score`,
-    [supplier, f.host, f.url, f.title, f.why, f.temp, f.score]
-  );
-}
+    // tiny heuristic sweep (fast)
+    const CANDIDATE_PATHS = [
+      "/", "/vendor", "/vendors", "/supplier", "/suppliers",
+      "/procurement", "/purchasing", "/partner", "/partners", "/rfq"
+    ];
+    const USER_AGENT = "GalactlyBot/0.1 (+https://galactly.dev)";
 
-/* ---------- endpoints ---------- */
+    const hits: LeadItem[] = [];
+    const controller = new AbortController();
 
-// live sweep
-r.get(['/leads/find','/leads/find-buyers','/find','/find-buyers'], async (req: Request, res: Response) => {
-  const supplierHost = String(req.query.host || '').trim().toLowerCase();
-  const region = String(req.query.region || 'US/CA');
-  if (!supplierHost) return res.status(400).json({ ok:false, error:'host is required' });
+    async function tryFetch(path: string) {
+      const url = `https://${host}${path}`;
+      try {
+        const r = await fetch(url, {
+          method: "GET",
+          redirect: "follow",
+          headers: { "user-agent": USER_AGENT },
+          signal: controller.signal as any,
+        } as any);
+        if (!r.ok) return;
+        const ct = (r.headers.get("content-type") || "").toLowerCase();
+        if (!ct.includes("text/html")) return;
+        const html = (await r.text()).slice(0, 150_000).toLowerCase();
+        const score =
+          (html.includes("vendor") ? 1 : 0) +
+          (html.includes("supplier") ? 1 : 0) +
+          (html.includes("procurement") ? 1 : 0) +
+          (html.includes("packaging") ? 2 : 0);
+        if (score >= 2) {
+          const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
+          hits.push({
+            host,
+            platform: "web",
+            title: titleMatch?.[1]?.trim() || `Possible buyer @ ${host}`,
+            why: `vendor page / supplier (+packaging hints) — source: live`,
+            temp: "warm",
+            source_url: url,
+          });
+        }
+      } catch { /* ignore */ }
+    }
 
-  try {
-    const found = await findBuyersFast(supplierHost, region);
-    for (const f of found) await persistLead(supplierHost, f);
-    return res.json({ ok:true, items: found.map(f => ({
-      host:f.host, platform:'web', title:f.title,
-      created:new Date().toISOString(), temp:f.temp, whyText:f.why
-    }))});
-  } catch (e:any) {
-    return res.status(500).json({ ok:false, error: e?.message || 'internal error' });
+    // probe a handful of paths quickly (in parallel)
+    await Promise.all(CANDIDATE_PATHS.slice(0, 6).map(tryFetch));
+
+    // Persist any hits for future refreshes
+    for (const h of hits) {
+      await q(
+        `INSERT INTO lead_pool (host, platform, title, why, temp, source_url)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT (source_url) DO NOTHING`,
+        [h.host, h.platform, h.title, h.why, h.temp || "warm", h.source_url]
+      );
+    }
+
+    res.json({ ok: true, items: hits });
   }
-});
+);
 
-// deepen = broader paths, allow weaker packaging hints, and keep the best
-r.post(['/leads/deepen','/deepen'], async (req: Request, res: Response) => {
-  const supplierHost = String(req.body?.host || req.query.host || '').trim().toLowerCase();
-  const region = String(req.body?.region || req.query.region || 'US/CA');
-  if (!supplierHost) return res.status(400).json({ ok:false, error:'host required' });
+/**
+ * POST /api/leads/deepen
+ * Body: { host: string }
+ * Slower pass: broadens paths and packs more into DB for that host.
+ */
+router.post(
+  "/leads/deepen",
+  async (req: Request<unknown, unknown, { host?: string }>, res: Response) => {
+    const host = (req.body?.host || "").toLowerCase().trim();
+    if (!host) return res.status(400).json({ ok: false, error: "host required" });
 
-  // widen search on same candidate set (secondary paths, pack optional)
-  let candidates = listCandidates(region, 80).slice(0, 40);
-  const out: Found[] = [];
-  await Promise.all(candidates.map(async h => {
-    const f = await probeBuyer(h, false, true);
-    if (f) out.push({ ...f, temp: 'warm', score: f.score - 1 });
-  }));
-  out.sort((a,b)=>b.score-a.score).slice(0, 10);
-  for (const f of out) await persistLead(supplierHost, f);
+    const MORE_PATHS = [
+      "/supplier-registration", "/vendor-registration",
+      "/sourcing", "/supply", "/purchasing", "/purchase",
+      "/terms/vendor", "/terms/supplier"
+    ];
 
-  return res.json({ ok:true, added: out.length });
-});
+    let created = 0;
+    await Promise.all(
+      MORE_PATHS.map(async (p) => {
+        const url = `https://${host}${p}`;
+        try {
+          const r = await fetch(url, { headers: { "user-agent": "GalactlyBot/0.1" } } as any);
+          if (!r.ok) return;
+          const ct = (r.headers.get("content-type") || "").toLowerCase();
+          if (!ct.includes("text/html")) return;
+          const html = (await r.text()).slice(0, 200_000).toLowerCase();
+          if (html.includes("supplier") || html.includes("vendor")) {
+            await q(
+              `INSERT INTO lead_pool (host, platform, title, why, temp, source_url)
+               VALUES ($1,'web',$2,$3,'warm',$4)
+               ON CONFLICT (source_url) DO NOTHING`,
+              [
+                host,
+                `Possible buyer @ ${host}`,
+                "from deeper live sweep",
+                url,
+              ]
+            );
+            created++;
+          }
+        } catch { /* ignore */ }
+      })
+    );
 
-// warm/hot lists (prefer DB if present)
-r.get(['/leads/warm','/warm'], async (_req, res) => {
-  const db = await q<any>(`select buyer_host as host, title, why, temperature, created_at
-                           from buyer_leads where temperature='warm'
-                           order by created_at desc limit 200`);
-  if (db.rowCount && db.rowCount > 0) {
-    return res.json({ ok:true, items: db.rows.map(r => ({
-      host:r.host, platform:'web', title:r.title || 'Buyer lead',
-      created:r.created_at, temp:'warm', whyText:r.why || ''
-    }))});
+    res.json({ ok: true, created });
   }
-  const { warm } = buckets();
-  return res.json({ ok:true, items: warm.map(l => ({
-    host:l.host, platform:l.platform || 'web', title:l.title || 'Buyer lead',
-    created:l.created, temp:l.temperature, whyText:l.why || ''
-  }))});
-});
-
-r.get(['/leads/hot','/hot'], async (_req, res) => {
-  const db = await q<any>(`select buyer_host as host, title, why, temperature, created_at
-                           from buyer_leads where temperature='hot'
-                           order by created_at desc limit 200`);
-  if (db.rowCount && db.rowCount > 0) {
-    return res.json({ ok:true, items: db.rows.map(r => ({
-      host:r.host, platform:'web', title:r.title || 'Buyer lead',
-      created:r.created_at, temp:'hot', whyText:r.why || ''
-    }))});
-  }
-  const { hot } = buckets();
-  return res.json({ ok:true, items: hot.map(l => ({
-    host:l.host, platform:l.platform || 'web', title:l.title || 'Buyer lead',
-    created:l.created, temp:l.temperature, whyText:l.why || ''
-  }))});
-});
-
-// lock button
-r.post(['/leads/lock','/lock'], (req: Request, res: Response) => {
-  const host = String(req.body?.host || req.query.host || '').trim().toLowerCase();
-  const temp = String(req.body?.temp || req.query.temp || 'warm').toLowerCase();
-  if (!host) return res.status(400).json({ ok:false, error:'host required' });
-  const t = (temp === 'hot' ? 'hot' : temp === 'cold' ? 'cold' : 'warm') as any;
-  replaceHotWarm(host, t);
-  return res.json({ ok:true, host, temp:t });
-});
-
-// ingestion from Actions
-r.post(['/ingest/hosts','/api/ingest/hosts'], async (req: Request, res: Response) => {
-  const hosts = Array.isArray(req.body?.hosts) ? req.body.hosts : [];
-  const source = String(req.body?.source || 'mirror');
-  addMirroredHosts(hosts, source);
-  // also persist into candidate_hosts for later analysis
-  for (const h of hosts) await q(
-    `insert into candidate_hosts (host, seen_at, source)
-     values ($1, now(), $2)
-     on conflict (host) do update set seen_at=excluded.seen_at, source=excluded.source`,
-    [h, source]
-  );
-  res.json({ ok:true, added: hosts.length });
-});
-
-r.post(['/ingest/github','/api/ingest/github'], async (req: Request, res: Response) => {
-  const items = Array.isArray(req.body?.items) ? req.body.items : [];
-  const hosts: string[] = [];
-  for (const it of items) {
-    const h = String(it?.homepage || '').toLowerCase()
-      .replace(/^https?:\/\//,'').replace(/\/.*/,'').replace(/^www\./,'');
-    if (h && h.includes('.')) hosts.push(h);
-  }
-  if (hosts.length) addMirroredHosts(hosts, 'github');
-  for (const h of hosts) await q(
-    `insert into candidate_hosts (host, seen_at, source)
-     values ($1, now(), 'github')
-     on conflict (host) do update set seen_at=excluded.seen_at, source='github'`,
-     [h]
-  );
-  res.json({ ok:true, added: hosts.length });
-});
-
-export default r;
+);
