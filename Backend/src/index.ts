@@ -1,27 +1,20 @@
-// Backend/src/index.ts
-import express, { Request, Response } from "express";
-import cors from "cors";
-import { ensureSchema } from "./shared/db";
-import { router as leadsRouter } from "./routes/leads";
+import express from 'express';
+import cors from 'cors';
+import { leads } from './routes/leads';
+import { ensureSchema, hasDb } from './db';
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: '1mb' }));
 
-app.get("/health", (_: Request, res: Response) => res.json({ ok: true }));
+app.get('/healthz', (_req, res) => res.json({ ok: true, db: hasDb() }));
 
-// All app API under /api
-app.use("/api", leadsRouter);
+app.use('/api', leads);
 
+// boot
 const PORT = Number(process.env.PORT || 8787);
+(async () => { try { await ensureSchema(); } catch {} })();
 
-ensureSchema()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`buyers-api listening on ${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error("Schema init failed:", err);
-    process.exit(1);
-  });
+app.listen(PORT, () => {
+  console.log(`buyers-api up on :${PORT}`);
+});
