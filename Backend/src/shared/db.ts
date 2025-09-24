@@ -1,49 +1,69 @@
-// Backend/src/shared/db.ts
-import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
+// src/shared/db.ts
+import { Pool, QueryConfig, QueryResult } from "pg";
 
 /**
- * We keep a single Pool in global scope so hot-reloads / multiple imports
- * don’t create extra connections.
+ * We use ONE env var only.
+ * Point DATABASE_URL at your Postgres (Northflank add-on or Neon).
  */
-function getPool(): Pool {
-  const g = globalThis as unknown as { __GALACTLY_POOL__?: Pool };
-  if (!g.__GALACTLY_POOL__) {
-    g.__GALACTLY_POOL__ = new Pool({
-      connectionString: process.env.DATABASE_URL, // works for Neon or Northflank
-      // Neon & most hosted Postgres want TLS; NF add-on can too. Accept self-signed.
-      ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
-      max: Number(process.env.PGPOOL_MAX ?? 5),
-      idleTimeoutMillis: 30_000,
-    });
-  }
-  return g.__GALACTLY_POOL__;
+const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  process.env.NF_DATABASE_URL || // optional fallback if you set it
+  process.env.NEON_DATABASE_URL; // optional fallback if you set it
+
+if (!DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL is not set. Put your Postgres connection string in the service env."
+  );
 }
 
-export const pool = getPool();
+/**
+ * Some hosted PGs require TLS (Neon, etc). Northflank can, too, if TLS is enabled.
+ * Toggle with PGSSL=true or auto-detect by URL.
+ */
+const needSSL =
+  process.env.PGSSL === "true" ||
+  /neon\.tech|render\.com|supabase\.co|amazonaws\.com/i.test(DATABASE_URL);
+
+export const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: needSSL ? { rejectUnauthorized: false } : undefined,
+  // keep tiny to avoid exhausting free tiers
+  max: Number(process.env.PG_MAX ?? 5),
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
+});
+
+export type SQL = string | QueryConfig<any[]>;
 
 /**
- * Typed query helper that returns a full QueryResult so callers can use `.rows`.
- * Example:
- *   const rs = await q<{ id:number }>('select 1 as id');
- *   rs.rows[0].id
+ * Canonical query helper:
+ * - Accepts text + params or a QueryConfig
+ * - Returns a shape your handlers expect: { rows }
  */
-export async function q<R extends QueryResultRow = QueryResultRow>(
-  text: string,
+export async function q<T = any>(
+  sql: SQL,
   params?: any[]
-): Promise<QueryResult<R>> {
-  const client: PoolClient = await pool.connect();
-  try {
-    const res = await client.query<R>(text, params);
-    return res; // has `.rows`
-  } finally {
-    client.release();
-  }
+): Promise<{ rows: T[] }> {
+  const res: QueryResult = Array.isArray(params)
+    ? await pool.query(sql as string, params)
+    : await pool.query(sql as any);
+
+  return { rows: res.rows as T[] };
 }
 
-/** Quick connectivity check */
+/** Get a single row or null. */
+export async function one<T = any>(
+  sql: SQL,
+  params?: any[]
+): Promise<T | null> {
+  const { rows } = await q<T>(sql, params);
+  return rows.length ? (rows[0] as T) : null;
+}
+
+/** Quick health probe used by /healthz. */
 export async function hasDb(): Promise<boolean> {
   try {
-    await q("select 1");
+    await pool.query("select 1");
     return true;
   } catch {
     return false;
@@ -51,41 +71,20 @@ export async function hasDb(): Promise<boolean> {
 }
 
 /**
- * Create the minimal schema the app expects.
- * Safe to call on every boot.
+ * Idempotent schema bootstrap for leads storage.
+ * Safe to call at startup; it won't drop or replace anything.
  */
 export async function ensureSchema(): Promise<void> {
-  await q(`
+  await pool.query(`
     create table if not exists leads (
-      id        bigserial primary key,
-      host      text        not null,
-      platform  text,
-      title     text,
-      why_text  text,
-      created   timestamptz not null default now(),
-      temp      text,
-      meta      jsonb
+      id          bigserial primary key,
+      host        text not null,
+      platform    text,
+      title       text,
+      why_text    text,
+      temp        text,
+      created     timestamptz not null default now()
     );
-  `);
-
-  await q(`create index if not exists idx_leads_host on leads(host);`);
-  await q(`create index if not exists idx_leads_created on leads(created desc);`);
-
-  -- // Uniqueness to reduce dupes but permissive enough for inserts
-  await q(`
-    create unique index if not exists uniq_leads_identity
-      on leads(host, coalesce(platform,''), coalesce(title,''))
+    create index if not exists leads_host_created_idx on leads(host, created desc);
   `);
 }
-
-/** Row shape helper (optional for callers to import) */
-export type LeadRow = {
-  id: number;
-  host: string;
-  platform: string | null;
-  title: string | null;
-  why_text: string | null;
-  created: string; // ISO
-  temp: string | null;
-  meta: any;
-};
