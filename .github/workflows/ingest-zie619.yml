@@ -3,7 +3,7 @@ name: Ingest leads from Zie619 (public)
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "*/5 * * * *"   # every 5 minutes
+    - cron: "*/15 * * * *"   # every 15 minutes (GitHub minimum)
 
 jobs:
   ingest:
@@ -14,56 +14,54 @@ jobs:
       API_BASE: ${{ secrets.API_BASE }}   # e.g. https://p01--animated-cellar--vz4ftkwrzdfs.code.run
     steps:
       - name: Install jq & python
-        run: sudo apt-get update -y && sudo apt-get install -y jq python3
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq python3
 
       - name: Fetch repos from Zie619
         run: |
           curl -sSL -H 'Accept: application/vnd.github+json' \
-            "https://api.github.com/users/Zie619/repos?per_page=100&sort=updated" \
-            | jq 'map({name,homepage,description,topics,owner:(.owner.login)})' > rows.json
-          cat rows.json
+               -H 'User-Agent: ingest-workflow' \
+               "https://api.github.com/users/zie619/repos?sort=updated&per_page=100" \
+               > rows.json
+          jq '[.[] | {name,homepage,description,topics,owner:(.owner//{})}]' rows.json > rows_slim.json
+          cat rows_slim.json
 
       - name: Extract domains
-        id: doms
+        id: d
         run: |
-          python3 - <<'PY' rows.json
-          import json, re, sys, urllib.parse
-          rows = json.load(open('rows.json'))
+          python3 - <<'PY'
+          import json, re, urllib.parse
+          rows = json.load(open('rows_slim.json'))
           def to_host(s):
-              if not s: return None
-              s = s.strip()
-              try:
-                  u = urllib.parse.urlparse(s if '://' in s else 'https://' + s)
-                  h = (u.hostname or '').lower()
-              except Exception:
-                  h = s.lower().split('/')[0]
-              if h.startswith('www.'): h = h[4:]
-              return h if '.' in h and not h.endswith('github.com') else None
-          out = []
+            if not s: return None
+            try:
+              u = urllib.parse.urlparse(s if '://' in s else 'https://' + s)
+              h = (u.hostname or '').lower()
+              if h and h.startswith('www.'): h = h[4:]
+              return h if '.' in h else None
+            except Exception:
+              s = (s or '').strip().lower()
+              if s.startswith('www.'): s = s[4:]
+              return s if '.' in s else None
+          def domain_from_text(txt):
+            if not txt: return None
+            m = re.search(r'\b([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b', txt, re.I)
+            if not m: return None
+            h = m.group(1).lower()
+            return None if h.endswith('github.com') else h
+          hosts = set()
           for r in rows:
-              host = to_host(r.get('homepage')) or to_host(r.get('description',''))
-              if not host and r.get('owner'):
-                  host = f"{r['owner'].lower()}.github.io"
-              if host:
-                  out.append({
-                      "host": host,
-                      "platform": "web",
-                      "title": f"Repo {r.get('name','')} — possible buyer @ {r.get('owner','')}",
-                      "description": r.get('description') or "",
-                      "topics": r.get('topics') or [],
-                      "temp": "warm"
-                  })
-          print(json.dumps(out))
-          PY > doms.json
-          echo "DOMS=$(cat doms.json)" >> $GITHUB_OUTPUT
+            h = to_host(r.get('homepage')) or domain_from_text(r.get('description')) \
+                or (r.get('owner',{}).get('login','').lower() + '.github.io' if r.get('owner',{}).get('login') else None)
+            if h: hosts.add(h)
+          json.dump(sorted(hosts), open('hosts.json','w'))
+          print(open('hosts.json').read())
+          PY
 
       - name: POST to /api/ingest/github
-        env:
-          DOMS: ${{ steps.doms.outputs.DOMS }}
         run: |
           set -e
-          echo "$DOMS" | jq -c . > doms.json
-          JSON=$(jq -c '{items: .}' doms.json)
           curl -sS -X POST "$API_BASE/api/ingest/github" \
-            -H 'content-type: application/json' \
-            --data "$JSON" | jq .
+               -H "Content-Type: application/json" \
+               --data-binary @hosts.json
