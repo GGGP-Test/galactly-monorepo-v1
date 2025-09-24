@@ -1,132 +1,92 @@
-// Backend/src/shared/db.ts
-//
-// Minimal DB helper used by routes and index.
-// - If process.env.DATABASE_URL is a postgres URL *and* the "pg" module is
-//   available at runtime, we use it.
-// - Otherwise we fall back to a safe in-memory stub so TypeScript builds succeed
-//   and the service can run without a DB (writes become no-ops).
-//
+// File: src/shared/db.ts
+// Single source of truth for database access.
 
-// This keeps CI/CD green while you decide between Neon vs Northflank PG.
-//
-// Exports:
-//   hasDb(): Promise<boolean>
-//   ensureSchema(): Promise<void>
-//   q<T = any>(sql: string, params?: any[]): Promise<{ rows: T[]; rowCount: number }>
-//   closeDb(): Promise<void>
+import { Pool } from "pg";
 
-type QueryResult<T = any> = { rows: T[]; rowCount: number };
+/**
+ * Choose one URL *once*:
+ * - If you're keeping Neon: set env DATABASE_URL to the Neon connection string.
+ * - If you're keeping Northflank PG addon: set env DATABASE_URL to the addon URI.
+ *
+ * Do NOT set both. The app only reads DATABASE_URL.
+ */
+const DATABASE_URL = process.env.DATABASE_URL || "";
 
-const url = (process.env.DATABASE_URL || "").trim();
-const isPgUrl = /^postgres(ql)?:\/\//i.test(url);
-
-// We avoid importing "pg" types so the build doesn’t require @types/pg.
-let pgPool: any = null;
-let mode: "pg" | "memory" = "memory";
-
-// Try to enable Postgres mode (only if both URL and module exist)
-if (isPgUrl) {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { Pool } = require("pg");
-    pgPool = new Pool({
-      connectionString: url,
-      ssl: url.includes("neon.tech") ? { rejectUnauthorized: false } : undefined,
-    });
-    mode = "pg";
-    // Eager ping to surface bad URLs early (non-blocking)
-    pgPool.query("select 1").catch(() => {
-      mode = "memory";
-      pgPool = null;
-    });
-  } catch {
-    mode = "memory";
-    pgPool = null;
-  }
+if (!DATABASE_URL) {
+  // Don't crash at import time (lets tsc build), but make failures obvious at runtime.
+  // eslint-disable-next-line no-console
+  console.warn("[db] DATABASE_URL is not set. DB calls will fail until you set it.");
 }
 
-// ---- in-memory stub (used when no Postgres) ----
-const mem = {
-  lead_pool: [] as any[],
-};
+// Neon usually requires SSL; NF addon may not.
+// This config works for both.
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl:
+    /neon\.tech|amazonaws\.com/i.test(DATABASE_URL)
+      ? { rejectUnauthorized: false }
+      : (undefined as any),
+});
 
+// -------- public helpers --------
+
+/** Simple typed query helper. */
+export async function q<R = any>(text: string, params?: any[]) {
+  const res = await pool.query<R>(text, params);
+  return res;
+}
+
+/** Quick connectivity check used by the app’s health/setup paths. */
 export async function hasDb(): Promise<boolean> {
-  return mode === "pg";
-}
-
-export async function ensureSchema(): Promise<void> {
-  if (mode !== "pg" || !pgPool) {
-    // memory mode: initialize nothing
-    return;
-  }
-  // A permissive superset schema so various writers don’t break.
-  const ddl = `
-  create table if not exists lead_pool (
-    id bigserial primary key,
-    host text unique,
-    platform text,
-    title text,
-    why_text text,
-    temp text,
-    created timestamptz default now(),
-    -- optional/aux columns used by different writers
-    cat text,
-    kw text[],
-    fit_user int,
-    heat int,
-    source_url text,
-    snippet text,
-    ttl timestamptz,
-    state text
-  );
-  create index if not exists idx_lead_pool_created on lead_pool(created desc);
-  create index if not exists idx_lead_pool_host on lead_pool(host);
-  `;
-  await pgPool.query(ddl);
-}
-
-export async function q<T = any>(sql: string, params: any[] = []): Promise<QueryResult<T>> {
-  if (mode === "pg" && pgPool) {
-    const r = await pgPool.query(sql, params);
-    return { rows: r.rows as T[], rowCount: r.rowCount || 0 };
-    }
-  // Memory fallback: recognize a tiny subset used by our code paths
-  const s = sql.trim().toLowerCase();
-
-  if (s.startsWith("insert into lead_pool")) {
-    // Extremely lenient parser: expect host in params somewhere
-    const hostParamIndex = params.findIndex((v) => typeof v === "string" && v.includes("."));
-    const host = hostParamIndex >= 0 ? String(params[hostParamIndex]).toLowerCase() : undefined;
-    if (host && !mem.lead_pool.find((r) => r.host === host)) {
-      mem.lead_pool.push({
-        host,
-        platform: params.find((v) => v === "web") ? "web" : "web",
-        title: params.find((v) => typeof v === "string" && v.length && !v.includes(".")) || "",
-        why_text: "",
-        temp: "warm",
-        created: new Date().toISOString(),
-      });
-      return { rows: [], rowCount: 1 };
-    }
-    return { rows: [], rowCount: 0 };
-  }
-
-  if (s.startsWith("select") && s.includes("from lead_pool")) {
-    // Return all (caller can filter in code if needed)
-    return { rows: mem.lead_pool as T[], rowCount: mem.lead_pool.length };
-  }
-
-  if (s.startsWith("delete from lead_pool")) {
-    mem.lead_pool.length = 0;
-    return { rows: [], rowCount: 0 };
-  }
-
-  // Default no-op
-  return { rows: [] as T[], rowCount: 0 };
-}
-
-export async function closeDb(): Promise<void> {
-  if (mode === "pg" && pgPool) {
-    try { await pgPool.end(); } catch {}
+  try {
+    await q("select 1");
+    return true;
+  } catch {
+    return false;
   }
 }
+
+/**
+ * Creates the minimal schema the app expects.
+ * Idempotent: safe to call on every boot.
+ */
+export async function ensureSchema() {
+  // One table for both warm/hot leads; "temp" column carries the bucket.
+  await q(`
+    create table if not exists leads (
+      id          bigserial primary key,
+      host        text        not null,
+      platform    text        not null,
+      title       text        not null,
+      why_text    text        not null,
+      temp        text        not null check (temp in ('warm','hot')),
+      created_at  timestamptz not null default now()
+    );
+  `);
+
+  // Keep dupes out but allow same host with different titles or temps.
+  await q(`
+    create unique index if not exists leads_host_title_temp
+      on leads (host, title, temp);
+  `);
+
+  // Helpful indexes for typical queries.
+  await q(`create index if not exists leads_created_at on leads (created_at desc);`);
+  await q(`create index if not exists leads_host on leads (host);`);
+}
+
+/** Optional: graceful shutdown hook (use if you add a signal handler). */
+export async function closeDb() {
+  await pool.end();
+}
+
+// Useful types if you want them elsewhere.
+export type LeadRow = {
+  id: number;
+  host: string;
+  platform: string;
+  title: string;
+  why_text: string;
+  temp: "warm" | "hot";
+  created_at: string; // ISO
+};
