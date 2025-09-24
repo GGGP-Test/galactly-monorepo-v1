@@ -1,129 +1,123 @@
 // src/routes/leads.ts
 import { Router, Request, Response } from 'express';
+import {
+  ensureLeadForHost,
+  saveByHost,
+  replaceHotWarm,
+  buckets,
+  StoredLead,
+  Temp,
+} from '../shared/memStore';
 
-// Import the memStore loosely to avoid type friction if its exports change.
-import * as store from '../shared/memStore';
-const Store: any = store as any;
+const r = Router();
 
-type Persona = {
-  offer?: string;
-  solves?: string;
-  titles?: string[] | string;
-};
+function nowISO() {
+  return new Date().toISOString();
+}
 
-function normHost(h: unknown): string {
-  const s = String(h ?? '').trim().toLowerCase();
-  if (!s) return '';
+function toHost(s: string | undefined): string | undefined {
+  if (!s) return undefined;
   try {
-    // Strip scheme/path if user pasted a URL
-    const u = new URL(s.includes('://') ? s : `http://${s}`);
-    return u.hostname.replace(/^www\./, '');
+    const u = s.includes('://') ? new URL(s) : new URL('https://' + s);
+    const h = u.hostname.toLowerCase().replace(/^www\./, '');
+    return h.includes('.') ? h : undefined;
   } catch {
-    return s.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
+    return undefined;
   }
 }
 
-function readInput(req: Request) {
-  const src: any = req.method === 'GET' ? req.query : (req.body ?? {});
-  const host =
-    normHost(
-      src.host ??
-      src.supplier ??
-      src.domain ??
-      src.website ??
-      src.q
-    );
-  const region = String(src.region ?? src.country ?? 'US/CA');
-  const radius = Number(src.radius ?? src.r ?? 50);
-  const persona: Persona = {
-    offer: src.persona?.offer ?? src.offer,
-    solves: src.persona?.solves ?? src.solves,
-    titles: src.persona?.titles ?? src.titles,
+function toItem(lead: StoredLead) {
+  return {
+    host: lead.host,
+    platform: lead.platform ?? 'web',
+    title: lead.title ?? `Buyer lead for ${lead.host}`,
+    created: lead.created,
+    temp: lead.temperature === 'hot' ? 'hot' : lead.temperature === 'warm' ? 'warm' : 'cold',
+    whyText: lead.why ?? '',
   };
-  return { host, region, radius, persona };
 }
 
-function makeLead(host: string) {
-  // Build a minimal lead object the panel can display.
-  // If memStore has helpers, use them; otherwise synthesize.
-  const ts = new Date().toISOString();
-  const base = {
-    id: host,
-    host,
-    platform: 'web',
-    title: 'Potential buyer',
-    created: ts,
-    temp: 'warm',
-    whyText: `Seeded lead for ${host}`,
-  };
+// ---------- GET /leads/warm ----------
+r.get('/leads/warm', (_req: Request, res: Response) => {
+  const b = buckets();
+  const items = b.warm.map(toItem);
+  res.json({ ok: true, items });
+});
 
-  // If store has get/save, try to persist/fetch
-  try {
-    const existing = Store.getByHost?.(host);
-    if (existing) return existing;
-    Store.saveByHost?.(host, base);
-  } catch { /* no-op */ }
+// ---------- GET /leads/hot ----------
+r.get('/leads/hot', (_req: Request, res: Response) => {
+  const b = buckets();
+  const items = b.hot.map(toItem);
+  res.json({ ok: true, items });
+});
 
-  return base;
-}
+// ---------- POST /leads/lock ----------
+/*
+  Body examples:
+  { "host": "acme.com", "temp": "warm" }
+  { "host": "acme.com", "temp": "hot" }
+*/
+r.post('/leads/lock', (req: Request, res: Response) => {
+  const host = String(req.body?.host ?? '').trim().toLowerCase();
+  const t = String(req.body?.temp ?? 'warm').toLowerCase() as Temp;
+  if (!host) return res.status(400).json({ ok: false, error: 'host required' });
+  const updated = replaceHotWarm(host, t);
+  res.json({ ok: true, item: toItem(updated) });
+});
 
-async function findOneHandler(req: Request, res: Response) {
-  const { host } = readInput(req);
-  if (!host) return res.status(400).json({ ok: false, error: 'host is required' });
+// ---------- POST /ingest/github ----------
+/*
+  Accepts either:
+    - { items: [{ homepage, owner, name, description, topics, temp? }, ...] }
+    - or an array of those objects directly
+*/
+r.post('/ingest/github', (req: Request, res: Response) => {
+  const raw = Array.isArray(req.body) ? req.body : (req.body?.items ?? []);
+  if (!Array.isArray(raw)) {
+    return res.status(400).json({ ok: false, error: 'items[] required' });
+  }
 
-  // Prefer store if it can produce/enrich; fall back to synth
-  let item: any;
-  try {
-    item = Store.getByHost?.(host);
-  } catch { /* ignore */ }
-  if (!item) item = makeLead(host);
+  let saved = 0;
+  const out: StoredLead[] = [];
 
-  return res.json({ ok: true, item });
-}
+  for (const it of raw) {
+    const homepage: string | undefined = it?.homepage ?? '';
+    const host = toHost(homepage);
+    if (!host) continue;
 
-async function findManyHandler(req: Request, res: Response) {
-  const { host } = readInput(req);
-  if (!host) return res.status(400).json({ ok: false, error: 'host is required' });
+    const temp: Temp = (String(it?.temp ?? 'warm').toLowerCase() as Temp) || 'warm';
 
-  // Simple strategy: one primary + any warm/hot neighbors if store exposes buckets
-  const items: any[] = [];
-  try {
-    const primary = Store.getByHost?.(host);
-    if (primary) items.push(primary);
-  } catch { /* ignore */ }
+    // seed or update the lead
+    const title =
+      (it?.name ? `Repo ${it.name} — possible buyer @ ${host}` : undefined) ??
+      `Buyer lead for ${host}`;
 
-  if (!items.length) items.push(makeLead(host));
+    const why =
+      (it?.description ? String(it.description) + ' ' : '') +
+      '(from GitHub mirror)';
 
-  // Try to add a couple of “similar” entries from store if available
-  try {
-    const all = Store.buckets?.() ?? [];
-    const extra = Array.isArray(all)
-      ? all
-          .flatMap((b: any) => b?.items ?? b ?? [])
-          .filter((x: any) => x?.host && x.host !== host)
-          .slice(0, 3)
-      : [];
-    for (const x of extra) items.push(x);
-  } catch { /* ignore */ }
+    const lead = saveByHost(host, {
+      title,
+      platform: 'web',
+      created: nowISO(),
+      temperature: temp,
+      why,
+      saved: true,
+    });
 
-  return res.json({ ok: true, items });
-}
+    out.push(lead);
+    saved++;
+  }
 
-export const leadsRouter = Router();
+  res.json({ ok: true, saved, items: out.map(toItem) });
+});
 
-// Aliases for maximum compatibility with the panel’s auto-probe
-// /leads/*
-leadsRouter.get('/find-buyers', findManyHandler);
-leadsRouter.post('/find-buyers', findManyHandler);
-leadsRouter.get('/find-one', findOneHandler);
-leadsRouter.post('/find-one', findOneHandler);
-leadsRouter.get('/find', findOneHandler);
-leadsRouter.post('/find', findOneHandler);
+// Optional stub so the panel’s “Deeper results” doesn’t explode if it calls it
+r.post('/leads/deepen', (req: Request, res: Response) => {
+  const host = String(req.body?.host ?? '').trim().toLowerCase();
+  if (!host) return res.status(400).json({ ok: false, error: 'host required' });
+  // You can enrich here later; for now return dummy watchers/competitors.
+  res.json({ ok: true, host, watchers: [], competitors: [] });
+});
 
-// /buyers/* (aliases)
-leadsRouter.get('/buyers/find-buyers', findManyHandler);
-leadsRouter.post('/buyers/find-buyers', findManyHandler);
-leadsRouter.get('/buyers/find-one', findOneHandler);
-leadsRouter.post('/buyers/find-one', findOneHandler);
-leadsRouter.get('/buyers/find', findOneHandler);
-leadsRouter.post('/buyers/find', findOneHandler);
+export default r;
