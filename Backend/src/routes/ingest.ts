@@ -4,7 +4,6 @@ import { saveByHost } from '../shared/memStore';
 
 const r = Router();
 
-/** ---------- helpers ---------- */
 function hostFrom(urlLike?: string): string | undefined {
   if (!urlLike) return;
   try {
@@ -22,35 +21,32 @@ function domainFromText(txt?: string): string | undefined {
 }
 function nowISO() { return new Date().toISOString(); }
 
-/** ---------- POST /api/ingest/github ----------
- * Accepts either a single item or {items:[...]}.
- * Each item: { homepage, owner, name, description, topics, temp }
- * Saves into warm bucket so /leads/warm shows them immediately.
- */
+/** Accepts either one item or {items:[...]} and saves to warm. */
 r.post(['/ingest/github', '/leads/ingest/github'], async (req: Request, res: Response) => {
-  const rawItems = Array.isArray(req.body?.items) ? req.body.items : Array.isArray(req.body) ? req.body : [req.body];
+  const rawItems = Array.isArray(req.body?.items)
+    ? req.body.items
+    : Array.isArray(req.body) ? req.body : [req.body];
 
-  const saved = [];
+  const out: any[] = [];
+
   for (const it of rawItems) {
     const hp = String(it?.homepage || '').trim();
-    let host = hostFrom(hp) || domainFromText(String(it?.description || '')) || (it?.owner ? `${String(it.owner).toLowerCase()}.github.io` : '');
+    const desc = String(it?.description || '');
+    const owner = String(it?.owner || '').trim();
+    let host = hostFrom(hp) || domainFromText(desc) || (owner ? `${owner.toLowerCase()}.github.io` : '');
     if (!host) continue;
 
-    const title = it?.title
-      || (it?.name ? `Repo ${it.name} — possible buyer @ ${host}` : `Possible buyer @ ${host}`);
-
-    const why = it?.whyText || '(from GitHub live sweep)';
-    const created = nowISO();
-
+    const title = it?.title || (it?.name ? `Repo ${it.name} — possible buyer @ ${host}` : `Possible buyer @ ${host}`);
     const rec = saveByHost(host, {
       title,
       platform: 'web',
-      created,
-      temperature: (it?.temp === 'hot' ? 'hot' : 'warm'),
-      why,
+      created: nowISO(),
+      temperature: it?.temp === 'hot' ? 'hot' : 'warm',
+      why: it?.whyText || '(from GitHub mirror)',
       saved: true,
     });
-    saved.push({
+
+    out.push({
       host: rec.host,
       platform: rec.platform || 'web',
       title: rec.title,
@@ -60,28 +56,23 @@ r.post(['/ingest/github', '/leads/ingest/github'], async (req: Request, res: Res
     });
   }
 
-  return res.json({ ok: true, saved: saved.length, items: saved });
+  return res.json({ ok: true, saved: out.length, items: out });
 });
 
-/** ---------- POST /api/leads/deepen ----------
- * Live sweep of Zie619 → normalize → save to warm → return count.
- * Uses GH_PAT_PUBLIC if present to increase rate limit.
- */
+/** On-demand sweep of Zie619 (same idea as the action) */
 r.post(['/leads/deepen', '/deepen'], async (_req: Request, res: Response) => {
   const token = process.env.GH_PAT_PUBLIC || '';
-  const headers: Record<string,string> = {
+  const headers: Record<string, string> = {
     'Accept': 'application/vnd.github+json',
     'User-Agent': 'buyers-api',
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  // 1) fetch repos
   const url = 'https://api.github.com/users/zie619/repos?per_page=100&sort=updated';
   const r1 = await fetch(url, { headers } as any);
   if (!r1.ok) return res.status(502).json({ ok: false, error: `github ${r1.status}` });
   const repos = await r1.json();
 
-  // 2) normalize + persist
   let saved = 0;
   for (const r of repos) {
     const homepage = r?.homepage || '';
