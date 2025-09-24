@@ -1,298 +1,384 @@
 // src/routes/leads.ts
 import { Router } from "express";
-import { q } from "../shared/db";
+import runDiscovery from "../buyers/discovery";
+import { runPipeline } from "../buyers/pipeline";
 
-type LeadTemp = "warm" | "hot";
-interface LeadItem {
+/**
+ * This route implements:
+ * - Tier A/B gating (by URL patterns + tokens)
+ * - Confidence threshold (CONFIDENCE_MIN)
+ * - Early-exit on N accepted results (EARLY_EXIT_FOUND / MAX_RESULTS_*)
+ * - Short TTL cache (CACHE_TTL_S)
+ * - Per-user cooldown + daily click quota (FREE/PRO_* envs)
+ * - Per-host circuit breaker (HOST_CIRCUIT_FAILS / HOST_CIRCUIT_COOLDOWN_S)
+ * - “Why?” snippet for each candidate so the UI can show credibility
+ *
+ * All knobs are env-driven; no other files need edits.
+ */
+
+// ---------- env knobs ----------
+const ENV = {
+  ALLOW_TIERS: (process.env.ALLOW_TIERS || "AB").toUpperCase(), // "AB" or "A" or "B"
+  CONFIDENCE_MIN: num(process.env.CONFIDENCE_MIN, 0.72),
+  EARLY_EXIT_FOUND: int(process.env.EARLY_EXIT_FOUND, 3),
+
+  MAX_PROBES_PER_FIND_FREE: int(process.env.MAX_PROBES_PER_FIND_FREE, 20),
+  MAX_PROBES_PER_FIND_PRO: int(process.env.MAX_PROBES_PER_FIND_PRO, 40),
+
+  MAX_RESULTS_FREE: int(process.env.MAX_RESULTS_FREE, 3),
+  MAX_RESULTS_PRO: int(process.env.MAX_RESULTS_PRO, 10),
+
+  FREE_CLICKS_PER_DAY: int(process.env.FREE_CLICKS_PER_DAY, 2),
+  FREE_COOLDOWN_MIN: int(process.env.FREE_COOLDOWN_MIN, 30),
+
+  PRO_CLICKS_PER_DAY: int(process.env.PRO_CLICKS_PER_DAY, 20),
+
+  CACHE_TTL_S: int(process.env.CACHE_TTL_S, 600),
+
+  HOST_CIRCUIT_FAILS: int(process.env.HOST_CIRCUIT_FAILS, 5),
+  HOST_CIRCUIT_COOLDOWN_S: int(process.env.HOST_CIRCUIT_COOLDOWN_S, 600),
+
+  ENABLE_AUTO_TUNE: toBool(process.env.ENABLE_AUTO_TUNE, true),
+};
+
+function num(v: any, d: number) { const n = Number(v); return Number.isFinite(n) ? n : d; }
+function int(v: any, d: number) { const n = parseInt(String(v || ""), 10); return Number.isFinite(n) ? n : d; }
+function toBool(v: any, d: boolean) {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (!s) return d;
+  return ["1","true","yes","on","y"].includes(s);
+}
+
+// ---------- tiny in-memory store (panel lists remain local here) ----------
+type Temp = 'hot' | 'warm';
+type StoredLead = {
+  id: number;
   host: string;
-  platform: "web";
+  platform?: string;
   title: string;
-  why_text: string;
   created: string;
-  temp: LeadTemp;
+  temperature: Temp;
+  whyText?: string;
+  why?: any;
+};
+let nextId = 1;
+const panel: { hot: StoredLead[]; warm: StoredLead[] } = { hot: [], warm: [] };
+function resetPanel() { panel.hot = []; panel.warm = []; nextId = 1; }
+
+// ---------- per-user quota + cooldown (memory) ----------
+type Usage = { day: string; clicks: number; lastAt?: number };
+const usageByKey = new Map<string, Usage>();
+
+// plan detection: if client sends x-plan: pro we treat as pro; else free
+function detectPlan(req: any): "free"|"pro" {
+  const plan = String(req.header("x-plan") || "").toLowerCase();
+  return plan === "pro" ? "pro" : "free";
 }
+function identity(req: any): string {
+  const api = req.header("x-api-key") || "";
+  return api ? `key:${api}` : `ip:${req.ip || req.connection?.remoteAddress || "?"}`;
+}
+function canClickNow(req: any, plan: "free"|"pro"): { ok: true } | { ok: false, error: string, retryAfterS?: number } {
+  const id = identity(req);
+  const today = new Date().toISOString().slice(0,10);
+  const u = usageByKey.get(id) || { day: today, clicks: 0 } as Usage;
+  if (u.day !== today) { u.day = today; u.clicks = 0; u.lastAt = undefined; }
+  const now = Date.now();
 
-const router = Router();
-const ISO = () => new Date().toISOString();
-
-/* -------------------- tiny fetch helpers -------------------- */
-async function isReachable(url: string, timeoutMs = 4500): Promise<boolean> {
-  const ctrl = new AbortController();
-  const to = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    let r = await fetch(url, { method: "HEAD", signal: ctrl.signal });
-    if (!r.ok || (r.status >= 500 && r.status <= 599)) {
-      r = await fetch(url, { method: "GET", redirect: "follow", signal: ctrl.signal });
+  const limit = plan === "pro" ? ENV.PRO_CLICKS_PER_DAY : ENV.FREE_CLICKS_PER_DAY;
+  if (u.clicks >= limit) {
+    return { ok: false, error: `daily limit reached (${limit})` };
+  }
+  if (plan === "free" && u.lastAt) {
+    const cooldownMs = ENV.FREE_COOLDOWN_MIN * 60_000;
+    const left = u.lastAt + cooldownMs - now;
+    if (left > 0) {
+      return { ok: false, error: `cooldown ${Math.ceil(left/1000)}s`, retryAfterS: Math.ceil(left/1000) };
     }
-    return r.ok;
-  } catch {
-    return false;
-  } finally { clearTimeout(to); }
+  }
+  return { ok: true };
 }
-async function fetchText(url: string, timeoutMs = 5000): Promise<string> {
-  const ctrl = new AbortController();
-  const to = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const r = await fetch(url, { method: "GET", signal: ctrl.signal });
-    if (!r.ok) return "";
-    return await r.text();
-  } catch {
-    return "";
-  } finally { clearTimeout(to); }
+function noteClick(req: any) {
+  const id = identity(req);
+  const today = new Date().toISOString().slice(0,10);
+  const u = usageByKey.get(id) || { day: today, clicks: 0 } as Usage;
+  if (u.day !== today) { u.day = today; u.clicks = 0; }
+  u.clicks += 1; u.lastAt = Date.now();
+  usageByKey.set(id, u);
 }
 
-/* -------------------- DB utils -------------------- */
-async function ensureLeadsTable() {
-  await q(`
-    CREATE TABLE IF NOT EXISTS leads (
-      id BIGSERIAL PRIMARY KEY,
-      host TEXT NOT NULL,
-      platform TEXT NOT NULL,
-      title TEXT NOT NULL,
-      why_text TEXT NOT NULL,
-      temp TEXT NOT NULL,
-      created TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    CREATE INDEX IF NOT EXISTS leads_created_idx ON leads(created DESC);
-  `);
+// ---------- short TTL cache ----------
+type CacheVal = { expires: number; items: StoredLead[]; created: number };
+const cache = new Map<string, CacheVal>();
+function cacheKey(host: string, region: string, radiusMi: number, persona: any) {
+  const p = persona ? JSON.stringify(persona).slice(0, 160) : "";
+  return `${host}::${region}::${radiusMi}::${hash(p)}`;
 }
-async function saveLeads(items: LeadItem[]) {
-  if (!items.length) return;
-  try {
-    await ensureLeadsTable();
-    const values = items.map((_, i) =>
-      `($${i*6+1},$${i*6+2},$${i*6+3},$${i*6+4},$${i*6+5},$${i*6+6})`).join(",");
-    const params = items.flatMap(x => [x.host, x.platform, x.title, x.why_text, x.temp, x.created]);
-    await q(`INSERT INTO leads (host,platform,title,why_text,temp,created) VALUES ${values};`, params as any[]);
-  } catch { /* non-blocking */ }
+function hash(s: string) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
 }
 
-/* -------------------- vertical inference -------------------- */
-type Vertical = "food_bev" | "beauty_personal" | "household" | "pet" | "generic";
-function inferVertical(html: string): Vertical {
-  const h = html.toLowerCase();
-  if (/\b(food|beverage|snack|drink|bottl|can|frozen|grocery|dairy|confection|brew|coffee|tea)\b/.test(h)) return "food_bev";
-  if (/\b(cosmetic|beauty|skincare|fragrance|personal care|haircare|soap|shampoo|lotion|makeup)\b/.test(h)) return "beauty_personal";
-  if (/\b(cleaning|laundry|detergent|air care|home care|household)\b/.test(h)) return "household";
-  if (/\b(pet|cat|dog|treats|kibble|litter)\b/.test(h)) return "pet";
-  return "generic";
+// ---------- per-host circuit breaker ----------
+type Circuit = { fails: number; until?: number };
+const blockedByHost = new Map<string, Circuit>();
+function isBlocked(host: string): boolean {
+  const c = blockedByHost.get(host);
+  if (!c) return false;
+  if (c.until && c.until > Date.now()) return true;
+  if (c.until && c.until <= Date.now()) blockedByHost.delete(host);
+  return false;
 }
-function parseCatsParam(cats: string|undefined): Vertical[]|null {
-  if (!cats) return null;
-  const set = new Set(
-    cats.split(",")
-        .map(s => s.trim().toLowerCase())
-        .filter(Boolean)
-  );
-  const out: Vertical[] = [];
-  if (set.has("food") || set.has("beverage") || set.has("fb")) out.push("food_bev");
-  if (set.has("beauty") || set.has("personal") || set.has("cosmetic")) out.push("beauty_personal");
-  if (set.has("home") || set.has("household") || set.has("cleaning")) out.push("household");
-  if (set.has("pet") || set.has("pets")) out.push("pet");
-  return out.length ? out : null;
+function noteFail(host: string) {
+  const c = blockedByHost.get(host) || { fails: 0 } as Circuit;
+  c.fails += 1;
+  if (c.fails >= ENV.HOST_CIRCUIT_FAILS) {
+    c.until = Date.now() + ENV.HOST_CIRCUIT_COOLDOWN_S * 1000;
+    c.fails = 0; // reset after tripping
+  }
+  blockedByHost.set(host, c);
+}
+function noteOk(host: string) {
+  blockedByHost.delete(host);
 }
 
-/* -------------------- curated candidates -------------------- */
-type RegionTag =
-  | "US/National" | "US/West" | "US/East" | "US/Central"
-  | "US/CA" | "US/TX" | "US/FL" | "US/NY" | "US/WA" | "US/IL";
-interface Cand {
-  host: string;
-  url: string;
-  why: string;
-  regions: RegionTag[];
-  size: "mega"|"large"|"mid";
-  verticals?: Vertical[];
-}
-
-const CANDS: Cand[] = [
-  // Mid/regional retail (promoted by default)
-  { host:"heb.com",               url:"https://www.heb.com/static-page/vendor-portal",                 why:"retail vendor portal", regions:["US/TX","US/Central"], size:"mid",   verticals:["food_bev","pet","household"] },
-  { host:"sprouts.com",           url:"https://about.sprouts.com/contact/supplier",                    why:"retail supplier info", regions:["US/West","US/CA"],     size:"mid",   verticals:["food_bev"] },
-  { host:"traderjoes.com",        url:"https://www.traderjoes.com/home/contact-us/supplier-relations",why:"supplier relations",   regions:["US/West","US/CA"],    size:"mid",   verticals:["food_bev","beauty_personal","household"] },
-  { host:"wincofoods.com",        url:"https://wincofoods.com/about/suppliers",                        why:"supplier info",        regions:["US/West"],             size:"mid",   verticals:["food_bev"] },
-  { host:"meijer.com",            url:"https://www.meijer.com/services/suppliers.html",                why:"supplier info",        regions:["US/Central"],          size:"mid",   verticals:["food_bev","household","beauty_personal"] },
-  { host:"wegmans.com",           url:"https://www.wegmans.com/about-us/suppliers/",                  why:"supplier info",        regions:["US/East","US/NY"],     size:"mid",   verticals:["food_bev"] },
-
-  // Large retail
-  { host:"aldi.us",               url:"https://corporate.aldi.us/en/corporate-responsibility/suppliers/", why:"supplier info",  regions:["US/National"], size:"large", verticals:["food_bev","household"] },
-  { host:"kroger.com",            url:"https://www.thekrogerco.com/vendors-suppliers/",                why:"vendor portal",       regions:["US/National"], size:"large", verticals:["food_bev","household","beauty_personal","pet"] },
-  { host:"albertsons.com",        url:"https://www.albertsons.com/our-company/doing-business-with-us.html", why:"vendor info",  regions:["US/West","US/National","US/CA"], size:"large", verticals:["food_bev","household","beauty_personal","pet"] },
-
-  // Food/bev brands
-  { host:"jmsmucker.com",         url:"https://www.jmsmucker.com/about/suppliers",                     why:"supplier information", regions:["US/National"], size:"large", verticals:["food_bev","pet"] },
-  { host:"campbellsoupcompany.com",url:"https://www.campbellsoupcompany.com/about-us/suppliers/",      why:"supplier information", regions:["US/East"],     size:"large", verticals:["food_bev"] },
-  { host:"hormelfoods.com",       url:"https://www.hormelfoods.com/about/suppliers/",                  why:"supplier portal",      regions:["US/Central"],  size:"large", verticals:["food_bev"] },
-  { host:"keurigdrpepper.com",    url:"https://www.keurigdrpepper.com/en/our-company/suppliers",       why:"supplier information", regions:["US/National"], size:"large", verticals:["food_bev"] },
-
-  // Beauty/personal care
-  { host:"elcompanies.com",       url:"https://www.elcompanies.com/en/our-suppliers",                  why:"supplier info",        regions:["US/National"], size:"large", verticals:["beauty_personal"] },
-  { host:"edgewell.com",          url:"https://edgewell.com/suppliers/",                               why:"supplier resources",   regions:["US/National"], size:"mid",   verticals:["beauty_personal","household"] },
-  { host:"ulta.com",              url:"https://www.ulta.com/company/suppliers",                        why:"supplier info",        regions:["US/National"], size:"large", verticals:["beauty_personal"] },
-
-  // Household
-  { host:"churchdwight.com",      url:"https://churchdwight.com/suppliers",                            why:"supplier registration",regions:["US/National"], size:"large", verticals:["household","beauty_personal"] },
-  { host:"scjohnson.com",         url:"https://www.scjohnson.com/en/our-company/suppliers",            why:"supplier information", regions:["US/National"], size:"large", verticals:["household"] },
-  { host:"thecloroxcompany.com",  url:"https://www.thecloroxcompany.com/partners/suppliers/",          why:"supplier onboarding",  regions:["US/West","US/National","US/CA"], size:"large", verticals:["household","beauty_personal"] },
-
-  // Pet
-  { host:"petco.com",             url:"https://www.petco.com/content/petco/about/petco-suppliers.html",why:"vendor / supplier info", regions:["US/West","US/National"], size:"large", verticals:["pet","beauty_personal","household"] },
-  { host:"petsmart.com",          url:"https://corporate.petsmart.com/suppliers",                      why:"supplier information",  regions:["US/National"],          size:"large", verticals:["pet"] },
-  { host:"chewy.com",             url:"https://www.chewy.com/g/vendor-inquiry",                        why:"vendor inquiry",        regions:["US/East","US/National"], size:"mid",   verticals:["pet"] },
+// ---------- Tier A/B gating helpers ----------
+const PATH_RE = /(vendor|supplier|suppliers|procure|procurement|sourcing|purchasing|partners?|sell-?to|become-?a-?supplier|rfq|rfi)/i;
+const TOKENS = [
+  "become a supplier","new vendor","vendor registration","supplier registration",
+  "procurement","sourcing","purchasing","rfq","rfi","packaging","labels","corrugated","carton","boxes"
 ];
+const DISALLOW_HOSTS = [/^docs?\./i, /^help\./i, /^support\./i, /\.github\.io$/i];
 
-const MEGAS = new Set(["walmart.com","amazon.com","pg.com","pepsico.com","cocacolacompany.com","target.com","costco.com"]);
-
-/* -------------------- scoring (region + size + vertical) -------------------- */
-type SizePref = "mid" | "large" | "mega" | "all" | "balanced";
-function scoreCandidate(
-  c: Cand,
-  verticalWanted: Vertical[],
-  regionHint: string,
-  radiusMiles: number,
-  sizePref: SizePref
-): number {
-  let s = 0;
-
-  // vertical affinity
-  if (!verticalWanted.length) s += 0;
-  else if (c.verticals?.some(v => verticalWanted.includes(v))) s += 3;
-
-  // region weighting (smaller radius -> stronger local boost)
-  const baseRegion =
-    radiusMiles <= 50 ? 4 :
-    radiusMiles <= 150 ? 2 :
-    1;
-
-  if (regionHint) {
-    if (c.regions.includes(regionHint as any)) s += baseRegion;
-    const broad = regionHint.split("/")[1]; // e.g., "CA"
-    if (broad && c.regions.some(r => (r as string).endsWith(broad))) s += Math.max(1, baseRegion - 1);
-    if (c.regions.includes("US/National")) s += 1;
-  }
-
-  // size preference
-  const sizeBoost = (sp: SizePref, size: Cand["size"]) => {
-    if (sp === "all" || sp === "balanced") return size === "mid" ? 2 : size === "large" ? 1 : -2;
-    if (sp === "mid")  return size === "mid"  ? 3 : size === "large" ? 1 : -3;
-    if (sp === "large")return size === "large"? 3 : size === "mid"   ? 1 : -2;
-    if (sp === "mega") return size === "mega" ? 4 : -1;
-    return 0;
-  };
-  s += sizeBoost(sizePref, c.size);
-
-  // globally demote mega-caps unless explicitly requested
-  if (MEGAS.has(c.host)) s -= (sizePref === "mega" ? 0 : 3);
-
-  return s;
+function isTierAllowed(urlStr: string, allow: string): boolean {
+  try {
+    const u = new URL(urlStr);
+    const host = u.hostname.toLowerCase();
+    if (DISALLOW_HOSTS.some(re => re.test(host))) return false;
+    // A: explicit vendor/supplier/procurement paths
+    const pathHit = PATH_RE.test(u.pathname);
+    // B: homepage or generic page but description/title tokens indicate vendor intake
+    // (we’ll require token later from title/snippet; pathHit implies A-tier)
+    if (allow === "A") return pathHit;
+    if (allow === "B") return !pathHit; // B-tier = "soft" pages (handled later by token)
+    if (allow === "AB") return true;
+    return true;
+  } catch { return false; }
 }
 
-/* -------------------- build live list -------------------- */
-async function liveSweepForBuyers(
-  supplierHost: string,
-  regionHint: string,
-  radiusMiles: number,
-  sizePref: SizePref,
-  limit: number,
-  catsParam?: string
-): Promise<LeadItem[]> {
+function hasToken(s: string): { ok: boolean; hit?: string } {
+  const L = (s || "").toLowerCase();
+  for (const t of TOKENS) {
+    if (L.includes(t)) return { ok: true, hit: t };
+  }
+  return { ok: false };
+}
 
-  // infer vertical(s) from supplier site, allow override via cats=
-  let verticals: Vertical[] = [];
-  const override = parseCatsParam(catsParam);
-  if (override) {
-    verticals = override;
-  } else {
-    try {
-      const html = await fetchText(`https://${supplierHost}/`);
-      const v = inferVertical(html);
-      verticals = v === "generic" ? [] : [v];
-    } catch {
-      verticals = [];
+// ---------- router ----------
+const router = Router();
+
+// mini guard for write routes (optional)
+router.use((req, res, next) => {
+  (res as any).requireKey = () => {
+    const need = process.env.API_KEY || process.env.X_API_KEY;
+    if (!need) return true;
+    const got = req.header("x-api-key");
+    if (got !== need) {
+      res.status(401).json({ ok: false, error: "invalid api key" });
+      return false;
     }
-  }
+    return true;
+  };
+  next();
+});
 
-  // rank candidates and validate availability
-  const ranked = [...CANDS]
-    .map(c => ({ c, s: scoreCandidate(c, verticals, regionHint, radiusMiles, sizePref) }))
-    .sort((a,b) => b.s - a.s)
-    .slice(0, Math.max(14, limit + 4)) // over-sample before validation
-    .map(x => x.c);
+// health
+router.get("/ping", (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
-  const checks = await Promise.all(ranked.map(async (c) => {
-    const ok = await isReachable(c.url);
-    if (!ok) return null;
-    const item: LeadItem = {
-      host: c.host,
-      platform: "web",
-      title: `Supplier / vendor info | ${c.host}`,
-      why_text: `${c.why} — source: live`,
-      temp: "warm",
-      created: ISO(),
+// panel lists (still in-memory)
+router.get("/", (req, res) => {
+  const temp = String(req.query.temp || 'warm').toLowerCase();
+  const items = temp === 'hot' ? panel.hot : panel.warm;
+  res.json({ ok: true, items });
+});
+
+// core: find buyers (tier-gated, cached, quota’d)
+router.post("/find-buyers", async (req, res) => {
+  if (!(res as any).requireKey()) return;
+
+  try {
+    const plan = detectPlan(req);
+    const can = canClickNow(req, plan);
+    if (!can.ok) {
+      const out: any = { ok: false, error: can.error };
+      if (can.retryAfterS) (out as any).retryAfterS = can.retryAfterS;
+      return res.status(429).json(out);
+    }
+
+    const body = (req.body || {}) as {
+      supplier?: string;
+      region?: string;
+      radiusMi?: number;
+      persona?: any;
+      onlyUSCA?: boolean;
     };
-    return item;
-  }));
+    const supplier = (body.supplier || "").trim();
+    if (!supplier || supplier.length < 3) {
+      return res.status(400).json({ ok: false, error: "supplier domain is required" });
+    }
 
-  return checks.filter((x): x is LeadItem => Boolean(x)).slice(0, limit);
-}
+    // circuit-breaker per supplier host
+    if (isBlocked(supplier)) {
+      return res.status(503).json({ ok: false, error: "temporarily cooling this domain, try later" });
+    }
 
-/* -------------------- routes -------------------- */
+    const region = (body.region || "US/CA").trim();
+    const radiusMi = Math.max(1, Math.min(500, Number(body.radiusMi || 50)));
 
-// recent saved (Refresh warm)
-router.get("/warm", async (_req, res) => {
-  try {
-    await ensureLeadsTable();
-    const r: any = await q(
-      `SELECT host, platform, title, why_text, temp, created
-       FROM leads ORDER BY created DESC LIMIT 50`
-    );
-    const items: LeadItem[] = (r?.rows ?? []).map((row: any) => ({
-      host: row.host,
-      platform: row.platform,
-      title: row.title,
-      why_text: row.why_text,
-      temp: (row.temp as LeadTemp) ?? "warm",
-      created: (row.created instanceof Date ? row.created.toISOString() : row.created) ?? ISO(),
-    }));
-    res.json({ ok: true, items });
-  } catch {
-    res.json({ ok: true, items: [] });
-  }
-});
+    // cache check
+    const ckey = cacheKey(supplier, region, radiusMi, body.persona);
+    const cval = cache.get(ckey);
+    if (cval && cval.expires > Date.now()) {
+      // return cached but also mirror into panel buckets so UI sees them
+      mirrorToPanel(cval.items);
+      noteClick(req);
+      return res.json({
+        ok: true,
+        supplier,
+        cached: true,
+        created: cval.created,
+        candidates: cval.items,
+        message: `Returned ${cval.items.length} cached candidate(s).`
+      });
+    }
 
-// Find buyers (live + personalized)
-router.get("/find-buyers", async (req, res) => {
-  const supplierHost = String(req.query.host || "").trim().toLowerCase();
-  if (!supplierHost) return res.status(400).json({ ok: false, error: "missing host" });
-
-  const regionHint = String(req.query.region || "").trim(); // e.g., "US/CA"
-  const radius = Math.max(0, Number(req.query.radius ?? 50) || 50);
-  const sizeRaw = String(req.query.size || "").trim().toLowerCase();
-  const sizePref: SizePref =
-    sizeRaw === "mid" || sizeRaw === "large" || sizeRaw === "mega" || sizeRaw === "all"
-      ? (sizeRaw as SizePref)
-      : "balanced";
-  const limit = Math.min(15, Math.max(1, Number(req.query.limit ?? 10) || 10));
-  const catsParam = typeof req.query.cats === "string" ? req.query.cats : undefined;
-
-  try {
-    const liveItems = await liveSweepForBuyers(supplierHost, regionHint, radius, sizePref, limit, catsParam);
-    await saveLeads(liveItems);
-    res.json({
-      ok: true,
-      saved: liveItems.length,
-      items: liveItems,
-      latest_candidate: liveItems[0] ?? null,
-      params: { regionHint, radius, sizePref, limit, cats: catsParam ?? null }
+    // Discovery (still your function)
+    const discovery = await runDiscovery({
+      supplier,
+      region,
+      persona: (ENV.ENABLE_AUTO_TUNE && !body.persona) ? autoTunePersona(supplier) : body.persona
     });
-  } catch {
-    res.json({ ok: true, saved: 0, items: [] });
+
+    const excludeEnterprise = String(process.env.EXCLUDE_ENTERPRISE || 'true').toLowerCase() === 'true';
+
+    // max probes hint (pipeline may ignore; we still do early-exit on our side)
+    const maxProbes = (plan === "pro") ? ENV.MAX_PROBES_PER_FIND_PRO : ENV.MAX_PROBES_PER_FIND_FREE;
+
+    const { candidates } = await runPipeline(discovery, {
+      region: discovery ? (region || 'US/CA') : region,
+      radiusMi,
+      excludeEnterprise,
+      maxProbes,
+      confidenceMin: ENV.CONFIDENCE_MIN
+    } as any);
+
+    // Filter, score gate, and early exit
+    const allow = ENV.ALLOW_TIERS;
+    const maxResults = (plan === "pro") ? ENV.MAX_RESULTS_PRO : ENV.MAX_RESULTS_FREE;
+    const out: StoredLead[] = [];
+
+    for (const c of (candidates || [])) {
+      const detail = c?.evidence?.[0]?.detail || {};
+      const url: string = detail?.url || "";
+      const title: string = detail?.title || "";
+      const score: number = Number(c?.score ?? 0);
+
+      if (!url) continue;
+      if (score < ENV.CONFIDENCE_MIN) continue;
+      if (!isTierAllowed(url, allow)) continue;
+
+      const whyTok = hasToken(`${title} ${c?.snippet || ""}`);
+      // Require path indicator for Tier A or token for Tier B cases.
+      const pathIsA = PATH_RE.test(safePath(url));
+      if (allow === "A" && !pathIsA) continue;
+      if (allow === "B" && !whyTok.ok) continue;
+      if (allow === "AB" && !pathIsA && !whyTok.ok) continue;
+
+      const host = safeHost(url) || (c.domain || "unknown");
+      const temp: Temp = (c.temperature === "hot" ? "hot" : "warm");
+
+      const lead: StoredLead = {
+        id: nextId++,
+        host,
+        platform: (c.source || "").startsWith("rss") ? "news" : "web",
+        title: title || `Buyer lead for ${host}`,
+        created: new Date().toISOString(),
+        temperature: temp,
+        whyText: title,
+        why: {
+          url,
+          hit: whyTok.hit || (pathIsA ? "vendor-path" : undefined),
+          score: Number(score.toFixed(2)),
+          source: c.source || "unknown"
+        }
+      };
+
+      out.push(lead);
+      if (out.length >= Math.min(ENV.EARLY_EXIT_FOUND, maxResults)) break;
+    }
+
+    // If nothing acceptable came back, record a fail on this supplier host
+    if (out.length === 0) {
+      noteFail(supplier);
+    } else {
+      noteOk(supplier);
+    }
+
+    // Mirror to panel buckets and cache
+    panel.hot = [];
+    panel.warm = [];
+    mirrorToPanel(out);
+
+    cache.set(ckey, {
+      expires: Date.now() + ENV.CACHE_TTL_S * 1000,
+      items: out,
+      created: out.length
+    });
+
+    noteClick(req);
+
+    return res.json({
+      ok: true,
+      supplier: discovery?.supplierDomain || supplier,
+      persona: discovery?.persona,
+      latents: discovery?.latents,
+      archetypes: discovery?.archetypes,
+      candidates: out,
+      cached: false,
+      created: out.length,
+      message: `Created ${out.length} candidate(s). (plan=${plan}, allow=${allow})`
+    });
+
+  } catch (e: any) {
+    return res.status(500).json({ ok: false, error: e?.message || "internal error" });
   }
 });
 
-// Deeper results (kept minimal; live returns enough)
-router.post("/deepen", async (_req, res) => {
-  res.json({ ok: true, queued: 0, note: "deepen stub; live sweep already returned items" });
+// optional: clear in-memory panel & caches (key-protected)
+router.post("/__clear", (req, res) => {
+  if (!(res as any).requireKey()) return;
+  resetPanel();
+  cache.clear();
+  res.json({ ok: true });
 });
 
 export default router;
+
+// ---------- small helpers ----------
+function safeHost(urlStr: string): string | undefined {
+  try { return new URL(urlStr).hostname.replace(/^www\./, ""); } catch { return undefined; }
+}
+function safePath(urlStr: string): string {
+  try { return new URL(urlStr).pathname || "/"; } catch { return "/"; }
+}
+function mirrorToPanel(items: StoredLead[]) {
+  for (const m of items) {
+    if (m.temperature === 'hot') panel.hot.push(m);
+    else panel.warm.push(m);
+  }
+}
+function autoTunePersona(_supplier: string) {
+  // super light placeholder; leaves the pipeline compatibility intact
+  return { vertical: "packaging", size: "mid", region: "US/CA", roles: ["procurement","packaging","sourcing"] };
+}
