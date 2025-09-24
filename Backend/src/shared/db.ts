@@ -1,38 +1,37 @@
-import { Pool } from 'pg';
+// Backend/src/shared/db.ts
+// One tiny helper: q(sql, params) + a cheap health check.
+// Works with either NEON or Northflank Postgres. Just set DATABASE_URL.
 
-const DATABASE_URL = process.env.DATABASE_URL || '';
+import * as pg from 'pg';
 
-let pool: Pool | null = null;
-
-// Build-time safe: don't throw during import
-if (DATABASE_URL) {
-  pool = new Pool({
-    connectionString: DATABASE_URL,
-    ssl: DATABASE_URL.includes('sslmode=require')
-      ? { rejectUnauthorized: false }
-      : undefined,
-  });
+function buildUrlFromNFEnv() {
+  const host = process.env.PGHOST;
+  if (!host) return undefined;
+  const user = encodeURIComponent(process.env.PGUSER || '');
+  const pass = encodeURIComponent(process.env.PGPASSWORD || '');
+  const port = process.env.PGPORT || '5432';
+  const db   = process.env.PGDATABASE || 'postgres';
+  // sslmode=require works for NF & most hosted PG (ignore self-signed)
+  return `postgresql://${user}:${pass}@${host}:${port}/${db}?sslmode=require`;
 }
 
-export async function q<T = any>(sql: string, params: any[] = []) {
-  if (!pool) throw new Error('DB not configured: set DATABASE_URL');
-  return pool.query<T>(sql, params);
+const connectionString =
+  process.env.DATABASE_URL || buildUrlFromNFEnv();
+
+if (!connectionString) {
+  throw new Error('DATABASE_URL not set (or NF PG env vars missing).');
 }
 
-export async function ensureSchema() {
-  if (!pool) return false;
-  await q(`
-    create table if not exists lead_pool (
-      id           bigserial primary key,
-      host         text not null unique,
-      platform     text not null default 'web',
-      title        text,
-      why          text,
-      heat         int  not null default 60,
-      created_at   timestamptz not null default now()
-    );
-  `);
+export const pool = new pg.Pool({
+  connectionString,
+  ssl: { rejectUnauthorized: false },
+});
+
+export async function q<T = any>(text: string, params?: any[]) {
+  return pool.query<T>(text, params);
+}
+
+export async function dbHealth() {
+  await pool.query('select 1');
   return true;
 }
-
-export function hasDb() { return !!pool; }
