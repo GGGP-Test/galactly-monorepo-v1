@@ -1,110 +1,100 @@
+// Backend/src/routes/leads.ts
+// Minimal router that backs the free panel today.
+// Endpoints:
+//   GET  /api/leads/warm         -> last 50 leads from lead_pool
+//   POST /api/leads/deepen       -> no-op (could enrich later)
+//   GET  /api/leads/find-buyers  -> creates a quick “buyer lead for <host>” row
+//   POST /api/ingest/github      -> bulk ingest from your GH Action
+
 import { Router, Request, Response } from 'express';
-import { ensureSchema, hasDb, q } from '../db';
+import { q } from '../shared/db';
 
-type LeadRow = {
-  id?: number;
-  host: string;
-  platform?: string;
-  title?: string;
-  why?: string;
-  heat?: number;
-  created_at?: string;
-};
+export const router = Router();
+export default router;
 
-// in-memory fallback (when DATABASE_URL is not set)
-const mem: LeadRow[] = [];
-
-function normalize(r: Partial<LeadRow>): LeadRow {
-  return {
-    host: (r.host || '').toLowerCase().trim(),
-    platform: r.platform || 'web',
-    title: (r.title || '').trim(),
-    why: (r.why || '').trim(),
-    heat: Math.max(1, Math.min(99, Number(r.heat ?? 60))),
-  };
-}
-
-export const leads = Router();
-
-// health
-leads.get('/health', (_req, res) => res.json({ ok: true }));
-
-// upsert helper
-async function upsert(row: LeadRow) {
-  if (hasDb()) {
-    await ensureSchema();
-    await q(
-      `insert into lead_pool (host, platform, title, why, heat)
-       values ($1,$2,$3,$4,$5)
-       on conflict (host) do update set
-         platform = excluded.platform,
-         title    = excluded.title,
-         why      = excluded.why,
-         heat     = excluded.heat`,
-      [row.host, row.platform, row.title, row.why, row.heat]
+// -- bootstrap schema once (safe to call many times)
+async function ensureSchema() {
+  await q(`
+    create table if not exists lead_pool (
+      id bigserial primary key,
+      host text not null,
+      platform text not null default 'web',
+      title text not null,
+      why_text text not null default '',
+      temp text not null default 'warm',
+      created timestamptz not null default now()
     );
-  } else {
-    const i = mem.findIndex(x => x.host === row.host);
-    if (i >= 0) mem[i] = { ...mem[i], ...row, created_at: new Date().toISOString() };
-    else mem.push({ ...row, created_at: new Date().toISOString() });
-  }
+    create index if not exists lead_pool_created_idx on lead_pool(created desc);
+    create index if not exists lead_pool_host_idx    on lead_pool(host);
+  `);
 }
 
-// 1) Public ingest endpoint used by GitHub Actions
-// Accepts either {items:[...]} or a single item body.
-leads.post('/ingest/github', async (req: Request, res: Response) => {
-  const body = req.body || {};
-  const items: any[] = Array.isArray(body.items) ? body.items : [body];
+// ---- panel: warm list
+router.get('/api/leads/warm', async (_req: Request, res: Response) => {
+  await ensureSchema();
+  const r = await q<{host:string;platform:string;title:string;why_text:string;created:string;temp:string}>(
+    `select host, platform, title, why_text as "whyText", created, temp
+     from lead_pool order by created desc limit 50`
+  );
+  res.json({ ok: true, items: r.rows });
+});
 
+// ---- panel: deepen (placeholder – returns current warm set)
+router.post('/api/leads/deepen', async (_req: Request, res: Response) => {
+  await ensureSchema();
+  const r = await q(
+    `select host, platform, title, why_text as "whyText", created, temp
+     from lead_pool order by created desc limit 50`
+  );
+  res.json({ ok: true, items: r.rows });
+});
+
+// ---- panel: one-off “find buyers” for a supplier host
+router.get('/api/leads/find-buyers', async (req: Request, res: Response) => {
+  const supplierHost = String(req.query.host || '').trim().toLowerCase();
+  if (!supplierHost || !supplierHost.includes('.')) {
+    return res.status(400).json({ ok:false, error:'missing ?host' });
+  }
+  await ensureSchema();
+
+  // Super fast seed: write one deterministic lead immediately so the UI shows “something”
+  // You’ll replace this with your richer multi-source fusion later.
+  const title = `Buyer lead for ${supplierHost}`;
+  const why   = 'Compact shim matched (US/CA, 50 mi) — source: live';
+
+  await q(
+    `insert into lead_pool (host, platform, title, why_text, temp)
+     values ($1,'web',$2,$3,'warm')
+     on conflict do nothing`,
+    [supplierHost, title, why]
+  );
+
+  const r = await q(
+    `select host, platform, title, why_text as "whyText", created, temp
+     from lead_pool where host=$1 order by created desc limit 10`,
+    [supplierHost]
+  );
+  res.json({ ok: true, items: r.rows });
+});
+
+// ---- bulk ingest from your public GH Action (ingest-zie619.yml)
+router.post('/api/ingest/github', async (req: Request, res: Response) => {
+  await ensureSchema();
+  const items = Array.isArray(req.body?.items) ? req.body.items : [];
   let saved = 0;
   for (const it of items) {
-    const host = String(it.host || it.homepage || '').replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
+    const host = (it.host || '').toLowerCase();
+    const title = it.title || `Repo ${host}`;
+    const why   = it.whyText || '(from GitHub live sweep)';
     if (!host || !host.includes('.')) continue;
 
-    const row = normalize({
-      host,
-      platform: 'web',
-      title: String(it.title || it.name || '').slice(0, 200) || `Possible buyer @ ${host}`,
-      why: String(it.whyText || it.description || 'from GitHub mirror').slice(0, 500),
-      heat: 60,
-    });
-    await upsert(row);
+    await q(
+      `insert into lead_pool (host, platform, title, why_text, temp)
+       values ($1, $2, $3, $4, $5)
+       on conflict do nothing`,
+      [host, it.platform || 'web', title, why, it.temp || 'warm']
+    );
     saved++;
   }
   res.json({ ok: true, saved });
-});
-
-// 2) Warm list (recent leads)
-leads.get('/leads/warm', async (req: Request, res: Response) => {
-  const limit = Math.min(50, Math.max(1, Number(req.query.limit || 25)));
-  if (hasDb()) {
-    await ensureSchema();
-    const r = await q<LeadRow>(`select host, platform, title, why as "why", heat, created_at
-                                from lead_pool
-                                order by created_at desc limit $1`, [limit]);
-    return res.json({ ok: true, items: r.rows });
-  } else {
-    const items = mem.slice(-limit).reverse();
-    return res.json({ ok: true, items });
-  }
-});
-
-// 3) “Find buyer” single candidate – fast, heuristic
-//    This does NOT scrape; it proposes a plausible buyer quickly.
-leads.get('/leads/find-buyers', async (req: Request, res: Response) => {
-  const supplierHost = String(req.query.host || '').toLowerCase().trim();
-  if (!supplierHost) return res.status(400).json({ ok: false, error: 'host required' });
-
-  const title = `Buyer lead for ${supplierHost}`;
-  const why = 'Compat shim matched (region filter applied)';
-
-  const row = normalize({ host: supplierHost, title, why, heat: 65 });
-  await upsert(row);
-
-  res.json({ ok: true, candidate: row });
-});
-
-// 4) Optional “deepen” – placeholder that currently just acknowledges
-leads.post('/leads/deepen', async (_req, res) => {
-  res.json({ ok: true, did: 'noop' });
 });
