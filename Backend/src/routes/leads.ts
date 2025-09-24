@@ -1,123 +1,114 @@
-// src/routes/leads.ts
-import { Router, Request, Response } from 'express';
+import { Router } from "express";
+import type { Request, Response } from "express";
 import {
-  ensureLeadForHost,
+  buckets,
   saveByHost,
   replaceHotWarm,
-  buckets,
-  StoredLead,
-  Temp,
-} from '../shared/memStore';
+  watchers as getWatchers,
+  type StoredLead,
+} from "../shared/memStore";
 
 const r = Router();
 
-function nowISO() {
-  return new Date().toISOString();
-}
+type LeadItem = {
+  host: string;
+  platform?: string;
+  title?: string;
+  created?: string;
+  temp?: "hot" | "warm" | "cold" | string;
+  whyText?: string;
+};
 
-function toHost(s: string | undefined): string | undefined {
-  if (!s) return undefined;
-  try {
-    const u = s.includes('://') ? new URL(s) : new URL('https://' + s);
-    const h = u.hostname.toLowerCase().replace(/^www\./, '');
-    return h.includes('.') ? h : undefined;
-  } catch {
-    return undefined;
-  }
-}
+type ApiOk<T = unknown> = { ok: true } & T;
+type ApiErr = { ok: false; error: string };
 
-function toItem(lead: StoredLead) {
+function map(l: StoredLead): LeadItem {
   return {
-    host: lead.host,
-    platform: lead.platform ?? 'web',
-    title: lead.title ?? `Buyer lead for ${lead.host}`,
-    created: lead.created,
-    temp: lead.temperature === 'hot' ? 'hot' : lead.temperature === 'warm' ? 'warm' : 'cold',
-    whyText: lead.why ?? '',
+    host: l.host,
+    platform: l.platform ?? "web",
+    title: l.title ?? "Possible buyer",
+    created: l.created,
+    temp: l.temperature,
+    whyText: l.why ?? "",
   };
 }
 
-// ---------- GET /leads/warm ----------
-r.get('/leads/warm', (_req: Request, res: Response) => {
-  const b = buckets();
-  const items = b.warm.map(toItem);
-  res.json({ ok: true, items });
+function sendCsv(res: Response, leads: StoredLead[], filename: string) {
+  const rows = [
+    ["host", "platform", "title", "created", "temp", "whyText"].join(","),
+    ...leads.map((l) =>
+      [
+        l.host,
+        l.platform ?? "web",
+        (l.title ?? "").replace(/[\r\n,]+/g, " "),
+        l.created,
+        l.temperature,
+        (l.why ?? "").replace(/[\r\n,]+/g, " "),
+      ].join(",")
+    ),
+  ].join("\n");
+
+  res.setHeader("content-type", "text/csv; charset=utf-8");
+  res.setHeader("content-disposition", `attachment; filename="${filename}"`);
+  res.status(200).send(rows);
+}
+
+// --- list endpoints ---
+r.get("/leads/warm", (_req, res) => {
+  const warm = buckets().warm;
+  const wantCsv = String(_req.query.format ?? "").toLowerCase() === "csv";
+  if (wantCsv) return sendCsv(res, warm, "leads-warm.csv");
+  const body: ApiOk<{ items: LeadItem[] }> = { ok: true, items: warm.map(map) };
+  res.json(body);
 });
 
-// ---------- GET /leads/hot ----------
-r.get('/leads/hot', (_req: Request, res: Response) => {
-  const b = buckets();
-  const items = b.hot.map(toItem);
-  res.json({ ok: true, items });
+r.get("/leads/hot", (_req, res) => {
+  const hot = buckets().hot;
+  const wantCsv = String(_req.query.format ?? "").toLowerCase() === "csv";
+  if (wantCsv) return sendCsv(res, hot, "leads-hot.csv");
+  const body: ApiOk<{ items: LeadItem[] }> = { ok: true, items: hot.map(map) };
+  res.json(body);
 });
 
-// ---------- POST /leads/lock ----------
-/*
-  Body examples:
-  { "host": "acme.com", "temp": "warm" }
-  { "host": "acme.com", "temp": "hot" }
-*/
-r.post('/leads/lock', (req: Request, res: Response) => {
-  const host = String(req.body?.host ?? '').trim().toLowerCase();
-  const t = String(req.body?.temp ?? 'warm').toLowerCase() as Temp;
-  if (!host) return res.status(400).json({ ok: false, error: 'host required' });
-  const updated = replaceHotWarm(host, t);
-  res.json({ ok: true, item: toItem(updated) });
-});
+// Friendly CSV aliases if your UI calls explicit .csv paths
+r.get("/leads/warm.csv", (_req, res) => sendCsv(res, buckets().warm, "leads-warm.csv"));
+r.get("/leads/hot.csv", (_req, res) => sendCsv(res, buckets().hot, "leads-hot.csv"));
 
-// ---------- POST /ingest/github ----------
-/*
-  Accepts either:
-    - { items: [{ homepage, owner, name, description, topics, temp? }, ...] }
-    - or an array of those objects directly
-*/
-r.post('/ingest/github', (req: Request, res: Response) => {
-  const raw = Array.isArray(req.body) ? req.body : (req.body?.items ?? []);
-  if (!Array.isArray(raw)) {
-    return res.status(400).json({ ok: false, error: 'items[] required' });
+// --- lock (warm/hot) from the panel ---
+r.post("/leads/lock", (req: Request, res: Response) => {
+  const host = String(req.body.host ?? "").trim().toLowerCase();
+  let temp = String(req.body.temp ?? "warm").toLowerCase();
+  if (!host) {
+    const err: ApiErr = { ok: false, error: "host required" };
+    return res.status(400).json(err);
   }
+  if (!["warm", "hot", "cold"].includes(temp)) temp = "warm";
 
-  let saved = 0;
-  const out: StoredLead[] = [];
-
-  for (const it of raw) {
-    const homepage: string | undefined = it?.homepage ?? '';
-    const host = toHost(homepage);
-    if (!host) continue;
-
-    const temp: Temp = (String(it?.temp ?? 'warm').toLowerCase() as Temp) || 'warm';
-
-    // seed or update the lead
-    const title =
-      (it?.name ? `Repo ${it.name} — possible buyer @ ${host}` : undefined) ??
-      `Buyer lead for ${host}`;
-
-    const why =
-      (it?.description ? String(it.description) + ' ' : '') +
-      '(from GitHub mirror)';
-
-    const lead = saveByHost(host, {
-      title,
-      platform: 'web',
-      created: nowISO(),
-      temperature: temp,
-      why,
-      saved: true,
-    });
-
-    out.push(lead);
-    saved++;
-  }
-
-  res.json({ ok: true, saved, items: out.map(toItem) });
+  const updated = replaceHotWarm(host, temp as any);
+  const { watchers, competitors } = getWatchers(host);
+  const body: ApiOk<{
+    lead: LeadItem;
+    watchers: string[];
+    competitors: string[];
+  }> = { ok: true, lead: map(updated), watchers, competitors };
+  res.json(body);
 });
 
-// Optional stub so the panel’s “Deeper results” doesn’t explode if it calls it
-r.post('/leads/deepen', (req: Request, res: Response) => {
-  const host = String(req.body?.host ?? '').trim().toLowerCase();
-  if (!host) return res.status(400).json({ ok: false, error: 'host required' });
-  // You can enrich here later; for now return dummy watchers/competitors.
-  res.json({ ok: true, host, watchers: [], competitors: [] });
+// --- light “deepen” hook the UI uses (returns whatever we have) ---
+r.post("/leads/deepen", (req: Request, res: Response) => {
+  const host = String(req.body.host ?? "").trim().toLowerCase();
+  if (!host) {
+    const err: ApiErr = { ok: false, error: "host required" };
+    return res.status(400).json(err);
+  }
+  const { watchers, competitors } = getWatchers(host);
+  const lead = saveByHost(host); // ensure it exists
+  const body: ApiOk<{
+    lead: LeadItem;
+    watchers: string[];
+    competitors: string[];
+  }> = { ok: true, lead: map(lead), watchers, competitors };
+  res.json(body);
 });
 
 export default r;
