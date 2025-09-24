@@ -1,79 +1,94 @@
 // Backend/src/shared/db.ts
-import { Pool, PoolClient } from "pg";
+import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from "pg";
 
 /**
- * One env name to rule them all.
- * Put your Neon (or Northflank) connection string in DATABASE_URL.
- * If you later switch providers, just change the secret—no code changes.
+ * One source of truth for the DB connection.
+ * Looks for DATABASE_URL first (Neon/Northflank), then POSTGRES_URL.
  */
 const connectionString =
-  process.env.DATABASE_URL ||
-  process.env.NF_DATABASE_URL || // optional alias
-  process.env.NEON_DATABASE_URL; // optional alias
+  process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
 
 if (!connectionString) {
-  // Fail fast so we notice mis-config at boot
-  throw new Error("DATABASE_URL is not set");
+  // We don't throw here so builds still succeed; runtime will surface it.
+  console.warn(
+    "[db] DATABASE_URL/POSTGRES_URL not set. DB calls will fail at runtime."
+  );
 }
 
-// Neon and many managed PGs require TLS. NF add-on can also use TLS.
-// Being permissive here avoids cert headaches in containers.
-const pool = new Pool({
+/**
+ * SSL:
+ * - Neon generally requires SSL; Northflank addon usually works without.
+ * - Set PGSSL=disable in the environment to turn SSL off explicitly.
+ */
+export const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false },
+  ssl: process.env.PGSSL === "disable" ? undefined : { rejectUnauthorized: false },
 });
 
-// --- tiny helpers we export because other files import them ---
+/**
+ * Typed query helper.
+ * Usage:
+ *   const rows = await q<MyRow>("select * from leads where host=$1", [host])
+ */
+export async function q<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params: unknown[] = [],
+  client?: PoolClient
+): Promise<T[]> {
+  const runner = client ?? pool;
+  const res = (await runner.query(text, params)) as QueryResult<T>;
+  return res.rows;
+}
 
+/**
+ * Transaction helper.
+ * Usage:
+ *   await tx(async (c) => {
+ *     await c.query("...");
+ *     await c.query("...");
+ *   })
+ */
+export async function tx<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
+  const c = await pool.connect();
+  try {
+    await c.query("BEGIN");
+    const out = await fn(c);
+    await c.query("COMMIT");
+    return out;
+  } catch (err) {
+    try { await c.query("ROLLBACK"); } catch {}
+    throw err;
+  } finally {
+    c.release();
+  }
+}
+
+/** Simple connectivity probe used by health checks */
 export async function hasDb(): Promise<boolean> {
   try {
-    const r = await pool.query("select 1");
-    return r.rowCount === 1;
+    await pool.query("select 1");
+    return true;
   } catch {
     return false;
   }
 }
 
-/**
- * Idempotent schema creator. Safe to call on every boot.
- * Keeps it minimal so we compile even if other code imports ensureSchema().
- */
+/** Minimal schema needed by the leads API */
 export async function ensureSchema(): Promise<void> {
-  const sql = `
+  await pool.query(`
     create table if not exists leads (
-      id            bigserial primary key,
-      host          text not null,
-      platform      text,
-      title         text,
-      why_text      text,
-      temp          text,
-      created       timestamptz not null default now()
+      id serial primary key,
+      host text not null,
+      platform text not null,
+      title text,
+      why_text text,
+      temp text,
+      created timestamptz default now()
     );
-
-    create index if not exists leads_host_created_idx
-      on leads (host, created desc);
-  `;
-  await pool.query(sql);
+    create index if not exists leads_host_idx on leads(host);
+    create index if not exists leads_created_idx on leads(created);
+  `);
 }
 
-export async function query<T = any>(text: string, params?: any[]) {
-  return pool.query<T>(text, params);
-}
-
-export async function withTx<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
-  const client = await pool.connect();
-  try {
-    await client.query("begin");
-    const out = await fn(client);
-    await client.query("commit");
-    return out;
-  } catch (e) {
-    try { await client.query("rollback"); } catch {}
-    throw e;
-  } finally {
-    client.release();
-  }
-}
-
-export { pool };
-export default { pool, query, withTx, ensureSchema, hasDb };
+/** Default export for legacy imports */
+export default q;
