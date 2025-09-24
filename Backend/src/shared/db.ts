@@ -1,52 +1,38 @@
-// Backend/src/shared/db.ts
-import { Pool } from "pg";
+import { Pool } from 'pg';
 
-const {
-  DATABASE_URL,
-  PGHOST, PGDATABASE, PGUSER, PGPASSWORD, PGPORT, PGSSL
-} = process.env;
+const DATABASE_URL = process.env.DATABASE_URL || '';
 
-// Build a connection string if Northflank injects discrete vars
-let conn = DATABASE_URL;
-if (!conn && PGHOST && PGUSER && PGPASSWORD) {
-  const host = PGHOST;
-  const db   = PGDATABASE || "postgres";
-  const port = Number(PGPORT || "5432");
-  conn = `postgres://${encodeURIComponent(PGUSER)}:${encodeURIComponent(PGPASSWORD)}@${host}:${port}/${db}`;
+let pool: Pool | null = null;
+
+// Build-time safe: don't throw during import
+if (DATABASE_URL) {
+  pool = new Pool({
+    connectionString: DATABASE_URL,
+    ssl: DATABASE_URL.includes('sslmode=require')
+      ? { rejectUnauthorized: false }
+      : undefined,
+  });
 }
 
-// Fail fast with a clear message
-if (!conn) {
-  throw new Error("DATABASE_URL (or PG* vars) are required for postgres.");
-}
-
-// Northflank uses TLS; allow sslmode=require strings too
-const sslNeeded =
-  /sslmode=require/i.test(conn) || (PGSSL || "").toLowerCase() === "require";
-
-export const pool = new Pool({
-  connectionString: conn,
-  ssl: sslNeeded ? { rejectUnauthorized: false } : undefined,
-});
-
-export async function q<T = any>(text: string, params?: any[]) {
-  const res = await pool.query(text, params);
-  return { rows: res.rows as T[], rowCount: (res as any).rowCount ?? res.rows.length };
+export async function q<T = any>(sql: string, params: any[] = []) {
+  if (!pool) throw new Error('DB not configured: set DATABASE_URL');
+  return pool.query<T>(sql, params);
 }
 
 export async function ensureSchema() {
+  if (!pool) return false;
   await q(`
-    CREATE TABLE IF NOT EXISTS lead_pool (
-      id          BIGSERIAL PRIMARY KEY,
-      host        TEXT NOT NULL,
-      platform    TEXT NOT NULL DEFAULT 'web',
-      title       TEXT,
-      why         TEXT,
-      temp        TEXT NOT NULL DEFAULT 'warm',
-      created     TIMESTAMPTZ NOT NULL DEFAULT now(),
-      source_url  TEXT UNIQUE
+    create table if not exists lead_pool (
+      id           bigserial primary key,
+      host         text not null unique,
+      platform     text not null default 'web',
+      title        text,
+      why          text,
+      heat         int  not null default 60,
+      created_at   timestamptz not null default now()
     );
-    CREATE INDEX IF NOT EXISTS lead_pool_host_created_idx
-      ON lead_pool(host, created DESC);
   `);
+  return true;
 }
+
+export function hasDb() { return !!pool; }
