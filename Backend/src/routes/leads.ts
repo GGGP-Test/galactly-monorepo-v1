@@ -11,12 +11,13 @@ type Candidate = {
   why: string;
 };
 
-// --- simple per-session memory so Lock/Refresh works without DB ---
+// in-memory per-session store (keyed by x-key header or IP)
 type SessionState = { latest?: Candidate; saved: Candidate[] };
 const sessions = new Map<string, SessionState>();
 
 const router = Router();
 
+// ---------- helpers ----------
 function asString(v: unknown, fallback = ""): string {
   return typeof v === "string" ? v : fallback;
 }
@@ -40,10 +41,17 @@ function ensureSession(k: string): SessionState {
   }
   return s;
 }
+// read a parameter from body first, then query
+function param(req: Request, name: string): string {
+  const fromBody = (req.body && (req.body as any)[name]) as unknown;
+  if (typeof fromBody === "string") return fromBody;
+  const fromQuery = (req.query as any)[name] as unknown;
+  return asString(fromQuery);
+}
 
-// ------------------------------------------------------------------
-// FIND BUYERS (still returns one deterministic example for now)
-// ------------------------------------------------------------------
+// ---------- routes ----------
+
+// /api/leads/find-buyers  (simple deterministic example for now)
 router.get("/find-buyers", async (req: Request, res: Response) => {
   const supplierHost = asString(req.query.host).toLowerCase().trim();
   const region = asString(req.query.region, "US/CA");
@@ -69,40 +77,34 @@ router.get("/find-buyers", async (req: Request, res: Response) => {
   const s = ensureSession(k);
   s.latest = item;
 
-  // best-effort: persist "recent" (ignore if table missing)
+  // best-effort DB persist to recent_candidates
   try {
     await pool.query(
       `INSERT INTO recent_candidates (host, title, created, temp, why)
        VALUES ($1,$2,$3,$4,$5)
        ON CONFLICT (host) DO UPDATE
-         SET title = EXCLUDED.title,
-             created = EXCLUDED.created,
-             temp = EXCLUDED.temp,
-             why = EXCLUDED.why`,
+         SET title=EXCLUDED.title, created=EXCLUDED.created,
+             temp=EXCLUDED.temp, why=EXCLUDED.why`,
       [item.host, item.title, item.created, item.temp, item.why]
     );
   } catch {
-    /* ignore */
+    /* ignore if table not present */
   }
 
   res.json({ ok: true, items: [item] });
 });
 
-// ------------------------------------------------------------------
-// LOCK latest (or explicit) candidate
-// Supports GET for simplicity: /api/leads/lock?temp=warm
-// Optional: host/title/why/created can be provided; otherwise uses latest.
-// ------------------------------------------------------------------
+// Lock latest (or explicit) candidate
 async function doLock(req: Request, res: Response) {
   const k = keyFor(req);
   const s = ensureSession(k);
 
-  // Build from query first, else use latest
-  let host = asString(req.query.host);
-  let title = asString(req.query.title);
-  let why = asString(req.query.why);
-  let created = asString(req.query.created);
-  let temp: Temp = asTemp(req.query.temp, "warm");
+  // Prefer body, then query
+  let host = param(req, "host");
+  let title = param(req, "title");
+  let why = param(req, "why");
+  let created = param(req, "created");
+  let temp: Temp = asTemp(param(req, "temp"), "warm");
 
   let cand: Candidate | undefined;
 
@@ -124,35 +126,30 @@ async function doLock(req: Request, res: Response) {
     return;
   }
 
-  // Save in-memory
+  // save in memory
   s.saved.push(cand);
 
-  // Best-effort DB persist
+  // best-effort DB persist to saved_candidates
   try {
     await pool.query(
       `INSERT INTO saved_candidates (host, title, created, temp, why)
        VALUES ($1,$2,$3,$4,$5)
        ON CONFLICT (host) DO UPDATE
-         SET title = EXCLUDED.title,
-             created = EXCLUDED.created,
-             temp = EXCLUDED.temp,
-             why = EXCLUDED.why`,
+         SET title=EXCLUDED.title, created=EXCLUDED.created,
+             temp=EXCLUDED.temp, why=EXCLUDED.why`,
       [cand.host, cand.title, cand.created, cand.temp, cand.why]
     );
   } catch {
-    /* ignore */
+    /* ignore if table not present */
   }
 
-  res.json({ ok: true, savedCount: s.saved.length, item: cand });
+  res.status(200).json({ ok: true, savedCount: s.saved.length, item: cand });
 }
 
+router.post("/lock", doLock); // <— added POST to fix 404 from UI
 router.get("/lock", doLock);
-// (If your frontend later switches to POST JSON, this handler still works
-// because your app-level JSON parser will populate req.body. Kept GET for now.)
 
-// ------------------------------------------------------------------
-// LIST saved candidates (optionally filter by temp)
-// ------------------------------------------------------------------
+// List saved (optionally filter by temp)
 router.get("/list", (req: Request, res: Response) => {
   const k = keyFor(req);
   const s = ensureSession(k);
@@ -164,9 +161,7 @@ router.get("/list", (req: Request, res: Response) => {
   res.json({ ok: true, items });
 });
 
-// ------------------------------------------------------------------
-// CSV download of saved candidates
-// ------------------------------------------------------------------
+// CSV download
 router.get("/csv", (req: Request, res: Response) => {
   const k = keyFor(req);
   const s = ensureSession(k);
