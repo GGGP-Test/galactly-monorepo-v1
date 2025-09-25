@@ -2,13 +2,13 @@ import { Router, Request, Response } from "express";
 
 let pool: any = null;
 try {
-  // canonical, single db path — do not change
+  // Single canonical DB path – do not change
   pool = require("../shared/db").pool;
-} catch { /* optional DB; mem fallback handles locks */ }
+} catch { /* optional at runtime; in-mem fallback below */ }
 
 const router = Router();
 
-/* ---------------- Types + in-mem fallback for lock() ---------------- */
+/* ---------------- Types + tiny in-mem lock fallback ---------------- */
 type Temp = "warm" | "hot";
 type Lead = {
   host: string;
@@ -19,6 +19,7 @@ type Lead = {
   why?: string;
   supplier_host?: string;
 };
+
 const lockedMem = new Map<string, { lead: Lead; at: number }>();
 const TTL_MS = 60 * 60 * 1000;
 setInterval(() => {
@@ -26,7 +27,7 @@ setInterval(() => {
   for (const [k, v] of lockedMem) if (now - v.at > TTL_MS) lockedMem.delete(k);
 }, 10 * 60 * 1000);
 
-/* ---------------- Small utils (no regex flags) ---------------- */
+/* ---------------- Utilities (no regex flags) ---------------- */
 function normHost(input: string): string {
   let s = (input || "").trim();
   if (!s) return "";
@@ -43,85 +44,99 @@ function normHost(input: string): string {
   }
 }
 
-/* ---------------- Vertical detection from supplier host ---------------- */
-type Vertical = "CPG" | "Food" | "Beverage" | "Beauty" | "Household" | "Retail" | "Apparel" | "Pet";
-
-function guessVertical(supplierHost: string): Vertical[] {
-  const s = supplierHost.toLowerCase();
-
-  // Packaging keyword hints → vertical weighting
-  const kwFood = ["snack","food","pouch","bag","bake","sauce","meal","frozen","deli","jerky","bar","granola","chips","cookie","soup","cereal"];
-  const kwBev  = ["brew","coffee","tea","drink","bev","soda","water","can","bottle","sleeve","shrink","stretch","film"];
-  const kwBeauty = ["beauty","cosmetic","skincare","lotion","serum","tube","jar","dropper"];
-  const kwHH = ["home","clean","detergent","laundry","dish","wipes","trash","foil","wrap","liner","canister"];
-  const kwPet = ["pet","dog","cat","treats","kibble","litter"];
-  const kwRetail = ["market","grocer","foods","pharmacy","retail","store"];
-
-  const tags: Vertical[] = ["CPG"];
-  const has = (arr: string[]) => arr.some(w => s.includes(w));
-
-  if (has(kwBev)) tags.unshift("Beverage");
-  if (has(kwFood) || s.includes("flex") || s.includes("corrug") || s.includes("carton")) tags.unshift("Food");
-  if (has(kwBeauty)) tags.unshift("Beauty");
-  if (has(kwHH) || s.includes("house")) tags.unshift("Household");
-  if (has(kwPet)) tags.unshift("Pet");
-  if (has(kwRetail)) tags.unshift("Retail");
-
-  // stretch/shrink/film → often Bev/Food private label
-  if (s.includes("stretch") || s.includes("shrink") || s.includes("film") || s.includes("wrap")) {
-    if (!tags.includes("Beverage")) tags.unshift("Beverage");
-    if (!tags.includes("Food")) tags.unshift("Food");
-    if (!tags.includes("Retail")) tags.push("Retail");
-  }
-
-  return Array.from(new Set(tags));
+type Region = "US" | "CA" | "NA";
+function normalizeRegion(q: string | undefined): Region {
+  const s = (q || "").toUpperCase();
+  if (s.includes("CA") && !s.includes("USA")) return "CA";
+  return "US";
 }
 
-/* ---------------- Seed pools (expanded US/CA coverage) ---------------- */
-type Buyer = { host: string; pages: { path: string; title: string }[]; tier: "A" | "B"; vertical: Vertical; region: "US" | "CA" | "NA" };
+type Vertical = "CPG" | "Food" | "Beverage" | "Beauty" | "Household" | "Retail" | "Pet";
 
-const BUYERS_AB: Buyer[] = [
-  // Major US Food/Beverage/Household (Tier A)
-  { host: "coca-colacompany.com", tier: "A", vertical: "Beverage", region: "US", pages: [{ path: "/suppliers", title: "Suppliers | The Coca-Cola Company" }] },
-  { host: "pepsico.com",           tier: "A", vertical: "Beverage", region: "US", pages: [{ path: "/suppliers", title: "Supplier portal | PepsiCo" }] },
-  { host: "keurigdrpepper.com",    tier: "A", vertical: "Beverage", region: "US", pages: [{ path: "/procurement", title: "Procurement | Keurig Dr Pepper" }] },
-  { host: "nestle.com",            tier: "A", vertical: "Food",     region: "NA", pages: [{ path: "/suppliers", title: "Suppliers | Nestlé" }] },
-  { host: "generalmills.com",      tier: "A", vertical: "Food",     region: "US", pages: [{ path: "/suppliers", title: "Suppliers | General Mills" }] },
-  { host: "kraftheinzcompany.com", tier: "A", vertical: "Food",     region: "US", pages: [{ path: "/procurement", title: "Procurement | Kraft Heinz" }] },
-  { host: "mondelezinternational.com", tier: "A", vertical: "Food", region: "US", pages: [{ path: "/suppliers", title: "Suppliers | Mondelēz" }] },
-  { host: "conagra.com",           tier: "A", vertical: "Food",     region: "US", pages: [{ path: "/suppliers", title: "Suppliers | Conagra" }] },
-  { host: "kellanova.com",         tier: "A", vertical: "Food",     region: "US", pages: [{ path: "/partners", title: "Partners | Kellanova (Kellogg’s)" }] },
-  { host: "campbellsoupcompany.com", tier: "B", vertical: "Food",   region: "US", pages: [{ path: "/suppliers", title: "Suppliers | Campbell Soup" }] },
-  { host: "hormelfoods.com",       tier: "A", vertical: "Food",     region: "US", pages: [{ path: "/supplier", title: "Supplier / vendor info | Hormel Foods" }] },
-  { host: "tysonfoods.com",        tier: "A", vertical: "Food",     region: "US", pages: [{ path: "/suppliers", title: "Suppliers | Tyson Foods" }] },
-  // Household / Beauty
-  { host: "clorox.com",            tier: "A", vertical: "Household", region: "US", pages: [{ path: "/suppliers", title: "Suppliers & procurement | Clorox" }] },
-  { host: "pg.com",                tier: "A", vertical: "Household", region: "US", pages: [{ path: "/suppliers", title: "Suppliers | P&G" }] },
-  { host: "kimberly-clark.com",    tier: "A", vertical: "Household", region: "US", pages: [{ path: "/procurement", title: "Procurement | Kimberly-Clark" }] },
-  { host: "unilever.com",          tier: "A", vertical: "Beauty",    region: "NA", pages: [{ path: "/suppliers", title: "Suppliers | Unilever" }] },
-  { host: "colgatepalmolive.com",  tier: "A", vertical: "Household", region: "US", pages: [{ path: "/partners", title: "Partners | Colgate-Palmolive" }] },
-  // Retail US (private label buyers)
-  { host: "walmart.com",           tier: "A", vertical: "Retail",    region: "US", pages: [{ path: "/supplier", title: "Suppliers | Walmart" }] },
-  { host: "target.com",            tier: "A", vertical: "Retail",    region: "US", pages: [{ path: "/partners", title: "Partners | Target" }] },
-  { host: "costco.com",            tier: "A", vertical: "Retail",    region: "US", pages: [{ path: "/suppliers", title: "Suppliers | Costco (Kirkland)" }] },
-  { host: "albertsons.com",        tier: "B", vertical: "Retail",    region: "US", pages: [{ path: "/suppliers", title: "Suppliers | Albertsons" }] },
-  { host: "kroger.com",            tier: "A", vertical: "Retail",    region: "US", pages: [{ path: "/suppliers", title: "Suppliers | Kroger" }] },
-  { host: "wholefoodsmarket.com",  tier: "B", vertical: "Retail",    region: "US", pages: [{ path: "/suppliers", title: "Suppliers | Whole Foods" }] },
-  { host: "traderjoes.com",        tier: "B", vertical: "Retail",    region: "US", pages: [{ path: "/partners", title: "Partners | Trader Joe’s" }] },
+/** Packaging keyword hints (from supplier domain) → vertical(s) + packaging tag */
+function inferFromSupplier(host: string): { verticals: Vertical[]; ptag: string } {
+  const s = host.toLowerCase();
+
+  const has = (xs: string[]) => xs.some(w => s.includes(w));
+  const vset = new Set<Vertical>(["CPG"]);
+
+  // packaging tokens
+  let ptag = "general packaging";
+  if (has(["stretch","shrink","film","sleeve","wrap"])) { vset.add("Beverage"); vset.add("Food"); vset.add("Retail"); ptag = "stretch/shrink film"; }
+  if (has(["label","labels","sticker"])) { vset.add("Beverage"); vset.add("Beauty"); ptag = "labels & sleeves"; }
+  if (has(["bottle","glass","can","jar"])) { vset.add("Beverage"); vset.add("Beauty"); ptag = "bottles, cans & jars"; }
+  if (has(["pouch","sachet","bag"])) { vset.add("Food"); vset.add("Pet"); ptag = "flexible pouches/bags"; }
+  if (has(["corrug","carton","box"])) { vset.add("Food"); vset.add("Retail"); ptag = "corrugated/cartons"; }
+  if (has(["thermoform","clamshell","tray","blister"])) { vset.add("Food"); vset.add("Beauty"); ptag = "thermoform/blister"; }
+  if (has(["home","clean","detergent","laundry","wipe"])) { vset.add("Household"); ptag = ptag + " · household"; }
+  if (has(["pet","kibble","treat"])) { vset.add("Pet"); ptag = ptag + " · pet"; }
+  if (has(["beauty","cosmetic","skincare","lip","cream","lotion","serum"])) { vset.add("Beauty"); ptag = ptag + " · beauty"; }
+
+  const verticals = Array.from(vset);
+  return { verticals, ptag };
+}
+
+/* ---------------- Buyer pools (US/CA staples + indie Tier C) ---------------- */
+type BuyerAB = { host: string; title: string; tier: "A" | "B"; vertical: Vertical; region: Region };
+type BuyerC  = { host: string; title: string; vertical: Vertical; region: Region };
+
+const AB: BuyerAB[] = [
+  // Beverage
+  { host: "coca-colacompany.com", title: "Suppliers | The Coca-Cola Company", tier: "A", vertical: "Beverage", region: "US" },
+  { host: "pepsico.com",           title: "Supplier portal | PepsiCo",        tier: "A", vertical: "Beverage", region: "US" },
+  { host: "keurigdrpepper.com",    title: "Procurement | Keurig Dr Pepper",   tier: "A", vertical: "Beverage", region: "US" },
+  { host: "molsoncoors.com",       title: "Suppliers | Molson Coors",         tier: "B", vertical: "Beverage", region: "US" },
+
+  // Food
+  { host: "nestle.com",            title: "Suppliers | Nestlé",               tier: "A", vertical: "Food",     region: "NA" },
+  { host: "generalmills.com",      title: "Suppliers | General Mills",        tier: "A", vertical: "Food",     region: "US" },
+  { host: "kellanova.com",         title: "Partners | Kellanova",             tier: "A", vertical: "Food",     region: "US" },
+  { host: "conagra.com",           title: "Suppliers | Conagra",              tier: "A", vertical: "Food",     region: "US" },
+  { host: "campbellsoupcompany.com", title: "Suppliers | Campbell Soup",      tier: "B", vertical: "Food",     region: "US" },
+  { host: "kraftheinzcompany.com", title: "Procurement | Kraft Heinz",        tier: "A", vertical: "Food",     region: "US" },
+  { host: "hormelfoods.com",       title: "Supplier / vendor info | Hormel",  tier: "A", vertical: "Food",     region: "US" },
+  { host: "tysonfoods.com",        title: "Suppliers | Tyson Foods",          tier: "A", vertical: "Food",     region: "US" },
+  { host: "smucker.com",           title: "Suppliers | JM Smucker",           tier: "B", vertical: "Food",     region: "US" },
+  { host: "chobani.com",           title: "Partners & sourcing | Chobani",    tier: "B", vertical: "Food",     region: "US" },
+
+  // Household
+  { host: "pg.com",                title: "Suppliers | P&G",                  tier: "A", vertical: "Household", region: "US" },
+  { host: "clorox.com",            title: "Suppliers & procurement | Clorox", tier: "A", vertical: "Household", region: "US" },
+  { host: "kimberly-clark.com",    title: "Procurement | Kimberly-Clark",     tier: "A", vertical: "Household", region: "US" },
+  { host: "scj.com",               title: "Suppliers | SC Johnson",           tier: "B", vertical: "Household", region: "US" },
+  { host: "colgatepalmolive.com",  title: "Partners | Colgate-Palmolive",     tier: "A", vertical: "Household", region: "US" },
+  { host: "reckitt.com",           title: "Suppliers | Reckitt",              tier: "B", vertical: "Household", region: "NA" },
+
+  // Beauty
+  { host: "unilever.com",          title: "Suppliers | Unilever",             tier: "A", vertical: "Beauty",    region: "NA" },
+  { host: "loreal.com",            title: "Suppliers | L’Oréal",              tier: "A", vertical: "Beauty",    region: "NA" },
+  { host: "esteeLauder.com",       title: "Suppliers | Estée Lauder",         tier: "B", vertical: "Beauty",    region: "US" },
+  { host: "elfcosmetics.com",      title: "Packaging & sourcing | e.l.f.",    tier: "B", vertical: "Beauty",    region: "US" },
+
+  // Retail / Private label
+  { host: "walmart.com",           title: "Suppliers | Walmart",              tier: "A", vertical: "Retail",    region: "US" },
+  { host: "target.com",            title: "Partners | Target",                tier: "A", vertical: "Retail",    region: "US" },
+  { host: "costco.com",            title: "Suppliers | Costco (Kirkland)",    tier: "A", vertical: "Retail",    region: "US" },
+  { host: "albertsons.com",        title: "Suppliers | Albertsons",           tier: "B", vertical: "Retail",    region: "US" },
+  { host: "kroger.com",            title: "Suppliers | Kroger",               tier: "A", vertical: "Retail",    region: "US" },
+  { host: "wholefoodsmarket.com",  title: "Suppliers | Whole Foods",          tier: "B", vertical: "Retail",    region: "US" },
+  { host: "traderjoes.com",        title: "Partners | Trader Joe’s",          tier: "B", vertical: "Retail",    region: "US" },
+  { host: "sprouts.com",           title: "Own brand packaging | Sprouts",    tier: "B", vertical: "Retail",    region: "US" },
+  { host: "wegmans.com",           title: "Private label packaging | Wegmans",tier: "B", vertical: "Retail",    region: "US" },
+  { host: "heb.com",               title: "Own brand packaging | H-E-B",      tier: "B", vertical: "Retail",    region: "US" },
+  // Canada
+  { host: "loblaw.ca",             title: "Suppliers | Loblaw",               tier: "A", vertical: "Retail",    region: "CA" },
+  { host: "metro.ca",              title: "Suppliers | Metro",                tier: "B", vertical: "Retail",    region: "CA" },
+  { host: "sobeys.com",            title: "Suppliers | Sobeys",               tier: "B", vertical: "Retail",    region: "CA" },
+
   // Pet
-  { host: "purina.com",            tier: "A", vertical: "Pet",       region: "US", pages: [{ path: "/suppliers", title: "Suppliers | Purina" }] },
-  { host: "bluebuffalo.com",       tier: "B", vertical: "Pet",       region: "US", pages: [{ path: "/partners", title: "Partners | Blue Buffalo" }] },
-  // Canada key buyers
-  { host: "loblaw.ca",             tier: "A", vertical: "Retail",    region: "CA", pages: [{ path: "/suppliers", title: "Suppliers | Loblaw" }] },
-  { host: "metro.ca",              tier: "B", vertical: "Retail",    region: "CA", pages: [{ path: "/suppliers", title: "Suppliers | Metro" }] },
-  { host: "sobeys.com",            tier: "B", vertical: "Retail",    region: "CA", pages: [{ path: "/suppliers", title: "Suppliers | Sobeys" }] },
+  { host: "purina.com",            title: "Suppliers | Purina",               tier: "A", vertical: "Pet",       region: "US" },
+  { host: "bluebuffalo.com",       title: "Partners | Blue Buffalo",          tier: "B", vertical: "Pet",       region: "US" },
 ];
 
-/* Tier-C micro/indie brands — good packaging spenders */
-type MicroBuyer = { host: string; title: string; vertical: Vertical; region: "US" | "CA" | "NA" };
-const BUYERS_C: MicroBuyer[] = [
+const C: BuyerC[] = [
   { host: "liquiddeath.com",  title: "Partnerships & operations", vertical: "Beverage", region: "US" },
-  { host: "olipop.com",       title: "Partnerships & sourcing",   vertical: "Beverage", region: "US" },
+  { host: "olipop.com",       title: "Vendor / sourcing",         vertical: "Beverage", region: "US" },
   { host: "poppi.co",         title: "Vendor / sourcing",         vertical: "Beverage", region: "US" },
   { host: "guayaki.com",      title: "Supplier / partner",        vertical: "Beverage", region: "US" },
   { host: "huel.com",         title: "Supply & packaging",        vertical: "Food",     region: "NA" },
@@ -132,83 +147,95 @@ const BUYERS_C: MicroBuyer[] = [
   { host: "methodhome.com",   title: "Packaging & logistics",     vertical: "Household",region: "US" },
   { host: "blueland.com",     title: "Operations / vendor",       vertical: "Household",region: "US" },
   { host: "thefarmersdog.com",title: "Operations / packaging",    vertical: "Pet",      region: "US" },
-  { host: "sprouts.com",      title: "Own brand packaging",       vertical: "Retail",   region: "US" },
-  { host: "wegmans.com",      title: "Private label packaging",   vertical: "Retail",   region: "US" },
-  { host: "heb.com",          title: "Own brand packaging",       vertical: "Retail",   region: "US" },
   { host: "londondrugs.com",  title: "Private label packaging",   vertical: "Retail",   region: "CA" },
 ];
 
-/* ---------------- Selection logic with robust fallbacks ---------------- */
-type Region = "US" | "CA" | "NA";
-function normalizeRegion(q: string | undefined): Region {
-  const s = (q || "").toUpperCase();
-  if (s.includes("CA") && !s.includes("USA")) return "CA";
-  return "US"; // default for Free Panel UI
+/* ---------------- Anti-repeat memory per supplier ---------------- */
+const recentBySupplier = new Map<string, string[]>(); // supplierHost -> last N buyer hosts
+const MAX_RECENT = 6;
+function remember(supplier: string, buyerHost: string) {
+  const key = normHost(supplier);
+  const arr = recentBySupplier.get(key) || [];
+  arr.unshift(buyerHost);
+  while (arr.length > MAX_RECENT) arr.pop();
+  recentBySupplier.set(key, arr);
+}
+function alreadySeen(supplier: string, buyerHost: string): boolean {
+  const arr = recentBySupplier.get(normHost(supplier)) || [];
+  return arr.includes(buyerHost);
 }
 
+/* ---------------- Scoring/selection ---------------- */
 function pickBuyer(
   supplierHost: string,
-  opts: { tier?: "A" | "B" | "C"; depth?: "shallow" | "deep"; region: Region }
+  region: Region,
+  wantTier?: "A" | "B" | "C",
 ): { host: string; title: string; why: string } {
   const sup = normHost(supplierHost);
-  const wantedTier = opts.tier;
-  const deep = opts.depth === "deep";
-  const region = opts.region;
-  const verticalPref = guessVertical(supplierHost);
+  const { verticals, ptag } = inferFromSupplier(supplierHost);
 
-  // Build filtered pools (region + supplier exclusion)
-  const abBase = BUYERS_AB.filter(b => b.host !== sup && (b.region === region || b.region === "NA"));
-  const cBase  = BUYERS_C.filter(b => b.host !== sup && (b.region === region || b.region === "NA"));
+  const abBase = AB.filter(b => b.host !== sup && (b.region === region || b.region === "NA"));
+  const cBase  = C .filter(b => b.host !== sup && (b.region === region || b.region === "NA"));
 
-  // Try: vertical-matched Tier request
-  let abPool = abBase.filter(b => (!wantedTier || b.tier === wantedTier) && verticalPref.includes(b.vertical));
-  let cPool  = cBase.filter(b => verticalPref.includes(b.vertical));
+  let ab = abBase.filter(b => (!wantTier || b.tier === wantTier) && verticals.includes(b.vertical));
+  let cc = cBase .filter(b => verticals.includes(b.vertical));
 
-  // If empty due to vertical mismatch, relax vertical filter
-  if (!abPool.length) abPool = abBase.filter(b => !wantedTier || b.tier === wantedTier);
-  if (!cPool.length)  cPool  = cBase;
+  if (!ab.length) ab = abBase.filter(b => !wantTier || b.tier === wantTier);          // relax vertical
+  if (!cc.length) cc = cBase;                                                          // relax vertical
 
-  // Priority: explicit Tier; else A/B then (if deep) C; else C as last resort
-  if (wantedTier === "C") {
-    const chosen = cPool[Math.floor(Math.random() * Math.min(cPool.length, 8))] || cBase[0];
-    return {
-      host: chosen.host,
-      title: chosen.title,
-      why: `Tier C ${chosen.vertical}; ${region} indie/retail (supplier: ${sup})`
-    };
-  }
+  // Score A/B for variety and relevance
+  type Scored = BuyerAB & { score: number };
+  const scored: Scored[] = ab.map(b => {
+    const tierW = b.tier === "A" ? 1.2 : 1.0;
+    const vW    = verticals.includes(b.vertical) ? 1.2 : 1.0;
+    const seenP = alreadySeen(supplierHost, b.host) ? 0.5 : 1.0; // penalize recent repeats
+    const random = 0.8 + Math.random() * 0.4;
+    return { ...b, score: tierW * vW * seenP * random };
+  }).sort((a,b)=> b.score - a.score);
 
-  if (abPool.length) {
-    // bias to Tier A
-    abPool.sort((a, b) => (a.tier === b.tier ? 0 : a.tier === "A" ? -1 : 1));
-    const chosen = abPool[Math.floor(Math.random() * Math.min(abPool.length, 10))];
-    const page = chosen.pages[0];
-    return {
-      host: chosen.host,
-      title: page?.title || "Supplier / vendor program",
-      why: `Tier ${chosen.tier} ${chosen.vertical}; ${region} supplier program (picked for supplier: ${sup})`
-    };
-  }
+  let chosenHost = "";
+  let chosenTitle = "";
+  let chosenWhy = "";
 
-  if (deep || !abPool.length) {
-    const chosen = cPool[Math.floor(Math.random() * Math.min(cPool.length, 10))] || cBase[0];
-    return {
-      host: chosen.host,
-      title: chosen.title,
-      why: `Tier C ${chosen.vertical}; ${region} partnerships (supplier: ${sup})`
-    };
-  }
-
-  // Absolute last guard: pick any AB excluding supplier
-  const any = abBase[0] || { host: "sprouts.com", vertical: "Retail", pages: [{ path: "/brand", title: "Own brand packaging" }], tier: "B" as const, region: "US" as const };
-  return {
-    host: any.host,
-    title: any.pages[0].title,
-    why: `Generic fallback; ${region} AB buyer (supplier: ${sup})`
+  const tryPick = (list: { host: string; title: string; tier?: any; vertical: Vertical }[], whyMaker: (x:any)=>string) => {
+    for (const b of list) {
+      if (!alreadySeen(supplierHost, b.host)) {
+        chosenHost = b.host;
+        chosenTitle = b.title;
+        chosenWhy = whyMaker(b);
+        return true;
+      }
+    }
+    if (list.length) { // if all seen, take the top anyway
+      const b = list[0];
+      chosenHost = b.host;
+      chosenTitle = b.title;
+      chosenWhy = whyMaker(b);
+      return true;
+    }
+    return false;
   };
+
+  if (wantTier === "C") {
+    const ccShuffled = cc.sort(()=> Math.random() - 0.5);
+    tryPick(ccShuffled, (b)=>`Tier C ${b.vertical}; ${region} indie/retail · ${ptag}`);
+  } else if (scored.length) {
+    tryPick(scored, (b: Scored)=>`Tier ${b.tier} ${b.vertical}; ${region} supplier program · ${ptag}`);
+  } else {
+    const ccShuffled = cc.sort(()=> Math.random() - 0.5);
+    tryPick(ccShuffled, (b)=>`Tier C ${b.vertical}; ${region} partnerships · ${ptag}`);
+  }
+
+  if (!chosenHost) { // ultimate guard
+    const any = (abBase[0] || { host: "sprouts.com", title: "Own brand packaging" , vertical:"Retail" as Vertical, tier:"B" as const });
+    chosenHost = any.host; chosenTitle = any.title; chosenWhy = `Fallback AB; ${region} · ${ptag}`;
+  }
+
+  remember(supplierHost, chosenHost);
+  return { host: chosenHost, title: chosenTitle, why: chosenWhy };
 }
 
-/* ---------------- API: find-buyers (always returns a candidate) ---------------- */
+/* ---------------- GET /leads/find-buyers ---------------- */
 router.get("/leads/find-buyers", (req: Request, res: Response) => {
   const supplier = String(req.query.host || "").trim();
   if (!supplier) return res.status(400).json({ error: "host is required" });
@@ -217,21 +244,17 @@ router.get("/leads/find-buyers", (req: Request, res: Response) => {
   const tier: "A" | "B" | "C" | undefined =
     tierQ === "A" || tierQ === "B" || tierQ === "C" ? (tierQ as any) : undefined;
 
-  const depthQ = String(req.query.depth || "").toLowerCase();
-  const depth: "shallow" | "deep" = depthQ === "shallow" ? "shallow" : "deep"; // default to deep
-
   const region = normalizeRegion(String(req.query.region || ""));
 
-  const picked = pickBuyer(supplier, { tier, depth, region });
+  const result = pickBuyer(supplier, region, tier);
 
-  // Ensure we never echo the supplier back
-  if (normHost(picked.host) === normHost(supplier)) {
-    // pick again with hard fallback
-    const alt = pickBuyer("example.com", { tier, depth: "deep", region });
+  if (normHost(result.host) === normHost(supplier)) {
+    // hard avoid echo
+    const alt = pickBuyer("example.com", region, tier);
     return res.json({
       host: alt.host,
       platform: "web",
-      title: alt.title,
+      title: alt.title || "Buyer lead",
       created: new Date().toISOString(),
       temp: "warm" as const,
       why: alt.why,
@@ -240,17 +263,17 @@ router.get("/leads/find-buyers", (req: Request, res: Response) => {
   }
 
   return res.json({
-    host: picked.host,
+    host: result.host,
     platform: "web",
-    title: picked.title || `Buyer lead`,
+    title: result.title || "Buyer lead",
     created: new Date().toISOString(),
     temp: "warm" as const,
-    why: picked.why,
+    why: result.why,
     supplier_host: normHost(supplier),
   });
 });
 
-/* ---------------- API: lock (unchanged semantics) ---------------- */
+/* ---------------- POST /leads/lock ---------------- */
 router.post("/leads/lock", async (req: Request, res: Response) => {
   const body = req.body || {};
   const host = normHost(body.host || "");
