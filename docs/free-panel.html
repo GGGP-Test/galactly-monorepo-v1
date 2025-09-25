@@ -2,326 +2,252 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Leads Console — Free Panel (V3)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Free Panel</title>
+  <!-- silence favicon 404 on GH Pages -->
+  <link rel="icon" href="data:,">
   <style>
-    :root{
-      --bg:#0f1420;--panel:#141b2a;--muted:#9bb0d0;--text:#e8f0ff;--ok:#33c481;--warn:#d9a441;--bad:#ef6461;--chip:#1b2437;--chip-b:#2a3550;
-      --accent:#4d7cff;--accent-2:#2ed3ff;--border:#1f2940
-    }
-    *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-    .wrap{display:grid;grid-template-columns:420px 1fr;gap:18px;padding:18px}
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .col{display:flex;flex-direction:column;gap:10px}
-    input,select,button,textarea{border-radius:8px;border:1px solid var(--border);background:#0e1524;color:var(--text)}
-    input,select,button{height:36px;padding:0 10px}
-    input,select{min-width:0}
-    button{cursor:pointer}
-    button.primary{background:var(--accent);border-color:#375cd1;color:white}
-    button.ghost{background:#0d1321}
-    button.ok{background:var(--ok);border-color:#1f7d57;color:#05160f}
-    button.warn{background:var(--warn);border-color:#7c5a12;color:#1b1002}
-    button.bad{background:var(--bad);border-color:#a3312f}
-    .chips{display:flex;gap:8px;flex-wrap:wrap}
-    .chip{background:var(--chip);border:1px solid var(--chip-b);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--muted)}
-    .tbl{width:100%;border-collapse:collapse}
-    .tbl th,.tbl td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left}
-    .tbl th{color:var(--muted);font-weight:600}
-    .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
-    .tag.warm{background:#3b2b0f;color:#ffd079;border:1px solid #5a4317}
-    .tag.hot{background:#3a1111;color:#ffb0b0;border:1px solid #5e1f1f}
-    .tag.cold{background:#0e2636;color:#8fd0ff;border:1px solid #1b4763}
-    .grid2{display:grid;grid-template-columns:1fr auto;gap:10px}
-    .section-title{font-weight:700;margin:0 0 8px 0;color:#bcd0f7}
-    textarea{width:100%;min-height:100px;padding:10px;resize:vertical}
-    .right{justify-content:flex-end}
-    .muted{color:var(--muted)}
-    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
-    @media (max-width: 980px){ .wrap{grid-template-columns:1fr} }
+    :root{--bg:#0f1420;--card:#121a2a;--ink:#e7ecf7;--mut:#9db0cf;--accent:#5aa1ff;--warm:#e3b341;--hot:#ff5a5a;--ok:#38c98b;--dim:#1a2438}
+    *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+    body{margin:0;background:var(--bg);color:var(--ink)}
+    .page{max-width:1000px;margin:32px auto;padding:0 16px}
+    h1{font-size:20px;margin:0 0 16px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .card{background:var(--card);border:1px solid #1d2943;border-radius:10px;padding:14px;margin:12px 0}
+    label{font-size:12px;color:var(--mut);display:block;margin-bottom:6px}
+    input,select,button,textarea{border-radius:8px;border:1px solid #24406a;background:#101728;color:var(--ink)}
+    input,select{height:36px;padding:0 10px}
+    button{height:36px;padding:0 12px;cursor:pointer}
+    button.primary{background:var(--accent);border-color:#2c6ad4;color:#fff}
+    button.warm{background:var(--warm);border-color:#a68021;color:#1a1207}
+    button.hot{background:var(--hot);border-color:#c23c3c;color:#fff}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .badges{display:flex;gap:8px;flex-wrap:wrap}
+    .badge{background:var(--dim);padding:6px 10px;border-radius:999px;font-size:12px}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:10px;border-bottom:1px solid #1d2943;font-size:14px}
+    .mut{color:var(--mut)}
+    textarea{width:100%;min-height:120px;padding:10px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+    .spacer{flex:1}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <!-- LEFT: controls -->
-    <div class="card col">
-      <div class="section-title">API</div>
+  <div class="page">
+    <h1>Free Panel</h1>
+
+    <!-- API base ---------------------------------------------------------->
+    <div class="card">
       <div class="row">
-        <input id="base" placeholder="https://your-api.example.com" style="flex:1" />
-        <button id="apply" class="primary">Apply</button>
-      </div>
-      <div class="row">
-        <button id="btnHealth" class="ghost">Health</button>
-        <button id="btnProbe"  class="ghost">Probe</button>
-        <button id="btnClear"  class="ghost">Clear list</button>
-      </div>
-      <div id="probeChips" class="chips"></div>
-
-      <div class="section-title" style="margin-top:14px">Key (optional)</div>
-      <div class="grid2">
-        <input id="apiKey" placeholder="paste key" />
-        <button id="saveKey" class="ghost">Save</button>
-      </div>
-
-      <div class="section-title" style="margin-top:14px">Action</div>
-      <select id="action">
-        <option value="find-one">Find buyers (one per click)</option>
-      </select>
-
-      <div class="section-title">Supplier host</div>
-      <input id="host" value="peekpackaging.com" />
-
-      <div class="section-title">Region / Radius</div>
-      <div class="row">
-        <select id="region" style="flex:1">
-          <option>US/CA</option><option>US/NY</option><option>US/TX</option><option>US/WA</option><option>US/IL</option>
-        </select>
-        <select id="radius" style="width:120px">
-          <option>25 mi</option><option selected>50 mi</option><option>100 mi</option><option>150 mi</option>
-        </select>
-        <button id="find" class="primary">Find buyer</button>
-      </div>
-
-      <div class="section-title" style="margin-top:14px">Latest candidate</div>
-      <div id="latest" class="card" style="background:#0d1321;border-color:#1b2440">
-        <div class="chips" id="latestChips"><span class="muted">No candidate yet.</span></div>
-        <div class="row" style="margin-top:8px">
-          <button id="lockWarm" class="warn">Lock (Warm)</button>
-          <button id="lockHot"  class="bad">Lock (Hot)</button>
-          <span class="muted" style="margin-left:6px">•</span>
-          <button id="deeper" class="ghost">Deeper results</button>
+        <div style="min-width:260px;flex:1">
+          <label for="api">API base</label>
+          <input id="api" type="text" placeholder="https://p01-animated-cellar-...code.run" />
+        </div>
+        <div><label>&nbsp;</label><button id="apply" class="primary">Apply</button></div>
+        <div class="spacer"></div>
+        <div class="row">
+          <button id="btn-health">Health</button>
+          <button id="btn-probe">Probe</button>
+          <button id="btn-clear">Clear list</button>
         </div>
       </div>
-
-      <div class="section-title" style="margin-top:14px">Saved (this session)</div>
-      <div class="row">
-        <button id="refreshWarm" class="ghost">Refresh warm</button>
-        <button id="refreshHot"  class="ghost">Refresh hot</button>
-        <button id="dlWarm" class="ghost">Download CSV (warm)</button>
-        <button id="dlHot"  class="ghost">Download CSV (hot)</button>
-      </div>
-
-      <div class="section-title" style="margin-top:14px">HTTP log</div>
-      <textarea id="httpLog" class="mono" spellcheck="false"></textarea>
     </div>
 
-    <!-- RIGHT: results -->
-    <div class="card col">
-      <div class="section-title">Results</div>
-      <table class="tbl" id="resultsTbl">
+    <!-- Find ------------------------------------------------------------->
+    <div class="card">
+      <div class="row">
+        <div style="min-width:280px;flex:1">
+          <label for="supplier-host">Supplier host</label>
+          <input id="supplier-host" placeholder="peekpackaging.com" />
+        </div>
+        <div>
+          <label for="region">Region</label>
+          <select id="region">
+            <option value="US/CA" selected>US/CA</option>
+            <option value="US">US</option>
+            <option value="CA">CA</option>
+          </select>
+        </div>
+        <div>
+          <label for="radius">Radius</label>
+          <select id="radius">
+            <option>25 mi</option>
+            <option selected>50 mi</option>
+            <option>100 mi</option>
+            <option>200 mi</option>
+          </select>
+        </div>
+        <div><label>&nbsp;</label><button id="btn-find" class="primary">Find buyer</button></div>
+      </div>
+    </div>
+
+    <!-- Latest candidate ------------------------------------------------->
+    <div class="card">
+      <label>Latest candidate</label>
+      <div class="badges" style="margin-bottom:10px">
+        <span class="badge" id="badge-host">—</span>
+        <span class="badge" id="badge-title">—</span>
+        <span class="badge mut" id="badge-when">—</span>
+        <span class="badge" id="badge-temp">—</span>
+        <span class="badge mut" id="badge-why">—</span>
+      </div>
+      <div class="row">
+        <button id="btn-lock-warm" class="warm">Lock (Warm)</button>
+        <button id="btn-lock-hot" class="hot">Lock (Hot)</button>
+        <button id="btn-deeper" disabled>Deeper results</button>
+      </div>
+    </div>
+
+    <!-- Saved / tools ---------------------------------------------------->
+    <div class="card">
+      <label>Saved (this session)</label>
+      <div class="row">
+        <button id="btn-refresh-warm" disabled>Refresh warm</button>
+        <button id="btn-refresh-hot" disabled>Refresh hot</button>
+        <button id="btn-dl-warm" disabled>Download CSV (warm)</button>
+        <button id="btn-dl-hot" disabled>Download CSV (hot)</button>
+      </div>
+    </div>
+
+    <!-- HTTP log --------------------------------------------------------->
+    <div class="card">
+      <label for="http-log">HTTP log</label>
+      <textarea id="http-log" spellcheck="false" placeholder=""></textarea>
+    </div>
+
+    <!-- Results ---------------------------------------------------------->
+    <div class="card">
+      <label>Results</label>
+      <table class="table">
         <thead>
-          <tr><th>#</th><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why (human-readable)</th></tr>
+          <tr>
+            <th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why (human-readable)</th>
+          </tr>
         </thead>
-        <tbody id="resultsBody">
-          <tr><td colspan="7" class="muted">No items yet.</td></tr>
-        </tbody>
+        <tbody id="results-tbody"></tbody>
       </table>
     </div>
   </div>
 
+  <!-- Client logic (inline, no external files) --------------------------->
   <script>
-    // ------------- helpers/state -------------
-    const S = {
-      base: '',
-      apiKey: '',
-      lastItem: null // latest candidate
-    };
-    const $ = (id) => document.getElementById(id);
-    const logEl = $('httpLog');
-
-    function toast(msg, good=false){
-      const t = new Date().toTimeString().slice(0,8);
-      log(`${t}  ${good ? '✓' : '✖'}  ${msg}`);
+    // --------- tiny utilities
+    const $ = (sel) => document.querySelector(sel);
+    const logEl = $("#http-log");
+    function logHttp(line){
+      const ts = new Date().toISOString().substring(11,19);
+      logEl.value = ts+"  "+line+"\\n"+logEl.value;
     }
-    function log(line){
-      logEl.value += (logEl.value ? '\n' : '') + line;
-      logEl.scrollTop = logEl.scrollHeight;
-    }
-    function saveLS(){
-      localStorage.setItem('free.base', S.base);
-      localStorage.setItem('free.key', S.apiKey);
-    }
-    function loadLS(){
-      S.base = (localStorage.getItem('free.base') || '').trim();
-      S.apiKey = (localStorage.getItem('free.key') || '').trim();
-      if (S.base) $('base').value = S.base;
-      if (S.apiKey) $('apiKey').value = S.apiKey;
-    }
-    function buildURL(path, query={}){
-      const base = (S.base || '').trim();
-      try{
-        const u = new URL(path.replace(/^\/+/, '/'), base.endsWith('/') ? base : base + '/');
-        Object.entries(query).forEach(([k,v])=>u.searchParams.set(k, v));
-        return u.toString();
-      }catch(e){
-        throw new Error('Invalid base URL');
-      }
-    }
-    async function call(method, path, {query, body} = {}){
-      const url = buildURL(path, query||{});
-      const opts = { method, headers: { 'Content-Type':'application/json' } };
-      if (S.apiKey) opts.headers['x-api-key'] = S.apiKey;
-      if (body) opts.body = JSON.stringify(body);
-      const t0 = performance.now();
-      const r = await fetch(url, opts);
-      const ms = Math.round(performance.now()-t0);
-      const ct = r.headers.get('content-type')||'';
-      let data = null;
-      if (ct.includes('application/json')) data = await r.json();
-      const ok = r.ok && data && data.ok !== false;
-      log(`${method}  ${new URL(url).pathname}${new URL(url).search}  ${r.status}  ${ok?'OK':'ERR'} (${ms}ms)`);
-      if (!ok) throw new Error(data?.error || `HTTP ${r.status}`);
-      return { r, data, url };
+    function setBadge(id, text){ const el = $(id); if(el){ el.textContent = text || "—"; el.title = text || ""; } }
+    function normalizeHost(raw){
+      return (raw||"").trim().replace(/^https?:\\/\\//i,"").replace(/^www\\./i,"").toLowerCase();
     }
 
-    function renderResults(items){
-      const tb = $('resultsBody');
-      tb.innerHTML = '';
-      if (!items || !items.length){
-        tb.innerHTML = '<tr><td colspan="7" class="muted">No items.</td></tr>';
-        return;
-      }
-      items.forEach((it, i)=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${i+1}</td>
-          <td class="mono">${it.host||''}</td>
-          <td>${it.platform||''}</td>
-          <td>${it.title||''}</td>
-          <td class="mono">${it.created||''}</td>
-          <td><span class="tag ${it.temp||'cold'}">${it.temp||''}</span></td>
-          <td>${it.whyText||''}</td>
-        `;
-        tb.appendChild(tr);
-      });
+    // --------- state
+    let latestCandidate = null; // {host,title,platform,created,temp,why,supplier_host}
+
+    // --------- render
+    function renderLatestCandidate(c){
+      setBadge("#badge-host", c?.host);
+      setBadge("#badge-title", c?.title);
+      setBadge("#badge-when", c?.created);
+      setBadge("#badge-temp", c?.temp);
+      setBadge("#badge-why", c?.why);
+    }
+    function clearLatestCandidate(reason){
+      latestCandidate = null;
+      renderLatestCandidate({});
+      logHttp("✗  " + (reason||"no candidate"));
+    }
+    function prependRow(c){
+      const tb = $("#results-tbody"); if(!tb) return;
+      const tr = document.createElement("tr");
+      const cells = [c.host||"", c.platform||"web", c.title||"", c.created||"", c.temp||"", c.why||""];
+      cells.forEach(t=>{ const td=document.createElement("td"); td.textContent=t; tr.appendChild(td); });
+      tb.prepend(tr);
     }
 
-    function renderLatest(item){
-      S.lastItem = item || null;
-      const box = $('latestChips');
-      box.innerHTML = '';
-      if (!item){
-        box.innerHTML = '<span class="muted">No candidate yet.</span>';
-        return;
-      }
-      const mk = (k, v)=> `<span class="chip"><b style="color:#cfe1ff">${k}</b>&nbsp; ${v}</span>`;
-      box.innerHTML = [
-        mk('Host', item.host),
-        mk('Title', item.title||''),
-        mk('When', item.created||''),
-        mk('Temp', item.temp||''),
-        mk('Why', item.whyText||'')
-      ].join(' ');
-    }
-
-    // ------------- actions -------------
-    async function apply(){
-      const base = ($('base').value||'').trim();
-      if (!base){ toast('Base cleared'); S.base=''; saveLS(); return; }
-      try{
-        S.base = base; saveLS();
-        toast('Base set', true);
-      }catch(e){ toast('Bad base URL'); }
-    }
-
-    async function health(){
-      try{
-        const {data} = await call('GET','/healthz');
-        toast('health: ok', true);
-        addProbeChip(`health: 200 @ (root)`);
-      }catch(e){
-        toast('health: failed');
-      }
-    }
-
-    async function probe(){
-      // just list routes for visibility
-      try{
-        const {data} = await call('GET','/routes');
-        const sample = (data.routes||[]).slice(0,8).join('", "');
-        addProbeChip('routes: ok'); addProbeChip(`sample: ["${sample}"]`);
-      }catch(e){
-        addProbeChip('routes: failed');
-      }
-    }
-
-    function addProbeChip(txt){
-      const el = document.createElement('span');
-      el.className='chip'; el.textContent = txt;
-      $('probeChips').appendChild(el);
-    }
+    // --------- API helpers
+    function getBase(){ return ($("#api").value || localStorage.getItem("apiBase") || "").trim(); }
+    function setBaseToUI(u){ $("#api").value = u || ""; }
+    function saveBase(u){ localStorage.setItem("apiBase", (u||"").trim()); }
 
     async function findBuyer(){
-      const host = ($('host').value||'').trim();
-      const region = $('region').value;
-      const radius = $('radius').value;
-      if (!host){ toast('enter host'); return; }
-      try{
-        const {data} = await call('GET','/api/leads/find-buyers',{ query:{ host, region, radius }});
-        const item = (data.items && data.items[0]) || {
-          host, platform:'web', title:`Buyer lead for ${host}`, created:new Date().toISOString(), temp:'warm', whyText:'Compat shim matched'
-        };
-        renderLatest(item);
-        renderResults([item]);
-      }catch(e){ toast(e.message||'find failed'); }
+      const base = getBase();
+      if(!base){ alert("Set API base and click Apply."); return; }
+
+      const supplierHost = normalizeHost($("#supplier-host").value);
+      const region = $("#region").value || "US/CA";
+      const radius = $("#radius").value || "50 mi";
+
+      const url = base.replace(/\\/+\$/,"") + "/api/leads/find-buyers?host="+encodeURIComponent(supplierHost)+"&region="+encodeURIComponent(region)+"&radius="+encodeURIComponent(radius);
+      const t0 = performance.now();
+      let resp;
+      try{ resp = await fetch(url); }
+      catch(e){ logHttp("GET  "+url+"  ERR ("+Math.round(performance.now()-t0)+"ms)"); clearLatestCandidate("network error"); return; }
+
+      const ms = Math.round(performance.now()-t0);
+      if(!resp.ok){ logHttp("GET  "+url+"  "+resp.status+" "+resp.statusText+" ("+ms+"ms)"); clearLatestCandidate("HTTP "+resp.status); return; }
+
+      let data = null; try{ data = await resp.json(); } catch{ logHttp("GET  "+url+"  200 OK (bad JSON) ("+ms+"ms)"); clearLatestCandidate("bad JSON"); return; }
+
+      // STRICT: accept only a real candidate
+      const c = {
+        host: data?.host || "",
+        platform: data?.platform || "web",
+        title: data?.title || "",
+        created: data?.created || new Date().toISOString(),
+        temp: data?.temp || "warm",
+        why: data?.why || "",
+        supplier_host: supplierHost
+      };
+
+      if(!c.host || !c.title){ logHttp("GET  "+url+"  200 OK ("+ms+"ms)"); clearLatestCandidate("no candidate from API"); return; }
+      if(c.host === supplierHost){ logHttp("GET  "+url+"  200 OK ("+ms+"ms)"); clearLatestCandidate("API returned supplier itself"); return; }
+
+      latestCandidate = c;
+      renderLatestCandidate(c);
+      prependRow(c);
+      logHttp("GET  "+url+"  200 OK ("+ms+"ms)");
     }
 
-    async function lock(temp){
-      if (!S.lastItem){ toast('no candidate'); return; }
+    async function lockLatest(tempWanted){
+      if(!latestCandidate){ clearLatestCandidate("no candidate yet"); return; }
+      const base = getBase();
+      const url = base.replace(/\\/+\$/,"") + "/api/leads/lock";
+      const body = { ...latestCandidate, temp: tempWanted || latestCandidate.temp || "warm" };
+
+      const t0 = performance.now();
+      let resp;
       try{
-        const {data} = await call('POST','/api/leads/lock',{ body:{ host:S.lastItem.host, temp } });
-        renderLatest(data.item);
-        toast(`locked ${temp} — watchers:${data.fomo?.watchers} competitors:${data.fomo?.competitors}`, true);
-      }catch(e){ toast(e.message||'lock failed'); }
+        resp = await fetch(url,{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+      }catch(e){
+        logHttp("POST "+url+"  ERR ("+Math.round(performance.now()-t0)+"ms)");
+        return;
+      }
+      const ms = Math.round(performance.now()-t0);
+      if(!resp.ok){ logHttp("POST "+url+"  "+resp.status+" "+resp.statusText+" ("+ms+"ms)"); return; }
+      logHttp("POST "+url+"  200 OK ("+ms+"ms)");
     }
 
-    async function deepen(){
-      if (!S.lastItem){ toast('no candidate'); return; }
-      const region = $('region').value, radius=$('radius').value;
-      try{
-        const {data} = await call('POST','/api/leads/deepen',{ body:{ host:S.lastItem.host, region, radius, topK:3 } });
-        renderResults(data.items||[]);
-      }catch(e){ toast(e.message||'deepen failed'); }
-    }
+    // --------- wire UI
+    function attach(){
+      // restore stored base
+      setBaseToUI(localStorage.getItem("apiBase") || "");
+      $("#apply").addEventListener("click", ()=>{ saveBase($("#api").value); logHttp("✓  Base restored"); });
+      $("#btn-find").addEventListener("click", findBuyer);
+      $("#btn-lock-warm").addEventListener("click", ()=>lockLatest("warm"));
+      $("#btn-lock-hot").addEventListener("click", ()=>lockLatest("hot"));
 
-    async function refreshSaved(kind){
-      const path = kind==='hot' ? '/api/leads/hot' : '/api/leads/warm';
-      try{
-        const {data} = await call('GET', path);
-        renderResults(data.items||[]);
-        toast(`loaded ${kind}`, true);
-      }catch(e){ toast(e.message||`load ${kind} failed`); }
+      // optional helpers
+      $("#btn-health").addEventListener("click", async ()=>{
+        const base=getBase(); if(!base){alert("Set API base.");return;}
+        const url=base.replace(/\\/+\$/,"")+"/healthz";
+        const t0=performance.now(); try{ const r=await fetch(url); logHttp("GET  "+url+"  "+r.status+" "+r.statusText+" ("+(Math.round(performance.now()-t0))+"ms)"); }catch{ logHttp("GET  "+url+"  ERR"); }
+      });
+      $("#btn-probe").addEventListener("click", ()=>logHttp("• probe (placeholder)"));
+      $("#btn-clear").addEventListener("click", ()=>{ $("#results-tbody").innerHTML=""; logHttp("• cleared list"); });
     }
-
-    function downloadCSV(kind){
-      try{
-        const url = buildURL(kind==='hot' ? '/api/leads/hot.csv' : '/api/leads/warm.csv');
-        const a=document.createElement('a'); a.href=url; a.download = `${kind}.csv`; document.body.appendChild(a); a.click(); a.remove();
-        toast(`CSV ${kind} started`, true);
-      }catch(e){ toast('bad base url'); }
-    }
-
-    // ------------- events -------------
-    function bind(id, fn){ const el=$(id); if(el) el.onclick = fn; }
-    function init(){
-      loadLS();
-      bind('apply', apply);
-      bind('btnClear', ()=>{ $('resultsBody').innerHTML='<tr><td colspan="7" class="muted">Cleared.</td></tr>'; renderLatest(null); log('—'); });
-      bind('btnHealth', health);
-      bind('btnProbe',  probe);
-      bind('saveKey', ()=>{ S.apiKey = ($('apiKey').value||'').trim(); saveLS(); toast('API key saved', true); });
-      bind('find', findBuyer);
-      bind('lockWarm', ()=>lock('warm'));
-      bind('lockHot',  ()=>lock('hot'));
-      bind('deeper', deepen);
-      bind('refreshWarm', ()=>refreshSaved('warm'));
-      bind('refreshHot',  ()=>refreshSaved('hot'));
-      bind('dlWarm', ()=>downloadCSV('warm'));
-      bind('dlHot',  ()=>downloadCSV('hot'));
-      // safe default base from LS; do not auto-fire calls
-      if (S.base) toast('Base restored', true);
-    }
-    init();
+    document.addEventListener("DOMContentLoaded", attach);
   </script>
 </body>
 </html>
