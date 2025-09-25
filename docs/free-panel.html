@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Free Panel</title>
-  <!-- silence favicon 404 on GH Pages -->
   <link rel="icon" href="data:,">
   <style>
     :root{--bg:#0f1420;--card:#121a2a;--ink:#e7ecf7;--mut:#9db0cf;--accent:#5aa1ff;--warm:#e3b341;--hot:#ff5a5a;--ok:#38c98b;--dim:#1a2438}
@@ -27,7 +26,7 @@
     .table{width:100%;border-collapse:collapse}
     .table th,.table td{padding:10px;border-bottom:1px solid #1d2943;font-size:14px}
     .mut{color:var(--mut)}
-    textarea{width:100%;min-height:120px;padding:10px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+    textarea{width:100%;min-height:120px;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace}
     .spacer{flex:1}
   </style>
 </head>
@@ -35,7 +34,7 @@
   <div class="page">
     <h1>Free Panel</h1>
 
-    <!-- API base ---------------------------------------------------------->
+    <!-- API base -->
     <div class="card">
       <div class="row">
         <div style="min-width:260px;flex:1">
@@ -52,7 +51,7 @@
       </div>
     </div>
 
-    <!-- Find ------------------------------------------------------------->
+    <!-- Finder -->
     <div class="card">
       <div class="row">
         <div style="min-width:280px;flex:1">
@@ -80,7 +79,7 @@
       </div>
     </div>
 
-    <!-- Latest candidate ------------------------------------------------->
+    <!-- Latest -->
     <div class="card">
       <label>Latest candidate</label>
       <div class="badges" style="margin-bottom:10px">
@@ -97,7 +96,7 @@
       </div>
     </div>
 
-    <!-- Saved / tools ---------------------------------------------------->
+    <!-- Saved -->
     <div class="card">
       <label>Saved (this session)</label>
       <div class="row">
@@ -108,44 +107,47 @@
       </div>
     </div>
 
-    <!-- HTTP log --------------------------------------------------------->
+    <!-- HTTP log -->
     <div class="card">
       <label for="http-log">HTTP log</label>
-      <textarea id="http-log" spellcheck="false" placeholder=""></textarea>
+      <textarea id="http-log" spellcheck="false"></textarea>
     </div>
 
-    <!-- Results ---------------------------------------------------------->
+    <!-- Results -->
     <div class="card">
       <label>Results</label>
       <table class="table">
         <thead>
-          <tr>
-            <th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why (human-readable)</th>
-          </tr>
+        <tr><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why (human-readable)</th></tr>
         </thead>
         <tbody id="results-tbody"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- Client logic (inline, no external files) --------------------------->
   <script>
-    // --------- tiny utilities
-    const $ = (sel) => document.querySelector(sel);
+    // ---------- utils
+    const $ = (s)=>document.querySelector(s);
     const logEl = $("#http-log");
+
     function logHttp(line){
       const ts = new Date().toISOString().substring(11,19);
       logEl.value = ts+"  "+line+"\\n"+logEl.value;
     }
-    function setBadge(id, text){ const el = $(id); if(el){ el.textContent = text || "—"; el.title = text || ""; } }
+    function setBadge(id, text){ const el=$(id); if(el){ el.textContent=text||"—"; el.title=text||""; } }
     function normalizeHost(raw){
       return (raw||"").trim().replace(/^https?:\\/\\//i,"").replace(/^www\\./i,"").toLowerCase();
     }
+    // safe URL join (no regex)
+    function join(base, path){
+      if(!base) return path;
+      const b = base.endsWith("/") ? base.slice(0,-1) : base;
+      return b + path;
+    }
 
-    // --------- state
+    // ---------- state
     let latestCandidate = null; // {host,title,platform,created,temp,why,supplier_host}
 
-    // --------- render
     function renderLatestCandidate(c){
       setBadge("#badge-host", c?.host);
       setBadge("#badge-title", c?.title);
@@ -154,44 +156,40 @@
       setBadge("#badge-why", c?.why);
     }
     function clearLatestCandidate(reason){
-      latestCandidate = null;
-      renderLatestCandidate({});
-      logHttp("✗  " + (reason||"no candidate"));
+      latestCandidate=null; renderLatestCandidate({});
+      if(reason) logHttp("✗  "+reason);
     }
     function prependRow(c){
-      const tb = $("#results-tbody"); if(!tb) return;
-      const tr = document.createElement("tr");
-      const cells = [c.host||"", c.platform||"web", c.title||"", c.created||"", c.temp||"", c.why||""];
-      cells.forEach(t=>{ const td=document.createElement("td"); td.textContent=t; tr.appendChild(td); });
+      const tb=$("#results-tbody"); if(!tb) return;
+      const tr=document.createElement("tr");
+      [c.host||"", c.platform||"web", c.title||"", c.created||"", c.temp||"", c.why||""]
+        .forEach(t=>{ const td=document.createElement("td"); td.textContent=t; tr.appendChild(td); });
       tb.prepend(tr);
     }
 
-    // --------- API helpers
     function getBase(){ return ($("#api").value || localStorage.getItem("apiBase") || "").trim(); }
-    function setBaseToUI(u){ $("#api").value = u || ""; }
-    function saveBase(u){ localStorage.setItem("apiBase", (u||"").trim()); }
+    function saveBase(u){ localStorage.setItem("apiBase",(u||"").trim()); }
 
+    // ---------- calls
     async function findBuyer(){
-      const base = getBase();
-      if(!base){ alert("Set API base and click Apply."); return; }
+      const base=getBase(); if(!base){ alert("Set API base and click Apply."); return; }
+      const supplierHost=normalizeHost($("#supplier-host").value);
+      const region=$("#region").value||"US/CA";
+      const radius=$("#radius").value||"50 mi";
+      const path=`/api/leads/find-buyers?host=${encodeURIComponent(supplierHost)}&region=${encodeURIComponent(region)}&radius=${encodeURIComponent(radius)}`;
+      const url=join(base,path);
 
-      const supplierHost = normalizeHost($("#supplier-host").value);
-      const region = $("#region").value || "US/CA";
-      const radius = $("#radius").value || "50 mi";
-
-      const url = base.replace(/\\/+\$/,"") + "/api/leads/find-buyers?host="+encodeURIComponent(supplierHost)+"&region="+encodeURIComponent(region)+"&radius="+encodeURIComponent(radius);
-      const t0 = performance.now();
+      const t0=performance.now();
       let resp;
-      try{ resp = await fetch(url); }
+      try{ resp=await fetch(url); }
       catch(e){ logHttp("GET  "+url+"  ERR ("+Math.round(performance.now()-t0)+"ms)"); clearLatestCandidate("network error"); return; }
 
-      const ms = Math.round(performance.now()-t0);
+      const ms=Math.round(performance.now()-t0);
       if(!resp.ok){ logHttp("GET  "+url+"  "+resp.status+" "+resp.statusText+" ("+ms+"ms)"); clearLatestCandidate("HTTP "+resp.status); return; }
 
-      let data = null; try{ data = await resp.json(); } catch{ logHttp("GET  "+url+"  200 OK (bad JSON) ("+ms+"ms)"); clearLatestCandidate("bad JSON"); return; }
+      let data=null; try{ data=await resp.json(); } catch{ logHttp("GET  "+url+"  200 OK (bad JSON) ("+ms+"ms)"); clearLatestCandidate("bad JSON"); return; }
 
-      // STRICT: accept only a real candidate
-      const c = {
+      const c={
         host: data?.host || "",
         platform: data?.platform || "web",
         title: data?.title || "",
@@ -201,51 +199,49 @@
         supplier_host: supplierHost
       };
 
+      // block supplier-as-candidate
       if(!c.host || !c.title){ logHttp("GET  "+url+"  200 OK ("+ms+"ms)"); clearLatestCandidate("no candidate from API"); return; }
       if(c.host === supplierHost){ logHttp("GET  "+url+"  200 OK ("+ms+"ms)"); clearLatestCandidate("API returned supplier itself"); return; }
 
-      latestCandidate = c;
-      renderLatestCandidate(c);
-      prependRow(c);
+      latestCandidate=c; renderLatestCandidate(c); prependRow(c);
       logHttp("GET  "+url+"  200 OK ("+ms+"ms)");
     }
 
     async function lockLatest(tempWanted){
       if(!latestCandidate){ clearLatestCandidate("no candidate yet"); return; }
-      const base = getBase();
-      const url = base.replace(/\\/+\$/,"") + "/api/leads/lock";
-      const body = { ...latestCandidate, temp: tempWanted || latestCandidate.temp || "warm" };
+      const base=getBase(); if(!base){ alert("Set API base and click Apply."); return; }
+      const url=join(base,"/api/leads/lock");
+      const body={...latestCandidate, temp: tempWanted || latestCandidate.temp || "warm"};
 
-      const t0 = performance.now();
+      const t0=performance.now();
       let resp;
       try{
-        resp = await fetch(url,{ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+        resp=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
       }catch(e){
-        logHttp("POST "+url+"  ERR ("+Math.round(performance.now()-t0)+"ms)");
-        return;
+        logHttp("POST "+url+"  ERR ("+Math.round(performance.now()-t0)+"ms)"); return;
       }
-      const ms = Math.round(performance.now()-t0);
+      const ms=Math.round(performance.now()-t0);
       if(!resp.ok){ logHttp("POST "+url+"  "+resp.status+" "+resp.statusText+" ("+ms+"ms)"); return; }
       logHttp("POST "+url+"  200 OK ("+ms+"ms)");
     }
 
-    // --------- wire UI
+    // ---------- wire
     function attach(){
-      // restore stored base
-      setBaseToUI(localStorage.getItem("apiBase") || "");
+      $("#api").value = localStorage.getItem("apiBase") || "";
       $("#apply").addEventListener("click", ()=>{ saveBase($("#api").value); logHttp("✓  Base restored"); });
       $("#btn-find").addEventListener("click", findBuyer);
       $("#btn-lock-warm").addEventListener("click", ()=>lockLatest("warm"));
       $("#btn-lock-hot").addEventListener("click", ()=>lockLatest("hot"));
 
-      // optional helpers
       $("#btn-health").addEventListener("click", async ()=>{
         const base=getBase(); if(!base){alert("Set API base.");return;}
-        const url=base.replace(/\\/+\$/,"")+"/healthz";
+        const url=join(base,"/healthz");
         const t0=performance.now(); try{ const r=await fetch(url); logHttp("GET  "+url+"  "+r.status+" "+r.statusText+" ("+(Math.round(performance.now()-t0))+"ms)"); }catch{ logHttp("GET  "+url+"  ERR"); }
       });
       $("#btn-probe").addEventListener("click", ()=>logHttp("• probe (placeholder)"));
       $("#btn-clear").addEventListener("click", ()=>{ $("#results-tbody").innerHTML=""; logHttp("• cleared list"); });
+
+      logHttp("• client ready");
     }
     document.addEventListener("DOMContentLoaded", attach);
   </script>
