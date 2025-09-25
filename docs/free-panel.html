@@ -1,226 +1,524 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Free Panel</title>
-  <link rel="icon" href="data:,">
-  <style>
-    :root{--bg:#0f1420;--card:#121a2a;--ink:#e7ecf7;--mut:#9db0cf;--accent:#5aa1ff;--warm:#e3b341;--hot:#ff5a5a;--ok:#38c98b;--dim:#1a2438}
-    *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
-    body{margin:0;background:var(--bg);color:var(--ink)}
-    .page{max-width:1000px;margin:24px auto;padding:0 16px}
-    h1{margin:0 0 12px;font-size:20px}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .card{background:var(--card);border:1px solid #1d2943;border-radius:10px;padding:14px;margin:12px 0}
-    label{font-size:12px;color:var(--mut);display:block;margin-bottom:6px}
-    input,select,button,textarea{border-radius:8px;border:1px solid #24406a;background:#101728;color:var(--ink)}
-    input,select{height:36px;padding:0 10px}
-    button{height:36px;padding:0 12px;cursor:pointer}
-    button.primary{background:var(--accent);border-color:#2c6ad4;color:#fff}
-    button.warm{background:var(--warm);border-color:#a68021;color:#1a1207}
-    button.hot{background:var(--hot);border-color:#c23c3c;color:#fff}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    .badge{display:inline-block;background:var(--dim);padding:6px 10px;border-radius:999px;font-size:12px;margin-right:8px}
-    .ready-dot{width:9px;height:9px;border-radius:50%;display:inline-block;vertical-align:middle;background:#9b9b9b;margin-left:8px}
-    .ready-dot.on{background:var(--ok)}
-    .table{width:100%;border-collapse:collapse}
-    .table th,.table td{padding:10px;border-bottom:1px solid #1d2943;font-size:14px}
-    textarea{width:100%;min-height:120px;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Free Panel — Buyers Finder</title>
+<style>
+  :root {
+    --bg: #0f1220; --panel:#151a2e; --muted:#222846; --text:#e9ecf8; --sub:#aeb6d9;
+    --acc:#6ea8fe; --ok:#2fb170; --warn:#ffb02e; --hot:#ff4769; --warm:#ffc857; --cool:#6ec6ff; --bad:#ff5d5d;
+    --chip:#2a315a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none}
+  .wrap{display:flex;min-height:100vh}
+  .left{width:420px;max-width:100%;padding:16px;border-right:1px solid var(--muted);background:linear-gradient(180deg,var(--panel),#10142a)}
+  .right{flex:1;min-width:0;padding:16px}
+  h2{margin:12px 0 8px;font-size:16px}
+  h3{margin:16px 0 8px;font-size:14px;color:var(--sub)}
+  label{display:block;font-size:12px;color:var(--sub);margin:6px 0 4px}
+  input,select,textarea{
+    width:100%;background:#0d1124;border:1px solid var(--muted);color:var(--text);
+    border-radius:8px;padding:10px 12px;outline:none;
+  }
+  textarea{min-height:68px;resize:vertical}
+  .row{display:flex;gap:8px}
+  .row > *{flex:1}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;background:#1e264a;border:1px solid var(--muted);
+    color:var(--text);padding:10px 12px;border-radius:8px;cursor:pointer;user-select:none
+  }
+  .btn:hover{background:#263062}
+  .btn.primary{background:var(--acc);border-color:transparent;color:#0b1024}
+  .btn.good{background:var(--ok);border-color:transparent;color:#03120b}
+  .btn.warn{background:var(--warn);border-color:transparent;color:#231500}
+  .btn.ghost{background:transparent}
+  .grid{display:grid;grid-template-columns: 1fr 1fr;gap:10px}
+  .section{padding:12px;border:1px solid var(--muted);border-radius:12px;background:rgba(255,255,255,0.02)}
+  .small{font-size:12px;color:var(--sub)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .chip{padding:3px 8px;border-radius:999px;background:var(--chip);color:#cdd6ff;font-size:12px}
+  .tag-hot{background:rgba(255,71,105,.14);color:#ff9fb0}
+  .tag-warm{background:rgba(255,200,87,.16);color:#ffe2a8}
+  .tag-cool{background:rgba(110,198,255,.16);color:#bfe6ff}
+  .table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  .table th{font-size:12px;color:var(--sub);text-align:left;padding:0 10px}
+  .table td{
+    background:#0e1430;padding:12px 10px;border-top:1px solid #1a2144;border-bottom:1px solid #1a2144
+  }
+  .table tr td:first-child{border-left:1px solid #1a2144;border-top-left-radius:8px;border-bottom-left-radius:8px}
+  .table tr td:last-child{border-right:1px solid #1a2144;border-top-right-radius:8px;border-bottom-right-radius:8px}
+  .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+  pre.log{
+    background:#0a0e22;border:1px solid #1a2144;border-radius:12px;padding:10px;max-height:200px;overflow:auto;color:#9cb3ff
+  }
+  .kbd{border:1px solid #41509a;border-bottom-width:2px;padding:2px 6px;border-radius:6px;background:#101949}
+  .hint{color:#8fa3ff}
+  .split{display:grid;grid-template-columns: 1.2fr 1fr;gap:12px}
+  @media (max-width:1100px){.split{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-  <div class="page">
-    <h1>
-      Free Panel <span class="badge" id="status-text">booting…</span><span class="ready-dot" id="ready-dot"></span>
-    </h1>
-
-    <div class="card">
+<div class="wrap">
+  <div class="left">
+    <h2>Connection</h2>
+    <div class="section">
+      <label>API Base (your server root)</label>
+      <input id="apiBase" placeholder="https://your-domain.tld" />
       <div class="row">
-        <div style="min-width:280px;flex:1">
-          <label for="api">API base</label>
-          <input id="api" placeholder="https://p01-animated-cellar-…code.run"/>
+        <div>
+          <label>x-api-key (optional)</label>
+          <input id="apiKey" placeholder="leave blank if none" />
         </div>
-        <div><label>&nbsp;</label><button id="apply" class="primary">Apply</button></div>
-        <div class="row" style="margin-left:auto">
-          <label>&nbsp;</label>
-          <button id="btn-health">Health</button>
-          <button id="btn-clear">Clear list</button>
+        <div style="align-self:flex-end">
+          <button class="btn" id="btnSaveConn">Save</button>
         </div>
+      </div>
+      <div class="small">Tip: if this HTML is served by the same host as the API, you can leave API Base blank.</div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="btnPing">Ping</button>
+        <button class="btn ghost" id="btnClearLog">Clear Log</button>
       </div>
     </div>
 
-    <div class="card">
+    <h2 style="margin-top:14px">Supplier</h2>
+    <div class="section">
+      <label>Supplier Host (their domain, no http)</label>
+      <input id="supplierHost" placeholder="example.com" />
       <div class="row">
-        <div style="min-width:260px;flex:1">
-          <label for="supplier-host">Supplier host</label>
-          <input id="supplier-host" placeholder="peekpackaging.com"/>
+        <div>
+          <label>City (boost)</label>
+          <input id="supplierCity" placeholder="e.g., los angeles" />
         </div>
         <div>
-          <label for="region">Region</label>
-          <select id="region">
-            <option value="US/CA" selected>US/CA</option>
-            <option value="US">US</option>
-            <option value="CA">CA</option>
+          <label>Min Tier</label>
+          <select id="minTier">
+            <option value="C">Tier C first</option>
+            <option value="B">Tier B+</option>
+            <option value="A">No filter (A/B/C)</option>
           </select>
         </div>
-        <div>
-          <label for="radius">Radius</label>
-          <select id="radius">
-            <option>25 mi</option><option selected>50 mi</option><option>100 mi</option><option>200 mi</option>
-          </select>
-        </div>
-        <div><label>&nbsp;</label><button id="btn-find" class="primary">Find buyer</button></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <label>Latest candidate</label>
-      <div style="margin-bottom:10px">
-        <span class="badge" id="b-host">—</span>
-        <span class="badge" id="b-title">—</span>
-        <span class="badge" id="b-when">—</span>
-        <span class="badge" id="b-temp">—</span>
-        <span class="badge" id="b-why">—</span>
       </div>
       <div class="row">
-        <button id="btn-lock-warm" class="warm">Lock (Warm)</button>
-        <button id="btn-lock-hot" class="hot">Lock (Hot)</button>
+        <div>
+          <label>Limit</label>
+          <select id="limit">
+            <option>6</option><option selected>12</option><option>20</option><option>30</option>
+          </select>
+        </div>
+        <div style="align-self:flex-end">
+          <button class="btn primary" id="btnFind">Find Buyers</button>
+        </div>
       </div>
+      <div class="small hint" id="activeProfileHint"></div>
     </div>
 
-    <div class="card">
-      <label for="http-log">HTTP log</label>
-      <textarea id="http-log" spellcheck="false"></textarea>
+    <h2 style="margin-top:14px">Preference Profile</h2>
+    <div class="section">
+      <div class="row">
+        <div>
+          <label>Profile ID</label>
+          <input id="profileId" placeholder="auto if blank" />
+        </div>
+        <div style="align-self:flex-end">
+          <button class="btn" id="btnLoadProfile">Load</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <label>City (default boost)</label>
+          <input id="prefCity" placeholder="e.g., los angeles" />
+        </div>
+        <div>
+          <label>Exclude Giants (Tier A)</label>
+          <select id="prefExcludeGiants">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+      </div>
+
+      <h3>Hot cues (one per line)</h3>
+      <textarea id="prefHot" placeholder="grand opening&#10;new launch&#10;pre-order"></textarea>
+
+      <h3>Warm cues (one per line)</h3>
+      <textarea id="prefWarm" placeholder="wholesale&#10;private label&#10;co-pack"></textarea>
+
+      <h3>Must-have (optional, one must appear for HOT)</h3>
+      <textarea id="prefMust" placeholder="(optional) e.g., preorder"></textarea>
+
+      <div class="grid">
+        <div>
+          <h3>Prefer Segments</h3>
+          <textarea id="prefSegPrefer" placeholder="beverage&#10;bakery&#10;beauty"></textarea>
+        </div>
+        <div>
+          <h3>Prefer Tags</h3>
+          <textarea id="prefTagPrefer" placeholder="label&#10;carton&#10;shipper"></textarea>
+        </div>
+      </div>
+      <div class="grid">
+        <div>
+          <h3>Avoid Segments</h3>
+          <textarea id="prefSegAvoid" placeholder="automotive"></textarea>
+        </div>
+        <div>
+          <h3>Avoid Tags</h3>
+          <textarea id="prefTagAvoid" placeholder="drum"></textarea>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <button class="btn good" id="btnSaveProfile">Save / Update Profile</button>
+        <button class="btn ghost" id="btnForgetProfile">Forget ID</button>
+      </div>
+      <div class="small">We store profile ID & API settings in <span class="kbd">localStorage</span> only.</div>
     </div>
 
-    <div class="card">
-      <label>Results</label>
-      <table class="table">
-        <thead><tr><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why</th></tr></thead>
-        <tbody id="results"></tbody>
-      </table>
+  </div>
+  <div class="right">
+    <div class="split">
+      <div>
+        <h2>Results</h2>
+        <table class="table" id="resultsTable">
+          <thead>
+            <tr>
+              <th style="width:70px">Score</th>
+              <th style="width:90px">Temp</th>
+              <th>Buyer</th>
+              <th>Why</th>
+              <th style="width:120px">Action</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody">
+            <!-- rows injected -->
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h2>HTTP Log</h2>
+        <pre class="log mono" id="httpLog"></pre>
+      </div>
     </div>
   </div>
+</div>
 
-  <script>
-    // ----------------- helpers (NO regex)
-    const $ = (s)=>document.querySelector(s);
-    const now = ()=>new Date().toISOString();
-    const logEl = $("#http-log");
-    function log(line){ const ts=now().slice(11,19); logEl.value = ts+"  "+line+"\\n"+logEl.value; }
+<script>
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const logEl = $('#httpLog');
 
-    function join(base, path){
-      if(!base) return path;
-      let b = base.trim();
-      if(b.endsWith("/")) b = b.slice(0,-1);
-      return b + path;
+  const S = {
+    apiBase: $('#apiBase'),
+    apiKey: $('#apiKey'),
+    btnSaveConn: $('#btnSaveConn'),
+    btnPing: $('#btnPing'),
+    btnClearLog: $('#btnClearLog'),
+
+    supplierHost: $('#supplierHost'),
+    supplierCity: $('#supplierCity'),
+    minTier: $('#minTier'),
+    limit: $('#limit'),
+    btnFind: $('#btnFind'),
+
+    profileId: $('#profileId'),
+    prefCity: $('#prefCity'),
+    prefExcludeGiants: $('#prefExcludeGiants'),
+    prefHot: $('#prefHot'),
+    prefWarm: $('#prefWarm'),
+    prefMust: $('#prefMust'),
+    prefSegPrefer: $('#prefSegPrefer'),
+    prefTagPrefer: $('#prefTagPrefer'),
+    prefSegAvoid: $('#prefSegAvoid'),
+    prefTagAvoid: $('#prefTagAvoid'),
+    btnSaveProfile: $('#btnSaveProfile'),
+    btnLoadProfile: $('#btnLoadProfile'),
+    btnForgetProfile: $('#btnForgetProfile'),
+    activeProfileHint: $('#activeProfileHint'),
+
+    resultsBody: $('#resultsBody'),
+  };
+
+  const LS = {
+    get k(){ return {
+      apiBase: 'fp.apiBase',
+      apiKey: 'fp.apiKey',
+      profileId: 'fp.profileId',
+      prefCity: 'fp.pref.city',
+      prefExcludeGiants: 'fp.pref.excludeGiants',
+      prefHot: 'fp.pref.hot',
+      prefWarm: 'fp.pref.warm',
+      prefMust: 'fp.pref.must',
+      prefSegPrefer: 'fp.pref.segPrefer',
+      prefTagPrefer: 'fp.pref.tagPrefer',
+      prefSegAvoid: 'fp.pref.segAvoid',
+      prefTagAvoid: 'fp.pref.tagAvoid',
+      supplierHost: 'fp.supplier.host',
+      supplierCity: 'fp.supplier.city',
+      minTier: 'fp.supplier.minTier',
+      limit: 'fp.supplier.limit',
+    }},
+    save(k,v){ localStorage.setItem(k, v ?? ''); },
+    load(k, d=''){ const v = localStorage.getItem(k); return v==null?d:v; },
+    del(k){ localStorage.removeItem(k); }
+  };
+
+  function ts(){ return new Date().toISOString().replace('T',' ').replace('Z',''); }
+  function log(line){ logEl.textContent += `[${ts()}] ${line}\n`; logEl.scrollTop = logEl.scrollHeight; }
+
+  function fullUrl(p){
+    const base = (S.apiBase.value||'').trim().replace(/\/+$/,'');
+    if (!base) return p; // relative to same origin
+    if (p.startsWith('http')) return p;
+    return base + p;
+  }
+
+  async function fetchJSON(method, path, body, opts={}){
+    const url = fullUrl(path);
+    const headers = {'content-type':'application/json'};
+    const k = (S.apiKey.value||'').trim();
+    if (k) headers['x-api-key'] = k;
+
+    const init = { method, headers, redirect: 'follow' };
+    if (body) init.body = JSON.stringify(body);
+
+    log(`${method} ${url}`);
+    const t0 = performance.now();
+    let resp, data, ok=false;
+    try{
+      resp = await fetch(url, init);
+      const ct = resp.headers.get('content-type')||'';
+      if (ct.includes('application/json')) data = await resp.json();
+      else data = { raw: await resp.text() };
+      ok = resp.ok;
+      log(`↳ ${resp.status} ${resp.statusText} (${Math.round(performance.now()-t0)} ms)`);
+    }catch(e){
+      log(`↳ network error: ${e && e.message ? e.message : e}`);
+      throw e;
     }
-    function normalizeHost(input){
-      let s = (input||"").trim();
-      if(!s) return "";
-      // ensure it has a scheme so URL() parses
-      const low = s.toLowerCase();
-      if(!(low.startsWith("http://") || low.startsWith("https://"))) s = "http://" + s;
-      try{
-        const u = new URL(s);
-        let h = (u.hostname||"").toLowerCase();
-        if(h.startsWith("www.")) h = h.slice(4);
-        return h;
-      }catch{
-        // fallback: lowercase & drop leading www.
-        let h = (input||"").trim().toLowerCase();
-        if(h.startsWith("www.")) h = h.slice(4);
-        return h;
+    if (!ok){
+      log(`↳ body: ${JSON.stringify(data)}`);
+      const err = new Error((data && data.error) ? data.error : `HTTP ${resp.status}`);
+      err.status = resp.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  function splitLines(s){
+    return (s||'').split(/[\n,;]+/).map(x=>x.trim().toLowerCase()).filter(Boolean);
+  }
+
+  function saveConn(){
+    LS.save(LS.k.apiBase, S.apiBase.value||'');
+    LS.save(LS.k.apiKey, S.apiKey.value||'');
+    log('saved connection');
+  }
+
+  async function ping(){
+    try{
+      const r = await fetchJSON('GET','/healthz');
+      log(`healthz: ${JSON.stringify(r)}`);
+    }catch(e){}
+  }
+
+  function setActiveProfileHint(){
+    const pid = (S.profileId.value||'').trim();
+    if (pid) S.activeProfileHint.textContent = `Using profileId=${pid} when searching (unless you clear it).`;
+    else S.activeProfileHint.textContent = `No profile set. You can still search; defaults apply.`;
+  }
+
+  async function saveProfile(){
+    const body = {
+      id: (S.profileId.value||'').trim() || undefined,
+      city: (S.prefCity.value||'').trim() || undefined,
+      excludeGiants: S.prefExcludeGiants.value === 'true',
+      hotCues: splitLines(S.prefHot.value),
+      warmCues: splitLines(S.prefWarm.value),
+      mustHave: splitLines(S.prefMust.value),
+      preferSegments: splitLines(S.prefSegPrefer.value),
+      preferTags: splitLines(S.prefTagPrefer.value),
+      avoidSegments: splitLines(S.prefSegAvoid.value),
+      avoidTags: splitLines(S.prefTagAvoid.value),
+    };
+    try{
+      const r = await fetchJSON('POST','/api/prefs/upsert', body);
+      const id = r.id || (r.profile && r.profile.id) || '';
+      if (id){
+        S.profileId.value = id;
+        LS.save(LS.k.profileId, id);
+        log(`profile saved id=${id}`);
+        setActiveProfileHint();
       }
+      // Persist form
+      LS.save(LS.k.prefCity, S.prefCity.value||'');
+      LS.save(LS.k.prefExcludeGiants, S.prefExcludeGiants.value||'false');
+      LS.save(LS.k.prefHot, S.prefHot.value||'');
+      LS.save(LS.k.prefWarm, S.prefWarm.value||'');
+      LS.save(LS.k.prefMust, S.prefMust.value||'');
+      LS.save(LS.k.prefSegPrefer, S.prefSegPrefer.value||'');
+      LS.save(LS.k.prefTagPrefer, S.prefTagPrefer.value||'');
+      LS.save(LS.k.prefSegAvoid, S.prefSegAvoid.value||'');
+      LS.save(LS.k.prefTagAvoid, S.prefTagAvoid.value||'');
+    }catch(e){}
+  }
+
+  async function loadProfile(){
+    const id = (S.profileId.value||'').trim();
+    if (!id){ log('no profile id'); return; }
+    try{
+      const r = await fetchJSON('GET', `/api/prefs/${encodeURIComponent(id)}`);
+      const p = r.profile||{};
+      S.prefCity.value = p.city || '';
+      S.prefExcludeGiants.value = String(!!p.excludeGiants);
+      S.prefHot.value = (p.hotCues||[]).join('\n');
+      S.prefWarm.value = (p.warmCues||[]).join('\n');
+      S.prefMust.value = (p.mustHave||[]).join('\n');
+      S.prefSegPrefer.value = (p.preferSegments||[]).join('\n');
+      S.prefTagPrefer.value = (p.preferTags||[]).join('\n');
+      S.prefSegAvoid.value = (p.avoidSegments||[]).join('\n');
+      S.prefTagAvoid.value = (p.avoidTags||[]).join('\n');
+      // save snapshot
+      saveProfile(); // persist to LS (reuses upsert but fine)
+      setActiveProfileHint();
+      log(`profile loaded id=${id}`);
+    }catch(e){}
+  }
+
+  function badge(temp){
+    const t = (temp||'').toLowerCase();
+    if (t==='hot')   return '<span class="chip tag-hot">HOT</span>';
+    if (t==='warm')  return '<span class="chip tag-warm">WARM</span>';
+    return '<span class="chip tag-cool">COOL</span>';
+  }
+
+  function renderRows(items){
+    S.resultsBody.innerHTML = '';
+    if (!items || items.length===0){
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 5;
+      td.textContent = 'No items';
+      tr.appendChild(td);
+      S.resultsBody.appendChild(tr);
+      return;
     }
-    function badge(id, v){ const el=$(id); if(el){ el.textContent=v||"—"; el.title=v||""; } }
-    function renderLatest(c){
-      badge("#b-host",c?.host); badge("#b-title",c?.title); badge("#b-when",c?.created);
-      badge("#b-temp",c?.temp); badge("#b-why",c?.why);
+    for (const it of items){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="mono">${Math.round(it.score||0)}</td>
+        <td>${badge(it.temp)}</td>
+        <td>
+          <div class="mono" style="font-weight:600">${it.host||''}</div>
+          <div class="small" style="opacity:.85">${it.title||''}</div>
+        </td>
+        <td><div class="small">${(it.why||'').replace(/\s·\s/g,' • ')}</div></td>
+        <td>
+          <button class="btn" data-lock="${encodeURIComponent(it.host||'')}">Lock</button>
+        </td>
+      `;
+      S.resultsBody.appendChild(tr);
     }
-    function addRow(c){
-      const tb=$("#results"); const tr=document.createElement("tr");
-      [c.host,c.platform||"web",c.title,c.created,c.temp,c.why].forEach(t=>{
-        const td=document.createElement("td"); td.textContent=t||""; tr.appendChild(td);
-      });
-      tb.prepend(tr);
+  }
+
+  async function findBuyers(){
+    const host = (S.supplierHost.value||'').trim().toLowerCase();
+    if (!host){ alert('Enter supplier host'); return; }
+    LS.save(LS.k.supplierHost, host);
+    const city = (S.supplierCity.value||'').trim();
+    LS.save(LS.k.supplierCity, city);
+    LS.save(LS.k.minTier, S.minTier.value);
+    LS.save(LS.k.limit, S.limit.value);
+
+    const params = new URLSearchParams();
+    params.set('host', host);
+    if (city) params.set('city', city);
+    params.set('minTier', S.minTier.value);
+    params.set('limit', String(S.limit.value));
+    const pid = (S.profileId.value||'').trim();
+    if (pid) params.set('profileId', pid);
+
+    S.btnFind.disabled = true;
+    S.btnFind.textContent = 'Searching…';
+    try{
+      const r = await fetchJSON('GET', `/api/leads/find-buyers?${params.toString()}`);
+      renderRows(r.items||[]);
+    }catch(e){
+      renderRows([]);
+    }finally{
+      S.btnFind.disabled = false;
+      S.btnFind.textContent = 'Find Buyers';
     }
+  }
 
-    let latest = null;
-    function setLatest(c){ latest=c; renderLatest(c||{}); }
+  async function onLockHost(host, rowBtn){
+    const title = 'Locked by user';
+    try{
+      const r = await fetchJSON('POST','/api/leads/lock',{ host, title, temp: 'warm' });
+      rowBtn.textContent = 'Locked ✓';
+      rowBtn.classList.add('good');
+      rowBtn.disabled = true;
+    }catch(e){}
+  }
 
-    function base(){ return ($("#api").value || localStorage.getItem("apiBase") || "").trim(); }
+  function hookEvents(){
+    S.btnSaveConn.addEventListener('click', saveConn);
+    S.btnPing.addEventListener('click', ping);
+    S.btnClearLog.addEventListener('click', ()=>{ logEl.textContent=''; });
 
-    // ----------------- actions
-    async function findBuyer(){
-      const b = base(); if(!b){ alert("Set API base then Apply."); return; }
-      const supplier = normalizeHost($("#supplier-host").value);
-      const region = $("#region").value || "US/CA";
-      const radius = $("#radius").value || "50 mi";
-      const url = join(b, "/api/leads/find-buyers?host="+encodeURIComponent(supplier)+"&region="+encodeURIComponent(region)+"&radius="+encodeURIComponent(radius));
-
-      const t0 = performance.now();
-      let r; try { r = await fetch(url); } catch(e){ log("GET  "+url+"  ERR"); setLatest(null); return; }
-      const ms = Math.round(performance.now()-t0);
-      if(!r.ok){ log("GET  "+url+"  "+r.status+" "+r.statusText+" ("+ms+"ms)"); setLatest(null); return; }
-
-      let d=null; try{ d = await r.json(); }catch{ log("GET  "+url+"  200 OK (bad JSON) ("+ms+"ms)"); setLatest(null); return; }
-
-      const c = {
-        host: (d && d.host) || "", title: (d && d.title) || "",
-        platform: (d && d.platform) || "web", created: (d && d.created) || now(),
-        temp: (d && d.temp) || "warm", why: (d && d.why) || "", supplier_host: supplier
-      };
-
-      if(!c.host || !c.title){ log("GET  "+url+"  200 OK ("+ms+"ms)"); setLatest(null); log("✗ no candidate from API"); return; }
-      if(c.host === supplier){ log("GET  "+url+"  200 OK ("+ms+"ms)"); setLatest(null); log("✗ API returned supplier itself"); return; }
-
-      setLatest(c); addRow(c); log("GET  "+url+"  200 OK ("+ms+"ms)");
-    }
-
-    async function lock(tempWanted){
-      if(!latest){ log("✗ no candidate yet"); return; }
-      const b = base(); if(!b){ alert("Set API base then Apply."); return; }
-      const url = join(b, "/api/leads/lock");
-      const body = {...latest, temp: tempWanted || latest.temp || "warm"};
-
-      const t0 = performance.now();
-      let r; try{
-        r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-      }catch(e){ log("POST "+url+"  ERR"); return; }
-      const ms = Math.round(performance.now()-t0);
-      log("POST "+url+"  "+r.status+" "+r.statusText+" ("+ms+"ms)");
-    }
-
-    // ----------------- boot (no IIFE crashes; wait for DOM)
-    document.addEventListener("DOMContentLoaded", () => {
-      try{
-        $("#apply").addEventListener("click", ()=>{ localStorage.setItem("apiBase", ($("#api").value||"").trim()); log("✓ Base restored"); });
-        $("#btn-health").addEventListener("click", async ()=>{
-          const b=base(); if(!b){ alert("Set API base."); return; }
-          const url = join(b, "/healthz");
-          const t0=performance.now();
-          try{ const r=await fetch(url); log("GET  "+url+"  "+r.status+" "+r.statusText+" ("+Math.round(performance.now()-t0)+"ms)"); }
-          catch{ log("GET  "+url+"  ERR"); }
-        });
-        $("#btn-clear").addEventListener("click", ()=>{ $("#results").innerHTML=""; log("• cleared list"); });
-        $("#btn-find").addEventListener("click", findBuyer);
-        $("#btn-lock-warm").addEventListener("click", ()=>lock("warm"));
-        $("#btn-lock-hot").addEventListener("click", ()=>lock("hot"));
-
-        const saved = localStorage.getItem("apiBase") || "";
-        if(saved) $("#api").value = saved;
-
-        $("#status-text").textContent = "client ready";
-        $("#ready-dot").classList.add("on");
-        log("• client ready");
-        window.__fpReady = true;
-      }catch(err){
-        console.error("boot error", err);
-        $("#status-text").textContent = "boot error (see console)";
-      }
+    S.btnSaveProfile.addEventListener('click', saveProfile);
+    S.btnLoadProfile.addEventListener('click', loadProfile);
+    S.btnForgetProfile.addEventListener('click', ()=>{
+      LS.del(LS.k.profileId);
+      S.profileId.value = '';
+      setActiveProfileHint();
+      log('forgot profile id');
     });
-  </script>
+
+    S.btnFind.addEventListener('click', findBuyers);
+
+    S.resultsBody.addEventListener('click', (e)=>{
+      const b = e.target.closest('button');
+      if (!b) return;
+      const enc = b.getAttribute('data-lock');
+      if (!enc) return;
+      const host = decodeURIComponent(enc);
+      onLockHost(host, b);
+    });
+  }
+
+  function restore(){
+    S.apiBase.value = LS.load(LS.k.apiBase,'');
+    S.apiKey.value = LS.load(LS.k.apiKey,'');
+
+    S.profileId.value = LS.load(LS.k.profileId,'');
+    S.prefCity.value = LS.load(LS.k.prefCity,'');
+    S.prefExcludeGiants.value = LS.load(LS.k.prefExcludeGiants,'false');
+    S.prefHot.value = LS.load(LS.k.prefHot,'');
+    S.prefWarm.value = LS.load(LS.k.prefWarm,'');
+    S.prefMust.value = LS.load(LS.k.prefMust,'');
+    S.prefSegPrefer.value = LS.load(LS.k.prefSegPrefer,'');
+    S.prefTagPrefer.value = LS.load(LS.k.prefTagPrefer,'');
+    S.prefSegAvoid.value = LS.load(LS.k.prefSegAvoid,'');
+    S.prefTagAvoid.value = LS.load(LS.k.prefTagAvoid,'');
+
+    S.supplierHost.value = LS.load(LS.k.supplierHost,'');
+    S.supplierCity.value = LS.load(LS.k.supplierCity,'');
+    S.minTier.value = LS.load(LS.k.minTier,'C') || 'C';
+    S.limit.value = LS.load(LS.k.limit,'12') || '12';
+
+    setActiveProfileHint();
+  }
+
+  // Boot
+  hookEvents();
+  restore();
+  log('ready');
+})();
+</script>
 </body>
 </html>
