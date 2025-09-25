@@ -1,8 +1,10 @@
 // src/routes/leads.ts
 import { Router, Request, Response } from 'express';
-import { q } from '../shared/db'; // DO NOT CHANGE THIS PATH
+import { q } from '../shared/db';
 
 const leads = Router();
+
+/* ========== types ========== */
 
 type Temp = 'warm' | 'hot';
 type Platform = 'web';
@@ -18,7 +20,7 @@ export interface Candidate {
   why: string;
 }
 
-/* ----------------- helpers ----------------- */
+/* ========== tiny utils ========== */
 
 const nowISO = () => new Date().toISOString();
 
@@ -33,137 +35,160 @@ const normalizeHost = (input: string): string => {
   }
 };
 
-const has = (s: string, ...needles: string[]) =>
-  needles.some(n => s.includes(n));
+const has = (s: string, ...needles: string[]) => needles.some(n => s.includes(n));
 
-/** Try to infer the supplier’s packaging specialization from its domain. */
+/* ========== category inference from supplier host ========== */
+
 function inferPackagingCategoryFromHost(host: string): string[] {
   const h = host.toLowerCase();
   const cats: string[] = [];
 
-  if (has(h, 'shrink', 'stretch', 'film', 'poly', 'plastic')) cats.push('food', 'beverage', 'retail');
-  if (has(h, 'label', 'labels', 'sticker')) cats.push('beauty', 'beverage', 'cpg');
-  if (has(h, 'box', 'boxes', 'corrug', 'carton')) cats.push('ecom', 'retail', 'food');
-  if (has(h, 'bottle', 'cap', 'closure')) cats.push('beverage', 'beauty');
-  if (has(h, 'pouch', 'bag', 'sachet')) cats.push('food', 'pet', 'cpg');
+  if (has(h, 'shrink', 'stretch', 'film', 'poly', 'plastic')) cats.push('food','beverage','retail');
+  if (has(h, 'label', 'labels', 'sticker')) cats.push('beauty','beverage','cpg','retail');
+  if (has(h, 'box', 'boxes', 'corrug', 'carton')) cats.push('ecom','retail','food');
+  if (has(h, 'bottle', 'cap', 'closure')) cats.push('beverage','beauty');
+  if (has(h, 'pouch', 'bag', 'sachet')) cats.push('food','pet','cpg');
   if (has(h, 'tube', 'jar', 'cosmetic')) cats.push('beauty');
-  if (has(h, 'foam')) cats.push('electronics', 'industrial');
-  if (cats.length === 0) cats.push('cpg'); // default broad CPG
+  if (has(h, 'mailer', 'void', 'foam')) cats.push('ecom','electronics','industrial');
+  if (cats.length === 0) cats.push('cpg'); // broad default
 
-  // de-duplicate while preserving order
   return [...new Set(cats)];
 }
 
-/* ----------------- curated catalog seed -----------------
-   This is a starter set; we’ll expand as we learn. Each entry is a “buyer”
-   with high-prob supplier programs and size hints. */
+/* ========== catalog seed (expanded mid-market) ========== */
 
 interface BuyerSeed {
   host: string;
   titleHint?: string;
-  regions: Region[];          // where they buy
+  regions: Region[];
   size: SizeBand;
-  cats: string[];             // categories they buy packaging for
-  vendorPaths?: string[];     // likely vendor / suppliers URLs
+  cats: string[];
+  vendorPaths?: string[];
 }
 
 const CATALOG: BuyerSeed[] = [
-  // FOOD / BEVERAGE (US/CA)
-  { host: 'pepsico.com',                regions: ['US','NA'], size: 'mega', cats: ['beverage','cpg'], vendorPaths: ['/suppliers','/supplier-portal'] },
-  { host: 'coca-colacompany.com',       regions: ['US','NA'], size: 'mega', cats: ['beverage'],      vendorPaths: ['/suppliers'] },
-  { host: 'nestle.com',                 regions: ['NA'],       size: 'mega', cats: ['food','cpg'],    vendorPaths: ['/suppliers'] },
-  { host: 'mondelezinternational.com',  regions: ['US','NA'],  size: 'mega', cats: ['food','cpg'],    vendorPaths: ['/suppliers'] },
-  { host: 'generalmills.com',           regions: ['US','NA'],  size: 'large',cats: ['food','cpg'],    vendorPaths: ['/suppliers'] },
-  { host: 'kraftheinzcompany.com',      regions: ['US','NA'],  size: 'large',cats: ['food','cpg'] },
-  { host: 'conagra.com',                regions: ['US'],       size: 'large',cats: ['food','cpg'] },
-  { host: 'hormelfoods.com',            regions: ['US'],       size: 'large',cats: ['food'] },
-  { host: 'smuckers.com',               regions: ['US'],       size: 'mid',  cats: ['food'] },
-  { host: 'danone.com',                 regions: ['NA'],       size: 'large',cats: ['food','beverage'] },
-  { host: 'keurigdrpepper.com',         regions: ['US'],       size: 'large',cats: ['beverage'] },
-  { host: 'postholdings.com',           regions: ['US'],       size: 'mid',  cats: ['food'] },
+  // ---- FOOD / BEV (mix of mid/large, US & CA)
+  { host: 'generalmills.com', regions: ['US','NA'], size: 'large', cats: ['food','cpg'], vendorPaths: ['/suppliers'] },
+  { host: 'postholdings.com', regions: ['US'], size: 'mid', cats: ['food'] },
+  { host: 'smuckers.com', regions: ['US'], size: 'mid', cats: ['food'] },
+  { host: 'danone.com', regions: ['NA'], size: 'large', cats: ['food','beverage'] },
+  { host: 'conagra.com', regions: ['US'], size: 'large', cats: ['food','cpg'] },
+  { host: 'hormelfoods.com', regions: ['US'], size: 'large', cats: ['food'] },
+  { host: 'kraftheinzcompany.com', regions: ['US','NA'], size: 'large', cats: ['food','cpg'] },
 
-  // BEAUTY / PERSONAL CARE
-  { host: 'loreal.com',                 regions: ['NA'],       size: 'mega', cats: ['beauty','cpg'], vendorPaths: ['/supplier-portal','/suppliers'] },
-  { host: 'estee.com',                  regions: ['US','NA'],  size: 'large',cats: ['beauty'] },
-  { host: 'pdcbeauty.com',              regions: ['US'],       size: 'mid',  cats: ['beauty'] },
-  { host: 'elfcosmetics.com',           regions: ['US'],       size: 'mid',  cats: ['beauty'] },
+  // ---- BEAUTY / PERSONAL CARE (bias to mid)
+  { host: 'pdcbeauty.com', regions: ['US'], size: 'mid', cats: ['beauty'], vendorPaths: ['/suppliers','/supplier-portal'] },
+  { host: 'elfcosmetics.com', regions: ['US'], size: 'mid', cats: ['beauty'] },
+  { host: 'loreal.com', regions: ['NA'], size: 'mega', cats: ['beauty','cpg'], vendorPaths: ['/supplier-portal','/suppliers'] }, // mega kept (fallback)
 
-  // RETAIL / GROCERY (lots of own-brand packaging)
-  { host: 'walmart.com',                regions: ['US','NA'],  size: 'mega', cats: ['retail','ecom'] },
-  { host: 'target.com',                 regions: ['US'],       size: 'mega', cats: ['retail','ecom'] },
-  { host: 'loblaw.ca',                  regions: ['CA'],       size: 'large',cats: ['retail','food'] },
-  { host: 'kroger.com',                 regions: ['US'],       size: 'large',cats: ['retail','food'] },
-  { host: 'albertsons.com',             regions: ['US'],       size: 'large',cats: ['retail','food'] },
-  { host: 'heb.com',                    regions: ['US'],       size: 'mid',  cats: ['retail','food'] },
-  { host: 'meijer.com',                 regions: ['US'],       size: 'mid',  cats: ['retail','food'] },
+  // ---- RETAIL / GROCERY (own-brand)
+  { host: 'loblaw.ca', regions: ['CA'], size: 'large', cats: ['retail','food'], vendorPaths: ['/suppliers'] },
+  { host: 'heb.com', regions: ['US'], size: 'mid', cats: ['retail','food'] },
+  { host: 'meijer.com', regions: ['US'], size: 'mid', cats: ['retail','food'] },
+  { host: 'aldi.us', regions: ['US'], size: 'mid', cats: ['retail','food'] },
+  { host: 'traderjoes.com', regions: ['US'], size: 'mid', cats: ['retail','food'] },
 
-  // PET / SPECIALTY CPG
-  { host: 'chewy.com',                  regions: ['US'],       size: 'large',cats: ['pet','ecom'] },
-  { host: 'freshpet.com',               regions: ['US'],       size: 'mid',  cats: ['pet','food'] },
-  { host: 'bluebuffalo.com',            regions: ['US'],       size: 'mid',  cats: ['pet'] },
+  // ---- PET
+  { host: 'freshpet.com', regions: ['US'], size: 'mid', cats: ['pet','food'] },
+  { host: 'bluebuffalo.com', regions: ['US'], size: 'mid', cats: ['pet'] },
 
-  // QSR / RESTAURANT (to-go packaging)
-  { host: 'mcdonalds.com',              regions: ['NA'],       size: 'mega', cats: ['food','qsr'] },
-  { host: 'starbucks.com',              regions: ['US','NA'],  size: 'mega', cats: ['beverage','qsr'] },
-  { host: 'chipotle.com',               regions: ['US'],       size: 'large',cats: ['food','qsr'] },
+  // ---- QSR / FOOD SERVICE (to-go)
+  { host: 'chipotle.com', regions: ['US'], size: 'large', cats: ['food','qsr'] },
+  { host: 'panerabread.com', regions: ['US'], size: 'mid', cats: ['food','qsr'] },
 
-  // BREWERIES / MID-MARKET BEVERAGE
-  { host: 'sierraNevada.com',           regions: ['US'],       size: 'smb',  cats: ['beverage'] },
-  { host: 'lagunitas.com',              regions: ['US'],       size: 'smb',  cats: ['beverage'] },
-  { host: 'canarchy.beer',              regions: ['US'],       size: 'mid',  cats: ['beverage'] },
+  // ---- MID-BEVERAGE (breweries)
+  { host: 'sierranevada.com', regions: ['US'], size: 'smb', cats: ['beverage'] },
+  { host: 'lagunitas.com', regions: ['US'], size: 'smb', cats: ['beverage'] },
+  { host: 'canarchy.beer', regions: ['US'], size: 'mid', cats: ['beverage'] },
 
-  // HOUSEHOLD / CLEANING
-  { host: 'clorox.com',                 regions: ['US','NA'],  size: 'large',cats: ['cpg'] },
-  { host: 'scjohnson.com',              regions: ['US','NA'],  size: 'large',cats: ['cpg'] },
+  // ---- HOUSEHOLD
+  { host: 'clorox.com', regions: ['US','NA'], size: 'large', cats: ['cpg'] },
+  { host: 'scjohnson.com', regions: ['US','NA'], size: 'large', cats: ['cpg'] },
 
-  // ECOM BRANDS (fast-moving, lighter vendor processes)
-  { host: 'hellofresh.com',             regions: ['US','NA'],  size: 'large',cats: ['food','ecom'] },
-  { host: 'dailyharvest.com',           regions: ['US'],       size: 'smb',  cats: ['food','ecom'] },
-  { host: 'thriveMarket.com',           regions: ['US'],       size: 'mid',  cats: ['food','ecom'] },
+  // ---- ECOM BRANDS
+  { host: 'hellofresh.com', regions: ['US','NA'], size: 'large', cats: ['food','ecom'] },
+  { host: 'dailyharvest.com', regions: ['US'], size: 'smb', cats: ['food','ecom'] },
+  { host: 'thrivemarket.com', regions: ['US'], size: 'mid', cats: ['food','ecom'] },
+
+  // ---- BIGS (fallbacks only; we deprioritize)
+  { host: 'pepsico.com', regions: ['US','NA'], size: 'mega', cats: ['beverage','cpg'], vendorPaths: ['/suppliers','/supplier-portal'] },
+  { host: 'coca-colacompany.com', regions: ['US','NA'], size: 'mega', cats: ['beverage'], vendorPaths: ['/suppliers'] },
+  { host: 'nestle.com', regions: ['NA'], size: 'mega', cats: ['food','cpg'], vendorPaths: ['/suppliers'] },
 ];
 
-/* ----------------- scoring & selection ----------------- */
+/* ========== scoring & web-probe ========== */
 
 interface Context {
   supplierHost: string;
   regionPref?: 'US' | 'CA';
+  avoidMega: boolean;
+  sizeBias?: 'smb' | 'mid' | 'any';
 }
 
-function sizeWeight(size: SizeBand): number {
-  // SMB-first bias (avoid only mega unless nothing else)
-  switch (size) {
-    case 'smb':  return 1.0;
-    case 'mid':  return 0.95;
-    case 'large':return 0.7;
-    case 'mega': return 0.25;
-    default:     return 0.6;
-  }
+function sizeWeight(size: SizeBand, bias?: 'smb' | 'mid' | 'any'): number {
+  const base: Record<SizeBand, number> = {
+    micro: 1.0, smb: 0.98, mid: 0.92, large: 0.65, mega: 0.2
+  };
+  let w = base[size] ?? 0.6;
+  if (bias === 'smb' && (size === 'smb' || size === 'micro')) w += 0.10;
+  if (bias === 'mid' && size === 'mid') w += 0.10;
+  return Math.max(0, Math.min(1.1, w));
 }
 
 function scoreBuyer(seed: BuyerSeed, ctx: Context, wantedCats: string[]): number {
   let s = 0;
 
-  // Category match (most important)
+  // Category match (dominant)
   const catHits = seed.cats.filter(c => wantedCats.includes(c)).length;
-  s += catHits * 40;
+  s += catHits * 45;
 
-  // Region match
+  // Region
   if (ctx.regionPref && seed.regions.includes(ctx.regionPref)) s += 15;
   else if (seed.regions.includes('NA')) s += 8;
 
-  // Size bias
-  s += 30 * sizeWeight(seed.size);
+  // Size
+  s += 30 * sizeWeight(seed.size, ctx.sizeBias);
 
-  // Known vendor page boost
-  if (seed.vendorPaths && seed.vendorPaths.length) s += 10;
+  // Vendor hints
+  if (seed.vendorPaths?.length) s += 8;
 
-  // Very weak jitter for variety
+  // Avoid mega unless allowed
+  if (ctx.avoidMega && seed.size === 'mega') s -= 20;
+
+  // light jitter
   s += (seed.host.length % 7);
 
   return s;
 }
 
-/* ----------------- persistence: dedupe window ----------------- */
+// Quick HEAD probe with timeout; non-blocking (we’ll probe only a shortlist)
+async function headOk(url: string, ms = 1500): Promise<boolean> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    const r = await fetch(url, { method: 'HEAD', redirect: 'follow', signal: ctrl.signal });
+    clearTimeout(t);
+    return r.ok || (r.status >= 300 && r.status < 400);
+  } catch {
+    return false;
+  }
+}
+
+async function vendorSignal(host: string, explicit?: string[]): Promise<number> {
+  const base = `https://${host}`;
+  const candidates = [
+    ...(explicit ?? []),
+    '/suppliers', '/supplier', '/supplier-portal', '/vendors', '/supplierinformation'
+  ];
+  // probe at most 2 paths to hold latency down
+  const tries = candidates.slice(0, 2);
+  const results = await Promise.all(tries.map(p => headOk(base + p)));
+  if (results.some(Boolean)) return +12;    // strong boost
+  if (explicit && explicit.length) return -6; // claimed vendor page but none found
+  return 0;                                  // neutral
+}
+
+/* ========== persistence: dedupe window ========== */
 
 async function ensureTables() {
   await q(`
@@ -189,113 +214,4 @@ async function recentlySuggested(supplierHost: string): Promise<Set<string>> {
       LIMIT 50;`,
     [supplierHost]
   );
-  return new Set(rows.map(r => String(r.suggested_host)));
-}
-
-async function logSuggestion(supplierHost: string, buyerHost: string) {
-  await q(
-    `INSERT INTO suggestion_log (supplier_host, suggested_host) VALUES ($1,$2);`,
-    [supplierHost, buyerHost]
-  );
-}
-
-/* ----------------- candidate picker ----------------- */
-
-async function pickSmartCandidate(host: string, region?: string): Promise<Candidate | null> {
-  const supplier = normalizeHost(host);
-  const regionPref = region?.includes('CA') ? 'CA' : region?.includes('US') ? 'US' : undefined;
-
-  const wantedCats = inferPackagingCategoryFromHost(supplier);
-  await ensureTables();
-  const seen = await recentlySuggested(supplier);
-
-  // score & rank
-  const ctx: Context = { supplierHost: supplier, regionPref };
-  const ranked = CATALOG
-    .filter(s => s.host !== supplier)                       // never the supplier
-    .filter(s => !seen.has(s.host))                         // avoid repeats
-    .map(s => ({ seed: s, score: scoreBuyer(s, ctx, wantedCats) }))
-    .sort((a, b) => b.score - a.score);
-
-  // prefer non-mega top 1; if only mega left, still return something
-  let chosen = ranked.find(r => r.seed.size !== 'mega') ?? ranked[0];
-  if (!chosen) return null;
-
-  const chosenHost = chosen.seed.host;
-
-  // Compose title & why
-  const title = chosen.seed.titleHint
-    ? chosen.seed.titleHint
-    : `Suppliers / vendor info | ${chosenHost}`;
-
-  const whyReason = [
-    wantedCats.length ? `fit: ${wantedCats.join('/')}` : '',
-    regionPref ? `region: ${regionPref}` : '',
-    `size: ${chosen.seed.size}`,
-    chosen.seed.vendorPaths?.length ? 'vendor page known' : ''
-  ].filter(Boolean).join(' · ');
-
-  const cand: Candidate = {
-    host: chosenHost,
-    platform: 'web',
-    title,
-    created: nowISO(),
-    temp: 'warm',
-    why: `${whyReason || 'match'} (picked for supplier: ${supplier})`
-  };
-
-  // Record to dedupe next calls
-  await logSuggestion(supplier, chosenHost);
-
-  return cand;
-}
-
-/* ----------------- routes ----------------- */
-
-// GET /api/leads/find-buyers?host=...&region=US%2FCA&radius=50+mi
-leads.get('/find-buyers', async (req: Request, res: Response) => {
-  const { host, region } = req.query as { host?: string; region?: string; radius?: string };
-  if (!host) return res.status(400).json({ error: 'host is required' });
-
-  try {
-    const cand = await pickSmartCandidate(host, region);
-    if (!cand) return res.status(404).json({ error: 'no match' });
-    return res.json(cand);
-  } catch (err: any) {
-    return res.status(500).json({ error: 'internal', detail: String(err?.message || err) });
-  }
-});
-
-// POST /api/leads/lock { host, title, temp? }
-leads.post('/lock', async (req: Request, res: Response) => {
-  const { host, title, temp } = (req.body ?? {}) as { host?: string; title?: string; temp?: Temp };
-  if (!host || !title) return res.status(400).json({ error: 'candidate with host and title required' });
-
-  const created = nowISO();
-  const h = normalizeHost(host);
-  const t: Temp = temp === 'hot' ? 'hot' : 'warm';
-
-  try {
-    await q(`
-      CREATE TABLE IF NOT EXISTS buyer_locks (
-        id BIGSERIAL PRIMARY KEY,
-        host TEXT NOT NULL,
-        title TEXT NOT NULL,
-        temp TEXT NOT NULL,
-        created TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `);
-    await q(
-      `INSERT INTO buyer_locks (host, title, temp, created)
-       VALUES ($1,$2,$3,$4)
-       ON CONFLICT DO NOTHING;`,
-      [h, title, t, created]
-    );
-    res.json({ ok: true });
-  } catch (err: any) {
-    res.status(500).json({ error: 'lock_failed', detail: String(err?.message || err) });
-  }
-});
-
-export default leads;
-export { leads as leadsRouter };
+  return new Set(rows.map(r => String
