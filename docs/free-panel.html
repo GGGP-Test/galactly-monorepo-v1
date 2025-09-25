@@ -32,17 +32,14 @@
 <body>
   <div class="page">
     <h1>
-      Free Panel
-      <span class="badge" id="status-text">booting…</span>
-      <span class="ready-dot" id="ready-dot"></span>
+      Free Panel <span class="badge" id="status-text">booting…</span><span class="ready-dot" id="ready-dot"></span>
     </h1>
 
-    <!-- API base -->
     <div class="card">
       <div class="row">
         <div style="min-width:280px;flex:1">
           <label for="api">API base</label>
-          <input id="api" placeholder="https://p01-animated-cellar-…code.run" />
+          <input id="api" placeholder="https://p01-animated-cellar-…code.run"/>
         </div>
         <div><label>&nbsp;</label><button id="apply" class="primary">Apply</button></div>
         <div class="row" style="margin-left:auto">
@@ -53,7 +50,6 @@
       </div>
     </div>
 
-    <!-- Finder -->
     <div class="card">
       <div class="row">
         <div style="min-width:260px;flex:1">
@@ -71,17 +67,13 @@
         <div>
           <label for="radius">Radius</label>
           <select id="radius">
-            <option>25 mi</option>
-            <option selected>50 mi</option>
-            <option>100 mi</option>
-            <option>200 mi</option>
+            <option>25 mi</option><option selected>50 mi</option><option>100 mi</option><option>200 mi</option>
           </select>
         </div>
         <div><label>&nbsp;</label><button id="btn-find" class="primary">Find buyer</button></div>
       </div>
     </div>
 
-    <!-- Latest -->
     <div class="card">
       <label>Latest candidate</label>
       <div style="margin-bottom:10px">
@@ -97,13 +89,11 @@
       </div>
     </div>
 
-    <!-- HTTP log -->
     <div class="card">
       <label for="http-log">HTTP log</label>
       <textarea id="http-log" spellcheck="false"></textarea>
     </div>
 
-    <!-- Results -->
     <div class="card">
       <label>Results</label>
       <table class="table">
@@ -114,115 +104,123 @@
   </div>
 
   <script>
-    // ---- tiny helpers
-    const $  = (s)=>document.querySelector(s);
-    const now= ()=>new Date().toISOString();
+    // ----------------- helpers (NO regex)
+    const $ = (s)=>document.querySelector(s);
+    const now = ()=>new Date().toISOString();
     const logEl = $("#http-log");
-    function log(line){ const ts = now().substring(11,19); logEl.value = ts+"  "+line+"\\n"+logEl.value; }
-    function join(base, path){ if(!base) return path; const b = base.endsWith("/")?base.slice(0,-1):base; return b+path; }
-    function nhost(x){ return (x||"").trim().replace(/^https?:\\/\\//i,"").replace(/^www\\./i,"").toLowerCase(); }
-    function badge(id, v){ const el=$(id); if(el){ el.textContent = v || "—"; el.title = v||""; } }
+    function log(line){ const ts=now().slice(11,19); logEl.value = ts+"  "+line+"\\n"+logEl.value; }
 
-    // ---- state
-    let latest = null; // {host,title,platform,created,temp,why,supplier_host}
-
-    function renderLatest(c){
-      badge("#b-host",  c?.host);
-      badge("#b-title", c?.title);
-      badge("#b-when",  c?.created);
-      badge("#b-temp",  c?.temp);
-      badge("#b-why",   c?.why);
+    function join(base, path){
+      if(!base) return path;
+      let b = base.trim();
+      if(b.endsWith("/")) b = b.slice(0,-1);
+      return b + path;
     }
-    function clearLatest(msg){
-      latest = null; renderLatest({});
-      if(msg) log("✗  "+msg);
+    function normalizeHost(input){
+      let s = (input||"").trim();
+      if(!s) return "";
+      // ensure it has a scheme so URL() parses
+      const low = s.toLowerCase();
+      if(!(low.startsWith("http://") || low.startsWith("https://"))) s = "http://" + s;
+      try{
+        const u = new URL(s);
+        let h = (u.hostname||"").toLowerCase();
+        if(h.startsWith("www.")) h = h.slice(4);
+        return h;
+      }catch{
+        // fallback: lowercase & drop leading www.
+        let h = (input||"").trim().toLowerCase();
+        if(h.startsWith("www.")) h = h.slice(4);
+        return h;
+      }
+    }
+    function badge(id, v){ const el=$(id); if(el){ el.textContent=v||"—"; el.title=v||""; } }
+    function renderLatest(c){
+      badge("#b-host",c?.host); badge("#b-title",c?.title); badge("#b-when",c?.created);
+      badge("#b-temp",c?.temp); badge("#b-why",c?.why);
     }
     function addRow(c){
-      const tb = $("#results"); if(!tb) return;
-      const tr = document.createElement("tr");
+      const tb=$("#results"); const tr=document.createElement("tr");
       [c.host,c.platform||"web",c.title,c.created,c.temp,c.why].forEach(t=>{
         const td=document.createElement("td"); td.textContent=t||""; tr.appendChild(td);
       });
       tb.prepend(tr);
     }
 
+    let latest = null;
+    function setLatest(c){ latest=c; renderLatest(c||{}); }
+
     function base(){ return ($("#api").value || localStorage.getItem("apiBase") || "").trim(); }
 
-    // ---- actions
+    // ----------------- actions
     async function findBuyer(){
       const b = base(); if(!b){ alert("Set API base then Apply."); return; }
-      const supplier = nhost($("#supplier-host").value);
-      const region   = $("#region").value || "US/CA";
-      const radius   = $("#radius").value || "50 mi";
-      const url = join(b, `/api/leads/find-buyers?host=${encodeURIComponent(supplier)}&region=${encodeURIComponent(region)}&radius=${encodeURIComponent(radius)}`);
+      const supplier = normalizeHost($("#supplier-host").value);
+      const region = $("#region").value || "US/CA";
+      const radius = $("#radius").value || "50 mi";
+      const url = join(b, "/api/leads/find-buyers?host="+encodeURIComponent(supplier)+"&region="+encodeURIComponent(region)+"&radius="+encodeURIComponent(radius));
 
       const t0 = performance.now();
-      let r;
-      try { r = await fetch(url); }
-      catch (e){ log(`GET  ${url}  ERR (${Math.round(performance.now()-t0)}ms)`); clearLatest("network error"); return; }
-
+      let r; try { r = await fetch(url); } catch(e){ log("GET  "+url+"  ERR"); setLatest(null); return; }
       const ms = Math.round(performance.now()-t0);
-      if(!r.ok){ log(`GET  ${url}  ${r.status} ${r.statusText} (${ms}ms)`); clearLatest("HTTP "+r.status); return; }
+      if(!r.ok){ log("GET  "+url+"  "+r.status+" "+r.statusText+" ("+ms+"ms)"); setLatest(null); return; }
 
-      let d=null; try { d = await r.json(); } catch { log(`GET  ${url}  200 OK (bad JSON) (${ms}ms)`); clearLatest("bad JSON"); return; }
+      let d=null; try{ d = await r.json(); }catch{ log("GET  "+url+"  200 OK (bad JSON) ("+ms+"ms)"); setLatest(null); return; }
 
       const c = {
-        host: d?.host || "", title: d?.title || "",
-        platform: d?.platform || "web", created: d?.created || now(),
-        temp: d?.temp || "warm", why: d?.why || "", supplier_host: supplier
+        host: (d && d.host) || "", title: (d && d.title) || "",
+        platform: (d && d.platform) || "web", created: (d && d.created) || now(),
+        temp: (d && d.temp) || "warm", why: (d && d.why) || "", supplier_host: supplier
       };
 
-      if(!c.host || !c.title){ log(`GET  ${url}  200 OK (${ms}ms)`); clearLatest("no candidate from API"); return; }
-      if(c.host === supplier){ log(`GET  ${url}  200 OK (${ms}ms)`); clearLatest("API returned supplier itself"); return; }
+      if(!c.host || !c.title){ log("GET  "+url+"  200 OK ("+ms+"ms)"); setLatest(null); log("✗ no candidate from API"); return; }
+      if(c.host === supplier){ log("GET  "+url+"  200 OK ("+ms+"ms)"); setLatest(null); log("✗ API returned supplier itself"); return; }
 
-      latest=c; renderLatest(c); addRow(c);
-      log(`GET  ${url}  200 OK (${ms}ms)`);
+      setLatest(c); addRow(c); log("GET  "+url+"  200 OK ("+ms+"ms)");
     }
 
     async function lock(tempWanted){
-      if(!latest){ clearLatest("no candidate yet"); return; }
+      if(!latest){ log("✗ no candidate yet"); return; }
       const b = base(); if(!b){ alert("Set API base then Apply."); return; }
       const url = join(b, "/api/leads/lock");
       const body = {...latest, temp: tempWanted || latest.temp || "warm"};
 
       const t0 = performance.now();
-      let r;
-      try{
+      let r; try{
         r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-      }catch(e){
-        log(`POST ${url}  ERR (${Math.round(performance.now()-t0)}ms)`); return;
-      }
+      }catch(e){ log("POST "+url+"  ERR"); return; }
       const ms = Math.round(performance.now()-t0);
-      log(`POST ${url}  ${r.status} ${r.statusText} (${ms}ms)`);
+      log("POST "+url+"  "+r.status+" "+r.statusText+" ("+ms+"ms)");
     }
 
-    // ---- boot
-    (function boot(){
+    // ----------------- boot (no IIFE crashes; wait for DOM)
+    document.addEventListener("DOMContentLoaded", () => {
       try{
-        $("#apply").addEventListener("click", ()=>{ localStorage.setItem("apiBase", $("#api").value.trim()); log("✓  Base restored"); });
+        $("#apply").addEventListener("click", ()=>{ localStorage.setItem("apiBase", ($("#api").value||"").trim()); log("✓ Base restored"); });
         $("#btn-health").addEventListener("click", async ()=>{
-          const b=base(); if(!b){alert("Set API base.");return;}
-          const url = join(b,"/healthz");
-          const t0=performance.now(); try{ const r=await fetch(url); log(`GET  ${url}  ${r.status} ${r.statusText} (${Math.round(performance.now()-t0)}ms)`);}catch{ log(`GET  ${url}  ERR`); }
+          const b=base(); if(!b){ alert("Set API base."); return; }
+          const url = join(b, "/healthz");
+          const t0=performance.now();
+          try{ const r=await fetch(url); log("GET  "+url+"  "+r.status+" "+r.statusText+" ("+Math.round(performance.now()-t0)+"ms)"); }
+          catch{ log("GET  "+url+"  ERR"); }
         });
         $("#btn-clear").addEventListener("click", ()=>{ $("#results").innerHTML=""; log("• cleared list"); });
         $("#btn-find").addEventListener("click", findBuyer);
         $("#btn-lock-warm").addEventListener("click", ()=>lock("warm"));
         $("#btn-lock-hot").addEventListener("click", ()=>lock("hot"));
 
-        // restore API base & set ready indicators
         const saved = localStorage.getItem("apiBase") || "";
         if(saved) $("#api").value = saved;
+
         $("#status-text").textContent = "client ready";
         $("#ready-dot").classList.add("on");
         log("• client ready");
-        window.__fpReady = true; // quick sanity flag if we need to check in console
+        window.__fpReady = true;
       }catch(err){
-        // If anything ever throws at boot, keep the page alive and show it
         console.error("boot error", err);
         $("#status-text").textContent = "boot error (see console)";
       }
-    })();
+    });
   </script>
 </body>
 </html>
