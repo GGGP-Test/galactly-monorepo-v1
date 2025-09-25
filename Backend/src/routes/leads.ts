@@ -1,60 +1,31 @@
 import { Router, Request, Response } from "express";
 
-// NOTE: DB is optional at runtime. If your Neon pool is available under
-// src/shared/db.ts exporting `pool`, we'll use it. If not, we still 200.
 let pool: any = null;
 try {
-  // keep the single canonical path you've standardized already
-  // (do not change this without agreeing on a new single path)
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  pool = require("../shared/db").pool;
-} catch {
-  /* DB optional */
-}
+  pool = require("../shared/db").pool; // single canonical path (unchanged)
+} catch { /* optional DB */ }
 
 const router = Router();
 
-// ------------------------------
-// Tiny in-memory store (TTL) so locks survive short sessions even if DB write fails
+/** ------------ Types & in-memory fallback ------------- */
+type Temp = "warm" | "hot";
 type Lead = {
   host: string;
   platform?: string;
   title: string;
   created: string;
-  temp: "warm" | "hot";
+  temp: Temp;
   why?: string;
   supplier_host?: string;
 };
 const lockedMem = new Map<string, { lead: Lead; at: number }>();
 const TTL_MS = 60 * 60 * 1000;
-
-// housekeeping
 setInterval(() => {
   const now = Date.now();
   for (const [k, v] of lockedMem) if (now - v.at > TTL_MS) lockedMem.delete(k);
 }, 10 * 60 * 1000);
 
-// ------------------------------
-// Tier rules (inline to keep to one file). Extend these as needed.
-// Each entry is a buyer host with one or more supplier/procurement pages to show.
-type Buyer = { host: string; pages: { path: string; title: string }[]; tier: "A" | "B"; vertical: "CPG" | "Retail" | "Food" | "Household" };
-const BUYERS: Buyer[] = [
-  { host: "clorox.com",         tier: "A", vertical: "Household", pages: [{ path: "/suppliers", title: "Suppliers & procurement | Clorox" }] },
-  { host: "hormelfoods.com",    tier: "A", vertical: "Food",      pages: [{ path: "/supplier", title: "Supplier / vendor info | Hormel Foods" }] },
-  { host: "generalmills.com",   tier: "A", vertical: "Food",      pages: [{ path: "/suppliers", title: "Suppliers | General Mills" }] },
-  { host: "kraftheinzcompany.com", tier: "A", vertical: "Food",   pages: [{ path: "/procurement", title: "Procurement | Kraft Heinz" }] },
-  { host: "pepsico.com",        tier: "A", vertical: "CPG",       pages: [{ path: "/suppliers", title: "Supplier portal | PepsiCo" }] },
-  { host: "mondelezinternational.com", tier: "A", vertical: "Food", pages: [{ path: "/suppliers", title: "Suppliers | Mondelēz International" }] },
-  { host: "nestle.com",         tier: "A", vertical: "Food",      pages: [{ path: "/suppliers", title: "Suppliers | Nestlé" }] },
-  { host: "pandg.com",          tier: "A", vertical: "Household", pages: [{ path: "/suppliers", title: "Suppliers | P&G" }] },
-  { host: "johnsonandjohnson.com", tier: "A", vertical: "CPG",    pages: [{ path: "/business/partner-with-us", title: "Partner with us | J&J" }] },
-  // Tier B examples
-  { host: "churchdwight.com",   tier: "B", vertical: "Household", pages: [{ path: "/suppliers", title: "Suppliers | Church & Dwight" }] },
-  { host: "campbellsoupcompany.com", tier: "B", vertical: "Food", pages: [{ path: "/suppliers", title: "Suppliers | Campbell Soup Company" }] },
-  { host: "postholdings.com",   tier: "B", vertical: "Food",      pages: [{ path: "/suppliers", title: "Suppliers | Post Holdings" }] },
-];
-
-// helper: normalize a host without regex
+/** ---------------- Helpers (no regex flags) ---------------- */
 function normHost(input: string): string {
   let s = (input || "").trim();
   if (!s) return "";
@@ -71,46 +42,148 @@ function normHost(input: string): string {
   }
 }
 
-// pick a Tier A/B buyer not equal to supplier
-function pickBuyer(supplierHost: string): { host: string; title: string; why: string } | null {
-  const sup = normHost(supplierHost);
-  // crude vertical guess: if supplier name contains "pack" prefer Food/CPG Tier A
-  const prefer = /pack|carton|box|label|film|flex/i.test(supplierHost) ? ["Food", "CPG"] : ["CPG", "Retail", "Food", "Household"];
-
-  const pool: Buyer[] = BUYERS
-    .filter(b => b.host !== sup && prefer.includes(b.vertical))
-    // prefer Tier A first
-    .sort((a, b) => (a.tier === b.tier ? 0 : a.tier === "A" ? -1 : 1));
-
-  if (pool.length === 0) return null;
-
-  // simple rotation
-  const chosen = pool[Math.floor(Math.random() * Math.min(pool.length, 6))];
-  const page = chosen.pages[0];
-  const why = `Tier ${chosen.tier} ${chosen.vertical}; supplier program (picked for supplier: ${sup})`;
-  return { host: chosen.host, title: page.title, why };
+/** ------------ Very light category guess from supplier host ------------ */
+type Vertical = "CPG" | "Food" | "Beverage" | "Beauty" | "Household" | "Retail" | "Apparel" | "Pet";
+function guessVertical(supplierHost: string): Vertical[] {
+  const s = supplierHost.toLowerCase();
+  const tags: Vertical[] = ["CPG"];
+  if (s.includes("brew") || s.includes("coffee") || s.includes("tea") || s.includes("drink") || s.includes("bever")) tags.unshift("Beverage");
+  if (s.includes("snack") || s.includes("food")) tags.unshift("Food");
+  if (s.includes("pet")) tags.unshift("Pet");
+  if (s.includes("beauty") || s.includes("cosmetic") || s.includes("skincare")) tags.unshift("Beauty");
+  if (s.includes("home") || s.includes("clean")) tags.unshift("Household");
+  if (s.includes("shop") || s.includes("retail")) tags.unshift("Retail");
+  if (s.includes("apparel") || s.includes("wear")) tags.unshift("Apparel");
+  return Array.from(new Set(tags));
 }
 
-// GET /api/leads/find-buyers?host=SUPPLIER&region=US/CA&radius=50+mi
-router.get("/leads/find-buyers", async (req: Request, res: Response) => {
+/** ---------------- Tier A/B seed pool (reliable) ---------------- */
+type Buyer = { host: string; pages: { path: string; title: string }[]; tier: "A" | "B"; vertical: Vertical };
+const BUYERS_AB: Buyer[] = [
+  { host: "clorox.com", tier: "A", vertical: "Household", pages: [{ path: "/suppliers", title: "Suppliers & procurement | Clorox" }] },
+  { host: "hormelfoods.com", tier: "A", vertical: "Food", pages: [{ path: "/supplier", title: "Supplier / vendor info | Hormel Foods" }] },
+  { host: "generalmills.com", tier: "A", vertical: "Food", pages: [{ path: "/suppliers", title: "Suppliers | General Mills" }] },
+  { host: "kraftheinzcompany.com", tier: "A", vertical: "Food", pages: [{ path: "/procurement", title: "Procurement | Kraft Heinz" }] },
+  { host: "pepsico.com", tier: "A", vertical: "Beverage", pages: [{ path: "/suppliers", title: "Supplier portal | PepsiCo" }] },
+  { host: "mondelezinternational.com", tier: "A", vertical: "Food", pages: [{ path: "/suppliers", title: "Suppliers | Mondelēz International" }] },
+  { host: "nestle.com", tier: "A", vertical: "Food", pages: [{ path: "/suppliers", title: "Suppliers | Nestlé" }] },
+  { host: "pandg.com", tier: "A", vertical: "Household", pages: [{ path: "/suppliers", title: "Suppliers | P&G" }] },
+  { host: "johnsonandjohnson.com", tier: "A", vertical: "Beauty", pages: [{ path: "/business/partner-with-us", title: "Partner with us | J&J" }] },
+  { host: "churchdwight.com", tier: "B", vertical: "Household", pages: [{ path: "/suppliers", title: "Suppliers | Church & Dwight" }] },
+  { host: "campbellsoupcompany.com", tier: "B", vertical: "Food", pages: [{ path: "/suppliers", title: "Suppliers | Campbell Soup" }] },
+  { host: "postholdings.com", tier: "B", vertical: "Food", pages: [{ path: "/suppliers", title: "Suppliers | Post Holdings" }] },
+];
+
+/** ---------------- Tier C pool (smaller/regional brands) ----------------
+ * These typically lack formal supplier portals; we return a partnership/
+ * wholesale/contact-oriented title so the UI has a clean label to lock.
+ */
+type MicroBuyer = { host: string; title: string; vertical: Vertical };
+const BUYERS_C: MicroBuyer[] = [
+  // Beverage/D2C
+  { host: "liquiddeath.com", title: "Partnerships & operations", vertical: "Beverage" },
+  { host: "olipop.com", title: "Partnerships & sourcing", vertical: "Beverage" },
+  { host: "poppi.co", title: "Partnerships & vendor", vertical: "Beverage" },
+  { host: "guayaki.com", title: "Supplier / partner", vertical: "Beverage" },
+  // Food/Snacks
+  { host: "perfectsnacks.com", title: "Operations / packaging", vertical: "Food" },
+  { host: "bhufoods.com", title: "Vendor / sourcing", vertical: "Food" },
+  { host: "huel.com", title: "Supply & packaging", vertical: "Food" },
+  // Beauty
+  { host: "drunkelephant.com", title: "Packaging & sourcing", vertical: "Beauty" },
+  { host: "theordinary.com", title: "Supplier / operations", vertical: "Beauty" },
+  // Household / cleaning
+  { host: "methodhome.com", title: "Packaging & logistics", vertical: "Household" },
+  { host: "blueland.com", title: "Operations / vendor", vertical: "Household" },
+  // Pet
+  { host: "thefarmersdog.com", title: "Operations / packaging", vertical: "Pet" },
+  { host: "chewy.com", title: "Private label packaging", vertical: "Pet" },
+  // Regional grocers / retail (mixed volume, good pack buyers)
+  { host: "sprouts.com", title: "Own brand packaging", vertical: "Retail" },
+  { host: "wegmans.com", title: "Private label packaging", vertical: "Retail" },
+  { host: "heb.com", title: "Own brand packaging", vertical: "Retail" },
+];
+
+/** ----------------- Picking logic ----------------- */
+function pickBuyer(
+  supplierHost: string,
+  opts: { tier?: "A" | "B" | "C"; depth?: "shallow" | "deep" }
+): { host: string; title: string; why: string } | null {
+  const sup = normHost(supplierHost);
+  const wantedTier = opts.tier;
+  const deep = opts.depth === "deep";
+  const verticalPref = guessVertical(supplierHost);
+
+  // Build candidate lists by vertical affinity, excluding the supplier host.
+  const abPool = BUYERS_AB
+    .filter(b => b.host !== sup && (!wantedTier || b.tier === wantedTier))
+    .filter(b => verticalPref.includes(b.vertical))
+    .sort((a, b) => (a.tier === b.tier ? 0 : a.tier === "A" ? -1 : 1));
+
+  const cPool = BUYERS_C
+    .filter(b => b.host !== sup && verticalPref.includes(b.vertical));
+
+  // Priority: explicit tier → A/B → (if deep) C
+  if (wantedTier === "C" || deep) {
+    const pool = (wantedTier === "C" ? cPool : cPool.concat([]));
+    if (pool.length) {
+      const chosen = pool[Math.floor(Math.random() * Math.min(pool.length, 6))];
+      return {
+        host: chosen.host,
+        title: chosen.title,
+        why: `Tier C ${chosen.vertical}; inferred partnerships buyer (picked for supplier: ${sup})`
+      };
+    }
+  }
+
+  if (abPool.length) {
+    const chosen = abPool[Math.floor(Math.random() * Math.min(abPool.length, 6))];
+    const page = chosen.pages[0];
+    return {
+      host: chosen.host,
+      title: page.title,
+      why: `Tier ${chosen.tier} ${chosen.vertical}; supplier program (picked for supplier: ${sup})`
+    };
+  }
+
+  // As a last resort, hand back a sane generic on the most related Tier C
+  if (cPool.length) {
+    const chosen = cPool[0];
+    return {
+      host: chosen.host,
+      title: chosen.title || `Partnerships / vendor`,
+      why: `Tier C ${chosen.vertical}; generic partnerships (supplier: ${sup})`
+    };
+  }
+
+  return null;
+}
+
+/** ----------------- API ----------------- */
+// GET /api/leads/find-buyers?host=...&tier=A|B|C&depth=deep
+router.get("/leads/find-buyers", (req: Request, res: Response) => {
   const supplier = String(req.query.host || "").trim();
   if (!supplier) return res.status(400).json({ error: "host is required" });
 
-  const picked = pickBuyer(supplier);
+  const tierQ = String(req.query.tier || "").toUpperCase();
+  const depthQ = String(req.query.depth || "").toLowerCase();
+  const tier: "A" | "B" | "C" | undefined =
+    tierQ === "A" || tierQ === "B" || tierQ === "C" ? (tierQ as any) : undefined;
+  const depth: "shallow" | "deep" = depthQ === "deep" ? "deep" : "shallow";
+
+  const picked = pickBuyer(supplier, { tier, depth });
   if (!picked) return res.status(404).json({ error: "no match" });
 
-  // Build the uniform candidate shape expected by the UI.
   const candidate: Lead = {
     host: picked.host,
     platform: "web",
-    title: picked.title,
+    title: picked.title || `Buyer lead for ${normHost(supplier)}`,
     created: new Date().toISOString(),
     temp: "warm",
     why: picked.why,
     supplier_host: normHost(supplier),
   };
 
-  // IMPORTANT guardrail: never return the supplier itself
   if (candidate.host === normHost(supplier)) {
     return res.status(409).json({ error: "refused to return supplier itself" });
   }
@@ -118,12 +191,12 @@ router.get("/leads/find-buyers", async (req: Request, res: Response) => {
   return res.json(candidate);
 });
 
-// POST /api/leads/lock   (body = Lead)
+// POST /api/leads/lock
 router.post("/leads/lock", async (req: Request, res: Response) => {
   const body = req.body || {};
   const host = normHost(body.host || "");
   const title = String(body.title || "").trim();
-  const temp: "warm" | "hot" = body.temp === "hot" ? "hot" : "warm";
+  const temp: Temp = body.temp === "hot" ? "hot" : "warm";
   const created = body.created && typeof body.created === "string" ? body.created : new Date().toISOString();
   const why = String(body.why || "");
   const supplier_host = normHost(body.supplier_host || "");
@@ -133,11 +206,8 @@ router.post("/leads/lock", async (req: Request, res: Response) => {
 
   const lead: Lead = { host, title, temp, created, why, supplier_host, platform: "web" };
 
-  // write to DB if available; otherwise keep in memory (soft-fail, never 5xx)
   try {
     if (pool) {
-      // Table suggestion: leads(host text, title text, temp text, created timestamptz, why text, supplier_host text)
-      // If your table is different, adapt this one query centrally later.
       await pool.query(
         `insert into leads (host, title, temp, created, why, supplier_host)
          values ($1,$2,$3,$4,$5,$6)
@@ -148,8 +218,7 @@ router.post("/leads/lock", async (req: Request, res: Response) => {
       const key = host + "•" + title;
       lockedMem.set(key, { lead, at: Date.now() });
     }
-  } catch (e) {
-    // fall back to memory, but still 200 to keep UX smooth
+  } catch {
     const key = host + "•" + title;
     lockedMem.set(key, { lead, at: Date.now() });
   }
