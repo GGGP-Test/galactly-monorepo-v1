@@ -1,16 +1,16 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Free Panel</title>
   <link rel="icon" href="data:,">
   <style>
     :root{--bg:#0f1420;--card:#121a2a;--ink:#e7ecf7;--mut:#9db0cf;--accent:#5aa1ff;--warm:#e3b341;--hot:#ff5a5a;--ok:#38c98b;--dim:#1a2438}
     *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
     body{margin:0;background:var(--bg);color:var(--ink)}
-    .page{max-width:1000px;margin:32px auto;padding:0 16px}
-    h1{font-size:20px;margin:0 0 16px}
+    .page{max-width:1000px;margin:24px auto;padding:0 16px}
+    h1{margin:0 0 12px;font-size:20px}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .card{background:var(--card);border:1px solid #1d2943;border-radius:10px;padding:14px;margin:12px 0}
     label{font-size:12px;color:var(--mut);display:block;margin-bottom:6px}
@@ -21,31 +21,33 @@
     button.warm{background:var(--warm);border-color:#a68021;color:#1a1207}
     button.hot{background:var(--hot);border-color:#c23c3c;color:#fff}
     button:disabled{opacity:.6;cursor:not-allowed}
-    .badges{display:flex;gap:8px;flex-wrap:wrap}
-    .badge{background:var(--dim);padding:6px 10px;border-radius:999px;font-size:12px}
+    .badge{display:inline-block;background:var(--dim);padding:6px 10px;border-radius:999px;font-size:12px;margin-right:8px}
+    .ready-dot{width:9px;height:9px;border-radius:50%;display:inline-block;vertical-align:middle;background:#9b9b9b;margin-left:8px}
+    .ready-dot.on{background:var(--ok)}
     .table{width:100%;border-collapse:collapse}
     .table th,.table td{padding:10px;border-bottom:1px solid #1d2943;font-size:14px}
-    .mut{color:var(--mut)}
     textarea{width:100%;min-height:120px;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace}
-    .spacer{flex:1}
   </style>
 </head>
 <body>
   <div class="page">
-    <h1>Free Panel</h1>
+    <h1>
+      Free Panel
+      <span class="badge" id="status-text">booting…</span>
+      <span class="ready-dot" id="ready-dot"></span>
+    </h1>
 
     <!-- API base -->
     <div class="card">
       <div class="row">
-        <div style="min-width:260px;flex:1">
+        <div style="min-width:280px;flex:1">
           <label for="api">API base</label>
-          <input id="api" type="text" placeholder="https://p01-animated-cellar-...code.run" />
+          <input id="api" placeholder="https://p01-animated-cellar-…code.run" />
         </div>
         <div><label>&nbsp;</label><button id="apply" class="primary">Apply</button></div>
-        <div class="spacer"></div>
-        <div class="row">
+        <div class="row" style="margin-left:auto">
+          <label>&nbsp;</label>
           <button id="btn-health">Health</button>
-          <button id="btn-probe">Probe</button>
           <button id="btn-clear">Clear list</button>
         </div>
       </div>
@@ -54,9 +56,9 @@
     <!-- Finder -->
     <div class="card">
       <div class="row">
-        <div style="min-width:280px;flex:1">
+        <div style="min-width:260px;flex:1">
           <label for="supplier-host">Supplier host</label>
-          <input id="supplier-host" placeholder="peekpackaging.com" />
+          <input id="supplier-host" placeholder="peekpackaging.com"/>
         </div>
         <div>
           <label for="region">Region</label>
@@ -82,28 +84,16 @@
     <!-- Latest -->
     <div class="card">
       <label>Latest candidate</label>
-      <div class="badges" style="margin-bottom:10px">
-        <span class="badge" id="badge-host">—</span>
-        <span class="badge" id="badge-title">—</span>
-        <span class="badge mut" id="badge-when">—</span>
-        <span class="badge" id="badge-temp">—</span>
-        <span class="badge mut" id="badge-why">—</span>
+      <div style="margin-bottom:10px">
+        <span class="badge" id="b-host">—</span>
+        <span class="badge" id="b-title">—</span>
+        <span class="badge" id="b-when">—</span>
+        <span class="badge" id="b-temp">—</span>
+        <span class="badge" id="b-why">—</span>
       </div>
       <div class="row">
         <button id="btn-lock-warm" class="warm">Lock (Warm)</button>
         <button id="btn-lock-hot" class="hot">Lock (Hot)</button>
-        <button id="btn-deeper" disabled>Deeper results</button>
-      </div>
-    </div>
-
-    <!-- Saved -->
-    <div class="card">
-      <label>Saved (this session)</label>
-      <div class="row">
-        <button id="btn-refresh-warm" disabled>Refresh warm</button>
-        <button id="btn-refresh-hot" disabled>Refresh hot</button>
-        <button id="btn-dl-warm" disabled>Download CSV (warm)</button>
-        <button id="btn-dl-hot" disabled>Download CSV (hot)</button>
       </div>
     </div>
 
@@ -117,133 +107,122 @@
     <div class="card">
       <label>Results</label>
       <table class="table">
-        <thead>
-        <tr><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why (human-readable)</th></tr>
-        </thead>
-        <tbody id="results-tbody"></tbody>
+        <thead><tr><th>Host</th><th>Platform</th><th>Title</th><th>Created</th><th>Temp</th><th>Why</th></tr></thead>
+        <tbody id="results"></tbody>
       </table>
     </div>
   </div>
 
   <script>
-    // ---------- utils
-    const $ = (s)=>document.querySelector(s);
+    // ---- tiny helpers
+    const $  = (s)=>document.querySelector(s);
+    const now= ()=>new Date().toISOString();
     const logEl = $("#http-log");
+    function log(line){ const ts = now().substring(11,19); logEl.value = ts+"  "+line+"\\n"+logEl.value; }
+    function join(base, path){ if(!base) return path; const b = base.endsWith("/")?base.slice(0,-1):base; return b+path; }
+    function nhost(x){ return (x||"").trim().replace(/^https?:\\/\\//i,"").replace(/^www\\./i,"").toLowerCase(); }
+    function badge(id, v){ const el=$(id); if(el){ el.textContent = v || "—"; el.title = v||""; } }
 
-    function logHttp(line){
-      const ts = new Date().toISOString().substring(11,19);
-      logEl.value = ts+"  "+line+"\\n"+logEl.value;
-    }
-    function setBadge(id, text){ const el=$(id); if(el){ el.textContent=text||"—"; el.title=text||""; } }
-    function normalizeHost(raw){
-      return (raw||"").trim().replace(/^https?:\\/\\//i,"").replace(/^www\\./i,"").toLowerCase();
-    }
-    // safe URL join (no regex)
-    function join(base, path){
-      if(!base) return path;
-      const b = base.endsWith("/") ? base.slice(0,-1) : base;
-      return b + path;
-    }
+    // ---- state
+    let latest = null; // {host,title,platform,created,temp,why,supplier_host}
 
-    // ---------- state
-    let latestCandidate = null; // {host,title,platform,created,temp,why,supplier_host}
-
-    function renderLatestCandidate(c){
-      setBadge("#badge-host", c?.host);
-      setBadge("#badge-title", c?.title);
-      setBadge("#badge-when", c?.created);
-      setBadge("#badge-temp", c?.temp);
-      setBadge("#badge-why", c?.why);
+    function renderLatest(c){
+      badge("#b-host",  c?.host);
+      badge("#b-title", c?.title);
+      badge("#b-when",  c?.created);
+      badge("#b-temp",  c?.temp);
+      badge("#b-why",   c?.why);
     }
-    function clearLatestCandidate(reason){
-      latestCandidate=null; renderLatestCandidate({});
-      if(reason) logHttp("✗  "+reason);
+    function clearLatest(msg){
+      latest = null; renderLatest({});
+      if(msg) log("✗  "+msg);
     }
-    function prependRow(c){
-      const tb=$("#results-tbody"); if(!tb) return;
-      const tr=document.createElement("tr");
-      [c.host||"", c.platform||"web", c.title||"", c.created||"", c.temp||"", c.why||""]
-        .forEach(t=>{ const td=document.createElement("td"); td.textContent=t; tr.appendChild(td); });
+    function addRow(c){
+      const tb = $("#results"); if(!tb) return;
+      const tr = document.createElement("tr");
+      [c.host,c.platform||"web",c.title,c.created,c.temp,c.why].forEach(t=>{
+        const td=document.createElement("td"); td.textContent=t||""; tr.appendChild(td);
+      });
       tb.prepend(tr);
     }
 
-    function getBase(){ return ($("#api").value || localStorage.getItem("apiBase") || "").trim(); }
-    function saveBase(u){ localStorage.setItem("apiBase",(u||"").trim()); }
+    function base(){ return ($("#api").value || localStorage.getItem("apiBase") || "").trim(); }
 
-    // ---------- calls
+    // ---- actions
     async function findBuyer(){
-      const base=getBase(); if(!base){ alert("Set API base and click Apply."); return; }
-      const supplierHost=normalizeHost($("#supplier-host").value);
-      const region=$("#region").value||"US/CA";
-      const radius=$("#radius").value||"50 mi";
-      const path=`/api/leads/find-buyers?host=${encodeURIComponent(supplierHost)}&region=${encodeURIComponent(region)}&radius=${encodeURIComponent(radius)}`;
-      const url=join(base,path);
+      const b = base(); if(!b){ alert("Set API base then Apply."); return; }
+      const supplier = nhost($("#supplier-host").value);
+      const region   = $("#region").value || "US/CA";
+      const radius   = $("#radius").value || "50 mi";
+      const url = join(b, `/api/leads/find-buyers?host=${encodeURIComponent(supplier)}&region=${encodeURIComponent(region)}&radius=${encodeURIComponent(radius)}`);
 
-      const t0=performance.now();
-      let resp;
-      try{ resp=await fetch(url); }
-      catch(e){ logHttp("GET  "+url+"  ERR ("+Math.round(performance.now()-t0)+"ms)"); clearLatestCandidate("network error"); return; }
+      const t0 = performance.now();
+      let r;
+      try { r = await fetch(url); }
+      catch (e){ log(`GET  ${url}  ERR (${Math.round(performance.now()-t0)}ms)`); clearLatest("network error"); return; }
 
-      const ms=Math.round(performance.now()-t0);
-      if(!resp.ok){ logHttp("GET  "+url+"  "+resp.status+" "+resp.statusText+" ("+ms+"ms)"); clearLatestCandidate("HTTP "+resp.status); return; }
+      const ms = Math.round(performance.now()-t0);
+      if(!r.ok){ log(`GET  ${url}  ${r.status} ${r.statusText} (${ms}ms)`); clearLatest("HTTP "+r.status); return; }
 
-      let data=null; try{ data=await resp.json(); } catch{ logHttp("GET  "+url+"  200 OK (bad JSON) ("+ms+"ms)"); clearLatestCandidate("bad JSON"); return; }
+      let d=null; try { d = await r.json(); } catch { log(`GET  ${url}  200 OK (bad JSON) (${ms}ms)`); clearLatest("bad JSON"); return; }
 
-      const c={
-        host: data?.host || "",
-        platform: data?.platform || "web",
-        title: data?.title || "",
-        created: data?.created || new Date().toISOString(),
-        temp: data?.temp || "warm",
-        why: data?.why || "",
-        supplier_host: supplierHost
+      const c = {
+        host: d?.host || "", title: d?.title || "",
+        platform: d?.platform || "web", created: d?.created || now(),
+        temp: d?.temp || "warm", why: d?.why || "", supplier_host: supplier
       };
 
-      // block supplier-as-candidate
-      if(!c.host || !c.title){ logHttp("GET  "+url+"  200 OK ("+ms+"ms)"); clearLatestCandidate("no candidate from API"); return; }
-      if(c.host === supplierHost){ logHttp("GET  "+url+"  200 OK ("+ms+"ms)"); clearLatestCandidate("API returned supplier itself"); return; }
+      if(!c.host || !c.title){ log(`GET  ${url}  200 OK (${ms}ms)`); clearLatest("no candidate from API"); return; }
+      if(c.host === supplier){ log(`GET  ${url}  200 OK (${ms}ms)`); clearLatest("API returned supplier itself"); return; }
 
-      latestCandidate=c; renderLatestCandidate(c); prependRow(c);
-      logHttp("GET  "+url+"  200 OK ("+ms+"ms)");
+      latest=c; renderLatest(c); addRow(c);
+      log(`GET  ${url}  200 OK (${ms}ms)`);
     }
 
-    async function lockLatest(tempWanted){
-      if(!latestCandidate){ clearLatestCandidate("no candidate yet"); return; }
-      const base=getBase(); if(!base){ alert("Set API base and click Apply."); return; }
-      const url=join(base,"/api/leads/lock");
-      const body={...latestCandidate, temp: tempWanted || latestCandidate.temp || "warm"};
+    async function lock(tempWanted){
+      if(!latest){ clearLatest("no candidate yet"); return; }
+      const b = base(); if(!b){ alert("Set API base then Apply."); return; }
+      const url = join(b, "/api/leads/lock");
+      const body = {...latest, temp: tempWanted || latest.temp || "warm"};
 
-      const t0=performance.now();
-      let resp;
+      const t0 = performance.now();
+      let r;
       try{
-        resp=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+        r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
       }catch(e){
-        logHttp("POST "+url+"  ERR ("+Math.round(performance.now()-t0)+"ms)"); return;
+        log(`POST ${url}  ERR (${Math.round(performance.now()-t0)}ms)`); return;
       }
-      const ms=Math.round(performance.now()-t0);
-      if(!resp.ok){ logHttp("POST "+url+"  "+resp.status+" "+resp.statusText+" ("+ms+"ms)"); return; }
-      logHttp("POST "+url+"  200 OK ("+ms+"ms)");
+      const ms = Math.round(performance.now()-t0);
+      log(`POST ${url}  ${r.status} ${r.statusText} (${ms}ms)`);
     }
 
-    // ---------- wire
-    function attach(){
-      $("#api").value = localStorage.getItem("apiBase") || "";
-      $("#apply").addEventListener("click", ()=>{ saveBase($("#api").value); logHttp("✓  Base restored"); });
-      $("#btn-find").addEventListener("click", findBuyer);
-      $("#btn-lock-warm").addEventListener("click", ()=>lockLatest("warm"));
-      $("#btn-lock-hot").addEventListener("click", ()=>lockLatest("hot"));
+    // ---- boot
+    (function boot(){
+      try{
+        $("#apply").addEventListener("click", ()=>{ localStorage.setItem("apiBase", $("#api").value.trim()); log("✓  Base restored"); });
+        $("#btn-health").addEventListener("click", async ()=>{
+          const b=base(); if(!b){alert("Set API base.");return;}
+          const url = join(b,"/healthz");
+          const t0=performance.now(); try{ const r=await fetch(url); log(`GET  ${url}  ${r.status} ${r.statusText} (${Math.round(performance.now()-t0)}ms)`);}catch{ log(`GET  ${url}  ERR`); }
+        });
+        $("#btn-clear").addEventListener("click", ()=>{ $("#results").innerHTML=""; log("• cleared list"); });
+        $("#btn-find").addEventListener("click", findBuyer);
+        $("#btn-lock-warm").addEventListener("click", ()=>lock("warm"));
+        $("#btn-lock-hot").addEventListener("click", ()=>lock("hot"));
 
-      $("#btn-health").addEventListener("click", async ()=>{
-        const base=getBase(); if(!base){alert("Set API base.");return;}
-        const url=join(base,"/healthz");
-        const t0=performance.now(); try{ const r=await fetch(url); logHttp("GET  "+url+"  "+r.status+" "+r.statusText+" ("+(Math.round(performance.now()-t0))+"ms)"); }catch{ logHttp("GET  "+url+"  ERR"); }
-      });
-      $("#btn-probe").addEventListener("click", ()=>logHttp("• probe (placeholder)"));
-      $("#btn-clear").addEventListener("click", ()=>{ $("#results-tbody").innerHTML=""; logHttp("• cleared list"); });
-
-      logHttp("• client ready");
-    }
-    document.addEventListener("DOMContentLoaded", attach);
+        // restore API base & set ready indicators
+        const saved = localStorage.getItem("apiBase") || "";
+        if(saved) $("#api").value = saved;
+        $("#status-text").textContent = "client ready";
+        $("#ready-dot").classList.add("on");
+        log("• client ready");
+        window.__fpReady = true; // quick sanity flag if we need to check in console
+      }catch(err){
+        // If anything ever throws at boot, keep the page alive and show it
+        console.error("boot error", err);
+        $("#status-text").textContent = "boot error (see console)";
+      }
+    })();
   </script>
 </body>
 </html>
