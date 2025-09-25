@@ -214,4 +214,142 @@ async function recentlySuggested(supplierHost: string): Promise<Set<string>> {
       LIMIT 50;`,
     [supplierHost]
   );
-  return new Set(rows.map(r => String
+  return new Set(rows.map(r => String(r.suggested_host)));
+}
+
+async function logSuggestion(supplierHost: string, buyerHost: string) {
+  await q(
+    `INSERT INTO suggestion_log (supplier_host, suggested_host) VALUES ($1,$2);`,
+    [supplierHost, buyerHost]
+  );
+}
+
+/* ========== candidate selection ========== */
+
+function inferRegionFromTld(host: string): 'US' | 'CA' | undefined {
+  if (host.endsWith('.ca')) return 'CA';
+  if (host.endsWith('.us')) return 'US';
+  return undefined;
+}
+
+async function pickSmartCandidate(host: string, region?: string, opts?: { avoidMega?: boolean; bias?: 'smb'|'mid'|'any'; cats?: string[] }): Promise<Candidate | null> {
+  const supplier = normalizeHost(host);
+  const wantedCats = opts?.cats && opts.cats.length ? opts.cats : inferPackagingCategoryFromHost(supplier);
+
+  const regionPref = region?.includes('CA')
+    ? 'CA'
+    : region?.includes('US')
+    ? 'US'
+    : inferRegionFromTld(supplier);
+
+  await ensureTables();
+  const seen = await recentlySuggested(supplier);
+
+  const ctx: Context = {
+    supplierHost: supplier,
+    regionPref,
+    avoidMega: opts?.avoidMega ?? true,
+    sizeBias: opts?.bias ?? 'smb'
+  };
+
+  // Stage 1: raw scoring
+  const scored = CATALOG
+    .filter(s => s.host !== supplier)
+    .filter(s => !seen.has(s.host))
+    .map(s => ({ seed: s, score: scoreBuyer(s, ctx, wantedCats) }))
+    .sort((a, b) => b.score - a.score);
+
+  if (scored.length === 0) return null;
+
+  // Stage 2: probe vendor pages for the top 12 only
+  const topN = scored.slice(0, 12);
+  const boosts = await Promise.all(
+    topN.map(x => vendorSignal(x.seed.host, x.seed.vendorPaths))
+  );
+  for (let i = 0; i < topN.length; i++) topN[i].score += boosts[i];
+
+  // Re-rank with boosts
+  topN.sort((a, b) => b.score - a.score);
+
+  // Prefer non-mega; if only mega remains, take best mega
+  let chosen = topN.find(r => r.seed.size !== 'mega') ?? topN[0];
+  const picked = chosen.seed;
+
+  const title = picked.titleHint ?? `Suppliers / vendor info | ${picked.host}`;
+  const whyChunks = [
+    wantedCats.length ? `fit: ${wantedCats.join('/')}` : '',
+    regionPref ? `region: ${regionPref}` : '',
+    `size: ${picked.size}`,
+    (boosts[topN.indexOf(chosen)] ?? 0) > 0 ? 'vendor page verified' : (picked.vendorPaths?.length ? 'vendor page known' : '')
+  ].filter(Boolean);
+
+  const cand: Candidate = {
+    host: picked.host,
+    platform: 'web',
+    title,
+    created: nowISO(),
+    temp: 'warm',
+    why: `${whyChunks.join(' · ')} (picked for supplier: ${supplier})`
+  };
+
+  await logSuggestion(supplier, picked.host);
+  return cand;
+}
+
+/* ========== routes ========== */
+
+// GET /api/leads/find-buyers?host=...&region=US%2FCA&bias=smb|mid|any&avoidMega=true|false&cats=food,beauty
+leads.get('/find-buyers', async (req: Request, res: Response) => {
+  const { host, region, bias, avoidMega, cats } = req.query as Record<string, string | undefined>;
+  if (!host) return res.status(400).json({ error: 'host is required' });
+
+  try {
+    const cand = await pickSmartCandidate(
+      host,
+      region,
+      {
+        bias: (bias === 'mid' || bias === 'any') ? (bias as any) : 'smb',
+        avoidMega: avoidMega === 'false' ? false : true,
+        cats: cats ? cats.split(',').map(s => s.trim()).filter(Boolean) : undefined
+      }
+    );
+    if (!cand) return res.status(404).json({ error: 'no match' });
+    return res.json(cand);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'internal', detail: String(err?.message || err) });
+  }
+});
+
+// POST /api/leads/lock { host, title, temp? }
+leads.post('/lock', async (req: Request, res: Response) => {
+  const { host, title, temp } = (req.body ?? {}) as { host?: string; title?: string; temp?: Temp };
+  if (!host || !title) return res.status(400).json({ error: 'candidate with host and title required' });
+
+  const created = nowISO();
+  const h = normalizeHost(host);
+  const t: Temp = temp === 'hot' ? 'hot' : 'warm';
+
+  try {
+    await q(`
+      CREATE TABLE IF NOT EXISTS buyer_locks (
+        id BIGSERIAL PRIMARY KEY,
+        host TEXT NOT NULL,
+        title TEXT NOT NULL,
+        temp TEXT NOT NULL,
+        created TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await q(
+      `INSERT INTO buyer_locks (host, title, temp, created)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT DO NOTHING;`,
+      [h, title, t, created]
+    );
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: 'lock_failed', detail: String(err?.message || err) });
+  }
+});
+
+export default leads;
+export { leads as leadsRouter };
