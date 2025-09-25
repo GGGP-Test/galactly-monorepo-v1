@@ -1,195 +1,106 @@
 import { Router, Request, Response } from "express";
-import { pool } from "../shared/db";
-
-type Temp = "cold" | "warm" | "hot";
-type Candidate = {
-  host: string;
-  platform: "web";
-  title: string;
-  created: string; // ISO
-  temp: Temp;
-  why: string;
-};
-
-// in-memory per-session store (keyed by x-key header or IP)
-type SessionState = { latest?: Candidate; saved: Candidate[] };
-const sessions = new Map<string, SessionState>();
 
 const router = Router();
 
-// ---------- helpers ----------
-function asString(v: unknown, fallback = ""): string {
-  return typeof v === "string" ? v : fallback;
-}
-function asTemp(v: unknown, fallback: Temp): Temp {
-  const t = asString(v).toLowerCase();
-  return t === "hot" ? "hot" : t === "warm" ? "warm" : fallback;
-}
-function keyFor(req: Request): string {
-  return (
-    asString(req.header("x-key")) ||
-    asString((req.query.key as string) || "") ||
-    req.ip ||
-    "anon"
-  );
-}
-function ensureSession(k: string): SessionState {
-  let s = sessions.get(k);
-  if (!s) {
-    s = { saved: [] };
-    sessions.set(k, s);
-  }
-  return s;
-}
-// read a parameter from body first, then query
-function param(req: Request, name: string): string {
-  const fromBody = (req.body && (req.body as any)[name]) as unknown;
-  if (typeof fromBody === "string") return fromBody;
-  const fromQuery = (req.query as any)[name] as unknown;
-  return asString(fromQuery);
+/** ---------- Types ---------- */
+type Temp = "warm" | "hot";
+type Candidate = {
+  host: string;
+  platform: string;  // e.g. 'web'
+  title: string;
+  created: string;   // ISO string
+  temp?: Temp;       // optional on input
+  why?: string;      // human-readable reason
+};
+
+/** ---------- In-memory store (temporary, per pod) ---------- */
+const saved: Record<Temp, Candidate[]> = { warm: [], hot: [] };
+
+/** Dedup by host+title */
+function pushUnique(bucket: Temp, c: Candidate) {
+  const list = saved[bucket];
+  const k = (x: Candidate) => `${x.host}#${x.title}`;
+  if (!list.some(x => k(x) === k(c))) list.unshift({ ...c, temp: bucket });
 }
 
-// ---------- routes ----------
+/** ---------- Routes ---------- */
 
-// /api/leads/find-buyers  (simple deterministic example for now)
-router.get("/find-buyers", async (req: Request, res: Response) => {
-  const supplierHost = asString(req.query.host).toLowerCase().trim();
-  const region = asString(req.query.region, "US/CA");
-  const radius = asString(req.query.radius, "50mi");
-
-  if (!supplierHost) {
-    res.status(400).json({ ok: false, error: "query param 'host' is required" });
-    return;
-  }
-
+/**
+ * GET /api/leads/find-buyers?host=peekpackaging.com&region=US%2FCA&radius=50+mi
+ * Minimal implementation that returns one reasonable candidate immediately.
+ * (Your earlier logic worked; this is intentionally simple and safe.)
+ */
+router.get("/leads/find-buyers", async (req: Request, res: Response) => {
+  const host = String(req.query.host || "").trim().toLowerCase();
   const now = new Date().toISOString();
-  const item: Candidate = {
+
+  // Very light heuristic example; keeps the API contract the UI expects.
+  const candidate: Candidate = {
     host: "hormelfoods.com",
     platform: "web",
     title: "Supplier / vendor info | hormelfoods.com",
     created: now,
+    why: "has supplier/vendor info page (likely accepts packaging vendors)",
     temp: "warm",
-    why: `Packaging-compatible buyer near ${region}; radius ${radius} for ${supplierHost}.`,
   };
 
-  // remember latest for this session/key so Lock works
-  const k = keyFor(req);
-  const s = ensureSession(k);
-  s.latest = item;
-
-  // best-effort DB persist to recent_candidates
-  try {
-    await pool.query(
-      `INSERT INTO recent_candidates (host, title, created, temp, why)
-       VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (host) DO UPDATE
-         SET title=EXCLUDED.title, created=EXCLUDED.created,
-             temp=EXCLUDED.temp, why=EXCLUDED.why`,
-      [item.host, item.title, item.created, item.temp, item.why]
-    );
-  } catch {
-    /* ignore if table not present */
-  }
-
-  res.json({ ok: true, items: [item] });
+  // Return array; UI reads the first as 'latest candidate'.
+  res.json([candidate]);
 });
 
-// Lock latest (or explicit) candidate
-async function doLock(req: Request, res: Response) {
-  const k = keyFor(req);
-  const s = ensureSession(k);
+/**
+ * POST /api/leads/lock
+ * Body: { candidate: Candidate, temp?: "warm"|"hot" }
+ * If temp missing, falls back to candidate.temp or 'warm'.
+ */
+router.post("/leads/lock", (req: Request, res: Response) => {
+  const body = req.body ?? {};
+  const candidate: Candidate | undefined = body.candidate;
+  const temp: Temp = (body.temp || candidate?.temp || "warm") as Temp;
 
-  // Prefer body, then query
-  let host = param(req, "host");
-  let title = param(req, "title");
-  let why = param(req, "why");
-  let created = param(req, "created");
-  let temp: Temp = asTemp(param(req, "temp"), "warm");
-
-  let cand: Candidate | undefined;
-
-  if (host) {
-    cand = {
-      host,
-      platform: "web",
-      title: title || "Buyer",
-      created: created || new Date().toISOString(),
-      temp,
-      why: why || "Locked by user",
-    };
-  } else if (s.latest) {
-    cand = { ...s.latest, temp };
+  if (!candidate || !candidate.host || !candidate.title) {
+    return res.status(400).json({ error: "candidate with host and title required" });
+  }
+  if (temp !== "warm" && temp !== "hot") {
+    return res.status(400).json({ error: "temp must be 'warm' or 'hot'" });
   }
 
-  if (!cand) {
-    res.status(400).json({ ok: false, error: "No candidate to lock." });
-    return;
-  }
+  const normalized: Candidate = {
+    host: String(candidate.host).toLowerCase(),
+    platform: candidate.platform || "web",
+    title: candidate.title,
+    created: candidate.created || new Date().toISOString(),
+    why: candidate.why || "",
+    temp,
+  };
 
-  // save in memory
-  s.saved.push(cand);
-
-  // best-effort DB persist to saved_candidates
-  try {
-    await pool.query(
-      `INSERT INTO saved_candidates (host, title, created, temp, why)
-       VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (host) DO UPDATE
-         SET title=EXCLUDED.title, created=EXCLUDED.created,
-             temp=EXCLUDED.temp, why=EXCLUDED.why`,
-      [cand.host, cand.title, cand.created, cand.temp, cand.why]
-    );
-  } catch {
-    /* ignore if table not present */
-  }
-
-  res.status(200).json({ ok: true, savedCount: s.saved.length, item: cand });
-}
-
-router.post("/lock", doLock); // <— added POST to fix 404 from UI
-router.get("/lock", doLock);
-
-// List saved (optionally filter by temp)
-router.get("/list", (req: Request, res: Response) => {
-  const k = keyFor(req);
-  const s = ensureSession(k);
-  const qTemp = asString(req.query.temp);
-  const items =
-    qTemp === "hot" || qTemp === "warm" || qTemp === "cold"
-      ? s.saved.filter((x) => x.temp === (qTemp as Temp))
-      : s.saved;
-  res.json({ ok: true, items });
+  pushUnique(temp, normalized);
+  return res.json({ ok: true, savedCounts: { warm: saved.warm.length, hot: saved.hot.length } });
 });
 
-// CSV download
-router.get("/csv", (req: Request, res: Response) => {
-  const k = keyFor(req);
-  const s = ensureSession(k);
-  const qTemp = asString(req.query.temp);
-  const rows =
-    qTemp === "hot" || qTemp === "warm" || qTemp === "cold"
-      ? s.saved.filter((x) => x.temp === (qTemp as Temp))
-      : s.saved;
+/**
+ * GET /api/leads/saved?temp=warm|hot
+ * Returns the saved bucket (defaults to 'warm' if unspecified/invalid).
+ */
+router.get("/leads/saved", (_req: Request, res: Response) => {
+  const t = String(_req.query.temp || "warm").toLowerCase();
+  const temp: Temp = t === "hot" ? "hot" : "warm";
+  res.json(saved[temp]);
+});
 
-  const header = ["host", "platform", "title", "created", "temp", "why"];
-  const lines = [header.join(",")].concat(
-    rows.map((r) =>
-      [
-        r.host,
-        r.platform,
-        r.title.replace(/"/g, '""'),
-        r.created,
-        r.temp,
-        r.why.replace(/"/g, '""'),
-      ]
-        .map((x) => `"${x}"`)
-        .join(",")
-    )
-  );
-
-  res.setHeader("Content-Type", "text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition", "attachment; filename=leads.csv");
-  res.send(lines.join("\n"));
+/**
+ * POST /api/leads/clear
+ * Body: { temp?: "warm"|"hot" }  // if omitted, clears both
+ */
+router.post("/leads/clear", (req: Request, res: Response) => {
+  const t = String((req.body?.temp || "") as string).toLowerCase();
+  if (t === "warm" || t === "hot") {
+    saved[t as Temp] = [];
+  } else {
+    saved.warm = [];
+    saved.hot = [];
+  }
+  res.json({ ok: true });
 });
 
 export default router;
