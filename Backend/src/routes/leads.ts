@@ -1,292 +1,231 @@
 // src/routes/leads.ts
-import { Router, Request, Response } from 'express';
-import fs from 'fs';
-import path from 'path';
+import { Router, Request, Response } from "express";
+
+/* ------------------------- Types & small helpers ------------------------- */
+
+type Tier = "A" | "B" | "C";
+
+type Buyer = {
+  host: string;
+  name?: string;
+  tiers: Tier[];
+  segments: string[];           // e.g. ["food","beverage","beauty","industrial"]
+  tags?: string[];              // packaging hints: ["tin","shrink","glass","mailer"]
+  cityTags?: string[];          // e.g. ["los angeles","nj","bay area","dallas"]
+  vendorPaths?: string[];       // known supplier/vendor URLs to probe (optional)
+};
+
+type BuyersCatalog = { version: number; buyers: Buyer[] };
+
+type Candidate = {
+  host: string;
+  platform: "web";
+  title: string;
+  created: string;              // ISO datetime
+  temp: "warm" | "hot";
+  why: string;
+};
+
+function nowIso() { return new Date().toISOString(); }
+
+function decodeMaybeBase64(raw: string): string {
+  const trimmed = raw.trim();
+  const looksB64 = /^[A-Za-z0-9+/=]+$/.test(trimmed) && !trimmed.includes("{");
+  if (!looksB64) return trimmed;
+  try { return Buffer.from(trimmed, "base64").toString("utf8"); } catch { return trimmed; }
+}
+
+function loadBuyersCatalog(): BuyersCatalog {
+  const fromEnv = process.env.BUYERS_CATALOG_JSON;
+  if (fromEnv && fromEnv.trim()) {
+    const txt = decodeMaybeBase64(fromEnv);
+    return JSON.parse(txt);
+  }
+  // minimal fallback so the API still responds even if the secret is missing
+  const fallback: BuyersCatalog = {
+    version: 1,
+    buyers: [
+      {
+        host: "generalmills.com",
+        name: "General Mills",
+        tiers: ["A"],
+        segments: ["food","cpg"],
+        tags: ["carton","pouch","film"],
+        cityTags: ["minneapolis","mn","midwest"],
+        vendorPaths: ["/suppliers","/vendors","/supplier-info"]
+      },
+      {
+        host: "sallybeauty.com",
+        name: "Sally Beauty",
+        tiers: ["B"],
+        segments: ["beauty","retail"],
+        tags: ["bottle","jar","label","carton"],
+        cityTags: ["denton","tx","dallas","north texas"],
+        vendorPaths: ["/suppliers","/vendor","/supplier"]
+      },
+      {
+        host: "kindsnacks.com",
+        name: "KIND Snacks",
+        tiers: ["B"],
+        segments: ["food","snack","cpg"],
+        tags: ["film","pouch","carton"],
+        cityTags: ["new york","nyc","ny","manhattan"],
+        vendorPaths: ["/suppliers","/vendor"]
+      },
+      {
+        host: "califiafarms.com",
+        name: "Califia Farms",
+        tiers: ["B","C"],
+        segments: ["beverage","cpg"],
+        tags: ["bottle","label","shrink"],
+        cityTags: ["los angeles","la","southern california","so cal"],
+        vendorPaths: ["/suppliers","/supplier","/vendor"]
+      },
+      {
+        host: "perfectsnacks.com",
+        name: "Perfect Snacks",
+        tiers: ["C"],
+        segments: ["food","snack","cpg"],
+        tags: ["film","pouch","case"],
+        cityTags: ["san diego","sd","southern california"],
+        vendorPaths: ["/suppliers","/vendor"]
+      }
+    ]
+  };
+  return fallback;
+}
+
+/* -------------------- Supplier → inferred tags/segments ------------------- */
+
+function inferFromSupplierHost(host: string): {
+  supplierTags: string[];
+  supplierSegments: string[];
+} {
+  const h = host.toLowerCase();
+  const tags = new Set<string>();
+  const segs = new Set<string>();
+
+  // segments (very coarse for now)
+  if (/(food|snack|meal|cookie|bakery|meat|deli|grocery)/.test(h)) segs.add("food").add("cpg");
+  if (/(beverage|drink|brew|coffee|tea|soda|juice|water)/.test(h)) segs.add("beverage").add("cpg");
+  if (/(beauty|cosmetic|salon|hair|skincare|makeup|nail)/.test(h)) segs.add("beauty").add("retail");
+  if (/(pharma|med|rx|lab|biotech)/.test(h)) segs.add("pharma").add("health");
+  if (/(pet|animal|vet)/.test(h)) segs.add("pet").add("cpg");
+  if (/(auto|automotive)/.test(h)) segs.add("auto");
+  if (/(electronic|device|accessor|gadget)/.test(h)) segs.add("electronics");
+  if (/(industrial|chemical|adhesive|coating|paint)/.test(h)) segs.add("industrial");
+  if (segs.size === 0) segs.add("cpg"); // default broad bucket
+
+  // packaging keywords → tags
+  if (/(shrink|film|wrap)/.test(h)) tags.add("shrink").add("film");
+  if (/(tin|metal|can)/.test(h)) tags.add("tin").add("can");
+  if (/(glass|jar|vial)/.test(h)) tags.add("glass").add("jar");
+  if (/(label|sticker)/.test(h)) tags.add("label");
+  if (/(bottle|cap|closure)/.test(h)) tags.add("bottle");
+  if (/(box|carton|mailer|corrug|ship)/.test(h)) tags.add("carton").add("mailer");
+  if (/(pouch|sachet)/.test(h)) tags.add("pouch");
+  if (/(tube)/.test(h)) tags.add("tube");
+  if (tags.size === 0) tags.add("carton"); // sane default
+
+  return { supplierTags: [...tags], supplierSegments: [...segs] };
+}
+
+/* ------------------------------- Scoring ---------------------------------- */
+
+function scoreBuyer(b: Buyer, ctx: {
+  supplierTags: string[];
+  supplierSegments: string[];
+  wantTiers: Tier[];
+  cityHint?: string;
+}): number {
+  let s = 0;
+
+  // tier fit
+  if (b.tiers.some(t => ctx.wantTiers.includes(t))) s += 20;
+
+  // segment overlap
+  if (b.segments.some(seg => ctx.supplierSegments.includes(seg))) s += 25;
+
+  // tag overlap
+  if (b.tags && b.tags.some(t => ctx.supplierTags.includes(t))) s += 20;
+
+  // city/local boost
+  if (ctx.cityHint && b.cityTags?.some(c => ctx.cityHint!.includes(c))) s += 30;
+
+  // very small diversity bonus for broader buyers
+  if ((b.tags?.length ?? 0) >= 3) s += 5;
+
+  return s;
+}
+
+/* -------------------------------- Router ---------------------------------- */
 
 const router = Router();
 
-/** UI shape */
-export interface Candidate {
-  host: string;
-  platform: 'web';
-  title: string;
-  created: string;
-  temp: 'warm' | 'hot';
-  why: string;
-  score: number;
-}
-
-type Size = 'small' | 'mid' | 'large';
-type Vertical = 'cpg' | 'retail' | 'beauty' | 'beverage' | 'dairy' | 'household';
-type Region = 'US' | 'CA' | 'US/CA';
-
-interface CatalogRow {
-  host: string;
-  brand: string;
-  region: Region;
-  size: Size;
-  category: Vertical;
-  hasVendorPage?: boolean;
-}
-
-/* ------------------------------ Small built-in seed ------------------------------ */
-const SEED: CatalogRow[] = [
-  // CPG & beverage mid-market (good win-rate)
-  { host: 'lesserevil.com', brand: 'LesserEvil', region: 'US', size: 'mid', category: 'cpg', hasVendorPage: true },
-  { host: 'hippeas.com', brand: 'Hippeas', region: 'US', size: 'mid', category: 'cpg', hasVendorPage: true },
-  { host: 'rxbar.com', brand: 'RXBAR', region: 'US', size: 'mid', category: 'cpg', hasVendorPage: true },
-  { host: 'perfectsnacks.com', brand: 'Perfect Snacks', region: 'US', size: 'mid', category: 'cpg' },
-  { host: 'califiafarms.com', brand: 'Califia Farms', region: 'US', size: 'mid', category: 'beverage' },
-  { host: 'spindrift.com', brand: 'Spindrift', region: 'US', size: 'mid', category: 'beverage' },
-  { host: 'drinkolipop.com', brand: 'OLIPOP', region: 'US', size: 'mid', category: 'beverage' },
-  { host: 'lacolombe.com', brand: 'La Colombe', region: 'US', size: 'mid', category: 'beverage' },
-  { host: 'athleticbrewing.com', brand: 'Athletic Brewing', region: 'US', size: 'mid', category: 'beverage' },
-
-  // Dairy / household / beauty (non-megacap)
-  { host: 'siggis.com', brand: "Siggi's", region: 'US', size: 'mid', category: 'dairy' },
-  { host: 'tillamook.com', brand: 'Tillamook', region: 'US', size: 'mid', category: 'dairy' },
-  { host: 'drbronner.com', brand: "Dr. Bronner's", region: 'US', size: 'mid', category: 'beauty', hasVendorPage: true },
-  { host: 'methodhome.com', brand: 'Method', region: 'US', size: 'mid', category: 'household' },
-  { host: 'mrsmyers.com', brand: "Mrs. Meyer's", region: 'US', size: 'mid', category: 'household' },
-
-  // Regional retail (fast procurement)
-  { host: 'gelsons.com', brand: "Gelson's", region: 'US', size: 'small', category: 'retail', hasVendorPage: true },
-  { host: 'freshthyme.com', brand: 'Fresh Thyme', region: 'US', size: 'mid', category: 'retail' },
-  { host: 'newseasonsmarket.com', brand: 'New Seasons', region: 'US', size: 'mid', category: 'retail' },
-  { host: 'sprouts.com', brand: 'Sprouts', region: 'US', size: 'mid', category: 'retail' },
-  { host: 'wegmans.com', brand: 'Wegmans', region: 'US', size: 'mid', category: 'retail' },
-
-  // Canada retail
-  { host: 'saveonfoods.com', brand: 'Save-On-Foods', region: 'CA', size: 'mid', category: 'retail', hasVendorPage: true },
-  { host: 'longos.com', brand: "Longo's", region: 'CA', size: 'mid', category: 'retail' },
-  { host: 'farmboy.ca', brand: 'Farm Boy', region: 'CA', size: 'mid', category: 'retail' },
-
-  // Larger but legit when supplier is enterprise-ready
-  { host: 'kroger.com', brand: 'Kroger', region: 'US', size: 'large', category: 'retail', hasVendorPage: true },
-  { host: 'albertsons.com', brand: 'Albertsons', region: 'US', size: 'large', category: 'retail', hasVendorPage: true },
-];
-
-/* ---- Universal fallback when everything else filters out (still real buyers) ---- */
-const UNIVERSAL_RETAIL: CatalogRow[] = [
-  { host: 'heb.com', brand: 'H-E-B', region: 'US', size: 'mid', category: 'retail', hasVendorPage: true },
-  { host: 'wholefoodsmarket.com', brand: 'Whole Foods', region: 'US', size: 'large', category: 'retail', hasVendorPage: true },
-  { host: 'traderjoes.com', brand: 'Trader Joe’s', region: 'US', size: 'large', category: 'retail' },
-  { host: 'londondrugs.com', brand: 'London Drugs', region: 'CA', size: 'mid', category: 'retail' },
-  { host: 'calgarycoop.com', brand: 'Calgary Co-op', region: 'CA', size: 'mid', category: 'retail' },
-];
-
-/* -------------------------- External catalog (optional) -------------------------- */
-function loadExternalCatalog(): CatalogRow[] {
-  try {
-    const envPath = process.env.BUYERS_CATALOG_PATH;
-    const defaultPath = path.join(process.cwd(), 'data', 'buyers.catalog.json');
-    const p = envPath || (fs.existsSync(defaultPath) ? defaultPath : '');
-    if (!p) return [];
-    const txt = fs.readFileSync(p, 'utf8');
-    const json = JSON.parse(txt) as CatalogRow[];
-    return Array.isArray(json) ? json.filter(validRow) : [];
-  } catch {
-    return [];
-  }
-}
-
-function validRow(r: any): r is CatalogRow {
-  return r && typeof r.host === 'string' && typeof r.brand === 'string'
-    && ['US', 'CA', 'US/CA'].includes(r.region)
-    && ['small', 'mid', 'large'].includes(r.size)
-    && ['cpg', 'retail', 'beauty', 'beverage', 'dairy', 'household'].includes(r.category);
-}
-
-const EXTERNAL: CatalogRow[] = loadExternalCatalog();
-const CATALOG: CatalogRow[] = dedupeByHost([...SEED, ...EXTERNAL, ...UNIVERSAL_RETAIL]);
-
-/* ---------------------------------- Helpers ---------------------------------- */
-function dedupeByHost(rows: CatalogRow[]): CatalogRow[] {
-  const seen = new Set<string>();
-  const out: CatalogRow[] = [];
-  for (const r of rows) {
-    const h = normalizeHost(r.host);
-    if (!seen.has(h)) {
-      seen.add(h);
-      out.push({ ...r, host: h });
-    }
-  }
-  return out;
-}
-
-function normalizeHost(h: string): string {
-  return (h || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
-}
-
-function regionAccepts(candidate: Region, wanted: string): boolean {
-  const w = (wanted || '').toUpperCase();
-  if (!w) return true;
-  if (candidate === 'US/CA') return w === 'US' || w === 'CA' || w === 'US/CA';
-  if (candidate === 'US') return w === 'US' || w === 'US/CA';
-  if (candidate === 'CA') return w === 'CA' || w === 'US/CA';
-  return true;
-}
-
-function supplierHints(host: string): { verticals: Set<Vertical>, tags: string[] } {
-  const h = host.toLowerCase();
-  const v = new Set<Vertical>();
-  const tags: string[] = [];
-  const add = (x: Vertical) => v.add(x);
-
-  if (/(snack|chip|bar|granola|jerky|confect)/.test(h)) add('cpg');
-  if (/(beauty|cosmetic|skincare|soap|lotion)/.test(h)) add('beauty');
-  if (/(brew|coffee|tea|drink|beverag|soda|water|seltzer)/.test(h)) add('beverage');
-  if (/(dairy|milk|yogurt|cream|cheese)/.test(h)) add('dairy');
-  if (/(household|clean|detergent)/.test(h)) add('household');
-  if (!v.size) add('cpg');
-
-  if (/(shrink|stretch)/.test(h)) tags.push('stretch/shrink film');
-  if (/(label|sticker)/.test(h)) tags.push('labels');
-  if (/(box|carton|case)/.test(h)) tags.push('carton/box');
-  if (/(bottle|can|tin|foil|metal)/.test(h)) tags.push('metal/can/foil');
-
-  return { verticals: v, tags };
-}
-
-function sizeBase(size: Size): number {
-  if (size === 'small') return 18;
-  if (size === 'mid') return 28;
-  return 8; // large – lower base
-}
-
-function sizePrefBonus(size: Size, pref: 'small' | 'mid' | 'any'): number {
-  if (pref === 'any') return 0;
-  if (pref === 'small') return size === 'small' ? 12 : size === 'mid' ? 4 : -12;
-  // pref === 'mid'
-  return size === 'mid' ? 12 : size === 'small' ? 6 : -10;
-}
-
-function scoreRow(
-  row: CatalogRow,
-  supplierHost: string,
-  wantedRegion: string,
-  verticalHint: Vertical | null,
-  sizePref: 'small' | 'mid' | 'any'
-): { score: number; why: string[] } {
-  const why: string[] = [];
-  let score = 0;
-
-  // size + preference
-  score += sizeBase(row.size);
-  const sizeAdj = sizePrefBonus(row.size, sizePref);
-  score += sizeAdj;
-  if (sizeAdj > 0) why.push(`size: ${row.size}`);
-
-  // region
-  if (regionAccepts(row.region, wantedRegion)) {
-    score += 20;
-    why.push(`region: ${row.region}`);
-  } else {
-    score -= 10;
-  }
-
-  // vertical
-  const hints = supplierHints(supplierHost);
-  const vmatch = verticalHint ? row.category === verticalHint : hints.verticals.has(row.category);
-  if (vmatch) {
-    score += 30;
-    const vLabel = row.category === 'cpg' ? 'general packaging' : `${row.category} packaging`;
-    why.push(`fit: ${vLabel}`);
-  }
-
-  // packaging tags awareness (weak signal)
-  if (hints.tags.length) score += Math.min(10, hints.tags.length * 3);
-
-  if (row.hasVendorPage) {
-    score += 12;
-    why.push('vendor page known');
-  }
-
-  return { score, why };
-}
-
-function toCandidate(row: CatalogRow, supplierHost: string, whyBits: string[], score: number): Candidate {
-  const temp: 'warm' | 'hot' = score >= 85 ? 'hot' : 'warm';
-  const created = new Date().toISOString();
-  return {
-    host: row.host,
-    platform: 'web',
-    title: `Suppliers / vendor info | ${row.brand}`,
-    created,
-    temp,
-    why: `${whyBits.join(' · ')} · (picked for supplier: ${supplierHost})`,
-    score
-  };
-}
-
-/* ----------------------------------- Routes ----------------------------------- */
-
 /**
- * GET /api/leads/find-buyers?host=peekpackaging.com&region=US/CA&radius=50+mi&prefer=mid&vertical=cpg
+ * GET /api/leads/find-buyers?host=peekpackaging.com&region=US%2FCA&radius=50mi&city=los%20angeles
+ * Responds: { items: Candidate[] }
  */
-router.get('/find-buyers', (req: Request, res: Response) => {
-  const supplierHost = normalizeHost(String(req.query.host || ''));
-  const region = String(req.query.region || 'US/CA').toUpperCase();
-  const prefer = (String(req.query.prefer || 'mid').toLowerCase() as 'small' | 'mid' | 'any');
-  const verticalQ = String(req.query.vertical || '').toLowerCase();
-  const verticalHint = (['cpg','retail','beauty','beverage','dairy','household'].includes(verticalQ) ? verticalQ as Vertical : null);
+router.get("/find-buyers", async (req: Request, res: Response) => {
+  const host = String(req.query.host || "").trim().toLowerCase();
+  const region = String(req.query.region || "US/CA");
+  const radius = String(req.query.radius || "50mi");
+  const cityHint = (req.query.city ? String(req.query.city) : "").toLowerCase().trim() || undefined;
 
-  if (!supplierHost) return res.status(400).json({ error: 'Missing host' });
-
-  // score all rows
-  const scored = CATALOG.map(row => {
-    const { score, why } = scoreRow(row, supplierHost, region, verticalHint, prefer);
-    return { row, score, why };
-  });
-
-  // 1) strict threshold
-  let items = scored.filter(s => s.score > 50).sort((a,b) => b.score - a.score).slice(0, 12);
-
-  // 2) relax if empty
-  if (!items.length) items = scored.filter(s => s.score > 40).sort((a,b)=>b.score-a.score).slice(0, 12);
-
-  // 3) fallback to universal retail focus for the region
-  if (!items.length) {
-    const uni = UNIVERSAL_RETAIL.filter(r => regionAccepts(r.region, region));
-    const uniScored = uni.map(r => {
-      const { score, why } = scoreRow(r, supplierHost, region, verticalHint, prefer);
-      return { row: r, score, why };
-    }).sort((a,b)=>b.score-a.score).slice(0,8);
-    items = uniScored;
+  if (!host) {
+    res.status(400).json({ error: "host required", items: [] });
+    return;
   }
 
-  const out: Candidate[] = items.map(s => toCandidate(s.row, supplierHost, s.why, s.score));
-  return res.json({ items: out });
+  // broad desired tiers by region (tune as you like)
+  const wantTiers: Tier[] = region === "US/CA" ? ["A","B","C"] : ["B","C"];
+
+  const { supplierTags, supplierSegments } = inferFromSupplierHost(host);
+  const catalog = loadBuyersCatalog();
+
+  const scored = catalog.buyers.map(b => ({
+    buyer: b,
+    score: scoreBuyer(b, { supplierTags, supplierSegments, wantTiers, cityHint })
+  }));
+
+  // keep only relevant ones
+  const kept = scored
+    .filter(x => x.score >= 35)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 20);
+
+  const items: Candidate[] = kept.map(({ buyer, score }) => ({
+    host: buyer.host,
+    platform: "web",
+    title: `Suppliers / vendor info | ${buyer.name ?? buyer.host}`,
+    created: nowIso(),
+    temp: score >= 75 ? "hot" as const : "warm" as const,
+    why: [
+      `fit: ${buyer.segments.join(", ")}`,
+      `tiers: ${buyer.tiers.join("/")}`,
+      cityHint && buyer.cityTags?.some(c => cityHint.includes(c)) ? `near: ${cityHint}` : undefined,
+      buyer.tags && buyer.tags.length ? `packaging: ${buyer.tags.join(",")}` : undefined,
+      `score: ${score}`
+    ].filter(Boolean).join(" · ")
+  }));
+
+  // Your front-end prints "no candidate" on empty lists; keep 200 OK.
+  res.json({ items, meta: { host, region, radius, city: cityHint, tags: supplierTags, segs: supplierSegments } });
 });
 
 /**
  * POST /api/leads/lock
- * Body: { host, title, temp?, why? } or { candidate: Candidate }
+ * Body: { host: string, title: string, temp?: "warm"|"hot" }
+ * For now we acknowledge; you can wire to Neon later.
  */
-router.post('/lock', (req: Request, res: Response) => {
-  const body = req.body || {};
-  const c: Partial<Candidate> = body.candidate || body;
-
-  const host = typeof c.host === 'string' ? normalizeHost(c.host) : '';
-  const title = typeof c.title === 'string' ? c.title.trim() : '';
-
-  if (!host || !title) return res.status(400).json({ error: 'candidate with host and title required' });
-
-  const out: Candidate = {
-    host,
-    platform: 'web',
-    title,
-    created: new Date().toISOString(),
-    temp: (c.temp === 'hot' ? 'hot' : 'warm'),
-    why: (typeof c.why === 'string' && c.why) || 'locked by user',
-    score: typeof c.score === 'number' ? c.score : 0
-  };
-
-  return res.json({ ok: true, candidate: out });
-});
-
-router.get('/healthz', (_req, res) => {
-  res.json({ ok: true, seed: SEED.length, external: EXTERNAL.length, total: CATALOG.length });
+router.post("/lock", async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as Partial<Candidate>;
+  if (!body.host || !body.title) {
+    res.status(400).json({ error: "candidate with host and title required" });
+    return;
+  }
+  // TODO: insert into Neon (locked_leads) with user context when ready
+  res.json({ ok: true, saved: { host: body.host, title: body.title, temp: body.temp ?? "warm", at: nowIso() } });
 });
 
 export default router;
