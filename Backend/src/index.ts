@@ -1,57 +1,82 @@
 // src/index.ts
-import express from "express";
+// Express bootstrap with safe CORS, optional tiny logger, and /version.
+// Routers are mounted exactly as they are defined (no double-prefixing).
+
+import express, { Request, Response, NextFunction } from "express";
+import HealthRouter from "./routes/health";
+import CatalogRouter from "./routes/catalog";
 import LeadsRouter from "./routes/leads";
 import PrefsRouter from "./routes/prefs";
-import CatalogRouter from "./routes/catalog";
-import HealthRouter from "./routes/health";
 
 const app = express();
 
-// Hardening / base middleware
+// --- basics ---
 app.disable("x-powered-by");
-app.set("trust proxy", (process.env.TRUST_PROXY === "1" || process.env.TRUST_PROXY === "true") ? 1 : false);
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: process.env.JSON_LIMIT || "1mb" }));
 
-// Optional request logging (safe even if 'morgan' is not installed)
-try {
-  // @ts-ignore - dynamic require to avoid hard dependency
-  const morgan = require("morgan");
-  if (morgan && process.env.REQUEST_LOG !== "0") {
-    app.use(morgan(process.env.MORGAN_FORMAT || "tiny"));
-  }
-} catch {
-  // morgan not installed — skip logging without failing
+// --- tiny, dependency-free logger (opt-in) ---
+if ((process.env.DEBUG_LOG_REQUESTS || "").trim() === "1") {
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const t0 = Date.now();
+    const { method, url } = req;
+    res.on("finish", () => {
+      const ms = Date.now() - t0;
+      // keep it short; avoid logging bodies or secrets
+      console.log(`[req] ${method} ${url} → ${res.statusCode} ${ms}ms`);
+    });
+    next();
+  });
 }
 
-// Routers
-app.use(LeadsRouter);
-app.use("/api/prefs", PrefsRouter());
-app.use(CatalogRouter);
+// --- very simple CORS (override with CORS_ALLOW_ORIGIN if needed) ---
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const allow = process.env.CORS_ALLOW_ORIGIN || "*";
+  res.header("Access-Control-Allow-Origin", allow);
+  res.header("Vary", "Origin");
+  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
+// --- routes ---
+// Health router contains both /health and /api/health
 app.use(HealthRouter);
 
-// Minimal inline version endpoint (no new file)
-app.get(["/version", "/api/version"], (_req, res) => {
+// Catalog router exposes /api/catalog/*
+app.use(CatalogRouter);
+
+// Leads router exposes /api/leads/find-buyers
+app.use(LeadsRouter);
+
+// Prefs router is a factory that we mount under /api/prefs
+app.use("/api/prefs", PrefsRouter());
+
+// Lightweight ping
+app.get("/_ping", (_req, res) => res.type("text/plain").send("pong"));
+
+// Build/version info (no external file needed)
+app.get("/version", (_req, res) => {
   res.json({
     ok: true,
     service: "buyers-api",
     node: process.version,
     env: process.env.NODE_ENV || "development",
-    port: Number(process.env.PORT || 8787),
-    commit: process.env.GIT_SHA || undefined,
-    branch: process.env.GIT_BRANCH || undefined,
-    buildTime: process.env.BUILD_TIME || undefined,
-    uptimeSec: Math.round(process.uptime()),
+    git: {
+      sha: process.env.GIT_SHA || null,
+      branch: process.env.GIT_BRANCH || null,
+      time: process.env.BUILD_TIME || null,
+    },
     nowIso: new Date().toISOString(),
   });
 });
 
+// --- start server when run directly ---
 const PORT = Number(process.env.PORT || 8787);
 
-// Only listen when executed as the entrypoint (keeps tests/imports happy)
 if (require.main === module) {
   app.listen(PORT, () => {
-    // eslint-disable-next-line no-console
-    console.log(`[buyers-api] listening on :${PORT}`);
+    console.log(`[boot] buyers-api listening on :${PORT}`);
   });
 }
 
