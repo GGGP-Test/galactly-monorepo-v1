@@ -1,203 +1,289 @@
 // src/shared/catalog.ts
-// Lightweight buyer catalog loader + helpers.
-// - Merges Tier A/B and Tier C JSON blobs from env
-// - Optionally enriches with city-tags from a JSONL file (one JSON per line)
-// - Exposes simple, well-typed helpers for routes
+//
+// Normalized buyers catalog loaded from env (AB + C) and optional city JSONL.
+// Includes a light-weight scorer and a query function used by routes.
+//
+// Env keys we read (all optional):
+//   - BUYERS_CATALOG_TIER_AB_JSON   -> stringified JSON (array OR {buyers:[...]})
+//   - BUYERS_CATALOG_TIER_C_JSON    -> stringified JSON (array OR {buyers:[...]})
+//   - BUYERS_CATALOG_CITY_JSONL_PATH -> absolute path to JSONL file (one BuyerRow per line)
 
 import fs from "fs";
 import path from "path";
+import { EffectivePrefs, Tier } from "../shared/prefs";
 
-// keep these in sync with shared/prefs.ts
-export type Tier = "A" | "B" | "C";
+// ----------------- Types -----------------
+
 export type SizeBucket = "micro" | "small" | "mid" | "large";
 
+export interface BuyerSignals {
+  ecommerce?: boolean;
+  retail?: boolean;
+  wholesale?: boolean;
+}
+
 export interface BuyerRow {
-  host: string;                 // domain, normalized lower-case
+  host: string;                 // domain only
   name?: string;
-  tiers?: Tier[];               // e.g. ["C"] (can be empty -> treated as unknown)
-  segments?: string[];          // "food","beverage","beauty","industrial","pharma",...
-  tags?: string[];              // freeform labels: "ecommerce","retail","wholesale","bag","tin","film",...
-  cityTags?: string[];          // normalized city names the buyer is associated with
-  size?: SizeBucket;            // optional hint
-  scoreBase?: number;           // optional hint for ranking
+  tiers?: Tier[];               // ["A"] | ["B"] | ["C"] (default ["C"] if omitted)
+  segments?: string[];          // domain categories: "beverage","food","beauty",...
+  tags?: string[];              // materials/cues: "pouch","film","label","tin","bag",...
+  cityTags?: string[];          // lowercase city slugs: "los angeles","minneapolis",...
+  states?: string[];            // "ca","ny","tx" (optional)
+  countries?: string[];         // "us","ca" ...
+  size?: SizeBucket;            // coarse size guess
+  signals?: BuyerSignals;       // soft indicators used in scoring
+  source?: "seed" | "city" | "computed";
 }
 
 export interface BuyerCatalog {
-  version: number;
-  buyers: BuyerRow[];
+  ab: BuyerRow[];               // pre-seeded larger logos
+  c: BuyerRow[];                // mid/small market seeds
+  city: Record<string, BuyerRow[]>; // city -> rows (optional, may be empty)
+  version?: number;
 }
 
-// -------------------- internals --------------------
+// ----------------- Small utils -----------------
 
-function normalizeHost(input: string): string {
-  return (input || "")
-    .toLowerCase()
+function normStr(s?: string): string {
+  return (s || "").toLowerCase().trim();
+}
+
+export function normalizeHost(input: string): string {
+  return normStr(input)
     .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "")
-    .trim();
+    .replace(/\/.*$/, "");
 }
 
-function uniq<T>(arr: T[]): T[] {
+function uniqLower(a?: string[]): string[] {
+  const out: string[] = [];
   const seen = new Set<string>();
-  const out: T[] = [];
-  for (const item of arr) {
-    const key = typeof item === "string" ? item : JSON.stringify(item);
-    if (!seen.has(key)) {
-      seen.add(key);
-      out.push(item);
+  for (const v of a || []) {
+    const n = normStr(v);
+    if (n && !seen.has(n)) {
+      seen.add(n);
+      out.push(n);
     }
   }
   return out;
 }
 
-function parseJson<T>(raw: string | undefined, fallback: T): T {
-  if (!raw) return fallback;
-  try {
-    const val = JSON.parse(raw) as T;
-    return val;
-  } catch {
-    return fallback;
-  }
+function asArray<T = unknown>(v: unknown): T[] {
+  return Array.isArray(v) ? (v as T[]) : [];
 }
 
-function safeArray<A = unknown>(v: unknown): A[] {
-  return Array.isArray(v) ? (v as A[]) : [];
+function hasAny<T>(needle: T[] | undefined, hay: T[] | undefined): boolean {
+  if (!needle?.length || !hay?.length) return false;
+  const set = new Set(hay);
+  for (const n of needle) if (set.has(n)) return true;
+  return false;
 }
 
-function toBuyerRow(obj: any): BuyerRow | null {
-  const host = normalizeHost(obj?.host);
-  if (!host) return null;
-
+// Sanitize a BuyerRow to safe, normalized shapes
+function sanitizeRow(r: any, defTier: Tier[] = ["C"]): BuyerRow {
+  const host = normalizeHost(r?.host);
   const row: BuyerRow = {
     host,
-    name: typeof obj?.name === "string" ? obj.name : undefined,
-    tiers: safeArray<Tier>(obj?.tiers).filter(Boolean),
-    segments: safeArray<string>(obj?.segments).map(s => String(s || "").toLowerCase()),
-    tags: safeArray<string>(obj?.tags).map(s => String(s || "").toLowerCase()),
-    cityTags: safeArray<string>(obj?.cityTags).map(s => String(s || "").toLowerCase()),
-    size: ((): SizeBucket | undefined => {
-      const s = String(obj?.size || "").toLowerCase();
-      return s === "micro" || s === "small" || s === "mid" || s === "large" ? (s as SizeBucket) : undefined;
-    })(),
-    scoreBase: Number.isFinite(obj?.scoreBase) ? Number(obj.scoreBase) : undefined,
+    name: r?.name || undefined,
+    tiers: uniqLower(asArray<string>(r?.tiers)).map(x => (x.toUpperCase() as Tier)),
+    segments: uniqLower(asArray<string>(r?.segments)),
+    tags: uniqLower(asArray<string>(r?.tags)),
+    cityTags: uniqLower(asArray<string>(r?.cityTags)),
+    states: uniqLower(asArray<string>(r?.states)),
+    countries: uniqLower(asArray<string>(r?.countries)),
+    size: (r?.size as SizeBucket) || undefined,
+    signals: {
+      ecommerce: !!r?.signals?.ecommerce,
+      retail: !!r?.signals?.retail,
+      wholesale: !!r?.signals?.wholesale,
+    },
+    source: r?.source === "seed" || r?.source === "city" || r?.source === "computed" ? r.source : "seed",
   };
-
+  if (!row.tiers || row.tiers.length === 0) row.tiers = defTier;
   return row;
 }
 
-function mergeBuyers(a: BuyerRow[], b: BuyerRow[]): BuyerRow[] {
-  const byHost = new Map<string, BuyerRow>();
-  for (const list of [a, b]) {
-    for (const item of list) {
-      const key = normalizeHost(item.host);
-      if (!key) continue;
-      const prev = byHost.get(key);
-      if (!prev) {
-        byHost.set(key, { ...item, host: key, tiers: uniq(item.tiers || []), segments: uniq(item.segments || []), tags: uniq(item.tags || []), cityTags: uniq(item.cityTags || []) });
-      } else {
-        // shallow merge, union arrays
-        byHost.set(key, {
-          host: key,
-          name: item.name || prev.name,
-          tiers: uniq([...(prev.tiers || []), ...(item.tiers || [])]),
-          segments: uniq([...(prev.segments || []), ...(item.segments || [])]),
-          tags: uniq([...(prev.tags || []), ...(item.tags || [])]),
-          cityTags: uniq([...(prev.cityTags || []), ...(item.cityTags || [])]),
-          size: item.size || prev.size,
-          scoreBase: typeof item.scoreBase === "number" ? item.scoreBase : prev.scoreBase,
-        });
-      }
-    }
+// Parse env JSON that may be either an array or { buyers: [...] }
+function readBuyersFromEnv(key: string, defTier: Tier[]): BuyerRow[] {
+  const raw = process.env[key];
+  if (!raw) return [];
+  try {
+    const parsed: any = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map((r) => sanitizeRow(r, defTier));
+    if (Array.isArray(parsed?.buyers)) return parsed.buyers.map((r: any) => sanitizeRow(r, defTier));
+    return [];
+  } catch {
+    return [];
   }
-  return Array.from(byHost.values());
 }
 
-// -------------------- load from environment --------------------
+// Optional JSONL city catalog
+function readCityJsonl(filePath?: string): Record<string, BuyerRow[]> {
+  const cityIndex: Record<string, BuyerRow[]> = {};
+  if (!filePath) return cityIndex;
 
-/**
- * Reads env secrets and returns the full catalog (deduped).
- * Expected env:
- *  - BUYERS_CATALOG_TIER_AB_JSON : stringified {version:number, buyers: BuyerRow[]}
- *  - BUYERS_CATALOG_TIER_C_JSON  : stringified {version:number, buyers: BuyerRow[]}
- * Optional:
- *  - BUYERS_CATALOG_CITY_FILE    : path to JSONL; each line {"host":"x.com","cityTags":["seattle","wa"]}
- */
-let _catalogMemo: BuyerCatalog | null = null;
+  const p = path.resolve(filePath);
+  if (!fs.existsSync(p)) return cityIndex;
 
-export function getBuyerCatalog(): BuyerCatalog {
-  if (_catalogMemo) return _catalogMemo;
-
-  const abRaw = process.env.BUYERS_CATALOG_TIER_AB_JSON || "";
-  const cRaw = process.env.BUYERS_CATALOG_TIER_C_JSON || "";
-
-  const ab = parseJson<BuyerCatalog>(abRaw, { version: 1, buyers: [] });
-  const c = parseJson<BuyerCatalog>(cRaw, { version: 1, buyers: [] });
-
-  const abRows = safeArray<any>(ab?.buyers).map(toBuyerRow).filter(Boolean) as BuyerRow[];
-  const cRows = safeArray<any>(c?.buyers).map(toBuyerRow).filter(Boolean) as BuyerRow[];
-
-  let merged = mergeBuyers(abRows, cRows);
-
-  // Optional city enrichment from file
-  const cityFile = process.env.BUYERS_CATALOG_CITY_FILE;
-  if (cityFile) {
+  const text = fs.readFileSync(p, "utf8");
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) continue;
     try {
-      const p = path.resolve(cityFile);
-      if (fs.existsSync(p)) {
-        const lines = fs.readFileSync(p, "utf8").split(/\r?\n/);
-        const extra: Record<string, string[]> = {};
-        for (const line of lines) {
-          const t = line.trim();
-          if (!t) continue;
-          try {
-            const obj = JSON.parse(t);
-            const host = normalizeHost(obj?.host);
-            const cities = safeArray<string>(obj?.cityTags).map(s => String(s || "").toLowerCase());
-            if (host && cities.length) {
-              extra[host] = uniq([...(extra[host] || []), ...cities]);
-            }
-          } catch {
-            // ignore bad line
-          }
-        }
-        if (Object.keys(extra).length) {
-          merged = merged.map(r => {
-            const added = extra[r.host];
-            return added && added.length
-              ? { ...r, cityTags: uniq([...(r.cityTags || []), ...added]) }
-              : r;
-          });
-        }
+      const obj = JSON.parse(t);
+      const row = sanitizeRow({ ...obj, source: "city" });
+      for (const city of row.cityTags || []) {
+        if (!cityIndex[city]) cityIndex[city] = [];
+        cityIndex[city].push(row);
       }
     } catch {
-      // ignore file issues
+      // ignore bad line
     }
   }
-
-  _catalogMemo = { version: Math.max(Number(ab?.version || 1), Number(c?.version || 1)), buyers: merged };
-  return _catalogMemo;
+  return cityIndex;
 }
 
-// convenient short-hands
-export function getBuyerRows(): BuyerRow[] {
-  return getBuyerCatalog().buyers;
+// ----------------- Loader (used at runtime) -----------------
+
+let CACHED: BuyerCatalog | null = null;
+
+export function loadEnvCatalog(): BuyerCatalog {
+  if (CACHED) return CACHED;
+
+  const ab = readBuyersFromEnv("BUYERS_CATALOG_TIER_AB_JSON", ["A"]);
+  const c = readBuyersFromEnv("BUYERS_CATALOG_TIER_C_JSON", ["C"]);
+  const cityPath = process.env.BUYERS_CATALOG_CITY_JSONL_PATH;
+  const city = readCityJsonl(cityPath);
+
+  CACHED = { ab, c, city, version: 1 };
+  return CACHED;
 }
 
-export function findByCityTag(cityLike: string): BuyerRow[] {
-  const needle = String(cityLike || "").toLowerCase().trim();
-  if (!needle) return [];
-  const out: BuyerRow[] = [];
-  for (const r of getBuyerRows()) {
-    if ((r.cityTags || []).includes(needle)) out.push(r);
+// ----------------- Scoring -----------------
+
+function sizeFactor(size: SizeBucket | undefined, prefs: EffectivePrefs): number {
+  if (!size) return 0;
+  return prefs.sizeWeight[size] ?? 0;
+}
+
+function localityBonus(row: BuyerRow, prefs: EffectivePrefs): number {
+  if (!prefs.city) return 0;
+  const wanted = normStr(prefs.city);
+  return row.cityTags?.includes(wanted) ? prefs.signalWeight.local : 0;
+}
+
+function signalBonus(row: BuyerRow, prefs: EffectivePrefs): number {
+  let s = 0;
+  if (row.signals?.ecommerce) s += prefs.signalWeight.ecommerce;
+  if (row.signals?.retail) s += prefs.signalWeight.retail;
+  if (row.signals?.wholesale) s += prefs.signalWeight.wholesale;
+  return s;
+}
+
+function categoryGate(row: BuyerRow, prefs: EffectivePrefs): number {
+  // If allow list present, small bump when intersecting; if block list, penalize.
+  let score = 0;
+  if (prefs.categoriesAllow.length && hasAny(prefs.categoriesAllow, row.segments)) score += 0.3;
+  if (prefs.categoriesBlock.length && hasAny(prefs.categoriesBlock, row.segments)) score -= 1.0;
+  return score;
+}
+
+// Composite scorer (higher is better)
+export function scoreBuyerForPrefs(row: BuyerRow, prefs: EffectivePrefs): number {
+  let score = 0;
+
+  // Size bias
+  score += sizeFactor(row.size, prefs);
+
+  // Locality + signals
+  score += localityBonus(row, prefs);
+  score += signalBonus(row, prefs);
+
+  // Category nudges
+  score += categoryGate(row, prefs);
+
+  // Gentle tier sorting: C > B > A by default unless user changed focus
+  const tiers = row.tiers || ["C"];
+  const focus = prefs.tierFocus.join(",");
+  const tier = tiers[0] || "C";
+
+  // Default c>b>a; if user included A only, flip weight accordingly
+  if (focus.includes("C") && tier === "C") score += 0.8;
+  if (focus.includes("B") && tier === "B") score += 0.2;
+  if (focus.includes("A") && tier === "A") score += 0.0;
+
+  // Prefer small/mid when asked, penalize giants
+  if (prefs.preferSmallMid) {
+    if (row.size === "micro") score += 0.5;
+    if (row.size === "small") score += 0.35;
+    if (row.size === "mid") score += 0.1;
+    if (row.size === "large") score -= 1.2;
   }
-  return out;
+
+  return score;
 }
 
-// small helper for routes that need a quick sanity reason
-export function briefWhy(r: BuyerRow): string {
-  const parts: string[] = [];
-  if (r.segments?.length) parts.push(`segments:${r.segments.slice(0, 3).join(",")}${r.segments.length > 3 ? "…" : ""}`);
-  if (r.tags?.length) parts.push(`tags:${r.tags.slice(0, 4).join(",")}${r.tags.length > 4 ? "…" : ""}`);
-  if (r.tiers?.length) parts.push(`tier:${r.tiers.join(",")}`);
-  return parts.join(" • ");
+// ----------------- Query API (used by routes) -----------------
+
+export interface QueryResult {
+  items: BuyerRow[];
+  reason: string; // short debug string (can be shown in "why")
 }
+
+export function queryCatalog(prefs: EffectivePrefs, limit = 20): QueryResult {
+  const catalog = loadEnvCatalog();
+
+  // Pool by tier focus, but always make C the head for default focus
+  const wantC = prefs.tierFocus.includes("C");
+  const wantB = prefs.tierFocus.includes("B");
+  const wantA = prefs.tierFocus.includes("A");
+
+  const pool: BuyerRow[] = [];
+  // Order matters (C first by default):
+  if (wantC) pool.push(...catalog.c);
+  if (wantB) pool.push(...catalog.ab.filter(r => (r.tiers?.includes("B"))));
+  if (wantA) pool.push(...catalog.ab.filter(r => (r.tiers?.includes("A"))));
+
+  // City enrichment (non-exclusive): if user has a city pref, include those rows too
+  const cityKey = prefs.city ? normStr(prefs.city) : "";
+  if (cityKey && catalog.city[cityKey]) {
+    // Avoid never[] inference by pre-typing
+    const cityRows: BuyerRow[] = catalog.city[cityKey];
+    pool.push(...cityRows);
+  }
+
+  // Deduplicate by host
+  const seen = new Set<string>();
+  const unique: BuyerRow[] = [];
+  for (const r of pool) {
+    const h = normalizeHost(r.host);
+    if (!h || seen.has(h)) continue;
+    seen.add(h);
+    unique.push(r);
+  }
+
+  // Score + sort
+  const scored = unique
+    .map((r) => ({ row: r, score: scoreBuyerForPrefs(r, prefs) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((x) => x.row);
+
+  const reason =
+    `catalog: pool=${pool.length}, unique=${unique.length}, out=${scored.length}` +
+    (prefs.city ? ` • city=${prefs.city}` : "");
+
+  return { items: scored, reason };
+}
+
+// Optional helper for the leads route: return only rows for a city
+export function getCityCatalog(city: string): BuyerRow[] {
+  const c = loadEnvCatalog().city;
+  const key = normStr(city);
+  if (!key) return [];
+  return (c[key] || []).slice();
+}
+
+// Re-export a stable type alias routes/tests can use
+export type { BuyerRow as CatalogRow };
