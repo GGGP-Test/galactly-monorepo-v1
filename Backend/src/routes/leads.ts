@@ -4,9 +4,9 @@
 // - Accepts BuyerRow[] | {rows} | {items}
 // - No mutation of rows (keeps shared types happy)
 // - Adds explicit types to satisfy noImplicitAny
-// - Provides both named and default export for index.ts compatibility
+// - Provides named/default router exports + registerLeads(app, base)
 
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, type Application } from "express";
 import { loadCatalog, type BuyerRow } from "../shared/catalog";
 import { getPrefs, setPrefs, prefsSummary, type EffectivePrefs } from "../shared/prefs";
 import { scoreRow, classifyScore, buildWhy, allTags } from "../shared/trc";
@@ -132,6 +132,13 @@ LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) =>
     });
   }
 });
+
+// Helper so index.ts (or anyone) can mount without knowing the internals.
+// NOTE: because this router uses absolute paths ("/api/leads/..."),
+// the safest default is mounting at base="/".
+export function registerLeads(app: Application, base = "/"): void {
+  app.use(base, LeadsRouter);
+}
 
 // keep both exports so index.ts can import default or named
 export default LeadsRouter;
