@@ -1,169 +1,196 @@
 // src/routes/leads.ts
-import { Router, type Request, type Response } from "express";
-import {
-  getPrefs,
-  prefsSummary,
-  normalizeHost,
-  type EffectivePrefs,
-} from "../shared/prefs";
 
-// Catalog is versioned/evolving; import defensively
-// We only rely on shape-like fields when present.
-import * as Cat from "../shared/catalog";
+import { Router, Request, Response } from "express";
+import { EffectivePrefs, getPrefs, prefsSummary, Tier } from "../shared/prefs";
+import { BuyerRow, loadABCatalog, loadTierCCatalog } from "../shared/catalog";
 
-// What the UI expects from this route
-type Temp = "warm" | "hot";
-type Lead = {
+export const LeadsRouter = Router();
+
+// ---- helpers ---------------------------------------------------------------
+
+const isTier = (x: any): x is Tier => x === "A" || x === "B" || x === "C";
+
+function toLowerSet(arr?: string[]): Set<string> {
+  const s = new Set<string>();
+  for (const v of arr || []) {
+    const t = String(v || "").toLowerCase().trim();
+    if (t) s.add(t);
+  }
+  return s;
+}
+
+function rowTiers(row: BuyerRow): Tier[] {
+  const src: any[] = (row as any).tiers || [];
+  return src.filter(isTier) as Tier[];
+}
+
+function pickSize(row: BuyerRow): "micro" | "small" | "mid" | "large" {
+  const v = (row as any).size;
+  if (v === "micro" || v === "small" || v === "mid" || v === "large") return v;
+  return "mid";
+}
+
+function scoreRow(row: BuyerRow, p: EffectivePrefs): { score: number; whyBits: string[] } {
+  const why: string[] = [];
+
+  // size bias (strongly push away "large")
+  const size = pickSize(row);
+  const sizeW = p.sizeWeight[size];
+  let score = 50 + sizeW * 20; // center at 50, size shifts ±
+
+  why.push(`size=${size}(${sizeW})`);
+
+  // tier focus bonus/penalty
+  const tiers = rowTiers(row);
+  const focused = p.tierFocus.some(t => tiers.includes(t));
+  if (focused) {
+    score += 6;
+    why.push(`tier∈focus[${p.tierFocus.join(",")}]`);
+  } else {
+    score -= 4;
+    why.push(`tier∉focus`);
+  }
+
+  // locality
+  const cityWanted = (p.city || "").toLowerCase();
+  if (cityWanted) {
+    const rowCities = toLowerSet((row as any).cityTags);
+    if (rowCities.has(cityWanted)) {
+      score += 10 * p.signalWeight.local;
+      why.push(`local:${p.city}`);
+    }
+  }
+
+  // categories allow/block via tags + segments
+  const allow = toLowerSet(p.categoriesAllow);
+  const block = toLowerSet(p.categoriesBlock);
+  if (allow.size || block.size) {
+    const tags = toLowerSet((row as any).tags);
+    const segs = toLowerSet((row as any).segments);
+    const all = new Set<string>([...Array.from(tags), ...Array.from(segs)]);
+    let allowedHit = false;
+    let blockedHit = false;
+    for (const v of all) {
+      if (allow.has(v)) allowedHit = true;
+      if (block.has(v)) blockedHit = true;
+    }
+    if (allowedHit) {
+      score += 8;
+      why.push(`allow✓`);
+    }
+    if (blockedHit) {
+      score -= 15;
+      why.push(`block✗`);
+    }
+  }
+
+  // tiny nudges for channel tags
+  const tags = toLowerSet((row as any).tags);
+  if (tags.has("ecom") || tags.has("ecommerce")) score += 5 * p.signalWeight.ecommerce;
+  if (tags.has("retail")) score += 4 * p.signalWeight.retail;
+  if (tags.has("wholesale")) score += 2 * p.signalWeight.wholesale;
+
+  // clamp to 0..100
+  score = Math.max(0, Math.min(100, score));
+  return { score, whyBits: why };
+}
+
+function tempFromRow(row: BuyerRow, score: number): "hot" | "warm" {
+  // If the catalog supplied explicit signals, honor them lightly
+  const sigs: string[] = ((row as any).signals || []).map((s: any) => String(s || "").toLowerCase());
+  if (sigs.some(s => s.includes("launch") || s.includes("event") || s.includes("new sku"))) return "hot";
+  // Otherwise make it score-driven
+  return score >= 78 ? "hot" : "warm";
+}
+
+function makeTitle(row: BuyerRow): string {
+  const name = (row as any).name || (row as any).host || "buyer";
+  const host = (row as any).host || "";
+  return `Suppliers / vendor info | ${name || host}`.trim();
+}
+
+type ApiItem = {
   host: string;
   platform: "web";
   title: string;
-  created: string;        // ISO timestamp
-  temp: Temp;
+  created: string;      // ISO
+  temp: "warm" | "hot";
+  why: string;
   score: number;
-  why: string;            // human-readable reasoning
 };
 
-// Try to call whichever catalog query function exists,
-// falling back to a raw array of rows if needed.
-function queryCatalogSafe(p: EffectivePrefs): any[] {
-  const limit = Math.max(1, (p.maxWarm ?? 5) + (p.maxHot ?? 1));
-  const fn =
-    (Cat as any).queryCatalog ||
-    (Cat as any).searchCatalog ||
-    (Cat as any).search ||
-    (Cat as any).getRows ||
-    (Cat as any).all ||
-    (() => (Cat as any).rows || []);
+// ---- route ------------------------------------------------------------------
 
+LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) => {
   try {
-    const rows = fn({
-      city: p.city,
-      tierFocus: p.tierFocus,
-      categoriesAllow: p.categoriesAllow,
-      categoriesBlock: p.categoriesBlock,
-      preferSmallMid: p.preferSmallMid,
-      sizeWeight: p.sizeWeight,
-      limit,
+    const host = String(req.query.host || "");
+    if (!host) {
+      res.status(400).json({ error: "host is required" });
+      return;
+    }
+
+    // Pull user prefs (already have strong defaults that bias Tier C/small-mid)
+    const prefs = getPrefs(host);
+
+    // Optional ad-hoc per-request patches (city, radius, simple category filters)
+    const city = typeof req.query.city === "string" ? req.query.city : undefined;
+    const allow = typeof req.query.allow === "string" ? req.query.allow.split(",") : [];
+    const block = typeof req.query.block === "string" ? req.query.block.split(",") : [];
+
+    const effective: EffectivePrefs = {
+      ...prefs,
+      city: city || prefs.city,
+      categoriesAllow: allow.length ? allow : prefs.categoriesAllow,
+      categoriesBlock: block.length ? block : prefs.categoriesBlock,
+    };
+
+    // Load catalogs
+    const [ab, tc] = await Promise.all([loadABCatalog(), loadTierCCatalog()]);
+    // Merge with preference ordering (Tier C first if focused)
+    const focusC = effective.tierFocus.includes("C");
+    const rows: BuyerRow[] = focusC ? [...tc, ...ab] : [...ab, ...tc];
+
+    // Filter out the supplier itself and very large buyers if user prefers small/mid
+    const supplierHost = host.toLowerCase();
+    const filtered = rows.filter((r) => {
+      const rHost = String((r as any).host || "").toLowerCase();
+      if (!rHost || rHost === supplierHost) return false;
+      if (effective.preferSmallMid) {
+        const s = pickSize(r);
+        return s === "micro" || s === "small" || s === "mid";
+      }
+      return true;
     });
-    if (Array.isArray(rows)) return rows;
-    if (Array.isArray(rows?.items)) return rows.items;
-    return [];
-  } catch {
-    const rows = (Cat as any).rows || [];
-    return Array.isArray(rows) ? rows : [];
-  }
-}
 
-// Very light scoring with strong bias to Tier C + local + size prefs.
-// (We’ll enrich this later with signals and time-based hotness.)
-function scoreRow(row: any, p: EffectivePrefs): number {
-  let s = 0;
+    // Score & map
+    const scored: ApiItem[] = filtered.map((row) => {
+      const { score, whyBits } = scoreRow(row, effective);
+      const temp = tempFromRow(row, score);
+      const title = makeTitle(row);
+      const why = [
+        `fit: ${((row as any).segments || []).slice(0, 3).join("/") || "general packaging"}`,
+        prefsSummary(effective),
+        ...whyBits,
+      ].join(" · ");
 
-  // Tier bias
-  if (Array.isArray(row?.tiers)) {
-    if (row.tiers.includes("C")) s += 30;
-    if (row.tiers.some((t: string) => p.tierFocus.includes(t))) s += 10;
-  }
-
-  // City/locality
-  if (p.city) {
-    const city = String(p.city).toLowerCase();
-    const inCity =
-      (Array.isArray(row?.cityTags) && row.cityTags.some((c: string) => String(c).toLowerCase() === city)) ||
-      String(row?.city).toLowerCase() === city ||
-      String(row?.hqCity).toLowerCase() === city;
-    if (inCity) s += 40 * (p.signalWeight.local ?? 1);
-  }
-
-  // Size weighting
-  if (row?.size && p.sizeWeight && p.sizeWeight[row.size as keyof typeof p.sizeWeight] != null) {
-    s += Number(p.sizeWeight[row.size as keyof typeof p.sizeWeight]) * 10;
-  } else if (p.preferSmallMid) {
-    // Default nudge if size unknown
-    s += 6;
-  }
-
-  // Category allow/block simple nudges
-  const segs: string[] = (Array.isArray(row?.segments) ? row.segments : []).map((x: any) =>
-    String(x || "").toLowerCase(),
-  );
-  if (p.categoriesAllow.length && segs.some((s0) => p.categoriesAllow.includes(s0))) s += 5;
-  if (p.categoriesBlock.length && segs.some((s0) => p.categoriesBlock.includes(s0))) s -= 8;
-
-  return Math.round(s * 10) / 10;
-}
-
-function tempFromScore(score: number): Temp {
-  return score >= 60 ? "hot" : "warm";
-}
-
-function makeTitle(row: any): string {
-  const name = row?.name || row?.brand || row?.host || row?.domain || "Buyer";
-  return `Suppliers / vendor info | ${name}`;
-}
-
-function reason(row: any, p: EffectivePrefs, score: number): string {
-  const bits: string[] = [];
-
-  if (Array.isArray(row?.tiers) && row.tiers.length) {
-    bits.push(`tier: ${row.tiers.join("/")}`);
-  }
-  if (p.city) bits.push(`city preference: ${p.city}`);
-  if (row?.size) bits.push(`size: ${row.size}`);
-  if (Array.isArray(row?.segments) && row.segments.length) {
-    bits.push(`segments: ${row.segments.slice(0, 3).join(",")}${row.segments.length > 3 ? "…" : ""}`);
-  }
-
-  bits.push(`prefs • ${prefsSummary(p)}`);
-  bits.push(`score=${score}`);
-  return bits.join(" · ");
-}
-
-const router = Router();
-
-/**
- * GET /api/leads/find-buyers?host=stretchandshrink.com&region=US%2FCA&radius=50%20mi
- * Responds with { items: Lead[] } sorted by score, capped by user prefs.
- */
-router.get("/find-buyers", (req: Request, res: Response) => {
-  const hostQ = String(req.query.host || "");
-  const host = normalizeHost(hostQ);
-  if (!host) {
-    return res.status(400).json({ ok: false, error: "missing host query param" });
-  }
-
-  // Load effective prefs (bias to Tier C + local + small/mid by default)
-  const p = getPrefs(host);
-
-  // Pull candidate rows from catalog using our safe adapter
-  const rows = queryCatalogSafe(p);
-
-  // Score → map to Lead → sort
-  const scored: Lead[] = rows
-    .map((row: any) => {
-      const s = scoreRow(row, p);
-      const t = tempFromScore(s);
       return {
-        host: String(row?.host || row?.domain || ""),
+        host: (row as any).host || "",
         platform: "web",
-        title: makeTitle(row),
+        title,
         created: new Date().toISOString(),
-        temp: t,
-        score: s,
-        why: reason(row, p, s),
-      } as Lead;
-    })
-    // ensure host present
-    .filter((r) => r.host);
+        temp,
+        why,
+        score: Math.round(score),
+      };
+    });
 
-  scored.sort((a, b) => b.score - a.score);
+    // Sort, cap, respond
+    scored.sort((a, b) => b.score - a.score);
+    const items = scored.slice(0, Math.max(effective.maxWarm + effective.maxHot, 10));
 
-  // honor caps: hot first, then warm
-  const hot = scored.filter((x) => x.temp === "hot").slice(0, p.maxHot ?? 1);
-  const warm = scored.filter((x) => x.temp === "warm").slice(0, p.maxWarm ?? 5);
-  const items = [...hot, ...warm];
-
-  return res.json({ items });
+    res.status(200).json({ items });
+  } catch (err: any) {
+    // Keep error body simple for the client panel
+    res.status(500).json({ error: "find-buyers failed", detail: String(err?.message || err) });
+  }
 });
-
-export default router;
