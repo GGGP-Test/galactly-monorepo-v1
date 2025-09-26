@@ -1,34 +1,25 @@
-// src/index.ts
-import express, { Application } from "express";
+import express from "express";
+import type { Application } from "express";
 
-// Named registrar
 import { registerHealth } from "./routes/health";
-
-// Routers
-import { LeadsRouter } from "./routes/leads";
-import { PrefsRouter } from "./routes/prefs";
-
-// NOTE: catalog route is pinned for later re-enable to keep builds green
-// import registerCatalog from "./routes/catalog";
+import { registerLeads } from "./routes/leads";
+import { registerPrefs } from "./routes/prefs";
 
 const app: Application = express();
 
-// Core middleware
+// basic middleware only (keep deps minimal for now)
 app.use(express.json());
 
-// Health endpoint(s)
-registerHealth(app);
+// mount routes via register-helpers
+registerHealth(app); // exposes GET /healthz
+registerLeads(app);
+registerPrefs(app);
 
-// Feature routers
-app.use("/leads", LeadsRouter);
-app.use("/prefs", PrefsRouter);
+// simple root for sanity
+app.get("/", (_req, res) => res.json({ ok: true }));
 
-// Pinned: re-enable when ready
-// registerCatalog(app);
-
-const PORT = Number(process.env.PORT ?? 8787);
-app.listen(PORT, () => {
-  console.log(`buyers-api listening on :${PORT}`);
-});
+// start server
+const port = Number(process.env.PORT) || 8787;
+app.listen(port);
 
 export default app;
