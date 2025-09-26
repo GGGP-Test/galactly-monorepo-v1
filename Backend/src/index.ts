@@ -1,30 +1,34 @@
 // src/index.ts
-import express, { Application } from "express";
-import http from "http";
+import express from "express";
 
-// Route registrars – all default exports
-import registerHealth from "./routes/health";
-import registerPrefs from "./routes/prefs";
-import registerCatalog from "./routes/catalog";
-import registerLeads from "./routes/leads";
+import { registerHealth } from "./routes/health";
+import { registerPrefs } from "./routes/prefs";
+import { registerLeads } from "./routes/leads";
 
-const app: Application = express();
-app.use(express.json({ limit: "1mb" }));
+import { loadCatalog } from "./shared/catalog";
+import { getPrefs, setPrefs } from "./shared/prefs";
 
-// Mount routes (order: lightweight first)
-registerHealth(app);
-registerPrefs(app);
-registerCatalog(app);
-registerLeads(app);
+async function main() {
+  const app = express();
 
-// Simple root probe
-app.get("/", (_req, res) => {
-  res.json({ ok: true, service: "buyers-api" });
+  // minimal, no external middleware yet (morgan/cors left out on purpose)
+  app.use(express.json());
+
+  // load catalog once at startup (implementation reads env/secret path)
+  const catalog = await loadCatalog();
+
+  // wire routes with their deps
+  registerHealth(app, catalog);
+  registerPrefs(app, { getPrefs, setPrefs });
+  registerLeads(app, catalog, { getPrefs });
+
+  const port = Number(process.env.PORT || 8787);
+  app.listen(port, () => {
+    console.log(`[buyers-api] listening on :${port}`);
+  });
+}
+
+main().catch((err) => {
+  console.error("[buyers-api] fatal during startup:", err);
+  process.exit(1);
 });
-
-const PORT = Number(process.env.PORT || 8787);
-http.createServer(app).listen(PORT, () => {
-  console.log(`[api] listening on :${PORT}`);
-});
-
-export default app;
