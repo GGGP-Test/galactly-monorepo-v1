@@ -1,289 +1,206 @@
 // src/shared/catalog.ts
 //
-// Normalized buyers catalog loaded from env (AB + C) and optional city JSONL.
-// Includes a light-weight scorer and a query function used by routes.
+// Loads and filters the buyer catalog from env-backed secrets.
+// Safe parsing, explicit types, and simple filtering helpers.
 //
-// Env keys we read (all optional):
-//   - BUYERS_CATALOG_TIER_AB_JSON   -> stringified JSON (array OR {buyers:[...]})
-//   - BUYERS_CATALOG_TIER_C_JSON    -> stringified JSON (array OR {buyers:[...]})
-//   - BUYERS_CATALOG_CITY_JSONL_PATH -> absolute path to JSONL file (one BuyerRow per line)
+// Expected env keys (Northflank "Group secrets"):
+//   - BUYERS_CATALOG_TIER_AB_JSON : stringified JSON {version:number, buyers: BuyerRow[]}
+//   - BUYERS_CATALOG_TIER_C_JSON  : stringified JSON {version:number, buyers: BuyerRow[]}
+//
+// Optional (mounted file, future use):
+//   - CATALOG_CITY_JSONL : absolute path to a JSONL file with rows that include { host, cityTags: string[] }
+//
+// This module only does loading + light filtering. Scoring happens in routes/leads.ts.
 
-import fs from "fs";
-import path from "path";
-import { EffectivePrefs, Tier } from "../shared/prefs";
-
-// ----------------- Types -----------------
-
+export type Tier = "A" | "B" | "C";
 export type SizeBucket = "micro" | "small" | "mid" | "large";
 
-export interface BuyerSignals {
-  ecommerce?: boolean;
-  retail?: boolean;
-  wholesale?: boolean;
-}
-
 export interface BuyerRow {
-  host: string;                 // domain only
+  host: string;               // domain only (lowercase)
   name?: string;
-  tiers?: Tier[];               // ["A"] | ["B"] | ["C"] (default ["C"] if omitted)
-  segments?: string[];          // domain categories: "beverage","food","beauty",...
-  tags?: string[];              // materials/cues: "pouch","film","label","tin","bag",...
-  cityTags?: string[];          // lowercase city slugs: "los angeles","minneapolis",...
-  states?: string[];            // "ca","ny","tx" (optional)
-  countries?: string[];         // "us","ca" ...
-  size?: SizeBucket;            // coarse size guess
-  signals?: BuyerSignals;       // soft indicators used in scoring
-  source?: "seed" | "city" | "computed";
+  tiers?: Tier[];             // default ["C"] if omitted
+  segments?: string[];        // e.g. ["beverage","coffee"]
+  tags?: string[];            // e.g. ["bag","label","shipper"]
+  cityTags?: string[];        // e.g. ["los angeles","santa monica"]
+  size?: SizeBucket;          // rough size hint
 }
 
-export interface BuyerCatalog {
-  ab: BuyerRow[];               // pre-seeded larger logos
-  c: BuyerRow[];                // mid/small market seeds
-  city: Record<string, BuyerRow[]>; // city -> rows (optional, may be empty)
+export interface CatalogEnvelope {
   version?: number;
+  buyers?: BuyerRow[];
 }
 
-// ----------------- Small utils -----------------
-
-function normStr(s?: string): string {
-  return (s || "").toLowerCase().trim();
-}
-
-export function normalizeHost(input: string): string {
-  return normStr(input)
+function lcDomain(s: string): string {
+  return String(s || "")
+    .toLowerCase()
     .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "");
+    .replace(/\/.*$/, "")
+    .trim();
 }
 
-function uniqLower(a?: string[]): string[] {
+function normStrList(a?: string[]): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   for (const v of a || []) {
-    const n = normStr(v);
-    if (n && !seen.has(n)) {
-      seen.add(n);
-      out.push(n);
+    const x = String(v || "").toLowerCase().trim();
+    if (x && !seen.has(x)) {
+      seen.add(x);
+      out.push(x);
     }
   }
   return out;
 }
 
-function asArray<T = unknown>(v: unknown): T[] {
-  return Array.isArray(v) ? (v as T[]) : [];
+function normTiers(a?: Tier[]): Tier[] {
+  const valid: Tier[] = ["A", "B", "C"];
+  const out: Tier[] = [];
+  for (const t of a || []) {
+    if (valid.includes(t)) out.push(t);
+  }
+  return out.length ? out : ["C"];
 }
 
-function hasAny<T>(needle: T[] | undefined, hay: T[] | undefined): boolean {
-  if (!needle?.length || !hay?.length) return false;
-  const set = new Set(hay);
-  for (const n of needle) if (set.has(n)) return true;
-  return false;
+function normSize(s?: string): SizeBucket | undefined {
+  const x = String(s || "").toLowerCase().trim();
+  if (!x) return undefined;
+  if (x === "micro" || x === "small" || x === "mid" || x === "large") return x;
+  return undefined;
 }
 
-// Sanitize a BuyerRow to safe, normalized shapes
-function sanitizeRow(r: any, defTier: Tier[] = ["C"]): BuyerRow {
-  const host = normalizeHost(r?.host);
-  const row: BuyerRow = {
+function normalizeRow(r: any): BuyerRow | null {
+  const host = lcDomain(r?.host);
+  if (!host) return null;
+  return {
     host,
-    name: r?.name || undefined,
-    tiers: uniqLower(asArray<string>(r?.tiers)).map(x => (x.toUpperCase() as Tier)),
-    segments: uniqLower(asArray<string>(r?.segments)),
-    tags: uniqLower(asArray<string>(r?.tags)),
-    cityTags: uniqLower(asArray<string>(r?.cityTags)),
-    states: uniqLower(asArray<string>(r?.states)),
-    countries: uniqLower(asArray<string>(r?.countries)),
-    size: (r?.size as SizeBucket) || undefined,
-    signals: {
-      ecommerce: !!r?.signals?.ecommerce,
-      retail: !!r?.signals?.retail,
-      wholesale: !!r?.signals?.wholesale,
-    },
-    source: r?.source === "seed" || r?.source === "city" || r?.source === "computed" ? r.source : "seed",
+    name: r?.name ? String(r.name) : undefined,
+    tiers: normTiers(r?.tiers),
+    segments: normStrList(r?.segments),
+    tags: normStrList(r?.tags),
+    cityTags: normStrList(r?.cityTags),
+    size: normSize(r?.size),
   };
-  if (!row.tiers || row.tiers.length === 0) row.tiers = defTier;
-  return row;
 }
 
-// Parse env JSON that may be either an array or { buyers: [...] }
-function readBuyersFromEnv(key: string, defTier: Tier[]): BuyerRow[] {
-  const raw = process.env[key];
-  if (!raw) return [];
+function parseEnvCatalog(key: string): BuyerRow[] {
+  // Avoid mixing ?? and || without parentheses:
+  const raw = (process.env[key] ?? "");
+  if (!raw || raw.trim() === "") return [];
   try {
-    const parsed: any = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed.map((r) => sanitizeRow(r, defTier));
-    if (Array.isArray(parsed?.buyers)) return parsed.buyers.map((r: any) => sanitizeRow(r, defTier));
-    return [];
+    const env: CatalogEnvelope = JSON.parse(raw);
+    const src = Array.isArray(env?.buyers) ? env.buyers : [];
+    const out: BuyerRow[] = [];
+    for (const r of src) {
+      const n = normalizeRow(r);
+      if (n) out.push(n);
+    }
+    return out;
   } catch {
     return [];
   }
 }
 
-// Optional JSONL city catalog
-function readCityJsonl(filePath?: string): Record<string, BuyerRow[]> {
-  const cityIndex: Record<string, BuyerRow[]> = {};
-  if (!filePath) return cityIndex;
-
-  const p = path.resolve(filePath);
-  if (!fs.existsSync(p)) return cityIndex;
-
-  const text = fs.readFileSync(p, "utf8");
-  const lines = text.split(/\r?\n/);
-  for (const line of lines) {
-    const t = line.trim();
-    if (!t) continue;
-    try {
-      const obj = JSON.parse(t);
-      const row = sanitizeRow({ ...obj, source: "city" });
-      for (const city of row.cityTags || []) {
-        if (!cityIndex[city]) cityIndex[city] = [];
-        cityIndex[city].push(row);
+// Optional JSONL city enrichment (safe-if-missing)
+function parseCityJsonl(path?: string | null): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  const p = (path ?? "").trim();
+  if (!p) return map;
+  try {
+    // Lazy require so bundlers won’t choke in non-node contexts
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const fs = require("fs") as typeof import("fs");
+    if (!fs.existsSync(p)) return map;
+    const text = fs.readFileSync(p, "utf8");
+    const lines = text.split(/\r?\n/);
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t) continue;
+      try {
+        const row = JSON.parse(t);
+        const host = lcDomain(row?.host);
+        if (!host) continue;
+        const cities = normStrList(row?.cityTags);
+        if (!cities.length) continue;
+        map.set(host, cities);
+      } catch {
+        // ignore bad line
       }
-    } catch {
-      // ignore bad line
+    }
+  } catch {
+    // ignore fs errors on platforms where fs is blocked
+  }
+  return map;
+}
+
+export interface LoadedCatalog {
+  all: BuyerRow[];            // merged + normalized list
+  byHost: Map<string, BuyerRow>;
+}
+
+/**
+ * Load and merge AB + C catalogs, and enrich with city JSONL if provided.
+ */
+export function loadCatalog(): LoadedCatalog {
+  const ab: BuyerRow[] = parseEnvCatalog("BUYERS_CATALOG_TIER_AB_JSON");
+  const c: BuyerRow[] = parseEnvCatalog("BUYERS_CATALOG_TIER_C_JSON");
+
+  // Explicit typing avoids never[] inference
+  const merged: BuyerRow[] = [];
+  for (const r of ab) merged.push(r);
+  for (const r of c) merged.push(r);
+
+  // Optional city enrichment
+  const cityFile = (process.env.CATALOG_CITY_JSONL ?? "").trim();
+  if (cityFile) {
+    const cityMap = parseCityJsonl(cityFile);
+    for (let i = 0; i < merged.length; i++) {
+      const r = merged[i];
+      const extra = cityMap.get(r.host);
+      if (extra && extra.length) {
+        merged[i] = { ...r, cityTags: normStrList([...(r.cityTags || []), ...extra]) };
+      }
     }
   }
-  return cityIndex;
-}
 
-// ----------------- Loader (used at runtime) -----------------
-
-let CACHED: BuyerCatalog | null = null;
-
-export function loadEnvCatalog(): BuyerCatalog {
-  if (CACHED) return CACHED;
-
-  const ab = readBuyersFromEnv("BUYERS_CATALOG_TIER_AB_JSON", ["A"]);
-  const c = readBuyersFromEnv("BUYERS_CATALOG_TIER_C_JSON", ["C"]);
-  const cityPath = process.env.BUYERS_CATALOG_CITY_JSONL_PATH;
-  const city = readCityJsonl(cityPath);
-
-  CACHED = { ab, c, city, version: 1 };
-  return CACHED;
-}
-
-// ----------------- Scoring -----------------
-
-function sizeFactor(size: SizeBucket | undefined, prefs: EffectivePrefs): number {
-  if (!size) return 0;
-  return prefs.sizeWeight[size] ?? 0;
-}
-
-function localityBonus(row: BuyerRow, prefs: EffectivePrefs): number {
-  if (!prefs.city) return 0;
-  const wanted = normStr(prefs.city);
-  return row.cityTags?.includes(wanted) ? prefs.signalWeight.local : 0;
-}
-
-function signalBonus(row: BuyerRow, prefs: EffectivePrefs): number {
-  let s = 0;
-  if (row.signals?.ecommerce) s += prefs.signalWeight.ecommerce;
-  if (row.signals?.retail) s += prefs.signalWeight.retail;
-  if (row.signals?.wholesale) s += prefs.signalWeight.wholesale;
-  return s;
-}
-
-function categoryGate(row: BuyerRow, prefs: EffectivePrefs): number {
-  // If allow list present, small bump when intersecting; if block list, penalize.
-  let score = 0;
-  if (prefs.categoriesAllow.length && hasAny(prefs.categoriesAllow, row.segments)) score += 0.3;
-  if (prefs.categoriesBlock.length && hasAny(prefs.categoriesBlock, row.segments)) score -= 1.0;
-  return score;
-}
-
-// Composite scorer (higher is better)
-export function scoreBuyerForPrefs(row: BuyerRow, prefs: EffectivePrefs): number {
-  let score = 0;
-
-  // Size bias
-  score += sizeFactor(row.size, prefs);
-
-  // Locality + signals
-  score += localityBonus(row, prefs);
-  score += signalBonus(row, prefs);
-
-  // Category nudges
-  score += categoryGate(row, prefs);
-
-  // Gentle tier sorting: C > B > A by default unless user changed focus
-  const tiers = row.tiers || ["C"];
-  const focus = prefs.tierFocus.join(",");
-  const tier = tiers[0] || "C";
-
-  // Default c>b>a; if user included A only, flip weight accordingly
-  if (focus.includes("C") && tier === "C") score += 0.8;
-  if (focus.includes("B") && tier === "B") score += 0.2;
-  if (focus.includes("A") && tier === "A") score += 0.0;
-
-  // Prefer small/mid when asked, penalize giants
-  if (prefs.preferSmallMid) {
-    if (row.size === "micro") score += 0.5;
-    if (row.size === "small") score += 0.35;
-    if (row.size === "mid") score += 0.1;
-    if (row.size === "large") score -= 1.2;
+  const byHost = new Map<string, BuyerRow>();
+  for (const r of merged) {
+    byHost.set(r.host, r);
   }
 
-  return score;
+  return { all: merged, byHost };
 }
 
-// ----------------- Query API (used by routes) -----------------
+/**
+ * Light query helper used by routes/leads.ts
+ * Returns a filtered array (iterable).
+ */
+export function queryCatalog(opts?: {
+  tiers?: Tier[];             // default: any
+  allowSegments?: string[];   // if provided, require intersection
+  blockSegments?: string[];   // if provided, exclude intersection
+}): BuyerRow[] {
+  const { all } = loadCatalog();
 
-export interface QueryResult {
-  items: BuyerRow[];
-  reason: string; // short debug string (can be shown in "why")
-}
+  const tiers = normTiers(opts?.tiers);
+  const allow = normStrList(opts?.allowSegments);
+  const block = normStrList(opts?.blockSegments);
 
-export function queryCatalog(prefs: EffectivePrefs, limit = 20): QueryResult {
-  const catalog = loadEnvCatalog();
-
-  // Pool by tier focus, but always make C the head for default focus
-  const wantC = prefs.tierFocus.includes("C");
-  const wantB = prefs.tierFocus.includes("B");
-  const wantA = prefs.tierFocus.includes("A");
-
-  const pool: BuyerRow[] = [];
-  // Order matters (C first by default):
-  if (wantC) pool.push(...catalog.c);
-  if (wantB) pool.push(...catalog.ab.filter(r => (r.tiers?.includes("B"))));
-  if (wantA) pool.push(...catalog.ab.filter(r => (r.tiers?.includes("A"))));
-
-  // City enrichment (non-exclusive): if user has a city pref, include those rows too
-  const cityKey = prefs.city ? normStr(prefs.city) : "";
-  if (cityKey && catalog.city[cityKey]) {
-    // Avoid never[] inference by pre-typing
-    const cityRows: BuyerRow[] = catalog.city[cityKey];
-    pool.push(...cityRows);
+  const result: BuyerRow[] = [];
+  for (const r of all) {
+    // tiers filter
+    if (tiers.length) {
+      const rt = normTiers(r.tiers);
+      if (!rt.some(t => tiers.includes(t))) continue;
+    }
+    // block segments
+    if (block.length && (r.segments || []).some(s => block.includes(String(s).toLowerCase()))) {
+      continue;
+    }
+    // allow segments
+    if (allow.length) {
+      const has = (r.segments || []).some(s => allow.includes(String(s).toLowerCase()));
+      if (!has) continue;
+    }
+    result.push(r);
   }
-
-  // Deduplicate by host
-  const seen = new Set<string>();
-  const unique: BuyerRow[] = [];
-  for (const r of pool) {
-    const h = normalizeHost(r.host);
-    if (!h || seen.has(h)) continue;
-    seen.add(h);
-    unique.push(r);
-  }
-
-  // Score + sort
-  const scored = unique
-    .map((r) => ({ row: r, score: scoreBuyerForPrefs(r, prefs) }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((x) => x.row);
-
-  const reason =
-    `catalog: pool=${pool.length}, unique=${unique.length}, out=${scored.length}` +
-    (prefs.city ? ` • city=${prefs.city}` : "");
-
-  return { items: scored, reason };
+  return result;
 }
-
-// Optional helper for the leads route: return only rows for a city
-export function getCityCatalog(city: string): BuyerRow[] {
-  const c = loadEnvCatalog().city;
-  const key = normStr(city);
-  if (!key) return [];
-  return (c[key] || []).slice();
-}
-
-// Re-export a stable type alias routes/tests can use
-export type { BuyerRow as CatalogRow };
