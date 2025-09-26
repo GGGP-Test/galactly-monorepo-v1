@@ -2,23 +2,27 @@
 import type { Application, Request, Response } from "express";
 
 /**
- * Very small health endpoints.
- * - No catalog touching (keeps types simple, avoids array/object confusion).
- * - Exports both a named and default function so index.ts can import either way.
+ * Registers lightweight health endpoints.
+ * Deliberately no catalog/prefs dependencies so index.ts can call with just (app).
  */
 export function registerHealth(app: Application): void {
-  // Liveness: plain text for cheap probes
+  // JSON health (used by Dockerfile's HEALTHCHECK -> /healthz)
   app.get("/healthz", (_req: Request, res: Response) => {
-    res.type("text").send("ok");
-  });
-
-  // Readiness: tiny JSON with server time
-  app.get("/health", (_req: Request, res: Response) => {
-    res.json({
-      status: "ok",
-      now: new Date().toISOString(),
+    res.status(200).json({
+      ok: true,
+      service: "buyers-api",
+      ts: new Date().toISOString(),
+      uptime: process.uptime(),
     });
   });
-}
 
-export default registerHealth;
+  // Optional plaintext variant
+  app.get("/health", (_req: Request, res: Response) => {
+    res.status(200).type("text/plain").send("ok");
+  });
+
+  // A minimal HEAD handler for fast probes (no body)
+  app.head("/healthz", (_req: Request, res: Response) => {
+    res.status(200).end();
+  });
+}
