@@ -1,59 +1,74 @@
 // src/routes/prefs.ts
-import { Router, Request, Response } from "express";
+import { Router, type Request, type Response } from "express";
 import {
   getPrefs,
   setPrefs,
   defaultPrefs,
-  normalizeHost,
   prefsSummary,
+  normalizeHost,
   type UserPrefs,
   type EffectivePrefs,
 } from "../shared/prefs";
 
-export const PrefsRouter = Router();
+const router = Router();
 
 /**
  * GET /api/prefs?host=example.com
- * Returns the effective prefs for a supplier host.
+ * Returns the effective preferences for the supplied host.
  */
-PrefsRouter.get("/", (req: Request, res: Response) => {
-  const hostRaw = String(req.query.host ?? "").trim();
-  if (!hostRaw) return res.status(400).json({ error: "host required" });
-
-  const prefs = getPrefs(hostRaw);
-  return res.json({ ok: true, prefs, summary: prefsSummary(prefs) });
+router.get("/", (req: Request, res: Response) => {
+  const hostQ = String(req.query.host || "");
+  const host = normalizeHost(hostQ);
+  if (!host) {
+    return res.status(400).json({ ok: false, error: "missing host query param" });
+  }
+  const prefs: EffectivePrefs = getPrefs(host);
+  return res.json({
+    ok: true,
+    host,
+    prefs,
+    summary: prefsSummary(prefs),
+    defaults: defaultPrefs(host),
+  });
 });
 
 /**
- * PUT /api/prefs
- * Body: Partial<UserPrefs> with `host` (or host=? in query)
- * Merges the patch into stored prefs and returns the effective prefs.
+ * POST /api/prefs
+ * Body: Partial<UserPrefs> with a required "host".
+ * Merges the patch into stored prefs and returns the new effective prefs.
  */
-PrefsRouter.put("/", (req: Request, res: Response) => {
-  const host = normalizeHost(
-    String((req.body?.host ?? req.query.host ?? "") as string).trim()
-  );
-  if (!host) return res.status(400).json({ error: "host required" });
+router.post("/", (req: Request, res: Response) => {
+  const body = (req.body || {}) as Partial<UserPrefs>;
+  const host = normalizeHost(body.host || "");
+  if (!host) {
+    return res.status(400).json({ ok: false, error: "body.host is required" });
+  }
 
-  // accept a partial patch; we ignore any provided host inside the patch
-  const patch = { ...(req.body || {}) } as Partial<UserPrefs>;
-  delete (patch as any).host;
+  // Don’t let the client change the key you’re storing under accidentally
+  const patch: Partial<UserPrefs> = { ...body, host };
 
-  const prefs = setPrefs(host, patch);
-  return res.json({ ok: true, prefs, summary: prefsSummary(prefs) });
+  const effective = setPrefs(host, patch);
+  return res.status(200).json({
+    ok: true,
+    host,
+    prefs: effective,
+    summary: prefsSummary(effective),
+  });
 });
 
 /**
- * GET /api/prefs/default?host=example.com
- * Returns the platform defaults for a normalized host without touching store.
+ * Optional: quick reset endpoint for a host (handy while developing)
+ * DELETE /api/prefs?host=example.com
  */
-PrefsRouter.get("/default", (req: Request, res: Response) => {
-  const hostRaw = String(req.query.host ?? "").trim();
-  if (!hostRaw) return res.status(400).json({ error: "host required" });
-
-  const host = normalizeHost(hostRaw);
-  const prefs = defaultPrefs(host);
-  return res.json({ ok: true, prefs, summary: prefsSummary(prefs) });
+router.delete("/", (req: Request, res: Response) => {
+  const hostQ = String(req.query.host || "");
+  const host = normalizeHost(hostQ);
+  if (!host) {
+    return res.status(400).json({ ok: false, error: "missing host query param" });
+  }
+  // Replacing with defaults by simply not saving anything for this host:
+  const def = defaultPrefs(host);
+  return res.json({ ok: true, host, prefs: def, summary: prefsSummary(def) });
 });
 
-export default PrefsRouter;
+export default router;
