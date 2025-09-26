@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import leadsRouter from "./routes/leads";
+import prefsRouter from './routes/prefs';
+import leadsRouter from './routes/leads';
 
 const app = express();
 
@@ -8,6 +10,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(prefsRouter);
+app.use(leadsRouter);
 
 // health
 app.get("/healthz", (_req, res) => res.status(200).send("ok"));
