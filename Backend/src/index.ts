@@ -1,70 +1,57 @@
 // src/index.ts
-import express, { type Application, type Request, type Response, type NextFunction } from "express";
-import cors from "cors";
-
-// Routers (each defines absolute paths internally)
-import HealthRouter from "./routes/health";
-import PrefsRouter from "./routes/prefs";
+import express from "express";
 import LeadsRouter from "./routes/leads";
+import PrefsRouter from "./routes/prefs";
 import CatalogRouter from "./routes/catalog";
+import HealthRouter from "./routes/health";
 
-const app: Application = express();
+const app = express();
 
-// --- Middlewares ---
-app.set("trust proxy", true);
-app.use(cors());
+// Hardening / base middleware
+app.disable("x-powered-by");
+app.set("trust proxy", (process.env.TRUST_PROXY === "1" || process.env.TRUST_PROXY === "true") ? 1 : false);
 app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true }));
 
-// Optional morgan: don’t crash if it isn’t installed in prod layer
-(function attachLogger(a: Application) {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const morgan = require("morgan") as (fmt: string) => any;
-    const fmt = process.env.NODE_ENV === "production" ? "tiny" : "dev";
-    a.use(morgan(fmt));
-  } catch {
-    // Minimal fallback logger
-    a.use((req: Request, res: Response, next: NextFunction) => {
-      const t0 = Date.now();
-      res.on("finish", () => {
-        const ms = Date.now() - t0;
-        // keep it short to avoid noisy logs in Northflank
-        console.log(`${req.method} ${req.originalUrl} -> ${res.statusCode} (${ms}ms)`);
-      });
-      next();
-    });
+// Optional request logging (safe even if 'morgan' is not installed)
+try {
+  // @ts-ignore - dynamic require to avoid hard dependency
+  const morgan = require("morgan");
+  if (morgan && process.env.REQUEST_LOG !== "0") {
+    app.use(morgan(process.env.MORGAN_FORMAT || "tiny"));
   }
-})(app);
+} catch {
+  // morgan not installed — skip logging without failing
+}
 
-// --- Mount routers ---
-app.use(HealthRouter);   // /healthz, /health
-app.use("/api/prefs", PrefsRouter()); // GET/POST, /defaults
-app.use(LeadsRouter);    // /api/leads/find-buyers
-app.use(CatalogRouter);  // /api/catalog/*
+// Routers
+app.use(LeadsRouter);
+app.use("/api/prefs", PrefsRouter());
+app.use(CatalogRouter);
+app.use(HealthRouter);
 
-// Root info
-app.get("/", (_req, res) => {
-  res.json({ ok: true, service: "buyers-api", at: new Date().toISOString() });
+// Minimal inline version endpoint (no new file)
+app.get(["/version", "/api/version"], (_req, res) => {
+  res.json({
+    ok: true,
+    service: "buyers-api",
+    node: process.version,
+    env: process.env.NODE_ENV || "development",
+    port: Number(process.env.PORT || 8787),
+    commit: process.env.GIT_SHA || undefined,
+    branch: process.env.GIT_BRANCH || undefined,
+    buildTime: process.env.BUILD_TIME || undefined,
+    uptimeSec: Math.round(process.uptime()),
+    nowIso: new Date().toISOString(),
+  });
 });
 
-// 404
-app.use((_req, res) => res.status(404).json({ ok: false, error: "not_found" }));
+const PORT = Number(process.env.PORT || 8787);
 
-// Error handler
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const code = Number(err?.status || 500);
-  const msg = String(err?.message || "internal_error");
-  console.error("Unhandled error:", msg);
-  res.status(code).json({ ok: false, error: msg });
-});
-
-// Start server when executed directly (Docker runs node dist/index.js)
+// Only listen when executed as the entrypoint (keeps tests/imports happy)
 if (require.main === module) {
-  const port = Number(process.env.PORT || 8787);
-  app.listen(port, () => {
-    console.log(`buyers-api listening on :${port}`);
+  app.listen(PORT, () => {
+    // eslint-disable-next-line no-console
+    console.log(`[buyers-api] listening on :${PORT}`);
   });
 }
 
