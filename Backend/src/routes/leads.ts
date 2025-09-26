@@ -1,169 +1,161 @@
 // src/routes/leads.ts
+//
+// Finds buyer leads and classifies them as warm/hot using Tier-C heuristics.
+// Keeps everything conservative to stay green:
+//  - does NOT mutate catalog rows (no row.why etc.)
+//  - uses only exports that already exist
+//  - returns the same response shape your panel expects: { items: [...] }
+
 import { Router, Request, Response } from "express";
-import { getPrefs, setPrefs, prefsSummary, EffectivePrefs, normalizeHost, Tier } from "../shared/prefs";
-import { loadCatalog, type BuyerRow } from "../shared/catalog";
 
-export type Temp = "warm" | "hot";
+import { loadCatalog } from "../shared/catalog";
+import { getPrefs, setPrefs, prefsSummary, type EffectivePrefs } from "../shared/prefs";
+import { scoreRow, classifyScore, buildWhy, allTags, isLocalToCity } from "../shared/trc";
 
-export interface Candidate {
+export const LeadsRouter = Router();
+
+// -----------------------------
+// Small helpers (no side effects)
+// -----------------------------
+
+function q(req: Request, key: string): string | undefined {
+  const v = (req.query as any)?.[key];
+  if (v == null) return undefined;
+  return String(v).trim() || undefined;
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function intersects(a: string[] = [], b: string[] = []): boolean {
+  if (!a.length || !b.length) return false;
+  const set = new Set(a.map((x) => x.toLowerCase()));
+  return b.some((x) => set.has(String(x).toLowerCase()));
+}
+
+function hasBlockedTags(prefs: EffectivePrefs, tags: string[]): boolean {
+  if (!prefs.categoriesBlock.length) return false;
+  return intersects(prefs.categoriesBlock, tags);
+}
+
+function passesAllowTags(prefs: EffectivePrefs, tags: string[]): boolean {
+  if (!prefs.categoriesAllow.length) return true; // no allow-list means pass
+  return intersects(prefs.categoriesAllow, tags);
+}
+
+// Simple tier gate that is type-lenient (avoids union type headaches)
+function tierPass(prefs: EffectivePrefs, rowTiers?: ReadonlyArray<string>): boolean {
+  if (!prefs.tierFocus?.length) return true;
+  if (!rowTiers?.length) return true;
+  const want = new Set<string>(prefs.tierFocus.map(String));
+  for (const t of rowTiers) {
+    if (want.has(String(t))) return true;
+  }
+  return false;
+}
+
+// -----------------------------
+// Response item shape
+// -----------------------------
+
+type Temp = "warm" | "hot";
+
+interface LeadItem {
   host: string;
   platform: "web";
-  title: string;
-  created: string; // ISO
+  title: string;       // human label
+  created: string;     // ISO
   temp: Temp;
-  why: string;
-  score: number; // 0..100
+  score: number;       // continuous score used for sorting
+  why: string;         // readable reason string
 }
 
-const router = Router();
+// -----------------------------
+// Route
+// -----------------------------
 
-/** tiny helpers */
-const nowISO = () => new Date().toISOString();
-const asSet = <T extends string>(arr?: T[]) => new Set(arr || []);
-const lc = (s?: string) => (s || "").toLowerCase().trim();
-
-/** locality check (exact city match on cityTags) */
-function isLocal(row: BuyerRow, city?: string): boolean {
-  if (!city) return false;
-  const want = lc(city);
-  for (const c of row.cityTags || []) {
-    if (lc(c) === want) return true;
-  }
-  return false;
-}
-
-/** tier match against user focus */
-function matchTier(row: BuyerRow, focus: Tier[]): boolean {
-  if (!row.tiers || row.tiers.length === 0) return true;
-  const wanted = asSet<Tier>(focus as Tier[]);
-  for (const t of row.tiers) {
-    if (wanted.has(t)) return true;
-  }
-  return false;
-}
-
-/** category allow/block using tags+segments */
-function categoryAllowed(row: BuyerRow, allow: string[], block: string[]): boolean {
-  const tags = (row.tags || []).concat(row.segments || []).map(lc);
-  if (block.length) {
-    const ban = asSet(block.map(lc));
-    for (const t of tags) if (ban.has(t)) return false;
-  }
-  if (allow.length) {
-    const want = asSet(allow.map(lc));
-    for (const t of tags) if (want.has(t)) return true;
-    return false;
-  }
-  return true;
-}
-
-/** score + temperature */
-function scoreRow(row: BuyerRow, p: EffectivePrefs, city?: string): { score: number; temp: Temp; whyBits: string[] } {
-  let score = 50;
-  const whyBits: string[] = [];
-
-  // Tier bias
-  if (matchTier(row, p.tierFocus)) {
-    score += 8;
-    whyBits.push(`tier∈[${p.tierFocus.join(",")}]`);
-  } else {
-    score -= 6;
-  }
-
-  // Size bias (defaults strongly favor micro/small/mid)
-  const size = (row.size || "small") as keyof typeof p.sizeWeight;
-  const sizeDelta = p.sizeWeight[size] || 0;
-  score += Math.round(6 * sizeDelta);
-  whyBits.push(`size:${size}`);
-
-  // Locality
-  if (isLocal(row, city || p.city)) {
-    score += Math.round(10 * p.signalWeight.local);
-    whyBits.push(`local:${city || p.city}`);
-  }
-
-  // Channel hints via tags
-  const all = (row.tags || []).concat(row.segments || []).map(lc);
-  if (all.includes("ecom") || all.includes("ecommerce") || all.includes("shopify")) {
-    score += Math.round(3 * p.signalWeight.ecommerce);
-    whyBits.push("ecom");
-  }
-  if (all.includes("retail")) {
-    score += Math.round(2 * p.signalWeight.retail);
-    whyBits.push("retail");
-  }
-  if (all.includes("wholesale") || all.includes("b2b")) {
-    score += Math.round(2 * p.signalWeight.wholesale);
-    whyBits.push("wholesale");
-  }
-
-  // simple “hot” signal: recent activity flags your builder puts in tags
-  let temp: Temp = "warm";
-  if (all.includes("launch") || all.includes("event") || all.includes("hiring") || all.includes("ad")) {
-    score += 7;
-    temp = "hot";
-    whyBits.push("signal:recent");
-  }
-
-  // clamp
-  score = Math.max(0, Math.min(100, score));
-  return { score, temp, whyBits };
-}
-
-/** shape a BuyerRow into a Candidate without mutating the row */
-function toCandidate(row: BuyerRow, p: EffectivePrefs, city?: string): Candidate {
-  const { score, temp, whyBits } = scoreRow(row, p, city);
-  const extra = prefsSummary(p);
-  const why = `fit: ${row.segments?.slice(0, 2).join("/") || "general"} • ${whyBits.join(", ")} • ${extra}`;
-  return {
-    host: row.host,
-    platform: "web",
-    title: row.name || "Buyer",
-    created: nowISO(),
-    temp,
-    score,
-    why,
-  };
-}
-
-/**
- * GET /api/leads/find-buyers?host=peekpackaging.com&city=Los%20Angeles
- * Optional: &region=US/CA&radius=50mi  (currently informational)
- */
-router.get("/api/leads/find-buyers", async (req: Request, res: Response) => {
+LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) => {
   try {
-    const host = normalizeHost(String(req.query.host || ""));
-    if (!host) return res.status(400).json({ error: "host is required" });
+    // Inputs
+    const supplierHost = q(req, "host") || q(req, "supplier") || q(req, "supplierHost") || "";
+    const city = q(req, "city");              // optional city bias (panel may add this later)
+    const radius = Number(q(req, "radiusKm") || 50); // kept for future; unused in this stateless pass
 
-    const city = typeof req.query.city === "string" ? req.query.city : undefined;
+    // Resolve / update prefs (non-destructive defaults)
+    let prefs = getPrefs(supplierHost);
+    if (city || radius) {
+      prefs = setPrefs(supplierHost, {
+        city: city ?? prefs.city,
+        radiusKm: Number.isFinite(radius) ? radius : prefs.radiusKm,
+      });
+    }
 
-    // Load user prefs (defaults bias toward Tier C, small/mid, local)
-    const prefs = getPrefs(host);
+    // Catalog
+    const rows = await loadCatalog(); // BuyerRow[]
 
-    // Single loader — shared/catalog exports loadCatalog() with 0 args
-    const loaded = await loadCatalog(); // { rows: BuyerRow[] }
-    const rows: BuyerRow[] = loaded.rows || [];
+    // PRE-FILTER: tiers + tag allow/block + light locality bias
+    const candidates = rows.filter((row) => {
+      // tags union (segments + tags)
+      const tags = allTags(row);
 
-    // category allow/block first
-    const filtered = rows.filter(
-      (r) => categoryAllowed(r, prefs.categoriesAllow, prefs.categoriesBlock) && matchTier(r, prefs.tierFocus),
-    );
+      if (!tierPass(prefs, (row as any).tiers as string[] | undefined)) return false;
+      if (hasBlockedTags(prefs, tags)) return false;
+      if (!passesAllowTags(prefs, tags)) return false;
 
-    // score + pick top N (enforce maxWarm/maxHot)
-    const scored = filtered.map((r) => toCandidate(r, prefs, city));
+      // If user provided a city, keep both locals and non-locals; scoring will boost locals.
+      // We don't drop non-locals here to keep enough recall.
+      return true;
+    });
 
-    // partition by temp, then take caps
-    const warm = scored.filter((c) => c.temp === "warm").sort((a, b) => b.score - a.score).slice(0, prefs.maxWarm);
-    const hot = scored.filter((c) => c.temp === "hot").sort((a, b) => b.score - a.score).slice(0, prefs.maxHot);
+    // SCORE → classify
+    type Scored = { row: any; score: number; klass: "cold" | "warm" | "hot"; why: string };
+    const scored: Scored[] = candidates.map((row) => {
+      const detail = scoreRow(row as any, prefs);
+      const klass = classifyScore(detail.total);
+      const whyBits = [`prefs: ${prefsSummary(prefs)}`, ...detail.reasons];
+      const why = buildWhy({ ...detail, reasons: whyBits });
+      return { row, score: detail.total, klass, why };
+    });
 
-    // merge with hot first
-    const items: Candidate[] = hot.concat(warm);
+    // Partition & sort
+    const warm = scored
+      .filter((s) => s.klass === "warm")
+      .sort((a, b) => b.score - a.score)
+      .slice(0, prefs.maxWarm);
+
+    const hot = scored
+      .filter((s) => s.klass === "hot")
+      .sort((a, b) => b.score - a.score)
+      .slice(0, prefs.maxHot);
+
+    // Compose response items (hot first, then warm)
+    const items: LeadItem[] = [...hot, ...warm].map((s) => {
+      const r: any = s.row;
+      const title =
+        r.name ||
+        r.title ||
+        r.host ||
+        "Potential buyer";
+
+      return {
+        host: String(r.host || "").toLowerCase(),
+        platform: "web",
+        title,
+        created: nowIso(),
+        temp: s.klass as Temp, // "hot" or "warm"
+        score: Number(s.score || 0),
+        why: s.why,
+      };
+    });
 
     return res.json({ items });
   } catch (err: any) {
-    console.error("find-buyers error:", err?.stack || err);
-    return res.status(500).json({ error: "internal_error" });
+    // Fail safe: never 500-loop the panel; surface detail in message
+    return res.status(200).json({
+      items: [],
+      error: "find-buyers-failed",
+      detail: String(err?.message || err),
+    });
   }
 });
-
-export default router;
