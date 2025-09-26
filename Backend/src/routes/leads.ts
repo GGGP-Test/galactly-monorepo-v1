@@ -5,6 +5,7 @@
 // - No mutation of rows (keeps shared types happy)
 // - Explicit types to satisfy noImplicitAny
 // - Provides both named and default export for index.ts compatibility
+// - Only updates radius/city if they were actually provided in the query
 
 import { Router, Request, Response } from "express";
 import { loadCatalog, type BuyerRow } from "../shared/catalog";
@@ -66,19 +67,26 @@ interface LeadItem {
   why: string;
 }
 
-LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) => {
+// NOTE: path is relative to the mount in index.ts (app.use("/api/leads", LeadsRouter))
+// Final URL: GET /api/leads/find-buyers
+LeadsRouter.get("/find-buyers", async (req: Request, res: Response) => {
   try {
-    const supplierHost = q(req, "host") || q(req, "supplier") || q(req, "supplierHost") || "";
+    const supplierHost =
+      q(req, "host") || q(req, "supplier") || q(req, "supplierHost") || "";
+
+    // Optional overrides: only persist if provided
     const city = q(req, "city");
     const radiusQ = q(req, "radiusKm");
-    const radius = radiusQ != null ? Number(radiusQ) : NaN;
+    const radiusNum = radiusQ !== undefined ? Number(radiusQ) : undefined;
 
     let prefs = getPrefs(supplierHost);
-    if (city || Number.isFinite(radius)) {
-      prefs = setPrefs(supplierHost, {
-        city: city ?? prefs.city,
-        radiusKm: Number.isFinite(radius) ? radius : prefs.radiusKm,
-      });
+    const patch: Partial<EffectivePrefs> = {};
+    if (city !== undefined) patch.city = city;
+    if (radiusNum !== undefined && Number.isFinite(radiusNum)) {
+      patch.radiusKm = radiusNum;
+    }
+    if (Object.keys(patch).length) {
+      prefs = setPrefs(supplierHost, patch as any);
     }
 
     const catalog = await loadCatalog();
