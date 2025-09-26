@@ -1,15 +1,9 @@
 // src/routes/prefs.ts
 //
-// Minimal preferences API used by Free Panel.
-// - GET  /api/prefs?host=peekpackaging.com     -> returns effective prefs + summary
-// - POST /api/prefs                             -> upserts partial prefs for a host
-//
-// Notes:
-// • Uses in-memory store from shared/prefs.ts (swappable later to Redis/DB).
-// • Only whitelisted fields are applied; unknown keys are ignored safely.
-//
+// Preferences API (shape-safe, no side effects on import).
+// Exposes: default factory (buildPrefsRouter), a singleton PrefsRouter, and registerPrefs(app, base).
 
-import { Router, json } from "express";
+import { Router, json, type Application } from "express";
 import {
   getPrefs,
   setPrefs,
@@ -17,9 +11,6 @@ import {
   normalizeHost,
   prefsSummary,
   type UserPrefs,
-  type EffectivePrefs,
-  type Tier,
-  type SizeBucket,
 } from "../shared/prefs";
 
 // Narrow the body to allowed keys to keep things tidy/safe.
@@ -49,7 +40,7 @@ function pickPatch(input: any): Partial<UserPrefs> {
   if (Array.isArray(input.tierFocus)) {
     out.tierFocus = input.tierFocus
       .map((t: any) => String(t || "").toUpperCase())
-      .filter((t: string) => t === "A" || t === "B" || t === "C") as Tier[];
+      .filter((t: string) => t === "A" || t === "B" || t === "C") as any;
   }
 
   // Categories allow/block
@@ -77,7 +68,8 @@ function pickPatch(input: any): Partial<UserPrefs> {
   return out;
 }
 
-export default function PrefsRouter(): Router {
+// Factory — keeps backward compatibility with code that calls PrefsRouter() in index.ts
+export default function buildPrefsRouter(): Router {
   const r = Router();
   r.use(json());
 
@@ -129,4 +121,12 @@ export default function PrefsRouter(): Router {
   });
 
   return r;
+}
+
+// Singleton router instance (so you can do: app.use("/api/prefs", PrefsRouter))
+export const PrefsRouter: Router = buildPrefsRouter();
+
+// Registrar (so you can do: registerPrefs(app) or registerPrefs(app, "/api/prefs"))
+export function registerPrefs(app: Application, base = "/api/prefs"): void {
+  app.use(base, PrefsRouter);
 }
