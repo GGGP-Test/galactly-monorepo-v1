@@ -1,44 +1,35 @@
-import express type { Express, Request, Response } from "express";
+import express, { type Express, type Request, type Response } from "express";
+
+// Optional logger; safe if not installed in prod image
+let morgan: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  morgan = require("morgan");
+} catch {
+  /* morgan is optional */
+}
+
+// Your routers, matching the code you pasted
+import LeadsRouter from "./routes/leads";          // exports a Router instance
+import PrefsRouterFactory from "./routes/prefs";   // default export = () => Router
+import CatalogRouter from "./routes/catalog";      // exports a Router instance
 
 const app: Express = express();
 app.disable("x-powered-by");
 app.use(express.json());
+if (morgan) app.use(morgan("tiny"));
 
-// Optional request logger: works if present, silently skipped if not
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const morgan = require("morgan");
-  if (morgan) app.use(morgan("tiny"));
-} catch {
-  /* morgan is optional at runtime */
-}
+// Inline /health so we don’t depend on routes/health export shape
+app.get("/health", (_req: Request, res: Response) => {
+  res.status(200).json({ ok: true, ts: new Date().toISOString() });
+});
 
-/**
- * Load a route "registrar" module that exports either:
- *   - named:  export function registerX(app: Express) { ... }
- *   - default: export default function (app: Express) { ... }
- * and then invoke it with `app`.
- */
-function useRegistrar(modulePath: string, candidateNames: string[]) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const mod: any = require(modulePath);
-  const fn =
-    candidateNames.map((n) => mod?.[n]).find(Boolean) ??
-    mod?.default;
+// Mount the routers per their actual shapes
+app.use(LeadsRouter);
+app.use("/api/prefs", PrefsRouterFactory()); // factory returns a Router
+app.use(CatalogRouter);
 
-  if (typeof fn === "function") {
-    fn(app);
-  }
-}
-
-// Always present
-useRegistrar("./routes/health", ["registerHealth"]);
-
-// Tolerate either named or default exports in these modules
-useRegistrar("./routes/leads", ["registerLeads"]);
-useRegistrar("./routes/prefs", ["registerPrefs"]);
-
-// Simple root for smoke checks
+// Simple root
 app.get("/", (_req: Request, res: Response) =>
   res.status(200).json({ ok: true, service: "buyers-api" })
 );
