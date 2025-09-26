@@ -1,64 +1,169 @@
 // src/routes/leads.ts
-import { Router, Request, Response } from "express";
-import { getPrefs, prefsSummary } from "../shared/prefs";
-import { queryCatalog } from "../shared/catalog"; // returns BuyerRow[]
-import type { BuyerRow } from "../shared/catalog";
+import { Router, type Request, type Response } from "express";
+import {
+  getPrefs,
+  prefsSummary,
+  normalizeHost,
+  type EffectivePrefs,
+} from "../shared/prefs";
 
-export const LeadsRouter = Router();
+// Catalog is versioned/evolving; import defensively
+// We only rely on shape-like fields when present.
+import * as Cat from "../shared/catalog";
 
-/** Ping */
-LeadsRouter.get("/api/leads/health", (_req: Request, res: Response) => {
-  res.status(200).json({ ok: true });
-});
+// What the UI expects from this route
+type Temp = "warm" | "hot";
+type Lead = {
+  host: string;
+  platform: "web";
+  title: string;
+  created: string;        // ISO timestamp
+  temp: Temp;
+  score: number;
+  why: string;            // human-readable reasoning
+};
+
+// Try to call whichever catalog query function exists,
+// falling back to a raw array of rows if needed.
+function queryCatalogSafe(p: EffectivePrefs): any[] {
+  const limit = Math.max(1, (p.maxWarm ?? 5) + (p.maxHot ?? 1));
+  const fn =
+    (Cat as any).queryCatalog ||
+    (Cat as any).searchCatalog ||
+    (Cat as any).search ||
+    (Cat as any).getRows ||
+    (Cat as any).all ||
+    (() => (Cat as any).rows || []);
+
+  try {
+    const rows = fn({
+      city: p.city,
+      tierFocus: p.tierFocus,
+      categoriesAllow: p.categoriesAllow,
+      categoriesBlock: p.categoriesBlock,
+      preferSmallMid: p.preferSmallMid,
+      sizeWeight: p.sizeWeight,
+      limit,
+    });
+    if (Array.isArray(rows)) return rows;
+    if (Array.isArray(rows?.items)) return rows.items;
+    return [];
+  } catch {
+    const rows = (Cat as any).rows || [];
+    return Array.isArray(rows) ? rows : [];
+  }
+}
+
+// Very light scoring with strong bias to Tier C + local + size prefs.
+// (We’ll enrich this later with signals and time-based hotness.)
+function scoreRow(row: any, p: EffectivePrefs): number {
+  let s = 0;
+
+  // Tier bias
+  if (Array.isArray(row?.tiers)) {
+    if (row.tiers.includes("C")) s += 30;
+    if (row.tiers.some((t: string) => p.tierFocus.includes(t))) s += 10;
+  }
+
+  // City/locality
+  if (p.city) {
+    const city = String(p.city).toLowerCase();
+    const inCity =
+      (Array.isArray(row?.cityTags) && row.cityTags.some((c: string) => String(c).toLowerCase() === city)) ||
+      String(row?.city).toLowerCase() === city ||
+      String(row?.hqCity).toLowerCase() === city;
+    if (inCity) s += 40 * (p.signalWeight.local ?? 1);
+  }
+
+  // Size weighting
+  if (row?.size && p.sizeWeight && p.sizeWeight[row.size as keyof typeof p.sizeWeight] != null) {
+    s += Number(p.sizeWeight[row.size as keyof typeof p.sizeWeight]) * 10;
+  } else if (p.preferSmallMid) {
+    // Default nudge if size unknown
+    s += 6;
+  }
+
+  // Category allow/block simple nudges
+  const segs: string[] = (Array.isArray(row?.segments) ? row.segments : []).map((x: any) =>
+    String(x || "").toLowerCase(),
+  );
+  if (p.categoriesAllow.length && segs.some((s0) => p.categoriesAllow.includes(s0))) s += 5;
+  if (p.categoriesBlock.length && segs.some((s0) => p.categoriesBlock.includes(s0))) s -= 8;
+
+  return Math.round(s * 10) / 10;
+}
+
+function tempFromScore(score: number): Temp {
+  return score >= 60 ? "hot" : "warm";
+}
+
+function makeTitle(row: any): string {
+  const name = row?.name || row?.brand || row?.host || row?.domain || "Buyer";
+  return `Suppliers / vendor info | ${name}`;
+}
+
+function reason(row: any, p: EffectivePrefs, score: number): string {
+  const bits: string[] = [];
+
+  if (Array.isArray(row?.tiers) && row.tiers.length) {
+    bits.push(`tier: ${row.tiers.join("/")}`);
+  }
+  if (p.city) bits.push(`city preference: ${p.city}`);
+  if (row?.size) bits.push(`size: ${row.size}`);
+  if (Array.isArray(row?.segments) && row.segments.length) {
+    bits.push(`segments: ${row.segments.slice(0, 3).join(",")}${row.segments.length > 3 ? "…" : ""}`);
+  }
+
+  bits.push(`prefs • ${prefsSummary(p)}`);
+  bits.push(`score=${score}`);
+  return bits.join(" · ");
+}
+
+const router = Router();
 
 /**
- * Find buyers for a supplier.
- * Query: host=example.com&region=US/CA&radius=50
- *
- * NOTE: queryCatalog returns BuyerRow[] (not {items}).
- * We enrich rows with a human 'why' string but do not rely
- * on BuyerRow having a 'why' field in its type.
+ * GET /api/leads/find-buyers?host=stretchandshrink.com&region=US%2FCA&radius=50%20mi
+ * Responds with { items: Lead[] } sorted by score, capped by user prefs.
  */
-LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) => {
-  try {
-    const host = String(req.query.host || "").trim().toLowerCase();
-    if (!host) {
-      return res.status(400).json({ error: "missing host" });
-    }
-
-    const region = String(req.query.region || "US/CA");
-    const radiusKm = Number(req.query.radius || 50);
-
-    // Effective prefs (city/tier/size bias etc.)
-    const prefs = getPrefs(host);
-
-    // Call catalog with the pieces it needs
-    const rows: BuyerRow[] = await queryCatalog({
-      host,
-      region,
-      city: prefs.city,
-      radiusKm: Number.isFinite(radiusKm) ? radiusKm : prefs.radiusKm,
-      tierFocus: prefs.tierFocus,
-      categoriesAllow: prefs.categoriesAllow,
-      categoriesBlock: prefs.categoriesBlock,
-      sizeWeight: prefs.sizeWeight,
-      preferSmallMid: prefs.preferSmallMid,
-      signalWeight: prefs.signalWeight,
-      maxWarm: prefs.maxWarm,
-      maxHot: prefs.maxHot,
-    } as any);
-
-    // Build explanation once; attach as 'why' in the payload we return.
-    const why = prefsSummary(prefs);
-
-    type BuyerOut = BuyerRow & { why?: string };
-    const items: BuyerOut[] = (rows || []).map(r => ({ ...(r as any), why }));
-
-    return res.status(200).json({ items });
-  } catch (err: any) {
-    const msg = err?.message || String(err);
-    return res.status(500).json({ error: msg });
+router.get("/find-buyers", (req: Request, res: Response) => {
+  const hostQ = String(req.query.host || "");
+  const host = normalizeHost(hostQ);
+  if (!host) {
+    return res.status(400).json({ ok: false, error: "missing host query param" });
   }
+
+  // Load effective prefs (bias to Tier C + local + small/mid by default)
+  const p = getPrefs(host);
+
+  // Pull candidate rows from catalog using our safe adapter
+  const rows = queryCatalogSafe(p);
+
+  // Score → map to Lead → sort
+  const scored: Lead[] = rows
+    .map((row: any) => {
+      const s = scoreRow(row, p);
+      const t = tempFromScore(s);
+      return {
+        host: String(row?.host || row?.domain || ""),
+        platform: "web",
+        title: makeTitle(row),
+        created: new Date().toISOString(),
+        temp: t,
+        score: s,
+        why: reason(row, p, s),
+      } as Lead;
+    })
+    // ensure host present
+    .filter((r) => r.host);
+
+  scored.sort((a, b) => b.score - a.score);
+
+  // honor caps: hot first, then warm
+  const hot = scored.filter((x) => x.temp === "hot").slice(0, p.maxHot ?? 1);
+  const warm = scored.filter((x) => x.temp === "warm").slice(0, p.maxWarm ?? 5);
+  const items = [...hot, ...warm];
+
+  return res.json({ items });
 });
 
-export default LeadsRouter;
+export default router;
