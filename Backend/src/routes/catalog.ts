@@ -2,8 +2,9 @@
 //
 // Read-only endpoints to inspect the loaded buyer catalog.
 // Safe against shape drift (array | {rows} | {items}).
+// Exposes both a Router (default export) and registerCatalog(app, base).
 
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, type Application } from "express";
 import { loadCatalog, type BuyerRow } from "../shared/catalog";
 
 export const CatalogRouter = Router();
@@ -99,6 +100,11 @@ CatalogRouter.post("/api/catalog/reload", async (_req: Request, res: Response) =
     return res.status(200).json({ ok: false, error: "catalog-reload-failed", detail: String(err?.message || err) });
   }
 });
+
+// Convenience mount helper (mirrors leads/health style)
+export function registerCatalog(app: Application, base = "/"): void {
+  app.use(base, CatalogRouter);
+}
 
 // export both named & default to avoid import style issues
 export default CatalogRouter;
