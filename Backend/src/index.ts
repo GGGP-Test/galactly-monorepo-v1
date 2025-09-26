@@ -86,6 +86,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// Plain readiness endpoint for infra probes (no router/prefix)
+app.get("/healthz", (_req, res) => res.status(200).type("text/plain").send("ok"));
+
 // -------- Mount routers --------
 app.use("/api/health", HealthRouter);    // expects default Router
 app.use("/api/prefs", PrefsRouter());    // prefs exports a factory -> call it
