@@ -1,10 +1,15 @@
 // src/routes/catalog.ts
 //
 // Read-only endpoints to inspect the loaded buyer catalog.
-// Safe against shape drift (array | {rows} | {items}).
-// Exposes both a Router (default export) and registerCatalog(app, base).
+// Router paths are RELATIVE to the mount point in index.ts:
+//   app.use("/api/catalog", CatalogRouter)
+//
+// Endpoints:
+//   GET  /api/catalog            -> summary stats
+//   GET  /api/catalog/sample     -> small sample list (?limit=20)
+//   POST /api/catalog/reload     -> rebuilds in-memory cache from env
 
-import { Router, Request, Response, type Application } from "express";
+import { Router, Request, Response } from "express";
 import { loadCatalog, type BuyerRow } from "../shared/catalog";
 
 export const CatalogRouter = Router();
@@ -29,7 +34,8 @@ function arr(v: unknown): string[] {
   return (v as unknown[]).map((x) => asStr(x)).filter(Boolean);
 }
 
-CatalogRouter.get("/api/catalog/stats", async (_req: Request, res: Response) => {
+// GET /api/catalog  -> summary
+CatalogRouter.get("/", async (_req: Request, res: Response) => {
   try {
     const cat = await loadCatalog();
     const rows = toArray(cat);
@@ -43,7 +49,10 @@ CatalogRouter.get("/api/catalog/stats", async (_req: Request, res: Response) => 
       for (const t of tiers) byTier[t] = (byTier[t] || 0) + 1;
 
       const cities = arr((r as any).cityTags);
-      for (const c of cities) cityCount[c.toLowerCase()] = (cityCount[c.toLowerCase()] || 0) + 1;
+      for (const c of cities) {
+        const k = c.toLowerCase();
+        cityCount[k] = (cityCount[k] || 0) + 1;
+      }
     }
 
     const topCities = Object.entries(cityCount)
@@ -58,18 +67,14 @@ CatalogRouter.get("/api/catalog/stats", async (_req: Request, res: Response) => 
       cityTags: arr((r as any).cityTags),
     }));
 
-    return res.json({
-      total: rows.length,
-      byTier,
-      topCities,
-      exampleHosts,
-    });
+    res.json({ total: rows.length, byTier, topCities, exampleHosts });
   } catch (err: any) {
-    return res.status(200).json({ error: "catalog-stats-failed", detail: String(err?.message || err) });
+    res.status(200).json({ error: "catalog-stats-failed", detail: String(err?.message || err) });
   }
 });
 
-CatalogRouter.get("/api/catalog/sample", async (req: Request, res: Response) => {
+// GET /api/catalog/sample?limit=20
+CatalogRouter.get("/sample", async (req: Request, res: Response) => {
   try {
     const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 20));
     const cat = await loadCatalog();
@@ -84,27 +89,20 @@ CatalogRouter.get("/api/catalog/sample", async (req: Request, res: Response) => 
       segments: arr((r as any).segments),
     }));
 
-    return res.json({ items, total: items.length });
+    res.json({ items, total: items.length });
   } catch (err: any) {
-    return res.status(200).json({ error: "catalog-sample-failed", detail: String(err?.message || err) });
+    res.status(200).json({ error: "catalog-sample-failed", detail: String(err?.message || err) });
   }
 });
 
-// (Optional) no-op reload to keep contract future-proof.
-// If loadCatalog caches, re-invoking will refresh that cache.
-CatalogRouter.post("/api/catalog/reload", async (_req: Request, res: Response) => {
+// POST /api/catalog/reload
+CatalogRouter.post("/reload", async (_req: Request, res: Response) => {
   try {
     await loadCatalog();
-    return res.json({ ok: true, reloaded: true, at: new Date().toISOString() });
+    res.json({ ok: true, reloaded: true, at: new Date().toISOString() });
   } catch (err: any) {
-    return res.status(200).json({ ok: false, error: "catalog-reload-failed", detail: String(err?.message || err) });
+    res.status(200).json({ ok: false, error: "catalog-reload-failed", detail: String(err?.message || err) });
   }
 });
 
-// Convenience mount helper (mirrors leads/health style)
-export function registerCatalog(app: Application, base = "/"): void {
-  app.use(base, CatalogRouter);
-}
-
-// export both named & default to avoid import style issues
 export default CatalogRouter;
