@@ -1,12 +1,13 @@
 // src/shared/catalog.ts
 //
 // Canonical catalog types + loader.
-// Now with a small in-memory TTL cache so routes don’t rebuild on every hit.
-// Exposes a stable shape: { rows: BuyerRow[] }.
+// Always expose a consistent shape: { rows: BuyerRow[] }.
+// Tolerant to either an object with {buyers|rows|items} OR a bare array.
 
 import type { Tier, SizeBucket } from "./prefs";
 
-// ---------- Types used by routes/leads.ts ----------
+// --- Types used by routes/leads.ts ---
+
 export interface BuyerRow {
   host: string;                    // required, unique-ish key
   name?: string;
@@ -21,38 +22,24 @@ export interface BuyerRow {
   // Light metadata used by UI/logging
   platform?: string;               // "web" | "retail" | "marketplace" | etc.
   created?: string;                // ISO timestamp if present in seed
-
-  // Not set by catalog; routes compute these:
-  temp?: "warm" | "hot" | null;
-  score?: number;
-  why?: string;
+  temp?: "warm" | "hot" | null;    // not set by catalog; routes compute this
+  score?: number;                  // not set by catalog; routes compute this
+  why?: string;                    // not set by catalog; routes explain here
 }
 
 export interface LoadedCatalog {
   rows: BuyerRow[];
 }
 
-// ---------- Env keys (Northflank secret group injects these) ----------
-const KEY_TIER_C = "BUYERS_CATALOG_TIER_C_JSON";
+// --- Env keys (Northflank Secret Group) ---
+const KEY_TIER_C  = "BUYERS_CATALOG_TIER_C_JSON";
 const KEY_TIER_AB = "BUYERS_CATALOG_TIER_AB_JSON";
 
-// ---------- Tiny TTL cache ----------
-type CacheCell = { at: number; data: LoadedCatalog };
-let CACHE: CacheCell | null = null;
+// --- internal cache ---
+let CACHE: LoadedCatalog | null = null;
 
-function ttlSec(): number {
-  const n = Number(process.env.CATALOG_TTL_SEC ?? 300);
-  if (!Number.isFinite(n)) return 300;
-  // keep sane: 5s..3600s
-  return Math.max(5, Math.min(3600, Math.floor(n)));
-}
+// --- helpers ---
 
-function cacheValid(cell: CacheCell | null): boolean {
-  if (!cell) return false;
-  return (Date.now() - cell.at) < ttlSec() * 1000;
-}
-
-// ---------- helpers ----------
 function asArray(x: unknown): string[] {
   if (Array.isArray(x)) return x.map(v => String(v ?? "").trim()).filter(Boolean);
   if (x == null || x === "") return [];
@@ -68,23 +55,29 @@ function lowerUniq(values: string[]): string[] {
   return [...out];
 }
 
-function safeParseObject(raw: string | undefined): any {
+function safeParse(raw: string | undefined): any {
   if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+function coerceBuyerList(val: any): any[] {
+  // Accept object or bare array
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (Array.isArray(val.buyers)) return val.buyers;
+  if (Array.isArray(val.rows))   return val.rows;
+  if (Array.isArray(val.items))  return val.items;
+  return [];
 }
 
 function normalizeRow(anyRow: any): BuyerRow | null {
   if (!anyRow || typeof anyRow !== "object") return null;
 
-  const host = String(anyRow.host || "")
-    .toLowerCase()
+  const host = String(anyRow.host || "").toLowerCase()
     .replace(/^https?:\/\//, "")
     .replace(/\/.*$/, "")
     .trim();
+
   if (!host) return null;
 
   const row: BuyerRow = {
@@ -94,9 +87,9 @@ function normalizeRow(anyRow: any): BuyerRow | null {
     created: (anyRow.created && String(anyRow.created)) || undefined,
 
     // normalize arrays
-    tiers: lowerUniq(asArray(anyRow.tiers)) as Tier[],
+    tiers:    lowerUniq(asArray(anyRow.tiers)) as Tier[],
     segments: lowerUniq(asArray(anyRow.segments)),
-    tags: lowerUniq(asArray(anyRow.tags)),
+    tags:     lowerUniq(asArray(anyRow.tags)),
     cityTags: lowerUniq(asArray(anyRow.cityTags)),
 
     // optional hints
@@ -107,12 +100,12 @@ function normalizeRow(anyRow: any): BuyerRow | null {
 }
 
 function buildFromEnv(): LoadedCatalog {
-  // Expect both env values to look like: { "version": "x", "buyers": [ ... ] }
-  const rawC = safeParseObject(process.env[KEY_TIER_C]);
-  const rawAB = safeParseObject(process.env[KEY_TIER_AB]);
+  const rawC  = safeParse(process.env[KEY_TIER_C]);
+  const rawAB = safeParse(process.env[KEY_TIER_AB]);
 
-  const buyersC: any[] = Array.isArray(rawC?.buyers) ? rawC.buyers : [];
-  const buyersAB: any[] = Array.isArray(rawAB?.buyers) ? rawAB.buyers : [];
+  // Accept either {buyers:[...]} or bare [...]
+  const buyersC  = coerceBuyerList(rawC);
+  const buyersAB = coerceBuyerList(rawAB);
 
   const allRaw = buyersC.concat(buyersAB);
 
@@ -131,30 +124,22 @@ function buildFromEnv(): LoadedCatalog {
   return { rows };
 }
 
-// ---------- Public API ----------
+// --- Public API ---
 
-/**
- * Returns cached catalog if fresh; rebuilds from env when TTL expires.
- * Shape is always { rows: BuyerRow[] }.
- */
+/** Returns cached catalog; builds once from env on first call. */
 export function getCatalog(): LoadedCatalog {
-  if (cacheValid(CACHE)) return CACHE!.data;
-  const data = buildFromEnv();
-  CACHE = { at: Date.now(), data };
-  return data;
+  if (CACHE) return CACHE;
+  CACHE = buildFromEnv();
+  return CACHE;
 }
 
-/**
- * Forces a rebuild from env (ignores TTL) and refreshes the cache.
- * Useful for /api/catalog/reload or when you update secrets.
- */
+/** Rebuilds the catalog from env (no network I/O) and returns it. */
 export function loadCatalog(): LoadedCatalog {
-  const data = buildFromEnv();
-  CACHE = { at: Date.now(), data };
-  return data;
+  CACHE = buildFromEnv();
+  return CACHE;
 }
 
-/** Clear the cache (primarily for tests or ops). */
+// Small utility for tests/ops
 export function __clearCatalogCache() {
   CACHE = null;
 }
