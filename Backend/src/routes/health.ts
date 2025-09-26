@@ -1,23 +1,24 @@
 // src/routes/health.ts
 //
-// Rich health endpoint with defensive catalog stats.
-// - Works whether the catalog is [] | {rows} | {items}
-// - No implicit-any; no new dependencies
-// - Tiny in-process cache to keep it cheap
+// Lightweight health + status without extra deps.
+// - GET /api/health            -> uptime/env + catalog summary (safe against shape drift)
+// - GET /api/health/ping       -> simple pong
+//
+// No external packages. Default export = Router.
 
 import { Router, Request, Response } from "express";
-import { loadCatalog } from "../shared/catalog";
+import { getCatalog, type BuyerRow } from "../shared/catalog";
 
-const HealthRouter = Router();
+const r = Router();
 
-// ---- helpers ----
-type AnyCat = unknown;
+// ---- tiny helpers (avoid implicit-any) ----
+type Loaded = unknown;
 
-function toArray(cat: AnyCat): any[] {
-  const c: any = cat as any;
-  if (Array.isArray(c)) return c as any[];
-  if (Array.isArray(c?.rows)) return c.rows as any[];
-  if (Array.isArray(c?.items)) return c.items as any[];
+function toArray(cat: Loaded): BuyerRow[] {
+  const anyCat = cat as any;
+  if (Array.isArray(anyCat)) return anyCat as BuyerRow[];
+  if (Array.isArray(anyCat?.rows)) return anyCat.rows as BuyerRow[];
+  if (Array.isArray(anyCat?.items)) return anyCat.items as BuyerRow[];
   return [];
 }
 
@@ -30,67 +31,56 @@ function arr(v: unknown): string[] {
   return (v as unknown[]).map((x) => asStr(x)).filter(Boolean);
 }
 
-// ---- cheap TTL cache for stats ----
-type CatalogStats = {
-  total: number;
-  byTier: Record<string, number>;
-  sampleHosts: string[];
-};
-
-let STATS_CACHE: CatalogStats | null = null;
-let STATS_AT = 0;
-const STATS_TTL_MS = 15_000;
-
-function computeStats(): CatalogStats {
-  const cat = loadCatalog(); // sync; safe to call without await
-  const rows = toArray(cat);
-
-  const byTier: Record<string, number> = {};
-  const sampleHosts: string[] = [];
-
-  for (let i = 0; i < rows.length; i++) {
-    const r: any = rows[i];
-    if (sampleHosts.length < 10) {
-      const host = asStr(r?.host);
-      if (host) sampleHosts.push(host.toLowerCase());
-    }
-    const tiers = arr(r?.tiers);
-    if (tiers.length === 0) tiers.push("?");
-    for (let j = 0; j < tiers.length; j++) {
-      const t = tiers[j];
-      byTier[t] = (byTier[t] || 0) + 1;
-    }
-  }
-
-  return { total: rows.length, byTier, sampleHosts };
-}
-
-function getStats(): CatalogStats {
-  const now = Date.now();
-  if (!STATS_CACHE || now - STATS_AT > STATS_TTL_MS) {
-    STATS_CACHE = computeStats();
-    STATS_AT = now;
-  }
-  return STATS_CACHE;
-}
-
 // ---- routes ----
-HealthRouter.get("/healthz", (_req: Request, res: Response) => {
-  res.json({ ok: true });
+
+// Simple liveness
+r.get("/ping", (_req: Request, res: Response) => {
+  res.json({ pong: true, at: new Date().toISOString() });
 });
 
-HealthRouter.get("/health", (_req: Request, res: Response) => {
-  const s = getStats();
-  res.json({
-    ok: true,
-    service: "buyers-api",
-    node: process.version,
-    env: process.env.NODE_ENV || "development",
-    port: Number(process.env.PORT || 8787),
-    uptimeSec: Math.round(process.uptime()),
-    nowIso: new Date().toISOString(),
-    catalog: s,
-  });
+// Uptime + small catalog snapshot (safe in prod logs)
+r.get("/", (_req: Request, res: Response) => {
+  try {
+    const startedAt = Number(process.uptime ? Date.now() - process.uptime() * 1000 : Date.now());
+    const cat = getCatalog(); // cached build from env
+    const rows = toArray(cat);
+
+    // summarize tiers & a tiny sample (no heavy work)
+    const byTier: Record<string, number> = {};
+    for (const row of rows.slice(0, 200)) {
+      const tiers = arr((row as any).tiers);
+      if (tiers.length === 0) tiers.push("?");
+      for (const t of tiers) byTier[t] = (byTier[t] || 0) + 1;
+    }
+
+    const sample = rows.slice(0, 12).map((row) => ({
+      host: asStr((row as any).host),
+      name: asStr((row as any).name || (row as any).title),
+      tiers: arr((row as any).tiers),
+      cityTags: arr((row as any).cityTags),
+      segments: arr((row as any).segments),
+    }));
+
+    res.json({
+      ok: true,
+      service: "buyers-api",
+      now: new Date().toISOString(),
+      uptimeSec: Math.round(process.uptime ? process.uptime() : 0),
+      startedAtIso: new Date(startedAt).toISOString(),
+      env: {
+        node: process.version,
+        port: Number(process.env.PORT || 8080),
+        allowOrigins: String(process.env.ALLOW_ORIGINS || ""),
+      },
+      catalog: {
+        total: rows.length,
+        byTier,
+        sample,
+      },
+    });
+  } catch (err: any) {
+    res.status(200).json({ ok: false, error: String(err?.message || err) });
+  }
 });
 
-export default HealthRouter;
+export default r;
