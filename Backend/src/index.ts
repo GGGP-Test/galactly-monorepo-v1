@@ -1,25 +1,27 @@
-import express from "express";
-import type { Application } from "express";
+import express, { type Application } from "express";
 
+// Health route exports a *named* function
 import { registerHealth } from "./routes/health";
-import { registerLeads } from "./routes/leads";
-import { registerPrefs } from "./routes/prefs";
+
+// Leads and Prefs currently export a *default* registrar
+import registerLeads from "./routes/leads";
+import registerPrefs from "./routes/prefs";
 
 const app: Application = express();
-
-// basic middleware only (keep deps minimal for now)
 app.use(express.json());
 
-// mount routes via register-helpers
-registerHealth(app); // exposes GET /healthz
+// Mount route registrars (do not pass extra args)
+registerHealth(app);
 registerLeads(app);
 registerPrefs(app);
 
-// simple root for sanity
-app.get("/", (_req, res) => res.json({ ok: true }));
+// Start server (Docker HEALTHCHECK probes http://127.0.0.1:${PORT}/healthz)
+const PORT = Number(process.env.PORT) || 8787;
 
-// start server
-const port = Number(process.env.PORT) || 8787;
-app.listen(port);
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`buyers-api listening on ${PORT}`);
+  });
+}
 
 export default app;
