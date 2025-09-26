@@ -1,66 +1,95 @@
 // src/routes/leads.ts
-import { Router } from "express";
-import { getPrefs, setPrefs, prefsSummary, EffectivePrefs } from "../shared/prefs";
-import { queryCatalog } from "../shared/catalog";
+import { Router, Request, Response } from "express";
+import { getPrefs, prefsSummary, normalizeHost, EffectivePrefs } from "../shared/prefs";
+import { queryCatalog, BuyerRow } from "../shared/catalog";
 
-const router = Router();
+export const LeadsRouter = Router();
 
-// Accept JSON just for this router (index.ts also applies app-wide)
-router.use((req, res, next) => {
-  // Northflank Express images already include express.json in index.ts,
-  // but keeping this guard makes the route self-contained.
-  // @ts-ignore
-  if (!("json" in req)) return next();
-  next();
+/**
+ * Health ping for this route-set (handy for Docker healthcheck chaining)
+ */
+LeadsRouter.get("/api/leads/health", (_req, res) => {
+  res.json({ ok: true, at: new Date().toISOString() });
 });
 
-// GET /api/leads/find-buyers?host=...&region=US%2FCA&radius=50mi
-router.get("/leads/find-buyers", (req, res) => {
-  const host = String(req.query.host || "").trim();
-  if (!host) return res.status(400).json({ error: "host required" });
-
-  const city = (req.query.city ? String(req.query.city) : "").trim() || undefined;
-
-  // resolve effective prefs (bias to small/mid + tier C/B)
-  let prefs: EffectivePrefs = getPrefs(host);
-  if (city && city !== prefs.city) {
-    prefs = setPrefs(host, { city });
-  }
-
-  const items = queryCatalog(prefs, prefs.maxWarm);
-
-  // Attach a readable “why” footer with prefs summary
-  for (const it of items) {
-    it.why = `${it.why} · ${prefsSummary(prefs)}`;
-  }
-
-  return res.json({ items });
-});
-
-// POST /api/leads/lock  { host, title, temp, why, platform }
-router.post("/leads/lock", (req, res) => {
+/**
+ * Find buyers for a supplier host.
+ *
+ * Query params:
+ *   - host (required): supplier website (domain or URL)
+ *   - region (optional): "US/CA" etc. (currently informational)
+ *   - radius (optional): "50 mi" etc. (currently informational)
+ */
+LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) => {
   try {
-    const body = req.body || {};
-    if (!body || !body.host || !body.title) {
-      return res.status(400).json({ error: "candidate with host and title required" });
+    const hostParam = String(req.query.host || "").trim();
+    if (!hostParam) {
+      res.status(400).json({ error: "host is required" });
+      return;
     }
-    // In this minimal impl we just acknowledge the lock.
-    // You can persist to Neon later; the API surface won’t change.
-    return res.json({ ok: true });
-  } catch (e: any) {
-    return res.status(500).json({ error: e?.message || "lock failed" });
+    const host = normalizeHost(hostParam);
+
+    // Load effective prefs (city bias, tier focus, size weighting, etc.)
+    const prefs: EffectivePrefs = getPrefs(host);
+
+    // Build a simple query for the catalog
+    const q = {
+      host,                         // used for logging/scoring context
+      city: prefs.city,             // optional city bias
+      tiers: prefs.tierFocus,       // e.g. ["C","B"]
+      allow: prefs.categoriesAllow, // tags/categories to prefer
+      block: prefs.categoriesBlock, // tags/categories to avoid
+      preferSmallMid: prefs.preferSmallMid,
+      sizeWeight: prefs.sizeWeight,
+      limit: Math.max(5, (prefs.maxWarm || 5) + (prefs.maxHot || 1) + 5),
+    } as const;
+
+    // Ask the catalog to produce candidates
+    const out = await queryCatalog(q);
+
+    // Normalize to the Free Panel table shape
+    const nowIso = new Date().toISOString();
+    const items = (out.items || out || []).slice(0, prefs.maxWarm || 5).map((row: BuyerRow) =>
+      rowToResult(row, prefs, nowIso)
+    );
+
+    res.json({ items });
+  } catch (err: any) {
+    res.status(500).json({ error: String(err?.message || err || "unknown") });
   }
 });
 
-// Optional: quick prefs setter used by your free panel
-router.post("/prefs", (req, res) => {
-  const { host, patch } = req.body || {};
-  if (!host) return res.status(400).json({ error: "host required" });
-  const eff = setPrefs(host, patch || {});
-  res.json({ ok: true, prefs: eff });
-});
+/* ------------------------- helpers ------------------------- */
 
-// Simple ping used by the Docker HEALTHCHECK
-router.get("/healthz", (_req, res) => res.json({ ok: true }));
+function rowToResult(row: BuyerRow, prefs: EffectivePrefs, createdIso: string) {
+  // Title (stable and readable)
+  const title = `Suppliers / vendor info | ${row.name || row.host}`;
 
-export default router;
+  // Temperature: prefer "warm" by default; nudge to "hot" if tier C + strong city match
+  const isTierC = Array.isArray(row.tiers) && row.tiers.includes("C" as any);
+  const cityHit =
+    !!prefs.city &&
+    Array.isArray(row.cityTags) &&
+    row.cityTags.map(safeLower).includes(safeLower(prefs.city));
+
+  const temp: "warm" | "hot" = isTierC && cityHit ? "hot" : "warm";
+
+  // Human "why" (we synthesize; BuyerRow has no 'why' field)
+  const seg = Array.isArray(row.segments) && row.segments.length ? row.segments.join(" · ") : "general packaging";
+  const tierTxt = Array.isArray(row.tiers) && row.tiers.length ? `tier: ${row.tiers.join("/")}` : "tier: n/a";
+  const cityTxt = prefs.city ? (cityHit ? `city match: ${prefs.city}` : `city bias: ${prefs.city}`) : "city: n/a";
+  const why = `${seg} • ${tierTxt} • ${cityTxt} • ${prefsSummary(prefs)}`;
+
+  return {
+    host: row.host,
+    platform: "web",
+    title,
+    created: createdIso,
+    temp,
+    why,
+  };
+}
+
+function safeLower(s: any): string {
+  return String(s || "").trim().toLowerCase();
+}
