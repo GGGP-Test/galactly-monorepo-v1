@@ -1,12 +1,12 @@
 // src/shared/catalog.ts
 //
 // Canonical catalog types + loader.
-// Always expose a consistent shape: { rows: BuyerRow[] }.
+// Now with a small in-memory TTL cache so routes don’t rebuild on every hit.
+// Exposes a stable shape: { rows: BuyerRow[] }.
 
 import type { Tier, SizeBucket } from "./prefs";
 
-// --- Types used by routes/leads.ts ---
-
+// ---------- Types used by routes/leads.ts ----------
 export interface BuyerRow {
   host: string;                    // required, unique-ish key
   name?: string;
@@ -21,24 +21,38 @@ export interface BuyerRow {
   // Light metadata used by UI/logging
   platform?: string;               // "web" | "retail" | "marketplace" | etc.
   created?: string;                // ISO timestamp if present in seed
-  temp?: "warm" | "hot" | null;    // not set by catalog; routes compute this
-  score?: number;                  // not set by catalog; routes compute this
-  why?: string;                    // not set by catalog; routes explain here
+
+  // Not set by catalog; routes compute these:
+  temp?: "warm" | "hot" | null;
+  score?: number;
+  why?: string;
 }
 
 export interface LoadedCatalog {
   rows: BuyerRow[];
 }
 
-// --- Env keys we read (Northflank secret group) ---
+// ---------- Env keys (Northflank secret group injects these) ----------
 const KEY_TIER_C = "BUYERS_CATALOG_TIER_C_JSON";
 const KEY_TIER_AB = "BUYERS_CATALOG_TIER_AB_JSON";
 
-// --- internal cache ---
-let CACHE: LoadedCatalog | null = null;
+// ---------- Tiny TTL cache ----------
+type CacheCell = { at: number; data: LoadedCatalog };
+let CACHE: CacheCell | null = null;
 
-// --- helpers ---
+function ttlSec(): number {
+  const n = Number(process.env.CATALOG_TTL_SEC ?? 300);
+  if (!Number.isFinite(n)) return 300;
+  // keep sane: 5s..3600s
+  return Math.max(5, Math.min(3600, Math.floor(n)));
+}
 
+function cacheValid(cell: CacheCell | null): boolean {
+  if (!cell) return false;
+  return (Date.now() - cell.at) < ttlSec() * 1000;
+}
+
+// ---------- helpers ----------
 function asArray(x: unknown): string[] {
   if (Array.isArray(x)) return x.map(v => String(v ?? "").trim()).filter(Boolean);
   if (x == null || x === "") return [];
@@ -66,11 +80,11 @@ function safeParseObject(raw: string | undefined): any {
 function normalizeRow(anyRow: any): BuyerRow | null {
   if (!anyRow || typeof anyRow !== "object") return null;
 
-  const host = String(anyRow.host || "").toLowerCase()
+  const host = String(anyRow.host || "")
+    .toLowerCase()
     .replace(/^https?:\/\//, "")
     .replace(/\/.*$/, "")
     .trim();
-
   if (!host) return null;
 
   const row: BuyerRow = {
@@ -87,15 +101,13 @@ function normalizeRow(anyRow: any): BuyerRow | null {
 
     // optional hints
     size: (anyRow.size as SizeBucket) || undefined,
-
-    // not set here: temp, score, why (routes compute/explain those)
   };
 
   return row;
 }
 
 function buildFromEnv(): LoadedCatalog {
-  // Both env values are expected to be JSON objects: { version, buyers: [...] }
+  // Expect both env values to look like: { "version": "x", "buyers": [ ... ] }
   const rawC = safeParseObject(process.env[KEY_TIER_C]);
   const rawAB = safeParseObject(process.env[KEY_TIER_AB]);
 
@@ -119,28 +131,30 @@ function buildFromEnv(): LoadedCatalog {
   return { rows };
 }
 
-// --- Public API ---
+// ---------- Public API ----------
 
 /**
- * Returns cached catalog; builds once from env on first call.
+ * Returns cached catalog if fresh; rebuilds from env when TTL expires.
  * Shape is always { rows: BuyerRow[] }.
  */
 export function getCatalog(): LoadedCatalog {
-  if (CACHE) return CACHE;
-  CACHE = buildFromEnv();
-  return CACHE;
+  if (cacheValid(CACHE)) return CACHE!.data;
+  const data = buildFromEnv();
+  CACHE = { at: Date.now(), data };
+  return data;
 }
 
 /**
- * Rebuilds the catalog from env (no network I/O) and returns it.
- * Also refreshes the cache used by getCatalog().
+ * Forces a rebuild from env (ignores TTL) and refreshes the cache.
+ * Useful for /api/catalog/reload or when you update secrets.
  */
 export function loadCatalog(): LoadedCatalog {
-  CACHE = buildFromEnv();
-  return CACHE;
+  const data = buildFromEnv();
+  CACHE = { at: Date.now(), data };
+  return data;
 }
 
-// Small utility for tests/ops
+/** Clear the cache (primarily for tests or ops). */
 export function __clearCatalogCache() {
   CACHE = null;
 }
