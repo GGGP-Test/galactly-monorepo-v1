@@ -1,43 +1,51 @@
 // src/routes/leads.ts
 //
-// Hardened, city-aware buyer finding + lightweight locking.
-// - Keeps your scoring & prefs flow intact.
-// - Adds in-memory per-supplier locks with TTL, no DB required.
-// - One-file change; no new dependencies.
+// Leads endpoint with:
+//  - Env-tunable warm/hot thresholds
+//  - In-memory lock/locked/unlock so the Free Panel "Lock" works
+//  - Safe against catalog shape drift (array | {rows} | {items})
+//  - No external deps; exports both named and default Router
 
 import { Router, Request, Response, json } from "express";
 import { loadCatalog, type BuyerRow } from "../shared/catalog";
 import { getPrefs, setPrefs, prefsSummary, type EffectivePrefs } from "../shared/prefs";
-import { scoreRow, classifyScore, buildWhy, allTags } from "../shared/trc";
+import { scoreRow, buildWhy, allTags } from "../shared/trc";
 
+// ---------- router ----------
 export const LeadsRouter = Router();
-LeadsRouter.use(json()); // allow POST JSON bodies to /lock, /unlock
+LeadsRouter.use(json()); // ensure POST bodies parse even if index didn't add global json()
 
-/** safe query getter */
+// ---------- env knobs (safe defaults) ----------
+function num(v: any, d: number) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+}
+const HOT_CUTOFF  = num(process.env.HOT_CUTOFF, 1.8);
+const WARM_CUTOFF = num(process.env.WARM_CUTOFF, 0.9);
+const MAX_WARM_CAP = num(process.env.MAX_WARM_CAP, 8);
+const MAX_HOT_CAP  = num(process.env(MAX_HOT_CAP as any), 3); // tolerate undefined; we clamp again below
+
+function classify(total: number): "cold" | "warm" | "hot" {
+  if (total >= HOT_CUTOFF) return "hot";
+  if (total >= WARM_CUTOFF) return "warm";
+  return "cold";
+}
+
+// ---------- small helpers ----------
 function q(req: Request, key: string): string | undefined {
   const v = (req.query as any)?.[key];
   if (v == null) return undefined;
   const s = String(v).trim();
   return s.length ? s : undefined;
 }
-
 function nowIso(): string {
   return new Date().toISOString();
 }
-
 function intersects(a: string[] = [], b: string[] = []): boolean {
   if (!a.length || !b.length) return false;
   const set = new Set(a.map((x) => x.toLowerCase()));
   return b.some((x) => set.has(String(x).toLowerCase()));
 }
-
-function hasBlockedTags(prefs: EffectivePrefs, tags: string[]): boolean {
-  return prefs.categoriesBlock.length ? intersects(prefs.categoriesBlock, tags) : false;
-}
-function passesAllowTags(prefs: EffectivePrefs, tags: string[]): boolean {
-  return prefs.categoriesAllow.length ? intersects(prefs.categoriesAllow, tags) : true;
-}
-
 function tierPass(prefs: EffectivePrefs, rowTiers?: ReadonlyArray<string>): boolean {
   if (!prefs.tierFocus?.length) return true;
   if (!rowTiers?.length) return true;
@@ -45,8 +53,6 @@ function tierPass(prefs: EffectivePrefs, rowTiers?: ReadonlyArray<string>): bool
   for (const t of rowTiers) if (want.has(String(t))) return true;
   return false;
 }
-
-/** Normalize whatever loadCatalog() returns to BuyerRow[] without depending on its TS type */
 function toArrayMaybe(cat: unknown): BuyerRow[] {
   const anyCat = cat as any;
   if (Array.isArray(anyCat)) return anyCat as BuyerRow[];
@@ -56,7 +62,7 @@ function toArrayMaybe(cat: unknown): BuyerRow[] {
 }
 
 type Temp = "warm" | "hot";
-interface LeadItem {
+export interface LeadItem {
   host: string;
   platform: "web";
   title: string;
@@ -64,72 +70,31 @@ interface LeadItem {
   temp: Temp;
   score: number;
   why: string;
-  locked?: boolean;
 }
 
-/* ---------------------------
-   In-memory locks with TTL
----------------------------- */
+// ---------- in-memory locks (no DB yet) ----------
+const LOCKS = new Map<string, Map<string, LeadItem>>(); // supplierHost -> (leadHost -> item)
 
-interface LockRec {
-  supplier: string;   // normalized supplier host
-  host: string;       // buyer host
-  title?: string;     // optional title for fallback display
-  at: number;         // ms timestamp
-  ttlMs: number;      // time to live in ms
-}
-
-const LOCKS = new Map<string, LockRec>(); // key: `${supplier}|${host}`
-
-function normHost(s: string): string {
-  return (s || "")
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "")
-    .trim();
-}
-
-function lockTtlMs(): number {
-  const sec = Number(process.env.LOCK_TTL_SEC ?? 900);
-  const sane = Number.isFinite(sec) ? Math.max(60, Math.min(86400, sec)) : 900; // 1 min..24h
-  return sane * 1000;
-}
-
-function lockKey(supplierHost: string, buyerHost: string): string {
-  return `${normHost(supplierHost)}|${normHost(buyerHost)}`;
-}
-
-function purgeExpired() {
-  const now = Date.now();
-  for (const [k, rec] of LOCKS) {
-    if (now - rec.at > rec.ttlMs) LOCKS.delete(k);
+function getLockBucket(supplierHost: string): Map<string, LeadItem> {
+  const key = supplierHost.toLowerCase();
+  let bucket = LOCKS.get(key);
+  if (!bucket) {
+    bucket = new Map<string, LeadItem>();
+    LOCKS.set(key, bucket);
   }
+  return bucket;
 }
 
-function isLocked(supplierHost: string, buyerHost: string): boolean {
-  purgeExpired();
-  return LOCKS.has(lockKey(supplierHost, buyerHost));
-}
-
-function getSupplierLockedHosts(supplierHost: string): LockRec[] {
-  purgeExpired();
-  const sup = normHost(supplierHost);
-  const out: LockRec[] = [];
-  for (const rec of LOCKS.values()) {
-    if (rec.supplier === sup) out.push(rec);
-  }
-  return out;
-}
-
-/* ---------------------------
-   Routes
----------------------------- */
-
+// ---------- find-buyers ----------
 LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) => {
   try {
-    const supplierHost = normHost(q(req, "host") || q(req, "supplier") || q(req, "supplierHost") || "");
+    const supplierHost = (q(req, "host") || q(req, "supplier") || q(req, "supplierHost") || "").toLowerCase();
     const city = q(req, "city");
     const radius = Number(q(req, "radiusKm") || 50);
+
+    if (!supplierHost) {
+      return res.status(400).json({ items: [], error: "missing-supplier-host" });
+    }
 
     let prefs = getPrefs(supplierHost);
     if (city || Number.isFinite(radius)) {
@@ -142,47 +107,41 @@ LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) =>
     const catalog = await loadCatalog();
     const rows: BuyerRow[] = toArrayMaybe(catalog);
 
-    // Base candidate filter (tier + allow/block tags)
     const candidates: BuyerRow[] = rows.filter((row: BuyerRow) => {
       const tags = allTags(row);
+      // allow/block lists
+      if (prefs.categoriesBlock.length && intersects(prefs.categoriesBlock, tags)) return false;
+      if (prefs.categoriesAllow.length && !intersects(prefs.categoriesAllow, tags)) return false;
+      // tier
       if (!tierPass(prefs, (row as any).tiers as string[] | undefined)) return false;
-      if (hasBlockedTags(prefs, tags)) return false;
-      if (!passesAllowTags(prefs, tags)) return false;
       return true;
     });
 
-    // Score & classify
     const scored = candidates.map((row: BuyerRow) => {
       const detail = scoreRow(row as any, prefs);
-      const klass = classifyScore(detail.total); // 'cold' | 'warm' | 'hot'
+      const klass = classify(detail.total);
       const whyBits = [`prefs: ${prefsSummary(prefs)}`, ...detail.reasons];
       const why = buildWhy({ ...detail, reasons: whyBits });
       return { row, score: detail.total, klass, why };
     });
 
-    // Prepare warm/hot picks
+    const maxWarm = Math.max(0, Math.min(MAX_WARM_CAP, prefs.maxWarm));
+    const maxHot  = Math.max(0, Math.min(MAX_HOT_CAP,  prefs.maxHot));
+
     const warm = scored
       .filter((s) => s.klass === "warm")
       .sort((a, b) => b.score - a.score)
-      .slice(0, prefs.maxWarm);
+      .slice(0, maxWarm);
 
     const hot = scored
       .filter((s) => s.klass === "hot")
       .sort((a, b) => b.score - a.score)
-      .slice(0, prefs.maxHot);
+      .slice(0, maxHot);
 
-    // Build items
-    const picked = [...hot, ...warm];
-
-    // Promote existing locks for this supplier (ensure they’re present & marked)
-    const locked = getSupplierLockedHosts(supplierHost);
-    const byHost = new Map<string, LeadItem>();
-
-    // First, add scored picks
-    for (const s of picked) {
+    const items: LeadItem[] = [...hot, ...warm].map((s) => {
       const r = s.row as any;
       const title: string = r.name || r.title || r.host || "Potential buyer";
-      byHost.set(String(r.host).toLowerCase(), {
+      return {
         host: String(r.host || "").toLowerCase(),
         platform: "web",
         title,
@@ -190,39 +149,10 @@ LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) =>
         temp: s.klass as Temp,
         score: Number(s.score || 0),
         why: s.why,
-        locked: isLocked(supplierHost, r.host),
-      });
-    }
+      };
+    });
 
-    // Then, ensure any locked-but-not-picked are included at top with minimal info
-    for (const L of locked) {
-      const h = L.host.toLowerCase();
-      if (!byHost.has(h)) {
-        byHost.set(h, {
-          host: h,
-          platform: "web",
-          title: L.title || h,
-          created: nowIso(),
-          temp: "warm",
-          score: 999, // float to the top visually
-          why: "locked • previously saved by you",
-          locked: true,
-        });
-      } else {
-        // mark as locked
-        const item = byHost.get(h)!;
-        item.locked = true;
-        // small bump to keep locked near top
-        item.score = Math.max(item.score, 999);
-      }
-    }
-
-    // Final list (locked first by score=999, then remaining by score)
-    const items: LeadItem[] = Array.from(byHost.values())
-      .sort((a, b) => b.score - a.score)
-      .map((it) => ({ ...it, score: Number.isFinite(it.score) ? it.score : 0 }));
-
-    return res.json({ items });
+    return res.json({ items, prefs: { summary: prefsSummary(prefs) } });
   } catch (err: any) {
     return res.status(200).json({
       items: [],
@@ -232,73 +162,81 @@ LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) =>
   }
 });
 
-/**
- * POST /api/leads/lock
- * body: { supplierHost: string, host: string, title?: string }
- */
+// ---------- locks API (no DB, flexible params) ----------
+
+// POST /api/leads/lock
+// body OR query may contain:
+//   supplierHost|supplier|host   -> supplier's domain (required)
+//   leadHost|buyer|candidate     -> buyer domain (required)
+//   title                        -> optional title
+//   score, temp, why             -> optional; we’ll fill defaults
 LeadsRouter.post("/api/leads/lock", (req: Request, res: Response) => {
   try {
-    const supplierHost = normHost(String(req.body?.supplierHost || req.body?.supplier || req.body?.host || ""));
-    const buyerHost = normHost(String(req.body?.buyerHost || req.body?.leadHost || req.body?.host || ""));
-    const title = String(req.body?.title || "").trim() || undefined;
+    const B = (req.body || {}) as Partial<LeadItem> & Record<string, any>;
 
-    if (!supplierHost || !buyerHost) {
-      return res.status(400).json({ ok: false, error: "supplierHost and host required" });
+    const supplier =
+      (q(req, "supplierHost") || q(req, "supplier") || q(req, "host") || B.supplierHost || B.supplier || B.host || "")
+        .toLowerCase()
+        .trim();
+
+    const leadHost =
+      (q(req, "leadHost") || q(req, "buyer") || q(req, "candidate") || B.leadHost || B.buyer || B.candidate || B.host || "")
+        .toLowerCase()
+        .trim();
+
+    const title = String(B.title || q(req, "title") || "Potential buyer").trim();
+
+    if (!supplier || !leadHost) {
+      return res.status(400).json({ ok: false, error: "supplierHost and leadHost required" });
     }
 
-    const rec: LockRec = {
-      supplier: supplierHost,
-      host: buyerHost,
+    const item: LeadItem = {
+      host: leadHost,
+      platform: "web",
       title,
-      at: Date.now(),
-      ttlMs: lockTtlMs(),
+      created: nowIso(),
+      temp: (B.temp as Temp) || "warm",
+      score: Number.isFinite(B.score) ? Number(B.score) : 0,
+      why: String(B.why || "locked manually"),
     };
-    LOCKS.set(lockKey(supplierHost, buyerHost), rec);
-    purgeExpired();
 
-    return res.json({ ok: true, locked: { host: rec.host, title: rec.title, until: new Date(rec.at + rec.ttlMs).toISOString() } });
+    const bucket = getLockBucket(supplier);
+    bucket.set(leadHost, item);
+
+    return res.json({ ok: true, locked: item, total: bucket.size });
   } catch (err: any) {
     return res.status(200).json({ ok: false, error: "lock-failed", detail: String(err?.message || err) });
   }
 });
 
-/**
- * POST /api/leads/unlock
- * body: { supplierHost: string, host: string }
- */
-LeadsRouter.post("/api/leads/unlock", (req: Request, res: Response) => {
-  try {
-    const supplierHost = normHost(String(req.body?.supplierHost || req.body?.supplier || ""));
-    const buyerHost = normHost(String(req.body?.buyerHost || req.body?.host || ""));
-    if (!supplierHost || !buyerHost) {
-      return res.status(400).json({ ok: false, error: "supplierHost and host required" });
-    }
-    LOCKS.delete(lockKey(supplierHost, buyerHost));
-    purgeExpired();
-    return res.json({ ok: true, unlocked: buyerHost });
-  } catch (err: any) {
-    return res.status(200).json({ ok: false, error: "unlock-failed", detail: String(err?.message || err) });
-  }
+// GET /api/leads/locked?host=supplierHost
+LeadsRouter.get("/api/leads/locked", (req: Request, res: Response) => {
+  const supplier = (q(req, "host") || q(req, "supplier") || q(req, "supplierHost") || "").toLowerCase().trim();
+  if (!supplier) return res.status(400).json({ ok: false, error: "missing-supplier-host" });
+  const bucket = getLockBucket(supplier);
+  return res.json({ ok: true, items: Array.from(bucket.values()), total: bucket.size });
 });
 
-/**
- * GET /api/leads/locks?supplierHost=example.com
- * (debug/UX support)
- */
-LeadsRouter.get("/api/leads/locks", (req: Request, res: Response) => {
-  try {
-    const supplierHost = normHost(String(req.query?.supplierHost || req.query?.supplier || req.query?.host || ""));
-    if (!supplierHost) return res.status(400).json({ ok: false, error: "Missing ?supplierHost" });
-    const rows = getSupplierLockedHosts(supplierHost).map((r) => ({
-      host: r.host,
-      title: r.title,
-      expiresAt: new Date(r.at + r.ttlMs).toISOString(),
-    }));
-    return res.json({ ok: true, items: rows });
-  } catch (err: any) {
-    return res.status(200).json({ ok: false, error: "locks-failed", detail: String(err?.message || err) });
-  }
+// DELETE /api/leads/locked?host=supplierHost&leadHost=buyer.com
+LeadsRouter.delete("/api/leads/locked", (req: Request, res: Response) => {
+  const supplier = (q(req, "host") || q(req, "supplier") || q(req, "supplierHost") || "").toLowerCase().trim();
+  const leadHost = (q(req, "leadHost") || q(req, "buyer") || q(req, "candidate") || "").toLowerCase().trim();
+  if (!supplier || !leadHost) return res.status(400).json({ ok: false, error: "supplierHost and leadHost required" });
+
+  const bucket = getLockBucket(supplier);
+  const existed = bucket.delete(leadHost);
+  return res.json({ ok: true, removed: existed, total: bucket.size });
 });
 
-// keep default export so index.ts can `import leads from "./routes/leads"`
+// Optional: clear all locks for a supplier (not wired in UI)
+// POST /api/leads/locked/clear  body: { host: "supplier.com" }
+LeadsRouter.post("/api/leads/locked/clear", (req: Request, res: Response) => {
+  const body = (req.body || {}) as Record<string, any>;
+  const supplier = String(body.host || body.supplier || body.supplierHost || "").toLowerCase().trim();
+  if (!supplier) return res.status(400).json({ ok: false, error: "missing-supplier-host" });
+  LOCKS.set(supplier, new Map());
+  return res.json({ ok: true, total: 0 });
+});
+
+// keep default export for index.ts
 export default LeadsRouter;
