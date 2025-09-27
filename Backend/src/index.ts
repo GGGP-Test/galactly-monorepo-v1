@@ -16,6 +16,7 @@ import HealthRouter from "./routes/health";
 import PrefsRouter from "./routes/prefs";
 import LeadsRouter from "./routes/leads";
 import CatalogRouter from "./routes/catalog";
+import ClassifyRouter from "./routes/classify";
 
 const app = express();
 
@@ -96,6 +97,8 @@ app.use("/api/prefs", PrefsRouter());    // prefs exports a factory -> call it
 app.use("/api/leads", LeadsRouter);      // default Router
 app.use("/api/catalog", CatalogRouter);  // default Router
 app.use("/api/places", PlacesRouter);
+app.use("/api/classify", ClassifyRouter);
+
 // Simple root
 app.get("/", (_req: Request, res: Response) => {
   res.json({ ok: true, service: "buyers-api", at: new Date().toISOString() });
