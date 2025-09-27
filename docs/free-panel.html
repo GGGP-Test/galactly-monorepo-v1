@@ -178,6 +178,30 @@
       <div class="small">We store profile ID & API settings in <span class="kbd">localStorage</span> only.</div>
     </div>
 
+    <!-- NEW: Places discovery -->
+    <h2 style="margin-top:14px">Places discovery</h2>
+    <div class="section">
+      <label>Search term</label>
+      <input id="placesQ" placeholder="e.g., coffee shop, bakery, salon" />
+      <div class="row">
+        <div>
+          <label>City (uses Supplier city if blank)</label>
+          <input id="placesCity" placeholder="optional, e.g., los angeles" />
+        </div>
+        <div>
+          <label>Limit</label>
+          <select id="placesLimit">
+            <option>5</option><option selected>12</option><option>20</option><option>30</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="btnPlaces">Discover via Places</button>
+        <button class="btn ghost" id="btnPlacesHint">?</button>
+      </div>
+      <div class="small" id="placesStatus"></div>
+    </div>
+
   </div>
   <div class="right">
     <div class="split">
@@ -239,6 +263,14 @@
     btnForgetProfile: $('#btnForgetProfile'),
     activeProfileHint: $('#activeProfileHint'),
 
+    // NEW: Places
+    placesQ: $('#placesQ'),
+    placesCity: $('#placesCity'),
+    placesLimit: $('#placesLimit'),
+    btnPlaces: $('#btnPlaces'),
+    btnPlacesHint: $('#btnPlacesHint'),
+    placesStatus: $('#placesStatus'),
+
     resultsBody: $('#resultsBody'),
   };
 
@@ -260,6 +292,10 @@
       supplierCity: 'fp.supplier.city',
       minTier: 'fp.supplier.minTier',
       limit: 'fp.supplier.limit',
+      // NEW
+      placesQ: 'fp.places.q',
+      placesCity: 'fp.places.city',
+      placesLimit: 'fp.places.limit',
     }},
     save(k,v){ localStorage.setItem(k, v ?? ''); },
     load(k, d=''){ const v = localStorage.getItem(k); return v==null?d:v; },
@@ -276,7 +312,7 @@
     return base + p;
   }
 
-  async function fetchJSON(method, path, body, opts={}){
+  async function fetchJSON(method, path, body){
     const url = fullUrl(path);
     const headers = {'content-type':'application/json'};
     const k = (S.apiKey.value||'').trim();
@@ -414,7 +450,7 @@
         <td>${badge(it.temp)}</td>
         <td>
           <div class="mono" style="font-weight:600">${it.host||''}</div>
-          <div class="small" style="opacity:.85">${it.title||''}</div>
+          <div class="small" style="opacity:.85">${it.title||it.name||''}</div>
         </td>
         <td><div class="small">${(it.why||'').replace(/\s·\s/g,' • ')}</div></td>
         <td>
@@ -455,6 +491,61 @@
     }
   }
 
+  // --- NEW: Places discovery ---
+  function normalizePlaces(items, city){
+    return (items||[]).map(p => {
+      const tags = Array.isArray(p.tags)? p.tags : [];
+      return {
+        host: p.host || '',
+        title: p.name || 'Found via Places',
+        name: p.name || '',
+        score: 0,
+        temp: 'cool',
+        why: `via Places · city:${(city||'').toLowerCase()} · tags:${tags.slice(0,6).join(', ')}`
+      };
+    });
+  }
+
+  async function discoverPlaces(){
+    const q = (S.placesQ.value||'').trim();
+    const city = (S.placesCity.value||S.supplierCity.value||'').trim();
+    const limit = (S.placesLimit.value||'12').trim();
+    LS.save(LS.k.placesQ, q);
+    LS.save(LS.k.placesCity, city);
+    LS.save(LS.k.placesLimit, limit);
+
+    if (!q){ alert('Enter a Places search term (e.g., coffee shop)'); return; }
+
+    const params = new URLSearchParams();
+    params.set('q', q);
+    if (city) params.set('city', city);
+    params.set('limit', limit);
+
+    S.btnPlaces.disabled = true;
+    S.btnPlaces.textContent = 'Searching…';
+    S.placesStatus.textContent = '';
+    try{
+      const r = await fetchJSON('GET', `/api/places/search?${params.toString()}`);
+      if (r && r.ok === false){
+        // Friendly hints for quotas / rate limits
+        if (r.error === 'daily-quota-exceeded'){
+          S.placesStatus.textContent = 'Daily quota reached. Try later or set an x-api-key to separate your quota.';
+        }else if (r.error === 'rate-limited'){
+          S.placesStatus.textContent = 'Rate limited. Wait a few seconds and try again.';
+        }else{
+          S.placesStatus.textContent = r.error || 'No results.';
+        }
+      }
+      const rows = normalizePlaces(r.items||[], city);
+      renderRows(rows);
+    }catch(e){
+      renderRows([]);
+    }finally{
+      S.btnPlaces.disabled = false;
+      S.btnPlaces.textContent = 'Discover via Places';
+    }
+  }
+
   async function onLockHost(host, rowBtn){
     const title = 'Locked by user';
     try{
@@ -480,6 +571,12 @@
     });
 
     S.btnFind.addEventListener('click', findBuyers);
+
+    // NEW
+    S.btnPlaces.addEventListener('click', discoverPlaces);
+    S.btnPlacesHint.addEventListener('click', ()=>{
+      alert('Uses /api/places/search with caching and daily caps. Tip: set an x-api-key in Connection to separate quotas per tester.');
+    });
 
     S.resultsBody.addEventListener('click', (e)=>{
       const b = e.target.closest('button');
@@ -510,6 +607,11 @@
     S.supplierCity.value = LS.load(LS.k.supplierCity,'');
     S.minTier.value = LS.load(LS.k.minTier,'C') || 'C';
     S.limit.value = LS.load(LS.k.limit,'12') || '12';
+
+    // NEW
+    S.placesQ.value = LS.load(LS.k.placesQ,'');
+    S.placesCity.value = LS.load(LS.k.placesCity,'');
+    S.placesLimit.value = LS.load(LS.k.placesLimit,'12') || '12';
 
     setActiveProfileHint();
   }
