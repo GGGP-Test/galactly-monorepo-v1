@@ -1,266 +1,237 @@
-// src/routes/places.ts
+// Lightweight Google Places search with caching + cost guardrails.
+// GET /api/places/search?q=coffee shop&city=los angeles&limit=5
 //
-// Real-buyer finder via Google Places (Text Search + Details).
-// - GET /api/places/search?q=bakery&city=los%20angeles&limit=10
-// - Requires: process.env.GOOGLE_PLACES_API_KEY
-// - No external deps; uses Node 18/20 fetch
-//
-// Notes:
-// • Only returns places that expose a real website URL.
-// • Designed to find Tier-C/small retail/food/boutique first.
-// • Safe defaults + tiny in-memory cache (TTL configurable).
+// - Uses in-process TTL cache to reduce paid calls
+// - Applies daily cap per client (IP or x-api-key)
+// - Gentle degrade on quota/rate hit (200 with ok:false, items:[])
+// - No extra deps; uses global fetch (Node 18/20)
 
 import { Router, Request, Response } from "express";
-
-const PLACES_KEY = process.env.GOOGLE_PLACES_API_KEY || "";
-const CACHE_TTL_S = Number(process.env.CACHE_TTL_S || 600);
-const MAX_DETAILS_PER_REQ = Math.max(1, Math.min(25, Number(process.env.MAX_PROBES_PER_FIND_FREE || 20)));
+import { CFG, capResults } from "../shared/env";
+// If you saved the helper as "guard.ts", change the next line to "../shared/guard"
+import { withCache, daily, rate } from "../shared/guards";
 
 const r = Router();
 
-type Maybe<T> = T | null | undefined;
+// Explicitly type fetch to keep TS happy without DOM lib types.
+const F: (input: any, init?: any) => Promise<any> = (globalThis as any).fetch;
 
-interface PlaceBasic {
-  place_id: string;
-  name?: string;
-  business_status?: string;
-  types?: string[];
-  formatted_address?: string;
+// ---------- small helpers ----------
+function q(req: Request, key: string): string | undefined {
+  const v = (req.query as Record<string, unknown> | undefined)?.[key];
+  if (v == null) return undefined;
+  const s = String(v).trim();
+  return s.length ? s : undefined;
 }
 
-interface PlaceDetails {
+function clientKey(req: Request): string {
+  // prefer caller-provided key; fallback to IP
+  const apiKey = (req.headers["x-api-key"] || "") as string;
+  const ip = (req.ip || req.socket.remoteAddress || "unknown").toString();
+  return apiKey ? `k:${apiKey}` : `ip:${ip}`;
+}
+
+function toHost(url: string | undefined): string {
+  try {
+    if (!url) return "";
+    const u = new URL(url.startsWith("http") ? url : `https://${url}`);
+    return u.hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return (url || "").toLowerCase();
+  }
+}
+
+function asStr(v: unknown): string {
+  return (v == null ? "" : String(v)).trim();
+}
+
+function uniq<T>(arr: T[]): T[] {
+  const out: T[] = [];
+  const seen = new Set<string>();
+  for (const a of arr) {
+    const k = JSON.stringify(a);
+    if (!seen.has(k)) {
+      seen.add(k);
+      out.push(a);
+    }
+  }
+  return out;
+}
+
+// ---------- Google helpers ----------
+interface GTextSearchResult {
+  place_id: string;
+  types?: string[];
+  // address components not needed here
+}
+
+interface GTextSearchResponse {
+  results?: GTextSearchResult[];
+  status?: string;
+  error_message?: string;
+}
+
+interface GDetailsResult {
   website?: string;
   name?: string;
   types?: string[];
-  formatted_address?: string;
 }
 
-interface FoundBuyer {
-  host: string;
-  name: string;
-  tiers: string[];       // e.g., ["C"]
-  tags: string[];        // normalized
-  cityTags: string[];    // normalized city
-  segments: string[];    // e.g., ["food","retail","cafe"]
+interface GDetailsResponse {
+  result?: GDetailsResult;
+  status?: string;
+  error_message?: string;
 }
 
-// --- tiny utils ---
+async function googleTextSearch(query: string, key: string): Promise<GTextSearchResult[]> {
+  const url =
+    "https://maps.googleapis.com/maps/api/place/textsearch/json?" +
+    new URLSearchParams({
+      query,
+      // region/ language hints could be added later if needed
+      key,
+    }).toString();
 
-function norm(s: Maybe<string>): string {
-  return String(s || "")
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  const res = await F(url);
+  const data = (await res.json()) as GTextSearchResponse;
+  if (data.status && data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+    throw new Error(`places textsearch: ${data.status} ${data.error_message || ""}`.trim());
+  }
+  return data.results || [];
 }
 
-function hostFromUrl(url: string): string | undefined {
-  try {
-    const h = new URL(url).hostname
-      .toLowerCase()
-      .replace(/^www\./, "")
-      .trim();
-    return h || undefined;
-  } catch {
+async function googleDetails(placeId: string, key: string): Promise<GDetailsResult | undefined> {
+  const url =
+    "https://maps.googleapis.com/maps/api/place/details/json?" +
+    new URLSearchParams({
+      place_id: placeId,
+      // Request only fields we need to keep costs low.
+      // (Fields billing only applies to Places *new* API; classic details uses status-based billing.)
+      fields: "website,name,types",
+      key,
+    }).toString();
+
+  const res = await F(url);
+  const data = (await res.json()) as GDetailsResponse;
+  if (data.status && data.status !== "OK") {
+    // Do not throw on NOT_FOUND/etc., just skip this record.
     return undefined;
   }
+  return data.result;
 }
 
-function uniqLower(xs: Maybe<string[]>): string[] {
-  const out = new Set<string>();
-  for (const x of xs || []) {
-    const v = norm(x);
-    if (v) out.add(v);
-  }
-  return [...out];
-}
-
-// map Google types → our coarse segments/tags
-function segmentsFromTypes(types: string[] = []): string[] {
-  const t = new Set(types.map(norm));
-  const seg = new Set<string>();
-
-  // food / beverage
-  if (t.has("cafe") || t.has("coffee_shop") || t.has("bakery") || t.has("restaurant")) {
-    seg.add("food");
-    seg.add("retail");
-  }
-
-  // boutique / retail-ish
-  if (t.has("store") || t.has("clothing_store") || t.has("home_goods_store") || t.has("convenience_store")) {
-    seg.add("retail");
-  }
-
-  // crafts / beauty / local services hints → still retail-ish for our purposes
-  if (t.has("beauty_salon") || t.has("hair_care") || t.has("jewelry_store") || t.has("florist")) {
-    seg.add("retail");
-  }
-
-  return [...seg];
-}
-
-function baseTags(types: string[] = []): string[] {
-  const tags = new Set<string>();
-  for (const t of types) tags.add(norm(t).replace(/_/g, " "));
-  return [...tags];
-}
-
-// --- very small in-memory cache ---
-
-const CACHE = new Map<
-  string,
-  { expiresAt: number; data: any }
->();
-
-function cacheKey(kind: string, params: Record<string, any>): string {
-  return `${kind}:${Object.keys(params)
-    .sort()
-    .map((k) => `${k}=${String(params[k])}`)
-    .join("&")}`;
-}
-
-function cacheGet(key: string): any | undefined {
-  const hit = CACHE.get(key);
-  if (!hit) return undefined;
-  if (Date.now() > hit.expiresAt) {
-    CACHE.delete(key);
-    return undefined;
-  }
-  return hit.data;
-}
-
-function cacheSet(key: string, data: any, ttlSec = CACHE_TTL_S) {
-  CACHE.set(key, { data, expiresAt: Date.now() + ttlSec * 1000 });
-}
-
-// --- Google API calls ---
-
-async function textSearch(query: string): Promise<PlaceBasic[]> {
-  const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
-  url.searchParams.set("query", query);
-  url.searchParams.set("key", PLACES_KEY);
-
-  const res = await fetch(url.toString(), { method: "GET" });
-  if (!res.ok) throw new Error(`textsearch http ${res.status}`);
-  const body = await res.json();
-  const status = String(body?.status || "");
-  if (status !== "OK" && status !== "ZERO_RESULTS") {
-    throw new Error(`textsearch status ${status}`);
-  }
-
-  const results = Array.isArray(body?.results) ? body.results : [];
-  return results.map((r: any) => ({
-    place_id: String(r.place_id || ""),
-    name: r.name ? String(r.name) : undefined,
-    business_status: r.business_status ? String(r.business_status) : undefined,
-    types: Array.isArray(r.types) ? r.types.map(String) : [],
-    formatted_address: r.formatted_address ? String(r.formatted_address) : undefined,
-  }));
-}
-
-async function placeDetails(placeId: string): Promise<PlaceDetails> {
-  const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
-  url.searchParams.set("place_id", placeId);
-  // Ask only for what we need to keep it cheap.
-  url.searchParams.set("fields", "name,website,types,formatted_address");
-  url.searchParams.set("key", PLACES_KEY);
-
-  const res = await fetch(url.toString(), { method: "GET" });
-  if (!res.ok) throw new Error(`details http ${res.status}`);
-  const body = await res.json();
-  const status = String(body?.status || "");
-  if (status !== "OK") throw new Error(`details status ${status}`);
-
-  const r = body?.result || {};
-  return {
-    website: r.website ? String(r.website) : undefined,
-    name: r.name ? String(r.name) : undefined,
-    types: Array.isArray(r.types) ? r.types.map(String) : [],
-    formatted_address: r.formatted_address ? String(r.formatted_address) : undefined,
-  };
-}
-
-// --- Route: /api/places/search ---
-
+// ---------- route ----------
 r.get("/search", async (req: Request, res: Response) => {
   try {
-    if (!PLACES_KEY) {
+    if (!CFG.googlePlacesApiKey) {
+      return res
+        .status(200)
+        .json({ ok: false, items: [], error: "places-disabled", detail: "missing api key" });
+    }
+
+    const rawQ = q(req, "q") || "";
+    const city = q(req, "city") || "";
+    const wantLimit = Number(q(req, "limit"));
+    const baseLimit =
+      Number.isFinite(wantLimit) && wantLimit > 0 ? Math.floor(wantLimit) : CFG.placesLimitDefault;
+
+    // Treat this endpoint as "free plan" by default for caps; can be switched later per key.
+    const outCap = capResults(false /* isPro */, baseLimit);
+
+    // ---- guardrails: daily + simple burst gate
+    const who = clientKey(req);
+    const dailyLimit = Math.max(1, CFG.freeClicksPerDay || 25);
+    const day = daily.allow(`places:${who}`, dailyLimit);
+    if (!day.ok) {
       return res.status(200).json({
         ok: false,
-        error: "missing-places-key",
-        detail: "Set GOOGLE_PLACES_API_KEY in the environment.",
         items: [],
+        error: "daily-quota-exceeded",
       });
     }
 
-    const q = norm(String(req.query.q || "packaging friendly cafe"));
-    const cityRaw = String(req.query.city || "");
-    const city = norm(cityRaw);
-    const limit = Math.max(1, Math.min(50, Number(req.query.limit || 10)));
-
-    if (!city) {
-      return res.status(400).json({ ok: false, error: "missing-city", items: [] });
-    }
-
-    // Build a single conservative query first; we can expand later if needed.
-    const query = `${q} in ${city}`;
-    const ck = cacheKey("textsearch", { q, city });
-
-    let basics: PlaceBasic[] | undefined = cacheGet(ck);
-    if (!basics) {
-      basics = await textSearch(query);
-      cacheSet(ck, basics);
-    }
-
-    // Keep only operational candidates; then fetch details for a small subset.
-    const candidates = basics
-      .filter((b) => (b.business_status || "").toUpperCase() === "OPERATIONAL")
-      .slice(0, MAX_DETAILS_PER_REQ);
-
-    const out: FoundBuyer[] = [];
-    for (const c of candidates) {
-      if (!c.place_id) continue;
-
-      // Details may hit cache too
-      const dk = cacheKey("details", { id: c.place_id });
-      let det: PlaceDetails | undefined = cacheGet(dk);
-      if (!det) {
-        try {
-          det = await placeDetails(c.place_id);
-          cacheSet(dk, det);
-        } catch {
-          continue; // skip noisy ones
-        }
-      }
-
-      const host = det?.website ? hostFromUrl(det.website) : undefined;
-      if (!host) continue;
-
-      const types = uniqLower([...(c.types || []), ...((det?.types || []).map(String))]);
-      const segs = segmentsFromTypes(types);
-      const tags = uniqLower([...baseTags(types), q]);
-
-      out.push({
-        host,
-        name: det?.name || c.name || host,
-        tiers: ["C"],
-        tags,
-        cityTags: [city],
-        segments: segs,
+    const burst = rate.allow(`places:${who}`, 5 /* per window */, 10_000 /* ms */);
+    if (!burst.ok) {
+      return res.status(200).json({
+        ok: false,
+        items: [],
+        error: "rate-limited",
+        retryInMs: burst.resetInMs,
       });
-
-      if (out.length >= limit) break;
     }
 
-    return res.json({ ok: true, items: out });
-  } catch (err: any) {
-    return res.status(200).json({
-      ok: false,
-      error: "places-search-failed",
-      detail: String(err?.message || err),
-      items: [],
+    // Build the text search query (keep it simple: "<q> <city>")
+    const query = [rawQ, city].filter(Boolean).join(" ").trim();
+    if (!query) {
+      return res.status(200).json({ ok: true, items: [] });
+    }
+
+    const cacheKey = `places:${query}:cap${outCap}`;
+    const ttlMs = Math.max(5, CFG.cacheTtlS || 300) * 1000;
+
+    const items = await withCache(cacheKey, ttlMs, async () => {
+      // 1) text search
+      const results = await googleTextSearch(query, CFG.googlePlacesApiKey!);
+
+      // 2) take the top slice we'll attempt details for (cap)
+      const take = results.slice(0, outCap);
+
+      // 3) hydrate details in parallel (website, name, types)
+      const details = await Promise.all(
+        take.map((r) => googleDetails(r.place_id, CFG.googlePlacesApiKey!)),
+      );
+
+      // 4) map into our FreePanel item shape
+      const cityTag = city.toLowerCase();
+      const itemsMapped = details
+        .map((d) => {
+          if (!d) return undefined;
+          const host = toHost(d.website);
+          if (!host) return undefined; // skip if no real website
+          const name = asStr(d.name);
+          const types = Array.isArray(d.types) ? d.types : [];
+          // Very light normalization
+          const tags = uniq(
+            types
+              .map((t) => t.toLowerCase())
+              .filter((t) => t && t !== "point_of_interest") // keep it a bit cleaner
+              .map((t) => t.replace(/_/g, " ")),
+          );
+
+          // Heuristics: if "cafe" or "bakery" etc, call it Tier C
+          const tiers: string[] = ["C"];
+
+          // Optional segments guess
+          const segments: string[] = [];
+          if (tags.includes("food")) segments.push("food");
+          if (tags.includes("cafe") || tags.includes("store")) segments.push("retail");
+
+          return {
+            host,
+            name,
+            tiers,
+            tags,
+            cityTags: cityTag ? [cityTag] : [],
+            segments,
+          };
+        })
+        .filter(Boolean) as Array<{
+        host: string;
+        name: string;
+        tiers: string[];
+        tags: string[];
+        cityTags: string[];
+        segments: string[];
+      }>;
+
+      return itemsMapped.slice(0, outCap);
     });
+
+    return res.status(200).json({ ok: true, items });
+  } catch (err: unknown) {
+    const msg = (err as { message?: string })?.message || String(err);
+    // Soft-fail (200) to keep UI happy; surface detail for debugging
+    return res.status(200).json({ ok: false, items: [], error: "places-failed", detail: msg });
   }
 });
 
