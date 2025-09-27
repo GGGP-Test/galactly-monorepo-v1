@@ -1,42 +1,30 @@
 // src/shared/catalog.ts
 //
 // Canonical catalog types + loader.
-// Now supports env OR file secrets, and multiple shapes:
-// - { buyers: [...] } (preferred)
-// - raw array:        [ {...}, {...} ]
-// - NDJSON:           one JSON object per line
-//
-// Env variables (any subset may be present):
-//   BUYERS_CATALOG_TIER_C_JSON
-//   BUYERS_CATALOG_TIER_AB_JSON
-//   BUYERS_CATALOG_TIER_C_JSON_FILE       (path to file)
-//   BUYERS_CATALOG_TIER_AB_JSON_FILE      (path to file)
-//   CITY_CATALOG_FILE                     (path to file; optional extra source)
+// Always expose a consistent shape: { rows: BuyerRow[] }.
+// Sources (merged in this order):
+//   1) BUYERS_CATALOG_TIER_C_JSON   (env secret: array OR {buyers: [...]})
+//   2) BUYERS_CATALOG_TIER_AB_JSON  (env secret: array OR {buyers: [...]})
+//   3) CITY_CATALOG_FILE (JSON file; default /run/secrets/city-catalog.json; array OR {buyers:[...]} )
 
-import fs from "node:fs";
+import type { Tier, SizeBucket } from "./prefs";
+import * as fs from "fs";
 
-// Re-export Tier/SizeBucket types
-export type Tier = "A" | "B" | "C";
-export type SizeBucket = "micro" | "small" | "mid" | "large";
-
-// --- Types used by routes/leads.ts ---
-
+// ---------- Types used by routes/leads.ts ----------
 export interface BuyerRow {
   host: string;                    // required, unique-ish key
   name?: string;
 
   // Targeting + classification
-  tiers?: Tier[];                  // e.g. ["C"]
-  size?: SizeBucket;               // optional hint
+  tiers?: Tier[];                  // e.g. ["C"] (we mostly care about "C")
+  size?: SizeBucket;               // micro|small|mid|large (optional hint)
   segments?: string[];             // industry buckets
-  tags?: string[];                 // free-form tags
+  tags?: string[];                 // free-form tags (e.g. "pouch","label","tin")
   cityTags?: string[];             // normalized lowercase city names
 
-  // Light metadata used by UI/logging
-  platform?: string;               // "web" | "retail" | ...
-  created?: string;                // ISO timestamp if present in seed
-
-  // Computed by routes later (not set here):
+  // Light metadata used by UI/logging (computed by routes, not by catalog)
+  platform?: string;
+  created?: string;
   temp?: "warm" | "hot" | null;
   score?: number;
   why?: string;
@@ -46,101 +34,49 @@ export interface LoadedCatalog {
   rows: BuyerRow[];
 }
 
-// --- Env keys we read ---
-const KEY_TIER_C = "BUYERS_CATALOG_TIER_C_JSON";
-const KEY_TIER_AB = "BUYERS_CATALOG_TIER_AB_JSON";
-const KEY_TIER_C_FILE = "BUYERS_CATALOG_TIER_C_JSON_FILE";
-const KEY_TIER_AB_FILE = "BUYERS_CATALOG_TIER_AB_JSON_FILE";
-const KEY_CITY_FILE = "CITY_CATALOG_FILE"; // optional catch-all
+// ---------- Env keys / file path ----------
+const KEY_TIER_C   = "BUYERS_CATALOG_TIER_C_JSON";
+const KEY_TIER_AB  = "BUYERS_CATALOG_TIER_AB_JSON";
+const FILE_PATH    = String(process.env.CITY_CATALOG_FILE || "/run/secrets/city-catalog.json");
 
-// --- internal cache ---
-let CACHE: LoadedCatalog | null = null;
+// ---------- tiny helpers ----------
+function asArray(x: unknown): string[] {
+  if (Array.isArray(x)) return x.map(v => String(v ?? "").trim()).filter(Boolean);
+  if (x == null || x === "") return [];
+  return [String(x).trim()].filter(Boolean);
+}
 
-// ----------------- helpers -----------------
-
-function lowerUniq(values: unknown): string[] {
+function lowerUniq(values: string[]): string[] {
   const out = new Set<string>();
-  const arr = Array.isArray(values) ? values : [];
-  for (const v of arr) {
-    const s = String(v ?? "").toLowerCase().trim();
+  for (const v of values) {
+    const s = String(v || "").toLowerCase().trim();
     if (s) out.add(s);
   }
   return [...out];
 }
 
-function safeReadFile(path?: string): string | null {
-  if (!path) return null;
-  try {
-    return fs.readFileSync(path, "utf8");
-  } catch {
-    return null;
-  }
+function tryParseJSON(raw: string | undefined): any | null {
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
 }
 
-function tryParseJSON(text?: string | null): any | null {
-  if (!text) return null;
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
-
-// Accept various container shapes and return a plain array of raw buyer objects.
-function extractRawArray(anyShape: any): any[] {
-  if (!anyShape) return [];
-  if (Array.isArray(anyShape)) return anyShape;
-  if (Array.isArray(anyShape.buyers)) return anyShape.buyers;
-  if (Array.isArray(anyShape.items)) return anyShape.items;
+/** Accept either a raw array OR an object with { buyers: [...] } */
+function extractBuyers(maybe: any): any[] {
+  if (!maybe) return [];
+  if (Array.isArray(maybe)) return maybe;
+  if (Array.isArray(maybe?.buyers)) return maybe.buyers;
   return [];
-}
-
-/**
- * Parse string content that might be:
- *  - JSON object with buyers
- *  - JSON array
- *  - NDJSON (newline-delimited JSON)
- */
-function parseBuyersFlexible(raw: string | null): any[] {
-  if (!raw) return [];
-  // First, try normal JSON
-  const asJson = tryParseJSON(raw);
-  if (asJson) return extractRawArray(asJson);
-
-  // Fallback: NDJSON — parse each non-empty line
-  const out: any[] = [];
-  for (const line of raw.split(/\r?\n/)) {
-    const s = line.trim();
-    if (!s) continue;
-    const obj = tryParseJSON(s);
-    if (obj && typeof obj === "object") out.push(obj);
-  }
-  return out;
-}
-
-function asArray(x: unknown): string[] {
-  if (Array.isArray(x)) return x.map((v) => String(v ?? "").trim()).filter(Boolean);
-  if (x == null || x === "") return [];
-  return [String(x).trim()].filter(Boolean);
 }
 
 function normalizeRow(anyRow: any): BuyerRow | null {
   if (!anyRow || typeof anyRow !== "object") return null;
 
-  const host = String(anyRow.host || "")
-    .toLowerCase()
+  const host = String(anyRow.host || "").toLowerCase()
     .replace(/^https?:\/\//, "")
     .replace(/\/.*$/, "")
     .trim();
+
   if (!host) return null;
-
-  // Accept both 'tier' and 'tiers'
-  const tiersRaw = anyRow.tiers ?? (anyRow.tier ? [anyRow.tier] : []);
-
-  // Accept 'city' string and/or 'cityTags' array
-  const cityTags = lowerUniq(
-    (anyRow.city ? [anyRow.city] : []).concat(asArray(anyRow.cityTags))
-  );
 
   const row: BuyerRow = {
     host,
@@ -149,42 +85,51 @@ function normalizeRow(anyRow: any): BuyerRow | null {
     created: (anyRow.created && String(anyRow.created)) || undefined,
 
     // normalize arrays
-    tiers: lowerUniq(tiersRaw) as Tier[],
+    tiers: lowerUniq(asArray(anyRow.tiers)) as Tier[],
     segments: lowerUniq(asArray(anyRow.segments)),
     tags: lowerUniq(asArray(anyRow.tags)),
-    cityTags,
+    cityTags: lowerUniq(asArray(anyRow.cityTags)),
 
-    // optional hint
+    // optional hints
     size: (anyRow.size as SizeBucket) || undefined,
   };
 
   return row;
 }
 
-function loadSourceFromEnvKeys(): any[] {
-  const rawC = parseBuyersFlexible(process.env[KEY_TIER_C] ?? null);
-  const rawAB = parseBuyersFlexible(process.env[KEY_TIER_AB] ?? null);
-  return rawC.concat(rawAB);
-}
-
-function loadSourceFromFiles(): any[] {
-  const fromC = parseBuyersFlexible(safeReadFile(process.env[KEY_TIER_C_FILE]));
-  const fromAB = parseBuyersFlexible(safeReadFile(process.env[KEY_TIER_AB_FILE]));
-  const fromCity = parseBuyersFlexible(safeReadFile(process.env[KEY_CITY_FILE]));
-  return fromC.concat(fromAB).concat(fromCity);
+function readFileJSON(path: string): any | null {
+  try {
+    if (!fs.existsSync(path)) return null;
+    const txt = fs.readFileSync(path, "utf8");
+    return JSON.parse(txt);
+  } catch {
+    return null;
+  }
 }
 
 function buildFromSources(): LoadedCatalog {
-  // Gather from env JSON first (most explicit), then from file paths.
-  const rawList: any[] = []
-    .concat(loadSourceFromEnvKeys())
-    .concat(loadSourceFromFiles());
+  // 1) Env secrets (your screenshots sometimes store a raw array)
+  const envC  = tryParseJSON(process.env[KEY_TIER_C]);
+  const envAB = tryParseJSON(process.env[KEY_TIER_AB]);
+
+  const rawC  = extractBuyers(envC);
+  const rawAB = extractBuyers(envAB);
+
+  // 2) Optional file secret (array OR {buyers:[...]})
+  const fileJSON = readFileJSON(FILE_PATH);
+  const rawFile  = extractBuyers(fileJSON);
+
+  // Merge all without using concat([]) to avoid TS never[] inference
+  const merged: any[] = [];
+  if (rawC.length)   merged.push(...rawC);
+  if (rawAB.length)  merged.push(...rawAB);
+  if (rawFile.length) merged.push(...rawFile);
 
   // Normalize + de-duplicate by host
   const seen = new Set<string>();
   const rows: BuyerRow[] = [];
 
-  for (const r of rawList) {
+  for (const r of merged) {
     const norm = normalizeRow(r);
     if (!norm) continue;
     if (seen.has(norm.host)) continue;
@@ -195,22 +140,27 @@ function buildFromSources(): LoadedCatalog {
   return { rows };
 }
 
-// --- Public API ---
+// ---------- Cache ----------
+let CACHE: LoadedCatalog | null = null;
 
-/** Returns cached catalog; builds once from env/files on first call. */
+// ---------- Public API ----------
+/** Returns cached catalog; builds once from env/file on first call. */
 export function getCatalog(): LoadedCatalog {
   if (CACHE) return CACHE;
   CACHE = buildFromSources();
   return CACHE;
 }
 
-/** Rebuilds catalog from env/files and returns it (refreshes cache). */
+/** Rebuilds the catalog from env/file and returns it. */
 export function loadCatalog(): LoadedCatalog {
   CACHE = buildFromSources();
   return CACHE;
 }
 
-// Small utility for tests/ops
+/** Clear cache (tests/ops) */
 export function __clearCatalogCache() {
   CACHE = null;
 }
+
+// Re-export for routes that import types from here
+export type { Tier, SizeBucket } from "./prefs";
