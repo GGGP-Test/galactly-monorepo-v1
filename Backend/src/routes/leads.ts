@@ -5,11 +5,19 @@
 // - No mutation of rows (keeps shared types happy)
 // - Explicit types to satisfy noImplicitAny
 // - Provides both named and default export for index.ts compatibility
+// - PATCH: respects ?minTier= (A|B|C), ?limit=, and global ALLOW_TIERS guardrail.
 
 import { Router, Request, Response } from "express";
 import { loadCatalog, type BuyerRow } from "../shared/catalog";
-import { getPrefs, setPrefs, prefsSummary, type EffectivePrefs } from "../shared/prefs";
+import {
+  getPrefs,
+  setPrefs,
+  prefsSummary,
+  type EffectivePrefs,
+  type Tier,
+} from "../shared/prefs";
 import { scoreRow, classifyScore, buildWhy, allTags } from "../shared/trc";
+import { CFG, capResults } from "../shared/env";
 
 export const LeadsRouter = Router();
 
@@ -46,6 +54,17 @@ function tierPass(prefs: EffectivePrefs, rowTiers?: ReadonlyArray<string>): bool
   return false;
 }
 
+/** Global allow-list from env (e.g. ALLOW_TIERS=AB) */
+function allowedByEnv(rowTiers?: ReadonlyArray<string>): boolean {
+  const allowed = CFG.allowTiers;
+  if (!rowTiers?.length) return true;
+  for (const t of rowTiers) {
+    const up = String(t || "").toUpperCase() as "A" | "B" | "C";
+    if (allowed.has(up)) return true;
+  }
+  return false;
+}
+
 /** Normalize whatever loadCatalog() returns to BuyerRow[] without depending on its TS type */
 function toArrayMaybe(cat: unknown): BuyerRow[] {
   const anyCat = cat as any;
@@ -66,23 +85,25 @@ interface LeadItem {
   why: string;
 }
 
-// NOTE: this path is relative to the mount in index.ts (`/api/leads`)
-LeadsRouter.get("/find-buyers", async (req: Request, res: Response) => {
+LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) => {
   try {
     const supplierHost = q(req, "host") || q(req, "supplier") || q(req, "supplierHost") || "";
     const city = q(req, "city");
-    const radiusQ = q(req, "radiusKm");
-    const radius = radiusQ != null ? Number(radiusQ) : NaN;
 
-    // optional overall limit (panel "Limit" box)
-    const limitQ = q(req, "limit");
-    const hardLimit = Number.isFinite(Number(limitQ)) ? Math.max(1, Math.min(200, Number(limitQ))) : undefined;
+    // honor ?limit= with guardrail cap (treat as free-plan for now)
+    const limitWant = Number(q(req, "limit"));
+    const outCap = capResults(false /* isPro */, Number.isFinite(limitWant) ? limitWant : 12);
+
+    // honor ?minTier= (A|B|C) — override tier focus for this supplier
+    const minTierQ = (q(req, "minTier") || "").toUpperCase().replace(/[^ABC]/g, "");
+    const minTier: Tier | undefined =
+      minTierQ === "A" || minTierQ === "B" || minTierQ === "C" ? (minTierQ as Tier) : undefined;
 
     let prefs = getPrefs(supplierHost);
-    if (city || Number.isFinite(radius)) {
+    if (city || minTier) {
       prefs = setPrefs(supplierHost, {
         city: city ?? prefs.city,
-        radiusKm: Number.isFinite(radius) ? radius : prefs.radiusKm,
+        tierFocus: minTier ? [minTier] : prefs.tierFocus,
       });
     }
 
@@ -91,7 +112,13 @@ LeadsRouter.get("/find-buyers", async (req: Request, res: Response) => {
 
     const candidates: BuyerRow[] = rows.filter((row: BuyerRow) => {
       const tags = allTags(row);
-      if (!tierPass(prefs, (row as any).tiers as string[] | undefined)) return false;
+      const rowTiers = (row as any).tiers as string[] | undefined;
+
+      // Global env guardrail (e.g. ALLOW_TIERS=AB)
+      if (!allowedByEnv(rowTiers)) return false;
+
+      // Per-request prefs
+      if (!tierPass(prefs, rowTiers)) return false;
       if (hasBlockedTags(prefs, tags)) return false;
       if (!passesAllowTags(prefs, tags)) return false;
       return true;
@@ -105,6 +132,7 @@ LeadsRouter.get("/find-buyers", async (req: Request, res: Response) => {
       return { row, score: detail.total, klass, why };
     });
 
+    // Sort by score descending within each band
     const warm = scored
       .filter((s) => s.klass === "warm")
       .sort((a, b) => b.score - a.score);
@@ -113,11 +141,10 @@ LeadsRouter.get("/find-buyers", async (req: Request, res: Response) => {
       .filter((s) => s.klass === "hot")
       .sort((a, b) => b.score - a.score);
 
-    // Respect prefs caps first, then optional hardLimit from query
-    const capped = [...hot.slice(0, prefs.maxHot), ...warm.slice(0, prefs.maxWarm)];
-    const finalList = typeof hardLimit === "number" ? capped.slice(0, hardLimit) : capped;
+    // Prioritize HOT, then WARM, capped by ?limit (with env guardrail)
+    const pick = [...hot, ...warm].slice(0, outCap);
 
-    const items: LeadItem[] = finalList.map((s) => {
+    const items: LeadItem[] = pick.map((s) => {
       const r = s.row as any;
       const title: string = r.name || r.title || r.host || "Potential buyer";
       return {
@@ -125,7 +152,7 @@ LeadsRouter.get("/find-buyers", async (req: Request, res: Response) => {
         platform: "web",
         title,
         created: nowIso(),
-        temp: (s.klass === "hot" ? "hot" : "warm") as Temp,
+        temp: s.klass as Temp,
         score: Number(s.score || 0),
         why: s.why,
       };
