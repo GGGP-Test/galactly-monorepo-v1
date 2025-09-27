@@ -1,90 +1,80 @@
-// src/shared/env.ts
-// Small, typed helpers for reading environment variables safely.
-// Works with noImplicitAny & strict mode.
+// Centralized, typed env config + tiny guardrail helpers.
+// No implicit-any anywhere.
 
-function hasValue(v: unknown): v is string {
-  return typeof v === "string" && v.trim().length > 0;
+export type ABC = "A" | "B" | "C";
+
+export interface AppConfig {
+  /** Global allow-list for tiers; e.g. ALLOW_TIERS=AB */
+  allowTiers: Set<ABC>;
+
+  /** Per-plan caps for outward results (used by leads.ts) */
+  maxResultsFree: number;
+  maxResultsPro: number;
+
+  /** Optional runtime guardrails you may use elsewhere */
+  freeClicksPerDay: number;
+  freeCooldownMin: number;
+  cacheTtlSec: number;
 }
 
-/** Return a string env var or the fallback (undefined allowed). */
-export function strEnv(name: string, fallback?: string): string | undefined {
-  const v = process.env[name];
-  return hasValue(v) ? v : fallback;
+/* ---------- tiny helpers ---------- */
+
+function clamp(n: number, lo: number, hi: number): number {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return lo;
+  return Math.max(lo, Math.min(hi, x));
 }
 
-/** Return a number (int) env var or fallback. Clamps to finite numbers. */
-export function intEnv(name: string, fallback: number): number {
-  const v = process.env[name];
-  const n = Number.parseInt(hasValue(v) ? v : "", 10);
-  return Number.isFinite(n) ? n : fallback;
+function envNum(key: string, def: number): number {
+  const raw = process.env[key];
+  if (raw == null || raw === "") return def;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : def;
 }
 
-/** Return a number (float) env var or fallback. */
-export function floatEnv(name: string, fallback: number): number {
-  const v = process.env[name];
-  const n = Number.parseFloat(hasValue(v) ? v : "");
-  return Number.isFinite(n) ? n : fallback;
+function envStr(key: string, def: string): string {
+  const raw = process.env[key];
+  return raw == null || raw === "" ? def : String(raw);
 }
 
-/** Parse common boolean spellings; default to fallback when unset/unknown. */
-export function boolEnv(name: string, fallback = false): boolean {
-  const v = process.env[name];
-  if (!hasValue(v)) return fallback;
-  switch (v.trim().toLowerCase()) {
-    case "1":
-    case "true":
-    case "yes":
-    case "on":
-      return true;
-    case "0":
-    case "false":
-    case "no":
-    case "off":
-      return false;
-    default:
-      return fallback;
+function parseAllowTiers(input: string): Set<ABC> {
+  const out = new Set<ABC>();
+  const s = (input || "").toUpperCase();
+  for (const ch of s) {
+    if (ch === "A" || ch === "B" || ch === "C") out.add(ch);
   }
+  // Fallback to all tiers if nothing valid provided
+  if (out.size === 0) {
+    out.add("A");
+    out.add("B");
+    out.add("C");
+  }
+  return out;
 }
 
-/**
- * Split a CSV env var into a trimmed string array.
- * - Empty/absent -> copies of fallback
- * - Dedup optional (off by default)
- */
-export function listEnv(
-  name: string,
-  fallback: string[] = [],
-  sep = ",",
-  dedup = false,
-): string[] {
-  const raw = process.env[name];
-  if (!hasValue(raw)) return [...fallback];
+/* ---------- exported config ---------- */
 
-  const parts: string[] = raw
-    .split(sep)
-    .map((s: string) => s.trim())
-    .filter((s: string) => s.length > 0);
+export const CFG: AppConfig = {
+  // e.g. ALLOW_TIERS=AB  (defaults to ABC)
+  allowTiers: parseAllowTiers(envStr("ALLOW_TIERS", "ABC")),
 
-  if (!dedup) return parts;
+  // outward result caps (feel free to tune via env)
+  maxResultsFree: clamp(envNum("MAX_RESULTS_FREE", 3), 1, 50),
+  maxResultsPro: clamp(envNum("MAX_RESULTS_PRO", 12), 1, 100),
 
-  const seen = new Set<string>();
-  for (const s of parts) seen.add(s);
-  return Array.from(seen);
-}
+  // optional extras you may wire elsewhere
+  freeClicksPerDay: clamp(envNum("FREE_CLICKS_PER_DAY", 2), 0, 1_000),
+  freeCooldownMin: clamp(envNum("FREE_COOLDOWN_MIN", 30), 0, 24 * 60),
+  cacheTtlSec: clamp(envNum("CACHE_TTL_S", 600), 1, 86_400),
+};
 
 /**
- * Constrain a string env var to a fixed set of allowed values.
- * Matching is case-insensitive; returns fallback if unset/invalid.
+ * Cap outward items by plan + caller request.
+ * - If `requested` is NaN/invalid, we use the plan’s default.
+ * - Always clamps to [1 .. planCap].
  */
-export function enumEnv<T extends string>(
-  name: string,
-  allowed: readonly T[],
-  fallback: T,
-): T {
-  const v = process.env[name];
-  if (!hasValue(v)) return fallback;
-
-  const want = v.trim().toLowerCase();
-  const found = allowed.find((a) => a.toLowerCase() === want);
-  return (found ?? fallback) as T;
+export function capResults(isPro: boolean, requested: number): number {
+  const planCap = isPro ? CFG.maxResultsPro : CFG.maxResultsFree;
+  const want = Number.isFinite(requested) ? Math.floor(requested) : planCap;
+  return clamp(want, 1, planCap);
 }
