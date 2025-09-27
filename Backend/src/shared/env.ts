@@ -1,150 +1,145 @@
 // src/shared/env.ts
 //
-// Centralized, typed env/config + small helpers.
-// Exports:
-//   - type AppConfig
-//   - CFG: AppConfig (validated, with defaults)
-//   - capResults(isPro, want): caps result count by plan
-//
-// Notes:
-//   • Names/casing match what the rest of the code imports:
-//       CFG.googlePlacesApiKey
-//       CFG.cacheTtlS
-//       CFG.placesLimitDefault
-//       CFG.allowTiers (Set<'A'|'B'|'C'>)
-//   • All helpers typed to satisfy noImplicitAny.
+// Centralized, typed config + small helpers used across routes.
+// This version adds Google Places keys expected by routes/places.ts
+// and keeps backward-compat aliases if older names were used.
 
-export type TierChar = "A" | "B" | "C";
+export type Tier = "A" | "B" | "C";
 
-export interface AppConfig {
-  // Guardrails
-  allowTiers: Set<TierChar>;
-
-  // Scoring / general knobs
-  confidenceMin: number;
-  earlyExitFound: number;
-
-  // Probe / result limits
-  maxProbesPerFindFree: number;
-  maxProbesPerFindPro: number;
-  maxResultsFree: number;
-  maxResultsPro: number;
-
-  // Quotas / cooldowns
-  freeClicksPerDay: number;
-  freeCooldownMin: number;
-
-  // Cache TTL (seconds)
-  cacheTtlS: number;
-
-  // Host circuit breaker
-  hostCircuitFails: number;
-  hostCircuitCooldownS: number;
-
-  // Feature toggles
-  enableAutoTune: boolean;
-
-  // Optional local file seed for city catalog
-  catalogCityFile: string;
-
-  // Google Places integration
-  googlePlacesApiKey: string;     // from GOOGLE_PLACES_API_KEY
-  placesLimitDefault: number;     // from PLACES_LIMIT_DEFAULT
+function n(v: unknown, def: number): number {
+  const x = typeof v === "string" ? v.trim() : "";
+  const num = x ? Number(x) : NaN;
+  return Number.isFinite(num) ? num : def;
 }
 
-// ------------- small typed parsers -------------
-
-function envStr(key: string, def = ""): string {
-  const v = process.env[key];
-  return v == null || v === "" ? def : String(v);
+function b(v: unknown, def = false): boolean {
+  const x = (typeof v === "string" ? v.trim() : "").toLowerCase();
+  if (x === "1" || x === "true" || x === "yes" || x === "on") return true;
+  if (x === "0" || x === "false" || x === "no" || x === "off") return false;
+  return def;
 }
 
-function envInt(key: string, def: number): number {
-  const v = Number(envStr(key, ""));
-  return Number.isFinite(v) ? v : def;
-}
-
-function envFloat(key: string, def: number): number {
-  const v = Number(envStr(key, ""));
-  return Number.isFinite(v) ? v : def;
-}
-
-function envBool(key: string, def: boolean): boolean {
-  const raw = envStr(key, "");
-  if (raw === "") return def;
-  const n = raw.trim().toLowerCase();
-  return n === "1" || n === "true" || n === "yes" || n === "on";
-}
-
-function parseAllowTiers(raw: string): Set<TierChar> {
-  const s = raw.replace(/[^ABC]/gi, "").toUpperCase();
-  const out = new Set<TierChar>();
-  for (const ch of s) {
-    if (ch === "A" || ch === "B" || ch === "C") out.add(ch);
-  }
-  // default to ABC if nothing parsed
-  if (out.size === 0) {
-    out.add("A"); out.add("B"); out.add("C");
+function csvSet(v: unknown, valid: ReadonlyArray<string>): Set<string> {
+  const raw = String(v || "").trim();
+  if (!raw) return new Set<string>();
+  const allow = new Set(valid.map((s) => s.toUpperCase()));
+  const out = new Set<string>();
+  for (const part of raw.split(",").map((s) => s.trim().toUpperCase())) {
+    if (allow.has(part)) out.add(part);
   }
   return out;
 }
 
-// ------------- public helpers -------------
+// ---------- Config shape ----------
+export interface AppConfig {
+  // Global allow-list for tiers (e.g. ALLOW_TIERS=AB)
+  allowTiers: Set<Tier>;
 
-/** Cap result count by plan (free/pro) and requested limit. */
-export function capResults(isPro: boolean, want: number): number {
-  const floor = 1;
-  const safeWant = Number.isFinite(want) ? Math.max(floor, Math.floor(want)) : floor;
-  const planCap = isPro ? CFG.maxResultsPro : CFG.maxResultsFree;
-  return Math.min(safeWant, planCap);
+  // Free/pro result caps
+  maxResultsFree: number;
+  maxResultsPro: number;
+
+  // Click / quota guards for free tier
+  freeClicksPerDay: number;
+  freeCooldownMin: number;
+
+  // Small in-process cache TTL (seconds)
+  cacheTtlS: number;
+
+  // Optional “legacy” name support (don’t use directly; provided for compatibility)
+  // cacheTtlSec?: number;
+
+  // Google Places support
+  googlePlacesApiKey?: string;
+  placesLimitDefault: number;
+
+  // Misc tuning (kept for completeness; not all parts are used everywhere)
+  confidenceMin: number;
+  earlyExitFound: number;
+  maxProbesPerFindFree: number;
+  maxProbesPerFindPro: number;
+  hostCircuitFails: number;
+  hostCircuitCooldownS: number;
+
+  // Feature flags
+  enableAutoTune: boolean;
+
+  // Optional file path for a city catalog (if mounted as secret file)
+  catalogCityFile?: string;
 }
 
-// ------------- build CFG -------------
+// ---------- Load from process.env ----------
+const E = process.env;
 
-export const CFG: AppConfig = {
-  // Guardrails
-  allowTiers: parseAllowTiers(envStr("ALLOW_TIERS", "ABC")),
+const allowTiers = (() => {
+  const set = csvSet(E.ALLOW_TIERS, ["A", "B", "C"]) as Set<string>;
+  // Default to ABC if unset
+  return (set.size ? set : new Set(["A", "B", "C"])) as Set<Tier>;
+})();
 
-  // Scoring / general knobs
-  confidenceMin: envFloat("CONFIDENCE_MIN", 0.72),
-  earlyExitFound: envInt("EARLY_EXIT_FOUND", 3),
-
-  // Probe / result limits
-  maxProbesPerFindFree: envInt("MAX_PROBES_PER_FIND_FREE", 20),
-  maxProbesPerFindPro: envInt("MAX_PROBES_PER_FIND_PRO", 50),
-  maxResultsFree: envInt("MAX_RESULTS_FREE", 3),
-  maxResultsPro: envInt("MAX_RESULTS_PRO", 10),
-
-  // Quotas / cooldowns
-  freeClicksPerDay: envInt("FREE_CLICKS_PER_DAY", 2),
-  freeCooldownMin: envInt("FREE_COOLDOWN_MIN", 30),
-
-  // Cache TTL (seconds)
-  cacheTtlS: envInt("CACHE_TTL_S", 600),
-
-  // Host circuit breaker
-  hostCircuitFails: envInt("HOST_CIRCUIT_FAILS", 5),
-  hostCircuitCooldownS: envInt("HOST_CIRCUIT_COOLDOWN_S", 600),
-
-  // Feature toggles
-  enableAutoTune: envBool("ENABLE_AUTO_TUNE", true),
-
-  // Optional local file seed for city catalog
-  catalogCityFile: envStr("CATALOG_CITY_FILE", ""),
-
-  // Google Places integration
-  googlePlacesApiKey: envStr("GOOGLE_PLACES_API_KEY", ""),
-  placesLimitDefault: envInt("PLACES_LIMIT_DEFAULT", 25),
+const cacheTtlFromEnv = (): number => {
+  const v = E.CACHE_TTL_S ?? E.CACHE_TTL_SEC; // accept either
+  return n(v, 600);
 };
 
-// Optional: surface a tiny, readable summary for logs/debug
-export function cfgSummary(): Record<string, unknown> {
-  return {
-    allowTiers: Array.from(CFG.allowTiers.values()).join(""),
-    maxResultsFree: CFG.maxResultsFree,
-    maxResultsPro: CFG.maxResultsPro,
-    cacheTtlS: CFG.cacheTtlS,
-    placesLimitDefault: CFG.placesLimitDefault,
-    hasPlacesKey: CFG.googlePlacesApiKey ? true : false,
-  };
+const googlePlacesKeyFromEnv = (): string | undefined => {
+  // accept GOOGLE_PLACES_API_KEY or legacy GOOGLE_PLACES_KEY
+  const k = (E.GOOGLE_PLACES_API_KEY || E.GOOGLE_PLACES_KEY || "").trim();
+  return k || undefined;
+};
+
+export const CFG: AppConfig = {
+  allowTiers,
+
+  maxResultsFree: n(E.MAX_RESULTS_FREE, 3),
+  maxResultsPro: n(E.MAX_RESULTS_PRO, 8),
+
+  freeClicksPerDay: n(E.FREE_CLICKS_PER_DAY, 25),
+  freeCooldownMin: n(E.FREE_COOLDOWN_MIN, 30),
+
+  cacheTtlS: cacheTtlFromEnv(),
+  // cacheTtlSec: undefined, // legacy alias not needed externally
+
+  googlePlacesApiKey: googlePlacesKeyFromEnv(),
+  placesLimitDefault: n(E.PLACES_LIMIT_DEFAULT, 10),
+
+  confidenceMin: Number.isFinite(Number(E.CONFIDENCE_MIN))
+    ? Number(E.CONFIDENCE_MIN)
+    : 0.72,
+  earlyExitFound: n(E.EARLY_EXIT_FOUND, 3),
+
+  maxProbesPerFindFree: n(E.MAX_PROBES_PER_FIND_FREE, 20),
+  maxProbesPerFindPro: n(E.MAX_PROBES_PER_FIND_PRO, 50),
+
+  hostCircuitFails: n(E.HOST_CIRCUIT_FAILS, 5),
+  hostCircuitCooldownS: n(E.HOST_CIRCUIT_COOLDOWN_S, 600),
+
+  enableAutoTune: b(E.ENABLE_AUTO_TUNE, true),
+
+  catalogCityFile: (E.CATALOG_CITY_FILE || "").trim() || undefined,
+};
+
+// ---------- Small helpers used by routes ----------
+
+/** Cap result count by plan + env maximums. */
+export function capResults(isPro: boolean, requested: number): number {
+  const cap = isPro ? CFG.maxResultsPro : CFG.maxResultsFree;
+  const want = Number.isFinite(requested) && requested > 0 ? Math.floor(requested) : cap;
+  return Math.max(1, Math.min(want, cap));
+}
+
+/** Safely map a maybe-string to Tier or undefined. */
+export function toTier(v: unknown): Tier | undefined {
+  const s = String(v || "").toUpperCase();
+  return s === "A" || s === "B" || s === "C" ? (s as Tier) : undefined;
+}
+
+/** Convenience: true if any of row’s tiers are allowed by env (ALLOW_TIERS). */
+export function allowedByEnvTiers(rowTiers?: ReadonlyArray<string>): boolean {
+  if (!rowTiers?.length) return true;
+  for (const t of rowTiers) {
+    const up = String(t || "").toUpperCase() as Tier;
+    if (CFG.allowTiers.has(up)) return true;
+  }
+  return false;
 }
