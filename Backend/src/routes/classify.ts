@@ -169,20 +169,21 @@ r.get("/", async (req: Request, res: ExResponse) => {
 
     if (!host) return res.status(400).json({ ok: false, error: "bad_host" });
 
-    // daily limit
+    // daily limit (daily.get returns a number)
     const key = `classify:${clientKey(req)}`;
     const cap = CFG.classifyDailyLimit;
-    const count = (daily.get(key)?.count ?? 0);
+    const count = Number(daily.get(key) ?? 0);
     if (count >= cap) return res.status(200).json({ ok: false, error: "quota", remaining: 0 });
 
-    // email ↔ domain soft check
+    // email ↔ domain soft check (no hard reject)
     const ed = emailsDomain(email);
     if (ed && ed !== host && !ed.endsWith(`.${host}`)) {
-      // soft-allow with reduced trust
+      // soft-allow with reduced trust (not used further here)
     }
 
     const result = await withCache(`class:${host}`, CFG.classifyCacheTtlS * 1000, () => classifyHostOnce(host));
-    daily.inc(key, 1);
+    // increment usage
+    if (typeof daily.inc === "function") daily.inc(key, 1);
     return res.json(result);
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
@@ -195,13 +196,14 @@ r.post("/", async (req: Request, res: ExResponse) => {
     const body = (req.body || {}) as { host?: string; email?: string };
     const host = normalizeHost(body.host);
     if (!host) return res.status(400).json({ ok: false, error: "bad_host" });
+
     const key = `classify:${clientKey(req)}`;
     const cap = CFG.classifyDailyLimit;
-    const count = (daily.get(key)?.count ?? 0);
+    const count = Number(daily.get(key) ?? 0);
     if (count >= cap) return res.status(200).json({ ok: false, error: "quota", remaining: 0 });
 
     const result = await withCache(`class:${host}`, CFG.classifyCacheTtlS * 1000, () => classifyHostOnce(host));
-    daily.inc(key, 1);
+    if (typeof daily.inc === "function") daily.inc(key, 1);
     return res.json(result);
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
