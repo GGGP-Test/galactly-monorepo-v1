@@ -1,8 +1,10 @@
 // src/shared/env.ts
 //
 // Centralized, typed config + small helpers used across routes.
-// This version adds Google Places keys expected by routes/places.ts
-// and keeps backward-compat aliases if older names were used.
+// - Keeps your existing fields (tiers, caps, cache, places)
+// - Adds Gemini + classify/fetch guardrails for the classifier route
+// - Back-compat for GOOGLE_PLACES_KEY / CACHE_TTL_SEC
+// - Helpers: capResults(), toTier(), allowedByEnvTiers()
 
 export type Tier = "A" | "B" | "C";
 
@@ -11,14 +13,12 @@ function n(v: unknown, def: number): number {
   const num = x ? Number(x) : NaN;
   return Number.isFinite(num) ? num : def;
 }
-
 function b(v: unknown, def = false): boolean {
   const x = (typeof v === "string" ? v.trim() : "").toLowerCase();
   if (x === "1" || x === "true" || x === "yes" || x === "on") return true;
   if (x === "0" || x === "false" || x === "no" || x === "off") return false;
   return def;
 }
-
 function csvSet(v: unknown, valid: ReadonlyArray<string>): Set<string> {
   const raw = String(v || "").trim();
   if (!raw) return new Set<string>();
@@ -46,14 +46,11 @@ export interface AppConfig {
   // Small in-process cache TTL (seconds)
   cacheTtlS: number;
 
-  // Optional “legacy” name support (don’t use directly; provided for compatibility)
-  // cacheTtlSec?: number;
-
   // Google Places support
   googlePlacesApiKey?: string;
   placesLimitDefault: number;
 
-  // Misc tuning (kept for completeness; not all parts are used everywhere)
+  // Misc tuning
   confidenceMin: number;
   earlyExitFound: number;
   maxProbesPerFindFree: number;
@@ -66,6 +63,13 @@ export interface AppConfig {
 
   // Optional file path for a city catalog (if mounted as secret file)
   catalogCityFile?: string;
+
+  // --- Classifier / AI enrichment knobs ---
+  geminiApiKey?: string;          // GEMINI_API_KEY (2.5 free tier OK)
+  classifyCacheTtlS: number;      // CLASSIFY_CACHE_TTL_S
+  classifyDailyLimit: number;     // CLASSIFY_DAILY_LIMIT
+  fetchTimeoutMs: number;         // FETCH_TIMEOUT_MS for site fetch
+  maxFetchBytes: number;          // MAX_FETCH_BYTES safety cap
 }
 
 // ---------- Load from process.env ----------
@@ -89,6 +93,7 @@ const googlePlacesKeyFromEnv = (): string | undefined => {
 };
 
 export const CFG: AppConfig = {
+  // --- your existing knobs ---
   allowTiers,
 
   maxResultsFree: n(E.MAX_RESULTS_FREE, 3),
@@ -98,7 +103,6 @@ export const CFG: AppConfig = {
   freeCooldownMin: n(E.FREE_COOLDOWN_MIN, 30),
 
   cacheTtlS: cacheTtlFromEnv(),
-  // cacheTtlSec: undefined, // legacy alias not needed externally
 
   googlePlacesApiKey: googlePlacesKeyFromEnv(),
   placesLimitDefault: n(E.PLACES_LIMIT_DEFAULT, 10),
@@ -117,14 +121,23 @@ export const CFG: AppConfig = {
   enableAutoTune: b(E.ENABLE_AUTO_TUNE, true),
 
   catalogCityFile: (E.CATALOG_CITY_FILE || "").trim() || undefined,
+
+  // --- new AI/classifier knobs (safe defaults) ---
+  geminiApiKey: (E.GEMINI_API_KEY || "").trim() || undefined,
+  classifyCacheTtlS: n(E.CLASSIFY_CACHE_TTL_S, 86400), // 24h
+  classifyDailyLimit: n(E.CLASSIFY_DAILY_LIMIT, 50),
+  fetchTimeoutMs: n(E.FETCH_TIMEOUT_MS, 10000),
+  maxFetchBytes: n(E.MAX_FETCH_BYTES, 800000),
 };
 
 // ---------- Small helpers used by routes ----------
 
 /** Cap result count by plan + env maximums. */
-export function capResults(isPro: boolean, requested: number): number {
-  const cap = isPro ? CFG.maxResultsPro : CFG.maxResultsFree;
-  const want = Number.isFinite(requested) && requested > 0 ? Math.floor(requested) : cap;
+export function capResults(isPro: boolean, requested?: number): number {
+  const cap = Math.max(1, isPro ? CFG.maxResultsPro : CFG.maxResultsFree);
+  const want = Number.isFinite(requested || NaN) && (requested as number) > 0
+    ? Math.floor(requested as number)
+    : cap;
   return Math.max(1, Math.min(want, cap));
 }
 
@@ -134,7 +147,7 @@ export function toTier(v: unknown): Tier | undefined {
   return s === "A" || s === "B" || s === "C" ? (s as Tier) : undefined;
 }
 
-/** Convenience: true if any of row’s tiers are allowed by env (ALLOW_TIERS). */
+/** True if any of row’s tiers are allowed by env (ALLOW_TIERS). */
 export function allowedByEnvTiers(rowTiers?: ReadonlyArray<string>): boolean {
   if (!rowTiers?.length) return true;
   for (const t of rowTiers) {
