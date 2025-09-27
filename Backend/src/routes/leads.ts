@@ -5,7 +5,6 @@
 // - No mutation of rows (keeps shared types happy)
 // - Explicit types to satisfy noImplicitAny
 // - Provides both named and default export for index.ts compatibility
-// - Only updates radius/city if they were actually provided in the query
 
 import { Router, Request, Response } from "express";
 import { loadCatalog, type BuyerRow } from "../shared/catalog";
@@ -39,11 +38,15 @@ function passesAllowTags(prefs: EffectivePrefs, tags: string[]): boolean {
   return prefs.categoriesAllow.length ? intersects(prefs.categoriesAllow, tags) : true;
 }
 
+// ✅ case-insensitive tier comparison (catalog may have "c", prefs have "C")
 function tierPass(prefs: EffectivePrefs, rowTiers?: ReadonlyArray<string>): boolean {
   if (!prefs.tierFocus?.length) return true;
   if (!rowTiers?.length) return true;
-  const want = new Set<string>(prefs.tierFocus.map(String));
-  for (const t of rowTiers) if (want.has(String(t))) return true;
+  const want = new Set<string>(prefs.tierFocus.map((t) => String(t).toUpperCase()));
+  for (const t of rowTiers) {
+    const got = String(t || "").toUpperCase();
+    if (want.has(got)) return true;
+  }
   return false;
 }
 
@@ -67,29 +70,22 @@ interface LeadItem {
   why: string;
 }
 
-// NOTE: path is relative to the mount in index.ts (app.use("/api/leads", LeadsRouter))
-// Final URL: GET /api/leads/find-buyers
 LeadsRouter.get("/find-buyers", async (req: Request, res: Response) => {
   try {
-    const supplierHost =
-      q(req, "host") || q(req, "supplier") || q(req, "supplierHost") || "";
-
-    // Optional overrides: only persist if provided
+    const supplierHost = q(req, "host") || q(req, "supplier") || q(req, "supplierHost") || "";
     const city = q(req, "city");
     const radiusQ = q(req, "radiusKm");
-    const radiusNum = radiusQ !== undefined ? Number(radiusQ) : undefined;
+    const radius = radiusQ != null ? Number(radiusQ) : NaN;
 
     let prefs = getPrefs(supplierHost);
-    const patch: Partial<EffectivePrefs> = {};
-    if (city !== undefined) patch.city = city;
-    if (radiusNum !== undefined && Number.isFinite(radiusNum)) {
-      patch.radiusKm = radiusNum;
-    }
-    if (Object.keys(patch).length) {
-      prefs = setPrefs(supplierHost, patch as any);
+    if (city || Number.isFinite(radius)) {
+      prefs = setPrefs(supplierHost, {
+        city: city ?? prefs.city,
+        radiusKm: Number.isFinite(radius) ? radius : prefs.radiusKm,
+      });
     }
 
-    const catalog = await loadCatalog();
+    const catalog = await Promise.resolve(loadCatalog());
     const rows: BuyerRow[] = toArrayMaybe(catalog);
 
     const candidates: BuyerRow[] = rows.filter((row: BuyerRow) => {
