@@ -10,6 +10,7 @@
 
 import express, { Request, Response, NextFunction } from "express";
 
+import PlacesRouter from "./routes/places";
 // Routers (current exports: default Router for health/leads/catalog; factory for prefs)
 import HealthRouter from "./routes/health";
 import PrefsRouter from "./routes/prefs";
@@ -94,7 +95,7 @@ app.use("/api/health", HealthRouter);    // expects default Router
 app.use("/api/prefs", PrefsRouter());    // prefs exports a factory -> call it
 app.use("/api/leads", LeadsRouter);      // default Router
 app.use("/api/catalog", CatalogRouter);  // default Router
-
+app.use("/api/places", PlacesRouter);
 // Simple root
 app.get("/", (_req: Request, res: Response) => {
   res.json({ ok: true, service: "buyers-api", at: new Date().toISOString() });
