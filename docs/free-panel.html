@@ -6,8 +6,8 @@
 <title>Free Panel — Buyers Finder</title>
 <style>
   :root {
-    --bg: #0f1220; --panel:#151a2e; --muted:#222846; --text:#e9ecf8; --sub:#aeb6d9;
-    --acc:#6ea8fe; --ok:#2fb170; --warn:#ffb02e; --hot:#ff4769; --warm:#ffc857; --cool:#6ec6ff; --bad:#ff5d5d;
+    --bg:#0f1220; --panel:#151a2e; --muted:#222846; --text:#e9ecf8; --sub:#aeb6d9;
+    --acc:#6ea8fe; --ok:#2fb170; --warn:#ffb02e; --hot:#ff4769; --warm:#ffc857; --cool:#6ec6ff;
     --chip:#2a315a;
   }
   *{box-sizing:border-box}
@@ -21,11 +21,11 @@
   label{display:block;font-size:12px;color:var(--sub);margin:6px 0 4px}
   input,select,textarea{
     width:100%;background:#0d1124;border:1px solid var(--muted);color:var(--text);
-    border-radius:8px;padding:10px 12px;outline:none;
+    border-radius:8px;padding:10px 12px;outline:none
   }
   textarea{min-height:68px;resize:vertical}
   .row{display:flex;gap:8px}
-  .row > *{flex:1}
+  .row>*{flex:1}
   .btn{
     display:inline-flex;align-items:center;gap:8px;background:#1e264a;border:1px solid var(--muted);
     color:var(--text);padding:10px 12px;border-radius:8px;cursor:pointer;user-select:none
@@ -35,7 +35,6 @@
   .btn.good{background:var(--ok);border-color:transparent;color:#03120b}
   .btn.warn{background:var(--warn);border-color:transparent;color:#231500}
   .btn.ghost{background:transparent}
-  .grid{display:grid;grid-template-columns: 1fr 1fr;gap:10px}
   .section{padding:12px;border:1px solid var(--muted);border-radius:12px;background:rgba(255,255,255,0.02)}
   .small{font-size:12px;color:var(--sub)}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
@@ -45,18 +44,13 @@
   .tag-cool{background:rgba(110,198,255,.16);color:#bfe6ff}
   .table{width:100%;border-collapse:separate;border-spacing:0 8px}
   .table th{font-size:12px;color:var(--sub);text-align:left;padding:0 10px}
-  .table td{
-    background:#0e1430;padding:12px 10px;border-top:1px solid #1a2144;border-bottom:1px solid #1a2144
-  }
+  .table td{background:#0e1430;padding:12px 10px;border-top:1px solid #1a2144;border-bottom:1px solid #1a2144}
   .table tr td:first-child{border-left:1px solid #1a2144;border-top-left-radius:8px;border-bottom-left-radius:8px}
   .table tr td:last-child{border-right:1px solid #1a2144;border-top-right-radius:8px;border-bottom-right-radius:8px}
-  .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
-  pre.log{
-    background:#0a0e22;border:1px solid #1a2144;border-radius:12px;padding:10px;max-height:200px;overflow:auto;color:#9cb3ff
-  }
-  .kbd{border:1px solid #41509a;border-bottom-width:2px;padding:2px 6px;border-radius:6px;background:#101949}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+  pre.log{background:#0a0e22;border:1px solid #1a2144;border-radius:12px;padding:10px;max-height:220px;overflow:auto;color:#9cb3ff}
   .hint{color:#8fa3ff}
-  .split{display:grid;grid-template-columns: 1.2fr 1fr;gap:12px}
+  .split{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}
   @media (max-width:1100px){.split{grid-template-columns:1fr}}
 </style>
 </head>
@@ -72,9 +66,7 @@
           <label>x-api-key (optional)</label>
           <input id="apiKey" placeholder="leave blank if none" />
         </div>
-        <div style="align-self:flex-end">
-          <button class="btn" id="btnSaveConn">Save</button>
-        </div>
+        <div style="align-self:flex-end"><button class="btn" id="btnSaveConn">Save</button></div>
       </div>
       <div class="small">Tip: if this HTML is served by the same host as the API, you can leave API Base blank.</div>
       <div class="row" style="margin-top:8px">
@@ -89,7 +81,7 @@
       <input id="supplierHost" placeholder="example.com" />
       <div class="row">
         <div>
-          <label>City (boost)</label>
+          <label>City (used everywhere)</label>
           <input id="supplierCity" placeholder="e.g., los angeles" />
         </div>
         <div>
@@ -104,40 +96,45 @@
       <div class="row">
         <div>
           <label>Limit</label>
-          <select id="limit">
-            <option>6</option><option selected>12</option><option>20</option><option>30</option>
-          </select>
+          <select id="limit"><option>6</option><option selected>12</option><option>20</option><option>30</option></select>
+        </div>
+        <div>
+          <label>Fallback discovery term</label>
+          <input id="discoverTerm" placeholder="e.g., coffee shop" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <div>
+          <label style="display:flex;gap:8px;align-items:center">
+            <input type="checkbox" id="useFallback" checked />
+            Also use Google Places if no buyers found
+          </label>
         </div>
         <div style="align-self:flex-end">
-          <button class="btn primary" id="btnFind">Find Buyers</button>
+          <button class="btn primary" id="btnFind" disabled>Find Buyers</button>
         </div>
       </div>
       <div class="small hint" id="activeProfileHint"></div>
     </div>
 
-    <h2 style="margin-top:14px">Preference Profile</h2>
+    <h2 style="margin-top:14px">Preference Profile (optional)</h2>
     <div class="section">
       <div class="row">
         <div>
           <label>Profile ID</label>
           <input id="profileId" placeholder="auto if blank" />
         </div>
-        <div style="align-self:flex-end">
-          <button class="btn" id="btnLoadProfile">Load</button>
-        </div>
+        <div style="align-self:flex-end"><button class="btn" id="btnLoadProfile">Load</button></div>
       </div>
 
-      <div class="grid">
+      <div class="row">
         <div>
-          <label>City (default boost)</label>
+          <label>City default (used only if Supplier city is blank)</label>
           <input id="prefCity" placeholder="e.g., los angeles" />
         </div>
         <div>
           <label>Exclude Giants (Tier A)</label>
-          <select id="prefExcludeGiants">
-            <option value="false">No</option>
-            <option value="true">Yes</option>
-          </select>
+          <select id="prefExcludeGiants"><option value="false">No</option><option value="true">Yes</option></select>
         </div>
       </div>
 
@@ -150,7 +147,7 @@
       <h3>Must-have (optional, one must appear for HOT)</h3>
       <textarea id="prefMust" placeholder="(optional) e.g., preorder"></textarea>
 
-      <div class="grid">
+      <div class="row">
         <div>
           <h3>Prefer Segments</h3>
           <textarea id="prefSegPrefer" placeholder="beverage&#10;bakery&#10;beauty"></textarea>
@@ -160,7 +157,7 @@
           <textarea id="prefTagPrefer" placeholder="label&#10;carton&#10;shipper"></textarea>
         </div>
       </div>
-      <div class="grid">
+      <div class="row">
         <div>
           <h3>Avoid Segments</h3>
           <textarea id="prefSegAvoid" placeholder="automotive"></textarea>
@@ -175,34 +172,11 @@
         <button class="btn good" id="btnSaveProfile">Save / Update Profile</button>
         <button class="btn ghost" id="btnForgetProfile">Forget ID</button>
       </div>
-      <div class="small">We store profile ID & API settings in <span class="kbd">localStorage</span> only.</div>
-    </div>
-
-    <!-- NEW: Places discovery -->
-    <h2 style="margin-top:14px">Places discovery</h2>
-    <div class="section">
-      <label>Search term</label>
-      <input id="placesQ" placeholder="e.g., coffee shop, bakery, salon" />
-      <div class="row">
-        <div>
-          <label>City (uses Supplier city if blank)</label>
-          <input id="placesCity" placeholder="optional, e.g., los angeles" />
-        </div>
-        <div>
-          <label>Limit</label>
-          <select id="placesLimit">
-            <option>5</option><option selected>12</option><option>20</option><option>30</option>
-          </select>
-        </div>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <button class="btn" id="btnPlaces">Discover via Places</button>
-        <button class="btn ghost" id="btnPlacesHint">?</button>
-      </div>
-      <div class="small" id="placesStatus"></div>
+      <div class="small">We store profile ID & API settings in <span class="mono">localStorage</span> only.</div>
     </div>
 
   </div>
+
   <div class="right">
     <div class="split">
       <div>
@@ -217,9 +191,7 @@
               <th style="width:120px">Action</th>
             </tr>
           </thead>
-          <tbody id="resultsBody">
-            <!-- rows injected -->
-          </tbody>
+          <tbody id="resultsBody"><!-- rows injected --></tbody>
         </table>
       </div>
       <div>
@@ -236,69 +208,40 @@
   const logEl = $('#httpLog');
 
   const S = {
-    apiBase: $('#apiBase'),
-    apiKey: $('#apiKey'),
-    btnSaveConn: $('#btnSaveConn'),
-    btnPing: $('#btnPing'),
-    btnClearLog: $('#btnClearLog'),
+    apiBase: $('#apiBase'), apiKey: $('#apiKey'),
+    btnSaveConn: $('#btnSaveConn'), btnPing: $('#btnPing'), btnClearLog: $('#btnClearLog'),
 
-    supplierHost: $('#supplierHost'),
-    supplierCity: $('#supplierCity'),
-    minTier: $('#minTier'),
-    limit: $('#limit'),
+    supplierHost: $('#supplierHost'), supplierCity: $('#supplierCity'),
+    minTier: $('#minTier'), limit: $('#limit'),
+    discoverTerm: $('#discoverTerm'), useFallback: $('#useFallback'),
     btnFind: $('#btnFind'),
 
-    profileId: $('#profileId'),
-    prefCity: $('#prefCity'),
+    profileId: $('#profileId'), prefCity: $('#prefCity'),
     prefExcludeGiants: $('#prefExcludeGiants'),
-    prefHot: $('#prefHot'),
-    prefWarm: $('#prefWarm'),
-    prefMust: $('#prefMust'),
-    prefSegPrefer: $('#prefSegPrefer'),
-    prefTagPrefer: $('#prefTagPrefer'),
-    prefSegAvoid: $('#prefSegAvoid'),
-    prefTagAvoid: $('#prefTagAvoid'),
-    btnSaveProfile: $('#btnSaveProfile'),
-    btnLoadProfile: $('#btnLoadProfile'),
+    prefHot: $('#prefHot'), prefWarm: $('#prefWarm'), prefMust: $('#prefMust'),
+    prefSegPrefer: $('#prefSegPrefer'), prefTagPrefer: $('#prefTagPrefer'),
+    prefSegAvoid: $('#prefSegAvoid'), prefTagAvoid: $('#prefTagAvoid'),
+    btnSaveProfile: $('#btnSaveProfile'), btnLoadProfile: $('#btnLoadProfile'),
     btnForgetProfile: $('#btnForgetProfile'),
+
     activeProfileHint: $('#activeProfileHint'),
-
-    // NEW: Places
-    placesQ: $('#placesQ'),
-    placesCity: $('#placesCity'),
-    placesLimit: $('#placesLimit'),
-    btnPlaces: $('#btnPlaces'),
-    btnPlacesHint: $('#btnPlacesHint'),
-    placesStatus: $('#placesStatus'),
-
     resultsBody: $('#resultsBody'),
   };
 
   const LS = {
     get k(){ return {
-      apiBase: 'fp.apiBase',
-      apiKey: 'fp.apiKey',
-      profileId: 'fp.profileId',
-      prefCity: 'fp.pref.city',
-      prefExcludeGiants: 'fp.pref.excludeGiants',
-      prefHot: 'fp.pref.hot',
-      prefWarm: 'fp.pref.warm',
-      prefMust: 'fp.pref.must',
-      prefSegPrefer: 'fp.pref.segPrefer',
-      prefTagPrefer: 'fp.pref.tagPrefer',
-      prefSegAvoid: 'fp.pref.segAvoid',
-      prefTagAvoid: 'fp.pref.tagAvoid',
-      supplierHost: 'fp.supplier.host',
-      supplierCity: 'fp.supplier.city',
-      minTier: 'fp.supplier.minTier',
-      limit: 'fp.supplier.limit',
-      // NEW
-      placesQ: 'fp.places.q',
-      placesCity: 'fp.places.city',
-      placesLimit: 'fp.places.limit',
+      apiBase:'fp.apiBase', apiKey:'fp.apiKey',
+      profileId:'fp.profileId',
+      prefCity:'fp.pref.city', prefExcludeGiants:'fp.pref.excludeGiants',
+      prefHot:'fp.pref.hot', prefWarm:'fp.pref.warm', prefMust:'fp.pref.must',
+      prefSegPrefer:'fp.pref.segPrefer', prefTagPrefer:'fp.pref.tagPrefer',
+      prefSegAvoid:'fp.pref.segAvoid', prefTagAvoid:'fp.pref.tagAvoid',
+      supplierHost:'fp.supplier.host', supplierCity:'fp.supplier.city',
+      minTier:'fp.supplier.minTier', limit:'fp.supplier.limit',
+      discoverTerm:'fp.discover.term', useFallback:'fp.discover.use'
     }},
     save(k,v){ localStorage.setItem(k, v ?? ''); },
-    load(k, d=''){ const v = localStorage.getItem(k); return v==null?d:v; },
+    load(k,d=''){ const v = localStorage.getItem(k); return v==null?d:v; },
     del(k){ localStorage.removeItem(k); }
   };
 
@@ -307,7 +250,7 @@
 
   function fullUrl(p){
     const base = (S.apiBase.value||'').trim().replace(/\/+$/,'');
-    if (!base) return p; // relative to same origin
+    if (!base) return p;
     if (p.startsWith('http')) return p;
     return base + p;
   }
@@ -315,10 +258,8 @@
   async function fetchJSON(method, path, body){
     const url = fullUrl(path);
     const headers = {'content-type':'application/json'};
-    const k = (S.apiKey.value||'').trim();
-    if (k) headers['x-api-key'] = k;
-
-    const init = { method, headers, redirect: 'follow' };
+    const k = (S.apiKey.value||'').trim(); if (k) headers['x-api-key'] = k;
+    const init = { method, headers, redirect:'follow' };
     if (body) init.body = JSON.stringify(body);
 
     log(`${method} ${url}`);
@@ -327,8 +268,7 @@
     try{
       resp = await fetch(url, init);
       const ct = resp.headers.get('content-type')||'';
-      if (ct.includes('application/json')) data = await resp.json();
-      else data = { raw: await resp.text() };
+      data = ct.includes('application/json') ? await resp.json() : { raw: await resp.text() };
       ok = resp.ok;
       log(`↳ ${resp.status} ${resp.statusText} (${Math.round(performance.now()-t0)} ms)`);
     }catch(e){
@@ -338,113 +278,35 @@
     if (!ok){
       log(`↳ body: ${JSON.stringify(data)}`);
       const err = new Error((data && data.error) ? data.error : `HTTP ${resp.status}`);
-      err.status = resp.status;
-      err.data = data;
-      throw err;
+      err.status = resp.status; err.data = data; throw err;
     }
     return data;
   }
 
-  function splitLines(s){
-    return (s||'').split(/[\n,;]+/).map(x=>x.trim().toLowerCase()).filter(Boolean);
-  }
-
-  function saveConn(){
-    LS.save(LS.k.apiBase, S.apiBase.value||'');
-    LS.save(LS.k.apiKey, S.apiKey.value||'');
-    log('saved connection');
-  }
-
-  async function ping(){
-    try{
-      const r = await fetchJSON('GET','/healthz');
-      log(`healthz: ${JSON.stringify(r)}`);
-    }catch(e){}
-  }
+  function splitLines(s){ return (s||'').split(/[\n,;]+/).map(x=>x.trim().toLowerCase()).filter(Boolean); }
 
   function setActiveProfileHint(){
     const pid = (S.profileId.value||'').trim();
-    if (pid) S.activeProfileHint.textContent = `Using profileId=${pid} when searching (unless you clear it).`;
-    else S.activeProfileHint.textContent = `No profile set. You can still search; defaults apply.`;
-  }
-
-  async function saveProfile(){
-    const body = {
-      id: (S.profileId.value||'').trim() || undefined,
-      city: (S.prefCity.value||'').trim() || undefined,
-      excludeGiants: S.prefExcludeGiants.value === 'true',
-      hotCues: splitLines(S.prefHot.value),
-      warmCues: splitLines(S.prefWarm.value),
-      mustHave: splitLines(S.prefMust.value),
-      preferSegments: splitLines(S.prefSegPrefer.value),
-      preferTags: splitLines(S.prefTagPrefer.value),
-      avoidSegments: splitLines(S.prefSegAvoid.value),
-      avoidTags: splitLines(S.prefTagAvoid.value),
-    };
-    try{
-      const r = await fetchJSON('POST','/api/prefs/upsert', body);
-      const id = r.id || (r.profile && r.profile.id) || '';
-      if (id){
-        S.profileId.value = id;
-        LS.save(LS.k.profileId, id);
-        log(`profile saved id=${id}`);
-        setActiveProfileHint();
-      }
-      // Persist form
-      LS.save(LS.k.prefCity, S.prefCity.value||'');
-      LS.save(LS.k.prefExcludeGiants, S.prefExcludeGiants.value||'false');
-      LS.save(LS.k.prefHot, S.prefHot.value||'');
-      LS.save(LS.k.prefWarm, S.prefWarm.value||'');
-      LS.save(LS.k.prefMust, S.prefMust.value||'');
-      LS.save(LS.k.prefSegPrefer, S.prefSegPrefer.value||'');
-      LS.save(LS.k.prefTagPrefer, S.prefTagPrefer.value||'');
-      LS.save(LS.k.prefSegAvoid, S.prefSegAvoid.value||'');
-      LS.save(LS.k.prefTagAvoid, S.prefTagAvoid.value||'');
-    }catch(e){}
-  }
-
-  async function loadProfile(){
-    const id = (S.profileId.value||'').trim();
-    if (!id){ log('no profile id'); return; }
-    try{
-      const r = await fetchJSON('GET', `/api/prefs/${encodeURIComponent(id)}`);
-      const p = r.profile||{};
-      S.prefCity.value = p.city || '';
-      S.prefExcludeGiants.value = String(!!p.excludeGiants);
-      S.prefHot.value = (p.hotCues||[]).join('\n');
-      S.prefWarm.value = (p.warmCues||[]).join('\n');
-      S.prefMust.value = (p.mustHave||[]).join('\n');
-      S.prefSegPrefer.value = (p.preferSegments||[]).join('\n');
-      S.prefTagPrefer.value = (p.preferTags||[]).join('\n');
-      S.prefSegAvoid.value = (p.avoidSegments||[]).join('\n');
-      S.prefTagAvoid.value = (p.avoidTags||[]).join('\n');
-      // save snapshot
-      saveProfile(); // persist to LS (reuses upsert but fine)
-      setActiveProfileHint();
-      log(`profile loaded id=${id}`);
-    }catch(e){}
+    S.activeProfileHint.textContent = pid
+      ? `Using profileId=${pid} when searching (unless you clear it).`
+      : `No profile set. You can still search; defaults apply.`;
   }
 
   function badge(temp){
-    const t = (temp||'').toLowerCase();
-    if (t==='hot')   return '<span class="chip tag-hot">HOT</span>';
-    if (t==='warm')  return '<span class="chip tag-warm">WARM</span>';
+    const t=(temp||'').toLowerCase();
+    if (t==='hot') return '<span class="chip tag-hot">HOT</span>';
+    if (t==='warm') return '<span class="chip tag-warm">WARM</span>';
     return '<span class="chip tag-cool">COOL</span>';
   }
 
   function renderRows(items){
-    S.resultsBody.innerHTML = '';
-    if (!items || items.length===0){
-      const tr = document.createElement('tr');
-      const td = document.createElement('td');
-      td.colSpan = 5;
-      td.textContent = 'No items';
-      tr.appendChild(td);
-      S.resultsBody.appendChild(tr);
-      return;
+    S.resultsBody.innerHTML='';
+    if (!items || !items.length){
+      const tr=document.createElement('tr'), td=document.createElement('td');
+      td.colSpan=5; td.textContent='No items'; tr.appendChild(td); S.resultsBody.appendChild(tr); return;
     }
     for (const it of items){
-      const tr = document.createElement('tr');
+      const tr=document.createElement('tr');
       tr.innerHTML = `
         <td class="mono">${Math.round(it.score||0)}</td>
         <td>${badge(it.temp)}</td>
@@ -453,107 +315,104 @@
           <div class="small" style="opacity:.85">${it.title||it.name||''}</div>
         </td>
         <td><div class="small">${(it.why||'').replace(/\s·\s/g,' • ')}</div></td>
-        <td>
-          <button class="btn" data-lock="${encodeURIComponent(it.host||'')}">Lock</button>
-        </td>
+        <td><button class="btn" data-lock="${encodeURIComponent(it.host||'')}">Lock</button></td>
       `;
       S.resultsBody.appendChild(tr);
     }
   }
 
-  async function findBuyers(){
-    const host = (S.supplierHost.value||'').trim().toLowerCase();
-    if (!host){ alert('Enter supplier host'); return; }
-    LS.save(LS.k.supplierHost, host);
-    const city = (S.supplierCity.value||'').trim();
-    LS.save(LS.k.supplierCity, city);
-    LS.save(LS.k.minTier, S.minTier.value);
-    LS.save(LS.k.limit, S.limit.value);
+  function saveConn(){ LS.save(LS.k.apiBase,S.apiBase.value||''); LS.save(LS.k.apiKey,S.apiKey.value||''); log('saved connection'); }
+  async function ping(){ try{ const r=await fetchJSON('GET','/healthz'); log(`healthz: ${JSON.stringify(r)}`);}catch(e){} }
 
-    const params = new URLSearchParams();
-    params.set('host', host);
-    if (city) params.set('city', city);
-    params.set('minTier', S.minTier.value);
-    params.set('limit', String(S.limit.value));
-    const pid = (S.profileId.value||'').trim();
-    if (pid) params.set('profileId', pid);
-
-    S.btnFind.disabled = true;
-    S.btnFind.textContent = 'Searching…';
+  async function saveProfile(){
+    const body = {
+      id:(S.profileId.value||'').trim()||undefined,
+      city:(S.prefCity.value||'').trim()||undefined,
+      excludeGiants:S.prefExcludeGiants.value==='true',
+      hotCues:splitLines(S.prefHot.value), warmCues:splitLines(S.prefWarm.value),
+      mustHave:splitLines(S.prefMust.value),
+      preferSegments:splitLines(S.prefSegPrefer.value), preferTags:splitLines(S.prefTagPrefer.value),
+      avoidSegments:splitLines(S.prefSegAvoid.value), avoidTags:splitLines(S.prefTagAvoid.value),
+    };
     try{
-      const r = await fetchJSON('GET', `/api/leads/find-buyers?${params.toString()}`);
-      renderRows(r.items||[]);
-    }catch(e){
-      renderRows([]);
-    }finally{
-      S.btnFind.disabled = false;
-      S.btnFind.textContent = 'Find Buyers';
-    }
-  }
-
-  // --- NEW: Places discovery ---
-  function normalizePlaces(items, city){
-    return (items||[]).map(p => {
-      const tags = Array.isArray(p.tags)? p.tags : [];
-      return {
-        host: p.host || '',
-        title: p.name || 'Found via Places',
-        name: p.name || '',
-        score: 0,
-        temp: 'cool',
-        why: `via Places · city:${(city||'').toLowerCase()} · tags:${tags.slice(0,6).join(', ')}`
-      };
-    });
-  }
-
-  async function discoverPlaces(){
-    const q = (S.placesQ.value||'').trim();
-    const city = (S.placesCity.value||S.supplierCity.value||'').trim();
-    const limit = (S.placesLimit.value||'12').trim();
-    LS.save(LS.k.placesQ, q);
-    LS.save(LS.k.placesCity, city);
-    LS.save(LS.k.placesLimit, limit);
-
-    if (!q){ alert('Enter a Places search term (e.g., coffee shop)'); return; }
-
-    const params = new URLSearchParams();
-    params.set('q', q);
-    if (city) params.set('city', city);
-    params.set('limit', limit);
-
-    S.btnPlaces.disabled = true;
-    S.btnPlaces.textContent = 'Searching…';
-    S.placesStatus.textContent = '';
-    try{
-      const r = await fetchJSON('GET', `/api/places/search?${params.toString()}`);
-      if (r && r.ok === false){
-        // Friendly hints for quotas / rate limits
-        if (r.error === 'daily-quota-exceeded'){
-          S.placesStatus.textContent = 'Daily quota reached. Try later or set an x-api-key to separate your quota.';
-        }else if (r.error === 'rate-limited'){
-          S.placesStatus.textContent = 'Rate limited. Wait a few seconds and try again.';
-        }else{
-          S.placesStatus.textContent = r.error || 'No results.';
-        }
-      }
-      const rows = normalizePlaces(r.items||[], city);
-      renderRows(rows);
-    }catch(e){
-      renderRows([]);
-    }finally{
-      S.btnPlaces.disabled = false;
-      S.btnPlaces.textContent = 'Discover via Places';
-    }
-  }
-
-  async function onLockHost(host, rowBtn){
-    const title = 'Locked by user';
-    try{
-      const r = await fetchJSON('POST','/api/leads/lock',{ host, title, temp: 'warm' });
-      rowBtn.textContent = 'Locked ✓';
-      rowBtn.classList.add('good');
-      rowBtn.disabled = true;
+      const r = await fetchJSON('POST','/api/prefs/upsert', body);
+      const id = r.id || (r.profile && r.profile.id) || '';
+      if (id){ S.profileId.value=id; LS.save(LS.k.profileId,id); log(`profile saved id=${id}`); setActiveProfileHint(); }
+      // persist fields
+      LS.save(LS.k.prefCity,S.prefCity.value||''); LS.save(LS.k.prefExcludeGiants,S.prefExcludeGiants.value||'false');
+      LS.save(LS.k.prefHot,S.prefHot.value||''); LS.save(LS.k.prefWarm,S.prefWarm.value||''); LS.save(LS.k.prefMust,S.prefMust.value||'');
+      LS.save(LS.k.prefSegPrefer,S.prefSegPrefer.value||''); LS.save(LS.k.prefTagPrefer,S.prefTagPrefer.value||'');
+      LS.save(LS.k.prefSegAvoid,S.prefSegAvoid.value||''); LS.save(LS.k.prefTagAvoid,S.prefTagAvoid.value||'');
     }catch(e){}
+  }
+
+  async function loadProfile(){
+    const id=(S.profileId.value||'').trim(); if(!id){ log('no profile id'); return; }
+    try{
+      const r = await fetchJSON('GET', `/api/prefs/${encodeURIComponent(id)}`);
+      const p = r.profile||{};
+      S.prefCity.value = p.city || '';
+      S.prefExcludeGiants.value = String(!!p.excludeGiants);
+      S.prefHot.value = (p.hotCues||[]).join('\n'); S.prefWarm.value = (p.warmCues||[]).join('\n');
+      S.prefMust.value = (p.mustHave||[]).join('\n');
+      S.prefSegPrefer.value = (p.preferSegments||[]).join('\n'); S.prefTagPrefer.value = (p.preferTags||[]).join('\n');
+      S.prefSegAvoid.value = (p.avoidSegments||[]).join('\n'); S.prefTagAvoid.value = (p.avoidTags||[]).join('\n');
+      saveProfile(); setActiveProfileHint(); log(`profile loaded id=${id}`);
+    }catch(e){}
+  }
+
+  async function onLockHost(host, btn){
+    try{ await fetchJSON('POST','/api/leads/lock',{ host, title:'Locked by user', temp:'warm' });
+      btn.textContent='Locked ✓'; btn.classList.add('good'); btn.disabled=true;
+    }catch(e){}
+  }
+
+  async function findBuyers(){
+    const host=(S.supplierHost.value||'').trim().toLowerCase();
+    if(!host){ alert('Enter supplier host'); return; }
+    LS.save(LS.k.supplierHost,host);
+
+    const city=(S.supplierCity.value||'').trim() || (S.prefCity.value||'').trim();
+    LS.save(LS.k.supplierCity,city);
+    LS.save(LS.k.minTier,S.minTier.value);
+    LS.save(LS.k.limit,S.limit.value);
+    LS.save(LS.k.discoverTerm,S.discoverTerm.value||'');
+    LS.save(LS.k.useFallback,String(S.useFallback.checked));
+
+    const params=new URLSearchParams();
+    params.set('host',host);
+    if(city) params.set('city',city);
+    params.set('minTier',S.minTier.value);
+    params.set('limit',String(S.limit.value));
+    const pid=(S.profileId.value||'').trim(); if(pid) params.set('profileId',pid);
+
+    S.btnFind.disabled=true; S.btnFind.textContent='Searching…';
+    try{
+      // 1) primary: leads
+      const base = await fetchJSON('GET', `/api/leads/find-buyers?${params.toString()}`);
+      if ((base.items||[]).length>0){ renderRows(base.items); return; }
+
+      // 2) optional fallback: places
+      if (!S.useFallback.checked){ renderRows([]); return; }
+      const term=(S.discoverTerm.value||'coffee shop').trim();
+      const limit=Number(S.limit.value)||12;
+
+      const p2 = new URLSearchParams({ q:term, city, limit:String(limit) });
+      const alt = await fetchJSON('GET', `/api/places/search?${p2.toString()}`);
+      if (alt && alt.ok && (alt.items||[]).length){
+        const mapped = (alt.items||[]).map(it => ({
+          host: it.host, title: it.name||'Potential buyer',
+          temp: 'cool', score: 0,
+          why: `discovered via Places • q="${term}" • ${city||'anywhere'}`
+        }));
+        renderRows(mapped);
+      }else{
+        const err = alt && alt.error ? alt.error : 'no-results';
+        if (err==='daily-quota-exceeded') log('Places guardrail: free daily quota exceeded');
+        renderRows([]);
+      }
+    }catch(e){ renderRows([]); }
+    finally{ S.btnFind.disabled=false; S.btnFind.textContent='Find Buyers'; }
   }
 
   function hookEvents(){
@@ -563,63 +422,38 @@
 
     S.btnSaveProfile.addEventListener('click', saveProfile);
     S.btnLoadProfile.addEventListener('click', loadProfile);
-    S.btnForgetProfile.addEventListener('click', ()=>{
-      LS.del(LS.k.profileId);
-      S.profileId.value = '';
-      setActiveProfileHint();
-      log('forgot profile id');
-    });
+    S.btnForgetProfile.addEventListener('click', ()=>{ LS.del(LS.k.profileId); S.profileId.value=''; setActiveProfileHint(); log('forgot profile id'); });
 
     S.btnFind.addEventListener('click', findBuyers);
-
-    // NEW
-    S.btnPlaces.addEventListener('click', discoverPlaces);
-    S.btnPlacesHint.addEventListener('click', ()=>{
-      alert('Uses /api/places/search with caching and daily caps. Tip: set an x-api-key in Connection to separate quotas per tester.');
-    });
-
     S.resultsBody.addEventListener('click', (e)=>{
-      const b = e.target.closest('button');
-      if (!b) return;
-      const enc = b.getAttribute('data-lock');
-      if (!enc) return;
-      const host = decodeURIComponent(enc);
-      onLockHost(host, b);
+      const b=e.target.closest('button'); if(!b) return;
+      const enc=b.getAttribute('data-lock'); if(!enc) return;
+      const host=decodeURIComponent(enc); onLockHost(host,b);
     });
+
+    // gate Find button on required field
+    const gate=()=>{ S.btnFind.disabled = !((S.supplierHost.value||'').trim()); };
+    S.supplierHost.addEventListener('input',gate); gate();
   }
 
   function restore(){
-    S.apiBase.value = LS.load(LS.k.apiBase,'');
-    S.apiKey.value = LS.load(LS.k.apiKey,'');
+    S.apiBase.value = LS.load(LS.k.apiBase,''); S.apiKey.value = LS.load(LS.k.apiKey,'');
 
-    S.profileId.value = LS.load(LS.k.profileId,'');
-    S.prefCity.value = LS.load(LS.k.prefCity,'');
+    S.profileId.value = LS.load(LS.k.profileId,''); S.prefCity.value = LS.load(LS.k.prefCity,'');
     S.prefExcludeGiants.value = LS.load(LS.k.prefExcludeGiants,'false');
-    S.prefHot.value = LS.load(LS.k.prefHot,'');
-    S.prefWarm.value = LS.load(LS.k.prefWarm,'');
-    S.prefMust.value = LS.load(LS.k.prefMust,'');
-    S.prefSegPrefer.value = LS.load(LS.k.prefSegPrefer,'');
-    S.prefTagPrefer.value = LS.load(LS.k.prefTagPrefer,'');
-    S.prefSegAvoid.value = LS.load(LS.k.prefSegAvoid,'');
-    S.prefTagAvoid.value = LS.load(LS.k.prefTagAvoid,'');
+    S.prefHot.value = LS.load(LS.k.prefHot,''); S.prefWarm.value = LS.load(LS.k.prefWarm,''); S.prefMust.value = LS.load(LS.k.prefMust,'');
+    S.prefSegPrefer.value = LS.load(LS.k.prefSegPrefer,''); S.prefTagPrefer.value = LS.load(LS.k.prefTagPrefer,'');
+    S.prefSegAvoid.value = LS.load(LS.k.prefSegAvoid,''); S.prefTagAvoid.value = LS.load(LS.k.prefTagAvoid,'');
 
-    S.supplierHost.value = LS.load(LS.k.supplierHost,'');
-    S.supplierCity.value = LS.load(LS.k.supplierCity,'');
-    S.minTier.value = LS.load(LS.k.minTier,'C') || 'C';
-    S.limit.value = LS.load(LS.k.limit,'12') || '12';
-
-    // NEW
-    S.placesQ.value = LS.load(LS.k.placesQ,'');
-    S.placesCity.value = LS.load(LS.k.placesCity,'');
-    S.placesLimit.value = LS.load(LS.k.placesLimit,'12') || '12';
+    S.supplierHost.value = LS.load(LS.k.supplierHost,''); S.supplierCity.value = LS.load(LS.k.supplierCity,'');
+    S.minTier.value = LS.load(LS.k.minTier,'C') || 'C'; S.limit.value = LS.load(LS.k.limit,'12') || '12';
+    S.discoverTerm.value = LS.load(LS.k.discoverTerm,'coffee shop'); S.useFallback.checked = LS.load(LS.k.useFallback,'true')==='true';
 
     setActiveProfileHint();
   }
 
   // Boot
-  hookEvents();
-  restore();
-  log('ready');
+  hookEvents(); restore(); log('ready');
 })();
 </script>
 </body>
