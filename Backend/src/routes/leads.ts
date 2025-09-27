@@ -1,25 +1,15 @@
 // src/routes/leads.ts
 //
-// Finds buyer leads by combining our env-backed catalog with optional
-// Google Places SMB discovery (real websites) when a city is provided.
+// Hardened against catalog shape drift.
 // - Accepts BuyerRow[] | {rows} | {items}
-// - No mutation of source rows
-// - Explicit types (noImplicitAny safe)
-// - Provides both named and default export
-//
-// Query params (subset used by Free Panel):
-//   host=...               supplier host (key for prefs)
-//   city=...               boosts locality + triggers Places enrichment
-//   radiusKm=...           saved in prefs (optional)
-//   categories=csv         optional override for Places categories
-//   limit=n                soft cap for Places fetch (final warm/hot still
-//                          governed by prefs.maxWarm / prefs.maxHot)
+// - No mutation of rows (keeps shared types happy)
+// - Explicit types to satisfy noImplicitAny
+// - Provides both named and default export for index.ts compatibility
 
 import { Router, Request, Response } from "express";
 import { loadCatalog, type BuyerRow } from "../shared/catalog";
 import { getPrefs, setPrefs, prefsSummary, type EffectivePrefs } from "../shared/prefs";
 import { scoreRow, classifyScore, buildWhy, allTags } from "../shared/trc";
-import { fetchPlacesBuyers } from "../shared/places";
 
 export const LeadsRouter = Router();
 
@@ -65,19 +55,6 @@ function toArrayMaybe(cat: unknown): BuyerRow[] {
   return [];
 }
 
-/** Deduplicate rows by host (case-insensitive) while preserving first occurrence. */
-function dedupeByHost(rows: BuyerRow[]): BuyerRow[] {
-  const out: BuyerRow[] = [];
-  const seen = new Set<string>();
-  for (const r of rows) {
-    const h = String((r as any).host || "").toLowerCase();
-    if (!h || seen.has(h)) continue;
-    seen.add(h);
-    out.push(r);
-  }
-  return out;
-}
-
 type Temp = "warm" | "hot";
 interface LeadItem {
   host: string;
@@ -89,17 +66,17 @@ interface LeadItem {
   why: string;
 }
 
-LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) => {
+// NOTE: this path is relative to the mount in index.ts (`/api/leads`)
+LeadsRouter.get("/find-buyers", async (req: Request, res: Response) => {
   try {
     const supplierHost = q(req, "host") || q(req, "supplier") || q(req, "supplierHost") || "";
     const city = q(req, "city");
     const radiusQ = q(req, "radiusKm");
     const radius = radiusQ != null ? Number(radiusQ) : NaN;
 
-    // Optional Places overrides
-    const categoriesCsv = q(req, "categories");
+    // optional overall limit (panel "Limit" box)
     const limitQ = q(req, "limit");
-    const limit = limitQ ? Number(limitQ) : NaN;
+    const hardLimit = Number.isFinite(Number(limitQ)) ? Math.max(1, Math.min(200, Number(limitQ))) : undefined;
 
     let prefs = getPrefs(supplierHost);
     if (city || Number.isFinite(radius)) {
@@ -109,27 +86,10 @@ LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) =>
       });
     }
 
-    // 1) Base catalog (env-backed)
     const catalog = await loadCatalog();
-    const baseRows: BuyerRow[] = toArrayMaybe(catalog);
+    const rows: BuyerRow[] = toArrayMaybe(catalog);
 
-    // 2) Optional Google Places SMB discovery (only when we have city + API key)
-    const havePlacesKey = Boolean((process.env.GOOGLE_PLACES_API_KEY || "").trim());
-    let placesRows: BuyerRow[] = [];
-    if (havePlacesKey && city) {
-      const cats = categoriesCsv
-        ? categoriesCsv.split(",").map((s) => s.trim()).filter(Boolean)
-        : undefined;
-      const placesLimitEnv = Number(process.env.PLACES_LIMIT_DEFAULT || "");
-      const want = Number.isFinite(limit) && limit > 0 ? limit : (Number.isFinite(placesLimitEnv) ? placesLimitEnv : 25);
-      placesRows = await fetchPlacesBuyers({ city, categories: cats, limit: want });
-    }
-
-    // Merge + de-dupe
-    const mergedRows = dedupeByHost([...baseRows, ...placesRows]);
-
-    // Candidate filtering using prefs
-    const candidates: BuyerRow[] = mergedRows.filter((row: BuyerRow) => {
+    const candidates: BuyerRow[] = rows.filter((row: BuyerRow) => {
       const tags = allTags(row);
       if (!tierPass(prefs, (row as any).tiers as string[] | undefined)) return false;
       if (hasBlockedTags(prefs, tags)) return false;
@@ -137,7 +97,6 @@ LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) =>
       return true;
     });
 
-    // Score and explain
     const scored = candidates.map((row: BuyerRow) => {
       const detail = scoreRow(row as any, prefs);
       const klass = classifyScore(detail.total); // 'cold' | 'warm' | 'hot'
@@ -148,15 +107,17 @@ LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) =>
 
     const warm = scored
       .filter((s) => s.klass === "warm")
-      .sort((a, b) => b.score - a.score)
-      .slice(0, prefs.maxWarm);
+      .sort((a, b) => b.score - a.score);
 
     const hot = scored
       .filter((s) => s.klass === "hot")
-      .sort((a, b) => b.score - a.score)
-      .slice(0, prefs.maxHot);
+      .sort((a, b) => b.score - a.score);
 
-    const items: LeadItem[] = [...hot, ...warm].map((s) => {
+    // Respect prefs caps first, then optional hardLimit from query
+    const capped = [...hot.slice(0, prefs.maxHot), ...warm.slice(0, prefs.maxWarm)];
+    const finalList = typeof hardLimit === "number" ? capped.slice(0, hardLimit) : capped;
+
+    const items: LeadItem[] = finalList.map((s) => {
       const r = s.row as any;
       const title: string = r.name || r.title || r.host || "Potential buyer";
       return {
@@ -164,7 +125,7 @@ LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) =>
         platform: "web",
         title,
         created: nowIso(),
-        temp: s.klass as Temp,
+        temp: (s.klass === "hot" ? "hot" : "warm") as Temp,
         score: Number(s.score || 0),
         why: s.why,
       };
