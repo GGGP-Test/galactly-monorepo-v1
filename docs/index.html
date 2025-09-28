@@ -4,510 +4,337 @@
   <meta charset="utf-8" />
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
+    content="width=device-width, initial-scale=1, maximum-scale=1"
   />
   <title>Galactly — Find real packaging buyers</title>
-  <meta name="color-scheme" content="dark light" />
   <style>
-    :root {
-      --bg: #0b0f14;
-      --panel: #0f141a;
-      --panel-2: #121922;
-      --text: #e8eef5;
-      --muted: #9fb0c2;
-      --accent: #7fe3ff;
-      --accent-2: #38bdf8;
-      --good: #4ade80;
-      --chip: #1b2733;
-      --chip-on: #203343;
-      --border: #1a2430;
-      --shadow: 0 20px 60px rgba(0,0,0,.4);
+    :root{
+      --bg:#0e1217; --card:#121821; --muted:#8aa0b5; --text:#e9f1f7;
+      --primary:#72d2ff; --accent:#38e17b; --chip:#1a2432; --chip-border:#243142;
+      --slider:#90a4b8; --slider-track:#273244; --danger:#ff6b6b;
+      --btn:#7fe3ff; --btn-text:#06202a;
     }
-    html, body {
-      margin: 0; padding: 0;
-      background: radial-gradient(1200px 600px at 50% -10%, #102131, var(--bg));
-      color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
-      min-height: 100%;
+    html,body{height:100%;background:var(--bg);color:var(--text);margin:0;font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    .hero{
+      max-width:1100px;margin:64px auto;padding:24px 20px;text-align:center;
     }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .wrap { max-width: 1120px; margin: 0 auto; padding: 72px 20px 120px; }
-    .hero {
-      text-align: center; padding: 96px 0 72px;
-    }
-    .hero h1 { font-size: clamp(32px, 5vw, 56px); margin: 0 0 16px; letter-spacing: .2px; }
-    .hero p { color: var(--muted); font-size: clamp(16px, 2.2vw, 20px); margin: 0 0 28px; }
-    .cta {
-      background: linear-gradient(180deg, #74d6fb, #44b2ec);
-      border: none; color: #04121c; font-weight: 700;
-      padding: 14px 22px; font-size: 16px; border-radius: 12px;
-      cursor: pointer; box-shadow: 0 8px 24px rgba(55,160,230,.35);
-    }
-    .cta:hover { filter: brightness(.98); }
-
-    /* Modal */
-    .backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,.6);
-      display: none; align-items: center; justify-content: center;
-      padding: 24px; z-index: 1000;
-    }
-    .backdrop.on { display: flex; }
-    .modal {
-      width: min(920px, 96vw);
-      background: linear-gradient(180deg, var(--panel), var(--panel-2));
-      border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    .modal-hd {
-      display:flex; align-items:center; justify-content: space-between;
-      padding: 16px 18px; border-bottom: 1px solid var(--border);
-    }
-    .modal-hd h3 { margin: 0; font-size: 18px; }
-    .x { border: 0; background: transparent; color: var(--muted); font-size: 22px; cursor: pointer; }
-    .modal-bd { padding: 18px; max-height: min(74vh, 760px); overflow: auto; }
-    .row { display: flex; gap: 18px; flex-wrap: wrap; }
-    .col { flex: 1 1 300px; }
-    .panel {
-      background: #0f1720; border: 1px solid var(--border); border-radius: 14px; padding: 16px;
-    }
-    .footer {
-      display:flex; align-items:center; justify-content:flex-end; gap: 12px;
-      padding: 14px 18px; border-top: 1px solid var(--border);
-    }
-    .btn {
-      border: 1px solid var(--border);
-      background: #16212c; color: var(--text); padding: 10px 14px; border-radius: 10px; cursor: pointer;
-    }
-    .btn.primary { background: #33b6f2; color: #072033; border: 0; font-weight: 700; }
-    .btn:disabled { opacity: .6; cursor: default; }
-    .pill {
-      display: inline-flex; align-items:center; gap: 8px;
-      padding: 10px 14px; border-radius: 12px; background: #0e1721; border: 1px solid var(--border);
-      cursor: pointer; transition: .15s transform ease;
-    }
-    .pill.on { outline: 2px solid #8cffb3; box-shadow: 0 0 0 4px rgba(76,255,171,.08) inset; }
-    .pill:hover { transform: translateY(-1px); }
-    .hint { color: var(--muted); font-size: 13px; margin-top: 6px; }
-
-    .field { display:flex; flex-direction:column; gap:8px; margin-bottom: 14px; }
-    .field label { font-size: 14px; color: var(--muted); }
-    .input, select, textarea {
-      background:#0e1620; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:12px 12px;
-      outline:none;
-    }
-    .input:focus, select:focus, textarea:focus { border-color:#2b6aa1; box-shadow:0 0 0 3px rgba(56,189,248,.2); }
-    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-    @media (max-width: 720px){ .grid2{ grid-template-columns: 1fr; } }
-
-    .sl { display:flex; align-items:center; gap:10px; margin: 8px 0; }
-    .sl input[type=range] { width:100%; accent-color:#7bb8ff; }
-    .sl .v { width:18px; text-align:right; color:var(--muted); font-size:12px; }
-
-    .chips { display:flex; gap:8px; flex-wrap:wrap; }
-    .chip { background: var(--chip); color: var(--text); border: 1px solid var(--border);
-      padding: 6px 10px; border-radius: 999px; cursor: pointer; font-size: 13px;}
-    .chip.on { background: var(--chip-on); border-color: #2a4156; }
-    .section-ttl { font-weight: 700; margin-bottom: 8px; }
-
-    .headline {
-      display:flex; align-items:center; gap:12px;
-      background:#0b1521; border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:10px;
-    }
-    .fav { width:28px; height:28px; border-radius:6px; background:#14293d; display:grid; place-items:center; overflow:hidden; }
-    .fav img { display:block; width:100%; height:100%; object-fit:cover; }
-    .subtitle { color: var(--muted); font-size: 12px; margin-bottom: 12px; text-align:center; }
-    .adv-toggle { display:flex; justify-content:center; margin: 8px 0 16px; }
-    .adv-btn { background:#0f1a24; border:1px solid var(--border); color:var(--text); border-radius:999px; padding:8px 14px; cursor:pointer; }
-    .center { text-align:center; }
-
-    /* API chip (inlined fallback) */
-    #api-base-chip {
-      position: fixed; right: 10px; bottom: 10px; z-index: 9999;
-      padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(0,0,0,0.35); color: white; font-size: 12px; cursor: pointer; backdrop-filter: blur(4px);
-    }
+    h1{font-weight:800;font-size:40px;letter-spacing:-.02em;margin:0 0 16px}
+    p.sub{color:var(--muted);margin:0 0 28px}
+    .cta{background:var(--btn);color:var(--btn-text);border:0;border-radius:14px;padding:14px 22px;font-weight:700;cursor:pointer}
+    /* modal */
+    .overlay{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;padding:24px}
+    .overlay.show{display:flex}
+    .modal{width:min(920px,100%);background:var(--card);border-radius:16px;box-shadow:0 18px 60px #000a;border:1px solid #1a2736;position:relative}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #1a2736}
+    .modal-title{font-weight:800}
+    .modal-body{padding:18px}
+    .close{background:transparent;border:0;color:var(--muted);font-size:22px;cursor:pointer}
+    .row{display:flex;gap:18px;flex-wrap:wrap}
+    .col{flex:1 1 380px}
+    .card{background:#0f1520;border:1px solid #1a2736;border-radius:12px;padding:14px}
+    .company-line{display:flex;align-items:center;gap:12px;justify-content:center;background:#0f1622;border:1px solid #1a2736;border-radius:12px;padding:16px;min-height:80px}
+    .mini{color:var(--muted);font-size:13px}
+    a.link{color:var(--primary);text-decoration:none}
+    .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .chip{border:1px solid var(--chip-border);background:var(--chip);border-radius:999px;padding:6px 10px;font-size:13px;cursor:pointer}
+    .chip.selected{outline:2px solid var(--accent);outline-offset:0}
+    .field{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+    .field input{background:#0d131d;color:var(--text);border:1px solid #1a2736;border-radius:10px;padding:10px 12px}
+    .help{color:var(--muted);font-size:12px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .slider-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;margin:8px 0}
+    input[type=range]{accent-color:var(--slider);width:100%}
+    .btn-row{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+    .btn{background:var(--btn);color:var(--btn-text);border:0;border-radius:12px;padding:10px 16px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#233043;color:#cfe7ff}
+    .pill{background:#123042;color:#9cd6ff;border-radius:999px;padding:6px 10px;font-size:12px}
+    .toolbar{display:flex;align-items:center;gap:10px}
+    .gear{color:var(--muted);font-size:18px;cursor:pointer}
+    .error{color:var(--danger)}
+    .center{display:flex;justify-content:center}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <section class="hero">
-      <h1>Find real packaging buyers.</h1>
-      <p>Laser-tuned leads for suppliers & converters — fast, token-light, and budget-smart.</p>
-      <button id="openOnboarding" class="cta">Get qualified leads free</button>
-    </section>
+
+  <div class="hero">
+    <h1>Find real packaging buyers</h1>
+    <p class="sub">Laser-targeted leads, tuned to your strengths. Start free.</p>
+    <button class="cta" id="openCta">Get qualified leads free</button>
   </div>
 
-  <!-- Onboarding modal -->
-  <div id="backdrop" class="backdrop" role="dialog" aria-modal="true" aria-labelledby="obTitle">
-    <div class="modal">
-      <div class="modal-hd">
-        <h3 id="obTitle">Get set up in 60 seconds</h3>
-        <button class="x" id="closeOnboarding" aria-label="Close">×</button>
+  <div class="overlay" id="overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <div class="toolbar">
+          <div class="modal-title">Get set up in 60 seconds</div>
+          <span id="envBadge" class="pill" style="display:none"></span>
+        </div>
+        <div class="toolbar">
+          <a id="setApi" class="gear" title="Set API base">⚙️</a>
+          <button class="close" id="closeBtn" aria-label="Close">×</button>
+        </div>
       </div>
-      <div class="modal-bd">
-        <!-- STEP 1 -->
-        <div id="step1" class="step">
-          <div class="panel">
-            <div class="section-ttl">Who are you?</div>
-            <div class="row">
-              <div class="col">
-                <div class="pill" data-role="supplier" tabindex="0" aria-pressed="true">
-                  <div>
-                    <div style="font-weight:700">I sell packaging (Supplier)</div>
-                    <div class="hint">
-                      You’ll get buyer leads tuned to your strengths.<br/>
-                      <em>Examples:</em> manufacturers, custom shops, converters, wholesalers, distributors, label &amp; box producers.
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col">
-                <div class="pill" data-role="buyer" tabindex="0" aria-pressed="false">
-                  <div>
-                    <div style="font-weight:700">I buy packaging (Buyer)</div>
-                    <div class="hint">
-                      We’re prioritizing suppliers. Buyers can browse too (limited).<br/>
-                      <em>Examples:</em> brands &amp; retailers, DTC/e-commerce, co-packers, CPG, cosmetics, beverage, food.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <div class="modal-body">
+        <!-- Step 3 only (you already tried the first two); we render summary + advanced -->
+        <div class="card" id="summaryCard">
+          <div class="company-line" id="companyLine">
+            <img id="favicon" src="" alt="" width="28" height="28" style="border-radius:6px;display:none">
+            <div id="oneLiner">your-company <b>— fetching summary…</b></div>
           </div>
-        </div>
-
-        <!-- STEP 2 -->
-        <div id="step2" class="step" style="display:none">
-          <div class="panel">
-            <div class="grid2">
-              <div class="field">
-                <label>Your name</label>
-                <input id="name" class="input" placeholder="Jane Smith" autocomplete="name" />
-              </div>
-              <div class="field">
-                <label>Business email *</label>
-                <input id="email" class="input" placeholder="you@yourcompany.com" autocomplete="email" />
-              </div>
-              <div class="field">
-                <label>Phone (required for alerts) *</label>
-                <input id="phone" class="input" inputmode="tel" placeholder="+1 555 123 4567" autocomplete="tel" />
-                <div class="hint">Country code helps us personalize geography (e.g., “+1” for U.S.). Testing mode: verification skipped.</div>
-              </div>
-              <div class="field">
-                <label>Website / Domain (auto from email)</label>
-                <input id="domain" class="input" placeholder="yourcompany.com" autocomplete="url" />
-              </div>
-            </div>
+          <div class="center mini" style="margin-top:8px;">
+            <a href="#" class="link" id="refreshLink">Refresh from website</a>
+            <span class="mini" id="fetchMsg" style="margin-left:8px;"></span>
           </div>
-        </div>
 
-        <!-- STEP 3 -->
-        <div id="step3" class="step" style="display:none">
-          <div class="panel">
-            <div class="headline">
-              <div class="fav"><img id="fav" alt="favicon" /></div>
-              <div id="oneLiner" style="font-weight:700">your-company <span style="color:#9fb0c2">— click “Refresh from website”.</span></div>
+          <div class="center" style="margin:14px 0;">
+            <button class="btn secondary" id="advToggle"><span id="advLabel">Show</span> advanced ▾</button>
+          </div>
+
+          <div id="advanced" style="display:none">
+            <div class="mini center" style="margin-bottom:8px;">Optional: refine ranking and add product-specific details.</div>
+            <div class="grid">
+              <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <b>General tuning</b>
+                  <label class="mini"><input type="checkbox" id="aiGeneral"> Let AI decide</label>
+                </div>
+                <div id="sliders"></div>
+              </div>
+              <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <b>Product signals (from your site)</b>
+                  <label class="mini"><input type="checkbox" id="aiProduct"> Let AI decide</label>
+                </div>
+                <div class="mini">Tap to select. We’ll use these as focus tags.</div>
+                <div class="chips" id="productChips"></div>
+              </div>
             </div>
-            <div class="center"><a id="refreshLink" href="#">Refresh from website</a></div>
 
-            <div class="adv-toggle"><button id="advBtn" class="adv-btn">Show advanced ▾</button></div>
-            <div id="advanced" style="display:none">
-              <div class="subtitle">Optional: refine ranking and add product-specific details.</div>
+            <div class="card" style="margin-top:14px">
+              <b>Buyer targeting</b>
               <div class="row">
-                <div class="col panel">
-                  <div class="section-ttl">General tuning</div>
-                  <div style="display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:6px;">
-                    <label class="hint" style="display:flex; align-items:center; gap:8px;">
-                      <input id="aiGeneral" type="checkbox" /> Let AI decide
-                    </label>
+                <div class="col">
+                  <div class="field">
+                    <label>Find buyers near…</label>
+                    <input id="cityInput" placeholder="e.g., Chicago" autocomplete="address-level2">
+                    <div class="chips" id="cityChips"></div>
+                    <div class="help">We’ll boost leads near this city.</div>
                   </div>
-                  <div class="sl"><span>📍 Prioritize nearby buyers</span><input type="range" min="0" max="10" value="6" class="rg" /><span class="v">6</span></div>
-                  <div class="sl"><span>🛒 Prefer e-commerce sites</span><input type="range" min="0" max="10" value="7" class="rg" /><span class="v">7</span></div>
-                  <div class="sl"><span>🏪 Prefer retail brands</span><input type="range" min="0" max="10" value="5" class="rg" /><span class="v">5</span></div>
-                  <div class="sl"><span>📦 Prefer wholesalers / distributors</span><input type="range" min="0" max="10" value="6" class="rg" /><span class="v">6</span></div>
-                  <div class="sl"><span>🏭 Prefer mid-size companies</span><input type="range" min="0" max="10" value="6" class="rg" /><span class="v">6</span></div>
-                  <div class="sl"><span>🏢 De-prioritize giant enterprises</span><input type="range" min="0" max="10" value="7" class="rg" /><span class="v">7</span></div>
                 </div>
-                <div class="col panel">
-                  <div class="section-ttl">Product signals (from your site)</div>
-                  <div style="display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:6px;">
-                    <label class="hint" style="display:flex; align-items:center; gap:8px;">
-                      <input id="aiProducts" type="checkbox" /> Let AI decide
-                    </label>
-                  </div>
-                  <div id="productChips" class="chips" aria-live="polite">
-                    <!-- chips injected -->
+                <div class="col">
+                  <div class="field">
+                    <label>Buyers in these sectors</label>
+                    <input id="sectorInput" placeholder="e.g., food, beverage, cosmetics" autocomplete="off">
+                    <div class="chips" id="sectorChips"></div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div class="panel" style="margin-top:14px">
-                <div class="section-ttl">Buyer targeting</div>
-                <div class="grid2">
-                  <div>
-                    <div class="field">
-                      <label>Find buyers near…</label>
-                      <input id="city" class="input" placeholder="e.g., Chicago" />
-                      <div id="cityChips" class="chips" style="margin-top:8px"></div>
-                      <div class="hint">We’ll boost leads near this city.</div>
-                    </div>
-                  </div>
-                  <div>
-                    <div class="field">
-                      <label>Buyers in these sectors</label>
-                      <input id="sectors" class="input" placeholder="e.g., food, beverage, cosmetics" />
-                      <div id="sectorChips" class="chips" style="margin-top:8px"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div><!-- /advanced -->
+            <div class="btn-row">
+              <button class="btn secondary" id="backBtn">Back</button>
+              <button class="btn" id="nextBtn">Next</button>
+            </div>
           </div>
+
         </div>
-      </div>
-      <div class="footer">
-        <button id="backBtn" class="btn">Back</button>
-        <button id="nextBtn" class="btn primary">Next</button>
       </div>
     </div>
   </div>
 
-  <!-- Optional helper (safe to include; page still works if the file is absent) -->
-  <script src="fe-utils.js"></script>
+<script>
+/* --------------------- API base resolver --------------------- */
+async function resolveApiBase(){
+  const qs = new URLSearchParams(location.search);
+  const fromQS = qs.get("api");
+  if(fromQS){
+    localStorage.setItem("apiBase", fromQS);
+  }
+  const candidates = [
+    localStorage.getItem("apiBase") || "",
+    (typeof window.API_BASE === "string" ? window.API_BASE : ""),
+    location.origin // works only if page is hosted with API
+  ].filter(Boolean);
 
-  <!-- Fallback API base + all onboarding logic -->
-  <script>
-    // ---- API base fallback (used if fe-utils.js isn't present) ----
-    (function () {
-      if (window.API_BASE && window.apiGet && window.apiPost) return;
-
-      const LS_KEY = "apiBase";
-      const QS_KEY = "api";
-      function norm(u){ if(!u) return ""; try{
-        if(u.startsWith("/")) return u.replace(/\/+$/,"");
-        const url=new URL(u); url.pathname=url.pathname.replace(/\/+$/,""); return url.toString();
-      }catch{ return "";}}
-      function resolveBase(){
-        const sp=new URLSearchParams(location.search); const qs=sp.get(QS_KEY);
-        if(qs){ const v=norm(qs); if(v) localStorage.setItem(LS_KEY, v);
-          sp.delete(QS_KEY); const clean=location.pathname+(sp.toString()?"?"+sp.toString():"")+location.hash;
-          history.replaceState({}, "", clean);
-        }
-        const saved=norm(localStorage.getItem(LS_KEY)||"");
-        return saved || "/api";
+  for(const base of candidates){
+    try{
+      const r = await fetch(base.replace(/\/$/,"") + "/healthz", {mode:"cors"});
+      const t = await r.text().catch(()=> "");
+      if(r.ok && /ok/i.test(t)){
+        return base.replace(/\/$/,"");
       }
-      function setBase(b){ const v=norm(b); if(!v) return; window.API_BASE=v; localStorage.setItem(LS_KEY,v); showChip(true); }
-      async function apiFetch(path,opts={}){ const base=window.API_BASE||resolveBase();
-        window.API_BASE=base;
-        const url=(/^https?:\/\//i.test(base)?base:base)+path;
-        const res=await fetch(url,{headers:{'Content-Type':'application/json'},...opts});
-        return res;
+    }catch(_){}
+  }
+  throw new Error("NO_API_BASE");
+}
+
+function setApiBaseInteractively(){
+  const v = prompt("Enter API base URL (your Northflank service URL).\nExample: https://animated-cellar--xxxxx.code.run");
+  if(v && /^https?:\/\//i.test(v)){
+    localStorage.setItem("apiBase", v.replace(/\/$/,""));
+    location.reload();
+  }
+}
+/* --------------------- UI wiring --------------------- */
+const $ = (s)=>document.querySelector(s);
+const overlay = $("#overlay");
+$("#openCta").onclick = ()=>{ overlay.classList.add("show"); initStep3(); };
+$("#closeBtn").onclick = ()=> overlay.classList.remove("show");
+$("#advToggle").onclick = ()=>{
+  const adv = $("#advanced");
+  adv.style.display = adv.style.display === "none" ? "block" : "none";
+  $("#advLabel").textContent = adv.style.display === "none" ? "Show" : "Hide";
+};
+$("#setApi").onclick = setApiBaseInteractively;
+
+function chip(label, selected=false, onToggle=()=>{}){
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = "chip" + (selected?" selected":"");
+  el.textContent = label;
+  el.onclick = ()=>{
+    el.classList.toggle("selected");
+    onToggle(el.classList.contains("selected"));
+  };
+  return el;
+}
+function sliderRow(label, val=5, min=0, max=10){
+  const row = document.createElement("div");
+  row.className = "slider-row";
+  const name = document.createElement("div"); name.textContent = label;
+  const input = document.createElement("input"); input.type="range"; input.min=min; input.max=max; input.value=val;
+  const out = document.createElement("div"); out.textContent = val;
+  input.oninput = ()=> out.textContent = input.value;
+  row.append(name, input, out);
+  return row;
+}
+/* --------------------- Step 3: fetch summary --------------------- */
+let API_BASE = ""; // resolved at runtime
+let currentHost = "";
+let currentEmail = "";
+// Pull from prior step (if you used the earlier steps these will be set in localStorage)
+(function seedFromStorage(){
+  const saved = JSON.parse(localStorage.getItem("onboard")||"{}");
+  if(saved.website) currentHost = saved.website.replace(/^https?:\/\//,"").replace(/\/.*$/,"");
+  if(saved.email) currentEmail = saved.email;
+})();
+
+async function fetchFavicon(host){
+  const url = `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&size=64&url=https://${encodeURIComponent(host)}`;
+  try{
+    const img = $("#favicon");
+    img.src = url;
+    img.style.display = "block";
+  }catch(_){}
+}
+
+function showOneLiner(text, host){
+  $("#oneLiner").innerHTML = `<b>${host || "your-company"}</b> — ${text}`;
+}
+
+async function callSummary(host, email){
+  const u = new URL(API_BASE + "/api/classify/summary");
+  u.searchParams.set("host", host);
+  if(email) u.searchParams.set("email", email);
+  const r = await fetch(u, {mode:"cors"});
+  if(r.status === 404){
+    // fallback to /api/classify
+    const u2 = new URL(API_BASE + "/api/classify");
+    u2.searchParams.set("host", host);
+    if(email) u2.searchParams.set("email", email);
+    const r2 = await fetch(u2, {mode:"cors"});
+    const j2 = await r2.json();
+    return { ok: !!j2.ok, summary: "", tags: [], sectors: [], cities: [], raw:j2, cached:j2.cached };
+  }
+  const j = await r.json();
+  return j;
+}
+
+async function initStep3(){
+  $("#fetchMsg").textContent = "";
+  $("#productChips").innerHTML = "";
+  $("#sectorChips").innerHTML = "";
+  $("#cityChips").innerHTML = "";
+  $("#sliders").innerHTML = "";
+  $("#advanced").style.display = "none";
+  $("#advLabel").textContent = "Show";
+
+  try{
+    API_BASE = await resolveApiBase();
+    $("#envBadge").style.display = "inline-block";
+    $("#envBadge").textContent = new URL(API_BASE).host;
+  }catch(e){
+    $("#fetchMsg").innerHTML = `<span class="error">Set API (click the gear).</span>`;
+    showOneLiner("unable to connect — API base is not set.", currentHost||"your-company");
+    return;
+  }
+
+  // if user came straight here, ask minimal host/email
+  if(!currentHost){
+    const h = prompt("Your website domain (e.g., peakpackaging.com):","");
+    if(!h){ showOneLiner("please enter your website (click refresh).", "your-company"); return; }
+    currentHost = String(h).trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
+  }
+  fetchFavicon(currentHost);
+  showOneLiner("fetching summary…", currentHost);
+
+  async function doFetch(){
+    $("#fetchMsg").textContent = "";
+    try{
+      const data = await callSummary(currentHost, currentEmail);
+      if(!data || data.ok === false){
+        $("#fetchMsg").innerHTML = `<span class="error">Network error while reading your site.</span>`;
+        showOneLiner("network error while reading your site.", currentHost);
+        return;
       }
-      async function apiGet(path){ const r=await apiFetch(path,{method:'GET'}); return r.ok? r.json(): Promise.reject({status:r.status,text:await r.text()}); }
-      async function apiPost(path, body){ const r=await apiFetch(path,{method:'POST', body: JSON.stringify(body||{})}); return r.ok? r.json(): Promise.reject({status:r.status,text:await r.text()}); }
-      function showChip(force){
-        if(document.getElementById("api-base-chip") && !force) return;
-        const chip=document.getElementById("api-base-chip")||document.createElement("button");
-        chip.id="api-base-chip"; chip.textContent="API";
-        chip.title=`API base: ${window.API_BASE||resolveBase()}\nClick to change`;
-        chip.onclick=()=>{ const v=prompt("Set API base (end with /api):", window.API_BASE||resolveBase()); if(v) setBase(v); };
-        if(!chip.parentNode) document.body.appendChild(chip);
-      }
-      // Expose
-      window.API_BASE = resolveBase();
-      window.apiGet = apiGet; window.apiPost = apiPost; window.setApiBase = setBase;
-      // If served from GitHub Pages, help the user set an absolute API
-      if(/github\.io$/i.test(location.hostname) && !/^https?:\/\//.test(window.API_BASE)){ showChip(); }
-    })();
+      const summary = data.summary || "sells packaging to brands.";
+      showOneLiner(summary, currentHost);
 
-    // ---- Onboarding logic ----
-    const qs = (s, el=document) => el.querySelector(s);
-    const qsa = (s, el=document) => Array.from(el.querySelectorAll(s));
+      // Product tags
+      const tags = (data.tags || []).slice(0, 14);
+      const prodWrap = $("#productChips");
+      tags.forEach(t => prodWrap.append(chip(t, true)));
 
-    const backdrop = qs('#backdrop');
-    const openBtn = qs('#openOnboarding');
-    const closeBtn = qs('#closeOnboarding');
-    const steps = [qs('#step1'), qs('#step2'), qs('#step3')];
-    const backBtn = qs('#backBtn'), nextBtn = qs('#nextBtn');
+      // Sectors chips
+      const sectors = (data.sectors || ["food","beverage","cosmetics","electronics","apparel"]).slice(0,10);
+      const sectWrap = $("#sectorChips");
+      sectors.forEach(t => sectWrap.append(chip(t)));
 
-    let step = 0;
-    let role = 'supplier';
-    let touchedDomain = false;
-    let classifyCache = null;
+      // City chips
+      const cities = (data.cities || ["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"]).slice(0,10);
+      const cityWrap = $("#cityChips");
+      cities.forEach(c => cityWrap.append(chip(c)));
 
-    function show(i){
-      step = Math.max(0, Math.min(2, i));
-      steps.forEach((s,idx)=> s.style.display = (idx===step?'block':'none'));
-      backBtn.disabled = step===0;
-      nextBtn.textContent = step===2 ? 'Next' : 'Next';
+      // Sliders
+      const s = $("#sliders");
+      const sliderList = [
+        "Prioritize nearby buyers",
+        "Prefer e-commerce sites",
+        "Prefer retail brands",
+        "Prefer wholesalers / distributors",
+        "Prefer mid-size companies",
+        "De-prioritize giant enterprises"
+      ];
+      sliderList.forEach((name,i)=> s.append(sliderRow(name, (data.tuning && data.tuning[i]) || [6,7,5,6,6,7][i])));
+
+    }catch(err){
+      console.error(err);
+      $("#fetchMsg").innerHTML = `<span class="error">Network error while reading your site.</span>`;
+      showOneLiner("network error while reading your site.", currentHost);
     }
+  }
 
-    function open(){
-      backdrop.classList.add('on'); document.body.style.overflow='hidden'; show(0);
-      // default selection
-      qsa('.pill').forEach(p => p.classList.toggle('on', p.dataset.role==='supplier'));
-      setTimeout(()=>qs('#name').focus(), 50);
-    }
-    function close(){
-      backdrop.classList.remove('on'); document.body.style.overflow='auto';
-    }
+  $("#refreshLink").onclick = (e)=>{ e.preventDefault(); doFetch(); };
+  $("#nextBtn").onclick = ()=> alert("Next → free panel (hook up once ready).");
+  $("#backBtn").onclick = ()=> overlay.classList.remove("show");
 
-    openBtn.addEventListener('click', open);
-    closeBtn.addEventListener('click', close);
+  await doFetch();
+}
 
-    // Step 1 role selection
-    qsa('.pill').forEach(p => {
-      p.addEventListener('click', () => {
-        role = p.dataset.role;
-        qsa('.pill').forEach(x => x.classList.toggle('on', x===p));
-      });
-      p.addEventListener('keydown', e => { if(e.key==='Enter' || e.key===' ') p.click(); });
-    });
-
-    backBtn.addEventListener('click', ()=> show(step-1));
-    nextBtn.addEventListener('click', async ()=>{
-      if(step===0) show(1);
-      else if(step===1) {
-        // minimal required checks
-        const email = qs('#email').value.trim();
-        const phone = qs('#phone').value.trim();
-        const domain = hostFromEmail(email) || qs('#domain').value.trim();
-        if(!email || !phone || !domain) { alert('Please enter business email, phone, and website/domain.'); return; }
-        qs('#domain').value = domain;
-
-        // Preload favicon + skeleton headline
-        updateFavicon(domain);
-        setOneLinerSkeleton(domain);
-
-        show(2);
-      } else if(step===2) {
-        // On final step we’ll move to free panel later; for now do nothing.
-        alert('Saved! (Preview build) — next we’ll wire this button to your free panel.');
-      }
-    });
-
-    // Step 2: derive domain from email live (also supports autofill)
-    const emailEl = qs('#email'), domainEl = qs('#domain');
-    function hostFromEmail(email){
-      const m = String(email||'').toLowerCase().match(/@([a-z0-9.-]+)/);
-      return m?.[1];
-    }
-    function syncDomain(){
-      if(touchedDomain) return;
-      const h = hostFromEmail(emailEl.value);
-      if(h) domainEl.value = h;
-    }
-    emailEl.addEventListener('input', syncDomain);
-    emailEl.addEventListener('change', syncDomain);
-    domainEl.addEventListener('input', ()=> touchedDomain=true);
-
-    // Step 3 controls
-    const advBtn = qs('#advBtn'), adv = qs('#advanced');
-    advBtn.addEventListener('click', ()=>{
-      const on = adv.style.display !== 'none';
-      adv.style.display = on ? 'none' : 'block';
-      advBtn.textContent = on ? 'Show advanced ▾' : 'Hide advanced ▲';
-    });
-
-    // sliders: live value
-    qsa('.rg').forEach(r => {
-      const v = r.parentElement.querySelector('.v');
-      const upd = ()=> v.textContent = r.value;
-      r.addEventListener('input', upd); upd();
-    });
-
-    // “Let AI decide” UX: dim or enable sliders/chips
-    function toggleGeneralAI(){
-      const on = qs('#aiGeneral').checked;
-      qsa('#step3 .col:first-child input[type=range]').forEach(r=>{
-        r.disabled = on; r.style.opacity = on? .5 : 1;
-      });
-    }
-    function toggleProductsAI(){
-      const on = qs('#aiProducts').checked;
-      qsa('#productChips .chip').forEach(c=>{
-        c.setAttribute('aria-disabled', on?'true':'false');
-        c.style.opacity = on? .5 : 1;
-      });
-    }
-    qs('#aiGeneral').addEventListener('change', toggleGeneralAI);
-    qs('#aiProducts').addEventListener('change', toggleProductsAI);
-
-    // chips helpers
-    function makeChip(txt){
-      const el = document.createElement('button');
-      el.className='chip'; el.type='button'; el.textContent=txt;
-      el.addEventListener('click', ()=> el.classList.toggle('on'));
-      return el;
-    }
-    function fillChips(id, arr){ const box = qs(id); box.innerHTML=''; arr.forEach(t=> box.appendChild(makeChip(t))); }
-    fillChips('#productChips', ['boxes','labels','cartons','pouches','bottles','jars','tape','corrugate']);
-    fillChips('#cityChips', ['Chicago','New York','Los Angeles','Dallas','Atlanta','Miami'].map(s=>'📍 '+s));
-    fillChips('#sectorChips', ['food','beverage','cosmetics','supplements','electronics','apparel']);
-
-    // When user clicks a suggestion chip under inputs, toggle into input field
-    function chipIntoInput(chipsBoxSel, inputSel, prefix=''){
-      qs(chipsBoxSel).addEventListener('click', (e)=>{
-        const c = e.target.closest('.chip'); if(!c) return;
-        c.classList.toggle('on');
-        const txt = c.textContent.replace(/^📍\s*/,'');
-        const input = qs(inputSel);
-        const vals = input.value.split(',').map(s=>s.trim()).filter(Boolean);
-        const i = vals.indexOf(txt);
-        if(c.classList.contains('on')) { if(i===-1) vals.push(txt); }
-        else { if(i>-1) vals.splice(i,1); }
-        input.value = vals.join(', ');
-      });
-    }
-    chipIntoInput('#cityChips', '#city');
-    chipIntoInput('#sectorChips', '#sectors');
-
-    // Step 3 headline + favicon + refresh
-    const fav = qs('#fav'), one = qs('#oneLiner'), rlink = qs('#refreshLink');
-    function updateFavicon(host){
-      fav.src = `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${encodeURIComponent(host)}&size=64`;
-    }
-    function setOneLinerSkeleton(host){
-      one.innerHTML = `<strong>${host}</strong> <span style="color:#9fb0c2">— fetching summary…</span>`;
-    }
-    function setOneLiner(host, role){
-      const verb = role === 'packaging_buyer' ? 'buys packaging' :
-                   role === 'packaging_supplier' ? 'sells packaging' : 'does business';
-      one.innerHTML = `<strong>${host}</strong> ${verb} <span style="color:#9fb0c2">to brands</span>.`;
-    }
-    function setOneLinerError(host, msg){
-      one.innerHTML = `<strong>${host}</strong> <span style="color:#efaaaa">— ${msg || 'network error while reading your site.'}</span>`;
-    }
-
-    async function doRefresh(){
-      const host = (qs('#domain').value || '').trim();
-      const email = (qs('#email').value || '').trim();
-      if(!host){ alert('Enter your website / domain first.'); return; }
-      updateFavicon(host); setOneLinerSkeleton(host);
-
-      try {
-        const res = await apiGet(`/classify?host=${encodeURIComponent(host)}&email=${encodeURIComponent(email)}`);
-        classifyCache = res;
-        if(res && res.ok) {
-          setOneLiner(res.host || host, res.role);
-          // If backend doesn’t return tags yet, keep defaults; else merge
-          // (future: res.productTags, res.sectorHints)
-          // no-op for now
-        } else {
-          const msg = (res && res.error==='quota') ? 'daily quota reached.' :
-                      (res && res.detail) || 'network error while reading your site.';
-          setOneLinerError(host, msg);
-        }
-      } catch (e) {
-        console.warn('classify error', e);
-        setOneLinerError(host);
-      }
-    }
-
-    rlink.addEventListener('click', (e)=>{ e.preventDefault(); doRefresh(); });
-
-    // Open modal if user appends ?open (handy for testing)
-    if(new URLSearchParams(location.search).has('open')) open();
-  </script>
+// handy if you want to pre-seed from step 2 later:
+window.seedOnboard = (email, website)=>{
+  localStorage.setItem("onboard", JSON.stringify({email, website}));
+};
+</script>
 </body>
 </html>
