@@ -1,9 +1,9 @@
 // src/shared/env.ts
 //
-// Centralized, typed environment config + a few helpers.
-// Keeps defaults safe/cheap for Free; everything is overridable via env.
-//
-// Referenced by: routes (leads, places, classify), guards, health, etc.
+// Centralized, typed environment config + helpers.
+// This version stays compatible with older routes:
+//  - CFG.allowTiers is a Set<"A"|"B"|"C"> so code can call .has(...)
+//  - capResults accepts ANY plan-like (string | false | undefined) and coerces
 
 type NodeEnv = "development" | "production" | "test";
 
@@ -12,21 +12,14 @@ function envStr(name: string, fallback = ""): string {
   return (v === undefined || v === null || v === "") ? fallback : String(v);
 }
 function envInt(name: string, fallback: number): number {
-  const v = Number(envStr(name, ""));
-  return Number.isFinite(v) ? v : fallback;
-}
-function envBool(name: string, fallback: boolean): boolean {
-  const v = envStr(name, "").toLowerCase().trim();
-  if (v === "true" || v === "1" || v === "yes") return true;
-  if (v === "false" || v === "0" || v === "no") return false;
-  return fallback;
+  const n = Number(envStr(name, ""));
+  return Number.isFinite(n) ? n : fallback;
 }
 function parseCsv(input: string): string[] {
-  return input
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
+  return input.split(",").map(s => s.trim()).filter(Boolean);
 }
+
+export type Plan = "free" | "pro" | "ultimate";
 
 export interface AppConfig {
   // server
@@ -36,8 +29,9 @@ export interface AppConfig {
   // cors
   allowOrigins: string[];
 
-  // product/tier gates
-  allowTiers: "A" | "AB" | "ABC" | "B" | "BC" | "C";
+  // tiers
+  allowTiers: Set<"A" | "B" | "C">;        // NOTE: Set, for legacy code using .has()
+  allowTiersCode: "A" | "AB" | "ABC" | "B" | "BC" | "C";
 
   // global caps / cache
   cacheTtlS: number;
@@ -58,16 +52,25 @@ export interface AppConfig {
   geminiApiKey?: string;
 }
 
-// ---- derive config from process.env with safe defaults ----
+// -------- derive config --------
 const NODE_ENV = (envStr("NODE_ENV", "production") as NodeEnv);
 
-const ALLOW_ORIGINS = parseCsv(envStr("ALLOW_ORIGINS", "")); // empty = allow same-origin only (handled by CORS layer)
+const ALLOW_ORIGINS = parseCsv(envStr("ALLOW_ORIGINS", "")); // empty => allow same-origin only
 
 const ALLOW_TIERS_RAW = envStr("ALLOW_TIERS", "ABC").toUpperCase();
-const ALLOW_TIERS: AppConfig["allowTiers"] =
+const ALLOW_TIERS_CODE: AppConfig["allowTiersCode"] =
   (["A","AB","ABC","B","BC","C"] as const).includes(ALLOW_TIERS_RAW as any)
     ? (ALLOW_TIERS_RAW as any)
     : "ABC";
+
+// convert code -> Set
+function codeToSet(code: AppConfig["allowTiersCode"]): Set<"A"|"B"|"C"> {
+  const s = new Set<"A"|"B"|"C">();
+  if (code.includes("A")) s.add("A");
+  if (code.includes("B")) s.add("B");
+  if (code.includes("C")) s.add("C");
+  return s;
+}
 
 export const CFG: AppConfig = {
   // server
@@ -77,11 +80,12 @@ export const CFG: AppConfig = {
   // cors
   allowOrigins: ALLOW_ORIGINS,
 
-  // product/tier gates
-  allowTiers: ALLOW_TIERS,
+  // tiers
+  allowTiers: codeToSet(ALLOW_TIERS_CODE),
+  allowTiersCode: ALLOW_TIERS_CODE,
 
   // global caps / cache
-  cacheTtlS: envInt("CACHE_TTL_S", 300),              // 5m default for general caches
+  cacheTtlS: envInt("CACHE_TTL_S", 300),              // 5m default
   maxResultsFree: envInt("MAX_RESULTS_FREE", 25),
   maxResultsPro: envInt("MAX_RESULTS_PRO", 100),
   freeClicksPerDay: envInt("FREE_CLICKS_PER_DAY", 50),
@@ -99,35 +103,33 @@ export const CFG: AppConfig = {
   geminiApiKey: envStr("GEMINI_API_KEY", "") || undefined,
 };
 
-// ---- helpers used by routes/guards ----
+// -------- helpers --------
 
 export function isOriginAllowed(origin?: string): boolean {
-  if (!origin) return true; // same-origin/XHR without Origin header
+  if (!origin) return true;                 // same-origin/XHR without Origin header
   if (!CFG.allowOrigins.length) return true; // permissive until configured
   return CFG.allowOrigins.some(o => origin.startsWith(o));
 }
 
-export type Plan = "free" | "pro" | "ultimate";
-export function capResults(plan: Plan, requested?: number): number {
+// Accept anything; coerce to a plan. Legacy routes sometimes pass `false`.
+export function capResults(planLike: any, requested?: number): number {
+  const plan = (typeof planLike === "string" ? planLike.toLowerCase() : "") as Plan | "";
   const req = Math.max(0, Number(requested ?? 0));
-  if (plan === "free") return Math.min(req || CFG.maxResultsFree, CFG.maxResultsFree);
-  if (plan === "pro") return Math.min(req || CFG.maxResultsPro, CFG.maxResultsPro);
-  // ultimate currently same as pro (can diverge later)
-  return Math.min(req || CFG.maxResultsPro, CFG.maxResultsPro);
+  if (plan === "pro" || plan === "ultimate") {
+    return Math.min(req || CFG.maxResultsPro, CFG.maxResultsPro);
+  }
+  // default = free
+  return Math.min(req || CFG.maxResultsFree, CFG.maxResultsFree);
 }
 
 export function isTierAllowed(tier: "A" | "B" | "C"): boolean {
-  const s = CFG.allowTiers;
-  if (s === "ABC") return true;
-  if (s === "AB") return tier !== "C";
-  if (s === "BC") return tier !== "A";
-  return s === tier;
+  return CFG.allowTiers.has(tier);
 }
 
 export function summarizeForHealth() {
   return {
     nodeEnv: CFG.nodeEnv,
-    allowTiers: CFG.allowTiers,
+    allowTiers: Array.from(CFG.allowTiers).join(""),
     allowOrigins: CFG.allowOrigins.length,
     hasPlacesKey: Boolean(CFG.googlePlacesApiKey),
     classifyDailyLimit: CFG.classifyDailyLimit,
