@@ -24,7 +24,7 @@
     .btn.alt{background:#1a2233;color:var(--fg);box-shadow:none}
     .note{font-size:13px;color:var(--muted)}
 
-    /* Modal overlay with subtle blur to keep context */
+    /* Modal overlay with subtle blur */
     .modal-backdrop{position:fixed;inset:0;background:rgba(6,10,18,.58);backdrop-filter:blur(4px);
       display:none;align-items:flex-start;justify-content:center;z-index:50}
     .modal{width:min(920px,92vw);margin:6vh 0;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;
@@ -259,7 +259,7 @@
     };
 
     const mb = qs("#mb");
-    const openBtn = qs("#open-onboarding");
+    const openBtn = qs("#open-onboarding");   // ← single declaration (was duplicated before)
     const closeBtn = qs("#ob-x");
     const backBtn = qs("#back");
     const nextBtn = qs("#next");
@@ -305,7 +305,7 @@
         setLogo(inferred);
         summaryRefresh();
       }
-      if (!email){ // if user cleared email and didn't manually edit domain, clear domain too
+      if (!email){
         if (!state.domainEdited){ domainEl.value = ""; state.domain=""; setLogo(""); summaryRefresh(); }
       }
     }
@@ -354,7 +354,6 @@
         syncEmailDerivedDomain();
       }
     }, 600);
-    // Also do an initial sync after load
     setTimeout(()=>{ state.email=emailEl.value.trim(); syncEmailDerivedDomain(); }, 350);
 
     /* ---------- Step 3 ---------- */
@@ -394,7 +393,6 @@
         const res = await fetch(`/api/classify?host=${encodeURIComponent(state.domain)}`);
         const data = await res.json();
         if (data && data.ok !== false) {
-          // basic mapping -> suggestions
           const ev = (data.evidence||[]).join(" ").toLowerCase();
           const sugg = new Set();
           ["wholesale","distributor","manufacturer","ecommerce","retail","private label","copack","co-pack","bottle","jar","label","carton","corrugate","pouch"].forEach(k=>{
@@ -403,7 +401,6 @@
           renderTagSuggestions([...sugg]);
           const who = (data.role==="packaging_supplier") ? "sells" : (data.role==="packaging_buyer" ? "buys" : "does");
           qs("#sum-verb").textContent = who;
-          // If user hasn't customized token, update default text
           if (sumCompany.innerText==="your-company" || !sumCompany.innerText.trim()){ sumCompany.innerText = prettyHost(state.domain); }
         } else {
           renderTagSuggestions([]);
@@ -428,15 +425,13 @@
       });
     }
 
-    function prettyHost(h){ return (h||"").replace(/^https?:\\/\\/|^www\\./g,'').replace(/\\/$/,''); }
+    function prettyHost(h){ return (h||"").replace(/^https?:\/\/|^www\./g,'').replace(/\/$/,''); }
 
     function summaryRefresh(userEdited){
       const host = state.domain ? prettyHost(state.domain) : "your-company";
       if (!userEdited) sumCompany.innerText = sumCompany.innerText.trim() || host;
-      // where token from city
       const where = state.city ? `near ${state.city}` : "";
       if (!userEdited) sumWhere.innerText = where;
-      // what from tags (first 2) if user didn't edit
       if (!userEdited){
         const what = (state.tags && state.tags.length) ? state.tags.slice(0,2).join(", ") : "packaging";
         if (!sumWhat.innerText.trim() || sumWhat.innerText==="packaging") sumWhat.innerText = what;
@@ -444,7 +439,7 @@
       setLogo(state.domain);
     }
 
-    // Lightweight logo pull: try site favicon, then DDG icon service, else placeholder.
+    // Lightweight logo pull
     const logoEl = qs("#logo");
     function setLogo(domain){
       const d = prettyHost(domain||"");
@@ -489,7 +484,7 @@
       gateNext();
     }
 
-    const openBtn = qs("#open-onboarding");
+    // hook up buttons
     openBtn.addEventListener("click", ()=> show(1));
     closeBtn.addEventListener("click", hide);
     backBtn.addEventListener("click", ()=>{
@@ -530,7 +525,7 @@
 
     // dev helper
     const params = new URLSearchParams(location.search);
-    if (params.get("dev")==="1"){ devskip.checked=true; devskip.dispatchEvent(new Event("change")); show(1); }
+    if (params.get("dev")==="1"){ const s=qs("#devskip"); s.checked=true; s.dispatchEvent(new Event("change")); show(1); }
   })();
   </script>
 </body>
