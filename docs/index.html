@@ -1,75 +1,110 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Galactly — Find real packaging buyers</title>
+<link rel="preconnect" href="https://icons.duckduckgo.com">
 <style>
   :root{
     --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c;
     --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
     --cta:#6de1ff; --ctaText:#082433; --chip:#1d2735;
-    --chipActive:#0e3b52; --accent:#38e08f; --danger:#ff7b7b; --divider:#1c2532;
-    --edit:#0f2b3f; --editField:#163d54; --editStroke:#2e5a77;
+    --chipActive:#0e3b52; --accent:#38e08f;
+    --danger:#ff7b7b; --divider:#1c2532;
   }
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
   a{color:var(--brand);text-decoration:none}
-  button{font:inherit}
-  .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;background:radial-gradient(1200px 600px at 50% -200px,#102132 0,transparent 70%)}
-  .hero-inner{max-width:920px;text-align:center}
-  h1{font-size:clamp(32px,6vw,56px);margin:0 0 12px}
-  p.lead{color:var(--muted);margin:0 0 28px}
-  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
-  .btn.sec{background:#152333;color:#bcd1e2}
+  .hero{
+    min-height:100vh; display:grid; place-items:center; padding:4rem 1rem;
+    background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%);
+  }
+  .hero-inner{max-width:920px; text-align:center}
+  h1{font-size: clamp(32px, 6vw, 56px); margin:0 0 12px}
+  p.lead{color:var(--muted); margin:0 0 28px}
+  .btn{display:inline-flex; align-items:center; gap:.6rem; padding:12px 18px;
+       border-radius:12px; background:var(--cta); color:var(--ctaText); font-weight:700; border:none; cursor:pointer}
+  .btn .spark{filter:drop-shadow(0 2px 6px rgba(109,225,255,.55))}
   .btn:active{transform:translateY(1px)}
-  .spark{filter:drop-shadow(0 2px 6px rgba(109,225,255,.55))}
-  .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
+  /* modal */
+  .modal{position:fixed; inset:0; background:rgba(5,10,16,.55);
+         display:none; align-items:center; justify-content:center; z-index:20}
   .modal.show{display:flex}
-  .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
-  .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
-  .steps{display:flex;gap:8px;align-items:center}
-  .dot{width:8px;height:8px;border-radius:50%;background:#2a3444}
+  .card{width:min(980px,92vw); background:var(--panel); border:1px solid var(--divider);
+        border-radius:18px; box-shadow:0 30px 80px rgba(0,0,0,.45); overflow:hidden}
+  .card-hd{display:flex; align-items:center; justify-content:space-between; gap:12px;
+           padding:16px 18px; background:linear-gradient(180deg,#0f1622,#0e1520); border-bottom:1px solid var(--divider)}
+  .steps{display:flex; gap:8px; align-items:center}
+  .dot{width:8px;height:8px;border-radius:50%; background:#2a3444}
   .dot.on{background:#5bd0ff}
   .card-bd{padding:18px}
-  .scroll{max-height:70vh;overflow:auto;padding:6px 6px}
-  .row{display:flex;gap:18px;flex-wrap:wrap}
+  .scroll{max-height:70vh; overflow:auto; padding:6px 6px}
+  .row{display:flex; gap:18px; flex-wrap:wrap}
   .col{flex:1 1 0}
-  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:var(--muted);font-size:12px}
+  .pill{padding:6px 10px; border-radius:999px; background:#0d1a26; color:var(--muted); font-size:12px}
   .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
   .gear{background:transparent;border:none;color:#99b4c7;cursor:pointer}
-  .pick{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .option{background:var(--panel-2);border:1px solid var(--divider);border-radius:16px;padding:16px;cursor:pointer}
-  .option h3{margin:0 0 6px}.option p{margin:0;color:var(--muted)}.option .examples{margin-top:10px;font-size:13px;color:#a9bed0}
-  .option.active{outline:2px solid #70ff7f;box-shadow:0 0 0 6px rgba(56,224,143,.12) inset}
+
+  /* cards step 1 */
+  .pick{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  .option{background:var(--panel-2); border:1px solid var(--divider); border-radius:16px; padding:16px; cursor:pointer; position:relative}
+  .option h3{margin:0 0 6px}
+  .option p{margin:0;color:var(--muted)}
+  .option .examples{margin-top:10px; font-size:13px; color:#a9bed0}
+  .option.active{outline:2px solid #70ff7f; box-shadow:0 0 0 6px rgba(56,224,143,.12) inset}
+
+  /* inputs */
   .field{margin:10px 0}
-  label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
-  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
-  input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
-  .summary{display:flex;align-items:flex-start;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:14px 16px;border-radius:14px;margin-bottom:12px;position:relative}
-  .summary.edit{background:var(--edit);border-color:var(--editStroke)}
-  .fav{width:24px;height:24px;border-radius:6px;background:#122;display:grid;place-items:center;overflow:hidden;flex:0 0 auto}
-  .one{font-weight:700;line-height:1.35}
-  .seg{padding:2px 6px;border-radius:8px}
-  .seg[contenteditable="true"]{outline:none;border:1px dashed transparent}
-  .summary.edit .seg[contenteditable="true"]{background:var(--editField);border-color:#2e5a77}
-  .seg:empty:before{content:"—";color:#6f8aa1}
-  .subtle{color:#9ab0c0;font-size:13px}
-  .editBadge{position:absolute;top:8px;right:10px;font-size:12px;color:#9ab0c0}
-  .editBtn{background:#163246;border:1px solid var(--editStroke);color:#bfe9ff;padding:6px 10px;border-radius:9px;cursor:pointer}
-  .group{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px;margin:14px 0}
+  label{display:block; font-size:13px; color:#9abbcc; margin:0 0 6px}
+  input[type=text],input[type=email],input[type=tel]{
+    width:100%; padding:12px 12px; border-radius:12px; border:1px solid var(--divider);
+    background:#0d1520; color:var(--text); outline:none
+  }
+  input:focus{border-color:#385dff66; box-shadow:0 0 0 4px #2a3f5a66}
+
+  /* summary / one-liner */
+  .summary{
+    display:flex; align-items:center; gap:12px; background:#0e1622; border:1px solid var(--divider);
+    padding:14px 16px; border-radius:14px; margin-bottom:12px
+  }
+  .fav{width:24px; height:24px; border-radius:6px; background:#122; display:grid; place-items:center; overflow:hidden}
+  .one{font-weight:700}
+  .subtle{color:#9ab0c0; font-size:13px}
+
+  /* editable liner */
+  .liner{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+  .slot{display:inline-flex; align-items:center; background:#0b2030; border:1px solid #1a3548; color:#d7f4ff;
+        border-radius:10px; padding:6px 8px; font-weight:600}
+  .slot.readonly{background:#0b1522; color:#bfe6ffb3}
+  .slot input{background:transparent;color:inherit;border:none;outline:none;min-width:40px}
+  .slot input::placeholder{color:#86a5ba}
+  .slot .sep{display:inline-block; width:6px}
+
+  /* groups / chips / sliders */
+  .group{background:#0f1724; border:1px solid var(--divider); border-radius:14px; padding:14px; margin:14px 0}
   .group h4{margin:0 0 8px}
   .help{font-size:12px;color:#8fa8bb;margin:6px 0 10px}
+  .chip{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px;
+        background:var(--chip); color:#bcd1e2; margin:6px 8px 0 0; cursor:pointer; border:1px solid #203041}
+  .chip.active{background:var(--chipActive); color:#dff6ff; border-color:#1d4c66}
   .chips{user-select:none}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#bcd1e2;margin:6px 8px 0 0;cursor:pointer;border:1px solid #203041}
-  .chip.active{background:var(--chipActive);color:#dff6ff;border-color:#1d4c66}
-  .slider{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin:10px 0}
-  .slider input[type=range]{width:100%}
-  .tog{display:flex;align-items:center;gap:10px;margin:10px 0}
-  .muted *{opacity:.45;pointer-events:none}
-  /* keep the AI checkbox usable even when muted */
-  .muted input[type=checkbox], .muted label, .muted .hdr{opacity:1;pointer-events:auto}
-  .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--divider)}
-  @media (max-width:800px){.pick{grid-template-columns:1fr}.row{flex-direction:column}}
+  .pref-list{display:grid; grid-template-columns:1fr 1fr; gap:8px 18px}
+  .pref-item{display:flex; align-items:center; gap:10px}
+  .pref-item input[type=checkbox]{width:18px;height:18px}
+  .g-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+  .g-body.muted{opacity:.45; pointer-events:none}
+
+  .slider-row{display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; margin:10px 0}
+  .slider-row input[type=range]{width:260px}
+
+  .tool{display:inline-block; width:16px; height:16px; border-radius:50%; background:#233244; color:#bcd1e2;
+        text-align:center; line-height:16px; font-size:11px; margin-left:6px; cursor:pointer}
+  .tooltip{position:absolute; z-index:10; background:#0b111a; border:1px solid var(--divider); padding:8px 10px; border-radius:8px; font-size:12px; color:#cfe1ef; display:none}
+  .tool[data-tip]:hover + .tooltip, .tool[data-tip].show + .tooltip{display:block}
+
+  .card-ft{display:flex; justify-content:flex-end; gap:10px; padding:14px 18px; border-top:1px solid var(--divider)}
+  .btn.sec{background:#152333; color:#bcd1e2}
+  @media (max-width:800px){ .pick{grid-template-columns:1fr} .row{flex-direction:column} .pref-list{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -81,6 +116,7 @@
     </div>
   </div>
 
+  <!-- Onboarding modal -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="card" role="document">
       <div class="card-hd">
@@ -89,7 +125,7 @@
           <span class="dot" data-step-dot="1"></span>
           <span class="dot" data-step-dot="2"></span>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex; gap:8px; align-items:center">
           <button id="gear" class="gear" title="Set API base">⚙️</button>
           <button id="close" class="x" aria-label="Close">✕</button>
         </div>
@@ -127,26 +163,27 @@
                 </div>
                 <div class="field">
                   <label>Phone (required for alerts) *</label>
-                  <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/>
+                  <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567" />
                   <div class="subtle">Country code helps us personalize geography (e.g., “+1” for U.S.).</div>
                 </div>
               </div>
               <div class="col">
                 <div class="field">
                   <label>Business email *</label>
-                  <input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required/>
+                  <input id="email" type="email" autocomplete="email"
+                         placeholder="you@yourcompany.com" required />
                 </div>
                 <div class="field">
                   <label>Website / Domain (auto from email)</label>
-                  <input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/>
+                  <input id="host" type="text" inputmode="url" placeholder="yourcompany.com" />
                   <div class="subtle">Auto-filled from your email as you type. You can edit.</div>
                 </div>
               </div>
             </div>
 
-            <div class="group" style="display:flex;align-items:center;justify-content:space-between">
+            <div class="group" style="display:flex; align-items:center; justify-content:space-between">
               <div class="subtle">Testing mode: verification skipped.</div>
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
                 <input id="skipVerify" type="checkbox" checked> I’m just testing (skip verification)
               </label>
             </div>
@@ -155,35 +192,22 @@
           <!-- STEP 3 -->
           <section class="step" id="step3" hidden>
             <div class="pill">Step 3 of 3</div>
-
-            <!-- Editable one-liner -->
-            <div id="summaryBox" class="summary edit" aria-live="polite">
+            <div class="summary">
               <div class="fav"><img id="fav" alt="" width="24" height="24" referrerpolicy="no-referrer"></div>
               <div style="flex:1">
-                <div id="one" class="one">
-                  <span id="ol-company" class="seg">your-company</span>
-                  <span class="seg">—</span>
-                  <span class="seg" id="ol-verb" contenteditable="true">supplies</span>
-                  <span class="seg" id="ol-products" contenteditable="true">custom & retail packaging</span>
-                  for
-                  <span class="seg" id="ol-sectors" contenteditable="true">consumer brands</span>
-                  in
-                  <span class="seg" id="ol-geos" contenteditable="true">the U.S.</span>.
-                  Best contacts:
-                  <span class="seg" id="ol-titles" contenteditable="true">Operations, Packaging, Procurement</span>.
+                <div id="liner" class="liner">
+                  <!-- tokens get injected here -->
                 </div>
-                <div class="subtle" style="margin-top:6px">
+                <div class="subtle" style="margin-top:6px;">
                   <a id="refresh" href="#" role="button">Refresh from website</a>
-                  <span id="status"></span>
+                  <span id="status" class="subtle"></span>
+                  <a id="editLine" href="#" style="margin-left:16px">Edit</a>
+                  <a id="doneLine" href="#" style="margin-left:12px; display:none">Done</a>
                 </div>
-              </div>
-              <div class="editBadge">
-                <button id="toggleEdit" class="editBtn" type="button">✓ Done</button>
               </div>
             </div>
 
-            <!-- Controls -->
-            <button id="advToggle" class="btn sec" style="padding:8px 12px;border-radius:999px">
+            <button id="advToggle" class="btn sec" style="padding:8px 12px; border-radius:999px">
               <span id="advLbl">Show advanced ▾</span>
             </button>
 
@@ -191,45 +215,52 @@
               <div class="help" style="margin-top:10px;">Optional: refine ranking and add product-specific details.</div>
 
               <div class="row">
-                <!-- GENERAL: now toggles -->
+                <!-- General preferences -->
                 <div class="col group" id="grp-general">
-                  <div class="hdr" style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="g-head">
                     <h4>General preferences</h4>
                     <label style="display:flex;align-items:center;gap:6px">
                       <input id="aiGeneral" type="checkbox"> Let AI decide
                     </label>
                   </div>
-                  <div id="generalBody">
-                    <label class="tog"><input type="checkbox" id="tgNear" checked> 📍 Prioritize nearby buyers</label>
-                    <label class="tog"><input type="checkbox" id="tgEcom" checked> 🛒 Prefer e-commerce sites</label>
-                    <label class="tog"><input type="checkbox" id="tgRetail"> 🏪 Prefer retail brands</label>
-                    <label class="tog"><input type="checkbox" id="tgWholesale"> 📦 Prefer wholesalers / distributors</label>
-                    <label class="tog"><input type="checkbox" id="tgMids" checked> 🏗️ Prefer mid-size companies</label>
-                    <label class="tog"><input type="checkbox" id="tgAvoidGiants" checked> 🏢 De-prioritize giant enterprises</label>
+                  <div class="g-body" id="generalBody">
+                    <div class="pref-list">
+                      <label class="pref-item"><input id="prefNear" type="checkbox" checked> 📍 Prioritize nearby buyers</label>
+                      <label class="pref-item"><input id="prefEcom" type="checkbox" checked> 🛒 Prefer e-commerce sites</label>
+                      <label class="pref-item"><input id="prefRetail" type="checkbox"> 🏬 Prefer retail brands</label>
+                      <label class="pref-item"><input id="prefWholesale" type="checkbox"> 📦 Prefer wholesalers / distributors</label>
+                      <label class="pref-item"><input id="prefMids" type="checkbox" checked> 🏗️ Prefer mid-size companies</label>
+                      <label class="pref-item"><input id="prefAvoidGiants" type="checkbox" checked> 🏢 De-prioritize giant enterprises</label>
+                    </div>
                   </div>
                 </div>
 
-                <!-- PRODUCT SIGNALS -->
+                <!-- Product signals -->
                 <div class="col group" id="grp-product">
-                  <div class="hdr" style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="g-head">
                     <h4>Product signals (from your site)</h4>
                     <label style="display:flex;align-items:center;gap:6px">
                       <input id="aiProduct" type="checkbox"> Let AI decide
                     </label>
                   </div>
-                  <div id="productChips" class="chips">Tap to select. We’ll use these as focus tags.</div>
+                  <div class="g-body" id="productBody">
+                    <div id="productChips" class="chips" aria-live="polite">Tap to select. We’ll use these as focus tags.</div>
+                  </div>
                 </div>
               </div>
 
-              <!-- DYNAMIC BUYER PRIORITIES -->
-              <div class="group" id="grp-prior">
-                <div class="hdr" style="display:flex;justify-content:space-between;align-items:center">
-                  <h4>Buyer priorities (dynamic)</h4>
-                  <span class="subtle">Tell us how much your buyers care about these.</span>
+              <!-- Buyer intelligence -->
+              <div class="group" id="grp-intel">
+                <div class="g-head">
+                  <h4>Buyer intelligence (dynamic)</h4>
+                  <div class="subtle">Tell us how much your buyers care about these.</div>
                 </div>
-                <div id="prioBox"></div>
+                <div class="g-body" id="intelBody">
+                  <!-- dynamic slider rows appear here -->
+                </div>
               </div>
 
+              <!-- Buyer targeting -->
               <div class="group">
                 <h4>Buyer targeting</h4>
                 <div class="row">
@@ -252,7 +283,7 @@
 
         <div class="card-ft">
           <button id="back" class="btn sec">Back</button>
-          <button id="next" class="btn">Finish</button>
+          <button id="next" class="btn">Next</button>
         </div>
       </div>
     </div>
@@ -260,270 +291,423 @@
 
 <script>
 (() => {
-  // ---------- tiny storage ----------
-  const getStored=(k)=>{try{return localStorage.getItem(k)||""}catch{return""}};
-  const setStored=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
-
-  // ---------- API base ----------
-  const API_BASE={
-    get(){ if (window.API_BASE) return window.API_BASE;
-      const s=getStored("apiBase"); return s||"/api";},
-    set(v){ if(v) setStored("apiBase",v);}
+  // ---------- API BASE DETECTION & NORMALIZATION ----------
+  function getStored(k){ try{return localStorage.getItem(k)||""}catch{return""} }
+  function setStored(k,v){ try{localStorage.setItem(k,v)}catch{} }
+  const API_BASE = {
+    getRaw(){
+      if (window.API_BASE && typeof window.API_BASE==="string") return window.API_BASE;
+      const saved = getStored("apiBase");
+      return saved || "/api";
+    },
+    get(){ // always ends with /api (no trailing slash afterwards)
+      let b = API_BASE.getRaw().trim();
+      if (!b) b = "/api";
+      // remove trailing slash
+      b = b.replace(/\/+$/,"");
+      // ensure ends with /api
+      if (!/\/api$/i.test(b)) b = b + "/api";
+      return b;
+    },
+    set(v){ if(v) setStored("apiBase", v) }
   };
-  document.getElementById("gear").addEventListener("click",()=>{
-    const cur=API_BASE.get();
-    const v=prompt("API base (ends with /api). Example:\nhttps://YOUR-NORTHFLANK.code.run/api",cur);
-    if(v){API_BASE.set(v);alert("Saved. I’ll use:\n"+API_BASE.get());}
+
+  // gear: set base
+  document.getElementById("gear").addEventListener("click", () => {
+    const cur = API_BASE.getRaw();
+    const v = prompt("API base (ends with /api). Example:\nhttps://YOUR-NORTHFLANK-SUBDOMAIN.code.run/api", cur);
+    if (!v) return;
+    API_BASE.set(v);
+    alert("Saved. Using:\n" + API_BASE.get());
   });
 
-  // ---------- els ----------
-  const modal=$("#modal"), openBtn=$("#cta"), closeBtn=$("#close"), backBtn=$("#back"), nextBtn=$("#next");
-  const dots=[...document.querySelectorAll("[data-step-dot]")];
-  const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
-  const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone");
-  const favEl=$("#fav"), summaryBox=$("#summaryBox"), refreshA=$("#refresh"), statusEl=$("#status");
-  const seg={ company:$("#ol-company"), verb:$("#ol-verb"), products:$("#ol-products"), sectors:$("#ol-sectors"), geos:$("#ol-geos"), titles:$("#ol-titles") };
-  const toggleEditBtn=$("#toggleEdit");
-  const advToggle=$("#advToggle"), advLbl=$("#advLbl"), adv=$("#advanced");
-  const aiGeneral=$("#aiGeneral"), aiProduct=$("#aiProduct");
-  const grpGeneral=$("#grp-general"), grpProduct=$("#grp-product");
-  const generalBody=$("#generalBody"), productChips=$("#productChips");
-  const cityChips=$("#cityChips"), sectorChips=$("#sectorChips"), cityEl=$("#city"), sectorsEl=$("#sectors");
-  const prioBox=$("#prioBox");
+  // ---------- ELEMENTS ----------
+  const modal = document.getElementById("modal");
+  const openBtn = document.getElementById("cta");
+  const closeBtn = document.getElementById("close");
+  const backBtn = document.getElementById("back");
+  const nextBtn = document.getElementById("next");
+  const dots = [...document.querySelectorAll("[data-step-dot]")];
 
-  // toggles
-  const tgs={near:$("#tgNear"), ecom:$("#tgEcom"), retail:$("#tgRetail"), wholesale:$("#tgWholesale"), mids:$("#tgMids"), avoid:$("#tgAvoidGiants")};
+  const optSupplier = document.getElementById("opt-supplier");
+  const optBuyer = document.getElementById("opt-buyer");
 
-  // state
-  const state={
-    step:0, role:"supplier",
-    email:"", host:"",
-    touched:{gen:false, prod:false, prio:false, chips:false},
-    productTags:[], sectorHints:[],
-    hostTouched:false,
-    ol: {verb:"supplies", products:"custom & retail packaging", sectors:"consumer brands", geos:"the U.S.", titles:"Operations, Packaging, Procurement"}
+  const nameEl = document.getElementById("name");
+  const phoneEl = document.getElementById("phone");
+  const emailEl = document.getElementById("email");
+  const hostEl  = document.getElementById("host");
+  const skipVerify = document.getElementById("skipVerify");
+
+  const favEl = document.getElementById("fav");
+  const liner = document.getElementById("liner");
+  const refreshA = document.getElementById("refresh");
+  const statusEl = document.getElementById("status");
+  const editLine = document.getElementById("editLine");
+  const doneLine = document.getElementById("doneLine");
+
+  const advToggle = document.getElementById("advToggle");
+  const advLbl = document.getElementById("advLbl");
+  const adv = document.getElementById("advanced");
+
+  const aiGeneral = document.getElementById("aiGeneral");
+  const aiProduct = document.getElementById("aiProduct");
+  const generalBody = document.getElementById("generalBody");
+  const productBody = document.getElementById("productBody");
+
+  const productChips = document.getElementById("productChips");
+  const cityChips = document.getElementById("cityChips");
+  const sectorChips = document.getElementById("sectorChips");
+  const intelBody = document.getElementById("intelBody");
+
+  // prefs checkboxes
+  const prefs = {
+    near: document.getElementById("prefNear"),
+    ecom: document.getElementById("prefEcom"),
+    retail: document.getElementById("prefRetail"),
+    wholesale: document.getElementById("prefWholesale"),
+    mids: document.getElementById("prefMids"),
+    avoid: document.getElementById("prefAvoidGiants")
   };
-  const savedOL=getStored("olVars"); if(savedOL) try{Object.assign(state.ol,JSON.parse(savedOL));}catch{}
 
-  // helpers
-  function $(s){return document.querySelector(s)}
-  function show(step){state.step=step;["#step1","#step2","#step3"].forEach((id,i)=>{const el=$(id);el.hidden=i!==step;dots[i].classList.toggle("on",i===step)});backBtn.style.visibility=step===0?"hidden":"visible";}
-  function open(){modal.classList.add("show");modal.setAttribute("aria-hidden","false");show(0)}
-  function close(){modal.classList.remove("show");modal.setAttribute("aria-hidden","true")}
-  const normHost=(h)=>String(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
-  const domainFromEmail=(e)=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
-  function setFavicon(host){const h=normHost(host); if(!h){favEl.src="";return} favEl.src="https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"; favEl.onerror=()=>favEl.style.display="none"; favEl.style.display=""}
-  function setEdit(on){summaryBox.classList.toggle("edit",on);toggleEditBtn.textContent=on?"✓ Done":"✎ Edit"}
-  function hydrateOneLiner(company){seg.company.textContent=company||"your-company"; seg.verb.textContent=state.ol.verb; seg.products.textContent=state.ol.products; seg.sectors.textContent=state.ol.sectors; seg.geos.textContent=state.ol.geos; seg.titles.textContent=state.ol.titles}
+  // ---------- STATE ----------
+  const state = {
+    step:0,
+    role:"supplier",
+    email:"",
+    host:"",
+    productTags:[],
+    sectorHints:[],
+    lineSlots: null,   // {verb, offering, target, geo, titles}
+    userTouched: { general:false, product:false, intel:false },
+    hostTouched:false
+  };
 
-  // email ↔ domain real-time sync with manual-override respect
-  hostEl.addEventListener("input",()=>{state.hostTouched=true});
-  function syncDomain(){ if(state.hostTouched) return; const d=domainFromEmail(emailEl.value); if(d) hostEl.value=d; }
-  emailEl.addEventListener("input",syncDomain);
-  emailEl.addEventListener("change",syncDomain);
-  setTimeout(syncDomain,80);
+  // ---------- UTIL ----------
+  const $ = sel => document.querySelector(sel);
+  function show(step){
+    state.step = step;
+    ["#step1","#step2","#step3"].forEach((id,i)=>{
+      const el=$(id); if(!el) return;
+      el.hidden = i!==step;
+      dots[i].classList.toggle("on", i===step);
+    });
+    backBtn.style.visibility = step===0? "hidden":"visible";
+    nextBtn.textContent = step===2? "Finish":"Next";
+  }
+  function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
+  function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
+  function normHost(h){
+    if (!h) return "";
+    return String(h).trim().toLowerCase()
+      .replace(/^https?:\/\//,"")
+      .replace(/^www\./,"")
+      .replace(/\/.*$/,"");
+  }
+  function domainFromEmail(e){
+    const m = (e||"").toLowerCase().match(/@([a-z0-9.-]+)/);
+    return m? m[1] : "";
+  }
+  function setFavicon(host){
+    const h = normHost(host);
+    if(!h){ favEl.removeAttribute("src"); return; }
+    favEl.src = "https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico";
+    favEl.onerror = () => { favEl.style.display="none"; };
+    favEl.style.display="";
+  }
 
-  // role
-  function setRole(r){state.role=r;optSupplier.classList.toggle("active",r==="supplier");optBuyer.classList.toggle("active",r==="buyer")}
-  optSupplier.addEventListener("click",()=>setRole("supplier"));
-  optBuyer.addEventListener("click",()=>setRole("buyer"));
-  setRole("supplier");
-
-  // edit toggle
-  toggleEditBtn.addEventListener("click",()=>{
-    const on=!summaryBox.classList.contains("edit"); setEdit(on);
-    if(!on){ // save
-      state.ol={verb:seg.verb.textContent.trim()||"supplies", products:seg.products.textContent.trim()||"packaging", sectors:seg.sectors.textContent.trim()||"brands", geos:seg.geos.textContent.trim()||"the U.S.", titles:seg.titles.textContent.trim()||"Operations, Packaging, Procurement"};
-      setStored("olVars",JSON.stringify(state.ol));
+  // token builder for one-liner
+  function makeSlot(text, opts={}){
+    const s = document.createElement("span");
+    s.className = "slot" + (opts.readonly? " readonly":"");
+    if (opts.readonly){
+      s.textContent = text;
+    } else {
+      const i = document.createElement("input");
+      i.value = text || "";
+      i.placeholder = opts.placeholder || "";
+      i.size = Math.max( (i.value||i.placeholder||"").length, 4 );
+      i.addEventListener("input", ()=>{ i.size=Math.max(i.value.length,4); });
+      s.appendChild(i);
     }
+    return s;
+  }
+  function buildLinerUI(slots, editing){
+    liner.innerHTML = "";
+    // host (locked)
+    liner.appendChild(makeSlot(state.host, {readonly:true}));
+    liner.appendChild(makeSlot("—", {readonly:true}));
+    // editable parts
+    const addTok = (label, key, readonlyWord=false) => {
+      if (readonlyWord) { liner.appendChild(makeSlot(label,{readonly:true})); return; }
+      liner.appendChild(makeSlot(slots[key]||"", {placeholder:label}));
+    };
+    addTok("", "verb");          // e.g., supplies / manufactures / converts
+    addTok("", "offering");      // e.g., custom boxes, labels, corrugate
+    addTok("", "forWord", true); // "for"
+    addTok("", "target");        // e.g., CPG brands
+    addTok("", "inWord", true);  // "in"
+    addTok("", "geo");           // e.g., the U.S.
+    addTok("", "dotWord", true); // "."
+    addTok("Best contacts:", "titlesLabel", true);
+    addTok("", "titles");        // e.g., Operations, Procurement
+    // editing mode toggle
+    [...liner.querySelectorAll(".slot input")].forEach(inp => inp.disabled = !editing);
+    editLine.style.display = editing? "none":"inline";
+    doneLine.style.display = editing? "inline":"none";
+  }
+
+  // tooltips instant
+  document.querySelectorAll(".tool[data-tip]").forEach(t=>{
+    t.addEventListener("mouseenter", ()=> t.classList.add("show"));
+    t.addEventListener("mouseleave", ()=> t.classList.remove("show"));
+    t.addEventListener("click", (e)=>{ e.stopPropagation(); t.classList.toggle("show"); });
+  });
+  document.addEventListener("click", ()=> {
+    document.querySelectorAll(".tool.show").forEach(t=>t.classList.remove("show"));
   });
 
-  // tooltips
-  document.addEventListener("click",()=>{document.querySelectorAll(".tool.show").forEach(t=>t.classList.remove("show"))});
-
-  // AI mute (only bodies)
+  // Let AI decide: mute only body, keep header (and switch) clickable
   function applyAIMute(){
     generalBody.classList.toggle("muted", aiGeneral.checked);
-    productChips.classList.toggle("muted", aiProduct.checked);
+    productBody.classList.toggle("muted", aiProduct.checked);
   }
-  aiGeneral.addEventListener("change",()=>{applyAIMute();state.touched.gen=true});
-  aiProduct.addEventListener("change",()=>{applyAIMute();state.touched.prod=true});
+  aiGeneral.addEventListener("change", applyAIMute);
+  aiProduct.addEventListener("change", applyAIMute);
 
-  // advanced toggle
-  advToggle.addEventListener("click",(e)=>{e.preventDefault();const open=!adv.hasAttribute("hidden");if(open){adv.setAttribute("hidden","");advLbl.textContent="Show advanced ▾"}else{adv.removeAttribute("hidden");advLbl.textContent="Hide advanced ▲"}});
-
-  // chips
-  function chip(text, fn){const span=document.createElement("span");span.className="chip";span.textContent=text;span.addEventListener("click",()=>fn?.(text,span));return span}
-  function chipsFrom(list, box, onSel){box.innerHTML="";(list||[]).forEach(v=>box.appendChild(chip(v,onSel)))}
-
-  // city defaults
-  chipsFrom(["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"], cityChips,(t,span)=>{
-    const cur=new Set(cityEl.value.split(",").map(s=>s.trim()).filter(Boolean));
-    if(cur.has(t)){cur.delete(t);span.classList.remove("active")}else{cur.add(t);span.classList.add("active")}
-    cityEl.value=[...cur].join(", ")
+  // Advanced toggle
+  advToggle.addEventListener("click", (e)=>{
+    e.preventDefault();
+    const open = adv.hasAttribute("hidden") ? false : true;
+    if (open){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
+    else { adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
   });
 
-  // sector defaults
-  function sectorClick(t,span){
-    const cur=new Set(sectorsEl.value.split(",").map(s=>s.trim()).filter(Boolean));
-    if(cur.has(t)){cur.delete(t);span.classList.remove("active")}else{cur.add(t);span.classList.add("active")}
-    sectorsEl.value=[...cur].join(", "); state.touched.chips=true;
-    const sample=[...cur].slice(0,3).join(", "); if(sample){seg.sectors.textContent=sample;state.ol.sectors=sample}
-  }
-  chipsFrom(["food","beverage","cosmetics","electronics","apparel","supplements","pharma"], sectorChips, sectorClick);
-
-  // API
-  async function apiGet(path){const base=API_BASE.get().replace(/\/$/,"");const url=base+path;const r=await fetch(url,{credentials:"omit"});if(!r.ok)throw new Error("http "+r.status);return r.json()}
-
-  // Natural language helpers
-  const joinNat=(arr)=>arr.length<=2?arr.join(" and "):arr.slice(0,-1).join(", ")+", and "+arr.slice(-1);
-  function titleSuggest(sectors){
-    const s=new Set((sectors||[]).map(x=>x.toLowerCase()));
-    if(s.has("food")||s.has("beverage")||s.has("pharma")) return "Operations, Quality, Procurement";
-    if(s.has("cosmetics")) return "Packaging, Brand, Procurement";
-    if(s.has("electronics")) return "Operations, Supply Chain, Procurement";
-    return "Operations, Packaging, Procurement";
-  }
-
-  // smarter rewrite from classify
-  function rewriteSummary(host, data){
-    const raw=String(data.summary||"").replace(/contact\s+us.*$/i," ").replace(/\s{2,}/g," ").trim();
-    // products phrase
-    const tags=(data.productTags||[]).filter(Boolean);
-    const products = tags.length ? joinNat(tags.slice(0,4)) : "custom & retail packaging";
-    // sectors phrase
-    const secs=(data.sectorHints||[]).filter(Boolean);
-    const sectors= secs.length ? joinNat(secs.slice(0,3)) : "consumer brands";
-    // geo guess
-    const m=raw.match(/\bin\s+([A-Z][A-Za-z]+(?:,\s*[A-Z][A-Za-z]+)*)(?:\.|,)?/);
-    const geo = m? m[1] : "the U.S.";
-    return {verb:"supplies", products, sectors, geos:geo, titles:titleSuggest(secs)};
-  }
-
-  // product chips and linkage
-  function renderProductTags(tags){
-    productChips.innerHTML=""; (tags||[]).slice(0,18).forEach(t=>{
-      const c=chip(t,(text,span)=>{
-        span.classList.toggle("active");
-        const selected=[...productChips.querySelectorAll(".chip.active")].map(x=>x.textContent);
-        const top=(selected.length?selected:tags).slice(0,4);
-        if(top.length){seg.products.textContent=joinNat(top); state.ol.products=joinNat(top)}
-        state.touched.prod=true;
-      });
-      productChips.appendChild(c);
-    });
-  }
-
-  // dynamic buyer priorities based on tags+sectors
-  const LIB={
-    generic:[
-      {id:"lead", label:"Short lead time", help:"e.g., < 15 days", def:7},
-      {id:"moq", label:"Low MOQs", help:"small minimum orders", def:6},
-      {id:"price", label:"Price sensitivity", help:"unit cost matters most", def:5},
-      {id:"sustain", label:"Sustainability", help:"recycled/compostable", def:5},
-      {id:"custom", label:"Customization depth", help:"print/shape/finish", def:5},
-      {id:"certs", label:"Certifications", help:"FDA/food-grade/ISO/GFSI", def:4},
-    ],
-    corrugate:[{id:"ect",label:"Box strength / ECT",def:7},{id:"dims",label:"Custom dimensions",def:6}],
-    labels:[{id:"shortRun",label:"Short runs",def:7},{id:"color",label:"Color accuracy",def:6}],
-    pouches:[{id:"barrier",label:"Barrier / shelf-life",def:7},{id:"reseal",label:"Zipper / reseal",def:6}],
-    bottles:[{id:"molds",label:"Stock vs custom molds",def:6}],
-    jars:[{id:"closures",label:"Closure / liner match",def:6}],
-    tape:[{id:"adhesion",label:"Adhesion strength",def:6}],
-    food:[{id:"foodsafe",label:"Food-safe materials",def:7}],
-    beverage:[{id:"coldchain",label:"Cold-chain suitability",def:6}],
-    cosmetics:[{id:"finish",label:"Premium finishes",def:6}],
-    electronics:[{id:"protection",label:"Protective inserts / ESD",def:7}],
-    pharma:[{id:"compliance",label:"Regulatory compliance",def:7}],
-  };
-  function uniqBy(arr, key){const m=new Set();return arr.filter(o=>{const k=o[key]; if(m.has(k))return false;m.add(k);return true})}
-  function buildBuyerPriorities(tags,sectors){
-    prioBox.innerHTML="";
-    let items=[...LIB.generic];
-    const tset=new Set((tags||[]).map(s=>s.toLowerCase()));
-    const sset=new Set((sectors||[]).map(s=>s.toLowerCase()));
-    if(tset.has("corrugate")||tset.has("boxes")) items=items.concat(LIB.corrugate);
-    if(tset.has("labels")) items=items.concat(LIB.labels);
-    if(tset.has("pouches")) items=items.concat(LIB.pouches);
-    if(tset.has("bottles")) items=items.concat(LIB.bottles);
-    if(tset.has("jars")) items=items.concat(LIB.jars);
-    if(tset.has("tape")) items=items.concat(LIB.tape);
-    if(sset.has("food")) items=items.concat(LIB.food);
-    if(sset.has("beverage")) items=items.concat(LIB.beverage);
-    if(sset.has("cosmetics")) items=items.concat(LIB.cosmetics);
-    if(sset.has("electronics")) items=items.concat(LIB.electronics);
-    if(sset.has("pharma")) items=items.concat(LIB.pharma);
-    items=uniqBy(items,"id").slice(0,18);
-
-    items.forEach(it=>{
-      const row=document.createElement("div"); row.className="slider";
-      const left=document.createElement("div");
-      left.innerHTML=`${it.label} <span class="subtle">— ${it.help||""}</span>`;
-      const input=document.createElement("input");
-      input.type="range"; input.min="0"; input.max="10"; input.value=it.def||5; input.dataset.id=it.id;
-      input.addEventListener("input",()=>{state.touched.prio=true});
-      row.appendChild(left); row.appendChild(input); prioBox.appendChild(row);
-    });
-  }
-
-  // refresh classify
-  async function refreshFromWebsite(){
-    const host=normHost(hostEl.value); if(!host) return;
-    setFavicon(host); statusEl.textContent=""; seg.company.textContent=host;
-
-    try{
-      const q=`?host=${encodeURIComponent(host)}&email=${encodeURIComponent(emailEl.value||"")}`;
-      const data = await apiGet("/classify"+q);
-
-      const tags=data.productTags||[]; const secs=data.sectorHints||[];
-      state.productTags=tags; state.sectorHints=secs;
-
-      renderProductTags(tags);
-      buildBuyerPriorities(tags, secs);
-
-      // build smarter defaults, but don’t overwrite user edits
-      const ol = rewriteSummary(host, data);
-      if(!getStored("olVars")) Object.assign(state.ol, ol);
-      hydrateOneLiner(host);
-
-      // seed sector chips active
-      sectorChips.querySelectorAll(".chip").forEach(ch=>{ if(secs.slice(0,3).includes(ch.textContent)) ch.classList.add("active") });
-
-      statusEl.textContent = data.cached ? " (cached)" : "";
-    }catch(e){
-      console.warn(e); hydrateOneLiner(host);
-    }
-  }
-
-  refreshA.addEventListener("click",(e)=>{e.preventDefault();refreshFromWebsite()});
-
-  // nav
-  openBtn.addEventListener("click",open);
-  closeBtn.addEventListener("click",close);
-  backBtn.addEventListener("click",()=>show(Math.max(0,state.step-1)));
-  nextBtn.addEventListener("click",()=>{
-    if(state.step===0){show(1);return}
-    if(state.step===1){
-      if(!emailEl.value || !phoneEl.value){alert("Business email and phone are required.");return}
-      state.email=emailEl.value.trim(); state.host=normHost(hostEl.value||domainFromEmail(state.email));
-      if(!state.host){alert("Please provide your website/domain.");return}
-      refreshFromWebsite().then(()=>show(2));
+  // step wiring
+  openBtn.addEventListener("click", open);
+  closeBtn.addEventListener("click", close);
+  backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+  nextBtn.addEventListener("click", async ()=>{
+    if (state.step===0){ show(1); return; }
+    if (state.step===1){
+      if (!emailEl.value || !phoneEl.value){
+        alert("Business email and phone are required.");
+        return;
+      }
+      state.email = emailEl.value.trim();
+      state.host  = normHost(hostEl.value || domainFromEmail(state.email));
+      if (!state.host){ alert("Please provide your website/domain."); return; }
+      await refreshFromWebsite();
+      show(2);
       return;
     }
-    if(state.step===2){
-      // Auto-apply AI decide if untouched
-      const untouched = !state.touched.gen && !state.touched.prod && !state.touched.prio && !state.touched.chips;
-      if(untouched){ aiGeneral.checked=true; aiProduct.checked=true; applyAIMute(); }
+    if (state.step===2){
+      // Silent AI auto if untouched
+      if (!state.userTouched.general) aiGeneral.checked = true;
+      if (!state.userTouched.product) aiProduct.checked = true;
+      applyAIMute();
       alert("Saved! (Demo) You’ll go to the free panel next.");
       close();
     }
   });
 
-  // init
-  hydrateOneLiner("your-company");
-  setEdit(true); // make editability obvious
-  applyAIMute();
+  // role pick
+  function setRole(r){
+    state.role = r;
+    optSupplier.classList.toggle("active", r==="supplier");
+    optBuyer.classList.toggle("active", r==="buyer");
+    document.querySelector('[data-step-dot="0"]').classList.add("on");
+  }
+  optSupplier.addEventListener("click", ()=> setRole("supplier"));
+  optBuyer.addEventListener("click", ()=> setRole("buyer"));
+  setRole("supplier");
+
+  // email -> domain autofill with override detection
+  hostEl.addEventListener("input", ()=>{ state.hostTouched = true; });
+  function syncDomainRealtime(){
+    const d = domainFromEmail(emailEl.value);
+    if (!d) return;
+    if (!state.hostTouched){ hostEl.value = d; }  // only auto if user hasn't typed in host field
+  }
+  emailEl.addEventListener("input", syncDomainRealtime);
+  emailEl.addEventListener("change", syncDomainRealtime);
+  setTimeout(syncDomainRealtime, 80); // catch browser autofill
+
+  // city & sector defaults
+  const cityEl = document.getElementById("city");
+  const sectorsEl = document.getElementById("sectors");
+  function chipsFrom(list, box, targetInput){
+    box.innerHTML = "";
+    list.forEach(v=>{
+      const c=document.createElement("span");
+      c.className="chip";
+      c.textContent=v;
+      c.addEventListener("click",()=>{
+        const cur = new Set((targetInput.value||"").split(",").map(s=>s.trim()).filter(Boolean));
+        if (cur.has(v)) cur.delete(v); else cur.add(v);
+        targetInput.value = [...cur].join(", ");
+        c.classList.toggle("active");
+      });
+      box.appendChild(c);
+    });
+  }
+  chipsFrom(["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"], cityChips, cityEl);
+  chipsFrom(["food","beverage","cosmetics","electronics","apparel","supplements","pharma"], sectorChips, sectorsEl);
+
+  // product tags chips
+  function addProductChip(text){
+    const span = document.createElement("span");
+    span.className = "chip";
+    span.textContent = text;
+    span.tabIndex = 0;
+    span.addEventListener("click", () => {
+      span.classList.toggle("active");
+      const on = span.classList.contains("active");
+      const i = state.productTags.indexOf(text);
+      if (on && i<0) state.productTags.push(text);
+      if (!on && i>=0) state.productTags.splice(i,1);
+      state.userTouched.product = true;
+    });
+    productChips.appendChild(span);
+  }
+  function renderProductTags(tags){
+    productChips.innerHTML="";
+    state.productTags = [];
+    (tags||[]).slice(0,18).forEach(t=> addProductChip(t));
+  }
+
+  // buyer intelligence (dynamic)
+  function suggestedIntel(tags, sectors){
+    const T = new Set((tags||[]).map(t=>t.toLowerCase()));
+    const S = new Set((sectors||[]).map(s=>s.toLowerCase()));
+    const out = [
+      {key:"leadTime", label:"Fast turnaround (≤ 2 weeks)"},
+      {key:"lowMOQ", label:"Low MOQs / short runs"},
+      {key:"sustainability", label:"Eco materials / recyclable"},
+      {key:"usMade", label:"Made in USA"},
+      {key:"designHelp", label:"Design & structural support"},
+      {key:"unitCost", label:"Lowest unit cost"},
+    ];
+    if (T.has("boxes") || T.has("corrugate")) out.push({key:"ecommReady", label:"E-commerce ship-safe / ISTA-friendly"});
+    if (T.has("labels")) out.push({key:"colorAccuracy", label:"Color accuracy & print quality"});
+    if (S.has("cosmetics")) out.push({key:"premiumLook", label:"Premium brand presentation"});
+    if (S.has("electronics")) out.push({key:"protection", label:"Protection / anti-static options"});
+    return out;
+  }
+  function renderIntel(intelList){
+    intelBody.innerHTML = "";
+    intelList.forEach(meta=>{
+      const row = document.createElement("div");
+      row.className = "slider-row";
+      const label = document.createElement("div");
+      label.textContent = meta.label;
+      const input = document.createElement("input");
+      input.type="range"; input.min=0; input.max=10; input.value=6;
+      input.addEventListener("input", ()=>{ state.userTouched.intel = true; });
+      row.appendChild(label); row.appendChild(input);
+      intelBody.appendChild(row);
+    });
+  }
+
+  // ---------- API CALLS ----------
+  async function apiGet(path){
+    const base = API_BASE.get(); // normalized to end with /api
+    const url = base.replace(/\/$/,"") + path;
+    const r = await fetch(url, {credentials:"omit"});
+    if (!r.ok) throw new Error("http "+r.status);
+    return r.json();
+  }
+
+  // smarter one-liner suggestion
+  function makeSmartSlots(host, data){
+    const tags = data?.productTags||[];
+    const sectors = data?.sectorHints||[];
+    const topTags = tags.slice(0,3).join(", ");
+    const topSecs = sectors.slice(0,2).join("/");
+    const titles = "Operations, Procurement";
+    return {
+      verb: "supplies",
+      offering: topTags || "custom packaging",
+      forWord: "for",
+      target: (topSecs? `${topSecs} brands` : "CPG brands"),
+      inWord: "in",
+      geo: "the U.S.",
+      dotWord: ".",
+      titlesLabel: "Best contacts:",
+      titles
+    };
+  }
+
+  // Edit/Done toggle for liner
+  editLine.addEventListener("click",(e)=>{ e.preventDefault(); buildLinerUI(state.lineSlots, true); });
+  doneLine.addEventListener("click",(e)=>{
+    e.preventDefault();
+    // capture values back
+    const inputs = liner.querySelectorAll(".slot input");
+    const vals = [];
+    inputs.forEach(i=> vals.push(i.value.trim()));
+    // map back in order: verb, offering, target, geo, titles
+    const [verb, offering, target, geo, titles] = [vals[0], vals[1], vals[2], vals[3], vals[4]];
+    state.lineSlots.verb = verb || state.lineSlots.verb;
+    state.lineSlots.offering = offering || state.lineSlots.offering;
+    state.lineSlots.target = target || state.lineSlots.target;
+    state.lineSlots.geo = geo || state.lineSlots.geo;
+    state.lineSlots.titles = titles || state.lineSlots.titles;
+    buildLinerUI(state.lineSlots, false);
+  });
+
+  async function refreshFromWebsite(){
+    const host = normHost(hostEl.value);
+    if (!host) return;
+
+    setFavicon(host);
+    state.host = host;
+    statusEl.textContent = "";
+    liner.innerHTML = "";
+    liner.appendChild(makeSlot(host, {readonly:true}));
+    liner.appendChild(makeSlot("— fetching summary…", {readonly:true}));
+
+    try{
+      const q = "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(emailEl.value||"");
+      const data = await apiGet("/classify"+q);
+      if (data.ok){
+        state.productTags = data.productTags || [];
+        state.sectorHints = data.sectorHints || [];
+        // build smart one-liner
+        state.lineSlots = makeSmartSlots(host, data);
+        buildLinerUI(state.lineSlots, false);
+        // chips + buyer intel
+        renderProductTags(state.productTags);
+        renderIntel(suggestedIntel(state.productTags, state.sectorHints));
+        // sector chips for targeting
+        sectorChips.innerHTML="";
+        chipsFrom((state.sectorHints.length? state.sectorHints : ["food","beverage","cosmetics"]), sectorChips, document.getElementById("sectors"));
+        statusEl.textContent = data.cached ? " (cached)" : "";
+      } else {
+        liner.innerHTML = "";
+        liner.appendChild(makeSlot(host+" — network error while reading your site.", {readonly:true}));
+        renderProductTags([]);
+        renderIntel(suggestedIntel([],[]));
+        statusEl.textContent = "";
+      }
+    }catch(err){
+      console.warn(err);
+      liner.innerHTML = "";
+      liner.appendChild(makeSlot(host+" — network error while reading your site.", {readonly:true}));
+      statusEl.textContent = "";
+    }
+  }
+  refreshA.addEventListener("click", (e)=>{ e.preventDefault(); refreshFromWebsite(); });
+
+  // track touches
+  Object.values(prefs).forEach(cb => cb.addEventListener("change", ()=> state.userTouched.general = true));
+
+  // ---------- ESC & overlay close ----------
+  modal.addEventListener("click",(e)=>{ if(e.target===modal) close(); });
+  document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") close(); });
+
+  // ---------- initial ----------
   show(0);
+  applyAIMute();
 })();
 </script>
 </body>
