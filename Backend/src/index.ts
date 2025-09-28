@@ -1,89 +1,80 @@
 // src/index.ts
-// Express boot with strict CORS, tiny logger, and all API routes (including /api/classify)
+// Express bootstrap with strict CORS, tiny logger, and canonical /api/* mounts.
 
 import express, { Request, Response, NextFunction } from "express";
-import path from "path";
-import cors from "cors";
 
-import leads from "./routes/leads";
-import prefs from "./routes/prefs";
-import catalog from "./routes/catalog";
-import places from "./routes/places";
-import classify from "./routes/classify"; // <- ensure this exists
-import { CFG } from "./shared/env";
+import HealthRouter from "./routes/health";
+import PrefsRouter from "./routes/prefs";
+import LeadsRouter from "./routes/leads";
+import CatalogRouter from "./routes/catalog";
+import PlacesRouter from "./routes/places";
+import ClassifyRouter from "./routes/classify";
+import { CFG, isOriginAllowed } from "./shared/env";
+
+const app = express();
+
+// ---- basic hardening --------------------------------------------------------
+app.disable("x-powered-by");
 
 // ---- tiny logger ------------------------------------------------------------
-function tinyLog(req: Request, _res: Response, next: NextFunction) {
-  const t0 = Date.now();
-  const { method, url } = req;
-  resOnFinish(_res, () => {
-    const ms = Date.now() - t0;
-    const code = _res.statusCode;
-    // keep logs small and readable
-    console.log(`${method} ${url} -> ${code} ${ms}ms`);
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const t0 = process.hrtime.bigint();
+  res.on("finish", () => {
+    const dtMs = Number((process.hrtime.bigint() - t0) / BigInt(1e6));
+    // keep logs compact; Northflank groups nicely
+    console.log(
+      `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} -> ${res.statusCode} ${dtMs}ms`
+    );
   });
   next();
-}
-function resOnFinish(res: Response, cb: () => void) {
-  res.once("finish", cb);
-  res.once("close", cb);
-}
-
-// ---- strict CORS ------------------------------------------------------------
-const allowList = (CFG.allowOrigins || "").split(",").map(s => s.trim()).filter(Boolean);
-const corsOpts: cors.CorsOptions = {
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // allow same-origin / server-side
-    if (allowList.length === 0 || allowList.includes(origin)) return cb(null, true);
-    return cb(new Error("CORS: origin not allowed"), false);
-  },
-  credentials: true,
-};
-
-// ---- app --------------------------------------------------------------------
-const app = express();
-app.disable("x-powered-by");
-app.use(tinyLog);
-app.use(cors(corsOpts));
-app.use(express.json({ limit: "512kb" }));
-
-// ---- health -----------------------------------------------------------------
-app.get("/healthz", (_req, res) => res.type("text/plain").send("ok"));
-app.get("/api/health", (_req, res) => {
-  res.json({
-    ok: true,
-    uptime_s: Math.round(process.uptime()),
-    env: {
-      node: process.version,
-      tier_allow: CFG.allowTiers,
-      cors: allowList,
-    },
-  });
 });
 
-// ---- APIs -------------------------------------------------------------------
-app.use("/api/prefs", prefs);
-app.use("/api/leads", leads);
-app.use("/api/catalog", catalog);
-app.use("/api/places", places);
-app.use("/api/classify", classify); // <- this fixes the 404
+// ---- strict CORS (no deps) --------------------------------------------------
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const origin = req.headers.origin as string | undefined;
+  res.setHeader("Vary", "Origin");
+  if (origin && isOriginAllowed(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    const reqHdrs =
+      (req.headers["access-control-request-headers"] as string | undefined) ||
+      "Content-Type,Authorization";
+    res.setHeader("Access-Control-Allow-Headers", reqHdrs);
+    return res.status(204).end();
+  }
+  next();
+});
 
-// ---- docs (static) ----------------------------------------------------------
-const docsDir = path.join(__dirname, "../docs");
-app.use(express.static(docsDir, { extensions: ["html"] }));
-app.get("/", (_req, res) => res.sendFile(path.join(docsDir, "index.html")));
+// ---- body parsing -----------------------------------------------------------
+app.use(express.json({ limit: "512kb" }));
 
-// ---- not found / errors -----------------------------------------------------
-app.use((req, res) => res.status(404).json({ ok: false, error: "not_found", path: req.path }));
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error("ERR", err?.message || err);
+// ---- health probes ----------------------------------------------------------
+app.get("/healthz", (_req, res) => res.type("text/plain").send("ok"));
+app.use("/api/health", HealthRouter);
+
+// ---- API mounts (canonical only) -------------------------------------------
+app.use("/api/prefs", PrefsRouter);
+app.use("/api/leads", LeadsRouter);
+app.use("/api/catalog", CatalogRouter);
+app.use("/api/places", PlacesRouter);
+app.use("/api/classify", ClassifyRouter); // fixes 404 seen from the modal
+
+// ---- 404 for unknown /api/* -------------------------------------------------
+app.use("/api", (_req, res) => res.status(404).json({ ok: false, error: "not_found" }));
+
+// ---- generic error handler --------------------------------------------------
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("Unhandled error:", (err as any)?.message || err);
   res.status(500).json({ ok: false, error: "server_error" });
 });
 
-// ---- listen -----------------------------------------------------------------
-const PORT = Number(process.env.PORT || 8787);
-app.listen(PORT, () => {
-  console.log(`buyers-api listening on :${PORT}`);
+// ---- boot -------------------------------------------------------------------
+const port = Number(CFG.port || process.env.PORT || 8787);
+app.listen(port, () => {
+  console.log(`buyers-api listening on :${port} (env=${CFG.nodeEnv}) — /healthz, /api/*`);
 });
 
 export default app;
