@@ -1,221 +1,130 @@
-// public/script.js
-// Keeps your admin "Find buyers" panel intact AND adds onboarding helpers
-// for Step 3 (one-liner + product signals) that call /api/classify correctly.
+// docs/script.js
+// Onboarding helpers for the landing modal (frontend-only).
+// Robustly calls your backend /classify regardless of how the API base is pasted,
+// and auto-fills domain from business email (works with browser autofill too).
 
 (function () {
-  // ---------- Admin panel (existing) ----------
-  const els = {
-    base: document.querySelector("#apiBase"),
-    key: document.querySelector("#apiKey"),
-    apply: document.querySelector("#btnApply"),
-    region: document.querySelector("#region"),
-    radius: document.querySelector("#radius"),
-    domain: document.querySelector("#supplierDomain"),
-    btnFind: document.querySelector("#btnFindBuyers"),
-    toast: document.querySelector("#toast"),
-    hotBtn: document.querySelector("#btnRefreshHot"),
-    warmBtn: document.querySelector("#btnRefreshWarm"),
-    tableBody: document.querySelector("#leadsTbody"),
-    status: document.querySelector("#statusText"),
-  };
+  // ---------- utilities ----------
+  const LS_KEY = "apiBase"; // where we store your API base
 
-  function saveLocal() {
-    els.base && localStorage.setItem("apiBase", els.base.value.trim());
-    els.key && localStorage.setItem("apiKey", els.key.value.trim());
-  }
-  function loadLocal() {
-    const b = localStorage.getItem("apiBase");
-    const k = localStorage.getItem("apiKey");
-    if (els.base && b) els.base.value = b;
-    if (els.key && k) els.key.value = k;
-  }
-  function toast(msg, kind = "info") {
-    if (!els.toast) return alert(msg);
-    els.toast.textContent = msg;
-    els.toast.className = `toast ${kind}`;
-    els.toast.style.display = "block";
-    setTimeout(() => (els.toast.style.display = "none"), 4000);
-  }
-  function normDomain(s) {
-    if (!s) return "";
-    s = s.trim().toLowerCase();
-    s = s.replace(/^https?:\/\//, "").replace(/^www\./, "");
-    const idx = s.indexOf("/");
-    if (idx >= 0) s = s.slice(0, idx);
-    return s;
+  function getApiBaseRaw() {
+    const fromAttr = document.documentElement.getAttribute("data-api-base") || "";
+    const fromLS = localStorage.getItem(LS_KEY) || "";
+    const fromMeta = (document.querySelector('meta[name="api-base"]')?.getAttribute("content")) || "";
+    return (fromAttr || fromLS || fromMeta || "").trim().replace(/\/+$/, "");
   }
 
-  function apiBaseRaw() {
-    // Prefer the visible input if present; fall back to localStorage
-    const fromInput = els.base && els.base.value ? els.base.value.trim() : "";
-    const fromLS = localStorage.getItem("apiBase") || "";
-    return (fromInput || fromLS).replace(/\/+$/, "");
-  }
-  function apiHeaders() {
-    const key = (els.key && els.key.value.trim()) || localStorage.getItem("apiKey") || "";
-    return Object.assign({ "Content-Type": "application/json" }, key ? { "x-api-key": key } : {});
+  function setApiBase(raw) {
+    if (!raw) return;
+    const v = raw.trim().replace(/\/+$/, "");
+    localStorage.setItem(LS_KEY, v);
+    console.info("[onboarding] apiBase saved:", v);
   }
 
-  async function api(path, opts = {}) {
-    const base = apiBaseRaw();
-    const headers = Object.assign({}, apiHeaders(), opts.headers || {});
-    const resp = await fetch(`${base}${path}`, { credentials: "omit", ...opts, headers });
-    let body = null;
-    try {
-      body = await resp.json();
-    } catch { /* ignore non-JSON */ }
-    return { status: resp.status, ok: resp.ok, body };
+  function promptApiBase() {
+    const cur = getApiBaseRaw();
+    const val = window.prompt(
+      "API base (can be with or without /api).\nExample: https://YOUR-SUBDOMAIN.code.run/api",
+      cur || "https://…your-subdomain….code.run/api"
+    );
+    if (val) setApiBase(val);
   }
 
-  async function findBuyers() {
-    if (!els.btnFind) return;
-    const domainRaw = els.domain ? els.domain.value : "";
-    const domain = normDomain(domainRaw);
-    if (!domain) return toast("Please enter a supplier domain (e.g. acme.com)", "warn");
+  function headers() {
+    const h = { "Content-Type": "application/json" };
+    const apiKey = localStorage.getItem("apiKey") || ""; // optional
+    if (apiKey) h["x-api-key"] = apiKey;
+    return h;
+  }
 
-    els.btnFind.disabled = true;
-    els.btnFind.textContent = "Finding buyers...";
-    els.status && (els.status.textContent = "Finding buyers…");
+  // Smart join without double slashes
+  function join(base, tail) {
+    return `${base.replace(/\/+$/, "")}/${String(tail).replace(/^\/+/, "")}`;
+  }
 
-    const payload = {
-      domain, // <<< IMPORTANT: always send as `domain`
-      region: els.region?.value || "US/CA",
-      radiusMi: Number(els.radius?.value || 50),
-      // persona: optional later
+  // Try both /classify and /api/classify depending on what user pasted
+  async function classifyFetch(host, email) {
+    const base = getApiBaseRaw();
+    if (!base) {
+      promptApiBase();
+      throw new Error("api_base_missing");
+    }
+
+    // Candidate #1: base + "/classify"
+    const u1 = new URL(join(base, "/classify"));
+    u1.searchParams.set("host", host);
+    if (email) u1.searchParams.set("email", email);
+
+    // Candidate #2: (base without trailing /api) + "/api/classify"
+    const baseNoApi = base.replace(/\/api\/?$/i, "");
+    const u2 = new URL(join(baseNoApi, "/api/classify"));
+    u2.searchParams.set("host", host);
+    if (email) u2.searchParams.set("email", email);
+
+    // If base already ends with /api, u1 => “…/api/classify” (good), u2 is identical.
+    // If base lacks /api, u1 => “…/classify” (likely 404), u2 => “…/api/classify” (good).
+    // We’ll try u1 first, then u2 if 404-ish HTML like “Cannot GET /classify”.
+
+    const tryOnce = async (url) => {
+      const resp = await fetch(url.toString(), { credentials: "omit", headers: headers() });
+      let bodyText = "";
+      try { bodyText = await resp.text(); } catch {}
+      // Parse JSON if it looks like JSON
+      let parsed = null;
+      if (bodyText && /^\s*[\{\[]/.test(bodyText)) {
+        try { parsed = JSON.parse(bodyText); } catch {}
+      }
+      return { ok: resp.ok, status: resp.status, text: bodyText, json: parsed };
     };
 
-    const { status, body } = await api("/api/v1/leads/find-buyers", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    const r1 = await tryOnce(u1);
+    // Fast-path if r1 ok JSON with ok:true
+    if (r1.json && (r1.json.ok === true || r1.json.host)) return r1.json;
 
-    if (status === 400) {
-      toast((body && body.error) || "Bad request", "error");
-    } else if (status >= 500) {
-      toast("Server error. Try again.", "error");
-    } else {
-      const created = body?.created ?? 0;
-      const hot = body?.hot ?? 0;
-      const warm = body?.warm ?? 0;
-      toast(`Created ${created} candidate(s). Hot:${hot} Warm:${warm}. Refresh lists to view.`, "info");
+    // If r1 failed or returned “Cannot GET /classify”, try the other URL
+    const looksWrong =
+      !r1.ok ||
+      (typeof r1.text === "string" && /Cannot\s+GET\s+\/classify/i.test(r1.text));
+
+    if (looksWrong) {
+      const r2 = await tryOnce(u2);
+      if (r2.json && (r2.json.ok === true || r2.json.host)) return r2.json;
+      const msg = r2.text || "classify-failed";
+      throw new Error(`classify_failed:${r2.status}:${msg.slice(0, 160)}`);
     }
 
-    els.btnFind.disabled = false;
-    els.btnFind.textContent = "Find buyers";
-    els.status && (els.status.textContent = "");
-  }
-
-  async function refreshList(temp) {
-    const { body } = await api(`/api/v1/leads?temp=${encodeURIComponent(temp)}&region=usca`);
-    if (!Array.isArray(body) || !els.tableBody) return;
-    els.tableBody.innerHTML = "";
-    for (const l of body) {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${l.id || ""}</td>
-        <td>${l.domain || l.website || ""}</td>
-        <td>${l.platform || "web"}</td>
-        <td>${l.title || ""}</td>
-        <td>${new Date(l.createdAt || Date.now()).toLocaleString()}</td>
-        <td>${l.temp || ""}</td>
-        <td>${(l.why || l.meta?.why || "").toString().slice(0, 120)}</td>`;
-      els.tableBody.appendChild(tr);
+    // If r1 returned JSON but not ok, throw that
+    if (r1.json && r1.json.ok === false) {
+      throw new Error(`classify_error:${r1.json.error || "unknown"}`);
     }
+    throw new Error(`classify_failed:${r1.status}:${String(r1.text).slice(0,160)}`);
   }
 
-  // ---------- Onboarding modal additions ----------
-  // Works only if the Step 2/3 elements exist on the page.
+  // ---------- UI helpers ----------
+  function q(sel) { return document.querySelector(sel); }
+  function qa(sel) { return Array.from(document.querySelectorAll(sel)); }
 
-  // Normalize to '<base>/api' for classify calls
-  function apiBaseForClassify() {
-    const raw = apiBaseRaw(); // may already include /api or not
-    if (!raw) return "";
-    return /\/api\/?$/i.test(raw) ? raw.replace(/\/+$/, "") : `${raw}/api`;
-  }
-
-  function setApiBaseInteractive() {
-    const current = apiBaseRaw();
-    const val = window.prompt(
-      "API base (ends with /api). Example:\nhttps://YOUR-NORTHFLANK-SUBDOMAIN.code.run/api",
-      current || "https://…your-subdomain….code.run/api"
+  // Find email & domain inputs broadly
+  function locateEmailInput() {
+    return (
+      q("#business-email") ||
+      q('input[type="email"]') ||
+      q('input[name*="email" i]')
     );
-    if (!val) return;
-    const trimmed = val.trim();
-    // Store without trailing slash; we keep original admin input in sync if present
-    localStorage.setItem("apiBase", trimmed.replace(/\/+$/, ""));
-    if (els.base) els.base.value = trimmed.replace(/\/+$/, "");
-    toast("API base saved.");
+  }
+  function locateDomainInput() {
+    return (
+      q("#domain") ||
+      q("#website") ||
+      q('input[name*="domain" i]') ||
+      q('input[name*="website" i]')
+    );
   }
 
-  async function classify(host, email) {
-    const base = apiBaseForClassify();
-    if (!base) {
-      setApiBaseInteractive();
-      throw new Error("api_base_not_set");
-    }
-    const url = new URL(`${base}/classify`);
-    url.searchParams.set("host", host);
-    if (email) url.searchParams.set("email", email);
-    const resp = await fetch(url.toString(), { credentials: "omit", headers: apiHeaders() });
-    if (!resp.ok) throw new Error(`http_${resp.status}`);
-    return await resp.json();
-  }
-
-  // Update the one-liner + product chips inside Step 3
-  async function refreshSummary(host, email) {
-    const statusEl = document.querySelector("[data-summary]");
-    if (statusEl) statusEl.textContent = `${host} — fetching summary…`;
-
-    try {
-      const data = await classify(host, email);
-      if (!data || data.ok === false) {
-        const reason = data?.error || "network error";
-        if (statusEl) statusEl.textContent = `${host} — ${reason} while reading your site.`;
-        return;
-      }
-
-      // 1-liner
-      const one = data.summary || `${data.host} sells packaging to brands.`;
-      if (statusEl) statusEl.textContent = one;
-
-      // favicon (gstatic)
-      const fav = document.getElementById("company-favicon");
-      if (fav) fav.src =
-        `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=64&url=https://${encodeURIComponent(data.host)}`;
-
-      // product signals → chips
-      const chipBox = document.querySelector("[data-product-chips]");
-      if (chipBox) {
-        chipBox.innerHTML = "";
-        const tags = (data.productTags || []).slice(0, 12);
-        if (tags.length === 0) {
-          chipBox.insertAdjacentHTML(
-            "beforeend",
-            `<span class="muted">Tap to select. We’ll use these as focus tags.</span>`
-          );
-        } else {
-          for (const t of tags) {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "chip";
-            btn.textContent = t;
-            btn.addEventListener("click", () => btn.classList.toggle("chip--on"));
-            chipBox.appendChild(btn);
-          }
-        }
-      }
-    } catch (err) {
-      const msg = (err && err.message) || String(err);
-      if (msg === "api_base_not_set") return; // user will retry after setting
-      const statusEl = document.querySelector("[data-summary]");
-      if (statusEl) statusEl.textContent = `${host} — network error while reading your site.`;
-    }
-  }
-
-  // Auto-fill domain from business email (handles browser autofill)
+  // Auto-fill domain from email (handles autofill)
   function wireEmailToDomain() {
-    const emailEl = document.getElementById("business-email");
-    const domainEl = document.getElementById("domain");
+    const emailEl = locateEmailInput();
+    const domainEl = locateDomainInput();
     if (!emailEl || !domainEl) return;
 
     const sync = () => {
@@ -224,43 +133,87 @@
       if (m) domainEl.value = m[1].toLowerCase();
     };
     ["input", "change", "blur"].forEach(ev => emailEl.addEventListener(ev, sync));
-    // Try once after load for saved autofill
-    setTimeout(sync, 120);
+    // Try after browser autofill
+    setTimeout(sync, 150);
   }
 
-  // Wire “Refresh from website” and the settings cog if present
-  function wireOnboardingActions() {
-    document.querySelectorAll("[data-action='set-api']").forEach(el => {
-      el.addEventListener("click", (e) => { e.preventDefault(); setApiBaseInteractive(); });
+  function setSummary(text) {
+    const el =
+      q("[data-summary]") ||
+      q("#summaryLine") ||
+      q(".summary-line");
+    if (el) el.textContent = text;
+  }
+
+  function setFavicon(host) {
+    const img = q("#company-favicon");
+    if (!img || !host) return;
+    img.src = `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=64&url=https://${encodeURIComponent(host)}`;
+  }
+
+  function renderProductChips(tags) {
+    const box =
+      q("[data-product-chips]") ||
+      q("#product-chips");
+    if (!box) return;
+    box.innerHTML = "";
+    const list = Array.isArray(tags) ? tags.slice(0, 12) : [];
+    if (list.length === 0) {
+      box.insertAdjacentHTML("beforeend", `<span class="muted">Tap to select. We’ll use these as focus tags.</span>`);
+      return;
+    }
+    for (const t of list) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chip";
+      btn.textContent = t;
+      btn.addEventListener("click", () => btn.classList.toggle("chip--on"));
+      box.appendChild(btn);
+    }
+  }
+
+  async function refreshFromWebsite() {
+    const host = (locateDomainInput()?.value || "").trim().toLowerCase();
+    const email = (locateEmailInput()?.value || "").trim().toLowerCase();
+    if (!host) {
+      alert("Add your website first (e.g. acme.com).");
+      return;
+    }
+    setSummary(`${host} — fetching summary…`);
+    try {
+      const data = await classifyFetch(host, email);
+      // Accept both new or fallback shapes
+      const summary = data.summary || `${data.host || host} sells packaging to brands.`;
+      const productTags = data.productTags || data.products || [];
+      const realHost = data.host || host;
+
+      setSummary(summary);
+      setFavicon(realHost);
+      renderProductChips(productTags);
+    } catch (err) {
+      console.warn("[onboarding] classify error:", err);
+      setSummary(`${host} — network error while reading your site.`);
+    }
+  }
+
+  function wireActions() {
+    // Gear / API base
+    qa("[data-action='set-api'], #set-api-base").forEach(el => {
+      el.addEventListener("click", (e) => { e.preventDefault(); promptApiBase(); });
     });
-    document.querySelectorAll("[data-action='refresh']").forEach(el => {
-      el.addEventListener("click", (e) => {
-        e.preventDefault();
-        const host = (document.getElementById("domain")?.value || "").trim().toLowerCase();
-        const email = (document.getElementById("business-email")?.value || "").trim().toLowerCase();
-        if (!host) return toast("Add your website first.", "warn");
-        refreshSummary(host, email);
-      });
+    // Refresh link
+    qa("[data-action='refresh'], #refresh-from-website").forEach(el => {
+      el.addEventListener("click", (e) => { e.preventDefault(); refreshFromWebsite(); });
     });
   }
 
   // ---------- boot ----------
-  loadLocal();
-
-  // Admin page wires (if present)
-  els.apply && els.apply.addEventListener("click", () => { saveLocal(); toast("Applied API base & key.", "info"); });
-  els.btnFind && els.btnFind.addEventListener("click", () => findBuyers());
-  els.hotBtn && els.hotBtn.addEventListener("click", () => refreshList("hot"));
-  els.warmBtn && els.warmBtn.addEventListener("click", () => refreshList("warm"));
-  if (els.tableBody) { refreshList("warm").catch(() => {}); }
-
-  // Onboarding wires (safe no-ops on pages that don’t have these elements)
   wireEmailToDomain();
-  wireOnboardingActions();
+  wireActions();
 
-  // Expose minimal surface if index.html wants to call directly
+  // Optional: expose small API for inline onclick handlers
   window.Galactly = Object.assign(window.Galactly || {}, {
-    setApiBaseInteractive,
-    refreshSummary,
+    setApiBase: promptApiBase,
+    refreshFromWebsite,
   });
 })();
