@@ -1,100 +1,78 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Buyers Finder — Packaging Leads</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root{
-      --bg:#0b0e13;--fg:#e9eef6;--muted:#a6b0bf;--brand:#6ae3ff;--accent:#8fff6a;
-      --card:#121825;--card-2:#0f1420;--line:#1e2635;--warn:#ffcc66;--danger:#ff6a6a;
-      --focus:0 0 0 3px rgba(106,227,255,.35);--range:#7ea2c7;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif}
-    a{color:var(--brand);text-decoration:none}
-    .container{max-width:980px;margin:0 auto;padding:32px}
-    .hero{display:flex;flex-direction:column;align-items:center;gap:16px;padding:72px 16px 48px;text-align:center}
-    .hero h1{font-size:42px;line-height:1.05;margin:0}
-    .hero p{color:var(--muted);max-width:680px;margin:0;font-size:18px}
-    .cta{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
-    .btn{appearance:none;border:0;border-radius:12px;padding:14px 18px;background:linear-gradient(180deg,var(--brand),#4bd1ff);
-      color:#001018;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(75,209,255,.25);transition:transform .04s ease}
-    .btn:active{transform:translateY(1px)}
-    .btn.alt{background:#1a2233;color:var(--fg);box-shadow:none}
-    .btn.small{padding:8px 12px;border-radius:10px;font-weight:600}
-    .note{font-size:13px;color:var(--muted)}
+<meta charset="utf-8" />
+<title>Buyers Finder — Packaging Leads</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+:root{
+  --bg:#0b0e13;--fg:#e9eef6;--muted:#a6b0bf;--brand:#6ae3ff;--accent:#8fff6a;
+  --card:#121825;--card2:#0f1420;--line:#1e2635;--warn:#ffcc66;--range:#9bb2ca;
+}
+*{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif}
+a{color:var(--brand);text-decoration:none}
+.container{max-width:980px;margin:0 auto;padding:32px}
+.hero{display:flex;flex-direction:column;align-items:center;gap:16px;padding:72px 16px 48px;text-align:center}
+.hero h1{font-size:42px;line-height:1.05;margin:0} .hero p{color:var(--muted);max-width:680px;margin:0;font-size:18px}
+.cta{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.btn{appearance:none;border:0;border-radius:12px;padding:14px 18px;background:linear-gradient(180deg,var(--brand),#4bd1ff);
+  color:#001018;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(75,209,255,.25);transition:transform .04s}
+.btn:active{transform:translateY(1px)} .btn.alt{background:#1a2233;color:var(--fg);box-shadow:none}
+.btn.small{padding:8px 12px;border-radius:10px;font-weight:600} .note{font-size:13px;color:var(--muted)}
 
-    /* Modal layout */
-    .modal-backdrop{position:fixed;inset:0;background:rgba(6,10,18,.58);backdrop-filter:blur(4px);
-      display:none;align-items:center;justify-content:center;z-index:50}
-    .modal{width:min(940px,94vw);max-height:92vh;display:flex;flex-direction:column;
-      background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;
-      box-shadow:0 20px 60px rgba(0,0,0,.45)}
-    .modal header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:var(--card-2);border-bottom:1px solid var(--line)}
-    .modal header h2{margin:0;font-size:18px}
-    .close{background:none;border:0;color:var(--muted);font-size:20px;cursor:pointer}
-    .steps{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--card-2)}
-    .step-dot{height:8px;width:8px;border-radius:99px;background:#2a3446}
-    .step-dot.active{background:var(--brand)}
-    .body{padding:20px 18px 8px;overflow:auto;flex:1}
-    .grid{display:grid;gap:16px}
-    .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .card{border:1px solid var(--line);background:linear-gradient(180deg,var(--card),#0f1420);padding:18px;border-radius:14px;display:flex;gap:12px;flex-direction:column;cursor:pointer;transition:box-shadow .2s,border-color .2s}
-    .card:hover{box-shadow:0 0 0 1px var(--brand)}
-    .card.selected{box-shadow:0 0 0 2px var(--accent),0 10px 28px rgba(143,255,106,.12)}
-    .card .title{font-weight:800}
-    .card .small{font-size:12px;color:var(--muted)}
-    .field{display:flex;flex-direction:column;gap:8px}
-    .field label{font-size:13px;color:var(--muted)}
-    .input,select,textarea{background:#0f1420;border:1px solid var(--line);border-radius:10px;color:var(--fg);padding:12px 12px;outline:none}
-    .input:focus,select:focus,textarea:focus{box-shadow:var(--focus);border-color:#2f3b4f}
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    .row > *{flex:1}
-    .footer{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-top:1px solid var(--line);background:var(--card-2)}
-    .footer .left{display:flex;gap:12px;align-items:center}
-    .badge{font-size:12px;color:#001018;background:var(--brand);border-radius:999px;padding:4px 8px}
-    .warn{color:var(--warn)}
-    .tiny{font-size:12px;color:var(--muted)}
-    .hidden{display:none!important}
+.modal-backdrop{position:fixed;inset:0;background:rgba(6,10,18,.58);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;z-index:50}
+.modal{width:min(940px,94vw);max-height:92vh;display:flex;flex-direction:column;background:var(--card);
+  border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:var(--card2);border-bottom:1px solid var(--line)}
+header h2{margin:0;font-size:18px} .close{background:none;border:0;color:var(--muted);font-size:20px;cursor:pointer}
+.steps{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--card2)}
+.step-dot{height:8px;width:8px;border-radius:99px;background:#2a3446}.step-dot.active{background:var(--brand)}
+.body{padding:20px 18px 8px;overflow:auto;flex:1}
+.grid{display:grid;gap:16px}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.card{border:1px solid var(--line);background:linear-gradient(180deg,var(--card),#0f1420);padding:18px;border-radius:14px;
+  display:flex;gap:10px;flex-direction:column;cursor:pointer;transition:box-shadow .2s,border-color .2s}
+.card:hover{box-shadow:0 0 0 1px var(--brand)} .card.selected{box-shadow:0 0 0 2px var(--accent),0 10px 28px rgba(143,255,106,.12)}
+.card .title{font-weight:800}.small{font-size:12px;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:8px} .field label{font-size:13px;color:var(--muted)}
+.input{background:#0f1420;border:1px solid var(--line);border-radius:10px;color:var(--fg);padding:12px}
+.input:focus{outline:none;box-shadow:0 0 0 3px rgba(106,227,255,.35);border-color:#2f3b4f}
+.row{display:flex;gap:12px;flex-wrap:wrap}.row>*{flex:1}
+.footer{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-top:1px solid var(--line);background:var(--card2)}
+.badge{font-size:12px;color:#001018;background:var(--brand);border-radius:999px;padding:4px 8px}.tiny{font-size:12px;color:var(--muted)}
+.hidden{display:none!important}
 
-    /* Step 1 examples list */
-    .ex{display:flex;gap:6px;flex-wrap:wrap}
-    .ex .chip{background:#121a2a;border:1px solid var(--line);padding:4px 8px;border-radius:999px;font-size:11px}
+.ex{display:flex;gap:6px;flex-wrap:wrap}.ex .chip{background:#121a2a;border:1px solid var(--line);padding:4px 8px;border-radius:999px;font-size:11px}
 
-    /* Step 3 summary */
-    .summary-card{border:1px solid var(--line);background:#0e1726;border-radius:16px;padding:22px 18px;margin:6px 0 12px}
-    .summary-wrap{display:flex;align-items:center;gap:14px;justify-content:center}
-    .logo{height:44px;width:44px;border-radius:10px;border:1px solid var(--line);object-fit:cover;background:#0b1220}
-    .summary{font-size:20px;line-height:1.45;text-align:center}
-    .summary b{font-weight:800}
-    .editable{display:inline-block;min-width:24px;border-bottom:1px dashed #2b3a52;padding:0 4px;border-radius:4px}
-    .editable:focus{outline:none;box-shadow:var(--focus)}
+.summary-card{border:1px solid var(--line);background:#0e1726;border-radius:16px;padding:22px 18px;margin:6px 0 12px}
+.summary-wrap{display:flex;align-items:center;gap:14px;justify-content:center}
+.logo{height:44px;width:44px;border-radius:10px;border:1px solid var(--line);object-fit:cover;background:#0b1220}
+.summary{font-size:20px;line-height:1.45;text-align:center}.summary b{font-weight:800}
+.editable{display:inline-block;min-width:24px;border-bottom:1px dashed #2b3a52;padding:0 4px;border-radius:4px}
+.editable:focus{outline:none;box-shadow:0 0 0 3px rgba(106,227,255,.35)}
+.center{display:flex;justify-content:center}
+.adv-toggle{margin:10px auto 6px}.adv-label{color:var(--muted);font-size:13px;text-align:center;margin-top:2px}
 
-    .center{display:flex;justify-content:center}
-    .adv-toggle{margin:10px auto 6px}
-    .adv-label{color:var(--muted);font-size:13px;text-align:center;margin-top:2px}
+.group{border:1px solid var(--line);border-radius:14px;padding:14px;background:#0f1420;margin-top:12px}
+.group h4{margin:0 0 6px 0;font-size:14px}
+.flex2{display:grid;grid-template-columns:1fr 1fr;gap:14px} /* 2-column inside Advanced */
 
-    .group{border:1px solid var(--line);border-radius:14px;padding:14px;background:#0f1420;margin-top:12px}
-    .group h4{margin:0 0 6px 0;font-size:14px}
-    .switch{display:inline-flex;align-items:center;gap:8px}
-    .switch input{accent-color:#4bd1ff}
-    .disabled{opacity:.55;filter:grayscale(.25);pointer-events:none}
+.switch{display:inline-flex;align-items:center;gap:8px}.switch input{accent-color:#4bd1ff}
+.disabled{opacity:.55;filter:grayscale(.25);pointer-events:none}
+.sliders{display:grid;gap:12px}
+.slider-row{display:flex;gap:10px;align-items:center}
+.slider-row input[type=range]{flex:0 0 220px;accent-color:var(--range)}
+.label-ico{display:flex;align-items:center;gap:6px}
+.help{display:none;position:absolute;z-index:5;background:#0f1420;border:1px solid var(--line);padding:8px 10px;border-radius:8px;font-size:12px;max-width:260px}
+.help.show{display:block}.help-host{position:relative}.ico{cursor:pointer}
 
-    .sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-    .slider-row{display:flex;gap:10px;align-items:center}
-    .slider-row input[type=range]{flex:0 0 240px;accent-color:var(--range)}
-    .label-ico{display:flex;align-items:center;gap:6px}
-    .ico{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;opacity:.9;cursor:pointer}
-    .help{display:none;position:absolute;z-index:5;background:#0f1420;border:1px solid var(--line);padding:8px 10px;border-radius:8px;font-size:12px;max-width:260px}
-    .help.show{display:block}
-    .help-host{position:relative}
-
-    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-    .chipX{background:#121a2a;border:1px solid var(--line);padding:6px 10px;border-radius:999px;font-size:12px;cursor:pointer}
-    .chipX.sel{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset}
-    .muted{color:var(--muted)}
-  </style>
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.chipX{background:#121a2a;border:1px solid var(--line);padding:6px 10px;border-radius:999px;font-size:12px;cursor:pointer}
+.chipX.sel{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset}
+.linkbtn{background:none;color:var(--brand);border:0;text-decoration:underline;cursor:pointer;padding:0;font:inherit}
+.statusline{font-size:12px;color:var(--muted);text-align:center;margin-top:6px;min-height:18px}
+</style>
 </head>
 <body>
   <div class="container hero">
@@ -107,7 +85,6 @@
     <p class="note">No spam. Cost-safe discovery. You own the dials.</p>
   </div>
 
-  <!-- Modal -->
   <div id="mb" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="ob-title">
     <div class="modal">
       <header>
@@ -115,11 +92,7 @@
         <button class="close" id="ob-x" aria-label="Close">✕</button>
       </header>
 
-      <div class="steps" id="steps">
-        <div class="step-dot active" data-step="1" title="Role"></div>
-        <div class="step-dot" data-step="2" title="Your details"></div>
-        <div class="step-dot" data-step="3" title="Preferences"></div>
-      </div>
+      <div class="steps"><div class="step-dot active" data-step="1"></div><div class="step-dot" data-step="2"></div><div class="step-dot" data-step="3"></div></div>
 
       <div class="body">
         <!-- STEP 1 -->
@@ -127,23 +100,13 @@
           <div class="grid cols-2">
             <div class="card selected" data-role="supplier" tabindex="0" aria-pressed="true">
               <div class="title">I sell packaging (Supplier)</div>
-              <div class="tiny">You’ll get buyer leads tuned to your strengths.</div>
-              <div class="ex">
-                <span class="chip">Examples:</span>
-                <span class="chip">manufacturers</span><span class="chip">converters</span>
-                <span class="chip">label printers</span><span class="chip">co-packers</span>
-                <span class="chip">distributors</span>
-              </div>
+              <div class="small">You’ll get buyer leads tuned to your strengths.</div>
+              <div class="ex"><span class="chip">Examples:</span><span class="chip">manufacturers</span><span class="chip">converters</span><span class="chip">label printers</span><span class="chip">co-packers</span><span class="chip">distributors</span></div>
             </div>
             <div class="card" data-role="buyer" tabindex="0" aria-pressed="false">
               <div class="title">I buy packaging (Buyer)</div>
-              <div class="tiny">We’re prioritizing suppliers. Buyers can browse too (limited).</div>
-              <div class="ex">
-                <span class="chip">Examples:</span>
-                <span class="chip">brands</span><span class="chip">CPG</span>
-                <span class="chip">DTC retailers</span><span class="chip">beverage</span>
-                <span class="chip">cosmetics</span>
-              </div>
+              <div class="small">We’re prioritizing suppliers. Buyers can browse too (limited).</div>
+              <div class="ex"><span class="chip">Examples:</span><span class="chip">brands</span><span class="chip">CPG</span><span class="chip">DTC retailers</span><span class="chip">beverage</span><span class="chip">cosmetics</span></div>
             </div>
           </div>
         </section>
@@ -152,47 +115,33 @@
         <section id="s2" class="hidden">
           <div class="grid">
             <div class="row">
-              <div class="field">
-                <label for="name">Your name</label>
-                <input id="name" class="input" placeholder="Alex Chen" autocomplete="name">
-              </div>
-              <div class="field">
-                <label for="email">Business email <span class="warn">*</span></label>
-                <input id="email" class="input" type="email" placeholder="you@yourcompany.com"
-                       autocomplete="email" required>
-              </div>
+              <div class="field"><label for="name">Your name</label><input id="name" class="input" placeholder="Alex Chen" autocomplete="name"></div>
+              <div class="field"><label for="email">Business email <span style="color:var(--warn)">*</span></label>
+                <input id="email" class="input" type="email" placeholder="you@yourcompany.com" autocomplete="email" required></div>
             </div>
             <div class="row">
-              <div class="field">
-                <label for="phone">Phone (required for alerts) <span class="warn">*</span></label>
-                <input id="phone" class="input" type="tel" inputmode="tel" required
-                       placeholder="+1 555 123 4567" autocomplete="tel"
-                       pattern="\\+?[0-9\\s().\\-]{7,}">
-                <div class="tiny">Country code helps us localize (e.g., “+1” for U.S.).</div>
-              </div>
-              <div class="field">
-                <label for="domain">Website / Domain (auto from email)</label>
+              <div class="field"><label for="phone">Phone (required for alerts) <span style="color:var(--warn)">*</span></label>
+                <input id="phone" class="input" type="tel" inputmode="tel" required placeholder="+1 555 123 4567" autocomplete="tel"
+                  pattern="\\+?[0-9\\s().\\-]{7,}">
+                <div class="tiny">Country code helps us localize (e.g., “+1” for U.S.).</div></div>
+              <div class="field"><label for="domain">Website / Domain (auto from email)</label>
                 <input id="domain" class="input" placeholder="yourcompany.com" autocomplete="url">
-                <div class="tiny">Auto-filled from your email. You can edit.</div>
-              </div>
+                <div class="tiny">Auto-filled from your email. You can edit.</div></div>
             </div>
             <div class="row">
               <button id="verify" class="btn" style="min-width:180px">Verify email</button>
               <span id="vstate" class="tiny">Verification required to continue.</span>
-              <label class="tiny" style="margin-left:auto;display:flex;align-items:center;gap:6px">
-                <input type="checkbox" id="devskip"> I’m just testing (skip verification)
-              </label>
+              <label class="tiny" style="margin-left:auto;display:flex;align-items:center;gap:6px"><input type="checkbox" id="devskip"> I’m just testing (skip verification)</label>
             </div>
           </div>
         </section>
 
         <!-- STEP 3 -->
         <section id="s3" class="hidden">
-          <!-- One-liner -->
           <div class="summary-card">
             <div class="summary-wrap">
               <img id="logo" class="logo" alt="logo">
-              <div class="summary" id="summary">
+              <div class="summary">
                 <b id="sum-company" class="editable" contenteditable="true">your-company</b>
                 <span id="sum-verb">sells</span>
                 <b id="sum-what" class="editable" contenteditable="true">packaging</b>
@@ -201,90 +150,74 @@
                 <span id="sum-where" class="editable" contenteditable="true"></span>.
               </div>
             </div>
-            <div class="tiny center" style="margin-top:10px">
-              <span class="link" id="refresh">Refresh from website</span> (uses /api/classify, cached)
+            <div class="center" style="gap:10px;margin-top:10px">
+              <button id="refresh" class="linkbtn" type="button">Refresh from website</button>
             </div>
+            <div id="classify-status" class="statusline"></div>
           </div>
 
-          <!-- Advanced toggle centered -->
-          <div class="center">
-            <button id="adv-toggle" class="btn alt small adv-toggle">Show advanced ▼</button>
-          </div>
+          <div class="center"><button id="adv-toggle" class="btn alt small adv-toggle">Show advanced ▼</button></div>
           <div class="adv-label">Optional: refine ranking and add product-specific details.</div>
 
-          <!-- Advanced panel -->
           <div id="adv" class="hidden">
-            <!-- General tuning -->
-            <div class="group">
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-                <h4 style="margin:0">General tuning</h4>
-                <label class="switch tiny" title="Use balanced defaults. You can always tweak later.">
-                  <input type="checkbox" id="ai-general"> <b>Let AI decide</b>
-                </label>
+            <div class="flex2">
+              <!-- LEFT: General tuning -->
+              <div class="group">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+                  <h4 style="margin:0">General tuning</h4>
+                  <label class="switch tiny"><input type="checkbox" id="ai-general"> <b>Let AI decide</b></label>
+                </div>
+                <div id="general-controls" class="sliders" style="margin-top:8px">
+                  <div class="field">
+                    <div class="label-ico help-host"><span class="ico" data-help="nearby">📍</span><div class="help" id="help-nearby">Higher = boost same-city / nearby buyers.</div><span>Prioritize nearby buyers</span></div>
+                    <div class="slider-row"><input id="w-local" type="range" min="0" max="10" value="6"><span id="w-local-val" class="tiny">6</span></div>
+                  </div>
+                  <div class="field">
+                    <div class="label-ico help-host"><span class="ico" data-help="ecom">🛒</span><div class="help" id="help-ecom">Higher = boost buyers with online stores/carts.</div><span>Prefer e-commerce sites</span></div>
+                    <div class="slider-row"><input id="w-ecom" type="range" min="0" max="10" value="7"><span id="w-ecom-val" class="tiny">7</span></div>
+                  </div>
+                  <div class="field">
+                    <div class="label-ico help-host"><span class="ico" data-help="retail">🏪</span><div class="help" id="help-retail">Higher = boost DTC/retail brand targets.</div><span>Prefer retail brands</span></div>
+                    <div class="slider-row"><input id="w-retail" type="range" min="0" max="10" value="5"><span id="w-retail-val" class="tiny">5</span></div>
+                  </div>
+                  <div class="field">
+                    <div class="label-ico help-host"><span class="ico" data-help="wh">📦</span><div class="help" id="help-wh">Higher = boost distributors, co-packers, wholesale.</div><span>Prefer wholesalers / distributors</span></div>
+                    <div class="slider-row"><input id="w-wholesale" type="range" min="0" max="10" value="6"><span id="w-wholesale-val" class="tiny">6</span></div>
+                  </div>
+                  <div class="field">
+                    <div class="label-ico help-host"><span class="ico" data-help="size">🏗️</span><div class="help" id="help-size">Higher = boost mids; lower = more small/large.</div><span>Prefer mid-size companies</span></div>
+                    <div class="slider-row"><input id="w-size" type="range" min="0" max="10" value="6"><span id="w-size-val" class="tiny">6</span></div>
+                  </div>
+                  <div class="field">
+                    <div class="label-ico help-host"><span class="ico" data-help="avoid">🏢</span><div class="help" id="help-avoid">Higher = down-rank very large enterprises.</div><span>De-prioritize giant enterprises</span></div>
+                    <div class="slider-row"><input id="w-avoid" type="range" min="0" max="10" value="7"><span id="w-avoid-val" class="tiny">7</span></div>
+                  </div>
+                </div>
               </div>
-              <div id="general-controls" class="sliders" style="margin-top:8px">
-                <!-- Each label has an instant tooltip (hover or tap) -->
-                <div class="field">
-                  <div class="label-ico help-host">
-                    <span class="ico" data-help="nearby">📍</span>
-                    <div class="help" id="help-nearby">Higher = boost same-city / nearby buyers.</div>
-                    <span>Prioritize nearby buyers</span>
-                  </div>
-                  <div class="slider-row"><input id="w-local" type="range" min="0" max="10" value="6"><span id="w-local-val" class="tiny">6</span></div>
+
+              <!-- RIGHT: Product signals -->
+              <div class="group">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+                  <h4 style="margin:0">Product signals (from your site)</h4>
+                  <label class="switch tiny"><input type="checkbox" id="ai-product"> <b>Let AI decide</b></label>
                 </div>
-                <div class="field">
-                  <div class="label-ico help-host">
-                    <span class="ico" data-help="ecom">🛒</span>
-                    <div class="help" id="help-ecom">Higher = boost buyers with online stores/carts.</div>
-                    <span>Prefer e-commerce sites</span>
-                  </div>
-                  <div class="slider-row"><input id="w-ecom" type="range" min="0" max="10" value="7"><span id="w-ecom-val" class="tiny">7</span></div>
-                </div>
-                <div class="field">
-                  <div class="label-ico help-host">
-                    <span class="ico" data-help="retail">🏪</span>
-                    <div class="help" id="help-retail">Higher = boost DTC/retail brand targets.</div>
-                    <span>Prefer retail brands</span>
-                  </div>
-                  <div class="slider-row"><input id="w-retail" type="range" min="0" max="10" value="5"><span id="w-retail-val" class="tiny">5</span></div>
-                </div>
-                <div class="field">
-                  <div class="label-ico help-host">
-                    <span class="ico" data-help="wh">📦</span>
-                    <div class="help" id="help-wh">Higher = boost distributors, co-packers, wholesale.</div>
-                    <span>Prefer wholesalers / distributors</span>
-                  </div>
-                  <div class="slider-row"><input id="w-wholesale" type="range" min="0" max="10" value="6"><span id="w-wholesale-val" class="tiny">6</span></div>
-                </div>
-                <div class="field">
-                  <div class="label-ico help-host">
-                    <span class="ico" data-help="size">🏗️</span>
-                    <div class="help" id="help-size">Higher = boost mids; lower = more small/large.</div>
-                    <span>Prefer mid-size companies</span>
-                  </div>
-                  <div class="slider-row"><input id="w-size" type="range" min="0" max="10" value="6"><span id="w-size-val" class="tiny">6</span></div>
-                </div>
-                <div class="field">
-                  <div class="label-ico help-host">
-                    <span class="ico" data-help="avoid">🏢</span>
-                    <div class="help" id="help-avoid">Higher = down-rank very large enterprises.</div>
-                    <span>De-prioritize giant enterprises</span>
-                  </div>
-                  <div class="slider-row"><input id="w-avoid" type="range" min="0" max="10" value="7"><span id="w-avoid-val" class="tiny">7</span></div>
+                <div id="product-controls" style="margin-top:6px">
+                  <div class="tiny" style="color:var(--muted)">Tap to select. We’ll use these as focus tags.</div>
+                  <div id="prod-types" class="chips" style="margin-top:8px"></div>
+                  <div id="prod-mats" class="chips"></div>
+                  <div id="prod-certs" class="chips"></div>
                 </div>
               </div>
             </div>
 
-            <!-- Buyer targeting -->
+            <!-- Buyer targeting (examples inline) -->
             <div class="group">
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-                <h4 style="margin:0">Buyer targeting</h4>
-              </div>
+              <h4 style="margin:0 0 8px 0">Buyer targeting</h4>
               <div class="row">
                 <div class="field">
                   <label for="city">Find buyers near…</label>
                   <input id="city" class="input" placeholder="e.g., Chicago">
-                  <div class="tiny muted">We’ll boost leads near this city.</div>
+                  <div id="city-sug" class="chips"></div>
                 </div>
                 <div class="field">
                   <label for="tags">Buyers in these sectors</label>
@@ -292,245 +225,194 @@
                   <div id="tag-suggestions" class="chips"></div>
                 </div>
               </div>
-            </div>
-
-            <!-- Product signals -->
-            <div class="group">
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-                <h4 style="margin:0">Product signals (from your site)</h4>
-                <label class="switch tiny"><input type="checkbox" id="ai-product"> <b>Let AI decide</b></label>
-              </div>
-              <div id="product-controls" style="margin-top:6px">
-                <div class="tiny muted">Tap to select. We’ll use these as focus tags.</div>
-                <div id="prod-types" class="chips" style="margin-top:8px"></div>
-                <div id="prod-mats" class="chips"></div>
-                <div id="prod-certs" class="chips"></div>
-              </div>
+              <div class="tiny">Tip: click a chip to add/remove.</div>
             </div>
           </div>
         </section>
       </div>
 
       <div class="footer">
-        <div class="left">
-          <span id="role-badge" class="badge">Supplier</span>
-          <span id="status" class="tiny">Step 1 of 3</span>
-        </div>
-        <div class="row" style="justify-content:flex-end">
-          <button id="back" class="btn alt">Back</button>
-          <button id="next" class="btn">Next</button>
-        </div>
+        <div style="display:flex;gap:12px;align-items:center"><span id="role-badge" class="badge">Supplier</span><span id="status" class="tiny">Step 1 of 3</span></div>
+        <div class="row" style="justify-content:flex-end"><button id="back" class="btn alt">Back</button><button id="next" class="btn">Next</button></div>
       </div>
     </div>
   </div>
 
-  <script>
-  (function(){
-    const qs = s=>document.querySelector(s); const qsa = s=>Array.from(document.querySelectorAll(s));
-    const state = { step:1, role:"supplier", verified:false, testing:false,
-      name:"", email:"", phone:"", domain:"", domainEdited:false,
-      city:"", tags:[], weights:{locality:6,ecom:7,retail:5,wholesale:6,size:6,avoid:7},
-      usPhone:false, aiGeneral:false, aiProduct:false
-    };
+<script>
+(function(){
+  const qs=s=>document.querySelector(s), qsa=s=>Array.from(document.querySelectorAll(s));
+  const state={step:1,role:"supplier",verified:false,testing:false,name:"",email:"",phone:"",domain:"",domainEdited:false,
+    city:"",tags:[],weights:{locality:6,ecom:7,retail:5,wholesale:6,size:6,avoid:7},usPhone:false,aiGeneral:false,aiProduct:false};
 
-    /* --- modal & sections --- */
-    const mb=qs("#mb"), openBtn=qs("#open-onboarding"), closeBtn=qs("#ob-x"), backBtn=qs("#back"), nextBtn=qs("#next");
-    const stepsDots=qsa(".step-dot"), status=qs("#status"), badge=qs("#role-badge");
-    const s1=qs("#s1"), s2=qs("#s2"), s3=qs("#s3");
+  const mb=qs("#mb"), openBtn=qs("#open-onboarding"), closeBtn=qs("#ob-x"), backBtn=qs("#back"), nextBtn=qs("#next");
+  const steps=qsa(".step-dot"), status=qs("#status"), badge=qs("#role-badge");
+  const s1=qs("#s1"), s2=qs("#s2"), s3=qs("#s3");
 
-    /* Step 1 role cards with examples */
-    const roleCards=qsa(".card[data-role]");
-    roleCards.forEach(c=>{
-      c.addEventListener("click", ()=>selectRole(c.dataset.role));
-      c.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();selectRole(c.dataset.role);} });
-    });
-    function selectRole(role){
-      state.role=role; roleCards.forEach(c=>c.classList.toggle("selected", c.dataset.role===role));
-      roleCards.forEach(c=>c.setAttribute("aria-pressed", c.dataset.role===role ? "true":"false"));
-      badge.textContent = role==="supplier" ? "Supplier" : "Buyer";
-      qs("#sum-verb").textContent = role==="supplier" ? "sells" : "buys";
-      summaryRefresh();
-    }
+  /* Step 1 */
+  qsa(".card[data-role]").forEach(c=>{
+    c.addEventListener("click",()=>selectRole(c.dataset.role));
+    c.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selectRole(c.dataset.role);}});
+  });
+  function selectRole(role){ state.role=role; qsa(".card[data-role]").forEach(c=>c.classList.toggle("selected",c.dataset.role===role)); badge.textContent=role==="supplier"?"Supplier":"Buyer"; qs("#sum-verb").textContent=role==="supplier"?"sells":"buys"; }
 
-    /* Step 2 */
-    const nameEl=qs("#name"), emailEl=qs("#email"), phoneEl=qs("#phone"), domainEl=qs("#domain");
-    const verifyBtn=qs("#verify"), vstate=qs("#vstate"), devskip=qs("#devskip");
-    function deriveDomainFromEmail(e){ const m=(e||"").trim().match(/@([a-z0-9.-]+\.[a-z]{2,})$/i); return m?m[1].toLowerCase():""; }
-    function prettyHost(h){ return (h||"").replace(/^https?:\/\/|^www\./g,'').replace(/\/$/,''); }
-    function setLogo(domain){
-      const d=prettyHost(domain||""); const logoEl=qs("#logo"); if(!d){logoEl.src="";logoEl.alt="";return;}
-      const c=[`https://${d}/favicon.ico`,`https://${d}/apple-touch-icon.png`,`https://icons.duckduckgo.com/ip3/${encodeURIComponent(d)}.ico`];
-      let i=0; const next=()=>{ if(i>=c.length){logoEl.src="";return;} logoEl.src=c[i++]; logoEl.onerror=next; logoEl.alt=d+" logo"; }; next();
-    }
-    function syncEmailDerivedDomain(){
-      const email=emailEl.value; const inferred=deriveDomainFromEmail(email);
-      if(!state.domainEdited){ domainEl.value=inferred; state.domain=inferred; setLogo(inferred); summaryRefresh();}
-      if(!email && !state.domainEdited){ domainEl.value=""; state.domain=""; setLogo(""); summaryRefresh();}
-    }
-    emailEl.addEventListener("input",()=>{state.email=emailEl.value.trim();syncEmailDerivedDomain();});
-    emailEl.addEventListener("change",()=>{state.email=emailEl.value.trim();syncEmailDerivedDomain();});
-    domainEl.addEventListener("input",()=>{
-      const prev=state.domain; state.domain=domainEl.value.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
-      state.domainEdited = state.domain!==deriveDomainFromEmail(state.email);
-      if(state.domain!==prev){ setLogo(state.domain); summaryRefresh(); }
-    });
-    phoneEl.addEventListener("input",()=>{ state.phone=phoneEl.value.trim(); state.usPhone=/^\s*(\+?1[\s().-]?)|(\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})\s*$/.test(state.phone);});
-    devskip.addEventListener("change",()=>{ state.testing=devskip.checked; state.verified=state.testing; vstate.textContent=state.testing?"Testing mode: verification skipped.":"Verification required to continue."; gateNext();});
-    verifyBtn.addEventListener("click",async()=>{
-      if(!emailEl.reportValidity()||!phoneEl.reportValidity())return;
-      verifyBtn.disabled=true; vstate.textContent="Sending verification email…"; await new Promise(r=>setTimeout(r,900));
-      state.verified=true; verifyBtn.disabled=false; vstate.textContent="Email verified (stub)."; gateNext();
-    });
-    // pick up browser autofill
-    let lastEmail=""; setInterval(()=>{ if(emailEl.value!==lastEmail){ lastEmail=emailEl.value; state.email=lastEmail.trim(); syncEmailDerivedDomain(); }},600);
-    setTimeout(()=>{ state.email=emailEl.value.trim(); syncEmailDerivedDomain(); },350);
+  /* Step 2 */
+  const nameEl=qs("#name"), emailEl=qs("#email"), phoneEl=qs("#phone"), domainEl=qs("#domain"), verifyBtn=qs("#verify"), vstate=qs("#vstate"), devskip=qs("#devskip");
+  function deriveDomainFromEmail(e){const m=(e||"").trim().match(/@([a-z0-9.-]+\.[a-z]{2,})$/i);return m?m[1].toLowerCase():"";}
+  function prettyHost(h){return (h||"").replace(/^https?:\/\/|^www\./g,'').replace(/\/$/,'');}
+  function setLogo(domain){const d=prettyHost(domain||""); const logo=qs("#logo"); if(!d){logo.src="";return;}
+    const c=[`https://${d}/favicon.ico`,`https://${d}/apple-touch-icon.png`,`https://icons.duckduckgo.com/ip3/${encodeURIComponent(d)}.ico`];
+    let i=0; const next=()=>{if(i>=c.length){logo.src="";return;} logo.src=c[i++]; logo.onerror=next; logo.alt=d+" logo";}; next();}
+  function syncEmailDerivedDomain(){const email=emailEl.value; const inferred=deriveDomainFromEmail(email);
+    if(!state.domainEdited){domainEl.value=inferred; state.domain=inferred; setLogo(inferred);} if(!email && !state.domainEdited){domainEl.value=""; state.domain=""; setLogo("");}}
+  emailEl.addEventListener("input",()=>{state.email=emailEl.value.trim(); syncEmailDerivedDomain();});
+  emailEl.addEventListener("change",()=>{state.email=emailEl.value.trim(); syncEmailDerivedDomain();});
+  domainEl.addEventListener("input",()=>{const prev=state.domain; state.domain=domainEl.value.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+    state.domainEdited=state.domain!==deriveDomainFromEmail(state.email); if(state.domain!==prev){setLogo(state.domain);} });
+  phoneEl.addEventListener("input",()=>{state.phone=phoneEl.value.trim(); state.usPhone=/^\s*(\+?1[\s().-]?)|(\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})\s*$/.test(state.phone);});
+  devskip.addEventListener("change",()=>{state.testing=devskip.checked; state.verified=state.testing; vstate.textContent=state.testing?"Testing mode: verification skipped.":"Verification required to continue."; gateNext();});
+  verifyBtn.addEventListener("click",async()=>{ if(!emailEl.reportValidity()||!phoneEl.reportValidity())return; verifyBtn.disabled=true; vstate.textContent="Sending verification email…";
+    await new Promise(r=>setTimeout(r,700)); state.verified=true; verifyBtn.disabled=false; vstate.textContent="Email verified (stub)."; gateNext();});
+  let lastEmail=""; setInterval(()=>{ if(emailEl.value!==lastEmail){ lastEmail=emailEl.value; state.email=lastEmail.trim(); syncEmailDerivedDomain(); }},600);
+  setTimeout(()=>{ state.email=emailEl.value.trim(); syncEmailDerivedDomain(); },300);
 
-    /* Step 3 controls */
-    const cityEl=qs("#city"), tagsEl=qs("#tags"), tagSug=qs("#tag-suggestions");
-    const advToggle=qs("#adv-toggle"), adv=qs("#adv");
-    const aiGen=qs("#ai-general"), aiProd=qs("#ai-product");
-    const generalCtrls=qs("#general-controls"), productCtrls=qs("#product-controls");
-    const prodTypes=qs("#prod-types"), prodMats=qs("#prod-mats"), prodCerts=qs("#prod-certs");
-    const sumCompany=qs("#sum-company"), sumWhat=qs("#sum-what"), sumWho=qs("#sum-who"), sumWhere=qs("#sum-where");
-    [sumCompany,sumWhat,sumWho,sumWhere].forEach(el=> el.addEventListener("input",()=>summaryRefresh(true)));
-    const ranges=[["w-local","locality"],["w-ecom","ecom"],["w-retail","retail"],["w-wholesale","wholesale"],["w-size","size"],["w-avoid","avoid"]];
-    ranges.forEach(([id,key])=>{ const input=qs("#"+id), val=qs("#"+id+"-val"); input.addEventListener("input",()=>{state.weights[key]=Number(input.value); val.textContent=input.value;}); });
+  /* Step 3 elements */
+  const cityEl=qs("#city"), tagsEl=qs("#tags"), tagSug=qs("#tag-suggestions"), citySug=qs("#city-sug");
+  const adv=qs("#adv"), advToggle=qs("#adv-toggle"), aiGen=qs("#ai-general"), aiProd=qs("#ai-product");
+  const generalCtrls=qs("#general-controls"), productCtrls=qs("#product-controls");
+  const prodTypes=qs("#prod-types"), prodMats=qs("#prod-mats"), prodCerts=qs("#prod-certs");
+  const refreshBtn=qs("#refresh"), statusLine=qs("#classify-status");
+  const sumCompany=qs("#sum-company"), sumWhat=qs("#sum-what"), sumWho=qs("#sum-who"), sumWhere=qs("#sum-where");
+  [sumCompany,sumWhat,sumWho,sumWhere].forEach(el=>el.addEventListener("input",()=>summaryRefresh(true)));
+  [["w-local","locality"],["w-ecom","ecom"],["w-retail","retail"],["w-wholesale","wholesale"],["w-size","size"],["w-avoid","avoid"]]
+    .forEach(([id,key])=>{const i=qs("#"+id),v=qs("#"+id+"-val"); i.addEventListener("input",()=>{state.weights[key]=+i.value; v.textContent=i.value;});});
+  cityEl.addEventListener("input",()=>{state.city=cityEl.value.trim(); summaryRefresh();});
+  tagsEl.addEventListener("input",()=>{state.tags=tagsEl.value.split(",").map(s=>s.trim()).filter(Boolean);});
 
-    cityEl.addEventListener("input",()=>{state.city=cityEl.value.trim(); summaryRefresh();});
-    tagsEl.addEventListener("input",()=>{state.tags=tagsEl.value.split(",").map(s=>s.trim()).filter(Boolean);});
+  advToggle.addEventListener("click",()=>{const open=adv.classList.contains("hidden"); adv.classList.toggle("hidden",!open); advToggle.textContent=open?"Hide advanced ▲":"Show advanced ▼";});
+  aiGen.addEventListener("change",()=>{state.aiGeneral=aiGen.checked; generalCtrls.classList.toggle("disabled",state.aiGeneral); qsa("#general-controls input[type=range]").forEach(el=>el.disabled=state.aiGeneral);});
+  aiProd.addEventListener("change",()=>{state.aiProduct=aiProd.checked; productCtrls.classList.toggle("disabled",state.aiProduct); qsa("#product-controls .chipX").forEach(el=>el.classList.toggle("disabled",state.aiProduct));});
 
-    advToggle.addEventListener("click",()=>{ const open=adv.classList.contains("hidden"); adv.classList.toggle("hidden",!open); advToggle.textContent=open?"Hide advanced ▲":"Show advanced ▼"; });
-    aiGen.addEventListener("change",()=>{ state.aiGeneral=aiGen.checked; generalCtrls.classList.toggle("disabled",state.aiGeneral); qsa("#general-controls input[type=range]").forEach(el=> el.disabled=state.aiGeneral); });
-    aiProd.addEventListener("change",()=>{ state.aiProduct=aiProd.checked; productCtrls.classList.toggle("disabled",state.aiProduct); qsa("#product-controls .chipX").forEach(el=> el.classList.toggle("disabled",state.aiProduct)); });
+  function chip(container,text,on){const el=document.createElement("span"); el.className="chipX"; el.textContent=text;
+    el.addEventListener("click",()=>on(el,text)); container.appendChild(el); return el;}
+  function setChipsSelectedFromInput(){const chosen=new Set((tagsEl.value||"").split(",").map(s=>s.trim()).filter(Boolean));
+    qsa(".chips .chipX").forEach(el=>{ if(chosen.has(el.textContent)) el.classList.add("sel"); else el.classList.remove("sel"); }); }
 
-    // instant tooltips (hover or tap)
-    qsa(".ico").forEach(ico=>{
-      const id="help-"+ico.dataset.help; const el=qs("#"+id); const host=ico.parentElement;
-      const show=()=>{ el.classList.add("show"); }; const hide=()=>{ el.classList.remove("show"); };
-      ico.addEventListener("mouseenter",show); ico.addEventListener("mouseleave",hide);
-      ico.addEventListener("click",(e)=>{ e.stopPropagation(); el.classList.toggle("show"); });
-      host.addEventListener("mouseleave",hide); document.addEventListener("click",()=>el.classList.remove("show"));
-    });
+  function renderTagSuggestions(list){ tagSug.innerHTML=""; (list||[]).slice(0,10).forEach(t=>chip(tagSug,t,(el,val)=>{const parts=new Set(tagsEl.value.split(",").map(s=>s.trim()).filter(Boolean)); if(el.classList.contains("sel")){parts.delete(val);} else {parts.add(val);} tagsEl.value=Array.from(parts).join(", "); setChipsSelectedFromInput(); })); setChipsSelectedFromInput(); }
+  function renderCitySuggestions(list){ citySug.innerHTML=""; (list||[]).slice(0,6).forEach(c=>chip(citySug,c,(_el,val)=>{ cityEl.value=val; cityEl.dispatchEvent(new Event("input")); })); }
 
-    qs("#refresh").addEventListener("click",()=>runClassifyAndFill(true));
+  function renderProductChips(obj){
+    prodTypes.innerHTML=""; prodMats.innerHTML=""; prodCerts.innerHTML="";
+    const head=t=>{const h=document.createElement("div"); h.className="tiny"; h.style.color="var(--muted)"; h.textContent=t; return h;};
+    if(obj.types?.length){ prodTypes.appendChild(head("Packaging types")); obj.types.forEach(t=>chip(prodTypes,t,(el,val)=>toggleTag(el,val))); }
+    if(obj.materials?.length){ prodMats.appendChild(head("Materials")); obj.materials.forEach(t=>chip(prodMats,t,(el,val)=>toggleTag(el,val))); }
+    if(obj.certs?.length){ prodCerts.appendChild(head("Certifications")); obj.certs.forEach(t=>chip(prodCerts,t,(el,val)=>toggleTag(el,val))); }
+    setChipsSelectedFromInput();
+  }
+  function toggleTag(el,val){ if(state.aiProduct)return; const parts=new Set(tagsEl.value.split(",").map(s=>s.trim()).filter(Boolean));
+    if(el.classList.contains("sel")){parts.delete(val); el.classList.remove("sel");} else {parts.add(val); el.classList.add("sel");}
+    tagsEl.value=Array.from(parts).join(", "); }
 
-    function chip(container,text){
-      const el=document.createElement("span"); el.className="chipX"; el.textContent=text;
-      el.addEventListener("click",()=>{ if(state.aiProduct) return;
-        const parts=new Set(tagsEl.value.split(",").map(s=>s.trim()).filter(Boolean));
-        if(el.classList.contains("sel")){ parts.delete(text); el.classList.remove("sel"); } else { parts.add(text); el.classList.add("sel"); }
-        tagsEl.value=Array.from(parts).join(", "); tagsEl.dispatchEvent(new Event("input"));
-      });
-      container.appendChild(el);
-      return el;
-    }
-    function renderTagSuggestions(list){
-      tagSug.innerHTML=""; (list||[]).slice(0,10).forEach(t=> chip(tagSug,t));
-    }
-    function renderProductChips(obj){
-      prodTypes.innerHTML=""; prodMats.innerHTML=""; prodCerts.innerHTML="";
-      const mkHead = (t)=>{ const h=document.createElement("div"); h.className="tiny muted"; h.textContent=t; return h; };
-      if(obj.types?.length){ prodTypes.appendChild(mkHead("Packaging types")); obj.types.forEach(t=>chip(prodTypes,t)); }
-      if(obj.materials?.length){ prodMats.appendChild(mkHead("Materials")); obj.materials.forEach(t=>chip(prodMats,t)); }
-      if(obj.certs?.length){ prodCerts.appendChild(mkHead("Certifications")); obj.certs.forEach(t=>chip(prodCerts,t)); }
-    }
-    function uniq(a){ return Array.from(new Set(a)); }
+  // instant tooltips (hover or tap)
+  qsa(".ico").forEach(ico=>{
+    const id="help-"+ico.dataset.help, el=qs("#"+id), host=ico.parentElement;
+    const show=()=>el.classList.add("show"), hide=()=>el.classList.remove("show");
+    ico.addEventListener("mouseenter",show); ico.addEventListener("mouseleave",hide);
+    ico.addEventListener("click",e=>{e.stopPropagation(); el.classList.toggle("show");});
+    host.addEventListener("mouseleave",hide); document.addEventListener("click",()=>el.classList.remove("show"));
+  });
 
-    // robust extractor: handle various classify shapes
-    function extractFromClassify(d){
-      const allText = [d.oneLiner,d.summary,(d.evidence||[]).join(" "), (d.tags||[]).join(" "), (d.inferred?.tags||[]).join(" ")].filter(Boolean).join(" ").toLowerCase();
-      const pick=(arr)=>arr.filter(k=>allText.includes(k));
-      const types = pick(["bottle","bottles","jar","jars","tube","tubes","can","cans","pouch","pouches","bag","bags","box","boxes","carton","cartons","label","labels","shrink","corrugate","corrugated","mailer","clamshell","tray","cap","closure","foil"]);
-      const materials = pick(["glass","aluminum","paper","paperboard","kraft","cardboard","corrugate","plastic","pet","hdpe","ldpe","pp","pla","biodegradable","compostable"]);
-      const certs = pick(["fda","iso","gmp","nsf","bpa-free","bpa free","usda","kosher","halal","rohs","reach"]);
-      let what="packaging";
-      if (d.what) what = d.what;
-      else if (types.length) what = Array.from(new Set(types.map(t=>t.replace(/s$/,'')))).slice(0,2).join(", ");
-      let who="brands";
-      if (d.who) who = d.who;
-      else {
-        if (allText.includes("wholesale")||allText.includes("distributor")||allText.includes("b2b")) who="wholesale buyers";
-        if (allText.includes("private label")||allText.includes("co-pack")||allText.includes("copack")) who="private-label & co-pack";
+  refreshBtn.addEventListener("click",()=>runClassifyAndFill(true));
+
+  function extractFromClassify(d){
+    const join = v => Array.isArray(v)?v.join(" "): (v||"");
+    const allText = [d.oneLiner,d.summary,join(d.evidence),join(d.tags),join(d.inferred?.tags)].join(" ").toLowerCase();
+    const pick = arr => arr.filter(k=>allText.includes(k));
+    const types = pick(["bottle","bottles","jar","jars","tube","tubes","can","cans","pouch","pouches","bag","bags","box","boxes","carton","cartons","label","labels","shrink","corrugate","corrugated","mailer","clamshell","tray","cap","closure","foil"]);
+    const materials = pick(["glass","aluminum","paper","paperboard","kraft","cardboard","corrugate","plastic","pet","hdpe","ldpe","pp","pla","biodegradable","compostable"]);
+    const certs = pick(["fda","iso","gmp","nsf","bpa-free","bpa free","usda","kosher","halal","rohs","reach"]);
+    let what = d.what || (types.length ? Array.from(new Set(types.map(t=>t.replace(/s$/,'')))).slice(0,2).join(", ") : "packaging");
+    let who  = d.who  || (allText.includes("wholesale")||allText.includes("distributor")||allText.includes("b2b") ? "wholesale buyers" :
+                           (allText.includes("private label")||allText.includes("co-pack")||allText.includes("copack") ? "private-label & co-pack" : "brands"));
+    const baseTags = [...(d.tags||[]), ...(d.inferred?.tags||[]), ...types, ...materials, ...certs];
+    const suggestions = Array.from(new Set(baseTags)).slice(0,16);
+    const cityHints = d.cityHints || []; // if server sends any
+    return {types:Array.from(new Set(types)), materials:Array.from(new Set(materials)), certs:Array.from(new Set(certs)), what, who, suggestions, cityHints};
+  }
+
+  async function runClassifyAndFill(manual){
+    const host = state.domain || (state.email.split("@")[1]||"").trim();
+    if(!host){ statusLine.textContent="Enter your business email or website."; return; }
+    statusLine.textContent = "Refreshing from website…";
+    try{
+      const res = await fetch(`/api/classify?host=${encodeURIComponent(host)}`);
+      const data = await res.json();
+      if (data && data.ok !== false){
+        const inf = extractFromClassify(data);
+        const verb = (data.role==="packaging_supplier") ? "sells" : (data.role==="packaging_buyer" ? "buys" : "does");
+        qs("#sum-verb").textContent = verb;
+        if (!sumCompany.innerText.trim() || sumCompany.innerText==="your-company") sumCompany.innerText = prettyHost(host);
+        if (!sumWhat.innerText.trim()    || sumWhat.innerText==="packaging")      sumWhat.innerText = inf.what;
+        if (!sumWho.innerText.trim()     || sumWho.innerText==="brands")          sumWho.innerText  = inf.who;
+
+        renderTagSuggestions(inf.suggestions);
+        renderProductChips({types:inf.types, materials:inf.materials, certs:inf.certs});
+        if (inf.cityHints?.length) renderCitySuggestions(inf.cityHints);
+        else renderCitySuggestions(state.usPhone ? ["Chicago","Dallas","Los Angeles","New York","Atlanta","Houston"] : []);
+
+        statusLine.textContent = (inf.types.length||inf.materials.length||inf.certs.length||inf.suggestions.length) ? "Filled from website." : "No clear product signals found (you can type your own).";
+      } else {
+        statusLine.textContent = "Couldn’t read your site (cached/limited). You can type manually.";
       }
-      const baseTags = uniq([...(d.tags||[]), ...(d.inferred?.tags||[])]);
-      const suggestions = uniq(baseTags.concat(types,materials,certs));
-      return { types:uniq(types), materials:uniq(materials), certs:uniq(certs), what, who, suggestions };
+    } catch(e){
+      statusLine.textContent = "Network error while reading your site.";
     }
+    if (manual) summaryRefresh();
+  }
 
-    async function runClassifyAndFill(force){
-      if(!state.domain) return;
-      try{
-        const res=await fetch(`/api/classify?host=${encodeURIComponent(state.domain)}`);
-        const data=await res.json();
-        if (data && data.ok !== false){
-          const inf=extractFromClassify(data);
-          const verb = (data.role==="packaging_supplier") ? "sells" : (data.role==="packaging_buyer" ? "buys" : "does");
-          qs("#sum-verb").textContent = verb;
-          if (!sumCompany.innerText.trim() || sumCompany.innerText==="your-company") sumCompany.innerText = prettyHost(state.domain);
-          if (!sumWhat.innerText.trim() || sumWhat.innerText==="packaging") sumWhat.innerText = inf.what;
-          if (!sumWho.innerText.trim() || sumWho.innerText==="brands")   sumWho.innerText   = inf.who;
-          renderTagSuggestions(inf.suggestions.slice(0,12));
-          renderProductChips({types:inf.types,materials:inf.materials,certs:inf.certs});
-          // select chips already present in tags input
-          const chosen=new Set((tagsEl.value||"").split(",").map(s=>s.trim()).filter(Boolean));
-          qsa(".chips .chipX").forEach(el=>{ if (chosen.has(el.textContent)) el.classList.add("sel"); });
-        } else {
-          console.warn("classify returned not-ok", data);
-        }
-      } catch(err){ console.warn("classify failed", err); }
-      if (force) summaryRefresh();
+  function summaryRefresh(userEdited){
+    const host = state.domain ? prettyHost(state.domain) : "your-company";
+    if(!userEdited) sumCompany.innerText = sumCompany.innerText.trim() || host;
+    const where = state.city ? ` near ${state.city}` : ""; if(!userEdited) sumWhere.innerText = where;
+    setLogo(state.domain);
+  }
+
+  /* lifecycle */
+  function show(step=1){ state.step=step; mb.style.display="flex"; renderStep(); }
+  function hide(){ mb.style.display="none"; }
+  function gateNext(){ if(state.step===2){ const ok=(state.testing||state.verified)&&emailEl.reportValidity()&&phoneEl.reportValidity(); nextBtn.disabled=!ok; } else { nextBtn.disabled=false; } }
+  function renderStep(){
+    [s1,s2,s3].forEach(el=>el.classList.add("hidden")); qs("#s"+state.step).classList.remove("hidden");
+    steps.forEach((d,i)=>d.classList.toggle("active", i===state.step-1)); status.textContent=`Step ${state.step} of 3`;
+    if(state.step===3){ summaryRefresh(); runClassifyAndFill(false); } gateNext();
+  }
+
+  openBtn.addEventListener("click",()=>show(1)); closeBtn.addEventListener("click",hide);
+  backBtn.addEventListener("click",()=>{ if(state.step>1){state.step--; renderStep();} else hide(); });
+  nextBtn.addEventListener("click",async()=>{
+    if(state.step===1){ state.step=2; renderStep(); return; }
+    if(state.step===2){
+      state.name=nameEl.value.trim(); state.phone=phoneEl.value.trim(); state.email=emailEl.value.trim(); state.domain=domainEl.value.trim();
+      if(!emailEl.reportValidity()||!phoneEl.reportValidity())return; if(!state.testing && !state.verified)return;
+      state.step=3; renderStep(); return;
     }
+    if(state.step===3){ await persistPrefsThenOpen(); }
+  });
 
-    function summaryRefresh(userEdited){
-      const host = state.domain ? prettyHost(state.domain) : "your-company";
-      if(!userEdited) sumCompany.innerText = sumCompany.innerText.trim() || host;
-      const where = state.city ? `near ${state.city}` : "";
-      if(!userEdited) sumWhere.innerText = where;
-      setLogo(state.domain);
-    }
+  async function persistPrefsThenOpen(){
+    const like=(tagsEl.value||"").split(",").map(s=>s.trim()).filter(Boolean);
+    const payload={ host: state.domain || (state.email.split("@")[1]||"").trim(),
+      signalWeight: state.aiGeneral ? 6 : Number(state.weights.ecom)||0,
+      sizeWeight: state.aiGeneral ? 6 : Number(state.weights.size)||0,
+      likeTags: like, city: state.city||"", role: state.role, phone: state.phone, name: state.name, usPhone: state.usPhone };
+    try{ await fetch("/api/prefs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});}catch{}
+    const host=encodeURIComponent(payload.host||""); const city=state.city?`&city=${encodeURIComponent(state.city)}`:"";
+    window.location.href=`./free-panel.html?host=${host}${city}`;
+  }
 
-    /* modal lifecycle */
-    function show(step=1){ state.step=step; mb.style.display="flex"; renderStep(); }
-    function hide(){ mb.style.display="none"; }
-    function gateNext(){ if(state.step===2){ const ok=(state.testing||state.verified)&&emailEl.reportValidity()&&phoneEl.reportValidity(); nextBtn.disabled=!ok; } else { nextBtn.disabled=false; } }
-    function renderStep(){
-      [s1,s2,s3].forEach(el=>el.classList.add("hidden")); qs("#s"+state.step).classList.remove("hidden");
-      stepsDots.forEach(d=>d.classList.toggle("active", Number(d.dataset.step)===state.step));
-      status.textContent=`Step ${state.step} of 3`;
-      if(state.step===3){ summaryRefresh(); runClassifyAndFill(false); }
-      gateNext();
-    }
-
-    openBtn.addEventListener("click",()=>show(1));
-    closeBtn.addEventListener("click",hide);
-    backBtn.addEventListener("click",()=>{ if(state.step>1){state.step--; renderStep();} else hide(); });
-    nextBtn.addEventListener("click",async()=>{
-      if(state.step===1){ state.step=2; renderStep(); return; }
-      if(state.step===2){
-        state.name=nameEl.value.trim(); state.phone=phoneEl.value.trim(); state.email=emailEl.value.trim(); state.domain=domainEl.value.trim();
-        if(!emailEl.reportValidity()||!phoneEl.reportValidity())return; if(!state.testing && !state.verified)return;
-        state.step=3; renderStep(); return;
-      }
-      if(state.step===3){ await persistPrefsThenOpen(); }
-    });
-
-    async function persistPrefsThenOpen(){
-      const like=(tagsEl.value||"").split(",").map(s=>s.trim()).filter(Boolean);
-      const payload={ host: state.domain || (state.email.split("@")[1]||"").trim(),
-        signalWeight: state.aiGeneral ? 6 : Number(state.weights.ecom)||0,
-        sizeWeight: state.aiGeneral ? 6 : Number(state.weights.size)||0,
-        likeTags: like, city: state.city||"", role: state.role,
-        phone: state.phone, name: state.name, usPhone: state.usPhone
-      };
-      try{ await fetch("/api/prefs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});}catch{}
-      const host=encodeURIComponent(payload.host||""); const city=state.city?`&city=${encodeURIComponent(state.city)}`:"";
-      window.location.href=`./free-panel.html?host=${host}${city}`;
-    }
-
-    // dev helper
-    const params=new URLSearchParams(location.search);
-    if(params.get("dev")==="1"){ const s=qs("#devskip"); s.checked=true; s.dispatchEvent(new Event("change")); show(1); }
-  })();
-  </script>
+  // dev helper
+  const params=new URLSearchParams(location.search);
+  if(params.get("dev")==="1"){ const s=qs("#devskip"); s.checked=true; s.dispatchEvent(new Event("change")); show(1); }
+})();
+</script>
 </body>
 </html>
