@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Buyers Finder – Debug Classify</title>
+<style>
+  body{font:14px/1.4 system-ui,Segoe UI,Roboto,Inter,Arial;margin:20px;background:#0b0f14;color:#e9f1f7}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  input{padding:10px;border-radius:10px;border:1px solid #223042;background:#0d1520;color:#e9f1f7}
+  button{padding:10px 14px;border-radius:10px;border:0;background:#6de1ff;color:#082433;font-weight:700;cursor:pointer}
+  .card{background:#121822;border:1px solid #1c2532;border-radius:12px;padding:12px;margin-top:12px}
+  code,pre{white-space:pre-wrap;word-break:break-word}
+  .muted{color:#9ab0c0}
+</style>
+</head>
+<body>
+  <h1>Debug: /api/classify</h1>
+  <div class="row">
+    <input id="api" placeholder="https://YOUR.code.run or https://YOUR.code.run/api" style="min-width:360px;width:36ch">
+    <button id="save">Save API</button>
+  </div>
+  <div class="row">
+    <input id="host" placeholder="peekpackaging.com" style="min-width:260px">
+    <input id="email" placeholder="you@peekpackaging.com" style="min-width:260px">
+    <button id="go">Test classify</button>
+  </div>
+
+  <div class="card">
+    <div class="muted">Request URL</div>
+    <div id="req" style="margin-top:6px"></div>
+  </div>
+
+  <div class="card">
+    <div class="muted">Response</div>
+    <pre id="out" style="margin-top:6px"></pre>
+  </div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const getApi = () => (localStorage.getItem("apiBase")||"").trim().replace(/\/+$/,"");
+
+  $("#api").value = getApi();
+
+  $("#save").onclick = () => {
+    const v = $("#api").value.trim().replace(/\/+$/,"");
+    localStorage.setItem("apiBase", v);
+    alert("API saved: " + v);
+  };
+
+  function buildUrls(base){
+    const b = base.replace(/\/+$/,"");
+    const u1 = new URL(b + "/classify");
+    const b2 = b.replace(/\/api\/?$/i,"");
+    const u2 = new URL(b2 + "/api/classify");
+    return [u1,u2];
+  }
+
+  $("#go").onclick = async () => {
+    const base = getApi();
+    if(!base){ alert("Set API first."); return; }
+    const host = ($("#host").value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
+    const email = ($("#email").value||"").trim().toLowerCase();
+
+    const [u1,u2] = buildUrls(base);
+    u1.searchParams.set("host",host); if(email) u1.searchParams.set("email",email);
+    u2.searchParams.set("host",host); if(email) u2.searchParams.set("email",email);
+
+    // Try #1 then fallback #2
+    let used, res, txt;
+    try{
+      $("#req").textContent = u1.toString();
+      res = await fetch(u1.toString(), {credentials:"omit"});
+      txt = await res.text();
+      if(!res.ok || /Cannot\s+GET\s+\/classify/i.test(txt)){
+        $("#req").textContent += "\n(fallback) " + u2.toString();
+        res = await fetch(u2.toString(), {credentials:"omit"});
+        txt = await res.text();
+        used = u2.toString();
+      } else {
+        used = u1.toString();
+      }
+    }catch(e){
+      $("#out").textContent = "Network error: " + e;
+      return;
+    }
+
+    // Pretty print JSON if possible
+    try{
+      const j = JSON.parse(txt);
+      $("#out").textContent = JSON.stringify(j, null, 2);
+    }catch(_){
+      $("#out").textContent = `HTTP ${res.status}\n` + txt.slice(0, 4000);
+    }
+  };
+})();
+</script>
+</body>
+</html>
