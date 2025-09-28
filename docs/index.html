@@ -1,375 +1,548 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Galactly — Find real packaging buyers</title>
+<link rel="preconnect" href="https://icons.duckduckgo.com">
 <style>
   :root{
-    --bg:#0e1217; --card:#121821; --muted:#8aa0b5; --text:#e9f1f7;
-    --primary:#72d2ff; --accent:#38e17b; --chip:#1a2432; --chip-border:#243142;
-    --slider:#90a4b8; --slider-track:#273244; --danger:#ff6b6b;
-    --btn:#7fe3ff; --btn-text:#06202a;
+    --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c;
+    --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
+    --cta:#6de1ff; --ctaText:#082433; --chip:#1d2735;
+    --chipActive:#0e3b52; --accent:#38e08f;
+    --danger:#ff7b7b; --divider:#1c2532;
   }
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-  .hero{max-width:1100px;margin:64px auto;padding:24px 20px;text-align:center}
-  h1{font-weight:800;font-size:40px;letter-spacing:-.02em;margin:0 0 16px}
-  p.sub{color:var(--muted);margin:0 0 28px}
-  .cta{background:var(--btn);color:var(--btn-text);border:0;border-radius:14px;padding:14px 22px;font-weight:700;cursor:pointer}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
+  a{color:var(--brand);text-decoration:none}
+  .hero{
+    min-height:100vh; display:grid; place-items:center; padding:4rem 1rem;
+    background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%);
+  }
+  .hero-inner{max-width:920px; text-align:center}
+  h1{font-size: clamp(32px, 6vw, 56px); margin:0 0 12px}
+  p.lead{color:var(--muted); margin:0 0 28px}
+  .btn{display:inline-flex; align-items:center; gap:.6rem; padding:12px 18px;
+       border-radius:12px; background:var(--cta); color:var(--ctaText); font-weight:700; border:none; cursor:pointer}
+  .btn .spark{filter:drop-shadow(0 2px 6px rgba(109,225,255,.55))}
+  .btn:active{transform:translateY(1px)}
   /* modal */
-  .overlay{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;padding:24px}
-  .overlay.show{display:flex}
-  .modal{width:min(920px,100%);background:var(--card);border-radius:16px;box-shadow:0 18px 60px #000a;border:1px solid #1a2736;position:relative}
-  .modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #1a2736}
-  .modal-title{font-weight:800}
-  .close{background:transparent;border:0;color:var(--muted);font-size:22px;cursor:pointer}
-  .body{padding:18px}
-  .dots{display:flex;gap:6px}
-  .dot{width:8px;height:8px;border-radius:50%;background:#223041}
-  .dot.on{background:#6fc3ff}
-  .gear{color:var(--muted);font-size:18px;cursor:pointer;margin-left:10px}
-  .pill{background:#123042;color:#9cd6ff;border-radius:999px;padding:6px 10px;font-size:12px;margin-left:8px}
-  .row{display:flex;gap:18px;flex-wrap:wrap}
-  .col{flex:1 1 380px}
-  .card{background:#0f1520;border:1px solid #1a2736;border-radius:12px;padding:14px}
-  .mini{color:var(--muted);font-size:13px}
-  .btn{background:var(--btn);color:var(--btn-text);border:0;border-radius:12px;padding:10px 16px;font-weight:700;cursor:pointer}
-  .btn.secondary{background:#233043;color:#cfe7ff}
-  .btn-row{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
-  .select-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .sel{border:2px solid transparent;border-radius:14px;padding:16px;background:#0f1622;cursor:pointer}
-  .sel.active{border-color:#4df07c;box-shadow:0 0 0 4px #4df07c22}
-  .sel h3{margin:0 0 6px}
-  .help{color:var(--muted);font-size:12px}
-  .field{display:flex;flex-direction:column;gap:6px;margin:10px 0}
-  .field input{background:#0d131d;color:var(--text);border:1px solid #1a2736;border-radius:10px;padding:10px 12px}
-  .company-line{display:flex;align-items:center;gap:12px;justify-content:center;background:#0f1622;border:1px solid #1a2736;border-radius:12px;padding:16px;min-height:80px}
-  .center{display:flex;justify-content:center;align-items:center}
-  .link{color:var(--primary);text-decoration:none}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
-  .chip{border:1px solid var(--chip-border);background:var(--chip);border-radius:999px;padding:6px 10px;font-size:13px;cursor:pointer}
-  .chip.selected{outline:2px solid var(--accent)}
-  .slider-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;margin:8px 0}
-  input[type=range]{accent-color:var(--slider);width:100%}
-  .error{color:var(--danger)}
+  .modal{position:fixed; inset:0; background:rgba(5,10,16,.55);
+         display:none; align-items:center; justify-content:center; z-index:20}
+  .modal.show{display:flex}
+  .card{width:min(980px,92vw); background:var(--panel); border:1px solid var(--divider);
+        border-radius:18px; box-shadow:0 30px 80px rgba(0,0,0,.45); overflow:hidden}
+  .card-hd{display:flex; align-items:center; justify-content:space-between; gap:12px;
+           padding:16px 18px; background:linear-gradient(180deg,#0f1622,#0e1520); border-bottom:1px solid var(--divider)}
+  .steps{display:flex; gap:8px; align-items:center}
+  .dot{width:8px;height:8px;border-radius:50%; background:#2a3444}
+  .dot.on{background:#5bd0ff}
+  .card-bd{padding:18px}
+  .scroll{max-height:70vh; overflow:auto; padding:6px 6px}
+  .row{display:flex; gap:18px; flex-wrap:wrap}
+  .col{flex:1 1 0}
+  .pill{padding:6px 10px; border-radius:999px; background:#0d1a26; color:var(--muted); font-size:12px}
+  .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
+  .gear{background:transparent;border:none;color:#99b4c7;cursor:pointer}
+  /* cards step 1 */
+  .pick{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  .option{background:var(--panel-2); border:1px solid var(--divider); border-radius:16px; padding:16px; cursor:pointer; position:relative}
+  .option h3{margin:0 0 6px}
+  .option p{margin:0;color:var(--muted)}
+  .option .examples{margin-top:10px; font-size:13px; color:#a9bed0}
+  .option.active{outline:2px solid #70ff7f; box-shadow:0 0 0 6px rgba(56,224,143,.12) inset}
+  /* inputs */
+  .field{margin:10px 0}
+  label{display:block; font-size:13px; color:#9abbcc; margin:0 0 6px}
+  input[type=text],input[type=email],input[type=tel]{
+    width:100%; padding:12px 12px; border-radius:12px; border:1px solid var(--divider);
+    background:#0d1520; color:var(--text); outline:none
+  }
+  input:focus{border-color:#385dff66; box-shadow:0 0 0 4px #2a3f5a66}
+  /* one-liner */
+  .summary{
+    display:flex; align-items:center; gap:12px; background:#0e1622; border:1px solid var(--divider);
+    padding:14px 16px; border-radius:14px; margin-bottom:12px
+  }
+  .fav{width:24px; height:24px; border-radius:6px; background:#122; display:grid; place-items:center; overflow:hidden}
+  .one{font-weight:700}
+  .subtle{color:#9ab0c0; font-size:13px}
+  /* chips + sliders */
+  .group{background:#0f1724; border:1px solid var(--divider); border-radius:14px; padding:14px; margin:14px 0}
+  .group h4{margin:0 0 8px}
+  .help{font-size:12px;color:#8fa8bb;margin:6px 0 10px}
+  .chip{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px;
+        background:var(--chip); color:#bcd1e2; margin:6px 8px 0 0; cursor:pointer; border:1px solid #203041}
+  .chip.active{background:var(--chipActive); color:#dff6ff; border-color:#1d4c66}
+  .chips{user-select:none}
+  .slider{display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; margin:10px 0}
+  .slider input[type=range]{width:100%}
+  .muted *{opacity:.45; pointer-events:none}
+  .tool{display:inline-block; width:16px; height:16px; border-radius:50%; background:#233244; color:#bcd1e2;
+        text-align:center; line-height:16px; font-size:11px; margin-left:6px; cursor:pointer}
+  .tooltip{position:absolute; z-index:10; background:#0b111a; border:1px solid var(--divider); padding:8px 10px; border-radius:8px; font-size:12px; color:#cfe1ef; display:none}
+  .tool[data-tip]:hover + .tooltip, .tool[data-tip].show + .tooltip{display:block}
+  /* footer */
+  .card-ft{display:flex; justify-content:flex-end; gap:10px; padding:14px 18px; border-top:1px solid var(--divider)}
+  .btn.sec{background:#152333; color:#bcd1e2}
+  /* small */
+  @media (max-width:800px){ .pick{grid-template-columns:1fr} .row{flex-direction:column} }
 </style>
 </head>
 <body>
   <div class="hero">
-    <h1>Find real packaging buyers</h1>
-    <p class="sub">Laser-targeted leads, tuned to your strengths. Start free.</p>
-    <button id="openCta" class="cta">Get qualified leads free</button>
+    <div class="hero-inner">
+      <h1>Find real packaging buyers.</h1>
+      <p class="lead">Laser-targeted leads, tuned to your strengths.</p>
+      <button id="cta" class="btn"><span class="spark">✨</span> Get qualified leads free</button>
+    </div>
   </div>
 
-  <div id="overlay" class="overlay">
-    <div class="modal" role="dialog" aria-modal="true">
-      <div class="modal-header">
-        <div class="modal-title">Get set up in 60 seconds</div>
-        <div class="center" style="gap:10px">
-          <div class="dots">
-            <div class="dot" id="d1"></div>
-            <div class="dot" id="d2"></div>
-            <div class="dot" id="d3"></div>
-          </div>
-          <span id="envBadge" class="pill" style="display:none"></span>
-          <a id="setApi" class="gear" title="Set API base">⚙️</a>
-          <button id="closeBtn" class="close" aria-label="Close">×</button>
+  <!-- Onboarding modal -->
+  <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="card" role="document">
+      <div class="card-hd">
+        <div class="steps" aria-label="Steps">
+          <span class="dot on" data-step-dot="0"></span>
+          <span class="dot" data-step-dot="1"></span>
+          <span class="dot" data-step-dot="2"></span>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center">
+          <button id="gear" class="gear" title="Set API base">⚙️</button>
+          <button id="close" class="x" aria-label="Close">✕</button>
         </div>
       </div>
-      <div class="body">
-        <!-- steps container -->
-        <div id="step1" style="display:none">
-          <div class="select-cards">
-            <div id="optSupplier" class="sel active" role="button" tabindex="0">
-              <h3>I sell packaging (Supplier)</h3>
-              <div class="mini">You’ll get buyer leads tuned to your strengths.<br>Examples: <b>manufacturers</b>, <b>custom shops</b>, <b>converters</b>, <b>wholesalers</b>, <b>distributors</b>, <b>label & box producers</b>.</div>
-            </div>
-            <div id="optBuyer" class="sel" role="button" tabindex="0">
-              <h3>I buy packaging (Buyer)</h3>
-              <div class="mini">We’re prioritizing suppliers. Buyers can browse too (limited).<br>Examples: <b>brands & retailers</b>, <b>DTC/e-commerce</b>, <b>co-packers</b>, <b>CPG</b>, <b>cosmetics</b>, <b>beverage</b>, <b>food</b>.</div>
-            </div>
-          </div>
-          <div class="btn-row">
-            <button class="btn" id="s1Next">Next</button>
-          </div>
-        </div>
 
-        <div id="step2" style="display:none">
-          <div class="row">
-            <div class="col">
-              <div class="field">
-                <label>Your name</label>
-                <input id="nameInput" placeholder="e.g., Alex Rivera" autocomplete="name">
+      <div class="card-bd">
+        <div class="scroll">
+          <!-- STEP 1 -->
+          <section class="step" id="step1">
+            <div class="pill">Get set up in 60 seconds</div>
+            <h2 style="margin:10px 0 14px;">Pick your side</h2>
+            <div class="pick" role="listbox" aria-label="Choose role">
+              <div id="opt-supplier" class="option" tabindex="0" role="option" aria-selected="true">
+                <h3>🙌 I sell packaging <small>(Supplier)</small></h3>
+                <p>You’ll get buyer leads tuned to your strengths.</p>
+                <p class="examples"><strong>Examples:</strong> manufacturers, custom shops, converters, wholesalers, distributors, label &amp; box producers.</p>
               </div>
-              <div class="field">
-                <label>Phone (required for alerts)</label>
-                <input id="phoneInput" inputmode="tel" placeholder="+1 415 555 0123" autocomplete="tel">
-                <div class="help">Country code helps personalize geography (e.g., “+1” for U.S.).</div>
+              <div id="opt-buyer" class="option" tabindex="0" role="option" aria-selected="false">
+                <h3>🛒 I buy packaging <small>(Buyer)</small></h3>
+                <p>We’re prioritizing suppliers. Buyers can browse too (limited).</p>
+                <p class="examples"><strong>Examples:</strong> brands &amp; retailers, DTC/e-commerce, co-packers, CPG, cosmetics, beverage, food.</p>
               </div>
             </div>
-            <div class="col">
-              <div class="field">
-                <label>Business email *</label>
-                <input id="emailInput" type="email" placeholder="you@yourcompany.com" autocomplete="email" required>
-              </div>
-              <div class="field">
-                <label>Website / Domain (auto from email)</label>
-                <input id="domainInput" placeholder="yourcompany.com" autocomplete="url">
-                <div class="help">Auto-filled from your email as you type. You can edit.</div>
-              </div>
-            </div>
-          </div>
-          <div class="btn-row">
-            <button class="btn secondary" id="s2Back">Back</button>
-            <button class="btn" id="s2Next">Next</button>
-          </div>
-        </div>
+          </section>
 
-        <div id="step3" style="display:none">
-          <div class="card">
-            <div class="company-line">
-              <img id="favicon" src="" alt="" width="28" height="28" style="border-radius:6px;display:none">
-              <div id="oneLiner">your-company — <b>fetching summary…</b></div>
-            </div>
-            <div class="center mini" style="margin-top:8px;">
-              <a href="#" id="refreshLink" class="link">Refresh from website</a>
-              <span id="fetchMsg" class="mini" style="margin-left:8px;"></span>
-            </div>
-
-            <div class="center" style="margin:14px 0;">
-              <button id="advToggle" class="btn secondary"><span id="advLabel">Show</span> advanced ▾</button>
-            </div>
-
-            <div id="advanced" style="display:none">
-              <div class="mini center" style="margin-bottom:8px;">Optional: refine ranking and add product-specific details.</div>
-              <div class="grid">
-                <div class="card">
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                    <b>General tuning</b>
-                    <label class="mini"><input type="checkbox" id="aiGeneral"> Let AI decide</label>
-                  </div>
-                  <div id="sliders"></div>
+          <!-- STEP 2 -->
+          <section class="step" id="step2" hidden>
+            <div class="pill">Step 2 of 3</div>
+            <h2 style="margin:10px 0 14px;">Tell us who you are</h2>
+            <div class="row">
+              <div class="col">
+                <div class="field">
+                  <label>Your name</label>
+                  <input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter">
                 </div>
-                <div class="card">
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                    <b>Product signals (from your site)</b>
-                    <label class="mini"><input type="checkbox" id="aiProduct"> Let AI decide</label>
-                  </div>
-                  <div class="mini">Tap to select. We’ll use these as focus tags.</div>
-                  <div id="productChips" class="chips"></div>
+                <div class="field">
+                  <label>Phone (required for alerts) *</label>
+                  <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567" />
+                  <div class="subtle">Country code helps us personalize geography (e.g., “+1” for U.S.).</div>
                 </div>
               </div>
+              <div class="col">
+                <div class="field">
+                  <label>Business email *</label>
+                  <input id="email" type="email" autocomplete="email"
+                         placeholder="you@yourcompany.com" required />
+                </div>
+                <div class="field">
+                  <label>Website / Domain (auto from email)</label>
+                  <input id="host" type="text" inputmode="url" placeholder="yourcompany.com" />
+                  <div class="subtle">Auto-filled from your email as you type. You can edit.</div>
+                </div>
+              </div>
+            </div>
 
-              <div class="card" style="margin-top:14px">
-                <b>Buyer targeting</b>
+            <div class="group" style="display:flex; align-items:center; justify-content:space-between">
+              <div class="subtle">Testing mode: verification skipped.</div>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+                <input id="skipVerify" type="checkbox" checked> I’m just testing (skip verification)
+              </label>
+            </div>
+          </section>
+
+          <!-- STEP 3 -->
+          <section class="step" id="step3" hidden>
+            <div class="pill">Step 3 of 3</div>
+            <div class="summary">
+              <div class="fav"><img id="fav" alt="" width="24" height="24" referrerpolicy="no-referrer"></div>
+              <div>
+                <div id="one" class="one">your-company — fetching summary…</div>
+                <div class="subtle">
+                  <a id="refresh" href="#" role="button">Refresh from website</a>
+                  <span id="status" class="subtle"></span>
+                </div>
+              </div>
+            </div>
+
+            <button id="advToggle" class="btn sec" style="padding:8px 12px; border-radius:999px">
+              <span id="advLbl">Show advanced ▾</span>
+            </button>
+            <div id="advanced" hidden>
+              <div class="help" style="margin-top:10px;">Optional: refine ranking and add product-specific details.</div>
+
+              <div class="row">
+                <div class="col group" id="grp-general">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h4>General tuning</h4>
+                    <label style="display:flex;align-items:center;gap:6px"><input id="aiGeneral" type="checkbox"> Let AI decide</label>
+                  </div>
+
+                  <div class="slider"><div>📍 Prioritize nearby buyers
+                    <span class="tool" data-tip>?</span><span class="tooltip">Boosts leads close to your city.</span>
+                  </div><input id="slLoc" type="range" min="0" max="10" value="6"></div>
+
+                  <div class="slider"><div>🛒 Prefer e-commerce sites
+                    <span class="tool" data-tip>?</span><span class="tooltip">Brands that mainly sell online.</span>
+                  </div><input id="slEcom" type="range" min="0" max="10" value="7"></div>
+
+                  <div class="slider"><div>🏪 Prefer retail brands
+                    <span class="tool" data-tip>?</span><span class="tooltip">Brick-and-mortar or retail-oriented brands.</span>
+                  </div><input id="slRetail" type="range" min="0" max="10" value="5"></div>
+
+                  <div class="slider"><div>📦 Prefer wholesalers / distributors
+                    <span class="tool" data-tip>?</span><span class="tooltip">Companies that resell or distribute.</span>
+                  </div><input id="slWholesale" type="range" min="0" max="10" value="6"></div>
+
+                  <div class="slider"><div>🏗️ Prefer mid-size companies
+                    <span class="tool" data-tip>?</span><span class="tooltip">Steers toward mid-market buyers.</span>
+                  </div><input id="slMids" type="range" min="0" max="10" value="6"></div>
+
+                  <div class="slider"><div>🏢 De-prioritize giant enterprises
+                    <span class="tool" data-tip>?</span><span class="tooltip">Down-weights Fortune-500 scale buyers.</span>
+                  </div><input id="slAvoidGiants" type="range" min="0" max="10" value="7"></div>
+                </div>
+
+                <div class="col group" id="grp-product">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h4>Product signals (from your site)</h4>
+                    <label style="display:flex;align-items:center;gap:6px"><input id="aiProduct" type="checkbox"> Let AI decide</label>
+                  </div>
+                  <div id="productChips" class="chips" aria-live="polite">Tap to select. We’ll use these as focus tags.</div>
+                </div>
+              </div>
+
+              <div class="group">
+                <h4>Buyer targeting</h4>
                 <div class="row">
                   <div class="col">
-                    <div class="field">
-                      <label>Find buyers near…</label>
-                      <input id="cityInput" placeholder="e.g., Chicago" autocomplete="address-level2">
-                      <div id="cityChips" class="chips"></div>
-                      <div class="help">We’ll boost leads near this city.</div>
-                    </div>
+                    <label>Find buyers near…</label>
+                    <input id="city" type="text" placeholder="e.g., Chicago">
+                    <div id="cityChips" class="chips" style="margin-top:6px"></div>
+                    <div class="subtle">We’ll boost leads near this city.</div>
                   </div>
                   <div class="col">
-                    <div class="field">
-                      <label>Buyers in these sectors</label>
-                      <input id="sectorInput" placeholder="e.g., food, beverage, cosmetics">
-                      <div id="sectorChips" class="chips"></div>
-                    </div>
+                    <label>Buyers in these sectors</label>
+                    <input id="sectors" type="text" placeholder="e.g., food, beverage, cosmetics">
+                    <div id="sectorChips" class="chips" style="margin-top:6px"></div>
                   </div>
                 </div>
               </div>
-
-              <div class="btn-row">
-                <button class="btn secondary" id="s3Back">Back</button>
-                <button class="btn" id="s3Next">Next</button>
-              </div>
             </div>
-          </div>
+          </section>
         </div>
 
-      </div><!-- /body -->
+        <div class="card-ft">
+          <button id="back" class="btn sec">Back</button>
+          <button id="next" class="btn">Next</button>
+        </div>
+      </div>
     </div>
   </div>
 
 <script>
-/* --------------------- helpers --------------------- */
-const $ = s => document.querySelector(s);
-const dot = n => $("#d"+n);
-function setDots(n){ [1,2,3].forEach(i=>dot(i).classList.toggle("on", i===n)); }
-function chip(label, selected=false, onToggle=()=>{}){
-  const el=document.createElement("button");
-  el.type="button"; el.className="chip"+(selected?" selected":""); el.textContent=label;
-  el.onclick=()=>{ el.classList.toggle("selected"); onToggle(el.classList.contains("selected")); };
-  return el;
-}
-function sliderRow(label, val=5, min=0, max=10){
-  const row=document.createElement("div"); row.className="slider-row";
-  const name=document.createElement("div"); name.textContent=label;
-  const input=document.createElement("input"); input.type="range"; input.min=min; input.max=max; input.value=val;
-  const out=document.createElement("div"); out.textContent=val;
-  input.oninput=()=> out.textContent=input.value;
-  row.append(name,input,out); return row;
-}
-/* --------------------- API base resolver --------------------- */
-async function resolveApiBase(){
-  const qs=new URLSearchParams(location.search);
-  const fromQS=qs.get("api"); if(fromQS){ localStorage.setItem("apiBase", fromQS); }
-  const candidates=[
-    localStorage.getItem("apiBase")||"",
-    (typeof window.API_BASE==="string" ? window.API_BASE : ""),
-    location.origin
-  ].filter(Boolean);
-  for(const base of candidates){
-    try{
-      const r=await fetch(base.replace(/\/$/,"")+"/healthz",{mode:"cors"});
-      const t=await r.text().catch(()=> ""); if(r.ok && /ok/i.test(t)){ return base.replace(/\/$/,""); }
-    }catch(_){}
-  }
-  throw new Error("NO_API");
-}
-function setApiBaseInteractively(){
-  const v=prompt("Enter API base URL (your Northflank service URL).\nExample: https://animated-cellar--xxxx.code.run");
-  if(v && /^https?:\/\//i.test(v)){ localStorage.setItem("apiBase", v.replace(/\/$/,"")); location.reload(); }
-}
-/* --------------------- state --------------------- */
-let API_BASE=""; let state={ role:"supplier", name:"", email:"", phone:"", website:"" };
-function save(){ localStorage.setItem("onboard", JSON.stringify(state)); }
-function load(){ try{ state=Object.assign(state, JSON.parse(localStorage.getItem("onboard")||"{}")); }catch(_){} }
-/* --------------------- steps wiring --------------------- */
-const overlay=$("#overlay");
-$("#openCta").onclick=()=>{ overlay.classList.add("show"); showStep(1); };
-$("#closeBtn").onclick=()=> overlay.classList.remove("show");
-$("#setApi").onclick=setApiBaseInteractively;
-
-function showStep(n){
-  setDots(n);
-  ["#step1","#step2","#step3"].forEach((s,i)=>{ const el=$(s); el.style.display=(i===n-1)?"block":"none"; });
-  if(n===1) step1Init();
-  if(n===2) step2Init();
-  if(n===3) step3Init();
-}
-
-/* ----- Step 1 ----- */
-function step1Init(){
-  load();
-  const a=$("#optSupplier"), b=$("#optBuyer");
-  function sel(role){ state.role=role; a.classList.toggle("active", role==="supplier"); b.classList.toggle("active", role!=="supplier"); save(); }
-  a.onclick=()=>sel("supplier"); b.onclick=()=>sel("buyer"); sel(state.role||"supplier");
-  $("#s1Next").onclick=()=> showStep(2);
-}
-
-/* ----- Step 2 ----- */
-function step2Init(){
-  load();
-  const name=$("#nameInput"), email=$("#emailInput"), phone=$("#phoneInput"), dom=$("#domainInput");
-  name.value=state.name||""; email.value=state.email||""; phone.value=state.phone||""; dom.value=state.website||"";
-
-  let domainTouched=false;
-  dom.addEventListener("input", ()=> domainTouched=true);
-
-  function derive(){
-    const m = String(email.value||"").toLowerCase().match(/@([a-z0-9.-]+)/);
-    const d = m?.[1] || "";
-    if(!domainTouched){ dom.value = d; }
-    if(!email.value && !domainTouched){ dom.value=""; }
-  }
-  email.addEventListener("input", derive);
-  email.addEventListener("change", derive);
-
-  // handle browser autofill (fires no input): poll briefly
-  let tries=0; const t=setInterval(()=>{ tries++; if(email.value && !dom.value){ derive(); } if(tries>20){ clearInterval(t); } },100);
-
-  $("#s2Back").onclick=()=> showStep(1);
-  $("#s2Next").onclick=()=>{
-    if(!email.value || !dom.value || !phone.value){
-      alert("Please enter business email, phone and website."); return;
-    }
-    state.name=name.value.trim(); state.email=email.value.trim(); state.phone=phone.value.trim(); state.website=dom.value.trim().replace(/^https?:\/\//,"").replace(/\/.*$/,""); save();
-    showStep(3);
+(() => {
+  // ---------- API BASE DETECTION ----------
+  function getStored(k){ try{return localStorage.getItem(k)||""}catch{return""} }
+  function setStored(k,v){ try{localStorage.setItem(k,v)}catch{} }
+  const API_BASE = {
+    get(){
+      // order: explicit window override -> localStorage -> same-origin /api
+      if (window.API_BASE && typeof window.API_BASE==="string") return window.API_BASE;
+      const saved = getStored("apiBase");
+      if (saved) return saved;
+      // If running on GitHub Pages, same-origin "/api" will 404; still return it and show a gear to set real base.
+      return "/api";
+    },
+    set(v){ if(v) setStored("apiBase", v) }
   };
-}
 
-/* ----- Step 3 ----- */
-let currentHost=""; let currentEmail="";
-function faviconFor(host){
-  const url=`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&size=64&url=https://${encodeURIComponent(host)}`;
-  const img=$("#favicon"); img.src=url; img.style.display="block";
-}
-function setOneLiner(text, host){ $("#oneLiner").innerHTML=`<b>${host||"your-company"}</b> — ${text}`; }
-async function callSummary(host,email){
-  const u=new URL(API_BASE+"/api/classify/summary"); u.searchParams.set("host",host); if(email) u.searchParams.set("email",email);
-  const r=await fetch(u,{mode:"cors"});
-  if(r.status===404){
-    const u2=new URL(API_BASE+"/api/classify"); u2.searchParams.set("host",host); if(email) u2.searchParams.set("email",email);
-    const r2=await fetch(u2,{mode:"cors"}); const j2=await r2.json();
-    return { ok: !!j2.ok, summary:"", tags:[], sectors:[], cities:[], tuning:[], raw:j2 };
+  // small gear config
+  const gear = document.getElementById("gear");
+  gear.addEventListener("click", async () => {
+    const cur = API_BASE.get();
+    const v = prompt("API base (ends with /api). Example:\nhttps://YOUR-NORTHFLANK-SUBDOMAIN.code.run/api", cur);
+    if (!v) return;
+    API_BASE.set(v);
+    alert("Saved. I’ll use:\n" + API_BASE.get());
+  });
+
+  // ---------- ELEMENTS ----------
+  const modal = document.getElementById("modal");
+  const openBtn = document.getElementById("cta");
+  const closeBtn = document.getElementById("close");
+  const backBtn = document.getElementById("back");
+  const nextBtn = document.getElementById("next");
+  const dots = [...document.querySelectorAll("[data-step-dot]")];
+
+  const optSupplier = document.getElementById("opt-supplier");
+  const optBuyer = document.getElementById("opt-buyer");
+
+  const nameEl = document.getElementById("name");
+  const phoneEl = document.getElementById("phone");
+  const emailEl = document.getElementById("email");
+  const hostEl  = document.getElementById("host");
+  const skipVerify = document.getElementById("skipVerify");
+
+  const favEl = document.getElementById("fav");
+  const oneEl = document.getElementById("one");
+  const refreshA = document.getElementById("refresh");
+  const statusEl = document.getElementById("status");
+
+  const advToggle = document.getElementById("advToggle");
+  const advLbl = document.getElementById("advLbl");
+  const adv = document.getElementById("advanced");
+
+  const aiGeneral = document.getElementById("aiGeneral");
+  const aiProduct = document.getElementById("aiProduct");
+  const grpGeneral = document.getElementById("grp-general");
+  const grpProduct = document.getElementById("grp-product");
+
+  const productChips = document.getElementById("productChips");
+  const cityChips = document.getElementById("cityChips");
+  const sectorChips = document.getElementById("sectorChips");
+
+  const sl = {
+    loc: document.getElementById("slLoc"),
+    ecom: document.getElementById("slEcom"),
+    retail: document.getElementById("slRetail"),
+    whole: document.getElementById("slWholesale"),
+    mids: document.getElementById("slMids"),
+    avoid: document.getElementById("slAvoidGiants")
+  };
+
+  // ---------- STATE ----------
+  const state = {
+    step:0,
+    role:"supplier",
+    email:"",
+    host:"",
+    summary:"",
+    productTags:[],
+    sectorHints:[],
+  };
+
+  // ---------- UTIL ----------
+  const $ = sel => document.querySelector(sel);
+  function show(step){
+    state.step = step;
+    ["#step1","#step2","#step3"].forEach((id,i)=>{
+      const el=$(id); if(!el) return;
+      el.hidden = i!==step;
+      dots[i].classList.toggle("on", i===step);
+    });
+    backBtn.style.visibility = step===0? "hidden":"visible";
+    nextBtn.textContent = step===2? "Finish":"Next";
   }
-  return await r.json();
-}
-function muteSection(chk, els){
-  const set=(on)=> els.forEach(el=> el.style.opacity = on? ".45":"1");
-  chk.onchange = ()=> set(chk.checked);
-  set(chk.checked);
-}
-async function step3Init(){
-  load();
-  $("#advanced").style.display="none"; $("#advLabel").textContent="Show";
-  $("#productChips").innerHTML=""; $("#sectorChips").innerHTML=""; $("#cityChips").innerHTML=""; $("#sliders").innerHTML="";
-  $("#fetchMsg").textContent="";
-
-  try{
-    API_BASE=await resolveApiBase(); $("#envBadge").style.display="inline-block"; $("#envBadge").textContent=new URL(API_BASE).host;
-  }catch(_){
-    $("#fetchMsg").innerHTML = `<span class="error">Set API (click the gear).</span>`; setOneLiner("unable to connect — API base is not set.","your-company"); return;
+  function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
+  function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
+  function normHost(h){
+    if (!h) return "";
+    return String(h).trim().toLowerCase()
+      .replace(/^https?:\/\//,"")
+      .replace(/\/.*$/,"");
+  }
+  function domainFromEmail(e){
+    const m = (e||"").toLowerCase().match(/@([a-z0-9.-]+)/);
+    return m? m[1] : "";
+  }
+  function setFavicon(host){
+    const h = normHost(host);
+    if(!h){ favEl.src=""; return; }
+    // try duckduckgo ip3
+    favEl.src = "https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico";
+    favEl.onerror = () => { favEl.style.display="none"; };
+    favEl.style.display="";
+  }
+  function setOneLiner(txt){
+    oneEl.textContent = txt;
+  }
+  function chip(text, targetArr){
+    const span = document.createElement("span");
+    span.className = "chip";
+    span.textContent = text;
+    span.tabIndex = 0;
+    span.addEventListener("click", () => {
+      span.classList.toggle("active");
+      const on = span.classList.contains("active");
+      const i = targetArr.indexOf(text);
+      if (on && i<0) targetArr.push(text);
+      if (!on && i>=0) targetArr.splice(i,1);
+    });
+    productChips.appendChild(span);
+  }
+  function chipsFrom(list, box){
+    box.innerHTML = "";
+    list.forEach(v=>{
+      const c=document.createElement("span");
+      c.className="chip";
+      c.textContent=v;
+      c.addEventListener("click",()=>{
+        // toggle into the input field as comma list
+        const el = (box===cityChips)? cityEl : sectorsEl;
+        const cur = new Set(el.value.split(",").map(s=>s.trim()).filter(Boolean));
+        if (cur.has(v)) cur.delete(v); else cur.add(v);
+        el.value = [...cur].join(", ");
+        c.classList.toggle("active");
+      });
+      box.appendChild(c);
+    });
   }
 
-  currentHost = (state.website||"").replace(/^https?:\/\//,"").replace(/\/.*$/,"");
-  currentEmail = state.email||"";
-  if(!currentHost){ setOneLiner("please go back and enter your website.","your-company"); return; }
+  // tooltips: instant on hover or tap
+  document.querySelectorAll(".tool[data-tip]").forEach(t=>{
+    t.addEventListener("mouseenter", ()=> t.classList.add("show"));
+    t.addEventListener("mouseleave", ()=> t.classList.remove("show"));
+    t.addEventListener("click", (e)=>{ e.stopPropagation(); t.classList.toggle("show"); });
+  });
+  document.addEventListener("click", ()=> {
+    document.querySelectorAll(".tool.show").forEach(t=>t.classList.remove("show"));
+  });
 
-  faviconFor(currentHost); setOneLiner("fetching summary…", currentHost);
+  // AI decide switches
+  function applyAIMute(){
+    grpGeneral.classList.toggle("muted", aiGeneral.checked);
+    grpProduct.classList.toggle("muted", aiProduct.checked);
+  }
+  aiGeneral.addEventListener("change", applyAIMute);
+  aiProduct.addEventListener("change", applyAIMute);
 
-  async function run(){
-    $("#fetchMsg").textContent="";
+  // advanced toggle
+  advToggle.addEventListener("click", (e)=>{
+    e.preventDefault();
+    const open = adv.hasAttribute("hidden") ? false : true;
+    if (open){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
+    else { adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
+  });
+
+  // step wiring
+  openBtn.addEventListener("click", open);
+  closeBtn.addEventListener("click", close);
+  backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+  nextBtn.addEventListener("click", async ()=>{
+    if (state.step===0){ show(1); return; }
+    if (state.step===1){
+      if (!emailEl.value || !phoneEl.value){
+        alert("Business email and phone are required.");
+        return;
+      }
+      state.email = emailEl.value.trim();
+      state.host  = normHost(hostEl.value || domainFromEmail(state.email));
+      if (!state.host){ alert("Please provide your website/domain."); return; }
+      // go fetch summary/classify
+      await refreshFromWebsite();
+      show(2);
+      return;
+    }
+    if (state.step===2){
+      // Finish -> navigate to free panel later
+      alert("Saved! (Demo) You’ll go to the free panel next.");
+      close();
+    }
+  });
+
+  // role pick
+  function setRole(r){
+    state.role = r;
+    optSupplier.classList.toggle("active", r==="supplier");
+    optBuyer.classList.toggle("active", r==="buyer");
+    document.querySelector('[data-step-dot="0"]').classList.add("on");
+  }
+  optSupplier.addEventListener("click", ()=> setRole("supplier"));
+  optBuyer.addEventListener("click", ()=> setRole("buyer"));
+  setRole("supplier");
+
+  // email -> domain autofill (also reacts to autofill)
+  function syncDomain(){
+    const d = domainFromEmail(emailEl.value);
+    if (d && !hostEl.value) hostEl.value = d;
+  }
+  emailEl.addEventListener("input", syncDomain);
+  emailEl.addEventListener("change", syncDomain);
+  setTimeout(syncDomain, 50); // capture browser autofill
+
+  // city & sector defaults
+  const cityEl = document.getElementById("city");
+  const sectorsEl = document.getElementById("sectors");
+  chipsFrom(["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"], cityChips);
+  chipsFrom(["food","beverage","cosmetics","electronics","apparel","supplements","pharma"], sectorChips);
+
+  // product tags dynamic from classify
+  function renderProductTags(tags){
+    productChips.innerHTML="";
+    state.productTags = [];
+    (tags||[]).slice(0,18).forEach(t=> chip(t, state.productTags));
+  }
+
+  // ---------- API CALLS ----------
+  async function apiGet(path){
+    const base = API_BASE.get();
+    const url = base.replace(/\/$/,"") + path;
+    const r = await fetch(url, {credentials:"omit"});
+    if (!r.ok) throw new Error("http "+r.status);
+    return r.json();
+  }
+
+  async function refreshFromWebsite(){
+    const host = normHost(hostEl.value);
+    if (!host) return;
+
+    setFavicon(host);
+    setOneLiner(host+" — fetching summary…");
+    statusEl.textContent = "";
+
     try{
-      const data=await callSummary(currentHost,currentEmail);
-      if(!data || data.ok===false){ $("#fetchMsg").innerHTML=`<span class="error">Network error while reading your site.</span>`; setOneLiner("network error while reading your site.",currentHost); return; }
-      const summary=data.summary || "sells packaging to brands.";
-      setOneLiner(summary,currentHost);
-
-      const prodWrap=$("#productChips");
-      (data.tags||[]).slice(0,14).forEach(t=> prodWrap.append(chip(t,true)));
-      const sectWrap=$("#sectorChips");
-      (data.sectors||["food","beverage","cosmetics","electronics","apparel"]).slice(0,10).forEach(t=> sectWrap.append(chip(t)));
-      const cityWrap=$("#cityChips");
-      (data.cities||["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"]).slice(0,10).forEach(c=> cityWrap.append(chip(c)));
-
-      const s=$("#sliders");
-      ["Prioritize nearby buyers","Prefer e-commerce sites","Prefer retail brands","Prefer wholesalers / distributors","Prefer mid-size companies","De-prioritize giant enterprises"]
-        .forEach((name,i)=> s.append(sliderRow(name,(data.tuning&&data.tuning[i])||[6,7,5,6,6,7][i])));
-
-    }catch(e){ console.error(e); $("#fetchMsg").innerHTML=`<span class="error">Network error while reading your site.</span>`; setOneLiner("network error while reading your site.",currentHost); }
+      const q = "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(emailEl.value||"");
+      const data = await apiGet("/classify"+q);
+      // classifier now returns: ok, role, confidence, productTags, sectorHints, summary, cached, bytes
+      if (data.ok){
+        const line = data.summary || (host+" sells packaging to brands.");
+        setOneLiner(line);
+        renderProductTags(data.productTags || []);
+        chipsFrom(data.sectorHints || ["food","beverage","cosmetics"], sectorChips);
+        statusEl.textContent = data.cached ? " (cached)" : "";
+      } else {
+        setOneLiner(host+" — network error while reading your site.");
+        renderProductTags([]);
+        statusEl.textContent = "";
+      }
+    }catch(err){
+      setOneLiner(host+" — network error while reading your site.");
+      statusEl.textContent = "";
+      console.warn(err);
+    }
   }
 
-  $("#advToggle").onclick=()=>{ const adv=$("#advanced"); adv.style.display=adv.style.display==="none"?"block":"none"; $("#advLabel").textContent=adv.style.display==="none"?"Show":"Hide"; };
-  $("#refreshLink").onclick=(e)=>{ e.preventDefault(); run(); };
-  $("#s3Back").onclick=()=> showStep(2);
-  $("#s3Next").onclick=()=> alert("Next → free panel (hook up later).");
+  refreshA.addEventListener("click", (e)=>{ e.preventDefault(); refreshFromWebsite(); });
 
-  // Mute behavior
-  muteSection($("#aiGeneral"), [$("#sliders")]);
-  muteSection($("#aiProduct"), [$("#productChips")]);
+  // ---------- ESC & overlay close ----------
+  modal.addEventListener("click",(e)=>{ if(e.target===modal) close(); });
+  document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") close(); });
 
-  await run();
-}
-
-/* boot */
-document.addEventListener("DOMContentLoaded", async()=>{
-  try{ API_BASE=await resolveApiBase(); $("#envBadge").style.display="inline-block"; $("#envBadge").textContent=new URL(API_BASE).host; }catch(_){}
-});
+  // ---------- initial ----------
+  show(0);
+  applyAIMute();
+})();
 </script>
 </body>
 </html>
