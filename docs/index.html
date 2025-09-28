@@ -1,96 +1,444 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Galactly — Live packaging buyer signals</title>
-  <script src="./config.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <title>Buyers Finder — Packaging Leads</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{ --ink:#eaf0ff; --mut:#a6b2c9; --line:#1f2a3e; --panel:#0b121d; --pill:#101a2c; }
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0; font:500 14px Inter,system-ui; color:var(--ink);
-      background: radial-gradient(1200px 700px at 80% -10%, rgba(70,110,180,.22), transparent 40%), #070b12;}
-    header{height:60px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0b111b,#0a0e15)}
-    .badge{display:inline-flex; gap:8px; align-items:center; padding:8px 12px; border:1px solid var(--line); border-radius:999px; background:var(--pill)}
-    .badge .dot{width:8px;height:8px;border-radius:50%;background:#3ae0b4; box-shadow:0 0 10px rgba(58,224,180,.7)}
-    .wrap{max-width:1280px; margin:0 auto; padding:24px 16px}
-    .hero{display:grid; grid-template-columns:minmax(420px, 52%) 1fr; gap:24px; align-items:center}
-    @media (max-width:1080px){ .hero{grid-template-columns:1fr} }
-    .h1{font-weight:800; font-size:clamp(34px,6vw,56px); line-height:1.06; letter-spacing:-.01em; margin:0 0 10px}
-    .sub{color:#cfdbff; opacity:.9; margin:0 0 12px}
-    .btn{border-radius:14px; padding:12px 16px; font-weight:700; background:var(--pill); border:1px solid var(--line); color:var(--ink); cursor:pointer}
-    .btn.primary{background:linear-gradient(90deg,#fff,#e6efff); color:#0b111b; border-color:transparent}
-    .kv{font-size:12px; color:#c6d5f3}
-    .right{position:relative; height:520px; border:1px solid var(--line); border-radius:18px; overflow:hidden;
-      background: radial-gradient(600px 380px at 50% 55%, rgba(120,160,255,.12), rgba(10,14,22,1) 70%);}
-    .core{position:absolute; left:50%; top:52%; width:220px; height:220px; margin:-110px 0 0 -110px; border-radius:50%;
-      background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.95), rgba(200,230,255,.4) 45%, rgba(140,170,220,.06) 65%, transparent 70%);}
-    .beam{position:absolute; left:50%; top:52%; width:2px; height:1px; background:linear-gradient(180deg,rgba(255,255,255,.9),transparent); transform-origin:0 0}
-    .chips{position:absolute; left:12px; right:12px; bottom:12px; display:flex; gap:8px; flex-wrap:wrap}
-    .chip{display:inline-flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid #27324a; border-radius:999px; background:rgba(10,16,28,.85); color:#cfe0ff; font-size:12px}
-    .debug{font-size:11px; color:#9ab2d9; opacity:.9; margin-top:8px}
+    :root{
+      --bg:#0b0e13;--fg:#e9eef6;--muted:#a6b0bf;--brand:#6ae3ff;--accent:#8fff6a;
+      --card:#121825;--card-2:#0f1420;--line:#1e2635;--warn:#ffcc66;--danger:#ff6a6a;
+      --focus:0 0 0 3px rgba(106,227,255,.4);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
+    a{color:var(--brand);text-decoration:none}
+    .container{max-width:980px;margin:0 auto;padding:32px}
+    .hero{display:flex;flex-direction:column;align-items:center;gap:16px;padding:72px 16px 48px;text-align:center}
+    .hero h1{font-size:40px;line-height:1.1;margin:0}
+    .hero p{color:var(--muted);max-width:680px;margin:0}
+    .cta{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    .btn{appearance:none;border:0;border-radius:12px;padding:14px 18px;background:linear-gradient(180deg,var(--brand),#4bd1ff);
+      color:#001018;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(75,209,255,.25);transition:transform .04s ease}
+    .btn:active{transform:translateY(1px)}
+    .btn.alt{background:#1a2233;color:var(--fg);box-shadow:none}
+    .note{font-size:13px;color:var(--muted)}
+
+    /* Modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(3,6,12,.64);display:none;align-items:flex-start;justify-content:center;z-index:50}
+    .modal{width:min(860px,92vw);margin-top:6vh;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,.45)}
+    .modal header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:var(--card-2);border-bottom:1px solid var(--line)}
+    .modal header h2{margin:0;font-size:18px}
+    .close{background:none;border:0;color:var(--muted);font-size:20px;cursor:pointer}
+    .steps{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--card-2)}
+    .step-dot{height:8px;width:8px;border-radius:99px;background:#2a3446;position:relative}
+    .step-dot.active{background:var(--brand)}
+    .body{padding:20px 18px 8px}
+    .grid{display:grid;gap:16px}
+    .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .card{border:1px solid var(--line);background:linear-gradient(180deg,var(--card),#0f1420);padding:18px;border-radius:14px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:box-shadow .2s,border-color .2s}
+    .card:hover{box-shadow:0 0 0 1px var(--brand)}
+    .card.selected{box-shadow:0 0 0 2px var(--accent),0 10px 28px rgba(143,255,106,.12)}
+    .card .title{font-weight:700}
+    .field{display:flex;flex-direction:column;gap:8px}
+    .field label{font-size:13px;color:var(--muted)}
+    .input,select,textarea{background:#0f1420;border:1px solid var(--line);border-radius:10px;color:var(--fg);padding:12px 12px;outline:none}
+    .input:focus,select:focus,textarea:focus{box-shadow:var(--focus);border-color:#2f3b4f}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row > *{flex:1}
+    .footer{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-top:1px solid var(--line);background:var(--card-2)}
+    .footer .left{display:flex;gap:12px;align-items:center}
+    .badge{font-size:12px;color:#001018;background:var(--brand);border-radius:999px;padding:4px 8px}
+    .warn{color:var(--warn)}
+    .danger{color:var(--danger)}
+    .tiny{font-size:12px;color:var(--muted)}
+    .hidden{display:none!important}
+    .sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .slider-row{display:flex;gap:10px;align-items:center}
+    .slider-row input[type=range]{flex:1}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{background:#121a2a;border:1px solid var(--line);padding:6px 10px;border-radius:999px;font-size:12px}
+    .link{color:var(--brand);cursor:pointer;text-decoration:underline}
   </style>
 </head>
 <body>
-<header>
-  <div class="badge"><span class="dot"></span><span id="presenceTxt">0 online</span></div>
-  <div class="kv" id="quotaKv">— searches • — reveals</div>
-</header>
-
-<div class="wrap">
-  <section class="hero">
-    <div>
-      <h1 class="h1">Find US &amp; Canada Packaging Buyers in &lt;30s</h1>
-      <p class="sub">Dev mode is fully open (no sign-up, no quotas). Flip it back when you launch.</p>
-      <div style="display:flex;gap:10px">
-        <a class="btn primary" href="./free-panel.html">Open Live Feed</a>
-        <a class="btn" href="./free-panel.html">Try a scan</a>
-      </div>
-      <div class="debug" id="dbg"></div>
+  <div class="container hero">
+    <h1>Find real packaging buyers.</h1>
+    <p>Deterministic discovery + smart enrichment. Start free. See HOT leads first, with reasons you control.</p>
+    <div class="cta">
+      <button id="open-onboarding" class="btn">Get qualified leads free</button>
+      <a class="btn alt" href="./free-panel.html">Open Free Panel (raw)</a>
     </div>
-    <div class="right" aria-hidden="true">
-      <div class="core"></div>
-      <div class="beam" style="transform:rotate(-8deg) scale(260)"></div>
-      <div class="beam" style="transform:rotate(12deg) scale(240)"></div>
-      <div class="beam" style="transform:rotate(26deg) scale(200)"></div>
-      <div class="chips">
-        <div class="chip">Leads / 30s <strong>live</strong></div>
-        <div class="chip">Ready now <strong>live</strong></div>
-        <div class="chip">Quoted <strong>live</strong></div>
+    <p class="note">No spam. Cost-safe discovery. You own the dials.</p>
+  </div>
+
+  <!-- Onboarding Modal -->
+  <div id="mb" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="ob-title">
+    <div class="modal">
+      <header>
+        <h2 id="ob-title">Get set up in 60 seconds</h2>
+        <button class="close" id="ob-x" aria-label="Close">✕</button>
+      </header>
+
+      <div class="steps" id="steps">
+        <div class="step-dot active" data-step="1" title="Role"></div>
+        <div class="step-dot" data-step="2" title="Your details"></div>
+        <div class="step-dot" data-step="3" title="Preferences"></div>
+      </div>
+
+      <div class="body">
+        <!-- STEP 1 -->
+        <section id="s1">
+          <div class="grid cols-2">
+            <div class="card selected" data-role="supplier" tabindex="0">
+              <div>
+                <div class="title">I sell packaging (Supplier)</div>
+                <div class="tiny">You’ll get buyer leads tuned to your strengths.</div>
+              </div>
+            </div>
+            <div class="card" data-role="buyer" tabindex="0">
+              <div>
+                <div class="title">I buy packaging (Buyer)</div>
+                <div class="tiny">We’re prioritizing suppliers. Buyers can browse too (limited).</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- STEP 2 -->
+        <section id="s2" class="hidden">
+          <div class="grid">
+            <div class="row">
+              <div class="field">
+                <label for="name">Your name</label>
+                <input id="name" class="input" placeholder="Alex Chen" autocomplete="name">
+              </div>
+              <div class="field">
+                <label for="email">Business email <span class="warn">*</span></label>
+                <input id="email" class="input" type="email" placeholder="you@yourcompany.com" autocomplete="email" required>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="phone">Phone (for lead alerts)</label>
+                <input id="phone" class="input" type="tel" inputmode="tel" placeholder="+1 555 123 4567">
+              </div>
+              <div class="field">
+                <label for="domain">Website / Domain (auto from email)</label>
+                <input id="domain" class="input" placeholder="yourcompany.com" autocomplete="url">
+              </div>
+            </div>
+            <div class="row">
+              <button id="verify" class="btn" style="min-width:180px">Verify email</button>
+              <span id="vstate" class="tiny">Verification required to continue.</span>
+              <label class="tiny" style="margin-left:auto;display:flex;align-items:center;gap:6px">
+                <input type="checkbox" id="devskip"> I’m just testing (skip verification)
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- STEP 3 -->
+        <section id="s3" class="hidden">
+          <div class="grid" style="gap:10px">
+            <div class="field">
+              <label>One-liner summary</label>
+              <div id="summary" class="chip" style="background:#0e1726;border-radius:10px;padding:10px 12px;border:1px solid var(--line)">
+                We’ll stitch this from your domain + sliders…
+              </div>
+              <div class="tiny">
+                <span class="link" id="refresh">Refresh from website</span> (uses /api/classify, cached)
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="city">Primary city (optional, boosts locality)</label>
+                <input id="city" class="input" placeholder="Chicago">
+              </div>
+              <div class="field">
+                <label for="tags">Focus tags (comma separated)</label>
+                <input id="tags" class="input" placeholder="food, beverage, cosmetics">
+              </div>
+            </div>
+
+            <div class="sliders">
+              <div class="field">
+                <label>Locality importance</label>
+                <div class="slider-row">
+                  <input id="w-local" type="range" min="0" max="10" value="6">
+                  <span id="w-local-val" class="tiny">6</span>
+                </div>
+              </div>
+              <div class="field">
+                <label>E-commerce signal</label>
+                <div class="slider-row">
+                  <input id="w-ecom" type="range" min="0" max="10" value="7">
+                  <span id="w-ecom-val" class="tiny">7</span>
+                </div>
+              </div>
+              <div class="field">
+                <label>Retail channel</label>
+                <div class="slider-row">
+                  <input id="w-retail" type="range" min="0" max="10" value="5">
+                  <span id="w-retail-val" class="tiny">5</span>
+                </div>
+              </div>
+              <div class="field">
+                <label>Wholesale channel</label>
+                <div class="slider-row">
+                  <input id="w-wholesale" type="range" min="0" max="10" value="6">
+                  <span id="w-wholesale-val" class="tiny">6</span>
+                </div>
+              </div>
+              <div class="field">
+                <label>Company size (prefer mids)</label>
+                <div class="slider-row">
+                  <input id="w-size" type="range" min="0" max="10" value="6">
+                  <span id="w-size-val" class="tiny">6</span>
+                </div>
+              </div>
+              <div class="field">
+                <label>Avoid giants</label>
+                <div class="slider-row">
+                  <input id="w-avoid" type="range" min="0" max="10" value="7">
+                  <span id="w-avoid-val" class="tiny">7</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+      </div>
+
+      <div class="footer">
+        <div class="left">
+          <span id="role-badge" class="badge">Supplier</span>
+          <span id="status" class="tiny">Step 1 of 3</span>
+        </div>
+        <div class="row" style="justify-content:flex-end">
+          <button id="back" class="btn alt">Back</button>
+          <button id="next" class="btn">Next</button>
+        </div>
       </div>
     </div>
-  </section>
-</div>
+  </div>
 
-<script>
-(function(){
-  const uidKey='gal_uid';
-  let UID = localStorage.getItem(uidKey);
-  if(!UID){ UID = 'u-' + Math.random().toString(36).slice(2,12); localStorage.setItem(uidKey, UID); }
+  <script>
+  (function(){
+    const qs = sel => document.querySelector(sel);
+    const qsa = sel => Array.from(document.querySelectorAll(sel));
 
-  function normalizeHost(v){ let s=(v||window.API_DEFAULT||location.origin).toString().trim(); s=s.replace(/\/api\/v1\/?$/,'').replace(/\/$/,''); return s; }
-  const HOST   = normalizeHost(localStorage.getItem('apiBase') || window.API_DEFAULT);
-  const API    = HOST + '/api/v1';
-  localStorage.setItem('apiBase', HOST);
+    const state = {
+      step: 1,
+      role: "supplier",
+      verified: false,
+      testing: false,
+      name: "",
+      email: "",
+      phone: "",
+      domain: "",
+      city: "",
+      tags: [],
+      weights: { locality:6, ecom:7, retail:5, wholesale:6, size:6, avoid:7 }
+    };
 
-  async function api(path,opt){
-    const o=opt||{}; const headers=new Headers(o.headers||{});
-    headers.set('x-galactly-user', UID);
-    if(localStorage.getItem('gal_unlim')==='true') headers.set('x-dev-unlim','true');
-    const res = await fetch(API + path, { ...o, headers, mode:'cors' });   // ← NO credentials
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    return res.json();
-  }
+    const mb = qs("#mb");
+    const openBtn = qs("#open-onboarding");
+    const closeBtn = qs("#ob-x");
+    const backBtn = qs("#back");
+    const nextBtn = qs("#next");
+    const badge = qs("#role-badge");
+    const status = qs("#status");
+    const stepsDots = qsa(".step-dot");
 
-  document.getElementById('dbg').textContent = `[api] ${HOST}  uid=${UID}  unlim=${localStorage.getItem('gal_unlim')==='true'}`;
+    // step sections
+    const s1 = qs("#s1"), s2 = qs("#s2"), s3 = qs("#s3");
 
-  async function presence(){ try{ const j=await api('/presence/online'); document.getElementById('presenceTxt').textContent=(j.total||0)+' online'; }catch{} }
-  async function status(){ try{ const j=await api('/status'); const q=j.quota||{}; const s=(j.devUnlimited?'∞':q.findsLeft??'—'); const r=(j.devUnlimited?'∞':q.revealsLeft??'—'); document.getElementById('quotaKv').textContent=`${s} searches • ${r} reveals`; }catch{} }
+    // step1 role cards
+    const roleCards = qsa(".card[data-role]");
+    roleCards.forEach(c=>{
+      c.addEventListener("click", ()=> selectRole(c.dataset.role));
+      c.addEventListener("keydown", (e)=> { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRole(c.dataset.role);} });
+    });
 
-  presence(); setInterval(presence, 10000);
-  status();   setInterval(status,   12000);
-})();
-</script>
+    function selectRole(role){
+      state.role = role;
+      roleCards.forEach(c=> c.classList.toggle("selected", c.dataset.role===role));
+      badge.textContent = role==="supplier" ? "Supplier" : "Buyer";
+      summaryRefresh();
+    }
+
+    // step2 inputs
+    const nameEl = qs("#name");
+    const emailEl = qs("#email");
+    const phoneEl = qs("#phone");
+    const domainEl = qs("#domain");
+    const verifyBtn = qs("#verify");
+    const vstate = qs("#vstate");
+    const devskip = qs("#devskip");
+
+    emailEl.addEventListener("input", ()=>{
+      const v = emailEl.value.trim();
+      const m = v.match(/@([a-z0-9.-]+\.[a-z]{2,})$/i);
+      if(m && !domainEl.value) domainEl.value = m[1].toLowerCase();
+      state.email = v;
+      state.domain = domainEl.value.trim();
+      vstate.textContent = state.verified ? "Email verified." : "Verification required to continue.";
+      summaryRefresh();
+    });
+
+    domainEl.addEventListener("input", ()=>{
+      state.domain = domainEl.value.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+      summaryRefresh();
+    });
+
+    devskip.addEventListener("change", ()=>{
+      state.testing = devskip.checked;
+      if (state.testing) { state.verified = true; vstate.textContent = "Testing mode: verification skipped."; }
+      else { state.verified = false; vstate.textContent = "Verification required to continue."; }
+      gateNext();
+    });
+
+    verifyBtn.addEventListener("click", async ()=>{
+      // Stubbed verification: pretend to send email, then mark verified after a moment.
+      if (!emailEl.reportValidity()) return;
+      verifyBtn.disabled = true;
+      vstate.textContent = "Sending verification email…";
+      await new Promise(r=>setTimeout(r, 900));
+      state.verified = true;
+      verifyBtn.disabled = false;
+      vstate.textContent = "Email verified (stub).";
+      gateNext();
+    });
+
+    // step3
+    const cityEl = qs("#city");
+    const tagsEl = qs("#tags");
+    const summaryEl = qs("#summary");
+    const refreshBtn = qs("#refresh");
+
+    const ranges = [
+      ["w-local","locality"],["w-ecom","ecom"],["w-retail","retail"],
+      ["w-wholesale","wholesale"],["w-size","size"],["w-avoid","avoid"]
+    ];
+    ranges.forEach(([id,key])=>{
+      const input = qs("#"+id);
+      const val = qs("#"+id+"-val");
+      input.addEventListener("input", ()=>{
+        state.weights[key] = Number(input.value);
+        val.textContent = input.value;
+        summaryRefresh();
+      });
+    });
+
+    cityEl.addEventListener("input", ()=>{ state.city = cityEl.value.trim(); summaryRefresh(); });
+    tagsEl.addEventListener("input", ()=>{ state.tags = tagsEl.value.split(",").map(s=>s.trim()).filter(Boolean); summaryRefresh(); });
+
+    refreshBtn.addEventListener("click", async ()=>{
+      if (!state.domain) return;
+      try{
+        const res = await fetch(`/api/classify?host=${encodeURIComponent(state.domain)}`);
+        const data = await res.json();
+        if (data && data.ok !== false) {
+          const role = data.role || "packaging_buyer";
+          const conf = data.confidence ? ` @ ${(data.confidence*100).toFixed(0)}%` : "";
+          const who = (role==="packaging_supplier") ? "supplier" : (role==="packaging_buyer" ? "buyer" : "company");
+          summaryEl.textContent = `${prettyHost(state.domain)} looks like a ${who}${conf}. Sliders below will tune who you want to see.`;
+        } else {
+          summaryRefresh();
+        }
+      } catch {
+        summaryRefresh();
+      }
+    });
+
+    function prettyHost(h){ return (h||"").replace(/^www\./,''); }
+
+    function summaryRefresh(){
+      const who = state.role==="supplier" ? "sells" : "buys";
+      const tgt = (state.tags && state.tags.length) ? state.tags.slice(0,3).join(", ") : "packaging";
+      const city = state.city ? ` near ${state.city}` : "";
+      const dial = `loc:${state.weights.locality}/10, ecom:${state.weights.ecom}/10, size:${state.weights.size}/10`;
+      const host = state.domain ? prettyHost(state.domain) : "your-company";
+      summaryEl.textContent = `${host} ${who} ${tgt}${city}. Dials — ${dial}.`;
+    }
+
+    // modal lifecycle
+    function show(step=1){
+      state.step = step;
+      mb.style.display = "flex";
+      renderStep();
+    }
+    function hide(){ mb.style.display = "none"; }
+
+    function gateNext(){
+      if (state.step===2){
+        const ok = state.testing || state.verified;
+        nextBtn.disabled = !ok;
+      } else {
+        nextBtn.disabled = false;
+      }
+    }
+
+    function renderStep(){
+      [s1,s2,s3].forEach(el=> el.classList.add("hidden"));
+      qs("#s"+state.step).classList.remove("hidden");
+      stepsDots.forEach(d=> d.classList.toggle("active", Number(d.dataset.step)===state.step));
+      status.textContent = `Step ${state.step} of 3`;
+      gateNext();
+    }
+
+    openBtn.addEventListener("click", ()=> show(1));
+    closeBtn.addEventListener("click", hide);
+    backBtn.addEventListener("click", ()=>{
+      if (state.step>1){ state.step--; renderStep(); }
+      else hide();
+    });
+    nextBtn.addEventListener("click", async ()=>{
+      if (state.step===1){ state.step=2; renderStep(); return; }
+      if (state.step===2){
+        // stash form values
+        state.name = nameEl.value.trim();
+        state.phone = phoneEl.value.trim();
+        state.email = emailEl.value.trim();
+        state.domain = domainEl.value.trim();
+        // basic validity
+        if (!state.email || !/@.+\./.test(state.email)) { emailEl.reportValidity(); return; }
+        if (!state.testing && !state.verified) { return; }
+        state.step=3; renderStep(); return;
+      }
+      if (state.step===3){
+        await persistPrefsThenOpen();
+      }
+    });
+
+    async function persistPrefsThenOpen(){
+      // Build prefs payload expected by /api/prefs
+      const payload = {
+        host: state.domain || state.email.split("@")[1],
+        signalWeight: Number(state.weights.ecom) || 0,     // maps to existing server shape
+        sizeWeight: Number(state.weights.size) || 0,
+        likeTags: state.tags || [],
+        city: state.city || "",
+        role: state.role
+      };
+      try {
+        await fetch("/api/prefs", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify(payload)
+        });
+      } catch (e) { /* non-fatal */ }
+      const host = encodeURIComponent(payload.host || "");
+      const city = state.city ? `&city=${encodeURIComponent(state.city)}` : "";
+      window.location.href = `./free-panel.html?host=${host}${city}`;
+    }
+
+    // If ?dev=1 in URL, auto-open + skip verification (nice for QA)
+    const params = new URLSearchParams(location.search);
+    if (params.get("dev")==="1"){ devskip.checked=true; devskip.dispatchEvent(new Event("change")); show(1); }
+  })();
+  </script>
 </body>
 </html>
