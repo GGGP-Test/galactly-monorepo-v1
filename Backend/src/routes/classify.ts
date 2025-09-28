@@ -1,25 +1,14 @@
 // src/routes/classify.ts
 //
-// Domain classifier + lightweight summarizer with guardrails & caching.
+// Domain classifier with guardrails + caching + lightweight tag/sector mining.
 // GET  /api/classify?host=acme.com&email=user@acme.com
 // POST /api/classify  { host, email }
-//
-// Returns:
-//  - role: "packaging_supplier" | "packaging_buyer" | "neither"
-//  - confidence: 0..1
-//  - oneLiner: string
-//  - productTags: string[]        // for Product signals chips
-//  - sectors: string[]            // for Buyer targeting chips
-//  - title: string, h1s: string[] // UX context
-//  - favicon: string              // convenience favicon URL
-//  - evidence, bytes, cached, fetchedAt
-//
-// Deterministic (no LLM spend). Caches by host for CLASSIFY_CACHE_TTL_S.
 
 import { Router, Request, Response as ExResponse } from "express";
 import { withCache, daily } from "../shared/guards";
 import { CFG } from "../shared/env";
 
+// Minimal Fetch response type for Node 20 without DOM libs.
 type FetchResponse = {
   ok: boolean;
   status: number;
@@ -33,7 +22,7 @@ const F: (input: string, init?: any) => Promise<FetchResponse> = (globalThis as 
 
 const r = Router();
 
-// ---------- helpers ----------
+// -------------------- helpers --------------------
 
 function normalizeHost(raw?: string): string | undefined {
   if (!raw) return undefined;
@@ -88,18 +77,17 @@ async function fetchHomepage(host: string): Promise<{ body: string; bytes: numbe
   throw lastErr || new Error("fetch-failed");
 }
 
-function extractTitleH1(html: string): { title: string; h1s: string[] } {
-  const tMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  const title = (tMatch?.[1] || "").replace(/\s+/g, " ").trim();
-  const h1s: string[] = [];
-  const re = /<h1[^>]*>([\s\S]*?)<\/h1>/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(html))) {
-    const raw = m[1] || "";
-    const t = raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    if (t) h1s.push(t);
-  }
-  return { title, h1s };
+function extractTitleMeta(html: string): { title: string; meta: string } {
+  const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 200);
+  const meta =
+    html
+      .match(/<meta[^>]+name=["']description["'][^>]*>/gi)
+      ?.map(m => m.match(/\bcontent=["']([^"']+)["']/i)?.[1] || "")
+      .join(" ") || "";
+  return { title, meta };
 }
 
 function textAndJsonLd(html: string): { text: string; jsonld: string[] } {
@@ -108,13 +96,12 @@ function textAndJsonLd(html: string): { text: string; jsonld: string[] } {
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
-    .slice(0, 200000)
-    .toLowerCase();
+    .slice(0, 200000);
   const jsonld: string[] = [];
   const re = /<script[^>]*type=['"]application\/ld\+json['"][^>]*>([\s\S]*?)<\/script>/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(html))) {
-    const payload = (m[1] || "").trim();
+    const payload = m[1]?.trim();
     if (payload) jsonld.push(payload);
   }
   return { text: text.trim(), jsonld };
@@ -122,54 +109,23 @@ function textAndJsonLd(html: string): { text: string; jsonld: string[] } {
 
 type Role = "packaging_supplier" | "packaging_buyer" | "neither";
 
-const PRODUCT_TOKENS = [
-  "packaging","box","boxes","carton","cartons","corrugate","corrugated",
-  "mailers","label","labels","sticker","stickers","pouch","pouches",
-  "bottle","bottles","jar","jars","tube","tubes","can","cans",
-  "tray","trays","insert","inserts","tape","films","shrink","clamshell",
-  "bag","bags","foil","mylar","kraft","rigid","folding","carton"
-];
-
-const SUPPLIER_VERBS = ["manufacture","manufacturer","supply","supplier","custom","co-pack","copack","contract pack","private label","wholesale","converter","print","die cut","laminate"];
-
-const BUYER_HINTS = ["brand","retail","retailer","store","locations","menu","our stores","shop","basket","cart","checkout","collection"];
-
-const SECTOR_WORDS = [
-  "food","beverage","drinks","cosmetics","beauty","skincare","health","supplements",
-  "vitamin","pharma","cannabis","cbd","coffee","tea","chocolate","bakery","confectionery",
-  "pet","apparel","fashion","electronics","home","cleaning","industrial","automotive"
-];
-
-function countHits(text: string, words: string[]): number {
-  let n = 0;
-  for (const w of words) {
-    // word boundary where sensible; fall back to simple includes.
-    const rx = /\w/.test(w[w.length - 1]) ? new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i") : null;
-    if (rx ? rx.test(text) : text.includes(w)) n++;
-  }
-  return n;
-}
-
-function topMatches(text: string, words: string[], max = 8): string[] {
-  const scored = words.map(w => {
-    const rx = new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g");
-    const c = (text.match(rx) || []).length;
-    return { w, c };
-  }).filter(x => x.c > 0);
-  scored.sort((a,b)=>b.c-a.c);
-  const out = scored.slice(0, max).map(x=>x.w);
-  // small enrichment: plural ↔ singular dedupe
-  const dedup = Array.from(new Set(out.map(w => w.replace(/s$/, ""))));
-  return dedup;
-}
-
 function ruleClassify(text: string, jsonld: string[]): { role: Role; confidence: number; evidence: string[] } {
-  const prod = countHits(text, PRODUCT_TOKENS);
-  const sup  = countHits(text, SUPPLIER_VERBS);
-  const buy  = countHits(text, BUYER_HINTS);
+  const t = text.toLowerCase();
 
-  let scoreSupplier = sup + prod > 0 ? 1 + sup + Math.min(2, prod) : 0;
-  let scoreBuyer    = buy + (prod > 0 ? 1 : 0);
+  const productSignals = ["product", "catalog", "shop", "store", "price", "cart", "sku"];
+  const packagingTokens = ["packaging", "box", "boxes", "carton", "label", "labels", "corrugate", "pouch", "pouches", "bottle", "bottles", "jar", "jars", "film", "films", "mailer", "mailers", "clamshell", "blister"];
+  const buyerHints = ["brand", "retail", "ecommerce", "our stores", "locations", "menu"];
+  const supplierVerbs = ["manufacture", "supply", "wholesale", "distributor", "co-pack", "contract pack", "private label"];
+
+  const contains = (arr: string[]) => arr.reduce((n, w) => (t.includes(w) ? n + 1 : n), 0);
+
+  const prod = contains(productSignals);
+  const pack = contains(packagingTokens);
+  const buy = contains(buyerHints);
+  const sup = contains(supplierVerbs);
+
+  let scoreSupplier = sup + pack + (prod > 0 ? 1 : 0);
+  let scoreBuyer = buy + (prod > 0 ? 1 : 0);
 
   for (const raw of jsonld) {
     try {
@@ -181,76 +137,116 @@ function ruleClassify(text: string, jsonld: string[]): { role: Role; confidence:
         if (s.includes("wholesalestore") || s.includes("manufacturer")) scoreSupplier += 1;
         if (s.includes("store") || s.includes("localbusiness")) scoreBuyer += 1;
       }
-    } catch { /* ignore bad JSON-LD */ }
+    } catch { /* ignore */ }
   }
 
   const evidence: string[] = [];
-  if (prod) evidence.push(`product_tokens:${prod}`);
-  if (sup)  evidence.push(`supplier_verbs:${sup}`);
-  if (buy)  evidence.push(`buyer_hints:${buy}`);
+  if (prod) evidence.push(`product_signals:${prod}`);
+  if (pack) evidence.push(`packaging_terms:${pack}`);
+  if (sup) evidence.push(`supplier_verbs:${sup}`);
+  if (buy) evidence.push(`buyer_hints:${buy}`);
 
-  if (scoreSupplier >= scoreBuyer && scoreSupplier >= 2) {
-    return { role: "packaging_supplier", confidence: Math.min(1, 0.55 + 0.08 * scoreSupplier), evidence };
-  }
-  if (scoreBuyer >= 2) {
-    return { role: "packaging_buyer", confidence: Math.min(1, 0.55 + 0.08 * scoreBuyer), evidence };
-  }
+  if (scoreSupplier >= scoreBuyer && scoreSupplier >= 2) return { role: "packaging_supplier", confidence: Math.min(1, 0.55 + 0.1 * scoreSupplier), evidence };
+  if (scoreBuyer >= 2) return { role: "packaging_buyer", confidence: Math.min(1, 0.55 + 0.1 * scoreBuyer), evidence };
   return { role: "neither", confidence: 0.35, evidence };
 }
 
-function buildOneLiner(host: string, role: Role, productTags: string[], sectors: string[], title: string, h1s: string[]): string {
-  const brand = host.replace(/^www\./, "");
-  const prod = productTags.slice(0,3).join(", ") || "packaging";
-  const sect = sectors.slice(0,3).join(", ") || "brands";
-  if (role === "packaging_buyer") {
-    return `${brand} buys ${prod} for ${sect}.`;
+// --- light product + sector mining (deterministic) ---
+
+const PRODUCT_LEXICON = [
+  "boxes","cartons","labels","pouches","bottles","jars","tape","corrugate","films","mailers",
+  "clamshells","blister","trays","caps","closures","lids","bags","tubes","canisters","cans",
+  "shrink","stretch","void fill","inserts","foam","clamshell","thermoform","rigid","flexible",
+  "glass","aluminum","pet","hdpe","ldpe","pp","paperboard","kraft"
+];
+const SECTOR_LEXICON = [
+  "food","beverage","cosmetics","beauty","apparel","fashion","electronics",
+  "pharma","pharmaceutical","supplements","nutraceuticals","cannabis","pet","industrial","home"
+];
+
+function mineTokens(t: string, lex: string[], max = 8): string[] {
+  const lc = t.toLowerCase();
+  const hits = new Map<string, number>();
+  for (const raw of lex) {
+    const key = raw.toLowerCase();
+    const pattern = new RegExp(`\\b${key.replace(/\s+/g,"\\s+")}\\b`, "g");
+    const m = lc.match(pattern);
+    if (m && m.length) hits.set(normalizeToken(key), m.length);
   }
-  if (role === "packaging_supplier") {
-    return `${brand} sells ${prod} to ${sect}.`;
-  }
-  // fallback – use title/h1 clue if helpful
-  const clue = (title || h1s[0] || "").replace(/\s+/g, " ").trim();
-  if (clue) return `${brand} — ${clue}`;
-  return `${brand} — we couldn’t confirm packaging focus yet.`;
+  return [...hits.entries()]
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0, max)
+    .map(([k])=>prettyToken(k));
+}
+function normalizeToken(s: string): string {
+  return s.replace(/\s+/g," ").trim();
+}
+function prettyToken(s: string): string {
+  const up = s.toUpperCase();
+  if (["PET","HDPE","LDPE","PP"].includes(up)) return up;
+  return s.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// --- one-liner composer ---
+
+function composeOneLiner(host: string, role: Role, products: string[], sectors: string[], title: string, meta: string): string {
+  const domain = host.trim().toLowerCase();
+  const name = (title || domain).replace(/\s*\|\s*.*$/, "").replace(/\s*-\s*.*$/, "").slice(0, 60);
+  const prod = products.slice(0,3).join(", ") || "packaging";
+  const sect = sectors.slice(0,3).join(", ");
+  const verb = role === "packaging_buyer" ? "buys" : "sells";
+  const tail = sect ? ` to brands in ${sect}` : " to brands";
+  // Use meta to upgrade verb if it looks like services-only
+  const metaLc = (meta || "").toLowerCase();
+  const servicesOnly = /design|engineering|consult(ing)?/.test(metaLc) && !/manufactur|produce/.test(metaLc);
+  const verb2 = servicesOnly ? "provides" : verb;
+  return `${name} ${verb2} ${prod}${tail}.`;
 }
 
 function faviconUrl(host: string): string {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
 }
 
+// -------------------- core --------------------
+
 async function classifyHostOnce(host: string) {
   const page = await fetchHomepage(host);
-  const { title, h1s } = extractTitleH1(page.body);
+  const { title, meta } = extractTitleMeta(page.body);
   const { text, jsonld } = textAndJsonLd(page.body);
-
-  // base role
   const first = ruleClassify(text, jsonld);
 
-  // product + sector hints
-  const productTags = topMatches(text, PRODUCT_TOKENS, 10);
-  const sectors     = topMatches(text, SECTOR_WORDS, 8);
+  // product & sector cues (deterministic, cheap)
+  const productTags = mineTokens(text, PRODUCT_LEXICON, 10);
+  const sectorsRaw = mineTokens(text, SECTOR_LEXICON, 10);
+  // canonicalize sectors (merge aliases)
+  const sectors = Array.from(new Set(
+    sectorsRaw.map(s => {
+      const lc = s.toLowerCase();
+      if (lc === "beauty") return "cosmetics";
+      if (lc === "pharmaceutical") return "pharma";
+      return s.toLowerCase();
+    })
+  )).map(prettyToken);
 
-  const oneLiner = buildOneLiner(host, first.role, productTags, sectors, title, h1s);
+  const oneLiner = composeOneLiner(host, first.role, productTags, sectors, title, meta);
 
   return {
     ok: true as const,
     host,
     role: first.role,
     confidence: first.confidence,
-    oneLiner,
-    productTags,
-    sectors,
-    title,
-    h1s,
-    favicon: faviconUrl(host),
     evidence: first.evidence,
     bytes: page.bytes,
     fetchedAt: new Date().toISOString(),
-    cached: false as const,
+    cached: false,
+    oneLiner,
+    productTags,
+    sectors,
+    favicon: faviconUrl(host)
   };
 }
 
-// ---------- routes ----------
+// -------------------- routes --------------------
 
 r.get("/", async (req: Request, res: ExResponse) => {
   try {
@@ -261,18 +257,18 @@ r.get("/", async (req: Request, res: ExResponse) => {
     // daily limit
     const key = `classify:${clientKey(req)}`;
     const cap = CFG.classifyDailyLimit;
-    const used = Number(daily.get(key) ?? 0);
-    if (used >= cap) return res.status(200).json({ ok: false, error: "quota", remaining: 0 });
+    const count = Number(daily.get(key) ?? 0);
+    if (count >= cap) return res.status(200).json({ ok: false, error: "quota", remaining: 0 });
 
-    // soft email↔domain note (no hard reject)
+    // soft check email ↔ domain (no hard reject)
     const ed = emailsDomain(email);
     if (ed && ed !== host && !ed.endsWith(`.${host}`)) {
-      // could flag lowered trust later
+      // optional: we could lower trust here; not used yet.
     }
 
     const result = await withCache(`class:${host}`, CFG.classifyCacheTtlS * 1000, () => classifyHostOnce(host));
     if (typeof daily.inc === "function") daily.inc(key, 1);
-    return res.json({ ...result, cached: result ? (daily.get("nope") === -1 ? false : true) : false }); // cached flag already false inside; harmless
+    return res.json(result);
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
     return res.status(200).json({ ok: false, error: "classify-failed", detail: msg });
@@ -287,8 +283,8 @@ r.post("/", async (req: Request, res: ExResponse) => {
 
     const key = `classify:${clientKey(req)}`;
     const cap = CFG.classifyDailyLimit;
-    const used = Number(daily.get(key) ?? 0);
-    if (used >= cap) return res.status(200).json({ ok: false, error: "quota", remaining: 0 });
+    const count = Number(daily.get(key) ?? 0);
+    if (count >= cap) return res.status(200).json({ ok: false, error: "quota", remaining: 0 });
 
     const result = await withCache(`class:${host}`, CFG.classifyCacheTtlS * 1000, () => classifyHostOnce(host));
     if (typeof daily.inc === "function") daily.inc(key, 1);
