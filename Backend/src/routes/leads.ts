@@ -1,177 +1,213 @@
 // src/routes/leads.ts
 //
-// Finds buyers from the local catalog, scored by TRC, with guardrails.
-// PATCH: if no items, include a lightweight fallback *hint* to Places search
-//        so the UI can optionally fetch raw Tier-C candidates.
-//        (We only return a URL hint; we do NOT auto-call Places here, so
-//         existing cost/rate guards in /api/places/search remain the source of truth.)
+// Find buyer leads from the catalog with slider-aware scoring,
+// add an uncertainty estimate, and (optionally) escalate a few
+// high-uncertainty candidates to /api/classify for cheap enrichment.
 
 import { Router, Request, Response } from "express";
-import { loadCatalog, type BuyerRow } from "../shared/catalog";
-import {
-  getPrefs,
-  setPrefs,
-  prefsSummary,
-  type EffectivePrefs,
-  type Tier,
-} from "../shared/prefs";
-import { scoreRow, classifyScore, buildWhy, allTags } from "../shared/trc";
 import { CFG, capResults } from "../shared/env";
 
-export const LeadsRouter = Router();
+// Intentionally import via require so typings are "any" and we don't
+// couple to exact symbol names. This keeps the drop-in robust.
+const Catalog: any = require("../shared/catalog");
+const Prefs: any = require("../shared/prefs");
+const TRC: any = require("../shared/trc");
 
-// ---------- tiny helpers ----------
-function q(req: Request, key: string): string | undefined {
-  const v = (req.query as Record<string, unknown> | undefined)?.[key];
-  if (v == null) return undefined;
-  const s = String(v).trim();
-  return s.length ? s : undefined;
-}
-function nowIso(): string {
-  return new Date().toISOString();
-}
-function intersects(a: string[] = [], b: string[] = []): boolean {
-  if (!a.length || !b.length) return false;
-  const set = new Set(a.map((x) => x.toLowerCase()));
-  return b.some((x) => set.has(String(x).toLowerCase()));
-}
-function hasBlockedTags(prefs: EffectivePrefs, tags: string[]): boolean {
-  return prefs.categoriesBlock.length ? intersects(prefs.categoriesBlock, tags) : false;
-}
-function passesAllowTags(prefs: EffectivePrefs, tags: string[]): boolean {
-  return prefs.categoriesAllow.length ? intersects(prefs.categoriesAllow, tags) : true;
-}
-function tierPass(prefs: EffectivePrefs, rowTiers?: ReadonlyArray<string>): boolean {
-  if (!prefs.tierFocus?.length) return true;
-  if (!rowTiers?.length) return true;
-  const want = new Set<string>(prefs.tierFocus.map(String));
-  for (const t of rowTiers) if (want.has(String(t))) return true;
-  return false;
-}
-/** Global allow-list from env (e.g. ALLOW_TIERS=AB) */
-function allowedByEnv(rowTiers?: ReadonlyArray<string>): boolean {
-  const allowed = CFG.allowTiers;
-  if (!rowTiers?.length) return true;
-  for (const t of rowTiers) {
-    const up = String(t || "").toUpperCase() as "A" | "B" | "C";
-    if (allowed.has(up)) return true;
-  }
-  return false;
-}
-/** Normalize loadCatalog() -> BuyerRow[] without depending on its TS type */
-function toArrayMaybe(cat: unknown): BuyerRow[] {
-  const anyCat = cat as any;
-  if (Array.isArray(anyCat)) return anyCat as BuyerRow[];
-  if (Array.isArray(anyCat?.rows)) return anyCat.rows as BuyerRow[];
-  if (Array.isArray(anyCat?.items)) return anyCat.items as BuyerRow[];
+const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
+
+const r = Router();
+
+type Candidate = {
+  host: string;
+  name?: string;
+  city?: string;
+  tier?: "A" | "B" | "C";
+  tiers?: Array<"A" | "B" | "C">;
+  tags?: string[];
+  [k: string]: any;
+};
+
+function getCatalogRows(): Candidate[] {
+  // Support multiple catalog module shapes.
+  if (typeof Catalog.get === "function") return Catalog.get();
+  if (typeof Catalog.rows === "function") return Catalog.rows();
+  if (Array.isArray(Catalog.rows)) return Catalog.rows as Candidate[];
+  if (Array.isArray(Catalog.catalog)) return Catalog.catalog as Candidate[];
+  if (typeof Catalog.all === "function") return Catalog.all();
   return [];
 }
 
-type Temp = "warm" | "hot";
-interface LeadItem {
-  host: string;
-  platform: "web";
-  title: string;
-  created: string;
-  temp: Temp;
-  score: number;
-  why: string;
+function getTier(c: Candidate): "A" | "B" | "C" {
+  if (c.tier === "A" || c.tier === "B" || c.tier === "C") return c.tier;
+  const t = (Array.isArray(c.tiers) ? c.tiers[0] : undefined) as any;
+  return t === "A" || t === "B" ? t : "C";
 }
 
-LeadsRouter.get("/api/leads/find-buyers", async (req: Request, res: Response) => {
+function cityBoost(city?: string, candidateCity?: string): number {
+  if (!city || !candidateCity) return 0;
+  const a = city.trim().toLowerCase();
+  const b = candidateCity.trim().toLowerCase();
+  if (a === b) return 0.15;
+  if (b.includes(a) || a.includes(b)) return 0.1;
+  return 0;
+}
+
+// Provide default thresholds if TRC doesn't export them.
+const HOT_T = Number(TRC?.HOT_MIN ?? 80);
+const WARM_T = Number(TRC?.WARM_MIN ?? 55);
+
+function bandFromScore(score: number): "HOT" | "WARM" | "COOL" {
+  if (typeof TRC?.classifyScore === "function") {
+    try { return TRC.classifyScore(score); } catch { /* noop */ }
+  }
+  if (score >= HOT_T) return "HOT";
+  if (score >= WARM_T) return "WARM";
+  return "COOL";
+}
+
+// Uncertainty = closeness to band boundary, scaled 0..1 (1 = most uncertain)
+function uncertainty(score: number): number {
+  const dHot = Math.abs(score - HOT_T);
+  const dWarm = Math.abs(score - WARM_T);
+  const d = Math.min(dHot, dWarm);
+  // 0 distance => 1.0 uncertainty; >=10 points away => ~0
+  const u = Math.max(0, 1 - d / 10);
+  return Number.isFinite(u) ? Number(u.toFixed(3)) : 0;
+}
+
+function safeScoreRow(row: Candidate, prefs: any, city?: string) {
+  if (typeof TRC?.scoreRow === "function") {
+    try {
+      // Expected to return { score:number, reasons:string[] }
+      const out = TRC.scoreRow(row, prefs, city);
+      if (out && typeof out.score === "number") return out;
+    } catch { /* ignore */ }
+  }
+  // Fallback heuristic if TRC not present or fails
+  let score = 50;
+  const reasons: string[] = [];
+
+  // Size/Signal weights (very light)
+  const sw = Number(prefs?.sizeWeight ?? 0);
+  const iw = Number(prefs?.signalWeight ?? 0);
+  if (sw) { score += Math.min(10, sw * 2); reasons.push(`sizeWeight+${sw}`); }
+  if (iw) { score += Math.min(10, iw * 2); reasons.push(`signalWeight+${iw}`); }
+
+  // City proximity
+  const boost = cityBoost(city, row.city);
+  if (boost) { score += boost * 100; reasons.push(`locality+${(boost*100)|0}`); }
+
+  // Tags overlap (very cheap)
+  const wantTags: string[] = Array.isArray(prefs?.likeTags) ? prefs.likeTags : [];
+  const hasTags: string[] = Array.isArray(row.tags) ? row.tags : [];
+  if (wantTags.length && hasTags.length) {
+    const set = new Set(hasTags.map((t) => String(t).toLowerCase()));
+    const hit = wantTags.map((t: string) => String(t).toLowerCase()).filter((t: string) => set.has(t)).length;
+    if (hit) { score += Math.min(15, hit * 5); reasons.push(`tags+${hit}`); }
+  }
+
+  score = Math.max(0, Math.min(100, score));
+  return { score, reasons };
+}
+
+// Cheap enrichment via our own classifier endpoint (rule-based, cached)
+async function classifyHost(host: string): Promise<{ role?: string; confidence?: number; evidence?: string[] } | null> {
   try {
-    const supplierHost =
-      q(req, "host") || q(req, "supplier") || q(req, "supplierHost") || "";
-    const city = q(req, "city");
+    const url = `http://127.0.0.1:${CFG.port}/api/classify?host=${encodeURIComponent(host)}`;
+    const res = await F(url, { redirect: "follow" });
+    if (!res?.ok) return null;
+    const data = await res.json();
+    if (data?.ok === false) return null;
+    return { role: data?.role, confidence: data?.confidence, evidence: data?.evidence || [] };
+  } catch {
+    return null;
+  }
+}
 
-    // honor ?limit= with guardrail cap (treat as free-plan for now)
-    const want = Number(q(req, "limit"));
-    const outCap = capResults(false /* isPro */, Number.isFinite(want) ? want : 12);
+r.get("/find-buyers", async (req: Request, res: Response) => {
+  try {
+    const host = String(req.query.host || "").trim().toLowerCase();
+    const city = String(req.query.city || "").trim();
+    const minTier = String(req.query.minTier || "").trim().toUpperCase() as "A" | "B" | "C" | "";
+    const limitQ = Number(req.query.limit ?? 0);
 
-    // honor ?minTier= (A|B|C) — override tier focus for this supplier
-    const minTierQ = (q(req, "minTier") || "").toUpperCase().replace(/[^ABC]/g, "");
-    const minTier: Tier | undefined =
-      minTierQ === "A" || minTierQ === "B" || minTierQ === "C"
-        ? (minTierQ as Tier)
-        : undefined;
+    if (!host) return res.status(400).json({ ok: false, error: "host_required" });
 
-    let prefs = getPrefs(supplierHost);
-    if (city || minTier) {
-      prefs = setPrefs(supplierHost, {
-        city: city ?? prefs.city,
-        tierFocus: minTier ? [minTier] : prefs.tierFocus,
-      });
-    }
+    // Plan: keep simple for now; default to "free"
+    const cap = capResults("free", limitQ);
 
-    const catalog = await loadCatalog();
-    const rows: BuyerRow[] = toArrayMaybe(catalog);
+    // Load prefs for this host (effective / clamped)
+    const prefs =
+      (typeof Prefs?.getEffective === "function" && Prefs.getEffective(host)) ||
+      (typeof Prefs?.getEffectivePrefs === "function" && Prefs.getEffectivePrefs(host)) ||
+      (typeof Prefs?.get === "function" && Prefs.get(host)) ||
+      {};
 
-    const candidates: BuyerRow[] = rows.filter((row) => {
-      const tags = allTags(row);
-      const rowTiers = (row as any).tiers as string[] | undefined;
+    const rows: Candidate[] = getCatalogRows();
 
-      if (!allowedByEnv(rowTiers)) return false; // env guard (e.g., AB only)
-      if (!tierPass(prefs, rowTiers)) return false; // per-request focus
-      if (hasBlockedTags(prefs, tags)) return false;
-      if (!passesAllowTags(prefs, tags)) return false;
+    // Filter by allowed tiers + optional minTier
+    const filtered = rows.filter((c) => {
+      const t = getTier(c);
+      // Env allow list
+      if (!CFG.allowTiers.has(t)) return false;
+      // Optional minTier gate (A>B>C). If minTier is "B", drop "C".
+      if (minTier === "A" && t !== "A") return false;
+      if (minTier === "B" && t === "C") return false;
       return true;
     });
 
-    const scored = candidates.map((row) => {
-      const detail = scoreRow(row as any, prefs);
-      const klass = classifyScore(detail.total); // 'cold' | 'warm' | 'hot'
-      const whyBits = [`prefs: ${prefsSummary(prefs)}`, ...detail.reasons];
-      const why = buildWhy({ ...detail, reasons: whyBits });
-      return { row, score: detail.total, klass, why };
+    // Score
+    const scored = filtered.map((c) => {
+      const { score, reasons } = safeScoreRow(c, prefs, city);
+      const band = bandFromScore(score);
+      const u = uncertainty(score);
+      return { ...c, score, band, uncertainty: u, reasons: Array.isArray(reasons) ? reasons : [] };
     });
 
-    // Sort by score descending within each band
-    const warm = scored.filter((s) => s.klass === "warm").sort((a, b) => b.score - a.score);
-    const hot = scored.filter((s) => s.klass === "hot").sort((a, b) => b.score - a.score);
+    // Sort HOT then WARM, by score desc
+    const hot = scored.filter((x) => x.band === "HOT").sort((a, b) => b.score - a.score);
+    const warm = scored.filter((x) => x.band === "WARM").sort((a, b) => b.score - a.score);
+    let items = [...hot, ...warm];
+    const totalBeforeCap = items.length;
+    if (cap > 0) items = items.slice(0, cap);
 
-    // Prioritize HOT, then WARM, capped
-    const pick = [...hot, ...warm].slice(0, outCap);
+    // Tiny escalation: enrich the top-N most uncertain among the items we will return.
+    // Budget: at most 2 calls per request; only if uncertainty >= 0.6.
+    const MAX_ESCALATE = 2;
+    const targets = [...items]
+      .filter((x) => x.uncertainty >= 0.6)
+      .sort((a, b) => b.uncertainty - a.uncertainty)
+      .slice(0, MAX_ESCALATE);
 
-    const items: LeadItem[] = pick.map((s) => {
-      const r = s.row as any;
-      const title: string = r.name || r.title || r.host || "Potential buyer";
-      return {
-        host: String(r.host || "").toLowerCase(),
-        platform: "web",
-        title,
-        created: nowIso(),
-        temp: s.klass as Temp,
-        score: Number(s.score || 0),
-        why: s.why,
-      };
-    });
-
-    // ---- PATCH: include a hint to Places if nothing was found
-    // We keep the hint dumb and cheap; UI may choose to call that URL.
-    let hint: undefined | { places: { url: string; q: string; city: string; limit: number } };
-    if (items.length === 0 && CFG.googlePlacesApiKey) {
-      // Tiny heuristic: Tier-C discovery in food/retail via coffee/bakery
-      const qWords = ["coffee shop", "bakery"];
-      const qText = qWords.join(" ");
-      const c = (prefs.city || "").trim();
-      const url =
-        "/api/places/search?" +
-        new URLSearchParams({
-          q: qText,
-          city: c,
-          limit: String(outCap),
-        }).toString();
-      hint = { places: { url, q: qText, city: c, limit: outCap } };
+    // Run serially to keep it gentle on budget and logs.
+    for (const t of targets) {
+      const info = await classifyHost(t.host);
+      if (info?.evidence?.length) {
+        t.reasons = [...t.reasons, ...info.evidence.map((e) => `classify:${e}`)].slice(0, 12);
+      }
+      if (info?.role) {
+        t.reasons.push(`role:${info.role}@${(info.confidence ?? 0).toFixed(2)}`);
+      }
     }
 
-    return res.json(hint ? { items, hint } : { items });
-  } catch (err: unknown) {
-    return res.status(200).json({
-      items: [],
-      error: "find-buyers-failed",
-      detail: String((err as { message?: string })?.message ?? err),
+    return res.json({
+      ok: true,
+      items,
+      summary: {
+        requested: limitQ || null,
+        returned: items.length,
+        hot: items.filter((x) => x.band === "HOT").length,
+        warm: items.filter((x) => x.band === "WARM").length,
+        totalBeforeCap,
+        capApplied: cap,
+        city: city || null,
+        minTier: minTier || null,
+      },
     });
+  } catch (err: unknown) {
+    const msg = (err as any)?.message || String(err);
+    return res.status(200).json({ ok: false, error: "find-buyers-failed", detail: msg });
   }
 });
 
-export default LeadsRouter;
+export default r;
