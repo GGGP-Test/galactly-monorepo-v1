@@ -1,160 +1,112 @@
 // docs/script.js
-// Onboarding helpers for the landing modal (frontend-only).
-// Robustly calls your backend /classify regardless of how the API base is pasted,
-// and auto-fills domain from business email (works with browser autofill too).
+// Onboarding glue: robust email→domain autofill + safe classify fetcher
+// that works whether your API base includes /api or not. Also auto-triggers
+// classify when moving from Step 2 → Step 3 (or when domain becomes valid).
 
 (function () {
-  // ---------- utilities ----------
-  const LS_KEY = "apiBase"; // where we store your API base
+  // ------------- tiny helpers -------------
+  const LS = {
+    apiBase: "apiBase",
+    apiKey: "apiKey",
+  };
 
-  function getApiBaseRaw() {
-    const fromAttr = document.documentElement.getAttribute("data-api-base") || "";
-    const fromLS = localStorage.getItem(LS_KEY) || "";
-    const fromMeta = (document.querySelector('meta[name="api-base"]')?.getAttribute("content")) || "";
-    return (fromAttr || fromLS || fromMeta || "").trim().replace(/\/+$/, "");
-  }
+  const qs = (s, r = document) => r.querySelector(s);
+  const qsa = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-  function setApiBase(raw) {
+  const getApiBase = () =>
+    (document.documentElement.getAttribute("data-api-base") ||
+      localStorage.getItem(LS.apiBase) ||
+      qs('meta[name="api-base"]')?.getAttribute("content") ||
+      ""
+    ).trim().replace(/\/+$/, "");
+
+  const setApiBase = (raw) => {
     if (!raw) return;
     const v = raw.trim().replace(/\/+$/, "");
-    localStorage.setItem(LS_KEY, v);
-    console.info("[onboarding] apiBase saved:", v);
-  }
+    localStorage.setItem(LS.apiBase, v);
+    console.info("[onboarding] saved apiBase:", v);
+  };
 
-  function promptApiBase() {
-    const cur = getApiBaseRaw();
-    const val = window.prompt(
-      "API base (can be with or without /api).\nExample: https://YOUR-SUBDOMAIN.code.run/api",
-      cur || "https://…your-subdomain….code.run/api"
+  const promptApiBase = () => {
+    const cur = getApiBase();
+    const v = window.prompt(
+      "API base (with or without /api). Example:\nhttps://YOUR-SUBDOMAIN.code.run/api",
+      cur || ""
     );
-    if (val) setApiBase(val);
-  }
+    if (v) setApiBase(v);
+  };
 
-  function headers() {
+  const hdrs = () => {
     const h = { "Content-Type": "application/json" };
-    const apiKey = localStorage.getItem("apiKey") || ""; // optional
-    if (apiKey) h["x-api-key"] = apiKey;
+    const k = localStorage.getItem(LS.apiKey) || "";
+    if (k) h["x-api-key"] = k;
     return h;
-  }
+  };
 
-  // Smart join without double slashes
-  function join(base, tail) {
-    return `${base.replace(/\/+$/, "")}/${String(tail).replace(/^\/+/, "")}`;
-  }
+  const join = (base, tail) => `${base.replace(/\/+$/, "")}/${String(tail).replace(/^\/+/, "")}`;
 
-  // Try both /classify and /api/classify depending on what user pasted
-  async function classifyFetch(host, email) {
-    const base = getApiBaseRaw();
-    if (!base) {
-      promptApiBase();
-      throw new Error("api_base_missing");
-    }
+  const normHost = (s) => {
+    if (!s) return "";
+    return String(s)
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .replace(/\/.*$/, "");
+  };
 
-    // Candidate #1: base + "/classify"
-    const u1 = new URL(join(base, "/classify"));
-    u1.searchParams.set("host", host);
-    if (email) u1.searchParams.set("email", email);
-
-    // Candidate #2: (base without trailing /api) + "/api/classify"
-    const baseNoApi = base.replace(/\/api\/?$/i, "");
-    const u2 = new URL(join(baseNoApi, "/api/classify"));
-    u2.searchParams.set("host", host);
-    if (email) u2.searchParams.set("email", email);
-
-    // If base already ends with /api, u1 => “…/api/classify” (good), u2 is identical.
-    // If base lacks /api, u1 => “…/classify” (likely 404), u2 => “…/api/classify” (good).
-    // We’ll try u1 first, then u2 if 404-ish HTML like “Cannot GET /classify”.
-
-    const tryOnce = async (url) => {
-      const resp = await fetch(url.toString(), { credentials: "omit", headers: headers() });
-      let bodyText = "";
-      try { bodyText = await resp.text(); } catch {}
-      // Parse JSON if it looks like JSON
-      let parsed = null;
-      if (bodyText && /^\s*[\{\[]/.test(bodyText)) {
-        try { parsed = JSON.parse(bodyText); } catch {}
-      }
-      return { ok: resp.ok, status: resp.status, text: bodyText, json: parsed };
-    };
-
-    const r1 = await tryOnce(u1);
-    // Fast-path if r1 ok JSON with ok:true
-    if (r1.json && (r1.json.ok === true || r1.json.host)) return r1.json;
-
-    // If r1 failed or returned “Cannot GET /classify”, try the other URL
-    const looksWrong =
-      !r1.ok ||
-      (typeof r1.text === "string" && /Cannot\s+GET\s+\/classify/i.test(r1.text));
-
-    if (looksWrong) {
-      const r2 = await tryOnce(u2);
-      if (r2.json && (r2.json.ok === true || r2.json.host)) return r2.json;
-      const msg = r2.text || "classify-failed";
-      throw new Error(`classify_failed:${r2.status}:${msg.slice(0, 160)}`);
-    }
-
-    // If r1 returned JSON but not ok, throw that
-    if (r1.json && r1.json.ok === false) {
-      throw new Error(`classify_error:${r1.json.error || "unknown"}`);
-    }
-    throw new Error(`classify_failed:${r1.status}:${String(r1.text).slice(0,160)}`);
-  }
-
-  // ---------- UI helpers ----------
-  function q(sel) { return document.querySelector(sel); }
-  function qa(sel) { return Array.from(document.querySelectorAll(sel)); }
-
-  // Find email & domain inputs broadly
-  function locateEmailInput() {
+  // ------------- DOM targets (very tolerant) -------------
+  function findEmailInput() {
     return (
-      q("#business-email") ||
-      q('input[type="email"]') ||
-      q('input[name*="email" i]')
-    );
-  }
-  function locateDomainInput() {
-    return (
-      q("#domain") ||
-      q("#website") ||
-      q('input[name*="domain" i]') ||
-      q('input[name*="website" i]')
+      qs("#business-email") ||
+      qs("#email") ||
+      qs('input[type="email"]') ||
+      qs('input[name*="email" i]')
     );
   }
 
-  // Auto-fill domain from email (handles autofill)
-  function wireEmailToDomain() {
-    const emailEl = locateEmailInput();
-    const domainEl = locateDomainInput();
-    if (!emailEl || !domainEl) return;
-
-    const sync = () => {
-      const v = String(emailEl.value || "");
-      const m = v.match(/@([a-z0-9.-]+\.[a-z]{2,})/i);
-      if (m) domainEl.value = m[1].toLowerCase();
-    };
-    ["input", "change", "blur"].forEach(ev => emailEl.addEventListener(ev, sync));
-    // Try after browser autofill
-    setTimeout(sync, 150);
+  function findDomainInput() {
+    return (
+      qs("#supplierDomain") ||   // panel page id
+      qs("#domain") ||
+      qs("#website") ||
+      qs('input[name*="domain" i]') ||
+      qs('input[name*="website" i]')
+    );
   }
 
-  function setSummary(text) {
-    const el =
-      q("[data-summary]") ||
-      q("#summaryLine") ||
-      q(".summary-line");
-    if (el) el.textContent = text;
+  function findSummaryEl() {
+    return qs("[data-summary]") || qs("#summaryLine") || qs(".summary-line");
   }
 
-  function setFavicon(host) {
-    const img = q("#company-favicon");
+  function findRefreshLink() {
+    return (
+      qsa("[data-action='refresh']").at(0) ||
+      qs("#refresh-from-website") ||
+      // the text link inside the one-liner card
+      qsa("a").find(a => /refresh from website/i.test(a.textContent || ""))
+    );
+  }
+
+  function findNextButtons() {
+    // Buttons that likely move steps
+    return qsa("button").filter(b => /^(next|finish)$/i.test(b.textContent.trim()));
+  }
+
+  function setSummaryText(txt) {
+    const el = findSummaryEl();
+    if (el) el.textContent = txt;
+  }
+
+  function setFaviconFor(host) {
+    const img = qs("#company-favicon");
     if (!img || !host) return;
-    img.src = `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=64&url=https://${encodeURIComponent(host)}`;
+    img.src =
+      `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=64&url=https://${encodeURIComponent(host)}`;
   }
 
-  function renderProductChips(tags) {
-    const box =
-      q("[data-product-chips]") ||
-      q("#product-chips");
+  function setProductChips(tags) {
+    const box = qs("[data-product-chips]") || qs("#product-chips");
     if (!box) return;
     box.innerHTML = "";
     const list = Array.isArray(tags) ? tags.slice(0, 12) : [];
@@ -172,46 +124,174 @@
     }
   }
 
+  // ------------- classify: try both paths safely -------------
+  async function fetchClassify(host, email) {
+    const base = getApiBase();
+    if (!base) {
+      promptApiBase();
+      throw new Error("api_base_missing");
+    }
+    const hostClean = normHost(host);
+    if (!hostClean) throw new Error("bad_host");
+
+    const attempt = async (url) => {
+      const r = await fetch(url, { credentials: "omit", headers: hdrs() });
+      const txt = await r.text();
+      let json = null;
+      if (/^\s*[\{\[]/.test(txt)) { try { json = JSON.parse(txt); } catch {} }
+      return { ok: r.ok, status: r.status, txt, json };
+    };
+
+    // Candidate 1: whatever user pasted + "/classify"
+    const u1 = new URL(join(base, "/classify"));
+    u1.searchParams.set("host", hostClean);
+    if (email) u1.searchParams.set("email", email);
+
+    // Candidate 2: ensure "/api/classify"
+    const baseNoApi = base.replace(/\/api\/?$/i, "");
+    const u2 = new URL(join(baseNoApi, "/api/classify"));
+    u2.searchParams.set("host", hostClean);
+    if (email) u2.searchParams.set("email", email);
+
+    const a1 = await attempt(u1.toString());
+    if (a1.json && (a1.json.ok === true || a1.json.host)) return a1.json;
+
+    const looksWrong =
+      !a1.ok || /Cannot\s+GET\s+\/classify/i.test(a1.txt || "");
+    if (looksWrong) {
+      const a2 = await attempt(u2.toString());
+      if (a2.json && (a2.json.ok === true || a2.json.host)) return a2.json;
+      throw new Error(`classify_failed:${a2.status}:${(a2.txt || "").slice(0, 200)}`);
+    }
+    if (a1.json && a1.json.ok === false) {
+      throw new Error(`classify_error:${a1.json.error || "unknown"}`);
+    }
+    throw new Error(`classify_failed:${a1.status}:${(a1.txt || "").slice(0, 200)}`);
+  }
+
+  // ------------- wire email → domain (immediate on "@") -------------
+  function wireEmailToDomain() {
+    const emailEl = findEmailInput();
+    const domainEl = findDomainInput();
+    if (!emailEl || !domainEl) return;
+
+    const applyFrom = (val) => {
+      const m = String(val || "").match(/@([a-z0-9.-]+\.[a-z]{2,})/i);
+      if (m) {
+        const d = m[1].toLowerCase();
+        if (domainEl.value !== d) {
+          domainEl.value = d;
+          domainEl.dispatchEvent(new Event("input", { bubbles: true }));
+          document.dispatchEvent(new CustomEvent("domain:changed", { detail: d }));
+        }
+      }
+    };
+
+    // Key events: update as soon as the user types "@"
+    const onInput = () => applyFrom(emailEl.value);
+    emailEl.addEventListener("input", onInput);
+    emailEl.addEventListener("keyup", onInput);
+    emailEl.addEventListener("change", onInput);
+    emailEl.addEventListener("paste", () => setTimeout(onInput, 0));
+
+    // Browser autofill: poll briefly after focus
+    emailEl.addEventListener("focus", () => {
+      const t0 = Date.now();
+      const iv = setInterval(() => {
+        applyFrom(emailEl.value);
+        if (Date.now() - t0 > 2000) clearInterval(iv);
+      }, 120);
+    });
+
+    // Initial sync (handles pre-filled states)
+    setTimeout(onInput, 50);
+  }
+
+  // ------------- connect domain → crawl (auto classify) -------------
+  let classifyDebounce = 0;
+  const scheduleClassify = (ms = 300) => {
+    clearTimeout(classifyDebounce);
+    classifyDebounce = setTimeout(() => {
+      refreshFromWebsite();
+    }, ms);
+  };
+
+  function wireDomainChangeTriggers() {
+    const domainEl = findDomainInput();
+    if (!domainEl) return;
+    const onChange = () => {
+      const d = normHost(domainEl.value);
+      if (d) scheduleClassify(300);
+    };
+    ["input", "change", "blur"].forEach(ev => domainEl.addEventListener(ev, onChange));
+    document.addEventListener("domain:changed", () => scheduleClassify(150));
+  }
+
+  function wireStepTransitions() {
+    // If the UI has explicit Next/Finish buttons, trigger classify just after click.
+    findNextButtons().forEach(btn => {
+      btn.addEventListener("click", () => {
+        // give the UI a moment to swap to Step 3, then run classify
+        setTimeout(() => scheduleClassify(0), 350);
+      });
+    });
+  }
+
+  // Manual “Refresh from website” link
   async function refreshFromWebsite() {
-    const host = (locateDomainInput()?.value || "").trim().toLowerCase();
-    const email = (locateEmailInput()?.value || "").trim().toLowerCase();
+    const domainEl = findDomainInput();
+    const emailEl = findEmailInput();
+    const host = normHost(domainEl?.value || "");
+    const email = (emailEl?.value || "").trim().toLowerCase();
+
     if (!host) {
-      alert("Add your website first (e.g. acme.com).");
+      // nudge user to add API if missing too
+      const base = getApiBase();
+      if (!base) promptApiBase();
+      setSummaryText("Add your website first (e.g. acme.com).");
       return;
     }
-    setSummary(`${host} — fetching summary…`);
+
+    setSummaryText(`${host} — fetching summary…`);
     try {
-      const data = await classifyFetch(host, email);
-      // Accept both new or fallback shapes
-      const summary = data.summary || `${data.host || host} sells packaging to brands.`;
-      const productTags = data.productTags || data.products || [];
+      const data = await fetchClassify(host, email);
       const realHost = data.host || host;
 
-      setSummary(summary);
-      setFavicon(realHost);
-      renderProductChips(productTags);
+      // accept both legacy and new shapes
+      const summary =
+        data.summary ||
+        `${realHost} sells packaging to brands.`;
+
+      const productTags = data.productTags || data.products || data.product_signals || [];
+
+      setSummaryText(summary);
+      setFaviconFor(realHost);
+      setProductChips(productTags);
     } catch (err) {
       console.warn("[onboarding] classify error:", err);
-      setSummary(`${host} — network error while reading your site.`);
+      setSummaryText(`${host} — network error while reading your site.`);
     }
   }
 
-  function wireActions() {
-    // Gear / API base
-    qa("[data-action='set-api'], #set-api-base").forEach(el => {
+  function wireManualActions() {
+    // “gear” to set API base
+    qsa("[data-action='set-api'], #set-api-base").forEach(el => {
       el.addEventListener("click", (e) => { e.preventDefault(); promptApiBase(); });
     });
-    // Refresh link
-    qa("[data-action='refresh'], #refresh-from-website").forEach(el => {
-      el.addEventListener("click", (e) => { e.preventDefault(); refreshFromWebsite(); });
-    });
+    // “Refresh from website”
+    const refreshEl = findRefreshLink();
+    if (refreshEl) {
+      refreshEl.addEventListener("click", (e) => { e.preventDefault(); refreshFromWebsite(); });
+    }
   }
 
-  // ---------- boot ----------
+  // ------------- boot -------------
   wireEmailToDomain();
-  wireActions();
+  wireDomainChangeTriggers();
+  wireStepTransitions();
+  wireManualActions();
 
-  // Optional: expose small API for inline onclick handlers
+  // expose a tiny API for inline handlers if needed
   window.Galactly = Object.assign(window.Galactly || {}, {
     setApiBase: promptApiBase,
     refreshFromWebsite,
