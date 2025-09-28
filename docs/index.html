@@ -22,6 +22,7 @@
       color:#001018;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(75,209,255,.25);transition:transform .04s ease}
     .btn:active{transform:translateY(1px)}
     .btn.alt{background:#1a2233;color:var(--fg);box-shadow:none}
+    .btn.small{padding:8px 12px;border-radius:10px;font-weight:600}
     .note{font-size:13px;color:var(--muted)}
 
     /* Modal overlay with subtle blur */
@@ -56,22 +57,37 @@
     .tiny{font-size:12px;color:var(--muted)}
     .hidden{display:none!important}
 
-    .sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-    .slider-row{display:flex;gap:10px;align-items:center}
-    .slider-row input[type=range]{flex:1}
-
-    .summary-wrap{display:flex;align-items:center;gap:14px;justify-content:center;padding:12px;border:1px solid var(--line);border-radius:14px;background:#0e1726}
-    .logo{height:40px;width:40px;border-radius:10px;border:1px solid var(--line);object-fit:cover;background:#0b1220}
-    .summary{font-size:18px;line-height:1.35;text-align:center}
+    /* Step 3 summary */
+    .summary-card{border:1px solid var(--line);background:#0e1726;border-radius:16px;padding:18px;margin-bottom:16px}
+    .summary-wrap{display:flex;align-items:center;gap:14px;justify-content:center}
+    .logo{height:44px;width:44px;border-radius:10px;border:1px solid var(--line);object-fit:cover;background:#0b1220}
+    .summary{font-size:20px;line-height:1.45;text-align:center}
     .summary b{font-weight:800}
     .editable{display:inline-block;min-width:24px;border-bottom:1px dashed #2b3a52;padding:0 4px;border-radius:4px}
     .editable:focus{outline:none;box-shadow:var(--focus)}
+
     .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
     .chip{background:#121a2a;border:1px solid var(--line);padding:6px 10px;border-radius:999px;font-size:12px;cursor:pointer}
+    .chip.sel{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset}
     .chip:hover{border-color:#2f3b4f}
+
+    .adv-head{display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px}
+    .adv-copy{color:var(--muted);font-size:13px}
+    .group{border:1px solid var(--line);border-radius:14px;padding:14px;background:#0f1420}
+    .group h4{margin:0 0 10px 0;font-size:14px}
+    .sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .slider-row{display:flex;gap:10px;align-items:center}
+    .slider-row input[type=range]{flex:1}
+    .label-ico{display:inline-flex;align-items:center;gap:6px}
+    .ico{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;opacity:.8}
+    .tooltip{border-bottom:1px dashed #39465c;cursor:help}
 
     .hint{font-size:12px;color:var(--muted);margin-top:-6px}
     .link{color:var(--brand);cursor:pointer;text-decoration:underline}
+    .muted{color:var(--muted)}
+    .switch{display:inline-flex;align-items:center;gap:8px}
+    .switch input{accent-color:#4bd1ff}
+    .disabled{opacity:.55;pointer-events:none}
   </style>
 </head>
 <body>
@@ -159,8 +175,8 @@
 
         <!-- STEP 3 -->
         <section id="s3" class="hidden">
-          <div class="grid" style="gap:10px">
-            <!-- Big editable one-liner with logo -->
+          <!-- Big one-liner -->
+          <div class="summary-card">
             <div class="summary-wrap">
               <img id="logo" class="logo" alt="logo">
               <div class="summary" id="summary">
@@ -172,61 +188,104 @@
                 <span id="sum-where" class="editable" contenteditable="true"></span>.
               </div>
             </div>
-            <div class="tiny" style="text-align:center;margin-top:-4px">
+            <div class="tiny" style="text-align:center;margin-top:10px">
               <span class="link" id="refresh">Refresh from website</span> (uses /api/classify, cached)
             </div>
+          </div>
 
-            <div class="row">
-              <div class="field">
-                <label for="city">Primary city (optional, boosts locality)</label>
-                <input id="city" class="input" placeholder="Chicago">
-              </div>
-              <div class="field">
-                <label for="tags">Focus tags (comma separated)</label>
-                <input id="tags" class="input" placeholder="food, beverage, cosmetics">
-                <div id="tag-suggestions" class="chips"></div>
+          <!-- Core fields -->
+          <div class="row">
+            <div class="field">
+              <label for="city">Primary city (optional, boosts locality)</label>
+              <input id="city" class="input" placeholder="Chicago">
+            </div>
+            <div class="field">
+              <label for="tags">Focus tags (comma separated)</label>
+              <input id="tags" class="input" placeholder="food, beverage, cosmetics">
+              <div id="tag-suggestions" class="chips"></div>
+            </div>
+          </div>
+
+          <!-- Advanced expander -->
+          <div class="adv-head">
+            <div class="adv-copy">Advanced: tune how we rank buyers and add product-specific signals</div>
+            <button id="adv-toggle" class="btn small alt">Show advanced ▼</button>
+          </div>
+
+          <div id="adv" class="hidden">
+            <!-- General tuning -->
+            <div class="group" style="margin-top:10px">
+              <h4>General tuning</h4>
+              <label class="switch tiny"><input type="checkbox" id="ai-general"> Let AI decide</label>
+              <div id="general-controls" class="sliders" style="margin-top:8px">
+                <div class="field">
+                  <label class="label-ico"> 
+                    <span class="ico" title="Nearby buyers first">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7zm0 9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+                    </span>
+                    Prioritize nearby buyers <span class="tooltip tiny" title="Higher = stronger boost for same-city/metro matches.">(ⓘ)</span>
+                  </label>
+                  <div class="slider-row"><input id="w-local" type="range" min="0" max="10" value="6"><span id="w-local-val" class="tiny">6</span></div>
+                </div>
+                <div class="field">
+                  <label class="label-ico">
+                    <span class="ico" title="E-commerce sites">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M7 18h10l1-8H6l1 8zm3-14h4l1 3H9l1-3z"/></svg>
+                    </span>
+                    Prefer e-commerce sites <span class="tooltip tiny" title="Higher = boost companies with carts/shops.">(ⓘ)</span>
+                  </label>
+                  <div class="slider-row"><input id="w-ecom" type="range" min="0" max="10" value="7"><span id="w-ecom-val" class="tiny">7</span></div>
+                </div>
+                <div class="field">
+                  <label class="label-ico">
+                    <span class="ico" title="Retail brands">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M4 4h16v6H4V4zm1 8h14v8H5v-8z"/></svg>
+                    </span>
+                    Prefer retail brands <span class="tooltip tiny" title="Higher = boost DTC/retail brand targets.">(ⓘ)</span>
+                  </label>
+                  <div class="slider-row"><input id="w-retail" type="range" min="0" max="10" value="5"><span id="w-retail-val" class="tiny">5</span></div>
+                </div>
+                <div class="field">
+                  <label class="label-ico">
+                    <span class="ico" title="Wholesale / distribution">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M3 7h18v4H3V7zm0 6h18v4H3v-4z"/></svg>
+                    </span>
+                    Prefer wholesalers / distributors <span class="tooltip tiny" title="Higher = boost B2B distributors, co-packers, wholesale.">(ⓘ)</span>
+                  </label>
+                  <div class="slider-row"><input id="w-wholesale" type="range" min="0" max="10" value="6"><span id="w-wholesale-val" class="tiny">6</span></div>
+                </div>
+                <div class="field">
+                  <label class="label-ico">
+                    <span class="ico" title="Company size">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M3 19h6V5H3v14zm12-8h6v8h-6v-8z"/></svg>
+                    </span>
+                    Prefer mid-size companies <span class="tooltip tiny" title="Higher = boost mids; lower = more small or large.">(ⓘ)</span>
+                  </label>
+                  <div class="slider-row"><input id="w-size" type="range" min="0" max="10" value="6"><span id="w-size-val" class="tiny">6</span></div>
+                </div>
+                <div class="field">
+                  <label class="label-ico">
+                    <span class="ico" title="Avoid very large enterprises">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M2 20h20v2H2zM4 18h4V6H4v12zm6 0h4V2h-4v16zm6 0h4V8h-4v10z"/></svg>
+                    </span>
+                    De-prioritize giant enterprises <span class="tooltip tiny" title="Higher = down-rank the very largest companies.">(ⓘ)</span>
+                  </label>
+                  <div class="slider-row"><input id="w-avoid" type="range" min="0" max="10" value="7"><span id="w-avoid-val" class="tiny">7</span></div>
+                </div>
               </div>
             </div>
 
-            <div class="sliders">
-              <div class="field">
-                <label>Locality importance</label>
-                <div class="slider-row">
-                  <input id="w-local" type="range" min="0" max="10" value="6"><span id="w-local-val" class="tiny">6</span>
-                </div>
-              </div>
-              <div class="field">
-                <label>E-commerce signal</label>
-                <div class="slider-row">
-                  <input id="w-ecom" type="range" min="0" max="10" value="7"><span id="w-ecom-val" class="tiny">7</span>
-                </div>
-              </div>
-              <div class="field">
-                <label>Retail channel</label>
-                <div class="slider-row">
-                  <input id="w-retail" type="range" min="0" max="10" value="5"><span id="w-retail-val" class="tiny">5</span>
-                </div>
-              </div>
-              <div class="field">
-                <label>Wholesale channel</label>
-                <div class="slider-row">
-                  <input id="w-wholesale" type="range" min="0" max="10" value="6"><span id="w-wholesale-val" class="tiny">6</span>
-                </div>
-              </div>
-              <div class="field">
-                <label>Company size (prefer mids)</label>
-                <div class="slider-row">
-                  <input id="w-size" type="range" min="0" max="10" value="6"><span id="w-size-val" class="tiny">6</span>
-                </div>
-              </div>
-              <div class="field">
-                <label>Avoid giants</label>
-                <div class="slider-row">
-                  <input id="w-avoid" type="range" min="0" max="10" value="7"><span id="w-avoid-val" class="tiny">7</span>
-                </div>
+            <!-- Product signals -->
+            <div class="group" style="margin-top:12px">
+              <h4>Product signals (from your site)</h4>
+              <label class="switch tiny"><input type="checkbox" id="ai-product"> Let AI decide</label>
+              <div id="product-controls" style="margin-top:8px">
+                <div class="tiny muted">Click to select. We’ll use these as focus tags.</div>
+                <div id="prod-types" class="chips" style="margin-top:8px"></div>
+                <div id="prod-mats" class="chips"></div>
+                <div id="prod-certs" class="chips"></div>
               </div>
             </div>
-
           </div>
         </section>
       </div>
@@ -255,18 +314,18 @@
       name: "", email: "", phone: "", domain: "", domainEdited:false,
       city: "", tags: [],
       weights: { locality:6, ecom:7, retail:5, wholesale:6, size:6, avoid:7 },
-      usPhone: false
+      usPhone: false,
+      aiGeneral:false, aiProduct:false
     };
 
     const mb = qs("#mb");
-    const openBtn = qs("#open-onboarding");   // ← single declaration (was duplicated before)
+    const openBtn = qs("#open-onboarding");
     const closeBtn = qs("#ob-x");
     const backBtn = qs("#back");
     const nextBtn = qs("#next");
     const badge = qs("#role-badge");
     const status = qs("#status");
     const stepsDots = qsa(".step-dot");
-
     const s1 = qs("#s1"), s2 = qs("#s2"), s3 = qs("#s3");
 
     /* ---------- Step 1 ---------- */
@@ -296,6 +355,8 @@
       const m = (e||"").trim().match(/@([a-z0-9.-]+\.[a-z]{2,})$/i);
       return m ? m[1].toLowerCase() : "";
     }
+    function prettyHost(h){ return (h||"").replace(/^https?:\/\/|^www\./g,'').replace(/\/$/,''); }
+
     function syncEmailDerivedDomain(){
       const email = emailEl.value;
       const inferred = deriveDomainFromEmail(email);
@@ -345,7 +406,7 @@
       gateNext();
     });
 
-    // Pick up browser autofill: poll for value changes briefly
+    // Pick up browser autofill
     let lastEmail="";
     setInterval(()=>{
       if (emailEl.value !== lastEmail){
@@ -361,81 +422,138 @@
     const tagsEl = qs("#tags");
     const tagSug = qs("#tag-suggestions");
     const refreshBtn = qs("#refresh");
+    const advToggle = qs("#adv-toggle");
+    const adv = qs("#adv");
+    const aiGen = qs("#ai-general");
+    const aiProd = qs("#ai-product");
+    const generalCtrls = qs("#general-controls");
+    const productCtrls = qs("#product-controls");
+    const prodTypes = qs("#prod-types");
+    const prodMats = qs("#prod-mats");
+    const prodCerts = qs("#prod-certs");
 
     const sumCompany = qs("#sum-company");
     const sumWhat = qs("#sum-what");
     const sumWho = qs("#sum-who");
     const sumWhere = qs("#sum-where");
+
     [sumCompany,sumWhat,sumWho,sumWhere].forEach(el=>{
       el.addEventListener("input", ()=> summaryRefresh(true));
     });
 
-    const ranges = [
+    const rangeMap = [
       ["w-local","locality"],["w-ecom","ecom"],["w-retail","retail"],
       ["w-wholesale","wholesale"],["w-size","size"],["w-avoid","avoid"]
     ];
-    ranges.forEach(([id,key])=>{
+    rangeMap.forEach(([id,key])=>{
       const input = qs("#"+id);
       const val = qs("#"+id+"-val");
       input.addEventListener("input", ()=>{
         state.weights[key] = Number(input.value);
         val.textContent = input.value;
-        summaryRefresh();
       });
     });
 
     cityEl.addEventListener("input", ()=>{ state.city = cityEl.value.trim(); summaryRefresh(); });
-    tagsEl.addEventListener("input", ()=>{ state.tags = tagsEl.value.split(",").map(s=>s.trim()).filter(Boolean); summaryRefresh(); });
+    tagsEl.addEventListener("input", ()=>{ state.tags = tagsEl.value.split(",").map(s=>s.trim()).filter(Boolean); });
 
-    refreshBtn.addEventListener("click", async ()=>{
+    advToggle.addEventListener("click", ()=>{
+      const open = adv.classList.contains("hidden");
+      adv.classList.toggle("hidden", !open);
+      advToggle.textContent = open ? "Hide advanced ▲" : "Show advanced ▼";
+    });
+
+    aiGen.addEventListener("change", ()=>{
+      state.aiGeneral = aiGen.checked;
+      generalCtrls.classList.toggle("disabled", state.aiGeneral);
+      qsa("#general-controls input[type=range]").forEach(el=> el.disabled = state.aiGeneral);
+    });
+
+    aiProd.addEventListener("change", ()=>{
+      state.aiProduct = aiProd.checked;
+      productCtrls.classList.toggle("disabled", state.aiProduct);
+      qsa("#product-controls .chip").forEach(el=> el.classList.toggle("disabled", state.aiProduct));
+    });
+
+    refreshBtn.addEventListener("click", ()=> runClassifyAndFill(true));
+
+    function chip(container, text){
+      const el = document.createElement("span");
+      el.className="chip";
+      el.textContent = text;
+      el.addEventListener("click", ()=>{
+        if (state.aiProduct) return;
+        const parts = new Set(tagsEl.value.split(",").map(s=>s.trim()).filter(Boolean));
+        if (el.classList.contains("sel")) { parts.delete(text); el.classList.remove("sel"); }
+        else { parts.add(text); el.classList.add("sel"); }
+        tagsEl.value = Array.from(parts).join(", ");
+        tagsEl.dispatchEvent(new Event("input"));
+      });
+      container.appendChild(el);
+      return el;
+    }
+
+    function renderTagSuggestions(list){
+      tagSug.innerHTML = "";
+      (list||[]).slice(0,8).forEach(t=> chip(tagSug, t));
+    }
+
+    function renderProductChips(obj){
+      prodTypes.innerHTML=""; prodMats.innerHTML=""; prodCerts.innerHTML="";
+      if (obj.types?.length){ const h=document.createElement("div"); h.className="tiny muted"; h.textContent="Packaging types"; prodTypes.appendChild(h); obj.types.forEach(t=>chip(prodTypes,t)); }
+      if (obj.materials?.length){ const h=document.createElement("div"); h.className="tiny muted"; h.textContent="Materials"; prodMats.appendChild(h); obj.materials.forEach(t=>chip(prodMats,t)); }
+      if (obj.certs?.length){ const h=document.createElement("div"); h.className="tiny muted"; h.textContent="Certifications"; prodCerts.appendChild(h); obj.certs.forEach(t=>chip(prodCerts,t)); }
+    }
+
+    function tokenizeEvidence(evidenceText){
+      const txt = (evidenceText||"").toLowerCase();
+      const pick = (arr)=>arr.filter(k=>txt.includes(k));
+      const types = pick(["bottle","bottles","jar","jars","tube","tubes","can","cans","pouch","pouches","bag","bags","box","boxes","carton","cartons","label","labels","shrink","corrugate","corrugated","mailer","clamshell","tray","cap","closure","foil"]);
+      const materials = pick(["glass","aluminum","paper","paperboard","kraft","cardboard","corrugate","plastic","pet","hdpe","ldpe","pp","pla","biodegradable","compostable"]);
+      const certs = pick(["fda","iso","gmp","nsf","bpa-free","bpa free","usda","kosher","halal","rohs","reach"]);
+      // what/who heuristics
+      let what = "packaging";
+      if (types.length) what = Array.from(new Set(types.map(t=>t.replace(/s$/,'')))).slice(0,2).join(", ");
+      let who = "brands";
+      if (txt.includes("wholesale")||txt.includes("distributor")||txt.includes("b2b")) who = "wholesale buyers";
+      if (txt.includes("private label")||txt.includes("co-pack")||txt.includes("copack")) who = "private-label & co-pack";
+      return { types: uniq(types), materials: uniq(materials), certs: uniq(certs), what, who };
+    }
+    function uniq(a){ return Array.from(new Set(a)); }
+
+    async function runClassifyAndFill(forceClick=false){
       if (!state.domain) return;
       try{
         const res = await fetch(`/api/classify?host=${encodeURIComponent(state.domain)}`);
         const data = await res.json();
         if (data && data.ok !== false) {
-          const ev = (data.evidence||[]).join(" ").toLowerCase();
-          const sugg = new Set();
-          ["wholesale","distributor","manufacturer","ecommerce","retail","private label","copack","co-pack","bottle","jar","label","carton","corrugate","pouch"].forEach(k=>{
-            if(ev.includes(k.replace(" ",""))) sugg.add(k);
-          });
-          renderTagSuggestions([...sugg]);
-          const who = (data.role==="packaging_supplier") ? "sells" : (data.role==="packaging_buyer" ? "buys" : "does");
-          qs("#sum-verb").textContent = who;
-          if (sumCompany.innerText==="your-company" || !sumCompany.innerText.trim()){ sumCompany.innerText = prettyHost(state.domain); }
-        } else {
-          renderTagSuggestions([]);
+          const evText = (data.evidence||[]).join(" ");
+          const inf = tokenizeEvidence(evText);
+          // verb from role
+          const whoVerb = (data.role==="packaging_supplier") ? "sells" : (data.role==="packaging_buyer" ? "buys" : "does");
+          qs("#sum-verb").textContent = whoVerb;
+          // tokens (only overwrite if user hasn't edited)
+          if (!sumCompany.innerText.trim() || sumCompany.innerText==="your-company") sumCompany.innerText = prettyHost(state.domain);
+          if (!sumWhat.innerText.trim() || sumWhat.innerText==="packaging") sumWhat.innerText = inf.what;
+          if (!sumWho.innerText.trim() || sumWho.innerText==="brands") sumWho.innerText = inf.who;
+          // tag suggestions + product chips
+          const baseChips = ["wholesale","distributor","retail","ecommerce","private label","co-pack","co-packer"];
+          renderTagSuggestions(uniq(baseChips.concat(inf.types, inf.materials, inf.certs).slice(0,12)));
+          renderProductChips({types:inf.types, materials:inf.materials, certs:inf.certs});
+          // mark any existing tags as selected
+          const chosen = new Set((tagsEl.value||"").split(",").map(s=>s.trim()).filter(Boolean));
+          qsa(".chips .chip").forEach(el=>{ if (chosen.has(el.textContent)) el.classList.add("sel"); });
         }
-      } catch {
-        renderTagSuggestions([]);
-      }
-      summaryRefresh();
-    });
-
-    function renderTagSuggestions(list){
-      tagSug.innerHTML = "";
-      (list||[]).slice(0,8).forEach(t=>{
-        const el = document.createElement("span");
-        el.className="chip";
-        el.textContent = t;
-        el.addEventListener("click", ()=>{
-          const parts = tagsEl.value.split(",").map(s=>s.trim()).filter(Boolean);
-          if (!parts.includes(t)){ parts.push(t); tagsEl.value = parts.join(", "); tagsEl.dispatchEvent(new Event("input")); }
-        });
-        tagSug.appendChild(el);
-      });
+      } catch { /* ignore */ }
+      if (forceClick) summaryRefresh();
     }
-
-    function prettyHost(h){ return (h||"").replace(/^https?:\/\/|^www\./g,'').replace(/\/$/,''); }
 
     function summaryRefresh(userEdited){
       const host = state.domain ? prettyHost(state.domain) : "your-company";
       if (!userEdited) sumCompany.innerText = sumCompany.innerText.trim() || host;
       const where = state.city ? `near ${state.city}` : "";
       if (!userEdited) sumWhere.innerText = where;
-      if (!userEdited){
-        const what = (state.tags && state.tags.length) ? state.tags.slice(0,2).join(", ") : "packaging";
-        if (!sumWhat.innerText.trim() || sumWhat.innerText==="packaging") sumWhat.innerText = what;
-      }
+      // logo refresh
       setLogo(state.domain);
     }
 
@@ -481,10 +599,13 @@
       qs("#s"+state.step).classList.remove("hidden");
       stepsDots.forEach(d=> d.classList.toggle("active", Number(d.dataset.step)===state.step));
       status.textContent = `Step ${state.step} of 3`;
+      if (state.step===3) {
+        summaryRefresh();
+        runClassifyAndFill(false);
+      }
       gateNext();
     }
 
-    // hook up buttons
     openBtn.addEventListener("click", ()=> show(1));
     closeBtn.addEventListener("click", hide);
     backBtn.addEventListener("click", ()=>{
@@ -500,7 +621,7 @@
         state.domain = domainEl.value.trim();
         if (!emailEl.reportValidity() || !phoneEl.reportValidity()) return;
         if (!state.testing && !state.verified) return;
-        state.step=3; renderStep(); summaryRefresh(); return;
+        state.step=3; renderStep(); return;
       }
       if (state.step===3){
         await persistPrefsThenOpen();
@@ -508,11 +629,13 @@
     });
 
     async function persistPrefsThenOpen(){
+      // If AI toggles are on, we set medium defaults; product chips live in likeTags.
+      const like = (tagsEl.value||"").split(",").map(s=>s.trim()).filter(Boolean);
       const payload = {
         host: state.domain || (state.email.split("@")[1]||"").trim(),
-        signalWeight: Number(state.weights.ecom) || 0,
-        sizeWeight: Number(state.weights.size) || 0,
-        likeTags: state.tags || [],
+        signalWeight: state.aiGeneral ? 6 : Number(state.weights.ecom) || 0,
+        sizeWeight: state.aiGeneral ? 6 : Number(state.weights.size) || 0,
+        likeTags: like,
         city: state.city || "",
         role: state.role,
         phone: state.phone, name: state.name, usPhone: state.usPhone
