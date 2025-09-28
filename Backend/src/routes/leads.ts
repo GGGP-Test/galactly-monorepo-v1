@@ -15,15 +15,16 @@ const Prefs: any = require("../shared/prefs");
 
 let TRC: any = {};
 try {
-  // If dist/shared/trc.js exists, we’ll use it; otherwise we proceed with the built-in heuristic.
+  // If dist/shared/trc.js exists, use it; else fall back to heuristic.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   TRC = require("../shared/trc");
-} catch (e) {
+} catch {
   console.warn("[leads] optional module ../shared/trc not found; falling back to heuristic scoring");
 }
 
 const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 
+// SINGLE router declaration (previous build failed due to duplicate)
 const r = Router();
 
 type Candidate = {
@@ -132,8 +133,6 @@ async function classifyHost(host: string): Promise<{ role?: string; confidence?:
     return null;
   }
 }
-
-const r = Router();
 
 r.get("/find-buyers", async (req: Request, res: Response) => {
   try {
