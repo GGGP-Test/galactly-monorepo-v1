@@ -8,10 +8,19 @@ import { Router, Request, Response } from "express";
 import { CFG, capResults } from "../shared/env";
 
 // Intentionally import via require so typings are "any" and we don't
-// couple to exact symbol names. This keeps the drop-in robust.
+// couple to exact symbol names. Some deployments may not include TRC;
+// make it optional so the server never crashes at startup.
 const Catalog: any = require("../shared/catalog");
 const Prefs: any = require("../shared/prefs");
-const TRC: any = require("../shared/trc");
+
+let TRC: any = {};
+try {
+  // If dist/shared/trc.js exists, we’ll use it; otherwise we proceed with the built-in heuristic.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  TRC = require("../shared/trc");
+} catch (e) {
+  console.warn("[leads] optional module ../shared/trc not found; falling back to heuristic scoring");
+}
 
 const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 
@@ -124,6 +133,8 @@ async function classifyHost(host: string): Promise<{ role?: string; confidence?:
   }
 }
 
+const r = Router();
+
 r.get("/find-buyers", async (req: Request, res: Response) => {
   try {
     const host = String(req.query.host || "").trim().toLowerCase();
@@ -172,14 +183,12 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
     if (cap > 0) items = items.slice(0, cap);
 
     // Tiny escalation: enrich the top-N most uncertain among the items we will return.
-    // Budget: at most 2 calls per request; only if uncertainty >= 0.6.
     const MAX_ESCALATE = 2;
     const targets = [...items]
       .filter((x) => x.uncertainty >= 0.6)
       .sort((a, b) => b.uncertainty - a.uncertainty)
       .slice(0, MAX_ESCALATE);
 
-    // Run serially to keep it gentle on budget and logs.
     for (const t of targets) {
       const info = await classifyHost(t.host);
       if (info?.evidence?.length) {
