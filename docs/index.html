@@ -1,449 +1,353 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Buyers Finder</title>
-<style>
-  :root{
-    --bg:#0c1218; --panel:#121a22; --panel-2:#0f161d; --muted:#a7bacb;
-    --text:#e6eef7; --accent:#7dd3fc; --accent-2:#67e8f9; --ok:#8bdb7c; --warn:#fbbf24;
-    --chip:#1b2733; --chip-on:#203548; --rail:#394754; --thumb:#a9c7db;
-  }
-  html,body{height:100%; background:var(--bg); color:var(--text); margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";}
-  .hero{
-    min-height:100vh; display:flex; align-items:center; justify-content:center; text-align:center;
-    background:radial-gradient(80rem 40rem at 50% -10%, #0e1722 0, transparent 60%), linear-gradient(#0b1218, #0b1218);
-    padding:48px 16px;
-  }
-  .hero h1{font-size:42px; margin:0 0 12px; letter-spacing:.2px}
-  .hero p{color:var(--muted); margin:0 0 24px}
-  .cta{font-weight:700; padding:14px 22px; border-radius:12px; border:0; background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#081018; cursor:pointer;}
-  .cta:active{transform:translateY(1px)}
-  /* Modal */
-  .overlay{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:24px}
-  .overlay.show{display:flex}
-  .modal{width:min(980px,96vw); max-height:90vh; overflow:hidden; background:var(--panel); border:1px solid #1b2632; border-radius:18px; box-shadow: 0 10px 40px rgba(0,0,0,.45);}
-  .modal header{display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid #19232e;}
-  .close{all:unset; cursor:pointer; color:var(--muted); font-size:20px; padding:6px 8px}
-  .content{padding:16px 16px 10px; overflow:auto; max-height:calc(90vh - 56px)}
-  .stepper{display:flex; gap:8px; padding:2px 0 10px 4px}
-  .dot{width:8px; height:8px; border-radius:6px; background:#263342}
-  .dot.on{background:#7dc4ff}
-  .section{background:var(--panel-2); border:1px solid #1b2632; border-radius:14px; padding:12px; margin:10px 0 18px}
-  .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
-  .row-1{display:grid; grid-template-columns:1fr; gap:12px}
-  .label{font-size:13px; color:var(--muted); margin:6px 0 6px}
-  input[type="text"], input[type="email"], input[type="tel"]{
-    width:100%; padding:12px 12px; border-radius:10px; border:1px solid #233141; background:#0d141b; color:var(--text);
-  }
-  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px}
-  .chip{user-select:none; cursor:pointer; padding:6px 10px; border-radius:999px; background:var(--chip); border:1px solid #203140; color:#cfe3f7; font-size:12px}
-  .chip.on{background:var(--chip-on); border-color:#33536e}
-  .cards{display:grid; grid-template-columns:1fr 1fr; gap:14px}
-  .card{padding:16px; border-radius:16px; border:1px solid #213140; background:#0d141b; cursor:pointer}
-  .card.active{box-shadow:0 0 0 2px #51f37e inset; background:#0c1512}
-  .sub{font-size:13px; color:var(--muted)}
-  .examples{color:#9bc5ff; font-size:12px; margin-top:4px}
-  .actions{display:flex; justify-content:flex-end; gap:10px; padding:10px 0 16px}
-  .btn{all:unset; cursor:pointer; padding:10px 16px; border-radius:10px; border:1px solid #223246; color:#cfe3f7; background:#0e1520}
-  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#081018; border:0}
-  .one-liner{display:flex; align-items:center; gap:12px; padding:14px; background:#0e151d; border:1px solid #1b2734; border-radius:12px}
-  .one-liner img{width:28px; height:28px; border-radius:6px}
-  .muted{color:var(--muted); font-size:12px}
-  .center{display:flex; justify-content:center; padding:10px}
-  .toggle{all:unset; cursor:pointer; padding:8px 14px; border-radius:999px; border:1px solid #2a394a; background:#0d141b; color:#cfe3f7; font-weight:600}
-  .toggle:hover{border-color:#3a526a}
-  .adv-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
-  .group{border:1px solid #1b2632; border-radius:14px; padding:12px}
-  .group h4{margin:0 0 12px; font-size:14px}
-  .gmuted{font-size:12px; color:#96b1c4; margin:-6px 0 10px}
-  /* sliders */
-  .slider{appearance:none; width:100%; height:6px; border-radius:6px; background:var(--rail); outline:none}
-  .slider::-webkit-slider-thumb{appearance:none; width:16px; height:16px; border-radius:50%; background:var(--thumb); border:2px solid #2a3a4a}
-  .row-s{display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; margin:6px 0}
-  .right{display:flex; align-items:center; gap:10px; justify-content:flex-end}
-  .muted-link{color:#7dc4ff; cursor:pointer; text-decoration:underline}
-  .tooltip{position:fixed; z-index:10; background:#0e1a24; border:1px solid #224; color:#cfe3f7; font-size:12px; padding:6px 8px; border-radius:8px; display:none; max-width:260px}
-  .disabled{opacity:.45; pointer-events:none; filter:grayscale(.25)}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Buyers Finder</title>
+  <style>
+    :root{
+      --bg:#0d1117; --panel:#111826; --panel2:#0f1623;
+      --text:#d6e2f0; --muted:#9fb2c8; --accent:#7bd7ff;
+      --cta:#67d1ff; --ctaText:#06141f; --line:#233146;
+      --chip:#172131; --chipOn:#203147; --danger:#ff7b7b;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:radial-gradient(1000px 520px at 50% -10%, #0f1a2a 0%, #0d1117 60%, #0b0f15 100%);
+      color:var(--text);
+      font:14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .hero{min-height:100vh; display:grid; place-items:center; padding:32px}
+    .hero-inner{max-width:880px; text-align:center}
+    h1{font-size:44px; line-height:1.08; margin:0 0 12px}
+    h1 strong{color:#fff}
+    p.sub{color:var(--muted); margin:0 0 28px}
+    .cta{display:inline-block; padding:14px 22px; border-radius:12px; background:var(--cta); color:var(--ctaText);
+      font-weight:800; text-decoration:none; box-shadow:0 8px 22px rgba(103,209,255,.25)}
+    .cta:active{transform:translateY(1px)}
+
+    /* Modal */
+    .scrim{position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:24px; background:rgba(0,0,0,.55); z-index:50}
+    .scrim.on{display:flex}
+    .modal{width:min(960px,96vw); max-height:90vh; display:flex; flex-direction:column; background:var(--panel);
+      border:1px solid var(--line); border-radius:16px; box-shadow:0 12px 50px rgba(0,0,0,.45)}
+    .hd{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 16px; border-bottom:1px solid var(--line)}
+    .tt{font-weight:800}
+    .dots{display:flex; gap:6px; align-items:center}
+    .dot{width:8px; height:8px; border-radius:50%; background:#2a3952}
+    .dot.on{background:#6ba8ff}
+    .x{border:0; background:transparent; color:var(--muted); font-size:18px; cursor:pointer}
+    .bd{padding:16px; overflow:auto}
+    .card{background:var(--panel2); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin:10px 0}
+    .row{display:flex; gap:16px; flex-wrap:wrap}
+    .col{flex:1 1 300px}
+    .row2{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+    @media (max-width:860px){ .row2{grid-template-columns:1fr} }
+
+    .pill{display:flex; flex-direction:column; gap:4px; padding:12px; border-radius:14px; border:1px solid var(--line); background:#0f1626; cursor:pointer}
+    .pill.on{outline:2px solid #74ff9d44; background:#102035}
+    .muted{color:var(--muted)} .note{color:var(--muted); font-size:12px}
+
+    label.lbl{display:block; font-weight:700; margin:10px 0 6px}
+    input,textarea{width:100%; background:#0e1523; border:1px solid var(--line); color:var(--text); padding:10px 12px; border-radius:10px; outline:none}
+    input:focus{border-color:#365f9b; box-shadow:0 0 0 3px rgba(100,180,255,.15)}
+
+    .btn{cursor:pointer; border:1px solid var(--line); background:#142033; color:var(--text); border-radius:10px; padding:10px 12px}
+    .btn.primary{background:var(--cta); color:var(--ctaText); border-color:transparent}
+    .btn.ghost{background:transparent}
+    .btn.small{padding:6px 9px; border-radius:8px; font-size:12px}
+    .center{display:flex; justify-content:center; gap:8px; margin:10px 0}
+
+    .headline{display:flex; align-items:center; gap:10px; padding:14px 16px; border-radius:12px; border:1px solid var(--line); background:#0e1626; font-size:18px}
+    .fav{width:28px; height:28px; border-radius:6px; background:#0c1421}
+
+    .chips{display:flex; flex-wrap:wrap; gap:8px}
+    .chip{user-select:none; padding:7px 10px; border-radius:999px; background:var(--chip); border:1px solid var(--line); cursor:pointer}
+    .chip.on{background:var(--chipOn); outline:2px solid #3a5172}
+    .sl{display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px}
+    .slider{appearance:none; height:6px; background:#2a3952; border-radius:10px}
+    .slider::-webkit-slider-thumb{appearance:none; width:14px; height:14px; border-radius:50%; background:#8bbcff}
+    .dim{opacity:.45; pointer-events:none; filter:grayscale(.15)}
+    .link{color:var(--accent); text-decoration:underline; cursor:pointer}
+    .err{color:var(--danger); margin-top:6px}
+    .tip{position:fixed; display:none; z-index:100; background:#0b1524; border:1px solid var(--line); color:var(--text); padding:8px 10px; border-radius:8px; font-size:12px; max-width:260px}
+  </style>
 </head>
 <body>
-
-<section class="hero">
-  <div>
-    <h1>Find real packaging buyers.</h1>
-    <p>Free, useful leads in minutes. Upgrade later for deeper AI enrichment.</p>
-    <button class="cta" id="openCta">Get qualified leads free</button>
-  </div>
-</section>
-
-<div class="overlay" id="overlay" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="title">
-    <header>
-      <div id="title">Get set up in 60 seconds</div>
-      <button class="close" id="closeX">✕</button>
-    </header>
-    <div class="content" id="content">
-      <div class="stepper"><div class="dot on"></div><div class="dot"></div><div class="dot"></div></div>
-
-      <!-- STEP 1 -->
-      <div id="step1" class="section">
-        <div class="cards">
-          <div class="card" id="cardSupplier" tabindex="0">
-            <div style="font-weight:700; font-size:16px">I sell packaging (Supplier)</div>
-            <div class="sub">You’ll get buyer leads tuned to your strengths.</div>
-            <div class="examples">Examples: manufacturers, custom shops, converters, wholesalers, distributors, label &amp; box producers.</div>
-          </div>
-          <div class="card" id="cardBuyer" tabindex="0">
-            <div style="font-weight:700; font-size:16px">I buy packaging (Buyer)</div>
-            <div class="sub">We’re prioritizing suppliers. Buyers can browse too (limited).</div>
-            <div class="examples">Examples: brands &amp; retailers, DTC/e-commerce, co-packers, CPG, cosmetics, beverage, food.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- STEP 2 -->
-      <div id="step2" class="section" style="display:none">
-        <div class="row">
-          <div>
-            <div class="label">Your name</div>
-            <input id="name" type="text" placeholder="e.g., Jordan Reyes" autocomplete="name" />
-          </div>
-          <div>
-            <div class="label">Business email *</div>
-            <input id="email" type="email" placeholder="you@company.com" autocomplete="email" />
-          </div>
-        </div>
-        <div class="row">
-          <div>
-            <div class="label">Phone (required for alerts) *</div>
-            <!-- no pattern: do JS validation; avoids the broken regex -->
-            <input id="phone" type="tel" inputmode="tel" placeholder="+1 555 123 4567" autocomplete="tel" />
-            <div class="muted">Country code helps us personalize geography (e.g., “+1” for U.S.).</div>
-          </div>
-          <div>
-            <div class="label">Website / Domain (auto from email)</div>
-            <input id="website" type="text" placeholder="company.com" autocomplete="url" />
-            <div class="muted">Auto-filled from your email as you type. You can edit.</div>
-          </div>
-        </div>
-        <div class="muted" id="verifyNote">Testing mode: verification skipped.</div>
-      </div>
-
-      <!-- STEP 3 -->
-      <div id="step3" class="section" style="display:none">
-        <div class="one-liner">
-          <img id="favicon" src="https://www.google.com/s2/favicons?domain=example.com&sz=64" alt="logo" />
-          <div style="font-size:18px; font-weight:700"><span id="oneLinerText">your-company</span></div>
-        </div>
-        <div class="center">
-          <span id="refreshLink" class="muted-link">Refresh from website</span>
-        </div>
-
-        <div class="center"><button class="toggle" id="toggleAdv">Show advanced ▾</button></div>
-
-        <div id="advanced" style="display:none">
-          <div class="gmuted" style="text-align:center; margin-top:-4px">Optional: refine ranking and add product-specific details.</div>
-          <div class="adv-grid">
-            <div class="group" id="groupGeneral">
-              <h4>General tuning <label style="float:right; font-weight:500; font-size:12px"><input type="checkbox" id="aiGeneral"> Let AI decide</label></h4>
-              <div class="row-s" data-tip="Boosts local matches. Great for nearby delivery or on-site work.">
-                <div>📍 Prioritize nearby buyers</div>
-                <input class="slider" id="slNear" type="range" min="0" max="10" value="6" />
-              </div>
-              <div class="row-s" data-tip="Websites that sell online (carts, SKUs).">
-                <div>🛒 Prefer e-commerce sites</div>
-                <input class="slider" id="slEcom" type="range" min="0" max="10" value="7" />
-              </div>
-              <div class="row-s" data-tip="Brands that own consumer products.">
-                <div>🏪 Prefer retail brands</div>
-                <input class="slider" id="slRetail" type="range" min="0" max="10" value="5" />
-              </div>
-              <div class="row-s" data-tip="Good for B2B bulk buyers.">
-                <div>📦 Prefer wholesalers / distributors</div>
-                <input class="slider" id="slWholesale" type="range" min="0" max="10" value="6" />
-              </div>
-              <div class="row-s" data-tip="Avoid very small and very large companies.">
-                <div>🏗 Prefer mid-size companies</div>
-                <input class="slider" id="slMids" type="range" min="0" max="10" value="6" />
-              </div>
-              <div class="row-s" data-tip="Down-weights giant enterprises (hard to close).">
-                <div>🏢 De-prioritize giant enterprises</div>
-                <input class="slider" id="slAvoidGiants" type="range" min="0" max="10" value="7" />
-              </div>
-            </div>
-
-            <div class="group" id="groupProduct">
-              <h4>Product signals (from your site) <label style="float:right; font-weight:500; font-size:12px"><input type="checkbox" id="aiProduct"> Let AI decide</label></h4>
-              <div class="muted">Tap to select. We’ll use these as focus tags.</div>
-              <div class="chips" id="chipsProducts">
-                <!-- filled after classify; fallback set below -->
-              </div>
-            </div>
-          </div>
-
-          <div class="group" style="margin-top:14px">
-            <h4>Buyer targeting</h4>
-            <div class="row">
-              <div>
-                <div class="label">Find buyers near…</div>
-                <input id="inCity" type="text" placeholder="e.g., Chicago" />
-                <div class="chips" id="chipsCities"></div>
-                <div class="muted">We’ll boost leads near this city.</div>
-              </div>
-              <div>
-                <div class="label">Buyers in these sectors</div>
-                <input id="inSectors" type="text" placeholder="e.g., food, beverage, cosmetics" />
-                <div class="chips" id="chipsSectors"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="btn" id="btnBack">Back</button>
-        <button class="btn primary" id="btnNext">Next</button>
-      </div>
+  <div class="hero">
+    <div class="hero-inner">
+      <h1><strong>Find real packaging buyers.</strong> Hot leads, not hot air.</h1>
+      <p class="sub">Start free. Deterministic discovery now. AI enrichment when it truly helps.</p>
+      <a id="open" class="cta" href="#">Get qualified leads free</a>
     </div>
   </div>
-</div>
 
-<div class="tooltip" id="tip"></div>
+  <div id="scrim" class="scrim" role="dialog" aria-modal="true" aria-labelledby="onbTitle">
+    <div class="modal">
+      <div class="hd">
+        <div class="tt" id="onbTitle">Get set up in 60 seconds</div>
+        <div class="dots"><div class="dot on"></div><div class="dot"></div><div class="dot"></div></div>
+        <button id="x" class="x">✕</button>
+      </div>
+      <div id="panel" class="bd"></div>
+    </div>
+  </div>
 
-<script>
-  // ---------- helpers ----------
-  const $ = (s, el=document)=>el.querySelector(s);
-  const $$ = (s, el=document)=>Array.from(el.querySelectorAll(s));
+  <div id="tip" class="tip"></div>
 
-  const state = {
-    role: "supplier",
-    name: "", email: "", phone: "", host: "",
-    city: "", sectors: [], productTags: new Set(),
-    classify: null
-  };
+  <script>
+    // ------------ helpers / state
+    const API_BASE = "/api";
+    const $ = sel => document.querySelector(sel);
+    const panel = $("#panel"), scrim = $("#scrim"), tip = $("#tip");
+    const dots = () => Array.from(document.querySelectorAll(".dots .dot"));
 
-  // ---------- modal plumbing ----------
-  const overlay = $("#overlay");
-  $("#openCta").addEventListener("click", () => { overlay.classList.add("show"); goStep(1); });
-  $("#closeX").addEventListener("click", () => overlay.classList.remove("show"));
-  $("#btnBack").addEventListener("click", back);
-  $("#btnNext").addEventListener("click", next);
-  function goStep(n){
-    $$("#step1,#step2,#step3").forEach(el=>el.style.display="none");
-    $("#step"+n).style.display="block";
-    $$(".dot").forEach((d,i)=>d.classList.toggle("on", i<n));
-  }
-  function back(){
-    const visible = [1,2,3].find(n => $("#step"+n).style.display==="block");
-    if(visible>1) goStep(visible-1);
-  }
-  function next(){
-    const visible = [1,2,3].find(n => $("#step"+n).style.display==="block");
-    if(visible===1){ goStep(2); return; }
-    if(visible===2){
-      // light validation: email + phone required
-      state.email = $("#email").value.trim();
-      state.phone = $("#phone").value.trim();
-      state.name  = $("#name").value.trim();
-      state.host  = sanitizeHost($("#website").value.trim());
-      if(!state.email || !state.phone){
-        alert("Please enter your business email and phone.");
-        return;
-      }
-      if(!state.host){ // derive from email
-        const m = state.email.match(/@([a-z0-9.-]+)/i);
-        if(m) state.host = m[1].toLowerCase();
-      }
-      $("#website").value = state.host || "";
-      setFavicon(state.host);
-      setOneLinerPlaceholder(state.host);
-      goStep(3);
-      // auto-refresh on entry
-      refreshFromWebsite();
-      return;
-    }
-    if(visible===3){
-      // here we'd POST prefs/profile; for Free we just close
-      overlay.classList.remove("show");
-      // redirect to Free Panel later if needed
-    }
-  }
+    const S = {
+      role:"supplier",
+      name:"", email:"", phone:"", host:"",
+      prefs:{ locality:6, ecom:7, retail:5, wholesale:6, mids:6, avoidGiants:7, focusTags:[], sectors:[], city:"" },
+      classify:null
+    };
 
-  // ---------- Step 1 ----------
-  const cardSupplier = $("#cardSupplier");
-  const cardBuyer    = $("#cardBuyer");
-  function setRole(r){
-    state.role = r;
-    cardSupplier.classList.toggle("active", r==="supplier");
-    cardBuyer.classList.toggle("active", r==="buyer");
-    $("#btnNext").textContent = "Next";
-  }
-  setRole("supplier");
-  cardSupplier.addEventListener("click", ()=>setRole("supplier"));
-  cardBuyer.addEventListener("click", ()=>setRole("buyer"));
+    const emailDomain = e => (String(e||"").toLowerCase().match(/@([a-z0-9.-]+)/)||[])[1] || "";
+    const fav = h => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=64`;
 
-  // ---------- Step 2: email -> website autofill (typing + autofill) ----------
-  const emailEl = $("#email");
-  const websiteEl = $("#website");
-  function updateHostFromEmail(){
-    const v = emailEl.value.trim();
-    const m = v.match(/@([a-z0-9.-]+)/i);
-    const derived = m ? sanitizeHost(m[1].toLowerCase()) : "";
-    if(derived && !websiteEl.value) websiteEl.value = derived;
-  }
-  emailEl.addEventListener("input", updateHostFromEmail);
-  emailEl.addEventListener("change", updateHostFromEmail);
-  // handle autofill (fires without input): poll briefly after focus
-  emailEl.addEventListener("focus", () => setTimeout(updateHostFromEmail, 100));
-
-  // ---------- Step 3 ----------
-  $("#toggleAdv").addEventListener("click", ()=>{
-    const adv = $("#advanced");
-    const show = adv.style.display==="none";
-    adv.style.display = show ? "block" : "none";
-    $("#toggleAdv").textContent = show ? "Hide advanced ▲" : "Show advanced ▾";
-  });
-
-  // tooltips (immediate + click for mobile)
-  const tip = $("#tip");
-  function showTip(el){
-    tip.textContent = el.dataset.tip || "";
-    if(!tip.textContent) return;
-    tip.style.display = "block";
-    const r = el.getBoundingClientRect();
-    tip.style.left = (r.left + window.scrollX + 8) + "px";
-    tip.style.top  = (r.top  + window.scrollY - 8 - tip.offsetHeight) + "px";
-  }
-  function hideTip(){ tip.style.display = "none"; }
-  $$(".row-s").forEach(rs=>{
-    rs.addEventListener("mouseenter", ()=>showTip(rs));
-    rs.addEventListener("mouseleave", hideTip);
-    rs.addEventListener("click", ()=>{ if(tip.style.display==="block") hideTip(); else showTip(rs); });
-  });
-
-  // Let AI decide -> disable group
-  $("#aiGeneral").addEventListener("change", (e)=>{
-    $("#groupGeneral").classList.toggle("disabled", e.target.checked);
-  });
-  $("#aiProduct").addEventListener("change", (e)=>{
-    $("#groupProduct").classList.toggle("disabled", e.target.checked);
-  });
-
-  // buyer chips (examples + city from step2 if present)
-  const defaultCities = ["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"];
-  const defaultSectors = ["food","beverage","cosmetics","supplements","electronics","apparel"];
-  function seedChips(){
-    const cc = $("#chipsCities"); cc.innerHTML="";
-    const cs = $("#chipsSectors"); cs.innerHTML="";
-    const ps = $("#chipsProducts"); ps.innerHTML="";
-    const cities = new Set(defaultCities);
-    if($("#website").value) { /* no-op now */ }
-    addChipList(cc, Array.from(cities), v=>{
-      $("#inCity").value = v;
-    });
-    addChipList(cs, defaultSectors, v=>{
-      toggleCsvInput($("#inSectors"), v);
-    });
-    // Product signals—fallback tags; classifier may add more below
-    const fallback = ["boxes","labels","cartons","pouches","bottles","jars","tape","corrugate"];
-    addSelectableChips(ps, fallback, state.productTags);
-  }
-  function addChipList(container, arr, onPick){
-    arr.forEach(v=>{
+    const chip = (t,on=false) => {
       const el = document.createElement("span");
-      el.className="chip"; el.textContent=v;
-      el.addEventListener("click", ()=>onPick(v));
-      container.appendChild(el);
-    });
-  }
-  function addSelectableChips(container, arr, set){
-    arr.forEach(v=>{
-      const el = document.createElement("span");
-      el.className="chip"; el.textContent=v;
-      el.addEventListener("click", ()=>{
-        if(set.has(v)){ set.delete(v); el.classList.remove("on"); }
-        else { set.add(v); el.classList.add("on"); }
-      });
-      container.appendChild(el);
-    });
-  }
-  function toggleCsvInput(input, val){
-    const parts = input.value.split(",").map(s=>s.trim()).filter(Boolean);
-    const i = parts.indexOf(val);
-    if(i>=0) parts.splice(i,1); else parts.push(val);
-    input.value = parts.join(", ");
-  }
+      el.className = "chip"+(on?" on":"");
+      el.textContent = t;
+      el.onclick = () => el.classList.toggle("on");
+      return el;
+    };
+    const fillChips = (el, arr=[]) => { el.innerHTML=""; arr.forEach(t=>el.appendChild(chip(t))); };
+    const selected = el => Array.from(el.querySelectorAll(".chip.on")).map(x=>x.textContent.trim());
 
-  // One-liner + favicon
-  function setFavicon(host){
-    $("#favicon").src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host||"example.com")}&sz=64`;
-  }
-  function setOneLinerPlaceholder(host){
-    $("#oneLinerText").textContent = `${host || "your-company"} sells packaging to brands.`;
-  }
+    const showTip = (txt,x,y)=>{ tip.textContent=txt; tip.style.display="block"; const pad=10; tip.style.left=(x+pad)+"px"; tip.style.top=(y+pad)+"px"; };
+    const hideTip = ()=> tip.style.display="none";
 
-  // Refresh from website -> /api/classify
-  $("#refreshLink").addEventListener("click", refreshFromWebsite);
-  async function refreshFromWebsite(){
-    const email = $("#email").value.trim();
-    let host = sanitizeHost($("#website").value.trim());
-    if(!host){
-      const m = email.match(/@([a-z0-9.-]+)/i);
-      host = m ? sanitizeHost(m[1]) : "";
+    const setStep = n => dots().forEach((d,i)=>d.classList.toggle("on", i===n));
+
+    // ------------ step 1
+    function stepRole(){
+      setStep(0);
+      panel.innerHTML = `
+        <div class="row">
+          <div class="col">
+            <div id="optSup" class="pill ${S.role==='supplier'?'on':''}" tabindex="0" role="button" aria-pressed="${S.role==='supplier'}">
+              <div style="font-weight:800">I sell packaging (Supplier)</div>
+              <div class="muted">You’ll get buyer leads tuned to your strengths.</div>
+              <div class="note" style="margin-top:6px">Examples: manufacturers, custom shops, converters, wholesalers, distributors, label & box producers.</div>
+            </div>
+          </div>
+          <div class="col">
+            <div id="optBuy" class="pill ${S.role==='buyer'?'on':''}" tabindex="0" role="button" aria-pressed="${S.role==='buyer'}">
+              <div style="font-weight:800">I buy packaging (Buyer)</div>
+              <div class="muted">We’re prioritizing suppliers. Buyers can browse too (limited).</div>
+              <div class="note" style="margin-top:6px">Examples: brands & retailers, DTC/e-commerce, co-packers, CPG, cosmetics, beverage, food.</div>
+            </div>
+          </div>
+        </div>
+        <div class="row" style="justify-content:flex-end; margin-top:12px">
+          <button id="b1" class="btn ghost">Back</button>
+          <button id="n1" class="btn primary">Next</button>
+        </div>
+      `;
+      $("#optSup").onclick=()=>{S.role='supplier'; stepRole();};
+      $("#optBuy").onclick=()=>{S.role='buyer'; stepRole();};
+      $("#b1").onclick=close;
+      $("#n1").onclick=stepProfile;
     }
-    if(!host){ alert("Please enter a valid business email or website first."); return; }
-    setFavicon(host);
-    $("#oneLinerText").textContent = `Reading ${host}…`;
-    $("#refreshLink").textContent = "Refreshing…";
 
-    try{
-      const r = await fetch(`/api/classify?host=${encodeURIComponent(host)}${email?`&email=${encodeURIComponent(email)}`:""}`);
-      const j = await r.json().catch(()=>({ok:false}));
-      state.classify = j;
-      seedChips(); // reset chips each refresh
+    // ------------ step 2
+    function stepProfile(){
+      setStep(1);
+      panel.innerHTML = `
+        <div class="row2 card">
+          <div>
+            <label class="lbl" for="name">Your name</label>
+            <input id="name" autocomplete="name" placeholder="e.g., Alex Chen" value="${S.name}">
+          </div>
+          <div>
+            <label class="lbl" for="email">Business email *</label>
+            <input id="email" type="email" autocomplete="email" placeholder="name@company.com" value="${S.email}">
+          </div>
+          <div>
+            <label class="lbl" for="phone">Phone (required for alerts) *</label>
+            <input id="phone" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567" value="${S.phone}">
+            <div class="note">Country code helps us personalize geography (e.g., “+1” for U.S.). Testing mode: verification skipped.</div>
+          </div>
+          <div>
+            <label class="lbl" for="host">Website / Domain (auto from email)</label>
+            <input id="host" placeholder="company.com" value="${S.host}">
+            <div class="note">Auto-filled from your email as you type. You can edit.</div>
+          </div>
+        </div>
+        <div class="row" style="justify-content:flex-end; margin-top:12px">
+          <button id="b2" class="btn ghost">Back</button>
+          <button id="n2" class="btn primary">Next</button>
+        </div>
+      `;
+      const email=$("#email"), host=$("#host");
+      const sync=()=>{ const d=emailDomain(email.value); if(d && (!host.value || host.value===S.host || host.value.includes("@"))) host.value=d; };
+      email.addEventListener("input", sync);
+      setTimeout(sync, 150); // catch browser autofill
+      $("#b2").onclick=stepRole;
+      $("#n2").onclick=()=>{ S.name=$("#name").value.trim(); S.email=email.value.trim(); S.phone=$("#phone").value.trim();
+        S.host=host.value.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,''); stepSummary(); classify(S.host,S.email); };
+    }
 
-      if(j && j.ok){
-        const line = buildOneLiner(host, j);
-        $("#oneLinerText").textContent = line;
-        // (Optional) add a couple of product guesses from role/evidence
-        const ps = $("#chipsProducts");
-        if(ps.childElementCount===0){
-          addSelectableChips(ps, ["custom","printed","eco-friendly"], state.productTags);
+    // ------------ classify + headline
+    async function classify(host,email){
+      if(!host) return;
+      setHeadline({host,loading:true});
+      try{
+        const res = await fetch(`${API_BASE}/classify?host=${encodeURIComponent(host)}${email?`&email=${encodeURIComponent(email)}`:''}`);
+        if(!res.ok) throw new Error("http_"+res.status);
+        const data = await res.json();
+        if(data && data.ok){
+          S.classify = data;
+          setHeadline({host, oneLiner:data.oneLiner, favicon:data.favicon});
+          // seed chips
+          if($("#prodChips") && data.productTags) fillChips($("#prodChips"), data.productTags);
+          if($("#sectChips") && data.sectors) fillChips($("#sectChips"), data.sectors);
+        }else{
+          setHeadline({host, error:(data && (data.error||data.detail)) || "network error while reading your site."});
         }
-        $("#refreshLink").textContent = "Refresh from website";
-      } else {
-        $("#oneLinerText").textContent = `${host} — network error while reading your site.`;
-        $("#refreshLink").textContent = "Refresh from website";
+      }catch(e){
+        setHeadline({host, error:"network error while reading your site."});
       }
-    }catch(e){
-      $("#oneLinerText").textContent = `Network error.`;
-      $("#refreshLink").textContent = "Refresh from website";
     }
-  }
-
-  function buildOneLiner(host, j){
-    const h = host?.replace(/^www\./,'') || "your-company";
-    if(j.role==="packaging_supplier"){
-      return `${h} sells packaging to brands.`;
-    } else if(j.role==="packaging_buyer"){
-      return `${h} buys packaging for its products.`;
+    function setHeadline({host, oneLiner, favicon, loading, error}){
+      const ic=$("#fav"), t=$("#one"), err=$("#err");
+      ic.src = favicon || fav(host);
+      if(loading){ t.textContent = `${host} — loading…`; err.textContent=""; return; }
+      if(error){ t.textContent = `${host} — ${error}`; err.textContent=""; return; }
+      t.textContent = oneLiner || `${host} — `;
+      err.textContent="";
     }
-    return `${h} — we couldn’t confirm packaging focus yet.`;
-  }
 
-  function sanitizeHost(raw){
-    if(!raw) return "";
-    const s = String(raw).trim().toLowerCase()
-      .replace(/^https?:\/\//,'')
-      .replace(/\/.*$/,'')
-      .replace(/[^a-z0-9.-]/g,''); // prevents the trailing "-1" style bugs
-    return s;
-  }
+    // ------------ step 3
+    function stepSummary(){
+      setStep(2);
+      panel.innerHTML = `
+        <div class="card">
+          <div class="headline">
+            <img id="fav" class="fav" alt="">
+            <div id="one">your-company sells packaging to brands.</div>
+          </div>
+          <div class="center"><a id="refresh" class="link">Refresh from website</a></div>
 
-  // seed default chips on load
-  seedChips();
-</script>
+          <div class="center"><button id="toggle" class="btn small">Show advanced ▾</button></div>
+          <div class="note" style="text-align:center; margin-bottom:10px">Optional: refine ranking and add product-specific details.</div>
+
+          <div id="adv" style="display:none">
+            <div class="row2">
+              <div id="genCard" class="card">
+                <div style="display:flex; align-items:center; justify-content:space-between">
+                  <div style="font-weight:800">General tuning</div>
+                  <label class="note"><input id="genAuto" type="checkbox"> Let AI decide</label>
+                </div>
+                <div class="sl"><div>📍 Prioritize nearby buyers <span class="muted" data-tip="Boosts leads near your chosen city.">ⓘ</span></div><input id="sLocal" class="slider" type="range" min="0" max="10" value="${S.prefs.locality}"></div>
+                <div class="sl"><div>🛒 Prefer e-commerce sites <span class="muted" data-tip="Brands with carts or product grids.">ⓘ</span></div><input id="sEcom" class="slider" type="range" min="0" max="10" value="${S.prefs.ecom}"></div>
+                <div class="sl"><div>🏷️ Prefer retail brands <span class="muted" data-tip="DTC / retail-facing brands.">ⓘ</span></div><input id="sRetail" class="slider" type="range" min="0" max="10" value="${S.prefs.retail}"></div>
+                <div class="sl"><div>📦 Prefer wholesalers / distributors <span class="muted" data-tip="Companies that resell widely.">ⓘ</span></div><input id="sWholesale" class="slider" type="range" min="0" max="10" value="${S.prefs.wholesale}"></div>
+                <div class="sl"><div>🏗️ Prefer mid-size companies <span class="muted" data-tip="Bias away from tiny or giant orgs.">ⓘ</span></div><input id="sMids" class="slider" type="range" min="0" max="10" value="${S.prefs.mids}"></div>
+                <div class="sl"><div>🏙️ De-prioritize giant enterprises <span class="muted" data-tip="Down-weight Fortune-scale giants.">ⓘ</span></div><input id="sAvoid" class="slider" type="range" min="0" max="10" value="${S.prefs.avoidGiants}"></div>
+              </div>
+
+              <div id="prodCard" class="card">
+                <div style="display:flex; align-items:center; justify-content:space-between">
+                  <div style="font-weight:800">Product signals (from your site)</div>
+                  <label class="note"><input id="prodAuto" type="checkbox"> Let AI decide</label>
+                </div>
+                <div class="note" style="margin-bottom:8px">Tap to select. We’ll use these as focus tags.</div>
+                <div id="prodChips" class="chips"></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div style="font-weight:800; margin-bottom:6px">Buyer targeting</div>
+              <div class="row2">
+                <div>
+                  <label class="lbl">Find buyers near…</label>
+                  <input id="city" placeholder="e.g., Chicago">
+                  <div id="cityChips" class="chips" style="margin-top:8px"></div>
+                  <div class="note">We’ll boost leads near this city.</div>
+                </div>
+                <div>
+                  <label class="lbl">Buyers in these sectors</label>
+                  <input id="sectInput" placeholder="e.g., food, beverage, cosmetics">
+                  <div id="sectChips" class="chips" style="margin-top:8px"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" style="justify-content:flex-end; margin-top:12px">
+            <button id="back3" class="btn ghost">Back</button>
+            <button id="next3" class="btn primary">Next</button>
+          </div>
+          <div id="err" class="err"></div>
+        </div>
+      `;
+
+      // headline initial
+      $("#fav").src = fav(S.host);
+      $("#one").textContent = S.classify?.oneLiner || (S.host ? `${S.host} — ` : "your-company sells packaging to brands.");
+
+      // refresh
+      $("#refresh").onclick = (e)=>{ e.preventDefault(); classify(S.host, S.email); };
+
+      // show/hide advanced
+      const adv=$("#adv"), toggle=$("#toggle");
+      toggle.onclick=()=>{ const open=adv.style.display!=="none"; adv.style.display=open?"none":"block"; toggle.textContent=open?"Show advanced ▾":"Hide advanced ▲"; };
+
+      // tooltips instant (hover + tap)
+      panel.querySelectorAll("[data-tip]").forEach(el=>{
+        const txt = el.getAttribute("data-tip");
+        el.addEventListener("mouseenter", ev=>showTip(txt, ev.clientX, ev.clientY));
+        el.addEventListener("mouseleave", hideTip);
+        el.addEventListener("click", ev=>{ if(tip.style.display==="block") hideTip(); else showTip(txt, ev.clientX, ev.clientY); });
+      });
+      document.addEventListener("scroll", hideTip, {passive:true});
+
+      // AI decide toggles
+      function setDisabled(card, chkId){
+        const on = $(chkId).checked;
+        card.classList.toggle("dim", on);
+        card.querySelectorAll("input[type=range], .chip").forEach(el=> el.disabled = on);
+      }
+      $("#genAuto").addEventListener("change", ()=>setDisabled($("#genCard"), "#genAuto")); setDisabled($("#genCard"), "#genAuto");
+      $("#prodAuto").addEventListener("change", ()=>setDisabled($("#prodCard"), "#prodAuto")); setDisabled($("#prodCard"), "#prodAuto");
+
+      // suggestions
+      fillChips($("#cityChips"), ["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"]);
+      $("#cityChips").onclick = e => { if(e.target.classList.contains("chip")) $("#city").value = e.target.textContent.trim(); };
+
+      // pre-fill chips from classify if present
+      if(S.classify?.productTags) fillChips($("#prodChips"), S.classify.productTags);
+      if(S.classify?.sectors) fillChips($("#sectChips"), S.classify.sectors);
+
+      $("#back3").onclick = stepProfile;
+      $("#next3").onclick = ()=>{
+        S.prefs.focusTags = selected($("#prodChips"));
+        const typed = $("#sectInput").value.split(",").map(s=>s.trim()).filter(Boolean);
+        S.prefs.sectors = Array.from(new Set([...typed, ...selected($("#sectChips"))]));
+        S.prefs.city = $("#city").value.trim();
+        close(); // handoff to Free Panel later
+      };
+    }
+
+    // ------------ modal open/close
+    function open(){ scrim.classList.add("on"); document.body.style.overflow="hidden"; stepRole(); }
+    function close(){ scrim.classList.remove("on"); document.body.style.overflow=""; hideTip(); }
+
+    // ------------ wire events
+    $("#open").onclick = (e)=>{ e.preventDefault(); open(); };
+    $("#x").onclick = close;
+    scrim.addEventListener("click", e=>{ if(e.target===scrim) close(); });
+  </script>
 </body>
 </html>
