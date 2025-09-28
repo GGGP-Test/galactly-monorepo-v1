@@ -11,12 +11,12 @@
       --focus:0 0 0 3px rgba(106,227,255,.4);
     }
     *{box-sizing:border-box}
-    html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif}
     a{color:var(--brand);text-decoration:none}
     .container{max-width:980px;margin:0 auto;padding:32px}
     .hero{display:flex;flex-direction:column;align-items:center;gap:16px;padding:72px 16px 48px;text-align:center}
-    .hero h1{font-size:40px;line-height:1.1;margin:0}
-    .hero p{color:var(--muted);max-width:680px;margin:0}
+    .hero h1{font-size:42px;line-height:1.05;margin:0}
+    .hero p{color:var(--muted);max-width:680px;margin:0;font-size:18px}
     .cta{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
     .btn{appearance:none;border:0;border-radius:12px;padding:14px 18px;background:linear-gradient(180deg,var(--brand),#4bd1ff);
       color:#001018;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(75,209,255,.25);transition:transform .04s ease}
@@ -24,9 +24,10 @@
     .btn.alt{background:#1a2233;color:var(--fg);box-shadow:none}
     .note{font-size:13px;color:var(--muted)}
 
-    /* Modal */
-    .modal-backdrop{position:fixed;inset:0;background:rgba(3,6,12,.64);display:none;align-items:flex-start;justify-content:center;z-index:50}
-    .modal{width:min(860px,92vw);margin-top:6vh;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;
+    /* Modal overlay with subtle blur to keep context */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(6,10,18,.58);backdrop-filter:blur(4px);
+      display:none;align-items:flex-start;justify-content:center;z-index:50}
+    .modal{width:min(920px,92vw);margin:6vh 0;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;
       box-shadow:0 20px 60px rgba(0,0,0,.45)}
     .modal header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:var(--card-2);border-bottom:1px solid var(--line)}
     .modal header h2{margin:0;font-size:18px}
@@ -54,11 +55,22 @@
     .danger{color:var(--danger)}
     .tiny{font-size:12px;color:var(--muted)}
     .hidden{display:none!important}
+
     .sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
     .slider-row{display:flex;gap:10px;align-items:center}
     .slider-row input[type=range]{flex:1}
-    .chips{display:flex;gap:8px;flex-wrap:wrap}
-    .chip{background:#121a2a;border:1px solid var(--line);padding:6px 10px;border-radius:999px;font-size:12px}
+
+    .summary-wrap{display:flex;align-items:center;gap:14px;justify-content:center;padding:12px;border:1px solid var(--line);border-radius:14px;background:#0e1726}
+    .logo{height:40px;width:40px;border-radius:10px;border:1px solid var(--line);object-fit:cover;background:#0b1220}
+    .summary{font-size:18px;line-height:1.35;text-align:center}
+    .summary b{font-weight:800}
+    .editable{display:inline-block;min-width:24px;border-bottom:1px dashed #2b3a52;padding:0 4px;border-radius:4px}
+    .editable:focus{outline:none;box-shadow:var(--focus)}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+    .chip{background:#121a2a;border:1px solid var(--line);padding:6px 10px;border-radius:999px;font-size:12px;cursor:pointer}
+    .chip:hover{border-color:#2f3b4f}
+
+    .hint{font-size:12px;color:var(--muted);margin-top:-6px}
     .link{color:var(--brand);cursor:pointer;text-decoration:underline}
   </style>
 </head>
@@ -73,7 +85,7 @@
     <p class="note">No spam. Cost-safe discovery. You own the dials.</p>
   </div>
 
-  <!-- Onboarding Modal -->
+  <!-- Modal -->
   <div id="mb" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="ob-title">
     <div class="modal">
       <header>
@@ -116,17 +128,23 @@
               </div>
               <div class="field">
                 <label for="email">Business email <span class="warn">*</span></label>
-                <input id="email" class="input" type="email" placeholder="you@yourcompany.com" autocomplete="email" required>
+                <input id="email" class="input" type="email" placeholder="you@yourcompany.com"
+                       autocomplete="email" required>
               </div>
             </div>
             <div class="row">
               <div class="field">
-                <label for="phone">Phone (for lead alerts)</label>
-                <input id="phone" class="input" type="tel" inputmode="tel" placeholder="+1 555 123 4567">
+                <label for="phone">Phone (required for alerts) <span class="warn">*</span></label>
+                <input id="phone" class="input" type="tel" inputmode="tel" required
+                       placeholder="+1 555 123 4567"
+                       autocomplete="tel"
+                       pattern="\\+?[0-9\\s().\\-]{7,}">
+                <div class="hint">Country code helps us personalize geography (e.g., “+1” for U.S.).</div>
               </div>
               <div class="field">
                 <label for="domain">Website / Domain (auto from email)</label>
                 <input id="domain" class="input" placeholder="yourcompany.com" autocomplete="url">
+                <div class="hint">Auto-filled from your email. You can edit.</div>
               </div>
             </div>
             <div class="row">
@@ -142,15 +160,22 @@
         <!-- STEP 3 -->
         <section id="s3" class="hidden">
           <div class="grid" style="gap:10px">
-            <div class="field">
-              <label>One-liner summary</label>
-              <div id="summary" class="chip" style="background:#0e1726;border-radius:10px;padding:10px 12px;border:1px solid var(--line)">
-                We’ll stitch this from your domain + sliders…
-              </div>
-              <div class="tiny">
-                <span class="link" id="refresh">Refresh from website</span> (uses /api/classify, cached)
+            <!-- Big editable one-liner with logo -->
+            <div class="summary-wrap">
+              <img id="logo" class="logo" alt="logo">
+              <div class="summary" id="summary">
+                <b id="sum-company" class="editable" contenteditable="true">your-company</b>
+                <span id="sum-verb">sells</span>
+                <b id="sum-what" class="editable" contenteditable="true">packaging</b>
+                <span>to</span>
+                <b id="sum-who" class="editable" contenteditable="true">brands</b>
+                <span id="sum-where" class="editable" contenteditable="true"></span>.
               </div>
             </div>
+            <div class="tiny" style="text-align:center;margin-top:-4px">
+              <span class="link" id="refresh">Refresh from website</span> (uses /api/classify, cached)
+            </div>
+
             <div class="row">
               <div class="field">
                 <label for="city">Primary city (optional, boosts locality)</label>
@@ -159,6 +184,7 @@
               <div class="field">
                 <label for="tags">Focus tags (comma separated)</label>
                 <input id="tags" class="input" placeholder="food, beverage, cosmetics">
+                <div id="tag-suggestions" class="chips"></div>
               </div>
             </div>
 
@@ -166,43 +192,37 @@
               <div class="field">
                 <label>Locality importance</label>
                 <div class="slider-row">
-                  <input id="w-local" type="range" min="0" max="10" value="6">
-                  <span id="w-local-val" class="tiny">6</span>
+                  <input id="w-local" type="range" min="0" max="10" value="6"><span id="w-local-val" class="tiny">6</span>
                 </div>
               </div>
               <div class="field">
                 <label>E-commerce signal</label>
                 <div class="slider-row">
-                  <input id="w-ecom" type="range" min="0" max="10" value="7">
-                  <span id="w-ecom-val" class="tiny">7</span>
+                  <input id="w-ecom" type="range" min="0" max="10" value="7"><span id="w-ecom-val" class="tiny">7</span>
                 </div>
               </div>
               <div class="field">
                 <label>Retail channel</label>
                 <div class="slider-row">
-                  <input id="w-retail" type="range" min="0" max="10" value="5">
-                  <span id="w-retail-val" class="tiny">5</span>
+                  <input id="w-retail" type="range" min="0" max="10" value="5"><span id="w-retail-val" class="tiny">5</span>
                 </div>
               </div>
               <div class="field">
                 <label>Wholesale channel</label>
                 <div class="slider-row">
-                  <input id="w-wholesale" type="range" min="0" max="10" value="6">
-                  <span id="w-wholesale-val" class="tiny">6</span>
+                  <input id="w-wholesale" type="range" min="0" max="10" value="6"><span id="w-wholesale-val" class="tiny">6</span>
                 </div>
               </div>
               <div class="field">
                 <label>Company size (prefer mids)</label>
                 <div class="slider-row">
-                  <input id="w-size" type="range" min="0" max="10" value="6">
-                  <span id="w-size-val" class="tiny">6</span>
+                  <input id="w-size" type="range" min="0" max="10" value="6"><span id="w-size-val" class="tiny">6</span>
                 </div>
               </div>
               <div class="field">
                 <label>Avoid giants</label>
                 <div class="slider-row">
-                  <input id="w-avoid" type="range" min="0" max="10" value="7">
-                  <span id="w-avoid-val" class="tiny">7</span>
+                  <input id="w-avoid" type="range" min="0" max="10" value="7"><span id="w-avoid-val" class="tiny">7</span>
                 </div>
               </div>
             </div>
@@ -230,17 +250,12 @@
     const qsa = sel => Array.from(document.querySelectorAll(sel));
 
     const state = {
-      step: 1,
-      role: "supplier",
-      verified: false,
-      testing: false,
-      name: "",
-      email: "",
-      phone: "",
-      domain: "",
-      city: "",
-      tags: [],
-      weights: { locality:6, ecom:7, retail:5, wholesale:6, size:6, avoid:7 }
+      step: 1, role: "supplier",
+      verified: false, testing: false,
+      name: "", email: "", phone: "", domain: "", domainEdited:false,
+      city: "", tags: [],
+      weights: { locality:6, ecom:7, retail:5, wholesale:6, size:6, avoid:7 },
+      usPhone: false
     };
 
     const mb = qs("#mb");
@@ -252,24 +267,23 @@
     const status = qs("#status");
     const stepsDots = qsa(".step-dot");
 
-    // step sections
     const s1 = qs("#s1"), s2 = qs("#s2"), s3 = qs("#s3");
 
-    // step1 role cards
+    /* ---------- Step 1 ---------- */
     const roleCards = qsa(".card[data-role]");
     roleCards.forEach(c=>{
       c.addEventListener("click", ()=> selectRole(c.dataset.role));
       c.addEventListener("keydown", (e)=> { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectRole(c.dataset.role);} });
     });
-
     function selectRole(role){
       state.role = role;
       roleCards.forEach(c=> c.classList.toggle("selected", c.dataset.role===role));
       badge.textContent = role==="supplier" ? "Supplier" : "Buyer";
+      qs("#sum-verb").textContent = role==="supplier" ? "sells" : "buys";
       summaryRefresh();
     }
 
-    // step2 inputs
+    /* ---------- Step 2 ---------- */
     const nameEl = qs("#name");
     const emailEl = qs("#email");
     const phoneEl = qs("#phone");
@@ -278,19 +292,38 @@
     const vstate = qs("#vstate");
     const devskip = qs("#devskip");
 
-    emailEl.addEventListener("input", ()=>{
-      const v = emailEl.value.trim();
-      const m = v.match(/@([a-z0-9.-]+\.[a-z]{2,})$/i);
-      if(m && !domainEl.value) domainEl.value = m[1].toLowerCase();
-      state.email = v;
-      state.domain = domainEl.value.trim();
-      vstate.textContent = state.verified ? "Email verified." : "Verification required to continue.";
-      summaryRefresh();
-    });
+    function deriveDomainFromEmail(e){
+      const m = (e||"").trim().match(/@([a-z0-9.-]+\.[a-z]{2,})$/i);
+      return m ? m[1].toLowerCase() : "";
+    }
+    function syncEmailDerivedDomain(){
+      const email = emailEl.value;
+      const inferred = deriveDomainFromEmail(email);
+      if (!state.domainEdited){
+        domainEl.value = inferred;
+        state.domain = inferred;
+        setLogo(inferred);
+        summaryRefresh();
+      }
+      if (!email){ // if user cleared email and didn't manually edit domain, clear domain too
+        if (!state.domainEdited){ domainEl.value = ""; state.domain=""; setLogo(""); summaryRefresh(); }
+      }
+    }
+
+    emailEl.addEventListener("input", ()=>{ state.email=emailEl.value.trim(); syncEmailDerivedDomain(); });
+    emailEl.addEventListener("change", ()=>{ state.email=emailEl.value.trim(); syncEmailDerivedDomain(); });
+    emailEl.addEventListener("blur", ()=>{ state.email=emailEl.value.trim(); syncEmailDerivedDomain(); });
 
     domainEl.addEventListener("input", ()=>{
+      const prev = state.domain;
       state.domain = domainEl.value.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
-      summaryRefresh();
+      state.domainEdited = state.domain !== deriveDomainFromEmail(state.email);
+      if (state.domain !== prev){ setLogo(state.domain); summaryRefresh(); }
+    });
+
+    phoneEl.addEventListener("input", ()=>{
+      state.phone = phoneEl.value.trim();
+      state.usPhone = /^\s*(\+?1[\s().-]?)|(\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})\s*$/.test(state.phone);
     });
 
     devskip.addEventListener("change", ()=>{
@@ -301,8 +334,8 @@
     });
 
     verifyBtn.addEventListener("click", async ()=>{
-      // Stubbed verification: pretend to send email, then mark verified after a moment.
       if (!emailEl.reportValidity()) return;
+      if (!phoneEl.reportValidity()) return;
       verifyBtn.disabled = true;
       vstate.textContent = "Sending verification email…";
       await new Promise(r=>setTimeout(r, 900));
@@ -312,11 +345,31 @@
       gateNext();
     });
 
-    // step3
+    // Pick up browser autofill: poll for value changes briefly
+    let lastEmail="";
+    setInterval(()=>{
+      if (emailEl.value !== lastEmail){
+        lastEmail = emailEl.value;
+        state.email = lastEmail.trim();
+        syncEmailDerivedDomain();
+      }
+    }, 600);
+    // Also do an initial sync after load
+    setTimeout(()=>{ state.email=emailEl.value.trim(); syncEmailDerivedDomain(); }, 350);
+
+    /* ---------- Step 3 ---------- */
     const cityEl = qs("#city");
     const tagsEl = qs("#tags");
-    const summaryEl = qs("#summary");
+    const tagSug = qs("#tag-suggestions");
     const refreshBtn = qs("#refresh");
+
+    const sumCompany = qs("#sum-company");
+    const sumWhat = qs("#sum-what");
+    const sumWho = qs("#sum-who");
+    const sumWhere = qs("#sum-where");
+    [sumCompany,sumWhat,sumWho,sumWhere].forEach(el=>{
+      el.addEventListener("input", ()=> summaryRefresh(true));
+    });
 
     const ranges = [
       ["w-local","locality"],["w-ecom","ecom"],["w-retail","retail"],
@@ -341,30 +394,77 @@
         const res = await fetch(`/api/classify?host=${encodeURIComponent(state.domain)}`);
         const data = await res.json();
         if (data && data.ok !== false) {
-          const role = data.role || "packaging_buyer";
-          const conf = data.confidence ? ` @ ${(data.confidence*100).toFixed(0)}%` : "";
-          const who = (role==="packaging_supplier") ? "supplier" : (role==="packaging_buyer" ? "buyer" : "company");
-          summaryEl.textContent = `${prettyHost(state.domain)} looks like a ${who}${conf}. Sliders below will tune who you want to see.`;
+          // basic mapping -> suggestions
+          const ev = (data.evidence||[]).join(" ").toLowerCase();
+          const sugg = new Set();
+          ["wholesale","distributor","manufacturer","ecommerce","retail","private label","copack","co-pack","bottle","jar","label","carton","corrugate","pouch"].forEach(k=>{
+            if(ev.includes(k.replace(" ",""))) sugg.add(k);
+          });
+          renderTagSuggestions([...sugg]);
+          const who = (data.role==="packaging_supplier") ? "sells" : (data.role==="packaging_buyer" ? "buys" : "does");
+          qs("#sum-verb").textContent = who;
+          // If user hasn't customized token, update default text
+          if (sumCompany.innerText==="your-company" || !sumCompany.innerText.trim()){ sumCompany.innerText = prettyHost(state.domain); }
         } else {
-          summaryRefresh();
+          renderTagSuggestions([]);
         }
       } catch {
-        summaryRefresh();
+        renderTagSuggestions([]);
       }
+      summaryRefresh();
     });
 
-    function prettyHost(h){ return (h||"").replace(/^www\./,''); }
-
-    function summaryRefresh(){
-      const who = state.role==="supplier" ? "sells" : "buys";
-      const tgt = (state.tags && state.tags.length) ? state.tags.slice(0,3).join(", ") : "packaging";
-      const city = state.city ? ` near ${state.city}` : "";
-      const dial = `loc:${state.weights.locality}/10, ecom:${state.weights.ecom}/10, size:${state.weights.size}/10`;
-      const host = state.domain ? prettyHost(state.domain) : "your-company";
-      summaryEl.textContent = `${host} ${who} ${tgt}${city}. Dials — ${dial}.`;
+    function renderTagSuggestions(list){
+      tagSug.innerHTML = "";
+      (list||[]).slice(0,8).forEach(t=>{
+        const el = document.createElement("span");
+        el.className="chip";
+        el.textContent = t;
+        el.addEventListener("click", ()=>{
+          const parts = tagsEl.value.split(",").map(s=>s.trim()).filter(Boolean);
+          if (!parts.includes(t)){ parts.push(t); tagsEl.value = parts.join(", "); tagsEl.dispatchEvent(new Event("input")); }
+        });
+        tagSug.appendChild(el);
+      });
     }
 
-    // modal lifecycle
+    function prettyHost(h){ return (h||"").replace(/^https?:\\/\\/|^www\\./g,'').replace(/\\/$/,''); }
+
+    function summaryRefresh(userEdited){
+      const host = state.domain ? prettyHost(state.domain) : "your-company";
+      if (!userEdited) sumCompany.innerText = sumCompany.innerText.trim() || host;
+      // where token from city
+      const where = state.city ? `near ${state.city}` : "";
+      if (!userEdited) sumWhere.innerText = where;
+      // what from tags (first 2) if user didn't edit
+      if (!userEdited){
+        const what = (state.tags && state.tags.length) ? state.tags.slice(0,2).join(", ") : "packaging";
+        if (!sumWhat.innerText.trim() || sumWhat.innerText==="packaging") sumWhat.innerText = what;
+      }
+      setLogo(state.domain);
+    }
+
+    // Lightweight logo pull: try site favicon, then DDG icon service, else placeholder.
+    const logoEl = qs("#logo");
+    function setLogo(domain){
+      const d = prettyHost(domain||"");
+      if (!d){ logoEl.src=""; logoEl.alt=""; return; }
+      const candidates = [
+        `https://${d}/favicon.ico`,
+        `https://${d}/apple-touch-icon.png`,
+        `https://icons.duckduckgo.com/ip3/${encodeURIComponent(d)}.ico`
+      ];
+      let i = 0;
+      const tryNext = ()=> {
+        if (i>=candidates.length){ logoEl.src=""; logoEl.alt=""; return; }
+        logoEl.src = candidates[i++];
+        logoEl.onerror = tryNext;
+        logoEl.alt = d + " logo";
+      };
+      tryNext();
+    }
+
+    /* ---------- Modal lifecycle ---------- */
     function show(step=1){
       state.step = step;
       mb.style.display = "flex";
@@ -374,7 +474,7 @@
 
     function gateNext(){
       if (state.step===2){
-        const ok = state.testing || state.verified;
+        const ok = (state.testing || state.verified) && emailEl.reportValidity() && phoneEl.reportValidity();
         nextBtn.disabled = !ok;
       } else {
         nextBtn.disabled = false;
@@ -389,6 +489,7 @@
       gateNext();
     }
 
+    const openBtn = qs("#open-onboarding");
     openBtn.addEventListener("click", ()=> show(1));
     closeBtn.addEventListener("click", hide);
     backBtn.addEventListener("click", ()=>{
@@ -398,15 +499,13 @@
     nextBtn.addEventListener("click", async ()=>{
       if (state.step===1){ state.step=2; renderStep(); return; }
       if (state.step===2){
-        // stash form values
         state.name = nameEl.value.trim();
         state.phone = phoneEl.value.trim();
         state.email = emailEl.value.trim();
         state.domain = domainEl.value.trim();
-        // basic validity
-        if (!state.email || !/@.+\./.test(state.email)) { emailEl.reportValidity(); return; }
-        if (!state.testing && !state.verified) { return; }
-        state.step=3; renderStep(); return;
+        if (!emailEl.reportValidity() || !phoneEl.reportValidity()) return;
+        if (!state.testing && !state.verified) return;
+        state.step=3; renderStep(); summaryRefresh(); return;
       }
       if (state.step===3){
         await persistPrefsThenOpen();
@@ -414,28 +513,22 @@
     });
 
     async function persistPrefsThenOpen(){
-      // Build prefs payload expected by /api/prefs
       const payload = {
-        host: state.domain || state.email.split("@")[1],
-        signalWeight: Number(state.weights.ecom) || 0,     // maps to existing server shape
+        host: state.domain || (state.email.split("@")[1]||"").trim(),
+        signalWeight: Number(state.weights.ecom) || 0,
         sizeWeight: Number(state.weights.size) || 0,
         likeTags: state.tags || [],
         city: state.city || "",
-        role: state.role
+        role: state.role,
+        phone: state.phone, name: state.name, usPhone: state.usPhone
       };
-      try {
-        await fetch("/api/prefs", {
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body: JSON.stringify(payload)
-        });
-      } catch (e) { /* non-fatal */ }
+      try { await fetch("/api/prefs", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) }); } catch {}
       const host = encodeURIComponent(payload.host || "");
       const city = state.city ? `&city=${encodeURIComponent(state.city)}` : "";
       window.location.href = `./free-panel.html?host=${host}${city}`;
     }
 
-    // If ?dev=1 in URL, auto-open + skip verification (nice for QA)
+    // dev helper
     const params = new URLSearchParams(location.search);
     if (params.get("dev")==="1"){ devskip.checked=true; devskip.dispatchEvent(new Event("change")); show(1); }
   })();
