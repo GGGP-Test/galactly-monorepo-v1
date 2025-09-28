@@ -1,10 +1,12 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Galactly — Find real packaging buyers</title>
-<link rel="preconnect" href="https://icons.duckduckgo.com">
+
+<!-- Favicons from DuckDuckGo ip3 will be injected dynamically -->
+
 <style>
   :root{
     --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c;
@@ -12,80 +14,93 @@
     --cta:#6de1ff; --ctaText:#082433; --chip:#1d2735;
     --chipActive:#0e3b52; --accent:#38e08f;
     --danger:#ff7b7b; --divider:#1c2532;
+    --edit:#10293a; --editField:#153448; --editStroke:#2c536e;
   }
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
   a{color:var(--brand);text-decoration:none}
-  .hero{
-    min-height:100vh; display:grid; place-items:center; padding:4rem 1rem;
-    background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%);
-  }
-  .hero-inner{max-width:920px; text-align:center}
-  h1{font-size: clamp(32px, 6vw, 56px); margin:0 0 12px}
-  p.lead{color:var(--muted); margin:0 0 28px}
-  .btn{display:inline-flex; align-items:center; gap:.6rem; padding:12px 18px;
-       border-radius:12px; background:var(--cta); color:var(--ctaText); font-weight:700; border:none; cursor:pointer}
-  .btn .spark{filter:drop-shadow(0 2px 6px rgba(109,225,255,.55))}
+  button{font:inherit}
+
+  .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;
+    background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%);}
+  .hero-inner{max-width:920px;text-align:center}
+  h1{font-size:clamp(32px,6vw,56px);margin:0 0 12px}
+  p.lead{color:var(--muted);margin:0 0 28px}
+  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:12px;
+    background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
+  .btn.sec{background:#152333;color:#bcd1e2}
   .btn:active{transform:translateY(1px)}
+  .spark{filter:drop-shadow(0 2px 6px rgba(109,225,255,.55))}
+
   /* modal */
-  .modal{position:fixed; inset:0; background:rgba(5,10,16,.55);
-         display:none; align-items:center; justify-content:center; z-index:20}
+  .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
   .modal.show{display:flex}
-  .card{width:min(980px,92vw); background:var(--panel); border:1px solid var(--divider);
-        border-radius:18px; box-shadow:0 30px 80px rgba(0,0,0,.45); overflow:hidden}
-  .card-hd{display:flex; align-items:center; justify-content:space-between; gap:12px;
-           padding:16px 18px; background:linear-gradient(180deg,#0f1622,#0e1520); border-bottom:1px solid var(--divider)}
-  .steps{display:flex; gap:8px; align-items:center}
-  .dot{width:8px;height:8px;border-radius:50%; background:#2a3444}
+  .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
+  .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
+  .steps{display:flex;gap:8px;align-items:center}
+  .dot{width:8px;height:8px;border-radius:50%;background:#2a3444}
   .dot.on{background:#5bd0ff}
   .card-bd{padding:18px}
-  .scroll{max-height:70vh; overflow:auto; padding:6px 6px}
-  .row{display:flex; gap:18px; flex-wrap:wrap}
+  .scroll{max-height:70vh;overflow:auto;padding:6px 6px}
+  .row{display:flex;gap:18px;flex-wrap:wrap}
   .col{flex:1 1 0}
-  .pill{padding:6px 10px; border-radius:999px; background:#0d1a26; color:var(--muted); font-size:12px}
+  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:var(--muted);font-size:12px}
   .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
   .gear{background:transparent;border:none;color:#99b4c7;cursor:pointer}
-  /* cards step 1 */
-  .pick{display:grid; grid-template-columns:1fr 1fr; gap:16px}
-  .option{background:var(--panel-2); border:1px solid var(--divider); border-radius:16px; padding:16px; cursor:pointer; position:relative}
+
+  /* step 1 cards */
+  .pick{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .option{background:var(--panel-2);border:1px solid var(--divider);border-radius:16px;padding:16px;cursor:pointer;position:relative}
   .option h3{margin:0 0 6px}
   .option p{margin:0;color:var(--muted)}
-  .option .examples{margin-top:10px; font-size:13px; color:#a9bed0}
-  .option.active{outline:2px solid #70ff7f; box-shadow:0 0 0 6px rgba(56,224,143,.12) inset}
+  .option .examples{margin-top:10px;font-size:13px;color:#a9bed0}
+  .option.active{outline:2px solid #70ff7f;box-shadow:0 0 0 6px rgba(56,224,143,.12) inset}
+
   /* inputs */
   .field{margin:10px 0}
-  label{display:block; font-size:13px; color:#9abbcc; margin:0 0 6px}
+  label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
   input[type=text],input[type=email],input[type=tel]{
-    width:100%; padding:12px 12px; border-radius:12px; border:1px solid var(--divider);
-    background:#0d1520; color:var(--text); outline:none
-  }
-  input:focus{border-color:#385dff66; box-shadow:0 0 0 4px #2a3f5a66}
-  /* one-liner */
-  .summary{
-    display:flex; align-items:center; gap:12px; background:#0e1622; border:1px solid var(--divider);
-    padding:14px 16px; border-radius:14px; margin-bottom:12px
-  }
-  .fav{width:24px; height:24px; border-radius:6px; background:#122; display:grid; place-items:center; overflow:hidden}
-  .one{font-weight:700}
-  .subtle{color:#9ab0c0; font-size:13px}
-  /* chips + sliders */
-  .group{background:#0f1724; border:1px solid var(--divider); border-radius:14px; padding:14px; margin:14px 0}
+    width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);
+    background:#0d1520;color:var(--text);outline:none}
+  input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
+
+  /* ONE-LINER (editable) */
+  .summary{display:flex;align-items:flex-start;gap:12px;background:#0e1622;border:1px solid var(--divider);
+    padding:14px 16px;border-radius:14px;margin-bottom:12px;position:relative}
+  .summary.edit{background:var(--edit);border-color:var(--editStroke)}
+  .fav{width:24px;height:24px;border-radius:6px;background:#122;display:grid;place-items:center;overflow:hidden;flex:0 0 auto}
+  .one{font-weight:700;line-height:1.35}
+  .one .lock{color:#eaf6ff}
+  .chipline{margin-top:6px}
+  .editBadge{position:absolute;top:8px;right:10px;font-size:12px;color:#9ab0c0}
+  .editBtn{background:#163246;border:1px solid var(--editStroke);color:#bfe9ff;padding:6px 10px;border-radius:9px;cursor:pointer}
+  .seg{padding:0 4px;border-radius:6px}
+  .seg[contenteditable="true"]{outline:none;border:1px dashed transparent}
+  .summary.edit .seg[contenteditable="true"]{background:var(--editField);border-color:#2e5a77}
+  .seg:empty:before{content:"—";color:#6f8aa1}
+
+  .subtle{color:#9ab0c0;font-size:13px}
+
+  /* groups, sliders, chips */
+  .group{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px;margin:14px 0}
   .group h4{margin:0 0 8px}
   .help{font-size:12px;color:#8fa8bb;margin:6px 0 10px}
-  .chip{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px;
-        background:var(--chip); color:#bcd1e2; margin:6px 8px 0 0; cursor:pointer; border:1px solid #203041}
-  .chip.active{background:var(--chipActive); color:#dff6ff; border-color:#1d4c66}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);
+    color:#bcd1e2;margin:6px 8px 0 0;cursor:pointer;border:1px solid #203041}
+  .chip.active{background:var(--chipActive);color:#dff6ff;border-color:#1d4c66}
   .chips{user-select:none}
-  .slider{display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; margin:10px 0}
+  .slider{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin:10px 0}
   .slider input[type=range]{width:100%}
-  .muted *{opacity:.45; pointer-events:none}
-  .tool{display:inline-block; width:16px; height:16px; border-radius:50%; background:#233244; color:#bcd1e2;
-        text-align:center; line-height:16px; font-size:11px; margin-left:6px; cursor:pointer}
-  .tooltip{position:absolute; z-index:10; background:#0b111a; border:1px solid var(--divider); padding:8px 10px; border-radius:8px; font-size:12px; color:#cfe1ef; display:none}
-  .tool[data-tip]:hover + .tooltip, .tool[data-tip].show + .tooltip{display:block}
+
+  .muted *{opacity:.45;pointer-events:none}
+  .tool{display:inline-block;width:16px;height:16px;border-radius:50%;background:#233244;color:#bcd1e2;
+    text-align:center;line-height:16px;font-size:11px;margin-left:6px;cursor:pointer}
+  .tooltip{position:absolute;z-index:10;background:#0b111a;border:1px solid var(--divider);padding:8px 10px;border-radius:8px;font-size:12px;color:#cfe1ef;display:none}
+  .tool[data-tip]:hover + .tooltip,.tool[data-tip].show + .tooltip{display:block}
+
   /* footer */
-  .card-ft{display:flex; justify-content:flex-end; gap:10px; padding:14px 18px; border-top:1px solid var(--divider)}
-  .btn.sec{background:#152333; color:#bcd1e2}
-  /* small */
+  .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--divider)}
+
   @media (max-width:800px){ .pick{grid-template-columns:1fr} .row{flex-direction:column} }
 </style>
 </head>
@@ -107,7 +122,7 @@
           <span class="dot" data-step-dot="1"></span>
           <span class="dot" data-step-dot="2"></span>
         </div>
-        <div style="display:flex; gap:8px; align-items:center">
+        <div style="display:flex;gap:8px;align-items:center">
           <button id="gear" class="gear" title="Set API base">⚙️</button>
           <button id="close" class="x" aria-label="Close">✕</button>
         </div>
@@ -145,27 +160,26 @@
                 </div>
                 <div class="field">
                   <label>Phone (required for alerts) *</label>
-                  <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567" />
+                  <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/>
                   <div class="subtle">Country code helps us personalize geography (e.g., “+1” for U.S.).</div>
                 </div>
               </div>
               <div class="col">
                 <div class="field">
                   <label>Business email *</label>
-                  <input id="email" type="email" autocomplete="email"
-                         placeholder="you@yourcompany.com" required />
+                  <input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required/>
                 </div>
                 <div class="field">
                   <label>Website / Domain (auto from email)</label>
-                  <input id="host" type="text" inputmode="url" placeholder="yourcompany.com" />
+                  <input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/>
                   <div class="subtle">Auto-filled from your email as you type. You can edit.</div>
                 </div>
               </div>
             </div>
 
-            <div class="group" style="display:flex; align-items:center; justify-content:space-between">
+            <div class="group" style="display:flex;align-items:center;justify-content:space-between">
               <div class="subtle">Testing mode: verification skipped.</div>
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                 <input id="skipVerify" type="checkbox" checked> I’m just testing (skip verification)
               </label>
             </div>
@@ -174,20 +188,36 @@
           <!-- STEP 3 -->
           <section class="step" id="step3" hidden>
             <div class="pill">Step 3 of 3</div>
-            <div class="summary">
+
+            <!-- Editable one-liner -->
+            <div id="summaryBox" class="summary" aria-live="polite">
               <div class="fav"><img id="fav" alt="" width="24" height="24" referrerpolicy="no-referrer"></div>
-              <div>
-                <div id="one" class="one">your-company — fetching summary…</div>
-                <div class="subtle">
+              <div style="flex:1">
+                <div id="one" class="one">
+                  <span id="ol-company" class="lock">your-company</span>
+                  <span class="seg" id="ol-verb" contenteditable="true">provides</span>
+                  <span class="seg" id="ol-products" contenteditable="true">packaging</span>
+                  for
+                  <span class="seg" id="ol-sectors" contenteditable="true">brands</span>
+                  in
+                  <span class="seg" id="ol-geos" contenteditable="true">the U.S.</span>.
+                  Best contacts:
+                  <span class="seg" id="ol-titles" contenteditable="true">Operations, Procurement</span>.
+                </div>
+                <div class="subtle chipline">
                   <a id="refresh" href="#" role="button">Refresh from website</a>
                   <span id="status" class="subtle"></span>
                 </div>
               </div>
+              <div class="editBadge">
+                <button id="toggleEdit" class="editBtn" type="button">✎ Edit</button>
+              </div>
             </div>
 
-            <button id="advToggle" class="btn sec" style="padding:8px 12px; border-radius:999px">
+            <button id="advToggle" class="btn sec" style="padding:8px 12px;border-radius:999px">
               <span id="advLbl">Show advanced ▾</span>
             </button>
+
             <div id="advanced" hidden>
               <div class="help" style="margin-top:10px;">Optional: refine ranking and add product-specific details.</div>
 
@@ -195,7 +225,9 @@
                 <div class="col group" id="grp-general">
                   <div style="display:flex;justify-content:space-between;align-items:center">
                     <h4>General tuning</h4>
-                    <label style="display:flex;align-items:center;gap:6px"><input id="aiGeneral" type="checkbox"> Let AI decide</label>
+                    <label style="display:flex;align-items:center;gap:6px">
+                      <input id="aiGeneral" type="checkbox"> Let AI decide
+                    </label>
                   </div>
 
                   <div class="slider"><div>📍 Prioritize nearby buyers
@@ -226,7 +258,9 @@
                 <div class="col group" id="grp-product">
                   <div style="display:flex;justify-content:space-between;align-items:center">
                     <h4>Product signals (from your site)</h4>
-                    <label style="display:flex;align-items:center;gap:6px"><input id="aiProduct" type="checkbox"> Let AI decide</label>
+                    <label style="display:flex;align-items:center;gap:6px">
+                      <input id="aiProduct" type="checkbox"> Let AI decide
+                    </label>
                   </div>
                   <div id="productChips" class="chips" aria-live="polite">Tap to select. We’ll use these as focus tags.</div>
                 </div>
@@ -262,31 +296,25 @@
 
 <script>
 (() => {
-  // ---------- API BASE (normalize + remember; supports with/without /api) ----------
-  const LS = { get:k=>{try{return localStorage.getItem(k)||""}catch{return""}}, set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}} };
-  function normalizeBase(v){
-    if(!v) return "/api";
-    v = (""+v).trim().replace(/\s+/g,"").replace(/\/+$/,"");
-    return v || "/api";
-  }
+  // ---------- STORAGE ----------
+  function getStored(k){ try{return localStorage.getItem(k)||""}catch{return""} }
+  function setStored(k,v){ try{localStorage.setItem(k,v)}catch{} }
+
+  // ---------- API BASE ----------
   const API_BASE = {
     get(){
-      const src = (window.API_BASE && typeof window.API_BASE==="string") ? window.API_BASE : LS.get("apiBase");
-      return normalizeBase(src || "/api");
+      if (window.API_BASE && typeof window.API_BASE==="string") return window.API_BASE;
+      const saved = getStored("apiBase"); if (saved) return saved;
+      return "/api"; // will 404 on GH Pages until user sets it
     },
-    set(v){ LS.set("apiBase", normalizeBase(v)); }
+    set(v){ if(v) setStored("apiBase", v) }
   };
 
-  // small gear to set base
-  document.getElementById("gear").addEventListener("click", () => {
+  // settings gear
+  document.getElementById("gear").addEventListener("click",()=>{
     const cur = API_BASE.get();
-    const v = prompt(
-      "API base (with or without /api).\nExamples:\nhttps://YOUR.code.run/api\nhttps://YOUR.code.run",
-      cur
-    );
-    if (!v) return;
-    API_BASE.set(v);
-    alert("Saved: " + API_BASE.get() + "\nI'll try both /classify and /api/classify.");
+    const v = prompt("API base (ends with /api). Example:\nhttps://YOUR-NORTHFLANK.code.run/api", cur);
+    if (v) { API_BASE.set(v); alert("Saved. I’ll use:\n"+API_BASE.get()); }
   });
 
   // ---------- ELEMENTS ----------
@@ -300,26 +328,30 @@
   const optSupplier = document.getElementById("opt-supplier");
   const optBuyer = document.getElementById("opt-buyer");
 
-  const nameEl = document.getElementById("name");
-  const phoneEl = document.getElementById("phone");
   const emailEl = document.getElementById("email");
   const hostEl  = document.getElementById("host");
-  const skipVerify = document.getElementById("skipVerify");
+  const phoneEl = document.getElementById("phone");
 
   const favEl = document.getElementById("fav");
-  const oneEl = document.getElementById("one");
+  const summaryBox = document.getElementById("summaryBox");
   const refreshA = document.getElementById("refresh");
   const statusEl = document.getElementById("status");
 
-  const advToggle = document.getElementById("advToggle");
-  const advLbl = document.getElementById("advLbl");
-  const adv = document.getElementById("advanced");
+  // one-liner editable segments
+  const seg = {
+    company: document.getElementById("ol-company"),
+    verb:    document.getElementById("ol-verb"),
+    products:document.getElementById("ol-products"),
+    sectors: document.getElementById("ol-sectors"),
+    geos:    document.getElementById("ol-geos"),
+    titles:  document.getElementById("ol-titles"),
+  };
+  const toggleEditBtn = document.getElementById("toggleEdit");
 
   const aiGeneral = document.getElementById("aiGeneral");
   const aiProduct = document.getElementById("aiProduct");
-  const grpGeneral = document.getElementById("grp-general");
-  const grpProduct = document.getElementById("grp-product");
-
+  const grpGeneral= document.getElementById("grp-general");
+  const grpProduct= document.getElementById("grp-product");
   const productChips = document.getElementById("productChips");
   const cityChips = document.getElementById("cityChips");
   const sectorChips = document.getElementById("sectorChips");
@@ -334,142 +366,112 @@
   };
 
   // ---------- STATE ----------
-  const state = { step:0, role:"supplier", email:"", host:"", productTags:[], sectorHints:[] };
+  const state = {
+    step:0, role:"supplier",
+    email:"", host:"",
+    productTags:[], sectorHints:[],
+    // one-liner vars (persist)
+    ol:{ verb:"provides", products:"packaging", sectors:"brands", geos:"the U.S.", titles:"Operations, Procurement" }
+  };
 
-  // ---------- UTIL ----------
+  // Restore persisted one-liner for continuity
+  const savedOL = getStored("olVars");
+  if (savedOL) try{ Object.assign(state.ol, JSON.parse(savedOL)); }catch{}
+
+  // ---------- HELPERS ----------
   const $ = sel => document.querySelector(sel);
   function show(step){
     state.step = step;
     ["#step1","#step2","#step3"].forEach((id,i)=>{
-      const el=$(id); if(!el) return;
-      el.hidden = i!==step;
-      dots[i].classList.toggle("on", i===step);
+      const el=$(id); if(!el) return; el.hidden = i!==step; dots[i].classList.toggle("on", i===step);
     });
     backBtn.style.visibility = step===0? "hidden":"visible";
     nextBtn.textContent = step===2? "Finish":"Next";
   }
   function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
   function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
-  function normHost(h){
-    if (!h) return "";
-    return String(h).trim().toLowerCase()
-      .replace(/^https?:\/\//,"")
-      .replace(/^www\./,"")
-      .replace(/\/.*$/,"");
-  }
-  function domainFromEmail(e){
-    const m = (e||"").toLowerCase().match(/@([a-z0-9.-]+)/);
-    return m? m[1] : "";
-  }
+  function normHost(h){ return String(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,""); }
+  function domainFromEmail(e){ const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m? m[1]:""; }
   function setFavicon(host){
-    const h = normHost(host);
-    if(!h){ favEl.src=""; favEl.style.display="none"; return; }
+    const h = normHost(host); if(!h){ favEl.src=""; return; }
     favEl.src = "https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico";
-    favEl.onerror = () => { favEl.style.display="none"; };
+    favEl.onerror = () => favEl.style.display="none";
     favEl.style.display="";
   }
-  function setOneLiner(txt){ oneEl.textContent = txt; }
 
-  // chip helpers
-  function chip(text, targetArr){
-    const span = document.createElement("span");
-    span.className = "chip";
-    span.textContent = text;
-    span.tabIndex = 0;
-    span.addEventListener("click", () => {
-      span.classList.toggle("active");
-      const on = span.classList.contains("active");
-      const i = targetArr.indexOf(text);
-      if (on && i<0) targetArr.push(text);
-      if (!on && i>=0) targetArr.splice(i,1);
-    });
-    productChips.appendChild(span);
-  }
-  function chipsFrom(list, box, inputEl){
-    box.innerHTML = "";
-    (list||[]).forEach(v=>{
-      const c=document.createElement("span");
-      c.className="chip";
-      c.textContent=v;
-      c.addEventListener("click",()=>{
-        const cur = new Set((inputEl.value||"").split(",").map(s=>s.trim()).filter(Boolean));
-        if (cur.has(v)) cur.delete(v); else cur.add(v);
-        inputEl.value = [...cur].join(", ");
-        c.classList.toggle("active");
-      });
-      box.appendChild(c);
+  // make summary obviously editable
+  function setEdit(on){
+    summaryBox.classList.toggle("edit", on);
+    toggleEditBtn.textContent = on? "✓ Done" : "✎ Edit";
+    Object.values(seg).forEach(s=>{
+      if (s===seg.company) return; // lock
+      s.setAttribute("contenteditable", on? "true":"true"); // still editable, but style toggles
     });
   }
-
-  // instant tooltips (hover + tap)
-  document.querySelectorAll(".tool[data-tip]").forEach(t=>{
-    t.addEventListener("mouseenter", ()=> t.classList.add("show"));
-    t.addEventListener("mouseleave", ()=> t.classList.remove("show"));
-    t.addEventListener("click", (e)=>{ e.stopPropagation(); t.classList.toggle("show"); });
+  toggleEditBtn.addEventListener("click", ()=>{
+    const on = !summaryBox.classList.contains("edit");
+    setEdit(on);
+    if (!on){ // leaving edit -> persist
+      state.ol = {
+        verb: seg.verb.textContent.trim()||"provides",
+        products: seg.products.textContent.trim()||"packaging",
+        sectors: seg.sectors.textContent.trim()||"brands",
+        geos: seg.geos.textContent.trim()||"the U.S.",
+        titles: seg.titles.textContent.trim()||"Operations, Procurement"
+      };
+      setStored("olVars", JSON.stringify(state.ol));
+    }
   });
-  document.addEventListener("click", ()=> {
-    document.querySelectorAll(".tool.show").forEach(t=>t.classList.remove("show"));
-  });
 
-  // AI mute
-  function applyAIMute(){
-    grpGeneral.classList.toggle("muted", aiGeneral.checked);
-    grpProduct.classList.toggle("muted", aiProduct.checked);
+  function hydrateOneLiner(company){
+    seg.company.textContent = company || "your-company";
+    seg.verb.textContent    = state.ol.verb;
+    seg.products.textContent= state.ol.products;
+    seg.sectors.textContent = state.ol.sectors;
+    seg.geos.textContent    = state.ol.geos;
+    seg.titles.textContent  = state.ol.titles;
   }
+
+  // chips
+  function chip(text, onClick){
+    const span=document.createElement("span"); span.className="chip"; span.textContent=text;
+    span.addEventListener("click",()=> onClick?.(text, span));
+    return span;
+  }
+
+  function chipsFrom(list, box, onSel){
+    box.innerHTML="";
+    (list||[]).forEach(v=> box.appendChild(chip(v,onSel)));
+  }
+
+  // AI decide switches
+  function applyAIMute(){ grpGeneral.classList.toggle("muted", aiGeneral.checked); grpProduct.classList.toggle("muted", aiProduct.checked); }
   aiGeneral.addEventListener("change", applyAIMute);
   aiProduct.addEventListener("change", applyAIMute);
 
   // advanced toggle
-  advToggle.addEventListener("click", (e)=>{
+  const advToggle = document.getElementById("advToggle");
+  const advLbl = document.getElementById("advLbl");
+  const adv = document.getElementById("advanced");
+  advToggle.addEventListener("click",(e)=>{
     e.preventDefault();
     const open = !adv.hasAttribute("hidden");
     if (open){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
     else { adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
   });
 
-  // role pick
-  function setRole(r){
-    state.role = r;
-    optSupplier.classList.toggle("active", r==="supplier");
-    optBuyer.classList.toggle("active", r==="buyer");
-  }
-  optSupplier.addEventListener("click", ()=> setRole("supplier"));
-  optBuyer.addEventListener("click", ()=> setRole("buyer"));
-  setRole("supplier");
-
-  // ---------- Email → Domain binding (real-time + autofill + manual override aware) ----------
-  let hostLockedByUser = false;
-  hostEl.addEventListener("input", () => {
-    hostLockedByUser = hostEl.value.trim().length > 0;
-  });
-
-  function syncDomain({force=false}={}){
-    const d = domainFromEmail(emailEl.value);
-    if (!d) {
-      if (force && !hostLockedByUser) hostEl.value = "";
-      return;
-    }
-    if (!hostLockedByUser || force) hostEl.value = d;
-  }
-  ["input","keyup","change","paste"].forEach(ev=> emailEl.addEventListener(ev, ()=>syncDomain({})));
-  setTimeout(()=>syncDomain({}), 60); // handle browser autofill
-  document.addEventListener("visibilitychange", ()=> { if(document.visibilityState==="visible") syncDomain({}); });
-
-  // ---------- Step flow ----------
-  document.getElementById("cta").addEventListener("click", open);
+  // step nav
+  openBtn.addEventListener("click", open);
   closeBtn.addEventListener("click", close);
   backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
   nextBtn.addEventListener("click", async ()=>{
     if (state.step===0){ show(1); return; }
     if (state.step===1){
-      if (!emailEl.value || !phoneEl.value){
-        alert("Business email and phone are required.");
-        return;
-      }
+      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
       state.email = emailEl.value.trim();
       state.host  = normHost(hostEl.value || domainFromEmail(state.email));
       if (!state.host){ alert("Please provide your website/domain."); return; }
-      await refreshFromWebsite();    // fetch summary & tags
+      await refreshFromWebsite(); // fetch & prefill one-liner + chips
       show(2);
       return;
     }
@@ -479,43 +481,80 @@
     }
   });
 
-  // ---------- Defaults for chips ----------
+  // role pick
+  function setRole(r){ state.role=r; optSupplier.classList.toggle("active", r==="supplier"); optBuyer.classList.toggle("active", r==="buyer"); }
+  optSupplier.addEventListener("click", ()=> setRole("supplier"));
+  optBuyer.addEventListener("click", ()=> setRole("buyer"));
+  setRole("supplier");
+
+  // email -> domain autofill (+ autofill support)
+  function syncDomain(){
+    const d = domainFromEmail(emailEl.value);
+    if (d && !hostEl.value) hostEl.value = d;
+  }
+  emailEl.addEventListener("input", syncDomain);
+  emailEl.addEventListener("change", syncDomain);
+  setTimeout(syncDomain, 60);
+
+  // city/sector “chips”
   const cityEl = document.getElementById("city");
   const sectorsEl = document.getElementById("sectors");
-  chipsFrom(["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"], cityChips, cityEl);
-  chipsFrom(["food","beverage","cosmetics","electronics","apparel","supplements","pharma"], sectorChips, sectorsEl);
+  chipsFrom(["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"], cityChips, (t,span)=>{
+    const cur = new Set(cityEl.value.split(",").map(s=>s.trim()).filter(Boolean));
+    if (cur.has(t)) {cur.delete(t); span.classList.remove("active");} else {cur.add(t); span.classList.add("active");}
+    cityEl.value=[...cur].join(", ");
+  });
+  function sectorClick(t,span){
+    const cur = new Set(sectorsEl.value.split(",").map(s=>s.trim()).filter(Boolean));
+    if (cur.has(t)) {cur.delete(t); span.classList.remove("active");} else {cur.add(t); span.classList.add("active");}
+    sectorsEl.value=[...cur].join(", ");
+    // also nudge one-liner sectors segment
+    const sample=[...cur].slice(0,3).join(", ");
+    if (sample) { seg.sectors.textContent = sample; state.ol.sectors = sample; }
+  }
+  chipsFrom(["food","beverage","cosmetics","electronics","apparel","supplements","pharma"], sectorChips, sectorClick);
 
-  function renderProductTags(tags){
-    productChips.innerHTML="";
-    state.productTags = [];
-    (tags||[]).slice(0,18).forEach(t=> chip(t, state.productTags));
+  // ---------- API ----------
+  async function apiGet(path){
+    const base = API_BASE.get().replace(/\/$/,"");
+    const url = base + path;
+    const r = await fetch(url,{credentials:"omit"});
+    if (!r.ok) throw new Error("http "+r.status);
+    return r.json();
   }
 
-  // ---------- API classify (try /classify then /api/classify) ----------
-  async function apiGetClassify(host, email){
-    const base = API_BASE.get().replace(/\/+$/,"");
-    const url1 = `${base}/classify?host=${encodeURIComponent(host)}${email?`&email=${encodeURIComponent(email)}`:""}`;
+  // smart rewrite from classify
+  function rewriteSummary(company, data){
+    // strip promos like "contact us..."
+    const raw = String(data.summary||"").replace(/contact\s+us.*$/i,"").replace(/\s{2,}/g," ").trim();
 
-    const tryFetch = async (u) => {
-      const r = await fetch(u, {credentials:"omit"});
-      const txt = await r.text();
-      try { return { ok: r.ok, status:r.status, json: JSON.parse(txt) }; }
-      catch { return { ok: r.ok, status:r.status, text: txt }; }
-    };
+    // choose products & sectors
+    const products = (data.productTags||[]).slice(0,4).join(", ") || "custom & retail";
+    const sectors  = (data.sectorHints||[]).slice(0,3).join(", ") || "consumer";
+    // crude geo scrape from summary (fallback none)
+    const geo = (raw.match(/in\s+([A-Z][A-Za-z]+(?:,\s*[A-Z][A-Za-z]+)*)/)||[])[1] || "";
+    // default titles
+    const titles = "Operations, Packaging, Procurement";
 
-    // Attempt #1
-    let res = await tryFetch(url1);
-    if (res.ok && res.json) return res.json;
+    // verb based on role/confidence (simple heuristic)
+    const verb = "supplies";
 
-    // Fallback to /api/classify
-    const baseNoApi = base.replace(/\/api$/i,"");
-    const url2 = `${baseNoApi}/api/classify?host=${encodeURIComponent(host)}${email?`&email=${encodeURIComponent(email)}`:""}`;
-    res = await tryFetch(url2);
-    if (res.ok && res.json) return res.json;
+    return { verb, products, sectors, geos: geo||"the U.S.", titles };
+  }
 
-    // bubble up readable error
-    const msg = res.json?.error || res.text || `http ${res.status}`;
-    throw new Error(msg);
+  // render product chips and wire to one-liner
+  function renderProductTags(tags){
+    productChips.innerHTML="";
+    (tags||[]).slice(0,18).forEach(t=>{
+      const c = chip(t,(text,span)=>{
+        span.classList.toggle("active");
+        // reflect first 3 selected into products segment
+        const selected=[...productChips.querySelectorAll(".chip.active")].map(x=>x.textContent);
+        const top = (selected.length?selected:tags).slice(0,4).join(", ");
+        seg.products.textContent = top; state.ol.products = top;
+      });
+      productChips.appendChild(c);
+    });
   }
 
   async function refreshFromWebsite(){
@@ -523,38 +562,52 @@
     if (!host) return;
 
     setFavicon(host);
-    setOneLiner(host+" — fetching summary…");
     statusEl.textContent = "";
+    seg.company.textContent = host;
 
     try{
-      const data = await apiGetClassify(host, emailEl.value||"");
-      if (data && data.ok){
-        setOneLiner(data.summary || (host+" sells packaging to brands."));
-        renderProductTags(data.productTags || []);
-        if (Array.isArray(data.sectorHints) && data.sectorHints.length){
-          chipsFrom(data.sectorHints, sectorChips, sectorsEl);
-        }
+      const q = "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(emailEl.value||"");
+      const data = await apiGet("/classify"+q);
+
+      if (data.ok){
+        state.productTags = data.productTags||[];
+        state.sectorHints = data.sectorHints||[];
+        renderProductTags(state.productTags);
+
+        // Build better default one-liner (but leave editable)
+        const ol = rewriteSummary(host, data);
+        // only overwrite empty or first-time fields; preserve user edits
+        if (!getStored("olVars")) Object.assign(state.ol, ol);
+
+        hydrateOneLiner(host);
+
+        // seed sectors chip selection visual
+        sectorChips.querySelectorAll(".chip").forEach(ch=>{
+          if (state.sectorHints.slice(0,3).includes(ch.textContent)) ch.classList.add("active");
+        });
+
+        // show cached status
         statusEl.textContent = data.cached ? " (cached)" : "";
       } else {
-        setOneLiner(host+" — network error while reading your site.");
-        renderProductTags([]);
         statusEl.textContent = "";
+        hydrateOneLiner(host);
       }
     }catch(err){
-      console.warn("classify failed:", err);
-      setOneLiner(host+" — network error while reading your site.");
-      statusEl.textContent = "";
-      renderProductTags([]);
+      console.warn(err);
+      hydrateOneLiner(host);
     }
   }
 
-  document.getElementById("refresh").addEventListener("click", (e)=>{ e.preventDefault(); refreshFromWebsite(); });
+  // manual refresh link
+  document.getElementById("refresh").addEventListener("click",(e)=>{ e.preventDefault(); refreshFromWebsite(); });
 
-  // ---------- ESC & overlay close ----------
+  // close on overlay / Esc
   modal.addEventListener("click",(e)=>{ if(e.target===modal) close(); });
   document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") close(); });
 
-  // ---------- init ----------
+  // init
+  hydrateOneLiner("your-company");
+  setEdit(false);
   show(0);
   applyAIMute();
 })();
