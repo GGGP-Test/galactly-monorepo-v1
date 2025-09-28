@@ -262,29 +262,31 @@
 
 <script>
 (() => {
-  // ---------- API BASE DETECTION ----------
-  function getStored(k){ try{return localStorage.getItem(k)||""}catch{return""} }
-  function setStored(k,v){ try{localStorage.setItem(k,v)}catch{} }
+  // ---------- API BASE (normalize + remember; supports with/without /api) ----------
+  const LS = { get:k=>{try{return localStorage.getItem(k)||""}catch{return""}}, set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}} };
+  function normalizeBase(v){
+    if(!v) return "/api";
+    v = (""+v).trim().replace(/\s+/g,"").replace(/\/+$/,"");
+    return v || "/api";
+  }
   const API_BASE = {
     get(){
-      // order: explicit window override -> localStorage -> same-origin /api
-      if (window.API_BASE && typeof window.API_BASE==="string") return window.API_BASE;
-      const saved = getStored("apiBase");
-      if (saved) return saved;
-      // If running on GitHub Pages, same-origin "/api" will 404; still return it and show a gear to set real base.
-      return "/api";
+      const src = (window.API_BASE && typeof window.API_BASE==="string") ? window.API_BASE : LS.get("apiBase");
+      return normalizeBase(src || "/api");
     },
-    set(v){ if(v) setStored("apiBase", v) }
+    set(v){ LS.set("apiBase", normalizeBase(v)); }
   };
 
-  // small gear config
-  const gear = document.getElementById("gear");
-  gear.addEventListener("click", async () => {
+  // small gear to set base
+  document.getElementById("gear").addEventListener("click", () => {
     const cur = API_BASE.get();
-    const v = prompt("API base (ends with /api). Example:\nhttps://YOUR-NORTHFLANK-SUBDOMAIN.code.run/api", cur);
+    const v = prompt(
+      "API base (with or without /api).\nExamples:\nhttps://YOUR.code.run/api\nhttps://YOUR.code.run",
+      cur
+    );
     if (!v) return;
     API_BASE.set(v);
-    alert("Saved. I’ll use:\n" + API_BASE.get());
+    alert("Saved: " + API_BASE.get() + "\nI'll try both /classify and /api/classify.");
   });
 
   // ---------- ELEMENTS ----------
@@ -332,15 +334,7 @@
   };
 
   // ---------- STATE ----------
-  const state = {
-    step:0,
-    role:"supplier",
-    email:"",
-    host:"",
-    summary:"",
-    productTags:[],
-    sectorHints:[],
-  };
+  const state = { step:0, role:"supplier", email:"", host:"", productTags:[], sectorHints:[] };
 
   // ---------- UTIL ----------
   const $ = sel => document.querySelector(sel);
@@ -360,6 +354,7 @@
     if (!h) return "";
     return String(h).trim().toLowerCase()
       .replace(/^https?:\/\//,"")
+      .replace(/^www\./,"")
       .replace(/\/.*$/,"");
   }
   function domainFromEmail(e){
@@ -368,15 +363,14 @@
   }
   function setFavicon(host){
     const h = normHost(host);
-    if(!h){ favEl.src=""; return; }
-    // try duckduckgo ip3
+    if(!h){ favEl.src=""; favEl.style.display="none"; return; }
     favEl.src = "https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico";
     favEl.onerror = () => { favEl.style.display="none"; };
     favEl.style.display="";
   }
-  function setOneLiner(txt){
-    oneEl.textContent = txt;
-  }
+  function setOneLiner(txt){ oneEl.textContent = txt; }
+
+  // chip helpers
   function chip(text, targetArr){
     const span = document.createElement("span");
     span.className = "chip";
@@ -391,25 +385,23 @@
     });
     productChips.appendChild(span);
   }
-  function chipsFrom(list, box){
+  function chipsFrom(list, box, inputEl){
     box.innerHTML = "";
-    list.forEach(v=>{
+    (list||[]).forEach(v=>{
       const c=document.createElement("span");
       c.className="chip";
       c.textContent=v;
       c.addEventListener("click",()=>{
-        // toggle into the input field as comma list
-        const el = (box===cityChips)? cityEl : sectorsEl;
-        const cur = new Set(el.value.split(",").map(s=>s.trim()).filter(Boolean));
+        const cur = new Set((inputEl.value||"").split(",").map(s=>s.trim()).filter(Boolean));
         if (cur.has(v)) cur.delete(v); else cur.add(v);
-        el.value = [...cur].join(", ");
+        inputEl.value = [...cur].join(", ");
         c.classList.toggle("active");
       });
       box.appendChild(c);
     });
   }
 
-  // tooltips: instant on hover or tap
+  // instant tooltips (hover + tap)
   document.querySelectorAll(".tool[data-tip]").forEach(t=>{
     t.addEventListener("mouseenter", ()=> t.classList.add("show"));
     t.addEventListener("mouseleave", ()=> t.classList.remove("show"));
@@ -419,7 +411,7 @@
     document.querySelectorAll(".tool.show").forEach(t=>t.classList.remove("show"));
   });
 
-  // AI decide switches
+  // AI mute
   function applyAIMute(){
     grpGeneral.classList.toggle("muted", aiGeneral.checked);
     grpProduct.classList.toggle("muted", aiProduct.checked);
@@ -430,13 +422,41 @@
   // advanced toggle
   advToggle.addEventListener("click", (e)=>{
     e.preventDefault();
-    const open = adv.hasAttribute("hidden") ? false : true;
+    const open = !adv.hasAttribute("hidden");
     if (open){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
     else { adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
   });
 
-  // step wiring
-  openBtn.addEventListener("click", open);
+  // role pick
+  function setRole(r){
+    state.role = r;
+    optSupplier.classList.toggle("active", r==="supplier");
+    optBuyer.classList.toggle("active", r==="buyer");
+  }
+  optSupplier.addEventListener("click", ()=> setRole("supplier"));
+  optBuyer.addEventListener("click", ()=> setRole("buyer"));
+  setRole("supplier");
+
+  // ---------- Email → Domain binding (real-time + autofill + manual override aware) ----------
+  let hostLockedByUser = false;
+  hostEl.addEventListener("input", () => {
+    hostLockedByUser = hostEl.value.trim().length > 0;
+  });
+
+  function syncDomain({force=false}={}){
+    const d = domainFromEmail(emailEl.value);
+    if (!d) {
+      if (force && !hostLockedByUser) hostEl.value = "";
+      return;
+    }
+    if (!hostLockedByUser || force) hostEl.value = d;
+  }
+  ["input","keyup","change","paste"].forEach(ev=> emailEl.addEventListener(ev, ()=>syncDomain({})));
+  setTimeout(()=>syncDomain({}), 60); // handle browser autofill
+  document.addEventListener("visibilitychange", ()=> { if(document.visibilityState==="visible") syncDomain({}); });
+
+  // ---------- Step flow ----------
+  document.getElementById("cta").addEventListener("click", open);
   closeBtn.addEventListener("click", close);
   backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
   nextBtn.addEventListener("click", async ()=>{
@@ -449,58 +469,53 @@
       state.email = emailEl.value.trim();
       state.host  = normHost(hostEl.value || domainFromEmail(state.email));
       if (!state.host){ alert("Please provide your website/domain."); return; }
-      // go fetch summary/classify
-      await refreshFromWebsite();
+      await refreshFromWebsite();    // fetch summary & tags
       show(2);
       return;
     }
     if (state.step===2){
-      // Finish -> navigate to free panel later
       alert("Saved! (Demo) You’ll go to the free panel next.");
       close();
     }
   });
 
-  // role pick
-  function setRole(r){
-    state.role = r;
-    optSupplier.classList.toggle("active", r==="supplier");
-    optBuyer.classList.toggle("active", r==="buyer");
-    document.querySelector('[data-step-dot="0"]').classList.add("on");
-  }
-  optSupplier.addEventListener("click", ()=> setRole("supplier"));
-  optBuyer.addEventListener("click", ()=> setRole("buyer"));
-  setRole("supplier");
-
-  // email -> domain autofill (also reacts to autofill)
-  function syncDomain(){
-    const d = domainFromEmail(emailEl.value);
-    if (d && !hostEl.value) hostEl.value = d;
-  }
-  emailEl.addEventListener("input", syncDomain);
-  emailEl.addEventListener("change", syncDomain);
-  setTimeout(syncDomain, 50); // capture browser autofill
-
-  // city & sector defaults
+  // ---------- Defaults for chips ----------
   const cityEl = document.getElementById("city");
   const sectorsEl = document.getElementById("sectors");
-  chipsFrom(["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"], cityChips);
-  chipsFrom(["food","beverage","cosmetics","electronics","apparel","supplements","pharma"], sectorChips);
+  chipsFrom(["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"], cityChips, cityEl);
+  chipsFrom(["food","beverage","cosmetics","electronics","apparel","supplements","pharma"], sectorChips, sectorsEl);
 
-  // product tags dynamic from classify
   function renderProductTags(tags){
     productChips.innerHTML="";
     state.productTags = [];
     (tags||[]).slice(0,18).forEach(t=> chip(t, state.productTags));
   }
 
-  // ---------- API CALLS ----------
-  async function apiGet(path){
-    const base = API_BASE.get();
-    const url = base.replace(/\/$/,"") + path;
-    const r = await fetch(url, {credentials:"omit"});
-    if (!r.ok) throw new Error("http "+r.status);
-    return r.json();
+  // ---------- API classify (try /classify then /api/classify) ----------
+  async function apiGetClassify(host, email){
+    const base = API_BASE.get().replace(/\/+$/,"");
+    const url1 = `${base}/classify?host=${encodeURIComponent(host)}${email?`&email=${encodeURIComponent(email)}`:""}`;
+
+    const tryFetch = async (u) => {
+      const r = await fetch(u, {credentials:"omit"});
+      const txt = await r.text();
+      try { return { ok: r.ok, status:r.status, json: JSON.parse(txt) }; }
+      catch { return { ok: r.ok, status:r.status, text: txt }; }
+    };
+
+    // Attempt #1
+    let res = await tryFetch(url1);
+    if (res.ok && res.json) return res.json;
+
+    // Fallback to /api/classify
+    const baseNoApi = base.replace(/\/api$/i,"");
+    const url2 = `${baseNoApi}/api/classify?host=${encodeURIComponent(host)}${email?`&email=${encodeURIComponent(email)}`:""}`;
+    res = await tryFetch(url2);
+    if (res.ok && res.json) return res.json;
+
+    // bubble up readable error
+    const msg = res.json?.error || res.text || `http ${res.status}`;
+    throw new Error(msg);
   }
 
   async function refreshFromWebsite(){
@@ -512,14 +527,13 @@
     statusEl.textContent = "";
 
     try{
-      const q = "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(emailEl.value||"");
-      const data = await apiGet("/classify"+q);
-      // classifier now returns: ok, role, confidence, productTags, sectorHints, summary, cached, bytes
-      if (data.ok){
-        const line = data.summary || (host+" sells packaging to brands.");
-        setOneLiner(line);
+      const data = await apiGetClassify(host, emailEl.value||"");
+      if (data && data.ok){
+        setOneLiner(data.summary || (host+" sells packaging to brands."));
         renderProductTags(data.productTags || []);
-        chipsFrom(data.sectorHints || ["food","beverage","cosmetics"], sectorChips);
+        if (Array.isArray(data.sectorHints) && data.sectorHints.length){
+          chipsFrom(data.sectorHints, sectorChips, sectorsEl);
+        }
         statusEl.textContent = data.cached ? " (cached)" : "";
       } else {
         setOneLiner(host+" — network error while reading your site.");
@@ -527,19 +541,20 @@
         statusEl.textContent = "";
       }
     }catch(err){
+      console.warn("classify failed:", err);
       setOneLiner(host+" — network error while reading your site.");
       statusEl.textContent = "";
-      console.warn(err);
+      renderProductTags([]);
     }
   }
 
-  refreshA.addEventListener("click", (e)=>{ e.preventDefault(); refreshFromWebsite(); });
+  document.getElementById("refresh").addEventListener("click", (e)=>{ e.preventDefault(); refreshFromWebsite(); });
 
   // ---------- ESC & overlay close ----------
   modal.addEventListener("click",(e)=>{ if(e.target===modal) close(); });
   document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") close(); });
 
-  // ---------- initial ----------
+  // ---------- init ----------
   show(0);
   applyAIMute();
 })();
