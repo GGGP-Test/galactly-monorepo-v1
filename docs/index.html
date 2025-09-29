@@ -1,82 +1,76 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Galactly — Find real packaging buyers</title>
-
 <link rel="preconnect" href="https://icons.duckduckgo.com">
 <style>
   :root{
     --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c;
     --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
-    --cta:#6de1ff; --ctaText:#082433; --chip:#1a2433;
-    --chipActive:#103247; --accent:#38e08f; --danger:#ff7b7b; --divider:#1b2531;
-    --ring:#24435f;
+    --cta:#6de1ff; --ctaText:#082433; --chip:#1d2735;
+    --chipActive:#0e3b52; --accent:#38e08f; --danger:#ff7b7b; --divider:#1c2532;
   }
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
   a{color:var(--brand);text-decoration:none}
-  .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%);}
+  .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;background:radial-gradient(1200px 600px at 50% -200px,#102132 0,transparent 70%)}
   .hero-inner{max-width:920px;text-align:center}
   h1{font-size:clamp(32px,6vw,56px);margin:0 0 12px}
   p.lead{color:var(--muted);margin:0 0 28px}
   .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
-  .btn.sec{background:#152333;color:#cfe0ee}
+  .btn .spark{filter:drop-shadow(0 2px 6px rgba(109,225,255,.55))}
   .btn:active{transform:translateY(1px)}
 
   /* modal */
   .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
   .modal.show{display:flex}
-  .card{width:min(980px,92vw);background:var(--panel);border:1px solid:var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
+  .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
   .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
   .steps{display:flex;gap:8px;align-items:center}
   .dot{width:8px;height:8px;border-radius:50%;background:#2a3444}
   .dot.on{background:#5bd0ff}
   .card-bd{padding:18px}
-  .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--divider)}
   .scroll{max-height:70vh;overflow:auto;padding:6px 6px}
+  .row{display:flex;gap:18px;flex-wrap:wrap}
+  .col{flex:1 1 0}
+  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:var(--muted);font-size:12px}
+  .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
+  .gear{background:transparent;border:none;color:#99b4c7;cursor:pointer}
 
   /* inputs */
   .field{margin:10px 0}
   label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
-  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input[type=text],input[type=email],input[type=tel]{
+    width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none
+  }
   input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
 
-  /* summary (sentence editor) */
-  .summary{display:flex;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:12px 14px;border-radius:14px;margin:0 0 14px;align-items:flex-start}
-  .fav{width:24px;height:24px;border-radius:6px;background:#122;display:grid;place-items:center;overflow:hidden;flex:0 0 auto}
+  /* summary (editable chips) */
+  .summary{display:flex;align-items:center;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:14px 16px;border-radius:14px;margin-bottom:12px}
+  .summary-editable{display:flex;flex-wrap:wrap;gap:6px;padding:6px;background:#0b1220;border-radius:10px}
+  .token{padding:6px 10px;border-radius:10px;background:#0f1b28;border:1px dashed #2b3a4f;color:#d9e6f2}
+  .token input{background:transparent;border:none;color:inherit;min-width:30px;max-width:240px}
+  .token.lock{background:#172233;border-style:solid;font-weight:700}
+  .edit-btn{padding:6px 10px;border-radius:999px;background:#12344a;border:1px solid #2b4e66;color:#d7f1ff;cursor:pointer}
   .one{font-weight:700}
-  .one-line{line-height:1.8}
-  .token{display:inline-block;border-radius:8px;padding:2px 6px;margin:0 2px}
-  .token[data-lock="true"]{background:transparent;color:#dfeaf5;border:0}
-  .sentence{--bgx:#0f1926}
-  .sentence .token[data-editable="true"]{background:transparent;border-bottom:1px dashed #3a5572}
-  .sentence.editing .token[data-editable="true"]{background:var(--bgx);border:1px solid #2b425a}
-  .sentence .token:focus{outline:2px solid var(--ring)}
-  .edit-actions{display:flex;gap:8px;margin-top:6px}
-  .big-edit{padding:6px 10px;border-radius:10px;background:#172839;border:1px solid #274059;color:#d8e8f7;font-weight:600;cursor:pointer}
-  .big-edit.primary{background:var(--cta);border:none;color:#06293a}
+  .subtle{color:#9ab0c0;font-size:13px}
 
   /* groups */
   .group{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px;margin:14px 0}
   .group h4{margin:0 0 8px}
-  .muted-hint{font-size:12px;color:#99b2c8;margin-left:8px}
-  .mute-wrap.muted{opacity:.45}
-  .mute-wrap.muted *{pointer-events:none}
-  .mute-wrap.muted .keep-live{pointer-events:auto;opacity:1}
-
+  .help{font-size:12px;color:#8fa8bb;margin:6px 0 10px}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#102233;color:#bcd1e2;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
+  .chip.active{background:#0e3b52;color:#dff6ff;border-color:#1d4c66}
   .chips{user-select:none}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041}
-  .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
+  .muted *{opacity:.45;pointer-events:none}
+  .tool{display:inline-block;width:16px;height:16px;border-radius:50%;background:#233244;color:#bcd1e2;text-align:center;line-height:16px;font-size:11px;margin-left:6px;cursor:pointer}
+  .tooltip{position:absolute;z-index:10;background:#0b111a;border:1px solid var(--divider);padding:8px 10px;border-radius:8px;font-size:12px;color:#cfe1ef;display:none}
+  .tool[data-tip]:hover + .tooltip,.tool[data-tip].show + .tooltip{display:block}
+  .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--divider)}
+  .btn.sec{background:#152333;color:#bcd1e2}
 
-  /* sliders */
-  .slider-row{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:center;margin:10px 0}
-  .slider-row input[type=range]{width:100%}
-
-  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
-  .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
-  .gear{background:transparent;border:none;color:#99b4c7;cursor:pointer}
-  @media (max-width:800px){.slider-row{grid-template-columns:1fr}}
+  @media (max-width:800px){.row{flex-direction:column}}
 </style>
 </head>
 <body>
@@ -88,7 +82,7 @@
     </div>
   </div>
 
-  <!-- modal -->
+  <!-- Onboarding modal -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="card" role="document">
       <div class="card-hd">
@@ -105,15 +99,18 @@
 
       <div class="card-bd">
         <div class="scroll">
-
           <!-- STEP 1 -->
           <section class="step" id="step1">
             <div class="pill">Get set up in 60 seconds</div>
             <h2 style="margin:10px 0 14px;">Pick your side</h2>
-            <div class="group">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-                <div id="opt-supplier" class="chip active" style="user-select:none;cursor:pointer">🙌 I sell packaging (Supplier)</div>
-                <div id="opt-buyer" class="chip" style="user-select:none;cursor:pointer">🛒 I buy packaging (Buyer)</div>
+            <div class="row" role="listbox" aria-label="Choose role">
+              <div id="opt-supplier" class="group" tabindex="0" role="option" aria-selected="true">
+                <h3>🙌 I sell packaging <small>(Supplier)</small></h3>
+                You’ll get buyer leads tuned to your strengths.
+              </div>
+              <div id="opt-buyer" class="group" tabindex="0" role="option" aria-selected="false">
+                <h3>🛒 I buy packaging <small>(Buyer)</small></h3>
+                We’re prioritizing suppliers. Buyers can browse too (limited).
               </div>
             </div>
           </section>
@@ -122,36 +119,32 @@
           <section class="step" id="step2" hidden>
             <div class="pill">Step 2 of 3</div>
             <h2 style="margin:10px 0 14px;">Tell us who you are</h2>
-
-            <div class="group">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-                <div>
-                  <div class="field">
-                    <label>Your name</label>
-                    <input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter">
-                  </div>
-                  <div class="field">
-                    <label>Phone (required for alerts) *</label>
-                    <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/>
-                    <div style="color:#9ab0c0;font-size:12px">Country code helps us personalize geography (e.g., “+1” for U.S.).</div>
-                  </div>
+            <div class="row">
+              <div class="col">
+                <div class="field">
+                  <label>Your name</label>
+                  <input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter">
                 </div>
-                <div>
-                  <div class="field">
-                    <label>Business email *</label>
-                    <input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required/>
-                  </div>
-                  <div class="field">
-                    <label>Website / Domain (auto from email)</label>
-                    <input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/>
-                    <div style="color:#9ab0c0;font-size:12px">Auto-filled from your email as you type. You can edit.</div>
-                  </div>
+                <div class="field">
+                  <label>Phone (required for alerts) *</label>
+                  <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567" />
+                </div>
+              </div>
+              <div class="col">
+                <div class="field">
+                  <label>Business email *</label>
+                  <input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required />
+                </div>
+                <div class="field">
+                  <label>Website / Domain (auto from email)</label>
+                  <input id="host" type="text" inputmode="url" placeholder="yourcompany.com" />
+                  <div class="subtle">Auto-filled from your email as you type. You can edit.</div>
                 </div>
               </div>
             </div>
 
             <div class="group" style="display:flex;align-items:center;justify-content:space-between">
-              <div style="color:#9ab0c0">Testing mode: verification skipped.</div>
+              <div class="subtle">Testing mode: verification skipped.</div>
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                 <input id="skipVerify" type="checkbox" checked> I’m just testing (skip verification)
               </label>
@@ -162,80 +155,72 @@
           <section class="step" id="step3" hidden>
             <div class="pill">Step 3 of 3</div>
 
-            <!-- sentence editor -->
+            <!-- editable one-liner -->
             <div class="summary">
               <div class="fav"><img id="fav" alt="" width="24" height="24" referrerpolicy="no-referrer"></div>
               <div style="flex:1">
-                <div id="sentence" class="one one-line sentence" aria-live="polite"></div>
-                <div class="edit-actions">
-                  <button id="editLine" class="big-edit">Edit</button>
-                  <button id="doneLine" class="big-edit primary" hidden>Done</button>
-                  <a id="refresh" href="#" class="big-edit" style="background:#142133;border-color:#25384b;color:#a9c3d8">Refresh from website</a>
-                  <span id="status" class="muted-hint"></span>
+                <div id="oneWrap" class="summary-editable" aria-live="polite">
+                  <!-- tokens injected -->
+                </div>
+                <div class="subtle" style="display:flex;gap:10px;align-items:center;margin-top:6px">
+                  <a id="refresh" href="#" role="button">Refresh from website</a>
+                  <button id="editLine" class="edit-btn" type="button">✎ Edit one-liner</button>
+                  <span id="status" class="subtle"></span>
                 </div>
               </div>
             </div>
 
-            <button id="advToggle" class="btn sec" style="padding:8px 12px;border-radius:999px;margin-bottom:8px">
+            <button id="advToggle" class="btn sec" style="padding:8px 12px;border-radius:999px">
               <span id="advLbl">Show advanced ▾</span>
             </button>
 
             <div id="advanced" hidden>
-              <div class="group">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-                  <!-- general -->
-                  <div class="group" id="grp-general">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                      <h4 style="margin:0">General preferences</h4>
-                      <label class="keep-live" style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                        <input id="aiGeneral" type="checkbox"> Let AI decide
-                      </label>
-                    </div>
-                    <div class="mute-wrap" id="generalWrap">
-                      <label class="chip"><input id="gp-near" type="checkbox" checked> 📍 Prioritize nearby buyers</label>
-                      <label class="chip"><input id="gp-ecom" type="checkbox" checked> 🛒 Prefer e-commerce sites</label>
-                      <label class="chip"><input id="gp-retail" type="checkbox"> 🏬 Prefer retail brands</label>
-                      <label class="chip"><input id="gp-wholesale" type="checkbox"> 📦 Prefer wholesalers / distributors</label>
-                      <label class="chip"><input id="gp-mids" type="checkbox" checked> 🏗️ Prefer mid-size companies</label>
-                      <label class="chip"><input id="gp-avoidBig" type="checkbox" checked> 🏢 De-prioritize giant enterprises</label>
-                    </div>
-                  </div>
+              <div class="help" style="margin-top:10px;">Optional: refine ranking and add product-specific details.</div>
 
-                  <!-- product tags -->
-                  <div class="group" id="grp-product">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                      <h4 style="margin:0">Product signals (from your site)</h4>
-                      <label class="keep-live" style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                        <input id="aiProduct" type="checkbox"> Let AI decide
-                      </label>
-                    </div>
-                    <div class="mute-wrap" id="productWrap">
-                      <div id="productChips" class="chips" aria-live="polite">Tap to select. We’ll use these as focus tags.</div>
-                    </div>
+              <div class="row">
+                <!-- General preferences (checkboxes) -->
+                <div class="col group" id="grp-general">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h4>General preferences</h4>
+                    <label style="display:flex;align-items:center;gap:6px"><input id="aiGeneral" type="checkbox"> Let AI decide</label>
                   </div>
+                  <label><input type="checkbox" id="prefNear" checked> 📍 Prioritize nearby buyers</label>
+                  <label><input type="checkbox" id="prefEcom" checked> 🛒 Prefer e-commerce sites</label>
+                  <label><input type="checkbox" id="prefRetail"> 🏬 Prefer retail brands</label>
+                  <label><input type="checkbox" id="prefWholesalers"> 🧱 Prefer wholesalers / distributors</label>
+                  <label><input type="checkbox" id="prefMid" checked> 🏗️ Prefer mid-size companies</label>
+                  <label><input type="checkbox" id="prefAvoidA" checked> 🏢 De-prioritize giant enterprises</label>
+                </div>
+
+                <!-- Product signals -->
+                <div class="col group" id="grp-product">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h4>Product signals (from your site)</h4>
+                    <label style="display:flex;align-items:center;gap:6px"><input id="aiProduct" type="checkbox"> Let AI decide</label>
+                  </div>
+                  <div id="productChips" class="chips" aria-live="polite">Tap to select. We’ll use these as focus tags.</div>
                 </div>
               </div>
 
-              <!-- Buyer intelligence / dynamic metrics -->
-              <div class="group">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                  <h4 style="margin:0">Buyer priorities (dynamic)</h4>
-                  <div class="muted-hint">Tell us how much your buyers care about these.</div>
+              <!-- Dynamic buyer intelligence sliders (if classifier provides them) -->
+              <div class="group" id="grp-buyerintel" hidden>
+                <div style="display:flex;justify-content:space-between;align-items:end">
+                  <h4>Buyer intelligence (dynamic)</h4>
+                  <div class="subtle">Tell us how much your buyers care about these.</div>
                 </div>
-                <div id="metricsBox"></div>
+                <div id="biList"></div>
               </div>
 
-              <!-- targeting -->
               <div class="group">
-                <h4 style="margin:0 0 8px">Buyer targeting</h4>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-                  <div>
+                <h4>Buyer targeting</h4>
+                <div class="row">
+                  <div class="col">
                     <label>Find buyers near…</label>
                     <input id="city" type="text" placeholder="e.g., Chicago">
                     <div id="cityChips" class="chips" style="margin-top:6px"></div>
-                    <div style="color:#9ab0c0;font-size:12px">We’ll boost leads near this city.</div>
+                    <div class="subtle">We’ll boost leads near this city.</div>
                   </div>
-                  <div>
+                  <div class="col">
                     <label>Buyers in these sectors</label>
                     <input id="sectors" type="text" placeholder="e.g., food, beverage, cosmetics">
                     <div id="sectorChips" class="chips" style="margin-top:6px"></div>
@@ -257,24 +242,25 @@
 <script>
 (() => {
   // ---------- API BASE ----------
-  function getStored(k){try{return localStorage.getItem(k)||""}catch{return""}}
-  function setStored(k,v){try{localStorage.setItem(k,v)}catch{}}
+  function getStored(k){ try{return localStorage.getItem(k)||""}catch{return""} }
+  function setStored(k,v){ try{localStorage.setItem(k,v)}catch{} }
   const API_BASE = {
     get(){
       if (window.API_BASE && typeof window.API_BASE==="string") return window.API_BASE;
       const saved = getStored("apiBase");
-      return saved || "/api";         // GH pages will 404; we prompt via ⚙️
+      return saved || "/api";
     },
     set(v){ if(v) setStored("apiBase", v) }
   };
 
-  // quick gear editor
-  document.getElementById("gear").addEventListener("click",()=>{
+  // small gear config
+  const gear = document.getElementById("gear");
+  gear.addEventListener("click", () => {
     const cur = API_BASE.get();
-    const v = prompt("API base (ends with /api). Example:\nhttps://YOUR-NORTHFLANK.code.run/api", cur);
-    if(!v) return;
+    const v = prompt("API base (ends with /api). Example:\nhttps://YOUR-NORTHFLANK-SUBDOMAIN.code.run/api", cur);
+    if (!v) return;
     API_BASE.set(v);
-    alert("Saved. Using:\n"+API_BASE.get());
+    alert("Saved. I’ll use:\n" + API_BASE.get());
   });
 
   // ---------- ELEMENTS ----------
@@ -285,314 +271,324 @@
   const nextBtn = document.getElementById("next");
   const dots = [...document.querySelectorAll("[data-step-dot]")];
 
-  const optSupplier = document.getElementById("opt-supplier");
-  const optBuyer = document.getElementById("opt-buyer");
-
   const emailEl = document.getElementById("email");
   const hostEl  = document.getElementById("host");
   const phoneEl = document.getElementById("phone");
 
   const favEl = document.getElementById("fav");
-  const sentence = document.getElementById("sentence");
+  const oneWrap = document.getElementById("oneWrap");
   const editBtn = document.getElementById("editLine");
-  const doneBtn = document.getElementById("doneLine");
   const refreshA = document.getElementById("refresh");
   const statusEl = document.getElementById("status");
 
-  const adv = document.getElementById("advanced");
   const advToggle = document.getElementById("advToggle");
   const advLbl = document.getElementById("advLbl");
+  const adv = document.getElementById("advanced");
 
-  const productChips = document.getElementById("productChips");
-  const metricsBox = document.getElementById("metricsBox");
   const aiGeneral = document.getElementById("aiGeneral");
   const aiProduct = document.getElementById("aiProduct");
-  const generalWrap = document.getElementById("generalWrap");
-  const productWrap = document.getElementById("productWrap");
+  const grpGeneral = document.getElementById("grp-general");
+  const grpProduct = document.getElementById("grp-product");
 
-  const cityEl = document.getElementById("city");
-  const sectorsEl = document.getElementById("sectors");
+  const productChips = document.getElementById("productChips");
   const cityChips = document.getElementById("cityChips");
   const sectorChips = document.getElementById("sectorChips");
+  const grpBI = document.getElementById("grp-buyerintel");
+  const biList = document.getElementById("biList");
 
-  // ---------- STATE ----------
+  const slugsGeneral = ["prefNear","prefEcom","prefRetail","prefWholesalers","prefMid","prefAvoidA"];
+
   const state = {
-    step:0,
-    role:"supplier",
-    email:"",
-    host:"",
-    line:{ host:"your-company.com", verb:"supplies", products:"packaging", audience:"brands", region:"the U.S.", contacts:"Operations, Procurement" },
-    productTags:[],
-    sectorHints:[],
-    metrics:[],   // {label, value}
-    touched:{general:false, product:false, metrics:false}
+    step:0, role:"supplier",
+    email:"", host:"",
+    tokens:[], productTags:[], sectorHints:[],
+    buyerIntel:[], // [{label, weight}]
+    hostAuto:true
   };
 
   // ---------- UTIL ----------
+  const $ = sel => document.querySelector(sel);
   function show(step){
     state.step = step;
     ["#step1","#step2","#step3"].forEach((id,i)=>{
-      const el=document.querySelector(id); if(!el) return;
-      el.hidden = i!==step;
-      dots[i].classList.toggle("on", i===step);
+      const el=$(id); if(!el) return;
+      el.hidden = i!==step; dots[i].classList.toggle("on", i===step);
     });
     backBtn.style.visibility = step===0? "hidden":"visible";
     nextBtn.textContent = step===2? "Finish":"Next";
   }
   function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
   function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
-  function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
-  function domainFromEmail(e){ const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m? m[1]:""; }
+  function normHost(h){
+    if (!h) return "";
+    return String(h).trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
+  }
+  function domainFromEmail(e){
+    const m = (e||"").toLowerCase().match(/@([a-z0-9.-]+)/);
+    return m? m[1] : "";
+  }
   function setFavicon(host){
-    const h=normHost(host);
-    if(!h){ favEl.src=""; favEl.style.display="none"; return; }
+    const h = normHost(host);
+    if(!h){ favEl.src=""; return; }
     favEl.style.display="";
-    favEl.src="https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico";
-    favEl.onerror=()=>{ favEl.style.display="none"; };
+    favEl.onerror = null;
+    favEl.src = "https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico";
+    favEl.onerror = () => {
+      favEl.onerror = null;
+      favEl.src = "https://www.google.com/s2/favicons?domain="+encodeURIComponent(h)+"&sz=64";
+      favEl.onerror = () => { favEl.style.display="none"; };
+    };
   }
 
-  // sentence render & edit
-  function renderSentence(editing=false){
-    const L = state.line;
-    const tpl = [
-      {k:"host", txt:L.host, lock:true},
-      {txt:"—", lock:true},
-      {k:"verb", txt:L.verb},
-      {k:"products", txt:L.products},
-      {txt:"for", lock:true},
-      {k:"audience", txt:L.audience},
-      {txt:"in", lock:true},
-      {k:"region", txt:L.region},
-      {txt:".", lock:true},
-      {txt:"Best contacts:", lock:true},
-      {k:"contacts", txt:L.contacts}
-    ];
-    sentence.classList.toggle("editing", editing);
-    sentence.innerHTML = "";
-    for (const part of tpl){
+  // editable one-liner tokens
+  function renderTokens(parts){
+    oneWrap.innerHTML="";
+    const mk = (text, lock=false) => {
       const span = document.createElement("span");
-      span.className="token";
-      span.dataset.lock = part.lock ? "true":"false";
-      if (!part.lock){
-        span.dataset.editable="true";
-        span.contentEditable = editing;
-        span.addEventListener("input",()=>{ state.line[part.k]=span.textContent.trim(); });
+      span.className = "token"+(lock?" lock":"");
+      if (lock){
+        span.textContent = text;
+      }else{
+        const inp=document.createElement("input");
+        inp.value = text;
+        inp.addEventListener("input", syncTokensFromUI);
+        span.appendChild(inp);
       }
-      span.textContent = part.txt;
-      sentence.appendChild(span);
-      sentence.appendChild(document.createTextNode(" "));
-    }
+      oneWrap.appendChild(span);
+    };
+    // structure: [HOST(lock), "—", verb, product, "for", audience, "in", region, ".", "Best contacts:", roles, "."]
+    mk(state.host, true);
+    mk("—", true);
+    (parts || ["supplies","packaging","for","brands","in","the U.S.","." ,"Best contacts:", "Operations, Procurement","."]).forEach(p=>{
+      const lock = ["—",".","Best contacts:"].includes(p);
+      mk(p, lock);
+    });
+    syncTokensFromUI();
+  }
+  function tokensToSentence(){
+    const pieces=[];
+    oneWrap.querySelectorAll(".token").forEach(t=>{
+      const lock = t.classList.contains("lock");
+      if (lock) pieces.push(t.textContent.trim());
+      else {
+        const v = (t.querySelector("input")?.value||"").trim();
+        if (v) pieces.push(v);
+      }
+    });
+    return pieces.join(" ").replace(/\s+([—.])/g,'$1');
+  }
+  function syncTokensFromUI(){
+    state.tokens = Array.from(oneWrap.querySelectorAll(".token")).map(t=>{
+      const lock = t.classList.contains("lock");
+      return lock ? t.textContent.trim() : (t.querySelector("input")?.value||"").trim();
+    });
+    // accessibility: set a title
+    oneWrap.setAttribute("title", tokensToSentence());
   }
 
-  editBtn.addEventListener("click", ()=>{ renderSentence(true); editBtn.hidden=true; doneBtn.hidden=false; });
-  doneBtn.addEventListener("click", ()=>{ renderSentence(false); editBtn.hidden=false; doneBtn.hidden=true; });
+  function chip(text){
+    const span = document.createElement("span");
+    span.className = "chip";
+    span.textContent = text;
+    span.tabIndex = 0;
+    span.addEventListener("click", () => {
+      span.classList.toggle("active");
+      const on = span.classList.contains("active");
+      const i = state.productTags.indexOf(text);
+      if (on && i<0) state.productTags.push(text);
+      if (!on && i>=0) state.productTags.splice(i,1);
+    });
+    productChips.appendChild(span);
+  }
+  function chipsFrom(list, box, inputEl){
+    box.innerHTML="";
+    list.forEach(v=>{
+      const c=document.createElement("span");
+      c.className="chip"; c.textContent=v;
+      c.addEventListener("click",()=>{
+        const cur = new Set((inputEl.value||"").split(",").map(s=>s.trim()).filter(Boolean));
+        if (cur.has(v)) cur.delete(v); else cur.add(v);
+        inputEl.value = [...cur].join(", ");
+        c.classList.toggle("active");
+      });
+      box.appendChild(c);
+    });
+  }
 
-  // adv toggle
-  advToggle.addEventListener("click",(e)=>{
+  // AI decide muting (but not the toggle itself)
+  function applyAIMute(){
+    grpGeneral.classList.toggle("muted", aiGeneral.checked);
+    grpProduct.classList.toggle("muted", aiProduct.checked);
+    aiGeneral.closest("label").style.opacity = 1;
+    aiProduct.closest("label").style.opacity = 1;
+  }
+  aiGeneral.addEventListener("change", applyAIMute);
+  aiProduct.addEventListener("change", applyAIMute);
+
+  // advanced toggle
+  advToggle.addEventListener("click", (e)=>{
     e.preventDefault();
     const open = !adv.hasAttribute("hidden");
     if (open){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
     else { adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
   });
 
-  // role toggles
-  function setRole(r){
-    state.role=r;
-    optSupplier.classList.toggle("active", r==="supplier");
-    optBuyer.classList.toggle("active", r==="buyer");
-  }
-  optSupplier.addEventListener("click", ()=>setRole("supplier"));
-  optBuyer.addEventListener("click", ()=>setRole("buyer"));
-
-  // email → domain (real-time)
-  function syncDomain(){
-    const d = domainFromEmail(emailEl.value);
-    if (d) hostEl.value = d;
-  }
-  emailEl.addEventListener("input", syncDomain);
-  emailEl.addEventListener("keyup", syncDomain);
-  emailEl.addEventListener("change", syncDomain);
-  setTimeout(syncDomain, 120); // capture browser autofill
-
-  // AI decide muting (only content, not toggles)
-  function applyMute(){
-    generalWrap.classList.toggle("muted", aiGeneral.checked);
-    productWrap.classList.toggle("muted", aiProduct.checked);
-  }
-  aiGeneral.addEventListener("change", applyMute);
-  aiProduct.addEventListener("change", applyMute);
-
-  // chips helpers
-  function addChip(text, box, pickSet){
-    const s=document.createElement("span"); s.className="chip"; s.textContent=text;
-    s.addEventListener("click",()=>{ s.classList.toggle("active"); 
-      if(pickSet){
-        if(s.classList.contains("active")) pickSet.add(text); else pickSet.delete(text);
-        state.touched.product=true;
-      }
-    });
-    box.appendChild(s);
-  }
-  function chipsFrom(list, box){
-    box.innerHTML=""; (list||[]).forEach(v=>addChip(v, box));
-  }
-
-  // metrics
-  function renderMetrics(labels){
-    metricsBox.innerHTML="";
-    state.metrics = (labels||[]).slice(0,20).map(l=>({label:l, value:8}));
-    for (const m of state.metrics){
-      const row=document.createElement("div"); row.className="slider-row";
-      const lab=document.createElement("div"); lab.textContent=m.label;
-      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=m.value;
-      input.addEventListener("input", ()=>{ m.value=Number(input.value); state.touched.metrics=true; });
-      row.appendChild(lab); row.appendChild(input);
-      metricsBox.appendChild(row);
-    }
-  }
-
-  // defaults for city & sectors
-  function seedChips(){
-    ["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"].forEach(c=>addChip(c,cityChips));
-    ["food","beverage","cosmetics","electronics","apparel","supplements","pharma"].forEach(s=>addChip(s,sectorChips));
-  }
-
-  // ---------- API CALLS ----------
-  async function classify(host,email){
-    const b0 = API_BASE.get().replace(/\/+$/,"");
-    const tries = [
-      b0 + "/classify",
-      b0 + "/api/classify" // fallback if user saved base without /api
-    ];
-    let last;
-    for (const url of tries){
-      try{
-        const r = await fetch(url+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email), {credentials:"omit"});
-        if (r.ok) return await r.json();
-        last = await r.text().catch(()=>r.statusText);
-      }catch(e){ last = e.message; }
-    }
-    throw new Error(last || "classify failed");
-  }
-
-  function deriveLine(data, host){
-    // naive heuristics from productTags + sectorHints
-    const prods = (data.productTags||[]).slice(0,3).join(", ") || "packaging";
-    const segs  = (data.sectorHints||[]).slice(0,2).join(", ") || "brands";
-    const contacts = /industrial|corrugat|pallet|film|shrink|automation/i.test((data.summary||"")+" "+(data.productTags||[]).join(","))
-      ? "Operations, Procurement" : "Procurement, Marketing";
-    state.line = { host, verb:"supplies", products:prods, audience:segs, region:"the U.S.", contacts };
-  }
-
-  function deriveMetrics(data){
-    const text = ((data.summary||"") + " " + (data.productTags||[]).join(" ") + " " + (data.evidence||[]).join(" ")).toLowerCase();
-    const map = [
-      [/lead|turnaround|rush|2 ?weeks|quick ship|fast/i, "Fast turnaround (≤ 2 weeks)"],
-      [/moq|minimum order|short run|prototype|sample/i, "Low MOQs / short runs"],
-      [/eco|sustain|recycl|compost|bio|green|post[- ]consumer/i, "Eco materials / recyclable"],
-      [/made in usa|domestic|local/i, "Made in USA"],
-      [/design|die[- ]?line|structur|render|artwork/i, "Design & structural support"],
-      [/cost|price|budget|unit cost|lowest/i, "Lowest unit cost"],
-      [/premium|lux|branding|unboxing/i, "Premium brand presentation"],
-      [/anti[- ]?static|esd|protect|fragile|cushion/i, "Protection / anti-static options"],
-      [/barrier|foil|oxygen|moisture|vapou?r/i, "Food-safe / barrier"],
-      [/tamper|child[- ]?resist|security/i, "Tamper / CR compliance"],
-      [/automation|pallet|fulfillment|co[- ]?pack/i, "Line automation / fulfillment"],
-      [/print|flexo|litho|digital|spot uv|emboss|foil/i, "Print & finish quality"],
-      [/inventory|stock|warehous|kanban|safety stock/i, "Vendor-managed inventory"],
-      [/custom size|die|bespoke|engineer/i, "Custom sizing / engineering"],
-      [/kitting|insert|assembly|contract pack/i, "Kitting / co-packing"],
-      [/regulatory|fda|prop ?65|reach|rohs/i, "Regulatory compliance"],
-      [/cold chain|insulat|temperat|thermal/i, "Cold-chain / thermal"],
-      [/returns|reverse logistics|reusab/i, "Reusability / returns"],
-      [/speed to market|launch|pilot/i, "Speed-to-market support"]
-    ];
-    const set = new Set();
-    for (const [re,label] of map){ if (re.test(text)) set.add(label); }
-    // Always include a couple of universal knobs
-    ["Fast turnaround (≤ 2 weeks)","Lowest unit cost"].forEach(x=>set.add(x));
-    return [...set].slice(0,20);
-  }
-
-  async function refreshFromWebsite(){
-    const host = normHost(hostEl.value);
-    if (!host) return;
-    setFavicon(host);
-    statusEl.textContent = "";
-    sentence.parentElement.parentElement.querySelector(".one").style.opacity = 1;
-
-    try{
-      renderSentence(false);
-      // prefill host in sentence
-      state.line.host = host;
-      renderSentence(false);
-
-      const data = await classify(host, emailEl.value||"");
-      if (data && data.ok){
-        // sentence + chips
-        deriveLine(data, host);
-        renderSentence(false);
-        const chosen = new Set();
-        productChips.innerHTML="";
-        (data.productTags||[]).slice(0,12).forEach(t=>addChip(t, productChips, chosen));
-        state.productTags = [...chosen];
-
-        // metrics (dynamic)
-        const labels = deriveMetrics(data);
-        renderMetrics(labels);
-
-        // sectors
-        sectorChips.innerHTML="";
-        (data.sectorHints||["food","beverage","cosmetics"]).slice(0,8).forEach(s=>addChip(s, sectorChips));
-
-        statusEl.textContent = data.cached ? "(cached)" : "";
-      }else{
-        renderMetrics(["Fast turnaround (≤ 2 weeks)","Low MOQs / short runs","Eco materials / recyclable","Lowest unit cost"]);
-        statusEl.textContent = " (offline)";
-      }
-    }catch(err){
-      console.warn(err);
-      statusEl.textContent = " (network error)";
-      renderMetrics(["Fast turnaround (≤ 2 weeks)","Low MOQs / short runs","Eco materials / recyclable","Lowest unit cost"]);
-    }
-  }
-
-  refreshA.addEventListener("click",(e)=>{ e.preventDefault(); refreshFromWebsite(); });
-
-  // ---------- NAV ----------
+  // step wiring
   openBtn.addEventListener("click", open);
   closeBtn.addEventListener("click", close);
   backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+
   nextBtn.addEventListener("click", async ()=>{
     if (state.step===0){ show(1); return; }
-
     if (state.step===1){
       if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
       state.email = emailEl.value.trim();
       state.host  = normHost(hostEl.value || domainFromEmail(state.email));
       if (!state.host){ alert("Please provide your website/domain."); return; }
-      // fetch classify
+      setFavicon(state.host);
+      // bootstrap tokens on first fetch
+      renderTokens();
       await refreshFromWebsite();
       show(2);
       return;
     }
-
     if (state.step===2){
-      // If user never touched stuff, auto-enable AI decide
-      if (!state.touched.general) aiGeneral.checked = true;
-      if (!state.touched.product) aiProduct.checked = true;
-      applyMute();
-      alert("Saved! (Demo) You’ll go to the free panel next.");
-      close();
+      // collect & carry to free panel
+      const cityEl = document.getElementById("city");
+      const sectorsEl = document.getElementById("sectors");
+
+      const general = {};
+      slugsGeneral.forEach(id=>{
+        const el=document.getElementById(id);
+        if (el) general[id]=!!el.checked;
+      });
+
+      // collect dynamic buyer intel sliders if any
+      const intel=[];
+      biList.querySelectorAll('[data-bi="row"]').forEach(row=>{
+        const label=row.querySelector('[data-bi="label"]')?.textContent?.trim();
+        const val=row.querySelector('input[type="range"]')?.value;
+        if (label) intel.push({label, weight:Number(val||0)});
+      });
+
+      const carry = {
+        host: state.host,
+        email: state.email,
+        oneLiner: tokensToSentence(),
+        tokens: state.tokens,
+        productTags: state.productTags,
+        sectorHints: (sectorsEl.value||"").split(",").map(s=>s.trim()).filter(Boolean),
+        general,
+        city: (cityEl.value||"").trim(),
+        buyerIntel: intel,
+        apiBase: API_BASE.get(),
+        apiKey: getStored("apiKey") || ""
+      };
+      localStorage.setItem("onboard.v1", JSON.stringify(carry));
+      // Also mirror base/key for the free panel convenience
+      if (carry.apiBase) localStorage.setItem("fp.apiBase", carry.apiBase);
+      if (carry.apiKey)  localStorage.setItem("fp.apiKey", carry.apiKey);
+
+      window.location.href = "free-panel.html?src=onboarding&host="+encodeURIComponent(state.host);
     }
   });
 
-  // init
+  // role pick
+  function setRole(r){
+    state.role = r;
+    document.getElementById("opt-supplier").classList.toggle("chip", r!=="supplier");
+    document.getElementById("opt-buyer").classList.toggle("chip", r!=="buyer");
+    document.querySelector('[data-step-dot="0"]').classList.add("on");
+  }
+  document.getElementById("opt-supplier").addEventListener("click", ()=> setRole("supplier"));
+  document.getElementById("opt-buyer").addEventListener("click", ()=> setRole("buyer"));
   setRole("supplier");
-  renderSentence(false);
-  applyMute();
-  seedChips();
+
+  // email -> domain autofill (sticky until user edits host)
+  function syncDomain(){
+    if (!state.hostAuto) return;
+    const d = domainFromEmail(emailEl.value);
+    if (d) hostEl.value = d;
+  }
+  emailEl.addEventListener("input", syncDomain);
+  emailEl.addEventListener("change", syncDomain);
+  hostEl.addEventListener("input", ()=>{ state.hostAuto = true && hostEl.value.trim()===""; });
+  hostEl.addEventListener("keydown", ()=>{ state.hostAuto = false; });
+  setTimeout(syncDomain, 60);
+
+  // chips defaults
+  const cityEl = document.getElementById("city");
+  const sectorsEl = document.getElementById("sectors");
+  chipsFrom(["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"], cityChips, cityEl);
+  chipsFrom(["food","beverage","cosmetics","electronics","apparel","supplements","pharma"], sectorChips, sectorsEl);
+
+  // buyer intel row render
+  function renderBuyerIntel(list){
+    biList.innerHTML="";
+    if (!list || !list.length){ grpBI.hidden=true; return; }
+    grpBI.hidden=false;
+    list.slice(0,20).forEach(q=>{
+      const row=document.createElement("div");
+      row.setAttribute("data-bi","row");
+      row.style.cssText="display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:center;margin:10px 0";
+      row.innerHTML = `<div data-bi="label">${q.label||q}</div>
+        <input type="range" min="0" max="10" step="1" value="${q.weight??7}" aria-label="${q.label||q} importance">`;
+      biList.appendChild(row);
+    });
+  }
+
+  // ---------- API ----------
+  async function apiGet(path){
+    const base = API_BASE.get();
+    const url = base.replace(/\/$/,"") + path;
+    const r = await fetch(url, {credentials:"omit"});
+    if (!r.ok) throw new Error("http "+r.status);
+    return r.json();
+  }
+
+  async function refreshFromWebsite(){
+    const host = normHost(hostEl.value);
+    if (!host) return;
+
+    setFavicon(host);
+    statusEl.textContent = "";
+
+    try{
+      const q = "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(emailEl.value||"");
+      const data = await apiGet("/classify"+q);
+      if (data.ok){
+        // summary tokens: HOST — supplies {tags.join(', ')} for {audience} in {region}. Best contacts: {roles}.
+        const tags = (data.productTags||[]).slice(0,3).join(", ") || "packaging";
+        const aud  = (data.sectorHints||[])[0] || "brands";
+        const reg  = data.region || "the U.S.";
+        const roles= (data.bestContacts||["Operations","Procurement"]).join(", ");
+        const startTokens = ["supplies", tags, "for", aud, "in", reg, ".", "Best contacts:", roles, "."];
+        renderTokens(startTokens);
+        // chips
+        productChips.innerHTML="";
+        state.productTags=[];
+        (data.productTags||[]).slice(0,12).forEach(t=>chip(t));
+        renderBuyerIntel(data.buyerIntel||data.buyerQuestions||[]);
+        statusEl.textContent = data.cached ? "(cached)" : "";
+      } else {
+        renderTokens(); statusEl.textContent = "";
+      }
+    }catch(err){
+      renderTokens(); statusEl.textContent = "";
+      console.warn(err);
+    }
+  }
+
+  refreshA.addEventListener("click", (e)=>{ e.preventDefault(); refreshFromWebsite(); });
+  editBtn.addEventListener("click", ()=>{ alert("Tip: click any token to edit. We'll carry this one-liner to the free panel."); });
+
+  // ---------- ESC & overlay close ----------
+  modal.addEventListener("click",(e)=>{ if(e.target===modal) close(); });
+  document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") close(); });
+
+  // ---------- initial ----------
   show(0);
+  applyAIMute();
 })();
 </script>
 </body>
