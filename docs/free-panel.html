@@ -3,549 +3,499 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Free Panel</title>
+<title>Galactly — Free panel</title>
 <link rel="preconnect" href="https://icons.duckduckgo.com">
 <style>
   :root{
-    --bg:#0b0f14; --panel:#101723; --panel-2:#0d1520; --sunken:#0b121b;
-    --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
-    --cta:#6de1ff; --ctaText:#082433; --chip:#182233; --chipActive:#103247;
-    --accent:#38e08f; --danger:#ff7b7b; --divider:#1b2531; --ring:#24435f;
-    --ok:#2dd4bf; --warn:#f59e0b;
+    --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c; --card:#0f1724;
+    --text:#e9f1f7; --muted:#90a7ba; --muted2:#a9bfd1;
+    --divider:#1b2531; --ring:#24435f;
+    --chip:#1a2433; --chipActive:#103247;
+    --cta:#6de1ff; --ctaText:#082433; --cta2:#0e2538;
+    --ok:#38e08f; --warn:#ffd166; --bad:#ff6b6b;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,Segoe UI,Roboto,Inter,Arial}
-  a{color:var(--brand);text-decoration:none}
-
-  /* layout */
-  .wrap{display:grid;grid-template-columns:280px 1fr;gap:14px;min-height:100vh;padding:14px}
-  @media (max-width:980px){.wrap{grid-template-columns:1fr}}
-  .left{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:12px;position:sticky;top:14px;height:fit-content}
-  .right{display:flex;flex-direction:column;gap:10px}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
+  a{color:inherit}
+  .wrap{display:grid;grid-template-columns:280px 1fr;gap:16px;max-width:1200px;margin:24px auto;padding:0 18px}
+  /* left column */
+  .card{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:14px}
+  .h{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
+  label{font-size:13px;color:var(--muted2);display:block;margin-bottom:6px}
+  input[type=text],input[type=url]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
+  .row{display:flex;gap:8px;align-items:center}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;border:1px solid var(--divider);background:#152333;color:#cfe0ee;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--cta);border:none;color:var(--ctaText);font-weight:700}
+  .btn.badge{padding:6px 10px;font-weight:700}
+  .btn.ghost{background:transparent}
+  .muted{color:var(--muted)}
+  .log{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0a121b;border:1px solid var(--divider);border-radius:10px;padding:8px;height:120px;overflow:auto;color:#a5bed1}
 
   /* top bar */
-  .top{background:linear-gradient(180deg,#0f1622,#0e1520);border:1px solid var(--divider);border-radius:14px;padding:10px}
-  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .hostBadge{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#0e1723;border:1px solid var(--divider)}
-  .favWrap{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;overflow:hidden;background:#0e1723;outline:2px solid #1f2a38;outline-offset:-2px}
-  .favWrap img{width:100%;height:100%}
-  .pill{padding:6px 9px;border-radius:999px;background:#0f1a27;color:#9eb5c8;border:1px solid #203041}
-  .btn{display:inline-flex;align-items:center;gap:.55rem;padding:10px 14px;border-radius:12px;background:#152333;color:#cfe0ee;border:1px solid #223447;cursor:pointer}
-  .btn:active{transform:translateY(1px)}
-  .btn.primary{background:var(--cta);color:var(--ctaText);border:none;font-weight:800}
-  .btn.success{background:#113226;color:#aef5e6;border-color:#1e5b47}
-  .btn.warn{background:#2a210a;color:#ffd694;border-color:#5a430c}
+  .top{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:10px 12px;display:flex;align-items:center;gap:10px}
+  .fav{width:24px;height:24px;border-radius:6px;overflow:hidden;display:grid;place-items:center;background:#fff;border:1px solid #cfd8e3}
+  .fav img{width:24px;height:24px;filter:saturate(1.05) contrast(1.05)}
+  .name{font-weight:800}
+  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-flex;gap:6px;align-items:center}
+  .pill.good{color:#0d3b23;background:#08301a;border:1px solid #174b2c}
+  .sep{flex:1}
+  select{background:#0d1520;border:1px solid var(--divider);color:var(--text);border-radius:10px;padding:8px 10px}
 
   /* table */
-  .card{background:var(--panel);border:1px solid var(--divider);border-radius:14px;overflow:hidden}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:12px 10px;border-bottom:1px solid var(--divider);text-align:left}
-  th{font-weight:600;color:#b9c8d6;background:#0f1724}
-  td small{color:#92a7bb}
-  .empty{padding:20px;color:#9cb3c8}
-
-  /* left controls */
-  .h{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#9db1c4;margin:10px 6px 6px}
-  .field{display:grid;gap:8px;margin:8px 0}
-  input[type=text]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
-  input[type=text]:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
-  select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:#d7e6f3}
-  .log{background:var(--sunken);border:1px solid var(--divider);border-radius:10px;padding:8px;font-family:ui-monospace,Menlo,Consolas,monospace;color:#9eb4c7;height:160px;overflow:auto;white-space:pre-wrap}
+  table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  thead th{font-size:12px;color:#90a7ba;text-align:left;padding:0 10px}
+  tbody td{background:var(--panel-2);border:1px solid var(--divider);padding:12px 10px}
+  tbody td:first-child{border-radius:12px 0 0 12px}
+  tbody td:last-child{border-radius:0 12px 12px 0}
+  .score{font-weight:800}
+  .action .btn{padding:6px 10px}
 
   /* drawer (profile) */
-  .drawer{position:fixed;inset:0;display:none;place-items:stretch;background:rgba(3,7,12,.55);z-index:30}
-  .drawer.show{display:grid}
-  .panel{margin-left:auto;width:min(840px,92vw);background:var(--panel-2);border-left:1px solid var(--divider);box-shadow:0 20px 80px rgba(0,0,0,.5);display:flex;flex-direction:column;max-height:100vh}
-  .phead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--divider);background:#0f1724}
-  .pbd{padding:14px 16px;overflow:auto}
-  .pft{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--divider)}
-  .group{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px;margin:14px 0}
-  .group h4{margin:0 0 8px}
-  .token{display:inline-block;border-radius:8px;padding:2px 6px;margin:0 2px}
-  .sentence{--bgx:#0f1926}
-  .sentence .token[data-editable="true"]{border-bottom:1px dashed #3a5572}
-  .sentence.editing .token[data-editable="true"]{background:var(--bgx);border:1px solid #2b425a}
-  .sentence .token:focus{outline:2px solid var(--ring)}
+  .drawer{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
+  .drawer.show{display:flex}
+  .sheet{width:min(980px,92vw);background:var(--card);border:1px solid var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
+  .sheet-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
+  .sheet-bd{padding:14px}
+  .sheet-ft{padding:12px 14px;border-top:1px solid var(--divider);display:flex;justify-content:flex-end;gap:8px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .chips{user-select:none}
   .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
   .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
-  .chips{user-select:none}
-  .slider-row{display:grid;grid-template-columns:1fr 280px;gap:14px;align-items:center;margin:10px 0}
-  .slider-row input[type=range]{width:100%}
-
-  .muted{color:#92a7bb}
-  .hint{font-size:12px;color:#9db1c4}
-  .tagInput, .cityInput, .sectorInput{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:#eaf4ff}
-
-  /* big CTA emphasis */
-  .findWrap{margin-left:auto;display:flex;gap:8px;align-items:center}
-  .cta-badge{font-size:12px;color:#052532;background:#a1eeff;border-radius:999px;padding:2px 8px;font-weight:800}
+  .slider-row{display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:center;margin:10px 0}
+  .one-line{background:#0e1622;border:1px solid var(--divider);border-radius:12px;padding:12px}
+  .edit-note{font-size:12px;color:var(--muted);cursor:pointer}
+  .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
+  .gear{background:transparent;border:none;color:#99b4c7;cursor:pointer}
+  @media (max-width:940px){.wrap{grid-template-columns:1fr} .grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <!-- LEFT COLUMN -->
-    <aside class="left">
-      <div class="h">Connection</div>
-      <div class="field">
-        <input id="apiBase" type="text" placeholder="https://your-host.tld/api">
-        <button id="saveApi" class="btn">Save</button>
+<div class="wrap">
+  <!-- LEFT: connection & log -->
+  <aside class="card">
+    <div class="h">Connection</div>
+    <label>API base (root or /api)</label>
+    <div class="row">
+      <input id="apiBase" type="text" placeholder="https://YOUR-NORTHFLANK.code.run or …/api">
+      <button id="saveApi" class="btn">Save</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="ping" class="btn">Ping</button>
+      <button id="clearLog" class="btn">Clear Log</button>
+    </div>
+
+    <div class="h" style="margin-top:16px">How many leads</div>
+    <select id="count">
+      <option>3</option><option selected>12</option><option>25</option><option>50</option>
+    </select>
+    <div class="muted" style="margin-top:8px">Used by <b>Find buyers</b>. The supplier host is locked to your profile to keep the panel minimal.</div>
+
+    <div class="h" style="margin-top:16px">HTTP Log</div>
+    <pre id="httpLog" class="log"></pre>
+  </aside>
+
+  <!-- RIGHT: main panel -->
+  <main>
+    <div class="top">
+      <span class="fav"><img id="fav" alt="" width="24" height="24" referrerpolicy="no-referrer"></span>
+      <span class="name" id="company">yourcompany.com</span>
+      <span id="personaPill" class="pill">no profile yet</span>
+      <span class="sep"></span>
+      <label class="muted">Count</label>
+      <select id="countTop">
+        <option>3</option><option selected>12</option><option>25</option><option>50</option>
+      </select>
+      <button id="profileBtn" class="btn">Profile</button>
+      <button id="applyBtn" class="btn">Apply</button>
+      <span class="pill">daily limit 3</span>
+      <button id="findBtn" class="btn primary">★ Find buyers</button>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="muted" style="margin-bottom:8px">Tip: click <b>Profile</b> to view or edit preferences. All preferences are hidden here to keep this panel focused on your leads.</div>
+      <table>
+        <thead>
+          <tr><th style="width:90px">Score</th><th style="width:90px">Temp</th><th>Buyer</th><th>Why</th><th style="width:150px">Action</th></tr>
+        </thead>
+        <tbody id="rows">
+          <!-- results -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- PROFILE DRAWER -->
+<div id="drawer" class="drawer" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="sheet" role="document">
+    <div class="sheet-hd">
+      <div class="row">
+        <span class="fav"><img id="fav2" alt="" width="24" height="24" referrerpolicy="no-referrer"></span>
+        <strong id="company2">yourcompany.com</strong>
       </div>
-      <div class="field">
-        <input id="apiKey" type="text" placeholder="x-api-key (optional)">
-        <button id="saveKey" class="btn">Save</button>
+      <div class="row">
+        <button id="gear" class="gear" title="Set API base">⚙️</button>
+        <button id="close" class="x" aria-label="Close">✕</button>
       </div>
-      <div class="row" style="gap:8px">
-        <button id="ping" class="btn">Ping</button>
-        <button id="clearLog" class="btn">Clear Log</button>
+    </div>
+    <div class="sheet-bd">
+      <!-- one-liner -->
+      <div class="one-line" id="oneLineBox">
+        <div id="oneLine">yourcompany.com — supplies packaging for brands in the U.S. Best contacts: Operations, Procurement</div>
+        <div class="edit-note" id="editToggle">click to toggle edit</div>
       </div>
 
-      <div class="h">How many leads</div>
-      <div class="field">
-        <select id="leadCount">
-          <option>3</option><option selected>12</option><option>25</option>
-        </select>
-      </div>
-      <div class="hint" style="margin:8px 2px 0">
-        Used by <b>Find buyers</b>. The supplier host is locked to your profile to keep the panel minimal.
-      </div>
+      <div class="grid">
+        <!-- general preferences -->
+        <div class="card" style="padding:12px">
+          <div class="h">General preferences</div>
+          <div id="genChips" class="chips"></div>
+        </div>
 
-      <div class="h">HTTP Log</div>
-      <div id="log" class="log" aria-live="polite"></div>
-    </aside>
-
-    <!-- RIGHT -->
-    <main class="right">
-      <div class="top">
-        <div class="row">
-          <span class="hostBadge">
-            <span class="favWrap"><img id="fav" alt="" referrerpolicy="no-referrer"></span>
-            <span id="hostLbl" style="font-weight:700">no profile yet</span>
-            <span id="personaTag" class="pill">persona (empty)</span>
-          </span>
-
-          <span class="pill">Count
-            <select id="countTop" style="background:transparent;border:0;color:#d9ecf9;margin-left:6px">
-              <option>3</option><option selected>12</option><option>25</option>
-            </select>
-          </span>
-
-          <div class="findWrap">
-            <button id="profileBtn" class="btn">Profile</button>
-            <button id="applyBtn" class="btn success">Apply</button>
-            <span class="cta-badge">daily limit 3</span>
-            <button id="findBtn" class="btn primary" title="Use your profile to fetch today’s leads">★ Find buyers</button>
-          </div>
+        <!-- product signals -->
+        <div class="card" style="padding:12px">
+          <div class="h">Product signals (from your site)</div>
+          <input id="prodInput" type="text" placeholder="add tag and press Enter">
+          <div id="prodChips" class="chips"></div>
         </div>
       </div>
 
-      <div class="card">
-        <table>
-          <thead>
-            <tr><th style="width:90px">Score</th><th style="width:90px">Temp</th><th>Buyer</th><th>Why</th><th style="width:120px">Action</th></tr>
-          </thead>
-          <tbody id="rows">
-            <tr><td colspan="5" class="empty">No items.</td></tr>
-          </tbody>
-        </table>
+      <!-- dynamic buyer priorities (exactly three by default, or from persona.metrics) -->
+      <div class="card" style="padding:12px;margin-top:14px">
+        <div class="h">Buyer priorities (dynamic)</div>
+        <div id="metricBox"></div>
       </div>
-    </main>
+
+      <!-- targeting -->
+      <div class="grid" style="margin-top:14px">
+        <div class="card" style="padding:12px">
+          <div class="h">Buyer targeting — City</div>
+          <input id="cityInput" type="text" placeholder="add city and press Enter">
+          <div id="cityChips" class="chips"></div>
+          <div class="muted" style="margin-top:6px">boost near</div>
+        </div>
+        <div class="card" style="padding:12px">
+          <div class="h">Buyer targeting — Sectors</div>
+          <input id="sectorInput" type="text" placeholder="add sector and press Enter">
+          <div id="sectorChips" class="chips"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-ft">
+      <button id="saveLocal" class="btn">Save locally</button>
+      <button id="applyBtn2" class="btn primary">Apply to API</button>
+    </div>
   </div>
-
-  <!-- PROFILE DRAWER -->
-  <div id="drawer" class="drawer" aria-hidden="true">
-    <section class="panel" role="dialog" aria-modal="true">
-      <div class="phead">
-        <div class="row">
-          <div class="favWrap" style="width:26px;height:26px"><img id="fav2" alt="" referrerpolicy="no-referrer"></div>
-          <div>
-            <div id="oneLine" class="sentence one-line"></div>
-            <div class="hint">Click tokens to edit. Host change will update the favicon + header.</div>
-          </div>
-        </div>
-        <div class="row">
-          <button id="toggleEdit" class="btn">Edit</button>
-          <button id="closeDrawer" class="btn">Close</button>
-        </div>
-      </div>
-
-      <div class="pbd">
-        <div class="group">
-          <h4 style="display:flex;justify-content:space-between;align-items:center;margin:0">
-            <span>General preferences</span>
-            <span class="muted" style="font-size:12px">click to toggle</span>
-          </h4>
-          <div id="generalChips" class="chips" aria-live="polite"></div>
-        </div>
-
-        <div class="group">
-          <h4>Product signals (from your site)</h4>
-          <input id="tagInput" class="tagInput" type="text" placeholder="add tag and press Enter">
-          <div id="productChips" class="chips"></div>
-        </div>
-
-        <div class="group">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <h4 style="margin:0">Buyer priorities (dynamic)</h4>
-            <div class="hint">Tell us how much buyers care.</div>
-          </div>
-          <div id="metricsBox"></div>
-        </div>
-
-        <div class="group">
-          <h4>Buyer targeting</h4>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-            <div>
-              <label class="hint">City — boost near</label>
-              <input id="cityInput" class="cityInput" type="text" placeholder="e.g., Chicago">
-              <div id="cityChips" class="chips" style="margin-top:6px"></div>
-            </div>
-            <div>
-              <label class="hint">Sectors</label>
-              <input id="sectorInput" class="sectorInput" type="text" placeholder="e.g., food, beverage, cosmetics">
-              <div id="sectorChips" class="chips" style="margin-top:6px"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="pft">
-        <span id="status" class="hint" style="margin-right:auto"></span>
-        <button id="saveLocal" class="btn">Save locally</button>
-        <button id="applyApi" class="btn success">Apply to API</button>
-      </div>
-    </section>
-  </div>
+</div>
 
 <script>
-(()=>{
-  // ---------- UTIL & STORAGE ----------
-  const $ = sel=>document.querySelector(sel);
-  const logEl = $('#log');
-  function log(msg){ const t = `[${new Date().toISOString().slice(11,19)}] ${msg}\n`; logEl.textContent += t; logEl.scrollTop = logEl.scrollHeight; }
-  function getStored(k,def=""){ try{ const v=localStorage.getItem(k); return v==null? def : v }catch{ return def } }
-  function setStored(k,v){ try{ localStorage.setItem(k,v) }catch{} }
-  function jsonGet(k,def){ try{ return JSON.parse(localStorage.getItem(k)||"")||def }catch{ return def } }
-  function jsonSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)) }catch{} }
-  function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
+(function(){
+  // ---------- storage helpers ----------
+  function getStored(k, d=""){ try{ const v=localStorage.getItem(k); return v===null? d: v; }catch{ return d; } }
+  function setStored(k,v){ try{ localStorage.setItem(k,v); }catch{} }
+  function delStored(k){ try{ localStorage.removeItem(k); }catch{} }
 
-  // API base handling (persist across pages)
-  const apiBaseInput = $('#apiBase'), apiKeyInput=$('#apiKey');
+  // ---------- API base normalization (always ends with /api) ----------
+  function normalizeApiBase(input){
+    let b=(input||"").trim().replace(/\/+$/,"");
+    const m=b.match(/^(.*?)(?:\/api(?:\/.*)?)$/i);
+    if(m) b = m[1];
+    return b ? (b + "/api") : "";
+  }
   const API = {
-    getBase(){ const x = getStored('apiBase',''); return x||'' },
-    setBase(v){ setStored('apiBase', String(v||'')); },
-    key(){ return getStored('xApiKey','') },
-    setKey(v){ setStored('xApiKey', String(v||'')) },
-    async fetch(path, opts={}){
-      const base = API.getBase().replace(/\/+$/,'');
-      const url = base ? (base + (path.startsWith('/')? path : '/'+path)) : path;
-      const headers = Object.assign({'content-type':'application/json'}, opts.headers||{});
-      if (API.key()) headers['x-api-key'] = API.key();
-      const res = await fetch(url, Object.assign(opts,{headers}));
-      return res;
+    get(){ const fromLS=getStored("apiBase",""); const fromWin=window.API_BASE||""; const raw=fromLS||fromWin; return normalizeApiBase(raw); },
+    set(v){ setStored("apiBase", v); },
+    withKey(init={}){
+      const k=getStored("xApiKey","");
+      const h=Object.assign({"Content-Type":"application/json"}, init.headers||{});
+      if (k) h["x-api-key"]=k;
+      return Object.assign({}, init, {headers:h});
     }
   };
-  apiBaseInput.value = API.getBase();
-  apiKeyInput.value = API.key();
-  $('#saveApi').onclick = ()=>{ API.setBase(apiBaseInput.value.trim()); log(`API base set to ${API.getBase()||'(blank)'}`) };
-  $('#saveKey').onclick = ()=>{ API.setKey(apiKeyInput.value.trim()); log(`x-api-key saved`) };
-  $('#clearLog').onclick = ()=>{ logEl.textContent="" };
-  $('#ping').onclick = async ()=>{
-    try{
-      const res = await API.fetch('/ping',{method:'GET'});
-      log(`GET /ping → ${res.status}`);
-      if (!res.ok) return;
-      const txt = await res.text(); log(txt.slice(0,200));
-    }catch(e){ log('ping error: '+e.message) }
-  };
 
-  // ---------- STATE ----------
+  // ---------- http log ----------
+  const httpLog = document.getElementById("httpLog");
+  function logHttp(line){
+    const now = new Date().toISOString().slice(11,19);
+    httpLog.textContent = `[${now}] ${line}\n` + httpLog.textContent;
+  }
+
+  // ---------- elements ----------
+  const apiBaseInput = document.getElementById("apiBase");
+  const saveApiBtn = document.getElementById("saveApi");
+  const pingBtn = document.getElementById("ping");
+  const clearLogBtn = document.getElementById("clearLog");
+
+  const countLeft = document.getElementById("count");
+  const countTop  = document.getElementById("countTop");
+  const rows = document.getElementById("rows");
+
+  const profileBtn = document.getElementById("profileBtn");
+  const applyBtn = document.getElementById("applyBtn");
+  const applyBtn2 = document.getElementById("applyBtn2");
+  const findBtn = document.getElementById("findBtn");
+
+  const drawer = document.getElementById("drawer");
+  const closeX = document.getElementById("close");
+  const gearBtn = document.getElementById("gear");
+
+  const fav = document.getElementById("fav");
+  const fav2 = document.getElementById("fav2");
+  const company = document.getElementById("company");
+  const company2 = document.getElementById("company2");
+  const pill = document.getElementById("personaPill");
+
+  const oneLine = document.getElementById("oneLine");
+  const editToggle = document.getElementById("editToggle");
+  const genChips = document.getElementById("genChips");
+  const prodInput = document.getElementById("prodInput");
+  const prodChips = document.getElementById("prodChips");
+  const metricBox = document.getElementById("metricBox");
+  const cityInput = document.getElementById("cityInput");
+  const cityChips = document.getElementById("cityChips");
+  const sectorInput = document.getElementById("sectorInput");
+  const sectorChips = document.getElementById("sectorChips");
+  const saveLocalBtn = document.getElementById("saveLocal");
+
+  // ---------- state ----------
   const state = {
-    host: '',
-    personaSource: 'no profile yet', // 'imported' | 'cached' | 'local'
-    line: { host:'yourcompany.com', verb:'supplies', products:'packaging', audience:'brands', region:'the U.S.', contacts:'Operations, Procurement' },
-    general: new Set(['Prefer mid-size companies','De-prioritize giant enterprises','Prioritize nearby buyers','Prefer e-commerce sites','Prefer wholesalers / distributors','Prefer retail brands']),
-    productTags: new Set(), // chips
-    metrics: [ // EXACTLY THREE default sliders (sync with step 3)
-      {label:'Line automation / fulfillment', value:8},
-      {label:'Fast turnaround (≤ 2 weeks)', value:7},
-      {label:'Lowest unit cost', value:8}
-    ],
-    cities: new Set(['Chicago','Los Angeles','New York','Dallas','Atlanta','Miami']),
-    sectors: new Set(['food','beverage','cosmetics','electronics']),
-    count: 12
+    persona:null,
+    metrics:[],
   };
 
-  // ---------- FAVICON ----------
-  function setFavicon(host){
-    const h = normHost(host);
-    const url = h ? `https://icons.duckduckgo.com/ip3/${encodeURIComponent(h)}.ico` : "";
-    const fav = $('#fav'), fav2 = $('#fav2');
-    [fav,fav2].forEach(img=>{
-      if (!img) return;
-      if (!url){ img.src=""; img.style.display="none"; return; }
-      img.style.display="";
-      img.src = url;
-      img.onerror = ()=>{ img.style.display="none"; };
-    });
+  // ---------- utils ----------
+  function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
+  function setFavicon(el, host){
+    const h = normHost(host); if(!h) return el.removeAttribute("src");
+    el.src = "https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico";
   }
+  function openDrawer(){ drawer.classList.add("show"); drawer.setAttribute("aria-hidden","false"); }
+  function closeDrawer(){ drawer.classList.remove("show"); drawer.setAttribute("aria-hidden","true"); }
 
-  // ---------- RENDER: HEADER / TABLE ----------
-  const hostLbl = $('#hostLbl'), personaTag = $('#personaTag');
-  function renderHeader(){
-    hostLbl.textContent = state.host? state.host : 'no profile yet';
-    personaTag.textContent = state.personaSource==='imported' ? 'persona (imported)'
-                           : state.personaSource==='local' ? 'persona (local)'
-                           : state.personaSource;
-    setFavicon(state.host);
-    $('#countTop').value = String(state.count);
-    $('#leadCount').value = String(state.count);
-  }
-
-  // ---------- PROFILE DRAWER ----------
-  const drawer = $('#drawer'), oneLine = $('#oneLine');
-  let editing = false;
-  function renderSentence(){
-    const L = state.line;
-    const tpl = [
-      {k:'host', txt:L.host, lock:false},
-      {txt:'—', lock:true},
-      {k:'verb', txt:L.verb},
-      {k:'products', txt:L.products},
-      {txt:'for', lock:true},
-      {k:'audience', txt:L.audience},
-      {txt:'in', lock:true},
-      {k:'region', txt:L.region},
-      {txt:'.  Best contacts:', lock:true},
-      {k:'contacts', txt:L.contacts}
-    ];
-    oneLine.classList.toggle('editing', editing);
-    oneLine.innerHTML = "";
-    for (const part of tpl){
-      const span = document.createElement('span');
-      span.className='token';
-      span.dataset.editable = part.lock? 'false':'true';
-      span.textContent = part.txt;
-      if (!part.lock && editing){
-        span.contentEditable = true;
-        span.addEventListener('input', ()=>{
-          state.line[part.k] = span.textContent.trim();
-          if (part.k==='host'){ state.host = normHost(state.line.host); renderHeader(); }
-        });
-      }
-      oneLine.appendChild(span);
-      oneLine.appendChild(document.createTextNode(' '));
-    }
-  }
-
-  function addChip(text, box, set){
-    const s = document.createElement('span'); s.className="chip"; s.textContent=text;
-    if (set && set.has(text)) s.classList.add('active');
-    s.addEventListener('click', ()=>{
-      s.classList.toggle('active');
-      if (!set) return;
-      if (s.classList.contains('active')) set.add(text); else set.delete(text);
-    });
+  function chip(label, box, active=false){
+    const s=document.createElement("span"); s.className="chip"; s.textContent=label;
+    if (active) s.classList.add("active");
+    s.addEventListener("click",()=>s.classList.toggle("active"));
     box.appendChild(s);
+    return s;
   }
-  function chipsFrom(list, box, set){
-    box.innerHTML=""; (list||[]).forEach(v=>addChip(v, box, set));
-  }
-  function renderGeneral(){
-    const box = $('#generalChips'); box.innerHTML="";
-    [
-      'Prefer mid-size companies','De-prioritize giant enterprises','Prioritize nearby buyers',
-      'Prefer e-commerce sites','Prefer wholesalers / distributors','Prefer retail brands'
-    ].forEach(t=> addChip(t, box, state.general));
-  }
-  function renderProduct(){
-    const box = $('#productChips'); box.innerHTML="";
-    state.productTags.forEach(t=> addChip(t, box, state.productTags));
-  }
-  function renderMetrics(){
-    const mbox = $('#metricsBox'); mbox.innerHTML="";
-    state.metrics = ensureThreeMetrics(state.metrics);
-    for (const m of state.metrics){
-      const row = document.createElement('div'); row.className='slider-row';
-      const lab = document.createElement('div'); lab.textContent=m.label;
-      const input = document.createElement('input'); input.type='range'; input.min='0'; input.max='10'; input.value=m.value;
-      input.addEventListener('input', ()=>{ m.value = Number(input.value) });
-      row.appendChild(lab); row.appendChild(input); mbox.appendChild(row);
-    }
-  }
-  function renderTargeting(){
-    chipsFrom([...state.cities], $('#cityChips'), state.cities);
-    chipsFrom([...state.sectors], $('#sectorChips'), state.sectors);
-  }
-
-  $('#toggleEdit').onclick = ()=>{ editing=!editing; renderSentence(); };
-  $('#closeDrawer').onclick = ()=> closeDrawer();
-  function openDrawer(){ drawer.classList.add('show'); drawer.setAttribute('aria-hidden','false'); renderSentence(); renderGeneral(); renderProduct(); renderMetrics(); renderTargeting(); $('#status').textContent=""; $('#tagInput').value=""; $('#cityInput').value=""; $('#sectorInput').value=""; }
-  function closeDrawer(){ drawer.classList.remove('show'); drawer.setAttribute('aria-hidden','true'); }
-
-  // inputs for adding chips
-  $('#tagInput').addEventListener('keydown',e=>{
-    if(e.key==='Enter'){ e.preventDefault(); const v=e.target.value.trim(); if(!v) return; state.productTags.add(v); e.target.value=""; renderProduct(); }
-  });
-  $('#cityInput').addEventListener('keydown',e=>{
-    if(e.key==='Enter'){ e.preventDefault(); const v=e.target.value.trim(); if(!v) return; state.cities.add(v); e.target.value=""; renderTargeting(); }
-  });
-  $('#sectorInput').addEventListener('keydown',e=>{
-    if(e.key==='Enter'){ e.preventDefault(); const v=e.target.value.trim(); if(!v) return; state.sectors.add(v); e.target.value=""; renderTargeting(); }
-  });
-
-  // ---------- PERSISTENCE ----------
-  const K = {
-    persona:'fp:persona', // main blob
-    line:'fp:line'
-  };
-  function saveLocal(){
-    jsonSet(K.persona, {
-      host: state.host,
-      general:[...state.general],
-      productTags:[...state.productTags],
-      metrics: state.metrics,
-      cities:[...state.cities],
-      sectors:[...state.sectors],
-      count: state.count
-    });
-    jsonSet(K.line, state.line);
-  }
-  function loadLocal(){
-    const p = jsonGet(K.persona, null);
-    const L = jsonGet(K.line, null);
-    if (p){
-      state.host = p.host||state.host;
-      state.general = new Set(p.general||[]);
-      state.productTags = new Set(p.productTags||[]);
-      state.metrics = ensureThreeMetrics(p.metrics||[]);
-      state.cities = new Set(p.cities||[]);
-      state.sectors = new Set(p.sectors||[]);
-      state.count = Number(p.count||state.count)||state.count;
-      state.personaSource = 'local';
-    }
-    if (L){ state.line = Object.assign(state.line, L); }
-  }
-
-  // Import from onboarding (auto, best effort)
-  function tryImportFromSetup(){
-    // scan a few common keys used by earlier step-3 builds
-    const candidates = [
-      'setup:persona','onboard:persona','personaDraft','setup:state','gal:setup','fp:persona_from_setup'
-    ];
-    for (const k of candidates){
-      const obj = jsonGet(k,null);
-      if (!obj) continue;
-      // minimal shape support
-      if (obj.host) state.host = normHost(obj.host);
-      if (obj.line) state.line = Object.assign(state.line, obj.line);
-      if (obj.productTags) state.productTags = new Set(obj.productTags);
-      if (obj.general) state.general = new Set(obj.general);
-      if (obj.metrics) state.metrics = ensureThreeMetrics(obj.metrics);
-      if (obj.cities) state.cities = new Set(obj.cities);
-      if (obj.sectors) state.sectors = new Set(obj.sectors);
-      state.personaSource = 'imported';
-      saveLocal(); // normalize to fp:* for next loads
-      log(`imported from ${k}`);
-      return true;
-    }
-    return false;
-  }
-
-  function ensureThreeMetrics(list){
-    const base = [
-      {label:'Line automation / fulfillment', value:8},
-      {label:'Fast turnaround (≤ 2 weeks)', value:7},
-      {label:'Lowest unit cost', value:8}
-    ];
-    if (!Array.isArray(list) || list.length===0) return base.map(x=>Object.assign({},x));
-    // keep any matching labels, then fill missing
-    const map = new Map(list.filter(x=>x && x.label).map(x=>[x.label, {label:x.label, value:Number(x.value||0)}]));
-    for (const m of base){ if (!map.has(m.label)) map.set(m.label, {label:m.label, value:m.value}); }
-    return [...map.values()].slice(0,3);
-  }
-
-  // ---------- APPLY / API ----------
-  async function applyToApi(){
-    saveLocal(); // always persist locally
-    const body = jsonGet(K.persona, {});
-    body.line = state.line;
-    try{
-      const res = await API.fetch('/prefs/upsert', {method:'POST', body:JSON.stringify(body)});
-      log(`POST /prefs/upsert → ${res.status}`);
-      if (!res.ok){
-        $('#status').textContent = '(offline) saved locally';
-        return;
+  function addOnEnter(input, box){
+    input.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter"){
+        e.preventDefault();
+        const v=input.value.trim(); if(!v) return;
+        chip(v, box, true);
+        input.value="";
       }
-      const data = await res.json().catch(()=>null);
-      $('#status').textContent = data && data.id ? `saved (id ${data.id})` : 'saved';
-    }catch(e){
-      log('apply error: '+e.message);
-      $('#status').textContent = '(offline) saved locally';
+    });
+  }
+  function getActiveChips(box){ return Array.from(box.querySelectorAll(".chip.active")).map(x=>x.textContent.trim()); }
+
+  function renderMetrics(metrics){
+    metricBox.innerHTML="";
+    state.metrics = metrics.slice(0,3); // keep UI at 3 sliders
+    for (const m of state.metrics){
+      const row=document.createElement("div"); row.className="slider-row";
+      const lab=document.createElement("div"); lab.textContent=m.label;
+      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=Number(m.value ?? 8);
+      input.addEventListener("input",()=>{ m.value = Number(input.value); });
+      row.appendChild(lab); row.appendChild(input);
+      metricBox.appendChild(row);
     }
+  }
+
+  function defaultMetrics(){
+    return [
+      {label:"Line automation / fulfillment", value:8},
+      {label:"Fast turnaround (≤ 2 weeks)", value:7},
+      {label:"Lowest unit cost", value:8}
+    ];
+  }
+
+  function renderPersona(p){
+    state.persona = p;
+    const host = p.host || p.line?.host || "yourcompany.com";
+    company.textContent = host; company2.textContent = host;
+    setFavicon(fav, host); setFavicon(fav2, host);
+    pill.textContent = "persona (imported)"; pill.classList.add("good");
+
+    // one-liner
+    if (p.line && p.line.host){
+      oneLine.textContent = `${p.line.host} — ${p.line.verb} ${p.line.products} for ${p.line.audience} in ${p.line.region}. Best contacts: ${p.line.contacts}`;
+    }else if (p.lineText){ oneLine.textContent = p.lineText; }
+
+    // general
+    genChips.innerHTML="";
+    const gen = p.general || {};
+    [
+      ["Prefer mid-size companies", !!gen.mids],
+      ["De-prioritize giant enterprises", !!gen.avoidBig],
+      ["Prioritize nearby buyers", !!gen.near],
+      ["Prefer e-commerce sites", !!gen.ecom],
+      ["Prefer wholesalers / distributors", !!gen.wholesale],
+      ["Prefer retail brands", !!gen.retail]
+    ].forEach(([lab, on])=> chip(lab, genChips, on));
+
+    // products
+    prodChips.innerHTML="";
+    (p.productTags||[]).forEach(t=> chip(t, prodChips, true));
+
+    // metrics (3 sliders)
+    const m = Array.isArray(p.metrics)&&p.metrics.length ? p.metrics : defaultMetrics();
+    renderMetrics(m);
+
+    // targeting
+    cityChips.innerHTML=""; (p.targeting?.city? [p.targeting.city] : ["Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"]).forEach(c=>chip(c,cityChips,true));
+    sectorChips.innerHTML=""; (p.sectorHints||["food","beverage","cosmetics"]).forEach(s=>chip(s,sectorChips,true));
+  }
+
+  // ---------- applying & fetching ----------
+  async function fetchJSON(url, init){
+    let r;
+    try{ r = await fetch(url, API.withKey(init)); }
+    catch(e){ logHttp(`ERR ${url} — ${e.message}`); throw e; }
+    const text = await r.text();
+    if (!r.ok){ logHttp(`${r.status} ${url} — ${text.slice(0,120)}`); throw new Error(text||r.statusText); }
+    logHttp(`${r.status} ${url}`);
+    try{ return JSON.parse(text); }catch{ return text; }
+  }
+
+  function collectPersona(){
+    const host = company.textContent.trim();
+    const p = state.persona || {};
+    const lineText = oneLine.textContent.trim();
+    const payload = {
+      host,
+      line: p.line || {host, verb:"supplies", products:"packaging", audience:"brands", region:"the U.S.", contacts:"Operations, Procurement"},
+      lineText,
+      productTags: getActiveChips(prodChips),
+      sectorHints: getActiveChips(sectorChips),
+      general: {
+        mids: genChips.textContent.includes("Prefer mid-size"),
+        avoidBig: genChips.textContent.includes("De-prioritize"),
+        near: genChips.textContent.includes("Prioritize nearby"),
+        ecom: genChips.textContent.includes("Prefer e-commerce"),
+        wholesale: genChips.textContent.includes("Prefer wholesalers"),
+        retail: genChips.textContent.includes("Prefer retail")
+      },
+      metrics: state.metrics,
+      targeting: { city: getActiveChips(cityChips)[0]||"", sectors: getActiveChips(sectorChips).join(", ") }
+    };
+    return payload;
+  }
+
+  async function applyPrefs(){
+    const base = API.get(); if(!base){ alert("Set API base first."); return; }
+    const payload = collectPersona();
+    await fetchJSON(base + "/prefs/upsert", {method:"POST", body: JSON.stringify(payload)});
+    pill.textContent = "profile applied"; pill.classList.add("good");
+  }
+
+  async function ping(){
+    const base = API.get(); if(!base){ alert("Set API base first."); return; }
+    await fetchJSON(base + "/ping", {method:"GET"});
   }
 
   async function findBuyers(){
-    saveLocal();
-    const host = state.host;
-    const count = state.count;
-    if (!host){ alert('Set your host in Profile first.'); return; }
-    try{
-      const url = `/leads/find-buyers?host=${encodeURIComponent(host)}&limit=${encodeURIComponent(count)}`;
-      const res = await API.fetch(url, {method:'GET'});
-      log(`GET ${url} → ${res.status}`);
-      if (!res.ok){ alert('API not ready yet. Check HTTP Log.'); return; }
-      const data = await res.json();
-      renderRows(data.items||[]);
-    }catch(e){ log('find buyers error: '+e.message); }
-  }
-  function renderRows(items){
-    const tbody = $('#rows'); tbody.innerHTML="";
-    if (!items || !items.length){ tbody.innerHTML = `<tr><td colspan="5" class="empty">No items.</td></tr>`; return; }
-    for (const it of items){
-      const tr = document.createElement('tr');
+    const base = API.get(); if(!base){ alert("Set API base first."); return; }
+    const count = Number(countTop.value||countLeft.value||12);
+    const p = collectPersona();
+    rows.innerHTML="";
+    const q = new URLSearchParams({
+      host: p.host || company.textContent.trim(),
+      count: String(count),
+      city: p.targeting.city||"",
+      sectors: p.sectorHints.join(","),
+      tags: p.productTags.join(",")
+    }).toString();
+
+    const paths = ["/buyers/find","/buyers/search","/find"];
+    let data=null, errLast=null;
+    for (const path of paths){
+      try{
+        data = await fetchJSON(base + path + "?" + q, {method:"GET"});
+        if (data) break;
+      }catch(e){ errLast=e; }
+    }
+    if (!data){ logHttp("No buyers: " + (errLast? errLast.message : "unknown")); rows.innerHTML = ""; return; }
+
+    const list = Array.isArray(data)? data : (data.items||data.results||[]);
+    if (!list.length){ rows.innerHTML=""; return; }
+
+    for (const it of list){
+      const tr=document.createElement("tr");
       tr.innerHTML = `
-        <td>${it.score ?? '-'}</td>
-        <td>${it.temp ?? '-'}</td>
-        <td>${it.buyer ?? '-'}</td>
-        <td><small>${it.why ?? ''}</small></td>
-        <td><button class="btn">Open</button></td>
-      `;
-      tbody.appendChild(tr);
+        <td class="score">${it.score ?? "-"}</td>
+        <td>${it.temp ?? "-"}</td>
+        <td>${it.name || it.company || it.host || "-"}</td>
+        <td>${it.why || it.reason || "-"}</td>
+        <td class="action"><button class="btn">Open</button></td>`;
+      rows.appendChild(tr);
+      tr.querySelector(".btn").addEventListener("click",()=> window.open(it.url || ("https://" + (it.host||"")), "_blank"));
     }
   }
 
-  // ---------- WIRING ----------
-  $('#profileBtn').onclick = openDrawer;
-  $('#applyBtn').onclick = ()=>{ openDrawer(); setTimeout(()=>applyToApi(), 200); };
-  $('#applyApi').onclick = applyToApi;
-  $('#saveLocal').onclick = ()=>{ saveLocal(); $('#status').textContent='saved locally'; };
-  $('#findBtn').onclick = findBuyers;
-
-  $('#leadCount').onchange = e=>{ state.count = Number(e.target.value); $('#countTop').value = e.target.value; saveLocal(); renderHeader(); };
-  $('#countTop').onchange = e=>{ state.count = Number(e.target.value); $('#leadCount').value = e.target.value; saveLocal(); renderHeader(); };
-
-  // City / sector preset chips clickable even when not in drawer (defensive)
-  document.addEventListener('click', (e)=>{
-    if (e.target.classList && e.target.classList.contains('drawer')){ closeDrawer(); }
+  // ---------- events ----------
+  saveApiBtn.addEventListener("click",()=>{
+    const normalized = normalizeApiBase(apiBaseInput.value);
+    if (!normalized){ alert("Please enter your site root or /api URL."); return; }
+    API.set(apiBaseInput.value); // keep original; we normalize when reading
+    logHttp("API base set to " + normalized.replace(/\/api$/,''));
+  });
+  gearBtn.addEventListener("click",()=> saveApiBtn.click());
+  pingBtn.addEventListener("click", ping);
+  clearLogBtn.addEventListener("click", ()=> httpLog.textContent="");
+  profileBtn.addEventListener("click", openDrawer);
+  closeX.addEventListener("click", closeDrawer);
+  applyBtn.addEventListener("click", applyPrefs);
+  applyBtn2.addEventListener("click", applyPrefs);
+  findBtn.addEventListener("click", findBuyers);
+  editToggle.addEventListener("click", ()=> {
+    const ed = oneLine.isContentEditable;
+    oneLine.contentEditable = !ed;
+    oneLine.style.outline = ed? "none" : "2px solid var(--ring)";
+  });
+  saveLocalBtn.addEventListener("click", ()=> {
+    const p = collectPersona();
+    setStored("fp.persona", JSON.stringify(p));
+    pill.textContent = "saved locally";
+    logHttp("persona saved locally");
   });
 
-  // ---------- BOOT ----------
+  addOnEnter(prodInput, prodChips);
+  addOnEnter(cityInput, cityChips);
+  addOnEnter(sectorInput, sectorChips);
+
+  // keep count selectors in sync
+  function syncCount(e){
+    const v = e.target.value;
+    countLeft.value = v; countTop.value = v;
+  }
+  countLeft.addEventListener("change", syncCount);
+  countTop.addEventListener("change", syncCount);
+
+  // ---------- boot ----------
   (function init(){
-    // 1) load persisted profile
-    loadLocal();
-
-    // 2) try to import from any step-3 cache if available (first time)
-    if (state.personaSource==='no profile yet'){
-      const imported = tryImportFromSetup();
-      if (!imported){
-        // 3) as a last resort keep a sensible default host
-        state.host = state.host || state.line.host || 'yourcompany.com';
-      }
+    apiBaseInput.value = (getStored("apiBase","") || "").replace(/\/+$/,"");
+    // auto-import persona if available
+    let p = null;
+    try{ p = JSON.parse(getStored("fp.persona","") || getStored("bf.persona","")); }catch{}
+    const auto = getStored("fp.autoImport","0")==="1";
+    if (p){ renderPersona(p); if (auto){ delStored("fp.autoImport"); } }
+    else{
+      // seed defaults so UI isn't empty
+      renderPersona({
+        host:"yourcompany.com",
+        productTags:["boxes","mailers","pallets"],
+        sectorHints:["food","beverage","cosmetics"],
+        general:{mids:true,avoidBig:true,near:true,ecom:true,wholesale:false,retail:false},
+        metrics: defaultMetrics(),
+        line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
+        targeting:{city:"Chicago"}
+      });
     }
-
-    renderHeader();
-    // expose favicon now that host resolved
-    setFavicon(state.host);
   })();
 })();
 </script>
