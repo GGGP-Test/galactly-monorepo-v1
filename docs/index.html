@@ -4,19 +4,12 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Galactly — Find real packaging buyers</title>
-
 <link rel="preconnect" href="https://icons.duckduckgo.com">
 <style>
-  :root{
-    --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c;
-    --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
-    --cta:#6de1ff; --ctaText:#082433; --chip:#1a2433;
-    --chipActive:#103247; --accent:#38e08f; --danger:#ff7b7b; --divider:#1b2531;
-    --ring:#24435f;
-  }
+  :root{--bg:#0b0f14;--panel:#121822;--muted:#8aa0b2;--text:#e9f1f7;--brand:#8ae3ff;--cta:#6de1ff;--ctaText:#082433;--chip:#132131;--chipActive:#103247;--divider:#1b2531;--ring:#24435f}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
   a{color:var(--brand);text-decoration:none}
-  .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%);}
+  .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;background:radial-gradient(1200px 600px at 50% -200px,#102132 0,transparent 70%)}
   .hero-inner{max-width:920px;text-align:center}
   h1{font-size:clamp(32px,6vw,56px);margin:0 0 12px}
   p.lead{color:var(--muted);margin:0 0 28px}
@@ -24,45 +17,47 @@
   .btn.sec{background:#152333;color:#cfe0ee}
   .btn:active{transform:translateY(1px)}
 
+  /* modal */
   .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
   .modal.show{display:flex}
   .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
-  .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
+  .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
   .steps{display:flex;gap:8px;align-items:center}
   .dot{width:8px;height:8px;border-radius:50%;background:#2a3444}
   .dot.on{background:#5bd0ff}
-  .card-bd{padding:18px}
-  .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--divider)}
-  .scroll{max-height:70vh;overflow:auto;padding:6px 6px}
+  .card-bd{padding:16px}
+  .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:12px 16px;border-top:1px solid var(--divider)}
+  .scroll{max-height:70vh;overflow:auto;padding:6px}
 
+  /* inputs */
   .field{margin:10px 0}
   label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
-  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
   input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
 
+  /* sentence */
   .summary{display:flex;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:12px 14px;border-radius:14px;margin:0 0 14px;align-items:flex-start}
-  .fav{width:24px;height:24px;border-radius:6px;background:#122;display:grid;place-items:center;overflow:hidden;flex:0 0 auto}
+  .fav{width:28px;height:28px;border-radius:8px;background:#fff;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;border:1px solid #dbe3ef}
+  .fav img{width:20px;height:20px;display:block}
   .one{font-weight:700}
   .one-line{line-height:1.8}
   .token{display:inline-block;border-radius:8px;padding:2px 6px;margin:0 2px}
   .token[data-lock="true"]{background:transparent;color:#dfeaf5;border:0}
-  .sentence{--bgx:#0f1926}
   .sentence .token[data-editable="true"]{background:transparent;border-bottom:1px dashed #3a5572}
-  .sentence.editing .token[data-editable="true"]{background:var(--bgx);border:1px solid #2b425a}
+  .sentence.editing .token[data-editable="true"]{background:#0f1926;border:1px solid #2b425a}
   .sentence .token:focus{outline:2px solid var(--ring)}
   .edit-actions{display:flex;gap:8px;margin-top:6px}
   .big-edit{padding:6px 10px;border-radius:10px;background:#172839;border:1px solid #274059;color:#d8e8f7;font-weight:600;cursor:pointer}
   .big-edit.primary{background:var(--cta);border:none;color:#06293a}
 
+  /* groups */
   .group{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px;margin:14px 0}
   .group h4{margin:0 0 8px}
   .muted-hint{font-size:12px;color:#99b2c8;margin-left:8px}
-  .mute-wrap.muted{opacity:.45}
-  .mute-wrap.muted *{pointer-events:none}
-  .mute-wrap.muted .keep-live{pointer-events:auto;opacity:1}
+  .mute-wrap.muted{opacity:.45}.mute-wrap.muted *{pointer-events:none}.mute-wrap.muted .keep-live{pointer-events:auto;opacity:1}
 
   .chips{user-select:none}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041}
   .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
 
   .slider-row{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:center;margin:10px 0}
@@ -83,6 +78,7 @@
     </div>
   </div>
 
+  <!-- modal -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="card" role="document">
       <div class="card-hd">
@@ -106,8 +102,8 @@
             <h2 style="margin:10px 0 14px;">Pick your side</h2>
             <div class="group">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-                <div id="opt-supplier" class="chip active">🙌 I sell packaging (Supplier)</div>
-                <div id="opt-buyer" class="chip">🛒 I buy packaging (Buyer)</div>
+                <div id="opt-supplier" class="chip active" style="cursor:pointer">🙌 I sell packaging (Supplier)</div>
+                <div id="opt-buyer" class="chip" style="cursor:pointer">🛒 I buy packaging (Buyer)</div>
               </div>
             </div>
           </section>
@@ -127,7 +123,7 @@
                   <div class="field">
                     <label>Phone (required for alerts) *</label>
                     <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/>
-                    <div style="color:#9ab0c0;font-size:12px">Country code helps personalize geography (e.g., “+1” for U.S.).</div>
+                    <div style="color:#9ab0c0;font-size:12px">Country code personalizes geography (e.g., “+1” for U.S.).</div>
                   </div>
                 </div>
                 <div>
@@ -156,8 +152,9 @@
           <section class="step" id="step3" hidden>
             <div class="pill">Step 3 of 3</div>
 
+            <!-- sentence editor -->
             <div class="summary">
-              <div class="fav"><img id="fav" alt="" width="24" height="24" referrerpolicy="no-referrer"></div>
+              <div class="fav"><img id="fav" alt="" referrerpolicy="no-referrer"></div>
               <div style="flex:1">
                 <div id="sentence" class="one one-line sentence" aria-live="polite"></div>
                 <div class="edit-actions">
@@ -176,6 +173,7 @@
             <div id="advanced" hidden>
               <div class="group">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+                  <!-- general -->
                   <div class="group" id="grp-general">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
                       <h4 style="margin:0">General preferences</h4>
@@ -193,6 +191,7 @@
                     </div>
                   </div>
 
+                  <!-- product tags -->
                   <div class="group" id="grp-product">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
                       <h4 style="margin:0">Product signals (from your site)</h4>
@@ -207,6 +206,7 @@
                 </div>
               </div>
 
+              <!-- Buyer priorities (dynamic) -->
               <div class="group">
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <h4 style="margin:0">Buyer priorities (dynamic)</h4>
@@ -215,6 +215,7 @@
                 <div id="metricsBox"></div>
               </div>
 
+              <!-- targeting -->
               <div class="group">
                 <h4 style="margin:0 0 8px">Buyer targeting</h4>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -244,368 +245,212 @@
   </div>
 
 <script>
-(() => {
-  // storage helpers
-  function getStored(k){ try{ const v=localStorage.getItem(k); return v==null? "": v; }catch{ return ""; } }
-  function setStored(k,v){ try{ localStorage.setItem(k,v); }catch{} }
+(()=>{
+// ---------- tiny store ----------
+const getStored=k=>{try{return localStorage.getItem(k)||""}catch{return""}}
+const setStored=(k,v)=>{try{localStorage.setItem(k,v)}catch{}}
 
-  const API_BASE = {
-    get(){
-      if (window.API_BASE && typeof window.API_BASE==="string") return window.API_BASE;
-      const saved = getStored("apiBase");
-      return saved || "/api";
-    },
-    set(v){ if(v) setStored("apiBase", v) }
-  };
+// ---------- API BASE ----------
+const API_BASE={
+  get(){ if(window.API_BASE&&typeof window.API_BASE==="string") return window.API_BASE;
+    const saved=getStored("apiBase"); return saved||"/api"; },
+  set(v){ if(v) setStored("apiBase",v) }
+};
+document.getElementById("gear").addEventListener("click",()=>{
+  const cur=API_BASE.get();
+  const v=prompt("API base (ends with /api). Example:\nhttps://YOUR-NORTHFLANK.code.run/api",cur);
+  if(!v) return; API_BASE.set(v); alert("Saved. Using:\n"+API_BASE.get());
+});
 
-  document.getElementById("gear").addEventListener("click",()=>{
-    const cur = API_BASE.get();
-    const v = prompt("API base (ends with /api). Example:\nhttps://YOUR-NORTHFLANK.code.run/api", cur);
-    if(!v) return;
-    API_BASE.set(v);
-    alert("Saved. Using:\n"+API_BASE.get());
-  });
+// ---------- ELEMENTS ----------
+const modal=$("#modal"), openBtn=$("#cta"), closeBtn=$("#close"), backBtn=$("#back"), nextBtn=$("#next");
+const dots=[...document.querySelectorAll("[data-step-dot]")];
+const $id=id=>document.getElementById(id), $=(sel)=>document.querySelector(sel);
 
-  const modal = document.getElementById("modal");
-  const openBtn = document.getElementById("cta");
-  const closeBtn = document.getElementById("close");
-  const backBtn = document.getElementById("back");
-  const nextBtn = document.getElementById("next");
-  const dots = [...document.querySelectorAll("[data-step-dot]")];
+const optSupplier=$id("opt-supplier"), optBuyer=$id("opt-buyer");
+const emailEl=$id("email"), hostEl=$id("host"), phoneEl=$id("phone");
 
-  const optSupplier = document.getElementById("opt-supplier");
-  const optBuyer = document.getElementById("opt-buyer");
+const favImg=$id("fav"), sentence=$id("sentence"), editBtn=$id("editLine"), doneBtn=$id("doneLine"), refreshA=$id("refresh"), statusEl=$id("status");
+const adv=$id("advanced"), advToggle=$id("advToggle"), advLbl=$id("advLbl");
+const productChips=$id("productChips"), metricsBox=$id("metricsBox"), aiGeneral=$id("aiGeneral"), aiProduct=$id("aiProduct"), generalWrap=$id("generalWrap"), productWrap=$id("productWrap");
+const cityEl=$id("city"), sectorsEl=$id("sectors"), cityChips=$id("cityChips"), sectorChips=$id("sectorChips");
 
-  const emailEl = document.getElementById("email");
-  const hostEl  = document.getElementById("host");
-  const phoneEl = document.getElementById("phone");
+// ---------- STATE ----------
+const state={step:0,role:"supplier",email:"",host:"",line:{host:"your-company.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},productTags:new Set(),sectorHints:new Set(),metrics:[],touched:{general:false,product:false,metrics:false}};
+function show(step){ state.step=step; ["#step1","#step2","#step3"].forEach((id,i)=>{const el=$(id); if(el){el.hidden=i!==step; dots[i].classList.toggle("on",i===step)}}); backBtn.style.visibility=step===0?"hidden":"visible"; nextBtn.textContent=step===2?"Finish":"Next"; }
+function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
+function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
+const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""}
 
-  const favEl = document.getElementById("fav");
-  const sentence = document.getElementById("sentence");
-  const editBtn = document.getElementById("editLine");
-  const doneBtn = document.getElementById("doneLine");
-  const refreshA = document.getElementById("refresh");
-  const statusEl = document.getElementById("status");
+// favicon loader with fallbacks + white chip bg
+function setFavicon(host){
+  const h=normHost(host); if(!h){favImg.src=""; return;}
+  const chain=[
+    "https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico",
+    "https://www.google.com/s2/favicons?domain="+encodeURIComponent(h)+"&sz=64",
+    "https://logo.clearbit.com/"+encodeURIComponent(h)
+  ];
+  let i=0; const tryNext=()=>{ if(i>=chain.length){favImg.src="";return;} favImg.src=chain[i++]; }
+  favImg.onerror=tryNext; tryNext();
+}
 
-  const adv = document.getElementById("advanced");
-  const advToggle = document.getElementById("advToggle");
-  const advLbl = document.getElementById("advLbl");
-
-  const productChips = document.getElementById("productChips");
-  const metricsBox = document.getElementById("metricsBox");
-  const aiGeneral = document.getElementById("aiGeneral");
-  const aiProduct = document.getElementById("aiProduct");
-  const generalWrap = document.getElementById("generalWrap");
-  const productWrap = document.getElementById("productWrap");
-
-  const cityEl = document.getElementById("city");
-  const sectorsEl = document.getElementById("sectors");
-  const cityChips = document.getElementById("cityChips");
-  const sectorChips = document.getElementById("sectorChips");
-
-  const state = {
-    step:0,
-    role:"supplier",
-    email:"",
-    host:"",
-    line:{ host:"your-company.com", verb:"supplies", products:"packaging", audience:"brands", region:"the U.S.", contacts:"Operations, Procurement" },
-    productTags:[],
-    sectorHints:[],
-    metrics:[],
-    touched:{general:false, product:false, metrics:false}
-  };
-
-  function show(step){
-    state.step = step;
-    ["#step1","#step2","#step3"].forEach((id,i)=>{
-      const el=document.querySelector(id); if(!el) return;
-      el.hidden = i!==step;
-      dots[i].classList.toggle("on", i===step);
-    });
-    backBtn.style.visibility = step===0? "hidden":"visible";
-    nextBtn.textContent = step===2? "Finish":"Next";
+// sentence render & edit
+function renderSentence(editing=false){
+  const L=state.line, tpl=[
+    {k:"host",txt:L.host,lock:true},{txt:"—",lock:true},
+    {k:"verb",txt:L.verb},{k:"products",txt:L.products},{txt:"for",lock:true},
+    {k:"audience",txt:L.audience},{txt:"in",lock:true},{k:"region",txt:L.region},{txt:".",lock:true},
+    {txt:"Best contacts:",lock:true},{k:"contacts",txt:L.contacts}
+  ];
+  sentence.classList.toggle("editing",editing); sentence.innerHTML="";
+  for(const part of tpl){ const span=document.createElement("span"); span.className="token"; span.dataset.lock=part.lock?"true":"false";
+    if(!part.lock){ span.dataset.editable="true"; span.contentEditable=editing; span.addEventListener("input",()=>{state.line[part.k]=span.textContent.trim();});}
+    span.textContent=part.txt; sentence.appendChild(span); sentence.appendChild(document.createTextNode(" "));
   }
-  function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
-  function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
-  function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
-  function domainFromEmail(e){ const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m? m[1]:""; }
-  function setFavicon(host){
-    const h=normHost(host);
-    if(!h){ favEl.src=""; favEl.style.display="none"; return; }
-    favEl.style.display="";
-    favEl.src="https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico";
-    favEl.onerror=()=>{ favEl.style.display="none"; };
+}
+editBtn.addEventListener("click",()=>{renderSentence(true);editBtn.hidden=true;doneBtn.hidden=false;});
+doneBtn.addEventListener("click",()=>{renderSentence(false);editBtn.hidden=false;doneBtn.hidden=true;});
+
+// advanced toggle
+advToggle.addEventListener("click",e=>{e.preventDefault();const open=!adv.hasAttribute("hidden"); if(open){adv.setAttribute("hidden","");advLbl.textContent="Show advanced ▾";} else {adv.removeAttribute("hidden");advLbl.textContent="Hide advanced ▲";}});
+// role toggles
+function setRole(r){state.role=r; optSupplier.classList.toggle("active",r==="supplier"); optBuyer.classList.toggle("active",r==="buyer");}
+optSupplier.addEventListener("click",()=>setRole("supplier")); optBuyer.addEventListener("click",()=>setRole("buyer"));
+// email → domain
+function syncDomain(){ const d=domainFromEmail(emailEl.value); if(d) hostEl.value=d; } ["input","keyup","change"].forEach(ev=>emailEl.addEventListener(ev,syncDomain)); setTimeout(syncDomain,120);
+
+// AI decide muting
+function applyMute(){ generalWrap.classList.toggle("muted",aiGeneral.checked); productWrap.classList.toggle("muted",aiProduct.checked);}
+aiGeneral.addEventListener("change",applyMute); aiProduct.addEventListener("change",applyMute);
+
+// chips helpers
+function addChip(text,box,pickSet){ const s=document.createElement("span"); s.className="chip"; s.textContent=text; s.addEventListener("click",()=>{s.classList.toggle("active"); if(pickSet){ if(s.classList.contains("active")) pickSet.add(text); else pickSet.delete(text); state.touched.product=true; }}); box.appendChild(s); }
+function chipList(box){ return [...box.querySelectorAll(".chip.active")].map(el=>el.textContent.trim()) }
+// metrics
+function renderMetrics(labels){ metricsBox.innerHTML=""; state.metrics=(labels||[]).slice(0,20).map(l=>({label:l,value:8}));
+  for(const m of state.metrics){ const row=document.createElement("div"); row.className="slider-row"; const lab=document.createElement("div"); lab.textContent=m.label;
+    const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=m.value; input.addEventListener("input",()=>{m.value=+input.value; state.touched.metrics=true;});
+    row.appendChild(lab); row.appendChild(input); metricsBox.appendChild(row); }
+}
+// defaults for city & sectors
+function seedChips(){ ["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"].forEach(c=>addChip(c,cityChips));
+  ["food","beverage","cosmetics","electronics","apparel","supplements","pharma"].forEach(s=>addChip(s,sectorChips)); }
+
+// ---------- API ----------
+async function classify(host,email){
+  const b0=API_BASE.get().replace(/\/+$/,"");
+  const tries=[b0+"/classify", b0+"/api/classify"];
+  let last;
+  for(const url of tries){
+    try{ const r=await fetch(url+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email),{credentials:"omit"});
+      if(r.ok) return await r.json(); last=await r.text().catch(()=>r.statusText);
+    }catch(e){ last=e.message; }
   }
+  throw new Error((last||"")+" classify failed");
+}
 
-  function renderSentence(editing=false){
-    const L = state.line;
-    const tpl = [
-      {k:"host", txt:L.host, lock:true},
-      {txt:"—", lock:true},
-      {k:"verb", txt:L.verb},
-      {k:"products", txt:L.products},
-      {txt:"for", lock:true},
-      {k:"audience", txt:L.audience},
-      {txt:"in", lock:true},
-      {k:"region", txt:L.region},
-      {txt:".", lock:true},
-      {txt:"Best contacts:", lock:true},
-      {k:"contacts", txt:L.contacts}
-    ];
-    sentence.classList.toggle("editing", editing);
-    sentence.innerHTML = "";
-    for (const part of tpl){
-      const span = document.createElement("span");
-      span.className="token";
-      span.dataset.lock = part.lock ? "true":"false";
-      if (!part.lock){
-        span.dataset.editable="true";
-        span.contentEditable = editing;
-        span.addEventListener("input",()=>{ state.line[part.k]=span.textContent.trim(); });
-      }
-      span.textContent = part.txt;
-      sentence.appendChild(span);
-      sentence.appendChild(document.createTextNode(" "));
-    }
+function deriveLine(data,host){
+  const prods=(data.productTags||[]).slice(0,3).join(", ")||"packaging";
+  const segs=(data.sectorHints||[]).slice(0,2).join(", ")||"brands";
+  const contacts=/industrial|corrugat|pallet|film|shrink|automation/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")))
+    ?"Operations, Procurement":"Procurement, Marketing";
+  state.line={host,verb:"supplies",products:prods,audience:segs,region:"the U.S.",contacts};
+}
+function deriveMetrics(data){
+  const text=((data.summary||"")+" "+(data.productTags||[]).join(" ")+" "+(data.evidence||[]).join(" ")).toLowerCase();
+  const map=[
+    [/lead|turnaround|rush|2 ?weeks|quick ship|fast/,"Fast turnaround (≤ 2 weeks)"],
+    [/moq|minimum order|short run|prototype|sample/,"Low MOQs / short runs"],
+    [/eco|sustain|recycl|compost|bio|green|post[- ]consumer/,"Eco materials / recyclable"],
+    [/made in usa|domestic|local/,"Made in USA"],
+    [/design|die[- ]?line|structur|render|artwork/,"Design & structural support"],
+    [/cost|price|budget|unit cost|lowest/,"Lowest unit cost"],
+    [/premium|lux|branding|unboxing/,"Premium brand presentation"],
+    [/anti[- ]?static|esd|protect|fragile|cushion/,"Protection / anti-static options"],
+    [/barrier|foil|oxygen|moisture|vapou?r/,"Food-safe / barrier"],
+    [/tamper|child[- ]?resist|security/,"Tamper / CR compliance"],
+    [/automation|pallet|fulfillment|co[- ]?pack/,"Line automation / fulfillment"],
+    [/print|flexo|litho|digital|spot uv|emboss|foil/,"Print & finish quality"],
+    [/inventory|stock|warehous|kanban|safety stock/,"Vendor-managed inventory"],
+    [/custom size|die|bespoke|engineer/,"Custom sizing / engineering"],
+    [/kitting|insert|assembly|contract pack/,"Kitting / co-packing"],
+    [/regulatory|fda|prop ?65|reach|rohs/,"Regulatory compliance"],
+    [/cold chain|insulat|temperat|thermal/,"Cold-chain / thermal"],
+    [/returns|reverse logistics|reusab/,"Reusability / returns"],
+    [/speed to market|launch|pilot/,"Speed-to-market support"]
+  ];
+  const set=new Set(); for(const [re,label] of map){ if(re.test(text)) set.add(label); }
+  ["Fast turnaround (≤ 2 weeks)","Lowest unit cost"].forEach(x=>set.add(x));
+  return [...set].slice(0,20);
+}
+
+async function refreshFromWebsite(){
+  const host=normHost(hostEl.value); if(!host) return;
+  setFavicon(host); statusEl.textContent="";
+  try{
+    state.line.host=host; renderSentence(false);
+    const data=await classify(host,emailEl.value||"");
+    if(data&&data.ok){
+      deriveLine(data,host); renderSentence(false);
+      productChips.innerHTML=""; state.productTags=new Set();
+      (data.productTags||[]).slice(0,12).forEach(t=>addChip(t,productChips,state.productTags));
+      const labels=deriveMetrics(data); renderMetrics(labels);
+      sectorChips.innerHTML=""; (data.sectorHints||["food","beverage","cosmetics"]).slice(0,8).forEach(s=>addChip(s,sectorChips,state.sectorHints));
+      statusEl.textContent=data.cached?"(cached)":""; 
+    }else{ renderMetrics(["Fast turnaround (≤ 2 weeks)","Low MOQs / short runs","Eco materials / recyclable","Lowest unit cost"]); statusEl.textContent=" (offline)"; }
+  }catch(err){ console.warn(err); statusEl.textContent=" (network error)"; renderMetrics(["Fast turnaround (≤ 2 weeks)","Low MOQs / short runs","Eco materials / recyclable","Lowest unit cost"]); }
+}
+refreshA.addEventListener("click",e=>{e.preventDefault();refreshFromWebsite();});
+
+// ---------- NAV ----------
+openBtn.addEventListener("click",open); closeBtn.addEventListener("click",close);
+backBtn.addEventListener("click",()=>show(Math.max(0,state.step-1)));
+nextBtn.addEventListener("click",async ()=>{
+  if(state.step===0){ show(1); return; }
+  if(state.step===1){
+    if(!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
+    state.email=emailEl.value.trim(); state.host=normHost(hostEl.value || domainFromEmail(state.email));
+    if(!state.host){ alert("Please provide your website/domain."); return; }
+    await refreshFromWebsite(); show(2); return;
   }
+  if(state.step===2){
+    // auto-enable AI decide if untouched
+    if(!state.touched.general) aiGeneral.checked=true;
+    if(!state.touched.product) aiProduct.checked=true; applyMute();
 
-  editBtn.addEventListener("click", ()=>{ renderSentence(true); editBtn.hidden=true; doneBtn.hidden=false; });
-  doneBtn.addEventListener("click", ()=>{ renderSentence(false); editBtn.hidden=false; doneBtn.hidden=true; });
-
-  advToggle.addEventListener("click",(e)=>{
-    e.preventDefault();
-    const isOpen = !adv.hasAttribute("hidden");
-    if (isOpen){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
-    else { adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
-  });
-
-  function setRole(r){
-    state.role=r;
-    optSupplier.classList.toggle("active", r==="supplier");
-    optBuyer.classList.toggle("active", r==="buyer");
-  }
-  optSupplier.addEventListener("click", ()=>setRole("supplier"));
-  optBuyer.addEventListener("click", ()=>setRole("buyer"));
-
-  function syncDomain(){
-    const d = domainFromEmail(emailEl.value);
-    if (d) hostEl.value = d;
-  }
-  emailEl.addEventListener("input", syncDomain);
-  emailEl.addEventListener("keyup", syncDomain);
-  emailEl.addEventListener("change", syncDomain);
-  setTimeout(syncDomain, 120);
-
-  function applyMute(){
-    generalWrap.classList.toggle("muted", aiGeneral.checked);
-    productWrap.classList.toggle("muted", aiProduct.checked);
-  }
-  aiGeneral.addEventListener("change", applyMute);
-  aiProduct.addEventListener("change", applyMute);
-
-  function addChip(text, box, pickSet){
-    const s=document.createElement("span"); s.className="chip"; s.textContent=text;
-    s.addEventListener("click",()=>{ s.classList.toggle("active");
-      if(pickSet){
-        if(s.classList.contains("active")) pickSet.add(text); else pickSet.delete(text);
-        state.touched.product=true;
-      }
-    });
-    box.appendChild(s);
-  }
-  function chipsFrom(list, box){
-    box.innerHTML=""; (list||[]).forEach(v=>addChip(v, box));
-  }
-
-  function renderMetrics(labels){
-    metricsBox.innerHTML="";
-    state.metrics = (labels||[]).slice(0,20).map(l=>({label:l, value:8}));
-    for (const m of state.metrics){
-      const row=document.createElement("div"); row.className="slider-row";
-      const lab=document.createElement("div"); lab.textContent=m.label;
-      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=m.value;
-      input.addEventListener("input", ()=>{ m.value=Number(input.value); state.touched.metrics=true; });
-      row.appendChild(lab); row.appendChild(input);
-      metricsBox.appendChild(row);
-    }
-  }
-
-  function seedChips(){
-    ["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"].forEach(c=>addChip(c,cityChips));
-    ["food","beverage","cosmetics","electronics","apparel","supplements","pharma"].forEach(s=>addChip(s,sectorChips));
-  }
-
-  async function classify(host,email){
-    const b0 = API_BASE.get().replace(/\/+$/,"");
-    const tries = [ b0 + "/classify", b0 + "/api/classify" ];
-    let last;
-    for (const url of tries){
-      try{
-        const r = await fetch(url+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email), {credentials:"omit"});
-        if (r.ok) return await r.json();
-        last = await r.text().catch(()=>r.statusText);
-      }catch(e){ last = e.message; }
-    }
-    throw new Error((last||"") + " classify failed");
-  }
-
-  function deriveLine(data, host){
-    const prods = ((data.productTags||[]).slice(0,3).join(", ")) || "packaging";
-    const segs  = ((data.sectorHints||[]).slice(0,2).join(", ")) || "brands";
-    const contacts = /industrial|corrugat|pallet|film|shrink|automation/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")).trim())
-      ? "Operations, Procurement" : "Procurement, Marketing";
-    state.line = { host, verb:"supplies", products:prods, audience:segs, region:"the U.S.", contacts };
-  }
-
-  function deriveMetrics(data){
-    const text = ((data.summary||"") + " " + (data.productTags||[]).join(" ") + " " + (data.evidence||[]).join(" ")).toLowerCase();
-    const map = [
-      [/lead|turnaround|rush|2 ?weeks|quick ship|fast/i, "Fast turnaround (≤ 2 weeks)"],
-      [/moq|minimum order|short run|prototype|sample/i, "Low MOQs / short runs"],
-      [/eco|sustain|recycl|compost|bio|green|post[- ]consumer/i, "Eco materials / recyclable"],
-      [/made in usa|domestic|local/i, "Made in USA"],
-      [/design|die[- ]?line|structur|render|artwork/i, "Design & structural support"],
-      [/cost|price|budget|unit cost|lowest/i, "Lowest unit cost"],
-      [/premium|lux|branding|unboxing/i, "Premium brand presentation"],
-      [/anti[- ]?static|esd|protect|fragile|cushion/i, "Protection / anti-static options"],
-      [/barrier|foil|oxygen|moisture|vapou?r/i, "Food-safe / barrier"],
-      [/tamper|child[- ]?resist|security/i, "Tamper / CR compliance"],
-      [/automation|pallet|fulfillment|co[- ]?pack/i, "Line automation / fulfillment"],
-      [/print|flexo|litho|digital|spot uv|emboss|foil/i, "Print & finish quality"],
-      [/inventory|stock|warehous|kanban|safety stock/i, "Vendor-managed inventory"],
-      [/custom size|die|bespoke|engineer/i, "Custom sizing / engineering"],
-      [/kitting|insert|assembly|contract pack/i, "Kitting / co-packing"],
-      [/regulatory|fda|prop ?65|reach|rohs/i, "Regulatory compliance"],
-      [/cold chain|insulat|temperat|thermal/i, "Cold-chain / thermal"],
-      [/returns|reverse logistics|reusab/i, "Reusability / returns"],
-      [/speed to market|launch|pilot/i, "Speed-to-market support"]
-    ];
-    const set = new Set();
-    for (const [re,label] of map){ if (re.test(text)) set.add(label); }
-    ["Fast turnaround (≤ 2 weeks)","Lowest unit cost"].forEach(x=>set.add(x));
-    return [...set].slice(0,20);
-  }
-
-  async function refreshFromWebsite(){
-    const host = normHost(hostEl.value);
-    if (!host) return;
-    setFavicon(host);
-    statusEl.textContent = "";
-
-    try{
-      state.line.host = host;
-      renderSentence(false);
-
-      const data = await classify(host, emailEl.value||"");
-      if (data && data.ok){
-        deriveLine(data, host);
-        renderSentence(false);
-
-        const chosen = new Set();
-        productChips.innerHTML="";
-        (data.productTags||[]).slice(0,12).forEach(t=>addChip(t, productChips, chosen));
-        state.productTags = [...chosen];
-
-        const labels = deriveMetrics(data);
-        renderMetrics(labels);
-
-        sectorChips.innerHTML="";
-        (data.sectorHints||["food","beverage","cosmetics"]).slice(0,8).forEach(s=>addChip(s, sectorChips));
-
-        statusEl.textContent = data.cached ? "(cached)" : "";
-      }else{
-        renderMetrics(["Fast turnaround (≤ 2 weeks)","Low MOQs / short runs","Eco materials / recyclable","Lowest unit cost"]);
-        statusEl.textContent = " (offline)";
-      }
-    }catch(err){
-      console.warn(err);
-      statusEl.textContent = " (network error)";
-      renderMetrics(["Fast turnaround (≤ 2 weeks)","Low MOQs / short runs","Eco materials / recyclable","Lowest unit cost"]);
-    }
-  }
-  refreshA.addEventListener("click",(e)=>{ e.preventDefault(); refreshFromWebsite(); });
-
-  // persona handoff wiring
-  const SETUP_WIRE_KEY = 'bf.setup.persona.v1';
-
-  function collectActiveChips(containerEl){
-    return [...(containerEl?.querySelectorAll('.chip.active')||[])]
-      .map(x => x.textContent.trim()).filter(Boolean);
-  }
-  function collectAllChips(containerEl){
-    return [...(containerEl?.querySelectorAll('.chip')||[])]
-      .map(x => ({ label:x.textContent.trim(), active:x.classList.contains('active') }));
-  }
-  function buildPersonaPayload(){
-    const general = {
-      prioritizeNearby: document.getElementById('gp-near')?.checked ?? false,
-      preferEcom:       document.getElementById('gp-ecom')?.checked ?? false,
-      preferRetail:     document.getElementById('gp-retail')?.checked ?? false,
-      preferWholesale:  document.getElementById('gp-wholesale')?.checked ?? false,
-      preferMidSize:    document.getElementById('gp-mids')?.checked ?? false,
-      avoidGiants:      document.getElementById('gp-avoidBig')?.checked ?? false,
-      aiDecide:         aiGeneral?.checked ?? false
+    // ---- BUILD & SAVE PERSONA ----
+    const payload={
+      ts:new Date().toISOString(),
+      host:state.line.host, role:state.role,
+      summary: sentence.textContent.trim(),
+      line: {...state.line},
+      productTags: chipList(productChips),
+      sectorHints: chipList(sectorChips),
+      ai:{general:!!aiGeneral.checked,product:!!aiProduct.checked},
+      general:{
+        near: $id("gp-near").checked, ecom:$id("gp-ecom").checked, retail:$id("gp-retail").checked,
+        wholesale:$id("gp-wholesale").checked, mids:$id("gp-mids").checked, avoidBig:$id("gp-avoidBig").checked
+      },
+      metrics: state.metrics.map(m=>({label:m.label,value:m.value})),
+      targeting:{city:cityEl.value.trim(),sectors:sectorsEl.value.trim()}
     };
-    const product = {
-      aiDecide: aiProduct?.checked ?? false,
-      chips: collectAllChips(productChips),
-      selected: collectActiveChips(productChips)
-    };
-    const metrics = (state.metrics||[]).map(m => ({ label:m.label, value:Number(m.value||0) }));
-    const persona = {
-      ts: Date.now(),
-      host: state.host || normHost(hostEl.value || domainFromEmail(emailEl.value||'')),
-      email: emailEl.value||'',
-      line: { ...state.line },
-      general, product, metrics,
-      city: (cityEl?.value||'').trim(),
-      sectorsInput: (sectorsEl?.value||'').trim(),
-      cityChips: collectAllChips(cityChips),
-      sectorChips: collectAllChips(sectorChips),
-      summary: { products: product.selected.slice(0,6), topMetrics: metrics.slice(0,6).map(m=>m.label) }
-    };
-    return persona;
+    const J=JSON.stringify(payload);
+    // Save under multiple keys so free-panel can find it regardless of version
+    setStored("fp.setupPayload",J); setStored("fp.persona",J); setStored("onboarding.persona",J);
+    setStored("fp.lastHost",state.line.host);
+
+    // redirect with flag so panel can auto-import
+    window.location.href="free-panel.html#auto-import";
   }
-  function handoffToFreePanel(){
-    try{
-      const payload = buildPersonaPayload();
-      localStorage.setItem(SETUP_WIRE_KEY, JSON.stringify(payload));
-    }catch(e){ console.warn('persona save failed', e); }
-    window.location.assign('free-panel.html#import');
-  }
+});
 
-  // NAV
-  openBtn.addEventListener("click", open);
-  closeBtn.addEventListener("click", close);
-  backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+// init
+function seed(){ setRole("supplier"); renderSentence(false); applyMute(); seedChips(); show(0); }
+seed();
 
-  nextBtn.addEventListener("click", async ()=>{
-    if (state.step===0){ show(1); return; }
-
-    if (state.step===1){
-      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
-      state.email = emailEl.value.trim();
-      state.host  = normHost(hostEl.value || domainFromEmail(state.email));
-      if (!state.host){ alert("Please provide your website/domain."); return; }
-      await refreshFromWebsite();
-      show(2);
-      return;
-    }
-
-    if (state.step===2){
-      if (!state.touched.general) aiGeneral.checked = true;
-      if (!state.touched.product) aiProduct.checked = true;
-      applyMute();
-      handoffToFreePanel();
-    }
-  });
-
-  // init
-  setRole("supplier");
-  renderSentence(false);
-  applyMute();
-  seedChips();
-  show(0);
+// helpers
+function $(q){return document.querySelector(q)}
 })();
 </script>
 </body>
