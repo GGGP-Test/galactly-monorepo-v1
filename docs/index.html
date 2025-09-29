@@ -24,7 +24,6 @@
   .btn.sec{background:#152333;color:#cfe0ee}
   .btn:active{transform:translateY(1px)}
 
-  /* modal */
   .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
   .modal.show{display:flex}
   .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
@@ -36,13 +35,11 @@
   .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--divider)}
   .scroll{max-height:70vh;overflow:auto;padding:6px 6px}
 
-  /* inputs */
   .field{margin:10px 0}
   label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
   input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
   input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
 
-  /* summary (sentence editor) */
   .summary{display:flex;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:12px 14px;border-radius:14px;margin:0 0 14px;align-items:flex-start}
   .fav{width:24px;height:24px;border-radius:6px;background:#122;display:grid;place-items:center;overflow:hidden;flex:0 0 auto}
   .one{font-weight:700}
@@ -57,7 +54,6 @@
   .big-edit{padding:6px 10px;border-radius:10px;background:#172839;border:1px solid #274059;color:#d8e8f7;font-weight:600;cursor:pointer}
   .big-edit.primary{background:var(--cta);border:none;color:#06293a}
 
-  /* groups */
   .group{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px;margin:14px 0}
   .group h4{margin:0 0 8px}
   .muted-hint{font-size:12px;color:#99b2c8;margin-left:8px}
@@ -66,10 +62,9 @@
   .mute-wrap.muted .keep-live{pointer-events:auto;opacity:1}
 
   .chips{user-select:none}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
   .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
 
-  /* sliders */
   .slider-row{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:center;margin:10px 0}
   .slider-row input[type=range]{width:100%}
 
@@ -88,7 +83,6 @@
     </div>
   </div>
 
-  <!-- modal -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="card" role="document">
       <div class="card-hd">
@@ -112,8 +106,8 @@
             <h2 style="margin:10px 0 14px;">Pick your side</h2>
             <div class="group">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-                <div id="opt-supplier" class="chip active" style="user-select:none;cursor:pointer">🙌 I sell packaging (Supplier)</div>
-                <div id="opt-buyer" class="chip" style="user-select:none;cursor:pointer">🛒 I buy packaging (Buyer)</div>
+                <div id="opt-supplier" class="chip active">🙌 I sell packaging (Supplier)</div>
+                <div id="opt-buyer" class="chip">🛒 I buy packaging (Buyer)</div>
               </div>
             </div>
           </section>
@@ -133,7 +127,7 @@
                   <div class="field">
                     <label>Phone (required for alerts) *</label>
                     <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/>
-                    <div style="color:#9ab0c0;font-size:12px">Country code helps us personalize geography (e.g., “+1” for U.S.).</div>
+                    <div style="color:#9ab0c0;font-size:12px">Country code helps personalize geography (e.g., “+1” for U.S.).</div>
                   </div>
                 </div>
                 <div>
@@ -162,7 +156,6 @@
           <section class="step" id="step3" hidden>
             <div class="pill">Step 3 of 3</div>
 
-            <!-- sentence editor -->
             <div class="summary">
               <div class="fav"><img id="fav" alt="" width="24" height="24" referrerpolicy="no-referrer"></div>
               <div style="flex:1">
@@ -183,7 +176,6 @@
             <div id="advanced" hidden>
               <div class="group">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-                  <!-- general -->
                   <div class="group" id="grp-general">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
                       <h4 style="margin:0">General preferences</h4>
@@ -201,7 +193,6 @@
                     </div>
                   </div>
 
-                  <!-- product tags -->
                   <div class="group" id="grp-product">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
                       <h4 style="margin:0">Product signals (from your site)</h4>
@@ -216,7 +207,6 @@
                 </div>
               </div>
 
-              <!-- Buyer priorities / dynamic metrics -->
               <div class="group">
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <h4 style="margin:0">Buyer priorities (dynamic)</h4>
@@ -225,7 +215,6 @@
                 <div id="metricsBox"></div>
               </div>
 
-              <!-- targeting -->
               <div class="group">
                 <h4 style="margin:0 0 8px">Buyer targeting</h4>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -256,26 +245,20 @@
 
 <script>
 (() => {
-  // ---------- tiny storage helpers ----------
-  function getStored(k){ try{ return localStorage.getItem(k) || ""; }catch{ return ""; } }
-  function setStored(k,v){ try{ localStorage.setItem(k, v); }catch{} }
+  // storage helpers
+  function getStored(k){ try{ const v=localStorage.getItem(k); return v==null? "": v; }catch{ return ""; } }
+  function setStored(k,v){ try{ localStorage.setItem(k,v); }catch{} }
 
-  // ---------- API BASE ----------
   const API_BASE = {
     get(){
-      if (window.API_BASE && typeof window.API_BASE === "string") return window.API_BASE;
-      const saved = getStored("apiBase") || getStored("fp.apiBase");
-      return saved || "/api"; // GH Pages will 404; user sets a real base via ⚙️
+      if (window.API_BASE && typeof window.API_BASE==="string") return window.API_BASE;
+      const saved = getStored("apiBase");
+      return saved || "/api";
     },
-    set(v){
-      if (!v) return;
-      setStored("apiBase", v);
-      setStored("fp.apiBase", v); // also save what free-panel reads
-    }
+    set(v){ if(v) setStored("apiBase", v) }
   };
 
-  // quick gear editor
-  document.getElementById("gear").addEventListener("click", ()=>{
+  document.getElementById("gear").addEventListener("click",()=>{
     const cur = API_BASE.get();
     const v = prompt("API base (ends with /api). Example:\nhttps://YOUR-NORTHFLANK.code.run/api", cur);
     if(!v) return;
@@ -283,7 +266,6 @@
     alert("Saved. Using:\n"+API_BASE.get());
   });
 
-  // ---------- ELEMENTS ----------
   const modal = document.getElementById("modal");
   const openBtn = document.getElementById("cta");
   const closeBtn = document.getElementById("close");
@@ -321,7 +303,6 @@
   const cityChips = document.getElementById("cityChips");
   const sectorChips = document.getElementById("sectorChips");
 
-  // ---------- STATE ----------
   const state = {
     step:0,
     role:"supplier",
@@ -330,16 +311,14 @@
     line:{ host:"your-company.com", verb:"supplies", products:"packaging", audience:"brands", region:"the U.S.", contacts:"Operations, Procurement" },
     productTags:[],
     sectorHints:[],
-    metrics:[],   // {label, value}
+    metrics:[],
     touched:{general:false, product:false, metrics:false}
   };
 
-  // ---------- UTIL ----------
-  const $ = s => document.querySelector(s);
   function show(step){
     state.step = step;
     ["#step1","#step2","#step3"].forEach((id,i)=>{
-      const el=$(id); if(!el) return;
+      const el=document.querySelector(id); if(!el) return;
       el.hidden = i!==step;
       dots[i].classList.toggle("on", i===step);
     });
@@ -358,7 +337,6 @@
     favEl.onerror=()=>{ favEl.style.display="none"; };
   }
 
-  // sentence render & edit
   function renderSentence(editing=false){
     const L = state.line;
     const tpl = [
@@ -394,15 +372,13 @@
   editBtn.addEventListener("click", ()=>{ renderSentence(true); editBtn.hidden=true; doneBtn.hidden=false; });
   doneBtn.addEventListener("click", ()=>{ renderSentence(false); editBtn.hidden=false; doneBtn.hidden=true; });
 
-  // adv toggle
   advToggle.addEventListener("click",(e)=>{
     e.preventDefault();
-    const open = !adv.hasAttribute("hidden");
-    if (open){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
+    const isOpen = !adv.hasAttribute("hidden");
+    if (isOpen){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
     else { adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
   });
 
-  // role toggles
   function setRole(r){
     state.role=r;
     optSupplier.classList.toggle("active", r==="supplier");
@@ -411,7 +387,6 @@
   optSupplier.addEventListener("click", ()=>setRole("supplier"));
   optBuyer.addEventListener("click", ()=>setRole("buyer"));
 
-  // email → domain (real-time)
   function syncDomain(){
     const d = domainFromEmail(emailEl.value);
     if (d) hostEl.value = d;
@@ -419,9 +394,8 @@
   emailEl.addEventListener("input", syncDomain);
   emailEl.addEventListener("keyup", syncDomain);
   emailEl.addEventListener("change", syncDomain);
-  setTimeout(syncDomain, 120); // capture browser autofill
+  setTimeout(syncDomain, 120);
 
-  // AI decide muting (only content, not toggles)
   function applyMute(){
     generalWrap.classList.toggle("muted", aiGeneral.checked);
     productWrap.classList.toggle("muted", aiProduct.checked);
@@ -429,7 +403,6 @@
   aiGeneral.addEventListener("change", applyMute);
   aiProduct.addEventListener("change", applyMute);
 
-  // chips helpers
   function addChip(text, box, pickSet){
     const s=document.createElement("span"); s.className="chip"; s.textContent=text;
     s.addEventListener("click",()=>{ s.classList.toggle("active");
@@ -444,7 +417,6 @@
     box.innerHTML=""; (list||[]).forEach(v=>addChip(v, box));
   }
 
-  // metrics
   function renderMetrics(labels){
     metricsBox.innerHTML="";
     state.metrics = (labels||[]).slice(0,20).map(l=>({label:l, value:8}));
@@ -458,52 +430,55 @@
     }
   }
 
-  // defaults for city & sectors
   function seedChips(){
     ["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"].forEach(c=>addChip(c,cityChips));
     ["food","beverage","cosmetics","electronics","apparel","supplements","pharma"].forEach(s=>addChip(s,sectorChips));
   }
 
-  // ---------- API CALLS ----------
   async function classify(host,email){
-    const base = API_BASE.get().replace(/\/+$/,"");
-    const apiRoot = base.endsWith("/api") ? base : (base + "/api");
-    const url = `${apiRoot}/classify?host=${encodeURIComponent(host)}&email=${encodeURIComponent(email||"")}`;
-    const r = await fetch(url, {credentials:"omit"});
-    if (!r.ok) throw new Error("classify HTTP "+r.status);
-    return r.json();
+    const b0 = API_BASE.get().replace(/\/+$/,"");
+    const tries = [ b0 + "/classify", b0 + "/api/classify" ];
+    let last;
+    for (const url of tries){
+      try{
+        const r = await fetch(url+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email), {credentials:"omit"});
+        if (r.ok) return await r.json();
+        last = await r.text().catch(()=>r.statusText);
+      }catch(e){ last = e.message; }
+    }
+    throw new Error((last||"") + " classify failed");
   }
 
   function deriveLine(data, host){
-    const prods = (data.productTags || []).slice(0,3).join(", ") || "packaging";
-    const segs  = (data.sectorHints || []).slice(0,2).join(", ") || "brands";
-    const contacts = /industrial|corrugat|pallet|film|shrink|automation/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")))
+    const prods = ((data.productTags||[]).slice(0,3).join(", ")) || "packaging";
+    const segs  = ((data.sectorHints||[]).slice(0,2).join(", ")) || "brands";
+    const contacts = /industrial|corrugat|pallet|film|shrink|automation/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")).trim())
       ? "Operations, Procurement" : "Procurement, Marketing";
     state.line = { host, verb:"supplies", products:prods, audience:segs, region:"the U.S.", contacts };
   }
 
   function deriveMetrics(data){
-    const text = ((data.summary||"") + " " + (data.productTags||[]).join(" ") + " " + JSON.stringify(data.evidence||{})).toLowerCase();
+    const text = ((data.summary||"") + " " + (data.productTags||[]).join(" ") + " " + (data.evidence||[]).join(" ")).toLowerCase();
     const map = [
-      [/lead|turnaround|rush|2 ?weeks|quick ship|fast/, "Fast turnaround (≤ 2 weeks)"],
-      [/moq|minimum order|short run|prototype|sample/, "Low MOQs / short runs"],
-      [/eco|sustain|recycl|compost|bio|green|post[- ]consumer/, "Eco materials / recyclable"],
-      [/made in usa|domestic|local/, "Made in USA"],
-      [/design|die[- ]?line|structur|render|artwork/, "Design & structural support"],
-      [/cost|price|budget|unit cost|lowest/, "Lowest unit cost"],
-      [/premium|lux|branding|unboxing/, "Premium brand presentation"],
-      [/anti[- ]?static|esd|protect|fragile|cushion/, "Protection / anti-static options"],
-      [/barrier|foil|oxygen|moisture|vapou?r/, "Food-safe / barrier"],
-      [/tamper|child[- ]?resist|security/, "Tamper / CR compliance"],
-      [/automation|pallet|fulfillment|co[- ]?pack/, "Line automation / fulfillment"],
-      [/print|flexo|litho|digital|spot uv|emboss|foil/, "Print & finish quality"],
-      [/inventory|stock|warehous|kanban|safety stock/, "Vendor-managed inventory"],
-      [/custom size|die|bespoke|engineer/, "Custom sizing / engineering"],
-      [/kitting|insert|assembly|contract pack/, "Kitting / co-packing"],
-      [/regulatory|fda|prop ?65|reach|rohs/, "Regulatory compliance"],
-      [/cold chain|insulat|temperat|thermal/, "Cold-chain / thermal"],
-      [/returns|reverse logistics|reusab/, "Reusability / returns"],
-      [/speed to market|launch|pilot/, "Speed-to-market support"]
+      [/lead|turnaround|rush|2 ?weeks|quick ship|fast/i, "Fast turnaround (≤ 2 weeks)"],
+      [/moq|minimum order|short run|prototype|sample/i, "Low MOQs / short runs"],
+      [/eco|sustain|recycl|compost|bio|green|post[- ]consumer/i, "Eco materials / recyclable"],
+      [/made in usa|domestic|local/i, "Made in USA"],
+      [/design|die[- ]?line|structur|render|artwork/i, "Design & structural support"],
+      [/cost|price|budget|unit cost|lowest/i, "Lowest unit cost"],
+      [/premium|lux|branding|unboxing/i, "Premium brand presentation"],
+      [/anti[- ]?static|esd|protect|fragile|cushion/i, "Protection / anti-static options"],
+      [/barrier|foil|oxygen|moisture|vapou?r/i, "Food-safe / barrier"],
+      [/tamper|child[- ]?resist|security/i, "Tamper / CR compliance"],
+      [/automation|pallet|fulfillment|co[- ]?pack/i, "Line automation / fulfillment"],
+      [/print|flexo|litho|digital|spot uv|emboss|foil/i, "Print & finish quality"],
+      [/inventory|stock|warehous|kanban|safety stock/i, "Vendor-managed inventory"],
+      [/custom size|die|bespoke|engineer/i, "Custom sizing / engineering"],
+      [/kitting|insert|assembly|contract pack/i, "Kitting / co-packing"],
+      [/regulatory|fda|prop ?65|reach|rohs/i, "Regulatory compliance"],
+      [/cold chain|insulat|temperat|thermal/i, "Cold-chain / thermal"],
+      [/returns|reverse logistics|reusab/i, "Reusability / returns"],
+      [/speed to market|launch|pilot/i, "Speed-to-market support"]
     ];
     const set = new Set();
     for (const [re,label] of map){ if (re.test(text)) set.add(label); }
@@ -518,13 +493,11 @@
     statusEl.textContent = "";
 
     try{
-      // prefill host in sentence
       state.line.host = host;
       renderSentence(false);
 
       const data = await classify(host, emailEl.value||"");
       if (data && data.ok){
-        // sentence + chips
         deriveLine(data, host);
         renderSentence(false);
 
@@ -533,11 +506,9 @@
         (data.productTags||[]).slice(0,12).forEach(t=>addChip(t, productChips, chosen));
         state.productTags = [...chosen];
 
-        // metrics (dynamic)
         const labels = deriveMetrics(data);
         renderMetrics(labels);
 
-        // sectors
         sectorChips.innerHTML="";
         (data.sectorHints||["food","beverage","cosmetics"]).slice(0,8).forEach(s=>addChip(s, sectorChips));
 
@@ -552,13 +523,62 @@
       renderMetrics(["Fast turnaround (≤ 2 weeks)","Low MOQs / short runs","Eco materials / recyclable","Lowest unit cost"]);
     }
   }
-
   refreshA.addEventListener("click",(e)=>{ e.preventDefault(); refreshFromWebsite(); });
 
-  // ---------- NAV ----------
+  // persona handoff wiring
+  const SETUP_WIRE_KEY = 'bf.setup.persona.v1';
+
+  function collectActiveChips(containerEl){
+    return [...(containerEl?.querySelectorAll('.chip.active')||[])]
+      .map(x => x.textContent.trim()).filter(Boolean);
+  }
+  function collectAllChips(containerEl){
+    return [...(containerEl?.querySelectorAll('.chip')||[])]
+      .map(x => ({ label:x.textContent.trim(), active:x.classList.contains('active') }));
+  }
+  function buildPersonaPayload(){
+    const general = {
+      prioritizeNearby: document.getElementById('gp-near')?.checked ?? false,
+      preferEcom:       document.getElementById('gp-ecom')?.checked ?? false,
+      preferRetail:     document.getElementById('gp-retail')?.checked ?? false,
+      preferWholesale:  document.getElementById('gp-wholesale')?.checked ?? false,
+      preferMidSize:    document.getElementById('gp-mids')?.checked ?? false,
+      avoidGiants:      document.getElementById('gp-avoidBig')?.checked ?? false,
+      aiDecide:         aiGeneral?.checked ?? false
+    };
+    const product = {
+      aiDecide: aiProduct?.checked ?? false,
+      chips: collectAllChips(productChips),
+      selected: collectActiveChips(productChips)
+    };
+    const metrics = (state.metrics||[]).map(m => ({ label:m.label, value:Number(m.value||0) }));
+    const persona = {
+      ts: Date.now(),
+      host: state.host || normHost(hostEl.value || domainFromEmail(emailEl.value||'')),
+      email: emailEl.value||'',
+      line: { ...state.line },
+      general, product, metrics,
+      city: (cityEl?.value||'').trim(),
+      sectorsInput: (sectorsEl?.value||'').trim(),
+      cityChips: collectAllChips(cityChips),
+      sectorChips: collectAllChips(sectorChips),
+      summary: { products: product.selected.slice(0,6), topMetrics: metrics.slice(0,6).map(m=>m.label) }
+    };
+    return persona;
+  }
+  function handoffToFreePanel(){
+    try{
+      const payload = buildPersonaPayload();
+      localStorage.setItem(SETUP_WIRE_KEY, JSON.stringify(payload));
+    }catch(e){ console.warn('persona save failed', e); }
+    window.location.assign('free-panel.html#import');
+  }
+
+  // NAV
   openBtn.addEventListener("click", open);
   closeBtn.addEventListener("click", close);
   backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+
   nextBtn.addEventListener("click", async ()=>{
     if (state.step===0){ show(1); return; }
 
@@ -573,56 +593,12 @@
     }
 
     if (state.step===2){
-      // If user never touched stuff, auto-enable AI decide
       if (!state.touched.general) aiGeneral.checked = true;
       if (!state.touched.product) aiProduct.checked = true;
       applyMute();
-
-      // ---------- BRIDGE TO FREE PANEL ----------
-      // collect selected product tags
-      const selectedTags = [...productChips.querySelectorAll('.chip.active')].map(x=>x.textContent.trim());
-      // collect sector chips (active ones only if any, otherwise text box split)
-      const selectedSectors = [...sectorChips.querySelectorAll('.chip.active')].map(x=>x.textContent.trim());
-
-      // metrics already in state.metrics
-      const profile = {
-        ts: Date.now(),
-        host: state.host,
-        email: state.email,
-        phone: phoneEl.value.trim(),
-        line: state.line,
-        productTags: selectedTags.length ? selectedTags : state.productTags,
-        sectorHints: selectedSectors,
-        metrics: state.metrics, // [{label,value}]
-        ai: { general: !!aiGeneral.checked, product: !!aiProduct.checked },
-        general: {
-          near: $('#gp-near').checked,
-          ecom: $('#gp-ecom').checked,
-          retail: $('#gp-retail').checked,
-          wholesale: $('#gp-wholesale').checked,
-          mids: $('#gp-mids').checked,
-          avoidGiants: $('#gp-avoidBig').checked
-        },
-        city: cityEl.value.trim(),
-        sectors: (sectorsEl.value || "").split(",").map(s=>s.trim()).filter(Boolean)
-      };
-
-      // Save for free-panel
-      setStored('fp.setup', JSON.stringify(profile));
-      setStored('fp.supplier.host', state.host);
-      if (profile.city) setStored('fp.pref.city', profile.city);
-
-      alert("Saved! (Demo) You’ll go to the free panel next.");
-      // redirect
-      location.href = 'free-panel.html?from=setup';
+      handoffToFreePanel();
     }
   });
-
-  // seed defaults
-  function seedChips(){
-    ["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"].forEach(c=>addChip(c,cityChips));
-    ["food","beverage","cosmetics","electronics","apparel","supplements","pharma"].forEach(s=>addChip(s,sectorChips));
-  }
 
   // init
   setRole("supplier");
