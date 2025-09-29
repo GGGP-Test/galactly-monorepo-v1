@@ -6,186 +6,162 @@
 <title>Free Panel — Buyers Finder</title>
 <style>
   :root{
-    --bg:#0b0f1a; --panel:#10172a; --panel2:#0d1424; --muted:#2a3552;
-    --line:#1a2340; --text:#e9eefb; --sub:#aab6d6; --acc:#6ea8fe;
-    --ok:#2fb170; --warn:#ffb02e; --hot:#ff4769; --chip:#1b2441;
-    --chip2:#0e1a2e; --ring:#2a4dff66;
+    --bg:#0b111d; --panel:#121a2a; --panel2:#0e1624; --muted:#1b2940;
+    --text:#e7eefc; --sub:#9fb0cf; --accent:#6ea8fe; --ok:#2fb170; --warn:#ffb02e;
+    --chip:#1b243b; --chipOn:#0f2a49; --ring:#2b4e7b;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-  a{color:var(--acc);text-decoration:none}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Inter,Arial}
   .wrap{display:flex;min-height:100vh}
-  .left{width:420px;max-width:100%;padding:16px;border-right:1px solid var(--line);background:linear-gradient(180deg,var(--panel),#0a1122)}
-  .right{flex:1;min-width:0;padding:16px}
-  h2{margin:10px 0 8px;font-size:16px}
-  h3{margin:14px 0 8px;font-size:14px;color:var(--sub)}
+  /* left rail */
+  .left{width:340px;max-width:100%;padding:14px;border-right:1px solid var(--muted);background:linear-gradient(180deg,var(--panel),#0b1322)}
+  h2{margin:10px 0 8px;font-size:15px}
   label{display:block;font-size:12px;color:var(--sub);margin:6px 0 4px}
-  input,select,textarea{
-    width:100%;background:#0b1326;border:1px solid var(--line);color:var(--text);
-    border-radius:10px;padding:10px 12px;outline:none
-  }
-  input:focus,textarea:focus{border-color:#3b63ff44;box-shadow:0 0 0 4px var(--ring)}
-  textarea{min-height:68px;resize:vertical}
-  .row{display:flex;gap:8px}
-  .row>*{flex:1}
-  .btn{display:inline-flex;align-items:center;gap:8px;background:#17244a;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:10px;cursor:pointer;user-select:none}
-  .btn:hover{background:#203064}
-  .btn.primary{background:var(--acc);border-color:transparent;color:#081225}
-  .btn.good{background:var(--ok);border-color:transparent;color:#03140c}
+  input,select{width:100%;background:#0a1222;border:1px solid var(--muted);color:var(--text);border-radius:8px;padding:10px 12px;outline:none}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:#1a2540;border:1px solid var(--muted);color:var(--text);padding:9px 12px;border-radius:8px;cursor:pointer}
+  .btn.primary{background:var(--accent);border-color:transparent;color:#0a1222}
   .btn.ghost{background:transparent}
-  .btn.small{padding:6px 8px;border-radius:8px;font-size:12px}
-  .section{padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,0.02)}
+  .section{padding:10px;border:1px solid var(--muted);border-radius:12px;background:rgba(255,255,255,.02)}
+  .row{display:flex;gap:8px}.row>*{flex:1}
   .small{font-size:12px;color:var(--sub)}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-  .chip{padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ff;font-size:12px;border:1px solid var(--line)}
-  .chip.pick{cursor:pointer}
-  .chip.on{background:#20345c}
-  .pill{padding:6px 10px;border-radius:999px;background:#0e1b2e;color:#9fb1d6;font-size:12px;display:inline-block}
-  .table{width:100%;border-collapse:separate;border-spacing:0 8px}
-  .table th{font-size:12px;color:var(--sub);text-align:left;padding:0 10px}
-  .table td{background:#0d1330;padding:12px 10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .table tr td:first-child{border-left:1px solid var(--line);border-top-left-radius:8px;border-bottom-left-radius:8px}
-  .table tr td:last-child{border-right:1px solid var(--line);border-top-right-radius:8px;border-bottom-right-radius:8px}
-  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
-  pre.log{background:#0a0f22;border:1px solid var(--line);border-radius:12px;padding:10px;max-height:220px;overflow:auto;color:#9cb3ff}
-  .split{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}
-  @media (max-width:1100px){.split{grid-template-columns:1fr}}
-  /* Persona header */
-  .bar{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,#0f1630,#0c1428)}
-  .favwrap{width:28px;height:28px;border-radius:8px;background:#e8eefc;display:grid;place-items:center;overflow:hidden;border:1px solid #c9d4f8}
-  .favwrap img{width:18px;height:18px;display:block}
-  .host{font-weight:700}
-  .bar .spacer{flex:1}
-  /* Collapsible persona tray */
-  .tray{margin-top:10px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2);padding:10px;display:none}
-  .tray.show{display:block}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  @media (max-width:900px){.grid2{grid-template-columns:1fr}}
-  .slider-row{display:grid;grid-template-columns:1fr 220px;gap:12px;align-items:center;margin:8px 0}
+  /* right */
+  .right{flex:1;min-width:0;padding:14px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid var(--muted);border-radius:12px;background:var(--panel2)}
+  .idpill{display:flex;align-items:center;gap:10px}
+  .ico{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;overflow:hidden;
+       padding:2px;background:radial-gradient(24px 24px at 50% 50%,#1b2a41 0,#0c1322 70%);
+       filter:brightness(1.15) contrast(1.08)}
+  .ico img{width:100%;height:100%}
+  .pill{font-size:12px;color:#cfe1ff;background:#152237;border:1px solid var(--muted);padding:5px 8px;border-radius:999px}
+  .group{margin-top:10px;border:1px solid var(--muted);border-radius:12px;background:rgba(255,255,255,.02)}
+  .ghd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;user-select:none}
+  .ghd h3{margin:0;font-size:13px;color:#cfe1ff}
+  .gbody{padding:10px 12px;border-top:1px solid var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{padding:6px 10px;border-radius:999px;background:var(--chip);border:1px solid #223252;color:#cfe1ff}
+  .chip.on{background:var(--chipOn);border-color:#24507f}
+  .muted{color:var(--sub)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:1100px){.two{grid-template-columns:1fr}}
+  .slider-row{display:grid;grid-template-columns:1fr 240px;gap:12px;align-items:center;margin:8px 0}
   .slider-row input[type=range]{width:100%}
+  .table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:10px}
+  .table th{font-size:12px;color:var(--sub);text-align:left;padding:0 10px}
+  .table td{background:#0c1426;padding:12px 10px;border:1px solid #17264a}
+  .table tr td:first-child{border-top-left-radius:8px;border-bottom-left-radius:8px}
+  .table tr td:last-child{border-top-right-radius:8px;border-bottom-right-radius:8px}
+  pre.log{background:#0a0f1d;border:1px solid #17264a;border-radius:12px;padding:10px;max-height:220px;overflow:auto;color:#9cb3ff}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <!-- LEFT: connection + supplier -->
+
+  <!-- LEFT RAIL -->
   <div class="left">
     <h2>Connection</h2>
     <div class="section">
       <label>API Base (must end with <span class="mono">/api</span>)</label>
-      <input id="apiBase" placeholder="https://your-host.tld/api" />
+      <input id="apiBase" placeholder="https://your-host.tld/api"/>
       <div class="row" style="margin-top:6px">
-        <div>
-          <label>x-api-key (optional)</label>
-          <input id="apiKey" placeholder="leave blank if none" />
-        </div>
-        <div style="align-self:flex-end"><button class="btn" id="btnSaveConn">Save</button></div>
+        <input id="apiKey" placeholder="x-api-key (optional)"/>
+        <button class="btn" id="btnSaveConn">Save</button>
       </div>
       <div class="row" style="margin-top:6px">
         <button class="btn" id="btnPing">Ping</button>
         <button class="btn ghost" id="btnClearLog">Clear Log</button>
       </div>
-      <div class="small">Tip: if this HTML is served by the same host as the API, you can leave API Base blank (relative).</div>
+      <div class="small">Saved in <span class="mono">localStorage</span>.</div>
     </div>
 
-    <h2 style="margin-top:14px">Supplier</h2>
+    <h2 style="margin-top:12px">Supplier</h2>
     <div class="section">
       <label>Supplier host (domain only)</label>
-      <input id="supplierHost" placeholder="example.com" />
+      <input id="supplierHost" placeholder="example.com"/>
       <div class="row">
         <div>
           <label>City (boost leads near)</label>
-          <input id="supplierCity" placeholder="e.g., los angeles" />
+          <input id="supplierCity" placeholder="e.g., los angeles"/>
         </div>
         <div>
           <label>Limit</label>
-          <select id="limit"><option>6</option><option selected>12</option><option>20</option><option>30</option></select>
+          <select id="limit"><option>6</option><option selected>12</option><option>20</option></select>
         </div>
       </div>
       <div class="row" style="margin-top:8px">
         <button class="btn primary" id="btnFind" disabled>Find Buyers</button>
         <button class="btn" id="btnReclass">Re-classify</button>
       </div>
-      <div class="small" id="hintProfile"></div>
     </div>
 
-    <h2 style="margin-top:14px">Preference Profile</h2>
+    <h2 style="margin-top:12px">Preference Profile</h2>
     <div class="section">
       <div class="row">
-        <div>
-          <label>Profile ID</label>
-          <input id="profileId" placeholder="auto on Apply" />
-        </div>
-        <div style="align-self:flex-end"><button class="btn" id="btnLoadProfile">Load</button></div>
+        <input id="profileId" placeholder="auto on Apply"/>
+        <button class="btn" id="btnLoadProfile">Load</button>
       </div>
-      <h3 style="margin-top:8px">Persona Preview</h3>
-      <div class="small">Click <b>Import</b> (top bar) to pull persona from setup, or <b>Re-classify</b> to analyze the website again.</div>
-      <div id="personaMini" class="small" style="margin-top:6px;opacity:.85"></div>
-      <div class="row" style="margin-top:8px">
-        <button class="btn good" id="btnApplyProfile">Apply profile</button>
-        <button class="btn ghost" id="btnForgetProfile">Forget ID</button>
-      </div>
+      <div class="small" style="margin-top:8px">Persona Preview will auto-import from setup.</div>
     </div>
   </div>
 
-  <!-- RIGHT: persona + results + log -->
+  <!-- RIGHT PANE -->
   <div class="right">
-    <div class="bar" id="personaBar">
-      <span class="favwrap"><img id="fav" alt="" referrerpolicy="no-referrer"></span>
-      <span class="host mono" id="barHost">yourcompany.com</span>
-      <span class="pill" id="personaBadge">no persona yet</span>
-      <span class="spacer"></span>
-      <button class="btn small" id="btnImport">Import</button>
-      <button class="btn small" id="btnPersona">Persona</button>
-    </div>
-
-    <div class="tray" id="personaTray">
-      <div class="grid2">
-        <div class="section">
-          <h3>General preferences</h3>
-          <div id="prefChips" class="chips"></div>
-        </div>
-        <div class="section">
-          <h3>Product signals (from your site)</h3>
-          <div id="tagChips" class="chips"></div>
+    <div class="topbar">
+      <div class="idpill">
+        <div class="ico"><img id="fav" alt=""></div>
+        <div>
+          <div style="font-weight:700" id="hostLbl">yourcompany.com</div>
+          <div class="small muted" id="personaHint">no persona yet</div>
         </div>
       </div>
-
-      <div class="section" style="margin-top:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <h3 style="margin:0">Buyer priorities (dynamic)</h3>
-          <div class="small">Tell us how much buyers care.</div>
-        </div>
-        <div id="metricsBox"></div>
-      </div>
-
-      <div class="grid2" style="margin-top:10px">
-        <div class="section">
-          <h3>Buyer targeting — City</h3>
-          <input id="cityInput" placeholder="e.g., Chicago"/>
-          <div id="cityChips" class="chips" style="margin-top:6px"></div>
-        </div>
-        <div class="section">
-          <h3>Buyer targeting — Sectors</h3>
-          <input id="sectorInput" placeholder="e.g., food, beverage, cosmetics"/>
-          <div id="sectorChips" class="chips" style="margin-top:6px"></div>
-        </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="btnImport">Import</button>
+        <button class="btn" id="btnPersona">Persona</button>
+        <button class="btn" id="btnApply" style="background:#2fb170;color:#061611;border:none">Apply profile</button>
       </div>
     </div>
 
-    <div class="split" style="margin-top:12px">
+    <!-- Collapsibles -->
+    <div class="group" data-coll>
+      <div class="ghd"><h3>General preferences</h3><span class="small muted">from setup</span></div>
+      <div class="gbody">
+        <div id="prefChips" class="chips"></div>
+      </div>
+    </div>
+
+    <div class="group" data-coll>
+      <div class="ghd"><h3>Product signals (from your site)</h3><span class="small muted">chips</span></div>
+      <div class="gbody"><div id="tagChips" class="chips"></div></div>
+    </div>
+
+    <div class="group" data-coll>
+      <div class="ghd"><h3>Buyer priorities (dynamic)</h3><span class="small muted">Tell us how much buyers care.</span></div>
+      <div class="gbody" id="metricBox"></div>
+    </div>
+
+    <div class="two">
+      <div class="group" data-coll>
+        <div class="ghd"><h3>Buyer targeting — City</h3><span class="small muted">boost near</span></div>
+        <div class="gbody">
+          <input id="city" placeholder="e.g., Chicago" />
+          <div id="cityChips" class="chips" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="group" data-coll>
+        <div class="ghd"><h3>Buyer targeting — Sectors</h3><span class="small muted">e.g., food, beverage</span></div>
+        <div class="gbody">
+          <input id="sectors" placeholder="e.g., food, beverage, cosmetics"/>
+          <div id="sectorChips" class="chips" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results + Log -->
+    <div class="two" style="margin-top:10px">
       <div>
         <h2>Results</h2>
         <table class="table">
-          <thead>
-            <tr>
-              <th style="width:70px">Score</th>
-              <th style="width:90px">Temp</th>
-              <th>Buyer</th>
-              <th>Why</th>
-              <th style="width:120px">Action</th>
-            </tr>
-          </thead>
-          <tbody id="resultsBody"><tr><td colspan="5" class="small" style="opacity:.8">No items</td></tr></tbody>
+          <thead><tr><th style="width:70px">Score</th><th style="width:80px">Temp</th><th>Buyer</th><th>Why</th><th style="width:110px">Action</th></tr></thead>
+          <tbody id="resultsBody"><tr><td colspan="5" class="small muted">No items</td></tr></tbody>
         </table>
       </div>
       <div>
@@ -198,335 +174,219 @@
 
 <script>
 (function(){
-  const $ = s => document.querySelector(s);
-  const logEl = $('#httpLog');
-
-  // ---------- Local storage helpers ----------
-  const LS = {
-    get(k,d=''){ try{ const v=localStorage.getItem(k); return v==null?d:v; }catch{ return d; } },
-    set(k,v){ try{ localStorage.setItem(k, v); }catch{} },
-    del(k){ try{ localStorage.removeItem(k); }catch{} }
+  // ------ DOM helpers ------
+  const $=s=>document.querySelector(s);
+  const $$=s=>[...document.querySelectorAll(s)];
+  const logEl=$('#httpLog');
+  function ts(){return new Date().toISOString().replace('T',' ').replace('Z','');}
+  function log(line){logEl.textContent+=`[${ts()}] ${line}\n`;logEl.scrollTop=logEl.scrollHeight;}
+  const LS={
+    get(k,d=''){try{const v=localStorage.getItem(k);return v==null?d:v}catch{return d}},
+    set(k,v){try{localStorage.setItem(k,v)}catch{}},
+    del(k){try{localStorage.removeItem(k)}catch{}}
   };
 
-  // Shared keys (stable across pages)
-  const K = {
-    apiBase:'bf.v1.apiBase', apiKey:'bf.v1.apiKey',
-    persona:'bf.v1.persona', lastHost:'bf.v1.lastHost',
-    profileId:'bf.v1.profileId',
+  // ------ UI refs ------
+  const S={
+    apiBase:$('#apiBase'), apiKey:$('#apiKey'),
+    btnSaveConn:$('#btnSaveConn'), btnPing:$('#btnPing'), btnClearLog:$('#btnClearLog'),
+    supplierHost:$('#supplierHost'), supplierCity:$('#supplierCity'), limit:$('#limit'),
+    btnFind:$('#btnFind'), btnReclass:$('#btnReclass'),
+    btnImport:$('#btnImport'), btnApply:$('#btnApply'), btnPersona:$('#btnPersona'),
+    hostLbl:$('#hostLbl'), fav:$('#fav'), personaHint:$('#personaHint'),
+    prefChips:$('#prefChips'), tagChips:$('#tagChips'),
+    metricBox:$('#metricBox'), resultsBody:$('#resultsBody'),
+    city:$('#city'), sectors:$('#sectors'), cityChips:$('#cityChips'), sectorChips:'#sectorChips',
+    profileId:$('#profileId'), btnLoadProfile:$('#btnLoadProfile')
   };
 
-  // ---------- Elements ----------
-  const S = {
-    // conn
-    apiBase: $('#apiBase'), apiKey: $('#apiKey'),
-    btnSaveConn: $('#btnSaveConn'), btnPing: $('#btnPing'), btnClearLog: $('#btnClearLog'),
+  // ------ Collapsibles ------
+  $$('.group[data-coll]').forEach(g=>{
+    const head=g.querySelector('.ghd'); const body=g.querySelector('.gbody'); let open=false;
+    const set=()=>{body.style.display=open?'block':'none';};
+    head.addEventListener('click',()=>{open=!open;set();}); set(); // start collapsed
+  });
 
-    // supplier
-    supplierHost: $('#supplierHost'), supplierCity: $('#supplierCity'), limit: $('#limit'),
-    btnFind: $('#btnFind'), btnReclass: $('#btnReclass'),
-
-    // profile
-    profileId: $('#profileId'), btnLoadProfile: $('#btnLoadProfile'),
-    btnApplyProfile: $('#btnApplyProfile'), btnForgetProfile: $('#btnForgetProfile'),
-    hintProfile: $('#hintProfile'), personaMini: $('#personaMini'),
-
-    // persona bar/tray
-    barHost: $('#barHost'), fav: $('#fav'), personaBadge: $('#personaBadge'),
-    btnImport: $('#btnImport'), btnPersona: $('#btnPersona'), personaTray: $('#personaTray'),
-
-    // persona widgets
-    prefChips: $('#prefChips'), tagChips: $('#tagChips'),
-    metricsBox: $('#metricsBox'),
-    cityInput: $('#cityInput'), sectorInput: $('#sectorInput'),
-    cityChips: $('#cityChips'), sectorChips: $('#sectorChips'),
-
-    // results
-    resultsBody: $('#resultsBody')
-  };
-
-  // ---------- State ----------
-  const state = {
-    persona:null, // {host, productTags, sectorHints, summary, ...}
-    metrics:[],   // [{label,value}]
-    generalPrefs:new Set(['Prefer mid-size companies','De-prioritize giant enterprises']), // sane defaults
-    cityPicks:new Set(), sectorPicks:new Set()
-  };
-
-  // ---------- Utils ----------
-  function normHost(h){ return (h||'').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/.*$/,''); }
-  function fullUrl(path){
-    const base = (S.apiBase.value||'').trim().replace(/\/+$/,'');
-    if (!base) return path;
-    if (path.startsWith('http')) return path;
-    return base + path;
-  }
-  function log(line){ logEl.textContent += `[${new Date().toISOString().replace('T',' ').replace('Z','')}] ${line}\n`; logEl.scrollTop=logEl.scrollHeight; }
-  function badge(temp){
-    const t=(temp||'').toLowerCase();
-    if (t==='hot') return '<span class="chip" style="background:rgba(255,71,105,.14);color:#ff9fb0">HOT</span>';
-    if (t==='warm') return '<span class="chip" style="background:rgba(255,200,87,.16);color:#ffe2a8">WARM</span>';
-    return '<span class="chip" style="background:rgba(110,198,255,.16);color:#cfeaff">COOL</span>';
-  }
-  function setFav(host){
-    const h=normHost(host); S.fav.src=''; if(!h){ return; }
-    S.fav.src = 'https://icons.duckduckgo.com/ip3/'+encodeURIComponent(h)+'.ico';
-  }
-
-  async function fetchJSON(method, path, body){
-    const url = fullUrl(path);
-    const headers = {'content-type':'application/json'};
+  // ------ Connection + fetch ------
+  function base(){return (S.apiBase.value||'').trim().replace(/\/+$/,'');}
+  function fullUrl(p){ if(!p.startsWith('/')) p='/'+p; const b=base(); return b?p:b+p;}
+  async function fetchJSON(method,path,body){
+    const url=fullUrl(path); const headers={'content-type':'application/json'};
     const k=(S.apiKey.value||'').trim(); if(k) headers['x-api-key']=k;
-    const init = { method, headers, redirect:'follow' };
-    if (body) init.body = JSON.stringify(body);
-
     log(`${method} ${url}`);
-    const t0 = performance.now();
-    let resp, data, ok=false;
+    const t0=performance.now(); let resp,data;
     try{
-      resp=await fetch(url, init);
-      const ct=resp.headers.get('content-type')||'';
-      data = ct.includes('application/json') ? await resp.json() : { raw: await resp.text() };
-      ok = resp.ok;
+      resp=await fetch(url,{method,headers,body:body?JSON.stringify(body):undefined,redirect:'follow'});
+      const ct=(resp.headers.get('content-type')||''); data=ct.includes('json')?await resp.json():{raw:await resp.text()};
       log(`↳ ${resp.status} ${resp.statusText} (${Math.round(performance.now()-t0)} ms)`);
-    }catch(e){ log(`↳ network error: ${e.message||e}`); throw e; }
-    if(!ok){ log(`↳ body: ${JSON.stringify(data)}`); const er=new Error(data && data.error ? data.error : `HTTP ${resp.status}`); er.status=resp.status; er.data=data; throw er; }
-    return data;
+      if(!resp.ok){log(`↳ body: ${JSON.stringify(data).slice(0,400)}`); throw new Error(data&&data.error?data.error:`HTTP ${resp.status}`);}
+      return data;
+    }catch(e){ log(`↳ error: ${e.message||e}`); throw e; }
   }
 
-  function chips(box, items, selectable=false, set=null){
-    box.innerHTML='';
-    (items||[]).forEach(t=>{
-      const s=document.createElement('span'); s.className='chip'+(selectable?' pick':''); s.textContent=t;
-      if(selectable && set){ s.addEventListener('click',()=>{ s.classList.toggle('on'); if(s.classList.contains('on')) set.add(t); else set.delete(t); }); }
-      box.appendChild(s);
-    });
+  // ------ Persona state ------
+  const STATE={
+    host:'', favicon:'', persona:null,
+    prefs:[], tags:[], metrics:[], // metrics: [{label,value}]
+    cities:[], sectors:[]
+  };
+
+  const CANON_METRICS=[
+    'Line automation / fulfillment',
+    'Fast turnaround (≤ 2 weeks)',
+    'Lowest unit cost'
+  ];
+
+  function setFavicon(host){
+    const h=(host||'').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/.*$/,'');
+    if(!h){ S.fav.removeAttribute('src'); return; }
+    S.fav.src='https://icons.duckduckgo.com/ip3/'+encodeURIComponent(h)+'.ico';
+    S.fav.onerror=()=>{ S.fav.removeAttribute('src'); };
   }
 
-  function renderMetrics(labels){
-    S.metricsBox.innerHTML='';
-    state.metrics = (labels||[]).slice(0,20).map(l=>({label:l,value:8}));
-    for(const m of state.metrics){
+  // ------ Renderers ------
+  function chipEl(txt,on=false){const s=document.createElement('span'); s.className='chip'+(on?' on':''); s.textContent=txt; return s;}
+  function renderChips(list,box){ box.innerHTML=''; (list||[]).forEach(x=>box.appendChild(chipEl(x,true))); }
+  function renderMetrics(arr){
+    S.metricBox.innerHTML='';
+    const byLabel=new Map((arr||[]).map(m=>[m.label, m.value]));
+    const merged=CANON_METRICS.map(l=>({label:l, value: byLabel.has(l)? Number(byLabel.get(l)) : 8}));
+    STATE.metrics=merged;
+    for(const m of merged){
       const row=document.createElement('div'); row.className='slider-row';
       const lab=document.createElement('div'); lab.textContent=m.label;
       const input=document.createElement('input'); input.type='range'; input.min='0'; input.max='10'; input.value=String(m.value);
       input.addEventListener('input',()=>{ m.value=Number(input.value); });
-      row.appendChild(lab); row.appendChild(input);
-      S.metricsBox.appendChild(row);
+      row.appendChild(lab); row.appendChild(input); S.metricBox.appendChild(row);
     }
   }
-
-  function deriveMetrics(p){
-    const text = ((p.summary||'')+' '+(p.productTags||[]).join(' ')+' '+(p.evidence||[]).join(' ')).toLowerCase();
-    const map = [
-      [/lead|turnaround|rush|2 ?weeks|quick ship|fast/i, 'Fast turnaround (≤ 2 weeks)'],
-      [/moq|minimum order|short run|prototype|sample/i, 'Low MOQs / short runs'],
-      [/eco|sustain|recycl|compost|bio|green|post[- ]consumer/i, 'Eco materials / recyclable'],
-      [/made in usa|domestic|local/i, 'Made in USA'],
-      [/design|die[- ]?line|structur|render|artwork/i, 'Design & structural support'],
-      [/cost|price|budget|unit cost|lowest/i, 'Lowest unit cost'],
-      [/premium|lux|branding|unboxing/i, 'Premium brand presentation'],
-      [/anti[- ]?static|esd|protect|fragile|cushion/i, 'Protection / anti-static options'],
-      [/barrier|foil|oxygen|moisture|vapou?r/i, 'Food-safe / barrier'],
-      [/tamper|child[- ]?resist|security/i, 'Tamper / CR compliance'],
-      [/automation|pallet|fulfillment|co[- ]?pack/i, 'Line automation / fulfillment'],
-      [/print|flexo|litho|digital|spot uv|emboss|foil/i, 'Print & finish quality'],
-      [/inventory|warehous|kanban|safety stock/i, 'Vendor-managed inventory'],
-      [/custom size|engineer|die/i, 'Custom sizing / engineering'],
-      [/kitting|insert|assembly|contract pack/i, 'Kitting / co-packing'],
-      [/regulatory|fda|prop ?65|reach|rohs/i, 'Regulatory compliance'],
-      [/cold chain|insulat|thermal/i, 'Cold-chain / thermal'],
-      [/reusab|returns|reverse logistics/i, 'Reusability / returns'],
-      [/speed to market|launch|pilot/i, 'Speed-to-market support']
-    ];
-    const set = new Set();
-    for (const [re,label] of map){ if(re.test(text)) set.add(label); }
-    ['Fast turnaround (≤ 2 weeks)','Lowest unit cost'].forEach(x=>set.add(x));
-    return [...set];
+  function renderPersonaHints(){
+    S.hostLbl.textContent = STATE.host || 'yourcompany.com';
+    S.personaHint.textContent = STATE.persona ? 'persona (imported)' : 'no persona yet';
+    setFavicon(STATE.host);
   }
 
-  function renderPersona(p){
-    if(!p){ S.personaBadge.textContent='no persona yet'; return; }
-    const h = p.host || normHost(S.supplierHost.value);
-    S.barHost.textContent = h || '(unknown)';
-    setFav(h);
-
-    S.personaBadge.textContent = p.cached ? 'persona (cached)' : 'persona';
-    // Product tags
-    chips(S.tagChips, (p.productTags||[]).slice(0,14));
-    // Prefs (chips are illustrative here; your scoring uses sliders/filters)
-    const prefs = ['Prefer mid-size companies','De-prioritize giant enterprises','Prioritize nearby buyers','Prefer e-commerce sites','Prefer wholesalers / distributors','Prefer retail brands'];
-    chips(S.prefChips, prefs);
-    // Metrics (dynamic)
-    renderMetrics( deriveMetrics(p) );
-    // Targeting seeds
-    chips(S.cityChips, ['Chicago','Los Angeles','New York','Dallas','Atlanta','Miami'], true, state.cityPicks);
-    chips(S.sectorChips, (p.sectorHints&&p.sectorHints.length?p.sectorHints:['food','beverage','cosmetics','electronics']).slice(0,8), true, state.sectorPicks);
-
-    S.personaMini.textContent = (p.productTags&&p.productTags.length) ? `tags: ${p.productTags.slice(0,8).join(', ')}` : '(no tags)';
-    S.personaTray.classList.add('show');
-  }
-
-  function saveConn(){ LS.set(K.apiBase,S.apiBase.value||''); LS.set(K.apiKey,S.apiKey.value||''); log('saved connection'); }
-
-  async function ping(){ try{ const r=await fetchJSON('GET','/healthz'); log('healthz: '+JSON.stringify(r)); }catch(e){} }
-
-  async function classify(host){
-    host = normHost(host);
-    if(!host){ alert('Enter supplier host'); return null; }
-    LS.set(K.lastHost, host);
-    S.barHost.textContent = host;
+  // ------ Import from setup (auto) ------
+  function readSetupBlob(){
+    // Try several keys so it works with older index builds.
+    const keys=['bf.setup','gal.setup','galactly.setup','setup'];
+    for(const k of keys){
+      try{ const v=sessionStorage.getItem(k) || localStorage.getItem(k); if(v){ const o=JSON.parse(v); if(o && typeof o==='object') return o; } }catch{}
+    }
+    // Also try URL hash passthrough (?host=...)
     try{
-      // try /classify and /api/classify (handles mis-specified bases)
-      const tries = ['/classify','/api/classify'];
-      for (const path of tries){
-        try{
-          const r = await fetchJSON('GET', `${path}?host=${encodeURIComponent(host)}&email=`);
-          if (r && r.ok){ return r; }
-        }catch(e){ /* try next */ }
+      const h=new URLSearchParams(location.hash.slice(1));
+      const host=h.get('host'); if(host){ return {host}; }
+    }catch{}
+    return null;
+  }
+
+  function applySetupBlob(b){
+    if(!b) return false;
+    STATE.host = (b.host||'').trim();
+    STATE.prefs = (b.general||b.prefs||[]).slice(0,20);
+    STATE.tags  = (b.productTags||b.tags||[]).slice(0,20);
+    // metrics: array of {label,value} or [ {label,score} ]
+    let m = Array.isArray(b.metrics)? b.metrics : [];
+    m = m.map(x=>({label:String(x.label||x.name||''), value:Number(x.value??x.score??8)})).filter(x=>x.label);
+    STATE.metrics = m;
+    STATE.cities  = (b.cities||b.cityHints||[]).slice(0,10);
+    STATE.sectors = (b.sectors||b.sectorHints||[]).slice(0,10);
+    renderPersonaHints();
+    renderChips(STATE.prefs, S.prefChips);
+    renderChips(STATE.tags,  S.tagChips);
+    renderMetrics(STATE.metrics);
+    S.city.value = (STATE.cities[0]||'');
+    // city & sector chips
+    const cc=$('#cityChips'); cc.innerHTML=''; ['Chicago','Los Angeles','New York','Dallas','Atlanta','Miami'].forEach(c=>cc.appendChild(chipEl(c)));
+    const sc=$('#sectorChips'); sc.innerHTML=''; (STATE.sectors.length?STATE.sectors:['food','beverage','cosmetics','electronics']).forEach(s=>sc.appendChild(chipEl(s)));
+    return true;
+  }
+
+  function autoImport(){
+    const blob=readSetupBlob();
+    if(blob){ applySetupBlob(blob); S.personaHint.textContent='persona (imported)'; }
+  }
+
+  // ------ Load/save UI state ------
+  function restore(){
+    S.apiBase.value = LS.get('fp.apiBase','');
+    S.apiKey.value  = LS.get('fp.apiKey','');
+    S.supplierHost.value = LS.get('fp.supplier.host','');
+    S.supplierCity.value = LS.get('fp.supplier.city','');
+    S.limit.value  = LS.get('fp.supplier.limit','12') || '12';
+    S.btnFind.disabled = !((S.supplierHost.value||'').trim());
+  }
+  function persistBasics(){
+    LS.set('fp.apiBase',S.apiBase.value||''); LS.set('fp.apiKey',S.apiKey.value||'');
+    LS.set('fp.supplier.host',S.supplierHost.value||''); LS.set('fp.supplier.city',S.supplierCity.value||'');
+    LS.set('fp.supplier.limit',S.limit.value||'12');
+  }
+
+  // ------ Actions ------
+  S.btnSaveConn.addEventListener('click',()=>{persistBasics(); log('saved connection');});
+  S.btnPing.addEventListener('click',async()=>{ try{ const r=await fetchJSON('GET','/healthz'); log('healthz: '+JSON.stringify(r)); }catch(e){} });
+  S.btnClearLog.addEventListener('click',()=>{ logEl.textContent=''; });
+
+  S.supplierHost.addEventListener('input',()=>{ S.btnFind.disabled = !((S.supplierHost.value||'').trim()); });
+
+  S.btnFind.addEventListener('click', async ()=>{
+    const host=(S.supplierHost.value||'').trim().toLowerCase(); if(!host){ alert('Enter supplier host'); return; }
+    const city=(S.supplierCity.value||'').trim();
+    const p=new URLSearchParams({ host, city, limit:String(S.limit.value||12) });
+    try{
+      const base=await fetchJSON('GET','/api/leads/find-buyers?'+p.toString());
+      const items=(base.items||[]);
+      const body=S.resultsBody; body.innerHTML='';
+      if(!items.length){ const td=document.createElement('td'); td.colSpan=5; td.className='small muted'; td.textContent='No items'; const tr=document.createElement('tr'); tr.appendChild(td); body.appendChild(tr); return; }
+      for(const it of items){
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${Math.round(it.score||0)}</td>
+          <td><span class="pill">${(it.temp||'cool').toUpperCase()}</span></td>
+          <td><div style="font-weight:600">${it.host||''}</div><div class="small muted">${it.title||it.name||''}</div></td>
+          <td class="small">${(it.why||'').replace(/\s·\s/g,' • ')}</td>
+          <td><button class="btn">Lock</button></td>`;
+        body.appendChild(tr);
       }
-      return null;
-    }catch(e){ return null; }
-  }
+    }catch(e){}
+  });
 
-  async function reclassifyAndRender(){
-    const host = (S.supplierHost.value||'').trim() || LS.get(K.lastHost,'');
-    if(!host){ alert('Enter supplier host'); return; }
-    const data = await classify(host);
-    if (data && data.ok){
-      state.persona = { ...data, host: normHost(host) };
-      LS.set(K.persona, JSON.stringify(state.persona));
-      renderPersona(state.persona);
-    }else{
-      alert('Classify failed (check API base). See HTTP Log.');
-    }
-  }
+  S.btnReclass.addEventListener('click', async ()=>{
+    const h=(S.supplierHost.value||'').trim(); if(!h){ alert('Enter supplier host'); return; }
+    try{
+      const q='?host='+encodeURIComponent(h);
+      const r=await fetchJSON('GET','/classify'+q);
+      alert('Re-classified: '+(r&&r.ok?'ok':'check log'));
+    }catch(e){}
+  });
 
-  function importFromStorage(){
-    const fallbacks=[K.persona,'bf.persona','persona','setup.persona','galactly.persona'];
-    let raw='';
-    for(const k of fallbacks){ raw = LS.get(k,''); if(raw){ try{ state.persona=JSON.parse(raw); LS.set(K.persona,raw); break; }catch{} } }
-    if(state.persona){ renderPersona(state.persona); S.personaBadge.textContent='persona (imported)'; }
-    else alert('No saved persona found to import.');
-  }
+  S.btnImport.addEventListener('click',()=>{ const ok=applySetupBlob(readSetupBlob()); if(!ok) alert('Nothing to import yet. Finish step 3 first.'); });
 
-  async function applyProfile(){
-    const p = state.persona;
-    if(!p){ alert('No persona loaded. Click Import or Re-classify first.'); return; }
-    const body = {
+  S.btnApply.addEventListener('click', async ()=>{
+    const body={
       id:(S.profileId.value||'').trim()||undefined,
-      city:(S.supplierCity.value||'').trim()||undefined,
-      excludeGiants:true,
-      hotCues:['grand opening','new launch','pre-order'],
-      warmCues:['wholesale','private label','co-pack'],
-      mustHave:[],
-      preferSegments:[...state.sectorPicks],
-      preferTags:(p.productTags||[]).slice(0,12),
-      avoidSegments:[], avoidTags:[]
+      city:(S.city.value||S.supplierCity.value||'').trim()||undefined,
+      hotCues:[], warmCues:[],
+      preferTags:STATE.tags, preferSegments:STATE.sectors,
+      avoidTags:[], avoidSegments:[],
+      excludeGiants: STATE.prefs.some(p=>/giant/i.test(p)),
+      // Send priorities as stable labels
+      priorities: STATE.metrics.map(m=>({label:m.label, value:Number(m.value)||0}))
     };
     try{
-      const r = await fetchJSON('POST','/api/prefs/upsert', body);
+      const r=await fetchJSON('POST','/api/prefs/upsert',body);
       const id = r.id || (r.profile && r.profile.id) || '';
-      if (id){ S.profileId.value=id; LS.set(K.profileId,id); S.hintProfile.textContent='Profile saved. ID='+id; }
+      if(id){ S.profileId.value=id; LS.set('fp.profileId',id); }
+      alert('Profile applied'+(id?` (id=${id})`:'')+'.');
     }catch(e){}
-  }
+  });
 
-  async function loadProfile(){
-    const id=(S.profileId.value||'').trim();
-    if(!id){ alert('Enter a profile ID'); return; }
-    try{
-      const r = await fetchJSON('GET', `/api/prefs/${encodeURIComponent(id)}`);
-      if (r && r.profile){ S.hintProfile.textContent='Loaded profile.'; LS.set(K.profileId,id); }
-    }catch(e){}
-  }
+  S.btnPersona.addEventListener('click',()=>{ alert('Persona preview is already embedded here. Use Import if you want to re-pull from setup.'); });
 
-  function renderRows(items){
-    S.resultsBody.innerHTML='';
-    if (!items || !items.length){
-      const tr=document.createElement('tr'), td=document.createElement('td');
-      td.colSpan=5; td.textContent='No items'; td.className='small'; td.style.opacity=.8; tr.appendChild(td); S.resultsBody.appendChild(tr); return;
-    }
-    for (const it of items){
-      const tr=document.createElement('tr');
-      tr.innerHTML = `
-        <td class="mono">${Math.round(it.score||0)}</td>
-        <td>${badge(it.temp)}</td>
-        <td>
-          <div class="mono" style="font-weight:600">${it.host||''}</div>
-          <div class="small" style="opacity:.85">${it.title||it.name||''}</div>
-        </td>
-        <td><div class="small">${(it.why||'').replace(/\s·\s/g,' • ')}</div></td>
-        <td><button class="btn small" data-lock="${encodeURIComponent(it.host||'')}">Lock</button></td>
-      `;
-      S.resultsBody.appendChild(tr);
-    }
-  }
-
-  async function findBuyers(){
-    const host=(S.supplierHost.value||'').trim() || LS.get(K.lastHost,'');
-    if(!host){ alert('Enter supplier host'); return; }
-    const city=(S.supplierCity.value||'').trim();
-    const limit=String(S.limit.value||'12');
-    const params=new URLSearchParams({ host:normHost(host), limit });
-    if(city) params.set('city',city);
-    const pid=(S.profileId.value||LS.get(K.profileId,'')); if(pid) params.set('profileId',pid);
-
-    S.btnFind.disabled=true; S.btnFind.textContent='Searching…';
-    try{
-      const base = await fetchJSON('GET', `/api/leads/find-buyers?${params.toString()}`);
-      renderRows(base.items||[]);
-    }catch(e){ renderRows([]); }
-    finally{ S.btnFind.disabled=false; S.btnFind.textContent='Find Buyers'; }
-  }
-
-  // ---------- Events ----------
-  function hook(){
-    S.btnSaveConn.addEventListener('click', saveConn);
-    S.btnPing.addEventListener('click', ping);
-    S.btnClearLog.addEventListener('click', ()=>{ logEl.textContent=''; });
-
-    S.btnFind.addEventListener('click', findBuyers);
-    S.btnReclass.addEventListener('click', reclassifyAndRender);
-
-    S.btnImport.addEventListener('click', importFromStorage);
-    S.btnPersona.addEventListener('click', ()=>{ S.personaTray.classList.toggle('show'); });
-
-    S.btnApplyProfile.addEventListener('click', applyProfile);
-    S.btnForgetProfile.addEventListener('click', ()=>{ LS.del(K.profileId); S.profileId.value=''; S.hintProfile.textContent=''; });
-    S.btnLoadProfile.addEventListener('click', loadProfile);
-
-    // gate find btn
-    const gate=()=>{ S.btnFind.disabled = !((S.supplierHost.value||LS.get(K.lastHost,'')).trim()); };
-    S.supplierHost.addEventListener('input',gate); gate();
-
-    // results lock click
-    $('#resultsBody').addEventListener('click',(e)=>{
-      const b=e.target.closest('button'); if(!b) return;
-      const enc=b.getAttribute('data-lock'); if(!enc) return;
-      const host=decodeURIComponent(enc);
-      fetchJSON('POST','/api/leads/lock',{ host, title:'Locked by user', temp:'warm' })
-        .then(()=>{ b.textContent='Locked ✓'; b.classList.add('good'); b.disabled=true; })
-        .catch(()=>{});
-    });
-  }
-
-  // ---------- Boot ----------
-  function boot(){
-    S.apiBase.value = LS.get(K.apiBase,''); S.apiKey.value = LS.get(K.apiKey,'');
-    S.profileId.value = LS.get(K.profileId,'');
-    const lastHost = LS.get(K.lastHost,'');
-    S.supplierHost.value = lastHost;
-    S.barHost.textContent = lastHost || 'yourcompany.com';
-    if(lastHost) setFav(lastHost);
-
-    // Auto-import persona if present; otherwise auto-reclassify (best-effort)
-    const raw = LS.get(K.persona,'');
-    if(raw){ try{ state.persona=JSON.parse(raw); renderPersona(state.persona); S.personaBadge.textContent='persona (imported)'; }catch{} }
-    else if (lastHost){ reclassifyAndRender(); }
-
-    hook(); log('ready');
-  }
-
-  boot();
+  // ------ Boot ------
+  restore();
+  renderPersonaHints();
+  autoImport();        // <-- no more blank panel after finishing step 3
 })();
 </script>
 </body>
