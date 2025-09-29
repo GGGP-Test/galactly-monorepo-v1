@@ -6,540 +6,548 @@
 <title>Galactly — Free Panel</title>
 <link rel="preconnect" href="https://icons.duckduckgo.com">
 <style>
-:root{
-  --bg:#0b0f14; --panel:#111826; --panel2:#0e1520; --card:#101724;
-  --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff; --ring:#24435f;
-  --accent:#38e08f; --danger:#ff7b7b; --divider:#1b2531;
-  --cta:#6de1ff; --ctaText:#082433; --chip:#172435; --chipOn:#103247;
-}
-*{box-sizing:border-box}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
-a{color:var(--brand);text-decoration:none}
-button{cursor:pointer}
+  :root{
+    --bg:#0b0f14; --panel:#101723; --panel-2:#0d1520; --sunken:#0b121b;
+    --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
+    --cta:#6de1ff; --ctaText:#082433; --chip:#182233; --chipActive:#103247;
+    --accent:#38e08f; --danger:#ff7b7b; --divider:#1b2531; --ring:#24435f;
+    --ok:#2dd4bf; --warn:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,Segoe UI,Roboto,Inter,Arial}
+  a{color:var(--brand);text-decoration:none}
 
-.app{display:grid;grid-template-columns:300px 1fr;gap:16px;min-height:100vh;padding:16px}
-.left{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:12px}
-.right{display:flex;flex-direction:column;gap:12px}
+  /* layout */
+  .wrap{display:grid;grid-template-columns:280px 1fr;gap:14px;min-height:100vh;padding:14px}
+  @media (max-width:980px){.wrap{grid-template-columns:1fr}}
+  .left{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:12px;position:sticky;top:14px;height:fit-content}
+  .right{display:flex;flex-direction:column;gap:10px}
 
-.header{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:10px 12px}
-.hostchip{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--card);border:1px solid var(--divider)}
-.hostchip img{width:20px;height:20px;border-radius:4px;background:#0d1a26}
-.hostname{font-weight:700}
-.hsp{flex:1}
-.count{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--divider);border-radius:10px;padding:6px 8px}
-select, input[type=text]{background:#0d1520;color:var(--text);border:1px solid var(--divider);border-radius:10px;padding:8px 10px;outline:none}
-select:focus, input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
+  /* top bar */
+  .top{background:linear-gradient(180deg,#0f1622,#0e1520);border:1px solid var(--divider);border-radius:14px;padding:10px}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .hostBadge{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#0e1723;border:1px solid var(--divider)}
+  .favWrap{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;overflow:hidden;background:#0e1723;outline:2px solid #1f2a38;outline-offset:-2px}
+  .favWrap img{width:100%;height:100%}
+  .pill{padding:6px 9px;border-radius:999px;background:#0f1a27;color:#9eb5c8;border:1px solid #203041}
+  .btn{display:inline-flex;align-items:center;gap:.55rem;padding:10px 14px;border-radius:12px;background:#152333;color:#cfe0ee;border:1px solid #223447;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--cta);color:var(--ctaText);border:none;font-weight:800}
+  .btn.success{background:#113226;color:#aef5e6;border-color:#1e5b47}
+  .btn.warn{background:#2a210a;color:#ffd694;border-color:#5a430c}
 
-.btn{display:inline-flex;align-items:center;gap:.6rem;padding:10px 14px;border-radius:12px;border:1px solid var(--divider);background:#152333;color:#d5e7f5;font-weight:700}
-.btn.ghost{background:#152333}
-.btn.primary{background:var(--cta);color:var(--ctaText);border:none}
-.btn.success{background:var(--accent);color:#062a18;border:none}
-.btn:active{transform:translateY(1px)}
+  /* table */
+  .card{background:var(--panel);border:1px solid var(--divider);border-radius:14px;overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:12px 10px;border-bottom:1px solid var(--divider);text-align:left}
+  th{font-weight:600;color:#b9c8d6;background:#0f1724}
+  td small{color:#92a7bb}
+  .empty{padding:20px;color:#9cb3c8}
 
-.card{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:12px}
-.card h4{margin:0 0 8px}
-.help{color:var(--muted);font-size:12px}
+  /* left controls */
+  .h{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#9db1c4;margin:10px 6px 6px}
+  .field{display:grid;gap:8px;margin:8px 0}
+  input[type=text]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input[type=text]:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
+  select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:#d7e6f3}
+  .log{background:var(--sunken);border:1px solid var(--divider);border-radius:10px;padding:8px;font-family:ui-monospace,Menlo,Consolas,monospace;color:#9eb4c7;height:160px;overflow:auto;white-space:pre-wrap}
 
-.row{display:flex;gap:12px;align-items:center}
-.stack{display:flex;flex-direction:column;gap:10px}
+  /* drawer (profile) */
+  .drawer{position:fixed;inset:0;display:none;place-items:stretch;background:rgba(3,7,12,.55);z-index:30}
+  .drawer.show{display:grid}
+  .panel{margin-left:auto;width:min(840px,92vw);background:var(--panel-2);border-left:1px solid var(--divider);box-shadow:0 20px 80px rgba(0,0,0,.5);display:flex;flex-direction:column;max-height:100vh}
+  .phead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--divider);background:#0f1724}
+  .pbd{padding:14px 16px;overflow:auto}
+  .pft{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--divider)}
+  .group{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px;margin:14px 0}
+  .group h4{margin:0 0 8px}
+  .token{display:inline-block;border-radius:8px;padding:2px 6px;margin:0 2px}
+  .sentence{--bgx:#0f1926}
+  .sentence .token[data-editable="true"]{border-bottom:1px dashed #3a5572}
+  .sentence.editing .token[data-editable="true"]{background:var(--bgx);border:1px solid #2b425a}
+  .sentence .token:focus{outline:2px solid var(--ring)}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
+  .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
+  .chips{user-select:none}
+  .slider-row{display:grid;grid-template-columns:1fr 280px;gap:14px;align-items:center;margin:10px 0}
+  .slider-row input[type=range]{width:100%}
 
-.table{background:var(--panel);border:1px solid var(--divider);border-radius:14px;overflow:hidden}
-thead tr{background:#0e1624}
-table{width:100%;border-collapse:collapse}
-th,td{padding:10px;border-bottom:1px solid var(--divider);text-align:left}
-tbody tr:hover{background:#0b1422}
+  .muted{color:#92a7bb}
+  .hint{font-size:12px;color:#9db1c4}
+  .tagInput, .cityInput, .sectorInput{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:#eaf4ff}
 
-.log{background:var(--panel);border:1px solid var(--divider);border-radius:14px;min-height:120px;padding:8px;font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12px;overflow:auto;white-space:pre-wrap}
-
-.kv{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
-.inputrow{display:flex;gap:6px;align-items:center}
-.small{font-size:12px;color:var(--muted)}
-
-.chips{display:flex;gap:8px;flex-wrap:wrap}
-.chip{background:var(--chip);border:1px solid var(--divider);color:#cfe0ee;border-radius:999px;padding:6px 10px}
-.chip.on{background:var(--chipOn);color:#eaf7ff;border-color:#1b4862}
-.tagbox{display:flex;gap:8px;flex-wrap:wrap}
-.tagbox input{min-width:180px}
-
-.slider{display:grid;grid-template-columns:1fr 260px;gap:12px;align-items:center}
-input[type=range]{width:100%}
-
-/* Profile drawer (preferences) */
-.drawer{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:stretch;justify-content:flex-end;z-index:20}
-.drawer.show{display:flex}
-.sheet{width:min(780px,96vw);height:100%;background:var(--panel);border-left:1px solid var(--divider);box-shadow:0 30px 80px rgba(0,0,0,.45);display:flex;flex-direction:column}
-.sheet-hd{display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid var(--divider);background:linear-gradient(180deg,#0f1622,#0e1520)}
-.sheet-bd{padding:12px;overflow:auto;display:flex;flex-direction:column;gap:12px}
-.sheet-ft{display:flex;gap:10px;justify-content:flex-end;padding:12px;border-top:1px solid var(--divider)}
-
-.summary{display:flex;gap:10px;background:#0e1622;border:1px solid var(--divider);padding:10px;border-radius:12px}
-.summary .one{font-weight:700}
-.token{display:inline-block;padding:2px 6px;border-radius:8px}
-.token[contenteditable="true"]{border-bottom:1px dashed #3a5572}
-.token:focus{outline:2px solid var(--ring)}
-
-.badge{background:#0d1a26;border:1px solid var(--divider);padding:4px 8px;border-radius:8px;font-size:12px;color:#b8cfe0}
-hr{border:0;height:1px;background:var(--divider);margin:8px 0}
-@media (max-width:980px){.app{grid-template-columns:1fr}}
+  /* big CTA emphasis */
+  .findWrap{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .cta-badge{font-size:12px;color:#052532;background:#a1eeff;border-radius:999px;padding:2px 8px;font-weight:800}
 </style>
 </head>
 <body>
-<div class="app">
-
-  <!-- LEFT: connection + count (kept minimal) -->
-  <aside class="left">
-    <div class="card">
-      <h4>Connection</h4>
-      <div class="stack">
-        <label class="small">API Base (must end with <code>/api</code>)</label>
-        <div class="inputrow">
-          <input id="apiBase" type="text" placeholder="https://your-host.tld/api">
-          <button id="saveApi" class="btn">Save</button>
-        </div>
-
-        <label class="small">x-api-key (optional)</label>
-        <div class="inputrow">
-          <input id="apiKey" type="text" placeholder="leave blank if none">
-          <button id="saveKey" class="btn">Save</button>
-        </div>
-
-        <div class="row">
-          <button id="ping" class="btn">Ping</button>
-          <button id="clearLog" class="btn ghost">Clear Log</button>
-        </div>
-        <div class="help">Saved in <span class="badge">localStorage</span>.</div>
+  <div class="wrap">
+    <!-- LEFT COLUMN -->
+    <aside class="left">
+      <div class="h">Connection</div>
+      <div class="field">
+        <input id="apiBase" type="text" placeholder="https://your-host.tld/api">
+        <button id="saveApi" class="btn">Save</button>
       </div>
-    </div>
+      <div class="field">
+        <input id="apiKey" type="text" placeholder="x-api-key (optional)">
+        <button id="saveKey" class="btn">Save</button>
+      </div>
+      <div class="row" style="gap:8px">
+        <button id="ping" class="btn">Ping</button>
+        <button id="clearLog" class="btn">Clear Log</button>
+      </div>
 
-    <div class="card">
-      <h4>How many leads</h4>
-      <div class="stack">
-        <label class="small">Count</label>
+      <div class="h">How many leads</div>
+      <div class="field">
         <select id="leadCount">
-          <option>3</option><option>6</option><option selected>12</option><option>20</option>
-        </select>
-        <div class="help">Used by <span class="badge">Find buyers</span>. The supplier host is locked to your profile to keep the panel minimal.</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h4>HTTP Log</h4>
-      <div id="log" class="log"></div>
-    </div>
-  </aside>
-
-  <!-- RIGHT: header + results -->
-  <main class="right">
-
-    <!-- compact header -->
-    <div class="header">
-      <div class="hostchip" title="Your company profile">
-        <img id="fav" alt="">
-        <div class="hostname" id="hostLbl">yourcompany.com</div>
-        <span id="personaBadge" class="badge">no profile yet</span>
-      </div>
-
-      <div class="count">
-        <label class="small" style="margin-right:6px">Count</label>
-        <select id="leadCountTop">
-          <option>3</option><option>6</option><option selected>12</option><option>20</option>
+          <option>3</option><option selected>12</option><option>25</option>
         </select>
       </div>
-
-      <span class="hsp"></span>
-
-      <button id="openProfile" class="btn">Profile</button>
-      <button id="applyProfile" class="btn success" title="Save profile to API">Apply</button>
-      <button id="findBtn" class="btn primary" title="Get today’s leads">💥 Find buyers</button>
-    </div>
-
-    <!-- persona hint (collapsed; nothing heavy here) -->
-    <div class="card" id="personaHint" style="display:none">
-      <span class="small">Tip: click <b>Profile</b> to view or edit preferences. All preferences are hidden here to keep this panel focused on your leads.</span>
-    </div>
-
-    <!-- results table -->
-    <div class="table">
-      <table>
-        <thead>
-          <tr>
-            <th>Score</th><th>Temp</th><th>Buyer</th><th>Why</th><th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="results"><tr><td colspan="5" class="small" style="color:var(--muted);padding:16px">No items</td></tr></tbody>
-      </table>
-    </div>
-
-  </main>
-</div>
-
-<!-- PROFILE DRAWER -->
-<div class="drawer" id="drawer" aria-hidden="true">
-  <div class="sheet" role="dialog" aria-modal="true" aria-label="Profile">
-    <div class="sheet-hd">
-      <img id="fav2" alt="" width="20" height="20" style="border-radius:4px;background:#0d1a26">
-      <div id="hostLbl2" style="font-weight:700">yourcompany.com</div>
-      <span class="badge" id="cachedTag" style="margin-left:8px;display:none">(cached)</span>
-      <span class="hsp"></span>
-      <button id="reclass" class="btn">Re-classify</button>
-      <button id="closeDrawer" class="btn ghost">Close</button>
-    </div>
-
-    <div class="sheet-bd">
-
-      <!-- One-liner / sentence editor -->
-      <div class="summary">
-        <div class="one" id="oneLine"></div>
+      <div class="hint" style="margin:8px 2px 0">
+        Used by <b>Find buyers</b>. The supplier host is locked to your profile to keep the panel minimal.
       </div>
 
-      <div class="card">
-        <div class="row" style="justify-content:space-between">
-          <h4>General preferences</h4>
-          <span class="small">click to toggle</span>
-        </div>
-        <div id="generalChips" class="chips"></div>
-      </div>
+      <div class="h">HTTP Log</div>
+      <div id="log" class="log" aria-live="polite"></div>
+    </aside>
 
-      <div class="card">
-        <div class="row" style="justify-content:space-between">
-          <h4>Product signals (from your site)</h4>
-          <span class="small">type + Enter to add</span>
-        </div>
-        <div class="tagbox" id="productBox">
-          <input id="productInput" type="text" placeholder="add tag and press Enter">
-        </div>
-      </div>
+    <!-- RIGHT -->
+    <main class="right">
+      <div class="top">
+        <div class="row">
+          <span class="hostBadge">
+            <span class="favWrap"><img id="fav" alt="" referrerpolicy="no-referrer"></span>
+            <span id="hostLbl" style="font-weight:700">no profile yet</span>
+            <span id="personaTag" class="pill">persona (empty)</span>
+          </span>
 
-      <div class="card">
-        <div class="row" style="justify-content:space-between">
-          <h4>Buyer priorities (dynamic)</h4>
-          <span class="small">Tell us how much buyers care</span>
-        </div>
-        <div id="metricSliders" class="stack"></div>
-      </div>
+          <span class="pill">Count
+            <select id="countTop" style="background:transparent;border:0;color:#d9ecf9;margin-left:6px">
+              <option>3</option><option selected>12</option><option>25</option>
+            </select>
+          </span>
 
-      <div class="card">
-        <h4>Buyer targeting</h4>
-        <div class="row" style="gap:20px">
-          <div style="flex:1">
-            <div class="small">City — boost near</div>
-            <div class="tagbox" id="cityBox">
-              <input id="cityInput" type="text" placeholder="add city and press Enter">
-            </div>
-          </div>
-          <div style="flex:1">
-            <div class="small">Sectors</div>
-            <div class="tagbox" id="sectorBox">
-              <input id="sectorInput" type="text" placeholder="e.g., food, beverage, cosmetics">
-            </div>
+          <div class="findWrap">
+            <button id="profileBtn" class="btn">Profile</button>
+            <button id="applyBtn" class="btn success">Apply</button>
+            <span class="cta-badge">daily limit 3</span>
+            <button id="findBtn" class="btn primary" title="Use your profile to fetch today’s leads">★ Find buyers</button>
           </div>
         </div>
       </div>
 
-    </div>
-
-    <div class="sheet-ft">
-      <button id="saveLocal" class="btn">Save locally</button>
-      <button id="applyProfile2" class="btn success">Apply to API</button>
-    </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th style="width:90px">Score</th><th style="width:90px">Temp</th><th>Buyer</th><th>Why</th><th style="width:120px">Action</th></tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="5" class="empty">No items.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
   </div>
-</div>
+
+  <!-- PROFILE DRAWER -->
+  <div id="drawer" class="drawer" aria-hidden="true">
+    <section class="panel" role="dialog" aria-modal="true">
+      <div class="phead">
+        <div class="row">
+          <div class="favWrap" style="width:26px;height:26px"><img id="fav2" alt="" referrerpolicy="no-referrer"></div>
+          <div>
+            <div id="oneLine" class="sentence one-line"></div>
+            <div class="hint">Click tokens to edit. Host change will update the favicon + header.</div>
+          </div>
+        </div>
+        <div class="row">
+          <button id="toggleEdit" class="btn">Edit</button>
+          <button id="closeDrawer" class="btn">Close</button>
+        </div>
+      </div>
+
+      <div class="pbd">
+        <div class="group">
+          <h4 style="display:flex;justify-content:space-between;align-items:center;margin:0">
+            <span>General preferences</span>
+            <span class="muted" style="font-size:12px">click to toggle</span>
+          </h4>
+          <div id="generalChips" class="chips" aria-live="polite"></div>
+        </div>
+
+        <div class="group">
+          <h4>Product signals (from your site)</h4>
+          <input id="tagInput" class="tagInput" type="text" placeholder="add tag and press Enter">
+          <div id="productChips" class="chips"></div>
+        </div>
+
+        <div class="group">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h4 style="margin:0">Buyer priorities (dynamic)</h4>
+            <div class="hint">Tell us how much buyers care.</div>
+          </div>
+          <div id="metricsBox"></div>
+        </div>
+
+        <div class="group">
+          <h4>Buyer targeting</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div>
+              <label class="hint">City — boost near</label>
+              <input id="cityInput" class="cityInput" type="text" placeholder="e.g., Chicago">
+              <div id="cityChips" class="chips" style="margin-top:6px"></div>
+            </div>
+            <div>
+              <label class="hint">Sectors</label>
+              <input id="sectorInput" class="sectorInput" type="text" placeholder="e.g., food, beverage, cosmetics">
+              <div id="sectorChips" class="chips" style="margin-top:6px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pft">
+        <span id="status" class="hint" style="margin-right:auto"></span>
+        <button id="saveLocal" class="btn">Save locally</button>
+        <button id="applyApi" class="btn success">Apply to API</button>
+      </div>
+    </section>
+  </div>
 
 <script>
 (()=>{
+  // ---------- UTIL & STORAGE ----------
+  const $ = sel=>document.querySelector(sel);
+  const logEl = $('#log');
+  function log(msg){ const t = `[${new Date().toISOString().slice(11,19)}] ${msg}\n`; logEl.textContent += t; logEl.scrollTop = logEl.scrollHeight; }
+  function getStored(k,def=""){ try{ const v=localStorage.getItem(k); return v==null? def : v }catch{ return def } }
+  function setStored(k,v){ try{ localStorage.setItem(k,v) }catch{} }
+  function jsonGet(k,def){ try{ return JSON.parse(localStorage.getItem(k)||"")||def }catch{ return def } }
+  function jsonSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)) }catch{} }
+  function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
 
-// ---------- tiny utils ----------
-const $ = sel => document.querySelector(sel);
-const logEl = $('#log');
-function log(msg){ const ts=new Date().toISOString().replace('T',' ').slice(0,19); logEl.textContent += `[${ts}] ${msg}\n`; logEl.scrollTop = logEl.scrollHeight; }
-function getStored(k, d){ try{ const v=localStorage.getItem(k); return v? JSON.parse(v): d; }catch{ return d; } }
-function setStored(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
-function saveText(k, v){ try{ localStorage.setItem(k, v); }catch{} }
-function getText(k){ try{ return localStorage.getItem(k)||"" }catch{ return "" } }
-
-function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
-function faviconFor(host){ return host? `https://icons.duckduckgo.com/ip3/${encodeURIComponent(host)}.ico` : ""; }
-
-// ------------- persisted settings -------------
-const SETTINGS_KEY = "gg:panel:settings";
-const settings = getStored(SETTINGS_KEY, {
-  apiBase: getText("apiBase") || "",     // reuse any older key
-  apiKey:  getText("xApiKey") || "",
-  leadCount: Number(getText("leadCount")||12)
-});
-
-// ------------- profile / persona -------------
-const PROFILE_KEY = "gg:profile";
-const SETUP_KEYS = ["gg:setup","galactly:setup","onboard:step3"]; // auto-import sources
-
-let profile = getStored(PROFILE_KEY, null); // canonical shape below
-const emptyProfile = (host = "yourcompany.com")=>({
-  host, cached:false,
-  line:{ host, verb:"supplies", products:"packaging", audience:"brands", region:"the U.S.", contacts:"Operations, Procurement" },
-  productTags:[],
-  general:["Prefer mid-size companies","De-prioritize giant enterprises","Prioritize nearby buyers","Prefer e-commerce sites","Prefer wholesalers / distributors","Prefer retail brands"],
-  metrics:[ // three by default
-    {label:"Line automation / fulfillment", value:8},
-    {label:"Fast turnaround (≤ 2 weeks)", value:8},
-    {label:"Lowest unit cost", value:8}
-  ],
-  cities:["Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"],
-  sectors:["food","beverage","cosmetics","electronics"]
-});
-
-// merge helper
-function ensureShape(p){
-  const base = emptyProfile(p?.host||"yourcompany.com");
-  return {
-    ...base,
-    ...p,
-    line:{...base.line, ...(p?.line||{})},
-    productTags:[...(p?.productTags||[])],
-    general:(p?.general && p.general.length)? [...p.general] : base.general,
-    metrics:(p?.metrics && p.metrics.length)? p.metrics.map(m=>({label:m.label, value:Number(m.value||8)})) : base.metrics,
-    cities:[...(p?.cities||base.cities)],
-    sectors:[...(p?.sectors||base.sectors)],
-  };
-}
-
-// auto-import from any setup key (created by index.html step 3)
-function tryImportFromSetup(){
-  for (const k of SETUP_KEYS){
-    const raw = getStored(k, null);
-    if (!raw) continue;
-    // Accept either full profile shape or the step3 "state" you used before
-    const host = normHost(raw?.host || raw?.line?.host || raw?.supplierHost || raw?.domain || raw?.companyHost);
-    if (!host) continue;
-    const p = ensureShape({
-      host,
-      cached: !!raw.cached,
-      line: raw.line || {host, verb:"supplies", products:(raw.products||"packaging"), audience:(raw.audience||"brands"), region:(raw.region||"the U.S."), contacts:(raw.contacts||"Operations, Procurement")},
-      productTags: raw.productTags || [],
-      general: raw.general || raw.generalPrefs || [],
-      metrics: (raw.metrics || raw.buyerPriorities || []).map(x=> typeof x==="string"? {label:x, value:8}: x),
-      cities: raw.cities || raw.cityBoost || [],
-      sectors: raw.sectors || raw.sectorHints || [],
-    });
-    setStored(PROFILE_KEY, p);
-    profile = p;
-    log(`imported profile from ${k}`);
-    return true;
-  }
-  return false;
-}
-
-// initial import if no profile saved
-if (!profile){ if (!tryImportFromSetup()){ profile = emptyProfile(); } else { /* imported */ } }
-
-// ---------- bind settings UI ----------
-const apiBaseEl = $("#apiBase"); const apiKeyEl=$("#apiKey");
-const leadCountEl = $("#leadCount"); const leadCountTop = $("#leadCountTop");
-apiBaseEl.value = settings.apiBase; apiKeyEl.value = settings.apiKey;
-leadCountEl.value = String(settings.leadCount||12);
-leadCountTop.value = String(settings.leadCount||12);
-
-$("#saveApi").addEventListener("click", ()=>{ settings.apiBase = apiBaseEl.value.trim(); saveText("apiBase", settings.apiBase); setStored(SETTINGS_KEY, settings); log(`API base set to ${settings.apiBase}`); });
-$("#saveKey").addEventListener("click", ()=>{ settings.apiKey = apiKeyEl.value.trim(); saveText("xApiKey", settings.apiKey); setStored(SETTINGS_KEY, settings); log(`x-api-key saved (${settings.apiKey? "•••": "blank"})`); });
-leadCountEl.addEventListener("change", e=>{ settings.leadCount = Number(e.target.value); saveText("leadCount", String(settings.leadCount)); setStored(SETTINGS_KEY, settings); leadCountTop.value = e.target.value; });
-leadCountTop.addEventListener("change", e=>{ settings.leadCount = Number(e.target.value); saveText("leadCount", String(settings.leadCount)); setStored(SETTINGS_KEY, settings); leadCountEl.value = e.target.value; });
-
-// ---------- header host chip ----------
-function renderHost(){
-  const h = profile?.host || "yourcompany.com";
-  $("#hostLbl").textContent = h;
-  $("#hostLbl2").textContent = h;
-  $("#fav").src = faviconFor(h);
-  $("#fav2").src = faviconFor(h);
-  $("#personaBadge").textContent = profile && profile.productTags ? "persona (imported)" : "no profile yet";
-  $("#cachedTag").style.display = profile?.cached ? "" : "none";
-}
-renderHost();
-
-// ---------- results ----------
-function clearResults(){ $("#results").innerHTML = `<tr><td colspan="5" class="small" style="color:var(--muted);padding:16px">No items</td></tr>`; }
-clearResults();
-
-// ---------- HTTP helpers ----------
-function apiURL(path, q=null){
-  const base=(settings.apiBase||"").replace(/\/+$/,"");
-  const url = base? `${base}${path}` : path; // allow relative if same host serves API
-  if (!q) return url;
-  const u=new URL(url, location.origin);
-  for (const [k,v] of Object.entries(q)){ if(v!==undefined && v!==null) u.searchParams.set(k,String(v)); }
-  return u.toString();
-}
-async function fetchJSON(url, opts={}){
-  const headers = Object.assign({'content-type':'application/json'}, opts.headers||{});
-  if (settings.apiKey) headers['x-api-key']=settings.apiKey;
-  const r = await fetch(url, {...opts, headers});
-  let bodyTxt=""; try{ bodyTxt = await r.text(); }catch{}
-  let json=null; try{ json = JSON.parse(bodyTxt); }catch{}
-  return {ok:r.ok,status:r.status,body:json,raw:bodyTxt};
-}
-
-// ---------- drawer (Profile) ----------
-const drawer = $("#drawer");
-$("#openProfile").addEventListener("click", ()=>{ openDrawer(); });
-$("#closeDrawer").addEventListener("click", ()=>{ closeDrawer(); });
-function openDrawer(){ drawer.classList.add("show"); drawer.setAttribute("aria-hidden","false"); renderProfile(); }
-function closeDrawer(){ drawer.classList.remove("show"); drawer.setAttribute("aria-hidden","true"); }
-
-function renderOneLiner(){
-  const L = profile.line;
-  const el = $("#oneLine");
-  el.innerHTML = "";
-  const parts = [
-    ["host", L.host, true], ["sep"," — ",true],
-    ["verb", L.verb,false], ["products",` ${L.products}`,false],
-    ["txt"," for ",true], ["audience", L.audience,false],
-    ["txt"," in ",true], ["region", L.region,false],
-    ["txt",". ",true], ["txt","Best contacts: ",true], ["contacts",L.contacts,false]
-  ];
-  for (const [k,txt,lock] of parts){
-    const span=document.createElement("span");
-    span.className="token"; span.textContent=txt;
-    if (!lock && k!=="txt"){ span.contentEditable="true"; span.addEventListener("input",()=>{ profile.line[k]=span.textContent.trim(); persistLocal(); }); }
-    el.appendChild(span);
-    el.appendChild(document.createTextNode(" "));
-  }
-}
-
-function renderChips(){
-  const box=$("#generalChips"); box.innerHTML="";
-  const all = [
-    "Prefer mid-size companies","De-prioritize giant enterprises","Prioritize nearby buyers",
-    "Prefer e-commerce sites","Prefer wholesalers / distributors","Prefer retail brands"
-  ];
-  const set=new Set(profile.general||[]);
-  for(const label of all){
-    const sp=document.createElement("span"); sp.className="chip"+(set.has(label)?" on":""); sp.textContent=label;
-    sp.addEventListener("click",()=>{ if(sp.classList.toggle("on")) set.add(label); else set.delete(label); profile.general=[...set]; persistLocal(); });
-    box.appendChild(sp);
-  }
-}
-
-function renderTags(containerId, inputId, list){
-  const box=$(containerId); box.innerHTML="";
-  for (const t of list){ const sp=document.createElement("span"); sp.className="chip on"; sp.textContent=t; box.appendChild(sp); }
-  const input=$(inputId);
-  input.value=""; input.onkeydown=(e)=>{
-    if (e.key==="Enter"){
-      e.preventDefault();
-      const v=input.value.trim(); if(!v) return;
-      list.push(v); renderTags(containerId,inputId,list); persistLocal();
+  // API base handling (persist across pages)
+  const apiBaseInput = $('#apiBase'), apiKeyInput=$('#apiKey');
+  const API = {
+    getBase(){ const x = getStored('apiBase',''); return x||'' },
+    setBase(v){ setStored('apiBase', String(v||'')); },
+    key(){ return getStored('xApiKey','') },
+    setKey(v){ setStored('xApiKey', String(v||'')) },
+    async fetch(path, opts={}){
+      const base = API.getBase().replace(/\/+$/,'');
+      const url = base ? (base + (path.startsWith('/')? path : '/'+path)) : path;
+      const headers = Object.assign({'content-type':'application/json'}, opts.headers||{});
+      if (API.key()) headers['x-api-key'] = API.key();
+      const res = await fetch(url, Object.assign(opts,{headers}));
+      return res;
     }
   };
-}
+  apiBaseInput.value = API.getBase();
+  apiKeyInput.value = API.key();
+  $('#saveApi').onclick = ()=>{ API.setBase(apiBaseInput.value.trim()); log(`API base set to ${API.getBase()||'(blank)'}`) };
+  $('#saveKey').onclick = ()=>{ API.setKey(apiKeyInput.value.trim()); log(`x-api-key saved`) };
+  $('#clearLog').onclick = ()=>{ logEl.textContent="" };
+  $('#ping').onclick = async ()=>{
+    try{
+      const res = await API.fetch('/ping',{method:'GET'});
+      log(`GET /ping → ${res.status}`);
+      if (!res.ok) return;
+      const txt = await res.text(); log(txt.slice(0,200));
+    }catch(e){ log('ping error: '+e.message) }
+  };
 
-function renderMetrics(){
-  const box=$("#metricSliders"); box.innerHTML="";
-  if (!profile.metrics || !profile.metrics.length){
-    profile.metrics = emptyProfile(profile.host).metrics;
+  // ---------- STATE ----------
+  const state = {
+    host: '',
+    personaSource: 'no profile yet', // 'imported' | 'cached' | 'local'
+    line: { host:'yourcompany.com', verb:'supplies', products:'packaging', audience:'brands', region:'the U.S.', contacts:'Operations, Procurement' },
+    general: new Set(['Prefer mid-size companies','De-prioritize giant enterprises','Prioritize nearby buyers','Prefer e-commerce sites','Prefer wholesalers / distributors','Prefer retail brands']),
+    productTags: new Set(), // chips
+    metrics: [ // EXACTLY THREE default sliders (sync with step 3)
+      {label:'Line automation / fulfillment', value:8},
+      {label:'Fast turnaround (≤ 2 weeks)', value:7},
+      {label:'Lowest unit cost', value:8}
+    ],
+    cities: new Set(['Chicago','Los Angeles','New York','Dallas','Atlanta','Miami']),
+    sectors: new Set(['food','beverage','cosmetics','electronics']),
+    count: 12
+  };
+
+  // ---------- FAVICON ----------
+  function setFavicon(host){
+    const h = normHost(host);
+    const url = h ? `https://icons.duckduckgo.com/ip3/${encodeURIComponent(h)}.ico` : "";
+    const fav = $('#fav'), fav2 = $('#fav2');
+    [fav,fav2].forEach(img=>{
+      if (!img) return;
+      if (!url){ img.src=""; img.style.display="none"; return; }
+      img.style.display="";
+      img.src = url;
+      img.onerror = ()=>{ img.style.display="none"; };
+    });
   }
-  for (const m of profile.metrics){
-    const row=document.createElement("div"); row.className="slider";
-    const lab=document.createElement("div"); lab.textContent=m.label;
-    const rng=document.createElement("input"); rng.type="range"; rng.min="0"; rng.max="10"; rng.value=String(m.value||8);
-    rng.addEventListener("input",()=>{ m.value=Number(rng.value); persistLocal(); });
-    row.appendChild(lab); row.appendChild(rng); box.appendChild(row);
+
+  // ---------- RENDER: HEADER / TABLE ----------
+  const hostLbl = $('#hostLbl'), personaTag = $('#personaTag');
+  function renderHeader(){
+    hostLbl.textContent = state.host? state.host : 'no profile yet';
+    personaTag.textContent = state.personaSource==='imported' ? 'persona (imported)'
+                           : state.personaSource==='local' ? 'persona (local)'
+                           : state.personaSource;
+    setFavicon(state.host);
+    $('#countTop').value = String(state.count);
+    $('#leadCount').value = String(state.count);
   }
-}
 
-function renderProfile(){
-  profile = ensureShape(profile);
-  renderHost();
-  renderOneLiner();
-  renderChips();
-  renderTags("#productBox","#productInput",profile.productTags);
-  renderMetrics();
-  renderTags("#cityBox","#cityInput",profile.cities);
-  renderTags("#sectorBox","#sectorInput",profile.sectors);
-}
-
-function persistLocal(){ setStored(PROFILE_KEY, profile); }
-
-// Re-classify (analyze site) -> updates product tags / sectors / line; keeps your manual edits
-$("#reclass").addEventListener("click", async ()=>{
-  const base=(settings.apiBase||"").replace(/\/+$/,"");
-  if (!base){ alert("Set API Base (must end with /api)"); return; }
-  const url = apiURL("/classify",{host:profile.host});
-  log(`GET ${url}`);
-  const r = await fetchJSON(url, {method:"GET"});
-  if (!r.ok){ log(`  ${r.status} ${r.raw.slice(0,120)}`); alert("Classify failed"); return; }
-  const data = r.body||{};
-  // Merge in
-  profile.cached = !!data.cached;
-  profile.productTags = Array.from(new Set([...(profile.productTags||[]), ...((data.productTags||[]).slice(0,12))]));
-  profile.sectors = Array.from(new Set([...(profile.sectors||[]), ...((data.sectorHints||[]).slice(0,8))]));
-  if (data.summary || data.productTags){
-    const contacts = /industrial|corrugat|pallet|film|shrink|automation/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")))
-      ? "Operations, Procurement" : "Procurement, Marketing";
-    profile.line = { ...profile.line, products:(data.productTags||[]).slice(0,3).join(", ") || profile.line.products, audience:(data.sectorHints||[]).slice(0,2).join(", ") || profile.line.audience, contacts };
+  // ---------- PROFILE DRAWER ----------
+  const drawer = $('#drawer'), oneLine = $('#oneLine');
+  let editing = false;
+  function renderSentence(){
+    const L = state.line;
+    const tpl = [
+      {k:'host', txt:L.host, lock:false},
+      {txt:'—', lock:true},
+      {k:'verb', txt:L.verb},
+      {k:'products', txt:L.products},
+      {txt:'for', lock:true},
+      {k:'audience', txt:L.audience},
+      {txt:'in', lock:true},
+      {k:'region', txt:L.region},
+      {txt:'.  Best contacts:', lock:true},
+      {k:'contacts', txt:L.contacts}
+    ];
+    oneLine.classList.toggle('editing', editing);
+    oneLine.innerHTML = "";
+    for (const part of tpl){
+      const span = document.createElement('span');
+      span.className='token';
+      span.dataset.editable = part.lock? 'false':'true';
+      span.textContent = part.txt;
+      if (!part.lock && editing){
+        span.contentEditable = true;
+        span.addEventListener('input', ()=>{
+          state.line[part.k] = span.textContent.trim();
+          if (part.k==='host'){ state.host = normHost(state.line.host); renderHeader(); }
+        });
+      }
+      oneLine.appendChild(span);
+      oneLine.appendChild(document.createTextNode(' '));
+    }
   }
-  persistLocal(); renderProfile(); log("  ok: true (merged)");
-});
 
-// Save locally / Apply
-$("#saveLocal").addEventListener("click", ()=>{ persistLocal(); alert("Saved locally."); });
-function doApply(){ return upsertProfile().then(ok=>{ if(ok){ alert("Applied profile to API."); } }); }
-$("#applyProfile").addEventListener("click", doApply);
-$("#applyProfile2").addEventListener("click", doApply);
-
-async function upsertProfile(){
-  const base=(settings.apiBase||"").replace(/\/+$/,"");
-  if (!base){ alert("Set API Base (must end with /api)"); return false; }
-  const url = apiURL("/prefs/upsert");
-  log(`POST ${url}`);
-  const r = await fetchJSON(url,{method:"POST", body:JSON.stringify({profile})});
-  if (!r.ok){ log(`  ${r.status} ${r.raw.slice(0,200)}`); return false; }
-  log(`  ${r.status} saved`);
-  return true;
-}
-
-// ---------- Find buyers (hero) ----------
-$("#findBtn").addEventListener("click", async ()=>{
-  persistLocal(); // ensure saved host
-  clearResults();
-  const base=(settings.apiBase||"").replace(/\/+$/,"");
-  if (!base){ alert("Set API Base (must end with /api)"); return; }
-  const limit = settings.leadCount||12;
-  const url = apiURL("/leads/find-buyers",{host:profile.host, limit});
-  log(`GET ${url}`);
-  const r = await fetchJSON(url,{method:"GET"});
-  if (!r.ok){ log(`  ${r.status} ${r.raw.slice(0,200)}`); $("#results").innerHTML=`<tr><td colspan="5" class="small" style="color:#f8b">${r.status} — failed</td></tr>`; return; }
-  const rows = r.body?.items || [];
-  if (!rows.length){ $("#results").innerHTML=`<tr><td colspan="5" class="small" style="color:var(--muted)">No items</td></tr>`; return; }
-  const tb=$("#results"); tb.innerHTML="";
-  for (const it of rows){
-    const tr=document.createElement("tr");
-    const td=(t)=>{ const x=document.createElement("td"); x.textContent=t; return x; };
-    tr.appendChild(td(it.score ?? ""));
-    tr.appendChild(td(it.temp ?? ""));
-    tr.appendChild(td(it.buyer ?? ""));
-    tr.appendChild(td(it.why ?? ""));
-    const act=document.createElement("td");
-    const a=document.createElement("a"); a.href=it.url||"#"; a.target="_blank"; a.textContent="Open";
-    act.appendChild(a); tr.appendChild(act);
-    tb.appendChild(tr);
+  function addChip(text, box, set){
+    const s = document.createElement('span'); s.className="chip"; s.textContent=text;
+    if (set && set.has(text)) s.classList.add('active');
+    s.addEventListener('click', ()=>{
+      s.classList.toggle('active');
+      if (!set) return;
+      if (s.classList.contains('active')) set.add(text); else set.delete(text);
+    });
+    box.appendChild(s);
   }
-  log(`  ok: ${rows.length} items`);
-});
+  function chipsFrom(list, box, set){
+    box.innerHTML=""; (list||[]).forEach(v=>addChip(v, box, set));
+  }
+  function renderGeneral(){
+    const box = $('#generalChips'); box.innerHTML="";
+    [
+      'Prefer mid-size companies','De-prioritize giant enterprises','Prioritize nearby buyers',
+      'Prefer e-commerce sites','Prefer wholesalers / distributors','Prefer retail brands'
+    ].forEach(t=> addChip(t, box, state.general));
+  }
+  function renderProduct(){
+    const box = $('#productChips'); box.innerHTML="";
+    state.productTags.forEach(t=> addChip(t, box, state.productTags));
+  }
+  function renderMetrics(){
+    const mbox = $('#metricsBox'); mbox.innerHTML="";
+    state.metrics = ensureThreeMetrics(state.metrics);
+    for (const m of state.metrics){
+      const row = document.createElement('div'); row.className='slider-row';
+      const lab = document.createElement('div'); lab.textContent=m.label;
+      const input = document.createElement('input'); input.type='range'; input.min='0'; input.max='10'; input.value=m.value;
+      input.addEventListener('input', ()=>{ m.value = Number(input.value) });
+      row.appendChild(lab); row.appendChild(input); mbox.appendChild(row);
+    }
+  }
+  function renderTargeting(){
+    chipsFrom([...state.cities], $('#cityChips'), state.cities);
+    chipsFrom([...state.sectors], $('#sectorChips'), state.sectors);
+  }
 
-// ---------- persona hint & initial state ----------
-document.addEventListener("DOMContentLoaded", ()=>{
-  // Show hint once
-  $("#personaHint").style.display = "block";
-});
+  $('#toggleEdit').onclick = ()=>{ editing=!editing; renderSentence(); };
+  $('#closeDrawer').onclick = ()=> closeDrawer();
+  function openDrawer(){ drawer.classList.add('show'); drawer.setAttribute('aria-hidden','false'); renderSentence(); renderGeneral(); renderProduct(); renderMetrics(); renderTargeting(); $('#status').textContent=""; $('#tagInput').value=""; $('#cityInput').value=""; $('#sectorInput').value=""; }
+  function closeDrawer(){ drawer.classList.remove('show'); drawer.setAttribute('aria-hidden','true'); }
 
-// ---------- keep lead count in sync ----------
-function syncCountPickers(){ leadCountEl.value = String(settings.leadCount||12); leadCountTop.value = String(settings.leadCount||12); }
-syncCountPickers();
+  // inputs for adding chips
+  $('#tagInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); const v=e.target.value.trim(); if(!v) return; state.productTags.add(v); e.target.value=""; renderProduct(); }
+  });
+  $('#cityInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); const v=e.target.value.trim(); if(!v) return; state.cities.add(v); e.target.value=""; renderTargeting(); }
+  });
+  $('#sectorInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); const v=e.target.value.trim(); if(!v) return; state.sectors.add(v); e.target.value=""; renderTargeting(); }
+  });
 
-// ---------- initial save to canonical key & render ----------
-profile = ensureShape(profile);
-persistLocal();
-renderHost();
+  // ---------- PERSISTENCE ----------
+  const K = {
+    persona:'fp:persona', // main blob
+    line:'fp:line'
+  };
+  function saveLocal(){
+    jsonSet(K.persona, {
+      host: state.host,
+      general:[...state.general],
+      productTags:[...state.productTags],
+      metrics: state.metrics,
+      cities:[...state.cities],
+      sectors:[...state.sectors],
+      count: state.count
+    });
+    jsonSet(K.line, state.line);
+  }
+  function loadLocal(){
+    const p = jsonGet(K.persona, null);
+    const L = jsonGet(K.line, null);
+    if (p){
+      state.host = p.host||state.host;
+      state.general = new Set(p.general||[]);
+      state.productTags = new Set(p.productTags||[]);
+      state.metrics = ensureThreeMetrics(p.metrics||[]);
+      state.cities = new Set(p.cities||[]);
+      state.sectors = new Set(p.sectors||[]);
+      state.count = Number(p.count||state.count)||state.count;
+      state.personaSource = 'local';
+    }
+    if (L){ state.line = Object.assign(state.line, L); }
+  }
 
-})();</script>
+  // Import from onboarding (auto, best effort)
+  function tryImportFromSetup(){
+    // scan a few common keys used by earlier step-3 builds
+    const candidates = [
+      'setup:persona','onboard:persona','personaDraft','setup:state','gal:setup','fp:persona_from_setup'
+    ];
+    for (const k of candidates){
+      const obj = jsonGet(k,null);
+      if (!obj) continue;
+      // minimal shape support
+      if (obj.host) state.host = normHost(obj.host);
+      if (obj.line) state.line = Object.assign(state.line, obj.line);
+      if (obj.productTags) state.productTags = new Set(obj.productTags);
+      if (obj.general) state.general = new Set(obj.general);
+      if (obj.metrics) state.metrics = ensureThreeMetrics(obj.metrics);
+      if (obj.cities) state.cities = new Set(obj.cities);
+      if (obj.sectors) state.sectors = new Set(obj.sectors);
+      state.personaSource = 'imported';
+      saveLocal(); // normalize to fp:* for next loads
+      log(`imported from ${k}`);
+      return true;
+    }
+    return false;
+  }
+
+  function ensureThreeMetrics(list){
+    const base = [
+      {label:'Line automation / fulfillment', value:8},
+      {label:'Fast turnaround (≤ 2 weeks)', value:7},
+      {label:'Lowest unit cost', value:8}
+    ];
+    if (!Array.isArray(list) || list.length===0) return base.map(x=>Object.assign({},x));
+    // keep any matching labels, then fill missing
+    const map = new Map(list.filter(x=>x && x.label).map(x=>[x.label, {label:x.label, value:Number(x.value||0)}]));
+    for (const m of base){ if (!map.has(m.label)) map.set(m.label, {label:m.label, value:m.value}); }
+    return [...map.values()].slice(0,3);
+  }
+
+  // ---------- APPLY / API ----------
+  async function applyToApi(){
+    saveLocal(); // always persist locally
+    const body = jsonGet(K.persona, {});
+    body.line = state.line;
+    try{
+      const res = await API.fetch('/prefs/upsert', {method:'POST', body:JSON.stringify(body)});
+      log(`POST /prefs/upsert → ${res.status}`);
+      if (!res.ok){
+        $('#status').textContent = '(offline) saved locally';
+        return;
+      }
+      const data = await res.json().catch(()=>null);
+      $('#status').textContent = data && data.id ? `saved (id ${data.id})` : 'saved';
+    }catch(e){
+      log('apply error: '+e.message);
+      $('#status').textContent = '(offline) saved locally';
+    }
+  }
+
+  async function findBuyers(){
+    saveLocal();
+    const host = state.host;
+    const count = state.count;
+    if (!host){ alert('Set your host in Profile first.'); return; }
+    try{
+      const url = `/leads/find-buyers?host=${encodeURIComponent(host)}&limit=${encodeURIComponent(count)}`;
+      const res = await API.fetch(url, {method:'GET'});
+      log(`GET ${url} → ${res.status}`);
+      if (!res.ok){ alert('API not ready yet. Check HTTP Log.'); return; }
+      const data = await res.json();
+      renderRows(data.items||[]);
+    }catch(e){ log('find buyers error: '+e.message); }
+  }
+  function renderRows(items){
+    const tbody = $('#rows'); tbody.innerHTML="";
+    if (!items || !items.length){ tbody.innerHTML = `<tr><td colspan="5" class="empty">No items.</td></tr>`; return; }
+    for (const it of items){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${it.score ?? '-'}</td>
+        <td>${it.temp ?? '-'}</td>
+        <td>${it.buyer ?? '-'}</td>
+        <td><small>${it.why ?? ''}</small></td>
+        <td><button class="btn">Open</button></td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  // ---------- WIRING ----------
+  $('#profileBtn').onclick = openDrawer;
+  $('#applyBtn').onclick = ()=>{ openDrawer(); setTimeout(()=>applyToApi(), 200); };
+  $('#applyApi').onclick = applyToApi;
+  $('#saveLocal').onclick = ()=>{ saveLocal(); $('#status').textContent='saved locally'; };
+  $('#findBtn').onclick = findBuyers;
+
+  $('#leadCount').onchange = e=>{ state.count = Number(e.target.value); $('#countTop').value = e.target.value; saveLocal(); renderHeader(); };
+  $('#countTop').onchange = e=>{ state.count = Number(e.target.value); $('#leadCount').value = e.target.value; saveLocal(); renderHeader(); };
+
+  // City / sector preset chips clickable even when not in drawer (defensive)
+  document.addEventListener('click', (e)=>{
+    if (e.target.classList && e.target.classList.contains('drawer')){ closeDrawer(); }
+  });
+
+  // ---------- BOOT ----------
+  (function init(){
+    // 1) load persisted profile
+    loadLocal();
+
+    // 2) try to import from any step-3 cache if available (first time)
+    if (state.personaSource==='no profile yet'){
+      const imported = tryImportFromSetup();
+      if (!imported){
+        // 3) as a last resort keep a sensible default host
+        state.host = state.host || state.line.host || 'yourcompany.com';
+      }
+    }
+
+    renderHeader();
+    // expose favicon now that host resolved
+    setFavicon(state.host);
+  })();
+})();
+</script>
 </body>
 </html>
