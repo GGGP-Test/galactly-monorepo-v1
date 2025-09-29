@@ -42,7 +42,7 @@
 
   /* summary (sentence editor) */
   .summary{display:flex;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:12px 14px;border-radius:14px;margin:0 0 14px;align-items:flex-start}
-  .fav{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;background:#fff;border:1px solid #cfd8e3} /* white bg so dark favicons remain visible */
+  .fav{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;background:#fff;border:1px solid #cfd8e3}
   .fav img{width:24px;height:24px;filter:saturate(1.05) contrast(1.05)}
   .one{font-weight:700}
   .one-line{line-height:1.8}
@@ -257,14 +257,26 @@
   function getStored(k, d=""){ try{ const v = localStorage.getItem(k); return v===null? d : v; }catch{ return d; } }
   function setStored(k,v){ try{ localStorage.setItem(k, v); }catch{} }
 
-  // ---------- API BASE ----------
+  // ---------- API BASE (auto-normalized to end with /api) ----------
+  function normalizeApiBase(input) {
+    let b = (input || "").trim();
+    // strip trailing slashes
+    b = b.replace(/\/+$/,"");
+    // if user pasted a full endpoint like .../api/classify trim to .../api
+    const m = b.match(/^(.*?)(?:\/api(?:\/.*)?)$/i);
+    if (m) b = m[1];
+    // final normalized form must end with /api
+    return b + "/api";
+  }
   const API_BASE = {
     get(){
-      if (window.API_BASE && typeof window.API_BASE==="string") return window.API_BASE.replace(/\/+$/,"");
+      if (window.API_BASE && typeof window.API_BASE==="string"){
+        return normalizeApiBase(window.API_BASE);
+      }
       const saved = getStored("apiBase","");
-      return (saved||"").replace(/\/+$/,"");
+      return saved ? normalizeApiBase(saved) : "";
     },
-    set(v){ if(v) setStored("apiBase", v.replace(/\/+$/,"")); }
+    set(v){ if(v) setStored("apiBase", v); }
   };
 
   // ---------- ELEMENTS ----------
@@ -307,7 +319,10 @@
   // quick gear editor
   document.getElementById("gear").addEventListener("click",()=>{
     const cur = API_BASE.get() || "https://YOUR-NORTHFLANK.code.run/api";
-    const v = prompt("API base (should end with /api). Example:\nhttps://YOUR-NORTHFLANK.code.run/api", cur);
+    const v = prompt(
+      "API base (paste either your site root or /api URL).\nExamples:\nhttps://YOUR-NORTHFLANK.code.run\nhttps://YOUR-NORTHFLANK.code.run/api",
+      cur.replace(/\/api$/,'')
+    );
     if(!v) return;
     API_BASE.set(v);
     alert("Saved. Using:\n"+API_BASE.get());
@@ -448,19 +463,19 @@
   // ---------- API CALLS ----------
   async function classify(host,email){
     const base = API_BASE.get();
-    const tries = [
-      base + "/classify",
-      base + "/api/classify" // fallback if user saved base without /api
-    ].filter(Boolean);
-    let lastErr = "classify failed";
-    for (const url of tries){
-      try{
-        const r = await fetch(url+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email), {credentials:"omit"});
-        if (r.ok) return await r.json();
-        lastErr = await r.text().catch(()=>r.statusText);
-      }catch(e){ lastErr = e.message; }
+    if (!base){ throw new Error("API base not set"); }
+    const url = base + "/classify?host=" + encodeURIComponent(host) + "&email=" + encodeURIComponent(email||"");
+    let r;
+    try{
+      r = await fetch(url, {credentials:"omit"});
+    }catch(e){
+      throw new Error("Network error to " + url + " — " + e.message);
     }
-    throw new Error(lastErr);
+    if (!r.ok){
+      const t = await r.text().catch(()=>r.statusText);
+      throw new Error("Classify failed: " + r.status + " — " + t);
+    }
+    return await r.json();
   }
 
   function deriveLine(data, host){
@@ -502,9 +517,9 @@
 
   async function refreshFromWebsite(){
     const host = normHost(hostEl.value);
-    if (!host) return;
+    if (!host){ statusEl.textContent=""; return; }
     setFavicon(host);
-    statusEl.textContent = "";
+    statusEl.textContent = "fetching…";
 
     try{
       // prefill host in sentence
@@ -512,7 +527,7 @@
       renderSentence(false);
 
       const data = await classify(host, emailEl.value||"");
-      if (data && (data.ok || data.host)){
+      if (data){
         // sentence + chips
         deriveLine(data, host);
         renderSentence(false);
@@ -536,7 +551,7 @@
       }
     }catch(err){
       console.warn(err);
-      statusEl.textContent = " (network error)";
+      statusEl.textContent = " (" + err.message + ")";
       renderMetrics(["Fast turnaround (≤ 2 weeks)","Low MOQs / short runs","Eco materials / recyclable","Lowest unit cost"]);
     }
   }
@@ -569,17 +584,11 @@
     // Save for free-panel (cover both schemes just in case)
     setStored('bf.persona', JSON.stringify(persona));
     setStored('fp.persona', JSON.stringify(persona));
-
-    // Also seed the profile fields the panel already understands
-    setStored('fp.supplier.host', host);
-    setStored('fp.supplier.city', persona.targeting.city);
-    setStored('fp.pref.city', persona.targeting.city);
-    setStored('fp.pref.tagPrefer', (persona.productTags||[]).join('\n'));
-    setStored('fp.pref.segPrefer', (persona.sectorHints||[]).join('\n'));
-    setStored('fp.pref.excludeGiants', String(!!persona.general.avoidBig));
-
-    // Small flag so the panel can auto-import on load (harmless if unused)
     setStored('fp.autoImport','1');
+
+    // also persist a normalized API for the panel to re-use
+    const apiForPanel = API_BASE.get();
+    if (apiForPanel) setStored('apiBase', apiForPanel.replace(/\/api$/,''));
 
     location.href = 'free-panel.html';
   }
@@ -599,7 +608,6 @@
       return;
     }
     if (state.step===2){
-      // If user never touched stuff, auto-enable AI decide
       if (!state.touched.general) aiGeneral.checked = true;
       if (!state.touched.product) aiProduct.checked = true;
       applyMute();
