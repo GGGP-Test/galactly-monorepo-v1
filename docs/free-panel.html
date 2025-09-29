@@ -8,7 +8,7 @@
   :root {
     --bg:#0f1220; --panel:#151a2e; --muted:#222846; --text:#e9ecf8; --sub:#aeb6d9;
     --acc:#6ea8fe; --ok:#2fb170; --warn:#ffb02e; --hot:#ff4769; --warm:#ffc857; --cool:#6ec6ff;
-    --chip:#2a315a;
+    --chip:#2a315a; --ring:#2b4c9a; --divider:#1b2140;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
@@ -23,6 +23,7 @@
     width:100%;background:#0d1124;border:1px solid var(--muted);color:var(--text);
     border-radius:8px;padding:10px 12px;outline:none
   }
+  input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(110,168,254,.25);border-color:#2a3f78}
   textarea{min-height:68px;resize:vertical}
   .row{display:flex;gap:8px}
   .row>*{flex:1}
@@ -35,10 +36,12 @@
   .btn.good{background:var(--ok);border-color:transparent;color:#03120b}
   .btn.warn{background:var(--warn);border-color:transparent;color:#231500}
   .btn.ghost{background:transparent}
+  .btn.small{padding:6px 8px;font-size:12px}
   .section{padding:12px;border:1px solid var(--muted);border-radius:12px;background:rgba(255,255,255,0.02)}
   .small{font-size:12px;color:var(--sub)}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
   .chip{padding:3px 8px;border-radius:999px;background:var(--chip);color:#cdd6ff;font-size:12px}
+  .chip.sel{background:#31407a}
   .tag-hot{background:rgba(255,71,105,.14);color:#ff9fb0}
   .tag-warm{background:rgba(255,200,87,.16);color:#ffe2a8}
   .tag-cool{background:rgba(110,198,255,.16);color:#bfe6ff}
@@ -52,6 +55,21 @@
   .hint{color:#8fa3ff}
   .split{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}
   @media (max-width:1100px){.split{grid-template-columns:1fr}}
+
+  /* Profile accordion */
+  .accordion{border:1px solid var(--divider);border-radius:12px;background:#101632;margin-bottom:12px}
+  .acc-hd{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;cursor:pointer}
+  .acc-hd h2{margin:0}
+  .acc-bd{display:none;padding:12px;border-top:1px solid var(--divider)}
+  .accordion.open .acc-bd{display:block}
+  .one-line{font-weight:700;line-height:1.8;background:#0f162f;border:1px solid var(--divider);padding:8px 10px;border-radius:10px}
+  .token{display:inline-block;margin:0 2px}
+  .token.lock{opacity:.9}
+  .token.edit{padding:2px 6px;border-radius:8px;background:#132244;border:1px dashed #2a4382}
+  .slider-row{display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:center;margin:8px 0}
+  .slider-row input[type=range]{width:100%}
+  .badge{display:inline-flex;align-items:center;gap:6px;background:#0f1733;border:1px solid var(--divider);padding:4px 8px;border-radius:999px;color:#cfe0ff;font-size:12px}
+  .fav{width:18px;height:18px;border-radius:4px;overflow:hidden;display:inline-grid;place-items:center;background:#122}
 </style>
 </head>
 <body>
@@ -60,7 +78,7 @@
     <h2>Connection</h2>
     <div class="section">
       <label>API Base (your server root)</label>
-      <input id="apiBase" placeholder="https://your-domain.tld" />
+      <input id="apiBase" placeholder="https://your-northflank.code.run/api" />
       <div class="row">
         <div>
           <label>x-api-key (optional)</label>
@@ -68,20 +86,20 @@
         </div>
         <div style="align-self:flex-end"><button class="btn" id="btnSaveConn">Save</button></div>
       </div>
-      <div class="small">Tip: if this HTML is served by the same host as the API, you can leave API Base blank.</div>
       <div class="row" style="margin-top:8px">
         <button class="btn" id="btnPing">Ping</button>
         <button class="btn ghost" id="btnClearLog">Clear Log</button>
       </div>
+      <div class="small">Tip: if this HTML is served by the same host as the API, you can leave API Base blank.</div>
     </div>
 
     <h2 style="margin-top:14px">Supplier</h2>
     <div class="section">
-      <label>Supplier Host (their domain, no http)</label>
+      <label>Supplier Host (domain, no http)</label>
       <input id="supplierHost" placeholder="example.com" />
       <div class="row">
         <div>
-          <label>City (used everywhere)</label>
+          <label>City (boost leads near)</label>
           <input id="supplierCity" placeholder="e.g., los angeles" />
         </div>
         <div>
@@ -178,6 +196,40 @@
   </div>
 
   <div class="right">
+
+    <!-- Profile accordion (NEW) -->
+    <div id="accProfile" class="accordion">
+      <div class="acc-hd" id="accToggle">
+        <h2 style="display:flex;gap:10px;align-items:center">
+          <span class="fav"><img id="fav" width="18" height="18" referrerpolicy="no-referrer" alt=""></span>
+          <span>Profile (from setup)</span>
+          <span class="badge" id="badgeHost" style="margin-left:6px"></span>
+        </h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn small" id="btnImportSetup">Import</button>
+          <button class="btn small" id="btnReclassify">Re-classify</button>
+          <button class="btn good small" id="btnApply">Apply profile</button>
+        </div>
+      </div>
+      <div class="acc-bd">
+        <div id="lineBox" class="one-line" style="margin-bottom:8px"></div>
+        <div class="chips" id="tagBox"></div>
+
+        <div id="dynBox" class="section" style="margin-top:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <strong>Buyer priorities (dynamic)</strong>
+            <span class="small">Tell us how much your buyers care about these.</span>
+          </div>
+          <div id="metricsBox"></div>
+        </div>
+
+        <div class="section" style="margin-top:10px">
+          <strong>General preferences</strong>
+          <div class="chips" style="margin-top:6px" id="genBox"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="split">
       <div>
         <h2>Results</h2>
@@ -207,15 +259,19 @@
   const $ = sel => document.querySelector(sel);
   const logEl = $('#httpLog');
 
+  // ---------- Elements ----------
   const S = {
+    // conn
     apiBase: $('#apiBase'), apiKey: $('#apiKey'),
     btnSaveConn: $('#btnSaveConn'), btnPing: $('#btnPing'), btnClearLog: $('#btnClearLog'),
 
+    // supplier
     supplierHost: $('#supplierHost'), supplierCity: $('#supplierCity'),
     minTier: $('#minTier'), limit: $('#limit'),
     discoverTerm: $('#discoverTerm'), useFallback: $('#useFallback'),
     btnFind: $('#btnFind'),
 
+    // preference profile
     profileId: $('#profileId'), prefCity: $('#prefCity'),
     prefExcludeGiants: $('#prefExcludeGiants'),
     prefHot: $('#prefHot'), prefWarm: $('#prefWarm'), prefMust: $('#prefMust'),
@@ -224,44 +280,63 @@
     btnSaveProfile: $('#btnSaveProfile'), btnLoadProfile: $('#btnLoadProfile'),
     btnForgetProfile: $('#btnForgetProfile'),
 
+    // results
     activeProfileHint: $('#activeProfileHint'),
     resultsBody: $('#resultsBody'),
+
+    // profile accordion
+    acc: $('#accProfile'), accToggle: $('#accToggle'),
+    btnImportSetup: $('#btnImportSetup'), btnReclassify: $('#btnReclassify'), btnApply: $('#btnApply'),
+    lineBox: $('#lineBox'), tagBox: $('#tagBox'), metricsBox: $('#metricsBox'), genBox: $('#genBox'),
+    fav: $('#fav'), badgeHost: $('#badgeHost')
   };
 
+  // ---------- Storage keys ----------
   const LS = {
     get k(){ return {
       apiBase:'fp.apiBase', apiKey:'fp.apiKey',
       profileId:'fp.profileId',
+      // profile fields
+      profile:'fp.profile.json',
+      // onboarding carryover (from index.html step 3)
+      obHost:'onb.host', obLine:'onb.line', obTags:'onb.tags', obHints:'onb.sectorHints',
+      obMetrics:'onb.metrics', obGeneral:'onb.general',
+      // supplier form
+      supplierHost:'fp.supplier.host', supplierCity:'fp.supplier.city',
+      minTier:'fp.supplier.minTier', limit:'fp.supplier.limit',
+      discoverTerm:'fp.discover.term', useFallback:'fp.discover.use',
+      // old profile fields
       prefCity:'fp.pref.city', prefExcludeGiants:'fp.pref.excludeGiants',
       prefHot:'fp.pref.hot', prefWarm:'fp.pref.warm', prefMust:'fp.pref.must',
       prefSegPrefer:'fp.pref.segPrefer', prefTagPrefer:'fp.pref.tagPrefer',
-      prefSegAvoid:'fp.pref.segAvoid', prefTagAvoid:'fp.pref.tagAvoid',
-      supplierHost:'fp.supplier.host', supplierCity:'fp.supplier.city',
-      minTier:'fp.supplier.minTier', limit:'fp.supplier.limit',
-      discoverTerm:'fp.discover.term', useFallback:'fp.discover.use'
+      prefSegAvoid:'fp.pref.segAvoid', prefTagAvoid:'fp.pref.tagAvoid'
     }},
-    save(k,v){ localStorage.setItem(k, v ?? ''); },
-    load(k,d=''){ const v = localStorage.getItem(k); return v==null?d:v; },
+    save(k,v){ localStorage.setItem(k, typeof v==='string' ? v : JSON.stringify(v)); },
+    load(k,def=null){
+      const v = localStorage.getItem(k);
+      if (v==null) return def;
+      try{ return JSON.parse(v); }catch{ return v; }
+    },
     del(k){ localStorage.removeItem(k); }
   };
 
+  // ---------- Logging ----------
   function ts(){ return new Date().toISOString().replace('T',' ').replace('Z',''); }
   function log(line){ logEl.textContent += `[${ts()}] ${line}\n`; logEl.scrollTop = logEl.scrollHeight; }
 
+  // ---------- HTTP ----------
   function fullUrl(p){
     const base = (S.apiBase.value||'').trim().replace(/\/+$/,'');
     if (!base) return p;
     if (p.startsWith('http')) return p;
     return base + p;
   }
-
   async function fetchJSON(method, path, body){
     const url = fullUrl(path);
     const headers = {'content-type':'application/json'};
     const k = (S.apiKey.value||'').trim(); if (k) headers['x-api-key'] = k;
     const init = { method, headers, redirect:'follow' };
     if (body) init.body = JSON.stringify(body);
-
     log(`${method} ${url}`);
     const t0 = performance.now();
     let resp, data, ok=false;
@@ -283,22 +358,175 @@
     return data;
   }
 
-  function splitLines(s){ return (s||'').split(/[\n,;]+/).map(x=>x.trim().toLowerCase()).filter(Boolean); }
-
-  function setActiveProfileHint(){
-    const pid = (S.profileId.value||'').trim();
-    S.activeProfileHint.textContent = pid
-      ? `Using profileId=${pid} when searching (unless you clear it).`
-      : `No profile set. You can still search; defaults apply.`;
+  // ---------- Classify (with fallback /api) ----------
+  async function classify(host){
+    const base = (S.apiBase.value||'').trim().replace(/\/+$/,'');
+    const tries = [ base + '/classify', base + '/api/classify' ];
+    let last;
+    for (const u of tries){
+      try{
+        const r = await fetch(u + '?host=' + encodeURIComponent(host), {credentials:'omit'});
+        if (r.ok) return r.json();
+        last = await r.text().catch(()=>r.statusText);
+      }catch(e){ last = e.message; }
+    }
+    throw new Error(last||'classify failed');
   }
 
+  // ---------- Profile state & rendering ----------
+  const profile = {
+    host:"",
+    line:{host:"",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
+    productTags:[],
+    general:{ near:true, ecom:true, retail:false, wholesale:false, mids:true, avoidGiants:true },
+    metrics:[] // {label, value}
+  };
+
+  function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
+  function setFavicon(host){
+    const h=normHost(host); const img=S.fav;
+    if(!h){ img.style.display='none'; img.src=''; return; }
+    img.style.display=''; img.src='https://icons.duckduckgo.com/ip3/'+encodeURIComponent(h)+'.ico';
+    img.onerror=()=>{ img.style.display='none'; };
+  }
+  function renderLine(){
+    const L=profile.line;
+    const mk=(t,lock)=>`<span class="token ${lock?'lock':'edit'}">${t}</span>`;
+    S.lineBox.innerHTML = [
+      mk(L.host,true),'—', mk(L.verb,false), mk(L.products,false), 'for', mk(L.audience,false), 'in', mk(L.region,false), '.',
+      'Best contacts:', mk(L.contacts,false)
+    ].join(' ');
+  }
+  function renderTags(){
+    S.tagBox.innerHTML='';
+    (profile.productTags||[]).slice(0,14).forEach(t=>{
+      const s=document.createElement('span'); s.className='chip sel'; s.textContent=t; S.tagBox.appendChild(s);
+    });
+  }
+  function renderGeneral(){
+    const g=profile.general;
+    const pairs=[
+      [g.near,'📍 Nearby buyers'],
+      [g.ecom,'🛒 E-commerce'],
+      [g.retail,'🏬 Retail brands'],
+      [g.wholesale,'📦 Wholesalers / distributors'],
+      [g.mids,'🏗️ Mid-size companies'],
+      [g.avoidGiants,'🏢 Avoid giants']
+    ];
+    S.genBox.innerHTML=''; pairs.forEach(([on,label])=>{
+      const s=document.createElement('span'); s.className='chip'; if(on) s.classList.add('sel'); s.textContent=label; S.genBox.appendChild(s);
+    });
+  }
+  function renderMetrics(){
+    S.metricsBox.innerHTML='';
+    (profile.metrics||[]).forEach(m=>{
+      const row=document.createElement('div'); row.className='slider-row';
+      const l=document.createElement('div'); l.textContent=m.label; 
+      const r=document.createElement('input'); r.type='range'; r.min='0'; r.max='10'; r.value=String(m.value||8);
+      r.addEventListener('input',()=>{ m.value=Number(r.value); saveProfileLS(); });
+      row.appendChild(l); row.appendChild(r); S.metricsBox.appendChild(row);
+    });
+  }
+
+  function setBadge(){
+    const h=profile.host||'—';
+    S.badgeHost.textContent=h;
+    setFavicon(h);
+  }
+
+  function saveProfileLS(){
+    const snap={host:profile.host,line:profile.line,productTags:profile.productTags,general:profile.general,metrics:profile.metrics};
+    LS.save(LS.k.profile,snap);
+  }
+  function loadProfileLS(){
+    const p=LS.load(LS.k.profile,null);
+    if(!p) return false;
+    Object.assign(profile,p);
+    setBadge(); renderLine(); renderTags(); renderGeneral(); renderMetrics();
+    return true;
+  }
+
+  // Derive metrics (same spirit as onboarding)
+  function deriveMetricsFrom(data){
+    const text = ((data.summary||"") + " " + (data.productTags||[]).join(" ") + " " + (data.evidence||[]).join(" ")).toLowerCase();
+    const map = [
+      [/lead|turnaround|rush|2 ?weeks|quick ship|fast/i, "Fast turnaround (≤ 2 weeks)"],
+      [/moq|minimum order|short run|prototype|sample/i, "Low MOQs / short runs"],
+      [/eco|sustain|recycl|compost|bio|green|post[- ]consumer/i, "Eco materials / recyclable"],
+      [/made in usa|domestic|local/i, "Made in USA"],
+      [/design|die[- ]?line|structur|render|artwork/i, "Design & structural support"],
+      [/cost|price|budget|unit cost|lowest/i, "Lowest unit cost"],
+      [/premium|lux|branding|unboxing/i, "Premium brand presentation"],
+      [/anti[- ]?static|esd|protect|fragile|cushion/i, "Protection / anti-static options"],
+      [/barrier|foil|oxygen|moisture|vapou?r/i, "Food-safe / barrier"],
+      [/automation|pallet|fulfillment|co[- ]?pack/i, "Line automation / fulfillment"],
+      [/print|flexo|litho|digital|spot uv|emboss|foil/i, "Print & finish quality"],
+      [/inventory|stock|warehous|kanban|safety stock/i, "Vendor-managed inventory"],
+      [/custom size|die|bespoke|engineer/i, "Custom sizing / engineering"],
+      [/kitting|insert|assembly|contract pack/i, "Kitting / co-packing"],
+      [/regulatory|fda|prop ?65|reach|rohs/i, "Regulatory compliance"],
+      [/cold chain|insulat|temperat|thermal/i, "Cold-chain / thermal"],
+      [/reusab|returns|reverse logistics/i, "Reusability / returns"],
+      [/speed to market|launch|pilot/i, "Speed-to-market support"]
+    ];
+    const set=new Set();
+    for(const [re,label] of map){ if(re.test(text)) set.add(label); }
+    ["Fast turnaround (≤ 2 weeks)","Lowest unit cost"].forEach(x=>set.add(x));
+    return [...set].slice(0,20).map(label=>({label,value:8}));
+  }
+
+  function deriveLine(data, host){
+    const prods = (data.productTags||[]).slice(0,3).join(", ") || "packaging";
+    const segs  = (data.sectorHints||[]).slice(0,2).join(", ") || "brands";
+    const contacts = /industrial|corrugat|pallet|film|shrink|automation/i.test((data.summary||"")+" "+(data.productTags||[]).join(","))
+      ? "Operations, Procurement" : "Procurement, Marketing";
+    profile.line = { host, verb:"supplies", products:prods, audience:segs, region:"the U.S.", contacts };
+  }
+
+  // ---------- Import from onboarding ----------
+  function importFromOnboarding(){
+    const host = LS.load(LS.k.obHost,'') || S.supplierHost.value || '';
+    if (host) profile.host = host;
+    const line = LS.load(LS.k.obLine,null);
+    if (line){ profile.line = line; }
+    const tags = LS.load(LS.k.obTags,null); if (Array.isArray(tags)) profile.productTags = tags.slice(0,14);
+    const gen = LS.load(LS.k.obGeneral,null); if (gen) profile.general = Object.assign(profile.general, gen);
+    const metrics = LS.load(LS.k.obMetrics,null);
+    if (Array.isArray(metrics) && metrics.length){ profile.metrics = metrics.slice(0,20); }
+    setBadge(); renderLine(); renderTags(); renderGeneral(); renderMetrics(); saveProfileLS();
+  }
+
+  // ---------- Apply to backend ----------
+  function toUpsertBody(){
+    return {
+      id: (S.profileId.value||'').trim() || undefined,
+      host: profile.host,
+      line: profile.line,
+      productTags: profile.productTags,
+      general: profile.general,
+      weights: (profile.metrics||[]).map(m=>({ key:m.label, weight:Number(m.value||0) })),
+      // keep existing free-form knobs as well
+      city:(S.prefCity.value||'').trim()||undefined,
+      excludeGiants: S.prefExcludeGiants.value==='true',
+      hotCues: splitLines(S.prefHot.value), warmCues: splitLines(S.prefWarm.value),
+      mustHave: splitLines(S.prefMust.value),
+      preferSegments: splitLines(S.prefSegPrefer.value), preferTags: splitLines(S.prefTagPrefer.value),
+      avoidSegments: splitLines(S.prefSegAvoid.value), avoidTags: splitLines(S.prefTagAvoid.value)
+    };
+  }
+
+  // ---------- Helpers ----------
+  function splitLines(s){ return (s||'').split(/[\n,;]+/).map(x=>x.trim().toLowerCase()).filter(Boolean); }
+  function setActiveProfileHint(){
+    const pid=(S.profileId.value||'').trim();
+    S.activeProfileHint.textContent = pid ? `Using profileId=${pid} when searching.` : `No profile set. You can still search; defaults apply.`;
+  }
   function badge(temp){
     const t=(temp||'').toLowerCase();
     if (t==='hot') return '<span class="chip tag-hot">HOT</span>';
     if (t==='warm') return '<span class="chip tag-warm">WARM</span>';
     return '<span class="chip tag-cool">COOL</span>';
   }
-
   function renderRows(items){
     S.resultsBody.innerHTML='';
     if (!items || !items.length){
@@ -321,28 +549,17 @@
     }
   }
 
-  function saveConn(){ LS.save(LS.k.apiBase,S.apiBase.value||''); LS.save(LS.k.apiKey,S.apiKey.value||''); log('saved connection'); }
+  // ---------- Actions ----------
+  function saveConn(){ localStorage.setItem(LS.k.apiBase,S.apiBase.value||''); localStorage.setItem(LS.k.apiKey,S.apiKey.value||''); log('saved connection'); }
   async function ping(){ try{ const r=await fetchJSON('GET','/healthz'); log(`healthz: ${JSON.stringify(r)}`);}catch(e){} }
 
   async function saveProfile(){
-    const body = {
-      id:(S.profileId.value||'').trim()||undefined,
-      city:(S.prefCity.value||'').trim()||undefined,
-      excludeGiants:S.prefExcludeGiants.value==='true',
-      hotCues:splitLines(S.prefHot.value), warmCues:splitLines(S.prefWarm.value),
-      mustHave:splitLines(S.prefMust.value),
-      preferSegments:splitLines(S.prefSegPrefer.value), preferTags:splitLines(S.prefTagPrefer.value),
-      avoidSegments:splitLines(S.prefSegAvoid.value), avoidTags:splitLines(S.prefTagAvoid.value),
-    };
+    const body = toUpsertBody();
     try{
       const r = await fetchJSON('POST','/api/prefs/upsert', body);
       const id = r.id || (r.profile && r.profile.id) || '';
-      if (id){ S.profileId.value=id; LS.save(LS.k.profileId,id); log(`profile saved id=${id}`); setActiveProfileHint(); }
-      // persist fields
-      LS.save(LS.k.prefCity,S.prefCity.value||''); LS.save(LS.k.prefExcludeGiants,S.prefExcludeGiants.value||'false');
-      LS.save(LS.k.prefHot,S.prefHot.value||''); LS.save(LS.k.prefWarm,S.prefWarm.value||''); LS.save(LS.k.prefMust,S.prefMust.value||'');
-      LS.save(LS.k.prefSegPrefer,S.prefSegPrefer.value||''); LS.save(LS.k.prefTagPrefer,S.prefTagPrefer.value||'');
-      LS.save(LS.k.prefSegAvoid,S.prefSegAvoid.value||''); LS.save(LS.k.prefTagAvoid,S.prefTagAvoid.value||'');
+      if (id){ S.profileId.value=id; localStorage.setItem(LS.k.profileId,id); setActiveProfileHint(); log(`profile saved id=${id}`); }
+      LS.save(LS.k.profile, body); // stash snapshot
     }catch(e){}
   }
 
@@ -351,13 +568,23 @@
     try{
       const r = await fetchJSON('GET', `/api/prefs/${encodeURIComponent(id)}`);
       const p = r.profile||{};
+      // merge back into profile for rendering if present
+      if (p.host) profile.host = p.host;
+      if (p.line) profile.line = p.line;
+      if (Array.isArray(p.productTags)) profile.productTags = p.productTags;
+      if (p.general) profile.general = Object.assign(profile.general, p.general);
+      if (Array.isArray(p.weights)) profile.metrics = p.weights.map(w=>({label:w.key,value:Number(w.weight||0)}));
+      setBadge(); renderLine(); renderTags(); renderGeneral(); renderMetrics();
+
+      // also fill left free-form
       S.prefCity.value = p.city || '';
       S.prefExcludeGiants.value = String(!!p.excludeGiants);
       S.prefHot.value = (p.hotCues||[]).join('\n'); S.prefWarm.value = (p.warmCues||[]).join('\n');
       S.prefMust.value = (p.mustHave||[]).join('\n');
       S.prefSegPrefer.value = (p.preferSegments||[]).join('\n'); S.prefTagPrefer.value = (p.preferTags||[]).join('\n');
       S.prefSegAvoid.value = (p.avoidSegments||[]).join('\n'); S.prefTagAvoid.value = (p.avoidTags||[]).join('\n');
-      saveProfile(); setActiveProfileHint(); log(`profile loaded id=${id}`);
+
+      LS.save(LS.k.profile,p); setActiveProfileHint(); log(`profile loaded id=${id}`);
     }catch(e){}
   }
 
@@ -370,14 +597,15 @@
   async function findBuyers(){
     const host=(S.supplierHost.value||'').trim().toLowerCase();
     if(!host){ alert('Enter supplier host'); return; }
-    LS.save(LS.k.supplierHost,host);
+    localStorage.setItem(LS.k.supplierHost,host);
+    profile.host = profile.host || host; // keep badge coherent
 
     const city=(S.supplierCity.value||'').trim() || (S.prefCity.value||'').trim();
-    LS.save(LS.k.supplierCity,city);
-    LS.save(LS.k.minTier,S.minTier.value);
-    LS.save(LS.k.limit,S.limit.value);
-    LS.save(LS.k.discoverTerm,S.discoverTerm.value||'');
-    LS.save(LS.k.useFallback,String(S.useFallback.checked));
+    localStorage.setItem(LS.k.supplierCity,city);
+    localStorage.setItem(LS.k.minTier,S.minTier.value);
+    localStorage.setItem(LS.k.limit,S.limit.value);
+    localStorage.setItem(LS.k.discoverTerm,S.discoverTerm.value||'');
+    localStorage.setItem(LS.k.useFallback,String(S.useFallback.checked));
 
     const params=new URLSearchParams();
     params.set('host',host);
@@ -388,15 +616,12 @@
 
     S.btnFind.disabled=true; S.btnFind.textContent='Searching…';
     try{
-      // 1) primary: leads
       const base = await fetchJSON('GET', `/api/leads/find-buyers?${params.toString()}`);
       if ((base.items||[]).length>0){ renderRows(base.items); return; }
 
-      // 2) optional fallback: places
       if (!S.useFallback.checked){ renderRows([]); return; }
       const term=(S.discoverTerm.value||'coffee shop').trim();
       const limit=Number(S.limit.value)||12;
-
       const p2 = new URLSearchParams({ q:term, city, limit:String(limit) });
       const alt = await fetchJSON('GET', `/api/places/search?${p2.toString()}`);
       if (alt && alt.ok && (alt.items||[]).length){
@@ -415,6 +640,7 @@
     finally{ S.btnFind.disabled=false; S.btnFind.textContent='Find Buyers'; }
   }
 
+  // ---------- UI wiring ----------
   function hookEvents(){
     S.btnSaveConn.addEventListener('click', saveConn);
     S.btnPing.addEventListener('click', ping);
@@ -422,7 +648,7 @@
 
     S.btnSaveProfile.addEventListener('click', saveProfile);
     S.btnLoadProfile.addEventListener('click', loadProfile);
-    S.btnForgetProfile.addEventListener('click', ()=>{ LS.del(LS.k.profileId); S.profileId.value=''; setActiveProfileHint(); log('forgot profile id'); });
+    S.btnForgetProfile.addEventListener('click', ()=>{ localStorage.removeItem(LS.k.profileId); S.profileId.value=''; setActiveProfileHint(); log('forgot profile id'); });
 
     S.btnFind.addEventListener('click', findBuyers);
     S.resultsBody.addEventListener('click', (e)=>{
@@ -431,25 +657,61 @@
       const host=decodeURIComponent(enc); onLockHost(host,b);
     });
 
+    // accordion
+    S.accToggle.addEventListener('click', (e)=>{
+      // avoid toggling if a header button clicked
+      if (e.target.closest('button')) return;
+      S.acc.classList.toggle('open');
+    });
+
+    // profile header buttons
+    S.btnImportSetup.addEventListener('click', ()=>{ importFromOnboarding(); alert('Imported from setup (if present).'); });
+    S.btnReclassify.addEventListener('click', async ()=>{
+      const host = (S.supplierHost.value||profile.host||'').trim();
+      if (!host) return alert('Enter supplier host first.');
+      try{
+        const data=await classify(host);
+        profile.host=host;
+        deriveLine(data, host);
+        profile.productTags=(data.productTags||[]).slice(0,14);
+        profile.metrics=deriveMetricsFrom(data);
+        setBadge(); renderLine(); renderTags(); renderMetrics(); saveProfileLS();
+      }catch(e){ alert('Re-classify failed. Check API base.'); }
+    });
+    S.btnApply.addEventListener('click', saveProfile);
+
     // gate Find button on required field
     const gate=()=>{ S.btnFind.disabled = !((S.supplierHost.value||'').trim()); };
     S.supplierHost.addEventListener('input',gate); gate();
   }
 
   function restore(){
-    S.apiBase.value = LS.load(LS.k.apiBase,''); S.apiKey.value = LS.load(LS.k.apiKey,'');
+    S.apiBase.value = localStorage.getItem(LS.k.apiBase)||''; S.apiKey.value = localStorage.getItem(LS.k.apiKey)||'';
 
-    S.profileId.value = LS.load(LS.k.profileId,''); S.prefCity.value = LS.load(LS.k.prefCity,'');
-    S.prefExcludeGiants.value = LS.load(LS.k.prefExcludeGiants,'false');
-    S.prefHot.value = LS.load(LS.k.prefHot,''); S.prefWarm.value = LS.load(LS.k.prefWarm,''); S.prefMust.value = LS.load(LS.k.prefMust,'');
-    S.prefSegPrefer.value = LS.load(LS.k.prefSegPrefer,''); S.prefTagPrefer.value = LS.load(LS.k.prefTagPrefer,'');
-    S.prefSegAvoid.value = LS.load(LS.k.prefSegAvoid,''); S.prefTagAvoid.value = LS.load(LS.k.prefTagAvoid,'');
+    S.profileId.value = localStorage.getItem(LS.k.profileId)||'';
+    S.prefCity.value = localStorage.getItem(LS.k.prefCity)||'';
+    S.prefExcludeGiants.value = localStorage.getItem(LS.k.prefExcludeGiants)||'false';
+    S.prefHot.value = localStorage.getItem(LS.k.prefHot)||'';
+    S.prefWarm.value = localStorage.getItem(LS.k.prefWarm)||'';
+    S.prefMust.value = localStorage.getItem(LS.k.prefMust)||'';
+    S.prefSegPrefer.value = localStorage.getItem(LS.k.prefSegPrefer)||'';
+    S.prefTagPrefer.value = localStorage.getItem(LS.k.prefTagPrefer)||'';
+    S.prefSegAvoid.value = localStorage.getItem(LS.k.prefSegAvoid)||'';
+    S.prefTagAvoid.value = localStorage.getItem(LS.k.prefTagAvoid)||'';
 
-    S.supplierHost.value = LS.load(LS.k.supplierHost,''); S.supplierCity.value = LS.load(LS.k.supplierCity,'');
-    S.minTier.value = LS.load(LS.k.minTier,'C') || 'C'; S.limit.value = LS.load(LS.k.limit,'12') || '12';
-    S.discoverTerm.value = LS.load(LS.k.discoverTerm,'coffee shop'); S.useFallback.checked = LS.load(LS.k.useFallback,'true')==='true';
+    S.supplierHost.value = localStorage.getItem(LS.k.supplierHost)||'';
+    S.supplierCity.value = localStorage.getItem(LS.k.supplierCity)||'';
+    S.minTier.value = localStorage.getItem(LS.k.minTier)||'C';
+    S.limit.value = localStorage.getItem(LS.k.limit)||'12';
+    S.discoverTerm.value = localStorage.getItem(LS.k.discoverTerm)||'coffee shop';
+    S.useFallback.checked = (localStorage.getItem(LS.k.useFallback)||'true')==='true';
 
     setActiveProfileHint();
+
+    // load profile snapshot if present, else try import-from-onboarding quietly
+    if (!loadProfileLS()){
+      importFromOnboarding();
+    }
   }
 
   // Boot
