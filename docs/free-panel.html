@@ -1,63 +1,84 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Free Panel — Buyers Finder</title>
 <style>
-:root{--bg:#0f1220;--panel:#151a2e;--muted:#222846;--text:#e9ecf8;--sub:#aeb6d9;--acc:#6ea8fe;--ok:#2fb170;--warn:#ffb02e;--hot:#ff4769;--warm:#ffc857;--cool:#6ec6ff;--chip:#2a315a;--line:#1c2244}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-a{color:var(--acc);text-decoration:none}
-.wrap{display:flex;min-height:100vh}
-.left{width:430px;max-width:100%;padding:16px;border-right:1px solid var(--muted);background:linear-gradient(180deg,var(--panel),#10142a)}
-.right{flex:1;min-width:0;padding:16px}
-h1,h2,h3{margin:8px 0}h2{font-size:16px}h3{font-size:13px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em}
-label{display:block;font-size:12px;color:var(--sub);margin:6px 0 4px}
-input,select,textarea{width:100%;background:#0d1124;border:1px solid var(--muted);color:var(--text);border-radius:8px;padding:10px 12px;outline:none}
-textarea{min-height:68px;resize:vertical}
-.row{display:flex;gap:8px}.row>*{flex:1}
-.btn{display:inline-flex;align-items:center;gap:8px;background:#1e264a;border:1px solid var(--muted);color:var(--text);padding:9px 12px;border-radius:8px;cursor:pointer}
-.btn:hover{background:#263062}.btn.primary{background:var(--acc);border-color:transparent;color:#0b1024}.btn.good{background:var(--ok);border-color:transparent;color:#03120b}.btn.warn{background:var(--warn);border-color:transparent;color:#231500}.btn.ghost{background:transparent}.btn.icon{padding:8px}
-.section{padding:12px;border:1px solid var(--muted);border-radius:12px;background:rgba(255,255,255,.02)}
-.small{font-size:12px;color:var(--sub)}
-.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#21295a;color:#cfd6ff;font-size:12px}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.chip{padding:4px 8px;border-radius:999px;background:var(--chip);color:#cdd6ff;font-size:12px}
-.tag-hot{background:rgba(255,71,105,.14);color:#ff9fb0}.tag-warm{background:rgba(255,200,87,.16);color:#ffe2a8}.tag-cool{background:rgba(110,198,255,.16);color:#bfe6ff}
-.table{width:100%;border-collapse:separate;border-spacing:0 8px}
-.table th{font-size:12px;color:var(--sub);text-align:left;padding:0 10px}
-.table td{background:#0e1430;padding:12px 10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.table tr td:first-child{border-left:1px solid var(--line);border-top-left-radius:8px;border-bottom-left-radius:8px}
-.table tr td:last-child{border-right:1px solid var(--line);border-top-right-radius:8px;border-bottom-right-radius:8px}
-.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
-pre.log{background:#0a0e22;border:1px solid var(--line);border-radius:12px;padding:10px;max-height:220px;overflow:auto;color:#9cb3ff}
-.split{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}
-@media (max-width:1100px){.split{grid-template-columns:1fr}}
-/* profile bar */
-.profile{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--muted);border-radius:12px;background:#101633}
-.fav{width:22px;height:22px;border-radius:6px;background:#0b1228;display:grid;place-items:center;overflow:hidden}
-.one{font-weight:700}.one-edit{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
-.token{padding:4px 6px;border-radius:8px;background:#0f1734;border:1px solid #222f66}
-.bar-actions{margin-left:auto;display:flex;gap:8px}
-.details{margin-top:10px;border:1px dashed var(--muted);border-radius:10px;padding:10px;background:#0e1430}
-.details[hidden]{display:none}
-.details h4{margin:0 0 6px}
-.slider{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin:8px 0}
-.slider input[type=range]{width:220px}
-.hr{height:1px;background:var(--muted);margin:10px 0}
+  :root{
+    --bg:#0f1220; --panel:#151a2e; --muted:#222846; --text:#e9ecf8; --sub:#aeb6d9;
+    --acc:#6ea8fe; --ok:#2fb170; --warn:#ffb02e; --hot:#ff4769; --warm:#ffc857; --cool:#6ec6ff;
+    --chip:#2a315a; --chipOn:#19324e; --ring:#2a4cff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none}
+  .wrap{display:flex;min-height:100vh}
+  .left{width:420px;max-width:100%;padding:16px;border-right:1px solid var(--muted);background:linear-gradient(180deg,var(--panel),#10142a)}
+  .right{flex:1;min-width:0;padding:16px}
+  h2{margin:12px 0 8px;font-size:16px}
+  h3{margin:16px 0 8px;font-size:14px;color:var(--sub)}
+  label{display:block;font-size:12px;color:var(--sub);margin:6px 0 4px}
+  input,select,textarea{
+    width:100%;background:#0d1124;border:1px solid var(--muted);color:var(--text);
+    border-radius:8px;padding:10px 12px;outline:none
+  }
+  input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(106,168,254,.25);border-color:#2a4cff66}
+  textarea{min-height:68px;resize:vertical}
+  .row{display:flex;gap:8px}
+  .row>*{flex:1}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;background:#1e264a;border:1px solid var(--muted);
+    color:var(--text);padding:10px 12px;border-radius:8px;cursor:pointer;user-select:none
+  }
+  .btn:hover{background:#263062}
+  .btn.primary{background:var(--acc);border-color:transparent;color:#0b1024}
+  .btn.good{background:var(--ok);border-color:transparent;color:#03120b}
+  .btn.warn{background:var(--warn);border-color:transparent;color:#231500}
+  .btn.ghost{background:transparent}
+  .section{padding:12px;border:1px solid var(--muted);border-radius:12px;background:rgba(255,255,255,0.02)}
+  .small{font-size:12px;color:var(--sub)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .chip{padding:6px 10px;border-radius:999px;background:var(--chip);color:#cdd6ff;font-size:12px;border:1px solid #2c3a63;cursor:pointer;user-select:none}
+  .chip.active{background:var(--chipOn);border-color:#365081}
+  .table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  .table th{font-size:12px;color:var(--sub);text-align:left;padding:0 10px}
+  .table td{background:#0e1430;padding:12px 10px;border-top:1px solid #1a2144;border-bottom:1px solid #1a2144}
+  .table tr td:first-child{border-left:1px solid #1a2144;border-top-left-radius:8px;border-bottom-left-radius:8px}
+  .table tr td:last-child{border-right:1px solid #1a2144;border-top-right-radius:8px;border-bottom-right-radius:8px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+  pre.log{background:#0a0e22;border:1px solid #1a2144;border-radius:12px;padding:10px;max-height:220px;overflow:auto;color:#9cb3ff}
+  .hdr{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:12px;border:1px solid var(--muted);border-radius:12px;background:#0f1633; margin-bottom:12px
+  }
+  .hdr .title{display:flex;align-items:center;gap:10px}
+  .fav{width:18px;height:18px;border-radius:4px;overflow:hidden;background:#0b1123;display:grid;place-items:center}
+  .pill{padding:2px 8px;border-radius:999px;background:#19224a;color:#cfe1ff;font-size:11px}
+  details.drawer{border:1px solid var(--muted);border-radius:12px;background:#0e1430}
+  details.drawer>summary{list-style:none;cursor:pointer;padding:12px 14px;border-bottom:1px solid #1a2144}
+  details.drawer>summary::-webkit-details-marker{display:none}
+  .drawer-bd{padding:12px 14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:1100px){.grid2{grid-template-columns:1fr}}
+  .slider-row{display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:center;margin:8px 0}
+  .slider-row input[type=range]{width:100%}
+  .hint{color:#8fa3ff}
+  .badge{display:inline-block;padding:2px 6px;border-radius:6px;background:#18224a;color:#cfe1ff;font-size:11px;border:1px solid #26356a}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <!-- LEFT PANE -->
   <div class="left">
     <h2>Connection</h2>
     <div class="section">
       <label>API Base (ends with <span class="mono">/api</span>)</label>
-      <input id="apiBase" placeholder="https://YOUR-NF.code.run/api" />
-      <div class="row">
+      <input id="apiBase" placeholder="https://your-host.tld/api"/>
+      <div class="row" style="margin-top:6px">
         <div>
           <label>x-api-key (optional)</label>
-          <input id="apiKey" placeholder="leave blank if none" />
+          <input id="apiKey" placeholder="leave blank if none"/>
         </div>
         <div style="align-self:flex-end"><button class="btn" id="btnSaveConn">Save</button></div>
       </div>
@@ -71,273 +92,539 @@ pre.log{background:#0a0e22;border:1px solid var(--line);border-radius:12px;paddi
     <h2 style="margin-top:14px">Supplier</h2>
     <div class="section">
       <label>Supplier Host (domain only)</label>
-      <input id="supplierHost" placeholder="example.com" />
+      <input id="supplierHost" placeholder="example.com"/>
       <div class="row">
-        <div><label>City (boost)</label><input id="supplierCity" placeholder="e.g., Chicago"/></div>
-        <div><label>Limit</label><select id="limit"><option>6</option><option selected>12</option><option>20</option></select></div>
+        <div>
+          <label>City (boost leads near)</label>
+          <input id="supplierCity" placeholder="e.g., los angeles"/>
+        </div>
+        <div>
+          <label>Limit</label>
+          <select id="limit"><option>6</option><option selected>12</option><option>20</option><option>30</option></select>
+        </div>
       </div>
-      <div class="row" style="margin-top:6px">
-        <div style="align-self:flex-end"><button class="btn primary" id="btnFind" disabled>Find Buyers</button></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" id="btnFind" disabled>Find Buyers</button>
       </div>
-      <div class="small" id="activeProfileHint"></div>
+      <div class="small" id="leftPersonaHint"></div>
     </div>
 
     <h2 style="margin-top:14px">Preference Profile</h2>
     <div class="section">
       <div class="row">
-        <div><label>Profile ID</label><input id="profileId" placeholder="auto if Apply profile"/></div>
+        <div>
+          <label>Profile ID</label>
+          <input id="profileId" placeholder="auto on apply"/>
+        </div>
         <div style="align-self:flex-end"><button class="btn" id="btnLoadProfile">Load</button></div>
       </div>
-      <h3 style="margin-top:8px">Persona Preview</h3>
-      <div id="personaBox" class="details"><em class="small">Import from setup to populate…</em></div>
+      <h3 style="margin-top:10px">PERSONA PREVIEW</h3>
+      <div id="personaPreview" class="small" style="min-height:48px;opacity:.85">Import from setup to populate…</div>
       <div class="row" style="margin-top:8px">
         <button class="btn good" id="btnApplyProfile">Apply profile</button>
-        <button class="btn ghost" id="btnForgetProfile">Forget ID</button>
+        <button class="btn ghost" id="btnForgetId">Forget ID</button>
       </div>
-      <div class="small">Apply = upsert to API and save returned <span class="mono">profileId</span>.</div>
     </div>
   </div>
 
+  <!-- RIGHT PANE -->
   <div class="right">
-    <div class="profile" id="profileBar">
-      <div class="fav"><img id="fav" alt="" width="22" height="22" referrerpolicy="no-referrer"/></div>
-      <div style="min-width:0">
-        <div class="one"><span id="hostLbl">yourcompany.com</span> — <span id="oneLiner">(import from setup)</span></div>
-        <div class="one-edit" id="tokens"></div>
+    <div class="hdr">
+      <div class="title">
+        <div class="fav"><img id="fav" alt="" width="16" height="16" referrerpolicy="no-referrer"></div>
+        <div>
+          <div class="mono" id="hdrHost">—</div>
+          <div class="small" id="hdrSub" style="opacity:.9"></div>
+        </div>
       </div>
-      <div class="bar-actions">
+      <div style="display:flex;gap:8px">
         <button class="btn" id="btnImport">Import</button>
         <button class="btn" id="btnReclass">Re-classify</button>
-        <button class="btn good" id="btnUse">Apply profile</button>
+        <button class="btn good" id="btnApplyTop">Apply profile</button>
       </div>
     </div>
 
-    <div class="details" id="previewBox" hidden>
-      <h4>Profile Preview</h4>
-      <div id="previewInner"></div>
-    </div>
+    <details id="personaDrawer" class="drawer" open>
+      <summary>
+        <span class="badge">Persona (from setup)</span>
+        <span id="personaSummary" class="small" style="margin-left:8px;opacity:.9">empty</span>
+      </summary>
+      <div class="drawer-bd">
+        <div class="section" style="margin-bottom:12px">
+          <div id="oneLiner" style="font-weight:700"></div>
+        </div>
 
-    <div class="split" style="margin-top:12px">
+        <div class="grid2">
+          <div class="section">
+            <h3 style="margin-top:0">General preferences</h3>
+            <div id="prefGeneral" class="chips"></div>
+          </div>
+          <div class="section">
+            <h3 style="margin-top:0">Product signals (from your site)</h3>
+            <div id="prefProducts" class="chips"></div>
+          </div>
+        </div>
+
+        <div class="section" style="margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3 style="margin:0">Buyer priorities (dynamic)</h3>
+            <div class="small hint">Tell us how much your buyers care about these.</div>
+          </div>
+          <div id="prefMetrics" style="margin-top:6px"></div>
+        </div>
+
+        <div class="grid2" style="margin-top:12px">
+          <div class="section">
+            <h3 style="margin-top:0">Buyer targeting — City</h3>
+            <input id="prefCity" placeholder="e.g., Chicago"/>
+            <div id="prefCityChips" class="chips"></div>
+          </div>
+          <div class="section">
+            <h3 style="margin-top:0">Buyer targeting — Sectors</h3>
+            <input id="prefSectors" placeholder="e.g., food, beverage, cosmetics"/>
+            <div id="prefSectorChips" class="chips"></div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:12px;margin-top:12px">
       <div>
         <h2>Results</h2>
         <table class="table">
-          <thead><tr><th style="width:70px">Score</th><th style="width:90px">Temp</th><th>Buyer</th><th>Why</th><th style="width:100px">Action</th></tr></thead>
-          <tbody id="resultsBody"><tr><td colspan="5" class="small">No items yet.</td></tr></tbody>
+          <thead>
+            <tr>
+              <th style="width:70px">Score</th>
+              <th style="width:90px">Temp</th>
+              <th>Buyer</th>
+              <th>Why</th>
+              <th style="width:120px">Action</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"><tr><td colspan="5" class="small">No items</td></tr></tbody>
         </table>
       </div>
       <div>
         <h2>HTTP Log</h2>
-        <pre class="log mono" id="httpLog"></pre>
+        <pre id="httpLog" class="log mono"></pre>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-(()=>{
-// ---------- helpers ----------
-const $=s=>document.querySelector(s);
-const LS={
-  get k(){return{
-    setup:'gggp.setup.v1', apiBase:'apiBase', apiKey:'apiKey',
-    profileId:'fp.profileId', supplierHost:'fp.supplier.host', supplierCity:'fp.supplier.city', limit:'fp.limit'
-  }},
-  get(k,d=''){try{const v=localStorage.getItem(k);return v==null?d:v}catch{return d}},
-  set(k,v){try{localStorage.setItem(k,v)}catch{}},
-  del(k){try{localStorage.removeItem(k)}catch{}}
-};
-function ts(){return new Date().toISOString().replace('T',' ').replace('Z','')}
-function log(s){const el=$('#httpLog');el.textContent+=`[${ts()}] ${s}\n`;el.scrollTop=el.scrollHeight}
-function normHost(h){if(!h)return'';return String(h).trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'')}
-function ddgFav(host){return `https://icons.duckduckgo.com/ip3/${encodeURIComponent(host)}.ico`}
-function fullUrl(p){const base=($('#apiBase').value||'').trim().replace(/\/+$/,'');if(!base)return p;return base+p}
-async function fetchJSON(method,path,body){
-  const url=fullUrl(path);const headers={'content-type':'application/json'};
-  const k=$('#apiKey').value.trim();if(k)headers['x-api-key']=k;
-  const init={method,headers};if(body)init.body=JSON.stringify(body);
-  log(`${method} ${url}`);const t0=performance.now();
-  let resp,data;try{resp=await fetch(url,init);const ct=resp.headers.get('content-type')||'';data=ct.includes('json')?await resp.json():{raw:await resp.text()};
-    log(`↳ ${resp.status} ${resp.statusText} (${Math.round(performance.now()-t0)} ms)`);}catch(e){log(`↳ network error: ${e.message||e}`);throw e}
-  if(!resp.ok){log(`↳ body: ${JSON.stringify(data)}`);const er=new Error((data&&data.error)||`HTTP ${resp.status}`);er.status=resp.status;er.data=data;throw er}
-  return data
-}
-
-// ---------- state ----------
-const S={
-  setup:null, persona:null, profileId:null
-};
-
-// ---------- UI refs ----------
-const hostLbl=$('#hostLbl'), oneLiner=$('#oneLiner'), tokens=$('#tokens'), fav=$('#fav');
-const personaBox=$('#personaBox'), previewBox=$('#previewBox'), previewInner=$('#previewInner');
-const resultsBody=$('#resultsBody'), activeProfileHint=$('#activeProfileHint');
-
-// ---------- restore connection ----------
-(function restoreConn(){
-  $('#apiBase').value=LS.get(LS.k.apiBase,''); $('#apiKey').value=LS.get(LS.k.apiKey,'');
-  $('#profileId').value=LS.get(LS.k.profileId,'');
-  $('#supplierHost').value=LS.get(LS.k.supplierHost,''); $('#supplierCity').value=LS.get(LS.k.supplierCity,'');
-  $('#limit').value=LS.get(LS.k.limit,'12')||'12';
-  setFindGate();setActiveProfileHint();
-})();
-
-// ---------- profile rendering ----------
-function renderBar(setup){
-  const host=normHost(setup?.host||setup?.domain||'');
-  hostLbl.textContent=host||'yourcompany.com';
-  if(host){fav.src=ddgFav(host);fav.style.display=''}
-  oneLiner.textContent=setup?.oneLiner||setup?.summary||'';
-  tokens.innerHTML='';
-  const parts=setup?.oneTokens||[];
-  parts.forEach(t=>{const span=document.createElement('span');span.className='token';span.textContent=t;tokens.appendChild(span)})
-}
-
-function renderPersona(setup){
-  if(!setup){personaBox.innerHTML='<em class="small">No data yet. Click <b>Import</b>.</em>'; return}
-  const gp=setup.general||{}; const tags=setup.productTags||[];
-  const sectors=setup.sectorHints||[];
-  const intel=(setup.buyerIntel||setup.intel||[]).slice(0,20);
-  // left box
-  const wrap=document.createElement('div');
-  wrap.innerHTML=`
-    <div><strong>General preferences</strong></div>
-    <div class="chips" style="margin-bottom:6px">
-      ${gp.nearby?'<span class="chip">nearby buyers</span>':''}
-      ${gp.ecom?'<span class="chip">e-commerce</span>':''}
-      ${gp.retail?'<span class="chip">retail brands</span>':''}
-      ${gp.wholesale?'<span class="chip">wholesalers/distributors</span>':''}
-      ${gp.mids?'<span class="chip">mid-size</span>':''}
-      ${gp.avoidGiants?'<span class="chip">de-prioritize giants</span>':''}
-    </div>
-    <div class="hr"></div>
-    <div><strong>Product signals</strong></div>
-    <div class="chips">${tags.map(t=>`<span class="chip">${t}</span>`).join('') || '<span class="small">none</span>'}</div>
-    <div style="margin-top:6px"><span class="small">Sectors:</span> <span class="chips">${sectors.map(s=>`<span class="chip">${s}</span>`).join('')}</span></div>
-    <div class="hr"></div>
-    <div><strong>Buyer intelligence</strong></div>
-  `;
-  // sliders
-  intel.forEach(it=>{
-    const row=document.createElement('div');row.className='slider';
-    const label=document.createElement('div');label.textContent=it.name||it.label||'metric';
-    const input=document.createElement('input');input.type='range';input.min=0;input.max=10;input.value=Number(it.weight??7);
-    input.addEventListener('input',()=>{it.weight=Number(input.value)});
-    row.appendChild(label);row.appendChild(input);wrap.appendChild(row);
-  });
-  personaBox.innerHTML=''; personaBox.appendChild(wrap);
-  S.persona={gp,tags,sectors,intel};
-  // also show preview block
-  previewInner.innerHTML = `
-    <div class="chips">${tags.map(t=>`<span class="chip">${t}</span>`).join('')}</div>
-    <div class="small" style="margin-top:6px">Sectors: ${sectors.join(', ')||'—'}</div>
-    <div class="small" style="margin-top:6px">Intel: ${intel.map(i=>`${i.name}:${i.weight}`).join(' • ')||'—'}</div>
-  `;
-  previewBox.hidden=false;
-}
-
-// ---------- import & classify ----------
-function loadSetup(){
-  try{const raw=LS.get(LS.k.setup,''); if(!raw) return null; return JSON.parse(raw)}catch{return null}
-}
-
-async function reclassify(host,email){
-  const q=new URLSearchParams({host, email:email||''}).toString();
-  const data=await fetchJSON('GET', `/classify?${q}`);
-  if(data && data.ok){
-    const snap={
-      host, summary:data.summary||'', oneLiner:data.summary||'',
-      oneTokens:(data.summaryTokens||[]), productTags:data.productTags||[],
-      sectorHints:data.sectorHints||[], general:data.general||{},
-      buyerIntel:(data.buyerIntel||data.intel||[])
-    };
-    S.setup=snap; renderBar(snap); renderPersona(snap);
-  }
-}
-
-// ---------- apply profile to backend ----------
-function setActiveProfileHint(){
-  const pid=$('#profileId').value.trim();
-  activeProfileHint.textContent = pid ? `Using profileId=${pid} for searches.` : `No profile assigned. Click Apply profile first (recommended).`;
-}
-
-async function applyProfile(){
-  const host=normHost($('#supplierHost').value);
-  const city=$('#supplierCity').value.trim();
-  const body={
-    id:($('#profileId').value||'').trim()||undefined,
-    host, city:city||undefined,
-    general:S.persona?.gp||{},
-    productTags:S.persona?.tags||[],
-    sectorHints:S.persona?.sectors||[],
-    buyerIntel:(S.persona?.intel||[]).map(x=>({name:x.name||x.label, weight:Number(x.weight||0)}))
+(function(){
+  // ---- Utilities & Storage
+  const $ = s => document.querySelector(s);
+  const logEl = $('#httpLog');
+  function log(line){ logEl.textContent += line + "\\n"; logEl.scrollTop = logEl.scrollHeight; }
+  const LS = {
+    get(k, d=""){ try{ const v=localStorage.getItem(k); return v==null?d:v; }catch{ return d; } },
+    set(k, v){ try{ localStorage.setItem(k, v); }catch{} },
+    del(k){ try{ localStorage.removeItem(k); }catch{} }
   };
-  const r=await fetchJSON('POST','/api/prefs/upsert',body);
-  const id = r.id || (r.profile && r.profile.id) || '';
-  if(id){ $('#profileId').value=id; LS.set(LS.k.profileId,id); setActiveProfileHint(); alert('Profile applied ✓'); }
-}
-
-// ---------- search ----------
-function setFindGate(){
-  $('#btnFind').disabled = !normHost($('#supplierHost').value);
-}
-function badge(temp){
-  const t=String(temp||'').toLowerCase();
-  if(t==='hot')return'<span class="chip tag-hot">HOT</span>';
-  if(t==='warm')return'<span class="chip tag-warm">WARM</span>';
-  return'<span class="chip tag-cool">COOL</span>';
-}
-function renderRows(items){
-  resultsBody.innerHTML='';
-  if(!items||!items.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.textContent='No items';tr.appendChild(td);resultsBody.appendChild(tr);return}
-  for(const it of items){
-    const tr=document.createElement('tr');tr.innerHTML=`
-      <td class="mono">${Math.round(it.score||0)}</td>
-      <td>${badge(it.temp)}</td>
-      <td><div class="mono" style="font-weight:600">${it.host||''}</div><div class="small" style="opacity:.85">${it.title||it.name||''}</div></td>
-      <td><div class="small">${(it.why||'').replace(/\s·\s/g,' • ')}</div></td>
-      <td><button class="btn">Lock</button></td>`;resultsBody.appendChild(tr)
+  function SSget(k){ try{ return sessionStorage.getItem(k)||""; }catch{ return ""; } }
+  function normHost(h){ return String(h||"").trim().toLowerCase().replace(/^https?:\\/\\//,"").replace(/^www\\./,"").replace(/\\/.*$/,""); }
+  function setFav(host){
+    const h=normHost(host); const fav=$('#fav');
+    if(!h){ fav.src=""; return; }
+    fav.src="https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico";
   }
-}
-async function findBuyers(){
-  const host=normHost($('#supplierHost').value); const city=$('#supplierCity').value.trim();
-  const limit=$('#limit').value||'12'; const pid=$('#profileId').value.trim();
-  const qs=new URLSearchParams({host, city, limit, profileId:pid}).toString();
-  try{const r=await fetchJSON('GET', `/api/leads/find-buyers?${qs}`); renderRows(r.items||[])}catch(e){renderRows([])}
-}
 
-// ---------- events ----------
-$('#btnSaveConn').addEventListener('click',()=>{LS.set(LS.k.apiBase,$('#apiBase').value||'');LS.set(LS.k.apiKey,$('#apiKey').value||'');log('saved connection')});
-$('#btnPing').addEventListener('click',async()=>{try{const r=await fetchJSON('GET','/healthz');log('healthz '+JSON.stringify(r))}catch(e){}});
-$('#btnClearLog').addEventListener('click',()=>{$('#httpLog').textContent=''});
-$('#supplierHost').addEventListener('input',()=>{setFindGate(); const h=normHost($('#supplierHost').value); if(h){fav.src=ddgFav(h); hostLbl.textContent=h}});
-$('#btnFind').addEventListener('click',findBuyers);
-$('#btnLoadProfile').addEventListener('click',async()=>{const id=$('#profileId').value.trim(); if(!id){alert('Enter profileId first');return} try{const r=await fetchJSON('GET',`/api/prefs/${encodeURIComponent(id)}`); alert('Loaded ✓'); LS.set(LS.k.profileId,id); setActiveProfileHint()}catch(e){}});
-$('#btnForgetProfile').addEventListener('click',()=>{LS.del(LS.k.profileId); $('#profileId').value=''; setActiveProfileHint(); log('forgot profile id')});
+  // ---- Elements
+  const E = {
+    apiBase: $('#apiBase'), apiKey: $('#apiKey'),
+    btnSaveConn: $('#btnSaveConn'), btnPing: $('#btnPing'), btnClearLog: $('#btnClearLog'),
+    supplierHost: $('#supplierHost'), supplierCity: $('#supplierCity'), limit: $('#limit'), btnFind: $('#btnFind'),
+    profileId: $('#profileId'), btnLoadProfile: $('#btnLoadProfile'), btnApplyProfile: $('#btnApplyProfile'), btnForgetId: $('#btnForgetId'),
+    hdrHost: $('#hdrHost'), hdrSub: $('#hdrSub'), btnImport: $('#btnImport'), btnReclass: $('#btnReclass'), btnApplyTop: $('#btnApplyTop'),
+    leftPersonaHint: $('#leftPersonaHint'), personaPreview: $('#personaPreview'),
+    oneLiner: $('#oneLiner'),
+    prefGeneral: $('#prefGeneral'), prefProducts: $('#prefProducts'),
+    prefMetrics: $('#prefMetrics'),
+    prefCity: $('#prefCity'), prefSectors: $('#prefSectors'),
+    prefCityChips: $('#prefCityChips'), prefSectorChips: $('#prefSectorChips'),
+    personaSummary: $('#personaSummary'),
+    resultsBody: $('#resultsBody')
+  };
 
-$('#btnImport').addEventListener('click',()=>{
-  const setup=loadSetup(); if(!setup){alert('No setup found. Complete onboarding first.');return}
-  S.setup=setup; renderBar(setup); renderPersona(setup);
-  const host=normHost(setup.host||setup.domain||''); const city=(setup.city||'').trim();
-  $('#supplierHost').value=host; $('#supplierCity').value=city; setFindGate();
-  if(host){fav.src=ddgFav(host)}; log('imported setup from localStorage');
-});
-$('#btnReclass').addEventListener('click',async()=>{
-  const host=normHost($('#supplierHost').value || (S.setup && (S.setup.host||S.setup.domain)) || '');
-  if(!host){alert('Enter/Import host first');return} try{await reclassify(host, S.setup?.email||''); alert('Re-classified ✓')}catch(e){}
-});
-$('#btnUse').addEventListener('click',applyProfile);
-$('#btnApplyProfile').addEventListener('click',applyProfile);
+  // ---- Persist connection fields
+  function restoreConn(){
+    E.apiBase.value = LS.get('fp.apiBase','');
+    E.apiKey.value  = LS.get('fp.apiKey','');
+  }
+  function saveConn(){
+    LS.set('fp.apiBase', E.apiBase.value||'');
+    LS.set('fp.apiKey',  E.apiKey.value||'');
+    log('[conn] saved');
+  }
+  function fullUrl(p){
+    const base=(E.apiBase.value||'').replace(/\\/+$/,'');
+    if(!base) return p;
+    return p.startsWith('http')?p:base+p;
+  }
 
-function initFromSetupSilently(){
-  const setup=loadSetup(); if(!setup) return;
-  S.setup=setup; renderBar(setup); renderPersona(setup);
-  const host=normHost(setup.host||setup.domain||''); if(host){$('#supplierHost').value=host; fav.src=ddgFav(host)}
-  if(setup.city) $('#supplierCity').value=setup.city;
-  setFindGate();
-}
-// boot
-initFromSetupSilently(); setActiveProfileHint(); log('ready');
-})();
+  // ---- Persona rendering helpers
+  function chip(container, text, on=false){
+    const el=document.createElement('span');
+    el.className='chip'+(on?' active':''); el.textContent=text;
+    el.addEventListener('click', ()=> el.classList.toggle('active'));
+    container.appendChild(el);
+  }
+  function renderGeneral(prefs){
+    E.prefGeneral.innerHTML='';
+    const defs=[
+      ['near','📍 Prioritize nearby buyers'],
+      ['ecom','🛒 Prefer e-commerce sites'],
+      ['retail','🏬 Prefer retail brands'],
+      ['wholesale','📦 Prefer wholesalers / distributors'],
+      ['mids','🏗 Prefer mid-size companies'],
+      ['avoidBig','🏢 De-prioritize giant enterprises'],
+    ];
+    defs.forEach(([k,label])=> chip(E.prefGeneral, label, !!prefs?.[k]));
+  }
+  function renderProducts(tags){
+    E.prefProducts.innerHTML='';
+    (tags||[]).slice(0,18).forEach(t=> chip(E.prefProducts, t, true));
+  }
+  function renderMetrics(metrics){
+    E.prefMetrics.innerHTML='';
+    (metrics||[]).slice(0,20).forEach(m=>{
+      const row=document.createElement('div'); row.className='slider-row';
+      const lab=document.createElement('div'); lab.textContent=m.label||m;
+      const val=document.createElement('input'); val.type='range'; val.min='0'; val.max='10'; val.value=String(m.value ?? 8);
+      row.appendChild(lab); row.appendChild(val); E.prefMetrics.appendChild(row);
+    });
+  }
+  function renderTargeting(city, sectors){
+    E.prefCity.value = city||'';
+    E.prefSectors.value = Array.isArray(sectors)? sectors.join(', ') : (sectors||'');
+    const citySeeds=['Chicago','New York','Los Angeles','Dallas','Atlanta','Miami'];
+    const sectorSeeds=['food','beverage','cosmetics','electronics','apparel','supplements','pharma'];
+    E.prefCityChips.innerHTML=''; citySeeds.forEach(c=> chip(E.prefCityChips,c));
+    E.prefSectorChips.innerHTML=''; sectorSeeds.forEach(s=> chip(E.prefSectorChips,s));
+  }
+
+  // ---- Import from setup payload
+  function readSetupPayload(){
+    // Preferred: sessionStorage (set by onboarding just before redirect)
+    let raw = SSget('gal.setup');
+    if(!raw) raw = LS.get('gal.setup','');
+    // Legacy tiny format: {host:"..."} under "setupProfile"
+    if(!raw){
+      const legacy = LS.get('setupProfile','');
+      if(legacy){ try{ const j=JSON.parse(legacy); return { host:j.host||'' }; }catch{} }
+    }
+    if(!raw) return null;
+    try{ return JSON.parse(raw); }catch{ return null; }
+  }
+
+  function importFromSetup(){
+    const p = readSetupPayload();
+    if(!p){ alert('No setup payload found. Finish onboarding first.'); return; }
+    const host = normHost(p.host || p.line?.host || '');
+    if(host){
+      E.supplierHost.value = host;
+      E.hdrHost.textContent = host + ' — (import from setup)';
+      setFav(host);
+      E.btnFind.disabled = false;
+    }
+    // One-liner / sentence
+    const line = p.line || {};
+    const sentence = [
+      line.host||host||'yourcompany.com','—', line.verb||'supplies', line.products||'packaging',
+      'for', line.audience||'brands', 'in', line.region||'the U.S.', '.', 'Best contacts:', line.contacts||'Operations, Procurement'
+    ].join(' ');
+    E.oneLiner.textContent = sentence;
+
+    // General prefs
+    renderGeneral(p.general || {
+      near:true, ecom:true, mids:true, avoidBig:true
+    });
+
+    // Products
+    renderProducts(p.productTags || p.products || []);
+
+    // Dynamic buyer priorities
+    renderMetrics(p.metrics || []);
+
+    // Targeting
+    renderTargeting(p.city || p.targetCity || '', p.sectors || p.sectorHints || []);
+
+    // Hints / preview
+    E.leftPersonaHint.textContent = host? `Loaded for ${host}.` : '';
+    const previewBits = [];
+    if((p.productTags||[]).length) previewBits.push((p.productTags||[]).slice(0,4).join(', '));
+    if((p.sectors||p.sectorHints||[]).length) previewBits.push((p.sectors||p.sectorHints||[]).slice(0,3).join(', '));
+    if((p.metrics||[]).length) previewBits.push(`${(p.metrics||[]).length} metric(s)`);
+    E.personaPreview.textContent = previewBits.length? previewBits.join(' • ') : 'Imported (no details)';
+    E.personaSummary.textContent = host ? `ready for ${host}` : 'ready';
+  }
+
+  // ---- Boot / wiring (more wiring continues in Part 2)
+  function restoreLeft(){
+    E.supplierHost.value = LS.get('fp.supplier.host','');
+    E.supplierCity.value = LS.get('fp.supplier.city','');
+    E.limit.value = LS.get('fp.limit','12') || '12';
+    E.btnFind.disabled = !(E.supplierHost.value.trim());
+  }
+
+  // Top header buttons
+  E.btnImport.addEventListener('click', importFromSetup);
+
+  // Save / Ping / Clear
+  E.btnSaveConn.addEventListener('click', ()=>{ saveConn(); });
+  E.btnClearLog.addEventListener('click', ()=>{ logEl.textContent=''; });
+
+  // Try auto-import on load (if payload exists)
+  restoreConn();
+  restoreLeft();
+  const maybe = readSetupPayload();
+  if(maybe){
+    importFromSetup();
+  } else {
+    E.hdrHost.textContent = '—';
+    E.hdrSub.textContent = 'Click Import to pull your onboarding persona';
+  }
+    // --- More wiring
+
+  // Enable Find button when host present + update header + favicon
+  E.supplierHost.addEventListener('input', ()=>{
+    const host = normHost(E.supplierHost.value);
+    E.btnFind.disabled = !host;
+    if(host){ E.hdrHost.textContent = host; setFav(host); }
+  });
+
+  // Ping
+  E.btnPing.addEventListener('click', async ()=>{
+    try{
+      const r = await fetch(fullUrl('/healthz'));
+      log(`[ping] ${r.status} ${r.statusText}`);
+    }catch(e){ log(`[ping] network error ${e&&e.message?e.message:e}`); }
+  });
+
+  // ---- HTTP helper with logging
+  async function http(method, path, body){
+    const url = fullUrl(path);
+    const headers = {'content-type':'application/json'};
+    const k=(E.apiKey.value||'').trim(); if(k) headers['x-api-key']=k;
+    log(`${method} ${url}`);
+    const t0=performance.now();
+    let resp, data;
+    try{
+      resp = await fetch(url, {method, headers, body: body?JSON.stringify(body):undefined});
+      const ct = resp.headers.get('content-type')||'';
+      data = ct.includes('application/json') ? await resp.json() : { raw: await resp.text() };
+      log(`↳ ${resp.status} ${resp.statusText} (${Math.round(performance.now()-t0)} ms)`);
+    }catch(e){
+      log(`↳ network error: ${e && e.message ? e.message : e}`);
+      throw e;
+    }
+    if(!resp.ok){
+      log(`↳ body: ${JSON.stringify(data).slice(0,400)}`);
+      const err = new Error((data && data.error) ? data.error : `HTTP ${resp.status}`);
+      err.status = resp.status; err.data = data; throw err;
+    }
+    return data;
+  }
+
+  // ---- Classify with smart fallback (/classify and /api/classify)
+  async function classifySmart(host, email){
+    const base=(E.apiBase.value||'').replace(/\/+$/,'');
+    const qs = `?host=${encodeURIComponent(host)}${email?`&email=${encodeURIComponent(email)}`:''}`;
+    const tries=[`${base}/classify${qs}`, `${base}/api/classify${qs}`];
+    let last;
+    for(const url of tries){
+      try{
+        log(`GET ${url}`);
+        const r = await fetch(url, {headers:{'accept':'application/json'}});
+        const ct = r.headers.get('content-type')||'';
+        if(r.ok && ct.includes('application/json')){
+          const j = await r.json();
+          log(`↳ ${r.status} OK classify`);
+          return j;
+        }else{
+          last = await r.text().catch(()=>r.statusText);
+          log(`↳ ${r.status} ${r.statusText}`);
+        }
+      }catch(e){ last = e.message; log(`↳ network error ${e.message||e}`); }
+    }
+    throw new Error(last || 'classify failed');
+  }
+
+  // ---- Results rendering
+  function badge(t){
+    const v=String(t||'').toLowerCase();
+    if(v==='hot') return '<span class="chip" style="background:rgba(255,71,105,.16);border-color:#613042;color:#ff9fb0">HOT</span>';
+    if(v==='warm')return '<span class="chip" style="background:rgba(255,200,87,.16);border-color:#5f4b2b;color:#ffe2a8">WARM</span>';
+    return '<span class="chip" style="background:rgba(110,198,255,.16);border-color:#35526a;color:#bfe6ff">COOL</span>';
+  }
+  function renderRows(items){
+    const tb=E.resultsBody; tb.innerHTML='';
+    if(!items||!items.length){ tb.innerHTML='<tr><td colspan="5" class="small">No items</td></tr>'; return; }
+    for(const it of items){
+      const tr=document.createElement('tr');
+      tr.innerHTML = `
+        <td class="mono">${Math.round(it.score||0)}</td>
+        <td>${badge(it.temp)}</td>
+        <td>
+          <div class="mono" style="font-weight:600">${it.host||it.domain||''}</div>
+          <div class="small" style="opacity:.85">${it.title||it.name||''}</div>
+        </td>
+        <td><div class="small">${(it.why||'').replace(/\s·\s/g,' • ')}</div></td>
+        <td><button class="btn" data-lock="${encodeURIComponent(it.host||it.domain||'')}">Lock</button></td>
+      `;
+      tb.appendChild(tr);
+    }
+  }
+
+  // ---- Gather persona from UI
+  const GEN_MAP = new Map([
+    ['prioritize nearby buyers','near'],
+    ['prefer e-commerce sites','ecom'],
+    ['prefer retail brands','retail'],
+    ['prefer wholesalers / distributors','wholesale'],
+    ['prefer mid-size companies','mids'],
+    ['de-prioritize giant enterprises','avoidBig'],
+  ]);
+  function readGeneralFromChips(){
+    const out={};
+    [...E.prefGeneral.querySelectorAll('.chip')].forEach(ch=>{
+      const key = GEN_MAP.get(ch.textContent.trim().toLowerCase().replace(/^.. /,'')) || GEN_MAP.get(ch.textContent.trim().toLowerCase());
+      if(key) out[key] = ch.classList.contains('active');
+    });
+    return out;
+  }
+  function readProducts(){ return [...E.prefProducts.querySelectorAll('.chip')].filter(c=>c.classList.contains('active')).map(c=>c.textContent.trim()); }
+  function readMetrics(){
+    return [...E.prefMetrics.querySelectorAll('.slider-row')].map(r=>{
+      const label = r.firstChild.textContent.trim();
+      const val = Number(r.querySelector('input[type=range]').value||0);
+      return {label, value:val};
+    });
+  }
+  function readSectors(){
+    const text = E.prefSectors.value || '';
+    return text.split(/[,\n;]+/).map(s=>s.trim()).filter(Boolean);
+  }
+
+  function buildPersonaPayload(){
+    const host = normHost(E.supplierHost.value);
+    const payload = {
+      host,
+      line: { text: (E.oneLiner.textContent||'').trim() },
+      general: readGeneralFromChips(),
+      productTags: readProducts(),
+      metrics: readMetrics(),
+      city: (E.prefCity.value||'').trim(),
+      sectors: readSectors()
+    };
+    return payload;
+  }
+
+  // ---- Apply / Load Profile
+  async function applyProfile(){
+    const body = buildPersonaPayload();
+    try{
+      const r = await http('POST','/prefs/upsert', body);
+      const id = r.id || r.profile?.id;
+      if(id){
+        E.profileId.value = id;
+        LS.set('fp.profileId', id);
+        E.personaSummary.textContent = `profile ${id}`;
+        E.leftPersonaHint.textContent = `Using profileId=${id}`;
+      }
+      // Persist some basics for next visit
+      LS.set('fp.supplier.host', body.host||'');
+      LS.set('fp.supplier.city', body.city||'');
+      LS.set('fp.limit', E.limit.value||'12');
+    }catch(e){}
+  }
+  async function loadProfile(){
+    const id=(E.profileId.value||'').trim();
+    if(!id){ alert('Enter Profile ID'); return; }
+    try{
+      const r = await http('GET', `/prefs/${encodeURIComponent(id)}`);
+      const p = r.profile || {};
+      if(p.host){ E.supplierHost.value=p.host; E.hdrHost.textContent=p.host; setFav(p.host); E.btnFind.disabled=false; }
+      // General
+      renderGeneral(p.general||{});
+      // Products
+      renderProducts(p.productTags||[]);
+      // Metrics
+      renderMetrics(p.metrics||[]);
+      // Targeting
+      renderTargeting(p.city||'', p.sectors||[]);
+      // One-liner
+      if(p.line?.text){ E.oneLiner.textContent = p.line.text; }
+      E.personaSummary.textContent = `profile ${id} loaded`;
+      LS.set('fp.profileId', id);
+    }catch(e){}
+  }
+
+  // Buttons
+  E.btnApplyProfile.addEventListener('click', applyProfile);
+  E.btnApplyTop.addEventListener('click', applyProfile);
+  E.btnLoadProfile.addEventListener('click', loadProfile);
+  E.btnForgetId.addEventListener('click', ()=>{ LS.del('fp.profileId'); E.profileId.value=''; E.personaSummary.textContent='profile cleared'; });
+
+  // ---- Find buyers
+  async function findBuyers(){
+    const host = normHost(E.supplierHost.value);
+    if(!host){ alert('Enter supplier host'); return; }
+    // save simple left fields
+    LS.set('fp.supplier.host', host);
+    LS.set('fp.supplier.city', E.supplierCity.value||'');
+    LS.set('fp.limit', E.limit.value||'12');
+
+    const params=new URLSearchParams();
+    params.set('host',host);
+    if((E.supplierCity.value||'').trim()) params.set('city', (E.supplierCity.value||'').trim());
+    params.set('limit', String(E.limit.value||'12'));
+    const pid=(E.profileId.value||LS.get('fp.profileId','')).trim();
+    if(pid) params.set('profileId', pid);
+
+    try{
+      const data = await http('GET', `/leads/find-buyers?${params.toString()}`);
+      renderRows(data.items||[]);
+    }catch(e){ renderRows([]); }
+  }
+  E.btnFind.addEventListener('click', findBuyers);
+
+  // Lock button in table
+  E.resultsBody.addEventListener('click', async (e)=>{
+    const b=e.target.closest('button[data-lock]'); if(!b) return;
+    const host=decodeURIComponent(b.getAttribute('data-lock')||'');
+    try{
+      await http('POST','/leads/lock',{host, title:'Locked by user', temp:'warm'});
+      b.textContent='Locked ✓'; b.classList.add('good'); b.disabled=true;
+    }catch(e){}
+  });
+
+  // ---- Re-classify (refresh persona from live classify)
+  E.btnReclass.addEventListener('click', async ()=>{
+    const host = normHost(E.supplierHost.value||E.hdrHost.textContent||'');
+    if(!host){ alert('Enter supplier host first'); return; }
+    try{
+      const j = await classifySmart(host,'');
+      // Simple refresh: products + sectors + metrics summary if present
+      renderProducts(j.productTags||[]);
+      const sectorHints = j.sectorHints||[];
+      E.prefSectors.value = sectorHints.slice(0,6).join(', ');
+      // Keep existing metrics if already set; otherwise seed from classify
+      if(!(E.prefMetrics.children.length)){
+        const labels=(j.metrics||[]).map(m=>m.label).filter(Boolean);
+        if(labels.length){ renderMetrics(labels.map(l=>({label:l,value:8}))); }
+      }
+      E.personaSummary.textContent = 're-classified';
+    }catch(e){}
+  });
+
+  // Auto-load saved profileId if exists
+  const pidSaved = LS.get('fp.profileId','');
+  if(pidSaved){ E.profileId.value = pidSaved; }
+
+})(); // end IIFE
 </script>
 </body>
 </html>
