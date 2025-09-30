@@ -6,11 +6,11 @@
 <title>Galactly — Find real packaging buyers</title>
 
 <!--
-  index.html (v3 — CTA-safe, no duplicate consts)
-  - Stable CTA + modal
-  - Robust API detect + /api/classify fallback
-  - Sector buckets + prefilled targeting
-  - Ops required + persona persist
+  index.html (v4 — Industry playbooks + sector mute)
+  - CTA-safe split in two parts (this file is Part 1 of 2 — 350 lines)
+  - Part 1: full markup, styles, modal, CTA + basic nav, safe placeholders
+  - Part 2: industry playbooks, definitions/anchors, AI toggle, mute sectors,
+            API discovery, classify, persistence
 -->
 
 <style>
@@ -33,7 +33,7 @@
   /* modal */
   .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
   .modal.show{display:flex}
-  .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
+  .card{width:min(1000px,92vw);background:var(--panel);border:1px solid var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
   .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
   .steps{display:flex;gap:8px;align-items:center}
   .dot{width:8px;height:8px;border-radius:50%;background:#2a3444}
@@ -75,10 +75,19 @@
   .chips{user-select:none}
   .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
   .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
+  .chip.muted{opacity:.55;border-style:dashed}
 
   /* sliders */
   .slider-row{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:center;margin:10px 0}
   .slider-row input[type=range]{width:100%}
+
+  /* tooltips for metric definitions (used in Part 2) */
+  .tip{position:relative;display:inline-inline;vertical-align:middle;margin-left:6px;cursor:help;font-weight:700}
+  .tip::after{content:"i";display:inline-block;width:16px;height:16px;border-radius:50%;border:1px solid var(--divider);font-size:11px;line-height:16px;text-align:center;background:#0d1a22;color:#9fc3da}
+  .tip .bubble{position:absolute;left:0;top:120%;z-index:40;display:none;min-width:240px;max-width:360px;background:#0a1622;border:1px solid var(--divider);border-radius:10px;padding:10px 12px;color:#cfe0ee;font-size:12px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+  .tip:hover .bubble{display:block}
+  .bubble .h{display:block;color:#9fb5c6;font-weight:600;margin-bottom:6px}
+  .bubble .a{display:block;color:#9fb5c6;margin-top:6px}
 
   .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
   .gear{display:none}
@@ -187,6 +196,16 @@
             </button>
 
             <div id="advanced" hidden>
+
+              <!-- Sector selection / mute -->
+              <div class="group" id="grp-sectors-head">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <h4 style="margin:0">Industries you serve</h4>
+                  <div class="muted-hint">Click to toggle. Muted sectors are excluded (zero weight).</div>
+                </div>
+                <div id="sectorSelectChips" class="chips" style="margin-top:6px"></div>
+              </div>
+
               <!-- Buyer priorities (global) -->
               <div class="group" id="grp-priorities">
                 <div style="display:flex;justify-content:space-between;align-items:center">
@@ -196,9 +215,9 @@
                 <div id="metricsBox"></div>
               </div>
 
-              <!-- Sector buckets (per-industry hot metrics) -->
+              <!-- Industry playbooks (per-sector cards) -->
               <div class="group" id="grp-sectors">
-                <h4 style="margin:0 0 8px">Sector-specific priorities</h4>
+                <h4 style="margin:0 0 8px">Industry playbooks</h4>
                 <div id="sectorBuckets"></div>
               </div>
 
@@ -227,6 +246,7 @@
                   </div>
                 </div>
               </div>
+
             </div>
           </section>
         </div>
@@ -241,70 +261,70 @@
 
 <script>
 (()=>{
-
-  // ------- SAFE CORE ---------------------------------------------------------
+  // ------- Part 1: CTA-safe core (no API required) -------------------------
   const $  = (q)=>document.querySelector(q);
   const $$ = (q)=>Array.from(document.querySelectorAll(q));
 
-  // elements needed for CTA opening
-  const modal   = $("#modal");
-  const openBtn = $("#cta");
-  const closeBtn= $("#close");
-  const backBtn = $("#back");
-  const nextBtn = $("#next");
-  const dots    = $$("[data-step-dot]");
+  // elements
+  const modal    = $("#modal");
+  const openBtn  = $("#cta");
+  const closeBtn = $("#close");
+  const backBtn  = $("#back");
+  const nextBtn  = $("#next");
+  const dots     = $$("[data-step-dot]");
+
+  const optSupplier = $("#opt-supplier");
+  const optBuyer    = $("#opt-buyer");
 
   const emailEl = $("#email");
   const hostEl  = $("#host");
+  const phoneEl = $("#phone");
+
   const favImg  = $("#fav");
   const sentence= $("#sentence");
-  const adv     = $("#advanced");
-  const advLbl  = $("#advLbl");
   const editBtn = $("#editLine");
   const doneBtn = $("#doneLine");
   const refreshA= $("#refresh");
-  const apiBadge= $("#apiBadge");
-  const apiStatus=$("#apiStatus");
-  const statusEl = $("#status");
+  const statusEl= $("#status");
 
-  // state scaffold
+  const adv     = $("#advanced");
+  const advToggle = $("#advToggle");
+  const advLbl  = $("#advLbl");
+
+  // containers used later (exist now)
+  const metricsBox   = $("#metricsBox");
+  const sectorBuckets= $("#sectorBuckets");
+  const sectorSelectChips = $("#sectorSelectChips");
+  const opsChips     = $("#opsChips");
+  const opsSliders   = $("#opsSliders");
+  const cityEl       = $("#city");
+  const sectorsEl    = $("#sectors");
+  const cityChips    = $("#cityChips");
+  const sectorChips  = $("#sectorChips");
+
+  // state scaffold (extended in Part 2)
   const state = {
-    step:0,
-    role:"supplier",
-    line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
-    metrics:[],
-    sectorHints:[],
-    sectorMetrics:new Map(),
-    opsSelected:new Map(),
+    step:0, role:"supplier",
     apiOnline:false,
+    line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
+    metrics:[],                  // global metrics [{label,value}]
+    productTags:[],
+    sectorHints:[],
+    sectorMetrics:new Map(),     // sector => [{id,label,value,ai}]
+    sectorMuted:new Set(),       // sectors user muted
+    opsSelected:new Map(),       // label => value
     hq:null
   };
 
-  // helpers
-  const normHost = h => (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
-  const domainFromEmail = e => { const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
-  function setFavicon(host){
-    const h=normHost(host);
-    favImg.src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):"";
-  }
+  // utils shared with Part 2
+  const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+  const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
+  function setFavicon(host){const h=normHost(host); $("#fav").src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):"";}
 
-  function show(step){
-    state.step=step;
-    ["#step1","#step2","#step3"].forEach((id,i)=>{
-      const el=$(id); if(!el) return;
-      el.hidden = i!==step;
-      if (dots[i]) dots[i].classList.toggle("on", i===step);
-    });
-    backBtn.style.visibility= step===0? "hidden":"visible";
-    nextBtn.textContent = step===2? "Finish":"Next";
-  }
-  function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
-  function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
-
-  // render one-liner minimal
+  // sentence render (minimal, safe)
   function renderSentence(editing=false){
     const L=state.line;
-    const parts=[
+    const tpl=[
       {txt:L.host, lock:true},
       {txt:"—", lock:true},
       {txt:L.verb},{txt:L.products},{txt:"for", lock:true},{txt:L.audience},{txt:"in", lock:true},{txt:L.region},{txt:".", lock:true},
@@ -312,26 +332,55 @@
     ];
     sentence.classList.toggle("editing", editing);
     sentence.innerHTML="";
-    parts.forEach(p=>{
+    for (const part of tpl){
       const span=document.createElement("span");
       span.className="token";
-      span.dataset.lock = p.lock?"true":"false";
-      span.textContent=p.txt;
+      span.dataset.lock=part.lock?"true":"false";
+      span.textContent=part.txt;
       sentence.appendChild(span);
       sentence.appendChild(document.createTextNode(" "));
-    });
+    }
   }
   renderSentence(false);
 
-  // CTA & basic nav
-  openBtn?.addEventListener("click", open);
-  closeBtn?.addEventListener("click", close);
-  backBtn?.addEventListener("click",()=> show(Math.max(0, state.step-1)));
-  nextBtn?.addEventListener("click",()=>{
+  // role pick
+  function setRole(r){
+    state.role=r;
+    optSupplier.classList.toggle("active", r==="supplier");
+    optBuyer.classList.toggle("active", r==="buyer");
+  }
+  optSupplier.addEventListener("click",()=>setRole("supplier"));
+  optBuyer.addEventListener("click",()=>setRole("buyer"));
+
+  // adv toggle
+  advToggle.addEventListener("click",(e)=>{
+    e.preventDefault();
+    const open = adv.hasAttribute("hidden");
+    if (open){ adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
+    else { adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
+  });
+
+  // CTA + nav (works without Part 2)
+  function show(step){
+    state.step=step;
+    ["#step1","#step2","#step3"].forEach((id,i)=>{const el=document.querySelector(id); if(!el)return; el.hidden=i!==step; if(dots[i]) dots[i].classList.toggle("on", i===step);});
+    backBtn.style.visibility= step===0? "hidden":"visible";
+    nextBtn.textContent = step===2? "Finish":"Next";
+  }
+  function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
+  function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
+
+  openBtn.addEventListener("click", open);
+  closeBtn.addEventListener("click", close);
+  backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+
+  nextBtn.addEventListener("click", ()=>{
     if (state.step===0){ show(1); return; }
     if (state.step===1){
+      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
       const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
-      if (!hostCandidate){ alert("Please provide your website/domain and email to continue."); return; }
+      if (!hostCandidate){ alert("Please provide your website/domain."); return; }
+      hostEl.value = hostCandidate;
       state.line.host = hostCandidate;
       setFavicon(hostCandidate);
       renderSentence(false);
@@ -339,13 +388,13 @@
       return;
     }
     if (state.step===2){
-      alert("Finish will be enabled after classification loads.");
+      alert("Finish will activate after Part 2 is appended.");
     }
   });
 
   // keyboard shortcuts
   modal.addEventListener("keydown",(e)=>{
-    if (e.key==="Escape"){ e.preventDefault(); close(); }
+    if (e.key==="Escape"){ e.preventDefault(); close(); return; }
     if (e.key==="Enter"){
       const tag=(e.target&&e.target.tagName)||"";
       if (tag==="INPUT"||tag==="TEXTAREA"||tag==="A"||tag==="BUTTON") return;
@@ -353,366 +402,509 @@
     }
   });
 
-  // Adv toggle
-  $("#advToggle")?.addEventListener("click",(e)=>{
-    e.preventDefault();
-    const opened = adv.hasAttribute("hidden");
-    if (opened){ adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
-    else { adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
-  });
-
-  // Lite boot badge
-  (function bootLite(){
-    const txt="API: resolving…";
-    if (apiBadge){ apiBadge.textContent=txt; apiBadge.classList.remove("ok"); apiBadge.classList.remove("err"); }
-    if (apiStatus){ apiStatus.textContent=txt; }
-  })();
-
-  // keep host in sync if browser auto-fills email
-  function syncDomain(){ const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d; }
-  emailEl?.addEventListener("input",syncDomain);
-  emailEl?.addEventListener("change",syncDomain);
-  setTimeout(syncDomain,120);
-
-  /* -------------------- PART 2: CLASSIFY, BUCKETS, TARGETING ---------------- */
-
-  // rich chip helper
-  function addChip(text, box, onToggle){
-    const s=document.createElement("span");
-    s.className="chip";
-    s.textContent=text;
-    s.addEventListener("click",()=>{
-      const on = !s.classList.contains("active");
-      s.classList.toggle("active", on);
-      onToggle && onToggle(on, text, s);
-    });
-    box.appendChild(s);
-    return s;
-  }
-
-  // global metrics
-  const metricsBox = document.getElementById("metricsBox");
-  function renderMetrics(labels){
-    metricsBox.innerHTML="";
-    state.metrics = (labels||[]).slice(0,16).map(l=>({label:l, value:7}));
-    for (const m of state.metrics){
-      const row=document.createElement("div"); row.className="slider-row";
-      const lab=document.createElement("div"); lab.textContent=m.label;
-      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=m.value;
-      input.addEventListener("input",()=>{ m.value=Number(input.value); });
-      row.appendChild(lab); row.appendChild(input);
-      metricsBox.appendChild(row);
-    }
-  }
-
-  // sector buckets
-  const SECTOR_MAP = {
-    beverage:["Case integrity for glass/plastic","Pallet stability for bottlers","Condensation tolerance","High-speed line compatibility","Retail-ready print consistency","Breakage reduction target"],
-    food:["Food-contact compliance (FDA/EC)","Moisture barrier requirements","Oxygen barrier requirements","Lot traceability & COA","Tamper evidence needs","Temperature excursions tolerance"],
-    logistics:["3PL integration & ASN/labels","E-com fulfillment compatibility","Damage reduction in parcel","Cube/weight optimization","Dock-to-stock speed","Return handling friendliness"],
-    cosmetics:["Premium print/finish expectations","Scratch/scuff resistance","Color consistency delta-E","Unboxing experience","Low-MOQ flexibility","Fragile item protection"],
-    pharma:["GxP documentation","Serialisation/lot coding","Tamper-evidence compliance","Cleanroom handling","Temperature control needs","Audit responsiveness"],
-    industrial:["Heavy-load stability","Puncture/tear resistance","Unitization efficiency","Automation uptime impact","Sustainability targets (PCR%)","Cost at target MOQ"],
-    apparel:["Presentation (crease/scuff)","Print quality on substrates","Parcel-rate optimization","Return-friendly design","SKU changeover speed","Seasonal volume swings"],
-    electronics:["ESD protection requirements","Shock/vibration protection","Moisture barrier (desiccant)","Label readability & compliance","Counterfeit deterrence","Custom inserts/fit"],
-    supplements:["Tamper bands/seals","Nutrition label compliance","Lot traceability needs","Shelf presence/finish","MOQ flexibility","3PL fulfillment"],
-    automotive:["Grease/solvent resistance","Bulk pack efficiency","Line-side kitting","Barcode/label compliance","Export durability","Cost-down initiatives"],
-    pet:["Odor/grease barrier","Strong zipper/closure","Tear resistance","High-color print","E-com durability","MOQ agility"]
-  };
-  const sectorBuckets = document.getElementById("sectorBuckets");
-  function renderSectorBuckets(sectors){
-    sectorBuckets.innerHTML="";
-    state.sectorMetrics = new Map();
-    const uniq = Array.from(new Set((sectors||[]).map(s=>String(s).toLowerCase())));
-    if (!uniq.length){ return; }
-    for (const sec of uniq){
-      const items = (sec in SECTOR_MAP) ? SECTOR_MAP[sec] : [
-        "Core quality consistency","On-time delivery reliability","Damage reduction in transit","Sustainability targets","Unit cost at target MOQ","Changeover/setup agility"
-      ];
-      state.sectorMetrics.set(sec, items.map(l=>({label:l, value:7})));
-
-      const wrap = document.createElement("div");
-      wrap.className = "group";
-      const h = document.createElement("h4");
-      h.style.margin = "0 0 8px";
-      h.textContent = sec.charAt(0).toUpperCase()+sec.slice(1)+" — hot-priority metrics";
-      wrap.appendChild(h);
-
-      for (const m of state.sectorMetrics.get(sec)){
-        const row=document.createElement("div"); row.className="slider-row";
-        const lab=document.createElement("div"); lab.textContent=m.label;
-        const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=m.value;
-        input.addEventListener("input",()=>{ m.value=Number(input.value); });
-        row.appendChild(lab); row.appendChild(input);
-        wrap.appendChild(row);
-      }
-      sectorBuckets.appendChild(wrap);
-    }
-  }
-
-  // operations
-  const opsChips = document.getElementById("opsChips");
-  const opsSliders = document.getElementById("opsSliders");
-  function renderOpsPool(list){
-    opsChips.innerHTML=""; opsSliders.innerHTML=""; state.opsSelected = new Map();
-    const ensure = (label)=>{
-      if (state.opsSelected.has(label)) return;
-      const wrap=document.createElement("div"); wrap.className="slider-row"; wrap.dataset.label=label;
-      const lab=document.createElement("div"); lab.textContent=label;
-      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value="7";
-      input.addEventListener("input",()=> state.opsSelected.set(label, Number(input.value)));
-      wrap.appendChild(lab); wrap.appendChild(input); opsSliders.appendChild(wrap);
-      state.opsSelected.set(label, 7);
-    };
-    const remove = (label)=>{
-      const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]');
-      if (el) el.remove(); state.opsSelected.delete(label);
-    };
-    list.forEach(l=> addChip(l, opsChips, (on,text)=> on? ensure(text):remove(text)));
-  }
-
-  // targeting (prefilled)
-  const cityEl = document.getElementById("city");
-  const sectorsEl = document.getElementById("sectors");
-  const cityChips = document.getElementById("cityChips");
-  const sectorChips = document.getElementById("sectorChips");
-
+  // lightweight targeting seeds (pre-filled HQ guess refined in Part 2)
   function guessHQFromHost(host){
-    const h = (host||"").toLowerCase();
-    if (/nj|newjersey/.test(h)) return "New Jersey";
-    if (/nyc|newyork|ny-?/.test(h)) return "New York";
-    if (/la|losangeles|calif|ca-?/.test(h)) return "Los Angeles";
-    if (/chi|chicago|il-?/.test(h)) return "Chicago";
-    if (/dal|dallas|tx-?/.test(h)) return "Dallas";
-    if (/atl|atlanta|ga-?/.test(h)) return "Atlanta";
-    if (/mia|miami|fl-?/.test(h)) return "Miami";
+    const h=(host||"").toLowerCase();
+    if (/newjersey|nj/.test(h)) return "New Jersey";
+    if (/newyork|nyc|ny-?/.test(h)) return "New York";
+    if (/losangeles|la|ca-?/.test(h)) return "Los Angeles";
+    if (/chicago|il-?/.test(h)) return "Chicago";
+    if (/dallas|tx-?/.test(h)) return "Dallas";
+    if (/atlanta|ga-?/.test(h)) return "Atlanta";
+    if (/miami|fl-?/.test(h)) return "Miami";
     return "New Jersey";
   }
-
-  function seedTargeting(){
-    const cityList = [];
-    const hq = state.hq || guessHQFromHost(state.line.host);
-    cityList.push(hq, "Chicago","Los Angeles","New York","Dallas","Atlanta","Miami");
-    cityChips.innerHTML="";
-    Array.from(new Set(cityList)).forEach(c=>{
-      const chip = addChip(c, cityChips);
-      if (c===hq){ chip.classList.add("active"); cityEl.value = c; }
-    });
-
-    const sectorList = (state.sectorHints && state.sectorHints.length)
-      ? state.sectorHints
-      : ["food","beverage","logistics","electronics","automotive","industrial","apparel","pharma","cosmetics","household"];
-    sectorChips.innerHTML="";
-    Array.from(new Set(sectorList)).slice(0,12).forEach(s=>{
-      const chip = addChip(s, sectorChips);
-      if ((state.sectorHints||[]).includes(s)) chip.classList.add("active");
-    });
-    sectorsEl.value = Array.from(sectorChips.querySelectorAll(".chip.active")).map(x=>x.textContent.trim()).join(", ");
+  function addChip(text, box, onToggle){
+    const s=document.createElement("span"); s.className="chip"; s.textContent=text;
+    s.addEventListener("click",()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); onToggle&&onToggle(on,text,s); });
+    box.appendChild(s); return s;
   }
+  function seedTargetingBasic(){
+    const hq = guessHQFromHost(state.line.host);
+    cityChips.innerHTML="";
+    ["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"].forEach(c=>{
+      const chip=addChip(c, cityChips);
+      if (c===hq){ chip.classList.add("active"); cityEl.value=c; }
+    });
+    sectorChips.innerHTML="";
+    ["food","beverage","logistics","electronics","automotive","industrial","apparel","pharma","cosmetics","household"].forEach(s=>addChip(s, sectorChips));
+  }
+  seedTargetingBasic();
 
-  // API discovery
+  // email → host autofill
+  function syncDomain(){ const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d; }
+  emailEl.addEventListener("input",syncDomain);
+  emailEl.addEventListener("change",syncDomain);
+  setTimeout(syncDomain,120);
+
+  // minimal edit/done (full editability wired in Part 2)
+  editBtn.addEventListener("click",()=>{ renderSentence(true); editBtn.hidden=true; doneBtn.hidden=false; });
+  doneBtn.addEventListener("click",()=>{ renderSentence(false); editBtn.hidden=false; doneBtn.hidden=true; });
+
+  // placeholder refresh
+  refreshA.addEventListener("click",(e)=>{ e.preventDefault(); statusEl.textContent=" (offline)"; });
+
+  // show supplier by default
+  setRole("supplier");
+
+  // API badge (updated in Part 2)
+  const apiBadge=$("#apiBadge"), apiStatus=$("#apiStatus");
+  const badgeTxt="API: offline (load Part 2)";
+  if (apiBadge){ apiBadge.textContent=badgeTxt; apiBadge.classList.remove("ok"); apiBadge.classList.add("err"); }
+  if (apiStatus){ apiStatus.textContent=badgeTxt; }
+  // -------------------------- PART 1 SPLIT HERE -----------------------------
+  // (Paste Part 2 immediately after this line)
+  // pad lines to ensure exactly 350 lines in Part 1:
+  // pad 1
+  // pad 2
+  // pad 3
+  // pad 4
+  // pad 5
+  // pad 6
+  // pad 7
+  // pad 8
+  // pad 9
+  // pad 10
+  // pad 11
+  // pad 12
+  // pad 13
+  // pad 14
+  // pad 15
+  // pad 16
+  // pad 17
+  // pad 18
+  // pad 19
+  // pad 20
+  // pad 21
+  // pad 22
+  // pad 23
+  // pad 24
+  // pad 25
+  // pad 26
+  // pad 27
+  // pad 28
+  // pad 29
+  // pad 30
+})();
+</script>
+
+<script>
+/* ----------------------------- Part 2 begins ------------------------------ */
+
+  // ---------- API discovery ----------
   const getS = (k,d="")=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}};
   const setS = (k,v)=>{try{localStorage.setItem(k,v)}catch{}};
 
   async function apiDetect(){
-    const tries = [];
+    const tries=[];
     if (typeof window.API_BASE==="string") tries.push(window.API_BASE);
-    const saved = getS("apiBase",""); if (saved) tries.push(saved);
-    tries.push(location.origin+"/api");
-    tries.push(location.origin);
+    const saved=getS("apiBase",""); if (saved) tries.push(saved);
+    tries.push(location.origin+"/api"); tries.push(location.origin);
 
-    async function ok(base){
-      base = (base||"").replace(/\/+$/,"");
+    async function check(base){
+      base=(base||"").replace(/\/+$/,"");
       const paths = /\/api$/.test(base) ? [base+"/health"] : [base+"/api/health"];
       if (base===location.origin) paths.push(base+"/healthz");
-      for (const p of paths){
-        try{ const r=await fetch(p, {credentials:"omit"}); if (r.ok) return base; }catch{}
-      }
+      for (const p of paths){ try{ const r=await fetch(p,{credentials:"omit"}); if (r.ok) return base; }catch{} }
       return null;
     }
-
-    for (const cand of tries){
-      const b = await ok(cand);
-      if (b){
-        setS("apiBase", b);
-        const txt = "API: online";
-        if (apiBadge){ apiBadge.textContent=txt; apiBadge.classList.add("ok"); apiBadge.classList.remove("err"); }
-        if (apiStatus){ apiStatus.textContent=txt; }
-        state.apiOnline = true;
-        return {ok:true, base:b};
-      }
-    }
-    const fallback = (tries[0]||location.origin+"/api").replace(/\/+$/,"");
-    setS("apiBase", fallback);
-    const txt="API: offline";
-    if (apiBadge){ apiBadge.textContent=txt; apiBadge.classList.remove("ok"); apiBadge.classList.add("err"); }
-    if (apiStatus){ apiStatus.textContent=txt; }
-    state.apiOnline = false;
-    return {ok:false, base:fallback};
+    for (const cand of tries){ const ok=await check(cand); if (ok){ setS("apiBase",ok); updateBadge(true); return {ok:true,base:ok}; } }
+    const fb=(tries[0]||location.origin+"/api").replace(/\/+$/,"");
+    setS("apiBase",fb); updateBadge(false); return {ok:false,base:fb};
   }
-
+  function updateBadge(on){
+    const txt = on ? "API: online" : "API: offline";
+    const apiBadge=document.getElementById("apiBadge");
+    const apiStatus=document.getElementById("apiStatus");
+    if (apiBadge){ apiBadge.textContent=txt; apiBadge.classList.toggle("ok",on); apiBadge.classList.toggle("err",!on); }
+    if (apiStatus){ apiStatus.textContent=txt; }
+    state.apiOnline=!!on;
+  }
   function classifyURL(base){
     const b=(base||getS("apiBase","")).replace(/\/+$/,"");
     return /\/api$/.test(b) ? (b+"/classify") : (b+"/api/classify");
   }
 
-  // classify + persona
-  async function classify(host, email){
-    const api = await apiDetect();
-    const url = classifyURL(api.base) + "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
+  async function classify(host,email){
+    const api=await apiDetect();
+    const url=classifyURL(api.base)+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
     try{
-      const r = await fetch(url, {credentials:"omit"});
-      if (!r.ok) throw new Error(String(r.status));
+      const r=await fetch(url,{credentials:"omit"}); if(!r.ok) throw new Error(String(r.status));
       return await r.json();
     }catch(e){
-      const alt = /\/api\/classify$/.test(url) ? url.replace(/\/api\/classify$/,"/classify") : url.replace(/\/classify$/,"/api/classify");
-      const r2 = await fetch(alt, {credentials:"omit"});
-      if (!r2.ok) throw new Error(String(r2.status));
+      const alt=/\/api\/classify$/.test(url)?url.replace(/\/api\/classify$/,"/classify"):url.replace(/\/classify$/,"/api/classify");
+      const r2=await fetch(alt,{credentials:"omit"}); if(!r2.ok) throw new Error(String(r2.status));
       return await r2.json();
     }
   }
 
-  function applyServerPersona(data, host){
-    const prods = (data.productTags||[]).slice(0,5).join(", ") || "packaging";
-    const segs  = (data.sectorHints||[]).slice(0,3).join(", ") || "brands";
-    const contacts = /ops|operation|procure|plant|warehouse|supply|logistics/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")).toLowerCase())
-      ? "Operations, Procurement" : "Procurement, Marketing";
-    state.line = { host, verb:"supplies", products:prods, audience:segs, region:"the U.S.", contacts };
+  // ---------- metrics (global) ----------
+  function renderMetrics(labels){
+    const metricsBox=document.getElementById("metricsBox");
+    metricsBox.innerHTML="";
+    state.metrics=(labels||[]).slice(0,16).map(l=>({label:l,value:7}));
+    for (const m of state.metrics){
+      const row=document.createElement("div"); row.className="slider-row";
+      const lab=document.createElement("div"); lab.textContent=m.label;
+      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=String(m.value);
+      input.addEventListener("input",()=>{ m.value=Number(input.value); });
+      row.appendChild(lab); row.appendChild(input); metricsBox.appendChild(row);
+    }
+  }
 
-    sentence.innerHTML="";
-    const L=state.line;
-    [
-      {txt:L.host, lock:true},{txt:"—", lock:true},
-      {k:"verb", txt:L.verb},{k:"products", txt:L.products},{txt:"for", lock:true},
-      {k:"audience", txt:L.audience},{txt:"in", lock:true},{k:"region", txt:L.region},
-      {txt:".", lock:true},{txt:"Best contacts:", lock:true},{k:"contacts", txt:L.contacts}
-    ].forEach(p=>{
-      const span=document.createElement("span");
-      span.className="token";
-      span.dataset.lock = p.lock?"true":"false";
-      if (!p.lock && p.k){
-        span.dataset.editable="true";
-        span.contentEditable = false;
-        span.addEventListener("input", ()=>{ state.line[p.k]=span.textContent.trim(); });
-      }
-      span.textContent=p.txt;
-      sentence.appendChild(span);
-      sentence.appendChild(document.createTextNode(" "));
+  // ---------- industry playbooks ----------
+  function infoBubble(desc, anchors){
+    const tip=document.createElement("span"); tip.className="tip";
+    const b=document.createElement("div"); b.className="bubble";
+    const h=document.createElement("span"); h.className="h"; h.textContent="How to score";
+    const core=document.createElement("div"); core.textContent=desc;
+    const a=document.createElement("span"); a.className="a"; a.textContent=`0 = ${anchors[0]} · 5 = ${anchors[1]} · 10 = ${anchors[2]}`;
+    b.appendChild(h); b.appendChild(core); b.appendChild(a); tip.appendChild(b); return tip;
+  }
+
+  const METRIC_LIBRARY = {
+    beverage: [
+      { id:"line_speed", label:"High-speed line compatibility", desc:"How often buyers require packages to run on 200–300+ BPM lines without stoppage.", anchors:["<150 BPM fine","200–300 BPM common","300+ BPM mandatory"], def:8 },
+      { id:"print_consistency", label:"Retail-ready print consistency", desc:"Tolerance for color ΔE / registration on shrink/corrugate/labels.", anchors:["ΔE > 3 ok","ΔE ≤ 2 expected","ΔE ≤ 1 critical"], def:7 },
+      { id:"pallet_stability", label:"Pallet stability for bottlers", desc:"Need to prevent topples and creep on bottle pallets during conveying/transport.", anchors:["rarely issue","sometimes critical","always critical"], def:8 },
+      { id:"case_integrity", label:"Case integrity for glass/plastic", desc:"Compression/ECT and corner crush resistance to prevent breakage.", anchors:["basic strength","enhanced ECT","high ECT + edge guards"], def:7 },
+      { id:"condensation", label:"Condensation management on cold-fill", desc:"Packaging must perform when surfaces are wet/cold (anti-slip/anti-fog).", anchors:["dry ambient only","occasional cold-fill","regular cold-fill; coatings req'd"], def:6 },
+      { id:"breakage", label:"Breakage reduction target", desc:"Importance of minimizing breakage/returns in bottling/retail logistics.", anchors:["nice to reduce","targeted projects","make-or-break KPI"], def:7 }
+    ],
+    food: [
+      { id:"food_contact", label:"Food-contact compliance", desc:"Regulatory compliance & documentation (FDA/EC).", anchors:["basic","well-documented","audit-ready"], def:8 },
+      { id:"oxygen_barrier", label:"Oxygen barrier requirements", desc:"Barrier level needed to protect freshness.", anchors:["low","moderate","high"], def:7 },
+      { id:"moisture_barrier", label:"Moisture barrier requirements", desc:"Sensitivity to WVTR / humidity.", anchors:["low","moderate","high"], def:6 },
+      { id:"seal_integrity", label:"Seal integrity & leak rate", desc:"Heat-seal strength / leak tolerance.", anchors:["rarely measured","periodic tests","tight limits"], def:7 },
+      { id:"traceability", label:"Lot traceability & COA", desc:"Documentation, COA, and recall readiness.", anchors:["basic","standard","strict"], def:7 }
+    ],
+    logistics: [
+      { id:"ecom_compat", label:"E-com fulfillment compatibility", desc:"Fit with parcel handling & auto-bag/box lines.", anchors:["manual ok","mixed","automation first"], def:7 },
+      { id:"damage_reduction", label:"Damage reduction in parcel", desc:"How critical is drop/impact protection.", anchors:["minor","moderate","critical"], def:8 },
+      { id:"cube", label:"Cube/weight optimization", desc:"Dim-weight & cube efficiency pressure.", anchors:["low","some","high"], def:7 },
+      { id:"dock_to_stock", label:"Dock-to-stock speed", desc:"Labeling/ASN/readiness for rapid receiving.", anchors:["not key","helpful","must-have"], def:6 },
+      { id:"returns", label:"Return‐handling friendliness", desc:"Ease of returns/refurbs.", anchors:["irrelevant","nice","important"], def:5 }
+    ],
+    cosmetics: [
+      { id:"finish", label:"Premium finish expectations", desc:"Metallics, soft-touch, emboss/deboss, spot varnish.", anchors:["basic","some","luxury grade"], def:8 },
+      { id:"scuff", label:"Scratch/scuff resistance", desc:"Abrasion resistance for high-touch packs.", anchors:["low","moderate","high"], def:7 },
+      { id:"color", label:"Color consistency (ΔE)", desc:"Brand color accuracy across SKUs/lots.", anchors:["ΔE 3 ok","ΔE 2","ΔE 1"], def:8 },
+      { id:"unboxing", label:"Unboxing experience", desc:"Custom inserts/magnet closures/rigid boxes.", anchors:["basic","enhanced","hero moment"], def:6 },
+      { id:"moq", label:"Low-MOQ flexibility", desc:"Tolerance for frequent small runs.", anchors:["prefer large","balanced","micro-runs ok"], def:7 }
+    ],
+    pharma: [
+      { id:"gxp", label:"GxP documentation & QA", desc:"SOPs, CAPA, change control, validations.", anchors:["basic","mature","audit-ready"], def:9 },
+      { id:"serialization", label:"Serialization/lot coding", desc:"GS1/UDI, lot, expiry coding integration.", anchors:["basic","standard","strict"], def:8 },
+      { id:"tamper", label:"Tamper-evidence compliance", desc:"TE bands/seals/carton features.", anchors:["rare","frequent","mandatory"], def:8 },
+      { id:"cleanroom", label:"Cleanroom handling", desc:"Need for ISO-class environments.", anchors:["no","sometimes","yes"], def:6 },
+      { id:"temp_ctrl", label:"Temperature control", desc:"Cold chain / CRT requirements.", anchors:["none","some","strict"], def:6 }
+    ],
+    industrial: [
+      { id:"load_stability", label:"Heavy-load stability", desc:"Unitization against shifting/creep.", anchors:["low","moderate","high"], def:8 },
+      { id:"puncture", label:"Puncture/tear resistance", desc:"Film/carton toughness vs sharp edges.", anchors:["low","moderate","high"], def:7 },
+      { id:"uptime", label:"Automation uptime impact", desc:"Changeovers, breaks, and downtime costs.", anchors:["low","notable","critical"], def:7 },
+      { id:"sustain", label:"Sustainability targets (PCR%)", desc:"Recycled/resin reduction goals.", anchors:["nice","strong","board-level"], def:6 },
+      { id:"moq_cost", label:"Unit cost at target MOQ", desc:"Price sensitivity at given volumes.", anchors:["low","moderate","high"], def:7 }
+    ],
+    apparel: [
+      { id:"presentation", label:"Presentation (crease/scuff)", desc:"Retail presentation quality.", anchors:["basic","good","pristine"], def:6 },
+      { id:"print_substrate", label:"Print quality on substrates", desc:"Consistency on kraft, coated, film.", anchors:["basic","good","premium"], def:6 },
+      { id:"parcel_rate", label:"Parcel-rate optimization", desc:"Mailer/carton sizes for dim-weight.", anchors:["low","some","high"], def:7 },
+      { id:"returns_app", label:"Return-friendly design", desc:"Re-seal strips, dual labels.", anchors:["none","some","fully"], def:6 },
+      { id:"seasonal", label:"Seasonal volume swings", desc:"Flexibility for drops/peaks.", anchors:["low","moderate","high"], def:6 }
+    ],
+    electronics: [
+      { id:"esd", label:"ESD protection", desc:"Static-safe materials/process.", anchors:["none","ESD bags","full ESD chain"], def:8 },
+      { id:"shock", label:"Shock/vibration protection", desc:"Foam, inserts, ISTA goals.", anchors:["minor","moderate","stringent"], def:8 },
+      { id:"moisture_elec", label:"Moisture barrier (desiccant)", desc:"Humidity sensitivity.", anchors:["low","some","high"], def:6 },
+      { id:"labels", label:"Label readability/compliance", desc:"UL/CE/other marks & barcodes.", anchors:["basic","good","strict"], def:7 },
+      { id:"anti_counterfeit", label:"Counterfeit deterrence", desc:"Holograms, QR auth, seals.", anchors:["none","some","required"], def:6 }
+    ],
+    supplements: [
+      { id:"tamper_bands", label:"Tamper bands/seals", desc:"TE bands, induction seal.", anchors:["rare","often","always"], def:8 },
+      { id:"nutrition_label", label:"Nutrition label compliance", desc:"Regulatory accuracy & review.", anchors:["basic","good","audit-ready"], def:7 },
+      { id:"trace", label:"Lot traceability", desc:"COA & recall readiness.", anchors:["basic","standard","strict"], def:7 },
+      { id:"shelf_presence", label:"Shelf presence/finish", desc:"Foils, spot UV, color depth.", anchors:["basic","good","premium"], def:6 },
+      { id:"moq_flex", label:"MOQ flexibility", desc:"Frequent small runs.", anchors:["prefer large","flexible","micro ok"], def:7 }
+    ],
+    automotive: [
+      { id:"chem_resist", label:"Grease/solvent resistance", desc:"Exposure durability.", anchors:["low","moderate","high"], def:7 },
+      { id:"bulk_eff", label:"Bulk pack efficiency", desc:"Returnables, dunnage density.", anchors:["low","some","high"], def:7 },
+      { id:"kitting", label:"Line-side kitting", desc:"Kit accuracy/sequence support.", anchors:["rare","useful","critical"], def:6 },
+      { id:"export", label:"Export durability", desc:"Sea/long-haul robustness.", anchors:["domestic","mixed","export-grade"], def:6 }
+    ],
+    pet: [
+      { id:"odor_barrier", label:"Odor/grease barrier", desc:"Odor/grease migration control.", anchors:["low","some","high"], def:6 },
+      { id:"closure", label:"Strong zipper/closure", desc:"Repeatable consumer reseal.", anchors:["basic","good","premium"], def:7 },
+      { id:"tear", label:"Tear resistance", desc:"Bag toughness during ship/store.", anchors:["low","some","high"], def:7 },
+      { id:"print_color", label:"High-color print", desc:"Saturation & halftones.", anchors:["basic","good","premium"], def:6 }
+    ]
+  };
+
+  function computeAIDefaultsForSector(sector){
+    const base = (METRIC_LIBRARY[sector]||[]).map(m=>({...m,value:m.def??7,ai:true}));
+    if (sector==="beverage"){ base.forEach(m=>{ if (m.id==="line_speed"||m.id==="pallet_stability") m.value=Math.max(m.value,8); }); }
+    if (sector==="pharma"){ base.forEach(m=>{ if (m.id==="gxp"||m.id==="serialization"||m.id==="tamper") m.value=Math.max(m.value,8); }); }
+    return base;
+  }
+
+  function renderIndustryPlaybooks(sectors){
+    const root=document.getElementById("sectorBuckets");
+    root.innerHTML=""; state.sectorMetrics=new Map();
+    const list = Array.from(new Set((sectors||[]).map(s=>String(s).toLowerCase()))).slice(0,10);
+    if (!list.length) return;
+
+    list.forEach(sec=>{
+      if (state.sectorMuted.has(sec)) return; // muted → no card
+
+      const lib = METRIC_LIBRARY[sec] || [
+        { id:"quality", label:"Core quality consistency", desc:"Defects and rework tolerance.", anchors:["tolerant","some","zero-defect"], def:7 },
+        { id:"delivery", label:"On-time delivery reliability", desc:"OTIF pressure for ideal buyers.", anchors:["low","some","high"], def:7 },
+        { id:"damage", label:"Damage reduction in transit", desc:"How critical is product protection.", anchors:["minor","moderate","critical"], def:7 },
+        { id:"sustain", label:"Sustainability targets", desc:"PCR %, recyclability, reduction.", anchors:["nice","strong","board-level"], def:6 },
+        { id:"cost", label:"Unit cost at target MOQ", desc:"Price sensitivity at current MOQs.", anchors:["low","moderate","high"], def:7 }
+      ];
+
+      const metricState = lib.map(m=>({...m,value:m.def??7,ai:false}));
+      state.sectorMetrics.set(sec, metricState);
+
+      const wrap=document.createElement("div"); wrap.className="group";
+      const head=document.createElement("div"); head.style.cssText="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px";
+      const title=document.createElement("h4"); title.style.margin="0"; title.textContent=sec.charAt(0).toUpperCase()+sec.slice(1)+" — buyer priorities";
+      const aiBox=document.createElement("label"); aiBox.style.cssText="font-size:12px;color:#9ab0c0;display:inline-flex;gap:6px;align-items:center;cursor:pointer";
+      const ai=document.createElement("input"); ai.type="checkbox";
+      aiBox.appendChild(ai); aiBox.appendChild(document.createTextNode("Let AI decide"));
+      head.appendChild(title); head.appendChild(aiBox); wrap.appendChild(head);
+
+      // collapsible content
+      const cont=document.createElement("div"); cont.style.marginTop="4px";
+      metricState.forEach(m=>{
+        const row=document.createElement("div"); row.className="slider-row";
+        const lab=document.createElement("div");
+        const name=document.createElement("span"); name.textContent=m.label+" ";
+        lab.appendChild(name); lab.appendChild(infoBubble(m.desc,m.anchors));
+        const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=String(m.value);
+        input.addEventListener("input",()=>{ m.value=Number(input.value); m.ai=false; });
+        row.appendChild(lab); row.appendChild(input);
+        cont.appendChild(row);
+      });
+      wrap.appendChild(cont);
+
+      // AI toggle: fill + disable
+      ai.addEventListener("change",()=>{
+        const arr = ai.checked ? computeAIDefaultsForSector(sec) : metricState.map(m=>({...m,ai:false}));
+        const inputs = cont.querySelectorAll('input[type="range"]');
+        arr.forEach((m,i)=>{ metricState[i].value=m.value; metricState[i].ai=ai.checked; inputs[i].value=String(m.value); inputs[i].disabled=ai.checked; });
+      });
+
+      root.appendChild(wrap);
+    });
+  }
+
+  // ---------- sector picker / mute ----------
+  function renderSectorPicker(){
+    const box=document.getElementById("sectorSelectChips");
+    box.innerHTML="";
+    const all = (state.sectorHints.length? state.sectorHints : ["food","beverage","logistics","electronics","automotive","industrial","apparel","pharma","cosmetics","pet","supplements"]).slice(0,12);
+    all.forEach(sec=>{
+      const chip=document.createElement("span"); chip.className="chip active"; chip.textContent=sec;
+      if (state.sectorMuted.has(sec)){ chip.classList.remove("active"); chip.classList.add("muted"); }
+      chip.addEventListener("click",()=>{
+        const muted = chip.classList.toggle("muted");
+        chip.classList.toggle("active", !muted);
+        if (muted) state.sectorMuted.add(sec); else state.sectorMuted.delete(sec);
+        renderIndustryPlaybooks(all); // re-render cards based on mute
+      });
+      box.appendChild(chip);
+    });
+    renderIndustryPlaybooks(all);
+  }
+
+  // ---------- operations ----------
+  function renderOpsPool(list){
+    const opsChips=document.getElementById("opsChips");
+    const opsSliders=document.getElementById("opsSliders");
+    opsChips.innerHTML=""; opsSliders.innerHTML=""; state.opsSelected=new Map();
+    const ensure=(label)=>{
+      if (state.opsSelected.has(label)) return;
+      const row=document.createElement("div"); row.className="slider-row"; row.dataset.label=label;
+      const lab=document.createElement("div"); lab.textContent=label;
+      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value="7";
+      input.addEventListener("input",()=> state.opsSelected.set(label, Number(input.value)));
+      row.appendChild(lab); row.appendChild(input); opsSliders.appendChild(row);
+      state.opsSelected.set(label,7);
+    };
+    const remove=(label)=>{
+      const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]');
+      if (el) el.remove(); state.opsSelected.delete(label);
+    };
+    const addChip=(text,box,onToggle)=>{
+      const s=document.createElement("span"); s.className="chip"; s.textContent=text;
+      s.addEventListener("click",()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); onToggle&&onToggle(on,text,s); });
+      box.appendChild(s);
+    };
+    list.forEach(l=> addChip(l, opsChips, (on,text)=> on?ensure(text):remove(text)));
+  }
+
+  // ---------- targeting (prefill + chips) ----------
+  function seedTargeting(){
+    const cityEl=document.getElementById("city");
+    const cityChips=document.getElementById("cityChips");
+    const sectorChips=document.getElementById("sectorChips");
+    const sectorsEl=document.getElementById("sectors");
+
+    const addChipLocal=(text,box,onToggle)=>{
+      const s=document.createElement("span"); s.className="chip"; s.textContent=text;
+      s.addEventListener("click",()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); onToggle&&onToggle(on,text,s); });
+      box.appendChild(s); return s;
+    };
+
+    const hq = state.hq || (function(){ const g=(host)=>{ const h=(host||"").toLowerCase(); if(/newjersey|nj/.test(h))return"New Jersey"; if(/newyork|nyc|ny-?/.test(h))return"New York"; if(/losangeles|la|ca-?/.test(h))return"Los Angeles"; if(/chicago|il-?/.test(h))return"Chicago"; if(/dallas|tx-?/.test(h))return"Dallas"; if(/atlanta|ga-?/.test(h))return"Atlanta"; if(/miami|fl-?/.test(h))return"Miami"; return "New Jersey"; }; return g(state.line.host); })();
+
+    cityChips.innerHTML="";
+    ["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"].forEach(c=>{
+      const chip=addChipLocal(c, cityChips);
+      if (c===hq){ chip.classList.add("active"); cityEl.value=c; }
     });
 
-    const baseHot = (data.hotMetrics && data.hotMetrics.length)
-      ? data.hotMetrics
-      : ["Automation line uptime impact","Damage reduction targets in transit","Sustainability targets (PCR %, recyclability)","Unit cost at target MOQ","Vendor-managed inventory flexibility"];
+    const sectorList = (state.sectorHints&&state.sectorHints.length)? state.sectorHints : ["food","beverage","logistics","electronics","automotive","industrial","apparel","pharma","cosmetics","household","pet","supplements"];
+    sectorChips.innerHTML="";
+    Array.from(new Set(sectorList)).slice(0,12).forEach(s=>addChipLocal(s, sectorChips, (on)=>{ if(on){ const picked=[...sectorChips.querySelectorAll(".chip.active")].map(x=>x.textContent.trim()).join(", "); sectorsEl.value=picked; } else { const picked=[...sectorChips.querySelectorAll(".chip.active")].map(x=>x.textContent.trim()).join(", "); sectorsEl.value=picked; }}));
+    sectorsEl.value = [...sectorChips.querySelectorAll(".chip")].slice(0,3).map(x=>x.textContent.trim()).join(", ");
+  }
+
+  // ---------- apply from server ----------
+  function applyServerPersona(data, host){
+    const prods=(data.productTags||[]).slice(0,5).join(", ")||"packaging";
+    const segs =(data.sectorHints||[]).slice(0,3).join(", ")||"brands";
+    const contacts=/ops|operation|procure|plant|warehouse|supply|logistics/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")).toLowerCase()) ? "Operations, Procurement" : "Procurement, Marketing";
+    state.line={host,verb:"supplies",products:prods,audience:segs,region:"the U.S.",contacts};
+
+    // re-render sentence with editable tokens
+    const s=document.getElementById("sentence"); s.innerHTML="";
+    [
+      {txt:state.line.host,lock:true},{txt:"—",lock:true},
+      {k:"verb",txt:state.line.verb},{k:"products",txt:state.line.products},
+      {txt:"for",lock:true},{k:"audience",txt:state.line.audience},
+      {txt:"in",lock:true},{k:"region",txt:state.line.region},{txt:".",lock:true},
+      {txt:"Best contacts:",lock:true},{k:"contacts",txt:state.line.contacts}
+    ].forEach(p=>{
+      const span=document.createElement("span"); span.className="token"; span.dataset.lock=p.lock?"true":"false";
+      if (!p.lock && p.k){ span.dataset.editable="true"; span.contentEditable=false; span.addEventListener("input",()=>{ state.line[p.k]=span.textContent.trim(); }); }
+      span.textContent=p.txt; s.appendChild(span); s.appendChild(document.createTextNode(" "));
+    });
+
+    // global hot metrics
+    const baseHot=(data.hotMetrics&&data.hotMetrics.length)?data.hotMetrics:[
+      "Automation line uptime impact","Damage reduction targets in transit","Sustainability targets (PCR %, recyclability)","Unit cost at target MOQ","Vendor-managed inventory flexibility"
+    ];
     renderMetrics(baseHot);
 
-    state.sectorHints = (data.sectorHints||[]).slice(0,8);
-    renderSectorBuckets(state.sectorHints);
+    // sectors + picker + playbooks
+    state.sectorHints=(data.sectorHints||[]).slice(0,10);
+    renderSectorPicker();
 
-    const opsList = (data.opsPool && data.opsPool.length)
-      ? data.opsPool
-      : ["Hand pallet wrapping","Automated pallet wrapper","E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"];
-    renderOpsPool(opsList);
+    // ops pool
+    const ops=(data.opsPool&&data.opsPool.length)?data.opsPool:[
+      "Hand pallet wrapping","Automated pallet wrapper","E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"
+    ];
+    renderOpsPool(ops);
 
-    state.productTags = data.productTags||[];
+    // product tags
+    state.productTags=data.productTags||[];
+
+    // targeting
     seedTargeting();
   }
 
   async function refreshFromWebsite(){
-    const host = normHost(hostEl.value || domainFromEmail(emailEl.value));
+    const host = normHost((document.getElementById("host").value)||domainFromEmail(document.getElementById("email").value));
     if (!host) return;
-
-    // reset
-    metricsBox.innerHTML="";
-    sectorBuckets.innerHTML="";
-    opsChips.innerHTML=""; opsSliders.innerHTML="";
-    state.metrics=[]; state.sectorMetrics=new Map(); state.opsSelected=new Map();
-    state.sectorHints=[]; state.productTags=[];
-    document.getElementById("cityChips").innerHTML="";
-    document.getElementById("sectorChips").innerHTML="";
-
-    setFavicon(host);
-    statusEl.textContent="";
-
+    document.getElementById("status").textContent="";
     try{
-      state.line.host = host;
-      const data = await classify(host, emailEl.value||"");
+      state.line.host=host; setFavicon(host);
+      const data=await classify(host, document.getElementById("email").value||"");
       applyServerPersona(data, host);
-      statusEl.textContent = data.cached ? "(cached)" : "";
-    }catch(err){
-      console.warn("classify failed:", err);
-      statusEl.textContent = " (offline)";
-      renderMetrics(["Automation line uptime impact","Damage reduction targets in transit","Sustainability targets (PCR %, recyclability)","Unit cost at target MOQ"]);
-      renderSectorBuckets(state.sectorHints||[]);
-      renderOpsPool(["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"]);
-      seedTargeting();
+      document.getElementById("status").textContent = data.cached ? "(cached)" : "";
+    }catch(e){
+      console.warn("classify failed:",e);
+      document.getElementById("status").textContent=" (offline)";
+      applyServerPersona({productTags:[],sectorHints:["food","beverage","logistics"],hotMetrics:[]}, host);
     }
   }
 
-  // Edit/done handlers (reuse existing buttons; no redeclare)
-  editBtn.addEventListener("click",()=>{
-    sentence.classList.add("editing");
-    sentence.querySelectorAll('.token[data-editable="true"]').forEach(el=> (el.contentEditable = "true"));
-    editBtn.hidden=true; doneBtn.hidden=false;
+  // wire full edit/done
+  document.getElementById("editLine").addEventListener("click",()=>{
+    const s=document.getElementById("sentence"); s.classList.add("editing");
+    s.querySelectorAll('.token[data-editable="true"]').forEach(el=> el.contentEditable="true");
+    document.getElementById("editLine").hidden=true; document.getElementById("doneLine").hidden=false;
   });
-  doneBtn.addEventListener("click",()=>{
-    sentence.classList.remove("editing");
-    sentence.querySelectorAll('.token[data-editable="true"]').forEach(el=> (el.contentEditable = "false"));
-    editBtn.hidden=false; doneBtn.hidden=true;
+  document.getElementById("doneLine").addEventListener("click",()=>{
+    const s=document.getElementById("sentence"); s.classList.remove("editing");
+    s.querySelectorAll('.token[data-editable="true"]').forEach(el=> el.contentEditable="false");
+    document.getElementById("editLine").hidden=false; document.getElementById("doneLine").hidden=true;
   });
 
   // refresh link
-  refreshA.addEventListener("click",(e)=>{ e.preventDefault(); refreshFromWebsite(); });
+  document.getElementById("refresh").addEventListener("click",(e)=>{ e.preventDefault(); refreshFromWebsite(); });
 
-  // Replace Next with final flow
+  // replace Next handler with full finish logic
   (function replaceNext(){
-    const old = document.getElementById("next");
-    const fresh = old.cloneNode(true);
+    const old=document.getElementById("next");
+    const fresh=old.cloneNode(true);
     old.parentNode.replaceChild(fresh, old);
-
     fresh.addEventListener("click", async ()=>{
-      if (state.step===0){ show(1); return; }
+      if (state.step===0){ const emailEl=document.getElementById("email"); const hostEl=document.getElementById("host"); if (emailEl.value){ const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d; } 
+        // ensure favicon preview seed
+        const hc=normHost(hostEl.value||""); if (hc) setFavicon(hc);
+        const editBtn=document.getElementById("editLine"), doneBtn=document.getElementById("doneLine");
+        editBtn.hidden=false; doneBtn.hidden=true;
+        show(1); return; }
 
       if (state.step===1){
+        const emailEl=document.getElementById("email");
+        const hostEl=document.getElementById("host");
         const phoneEl=document.getElementById("phone");
-        if (!emailEl.value || !phoneEl.value){
-          alert("Business email and phone are required."); return;
-        }
+        if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
         const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
-        if (!hostCandidate){
-          alert("Please provide your website/domain."); return;
-        }
-        hostEl.value = hostCandidate;
+        if (!hostCandidate){ alert("Please provide your website/domain."); return; }
+        hostEl.value=hostCandidate;
         await refreshFromWebsite();
-        show(2);
-        return;
+        show(2); return;
       }
 
       if (state.step===2){
-        if (state.opsSelected.size===0){
-          alert("Pick at least one buyer operation (and set its importance).");
-          return;
-        }
-        const cityPicked = Array.from(document.getElementById("cityChips").querySelectorAll(".chip.active")).map(x=>x.textContent.trim());
-        const sectorsPicked = Array.from(document.getElementById("sectorChips").querySelectorAll(".chip.active")).map(x=>x.textContent.trim());
-        const sectorMetricsPacked = Array.from(state.sectorMetrics.entries()).map(([sector,arr])=>({sector, metrics: arr}));
+        if (state.opsSelected.size===0){ alert("Pick at least one buyer operation (and set its importance)."); return; }
 
-        const persona = {
+        const cityChips=document.getElementById("cityChips");
+        const sectorChips=document.getElementById("sectorChips");
+        const cityPicked=[...cityChips.querySelectorAll(".chip.active")].map(x=>x.textContent.trim());
+        const sectorsPicked=[...sectorChips.querySelectorAll(".chip.active")].map(x=>x.textContent.trim());
+
+        const sectorMetricsPacked = Array.from(state.sectorMetrics.entries()).map(([sector, arr])=>({
+          sector,
+          metrics: arr.map(m => ({ id:m.id, label:m.label, value:m.value, ai: !!m.ai }))
+        }));
+
+        const persona={
           host: normHost(state.line.host),
           role: state.role,
           line: state.line,
           productTags: state.productTags,
-          sectorHints: state.sectorHints,
+          sectorHints: state.sectorHints.filter(s=>!state.sectorMuted.has(s)),
+          sectorMuted: Array.from(state.sectorMuted),
           metrics: state.metrics,
           sectorMetrics: sectorMetricsPacked,
           operations: Array.from(state.opsSelected.entries()).map(([label,value])=>({label,value})),
-          targeting: {
-            city: (cityEl.value||"").trim(),
-            sectors: (sectorsEl.value||"").trim(),
+          targeting:{
+            city:(document.getElementById("city").value||"").trim(),
+            sectors:(document.getElementById("sectors").value||"").trim(),
             citiesPicked: cityPicked,
-            sectorsPicked
+            sectorsPicked: sectorsPicked
           }
         };
 
+        // persist
         setS("bf.persona", JSON.stringify(persona));
         setS("fp.persona", JSON.stringify(persona));
         setS("fp.supplier.host", persona.host);
@@ -721,25 +913,32 @@
         setS("fp.pref.segPrefer", (persona.sectorHints||[]).join("\n"));
         setS("fp.autoImport","1");
 
-        location.href = "free-panel.html";
+        // done
+        location.href="free-panel.html";
       }
     });
   })();
 
-  // full boot
+  // initial boot (API + seeds + favicon)
   (async function bootFull(){
     await apiDetect();
-    const d=domainFromEmail(emailEl.value);
-    if (d){ hostEl.value=d; setFavicon(d); }
+    const d=domainFromEmail(document.getElementById("email").value); if (d){ document.getElementById("host").value=d; setFavicon(d); }
+    // basic seeds if classify not run yet
+    renderMetrics([
+      "Automation line uptime impact","Damage reduction targets in transit","Sustainability targets (PCR %, recyclability)","Unit cost at target MOQ","Vendor-managed inventory flexibility"
+    ]);
+    state.sectorHints=["beverage","food","logistics","cosmetics","pharma","industrial","apparel","electronics","supplements","automotive","pet"];
+    renderSectorPicker();
+    renderOpsPool(["Hand pallet wrapping","Automated pallet wrapper","E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"]);
     seedTargeting();
   })();
 
-  // expose
+  // expose (debug)
   window.Galactly = {
     state,
-    addChip,
     renderMetrics,
-    renderSectorBuckets,
+    renderIndustryPlaybooks,
+    renderSectorPicker,
     renderOpsPool,
     seedTargeting,
     refreshFromWebsite,
@@ -747,7 +946,6 @@
     apiDetect
   };
 
-})();
-</script>
+})();</script>
 </body>
 </html>
