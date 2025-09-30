@@ -6,28 +6,23 @@
 <title>Galactly — Find real packaging buyers</title>
 
 <!--
-  index.html (v4 — Sector-first UX)
-  - CTA always works (no Part-2 dependency)
-  - Classify -> sector list (accordion). Each sector encapsulates:
-      metrics (0–10 with clear 0/10 anchors), buyer ops, and targeting.
-  - "Mute sector" (exclude from search) + "Let AI decide" (weights become advisory).
-  - Per-sector city chips prefills using HQ guess; sectors prefills from classify.
-  - No separate Ops/Targeting cards; everything lives under sectors.
-  - Finish persists persona to localStorage (bf.persona + fp.persona).
+  index.html  (Landing + Onboarding Steps 1–2)
+  - CTA always works (no other file required)
+  - Step 1: pick role
+  - Step 2: contact + company
+  - “Next” from Step 2 persists seed -> localStorage and redirects to step3.html
 -->
 
 <style>
   :root{
     --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c;
     --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
-    --cta:#6de1ff; --ctaText:#082433;
-    --chip:#1a2433; --chipActive:#103247;
-    --accent:#38e08f; --divider:#1b2531; --ring:#24435f;
+    --cta:#6de1ff; --ctaText:#082433; --divider:#1b2531;
   }
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
     font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
   .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;
-    background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%);position:relative;z-index:0}
+    background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%)}
   .hero-inner{max-width:920px;text-align:center}
   h1{font-size:clamp(32px,6vw,56px);margin:0 0 12px}
   p.lead{color:var(--muted);margin:0 0 28px}
@@ -37,11 +32,16 @@
   .btn.smol{padding:6px 10px;border-radius:10px;font-weight:600}
   .btn:active{transform:translateY(1px)}
   .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
+  .chips{user-select:none}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#172233;
+    color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
+  .chip.active{background:#103247;color:#eaf7ff;border-color:#1b4862}
+  .hint{font-size:12px;color:#9bb2c8}
 
   /* modal */
   .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
   .modal.show{display:flex}
-  .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--divider);border-radius:18px;
+  .card{width:min(980px,92vw);background:#0f1622;border:1px solid var(--divider);border-radius:18px;
     box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
   .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;
     background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
@@ -52,55 +52,19 @@
   .api-badge.ok{color:#0f0} .api-badge.err{color:#ff8}
   .card-bd{padding:18px}
   .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--divider)}
-  .scroll{max-height:70vh;overflow:auto;padding:6px 6px}
+  .scroll{max-height:70vh;overflow:auto;padding:6px}
 
-  /* summary / sentence */
-  .summary{display:flex;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:12px 14px;border-radius:14px;margin:0 0 14px;align-items:flex-start}
-  .fav{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;background:#fff;border:1px solid #cfd8e3}
-  .fav img{width:24px;height:24px}
-  .one{font-weight:700}
-  .one-line{line-height:1.8}
-  .token{display:inline-block;border-radius:8px;padding:2px 6px;margin:0 2px}
-  .token[data-lock="true"]{background:transparent;color:#dfeaf5;border:0}
-  .sentence .token[data-editable="true"]{background:transparent;border-bottom:1px dashed #3a5572}
-  .sentence.editing .token[data-editable="true"]{background:#0f1926;border:1px solid #2b425a}
-  .sentence .token:focus{outline:2px solid var(--ring)}
-  .edit-actions{display:flex;gap:8px;margin-top:6px}
-  .big-edit{padding:6px 10px;border-radius:10px;background:#172839;border:1px solid #274059;color:#d8e8f7;font-weight:600;cursor:pointer}
-  .big-edit.primary{background:var(--cta);border:none;color:#06293a}
-
-  /* chips */
-  .chips{user-select:none}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);
-    color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
-  .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
-  .hint{font-size:12px;color:#9bb2c8}
-  .muted-hint{font-size:12px;color:#99b2c8;margin-left:8px}
-
-  /* accordion sectors */
+  /* inputs */
   .accordion{border:1px solid var(--divider);border-radius:14px;background:#0f1724;margin:14px 0}
   .acc-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #142031;cursor:pointer}
   .acc-hd h4{margin:0;font-size:16px}
-  .acc-hd .right{display:flex;gap:10px;align-items:center}
-  .acc-bd{padding:12px 14px;display:none}
-  .accordion.open .acc-bd{display:block}
-  .badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#112033;border:1px solid #1f2f44;color:#a9c3da}
-  .mute{background:#1d2736;border-color:#2c3e55}
-  .switch{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:#a8c3d8}
-  .switch input{accent-color:#59dbff}
-
-  /* sliders */
-  .slider-row{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:center;margin:10px 0}
-  .slider-row input[type=range]{width:100%}
-  .row-sub{grid-column:1 / -1;margin-top:-6px}
-
+  .acc-bd{padding:12px 14px;display:block}
   .field{margin:10px 0}
   label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
   input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
   input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
 
   .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
-  @media (max-width:800px){.slider-row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -122,7 +86,7 @@
           <span class="dot" data-step-dot="2"></span>
         </div>
         <div style="display:flex;gap:10px;align-items:center">
-          <span id="apiBadge" class="api-badge">API: resolving…</span>
+          <span id="apiBadge" class="api-badge">Ready</span>
           <button id="close" class="x" aria-label="Close">✕</button>
         </div>
       </div>
@@ -134,10 +98,11 @@
           <section class="step" id="step1">
             <div class="pill">Get set up in 60 seconds</div>
             <h2 style="margin:10px 0 14px;">Pick your side</h2>
-            <div class="accordion open">
+
+            <div class="accordion">
               <div class="acc-hd" role="button" tabindex="0">
-                <h4 style="margin:0">Role</h4>
-                <div class="right"><span class="badge">Required</span></div>
+                <h4>Role</h4>
+                <div class="hint">Required</div>
               </div>
               <div class="acc-bd">
                 <div class="chips" id="roleChips">
@@ -152,10 +117,11 @@
           <section class="step" id="step2" hidden>
             <div class="pill">Step 2 of 3</div>
             <h2 style="margin:10px 0 14px;">Tell us who you are</h2>
-            <div class="accordion open">
+
+            <div class="accordion">
               <div class="acc-hd" role="button" tabindex="0">
                 <h4>Contact & company</h4>
-                <div class="right"><span class="badge">Required</span></div>
+                <div class="hint">Required</div>
               </div>
               <div class="acc-bd">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
@@ -167,7 +133,7 @@
                     <div class="field">
                       <label>Phone (required for alerts) *</label>
                       <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/>
-                      <div class="hint">Country code helps us personalize geography (e.g., “+1” for U.S.).</div>
+                      <div class="hint">Include country code (e.g., “+1”).</div>
                     </div>
                   </div>
                   <div>
@@ -178,54 +144,22 @@
                     <div class="field">
                       <label>Website / Domain</label>
                       <input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/>
-                      <div class="hint">Auto-filled from your email as you type. You can edit.</div>
+                      <div class="hint">Auto-filled from your email. You can edit.</div>
                     </div>
                   </div>
                 </div>
-                <div class="hint" id="apiStatus" style="margin-top:8px">API: resolving…</div>
+                <div class="hint" id="apiStatus" style="margin-top:8px">Step 3 opens in a new screen.</div>
               </div>
             </div>
           </section>
 
-          <!-- STEP 3 -->
+          <!-- STEP 3 PLACEHOLDER (not shown here) -->
           <section class="step" id="step3" hidden>
-            <div class="pill">Step 3 of 3</div>
-
-            <!-- warm one-liner -->
-            <div class="summary">
-              <div class="fav"><img id="fav" alt="" width="24" height="24" referrerpolicy="no-referrer"></div>
-              <div style="flex:1">
-                <div id="sentence" class="one one-line sentence" aria-live="polite"></div>
-                <div class="edit-actions">
-                  <button id="editLine" class="big-edit" type="button">Edit</button>
-                  <button id="doneLine" class="big-edit primary" type="button" hidden>Done</button>
-                  <a id="refresh" href="#" class="big-edit" style="background:#142133;border-color:#25384b;color:#a9c3d8">Refresh from website</a>
-                  <span id="status" class="muted-hint"></span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Advanced (collapsed by default) -->
-            <button id="advToggle" class="btn sec smol" type="button" style="border-radius:999px;margin-bottom:8px">
-              <span id="advLbl">Show advanced ▾</span>
-            </button>
-
-            <div id="advanced" hidden>
-              <div class="accordion open">
-                <div class="acc-hd" role="button" tabindex="0">
-                  <h4>Buyer sectors — tune each one</h4>
-                  <div class="right">
-                    <span class="badge" id="sectorCount">0 sectors</span>
-                  </div>
-                </div>
-                <div class="acc-bd">
-                  <div id="sectorsRoot"></div>
-                </div>
-              </div>
-            </div>
+            <!-- intentionally empty in index.html -->
           </section>
 
         </div>
+
         <div class="card-ft">
           <button id="back" class="btn sec" type="button">Back</button>
           <button id="next" class="btn" type="button">Next</button>
@@ -236,123 +170,83 @@
 
 <script>
 (()=>{
-  // ---------- tiny DOM helpers ----------
-  const $ = (q)=>document.querySelector(q);
+  // ------- helpers -------
+  const $  = (q)=>document.querySelector(q);
   const $$ = (q)=>Array.from(document.querySelectorAll(q));
-
-  // ---------- elements ----------
-  const modal=$("#modal"), openBtn=$("#cta"), closeBtn=$("#close");
-  const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
-  const apiBadge=$("#apiBadge"), apiStatus=$("#apiStatus");
-  const sentence=$("#sentence"), editBtn=$("#editLine"), doneBtn=$("#doneLine");
-  const refreshA=$("#refresh"), favImg=$("#fav");
-  const adv=$("#advanced"), advLbl=$("#advLbl");
-  const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone");
-  const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
-  const sectorsRoot=$("#sectorsRoot"), sectorCount=$("#sectorCount");
-
-  // ---------- state ----------
-  const state = {
-    step:0, role:"supplier",
-    apiOnline:false,
-    line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
-    productTags:[], sectorHints:[],
-    hq:"",
-    sectors:[],  // [{name, active, ai, metrics:[{label,tip,value}], ops:[{label,value,selected}], targeting:{citiesPicked:[], seeds:[]}}]
-  };
-
-  // ---------- utils ----------
   const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
   const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
-  function setFavicon(host){const h=normHost(host); favImg.src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):"";}
+
+  // ------- elements -------
+  const modal=$("#modal"), openBtn=$("#cta"), closeBtn=$("#close");
+  const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
+  const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone");
+  const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
+  const apiBadge=$("#apiBadge");
+
+  // ------- state -------
+  const state={ step:0, role:"supplier" };
+
+  // ------- CTA / nav -------
   function show(step){
     state.step=step;
-    ["#step1","#step2","#step3"].forEach((id,i)=>{const el=$(id); if(el){el.hidden=i!==step; if(dots[i]) dots[i].classList.toggle("on", i===step);}});
-    backBtn.style.visibility= step===0? "hidden":"visible";
-    nextBtn.textContent = step===2? "Finish":"Next";
+    ["#step1","#step2","#step3"].forEach((id,i)=>{const el=$(id); if(!el) return; el.hidden=i!==step; dots[i].classList.toggle("on", i===step);});
+    backBtn.style.visibility = step===0 ? "hidden" : "visible";
+    nextBtn.textContent = step===2 ? "Go to Step 3" : "Next";
   }
   function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
   function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
 
-  // ---------- role chips ----------
+  openBtn.addEventListener("click", open);
+  closeBtn.addEventListener("click", close);
+  backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+  nextBtn.addEventListener("click", ()=>{
+    if (state.step===0){ show(1); return; }
+    if (state.step===1){
+      // basic requirements checked on step 2
+      show(2); return;
+    }
+    if (state.step===2){
+      // validate & persist, then redirect to step3.html
+      if (!emailEl.value || !phoneEl.value){
+        alert("Business email and phone are required."); return;
+      }
+      const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
+      if (!hostCandidate){ alert("Please provide your website/domain (from email is fine)."); return; }
+
+      const seed = {
+        role: state.role,
+        contact: {
+          name: $("#name").value.trim(),
+          phone: phoneEl.value.trim(),
+          email: emailEl.value.trim()
+        },
+        host: hostCandidate
+      };
+      try{
+        localStorage.setItem("onb.seed", JSON.stringify(seed));
+        localStorage.setItem("fp.supplier.host", hostCandidate);
+      }catch{}
+
+      // navigate to heavy step 3 screen
+      window.location.href = "step3.html";
+    }
+  });
+
+  // ------- role chips -------
   function setRole(r){ state.role=r; optSupplier.classList.toggle("active", r==="supplier"); optBuyer.classList.toggle("active", r==="buyer"); }
   optSupplier.addEventListener("click",()=>setRole("supplier"));
   optBuyer.addEventListener("click",()=>setRole("buyer"));
 
-  // ---------- sentence render/edit ----------
-  function renderSentence(editing=false){
-    const L=state.line;
-    const tpl=[
-      {k:"host", txt:L.host, lock:true},{txt:"—", lock:true},
-      {k:"verb", txt:L.verb},{k:"products", txt:L.products},
-      {txt:"for", lock:true},{k:"audience", txt:L.audience},
-      {txt:"in", lock:true},{k:"region", txt:L.region},
-      {txt:".", lock:true},{txt:"Best contacts:", lock:true},{k:"contacts", txt:L.contacts}
-    ];
-    sentence.classList.toggle("editing", editing);
-    sentence.innerHTML="";
-    for (const part of tpl){
-      const span=document.createElement("span");
-      span.className="token"; span.dataset.lock = part.lock?"true":"false";
-      if (!part.lock){
-        span.dataset.editable="true"; span.contentEditable = editing;
-        span.addEventListener("input",()=>{ state.line[part.k]=span.textContent.trim(); });
-      }
-      span.textContent=part.txt; sentence.appendChild(span); sentence.appendChild(document.createTextNode(" "));
-    }
-  }
-  editBtn.addEventListener("click",()=>{renderSentence(true);editBtn.hidden=true;doneBtn.hidden=false;});
-  doneBtn.addEventListener("click",()=>{renderSentence(false);editBtn.hidden=false;doneBtn.hidden=true;});
+  // ------- convenience -------
+  function syncDomain(){ const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d; }
+  emailEl.addEventListener("input",syncDomain);
+  emailEl.addEventListener("change",syncDomain);
+  setTimeout(syncDomain, 80);
 
-  // ---------- adv toggle ----------
-  $("#advToggle").addEventListener("click",(e)=>{
-    e.preventDefault();
-    const open = adv.hasAttribute("hidden");
-    if (open){ adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
-    else { adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
-  });
+  // minimal badge (no dependency on backend here)
+  apiBadge.textContent = "Ready";
 
-  // ---------- CTA nav ----------
-  openBtn.addEventListener("click", open);
-  closeBtn.addEventListener("click", close);
-  backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
-  nextBtn.addEventListener("click", async ()=>{
-    if (state.step===0){ show(1); return; }
-
-    if (state.step===1){
-      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
-      const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
-      if (!hostCandidate){ alert("Please provide your website/domain."); return; }
-      hostEl.value = hostCandidate;
-      state.line.host = hostCandidate; setFavicon(hostCandidate); renderSentence(false);
-      await refreshFromWebsite();  // seeds sectors
-      show(2); return;
-    }
-
-    if (state.step===2){
-      // build persona payload
-      const persona = {
-        host: normHost(state.line.host),
-        role: state.role,
-        line: state.line,
-        productTags: state.productTags,
-        sectorHints: state.sectorHints,
-        sectors: state.sectors
-      };
-      try{ localStorage.setItem("bf.persona", JSON.stringify(persona)); }catch{}
-      try{
-        localStorage.setItem("fp.persona", JSON.stringify(persona));
-        localStorage.setItem("fp.supplier.host", persona.host);
-        localStorage.setItem("fp.pref.city", (state.hq||""));
-        localStorage.setItem("fp.pref.tagPrefer", (persona.productTags||[]).join("\n"));
-        localStorage.setItem("fp.pref.segPrefer", (persona.sectorHints||[]).join("\n"));
-        localStorage.setItem("fp.autoImport","1");
-      }catch{}
-      location.href = "free-panel.html";
-    }
-  });
-
-  // Enter/Escape
+  // keyboard helpers
   modal.addEventListener("keydown",(e)=>{
     if (e.key==="Escape"){ e.preventDefault(); close(); return; }
     if (e.key==="Enter"){
@@ -362,366 +256,8 @@
     }
   });
 
-  // ---------- email → domain ----------
-  function syncDomain(){ const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d; }
-  emailEl.addEventListener("input",syncDomain);
-  emailEl.addEventListener("change",syncDomain);
-
-  // ---------- API discovery ----------
-  const getS=(k,d="")=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}};
-  const setS=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
-  async function apiDetect(){
-    const tries=[];
-    if (typeof window.API_BASE==="string") tries.push(window.API_BASE);
-    const saved=getS("apiBase",""); if (saved) tries.push(saved);
-    tries.push(location.origin+"/api"); tries.push(location.origin);
-
-    async function check(base){
-      base=(base||"").replace(/\/+$/,"");
-      const paths=/\/api$/.test(base)?[base+"/health",base+"/ping"]:[base+"/api/health",base+"/api/ping"];
-      for (const p of paths){ try{ const r=await fetch(p,{credentials:"omit"}); if (r.ok) return base; }catch{} }
-      return null;
-    }
-    for (const cand of tries){
-      const b=await check(cand);
-      if (b){ setS("apiBase",b); apiBadge.textContent="API: online"; apiBadge.classList.add("ok"); apiBadge.classList.remove("err"); apiStatus.textContent="API: online"; state.apiOnline=true; return {ok:true,base:b}; }
-    }
-    const fb=(tries[0]||location.origin+"/api").replace(/\/+$/,"");
-    setS("apiBase",fb); apiBadge.textContent="API: offline"; apiBadge.classList.add("err"); apiBadge.classList.remove("ok"); apiStatus.textContent="API: offline"; state.apiOnline=false;
-    return {ok:false,base:fb};
-  }
-  function classifyURL(base){ const b=(base||getS("apiBase","")).replace(/\/+$/,""); return /\/api$/.test(b)?(b+"/classify"):(b+"/api/classify"); }
-
-  // ---------- sector catalog (metrics with explicit anchors) ----------
-  // Each metric: {label, tip} where tip contains "0=..., 10=..."
-  const CATALOG = {
-    beverage:{
-      metrics:[
-        {label:"High-speed line compatibility", tip:"0=manual/slow only · 10=proven at ≥500+ units/min (or ≥30 cases/min)"},
-        {label:"Retail-ready print consistency", tip:"0=frequent color drift/misregister · 10=ΔE<2 & tight register at volume"},
-        {label:"Condensation tolerance", tip:"0=package fails with light sweat · 10=survives heavy condensation (coolers/retort)"},
-        {label:"Pallet stability for bottlers", tip:"0=shifts/collapses · 10=ISTA 3A/3E pass or in-house equivalent"},
-        {label:"Case integrity for glass/plastic", tip:"0=breakage/deformation · 10=spec holds at peak load/transport"},
-        {label:"Damage reduction targets in transit", tip:"0=no target · 10=meets ≤0.5% damage KPI"}
-      ],
-      ops:["Depalletizing","Filler/capper integration","Shrink/bundling","Case packing","Palletizing","Cold-chain handling"],
-      seedSectors:["beverage"]
-    },
-    food:{
-      metrics:[
-        {label:"Food-contact compliance", tip:"0=unknown/no doc · 10=FDA/EC declarations with migration testing"},
-        {label:"Moisture barrier", tip:"0=uncontrolled · 10=meets WVTR spec at temp/RH"},
-        {label:"Oxygen barrier", tip:"0=uncontrolled · 10=meets OTR spec at storage temp"},
-        {label:"Lot traceability & COA", tip:"0=not available · 10=serialized lots with digital COA"},
-        {label:"Tamper evidence", tip:"0=absent · 10=validated TE (bands, seals)"},
-        {label:"Temperature excursions tolerance", tip:"0=fails cold/hot · 10=validated for expected excursions"}
-      ],
-      ops:["Form-fill-seal","Case packing","Labeling/inkjet","Metal detection/X-ray","Cold-chain handling"],
-      seedSectors:["food"]
-    },
-    cosmetics:{
-      metrics:[
-        {label:"Premium print/finish", tip:"0=basic CMYK · 10=foil/spot UV/emboss at scale"},
-        {label:"Color consistency ΔE", tip:"0=ΔE>6 · 10=ΔE≤2"},
-        {label:"Unboxing experience", tip:"0=plain · 10=designed, tactile experience"},
-        {label:"Scratch/scuff resistance", tip:"0=marks easily · 10=validated resistance"},
-        {label:"Low-MOQ flexibility", tip:"0=>20k MOQ · 10=≤1k agile runs"}
-      ],
-      ops:["Folding-carton gluing","Label application","Kitting","Co-packing"],
-      seedSectors:["cosmetics","beauty"]
-    },
-    electronics:{
-      metrics:[
-        {label:"ESD protection", tip:"0=not needed · 10=ANSI/ESD S541-compliant system"},
-        {label:"Shock/vibration protection", tip:"0=ad-hoc · 10=verified to product fragility (ISTA/ASTM)"},
-        {label:"Moisture control", tip:"0=none · 10=desiccant + barrier validated"},
-        {label:"Anti-counterfeit/trace", tip:"0=none · 10=labels/features with traceability"},
-        {label:"Custom fit/inserts", tip:"0=generic · 10=CNC/formed inserts fit spec"}
-      ],
-      ops:["ESD kitting","Foam cutting","Small-parts bagging","Label/serial application"],
-      seedSectors:["electronics","semiconductor","devices"]
-    },
-    pharma:{
-      metrics:[
-        {label:"GxP documentation", tip:"0=none · 10=full SOP/validation package"},
-        {label:"Serialization/lot coding", tip:"0=unavailable · 10=integrated GS1/lot on line"},
-        {label:"Tamper-evidence compliance", tip:"0=absent · 10=meets 21 CFR / EU FMD"},
-        {label:"Cleanroom handling", tip:"0=not supported · 10=ISO class support"},
-        {label:"Temperature control", tip:"0=ambient only · 10=validated 2–8°C or frozen"}
-      ],
-      ops:["Bottle/label lines","Cartoning","Blistering (outsourced)","Cold-chain"],
-      seedSectors:["pharma","medical"]
-    },
-    logistics:{
-      metrics:[
-        {label:"3PL integration & labels", tip:"0=no EDI/ASN · 10=ASN/SSCC labels ready"},
-        {label:"E-com fulfillment compatibility", tip:"0=poor · 10=pick/pack/scan friendly"},
-        {label:"Damage reduction in parcel", tip:"0=unknown · 10=meets parcel test KPI"},
-        {label:"Cube/weight optimization", tip:"0=oversized · 10=rate-optimized"},
-        {label:"Dock-to-stock speed", tip:"0=slow · 10=barcode ready & pre-kitted"}
-      ],
-      ops:["Warehouse pick/pack","3PL / distribution","Returns handling","Kitting/VAS"],
-      seedSectors:["logistics","3pl","ecommerce"]
-    },
-    industrial:{
-      metrics:[
-        {label:"Heavy-load stability", tip:"0=failures · 10=validated load containment"},
-        {label:"Puncture/tear resistance", tip:"0=frequent tears · 10=validated under spec"},
-        {label:"Unitization efficiency", tip:"0=manual · 10=auto stretch/shrink tuned"},
-        {label:"Automation uptime impact", tip:"0=frequent jams · 10=near-zero stops from packaging"},
-        {label:"Sustainability targets", tip:"0=not tracked · 10=PCR%/recyclability on spec"}
-      ],
-      ops:["Pallet wrapping","Auto case erectors","Banding/strapping"],
-      seedSectors:["industrial","manufacturing"]
-    },
-    apparel:{
-      metrics:[
-        {label:"Presentation (crease/scuff)", tip:"0=poor · 10=store-ready out-of-box"},
-        {label:"Print quality on substrates", tip:"0=ink issues · 10=sharp across SKUs"},
-        {label:"Parcel-rate optimization", tip:"0=waste · 10=dim-weight efficient"},
-        {label:"Return-friendly design", tip:"0=tears · 10=easy reseal/scan"},
-        {label:"Seasonal volume agility", tip:"0=slow · 10=quick changeovers"}
-      ],
-      ops:["Polybagging","Label/apply size SKU","Kitting/bundles","Return handling"],
-      seedSectors:["apparel","fashion"]
-    },
-    supplements:{
-      metrics:[
-        {label:"Tamper bands/seals", tip:"0=absent · 10=validated TE solutions"},
-        {label:"Nutrition label compliance", tip:"0=errors · 10=reg-proofed templates"},
-        {label:"Lot traceability", tip:"0=manual · 10=digital lots + COA"},
-        {label:"MOQ flexibility", tip:"0=>20k · 10=≤1k agile runs"}
-      ],
-      ops:["Bottle labeling","Shrink banding","Cartoning"],
-      seedSectors:["supplements","nutraceuticals"]
-    },
-    automotive:{
-      metrics:[
-        {label:"Grease/solvent resistance", tip:"0=fails · 10=validated to fluids"},
-        {label:"Bulk pack efficiency", tip:"0=air · 10=optimized dunnage/totes"},
-        {label:"Line-side kitting", tip:"0=none · 10=scan-ready kits"},
-        {label:"Export durability", tip:"0=failures · 10=ISTA 2A/3A pass"}
-      ],
-      ops:["Kitting","Returnable totes","Barcode compliance"],
-      seedSectors:["automotive","aftermarket"]
-    },
-    pet:{
-      metrics:[
-        {label:"Odor/grease barrier", tip:"0=bleed · 10=validated barrier"},
-        {label:"Closure strength", tip:"0=weak zips · 10=strong/child-resist"},
-        {label:"Tear resistance", tip:"0=easy tears · 10=meets spec"},
-        {label:"E-com durability", tip:"0=damages · 10=parcel test pass"}
-      ],
-      ops:["Pouching","Label/lot coding","Case packing"],
-      seedSectors:["pet","petcare"]
-    }
-  };
-
-  // ---------- build sectors UI ----------
-  function chip(text, on){
-    const s=document.createElement("span"); s.className="chip"; s.textContent=text;
-    if (on) s.classList.add("active"); return s;
-  }
-  function renderSectors(){
-    sectorsRoot.innerHTML="";
-    sectorCount.textContent = `${state.sectors.length} sector${state.sectors.length===1?"":"s"}`;
-    for (const sec of state.sectors){
-      const acc=document.createElement("div"); acc.className="accordion"; if (!sec.collapsed) acc.classList.add("open");
-
-      // Header
-      const hd=document.createElement("div"); hd.className="acc-hd"; hd.tabIndex=0; hd.role="button";
-      const h4=document.createElement("h4"); h4.textContent = `${capitalize(sec.name)} — hot-priority metrics`;
-      const right=document.createElement("div"); right.className="right";
-      const muteBtn=document.createElement("button"); muteBtn.className="btn smol mute"; muteBtn.textContent = sec.active? "Mute sector" : "Unmute sector";
-      muteBtn.addEventListener("click",(e)=>{ e.stopPropagation(); sec.active=!sec.active; muteBtn.textContent= sec.active?"Mute sector":"Unmute sector"; body.querySelectorAll("input, .chip").forEach(el=> el.disabled=!sec.active); });
-      const aiSwitch=document.createElement("label"); aiSwitch.className="switch";
-      const aiBox=document.createElement("input"); aiBox.type="checkbox"; aiBox.checked = !!sec.ai;
-      aiBox.addEventListener("change",()=>{ sec.ai = aiBox.checked; body.querySelectorAll("input[type=range]").forEach(r=>{ r.disabled = sec.ai || !sec.active; }); });
-      aiSwitch.append(aiBox, document.createTextNode("Let AI decide"));
-      right.append(muteBtn, aiSwitch);
-      hd.append(h4,right);
-      hd.addEventListener("click",()=>{ acc.classList.toggle("open"); sec.collapsed = !acc.classList.contains("open"); });
-
-      // Body
-      const body=document.createElement("div"); body.className="acc-bd";
-
-      // Metrics
-      for (const m of sec.metrics){
-        const row=document.createElement("div"); row.className="slider-row";
-        const lab=document.createElement("div"); lab.textContent=m.label;
-        const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=m.value;
-        input.disabled = sec.ai || !sec.active;
-        input.addEventListener("input",()=> m.value=Number(input.value));
-        const tip=document.createElement("div"); tip.className="row-sub hint"; tip.textContent = "0=" + (m.tip.split("·")[0].replace(/^.*0=/,"0=").trim()) + " · 10=" + (m.tip.split("·").slice(-1)[0].replace(/^.*10=/,"10=").trim());
-        row.appendChild(lab); row.appendChild(input); body.appendChild(row); body.appendChild(tip);
-      }
-
-      // Ops
-      const opsWrap=document.createElement("div"); opsWrap.style.marginTop="10px";
-      const opsTitle=document.createElement("div"); opsTitle.innerHTML=`<span class="hint">Buyer operations (click to add importance 0–10)</span>`;
-      const opsChips=document.createElement("div"); opsChips.className="chips";
-      const opsSliders=document.createElement("div");
-      const ensure=(label)=>{
-        let entry=sec.ops.find(o=>o.label===label);
-        if (!entry){ entry={label,value:7,selected:true}; sec.ops.push(entry); }
-        // slider
-        const wrap=document.createElement("div"); wrap.className="slider-row"; wrap.dataset.label=label;
-        const lab=document.createElement("div"); lab.textContent=label;
-        const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=entry.value;
-        input.disabled = !sec.active;
-        input.addEventListener("input",()=> entry.value=Number(input.value));
-        wrap.append(lab,input); opsSliders.appendChild(wrap);
-      };
-      const remove=(label)=>{
-        const i=sec.ops.findIndex(o=>o.label===label);
-        if (i>=0) sec.ops.splice(i,1);
-        const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]'); if (el) el.remove();
-      };
-      (sec.opsPool||[]).forEach(l=>{
-        const c=chip(l, !!sec.ops.find(o=>o.label===l));
-        c.addEventListener("click",()=>{
-          const on = !c.classList.contains("active");
-          c.classList.toggle("active", on);
-          on? ensure(l) : remove(l);
-        });
-        c.disabled = !sec.active; opsChips.appendChild(c);
-      });
-      opsWrap.append(opsTitle, opsChips, opsSliders);
-      body.appendChild(opsWrap);
-
-      // Targeting
-      const tgt=document.createElement("div"); tgt.style.marginTop="10px";
-      tgt.innerHTML = `
-        <div class="field">
-          <label>Boost leads near… <span class="hint">(city)</span></label>
-          <input type="text" placeholder="e.g., ${state.hq||"HQ city"}" value="${sec.targeting.city||state.hq||""}">
-          <div class="chips" style="margin-top:6px"></div>
-          <div class="hint">Select cities for this sector; we’ll expand intelligently.</div>
-        </div>`;
-      const cityInput=tgt.querySelector("input");
-      const chipBox=tgt.querySelector(".chips");
-      const citySeeds = Array.from(new Set([sec.targeting.city||state.hq||"", ...(sec.targeting.seeds||[]), state.hq, "Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"].filter(Boolean))));
-      citySeeds.forEach(c=>{
-        const cEl=chip(c, (sec.targeting.citiesPicked||[]).includes(c));
-        cEl.addEventListener("click",()=>{
-          cEl.classList.toggle("active");
-          const arr = new Set(sec.targeting.citiesPicked||[]);
-          if (cEl.classList.contains("active")) arr.add(c); else arr.delete(c);
-          sec.targeting.citiesPicked = Array.from(arr);
-          cityInput.value = sec.targeting.citiesPicked[0]||"";
-        });
-        chipBox.appendChild(cEl);
-      });
-      cityInput.addEventListener("input",()=>{ sec.targeting.city = cityInput.value.trim(); });
-      body.appendChild(tgt);
-
-      acc.append(hd,body);
-      sectorsRoot.appendChild(acc);
-    }
-  }
-
-  function capitalize(s){ return (s||"").charAt(0).toUpperCase()+String(s||"").slice(1); }
-
-  // ---------- sector seeding from classify ----------
-  function guessHQFromHost(host){
-    const h=(host||"").toLowerCase();
-    if (/nj|newjersey/.test(h)) return "New Jersey";
-    if (/nyc|newyork|(^|[\.-])ny([\.-]|$)/.test(h)) return "New York";
-    if (/losangeles|(^|[\.-])la([\.-]|$)|(^|[\.-])ca([\.-]|$)/.test(h)) return "Los Angeles";
-    if (/chicago|(^|[\.-])il([\.-]|$)/.test(h)) return "Chicago";
-    if (/dallas|(^|[\.-])tx([\.-]|$)/.test(h)) return "Dallas";
-    if (/atlanta|(^|[\.-])ga([\.-]|$)/.test(h)) return "Atlanta";
-    if (/miami|(^|[\.-])fl([\.-]|$)/.test(h)) return "Miami";
-    return "";
-  }
-
-  function sectorsFromHints(hints=[], tags=[]){
-    const known=Object.keys(CATALOG);
-    const text=(hints.join(" ")+" "+tags.join(" ")).toLowerCase();
-    const pick=new Set();
-    known.forEach(k=>{
-      const seeds=(CATALOG[k].seedSectors||[k]).map(s=>s.toLowerCase());
-      if (seeds.some(s=>text.includes(s))) pick.add(k);
-    });
-    // heuristics for stretch/shrink → add logistics/industrial/beverage
-    if (/stretch|shrink|pallet|film|wrap/.test(text)){ pick.add("logistics"); pick.add("industrial"); pick.add("beverage"); }
-    // fallback
-    if (!pick.size){ ["food","beverage","cosmetics","electronics","logistics"].forEach(k=>pick.add(k)); }
-    return Array.from(pick);
-  }
-
-  function buildSector(name){
-    const cat=CATALOG[name]||{metrics:[],ops:[],seedSectors:[name]};
-    const sec={
-      name, active:true, ai:false, collapsed:false,
-      metrics:cat.metrics.map(m=>({label:m.label, tip:m.tip, value:7})),
-      opsPool:cat.ops.slice(),
-      ops:[],
-      targeting:{city:state.hq||"", seeds:[...(cat.seedSectors||[])], citiesPicked:state.hq?[state.hq]:[]}
-    };
-    return sec;
-  }
-
-  // ---------- classify + apply ----------
-  async function classify(host, email){
-    const api=await apiDetect();
-    const url = classifyURL(api.base) + "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
-    try{
-      const r=await fetch(url,{credentials:"omit"}); if (!r.ok) throw new Error(String(r.status));
-      return await r.json();
-    }catch(e){
-      const alt = /\/api\/classify$/.test(url) ? url.replace(/\/api\/classify$/,"/classify") : url.replace(/\/classify$/,"/api/classify");
-      const r2=await fetch(alt,{credentials:"omit"}); if (!r2.ok) throw new Error(String(r2.status));
-      return await r2.json();
-    }
-  }
-
-  function applyPersonaFromServer(data, host){
-    // one-liner
-    const prods=(data.productTags||[]).slice(0,5).join(", ")||"packaging";
-    const segs=(data.sectorHints||[]).slice(0,3).join(", ")||"brands";
-    const contacts=/ops|operation|procure|plant|warehouse|supply|logistics/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")).toLowerCase())
-      ?"Operations, Procurement":"Procurement, Marketing";
-    state.line={host,verb:"supplies",products:prods,audience:segs,region:"the U.S.",contacts};
-    renderSentence(false);
-
-    state.productTags=data.productTags||[];
-    state.sectorHints=data.sectorHints||[];
-    state.hq = state.hq || guessHQFromHost(host);
-
-    const names = sectorsFromHints(state.sectorHints, state.productTags);
-    state.sectors = names.map(buildSector);
-
-    // pre-open first 2 for compactness
-    state.sectors.forEach((s,i)=>{ s.collapsed = i>1; });
-    renderSectors();
-  }
-
-  async function refreshFromWebsite(){
-    const host=normHost(hostEl.value || domainFromEmail(emailEl.value)); if (!host) return;
-    setFavicon(host); $("#status").textContent="";
-    try{
-      const data = await classify(host, emailEl.value||"");
-      applyPersonaFromServer(data, host);
-      $("#status").textContent = data.cached ? "(cached)" : "";
-    }catch(err){
-      console.warn("classify failed",err);
-      // conservative offline fallback
-      state.hq = state.hq || guessHQFromHost(host);
-      state.sectors = ["logistics","industrial","beverage"].map(buildSector);
-      renderSectors();
-      $("#status").textContent="(offline)";
-    }
-  }
-  window.__refreshFromWebsite = refreshFromWebsite;
-
-  // ---------- boot ----------
-  (async function boot(){
-    renderSentence(false);
-    const res=await apiDetect(); setS("apiBase",(res.base||""));
-    const d=domainFromEmail(emailEl.value); if (d){ hostEl.value=d; setFavicon(d); }
-  })();
-
+  // boot
+  show(0);
 })();
 </script>
 </body>
