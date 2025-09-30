@@ -11,16 +11,17 @@
 //     productTags: string[],
 //     sectorHints: string[],
 //     evidence: string[],
+//     hotMetrics?: string[],  // NEW: per-site, product/sector-aware hot-lead metrics
+//     opsPool?: string[],     // NEW: buyer operations suitable for this supplier
 //     bytes, fetchedAt, cached
 //   }
-//
-// No DOM typings required; we define a minimal fetch Response interface.
 
 import { Router, Request, Response as ExResponse } from "express";
 import { withCache, daily } from "../shared/guards";
 import { CFG } from "../shared/env";
 
-// ---- minimal fetch typing (Node 20) -----------------------------------------
+/* --------------------------------- fetch ---------------------------------- */
+
 type FetchResponse = {
   ok: boolean;
   status: number;
@@ -34,17 +35,14 @@ const F: (input: string, init?: any) => Promise<FetchResponse> = (globalThis as 
 
 const r = Router();
 
-// ---- helpers ----------------------------------------------------------------
+/* -------------------------------- helpers --------------------------------- */
+
 function normalizeHost(raw?: string): string | undefined {
   if (!raw) return undefined;
-  try {
-    const h = String(raw).trim().toLowerCase();
-    const clean = h.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-    if (!clean || !/^[a-z0-9.-]+$/.test(clean)) return undefined;
-    return clean;
-  } catch {
-    return undefined;
-  }
+  const h = String(raw).trim().toLowerCase();
+  const clean = h.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  if (!clean || !/^[a-z0-9.-]+$/.test(clean)) return undefined;
+  return clean;
 }
 
 function emailsDomain(email?: string): string | undefined {
@@ -75,18 +73,13 @@ async function fetchHomepage(host: string): Promise<{ body: string; bytes: numbe
   for (const u of urls) {
     try {
       const res = await timedFetch(u, CFG.fetchTimeoutMs);
-      if (!res.ok) {
-        lastErr = new Error(`status ${res.status}`);
-        continue;
-      }
+      if (!res.ok) { lastErr = new Error(`status ${res.status}`); continue; }
       const buf = await res.arrayBuffer();
       const bytes = buf.byteLength;
       if (bytes > CFG.maxFetchBytes) throw new Error(`too-large:${bytes}`);
       const body = new TextDecoder("utf-8").decode(buf);
       return { body, bytes, finalUrl: res.url || u };
-    } catch (e) {
-      lastErr = e;
-    }
+    } catch (e) { lastErr = e; }
   }
   throw lastErr || new Error("fetch-failed");
 }
@@ -100,23 +93,20 @@ function extractTextMeta(html: string): {
   keywords?: string[];
 } {
   const meta: Record<string, string> = {};
-  // <meta name="..." content="..."> and property="og:..."
   const reMeta = /<meta\s+[^>]*?(?:name|property)\s*=\s*["']([^"']+)["'][^>]*?content\s*=\s*["']([^"']*)["'][^>]*>/gi;
   let m: RegExpExecArray | null;
   while ((m = reMeta.exec(html))) {
     const k = m[1].toLowerCase();
     const v = m[2].trim();
-    meta[k] = meta[k] || v;
+    if (!meta[k]) meta[k] = v;
   }
 
-  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  const title = titleMatch?.[1]?.trim();
-
+  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim();
   const description = meta["description"] || meta["og:description"] || undefined;
 
   const keywordsRaw = meta["keywords"];
   const keywords =
-    keywordsRaw?.split(/[,;]/).map((s) => s.trim().toLowerCase()).filter(Boolean) || undefined;
+    keywordsRaw?.split(/[,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean) || undefined;
 
   const text = String(html)
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -137,7 +127,8 @@ function extractTextMeta(html: string): {
   return { text, jsonld, title, description, keywords };
 }
 
-// ---- rule classification (kept simple + deterministic) ----------------------
+/* --------------------------- classification rules -------------------------- */
+
 type Role = "packaging_supplier" | "packaging_buyer" | "neither";
 
 function ruleClassify(text: string, jsonld: string[]): {
@@ -147,60 +138,45 @@ function ruleClassify(text: string, jsonld: string[]): {
 } {
   const t = text.toLowerCase();
 
-  const productSignals = ["product", "catalog", "shop", "store", "price", "cart", "sku"];
+  const productSignals = ["product", "catalog", "shop", "store", "price", "sku"];
   const packagingTokens = [
-    "packaging",
-    "box",
-    "boxes",
-    "carton",
-    "corrugate",
-    "label",
-    "labels",
-    "tape",
-    "pouch",
-    "pouches",
-    "bottle",
-    "bottles",
-    "jar",
-    "jars",
-    "mailers",
-    "cartons"
+    "packaging","box","boxes","carton","cartons","corrugate","corrugated","label","labels",
+    "tape","pouch","pouches","bottle","bottles","jar","jars","mailers","carton","film","shrink",
+    "pallet","pallets","mailer"
   ];
   const buyerHints = ["brand", "retail", "ecommerce", "our stores", "locations", "menu"];
-  const supplierVerbs = ["manufacture", "supply", "wholesale", "distributor", "converter", "co-pack", "contract pack", "private label"];
+  const supplierVerbs = [
+    "manufacture","manufacturer","supply","supplies","wholesale","distributor","converter",
+    "co-pack","contract pack","private label","fabricate","produce"
+  ];
 
   const contains = (arr: string[]) => arr.reduce((n, w) => (t.includes(w) ? n + 1 : n), 0);
 
   const prod = contains(productSignals);
   const pack = contains(packagingTokens);
-  const buy = contains(buyerHints);
-  const sup = contains(supplierVerbs);
+  const buy  = contains(buyerHints);
+  const sup  = contains(supplierVerbs);
 
-  // Simple scoring
   let scoreSupplier = sup + pack + (prod > 0 ? 1 : 0);
-  let scoreBuyer = buy + (prod > 0 ? 1 : 0);
+  let scoreBuyer    = buy + (prod > 0 ? 1 : 0);
 
-  // JSON-LD nudges
   for (const raw of jsonld) {
     try {
       const obj = JSON.parse(raw);
       const arr = Array.isArray(obj) ? obj : [obj];
       for (const o of arr) {
-        const ttype = (o && (o["@type"] || o.type)) || "";
-        const s = typeof ttype === "string" ? ttype.toLowerCase() : "";
+        const s = String((o && (o["@type"] || o.type)) || "").toLowerCase();
         if (s.includes("wholesalestore") || s.includes("manufacturer") || s.includes("organization")) scoreSupplier += 1;
         if (s.includes("store") || s.includes("localbusiness") || s.includes("brand")) scoreBuyer += 1;
       }
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore bad LD */ }
   }
 
   const evidence: string[] = [];
   if (prod) evidence.push(`product_signals:${prod}`);
   if (pack) evidence.push(`packaging_terms:${pack}`);
-  if (sup) evidence.push(`supplier_verbs:${sup}`);
-  if (buy) evidence.push(`buyer_hints:${buy}`);
+  if (sup)  evidence.push(`supplier_verbs:${sup}`);
+  if (buy)  evidence.push(`buyer_hints:${buy}`);
 
   if (scoreSupplier >= scoreBuyer && scoreSupplier >= 2)
     return { role: "packaging_supplier", confidence: Math.min(1, 0.55 + 0.1 * scoreSupplier), evidence };
@@ -209,45 +185,45 @@ function ruleClassify(text: string, jsonld: string[]): {
   return { role: "neither", confidence: 0.35, evidence };
 }
 
-// ---- enrichment lexicons ----------------------------------------------------
+/* ------------------------------- lexicons ---------------------------------- */
+
 const PRODUCT_LEX: Record<string, string[]> = {
-  boxes: ["box", "boxes", "carton", "cartons", "rigid box", "corrugated", "mailer box"],
-  labels: ["label", "labels", "sticker", "stickers"],
-  cartons: ["carton", "cartons", "folding carton"],
-  pouches: ["pouch", "pouches", "stand up pouch", "stand-up pouch", "mylar"],
-  bottles: ["bottle", "bottles", "vial", "vials"],
-  jars: ["jar", "jars", "tin", "tins"],
-  tape: ["tape", "packaging tape"],
-  corrugate: ["corrugate", "corrugated"],
-  mailers: ["mailer", "mailers", "poly mailer"],
-  clamshells: ["clamshell", "clamshells", "blister"],
-  foam: ["foam insert", "foam", "eva foam"],
-  pallets: ["pallet", "pallets", "palletizing"],
-  mailer_bags: ["bag", "bags", "polybag", "poly bag"],
-  shrink: ["shrink", "shrink wrap", "shrink film"],
-  film: ["film", "flexible film", "laminate", "laminated film"],
+  boxes: ["box","boxes","carton","cartons","rigid box","corrugated","mailer box","folding carton"],
+  labels: ["label","labels","sticker","stickers"],
+  cartons: ["carton","cartons"],
+  pouches: ["pouch","pouches","stand up pouch","stand-up pouch","mylar","sachet"],
+  bottles: ["bottle","bottles","vial","vials","jar","jars","closure","cap"],
+  tape: ["tape","packaging tape"],
+  corrugate: ["corrugate","corrugated","ect","mullen"],
+  mailers: ["mailer","mailers","poly mailer","polybag","poly bag","mailer bag","mailer_bag"],
+  pallets: ["pallet","pallets","palletize","palletising","palletizing"],
+  shrink: ["shrink","shrink wrap","shrink film"],
+  film: ["film","laminate","laminated film","stretch film","stretch wrap","ldpe","lldpe","coex"]
 };
 
 const SECTOR_LEX: Record<string, string[]> = {
-  food: ["food", "grocery", "snack", "sauce", "salsa", "candy", "baked"],
-  beverage: ["beverage", "drink", "juice", "soda", "coffee", "tea", "brewery", "beer", "wine"],
-  cosmetics: ["cosmetic", "cosmetics", "beauty", "skincare", "skin care", "haircare", "makeup"],
-  supplements: ["supplement", "nutraceutical", "vitamin", "sports nutrition"],
-  electronics: ["electronics", "devices", "gadgets"],
-  apparel: ["apparel", "fashion", "clothing", "garment"],
-  pharma: ["pharma", "pharmaceutical", "medical", "medication", "rx"],
-  pet: ["pet", "pets", "petcare", "pet care"],
-  automotive: ["automotive", "auto", "aftermarket"],
-  home: ["home goods", "home & garden", "furniture", "decor"],
-  industrial: ["industrial", "b2b", "manufacturing", "factory"],
-  cannabis: ["cannabis", "cbd", "hemp"],
+  food: ["food","snack","sauce","salsa","candy","baked","meat","seafood","produce"],
+  beverage: ["beverage","drink","juice","soda","coffee","tea","brewery","beer","wine"],
+  cosmetics: ["cosmetic","cosmetics","beauty","skincare","skin care","haircare","makeup"],
+  supplements: ["supplement","nutraceutical","vitamin","sports nutrition"],
+  electronics: ["electronics","devices","gadgets","component","esd"],
+  apparel: ["apparel","fashion","clothing","garment"],
+  pharma: ["pharma","pharmaceutical","medical","medication","rx","gmp","lot traceability","coa"],
+  pet: ["pet","pets","petcare","pet care"],
+  automotive: ["automotive","auto","aftermarket"],
+  home: ["home goods","home & garden","furniture","decor"],
+  industrial: ["industrial","b2b","manufacturing","factory"],
+  cannabis: ["cannabis","cbd","hemp"]
 };
 
-// count matches for a lexicon across plain text + meta keywords
-function scoreLexicon(text: string, keywords?: string[]): (lex: Record<string, string[]>) => Record<string, number> {
+/* ---------------------------- scoring utilities ---------------------------- */
+
+function escapeRegExp(s: string): string { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+function scoreLexicon(text: string, keywords?: string[]) {
   const t = text.toLowerCase();
   const kw = (keywords || []).join(" ").toLowerCase();
-  return (lex) => {
+  return (lex: Record<string, string[]>) => {
     const scores: Record<string, number> = {};
     for (const [key, synonyms] of Object.entries(lex)) {
       let n = 0;
@@ -261,82 +237,186 @@ function scoreLexicon(text: string, keywords?: string[]): (lex: Record<string, s
   };
 }
 
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 function topKeys(scores: Record<string, number>, max = 8): string[] {
-  return Object.entries(scores)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, max)
-    .map(([k]) => k);
+  return Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0, max).map(([k])=>k);
 }
 
-// build a concise one-liner from pieces
-function composeOneLiner(host: string, role: Role, products: string[], sectors: string[], meta?: { title?: string; description?: string; }) {
+/* ----------------------- hot metrics & ops derivation ---------------------- */
+
+function buildHotMetrics(products: string[], sectors: string[], text: string): string[] {
+  const t = text.toLowerCase();
+  const set = new Set<string>();
+
+  const has = (word: RegExp | string) =>
+    (typeof word === "string" ? t.includes(word.toLowerCase()) : word.test(t));
+
+  const prod = (kw: string) => products.some(p => p.includes(kw));
+  const sect = (kw: string) => sectors.some(s => s.includes(kw));
+
+  // Stretch/shrink/pallet film
+  if (prod("shrink") || prod("film") || prod("pallet") || has(/stretch|pallet|shrink/)) {
+    set.add("Hand pallet wrapping");
+    set.add("Automated pallet wrapper readiness");
+    set.add("Load stability / puncture resistance");
+    set.add("Gauge optimization vs break risk");
+    set.add("Weekly pallet throughput");
+    set.add("COF / cling requirements");
+  }
+
+  // Corrugated / boxes / cartons
+  if (prod("boxes") || prod("carton") || prod("corrugate")) {
+    set.add("ECT / stack strength at target weight");
+    set.add("Board grade & burst/Mullen targets");
+    set.add("Die-line, folding & glue integrity");
+    set.add("Print registration & brand color accuracy");
+    set.add("Damage reduction targets in transit");
+  }
+
+  // Labels
+  if (prod("labels")) {
+    set.add("Adhesive performance vs substrate & temperature");
+    set.add("Print finish & brand color match");
+    set.add("Regulatory label compliance (e.g., GHS/FDA)");
+    set.add("Label application line readiness");
+  }
+
+  // Pouches / flexible film
+  if (prod("pouches") || (prod("film") && has(/mvtr|otr|barrier|foil|laminate|seal/i))) {
+    set.add("Barrier specs (OTR / MVTR)");
+    set.add("Seal strength & leak rate targets");
+    set.add("Shelf life & freshness targets");
+  }
+
+  // Bottles / jars
+  if (prod("bottles")) {
+    set.add("Breakage rate tolerance");
+    set.add("Closure compatibility & torque");
+    set.add("Label application alignment & adhesion");
+  }
+
+  // E-com / warehouse / 3PL
+  if (has(/e-?com|fulfill|3pl|pick.?pack|distribution|warehouse/i)) {
+    set.add("E-commerce fulfillment compatibility");
+    set.add("3PL / distribution integration");
+    set.add("Warehouse pick/pack flow");
+    set.add("Parcel test pass rate (ISTA 3A/6)");
+  }
+
+  // Food / beverage / barrier / FDA
+  if (sect("food") || sect("beverage") || has(/fda|usda|barrier|oxygen|moisture|foil|coa|lot/i)) {
+    set.add("Food-contact compliance (FDA/EC)");
+    set.add("Moisture / oxygen barrier needs");
+    set.add("Lot traceability & COA");
+  }
+
+  // Pharma / medical
+  if (sect("pharma") || has(/gmp|lot trace|serialization|medical|rx/i)) {
+    set.add("GMP/lot traceability & serialization support");
+    set.add("Tamper evidence / CR compliance");
+  }
+
+  // Cold chain
+  if (has(/cold[- ]?chain|thermal|insulated|refrigerated|temperature/i)) {
+    set.add("Thermal hold-time requirements");
+  }
+
+  // Sustainability (only if signals present)
+  if (has(/recycl|pcr|post[- ]consumer|compost|bio|sustain/i)) {
+    set.add("Sustainability targets (PCR %, recyclability)");
+  }
+
+  // Commercial
+  set.add("Unit cost at target MOQ");
+
+  return [...set];
+}
+
+function buildOpsPool(products: string[], sectors: string[], text: string): string[] {
+  const t = text.toLowerCase();
+  const set = new Set<string>();
+  const has = (re: RegExp) => re.test(t);
+  const prod = (kw: string) => products.some(p => p.includes(kw));
+  const sect = (kw: string) => sectors.some(s => s.includes(kw));
+
+  if (prod("shrink") || prod("film") || prod("pallet") || has(/stretch|pallet|shrink/)) {
+    set.add("Hand pallet wrapping");
+    set.add("Automated pallet wrapper");
+  }
+
+  if (has(/e-?com|fulfill|3pl|pick.?pack|warehouse|distribution/)) {
+    set.add("E-commerce fulfillment");
+    set.add("Warehouse pick/pack");
+    set.add("3PL / distribution");
+  }
+
+  if (sect("food") || sect("beverage")) {
+    // ops common to food/bev downstream
+    set.add("Co-packing");
+  }
+
+  if (has(/cold[- ]?chain|thermal|insulated|refrigerated|temperature/)) {
+    set.add("Cold-chain handling");
+  }
+
+  // Always allow co-packing if labels/boxes/pouches are strong
+  if (prod("labels") || prod("boxes") || prod("pouches")) set.add("Co-packing");
+
+  return [...set];
+}
+
+/* ------------------------------ composition -------------------------------- */
+
+function composeOneLiner(
+  host: string,
+  role: Role,
+  products: string[],
+  sectors: string[],
+  meta?: { title?: string; description?: string; }
+) {
   const shortHost = host.replace(/^www\./, "");
   const verb =
     role === "packaging_buyer" ? "buys packaging" :
     role === "packaging_supplier" ? "sells packaging" : "does business";
-  const prodBits = products.slice(0, 2).join(", ");
-  const secBits = sectors.slice(0, 2).join(" & ");
-  let line = `${shortHost} ${verb}`;
-  if (prodBits) line += ` — focus on ${prodBits}`;
-  if (secBits) line += ` for ${secBits} brands`;
-  line += ".";
 
-  // If we have a very clear meta description, prefer a cleaned version that mentions packaging
+  const prodBits = products.slice(0, 3).join(", ");
+  const secBits = sectors.slice(0, 3).join(", ");
+
   const desc = meta?.description || meta?.title;
   if (desc && desc.length >= 40 && /packag/i.test(desc)) {
-    // Clean extra whitespace/suffixes
     const clean = desc.replace(/\s+/g, " ").trim();
-    // Ensure it ends with a period
     return clean.endsWith(".") ? clean : `${clean}.`;
   }
 
+  let line = `${shortHost} ${verb}`;
+  if (prodBits) line += ` — focus on ${prodBits}`;
+  if (secBits) line += ` for ${secBits}`;
+  line += ".";
   return line;
 }
 
-// ---- core classify ----------------------------------------------------------
+/* ------------------------------- classify ---------------------------------- */
+
 async function classifyHostOnce(host: string) {
   const page = await fetchHomepage(host);
   const parsed = extractTextMeta(page.body);
   const first = ruleClassify(parsed.text, parsed.jsonld);
 
-  // Product + sector signals from lightweight lexicons
   const scorer = scoreLexicon(parsed.text, parsed.keywords);
   const productScores = scorer(PRODUCT_LEX);
-  const sectorScores = scorer(SECTOR_LEX);
+  const sectorScores  = scorer(SECTOR_LEX);
+
   const productTags = topKeys(productScores, 12);
   const sectorHints = topKeys(sectorScores, 8);
 
   const summary = composeOneLiner(
-    host,
-    first.role,
-    productTags,
-    sectorHints,
+    host, first.role, productTags, sectorHints,
     { title: parsed.title, description: parsed.description }
   );
 
-  // Optional LLM confirmation (schema-bound), only if we have a key and low-ish confidence.
-  // (Free plan: keep deterministic, no token spend)
-  if (!CFG.geminiApiKey || first.confidence >= 0.8) {
-    return {
-      ok: true,
-      host,
-      role: first.role,
-      confidence: first.confidence,
-      summary,
-      productTags,
-      sectorHints,
-      evidence: first.evidence,
-      bytes: page.bytes,
-      fetchedAt: new Date().toISOString(),
-      cached: false,
-    };
-  }
+  // Build server-side hot metrics + ops pool (preferred by UI if present)
+  const hotMetrics = buildHotMetrics(productTags, sectorHints, parsed.text);
+  const opsPool    = buildOpsPool(productTags, sectorHints, parsed.text);
 
-  // Placeholder if we later add LLM: keep deterministic
   return {
     ok: true,
     host,
@@ -345,14 +425,17 @@ async function classifyHostOnce(host: string) {
     summary,
     productTags,
     sectorHints,
-    evidence: [...first.evidence, "llm:skipped"],
+    evidence: first.evidence,
+    hotMetrics,
+    opsPool,
     bytes: page.bytes,
     fetchedAt: new Date().toISOString(),
-    cached: false,
+    cached: false
   };
 }
 
-// ---- routes -----------------------------------------------------------------
+/* ---------------------------------- routes --------------------------------- */
+
 r.get("/", async (req: Request, res: ExResponse) => {
   try {
     const rawHost = (req.query.host || "") as string;
@@ -367,10 +450,10 @@ r.get("/", async (req: Request, res: ExResponse) => {
     const count = Number(daily.get(key) ?? 0);
     if (count >= cap) return res.status(200).json({ ok: false, error: "quota", remaining: 0 });
 
-    // email ↔ domain soft check (no hard reject)
+    // soft email↔domain check (informational only)
     const ed = emailsDomain(email);
     if (ed && ed !== host && !ed.endsWith(`.${host}`)) {
-      // soft-allow with reduced trust (not used further here)
+      // could lower confidence later if we want
     }
 
     const result = await withCache(
@@ -383,7 +466,6 @@ r.get("/", async (req: Request, res: ExResponse) => {
     return res.json({ ...(result as object), cached: true });
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
-    // Normalize some network errors to a friendly string the UI shows
     const friendly =
       /too-large/.test(msg) ? "site too large" :
       /status\s+4\d\d/.test(msg) ? "blocked or not found" :
