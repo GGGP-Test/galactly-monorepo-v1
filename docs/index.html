@@ -51,7 +51,7 @@
   /* inputs */
   .field{margin:10px 0}
   label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
-  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:#var(--text);outline:none}
   input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
 
   /* summary (sentence) */
@@ -83,7 +83,7 @@
   .slider-row input[type=range]{width:100%}
 
   .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
-  .gear{display:none} /* no user API config in production */
+  .gear{display:none}
   @media (max-width:800px){.slider-row{grid-template-columns:1fr}}
 </style>
 </head>
@@ -189,7 +189,7 @@
             </button>
 
             <div id="advanced" hidden>
-              <!-- Buyer priorities (AI-suggested, hot lead) -->
+              <!-- Buyer priorities -->
               <div class="group" id="grp-priorities">
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <h4 style="margin:0">Buyer priorities — <span style="font-weight:600">for your top 10% buyers</span></h4>
@@ -237,7 +237,6 @@
 
 <script>
 (()=>{
-
   // ---------- safe storage ----------
   const getS = (k,d="")=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}};
   const setS = (k,v)=>{try{localStorage.setItem(k,v)}catch{}};
@@ -252,9 +251,7 @@
       if (saved) hints.push(saved);
       const rel = location.origin + "/api";
       hints.push(rel);
-      // allow bare root too (for some stacks)
       hints.push(location.origin);
-
       for (const h of hints){
         const b = (h||"").replace(/\/+$/,"");
         try{
@@ -267,7 +264,6 @@
     },
     classifyURL(){
       const b=this.base||"";
-      // If base already ends with /api, use /classify; otherwise use /api/classify
       return /\/api$/.test(b) ? (b+"/classify") : (b+"/api/classify");
     }
   };
@@ -412,7 +408,7 @@
 
   // operations pool → chips + slider on select
   function renderOpsPool(list){
-    opsChips.innerHTML=""; opsSliders.innerHTML="";
+    opsChips.innerHTML=""; opsSliders.innerHTML=""; state.opsSelected = new Map(); // clear selection to avoid leakage
     const ensureSlider = (label)=>{
       if (state.opsSelected.has(label)) return;
       const wrap=document.createElement("div"); wrap.className="slider-row"; wrap.dataset.label=label;
@@ -426,7 +422,7 @@
       const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]');
       if (el) el.remove(); state.opsSelected.delete(label);
     };
-    list.forEach(l=> addChip(l, opsChips, (on,text,el)=> on? ensureSlider(text):removeSlider(text)));
+    list.forEach(l=> addChip(l, opsChips, (on,text)=> on? ensureSlider(text):removeSlider(text)));
   }
 
   // heuristics → labels from server data
@@ -434,7 +430,6 @@
     const text = ((data.summary||"")+" "+(data.productTags||[]).join(" ")+" "+(data.evidence||[]).join(" ")).toLowerCase();
     const out=new Set();
 
-    // product-specific knobs first (AI-like heuristics)
     if (/stretch|shrink|pallet|film|wrap/.test(text)){
       out.add("Hand pallet wrapping");
       out.add("Automated pallet wrapper readiness");
@@ -457,14 +452,12 @@
       out.add("Lot traceability & COA");
     }
 
-    // generic—but meaningful—hot signals
     out.add("Automation line uptime impact");
     out.add("Damage reduction targets in transit");
     out.add("Vendor-managed inventory flexibility");
     out.add("Sustainability targets (PCR %, recyclability)");
     out.add("Unit cost at target MOQ");
 
-    // Convert to array
     return [...out];
   }
 
@@ -491,57 +484,64 @@
       if (!r.ok){ throw new Error(String(r.status)+" "+(await r.text().catch(()=>r.statusText))); }
       return await r.json();
     }catch(e){
-      // final fallback: try the opposite path once
       const b=api.base.replace(/\/+$/,"");
       const alt = /\/api$/.test(b) ? (b.replace(/\/api$/,"")+"/api/classify") : (b+"/classify");
-      try{
-        const r2= await fetch(alt+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||""), {credentials:"omit"});
-        if (!r2.ok) throw new Error(String(r2.status)+" "+(await r2.text().catch(()=>r2.statusText)));
-        return await r2.json();
-      }catch(e2){
-        throw e2;
-      }
+      const r2= await fetch(alt+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||""), {credentials:"omit"});
+      if (!r2.ok) throw new Error(String(r2.status)+" "+(await r2.text().catch(()=>r2.statusText)));
+      return await r2.json();
     }
   }
 
+  // reset UI/state when host changes to prevent leakage
+  let _lastHostKey = "";
+  function resetForHost(host){
+    const key = normHost(host);
+    if (key === _lastHostKey) return;
+    _lastHostKey = key;
+    metricsBox.innerHTML=""; state.metrics=[];
+    opsChips.innerHTML=""; opsSliders.innerHTML=""; state.opsSelected = new Map();
+    sectorChips.innerHTML=""; cityChips.innerHTML="";
+  }
+
   function applyServerPersona(data, host){
-    // warm line
     const prods = (data.productTags||[]).slice(0,5).join(", ") || "packaging";
     const segs  = (data.sectorHints||[]).slice(0,3).join(", ") || "brands";
     const contacts = /ops|operation|procure|plant|warehouse|supply|logistics/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")).toLowerCase())
       ? "Operations, Procurement" : "Procurement, Marketing";
     state.line = { host, verb:"supplies", products:prods, audience:segs, region:"the U.S.", contacts };
+    state.productTags = data.productTags||[];
+    state.sectorHints = data.sectorHints||[];
     renderSentence(false);
 
-    // hot metrics & ops
     const labels = deriveHotMetrics(data);
     renderMetrics(labels);
 
     const opsList = deriveOperations(data);
     renderOpsPool(opsList);
 
-    // sectors chips (suggestions)
     sectorChips.innerHTML="";
     (data.sectorHints||["food","beverage","logistics"]).slice(0,8).forEach(s=>addChip(s, sectorChips));
   }
-
-  async function refreshFromWebsite(){
-    const host = normHost(hostEl.value);
+    async function refreshFromWebsite(){
+    const host = normHost(hostEl.value || domainFromEmail(emailEl.value));
     if (!host) return;
+
+    resetForHost(host);
     setFavicon(host);
-    statusEl.textContent="";
+    statusEl.textContent = "";
 
     try{
-      // preset host into sentence
-      state.line.host = host; renderSentence(false);
+      // seed line with host so the one-liner never looks empty
+      state.line.host = host;
+      renderSentence(false);
 
       const data = await classify(host, emailEl.value||"");
       applyServerPersona(data, host);
       statusEl.textContent = data.cached ? "(cached)" : "";
     }catch(err){
-      console.warn("classify failed", err);
-      statusEl.textContent = " (network error)";
-      // still render smart defaults
+      console.warn("classify failed:", err);
+      statusEl.textContent = " (offline)";
+      // conservative defaults so UI is still usable
       renderMetrics([
         "Automation line uptime impact",
         "Damage reduction targets in transit",
@@ -549,37 +549,50 @@
         "Unit cost at target MOQ"
       ]);
       renderOpsPool([
-        "Hand pallet wrapping","Automated pallet wrapper","E-commerce fulfillment",
-        "Warehouse pick/pack","3PL / distribution","Co-packing"
+        "E-commerce fulfillment",
+        "Warehouse pick/pack",
+        "3PL / distribution",
+        "Co-packing"
       ]);
     }
   }
 
-  refreshA.addEventListener("click",(e)=>{e.preventDefault();refreshFromWebsite();});
+  refreshA.addEventListener("click",(e)=>{ e.preventDefault(); refreshFromWebsite(); });
 
   // ---------- nav ----------
-  openBtn.addEventListener("click",open);
-  closeBtn.addEventListener("click",close);
-  backBtn.addEventListener("click",()=> show(Math.max(0, state.step-1)));
-  nextBtn.addEventListener("click",async ()=>{
-    if (state.step===0){ show(1); return; }
+  openBtn.addEventListener("click", open);
+  closeBtn.addEventListener("click", close);
+
+  backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+
+  nextBtn.addEventListener("click", async ()=>{
+    if (state.step===0){
+      show(1);
+      return;
+    }
+
     if (state.step===1){
-      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
+      if (!emailEl.value || !phoneEl.value){
+        alert("Business email and phone are required.");
+        return;
+      }
       const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
-      if (!hostCandidate){ alert("Please provide your website/domain."); return; }
+      if (!hostCandidate){
+        alert("Please provide your website/domain.");
+        return;
+      }
       hostEl.value = hostCandidate;
       await refreshFromWebsite();
       show(2);
       return;
     }
-        if (state.step===2){
-      // require at least one operation
+
+    if (state.step===2){
       if (state.opsSelected.size===0){
         alert("Pick at least one buyer operation (and set its importance).");
         return;
       }
 
-      // Build persona
       const host = normHost(state.line.host);
       const persona = {
         host,
@@ -597,82 +610,70 @@
         }
       };
 
-      // Persist for the free panel
+      // persist for the free panel
       setS("bf.persona", JSON.stringify(persona));
       setS("fp.persona", JSON.stringify(persona));
 
-      // legacy seeds the free panel already understands
+      // legacy seeds the panel already understands
       setS("fp.supplier.host", host);
       setS("fp.pref.city", persona.targeting.city);
       setS("fp.pref.tagPrefer", (persona.productTags||[]).join("\n"));
       setS("fp.pref.segPrefer", (persona.sectorHints||[]).join("\n"));
       setS("fp.autoImport","1");
 
-      // Go to the panel
+      // go
       location.href = "free-panel.html";
-      return;
     }
   });
 
   // Enter-to-advance / Escape-to-close
   modal.addEventListener("keydown",(e)=>{
-    if (e.key==="Escape"){ e.preventDefault(); close(); }
+    if (e.key==="Escape"){ e.preventDefault(); close(); return; }
     if (e.key==="Enter"){
-      // allow enter to advance unless we're editing the one-liner
-      const tag = (e.target && e.target.tagName)||"";
-      if (tag==="INPUT" || tag==="A" || tag==="BUTTON") return;
-      e.preventDefault();
-      nextBtn.click();
+      const tag=(e.target&&e.target.tagName)||"";
+      if (tag==="INPUT" || tag==="TEXTAREA" || tag==="A" || tag==="BUTTON") return;
+      e.preventDefault(); nextBtn.click();
     }
   });
 
-  // Seed chips (cities + sectors)
+  // ---------- targeting seeds ----------
   function seedTargeting(){
-    // Cities: bias to common hubs + NJ first (per your Stretch & Shrink context)
     const cityList=["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"];
     cityChips.innerHTML="";
     cityList.forEach(c=>addChip(c, cityChips));
 
-    // Sectors: broad coverage so nobody feels “missed”
     const sectorList=["food","beverage","logistics","electronics","automotive","industrial","apparel","pharma","cosmetics","household"];
     sectorChips.innerHTML="";
     sectorList.forEach(s=>addChip(s, sectorChips));
   }
 
-  // API bootstrap + UI init
+  // ---------- boot ----------
   async function boot(){
     // discover API
     const res = await api.detect();
     state.apiOnline = !!res.ok;
     setS("apiBase", api.base);
-    apiBadge.textContent = state.apiOnline ? "API: online" : "API: offline";
+    const badgeTxt = state.apiOnline ? "API: online" : "API: offline";
+    apiBadge.textContent = badgeTxt;
     apiBadge.classList.toggle("ok", state.apiOnline);
     apiBadge.classList.toggle("err", !state.apiOnline);
-    if (apiStatus){ apiStatus.textContent = apiBadge.textContent; }
+    if (apiStatus) apiStatus.textContent = badgeTxt;
 
-    // role + sentence
+    // base UI
     setRole("supplier");
     renderSentence(false);
-
-    // prefill default targeting chips
     seedTargeting();
 
-    // auto-fill host from email (if already typed by browser)
+    // if browser already filled email, backfill host
     const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d;
   }
 
-  // Kick off
+  // start
   boot();
 
-  // Expose manual refresh hook if needed
+  // expose manual hook for debugging
   window.__refreshFromWebsite = refreshFromWebsite;
 
 })();</script>
 </body>
 </html>
-    
-    
-    
-    
-    
-    
