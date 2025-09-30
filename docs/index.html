@@ -5,195 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Galactly — Find real packaging buyers</title>
 
-<!-- (optional) CI can inject an API base later; Part 1 does not use it -->
-<meta name="api-base" content="">
-
-<style>
-  :root{
-    --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c;
-    --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
-    --cta:#6de1ff; --ctaText:#082433; --chip:#1a2433;
-    --divider:#1b2531;
-  }
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
-
-  /* Hero */
-  .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;position:relative}
-  .hero:before{
-    content:"";position:absolute;inset:0;
-    background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%);
-    z-index:0; pointer-events:none;
-  }
-  .hero-inner{max-width:920px;text-align:center;position:relative;z-index:1;pointer-events:auto}
-  h1{font-size:clamp(32px,6vw,56px);margin:0 0 12px}
-  p.lead{color:var(--muted);margin:0 0 28px}
-  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
-  .btn.sec{background:#152333;color:#cfe0ee}
-  .btn:active{transform:translateY(1px)}
-
-  /* Modal */
-  .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:30}
-  .modal.show{display:flex}
-  .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
-  .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
-  .steps{display:flex;gap:8px;align-items:center}
-  .dot{width:8px;height:8px;border-radius:50%;background:#2a3444}
-  .dot.on{background:#5bd0ff}
-  .card-bd{padding:16px}
-  .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 16px;border-top:1px solid var(--divider)}
-  .scroll{max-height:70vh;overflow:auto;padding:6px}
-
-  /* Inputs */
-  .field{margin:10px 0}
-  label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
-  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
-  input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
-  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#1a2433;color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
-  .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
-</style>
-</head>
-<body>
-  <div class="hero">
-    <div class="hero-inner">
-      <h1>Find real packaging buyers.</h1>
-      <p class="lead">Laser-targeted leads, tuned to your strengths.</p>
-      <button id="cta" type="button" class="btn"><span>✨</span> Get qualified leads free</button>
-    </div>
-  </div>
-
-  <!-- Modal -->
-  <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="card" role="document">
-      <div class="card-hd">
-        <div class="steps" aria-label="Steps">
-          <span class="dot on" data-step-dot="0"></span>
-          <span class="dot" data-step-dot="1"></span>
-          <span class="dot" data-step-dot="2"></span>
-        </div>
-        <button id="closeModalBtn" class="x" aria-label="Close">✕</button>
-      </div>
-
-      <div class="card-bd">
-        <div class="scroll">
-          <!-- STEP 1 -->
-          <section class="step" id="step1">
-            <div class="pill">Get set up in 60 seconds</div>
-            <h2 style="margin:10px 0 14px;">Pick your side</h2>
-            <div>
-              <span id="opt-supplier" class="chip" aria-pressed="true">🙌 I sell packaging (Supplier)</span>
-              <span id="opt-buyer" class="chip" aria-pressed="false">🛒 I buy packaging (Buyer)</span>
-            </div>
-          </section>
-
-          <!-- STEP 2 -->
-          <section class="step" id="step2" hidden>
-            <div class="pill">Step 2 of 3</div>
-            <h2 style="margin:10px 0 14px;">Tell us who you are</h2>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-              <div>
-                <div class="field">
-                  <label>Your name</label>
-                  <input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter">
-                </div>
-                <div class="field">
-                  <label>Phone (required for alerts) *</label>
-                  <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567">
-                </div>
-              </div>
-              <div>
-                <div class="field">
-                  <label>Business email *</label>
-                  <input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required>
-                </div>
-                <div class="field">
-                  <label>Website / Domain (auto from email)</label>
-                  <input id="host" type="text" inputmode="url" placeholder="yourcompany.com">
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- STEP 3 (placeholder; filled in Part 2) -->
-          <section class="step" id="step3" hidden>
-            <div class="pill">Step 3 of 3</div>
-            <p style="color:#9bb6c9">This step will load your one-liner, hot-buyer priorities, and targeting (added in Part 2).</p>
-          </section>
-        </div>
-
-        <div class="card-ft">
-          <button id="back" class="btn sec" type="button">Back</button>
-          <button id="next" class="btn" type="button">Next</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-<script>
-/* Part 1: only UX wiring. No network calls — so nothing can crash before click binding. */
-(function(){
-  function $(id){ return document.getElementById(id); }
-  function show(step){
-    const steps=["step1","step2","step3"];
-    steps.forEach((sid,i)=>{
-      const el=$(sid); if(!el) return;
-      el.hidden = i!==step;
-      const dot=document.querySelector(`[data-step-dot="${i}"]`);
-      if(dot) dot.classList.toggle("on", i===step);
-    });
-    $("back").style.visibility = step===0? "hidden":"visible";
-    $("next").textContent = step===2? "Finish":"Next";
-    window.__step = step;
-  }
-
-  function openModal(){ const m=$("modal"); if(!m) return; m.classList.add("show"); m.setAttribute("aria-hidden","false"); show(0); }
-  function closeModal(){ const m=$("modal"); if(!m) return; m.classList.remove("show"); m.setAttribute("aria-hidden","true"); }
-
-  document.addEventListener("DOMContentLoaded", ()=>{
-    try{
-      // Safe bindings
-      $("cta")?.addEventListener("click", openModal);
-      $("closeModalBtn")?.addEventListener("click", closeModal);
-      $("back")?.addEventListener("click", ()=> show(Math.max(0,(window.__step||0)-1)));
-      $("next")?.addEventListener("click", ()=>{
-        const s = (window.__step||0);
-        if (s<2) show(s+1); else closeModal(); // Part 2 will persist + navigate
-      });
-
-      // Role chips (visual toggle only in Part 1)
-      const sup = $("opt-supplier"), buy=$("opt-buyer");
-      function toggle(r){
-        const isSup = r==="supplier";
-        sup?.setAttribute("aria-pressed", String(isSup));
-        buy?.setAttribute("aria-pressed", String(!isSup));
-        sup?.classList.toggle("active", isSup);
-        buy?.classList.toggle("active", !isSup);
-      }
-      sup?.addEventListener("click", ()=>toggle("supplier"));
-      buy?.addEventListener("click", ()=>toggle("buyer"));
-
-      show(0);
-    }catch(err){
-      console.error("Init error:", err);
-      // Last-ditch fallback so the CTA always works
-      const btn=document.getElementById("cta");
-      if(btn) btn.onclick = openModal;
-    }
-  });
-})();
-</script>
-</body>
-</html>
-
-
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Find real packaging buyers</title>
-
-<!-- (optional) CI can inject an API base at build time; users never see this -->
+<!-- Optional: you can inject this at deploy time; users never see it -->
 <meta name="api-base" content="">
 
 <style>
@@ -208,13 +20,12 @@
   /* Hero */
   .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;position:relative}
   .hero:before{content:"";position:absolute;inset:0;background:radial-gradient(1200px 600px at 50% -200px,#102132 0,transparent 70%);z-index:0;pointer-events:none}
-  .hero-inner{max-width:920px;text-align:center;position:relative;z-index:1;pointer-events:auto}
+  .hero-inner{max-width:920px;text-align:center;position:relative;z-index:1}
   h1{font-size:clamp(32px,6vw,56px);margin:0 0 12px}
   p.lead{color:var(--muted);margin:0 0 28px}
   .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
   .btn.sec{background:#152333;color:#cfe0ee}
   .btn:active{transform:translateY(1px)}
-  .kbd{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;background:#0e1b28;padding:2px 6px;border-radius:6px;color:#9fb8cc;border:1px solid #1c3247}
 
   /* Modal */
   .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:30}
@@ -240,7 +51,7 @@
 
   /* Summary editor */
   .summary{display:flex;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:12px 14px;border-radius:14px;margin:0 0 14px;align-items:flex-start}
-  .fav{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;background:#fff;border:1px solid #cfd8e3}
+  .fav{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;background:#fff;border:1px solid #cfd8e3} /* white so dark favicons stay visible */
   .fav img{width:24px;height:24px;filter:saturate(1.05) contrast(1.05)}
   .one{font-weight:700}
   .one-line{line-height:1.8}
@@ -400,7 +211,7 @@
   </div>
 
 <script>
-/* ========= Onboarding (full) ========= */
+/* ========= Onboarding (single-file) ========= */
 (function(){
   // ------- helpers -------
   const $ = (id)=>document.getElementById(id);
@@ -420,21 +231,20 @@
   }
   function openModal(){ const m=$("modal"); m.classList.add("show"); m.setAttribute("aria-hidden","false"); show(0); }
   function closeModal(){ const m=$("modal"); m.classList.remove("show"); m.setAttribute("aria-hidden","true"); }
+  document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeModal(); });
 
   // email → domain
   function domainFromEmail(e){ const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m? m[1]:""; }
   function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
   function setFavicon(host){ const h=normHost(host); $("fav").src = h? "https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico" : ""; }
 
-  // ------- API resolve & classify -------
+  // ------- API resolve & classify (no user input) -------
   function apiHints(){
     const meta = byQS('meta[name="api-base"]')?.content?.trim() || "";
     const injected = (window.API_BASE||"").trim();
     const saved = getLS("apiBase","");
-    const origin = location.origin.replace(/\/$/,"");
-    // User never types anything; we just try the lot
+    const origin = (location.origin && location.origin!=="null") ? location.origin.replace(/\/$/,"") : "";
     const bases = [injected, meta, saved, origin+"/api", origin].filter(Boolean);
-    // produce unique list
     return [...new Set(bases.map(b=>b.replace(/\/+$/,"")))];
   }
 
@@ -452,9 +262,14 @@
     const hostQ = "host="+encodeURIComponent(host||"") + (email? "&email="+encodeURIComponent(email):"");
     const bases = apiHints();
     const candidates = new Set();
-    // Relative first (best for same-origin deployments)
-    candidates.add(location.origin.replace(/\/$/,"")+"/api/classify?"+hostQ);
-    candidates.add(location.origin.replace(/\/$/,"")+"/classify?"+hostQ);
+
+    // Try same host first
+    const self = (location.origin && location.origin!=="null") ? location.origin.replace(/\/$/,"") : "";
+    if(self){
+      candidates.add(self + "/api/classify?"+hostQ);
+      candidates.add(self + "/classify?"+hostQ);
+    }
+    // Try hinted bases with and without /api
     for (const b of bases){
       const base = b.replace(/\/+$/,"");
       candidates.add(base + "/classify?"+hostQ);
@@ -463,7 +278,7 @@
       candidates.add(noApi + "/classify?"+hostQ);
       candidates.add(noApi + "/api/classify?"+hostQ);
     }
-    // try in series
+
     for (const url of candidates){
       const data = await tryJson(url);
       if (data && (data.ok || data.host || data.productTags || data.summary)) {
@@ -478,7 +293,7 @@
   // ------- sentence + metrics -------
   const state = {
     role:"supplier",
-    line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
+    line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"businesses",region:"the U.S.",contacts:"Operations, Procurement"},
     metrics:[], ops:new Map(), qual:new Set(), tags:[], sectors:[]
   };
 
@@ -547,7 +362,6 @@
   }
 
   function seedChips(){
-    // city + sectors defaults (safe guesses)
     const cityBox=$("cityChips"), secBox=$("sectorChips");
     cityBox.innerHTML=""; secBox.innerHTML="";
     ["Newark, NJ","New York","Philadelphia","Boston","Chicago","Dallas"].forEach(c=>addChip(c, cityBox, (on,t)=>{ if(on) $("city").value=t; }));
@@ -555,15 +369,15 @@
   }
 
   function deriveFromSite(data, host){
-    // one-liner
     const prods = (data?.productTags||[]).slice(0,5).join(", ") || "packaging";
-    const sectors = (data?.sectorHints||[]).slice(0,3).join(", ") || "businesses";
+    // Important: do not overfit to one testimonial; keep 'businesses' unless clearly specific
+    const sectors = (data?.sectorHints||[]).length ? (data.sectorHints.slice(0,3).join(", ")) : "businesses";
     const contacts = /pallet|film|shrink|warehouse|automation|industrial/i.test(((data?.summary||"")+" "+(data?.productTags||[]).join(",")).toLowerCase())
       ? "Operations, Procurement" : "Procurement, Marketing";
     state.line = {host,verb:"supplies",products:prods,audience:sectors,region:"the U.S.",contacts};
 
-    // priorities (hot 10%) — conservative defaults + detected hints
-    const text=((data?.summary||"")+" "+(data?.evidence||[]).join(" ")).toLowerCase();
+    // Priorities tuned to hot leads; always include speed + cost, then infer extras
+    const text=((data?.summary||"")+" "+(data?.evidence||[]).join(" ")+" "+(data?.productTags||[]).join(" ")).toLowerCase();
     const map = [
       [/rush|lead.?time|2 ?weeks|quick ship|same[- ]day|turnaround/i,"Fast turnaround (≤ 2 weeks)"],
       [/cost|price|budget|unit cost|lowest/i,"Lowest unit cost"],
@@ -571,53 +385,45 @@
       [/eco|recycl|sustain|bio|green/i,"Sustainability / recyclable"],
       [/puncture|tear|strength|gauge|film quality|pre[- ]?stretch/i,"Film strength / pre-stretch control"]
     ];
-    const pri = new Set(["Fast turnaround (≤ 2 weeks)","Lowest unit cost"]); // always include
+    const pri = new Set(["Fast turnaround (≤ 2 weeks)","Lowest unit cost"]);
     map.forEach(([re,l])=>{ if(re.test(text)) pri.add(l); });
     renderMetrics([...pri]);
 
-    // operations (only the ones that make sense for pallet film/shrink, plus general)
-    const ops = [
+    // Ops: let them choose + weight
+    renderOps([
       "Hand pallet wrapping","Automated pallet wrapper","E-commerce fulfillment",
       "Warehouse pick/pack","3PL / distribution","Cold-chain handling","Co-packing"
-    ];
-    renderOps(ops);
+    ]);
 
-    // quality/compliance hints
-    const qual = [
+    // Quality & compliance
+    renderQual([
       "Pre-stretch control","High puncture resistance","Clarity / barcode scan-through",
       "Food-contact (FDA/USDA)","Recyclable film"
-    ];
-    renderQual(qual);
+    ]);
 
-    // tags/sectors
     state.tags = (data?.productTags||[]).slice(0,12);
     state.sectors = (data?.sectorHints||[]).slice(0,8);
   }
 
   // ------- events & flow -------
   document.addEventListener("DOMContentLoaded", ()=>{
-    // Open/close
     $("cta")?.addEventListener("click", openModal);
     $("closeModalBtn")?.addEventListener("click", closeModal);
     $("back")?.addEventListener("click", ()=> show(Math.max(0,(window.__step||0)-1)));
 
-    // role chips
     const sup=$("opt-supplier"), buy=$("opt-buyer");
     function setRole(r){ state.role=r; const S=r==="supplier"; sup.classList.toggle("active",S); buy.classList.toggle("active",!S);
       sup.setAttribute("aria-pressed",String(S)); buy.setAttribute("aria-pressed",String(!S)); }
     sup?.addEventListener("click", ()=>setRole("supplier"));
     buy?.addEventListener("click", ()=>setRole("buyer"));
 
-    // sentence edit
     $("editLine").addEventListener("click", ()=>{ renderSentence(true); $("editLine").hidden=true; $("doneLine").hidden=false; });
     $("doneLine").addEventListener("click", ()=>{ renderSentence(false); $("editLine").hidden=false; $("doneLine").hidden=true; });
     $("refresh").addEventListener("click", (e)=>{ e.preventDefault(); refreshFromWebsite(); });
 
-    // email → host autofill
     function syncDomain(){ const d=domainFromEmail($("email").value); if(d) $("host").value=d; }
     $("email").addEventListener("input", syncDomain); $("email").addEventListener("change", syncDomain); setTimeout(syncDomain, 120);
 
-    // next
     $("next").addEventListener("click", async ()=>{
       const s=(window.__step||0);
       if(s===0){ show(1); return; }
@@ -626,17 +432,13 @@
         let host = $("host").value.trim() || domainFromEmail(email);
         if(!email || !phone || !host){ alert("Please enter business email, phone, and website/domain."); return; }
         host = normHost(host); $("host").value = host; setFavicon(host);
-
         $("apiStatus").textContent = "API: resolving…";
-        await refreshFromWebsite(); // populates step 3 (falls back safely offline)
+        await refreshFromWebsite();
         show(2); return;
       }
-      if(s===2){
-        persistAndGo();
-      }
+      if(s===2){ persistAndGo(); }
     });
 
-    // init
     setRole("supplier"); renderSentence(false); seedChips(); show(0);
   });
 
@@ -647,10 +449,7 @@
     try{
       const data = await classify(host, email);
       if(data){ deriveFromSite(data, host); $("status").textContent = data.cached? "(cached)":""; }
-      else { // offline/defaults
-        deriveFromSite(null, host);
-        $("status").textContent = "(offline)";
-      }
+      else { deriveFromSite(null, host); $("status").textContent = "(offline)"; }
       renderSentence(false);
     }catch(e){
       console.warn("classify error", e);
@@ -668,9 +467,8 @@
       line: state.line,
       productTags: state.tags,
       sectorHints: state.sectors,
-      priorities: state.metrics,            // [{label,value}]
-      operations: [...state.ops.entries()]  // [[name,value],...]
-        .map(([label,value])=>({label,value})),
+      priorities: state.metrics,
+      operations: [...state.ops.entries()].map(([label,value])=>({label,value})),
       quality: [...state.qual],
       targeting: {
         city: ($("city").value||"").trim(),
@@ -682,10 +480,9 @@
       }
     };
 
-    // save to both keys our panel knows about
+    // Save for free-panel
     setLS('bf.persona', JSON.stringify(persona));
     setLS('fp.persona', JSON.stringify(persona));
-    // helper keys used by free-panel
     setLS('fp.supplier.host', host);
     setLS('fp.pref.city', persona.targeting.city);
     setLS('fp.pref.segPrefer', persona.targeting.picks.sectors.join('\n'));
