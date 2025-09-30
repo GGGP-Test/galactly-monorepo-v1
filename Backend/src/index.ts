@@ -1,5 +1,7 @@
 // src/index.ts
-// Express bootstrap with strict CORS, tiny logger, and canonical /api/* mounts.
+// Express bootstrap with strict CORS, tiny logger, canonical /api/* mounts,
+// plus /ping endpoints and a root alias for /classify (to satisfy the modal’s
+// fallback). Metrics logic stays in routes/classify.ts.
 
 import express, { Request, Response, NextFunction } from "express";
 
@@ -13,15 +15,19 @@ import { CFG, isOriginAllowed } from "./shared/env";
 
 const app = express();
 
-// ---- basic hardening --------------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/* Basic hardening                                                            */
+/* -------------------------------------------------------------------------- */
 app.disable("x-powered-by");
+app.set("trust proxy", true); // keep client IPs correct when behind a proxy
 
-// ---- tiny logger ------------------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/* Tiny request logger                                                        */
+/* -------------------------------------------------------------------------- */
 app.use((req: Request, res: Response, next: NextFunction) => {
   const t0 = process.hrtime.bigint();
   res.on("finish", () => {
     const dtMs = Number((process.hrtime.bigint() - t0) / BigInt(1e6));
-    // keep logs compact; Northflank groups nicely
     console.log(
       `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} -> ${res.statusCode} ${dtMs}ms`
     );
@@ -29,7 +35,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// ---- strict CORS (no deps) --------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/* Strict CORS (no external deps beyond your env helper)                      */
+/* -------------------------------------------------------------------------- */
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin as string | undefined;
   res.setHeader("Vary", "Origin");
@@ -48,33 +56,56 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// ---- body parsing -----------------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/* Body parsing                                                               */
+/* -------------------------------------------------------------------------- */
 app.use(express.json({ limit: "512kb" }));
 
-// ---- health probes ----------------------------------------------------------
-app.get("/healthz", (_req, res) => res.type("text/plain").send("ok"));
-app.use("/api/health", HealthRouter);
+/* -------------------------------------------------------------------------- */
+/* Health & Ping (used by the modal’s API auto-detection)                     */
+/* -------------------------------------------------------------------------- */
+const okText = (_req: Request, res: Response) => res.type("text/plain").send("ok");
+app.get("/healthz", okText);
+app.get("/ping", okText);
+app.head("/ping", okText);
+app.get("/api/ping", okText);
+app.head("/api/ping", okText);
 
-// ---- API mounts (canonical only) -------------------------------------------
+/* -------------------------------------------------------------------------- */
+/* Canonical API mounts                                                       */
+/* -------------------------------------------------------------------------- */
+app.use("/api/health", HealthRouter);
 app.use("/api/prefs", PrefsRouter);
 app.use("/api/leads", LeadsRouter);
 app.use("/api/catalog", CatalogRouter);
 app.use("/api/places", PlacesRouter);
-app.use("/api/classify", ClassifyRouter); // fixes 404 seen from the modal
+app.use("/api/classify", ClassifyRouter); // canonical endpoint
 
-// ---- 404 for unknown /api/* -------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/* Root alias for /classify (frontend sometimes tries /classify)              */
+/* -------------------------------------------------------------------------- */
+app.use("/classify", ClassifyRouter);
+
+/* -------------------------------------------------------------------------- */
+/* 404 handlers                                                               */
+/* -------------------------------------------------------------------------- */
 app.use("/api", (_req, res) => res.status(404).json({ ok: false, error: "not_found" }));
+app.use((_req, res) => res.status(404).type("text/plain").send("Not Found"));
 
-// ---- generic error handler --------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/* Generic error handler                                                      */
+/* -------------------------------------------------------------------------- */
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   console.error("Unhandled error:", (err as any)?.message || err);
   res.status(500).json({ ok: false, error: "server_error" });
 });
 
-// ---- boot -------------------------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/* Boot                                                                       */
+/* -------------------------------------------------------------------------- */
 const port = Number(CFG.port || process.env.PORT || 8787);
 app.listen(port, () => {
-  console.log(`buyers-api listening on :${port} (env=${CFG.nodeEnv}) — /healthz, /api/*`);
+  console.log(`buyers-api listening on :${port} (env=${CFG.nodeEnv}) — /healthz, /ping, /api/*`);
 });
 
 export default app;
