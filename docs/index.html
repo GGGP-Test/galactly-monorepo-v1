@@ -513,10 +513,10 @@
     state.sectorHints = data.sectorHints||[];
     renderSentence(false);
 
-    const labels = deriveHotMetrics(data);
+    const labels = (data.hotMetrics && data.hotMetrics.length) ? data.hotMetrics : deriveHotMetrics(data);
     renderMetrics(labels);
-
-    const opsList = deriveOperations(data);
+    
+    const opsList = (data.opsPool && data.opsPool.length) ? data.opsPool : deriveOperations(data);
     renderOpsPool(opsList);
 
     sectorChips.innerHTML="";
