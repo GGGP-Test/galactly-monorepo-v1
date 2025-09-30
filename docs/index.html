@@ -6,12 +6,13 @@
 <title>Galactly — Find real packaging buyers</title>
 
 <!--
-  index.html (v2 hot-lead model)
+  index.html (v3 sector buckets)
   - Auto API detection (no user input)
   - /api/classify fallback logic
   - One-liner = warm lead
   - “Show advanced” = hot-lead controls (top 10% buyers)
-  - No demo sliders; dynamic metrics from classify()
+  - Sector-specific buckets (per sectorHints)
+  - Buyer targeting prefilled from classify.hq (if present)
   - Operations not optional
 -->
 
@@ -51,7 +52,7 @@
   /* inputs */
   .field{margin:10px 0}
   label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
-  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:#var(--text);outline:none}
+  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
   input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
 
   /* summary (sentence) */
@@ -189,13 +190,20 @@
             </button>
 
             <div id="advanced" hidden>
-              <!-- Buyer priorities -->
+              <!-- Buyer priorities (global) -->
               <div class="group" id="grp-priorities">
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <h4 style="margin:0">Buyer priorities — <span style="font-weight:600">for your top 10% buyers</span></h4>
                   <div class="muted-hint">We weight hot leads by these (0–10).</div>
                 </div>
                 <div id="metricsBox"></div>
+              </div>
+
+              <!-- Sector buckets -->
+              <div class="group" id="grp-sectors">
+                <h4 style="margin:0 0 8px">Sector-specific priorities</h4>
+                <div id="sectorBuckets"></div>
+                <div class="muted-hint">Each sector gets its own sliders so scores are laser-accurate.</div>
               </div>
 
               <!-- Operations (not optional) -->
@@ -212,7 +220,7 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
                   <div>
                     <label>Find buyers near…</label>
-                    <input id="city" type="text" placeholder="e.g., New Jersey">
+                    <input id="city" type="text" placeholder="e.g., HQ city">
                     <div id="cityChips" class="chips" style="margin-top:6px"></div>
                     <div style="color:#9ab0c0;font-size:12px">We’ll boost leads near this city.</div>
                   </div>
@@ -297,6 +305,7 @@
   const advLbl=document.getElementById("advLbl");
 
   const metricsBox=document.getElementById("metricsBox");
+  const sectorBuckets=document.getElementById("sectorBuckets");
   const opsChips=document.getElementById("opsChips");
   const opsSliders=document.getElementById("opsSliders");
   const cityEl=document.getElementById("city");
@@ -310,10 +319,12 @@
     apiOnline:false,
     line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
     metrics:[],              // [{label, value}]
+    sectorMetrics:new Map(), // sector => [{label,value}]
     opsPool:[],              // chip list
     opsSelected:new Map(),   // label => value
     sectorHints:[],
-    productTags:[]
+    productTags:[],
+    hq:null                  // {city, region} if present
   };
 
   // ---------- utils ----------
@@ -337,7 +348,7 @@
       {k:"host", txt:L.host, lock:true},
       {txt:"—", lock:true},
       {k:"verb", txt:L.verb},
-      {k:"products", txt:L.products},
+            {k:"products", txt:L.products},
       {txt:"for", lock:true},
       {k:"audience", txt:L.audience},
       {txt:"in", lock:true},
@@ -363,14 +374,15 @@
     }
   }
 
+  // edit inline one-liner
   editBtn.addEventListener("click",()=>{renderSentence(true);editBtn.hidden=true;doneBtn.hidden=false;});
   doneBtn.addEventListener("click",()=>{renderSentence(false);editBtn.hidden=false;doneBtn.hidden=true;});
 
   // adv toggle (start collapsed)
   advToggle.addEventListener("click",(e)=>{
     e.preventDefault();
-    const open = adv.hasAttribute("hidden");
-    if (open){ adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
+    const opened = adv.hasAttribute("hidden");
+    if (opened){ adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
     else { adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
   });
 
@@ -380,6 +392,7 @@
   optBuyer.addEventListener("click",()=>setRole("buyer"));
 
   // email → domain
+  function domainFromEmail(e){const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""}
   function syncDomain(){ const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d; }
   emailEl.addEventListener("input",syncDomain);
   emailEl.addEventListener("change",syncDomain);
@@ -390,25 +403,140 @@
     const s=document.createElement("span"); s.className="chip"; s.textContent=text;
     s.addEventListener("click",()=>{ s.classList.toggle("active"); onToggle && onToggle(s.classList.contains("active"), text, s); });
     box.appendChild(s);
+    return s;
   }
 
-  // metrics render (AI-suggested labels)
+  // ---------- global metrics ----------
   function renderMetrics(labels){
     metricsBox.innerHTML="";
     state.metrics = (labels||[]).slice(0,16).map(l=>({label:l, value:7}));
     for (const m of state.metrics){
       const row=document.createElement("div"); row.className="slider-row";
       const lab=document.createElement("div"); lab.textContent=m.label;
-      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=m.value;
+      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=String(m.value);
       input.addEventListener("input",()=>{ m.value=Number(input.value); });
       row.appendChild(lab); row.appendChild(input);
       metricsBox.appendChild(row);
     }
   }
 
-  // operations pool → chips + slider on select
+  // ---------- sector buckets ----------
+  const SECTOR_METRICS = {
+    beverage: [
+      "Closure compatibility & torque",
+      "Hot-fill / cold-fill tolerance",
+      "Carbonation pressure / burst risk",
+      "Label application alignment & adhesion",
+      "Case pack and pallet pattern efficiency",
+      "Retail / club-store compliance (e.g., Costco)",
+      "Leak-proof / tamper evidence"
+    ],
+    food: [
+      "Food-contact compliance (FDA/EC)",
+      "Oxygen / moisture barrier (shelf life)",
+      "Lot traceability & COA",
+      "Primary pack seal integrity",
+      "Case ECT at target weight",
+      "Temperature / humidity performance"
+    ],
+    cosmetics: [
+      "Print registration & brand color accuracy",
+      "Scratch/scuff resistance in transit",
+      "Closure fit / leak-prevention",
+      "Label material & finish (matte/gloss/soft-touch)",
+      "Retail labeling compliance (INCI, claims)"
+    ],
+    pharma: [
+      "cGMP-friendly supplier process",
+      "Serialization / lot & expiry traceability",
+      "Tamper-evident & child-resistant",
+      "Temperature excursion tolerance",
+      "Cleanliness / particulate control"
+    ],
+    electronics: [
+      "ESD-safe materials & liners",
+      "Impact/drop protection targets",
+      "Dim-weight optimization",
+      "Barcode/label compliance"
+    ],
+    logistics: [
+      "3PL / distribution integration",
+      "Warehouse pick/pack flow",
+      "Damage reduction targets in transit",
+      "Pallet stability & wrapper settings"
+    ],
+    apparel: [
+      "Brand color & print consistency",
+      "Eco claims (PCR %, recyclability)",
+      "E-com returns durability",
+      "Polybag/shipper right-sizing"
+    ],
+    industrial: [
+      "Unit-load stability at throughput",
+      "Automation line uptime impact",
+      "Gauge/board optimization vs break risk",
+      "Vendor-managed inventory flexibility"
+    ],
+    automotive: [
+      "Part protection & corrosion inhibitors",
+      "Kitting/pick sequence friendliness",
+      "Returnable packaging compatibility",
+      "Line-side handling ergonomics"
+    ],
+    cannabis: [
+      "Child-resistant / state-specific rules",
+      "Odor barrier & seal integrity",
+      "Labeling compliance (warnings, THC)",
+      "Shelf appeal (finish/print)"
+    ]
+  };
+
+  function metricsForSector(sector){
+    const key=(sector||"").toLowerCase();
+    return (SECTOR_METRICS[key]||[
+      "Damage reduction targets in transit",
+      "Automation line uptime impact",
+      "Sustainability targets (PCR %, recyclability)",
+      "Unit cost at target MOQ"
+    ]).slice(0,7);
+  }
+
+  function renderSectorBuckets(hints){
+    sectorBuckets.innerHTML="";
+    state.sectorMetrics = new Map();
+    const list=(hints||[]).slice(0,6); // keep UI tidy
+    list.forEach(sector=>{
+      const box=document.createElement("div");
+      box.className="group";
+      box.style.margin="10px 0";
+      const h=document.createElement("h4");
+      h.textContent = sector.charAt(0).toUpperCase()+sector.slice(1);
+      h.style.margin="0 0 8px";
+      box.appendChild(h);
+
+      const holder=document.createElement("div");
+      const rows=[];
+      const defs=metricsForSector(sector).map(l=>({label:l,value:7}));
+      state.sectorMetrics.set(sector, defs);
+
+      defs.forEach(m=>{
+        const row=document.createElement("div"); row.className="slider-row";
+        const lab=document.createElement("div"); lab.textContent=m.label;
+        const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=String(m.value);
+        input.addEventListener("input",()=>{ m.value=Number(input.value); });
+        row.appendChild(lab); row.appendChild(input);
+        holder.appendChild(row);
+        rows.push(row);
+      });
+
+      box.appendChild(holder);
+      sectorBuckets.appendChild(box);
+    });
+  }
+
+  // ---------- operations ----------
   function renderOpsPool(list){
-    opsChips.innerHTML=""; opsSliders.innerHTML=""; state.opsSelected = new Map(); // clear selection to avoid leakage
+    opsChips.innerHTML=""; opsSliders.innerHTML=""; state.opsSelected = new Map();
     const ensureSlider = (label)=>{
       if (state.opsSelected.has(label)) return;
       const wrap=document.createElement("div"); wrap.className="slider-row"; wrap.dataset.label=label;
@@ -422,14 +550,13 @@
       const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]');
       if (el) el.remove(); state.opsSelected.delete(label);
     };
-    list.forEach(l=> addChip(l, opsChips, (on,text)=> on? ensureSlider(text):removeSlider(text)));
+    (list||[]).forEach(l=> addChip(l, opsChips, (on,text)=> on? ensureSlider(text):removeSlider(text)));
   }
 
-  // heuristics → labels from server data
+  // ---------- heuristics from server data ----------
   function deriveHotMetrics(data){
     const text = ((data.summary||"")+" "+(data.productTags||[]).join(" ")+" "+(data.evidence||[]).join(" ")).toLowerCase();
     const out=new Set();
-
     if (/stretch|shrink|pallet|film|wrap/.test(text)){
       out.add("Hand pallet wrapping");
       out.add("Automated pallet wrapper readiness");
@@ -438,26 +565,22 @@
       out.add("Weekly pallet throughput");
       out.add("COF / cling requirements");
     }
-
     if (/e-?com|fulfill|3pl|distribution|warehouse/i.test(text)){
       out.add("E-commerce fulfillment compatibility");
       out.add("3PL / distribution integration");
       out.add("Warehouse pick/pack flow");
       out.add("Cold-chain handling (if needed)");
     }
-
     if (/food|beverage|fda|barrier|oxygen|moisture|foil/.test(text)){
       out.add("Food-contact compliance (FDA/EC)");
       out.add("Moisture / oxygen barrier needs");
       out.add("Lot traceability & COA");
     }
-
     out.add("Automation line uptime impact");
     out.add("Damage reduction targets in transit");
     out.add("Vendor-managed inventory flexibility");
     out.add("Sustainability targets (PCR %, recyclability)");
     out.add("Unit cost at target MOQ");
-
     return [...out];
   }
 
@@ -476,7 +599,7 @@
     return [...ops];
   }
 
-  // classify fetch with robust base
+  // ---------- classify fetch ----------
   async function classify(host, email){
     const url = api.classifyURL() + "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
     try{
@@ -492,17 +615,43 @@
     }
   }
 
-  // reset UI/state when host changes to prevent leakage
+  // ---------- reset when host changes ----------
   let _lastHostKey = "";
   function resetForHost(host){
     const key = normHost(host);
     if (key === _lastHostKey) return;
     _lastHostKey = key;
     metricsBox.innerHTML=""; state.metrics=[];
+    sectorBuckets.innerHTML=""; state.sectorMetrics=new Map();
     opsChips.innerHTML=""; opsSliders.innerHTML=""; state.opsSelected = new Map();
     sectorChips.innerHTML=""; cityChips.innerHTML="";
   }
 
+  // ---------- targeting helpers ----------
+  function seedTargeting(hqCity, hints){
+    // prefill inputs
+    cityEl.value = hqCity || "";
+    sectorsEl.value = (hints||[]).slice(0,3).join(", ");
+    // chips
+    const defaults=["Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"];
+    const cityList = [hqCity, ...defaults].filter(Boolean);
+    cityChips.innerHTML="";
+    const seen = new Set();
+    cityList.forEach(c=>{ if(seen.has(c)) return; seen.add(c);
+      const chip=addChip(c, cityChips);
+      if (hqCity && c===hqCity) chip.classList.add("active");
+    });
+
+    const fallbackSectors=["food","beverage","logistics","electronics","automotive","industrial","apparel","pharma","cosmetics","household"];
+    const secs=(hints&&hints.length?hints:fallbackSectors);
+    sectorChips.innerHTML="";
+    secs.slice(0,8).forEach((s,i)=>{
+      const chip=addChip(s, sectorChips);
+      if (i<Math.min(3,secs.length)) chip.classList.add("active");
+    });
+  }
+
+  // ---------- apply server persona ----------
   function applyServerPersona(data, host){
     const prods = (data.productTags||[]).slice(0,5).join(", ") || "packaging";
     const segs  = (data.sectorHints||[]).slice(0,3).join(", ") || "brands";
@@ -511,18 +660,25 @@
     state.line = { host, verb:"supplies", products:prods, audience:segs, region:"the U.S.", contacts };
     state.productTags = data.productTags||[];
     state.sectorHints = data.sectorHints||[];
+    state.hq = data && data.hq && (data.hq.city || data.hq.region) ? {city:data.hq.city||"", region:data.hq.region||""} : null;
+
     renderSentence(false);
 
     const labels = (data.hotMetrics && data.hotMetrics.length) ? data.hotMetrics : deriveHotMetrics(data);
     renderMetrics(labels);
-    
+
+    renderSectorBuckets(state.sectorHints||[]);
+
     const opsList = (data.opsPool && data.opsPool.length) ? data.opsPool : deriveOperations(data);
     renderOpsPool(opsList);
 
-    sectorChips.innerHTML="";
-    (data.sectorHints||["food","beverage","logistics"]).slice(0,8).forEach(s=>addChip(s, sectorChips));
+    // prefill targeting from HQ + sectors
+    const preferredCity = (state.hq && state.hq.city) ? state.hq.city : "";
+    seedTargeting(preferredCity, state.sectorHints);
   }
-    async function refreshFromWebsite(){
+
+  // ---------- refresh ----------
+  async function refreshFromWebsite(){
     const host = normHost(hostEl.value || domainFromEmail(emailEl.value));
     if (!host) return;
 
@@ -531,7 +687,6 @@
     statusEl.textContent = "";
 
     try{
-      // seed line with host so the one-liner never looks empty
       state.line.host = host;
       renderSentence(false);
 
@@ -541,19 +696,20 @@
     }catch(err){
       console.warn("classify failed:", err);
       statusEl.textContent = " (offline)";
-      // conservative defaults so UI is still usable
       renderMetrics([
         "Automation line uptime impact",
         "Damage reduction targets in transit",
         "Sustainability targets (PCR %, recyclability)",
         "Unit cost at target MOQ"
       ]);
+      renderSectorBuckets(["beverage","food"]); // safe minimal defaults
       renderOpsPool([
         "E-commerce fulfillment",
         "Warehouse pick/pack",
         "3PL / distribution",
         "Co-packing"
       ]);
+      seedTargeting("", ["food","beverage","logistics"]);
     }
   }
 
@@ -562,25 +718,15 @@
   // ---------- nav ----------
   openBtn.addEventListener("click", open);
   closeBtn.addEventListener("click", close);
-
   backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
 
   nextBtn.addEventListener("click", async ()=>{
-    if (state.step===0){
-      show(1);
-      return;
-    }
+    if (state.step===0){ show(1); return; }
 
     if (state.step===1){
-      if (!emailEl.value || !phoneEl.value){
-        alert("Business email and phone are required.");
-        return;
-      }
+      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
       const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
-      if (!hostCandidate){
-        alert("Please provide your website/domain.");
-        return;
-      }
+      if (!hostCandidate){ alert("Please provide your website/domain."); return; }
       hostEl.value = hostCandidate;
       await refreshFromWebsite();
       show(2);
@@ -593,6 +739,7 @@
         return;
       }
 
+      // Build persona
       const host = normHost(state.line.host);
       const persona = {
         host,
@@ -600,28 +747,27 @@
         line: state.line,
         productTags: state.productTags,
         sectorHints: state.sectorHints,
-        metrics: state.metrics, // [{label,value}]
+        metrics: state.metrics,
+        sectorMetrics: Array.from(state.sectorMetrics.entries()).map(([sector,arr])=>({sector, metrics:arr})),
         operations: Array.from(state.opsSelected.entries()).map(([label,value])=>({label,value})),
         targeting: {
           city: (cityEl.value||"").trim(),
           sectors: (sectorsEl.value||"").trim(),
           citiesPicked: Array.from(cityChips.querySelectorAll(".chip.active")).map(x=>x.textContent.trim()),
-          sectorsPicked: Array.from(sectorChips.querySelectorAll(".chip.active")).map(x=>x.textContent.trim())
+          sectorsPicked: Array.from(sectorChips.querySelectorAll(".chip.active")).map(x=>x.textContent.trim()),
+          hq: state.hq
         }
       };
 
-      // persist for the free panel
       setS("bf.persona", JSON.stringify(persona));
       setS("fp.persona", JSON.stringify(persona));
 
-      // legacy seeds the panel already understands
       setS("fp.supplier.host", host);
-      setS("fp.pref.city", persona.targeting.city);
+      setS("fp.pref.city", persona.targeting.city || (state.hq?.city||""));
       setS("fp.pref.tagPrefer", (persona.productTags||[]).join("\n"));
       setS("fp.pref.segPrefer", (persona.sectorHints||[]).join("\n"));
       setS("fp.autoImport","1");
 
-      // go
       location.href = "free-panel.html";
     }
   });
@@ -636,20 +782,8 @@
     }
   });
 
-  // ---------- targeting seeds ----------
-  function seedTargeting(){
-    const cityList=["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"];
-    cityChips.innerHTML="";
-    cityList.forEach(c=>addChip(c, cityChips));
-
-    const sectorList=["food","beverage","logistics","electronics","automotive","industrial","apparel","pharma","cosmetics","household"];
-    sectorChips.innerHTML="";
-    sectorList.forEach(s=>addChip(s, sectorChips));
-  }
-
   // ---------- boot ----------
   async function boot(){
-    // discover API
     const res = await api.detect();
     state.apiOnline = !!res.ok;
     setS("apiBase", api.base);
@@ -659,19 +793,19 @@
     apiBadge.classList.toggle("err", !state.apiOnline);
     if (apiStatus) apiStatus.textContent = badgeTxt;
 
-    // base UI
     setRole("supplier");
     renderSentence(false);
-    seedTargeting();
 
-    // if browser already filled email, backfill host
+    // starter chips before we know HQ
+    seedTargeting("", []);
+
     const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d;
   }
 
   // start
   boot();
 
-  // expose manual hook for debugging
+  // expose manual hook
   window.__refreshFromWebsite = refreshFromWebsite;
 
 })();</script>
