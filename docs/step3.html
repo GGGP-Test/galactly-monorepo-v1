@@ -4,534 +4,576 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Galactly — Step 3</title>
-
-<!--
-  step3.html  (Sector-first advanced tuning)
-  - Loads seed from localStorage ("onb.seed")
-  - Detects API, calls /api/classify (with fallback path)
-  - Sector accordions (mute, “Let AI decide”, metrics with clear 0/10 anchors)
-  - Per-sector operations + per-sector targeting (merged in one card)
-  - Finish persists persona to localStorage and goes to free-panel.html
--->
-
 <style>
   :root{
     --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c;
     --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
-    --cta:#6de1ff; --ctaText:#082433; --chip:#1a2433; --chipActive:#103247;
-    --divider:#1b2531; --accent:#38e08f; --ring:#24435f;
+    --cta:#6de1ff; --ctaText:#082433; --chip:#1a2433;
+    --chipActive:#103247; --accent:#38e08f; --divider:#1b2531; --ring:#24435f;
   }
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-    font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
-  .wrap{max-width:980px;margin:24px auto;padding:0 14px}
-  .top{display:flex;align-items:center;justify-content:space-between;gap:14px}
-  .crumb{display:flex;align-items:center;gap:10px}
-  .fav{width:24px;height:24px;border-radius:6px;background:#fff;display:grid;place-items:center;border:1px solid #cfd8e3;overflow:hidden}
-  .fav img{width:24px;height:24px}
-  .badge{font-size:12px;padding:4px 8px;border-radius:10px;border:1px solid var(--divider);color:#a8c3d8}
-  .badge.ok{color:#0f0} .badge.err{color:#ff8}
-  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:10px 16px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
+  .wrap{max-width:1080px;margin:28px auto;padding:0 12px}
+  .topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .fav{width:20px;height:20px;border-radius:4px;display:grid;place-items:center;overflow:hidden;background:#fff;border:1px solid #cfd8e3}
+  .fav img{width:20px;height:20px}
+  .badge{font-size:12px;padding:3px 7px;border-radius:999px;border:1px solid var(--divider);color:#a8c3d8;margin-left:auto}
+  .badge.ok{color:#0f0}
+  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:10px 14px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
   .btn.sec{background:#152333;color:#cfe0ee}
-  .btn.smol{padding:6px 10px;border-radius:10px;font-weight:600}
-  .card{margin-top:16px;background:var(--panel);border:1px solid var(--divider);border-radius:16px;overflow:hidden}
-  .card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
-  .card-bd{padding:16px}
-  .sentence{display:flex;flex-wrap:wrap;gap:6px;font-weight:700}
-  .token{display:inline-block;border-radius:8px;padding:2px 6px}
-  .muted{color:#99b2c8}
-  .chips{user-select:none}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);
-    color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
+  .btn.sm{padding:6px 10px;border-radius:10px;font-weight:600}
+  .btn:active{transform:translateY(1px)}
+  .muted{color:#9cb1c4}
+  .summary{display:flex;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:12px 14px;border-radius:14px;margin:0 0 12px;align-items:flex-start}
+  .token{display:inline-block;border-radius:8px;padding:2px 6px;margin:0 2px}
+  .token[data-lock="true"]{background:transparent;color:#dfeaf5;border:0}
+  .sentence{--bgx:#0f1926}
+  .sentence .token[data-editable="true"]{background:transparent;border-bottom:1px dashed #3a5572}
+  .sentence.editing .token[data-editable="true"]{background:var(--bgx);border:1px solid #2b425a}
+  .sentence .token:focus{outline:2px solid var(--ring)}
+  .row{display:flex;gap:14px;align-items:center}
+  .card{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px}
+  .hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .hd h3,.hd h4{margin:0}
+  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
+  .muted-hint{font-size:12px;color:#99b2c8}
+  .actions{display:flex;gap:10px;align-items:center}
+
+  /* Advanced toggle */
+  #advanced[hidden]{display:none}
+
+  /* Layout for advanced */
+  .advanced-grid{display:grid;grid-template-columns:280px 1fr;gap:14px}
+  @media (max-width:900px){.advanced-grid{grid-template-columns:1fr}}
+
+  /* Rotor (industry wheel) */
+  .wheel{position:relative;height:300px;background:#0d1520;border:1px solid #1b2531;border-radius:12px;overflow:hidden}
+  .wheel-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:stretch;perspective:700px}
+  .wheel-item{padding:10px 12px;margin:0 8px;border-radius:10px;border:1px solid transparent;transform-origin:center;opacity:.35;transition:transform .12s,opacity .12s,background .12s,color .12s;border-color:transparent}
+  .wheel-item.active{background:var(--chipActive);color:#eaf7ff;opacity:1;border-color:#1b4862}
+  .wheel-fade{position:absolute;left:0;right:0;height:54px;pointer-events:none}
+  .wheel-fade.top{top:0;background:linear-gradient(180deg,#0d1520,transparent)}
+  .wheel-fade.bot{bottom:0;background:linear-gradient(0deg,#0d1520,transparent)}
+  .wheel-ctrls{display:flex;gap:8px;justify-content:space-between;margin-top:8px}
+  .xrow{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;border:1px solid #203041;cursor:pointer}
   .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media (max-width:860px){.grid2{grid-template-columns:1fr}}
-  /* accordion */
-  .acc{background:#0f1724;border:1px solid var(--divider);border-radius:14px;margin:14px 0;overflow:hidden}
-  .acc-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid #142031;cursor:pointer}
-  .acc-hd h3{margin:0;font-size:16px}
-  .acc-tools{display:flex;align-items:center;gap:10px}
-  .acc-bd{padding:12px 14px;display:none}
-  .acc.open .acc-bd{display:block}
-  .hint{font-size:12px;color:#9bb2c8}
-  .row{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:center;margin:8px 0}
-  .row input[type=range]{width:100%}
-  .subtle{font-size:12px;color:#90a7bb}
-  input[type=text]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:var(--text)}
-  input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66;outline:none}
-  .sect-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .hr{height:1px;background:var(--divider);margin:12px 0}
-  .right{display:flex;gap:8px;justify-content:flex-end}
+
+  /* Metrics & sliders */
+  .metric-row{display:grid;grid-template-columns:1fr 260px;gap:14px;align-items:center;margin:10px 0}
+  .metric-row input[type=range]{width:100%}
+  .metric-tip{font-size:12px;color:#89a2b6;margin-top:-6px}
+  .sect-hd{display:flex;align-items:center;gap:10px;justify-content:space-between;margin:2px 0 8px}
+  .sect-tools{display:flex;gap:8px;align-items:center}
+  .switch{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#9cb1c4}
+  .switch input{transform:translateY(1px)}
+  .div{height:1px;background:var(--divider);margin:10px 0}
+
+  /* Footer */
+  .ft{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
+  a.link{color:#8ae3ff;text-decoration:none}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="topbar">
+    <div class="fav"><img id="fav" alt="" referrerpolicy="no-referrer"></div>
+    <div id="crumb" class="muted"></div>
+    <span id="apiBadge" class="badge">API: resolving…</span>
+    <button id="back" class="btn sec sm">Back</button>
+  </div>
 
-  <div class="top">
-    <div class="crumb">
-      <div class="fav"><img id="fav" alt="" referrerpolicy="no-referrer"></div>
-      <div>
-        <div class="sentence" id="oneLine">
-          <!-- filled at runtime -->
-        </div>
-        <div class="hint" id="subLine"></div>
+  <!-- One-liner -->
+  <div class="summary card">
+    <div style="flex:1">
+      <div id="sentence" class="sentence" aria-live="polite"></div>
+      <div class="actions" style="margin-top:8px">
+        <button id="editLine" class="btn sec sm" type="button">Edit</button>
+        <button id="doneLine" class="btn sm" type="button" hidden>Done</button>
+        <span id="status" class="muted-hint"></span>
       </div>
-    </div>
-    <div class="crumb">
-      <span id="apiBadge" class="badge">API: resolving…</span>
-      <a class="btn sec smol" href="index.html">← Back</a>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-hd">
-      <div><strong>Step 3:</strong> Tune by sector</div>
-      <div id="status" class="hint"></div>
-    </div>
-    <div class="card-bd">
+  <!-- Advanced (collapsed by default) -->
+  <div class="hd">
+    <span class="pill">Step 3: Tune by industry</span>
+    <button id="advToggle" class="btn sec sm" type="button"><span id="advLbl">Show advanced ▾</span></button>
+    <span id="cached" class="muted-hint"></span>
+  </div>
 
-      <!-- Sector filter / quick open -->
-      <div class="sect-toolbar">
-        <span class="muted">Sectors:</span>
-        <div id="sectorFilter" class="chips"></div>
-        <span class="muted">|</span>
-        <label class="hint" style="display:flex;align-items:center;gap:6px">
-          <input id="hideMuted" type="checkbox"> Hide muted
-        </label>
+  <div id="advanced" hidden>
+    <div class="card advanced-grid">
+      <!-- LEFT: Rotor -->
+      <div>
+        <div class="sect-hd">
+          <h4 style="margin:0">Industries</h4>
+          <label class="switch"><input id="hideMuted" type="checkbox"> Hide muted</label>
+        </div>
+        <div id="wheel" class="wheel">
+          <div class="wheel-inner" id="wheelInner"></div>
+          <div class="wheel-fade top"></div>
+          <div class="wheel-fade bot"></div>
+        </div>
+        <div class="wheel-ctrls">
+          <button id="wheelUp" class="btn sec sm" type="button">▲</button>
+          <button id="wheelDown" class="btn sec sm" type="button">▼</button>
+          <div class="muted-hint" id="wheelHint" style="margin-left:auto">Scroll / drag to change</div>
+        </div>
       </div>
 
-      <div id="sectorsRoot"></div>
+      <!-- RIGHT: Industry detail -->
+      <div id="detail">
+        <div class="sect-hd">
+          <h3 id="sectTitle" style="margin:0">—</h3>
+          <div class="sect-tools">
+            <button id="muteBtn" class="btn sec sm" type="button">Mute industry</button>
+            <label class="switch"><input id="aiDecide" type="checkbox"> Let AI decide</label>
+          </div>
+        </div>
 
-      <div class="hr"></div>
-      <div class="right">
-        <button id="save" class="btn sec">Save</button>
-        <button id="finish" class="btn">Finish</button>
+        <div id="metricsBox"></div>
+
+        <div class="div"></div>
+
+        <div>
+          <div class="sect-hd"><h4 style="margin:0">Buyer operations (importance 0–10)</h4></div>
+          <div id="opsChips" class="xrow"></div>
+          <div id="opsSliders"></div>
+        </div>
+
+        <div class="div"></div>
+
+        <div>
+          <div class="sect-hd"><h4 style="margin:0">Targeting for this industry</h4></div>
+          <div class="row">
+            <div style="flex:1">
+              <label class="muted-hint">Boost near city…</label>
+              <input id="city" type="text" placeholder="e.g., HQ city" style="width:100%;padding:10px;border-radius:10px;background:#0d1520;border:1px solid var(--divider);color:var(--text);outline:none"/>
+              <div id="cityChips" class="xrow" style="margin-top:8px"></div>
+            </div>
+          </div>
+        </div>
+
       </div>
-
     </div>
+  </div>
+
+  <div class="ft">
+    <button id="save" class="btn sec" type="button">Save</button>
+    <button id="finish" class="btn" type="button">Finish</button>
+  </div>
+
+  <div class="muted-hint" style="margin-top:8px">
+    Trouble? <a class="link" href="index.html">Return to Step 2</a>
   </div>
 </div>
 
 <script>
 (()=>{
-  // ---------- helpers ----------
-  const $ = (q)=>document.querySelector(q);
-  const create = (tag,cls,txt)=>{const el=document.createElement(tag); if(cls) el.className=cls; if(txt!=null) el.textContent=txt; return el;};
-  const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
-  const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
-  function setFav(host){ const h=normHost(host); $("#fav").src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):""; }
 
-  // ---------- seed ----------
-  const seedJson = localStorage.getItem("onb.seed");
-  const seed = seedJson ? JSON.parse(seedJson) : {host:"", role:"supplier", contact:{}};
-  if (!seed.host && seed.contact && seed.contact.email){ seed.host = domainFromEmail(seed.contact.email); }
+  // ---------- storage helpers ----------
+  const getS=(k,d="")=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}};
+  const setS=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
 
-  // ---------- API detect ----------
-  const apiBadge = $("#apiBadge");
-  const statusEl = $("#status");
-  const store = {
-    get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}},
-    set(k,v){try{localStorage.setItem(k,v)}catch{}}
+  // ---------- state ----------
+  const state = {
+    apiOnline:false,
+    persona:null,           // incoming from Step 2
+    industries:[],          // [{key,label,muted:false, ai:false, metrics:[{k,l,tip,val}], opsSel:Map, city:"", opsPool:[...]}]
+    ix:0,                   // selected industry index
+    host:"", email:"", cached:false
   };
-  async function apiDetect(){
-    const tries=[];
-    if (typeof window.API_BASE==="string") tries.push(window.API_BASE);
-    const saved=store.get("apiBase",""); if (saved) tries.push(saved);
-    tries.push(location.origin+"/api"); tries.push(location.origin);
-    async function ok(base){
-      base=(base||"").replace(/\/+$/,"");
-      const paths=/\/api$/.test(base)?[base+"/health",base+"/ping"]: [base+"/api/health",base+"/api/ping"];
-      for(const p of paths){ try{const r=await fetch(p,{credentials:"omit"}); if(r.ok) return base;}catch{} }
-      return null;
-    }
-    for(const cand of tries){ const b=await ok(cand); if(b){ store.set("apiBase",b); apiBadge.textContent="API: online"; apiBadge.classList.add("ok"); apiBadge.classList.remove("err"); return {ok:true,base:b}; } }
-    const fb=(tries[0]||location.origin+"/api").replace(/\/+$/,""); store.set("apiBase",fb);
-    apiBadge.textContent="API: offline"; apiBadge.classList.add("err"); apiBadge.classList.remove("ok");
-    return {ok:false,base:fb};
-  }
-  function classifyURL(base){ const b=(base||store.get("apiBase","")).replace(/\/+$/,""); return /\/api$/.test(b)?(b+"/classify"):(b+"/api/classify"); }
 
-  // ---------- sector definitions with anchors ----------
-  const SECTOR_DEFS = {
-    beverage:{
+  // ---------- els ----------
+  const fav=document.getElementById("fav");
+  const crumb=document.getElementById("crumb");
+  const apiBadge=document.getElementById("apiBadge");
+  const backBtn=document.getElementById("back");
+  const saveBtn=document.getElementById("save");
+  const finishBtn=document.getElementById("finish");
+
+  const sentence=document.getElementById("sentence");
+  const editBtn=document.getElementById("editLine");
+  const doneBtn=document.getElementById("doneLine");
+  const statusEl=document.getElementById("status");
+
+  const adv=document.getElementById("advanced");
+  const advToggle=document.getElementById("advToggle");
+  const advLbl=document.getElementById("advLbl");
+
+  const wheel=document.getElementById("wheel");
+  const wheelInner=document.getElementById("wheelInner");
+  const wheelUp=document.getElementById("wheelUp");
+  const wheelDown=document.getElementById("wheelDown");
+  const hideMuted=document.getElementById("hideMuted");
+
+  const sectTitle=document.getElementById("sectTitle");
+  const muteBtn=document.getElementById("muteBtn");
+  const aiDecide=document.getElementById("aiDecide");
+
+  const metricsBox=document.getElementById("metricsBox");
+  const opsChips=document.getElementById("opsChips");
+  const opsSliders=document.getElementById("opsSliders");
+  const cityEl=document.getElementById("city");
+  const cityChips=document.getElementById("cityChips");
+
+  // ---------- utils ----------
+  const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+  function setFavicon(host){const h=normHost(host); fav.src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):"";}
+  const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+  const hash=(s)=>{let h=2166136261>>>0; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i); h+= (h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24)} return h>>>0; };
+  const seeded=(seed)=>{let x=seed>>>0; return ()=>{x^=x<<13; x^=x>>>17; x^=x<<5; return (x>>>0)/4294967295;}};
+
+  function addChip(text, box, onToggle){
+    const el=document.createElement("span");
+    el.className="chip"; el.textContent=text;
+    el.addEventListener("click",()=>{ const on=!el.classList.contains("active"); el.classList.toggle("active", on); onToggle && onToggle(on, text, el); });
+    box.appendChild(el); return el;
+  }
+
+  // ---------- rotor rendering ----------
+  function renderWheel(){
+    wheelInner.innerHTML="";
+    const show = state.industries.filter(ind => !hideMuted.checked || !ind.muted);
+    if (!show.length){ wheelInner.innerHTML='<div class="muted-hint" style="margin:10px auto">All industries muted</div>'; return; }
+    const selKey = show[ clamp(state.ix,0,show.length-1) ]?.key;
+    show.forEach((ind,i)=>{
+      const item=document.createElement("div");
+      item.className="wheel-item";
+      item.textContent = ind.label;
+      // fake 3D depth
+      const center = (show.length-1)/2;
+      const dz = (i - clamp(state.ix,0,show.length-1));
+      item.style.transform = `translateY(${(i*46)- (state.ix*46)}px) rotateX(${dz*10}deg)`;
+      item.style.opacity = String( clamp(1 - Math.abs(dz)*0.2, 0.25, 1) );
+      if (ind.key===selKey) item.classList.add("active");
+      item.addEventListener("click",()=>{ state.ix = i; renderWheel(); renderDetail(); });
+      wheelInner.appendChild(item);
+    });
+  }
+  let wheelDragY=null;
+  wheel.addEventListener("pointerdown",(e)=>{wheelDragY=e.clientY; wheel.setPointerCapture(e.pointerId);});
+  wheel.addEventListener("pointermove",(e)=>{
+    if (wheelDragY==null) return;
+    const dy = e.clientY - wheelDragY;
+    if (Math.abs(dy)>34){ state.ix = clamp(state.ix + (dy>0?1:-1), 0, state.industries.filter(x=>!hideMuted.checked||!x.muted).length-1); wheelDragY=e.clientY; renderWheel(); renderDetail(); }
+  });
+  ["pointerup","pointercancel","mouseleave"].forEach(ev=>wheel.addEventListener(ev,()=>{wheelDragY=null;}));
+  wheel.addEventListener("wheel",(e)=>{ e.preventDefault(); state.ix = clamp(state.ix + (e.deltaY>0?1:-1),0,state.industries.filter(x=>!hideMuted.checked||!x.muted).length-1); renderWheel(); renderDetail(); }, {passive:false});
+  wheelUp.addEventListener("click",()=>{ state.ix = clamp(state.ix-1,0,state.industries.length-1); renderWheel(); renderDetail(); });
+  wheelDown.addEventListener("click",()=>{ state.ix = clamp(state.ix+1,0,state.industries.length-1); renderWheel(); renderDetail(); });
+  hideMuted.addEventListener("change",()=>{ state.ix=0; renderWheel(); renderDetail(); });
+
+  // ---------- industry detail ----------
+  function renderDetail(){
+    const list = state.industries.filter(ind => !hideMuted.checked || !ind.muted);
+    const ind = list[ clamp(state.ix,0,list.length-1) ];
+    if (!ind){ sectTitle.textContent="—"; metricsBox.innerHTML=""; opsChips.innerHTML=""; opsSliders.innerHTML=""; cityEl.value=""; return; }
+    sectTitle.textContent = ind.label + (ind.muted?" (muted)":"");
+    aiDecide.checked = !!ind.ai;
+    muteBtn.textContent = ind.muted ? "Unmute industry" : "Mute industry";
+
+    // metrics
+    metricsBox.innerHTML="";
+    ind.metrics.forEach(m=>{
+      const row=document.createElement("div"); row.className="metric-row";
+      const left=document.createElement("div");
+      left.innerHTML = `<div style="font-weight:600">${m.l}</div><div class="metric-tip">${m.tip||""}</div>`;
+      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.step="1"; input.value=m.val;
+      input.disabled = !!ind.ai || ind.muted;
+      input.addEventListener("input",()=>{ m.val = Number(input.value); });
+      row.appendChild(left); row.appendChild(input); metricsBox.appendChild(row);
+    });
+
+    // operations pool
+    opsChips.innerHTML=""; opsSliders.innerHTML="";
+    const ensure=(label)=>{
+      if (ind.opsSel.has(label)) return;
+      const wrap=document.createElement("div"); wrap.className="metric-row"; wrap.dataset.label=label;
+      const lab=document.createElement("div"); lab.textContent=label;
+      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value="7";
+      input.disabled = ind.muted;
+      input.addEventListener("input",()=> ind.opsSel.set(label, Number(input.value)));
+      wrap.appendChild(lab); wrap.appendChild(input); opsSliders.appendChild(wrap);
+      ind.opsSel.set(label, 7);
+    };
+    const remove=(label)=>{
+      const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]');
+      if (el) el.remove(); ind.opsSel.delete(label);
+    };
+    ind.opsPool.forEach(op=>{
+      const chip=addChip(op, opsChips, (on,txt)=> on?ensure(txt):remove(txt));
+      if (ind.opsSel.has(op)) chip.classList.add("active");
+      chip.style.pointerEvents = ind.muted? "none":"auto";
+      chip.style.opacity = ind.muted? ".4":"1";
+    });
+
+    // city
+    cityEl.value = ind.city||"";
+    cityEl.disabled = ind.muted;
+    cityChips.innerHTML="";
+    ["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"].forEach(c=>{
+      const chip=addChip(c, cityChips, (on,txt)=>{ if(on) cityEl.value=txt; });
+      if ((ind.city||"").toLowerCase()===c.toLowerCase()) chip.classList.add("active");
+      chip.style.pointerEvents = ind.muted? "none":"auto";
+      chip.style.opacity = ind.muted? ".4":"1";
+    });
+  }
+
+  // ---------- one-liner editable ----------
+  function renderSentence(editing=false){
+    const L=state.persona?.line||{host:"",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Procurement"};
+    const tpl=[
+      {k:"host", txt:L.host, lock:true},
+      {txt:"—", lock:true},
+      {k:"verb", txt:L.verb},
+      {k:"products", txt:L.products},
+      {txt:"for", lock:true},
+      {k:"audience", txt:L.audience},
+      {txt:"in", lock:true},
+      {k:"region", txt:L.region},
+      {txt:".", lock:true},
+      {txt:"Best contacts:", lock:true},
+      {k:"contacts", txt:L.contacts}
+    ];
+    sentence.classList.toggle("editing", editing);
+    sentence.innerHTML="";
+    tpl.forEach(part=>{
+      const span=document.createElement("span");
+      span.className="token";
+      span.dataset.lock = part.lock?"true":"false";
+      if (!part.lock){
+        span.dataset.editable="true"; span.contentEditable = editing;
+        span.addEventListener("input",()=>{ state.persona.line[part.k]=span.textContent.trim(); });
+      }
+      span.textContent = part.txt;
+      sentence.appendChild(span);
+      sentence.appendChild(document.createTextNode(" "));
+    });
+  }
+  editBtn.addEventListener("click",()=>{renderSentence(true); editBtn.hidden=true; doneBtn.hidden=false;});
+  doneBtn.addEventListener("click",()=>{renderSentence(false); editBtn.hidden=false; doneBtn.hidden=true;});
+
+  // ---------- advanced toggle ----------
+  advToggle.addEventListener("click",(e)=>{
+    e.preventDefault();
+    const open = adv.hasAttribute("hidden");
+    if (open){ adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
+    else { adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
+  });
+
+  // ---------- industry catalog + metric definitions ----------
+  const CATALOG = {
+    beverage: {
+      label:"Beverage",
       metrics:[
-        ["High-speed line compatibility","0=manual/slow only","10=proven at ≥500+ units/min (or ≥30 cases/min)"],
-        ["Retail-ready print consistency","0=color drift/misregister","10=ΔE<2 & tight register at volume"],
-        ["Condensation tolerance","0=fails with light sweat","10=survives heavy condensation (coolers/retort)"],
-        ["Pallet stability for bottlers","0=shifts/collapses","10=passes ISTA 3A/3E or in-house equivalent"],
-        ["Case integrity for glass/plastic","0=frequent breakage/deformation","10=spec holds at peak load/transport"],
-        ["Damage reduction targets in transit","0=no target","10=meets ≤0.5% damage KPI"]
+        ["High-speed line compatibility","0=manual/slow only — 10=proven at ≥500+ units/min or ≥30 cases/min"],
+        ["Retail-ready print consistency","0=frequent color drift/misregister — 10=ΔE<2 & tight register at volume"],
+        ["Condensation tolerance","0=fails with light sweat — 10=survives heavy condensation (coolers/retort)"],
+        ["Pallet stability for bottlers","0=shifts/collapses — 10=stable to ISTA 3A/3E or in-house equivalent"],
+        ["Case integrity for glass/plastic","0=frequent breakage/deformation — 10=holds at peak load/transport"],
+        ["Damage reduction targets in transit","0=no target — 10=meets ≤0.5% damage KPI"]
       ],
       ops:["Automated pallet wrapper","Hand pallet wrapping","E-commerce fulfillment","3PL / distribution"]
     },
-    food:{
+    food: {
+      label:"Food",
       metrics:[
-        ["Food-contact compliance","0=not certified","10=FDA/EC compliant with documentation"],
-        ["Moisture barrier needs","0=not required","10=high MVTR resistance at spec"],
-        ["Oxygen barrier needs","0=not required","10=OTR at target (foil/ALOx/EVOH)"],
-        ["Lot traceability & COA","0=not provided","10=COA & full lot tracking each batch"],
-        ["Tamper evidence","0=not needed","10=required & validated"],
-        ["Temperature excursions","0=room temp only","10=survives freeze/retort/heat hold"]
+        ["Food-contact compliance (FDA/EC)","0=uncertified — 10=fully certified with documentation"],
+        ["Oxygen/moisture barrier","0=none — 10=validated OTR/WVTR for shelf-life target"],
+        ["Traceability & COA","0=none — 10=lot-level COA + recall-ready"],
+        ["Sealing performance","0=frequent leaks — 10=validated hermetic seal @ rate"],
+        ["Print/label regs","0=non-compliant — 10=GHS/NLEA compliant at scale"]
       ],
-      ops:["Co-packing","E-commerce fulfillment","Warehouse pick/pack"]
+      ops:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"]
     },
-    cosmetics:{
+    cosmetics: {
+      label:"Cosmetics",
       metrics:[
-        ["Premium print/finish","0=basic CMYK","10=foil/spot UV/emboss at scale"],
-        ["Color consistency ΔE","0=ΔE>6","10=ΔE≤2"],
-        ["Unboxing experience","0=plain","10=designed tactile experience"]
+        ["Premium print/finish expectations","0=basic CMYK — 10=foil/spot UV/emboss at scale"],
+        ["Color consistency delta-E","0=ΔE>6 — 10=ΔE≤2"],
+        ["Unboxing experience","0=plain — 10=designed tactile experience"]
       ],
-      ops:["Co-packing","E-commerce fulfillment"]
+      ops:["E-commerce fulfillment","3PL / distribution","Co-packing"]
     },
     electronics:{
+      label:"Electronics",
       metrics:[
-        ["ESD protection","0=not needed","10=ANSI/ESD S541-compliant"],
-        ["Shock/vibration protection","0=unrated","10=ISTAvibration/drop passed"],
-        ["Moisture barrier","0=not needed","10=in-bag desiccant & low MVTR"],
-        ["Label/readability compliance","0=adhoc","10=meets UL/CE/ROHS marks"]
+        ["ESD protection requirements","0=not needed — 10=ANSI/ESD S541-compliant"],
+        ["Shock/vibration protection","0=insufficient — 10=drop/ISTA validated"],
+        ["Moisture control","0=none — 10=desiccant & barrier spec maintained"]
       ],
-      ops:["3PL / distribution","Warehouse pick/pack"]
+      ops:["Warehouse pick/pack","3PL / distribution"]
     },
     pharma:{
+      label:"Pharma",
       metrics:[
-        ["GxP documentation","0=none","10=complete SOPs & training"],
-        ["Serialization/lot coding","0=not supported","10=GS1-ready"],
-        ["Tamper-evidence compliance","0=not required","10=required & validated"],
-        ["Cleanroom handling","0=not available","10=available & qualified"],
-        ["Temperature control","0=ambient only","10=cold-chain ready"]
+        ["GxP documentation","0=none — 10=auditable SOP & batch records"],
+        ["Serialisation/lot coding","0=none — 10=meets DSCSA/EMVS"],
+        ["Tamper-evidence","0=absent — 10=validated per region"],
+        ["Cleanroom handling","0=not supported — 10=GMP/ISO class fit"]
       ],
       ops:["3PL / distribution","Co-packing"]
     },
     logistics:{
+      label:"Logistics",
       metrics:[
-        ["3PL integration & labels","0=adhoc","10=ASN/SSCC labels integrated"],
-        ["E-commerce fulfillment compatibility","0=not ready","10=optimized pick/pack/SLAs"],
-        ["Damage reduction in parcel","0=unknown","10=≤0.5% damage"],
-        ["Cube/weight optimization","0=unoptimized","10=meets dimensional targets"]
+        ["3PL/WMS integration","0=manual — 10=ASN/label/API ready"],
+        ["Dock-to-stock speed","0=slow — 10=<24h typical"],
+        ["Cube/weight optimization","0=unoptimized — 10=rate-minimized design"]
       ],
       ops:["3PL / distribution","Warehouse pick/pack","E-commerce fulfillment"]
     },
     industrial:{
+      label:"Industrial",
       metrics:[
-        ["Heavy-load stability","0=tears/shifts","10=holds at target weight"],
-        ["Puncture/tear resistance","0=frequent puncture","10=validated to spec"],
-        ["Unitization efficiency","0=low","10=optimized for automation"],
-        ["Sustainability targets","0=not required","10=PCR% & recyclability label"],
-        ["Unit cost at target MOQ","0=not competitive","10=meets/beat target"]
+        ["Heavy-load stability","0=frequent collapse — 10=validated @ peak load"],
+        ["Puncture/tear resistance","0=tears easily — 10=meets spec @ use"],
+        ["Automation uptime impact","0=jams often — 10=no stops from packaging"],
+        ["Sustainability targets","0=none — 10=meets PCR%/recyclability mandate"]
       ],
       ops:["Automated pallet wrapper","Hand pallet wrapping","3PL / distribution"]
     },
     apparel:{
+      label:"Apparel",
       metrics:[
-        ["Presentation (crease/scuff)","0=issues common","10=clean presentation at scale"],
-        ["Print quality on substrates","0=inconsistent","10=consistent across SKUs"],
-        ["Parcel-rate optimization","0=oversize often","10=right-sized mailers/boxes"],
-        ["Return-friendly design","0=hard","10=reseal/returns easy"]
+        ["Presentation (crease/scuff)","0=issues common — 10=store-ready"],
+        ["Parcel-rate optimization","0=oversized — 10=lowest practical DIM"],
+        ["Return-friendly design","0=hassles — 10=easy reseal/scan"]
       ],
-      ops:["E-commerce fulfillment","Warehouse pick/pack"]
-    },
-    automotive:{
-      metrics:[
-        ["Grease/solvent resistance","0=unrated","10=validated exposure"],
-        ["Bulk pack efficiency","0=poor","10=optimized dunnage & racks"],
-        ["Line-side kitting","0=not supported","10=ready-to-assemble kits"],
-        ["Barcode/label compliance","0=adhoc","10=AIAG/ODV targets met"]
-      ],
-      ops:["3PL / distribution","Warehouse pick/pack"]
-    },
-    pet:{
-      metrics:[
-        ["Odor/grease barrier","0=not needed","10=required/validated"],
-        ["Zipper/closure strength","0=fails","10=meets pull tests"],
-        ["Tear resistance","0=weak","10=validated to spec"]
-      ],
-      ops:["Co-packing","3PL / distribution"]
+      ops:["E-commerce fulfillment","3PL / distribution"]
     }
   };
 
-  // ---------- UI roots ----------
-  const sectorsRoot = $("#sectorsRoot");
-  const sectorFilter = $("#sectorFilter");
-  const hideMuted = $("#hideMuted");
-
-  // ---------- state ----------
-  const state = {
-    host: normHost(seed.host||""),
-    role: seed.role || "supplier",
-    productTags: [],
-    sectorHints: [],
-    perSector: new Map(), // key => {muted, ai, metrics:[{label, v, a0, a10}], ops:Map(label->value), targeting:{city,citiesPicked:[]}}
-  };
-
-  // ---------- sentence ----------
-  function renderOneLiner(){
-    const line = {
-      host: state.host || "yourcompany.com",
-      verb: "supplies",
-      products: (state.productTags.slice(0,5).join(", ")) || "packaging",
-      audience: (state.sectorHints.slice(0,3).join(", ")) || "brands",
-      region: "the U.S.",
-      contacts: "Operations, Procurement"
+  // ---------- default weighting (probabilistic prefill) ----------
+  function prefillWeights(key, hostSeed){
+    // deterministic 0..1 generator per host & industry & metric
+    const base = seeded(hash(hostSeed+"::"+key));
+    return (idx, bias=0.65)=>{
+      // center around bias; mix with small variation
+      const r = base();
+      const val = Math.round(10 * clamp(bias + (r-0.5)*0.3, 0.2, 0.95));
+      return val;
     };
-    const one = $("#oneLine"); one.innerHTML="";
-    const parts=[line.host,"—",line.verb,line.products,"for",line.audience,"in",line.region,".","Best contacts:",line.contacts];
-    parts.forEach(t=>{ const s=create("span","token",t); one.appendChild(s); });
-    $("#subLine").textContent = seed.contact?.email ? seed.contact.email : "";
-    setFav(line.host);
   }
 
-  // ---------- chips ----------
-  function addChip(text, box, on){
-    const el=create("span","chip",text);
-    el.addEventListener("click",()=>{ const active=!el.classList.contains("active"); el.classList.toggle("active",active); on && on(active,text,el); });
-    box.appendChild(el); return el;
-  }
+  // ---------- build industries from persona ----------
+  function buildIndustries(){
+    const host = normHost(state.host || state.persona?.line?.host || "");
+    const seeds = (state.persona?.sectorHints && state.persona.sectorHints.length) ? state.persona.sectorHints
+      : ["beverage","food","cosmetics","electronics","industrial","logistics","apparel"];
 
-  // ---------- build sector accordion ----------
-  function ensureSector(key,label){
-    if (state.perSector.has(key)) return state.perSector.get(key);
-    const def=SECTOR_DEFS[key] || {metrics:[],ops:[]};
-    const data = {
-      key, label,
-      muted:false, ai:true,
-      metrics: def.metrics.map(([label,a0,a10])=>({label,v:7,a0,a10})),
-      ops: new Map(def.ops.map(o=>[o,7])),
-      targeting: {city:"", citiesPicked:[]}
-    };
-    state.perSector.set(key,data);
-    return data;
-  }
-
-  function drawSector(data){
-    const acc=create("div","acc"); acc.dataset.key=data.key;
-    const hd=create("div","acc-hd"); const h3=create("h3",null, data.label+" — hot-priority metrics");
-    const tools=create("div","acc-tools");
-    const muteBtn=create("button","btn sec smol", data.muted?"Unmute sector":"Mute sector");
-    muteBtn.addEventListener("click",()=>{ data.muted=!data.muted; muteBtn.textContent=data.muted?"Unmute sector":"Mute sector"; filterMuted(); });
-    const aiWrap=create("label","hint"); const aiChk=create("input"); aiChk.type="checkbox"; aiChk.checked=data.ai;
-    aiWrap.appendChild(aiChk); aiWrap.appendChild(document.createTextNode(" Let AI decide"));
-    aiChk.addEventListener("change",()=>{ data.ai=aiChk.checked; if (data.ai) autoDecide(data); });
-    tools.appendChild(muteBtn); tools.appendChild(aiWrap);
-    hd.appendChild(h3); hd.appendChild(tools);
-    acc.appendChild(hd);
-
-    const bd=create("div","acc-bd");
-
-    // metrics
-    data.metrics.forEach(m=>{
-      const row=create("div","row");
-      const left=create("div");
-      left.innerHTML = `<div>${m.label}</div><div class="subtle">0=${m.a0} — 10=${m.a10}</div>`;
-      const input=create("input"); input.type="range"; input.min="0"; input.max="10"; input.value=String(m.v);
-      input.addEventListener("input",()=>{ m.v=Number(input.value); data.ai=false; aiChk.checked=false; });
-      row.appendChild(left); row.appendChild(input); bd.appendChild(row);
-    });
-
-    // operations inside sector
-    const opsTitle=create("div","hint","Buyer operations (importance 0–10)");
-    bd.appendChild(opsTitle);
-    const opsChips=create("div","chips"); bd.appendChild(opsChips);
-    const opsSliders=create("div"); bd.appendChild(opsSliders);
-
-    function renderOps(){
-      opsChips.innerHTML=""; opsSliders.innerHTML="";
-      for (const [label,val] of data.ops.entries()){
-        const chip=addChip(label, opsChips, (active)=>{
-          if (!active){ data.ops.delete(label); renderOps(); return; }
-        });
-        chip.classList.add("active");
-        const row=create("div","row"); row.dataset.label=label;
-        const l=create("div",null,label);
-        const r=create("input"); r.type="range"; r.min="0"; r.max="10"; r.value=String(val);
-        r.addEventListener("input",()=> data.ops.set(label, Number(r.value)));
-        row.appendChild(l); row.appendChild(r); opsSliders.appendChild(row);
-      }
-      // “+ add” suggestions
-      const suggestions=(SECTOR_DEFS[data.key]?.ops||[]).filter(o=>!data.ops.has(o));
-      suggestions.forEach(o=>{
-        const c=addChip("+ "+o, opsChips, (on)=>{
-          if (on){ data.ops.set(o,7); renderOps(); }
-        });
+    state.industries = [];
+    for (const raw of seeds){
+      const key = String(raw).toLowerCase();
+      const cat = CATALOG[key];
+      if (!cat) continue;
+      const weightFn = prefillWeights(key, host);
+      const metrics = cat.metrics.map((m,i)=>({k:`m${i}`, l:m[0], tip:m[1], val: weightFn(i)}));
+      const opsPool = cat.ops.slice();
+      state.industries.push({
+        key, label:cat.label, muted:false, ai:false,
+        metrics,
+        opsPool,
+        opsSel:new Map(),
+        city:""
       });
     }
-    renderOps();
-
-    // targeting inside sector
-    bd.appendChild(create("div","hr"));
-    const tTitle=create("div","hint","Targeting for this sector");
-    bd.appendChild(tTitle);
-    const tg=create("div","grid2");
-    const left=create("div");
-    left.innerHTML=`<label class="hint">Boost near city</label>`;
-    const city=create("input"); city.type="text"; city.placeholder="e.g., New Jersey";
-    city.value=data.targeting.city||"";
-    city.addEventListener("input",()=> data.targeting.city=city.value.trim());
-    left.appendChild(city);
-    const right=create("div");
-    right.innerHTML=`<label class="hint">Quick picks</label>`;
-    const cityChips=create("div","chips"); right.appendChild(cityChips);
-    ["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"].forEach(c=>{
-      const chip=addChip(c, cityChips, (on)=>{
-        if (on){ data.targeting.city=c; city.value=c; }
-      });
-      if (c===data.targeting.city) chip.classList.add("active");
-    });
-    tg.appendChild(left); tg.appendChild(right);
-    bd.appendChild(tg);
-
-    acc.appendChild(bd);
-    // accordion toggle
-    hd.addEventListener("click",(e)=>{ if (e.target===muteBtn || e.target===aiChk) return; acc.classList.toggle("open"); });
-    // start open
-    acc.classList.add("open");
-    return acc;
+    // If classify hinted to prioritize first sector, bias it to index 0 already
+    state.ix = 0;
   }
 
-  function filterMuted(){
-    const hide = hideMuted.checked;
-    sectorsRoot.querySelectorAll(".acc").forEach(el=>{
-      const k=el.dataset.key; const d=state.perSector.get(k);
-      el.style.display = (hide && d.muted) ? "none" : "";
-    });
-  }
-  hideMuted.addEventListener("change", filterMuted);
-
-  // quick filter chips
-  function buildSectorFilter(keys){
-    sectorFilter.innerHTML="";
-    keys.forEach(k=>{
-      const name=k.charAt(0).toUpperCase()+k.slice(1);
-      const chip=addChip(name, sectorFilter, (on)=>{
-        const el=sectorsRoot.querySelector(`.acc[data-key="${CSS.escape(k)}"]`);
-        if (el){ el.classList.add("open"); el.scrollIntoView({behavior:"smooth",block:"start"}); }
-        chip.classList.remove("active");
-      });
-    });
+  // ---------- API detect (for badge only) ----------
+  async function apiDetect(){
+    const tries=[];
+    if (typeof window.API_BASE==="string") tries.push(window.API_BASE);
+    const saved=getS("apiBase",""); if (saved) tries.push(saved);
+    tries.push(location.origin+"/api"); tries.push(location.origin);
+    async function check(b){ b=(b||"").replace(/\/+$/,""); const p=/\/api$/.test(b)?[b+"/health"]:[b+"/api/health"]; try{const r=await fetch(p[0],{credentials:"omit"}); return r.ok}catch{return false}}
+    for (const t of tries){ if (await check(t)){ state.apiOnline=true; apiBadge.textContent="API: online"; apiBadge.classList.add("ok"); return; } }
+    state.apiOnline=false; apiBadge.textContent="API: offline"; apiBadge.classList.remove("ok");
   }
 
-  // ---------- auto decide (heuristics; optional server later) ----------
-  function autoDecide(sec){
-    const d = typeof sec==="string" ? state.perSector.get(sec) : sec;
-    if (!d) return;
-    // simple heuristic bumps based on host/product tags
-    const txt = (state.productTags.join(" ")+" "+state.sectorHints.join(" ")).toLowerCase();
-    const bump = (kw, amt)=> (txt.includes(kw)?amt:0);
-    d.metrics.forEach(m=>{
-      let v = 7 + bump("automation",1) + bump("high-speed",1);
-      if (/color|print/i.test(m.label)) v += bump("print",1);
-      if (/barrier|moisture|oxygen/i.test(m.label)) v += bump("barrier",1);
-      if (/pallet|stability/i.test(m.label)) v += bump("pallet",1);
-      m.v = Math.max(0, Math.min(10, v));
-    });
-    for (const [k,v] of d.ops.entries()){ d.ops.set(k, Math.min(10, Math.max(0, v + bump("3pl",1)))); }
-  }
-
-  // ---------- classify + apply ----------
-  async function classify(host,email){
-    const api = await apiDetect();
-    const url = classifyURL(api.base) + "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
-    try{
-      const r = await fetch(url,{credentials:"omit"}); if(!r.ok) throw new Error(String(r.status));
-      return await r.json();
-    }catch(e){
-      const alt=/\/api\/classify$/.test(url)?url.replace(/\/api\/classify$/,"/classify"):url.replace(/\/classify$/,"/api/classify");
-      const r2=await fetch(alt,{credentials:"omit"}); if(!r2.ok) throw new Error(String(r2.status));
-      return await r2.json();
+  // ---------- wiring ----------
+  muteBtn.addEventListener("click",()=>{
+    const show = state.industries.filter(ind => !hideMuted.checked || !ind.muted);
+    const ind = show[ clamp(state.ix,0,show.length-1) ];
+    if (!ind) return;
+    ind.muted = !ind.muted;
+    renderWheel(); renderDetail();
+  });
+  aiDecide.addEventListener("change",()=>{
+    const show = state.industries.filter(ind => !hideMuted.checked || !ind.muted);
+    const ind = show[ clamp(state.ix,0,show.length-1) ];
+    if (!ind) return;
+    ind.ai = aiDecide.checked;
+    if (ind.ai){
+      // lock sliders at current values (already meaningful); slight smoothing
+      ind.metrics.forEach((m,i)=> m.val = Math.round((m.val*0.7 + 7*0.3)));
     }
-  }
-
-  function applyPersona(data){
-    state.productTags = data.productTags||[];
-    // pick sectors: prefer server hints; else derive by tags
-    let sectors = (data.sectorHints||[]).map(s=>s.toLowerCase());
-    if (!sectors.length){
-      const text=((data.summary||"")+" "+(data.evidence||[]).join(" ")+" "+state.productTags.join(" ")).toLowerCase();
-      if (/beverage|brew|bottle/.test(text)) sectors.push("beverage");
-      if (/food|snack|meat|dairy|retort|fda/.test(text)) sectors.push("food");
-      if (/cosmetic|beauty|personal care/.test(text)) sectors.push("cosmetics");
-      if (/pharma|medical|gmp|gxp/.test(text)) sectors.push("pharma");
-      if (/electronic|semiconductor|esd/.test(text)) sectors.push("electronics");
-      if (/3pl|warehouse|fulfill|distribution/.test(text)) sectors.push("logistics");
-      if (/industrial|pallet|shrink/.test(text)) sectors.push("industrial");
-    }
-    // ensure known & unique; cap to 8 to avoid overwhelm
-    sectors = Array.from(new Set(sectors.filter(s=>SECTOR_DEFS[s])).values()).slice(0,8);
-    if (!sectors.length) sectors = ["beverage","food","logistics"]; // safe default
-
-    state.sectorHints = sectors;
-
-    // sentence
-    renderOneLiner();
-
-    // build UI
-    sectorsRoot.innerHTML="";
-    sectors.forEach(k=>{
-      const label=k.charAt(0).toUpperCase()+k.slice(1);
-      const d=ensureSector(k,label);
-      if (d.ai) autoDecide(d);
-      sectorsRoot.appendChild(drawSector(d));
-    });
-    buildSectorFilter(sectors);
-    filterMuted();
-  }
-
-  // ---------- save & finish ----------
-  function packPersona(){
-    const sectors=[];
-    for (const [key,d] of state.perSector.entries()){
-      if (!state.sectorHints.includes(key)) continue;
-      const sec={
-        sector:key, label:d.label, muted:d.muted, ai:d.ai,
-        metrics:d.metrics.map(m=>({label:m.label,value:m.v,a0:m.a0,a10:m.a10})),
-        operations:Array.from(d.ops.entries()).map(([label,value])=>({label,value})),
-        targeting:{city:d.targeting.city||"", citiesPicked:d.targeting.citiesPicked||[]}
-      };
-      sectors.push(sec);
-    }
-    const persona={
-      host: state.host,
-      role: state.role,
-      productTags: state.productTags,
-      sectorHints: state.sectorHints,
-      sectors
-    };
-    return persona;
-  }
-
-  $("#save").addEventListener("click",()=>{
-    const p=packPersona();
-    store.set("bf.persona", JSON.stringify(p));
-    store.set("fp.persona", JSON.stringify(p));
-    store.set("fp.supplier.host", p.host);
-    store.set("fp.pref.segPrefer", (p.sectorHints||[]).join("\n"));
-    alert("Saved.");
+    renderDetail();
   });
 
-  $("#finish").addEventListener("click",()=>{
-    const p=packPersona();
-    store.set("bf.persona", JSON.stringify(p));
-    store.set("fp.persona", JSON.stringify(p));
-    store.set("fp.supplier.host", p.host);
-    store.set("fp.pref.segPrefer", (p.sectorHints||[]).join("\n"));
-    store.set("fp.autoImport","1");
+  cityEl.addEventListener("input",()=>{
+    const list = state.industries.filter(ind => !hideMuted.checked || !ind.muted);
+    const ind = list[ clamp(state.ix,0,list.length-1) ];
+    if (ind) ind.city = cityEl.value.trim();
+  });
+
+  backBtn.addEventListener("click",()=>{ location.href="index.html#step2"; });
+
+  saveBtn.addEventListener("click", persistPersona);
+  finishBtn.addEventListener("click", ()=>{
+    persistPersona();
     location.href="free-panel.html";
   });
 
+  function persistPersona(){
+    // capture per-industry selections
+    const sectorsPacked = state.industries.map(ind=>({
+      key: ind.key, label: ind.label, muted: !!ind.muted, ai: !!ind.ai,
+      city: ind.city||"",
+      metrics: ind.metrics.map(m=>({label:m.l, value:m.val})),
+      operations: Array.from(ind.opsSel.entries()).map(([label,value])=>({label,value}))
+    }));
+
+    const personaOut = {
+      ...(state.persona||{}),
+      line: state.persona?.line || {},
+      sectorBuckets: sectorsPacked
+    };
+
+    // legacy prefs (best effort)
+    const mainCity = sectorsPacked.find(s=>!s.muted && s.city)?.city || "";
+    setS("bf.persona", JSON.stringify(personaOut));
+    setS("fp.persona", JSON.stringify(personaOut));
+    setS("fp.pref.city", mainCity);
+    setS("fp.pref.segPrefer", (state.persona?.sectorHints||[]).join("\n"));
+    setS("fp.pref.tagPrefer", (state.persona?.productTags||[]).join("\n"));
+    setS("fp.supplier.host", normHost(state.host||state.persona?.line?.host||""));
+    setS("fp.autoImport","1");
+  }
+
   // ---------- boot ----------
   (async function boot(){
-    if (!state.host){
-      const fallback = seed.contact?.email ? domainFromEmail(seed.contact.email) : "";
-      state.host = normHost(fallback);
+    await apiDetect();
+
+    const p = JSON.parse(getS("fp.persona", getS("bf.persona","null")));
+    if (!p || !p.line){
+      crumb.textContent="Missing data — start from Step 1";
+      document.querySelector(".summary").insertAdjacentHTML("beforeend",'<div class="muted-hint">No persona found. <a class="link" href="index.html">Go back</a>.</div>');
+      return;
     }
-    setFav(state.host||"");
-    $("#oneLine").textContent = (state.host||"yourcompany.com")+" — loading…";
-    try{
-      const data = await classify(state.host, seed.contact?.email||"");
-      statusEl.textContent = data.cached ? "(cached)" : "";
-      applyPersona(data);
-    }catch(e){
-      statusEl.textContent = "(offline mode)";
-      applyPersona({productTags:[], sectorHints:[]});
-    }
+    state.persona = p;
+    state.host = p.host || p.line?.host || "";
+    setFavicon(state.host);
+    crumb.textContent = (p.line?.host||"") + " — " + (p.line?.products||"packaging");
+    renderSentence(false);
+
+    // Build industries + UI
+    buildIndustries();
+    renderWheel();
+    renderDetail();
   })();
 
 })();
