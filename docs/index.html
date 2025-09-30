@@ -1,59 +1,58 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Galactly — Find real packaging buyers</title>
 
-<link rel="preconnect" href="https://icons.duckduckgo.com">
+<!-- Optional prod override. Leave empty in dev; CI can inject it. -->
+<meta name="api-base" content="">
+
 <style>
   :root{
     --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c;
     --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
     --cta:#6de1ff; --ctaText:#082433; --chip:#1a2433;
     --chipActive:#103247; --accent:#38e08f; --divider:#1b2531; --ring:#24435f;
-    --warn:#ff9c66; --bad:#ff6b6b;
   }
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
-  .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%); position:relative; z-index:0}
+  .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%)}
   .hero-inner{max-width:920px;text-align:center}
   h1{font-size:clamp(32px,6vw,56px);margin:0 0 12px}
   p.lead{color:var(--muted);margin:0 0 28px}
-  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer; position:relative; z-index:2}
+  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
   .btn.sec{background:#152333;color:#cfe0ee}
   .btn:active{transform:translateY(1px)}
-  .chip-badge{font-size:12px;border:1px solid var(--divider);padding:2px 8px;border-radius:999px;background:#0f1622;color:#a8bfd1}
 
   /* modal */
   .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
   .modal.show{display:flex}
   .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
-  .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
+  .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
   .steps{display:flex;gap:8px;align-items:center}
   .dot{width:8px;height:8px;border-radius:50%;background:#2a3444}
   .dot.on{background:#5bd0ff}
-  .card-bd{padding:18px}
-  .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--divider)}
-  .scroll{max-height:70vh;overflow:auto;padding:6px 6px}
+  .api{font-size:12px;color:#9bb6c9}
+  .api.ok{color:#60e0a8}
+  .api.err{color:#ff9aa5}
+  .card-bd{padding:16px}
+  .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 16px;border-top:1px solid var(--divider)}
+  .scroll{max-height:70vh;overflow:auto;padding:6px}
 
   /* inputs */
   .field{margin:10px 0}
   label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
-  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
   input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
 
-  /* summary (sentence editor) */
-  .summary{display:flex;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:12px 14px;border-radius:14px;margin:0 0 14px;align-items:flex-start}
+  /* sentence */
+  .summary{display:flex;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:12px 14px;border-radius:14px;margin:0 0 12px;align-items:flex-start}
   .fav{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;background:#fff;border:1px solid #cfd8e3}
   .fav img{width:24px;height:24px;filter:saturate(1.05) contrast(1.05)}
   .one{font-weight:700}
-  .one-line{line-height:1.8}
-  .token{display:inline-block;border-radius:8px;padding:2px 6px;margin:0 2px}
-  .token[data-lock="true"]{background:transparent;color:#dfeaf5;border:0}
-  .sentence{--bgx:#0f1926}
-  .sentence .token[data-editable="true"]{background:transparent;border-bottom:1px dashed #3a5572}
-  .sentence.editing .token[data-editable="true"]{background:var(--bgx);border:1px solid #2b425a}
-  .sentence .token:focus{outline:2px solid var(--ring)}
+  .token{display:inline-block;border-radius:8px;padding:0 4px;margin:0 1px}
+  .token[data-editable="true"]{border-bottom:1px dashed #3a5572}
+  .sentence.editing .token[data-editable="true"]{background:#0f1926;border:1px solid #2b425a}
   .edit-actions{display:flex;gap:8px;margin-top:6px}
   .big-edit{padding:6px 10px;border-radius:10px;background:#172839;border:1px solid #274059;color:#d8e8f7;font-weight:600;cursor:pointer}
   .big-edit.primary{background:var(--cta);border:none;color:#06293a}
@@ -61,7 +60,6 @@
   /* groups */
   .group{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px;margin:14px 0}
   .group h4{margin:0 0 8px}
-  .muted-hint{font-size:12px;color:#99b2c8;margin-left:8px}
   .chips{user-select:none}
   .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
   .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
@@ -69,13 +67,8 @@
   /* sliders */
   .slider-row{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:center;margin:10px 0}
   .slider-row input[type=range]{width:100%}
-
   .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
   .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
-  .gear{background:transparent;border:none;color:#99b4c7;cursor:pointer}
-  .status-ok{color:#8ff7c6}
-  .status-warn{color:var(--warn)}
-  .status-bad{color:var(--bad)}
   @media (max-width:800px){.slider-row{grid-template-columns:1fr}}
 </style>
 </head>
@@ -84,7 +77,7 @@
     <div class="hero-inner">
       <h1>Find real packaging buyers.</h1>
       <p class="lead">Laser-targeted leads, tuned to your strengths.</p>
-      <button id="cta" type="button" class="btn"><span class="spark">✨</span> Get qualified leads free</button>
+      <button id="cta" type="button" class="btn"><span>✨</span> Get qualified leads free</button>
     </div>
   </div>
 
@@ -97,11 +90,8 @@
           <span class="dot" data-step-dot="1"></span>
           <span class="dot" data-step-dot="2"></span>
         </div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <span id="apiStatus" class="chip-badge">API: resolving…</span>
-          <button id="gear" class="gear" title="Set API base">⚙️</button>
-          <button id="close" class="x" aria-label="Close">✕</button>
-        </div>
+        <div class="api" id="apiStatus">API: resolving…</div>
+        <button id="close" class="x" aria-label="Close">✕</button>
       </div>
 
       <div class="card-bd">
@@ -132,18 +122,18 @@
                   </div>
                   <div class="field">
                     <label>Phone (required for alerts) *</label>
-                    <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/>
+                    <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567">
                     <div style="color:#9ab0c0;font-size:12px">Country code helps us personalize geography (e.g., “+1” for U.S.).</div>
                   </div>
                 </div>
                 <div>
                   <div class="field">
                     <label>Business email *</label>
-                    <input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required/>
+                    <input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required>
                   </div>
                   <div class="field">
                     <label>Website / Domain (auto from email)</label>
-                    <input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/>
+                    <input id="host" type="text" inputmode="url" placeholder="yourcompany.com">
                     <div style="color:#9ab0c0;font-size:12px">Auto-filled from your email as you type. You can edit.</div>
                   </div>
                 </div>
@@ -166,56 +156,46 @@
             <div class="summary">
               <div class="fav"><img id="fav" alt="" width="24" height="24" referrerpolicy="no-referrer"></div>
               <div style="flex:1">
-                <div id="sentence" class="one one-line sentence" aria-live="polite"></div>
+                <div id="sentence" class="one sentence" aria-live="polite"></div>
                 <div class="edit-actions">
                   <button id="editLine" class="big-edit" type="button">Edit</button>
                   <button id="doneLine" class="big-edit primary" type="button" hidden>Done</button>
                   <a id="refresh" href="#" class="big-edit" style="background:#142133;border-color:#25384b;color:#a9c3d8">Refresh from website</a>
-                  <span id="status" class="muted-hint"></span>
+                  <span id="status" class="api" style="margin-left:6px"></span>
                 </div>
               </div>
             </div>
 
-            <button id="advToggle" class="btn sec" type="button" style="padding:8px 12px;border-radius:999px;margin-bottom:8px">
-              <span id="advLbl">Show advanced ▾</span>
-            </button>
+            <!-- Hot 10% priorities -->
+            <div class="group" id="grp-priorities">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <h4 style="margin:0">Buyer priorities — <em>for your top 10% buyers</em></h4>
+                <div style="font-size:12px;color:#9bb6c9">We’ll weight hot leads higher (0–10).</div>
+              </div>
+              <div id="metricsBox"></div>
+            </div>
 
-            <div id="advanced" hidden>
+            <!-- Operations (optional) -->
+            <div class="group">
+              <h4 style="margin:0 0 8px">Buyer operations (optional)</h4>
+              <div id="opsChips" class="chips"></div>
+            </div>
 
-              <!-- Buyer priorities -->
-              <div class="group">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                  <h4 style="margin:0">Buyer priorities — <i>for your top 10% buyers</i></h4>
-                  <div class="muted-hint">We weight hot leads by these (0–10).</div>
+            <!-- Targeting -->
+            <div class="group">
+              <h4 style="margin:0 0 8px">Buyer targeting</h4>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                <div>
+                  <label>Boost near city</label>
+                  <input id="city" type="text" placeholder="e.g., Chicago">
+                  <div id="cityChips" class="chips" style="margin-top:6px"></div>
                 </div>
-                <div id="metricsBox"></div>
-              </div>
-
-              <!-- Operations (optional) -->
-              <div class="group">
-                <h4 style="margin:0 0 8px">Buyer operations (optional)</h4>
-                <div class="muted-hint">Pick the ops your very best buyers run. Click to select; use the slider to set importance.</div>
-                <div id="opsChips" class="chips" style="margin-top:6px"></div>
-              </div>
-
-              <!-- Targeting -->
-              <div class="group">
-                <h4 style="margin:0 0 8px">Buyer targeting</h4>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-                  <div>
-                    <label>Find buyers near…</label>
-                    <input id="city" type="text" placeholder="e.g., Chicago">
-                    <div id="cityChips" class="chips" style="margin-top:6px"></div>
-                    <div style="color:#9ab0c0;font-size:12px">We’ll boost leads near this city.</div>
-                  </div>
-                  <div>
-                    <label>Buyers in these sectors</label>
-                    <input id="sectors" type="text" placeholder="e.g., food, beverage, cosmetics">
-                    <div id="sectorChips" class="chips" style="margin-top:6px"></div>
-                  </div>
+                <div>
+                  <label>Sectors / industries</label>
+                  <input id="sectors" type="text" placeholder="e.g., food, beverage, cosmetics">
+                  <div id="sectorChips" class="chips" style="margin-top:6px"></div>
                 </div>
               </div>
-
             </div>
           </section>
         </div>
@@ -230,52 +210,117 @@
 
 <script>
 (function(){
-  // ---------- Safe localStorage helpers ----------
-  function getStored(k, d=""){ try{ const v = localStorage.getItem(k); return v===null? d : v; }catch{ return d; } }
-  function setStored(k,v){ try{ localStorage.setItem(k, v); }catch{} }
-
-  // ---------- API BASE ----------
-  // User-entered base (can be root or /api); we’ll auto-resolve a working /classify.
-  const API_BASE = {
-    getRaw(){
-      if (window.API_BASE && typeof window.API_BASE==="string") return window.API_BASE.replace(/\/+$/,"");
-      const saved = getStored("apiBase","");
-      return (saved||"").replace(/\/+$/,"");
-    },
-    set(v){ if(v) setStored("apiBase", v.replace(/\/+$/,"")); }
+  /* ---------------- storage helpers ---------------- */
+  const S = {
+    g(k,d=""){ try{ const v=localStorage.getItem(k); return v===null? d : v; }catch{ return d; } },
+    s(k,v){ try{ localStorage.setItem(k,v); }catch{} },
+    d(k){ try{ localStorage.removeItem(k); }catch{} }
   };
 
-  // Resolved API root that definitely contains /classify (cached)
-  async function resolveApiRoot(){
-    const cached = getStored("api.resolved","");
-    if (cached) return cached;
+  /* ---------------- API base & probing ---------------- */
+  const apiStatus = document.getElementById('apiStatus');
 
-    const raw = API_BASE.getRaw();
-    const candidates = [];
-    if (raw) {
-      candidates.push(raw+"/classify");
-      candidates.push(raw+"/api/classify");
-      // If the user already saved `/api`, also try the plain root just in case
-      if (/\/api$/i.test(raw)) candidates.unshift(raw.replace(/\/api$/i,"")+"/classify");
-    }
+  function meta(name){
+    const m = document.querySelector(`meta[name="${name}"]`);
+    return m ? (m.content||"").trim() : "";
+  }
+  function tidy(u){ return (u||"").replace(/\/+$/,""); }
+  function uniq(arr){ return [...new Set(arr.filter(Boolean))]; }
 
-    // Probe each candidate with a very small request
-    for (const url of candidates){
-      try{
-        const probe = await fetch(url+"?ping=1",{method:"GET",mode:"cors"});
-        if (probe.ok){
-          const root = url.replace(/\/classify$/,"");
-          setStored("api.resolved", root);
-          return root;
-        }
-      }catch{}
-    }
-    return ""; // unresolved
+  function apiCandidates(){
+    const fromWindow = typeof window.API_BASE==="string" ? window.API_BASE : "";
+    const fromMeta   = meta("api-base");
+    const fromLS     = S.g("api.base.manual","");
+    const origin     = location.origin;
+
+    const cand = [];
+    if (fromWindow) cand.push(tidy(fromWindow));
+    if (fromMeta)   cand.push(tidy(fromMeta));
+    if (fromLS)     cand.push(tidy(fromLS));
+    // same origin (for deployments where API and site are same host)
+    cand.push(tidy(origin));
+    // common pattern where API is at /api
+    cand.push(tidy(origin)+"/api");
+    return uniq(cand);
   }
 
-  const apiStatusEl = document.getElementById("apiStatus");
+  async function tryFetch(u, opts={}, timeoutMs=9000){
+    const ctl = new AbortController();
+    const t = setTimeout(()=>ctl.abort(), timeoutMs);
+    try{
+      const r = await fetch(u, {...opts, credentials:"omit", signal:ctl.signal});
+      const text = await r.text();
+      let json=null;
+      try{ json = JSON.parse(text); }catch{}
+      return { ok:r.ok, status:r.status, text, json };
+    }catch(e){
+      return { ok:false, status:0, text:String(e), json:null };
+    }finally{ clearTimeout(t); }
+  }
 
-  // ---------- ELEMENTS ----------
+  async function probeClassify(host, email){
+    // cached path?
+    const cached = S.g("api.classify.path","");
+    if (cached){
+      const method = S.g("api.classify.method","GET");
+      const {ok,json} = await invokeClassify({url:cached, method}, host, email, true);
+      if (ok && json) return {url:cached, method};
+      S.d("api.classify.path"); S.d("api.classify.method");
+    }
+
+    const bases = apiCandidates();
+    const paths = ["/classify","/api/classify","/v1/classify"];
+    const methods = ["GET","POST"];
+
+    for (const base of bases){
+      for (const p of paths){
+        const url = tidy(base)+p;
+        for (const method of methods){
+          const {ok,json} = await invokeClassify({url, method}, host, email, true);
+          if (ok && json){
+            S.s("api.classify.path", url);
+            S.s("api.classify.method", method);
+            S.s("api.base.resolved", tidy(base));
+            return {url, method};
+          }
+        }
+      }
+    }
+    throw new Error("No classify endpoint found");
+  }
+
+  async function invokeClassify(target, host, email, probe=false){
+    const method = target.method||"GET";
+    let url = target.url;
+    let opts = {};
+    if (method==="GET"){
+      const q = new URLSearchParams({host, email: email||""}).toString();
+      url += (url.includes("?")?"&":"?")+q;
+      opts = { method:"GET" };
+    }else{
+      opts = { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({host, email}) };
+    }
+    const r = await tryFetch(url, opts, probe? 7000 : 12000);
+    return { ok:r.ok, json:r.json, status:r.status, text:r.text };
+  }
+
+  async function classify(host, email){
+    apiStatus.textContent = "API: resolving…";
+    try{
+      const target = await probeClassify(host, email);
+      apiStatus.textContent = "API: ok";
+      apiStatus.classList.add("ok");
+      const r = await invokeClassify(target, host, email, false);
+      if (r.ok && r.json) return r.json;
+      throw new Error(r.text||("HTTP "+r.status));
+    }catch(e){
+      apiStatus.textContent = "API: offline ("+String(e.message||e)+")";
+      apiStatus.classList.remove("ok"); apiStatus.classList.add("err");
+      throw e;
+    }
+  }
+
+  /* ---------------- UI refs ---------------- */
   const modal = document.getElementById("modal");
   const openBtn = document.getElementById("cta");
   const closeBtn = document.getElementById("close");
@@ -297,10 +342,6 @@
   const refreshA = document.getElementById("refresh");
   const statusEl = document.getElementById("status");
 
-  const adv = document.getElementById("advanced");
-  const advToggle = document.getElementById("advToggle");
-  const advLbl = document.getElementById("advLbl");
-
   const metricsBox = document.getElementById("metricsBox");
   const opsChips = document.getElementById("opsChips");
   const cityEl = document.getElementById("city");
@@ -308,30 +349,20 @@
   const cityChips = document.getElementById("cityChips");
   const sectorChips = document.getElementById("sectorChips");
 
-  // quick gear editor
-  document.getElementById("gear").addEventListener("click",()=>{
-    const cur = API_BASE.getRaw() || "https://YOUR-NORTHFLANK.code.run/api";
-    const v = prompt("API base (root or /api). Examples:\nhttps://YOUR-NORTHFLANK.code.run\nhttps://YOUR-NORTHFLANK.code.run/api", cur);
-    if(!v) return;
-    API_BASE.set(v);
-    setStored("api.resolved",""); // force re-resolve next time
-    apiStatusEl.textContent = "API: resolving…";
-    alert("Saved. Using:\n"+API_BASE.getRaw());
-  });
-
-  // ---------- STATE ----------
+  /* ---------------- state ---------------- */
   const state = {
     step:0, role:"supplier",
-    line:{ host:"your-company.com", verb:"supplies", products:"packaging", audience:"brands", region:"the U.S.", contacts:"Operations, Procurement" },
-    metrics:[],  // dynamic
-    opsPicked:new Set()
+    line:{ host:"yourcompany.com", verb:"supplies", products:"packaging", audience:"brands", region:"the U.S.", contacts:"Operations, Procurement" },
+    metrics:[],
+    productTags:[],
+    sectorHints:[]
   };
 
-  // ---------- UTIL ----------
+  /* ---------------- helpers ---------------- */
   function show(step){
     state.step = step;
     ["#step1","#step2","#step3"].forEach((id,i)=>{
-      const el=document.querySelector(id); if(!el) return;
+      const el=document.querySelector(id);
       el.hidden = i!==step;
       dots[i].classList.toggle("on", i===step);
     });
@@ -344,32 +375,28 @@
   function domainFromEmail(e){ const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m? m[1]:""; }
   function setFavicon(host){
     const h=normHost(host);
-    if(!h){ favImg.src=""; return; }
-    favImg.src="https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico";
+    favImg.src = h ? ("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico") : "";
   }
 
-  // sentence render & edit
   function renderSentence(editing=false){
     const L = state.line;
-    const tpl = [
-      {k:"host", txt:L.host, lock:true},
-      {txt:"—", lock:true},
-      {k:"verb", txt:L.verb},
-      {k:"products", txt:L.products},
-      {txt:"for", lock:true},
-      {k:"audience", txt:L.audience},
-      {txt:"in", lock:true},
-      {k:"region", txt:L.region},
-      {txt:".", lock:true},
-      {txt:"Best contacts:", lock:true},
-      {k:"contacts", txt:L.contacts}
-    ];
     sentence.classList.toggle("editing", editing);
     sentence.innerHTML = "";
+    const tpl = [
+      {k:"host", txt:L.host, lock:true},
+      {txt:" — ", lock:true},
+      {k:"verb", txt:L.verb},
+      {k:"products", txt:L.products},
+      {txt:" for ", lock:true},
+      {k:"audience", txt:L.audience},
+      {txt:" in ", lock:true},
+      {k:"region", txt:L.region},
+      {txt:".  Best contacts: ", lock:true},
+      {k:"contacts", txt:L.contacts}
+    ];
     for (const part of tpl){
       const span = document.createElement("span");
       span.className="token";
-      span.dataset.lock = part.lock ? "true":"false";
       if (!part.lock){
         span.dataset.editable="true";
         span.contentEditable = editing;
@@ -377,54 +404,20 @@
       }
       span.textContent = part.txt;
       sentence.appendChild(span);
-      sentence.appendChild(document.createTextNode(" "));
     }
   }
-
   editBtn.addEventListener("click", ()=>{ renderSentence(true); editBtn.hidden=true; doneBtn.hidden=false; });
   doneBtn.addEventListener("click", ()=>{ renderSentence(false); editBtn.hidden=false; doneBtn.hidden=true; });
 
-  // adv toggle
-  advToggle.addEventListener("click",(e)=>{
-    e.preventDefault();
-    const isOpen = !adv.hasAttribute("hidden");
-    if (isOpen){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
-    else { adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
-  });
-
-  // role toggles
-  function setRole(r){
-    state.role=r;
-    optSupplier.classList.toggle("active", r==="supplier");
-    optBuyer.classList.toggle("active", r==="buyer");
-  }
-  optSupplier.addEventListener("click", ()=>setRole("supplier"));
-  optBuyer.addEventListener("click", ()=>setRole("buyer"));
-
-  // email → domain (real-time)
-  function syncDomain(){
-    const d = domainFromEmail(emailEl.value);
-    if (d) hostEl.value = d;
-  }
-  ["input","keyup","change"].forEach(ev=> emailEl.addEventListener(ev, syncDomain));
-  setTimeout(syncDomain, 120);
-
-  // chips helpers
-  function addChip(text, box, set){
+  function addChip(text, box, onToggle){
     const s=document.createElement("span"); s.className="chip"; s.textContent=text;
-    s.addEventListener("click",()=>{ s.classList.toggle("active");
-      if(set){
-        if(s.classList.contains("active")) set.add(text); else set.delete(text);
-      }
-    });
+    s.addEventListener("click",()=>{ s.classList.toggle("active"); onToggle && onToggle(s.classList.contains("active"), text); });
     box.appendChild(s);
   }
 
-  // metrics
   function renderMetrics(labels){
-    if (!labels || !labels.length) return; // never overwrite with empty
     metricsBox.innerHTML="";
-    state.metrics = labels.slice(0,20).map(l=>({label:l, value:8}));
+    state.metrics = (labels||[]).slice(0,16).map(l=>({label:l, value:8}));
     for (const m of state.metrics){
       const row=document.createElement("div"); row.className="slider-row";
       const lab=document.createElement("div"); lab.textContent=m.label;
@@ -435,59 +428,46 @@
     }
   }
 
-  // defaults for city & sectors & ops
-  function seedChips(){
-    ["Chicago","New York","Los Angeles","Dallas","Atlanta","Miami"].forEach(c=>addChip(c,cityChips));
-    ["food","beverage","cosmetics","electronics","apparel","supplements","pharma"].forEach(s=>addChip(s,sectorChips));
-    ["Hand pallet wrapping","Automated pallet wrapper","E-commerce fulfillment"].forEach(o=>addChip(o,opsChips,state.opsPicked));
-  }
-
-  // ---------- API CALLS ----------
-  async function classify(host,email){
-    const root = await resolveApiRoot();
-    if (!root){
-      apiStatusEl.textContent = "API: not found";
-      apiStatusEl.className = "chip-badge status-bad";
-      throw new Error("No API detected (tried /classify and /api/classify)");
-    }
-    apiStatusEl.textContent = "API: OK";
-    apiStatusEl.className = "chip-badge status-ok";
-
-    const url = root + "/classify?host=" + encodeURIComponent(host) + "&email=" + encodeURIComponent(email||"");
-    const r = await fetch(url,{credentials:"omit"});
-    if (!r.ok){
-      const t = await r.text().catch(()=>r.statusText);
-      throw new Error(t||("HTTP "+r.status));
-    }
-    return r.json();
+  function seedTargeting(){
+    ["Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"].forEach(c=>addChip(c,cityChips));
+    ["food","beverage","cosmetics","electronics","apparel","pharma"].forEach(s=>addChip(s,sectorChips));
   }
 
   function deriveLine(data, host){
     const prods = (data.productTags||[]).slice(0,3).join(", ") || "packaging";
-    const contacts = /industrial|corrugat|pallet|film|shrink|automation/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")).toLowerCase())
-      ? "Operations, Procurement" : "Procurement, Marketing";
-    state.line = { host, verb:"supplies", products:prods, audience:"businesses", region:"the U.S.", contacts };
+    const segs  = (data.sectorHints||[]).slice(0,2).join(", ") || "businesses";
+    const contacts = /shrink|pallet|film|automation|industrial/i.test((data.summary||"")+prods) ? "Operations, Procurement" : "Procurement, Marketing";
+    state.line = { host, verb:"supplies", products:prods, audience:segs, region:"the U.S.", contacts };
   }
 
-  function deriveMetrics(data){
-    const text = ((data.summary||"") + " " + (data.productTags||[]).join(" ") + " " + (data.evidence||[]).join(" ")).toLowerCase();
-    const map = [
-      [/automation|pallet|fulfillment|co[- ]?pack/i, "Line automation / fulfillment"],
-      [/fast|lead.?time|rush|2 ?weeks|quick ship/i, "Fast turnaround (≤ 2 weeks)"],
-      [/cost|price|budget|unit cost|lowest/i, "Lowest unit cost"],
-      [/moq|minimum order|short run|prototype|sample/i, "Low MOQs / short runs"],
-      [/eco|sustain|recycl|compost|bio|green|post[- ]consumer/i, "Eco materials / recyclable"],
-      [/inventory|stock|warehous|kanban/i, "Vendor-managed inventory"],
-      [/food|barrier|fda|oxygen|moisture/i, "Food-safe / barrier"],
-      [/tamper|child[- ]?resist|security/i, "Tamper / CR compliance"]
-    ];
+  function deriveHotMetrics(data, host){
+    // Prefer specific, non-generic priorities first.
+    const fromText = ((data.summary||"")+" "+(data.evidence||[]).join(" ")+" "+(data.productTags||[]).join(" ")).toLowerCase();
     const set = new Set();
-    for (const [re,label] of map){ if (re.test(text)) set.add(label); }
-    // Always include the two universal ones but let the user tune them
-    ["Fast turnaround (≤ 2 weeks)","Lowest unit cost"].forEach(x=>set.add(x));
+
+    if (/pallet|wrapper|automation|fulfillment/.test(fromText) || /shrink|stretch/.test(host)){
+      set.add("Line automation / pallet wrapping");
+    }
+    if (/eco|recycl|compost|post[- ]consumer|bio/.test(fromText)) set.add("Sustainability / recyclable materials");
+    if (/barrier|foil|oxygen|moisture|fda|food/.test(fromText)) set.add("Food-safe / barrier performance");
+    if (/print|graphics|finish|brand/.test(fromText)) set.add("Print & brand presentation");
+    if (/inventory|stock|kanban|warehouse/.test(fromText)) set.add("Vendor-managed inventory");
+    // Always include two common discriminators so users can weight them:
+    set.add("Fast turnaround (≤ 2 weeks)");
+    set.add("Lowest unit cost");
+
     return [...set];
   }
 
+  function seedOps(host){
+    opsChips.innerHTML="";
+    const ops = (/shrink|stretch|pallet/.test(host) ? 
+      ["Hand pallet wrapping","Automated pallet wrapper","E-commerce fulfillment"] :
+      ["E-commerce fulfillment","Co-packing / kitting"]);
+    ops.forEach(o=>addChip(o, opsChips));
+  }
+
+  /* ---------------- classify & refresh ---------------- */
   async function refreshFromWebsite(){
     const host = normHost(hostEl.value);
     if (!host) return;
@@ -495,32 +475,60 @@
     statusEl.textContent = "";
 
     try{
+      // prefill sentence with host immediately
       state.line.host = host;
       renderSentence(false);
 
       const data = await classify(host, emailEl.value||"");
-      // sentence + metrics
-      deriveLine(data, host);
-      renderSentence(false);
+      if (data && (data.ok || data.host)){
+        deriveLine(data, host);
+        renderSentence(false);
 
-      const labels = deriveMetrics(data);
-      if (labels && labels.length) renderMetrics(labels);
+        // metrics
+        const labels = deriveHotMetrics(data, host);
+        renderMetrics(labels);
 
-      // sectors (broad & safe)
-      sectorChips.innerHTML="";
-      (data.sectorHints||["food","beverage","cosmetics"]).slice(0,8).forEach(s=>addChip(s, sectorChips));
+        // sectors (chips to pick)
+        sectorChips.innerHTML="";
+        (data.sectorHints||["food","beverage","cosmetics"]).slice(0,8).forEach(s=>addChip(s, sectorChips));
 
-      statusEl.textContent = data.cached ? "(cached)" : "(fresh)";
+        // ops
+        seedOps(host);
+
+        statusEl.textContent = data.cached ? "(cached)" : "";
+      }else{
+        throw new Error("No data");
+      }
     }catch(err){
-      console.warn("classify failed:", err);
-      statusEl.textContent = " (offline: "+(err.message||"error")+")";
-      // Do NOT overwrite sliders with demo labels here.
+      // Offline / 404 / method mismatch -> graceful defaults
+      const host = normHost(hostEl.value);
+      deriveLine({summary:"", productTags:[], sectorHints:[]}, host);
+      renderSentence(false);
+      renderMetrics(["Line automation / pallet wrapping","Sustainability / recyclable materials","Fast turnaround (≤ 2 weeks)","Lowest unit cost"]);
+      seedOps(host);
+      statusEl.textContent = " (offline)";
+      console.warn("refreshFromWebsite fallback:", err);
     }
   }
-
   refreshA.addEventListener("click",(e)=>{ e.preventDefault(); refreshFromWebsite(); });
 
-  // ---------- NAV ----------
+  /* ---------------- role + email → domain ---------------- */
+  function setRole(r){
+    state.role=r;
+    optSupplier.classList.toggle("active", r==="supplier");
+    optBuyer.classList.toggle("active", r==="buyer");
+  }
+  optSupplier.addEventListener("click", ()=>setRole("supplier"));
+  optBuyer.addEventListener("click", ()=>setRole("buyer"));
+
+  function syncDomain(){
+    const d = domainFromEmail(emailEl.value);
+    if (d && !hostEl.value) hostEl.value = d;
+  }
+  emailEl.addEventListener("input", syncDomain);
+  emailEl.addEventListener("change", syncDomain);
+
+  /* ---------------- navigation ---------------- */
   function savePersonaAndGo(){
     const host = normHost(state.line.host);
     const persona = {
@@ -528,26 +536,30 @@
       line: state.line,
       role: state.role,
       metrics: state.metrics,
-      ops: Array.from(state.opsPicked),
-      targeting: { city: (cityEl.value||"").trim(),
-                   sectors: (sectorsEl.value||"").trim(),
-                   cityPicked: Array.from(cityChips.querySelectorAll('.chip.active')).map(x=>x.textContent.trim()),
-                   sectorPicked: Array.from(sectorChips.querySelectorAll('.chip.active')).map(x=>x.textContent.trim())
-                 }
+      ops: Array.from(opsChips.querySelectorAll('.chip.active')).map(x=>x.textContent.trim()),
+      targeting: {
+        city: (cityEl.value||"").trim(),
+        sectors: (sectorsEl.value||"").trim(),
+        cityChips: Array.from(cityChips.querySelectorAll('.chip.active')).map(x=>x.textContent.trim()),
+        sectorChips: Array.from(sectorChips.querySelectorAll('.chip.active')).map(x=>x.textContent.trim())
+      }
     };
 
-    // Save for free-panel
-    setStored('bf.persona', JSON.stringify(persona));
-    setStored('fp.persona', JSON.stringify(persona));
-    setStored('fp.supplier.host', host);
-    setStored('fp.pref.city', persona.targeting.city);
-    setStored('fp.autoImport','1');
+    // Persist for free-panel
+    S.s('bf.persona', JSON.stringify(persona));
+    S.s('fp.persona', JSON.stringify(persona));
+    S.s('fp.supplier.host', host);
+    S.s('fp.pref.city', persona.targeting.city);
+    S.s('fp.autoImport','1');
 
     location.href = 'free-panel.html';
   }
 
+  const open = ()=>{ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); };
+  const closeM = ()=>{ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); };
+
   openBtn.addEventListener("click", open);
-  closeBtn.addEventListener("click", close);
+  closeBtn.addEventListener("click", closeM);
   backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
   nextBtn.addEventListener("click", async ()=>{
     if (state.step===0){ show(1); return; }
@@ -560,29 +572,39 @@
       show(2);
       return;
     }
-    if (state.step===2){
-      savePersonaAndGo();
-    }
+    if (state.step===2){ savePersonaAndGo(); }
   });
 
-  // Init UI
-  setRole("supplier");
-  renderSentence(false);
-  seedChips();
-  show(0);
+  /* ---------------- init ---------------- */
+  function init(){
+    setRole("supplier");
+    renderSentence(false);
+    seedTargeting();
 
-  // Resolve API on load (purely for the status chip)
-  (async ()=>{
-    const root = await resolveApiRoot();
-    if (root){
-      apiStatusEl.textContent = "API: OK";
-      apiStatusEl.className = "chip-badge status-ok";
-    }else{
-      apiStatusEl.textContent = "API: not found";
-      apiStatusEl.className = "chip-badge status-bad";
+    // Resolve API label early (non-blocking)
+    (async ()=>{
+      try{
+        const bases = apiCandidates();
+        if (bases.length){
+          const b = S.g("api.base.resolved", bases[0]);
+          apiStatus.textContent = "API: probing…";
+          apiStatus.classList.remove("ok","err");
+        }
+      }catch{}
+    })();
+  }
+  init();
+
+  // Hidden developer override (Shift+G) for emergencies.
+  window.addEventListener("keydown",(e)=>{
+    if (e.shiftKey && (e.key==="G" || e.key==="g")){
+      const cur = S.g("api.base.manual", meta("api-base") || "");
+      const v = prompt("Set API base (optional, advanced). Example:\nhttps://YOUR-SERVICE.code.run/api", cur);
+      if (v==null) return;
+      if (v.trim()) S.s("api.base.manual", tidy(v.trim())); else S.d("api.base.manual");
+      alert("Saved. Reload and try again.");
     }
-  })();
-
+  });
 })();
 </script>
 </body>
