@@ -4,15 +4,6 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Galactly — Find real packaging buyers</title>
-
-<!--
-  index.html (v4 — Industry playbooks + sector mute)
-  - CTA-safe split in two parts (this file is Part 1 of 2 — 350 lines)
-  - Part 1: full markup, styles, modal, CTA + basic nav, safe placeholders
-  - Part 2: industry playbooks, definitions/anchors, AI toggle, mute sectors,
-            API discovery, classify, persistence
--->
-
 <style>
   :root{
     --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c;
@@ -29,11 +20,9 @@
   .btn.sec{background:#152333;color:#cfe0ee}
   .btn:active{transform:translateY(1px)}
   .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
-
-  /* modal */
   .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
   .modal.show{display:flex}
-  .card{width:min(1000px,92vw);background:var(--panel);border:1px solid var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
+  .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--divider);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
   .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
   .steps{display:flex;gap:8px;align-items:center}
   .dot{width:8px;height:8px;border-radius:50%;background:#2a3444}
@@ -41,54 +30,33 @@
   .api-badge{font-size:12px;padding:4px 8px;border-radius:10px;border:1px solid var(--divider);color:#a8c3d8}
   .api-badge.ok{color:#0f0}
   .api-badge.err{color:#ff8}
-
   .card-bd{padding:18px}
   .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--divider)}
   .scroll{max-height:70vh;overflow:auto;padding:6px 6px}
-
-  /* inputs */
   .field{margin:10px 0}
   label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
-  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:#e9f1f7;outline:none}
   input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
-
-  /* summary (sentence) */
   .summary{display:flex;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:12px 14px;border-radius:14px;margin:0 0 14px;align-items:flex-start}
   .fav{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;background:#fff;border:1px solid #cfd8e3}
   .fav img{width:24px;height:24px;filter:saturate(1.05) contrast(1.05)}
-  .one{font-weight:700}
   .one-line{line-height:1.8}
   .token{display:inline-block;border-radius:8px;padding:2px 6px;margin:0 2px}
-  .token[data-lock="true"]{background:transparent;color:#dfeaf5;border:0}
   .sentence{--bgx:#0f1926}
-  .sentence .token[data-editable="true"]{background:transparent;border-bottom:1px dashed #3a5572}
-  .sentence.editing .token[data-editable="true"]{background:var(--bgx);border:1px solid #2b425a}
+  .sentence .token[data-editable=true]{background:transparent;border-bottom:1px dashed #3a5572}
+  .sentence.editing .token[data-editable=true]{background:var(--bgx);border:1px solid #2b425a}
   .sentence .token:focus{outline:2px solid var(--ring)}
   .edit-actions{display:flex;gap:8px;margin-top:6px}
   .big-edit{padding:6px 10px;border-radius:10px;background:#172839;border:1px solid #274059;color:#d8e8f7;font-weight:600;cursor:pointer}
   .big-edit.primary{background:var(--cta);border:none;color:#06293a}
-
-  /* groups */
   .group{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px;margin:14px 0}
   .group h4{margin:0 0 8px}
   .muted-hint{font-size:12px;color:#99b2c8;margin-left:8px}
   .chips{user-select:none}
   .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
   .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
-  .chip.muted{opacity:.55;border-style:dashed}
-
-  /* sliders */
   .slider-row{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:center;margin:10px 0}
   .slider-row input[type=range]{width:100%}
-
-  /* tooltips for metric definitions (used in Part 2) */
-  .tip{position:relative;display:inline-inline;vertical-align:middle;margin-left:6px;cursor:help;font-weight:700}
-  .tip::after{content:"i";display:inline-block;width:16px;height:16px;border-radius:50%;border:1px solid var(--divider);font-size:11px;line-height:16px;text-align:center;background:#0d1a22;color:#9fc3da}
-  .tip .bubble{position:absolute;left:0;top:120%;z-index:40;display:none;min-width:240px;max-width:360px;background:#0a1622;border:1px solid var(--divider);border-radius:10px;padding:10px 12px;color:#cfe0ee;font-size:12px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
-  .tip:hover .bubble{display:block}
-  .bubble .h{display:block;color:#9fb5c6;font-weight:600;margin-bottom:6px}
-  .bubble .a{display:block;color:#9fb5c6;margin-top:6px}
-
   .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
   .gear{display:none}
   @media (max-width:800px){.slider-row{grid-template-columns:1fr}}
@@ -102,8 +70,6 @@
       <button id="cta" type="button" class="btn"><span>✨</span> Get qualified leads free</button>
     </div>
   </div>
-
-  <!-- modal -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="card" role="document">
       <div class="card-hd">
@@ -117,11 +83,8 @@
           <button id="close" class="x" aria-label="Close">✕</button>
         </div>
       </div>
-
       <div class="card-bd">
         <div class="scroll">
-
-          <!-- STEP 1 -->
           <section class="step" id="step1">
             <div class="pill">Get set up in 60 seconds</div>
             <h2 style="margin:10px 0 14px;">Pick your side</h2>
@@ -132,8 +95,6 @@
               </div>
             </div>
           </section>
-
-          <!-- STEP 2 -->
           <section class="step" id="step2" hidden>
             <div class="pill">Step 2 of 3</div>
             <h2 style="margin:10px 0 14px;">Tell us who you are</h2>
@@ -163,7 +124,6 @@
                 </div>
               </div>
             </div>
-
             <div class="group" style="display:flex;align-items:center;justify-content:space-between">
               <div id="apiStatus" style="color:#9ab0c0">API: resolving…</div>
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -171,16 +131,12 @@
               </label>
             </div>
           </section>
-
-          <!-- STEP 3 -->
           <section class="step" id="step3" hidden>
             <div class="pill">Step 3 of 3</div>
-
-            <!-- one-liner (warm lead) -->
             <div class="summary">
               <div class="fav"><img id="fav" alt="" width="24" height="24" referrerpolicy="no-referrer"></div>
               <div style="flex:1">
-                <div id="sentence" class="one one-line sentence" aria-live="polite"></div>
+                <div id="sentence" class="one-line sentence" aria-live="polite"></div>
                 <div class="edit-actions">
                   <button id="editLine" class="big-edit" type="button">Edit</button>
                   <button id="doneLine" class="big-edit primary" type="button" hidden>Done</button>
@@ -189,24 +145,10 @@
                 </div>
               </div>
             </div>
-
-            <!-- Advanced (hot leads) collapsed by default -->
             <button id="advToggle" class="btn sec" type="button" style="padding:8px 12px;border-radius:999px;margin-bottom:8px">
               <span id="advLbl">Show advanced ▾</span>
             </button>
-
             <div id="advanced" hidden>
-
-              <!-- Sector selection / mute -->
-              <div class="group" id="grp-sectors-head">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                  <h4 style="margin:0">Industries you serve</h4>
-                  <div class="muted-hint">Click to toggle. Muted sectors are excluded (zero weight).</div>
-                </div>
-                <div id="sectorSelectChips" class="chips" style="margin-top:6px"></div>
-              </div>
-
-              <!-- Buyer priorities (global) -->
               <div class="group" id="grp-priorities">
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <h4 style="margin:0">Buyer priorities — <span style="font-weight:600">top 10% buyers</span></h4>
@@ -214,22 +156,16 @@
                 </div>
                 <div id="metricsBox"></div>
               </div>
-
-              <!-- Industry playbooks (per-sector cards) -->
               <div class="group" id="grp-sectors">
-                <h4 style="margin:0 0 8px">Industry playbooks</h4>
+                <h4 style="margin:0 0 8px">Sector-specific priorities</h4>
                 <div id="sectorBuckets"></div>
               </div>
-
-              <!-- Operations (not optional) -->
               <div class="group" id="grp-ops">
                 <h4 style="margin:0 0 8px">Buyer operations</h4>
                 <div id="opsChips" class="chips"></div>
                 <div id="opsSliders"></div>
                 <div class="muted-hint">Click to add; each selected operation gets its own importance slider.</div>
               </div>
-
-              <!-- Targeting -->
               <div class="group" id="grp-targeting">
                 <h4 style="margin:0 0 8px">Buyer targeting</h4>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -246,11 +182,9 @@
                   </div>
                 </div>
               </div>
-
             </div>
           </section>
         </div>
-
         <div class="card-ft">
           <button id="back" class="btn sec" type="button">Back</button>
           <button id="next" class="btn" type="button">Next</button>
@@ -258,685 +192,564 @@
       </div>
     </div>
   </div>
-
 <script>
 (()=>{
-  // ------- Part 1: CTA-safe core (no API required) -------------------------
-  const $  = (q)=>document.querySelector(q);
+  const $ = (q)=>document.querySelector(q);
   const $$ = (q)=>Array.from(document.querySelectorAll(q));
-
-  // elements
-  const modal    = $("#modal");
-  const openBtn  = $("#cta");
-  const closeBtn = $("#close");
-  const backBtn  = $("#back");
-  const nextBtn  = $("#next");
-  const dots     = $$("[data-step-dot]");
-
+  const modal   = $("#modal");
+  const openBtn = $("#cta");
+  const closeBtn= $("#close");
+  const backBtn = $("#back");
+  const nextBtn = $("#next");
+  const dots    = $$("[data-step-dot]");
+  const apiBadge= $("#apiBadge");
+  const apiStatus=$("#apiStatus");
   const optSupplier = $("#opt-supplier");
   const optBuyer    = $("#opt-buyer");
-
   const emailEl = $("#email");
   const hostEl  = $("#host");
-  const phoneEl = $("#phone");
-
   const favImg  = $("#fav");
   const sentence= $("#sentence");
+  const adv     = $("#advanced");
+  const advLbl  = $("#advLbl");
   const editBtn = $("#editLine");
   const doneBtn = $("#doneLine");
   const refreshA= $("#refresh");
-  const statusEl= $("#status");
-
-  const adv     = $("#advanced");
-  const advToggle = $("#advToggle");
-  const advLbl  = $("#advLbl");
-
-  // containers used later (exist now)
-  const metricsBox   = $("#metricsBox");
-  const sectorBuckets= $("#sectorBuckets");
-  const sectorSelectChips = $("#sectorSelectChips");
-  const opsChips     = $("#opsChips");
-  const opsSliders   = $("#opsSliders");
-  const cityEl       = $("#city");
-  const sectorsEl    = $("#sectors");
-  const cityChips    = $("#cityChips");
-  const sectorChips  = $("#sectorChips");
-
-  // state scaffold (extended in Part 2)
   const state = {
     step:0, role:"supplier",
-    apiOnline:false,
-    line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
-    metrics:[],                  // global metrics [{label,value}]
-    productTags:[],
-    sectorHints:[],
-    sectorMetrics:new Map(),     // sector => [{id,label,value,ai}]
-    sectorMuted:new Set(),       // sectors user muted
-    opsSelected:new Map(),       // label => value
-    hq:null
+    line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"}
   };
-
-  // utils shared with Part 2
-  const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+  const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*/,"");
   const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
-  function setFavicon(host){const h=normHost(host); $("#fav").src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):"";}
-
-  // sentence render (minimal, safe)
-  function renderSentence(editing=false){
-    const L=state.line;
-    const tpl=[
-      {txt:L.host, lock:true},
-      {txt:"—", lock:true},
-      {txt:L.verb},{txt:L.products},{txt:"for", lock:true},{txt:L.audience},{txt:"in", lock:true},{txt:L.region},{txt:".", lock:true},
-      {txt:"Best contacts:", lock:true},{txt:L.contacts}
-    ];
-    sentence.classList.toggle("editing", editing);
-    sentence.innerHTML="";
-    for (const part of tpl){
-      const span=document.createElement("span");
-      span.className="token";
-      span.dataset.lock=part.lock?"true":"false";
-      span.textContent=part.txt;
-      sentence.appendChild(span);
-      sentence.appendChild(document.createTextNode(" "));
-    }
-  }
-  renderSentence(false);
-
-  // role pick
-  function setRole(r){
-    state.role=r;
-    optSupplier.classList.toggle("active", r==="supplier");
-    optBuyer.classList.toggle("active", r==="buyer");
-  }
-  optSupplier.addEventListener("click",()=>setRole("supplier"));
-  optBuyer.addEventListener("click",()=>setRole("buyer"));
-
-  // adv toggle
-  advToggle.addEventListener("click",(e)=>{
-    e.preventDefault();
-    const open = adv.hasAttribute("hidden");
-    if (open){ adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
-    else { adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
-  });
-
-  // CTA + nav (works without Part 2)
+  function setFavicon(host){const h=normHost(host);favImg.src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):"";}
   function show(step){
     state.step=step;
-    ["#step1","#step2","#step3"].forEach((id,i)=>{const el=document.querySelector(id); if(!el)return; el.hidden=i!==step; if(dots[i]) dots[i].classList.toggle("on", i===step);});
+    ["#step1","#step2","#step3"].forEach((id,i)=>{const el=$(id);if(el){el.hidden=i!==step; if(dots[i]) dots[i].classList.toggle("on", i===step);}});
     backBtn.style.visibility= step===0? "hidden":"visible";
     nextBtn.textContent = step===2? "Finish":"Next";
   }
   function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
   function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
-
-  openBtn.addEventListener("click", open);
-  closeBtn.addEventListener("click", close);
-  backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
-
-  nextBtn.addEventListener("click", ()=>{
+  function renderSentence(){
+    const L=state.line;
+    const parts=[L.host,"—",L.verb,L.products,"for",L.audience,"in",L.region,".","Best contacts:",L.contacts];
+    sentence.innerHTML="";
+    for(const t of parts){ const s=document.createElement("span"); s.className="token"; s.textContent=t; sentence.appendChild(s); sentence.appendChild(document.createTextNode(" ")); }
+  }
+  function setRole(r){ state.role=r; optSupplier.classList.toggle("active", r==="supplier"); optBuyer.classList.toggle("active", r==="buyer"); }
+  optSupplier?.addEventListener("click",()=>setRole("supplier"));
+  optBuyer?.addEventListener("click",()=>setRole("buyer"));
+  openBtn?.addEventListener("click", open);
+  closeBtn?.addEventListener("click", close);
+  backBtn?.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+  nextBtn?.addEventListener("click", ()=>{
     if (state.step===0){ show(1); return; }
     if (state.step===1){
-      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
       const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
-      if (!hostCandidate){ alert("Please provide your website/domain."); return; }
-      hostEl.value = hostCandidate;
-      state.line.host = hostCandidate;
-      setFavicon(hostCandidate);
-      renderSentence(false);
-      show(2);
-      return;
+      if (!emailEl.value || !hostCandidate){ alert("Enter business email and website/domain to continue."); return; }
+      state.line.host = hostCandidate; setFavicon(hostCandidate); renderSentence(); show(2); return;
     }
-    if (state.step===2){
-      alert("Finish will activate after Part 2 is appended.");
-    }
+    if (state.step===2){ alert("Finish will be enabled after Part-2 is appended."); }
   });
-
-  // keyboard shortcuts
-  modal.addEventListener("keydown",(e)=>{
-    if (e.key==="Escape"){ e.preventDefault(); close(); return; }
-    if (e.key==="Enter"){
-      const tag=(e.target&&e.target.tagName)||"";
-      if (tag==="INPUT"||tag==="TEXTAREA"||tag==="A"||tag==="BUTTON") return;
-      e.preventDefault(); nextBtn.click();
-    }
+  document.getElementById("advToggle")?.addEventListener("click",(e)=>{
+    e.preventDefault();
+    const opened = adv.hasAttribute("hidden");
+    if (opened){ adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
+    else { adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
   });
+  function syncDomain(){ const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d; }
+  emailEl?.addEventListener("input",syncDomain);
+  emailEl?.addEventListener("change",syncDomain);
+  setTimeout(syncDomain,120);
+  (function bootLite(){
+    const txt="API: offline (awaiting Part-2)";
+    if (apiBadge){ apiBadge.textContent=txt; apiBadge.classList.remove("ok"); apiBadge.classList.add("err"); }
+    if (apiStatus){ apiStatus.textContent=txt; }
+    setRole("supplier");
+    renderSentence();
+  })();
+  window.Galactly = { refreshFromWebsite:()=>{}, seedTargeting:()=>{}, applyServerPersona:()=>{}, apiDetect:async()=>({ok:false}) };
+  // pad 01
+/* -------------------- PART 2 (append below pad lines, before the final `})();`) -------------------- */
 
-  // lightweight targeting seeds (pre-filled HQ guess refined in Part 2)
+  // ===== storage helpers =====
+  const getS = (k,d="")=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}};
+  const setS = (k,v)=>{try{localStorage.setItem(k,v)}catch{}};
+
+  // ===== elements we didn't bind in Part 1 =====
+  const metricsBox        = document.getElementById("metricsBox");
+  const sectorBucketsRoot = document.getElementById("sectorBuckets");
+  const opsChips          = document.getElementById("opsChips");
+  const opsSliders        = document.getElementById("opsSliders");
+  const cityEl            = document.getElementById("city");
+  const sectorsEl         = document.getElementById("sectors");
+  const cityChips         = document.getElementById("cityChips");
+  const sectorChips       = document.getElementById("sectorChips");
+  const statusEl          = document.getElementById("status");
+
+  // extend state
+  state.metrics = [];
+  state.opsSelected = new Map();
+  state.productTags = [];
+  state.sectorHints = [];
+  state.sectorMetrics = new Map(); // sector -> [{label,value,hint}]
+  state.mutedSectors = new Set();
+  state.apiOnline = false;
+  state.hq = "";
+
+  // ===== API discovery / classify =====
+  async function apiDetect(){
+    const candidates = [];
+    if (typeof window.API_BASE==="string") candidates.push(String(window.API_BASE));
+    const saved = getS("apiBase","");
+    if (saved) candidates.push(saved);
+    candidates.push(location.origin+"/api", location.origin);
+
+    async function check(base){
+      base = (base||"").replace(/\/+$/,"");
+      const paths = /\/api$/.test(base) ? [base+"/ping", base+"/health"] : [base+"/api/ping", base+"/api/health"];
+      for (const p of paths){
+        try{ const r = await fetch(p,{credentials:"omit"}); if (r.ok) return base; }catch{}
+      }
+      return null;
+    }
+
+    for (const c of candidates){
+      const ok = await check(c);
+      if (ok){
+        setS("apiBase", ok);
+        const txt="API: online";
+        if (apiBadge){ apiBadge.textContent=txt; apiBadge.classList.add("ok"); apiBadge.classList.remove("err"); }
+        if (apiStatus){ apiStatus.textContent=txt; }
+        state.apiOnline = true;
+        return {ok:true, base:ok};
+      }
+    }
+    const fb = (candidates[0]||location.origin+"/api").replace(/\/+$/,"");
+    setS("apiBase", fb);
+    const txt="API: offline";
+    if (apiBadge){ apiBadge.textContent=txt; apiBadge.classList.remove("ok"); apiBadge.classList.add("err"); }
+    if (apiStatus){ apiStatus.textContent=txt; }
+    state.apiOnline = false;
+    return {ok:false, base:fb};
+  }
+
+  function classifyURL(base){
+    const b=(base||getS("apiBase","")).replace(/\/+$/,"");
+    return /\/api$/.test(b) ? (b+"/classify") : (b+"/api/classify");
+  }
+
+  async function classify(host, email){
+    const api = await apiDetect();
+    const u1 = classifyURL(api.base) + "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
+    try{
+      const r = await fetch(u1,{credentials:"omit"});
+      if (!r.ok) throw new Error(String(r.status));
+      return await r.json();
+    }catch(_){
+      const u2 = /\/api\/classify$/.test(u1) ? u1.replace(/\/api\/classify$/,"/classify") : u1.replace(/\/classify$/,"/api/classify");
+      const r2 = await fetch(u2,{credentials:"omit"});
+      if (!r2.ok) throw new Error(String(r2.status));
+      return await r2.json();
+    }
+  }
+
+  // ===== helper: chip =====
+  function addChip(text, box, onToggle){
+    const s=document.createElement("span");
+    s.className="chip";
+    s.textContent=text;
+    s.addEventListener("click",()=>{
+      const on = !s.classList.contains("active");
+      s.classList.toggle("active", on);
+      onToggle && onToggle(on, text, s);
+    });
+    box.appendChild(s);
+    return s;
+  }
+
+  // ===== metric hints (measurable) =====
+  const HINT = {
+    "High-speed line compatibility":"0=manual/slow only · 10=proven at ≥500+ units/min (or ≥30 cases/min)",
+    "Retail-ready print consistency":"0=frequent color drift/misregister · 10=ΔE<2 and tight register at volume",
+    "Condensation tolerance":"0=package fails with light sweat · 10=survives heavy condensation (coolers/retort)",
+    "Case integrity for glass/plastic":"0=frequent breakage/deformation · 10=spec holds at peak load/transport",
+    "Pallet stability for bottlers":"0=shifts/collapses · 10=stable to ISTA 3A/3E or in-house equivalent",
+    "Damage reduction targets in transit":"0=no target · 10=meets ≤0.5% damage KPI",
+    "Automation line uptime impact":"0=frequent jams/changeover issues · 10=near-zero stops from packaging",
+    "Unit cost at target MOQ":"0=not competitive · 10=meets/better than target at MOQ",
+    "Sustainability targets (PCR %, recyclability)":"0=not required · 10=mandatory PCR%/recyclability label",
+    "Vendor-managed inventory flexibility":"0=none · 10=VMI with safety stock & kanban"
+  };
+
+  // ===== render global metrics =====
+  function renderMetrics(labels){
+    metricsBox.innerHTML="";
+    state.metrics = (labels||[]).slice(0,16).map(l=>{
+      const label = typeof l==="string" ? l : (l.label||"Metric");
+      const hint  = (typeof l==="object" && l.hint) || HINT[label] || "";
+      return {label, value:7, hint};
+    });
+
+    for (const m of state.metrics){
+      const row=document.createElement("div"); row.className="slider-row";
+      const lab=document.createElement("div");
+      lab.textContent=m.label;
+      if (m.hint){ const hintEl=document.createElement("div"); hintEl.className="muted-hint"; hintEl.textContent=m.hint; lab.appendChild(document.createElement("br")); lab.appendChild(hintEl); }
+      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=m.value;
+      input.addEventListener("input",()=>{ m.value=Number(input.value); });
+      row.appendChild(lab); row.appendChild(input);
+      metricsBox.appendChild(row);
+    }
+  }
+
+  // ===== sector catalog with measurable defaults =====
+  const SECTOR_METRICS = {
+    beverage: [
+      {label:"High-speed line compatibility",hint:HINT["High-speed line compatibility"]},
+      {label:"Retail-ready print consistency",hint:HINT["Retail-ready print consistency"]},
+      {label:"Condensation tolerance",hint:HINT["Condensation tolerance"]},
+      {label:"Pallet stability for bottlers",hint:HINT["Pallet stability for bottlers"]},
+      {label:"Case integrity for glass/plastic",hint:HINT["Case integrity for glass/plastic"]},
+      {label:"Damage reduction targets in transit",hint:HINT["Damage reduction targets in transit"]}
+    ],
+    food: [
+      {label:"Food-contact compliance (FDA/EC)",hint:"0=no requirement · 10=strict compliance + COA every lot"},
+      {label:"Moisture barrier requirements",hint:"0=none · 10=mvtr ≤ spec across environments"},
+      {label:"Oxygen barrier requirements",hint:"0=none · 10=otr ≤ spec at temp/humidity"},
+      {label:"Lot traceability & COA",hint:"0=not needed · 10=lot-level docs mandatory"},
+      {label:"Tamper evidence needs",hint:"0=none · 10=regulated sealing bands/labels"}
+    ],
+    logistics: [
+      {label:"E-com fulfillment compatibility",hint:"0=carton-only · 10=works in pick/pack, sorter, parcel"},
+      {label:"3PL integration & ASN/labels",hint:"0=manual · 10=GS1/ASN/SSCC-ready"},
+      {label:"Damage reduction in parcel",hint:"0=n/a · 10=meets ISTA 6A/3A goals"},
+      {label:"Cube/weight optimization",hint:"0=ignored · 10=downweight/rightsized"}
+    ],
+    cosmetics: [
+      {label:"Premium print/finish expectations",hint:"0=basic CMYK · 10=foil/spot UV/emboss at scale"},
+      {label:"Color consistency delta-E",hint:"0=ΔE>6 · 10=ΔE≤2"},
+      {label:"Unboxing experience",hint:"0=plain · 10=designed tactile experience"}
+    ],
+    pharma: [
+      {label:"GxP documentation",hint:"0=minimal · 10=full SOP/validation pack"},
+      {label:"Serialisation/lot coding",hint:"0=none · 10=DSCSA/EU FMD ready"},
+      {label:"Tamper-evidence compliance",hint:"0=not required · 10=regulated seals"}
+    ],
+    industrial: [
+      {label:"Heavy-load stability",hint:"0=fails often · 10=passes in-house drop/tilt"},
+      {label:"Puncture/tear resistance",hint:"0=low · 10=meets ASTM D-1709/D-1922"}
+    ],
+    apparel: [
+      {label:"Parcel-rate optimization",hint:"0=ignored · 10=poly/box right-sized"},
+      {label:"Return-friendly design",hint:"0=none · 10=easy reseal + clear label"}
+    ],
+    electronics: [
+      {label:"ESD protection requirements",hint:"0=not needed · 10=ANSI/ESD S541-compliant"},
+      {label:"Shock/vibration protection",hint:"0=none · 10=ISTA 2/3 compliance"}
+    ],
+    supplements: [
+      {label:"Tamper bands/seals",hint:"0=none · 10=band+induction+evidence"},
+      {label:"Nutrition label compliance",hint:"0=basic · 10=full 21 CFR compliant"}
+    ],
+    automotive: [
+      {label:"Barcode/label compliance",hint:"0=none · 10=AIAG/ODette spec"},
+      {label:"Export durability",hint:"0=local only · 10=export-ready packaging"}
+    ],
+    pet: [
+      {label:"Odor/grease barrier",hint:"0=none · 10=needed (PVDC/EVOH/etc.)"},
+      {label:"Strong zipper/closure",hint:"0=optional · 10=mandatory retentivity"}
+    ]
+  };
+
+  // sector render with mute + auto
+  function renderSectorBuckets(sectors){
+    sectorBucketsRoot.innerHTML="";
+    state.sectorMetrics = new Map();
+    const uniq = Array.from(new Set((sectors||[]).map(s=>String(s).toLowerCase()))).slice(0,12);
+    if (!uniq.length) return;
+
+    for (const sec of uniq){
+      const defaults = (SECTOR_METRICS[sec]||[
+        {label:"Core quality consistency",hint:"0=variable · 10=SPC within control limits"},
+        {label:"On-time delivery reliability",hint:"0=<80% OTD · 10=>=98% OTD"},
+        {label:"Changeover/setup agility",hint:"0=slow · 10=fast changeovers"}
+      ]).map(m=>({label:m.label, value:7, hint:m.hint||""}));
+
+      state.sectorMetrics.set(sec, defaults);
+
+      // wrapper
+      const wrap = document.createElement("div"); wrap.className="group";
+      const head = document.createElement("div"); head.style.display="flex"; head.style.justifyContent="space-between"; head.style.alignItems="center";
+      const title = document.createElement("h4"); title.style.margin="0"; title.textContent = sec.charAt(0).toUpperCase()+sec.slice(1)+" — hot-priority metrics";
+      const controls = document.createElement("div"); controls.style.display="flex"; controls.style.gap="8px"; controls.style.alignItems="center";
+
+      // mute chip
+      const mute = document.createElement("span"); mute.className="chip"; mute.textContent="Mute sector";
+      mute.addEventListener("click",()=>{
+        const on = !mute.classList.contains("active");
+        mute.classList.toggle("active", on);
+        if (on) state.mutedSectors.add(sec); else state.mutedSectors.delete(sec);
+      });
+
+      // auto decide
+      const autoLbl = document.createElement("label"); autoLbl.className="muted-hint"; autoLbl.style.cursor="pointer";
+      const auto = document.createElement("input"); auto.type="checkbox"; auto.style.marginRight="6px";
+      autoLbl.appendChild(auto); autoLbl.appendChild(document.createTextNode("Let AI decide"));
+      controls.appendChild(mute); controls.appendChild(autoLbl);
+
+      head.appendChild(title); head.appendChild(controls);
+      wrap.appendChild(head);
+
+      // metrics sliders
+      for (const m of defaults){
+        const row=document.createElement("div"); row.className="slider-row";
+        const lab=document.createElement("div"); lab.textContent=m.label;
+        if (m.hint){ const hint=document.createElement("div"); hint.className="muted-hint"; hint.textContent=m.hint; lab.appendChild(document.createElement("br")); lab.appendChild(hint); }
+        const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=m.value;
+        input.addEventListener("input",()=>{ m.value=Number(input.value); });
+        row.appendChild(lab); row.appendChild(input);
+        wrap.appendChild(row);
+      }
+
+      // stash auto state on element for export
+      wrap.dataset.sector = sec;
+      wrap.dataset.auto = "false";
+      auto.addEventListener("change",()=>{ wrap.dataset.auto = auto.checked ? "true":"false"; });
+      sectorBucketsRoot.appendChild(wrap);
+    }
+  }
+
+  // ===== operations =====
+  function renderOpsPool(list){
+    opsChips.innerHTML=""; opsSliders.innerHTML=""; state.opsSelected = new Map();
+    const ensure = (label)=>{
+      if (state.opsSelected.has(label)) return;
+      const wrap=document.createElement("div"); wrap.className="slider-row"; wrap.dataset.label=label;
+      const lab=document.createElement("div"); lab.textContent=label;
+      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value="7";
+      input.addEventListener("input",()=> state.opsSelected.set(label, Number(input.value)));
+      wrap.appendChild(lab); wrap.appendChild(input); opsSliders.appendChild(wrap);
+      state.opsSelected.set(label, 7);
+    };
+    const remove = (label)=>{
+      const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]');
+      if (el) el.remove(); state.opsSelected.delete(label);
+    };
+    (list||[]).forEach(l=> addChip(l, opsChips, (on,text)=> on? ensure(text):remove(text)));
+  }
+
+  // ===== targeting seeds (prefilled) =====
   function guessHQFromHost(host){
     const h=(host||"").toLowerCase();
-    if (/newjersey|nj/.test(h)) return "New Jersey";
-    if (/newyork|nyc|ny-?/.test(h)) return "New York";
-    if (/losangeles|la|ca-?/.test(h)) return "Los Angeles";
+    if (/new.?jersey|nj-?/.test(h)) return "New Jersey";
+    if (/new.?york|nyc|ny-?/.test(h)) return "New York";
+    if (/los.?angeles|la|ca-?/.test(h)) return "Los Angeles";
     if (/chicago|il-?/.test(h)) return "Chicago";
     if (/dallas|tx-?/.test(h)) return "Dallas";
     if (/atlanta|ga-?/.test(h)) return "Atlanta";
     if (/miami|fl-?/.test(h)) return "Miami";
     return "New Jersey";
   }
-  function addChip(text, box, onToggle){
-    const s=document.createElement("span"); s.className="chip"; s.textContent=text;
-    s.addEventListener("click",()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); onToggle&&onToggle(on,text,s); });
-    box.appendChild(s); return s;
-  }
-  function seedTargetingBasic(){
-    const hq = guessHQFromHost(state.line.host);
-    cityChips.innerHTML="";
-    ["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"].forEach(c=>{
-      const chip=addChip(c, cityChips);
-      if (c===hq){ chip.classList.add("active"); cityEl.value=c; }
-    });
-    sectorChips.innerHTML="";
-    ["food","beverage","logistics","electronics","automotive","industrial","apparel","pharma","cosmetics","household"].forEach(s=>addChip(s, sectorChips));
-  }
-  seedTargetingBasic();
 
-  // email → host autofill
-  function syncDomain(){ const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d; }
-  emailEl.addEventListener("input",syncDomain);
-  emailEl.addEventListener("change",syncDomain);
-  setTimeout(syncDomain,120);
-
-  // minimal edit/done (full editability wired in Part 2)
-  editBtn.addEventListener("click",()=>{ renderSentence(true); editBtn.hidden=true; doneBtn.hidden=false; });
-  doneBtn.addEventListener("click",()=>{ renderSentence(false); editBtn.hidden=false; doneBtn.hidden=true; });
-
-  // placeholder refresh
-  refreshA.addEventListener("click",(e)=>{ e.preventDefault(); statusEl.textContent=" (offline)"; });
-
-  // show supplier by default
-  setRole("supplier");
-
-  // API badge (updated in Part 2)
-  const apiBadge=$("#apiBadge"), apiStatus=$("#apiStatus");
-  const badgeTxt="API: offline (load Part 2)";
-  if (apiBadge){ apiBadge.textContent=badgeTxt; apiBadge.classList.remove("ok"); apiBadge.classList.add("err"); }
-  if (apiStatus){ apiStatus.textContent=badgeTxt; }
-  // -------------------------- PART 1 SPLIT HERE -----------------------------
-  // (Paste Part 2 immediately after this line)
-  // pad lines to ensure exactly 350 lines in Part 1:
-  // pad 1
-  // pad 2
-  // pad 3
-  // pad 4
-  // pad 5
-  // pad 6
-  // pad 7
-  // pad 8
-  // pad 9
-  // pad 10
-  // pad 11
-  // pad 12
-  // pad 13
-  // pad 14
-  // pad 15
-  // pad 16
-  // pad 17
-  // pad 18
-  // pad 19
-  // pad 20
-  // pad 21
-  // pad 22
-  // pad 23
-  // pad 24
-  // pad 25
-  // pad 26
-  // pad 27
-  // pad 28
-  // pad 29
-  // pad 30
-})();
-
-/* ----------------------------- Part 2 begins ------------------------------ */
-
-  // ---------- API discovery ----------
-  const getS = (k,d="")=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}};
-  const setS = (k,v)=>{try{localStorage.setItem(k,v)}catch{}};
-
-  async function apiDetect(){
-    const tries=[];
-    if (typeof window.API_BASE==="string") tries.push(window.API_BASE);
-    const saved=getS("apiBase",""); if (saved) tries.push(saved);
-    tries.push(location.origin+"/api"); tries.push(location.origin);
-
-    async function check(base){
-      base=(base||"").replace(/\/+$/,"");
-      const paths = /\/api$/.test(base) ? [base+"/health"] : [base+"/api/health"];
-      if (base===location.origin) paths.push(base+"/healthz");
-      for (const p of paths){ try{ const r=await fetch(p,{credentials:"omit"}); if (r.ok) return base; }catch{} }
-      return null;
-    }
-    for (const cand of tries){ const ok=await check(cand); if (ok){ setS("apiBase",ok); updateBadge(true); return {ok:true,base:ok}; } }
-    const fb=(tries[0]||location.origin+"/api").replace(/\/+$/,"");
-    setS("apiBase",fb); updateBadge(false); return {ok:false,base:fb};
-  }
-  function updateBadge(on){
-    const txt = on ? "API: online" : "API: offline";
-    const apiBadge=document.getElementById("apiBadge");
-    const apiStatus=document.getElementById("apiStatus");
-    if (apiBadge){ apiBadge.textContent=txt; apiBadge.classList.toggle("ok",on); apiBadge.classList.toggle("err",!on); }
-    if (apiStatus){ apiStatus.textContent=txt; }
-    state.apiOnline=!!on;
-  }
-  function classifyURL(base){
-    const b=(base||getS("apiBase","")).replace(/\/+$/,"");
-    return /\/api$/.test(b) ? (b+"/classify") : (b+"/api/classify");
-  }
-
-  async function classify(host,email){
-    const api=await apiDetect();
-    const url=classifyURL(api.base)+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
-    try{
-      const r=await fetch(url,{credentials:"omit"}); if(!r.ok) throw new Error(String(r.status));
-      return await r.json();
-    }catch(e){
-      const alt=/\/api\/classify$/.test(url)?url.replace(/\/api\/classify$/,"/classify"):url.replace(/\/classify$/,"/api/classify");
-      const r2=await fetch(alt,{credentials:"omit"}); if(!r2.ok) throw new Error(String(r2.status));
-      return await r2.json();
-    }
-  }
-
-  // ---------- metrics (global) ----------
-  function renderMetrics(labels){
-    const metricsBox=document.getElementById("metricsBox");
-    metricsBox.innerHTML="";
-    state.metrics=(labels||[]).slice(0,16).map(l=>({label:l,value:7}));
-    for (const m of state.metrics){
-      const row=document.createElement("div"); row.className="slider-row";
-      const lab=document.createElement("div"); lab.textContent=m.label;
-      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=String(m.value);
-      input.addEventListener("input",()=>{ m.value=Number(input.value); });
-      row.appendChild(lab); row.appendChild(input); metricsBox.appendChild(row);
-    }
-  }
-
-  // ---------- industry playbooks ----------
-  function infoBubble(desc, anchors){
-    const tip=document.createElement("span"); tip.className="tip";
-    const b=document.createElement("div"); b.className="bubble";
-    const h=document.createElement("span"); h.className="h"; h.textContent="How to score";
-    const core=document.createElement("div"); core.textContent=desc;
-    const a=document.createElement("span"); a.className="a"; a.textContent=`0 = ${anchors[0]} · 5 = ${anchors[1]} · 10 = ${anchors[2]}`;
-    b.appendChild(h); b.appendChild(core); b.appendChild(a); tip.appendChild(b); return tip;
-  }
-
-  const METRIC_LIBRARY = {
-    beverage: [
-      { id:"line_speed", label:"High-speed line compatibility", desc:"How often buyers require packages to run on 200–300+ BPM lines without stoppage.", anchors:["<150 BPM fine","200–300 BPM common","300+ BPM mandatory"], def:8 },
-      { id:"print_consistency", label:"Retail-ready print consistency", desc:"Tolerance for color ΔE / registration on shrink/corrugate/labels.", anchors:["ΔE > 3 ok","ΔE ≤ 2 expected","ΔE ≤ 1 critical"], def:7 },
-      { id:"pallet_stability", label:"Pallet stability for bottlers", desc:"Need to prevent topples and creep on bottle pallets during conveying/transport.", anchors:["rarely issue","sometimes critical","always critical"], def:8 },
-      { id:"case_integrity", label:"Case integrity for glass/plastic", desc:"Compression/ECT and corner crush resistance to prevent breakage.", anchors:["basic strength","enhanced ECT","high ECT + edge guards"], def:7 },
-      { id:"condensation", label:"Condensation management on cold-fill", desc:"Packaging must perform when surfaces are wet/cold (anti-slip/anti-fog).", anchors:["dry ambient only","occasional cold-fill","regular cold-fill; coatings req'd"], def:6 },
-      { id:"breakage", label:"Breakage reduction target", desc:"Importance of minimizing breakage/returns in bottling/retail logistics.", anchors:["nice to reduce","targeted projects","make-or-break KPI"], def:7 }
-    ],
-    food: [
-      { id:"food_contact", label:"Food-contact compliance", desc:"Regulatory compliance & documentation (FDA/EC).", anchors:["basic","well-documented","audit-ready"], def:8 },
-      { id:"oxygen_barrier", label:"Oxygen barrier requirements", desc:"Barrier level needed to protect freshness.", anchors:["low","moderate","high"], def:7 },
-      { id:"moisture_barrier", label:"Moisture barrier requirements", desc:"Sensitivity to WVTR / humidity.", anchors:["low","moderate","high"], def:6 },
-      { id:"seal_integrity", label:"Seal integrity & leak rate", desc:"Heat-seal strength / leak tolerance.", anchors:["rarely measured","periodic tests","tight limits"], def:7 },
-      { id:"traceability", label:"Lot traceability & COA", desc:"Documentation, COA, and recall readiness.", anchors:["basic","standard","strict"], def:7 }
-    ],
-    logistics: [
-      { id:"ecom_compat", label:"E-com fulfillment compatibility", desc:"Fit with parcel handling & auto-bag/box lines.", anchors:["manual ok","mixed","automation first"], def:7 },
-      { id:"damage_reduction", label:"Damage reduction in parcel", desc:"How critical is drop/impact protection.", anchors:["minor","moderate","critical"], def:8 },
-      { id:"cube", label:"Cube/weight optimization", desc:"Dim-weight & cube efficiency pressure.", anchors:["low","some","high"], def:7 },
-      { id:"dock_to_stock", label:"Dock-to-stock speed", desc:"Labeling/ASN/readiness for rapid receiving.", anchors:["not key","helpful","must-have"], def:6 },
-      { id:"returns", label:"Return‐handling friendliness", desc:"Ease of returns/refurbs.", anchors:["irrelevant","nice","important"], def:5 }
-    ],
-    cosmetics: [
-      { id:"finish", label:"Premium finish expectations", desc:"Metallics, soft-touch, emboss/deboss, spot varnish.", anchors:["basic","some","luxury grade"], def:8 },
-      { id:"scuff", label:"Scratch/scuff resistance", desc:"Abrasion resistance for high-touch packs.", anchors:["low","moderate","high"], def:7 },
-      { id:"color", label:"Color consistency (ΔE)", desc:"Brand color accuracy across SKUs/lots.", anchors:["ΔE 3 ok","ΔE 2","ΔE 1"], def:8 },
-      { id:"unboxing", label:"Unboxing experience", desc:"Custom inserts/magnet closures/rigid boxes.", anchors:["basic","enhanced","hero moment"], def:6 },
-      { id:"moq", label:"Low-MOQ flexibility", desc:"Tolerance for frequent small runs.", anchors:["prefer large","balanced","micro-runs ok"], def:7 }
-    ],
-    pharma: [
-      { id:"gxp", label:"GxP documentation & QA", desc:"SOPs, CAPA, change control, validations.", anchors:["basic","mature","audit-ready"], def:9 },
-      { id:"serialization", label:"Serialization/lot coding", desc:"GS1/UDI, lot, expiry coding integration.", anchors:["basic","standard","strict"], def:8 },
-      { id:"tamper", label:"Tamper-evidence compliance", desc:"TE bands/seals/carton features.", anchors:["rare","frequent","mandatory"], def:8 },
-      { id:"cleanroom", label:"Cleanroom handling", desc:"Need for ISO-class environments.", anchors:["no","sometimes","yes"], def:6 },
-      { id:"temp_ctrl", label:"Temperature control", desc:"Cold chain / CRT requirements.", anchors:["none","some","strict"], def:6 }
-    ],
-    industrial: [
-      { id:"load_stability", label:"Heavy-load stability", desc:"Unitization against shifting/creep.", anchors:["low","moderate","high"], def:8 },
-      { id:"puncture", label:"Puncture/tear resistance", desc:"Film/carton toughness vs sharp edges.", anchors:["low","moderate","high"], def:7 },
-      { id:"uptime", label:"Automation uptime impact", desc:"Changeovers, breaks, and downtime costs.", anchors:["low","notable","critical"], def:7 },
-      { id:"sustain", label:"Sustainability targets (PCR%)", desc:"Recycled/resin reduction goals.", anchors:["nice","strong","board-level"], def:6 },
-      { id:"moq_cost", label:"Unit cost at target MOQ", desc:"Price sensitivity at given volumes.", anchors:["low","moderate","high"], def:7 }
-    ],
-    apparel: [
-      { id:"presentation", label:"Presentation (crease/scuff)", desc:"Retail presentation quality.", anchors:["basic","good","pristine"], def:6 },
-      { id:"print_substrate", label:"Print quality on substrates", desc:"Consistency on kraft, coated, film.", anchors:["basic","good","premium"], def:6 },
-      { id:"parcel_rate", label:"Parcel-rate optimization", desc:"Mailer/carton sizes for dim-weight.", anchors:["low","some","high"], def:7 },
-      { id:"returns_app", label:"Return-friendly design", desc:"Re-seal strips, dual labels.", anchors:["none","some","fully"], def:6 },
-      { id:"seasonal", label:"Seasonal volume swings", desc:"Flexibility for drops/peaks.", anchors:["low","moderate","high"], def:6 }
-    ],
-    electronics: [
-      { id:"esd", label:"ESD protection", desc:"Static-safe materials/process.", anchors:["none","ESD bags","full ESD chain"], def:8 },
-      { id:"shock", label:"Shock/vibration protection", desc:"Foam, inserts, ISTA goals.", anchors:["minor","moderate","stringent"], def:8 },
-      { id:"moisture_elec", label:"Moisture barrier (desiccant)", desc:"Humidity sensitivity.", anchors:["low","some","high"], def:6 },
-      { id:"labels", label:"Label readability/compliance", desc:"UL/CE/other marks & barcodes.", anchors:["basic","good","strict"], def:7 },
-      { id:"anti_counterfeit", label:"Counterfeit deterrence", desc:"Holograms, QR auth, seals.", anchors:["none","some","required"], def:6 }
-    ],
-    supplements: [
-      { id:"tamper_bands", label:"Tamper bands/seals", desc:"TE bands, induction seal.", anchors:["rare","often","always"], def:8 },
-      { id:"nutrition_label", label:"Nutrition label compliance", desc:"Regulatory accuracy & review.", anchors:["basic","good","audit-ready"], def:7 },
-      { id:"trace", label:"Lot traceability", desc:"COA & recall readiness.", anchors:["basic","standard","strict"], def:7 },
-      { id:"shelf_presence", label:"Shelf presence/finish", desc:"Foils, spot UV, color depth.", anchors:["basic","good","premium"], def:6 },
-      { id:"moq_flex", label:"MOQ flexibility", desc:"Frequent small runs.", anchors:["prefer large","flexible","micro ok"], def:7 }
-    ],
-    automotive: [
-      { id:"chem_resist", label:"Grease/solvent resistance", desc:"Exposure durability.", anchors:["low","moderate","high"], def:7 },
-      { id:"bulk_eff", label:"Bulk pack efficiency", desc:"Returnables, dunnage density.", anchors:["low","some","high"], def:7 },
-      { id:"kitting", label:"Line-side kitting", desc:"Kit accuracy/sequence support.", anchors:["rare","useful","critical"], def:6 },
-      { id:"export", label:"Export durability", desc:"Sea/long-haul robustness.", anchors:["domestic","mixed","export-grade"], def:6 }
-    ],
-    pet: [
-      { id:"odor_barrier", label:"Odor/grease barrier", desc:"Odor/grease migration control.", anchors:["low","some","high"], def:6 },
-      { id:"closure", label:"Strong zipper/closure", desc:"Repeatable consumer reseal.", anchors:["basic","good","premium"], def:7 },
-      { id:"tear", label:"Tear resistance", desc:"Bag toughness during ship/store.", anchors:["low","some","high"], def:7 },
-      { id:"print_color", label:"High-color print", desc:"Saturation & halftones.", anchors:["basic","good","premium"], def:6 }
-    ]
-  };
-
-  function computeAIDefaultsForSector(sector){
-    const base = (METRIC_LIBRARY[sector]||[]).map(m=>({...m,value:m.def??7,ai:true}));
-    if (sector==="beverage"){ base.forEach(m=>{ if (m.id==="line_speed"||m.id==="pallet_stability") m.value=Math.max(m.value,8); }); }
-    if (sector==="pharma"){ base.forEach(m=>{ if (m.id==="gxp"||m.id==="serialization"||m.id==="tamper") m.value=Math.max(m.value,8); }); }
-    return base;
-  }
-
-  function renderIndustryPlaybooks(sectors){
-    const root=document.getElementById("sectorBuckets");
-    root.innerHTML=""; state.sectorMetrics=new Map();
-    const list = Array.from(new Set((sectors||[]).map(s=>String(s).toLowerCase()))).slice(0,10);
-    if (!list.length) return;
-
-    list.forEach(sec=>{
-      if (state.sectorMuted.has(sec)) return; // muted → no card
-
-      const lib = METRIC_LIBRARY[sec] || [
-        { id:"quality", label:"Core quality consistency", desc:"Defects and rework tolerance.", anchors:["tolerant","some","zero-defect"], def:7 },
-        { id:"delivery", label:"On-time delivery reliability", desc:"OTIF pressure for ideal buyers.", anchors:["low","some","high"], def:7 },
-        { id:"damage", label:"Damage reduction in transit", desc:"How critical is product protection.", anchors:["minor","moderate","critical"], def:7 },
-        { id:"sustain", label:"Sustainability targets", desc:"PCR %, recyclability, reduction.", anchors:["nice","strong","board-level"], def:6 },
-        { id:"cost", label:"Unit cost at target MOQ", desc:"Price sensitivity at current MOQs.", anchors:["low","moderate","high"], def:7 }
-      ];
-
-      const metricState = lib.map(m=>({...m,value:m.def??7,ai:false}));
-      state.sectorMetrics.set(sec, metricState);
-
-      const wrap=document.createElement("div"); wrap.className="group";
-      const head=document.createElement("div"); head.style.cssText="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px";
-      const title=document.createElement("h4"); title.style.margin="0"; title.textContent=sec.charAt(0).toUpperCase()+sec.slice(1)+" — buyer priorities";
-      const aiBox=document.createElement("label"); aiBox.style.cssText="font-size:12px;color:#9ab0c0;display:inline-flex;gap:6px;align-items:center;cursor:pointer";
-      const ai=document.createElement("input"); ai.type="checkbox";
-      aiBox.appendChild(ai); aiBox.appendChild(document.createTextNode("Let AI decide"));
-      head.appendChild(title); head.appendChild(aiBox); wrap.appendChild(head);
-
-      // collapsible content
-      const cont=document.createElement("div"); cont.style.marginTop="4px";
-      metricState.forEach(m=>{
-        const row=document.createElement("div"); row.className="slider-row";
-        const lab=document.createElement("div");
-        const name=document.createElement("span"); name.textContent=m.label+" ";
-        lab.appendChild(name); lab.appendChild(infoBubble(m.desc,m.anchors));
-        const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=String(m.value);
-        input.addEventListener("input",()=>{ m.value=Number(input.value); m.ai=false; });
-        row.appendChild(lab); row.appendChild(input);
-        cont.appendChild(row);
-      });
-      wrap.appendChild(cont);
-
-      // AI toggle: fill + disable
-      ai.addEventListener("change",()=>{
-        const arr = ai.checked ? computeAIDefaultsForSector(sec) : metricState.map(m=>({...m,ai:false}));
-        const inputs = cont.querySelectorAll('input[type="range"]');
-        arr.forEach((m,i)=>{ metricState[i].value=m.value; metricState[i].ai=ai.checked; inputs[i].value=String(m.value); inputs[i].disabled=ai.checked; });
-      });
-
-      root.appendChild(wrap);
-    });
-  }
-
-  // ---------- sector picker / mute ----------
-  function renderSectorPicker(){
-    const box=document.getElementById("sectorSelectChips");
-    box.innerHTML="";
-    const all = (state.sectorHints.length? state.sectorHints : ["food","beverage","logistics","electronics","automotive","industrial","apparel","pharma","cosmetics","pet","supplements"]).slice(0,12);
-    all.forEach(sec=>{
-      const chip=document.createElement("span"); chip.className="chip active"; chip.textContent=sec;
-      if (state.sectorMuted.has(sec)){ chip.classList.remove("active"); chip.classList.add("muted"); }
-      chip.addEventListener("click",()=>{
-        const muted = chip.classList.toggle("muted");
-        chip.classList.toggle("active", !muted);
-        if (muted) state.sectorMuted.add(sec); else state.sectorMuted.delete(sec);
-        renderIndustryPlaybooks(all); // re-render cards based on mute
-      });
-      box.appendChild(chip);
-    });
-    renderIndustryPlaybooks(all);
-  }
-
-  // ---------- operations ----------
-  function renderOpsPool(list){
-    const opsChips=document.getElementById("opsChips");
-    const opsSliders=document.getElementById("opsSliders");
-    opsChips.innerHTML=""; opsSliders.innerHTML=""; state.opsSelected=new Map();
-    const ensure=(label)=>{
-      if (state.opsSelected.has(label)) return;
-      const row=document.createElement("div"); row.className="slider-row"; row.dataset.label=label;
-      const lab=document.createElement("div"); lab.textContent=label;
-      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value="7";
-      input.addEventListener("input",()=> state.opsSelected.set(label, Number(input.value)));
-      row.appendChild(lab); row.appendChild(input); opsSliders.appendChild(row);
-      state.opsSelected.set(label,7);
-    };
-    const remove=(label)=>{
-      const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]');
-      if (el) el.remove(); state.opsSelected.delete(label);
-    };
-    const addChip=(text,box,onToggle)=>{
-      const s=document.createElement("span"); s.className="chip"; s.textContent=text;
-      s.addEventListener("click",()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); onToggle&&onToggle(on,text,s); });
-      box.appendChild(s);
-    };
-    list.forEach(l=> addChip(l, opsChips, (on,text)=> on?ensure(text):remove(text)));
-  }
-
-  // ---------- targeting (prefill + chips) ----------
   function seedTargeting(){
-    const cityEl=document.getElementById("city");
-    const cityChips=document.getElementById("cityChips");
-    const sectorChips=document.getElementById("sectorChips");
-    const sectorsEl=document.getElementById("sectors");
-
-    const addChipLocal=(text,box,onToggle)=>{
-      const s=document.createElement("span"); s.className="chip"; s.textContent=text;
-      s.addEventListener("click",()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); onToggle&&onToggle(on,text,s); });
-      box.appendChild(s); return s;
-    };
-
-    const hq = state.hq || (function(){ const g=(host)=>{ const h=(host||"").toLowerCase(); if(/newjersey|nj/.test(h))return"New Jersey"; if(/newyork|nyc|ny-?/.test(h))return"New York"; if(/losangeles|la|ca-?/.test(h))return"Los Angeles"; if(/chicago|il-?/.test(h))return"Chicago"; if(/dallas|tx-?/.test(h))return"Dallas"; if(/atlanta|ga-?/.test(h))return"Atlanta"; if(/miami|fl-?/.test(h))return"Miami"; return "New Jersey"; }; return g(state.line.host); })();
-
+    // cities
+    const hq = state.hq || guessHQFromHost(state.line.host);
+    const cityList=[hq,"Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"];
     cityChips.innerHTML="";
-    ["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"].forEach(c=>{
-      const chip=addChipLocal(c, cityChips);
+    Array.from(new Set(cityList)).forEach(c=>{
+      const chip=addChip(c, cityChips, (on,text)=>{
+        if (on) cityEl.value=text;
+        else if (cityEl.value===text) cityEl.value="";
+      });
       if (c===hq){ chip.classList.add("active"); cityEl.value=c; }
     });
 
-    const sectorList = (state.sectorHints&&state.sectorHints.length)? state.sectorHints : ["food","beverage","logistics","electronics","automotive","industrial","apparel","pharma","cosmetics","household","pet","supplements"];
+    // sectors
+    const list = (state.sectorHints && state.sectorHints.length)
+      ? state.sectorHints
+      : ["food","beverage","logistics","electronics","automotive","industrial","apparel","pharma","cosmetics","household"];
     sectorChips.innerHTML="";
-    Array.from(new Set(sectorList)).slice(0,12).forEach(s=>addChipLocal(s, sectorChips, (on)=>{ if(on){ const picked=[...sectorChips.querySelectorAll(".chip.active")].map(x=>x.textContent.trim()).join(", "); sectorsEl.value=picked; } else { const picked=[...sectorChips.querySelectorAll(".chip.active")].map(x=>x.textContent.trim()).join(", "); sectorsEl.value=picked; }}));
-    sectorsEl.value = [...sectorChips.querySelectorAll(".chip")].slice(0,3).map(x=>x.textContent.trim()).join(", ");
+    Array.from(new Set(list)).slice(0,12).forEach(s=>{
+      const chip=addChip(s, sectorChips, (on)=>{
+        const picked = Array.from(sectorChips.querySelectorAll(".chip.active")).map(x=>x.textContent.trim());
+        sectorsEl.value = picked.join(", ");
+      });
+      chip.classList.add("active");
+    });
+    sectorsEl.value = Array.from(sectorChips.querySelectorAll(".chip.active")).map(x=>x.textContent.trim()).join(", ");
   }
 
-  // ---------- apply from server ----------
+  // ===== persona apply =====
   function applyServerPersona(data, host){
-    const prods=(data.productTags||[]).slice(0,5).join(", ")||"packaging";
-    const segs =(data.sectorHints||[]).slice(0,3).join(", ")||"brands";
-    const contacts=/ops|operation|procure|plant|warehouse|supply|logistics/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")).toLowerCase()) ? "Operations, Procurement" : "Procurement, Marketing";
-    state.line={host,verb:"supplies",products:prods,audience:segs,region:"the U.S.",contacts};
+    const prods = (data.productTags||[]).slice(0,5).join(", ") || "packaging";
+    const segs  = (data.sectorHints||[]).slice(0,3).join(", ") || "brands";
+    const contacts = /ops|operation|procure|plant|warehouse|supply|logistics/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")).toLowerCase())
+      ? "Operations, Procurement" : "Procurement, Marketing";
+    state.line = { host, verb:"supplies", products:prods, audience:segs, region:"the U.S.", contacts };
+    sentence.innerHTML="";
+    const parts=[state.line.host,"—",state.line.verb,state.line.products,"for",state.line.audience,"in",state.line.region,".","Best contacts:",state.line.contacts];
+    for (const t of parts){ const s=document.createElement("span"); s.className="token"; s.textContent=t; sentence.appendChild(s); sentence.appendChild(document.createTextNode(" ")); }
 
-    // re-render sentence with editable tokens
-    const s=document.getElementById("sentence"); s.innerHTML="";
-    [
-      {txt:state.line.host,lock:true},{txt:"—",lock:true},
-      {k:"verb",txt:state.line.verb},{k:"products",txt:state.line.products},
-      {txt:"for",lock:true},{k:"audience",txt:state.line.audience},
-      {txt:"in",lock:true},{k:"region",txt:state.line.region},{txt:".",lock:true},
-      {txt:"Best contacts:",lock:true},{k:"contacts",txt:state.line.contacts}
-    ].forEach(p=>{
-      const span=document.createElement("span"); span.className="token"; span.dataset.lock=p.lock?"true":"false";
-      if (!p.lock && p.k){ span.dataset.editable="true"; span.contentEditable=false; span.addEventListener("input",()=>{ state.line[p.k]=span.textContent.trim(); }); }
-      span.textContent=p.txt; s.appendChild(span); s.appendChild(document.createTextNode(" "));
-    });
-
-    // global hot metrics
-    const baseHot=(data.hotMetrics&&data.hotMetrics.length)?data.hotMetrics:[
-      "Automation line uptime impact","Damage reduction targets in transit","Sustainability targets (PCR %, recyclability)","Unit cost at target MOQ","Vendor-managed inventory flexibility"
-    ];
+    // hot metrics (global)
+    const baseHot = (data.hotMetrics && data.hotMetrics.length)
+      ? data.hotMetrics
+      : [
+          "Automation line uptime impact",
+          "Damage reduction targets in transit",
+          "Sustainability targets (PCR %, recyclability)",
+          "Unit cost at target MOQ",
+          "Vendor-managed inventory flexibility"
+        ];
     renderMetrics(baseHot);
 
-    // sectors + picker + playbooks
-    state.sectorHints=(data.sectorHints||[]).slice(0,10);
-    renderSectorPicker();
+    // sectors
+    state.sectorHints = (data.sectorHints||[]).slice(0,12);
+    renderSectorBuckets(state.sectorHints);
 
-    // ops pool
-    const ops=(data.opsPool&&data.opsPool.length)?data.opsPool:[
-      "Hand pallet wrapping","Automated pallet wrapper","E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"
-    ];
-    renderOpsPool(ops);
+    // ops
+    const opsList = (data.opsPool && data.opsPool.length)
+      ? data.opsPool
+      : ["Hand pallet wrapping","Automated pallet wrapper","E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"];
+    renderOpsPool(opsList);
 
-    // product tags
-    state.productTags=data.productTags||[];
-
-    // targeting
+    // tags + targeting
+    state.productTags = data.productTags||[];
+    state.hq = data.hqCity || "";
     seedTargeting();
   }
 
   async function refreshFromWebsite(){
-    const host = normHost((document.getElementById("host").value)||domainFromEmail(document.getElementById("email").value));
+    const host = normHost(hostEl.value || domainFromEmail(emailEl.value));
     if (!host) return;
-    document.getElementById("status").textContent="";
+    statusEl.textContent="";
     try{
-      state.line.host=host; setFavicon(host);
-      const data=await classify(host, document.getElementById("email").value||"");
+      state.line.host = host; setFavicon(host);
+      const data = await classify(host, emailEl.value||"");
       applyServerPersona(data, host);
-      document.getElementById("status").textContent = data.cached ? "(cached)" : "";
-    }catch(e){
-      console.warn("classify failed:",e);
-      document.getElementById("status").textContent=" (offline)";
-      applyServerPersona({productTags:[],sectorHints:["food","beverage","logistics"],hotMetrics:[]}, host);
+      statusEl.textContent = data.cached ? "(cached)" : "";
+    }catch(err){
+      statusEl.textContent = " (offline)";
+      renderMetrics([
+        "Automation line uptime impact",
+        "Damage reduction targets in transit",
+        "Sustainability targets (PCR %, recyclability)",
+        "Unit cost at target MOQ"
+      ]);
+      renderSectorBuckets(state.sectorHints||[]);
+      renderOpsPool(["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"]);
+      seedTargeting();
     }
   }
 
-  // wire full edit/done
-  document.getElementById("editLine").addEventListener("click",()=>{
-    const s=document.getElementById("sentence"); s.classList.add("editing");
-    s.querySelectorAll('.token[data-editable="true"]').forEach(el=> el.contentEditable="true");
-    document.getElementById("editLine").hidden=true; document.getElementById("doneLine").hidden=false;
+  // wire edit/done + refresh
+  editBtn.addEventListener("click",()=>{
+    sentence.classList.add("editing");
+    editBtn.hidden=true; doneBtn.hidden=false;
+    sentence.querySelectorAll(".token").forEach((el,i)=>{
+      if ([1,8,9,10].includes(i)) return; // lock punctuation / "Best contacts:"
+      if (!/—|\.|Best contacts:/.test(el.textContent)) { el.dataset.editable="true"; el.contentEditable="true"; }
+    });
   });
-  document.getElementById("doneLine").addEventListener("click",()=>{
-    const s=document.getElementById("sentence"); s.classList.remove("editing");
-    s.querySelectorAll('.token[data-editable="true"]').forEach(el=> el.contentEditable="false");
-    document.getElementById("editLine").hidden=false; document.getElementById("doneLine").hidden=true;
+  doneBtn.addEventListener("click",()=>{
+    const vals = Array.from(sentence.querySelectorAll(".token")).map(s=>s.textContent.trim());
+    // recompute from sequence
+    state.line = {
+      host: vals[0]||state.line.host,
+      verb: vals[2]||state.line.verb,
+      products: vals[3]||state.line.products,
+      audience: vals[5]||state.line.audience,
+      region: vals[7]||state.line.region,
+      contacts: vals[11]||state.line.contacts
+    };
+    sentence.classList.remove("editing");
+    sentence.querySelectorAll(".token").forEach(el=>{ el.removeAttribute("contenteditable"); el.removeAttribute("data-editable"); });
+    editBtn.hidden=false; doneBtn.hidden=true;
   });
+  refreshA.addEventListener("click",(e)=>{ e.preventDefault(); refreshFromWebsite(); });
 
-  // refresh link
-  document.getElementById("refresh").addEventListener("click",(e)=>{ e.preventDefault(); refreshFromWebsite(); });
-
-  // replace Next handler with full finish logic
+  // replace Next handler to enable Finish
   (function replaceNext(){
-    const old=document.getElementById("next");
-    const fresh=old.cloneNode(true);
+    const old = nextBtn;
+    const fresh = old.cloneNode(true);
     old.parentNode.replaceChild(fresh, old);
+
     fresh.addEventListener("click", async ()=>{
-      if (state.step===0){ const emailEl=document.getElementById("email"); const hostEl=document.getElementById("host"); if (emailEl.value){ const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d; } 
-        // ensure favicon preview seed
-        const hc=normHost(hostEl.value||""); if (hc) setFavicon(hc);
-        const editBtn=document.getElementById("editLine"), doneBtn=document.getElementById("doneLine");
-        editBtn.hidden=false; doneBtn.hidden=true;
-        show(1); return; }
+      if (state.step===0){ show(1); return; }
 
       if (state.step===1){
-        const emailEl=document.getElementById("email");
-        const hostEl=document.getElementById("host");
-        const phoneEl=document.getElementById("phone");
-        if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
-        const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
-        if (!hostCandidate){ alert("Please provide your website/domain."); return; }
-        hostEl.value=hostCandidate;
+        if (!emailEl.value || !document.getElementById("phone").value){
+          alert("Business email and phone are required."); return;
+        }
+        const hc = normHost(hostEl.value || domainFromEmail(emailEl.value));
+        if (!hc){ alert("Please provide your website/domain."); return; }
+        hostEl.value = hc; state.line.host = hc; setFavicon(hc); renderSentence();
         await refreshFromWebsite();
         show(2); return;
       }
 
       if (state.step===2){
-        if (state.opsSelected.size===0){ alert("Pick at least one buyer operation (and set its importance)."); return; }
+        if (state.opsSelected.size===0){
+          alert("Pick at least one buyer operation (and set its importance).");
+          return;
+        }
 
-        const cityChips=document.getElementById("cityChips");
-        const sectorChips=document.getElementById("sectorChips");
-        const cityPicked=[...cityChips.querySelectorAll(".chip.active")].map(x=>x.textContent.trim());
-        const sectorsPicked=[...sectorChips.querySelectorAll(".chip.active")].map(x=>x.textContent.trim());
+        // collect sector metrics with auto/mute flags
+        const sectorsPacked = [];
+        sectorBucketsRoot.querySelectorAll(".group").forEach(secEl=>{
+          const sector = secEl.dataset.sector;
+          const auto = secEl.dataset.auto==="true";
+          if (state.mutedSectors.has(sector)){
+            sectorsPacked.push({sector, muted:true, auto:false, metrics:[]});
+          }else{
+            const arr = state.sectorMetrics.get(sector)||[];
+            sectorsPacked.push({sector, muted:false, auto, metrics:arr});
+          }
+        });
 
-        const sectorMetricsPacked = Array.from(state.sectorMetrics.entries()).map(([sector, arr])=>({
-          sector,
-          metrics: arr.map(m => ({ id:m.id, label:m.label, value:m.value, ai: !!m.ai }))
-        }));
-
-        const persona={
+        const persona = {
           host: normHost(state.line.host),
           role: state.role,
           line: state.line,
           productTags: state.productTags,
-          sectorHints: state.sectorHints.filter(s=>!state.sectorMuted.has(s)),
-          sectorMuted: Array.from(state.sectorMuted),
+          sectorHints: state.sectorHints,
           metrics: state.metrics,
-          sectorMetrics: sectorMetricsPacked,
+          sectorMetrics: sectorsPacked,
           operations: Array.from(state.opsSelected.entries()).map(([label,value])=>({label,value})),
-          targeting:{
-            city:(document.getElementById("city").value||"").trim(),
-            sectors:(document.getElementById("sectors").value||"").trim(),
-            citiesPicked: cityPicked,
-            sectorsPicked: sectorsPicked
+          targeting: {
+            city: (cityEl.value||"").trim(),
+            sectors: (sectorsEl.value||"").trim(),
+            citiesPicked: Array.from(cityChips.querySelectorAll(".chip.active")).map(x=>x.textContent.trim()),
+            sectorsPicked: Array.from(sectorChips.querySelectorAll(".chip.active")).map(x=>x.textContent.trim())
           }
         };
 
-        // persist
         setS("bf.persona", JSON.stringify(persona));
         setS("fp.persona", JSON.stringify(persona));
         setS("fp.supplier.host", persona.host);
-        setS("fp.pref.city", persona.targeting.city || (cityPicked[0]||""));
+        setS("fp.pref.city", persona.targeting.city || (persona.targeting.citiesPicked[0]||""));
         setS("fp.pref.tagPrefer", (persona.productTags||[]).join("\n"));
         setS("fp.pref.segPrefer", (persona.sectorHints||[]).join("\n"));
         setS("fp.autoImport","1");
 
-        // done
-        location.href="free-panel.html";
+        location.href = "free-panel.html";
       }
     });
   })();
 
-  // initial boot (API + seeds + favicon)
+  // full boot
   (async function bootFull(){
     await apiDetect();
-    const d=domainFromEmail(document.getElementById("email").value); if (d){ document.getElementById("host").value=d; setFavicon(d); }
-    // basic seeds if classify not run yet
-    renderMetrics([
-      "Automation line uptime impact","Damage reduction targets in transit","Sustainability targets (PCR %, recyclability)","Unit cost at target MOQ","Vendor-managed inventory flexibility"
-    ]);
-    state.sectorHints=["beverage","food","logistics","cosmetics","pharma","industrial","apparel","electronics","supplements","automotive","pet"];
-    renderSectorPicker();
-    renderOpsPool(["Hand pallet wrapping","Automated pallet wrapper","E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"]);
+    const d=domainFromEmail(emailEl.value); if (d){ hostEl.value=d; setFavicon(d); }
     seedTargeting();
   })();
 
-  // expose (debug)
+  // expose
   window.Galactly = {
     state,
+    addChip,
     renderMetrics,
-    renderIndustryPlaybooks,
-    renderSectorPicker,
+    renderSectorBuckets,
     renderOpsPool,
     seedTargeting,
     refreshFromWebsite,
@@ -944,6 +757,8 @@
     apiDetect
   };
 
-})();</script>
+/* -------------------- END PART 2 -------------------- */
+})();
+</script>
 </body>
 </html>
