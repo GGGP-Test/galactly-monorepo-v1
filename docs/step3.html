@@ -3,579 +3,514 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Step 3</title>
+<title>Step 3 — Tune by industry</title>
 <style>
   :root{
     --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c;
-    --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
-    --cta:#6de1ff; --ctaText:#082433; --chip:#1a2433;
-    --chipActive:#103247; --accent:#38e08f; --divider:#1b2531; --ring:#24435f;
+    --muted:#8aa0b2; --text:#e9f1f7; --accent:#38e08f; --brand:#8ae3ff;
+    --cta:#6de1ff; --ctaText:#082433; --divider:#1b2531; --ring:#24435f;
+    --chip:#1a2433; --chipActive:#103247;
+    --h:38px; /* rotor row height */
   }
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
-  .wrap{max-width:1080px;margin:28px auto;padding:0 12px}
-  .topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-  .fav{width:20px;height:20px;border-radius:4px;display:grid;place-items:center;overflow:hidden;background:#fff;border:1px solid #cfd8e3}
-  .fav img{width:20px;height:20px}
-  .badge{font-size:12px;padding:3px 7px;border-radius:999px;border:1px solid var(--divider);color:#a8c3d8;margin-left:auto}
-  .badge.ok{color:#0f0}
-  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:10px 14px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 14px}
+  .card{background:var(--panel);border:1px solid var(--divider);border-radius:16px}
+  .hd{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--divider);background:linear-gradient(180deg,#0f1622,#0e1520)}
+  .api{margin-left:auto;font-size:12px;padding:4px 8px;border:1px solid var(--divider);border-radius:10px;color:#a8c3d8}
+  .api.ok{color:#0f0}
+  .xbtn,.btn{border:0;border-radius:12px;cursor:pointer}
+  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:10px 14px;background:var(--cta);color:var(--ctaText);font-weight:700}
   .btn.sec{background:#152333;color:#cfe0ee}
-  .btn.sm{padding:6px 10px;border-radius:10px;font-weight:600}
-  .btn:active{transform:translateY(1px)}
-  .muted{color:#9cb1c4}
-  .summary{display:flex;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:12px 14px;border-radius:14px;margin:0 0 12px;align-items:flex-start}
+  .pill{padding:4px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
+  .bd{padding:14px 16px}
+  .one{display:flex;gap:12px;align-items:flex-start;background:#0e1622;border:1px solid var(--divider);padding:10px 12px;border-radius:12px}
+  .fav{width:24px;height:24px;border-radius:6px;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid #cfd8e3}
+  .fav img{width:24px;height:24px}
   .token{display:inline-block;border-radius:8px;padding:2px 6px;margin:0 2px}
   .token[data-lock="true"]{background:transparent;color:#dfeaf5;border:0}
   .sentence{--bgx:#0f1926}
   .sentence .token[data-editable="true"]{background:transparent;border-bottom:1px dashed #3a5572}
-  .sentence.editing .token[data-editable="true"]{background:var(--bgx);border:1px solid #2b425a}
+  .sentence.edit .token[data-editable="true"]{background:var(--bgx);border:1px solid #2b425a}
   .sentence .token:focus{outline:2px solid var(--ring)}
-  .row{display:flex;gap:14px;align-items:center}
-  .card{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px}
-  .hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-  .hd h3,.hd h4{margin:0}
-  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
-  .muted-hint{font-size:12px;color:#99b2c8}
-  .actions{display:flex;gap:10px;align-items:center}
-
-  /* Advanced toggle */
-  #advanced[hidden]{display:none}
-
-  /* Layout for advanced */
-  .advanced-grid{display:grid;grid-template-columns:280px 1fr;gap:14px}
-  @media (max-width:900px){.advanced-grid{grid-template-columns:1fr}}
-
-  /* Rotor (industry wheel) */
-  .wheel{position:relative;height:300px;background:#0d1520;border:1px solid #1b2531;border-radius:12px;overflow:hidden}
-  .wheel-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:stretch;perspective:700px}
-  .wheel-item{padding:10px 12px;margin:0 8px;border-radius:10px;border:1px solid transparent;transform-origin:center;opacity:.35;transition:transform .12s,opacity .12s,background .12s,color .12s;border-color:transparent}
-  .wheel-item.active{background:var(--chipActive);color:#eaf7ff;opacity:1;border-color:#1b4862}
-  .wheel-fade{position:absolute;left:0;right:0;height:54px;pointer-events:none}
-  .wheel-fade.top{top:0;background:linear-gradient(180deg,#0d1520,transparent)}
-  .wheel-fade.bot{bottom:0;background:linear-gradient(0deg,#0d1520,transparent)}
-  .wheel-ctrls{display:flex;gap:8px;justify-content:space-between;margin-top:8px}
-  .xrow{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;border:1px solid #203041;cursor:pointer}
+  .edit-actions{display:flex;gap:8px;margin-top:6px}
+  .small{font-size:12px;color:#8aa0b2}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:14px}
+  @media (max-width:980px){.grid{grid-template-columns:1fr}}
+  .panel{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:12px}
+  .panel h4{margin:0 0 10px}
+  .muted{color:#9ab0c0;font-size:12px}
+  .chips{user-select:none}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
   .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
-
-  /* Metrics & sliders */
-  .metric-row{display:grid;grid-template-columns:1fr 260px;gap:14px;align-items:center;margin:10px 0}
-  .metric-row input[type=range]{width:100%}
-  .metric-tip{font-size:12px;color:#89a2b6;margin-top:-6px}
-  .sect-hd{display:flex;align-items:center;gap:10px;justify-content:space-between;margin:2px 0 8px}
-  .sect-tools{display:flex;gap:8px;align-items:center}
-  .switch{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#9cb1c4}
-  .switch input{transform:translateY(1px)}
-  .div{height:1px;background:var(--divider);margin:10px 0}
-
-  /* Footer */
-  .ft{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
-  a.link{color:#8ae3ff;text-decoration:none}
+  .row{display:grid;grid-template-columns:1fr 280px;gap:14px;align-items:center;margin:8px 0}
+  .row input[type=range]{width:100%}
+  .hint{font-size:11px;color:#9cb3c7;margin-top:-4px}
+  .foot{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
+  /* rotor */
+  .rotor{position:relative;height:calc(var(--h)*7);overflow:hidden;background:#0e1622;border:1px solid var(--divider);border-radius:12px}
+  .rotor .mask{position:absolute;inset:0;pointer-events:none;background:
+    linear-gradient(#0e1622,rgba(14,22,34,0)) top/100% 34% no-repeat,
+    linear-gradient(rgba(14,22,34,0),#0e1622) bottom/100% 34% no-repeat}
+  .rail{position:absolute;left:0;right:0;top:50%;transform:translateY(calc(-3.5*var(--h)));will-change:transform}
+  .it{height:var(--h);display:flex;align-items:center;justify-content:center;transition:transform .12s, opacity .12s;opacity:.55}
+  .it.sel{font-weight:700;opacity:1;transform:scale(1.06)}
+  .rotor-bar{position:absolute;left:6px;right:6px;top:50%;height:var(--h);transform:translateY(-50%);border-radius:10px;border:1px dashed #2a3f4f}
+  .rotor-ctrl{display:flex;gap:8px;justify-content:center;margin-top:10px}
+  .ico{width:30px;height:30px;border-radius:8px;background:#132031;border:1px solid #1f2d42;display:grid;place-items:center;color:#b3c7da;cursor:pointer}
+  .topline{display:flex;gap:10px;align-items:center}
+  .toggle{cursor:pointer;user-select:none}
+  .switch{display:inline-flex;align-items:center;gap:8px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="topbar">
-    <div class="fav"><img id="fav" alt="" referrerpolicy="no-referrer"></div>
-    <div id="crumb" class="muted"></div>
-    <span id="apiBadge" class="badge">API: resolving…</span>
-    <button id="back" class="btn sec sm">Back</button>
-  </div>
-
-  <!-- One-liner -->
-  <div class="summary card">
-    <div style="flex:1">
-      <div id="sentence" class="sentence" aria-live="polite"></div>
-      <div class="actions" style="margin-top:8px">
-        <button id="editLine" class="btn sec sm" type="button">Edit</button>
-        <button id="doneLine" class="btn sm" type="button" hidden>Done</button>
-        <span id="status" class="muted-hint"></span>
-      </div>
+  <div class="card">
+    <div class="hd">
+      <div class="pill">Step 3 of 3</div>
+      <a id="back" class="btn sec" href="index.html">Back</a>
+      <span class="api" id="apiBadge">API: resolving…</span>
     </div>
-  </div>
-
-  <!-- Advanced (collapsed by default) -->
-  <div class="hd">
-    <span class="pill">Step 3: Tune by industry</span>
-    <button id="advToggle" class="btn sec sm" type="button"><span id="advLbl">Show advanced ▾</span></button>
-    <span id="cached" class="muted-hint"></span>
-  </div>
-
-  <div id="advanced" hidden>
-    <div class="card advanced-grid">
-      <!-- LEFT: Rotor -->
-      <div>
-        <div class="sect-hd">
-          <h4 style="margin:0">Industries</h4>
-          <label class="switch"><input id="hideMuted" type="checkbox"> Hide muted</label>
-        </div>
-        <div id="wheel" class="wheel">
-          <div class="wheel-inner" id="wheelInner"></div>
-          <div class="wheel-fade top"></div>
-          <div class="wheel-fade bot"></div>
-        </div>
-        <div class="wheel-ctrls">
-          <button id="wheelUp" class="btn sec sm" type="button">▲</button>
-          <button id="wheelDown" class="btn sec sm" type="button">▼</button>
-          <div class="muted-hint" id="wheelHint" style="margin-left:auto">Scroll / drag to change</div>
-        </div>
-      </div>
-
-      <!-- RIGHT: Industry detail -->
-      <div id="detail">
-        <div class="sect-hd">
-          <h3 id="sectTitle" style="margin:0">—</h3>
-          <div class="sect-tools">
-            <button id="muteBtn" class="btn sec sm" type="button">Mute industry</button>
-            <label class="switch"><input id="aiDecide" type="checkbox"> Let AI decide</label>
+    <div class="bd">
+      <div class="one">
+        <div class="fav"><img id="fav" alt="" referrerpolicy="no-referrer"></div>
+        <div style="flex:1">
+          <div id="sentence" class="sentence" aria-live="polite"></div>
+          <div class="edit-actions">
+            <button id="edit" class="btn sec" type="button">Edit</button>
+            <button id="done" class="btn" type="button" hidden>Done</button>
+            <a id="refresh" href="#" class="btn sec" style="padding:8px 10px">Refresh from website</a>
+            <span id="status" class="small"></span>
           </div>
         </div>
+      </div>
 
-        <div id="metricsBox"></div>
+      <div class="topline" style="margin:10px 0 6px">
+        <button id="advToggle" class="btn sec" type="button" style="padding:8px 12px;border-radius:999px"><span id="advLbl">Show advanced ▾</span></button>
+        <label class="switch small"><input id="hideMuted" type="checkbox"> Hide muted</label>
+      </div>
 
-        <div class="div"></div>
+      <div id="adv" hidden>
+        <div class="panel">
+          <h4 style="margin-bottom:6px">Step 3: Tune by industry</h4>
+          <div class="grid">
+            <!-- Rotor -->
+            <div>
+              <div class="rotor" id="rotor">
+                <div class="rail" id="rail"></div>
+                <div class="rotor-bar"></div>
+                <div class="mask"></div>
+              </div>
+              <div class="rotor-ctrl">
+                <div id="up" class="ico">▲</div>
+                <div id="down" class="ico">▼</div>
+              </div>
+              <div class="small" style="text-align:center;margin-top:8px">Scroll / drag to change industry</div>
+            </div>
 
-        <div>
-          <div class="sect-hd"><h4 style="margin:0">Buyer operations (importance 0–10)</h4></div>
-          <div id="opsChips" class="xrow"></div>
-          <div id="opsSliders"></div>
-        </div>
+            <!-- Industry detail -->
+            <div>
+              <div class="topline" style="justify-content:space-between">
+                <div class="pill" id="indLabel">Industry</div>
+                <div class="switch small">
+                  <label class="switch"><input id="aiDecide" type="checkbox"> Let AI decide</label>
+                  <button id="mute" class="btn sec" type="button" style="padding:6px 10px;border-radius:10px">Mute industry</button>
+                </div>
+              </div>
 
-        <div class="div"></div>
+              <div class="panel" style="margin-top:10px">
+                <h4 id="metricTitle" style="margin-bottom:6px">Hot-priority metrics</h4>
+                <div id="metrics"></div>
+              </div>
 
-        <div>
-          <div class="sect-hd"><h4 style="margin:0">Targeting for this industry</h4></div>
-          <div class="row">
-            <div style="flex:1">
-              <label class="muted-hint">Boost near city…</label>
-              <input id="city" type="text" placeholder="e.g., HQ city" style="width:100%;padding:10px;border-radius:10px;background:#0d1520;border:1px solid var(--divider);color:var(--text);outline:none"/>
-              <div id="cityChips" class="xrow" style="margin-top:8px"></div>
+              <div class="panel">
+                <h4 style="margin-bottom:6px">Buyer operations</h4>
+                <div id="opsChips" class="chips"></div>
+                <div id="opsSliders" style="margin-top:8px"></div>
+                <div class="muted">Click to add; each selected operation gets its own importance slider (0–10).</div>
+              </div>
+
+              <div class="panel">
+                <h4 style="margin-bottom:6px">Targeting for this industry</h4>
+                <label class="small">Boost near city…</label>
+                <input id="city" type="text" placeholder="e.g., HQ city" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none">
+                <div id="cityChips" class="chips" style="margin-top:6px"></div>
+              </div>
+
+              <div class="foot">
+                <button id="save" class="btn sec" type="button">Save</button>
+                <button id="finish" class="btn" type="button">Finish</button>
+              </div>
             </div>
           </div>
         </div>
-
-      </div>
+      </div> <!-- /adv -->
     </div>
-  </div>
-
-  <div class="ft">
-    <button id="save" class="btn sec" type="button">Save</button>
-    <button id="finish" class="btn" type="button">Finish</button>
-  </div>
-
-  <div class="muted-hint" style="margin-top:8px">
-    Trouble? <a class="link" href="index.html">Return to Step 2</a>
   </div>
 </div>
 
 <script>
 (()=>{
 
-  // ---------- storage helpers ----------
-  const getS=(k,d="")=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}};
-  const setS=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
+// ---------- tiny helpers ----------
+const $=q=>document.querySelector(q);
+const $$=q=>Array.from(document.querySelectorAll(q));
+const getS=(k,d="")=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}};
+const setS=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
+const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
+const favImg=$("#fav");
+function setFavicon(host){const h=normHost(host);favImg.src=h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):"";}
 
-  // ---------- state ----------
-  const state = {
-    apiOnline:false,
-    persona:null,           // incoming from Step 2
-    industries:[],          // [{key,label,muted:false, ai:false, metrics:[{k,l,tip,val}], opsSel:Map, city:"", opsPool:[...]}]
-    ix:0,                   // selected industry index
-    host:"", email:"", cached:false
+// ---------- API detect ----------
+const api={base:""};
+async function detectAPI(){
+  const hints=[];
+  if(typeof window.API_BASE==="string") hints.push(window.API_BASE);
+  const saved=getS("apiBase",""); if(saved) hints.push(saved);
+  hints.push(location.origin+"/api", location.origin);
+  async function tryBase(b){
+    b=(b||"").replace(/\/+$/,"");
+    const paths = /\/api$/.test(b) ? [b+"/health"] : [b+"/api/health"];
+    if (b===location.origin) paths.push(b+"/healthz");
+    for (const p of paths){ try{const r=await fetch(p,{credentials:"omit"}); if(r.ok) return b;}catch{} }
+    return null;
+  }
+  for (const h of hints){const ok=await tryBase(h); if(ok){api.base=ok; setS("apiBase",ok); return true;}}
+  api.base=hints[0]||location.origin+"/api"; return false;
+}
+function classifyURL(){const b=(api.base||getS("apiBase","")).replace(/\/+$/,""); return /\/api$/.test(b)?(b+"/classify"):(b+"/api/classify");}
+async function classify(host,email){
+  const url=classifyURL()+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
+  try{const r=await fetch(url,{credentials:"omit"}); if(!r.ok) throw new Error(r.status); return await r.json();}
+  catch(e){const alt=/\/api\/classify$/.test(url)?url.replace(/\/api\/classify$/,"/classify"):url.replace(/\/classify$/,"/api/classify"); const r2=await fetch(alt,{credentials:"omit"}); if(!r2.ok) throw new Error(r2.status); return await r2.json();}
+}
+
+// ---------- dataset ----------
+const INDUSTRY = {
+  beverage: {
+    label:"Beverage",
+    metrics:[
+      ["High-speed line compatibility","0=manual/slow only — 10=proven at ≥500+ units/min or ≥30 cases/min"],
+      ["Retail-ready print consistency","0=frequent color drift/misregister — 10=ΔE<2 & tight register at volume"],
+      ["Condensation tolerance","0=fails with light sweat — 10=survives heavy condensation (coolers/retort)"],
+      ["Pallet stability for bottlers","0=shifts/collapses — 10=stable to ISTA 3A/3E or in-house equivalent"],
+      ["Case integrity for glass/plastic","0=frequent breakage/deformation — 10=spec holds at peak load/transport"],
+      ["Damage reduction targets in transit","0=no target — 10=meets ≤0.5% damage KPI"]
+    ],
+    ops:["Automated pallet wrapper","Hand pallet wrapping","E-commerce fulfillment","3PL / distribution"],
+    cities:["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"]
+  },
+  food:{
+    label:"Food",
+    metrics:[
+      ["Food-contact compliance (FDA/EC)","0=uncertified — 10=fully certified with documentation"],
+      ["Oxygen/moisture barrier","0=none — 10=validated OTR/WVTR for shelf-life target"],
+      ["Traceability & COA","0=none — 10=lot-level COA + recall-ready"],
+      ["Sealing performance","0=frequent leaks — 10=validated hermetic seal @ scale"],
+      ["Print/label regs","0=non-compliant — 10=GHS/NLEA compliant at scale"]
+    ],
+    ops:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution"],
+    cities:["Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"]
+  },
+  cosmetics:{
+    label:"Cosmetics",
+    metrics:[
+      ["Premium print/finish expectations","0=basic CMYK — 10=foil/spot UV/emboss at scale"],
+      ["Color consistency delta-E","0=ΔE>6 — 10=ΔE≤2"],
+      ["Unboxing experience","0=plain — 10=designed tactile experience"]
+    ],
+    ops:["E-commerce fulfillment","3PL / distribution","Co-packing"],
+    cities:["Los Angeles","New York","Dallas","Atlanta","Miami"]
+  },
+  electronics:{
+    label:"Electronics",
+    metrics:[
+      ["ESD protection requirements","0=not needed — 10=ANSI/ESD S541-compliant"],
+      ["Shock/vibration protection","0=insufficient — 10=drop/ISTA validated"],
+      ["Moisture control","0=none — 10=desiccant & barrier spec maintained"]
+    ],
+    ops:["Warehouse pick/pack","3PL / distribution"],
+    cities:["San Jose","Los Angeles","Dallas","Atlanta","Chicago"]
+  },
+  industrial:{
+    label:"Industrial",
+    metrics:[
+      ["Heavy-load stability","0=frequent leaning — 10=locked and tested @ weight"],
+      ["Puncture/tear resistance","0=tears common — 10=passes in-house dart/tear spec"],
+      ["Unitization efficiency","0=low — 10=optimized wrap/cycle per pallet"]
+    ],
+    ops:["Automated pallet wrapper","3PL / distribution","Co-packing"],
+    cities:["Dallas","Chicago","Atlanta","Houston","Detroit"]
+  },
+  apparel:{
+    label:"Apparel",
+    metrics:[
+      ["Presentation (crease/scuff)","0=issues common — 10=store-ready"],
+      ["Parcel-rate optimization","0=oversized — 10=lowest practical DIM"],
+      ["Return-friendly design","0=hassles — 10=easy reseal/scan"]
+    ],
+    ops:["E-commerce fulfillment","3PL / distribution"],
+    cities:["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta"]
+  },
+  logistics:{
+    label:"Logistics",
+    metrics:[
+      ["ASN/label accuracy","0=frequent chargebacks — 10=clean audits"],
+      ["Dock-to-stock speed","0=slow — 10=fast receiving fit"],
+      ["Damage in parcel/LTL","0=high — 10=meets carrier KPIs"]
+    ],
+    ops:["3PL / distribution","Warehouse pick/pack","E-commerce fulfillment"],
+    cities:["Memphis","Dallas","Atlanta","Chicago","New Jersey"]
+  }
+};
+
+// ---------- state ----------
+const state={
+  apiOnline:false,
+  line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
+  sectors:Object.keys(INDUSTRY),
+  muted:new Set(),         // ids
+  aiAuto:new Set(),        // ids
+  weights:new Map(),       // id -> [{label, value, hint}]
+  opsSel:new Map(),        // id -> Map(label->value)
+  cityPref:new Map(),      // id -> city string
+  idx:0,                   // rotor index
+  personaSeed:null
+};
+
+// ---------- UI: sentence ----------
+const sentence=$("#sentence"), editBtn=$("#edit"), doneBtn=$("#done");
+function renderSentence(edit=false){
+  const L=state.line;
+  const tpl=[
+    {k:"host", txt:L.host, lock:true},
+    {txt:"—", lock:true},
+    {k:"verb", txt:L.verb},{k:"products", txt:L.products},
+    {txt:"for", lock:true},{k:"audience", txt:L.audience},
+    {txt:"in", lock:true},{k:"region", txt:L.region},{txt:".", lock:true},
+    {txt:"Best contacts:", lock:true},{k:"contacts", txt:L.contacts}
+  ];
+  sentence.classList.toggle("edit", edit);
+  sentence.innerHTML="";
+  for (const part of tpl){
+    const span=document.createElement("span");
+    span.className="token";
+    span.dataset.lock = part.lock?"true":"false";
+    if (!part.lock && part.k){
+      span.dataset.editable="true";
+      span.contentEditable = edit;
+      span.addEventListener("input",()=>{ state.line[part.k]=span.textContent.trim(); });
+    }
+    span.textContent=part.txt; sentence.appendChild(span);
+    sentence.appendChild(document.createTextNode(" "));
+  }
+}
+editBtn.addEventListener("click",()=>{renderSentence(true);editBtn.hidden=true;doneBtn.hidden=false;});
+doneBtn.addEventListener("click",()=>{renderSentence(false);editBtn.hidden=false;doneBtn.hidden=true;});
+
+// ---------- UI: advanced toggle ----------
+const adv=$("#adv"), advLbl=$("#advLbl");
+$("#advToggle").addEventListener("click",()=>{
+  const open=adv.hasAttribute("hidden");
+  if(open){adv.removeAttribute("hidden");advLbl.textContent="Hide advanced ▲";}
+  else{adv.setAttribute("hidden","");advLbl.textContent="Show advanced ▾";}
+});
+
+// ---------- rotor ----------
+const rail=$("#rail"); const rotor=$("#rotor"); const indLabel=$("#indLabel");
+function buildRotor(){
+  rail.innerHTML="";
+  const ids=filteredIds();
+  ids.forEach((id,i)=>{
+    const it=document.createElement("div"); it.className="it"; it.textContent=INDUSTRY[id].label; it.dataset.id=id;
+    rail.appendChild(it);
+  });
+  updateRotor(0,true);
+}
+function filteredIds(){
+  const ids=state.sectors.slice();
+  if ($("#hideMuted").checked) return ids.filter(id=>!state.muted.has(id));
+  return ids;
+}
+function updateRotor(delta=0, reset=false){
+  const ids=filteredIds();
+  if(!ids.length) return;
+  if(reset) state.idx = Math.min(state.idx, ids.length-1);
+  state.idx = Math.max(0, Math.min(ids.length-1, state.idx + delta));
+  const y = -state.idx*parseInt(getComputedStyle(document.documentElement).getPropertyValue('--h'));
+  rail.style.transform = `translateY(calc(-3.5*var(--h) + ${y}px))`;
+  rail.querySelectorAll(".it").forEach((el,i)=> el.classList.toggle("sel", i===state.idx));
+  const id=ids[state.idx]; indLabel.textContent=INDUSTRY[id].label;
+  drawIndustry(id);
+}
+let dragY=null;
+rotor.addEventListener("pointerdown",e=>{dragY=e.clientY; rotor.setPointerCapture(e.pointerId);});
+rotor.addEventListener("pointermove",e=>{
+  if(dragY==null) return;
+  const dy=e.clientY-dragY;
+  if(Math.abs(dy)>18){ updateRotor(dy>0?1:-1); dragY=e.clientY; }
+});
+["pointerup","pointercancel","pointerleave"].forEach(ev=>rotor.addEventListener(ev,()=>{dragY=null;}));
+rotor.addEventListener("wheel",e=>{ e.preventDefault(); updateRotor(e.deltaY>0?1:-1); }, {passive:false});
+$("#up").addEventListener("click",()=>updateRotor(-1));
+$("#down").addEventListener("click",()=>updateRotor(1));
+$("#hideMuted").addEventListener("change",()=>{ buildRotor(); });
+
+// ---------- per-industry panels ----------
+const metricsBox=$("#metrics");
+const opsChips=$("#opsChips");
+const opsSliders=$("#opsSliders");
+const cityEl=$("#city");
+const cityChips=$("#cityChips");
+const aiDecide=$("#aiDecide");
+const muteBtn=$("#mute");
+const metricTitle=$("#metricTitle");
+
+function addChip(text, box, onToggle){
+  const s=document.createElement("span"); s.className="chip"; s.textContent=text;
+  s.addEventListener("click",()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); onToggle && onToggle(on,text,s); });
+  box.appendChild(s); return s;
+}
+
+function ensureWeights(id){
+  if(state.weights.has(id)) return;
+  const items = INDUSTRY[id].metrics.map(([label,hint])=>({label,value:seedWeight(id,label),hint}));
+  state.weights.set(id, items);
+}
+function seedWeight(indId, label){
+  // probability prior 4..8, tuned by simple signals
+  let v=6;
+  const seed=(state.personaSeed||"") + " " + (INDUSTRY[indId].label||"");
+  const t=seed.toLowerCase();
+  if(/shrink|stretch|pallet|film|wrap/.test(t) && /beverage|industrial|logistics/.test(indId)) v+=1;
+  if(/print|label|brand/.test(t) && /cosmetics|food/.test(indId)) v+=1;
+  if(/esd|electronics/.test(t) && indId==="electronics") v+=2;
+  if(/e-?com|fulfill|3pl|warehouse/.test(t)) v+=1;
+  v=Math.max(3, Math.min(9, v));
+  return v;
+}
+function drawIndustry(id){
+  metricTitle.textContent = INDUSTRY[id].label+" — hot-priority metrics";
+  ensureWeights(id);
+  // metrics
+  metricsBox.innerHTML="";
+  for (const m of state.weights.get(id)){
+    const row=document.createElement("div"); row.className="row";
+    const lab=document.createElement("div");
+    lab.innerHTML = `<div>${m.label}</div><div class="hint">${m.hint}</div>`;
+    const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=m.value;
+    input.addEventListener("input",()=>{ m.value=Number(input.value); });
+    row.appendChild(lab); row.appendChild(input); metricsBox.appendChild(row);
+  }
+  // ops
+  opsChips.innerHTML=""; opsSliders.innerHTML="";
+  if (!state.opsSel.has(id)) state.opsSel.set(id,new Map());
+  const sel=state.opsSel.get(id);
+  const ensure=(label)=>{
+    if (sel.has(label)) return;
+    const wrap=document.createElement("div"); wrap.className="row"; wrap.dataset.label=label;
+    const lab=document.createElement("div"); lab.textContent=label;
+    const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value="7";
+    input.addEventListener("input",()=> sel.set(label, Number(input.value)));
+    wrap.appendChild(lab); wrap.appendChild(input); opsSliders.appendChild(wrap);
+    sel.set(label,7);
   };
-
-  // ---------- els ----------
-  const fav=document.getElementById("fav");
-  const crumb=document.getElementById("crumb");
-  const apiBadge=document.getElementById("apiBadge");
-  const backBtn=document.getElementById("back");
-  const saveBtn=document.getElementById("save");
-  const finishBtn=document.getElementById("finish");
-
-  const sentence=document.getElementById("sentence");
-  const editBtn=document.getElementById("editLine");
-  const doneBtn=document.getElementById("doneLine");
-  const statusEl=document.getElementById("status");
-
-  const adv=document.getElementById("advanced");
-  const advToggle=document.getElementById("advToggle");
-  const advLbl=document.getElementById("advLbl");
-
-  const wheel=document.getElementById("wheel");
-  const wheelInner=document.getElementById("wheelInner");
-  const wheelUp=document.getElementById("wheelUp");
-  const wheelDown=document.getElementById("wheelDown");
-  const hideMuted=document.getElementById("hideMuted");
-
-  const sectTitle=document.getElementById("sectTitle");
-  const muteBtn=document.getElementById("muteBtn");
-  const aiDecide=document.getElementById("aiDecide");
-
-  const metricsBox=document.getElementById("metricsBox");
-  const opsChips=document.getElementById("opsChips");
-  const opsSliders=document.getElementById("opsSliders");
-  const cityEl=document.getElementById("city");
-  const cityChips=document.getElementById("cityChips");
-
-  // ---------- utils ----------
-  const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
-  function setFavicon(host){const h=normHost(host); fav.src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):"";}
-  const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
-  const hash=(s)=>{let h=2166136261>>>0; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i); h+= (h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24)} return h>>>0; };
-  const seeded=(seed)=>{let x=seed>>>0; return ()=>{x^=x<<13; x^=x>>>17; x^=x<<5; return (x>>>0)/4294967295;}};
-
-  function addChip(text, box, onToggle){
-    const el=document.createElement("span");
-    el.className="chip"; el.textContent=text;
-    el.addEventListener("click",()=>{ const on=!el.classList.contains("active"); el.classList.toggle("active", on); onToggle && onToggle(on, text, el); });
-    box.appendChild(el); return el;
-  }
-
-  // ---------- rotor rendering ----------
-  function renderWheel(){
-    wheelInner.innerHTML="";
-    const show = state.industries.filter(ind => !hideMuted.checked || !ind.muted);
-    if (!show.length){ wheelInner.innerHTML='<div class="muted-hint" style="margin:10px auto">All industries muted</div>'; return; }
-    const selKey = show[ clamp(state.ix,0,show.length-1) ]?.key;
-    show.forEach((ind,i)=>{
-      const item=document.createElement("div");
-      item.className="wheel-item";
-      item.textContent = ind.label;
-      // fake 3D depth
-      const center = (show.length-1)/2;
-      const dz = (i - clamp(state.ix,0,show.length-1));
-      item.style.transform = `translateY(${(i*46)- (state.ix*46)}px) rotateX(${dz*10}deg)`;
-      item.style.opacity = String( clamp(1 - Math.abs(dz)*0.2, 0.25, 1) );
-      if (ind.key===selKey) item.classList.add("active");
-      item.addEventListener("click",()=>{ state.ix = i; renderWheel(); renderDetail(); });
-      wheelInner.appendChild(item);
-    });
-  }
-  let wheelDragY=null;
-  wheel.addEventListener("pointerdown",(e)=>{wheelDragY=e.clientY; wheel.setPointerCapture(e.pointerId);});
-  wheel.addEventListener("pointermove",(e)=>{
-    if (wheelDragY==null) return;
-    const dy = e.clientY - wheelDragY;
-    if (Math.abs(dy)>34){ state.ix = clamp(state.ix + (dy>0?1:-1), 0, state.industries.filter(x=>!hideMuted.checked||!x.muted).length-1); wheelDragY=e.clientY; renderWheel(); renderDetail(); }
-  });
-  ["pointerup","pointercancel","mouseleave"].forEach(ev=>wheel.addEventListener(ev,()=>{wheelDragY=null;}));
-  wheel.addEventListener("wheel",(e)=>{ e.preventDefault(); state.ix = clamp(state.ix + (e.deltaY>0?1:-1),0,state.industries.filter(x=>!hideMuted.checked||!x.muted).length-1); renderWheel(); renderDetail(); }, {passive:false});
-  wheelUp.addEventListener("click",()=>{ state.ix = clamp(state.ix-1,0,state.industries.length-1); renderWheel(); renderDetail(); });
-  wheelDown.addEventListener("click",()=>{ state.ix = clamp(state.ix+1,0,state.industries.length-1); renderWheel(); renderDetail(); });
-  hideMuted.addEventListener("change",()=>{ state.ix=0; renderWheel(); renderDetail(); });
-
-  // ---------- industry detail ----------
-  function renderDetail(){
-    const list = state.industries.filter(ind => !hideMuted.checked || !ind.muted);
-    const ind = list[ clamp(state.ix,0,list.length-1) ];
-    if (!ind){ sectTitle.textContent="—"; metricsBox.innerHTML=""; opsChips.innerHTML=""; opsSliders.innerHTML=""; cityEl.value=""; return; }
-    sectTitle.textContent = ind.label + (ind.muted?" (muted)":"");
-    aiDecide.checked = !!ind.ai;
-    muteBtn.textContent = ind.muted ? "Unmute industry" : "Mute industry";
-
-    // metrics
-    metricsBox.innerHTML="";
-    ind.metrics.forEach(m=>{
-      const row=document.createElement("div"); row.className="metric-row";
-      const left=document.createElement("div");
-      left.innerHTML = `<div style="font-weight:600">${m.l}</div><div class="metric-tip">${m.tip||""}</div>`;
-      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.step="1"; input.value=m.val;
-      input.disabled = !!ind.ai || ind.muted;
-      input.addEventListener("input",()=>{ m.val = Number(input.value); });
-      row.appendChild(left); row.appendChild(input); metricsBox.appendChild(row);
-    });
-
-    // operations pool
-    opsChips.innerHTML=""; opsSliders.innerHTML="";
-    const ensure=(label)=>{
-      if (ind.opsSel.has(label)) return;
-      const wrap=document.createElement("div"); wrap.className="metric-row"; wrap.dataset.label=label;
-      const lab=document.createElement("div"); lab.textContent=label;
-      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value="7";
-      input.disabled = ind.muted;
-      input.addEventListener("input",()=> ind.opsSel.set(label, Number(input.value)));
-      wrap.appendChild(lab); wrap.appendChild(input); opsSliders.appendChild(wrap);
-      ind.opsSel.set(label, 7);
-    };
-    const remove=(label)=>{
-      const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]');
-      if (el) el.remove(); ind.opsSel.delete(label);
-    };
-    ind.opsPool.forEach(op=>{
-      const chip=addChip(op, opsChips, (on,txt)=> on?ensure(txt):remove(txt));
-      if (ind.opsSel.has(op)) chip.classList.add("active");
-      chip.style.pointerEvents = ind.muted? "none":"auto";
-      chip.style.opacity = ind.muted? ".4":"1";
-    });
-
-    // city
-    cityEl.value = ind.city||"";
-    cityEl.disabled = ind.muted;
-    cityChips.innerHTML="";
-    ["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"].forEach(c=>{
-      const chip=addChip(c, cityChips, (on,txt)=>{ if(on) cityEl.value=txt; });
-      if ((ind.city||"").toLowerCase()===c.toLowerCase()) chip.classList.add("active");
-      chip.style.pointerEvents = ind.muted? "none":"auto";
-      chip.style.opacity = ind.muted? ".4":"1";
-    });
-  }
-
-  // ---------- one-liner editable ----------
-  function renderSentence(editing=false){
-    const L=state.persona?.line||{host:"",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Procurement"};
-    const tpl=[
-      {k:"host", txt:L.host, lock:true},
-      {txt:"—", lock:true},
-      {k:"verb", txt:L.verb},
-      {k:"products", txt:L.products},
-      {txt:"for", lock:true},
-      {k:"audience", txt:L.audience},
-      {txt:"in", lock:true},
-      {k:"region", txt:L.region},
-      {txt:".", lock:true},
-      {txt:"Best contacts:", lock:true},
-      {k:"contacts", txt:L.contacts}
-    ];
-    sentence.classList.toggle("editing", editing);
-    sentence.innerHTML="";
-    tpl.forEach(part=>{
-      const span=document.createElement("span");
-      span.className="token";
-      span.dataset.lock = part.lock?"true":"false";
-      if (!part.lock){
-        span.dataset.editable="true"; span.contentEditable = editing;
-        span.addEventListener("input",()=>{ state.persona.line[part.k]=span.textContent.trim(); });
-      }
-      span.textContent = part.txt;
-      sentence.appendChild(span);
-      sentence.appendChild(document.createTextNode(" "));
-    });
-  }
-  editBtn.addEventListener("click",()=>{renderSentence(true); editBtn.hidden=true; doneBtn.hidden=false;});
-  doneBtn.addEventListener("click",()=>{renderSentence(false); editBtn.hidden=false; doneBtn.hidden=true;});
-
-  // ---------- advanced toggle ----------
-  advToggle.addEventListener("click",(e)=>{
-    e.preventDefault();
-    const open = adv.hasAttribute("hidden");
-    if (open){ adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
-    else { adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
-  });
-
-  // ---------- industry catalog + metric definitions ----------
-  const CATALOG = {
-    beverage: {
-      label:"Beverage",
-      metrics:[
-        ["High-speed line compatibility","0=manual/slow only — 10=proven at ≥500+ units/min or ≥30 cases/min"],
-        ["Retail-ready print consistency","0=frequent color drift/misregister — 10=ΔE<2 & tight register at volume"],
-        ["Condensation tolerance","0=fails with light sweat — 10=survives heavy condensation (coolers/retort)"],
-        ["Pallet stability for bottlers","0=shifts/collapses — 10=stable to ISTA 3A/3E or in-house equivalent"],
-        ["Case integrity for glass/plastic","0=frequent breakage/deformation — 10=holds at peak load/transport"],
-        ["Damage reduction targets in transit","0=no target — 10=meets ≤0.5% damage KPI"]
-      ],
-      ops:["Automated pallet wrapper","Hand pallet wrapping","E-commerce fulfillment","3PL / distribution"]
-    },
-    food: {
-      label:"Food",
-      metrics:[
-        ["Food-contact compliance (FDA/EC)","0=uncertified — 10=fully certified with documentation"],
-        ["Oxygen/moisture barrier","0=none — 10=validated OTR/WVTR for shelf-life target"],
-        ["Traceability & COA","0=none — 10=lot-level COA + recall-ready"],
-        ["Sealing performance","0=frequent leaks — 10=validated hermetic seal @ rate"],
-        ["Print/label regs","0=non-compliant — 10=GHS/NLEA compliant at scale"]
-      ],
-      ops:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"]
-    },
-    cosmetics: {
-      label:"Cosmetics",
-      metrics:[
-        ["Premium print/finish expectations","0=basic CMYK — 10=foil/spot UV/emboss at scale"],
-        ["Color consistency delta-E","0=ΔE>6 — 10=ΔE≤2"],
-        ["Unboxing experience","0=plain — 10=designed tactile experience"]
-      ],
-      ops:["E-commerce fulfillment","3PL / distribution","Co-packing"]
-    },
-    electronics:{
-      label:"Electronics",
-      metrics:[
-        ["ESD protection requirements","0=not needed — 10=ANSI/ESD S541-compliant"],
-        ["Shock/vibration protection","0=insufficient — 10=drop/ISTA validated"],
-        ["Moisture control","0=none — 10=desiccant & barrier spec maintained"]
-      ],
-      ops:["Warehouse pick/pack","3PL / distribution"]
-    },
-    pharma:{
-      label:"Pharma",
-      metrics:[
-        ["GxP documentation","0=none — 10=auditable SOP & batch records"],
-        ["Serialisation/lot coding","0=none — 10=meets DSCSA/EMVS"],
-        ["Tamper-evidence","0=absent — 10=validated per region"],
-        ["Cleanroom handling","0=not supported — 10=GMP/ISO class fit"]
-      ],
-      ops:["3PL / distribution","Co-packing"]
-    },
-    logistics:{
-      label:"Logistics",
-      metrics:[
-        ["3PL/WMS integration","0=manual — 10=ASN/label/API ready"],
-        ["Dock-to-stock speed","0=slow — 10=<24h typical"],
-        ["Cube/weight optimization","0=unoptimized — 10=rate-minimized design"]
-      ],
-      ops:["3PL / distribution","Warehouse pick/pack","E-commerce fulfillment"]
-    },
-    industrial:{
-      label:"Industrial",
-      metrics:[
-        ["Heavy-load stability","0=frequent collapse — 10=validated @ peak load"],
-        ["Puncture/tear resistance","0=tears easily — 10=meets spec @ use"],
-        ["Automation uptime impact","0=jams often — 10=no stops from packaging"],
-        ["Sustainability targets","0=none — 10=meets PCR%/recyclability mandate"]
-      ],
-      ops:["Automated pallet wrapper","Hand pallet wrapping","3PL / distribution"]
-    },
-    apparel:{
-      label:"Apparel",
-      metrics:[
-        ["Presentation (crease/scuff)","0=issues common — 10=store-ready"],
-        ["Parcel-rate optimization","0=oversized — 10=lowest practical DIM"],
-        ["Return-friendly design","0=hassles — 10=easy reseal/scan"]
-      ],
-      ops:["E-commerce fulfillment","3PL / distribution"]
-    }
+  const remove=(label)=>{
+    const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]'); if(el) el.remove(); sel.delete(label);
   };
-
-  // ---------- default weighting (probabilistic prefill) ----------
-  function prefillWeights(key, hostSeed){
-    // deterministic 0..1 generator per host & industry & metric
-    const base = seeded(hash(hostSeed+"::"+key));
-    return (idx, bias=0.65)=>{
-      // center around bias; mix with small variation
-      const r = base();
-      const val = Math.round(10 * clamp(bias + (r-0.5)*0.3, 0.2, 0.95));
-      return val;
-    };
-  }
-
-  // ---------- build industries from persona ----------
-  function buildIndustries(){
-    const host = normHost(state.host || state.persona?.line?.host || "");
-    const seeds = (state.persona?.sectorHints && state.persona.sectorHints.length) ? state.persona.sectorHints
-      : ["beverage","food","cosmetics","electronics","industrial","logistics","apparel"];
-
-    state.industries = [];
-    for (const raw of seeds){
-      const key = String(raw).toLowerCase();
-      const cat = CATALOG[key];
-      if (!cat) continue;
-      const weightFn = prefillWeights(key, host);
-      const metrics = cat.metrics.map((m,i)=>({k:`m${i}`, l:m[0], tip:m[1], val: weightFn(i)}));
-      const opsPool = cat.ops.slice();
-      state.industries.push({
-        key, label:cat.label, muted:false, ai:false,
-        metrics,
-        opsPool,
-        opsSel:new Map(),
-        city:""
-      });
-    }
-    // If classify hinted to prioritize first sector, bias it to index 0 already
-    state.ix = 0;
-  }
-
-  // ---------- API detect (for badge only) ----------
-  async function apiDetect(){
-    const tries=[];
-    if (typeof window.API_BASE==="string") tries.push(window.API_BASE);
-    const saved=getS("apiBase",""); if (saved) tries.push(saved);
-    tries.push(location.origin+"/api"); tries.push(location.origin);
-    async function check(b){ b=(b||"").replace(/\/+$/,""); const p=/\/api$/.test(b)?[b+"/health"]:[b+"/api/health"]; try{const r=await fetch(p[0],{credentials:"omit"}); return r.ok}catch{return false}}
-    for (const t of tries){ if (await check(t)){ state.apiOnline=true; apiBadge.textContent="API: online"; apiBadge.classList.add("ok"); return; } }
-    state.apiOnline=false; apiBadge.textContent="API: offline"; apiBadge.classList.remove("ok");
-  }
-
-  // ---------- wiring ----------
-  muteBtn.addEventListener("click",()=>{
-    const show = state.industries.filter(ind => !hideMuted.checked || !ind.muted);
-    const ind = show[ clamp(state.ix,0,show.length-1) ];
-    if (!ind) return;
-    ind.muted = !ind.muted;
-    renderWheel(); renderDetail();
+  INDUSTRY[id].ops.forEach(l=>{
+    const chip=addChip(l, opsChips, (on,text)=> on?ensure(text):remove(text));
+    if(sel.has(l)) chip.classList.add("active");
   });
-  aiDecide.addEventListener("change",()=>{
-    const show = state.industries.filter(ind => !hideMuted.checked || !ind.muted);
-    const ind = show[ clamp(state.ix,0,show.length-1) ];
-    if (!ind) return;
-    ind.ai = aiDecide.checked;
-    if (ind.ai){
-      // lock sliders at current values (already meaningful); slight smoothing
-      ind.metrics.forEach((m,i)=> m.val = Math.round((m.val*0.7 + 7*0.3)));
-    }
-    renderDetail();
+  // city
+  cityEl.value = state.cityPref.get(id)||"";
+  cityEl.oninput=()=> state.cityPref.set(id, cityEl.value.trim());
+  cityChips.innerHTML="";
+  INDUSTRY[id].cities.forEach(c=>{
+    const chip=addChip(c, cityChips, (on,text)=>{ if(on){cityEl.value=text; state.cityPref.set(id,text);} });
   });
+  // toggles
+  aiDecide.checked = state.aiAuto.has(id);
+  aiDecide.onchange=()=>{ aiDecide.checked ? state.aiAuto.add(id) : state.aiAuto.delete(id); };
+  muteBtn.textContent = state.muted.has(id) ? "Unmute industry" : "Mute industry";
+  muteBtn.onclick=()=>{
+    if(state.muted.has(id)) state.muted.delete(id); else state.muted.add(id);
+    muteBtn.textContent = state.muted.has(id) ? "Unmute industry" : "Mute industry";
+    buildRotor();
+  };
+}
 
-  cityEl.addEventListener("input",()=>{
-    const list = state.industries.filter(ind => !hideMuted.checked || !ind.muted);
-    const ind = list[ clamp(state.ix,0,list.length-1) ];
-    if (ind) ind.city = cityEl.value.trim();
-  });
+// ---------- save / finish ----------
+function packPersona(){
+  const host=normHost(state.line.host);
+  const sectorMetrics = Array.from(state.weights.entries()).map(([id,arr])=>({
+    industry:id, metrics:arr
+  }));
+  const operations = Array.from(state.opsSel.entries()).flatMap(([id,map])=>
+    Array.from(map.entries()).map(([label,value])=>({industry:id,label,value}))
+  );
+  const targeting = Array.from(state.cityPref.entries()).map(([id,city])=>({industry:id, city}));
+  const muted = Array.from(state.muted.values());
+  const aiDecide = Array.from(state.aiAuto.values());
+  return {
+    host, line:state.line,
+    industries: state.sectors,
+    sectorMetrics, operations, targeting,
+    mutedIndustries: muted, aiDecideIndustries: aiDecide
+  };
+}
+$("#save").addEventListener("click",()=>{
+  const p=packPersona();
+  setS("bf.persona", JSON.stringify(p));
+  setS("fp.persona", JSON.stringify(p));
+  setS("fp.supplier.host", p.host);
+});
+$("#finish").addEventListener("click",()=>{
+  $("#save").click();
+  location.href="free-panel.html";
+});
 
-  backBtn.addEventListener("click",()=>{ location.href="index.html#step2"; });
+// ---------- boot ----------
+const apiBadge=$("#apiBadge"), statusEl=$("#status"), refreshA=$("#refresh");
+refreshA.addEventListener("click", async (e)=>{e.preventDefault(); await refreshFromWebsite();});
 
-  saveBtn.addEventListener("click", persistPersona);
-  finishBtn.addEventListener("click", ()=>{
-    persistPersona();
-    location.href="free-panel.html";
-  });
-
-  function persistPersona(){
-    // capture per-industry selections
-    const sectorsPacked = state.industries.map(ind=>({
-      key: ind.key, label: ind.label, muted: !!ind.muted, ai: !!ind.ai,
-      city: ind.city||"",
-      metrics: ind.metrics.map(m=>({label:m.l, value:m.val})),
-      operations: Array.from(ind.opsSel.entries()).map(([label,value])=>({label,value}))
-    }));
-
-    const personaOut = {
-      ...(state.persona||{}),
-      line: state.persona?.line || {},
-      sectorBuckets: sectorsPacked
-    };
-
-    // legacy prefs (best effort)
-    const mainCity = sectorsPacked.find(s=>!s.muted && s.city)?.city || "";
-    setS("bf.persona", JSON.stringify(personaOut));
-    setS("fp.persona", JSON.stringify(personaOut));
-    setS("fp.pref.city", mainCity);
-    setS("fp.pref.segPrefer", (state.persona?.sectorHints||[]).join("\n"));
-    setS("fp.pref.tagPrefer", (state.persona?.productTags||[]).join("\n"));
-    setS("fp.supplier.host", normHost(state.host||state.persona?.line?.host||""));
-    setS("fp.autoImport","1");
-  }
-
-  // ---------- boot ----------
-  (async function boot(){
-    await apiDetect();
-
-    const p = JSON.parse(getS("fp.persona", getS("bf.persona","null")));
-    if (!p || !p.line){
-      crumb.textContent="Missing data — start from Step 1";
-      document.querySelector(".summary").insertAdjacentHTML("beforeend",'<div class="muted-hint">No persona found. <a class="link" href="index.html">Go back</a>.</div>');
-      return;
-    }
-    state.persona = p;
-    state.host = p.host || p.line?.host || "";
-    setFavicon(state.host);
-    crumb.textContent = (p.line?.host||"") + " — " + (p.line?.products||"packaging");
+async function refreshFromWebsite(){
+  const host = normHost(state.line.host);
+  try{
+    const data = await classify(host, "");
+    statusEl.textContent = data.cached ? "(cached)" : "";
+    // seeds
+    const prods=(data.productTags||[]).slice(0,5).join(", ")||"packaging";
+    const segs=(data.sectorHints||[]).slice(0,3).join(", ")||"brands";
+    const contacts=/ops|operation|procure|plant|warehouse|supply|logistics/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")).toLowerCase())
+      ? "Operations, Procurement" : "Procurement, Marketing";
+    state.line={host,verb:"supplies",products:prods,audience:segs,region:"the U.S.",contacts};
+    state.personaSeed = (data.summary||"")+" "+(data.productTags||[]).join(" ");
     renderSentence(false);
+    // nudge prior weights with tags
+    for (const id of state.sectors){ state.weights.delete(id); } // force reseed
+    drawIndustry(filteredIds()[state.idx]||state.sectors[0]);
+  }catch(e){
+    statusEl.textContent="(offline)";
+  }
+}
 
-    // Build industries + UI
-    buildIndustries();
-    renderWheel();
-    renderDetail();
-  })();
+(async function boot(){
+  const personaJSON = getS("bf.persona","") || getS("fp.persona","");
+  if (personaJSON){
+    try{
+      const p=JSON.parse(personaJSON);
+      if(p && p.line){ state.line=p.line; }
+      if(p && p.host){ state.line.host=p.host; }
+    }catch{}
+  }
+  const emailSeed = getS("lastEmail",""); const domain = domainFromEmail(emailSeed); if (domain&&!state.line.host) state.line.host=domain;
+  setFavicon(state.line.host); renderSentence(false);
 
+  const ok=await detectAPI(); apiBadge.textContent=ok?"API: online":"API: offline"; apiBadge.classList.toggle("ok",ok);
+  buildRotor();
+  await refreshFromWebsite(); // safe even if offline
+})();
 })();
 </script>
 </body>
