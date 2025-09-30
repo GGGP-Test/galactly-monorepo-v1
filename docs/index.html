@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Galactly — Find real packaging buyers</title>
 
-<!-- Optional: if you deploy behind a custom API host, set it here -->
-<meta name="x-api-base" content="">
+<!-- optional: hardwire API here if you want -->
+<meta name="api-base" content="">
 
 <link rel="preconnect" href="https://icons.duckduckgo.com">
 <style>
@@ -18,13 +18,12 @@
   }
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
   .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%); position:relative; z-index:0}
-  .hero-inner{max-width:920px;text-align:center; position:relative; z-index:2}
+  .hero-inner{max-width:920px;text-align:center}
   h1{font-size:clamp(32px,6vw,56px);margin:0 0 12px}
   p.lead{color:var(--muted);margin:0 0 28px}
-  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer; position:relative; z-index:3}
+  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer; position:relative; z-index:2}
   .btn.sec{background:#152333;color:#cfe0ee}
   .btn:active{transform:translateY(1px)}
-  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
 
   /* modal */
   .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
@@ -44,7 +43,7 @@
   input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
   input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
 
-  /* sentence (one-liner) */
+  /* summary (sentence editor) */
   .summary{display:flex;gap:12px;background:#0e1622;border:1px solid var(--divider);padding:12px 14px;border-radius:14px;margin:0 0 14px;align-items:flex-start}
   .fav{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;background:#fff;border:1px solid #cfd8e3}
   .fav img{width:24px;height:24px;filter:saturate(1.05) contrast(1.05)}
@@ -60,7 +59,7 @@
   .big-edit{padding:6px 10px;border-radius:10px;background:#172839;border:1px solid #274059;color:#d8e8f7;font-weight:600;cursor:pointer}
   .big-edit.primary{background:var(--cta);border:none;color:#06293a}
 
-  /* groups & chips */
+  /* groups */
   .group{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px;margin:14px 0}
   .group h4{margin:0 0 8px}
   .muted-hint{font-size:12px;color:#99b2c8;margin-left:8px}
@@ -72,8 +71,9 @@
   .slider-row{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:center;margin:10px 0}
   .slider-row input[type=range]{width:100%}
 
+  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
   .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
-  .gear{background:transparent;border:none;color:#99b4c7;cursor:pointer}
+  .badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#102030;border:1px solid #274059;color:#9ec3de}
   @media (max-width:800px){.slider-row{grid-template-columns:1fr}}
 </style>
 </head>
@@ -95,9 +95,8 @@
           <span class="dot" data-step-dot="1"></span>
           <span class="dot" data-step-dot="2"></span>
         </div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <span id="apiBadge" class="pill" title="Backend status">API: resolving…</span>
-          <button id="gear" class="gear" title="Override API base">⚙️</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="apiBadge" class="badge">API: resolving…</span>
           <button id="close" class="x" aria-label="Close">✕</button>
         </div>
       </div>
@@ -183,12 +182,11 @@
             </div>
 
             <div class="group">
-              <h4 style="margin:0 0 8px">Buyer operations (optional)</h4>
+              <h4 style="margin:0">Buyer operations (optional)</h4>
               <div id="opsChips" class="chips"></div>
               <div id="opsSliders"></div>
-              <div class="muted-hint" style="margin-top:6px">Click to select; each selected operation gets its own importance slider.</div>
+              <div class="muted-hint">Click to select; each selected operation gets its own importance slider.</div>
             </div>
-
           </section>
         </div>
 
@@ -201,61 +199,48 @@
   </div>
 
 <script>
-/* =========================
-   Part 1/2 — Core + API glue
-   (Do NOT close this <script> tag; Part 2 continues the file.)
-   ========================= */
-
 (function(){
-
   // ---------- Safe localStorage helpers ----------
   function getStored(k, d=""){ try{ const v = localStorage.getItem(k); return v===null? d : v; }catch{ return d; } }
   function setStored(k,v){ try{ localStorage.setItem(k, v); }catch{} }
-  const $ = (q,root=document)=>root.querySelector(q);
-  const $$ = (q,root=document)=>Array.from(root.querySelectorAll(q));
 
-  // ---------- ELEMENTS ----------
-  const modal = $("#modal");
-  const openBtn = $("#cta");
-  const closeBtn = $("#close");
-  const backBtn = $("#back");
-  const nextBtn = $("#next");
-  const dots = $$("[data-step-dot]");
+  // ---------- UI refs ----------
+  const modal = document.getElementById("modal");
+  const openBtn = document.getElementById("cta");
+  const closeBtn = document.getElementById("close");
+  const backBtn = document.getElementById("back");
+  const nextBtn = document.getElementById("next");
+  const dots = [...document.querySelectorAll("[data-step-dot]")];
 
-  const optSupplier = $("#opt-supplier");
-  const optBuyer = $("#opt-buyer");
+  const optSupplier = document.getElementById("opt-supplier");
+  const optBuyer = document.getElementById("opt-buyer");
 
-  const emailEl = $("#email");
-  const hostEl  = $("#host");
-  const phoneEl = $("#phone");
+  const emailEl = document.getElementById("email");
+  const hostEl  = document.getElementById("host");
+  const phoneEl = document.getElementById("phone");
 
-  const favImg = $("#fav");
-  const sentence = $("#sentence");
-  const editBtn = $("#editLine");
-  const doneBtn = $("#doneLine");
-  const refreshA = $("#refresh");
-  const statusEl = $("#status");
+  const favImg = document.getElementById("fav");
+  const sentence = document.getElementById("sentence");
+  const editBtn = document.getElementById("editLine");
+  const doneBtn = document.getElementById("doneLine");
+  const refreshA = document.getElementById("refresh");
+  const statusEl = document.getElementById("status");
+  const apiBadge = document.getElementById("apiBadge");
 
-  const metricsBox = $("#metricsBox");
-  const opsChips = $("#opsChips");
-  const opsSliders = $("#opsSliders");
-
-  const apiBadge = $("#apiBadge");
-
-  // ---------- CTA must always be clickable ----------
-  openBtn.style.pointerEvents = 'auto';
-  openBtn.style.zIndex = 3;
+  const metricsBox = document.getElementById("metricsBox");
+  const opsChips   = document.getElementById("opsChips");
+  const opsSliders = document.getElementById("opsSliders");
 
   // ---------- STATE ----------
   const state = {
     step:0, role:"supplier",
-    line:{ host:"yourcompany.com", verb:"supplies", products:"packaging", audience:"brands", region:"the U.S.", contacts:"Operations, Procurement" },
+    line:{ host:"yourcompany.com", verb:"supplies", products:"packaging", audience:"businesses", region:"the U.S.", contacts:"Operations, Procurement" },
     metrics:[], // [{label,value}]
-    opsSelected:new Map(), // label -> value
+    opsSelected: new Map(), // label -> value
     api:{ base:"", status:"resolving" }
   };
 
-  // ---------- UTIL ----------
+  // ---------- Helpers ----------
   function show(step){
     state.step = step;
     ["#step1","#step2","#step3"].forEach((id,i)=>{
@@ -268,14 +253,12 @@
   }
   function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
   function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
+  function setBadge(txt, ok){ apiBadge.textContent = txt; apiBadge.style.color = ok? "#aef5c9" : "#9ec3de"; apiBadge.style.borderColor = ok? "#2f6b4a" : "#274059"; }
   function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
   function domainFromEmail(e){ const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m? m[1]:""; }
-  function setFavicon(host){
-    const h=normHost(host);
-    favImg.src = h ? ("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico") : "";
-  }
+  function setFavicon(host){ const h=normHost(host); favImg.src = h? ("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico") : ""; }
 
-  // ---------- One-liner render & edit ----------
+  // one-liner render/edit
   function renderSentence(editing=false){
     const L = state.line;
     const tpl = [
@@ -307,11 +290,10 @@
       sentence.appendChild(document.createTextNode(" "));
     }
   }
-
   editBtn.addEventListener("click", ()=>{ renderSentence(true); editBtn.hidden=true; doneBtn.hidden=false; });
   doneBtn.addEventListener("click", ()=>{ renderSentence(false); editBtn.hidden=false; doneBtn.hidden=true; });
 
-  // ---------- Role toggles ----------
+  // role toggles
   function setRole(r){
     state.role=r;
     optSupplier.classList.toggle("active", r==="supplier");
@@ -326,10 +308,11 @@
     if (d) hostEl.value = d;
   }
   emailEl.addEventListener("input", syncDomain);
+  emailEl.addEventListener("keyup", syncDomain);
   emailEl.addEventListener("change", syncDomain);
   setTimeout(syncDomain, 120);
 
-  // ---------- Metrics / Ops UI ----------
+  // metrics UI
   function renderMetrics(labels){
     metricsBox.innerHTML="";
     state.metrics = (labels||[]).slice(0,12).map(l=>({label:l, value:7}));
@@ -343,200 +326,202 @@
     }
   }
 
-  const OPS_LIST = [
-    "Hand pallet wrapping",
-    "Automated pallet wrapper",
-    "E-commerce fulfillment",
-    "Warehouse pick/pack",
-    "3PL / distribution",
-    "Cold-chain handling",
-    "Co-packing"
+  // ops UI
+  const OPS_POOL = [
+    "Hand pallet wrapping","Automated pallet wrapper",
+    "E-commerce fulfillment","Warehouse pick/pack",
+    "3PL / distribution","Cold-chain handling","Co-packing"
   ];
-
-  function drawOps(){
+  function renderOps(){
     opsChips.innerHTML=""; opsSliders.innerHTML="";
-    for (const label of OPS_LIST){
-      const chip=document.createElement("span"); chip.className="chip"; chip.textContent=label;
-      chip.addEventListener("click", ()=>{
-        const active = chip.classList.toggle("active");
-        if (active){
-          state.opsSelected.set(label,7);
-          const row=document.createElement("div"); row.className="slider-row"; row.dataset.op = label;
-          const lab=document.createElement("div"); lab.textContent=label+" importance";
-          const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=7;
-          input.addEventListener("input", ()=>state.opsSelected.set(label, Number(input.value)));
-          row.appendChild(lab); row.appendChild(input);
-          opsSliders.appendChild(row);
-        }else{
-          state.opsSelected.delete(label);
-          const row = opsSliders.querySelector(`[data-op="${CSS.escape(label)}"]`);
-          if (row) row.remove();
-        }
+    for (const tag of OPS_POOL){
+      const chip=document.createElement("span"); chip.className="chip"; chip.textContent=tag;
+      if (state.opsSelected.has(tag)) chip.classList.add("active");
+      chip.addEventListener("click",()=>{
+        if (state.opsSelected.has(tag)){ state.opsSelected.delete(tag); renderOps(); return; }
+        state.opsSelected.set(tag,7); renderOps();
       });
       opsChips.appendChild(chip);
     }
+    for (const [label,val] of state.opsSelected.entries()){
+      const row=document.createElement("div"); row.className="slider-row";
+      const lab=document.createElement("div"); lab.textContent=label;
+      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=val;
+      input.addEventListener("input", ()=>{ state.opsSelected.set(label, Number(input.value)); });
+      row.appendChild(lab); row.appendChild(input);
+      opsSliders.appendChild(row);
+    }
   }
 
-  // ---------- API BASE: auto-resolve & robust classify ----------
-  const DEFAULT_FALLBACKS = [
-    // 1) Saved by earlier sessions
-    getStored("apiBase",""),
-    // 2) Meta tag
-    (document.querySelector('meta[name="x-api-base"]')||{}).content || "",
-    // 3) If served from Northflank, prefer same origin + /api
-    location.hostname.includes(".code.run") ? (location.origin+"/api") : "",
-    // 4) Hard fallback (replace with your staging if needed)
-    "https://p01-animated-cellar--vz4flkwzzdfs.code.run/api"
-  ].filter(Boolean);
+  // ---------- API auto-detect ----------
+  function uniq(a){ return [...new Set(a.filter(Boolean).map(s=>String(s).trim()))]; }
+  function normBase(b){ return String(b||"").replace(/\/+$/,""); }
 
-  function setApiStatus(txt, ok=false){
-    state.api.status = ok? "ok" : txt || "offline";
-    apiBadge.textContent = "API: " + (ok? "connected" : (txt||"offline"));
-    apiBadge.style.background = ok? "rgba(56,224,143,.15)" : "rgba(255,120,120,.1)";
-    apiBadge.style.color = ok? "#8affc5" : "#ff9e9e";
+  function buildCandidateBases(){
+    const urlApi = new URLSearchParams(location.search).get("api");
+    const metaApi = document.querySelector('meta[name="api-base"]')?.content || "";
+    const ls = getStored("apiBase","");
+    const globals = (window.API_BASE? String(window.API_BASE):"");
+    const sameOrigin = location.origin + "/api";
+    return uniq([globals, urlApi, metaApi, ls, sameOrigin]).map(normBase);
   }
 
   async function tryPing(base){
-    const urls=[ "/ping", "/api/ping" ].map(s=>base.replace(/\/+$/,"")+s+"?t="+Date.now());
-    for (const u of urls){
+    const b = normBase(base);
+    const paths = ["/ping","/api/ping","/health","/v1/ping"];
+    for (const p of paths){
       try{
-        const r = await fetch(u, {mode:"cors",credentials:"omit"});
-        if (r.ok) return true;
+        const r = await fetch(b + p, {method:"GET", credentials:"omit", cache:"no-store"});
+        if (r.ok || r.status===404 || r.status===405 || r.status===204){
+          return true; // host reachable, treat as usable
+        }
       }catch(_){}
     }
     return false;
   }
 
   async function resolveApiBase(){
-    // Allow manual override via prompt/gear
-    if (window.API_BASE && typeof window.API_BASE==="string"){
-      const b = window.API_BASE.replace(/\/+$/,"");
-      if (await tryPing(b)){ state.api.base=b; setStored("apiBase",b); setApiStatus("connected",true); return b; }
-    }
-    // Try candidates in order
-    for (const cand of DEFAULT_FALLBACKS){
-      const b = cand.replace(/\/+$/,"");
+    const cands = buildCandidateBases();
+    for (const b of cands){
       if (!b) continue;
-      if (await tryPing(b)){ state.api.base=b; setStored("apiBase",b); setApiStatus("connected",true); return b; }
+      if (await tryPing(b)){ return b; }
     }
-    // Last resort: same origin (may 404 on static hosts, but we’ll handle)
-    state.api.base = location.origin;
-    setApiStatus("offline");
-    return state.api.base;
+    return ""; // offline
   }
 
+  async function bootstrapApi(){
+    setBadge("API: resolving…", false);
+    const resolved = await resolveApiBase();
+    state.api.base = resolved;
+    if (resolved){ setStored("apiBase", resolved); setBadge("API: online", true); }
+    else { setBadge("API: offline", false); }
+  }
+
+  // ---------- Signals (classify) ----------
   async function classify(host,email){
-    const base = state.api.base || await resolveApiBase();
-    const bases = [base, base+"/api"].map(b=>b.replace(/\/+$/,""));
-    const paths = ["/classify", "/api/classify"];
-    // Build attempts (base + path) ensuring no duplicate /api/api
-    const attempts=[];
-    for (const b of bases){
-      for (const p of paths){
-        const u = (b.endsWith("/api") && p.startsWith("/api")) ? (b+p.slice(4)) : (b+p);
-        attempts.push(u);
-      }
+    const base = state.api.base || "";
+    if (!base){
+      throw new Error("no_api_base");
     }
-    let lastErr="Cannot classify";
-    for (const url of attempts){
+    const b = normBase(base);
+    const qs = `?host=${encodeURIComponent(host)}&email=${encodeURIComponent(email||"")}`;
+    const paths = ["/classify","/api/classify","/v1/classify"];
+    let lastErr = "classify failed";
+    for (const p of paths){
       try{
-        const r = await fetch(url+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||""), {mode:"cors",credentials:"omit"});
+        const r = await fetch(b + p + qs, {credentials:"omit", cache:"no-store"});
         if (r.ok) return await r.json();
-        lastErr = (await r.text().catch(()=>r.statusText)) || r.statusText;
-        // Some hosts return an HTML "Cannot GET /classify" — keep looping
+        lastErr = `HTTP ${r.status}`;
       }catch(e){ lastErr = e.message; }
     }
     throw new Error(lastErr);
   }
 
-  // quick gear editor (debug only; hidden in production)
-  $("#gear").addEventListener("click",async ()=>{
-    const cur = state.api.base || getStored("apiBase","");
-    const v = prompt("API base (root or /api). Example:\nhttps://YOUR-SERVICE.code.run/api", cur);
-    if(!v) return;
-    const b = v.replace(/\/+$/,"");
-    if (await tryPing(b)){
-      state.api.base=b; setStored("apiBase",b); setApiStatus("connected",true);
-      alert("Saved. Using:\n"+b);
-    }else{
-      alert("That base did not respond to /ping.\nStill saved, but UI will run in offline mode.");
-      state.api.base=b; setStored("apiBase",b); setApiStatus("offline");
-    }
-  });
-
-  // Begin resolving right away
-  resolveApiBase();
-
-  // ---------- Derivers ----------
   function deriveLine(data, host){
     const prods = (data.productTags||[]).slice(0,5).join(", ") || "packaging";
-    const segs  = (data.sectorHints||[]).slice(0,3).join(", ") || "businesses";
-    const contacts = /industrial|corrugat|pallet|film|shrink|automation/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")).toLowerCase())
-      ? "Operations, Procurement" : "Procurement, Marketing";
+    const segs  = (data.sectorHints||[]).slice(0,2).join(", ") || "businesses";
+    const contacts = /industrial|corrugat|pallet|film|shrink|automation|warehouse/i.test(
+      ((data.summary||"")+" "+(data.productTags||[]).join(",")).toLowerCase()
+    ) ? "Operations, Procurement" : "Procurement, Marketing";
     state.line = { host, verb:"supplies", products:prods, audience:segs, region:"the U.S.", contacts };
   }
 
-  function deriveHotMetrics(data){
-    // Focused on top-10% buyer priorities (not generic “obvious” ones)
+  function deriveMetrics(data){
     const text = ((data.summary||"") + " " + (data.productTags||[]).join(" ") + " " + (data.evidence||[]).join(" ")).toLowerCase();
-    const add = new Set();
-    // Product-specific/hot-lead signals
-    if (/automation|pallet|wrapper|line/i.test(text)) add.add("Line automation / fulfillment");
-    if (/moq|short run|prototype|sample/i.test(text)) add.add("Low MOQs / short runs");
-    if (/eco|recycl|compost|bio|post[- ]consumer|sustain/i.test(text)) add.add("Sustainability (eco materials)");
-    if (/barrier|foil|oxygen|moisture|vapo?u?r|food/i.test(text)) add.add("Food-safe / barrier spec");
-    if (/cold[- ]?chain|thermal|insulat/i.test(text)) add.add("Cold-chain / thermal spec");
-    if (/tamper|child[- ]?resist|cr\s*cert|fda|reach|prop ?65/i.test(text)) add.add("Regulatory / compliance");
-    if (/print|finish|brand|unboxing|premium/i.test(text)) add.add("Premium brand presentation");
-    // Always include these two as anchor rails (they carry weight in scoring)
-    add.add("Fast turnaround (≤ 2 weeks)");
-    add.add("Lowest unit cost");
-    return Array.from(add);
+    const map = [
+      [/automation|wrapper|pallet|fulfillment|co-?pack/i, "Line automation / fulfillment"],
+      [/fast|lead[- ]?time|rush|2 ?weeks/i, "Fast turnaround (≤ 2 weeks)"],
+      [/cost|unit|price|lowest/i, "Lowest unit cost"],
+      [/eco|recycl|bio|green|sustain/i, "Eco materials / recyclable"],
+      [/barrier|food[- ]?safe|moisture|oxygen/i, "Food-safe / barrier"],
+      [/inventory|warehous|stock|kanban/i, "Vendor-managed inventory"]
+    ];
+    const set = new Set();
+    for (const [re,label] of map){ if (re.test(text)) set.add(label); }
+    // Always include two generics for weighting
+    ["Fast turnaround (≤ 2 weeks)","Lowest unit cost"].forEach(x=>set.add(x));
+    return [...set];
   }
 
-  // ---------- Refresh from website ----------
   async function refreshFromWebsite(){
-    const host = normHost(hostEl.value || domainFromEmail(emailEl.value));
-    if (!host){ alert("Please provide your company website/domain."); return; }
-    state.line.host = host;
+    const host = normHost(hostEl.value);
+    if (!host) return;
     setFavicon(host);
-    renderSentence(false);
-    statusEl.textContent = " (loading…)";
+    statusEl.textContent = "";
 
     try{
+      state.line.host = host;
+      renderSentence(false);
+
       const data = await classify(host, emailEl.value||"");
       if (data && (data.ok || data.host)){
         deriveLine(data, host);
         renderSentence(false);
-        renderMetrics(deriveHotMetrics(data));
-        statusEl.textContent = data.cached ? " (cached)" : "";
+
+        const labels = deriveMetrics(data);
+        renderMetrics(labels);
+
+        // preseed some ops if product tags hint
+        const txt = (data.productTags||[]).join(" ").toLowerCase();
+        if (/pallet|wrap/i.test(txt)) state.opsSelected.set("Hand pallet wrapping",7);
+        renderOps();
+
+        statusEl.textContent = data.cached ? "(cached)" : "";
       }else{
         renderMetrics(["Fast turnaround (≤ 2 weeks)","Lowest unit cost"]);
+        renderOps();
         statusEl.textContent = " (offline)";
       }
     }catch(err){
-      console.warn("classify error:", err);
-      // Offline defaults (minimal, not noisy)
+      console.warn(err);
+      if (String(err.message)==="no_api_base"){
+        statusEl.textContent = " (offline)";
+      }else{
+        statusEl.textContent = " (network error)";
+      }
       renderMetrics(["Fast turnaround (≤ 2 weeks)","Lowest unit cost"]);
-      statusEl.textContent = " (offline)";
+      renderOps();
     }
   }
 
   refreshA.addEventListener("click",(e)=>{ e.preventDefault(); refreshFromWebsite(); });
 
-  // ---------- Nav ----------
-  openBtn.addEventListener("click", open);
+  // ---------- Nav & init ----------
+  function openModal(){ open(); }
+
+  openBtn.addEventListener("click", openModal);
   closeBtn.addEventListener("click", close);
   backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+    nextBtn.addEventListener("click", async ()=>{
+    if (state.step===0){ show(1); return; }
+    if (state.step===1){
+      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
+      const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
+      if (!hostCandidate){ alert("Please provide your website/domain."); return; }
+      hostEl.value = hostCandidate;
 
-  // Seed UI
-  setRole("supplier");
-  renderSentence(false);
-  drawOps();
-  show(0);
+      await refreshFromWebsite();
+      show(2);
+      return;
+    }
+    if (state.step===2){
+      await saveAndGo();
+    }
+  });
 
-/* ===== Part 1/2 ends here — paste Part 2 immediately after this line ===== */
-  // ---------- Save persona & go ----------
+  document.addEventListener("keydown",(e)=>{
+    if (e.key==="Enter"){
+      const isEditing = sentence.classList.contains("editing");
+      const active = document.activeElement;
+      const isTextInput = active && (active.tagName==="INPUT" || active.isContentEditable);
+      if (!isEditing && (!isTextInput || active.id==="email" || active.id==="phone" || active.id==="host")){
+        e.preventDefault();
+        nextBtn.click();
+      }
+    }
+  });
+
+  // ---------- Persist to panel ----------
   function collectPersona(){
     const ops = Array.from(state.opsSelected.entries()).map(([label,value])=>({label,value}));
     const persona = {
@@ -553,72 +538,38 @@
       meta: {
         createdAt: Date.now(),
         apiBase: state.api.base || getStored("apiBase",""),
-        version: 1
+        version: 2
       }
     };
     return persona;
   }
 
   function persistForPanel(persona){
-    // canonical blob
     setStored('bf.persona', JSON.stringify(persona));
     setStored('fp.persona', JSON.stringify(persona));
     setStored('fp.autoImport','1');
 
-    // legacy seeds used by current free-panel
+    // free-panel legacy seeds
     setStored('fp.supplier.host', persona.host);
-    setStored('fp.pref.city', "");                  // kept blank (panel can boost near later)
     setStored('fp.pref.tagPrefer', (persona.line.products||""));
     setStored('fp.pref.segPrefer', (persona.line.audience||""));
-    setStored('fp.pref.excludeGiants', "false");
     setStored('fp.pref.ops', JSON.stringify(persona.ops||[]));
   }
 
   async function saveAndGo(){
     const persona = collectPersona();
     persistForPanel(persona);
-    // go to panel
     location.href = 'free-panel.html';
   }
 
-  // ---------- Next button flow ----------
-  nextBtn.addEventListener("click", async ()=>{
-    if (state.step===0){
-      show(1);
-      return;
-    }
-    if (state.step===1){
-      if (!emailEl.value || !phoneEl.value){
-        alert("Business email and phone are required.");
-        return;
-      }
-      // resolve host from email if missing
-      const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
-      if (!hostCandidate){ alert("Please provide your website/domain."); return; }
-      hostEl.value = hostCandidate;
-
-      // try to fetch signals; even if offline, proceed with defaults
-      await refreshFromWebsite();
-      show(2);
-      return;
-    }
-    if (state.step===2){
-      await saveAndGo();
-    }
-  });
-
-  // Allow Enter to act as Next (except when editing the one-liner)
-  document.addEventListener("keydown",(e)=>{
-    if (e.key==="Enter"){
-      const isEditing = sentence.classList.contains("editing");
-      const active = document.activeElement;
-      const isTextInput = active && (active.tagName==="INPUT" || active.isContentEditable);
-      if (!isEditing && (!isTextInput || active.id==="email" || active.id==="phone" || active.id==="host")){
-        e.preventDefault();
-        nextBtn.click();
-      }
-    }
-  });
+  // ---------- Boot ----------
+  (async function init(){
+    setRole("supplier");
+    renderSentence(false);
+    renderOps();
+    renderMetrics(["Fast turnaround (≤ 2 weeks)","Lowest unit cost"]); // placeholder while resolving API
+    await bootstrapApi(); // sets badge + picks base if reachable
+  })();
 
 })(); // end IIFE
 </script>
