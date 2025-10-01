@@ -6,97 +6,82 @@
 <title>Step 3 — Tune by industry</title>
 <style>
   :root{
-    --bg:#0b0f14; --panel:#111a26; --panel-2:#0e141c; --muted:#8aa0b2;
-    --text:#e9f1f7; --brand:#8ae3ff; --cta:#6de1ff; --ctaText:#082433;
-    --divider:#1b2531; --chip:#152233; --chipActive:#103247; --accent:#38e08f;
-    --slider:#c64; --thumb:#c43; --thumbH:#f85;
+    --bg:#0b0f14; --panel:#111a26; --muted:#8aa0b2; --text:#e9f1f7;
+    --cta:#6de1ff; --ctaText:#082433; --divider:#1b2531;
+    --chip:#152233; --chipActive:#103247;
+    --track:#213244; --thumb:#c43; --thumbH:#f85;
   }
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
     font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
   .wrap{max-width:1100px;margin:24px auto;padding:0 14px}
 
-  /* header (one-liner) */
+  /* one-liner */
   .summary{display:flex;gap:12px;align-items:flex-start;background:#0e1622;border:1px solid var(--divider);
     border-radius:14px;padding:12px 14px;margin-bottom:12px}
   .fav{width:28px;height:28px;border-radius:6px;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid #cfd8e3}
   .fav img{width:24px;height:24px}
   .one{font-weight:700}
-  .sentence{--bgx:#0f1926}
-  .token{display:inline-block;border-radius:8px;padding:2px 6px;margin:0 2px}
-  .token[data-lock="true"]{opacity:.9}
-  .token[data-editable="true"]{border-bottom:1px dashed #3a5572}
-  .sentence.editing .token[data-editable="true"]{background:var(--bgx);border:1px solid #2b425a}
-  .sentence .token:focus{outline:2px solid #24435f}
-  .edit-actions{display:flex;gap:8px;margin-top:6px}
-  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:10px 14px;border-radius:12px;background:var(--cta);color:var(--ctaText);
+  .sentence .token{display:inline-block;border-radius:8px;padding:2px 6px;margin:0 2px}
+  .sentence .token[data-editable="true"]{border-bottom:1px dashed #3a5572}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;background:var(--cta);color:var(--ctaText);
     font-weight:700;border:none;cursor:pointer}
   .btn.sec{background:#152333;color:#cfe0ee;font-weight:600}
   .btn.smol{padding:6px 10px;border-radius:10px}
   .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
-  .hint{font-size:12px;color:#9bb2c8}
-
-  /* advanced toggle */
-  .bar{display:flex;justify-content:space-between;align-items:center;margin:8px 0 12px}
   .ghost{background:transparent;border:1px solid var(--divider);color:#bcd0e0}
-  .ghost:hover{border-color:#2b425a}
 
   /* layout */
+  .bar{display:flex;justify-content:space-between;align-items:center;margin:8px 0 12px}
   .grid{display:grid;grid-template-columns:280px 1fr;gap:16px}
   @media (max-width:920px){.grid{grid-template-columns:1fr}}
 
-  /* rotor panel */
-  .rotor{position:relative;height:420px;border:1px solid var(--divider);border-radius:14px;background:linear-gradient(180deg,#0f1724,#0e141f);
-    overflow:hidden}
-  .rotor ul{list-style:none;margin:0;padding:0;position:absolute;inset:0;overflow:hidden}
-  .rotor li{height:70px;display:grid;place-items:center;color:#7890a3;user-select:none;cursor:pointer;transition:transform .2s,opacity .2s}
-  .rotor li.active{color:#e7f3ff;font-weight:700;transform:scale(1.02)}
-  .rotor li.muted{opacity:.25;text-decoration:line-through}
-  .rotor .fadeTop,.rotor .fadeBot{position:absolute;left:0;right:0;height:60px;pointer-events:none}
-  .rotor .fadeTop{top:0;background:linear-gradient(180deg,#0f1724,transparent)}
-  .rotor .fadeBot{bottom:0;background:linear-gradient(0deg,#0f1724,transparent)}
-  .rotor .label{position:absolute;left:10px;bottom:10px;font-size:12px;color:#90a8bb}
+  /* rotor */
+  .rotor{position:relative;height:420px;border:1px solid var(--divider);border-radius:14px;background:linear-gradient(180deg,#0f1724,#0e141f);overflow:hidden}
+  .bucket{position:absolute;inset:0}
+  .bucket li{list-style:none;height:70px;display:grid;place-items:center;color:#7890a3;user-select:none;cursor:pointer;transition:transform .18s ease, opacity .18s ease}
+  .bucket li.active{color:#e7f3ff;font-weight:700;transform:scale(1.02)}
+  .bucket li.muted{opacity:.28;text-decoration:line-through}
+  .fadeTop,.fadeBot{position:absolute;left:0;right:0;height:60px;pointer-events:none}
+  .fadeTop{top:0;background:linear-gradient(180deg,#0f1724,transparent)}
+  .fadeBot{bottom:0;background:linear-gradient(0deg,#0f1724,transparent)}
+  .label{position:absolute;left:10px;bottom:10px;font-size:12px;color:#90a8bb}
 
-  /* right panel */
+  /* pane */
   .pane{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px}
-  .pane h3{margin:0 0 8px}
   .pane-hd{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
-  .switch{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:#a8c0d3}
   .mute{background:#12283d;border:1px solid #21405d;color:#d8e8f7;border-radius:999px;padding:6px 10px;cursor:pointer}
   .mute.on{opacity:.6;text-decoration:line-through}
   .chips{user-select:none;margin-top:6px}
   .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
   .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
+  .hint{font-size:12px;color:#9bb2c8}
 
-  /* sliders */
-  .row{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:center;margin:10px 0}
-  .row small{color:#9bb2c8}
+  /* rows & sliders */
+  .row{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:center;margin:10px 0}
   input[type=range]{width:100%;-webkit-appearance:none;background:transparent}
-  input[type=range]::-webkit-slider-runnable-track{height:6px;background:#213244;border-radius:6px}
+  input[type=range]::-webkit-slider-runnable-track{height:6px;background:var(--track);border-radius:6px}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;margin-top:-6px;width:18px;height:18px;background:var(--thumb);border-radius:50%;border:2px solid #000}
   input[type=range]:active::-webkit-slider-thumb{background:var(--thumbH)}
-  input[type=range]::-moz-range-track{height:6px;background:#213244;border-radius:6px}
+  input[type=range]::-moz-range-track{height:6px;background:var(--track);border-radius:6px}
   input[type=range]::-moz-range-thumb{width:18px;height:18px;background:var(--thumb);border:2px solid #000;border-radius:50%}
 
-  /* size range (double handle) */
-  .size-row{margin:12px 0 4px}
-  .size-wrap{position:relative;height:28px}
-  .size-wrap input[type=range]{position:absolute;left:0;right:0;top:6px}
-  .size-vals{display:flex;justify-content:space-between;font-size:12px;color:#9bb2c8}
+  /* double range (size) */
+  .size{margin-top:8px}
+  .size .wrap{position:relative;height:30px}
+  .size input[type=range]{position:absolute;left:0;right:0;top:6px}
+  .size .vals{display:flex;justify-content:space-between;font-size:12px;color:#9bb2c8}
   .quick{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-  .quick .chip{padding:4px 8px}
-
-  /* footer buttons */
   .ft{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <!-- One liner -->
+  <!-- One-liner (single, non-duplicated) -->
   <div class="summary">
     <div class="fav"><img id="fav" alt="" referrerpolicy="no-referrer"/></div>
     <div style="flex:1">
       <div id="line" class="one sentence" aria-live="polite"></div>
-      <div class="edit-actions">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
         <button id="editLine" class="btn sec smol" type="button">Edit</button>
         <button id="doneLine" class="btn smol" type="button" hidden>Done</button>
         <a id="refresh" href="#" class="btn sec smol ghost">Refresh from website</a>
@@ -113,24 +98,26 @@
 
   <div id="advanced" hidden>
     <div class="grid">
-      <!-- ROTOR -->
+      <!-- Rotor column -->
       <div>
-        <div class="rotor" id="rotor">
-          <ul id="rotorList"></ul>
+        <div class="rotor" id="rotor" aria-label="Industries picker">
+          <ul class="bucket" id="bucket"></ul>
           <div class="fadeTop"></div><div class="fadeBot"></div>
           <div class="label">Scroll, drag or click. Center item is active.</div>
         </div>
-        <label class="switch" style="margin-top:8px">
-          <input id="hideMuted" type="checkbox"/> Hide muted
+        <label style="display:flex;gap:8px;align-items:center;margin-top:8px">
+          <input id="hideMuted" type="checkbox"> <span class="hint">Hide muted</span>
         </label>
       </div>
 
-      <!-- PANE -->
+      <!-- Details pane -->
       <div class="pane">
         <div class="pane-hd">
-          <h3 id="paneTitle">Industry</h3>
+          <h3 id="paneTitle" style="margin:0">Industry</h3>
           <div style="display:flex;gap:10px;align-items:center">
-            <label class="switch"><input id="aiDecide" type="checkbox"/> Let AI decide</label>
+            <label style="display:flex;gap:6px;align-items:center;font-size:13px;color:#a8c0d3">
+              <input id="aiDecide" type="checkbox"> Let AI decide
+            </label>
             <button id="muteBtn" class="mute" type="button">Mute</button>
           </div>
         </div>
@@ -141,33 +128,30 @@
           <h4 id="opsTitle" style="margin:0 0 6px">Buyer operations</h4>
           <div id="opsChips" class="chips"></div>
           <div id="opsSliders"></div>
-          <div class="hint">Click to add; each gets an importance slider (0–10).</div>
+          <div class="hint">Click to add; each selection gets its own importance slider (0–10).</div>
         </div>
 
         <div style="margin-top:12px">
           <h4 id="personaTitle" style="margin:0 0 6px">Hot-buyer persona</h4>
 
-          <div class="size-row">
+          <div class="size">
             <div class="hint">Company size focus (revenue). Drag both handles.</div>
-            <div class="size-wrap">
-              <input id="sizeMin" type="range" min="0" max="1000" step="5" value="20">
-              <input id="sizeMax" type="range" min="0" max="1000" step="5" value="200">
+            <div class="wrap">
+              <input id="sizeMin" type="range" min="0" max="1200" step="5" value="20">
+              <input id="sizeMax" type="range" min="0" max="1200" step="5" value="200">
             </div>
-            <div class="size-vals">
-              <span id="sizeMinLbl">$20M</span>
-              <span id="sizeMaxLbl">$200M</span>
-            </div>
+            <div class="vals"><span id="sizeMinLbl">$20M</span><span id="sizeMaxLbl">$200M</span></div>
             <div class="quick" id="sizeQuick"></div>
           </div>
 
-          <div class="size-row">
+          <div style="margin-top:8px">
             <div class="hint">Best titles to reach</div>
             <div id="titleChips" class="chips"></div>
           </div>
 
-          <div class="size-row">
+          <div style="margin-top:8px">
             <div class="hint" id="targetLbl">Boost near city…</div>
-            <input id="city" type="text" placeholder="e.g., HQ city" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:var(--text)"/>
+            <input id="city" type="text" placeholder="e.g., HQ city" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:#fff"/>
             <div id="cityChips" class="chips"></div>
           </div>
         </div>
@@ -184,403 +168,342 @@
 <script>
 (()=>{
 
-/* ------------ utils ------------ */
-const $ = (q)=>document.querySelector(q);
-const $$= (q)=>Array.from(document.querySelectorAll(q));
+/* ====== utils ====== */
+const $=q=>document.querySelector(q), $$=q=>Array.from(document.querySelectorAll(q));
 const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
 const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
 const setS=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
 const getS=(k,d="")=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
-/* ------------ elements ------------ */
+/* ====== elements ====== */
 const fav=$('#fav'), line=$('#line'), editBtn=$('#editLine'), doneBtn=$('#doneLine'), refreshA=$('#refresh');
-const backBtn=$('#back'), adv=$('#advanced'), advLbl=$('#advLbl'), advToggle=$('#advToggle');
-const rotor=$('#rotor'), rotorList=$('#rotorList'), hideMuted=$('#hideMuted');
+const backBtn=$('#back'), adv=$('#advanced'), advLbl=$('#advLbl'), advToggle=$('#advToggle'), apiBadge=$('#apiBadge');
+const bucket=$('#bucket'), rotor=$('#rotor'), hideMuted=$('#hideMuted');
 const paneTitle=$('#paneTitle'), aiDecide=$('#aiDecide'), muteBtn=$('#muteBtn');
 const metricsBox=$('#metrics'), opsChips=$('#opsChips'), opsSliders=$('#opsSliders');
 const sizeMin=$('#sizeMin'), sizeMax=$('#sizeMax'), sizeMinLbl=$('#sizeMinLbl'), sizeMaxLbl=$('#sizeMaxLbl'), sizeQuick=$('#sizeQuick');
 const titleChips=$('#titleChips'), city=$('#city'), cityChips=$('#cityChips'), targetLbl=$('#targetLbl');
-const saveBtn=$('#save'), finishBtn=$('#finish'), apiBadge=$('#apiBadge');
-const opsTitle=$('#opsTitle'), personaTitle=$('#personaTitle');
+const saveBtn=$('#save'), finishBtn=$('#finish'), opsTitle=$('#opsTitle'), personaTitle=$('#personaTitle');
 
-/* ------------ state ------------ */
+/* ====== state ====== */
 const state={
-  seed: null,
-  apiBase: "",
-  industries: [],     // [{name, muted, ai, metrics:[{label,desc,value}], opsPool:[], ops:Map, titles:[], size:[min,max], cities:[], city:""}]
-  index: 0
+  apiBase:"",
+  seed:null,
+  industries:[],     // master array
+  index:0,           // absolute index into state.industries
+  wheelLock:0,       // timestamp throttle
+  touchY:null
 };
 
-/* ------------ data (industry defaults) ------------ */
-const DB = {
-  Beverage:{
-    metrics:[
-      ["High-speed line compatibility","0=manual/slow only — 10=≥500+ units/min or ≥30 cases/min",8],
-      ["Retail-ready print consistency","0=frequent color drift/misregister — 10=ΔE<2 @ volume",8],
-      ["Condensation tolerance","0=fails w/ light sweat — 10=retort/cooler-ready",7],
-      ["Pallet stability for bottlers","0=shifts/collapses — 10=ISTA 3A/3E stable",8],
-      ["Case integrity for glass/plastic","0=breaks/deforms — 10=holds @ peak load",7],
-      ["Damage reduction targets in transit","0=no target — 10=≤0.5% KPI",7]
-    ],
-    opsPool:["Automated pallet wrapper","Hand pallet wrapping","E-commerce fulfillment","3PL / distribution"],
-    titles:["Operations","Procurement","Plant Manager"],
-    size:[20,250]
-  },
-  Food:{
-    metrics:[
-      ["Food-contact compliance (FDA/EC)","0=uncertified — 10=fully certified w/ docs",9],
-      ["Oxygen/moisture barrier","0=none — 10=validated OTR/WVTR",8],
-      ["Traceability & COA","0=none — 10=lot-level COA + recall-ready",8],
-      ["Sealing performance","0=frequent leaks — 10=validated hermetic seal",8],
-      ["Print/label regs","0=non-compliant — 10=GHS/NLEA compliant",7]
-    ],
-    opsPool:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"],
-    titles:["QA/Regulatory","Operations","Procurement"],
-    size:[10,150]
-  },
-  Cosmetics:{
-    metrics:[
-      ["Premium print/finish expectations","0=basic CMYK — 10=foil/spot/emboss @ scale",8],
-      ["Color consistency delta-E","0=ΔE>6 — 10=ΔE≤2",8],
-      ["Unboxing experience","0=plain — 10=designed tactile",7]
-    ],
-    opsPool:["E-commerce fulfillment","3PL / distribution","Co-packing"],
-    titles:["Brand Ops","Procurement","Packaging Eng"],
-    size:[5,80]
-  },
-  Electronics:{
-    metrics:[
-      ["ESD protection requirements","0=not needed — 10=ANSI/ESD S541",8],
-      ["Shock/vibration protection","0=insufficient — 10=drop/ISTA validated",8],
-      ["Moisture control","0=none — 10=desiccant + barrier spec",7]
-    ],
-    opsPool:["Warehouse pick/pack","3PL / distribution"],
-    titles:["Operations","Supply Chain","Packaging Eng"],
-    size:[20,400]
-  },
-  Industrial:{
-    metrics:[
-      ["Heavy-load stability","0=frequent tip/fail — 10=stable @ max load",8],
-      ["Puncture/tear resistance","0=tears common — 10=meets spec @ gauge",8],
-      ["Unitization efficiency","0=poor cube — 10=optimized unit load",7]
-    ],
-    opsPool:["Automated pallet wrapper","3PL / distribution"],
-    titles:["Plant Manager","Operations","Procurement"],
-    size:[30,500]
-  },
-  Logistics:{
-    metrics:[
-      ["3PL/e-com integration","0=manual — 10=ready labels/ASN/SLAs",8],
-      ["Damage in parcel","0=high — 10=≤0.5% returns due to damage",7],
-      ["Dock-to-stock speed","0=slow — 10=fast with ready SKUs",7]
-    ],
-    opsPool:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Hand pallet wrapping"],
-    titles:["Fulfillment Ops","Warehouse Manager","Procurement"],
-    size:[15,200]
-  },
-  Apparel:{
-    metrics:[
-      ["Presentation (crease/scuff)","0=issues common — 10=store-ready",8],
-      ["Parcel-rate optimization","0=oversized — 10=lowest practical DIM",7],
-      ["Return-friendly design","0=hassles — 10=easy reseal/scan",7]
-    ],
-    opsPool:["E-commerce fulfillment","3PL / distribution"],
-    titles:["E-com Ops","Logistics","Procurement"],
-    size:[5,120]
-  }
+/* ====== defaults ====== */
+const DB={
+  Beverage:{metrics:[
+    ["High-speed line compatibility","0=manual/slow — 10=≥500+ units/min or ≥30 cases/min",8],
+    ["Retail-ready print consistency","0=drift/misregister — 10=ΔE<2 @ volume",8],
+    ["Condensation tolerance","0=fails w/ light sweat — 10=retort/cooler-ready",7],
+    ["Pallet stability for bottlers","0=shifts/collapses — 10=ISTA 3A/3E stable",8],
+    ["Case integrity for glass/plastic","0=breaks/deforms — 10=holds @ peak load",7],
+    ["Damage reduction targets in transit","0=no target — 10=≤0.5% KPI",7]
+  ],opsPool:["Automated pallet wrapper","Hand pallet wrapping","E-commerce fulfillment","3PL / distribution"],
+  titles:["Operations","Procurement","Plant Manager"],size:[20,250]},
+  Food:{metrics:[
+    ["Food-contact compliance (FDA/EC)","0=uncertified — 10=fully certified w/ docs",9],
+    ["Oxygen/moisture barrier","0=none — 10=validated OTR/WVTR",8],
+    ["Traceability & COA","0=none — 10=lot-level COA + recall-ready",8],
+    ["Sealing performance","0=leaks — 10=validated hermetic seal",8],
+    ["Print/label regs","0=non-compliant — 10=GHS/NLEA compliant",7]
+  ],opsPool:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"],
+  titles:["QA/Regulatory","Operations","Procurement"],size:[10,150]},
+  Cosmetics:{metrics:[
+    ["Premium print/finish expectations","0=basic CMYK — 10=foil/spot/emboss @ scale",8],
+    ["Color consistency delta-E","0=ΔE>6 — 10=ΔE≤2",8],
+    ["Unboxing experience","0=plain — 10=designed tactile",7]
+  ],opsPool:["E-commerce fulfillment","3PL / distribution","Co-packing"],
+  titles:["Brand Ops","Procurement","Packaging Eng"],size:[5,80]},
+  Electronics:{metrics:[
+    ["ESD protection requirements","0=not needed — 10=ANSI/ESD S541",8],
+    ["Shock/vibration protection","0=insufficient — 10=drop/ISTA validated",8],
+    ["Moisture control","0=none — 10=desiccant + barrier spec",7]
+  ],opsPool:["Warehouse pick/pack","3PL / distribution"],
+  titles:["Operations","Supply Chain","Packaging Eng"],size:[20,400]},
+  Industrial:{metrics:[
+    ["Heavy-load stability","0=tip/fail — 10=stable @ max load",8],
+    ["Puncture/tear resistance","0=tears common — 10=meets spec @ gauge",8],
+    ["Unitization efficiency","0=poor cube — 10=optimized unit load",7]
+  ],opsPool:["Automated pallet wrapper","3PL / distribution"],
+  titles:["Plant Manager","Operations","Procurement"],size:[30,500]},
+  Logistics:{metrics:[
+    ["3PL/e-com integration","0=manual — 10=labels/ASN/SLAs ready",8],
+    ["Damage in parcel","0=high — 10=≤0.5% returns due to damage",7],
+    ["Dock-to-stock speed","0=slow — 10=fast with ready SKUs",7]
+  ],opsPool:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Hand pallet wrapping"],
+  titles:["Fulfillment Ops","Warehouse Manager","Procurement"],size:[15,200]},
+  Apparel:{metrics:[
+    ["Presentation (crease/scuff)","0=issues common — 10=store-ready",8],
+    ["Parcel-rate optimization","0=oversized — 10=lowest practical DIM",7],
+    ["Return-friendly design","0=hassles — 10=easy reseal/scan",7]
+  ],opsPool:["E-commerce fulfillment","3PL / distribution"],
+  titles:["E-com Ops","Logistics","Procurement"],size:[5,120]}
 };
 
-/* ------------ API discovery & classify ------------ */
+/* ====== API ====== */
 async function detectAPI(){
   const saved=getS("apiBase","");
   const tries=[saved, location.origin+"/api", location.origin].filter(Boolean);
   for (const t of tries){
-    const b=(t||"").replace(/\/+$/,"");
-    const paths = /\/api$/.test(b) ? [b+"/health", b+"/ping"] : [b+"/api/health", b+"/api/ping"];
-    try{
-      const r=await fetch(paths[0],{credentials:"omit"}); if (r.ok){ apiBadge.textContent="API: online"; state.apiBase=b; return; }
-    }catch{}
+    const base=(t||"").replace(/\/+$/,"");
+    const url=/\/api$/.test(base)?base+"/health":base+"/api/health";
+    try{const r=await fetch(url,{credentials:"omit"}); if(r.ok){apiBadge.textContent="API: online"; state.apiBase=base; return;}}catch{}
   }
-  apiBadge.textContent="API: offline"; state.apiBase = tries[0] || (location.origin+"/api");
+  apiBadge.textContent="API: offline"; state.apiBase=tries[0]||location.origin+"/api";
 }
-function classifyURL(){const b=(state.apiBase||"").replace(/\/+$/,"");return /\/api$/.test(b)?(b+"/classify"):(b+"/api/classify");}
+const classifyURL=()=> (/\/api$/.test(state.apiBase)?state.apiBase+"/classify":state.apiBase+"/api/classify");
 async function classify(host,email){
-  const url= classifyURL()+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
-  try{ const r=await fetch(url,{credentials:"omit"}); if(!r.ok) throw 0; return await r.json(); }
-  catch{ const alt=/\/api\/classify$/.test(url)?url.replace("/api/classify","/classify"):url.replace("/classify","/api/classify");
-         const r2=await fetch(alt,{credentials:"omit"}); if(!r2.ok) throw 0; return await r2.json(); }
+  const url=classifyURL()+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
+  try{const r=await fetch(url,{credentials:"omit"}); if(!r.ok) throw 0; return await r.json();}
+  catch{const alt=/\/api\/classify$/.test(url)?url.replace("/api/classify","/classify"):url.replace("/classify","/api/classify");
+        const r2=await fetch(alt,{credentials:"omit"}); if(!r2.ok) throw 0; return await r2.json();}
 }
 
-/* ------------ one-liner ------------ */
-function setFavicon(host){ const h=normHost(host); fav.src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):""; }
-function renderOneLiner(editing){
+/* ====== one-liner ====== */
+function setFavicon(host){ const h=normHost(host); $('#fav').src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):""; }
+function renderLine(edit=false){
   const L=state.line;
   const tpl=[
-    {txt:L.host, lock:true},
-    {txt:"—", lock:true},
-    {k:"verb", txt:L.verb},
-    {k:"products", txt:L.products},
-    {txt:"for", lock:true},
-    {k:"audience", txt:L.audience},
-    {txt:"in", lock:true},
-    {k:"region", txt:L.region},
-    {txt:".", lock:true},
-    {txt:"Best contacts:", lock:true},
-    {k:"contacts", txt:L.contacts}
+    {txt:L.host, lock:true},{txt:"—", lock:true},
+    {k:"verb",txt:L.verb},{k:"products",txt:L.products},
+    {txt:"for",lock:true},{k:"audience",txt:L.audience},
+    {txt:"in",lock:true},{k:"region",txt:L.region},
+    {txt:".",lock:true},{txt:"Best contacts:",lock:true},{k:"contacts",txt:L.contacts}
   ];
-  line.classList.toggle("editing", !!editing);
   line.innerHTML="";
-  for (const p of tpl){
-    const s=document.createElement("span");
-    s.className="token";
-    if (p.lock) s.dataset.lock="true";
-    else { s.dataset.editable="true"; s.contentEditable = editing?"true":"false"; s.addEventListener("input",()=>{ state.line[p.k]=s.textContent.trim(); }); }
-    s.textContent = p.txt; line.appendChild(s); line.appendChild(document.createTextNode(" "));
-  }
+  tpl.forEach(p=>{
+    const s=document.createElement("span"); s.className="token";
+    if (p.lock){ s.dataset.lock="true"; }
+    else { s.dataset.editable="true"; s.contentEditable = edit?"true":"false"; s.addEventListener("input",()=> state.line[p.k]=s.textContent.trim()); }
+    s.textContent=p.txt; line.appendChild(s); line.appendChild(document.createTextNode(" "));
+  });
 }
-editBtn.addEventListener("click",()=>{renderOneLiner(true); editBtn.hidden=true; doneBtn.hidden=false;});
-doneBtn.addEventListener("click",()=>{renderOneLiner(false); editBtn.hidden=false; doneBtn.hidden=true;});
+$('#editLine').onclick=()=>{renderLine(true); editBtn.hidden=true; doneBtn.hidden=false;};
+$('#doneLine').onclick=()=>{renderLine(false); editBtn.hidden=false; doneBtn.hidden=true;};
 
-/* ------------ rotor UI ------------ */
-function industryNamesFrom(data){
-  const hints = (data && Array.isArray(data.sectorHints) ? data.sectorHints : []);
+/* ====== industries build ====== */
+function titleCase(s){s=String(s||"");return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase();}
+function namesFromHints(data){
+  const hints = Array.isArray(data?.sectorHints)?data.sectorHints:[];
   const known = Object.keys(DB);
-  const out = [];
-  // prefer hints that exist in DB; then backfill with known
-  hints.forEach(h=>{ const k=titleCase(h); if (DB[k] && !out.includes(k)) out.push(k); });
-  known.forEach(k=>{ if (!out.includes(k)) out.push(k); });
+  const out=[];
+  hints.forEach(h=>{const k=titleCase(h); if(DB[k]&&!out.includes(k)) out.push(k);});
+  known.forEach(k=>{if(!out.includes(k)) out.push(k);});
   return out.slice(0,12);
 }
-function titleCase(s){ s=String(s||""); return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); }
-
 function buildIndustries(list){
   state.industries = list.map(name=>{
-    const base = DB[name] || {metrics:[],opsPool:[],titles:[],size:[10,100]};
+    const d=DB[name]||{metrics:[],opsPool:[],titles:[],size:[10,100]};
     return {
       name, muted:false, ai:false,
-      metrics: base.metrics.map(([label,desc,val])=>({label,desc,value:val})),
-      opsPool: base.opsPool.slice(),
-      ops: new Map(),         // label -> value
-      titles: base.titles.slice(),
-      size: base.size.slice(),
-      cities: ["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"],
+      metrics:d.metrics.map(([label,desc,val])=>({label,desc,value:val})),
+      opsPool:d.opsPool.slice(),
+      ops:new Map(),
+      titles:d.titles.slice(),
+      size:d.size.slice(),
+      cities:["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"],
       city:""
     };
   });
 }
 
-function renderRotor(){
-  rotorList.innerHTML="";
-  const filtered = hideMuted.checked ? state.industries.filter(i=>!i.muted) : state.industries.slice();
-  // ensure index points to filtered item
-  if (!filtered.length) return;
-  const activeName = (state.industries[state.index]||filtered[0]).name;
-  const idx = Math.max(0, filtered.findIndex(i=>i.name===activeName));
-  const topPad = 3, itemH = 70, total = filtered.length + topPad*2;
-  rotorList.style.height = (itemH* (Math.min(6,total)))+"px"; // container height fixed by CSS
-
-  for (let i=0;i<total;i++){
-    const li=document.createElement("li");
-    const dataIndex = i-topPad;
-    if (dataIndex>=0 && dataIndex<filtered.length){
-      const it=filtered[dataIndex];
-      li.textContent = it.name;
-      li.classList.toggle("muted", it.muted);
-      if (dataIndex===idx) li.classList.add("active");
-      li.addEventListener("click",()=> selectByName(it.name));
-    }else{
-      li.textContent="";
-    }
-    li.style.transform = `translateY(${(i- topPad - idx)*itemH}px)`;
-    rotorList.appendChild(li);
+/* ====== rotor (single-bind listeners, throttled) ====== */
+const VISIBLE=9, CENTER=4, ITEMH=70;
+function initBucket(){
+  bucket.innerHTML="";
+  for(let i=0;i<VISIBLE;i++){
+    const li=document.createElement("li"); li.dataset.slot=i-CENTER; li.textContent="";
+    bucket.appendChild(li);
   }
-
-  // wheel / touch
-  let touchY=null;
-  rotor.addEventListener("wheel", onWheel, {passive:false});
-  rotor.addEventListener("touchstart", e=>{touchY=e.touches[0].clientY;}, {passive:true});
+  // one-time wheel/touch/click
+  rotor.addEventListener("wheel", e=>{
+    e.preventDefault();
+    const now=performance.now(); if (now-state.wheelLock<110) return;
+    state.wheelLock=now; move(Math.sign(e.deltaY));
+  }, {passive:false});
+  rotor.addEventListener("touchstart", e=>{state.touchY=e.touches[0].clientY},{passive:true});
   rotor.addEventListener("touchmove", e=>{
-    if (touchY==null) return;
-    const dy = e.touches[0].clientY - touchY;
-    if (Math.abs(dy)>20){ dy>0?prev():next(); touchY = e.touches[0].clientY; }
+    if(state.touchY==null) return;
+    const dy=e.touches[0].clientY-state.touchY;
+    if(Math.abs(dy)>28){ move(dy>0?+1:-1); state.touchY=e.touches[0].clientY; }
   }, {passive:true});
-
-  function onWheel(e){ e.preventDefault(); (e.deltaY>0)?next():prev(); }
-  function next(){ move(+1); }
-  function prev(){ move(-1); }
-  function move(d){
-    const names = filtered.map(i=>i.name);
-    let j = names.indexOf(activeName);
-    j = Math.max(0, Math.min(names.length-1, j+d));
-    selectByName(names[j]);
+  bucket.addEventListener("click", e=>{
+    const li=e.target.closest("li"); if(!li||!li.dataset.name) return;
+    selectByName(li.dataset.name);
+  });
+}
+function viewList(){
+  const src = hideMuted.checked ? state.industries.filter(i=>!i.muted) : state.industries;
+  return src;
+}
+function activeName(){
+  return state.industries[state.index]?.name || viewList()[0]?.name || "";
+}
+function move(dir){
+  const names=viewList().map(i=>i.name); if(!names.length) return;
+  const curr=activeName(); let j=names.indexOf(curr); j=clamp(j+dir,0,names.length-1);
+  selectByName(names[j]);
+}
+function selectByName(name){
+  const idx=state.industries.findIndex(i=>i.name===name);
+  if(idx<0) return; state.index=idx; updateBucket(); renderPane();
+}
+function updateBucket(){
+  const list=viewList(); if(!list.length) return;
+  // ensure a valid center index in filtered view
+  const names=list.map(i=>i.name); let c=names.indexOf(activeName()); if(c<0) c=0;
+  const items=Array.from(bucket.children);
+  for(let i=0;i<VISIBLE;i++){
+    const off=i-CENTER, pos=clamp(c+off,0,names.length-1), name=names[pos];
+    const muted=list[pos].muted;
+    const li=items[i];
+    li.dataset.name=name; li.textContent=name;
+    li.classList.toggle("active", off===0);
+    li.classList.toggle("muted", !!muted);
+    li.style.transform=`translateY(${off*ITEMH}px)`;
   }
 }
 
-function selectByName(name){
-  const idx = state.industries.findIndex(i=>i.name===name);
-  if (idx<0) return;
-  state.index = idx;
-  renderRotor();
-  renderPane();
-}
-
-/* ------------ pane (metrics, ops, persona) ------------ */
+/* ====== pane render ====== */
 function renderPane(){
-  const ind = state.industries[state.index]; if (!ind) return;
-  paneTitle.textContent = ind.name;
-  opsTitle.textContent = `Buyer operations for ${ind.name}`;
-  personaTitle.textContent = `Hot-buyer persona — ${ind.name}`;
-  muteBtn.textContent = ind.muted? `Muted ${ind.name}` : `Mute ${ind.name}`;
+  const ind=state.industries[state.index]; if(!ind) return;
+  paneTitle.textContent=ind.name;
+  opsTitle.textContent=`Buyer operations for ${ind.name}`;
+  personaTitle.textContent=`Hot-buyer persona — ${ind.name}`;
+  muteBtn.textContent= ind.muted?`Muted ${ind.name}`:`Mute ${ind.name}`;
   muteBtn.classList.toggle("on", ind.muted);
-  aiDecide.checked = ind.ai;
+  aiDecide.checked=ind.ai;
 
   // metrics
   metricsBox.innerHTML="";
-  ind.metrics.forEach((m,i)=>{
+  ind.metrics.forEach(m=>{
     const row=document.createElement("div"); row.className="row";
     const left=document.createElement("div");
-    left.innerHTML=`<div style="font-weight:600">${m.label}</div><small>${m.desc}</small>`;
-    const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.step="1"; input.value=m.value;
-    input.disabled = ind.ai || ind.muted;
-    input.addEventListener("input",()=>{ m.value = Number(input.value); });
-    row.appendChild(left); row.appendChild(input); metricsBox.appendChild(row);
+    left.innerHTML=`<div style="font-weight:600">${m.label}</div><small class="hint">${m.desc}</small>`;
+    const r=document.createElement("input"); r.type="range"; r.min="0"; r.max="10"; r.step="1"; r.value=m.value;
+    r.disabled=ind.ai||ind.muted; r.addEventListener("input",()=>m.value=Number(r.value));
+    row.appendChild(left); row.appendChild(r); metricsBox.appendChild(row);
   });
 
   // ops
   opsChips.innerHTML=""; opsSliders.innerHTML="";
   const ensure=(label)=>{
-    if (ind.ops.has(label)) return;
+    if(ind.ops.has(label)) return;
     const wrap=document.createElement("div"); wrap.className="row"; wrap.dataset.label=label;
     const lab=document.createElement("div"); lab.textContent=label;
-    const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.step="1"; input.value="7";
-    input.addEventListener("input",()=>ind.ops.set(label, Number(input.value)));
-    input.disabled = ind.ai || ind.muted;
-    wrap.appendChild(lab); wrap.appendChild(input); opsSliders.appendChild(wrap);
-    ind.ops.set(label,7);
+    const r=document.createElement("input"); r.type="range"; r.min="0"; r.max="10"; r.step="1"; r.value="7";
+    r.disabled=ind.ai||ind.muted; r.addEventListener("input",()=>ind.ops.set(label,Number(r.value)));
+    wrap.appendChild(lab); wrap.appendChild(r); opsSliders.appendChild(wrap); ind.ops.set(label,7);
   };
-  const remove=(label)=>{
-    const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]'); if (el) el.remove(); ind.ops.delete(label);
-  };
-  ind.opsPool.forEach(l=>{
-    const s=document.createElement("span"); s.className="chip"; s.textContent=l;
-    s.classList.toggle("active", ind.ops.has(l));
-    s.addEventListener("click",()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active", on); on?ensure(l):remove(l); });
+  const remove=(label)=>{ const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]'); if(el) el.remove(); ind.ops.delete(label); };
+  ind.opsPool.forEach(lbl=>{
+    const s=document.createElement("span"); s.className="chip"; s.textContent=lbl;
+    s.classList.toggle("active", ind.ops.has(lbl));
+    s.onclick=()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); on?ensure(lbl):remove(lbl); };
     opsChips.appendChild(s);
   });
 
-  // persona — size double slider
-  sizeMin.value = ind.size[0]; sizeMax.value = ind.size[1];
-  syncSizeLabels();
-  sizeMin.oninput = ()=>{
-    if (Number(sizeMin.value) > Number(sizeMax.value)-5) sizeMin.value = Number(sizeMax.value)-5;
-    ind.size[0]=Number(sizeMin.value); syncSizeLabels();
-  };
-  sizeMax.oninput = ()=>{
-    if (Number(sizeMax.value) < Number(sizeMin.value)+5) sizeMax.value = Number(sizeMin.value)+5;
-    ind.size[1]=Number(sizeMax.value); syncSizeLabels();
-  };
-  sizeQuick.innerHTML="";
-  [[0,20],[20,100],[50,250],[100,500]].forEach(([a,b])=>{
+  // persona — size dual
+  const clampGap=5;
+  sizeMin.value=ind.size[0]; sizeMax.value=ind.size[1]; syncSize();
+  sizeMin.oninput=()=>{ if(+sizeMin.value>+sizeMax.value-clampGap) sizeMin.value=+sizeMax.value-clampGap; ind.size[0]=+sizeMin.value; syncSize(); };
+  sizeMax.oninput=()=>{ if(+sizeMax.value<+sizeMin.value+clampGap) sizeMax.value=+sizeMin.value+clampGap; ind.size[1]=+sizeMax.value; syncSize(); };
+  sizeQuick.innerHTML=""; [[0,20],[20,100],[50,250],[100,500],[200,1000]].forEach(([a,b])=>{
     const c=document.createElement("span"); c.className="chip"; c.textContent=`$${a}–${b}M`;
-    c.addEventListener("click",()=>{ ind.size=[a,b]; sizeMin.value=a; sizeMax.value=b; syncSizeLabels(); });
-    sizeQuick.appendChild(c);
+    c.onclick=()=>{ ind.size=[a,b]; sizeMin.value=a; sizeMax.value=b; syncSize(); }; sizeQuick.appendChild(c);
   });
 
   // persona — titles
-  titleChips.innerHTML="";
-  ind.titles.forEach(t=>{
+  titleChips.innerHTML=""; ind.titles.forEach(t=>{
     const s=document.createElement("span"); s.className="chip active"; s.textContent=t;
-    s.addEventListener("click",()=> s.classList.toggle("active"));
-    titleChips.appendChild(s);
+    s.onclick=()=> s.classList.toggle("active"); titleChips.appendChild(s);
   });
 
   // persona — city
-  targetLbl.textContent = `Boost near city for ${ind.name}…`;
-  city.value = ind.city||"";
-  city.oninput = ()=> ind.city = city.value.trim();
-  cityChips.innerHTML="";
-  ind.cities.forEach(c=>{
+  targetLbl.textContent=`Boost near city for ${ind.name}…`;
+  city.value=ind.city||""; city.oninput=()=> ind.city=city.value.trim();
+  cityChips.innerHTML=""; ind.cities.forEach(c=>{
     const s=document.createElement("span"); s.className="chip"; s.textContent=c;
-    s.addEventListener("click",()=>{ city.value=c; ind.city=c; });
-    cityChips.appendChild(s);
+    s.onclick=()=>{city.value=c; ind.city=c;}; cityChips.appendChild(s);
   });
 
-  // AI toggle
-  aiDecide.onchange = ()=>{ ind.ai = aiDecide.checked; renderPane(); };
-  muteBtn.onclick = ()=>{ ind.muted=!ind.muted; renderRotor(); renderPane(); };
+  // toggles
+  aiDecide.onchange=()=>{ ind.ai=aiDecide.checked; renderPane(); };
+  muteBtn.onclick=()=>{ ind.muted=!ind.muted; updateBucket(); renderPane(); };
+}
+function syncSize(){
+  sizeMinLbl.textContent="$"+Number(sizeMin.value)+"M";
+  sizeMaxLbl.textContent="$"+Number(sizeMax.value)+"M";
 }
 
-function syncSizeLabels(){
-  sizeMinLbl.textContent = "$"+Number(sizeMin.value)+"M";
-  sizeMaxLbl.textContent = "$"+Number(sizeMax.value)+"M";
-}
+/* ====== advanced toggle ====== */
+advToggle.onclick=(e)=>{e.preventDefault(); const open=adv.hasAttribute("hidden");
+  if(open){ adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
+  else{ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
+};
+hideMuted.onchange=()=>{ updateBucket(); };
 
-/* ------------ advanced toggle ------------ */
-advToggle.addEventListener("click",(e)=>{
-  e.preventDefault();
-  const open = adv.hasAttribute("hidden");
-  if (open){ adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
-  else { adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
-});
-
-/* ------------ refresh / back / save / finish ------------ */
-refreshA.addEventListener("click", async (e)=>{ e.preventDefault(); await loadAndClassify(); });
-backBtn.addEventListener("click", ()=> history.back());
-
-saveBtn.addEventListener("click", persistPersona);
-finishBtn.addEventListener("click", ()=>{ persistPersona(); location.href="free-panel.html"; });
-
-function persistPersona(){
-  const packed = {
-    host: state.seed.host,
+/* ====== save/finish ====== */
+saveBtn.onclick=persist; finishBtn.onclick=()=>{ persist(); location.href="free-panel.html"; };
+backBtn.onclick=()=>history.back();
+function persist(){
+  const packed={
+    host: state.seed?.host || "",
     line: state.line,
     industries: state.industries.map(i=>({
       name:i.name, muted:i.muted, ai:i.ai,
       metrics:i.metrics, operations:[...i.ops.entries()].map(([label,value])=>({label,value})),
       titles: Array.from(titleChips.querySelectorAll(".chip.active")).map(x=>x.textContent),
-      size: i.size, city: i.city
+      size:i.size, city:i.city
     }))
   };
-  setS("fp.persona", JSON.stringify(packed));
-  setS("bf.persona", JSON.stringify(packed));
+  setS("fp.persona", JSON.stringify(packed)); setS("bf.persona", JSON.stringify(packed));
 }
 
-/* ------------ boot ------------ */
-async function loadAndClassify(){
+/* ====== boot ====== */
+async function boot(){
   await detectAPI();
   // seed from Step 2
-  const seed = JSON.parse(getS("onb.seed","{}"));
-  state.seed = seed;
-  const host = normHost(seed.host || domainFromEmail((seed.contact||{}).email||""));
-  if (!host) return;
-  setFavicon(host);
+  const seed = JSON.parse(getS("onb.seed","{}")); state.seed=seed;
+  const host = normHost(seed.host || domainFromEmail(seed.contact?.email||""));
+  if(host) $('#fav').src="https://icons.duckduckgo.com/ip3/"+encodeURIComponent(host)+".ico";
 
+  // classify
   try{
-    const data = await classify(host, (seed.contact||{}).email||"");
-    // one-liner
-    const prods = (data.productTags||[]).slice(0,5).join(", ") || "packaging";
-    const segs  = (data.sectorHints||[]).slice(0,3).join(", ") || "brands";
-    const contacts = /ops|operation|procure|plant|warehouse|supply|logistics/i.test(((data.summary||"")+" "+(data.productTags||[]).join(",")).toLowerCase())
+    const data = await classify(host, seed.contact?.email||"");
+    // one-liner with 3-product cap + “etc.”
+    const tags = Array.isArray(data?.productTags)?data.productTags:[];
+    const main = tags.slice(0,3);
+    let products = main.join(", ") || "packaging";
+    if (tags.length>3) products += ", etc.";
+    const segs = (data?.sectorHints||[]).slice(0,3).join(", ") || "brands";
+    const contacts = /ops|operation|procure|plant|warehouse|supply|logistics/i.test(((data?.summary||"")+" "+tags.join(",")).toLowerCase())
       ? "Operations, Procurement" : "Procurement, Marketing";
-    state.line = { host, verb:"supplies", products:prods, audience:segs, region:"the U.S.", contacts };
-    renderOneLiner(false);
+    state.line = {host,verb:"supplies",products,audience:segs,region:"the U.S.",contacts};
+    renderLine(false);
 
-    // industries
-    const names = industryNamesFrom(data);
+    const names = namesFromHints(data);
     buildIndustries(names);
+    initBucket(); updateBucket();
     selectByName(names[0]||"Beverage");
-
-    apiBadge.textContent = "API: online";
+    apiBadge.textContent="API: online";
   }catch{
-    // offline fallback
     state.line = {host,verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"};
-    renderOneLiner(false);
+    renderLine(false);
     buildIndustries(Object.keys(DB));
+    initBucket(); updateBucket();
     selectByName("Beverage");
-    apiBadge.textContent = "API: offline";
+    apiBadge.textContent="API: offline";
   }
 }
-loadAndClassify();
+boot();
 
 })();</script>
 </body>
