@@ -1,76 +1,75 @@
+// src/routes/buyers.ts
+//
+// Public buyers API used by the free panel.
+// - GET /api/buyers/find     -> proxy to /api/leads/find-buyers
+// - GET /api/buyers/search   -> same as /find (compat)
+// - GET /api/find            -> alias that calls the same handler (mounted in index.ts)
+//
+// Notes
+// • We DO NOT touch private router internals (e.g., .handle). Instead we
+//   compose a tiny alias router and bind the same handler for "/".
+// • We translate the panel’s `count` query param to the leads route’s `limit`.
+
 import { Router, Request, Response } from "express";
 import { CFG } from "../shared/env";
 
 const r = Router();
-const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 
-function norm(s: unknown): string {
-  return String(s ?? "").trim();
+// ---------- helpers ----------
+function s(v: unknown): string {
+  return (v == null ? "" : String(v)).trim();
+}
+function normHost(input: unknown): string {
+  return s(input).toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
 }
 
-// Map UI query → leads service query
-function toLeadsURL(q: Record<string, any>): string {
-  const host = norm(q.host).toLowerCase();
-  const city = norm(q.city);
-  const minTier = norm(q.minTier).toUpperCase(); // optional A|B|C
-  const limit = Number(q.count ?? q.limit ?? 0);
+async function proxyFind(hostRaw: string, q: URLSearchParams): Promise<any> {
+  const host = normHost(hostRaw);
+  const limit = s(q.get("count")) || s(q.get("limit")) || "";
+  const city = s(q.get("city"));
+  const sectors = s(q.get("sectors")); // comma-separated
+  const tags = s(q.get("tags"));       // comma-separated
 
-  const u = new URL(`http://127.0.0.1:${CFG.port}/api/leads/find-buyers`);
-  if (host) u.searchParams.set("host", host);
-  if (city) u.searchParams.set("city", city);
-  if (minTier) u.searchParams.set("minTier", minTier);
-  if (limit) u.searchParams.set("limit", String(limit));
+  if (!host) {
+    return { ok: false, error: "host_required" };
+  }
 
-  // pass-through (leads.ts may ignore today; safe)
-  const sectors = norm(q.sectors);
-  const tags = norm(q.tags);
-  if (sectors) u.searchParams.set("sectors", sectors);
-  if (tags) u.searchParams.set("tags", tags);
+  const out = new URL(`http://127.0.0.1:${Number(CFG.port) || 8787}/api/leads/find-buyers`);
+  if (host) out.searchParams.set("host", host);
+  if (limit) out.searchParams.set("limit", limit);
+  if (city) out.searchParams.set("city", city);
+  if (sectors) out.searchParams.set("sectors", sectors);
+  if (tags) out.searchParams.set("tags", tags);
 
-  return u.toString();
+  const res = await fetch(out.toString(), { redirect: "follow" });
+  const text = await res.text();
+  try { return JSON.parse(text); } catch { return { ok: false, error: "bad_json", detail: text.slice(0, 200) }; }
 }
 
-// Normalize items to the shape free-panel expects (defensive: keep originals)
-function shapeItems(items: any[] = []) {
-  return items.map((it) => {
-    const host = norm(it.host);
-    return {
-      score: typeof it.score === "number" ? it.score : null,
-      temp: it.temp ?? it.band ?? null,
-      name: it.name || it.company || host || "-",
-      host,
-      url: it.url || (host ? `https://${host}` : undefined),
-      why: it.why || Array.isArray(it.reasons) ? (it.reasons || []).slice(0, 6).join(" • ") : undefined,
-      // keep originals too
-      ...it,
-    };
-  });
-}
-
-// GET /api/buyers/find  (primary path used by the UI)
-r.get("/find", async (req: Request, res: Response) => {
+// single handler reused by all entry points
+async function findHandler(req: Request, res: Response) {
   try {
-    const url = toLeadsURL(req.query as any);
-    const resp = await F(url, { redirect: "follow" });
-    const text = await resp.text();
-    if (!resp.ok) return res.status(200).json({ ok: false, error: `proxy:${resp.status}`, detail: text.slice(0, 240) });
-
-    let data: any = {};
-    try { data = JSON.parse(text); } catch { /* not expected, but safe */ }
-
-    if (data && data.items) data.items = shapeItems(data.items);
-    return res.json(data);
+    const q = new URLSearchParams(req.query as any);
+    const data = await proxyFind(q.get("host") || "", q);
+    // Always 200 with an ok flag for frontend simplicity
+    return res.status(200).json(data);
   } catch (err: any) {
     return res.status(200).json({ ok: false, error: "buyers-find-failed", detail: String(err?.message || err) });
   }
-});
+}
 
-// Alias used by some older builds: /api/buyers/search
-r.get("/search", (req, res) => r.handle({ ...req, url: "/find" } as any, res));
+// routes under /api/buyers/*
+r.get("/find", findHandler);
+r.get("/search", findHandler);
 
-// Super-short alias: /api/find  (free-panel tries this as a fallback)
-const root = Router();
-root.get("/", (req, res) => r.handle({ ...req, url: "/find" } as any, res));
+// Optional ping for quick diagnostics (kept lightweight)
+r.get("/ping", (_req, res) => res.json({ pong: true, at: new Date().toISOString() }));
 
 export default r;
-export const RootAlias = root;
+
+// ----- Root alias mounted at /api/find in index.ts -----
+export const RootAlias = Router();
+// support /api/find?host=... directly
+RootAlias.get("/", findHandler);
+// also expose the same subpaths under /api/find/*
+RootAlias.use("/", r);
