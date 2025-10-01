@@ -6,11 +6,11 @@
 <title>Galactly — Find real packaging buyers</title>
 
 <!--
-  index.html  (Landing + Onboarding Steps 1–2)
-  - CTA always works (no other file required)
+  index.html  (Landing + Onboarding Steps 1–2 only)
+  - CTA opens modal
   - Step 1: pick role
   - Step 2: contact + company
-  - “Next” from Step 2 persists seed -> localStorage and redirects to step3.html
+  - Next from Step 2 → validate, persist seed, redirect to step3.html (no interstitial)
 -->
 
 <style>
@@ -83,7 +83,6 @@
         <div class="steps" aria-label="Steps">
           <span class="dot on" data-step-dot="0"></span>
           <span class="dot" data-step-dot="1"></span>
-          <span class="dot" data-step-dot="2"></span>
         </div>
         <div style="display:flex;gap:10px;align-items:center">
           <span id="apiBadge" class="api-badge">Ready</span>
@@ -153,11 +152,6 @@
             </div>
           </section>
 
-          <!-- STEP 3 PLACEHOLDER (not shown here) -->
-          <section class="step" id="step3" hidden>
-            <!-- intentionally empty in index.html -->
-          </section>
-
         </div>
 
         <div class="card-ft">
@@ -180,6 +174,7 @@
   const modal=$("#modal"), openBtn=$("#cta"), closeBtn=$("#close");
   const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
   const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone");
+  const nameEl=$("#name");
   const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
   const apiBadge=$("#apiBadge");
 
@@ -189,9 +184,9 @@
   // ------- CTA / nav -------
   function show(step){
     state.step=step;
-    ["#step1","#step2","#step3"].forEach((id,i)=>{const el=$(id); if(!el) return; el.hidden=i!==step; dots[i].classList.toggle("on", i===step);});
+    ["#step1","#step2"].forEach((id,i)=>{const el=$(id); if(!el) return; el.hidden=i!==step; dots[i]?.classList.toggle("on", i===step);});
     backBtn.style.visibility = step===0 ? "hidden" : "visible";
-    nextBtn.textContent = step===2 ? "Go to Step 3" : "Next";
+    nextBtn.textContent = step===0 ? "Next" : "Continue";
   }
   function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
   function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
@@ -202,11 +197,6 @@
   nextBtn.addEventListener("click", ()=>{
     if (state.step===0){ show(1); return; }
     if (state.step===1){
-      // basic requirements checked on step 2
-      show(2); return;
-    }
-    if (state.step===2){
-      // validate & persist, then redirect to step3.html
       if (!emailEl.value || !phoneEl.value){
         alert("Business email and phone are required."); return;
       }
@@ -216,7 +206,7 @@
       const seed = {
         role: state.role,
         contact: {
-          name: $("#name").value.trim(),
+          name: nameEl.value.trim(),
           phone: phoneEl.value.trim(),
           email: emailEl.value.trim()
         },
@@ -225,9 +215,11 @@
       try{
         localStorage.setItem("onb.seed", JSON.stringify(seed));
         localStorage.setItem("fp.supplier.host", hostCandidate);
+        localStorage.setItem("email", seed.contact.email);
+        localStorage.setItem("contact.name", seed.contact.name||"");
+        localStorage.setItem("contact.phone", seed.contact.phone||"");
       }catch{}
 
-      // navigate to heavy step 3 screen
       window.location.href = "step3.html";
     }
   });
