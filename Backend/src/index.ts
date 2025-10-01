@@ -12,6 +12,7 @@ import CatalogRouter from "./routes/catalog";
 import PlacesRouter from "./routes/places";
 import ClassifyRouter from "./routes/classify";
 import { CFG, isOriginAllowed } from "./shared/env";
+import BuyersRouter, { RootAlias as FindAlias } from "./routes/buyers";
 
 const app = express();
 
@@ -80,6 +81,8 @@ app.use("/api/leads", LeadsRouter);
 app.use("/api/catalog", CatalogRouter);
 app.use("/api/places", PlacesRouter);
 app.use("/api/classify", ClassifyRouter); // canonical endpoint
+app.use("/api/buyers", BuyersRouter);
+app.use("/api/find", FindAlias); // optional short alias the panel probes
 
 /* -------------------------------------------------------------------------- */
 /* Root alias for /classify (frontend sometimes tries /classify)              */
