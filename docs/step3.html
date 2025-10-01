@@ -6,599 +6,649 @@
 <title>Step 3 — Tune by industry</title>
 <style>
   :root{
-    --bg:#0b0f14; --panel:#101826; --panel-2:#0d1420;
-    --text:#e9f1f7; --muted:#8aa0b2; --divider:#1c2836;
-    --chip:#162437; --chipActive:#103247; --cta:#6de1ff; --ctaText:#082433;
+    --bg:#0b0f14; --panel:#0f1622; --panel-2:#0d1420; --ink:#e7f2fb;
+    --muted:#97aec2; --line:#1a2837; --brand:#7be2ff; --chip:#132235;
+    --accent:#f05a2a; --thumb:#c94924; --ok:#1bd97c; --warn:#ffd36a;
   }
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-    font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
-  .wrap{max-width:1100px;margin:0 auto;padding:20px}
-  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 12px}
-  .crumb{padding:6px 10px;border-radius:999px;background:#0e1a28;border:1px solid var(--divider)}
-  .pill{padding:6px 10px;border-radius:999px;background:#0e1a28;color:#9fb6c9;font-size:12px}
-  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;
-    background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
-  .btn.sec{background:#152333;color:#cfe0ee}
-  .btn.slim{padding:6px 10px;border-radius:10px;font-weight:600}
-  .xbtn{background:transparent;border:1px solid var(--divider);color:#bcd0e0;border-radius:10px;padding:6px 10px;cursor:pointer}
-  .hint{font-size:12px;color:#9bb2c8}
-  .section{background:var(--panel);border:1px solid var(--divider);border-radius:16px;padding:12px}
-  .row{display:grid;grid-template-columns:300px 1fr;gap:18px}
-  @media(max-width:900px){.row{grid-template-columns:1fr}}
-  /* rotor */
-  .rotor{position:relative;height:360px;background:var(--panel-2);border:1px solid var(--divider);border-radius:14px;overflow:hidden}
-  .rotor::before{content:"";position:absolute;left:0;right:0;top:50%;height:48px;transform:translateY(-50%);
-    border-top:1px dashed #233549;border-bottom:1px dashed #233549;background:linear-gradient(180deg,transparent 0,#0f1a27 50%,transparent 100%)}
-  .rlist{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;touch-action:none}
-  .ritem{position:absolute;left:0;right:0;text-align:center;color:#87a2bb;transition:transform .18s ease,opacity .18s ease;
-    will-change:transform,opacity;pointer-events:auto}
-  .ritem span{display:inline-block;padding:6px 10px;border-radius:999px}
-  .ritem.active span{font-weight:800;color:#eaf6ff}
-  .ritem.muted span{color:#5e7387;text-decoration:line-through}
-  /* metrics card */
-  .card{background:var(--panel-2);border:1px solid var(--divider);border-radius:14px;padding:12px}
-  .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
-  .card-hd h3{margin:0;font-size:18px}
-  .switch{display:inline-flex;align-items:center;gap:8px}
-  .mute{padding:6px 10px;border-radius:999px;background:#132235;border:1px solid #1e3146;color:#cfe0ee;cursor:pointer}
-  .grid{display:grid;grid-template-columns:1fr 280px;gap:14px;margin:8px 0}
-  .metric{margin:6px 0}
-  .metric label{display:block;font-size:14px;margin:0 0 4px}
-  input[type=range]{width:100%}
-  /* chips */
-  .chips{user-select:none}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);
-    color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
-  .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
-  /* persona block */
-  .persona{margin-top:10px}
-  .rg{position:relative;height:28px}
-  .rg input[type=range]{position:absolute;left:0;right:0;top:0;bottom:0;background:transparent;-webkit-appearance:none;pointer-events:auto}
-  .rg input::-webkit-slider-thumb{-webkit-appearance:none;height:18px;width:18px;border-radius:50%;background:#e46b3c;border:2px solid #fff;cursor:pointer;position:relative;z-index:2}
-  .rg input::-moz-range-thumb{height:18px;width:18px;border-radius:50%;background:#e46b3c;border:2px solid #fff;cursor:pointer;position:relative;z-index:2}
-  .rg .bar{position:absolute;left:0;right:0;top:12px;height:4px;background:#233447;border-radius:999px}
-  .rg .fill{position:absolute;top:12px;height:4px;background:#e46b3c;border-radius:999px}
-  .range-row{display:grid;grid-template-columns:160px 1fr auto;gap:10px;align-items:center;margin:8px 0}
-  .kv{font-size:12px;color:#a7bfd3}
-  .title{font-weight:800}
-  /* adv toggle */
-  .advToggle{margin:12px 0}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.45 system-ui,Segoe UI,Roboto,Inter,Arial}
+  .wrap{max-width:1120px;margin:18px auto 80px;padding:0 14px}
+  .crumbs{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin-bottom:8px}
+  .crumb{padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel-2);color:#cfe0ee}
+  .api{margin-left:auto;font-size:12px;padding:4px 8px;border:1px solid var(--line);border-radius:999px}
+  .api.ok{color:var(--ok)} .api.off{color:var(--warn)}
+  .row{display:grid;grid-template-columns:300px 1fr;gap:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px}
+  .hd{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .hd h3{margin:0;font-size:16px}
+  .btn{background:#12324a;color:#d7ecfd;border:1px solid var(--line);padding:10px 14px;border-radius:12px;cursor:pointer}
+  .btn.primary{background:var(--brand);color:#062639}
+  .btn.inline{padding:6px 10px;border-radius:999px}
+  .toolbar{display:flex;gap:8px;align-items:center;margin:10px 0}
+  .hint{font-size:12px;color:var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:#cfe6ff;cursor:pointer}
+  .chip.sel{background:#15344c;color:#eaffff;border-color:#1e435c}
+
+  /* ------- rotor (left) ------- */
+  .rotor{height:520px;display:flex;align-items:center;justify-content:center;position:relative}
+  .rcol{position:relative;width:100%;height:100%;overflow:hidden}
+  .rlist{position:absolute;inset:0;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;pointer-events:none}
+  .ritem{pointer-events:auto;user-select:none;min-width:60%;text-align:center;padding:10px 6px;border-radius:12px;transition:transform .15s ease,opacity .15s ease}
+  .ritem span{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2)}
+  .ritem[data-pos="0"]{transform:scale(1.18)}
+  .ritem[data-pos="0"] span{font-weight:700}
+  .ritem{opacity:.35}
+  .ritem[data-pos="0"]{opacity:1}
+  .ritem[data-pos="1"], .ritem[data-pos="-1"]{opacity:.8}
+  .ritem[data-pos="2"], .ritem[data-pos="-2"]{opacity:.6}
+  .ritem[data-pos="3"], .ritem[data-pos="-3"]{opacity:.45}
+  .rhelp{position:absolute;bottom:10px;left:12px;font-size:12px;color:var(--muted)}
+  .muteToggle{margin-left:auto}
+
+  /* ------- right: industry details ------- */
+  .card{padding:10px 12px}
+  .block{border:1px solid var(--line);border-radius:14px;background:var(--panel-2);padding:12px;margin:12px 0}
+  .block h4{margin:0 0 10px;font-size:15px}
+  .metric{display:grid;grid-template-columns:1fr 290px;gap:12px;align-items:center;margin:12px 0}
+  .metric small{color:var(--muted)}
+  input[type="range"]{width:100%;appearance:none;height:4px;border-radius:6px;background:#193045;outline:none}
+  input[type="range"]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:50%;background:var(--thumb);border:none}
+  .ops .chip{background:#122235}
+  .ops .chip.sel{background:#17405c}
+
+  /* dual slider (revenue) */
+  .range{position:relative;height:28px;margin:8px 0}
+  .track{position:absolute;left:0;right:0;top:12px;height:4px;background:#1a3044;border-radius:6px}
+  .fill{position:absolute;height:4px;background:#275a7d;border-radius:6px}
+  .handle{position:absolute;top:7px;width:14px;height:14px;border-radius:50%;background:var(--thumb);cursor:grab;touch-action:none}
+  .labels{display:flex;justify-content:space-between;font-size:12px;color:#9fb2c6}
+  .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+  /* footer */
+  .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+
+  @media (max-width:980px){
+    .row{grid-template-columns:1fr}
+    .rotor{height:220px}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="bar" id="crumbs">
-    <span class="crumb" id="c-host"></span>
-    <span class="crumb" id="c-verb"></span>
-    <span class="crumb" id="c-prods"></span>
+  <div class="crumbs" id="crumbs">
+    <span class="crumb" id="c-host">example.com</span>
+    <span class="crumb" id="c-verb">supplies</span>
+    <span class="crumb" id="c-products">packaging, etc.</span>
     <span class="crumb">for</span>
-    <span class="crumb" id="c-aud"></span>
+    <span class="crumb" id="c-aud">—</span>
     <span class="crumb">in</span>
-    <span class="crumb" id="c-region"></span>
+    <span class="crumb" id="c-region">the U.S.</span>
     <span class="crumb">Best contacts:</span>
-    <span class="crumb" id="c-contacts"></span>
-    <span class="pill" id="apiBadge">API: resolving…</span>
-    <button id="back" class="xbtn">Back</button>
+    <span class="crumb" id="c-contacts">Procurement, Marketing</span>
+    <span class="api off" id="apiBadge">API: offline</span>
+    <button class="btn inline" id="backBtn">Back</button>
   </div>
 
-  <button id="advBtn" class="xbtn advToggle">Show advanced ▾</button>
+  <div class="toolbar">
+    <button id="advToggle" class="btn inline">Show advanced ▾</button>
+    <span class="hint">Advanced opens detailed tuning by industry.</span>
+    <div class="actions" style="margin-left:auto">
+      <button id="saveBtn" class="btn">Save</button>
+      <button id="finishBtn" class="btn primary">Finish</button>
+    </div>
+  </div>
 
-  <div id="advanced" hidden>
-    <div class="section">
-      <div class="row">
-        <div>
-          <div class="rotor" id="rotor">
-            <div class="rlist" id="rlist" aria-label="Industries"></div>
-          </div>
-          <div class="hint" style="margin-top:8px">Scroll, drag or click. Center item is active.</div>
-          <label style="display:flex;gap:8px;align-items:center;margin-top:8px" class="hint">
-            <input id="hideMuted" type="checkbox"/> Hide muted
-          </label>
+  <section id="advanced" class="panel" hidden>
+    <div class="hd">
+      <h3>Step 3: Tune by industry</h3>
+      <label class="hint"><input type="checkbox" id="hideMuted"> Hide muted</label>
+    </div>
+    <div class="row">
+      <!-- rotor -->
+      <div class="panel rotor">
+        <div class="rcol">
+          <div class="rlist" id="rotorList" aria-label="Industries (rotor)"></div>
+          <div class="rhelp">Scroll, drag or click. Center item is active.</div>
         </div>
-        <div>
-          <div class="card">
-            <div class="card-hd">
-              <h3 id="indTitle" class="title">Industry</h3>
-              <div class="switch">
-                <label style="display:flex;gap:8px;align-items:center" class="hint">
-                  <input id="aiAuto" type="checkbox"/> Let AI decide
-                </label>
-                <button id="muteBtn" class="mute">Mute</button>
-              </div>
-            </div>
+      </div>
 
-            <div id="metrics"></div>
+      <!-- right details -->
+      <div class="panel">
+        <div class="card">
+          <div class="toolbar">
+            <strong id="indTitle" style="font-size:16px">—</strong>
+            <label class="hint" style="margin-left:10px"><input id="aiDecide" type="checkbox"> Let AI decide</label>
+            <button id="muteBtn" class="btn inline muteToggle">Mute</button>
+          </div>
 
-            <div class="card" style="margin-top:10px">
-              <div class="card-hd">
-                <h3 style="margin:0">Buyer operations for <span id="opsFor">—</span></h3>
-              </div>
-              <div id="opsChips" class="chips"></div>
-              <div id="opsSliders"></div>
-              <div class="hint" style="margin-top:6px">Click to add; each selected operation gets an importance slider (0–10).</div>
-            </div>
+          <div id="metrics" class="block">
+            <h4>Hot-priority metrics</h4>
+            <div id="metricRows"></div>
+          </div>
 
-            <div class="card persona" style="margin-top:10px">
-              <div class="card-hd">
-                <h3 style="margin:0">Hot-buyer persona — <span id="personaFor">—</span></h3>
-              </div>
+          <div id="ops" class="block">
+            <h4>Buyer operations — <span id="opsFor">—</span></h4>
+            <div class="hint">Click to add; each selected operation gets its own importance slider (0–10).</div>
+            <div id="opsPool" class="chips ops" style="margin-top:8px"></div>
+            <div id="opsPicked"></div>
+          </div>
 
-              <div class="range-row">
-                <div class="kv">Target company size (revenue)</div>
-                <div class="rg" id="revRG">
-                  <div class="bar"></div>
+          <div id="persona" class="block">
+            <h4>Hot-buyer persona — <span id="personaFor">—</span></h4>
+
+            <div class="row-2">
+              <div>
+                <div class="hint" style="margin-bottom:4px">Target company size (revenue). Drag both handles.</div>
+                <div class="range" id="revRange" aria-label="Revenue range slider">
+                  <div class="track"></div>
                   <div class="fill" id="revFill"></div>
-                  <input id="revMin" type="range" min="0" max="200" step="1" value="5" aria-label="Revenue min ($M)"/>
-                  <input id="revMax" type="range" min="0" max="200" step="1" value="60" aria-label="Revenue max ($M)"/>
+                  <div class="handle" id="revA" role="slider" aria-valuemin="0" aria-valuemax="200" aria-valuenow="5"></div>
+                  <div class="handle" id="revB" role="slider" aria-valuemin="0" aria-valuemax="200" aria-valuenow="60"></div>
                 </div>
-                <div class="kv"><span id="revLbl">$5M–$60M</span></div>
+                <div class="labels"><span>$0</span><span>$200M</span></div>
+                <div class="hint" id="revText" style="margin-top:6px"></div>
               </div>
-
-              <div class="range-row">
-                <div class="kv">Target headcount</div>
-                <div>
-                  <input id="emp" type="range" min="1" max="10000" step="1" value="250" aria-label="Employees"/>
-                </div>
-                <div class="kv"><span id="empLbl">~250</span></div>
-              </div>
-
-              <div class="range-row">
-                <div class="kv">Best titles to reach</div>
-                <div id="titleChips" class="chips"></div>
-                <div></div>
+              <div>
+                <label class="hint" for="emp">Target headcount</label>
+                <input id="emp" type="range" min="1" max="5000" step="1" value="250">
+                <div class="labels"><span>1</span><span>5k</span></div>
+                <div class="hint" id="empText" style="margin-top:6px"></div>
               </div>
             </div>
 
+            <div style="margin-top:10px">
+              <div class="hint" style="margin-bottom:6px">Best titles to reach</div>
+              <div id="titleChips" class="chips"></div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="saveBtn2" class="btn">Save</button>
+            <button id="finishBtn2" class="btn primary">Finish</button>
           </div>
         </div>
       </div>
     </div>
-  </div>
-
-  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px">
-    <button id="save" class="xbtn">Save</button>
-    <button id="finish" class="btn">Finish</button>
-  </div>
+  </section>
 </div>
 
 <script>
-(() => {
-  const $ = (q)=>document.querySelector(q);
-  const $$ = (q)=>Array.from(document.querySelectorAll(q));
+(()=>{"use strict";
 
-  /* ---------- state ---------- */
-  const state = {
-    industries: [],
-    muted: new Set(),
-    selected: 0,
-    opsSelected: new Map(),  // label -> weight
-    persona: {},             // per-industry persona cache
+  /* =======================
+     Utilities & state
+  ======================= */
+  const $=q=>document.querySelector(q);
+  const $$=q=>Array.from(document.querySelectorAll(q));
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const fmtM=v=>v>=1000? (v/1000).toFixed(1)+"B" : v+"M";
+  const lerp=(a,b,t)=>a+(b-a)*t;
+
+  const state={
+    industries:[],
+    selected:0,
+    muted:new Set(),
     aiAuto:false,
+    persona:{}, // per industry
     seed:null
   };
 
-  /* ---------- crumb (read-only) ---------- */
-  function setCrumbs(line){
-    $("#c-host").textContent = line.host||"";
-    $("#c-verb").textContent = line.verb||"supplies";
-    $("#c-prods").textContent = line.products||"";
-    $("#c-aud").textContent  = line.audience||"";
-    $("#c-region").textContent = line.region||"";
-    $("#c-contacts").textContent = line.contacts||"";
+  /* =======================
+     Crumbs (one-liner)
+  ======================= */
+  function setCrumbs({host,verb,products,audience,region,contacts}){
+    $("#c-host").textContent=host||"—";
+    $("#c-verb").textContent=verb||"supplies";
+    $("#c-products").textContent=products||"packaging, etc.";
+    $("#c-aud").textContent=audience||"";
+    $("#c-region").textContent=region||"the U.S.";
+    $("#c-contacts").textContent=contacts||"Procurement, Marketing";
   }
 
-  /* ---------- adv toggle ---------- */
-  const advBtn = $("#advBtn");
-  const advBox = $("#advanced");
-  advBtn.addEventListener("click",()=>{
-    const open = advBox.hasAttribute("hidden");
-    if (open){ advBox.removeAttribute("hidden"); advBtn.textContent="Hide advanced ▲"; }
-    else { advBox.setAttribute("hidden",""); advBtn.textContent="Show advanced ▾"; }
+  /* =======================
+     Advanced toggle
+  ======================= */
+  const adv=$("#advanced"); const advToggle=$("#advToggle");
+  advToggle.addEventListener("click",()=>{
+    const open=adv.hasAttribute("hidden");
+    adv.toggleAttribute("hidden",!open);
+    advToggle.textContent= (open?"Hide advanced ▲":"Show advanced ▾");
   });
 
-  /* ---------- rotor ---------- */
-  const rotor = $("#rotor");
-  const rlist = $("#rlist");
-  let dragStartY = 0;
-  let dragStartSel = 0;
+  /* =======================
+     Rotor (scroll/drag/click)
+     - virtualized 7 visible rows
+     - center item is active
+  ======================= */
+  const rotorList=$("#rotorList");
+  let rotorDragging=false, dragStartY=0, dragAccum=0, wheelHold=0;
 
-  function clampSel(v){ return Math.max(0, Math.min(state.industries.length-1, v)); }
-  function setSelected(idx, snap=true){
-    const old = state.selected;
-    state.selected = clampSel(idx);
-    if (old!==state.selected || snap) renderRotor();
-    applyIndustry(state.selected);
+  function visibleItems(){
+    const names=state.industries.filter(n=>!($("#hideMuted").checked && state.muted.has(n)));
+    return names;
   }
 
   function renderRotor(){
-    const H = rotor.clientHeight;
-    const step = 40;
-    const mid = H/2;
-    rlist.innerHTML = "";
-    state.industries.forEach((name, i)=>{
-      if ($("#hideMuted").checked && state.muted.has(name)) return;
-      const dy = (i - state.selected) * step;
-      const dist = Math.abs(i - state.selected);
-      const scale = Math.max(0.74, 1 - dist*0.12);
-      const op = Math.max(0.18, 1 - dist*0.22);
-      const it = document.createElement("div");
-      it.className = "ritem"+(i===state.selected?" active":"")+(state.muted.has(name)?" muted":"");
-      it.style.top = "50%";
-      it.style.transform = `translateY(${dy}px) scale(${scale})`;
-      it.style.opacity = op;
-      const span = document.createElement("span");
-      span.textContent = name;
-      it.appendChild(span);
-      it.addEventListener("click",()=> setSelected(i,true));
-      rlist.appendChild(it);
-    });
+    rotorList.innerHTML="";
+    const names=visibleItems();
+    const selName=names[state.selected]||names[0];
+    state.selected = Math.max(0, names.indexOf(selName));
+    const windowSize=7;
+    for (let i=-3;i<=3;i++){
+      const idx=state.selected+i;
+      const name=names[idx];
+      const div=document.createElement("div");
+      div.className="ritem"; div.dataset.index=idx;
+      div.dataset.pos=i;
+      div.innerHTML=`<span>${name||""}</span>`;
+      if (name){
+        div.addEventListener("click",()=>setSelected(idx,true));
+      }else{
+        div.style.visibility="hidden";
+      }
+      rotorList.appendChild(div);
+    }
   }
 
-  function onWheel(e){
+  function shiftSelection(delta){
+    const names=visibleItems();
+    const next=clamp(state.selected+delta,0,Math.max(0,names.length-1));
+    if (next!==state.selected){
+      setSelected(next,false);
+    }
+  }
+
+  function setSelected(idx,fromUser){
+    const names=visibleItems();
+    state.selected=clamp(idx,0,Math.max(0,names.length-1));
+    // update rotor positions
+    $$(".ritem").forEach(el=>{
+      const i=Number(el.dataset.index);
+      el.dataset.pos = isFinite(i)? String(clamp(i-state.selected,-3,3)) : "99";
+      el.style.visibility = names[i] ? "visible":"hidden";
+    });
+    // render right side for this industry
+    const active=names[state.selected];
+    if (active) showIndustry(active, fromUser);
+  }
+
+  rotorList.addEventListener("wheel",(e)=>{
     e.preventDefault();
-    const dir = Math.sign(e.deltaY);
-    setSelected(state.selected + dir, true);
-  }
-  function onPointerDown(e){
-    dragStartY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
-    dragStartSel = state.selected;
-  }
-  function onPointerMove(e){
-    if (!dragStartY) return;
-    const y = e.clientY || (e.touches && e.touches[0].clientY) || 0;
-    const dy = y - dragStartY;
-    const step = 40;
-    const delta = Math.round(-dy/step);
-    const target = clampSel(dragStartSel + delta);
-    if (target!==state.selected){ state.selected = target; renderRotor(); }
-  }
-  function onPointerUp(){ dragStartY = 0; }
+    wheelHold+=e.deltaY;
+    if (Math.abs(wheelHold)>40){
+      shiftSelection(wheelHold>0?1:-1);
+      wheelHold=0;
+    }
+  },{passive:false});
 
-  rotor.addEventListener("wheel", onWheel, {passive:false});
-  rotor.addEventListener("mousedown", onPointerDown);
-  window.addEventListener("mousemove", onPointerMove);
-  window.addEventListener("mouseup", onPointerUp);
-  rotor.addEventListener("touchstart",(e)=>onPointerDown(e.touches[0]),{passive:true});
-  window.addEventListener("touchmove",(e)=>onPointerMove(e.touches[0]),{passive:false});
-  window.addEventListener("touchend", onPointerUp);
-  $("#hideMuted").addEventListener("change", renderRotor);
+  rotorList.addEventListener("pointerdown",(e)=>{
+    rotorDragging=true; dragStartY=e.clientY; dragAccum=0; rotorList.setPointerCapture(e.pointerId);
+  });
+  rotorList.addEventListener("pointermove",(e)=>{
+    if(!rotorDragging) return;
+    const dy=e.clientY-dragStartY; dragStartY=e.clientY; dragAccum+=dy;
+    if (Math.abs(dragAccum)>30){ shiftSelection(dragAccum>0?1:-1); dragAccum=0; }
+  });
+  rotorList.addEventListener("pointerup",()=>{rotorDragging=false});
 
-  /* ---------- metrics ---------- */
-  const metricsBox = $("#metrics");
-  function renderMetrics(list){
-    metricsBox.innerHTML = "";
-    (list||[]).forEach(m=>{
-      const row = document.createElement("div");
-      row.className="grid metric";
-      const lab=document.createElement("label");
-      lab.textContent=m.label;
-      const r=document.createElement("input");
-      r.type="range"; r.min="0"; r.max="10"; r.value=Number(m.value??7);
-      r.addEventListener("input",()=> m.value=Number(r.value));
-      row.appendChild(lab); row.appendChild(r);
-      metricsBox.appendChild(row);
-    });
+  $("#hideMuted").addEventListener("change",()=>{ renderRotor(); setSelected(state.selected,false); });
+
+  /* =======================
+     Right panel renderers
+  ======================= */
+  const metricRows=$("#metricRows");
+  const opsPool=$("#opsPool"); const opsPicked=$("#opsPicked");
+  const indTitle=$("#indTitle"); const opsFor=$("#opsFor"); const personaFor=$("#personaFor");
+  const muteBtn=$("#muteBtn"); const aiDecide=$("#aiDecide");
+
+  function metricRow(name,val=7){
+    const row=document.createElement("div");
+    row.className="metric grid";
+    row.innerHTML=`
+      <div>
+        <div>${name}</div>
+        <small>0→low — 10→high priority</small>
+      </div>
+      <input type="range" min="0" max="10" step="1" value="${val}">
+    `;
+    return row;
   }
 
-  /* ---------- ops ---------- */
-  const opsChips = $("#opsChips");
-  const opsSliders = $("#opsSliders");
-  function chip(text, onToggle){
-    const s=document.createElement("span");
-    s.className="chip"; s.textContent=text;
-    s.addEventListener("click",()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); onToggle(on,text); });
-    return s;
-  }
-  function renderOpsPool(list){
-    opsChips.innerHTML=""; opsSliders.innerHTML=""; state.opsSelected.clear();
-    const ensure=(label)=>{
-      if (state.opsSelected.has(label)) return;
-      const row=document.createElement("div"); row.className="grid"; row.dataset.label=label;
-      const l=document.createElement("div"); l.textContent=label;
-      const inp=document.createElement("input"); inp.type="range"; inp.min="0"; inp.max="10"; inp.value="7";
-      inp.addEventListener("input",()=> state.opsSelected.set(label,Number(inp.value)));
-      row.appendChild(l); row.appendChild(inp); opsSliders.appendChild(row);
-      state.opsSelected.set(label,7);
-    };
-    const remove=(label)=>{ const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]'); if(el) el.remove(); state.opsSelected.delete(label); };
-    (list||[]).forEach(l=>{ const c=chip(l,(on,t)=>on?ensure(t):remove(t)); opsChips.appendChild(c); });
-  }
+  function showIndustry(name, fromUser){
+    const P = (state.persona[name] ||= {metrics:[], opsPool:[], opsSelected:new Map(), rev:[5,60], emp:250, titles:[]});
+    indTitle.textContent=name;
+    opsFor.textContent=name;
+    personaFor.textContent=name;
 
-  /* ---------- persona ---------- */
-  const revMin=$("#revMin"), revMax=$("#revMax"), revFill=$("#revFill"), revLbl=$("#revLbl");
-  const emp=$("#emp"), empLbl=$("#empLbl");
-  function fmtM(v){ return "$"+v+"M"; }
-  function layoutRev(){
-    let a=Number(revMin.value), b=Number(revMax.value);
-    if (a>=b){ if (a===200){ b=a; a=b-1; revMin.value=a; } else { b=a+1; revMax.value=b; } }
-    const left=(a/200)*100, right=(b/200)*100;
-    revFill.style.left=left+"%"; revFill.style.width=(right-left)+"%";
-    revLbl.textContent=fmtM(a)+"–"+fmtM(b);
-  }
-  function layoutEmp(){
-    const v=Number(emp.value);
-    empLbl.textContent="~"+(v>=1000?(Math.round(v/100)/10+"k"):v);
-  }
-  ["input","change"].forEach(ev=>{ revMin.addEventListener(ev,layoutRev); revMax.addEventListener(ev,layoutRev); });
-  emp.addEventListener("input",layoutEmp);
-  layoutRev(); layoutEmp();
-
-  /* ---------- apply industry ---------- */
-  const indTitle=$("#indTitle"), opsFor=$("#opsFor"), personaFor=$("#personaFor");
-  const aiAuto=$("#aiAuto"), muteBtn=$("#muteBtn");
-  function applyIndustry(i){
-    const name=state.industries[i]||"—";
-    indTitle.textContent=name; opsFor.textContent=name; personaFor.textContent=name;
-    muteBtn.textContent=(state.muted.has(name)?"Unmute ":"Mute ")+name;
-    const P=(state.persona[name] ||= {metrics:[], opsPool:[], opsSelected:new Map(), rev:[5,60], emp:250, titles:["Operations","Procurement","Plant Manager"]});
-    renderMetrics(P.metrics);
-    renderOpsPool(P.opsPool.length?P.opsPool:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"]);
-    if (P.opsSelected && P.opsSelected.size){
-      P.opsSelected.forEach((v,label)=>{
-        [...opsChips.children].forEach(x=>{ if(x.textContent===label) x.classList.add("active"); });
-        const row=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"] input'); if(row) row.value=String(v);
-      });
-      state.opsSelected=new Map(P.opsSelected);
-    } else { state.opsSelected.clear(); }
-    revMin.value=P.rev?.[0]??5; revMax.value=P.rev?.[1]??60; layoutRev();
-    emp.value=P.emp??250; layoutEmp();
-    const box=$("#titleChips"); box.innerHTML=""; (P.titles||[]).forEach(t=>{ const s=document.createElement("span"); s.className="chip"; s.textContent=t; box.appendChild(s); });
-    aiAuto.checked = state.aiAuto===true;
-  }
-  muteBtn.addEventListener("click",()=>{ const n=state.industries[state.selected]; if(!n) return; if(state.muted.has(n)) state.muted.delete(n); else state.muted.add(n); renderRotor(); applyIndustry(state.selected); });
-  aiAuto.addEventListener("change",()=>{ state.aiAuto=aiAuto.checked; });
-// part1 end
-  /* ---------- collect & persist ---------- */
-  function snapshotCurrent(){
-    const name = state.industries[state.selected];
-    if (!name) return;
-    const P = (state.persona[name] ||= {});
     // metrics
-    P.metrics = Array.from(metricsBox.querySelectorAll(".grid.metric")).map(row=>{
-      const label = row.querySelector("label")?.textContent || "";
-      const val = Number(row.querySelector('input[type="range"]')?.value || 0);
-      return {label, value: val};
-    });
+    metricRows.innerHTML="";
+    (P.metrics||[]).forEach(m=> metricRows.appendChild( metricRow(m.label,m.value) ));
+
     // ops
-    P.opsPool = Array.from(opsChips.children).map(c=>c.textContent);
-    P.opsSelected = new Map(state.opsSelected);
+    opsPool.innerHTML=""; opsPicked.innerHTML="";
+    (P.opsPool||[]).forEach(lbl=>{
+      const c=document.createElement("span"); c.className="chip"; c.textContent=lbl;
+      c.addEventListener("click",()=>{
+        const now=P.opsSelected.get(lbl)||5;
+        P.opsSelected.set(lbl, now);
+        renderPickedOps(P);
+      });
+      opsPool.appendChild(c);
+    });
+    renderPickedOps(P);
+
     // persona sliders
-    P.rev = [Number(revMin.value), Number(revMax.value)];
-    P.emp = Number(emp.value);
+    setRevenue(P.rev[0], P.rev[1]);
+    $("#emp").value=P.emp; updateEmpLabel(P.emp);
+
     // titles
-    P.titles = Array.from($("#titleChips").children).map(c=>c.textContent);
+    const titleWrap=$("#titleChips"); titleWrap.innerHTML="";
+    (P.titles||["Operations","Procurement"]).forEach(t=>{
+      const s=document.createElement("span"); s.className="chip sel"; s.textContent=t;
+      s.addEventListener("click",()=>{ s.classList.toggle("sel"); });
+      titleWrap.appendChild(s);
+    });
+
+    // controls
+    aiDecide.checked = !!P.aiAuto;
+    muteBtn.textContent = (state.muted.has(name)?"Unmute ":"Mute ")+name;
+
+    if (fromUser) persist(); // snapshot on change by user
   }
 
+  function renderPickedOps(P){
+    opsPicked.innerHTML="";
+    P.opsSelected.forEach((v,k)=>{
+      const row=document.createElement("div"); row.className="metric";
+      row.innerHTML=`
+        <div><strong>${k}</strong><div class="hint">Importance (0–10)</div></div>
+        <input type="range" min="0" max="10" step="1" value="${v}">
+      `;
+      row.querySelector('input').addEventListener("input",e=>{ P.opsSelected.set(k, Number(e.target.value)); });
+      opsPicked.appendChild(row);
+    });
+  }
+
+  /* =======================
+     Dual-handle revenue slider
+  ======================= */
+  const revRange=$("#revRange"), revA=$("#revA"), revB=$("#revB"), revFill=$("#revFill"), revText=$("#revText");
+  const REV_MIN=0, REV_MAX=200, REV_STEP=1;
+  let revMin=5, revMax=60, activeHandle=null;
+
+  function posFromVal(v){ return (v-REV_MIN)/(REV_MAX-REV_MIN); }
+  function valFromX(px){
+    const rect=revRange.getBoundingClientRect();
+    const t=clamp((px-rect.left)/rect.width,0,1);
+    const raw=REV_MIN+t*(REV_MAX-REV_MIN);
+    return Math.round(raw/REV_STEP)*REV_STEP;
+  }
+  function layoutRev(){
+    const a=posFromVal(revMin), b=posFromVal(revMax), left=Math.min(a,b), right=Math.max(a,b);
+    revA.style.left=(a*100)+"%"; revB.style.left=(b*100)+"%";
+    revFill.style.left=(left*100)+"%"; revFill.style.width=((right-left)*100)+"%";
+    revText.textContent = `$${fmtM(Math.min(revMin,revMax))}–$${fmtM(Math.max(revMin,revMax))} focus`;
+    const activeName = visibleItems()[state.selected];
+    if (activeName){
+      const P = state.persona[activeName];
+      P.rev=[Math.min(revMin,revMax), Math.max(revMin,revMax)];
+    }
+  }
+  function startDrag(h,e){ activeHandle=h; h.setPointerCapture(e.pointerId); }
+  function moveDrag(e){
+    if(!activeHandle) return;
+    const v=valFromX(e.clientX);
+    if (activeHandle===revA) revMin=v; else revMax=v;
+    layoutRev();
+  }
+  function endDrag(){ activeHandle=null; }
+
+  [revA,revB].forEach(h=>{
+    h.addEventListener("pointerdown",e=>startDrag(h,e));
+    h.addEventListener("pointermove",moveDrag);
+    h.addEventListener("pointerup",endDrag);
+  });
+
+  $("#emp").addEventListener("input",(e)=>{
+    const v=Number(e.target.value); updateEmpLabel(v);
+    const activeName = visibleItems()[state.selected];
+    if (activeName) state.persona[activeName].emp=v;
+  });
+  function updateEmpLabel(v){ $("#empText").textContent = `~${v.toLocaleString()} employees`; }
+
+  function setRevenue(a,b){ revMin=a; revMax=b; layoutRev(); }
+
+  /* =======================
+     Mute / AI decide / Save
+  ======================= */
+  muteBtn.addEventListener("click",()=>{
+    const active = visibleItems()[state.selected];
+    if (!active) return;
+    if (state.muted.has(active)) state.muted.delete(active); else state.muted.add(active);
+    renderRotor(); setSelected(state.selected,false); persist();
+  });
+  aiDecide.addEventListener("change",()=>{
+    const active = visibleItems()[state.selected];
+    if (!active) return;
+    (state.persona[active] ||= {}).aiAuto = aiDecide.checked;
+    persist();
+  });
+
+  $("#saveBtn").addEventListener("click",persist);
+  $("#saveBtn2").addEventListener("click",persist);
+  $("#finishBtn").addEventListener("click",persist);
+  $("#finishBtn2").addEventListener("click",persist);
+
+  $("#backBtn").addEventListener("click",()=> location.href="index.html");
+
+  /* =======================
+     Persistence
+  ======================= */
+  function snapshotCurrent(){
+    const active = visibleItems()[state.selected];
+    if (!active) return;
+    // metrics values
+    const P = state.persona[active];
+    P.metrics = Array.from(metricRows.querySelectorAll(".metric")).map(m=>{
+      return {label: m.querySelector("div div") ? m.querySelector("div").firstElementChild.textContent : m.querySelector("div").textContent,
+              value: Number(m.querySelector('input[type="range"]').value)};
+    });
+  }
   function persist(){
     snapshotCurrent();
-    const out = {
-      industries: state.industries,
-      muted: [...state.muted],
-      aiAuto: state.aiAuto,
-      persona: Object.fromEntries(Object.entries(state.persona).map(([k,v])=>{
+    const data={
+      industries:state.industries,
+      selected:state.selected,
+      muted:[...state.muted],
+      aiAuto:state.aiAuto,
+      persona:Object.fromEntries(Object.entries(state.persona).map(([k,v])=>{
         const opsSel = v.opsSelected ? Object.fromEntries(v.opsSelected) : {};
-        return [k, {...v, opsSelected: opsSel}];
+        return [k,{...v,opsSelected:opsSel}];
       }))
     };
-    try{ localStorage.setItem("onb.step3", JSON.stringify(out)); }catch{}
+    try{ localStorage.setItem("onb.step3", JSON.stringify(data)); flash("Saved"); }catch{}
   }
-
-  $("#save").addEventListener("click", ()=>{ persist(); flash("Saved"); });
-  $("#finish").addEventListener("click", ()=>{ persist(); flash("Saved — you’re done!"); });
-
-  window.addEventListener("beforeunload", persist);
-
-  function flash(msg){
-    const n=document.createElement("div");
-    n.textContent=msg;
-    n.style.position="fixed"; n.style.right="16px"; n.style.bottom="16px";
-    n.style.padding="10px 12px"; n.style.background="#102238"; n.style.border="1px solid #1f3450";
-    n.style.borderRadius="10px"; n.style.color="#cfe6ff"; n.style.zIndex="9999";
-    document.body.appendChild(n);
-    setTimeout(()=>n.remove(),1400);
-  }
-
-  /* ---------- data & AI-ish defaults ---------- */
-  const DEFAULT_INDS = ["Beverage","Food","Cosmetics","Electronics","Industrial","Logistics","Apparel"];
-
-  const LIB = {
-    Beverage:{
-      metrics:[
-        {label:"High-speed line compatibility"},
-        {label:"Retail-ready print consistency"},
-        {label:"Condensation tolerance"},
-        {label:"Pallet stability for bottlers"},
-        {label:"Case integrity for glass/plastic"},
-        {label:"Damage reduction targets in transit"}
-      ],
-      ops:["Automated pallet wrapper","Hand pallet wrapping","E-commerce fulfillment","3PL / distribution"],
-      titles:["Operations","Procurement","Plant Manager"]
-    },
-    Food:{
-      metrics:[
-        {label:"Food-contact compliance (FDA/EC)"},
-        {label:"Oxygen/moisture barrier"},
-        {label:"Traceability & COA"},
-        {label:"Sealing performance"},
-        {label:"Print/label regs"}
-      ],
-      ops:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution"],
-      titles:["QA/QC","Packaging Engineer","Operations"]
-    },
-    Cosmetics:{
-      metrics:[
-        {label:"Premium print/finish expectations"},
-        {label:"Color consistency ΔE"},
-        {label:"Unboxing experience"}
-      ],
-      ops:["E-commerce fulfillment","3PL / distribution","Co-packing"],
-      titles:["Brand Manager","Packaging Engineer","Procurement"]
-    },
-    Electronics:{
-      metrics:[
-        {label:"ESD protection requirements"},
-        {label:"Shock/vibration protection"},
-        {label:"Moisture control"}
-      ],
-      ops:["Warehouse pick/pack","3PL / distribution"],
-      titles:["Supply Chain","Operations","Packaging Engineer"]
-    },
-    Industrial:{
-      metrics:[
-        {label:"Unit-load stability"},
-        {label:"Freight class / DIM efficiency"},
-        {label:"Material recyclability target"}
-      ],
-      ops:["3PL / distribution","Warehouse pick/pack"],
-      titles:["Plant Manager","Operations","Procurement"]
-    },
-    Logistics:{
-      metrics:[
-        {label:"3PL/e-com integration"},
-        {label:"Damage in parcel"},
-        {label:"Dock-to-stock speed"}
-      ],
-      ops:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution"],
-      titles:["Logistics Manager","Ops","Procurement"]
-    },
-    Apparel:{
-      metrics:[
-        {label:"Presentation (crease/scuff)"},
-        {label:"Parcel-rate optimization"},
-        {label:"Return-friendly design"}
-      ],
-      ops:["E-commerce fulfillment","3PL / distribution"],
-      titles:["E-com Ops","Fulfillment","Procurement"]
-    }
-  };
-
-  function seedFromStorage(){
+  function restore(){
     try{
-      const raw = localStorage.getItem("onb.seed");
-      if (!raw) return null;
-      const s = JSON.parse(raw);
-      return s;
-    }catch{return null;}
-  }
-
-  function composeOneLiner(seed, apiHint){
-    const host = seed?.host||"";
-    const verb = "supplies";
-    const prods = (apiHint?.productsTop3||[]).join(", ") + (apiHint?.productsEtc? ", etc.":"");
-    const audience = apiHint?.audience||seed?.role==="supplier"?"":apiHint?.audience||"";
-    const region = apiHint?.region||"the U.S.";
-    const contacts = (apiHint?.contacts||["Procurement","Marketing"]).join(", ");
-    setCrumbs({host, verb, products: prods, audience, region, contacts});
-  }
-
-  /* ---------- API classify (optional) ---------- */
-  async function classify(host){
-    const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 7000);
-    try{
-      const r = await fetch(`/classify?host=${encodeURIComponent(host)}`, {signal:ctl.signal});
-      clearTimeout(t);
-      if (!r.ok) throw new Error("bad status");
-      return await r.json();
-    }catch(e){
-      return null;
-    }
-  }
-
-  function applyAPIModel(m){
-    // m example: {industries:[{name, metrics:[{label}], ops:[..], titles:[..]}], productsTop3:[..], productsEtc:true, audience, region, contacts:[..]}
-    if (!m) return;
-    if (Array.isArray(m.industries) && m.industries.length){
-      state.industries = m.industries.map(x=>x.name).filter(Boolean);
-      m.industries.forEach(x=>{
-        if (!x?.name) return;
-        state.persona[x.name] = {
-          metrics:(x.metrics||[]).map(y=>({label:y.label, value:y.value??7})),
-          opsPool:(x.ops||[]),
-          opsSelected:new Map(),
-          rev:[5,60],
-          emp:250,
-          titles:x.titles && x.titles.length ? x.titles : (LIB[x.name]?.titles||["Operations","Procurement"])
-        };
-      });
-    }
-    composeOneLiner(state.seed, m||{});
-  }
-
-  function applyDefaults(){
-    if (!state.industries.length) state.industries = DEFAULT_INDS.slice();
-    state.industries.forEach(n=>{
-      if (state.persona[n]) return;
-      const lib = LIB[n]||{metrics:[],ops:[],titles:[]};
-      state.persona[n] = {
-        metrics: lib.metrics.map(x=>({label:x.label, value:8})),
-        opsPool: lib.ops.slice(),
-        opsSelected:new Map(),
-        rev:[5,60],
-        emp:250,
-        titles: lib.titles.slice()
-      };
-    });
-  }
-
-  /* ---------- restore previous work ---------- */
-  function restoreFromStorage(){
-    try{
-      const raw = localStorage.getItem("onb.step3");
-      if (!raw) return;
-      const d = JSON.parse(raw);
-      if (Array.isArray(d.industries) && d.industries.length) state.industries = d.industries;
+      const raw=localStorage.getItem("onb.step3"); if(!raw) return;
+      const d=JSON.parse(raw);
+      if(Array.isArray(d.industries)) state.industries=d.industries;
+      state.selected = d.selected||0;
       state.muted = new Set(d.muted||[]);
       state.aiAuto = !!d.aiAuto;
       if (d.persona){
         Object.entries(d.persona).forEach(([k,v])=>{
-          const opsSel = v.opsSelected ? new Map(Object.entries(v.opsSelected)) : new Map();
-          state.persona[k] = {...v, opsSelected: opsSel};
+          v.opsSelected = new Map(Object.entries(v.opsSelected||{}));
+          state.persona[k]=v;
         });
       }
     }catch{}
   }
-
-  /* ---------- boot ---------- */
-  async function boot(){
-    $("#apiBadge").textContent="API: probing…";
-    state.seed = seedFromStorage();
-
-    // Try API if we have a host
-    if (state.seed?.host){
-      const res = await classify(state.seed.host);
-      if (res){
-        $("#apiBadge").textContent="API: online";
-        $("#apiBadge").style.color="#0f0";
-        applyAPIModel(res);
-      }else{
-        $("#apiBadge").textContent="API: offline";
-        $("#apiBadge").style.color="#ff8";
-      }
-    }else{
-      $("#apiBadge").textContent="API: ready";
-    }
-
-    // Restore persisted edits last
-    restoreFromStorage();
-
-    // Defaults for any gaps
-    applyDefaults();
-
-    // Build rotor and show first industry
-    renderRotor();
-    setSelected(0,true);
-
-    // Crumbs if API didn’t fill them
-    if (!$("#c-host").textContent){
-      composeOneLiner(state.seed||{}, {});
-    }
-
-    // Back
-    $("#back").addEventListener("click",()=> history.length>1 ? history.back() : (location.href="index.html"));
+  function flash(t){
+    const n=document.createElement("div");
+    n.textContent=t;
+    n.style.position="fixed";n.style.right="14px";n.style.bottom="14px";n.style.zIndex="9999";
+    n.style.padding="10px 12px";n.style.background="#10243a";n.style.border="1px solid var(--line)";n.style.borderRadius="10px";
+    document.body.appendChild(n); setTimeout(()=>n.remove(),1200);
   }
 
-  boot();
-})();
-</script>
+  /* =======================
+     Data & API (guarded)
+  ======================= */
+  function hasAPI(){
+    // only opt-in to avoid 404 on static hosting
+    return !!(window.API_BASE || localStorage.getItem("useAPI")==="1");
+  }
+  async function classify(host){
+    if(!hasAPI()) return null;
+    const base = window.API_BASE || "";
+    try{
+      const r=await fetch(`${base}/classify?host=${encodeURIComponent(host)}`,{method:"GET"});
+      if(!r.ok) return null;
+      return await r.json();
+    }catch{return null;}
+  }
+
+  const DEFAULTS={
+    industries:["Beverage","Food","Cosmetics","Electronics","Industrial","Logistics","Apparel"],
+    lib:{
+      Beverage:{
+        metrics:["High-speed line compatibility","Retail-ready print consistency","Condensation tolerance","Pallet stability for bottlers","Case integrity for glass/plastic","Damage reduction targets in transit"],
+        ops:["Automated pallet wrapper","Hand pallet wrapping","E-commerce fulfillment","3PL / distribution"],
+        titles:["Operations","Procurement","Plant Manager"]
+      },
+      Food:{
+        metrics:["Food-contact compliance (FDA/EC)","Oxygen/moisture barrier","Traceability & COA","Sealing performance","Print/label regs"],
+        ops:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution"],
+        titles:["QA/QC","Packaging Engineer","Operations"]
+      },
+      Cosmetics:{
+        metrics:["Premium print/finish expectations","Color consistency ΔE","Unboxing experience"],
+        ops:["E-commerce fulfillment","3PL / distribution","Co-packing"],
+        titles:["Brand Manager","Packaging Engineer","Procurement"]
+      },
+            Electronics:{
+        metrics:["ESD protection requirements","Shock/vibration protection","Moisture control"],
+        ops:["Warehouse pick/pack","3PL / distribution"],
+        titles:["Operations","Packaging Engineer","Logistics"]
+      },
+      Industrial:{
+        metrics:["Unit-load stability","Film puncture/abrasion resistance","Automation line uptime impact"],
+        ops:["Palletizing","3PL / distribution"],
+        titles:["Plant Manager","Operations","Procurement"]
+      },
+      Logistics:{
+        metrics:["3PL/e-com integration","Damage in parcel","Dock-to-stock speed"],
+        ops:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution"],
+        titles:["Logistics","Operations","Supply Chain"]
+      },
+      Apparel:{
+        metrics:["Presentation (crease/scuff)","Parcel-rate optimization","Return-friendly design"],
+        ops:["E-commerce fulfillment","3PL / distribution"],
+        titles:["E-com Ops","Operations","Procurement"]
+      }
+    }
+  };
+
+  /* =======================
+     Boot: seed + API badge
+  ======================= */
+  function loadSeed(){
+    try{
+      const s=JSON.parse(localStorage.getItem("onb.seed")||"null");
+      state.seed=s||null;
+      // crumbs
+      setCrumbs({
+        host: s?.host || (location.hostname||"example.com"),
+        verb: "supplies",
+        products: s?.products || "boxes, labels, corrugate, etc.",
+        audience: s?.audience || "",
+        region: s?.region || "the U.S.",
+        contacts: (s?.bestContacts && s.bestContacts.join(", ")) || "Procurement, Marketing"
+      });
+    }catch{ setCrumbs({}); }
+  }
+
+  async function setupAPIBadge(){
+    const badge=$("#apiBadge");
+    if(!hasAPI()){ badge.textContent="API: offline"; badge.classList.add("off"); return; }
+    badge.textContent="API: checking…";
+    try{
+      const base=window.API_BASE||"";
+      const r=await fetch(`${base}/health`);
+      if(r.ok){ badge.textContent="API: online"; badge.classList.remove("off"); badge.classList.add("ok"); }
+      else { badge.textContent="API: offline"; badge.classList.add("off"); }
+    }catch{ badge.textContent="API: offline"; badge.classList.add("off"); }
+  }
+
+  /* =======================
+     Industry defaults / fill
+  ======================= */
+  function ensureIndustryPersona(name){
+    const lib=DEFAULTS.lib[name];
+    if(!state.persona[name]){
+      const metrics=(lib?.metrics||[]).map((label,i)=>({label,value: clamp(8-i,0,10)}));
+      const P={
+        metrics,
+        opsPool:[...(lib?.ops||[])],
+        opsSelected:new Map(),
+        rev:[8,80],
+        emp:250,
+        titles:[...(lib?.titles||[])],
+        aiAuto:false
+      };
+      state.persona[name]=P;
+    }else{
+      // ensure opsPool at least
+      if(!state.persona[name].opsPool?.length) state.persona[name].opsPool=[...(lib?.ops||[])];
+      if(!(state.persona[name].metrics?.length)) state.persona[name].metrics=(lib?.metrics||[]).map((label,i)=>({label,value: clamp(8-i,0,10)}));
+    }
+  }
+
+  function adoptIndustries(list){
+    state.industries = (list && list.length ? list : DEFAULTS.industries).slice(0,30);
+    state.industries.forEach(ensureIndustryPersona);
+  }
+
+  /* =======================
+     Initialize UI
+  ======================= */
+  async function init(){
+    loadSeed();
+    setupAPIBadge();
+    restore();
+
+    // If no industries yet, try API classify (guarded)
+    if(!state.industries.length){
+      let picked=null;
+      if(state.seed?.host){ picked = await classify(state.seed.host); }
+      const fromAPI = picked?.industries || null;
+      adoptIndustries(fromAPI);
+    }else{
+      // ensure lib-backed defaults exist after restore
+      state.industries.forEach(ensureIndustryPersona);
+    }
+
+    renderRotor();
+    setSelected( clamp(state.selected,0,visibleItems().length-1), false );
+    layoutRev();
+
+    // keyboard navigation
+    window.addEventListener("keydown",(e)=>{
+      if (e.key==="ArrowUp") { e.preventDefault(); shiftSelection(-1); }
+      if (e.key==="ArrowDown") { e.preventDefault(); shiftSelection(1); }
+      if (e.key==="PageUp") { e.preventDefault(); shiftSelection(-3); }
+      if (e.key==="PageDown") { e.preventDefault(); shiftSelection(3); }
+    });
+
+    // keep revenue track responsive
+    window.addEventListener("resize",layoutRev);
+  }
+
+  // run
+  init();
+
+})();</script>
 </body>
 </html>
