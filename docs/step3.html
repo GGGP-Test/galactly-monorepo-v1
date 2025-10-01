@@ -3,568 +3,598 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Step 3</title>
+<title>Galactly — Step 3: Tune your buyers</title>
+<meta name="api-base" content="">
 <style>
   :root{
-    --bg:#0b0f14; --panel:#0f1622; --panel-2:#0c1320;
-    --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
-    --cta:#6de1ff; --ctaText:#082433; --divider:#1b2531;
-    --chip:#152437; --chipOn:#103247;
-    --accent:#ff7a44;
+    --bg:#0b0f14; --panel:#121822; --panel2:#0e141c; --card:#0f1724;
+    --text:#e9f1f7; --muted:#8aa0b2; --muted2:#a9bfd1; --divider:#1b2531;
+    --accent:#6de1ff; --accentText:#082433; --ring:#2a4e6d;
+    --good:#38e08f; --warn:#ffd166; --bad:#ff6b6b;
   }
+  *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-    font:15px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
-  .wrap{max-width:1100px;margin:20px auto;padding:0 14px}
-  .crumbs{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 16px}
-  .crumb{padding:6px 10px;border-radius:999px;background:#0e1a28;border:1px solid var(--divider);color:#cfe0ee}
-  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;
-    background:#183046;color:#cfe0ee;border:1px solid var(--divider);cursor:pointer}
-  .btn.primary{background:var(--cta);color:var(--ctaText);border:none}
-  .btn.small{padding:6px 10px;border-radius:10px}
-  .badge{font-size:12px;padding:5px 8px;border-radius:10px;border:1px solid var(--divider);background:#0d1724;color:#9cb6cc}
-  .badge.click{cursor:pointer}
-  h1{font-size:22px;margin:4px 0 14px}
-  .panel{background:var(--panel);border:1px solid var(--divider);border-radius:16px}
-  .panel-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--divider)}
-  .panel-bd{padding:14px}
-  .grid{display:grid;grid-template-columns:320px 1fr;gap:16px}
-  .muted{color:#93a8bb}
+    font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
+  a{color:inherit}
+  .wrap{max-width:1200px;margin:0 auto;padding:16px}
+
+  .topbar{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--divider);
+    border-radius:14px;background:linear-gradient(180deg,#0f1622,#0e1520)}
+  .dot{width:8px;height:8px;border-radius:50%;background:#2a3444}
+  .dot.on{background:#5bd0ff}
+  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-flex;gap:6px;align-items:center}
+  .sep{flex:1}
+  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:10px 14px;border-radius:12px;border:1px solid var(--divider);
+    background:#152333;color:#cfe0ee;cursor:pointer}
+  .btn.primary{background:var(--accent);border:none;color:var(--accentText);font-weight:800}
+  .btn:active{transform:translateY(1px)}
+  .gear{background:transparent;border:none;color:#9bb2c6;cursor:pointer}
+
+  .grid{display:grid;grid-template-columns:360px 1fr;gap:16px;margin-top:16px}
+  @media (max-width:980px){ .grid{grid-template-columns:1fr} }
+
+  .card{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:12px}
+  .h{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:4px 0 8px}
+
+  /* One-liner */
+  .one{background:#0e1622;border:1px solid var(--divider);border-radius:12px;padding:12px}
+  .one .edit{font-size:12px;color:var(--muted);cursor:pointer;margin-top:6px}
+
+  /* Rotor pane */
+  .rotorWrap{position:relative;height:420px;overflow:hidden;border-radius:12px;background:var(--panel2);
+    border:1px solid var(--divider);padding:6px}
+  .rotorList{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;gap:18px;will-change:transform}
+  .rotItem{user-select:none;cursor:pointer;transition:transform .12s ease, opacity .12s ease; will-change:transform,opacity}
+  .rotItem .label{padding:6px 10px;border-radius:10px;border:1px solid transparent}
+  .rotItem.active .label{font-weight:800;border-color:#234158;background:#112032}
+  .rotorCtrls{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+  .mutedLine{font-size:12px;color:var(--muted)}
+
+  /* Metrics pane */
+  .sectHead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .sectHead .title{font-weight:800}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#1a2433;
+    color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
+  .chip.on{background:#103247;color:#eaf7ff;border-color:#1b4862}
+  .field{margin:10px 0}
+  label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
+  input[type=text]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input[type=text]:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
+
+  /* Sliders */
+  .sliderRow{margin:12px 0;display:grid;grid-template-columns:1fr 280px;align-items:center;gap:12px}
+  .sliderRow input[type=range]{width:100%}
+  .slim{display:flex;align-items:center;gap:8px}
+  .val{font-variant-numeric:tabular-nums;color:#cfe0ee}
   .hint{font-size:12px;color:#9bb2c8}
-  .section{background:var(--panel-2);border:1px solid var(--divider);border-radius:14px;margin:14px 0}
-  .section-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--divider)}
-  .section-bd{padding:12px 14px}
 
-  /* rotor */
-  .rotor{height:420px;overflow:auto;scroll-snap-type:y mandatory;background:#0e1826;border:1px solid var(--divider);border-radius:14px;position:relative}
-  .rotor-list{margin:0;padding:40px 0 40px 0;list-style:none}
-  .rotor-item{scroll-snap-align:center;display:flex;align-items:center;justify-content:center;height:56px;transition:transform .18s ease,opacity .18s ease;
-    color:#9fb4c8;font-weight:600}
-  .rotor-item.active{color:#eaf7ff}
-  .rotor .centerline{position:absolute;left:8px;right:8px;top:calc(50% - 28px);height:56px;border-radius:12px;background:linear-gradient(180deg,#0f2238,#0e1a2a);border:1px dashed #1e2f43;pointer-events:none}
-  .rotor .sublabel{position:absolute;left:12px;bottom:8px;font-size:12px;color:#7f9ab2}
+  /* Dual range */
+  .dual{position:relative;height:36px}
+  .dual input[type=range]{position:absolute;inset:0;pointer-events:none;background:transparent}
+  .dual input[type=range]::-webkit-slider-thumb{pointer-events:auto}
+  .dual input[type=range]::-moz-range-thumb{pointer-events:auto}
+  .track{position:absolute;left:0;right:0;top:16px;height:4px;background:#162433;border-radius:999px}
+  .fill{position:absolute;top:16px;height:4px;background:#2f6f8f;border-radius:999px}
 
-  /* scale/opacity is JS computed; these are baseline values */
-  .rotor-item{opacity:.35;transform:scale(.88)}
-  .rotor-item.near{opacity:.7;transform:scale(.95)}
-  .rotor-item.active{opacity:1;transform:scale(1.08)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:680px){ .sliderRow{grid-template-columns:1fr} .grid2{grid-template-columns:1fr} }
 
-  /* slider */
-  .row{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:center;margin:10px 0}
-  .lab{font-weight:700}
-  .sub{font-size:12px;color:#93a8bb}
-  input[type=range]{width:100%}
-  .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{background:var(--chip);color:#cfe0ee;border:1px solid #213448;border-radius:999px;padding:6px 10px;cursor:pointer}
-  .chip.on{background:var(--chipOn);border-color:#1b4862;color:#eaf7ff}
-
-  /* double range (revenue) */
-  .r-wrap{position:relative;height:30px}
-  .r-wrap input[type=range]{position:absolute;left:0;right:0;top:6px;height:20px;background:transparent;-webkit-appearance:none;appearance:none;margin:0}
-  .r-wrap input::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #000;cursor:pointer;position:relative;z-index:2}
-  .r-wrap input::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #000;cursor:pointer;position:relative;z-index:2}
-  .r-track{position:absolute;left:0;right:0;top:14px;height:4px;background:#24364a;border-radius:999px}
-  .r-active{position:absolute;top:14px;height:4px;background:#ff8c5e;border-radius:999px}
-
-  /* responsive */
-  @media(max-width:980px){
-    .grid{grid-template-columns:1fr}
-  }
+  /* footer */
+  .ft{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+  .ok{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <!-- crumbs / one-liner -->
-  <div class="crumbs" id="crumbs">
-    <span class="crumb" id="c-host">host</span>
-    <span class="crumb" id="c-supplies">supplies</span>
-    <span class="crumb">for</span>
-    <span class="crumb" id="c-ind">industry</span>
-    <span class="crumb">in</span>
-    <span class="crumb" id="c-geo">the U.S.</span>
-    <span class="crumb">Best contacts:</span>
-    <span class="crumb" id="c-contacts">Procurement, Marketing</span>
-    <span class="badge click" id="apiBadge">API: offline</span>
-    <button class="btn small" id="backBtn">Back</button>
+  <div class="topbar">
+    <span class="dot on"></span><span class="dot on"></span><span class="dot on"></span>
+    <span class="pill">Step 3 of 3 — Tune & apply</span>
+    <span id="apiBadge" class="pill">API: unknown</span>
+    <span class="sep"></span>
+    <button id="setApi" class="gear" title="Set API base">⚙️ API</button>
+    <button id="finish" class="btn primary">Finish & Go to panel</button>
   </div>
 
-  <h1>Step 3</h1>
+  <div class="card" style="margin-top:12px">
+    <div class="one">
+      <div id="oneLine">Loading your site summary…</div>
+      <div class="edit" id="editOne">click to toggle edit • <a href="#" id="refreshLink">refresh from website</a></div>
+    </div>
+  </div>
 
   <div class="grid">
-    <!-- Rotor column -->
-    <div>
-      <div class="panel">
-        <div class="panel-hd">
-          <strong>Industries</strong>
-          <label class="hint"><input type="checkbox" id="toggleHideMuted"/> Hide muted</label>
-        </div>
-        <div class="panel-bd">
-          <div class="rotor" id="rotor">
-            <div class="centerline"></div>
-            <ul class="rotor-list" id="rotorList"></ul>
-            <div class="sublabel">Scroll, drag or click. Center item is active.</div>
-          </div>
+    <!-- LEFT: industry rotor -->
+    <aside class="card">
+      <div class="h">Industries</div>
+      <div id="rotor" class="rotorWrap" aria-label="Industry selector">
+        <div id="rotorList" class="rotorList"></div>
+      </div>
+      <div class="rotorCtrls">
+        <div class="mutedLine"><span id="mutedCount">0</span> muted • <a href="#" id="toggleMuted">show</a></div>
+        <div style="display:flex;gap:6px">
+          <button id="upBtn" class="btn" title="Previous">▲</button>
+          <button id="downBtn" class="btn" title="Next">▼</button>
         </div>
       </div>
-    </div>
+    </aside>
 
-    <!-- Detail column -->
-    <div id="detailCol">
-      <div class="section">
-        <div class="section-hd">
-          <div><strong id="detailTitle">Beverage</strong> &nbsp; <label class="hint"><input type="checkbox" id="letAi"/> Let AI decide</label></div>
-          <button class="btn small" id="muteBtn">Mute</button>
-        </div>
-        <div class="section-bd" id="metrics">
-          <!-- metrics render here -->
-        </div>
+    <!-- RIGHT: metrics -->
+    <main class="card">
+      <div class="sectHead">
+        <div class="title" id="sectTitle">Industry</div>
+        <span class="pill" id="sectHint">hot metrics pre-filled</span>
+        <span class="sep"></span>
+        <button id="muteBtn" class="btn">Mute “<span id="muteName">—</span>”</button>
       </div>
 
-      <div class="section">
-        <div class="section-hd"><strong id="opsTitle">Buyer operations</strong></div>
-        <div class="section-bd">
-          <div class="chips" id="opsChips"></div>
-          <div class="hint" style="margin-top:6px">Click to add; each selected operation gets its own importance slider (0–10).</div>
-          <div id="opsSliders"></div>
+      <div class="h">Hot buyer persona</div>
+      <div id="titlesBox" class="field"></div>
+
+      <div class="grid2">
+        <div class="field">
+          <label>Target company size — <b>Revenue</b> (range)</label>
+          <div class="dual" id="revDual">
+            <div class="track"></div><div class="fill" id="revFill"></div>
+            <input id="revMin" type="range" min="0" max="200" step="1" value="10" />
+            <input id="revMax" type="range" min="0" max="200" step="1" value="60" />
+          </div>
+          <div class="slim"><span class="val" id="revMinVal">$10M</span> — <span class="val" id="revMaxVal">$60M</span></div>
+          <div class="hint">Drag both handles. Scale: $0–$200M (we’ll sanity-check conflicts automatically).</div>
         </div>
-      </div>
-
-      <div class="section">
-        <div class="section-hd"><strong id="personaTitle">Hot-buyer persona</strong></div>
-        <div class="section-bd">
-          <div class="row">
-            <div>
-              <div class="lab">Company revenue focus (USD). Drag both handles.</div>
-              <div class="sub">$5M — $5B+ total revenue window.</div>
-            </div>
-            <div>
-              <div class="r-wrap" id="revWrap">
-                <div class="r-track"></div>
-                <div class="r-active" id="revActive"></div>
-                <input type="range" id="revMin" min="5" max="5000" step="5" value="25" aria-label="Revenue min (USD millions)"/>
-                <input type="range" id="revMax" min="5" max="5000" step="5" value="60" aria-label="Revenue max (USD millions)"/>
-              </div>
-              <div class="hint"><span id="revReadout">$25M – $60M</span></div>
-            </div>
-          </div>
-
-          <div class="row">
-            <div>
-              <div class="lab">Company headcount (employees)</div>
-              <div class="sub">1 — 5,000+ employees</div>
-            </div>
-            <div><input type="range" id="emp" min="1" max="5000" step="1" value="250"/><div class="hint"><span id="empReadout">250</span></div></div>
-          </div>
-
-          <div class="row">
-            <div>
-              <div class="lab">Best titles to reach</div>
-              <div class="sub">We boost these roles first in each account.</div>
-            </div>
-            <div class="chips" id="titleChips"></div>
-          </div>
-
-          <div class="row">
-            <div>
-              <div class="lab">Boost near city (e.g., HQ)</div>
-            </div>
-            <div><input id="geoBoost" type="text" placeholder="e.g., New Jersey" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--divider);background:#0d1724;color:var(--text)"/></div>
-          </div>
+        <div class="field">
+          <label>Target company size — <b>Employees</b></label>
+          <input id="emp" type="range" min="1" max="5000" step="1" value="120"/>
+          <div class="slim"><span class="val" id="empVal">120</span> employees • <span class="hint" id="empHint">small</span></div>
         </div>
       </div>
 
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin:10px 0 24px">
-        <button class="btn" id="saveBtn">Save</button>
-        <button class="btn primary" id="finishBtn">Finish</button>
+      <div class="h" style="margin-top:6px">Top priorities (pre-filled for this industry)</div>
+      <div id="metricBox"></div>
+
+      <div class="h" style="margin-top:10px">Targeting</div>
+      <div class="grid2">
+        <div class="field">
+          <label>Priority cities</label>
+          <input id="cityInput" type="text" placeholder="add city and press Enter">
+          <div id="cityChips"></div>
+        </div>
+        <div class="field">
+          <label>Product focus from your site</label>
+          <input id="tagInput" type="text" placeholder="add tag and press Enter">
+          <div id="tagChips"></div>
+        </div>
       </div>
-    </div>
+
+      <div class="field">
+        <label><input id="letAi" type="checkbox" checked> Let AI finalize conflicts (recommended)</label>
+      </div>
+
+      <div class="ft">
+        <button id="apply" class="btn">Apply to API</button>
+        <button id="saveLocal" class="btn">Save locally</button>
+      </div>
+      <div class="hint" id="statusLine" style="margin-top:8px"></div>
+    </main>
   </div>
 </div>
 
 <script>
-(()=>{
+(function(){
+  /* ---------------------- tiny helpers ---------------------- */
+  const $ = (q,r=document)=>r.querySelector(q);
+  const $$ = (q,r=document)=>Array.from(r.querySelectorAll(q));
+  const normHost = s => (s||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+  const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+  const fmtM = v => "$" + v.toString() + "M";
+  const LS = {
+    seed:"onb.seed", apiBase:"apiBase", persona:"fp.persona",
+    muted:"fp.muted.industries"
+  };
 
-/* ---------------------------- core state ---------------------------- */
-const $=q=>document.querySelector(q), $$=q=>Array.from(document.querySelectorAll(q));
-const getS=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
-const setS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
-const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+  const getSeed = ()=>{ try{ return JSON.parse(localStorage.getItem(LS.seed)||"{}"); }catch{ return {}; } };
+  const getApiBase = ()=>{
+    const meta = document.querySelector('meta[name="api-base"]')?.content || "";
+    const v = localStorage.getItem(LS.apiBase) || meta || "";
+    return (v||"").trim().replace(/\/+$/,"");
+  };
+  const setApiBase = (raw)=>{
+    const v = (raw||"").trim().replace(/\/+$/,"");
+    if (v) localStorage.setItem(LS.apiBase, v);
+  };
+  const ensureApi = ()=>{
+    let base = getApiBase();
+    if (!base) {
+      const v = prompt("API base (with or without /api). Example:\nhttps://YOUR-SUBDOMAIN.code.run/api","")||"";
+      if (v) { setApiBase(v); base = getApiBase(); }
+    }
+    return base;
+  };
+  const join=(b,t)=>`${b.replace(/\/+$/,"")}/${String(t).replace(/^\/+/,"")}`;
 
-const seed = getS("onb.seed", {host:""});
-const host = normHost(seed.host || getS("fp.supplier.host",""));
-const apiBase = getS("api.base","");
+  const apiBadge=$("#apiBadge");
+  const updApiBadge=()=>{
+    const b=getApiBase(); apiBadge.textContent = b? ("API: " + b.replace(/https?:\/\//,"")) : "API: not set";
+  };
 
-/* --------------------------- UI references -------------------------- */
-const rotor = $("#rotor"), rotorList=$("#rotorList");
-const toggleHideMuted=$("#toggleHideMuted");
-const apiBadge=$("#apiBadge");
-const cHost=$("#c-host"), cSup=$("#c-supplies"), cInd=$("#c-ind"), cGeo=$("#c-geo"), cContacts=$("#c-contacts");
-const detailTitle=$("#detailTitle"), muteBtn=$("#muteBtn"), letAi=$("#letAi");
-const metrics=$("#metrics"), opsTitle=$("#opsTitle"), opsChips=$("#opsChips"), opsSliders=$("#opsSliders");
-const personaTitle=$("#personaTitle"), revMin=$("#revMin"), revMax=$("#revMax"), revActive=$("#revActive"), revWrap=$("#revWrap"), revReadout=$("#revReadout");
-const emp=$("#emp"), empReadout=$("#empReadout"), titleChips=$("#titleChips"), geoBoost=$("#geoBoost");
+  /* ---------------------- state ---------------------- */
+  const seed = getSeed();
+  const host = normHost(seed.host || seed?.contact?.email?.split("@")[1] || localStorage.getItem("fp.supplier.host") || "");
+  const state = {
+    host,
+    classify:null,
+    industries:[],          // from sectorHints (+ fallbacks)
+    muted:new Set(),        // names
+    showMuted:false,
+    sel:0,
+    titlesDefault:["Operations","Procurement","COO","Logistics","Supply Chain"],
+    titlesBySector:{
+      beverage:["Operations","Plant Manager","Packaging Engineer","Procurement"],
+      food:["Quality","Operations","Procurement","Packaging Engineer"],
+      cosmetics:["Brand Ops","QA/Regulatory","Procurement"],
+      electronics:["Operations","Packaging Engineer","Procurement"],
+      pharma:["QA/Regulatory","Operations","Packaging","Procurement"],
+      apparel:["Operations","Fulfillment","Procurement"],
+      cannabis:["Compliance","Operations","Procurement"]
+    },
+    products:[],
+    metricsBySector:{},   // from API
+    geo:{citiesTop:[],statesTop:[]}
+  };
 
-/* ------------------------ industry + defaults ----------------------- */
-const INDUSTRY_SET = [
-  "Beverage","Food","Cosmetics","Electronics","Industrial","Logistics",
-  "Automotive","Personal Care","Home Care","Aerospace","Pharma","Cannabis"
-];
-
-const DEFAULTS = {
-  // Metrics mimic “0 = low/none … 10 = top/validated” with concrete hints in UI
-  Beverage:[
-    {k:"High-speed line compatibility",v:7,sub:"0—manual/slow → 10—≥500+ units/min"},
-    {k:"Retail-ready print consistency",v:6,sub:"0—drift → 10—ΔE<2 @ volume"},
-    {k:"Condensation tolerance",v:6,sub:"0—fails w/ light sweat → 10—retort/cooler-ready"},
-    {k:"Pallet stability for bottlers",v:7,sub:"0—shifts → 10—ISTA 3A/3E stable"},
-    {k:"Case integrity for glass/plastic",v:6,sub:"0—breaks → 10—holds @ peak load"},
-    {k:"Damage reduction targets in transit",v:6,sub:"0—none → 10—≤0.5% KPI"}
-  ],
-  Food:[
-    {k:"Food-contact compliance (FDA/EC)",v:8,sub:"0—uncertified → 10—fully certified"},
-    {k:"Oxygen/moisture barrier",v:7,sub:"0—none → 10—validated OTR/WVTR"},
-    {k:"Traceability & COA",v:7,sub:"0—none → 10—lot-level COA + recall-ready"},
-    {k:"Sealing performance",v:7,sub:"0—frequent leaks → 10—validated @ scale"},
-    {k:"Print/label regs",v:6,sub:"0—non-compliant → 10—GHS/NLEA compliant"}
-  ],
-  Cosmetics:[
-    {k:"Premium print/finish expectations",v:8,sub:"0—basic CMYK → 10—foil/spot UV/emboss"},
-    {k:"Color consistency ΔE",v:7,sub:"0—ΔE>6 → 10—ΔE≤2"},
-    {k:"Unboxing experience",v:7,sub:"0—plain → 10—designed tactile experience"}
-  ],
-  Electronics:[
-    {k:"ESD protection requirements",v:7,sub:"0—none → 10—ANSI/ESD S541 compliant"},
-    {k:"Shock/vibration protection",v:7,sub:"0—insufficient → 10—drop/ISTA validated"},
-    {k:"Moisture control",v:6,sub:"0—none → 10—desiccant & barrier spec"}
-  ],
-  Industrial:[
-    {k:"Heavy-duty load retention",v:7,sub:"0—shifts → 10—secure through lanes"},
-    {k:"Corrosion/VCI needs",v:6,sub:"0—none → 10—VCI pack spec"},
-    {k:"Unit cost @ target MOQ",v:6,sub:"0—uncompetitive → 10—meets/better than target"}
-  ],
-  Logistics:[
-    {k:"3PL/e-com integration",v:7,sub:"0—manual → 10—ready labels/ASN/SLAs"},
-    {k:"Damage in parcel",v:6,sub:"0—high → 10—<0.5% returns due to damage"},
-    {k:"Dock-to-stock speed",v:6,sub:"0—slow → 10—fast with ready SKUs"}
-  ]
-};
-
-// Per-industry buyer ops menu (click to add → slider appears)
-const OPS_MENU = [
-  "E-commerce fulfillment","Warehouse pick/pack","3PL / distribution",
-  "Automated pallet wrapper","Hand pallet wrapping","Co-packing","Cold chain"
-];
-
-// Persona title presets
-const TITLE_MENU = ["Operations","Procurement","Plant Manager","Packaging","Quality","Regulatory","Logistics","Supply Chain","Engineering"];
-
-/* ------------------------------ model ------------------------------- */
-let model = {
-  host,
-  industries: INDUSTRY_SET.map(name=>({
-    name, muted:false, ai:false,
-    metrics: (DEFAULTS[name]||[]).map(m=>({k:m.k, sub:m.sub, v:m.v})),
-    ops: ["E-commerce fulfillment","3PL / distribution"], // starter chips
-    opsWeights: {}, // k -> 0..10
-    persona: {rev:[25,60], emp:250, titles:["Operations","Procurement","Plant Manager"], city:""}
-  })),
-  activeIdx:0,
-  hideMuted:false,
-  ai_hints:{conflicts:[]}
-};
-
-/* ------------------------- one-liner / API -------------------------- */
-function setCrumbs(p){
-  cHost.textContent = p.host || host || "–";
-  cSup.textContent  = (p.supplies||"supplies").toLowerCase();
-  cInd.textContent  = p.industry|| (model.industries[model.activeIdx]?.name||"industry").toLowerCase();
-  cGeo.textContent  = p.geo||"the U.S.";
-  cContacts.textContent = (p.contacts||["Operations","Procurement"]).join(", ");
-}
-
-async function classifyViaAPI(){
-  if (!apiBase){ apiBadge.textContent="API: offline"; apiBadge.style.color="#ffb"; return null; }
-  apiBadge.textContent="API: checking…";
-  try{
-    const url = apiBase.replace(/\/+$/,"") + "/classify?host=" + encodeURIComponent(host);
-    const r = await fetch(url, {mode:"cors"});
-    if (!r.ok) throw new Error(r.status);
-    const j = await r.json();
-    apiBadge.textContent="API: online"; apiBadge.style.color="#0f0";
-    return j;
-  }catch(e){
-    apiBadge.textContent="API: offline"; apiBadge.style.color="#ffb";
-    return null;
+  /* ---------------------- one-liner compose ---------------------- */
+  function composeOneLiner(data){
+    const products = (data.productTags||[]).slice(0,3);
+    const prodStr = products.join(", ") + ( (data.productTags||[]).length>3 ? ", etc." : "");
+    const secStr = (data.sectorHints||[]).slice(0,2).join(" & ");
+    const short = (data.host||state.host||"yourcompany.com").replace(/^www\./,"");
+    const roleVerb = data.role==="packaging_buyer" ? "buys packaging" :
+                     data.role==="packaging_supplier" ? "supplies packaging" : "does business";
+    let line = `${short} ${roleVerb}`;
+    if (prodStr) line += ` — ${prodStr}`;
+    if (secStr) line += ` for ${secStr} brands`;
+    line += ".";
+    return line;
   }
-}
 
-apiBadge.addEventListener("click",()=>{
-  const v = prompt("API base (example: https://api.yourdomain.com)\nI will call GET {base}/classify?host=example.com", apiBase||"");
-  if (v!=null){ setS("api.base", v.trim()); location.reload(); }
-});
+  /* ---------------------- classify fetch ---------------------- */
+  async function fetchClassify(h){
+    const base = ensureApi(); if (!base) return null;
+    const u1 = new URL(join(base,"/classify")); u1.searchParams.set("host", h);
+    const u2 = new URL(join(base.replace(/\/api\/?$/i,""),"/api/classify")); u2.searchParams.set("host", h);
+    const tryFetch = async (url)=>{
+      const r = await fetch(url, {credentials:"omit"});
+      const t = await r.text();
+      try{ return JSON.parse(t); }catch{ return {ok:false, error:"bad_json", raw:t}; }
+    };
+    let d = await tryFetch(u1.toString());
+    if (!d?.ok) d = await tryFetch(u2.toString());
+    return d;
+  }
 
-/* --------------------------- rotor render --------------------------- */
-function renderRotor(){
-  rotorList.innerHTML="";
-  const list = model.industries.filter(x=>model.hideMuted? !x.muted : true);
-  list.forEach((it,idx)=>{
-    const li = document.createElement("li");
-    li.className="rotor-item";
-    li.textContent = it.name;
-    li.dataset.index = model.industries.findIndex(z=>z.name===it.name);
-    li.addEventListener("click",()=>activateIndustry(+li.dataset.index,true));
-    rotorList.appendChild(li);
-  });
-  requestAnimationFrame(()=>syncRotorVisual());
-  // Snap to active
-  setTimeout(()=>scrollItemIntoCenter(model.activeIdx), 30);
-}
-
-function scaleClass(distance){
-  if (distance===0) return "active";
-  if (distance===1) return "near";
-  return "";
-}
-
-function syncRotorVisual(){
-  const items=$$(".rotor-item");
-  let center = rotor.scrollTop + (rotor.clientHeight/2);
-  items.forEach((el,i)=>{
-    const mid = el.offsetTop + el.clientHeight/2;
-    const dist = Math.abs(mid-center)/el.clientHeight; // ~1 per row
-    el.classList.remove("active","near");
-    if (dist<0.5) el.classList.add("active");
-    else if (dist<1.5) el.classList.add("near");
-  });
-}
-
-function indexFromCenter(){
-  const items=$$(".rotor-item");
-  let center = rotor.scrollTop + (rotor.clientHeight/2);
-  let bestIdx=0, best=1e9;
-  items.forEach((el,i)=>{
-    const mid = el.offsetTop + el.clientHeight/2;
-    const d = Math.abs(mid-center);
-    if (d<best){ best=d; bestIdx=i; }
-  });
-  // map visual index → real index
-  const visual = items[bestIdx];
-  return +visual.dataset.index;
-}
-
-function scrollItemIntoCenter(realIndex){
-  const visual = $$(".rotor-item").find(el=>+el.dataset.index===realIndex);
-  if (!visual) return;
-  const top = visual.offsetTop - (rotor.clientHeight/2 - visual.clientHeight/2);
-  rotor.scrollTo({top, behavior:"instant"});
-  syncRotorVisual();
-}
-
-rotor.addEventListener("scroll",()=>{ syncRotorVisual(); debounceCenterPick(); }, {passive:true});
-let centerTimer=null;
-function debounceCenterPick(){
-  if (centerTimer) cancelAnimationFrame(centerTimer);
-  centerTimer = requestAnimationFrame(()=>{
-    const idx = indexFromCenter();
-    if (idx!==model.activeIdx) activateIndustry(idx,false);
-  });
-}
-
-toggleHideMuted.addEventListener("change",()=>{ model.hideMuted=toggleHideMuted.checked; renderRotor(); });
-
-/* --------------------------- detail render -------------------------- */
-function renderDetail(){
-  const ind = model.industries[model.activeIdx]; if (!ind) return;
-  detailTitle.textContent = ind.name;
-  personaTitle.textContent = `Hot-buyer persona — ${ind.name}`;
-  opsTitle.textContent = `Buyer operations for ${ind.name}`;
-  letAi.checked = !!ind.ai;
-  muteBtn.textContent = ind.muted? `Unmute ${ind.name}` : `Mute ${ind.name}`;
-
-  // Metrics
-  metrics.innerHTML = ind.metrics.map(m=>`
-    <div class="row">
-      <div>
-        <div class="lab">${m.k}</div>
-        <div class="sub">${m.sub||"0—low priority → 10—top priority"}</div>
-      </div>
-      <div><input type="range" min="0" max="10" step="1" value="${m.v}" data-metric="${m.k}"/></div>
-    </div>
-  `).join("");
-
-  // Ops chips
-  opsChips.innerHTML = OPS_MENU.map(k=>{
-    const on = ind.ops.includes(k);
-    return `<span class="chip ${on?'on':''}" data-op="${k}">${k}</span>`;
-  }).join("");
-
-  // Sliders per selected op
-  opsSliders.innerHTML = ind.ops.map(k=>{
-    const v = (ind.opsWeights&&typeof ind.opsWeights[k]==="number")? ind.opsWeights[k]:7;
-    return `
-      <div class="row">
-        <div><div class="lab">${k}</div><div class="sub">Importance (0–10)</div></div>
-        <div><input type="range" min="0" max="10" step="1" value="${v}" data-opw="${k}"/></div>
-      </div>
-    `;
-  }).join("");
-
-  // Persona values
-  const [mn,mx]=ind.persona.rev;
-  revMin.value=mn; revMax.value=mx; updateRevTrack();
-  emp.value=ind.persona.emp; empReadout.textContent=ind.persona.emp;
-  geoBoost.value=ind.persona.city||"";
-
-  // Titles
-  titleChips.innerHTML = TITLE_MENU.map(t=>{
-    const on = ind.persona.titles.includes(t);
-    return `<span class="chip ${on?'on':''}" data-title="${t}">${t}</span>`;
-  }).join("");
-
-  // Wire inputs
-  $$("input[data-metric]").forEach(inp=>{
-    inp.addEventListener("input",()=>{
-      const m = ind.metrics.find(z=>z.k===inp.dataset.metric);
-      m.v = +inp.value;
-      flagConflictsIfAny(ind);
+  /* ---------------------- chips ---------------------- */
+  function chip(label, box, on=true){
+    const s=document.createElement("span"); s.className="chip"+(on?" on":""); s.textContent=label;
+    s.addEventListener("click",()=> s.classList.toggle("on"));
+    box.appendChild(s); return s;
+  }
+  function getOnChips(box){ return Array.from(box.querySelectorAll(".chip.on")).map(x=>x.textContent.trim()); }
+  function addOnEnter(input, box){
+    input.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter"){ e.preventDefault(); const v=input.value.trim(); if(!v) return; chip(v, box, true); input.value=""; }
     });
-  });
-  $$(".chip[data-op]").forEach(ch=>{
-    ch.addEventListener("click",()=>{
-      const k=ch.dataset.op;
-      const i=ind.ops.indexOf(k);
-      if (i>=0) ind.ops.splice(i,1); else ind.ops.push(k);
-      renderDetail();
+  }
+
+  /* ---------------------- rotor ---------------------- */
+  const rotor=$("#rotor"), rotorList=$("#rotorList");
+  const mutedKey = LS.muted + ":" + (host||"");
+  try{
+    const arr = JSON.parse(localStorage.getItem(mutedKey)||"[]");
+    if (Array.isArray(arr)) arr.forEach(x=>state.muted.add(String(x)));
+  }catch{}
+
+  function setMutedPersist(){
+    try{ localStorage.setItem(mutedKey, JSON.stringify(Array.from(state.muted))); }catch{}
+    $("#mutedCount").textContent = String(state.muted.size);
+  }
+
+  function buildIndustries(d){
+    const s = Array.isArray(d?.sectorHints) ? d.sectorHints.slice(0,12) : [];
+    const fallback = ["food","beverage","cosmetics","electronics","pharma","apparel","cannabis","industrial","home"];
+    const uniq = [];
+    const seen = new Set();
+    for (const x of [...s, ...fallback]){
+      const k = String(x||"").toLowerCase().trim();
+      if (!k || seen.has(k)) continue;
+      seen.add(k); uniq.push(k);
+      if (uniq.length>=14) break;
+    }
+    state.industries = uniq;
+    // Default select = first non-muted, else 0
+    let idx = uniq.findIndex(x => !state.muted.has(x));
+    if (idx<0) idx = 0;
+    state.sel = idx;
+    renderRotor(true);
+  }
+
+  function renderRotor(center=false){
+    rotorList.innerHTML="";
+    const visible = state.industries.filter(i => state.showMuted || !state.muted.has(i));
+    // Always reserve space and center current selection among visible
+    let selName = state.industries[state.sel] || visible[0] || "industry";
+    // if sel muted & hidden, pick nearest visible
+    if (!state.showMuted && state.muted.has(selName)){
+      const cand = visible[0]; if (cand){ selName = cand; state.sel = state.industries.indexOf(cand); }
+    }
+    const selVisibleIndex = visible.indexOf(selName);
+
+    visible.forEach((name, i)=>{
+      const dist = Math.abs(i - selVisibleIndex);
+      const scale = dist===0? 1.15 : Math.max(0.82, 1 - dist*0.06);
+      const opacity = dist===0? 1 : Math.max(0.25, 1 - dist*0.18);
+
+      const item = document.createElement("div");
+      item.className = "rotItem"+(name===selName?" active":"");
+      item.style.transform = `scale(${scale})`;
+      item.style.opacity = String(opacity);
+      item.setAttribute("role","button");
+      item.setAttribute("aria-label", name);
+      item.innerHTML = `<div class="label">${name}</div>`;
+      item.addEventListener("click", ()=> selectIndustryByName(name));
+      rotorList.appendChild(item);
     });
+
+    if (center){
+      // vertically center active item
+      const boxH = rotor.clientHeight;
+      const itemH = 36; // approx each row incl. gap
+      const top = (boxH/2) - (itemH/2) - (selVisibleIndex*itemH);
+      rotorList.style.transform = `translateY(${Math.round(top)}px)`;
+    }else{
+      // adjust smoothly to keep active in middle
+      const boxH = rotor.clientHeight;
+      const itemH = 36;
+      const top = (boxH/2) - (itemH/2) - (selVisibleIndex*itemH);
+      rotorList.style.transition = "transform .12s ease";
+      rotorList.style.transform = `translateY(${Math.round(top)}px)`;
+      setTimeout(()=> rotorList.style.transition = "", 150);
+    }
+
+    $("#toggleMuted").textContent = state.showMuted? "hide" : "show";
+    $("#mutedCount").textContent = String(state.muted.size);
+    // update metrics header + button label
+    $("#sectTitle").textContent = titleCase(selName);
+    $("#muteName").textContent = titleCase(selName);
+    renderMetricsFor(selName);
+  }
+
+  function titleCase(s){ return String(s||"").replace(/\b\w/g,m=>m.toUpperCase()); }
+
+  function selectIndustryByName(name){
+    const idx = state.industries.indexOf(name);
+    if (idx>=0){ state.sel = idx; renderRotor(false); }
+  }
+
+  function stepSelection(delta){
+    const visible = state.industries.filter(i => state.showMuted || !state.muted.has(i));
+    const curName = state.industries[state.sel];
+    let i = visible.indexOf(curName);
+    if (i<0) i=0;
+    i = (i + delta + visible.length) % visible.length;
+    const target = visible[i];
+    selectIndustryByName(target);
+  }
+
+  // wheel + touch/drag
+  let touchY=0;
+  rotor.addEventListener("wheel",(e)=>{ e.preventDefault(); stepSelection(e.deltaY>0? +1 : -1); }, {passive:false});
+  rotor.addEventListener("pointerdown",(e)=>{ touchY=e.clientY; rotor.setPointerCapture(e.pointerId); });
+  rotor.addEventListener("pointermove",(e)=>{ if (!touchY) return; const dy=e.clientY-touchY; if (Math.abs(dy)>18){ stepSelection(dy>0? +1 : -1); touchY=e.clientY; } });
+  rotor.addEventListener("pointerup",()=>{ touchY=0; });
+
+  $("#upBtn").addEventListener("click",()=> stepSelection(-1));
+  $("#downBtn").addEventListener("click",()=> stepSelection(+1));
+
+  $("#toggleMuted").addEventListener("click",(e)=>{ e.preventDefault(); state.showMuted=!state.showMuted; renderRotor(true); });
+  $("#muteBtn").addEventListener("click",()=>{
+    const name = state.industries[state.sel]; if (!name) return;
+    if (state.muted.has(name)) state.muted.delete(name); else state.muted.add(name);
+    setMutedPersist(); renderRotor(true);
   });
-  $$("input[data-opw]").forEach(inp=>{
-    inp.addEventListener("input",()=>{ ind.opsWeights[inp.dataset.opw]=+inp.value; });
-  });
-  $$(".chip[data-title]").forEach(ch=>{
-    ch.addEventListener("click",()=>{
-      const t=ch.dataset.title, i=ind.persona.titles.indexOf(t);
-      if (i>=0) ind.persona.titles.splice(i,1); else ind.persona.titles.push(t);
-      renderDetail();
-    });
-  });
-}
 
-/* ---------------------- persona sliders logic ----------------------- */
-function clampRevenue(){
-  let a=+revMin.value, b=+revMax.value;
-  if (a>b){ const t=a; a=b; b=t; }
-  a=Math.max(5,Math.min(5000,a));
-  b=Math.max(5,Math.min(5000,b));
-  revMin.value=a; revMax.value=b;
-  updateRevTrack();
-  const ind=model.industries[model.activeIdx];
-  ind.persona.rev=[a,b];
-  flagConflictsIfAny(ind);
-}
-function updateRevTrack(){
-  const min=+revMin.min, max=+revMin.max, a=+revMin.value, b=+revMax.value;
-  const p1=((a-min)/(max-min))*100, p2=((b-min)/(max-min))*100;
-  revActive.style.left=p1+"%"; revActive.style.right=(100-p2)+"%";
-  revReadout.textContent = `$${a}M – $${b>=5000? '5,000M+':'$'+b+'M'}`.replace('$$','$');
-}
-revMin.addEventListener("input",clampRevenue);
-revMax.addEventListener("input",clampRevenue);
-emp.addEventListener("input",()=>{ const ind=model.industries[model.activeIdx]; ind.persona.emp=+emp.value; empReadout.textContent=emp.value; flagConflictsIfAny(ind); });
-geoBoost.addEventListener("change",()=>{ model.industries[model.activeIdx].persona.city=geoBoost.value.trim(); });
+  /* ---------------------- metrics render ---------------------- */
+  const metricBox=$("#metricBox"), titlesBox=$("#titlesBox");
+  const cityInput=$("#cityInput"), tagInput=$("#tagInput");
+  const cityChips=document.createElement("div"); cityChips.id="cityChipsInner"; $("#cityChips").appendChild(cityChips);
+  const tagChips=document.createElement("div"); tagChips.id="tagChipsInner"; $("#tagChips").appendChild(tagChips);
 
-/* ------------------------ conflicts / AI hint ----------------------- */
-function flagConflictsIfAny(ind){
-  model.ai_hints.conflicts=[];
-  const [a,b]=ind.persona.rev; const e=ind.persona.emp;
-  // simple sanity: revenue < $10M rarely supports 500+ employees
-  if (b<=10 && e>=500){ model.ai_hints.conflicts.push("rev<=10M vs emp>=500"); }
-  // headcount 1–5K with revenue < 20M improbable
-  if (e>=1000 && b<50){ model.ai_hints.conflicts.push("emp>=1K vs rev<50M"); }
-  letAi.indeterminate = model.ai_hints.conflicts.length>0;
-}
-
-/* --------------------------- actions -------------------------------- */
-muteBtn.addEventListener("click",()=>{
-  const ind=model.industries[model.activeIdx];
-  ind.muted=!ind.muted;
-  muteBtn.textContent = ind.muted? `Unmute ${ind.name}` : `Mute ${ind.name}`;
-  renderRotor();
-});
-letAi.addEventListener("change",()=>{ model.industries[model.activeIdx].ai = letAi.checked; });
-
-function activateIndustry(idx, scrollAlso){
-  model.activeIdx=idx;
-  if (scrollAlso) scrollItemIntoCenter(idx);
-  renderDetail();
-  // update crumb industry
-  cInd.textContent = model.industries[idx].name.toLowerCase();
-}
-
-$("#finishBtn").addEventListener("click",()=>saveAndFinish());
-$("#saveBtn").addEventListener("click",()=>saveModel(true));
-$("#backBtn").addEventListener("click",()=>history.back());
-
-function saveModel(notify){
-  setS("step3.model", model);
-  if (notify) { const s=document.createElement("span"); s.textContent="Saved"; s.className="badge"; $("#saveBtn").after(s); setTimeout(()=>s.remove(),900); }
-}
-function saveAndFinish(){
-  saveModel(false);
-  alert("Saved! (Wire this to your dash route.)");
-}
-
-/* --------------------------- bootstrap ------------------------------ */
-function fromClassifyPayload(p){
-  // expected fields (example)
-  // { host, supplies:["stretch film","pallets"], country:"US", bestContacts:["Operations","Procurement"], industries:[{name, muted, metrics:[{k,sub,v}], persona:{rev:[min,max], emp, titles, city}, ops:[...]}] }
-  if (!p) return;
-  if (p.host) model.host=normHost(p.host);
-  if (Array.isArray(p.industries) && p.industries.length){
-    model.industries = p.industries.map(x=>({
-      name: x.name,
-      muted: !!x.muted,
-      ai: !!x.ai,
-      metrics: (Array.isArray(x.metrics)? x.metrics : (DEFAULTS[x.name]||[])).map(m=>({k:m.k, sub:m.sub, v: typeof m.v==="number"? m.v : 6})),
-      ops: Array.isArray(x.ops)? x.ops : ["E-commerce fulfillment","3PL / distribution"],
-      opsWeights: x.opsWeights || {},
-      persona: Object.assign({rev:[25,60], emp:250, titles:["Operations","Procurement"], city:""}, x.persona||{})
+  function renderTitlesFor(sector){
+    titlesBox.innerHTML="";
+    const list = state.titlesBySector[sector] || state.titlesDefault;
+    titlesBox.append(...list.map(title=>{
+      const el = document.createElement("span"); el.className="chip on"; el.textContent=title; el.addEventListener("click",()=> el.classList.toggle("on"));
+      return el;
     }));
   }
-  setCrumbs({
-    host:model.host,
-    supplies: (p.supplies||[]).slice(0,3).join(", ") + (p.supplies && p.supplies.length>3? ", etc.": ""),
-    industry: model.industries[0]?.name,
-    geo: p.country? ("the " + (p.country==="US"?"U.S.":p.country)) : "the U.S.",
-    contacts: p.bestContacts||["Operations","Procurement"]
+
+  function renderMetricsFor(sector){
+    renderTitlesFor(sector);
+    const metrics = (state.metricsBySector[sector] || state.metricsBySector.general || []).slice(0,3);
+    metricBox.innerHTML="";
+    if (!metrics.length){
+      metricBox.innerHTML = `<div class="hint">No strong signals for this industry. You can still set priorities below.</div>`;
+      return;
+    }
+    for (const m of metrics){
+      const row=document.createElement("div"); row.className="sliderRow";
+      const lab=document.createElement("div"); lab.textContent=m;
+      const ctl=document.createElement("div");
+      ctl.innerHTML = `<input type="range" min="0" max="10" step="1" value="8">`;
+      row.appendChild(lab); row.appendChild(ctl);
+      metricBox.appendChild(row);
+    }
+  }
+
+  /* ---------------------- revenue dual range ---------------------- */
+  const revMin=$("#revMin"), revMax=$("#revMax"), revFill=$("#revFill"), revMinVal=$("#revMinVal"), revMaxVal=$("#revMaxVal");
+  function syncDual(){
+    let a = parseInt(revMin.value,10), b = parseInt(revMax.value,10);
+    if (a>b){ const t=a; a=b; b=t; revMin.value=a; revMax.value=b; }
+    const minPx=0, maxPx=$("#revDual").clientWidth||280; // just for fill sizing
+    const lo = a/200, hi=b/200;
+    revFill.style.left = (lo*100)+"%";
+    revFill.style.right = ((1-hi)*100)+"%";
+    revMinVal.textContent = fmtM(a);
+    revMaxVal.textContent = fmtM(b);
+  }
+  revMin.addEventListener("input", syncDual);
+  revMax.addEventListener("input", syncDual);
+  window.addEventListener("resize", syncDual);
+
+  /* ---------------------- employees ---------------------- */
+  const emp=$("#emp"), empVal=$("#empVal"), empHint=$("#empHint");
+  function syncEmp(){
+    const n = parseInt(emp.value,10);
+    empVal.textContent = String(n);
+    empHint.textContent = n<20 ? "micro" : n<200 ? "small" : n<1000 ? "mid" : "large";
+  }
+  emp.addEventListener("input", syncEmp);
+
+  /* ---------------------- one-liner edit/refresh ---------------------- */
+  const oneLine=$("#oneLine");
+  $("#editOne").addEventListener("click", (e)=>{
+    if ((e.target||{}).id==="refreshLink") return;
+    const ed = oneLine.isContentEditable;
+    oneLine.contentEditable = !ed;
+    oneLine.style.outline = ed? "none" : "2px solid var(--ring)";
   });
-}
-
-function fallbackOneLiner(){
-  setCrumbs({
-    host:model.host,
-    supplies: "packaging",
-    industry: model.industries[0]?.name||"industry",
-    geo:"the U.S.",
-    contacts:["Operations","Procurement"]
+  $("#refreshLink").addEventListener("click", async (e)=>{
+    e.preventDefault(); await loadFromSite(host,true);
   });
-}
 
-async function init(){
-  // one-liner
-  if (host) cHost.textContent=host;
-  if (apiBase){ const payload = await classifyViaAPI(); if (payload) fromClassifyPayload(payload); else fallbackOneLiner(); }
-  else { fallbackOneLiner(); }
+  /* ---------------------- apply/save ---------------------- */
+  function collectPersona(){
+    const sector = state.industries[state.sel] || "general";
+    const titles = getOnChips(titlesBox);
+    const cities = getOnChips(cityChips);
+    const tags = getOnChips(tagChips);
+    const revA = parseInt(revMin.value,10), revB = parseInt(revMax.value,10);
+    const minRev = Math.min(revA, revB), maxRev = Math.max(revA, revB);
 
-  // render rotor + detail
-  toggleHideMuted.checked = model.hideMuted;
-  renderRotor();
-  activateIndustry(model.activeIdx,true);
+    const metrics = Array.from(metricBox.querySelectorAll(".sliderRow")).map(row=>{
+      const label = row.firstChild.textContent.trim();
+      const val = Number(row.querySelector("input[type=range]").value||"8");
+      return { label, value: val };
+    });
 
-  // start at selected, not at bottom
-  scrollItemIntoCenter(model.activeIdx);
-}
+    return {
+      host: state.host,
+      lineText: oneLine.textContent.trim(),
+      productTags: tags,
+      sectorHints: state.industries.filter(x=>!state.muted.has(x)),
+      mutedSectors: Array.from(state.muted),
+      general: { aiFinalize: $("#letAi").checked },
+      metrics,
+      targeting: {
+        sector,
+        titles,
+        cities,
+        revenueMinM: minRev,
+        revenueMaxM: maxRev,
+        employees: Number(emp.value||0)
+      }
+    };
+  }
 
-init();
+  async function applyToApi(){
+    const base = ensureApi(); if (!base) return;
+    const payload = collectPersona();
+    try{
+      const res = await fetch(join(base,"/prefs/upsert"), {
+        method:"POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(payload)
+      });
+      const ok = res.ok; const txt = await res.text();
+      $("#statusLine").textContent = ok ? "Profile applied." : ("Apply failed: " + (txt||res.status));
+      $("#statusLine").className = ok? "ok" : "bad";
+    }catch(err){
+      $("#statusLine").textContent = "Network error applying profile.";
+      $("#statusLine").className = "bad";
+    }
+  }
 
-})();</script>
+  function saveLocal(){
+    try{ localStorage.setItem(LS.persona, JSON.stringify(collectPersona())); $("#statusLine").textContent="Saved locally."; $("#statusLine").className="ok"; }
+    catch{ $("#statusLine").textContent="Save failed."; $("#statusLine").className="bad"; }
+  }
+
+  $("#apply").addEventListener("click", applyToApi);
+  $("#saveLocal").addEventListener("click", saveLocal);
+  $("#finish").addEventListener("click", ()=>{
+    // save-and-go pattern
+    saveLocal();
+    // mark auto-import for panel
+    try{ localStorage.setItem("fp.autoImport","1"); }catch{}
+    window.location.href = "free-panel.html";
+  });
+
+  /* ---------------------- load classify + hydrate ---------------------- */
+  async function loadFromSite(h, forceRefresh=false){
+    updApiBadge();
+    if (!h){ oneLine.textContent = "Missing website/domain."; return; }
+    $("#statusLine").textContent = `Reading ${h}…`;
+    const data = await fetchClassify(h);
+    if (!data || data.ok===false){
+      $("#statusLine").textContent = `Couldn’t read ${h}: ${data?.detail||"error"}`;
+      $("#statusLine").className = "warn"; return;
+    }
+    state.classify = data;
+    state.products = Array.isArray(data.productTags)? data.productTags.slice(0,12) : [];
+    state.metricsBySector = data.hotMetricsBySector || {};
+    state.geo = data.geoHints || {citiesTop:[],statesTop:[]};
+
+    // one-liner
+    const use = (forceRefresh || !oneLine.textContent || /Loading/.test(oneLine.textContent));
+    if (use){
+      oneLine.textContent = composeOneLiner(data);
+    }
+
+    // chips
+    $("#tagChipsInner").innerHTML=""; state.products.forEach(t=> chip(t, $("#tagChipsInner"), true));
+    $("#cityChipsInner").innerHTML="";
+    const citySeeds = (state.geo.citiesTop && state.geo.citiesTop.length) ? state.geo.citiesTop : ["Chicago","Dallas","Atlanta"];
+    citySeeds.forEach(c=> chip(c, $("#cityChipsInner"), true));
+
+    // industries + metrics
+    buildIndustries(data);
+    $("#statusLine").textContent = "Pre-filled from your site.";
+    $("#statusLine").className = "ok";
+
+    // revenue range quick seed by size guess
+    const guess = state.products.some(p=>/pallet|ship|logistics/i.test(p)) ? [5,50] :
+                  state.products.some(p=>/labels?|boxes?|cartons?/i.test(p)) ? [2,80] : [1,40];
+    revMin.value = guess[0]; revMax.value = guess[1]; syncDual();
+    emp.value = 120; syncEmp();
+  }
+
+  /* ---------------------- inputs wiring ---------------------- */
+  addOnEnter($("#cityInput"), $("#cityChipsInner"));
+  addOnEnter($("#tagInput"), $("#tagChipsInner"));
+  $("#setApi").addEventListener("click", ()=>{
+    const cur = getApiBase();
+    const v = prompt("API base (with or without /api).", cur||"")||"";
+    if (v) setApiBase(v);
+    updApiBadge();
+  });
+
+  /* ---------------------- boot ---------------------- */
+  updApiBadge();
+  if (!host) {
+    const manual = prompt("Your website / domain? (e.g., acme.com)","")||"";
+    state.host = normHost(manual);
+  }
+  loadFromSite(state.host, true);
+  // initialize visuals
+  syncDual(); syncEmp();
+})();
+</script>
 </body>
 </html>
