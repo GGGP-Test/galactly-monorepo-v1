@@ -9,65 +9,60 @@
 :root{
   --bg:#0b0f14; --panel:#101726; --panel-2:#0e141c; --divider:#1b2531;
   --text:#e9f1f7; --muted:#8aa0b2; --brand:#8ae3ff; --cta:#6de1ff; --ctaText:#082433;
-  --chip:#162133; --chipAct:#0f3046; --good:#38e08f; --bad:#ff6b6b;
+  --chip:#162133; --chipAct:#0f3046;
 }
-html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,Segoe UI,Inter,Roboto,Arial}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,Inter,Segoe UI,Roboto,Arial}
 .wrap{max-width:1100px;margin:0 auto;padding:22px 14px 36px}
 
+/* top line */
 .top{background:linear-gradient(180deg,#0f1623,#0b131e);border:1px solid var(--divider);border-radius:14px;padding:12px 12px 8px;margin-bottom:16px}
 .badge{display:inline-flex;gap:6px;align-items:center;background:#0f1e2c;border:1px solid var(--divider);border-radius:999px;padding:6px 10px;margin:4px 6px 0 0;color:#cfe5f9}
 .badge .favicon{width:18px;height:18px;border-radius:4px;background:#fff;display:inline-grid;place-items:center;overflow:hidden}
 .kv{display:flex;flex-wrap:wrap;gap:6px 10px;margin:8px 0 0}
 .kv .pill{background:#0e1a27;border:1px solid var(--divider);border-radius:10px;padding:6px 10px;color:#bcd3e7}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0f1e2c;border:1px solid var(--divider);color:#cfe5f9}
 
-.hrow{display:flex;justify-content:space-between;align-items:center;margin:6px 0 8px}
+/* buttons */
 .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
 .btn.sec{background:#152333;color:#cfe0ee}
 .btn.ghost{background:#0f1b29;border:1px solid var(--divider);color:#cfe0ee}
 .btn:active{transform:translateY(1px)}
+.hrow{display:flex;justify-content:space-between;align-items:center;margin:6px 0 8px}
 
+/* cards */
 .card{background:var(--panel);border:1px solid var(--divider);border-radius:16px;padding:14px;margin:12px 0}
 .card h3{margin:0 0 8px}
 .muted{color:#9eb4c7;font-size:12px}
 
-/* --- Rotor ---  */
+/* --- Rotor (center-locked) --- */
 .pane{display:grid;grid-template-columns:300px 1fr;gap:16px}
 @media (max-width:900px){.pane{grid-template-columns:1fr}}
 .rotor{position:relative;height:280px;background:#0e1725;border:1px solid var(--divider);border-radius:14px;overflow:hidden}
-.rotor .hint{position:absolute;bottom:8px;left:10px;color:#88a1b8;font-size:12px}
 .rotor-viewport{position:absolute;inset:0;contain:layout paint;will-change:transform}
 .rotor-item{
   position:absolute;left:50%;
-  transform:translate(-50%,-50%) scale(0.9);
-  transition:transform .18s ease,opacity .18s ease,filter .18s ease;
-  padding:8px 12px;border-radius:10px;border:1px solid transparent;
-  background:transparent;color:#b7c9da;pointer-events:auto;user-select:none;
-  white-space:nowrap;font-weight:700;letter-spacing:.2px
+  transform:translate(-50%,-50%) scale(var(--s,.9));
+  top:calc(50% + var(--y,0px));
+  opacity:var(--o,.7);
+  color:rgba(231,242,255,var(--o,.7));
+  font-weight:600;letter-spacing:.2px;white-space:nowrap;pointer-events:auto;user-select:none;
 }
-.rotor-item.active{color:#eaf6ff;background:#0f2234;border-color:#1e3a55;filter:none}
-.rotor-item.muted{opacity:.28;filter:grayscale(40%)}
-.rotor-center-line{position:absolute;left:10px;right:10px;top:50%;transform:translateY(-50%);
-  height:0;border-top:1px dashed #1d3144}
+.rotor-item.active{font-weight:900;opacity:1;--s:1.18;color:#eaf6ff}
+.rotor-item.muted{opacity:.24}
+.rotor-center-line{position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:0;border-top:1px dashed #1d3144}
+.rotor-hint{position:absolute;left:10px;bottom:8px;color:#88a1b8;font-size:12px}
 
-/* --- Metrics + sliders --- */
+/* right column basics */
 .row{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:center;margin:8px 0}
 @media (max-width:800px){.row{grid-template-columns:1fr}}
 input[type=range]{width:100%}
-
-/* chips */
 .chips{user-select:none}
-.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);
-  color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
 .chip.active{background:var(--chipAct);color:#eaf7ff;border-color:#1b4862}
 
-/* dual slider (company size) */
+/* dual slider track */
 .duo{position:relative;height:36px;margin:6px 0 4px}
-.duo input{position:absolute;left:0;right:0;top:8px;height:20px;appearance:none;background:transparent;pointer-events:auto}
-.duo input::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:#e56;box-shadow:0 0 0 3px #0a1522;border:2px solid #fff;cursor:pointer}
-.duo input::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#e56;border:2px solid #fff;cursor:pointer}
 .duo .track{position:absolute;left:0;right:0;top:17px;height:6px;border-radius:999px;background:#314258}
-.duo .fill{position:absolute;top:17px;height:6px;border-radius:999px;background:#e56}
-.range-labels{display:flex;justify-content:space-between;color:#92a9bd;font-size:12px}
 
 /* footer */
 .ft{display:flex;justify-content:space-between;gap:12px;margin-top:16px}
@@ -76,7 +71,7 @@ input[type=range]{width:100%}
 </head>
 <body>
   <div class="wrap">
-    <!-- Persona one-liner -->
+    <!-- Persona one-liner + controls -->
     <div class="top" id="personaTop">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span class="badge"><span class="favicon"><img id="fav" alt="" width="18" height="18" referrerpolicy="no-referrer"></span><span id="hostTxt">yourcompany.com</span></span>
@@ -86,28 +81,27 @@ input[type=range]{width:100%}
       </div>
     </div>
 
-    <!-- Advanced (collapsible) -->
     <div class="hrow">
       <h2 style="margin:0">Step 3</h2>
-      <button id="advToggle" class="btn  ghost"><span id="advLbl">Hide advanced ▲</span></button>
+      <button id="advToggle" class="btn ghost"><span id="advLbl">Hide advanced ▲</span></button>
     </div>
 
     <div id="adv" class="card">
       <div class="pane">
-        <!-- Rotor -->
+        <!-- Rotor (left) -->
         <div class="rotor" id="rotor" aria-label="Industries">
           <div class="rotor-viewport" id="rotorViewport"></div>
           <div class="rotor-center-line"></div>
-          <div class="hint">Scroll, drag or click. Center item is active.</div>
+          <div class="rotor-hint">Scroll, drag or click. Center item is active.</div>
         </div>
 
-        <!-- Right side: metrics for selected industry -->
+        <!-- Right side -->
         <div>
           <div class="hrow">
             <h3 id="sectTitle" style="margin:0">—</h3>
             <div style="display:flex;gap:10px;align-items:center">
               <label class="muted" style="display:flex;gap:6px;align-items:center"><input id="aiDecide" type="checkbox"> Let AI decide</label>
-              <button id="muteBtn" class="btn  ghost">Mute</button>
+              <button id="muteBtn" class="btn ghost">Mute</button>
             </div>
           </div>
 
@@ -122,27 +116,21 @@ input[type=range]{width:100%}
 
           <div class="card" id="personaBox">
             <h4 style="margin:0 0 8px">Hot-buyer persona — <span id="personaFor">—</span></h4>
-            <div>
-              <div class="muted" style="margin:4px 0 6px">Company size focus (revenue). Drag both handles.</div>
-              <div class="duo">
-                <div class="track"></div><div class="fill" id="fill"></div>
-                <input id="lo" type="range" min="0" max="7" value="1" step="1">
-                <input id="hi" type="range" min="0" max="7" value="3" step="1">
-              </div>
-              <div class="range-labels"><span>$0</span><span>$20M</span><span>$100M</span><span>$250M</span><span>$500M</span><span>$1B</span><span>$5B</span><span>$10B+</span></div>
-
-              <div style="margin-top:10px">
-                <label class="muted">Best titles to reach</label>
-                <div id="titlesChips" class="chips" style="margin-top:4px"></div>
-              </div>
+            <div class="muted" style="margin:4px 0 6px">Company size focus (revenue). Drag both handles.</div>
+            <div class="duo"><div class="track"></div></div>
+            <div style="margin-top:10px">
+              <label class="muted">Best titles to reach</label>
+              <div id="titlesChips" class="chips" style="margin-top:4px"></div>
             </div>
           </div>
+        </div>
+      </div>
 
-        </div><!-- /right -->
-      </div><!-- /pane -->
-    </div><!-- /adv -->
+      <label class="muted" style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <input id="hideMutedBox" type="checkbox"> Hide muted
+      </label>
+    </div>
 
-    <!-- footer -->
     <div class="ft">
       <div class="muted" id="status"></div>
       <div class="right">
@@ -161,7 +149,6 @@ const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);
 const getS=(k,d=null)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
 const setS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
-
 function setFavicon(host){ const h=normHost(host); const fav=$("#fav"); fav.src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):""; }
 
 /* ==================== Seed + API ==================== */
@@ -184,117 +171,44 @@ function classifyURL(){
   return /\/api$/.test(b) ? b+"/classify" : b+"/api/classify";
 }
 
-/* ==================== Domain data (metrics, ops, titles) ==================== */
-const INDUSTRIES = [
-  "Beverage","Food","Cosmetics","Electronics","Industrial","Logistics","Apparel","Pharma","Automotive"
-];
+/* ==================== Data shells ==================== */
+const INDUSTRIES = ["Beverage","Food","Cosmetics","Electronics","Industrial","Logistics","Apparel","Pharma","Automotive"];
 
-const METRIC_MAP = {
-  Beverage:[
-    ["High-speed line compatibility","0=manual/slow — 10=≥500+ units/min or ≥30 cases/min",8],
-    ["Retail-ready print consistency","0=drift/misregister — 10=ΔE<2 @ volume",8],
-    ["Condensation tolerance","0=fails w/ light sweat — 10=retort/cooler-ready",7],
-    ["Pallet stability for bottlers","0=shifts/collapses — 10=ISTA 3A/3E stable",8],
-    ["Case integrity for glass/plastic","0=breaks/deforms — 10=holds @ peak load",7],
-    ["Damage reduction targets in transit","0=no target — 10=≤0.5% KPI",7]
-  ],
-  Food:[
-    ["Food-contact compliance (FDA/EC)","0=uncertified — 10=fully certified",9],
-    ["Oxygen/moisture barrier","0=none — 10=validated OTR/WVTR",8],
-    ["Traceability & COA","0=none — 10=lot-level COA + recall-ready",8],
-    ["Sealing performance","0=frequent leaks — 10=validated hermetic @ scale",8],
-    ["Print/label regs","0=non-compliant — 10=GHS/NLEA @ scale",7]
-  ],
-  Cosmetics:[
-    ["Premium print/finish expectations","0=basic CMYK — 10=foil/spot/emboss @ scale",9],
-    ["Color consistency ΔE","0=ΔE>6 — 10=ΔE≤2",8],
-    ["Unboxing experience","0=plain — 10=designed tactile experience",7]
-  ],
-  Electronics:[
-    ["ESD protection requirements","0=not needed — 10=ANSI/ESD S541",8],
-    ["Shock/vibration protection","0=insufficient — 10=drop/ISTA validated",7],
-    ["Moisture control","0=none — 10=desiccant + barrier spec",7]
-  ],
-  Industrial:[
-    ["Heavy-load stability","0=frequent load shifts — 10=validated",8],
-    ["Puncture/tear resistance","0=tears common — 10=meets spec",8],
-    ["Unitization efficiency","0=inefficient — 10=optimized cube/film",7]
-  ],
-  Logistics:[
-    ["3PL/e-com integration","0=manual — 10=ready labels/ASN/SLAs",8],
-    ["Damage in parcel","0=high — 10=≤0.5% returns due to damage",7],
-    ["Dock-to-stock speed","0=slow — 10=fast with ready SKUs",7]
-  ],
-  Apparel:[
-    ["Presentation (crease/scuff)","0=issues common — 10=store-ready",8],
-    ["Parcel-rate optimization","0=oversized — 10=lowest practical DIM",7],
-    ["Return-friendly design","0=hassles — 10=easy reseal/scan",7]
-  ],
-  Pharma:[
-    ["GxP documentation","0=basic — 10=full dossier",9],
-    ["Tamper-evidence","0=not present — 10=validated",8],
-    ["Serialisation/lot coding","0=none — 10=aggregated",8]
-  ],
-  Automotive:[
-    ["Grease/solvent resistance","0=poor — 10=validated",7],
-    ["Line-side kitting","0=ad-hoc — 10=optimized",7],
-    ["Export durability","0=fails — 10=validated",7]
-  ]
-};
-const OPS_POOL = {
-  default:["Hand pallet wrapping","Automated pallet wrapper","E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"],
-  Apparel:["E-commerce fulfillment","3PL / distribution"],
-  Logistics:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution"]
-};
-const TITLES_POOL = {
-  default:["Operations","Procurement","Plant Manager","Supply Chain","Warehouse"],
-  Cosmetics:["Operations","Procurement","Brand Ops"],
-  Logistics:["Operations","Supply Chain","Procurement"],
-  Apparel:["Operations","E-com Ops","Procurement"]
-};
-
-/* ==================== Rotor component ==================== */
+/* ==================== Rotor (center-locked) ==================== */
 const rotor = $("#rotor");
 const viewport = $("#rotorViewport");
 let items = INDUSTRIES.map(name=>({name, muted:false, aiDecide:false}));
 let filtered = items.slice();
-let sel = 0;            // selected index in filtered[]
-let gap = 52;           // px distance between rows
-let animRaf = null;
+let sel = 0;          // selected index in filtered[]
+let GAP = 44;         // distance between items (px)
 let dragging = false, startY=0, acc=0;
 
-function renderRotor(){
-  // Virtualize: only draw 11 around selection
+function drawRotor(){
   viewport.innerHTML="";
-  const centerY = rotor.clientHeight/2;
-  const span = 5;
+  const span = 6; // draw ±6 items only (perf)
   for (let i=-span;i<=span;i++){
     const idx = sel+i;
     if (idx<0 || idx>=filtered.length) continue;
-    const data = filtered[idx];
+    const it = filtered[idx];
+    const y = i*GAP;
     const d = Math.abs(i);
-    const y = centerY + i*gap;
-    const s = clamp(1 - 0.12*d, 0.7, 1.12);
-    const o = clamp(1 - 0.18*d, .18, 1);
+    const s = clamp(1 - 0.10*d, 0.72, 1.18);
+    const o = clamp(1 - 0.16*d, .16, 1);
     const el = document.createElement("div");
-    el.className = "rotor-item"+(i===0?" active":"")+(data.muted?" muted":"");
-    el.style.top = y+"px";
-    el.style.setProperty("--d", d);
-    el.style.transform = `translate(-50%,-50%) scale(${s})`;
-    el.style.opacity = o;
-    el.textContent = data.name;
-    el.addEventListener("click",()=>{ sel = idx; syncIndustryUI(); renderRotor(); });
+    el.className = "rotor-item"+(i===0?" active":"")+(it.muted?" muted":"");
+    el.style.setProperty("--s", s);
+    el.style.setProperty("--o", o);
+    el.style.setProperty("--y", y+"px");
+    el.textContent = it.name;
+    el.addEventListener("click",()=>{ sel = idx; syncIndustryUI(); drawRotor(); });
     viewport.appendChild(el);
   }
 }
-
 function stepBy(delta){
   if (!filtered.length) return;
   sel = (sel + delta + filtered.length) % filtered.length;
-  syncIndustryUI();
-  renderRotor();
+  syncIndustryUI(); drawRotor();
 }
-
 function onWheel(e){
   e.preventDefault();
   acc += e.deltaY;
@@ -308,7 +222,7 @@ function onPointerMove(e){
   if (!dragging) return;
   const y = e.clientY || e.touches?.[0]?.clientY || 0;
   const dy = y - startY; startY = y; acc += dy;
-  while (Math.abs(acc) >= gap/2){ stepBy(acc>0?-1:1); acc += (acc>0?-1:1)*(-gap/2); }
+  while (Math.abs(acc) >= GAP/2){ stepBy(acc>0?-1:1); acc += (acc>0?-1:1)*(-GAP/2); }
 }
 function onPointerUp(){ dragging=false; }
 
@@ -321,42 +235,9 @@ rotor.addEventListener("touchstart", e=>onPointerDown(e.touches[0]), {passive:tr
 rotor.addEventListener("touchmove", e=>{onPointerMove(e.touches[0]); e.preventDefault();},{passive:false});
 rotor.addEventListener("touchend", onPointerUp);
 
-/* ==================== Right side UI ==================== */
+/* ==================== Right column wires ==================== */
 const sectTitle=$("#sectTitle"), muteBtn=$("#muteBtn"), aiDecide=$("#aiDecide");
-const metricsBox=$("#metricsBox"), opsChips=$("#opsChips"), opsSliders=$("#opsSliders");
 const opsFor=$("#opsFor"), personaFor=$("#personaFor");
-const titlesChips=$("#titlesChips");
-
-function chip(text, active=false){
-  const s=document.createElement("span"); s.className="chip"; s.textContent=text;
-  if (active) s.classList.add("active");
-  s.addEventListener("click",()=> s.classList.toggle("active"));
-  return s;
-}
-
-function renderMetrics(name){
-  metricsBox.innerHTML="";
-  const list = (METRIC_MAP[name]||METRIC_MAP.Beverage);
-  list.forEach(([label,desc,def=7])=>{
-    const row=document.createElement("div"); row.className="row";
-    const left=document.createElement("div");
-    left.innerHTML = `<div style="font-weight:700">${label}</div><div class="muted">${desc}</div>`;
-    const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=def;
-    row.appendChild(left); row.appendChild(input); metricsBox.appendChild(row);
-  });
-}
-
-function renderOps(name){
-  opsChips.innerHTML=""; opsSliders.innerHTML="";
-  const pool = OPS_POOL[name] || OPS_POOL.default;
-  pool.forEach(p=> opsChips.appendChild(chip(p,true)));
-}
-
-function renderTitles(name){
-  titlesChips.innerHTML="";
-  (TITLES_POOL[name]||TITLES_POOL.default).forEach(t=> titlesChips.appendChild(chip(t,true)));
-}
-
 function syncIndustryUI(){
   if (!filtered.length){ sectTitle.textContent="—"; return; }
   const name = filtered[sel].name;
@@ -365,110 +246,44 @@ function syncIndustryUI(){
   personaFor.textContent = name;
   muteBtn.textContent = filtered[sel].muted ? ("Unmute "+name) : ("Mute "+name);
   aiDecide.checked = !!filtered[sel].aiDecide;
-
-  renderMetrics(name);
-  renderOps(name);
-  renderTitles(name);
 }
-
-/* hide-muted toggle */
-const hideMuted = document.createElement("label");
-hideMuted.className="muted"; hideMuted.style.display="flex"; hideMuted.style.gap="8px"; hideMuted.style.alignItems="center";
-hideMuted.style.marginTop="8px"; hideMuted.innerHTML = `<input id="hideMutedBox" type="checkbox"> Hide muted`;
-rotor.after(hideMuted);
-$("#hideMutedBox").addEventListener("change",()=>{
-  const on = $("#hideMutedBox").checked;
-  filtered = on ? items.filter(x=>!x.muted) : items.slice();
-  sel = 0; renderRotor(); syncIndustryUI();
-});
-
-/* mute + ai decide */
 muteBtn.addEventListener("click",()=>{
   if (!filtered.length) return;
   const obj = filtered[sel];
   obj.muted = !obj.muted;
-  muteBtn.textContent = obj.muted ? ("Unmute "+obj.name) : ("Mute "+obj.name);
   if ($("#hideMutedBox").checked){ filtered = items.filter(x=>!x.muted); sel = 0; }
-  renderRotor(); syncIndustryUI();
+  syncIndustryUI(); drawRotor();
 });
 aiDecide.addEventListener("change",()=>{ if(filtered.length) filtered[sel].aiDecide = aiDecide.checked; });
+$("#hideMutedBox").addEventListener("change",()=>{
+  const on = $("#hideMutedBox").checked;
+  filtered = on ? items.filter(x=>!x.muted) : items.slice();
+  sel = 0; drawRotor(); syncIndustryUI();
+});
 
-/* ==================== Persona badges (top line) ==================== */
+/* ==================== One-liner (top badges) ==================== */
 function setOneLiner(data){
   const kv=$("#kvLine"); kv.innerHTML="";
+  const tags = (data.productTags||[]);
+  const top3 = tags.slice(0,3).join(", ") + (tags.length>3 ? ", etc." : "");
   const parts = [
     ["supplies", true],
-    [ (data.productTags||[]).slice(0,3).join(", ") + ( (data.productTags||[]).length>3 ? ", etc." : "" ) || "packaging", true],
+    [ top3 || "packaging", true],
     ["for", true],
-    [ (data.sectorHints||[]).slice(0,1).join(", ") || "brands", true],
+    [ (data.sectorHints||[])[0] || "brands", true],
     ["in", true],
     [ "the U.S.", true ]
   ];
   parts.forEach(([txt])=>{const s=document.createElement("span"); s.className="pill"; s.textContent=txt; kv.appendChild(s);});
 }
 
-/* ==================== Dual-range (company size) ==================== */
-const lo=$("#lo"), hi=$("#hi"), fill=$("#fill");
-const steps=[0,20,100,250,500,1000,5000,10000]; // $M
-function syncFill(){
-  let a=+lo.value, b=+hi.value;
-  if (a>b){ const t=a;a=b;b=t; lo.value=a; hi.value=b; }
-  const w = $("#personaBox").clientWidth - 28;
-  const pct = x => x/7;
-  fill.style.left = (pct(a)*100)+"%";
-  fill.style.right = (100 - pct(b)*100)+"%";
-}
-lo.addEventListener("input",syncFill); hi.addEventListener("input",syncFill);
-
-/* ==================== Save / Finish ==================== */
-function collectPersona(){
-  const industry = filtered.length ? filtered[sel].name : "Beverage";
-  const metrics = [...metricsBox.querySelectorAll(".row")].map(r=>({
-    label: r.querySelector("div div:nth-child(1)")?.previousSibling?"" : r.querySelector("div").textContent.split("\n")[0],
-    value: +r.querySelector('input[type="range"]').value
-  }));
-  const operations = [...opsChips.querySelectorAll(".chip.active")].map(el=>({label:el.textContent, value:7}));
-  const titles = [...titlesChips.querySelectorAll(".chip.active")].map(el=>el.textContent);
-  const size = { minM: steps[+lo.value], maxM: steps[+hi.value] };
-
-  const persona = {
-    host, industry, metrics, operations,
-    persona: { titles, size },
-    muted: items.filter(x=>x.muted).map(x=>x.name),
-    aiDecide: items.filter(x=>x.aiDecide).map(x=>x.name)
-  };
-  return persona;
-}
-$("#save").addEventListener("click",()=>{
-  setS("bf.persona", collectPersona());
-  $("#status").textContent="Saved.";
-  setTimeout(()=>$("#status").textContent="",1200);
-});
-$("#finish").addEventListener("click",()=>{
-  const p=collectPersona();
-  setS("bf.persona", p);
-  setS("fp.persona", p);
-  setS("fp.supplier.host", host);
-  setS("fp.autoImport","1");
-  location.href="free-panel.html";
-});
-
-/* ==================== Advanced toggle ==================== */
-const adv=$("#adv"), advToggle=$("#advToggle"), advLbl=$("#advLbl");
-advToggle.addEventListener("click",()=>{
-  const open = !adv.hasAttribute("hidden");
-  if (open){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
-  else { adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
-});
-
-/* ==================== Classify (light) ==================== */
+/* ==================== Classify helper ==================== */
 async function classify(host, email){
   const url= classifyURL() + "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
   try{
     const r=await fetch(url,{credentials:"omit"}); if(!r.ok) throw new Error(r.status);
     return await r.json();
   }catch(e){
-    // path swap fallback
     const alt = /\/api\/classify$/.test(url)?url.replace(/\/api\/classify$/,"/classify"):url.replace(/\/classify$/,"/api/classify");
     const r2=await fetch(alt,{credentials:"omit"}); if(!r2.ok) throw new Error(r2.status);
     return await r2.json();
@@ -478,34 +293,258 @@ async function classify(host, email){
 /* ==================== Boot ==================== */
 async function boot(){
   await apiDetect();
-
-  // initial rotor
-  filtered = items.slice();
-  sel = 0; renderRotor(); syncIndustryUI(); syncFill();
-
-  // fetch persona hints
+  filtered = items.slice(); sel = 0; drawRotor(); syncIndustryUI();
   $("#status").textContent="Fetching…";
   try{
     const data = await classify(host, seed?.contact?.email||"");
-    setOneLiner(data||{});
-    $("#status").textContent = data?.cached ? "(cached)" : "";
-    // optional: prioritize sectors from classify
-    if (Array.isArray(data?.sectorHints) && data.sectorHints.length){
-      const set=new Set(data.sectorHints.map(s=>String(s).toLowerCase()));
-      items.forEach(it=>{ it.priority = set.has(it.name.toLowerCase())?1:0; });
-      items.sort((a,b)=>b.priority-a.priority || a.name.localeCompare(b.name));
-      filtered = items.slice(); sel = 0; renderRotor(); syncIndustryUI();
-    }
-  }catch(e){
-    $("#status").textContent="(offline)";
-    setOneLiner({});
-  }
+    setOneLiner(data||{}); $("#status").textContent = data?.cached ? "(cached)" : "";
+  }catch{ $("#status").textContent="(offline)"; setOneLiner({}); }
 }
 boot();
 
 /* back */
 $("#back").addEventListener("click",()=>history.back());
 
+/* ==== PART SPLIT MARK — STOP HERE (Part 1/2) ==== */
+
+  /* ==================== Metrics / Ops / Persona ==================== */
+  const METRICS = {
+    Beverage: [
+      {k:"speed", label:"High-speed line compatibility", hint:"0—manual/slow  — 10—≥500+ units/min or ≥30 cases/min", def:8},
+      {k:"print", label:"Retail-ready print consistency", hint:"0—drift/misregister  — 10—ΔE<2 & tight register @ volume", def:8},
+      {k:"condense", label:"Condensation tolerance", hint:"0—fails w/ light sweat  — 10—retort/cooler-ready", def:7},
+      {k:"pallet", label:"Pallet stability for bottlers", hint:"0—shifts/collapses  — 10—ISTA 3A/3E stable", def:8},
+      {k:"integrity", label:"Case integrity for glass/plastic", hint:"0—breaks/deforms  — 10—holds @ peak load/transport", def:8},
+      {k:"damage", label:"Damage reduction targets in transit", hint:"0—no target  — 10—≤0.5% KPI", def:7}
+    ],
+    Food: [
+      {k:"fda", label:"Food-contact compliance (FDA/EC)", hint:"0—uncertified  — 10—fully certified w/ documentation", def:9},
+      {k:"barrier", label:"Oxygen/moisture barrier", hint:"0—none  — 10—validated OTR/WVTR for shelf-life", def:8},
+      {k:"trace", label:"Traceability & COA", hint:"0—none  — 10—lot-level COA + recall-ready", def:8},
+      {k:"seal", label:"Sealing performance", hint:"0—frequent leaks  — 10—validated hermetic seal @ scale", def:8},
+      {k:"labels", label:"Print/label regs", hint:"0—non-compliant  — 10—GHS/NLEA compliant @ scale", def:7}
+    ],
+    Cosmetics: [
+      {k:"finish", label:"Premium print/finish expectations", hint:"0—basic CMYK  — 10—foil/spot UV/emboss @ scale", def:8},
+      {k:"deltae", label:"Color consistency ΔE", hint:"0—ΔE>6  — 10—ΔE≤2", def:8},
+      {k:"unbox", label:"Unboxing experience", hint:"0—plain  — 10—designed tactile experience", def:7}
+    ],
+    Electronics: [
+      {k:"esd", label:"ESD protection requirements", hint:"0—not needed  — 10—ANSI/ESD S541-compliant", def:8},
+      {k:"shock", label:"Shock/vibration protection", hint:"0—insufficient  — 10—drop/ISTA validated", def:8},
+      {k:"moist", label:"Moisture control", hint:"0—none  — 10—desiccant & barrier spec maintained", def:7}
+    ],
+    Industrial: [
+      {k:"heavy", label:"Heavy-load stability", hint:"0—fails  — 10—validated for load/height", def:8},
+      {k:"puncture", label:"Puncture/tear resistance", hint:"0—tears common  — 10—spec passes across SKUs", def:8},
+      {k:"unit", label:"Unitization efficiency", hint:"0—poor cube  — 10—optimized cube/weight", def:7}
+    ],
+    Logistics: [
+      {k:"asn", label:"3PL/e-com integration", hint:"0—manual  — 10—ready labels/ASN/SLAs", def:8},
+      {k:"parcel", label:"Damage in parcel", hint:"0—high  — 10—≤0.5% returns due to damage", def:7},
+      {k:"dock", label:"Dock-to-stock speed", hint:"0—slow  — 10—fast with ready SKUs", def:7}
+    ],
+    Apparel: [
+      {k:"present", label:"Presentation (crease/scuff)", hint:"0—issues common  — 10—store-ready", def:8},
+      {k:"dim", label:"Parcel-rate optimization", hint:"0—oversized  — 10—lowest practical DIM", def:8},
+      {k:"returns", label:"Return-friendly design", hint:"0—hassles  — 10—easy reseal/scan", def:7}
+    ],
+    Pharma: [
+      {k:"gxp", label:"GxP documentation", hint:"0—weak  — 10—robust/validated", def:9},
+      {k:"serial", label:"Serialization/lot coding", hint:"0—none  — 10—DSCSA/trace-ready", def:9},
+      {k:"tamper", label:"Tamper-evidence compliance", hint:"0—none  — 10—validated TE spec", def:9}
+    ],
+    Automotive: [
+      {k:"solvent", label:"Grease/solvent resistance", hint:"0—fails  — 10—lab-validated", def:8},
+      {k:"bulk", label:"Bulk-pack efficiency", hint:"0—poor  — 10—optimized dunnage/kitting", def:7},
+      {k:"barcode", label:"Barcode/label compliance", hint:"0—non-compliant  — 10—OEM spec met", def:8}
+    ]
+  };
+  const OPS = {
+    Beverage:["Automated pallet wrapper","Hand pallet wrapping","E-commerce fulfillment","3PL / distribution"],
+    Food:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution"],
+    Cosmetics:["E-commerce fulfillment","3PL / distribution","Co-packing"],
+    Electronics:["Warehouse pick/pack","3PL / distribution"],
+    Industrial:["3PL / distribution","Warehouse pick/pack"],
+    Logistics:["3PL / distribution","E-commerce fulfillment","Warehouse pick/pack"],
+    Apparel:["E-commerce fulfillment","3PL / distribution"],
+    Pharma:["3PL / distribution","Cold chain"],
+    Automotive:["3PL / distribution","Kitting"]
+  };
+  const TITLES = {
+    default:["Operations","Procurement","Plant Manager","Supply Chain","Packaging Engineer","Warehouse"],
+    Logistics:["Logistics","Ops","Fulfillment","Procurement","3PL Manager"],
+    Apparel:["E-com Ops","Fulfillment","Procurement","Supply Chain"],
+    Beverage:["Packaging Engineer","Operations","Procurement","Plant Manager"]
+  };
+
+  // runtime state per industry
+  items.forEach(it=>{
+    it.metrics = (METRICS[it.name]||[]).map(m=>({...m, value:m.def}));
+    it.opsSel = new Map();           // label -> importance (0..10)
+    it.size = {min:5, max:120};      // $M
+    it.titles = new Set((TITLES[it.name]||TITLES.default).slice(0,2)); // preselect a couple
+  });
+
+  /* ---------- metrics UI ---------- */
+  const metricsBox = $("#metricsBox");
+  function renderMetricsFor(name){
+    const obj = items.find(x=>x.name===name); if (!obj) return;
+    metricsBox.innerHTML="";
+    obj.metrics.forEach(m=>{
+      const row=document.createElement("div"); row.className="row";
+      const lab=document.createElement("div");
+      lab.innerHTML=`<div style="font-weight:700">${m.label}</div><div class="muted">${m.hint}</div>`;
+      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=m.value;
+      input.addEventListener("input",()=>{ m.value=+input.value; });
+      row.appendChild(lab); row.appendChild(input); metricsBox.appendChild(row);
+    });
+    applyAIDecideDisabling(obj.aiDecide);
+  }
+
+  /* ---------- ops UI ---------- */
+  const opsChips=$("#opsChips"), opsSliders=$("#opsSliders");
+  function addChip(txt, box, onToggle, active=false){
+    const s=document.createElement("span"); s.className="chip"; s.textContent=txt; box.appendChild(s);
+    s.classList.toggle("active", !!active);
+    s.addEventListener("click",()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); onToggle?.(on,txt,s); });
+    return s;
+  }
+  function renderOpsFor(name){
+    const obj = items.find(x=>x.name===name); if (!obj) return;
+    opsChips.innerHTML=""; opsSliders.innerHTML="";
+    (OPS[name]||[]).forEach(l=>{
+      addChip(l, opsChips, (on, label)=>{
+        if (on){ ensureOp(label); } else { removeOp(label); }
+      }, obj.opsSel.has(l));
+    });
+    // paint sliders for existing selections
+    obj.opsSel.forEach((v,label)=> ensureOp(label,v));
+
+    function ensureOp(label, val=7){
+      if (obj.opsSel.has(label) && opsSliders.querySelector(`[data-lab="${CSS.escape(label)}"]`)) return;
+      const wrap=document.createElement("div"); wrap.className="row"; wrap.dataset.lab=label;
+      const lab=document.createElement("div"); lab.innerHTML=`<div style="font-weight:700">${label}</div>`;
+      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=val;
+      input.addEventListener("input",()=> obj.opsSel.set(label, +input.value));
+      wrap.appendChild(lab); wrap.appendChild(input); opsSliders.appendChild(wrap);
+      obj.opsSel.set(label, val);
+      applyAIDecideDisabling(obj.aiDecide);
+    }
+    function removeOp(label){
+      const el=opsSliders.querySelector(`[data-lab="${CSS.escape(label)}"]`); if (el) el.remove();
+      obj.opsSel.delete(label);
+    }
+  }
+
+  /* ---------- persona UI ---------- */
+  const personaBox=$("#personaBox");
+  const titlesChips=$("#titlesChips");
+  let rMin, rMax, sizeLabel;
+  function renderPersonaFor(name){
+    const obj = items.find(x=>x.name===name); if (!obj) return;
+
+    // dual slider
+    personaBox.querySelector(".duo")?.querySelectorAll("input").forEach(el=>el.remove());
+    const minInput=document.createElement("input");
+    const maxInput=document.createElement("input");
+    minInput.type=maxInput.type="range";
+    minInput.min=maxInput.min="0"; minInput.max=maxInput.max="120";
+    minInput.value=obj.size.min; maxInput.value=obj.size.max;
+    minInput.style.width=maxInput.style.width="100%";
+    minInput.style.position=maxInput.style.position="absolute";
+    minInput.style.top=maxInput.style.top="0"; minInput.style.left=maxInput.style.left="0";
+    minInput.addEventListener("input",()=>{ const a=+minInput.value; const b=+maxInput.value; if (a>b-2) minInput.value=b-2; obj.size.min=+minInput.value; updateSizeLabel(); });
+    maxInput.addEventListener("input",()=>{ const a=+minInput.value; const b=+maxInput.value; if (b<a+2) maxInput.value=a+2; obj.size.max=+maxInput.value; updateSizeLabel(); });
+    const duo=personaBox.querySelector(".duo"); duo.appendChild(minInput); duo.appendChild(maxInput);
+    rMin=minInput; rMax=maxInput;
+
+    // labels row
+    sizeLabel = personaBox.querySelector(".sizeLbl");
+    if (!sizeLabel){ sizeLabel=document.createElement("div"); sizeLabel.className="sizeLbl muted"; sizeLabel.style.marginTop="6px"; personaBox.appendChild(sizeLabel); }
+    updateSizeLabel();
+
+    // titles
+    titlesChips.innerHTML="";
+    const pool = (TITLES[name]||TITLES.default);
+    pool.forEach(t=> addChip(t, titlesChips, (on,txt)=>{ if(on) obj.titles.add(txt); else obj.titles.delete(txt); }, obj.titles.has(t)));
+    applyAIDecideDisabling(obj.aiDecide);
+  }
+  function updateSizeLabel(){
+    if (!sizeLabel) return;
+    const fmt=n=> (n===0?"$0M":("$"+n+"M"));
+    const obj = filtered[sel];
+    sizeLabel.textContent = `${fmt(obj.size.min)}–${fmt(obj.size.max)} company revenue focus`;
+  }
+
+  /* ---------- AI decide visual ---------- */
+  function applyAIDecideDisabling(on){
+    [metricsBox, opsSliders, personaBox].forEach(box=>{
+      box.querySelectorAll("input[type=range]").forEach(inp=>{ inp.disabled = on; inp.style.opacity = on? .6 : 1; });
+      box.querySelectorAll(".chip").forEach(ch=> ch.style.pointerEvents = on? "none":"auto");
+      box.style.opacity = on? .85 : 1;
+    });
+  }
+
+  /* ---------- selection changed ---------- */
+  function paintRight(){
+    const name = filtered[sel]?.name; if (!name) return;
+    renderMetricsFor(name);
+    renderOpsFor(name);
+    renderPersonaFor(name);
+  }
+  const _syncPrev = syncIndustryUI;
+  syncIndustryUI = function(){ _syncPrev(); paintRight(); };
+
+  /* ---------- adv toggle ---------- */
+  const advToggle=$("#advToggle"), advLbl=$("#advLbl"), adv=$("#adv");
+  advToggle.addEventListener("click",()=>{
+    const opened = !adv.hasAttribute("hidden");
+    if (opened){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
+    else { adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
+  });
+
+  /* ---------- Save / Finish ---------- */
+  function gatherPersona(){
+    // include *all* industries (even muted) so downstream can honor weights
+    const pack = items.map(it=>({
+      industry: it.name,
+      muted: !!it.muted,
+      aiDecide: !!it.aiDecide,
+      metrics: it.metrics.map(m=>({k:m.k,label:m.label,value:m.value})),
+      operations: Array.from(it.opsSel.entries()).map(([label,value])=>({label,value})),
+      size: {...it.size},
+      titles: Array.from(it.titles)
+    }));
+    const persona = {
+      host,
+      role: seed?.role||"supplier",
+      productTags: [], // step-level tags live in classifier; saved below via kv
+      sectors: items.filter(x=>!x.muted).map(x=>x.name),
+      industries: pack
+    };
+    return persona;
+  }
+  function persistPersona(per){
+    setS("bf.persona", per);
+    setS("fp.persona", per);
+    try{
+      localStorage.setItem("fp.supplier.host", per.host||"");
+      localStorage.setItem("fp.pref.segPrefer", (per.sectors||[]).join("\n"));
+    }catch{}
+  }
+  $("#save").addEventListener("click",()=>{
+    const p=gatherPersona(); persistPersona(p);
+    $("#status").textContent="Saved.";
+    setTimeout(()=>$("#status").textContent="",1200);
+  });
+  $("#finish").addEventListener("click",()=>{
+    const p=gatherPersona(); persistPersona(p);
+    window.location.href="free-panel.html";
+  });
+
+  /* ---------- initial right pane paint ---------- */
+  paintRight();
 })();
 </script>
 </body>
