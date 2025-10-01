@@ -1,10 +1,11 @@
 // src/routes/classify.ts
 //
-// Hardened domain classifier:
-// - Multi-page probing (/, /products, /solutions, /packaging, …) with real UA
-// - Conservative time/byte limits
-// - Expanded product lexicon for packaging giants
-// - 1–3 items then “etc.” rule for products & sectors in one-liner
+// High-completeness classifier (accuracy > speed):
+//  • Up to 24 HTML pages per site (priority-scored BFS on internal links)
+//  • robots.txt → sitemap(.xml|.xml.gz) → sitemap-index sampling (≤40 URLs)
+//  • SPA-aware JSON mining (__NEXT_DATA__, __NUXT__, <script type=application/json>)
+//  • Broader packaging lexicons (rigid/flexible/closures/trays/thermoform/etc.)
+//  • “List up to 3, else ‘etc.’” rule for products & sectors
 //
 // GET  /api/classify?host=acme.com&email=user@acme.com
 // POST /api/classify  { host, email }
@@ -12,8 +13,9 @@
 import { Router, Request, Response as ExResponse } from "express";
 import { withCache, daily } from "../shared/guards";
 import { CFG } from "../shared/env";
+import * as zlib from "zlib";
 
-// ---- minimal fetch typing (Node 20) -----------------------------------------
+/* -------------------------------- fetch types ------------------------------ */
 type FetchResponse = {
   ok: boolean;
   status: number;
@@ -27,7 +29,7 @@ const F: (input: string, init?: any) => Promise<FetchResponse> = (globalThis as 
 
 const r = Router();
 
-// ---- helpers ----------------------------------------------------------------
+/* ------------------------------- tiny helpers ------------------------------ */
 function normalizeHost(raw?: string): string | undefined {
   if (!raw) return undefined;
   try {
@@ -37,128 +39,122 @@ function normalizeHost(raw?: string): string | undefined {
     return clean;
   } catch { return undefined; }
 }
-
 function emailsDomain(email?: string): string | undefined {
   if (!email) return undefined;
   const m = String(email).toLowerCase().match(/@([a-z0-9.-]+)/);
   return m?.[1];
 }
-
 function clientKey(req: Request): string {
   const apiKey = (req.headers["x-api-key"] || "") as string;
   const ip = (req.ip || req.socket.remoteAddress || "unknown").toString();
   return apiKey ? `k:${apiKey}` : `ip:${ip}`;
 }
-
 const UA_HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
   "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "en-US,en;q=0.9",
 };
-
 async function timedFetch(url: string, timeoutMs: number): Promise<FetchResponse> {
   const ctl = new (globalThis as any).AbortController();
-  const t = setTimeout(() => ctl.abort(), Math.max(200, timeoutMs));
+  const t = setTimeout(() => ctl.abort(), Math.max(500, timeoutMs));
   try { return await F(url, { signal: ctl.signal, redirect: "follow", headers: UA_HEADERS }); }
   finally { clearTimeout(t as any); }
 }
-
 function decodeUTF8(ab: ArrayBuffer): string {
   try { return new TextDecoder("utf-8").decode(ab); }
   catch { try { return new TextDecoder().decode(ab); } catch { return ""; } }
 }
+function maybeGunzip(buf: Buffer, url: string, contentType?: string): Buffer {
+  try {
+    if (url.endsWith(".gz") || /gzip/i.test(contentType || "")) {
+      return zlib.gunzipSync(buf);
+    }
+  } catch { /* ignore */ }
+  return buf;
+}
+function uniq<T>(a: T[]): T[] { return Array.from(new Set(a)); }
+function sameHost(u: string, host: string): boolean {
+  try {
+    const h = new URL(u);
+    const want = host.replace(/^www\./, "");
+    const got = (h.hostname || "").replace(/^www\./, "");
+    return want === got;
+  } catch { return false; }
+}
+function joinForLine(list: string[]): string {
+  const a = list.filter(Boolean);
+  if (!a.length) return "";
+  if (a.length === 1) return a[0];
+  if (a.length === 2) return `${a[0]} & ${a[1]}`;
+  if (a.length === 3) return `${a[0]}, ${a[1]} & ${a[2]}`;
+  return `${a[0]}, ${a[1]}, ${a[2]}, etc.`;
+}
 
-function uniq<T>(arr: T[]): T[] { return Array.from(new Set(arr)); }
+/* ---------------------------- discovery seeds ------------------------------ */
+const PATH_HINTS = [
+  "", "/", "/home", "/about",
+  "/products", "/solutions", "/services", "/packaging",
+  "/markets", "/industries", "/segments", "/what-we-do", "/capabilities",
+  "/portfolio", "/our-products", "/applications"
+];
+const LINK_KEYWORDS = [
+  "product","packag","solution","service",
+  "market","industry","segment","capabil","portfolio","application"
+];
+const SITEMAP_HINTS = ["/sitemap.xml", "/sitemap_index.xml", "/sitemap-index.xml", "/sitemap/sitemap.xml", "/robots.txt"];
 
-/** Choose next URLs to try when root is thin. */
-function candidatePaths(host: string): string[] {
+function candidateSeeds(host: string): string[] {
   const h = host.replace(/^www\./, "");
   const bases = [`https://${h}`, `https://www.${h}`, `http://${h}`];
-  const tails = ["", "/", "/products", "/solutions", "/packaging", "/what-we-do", "/capabilities", "/markets", "/about"];
-  const urls: string[] = [];
-  for (const b of bases) for (const t of tails) urls.push(`${b}${t}`);
-  return uniq(urls);
+  const out: string[] = [];
+  for (const b of bases) for (const t of PATH_HINTS) out.push(`${b}${t}`);
+  return uniq(out);
 }
 
-/** Fetch up to N pages until we have enough text. */
-async function fetchMulti(host: string, maxPages = 3): Promise<{ text: string; jsonld: string[]; title?: string; description?: string; bytes: number; pagesTried: number[]; }> {
-  const urls = candidatePaths(host);
-  const jsonldAll: string[] = [];
-  let textAll = "";
-  let title: string | undefined;
-  let description: string | undefined;
-  let bytesTotal = 0;
-  const tried: number[] = [];
-
-  for (const url of urls) {
-    if (tried.length >= maxPages) break;
-
-    try {
-      const res = await timedFetch(url, CFG.fetchTimeoutMs);
-      if (!res.ok) continue;
-
-      const buf = await res.arrayBuffer();
-      const bytes = buf.byteLength;
-      if (bytes > CFG.maxFetchBytes) continue; // skip giant HTML blobs
-      bytesTotal += bytes;
-      tried.push(res.status);
-
-      const html = decodeUTF8(buf);
-      const parsed = extractTextMeta(html);
-
-      if (!title && parsed.title) title = parsed.title;
-      if (!description && parsed.description) description = parsed.description;
-
-      textAll += " \n " + parsed.text;
-      jsonldAll.push(...parsed.jsonld);
-
-      // Stop early when we have enough raw signal (rough heuristic)
-      if (textAll.length > 8000) break;
-    } catch {
-      // ignore and move on
-    }
-  }
-
-  return {
-    text: textAll.trim(),
-    jsonld: jsonldAll,
-    title,
-    description,
-    bytes: bytesTotal,
-    pagesTried: tried,
-  };
-}
-
-// very light HTML -> text + JSON-LD + key meta
-function extractTextMeta(html: string): {
+/* ----------------------- HTML + SPA data extraction ------------------------ */
+type ParseOut = {
   text: string;
   jsonld: string[];
   title?: string;
   description?: string;
   keywords?: string[];
-} {
+  links: string[];
+};
+function extractTextMetaAndLinks(html: string, baseUrl: string, wantedHost: string): ParseOut {
   const meta: Record<string, string> = {};
   const reMeta = /<meta\s+[^>]*?(?:name|property)\s*=\s*["']([^"']+)["'][^>]*?content\s*=\s*["']([^"']*)["'][^>]*>/gi;
   let m: RegExpExecArray | null;
   while ((m = reMeta.exec(html))) {
     const k = m[1].toLowerCase(); const v = m[2].trim();
-    meta[k] = meta[k] || v;
+    if (!meta[k]) meta[k] = v;
   }
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const title = titleMatch?.[1]?.replace(/\s+/g, " ").trim();
   const description = (meta["description"] || meta["og:description"] || meta["twitter:description"] || "").trim();
-
   const keywordsRaw = meta["keywords"];
   const keywords = keywordsRaw?.split(/[,;]|·/).map(s=>s.trim().toLowerCase()).filter(Boolean) || undefined;
 
-  const text = String(html)
+  const linksAbs: string[] = [];
+  const reA = /<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi;
+  let a: RegExpExecArray | null;
+  while ((a = reA.exec(html))) {
+    const href = (a[1] || "").trim();
+    if (!href || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("#")) continue;
+    let abs: string;
+    try { abs = new URL(href, baseUrl).toString(); } catch { continue; }
+    if (!sameHost(abs, wantedHost)) continue;
+    const path = abs.split("?")[0].toLowerCase();
+    if (LINK_KEYWORDS.some(k => path.includes(k))) linksAbs.push(abs);
+  }
+
+  const textPlain = String(html)
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
-    .slice(0, 250000)
+    .slice(0, 400000)
     .trim();
 
   const jsonld: string[] = [];
@@ -169,28 +165,194 @@ function extractTextMeta(html: string): {
     if (payload) jsonld.push(payload);
   }
 
-  return { text, jsonld, title, description, keywords };
+  // SPA JSON blobs
+  let spaText = "";
+  const blobs: string[] = [];
+
+  const nextRe = /<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i;
+  const nextM = nextRe.exec(html);
+  if (nextM?.[1]) blobs.push(nextM[1]);
+
+  const nuxtRe = /window\.__NUXT__\s*=\s*({[\s\S]*?});/i;
+  const nuxtM = nuxtRe.exec(html);
+  if (nuxtM?.[1]) blobs.push(nuxtM[1]);
+
+  const reJSON = /<script[^>]*type=['"]application\/json['"][^>]*>([\s\S]*?)<\/script>/gi;
+  let jj: RegExpExecArray | null;
+  while ((jj = reJSON.exec(html))) {
+    const payload = (jj[1] || "").trim();
+    if (payload.length < 400000) blobs.push(payload);
+  }
+
+  function collectStringsFromJSON(raw: string, budget = 24000): string {
+    try {
+      const obj = JSON.parse(raw);
+      let out = "";
+      let used = 0;
+      const walk = (v: any) => {
+        if (used >= budget) return;
+        const t = typeof v;
+        if (t === "string") {
+          const s = v.replace(/\s+/g, " ").trim();
+          if (s.length >= 3 && /[A-Za-z]/.test(s)) { out += " " + s; used += s.length; }
+          return;
+        }
+        if (t === "number" || t === "boolean") return;
+        if (Array.isArray(v)) { for (const x of v) { if (used >= budget) break; walk(x); } return; }
+        if (v && t === "object") { for (const k of Object.keys(v)) { if (used >= budget) break; walk(v[k]); } }
+      };
+      walk(obj);
+      return out;
+    } catch { return ""; }
+  }
+  for (const b of blobs) {
+    const s = collectStringsFromJSON(b);
+    if (s) spaText += " " + s;
+  }
+
+  const combinedText = (textPlain + " " + spaText).trim();
+  return { text: combinedText, jsonld, title, description, keywords, links: uniq(linksAbs) };
 }
 
-// ---- rule classification ----------------------------------------------------
+/* ---------------------------- robots + sitemaps ---------------------------- */
+async function getSitemapUrls(host: string): Promise<string[]> {
+  const out: string[] = [];
+  // robots.txt first
+  try {
+    const robots = await timedFetch(`https://${host}/robots.txt`, 6000);
+    if (robots.ok) {
+      const txt = await robots.text();
+      const lines = txt.split(/\r?\n/);
+      for (const ln of lines) {
+        const m = ln.match(/^\s*Sitemap:\s*(\S+)\s*$/i);
+        if (m?.[1]) out.push(m[1].trim());
+      }
+    }
+  } catch { /* ignore */ }
+
+  // fallbacks
+  if (!out.length) {
+    for (const h of SITEMAP_HINTS) out.push(`https://${host}${h}`);
+  }
+  return uniq(out);
+}
+
+async function fetchXml(u: string): Promise<string | null> {
+  try {
+    const res = await timedFetch(u, 8000);
+    if (!res.ok) return null;
+    const ab = await res.arrayBuffer();
+    const buf = Buffer.from(ab);
+    const ct = res.headers.get("content-type") || "";
+    const data = maybeGunzip(buf, u, ct);
+    return data.toString("utf8");
+  } catch { return null; }
+}
+
+// extracts <loc> from sitemap or sitemap-index
+function extractLocsFromXml(xml: string): string[] {
+  const locs: string[] = [];
+  const re = /<loc>\s*([^<\s]+)\s*<\/loc>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml))) locs.push((m[1] || "").trim());
+  return uniq(locs);
+}
+
+/* ------------------------ prioritized internal crawl ----------------------- */
+type QItem = { url: string; score: number };
+const LINK_BONUS = [
+  { k: "packag", w: 6 },
+  { k: "product", w: 5 },
+  { k: "solution", w: 4 },
+  { k: "industry", w: 4 },
+  { k: "market", w: 4 },
+  { k: "segment", w: 4 },
+  { k: "service", w: 3 },
+  { k: "application", w: 3 },
+  { k: "portfolio", w: 2 }
+];
+
+function scorePath(u: string): number {
+  const path = u.split("?")[0].toLowerCase();
+  let s = 0;
+  for (const {k, w} of LINK_BONUS) if (path.includes(k)) s += w;
+  // shallower paths first
+  const depth = (new URL(u).pathname || "/").split("/").filter(Boolean).length;
+  s += Math.max(0, 6 - depth);
+  return s;
+}
+
+/* ------------------------------ lexicons ----------------------------------- */
 type Role = "packaging_supplier" | "packaging_buyer" | "neither";
 
-function ruleClassify(text: string, jsonld: string[]): {
-  role: Role;
-  confidence: number;
-  evidence: string[];
-} {
-  const t = (text || "").toLowerCase();
+const PRODUCT_LEX: Record<string, string[]> = {
+  boxes: ["box","boxes","carton","cartons","rigid box","corrugated","mailer box","folding carton"],
+  labels: ["label","labels","sticker","stickers"],
+  pouches: ["pouch","pouches","stand up pouch","stand-up pouch","mylar","sachet","sachets"],
+  bottles: ["bottle","bottles","vial","vials"],
+  jars: ["jar","jars","tin","tins"],
+  tape: ["tape","packaging tape"],
+  corrugate: ["corrugate","corrugated","corrugated box","corrugated packaging"],
+  mailers: ["mailer","mailers","poly mailer","mailer bag","polybag","poly bag"],
+  clamshells: ["clamshell","clamshells","blister"],
+  foam: ["foam insert","foam","eva foam"],
+  pallets: ["pallet","pallets","palletizing","pallet wrap","stretch wrap"],
+  shrink: ["shrink","shrink wrap","shrink film"],
+  film: ["film","flexible film","laminate","laminated film","flexible packaging","flexibles"],
+  closures: ["closure","closures","cap","caps","lids","lid","fitment","fitments"],
+  trays: ["tray","trays","thermoform","thermoformed","thermoforming"],
+  rigid: ["rigid","rigid packaging","tub","tubs","cup","cups","container","containers","hdpe","pet"]
+};
+const SECTOR_LEX: Record<string, string[]> = {
+  food: ["food","grocery","snack","sauce","salsa","candy","baked","meals","deli"],
+  beverage: ["beverage","drink","juice","soda","coffee","tea","brewery","beer","wine","distillery","dairy","water"],
+  cosmetics: ["cosmetics","cosmetic","beauty","skincare","skin care","haircare","makeup","fragrance","personal care","home care"],
+  supplements: ["supplement","nutraceutical","vitamin","sports nutrition"],
+  electronics: ["electronics","devices","gadgets","semiconductor","pcb"],
+  apparel: ["apparel","fashion","clothing","garment"],
+  pharma: ["pharma","pharmaceutical","medical","medication","rx","otc","healthcare","health care"],
+  pet: ["pet","pets","petcare","pet care"],
+  automotive: ["automotive","auto","aftermarket"],
+  home: ["home goods","home & garden","furniture","decor","household"],
+  industrial: ["industrial","b2b","manufacturing","factory"],
+  cannabis: ["cannabis","cbd","hemp"]
+};
 
-  const productSignals = ["product", "catalog", "shop", "store", "price", "cart", "sku"];
+function escapeRegExp(s: string): string { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+function scoreLexicon(text: string, keywords?: string[]): (lex: Record<string, string[]>) => Record<string, number> {
+  const t = text.toLowerCase();
+  const kw = (keywords || []).join(" ").toLowerCase();
+  return (lex) => {
+    const scores: Record<string, number> = {};
+    for (const [key, synonyms] of Object.entries(lex)) {
+      let n = 0;
+      for (const s of synonyms) {
+        const re = new RegExp(`\\b${escapeRegExp(s.toLowerCase())}\\b`, "g");
+        n += (t.match(re)?.length || 0) + (kw.match(re)?.length || 0);
+      }
+      if (n > 0) scores[key] = n;
+    }
+    return scores;
+  };
+}
+function topKeys(scores: Record<string, number>, max = 8): string[] {
+  return Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0, max).map(([k]) => k);
+}
+
+function ruleClassify(text: string, jsonld: string[]): { role: Role; confidence: number; evidence: string[] } {
+  const t = (text || "").toLowerCase();
+  const productSignals = ["product","catalog","shop","store","price","sku","portfolio"];
   const packagingTokens = [
-    "packaging","package","packages","box","boxes","carton","cartons","corrugate","corrugated",
-    "label","labels","tape","pouch","pouches","pouching","bottle","bottles","jar","jars",
-    "mailers","mailer","film","shrink","stretch","pallet","pallets","thermoform","blister",
-    "tray","trays","cup","cups","lid","lids","closure","closures","cap","caps","rigid","flexible"
+    "packaging","package","packages","converter","conversion",
+    "box","boxes","carton","cartons","corrugate","corrugated",
+    "label","labels","tape","pouch","pouches","sachet","sachets",
+    "bottle","bottles","jar","jars","film","shrink","stretch",
+    "pallet","pallets","thermoform","blister","tray","trays",
+    "cup","cups","lid","lids","closure","closures","cap","caps",
+    "rigid","flexible","laminate","coating","printing","container","containers"
   ];
-  const buyerHints = ["brand", "retail", "ecommerce", "our stores", "locations", "menu"];
-  const supplierVerbs = ["manufacture", "converter", "convert", "supply", "supplier", "wholesale", "distributor", "co-pack", "contract pack", "private label"];
+  const buyerHints = ["brand","retail","ecommerce","our stores","locations","menu"];
+  const supplierVerbs = ["manufacture","converter","convert","supply","supplier","wholesale","distributor","co-pack","contract pack","private label","produce","produces","global leader"];
 
   const contains = (arr: string[]) => arr.reduce((n, w) => (t.includes(w) ? n + 1 : n), 0);
 
@@ -202,7 +364,6 @@ function ruleClassify(text: string, jsonld: string[]): {
   let scoreSupplier = sup + pack + (prod > 0 ? 1 : 0);
   let scoreBuyer = buy + (prod > 0 ? 1 : 0);
 
-  // JSON-LD nudges
   for (const raw of jsonld) {
     try {
       const obj = JSON.parse(raw);
@@ -229,49 +390,11 @@ function ruleClassify(text: string, jsonld: string[]): {
   return { role: "neither", confidence: 0.35, evidence };
 }
 
-// ---- enrichment lexicons ----------------------------------------------------
-const PRODUCT_LEX: Record<string, string[]> = {
-  boxes: ["box","boxes","carton","cartons","rigid box","corrugated","mailer box"],
-  labels: ["label","labels","sticker","stickers"],
-  cartons: ["carton","cartons","folding carton"],
-  pouches: ["pouch","pouches","stand up pouch","stand-up pouch","mylar","sachet","sachets"],
-  bottles: ["bottle","bottles","vial","vials"],
-  jars: ["jar","jars","tin","tins"],
-  tape: ["tape","packaging tape"],
-  corrugate: ["corrugate","corrugated"],
-  mailers: ["mailer","mailers","poly mailer","mailer bag","polybag","poly bag"],
-  clamshells: ["clamshell","clamshells","blister"],
-  foam: ["foam insert","foam","eva foam"],
-  pallets: ["pallet","pallets","palletizing","pallet wrap"],
-  shrink: ["shrink","shrink wrap","shrink film"],
-  film: ["film","flexible film","laminate","laminated film","flexible packaging","flexible"],
-  closures: ["closure","closures","cap","caps","lids","lid","fitment","fitments"],
-  trays: ["tray","trays","thermoform","thermoformed","thermoforming"],
-  rigid: ["rigid","rigid packaging","tub","tubs","cup","cups","container","containers"]
-};
-
-const SECTOR_LEX: Record<string, string[]> = {
-  food: ["food","grocery","snack","sauce","salsa","candy","baked","meals","ready meal"],
-  beverage: ["beverage","drink","juice","soda","coffee","tea","brewery","beer","wine","distillery","dairy","water"],
-  cosmetics: ["cosmetic","cosmetics","beauty","skincare","skin care","haircare","makeup","fragrance","personal care","home care"],
-  supplements: ["supplement","nutraceutical","vitamin","sports nutrition"],
-  electronics: ["electronics","devices","gadgets","semiconductor","pcb"],
-  apparel: ["apparel","fashion","clothing","garment"],
-  pharma: ["pharma","pharmaceutical","medical","medication","rx","otc","healthcare","health care"],
-  pet: ["pet","pets","petcare","pet care"],
-  automotive: ["automotive","auto","aftermarket"],
-  home: ["home goods","home & garden","furniture","decor","household"],
-  industrial: ["industrial","b2b","manufacturing","factory"],
-  cannabis: ["cannabis","cbd","hemp"]
-};
-
-// sector → curated hot metrics
 function suggestSectorMetrics(productTags: string[], sectorHints: string[]): Record<string,string[]> {
   const s = sectorHints.map(x=>x.toLowerCase());
   const p = productTags.map(x=>x.toLowerCase());
   const out: Record<string,string[]> = {};
-
-  if (p.includes("boxes") || p.includes("cartons") || p.includes("corrugate")) {
+  if (p.includes("boxes") || p.includes("corrugate")) {
     out["corrugate"] = [
       "ECT / stack strength at target weight",
       "Board grade & burst/Mullen targets",
@@ -283,7 +406,6 @@ function suggestSectorMetrics(productTags: string[], sectorHints: string[]): Rec
       "E-commerce fulfillment compatibility"
     ];
   }
-
   if (s.includes("beverage")) {
     out["beverage"] = [
       "Closure compatibility & torque",
@@ -294,7 +416,6 @@ function suggestSectorMetrics(productTags: string[], sectorHints: string[]): Rec
       "E-commerce fulfillment compatibility"
     ];
   }
-
   if (s.includes("food")) {
     out["food"] = [
       "Food-contact compliance (FDA/EC)",
@@ -305,7 +426,6 @@ function suggestSectorMetrics(productTags: string[], sectorHints: string[]): Rec
       "Unit cost at target MOQ"
     ];
   }
-
   if (s.includes("cosmetics")) {
     out["cosmetics"] = [
       "Print finish & brand color match",
@@ -316,7 +436,6 @@ function suggestSectorMetrics(productTags: string[], sectorHints: string[]): Rec
       "Retail scuff/scratch resistance"
     ];
   }
-
   if (s.includes("electronics")) {
     out["electronics"] = [
       "Drop/edge-crush protection at DIM weight",
@@ -326,7 +445,6 @@ function suggestSectorMetrics(productTags: string[], sectorHints: string[]): Rec
       "Outer carton strength at target cost"
     ];
   }
-
   if (s.includes("pharma")) {
     out["pharma"] = [
       "cGMP/FDA packaging compliance",
@@ -336,7 +454,6 @@ function suggestSectorMetrics(productTags: string[], sectorHints: string[]): Rec
       "Serialization / GS1 barcode placement"
     ];
   }
-
   if (s.includes("cannabis")) {
     out["cannabis"] = [
       "Child-resistant certification",
@@ -345,7 +462,6 @@ function suggestSectorMetrics(productTags: string[], sectorHints: string[]): Rec
       "Tamper-evidence integrity"
     ];
   }
-
   if (Object.keys(out).length === 0) {
     out["general"] = [
       "Damage reduction targets in transit",
@@ -357,73 +473,33 @@ function suggestSectorMetrics(productTags: string[], sectorHints: string[]): Rec
   return out;
 }
 
-// quick geo hints
+/* ------------------------------ geo hints (US) ----------------------------- */
 const US_ST_ABBR = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 const US_ST_FULL = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"];
-
 function extractGeoHints(text: string): { citiesTop: string[]; statesTop: string[] } {
   const t = text || "";
   const cities = new Map<string, number>();
   const states = new Map<string, number>();
-
   const reCitySt = /\b([A-Z][A-Za-z .'-]{2,}?),\s*(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/g;
   let m: RegExpExecArray | null;
   while ((m = reCitySt.exec(t))) {
-    const city = m[1].trim();
-    const st = m[2].trim();
+    const city = m[1].trim(); const st = m[2].trim();
     cities.set(city, (cities.get(city) || 0) + 2);
     states.set(st, (states.get(st) || 0) + 2);
   }
-
   const reCityState = new RegExp(`\\b([A-Z][A-Za-z .'-]{2,}?),\\s*(${US_ST_FULL.join("|")})\\b`, "g");
   let n: RegExpExecArray | null;
   while ((n = reCityState.exec(t))) {
-    const city = n[1].trim();
-    const st = n[2].trim();
+    const city = n[1].trim(); const st = n[2].trim();
     cities.set(city, (cities.get(city) || 0) + 1);
     states.set(st, (states.get(st) || 0) + 1);
   }
-
   const citiesTop = Array.from(cities.entries()).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k])=>k);
   const statesTop = Array.from(states.entries()).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k])=>k);
   return { citiesTop, statesTop };
 }
 
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function scoreLexicon(text: string, keywords?: string[]): (lex: Record<string, string[]>) => Record<string, number> {
-  const t = text.toLowerCase();
-  const kw = (keywords || []).join(" ").toLowerCase();
-  return (lex) => {
-    const scores: Record<string, number> = {};
-    for (const [key, synonyms] of Object.entries(lex)) {
-      let n = 0;
-      for (const s of synonyms) {
-        const re = new RegExp(`\\b${escapeRegExp(s.toLowerCase())}\\b`, "g");
-        n += (t.match(re)?.length || 0) + (kw.match(re)?.length || 0);
-      }
-      if (n > 0) scores[key] = n;
-    }
-    return scores;
-  };
-}
-
-function topKeys(scores: Record<string, number>, max = 8): string[] {
-  return Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0, max).map(([k]) => k);
-}
-
-function joinForLine(list: string[]): string {
-  const a = list.filter(Boolean);
-  if (!a.length) return "";
-  if (a.length === 1) return a[0];
-  if (a.length === 2) return `${a[0]} & ${a[1]}`;
-  if (a.length === 3) return `${a[0]}, ${a[1]} & ${a[2]}`;
-  return `${a[0]}, ${a[1]}, ${a[2]}, etc.`;
-}
-
-// concise line (uses 1–3 items then etc.)
+/* --------------------------- one-liner composer ---------------------------- */
 function composeOneLiner(host: string, role: Role, products: string[], sectors: string[], meta?: { title?: string; description?: string; }) {
   const shortHost = host.replace(/^www\./, "");
   const verb = role === "packaging_buyer" ? "buys packaging" :
@@ -442,11 +518,102 @@ function composeOneLiner(host: string, role: Role, products: string[], sectors: 
   return line;
 }
 
-// ---- core classify ----------------------------------------------------------
-async function classifyHostOnce(host: string) {
-  const sample = await fetchMulti(host, 3);
+/* ----------------------------- main crawling ------------------------------- */
+async function fetchRich(host: string, opts?: { maxPages?: number }): Promise<{
+  text: string;
+  jsonld: string[];
+  title?: string;
+  description?: string;
+  bytes: number;
+  sources: string[];
+}> {
+  const MAX_PAGES = Math.max(6, Math.min(24, opts?.maxPages ?? 24)); // completeness-first
+  const MAX_SITEMAP_URLS = 40;
+  const tried = new Set<string>();
+  const sources: string[] = [];
+  let bytesTotal = 0;
+  let title: string | undefined;
+  let description: string | undefined;
+  let textAll = "";
+  const jsonldAll: string[] = [];
 
-  // If we got nearly nothing, be explicit
+  // seeds
+  const queue: QItem[] = candidateSeeds(host).map(u => ({ url: u, score: scorePath(u) }));
+
+  // sitemaps (robots + hints)
+  try {
+    const siteMaps = await getSitemapUrls(host);
+    for (const sm of siteMaps.slice(0, 6)) {
+      const xml = await fetchXml(sm);
+      if (!xml) continue;
+      const locs = extractLocsFromXml(xml);
+      // if it's a sitemap index, you get many sitemaps — sample a few
+      const likely = locs
+        .filter(u => sameHost(u, host))
+        .filter(u => {
+          const p = u.split("?")[0].toLowerCase();
+          return LINK_KEYWORDS.some(k => p.includes(k));
+        })
+        .slice(0, MAX_SITEMAP_URLS);
+      for (const u of likely) queue.push({ url: u, score: scorePath(u) + 8 });
+    }
+  } catch { /* ignore */ }
+
+  // main crawl (priority queue; small concurrency)
+  const takeBatch = (n: number) => {
+    queue.sort((a,b) => b.score - a.score);
+    const batch: QItem[] = [];
+    while (queue.length && batch.length < n) {
+      const it = queue.shift()!;
+      if (tried.has(it.url)) continue;
+      tried.add(it.url); batch.push(it);
+    }
+    return batch;
+  };
+
+  while (sources.length < MAX_PAGES) {
+    const batch = takeBatch(4);
+    if (!batch.length) break;
+
+    const results = await Promise.all(batch.map(async it => {
+      try {
+        const res = await timedFetch(it.url, Math.max(CFG.fetchTimeoutMs, 9000));
+        if (!res.ok) return null;
+        const ab = await res.arrayBuffer();
+        const bytes = ab.byteLength;
+        if (bytes > CFG.maxFetchBytes) return null;
+        const html = decodeUTF8(ab);
+        return { url: res.url || it.url, html };
+      } catch { return null; }
+    }));
+
+    for (const r of results) {
+      if (!r) continue;
+      sources.push(r.url);
+      const parsed = extractTextMetaAndLinks(r.html, r.url, host);
+      if (!title && parsed.title) title = parsed.title;
+      if (!description && parsed.description) description = parsed.description;
+      jsonldAll.push(...parsed.jsonld);
+      textAll += " \n " + parsed.text;
+      bytesTotal += Buffer.byteLength(r.html, "utf8");
+
+      // add a few more internal candidates discovered on-page
+      for (const l of parsed.links.slice(0, 5)) {
+        if (!tried.has(l)) queue.push({ url: l, score: scorePath(l) + 2 });
+      }
+
+      if (textAll.length > 30000) break;
+    }
+    if (textAll.length > 30000) break;
+  }
+
+  return { text: textAll.trim(), jsonld: jsonldAll, title, description, bytes: bytesTotal, sources: uniq(sources) };
+}
+
+/* -------------------------------- classify --------------------------------- */
+async function classifyHostOnce(host: string) {
+  const sample = await fetchRich(host, { maxPages: 24 });
+
   if (!sample.text || sample.text.length < 500) {
     return {
       ok: true,
@@ -455,12 +622,13 @@ async function classifyHostOnce(host: string) {
       confidence: 0.3,
       summary: `${host.replace(/^www\./,"")} does business.`,
       productTags: [],
-      sectorHints: ["general"],
+      sectorHints: ["General"],
       evidence: ["thin_site_or_blocked"],
       hotMetricsBySector: suggestSectorMetrics([], ["general"]),
       geoHints: { citiesTop: [], statesTop: [] },
       bytes: sample.bytes,
       fetchedAt: new Date().toISOString(),
+      sources: sample.sources,
       cached: false
     };
   }
@@ -470,19 +638,18 @@ async function classifyHostOnce(host: string) {
   const scorer = scoreLexicon(sample.text);
   const productScores = scorer(PRODUCT_LEX);
   const sectorScores = scorer(SECTOR_LEX);
-  let productTags = topKeys(productScores, 12);
-  const sectorHints = topKeys(sectorScores, 8);
 
-  // gentle fallback: if we saw “packag” but no tags, add generic “packaging”
-  if (!productTags.length && /packag/i.test(sample.text)) {
-    productTags = ["packaging"];
-  }
+  let productTags = topKeys(productScores, 12);
+  if (!productTags.length && /packag/i.test(sample.text)) productTags = ["packaging"];
+
+  const sectorHintsRaw = topKeys(sectorScores, 8);
+  const sectorHints = sectorHintsRaw.length ? sectorHintsRaw.map(s => s.replace(/\b\w/g, m => m.toUpperCase())) : ["General"];
 
   const summary = composeOneLiner(
     host,
     first.role,
     productTags,
-    sectorHints.map(s => s.replace(/\b\w/g, m => m.toUpperCase())),
+    sectorHints,
     { title: sample.title, description: sample.description }
   );
 
@@ -502,11 +669,12 @@ async function classifyHostOnce(host: string) {
     geoHints,
     bytes: sample.bytes,
     fetchedAt: new Date().toISOString(),
+    sources: sample.sources,
     cached: false
   };
 }
 
-// ---- routes -----------------------------------------------------------------
+/* --------------------------------- routes ---------------------------------- */
 r.get("/", async (req: Request, res: ExResponse) => {
   try {
     const rawHost = (req.query.host || "") as string;
