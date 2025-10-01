@@ -3,508 +3,510 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Step 3 — Tune by industry</title>
+<title>Galactly — Step 3</title>
+
 <style>
-  :root{
-    --bg:#0b0f14; --panel:#111a26; --muted:#8aa0b2; --text:#e9f1f7;
-    --cta:#6de1ff; --ctaText:#082433; --divider:#1b2531;
-    --chip:#152233; --chipActive:#103247;
-    --track:#213244; --thumb:#c43; --thumbH:#f85;
-  }
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-    font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
-  .wrap{max-width:1100px;margin:24px auto;padding:0 14px}
+:root{
+  --bg:#0b0f14; --panel:#101726; --panel-2:#0e141c; --divider:#1b2531;
+  --text:#e9f1f7; --muted:#8aa0b2; --brand:#8ae3ff; --cta:#6de1ff; --ctaText:#082433;
+  --chip:#162133; --chipAct:#0f3046; --good:#38e08f; --bad:#ff6b6b;
+}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,Segoe UI,Inter,Roboto,Arial}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 14px 36px}
 
-  /* one-liner */
-  .summary{display:flex;gap:12px;align-items:flex-start;background:#0e1622;border:1px solid var(--divider);
-    border-radius:14px;padding:12px 14px;margin-bottom:12px}
-  .fav{width:28px;height:28px;border-radius:6px;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid #cfd8e3}
-  .fav img{width:24px;height:24px}
-  .one{font-weight:700}
-  .sentence .token{display:inline-block;border-radius:8px;padding:2px 6px;margin:0 2px}
-  .sentence .token[data-editable="true"]{border-bottom:1px dashed #3a5572}
-  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;background:var(--cta);color:var(--ctaText);
-    font-weight:700;border:none;cursor:pointer}
-  .btn.sec{background:#152333;color:#cfe0ee;font-weight:600}
-  .btn.smol{padding:6px 10px;border-radius:10px}
-  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
-  .ghost{background:transparent;border:1px solid var(--divider);color:#bcd0e0}
+.top{background:linear-gradient(180deg,#0f1623,#0b131e);border:1px solid var(--divider);border-radius:14px;padding:12px 12px 8px;margin-bottom:16px}
+.badge{display:inline-flex;gap:6px;align-items:center;background:#0f1e2c;border:1px solid var(--divider);border-radius:999px;padding:6px 10px;margin:4px 6px 0 0;color:#cfe5f9}
+.badge .favicon{width:18px;height:18px;border-radius:4px;background:#fff;display:inline-grid;place-items:center;overflow:hidden}
+.kv{display:flex;flex-wrap:wrap;gap:6px 10px;margin:8px 0 0}
+.kv .pill{background:#0e1a27;border:1px solid var(--divider);border-radius:10px;padding:6px 10px;color:#bcd3e7}
 
-  /* layout */
-  .bar{display:flex;justify-content:space-between;align-items:center;margin:8px 0 12px}
-  .grid{display:grid;grid-template-columns:280px 1fr;gap:16px}
-  @media (max-width:920px){.grid{grid-template-columns:1fr}}
+.hrow{display:flex;justify-content:space-between;align-items:center;margin:6px 0 8px}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
+.btn.sec{background:#152333;color:#cfe0ee}
+.btn.ghost{background:#0f1b29;border:1px solid var(--divider);color:#cfe0ee}
+.btn:active{transform:translateY(1px)}
 
-  /* rotor */
-  .rotor{position:relative;height:420px;border:1px solid var(--divider);border-radius:14px;background:linear-gradient(180deg,#0f1724,#0e141f);overflow:hidden}
-  .bucket{position:absolute;inset:0}
-  .bucket li{list-style:none;height:70px;display:grid;place-items:center;color:#7890a3;user-select:none;cursor:pointer;transition:transform .18s ease, opacity .18s ease}
-  .bucket li.active{color:#e7f3ff;font-weight:700;transform:scale(1.02)}
-  .bucket li.muted{opacity:.28;text-decoration:line-through}
-  .fadeTop,.fadeBot{position:absolute;left:0;right:0;height:60px;pointer-events:none}
-  .fadeTop{top:0;background:linear-gradient(180deg,#0f1724,transparent)}
-  .fadeBot{bottom:0;background:linear-gradient(0deg,#0f1724,transparent)}
-  .label{position:absolute;left:10px;bottom:10px;font-size:12px;color:#90a8bb}
+.card{background:var(--panel);border:1px solid var(--divider);border-radius:16px;padding:14px;margin:12px 0}
+.card h3{margin:0 0 8px}
+.muted{color:#9eb4c7;font-size:12px}
 
-  /* pane */
-  .pane{background:#0f1724;border:1px solid var(--divider);border-radius:14px;padding:14px}
-  .pane-hd{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
-  .mute{background:#12283d;border:1px solid #21405d;color:#d8e8f7;border-radius:999px;padding:6px 10px;cursor:pointer}
-  .mute.on{opacity:.6;text-decoration:line-through}
-  .chips{user-select:none;margin-top:6px}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
-  .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
-  .hint{font-size:12px;color:#9bb2c8}
+/* --- Rotor ---  */
+.pane{display:grid;grid-template-columns:300px 1fr;gap:16px}
+@media (max-width:900px){.pane{grid-template-columns:1fr}}
+.rotor{position:relative;height:280px;background:#0e1725;border:1px solid var(--divider);border-radius:14px;overflow:hidden}
+.rotor .hint{position:absolute;bottom:8px;left:10px;color:#88a1b8;font-size:12px}
+.rotor-viewport{position:absolute;inset:0;contain:layout paint;will-change:transform}
+.rotor-item{
+  position:absolute;left:50%;
+  transform:translate(-50%,-50%) scale(0.9);
+  transition:transform .18s ease,opacity .18s ease,filter .18s ease;
+  padding:8px 12px;border-radius:10px;border:1px solid transparent;
+  background:transparent;color:#b7c9da;pointer-events:auto;user-select:none;
+  white-space:nowrap;font-weight:700;letter-spacing:.2px
+}
+.rotor-item.active{color:#eaf6ff;background:#0f2234;border-color:#1e3a55;filter:none}
+.rotor-item.muted{opacity:.28;filter:grayscale(40%)}
+.rotor-center-line{position:absolute;left:10px;right:10px;top:50%;transform:translateY(-50%);
+  height:0;border-top:1px dashed #1d3144}
 
-  /* rows & sliders */
-  .row{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:center;margin:10px 0}
-  input[type=range]{width:100%;-webkit-appearance:none;background:transparent}
-  input[type=range]::-webkit-slider-runnable-track{height:6px;background:var(--track);border-radius:6px}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;margin-top:-6px;width:18px;height:18px;background:var(--thumb);border-radius:50%;border:2px solid #000}
-  input[type=range]:active::-webkit-slider-thumb{background:var(--thumbH)}
-  input[type=range]::-moz-range-track{height:6px;background:var(--track);border-radius:6px}
-  input[type=range]::-moz-range-thumb{width:18px;height:18px;background:var(--thumb);border:2px solid #000;border-radius:50%}
+/* --- Metrics + sliders --- */
+.row{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:center;margin:8px 0}
+@media (max-width:800px){.row{grid-template-columns:1fr}}
+input[type=range]{width:100%}
 
-  /* double range (size) */
-  .size{margin-top:8px}
-  .size .wrap{position:relative;height:30px}
-  .size input[type=range]{position:absolute;left:0;right:0;top:6px}
-  .size .vals{display:flex;justify-content:space-between;font-size:12px;color:#9bb2c8}
-  .quick{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-  .ft{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
+/* chips */
+.chips{user-select:none}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);
+  color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
+.chip.active{background:var(--chipAct);color:#eaf7ff;border-color:#1b4862}
+
+/* dual slider (company size) */
+.duo{position:relative;height:36px;margin:6px 0 4px}
+.duo input{position:absolute;left:0;right:0;top:8px;height:20px;appearance:none;background:transparent;pointer-events:auto}
+.duo input::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:#e56;box-shadow:0 0 0 3px #0a1522;border:2px solid #fff;cursor:pointer}
+.duo input::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#e56;border:2px solid #fff;cursor:pointer}
+.duo .track{position:absolute;left:0;right:0;top:17px;height:6px;border-radius:999px;background:#314258}
+.duo .fill{position:absolute;top:17px;height:6px;border-radius:999px;background:#e56}
+.range-labels{display:flex;justify-content:space-between;color:#92a9bd;font-size:12px}
+
+/* footer */
+.ft{display:flex;justify-content:space-between;gap:12px;margin-top:16px}
+.right{display:flex;gap:10px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <!-- One-liner (single, non-duplicated) -->
-  <div class="summary">
-    <div class="fav"><img id="fav" alt="" referrerpolicy="no-referrer"/></div>
-    <div style="flex:1">
-      <div id="line" class="one sentence" aria-live="polite"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
-        <button id="editLine" class="btn sec smol" type="button">Edit</button>
-        <button id="doneLine" class="btn smol" type="button" hidden>Done</button>
-        <a id="refresh" href="#" class="btn sec smol ghost">Refresh from website</a>
-        <span id="apiBadge" class="pill">API: resolving…</span>
+  <div class="wrap">
+    <!-- Persona one-liner -->
+    <div class="top" id="personaTop">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="badge"><span class="favicon"><img id="fav" alt="" width="18" height="18" referrerpolicy="no-referrer"></span><span id="hostTxt">yourcompany.com</span></span>
+        <div class="kv" id="kvLine"></div>
+        <span id="apiBadge" class="pill" style="margin-left:auto">API: resolving…</span>
+        <button id="back" class="btn sec">Back</button>
       </div>
     </div>
-    <button id="back" class="btn sec smol" style="align-self:flex-start">Back</button>
-  </div>
 
-  <div class="bar">
-    <div class="pill">Step 3</div>
-    <button id="advToggle" class="btn sec smol ghost"><span id="advLbl">Show advanced ▾</span></button>
-  </div>
+    <!-- Advanced (collapsible) -->
+    <div class="hrow">
+      <h2 style="margin:0">Step 3</h2>
+      <button id="advToggle" class="btn  ghost"><span id="advLbl">Hide advanced ▲</span></button>
+    </div>
 
-  <div id="advanced" hidden>
-    <div class="grid">
-      <!-- Rotor column -->
-      <div>
-        <div class="rotor" id="rotor" aria-label="Industries picker">
-          <ul class="bucket" id="bucket"></ul>
-          <div class="fadeTop"></div><div class="fadeBot"></div>
-          <div class="label">Scroll, drag or click. Center item is active.</div>
-        </div>
-        <label style="display:flex;gap:8px;align-items:center;margin-top:8px">
-          <input id="hideMuted" type="checkbox"> <span class="hint">Hide muted</span>
-        </label>
-      </div>
-
-      <!-- Details pane -->
+    <div id="adv" class="card">
       <div class="pane">
-        <div class="pane-hd">
-          <h3 id="paneTitle" style="margin:0">Industry</h3>
-          <div style="display:flex;gap:10px;align-items:center">
-            <label style="display:flex;gap:6px;align-items:center;font-size:13px;color:#a8c0d3">
-              <input id="aiDecide" type="checkbox"> Let AI decide
-            </label>
-            <button id="muteBtn" class="mute" type="button">Mute</button>
-          </div>
+        <!-- Rotor -->
+        <div class="rotor" id="rotor" aria-label="Industries">
+          <div class="rotor-viewport" id="rotorViewport"></div>
+          <div class="rotor-center-line"></div>
+          <div class="hint">Scroll, drag or click. Center item is active.</div>
         </div>
 
-        <div id="metrics"></div>
-
-        <div style="margin-top:12px">
-          <h4 id="opsTitle" style="margin:0 0 6px">Buyer operations</h4>
-          <div id="opsChips" class="chips"></div>
-          <div id="opsSliders"></div>
-          <div class="hint">Click to add; each selection gets its own importance slider (0–10).</div>
-        </div>
-
-        <div style="margin-top:12px">
-          <h4 id="personaTitle" style="margin:0 0 6px">Hot-buyer persona</h4>
-
-          <div class="size">
-            <div class="hint">Company size focus (revenue). Drag both handles.</div>
-            <div class="wrap">
-              <input id="sizeMin" type="range" min="0" max="1200" step="5" value="20">
-              <input id="sizeMax" type="range" min="0" max="1200" step="5" value="200">
+        <!-- Right side: metrics for selected industry -->
+        <div>
+          <div class="hrow">
+            <h3 id="sectTitle" style="margin:0">—</h3>
+            <div style="display:flex;gap:10px;align-items:center">
+              <label class="muted" style="display:flex;gap:6px;align-items:center"><input id="aiDecide" type="checkbox"> Let AI decide</label>
+              <button id="muteBtn" class="btn  ghost">Mute</button>
             </div>
-            <div class="vals"><span id="sizeMinLbl">$20M</span><span id="sizeMaxLbl">$200M</span></div>
-            <div class="quick" id="sizeQuick"></div>
           </div>
 
-          <div style="margin-top:8px">
-            <div class="hint">Best titles to reach</div>
-            <div id="titleChips" class="chips"></div>
+          <div id="metricsBox" class="card" style="margin:10px 0 12px"></div>
+
+          <div class="card" id="opsBox">
+            <h4 style="margin:0 0 8px">Buyer operations for <span id="opsFor">—</span></h4>
+            <div id="opsChips" class="chips"></div>
+            <div id="opsSliders" style="margin-top:6px"></div>
+            <div class="muted">Click to add; each selected operation gets its own importance slider (0–10).</div>
           </div>
 
-          <div style="margin-top:8px">
-            <div class="hint" id="targetLbl">Boost near city…</div>
-            <input id="city" type="text" placeholder="e.g., HQ city" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:#fff"/>
-            <div id="cityChips" class="chips"></div>
-          </div>
-        </div>
+          <div class="card" id="personaBox">
+            <h4 style="margin:0 0 8px">Hot-buyer persona — <span id="personaFor">—</span></h4>
+            <div>
+              <div class="muted" style="margin:4px 0 6px">Company size focus (revenue). Drag both handles.</div>
+              <div class="duo">
+                <div class="track"></div><div class="fill" id="fill"></div>
+                <input id="lo" type="range" min="0" max="7" value="1" step="1">
+                <input id="hi" type="range" min="0" max="7" value="3" step="1">
+              </div>
+              <div class="range-labels"><span>$0</span><span>$20M</span><span>$100M</span><span>$250M</span><span>$500M</span><span>$1B</span><span>$5B</span><span>$10B+</span></div>
 
-        <div class="ft">
-          <button id="save" class="btn sec" type="button">Save</button>
-          <button id="finish" class="btn" type="button">Finish</button>
-        </div>
+              <div style="margin-top:10px">
+                <label class="muted">Best titles to reach</label>
+                <div id="titlesChips" class="chips" style="margin-top:4px"></div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /right -->
+      </div><!-- /pane -->
+    </div><!-- /adv -->
+
+    <!-- footer -->
+    <div class="ft">
+      <div class="muted" id="status"></div>
+      <div class="right">
+        <button id="save" class="btn ghost">Save</button>
+        <button id="finish" class="btn">Finish</button>
       </div>
     </div>
   </div>
-</div>
 
 <script>
 (()=>{
-
-/* ====== utils ====== */
+/* ==================== Utilities ==================== */
 const $=q=>document.querySelector(q), $$=q=>Array.from(document.querySelectorAll(q));
 const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
 const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
-const setS=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
-const getS=(k,d="")=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}};
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const getS=(k,d=null)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
+const setS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 
-/* ====== elements ====== */
-const fav=$('#fav'), line=$('#line'), editBtn=$('#editLine'), doneBtn=$('#doneLine'), refreshA=$('#refresh');
-const backBtn=$('#back'), adv=$('#advanced'), advLbl=$('#advLbl'), advToggle=$('#advToggle'), apiBadge=$('#apiBadge');
-const bucket=$('#bucket'), rotor=$('#rotor'), hideMuted=$('#hideMuted');
-const paneTitle=$('#paneTitle'), aiDecide=$('#aiDecide'), muteBtn=$('#muteBtn');
-const metricsBox=$('#metrics'), opsChips=$('#opsChips'), opsSliders=$('#opsSliders');
-const sizeMin=$('#sizeMin'), sizeMax=$('#sizeMax'), sizeMinLbl=$('#sizeMinLbl'), sizeMaxLbl=$('#sizeMaxLbl'), sizeQuick=$('#sizeQuick');
-const titleChips=$('#titleChips'), city=$('#city'), cityChips=$('#cityChips'), targetLbl=$('#targetLbl');
-const saveBtn=$('#save'), finishBtn=$('#finish'), opsTitle=$('#opsTitle'), personaTitle=$('#personaTitle');
+function setFavicon(host){ const h=normHost(host); const fav=$("#fav"); fav.src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):""; }
 
-/* ====== state ====== */
-const state={
-  apiBase:"",
-  seed:null,
-  industries:[],     // master array
-  index:0,           // absolute index into state.industries
-  wheelLock:0,       // timestamp throttle
-  touchY:null
-};
+/* ==================== Seed + API ==================== */
+const seed = getS("onb.seed", {contact:{}, host:""});
+const host = normHost(seed?.host || domainFromEmail(seed?.contact?.email || ""));
+$("#hostTxt").textContent = host || "yourcompany.com";
+setFavicon(host);
 
-/* ====== defaults ====== */
-const DB={
-  Beverage:{metrics:[
+const apiBadge=$("#apiBadge");
+let API_BASE = localStorage.getItem("apiBase") || (location.origin+"/api");
+async function apiDetect(){
+  const paths = /\/api$/.test(API_BASE) ? [API_BASE+"/health"] : [API_BASE+"/api/health"];
+  for (const p of paths){
+    try{const r=await fetch(p,{credentials:"omit"}); if(r.ok){ apiBadge.textContent="API: online"; apiBadge.style.color="#0f0"; return; }}catch{}
+  }
+  apiBadge.textContent="API: offline"; apiBadge.style.color="#ff8";
+}
+function classifyURL(){
+  const b=(API_BASE||"").replace(/\/+$/,"");
+  return /\/api$/.test(b) ? b+"/classify" : b+"/api/classify";
+}
+
+/* ==================== Domain data (metrics, ops, titles) ==================== */
+const INDUSTRIES = [
+  "Beverage","Food","Cosmetics","Electronics","Industrial","Logistics","Apparel","Pharma","Automotive"
+];
+
+const METRIC_MAP = {
+  Beverage:[
     ["High-speed line compatibility","0=manual/slow — 10=≥500+ units/min or ≥30 cases/min",8],
     ["Retail-ready print consistency","0=drift/misregister — 10=ΔE<2 @ volume",8],
     ["Condensation tolerance","0=fails w/ light sweat — 10=retort/cooler-ready",7],
     ["Pallet stability for bottlers","0=shifts/collapses — 10=ISTA 3A/3E stable",8],
     ["Case integrity for glass/plastic","0=breaks/deforms — 10=holds @ peak load",7],
     ["Damage reduction targets in transit","0=no target — 10=≤0.5% KPI",7]
-  ],opsPool:["Automated pallet wrapper","Hand pallet wrapping","E-commerce fulfillment","3PL / distribution"],
-  titles:["Operations","Procurement","Plant Manager"],size:[20,250]},
-  Food:{metrics:[
-    ["Food-contact compliance (FDA/EC)","0=uncertified — 10=fully certified w/ docs",9],
+  ],
+  Food:[
+    ["Food-contact compliance (FDA/EC)","0=uncertified — 10=fully certified",9],
     ["Oxygen/moisture barrier","0=none — 10=validated OTR/WVTR",8],
     ["Traceability & COA","0=none — 10=lot-level COA + recall-ready",8],
-    ["Sealing performance","0=leaks — 10=validated hermetic seal",8],
-    ["Print/label regs","0=non-compliant — 10=GHS/NLEA compliant",7]
-  ],opsPool:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"],
-  titles:["QA/Regulatory","Operations","Procurement"],size:[10,150]},
-  Cosmetics:{metrics:[
-    ["Premium print/finish expectations","0=basic CMYK — 10=foil/spot/emboss @ scale",8],
-    ["Color consistency delta-E","0=ΔE>6 — 10=ΔE≤2",8],
-    ["Unboxing experience","0=plain — 10=designed tactile",7]
-  ],opsPool:["E-commerce fulfillment","3PL / distribution","Co-packing"],
-  titles:["Brand Ops","Procurement","Packaging Eng"],size:[5,80]},
-  Electronics:{metrics:[
+    ["Sealing performance","0=frequent leaks — 10=validated hermetic @ scale",8],
+    ["Print/label regs","0=non-compliant — 10=GHS/NLEA @ scale",7]
+  ],
+  Cosmetics:[
+    ["Premium print/finish expectations","0=basic CMYK — 10=foil/spot/emboss @ scale",9],
+    ["Color consistency ΔE","0=ΔE>6 — 10=ΔE≤2",8],
+    ["Unboxing experience","0=plain — 10=designed tactile experience",7]
+  ],
+  Electronics:[
     ["ESD protection requirements","0=not needed — 10=ANSI/ESD S541",8],
-    ["Shock/vibration protection","0=insufficient — 10=drop/ISTA validated",8],
+    ["Shock/vibration protection","0=insufficient — 10=drop/ISTA validated",7],
     ["Moisture control","0=none — 10=desiccant + barrier spec",7]
-  ],opsPool:["Warehouse pick/pack","3PL / distribution"],
-  titles:["Operations","Supply Chain","Packaging Eng"],size:[20,400]},
-  Industrial:{metrics:[
-    ["Heavy-load stability","0=tip/fail — 10=stable @ max load",8],
-    ["Puncture/tear resistance","0=tears common — 10=meets spec @ gauge",8],
-    ["Unitization efficiency","0=poor cube — 10=optimized unit load",7]
-  ],opsPool:["Automated pallet wrapper","3PL / distribution"],
-  titles:["Plant Manager","Operations","Procurement"],size:[30,500]},
-  Logistics:{metrics:[
-    ["3PL/e-com integration","0=manual — 10=labels/ASN/SLAs ready",8],
+  ],
+  Industrial:[
+    ["Heavy-load stability","0=frequent load shifts — 10=validated",8],
+    ["Puncture/tear resistance","0=tears common — 10=meets spec",8],
+    ["Unitization efficiency","0=inefficient — 10=optimized cube/film",7]
+  ],
+  Logistics:[
+    ["3PL/e-com integration","0=manual — 10=ready labels/ASN/SLAs",8],
     ["Damage in parcel","0=high — 10=≤0.5% returns due to damage",7],
     ["Dock-to-stock speed","0=slow — 10=fast with ready SKUs",7]
-  ],opsPool:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Hand pallet wrapping"],
-  titles:["Fulfillment Ops","Warehouse Manager","Procurement"],size:[15,200]},
-  Apparel:{metrics:[
+  ],
+  Apparel:[
     ["Presentation (crease/scuff)","0=issues common — 10=store-ready",8],
     ["Parcel-rate optimization","0=oversized — 10=lowest practical DIM",7],
     ["Return-friendly design","0=hassles — 10=easy reseal/scan",7]
-  ],opsPool:["E-commerce fulfillment","3PL / distribution"],
-  titles:["E-com Ops","Logistics","Procurement"],size:[5,120]}
+  ],
+  Pharma:[
+    ["GxP documentation","0=basic — 10=full dossier",9],
+    ["Tamper-evidence","0=not present — 10=validated",8],
+    ["Serialisation/lot coding","0=none — 10=aggregated",8]
+  ],
+  Automotive:[
+    ["Grease/solvent resistance","0=poor — 10=validated",7],
+    ["Line-side kitting","0=ad-hoc — 10=optimized",7],
+    ["Export durability","0=fails — 10=validated",7]
+  ]
+};
+const OPS_POOL = {
+  default:["Hand pallet wrapping","Automated pallet wrapper","E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"],
+  Apparel:["E-commerce fulfillment","3PL / distribution"],
+  Logistics:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution"]
+};
+const TITLES_POOL = {
+  default:["Operations","Procurement","Plant Manager","Supply Chain","Warehouse"],
+  Cosmetics:["Operations","Procurement","Brand Ops"],
+  Logistics:["Operations","Supply Chain","Procurement"],
+  Apparel:["Operations","E-com Ops","Procurement"]
 };
 
-/* ====== API ====== */
-async function detectAPI(){
-  const saved=getS("apiBase","");
-  const tries=[saved, location.origin+"/api", location.origin].filter(Boolean);
-  for (const t of tries){
-    const base=(t||"").replace(/\/+$/,"");
-    const url=/\/api$/.test(base)?base+"/health":base+"/api/health";
-    try{const r=await fetch(url,{credentials:"omit"}); if(r.ok){apiBadge.textContent="API: online"; state.apiBase=base; return;}}catch{}
-  }
-  apiBadge.textContent="API: offline"; state.apiBase=tries[0]||location.origin+"/api";
-}
-const classifyURL=()=> (/\/api$/.test(state.apiBase)?state.apiBase+"/classify":state.apiBase+"/api/classify");
-async function classify(host,email){
-  const url=classifyURL()+"?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
-  try{const r=await fetch(url,{credentials:"omit"}); if(!r.ok) throw 0; return await r.json();}
-  catch{const alt=/\/api\/classify$/.test(url)?url.replace("/api/classify","/classify"):url.replace("/classify","/api/classify");
-        const r2=await fetch(alt,{credentials:"omit"}); if(!r2.ok) throw 0; return await r2.json();}
-}
+/* ==================== Rotor component ==================== */
+const rotor = $("#rotor");
+const viewport = $("#rotorViewport");
+let items = INDUSTRIES.map(name=>({name, muted:false, aiDecide:false}));
+let filtered = items.slice();
+let sel = 0;            // selected index in filtered[]
+let gap = 52;           // px distance between rows
+let animRaf = null;
+let dragging = false, startY=0, acc=0;
 
-/* ====== one-liner ====== */
-function setFavicon(host){ const h=normHost(host); $('#fav').src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):""; }
-function renderLine(edit=false){
-  const L=state.line;
-  const tpl=[
-    {txt:L.host, lock:true},{txt:"—", lock:true},
-    {k:"verb",txt:L.verb},{k:"products",txt:L.products},
-    {txt:"for",lock:true},{k:"audience",txt:L.audience},
-    {txt:"in",lock:true},{k:"region",txt:L.region},
-    {txt:".",lock:true},{txt:"Best contacts:",lock:true},{k:"contacts",txt:L.contacts}
-  ];
-  line.innerHTML="";
-  tpl.forEach(p=>{
-    const s=document.createElement("span"); s.className="token";
-    if (p.lock){ s.dataset.lock="true"; }
-    else { s.dataset.editable="true"; s.contentEditable = edit?"true":"false"; s.addEventListener("input",()=> state.line[p.k]=s.textContent.trim()); }
-    s.textContent=p.txt; line.appendChild(s); line.appendChild(document.createTextNode(" "));
-  });
-}
-$('#editLine').onclick=()=>{renderLine(true); editBtn.hidden=true; doneBtn.hidden=false;};
-$('#doneLine').onclick=()=>{renderLine(false); editBtn.hidden=false; doneBtn.hidden=true;};
-
-/* ====== industries build ====== */
-function titleCase(s){s=String(s||"");return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase();}
-function namesFromHints(data){
-  const hints = Array.isArray(data?.sectorHints)?data.sectorHints:[];
-  const known = Object.keys(DB);
-  const out=[];
-  hints.forEach(h=>{const k=titleCase(h); if(DB[k]&&!out.includes(k)) out.push(k);});
-  known.forEach(k=>{if(!out.includes(k)) out.push(k);});
-  return out.slice(0,12);
-}
-function buildIndustries(list){
-  state.industries = list.map(name=>{
-    const d=DB[name]||{metrics:[],opsPool:[],titles:[],size:[10,100]};
-    return {
-      name, muted:false, ai:false,
-      metrics:d.metrics.map(([label,desc,val])=>({label,desc,value:val})),
-      opsPool:d.opsPool.slice(),
-      ops:new Map(),
-      titles:d.titles.slice(),
-      size:d.size.slice(),
-      cities:["New Jersey","Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"],
-      city:""
-    };
-  });
-}
-
-/* ====== rotor (single-bind listeners, throttled) ====== */
-const VISIBLE=9, CENTER=4, ITEMH=70;
-function initBucket(){
-  bucket.innerHTML="";
-  for(let i=0;i<VISIBLE;i++){
-    const li=document.createElement("li"); li.dataset.slot=i-CENTER; li.textContent="";
-    bucket.appendChild(li);
-  }
-  // one-time wheel/touch/click
-  rotor.addEventListener("wheel", e=>{
-    e.preventDefault();
-    const now=performance.now(); if (now-state.wheelLock<110) return;
-    state.wheelLock=now; move(Math.sign(e.deltaY));
-  }, {passive:false});
-  rotor.addEventListener("touchstart", e=>{state.touchY=e.touches[0].clientY},{passive:true});
-  rotor.addEventListener("touchmove", e=>{
-    if(state.touchY==null) return;
-    const dy=e.touches[0].clientY-state.touchY;
-    if(Math.abs(dy)>28){ move(dy>0?+1:-1); state.touchY=e.touches[0].clientY; }
-  }, {passive:true});
-  bucket.addEventListener("click", e=>{
-    const li=e.target.closest("li"); if(!li||!li.dataset.name) return;
-    selectByName(li.dataset.name);
-  });
-}
-function viewList(){
-  const src = hideMuted.checked ? state.industries.filter(i=>!i.muted) : state.industries;
-  return src;
-}
-function activeName(){
-  return state.industries[state.index]?.name || viewList()[0]?.name || "";
-}
-function move(dir){
-  const names=viewList().map(i=>i.name); if(!names.length) return;
-  const curr=activeName(); let j=names.indexOf(curr); j=clamp(j+dir,0,names.length-1);
-  selectByName(names[j]);
-}
-function selectByName(name){
-  const idx=state.industries.findIndex(i=>i.name===name);
-  if(idx<0) return; state.index=idx; updateBucket(); renderPane();
-}
-function updateBucket(){
-  const list=viewList(); if(!list.length) return;
-  // ensure a valid center index in filtered view
-  const names=list.map(i=>i.name); let c=names.indexOf(activeName()); if(c<0) c=0;
-  const items=Array.from(bucket.children);
-  for(let i=0;i<VISIBLE;i++){
-    const off=i-CENTER, pos=clamp(c+off,0,names.length-1), name=names[pos];
-    const muted=list[pos].muted;
-    const li=items[i];
-    li.dataset.name=name; li.textContent=name;
-    li.classList.toggle("active", off===0);
-    li.classList.toggle("muted", !!muted);
-    li.style.transform=`translateY(${off*ITEMH}px)`;
+function renderRotor(){
+  // Virtualize: only draw 11 around selection
+  viewport.innerHTML="";
+  const centerY = rotor.clientHeight/2;
+  const span = 5;
+  for (let i=-span;i<=span;i++){
+    const idx = sel+i;
+    if (idx<0 || idx>=filtered.length) continue;
+    const data = filtered[idx];
+    const d = Math.abs(i);
+    const y = centerY + i*gap;
+    const s = clamp(1 - 0.12*d, 0.7, 1.12);
+    const o = clamp(1 - 0.18*d, .18, 1);
+    const el = document.createElement("div");
+    el.className = "rotor-item"+(i===0?" active":"")+(data.muted?" muted":"");
+    el.style.top = y+"px";
+    el.style.setProperty("--d", d);
+    el.style.transform = `translate(-50%,-50%) scale(${s})`;
+    el.style.opacity = o;
+    el.textContent = data.name;
+    el.addEventListener("click",()=>{ sel = idx; syncIndustryUI(); renderRotor(); });
+    viewport.appendChild(el);
   }
 }
 
-/* ====== pane render ====== */
-function renderPane(){
-  const ind=state.industries[state.index]; if(!ind) return;
-  paneTitle.textContent=ind.name;
-  opsTitle.textContent=`Buyer operations for ${ind.name}`;
-  personaTitle.textContent=`Hot-buyer persona — ${ind.name}`;
-  muteBtn.textContent= ind.muted?`Muted ${ind.name}`:`Mute ${ind.name}`;
-  muteBtn.classList.toggle("on", ind.muted);
-  aiDecide.checked=ind.ai;
+function stepBy(delta){
+  if (!filtered.length) return;
+  sel = (sel + delta + filtered.length) % filtered.length;
+  syncIndustryUI();
+  renderRotor();
+}
 
-  // metrics
+function onWheel(e){
+  e.preventDefault();
+  acc += e.deltaY;
+  if (Math.abs(acc) > 40){ stepBy(acc>0?1:-1); acc = 0; }
+}
+function onPointerDown(e){
+  dragging=true; startY = e.clientY || e.touches?.[0]?.clientY || 0; acc=0;
+  rotor.setPointerCapture?.(e.pointerId||0);
+}
+function onPointerMove(e){
+  if (!dragging) return;
+  const y = e.clientY || e.touches?.[0]?.clientY || 0;
+  const dy = y - startY; startY = y; acc += dy;
+  while (Math.abs(acc) >= gap/2){ stepBy(acc>0?-1:1); acc += (acc>0?-1:1)*(-gap/2); }
+}
+function onPointerUp(){ dragging=false; }
+
+rotor.addEventListener("wheel", onWheel, {passive:false});
+rotor.addEventListener("pointerdown", onPointerDown);
+rotor.addEventListener("pointermove", onPointerMove);
+rotor.addEventListener("pointerup", onPointerUp);
+rotor.addEventListener("pointercancel", onPointerUp);
+rotor.addEventListener("touchstart", e=>onPointerDown(e.touches[0]), {passive:true});
+rotor.addEventListener("touchmove", e=>{onPointerMove(e.touches[0]); e.preventDefault();},{passive:false});
+rotor.addEventListener("touchend", onPointerUp);
+
+/* ==================== Right side UI ==================== */
+const sectTitle=$("#sectTitle"), muteBtn=$("#muteBtn"), aiDecide=$("#aiDecide");
+const metricsBox=$("#metricsBox"), opsChips=$("#opsChips"), opsSliders=$("#opsSliders");
+const opsFor=$("#opsFor"), personaFor=$("#personaFor");
+const titlesChips=$("#titlesChips");
+
+function chip(text, active=false){
+  const s=document.createElement("span"); s.className="chip"; s.textContent=text;
+  if (active) s.classList.add("active");
+  s.addEventListener("click",()=> s.classList.toggle("active"));
+  return s;
+}
+
+function renderMetrics(name){
   metricsBox.innerHTML="";
-  ind.metrics.forEach(m=>{
+  const list = (METRIC_MAP[name]||METRIC_MAP.Beverage);
+  list.forEach(([label,desc,def=7])=>{
     const row=document.createElement("div"); row.className="row";
     const left=document.createElement("div");
-    left.innerHTML=`<div style="font-weight:600">${m.label}</div><small class="hint">${m.desc}</small>`;
-    const r=document.createElement("input"); r.type="range"; r.min="0"; r.max="10"; r.step="1"; r.value=m.value;
-    r.disabled=ind.ai||ind.muted; r.addEventListener("input",()=>m.value=Number(r.value));
-    row.appendChild(left); row.appendChild(r); metricsBox.appendChild(row);
+    left.innerHTML = `<div style="font-weight:700">${label}</div><div class="muted">${desc}</div>`;
+    const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=def;
+    row.appendChild(left); row.appendChild(input); metricsBox.appendChild(row);
   });
+}
 
-  // ops
+function renderOps(name){
   opsChips.innerHTML=""; opsSliders.innerHTML="";
-  const ensure=(label)=>{
-    if(ind.ops.has(label)) return;
-    const wrap=document.createElement("div"); wrap.className="row"; wrap.dataset.label=label;
-    const lab=document.createElement("div"); lab.textContent=label;
-    const r=document.createElement("input"); r.type="range"; r.min="0"; r.max="10"; r.step="1"; r.value="7";
-    r.disabled=ind.ai||ind.muted; r.addEventListener("input",()=>ind.ops.set(label,Number(r.value)));
-    wrap.appendChild(lab); wrap.appendChild(r); opsSliders.appendChild(wrap); ind.ops.set(label,7);
+  const pool = OPS_POOL[name] || OPS_POOL.default;
+  pool.forEach(p=> opsChips.appendChild(chip(p,true)));
+}
+
+function renderTitles(name){
+  titlesChips.innerHTML="";
+  (TITLES_POOL[name]||TITLES_POOL.default).forEach(t=> titlesChips.appendChild(chip(t,true)));
+}
+
+function syncIndustryUI(){
+  if (!filtered.length){ sectTitle.textContent="—"; return; }
+  const name = filtered[sel].name;
+  sectTitle.textContent = name;
+  opsFor.textContent = name;
+  personaFor.textContent = name;
+  muteBtn.textContent = filtered[sel].muted ? ("Unmute "+name) : ("Mute "+name);
+  aiDecide.checked = !!filtered[sel].aiDecide;
+
+  renderMetrics(name);
+  renderOps(name);
+  renderTitles(name);
+}
+
+/* hide-muted toggle */
+const hideMuted = document.createElement("label");
+hideMuted.className="muted"; hideMuted.style.display="flex"; hideMuted.style.gap="8px"; hideMuted.style.alignItems="center";
+hideMuted.style.marginTop="8px"; hideMuted.innerHTML = `<input id="hideMutedBox" type="checkbox"> Hide muted`;
+rotor.after(hideMuted);
+$("#hideMutedBox").addEventListener("change",()=>{
+  const on = $("#hideMutedBox").checked;
+  filtered = on ? items.filter(x=>!x.muted) : items.slice();
+  sel = 0; renderRotor(); syncIndustryUI();
+});
+
+/* mute + ai decide */
+muteBtn.addEventListener("click",()=>{
+  if (!filtered.length) return;
+  const obj = filtered[sel];
+  obj.muted = !obj.muted;
+  muteBtn.textContent = obj.muted ? ("Unmute "+obj.name) : ("Mute "+obj.name);
+  if ($("#hideMutedBox").checked){ filtered = items.filter(x=>!x.muted); sel = 0; }
+  renderRotor(); syncIndustryUI();
+});
+aiDecide.addEventListener("change",()=>{ if(filtered.length) filtered[sel].aiDecide = aiDecide.checked; });
+
+/* ==================== Persona badges (top line) ==================== */
+function setOneLiner(data){
+  const kv=$("#kvLine"); kv.innerHTML="";
+  const parts = [
+    ["supplies", true],
+    [ (data.productTags||[]).slice(0,3).join(", ") + ( (data.productTags||[]).length>3 ? ", etc." : "" ) || "packaging", true],
+    ["for", true],
+    [ (data.sectorHints||[]).slice(0,1).join(", ") || "brands", true],
+    ["in", true],
+    [ "the U.S.", true ]
+  ];
+  parts.forEach(([txt])=>{const s=document.createElement("span"); s.className="pill"; s.textContent=txt; kv.appendChild(s);});
+}
+
+/* ==================== Dual-range (company size) ==================== */
+const lo=$("#lo"), hi=$("#hi"), fill=$("#fill");
+const steps=[0,20,100,250,500,1000,5000,10000]; // $M
+function syncFill(){
+  let a=+lo.value, b=+hi.value;
+  if (a>b){ const t=a;a=b;b=t; lo.value=a; hi.value=b; }
+  const w = $("#personaBox").clientWidth - 28;
+  const pct = x => x/7;
+  fill.style.left = (pct(a)*100)+"%";
+  fill.style.right = (100 - pct(b)*100)+"%";
+}
+lo.addEventListener("input",syncFill); hi.addEventListener("input",syncFill);
+
+/* ==================== Save / Finish ==================== */
+function collectPersona(){
+  const industry = filtered.length ? filtered[sel].name : "Beverage";
+  const metrics = [...metricsBox.querySelectorAll(".row")].map(r=>({
+    label: r.querySelector("div div:nth-child(1)")?.previousSibling?"" : r.querySelector("div").textContent.split("\n")[0],
+    value: +r.querySelector('input[type="range"]').value
+  }));
+  const operations = [...opsChips.querySelectorAll(".chip.active")].map(el=>({label:el.textContent, value:7}));
+  const titles = [...titlesChips.querySelectorAll(".chip.active")].map(el=>el.textContent);
+  const size = { minM: steps[+lo.value], maxM: steps[+hi.value] };
+
+  const persona = {
+    host, industry, metrics, operations,
+    persona: { titles, size },
+    muted: items.filter(x=>x.muted).map(x=>x.name),
+    aiDecide: items.filter(x=>x.aiDecide).map(x=>x.name)
   };
-  const remove=(label)=>{ const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]'); if(el) el.remove(); ind.ops.delete(label); };
-  ind.opsPool.forEach(lbl=>{
-    const s=document.createElement("span"); s.className="chip"; s.textContent=lbl;
-    s.classList.toggle("active", ind.ops.has(lbl));
-    s.onclick=()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); on?ensure(lbl):remove(lbl); };
-    opsChips.appendChild(s);
-  });
-
-  // persona — size dual
-  const clampGap=5;
-  sizeMin.value=ind.size[0]; sizeMax.value=ind.size[1]; syncSize();
-  sizeMin.oninput=()=>{ if(+sizeMin.value>+sizeMax.value-clampGap) sizeMin.value=+sizeMax.value-clampGap; ind.size[0]=+sizeMin.value; syncSize(); };
-  sizeMax.oninput=()=>{ if(+sizeMax.value<+sizeMin.value+clampGap) sizeMax.value=+sizeMin.value+clampGap; ind.size[1]=+sizeMax.value; syncSize(); };
-  sizeQuick.innerHTML=""; [[0,20],[20,100],[50,250],[100,500],[200,1000]].forEach(([a,b])=>{
-    const c=document.createElement("span"); c.className="chip"; c.textContent=`$${a}–${b}M`;
-    c.onclick=()=>{ ind.size=[a,b]; sizeMin.value=a; sizeMax.value=b; syncSize(); }; sizeQuick.appendChild(c);
-  });
-
-  // persona — titles
-  titleChips.innerHTML=""; ind.titles.forEach(t=>{
-    const s=document.createElement("span"); s.className="chip active"; s.textContent=t;
-    s.onclick=()=> s.classList.toggle("active"); titleChips.appendChild(s);
-  });
-
-  // persona — city
-  targetLbl.textContent=`Boost near city for ${ind.name}…`;
-  city.value=ind.city||""; city.oninput=()=> ind.city=city.value.trim();
-  cityChips.innerHTML=""; ind.cities.forEach(c=>{
-    const s=document.createElement("span"); s.className="chip"; s.textContent=c;
-    s.onclick=()=>{city.value=c; ind.city=c;}; cityChips.appendChild(s);
-  });
-
-  // toggles
-  aiDecide.onchange=()=>{ ind.ai=aiDecide.checked; renderPane(); };
-  muteBtn.onclick=()=>{ ind.muted=!ind.muted; updateBucket(); renderPane(); };
+  return persona;
 }
-function syncSize(){
-  sizeMinLbl.textContent="$"+Number(sizeMin.value)+"M";
-  sizeMaxLbl.textContent="$"+Number(sizeMax.value)+"M";
-}
+$("#save").addEventListener("click",()=>{
+  setS("bf.persona", collectPersona());
+  $("#status").textContent="Saved.";
+  setTimeout(()=>$("#status").textContent="",1200);
+});
+$("#finish").addEventListener("click",()=>{
+  const p=collectPersona();
+  setS("bf.persona", p);
+  setS("fp.persona", p);
+  setS("fp.supplier.host", host);
+  setS("fp.autoImport","1");
+  location.href="free-panel.html";
+});
 
-/* ====== advanced toggle ====== */
-advToggle.onclick=(e)=>{e.preventDefault(); const open=adv.hasAttribute("hidden");
-  if(open){ adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
-  else{ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
-};
-hideMuted.onchange=()=>{ updateBucket(); };
+/* ==================== Advanced toggle ==================== */
+const adv=$("#adv"), advToggle=$("#advToggle"), advLbl=$("#advLbl");
+advToggle.addEventListener("click",()=>{
+  const open = !adv.hasAttribute("hidden");
+  if (open){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
+  else { adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
+});
 
-/* ====== save/finish ====== */
-saveBtn.onclick=persist; finishBtn.onclick=()=>{ persist(); location.href="free-panel.html"; };
-backBtn.onclick=()=>history.back();
-function persist(){
-  const packed={
-    host: state.seed?.host || "",
-    line: state.line,
-    industries: state.industries.map(i=>({
-      name:i.name, muted:i.muted, ai:i.ai,
-      metrics:i.metrics, operations:[...i.ops.entries()].map(([label,value])=>({label,value})),
-      titles: Array.from(titleChips.querySelectorAll(".chip.active")).map(x=>x.textContent),
-      size:i.size, city:i.city
-    }))
-  };
-  setS("fp.persona", JSON.stringify(packed)); setS("bf.persona", JSON.stringify(packed));
-}
-
-/* ====== boot ====== */
-async function boot(){
-  await detectAPI();
-  // seed from Step 2
-  const seed = JSON.parse(getS("onb.seed","{}")); state.seed=seed;
-  const host = normHost(seed.host || domainFromEmail(seed.contact?.email||""));
-  if(host) $('#fav').src="https://icons.duckduckgo.com/ip3/"+encodeURIComponent(host)+".ico";
-
-  // classify
+/* ==================== Classify (light) ==================== */
+async function classify(host, email){
+  const url= classifyURL() + "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
   try{
-    const data = await classify(host, seed.contact?.email||"");
-    // one-liner with 3-product cap + “etc.”
-    const tags = Array.isArray(data?.productTags)?data.productTags:[];
-    const main = tags.slice(0,3);
-    let products = main.join(", ") || "packaging";
-    if (tags.length>3) products += ", etc.";
-    const segs = (data?.sectorHints||[]).slice(0,3).join(", ") || "brands";
-    const contacts = /ops|operation|procure|plant|warehouse|supply|logistics/i.test(((data?.summary||"")+" "+tags.join(",")).toLowerCase())
-      ? "Operations, Procurement" : "Procurement, Marketing";
-    state.line = {host,verb:"supplies",products,audience:segs,region:"the U.S.",contacts};
-    renderLine(false);
+    const r=await fetch(url,{credentials:"omit"}); if(!r.ok) throw new Error(r.status);
+    return await r.json();
+  }catch(e){
+    // path swap fallback
+    const alt = /\/api\/classify$/.test(url)?url.replace(/\/api\/classify$/,"/classify"):url.replace(/\/classify$/,"/api/classify");
+    const r2=await fetch(alt,{credentials:"omit"}); if(!r2.ok) throw new Error(r2.status);
+    return await r2.json();
+  }
+}
 
-    const names = namesFromHints(data);
-    buildIndustries(names);
-    initBucket(); updateBucket();
-    selectByName(names[0]||"Beverage");
-    apiBadge.textContent="API: online";
-  }catch{
-    state.line = {host,verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"};
-    renderLine(false);
-    buildIndustries(Object.keys(DB));
-    initBucket(); updateBucket();
-    selectByName("Beverage");
-    apiBadge.textContent="API: offline";
+/* ==================== Boot ==================== */
+async function boot(){
+  await apiDetect();
+
+  // initial rotor
+  filtered = items.slice();
+  sel = 0; renderRotor(); syncIndustryUI(); syncFill();
+
+  // fetch persona hints
+  $("#status").textContent="Fetching…";
+  try{
+    const data = await classify(host, seed?.contact?.email||"");
+    setOneLiner(data||{});
+    $("#status").textContent = data?.cached ? "(cached)" : "";
+    // optional: prioritize sectors from classify
+    if (Array.isArray(data?.sectorHints) && data.sectorHints.length){
+      const set=new Set(data.sectorHints.map(s=>String(s).toLowerCase()));
+      items.forEach(it=>{ it.priority = set.has(it.name.toLowerCase())?1:0; });
+      items.sort((a,b)=>b.priority-a.priority || a.name.localeCompare(b.name));
+      filtered = items.slice(); sel = 0; renderRotor(); syncIndustryUI();
+    }
+  }catch(e){
+    $("#status").textContent="(offline)";
+    setOneLiner({});
   }
 }
 boot();
 
-})();</script>
+/* back */
+$("#back").addEventListener("click",()=>history.back());
+
+})();
+</script>
 </body>
 </html>
