@@ -17,7 +17,7 @@
 //   }
 
 import { Router, Request, Response as ExResponse } from "express";
-import { withCache, daily } from "../shared/guards";
+import { withCache } from "../shared/guards";
 import { CFG } from "../shared/env";
 
 // ---- minimal fetch typing (Node 20) -----------------------------------------
@@ -49,12 +49,6 @@ function emailsDomain(email?: string): string | undefined {
   if (!email) return undefined;
   const m = String(email).toLowerCase().match(/@([a-z0-9.-]+)/);
   return m?.[1];
-}
-
-function clientKey(req: Request): string {
-  const apiKey = (req.headers["x-api-key"] || "") as string;
-  const ip = (req.ip || req.socket.remoteAddress || "unknown").toString();
-  return apiKey ? `k:${apiKey}` : `ip:${ip}`;
 }
 
 async function timedFetch(url: string, timeoutMs: number): Promise<FetchResponse> {
@@ -122,7 +116,7 @@ function extractTextMeta(html: string): {
   return { text, jsonld, title, description, keywords };
 }
 
-// ---- rule classification (kept simple + deterministic) ----------------------
+// ---- rule classification (simple + deterministic) ---------------------------
 type Role = "packaging_supplier" | "packaging_buyer" | "neither";
 
 function ruleClassify(text: string, jsonld: string[]): {
@@ -136,7 +130,7 @@ function ruleClassify(text: string, jsonld: string[]): {
   const packagingTokens = [
     "packaging","box","boxes","carton","cartons","corrugate","corrugated",
     "label","labels","tape","pouch","pouches","bottle","bottles","jar","jars",
-    "mailers","mailer","cartons","film","shrink","pallet","pallets"
+    "mailers","mailer","film","shrink","pallet","pallets","clamshell","blister"
   ];
   const buyerHints = ["brand", "retail", "ecommerce", "our stores", "locations", "menu"];
   const supplierVerbs = ["manufacture", "supply", "wholesale", "distributor", "converter", "co-pack", "contract pack", "private label"];
@@ -162,7 +156,7 @@ function ruleClassify(text: string, jsonld: string[]): {
         if (s.includes("wholesalestore") || s.includes("manufacturer") || s.includes("organization")) scoreSupplier += 1;
         if (s.includes("store") || s.includes("localbusiness") || s.includes("brand")) scoreBuyer += 1;
       }
-    } catch { /* ignore */ }
+    } catch { /* ignore bad JSON-LD */ }
   }
 
   const evidence: string[] = [];
@@ -219,7 +213,6 @@ function suggestSectorMetrics(productTags: string[], sectorHints: string[]): Rec
   const p = productTags.map(x=>x.toLowerCase());
   const out: Record<string,string[]> = {};
 
-  // Corrugate/boxes (if boxes/corrugate in tags)
   if (p.includes("boxes") || p.includes("cartons") || p.includes("corrugate")) {
     out["corrugate"] = [
       "ECT / stack strength at target weight",
@@ -295,7 +288,6 @@ function suggestSectorMetrics(productTags: string[], sectorHints: string[]): Rec
     ];
   }
 
-  // Fallback “general packaging” if nothing else triggered
   if (Object.keys(out).length === 0) {
     out["general"] = [
       "Damage reduction targets in transit",
@@ -316,7 +308,6 @@ function extractGeoHints(text: string): { citiesTop: string[]; statesTop: string
   const cities = new Map<string, number>();
   const states = new Map<string, number>();
 
-  // City, ST (abbrev)
   const reCitySt = /\b([A-Z][A-Za-z .'-]{2,}?),\s*(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b/g;
   let m: RegExpExecArray | null;
   while ((m = reCitySt.exec(t))) {
@@ -326,7 +317,6 @@ function extractGeoHints(text: string): { citiesTop: string[]; statesTop: string
     states.set(st, (states.get(st) || 0) + 2);
   }
 
-  // City, State
   const reCityState = new RegExp(`\\b([A-Z][A-Za-z .'-]{2,}?),\\s*(${US_ST_FULL.join("|")})\\b`, "g");
   let n: RegExpExecArray | null;
   while ((n = reCityState.exec(t))) {
@@ -336,7 +326,6 @@ function extractGeoHints(text: string): { citiesTop: string[]; statesTop: string
     states.set(st, (states.get(st) || 0) + 1);
   }
 
-  // Rank & limit
   const citiesTop = Array.from(cities.entries()).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k])=>k);
   const statesTop = Array.from(states.entries()).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k])=>k);
   return { citiesTop, statesTop };
@@ -406,7 +395,6 @@ async function classifyHostOnce(host: string) {
     { title: parsed.title, description: parsed.description }
   );
 
-  // New: sector-grouped metrics + geo hints
   const hotMetricsBySector = suggestSectorMetrics(productTags, sectorHints);
   const geoHints = extractGeoHints(parsed.text);
 
@@ -436,11 +424,6 @@ r.get("/", async (req: Request, res: ExResponse) => {
 
     if (!host) return res.status(404).json({ ok: false, error: "bad_host", detail: "Missing or invalid host" });
 
-    const key = `classify:${clientKey(req)}`;
-    const cap = CFG.classifyDailyLimit;
-    const count = Number(daily.get(key) ?? 0);
-    if (count >= cap) return res.status(200).json({ ok: false, error: "quota", remaining: 0 });
-
     const ed = emailsDomain(email);
     if (ed && ed !== host && !ed.endsWith(`.${host}`)) { /* soft-allow */ }
 
@@ -450,7 +433,6 @@ r.get("/", async (req: Request, res: ExResponse) => {
       () => classifyHostOnce(host)
     );
 
-    if (typeof daily.inc === "function") daily.inc(key, 1);
     return res.json({ ...(result as object), cached: true });
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
@@ -469,17 +451,11 @@ r.post("/", async (req: Request, res: ExResponse) => {
     const host = normalizeHost(body.host);
     if (!host) return res.status(404).json({ ok: false, error: "bad_host" });
 
-    const key = `classify:${clientKey(req)}`;
-    const cap = CFG.classifyDailyLimit;
-    const count = Number(daily.get(key) ?? 0);
-    if (count >= cap) return res.status(200).json({ ok: false, error: "quota", remaining: 0 });
-
     const result = await withCache(
       `class:${host}`,
       CFG.classifyCacheTtlS * 1000,
       () => classifyHostOnce(host)
     );
-    if (typeof daily.inc === "function") daily.inc(key, 1);
     return res.json({ ...(result as object), cached: true });
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
