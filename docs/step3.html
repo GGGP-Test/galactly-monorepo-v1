@@ -38,7 +38,7 @@
 
   /* One-liner */
   .one{background:#0e1622;border:1px solid var(--divider);border-radius:12px;padding:12px}
-  .one .edit{font-size:12px;color:var(--muted);cursor:pointer;margin-top:6px}
+  .one .edit{font-size:12px;color:#9bb2c8;cursor:pointer;margin-top:6px}
 
   /* Rotor pane */
   .rotorWrap{position:relative;height:420px;overflow:hidden;border-radius:12px;background:var(--panel2);
@@ -135,11 +135,11 @@
           <label>Target company size — <b>Revenue</b> (range)</label>
           <div class="dual" id="revDual">
             <div class="track"></div><div class="fill" id="revFill"></div>
-            <input id="revMin" type="range" min="0" max="200" step="1" value="10" />
+            <input id="revMin" type="range" min="0" max="200" step="1" value="0" />
             <input id="revMax" type="range" min="0" max="200" step="1" value="60" />
           </div>
-          <div class="slim"><span class="val" id="revMinVal">$10M</span> — <span class="val" id="revMaxVal">$60M</span></div>
-          <div class="hint">Drag both handles. Scale: $0–$200M (we’ll sanity-check conflicts automatically).</div>
+          <div class="slim"><span class="val" id="revMinVal">$0M</span> — <span class="val" id="revMaxVal">$60M</span></div>
+          <div class="hint">Drag both handles. Scale: $0–$200M.</div>
         </div>
         <div class="field">
           <label>Target company size — <b>Employees</b></label>
@@ -191,6 +191,13 @@
     muted:"fp.muted.industries"
   };
 
+  const displaySector = s => {
+    const k = String(s||"").toLowerCase();
+    if (k === "home") return "Home Care";   // fix: “home” reads as Home Care
+    if (k === "industrial") return "Industrial";
+    return String(s||"").replace(/\b\w/g,m=>m.toUpperCase());
+  };
+
   const getSeed = ()=>{ try{ return JSON.parse(localStorage.getItem(LS.seed)||"{}"); }catch{ return {}; } };
   const getApiBase = ()=>{
     const meta = document.querySelector('meta[name="api-base"]')?.content || "";
@@ -222,7 +229,7 @@
   const state = {
     host,
     classify:null,
-    industries:[],          // from sectorHints (+ fallbacks)
+    industries:[],          // from sectorHints (+ careful fallback)
     muted:new Set(),        // names
     showMuted:false,
     sel:0,
@@ -242,16 +249,31 @@
   };
 
   /* ---------------------- one-liner compose ---------------------- */
+  function joinForLine(list){
+    if (!list || !list.length) return "";
+    if (list.length === 1) return list[0];
+    if (list.length === 2) return list[0] + " & " + list[1];
+    if (list.length === 3) return list[0] + ", " + list[1] + " & " + list[2];
+    // > 3 — show 3 then “etc.”
+    return list[0] + ", " + list[1] + ", " + list[2] + ", etc.";
+  }
+
   function composeOneLiner(data){
-    const products = (data.productTags||[]).slice(0,3);
-    const prodStr = products.join(", ") + ( (data.productTags||[]).length>3 ? ", etc." : "");
-    const secStr = (data.sectorHints||[]).slice(0,2).join(" & ");
     const short = (data.host||state.host||"yourcompany.com").replace(/^www\./,"");
-    const roleVerb = data.role==="packaging_buyer" ? "buys packaging" :
-                     data.role==="packaging_supplier" ? "supplies packaging" : "does business";
-    let line = `${short} ${roleVerb}`;
-    if (prodStr) line += ` — ${prodStr}`;
-    if (secStr) line += ` for ${secStr} brands`;
+    const verb = data.role==="packaging_buyer" ? "buys packaging" :
+                 data.role==="packaging_supplier" ? "supplies packaging" : "does business";
+    const prods = (data.productTags||[]).map(String);
+    const sectors = (data.sectorHints||[]).map(displaySector);
+
+    // 1–3 products exactly; add “etc.” ONLY if >3
+    const prodBits = joinForLine(prods.slice(0, Math.min(3, prods.length)));
+
+    // sectors follow same rule
+    const sectBits = joinForLine(sectors.slice(0, Math.min(3, sectors.length)));
+
+    let line = `${short} ${verb}`;
+    if (prodBits) line += ` — ${prodBits}`;
+    if (sectBits) line += ` for ${sectBits} brands`;
     line += ".";
     return line;
   }
@@ -298,18 +320,18 @@
   }
 
   function buildIndustries(d){
-    const s = Array.isArray(d?.sectorHints) ? d.sectorHints.slice(0,12) : [];
-    const fallback = ["food","beverage","cosmetics","electronics","pharma","apparel","cannabis","industrial","home"];
+    // prefer only site sectors; if none, fallback to ["general"]
+    const s = Array.isArray(d?.sectorHints) ? d.sectorHints.filter(Boolean) : [];
     const uniq = [];
     const seen = new Set();
-    for (const x of [...s, ...fallback]){
+    const source = s.length ? s : ["general"];
+    for (const x of source){
       const k = String(x||"").toLowerCase().trim();
       if (!k || seen.has(k)) continue;
       seen.add(k); uniq.push(k);
       if (uniq.length>=14) break;
     }
     state.industries = uniq;
-    // Default select = first non-muted, else 0
     let idx = uniq.findIndex(x => !state.muted.has(x));
     if (idx<0) idx = 0;
     state.sel = idx;
@@ -319,13 +341,11 @@
   function renderRotor(center=false){
     rotorList.innerHTML="";
     const visible = state.industries.filter(i => state.showMuted || !state.muted.has(i));
-    // Always reserve space and center current selection among visible
-    let selName = state.industries[state.sel] || visible[0] || "industry";
-    // if sel muted & hidden, pick nearest visible
+    let selName = state.industries[state.sel] || visible[0] || "general";
     if (!state.showMuted && state.muted.has(selName)){
       const cand = visible[0]; if (cand){ selName = cand; state.sel = state.industries.indexOf(cand); }
     }
-    const selVisibleIndex = visible.indexOf(selName);
+    const selVisibleIndex = Math.max(0, visible.indexOf(selName));
 
     visible.forEach((name, i)=>{
       const dist = Math.abs(i - selVisibleIndex);
@@ -338,36 +358,24 @@
       item.style.opacity = String(opacity);
       item.setAttribute("role","button");
       item.setAttribute("aria-label", name);
-      item.innerHTML = `<div class="label">${name}</div>`;
+      item.innerHTML = `<div class="label">${displaySector(name)}</div>`;
       item.addEventListener("click", ()=> selectIndustryByName(name));
       rotorList.appendChild(item);
     });
 
-    if (center){
-      // vertically center active item
-      const boxH = rotor.clientHeight;
-      const itemH = 36; // approx each row incl. gap
-      const top = (boxH/2) - (itemH/2) - (selVisibleIndex*itemH);
-      rotorList.style.transform = `translateY(${Math.round(top)}px)`;
-    }else{
-      // adjust smoothly to keep active in middle
-      const boxH = rotor.clientHeight;
-      const itemH = 36;
-      const top = (boxH/2) - (itemH/2) - (selVisibleIndex*itemH);
-      rotorList.style.transition = "transform .12s ease";
-      rotorList.style.transform = `translateY(${Math.round(top)}px)`;
-      setTimeout(()=> rotorList.style.transition = "", 150);
-    }
+    const boxH = rotor.clientHeight;
+    const itemH = 36;
+    const top = (boxH/2) - (itemH/2) - (selVisibleIndex*itemH);
+    rotorList.style.transition = center ? "" : "transform .12s ease";
+    rotorList.style.transform = `translateY(${Math.round(top)}px)`;
+    if (!center) setTimeout(()=> rotorList.style.transition = "", 150);
 
     $("#toggleMuted").textContent = state.showMuted? "hide" : "show";
     $("#mutedCount").textContent = String(state.muted.size);
-    // update metrics header + button label
-    $("#sectTitle").textContent = titleCase(selName);
-    $("#muteName").textContent = titleCase(selName);
+    $("#sectTitle").textContent = displaySector(selName);
+    $("#muteName").textContent = displaySector(selName);
     renderMetricsFor(selName);
   }
-
-  function titleCase(s){ return String(s||"").replace(/\b\w/g,m=>m.toUpperCase()); }
 
   function selectIndustryByName(name){
     const idx = state.industries.indexOf(name);
@@ -384,7 +392,6 @@
     selectIndustryByName(target);
   }
 
-  // wheel + touch/drag
   let touchY=0;
   rotor.addEventListener("wheel",(e)=>{ e.preventDefault(); stepSelection(e.deltaY>0? +1 : -1); }, {passive:false});
   rotor.addEventListener("pointerdown",(e)=>{ touchY=e.clientY; rotor.setPointerCapture(e.pointerId); });
@@ -421,7 +428,7 @@
     const metrics = (state.metricsBySector[sector] || state.metricsBySector.general || []).slice(0,3);
     metricBox.innerHTML="";
     if (!metrics.length){
-      metricBox.innerHTML = `<div class="hint">No strong signals for this industry. You can still set priorities below.</div>`;
+      metricBox.innerHTML = `<div class="hint">No strong signals for this industry.</div>`;
       return;
     }
     for (const m of metrics){
@@ -439,7 +446,6 @@
   function syncDual(){
     let a = parseInt(revMin.value,10), b = parseInt(revMax.value,10);
     if (a>b){ const t=a; a=b; b=t; revMin.value=a; revMax.value=b; }
-    const minPx=0, maxPx=$("#revDual").clientWidth||280; // just for fill sizing
     const lo = a/200, hi=b/200;
     revFill.style.left = (lo*100)+"%";
     revFill.style.right = ((1-hi)*100)+"%";
@@ -529,12 +535,26 @@
   $("#apply").addEventListener("click", applyToApi);
   $("#saveLocal").addEventListener("click", saveLocal);
   $("#finish").addEventListener("click", ()=>{
-    // save-and-go pattern
     saveLocal();
-    // mark auto-import for panel
     try{ localStorage.setItem("fp.autoImport","1"); }catch{}
     window.location.href = "free-panel.html";
   });
+
+  /* ---------------------- product refinement (shrink/film heuristic) ------ */
+  // If site clearly signals shrink/stretch/film, drop rigid/container-y generics.
+  function refineProductTags(host, list){
+    const L = (list||[]).map(s=>String(s).toLowerCase());
+    const shrinky = L.some(t => /shrink|stretch|film/.test(t));
+    if (!shrinky) return list||[];
+    const drop = new Set(["boxes","box","cartons","carton","bottles","jars","labels","mailer_bags","mailers"]);
+    const keep = [];
+    for (const t of list||[]){
+      const k = String(t).toLowerCase();
+      if (drop.has(k)) continue;
+      keep.push(t);
+    }
+    return keep;
+  }
 
   /* ---------------------- load classify + hydrate ---------------------- */
   async function loadFromSite(h, forceRefresh=false){
@@ -547,37 +567,37 @@
       $("#statusLine").className = "warn"; return;
     }
     state.classify = data;
-    state.products = Array.isArray(data.productTags)? data.productTags.slice(0,12) : [];
     state.metricsBySector = data.hotMetricsBySector || {};
     state.geo = data.geoHints || {citiesTop:[],statesTop:[]};
 
-    // one-liner
-    const use = (forceRefresh || !oneLine.textContent || /Loading/.test(oneLine.textContent));
-    if (use){
-      oneLine.textContent = composeOneLiner(data);
-    }
+    // one-liner (strict rules; no seed words)
+    oneLine.textContent = composeOneLiner(data);
 
-    // chips
-    $("#tagChipsInner").innerHTML=""; state.products.forEach(t=> chip(t, $("#tagChipsInner"), true));
-    $("#cityChipsInner").innerHTML="";
-    const citySeeds = (state.geo.citiesTop && state.geo.citiesTop.length) ? state.geo.citiesTop : ["Chicago","Dallas","Atlanta"];
-    citySeeds.forEach(c=> chip(c, $("#cityChipsInner"), true));
-
-    // industries + metrics
+    // industries
     buildIndustries(data);
+
+    // product focus: refined & prefilled
+    let prods = Array.isArray(data.productTags)? data.productTags.slice(0,12) : [];
+    prods = refineProductTags(state.host, prods);
+    $("#tagChips").innerHTML=""; const tagBox=document.createElement("div"); tagBox.id="tagChipsInner"; $("#tagChips").appendChild(tagBox);
+    prods.forEach(t=> chip(t, tagBox, true));
+
+    // cities: only from geo (no seed cities); prefill if present
+    $("#cityChips").innerHTML=""; const cityBox=document.createElement("div"); cityBox.id="cityChipsInner"; $("#cityChips").appendChild(cityBox);
+    const citySeeds = (state.geo.citiesTop && state.geo.citiesTop.length) ? state.geo.citiesTop : [];
+    citySeeds.forEach(c=> chip(c, cityBox, true));
+
     $("#statusLine").textContent = "Pre-filled from your site.";
     $("#statusLine").className = "ok";
 
-    // revenue range quick seed by size guess
-    const guess = state.products.some(p=>/pallet|ship|logistics/i.test(p)) ? [5,50] :
-                  state.products.some(p=>/labels?|boxes?|cartons?/i.test(p)) ? [2,80] : [1,40];
-    revMin.value = guess[0]; revMax.value = guess[1]; syncDual();
+    // sliders initial
+    revMin.value = 0; revMax.value = clamp(revMax.value|0, 0, 200); syncDual();
     emp.value = 120; syncEmp();
   }
 
   /* ---------------------- inputs wiring ---------------------- */
-  addOnEnter($("#cityInput"), $("#cityChipsInner"));
-  addOnEnter($("#tagInput"), $("#tagChipsInner"));
+  addOnEnter($("#cityInput"), $("#cityChips"));
+  addOnEnter($("#tagInput"), $("#tagChips"));
   $("#setApi").addEventListener("click", ()=>{
     const cur = getApiBase();
     const v = prompt("API base (with or without /api).", cur||"")||"";
@@ -587,12 +607,9 @@
 
   /* ---------------------- boot ---------------------- */
   updApiBadge();
-  if (!host) {
-    const manual = prompt("Your website / domain? (e.g., acme.com)","")||"";
-    state.host = normHost(manual);
-  }
+  const initHost = host || prompt("Your website / domain? (e.g., acme.com)","")||"";
+  state.host = normHost(initHost);
   loadFromSite(state.host, true);
-  // initialize visuals
   syncDual(); syncEmp();
 })();
 </script>
