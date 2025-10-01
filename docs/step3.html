@@ -3,548 +3,601 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Step 3</title>
-
+<title>Step 3 — Tune by industry</title>
 <style>
-:root{
-  --bg:#0b0f14; --panel:#101726; --panel-2:#0e141c; --divider:#1b2531;
-  --text:#e9f1f7; --muted:#8aa0b2; --brand:#8ae3ff; --cta:#6de1ff; --ctaText:#082433;
-  --chip:#162133; --chipAct:#0f3046;
-}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,Inter,Segoe UI,Roboto,Arial}
-.wrap{max-width:1100px;margin:0 auto;padding:22px 14px 36px}
-
-/* top line */
-.top{background:linear-gradient(180deg,#0f1623,#0b131e);border:1px solid var(--divider);border-radius:14px;padding:12px 12px 8px;margin-bottom:16px}
-.badge{display:inline-flex;gap:6px;align-items:center;background:#0f1e2c;border:1px solid var(--divider);border-radius:999px;padding:6px 10px;margin:4px 6px 0 0;color:#cfe5f9}
-.badge .favicon{width:18px;height:18px;border-radius:4px;background:#fff;display:inline-grid;place-items:center;overflow:hidden}
-.kv{display:flex;flex-wrap:wrap;gap:6px 10px;margin:8px 0 0}
-.kv .pill{background:#0e1a27;border:1px solid var(--divider);border-radius:10px;padding:6px 10px;color:#bcd3e7}
-.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0f1e2c;border:1px solid var(--divider);color:#cfe5f9}
-
-/* buttons */
-.btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
-.btn.sec{background:#152333;color:#cfe0ee}
-.btn.ghost{background:#0f1b29;border:1px solid var(--divider);color:#cfe0ee}
-.btn:active{transform:translateY(1px)}
-.hrow{display:flex;justify-content:space-between;align-items:center;margin:6px 0 8px}
-
-/* cards */
-.card{background:var(--panel);border:1px solid var(--divider);border-radius:16px;padding:14px;margin:12px 0}
-.card h3{margin:0 0 8px}
-.muted{color:#9eb4c7;font-size:12px}
-
-/* --- Rotor (center-locked) --- */
-.pane{display:grid;grid-template-columns:300px 1fr;gap:16px}
-@media (max-width:900px){.pane{grid-template-columns:1fr}}
-.rotor{position:relative;height:280px;background:#0e1725;border:1px solid var(--divider);border-radius:14px;overflow:hidden}
-.rotor-viewport{position:absolute;inset:0;contain:layout paint;will-change:transform}
-.rotor-item{
-  position:absolute;left:50%;
-  transform:translate(-50%,-50%) scale(var(--s,.9));
-  top:calc(50% + var(--y,0px));
-  opacity:var(--o,.7);
-  color:rgba(231,242,255,var(--o,.7));
-  font-weight:600;letter-spacing:.2px;white-space:nowrap;pointer-events:auto;user-select:none;
-}
-.rotor-item.active{font-weight:900;opacity:1;--s:1.18;color:#eaf6ff}
-.rotor-item.muted{opacity:.24}
-.rotor-center-line{position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:0;border-top:1px dashed #1d3144}
-.rotor-hint{position:absolute;left:10px;bottom:8px;color:#88a1b8;font-size:12px}
-
-/* right column basics */
-.row{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:center;margin:8px 0}
-@media (max-width:800px){.row{grid-template-columns:1fr}}
-input[type=range]{width:100%}
-.chips{user-select:none}
-.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
-.chip.active{background:var(--chipAct);color:#eaf7ff;border-color:#1b4862}
-
-/* dual slider track */
-.duo{position:relative;height:36px;margin:6px 0 4px}
-.duo .track{position:absolute;left:0;right:0;top:17px;height:6px;border-radius:999px;background:#314258}
-
-/* footer */
-.ft{display:flex;justify-content:space-between;gap:12px;margin-top:16px}
-.right{display:flex;gap:10px}
+  :root{
+    --bg:#0b0f14; --panel:#101826; --panel-2:#0d1420;
+    --text:#e9f1f7; --muted:#8aa0b2; --divider:#1c2836;
+    --chip:#162437; --chipActive:#103247; --cta:#6de1ff; --ctaText:#082433;
+  }
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 12px}
+  .crumb{padding:6px 10px;border-radius:999px;background:#0e1a28;border:1px solid var(--divider)}
+  .pill{padding:6px 10px;border-radius:999px;background:#0e1a28;color:#9fb6c9;font-size:12px}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;
+    background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
+  .btn.sec{background:#152333;color:#cfe0ee}
+  .btn.slim{padding:6px 10px;border-radius:10px;font-weight:600}
+  .xbtn{background:transparent;border:1px solid var(--divider);color:#bcd0e0;border-radius:10px;padding:6px 10px;cursor:pointer}
+  .hint{font-size:12px;color:#9bb2c8}
+  .section{background:var(--panel);border:1px solid var(--divider);border-radius:16px;padding:12px}
+  .row{display:grid;grid-template-columns:300px 1fr;gap:18px}
+  @media(max-width:900px){.row{grid-template-columns:1fr}}
+  /* rotor */
+  .rotor{position:relative;height:360px;background:var(--panel-2);border:1px solid var(--divider);border-radius:14px;overflow:hidden}
+  .rotor::before{content:"";position:absolute;left:0;right:0;top:50%;height:48px;transform:translateY(-50%);
+    border-top:1px dashed #233549;border-bottom:1px dashed #233549;background:linear-gradient(180deg,transparent 0,#0f1a27 50%,transparent 100%)}
+  .rlist{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;touch-action:none}
+  .ritem{position:absolute;left:0;right:0;text-align:center;color:#87a2bb;transition:transform .18s ease,opacity .18s ease;
+    will-change:transform,opacity;pointer-events:auto}
+  .ritem span{display:inline-block;padding:6px 10px;border-radius:999px}
+  .ritem.active span{font-weight:800;color:#eaf6ff}
+  .ritem.muted span{color:#5e7387;text-decoration:line-through}
+  /* metrics card */
+  .card{background:var(--panel-2);border:1px solid var(--divider);border-radius:14px;padding:12px}
+  .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+  .card-hd h3{margin:0;font-size:18px}
+  .switch{display:inline-flex;align-items:center;gap:8px}
+  .mute{padding:6px 10px;border-radius:999px;background:#132235;border:1px solid #1e3146;color:#cfe0ee;cursor:pointer}
+  .grid{display:grid;grid-template-columns:1fr 280px;gap:14px;margin:8px 0}
+  .metric{margin:6px 0}
+  .metric label{display:block;font-size:14px;margin:0 0 4px}
+  input[type=range]{width:100%}
+  /* chips */
+  .chips{user-select:none}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);
+    color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
+  .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
+  /* persona block */
+  .persona{margin-top:10px}
+  .rg{position:relative;height:28px}
+  .rg input[type=range]{position:absolute;left:0;right:0;top:0;bottom:0;background:transparent;-webkit-appearance:none;pointer-events:auto}
+  .rg input::-webkit-slider-thumb{-webkit-appearance:none;height:18px;width:18px;border-radius:50%;background:#e46b3c;border:2px solid #fff;cursor:pointer;position:relative;z-index:2}
+  .rg input::-moz-range-thumb{height:18px;width:18px;border-radius:50%;background:#e46b3c;border:2px solid #fff;cursor:pointer;position:relative;z-index:2}
+  .rg .bar{position:absolute;left:0;right:0;top:12px;height:4px;background:#233447;border-radius:999px}
+  .rg .fill{position:absolute;top:12px;height:4px;background:#e46b3c;border-radius:999px}
+  .range-row{display:grid;grid-template-columns:160px 1fr auto;gap:10px;align-items:center;margin:8px 0}
+  .kv{font-size:12px;color:#a7bfd3}
+  .title{font-weight:800}
+  /* adv toggle */
+  .advToggle{margin:12px 0}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <!-- Persona one-liner + controls -->
-    <div class="top" id="personaTop">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span class="badge"><span class="favicon"><img id="fav" alt="" width="18" height="18" referrerpolicy="no-referrer"></span><span id="hostTxt">yourcompany.com</span></span>
-        <div class="kv" id="kvLine"></div>
-        <span id="apiBadge" class="pill" style="margin-left:auto">API: resolving…</span>
-        <button id="back" class="btn sec">Back</button>
-      </div>
-    </div>
+<div class="wrap">
+  <div class="bar" id="crumbs">
+    <span class="crumb" id="c-host"></span>
+    <span class="crumb" id="c-verb"></span>
+    <span class="crumb" id="c-prods"></span>
+    <span class="crumb">for</span>
+    <span class="crumb" id="c-aud"></span>
+    <span class="crumb">in</span>
+    <span class="crumb" id="c-region"></span>
+    <span class="crumb">Best contacts:</span>
+    <span class="crumb" id="c-contacts"></span>
+    <span class="pill" id="apiBadge">API: resolving…</span>
+    <button id="back" class="xbtn">Back</button>
+  </div>
 
-    <div class="hrow">
-      <h2 style="margin:0">Step 3</h2>
-      <button id="advToggle" class="btn ghost"><span id="advLbl">Hide advanced ▲</span></button>
-    </div>
+  <button id="advBtn" class="xbtn advToggle">Show advanced ▾</button>
 
-    <div id="adv" class="card">
-      <div class="pane">
-        <!-- Rotor (left) -->
-        <div class="rotor" id="rotor" aria-label="Industries">
-          <div class="rotor-viewport" id="rotorViewport"></div>
-          <div class="rotor-center-line"></div>
-          <div class="rotor-hint">Scroll, drag or click. Center item is active.</div>
-        </div>
-
-        <!-- Right side -->
+  <div id="advanced" hidden>
+    <div class="section">
+      <div class="row">
         <div>
-          <div class="hrow">
-            <h3 id="sectTitle" style="margin:0">—</h3>
-            <div style="display:flex;gap:10px;align-items:center">
-              <label class="muted" style="display:flex;gap:6px;align-items:center"><input id="aiDecide" type="checkbox"> Let AI decide</label>
-              <button id="muteBtn" class="btn ghost">Mute</button>
-            </div>
+          <div class="rotor" id="rotor">
+            <div class="rlist" id="rlist" aria-label="Industries"></div>
           </div>
-
-          <div id="metricsBox" class="card" style="margin:10px 0 12px"></div>
-
-          <div class="card" id="opsBox">
-            <h4 style="margin:0 0 8px">Buyer operations for <span id="opsFor">—</span></h4>
-            <div id="opsChips" class="chips"></div>
-            <div id="opsSliders" style="margin-top:6px"></div>
-            <div class="muted">Click to add; each selected operation gets its own importance slider (0–10).</div>
-          </div>
-
-          <div class="card" id="personaBox">
-            <h4 style="margin:0 0 8px">Hot-buyer persona — <span id="personaFor">—</span></h4>
-            <div class="muted" style="margin:4px 0 6px">Company size focus (revenue). Drag both handles.</div>
-            <div class="duo"><div class="track"></div></div>
-            <div style="margin-top:10px">
-              <label class="muted">Best titles to reach</label>
-              <div id="titlesChips" class="chips" style="margin-top:4px"></div>
+          <div class="hint" style="margin-top:8px">Scroll, drag or click. Center item is active.</div>
+          <label style="display:flex;gap:8px;align-items:center;margin-top:8px" class="hint">
+            <input id="hideMuted" type="checkbox"/> Hide muted
+          </label>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-hd">
+              <h3 id="indTitle" class="title">Industry</h3>
+              <div class="switch">
+                <label style="display:flex;gap:8px;align-items:center" class="hint">
+                  <input id="aiAuto" type="checkbox"/> Let AI decide
+                </label>
+                <button id="muteBtn" class="mute">Mute</button>
+              </div>
             </div>
+
+            <div id="metrics"></div>
+
+            <div class="card" style="margin-top:10px">
+              <div class="card-hd">
+                <h3 style="margin:0">Buyer operations for <span id="opsFor">—</span></h3>
+              </div>
+              <div id="opsChips" class="chips"></div>
+              <div id="opsSliders"></div>
+              <div class="hint" style="margin-top:6px">Click to add; each selected operation gets an importance slider (0–10).</div>
+            </div>
+
+            <div class="card persona" style="margin-top:10px">
+              <div class="card-hd">
+                <h3 style="margin:0">Hot-buyer persona — <span id="personaFor">—</span></h3>
+              </div>
+
+              <div class="range-row">
+                <div class="kv">Target company size (revenue)</div>
+                <div class="rg" id="revRG">
+                  <div class="bar"></div>
+                  <div class="fill" id="revFill"></div>
+                  <input id="revMin" type="range" min="0" max="200" step="1" value="5" aria-label="Revenue min ($M)"/>
+                  <input id="revMax" type="range" min="0" max="200" step="1" value="60" aria-label="Revenue max ($M)"/>
+                </div>
+                <div class="kv"><span id="revLbl">$5M–$60M</span></div>
+              </div>
+
+              <div class="range-row">
+                <div class="kv">Target headcount</div>
+                <div>
+                  <input id="emp" type="range" min="1" max="10000" step="1" value="250" aria-label="Employees"/>
+                </div>
+                <div class="kv"><span id="empLbl">~250</span></div>
+              </div>
+
+              <div class="range-row">
+                <div class="kv">Best titles to reach</div>
+                <div id="titleChips" class="chips"></div>
+                <div></div>
+              </div>
+            </div>
+
           </div>
         </div>
-      </div>
-
-      <label class="muted" style="display:flex;gap:8px;align-items:center;margin-top:8px">
-        <input id="hideMutedBox" type="checkbox"> Hide muted
-      </label>
-    </div>
-
-    <div class="ft">
-      <div class="muted" id="status"></div>
-      <div class="right">
-        <button id="save" class="btn ghost">Save</button>
-        <button id="finish" class="btn">Finish</button>
       </div>
     </div>
   </div>
 
+  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px">
+    <button id="save" class="xbtn">Save</button>
+    <button id="finish" class="btn">Finish</button>
+  </div>
+</div>
+
 <script>
-(()=>{
-/* ==================== Utilities ==================== */
-const $=q=>document.querySelector(q), $$=q=>Array.from(document.querySelectorAll(q));
-const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
-const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
-const getS=(k,d=null)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
-const setS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
-const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
-function setFavicon(host){ const h=normHost(host); const fav=$("#fav"); fav.src = h?("https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico"):""; }
+(() => {
+  const $ = (q)=>document.querySelector(q);
+  const $$ = (q)=>Array.from(document.querySelectorAll(q));
 
-/* ==================== Seed + API ==================== */
-const seed = getS("onb.seed", {contact:{}, host:""});
-const host = normHost(seed?.host || domainFromEmail(seed?.contact?.email || ""));
-$("#hostTxt").textContent = host || "yourcompany.com";
-setFavicon(host);
-
-const apiBadge=$("#apiBadge");
-let API_BASE = localStorage.getItem("apiBase") || (location.origin+"/api");
-async function apiDetect(){
-  const paths = /\/api$/.test(API_BASE) ? [API_BASE+"/health"] : [API_BASE+"/api/health"];
-  for (const p of paths){
-    try{const r=await fetch(p,{credentials:"omit"}); if(r.ok){ apiBadge.textContent="API: online"; apiBadge.style.color="#0f0"; return; }}catch{}
-  }
-  apiBadge.textContent="API: offline"; apiBadge.style.color="#ff8";
-}
-function classifyURL(){
-  const b=(API_BASE||"").replace(/\/+$/,"");
-  return /\/api$/.test(b) ? b+"/classify" : b+"/api/classify";
-}
-
-/* ==================== Data shells ==================== */
-const INDUSTRIES = ["Beverage","Food","Cosmetics","Electronics","Industrial","Logistics","Apparel","Pharma","Automotive"];
-
-/* ==================== Rotor (center-locked) ==================== */
-const rotor = $("#rotor");
-const viewport = $("#rotorViewport");
-let items = INDUSTRIES.map(name=>({name, muted:false, aiDecide:false}));
-let filtered = items.slice();
-let sel = 0;          // selected index in filtered[]
-let GAP = 44;         // distance between items (px)
-let dragging = false, startY=0, acc=0;
-
-function drawRotor(){
-  viewport.innerHTML="";
-  const span = 6; // draw ±6 items only (perf)
-  for (let i=-span;i<=span;i++){
-    const idx = sel+i;
-    if (idx<0 || idx>=filtered.length) continue;
-    const it = filtered[idx];
-    const y = i*GAP;
-    const d = Math.abs(i);
-    const s = clamp(1 - 0.10*d, 0.72, 1.18);
-    const o = clamp(1 - 0.16*d, .16, 1);
-    const el = document.createElement("div");
-    el.className = "rotor-item"+(i===0?" active":"")+(it.muted?" muted":"");
-    el.style.setProperty("--s", s);
-    el.style.setProperty("--o", o);
-    el.style.setProperty("--y", y+"px");
-    el.textContent = it.name;
-    el.addEventListener("click",()=>{ sel = idx; syncIndustryUI(); drawRotor(); });
-    viewport.appendChild(el);
-  }
-}
-function stepBy(delta){
-  if (!filtered.length) return;
-  sel = (sel + delta + filtered.length) % filtered.length;
-  syncIndustryUI(); drawRotor();
-}
-function onWheel(e){
-  e.preventDefault();
-  acc += e.deltaY;
-  if (Math.abs(acc) > 40){ stepBy(acc>0?1:-1); acc = 0; }
-}
-function onPointerDown(e){
-  dragging=true; startY = e.clientY || e.touches?.[0]?.clientY || 0; acc=0;
-  rotor.setPointerCapture?.(e.pointerId||0);
-}
-function onPointerMove(e){
-  if (!dragging) return;
-  const y = e.clientY || e.touches?.[0]?.clientY || 0;
-  const dy = y - startY; startY = y; acc += dy;
-  while (Math.abs(acc) >= GAP/2){ stepBy(acc>0?-1:1); acc += (acc>0?-1:1)*(-GAP/2); }
-}
-function onPointerUp(){ dragging=false; }
-
-rotor.addEventListener("wheel", onWheel, {passive:false});
-rotor.addEventListener("pointerdown", onPointerDown);
-rotor.addEventListener("pointermove", onPointerMove);
-rotor.addEventListener("pointerup", onPointerUp);
-rotor.addEventListener("pointercancel", onPointerUp);
-rotor.addEventListener("touchstart", e=>onPointerDown(e.touches[0]), {passive:true});
-rotor.addEventListener("touchmove", e=>{onPointerMove(e.touches[0]); e.preventDefault();},{passive:false});
-rotor.addEventListener("touchend", onPointerUp);
-
-/* ==================== Right column wires ==================== */
-const sectTitle=$("#sectTitle"), muteBtn=$("#muteBtn"), aiDecide=$("#aiDecide");
-const opsFor=$("#opsFor"), personaFor=$("#personaFor");
-function syncIndustryUI(){
-  if (!filtered.length){ sectTitle.textContent="—"; return; }
-  const name = filtered[sel].name;
-  sectTitle.textContent = name;
-  opsFor.textContent = name;
-  personaFor.textContent = name;
-  muteBtn.textContent = filtered[sel].muted ? ("Unmute "+name) : ("Mute "+name);
-  aiDecide.checked = !!filtered[sel].aiDecide;
-}
-muteBtn.addEventListener("click",()=>{
-  if (!filtered.length) return;
-  const obj = filtered[sel];
-  obj.muted = !obj.muted;
-  if ($("#hideMutedBox").checked){ filtered = items.filter(x=>!x.muted); sel = 0; }
-  syncIndustryUI(); drawRotor();
-});
-aiDecide.addEventListener("change",()=>{ if(filtered.length) filtered[sel].aiDecide = aiDecide.checked; });
-$("#hideMutedBox").addEventListener("change",()=>{
-  const on = $("#hideMutedBox").checked;
-  filtered = on ? items.filter(x=>!x.muted) : items.slice();
-  sel = 0; drawRotor(); syncIndustryUI();
-});
-
-/* ==================== One-liner (top badges) ==================== */
-function setOneLiner(data){
-  const kv=$("#kvLine"); kv.innerHTML="";
-  const tags = (data.productTags||[]);
-  const top3 = tags.slice(0,3).join(", ") + (tags.length>3 ? ", etc." : "");
-  const parts = [
-    ["supplies", true],
-    [ top3 || "packaging", true],
-    ["for", true],
-    [ (data.sectorHints||[])[0] || "brands", true],
-    ["in", true],
-    [ "the U.S.", true ]
-  ];
-  parts.forEach(([txt])=>{const s=document.createElement("span"); s.className="pill"; s.textContent=txt; kv.appendChild(s);});
-}
-
-/* ==================== Classify helper ==================== */
-async function classify(host, email){
-  const url= classifyURL() + "?host="+encodeURIComponent(host)+"&email="+encodeURIComponent(email||"");
-  try{
-    const r=await fetch(url,{credentials:"omit"}); if(!r.ok) throw new Error(r.status);
-    return await r.json();
-  }catch(e){
-    const alt = /\/api\/classify$/.test(url)?url.replace(/\/api\/classify$/,"/classify"):url.replace(/\/classify$/,"/api/classify");
-    const r2=await fetch(alt,{credentials:"omit"}); if(!r2.ok) throw new Error(r2.status);
-    return await r2.json();
-  }
-}
-
-/* ==================== Boot ==================== */
-async function boot(){
-  await apiDetect();
-  filtered = items.slice(); sel = 0; drawRotor(); syncIndustryUI();
-  $("#status").textContent="Fetching…";
-  try{
-    const data = await classify(host, seed?.contact?.email||"");
-    setOneLiner(data||{}); $("#status").textContent = data?.cached ? "(cached)" : "";
-  }catch{ $("#status").textContent="(offline)"; setOneLiner({}); }
-}
-boot();
-
-/* back */
-$("#back").addEventListener("click",()=>history.back());
-
-/* ==== PART SPLIT MARK — STOP HERE (Part 1/2) ==== */
-
-  /* ==================== Metrics / Ops / Persona ==================== */
-  const METRICS = {
-    Beverage: [
-      {k:"speed", label:"High-speed line compatibility", hint:"0—manual/slow  — 10—≥500+ units/min or ≥30 cases/min", def:8},
-      {k:"print", label:"Retail-ready print consistency", hint:"0—drift/misregister  — 10—ΔE<2 & tight register @ volume", def:8},
-      {k:"condense", label:"Condensation tolerance", hint:"0—fails w/ light sweat  — 10—retort/cooler-ready", def:7},
-      {k:"pallet", label:"Pallet stability for bottlers", hint:"0—shifts/collapses  — 10—ISTA 3A/3E stable", def:8},
-      {k:"integrity", label:"Case integrity for glass/plastic", hint:"0—breaks/deforms  — 10—holds @ peak load/transport", def:8},
-      {k:"damage", label:"Damage reduction targets in transit", hint:"0—no target  — 10—≤0.5% KPI", def:7}
-    ],
-    Food: [
-      {k:"fda", label:"Food-contact compliance (FDA/EC)", hint:"0—uncertified  — 10—fully certified w/ documentation", def:9},
-      {k:"barrier", label:"Oxygen/moisture barrier", hint:"0—none  — 10—validated OTR/WVTR for shelf-life", def:8},
-      {k:"trace", label:"Traceability & COA", hint:"0—none  — 10—lot-level COA + recall-ready", def:8},
-      {k:"seal", label:"Sealing performance", hint:"0—frequent leaks  — 10—validated hermetic seal @ scale", def:8},
-      {k:"labels", label:"Print/label regs", hint:"0—non-compliant  — 10—GHS/NLEA compliant @ scale", def:7}
-    ],
-    Cosmetics: [
-      {k:"finish", label:"Premium print/finish expectations", hint:"0—basic CMYK  — 10—foil/spot UV/emboss @ scale", def:8},
-      {k:"deltae", label:"Color consistency ΔE", hint:"0—ΔE>6  — 10—ΔE≤2", def:8},
-      {k:"unbox", label:"Unboxing experience", hint:"0—plain  — 10—designed tactile experience", def:7}
-    ],
-    Electronics: [
-      {k:"esd", label:"ESD protection requirements", hint:"0—not needed  — 10—ANSI/ESD S541-compliant", def:8},
-      {k:"shock", label:"Shock/vibration protection", hint:"0—insufficient  — 10—drop/ISTA validated", def:8},
-      {k:"moist", label:"Moisture control", hint:"0—none  — 10—desiccant & barrier spec maintained", def:7}
-    ],
-    Industrial: [
-      {k:"heavy", label:"Heavy-load stability", hint:"0—fails  — 10—validated for load/height", def:8},
-      {k:"puncture", label:"Puncture/tear resistance", hint:"0—tears common  — 10—spec passes across SKUs", def:8},
-      {k:"unit", label:"Unitization efficiency", hint:"0—poor cube  — 10—optimized cube/weight", def:7}
-    ],
-    Logistics: [
-      {k:"asn", label:"3PL/e-com integration", hint:"0—manual  — 10—ready labels/ASN/SLAs", def:8},
-      {k:"parcel", label:"Damage in parcel", hint:"0—high  — 10—≤0.5% returns due to damage", def:7},
-      {k:"dock", label:"Dock-to-stock speed", hint:"0—slow  — 10—fast with ready SKUs", def:7}
-    ],
-    Apparel: [
-      {k:"present", label:"Presentation (crease/scuff)", hint:"0—issues common  — 10—store-ready", def:8},
-      {k:"dim", label:"Parcel-rate optimization", hint:"0—oversized  — 10—lowest practical DIM", def:8},
-      {k:"returns", label:"Return-friendly design", hint:"0—hassles  — 10—easy reseal/scan", def:7}
-    ],
-    Pharma: [
-      {k:"gxp", label:"GxP documentation", hint:"0—weak  — 10—robust/validated", def:9},
-      {k:"serial", label:"Serialization/lot coding", hint:"0—none  — 10—DSCSA/trace-ready", def:9},
-      {k:"tamper", label:"Tamper-evidence compliance", hint:"0—none  — 10—validated TE spec", def:9}
-    ],
-    Automotive: [
-      {k:"solvent", label:"Grease/solvent resistance", hint:"0—fails  — 10—lab-validated", def:8},
-      {k:"bulk", label:"Bulk-pack efficiency", hint:"0—poor  — 10—optimized dunnage/kitting", def:7},
-      {k:"barcode", label:"Barcode/label compliance", hint:"0—non-compliant  — 10—OEM spec met", def:8}
-    ]
-  };
-  const OPS = {
-    Beverage:["Automated pallet wrapper","Hand pallet wrapping","E-commerce fulfillment","3PL / distribution"],
-    Food:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution"],
-    Cosmetics:["E-commerce fulfillment","3PL / distribution","Co-packing"],
-    Electronics:["Warehouse pick/pack","3PL / distribution"],
-    Industrial:["3PL / distribution","Warehouse pick/pack"],
-    Logistics:["3PL / distribution","E-commerce fulfillment","Warehouse pick/pack"],
-    Apparel:["E-commerce fulfillment","3PL / distribution"],
-    Pharma:["3PL / distribution","Cold chain"],
-    Automotive:["3PL / distribution","Kitting"]
-  };
-  const TITLES = {
-    default:["Operations","Procurement","Plant Manager","Supply Chain","Packaging Engineer","Warehouse"],
-    Logistics:["Logistics","Ops","Fulfillment","Procurement","3PL Manager"],
-    Apparel:["E-com Ops","Fulfillment","Procurement","Supply Chain"],
-    Beverage:["Packaging Engineer","Operations","Procurement","Plant Manager"]
+  /* ---------- state ---------- */
+  const state = {
+    industries: [],
+    muted: new Set(),
+    selected: 0,
+    opsSelected: new Map(),  // label -> weight
+    persona: {},             // per-industry persona cache
+    aiAuto:false,
+    seed:null
   };
 
-  // runtime state per industry
-  items.forEach(it=>{
-    it.metrics = (METRICS[it.name]||[]).map(m=>({...m, value:m.def}));
-    it.opsSel = new Map();           // label -> importance (0..10)
-    it.size = {min:5, max:120};      // $M
-    it.titles = new Set((TITLES[it.name]||TITLES.default).slice(0,2)); // preselect a couple
-  });
-
-  /* ---------- metrics UI ---------- */
-  const metricsBox = $("#metricsBox");
-  function renderMetricsFor(name){
-    const obj = items.find(x=>x.name===name); if (!obj) return;
-    metricsBox.innerHTML="";
-    obj.metrics.forEach(m=>{
-      const row=document.createElement("div"); row.className="row";
-      const lab=document.createElement("div");
-      lab.innerHTML=`<div style="font-weight:700">${m.label}</div><div class="muted">${m.hint}</div>`;
-      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=m.value;
-      input.addEventListener("input",()=>{ m.value=+input.value; });
-      row.appendChild(lab); row.appendChild(input); metricsBox.appendChild(row);
-    });
-    applyAIDecideDisabling(obj.aiDecide);
+  /* ---------- crumb (read-only) ---------- */
+  function setCrumbs(line){
+    $("#c-host").textContent = line.host||"";
+    $("#c-verb").textContent = line.verb||"supplies";
+    $("#c-prods").textContent = line.products||"";
+    $("#c-aud").textContent  = line.audience||"";
+    $("#c-region").textContent = line.region||"";
+    $("#c-contacts").textContent = line.contacts||"";
   }
-
-  /* ---------- ops UI ---------- */
-  const opsChips=$("#opsChips"), opsSliders=$("#opsSliders");
-  function addChip(txt, box, onToggle, active=false){
-    const s=document.createElement("span"); s.className="chip"; s.textContent=txt; box.appendChild(s);
-    s.classList.toggle("active", !!active);
-    s.addEventListener("click",()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); onToggle?.(on,txt,s); });
-    return s;
-  }
-  function renderOpsFor(name){
-    const obj = items.find(x=>x.name===name); if (!obj) return;
-    opsChips.innerHTML=""; opsSliders.innerHTML="";
-    (OPS[name]||[]).forEach(l=>{
-      addChip(l, opsChips, (on, label)=>{
-        if (on){ ensureOp(label); } else { removeOp(label); }
-      }, obj.opsSel.has(l));
-    });
-    // paint sliders for existing selections
-    obj.opsSel.forEach((v,label)=> ensureOp(label,v));
-
-    function ensureOp(label, val=7){
-      if (obj.opsSel.has(label) && opsSliders.querySelector(`[data-lab="${CSS.escape(label)}"]`)) return;
-      const wrap=document.createElement("div"); wrap.className="row"; wrap.dataset.lab=label;
-      const lab=document.createElement("div"); lab.innerHTML=`<div style="font-weight:700">${label}</div>`;
-      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=val;
-      input.addEventListener("input",()=> obj.opsSel.set(label, +input.value));
-      wrap.appendChild(lab); wrap.appendChild(input); opsSliders.appendChild(wrap);
-      obj.opsSel.set(label, val);
-      applyAIDecideDisabling(obj.aiDecide);
-    }
-    function removeOp(label){
-      const el=opsSliders.querySelector(`[data-lab="${CSS.escape(label)}"]`); if (el) el.remove();
-      obj.opsSel.delete(label);
-    }
-  }
-
-  /* ---------- persona UI ---------- */
-  const personaBox=$("#personaBox");
-  const titlesChips=$("#titlesChips");
-  let rMin, rMax, sizeLabel;
-  function renderPersonaFor(name){
-    const obj = items.find(x=>x.name===name); if (!obj) return;
-
-    // dual slider
-    personaBox.querySelector(".duo")?.querySelectorAll("input").forEach(el=>el.remove());
-    const minInput=document.createElement("input");
-    const maxInput=document.createElement("input");
-    minInput.type=maxInput.type="range";
-    minInput.min=maxInput.min="0"; minInput.max=maxInput.max="120";
-    minInput.value=obj.size.min; maxInput.value=obj.size.max;
-    minInput.style.width=maxInput.style.width="100%";
-    minInput.style.position=maxInput.style.position="absolute";
-    minInput.style.top=maxInput.style.top="0"; minInput.style.left=maxInput.style.left="0";
-    minInput.addEventListener("input",()=>{ const a=+minInput.value; const b=+maxInput.value; if (a>b-2) minInput.value=b-2; obj.size.min=+minInput.value; updateSizeLabel(); });
-    maxInput.addEventListener("input",()=>{ const a=+minInput.value; const b=+maxInput.value; if (b<a+2) maxInput.value=a+2; obj.size.max=+maxInput.value; updateSizeLabel(); });
-    const duo=personaBox.querySelector(".duo"); duo.appendChild(minInput); duo.appendChild(maxInput);
-    rMin=minInput; rMax=maxInput;
-
-    // labels row
-    sizeLabel = personaBox.querySelector(".sizeLbl");
-    if (!sizeLabel){ sizeLabel=document.createElement("div"); sizeLabel.className="sizeLbl muted"; sizeLabel.style.marginTop="6px"; personaBox.appendChild(sizeLabel); }
-    updateSizeLabel();
-
-    // titles
-    titlesChips.innerHTML="";
-    const pool = (TITLES[name]||TITLES.default);
-    pool.forEach(t=> addChip(t, titlesChips, (on,txt)=>{ if(on) obj.titles.add(txt); else obj.titles.delete(txt); }, obj.titles.has(t)));
-    applyAIDecideDisabling(obj.aiDecide);
-  }
-  function updateSizeLabel(){
-    if (!sizeLabel) return;
-    const fmt=n=> (n===0?"$0M":("$"+n+"M"));
-    const obj = filtered[sel];
-    sizeLabel.textContent = `${fmt(obj.size.min)}–${fmt(obj.size.max)} company revenue focus`;
-  }
-
-  /* ---------- AI decide visual ---------- */
-  function applyAIDecideDisabling(on){
-    [metricsBox, opsSliders, personaBox].forEach(box=>{
-      box.querySelectorAll("input[type=range]").forEach(inp=>{ inp.disabled = on; inp.style.opacity = on? .6 : 1; });
-      box.querySelectorAll(".chip").forEach(ch=> ch.style.pointerEvents = on? "none":"auto");
-      box.style.opacity = on? .85 : 1;
-    });
-  }
-
-  /* ---------- selection changed ---------- */
-  function paintRight(){
-    const name = filtered[sel]?.name; if (!name) return;
-    renderMetricsFor(name);
-    renderOpsFor(name);
-    renderPersonaFor(name);
-  }
-  const _syncPrev = syncIndustryUI;
-  syncIndustryUI = function(){ _syncPrev(); paintRight(); };
 
   /* ---------- adv toggle ---------- */
-  const advToggle=$("#advToggle"), advLbl=$("#advLbl"), adv=$("#adv");
-  advToggle.addEventListener("click",()=>{
-    const opened = !adv.hasAttribute("hidden");
-    if (opened){ adv.setAttribute("hidden",""); advLbl.textContent="Show advanced ▾"; }
-    else { adv.removeAttribute("hidden"); advLbl.textContent="Hide advanced ▲"; }
+  const advBtn = $("#advBtn");
+  const advBox = $("#advanced");
+  advBtn.addEventListener("click",()=>{
+    const open = advBox.hasAttribute("hidden");
+    if (open){ advBox.removeAttribute("hidden"); advBtn.textContent="Hide advanced ▲"; }
+    else { advBox.setAttribute("hidden",""); advBtn.textContent="Show advanced ▾"; }
   });
 
-  /* ---------- Save / Finish ---------- */
-  function gatherPersona(){
-    // include *all* industries (even muted) so downstream can honor weights
-    const pack = items.map(it=>({
-      industry: it.name,
-      muted: !!it.muted,
-      aiDecide: !!it.aiDecide,
-      metrics: it.metrics.map(m=>({k:m.k,label:m.label,value:m.value})),
-      operations: Array.from(it.opsSel.entries()).map(([label,value])=>({label,value})),
-      size: {...it.size},
-      titles: Array.from(it.titles)
-    }));
-    const persona = {
-      host,
-      role: seed?.role||"supplier",
-      productTags: [], // step-level tags live in classifier; saved below via kv
-      sectors: items.filter(x=>!x.muted).map(x=>x.name),
-      industries: pack
-    };
-    return persona;
+  /* ---------- rotor ---------- */
+  const rotor = $("#rotor");
+  const rlist = $("#rlist");
+  let dragStartY = 0;
+  let dragStartSel = 0;
+
+  function clampSel(v){ return Math.max(0, Math.min(state.industries.length-1, v)); }
+  function setSelected(idx, snap=true){
+    const old = state.selected;
+    state.selected = clampSel(idx);
+    if (old!==state.selected || snap) renderRotor();
+    applyIndustry(state.selected);
   }
-  function persistPersona(per){
-    setS("bf.persona", per);
-    setS("fp.persona", per);
+
+  function renderRotor(){
+    const H = rotor.clientHeight;
+    const step = 40;
+    const mid = H/2;
+    rlist.innerHTML = "";
+    state.industries.forEach((name, i)=>{
+      if ($("#hideMuted").checked && state.muted.has(name)) return;
+      const dy = (i - state.selected) * step;
+      const dist = Math.abs(i - state.selected);
+      const scale = Math.max(0.74, 1 - dist*0.12);
+      const op = Math.max(0.18, 1 - dist*0.22);
+      const it = document.createElement("div");
+      it.className = "ritem"+(i===state.selected?" active":"")+(state.muted.has(name)?" muted":"");
+      it.style.top = "50%";
+      it.style.transform = `translateY(${dy}px) scale(${scale})`;
+      it.style.opacity = op;
+      const span = document.createElement("span");
+      span.textContent = name;
+      it.appendChild(span);
+      it.addEventListener("click",()=> setSelected(i,true));
+      rlist.appendChild(it);
+    });
+  }
+
+  function onWheel(e){
+    e.preventDefault();
+    const dir = Math.sign(e.deltaY);
+    setSelected(state.selected + dir, true);
+  }
+  function onPointerDown(e){
+    dragStartY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+    dragStartSel = state.selected;
+  }
+  function onPointerMove(e){
+    if (!dragStartY) return;
+    const y = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+    const dy = y - dragStartY;
+    const step = 40;
+    const delta = Math.round(-dy/step);
+    const target = clampSel(dragStartSel + delta);
+    if (target!==state.selected){ state.selected = target; renderRotor(); }
+  }
+  function onPointerUp(){ dragStartY = 0; }
+
+  rotor.addEventListener("wheel", onWheel, {passive:false});
+  rotor.addEventListener("mousedown", onPointerDown);
+  window.addEventListener("mousemove", onPointerMove);
+  window.addEventListener("mouseup", onPointerUp);
+  rotor.addEventListener("touchstart",(e)=>onPointerDown(e.touches[0]),{passive:true});
+  window.addEventListener("touchmove",(e)=>onPointerMove(e.touches[0]),{passive:false});
+  window.addEventListener("touchend", onPointerUp);
+  $("#hideMuted").addEventListener("change", renderRotor);
+
+  /* ---------- metrics ---------- */
+  const metricsBox = $("#metrics");
+  function renderMetrics(list){
+    metricsBox.innerHTML = "";
+    (list||[]).forEach(m=>{
+      const row = document.createElement("div");
+      row.className="grid metric";
+      const lab=document.createElement("label");
+      lab.textContent=m.label;
+      const r=document.createElement("input");
+      r.type="range"; r.min="0"; r.max="10"; r.value=Number(m.value??7);
+      r.addEventListener("input",()=> m.value=Number(r.value));
+      row.appendChild(lab); row.appendChild(r);
+      metricsBox.appendChild(row);
+    });
+  }
+
+  /* ---------- ops ---------- */
+  const opsChips = $("#opsChips");
+  const opsSliders = $("#opsSliders");
+  function chip(text, onToggle){
+    const s=document.createElement("span");
+    s.className="chip"; s.textContent=text;
+    s.addEventListener("click",()=>{ const on=!s.classList.contains("active"); s.classList.toggle("active",on); onToggle(on,text); });
+    return s;
+  }
+  function renderOpsPool(list){
+    opsChips.innerHTML=""; opsSliders.innerHTML=""; state.opsSelected.clear();
+    const ensure=(label)=>{
+      if (state.opsSelected.has(label)) return;
+      const row=document.createElement("div"); row.className="grid"; row.dataset.label=label;
+      const l=document.createElement("div"); l.textContent=label;
+      const inp=document.createElement("input"); inp.type="range"; inp.min="0"; inp.max="10"; inp.value="7";
+      inp.addEventListener("input",()=> state.opsSelected.set(label,Number(inp.value)));
+      row.appendChild(l); row.appendChild(inp); opsSliders.appendChild(row);
+      state.opsSelected.set(label,7);
+    };
+    const remove=(label)=>{ const el=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"]'); if(el) el.remove(); state.opsSelected.delete(label); };
+    (list||[]).forEach(l=>{ const c=chip(l,(on,t)=>on?ensure(t):remove(t)); opsChips.appendChild(c); });
+  }
+
+  /* ---------- persona ---------- */
+  const revMin=$("#revMin"), revMax=$("#revMax"), revFill=$("#revFill"), revLbl=$("#revLbl");
+  const emp=$("#emp"), empLbl=$("#empLbl");
+  function fmtM(v){ return "$"+v+"M"; }
+  function layoutRev(){
+    let a=Number(revMin.value), b=Number(revMax.value);
+    if (a>=b){ if (a===200){ b=a; a=b-1; revMin.value=a; } else { b=a+1; revMax.value=b; } }
+    const left=(a/200)*100, right=(b/200)*100;
+    revFill.style.left=left+"%"; revFill.style.width=(right-left)+"%";
+    revLbl.textContent=fmtM(a)+"–"+fmtM(b);
+  }
+  function layoutEmp(){
+    const v=Number(emp.value);
+    empLbl.textContent="~"+(v>=1000?(Math.round(v/100)/10+"k"):v);
+  }
+  ["input","change"].forEach(ev=>{ revMin.addEventListener(ev,layoutRev); revMax.addEventListener(ev,layoutRev); });
+  emp.addEventListener("input",layoutEmp);
+  layoutRev(); layoutEmp();
+
+  /* ---------- apply industry ---------- */
+  const indTitle=$("#indTitle"), opsFor=$("#opsFor"), personaFor=$("#personaFor");
+  const aiAuto=$("#aiAuto"), muteBtn=$("#muteBtn");
+  function applyIndustry(i){
+    const name=state.industries[i]||"—";
+    indTitle.textContent=name; opsFor.textContent=name; personaFor.textContent=name;
+    muteBtn.textContent=(state.muted.has(name)?"Unmute ":"Mute ")+name;
+    const P=(state.persona[name] ||= {metrics:[], opsPool:[], opsSelected:new Map(), rev:[5,60], emp:250, titles:["Operations","Procurement","Plant Manager"]});
+    renderMetrics(P.metrics);
+    renderOpsPool(P.opsPool.length?P.opsPool:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution","Co-packing"]);
+    if (P.opsSelected && P.opsSelected.size){
+      P.opsSelected.forEach((v,label)=>{
+        [...opsChips.children].forEach(x=>{ if(x.textContent===label) x.classList.add("active"); });
+        const row=opsSliders.querySelector('[data-label="'+CSS.escape(label)+'"] input'); if(row) row.value=String(v);
+      });
+      state.opsSelected=new Map(P.opsSelected);
+    } else { state.opsSelected.clear(); }
+    revMin.value=P.rev?.[0]??5; revMax.value=P.rev?.[1]??60; layoutRev();
+    emp.value=P.emp??250; layoutEmp();
+    const box=$("#titleChips"); box.innerHTML=""; (P.titles||[]).forEach(t=>{ const s=document.createElement("span"); s.className="chip"; s.textContent=t; box.appendChild(s); });
+    aiAuto.checked = state.aiAuto===true;
+  }
+  muteBtn.addEventListener("click",()=>{ const n=state.industries[state.selected]; if(!n) return; if(state.muted.has(n)) state.muted.delete(n); else state.muted.add(n); renderRotor(); applyIndustry(state.selected); });
+  aiAuto.addEventListener("change",()=>{ state.aiAuto=aiAuto.checked; });
+// part1 end
+  /* ---------- collect & persist ---------- */
+  function snapshotCurrent(){
+    const name = state.industries[state.selected];
+    if (!name) return;
+    const P = (state.persona[name] ||= {});
+    // metrics
+    P.metrics = Array.from(metricsBox.querySelectorAll(".grid.metric")).map(row=>{
+      const label = row.querySelector("label")?.textContent || "";
+      const val = Number(row.querySelector('input[type="range"]')?.value || 0);
+      return {label, value: val};
+    });
+    // ops
+    P.opsPool = Array.from(opsChips.children).map(c=>c.textContent);
+    P.opsSelected = new Map(state.opsSelected);
+    // persona sliders
+    P.rev = [Number(revMin.value), Number(revMax.value)];
+    P.emp = Number(emp.value);
+    // titles
+    P.titles = Array.from($("#titleChips").children).map(c=>c.textContent);
+  }
+
+  function persist(){
+    snapshotCurrent();
+    const out = {
+      industries: state.industries,
+      muted: [...state.muted],
+      aiAuto: state.aiAuto,
+      persona: Object.fromEntries(Object.entries(state.persona).map(([k,v])=>{
+        const opsSel = v.opsSelected ? Object.fromEntries(v.opsSelected) : {};
+        return [k, {...v, opsSelected: opsSel}];
+      }))
+    };
+    try{ localStorage.setItem("onb.step3", JSON.stringify(out)); }catch{}
+  }
+
+  $("#save").addEventListener("click", ()=>{ persist(); flash("Saved"); });
+  $("#finish").addEventListener("click", ()=>{ persist(); flash("Saved — you’re done!"); });
+
+  window.addEventListener("beforeunload", persist);
+
+  function flash(msg){
+    const n=document.createElement("div");
+    n.textContent=msg;
+    n.style.position="fixed"; n.style.right="16px"; n.style.bottom="16px";
+    n.style.padding="10px 12px"; n.style.background="#102238"; n.style.border="1px solid #1f3450";
+    n.style.borderRadius="10px"; n.style.color="#cfe6ff"; n.style.zIndex="9999";
+    document.body.appendChild(n);
+    setTimeout(()=>n.remove(),1400);
+  }
+
+  /* ---------- data & AI-ish defaults ---------- */
+  const DEFAULT_INDS = ["Beverage","Food","Cosmetics","Electronics","Industrial","Logistics","Apparel"];
+
+  const LIB = {
+    Beverage:{
+      metrics:[
+        {label:"High-speed line compatibility"},
+        {label:"Retail-ready print consistency"},
+        {label:"Condensation tolerance"},
+        {label:"Pallet stability for bottlers"},
+        {label:"Case integrity for glass/plastic"},
+        {label:"Damage reduction targets in transit"}
+      ],
+      ops:["Automated pallet wrapper","Hand pallet wrapping","E-commerce fulfillment","3PL / distribution"],
+      titles:["Operations","Procurement","Plant Manager"]
+    },
+    Food:{
+      metrics:[
+        {label:"Food-contact compliance (FDA/EC)"},
+        {label:"Oxygen/moisture barrier"},
+        {label:"Traceability & COA"},
+        {label:"Sealing performance"},
+        {label:"Print/label regs"}
+      ],
+      ops:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution"],
+      titles:["QA/QC","Packaging Engineer","Operations"]
+    },
+    Cosmetics:{
+      metrics:[
+        {label:"Premium print/finish expectations"},
+        {label:"Color consistency ΔE"},
+        {label:"Unboxing experience"}
+      ],
+      ops:["E-commerce fulfillment","3PL / distribution","Co-packing"],
+      titles:["Brand Manager","Packaging Engineer","Procurement"]
+    },
+    Electronics:{
+      metrics:[
+        {label:"ESD protection requirements"},
+        {label:"Shock/vibration protection"},
+        {label:"Moisture control"}
+      ],
+      ops:["Warehouse pick/pack","3PL / distribution"],
+      titles:["Supply Chain","Operations","Packaging Engineer"]
+    },
+    Industrial:{
+      metrics:[
+        {label:"Unit-load stability"},
+        {label:"Freight class / DIM efficiency"},
+        {label:"Material recyclability target"}
+      ],
+      ops:["3PL / distribution","Warehouse pick/pack"],
+      titles:["Plant Manager","Operations","Procurement"]
+    },
+    Logistics:{
+      metrics:[
+        {label:"3PL/e-com integration"},
+        {label:"Damage in parcel"},
+        {label:"Dock-to-stock speed"}
+      ],
+      ops:["E-commerce fulfillment","Warehouse pick/pack","3PL / distribution"],
+      titles:["Logistics Manager","Ops","Procurement"]
+    },
+    Apparel:{
+      metrics:[
+        {label:"Presentation (crease/scuff)"},
+        {label:"Parcel-rate optimization"},
+        {label:"Return-friendly design"}
+      ],
+      ops:["E-commerce fulfillment","3PL / distribution"],
+      titles:["E-com Ops","Fulfillment","Procurement"]
+    }
+  };
+
+  function seedFromStorage(){
     try{
-      localStorage.setItem("fp.supplier.host", per.host||"");
-      localStorage.setItem("fp.pref.segPrefer", (per.sectors||[]).join("\n"));
+      const raw = localStorage.getItem("onb.seed");
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      return s;
+    }catch{return null;}
+  }
+
+  function composeOneLiner(seed, apiHint){
+    const host = seed?.host||"";
+    const verb = "supplies";
+    const prods = (apiHint?.productsTop3||[]).join(", ") + (apiHint?.productsEtc? ", etc.":"");
+    const audience = apiHint?.audience||seed?.role==="supplier"?"":apiHint?.audience||"";
+    const region = apiHint?.region||"the U.S.";
+    const contacts = (apiHint?.contacts||["Procurement","Marketing"]).join(", ");
+    setCrumbs({host, verb, products: prods, audience, region, contacts});
+  }
+
+  /* ---------- API classify (optional) ---------- */
+  async function classify(host){
+    const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 7000);
+    try{
+      const r = await fetch(`/classify?host=${encodeURIComponent(host)}`, {signal:ctl.signal});
+      clearTimeout(t);
+      if (!r.ok) throw new Error("bad status");
+      return await r.json();
+    }catch(e){
+      return null;
+    }
+  }
+
+  function applyAPIModel(m){
+    // m example: {industries:[{name, metrics:[{label}], ops:[..], titles:[..]}], productsTop3:[..], productsEtc:true, audience, region, contacts:[..]}
+    if (!m) return;
+    if (Array.isArray(m.industries) && m.industries.length){
+      state.industries = m.industries.map(x=>x.name).filter(Boolean);
+      m.industries.forEach(x=>{
+        if (!x?.name) return;
+        state.persona[x.name] = {
+          metrics:(x.metrics||[]).map(y=>({label:y.label, value:y.value??7})),
+          opsPool:(x.ops||[]),
+          opsSelected:new Map(),
+          rev:[5,60],
+          emp:250,
+          titles:x.titles && x.titles.length ? x.titles : (LIB[x.name]?.titles||["Operations","Procurement"])
+        };
+      });
+    }
+    composeOneLiner(state.seed, m||{});
+  }
+
+  function applyDefaults(){
+    if (!state.industries.length) state.industries = DEFAULT_INDS.slice();
+    state.industries.forEach(n=>{
+      if (state.persona[n]) return;
+      const lib = LIB[n]||{metrics:[],ops:[],titles:[]};
+      state.persona[n] = {
+        metrics: lib.metrics.map(x=>({label:x.label, value:8})),
+        opsPool: lib.ops.slice(),
+        opsSelected:new Map(),
+        rev:[5,60],
+        emp:250,
+        titles: lib.titles.slice()
+      };
+    });
+  }
+
+  /* ---------- restore previous work ---------- */
+  function restoreFromStorage(){
+    try{
+      const raw = localStorage.getItem("onb.step3");
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (Array.isArray(d.industries) && d.industries.length) state.industries = d.industries;
+      state.muted = new Set(d.muted||[]);
+      state.aiAuto = !!d.aiAuto;
+      if (d.persona){
+        Object.entries(d.persona).forEach(([k,v])=>{
+          const opsSel = v.opsSelected ? new Map(Object.entries(v.opsSelected)) : new Map();
+          state.persona[k] = {...v, opsSelected: opsSel};
+        });
+      }
     }catch{}
   }
-  $("#save").addEventListener("click",()=>{
-    const p=gatherPersona(); persistPersona(p);
-    $("#status").textContent="Saved.";
-    setTimeout(()=>$("#status").textContent="",1200);
-  });
-  $("#finish").addEventListener("click",()=>{
-    const p=gatherPersona(); persistPersona(p);
-    window.location.href="free-panel.html";
-  });
 
-  /* ---------- initial right pane paint ---------- */
-  paintRight();
+  /* ---------- boot ---------- */
+  async function boot(){
+    $("#apiBadge").textContent="API: probing…";
+    state.seed = seedFromStorage();
+
+    // Try API if we have a host
+    if (state.seed?.host){
+      const res = await classify(state.seed.host);
+      if (res){
+        $("#apiBadge").textContent="API: online";
+        $("#apiBadge").style.color="#0f0";
+        applyAPIModel(res);
+      }else{
+        $("#apiBadge").textContent="API: offline";
+        $("#apiBadge").style.color="#ff8";
+      }
+    }else{
+      $("#apiBadge").textContent="API: ready";
+    }
+
+    // Restore persisted edits last
+    restoreFromStorage();
+
+    // Defaults for any gaps
+    applyDefaults();
+
+    // Build rotor and show first industry
+    renderRotor();
+    setSelected(0,true);
+
+    // Crumbs if API didn’t fill them
+    if (!$("#c-host").textContent){
+      composeOneLiner(state.seed||{}, {});
+    }
+
+    // Back
+    $("#back").addEventListener("click",()=> history.length>1 ? history.back() : (location.href="index.html"));
+  }
+
+  boot();
 })();
 </script>
 </body>
