@@ -13,7 +13,6 @@
   html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
     font:15px/1.4 system-ui,Segoe UI,Roboto,Inter,Arial}
   .wrap{max-width:1100px;margin:22px auto;padding:0 14px}
-  /* crumbs */
   .crumbs{display:flex;flex-wrap:wrap;gap:8px 10px;margin:0 0 10px}
   .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;
     background:#0e1825;border:1px solid var(--line);color:#cfe0ee}
@@ -22,15 +21,13 @@
   .btn{padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:#102033;color:#d4e7f7;cursor:pointer}
   .btn.primary{background:var(--cta);color:#062433;border-color:#5bcdf7}
   .row{display:flex;gap:18px;align-items:center;justify-content:space-between}
-  /* advanced toggle */
   .toggle{display:inline-flex;align-items:center;gap:8px}
-  .toggle>button{border-radius:10px}
-  /* layout */
   .grid{display:grid;grid-template-columns:300px 1fr;gap:18px;margin-top:12px}
   @media (max-width:900px){ .grid{grid-template-columns:1fr} }
   .pane{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
   .pane-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0f1622,#0e1420)}
   .pane-bd{padding:12px 14px}
+
   /* rotor */
   .rotor{height:420px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--panel-2)}
   .rotor ul{list-style:none;margin:0;padding:0;position:relative;height:100%;width:100%}
@@ -41,6 +38,7 @@
   .rotor .ghost{position:absolute;top:50%;left:0;right:0;height:34px;border-radius:10px;transform:translateY(-50%);
     background:radial-gradient(60% 120% at 50% 50%,rgba(255,255,255,.04),rgba(255,255,255,0))}
   .mutedLbl{display:flex;align-items:center;gap:8px;margin-top:8px;color:#a9bfd1;font-size:13px}
+
   /* sliders */
   .metric{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:center;margin:12px 0}
   .metric small{color:var(--muted)}
@@ -50,25 +48,25 @@
     background:var(--accent);margin-top:-5px;border:2px solid #fff}
   input[type=range]::-moz-range-track{height:6px;background:#1a2634;border-radius:999px}
   input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid #fff}
-  /* operations + titles chips */
+
   .chips{display:flex;flex-wrap:wrap;gap:8px}
   .pill{padding:7px 10px;border-radius:999px;border:1px solid var(--line);background:#0f1b2a;color:#cfe2f2;cursor:pointer}
   .pill.on{background:#103247;border-color:#1b4862;color:#eaf7ff}
-  .stack{display:grid;gap:10px}
   .opsSel{display:grid;gap:10px;margin-top:10px}
   .opsRow{display:grid;grid-template-columns:1fr 120px;gap:12px;align-items:center}
-  /* persona */
+
   .section{border:1px solid var(--line);border-radius:14px;padding:12px;background:#0f1724;margin:14px 0}
   .section h4{margin:0 0 8px}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  /* double handle revenue */
+
+  /* double-handle revenue */
   .revTrack{position:relative;height:30px;padding:8px 0}
   .revTrack .bar{position:absolute;left:0;right:0;top:50%;height:6px;background:#162233;border-radius:8px;transform:translateY(-50%)}
   .revTrack input[type=range]{position:absolute;left:0;right:0;top:0;height:30px;pointer-events:none}
   .revTrack input[type=range]::-webkit-slider-thumb{pointer-events:auto}
   .revTrack input[type=range]::-moz-range-thumb{pointer-events:auto}
   .revRead{display:flex;justify-content:space-between;color:#9fb4c7;font-size:12px;margin-top:6px}
-  /* footer */
+
   .footer{display:flex;gap:10px;justify-content:flex-end;margin:14px 0}
   .hidden{display:none!important}
 </style>
@@ -86,17 +84,13 @@
   <div class="row" style="margin:10px 0 6px">
     <h2 style="margin:0">Step 3</h2>
     <div style="display:flex;gap:10px">
-      <div class="toggle">
-        <button id="advBtn" class="btn">Show advanced ▾</button>
-      </div>
+      <button id="advBtn" class="btn">Show advanced ▾</button>
       <button id="saveBtn" class="btn">Save</button>
       <button id="finishBtn" class="btn primary">Finish</button>
     </div>
   </div>
 
-  <!-- ADVANCED -->
   <div id="adv" class="grid hidden" aria-expanded="false">
-    <!-- left: rotor -->
     <div class="pane">
       <div class="pane-hd">
         <strong>Industries</strong>
@@ -111,7 +105,6 @@
       </div>
     </div>
 
-    <!-- right: details -->
     <div class="pane">
       <div class="pane-hd">
         <div style="display:flex;align-items:center;gap:12px">
@@ -141,7 +134,7 @@
                 <input id="revMin" type="range" min="0" max="120" step="1" value="8" aria-label="Min revenue"/>
                 <input id="revMax" type="range" min="0" max="120" step="1" value="80" aria-label="Max revenue"/>
               </div>
-              <div class="revRead"><span id="revMinLbl">$0M</span><span id="revMaxLbl">$120M+</span></div>
+              <div class="revRead"><span id="revMinLbl">$0M</span><span id="revMaxLbl" style="margin-left:auto">$120M+</span></div>
             </div>
             <div>
               <label style="display:block;margin:0 0 6px;color:#a9bfd1">Company headcount (employees)</label>
@@ -164,7 +157,6 @@
     </div>
   </div>
 
-  <!-- footer (mobile) -->
   <div class="footer">
     <button id="saveBtn2" class="btn">Save</button>
     <button id="finishBtn2" class="btn primary">Finish</button>
@@ -173,14 +165,15 @@
 
 <script>
 (()=>{
-  /* ========= Utilities ========= */
+
+  /* ---------------- Utilities ---------------- */
   const $ = (q,el=document)=>el.querySelector(q);
   const $$ = (q,el=document)=>Array.from(el.querySelectorAll(q));
   const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
-  const fmtM = n => (n>=100 ? "$100M+" : `$${n}M`);
+  const fmtM = n => (n>=120 ? "$120M+" : `$${n}M`);
   const hasAPI = ()=> typeof window.API_BASE==="string" && !!window.API_BASE;
 
-  /* ========= Elements ========= */
+  /* ---------------- Elements ---------------- */
   const crumbsEl=$("#crumbs"), adv=$("#adv"), advBtn=$("#advBtn");
   const rotor=$("#rotor"), rotorList=$("#rotorList"), hideMuted=$("#hideMuted");
   const apiBadge=$("#apiBadge");
@@ -190,17 +183,17 @@
   const revMin=$("#revMin"), revMax=$("#revMax"), revMinLbl=$("#revMinLbl"), revMaxLbl=$("#revMaxLbl");
   const emp=$("#emp"), empLbl=$("#empLbl"), titlesEl=$("#titles"), city=$("#city");
 
-  /* ========= State ========= */
+  /* ---------------- State ---------------- */
   const state = {
     industries: [],
     muted: new Set(),
     hideMuted:false,
     selected: 0,
-    persona: {}, // per industry
+    persona: {},
     seed:null
   };
 
-  /* ========= Defaults (deterministic, no demo host fallbacks) ========= */
+  /* ---------------- Library ---------------- */
   const LIB = {
     Beverage:{
       metrics:[
@@ -257,18 +250,18 @@
   };
   const DEFAULT_INDS = Object.keys(LIB);
 
-  /* ========= Seed + crumbs ========= */
+  /* ---------------- Seed + crumbs ---------------- */
   function loadSeed(){
     try{
       const s=JSON.parse(localStorage.getItem("onb.seed")||"null");
       state.seed=s||null;
-      renderCrumbs();
-    }catch{ renderCrumbs(); }
+    }catch{ state.seed=null; }
+    renderCrumbs();
   }
   function renderCrumbs(){
     const s=state.seed||{};
     const parts = [
-      s.host ? s.host : "(no domain)",
+      s.host || "(no domain)",
       "supplies",
       s.products || "boxes, labels, corrugate, etc.",
       "for",
@@ -279,54 +272,60 @@
       (s.bestContacts && s.bestContacts.join(", ")) || "Procurement, Marketing"
     ];
     crumbsEl.innerHTML = "";
-    parts.forEach(p=>{
-      if (!p) return;
+    parts.filter(Boolean).forEach(p=>{
       const c=document.createElement("div");
       c.className="chip";
       c.textContent=p;
       crumbsEl.appendChild(c);
     });
-    // badge
-    if(hasAPI()){
-      apiBadge.textContent="API: online"; apiBadge.classList.add("ok");
+    if(hasAPI()){ apiBadge.textContent="API: online"; apiBadge.classList.add("ok"); }
+    else { apiBadge.textContent="API: offline"; apiBadge.classList.remove("ok"); }
+  }
+
+  /* ---------------- Persona normalize (fixes your error) ---------------- */
+  function normalizePersona(ind){
+    const lib=LIB[ind]||{metrics:[],ops:[],titles:[]};
+    let p = state.persona[ind] || {};
+    // metrics -> array of {label,value}
+    if (!Array.isArray(p.metrics) || !p.metrics.length){
+      p.metrics = lib.metrics.map((l,i)=>({label:l,value:clamp(8-i,0,10)}));
     }else{
-      apiBadge.textContent="API: offline"; apiBadge.classList.remove("ok");
+      p.metrics = p.metrics.map(m=>{
+        if(typeof m==="string") return {label:m,value:7};
+        return {label: m.label || "", value: clamp(+m.value||7,0,10)};
+      });
+      // ensure any missing lib metrics exist
+      lib.metrics.forEach(l=>{ if(!p.metrics.find(x=>x.label===l)) p.metrics.push({label:l,value:7}); });
     }
+    if (!Array.isArray(p.opsPool)) p.opsPool=[...lib.ops];
+    if (!Array.isArray(p.opsSel)) p.opsSel=[];
+    if (!Array.isArray(p.titles) || !p.titles.length) p.titles=[...lib.titles];
+    if (!Array.isArray(p.rev) || p.rev.length!==2) p.rev=[8,80];
+    p.rev=[clamp(+p.rev[0],0,120), clamp(+p.rev[1],0,120)]; if(p.rev[0]>p.rev[1]) p.rev.reverse();
+    if (typeof p.emp!=="number") p.emp=250;
+    if (typeof p.city!=="string") p.city="";
+    p.ai = !!p.ai;
+    state.persona[ind]=p;
   }
+  function ensurePersona(ind){ normalizePersona(ind); }
 
-  /* ========= Persona helpers ========= */
-  function ensurePersona(ind){
-    if(!state.persona[ind]){
-      const lib=LIB[ind]||{metrics:[],ops:[],titles:[]};
-      state.persona[ind]={
-        metrics: lib.metrics.map((label,i)=>({label,value: clamp(8-i,0,10)})),
-        opsPool:[...lib.ops],
-        opsSel:[],
-        rev:[8,80],
-        emp:250,
-        titles:[...lib.titles],
-        ai:false,
-        city:""
-      };
-    }
-  }
-
+  /* ---------------- Industries ---------------- */
   function adoptIndustries(list){
-    state.industries = (list && list.length ? list : DEFAULT_INDS).slice(0,30);
-    state.industries.forEach(ensurePersona);
+    const src = (list && list.length ? list : DEFAULT_INDS);
+    const seen=new Set();
+    state.industries = src.filter(n=> n && !seen.has(n) && (seen.add(n),true));
+    if (!state.industries.length) state.industries=[...DEFAULT_INDS];
+    state.industries.slice(0,30).forEach(ensurePersona);
   }
 
-  /* ========= Rotor ========= */
+  /* ---------------- Rotor ---------------- */
   function rotorItems(){
-    const list = state.industries.filter(x=>!state.muted.has(x) || !state.hideMuted);
-    return list.length?list:state.industries.slice(); // never empty
+    const arr = state.industries.filter(x=>!state.muted.has(x) || !state.hideMuted);
+    return arr.length?arr:[...state.industries];
   }
   function renderRotor(){
     const items = rotorItems();
     rotorList.innerHTML="";
-    const H = rotor.clientHeight;
-    const centerY = H/2;
-    const step = 44; // vertical spacing
     items.forEach((name,i)=>{
       const li=document.createElement("li");
       li.textContent=name;
@@ -334,81 +333,64 @@
       rotorList.appendChild(li);
     });
     positionRotor();
-    // events
-    rotor.addEventListener("wheel", onWheel, {passive:false});
-    rotor.addEventListener("mousedown", startDrag);
-    rotor.addEventListener("touchstart", startDrag,{passive:false});
-    rotorList.addEventListener("click",(e)=>{
-      const li=e.target.closest("li"); if(!li) return;
-      const idx=+li.getAttribute("data-i");
-      setSelected(idx,true);
-    });
   }
   function positionRotor(){
     const items = rotorItems();
-    const center = state.selected = clamp(state.selected,0,items.length-1);
+    state.selected = clamp(state.selected,0,items.length-1);
     const lis = $$("li",rotorList);
+    const step = 36; // tighter spacing
+    const centerY = rotor.clientHeight/2 - 16;
     lis.forEach((li,i)=>{
-      const d = i-center; // distance from center
-      const y = d*44 + (rotor.clientHeight/2 - 17); // approx center line
+      const d = i - state.selected;
+      const y = centerY + d*step;
       const scale = 1 - Math.min(Math.abs(d)*0.12,0.5);
       const alpha = 1 - Math.min(Math.abs(d)*0.18,0.75);
       li.style.transform=`translateY(${y}px) scale(${scale})`;
       li.style.opacity=String(alpha);
       li.style.fontSize = (scale*18).toFixed(2)+"px";
-      li.classList.toggle("active", i===center);
+      li.classList.toggle("active", i===state.selected);
     });
-    // title/top controls reflect selected
-    const activeName = items[center];
-    updateDetail(activeName);
+    updateDetail(items[state.selected]);
   }
-  let dragY=null;
-  function startDrag(e){
+  let wheelLock=0;
+  rotor.addEventListener("wheel",(e)=>{
     e.preventDefault();
-    dragY = ("touches" in e)? e.touches[0].clientY : e.clientY;
-    const move = ev=>{
+    const now=performance.now(); if(now-wheelLock<80) return; wheelLock=now;
+    setSelected(state.selected + (e.deltaY>0?1:-1));
+  },{passive:false});
+  let dragY=null;
+  rotor.addEventListener("mousedown",e=>startDrag(e.clientY));
+  rotor.addEventListener("touchstart",e=>{ if(e.touches&&e.touches[0]) startDrag(e.touches[0].clientY); },{passive:false});
+  function startDrag(y0){
+    dragY=y0;
+    const move=ev=>{
       const y=("touches" in ev)? ev.touches[0].clientY : ev.clientY;
-      const dy=y-dragY;
-      if(Math.abs(dy)>20){
-        const dir = dy>0?1:-1;
-        setSelected(state.selected+dir,true);
-        dragY=y;
-      }
+      if(Math.abs(y-dragY)>20){ setSelected(state.selected + (y>dragY?1:-1)); dragY=y; }
     };
-    const end = ()=>{
-      dragY=null;
-      window.removeEventListener("mousemove",move);
-      window.removeEventListener("mouseup",end);
-      window.removeEventListener("touchmove",move);
-      window.removeEventListener("touchend",end);
-    };
+    const end=()=>{ window.removeEventListener("mousemove",move); window.removeEventListener("mouseup",end);
+      window.removeEventListener("touchmove",move); window.removeEventListener("touchend",end); };
     window.addEventListener("mousemove",move);
     window.addEventListener("mouseup",end);
     window.addEventListener("touchmove",move,{passive:false});
     window.addEventListener("touchend",end);
   }
-  function onWheel(e){
-    e.preventDefault();
-    const dir = e.deltaY>0 ? 1 : -1;
-    setSelected(state.selected+dir,true);
-  }
-  function setSelected(idx,animate){
-    const items = rotorItems();
-    state.selected = clamp(idx,0,items.length-1);
-    if(animate) positionRotor(); else positionRotor();
-  }
+  function setSelected(idx){ state.selected=clamp(idx,0,rotorItems().length-1); positionRotor(); }
+  rotorList.addEventListener("click",(e)=>{
+    const li=e.target.closest("li"); if(!li) return;
+    setSelected(+li.getAttribute("data-i"));
+  });
 
-  /* ========= Detail panel ========= */
+  /* ---------------- Detail panel ---------------- */
   function updateDetail(ind){
     ensurePersona(ind);
+    const P=state.persona[ind];
     indTitle.textContent = ind;
-    $("#opsFor").textContent = ind;
-    $("#personaFor").textContent = ind;
-    $("#muteBtn").textContent = (state.muted.has(ind)?"Unmute ":"Mute ")+ind;
-    $("#aiDecide").checked = !!state.persona[ind].ai;
+    opsFor.textContent = ind;
+    personaFor.textContent = ind;
+    muteBtn.textContent = (state.muted.has(ind)?"Unmute ":"Mute ")+ind;
+    aiDecide.checked = !!P.ai;
 
     // metrics
-    const P = state.persona[ind];
     metricsEl.innerHTML="";
     P.metrics.forEach((m,ix)=>{
       const row=document.createElement("div");
@@ -421,31 +403,28 @@
         <div><input type="range" min="0" max="10" step="1" value="${m.value}" aria-label="${m.label} importance"></div>
       `;
       $("input",row).addEventListener("input",(e)=>{
-        P.metrics[ix].value = +e.target.value;
-        persist();
+        P.metrics[ix].value = +e.target.value; persist();
       });
       metricsEl.appendChild(row);
     });
 
-    // ops pool (chips)
     renderOps(ind);
     // persona sliders
     revMin.value=P.rev[0]; revMax.value=P.rev[1];
     revMinLbl.textContent=fmtM(+revMin.value);
     revMaxLbl.textContent=fmtM(+revMax.value);
     emp.value=P.emp; empLbl.textContent=P.emp.toLocaleString();
-    // titles
     renderTitles(ind);
-    // city
     city.value=P.city||"";
   }
 
   function renderOps(ind){
-    const P=state.persona[ind];
+    const P=state.persona[ind]; // guard everything
+    if(!P.opsPool) P.opsPool=[];
+    if(!P.opsSel) P.opsSel=[];
     opsPoolEl.innerHTML=""; opsSelEl.innerHTML="";
     P.opsPool.forEach(label=>{
-      const el=document.createElement("div"); el.className="pill";
-      el.textContent=label;
+      const el=document.createElement("div"); el.className="pill"; el.textContent=label;
       el.addEventListener("click",()=>{
         if(!P.opsSel.find(o=>o.label===label)){
           P.opsSel.push({label,value:7});
@@ -467,6 +446,7 @@
 
   function renderTitles(ind){
     const P=state.persona[ind];
+    if(!Array.isArray(P.titles)) P.titles=[];
     titlesEl.innerHTML="";
     const pool = ["Operations","Procurement","Plant Manager","Packaging","Quality","Regulatory","Logistics","Supply Chain","Engineering","Brand"];
     pool.forEach(t=>{
@@ -475,65 +455,50 @@
       p.textContent=t;
       p.addEventListener("click",()=>{
         const on=P.titles.includes(t);
-        if(on) P.titles=P.titles.filter(x=>x!==t);
-        else P.titles.push(t);
+        if(on) P.titles=P.titles.filter(x=>x!==t); else P.titles.push(t);
         renderTitles(ind); persist();
       });
       titlesEl.appendChild(p);
     });
   }
 
-  /* ========= Controls / bindings ========= */
+  /* ---------------- Controls ---------------- */
   advBtn.addEventListener("click",()=>{
-    const open = adv.classList.toggle("hidden");
-    advBtn.textContent = open ? "Show advanced ▾" : "Hide advanced ▲";
-    adv.setAttribute("aria-expanded", String(!open));
+    const willHide = !adv.classList.contains("hidden");
+    adv.classList.toggle("hidden");
+    advBtn.textContent = willHide ? "Show advanced ▾" : "Hide advanced ▲";
+    adv.setAttribute("aria-expanded", String(!willHide));
   });
-
   hideMuted.addEventListener("change",(e)=>{
-    state.hideMuted = e.target.checked;
-    renderRotor();
+    state.hideMuted = e.target.checked; renderRotor(); persist();
   });
-
   muteBtn.addEventListener("click",()=>{
     const ind=rotorItems()[state.selected];
     if(state.muted.has(ind)) state.muted.delete(ind); else state.muted.add(ind);
     renderRotor(); persist();
   });
-
   aiDecide.addEventListener("change",(e)=>{
-    const ind=rotorItems()[state.selected];
-    ensurePersona(ind);
-    state.persona[ind].ai = e.target.checked;
-    persist();
+    const ind=rotorItems()[state.selected]; ensurePersona(ind);
+    state.persona[ind].ai = !!e.target.checked; persist();
   });
 
-  // revenue double handle logic: keep min<=max, both draggable
-  function syncRevZ(){
-    // bring the currently closer handle to front to allow selecting it
-    if(+revMin.value > +revMax.value) [revMin.value,revMax.value]=[revMax.value,revMin.value];
+  function syncRev(){
+    // keep handles ordered and persist
+    if(+revMin.value > +revMax.value){ const t=revMin.value; revMin.value=revMax.value; revMax.value=t; }
     revMinLbl.textContent=fmtM(+revMin.value);
     revMaxLbl.textContent=fmtM(+revMax.value);
     const ind=rotorItems()[state.selected]; ensurePersona(ind);
-    state.persona[ind].rev=[+revMin.value,+revMax.value];
-    persist();
+    state.persona[ind].rev=[+revMin.value,+revMax.value]; persist();
   }
-  ["input","change"].forEach(ev=>{
-    revMin.addEventListener(ev,syncRevZ);
-    revMax.addEventListener(ev,syncRevZ);
-  });
-
+  ["input","change"].forEach(ev=>{ revMin.addEventListener(ev,syncRev); revMax.addEventListener(ev,syncRev); });
   emp.addEventListener("input",(e)=>{
-    empLbl.textContent = (+e.target.value).toLocaleString();
+    empLbl.textContent=(+e.target.value).toLocaleString();
     const ind=rotorItems()[state.selected]; ensurePersona(ind);
-    state.persona[ind].emp = +e.target.value;
-    persist();
+    state.persona[ind].emp=+e.target.value; persist();
   });
-
   city.addEventListener("input",(e)=>{
     const ind=rotorItems()[state.selected]; ensurePersona(ind);
-    state.persona[ind].city = e.target.value.trim();
-    persist();
+    state.persona[ind].city=e.target.value.trim(); persist();
   });
 
   $("#saveBtn").addEventListener("click",persist);
@@ -542,12 +507,9 @@
   $("#finishBtn2").addEventListener("click",finish);
   $("#backBtn").addEventListener("click",()=>history.back());
 
-  function finish(){
-    persist();
-    alert("Saved! (Hook this to your dashboard redirect)");
-  }
+  function finish(){ persist(); alert("Saved! (hook redirect to dashboard)"); }
 
-  /* ========= Persistence ========= */
+  /* ---------------- Persistence ---------------- */
   function persist(){
     try{
       const out={
@@ -570,22 +532,23 @@
       state.hideMuted=!!s.hideMuted;
       state.selected=+s.selected||0;
       state.persona=s.persona||{};
+      // upgrade existing persona records to current schema
+      state.industries.forEach(normalizePersona);
     }catch{}
   }
 
-  /* ========= Init ========= */
+  /* ---------------- Init ---------------- */
   function init(){
     loadSeed();
     restore();
     adoptIndustries(state.industries);
-    // setup UI
     hideMuted.checked = state.hideMuted;
     renderRotor();
-    // default collapsed advanced (open with button)
     adv.classList.add("hidden");
     advBtn.textContent="Show advanced ▾";
   }
   init();
+
 })();
 </script>
 </body>
