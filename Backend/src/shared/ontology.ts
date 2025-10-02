@@ -1,347 +1,306 @@
-// src/shared/ontology.ts
-//
-// Deterministic, dependency-free ontology helpers for packaging.
-// Exports the three functions expected by routes/classify.ts:
-//   - productsFrom(text, keywords?) => string[]
-//   - sectorsFrom(text, keywords?)  => string[]
-//   - metricsBySector(text, sectors, productTags) => Record<string,string[]>
-//
-// Design notes
-// ------------
-// • We normalize text and count token hits with word-boundary regexes.
-// • Products and sectors are derived from both page text and meta keywords.
-// • metricsBySector() follows a bottom-up strategy:
-//      1) sector-specific deep metrics (when available)
-//      2) product-specific technical metrics (based on detected products)
-//      3) generic ops metrics (never leaves a sector empty)
-// • All outputs are lowercased, unique, human-ready phrases.
-// • No external libs; safe for server-only usage.
+// Deterministic ontology + extractors for packaging
+// No external deps. Keep fast and safe under strict TS.
 
-type Counter = Map<string, number>;
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-function normalize(s: string): string {
-  return (s || "")
-    .replace(/\s+/g, " ")
-    .trim();
+export type CanonicalProduct =
+  | "boxes" | "cartons" | "corrugate"
+  | "labels"
+  | "tape"
+  | "film" | "shrink" | "stretch"
+  | "pallets" | "trays"
+  | "pouches" | "bags" | "mailer"
+  | "foam"
+  | "bottles" | "jars" | "closures" | "caps"
+  | "rigid" | "flexible"
+  | "clamshells"
+  | "tins" | "cans"
+  ;
+
+export type CanonicalSector =
+  | "Food"
+  | "Beverage"
+  | "Industrial"
+  | "Automotive"
+  | "Pharma"
+  | "Cosmetics"
+  | "Cannabis"
+  | "Electronics"
+  | "Apparel"
+  | "Logistics"
+  | "General";
+
+function normWords(s: string): string {
+  return (s || "").toLowerCase();
 }
 
-function toBag(text: string, keywords?: string[]): string {
-  const kw = (keywords || [])
-    .map(k => String(k || "").toLowerCase().trim())
-    .filter(Boolean)
-    .join(" ");
-  return `${text || ""} ${kw}`.toLowerCase();
+function scoreHits(text: string, pats: RegExp[]): number {
+  let n = 0;
+  for (const re of pats) if (re.test(text)) n++;
+  return n;
 }
 
-function bump(counter: Counter, key: string, n = 1) {
-  counter.set(key, (counter.get(key) || 0) + n);
-}
-
-function rank(counter: Counter, limit = 12): string[] {
-  return Array.from(counter.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([k]) => k);
-}
-
-function uniq<T>(a: T[]): T[] {
-  return Array.from(new Set(a));
-}
-
-function take<T>(a: T[], n: number): T[] {
-  return a.length > n ? a.slice(0, n) : a;
-}
-
-// ---------------------------------------------------------------------------
-// Canonical product tags (normalized) with synonym patterns
-// ---------------------------------------------------------------------------
-const PRODUCT_CANON: Record<string, string[]> = {
-  // flexible + films
-  "film": ["film", "films"],
-  "shrink": ["shrink", "shrinkwrap", "shrink wrap", "shrink-film", "shrink film"],
-  "stretch": ["stretch", "stretchwrap", "stretch wrap"],
-  "pouches": ["pouch", "pouches", "standup pouch", "stand-up pouch"],
-  // corrugate / rigid pack / components
-  "boxes": ["box", "boxes", "carton", "cartons", "corrugate", "corrugated"],
-  "labels": ["label", "labels", "labeling"],
-  "tape": ["tape", "tapes"],
-  "pallets": ["pallet", "pallets"],
-  "closures": ["closure", "closures", "cap", "caps", "lids", "lid"],
-  "bottles": ["bottle", "bottles"],
-  "jars": ["jar", "jars"],
-  "trays": ["tray", "trays", "clamshell", "clamshells"],
-  "foam": ["foam", "foam-in-place", "fip"],
-};
-
-function buildProductRegex(): Record<string, RegExp[]> {
-  const out: Record<string, RegExp[]> = {};
-  for (const [canon, syns] of Object.entries(PRODUCT_CANON)) {
-    out[canon] = syns.map(
-      w => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"),
-    );
+function uniqLower(a: string[]): string[] {
+  const out = new Set<string>();
+  for (const s of a) {
+    const v = String(s || "").toLowerCase().trim();
+    if (v) out.add(v);
   }
-  return out;
+  return Array.from(out);
 }
 
-const PRODUCT_RE = buildProductRegex();
+/* -------------------------------------------------------------------------- */
+/* Product extraction                                                          */
+/* -------------------------------------------------------------------------- */
 
-// ---------------------------------------------------------------------------
-// Canonical sectors with synonym patterns
-// ---------------------------------------------------------------------------
-const SECTOR_CANON: Record<string, string[]> = {
-  "beverage": ["beverage", "brewery", "distillery", "winery", "drinks", "drink"],
-  "food": ["food", "snack", "dairy", "meat", "bakery", "confectionery"],
-  "industrial": ["industrial", "manufacturing", "factory", "warehouse", "warehousing"],
-  "automotive": ["automotive", "auto", "vehicle", "tier 1", "tier-1"],
-  "cosmetics": ["cosmetic", "cosmetics", "beauty", "skincare", "makeup"],
-  "pharma": ["pharma", "pharmaceutical", "biotech", "life science", "life-science"],
-  "electronics": ["electronics", "electronic", "semiconductor", "ems", "pcb"],
-  "cannabis": ["cannabis", "cbd", "hemp", "dispensary"],
-};
+type ProductLex = { tag: CanonicalProduct; pats: RegExp[] };
 
-function buildSectorRegex(): Record<string, RegExp[]> {
-  const out: Record<string, RegExp[]> = {};
-  for (const [canon, syns] of Object.entries(SECTOR_CANON)) {
-    out[canon] = syns.map(
-      w => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"),
-    );
-  }
-  return out;
-}
-
-const SECTOR_RE = buildSectorRegex();
-
-// ---------------------------------------------------------------------------
-// Product- and sector-specific deep metrics
-// (phrases are written in human language for the UI)
-// ---------------------------------------------------------------------------
-const GENERIC_OPS_METRICS = [
-  "on-time delivery (OTD)",
-  "MOQ & price breaks",
-  "quality defects (ppm)",
+const PRODUCT_LEX: ProductLex[] = [
+  { tag: "boxes",      pats: [/box(es)?/i, /custom\s*box/i] },
+  { tag: "cartons",    pats: [/carton(s)?/i] },
+  { tag: "corrugate",  pats: [/corrugat(ed|e|ion)/i, /\bect\b/i] },
+  { tag: "labels",     pats: [/label(s|ing)?/i, /psa/i] },
+  { tag: "tape",       pats: [/tape(s)?/i] },
+  { tag: "film",       pats: [/\bfilm(s)?\b/i] },
+  { tag: "shrink",     pats: [/shrink( wrap| film)?/i] },
+  { tag: "stretch",    pats: [/stretch( wrap| film)?/i] },
+  { tag: "pallets",    pats: [/pallet(s)?/i] },
+  { tag: "trays",      pats: [/tray(s)?/i] },
+  { tag: "pouches",    pats: [/pouch(es)?/i] },
+  { tag: "bags",       pats: [/\bbag(s)?\b/i, /polybag(s)?/i] },
+  { tag: "mailer",     pats: [/mailer(s)?/i, /mailing bag(s)?/i] },
+  { tag: "foam",       pats: [/foam/i, /cushion(ing)?/i] },
+  { tag: "bottles",    pats: [/bottle(s)?/i] },
+  { tag: "jars",       pats: [/jar(s)?/i] },
+  { tag: "closures",   pats: [/closure(s)?/i, /child[- ]resistant/i, /\bcr cap/i] },
+  { tag: "caps",       pats: [/\bcap(s)?\b/i, /screwcap/i] },
+  { tag: "rigid",      pats: [/rigid/i] },
+  { tag: "flexible",   pats: [/flexible/i, /\bflex pack/i] },
+  { tag: "clamshells", pats: [/clamshell(s)?/i] },
+  { tag: "tins",       pats: [/\btin(s)?\b/i] },
+  { tag: "cans",       pats: [/\bcan(s)?\b/i] },
 ];
 
-const PRODUCT_METRICS: Record<string, string[]> = {
-  film: [
-    "load containment force",
-    "puncture resistance",
-    "coefficient of friction (cling/COF)",
-    "wrap speed on line",
-    "gauge & yield optimization",
-  ],
-  shrink: [
-    "shrink ratio & recovery",
-    "seal strength after shrink",
-    "perforation/vent pattern",
-  ],
-  stretch: [
-    "edge tear resistance",
-    "pre-stretch percentage",
-    "film memory & rebound",
-  ],
-  labels: [
-    "adhesive type vs temperature range",
-    "print durability (scuff/solvent)",
-    "applicator speed compatibility",
-  ],
-  boxes: [
-    "edge crush (ECT)",
-    "box compression strength (BCT)",
-    "die-cut tolerances & score quality",
-  ],
-  closures: [
-    "application & removal torque",
-    "liner type and leak rate",
-    "neck finish compatibility",
-  ],
-  bottles: [
-    "neck finish tolerance",
-    "wall thickness consistency",
-    "clarity/haze targets",
-  ],
-  jars: [
-    "seal integrity under hot-fill",
-    "vacuum/pressure hold",
-  ],
-  pouches: [
-    "seal strength & delamination risk",
-    "oxygen transmission rate (OTR)",
-    "retort/hot-fill compatibility",
-  ],
-  pallets: [
-    "footprint & deck board spec",
-    "dynamic vs static load rating",
-  ],
-  foam: [
-    "density & ILD",
-    "cushion curves vs drop height",
-  ],
-  trays: [
-    "cell geometry & crush resistance",
-    "hinge strength (for clamshells)",
-  ],
-  tape: [
-    "adhesion/peel vs surface energy",
-    "shear strength under load",
-  ],
-};
+export function productsFrom(textRaw: string, keywords?: string[]): string[] {
+  const text = normWords(textRaw);
+  const kw = uniqLower(keywords || []);
+  const hits: Array<{ tag: CanonicalProduct; score: number }> = [];
 
-const SECTOR_DEEP_METRICS: Record<string, string[]> = {
-  beverage: [
-    "closure compatibility & torque",
-    "label application alignment & adhesion",
-    "bottle/secondary pack stability in transit",
-  ],
-  food: [
-    "food-contact compliance (FDA/EC)",
-    "moisture / oxygen barrier needs",
-    "seal integrity under process (hot-fill/retort)",
-  ],
-  industrial: [
-    "damage reduction targets in transit",
-    "automation line uptime impact",
-    "sustainability targets (PCR %, recyclability)",
-  ],
-  automotive: [
-    "component surface protection (scratch/scuff)",
-    "just-in-time delivery stability",
-    "line-side pack density & ergonomics",
-  ],
-  cosmetics: [
-    "display clarity & scuff resistance",
-    "tamper-evidence & seal aesthetics",
-    "unit cost vs luxury feel",
-  ],
-  pharma: [
-    "USP/Ph. Eur. compliance",
-    "sterility assurance level (SAL)",
-    "serialization & traceability",
-  ],
-  electronics: [
-    "ESD protection targets",
-    "shock/vibration mitigation",
-    "dimensional repeatability in trays",
-  ],
-  cannabis: [
-    "child-resistant compliance",
-    "odor barrier performance",
-    "state-by-state label rules",
-  ],
-  // fallback bucket used when sector == "general"
-  general: [
-    "packaging cost per unit",
-    "damage/returns reduction",
-    "shelf or unboxing presentation",
-  ],
-};
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/** Return normalized product tags ranked by frequency. */
-export function productsFrom(text: string, keywords?: string[]): string[] {
-  const bag = toBag(text, keywords);
-  const c: Counter = new Map();
-
-  for (const [canon, res] of Object.entries(PRODUCT_RE)) {
-    for (const r of res) {
-      if (r.test(bag)) bump(c, canon);
-    }
+  for (const p of PRODUCT_LEX) {
+    const s = scoreHits(text, p.pats) + (kw.some(k => p.pats.some(re => re.test(k))) ? 1 : 0);
+    if (s > 0) hits.push({ tag: p.tag, score: s });
   }
 
-  // small boost when a product appears near obvious commerce cues
-  const commerce = /\b(price|catalog|shop|store|sku|buy|quote|rfq|rfqs)\b/i.test(bag);
-  if (commerce) {
-    for (const k of c.keys()) bump(c, k, 0.25);
+  // Merge near-synonyms (film/shrink/stretch => keep distinct but contiguous)
+  hits.sort((a, b) => b.score - a.score);
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const h of hits) {
+    if (seen.has(h.tag)) continue;
+    seen.add(h.tag);
+    out.push(h.tag);
+    if (out.length >= 12) break;
   }
-
-  const ranked = rank(c, 12);
-  return ranked;
-}
-
-/** Return normalized sector hints ranked by frequency; guarantees at least one value. */
-export function sectorsFrom(text: string, keywords?: string[]): string[] {
-  const bag = toBag(text, keywords);
-  const c: Counter = new Map();
-
-  for (const [canon, res] of Object.entries(SECTOR_RE)) {
-    for (const r of res) {
-      if (r.test(bag)) bump(c, canon);
-    }
-  }
-
-  // Heuristics: if product list looks B2C-adjacent, nudge food/beverage/cosmetics
-  const b2cNudge = /\b(brand|store|menu|recipe|fragrance|drink|snack)\b/i.test(bag);
-  if (b2cNudge) {
-    bump(c, "food", 0.25);
-    bump(c, "beverage", 0.25);
-    bump(c, "cosmetics", 0.15);
-  }
-
-  const ranked = rank(c, 6);
-  return ranked.length ? ranked : ["general"];
-}
-
-/**
- * Produce deep, sector-specific metrics for UI consumption.
- * Never returns an empty array for any provided sector.
- *
- * Bottom-up order:
- *   1) sector deep metrics
- *   2) product-specific metrics matched to detected products
- *   3) generic ops metrics as last resort
- */
-export function metricsBySector(
-  text: string,
-  sectors: string[],
-  productTags: string[],
-): Record<string, string[]> {
-  const bag = normalize(text).toLowerCase();
-
-  // narrow product metrics to those actually present
-  const productSet = new Set(productTags);
-
-  const out: Record<string, string[]> = {};
-  const sectorsEff = (sectors && sectors.length) ? sectors : ["general"];
-
-  for (const sector of sectorsEff) {
-    const key = sector.toLowerCase();
-    const deep = SECTOR_DEEP_METRICS[key] || [];
-    const prod: string[] = [];
-
-    // Add product-specific metrics that are especially relevant to this sector.
-    // (Light gating by sector keyword presence to keep lists tight.)
-    const gateWord =
-      key === "general" ? "" :
-      key === "industrial" ? "industrial" :
-      key;
-
-    const gate = gateWord ? new RegExp(`\\b${gateWord}\\b`, "i") : null;
-    const gateOk = !gate || gate.test(bag);
-
-    if (gateOk) {
-      for (const p of productSet) {
-        const m = PRODUCT_METRICS[p];
-        if (m && m.length) prod.push(...m);
-      }
-    }
-
-    // Deduplicate while preserving order preference: deep -> prod -> generic
-    const merged = uniq<string>([...deep, ...prod, ...GENERIC_OPS_METRICS]);
-
-    // Keep it readable; UI can show more if needed.
-    out[sector] = take(merged, 12);
-
-    // Absolute guarantee: never empty.
-    if (!out[sector].length) {
-      out[sector] = take([...SECTOR_DEEP_METRICS.general, ...GENERIC_OPS_METRICS], 6);
-    }
-  }
-
   return out;
 }
 
-// Re-export a small list of known sectors/products (optional – can help UIs/tests)
-export const KNOWN_SECTORS = Object.keys(SECTOR_CANON);
-export const KNOWN_PRODUCTS = Object.keys(PRODUCT_CANON);
+/* -------------------------------------------------------------------------- */
+/* Sector extraction                                                           */
+/* -------------------------------------------------------------------------- */
+
+type SectorLex = { name: CanonicalSector; pats: RegExp[] };
+
+const SECTOR_LEX: SectorLex[] = [
+  { name: "Food",        pats: [/food/i, /retort/i, /fda/i, /usda/i, /snack/i, /meat|dairy|produce/i] },
+  { name: "Beverage",    pats: [/beverage|brew|distill|bottl(e|ing)/i, /drink|juice|soda/i] },
+  { name: "Industrial",  pats: [/industrial/i, /mro/i, /maintenance/i, /warehouse/i, /pallet/i] },
+  { name: "Automotive",  pats: [/automotive|auto\s?parts?/i, /tier\s?[1-3]/i] },
+  { name: "Pharma",      pats: [/pharma(cy|ceutical)?/i, /gmp/i, /sterile/i] },
+  { name: "Cosmetics",   pats: [/cosmetic(s)?/i, /beauty/i, /personal care/i] },
+  { name: "Cannabis",    pats: [/cannabis|hemp|thc|cbd/i, /child[- ]resistant/i] },
+  { name: "Electronics", pats: [/electronics?/i, /esd/i, /anti[- ]static/i] },
+  { name: "Apparel",     pats: [/apparel|garment|fashion/i] },
+  { name: "Logistics",   pats: [/3pl|logistics|fulfillment|warehouse/i] },
+];
+
+export function sectorsFrom(textRaw: string, keywords?: string[]): CanonicalSector[] {
+  const text = normWords(textRaw);
+  const kw = uniqLower(keywords || []);
+  const hits: Array<{ name: CanonicalSector; score: number }> = [];
+
+  for (const s of SECTOR_LEX) {
+    const sc = scoreHits(text, s.pats) + (kw.some(k => s.pats.some(re => re.test(k))) ? 1 : 0);
+    if (sc > 0) hits.push({ name: s.name, score: sc });
+  }
+
+  hits.sort((a, b) => b.score - a.score);
+  const out = hits.map(h => h.name);
+  if (out.length === 0) out.push("General");
+  return Array.from(new Set(out)).slice(0, 6);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Metrics (bottom-up first, then fallbacks)                                   */
+/* -------------------------------------------------------------------------- */
+
+type MetricHint = { phrase: string; re: RegExp };
+
+const H: Record<string, MetricHint[]> = {
+  // Cross-sector phrases we can “detect” directly in copy
+  general: [
+    { phrase: "lead time", re: /lead[- ]time/i },
+    { phrase: "moq / minimum order", re: /moq|minimum order/i },
+    { phrase: "on-time delivery", re: /on[- ]time delivery/i },
+    { phrase: "unit cost per pack", re: /unit cost|cost per/i },
+    { phrase: "sustainability (PCR%, recyclability)", re: /pcr|recycl/i },
+    { phrase: "quality certifications (ISO, SQF)", re: /iso|sqf/i },
+  ],
+  film: [
+    { phrase: "load stability in transit", re: /load (stability|secure)/i },
+    { phrase: "puncture/tear resistance", re: /puncture|tear/i },
+    { phrase: "pre-stretch efficiency", re: /pre[- ]stretch/i },
+  ],
+  labels: [
+    { phrase: "adhesion on substrate", re: /adhes(ion|ive)/i },
+    { phrase: "print durability/scuff", re: /scuff|abrasion|durab/i },
+    { phrase: "application alignment", re: /align(ment)?|label applicat/i },
+  ],
+  corrugate: [
+    { phrase: "stack/edge crush strength (ECT)", re: /\bect\b|edge crush|stack strength/i },
+    { phrase: "cube efficiency / freight", re: /cube|freight/i },
+  ],
+  bottles: [
+    { phrase: "closure compatibility & torque", re: /torque|compatib(le|ility)/i },
+    { phrase: "hot-fill/retort seal integrity", re: /hot[- ]fill|retort|seal integrity/i },
+  ],
+  closures: [
+    { phrase: "child-resistant compliance", re: /child[- ]resistant|cr\s?cap/i },
+    { phrase: "torque window / application", re: /torque|apply/i },
+  ],
+};
+
+/** Sector fallback libraries (used if no direct matches found). */
+const SECTOR_DEFAULTS: Record<CanonicalSector, string[]> = {
+  Food: [
+    "Food-contact compliance (FDA/EC)",
+    "Moisture / oxygen barrier needs",
+    "Seal integrity under process (hot-fill/retort)",
+  ],
+  Beverage: [
+    "Closure compatibility & torque",
+    "Label application alignment & adhesion",
+    "Bottle/secondary pack stability in transit",
+  ],
+  Industrial: [
+    "Damage reduction targets in transit",
+    "Automation line uptime impact",
+    "Sustainability targets (PCR %, recyclability)",
+  ],
+  Automotive: [
+    "ESD-safe / part protection needs",
+    "Dimensional tolerance / fit in line",
+    "Traceability & labeling (VIN/lot)",
+  ],
+  Pharma: [
+    "GMP & sterile barrier requirements",
+    "Lot & serial traceability (DSCSA)",
+    "Tamper-evident packaging integrity",
+  ],
+  Cosmetics: [
+    "Aesthetic clarity / scuff resistance",
+    "Label/print fidelity on curved surfaces",
+    "Tamper-evident & leak-proof sealing",
+  ],
+  Cannabis: [
+    "Child-resistant compliance",
+    "Odor / moisture barrier control",
+    "Labeling compliance (THC %, warnings)",
+  ],
+  Electronics: [
+    "ESD protection & handling",
+    "Cushioning / drop protection",
+    "Moisture barrier & desiccant control",
+  ],
+  Apparel: [
+    "Branding/unboxing presentation",
+    "Damage/return reduction in parcel",
+    "Label/size ID accuracy",
+  ],
+  Logistics: [
+    "Cube efficiency / freight class",
+    "Pallet stability & wrap optimization",
+    "Pick/pack scanability & labeling",
+  ],
+  General: [
+    "Lead time commitments",
+    "Minimum order quantities (MOQ)",
+    "On-time delivery performance",
+  ],
+};
+
+/**
+ * Choose metrics per sector from the given text, then fallback so it’s never empty.
+ * Also enrich with product-specific metrics when relevant.
+ */
+export function metricsBySector(
+  textRaw: string,
+  sectors: string[],
+  products: string[]
+): Record<string, string[]> {
+  const text = normWords(textRaw);
+  const chosen = new Map<CanonicalSector, string[]>();
+
+  // Helper: push metric if not present
+  const add = (sec: CanonicalSector, metric: string) => {
+    const cur = chosen.get(sec) || [];
+    if (!cur.includes(metric)) cur.push(metric);
+    chosen.set(sec, cur);
+  };
+
+  const sectorsNorm: CanonicalSector[] =
+    (sectors && sectors.length ? (sectors as CanonicalSector[]) : ["General"]);
+
+  for (const sec of sectorsNorm) {
+    // 1) Bottom-up: look for explicit phrase hits tied to products
+    // Map some products to hint families
+    const prods = new Set(products.map(p => p.toLowerCase()));
+    if (prods.has("film") || prods.has("shrink") || prods.has("stretch") || prods.has("pallets")) {
+      for (const h of H.film) if (h.re.test(text)) add(sec, h.phrase);
+    }
+    if (prods.has("labels")) {
+      for (const h of H.labels) if (h.re.test(text)) add(sec, h.phrase);
+    }
+    if (prods.has("corrugate") || prods.has("boxes") || prods.has("cartons")) {
+      for (const h of H.corrugate) if (h.re.test(text)) add(sec, h.phrase);
+    }
+    if (prods.has("bottles") || prods.has("jars")) {
+      for (const h of H.bottles) if (h.re.test(text)) add(sec, h.phrase);
+    }
+    if (prods.has("closures") || prods.has("caps")) {
+      for (const h of H.closures) if (h.re.test(text)) add(sec, h.phrase);
+    }
+
+    // 2) Always consider general phrases present on the site
+    for (const g of H.general) if (g.re.test(text)) add(sec, g.phrase);
+
+    // 3) Fallback: if still sparse, use sector defaults
+    const have = chosen.get(sec) || [];
+    if (have.length < 3) {
+      const def = SECTOR_DEFAULTS[sec] || SECTOR_DEFAULTS.General;
+      for (const m of def) add(sec, m);
+    }
+
+    // 4) Cap to a tidy set
+    chosen.set(sec, (chosen.get(sec) || []).slice(0, 8));
+  }
+
+  // If no sectors detected at all (shouldn't happen), ensure General
+  if (chosen.size === 0) {
+    chosen.set("General", SECTOR_DEFAULTS.General.slice(0, 6));
+  }
+
+  // Return as plain record
+  const out: Record<string, string[]> = {};
+  for (const [k, v] of chosen.entries()) out[k] = v;
+  return out;
+}
