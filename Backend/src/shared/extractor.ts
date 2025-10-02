@@ -1,13 +1,14 @@
 // src/shared/extractor.ts
 //
-// Thin, typed wrappers around the ontology helpers so routes can import
-// extractProducts / extractSectors / extractMetrics with stable names.
-// All functions are pure and deterministic; no network or globals.
+// Stable facade over ./ontology so routes can import either the old
+// names (productsFrom, sectorsFrom, metricsBySector) or the new
+// names (extractProducts, extractSectors, extractMetrics).
+// Pure, deterministic; no network calls.
 
 import {
-  productsFrom as _productsFrom,
-  sectorsFrom as _sectorsFrom,
-  metricsBySector as _metricsBySector,
+  productsFrom as ontologyProductsFrom,
+  sectorsFrom as ontologySectorsFrom,
+  metricsBySector as ontologyMetricsBySector,
 } from "./ontology";
 
 export type MetricMap = Record<string, string[]>;
@@ -16,14 +17,14 @@ export type MetricMap = Record<string, string[]>;
 export function extractProducts(text: string, keywords?: string[]): string[] {
   const t = String(text || "");
   const kw = Array.isArray(keywords) ? keywords : [];
-  return _productsFrom(t, kw);
+  return ontologyProductsFrom(t, kw);
 }
 
 /** Extract normalized sector/audience hints from site text (+ optional meta keywords). */
 export function extractSectors(text: string, keywords?: string[]): string[] {
   const t = String(text || "");
   const kw = Array.isArray(keywords) ? keywords : [];
-  return _sectorsFrom(t, kw);
+  return ontologySectorsFrom(t, kw);
 }
 
 /**
@@ -38,13 +39,17 @@ export function extractMetrics(
   const t = String(text || "");
   const sectors = Array.isArray(sectorHints) ? sectorHints : [];
   const products = Array.isArray(productTags) ? productTags : [];
-  return _metricsBySector(t, sectors, products);
+  return ontologyMetricsBySector(t, sectors, products);
 }
 
-/**
- * Aggregator alias used by some callers; currently just delegates to extractMetrics.
- * Kept separate so we can evolve post-processing (dedupe, cap, rank) without touching routes.
- */
+/** Alias kept for callers still importing { metricsBySector } from this module. */
+export const metricsBySector = extractMetrics;
+
+/** Aliases for legacy callers importing { productsFrom, sectorsFrom }. */
+export const productsFrom = extractProducts;
+export const sectorsFrom = extractSectors;
+
+/** Optional aggregator name some code uses; currently same as extractMetrics. */
 export function aggregateBottomUp(
   text: string,
   sectorHints: string[],
@@ -57,5 +62,8 @@ export default {
   extractProducts,
   extractSectors,
   extractMetrics,
+  metricsBySector,
+  productsFrom,
+  sectorsFrom,
   aggregateBottomUp,
 };
