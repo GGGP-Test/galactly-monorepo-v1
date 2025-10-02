@@ -18,8 +18,9 @@
   html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
   a{color:inherit}
   .wrap{display:grid;grid-template-columns:280px 1fr;gap:16px;max-width:1200px;margin:24px auto;padding:0 18px}
-  /* left column */
+  /* left column (hidden by default) */
   .card{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:14px}
+  .left-advanced{display:none}
   .h{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
   label{font-size:13px;color:var(--muted2);display:block;margin-bottom:6px}
   input[type=text],input[type=url]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
@@ -42,6 +43,7 @@
   .pill.good{color:#0d3b23;background:#08301a;border:1px solid #174b2c}
   .sep{flex:1}
   select{background:#0d1520;border:1px solid var(--divider);color:var(--text);border-radius:10px;padding:8px 10px}
+  .ghost-gear{background:transparent;border:none;color:#9bb3c6;cursor:pointer}
 
   /* table */
   table{width:100%;border-collapse:separate;border-spacing:0 8px}
@@ -73,8 +75,8 @@
 </head>
 <body>
 <div class="wrap">
-  <!-- LEFT: connection & log -->
-  <aside class="card">
+  <!-- LEFT: connection & log (hidden by default) -->
+  <aside id="leftCol" class="card left-advanced" aria-hidden="true">
     <div class="h">Connection</div>
     <label>API base (root or /api)</label>
     <div class="row">
@@ -93,7 +95,7 @@
     <div class="muted" style="margin-top:8px">Used by <b>Find buyers</b>. The supplier host is locked to your profile to keep the panel minimal.</div>
 
     <div class="h" style="margin-top:16px">HTTP Log</div>
-    <pre id="httpLog" class="log"></pre>
+    <pre id="httpLog" class="log" aria-live="polite"></pre>
   </aside>
 
   <!-- RIGHT: main panel -->
@@ -103,13 +105,8 @@
       <span class="name" id="company">yourcompany.com</span>
       <span id="personaPill" class="pill">no profile yet</span>
       <span class="sep"></span>
-      <label class="muted">Count</label>
-      <select id="countTop">
-        <option>3</option><option selected>12</option><option>25</option><option>50</option>
-      </select>
+      <button id="advToggle" class="ghost-gear" title="Advanced (API & logs)">⚙️</button>
       <button id="profileBtn" class="btn">Profile</button>
-      <button id="applyBtn" class="btn">Apply</button>
-      <span class="pill">daily limit 3</span>
       <button id="findBtn" class="btn primary">★ Find buyers</button>
     </div>
 
@@ -152,10 +149,10 @@
         <div class="card" style="padding:12px">
           <div class="h">General preferences</div>
           <div id="genChips" class="chips"></div>
-          <label style="margin-top:10px">
-            <input type="checkbox" id="inboundOptIn"> List my company for inbound opportunities
-          </label>
-          <div class="muted" id="inboundHint" style="font-size:12px;margin-top:4px">If enabled, buyers searching in the marketplace can discover your company.</div>
+          <div id="inboundRow" class="muted" style="margin-top:8px">
+            <label><input id="inboundChk" type="checkbox"> List my company for inbound opportunities</label>
+            <div id="inboundNote" class="muted" style="font-size:12px"></div>
+          </div>
         </div>
 
         <!-- product signals -->
@@ -201,15 +198,18 @@
   function setStored(k,v){ try{ localStorage.setItem(k,v); }catch{} }
   function delStored(k){ try{ localStorage.removeItem(k); }catch{} }
 
-  // ---------- API base normalization (always ends with /api) ----------
+  // ---------- API base normalization (defaults to same-origin /api) ----------
   function normalizeApiBase(input){
     let b=(input||"").trim().replace(/\/+$/,"");
     const m=b.match(/^(.*?)(?:\/api(?:\/.*)?)$/i);
     if(m) b = m[1];
-    return b ? (b + "/api") : "";
+    return b ? (b + "/api") : (window.location.origin + "/api");
   }
   const API = {
-    get(){ const fromLS=getStored("apiBase",""); const fromWin=window.API_BASE||""; const raw=fromLS||fromWin; return normalizeApiBase(raw); },
+    get(){
+      const raw = getStored("apiBase","") || (window.API_BASE||"");
+      return normalizeApiBase(raw);
+    },
     set(v){ setStored("apiBase", v); },
     withKey(init={}){
       const k=getStored("xApiKey","");
@@ -223,22 +223,44 @@
   const httpLog = document.getElementById("httpLog");
   function logHttp(line){
     const now = new Date().toISOString().slice(11,19);
-    httpLog.textContent = `[${now}] ${line}\n` + httpLog.textContent;
+    if (httpLog) httpLog.textContent = `[${now}] ${line}\n` + (httpLog.textContent||"");
+  }
+
+  // ---------- small fetch helpers ----------
+  async function fetchJSON(url, init){
+    let r, text;
+    try{ r = await fetch(url, API.withKey(init)); }
+    catch(e){ logHttp(`ERR ${url} — ${e.message}`); throw e; }
+    text = await r.text();
+    if (!r.ok){
+      logHttp(`${r.status} ${url} — ${text.slice(0,120)}`);
+      throw new Error(text||r.statusText);
+    }
+    logHttp(`${r.status} ${url}`);
+    try{ return JSON.parse(text); }catch{ return text; }
+  }
+  // Soft GET that treats 404 as "null" (used for inbound/status)
+  async function fetchJSONSoft(url, init){
+    let r, text;
+    try{ r = await fetch(url, API.withKey(init)); }
+    catch(e){ logHttp(`ERR ${url} — ${e.message}`); return null; }
+    text = await r.text();
+    if (r.status === 404){ logHttp(`404 (soft) ${url}`); return null; }
+    if (!r.ok){ logHttp(`${r.status} ${url} — ${text.slice(0,120)}`); return null; }
+    logHttp(`${r.status} ${url}`);
+    try{ return JSON.parse(text); }catch{ return text; }
   }
 
   // ---------- elements ----------
+  const leftCol = document.getElementById("leftCol");
+  const advToggle = document.getElementById("advToggle");
   const apiBaseInput = document.getElementById("apiBase");
   const saveApiBtn = document.getElementById("saveApi");
   const pingBtn = document.getElementById("ping");
   const clearLogBtn = document.getElementById("clearLog");
 
-  const countLeft = document.getElementById("count");
-  const countTop  = document.getElementById("countTop");
   const rows = document.getElementById("rows");
-
   const profileBtn = document.getElementById("profileBtn");
-  const applyBtn = document.getElementById("applyBtn");
-  const applyBtn2 = document.getElementById("applyBtn2");
   const findBtn = document.getElementById("findBtn");
 
   const drawer = document.getElementById("drawer");
@@ -262,21 +284,29 @@
   const sectorInput = document.getElementById("sectorInput");
   const sectorChips = document.getElementById("sectorChips");
   const saveLocalBtn = document.getElementById("saveLocal");
-  const inboundOptIn = document.getElementById("inboundOptIn");
-  const inboundHint = document.getElementById("inboundHint");
+
+  const inboundRow = document.getElementById("inboundRow");
+  const inboundChk = document.getElementById("inboundChk");
+  const inboundNote = document.getElementById("inboundNote");
 
   // ---------- state ----------
-  const state = {
-    persona:null,
-    metrics:[],
-    host:""
-  };
+  const state = { persona:null, metrics:[], inboundAvail:false };
 
   // ---------- utils ----------
   function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
   function setFavicon(el, host){
-    const h = normHost(host); if(!h) return el.removeAttribute("src");
-    el.src = "https://icons.duckduckgo.com/ip3/"+encodeURIComponent(h)+".ico";
+    const h = normHost(host); if(!h){ el.removeAttribute("src"); return; }
+    const sources = [
+      `https://icons.duckduckgo.com/ip3/${encodeURIComponent(h)}.ico`,
+      `https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=64`,
+      `https://${h}/favicon.ico`
+    ];
+    let i = 0;
+    function tryNext(){
+      if (i >= sources.length){ el.removeAttribute("src"); return; }
+      const url = sources[i++]; el.src = url;
+    }
+    el.onerror = tryNext; tryNext();
   }
   function openDrawer(){ drawer.classList.add("show"); drawer.setAttribute("aria-hidden","false"); }
   function closeDrawer(){ drawer.classList.remove("show"); drawer.setAttribute("aria-hidden","true"); }
@@ -285,16 +315,14 @@
     const s=document.createElement("span"); s.className="chip"; s.textContent=label;
     if (active) s.classList.add("active");
     s.addEventListener("click",()=>s.classList.toggle("active"));
-    box.appendChild(s);
-    return s;
+    box.appendChild(s); return s;
   }
   function addOnEnter(input, box){
     input.addEventListener("keydown",(e)=>{
       if(e.key==="Enter"){
         e.preventDefault();
         const v=input.value.trim(); if(!v) return;
-        chip(v, box, true);
-        input.value="";
+        chip(v, box, true); input.value="";
       }
     });
   }
@@ -302,7 +330,7 @@
 
   function renderMetrics(metrics){
     metricBox.innerHTML="";
-    state.metrics = metrics.slice(0,3); // UI = 3 sliders
+    state.metrics = metrics.slice(0,3);
     for (const m of state.metrics){
       const row=document.createElement("div"); row.className="slider-row";
       const lab=document.createElement("div"); lab.textContent=m.label || String(m);
@@ -312,7 +340,6 @@
       metricBox.appendChild(row);
     }
   }
-
   function defaultMetrics(){
     return [
       {label:"Line automation / fulfillment", value:8},
@@ -321,70 +348,49 @@
     ];
   }
 
-  // ---------- prefs <-> persona mapping helpers ----------
-  function personaFromPrefs(host, prefs){
-    const p = {
-      host,
-      productTags: Array.isArray(prefs?.categoriesAllow) ? prefs.categoriesAllow : [],
-      sectorHints: [], // your server doesn't persist sectors yet; user can add
-      general: {
-        mids: !!prefs?.preferSmallMid,
-        avoidBig: (prefs?.sizeWeight?.large ?? -1.2) < 0,
-        near: (prefs?.signalWeight?.local ?? 0) > 0.9,
-        ecom: (prefs?.signalWeight?.ecommerce ?? 0) > 0.2,
-        wholesale: (prefs?.signalWeight?.wholesale ?? 0) > 0.1,
-        retail: (prefs?.signalWeight?.retail ?? 0) > 0.1
-      },
-      metrics: defaultMetrics(),
-      targeting: { city: prefs?.city || "" }
-    };
-    return p;
+  function renderPersona(p){
+    state.persona = p || {};
+    const host = p.host || p.line?.host || "yourcompany.com";
+    company.textContent = host; company2.textContent = host;
+    setFavicon(fav, host); setFavicon(fav2, host);
+    pill.textContent = "persona (imported)"; pill.classList.add("good");
+
+    // one-liner
+    if (p.line && p.line.host){
+      const L = p.line;
+      oneLine.textContent = `${L.host} — ${L.verb||"supplies"} ${L.products||"packaging"} for ${L.audience||"brands"} in ${L.region||"the U.S."}. Best contacts: ${L.contacts||"Operations, Procurement"}`;
+    }else if (p.lineText){ oneLine.textContent = p.lineText; }
+
+    // general
+    genChips.innerHTML="";
+    const gen = p.general || {};
+    [
+      ["Prefer mid-size companies", !!gen.mids],
+      ["De-prioritize giant enterprises", !!gen.avoidBig],
+      ["Prioritize nearby buyers", !!gen.near],
+      ["Prefer e-commerce sites", !!gen.ecom],
+      ["Prefer wholesalers / distributors", !!gen.wholesale],
+      ["Prefer retail brands", !!gen.retail]
+    ].forEach(([lab, on])=> chip(lab, genChips, on));
+
+    // inbound section visibility depends on backend ping
+    inboundRow.style.display = state.inboundAvail ? "" : "";
+    inboundNote.textContent = state.inboundAvail ? "" : "Listing endpoint not available on this deployment.";
+
+    // products
+    prodChips.innerHTML="";
+    (p.productTags||[]).forEach(t=> chip(t, prodChips, true));
+
+    // metrics
+    const m = Array.isArray(p.metrics)&&p.metrics.length ? p.metrics : defaultMetrics();
+    renderMetrics(m);
+
+    // targeting
+    cityChips.innerHTML=""; (p.targeting?.cities?.length ? p.targeting.cities : (p.targeting?.city? [p.targeting.city] : ["Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"])).forEach(c=>chip(c,cityChips,true));
+    sectorChips.innerHTML=""; (p.sectorHints||["food","beverage","cosmetics"]).forEach(s=>chip(s,sectorChips,true));
   }
 
   // ---------- applying & fetching ----------
-  async function fetchJSON(url, init){
-    let r;
-    try{ r = await fetch(url, API.withKey(init)); }
-    catch(e){ logHttp(`ERR ${url} — ${e.message}`); throw e; }
-    const text = await r.text();
-    logHttp(`${r.status} ${url}`);
-    if (!r.ok){ throw new Error(text || r.statusText); }
-    try{ return JSON.parse(text); }catch{ return text; }
-  }
-
-  async function fetchPrefs(host){
-    const base = API.get(); if(!base) return null;
-    try{
-      const d = await fetchJSON(base + "/prefs/" + encodeURIComponent(host), {method:"GET"});
-      return d?.prefs ? d.prefs : null;
-    }catch{ return null; }
-  }
-
-  async function fetchInboundStatus(host){
-    const base = API.get(); if(!base) return null;
-    try{
-      const d = await fetchJSON(base + "/inbound/status?host=" + encodeURIComponent(host), {method:"GET"});
-      return !!d?.listed;
-    }catch{
-      // endpoint might not exist; hide the checkbox hint gracefully
-      inboundHint.textContent = "Listing endpoint not available on this deployment.";
-      return null;
-    }
-  }
-
-  async function applyInbound(host, optIn){
-    const base = API.get(); if(!base) return;
-    try{
-      await fetchJSON(base + "/inbound/opt-in", {
-        method:"POST",
-        body: JSON.stringify({ host, optIn: !!optIn })
-      });
-      logHttp(`inbound ${optIn? "opt-in" : "opt-out"} saved`);
-    }catch(e){
-      logHttp("inbound save failed: " + e.message);
-    }
-  }
-
   function collectPersona(){
     const host = company.textContent.trim();
     const p = state.persona || {};
@@ -404,42 +410,37 @@
         retail: genChips.textContent.includes("Prefer retail")
       },
       metrics: state.metrics,
-      targeting: { city: getActiveChips(cityChips)[0]||"", sectors: getActiveChips(sectorChips).join(", ") }
+      targeting: { 
+        city: getActiveChips(cityChips)[0]||"", 
+        sectors: getActiveChips(sectorChips).join(", "),
+        cities: getActiveChips(cityChips)
+      }
     };
   }
 
   async function applyPrefs(){
-    const base = API.get(); if(!base){ alert("Set API base first."); return; }
+    const base = API.get();
     const payload = collectPersona();
     await fetchJSON(base + "/prefs/upsert", {method:"POST", body: JSON.stringify(payload)});
-    // persist host for future sessions
-    setStored("fp.supplier.host", payload.host);
     pill.textContent = "profile applied"; pill.classList.add("good");
-
-    // Inbound flag (best-effort)
-    const opt = inboundOptIn.checked;
-    applyInbound(payload.host, opt);
   }
 
   async function ping(){
-    const base = API.get(); if(!base){ alert("Set API base first."); return; }
-    await fetchJSON(base + "/ping", {method:"GET"});
+    const base = API.get(); await fetchJSON(base + "/ping", {method:"GET"});
   }
 
   async function findBuyers(){
-    const base = API.get(); if(!base){ alert("Set API base first."); return; }
-    const count = Number(countTop.value||countLeft.value||12);
+    const base = API.get();
     const p = collectPersona();
     rows.innerHTML="";
-
     const q = new URLSearchParams({
       host: p.host || company.textContent.trim(),
-      limit: String(count),
-      city: p.targeting.city || ""
+      limit: String(12),
+      city: p.targeting.city||""
     }).toString();
 
-    // canonical path matches routes/leads.ts
-    const paths = ["/leads/find-buyers","/buyers/find","/buyers/search","/find"];
+    // Primary (matches our backend), then fallbacks
+    const paths = ["/leads/find-buyers", "/buyers/find", "/buyers/search", "/find"];
     let data=null, errLast=null;
     for (const path of paths){
       try{
@@ -447,55 +448,78 @@
         if (data) break;
       }catch(e){ errLast=e; }
     }
-    if (!data){ logHttp("No buyers: " + (errLast? errLast.message : "unknown")); rows.innerHTML = ""; return; }
+    if (!data){ rows.innerHTML = ""; return; }
 
     const list = Array.isArray(data)? data : (data.items||data.results||[]);
-    if (!Array.isArray(list) || !list.length){ rows.innerHTML=""; return; }
+    if (!list.length){ rows.innerHTML=""; return; }
 
     for (const it of list){
-      const who = it.name || it.company || it.host || "-";
-      const why = Array.isArray(it.reasons) ? it.reasons.join(" • ") : (it.why || it.reason || "-");
-      const band = it.band || it.temp || "-";
-      const score = (typeof it.score==="number") ? it.score : "-";
-
       const tr=document.createElement("tr");
+      const why = Array.isArray(it.reasons) ? it.reasons.join(", ") : (it.why || it.reason || "-");
       tr.innerHTML = `
-        <td class="score">${score}</td>
-        <td>${band}</td>
-        <td>${who}</td>
+        <td class="score">${it.score ?? "-"}</td>
+        <td>${it.band ?? "-"}</td>
+        <td>${it.name || it.company || it.host || "-"}</td>
         <td>${why}</td>
         <td class="action"><button class="btn">Open</button></td>`;
       rows.appendChild(tr);
-      tr.querySelector(".btn").addEventListener("click",()=> {
-        const href = it.url || ("https://" + (it.host||""));
-        if (href) window.open(href, "_blank");
-      });
+      tr.querySelector(".btn").addEventListener("click",()=> window.open(it.url || ("https://" + (it.host||"")), "_blank"));
     }
   }
 
+  // ---------- inbound listing (soft 404s) ----------
+  async function checkInboundAvailable(){
+    const base = API.get();
+    const ping = await fetchJSONSoft(base + "/inbound/ping", {method:"GET"});
+    state.inboundAvail = !!(ping && ping.ok);
+    inboundRow.style.display = ""; // always visible, note will explain if not available
+    inboundNote.textContent = state.inboundAvail ? "" : "Listing endpoint not available on this deployment.";
+  }
+  async function refreshInboundStatus(){
+    if (!state.inboundAvail) return;
+    const base = API.get();
+    const host = company.textContent.trim();
+    const st = await fetchJSONSoft(base + "/inbound/status?host=" + encodeURIComponent(host), {method:"GET"});
+    inboundChk.checked = !!(st && st.ok && st.listed === true);
+  }
+  inboundChk?.addEventListener("change", async ()=>{
+    if (!state.inboundAvail) return;
+    const base = API.get();
+    const host = company.textContent.trim();
+    if (inboundChk.checked){
+      await fetchJSON(base + "/inbound/list", {method:"POST", body: JSON.stringify({host})});
+    }else{
+      await fetchJSON(base + "/inbound/unlist?host=" + encodeURIComponent(host), {method:"DELETE"});
+    }
+    await refreshInboundStatus();
+  });
+
   // ---------- events ----------
-  saveApiBtn.addEventListener("click",()=>{
+  document.getElementById("advToggle").addEventListener("click",()=>{
+    const show = leftCol.style.display !== "block";
+    leftCol.style.display = show ? "block" : "none";
+    leftCol.setAttribute("aria-hidden", show ? "false" : "true");
+  });
+
+  saveApiBtn?.addEventListener("click",()=>{
     const normalized = normalizeApiBase(apiBaseInput.value);
-    if (!normalized){ alert("Please enter your site root or /api URL."); return; }
-    API.set(apiBaseInput.value); // store raw; we normalize on read
+    API.set(apiBaseInput.value); // keep original; we normalize when reading
     logHttp("API base set to " + normalized.replace(/\/api$/,''));
   });
-  gearBtn.addEventListener("click",()=> saveApiBtn.click());
-  pingBtn.addEventListener("click", ping);
-  clearLogBtn.addEventListener("click", ()=> httpLog.textContent="");
+  gearBtn?.addEventListener("click",()=> saveApiBtn?.click());
+  pingBtn?.addEventListener("click", ping);
+  clearLogBtn?.addEventListener("click", ()=> { if (httpLog) httpLog.textContent=""; });
   profileBtn.addEventListener("click", openDrawer);
   closeX.addEventListener("click", closeDrawer);
-  applyBtn.addEventListener("click", applyPrefs);
-  applyBtn2.addEventListener("click", applyPrefs);
+  drawer.addEventListener("click", (e)=>{ if (e.target === drawer) closeDrawer(); });
+  window.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeDrawer(); });
+
+  document.getElementById("applyBtn2").addEventListener("click", applyPrefs);
   findBtn.addEventListener("click", findBuyers);
   editToggle.addEventListener("click", ()=> {
     const ed = oneLine.isContentEditable;
     oneLine.contentEditable = !ed;
     oneLine.style.outline = ed? "none" : "2px solid var(--ring)";
-  });
-  inboundOptIn.addEventListener("change", ()=> {
-    const host = company.textContent.trim();
-    applyInbound(host, inboundOptIn.checked);
   });
   saveLocalBtn.addEventListener("click", ()=> {
     const p = collectPersona();
@@ -508,99 +532,30 @@
   addOnEnter(cityInput, cityChips);
   addOnEnter(sectorInput, sectorChips);
 
-  // keep count selectors in sync
-  function syncCount(e){
-    const v = e.target.value;
-    countLeft.value = v; countTop.value = v;
-  }
-  countLeft.addEventListener("change", syncCount);
-  countTop.addEventListener("change", syncCount);
-
   // ---------- boot ----------
   (async function init(){
-    apiBaseInput.value = (getStored("apiBase","") || "").replace(/\/+$/,"");
+    if (apiBaseInput) apiBaseInput.value = (getStored("apiBase","") || "").replace(/\/+$/,"");
 
-    // Resolve host preference
-    let host = getStored("fp.supplier.host","").trim();
-    if (!host){
-      try{
-        const pLS = JSON.parse(getStored("fp.persona","") || getStored("bf.persona","") || "{}");
-        if (pLS && pLS.host) host = pLS.host;
-      }catch{}
+    // auto-import persona from Step 3 (strict)
+    let p = null;
+    try{ p = JSON.parse(getStored("fp.persona","")); }catch{}
+    if (!p){
+      // keep UI non-empty as a fallback
+      p = {
+        host:"yourcompany.com",
+        productTags:["boxes","mailers","pallets"],
+        sectorHints:["food","beverage","cosmetics"],
+        general:{mids:true,avoidBig:true,near:true,ecom:true,wholesale:false,retail:false},
+        metrics: defaultMetrics(),
+        line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
+        targeting:{city:"Chicago"}
+      };
     }
-    if (!host) host = "yourcompany.com";
-    state.host = normHost(host);
-    company.textContent = state.host;
-    company2.textContent = state.host;
-    setFavicon(fav, state.host);
-    setFavicon(fav2, state.host);
+    renderPersona(p);
 
-    // Import prefs from API if available, else from local persona
-    let persona = null;
-    const prefs = await fetchPrefs(state.host);
-    if (prefs){
-      persona = personaFromPrefs(state.host, prefs);
-      pill.textContent = "profile (server)"; pill.classList.add("good");
-    }else{
-      try{ persona = JSON.parse(getStored("fp.persona","") || "{}"); }catch{}
-      if (persona && persona.host){
-        pill.textContent = "profile (local)"; pill.classList.add("good");
-      }else{
-        persona = {
-          host: state.host,
-          productTags:["boxes","mailers","pallets"],
-          sectorHints:["food","beverage","cosmetics"],
-          general:{mids:true,avoidBig:true,near:true,ecom:true,wholesale:false,retail:false},
-          metrics: defaultMetrics(),
-          line:{host:state.host,verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
-          targeting:{city:"Chicago"}
-        };
-        pill.textContent = "no profile yet";
-      }
-    }
-    renderPersona(persona);
-
-    // Try to hydrate inbound listing state (optional endpoint)
-    const listed = await fetchInboundStatus(state.host);
-    if (listed !== null) inboundOptIn.checked = !!listed;
+    await checkInboundAvailable();
+    await refreshInboundStatus();
   })();
-
-  // ---------- render persona ----------
-  function renderPersona(p){
-    state.persona = p;
-    const host = p.host || "yourcompany.com";
-    company.textContent = host; company2.textContent = host;
-    setFavicon(fav, host); setFavicon(fav2, host);
-
-    // one-liner
-    if (p.line && p.line.host){
-      oneLine.textContent = `${p.line.host} — ${p.line.verb} ${p.line.products} for ${p.line.audience} in ${p.line.region}. Best contacts: ${p.line.contacts}`;
-    }else if (p.lineText){ oneLine.textContent = p.lineText; }
-
-    // general chips
-    genChips.innerHTML="";
-    const gen = p.general || {};
-    [
-      ["Prefer mid-size companies", !!gen.mids],
-      ["De-prioritize giant enterprises", !!gen.avoidBig],
-      ["Prioritize nearby buyers", !!gen.near],
-      ["Prefer e-commerce sites", !!gen.ecom],
-      ["Prefer wholesalers / distributors", !!gen.wholesale],
-      ["Prefer retail brands", !!gen.retail]
-    ].forEach(([lab, on])=> chip(lab, genChips, on));
-
-    // products
-    prodChips.innerHTML="";
-    (p.productTags||[]).forEach(t=> chip(t, prodChips, true));
-
-    // metrics (3 sliders)
-    const m = Array.isArray(p.metrics)&&p.metrics.length ? p.metrics : defaultMetrics();
-    renderMetrics(m);
-
-    // targeting
-    cityChips.innerHTML=""; (p.targeting?.city? [p.targeting.city] : []).forEach(c=>chip(c,cityChips,true));
-    sectorChips.innerHTML=""; (p.sectorHints||[]).forEach(s=>chip(s,sectorChips,true));
-  }
 })();
 </script>
 </body>
