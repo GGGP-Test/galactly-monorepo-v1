@@ -1,223 +1,151 @@
 // src/shared/trc.ts
 //
-// Tier-C (small/micro buyer) heuristics and helpers.
-// Pure functions: safe to import from routes or jobs.
-// Nothing here mutates global state.
+// Lightweight lead scoring + band thresholds used by routes/leads.ts.
+// Dependency-free, defensive with types. Exported surface:
+//   - HOT_MIN, WARM_MIN
+//   - classifyScore(score) => "HOT" | "WARM" | "COOL"
+//   - scoreRow(row, prefs, city?) => { score:number, reasons:string[] }
+//
+// Notes
+// -----
+// * This is heuristic and deterministic (no AI).
+// * Prefs shape matches src/shared/prefs.ts "EffectivePrefs" loosely (we read only what we need).
+// * Row is the normalized buyer row (host, tiers?, size?, tags?, segments?, cityTags?).
 
-// Imports are type-only to keep this module side-effect free.
-import type { EffectivePrefs, SizeBucket } from "./prefs";
-import type { BuyerRow } from "./catalog";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-// ---------------------
-// Normalization helpers
-// ---------------------
+export const HOT_MIN = 80;
+export const WARM_MIN = 55;
 
-/** Lowercase, strip accents, collapse spaces (for city/tag matching). */
-export function norm(s: string): string {
-  return (s || "")
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+export function classifyScore(score: number): "HOT" | "WARM" | "COOL" {
+  if (score >= HOT_MIN) return "HOT";
+  if (score >= WARM_MIN) return "WARM";
+  return "COOL";
 }
 
-/** Quick set building utility. */
-function setOf<T extends string | number>(xs: T[] | undefined | null): Set<T> {
-  return new Set((xs || []) as T[]);
+function clamp(n: any, lo: number, hi: number, fb: number): number {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return fb;
+  return Math.max(lo, Math.min(hi, x));
 }
 
-/** Extract all normalized tags (tags[] + segments[]), unique. */
-export function allTags(row: BuyerRow): string[] {
+function lowerSet(arr: any): Set<string> {
   const out = new Set<string>();
-  for (const arr of [row.tags as string[] | undefined, row.segments as string[] | undefined]) {
-    if (!arr) continue;
-    for (const t of arr) {
-      const v = norm(String(t));
-      if (v) out.add(v);
+  if (Array.isArray(arr)) {
+    for (const v of arr) {
+      const s = String(v ?? "").toLowerCase().trim();
+      if (s) out.add(s);
     }
   }
-  return [...out];
+  return out;
 }
 
-/** Does the row have a specific (normalized) tag? */
-export function hasTag(row: BuyerRow, tag: string): boolean {
-  const needle = norm(tag);
-  if (!needle) return false;
-  return allTags(row).some((t) => t === needle);
+function firstLower(arr: any): string | undefined {
+  if (!Array.isArray(arr) || arr.length === 0) return undefined;
+  const s = String(arr[0] ?? "").toLowerCase().trim();
+  return s || undefined;
 }
 
-/** Return any numeric token after a key pattern like "store_count:42". */
-function tagNumber(row: BuyerRow, key: string): number | undefined {
-  const k = norm(key) + ":";
-  for (const t of allTags(row)) {
-    if (t.startsWith(k)) {
-      const num = Number(t.slice(k.length));
-      if (Number.isFinite(num)) return num;
-    }
-  }
+function sizeBucket(val: any): "micro" | "small" | "mid" | "large" | undefined {
+  const s = String(val ?? "").toLowerCase().trim();
+  if (s === "micro" || s === "small" || s === "mid" || s === "large") return s;
   return undefined;
 }
 
-// ---------------------
-// Geo / locality checks
-// ---------------------
-
-/** True if row is tagged with the same city (exact or near-synonym). */
-export function isLocalToCity(row: BuyerRow, city: string | undefined): boolean {
-  if (!city) return false;
-  const want = norm(city);
-  if (!want) return false;
-
-  // Primary source: cityTags[] (already normalized-ish in our catalogs)
-  const cities = (row as any).cityTags as string[] | undefined;
-  if (cities && cities.some((c) => norm(c) === want)) return true;
-
-  // Secondary: free-form tags like "city:los angeles" or "geo:los angeles"
-  const tags = allTags(row);
-  for (const t of tags) {
-    if (t.startsWith("city:") || t.startsWith("geo:")) {
-      const v = t.split(":")[1] || "";
-      if (norm(v) === want) return true;
+function cityMatchBoost(panelCity?: string, rowCity?: string, rowCityTags?: string[]): number {
+  if (!panelCity) return 0;
+  const a = panelCity.toLowerCase().trim();
+  if (!a) return 0;
+  if (rowCity && rowCity.toLowerCase().trim() === a) return 8;            // exact hit
+  if (Array.isArray(rowCityTags)) {
+    for (const c of rowCityTags) {
+      if (String(c || "").toLowerCase().trim() === a) return 6;           // tag hit
     }
   }
-  return false;
+  // small fuzzy: substring or prefix like "los angeles" vs "los angeles county"
+  if (rowCity && (rowCity.toLowerCase().includes(a) || a.includes(rowCity.toLowerCase()))) return 4;
+  return 0;
 }
 
-// ---------------------
-// Size estimation
-// ---------------------
+function intersectCount(a: Set<string>, b: Set<string>): number {
+  let n = 0;
+  a.forEach(v => { if (b.has(v)) n++; });
+  return n;
+}
+
+// Public API ---------------------------------------------------------------
 
 /**
- * Estimate buyer size bucket from weak signals.
- * We bias toward "micro/small" unless strong signals say otherwise.
+ * Score a catalog row with respect to effective prefs and optional city focus.
+ * Produces a 0..100 score and short "reasons" suitable for UI chips.
  */
-export function estimateSize(row: BuyerRow): SizeBucket {
-  const tags = setOf(allTags(row));
-  const storeCount = tagNumber(row, "store_count");
-  const employees = tagNumber(row, "employees");
-  const revenue = tagNumber(row, "revenue_usd_m"); // e.g. "revenue_usd_m:12"
-
-  // Strong large/mid signals
-  if ((storeCount ?? 0) >= 50) return "large";
-  if ((employees ?? 0) >= 250) return "large";
-  if ((revenue ?? 0) >= 100) return "large";
-
-  if ((storeCount ?? 0) >= 10) return "mid";
-  if ((employees ?? 0) >= 50) return "mid";
-  if ((revenue ?? 0) >= 10) return "mid";
-
-  // E-com / craft-platform hints → micro/small
-  if (tags.has("etsy") || tags.has("shopify") || tags.has("woocommerce")) {
-    return "micro";
-  }
-
-  // Food truck / single-location cafe, salon, boutique → micro/small
-  const singleLocationHints = ["single location", "one store", "local shop"];
-  if (singleLocationHints.some((h) => tags.has(norm(h)))) return "micro";
-
-  // Default small
-  return "small";
-}
-
-// ---------------------
-// Commercial channel hints
-// ---------------------
-
-export interface ChannelHints {
-  ecommerce: boolean;
-  retail: boolean;
-  wholesale: boolean;
-}
-
-export function channelHints(row: BuyerRow): ChannelHints {
-  const tags = setOf(allTags(row));
-  return {
-    ecommerce:
-      tags.has("ecommerce") ||
-      tags.has("e-commerce") ||
-      tags.has("shopify") ||
-      tags.has("etsy") ||
-      tags.has("woocommerce"),
-    retail:
-      tags.has("retail") ||
-      tags.has("grocery") ||
-      tags.has("boutique") ||
-      (tagNumber(row, "store_count") ?? 0) > 0,
-    wholesale: tags.has("wholesale") || tags.has("distributor") || tags.has("b2b"),
-  };
-}
-
-// ---------------------
-// Scoring (not wired yet)
-// ---------------------
-
-export interface ScoreDetail {
-  size: SizeBucket;
-  base: number;          // from size weight
-  localBoost: number;    // locality bonus
-  channelBoost: number;  // ecom/retail/wholesale nudges
-  total: number;
-  reasons: string[];     // human readable
-}
-
-/**
- * Compute a continuous score for a BuyerRow given effective prefs.
- * (We’ll map continuous → warm/hot thresholds in the route.)
- */
-export function scoreRow(row: BuyerRow, prefs: EffectivePrefs): ScoreDetail {
+export function scoreRow(row: any, prefs: any, panelCity?: string): { score: number; reasons: string[] } {
+  // Base score
+  let score = 50;
   const reasons: string[] = [];
-  const size = estimateSize(row);
-  let total = 0;
 
-  // Size weight
-  const base = Number(prefs.sizeWeight[size] ?? 0);
-  total += base;
-  reasons.push(`size=${size}(w=${base})`);
+  // --- Tier priority (A>B>C) --------------------------------------------
+  const tier = (row?.tier === "A" || row?.tier === "B" || row?.tier === "C")
+    ? row.tier
+    : (firstLower(row?.tiers) as "a" | "b" | "c" | undefined)?.toUpperCase();
 
-  // Locality
-  let localBoost = 0;
-  if (isLocalToCity(row, prefs.city)) {
-    localBoost = Number(prefs.signalWeight.local ?? 0);
-    total += localBoost;
-    reasons.push(`local(+${localBoost})`);
+  if (tier === "A") { score += 8; reasons.push("tier:A"); }
+  else if (tier === "B") { score += 3; reasons.push("tier:B"); }
+  else if (tier === "C") { score += 0; reasons.push("tier:C"); }
+
+  // --- Size fit (micro/small/mid/large) --------------------------------
+  const rowSize = sizeBucket(row?.size);
+  const sw = prefs?.sizeWeight || {};
+  const wMicro = clamp(sw.micro, -3, 3, 1.2);
+  const wSmall = clamp(sw.small, -3, 3, 1.0);
+  const wMid   = clamp(sw.mid,   -3, 3, 0.6);
+  const wLarge = clamp(sw.large, -3, 3, -1.2);
+
+  const sizeW = rowSize === "micro" ? wMicro
+              : rowSize === "small" ? wSmall
+              : rowSize === "mid"   ? wMid
+              : rowSize === "large" ? wLarge
+              : 0;
+
+  if (rowSize) {
+    score += sizeW * 4; // weight -> up to about ±12
+    reasons.push(`size:${rowSize}@${sizeW.toFixed(2)}`);
   }
 
-  // Channel nudges
-  const ch = channelHints(row);
-  let channelBoost = 0;
-  if (ch.ecommerce) {
-    channelBoost += Number(prefs.signalWeight.ecommerce ?? 0);
-    reasons.push(`ecom(+${prefs.signalWeight.ecommerce ?? 0})`);
-  }
-  if (ch.retail) {
-    channelBoost += Number(prefs.signalWeight.retail ?? 0);
-    reasons.push(`retail(+${prefs.signalWeight.retail ?? 0})`);
-  }
-  if (ch.wholesale) {
-    channelBoost += Number(prefs.signalWeight.wholesale ?? 0);
-    reasons.push(`wholesale(+${prefs.signalWeight.wholesale ?? 0})`);
-  }
-  total += channelBoost;
+  // --- Category allow/block --------------------------------------------
+  const allow = lowerSet(prefs?.categoriesAllow || []);
+  const block = lowerSet(prefs?.categoriesBlock || []);
+  const rowTags = lowerSet(row?.tags || []);
+  const rowSegs = lowerSet(row?.segments || []);
+  const rowCats = new Set<string>([...rowTags, ...rowSegs]);
 
-  return { size, base, localBoost, channelBoost, total, reasons };
-}
+  const hitsAllow = intersectCount(rowCats, allow);
+  const hitsBlock = intersectCount(rowCats, block);
 
-/** Simple thresholds we’ll tune later when wiring to /leads. */
-export function classifyScore(total: number): "cold" | "warm" | "hot" {
-  if (total >= 1.8) return "hot";
-  if (total >= 0.9) return "warm";
-  return "cold";
-}
+  if (hitsAllow > 0) { score += Math.min(10, 4 * hitsAllow); reasons.push(`allow+${hitsAllow}`); }
+  if (hitsBlock > 0) { score -= Math.min(12, 6 * hitsBlock); reasons.push(`block-${hitsBlock}`); }
 
-// ---------------------
-// Pretty “why” builder
-// ---------------------
+  // --- Signal weights (panel “sliders”) --------------------------------
+  const sig = prefs?.signalWeight || {};
+  const wLocal     = clamp(sig.local,     -3, 3, 1.6);
+  const wEcomm     = clamp(sig.ecommerce, -1, 1, 0.25);
+  const wRetail    = clamp(sig.retail,    -1, 1, 0.2);
+  const wWholesale = clamp(sig.wholesale, -1, 1, 0.1);
 
-export function buildWhy(detail: ScoreDetail): string {
-  const parts = [
-    ...detail.reasons,
-    `score=${detail.total.toFixed(2)}`,
-  ];
-  return parts.join(" • ");
+  // local signal: city proximity
+  const localBoost = cityMatchBoost(prefs?.city || panelCity, row?.city, row?.cityTags);
+  if (localBoost) { score += localBoost * (1 + 0.2 * wLocal); reasons.push(`local+${localBoost | 0}`); }
+
+  // very light generic boosts (if row has hints)
+  if (rowTags.size > 0)  { score += 2 * wRetail;    reasons.push("retail-ish"); }
+  if (rowSegs.size > 0)  { score += 2 * wWholesale; reasons.push("wholesale-ish"); }
+  if ((row?.platform || "").includes("shopify")) { score += 2 * wEcomm; reasons.push("ecomm"); }
+
+  // --- Cap & normalize ---------------------------------------------------
+  score = Math.max(0, Math.min(100, score));
+
+  // Keep reasons short-ish
+  if (reasons.length > 12) reasons.length = 12;
+
+  return { score, reasons };
 }
