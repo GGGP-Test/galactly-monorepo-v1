@@ -117,7 +117,7 @@
       <div class="muted" style="margin-bottom:8px">Tip: click <b>Profile</b> to view or edit preferences. All preferences are hidden here to keep this panel focused on your leads.</div>
       <table>
         <thead>
-          <tr><th style="width:90px">Score</th><th style="width:90px">Temp</th><th>Buyer</th><th>Why</th><th style="width:150px">Action</th></tr>
+          <tr><th style="width:90px">Score</th><th style="width:90px">Band</th><th>Buyer</th><th>Why</th><th style="width:150px">Action</th></tr>
         </thead>
         <tbody id="rows">
           <!-- results -->
@@ -152,6 +152,10 @@
         <div class="card" style="padding:12px">
           <div class="h">General preferences</div>
           <div id="genChips" class="chips"></div>
+          <label style="margin-top:10px">
+            <input type="checkbox" id="inboundOptIn"> List my company for inbound opportunities
+          </label>
+          <div class="muted" id="inboundHint" style="font-size:12px;margin-top:4px">If enabled, buyers searching in the marketplace can discover your company.</div>
         </div>
 
         <!-- product signals -->
@@ -258,11 +262,14 @@
   const sectorInput = document.getElementById("sectorInput");
   const sectorChips = document.getElementById("sectorChips");
   const saveLocalBtn = document.getElementById("saveLocal");
+  const inboundOptIn = document.getElementById("inboundOptIn");
+  const inboundHint = document.getElementById("inboundHint");
 
   // ---------- state ----------
   const state = {
     persona:null,
     metrics:[],
+    host:""
   };
 
   // ---------- utils ----------
@@ -295,10 +302,10 @@
 
   function renderMetrics(metrics){
     metricBox.innerHTML="";
-    state.metrics = metrics.slice(0,3); // keep UI at 3 sliders
+    state.metrics = metrics.slice(0,3); // UI = 3 sliders
     for (const m of state.metrics){
       const row=document.createElement("div"); row.className="slider-row";
-      const lab=document.createElement("div"); lab.textContent=m.label;
+      const lab=document.createElement("div"); lab.textContent=m.label || String(m);
       const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=Number(m.value ?? 8);
       input.addEventListener("input",()=>{ m.value = Number(input.value); });
       row.appendChild(lab); row.appendChild(input);
@@ -314,41 +321,24 @@
     ];
   }
 
-  function renderPersona(p){
-    state.persona = p;
-    const host = p.host || p.line?.host || "yourcompany.com";
-    company.textContent = host; company2.textContent = host;
-    setFavicon(fav, host); setFavicon(fav2, host);
-    pill.textContent = "persona (imported)"; pill.classList.add("good");
-
-    // one-liner
-    if (p.line && p.line.host){
-      oneLine.textContent = `${p.line.host} — ${p.line.verb} ${p.line.products} for ${p.line.audience} in ${p.line.region}. Best contacts: ${p.line.contacts}`;
-    }else if (p.lineText){ oneLine.textContent = p.lineText; }
-
-    // general
-    genChips.innerHTML="";
-    const gen = p.general || {};
-    [
-      ["Prefer mid-size companies", !!gen.mids],
-      ["De-prioritize giant enterprises", !!gen.avoidBig],
-      ["Prioritize nearby buyers", !!gen.near],
-      ["Prefer e-commerce sites", !!gen.ecom],
-      ["Prefer wholesalers / distributors", !!gen.wholesale],
-      ["Prefer retail brands", !!gen.retail]
-    ].forEach(([lab, on])=> chip(lab, genChips, on));
-
-    // products
-    prodChips.innerHTML="";
-    (p.productTags||[]).forEach(t=> chip(t, prodChips, true));
-
-    // metrics (3 sliders)
-    const m = Array.isArray(p.metrics)&&p.metrics.length ? p.metrics : defaultMetrics();
-    renderMetrics(m);
-
-    // targeting
-    cityChips.innerHTML=""; (p.targeting?.city? [p.targeting.city] : ["Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"]).forEach(c=>chip(c,cityChips,true));
-    sectorChips.innerHTML=""; (p.sectorHints||["food","beverage","cosmetics"]).forEach(s=>chip(s,sectorChips,true));
+  // ---------- prefs <-> persona mapping helpers ----------
+  function personaFromPrefs(host, prefs){
+    const p = {
+      host,
+      productTags: Array.isArray(prefs?.categoriesAllow) ? prefs.categoriesAllow : [],
+      sectorHints: [], // your server doesn't persist sectors yet; user can add
+      general: {
+        mids: !!prefs?.preferSmallMid,
+        avoidBig: (prefs?.sizeWeight?.large ?? -1.2) < 0,
+        near: (prefs?.signalWeight?.local ?? 0) > 0.9,
+        ecom: (prefs?.signalWeight?.ecommerce ?? 0) > 0.2,
+        wholesale: (prefs?.signalWeight?.wholesale ?? 0) > 0.1,
+        retail: (prefs?.signalWeight?.retail ?? 0) > 0.1
+      },
+      metrics: defaultMetrics(),
+      targeting: { city: prefs?.city || "" }
+    };
+    return p;
   }
 
   // ---------- applying & fetching ----------
@@ -357,16 +347,49 @@
     try{ r = await fetch(url, API.withKey(init)); }
     catch(e){ logHttp(`ERR ${url} — ${e.message}`); throw e; }
     const text = await r.text();
-    if (!r.ok){ logHttp(`${r.status} ${url} — ${text.slice(0,120)}`); throw new Error(text||r.statusText); }
     logHttp(`${r.status} ${url}`);
+    if (!r.ok){ throw new Error(text || r.statusText); }
     try{ return JSON.parse(text); }catch{ return text; }
+  }
+
+  async function fetchPrefs(host){
+    const base = API.get(); if(!base) return null;
+    try{
+      const d = await fetchJSON(base + "/prefs/" + encodeURIComponent(host), {method:"GET"});
+      return d?.prefs ? d.prefs : null;
+    }catch{ return null; }
+  }
+
+  async function fetchInboundStatus(host){
+    const base = API.get(); if(!base) return null;
+    try{
+      const d = await fetchJSON(base + "/inbound/status?host=" + encodeURIComponent(host), {method:"GET"});
+      return !!d?.listed;
+    }catch{
+      // endpoint might not exist; hide the checkbox hint gracefully
+      inboundHint.textContent = "Listing endpoint not available on this deployment.";
+      return null;
+    }
+  }
+
+  async function applyInbound(host, optIn){
+    const base = API.get(); if(!base) return;
+    try{
+      await fetchJSON(base + "/inbound/opt-in", {
+        method:"POST",
+        body: JSON.stringify({ host, optIn: !!optIn })
+      });
+      logHttp(`inbound ${optIn? "opt-in" : "opt-out"} saved`);
+    }catch(e){
+      logHttp("inbound save failed: " + e.message);
+    }
   }
 
   function collectPersona(){
     const host = company.textContent.trim();
     const p = state.persona || {};
     const lineText = oneLine.textContent.trim();
-    const payload = {
+    return {
       host,
       line: p.line || {host, verb:"supplies", products:"packaging", audience:"brands", region:"the U.S.", contacts:"Operations, Procurement"},
       lineText,
@@ -383,14 +406,19 @@
       metrics: state.metrics,
       targeting: { city: getActiveChips(cityChips)[0]||"", sectors: getActiveChips(sectorChips).join(", ") }
     };
-    return payload;
   }
 
   async function applyPrefs(){
     const base = API.get(); if(!base){ alert("Set API base first."); return; }
     const payload = collectPersona();
     await fetchJSON(base + "/prefs/upsert", {method:"POST", body: JSON.stringify(payload)});
+    // persist host for future sessions
+    setStored("fp.supplier.host", payload.host);
     pill.textContent = "profile applied"; pill.classList.add("good");
+
+    // Inbound flag (best-effort)
+    const opt = inboundOptIn.checked;
+    applyInbound(payload.host, opt);
   }
 
   async function ping(){
@@ -403,15 +431,15 @@
     const count = Number(countTop.value||countLeft.value||12);
     const p = collectPersona();
     rows.innerHTML="";
+
     const q = new URLSearchParams({
       host: p.host || company.textContent.trim(),
-      count: String(count),
-      city: p.targeting.city||"",
-      sectors: p.sectorHints.join(","),
-      tags: p.productTags.join(",")
+      limit: String(count),
+      city: p.targeting.city || ""
     }).toString();
 
-    const paths = ["/buyers/find","/buyers/search","/find"];
+    // canonical path matches routes/leads.ts
+    const paths = ["/leads/find-buyers","/buyers/find","/buyers/search","/find"];
     let data=null, errLast=null;
     for (const path of paths){
       try{
@@ -422,18 +450,26 @@
     if (!data){ logHttp("No buyers: " + (errLast? errLast.message : "unknown")); rows.innerHTML = ""; return; }
 
     const list = Array.isArray(data)? data : (data.items||data.results||[]);
-    if (!list.length){ rows.innerHTML=""; return; }
+    if (!Array.isArray(list) || !list.length){ rows.innerHTML=""; return; }
 
     for (const it of list){
+      const who = it.name || it.company || it.host || "-";
+      const why = Array.isArray(it.reasons) ? it.reasons.join(" • ") : (it.why || it.reason || "-");
+      const band = it.band || it.temp || "-";
+      const score = (typeof it.score==="number") ? it.score : "-";
+
       const tr=document.createElement("tr");
       tr.innerHTML = `
-        <td class="score">${it.score ?? "-"}</td>
-        <td>${it.temp ?? "-"}</td>
-        <td>${it.name || it.company || it.host || "-"}</td>
-        <td>${it.why || it.reason || "-"}</td>
+        <td class="score">${score}</td>
+        <td>${band}</td>
+        <td>${who}</td>
+        <td>${why}</td>
         <td class="action"><button class="btn">Open</button></td>`;
       rows.appendChild(tr);
-      tr.querySelector(".btn").addEventListener("click",()=> window.open(it.url || ("https://" + (it.host||"")), "_blank"));
+      tr.querySelector(".btn").addEventListener("click",()=> {
+        const href = it.url || ("https://" + (it.host||""));
+        if (href) window.open(href, "_blank");
+      });
     }
   }
 
@@ -441,7 +477,7 @@
   saveApiBtn.addEventListener("click",()=>{
     const normalized = normalizeApiBase(apiBaseInput.value);
     if (!normalized){ alert("Please enter your site root or /api URL."); return; }
-    API.set(apiBaseInput.value); // keep original; we normalize when reading
+    API.set(apiBaseInput.value); // store raw; we normalize on read
     logHttp("API base set to " + normalized.replace(/\/api$/,''));
   });
   gearBtn.addEventListener("click",()=> saveApiBtn.click());
@@ -456,6 +492,10 @@
     const ed = oneLine.isContentEditable;
     oneLine.contentEditable = !ed;
     oneLine.style.outline = ed? "none" : "2px solid var(--ring)";
+  });
+  inboundOptIn.addEventListener("change", ()=> {
+    const host = company.textContent.trim();
+    applyInbound(host, inboundOptIn.checked);
   });
   saveLocalBtn.addEventListener("click", ()=> {
     const p = collectPersona();
@@ -477,26 +517,90 @@
   countTop.addEventListener("change", syncCount);
 
   // ---------- boot ----------
-  (function init(){
+  (async function init(){
     apiBaseInput.value = (getStored("apiBase","") || "").replace(/\/+$/,"");
-    // auto-import persona if available
-    let p = null;
-    try{ p = JSON.parse(getStored("fp.persona","") || getStored("bf.persona","")); }catch{}
-    const auto = getStored("fp.autoImport","0")==="1";
-    if (p){ renderPersona(p); if (auto){ delStored("fp.autoImport"); } }
-    else{
-      // seed defaults so UI isn't empty
-      renderPersona({
-        host:"yourcompany.com",
-        productTags:["boxes","mailers","pallets"],
-        sectorHints:["food","beverage","cosmetics"],
-        general:{mids:true,avoidBig:true,near:true,ecom:true,wholesale:false,retail:false},
-        metrics: defaultMetrics(),
-        line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
-        targeting:{city:"Chicago"}
-      });
+
+    // Resolve host preference
+    let host = getStored("fp.supplier.host","").trim();
+    if (!host){
+      try{
+        const pLS = JSON.parse(getStored("fp.persona","") || getStored("bf.persona","") || "{}");
+        if (pLS && pLS.host) host = pLS.host;
+      }catch{}
     }
+    if (!host) host = "yourcompany.com";
+    state.host = normHost(host);
+    company.textContent = state.host;
+    company2.textContent = state.host;
+    setFavicon(fav, state.host);
+    setFavicon(fav2, state.host);
+
+    // Import prefs from API if available, else from local persona
+    let persona = null;
+    const prefs = await fetchPrefs(state.host);
+    if (prefs){
+      persona = personaFromPrefs(state.host, prefs);
+      pill.textContent = "profile (server)"; pill.classList.add("good");
+    }else{
+      try{ persona = JSON.parse(getStored("fp.persona","") || "{}"); }catch{}
+      if (persona && persona.host){
+        pill.textContent = "profile (local)"; pill.classList.add("good");
+      }else{
+        persona = {
+          host: state.host,
+          productTags:["boxes","mailers","pallets"],
+          sectorHints:["food","beverage","cosmetics"],
+          general:{mids:true,avoidBig:true,near:true,ecom:true,wholesale:false,retail:false},
+          metrics: defaultMetrics(),
+          line:{host:state.host,verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
+          targeting:{city:"Chicago"}
+        };
+        pill.textContent = "no profile yet";
+      }
+    }
+    renderPersona(persona);
+
+    // Try to hydrate inbound listing state (optional endpoint)
+    const listed = await fetchInboundStatus(state.host);
+    if (listed !== null) inboundOptIn.checked = !!listed;
   })();
+
+  // ---------- render persona ----------
+  function renderPersona(p){
+    state.persona = p;
+    const host = p.host || "yourcompany.com";
+    company.textContent = host; company2.textContent = host;
+    setFavicon(fav, host); setFavicon(fav2, host);
+
+    // one-liner
+    if (p.line && p.line.host){
+      oneLine.textContent = `${p.line.host} — ${p.line.verb} ${p.line.products} for ${p.line.audience} in ${p.line.region}. Best contacts: ${p.line.contacts}`;
+    }else if (p.lineText){ oneLine.textContent = p.lineText; }
+
+    // general chips
+    genChips.innerHTML="";
+    const gen = p.general || {};
+    [
+      ["Prefer mid-size companies", !!gen.mids],
+      ["De-prioritize giant enterprises", !!gen.avoidBig],
+      ["Prioritize nearby buyers", !!gen.near],
+      ["Prefer e-commerce sites", !!gen.ecom],
+      ["Prefer wholesalers / distributors", !!gen.wholesale],
+      ["Prefer retail brands", !!gen.retail]
+    ].forEach(([lab, on])=> chip(lab, genChips, on));
+
+    // products
+    prodChips.innerHTML="";
+    (p.productTags||[]).forEach(t=> chip(t, prodChips, true));
+
+    // metrics (3 sliders)
+    const m = Array.isArray(p.metrics)&&p.metrics.length ? p.metrics : defaultMetrics();
+    renderMetrics(m);
+
+    // targeting
+    cityChips.innerHTML=""; (p.targeting?.city? [p.targeting.city] : []).forEach(c=>chip(c,cityChips,true));
+    sectorChips.innerHTML=""; (p.sectorHints||[]).forEach(s=>chip(s,sectorChips,true));
+  }
 })();
 </script>
 </body>
