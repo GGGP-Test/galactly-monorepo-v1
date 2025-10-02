@@ -1,297 +1,171 @@
-// Lightweight packaging ontology + extractors (no external deps)
-//
-// What this module does
-// 1) Normalizes and detects product tags and sector hints from raw text/meta
-// 2) Extracts deep "buyer metrics" per sector using regex patterns
-//    - detailed matches first (bottom-up), then sector-general, then general fallback
-// 3) Always returns something (no empty sectors)
-//
-// Exports
-// - productsFrom(text, keywords?) -> string[]            (up to 12, ordered by score)
-// - sectorsFrom(text, keywords?) -> string[]             (up to 8, ordered by score)
-// - metricsBySector(text, sectors?, products?) -> Record<string,string[]>
-//
-// Notes
-// - Keep in sync with spider/classifier defaults, but this file stands alone.
-// - Tune by adding synonyms/patterns; everything is deterministic & cheap.
+/* 
+  Ontology (packaging) — industries, product lexicon, metric rules.
+  Safe typing (no unions at call-sites): all pattern lists are RegExp[].
+  Small helpers included so downstream code can stay simple.
+*/
 
-export type SectorKey =
-  | "food" | "beverage" | "cosmetics" | "supplements"
-  | "electronics" | "pharma" | "pet" | "automotive"
-  | "industrial" | "logistics" | "warehouse" | "home"
-  | "cannabis" | "general";
+export type ID = string;
 
-export type ProductKey =
-  | "boxes" | "labels" | "cartons" | "pouches" | "bottles" | "jars"
-  | "tape" | "corrugate" | "mailers" | "clamshells" | "foam" | "pallets"
-  | "mailer_bags" | "shrink" | "film" | "closures" | "rigid";
-
-type Lex = Record<string, string[]>;
-
-const PRODUCT_LEX: Lex = {
-  boxes: ["box","boxes","mailing box","mailer box","rigid box","setup box","folding carton box"],
-  labels: ["label","labels","sticker","stickers","ps label","pressure sensitive label"],
-  cartons: ["carton","cartons","folding carton"],
-  pouches: ["pouch","pouches","stand up pouch","stand-up pouch","mylar"],
-  bottles: ["bottle","bottles","vial","vials"],
-  jars: ["jar","jars","tin","tins"],
-  tape: ["tape","packaging tape"],
-  corrugate: ["corrugate","corrugated","corrugated box","shipper"],
-  mailers: ["mailer","mailers","poly mailer"],
-  clamshells: ["clamshell","clamshells","blister"],
-  foam: ["foam","foam insert","eva foam"],
-  pallets: ["pallet","pallets","palletizing"],
-  mailer_bags: ["bag","bags","polybag","poly bag"],
-  shrink: ["shrink","shrink wrap","shrink film","shrink sleeve"],
-  film: ["film","stretch","stretch wrap","stretch film","laminate","laminated film"],
-  closures: ["closure","closures","cap","caps","lug","crown","ct cap","child-resistant cap"],
-  rigid: ["rigid","rigid container","rigid packaging"]
-};
-
-const SECTOR_LEX: Lex = {
-  food: ["food","grocery","snack","sauce","salsa","candy","baked","bakery"],
-  beverage: ["beverage","drink","juice","soda","coffee","tea","brewery","beer","wine","distillery","cpg beverage"],
-  cosmetics: ["cosmetic","cosmetics","beauty","skincare","skin care","haircare","makeup","fragrance"],
-  supplements: ["supplement","nutraceutical","vitamin","sports nutrition"],
-  electronics: ["electronics","devices","gadgets","semiconductor","pcb","hardware device"],
-  apparel: ["apparel","fashion","clothing","garment"], // alias; maps to industrial/home if needed
-  pharma: ["pharma","pharmaceutical","medical","medication","rx","otc"],
-  pet: ["pet","pets","petcare","pet care"],
-  automotive: ["automotive","auto","aftermarket","auto parts"],
-  home: ["home goods","home & garden","furniture","decor","household"],
-  industrial: ["industrial","manufacturing","b2b","factory","machining","fabrication"],
-  logistics: ["logistics","3pl","third party logistics","fulfillment","distribution","dc"],
-  warehouse: ["warehouse","warehousing","distribution center","dc","pallet load","pallets"],
-  cannabis: ["cannabis","cbd","hemp"]
-};
-
-// -------------- helpers --------------
-
-function esc(s: string){ return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"); }
-
-function scoreLex(text: string, keywords: string[] | undefined, lex: Lex): Record<string, number> {
-  const t = text.toLowerCase();
-  const kw = (keywords || []).join(" ").toLowerCase();
-  const scores: Record<string, number> = {};
-  for (const [key, syns] of Object.entries(lex)) {
-    let n = 0;
-    for (const s of syns) {
-      const re = new RegExp(`\\b${esc(s.toLowerCase())}\\b`, "g");
-      n += (t.match(re)?.length || 0) + (kw.match(re)?.length || 0);
-    }
-    if (n > 0) scores[key] = n;
-  }
-  return scores;
+export interface IndustryRule {
+  id: ID;
+  label: string;
+  patterns: RegExp[];          // text signals for this industry
 }
 
-function topKeys(scores: Record<string, number>, max: number): string[] {
-  return Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,max).map(([k])=>k);
+export interface MetricRule {
+  id: ID;
+  label: string;
+  industries?: ID[];           // if omitted, applies “general”
+  patterns: RegExp[];          // text signals that support this metric
+  weight?: number;             // optional influence hint
 }
 
-function uniqKeepOrder<T>(arr: T[]): T[] {
-  const seen = new Set<string>();
-  const out: T[] = [];
-  for (const x of arr) {
-    const k = String(x).toLowerCase();
-    if (seen.has(k)) continue;
-    seen.add(k); out.push(x);
-  }
-  return out;
+export type ProductLex = Record<string, RegExp[]>;
+
+/* ------------------------------- utilities -------------------------------- */
+
+function toRegExp(x: string | RegExp): RegExp {
+  return x instanceof RegExp ? x : new RegExp(x, "i");
+}
+function toRegArray(x: string | RegExp | Array<string | RegExp>): RegExp[] {
+  return Array.isArray(x) ? x.map(toRegExp) : [toRegExp(x)];
 }
 
-// -------------- public product/sector detection --------------
-
-export function productsFrom(text: string, keywords?: string[]): string[] {
-  const scores = scoreLex(text, keywords, PRODUCT_LEX);
-  const ordered = topKeys(scores, 12) as ProductKey[];
-  return ordered;
-}
-
-export function sectorsFrom(text: string, keywords?: string[]): string[] {
-  const scores = scoreLex(text, keywords, SECTOR_LEX);
-  // Favor logistics/warehouse if strong film/stretch signals appear
-  const bonus = /\b(stretch|stretch\s+film|shrink\s+wrap|pallet|palletizing)\b/i.test(text) ? 1 : 0;
-  if (bonus) {
-    scores["logistics"] = (scores["logistics"] || 0) + 1;
-    scores["warehouse"] = (scores["warehouse"] || 0) + 1;
-  }
-  return topKeys(scores, 8) as SectorKey[];
-}
-
-// -------------- metric ontology --------------
-
-type MetricDef = { label: string; pats?: RegExp[]; weight?: number };
-
-// Detailed, sector-specific first; keep concise labels (UI renders them directly)
-const METRIC_PATTERNS: Record<SectorKey, MetricDef[]> = {
-  beverage: [
-    { label: "Closure compatibility & torque", pats: [/closure|cap|torque|crown|finish/i] },
-    { label: "Label application alignment & adhesion", pats: [/label.+(apply|adhesion|registration)/i] },
-    { label: "Bottle/secondary pack stability in transit", pats: [/bottle|case.+stability|shippers?/i] },
-    { label: "Cold-chain / condensation resistance", pats: [/cold(-|\s)?chain|condensation|wet.+strength/i] },
-    { label: "Lot traceability & COA", pats: [/traceability|coa|certificate of analysis/i] }
-  ],
-  food: [
-    { label: "Food-contact compliance (FDA/EC)", pats: /(fda|usda|ec)\W?.{0,10}(compliance|contact)/i },
-    { label: "Moisture / oxygen barrier needs", pats: /moisture|oxygen|otr|wvtr|barrier/i },
-    { label: "Seal integrity under process (hot-fill/retort)", pats: /(hot[-\s]?fill|retort|seal integrity)/i },
-    { label: "Case-packing line uptime impact", pats: /(case[-\s]?pack|line).{0,20}(uptime|downtime)/i }
-  ],
-  cosmetics: [
-    { label: "Print finish & brand color match", pats: /pantone|brand color|gloss|matte|soft touch/i },
-    { label: "Decor registration (foil/emboss/deboss)", pats: /(foil|emboss|deboss).{0,20}(register|registration|alignment)/i },
-    { label: "Label adhesion on varnished surfaces", pats: /label.+(varnish|adhesion)/i },
-    { label: "Tamper-evidence features", pats: /tamper/i }
-  ],
-  electronics: [
-    { label: "Drop/edge-crush protection at DIM weight", pats: /(drop test|edge crush|ect|dim weight)/i },
-    { label: "ESD-safe packaging compliance", pats: /esd|electrostatic/i },
-    { label: "Foam insert precision & fit", pats: /(foam insert|die cut foam|precision fit)/i }
-  ],
-  pharma: [
-    { label: "cGMP/FDA packaging compliance", pats: /(cGmp|gmp|fda).{0,20}(packaging|compl)/i },
-    { label: "Serialization / GS1 barcode placement", pats: /gs1|serialization|serialized/i },
-    { label: "Tamper-evident & child-resistant certification", pats: /child[-\s]?resistant|crcert|astm|16 cfr/i }
-  ],
-  cannabis: [
-    { label: "Child-resistant certification", pats: /child[-\s]?resistant|cr\s?cert/i },
-    { label: "State regulatory label compliance", pats: /warning|prop 65|state required label/i },
-    { label: "Odor/light barrier performance", pats: /(odor|light).{0,10}barrier/i }
-  ],
-  automotive: [
-    { label: "Component protection & abrasion resistance", pats: /(abrasion|scuff|scratch).{0,20}(resist)/i },
-    { label: "Returnable/dunnage compatibility", pats: /(returnable|dunnage|tote)/i }
-  ],
-  pet: [
-    { label: "Puncture resistance for kibble/chews", pats: /(puncture|tear).{0,10}(resist)/i },
-    { label: "Odor/grease barrier", pats: /(odor|grease).{0,10}barrier/i }
-  ],
-  home: [
-    { label: "Retail scuff/scratch resistance", pats: /(retail|shelf).{0,20}(scuff|scratch)/i },
-    { label: "Print durability (rub/bleed)", pats: /(rub|bleed|ink).{0,15}(resist|durab)/i }
-  ],
-  industrial: [
-    { label: "Outer carton strength at target cost", pats: /(ect|mullen|burst|board grade)/i },
-    { label: "Pallet pattern compatibility", pats: /(pallet pattern|ti.?hi|ti-hi)/i }
-  ],
-  warehouse: [
-    { label: "Load containment force at target pre-stretch", pats: /(containment force|pre[-\s]?stretch|force meter)/i },
-    { label: "Irregular load stability (non-cubed)", pats: /(irregular|non[-\s]?cubed|odd[-\s]?shape).{0,20}(load|pallet)/i },
-    { label: "Corner/edge tear risk mitigation", pats: /(corner|edge).{0,15}(tear|puncture)/i },
-    { label: "Cling/slip vs film-to-film contact", pats: /(cling|slip).{0,20}(film|wrap)/i }
-  ],
-  logistics: [
-    { label: "E-commerce / ISTA transit readiness", pats: /(ista|e-?commerce|parcel).{0,20}(test|transit)/i },
-    { label: "Damage reduction targets in transit", pats: /(damage rate|in-transit damage|claims)/i },
-    { label: "Automation line uptime impact", pats: /(automation|auto wrap|case packer).{0,20}(uptime|downtime)/i }
-  ],
-  // sectors not explicitly listed above get covered by general fallbacks
-  general: [
-    { label: "Damage reduction targets in transit" },
-    { label: "Automation line uptime impact" },
-    { label: "Sustainability targets (PCR %, recyclability)" },
-    { label: "Unit cost at target MOQ" }
-  ],
-  supplements: [
-    { label: "Barrier & freshness (moisture/oxygen)", pats: /moisture|oxygen|barrier|desiccant/i },
-    { label: "Tamper-evident seal integrity", pats: /induction seal|tamper/i }
-  ]
-};
-
-// Product-driven metric adders (e.g., if film/shrink detected)
-const PRODUCT_METRIC_HINTS: Partial<Record<ProductKey, MetricDef[]>> = {
-  film: [
-    { label: "Load containment force at target pre-stretch" },
-    { label: "Puncture/tear resistance vs edges" }
-  ],
-  shrink: [
-    { label: "Shrink curve & optics (haze/clarity)" },
-    { label: "Perforation & venting for trapped air" }
-  ],
-  corrugate: [
-    { label: "ECT / stack strength at target weight" },
-    { label: "Print registration & color accuracy" }
-  ],
-  labels: [
-    { label: "Adhesive selection vs substrate" },
-    { label: "Application speed & registration" }
-  ],
-  closures: [
-    { label: "Torque window & closure compatibility" }
-  ]
-};
-
-// -------------- extraction engine --------------
-
-function matchMetrics(text: string, defs: MetricDef[]): string[] {
+export function matchCount(text: string, pats: RegExp[] = []): number {
   const t = text || "";
-  const hits: Array<{ label: string; w: number }> = [];
-  for (const d of defs) {
-    const any = !d.pats || d.pats.length === 0
-      ? false
-      : d.pats.some(re => re.test(t));
-    const w = (any ? (d.weight ?? 2) : (d.pats ? 0 : 1)); // explicit matches outrank implied
-    if (w > 0) hits.push({ label: d.label, w });
+  let n = 0;
+  for (const re of pats) {
+    try {
+      if (re.test(t)) n++;
+    } catch { /* ignore bad regex */ }
   }
-  // sort by weight desc, keep unique
-  const ordered = hits.sort((a,b)=>b.w-a.w).map(h=>h.label);
-  return uniqKeepOrder(ordered);
+  return n;
 }
 
-function sectorFallback(sector: SectorKey): string[] {
-  if (sector !== "general" && METRIC_PATTERNS[sector]) {
-    // keep the first three generic from that sector if present
-    const names = METRIC_PATTERNS[sector].map(d=>d.label);
-    if (names.length) return uniqKeepOrder(names).slice(0,3);
-  }
-  return METRIC_PATTERNS.general.map(d=>d.label).slice(0,3);
+function rank<T extends { score: number }>(arr: T[], k = 8): T[] {
+  return [...arr].sort((a, b) => b.score - a.score).slice(0, k);
 }
 
-export function metricsBySector(
-  text: string,
-  sectorHints?: string[] | null,
-  productTags?: string[] | null
-): Record<string, string[]> {
-  const sectors: SectorKey[] = (sectorHints?.length ? sectorHints : ["general"])
-    .map(s => (s as SectorKey))
-    .filter(Boolean);
+/* --------------------------------- data ----------------------------------- */
+/* Industries: lightweight signals. Expand/adjust over time. */
 
-  const prods = (productTags || []) as ProductKey[];
+export const INDUSTRY_RULES: IndustryRule[] = [
+  { id: "food",       label: "Food",       patterns: toRegArray([/food/i, /snack/i, /sauce/i, /retort/i, /hot[-\s]?fill/i, /fda/i]) },
+  { id: "beverage",   label: "Beverage",   patterns: toRegArray([/beverage/i, /drink/i, /brew(ery|ing)/i, /distill(ery|ation)/i, /\bbottle(s)?\b/i]) },
+  { id: "cosmetics",  label: "Cosmetics",  patterns: toRegArray([/cosmetic/i, /beauty/i, /skincare|skin care/i, /make-?up/i, /fragrance/i]) },
+  { id: "supplements",label: "Supplements",patterns: toRegArray([/supplement/i, /vitamin/i, /nutraceutical/i]) },
+  { id: "pharma",     label: "Pharma",     patterns: toRegArray([/pharma/i, /pharmaceutical/i, /\brx\b/i, /\botc\b/i, /gmp|cGMP/i]) },
+  { id: "electronics",label: "Electronics",patterns: toRegArray([/electronics?/i, /device/i, /\bpcb\b/i, /\besd\b/i]) },
+  { id: "apparel",    label: "Apparel",    patterns: toRegArray([/apparel/i, /garment/i, /fashion/i]) },
+  { id: "industrial", label: "Industrial", patterns: toRegArray([/industrial/i, /manufactur(ing|er)/i, /b2b/i, /factory/i]) },
+  { id: "automotive", label: "Automotive", patterns: toRegArray([/automotive/i, /\bauto\b/i, /aftermarket/i, /tier\s*[1-3]/i]) },
+  { id: "cannabis",   label: "Cannabis",   patterns: toRegArray([/cannabis/i, /\bcbd\b/i, /hemp/i, /thc/i]) },
+];
 
-  const out: Record<string, string[]> = {};
+/* Products: normalized tags → signal regex list (use keys as canonical tags) */
 
-  for (const s of sectors) {
-    const defs = METRIC_PATTERNS[s as SectorKey] || [];
-    let list = matchMetrics(text, defs);
+export const PRODUCT_LEX: ProductLex = {
+  boxes:       toRegArray([/\bbox(es)?\b/i, /carton(s)?/i, /folding carton/i, /rigid box/i]),
+  labels:      toRegArray([/\blabel(s)?\b/i, /\bsticker(s)?\b/i]),
+  tape:        toRegArray([/\btape\b/i, /packaging tape/i]),
+  corrugate:   toRegArray([/corrugat(e|ed)/i, /corrugate/i]),
+  mailers:     toRegArray([/\bmailer(s)?\b/i, /poly mailer/i]),
+  pouches:     toRegArray([/\bpouch(es)?\b/i, /stand[-\s]?up pouch/i, /\bmylar\b/i]),
+  film:        toRegArray([/\bfilm\b/i, /stretch( wrap)?/i, /shrink( wrap| film)?/i]),
+  shrink:      toRegArray([/shrink( wrap| film)?/i]),
+  pallets:     toRegArray([/\bpallet(s)?\b/i]),
+  foam:        toRegArray([/\bfoam\b/i, /foam insert/i, /eva foam/i]),
+  clamshells:  toRegArray([/clamshell(s)?/i, /blister/i]),
+  bottles:     toRegArray([/\bbottle(s)?\b/i, /\bvial(s)?\b/i]),
+  jars:        toRegArray([/\bjar(s)?\b/i, /\btin(s)?\b/i]),
+  closures:    toRegArray([/\bclosure(s)?\b/i, /\bcap(s)?\b/i, /torque/i]),
+  trays:       toRegArray([/\btray(s)?\b/i]),
+};
 
-    // product-informed additions for this sector
-    for (const p of prods) {
-      const adds = PRODUCT_METRIC_HINTS[p as ProductKey];
-      if (adds && adds.length) {
-        list = uniqKeepOrder([...list, ...adds.map(a=>a.label)]);
-      }
-    }
+/* Metrics: deeper, industry-aware buyer priorities. */
 
-    // if nothing matched, use sector fallback then general
-    if (!list.length) list = sectorFallback(s);
+export const METRIC_RULES: MetricRule[] = [
+  // Corrugate / boxes (general)
+  { id: "ect_strength", label: "ECT / stack strength at target weight", patterns: toRegArray([/\bect\b/i, /edge[-\s]?crush/i, /stack (strength|testing)/i]), weight: 2 },
+  { id: "board_grade",  label: "Board grade & burst/Mullen targets",     patterns: toRegArray([/mullen/i, /burst/i, /board grade/i]), weight: 1.6 },
+  { id: "print_reg",    label: "Print registration & brand color accuracy", patterns: toRegArray([/print registration/i, /pantone|color match/i]), weight: 1.3 },
+  { id: "ecom_fit",     label: "E-commerce fulfillment compatibility",    patterns: toRegArray([/e-?commerce/i, /fulfillment/i, /amazon/i]), weight: 1.0 },
 
-    // Always ensure at least 3 per sector (mix in general fallbacks)
-    if (list.length < 3) {
-      const gen = METRIC_PATTERNS.general.map(d=>d.label);
-      list = uniqKeepOrder([...list, ...gen]).slice(0, 6);
-    }
+  // Beverage specifics
+  { id: "closure_torque", label: "Closure compatibility & torque", industries: ["beverage"], patterns: toRegArray([/torque/i, /cap( ping)?/i, /closure/i]) , weight: 2.0 },
+  { id: "label_adh",      label: "Label application alignment & adhesion", industries: ["beverage"], patterns: toRegArray([/label applicat/i, /adhes(ion|ive)/i]) , weight: 1.6 },
+  { id: "pack_stability", label: "Bottle/secondary pack stability in transit", industries: ["beverage"], patterns: toRegArray([/bottle pack/i, /case stability/i, /shrink bundle/i]) , weight: 1.4 },
 
-    out[s] = list.slice(0, 8); // reasonable cap per sector
-  }
+  // Food specifics
+  { id: "food_compliance", label: "Food-contact compliance (FDA/EC)", industries: ["food"], patterns: toRegArray([/fda/i, /food[-\s]?contact/i, /ec\s*1935\/2004/i]), weight: 2.0 },
+  { id: "barrier_needs",   label: "Moisture / oxygen barrier needs", industries: ["food"], patterns: toRegArray([/oxygen barrier/i, /moisture barrier/i, /otr|wvtr/i]), weight: 1.7 },
+  { id: "seal_integrity",  label: "Seal integrity under process (hot-fill/retort)", industries: ["food"], patterns: toRegArray([/retort/i, /hot[-\s]?fill/i, /seal integrity/i]), weight: 1.6 },
 
-  // If caller only asked for general or we ended up empty, ensure a general key
-  if (!Object.keys(out).length) {
-    out.general = METRIC_PATTERNS.general.map(d=>d.label).slice(0,4);
-  }
+  // Cosmetics
+  { id: "cos_color",    label: "Print finish & brand color match", industries: ["cosmetics"], patterns: toRegArray([/foil|emboss|varnish/i, /pantone|color match/i]) , weight: 1.6 },
+  { id: "cos_decor",    label: "Decor registration (foil/emboss/deboss)", industries: ["cosmetics"], patterns: toRegArray([/emboss|deboss|foil/i]) , weight: 1.2 },
 
-  return out;
+  // Electronics
+  { id: "esd_safe",     label: "ESD-safe packaging compliance", industries: ["electronics"], patterns: toRegArray([/\besd\b/i, /ansi[-\s]?esd/i]) , weight: 2.0 },
+  { id: "drop_protect", label: "Drop/edge-crush protection at DIM weight", industries: ["electronics"], patterns: toRegArray([/drop test/i, /edge[-\s]?crush/i, /dim weight/i]) , weight: 1.4 },
+
+  // Pharma
+  { id: "pharma_gmp",   label: "cGMP/FDA packaging compliance", industries: ["pharma"], patterns: toRegArray([/\bcgmp\b/i, /fda/i, /21\s*cfr/i]) , weight: 2.0 },
+  { id: "pharma_serial",label: "Serialization / GS1 barcode placement", industries: ["pharma"], patterns: toRegArray([/serialization/i, /\bgs1\b/i, /barcode/i]) , weight: 1.2 },
+  { id: "pharma_cr",    label: "Child-resistant closure certification", industries: ["pharma","cannabis"], patterns: toRegArray([/child[-\s]?resistant/i, /\bcrc?\b/i]) , weight: 1.4 },
+
+  // General (useful defaults when nothing deep fires)
+  { id: "damage_reduction", label: "Damage reduction targets in transit", patterns: toRegArray([/damage reduction/i, /transit damage/i, /supply chain damage/i]), weight: 1.2 },
+  { id: "automation_uptime", label: "Automation line uptime impact", patterns: toRegArray([/line (uptime|stoppage|downtime)/i, /automation/i]), weight: 1.1 },
+  { id: "sustainability", label: "Sustainability targets (PCR %, recyclability)", patterns: toRegArray([/pcr/i, /recyclab(le|ility)/i, /post[-\s]?consumer/i]), weight: 1.0 },
+];
+
+/* ------------------------------- detectors -------------------------------- */
+
+export function detectIndustries(text: string, top = 3): Array<{ id: ID; label: string; score: number }> {
+  const t = text || "";
+  const scored = INDUSTRY_RULES.map(r => ({ id: r.id, label: r.label, score: matchCount(t, r.patterns) }));
+  return rank(scored, top).filter(x => x.score > 0);
 }
 
-// Convenience exports for other modules / tests
-export const ALL_PRODUCTS = Object.freeze(Object.keys(PRODUCT_LEX));
-export const ALL_SECTORS  = Object.freeze(Object.keys(SECTOR_LEX));
+export function detectProducts(text: string, top = 12): string[] {
+  const t = text || "";
+  const scored = Object.entries(PRODUCT_LEX).map(([tag, res]) => ({ tag, score: matchCount(t, res) }));
+  return rank(scored, top).filter(x => x.score > 0).map(x => x.tag);
+}
+
+export function detectMetrics(text: string, industries: ID[], top = 6): string[] {
+  const t = text || "";
+  const ids = new Set(industries);
+  const scored = METRIC_RULES
+    .filter(m => !m.industries || m.industries.some(id => ids.has(id)))
+    .map(m => {
+      const base = matchCount(t, m.patterns);
+      const w = Number(m.weight || 1);
+      return { id: m.id, score: base * w, label: m.label };
+    });
+  const primary = rank(scored, top).filter(x => x.score > 0);
+  if (primary.length) return primary.map(x => x.id);
+  // fallback: general defaults if nothing triggered
+  const general = METRIC_RULES.filter(m => !m.industries).slice(0, top);
+  return general.map(m => m.id);
+}
+
+/* ---------------------------- presentation helpers ------------------------ */
+
+export function composeOneLiner(host: string, products: string[], sectors: string[]): string {
+  const h = (host || "").replace(/^www\./, "");
+  const p = products.slice(0, 3);
+  const s = sectors.slice(0, 3);
+  const moreP = products.length > 3 ? ", etc." : "";
+  const moreS = sectors.length > 3 ? " & others" : "";
+  const prodText = p.length ? ` — ${p.join(", ")}${moreP}` : "";
+  const sectorText = s.length ? ` for ${s.join(" & ")} brands${moreS}` : "";
+  return `${h} supplies packaging${prodText}${sectorText}.`;
+}
+
+/* Export rule lookup for UIs (labels by id) */
+export const METRIC_LABEL_BY_ID: Record<string, string> =
+  Object.fromEntries(METRIC_RULES.map(m => [m.id, m.label]));
+export const INDUSTRY_LABEL_BY_ID: Record<string, string> =
+  Object.fromEntries(INDUSTRY_RULES.map(r => [r.id, r.label]));
