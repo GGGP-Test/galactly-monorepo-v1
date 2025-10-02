@@ -248,7 +248,7 @@
     geo:{citiesTop:[],statesTop:[]}
   };
 
-  /* ---------------------- one-liner compose ---------------------- */
+  /* ---------------------- one-liner (fallback) ---------------------- */
   function joinForLine(list){
     if (!list || !list.length) return "";
     if (list.length === 1) return list[0];
@@ -257,20 +257,14 @@
     // > 3 — show 3 then “etc.”
     return list[0] + ", " + list[1] + ", " + list[2] + ", etc.";
   }
-
   function composeOneLiner(data){
     const short = (data.host||state.host||"yourcompany.com").replace(/^www\./,"");
     const verb = data.role==="packaging_buyer" ? "buys packaging" :
                  data.role==="packaging_supplier" ? "supplies packaging" : "does business";
     const prods = (data.productTags||[]).map(String);
     const sectors = (data.sectorHints||[]).map(displaySector);
-
-    // 1–3 products exactly; add “etc.” ONLY if >3
     const prodBits = joinForLine(prods.slice(0, Math.min(3, prods.length)));
-
-    // sectors follow same rule
     const sectBits = joinForLine(sectors.slice(0, Math.min(3, sectors.length)));
-
     let line = `${short} ${verb}`;
     if (prodBits) line += ` — ${prodBits}`;
     if (sectBits) line += ` for ${sectBits} brands`;
@@ -281,8 +275,14 @@
   /* ---------------------- classify fetch ---------------------- */
   async function fetchClassify(h){
     const base = ensureApi(); if (!base) return null;
-    const u1 = new URL(join(base,"/classify")); u1.searchParams.set("host", h);
-    const u2 = new URL(join(base.replace(/\/api\/?$/i,""),"/api/classify")); u2.searchParams.set("host", h);
+    const u1 = new URL(join(base,"/classify")); 
+    u1.searchParams.set("host", h);
+    u1.searchParams.set("maxPages", "16"); // deep crawl
+
+    const u2 = new URL(join(base.replace(/\/api\/?$/i,""),"/api/classify"));
+    u2.searchParams.set("host", h);
+    u2.searchParams.set("maxPages", "16"); // deep crawl
+
     const tryFetch = async (url)=>{
       const r = await fetch(url, {credentials:"omit"});
       const t = await r.text();
@@ -367,6 +367,7 @@
     const itemH = 36;
     const top = (boxH/2) - (itemH/2) - (selVisibleIndex*itemH);
     rotorList.style.transition = center ? "" : "transform .12s ease";
+    rotorList.style.transform = `translateY=${Math.round(top)}px`;
     rotorList.style.transform = `translateY(${Math.round(top)}px)`;
     if (!center) setTimeout(()=> rotorList.style.transition = "", 150);
 
@@ -474,7 +475,7 @@
     oneLine.style.outline = ed? "none" : "2px solid var(--ring)";
   });
   $("#refreshLink").addEventListener("click", async (e)=>{
-    e.preventDefault(); await loadFromSite(host,true);
+    e.preventDefault(); await loadFromSite(state.host,true);
   });
 
   /* ---------------------- apply/save ---------------------- */
@@ -519,6 +520,7 @@
         method:"POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(payload)
       });
       const ok = res.ok; const txt = await res.text();
+      if (ok) { try{ localStorage.setItem("fp.supplier.host", state.host); }catch{} }
       $("#statusLine").textContent = ok ? "Profile applied." : ("Apply failed: " + (txt||res.status));
       $("#statusLine").className = ok? "ok" : "bad";
     }catch(err){
@@ -528,7 +530,12 @@
   }
 
   function saveLocal(){
-    try{ localStorage.setItem(LS.persona, JSON.stringify(collectPersona())); $("#statusLine").textContent="Saved locally."; $("#statusLine").className="ok"; }
+    try{ 
+      localStorage.setItem(LS.persona, JSON.stringify(collectPersona())); 
+      localStorage.setItem("fp.supplier.host", state.host);
+      $("#statusLine").textContent="Saved locally."; 
+      $("#statusLine").className="ok"; 
+    }
     catch{ $("#statusLine").textContent="Save failed."; $("#statusLine").className="bad"; }
   }
 
@@ -541,7 +548,6 @@
   });
 
   /* ---------------------- product refinement (shrink/film heuristic) ------ */
-  // If site clearly signals shrink/stretch/film, drop rigid/container-y generics.
   function refineProductTags(host, list){
     const L = (list||[]).map(s=>String(s).toLowerCase());
     const shrinky = L.some(t => /shrink|stretch|film/.test(t));
@@ -569,9 +575,11 @@
     state.classify = data;
     state.metricsBySector = data.hotMetricsBySector || {};
     state.geo = data.geoHints || {citiesTop:[],statesTop:[]};
+    state.host = data.host || h;
 
-    // one-liner (strict rules; no seed words)
-    oneLine.textContent = composeOneLiner(data);
+    // Prefer backend summary; fallback to local composition
+    const serverLine = (typeof data.summary === "string" && data.summary.trim()) ? data.summary.trim() : "";
+    oneLine.textContent = serverLine || composeOneLiner(data);
 
     // industries
     buildIndustries(data);
@@ -596,6 +604,11 @@
   }
 
   /* ---------------------- inputs wiring ---------------------- */
+  function addOnEnter(input, box){
+    input.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter"){ e.preventDefault(); const v=input.value.trim(); if(!v) return; chip(v, box, true); input.value=""; }
+    });
+  }
   addOnEnter($("#cityInput"), $("#cityChips"));
   addOnEnter($("#tagInput"), $("#tagChips"));
   $("#setApi").addEventListener("click", ()=>{
@@ -609,6 +622,7 @@
   updApiBadge();
   const initHost = host || prompt("Your website / domain? (e.g., acme.com)","")||"";
   state.host = normHost(initHost);
+  try{ if (state.host) localStorage.setItem("fp.supplier.host", state.host); }catch{}
   loadFromSite(state.host, true);
   syncDual(); syncEmp();
 })();
