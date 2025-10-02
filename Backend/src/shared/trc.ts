@@ -1,16 +1,20 @@
 // src/shared/trc.ts
 //
 // Lightweight lead scoring + band thresholds used by routes/leads.ts.
-// Dependency-free, defensive with types. Exported surface:
+// Deterministic, dependency-free, and now aware of persona overlays:
+//   - titlesPreferred: string[]
+//   - materialsAllow/materialsBlock: string[]
+//   - certsRequired: string[]
+//   - keywordsAdd/keywordsAvoid: string[]
+//
+// Exported surface (unchanged):
 //   - HOT_MIN, WARM_MIN
 //   - classifyScore(score) => "HOT" | "WARM" | "COOL"
 //   - scoreRow(row, prefs, city?) => { score:number, reasons:string[] }
 //
-// Notes
-// -----
-// * This is heuristic and deterministic (no AI).
-// * Prefs shape matches src/shared/prefs.ts "EffectivePrefs" loosely (we read only what we need).
-// * Row is the normalized buyer row (host, tiers?, size?, tags?, segments?, cityTags?).
+// Row (buyer candidate) is loose: { host, tier/tiers?, size?, tags?, segments?,
+//                                   city?, cityTags?, materials?, certs?, roles?/contacts?/bestTitles? }
+// Prefs is EffectivePrefs from shared/prefs plus optional overlay fields above.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -22,6 +26,8 @@ export function classifyScore(score: number): "HOT" | "WARM" | "COOL" {
   if (score >= WARM_MIN) return "WARM";
   return "COOL";
 }
+
+/* --------------------------------- utils ---------------------------------- */
 
 function clamp(n: any, lo: number, hi: number, fb: number): number {
   const x = Number(n);
@@ -38,6 +44,10 @@ function lowerSet(arr: any): Set<string> {
     }
   }
   return out;
+}
+
+function lowerList(arr: any): string[] {
+  return Array.from(lowerSet(arr));
 }
 
 function firstLower(arr: any): string | undefined {
@@ -67,13 +77,18 @@ function cityMatchBoost(panelCity?: string, rowCity?: string, rowCityTags?: stri
   return 0;
 }
 
-function intersectCount(a: Set<string>, b: Set<string>): number {
+function intersectCountSet(a: Set<string>, b: Set<string>): number {
   let n = 0;
   a.forEach(v => { if (b.has(v)) n++; });
   return n;
 }
 
-// Public API ---------------------------------------------------------------
+function anyIntersect(a: Set<string>, b: Set<string>): boolean {
+  for (const v of a) if (b.has(v)) return true;
+  return false;
+}
+
+/* --------------------------------- scorer --------------------------------- */
 
 /**
  * Score a catalog row with respect to effective prefs and optional city focus.
@@ -112,15 +127,15 @@ export function scoreRow(row: any, prefs: any, panelCity?: string): { score: num
     reasons.push(`size:${rowSize}@${sizeW.toFixed(2)}`);
   }
 
-  // --- Category allow/block --------------------------------------------
+  // --- Category allow/block (tags & segments) ---------------------------
   const allow = lowerSet(prefs?.categoriesAllow || []);
   const block = lowerSet(prefs?.categoriesBlock || []);
   const rowTags = lowerSet(row?.tags || []);
   const rowSegs = lowerSet(row?.segments || []);
   const rowCats = new Set<string>([...rowTags, ...rowSegs]);
 
-  const hitsAllow = intersectCount(rowCats, allow);
-  const hitsBlock = intersectCount(rowCats, block);
+  const hitsAllow = intersectCountSet(rowCats, allow);
+  const hitsBlock = intersectCountSet(rowCats, block);
 
   if (hitsAllow > 0) { score += Math.min(10, 4 * hitsAllow); reasons.push(`allow+${hitsAllow}`); }
   if (hitsBlock > 0) { score -= Math.min(12, 6 * hitsBlock); reasons.push(`block-${hitsBlock}`); }
@@ -140,6 +155,75 @@ export function scoreRow(row: any, prefs: any, panelCity?: string): { score: num
   if (rowTags.size > 0)  { score += 2 * wRetail;    reasons.push("retail-ish"); }
   if (rowSegs.size > 0)  { score += 2 * wWholesale; reasons.push("wholesale-ish"); }
   if ((row?.platform || "").includes("shopify")) { score += 2 * wEcomm; reasons.push("ecomm"); }
+
+  // --- Persona overlays (new) -------------------------------------------
+  // Titles preferred (match against any row roles/contacts/bestTitles)
+  const prefTitles = lowerSet(prefs?.titlesPreferred || []);
+  if (prefTitles.size) {
+    const rowTitles = new Set<string>([
+      ...lowerList(row?.roles),
+      ...lowerList(row?.contacts),
+      ...lowerList(row?.bestTitles),
+    ]);
+    const tHits = intersectCountSet(prefTitles, rowTitles);
+    if (tHits > 0) {
+      score += Math.min(9, 3 * tHits);
+      reasons.push(`title+${tHits}`);
+    }
+  }
+
+  // Materials allow/block (use row.materials if present, else fall back to tags)
+  const allowMat = lowerSet(prefs?.materialsAllow || []);
+  const blockMat = lowerSet(prefs?.materialsBlock || []);
+  if (allowMat.size || blockMat.size) {
+    const rowMats = new Set<string>([...lowerList(row?.materials), ...rowCats]);
+    const mAllow = intersectCountSet(rowMats, allowMat);
+    const mBlock = intersectCountSet(rowMats, blockMat);
+    if (mAllow > 0) {
+      score += Math.min(10, 4 * mAllow);
+      reasons.push(`material+${mAllow}`);
+    }
+    if (mBlock > 0) {
+      score -= Math.min(12, 6 * mBlock);
+      reasons.push(`material-${mBlock}`);
+    }
+  }
+
+  // Certifications required (boost if row advertises any; slight penalty if persona asks but none found)
+  const needCerts = lowerSet(prefs?.certsRequired || []);
+  if (needCerts.size) {
+    const rowCerts = new Set<string>([...lowerList(row?.certs), ...rowCats]);
+    const cHits = intersectCountSet(rowCerts, needCerts);
+    if (cHits > 0) {
+      score += Math.min(10, 4 * cHits);
+      reasons.push(`cert+${cHits}`);
+    } else {
+      score -= 3; // soft nudge; we don't know for sure they lack it
+      reasons.push("missing-certs");
+    }
+  }
+
+  // Keywords add/avoid (search across light blob: name, why, tags, segments)
+  const kwAdd = lowerSet(prefs?.keywordsAdd || []);
+  const kwAvoid = lowerSet(prefs?.keywordsAvoid || []);
+  if (kwAdd.size || kwAvoid.size) {
+    const blobTokens = new Set<string>([
+      ...lowerList(row?.tags),
+      ...lowerList(row?.segments),
+      ...lowerList((row?.why || "").split(/[^\w]+/)),
+      ...lowerList((row?.name || "").split(/[^\w]+/)),
+    ]);
+    const addHits = intersectCountSet(blobTokens, kwAdd);
+    const avoidHits = intersectCountSet(blobTokens, kwAvoid);
+    if (addHits > 0) {
+      score += Math.min(8, 2 * addHits);
+      reasons.push(`kw+${addHits}`);
+    }
+    if (avoidHits > 0) {
+      score -= Math.min(9, 3 * avoidHits);
+      reasons.push(`kw-${avoidHits}`);
+    }
+  }
 
   // --- Cap & normalize ---------------------------------------------------
   score = Math.max(0, Math.min(100, score));
