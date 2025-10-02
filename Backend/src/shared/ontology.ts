@@ -1,171 +1,227 @@
-/* 
-  Ontology (packaging) — industries, product lexicon, metric rules.
-  Safe typing (no unions at call-sites): all pattern lists are RegExp[].
-  Small helpers included so downstream code can stay simple.
-*/
+// src/shared/ontology.ts
+//
+// Lightweight packaging ontology + scorers used by /classify and step3.
+// Exports:
+//   - productsFrom(text, keywords?, max?) -> string[]
+//   - sectorsFrom(text, keywords?, max?)  -> string[]
+//   - metricsBySector: Record<string,string[]>
+//
+// Design goals:
+//   - deterministic (no AI calls), forgiving, and fast
+//   - accepts both page text and <meta keywords> as weak signals
+//   - everything is simple string/regex matching; no heavy deps
 
-export type ID = string;
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-export interface IndustryRule {
-  id: ID;
-  label: string;
-  patterns: RegExp[];          // text signals for this industry
-}
+export type Sector =
+  | "food"
+  | "beverage"
+  | "cosmetics"
+  | "supplements"
+  | "electronics"
+  | "apparel"
+  | "pharma"
+  | "pet"
+  | "automotive"
+  | "home"
+  | "industrial"
+  | "cannabis";
 
-export interface MetricRule {
-  id: ID;
-  label: string;
-  industries?: ID[];           // if omitted, applies “general”
-  patterns: RegExp[];          // text signals that support this metric
-  weight?: number;             // optional influence hint
-}
+/* -------------------------------------------------------------------------- */
+/* Lexicons                                                                    */
+/* -------------------------------------------------------------------------- */
 
-export type ProductLex = Record<string, RegExp[]>;
-
-/* ------------------------------- utilities -------------------------------- */
-
-function toRegExp(x: string | RegExp): RegExp {
-  return x instanceof RegExp ? x : new RegExp(x, "i");
-}
-function toRegArray(x: string | RegExp | Array<string | RegExp>): RegExp[] {
-  return Array.isArray(x) ? x.map(toRegExp) : [toRegExp(x)];
-}
-
-export function matchCount(text: string, pats: RegExp[] = []): number {
-  const t = text || "";
-  let n = 0;
-  for (const re of pats) {
-    try {
-      if (re.test(t)) n++;
-    } catch { /* ignore bad regex */ }
-  }
-  return n;
-}
-
-function rank<T extends { score: number }>(arr: T[], k = 8): T[] {
-  return [...arr].sort((a, b) => b.score - a.score).slice(0, k);
-}
-
-/* --------------------------------- data ----------------------------------- */
-/* Industries: lightweight signals. Expand/adjust over time. */
-
-export const INDUSTRY_RULES: IndustryRule[] = [
-  { id: "food",       label: "Food",       patterns: toRegArray([/food/i, /snack/i, /sauce/i, /retort/i, /hot[-\s]?fill/i, /fda/i]) },
-  { id: "beverage",   label: "Beverage",   patterns: toRegArray([/beverage/i, /drink/i, /brew(ery|ing)/i, /distill(ery|ation)/i, /\bbottle(s)?\b/i]) },
-  { id: "cosmetics",  label: "Cosmetics",  patterns: toRegArray([/cosmetic/i, /beauty/i, /skincare|skin care/i, /make-?up/i, /fragrance/i]) },
-  { id: "supplements",label: "Supplements",patterns: toRegArray([/supplement/i, /vitamin/i, /nutraceutical/i]) },
-  { id: "pharma",     label: "Pharma",     patterns: toRegArray([/pharma/i, /pharmaceutical/i, /\brx\b/i, /\botc\b/i, /gmp|cGMP/i]) },
-  { id: "electronics",label: "Electronics",patterns: toRegArray([/electronics?/i, /device/i, /\bpcb\b/i, /\besd\b/i]) },
-  { id: "apparel",    label: "Apparel",    patterns: toRegArray([/apparel/i, /garment/i, /fashion/i]) },
-  { id: "industrial", label: "Industrial", patterns: toRegArray([/industrial/i, /manufactur(ing|er)/i, /b2b/i, /factory/i]) },
-  { id: "automotive", label: "Automotive", patterns: toRegArray([/automotive/i, /\bauto\b/i, /aftermarket/i, /tier\s*[1-3]/i]) },
-  { id: "cannabis",   label: "Cannabis",   patterns: toRegArray([/cannabis/i, /\bcbd\b/i, /hemp/i, /thc/i]) },
-];
-
-/* Products: normalized tags → signal regex list (use keys as canonical tags) */
-
-export const PRODUCT_LEX: ProductLex = {
-  boxes:       toRegArray([/\bbox(es)?\b/i, /carton(s)?/i, /folding carton/i, /rigid box/i]),
-  labels:      toRegArray([/\blabel(s)?\b/i, /\bsticker(s)?\b/i]),
-  tape:        toRegArray([/\btape\b/i, /packaging tape/i]),
-  corrugate:   toRegArray([/corrugat(e|ed)/i, /corrugate/i]),
-  mailers:     toRegArray([/\bmailer(s)?\b/i, /poly mailer/i]),
-  pouches:     toRegArray([/\bpouch(es)?\b/i, /stand[-\s]?up pouch/i, /\bmylar\b/i]),
-  film:        toRegArray([/\bfilm\b/i, /stretch( wrap)?/i, /shrink( wrap| film)?/i]),
-  shrink:      toRegArray([/shrink( wrap| film)?/i]),
-  pallets:     toRegArray([/\bpallet(s)?\b/i]),
-  foam:        toRegArray([/\bfoam\b/i, /foam insert/i, /eva foam/i]),
-  clamshells:  toRegArray([/clamshell(s)?/i, /blister/i]),
-  bottles:     toRegArray([/\bbottle(s)?\b/i, /\bvial(s)?\b/i]),
-  jars:        toRegArray([/\bjar(s)?\b/i, /\btin(s)?\b/i]),
-  closures:    toRegArray([/\bclosure(s)?\b/i, /\bcap(s)?\b/i, /torque/i]),
-  trays:       toRegArray([/\btray(s)?\b/i]),
+// product groups we surface as "productTags"
+const PRODUCT_LEX: Record<string, Array<string | RegExp>> = {
+  boxes: ["box", "boxes", "carton", "cartons", "folding carton", "rigid box", /corrugat(?:e|ed)/i, "mailer box"],
+  labels: ["label", "labels", "sticker", "stickers", "pressure sensitive"],
+  tape: ["tape", "packaging tape", "opp tape"],
+  pouches: ["pouch", "pouches", "stand up pouch", "stand-up pouch", "mylar"],
+  film: ["film", "shrink film", "stretch film", "laminate", "laminated film", "stretch wrap", "shrink wrap"],
+  mailers: ["mailer", "mailers", "poly mailer", "bubble mailer"],
+  corrugate: [/corrugat(?:e|ed)/i, "flute", "ect", "mullen"],
+  clamshells: ["clamshell", "clamshells", "blister"],
+  foam: ["foam insert", "eva foam", "pe foam", "epe foam"],
+  pallets: ["pallet", "pallets", "palletizing"],
+  mailer_bags: ["bag", "bags", "polybag", "poly bag"],
+  bottles: ["bottle", "bottles", "vial", "vials"],
+  jars: ["jar", "jars", "tin", "tins"],
+  closures: ["closure", "closures", "cap", "caps", "lug", "snap cap", "child-resistant"],
+  trays: ["tray", "trays", "thermoform", "thermoformed"],
 };
 
-/* Metrics: deeper, industry-aware buyer priorities. */
+// sectors we hint for the persona/industries rail
+const SECTOR_LEX: Record<Sector, Array<string | RegExp>> = {
+  food: ["food", "grocery", "snack", "sauce", "salsa", "candy", "baked", "deli", "frozen"],
+  beverage: ["beverage", "drink", "juice", "soda", "coffee", "tea", "brewery", "beer", "wine", "distillery"],
+  cosmetics: ["cosmetic", "cosmetics", "beauty", "skincare", "skin care", "haircare", "makeup", "fragrance"],
+  supplements: ["supplement", "nutraceutical", "vitamin", "sports nutrition"],
+  electronics: ["electronics", "devices", "gadget", "semiconductor", "pcb"],
+  apparel: ["apparel", "fashion", "clothing", "garment"],
+  pharma: ["pharma", "pharmaceutical", "medical", "medication", /\brx\b/i, /\botc\b/i],
+  pet: ["pet", "pets", "petcare", "pet care"],
+  automotive: ["automotive", "auto", "aftermarket", "oem"],
+  home: ["home goods", "home & garden", "furniture", "decor"],
+  industrial: ["industrial", "b2b", "manufacturing", "factory", "warehouse", "fulfillment"],
+  cannabis: ["cannabis", "cbd", "hemp", "dispensary"],
+};
 
-export const METRIC_RULES: MetricRule[] = [
-  // Corrugate / boxes (general)
-  { id: "ect_strength", label: "ECT / stack strength at target weight", patterns: toRegArray([/\bect\b/i, /edge[-\s]?crush/i, /stack (strength|testing)/i]), weight: 2 },
-  { id: "board_grade",  label: "Board grade & burst/Mullen targets",     patterns: toRegArray([/mullen/i, /burst/i, /board grade/i]), weight: 1.6 },
-  { id: "print_reg",    label: "Print registration & brand color accuracy", patterns: toRegArray([/print registration/i, /pantone|color match/i]), weight: 1.3 },
-  { id: "ecom_fit",     label: "E-commerce fulfillment compatibility",    patterns: toRegArray([/e-?commerce/i, /fulfillment/i, /amazon/i]), weight: 1.0 },
+/* -------------------------------------------------------------------------- */
+/* Metric library (bottom-up > general)                                       */
+/* -------------------------------------------------------------------------- */
 
-  // Beverage specifics
-  { id: "closure_torque", label: "Closure compatibility & torque", industries: ["beverage"], patterns: toRegArray([/torque/i, /cap( ping)?/i, /closure/i]) , weight: 2.0 },
-  { id: "label_adh",      label: "Label application alignment & adhesion", industries: ["beverage"], patterns: toRegArray([/label applicat/i, /adhes(ion|ive)/i]) , weight: 1.6 },
-  { id: "pack_stability", label: "Bottle/secondary pack stability in transit", industries: ["beverage"], patterns: toRegArray([/bottle pack/i, /case stability/i, /shrink bundle/i]) , weight: 1.4 },
+export const metricsBySector: Record<string, string[]> = {
+  // shared, industry-agnostic (appended as fallback)
+  general: [
+    "Damage reduction targets in transit",
+    "Automation line uptime impact",
+    "Sustainability targets (PCR %, recyclability)",
+    "Unit cost at target MOQ",
+    "E-commerce fulfillment compatibility",
+  ],
 
-  // Food specifics
-  { id: "food_compliance", label: "Food-contact compliance (FDA/EC)", industries: ["food"], patterns: toRegArray([/fda/i, /food[-\s]?contact/i, /ec\s*1935\/2004/i]), weight: 2.0 },
-  { id: "barrier_needs",   label: "Moisture / oxygen barrier needs", industries: ["food"], patterns: toRegArray([/oxygen barrier/i, /moisture barrier/i, /otr|wvtr/i]), weight: 1.7 },
-  { id: "seal_integrity",  label: "Seal integrity under process (hot-fill/retort)", industries: ["food"], patterns: toRegArray([/retort/i, /hot[-\s]?fill/i, /seal integrity/i]), weight: 1.6 },
+  corrugate: [
+    "ECT / stack strength at target weight",
+    "Board grade & burst/Mullen targets",
+    "Die-line, folding & glue integrity",
+    "Print registration & brand color accuracy",
+  ],
 
-  // Cosmetics
-  { id: "cos_color",    label: "Print finish & brand color match", industries: ["cosmetics"], patterns: toRegArray([/foil|emboss|varnish/i, /pantone|color match/i]) , weight: 1.6 },
-  { id: "cos_decor",    label: "Decor registration (foil/emboss/deboss)", industries: ["cosmetics"], patterns: toRegArray([/emboss|deboss|foil/i]) , weight: 1.2 },
+  beverage: [
+    "Closure compatibility & torque",
+    "Label application alignment & adhesion",
+    "Bottle/secondary pack stability in transit",
+    "Cold-chain / condensation resistance",
+    "Lot traceability & COA",
+  ],
 
-  // Electronics
-  { id: "esd_safe",     label: "ESD-safe packaging compliance", industries: ["electronics"], patterns: toRegArray([/\besd\b/i, /ansi[-\s]?esd/i]) , weight: 2.0 },
-  { id: "drop_protect", label: "Drop/edge-crush protection at DIM weight", industries: ["electronics"], patterns: toRegArray([/drop test/i, /edge[-\s]?crush/i, /dim weight/i]) , weight: 1.4 },
+  food: [
+    "Food-contact compliance (FDA/EC)",
+    "Moisture / oxygen barrier needs",
+    "Seal integrity under process (hot-fill/retort)",
+    "Case-packing line uptime impact",
+  ],
 
-  // Pharma
-  { id: "pharma_gmp",   label: "cGMP/FDA packaging compliance", industries: ["pharma"], patterns: toRegArray([/\bcgmp\b/i, /fda/i, /21\s*cfr/i]) , weight: 2.0 },
-  { id: "pharma_serial",label: "Serialization / GS1 barcode placement", industries: ["pharma"], patterns: toRegArray([/serialization/i, /\bgs1\b/i, /barcode/i]) , weight: 1.2 },
-  { id: "pharma_cr",    label: "Child-resistant closure certification", industries: ["pharma","cannabis"], patterns: toRegArray([/child[-\s]?resistant/i, /\bcrc?\b/i]) , weight: 1.4 },
+  cosmetics: [
+    "Print finish & brand color match",
+    "Decor registration (foil/emboss/deboss)",
+    "Label adhesion on varnished surfaces",
+    "Carton rigidity vs weight",
+    "Tamper-evidence features",
+  ],
 
-  // General (useful defaults when nothing deep fires)
-  { id: "damage_reduction", label: "Damage reduction targets in transit", patterns: toRegArray([/damage reduction/i, /transit damage/i, /supply chain damage/i]), weight: 1.2 },
-  { id: "automation_uptime", label: "Automation line uptime impact", patterns: toRegArray([/line (uptime|stoppage|downtime)/i, /automation/i]), weight: 1.1 },
-  { id: "sustainability", label: "Sustainability targets (PCR %, recyclability)", patterns: toRegArray([/pcr/i, /recyclab(le|ility)/i, /post[-\s]?consumer/i]), weight: 1.0 },
-];
+  electronics: [
+    "Drop/edge-crush protection at DIM weight",
+    "ESD-safe packaging compliance",
+    "Foam insert precision & fit",
+    "Sealed-air / void-fill compatibility",
+  ],
 
-/* ------------------------------- detectors -------------------------------- */
+  pharma: [
+    "cGMP/FDA packaging compliance",
+    "Lot traceability & COA",
+    "Tamper-evident seal integrity",
+    "Child-resistant closure certification",
+    "Serialization / GS1 barcode placement",
+  ],
 
-export function detectIndustries(text: string, top = 3): Array<{ id: ID; label: string; score: number }> {
-  const t = text || "";
-  const scored = INDUSTRY_RULES.map(r => ({ id: r.id, label: r.label, score: matchCount(t, r.patterns) }));
-  return rank(scored, top).filter(x => x.score > 0);
+  cannabis: [
+    "Child-resistant certification",
+    "State regulatory label compliance",
+    "Odor/light barrier performance",
+    "Tamper-evidence integrity",
+  ],
+
+  automotive: [
+    "Component scuff/scratch resistance",
+    "Returnable/return-loop compatibility",
+    "Line-side kitting efficiency",
+  ],
+};
+
+/* -------------------------------------------------------------------------- */
+/* Scoring helpers                                                             */
+/* -------------------------------------------------------------------------- */
+
+function normalize(str: string): string {
+  return (str || "").toLowerCase();
 }
 
-export function detectProducts(text: string, top = 12): string[] {
-  const t = text || "";
-  const scored = Object.entries(PRODUCT_LEX).map(([tag, res]) => ({ tag, score: matchCount(t, res) }));
-  return rank(scored, top).filter(x => x.score > 0).map(x => x.tag);
+function countHits(hay: string, needle: string | RegExp): number {
+  if (!hay) return 0;
+  if (typeof needle === "string") {
+    const re = new RegExp(`\\b${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g");
+    return hay.match(re)?.length || 0;
+  }
+  return hay.match(needle)?.length || 0;
 }
 
-export function detectMetrics(text: string, industries: ID[], top = 6): string[] {
-  const t = text || "";
-  const ids = new Set(industries);
-  const scored = METRIC_RULES
-    .filter(m => !m.industries || m.industries.some(id => ids.has(id)))
-    .map(m => {
-      const base = matchCount(t, m.patterns);
-      const w = Number(m.weight || 1);
-      return { id: m.id, score: base * w, label: m.label };
-    });
-  const primary = rank(scored, top).filter(x => x.score > 0);
-  if (primary.length) return primary.map(x => x.id);
-  // fallback: general defaults if nothing triggered
-  const general = METRIC_RULES.filter(m => !m.industries).slice(0, top);
-  return general.map(m => m.id);
+function scoreLexicon(
+  text: string,
+  keywords: string[] | undefined,
+  lex: Record<string, Array<string | RegExp>>,
+): Record<string, number> {
+  const hay = normalize(text);
+  const keyStr = normalize((keywords || []).join(" "));
+  const out: Record<string, number> = {};
+  for (const [key, synonyms] of Object.entries(lex)) {
+    let n = 0;
+    for (const syn of synonyms) {
+      n += countHits(hay, syn) + countHits(keyStr, syn);
+    }
+    if (n > 0) out[key] = n;
+  }
+  return out;
 }
 
-/* ---------------------------- presentation helpers ------------------------ */
-
-export function composeOneLiner(host: string, products: string[], sectors: string[]): string {
-  const h = (host || "").replace(/^www\./, "");
-  const p = products.slice(0, 3);
-  const s = sectors.slice(0, 3);
-  const moreP = products.length > 3 ? ", etc." : "";
-  const moreS = sectors.length > 3 ? " & others" : "";
-  const prodText = p.length ? ` — ${p.join(", ")}${moreP}` : "";
-  const sectorText = s.length ? ` for ${s.join(" & ")} brands${moreS}` : "";
-  return `${h} supplies packaging${prodText}${sectorText}.`;
+function topKeys(scores: Record<string, number>, max: number): string[] {
+  return Object.entries(scores)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, Math.max(0, max))
+    .map(([k]) => k);
 }
 
-/* Export rule lookup for UIs (labels by id) */
-export const METRIC_LABEL_BY_ID: Record<string, string> =
-  Object.fromEntries(METRIC_RULES.map(m => [m.id, m.label]));
-export const INDUSTRY_LABEL_BY_ID: Record<string, string> =
-  Object.fromEntries(INDUSTRY_RULES.map(r => [r.id, r.label]));
+/* -------------------------------------------------------------------------- */
+/* Public API                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/** Extract normalized product tags (max 12) from page text + keywords. */
+export function productsFrom(text: string, keywords?: string[], max = 12): string[] {
+  const scores = scoreLexicon(text || "", keywords || [], PRODUCT_LEX);
+  return topKeys(scores, max);
+}
+
+/** Extract sector hints (max 8) from page text + keywords. */
+export function sectorsFrom(text: string, keywords?: string[], max = 8): string[] {
+  const scores = scoreLexicon(text || "", keywords || [], SECTOR_LEX as any);
+  return topKeys(scores, max);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Small utilities some routes might want                                     */
+/* -------------------------------------------------------------------------- */
+
+/** Returns a concatenated metric list for a set of sectors with general fallback. */
+export function metricsForSectors(sectors: string[], maxPerSector = 6): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  for (const s of sectors) {
+    const list = metricsBySector[s] || [];
+    for (const m of list.slice(0, maxPerSector)) {
+      if (!seen.has(m)) {
+        seen.add(m);
+        out.push(m);
+      }
+    }
+  }
+
+  // Always ensure a few general metrics present
+  for (const m of metricsBySector.general) {
+    if (!seen.has(m)) {
+      seen.add(m);
+      out.push(m);
+    }
+  }
+  return out.slice(0, 24);
+}
