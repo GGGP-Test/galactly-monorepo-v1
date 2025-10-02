@@ -1,41 +1,26 @@
 // src/routes/classify.ts
 //
-// Deep classifier (crawler + extractor + summarizer)
-// --------------------------------------------------
-// GET  /api/classify?host=acme.com[&maxPages=8][&mode=deep|fast]
-// POST /api/classify  { host, maxPages?, mode? }
+// Deep classifier (focused crawl -> extraction -> bottom-up metrics)
+// Deterministic, no paid APIs.
 //
-// Returns:
-// {
-//   ok: true,
-//   host, role, confidence,
-//   summary,
-//   productTags: string[],
-//   sectorHints: string[],
-//   hotMetricsBySector: Record<string,string[]>,
-//   geoHints: { citiesTop: string[], statesTop: string[] },
-//   bytes, fetchedAt, cached
-// }
+// GET  /api/classify?host=acme.com[&maxPages=8]
+// POST /api/classify  { host, maxPages? }
 
 import { Router, Request, Response } from "express";
 import { withCache, daily } from "../shared/guards";
 import { CFG } from "../shared/env";
-
 import { spiderHost } from "../shared/spider";
-import { extractProducts, extractSectors, metricsBySector } from "../shared/extractor";
-import { buildOneLiner, type Role } from "../shared/summarizer";
+import {
+  extractProducts,
+  extractSectors,
+  extractMetrics,
+} from "../shared/extractor";
+
+type Role = "packaging_supplier" | "packaging_buyer" | "neither";
 
 const r = Router();
 
-// Node 20 global fetch typing (minimal)
-type FetchResponse = {
-  ok: boolean;
-  status: number;
-  url: string;
-  text(): Promise<string>;
-  json(): Promise<any>;
-};
-const F: (u: string, init?: any) => Promise<FetchResponse> = (globalThis as any).fetch;
+// ---------- helpers ----------------------------------------------------------
 
 function normHost(raw?: string): string | undefined {
   if (!raw) return;
@@ -53,7 +38,7 @@ function roleFromSignals(text: string): { role: Role; confidence: number; eviden
   const packagingTokens = [
     "packaging","box","boxes","carton","cartons","corrugate","corrugated",
     "label","labels","tape","pouch","pouches","bottle","bottles","jar","jars",
-    "mailers","mailer","film","shrink","pallet","pallets","closure","closures","cap","caps","stretch"
+    "mailers","mailer","film","shrink","pallet","pallets","closure","cap","stretch"
   ];
   const buyerHints = ["brand", "retail", "ecommerce", "our stores", "locations", "menu"];
   const supplierVerbs = ["manufacture", "supply", "wholesale", "distributor", "converter", "co-pack", "contract pack", "private label"];
@@ -81,9 +66,32 @@ function roleFromSignals(text: string): { role: Role; confidence: number; eviden
   return { role: "neither", confidence: 0.35, evidence };
 }
 
-// City/State extraction (very light)
-const US_ST_FULL = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"];
+function listForLine(items: string[], maxShown = 3): { text: string; used: string[] } {
+  const uniq = Array.from(new Set(items)).filter(Boolean);
+  if (uniq.length === 0) return { text: "", used: [] };
+  if (uniq.length <= maxShown) return { text: uniq.join(", "), used: uniq };
+  const used = uniq.slice(0, maxShown);
+  return { text: `${used.join(", ")}, etc.`, used };
+}
 
+function composeOneLiner(host: string, role: Role, products: string[], sectors: string[]): string {
+  const short = host.replace(/^www\./, "");
+  const verb  = role === "packaging_buyer" ? "buys packaging" :
+                role === "packaging_supplier" ? "supplies packaging" :
+                "does business";
+
+  const p = listForLine(products, 3);
+  const s = listForLine(sectors, 3);
+
+  let line = `${short} ${verb}`;
+  if (p.text) line += ` — ${p.text}`;
+  if (s.text) line += ` for ${s.text} brands`;
+  line += ".";
+  return line;
+}
+
+// Simple geo hints (best-effort)
+const US_ST_FULL = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"];
 function extractGeoHints(text: string): { citiesTop: string[]; statesTop: string[] } {
   const t = text || "";
   const cities = new Map<string, number>();
@@ -112,13 +120,14 @@ function extractGeoHints(text: string): { citiesTop: string[]; statesTop: string
   return { citiesTop, statesTop };
 }
 
-// ---- core classify ---------------------------------------------------------
-async function classifyHost(host: string, maxPages: number, mode: "deep" | "fast" = "deep") {
+// ---------- core -------------------------------------------------------------
+
+async function classifyHost(host: string, maxPages: number) {
+  // Focused crawl; spider’s options only include these keys
   const crawl = await spiderHost(host, {
     maxPages: Math.min(Math.max(3, maxPages || 0), 16),
-    maxBytes: Math.max(1_000_000, CFG.maxFetchBytes || 1_500_000),
     timeoutMs: Math.max(5000, CFG.fetchTimeoutMs || 7000),
-    // optional: could add allowPatterns/denyPatterns later
+    maxBytes: Math.max(1_000_000, CFG.maxFetchBytes || 1_500_000),
   });
 
   const text = String((crawl as any).text || "");
@@ -129,30 +138,25 @@ async function classifyHost(host: string, maxPages: number, mode: "deep" | "fast
 
   const roleGuess = roleFromSignals(text + " " + title + " " + description);
 
-  // Bottom-up extraction
   const productTags = extractProducts(text, keywords);
   const sectorHints = extractSectors(text, keywords);
-  const hotMetricsBySector = metricsBySector(text, sectorHints, productTags);
+
+  // Bottom-up metrics (guaranteed non-empty per sector by extractor/ontology)
+  const hotMetricsBySector = extractMetrics(text, sectorHints, productTags);
 
   const geoHints = extractGeoHints(text);
 
-  const summary = buildOneLiner(
-    host,
-    roleGuess.role,
-    productTags,
-    sectorHints,
-    { style: mode === "deep" ? "rich" : "normal" }
-  );
+  const summary = composeOneLiner(host, roleGuess.role, productTags, sectorHints);
 
   return {
     ok: true,
     host,
     role: roleGuess.role,
     confidence: roleGuess.confidence,
+    evidence: roleGuess.evidence,
     summary,
     productTags,
     sectorHints,
-    evidence: roleGuess.evidence,
     hotMetricsBySector,
     geoHints,
     bytes,
@@ -161,7 +165,8 @@ async function classifyHost(host: string, maxPages: number, mode: "deep" | "fast
   };
 }
 
-// ---- routes ----------------------------------------------------------------
+// ---------- routes -----------------------------------------------------------
+
 r.get("/", async (req: Request, res: Response) => {
   try {
     const host = normHost(String(req.query.host || ""));
@@ -174,13 +179,11 @@ r.get("/", async (req: Request, res: Response) => {
     }
 
     const maxPages = Number(req.query.maxPages ?? 8) || 8;
-    const mode = (String(req.query.mode || "deep").toLowerCase() === "fast" ? "fast" : "deep") as "deep" | "fast";
 
-    const key = `classify:${host}:${mode}:${maxPages}`;
     const result = await withCache(
-      key,
+      `classify:${host}`,
       (CFG.classifyCacheTtlS || (24 * 3600)) * 1000,
-      () => classifyHost(host, maxPages, mode)
+      () => classifyHost(host, maxPages)
     );
 
     if (typeof daily.inc === "function") daily.inc(capKey, 1);
@@ -198,7 +201,7 @@ r.get("/", async (req: Request, res: Response) => {
 
 r.post("/", async (req: Request, res: Response) => {
   try {
-    const body = (req.body || {}) as { host?: string; maxPages?: number; mode?: "deep" | "fast" };
+    const body = (req.body || {}) as { host?: string; maxPages?: number };
     const host = normHost(body.host);
     if (!host) return res.status(404).json({ ok: false, error: "bad_host" });
 
@@ -209,13 +212,11 @@ r.post("/", async (req: Request, res: Response) => {
     }
 
     const maxPages = Number(body.maxPages ?? 8) || 8;
-    const mode = (body.mode === "fast" ? "fast" : "deep") as "deep" | "fast";
 
-    const key = `classify:${host}:${mode}:${maxPages}`;
     const result = await withCache(
-      key,
+      `classify:${host}`,
       (CFG.classifyCacheTtlS || (24 * 3600)) * 1000,
-      () => classifyHost(host, maxPages, mode)
+      () => classifyHost(host, maxPages)
     );
 
     if (typeof daily.inc === "function") daily.inc(capKey, 1);
