@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Galactly — Admin / Monitor</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121822; --panel2:#0e141c; --card:#0f1724;
+    --text:#e9f1f7; --muted:#8aa0b2; --accent:#6de1ff; --ring:#2a4e6d;
+    --ok:#38e08f; --warn:#ffd166; --bad:#ff6b6b; --border:#1b2531;
+  }
+  *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:14px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
+  a{color:inherit}
+  .wrap{max-width:1200px;margin:0 auto;padding:16px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px}
+  .grid{display:grid;grid-template-columns:360px 1fr;gap:16px}
+  @media (max-width:980px){ .grid{grid-template-columns:1fr} }
+  .top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px}
+  .sep{flex:1}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:8px 12px;border-radius:10px;border:1px solid var(--border);
+    background:#152333;color:#cfe0ee;cursor:pointer}
+  .btn.primary{background:var(--accent);border:none;color:#082433;font-weight:800}
+  .btn:active{transform:translateY(1px)}
+  input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0d1520;color:var(--text);outline:none}
+  input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
+  label{display:block;color:#9bb2c8;margin:8px 0 6px}
+  .log{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0a121b;border:1px solid var(--border);border-radius:10px;padding:8px;height:260px;overflow:auto;color:#a5bed1;margin-top:8px}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  .h{font-size:12px;color:#8aa0b2;letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
+  .kv{display:grid;grid-template-columns:160px 1fr;gap:8px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .kv div{padding:4px 0;border-bottom:1px dashed #152233}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top card" style="margin-bottom:16px">
+    <strong>Admin / Monitor</strong>
+    <span id="liveDot" class="pill">SSE: connecting…</span>
+    <span class="sep"></span>
+    <button id="pingBtn" class="btn">Ping</button>
+    <button id="healthBtn" class="btn">Health</button>
+    <button id="reloadBtn" class="btn">Reload catalog</button>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT: settings & quick actions -->
+    <aside class="card">
+      <div class="h">API</div>
+      <label>Base</label>
+      <input id="apiBase" type="url" placeholder="https://YOUR.code.run/api">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="saveApi" class="btn">Save</button>
+        <button id="testApi" class="btn">Test</button>
+      </div>
+
+      <div class="h" style="margin-top:16px">Find buyers</div>
+      <label>Host</label>
+      <input id="hostInput" type="text" placeholder="yourcompany.com">
+      <label>City (optional)</label>
+      <input id="cityInput" type="text" placeholder="e.g., San Diego">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="findBtn" class="btn primary">Find buyers</button>
+      </div>
+
+      <div class="h" style="margin-top:16px">Prefs</div>
+      <label>Quick apply demo prefs for current host</label>
+      <button id="applyPrefs" class="btn">Apply demo prefs</button>
+
+      <div class="h" style="margin-top:16px">Options</div>
+      <label><input id="autoScroll" type="checkbox" checked> Auto-scroll logs</label>
+    </aside>
+
+    <!-- RIGHT: live stream + snapshots -->
+    <main>
+      <div class="card">
+        <div class="h">Live stream (SSE)</div>
+        <pre id="liveLog" class="log" aria-live="polite"></pre>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="h">Last health snapshot</div>
+        <div id="healthBox" class="kv"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function(){
+  // --- constants (pre-filled with your live API; can be overridden & saved) ---
+  const DEFAULT_API = "https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api";
+
+  // --- tiny helpers ---
+  const $ = (q, r=document)=>r.querySelector(q);
+  const logBox = $("#liveLog");
+  const dot = $("#liveDot");
+  const healthBox = $("#healthBox");
+
+  const LS_KEY = "admin.apiBase";
+  function getBase(){ return (localStorage.getItem(LS_KEY) || DEFAULT_API).replace(/\/+$/,""); }
+  function setBase(v){ localStorage.setItem(LS_KEY, String(v||"").trim()); }
+  function post(u, body){ return fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})}); }
+  function get(u){ return fetch(u,{method:"GET"}); }
+  function kv(obj){
+    healthBox.innerHTML="";
+    const add=(k,v)=>{ const a=document.createElement("div"); a.textContent=k; const b=document.createElement("div"); b.textContent=v; healthBox.append(a,b); };
+    if (!obj){ add("status","-"); return; }
+    add("service", obj.service || "-");
+    add("uptimeSec", obj.uptimeSec);
+    add("allowTiers", obj.env?.allowTiers);
+    add("catalog.total", obj.catalog?.total);
+    add("catalog.byTier", JSON.stringify(obj.catalog?.byTier||{}));
+    add("now", obj.now);
+  }
+  function log(line){
+    const at = new Date().toISOString().slice(11,19);
+    logBox.textContent += `[${at}] ${line}\n`;
+    if ($("#autoScroll").checked) logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  // --- wire base input ---
+  const apiInput = $("#apiBase");
+  apiInput.value = getBase();
+  $("#saveApi").addEventListener("click", ()=>{ setBase(apiInput.value); log("API base saved."); });
+  $("#testApi").addEventListener("click", async ()=>{
+    try{
+      const r = await get(getBase()+"/ping");
+      log("Test: /ping -> " + r.status);
+    }catch(e){ log("Test failed: " + (e.message||e)); }
+  });
+
+  // --- buttons ---
+  $("#pingBtn").addEventListener("click", async ()=>{
+    const r = await get(getBase()+"/api/ping");
+    log("Ping -> "+r.status);
+  });
+  $("#healthBtn").addEventListener("click", async ()=>{
+    const r = await get(getBase()+"/health");
+    const j = await r.json().catch(()=>null);
+    kv(j||{});
+    log("Health -> " + r.status + " (catalog.total=" + (j?.catalog?.total||0) + ")");
+  });
+  $("#reloadBtn").addEventListener("click", async ()=>{
+    const r = await post(getBase()+"/catalog/reload",{});
+    const j = await r.json().catch(()=>null);
+    log("Catalog reload -> " + r.status + " " + JSON.stringify(j||{}));
+  });
+
+  $("#findBtn").addEventListener("click", async ()=>{
+    const host = $("#hostInput").value.trim();
+    const city = $("#cityInput").value.trim();
+    if (!host){ log("find: please enter host"); return; }
+    const q = new URLSearchParams({ host, limit:"8", city }).toString();
+    const r = await get(getBase()+"/leads/find-buyers?"+q);
+    const j = await r.json().catch(()=>null);
+    log("find-buyers -> " + r.status + " " + JSON.stringify(j?.summary||j||{}));
+  });
+
+  $("#applyPrefs").addEventListener("click", async ()=>{
+    const host = $("#hostInput").value.trim();
+    if (!host){ log("prefs: please enter host"); return; }
+    const payload = {
+      host,
+      productTags:["film","labels"],
+      sectorHints:["Food","Beverage"],
+      general:{ mids:true, avoidBig:true, near:true, ecom:false, wholesale:true, retail:true },
+      metrics:[{label:"Fast turnaround", value:8},{label:"Lowest unit cost", value:7}],
+      targeting:{ city: $("#cityInput").value.trim() || "San Diego" },
+      inboundOptIn:true
+    };
+    const r = await post(getBase()+"/prefs/upsert", payload);
+    const j = await r.json().catch(()=>null);
+    log("prefs.upsert -> " + r.status + " " + (j?.summary || JSON.stringify(j||{})));
+  });
+
+  // --- SSE stream ---
+  function connectSSE(){
+    const url = getBase().replace(/\/api$/,"") + "/api/events/stream";
+    let es;
+    try{
+      es = new EventSource(url, { withCredentials:false });
+    }catch(e){ log("SSE init failed: " + (e.message||e)); dot.textContent="SSE: failed"; dot.className="pill bad"; return; }
+
+    dot.textContent = "SSE: connecting…"; dot.className="pill";
+    es.onopen = ()=>{ dot.textContent="SSE: live"; dot.className="pill ok"; log("SSE connected"); };
+    es.onerror = ()=>{ dot.textContent="SSE: error"; dot.className="pill warn"; };
+    es.onmessage = (ev)=>{
+      try{
+        const data = JSON.parse(ev.data);
+        log("evt " + (data.type||"message") + " " + JSON.stringify(data));
+      }catch{
+        log("evt " + ev.data);
+      }
+    };
+  }
+
+  // boot
+  connectSSE();
+  // fetch an initial health snapshot automatically
+  $("#healthBtn").click();
+})();
+</script>
+</body>
+</html>
