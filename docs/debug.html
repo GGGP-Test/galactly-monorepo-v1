@@ -1,98 +1,181 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Buyers Finder – Debug Classify</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Artemis BV1 — Debug Console</title>
 <style>
-  body{font:14px/1.4 system-ui,Segoe UI,Roboto,Inter,Arial;margin:20px;background:#0b0f14;color:#e9f1f7}
-  .row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-  input{padding:10px;border-radius:10px;border:1px solid #223042;background:#0d1520;color:#e9f1f7}
-  button{padding:10px 14px;border-radius:10px;border:0;background:#6de1ff;color:#082433;font-weight:700;cursor:pointer}
-  .card{background:#121822;border:1px solid #1c2532;border-radius:12px;padding:12px;margin-top:12px}
-  code,pre{white-space:pre-wrap;word-break:break-word}
-  .muted{color:#9ab0c0}
+  :root{
+    --bg:#0b0f14; --panel:#121822; --card:#0f1724; --divider:#1b2531;
+    --text:#e9f1f7; --muted:#8aa0b2; --accent:#6de1ff; --accentText:#082433;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:15px/1.5 system-ui,Segoe UI,Inter,Roboto,Arial}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  h1{margin:0 0 10px;font-size:18px}
+  .card{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:12px;margin-top:12px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  input{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
+  .btn{font:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--divider);background:#152333;color:#cfe0ee;cursor:pointer}
+  .btn.primary{background:var(--accent);border:none;color:var(--accentText);font-weight:800}
+  .h{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
+  pre{margin:0;background:#0a121b;border:1px solid var(--divider);border-radius:10px;padding:10px;color:#a5bed1;overflow:auto;max-height:460px}
+  .muted{color:var(--muted)}
 </style>
 </head>
 <body>
-  <h1>Debug: /api/classify</h1>
-  <div class="row">
-    <input id="api" placeholder="https://YOUR.code.run or https://YOUR.code.run/api" style="min-width:360px;width:36ch">
-    <button id="save">Save API</button>
-  </div>
-  <div class="row">
-    <input id="host" placeholder="peekpackaging.com" style="min-width:260px">
-    <input id="email" placeholder="you@peekpackaging.com" style="min-width:260px">
-    <button id="go">Test classify</button>
+<div class="wrap">
+  <h1>Artemis BV1 — Debug Console</h1>
+
+  <!-- API base -->
+  <div class="card">
+    <div class="h">API base</div>
+    <div class="row">
+      <input id="apiBase" type="text" style="min-width:420px" placeholder="https://…/api">
+      <button id="saveApi" class="btn">Save</button>
+      <button id="ping" class="btn">Ping</button>
+      <button id="health" class="btn">Health</button>
+      <button id="status" class="btn">Status</button>
+    </div>
+    <div class="muted" style="margin-top:6px">This page remembers the API base in your browser only.</div>
   </div>
 
+  <!-- Classify -->
   <div class="card">
-    <div class="muted">Request URL</div>
-    <div id="req" style="margin-top:6px"></div>
+    <div class="h">Classifier</div>
+    <div class="row">
+      <input id="host" type="text" placeholder="host e.g. peekpackaging.com" style="min-width:280px">
+      <input id="email" type="text" placeholder="email (optional)">
+      <button id="classify" class="btn primary">GET /classify (auto-fallback)</button>
+    </div>
+    <div class="muted" id="reqUrl" style="margin-top:6px">Request URL will appear here</div>
   </div>
 
+  <!-- Prefs -->
   <div class="card">
-    <div class="muted">Response</div>
-    <pre id="out" style="margin-top:6px"></pre>
+    <div class="h">Prefs</div>
+    <div class="row">
+      <button id="prefsGet" class="btn">GET /prefs?host=…</button>
+      <button id="prefsUp" class="btn">POST /prefs/upsert (demo)</button>
+    </div>
+    <div class="muted" style="margin-top:6px">Demo upsert sets city “San Diego”, mids+near on, and tags film/labels/food/beverage.</div>
   </div>
+
+  <!-- Leads & Catalog -->
+  <div class="card">
+    <div class="h">Leads & Catalog</div>
+    <div class="row">
+      <input id="city" type="text" placeholder="city (optional)">
+      <button id="find" class="btn primary">GET /leads/find-buyers</button>
+      <button id="catSum" class="btn">GET /catalog</button>
+      <button id="catSample" class="btn">GET /catalog/sample?limit=10</button>
+      <button id="catReload" class="btn">POST /catalog/reload</button>
+    </div>
+  </div>
+
+  <!-- Places (optional on server) -->
+  <div class="card">
+    <div class="h">Places (optional)</div>
+    <div class="row">
+      <input id="q" type="text" placeholder="search (e.g., coffee shop)">
+      <input id="city2" type="text" placeholder="city (e.g., San Diego)">
+      <button id="places" class="btn">GET /places/search</button>
+    </div>
+    <div class="muted" style="margin-top:6px">Requires GOOGLE_PLACES_API_KEY configured on the API.</div>
+  </div>
+
+  <!-- Output -->
+  <div class="card">
+    <div class="h">Output</div>
+    <pre id="out" aria-live="polite"></pre>
+  </div>
+</div>
 
 <script>
 (function(){
-  const $ = s => document.querySelector(s);
-  const getApi = () => (localStorage.getItem("apiBase")||"").trim().replace(/\/+$/,"");
+  const DEF = "https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api"; // your Northflank API
+  const LS = "bv1.debug.api";
+  const $ = (q,r=document)=>r.querySelector(q);
+  const out = $("#out"), reqUrl=$("#reqUrl"), apiIn=$("#apiBase");
+  function getBase(){ return (localStorage.getItem(LS)||DEF).replace(/\/+$/,""); }
+  function setBase(v){ localStorage.setItem(LS, String(v||"").trim()); }
+  function path(p){ return getBase() + (String(p).startsWith("/")? p : "/"+p); }
+  function log(obj, title){
+    const t = title ? "# "+title+"\n" : "";
+    out.textContent = t + JSON.stringify(obj,null,2) + "\n\n" + out.textContent;
+  }
+  async function j(url, init){
+    const r = await fetch(url, Object.assign({headers:{'Content-Type':'application/json'}}, init||{}));
+    let data; try{ data = await r.json(); }catch{ data = { status:r.status, text: await r.text().catch(()=>"(no body)") }; }
+    return data;
+  }
+  function normHost(h){ return String(h||"").toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/[/#?].*$/,""); }
 
-  $("#api").value = getApi();
+  apiIn.value = getBase();
 
-  $("#save").onclick = () => {
-    const v = $("#api").value.trim().replace(/\/+$/,"");
-    localStorage.setItem("apiBase", v);
-    alert("API saved: " + v);
+  $("#saveApi").onclick = ()=>{ setBase(apiIn.value); log({saved:getBase()},"Saved"); };
+  $("#ping").onclick = async ()=> log(await fetch(path("/ping")).then(r=>({status:r.status})), "Ping");
+  $("#health").onclick = async ()=> log(await j(path("/health")), "Health");
+  $("#status").onclick = async ()=> log(await j(path("/status")), "Status");
+
+  // ---- classify with auto-fallback (/classify then /api/classify) ----
+  $("#classify").onclick = async ()=>{
+    const host = normHost($("#host").value||"");
+    const email = ($("#email").value||"").trim();
+    if(!host){ log({error:"host required"},"Error"); return; }
+    const base = getBase();
+    const u1 = new URL(base.replace(/\/+$/,"") + "/classify");
+    const u2 = new URL(base.replace(/\/api\/?$/i,"") + "/api/classify");
+    u1.searchParams.set("host", host); if(email) u1.searchParams.set("email", email);
+    u2.searchParams.set("host", host); if(email) u2.searchParams.set("email", email);
+
+    reqUrl.textContent = u1.toString();
+    let used = u1; let data = await j(u1.toString());
+    if (data && data.ok === false && /not_found|Cannot GET/i.test(JSON.stringify(data))) {
+      reqUrl.textContent += "\n(fallback) " + u2.toString();
+      used = u2; data = await j(u2.toString());
+    }
+    log(data, "Classify " + used.pathname);
   };
 
-  function buildUrls(base){
-    const b = base.replace(/\/+$/,"");
-    const u1 = new URL(b + "/classify");
-    const b2 = b.replace(/\/api\/?$/i,"");
-    const u2 = new URL(b2 + "/api/classify");
-    return [u1,u2];
-  }
+  // ---- prefs ----
+  $("#prefsGet").onclick = async ()=>{
+    const host = normHost($("#host").value||"");
+    if(!host) return log({error:"host required"},"Prefs GET");
+    log(await j(path("/prefs?host="+encodeURIComponent(host))), "Prefs GET");
+  };
+  $("#prefsUp").onclick = async ()=>{
+    const host = normHost($("#host").value||"");
+    if(!host) return log({error:"host required"},"Prefs UPSERT");
+    const body = {
+      host, inboundOptIn:true,
+      productTags:["film","labels"], sectorHints:["food","beverage"],
+      general:{ mids:true, avoidBig:true, near:true, retail:true, wholesale:true, ecom:false },
+      metrics:[{label:"Fast turnaround", value:8},{label:"Lowest unit cost", value:7}],
+      targeting:{ city: ($("#city").value||"San Diego") }
+    };
+    log(await j(path("/prefs/upsert"), {method:"POST", body: JSON.stringify(body)}), "Prefs UPSERT");
+  };
 
-  $("#go").onclick = async () => {
-    const base = getApi();
-    if(!base){ alert("Set API first."); return; }
-    const host = ($("#host").value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
-    const email = ($("#email").value||"").trim().toLowerCase();
+  // ---- leads & catalog ----
+  $("#find").onclick = async ()=>{
+    const host = normHost($("#host").value||"");
+    if(!host) return log({error:"host required"},"Leads");
+    const qs = new URLSearchParams({
+      host, limit:"8", city: ($("#city").value||"").trim()
+    }).toString();
+    log(await j(path("/leads/find-buyers?"+qs)), "Leads find-buyers");
+  };
+  $("#catSum").onclick = async ()=> log(await j(path("/catalog")), "Catalog summary");
+  $("#catSample").onclick = async ()=> log(await j(path("/catalog/sample?limit=10")), "Catalog sample");
+  $("#catReload").onclick = async ()=> log(await j(path("/catalog/reload"), {method:"POST"}), "Catalog reload");
 
-    const [u1,u2] = buildUrls(base);
-    u1.searchParams.set("host",host); if(email) u1.searchParams.set("email",email);
-    u2.searchParams.set("host",host); if(email) u2.searchParams.set("email",email);
-
-    // Try #1 then fallback #2
-    let used, res, txt;
-    try{
-      $("#req").textContent = u1.toString();
-      res = await fetch(u1.toString(), {credentials:"omit"});
-      txt = await res.text();
-      if(!res.ok || /Cannot\s+GET\s+\/classify/i.test(txt)){
-        $("#req").textContent += "\n(fallback) " + u2.toString();
-        res = await fetch(u2.toString(), {credentials:"omit"});
-        txt = await res.text();
-        used = u2.toString();
-      } else {
-        used = u1.toString();
-      }
-    }catch(e){
-      $("#out").textContent = "Network error: " + e;
-      return;
-    }
-
-    // Pretty print JSON if possible
-    try{
-      const j = JSON.parse(txt);
-      $("#out").textContent = JSON.stringify(j, null, 2);
-    }catch(_){
-      $("#out").textContent = `HTTP ${res.status}\n` + txt.slice(0, 4000);
-    }
+  // ---- places (optional) ----
+  $("#places").onclick = async ()=>{
+    const qs = new URLSearchParams({ q:($("#q").value||"").trim(), city:($("#city2").value||"").trim(), limit:"5" }).toString();
+    log(await j(path("/places/search?"+qs)), "Places search");
   };
 })();
 </script>
