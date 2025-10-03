@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Galactly — Step 3: Tune your buyers</title>
 <meta name="api-base" content="">
+<link id="favIcon" rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23121822'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' font-size='34' fill='%236de1ff' font-family='Arial,Helvetica,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <style>
   :root{
     --bg:#0b0f14; --panel:#121822; --panel2:#0e141c; --card:#0f1724;
@@ -58,7 +59,7 @@
   .chip.on{background:#103247;color:#eaf7ff;border-color:#1b4862}
   .field{margin:10px 0}
   label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
-  input[type=text]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:#var(--text);outline:none}
+  input[type=text]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
   input[type=text]:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
 
   /* Sliders */
@@ -188,8 +189,25 @@
   const fmtM = v => "$" + v.toString() + "M";
   const LS = { seed:"onb.seed", apiBase:"apiBase", persona:"fp.persona", muted:"fp.muted.industries" };
 
+  /* ---------- favicon helpers ---------- */
+  function svgFav(letter){
+    const l = encodeURIComponent(String(letter||"G").toUpperCase()[0]);
+    return "data:image/svg+xml,"+
+      `%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E`+
+      `%3Crect width='64' height='64' rx='12' fill='%23121822'/%3E`+
+      `%3Ctext x='50%25' y='54%25' text-anchor='middle' font-size='40' fill='%236de1ff' font-family='Arial,Helvetica,sans-serif'%3E${l}%3C/text%3E`+
+      `%3C/svg%3E`;
+  }
+  function setFavicon(url, host){
+    const link = document.getElementById("favIcon");
+    if (!url) { link.href = svgFav(host?.[0]); return; }
+    const img = new Image();
+    img.onload = ()=>{ link.href = url; };
+    img.onerror = ()=>{ link.href = svgFav(host?.[0]); };
+    img.src = url;
+  }
+
   /* ---------- city sanitization ---------- */
-  // Drop streets/addresses/venues; keep likely city/town names (letters, spaces, apostrophes, hyphens), no digits.
   const BAD_TOKENS = /\b(rd|road|st|street|ave|avenue|blvd|boulevard|dr|drive|ln|lane|hwy|highway|pkwy|parkway|ct|court|ctr|center|mall|plaza|trl|trail|county|state|airport|campus|university|college|park|winery|vineyard|blvd)\b/i;
   function titleCase(s){ return String(s).toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()); }
   function isLikelyCity(s){
@@ -202,8 +220,7 @@
     return /^[A-Za-z .'-]+$/.test(t);
   }
   function sanitizeCities(list){
-    const out = [];
-    const seen = new Set();
+    const out = []; const seen = new Set();
     for (const raw of (list||[])){
       const c = titleCase(String(raw||"").trim());
       if (!isLikelyCity(c)) continue;
@@ -270,6 +287,20 @@
     products:[],
     metricsBySector:{},
     geo:{citiesTop:[],statesTop:[]}
+  };
+
+  /* ---------- default priorities (fallbacks) ---------- */
+  const DEFAULT_METRICS = {
+    general:["Fast turnaround","Lowest unit cost","Line automation / fulfillment"],
+    food:["Quality & compliance","Fast turnaround","Shelf-ready packaging"],
+    cosmetics:["Brand consistency","Regulatory labeling","Short runs / sampling"],
+    cannabis:["Compliance","Child-resistant closures","Local suppliers"],
+    pharma:["QA / Regulatory","Sterile handling","Serialization / traceability"],
+    beverage:["Breakage control","Line speed / automation","Cold-chain readiness"],
+    electronics:["ESD-safe packaging","Kitting accuracy","Return logistics"],
+    apparel:["Fulfillment speed","Eco materials","SKU variety"],
+    industrial:["Damage reduction","Cube efficiency","Barcode readiness"],
+    home:["Eco materials","Brand consistency","Shelf impact"]
   };
 
   /* ---------- one-liner helpers ---------- */
@@ -415,12 +446,13 @@
   $("#muteBtn").addEventListener("click",()=>{
     const name = state.industries[state.sel]; if (!name) return;
     if (state.muted.has(name)) state.muted.delete(name); else state.muted.add(name);
-    setMutedPersist(); renderRotor(true);
+    try{ localStorage.setItem(mutedKey, JSON.stringify(Array.from(state.muted))); }catch{}
+    $("#mutedCount").textContent = String(state.muted.size);
+    renderRotor(true);
   });
 
   /* ---------- metrics render ---------- */
   const metricBox=$("#metricBox"), titlesBox=$("#titlesBox");
-  const cityInput=$("#cityInput"), tagInput=$("#tagInput");
   const cityChips=document.createElement("div"); cityChips.id="cityChipsInner"; $("#cityChips").appendChild(cityChips);
   const tagChips=document.createElement("div"); tagChips.id="tagChipsInner"; $("#tagChips").appendChild(tagChips);
 
@@ -433,14 +465,17 @@
     }));
   }
 
+  function metricsFor(sector){
+    const m = (state.metricsBySector[sector] || state.metricsBySector.general || []);
+    if (m && m.length) return m.slice(0,3);
+    const k = (sector||"general").toLowerCase();
+    return (DEFAULT_METRICS[k] || DEFAULT_METRICS.general).slice(0,3);
+  }
+
   function renderMetricsFor(sector){
     renderTitlesFor(sector);
-    const metrics = (state.metricsBySector[sector] || state.metricsBySector.general || []).slice(0,3);
+    const metrics = metricsFor(sector);
     metricBox.innerHTML="";
-    if (!metrics.length){
-      metricBox.innerHTML = `<div class="hint">No strong signals for this industry.</div>`;
-      return;
-    }
     for (const m of metrics){
       const row=document.createElement("div"); row.className="sliderRow";
       const lab=document.createElement("div"); lab.textContent=m;
@@ -490,9 +525,9 @@
   /* ---------- apply/save ---------- */
   function collectPersona(){
     const sector = state.industries[state.sel] || "general";
-    const titles = getOnChips(titlesBox);
-    const cities = sanitizeCities(getOnChips(cityChips));
-    const tags = getOnChips(tagChips);
+    const titles = Array.from(titlesBox.querySelectorAll(".chip.on")).map(x=>x.textContent.trim());
+    const cities = sanitizeCities(Array.from(document.querySelectorAll("#cityChipsInner .chip.on")).map(x=>x.textContent.trim()));
+    const tags = Array.from(document.querySelectorAll("#tagChipsInner .chip.on")).map(x=>x.textContent.trim());
     const revA = parseInt(revMin.value,10), revB = parseInt(revMax.value,10);
     const minRev = Math.min(revA, revB), maxRev = Math.max(revA, revB);
 
@@ -551,9 +586,9 @@
     }
   }
 
-  $("#apply").addEventListener("click", applyToApi);
-  $("#saveLocal").addEventListener("click", saveLocal);
-  $("#finish").addEventListener("click", ()=>{
+  document.getElementById("apply").addEventListener("click", applyToApi);
+  document.getElementById("saveLocal").addEventListener("click", saveLocal);
+  document.getElementById("finish").addEventListener("click", ()=>{
     saveLocal();
     try{ localStorage.setItem("fp.autoImport","1"); }catch{}
     window.location.href = "free-panel.html";
@@ -578,16 +613,20 @@
   async function loadFromSite(h){
     updApiBadge();
     if (!h){ oneLine.textContent = "Missing website/domain."; return; }
-    $("#statusLine").textContent = `Reading ${h}…`;
+    document.getElementById("statusLine").textContent = `Reading ${h}…`;
     const data = await fetchClassify(h);
     if (!data || data.ok===false){
-      $("#statusLine").textContent = `Couldn’t read ${h}: ${data?.detail||"error"}`;
-      $("#statusLine").className = "warn"; return;
+      document.getElementById("statusLine").textContent = `Couldn’t read ${h}: ${data?.detail||"error"}`;
+      document.getElementById("statusLine").className = "warn"; return;
     }
     state.classify = data;
     state.metricsBySector = data.hotMetricsBySector || {};
     state.geo = data.geoHints || {citiesTop:[],statesTop:[]};
     state.host = data.host || h;
+
+    // favicon
+    const fav = data.favicon || `https://${(state.host||"").replace(/^www\./,"")}/favicon.ico`;
+    setFavicon(fav, state.host);
 
     const serverLine = (typeof data.summary === "string" && data.summary.trim()) ? data.summary.trim() : "";
     oneLine.textContent = serverLine || composeOneLiner(data);
@@ -598,25 +637,33 @@
     // products
     let prods = Array.isArray(data.productTags)? data.productTags.slice(0,12) : [];
     prods = refineProductTags(state.host, prods);
-    $("#tagChips").innerHTML=""; const tagBox=document.createElement("div"); tagBox.id="tagChipsInner"; $("#tagChips").appendChild(tagBox);
+    document.getElementById("tagChips").innerHTML="";
+    const tagBox=document.createElement("div"); tagBox.id="tagChipsInner";
+    document.getElementById("tagChips").appendChild(tagBox);
     prods.forEach(t=> chip(t, tagBox, true));
 
     // cities (sanitized)
-    $("#cityChips").innerHTML=""; const cityBox=document.createElement("div"); cityBox.id="cityChipsInner"; $("#cityChips").appendChild(cityBox);
-    const citySeeds = sanitizeCities(state.geo.citiesTop || []);
-    citySeeds.forEach(c=> chip(c, cityBox, true));
+    document.getElementById("cityChips").innerHTML="";
+    const cityBox=document.createElement("div"); cityBox.id="cityChipsInner";
+    document.getElementById("cityChips").appendChild(cityBox);
+    sanitizeCities(state.geo.citiesTop || []).forEach(c=> chip(c, cityBox, true));
 
-    $("#statusLine").textContent = "Pre-filled from your site.";
-    $("#statusLine").className = "ok";
+    document.getElementById("statusLine").textContent = "Pre-filled from your site.";
+    document.getElementById("statusLine").className = "ok";
 
     revMin.value = 0; revMax.value = clamp(revMax.value|0, 0, 200); syncDual();
     emp.value = 120; syncEmp();
   }
 
   /* ---------- inputs wiring ---------- */
-  addOnEnter($("#cityInput"), $("#cityChips"));
-  addOnEnter($("#tagInput"), $("#tagChips"));
-  $("#setApi").addEventListener("click", ()=>{
+  function addOnEnter(input, box){
+    input.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter"){ e.preventDefault(); const v=input.value.trim(); if(!v) return; chip(v, box, true); input.value=""; }
+    });
+  }
+  addOnEnter(document.getElementById("cityInput"), document.getElementById("cityChips"));
+  addOnEnter(document.getElementById("tagInput"), document.getElementById("tagChips"));
+  document.getElementById("setApi").addEventListener("click", ()=>{
     const cur = getApiBase();
     const v = prompt("API base (with or without /api).", cur||"")||"";
     if (v) setApiBase(v);
