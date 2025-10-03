@@ -1,110 +1,197 @@
 // src/routes/events.ts
 //
-// Minimal event ingest + read-only monitor.
-// Endpoints (mounted under /api/events):
-//   POST /api/events/track    -> {ok:true,id}
-//   GET  /api/events/recent   -> last N (default 200)
-//   GET  /api/events/stats    -> counts by type (last 24h)
-//   GET  /api/events/ping     -> {pong:true}
+// Zero-deps event collector + viewer (in-memory).
+// Endpoints (mounted under /api/events in index.ts):
+//   GET  /api/events/ping          -> { pong:true }
+//   GET  /api/events               -> tiny summary
+//   GET  /api/events/recent?limit=100
+//   GET  /api/events/stats         -> totals + last24h breakdown
+//   POST /api/events/ingest        -> accepts 1 event or an array of events
+//
+// Notes
+// - In-memory only (per pod). Safe to run on free infra.
+// - No external libs; strict, defensive parsing.
+// - Designed to power a simple admin dashboard (next files).
 
 import { Router, Request, Response } from "express";
 
-type EventProps = Record<string, unknown>;
-
-type EventRecord = {
-  id: number;
-  ts: number;            // epoch ms
-  at: string;            // ISO
-  type: string;
-  host: string;
-  path: string;
-  ip: string;
-  ua: string;
-  props?: EventProps;
-};
-
-// ---- tiny helpers ----
-function asStr(v: unknown): string { return (v == null ? "" : String(v)).trim(); }
-function normHost(raw: string): string {
-  return String(raw || "")
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    .replace(/\/.*$/, "");
-}
-function clientIp(req: Request): string {
-  return (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
-    || (req.ip || req.socket.remoteAddress || "").toString();
-}
-function clamp(n: number, a: number, b: number): number { return Math.max(a, Math.min(b, n)); }
-
-// ---- in-memory ring buffer ----
-const MAX_EVENTS = 2000;
-const store: EventRecord[] = [];
-let NEXT_ID = 1;
-
-function pushEvent(e: EventRecord) {
-  store.push(e);
-  if (store.length > MAX_EVENTS) store.splice(0, store.length - MAX_EVENTS);
-}
-
 const r = Router();
 
-// liveness
-r.get("/ping", (_req, res) => res.json({ pong: true, at: new Date().toISOString() }));
+/* -------------------------------------------------------------------------- */
+/* Types & guards                                                              */
+/* -------------------------------------------------------------------------- */
 
-// ingest
-r.post("/track", (req: Request, res: Response) => {
+type Json = Record<string, unknown>;
+
+export type EventItem = {
+  id: string;              // monotonic-ish id
+  ts: number;              // epoch millis
+  type: string;            // "page_view" | "click" | "error" | ...
+  user?: string;           // free-form user id/email
+  path?: string;           // page or route
+  ip?: string;             // best-effort client hint
+  ua?: string;             // user-agent
+  meta?: Json;             // small bag of extra data
+};
+
+function isObj(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+function asStr(v: unknown): string | undefined {
+  const s = (v == null ? "" : String(v)).trim();
+  return s ? s : undefined;
+}
+function asMeta(v: unknown): Json | undefined {
+  if (!isObj(v)) return undefined;
+  // prune deeply by 1 level, keep only primitives and short strings
+  const out: Json = {};
+  let count = 0;
+  for (const [k, val] of Object.entries(v)) {
+    if (!k || count >= 40) break;
+    const t = typeof val;
+    if (t === "string" || t === "number" || t === "boolean") {
+      const vv = t === "string" ? (val as string).slice(0, 500) : val;
+      out[k] = vv as unknown;
+      count++;
+    }
+  }
+  return out;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Store                                                                       */
+/* -------------------------------------------------------------------------- */
+
+const MAX_EVENTS = 5000;
+const store: EventItem[] = [];
+const countsByTypeTotal = new Map<string, number>();
+let SEQ = 0;
+
+function nextId(): string {
+  SEQ = (SEQ + 1) >>> 0;
+  return `${Date.now()}-${SEQ}`;
+}
+
+function addEvent(e: Omit<EventItem, "id" | "ts"> & { ts?: number }): EventItem {
+  const ev: EventItem = {
+    id: nextId(),
+    ts: Number.isFinite(e.ts) ? (e.ts as number) : Date.now(),
+    type: e.type || "event",
+    user: e.user,
+    path: e.path,
+    ip: e.ip,
+    ua: e.ua,
+    meta: e.meta,
+  };
+  store.push(ev);
+  if (store.length > MAX_EVENTS) store.shift();
+  countsByTypeTotal.set(ev.type, (countsByTypeTotal.get(ev.type) || 0) + 1);
+  return ev;
+}
+
+function lastN(n: number): EventItem[] {
+  const m = Math.max(1, Math.min(n, MAX_EVENTS));
+  return store.slice(-m).reverse();
+}
+
+function statsNow() {
+  const now = Date.now();
+  const dayAgo = now - 24 * 60 * 60 * 1000;
+
+  const byType24 = new Map<string, number>();
+  const topPaths = new Map<string, number>();
+
+  for (let i = store.length - 1; i >= 0; i--) {
+    const ev = store[i];
+    if (ev.ts < dayAgo) break; // store is time-ordered
+    byType24.set(ev.type, (byType24.get(ev.type) || 0) + 1);
+    const p = ev.path || "";
+    if (p) topPaths.set(p, (topPaths.get(p) || 0) + 1);
+  }
+
+  const toObj = (m: Map<string, number>) =>
+    Array.from(m.entries())
+      .sort((a, b) => b[1] - a[1])
+      .reduce<Record<string, number>>((acc, [k, v]) => {
+        acc[k] = v;
+        return acc;
+      }, {});
+
+  return {
+    total: store.length,
+    byTypeTotal: toObj(countsByTypeTotal),
+    byType24h: toObj(byType24),
+    topPaths24h: Array.from(topPaths.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 25)
+      .map(([path, count]) => ({ path, count })),
+    sinceIso: new Date(dayAgo).toISOString(),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Routes                                                                      */
+/* -------------------------------------------------------------------------- */
+
+r.get("/ping", (_req: Request, res: Response) => {
+  res.json({ pong: true, now: new Date().toISOString() });
+});
+
+r.get("/", (_req: Request, res: Response) => {
+  res.json({ ok: true, total: store.length });
+});
+
+r.get("/recent", (req: Request, res: Response) => {
+  const limit = Math.max(1, Math.min(500, Number(req.query.limit) || 100));
+  res.json({ ok: true, items: lastN(limit) });
+});
+
+r.get("/stats", (_req: Request, res: Response) => {
+  res.json({ ok: true, ...statsNow() });
+});
+
+r.post("/ingest", (req: Request, res: Response) => {
   try {
-    const body = (req.body || {}) as Record<string, unknown>;
+    const body = req.body;
+    const ip =
+      (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+      (req.ip || req.socket.remoteAddress || "").toString();
+    const ua = (req.headers["user-agent"] as string) || "";
 
-    // hard limits + sanitization
-    const type = asStr(body.type).slice(0, 48) || "event";
-    const host = normHost(asStr(body.host)) || normHost(req.headers.origin as string || "") || "-";
-    const path = asStr(body.path || (req.headers.referer as string) || "").slice(0, 200) || "-";
-    const propsRaw = (body.props && typeof body.props === "object") ? (body.props as EventProps) : undefined;
-
-    // shallow clone + size guard on props
-    const props = propsRaw ? JSON.parse(JSON.stringify(propsRaw)) as EventProps : undefined;
-    const now = Date.now();
-    const rec: EventRecord = {
-      id: NEXT_ID++,
-      ts: now,
-      at: new Date(now).toISOString(),
-      type,
-      host,
-      path,
-      ip: clientIp(req),
-      ua: asStr(req.headers["user-agent"]).slice(0, 160),
-      props,
+    const normalizeOne = (raw: unknown): EventItem | null => {
+      if (!isObj(raw)) return null;
+      const type = asStr(raw.type) || "event";
+      const user = asStr(raw.user);
+      const path = asStr((raw as any).path || (raw as any).url || (raw as any).route);
+      const tsNum = Number((raw as any).ts);
+      const ev = addEvent({
+        type,
+        user,
+        path,
+        ip,
+        ua,
+        meta: asMeta((raw as any).meta),
+        ts: Number.isFinite(tsNum) ? tsNum : undefined,
+      });
+      return ev;
     };
 
-    pushEvent(rec);
-    return res.json({ ok: true, id: rec.id });
+    const added: EventItem[] = [];
+    if (Array.isArray(body)) {
+      for (const item of body) {
+        const ev = normalizeOne(item);
+        if (ev) added.push(ev);
+      }
+    } else {
+      const ev = normalizeOne(body);
+      if (ev) added.push(ev);
+    }
+
+    return res.json({ ok: true, added: added.length });
   } catch (err: unknown) {
-    return res.status(200).json({ ok: false, error: "ingest-failed", detail: String((err as any)?.message || err) });
+    const msg = (err as any)?.message || String(err);
+    return res.status(200).json({ ok: false, error: "ingest-failed", detail: msg });
   }
-});
-
-// recent N
-r.get("/recent", (req: Request, res: Response) => {
-  const limit = clamp(Number(req.query.limit) || 200, 1, MAX_EVENTS);
-  const items = store.slice(-limit).reverse();
-  res.json({ ok: true, total: items.length, items });
-});
-
-// simple stats (last 24h)
-r.get("/stats", (_req: Request, res: Response) => {
-  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-  const byType: Record<string, number> = {};
-  let total24h = 0;
-  for (let i = store.length - 1; i >= 0; i--) {
-    const e = store[i];
-    if (e.ts < cutoff) break;
-    total24h++;
-    byType[e.type] = (byType[e.type] || 0) + 1;
-  }
-  res.json({ ok: true, last24h: total24h, byType });
 });
 
 export default r;
