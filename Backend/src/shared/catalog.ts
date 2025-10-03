@@ -2,27 +2,35 @@
 //
 // Canonical catalog types + loader.
 // Always expose a consistent shape: { rows: BuyerRow[] }.
+//
 // Sources (merged in this order):
-//   1) BUYERS_CATALOG_TIER_C_JSON   (env secret: array OR {buyers: [...]})
-//   2) BUYERS_CATALOG_TIER_AB_JSON  (env secret: array OR {buyers: [...]})
-//   3) CITY_CATALOG_FILE (JSON file; default /run/secrets/city-catalog.json; array OR {buyers:[...]} )
+//   1) BUYERS_CATALOG_TIER_C_JSON   (env secret: array OR {buyers:[...]})
+//   2) BUYERS_CATALOG_TIER_AB_JSON  (env secret: array OR {buyers:[...]})
+//   3) CITY_CATALOG_FILE (JSON file; default /run/secrets/city-catalog.json; array OR {buyers:[...]})
+//
+// NOTE: Adds backward-compat shims so older code can do:
+//   - Catalog.get()       -> BuyerRow[]
+//   - Catalog.rows()      -> BuyerRow[]
+//   - Catalog.all()       -> BuyerRow[]
+//   - Catalog.catalog     -> BuyerRow[] (array snapshot)
 
 import type { Tier, SizeBucket } from "./prefs";
 import * as fs from "fs";
 
-// ---------- Types used by routes/leads.ts ----------
+/* --------------------------------- types ---------------------------------- */
+
 export interface BuyerRow {
   host: string;                    // required, unique-ish key
   name?: string;
 
   // Targeting + classification
-  tiers?: Tier[];                  // e.g. ["C"] (we mostly care about "C")
+  tiers?: Tier[];                  // e.g. ["C"]
   size?: SizeBucket;               // micro|small|mid|large (optional hint)
   segments?: string[];             // industry buckets
   tags?: string[];                 // free-form tags (e.g. "pouch","label","tin")
   cityTags?: string[];             // normalized lowercase city names
 
-  // Light metadata used by UI/logging (computed by routes, not by catalog)
+  // Light metadata (computed by routes, not by catalog)
   platform?: string;
   created?: string;
   temp?: "warm" | "hot" | null;
@@ -30,16 +38,16 @@ export interface BuyerRow {
   why?: string;
 }
 
-export interface LoadedCatalog {
-  rows: BuyerRow[];
-}
+export interface LoadedCatalog { rows: BuyerRow[]; }
 
-// ---------- Env keys / file path ----------
-const KEY_TIER_C   = "BUYERS_CATALOG_TIER_C_JSON";
-const KEY_TIER_AB  = "BUYERS_CATALOG_TIER_AB_JSON";
-const FILE_PATH    = String(process.env.CITY_CATALOG_FILE || "/run/secrets/city-catalog.json");
+/* -------------------------- env keys / file path --------------------------- */
 
-// ---------- tiny helpers ----------
+const KEY_TIER_C  = "BUYERS_CATALOG_TIER_C_JSON";
+const KEY_TIER_AB = "BUYERS_CATALOG_TIER_AB_JSON";
+const FILE_PATH   = String(process.env.CITY_CATALOG_FILE || "/run/secrets/city-catalog.json");
+
+/* -------------------------------- helpers --------------------------------- */
+
 function asArray(x: unknown): string[] {
   if (Array.isArray(x)) return x.map(v => String(v ?? "").trim()).filter(Boolean);
   if (x == null || x === "") return [];
@@ -71,7 +79,8 @@ function extractBuyers(maybe: any): any[] {
 function normalizeRow(anyRow: any): BuyerRow | null {
   if (!anyRow || typeof anyRow !== "object") return null;
 
-  const host = String(anyRow.host || "").toLowerCase()
+  const host = String(anyRow.host || "")
+    .toLowerCase()
     .replace(/^https?:\/\//, "")
     .replace(/\/.*$/, "")
     .trim();
@@ -107,19 +116,21 @@ function readFileJSON(path: string): any | null {
   }
 }
 
+/* -------------------------------- builder --------------------------------- */
+
 function buildFromSources(): LoadedCatalog {
-  // 1) Env secrets (your screenshots sometimes store a raw array)
+  // 1) Env secrets (can be array OR {buyers:[...]})
   const envC  = tryParseJSON(process.env[KEY_TIER_C]);
   const envAB = tryParseJSON(process.env[KEY_TIER_AB]);
 
-  const rawC  = extractBuyers(envC);
-  const rawAB = extractBuyers(envAB);
+  const rawC   = extractBuyers(envC);
+  const rawAB  = extractBuyers(envAB);
 
-  // 2) Optional file secret (array OR {buyers:[...]})
+  // 2) Optional file secret
   const fileJSON = readFileJSON(FILE_PATH);
   const rawFile  = extractBuyers(fileJSON);
 
-  // Merge all without using concat([]) to avoid TS never[] inference
+  // Merge w/out [].concat to avoid never[] inference weirdness
   const merged: any[] = [];
   if (rawC.length)   merged.push(...rawC);
   if (rawAB.length)  merged.push(...rawAB);
@@ -136,14 +147,15 @@ function buildFromSources(): LoadedCatalog {
     seen.add(norm.host);
     rows.push(norm);
   }
-
   return { rows };
 }
 
-// ---------- Cache ----------
+/* --------------------------------- cache ---------------------------------- */
+
 let CACHE: LoadedCatalog | null = null;
 
-// ---------- Public API ----------
+/* --------------------------------- API ------------------------------------ */
+
 /** Returns cached catalog; builds once from env/file on first call. */
 export function getCatalog(): LoadedCatalog {
   if (CACHE) return CACHE;
@@ -162,5 +174,36 @@ export function __clearCatalogCache() {
   CACHE = null;
 }
 
-// Re-export for routes that import types from here
+/* ----------------------------- compat shims --------------------------------
+   These make it work with older call-sites:
+   - leads.ts tries Catalog.get(), Catalog.rows(), Array.isArray(Catalog.catalog)
+-----------------------------------------------------------------------------*/
+
+/** Return BuyerRow[] (shim for legacy callers). */
+export function get(): BuyerRow[] {
+  return getCatalog().rows;
+}
+/** Alias that some code calls. */
+export function rows(): BuyerRow[] {
+  return getCatalog().rows;
+}
+/** Another alias seen in older code. */
+export function all(): BuyerRow[] {
+  return getCatalog().rows;
+}
+/** Array snapshot for callers that did Array.isArray(Catalog.catalog). */
+export const catalog: BuyerRow[] = getCatalog().rows;
+
+// Re-export types for convenience
 export type { Tier, SizeBucket } from "./prefs";
+
+export default {
+  getCatalog,
+  loadCatalog,
+  __clearCatalogCache,
+  // shims
+  get,
+  rows,
+  all,
+  catalog,
+};
