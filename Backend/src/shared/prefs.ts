@@ -1,67 +1,86 @@
 // src/shared/prefs.ts
-// In-memory preferences/persona store with sane defaults.
-// Pure TS, no DB. Compatible with existing routes and scorers.
 //
-// Exposes (compat-friendly):
-//  - normalizeHost(host)
-//  - setPrefs(host, patch) => EffectivePrefs
-//  - getPrefs(host)        => EffectivePrefs
-//  - getEffective(host)    => EffectivePrefs
-//  - getEffectivePrefs(host)=> EffectivePrefs
-//  - get(host)             => EffectivePrefs
-//  - prefsSummary(prefs)   => string
-//
-// Also exports types Tier, SizeBucket, EffectivePrefs.
+// Single source of truth for buyer/supplier preferences (effective persona).
+// Deterministic, dependency-free, in-memory store with sane defaults.
+// Designed to be compatible with routes/leads.ts, routes/prefs.ts, and shared/trc.ts.
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export type Tier = "A" | "B" | "C";
 export type SizeBucket = "micro" | "small" | "mid" | "large";
 
-type SignalKeys = "local" | "ecommerce" | "retail" | "wholesale";
+/** Numeric sliders that must never be undefined. */
+export type SizeWeight = {
+  micro: number;
+  small: number;
+  mid: number;
+  large: number;
+};
+
+export type SignalWeight = {
+  local: number;
+  ecommerce: number;
+  retail: number;
+  wholesale: number;
+};
 
 export interface EffectivePrefs {
-  // geo
-  city?: string;
+  host: string;
 
-  // sizing & signals (fully populated + clamped)
-  preferSmallMid: boolean;
-  sizeWeight: Record<SizeBucket, number>;
-  signalWeight: Record<SignalKeys, number>;
+  // light targeting
+  city?: string;                 // normalized host-level city preference
+  preferSmallMid: boolean;       // convenience flag (also reflected in sizeWeight)
 
-  // category/keyword targeting
+  // numeric knobs (always numbers)
+  sizeWeight: SizeWeight;
+  signalWeight: SignalWeight;
+
+  // category/tag steering (lowercase, unique)
   categoriesAllow: string[];
-  titlesPreferred: string[];
-  materialsAllow: string[];
-  materialsBlock: string[];
-  certsRequired: string[];
-  excludeHosts: string[];
-  keywordsAdd: string[];
-  keywordsAvoid: string[];
+  categoriesBlock: string[];
 
-  // directory/inbound
+  // directory / marketplace flag
   inboundOptIn: boolean;
+
+  // Optional overlays used by trc.ts (forwarded if present)
+  titlesPreferred?: string[];
+  materialsAllow?: string[];
+  materialsBlock?: string[];
+  certsRequired?: string[];
+  excludeHosts?: string[];
+  keywordsAdd?: string[];
+  keywordsAvoid?: string[];
+
+  // Legacy helper some old code reads (not relied upon by types)
+  // likeTags?: string[];  // <- we compute but keep off the interface to avoid strict drift
 }
 
-/** Partial patch accepted from the API/UI */
-export type PrefsPatch = Partial<{
-  city: string;
-  preferSmallMid: boolean;
-  sizeWeight: Partial<Record<SizeBucket, number>>;
-  signalWeight: Partial<Record<SignalKeys, number>>;
-  categoriesAllow: string[];
-  titlesPreferred: string[];
-  materialsAllow: string[];
-  materialsBlock: string[];
-  certsRequired: string[];
-  excludeHosts: string[];
-  keywordsAdd: string[];
-  keywordsAvoid: string[];
-  inboundOptIn: boolean;
-}>;
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                     */
+/* -------------------------------------------------------------------------- */
 
-/* -------------------------------- utils ----------------------------------- */
+function clamp(n: unknown, lo: number, hi: number, fb: number): number {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return fb;
+  if (x < lo) return lo;
+  if (x > hi) return hi;
+  return x;
+}
 
-export function normalizeHost(input: string): string {
-  const h = String(input || "")
+function lowerUniq(arr: unknown, cap = 48): string[] {
+  const out = new Set<string>();
+  if (Array.isArray(arr)) {
+    for (const v of arr) {
+      const s = String(v ?? "").toLowerCase().trim();
+      if (s) out.add(s);
+      if (out.size >= cap) break;
+    }
+  }
+  return [...out];
+}
+
+export function normalizeHost(raw?: string): string {
+  const h = String(raw || "")
     .trim()
     .toLowerCase()
     .replace(/^https?:\/\//, "")
@@ -70,179 +89,139 @@ export function normalizeHost(input: string): string {
   return /^[a-z0-9.-]+$/.test(h) ? h : "";
 }
 
-function clamp(n: unknown, lo: number, hi: number, fb: number): number {
-  const x = Number(n);
-  if (!Number.isFinite(x)) return fb;
-  return Math.max(lo, Math.min(hi, x));
-}
+/* -------------------------------------------------------------------------- */
+/* Defaults                                                                    */
+/* -------------------------------------------------------------------------- */
 
-function uniqLower(list: unknown): string[] {
-  const out = new Set<string>();
-  if (Array.isArray(list)) {
-    for (const v of list) {
-      const s = String(v ?? "").trim().toLowerCase();
-      if (s) out.add(s);
-    }
-  }
-  return [...out];
-}
-
-/* ------------------------------ defaults ---------------------------------- */
-
-// Defaults line up with trc.ts fallbacks, so results are stable even if
-// some fields are missing in the store.
-const DEFAULTS: EffectivePrefs = {
-  city: undefined,
-
-  preferSmallMid: true,
-
-  sizeWeight: {
-    micro: 1.2,
-    small: 1.0,
-    mid: 0.6,
-    large: -1.2,
-  },
-
-  signalWeight: {
-    local: 1.6,
-    ecommerce: 0.25,
-    retail: 0.2,
-    wholesale: 0.1,
-  },
-
-  categoriesAllow: [],
-  titlesPreferred: [],
-  materialsAllow: [],
-  materialsBlock: [],
-  certsRequired: [],
-  excludeHosts: [],
-  keywordsAdd: [],
-  keywordsAvoid: [],
-
-  inboundOptIn: false,
-};
-
-/* ---------------------------- in-memory store ------------------------------ */
-
-type RawPrefs = Partial<EffectivePrefs>;
-const STORE = new Map<string, RawPrefs>();
-
-/* ----------------------------- normalization ------------------------------ */
-
-function toEffective(raw: RawPrefs | undefined): EffectivePrefs {
-  const r = raw || {};
-
-  const sizeWeight: Record<SizeBucket, number> = {
-    micro: clamp(r.sizeWeight?.micro, -3, 3, DEFAULTS.sizeWeight.micro),
-    small: clamp(r.sizeWeight?.small, -3, 3, DEFAULTS.sizeWeight.small),
-    mid: clamp(r.sizeWeight?.mid, -3, 3, DEFAULTS.sizeWeight.mid),
-    large: clamp(r.sizeWeight?.large, -3, 3, DEFAULTS.sizeWeight.large),
-  };
-
-  const signalWeight: Record<SignalKeys, number> = {
-    local: clamp(r.signalWeight?.local, -3, 3, DEFAULTS.signalWeight.local),
-    ecommerce: clamp(r.signalWeight?.ecommerce, -3, 3, DEFAULTS.signalWeight.ecommerce),
-    retail: clamp(r.signalWeight?.retail, -3, 3, DEFAULTS.signalWeight.retail),
-    wholesale: clamp(r.signalWeight?.wholesale, -3, 3, DEFAULTS.signalWeight.wholesale),
-  };
-
+function defaultSizeWeight(preferSmallMid = true): SizeWeight {
+  // Tuned to pair nicely with shared/trc.ts defaults
   return {
-    city: (r.city || "").trim() || undefined,
+    micro: preferSmallMid ? 1.2 : 0.6,
+    small: preferSmallMid ? 1.0 : 0.6,
+    mid:   preferSmallMid ? 0.6 : 0.8,
+    large: preferSmallMid ? -1.2 : 0.2,
+  };
+}
 
-    preferSmallMid: r.preferSmallMid ?? DEFAULTS.preferSmallMid,
+function defaultSignalWeight(near = true): SignalWeight {
+  return {
+    local:     near ? 1.6 : 0.2,
+    ecommerce: 0.25,
+    retail:    0.2,
+    wholesale: 0.1,
+  };
+}
+
+export function defaultPrefs(host: string): EffectivePrefs {
+  const norm = normalizeHost(host) || "yourcompany.com";
+  const preferSmallMid = true;
+  const base: EffectivePrefs = {
+    host: norm,
+    city: undefined,
+    preferSmallMid,
+    sizeWeight: defaultSizeWeight(preferSmallMid),
+    signalWeight: defaultSignalWeight(true),
+    categoriesAllow: [],
+    categoriesBlock: [],
+    inboundOptIn: false,
+  };
+  // legacy helper (not typed): mirror categoriesAllow
+  (base as any).likeTags = base.categoriesAllow;
+  return base;
+}
+
+/* -------------------------------------------------------------------------- */
+/* In-memory store                                                             */
+/* -------------------------------------------------------------------------- */
+
+const STORE = new Map<string, EffectivePrefs>();
+
+function ensure(host: string): EffectivePrefs {
+  const h = normalizeHost(host);
+  if (!h) return defaultPrefs("yourcompany.com");
+  const cur = STORE.get(h);
+  if (cur) return cur;
+  const d = defaultPrefs(h);
+  STORE.set(h, d);
+  return d;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Public API                                                                  */
+/* -------------------------------------------------------------------------- */
+
+// Legacy aliases some routes probe for
+export function get(host: string): EffectivePrefs { return ensure(host); }
+export function getPrefs(host: string): EffectivePrefs { return ensure(host); }
+export function getEffective(host: string): EffectivePrefs { return ensure(host); }
+export function getEffectivePrefs(host: string): EffectivePrefs { return ensure(host); }
+
+/**
+ * Apply a patch (typically from routes/prefs.toPrefsPatch()).
+ * All numeric fields are clamped to numbers, arrays are normalized to lowercase uniques.
+ */
+export function setPrefs(host: string, patch: Partial<EffectivePrefs> & Record<string, any>): EffectivePrefs {
+  const h = normalizeHost(host);
+  if (!h) return defaultPrefs("yourcompany.com");
+
+  const cur = ensure(h);
+
+  // preferSmallMid toggles the default shape for sizeWeight when missing
+  const preferSmallMid = typeof patch.preferSmallMid === "boolean" ? patch.preferSmallMid : cur.preferSmallMid;
+
+  // Construct new numeric blocks (no undefined allowed)
+  const sizeWeight: SizeWeight = {
+    micro: clamp(patch?.sizeWeight?.micro, -3, 3, cur.sizeWeight.micro ?? defaultSizeWeight(preferSmallMid).micro),
+    small: clamp(patch?.sizeWeight?.small, -3, 3, cur.sizeWeight.small ?? defaultSizeWeight(preferSmallMid).small),
+    mid:   clamp(patch?.sizeWeight?.mid,   -3, 3, cur.sizeWeight.mid   ?? defaultSizeWeight(preferSmallMid).mid),
+    large: clamp(patch?.sizeWeight?.large, -3, 3, cur.sizeWeight.large ?? defaultSizeWeight(preferSmallMid).large),
+  };
+
+  const signalWeight: SignalWeight = {
+    local:     clamp(patch?.signalWeight?.local,     -3, 3, cur.signalWeight.local     ?? defaultSignalWeight(true).local),
+    ecommerce: clamp(patch?.signalWeight?.ecommerce, -1, 1, cur.signalWeight.ecommerce ?? defaultSignalWeight(true).ecommerce),
+    retail:    clamp(patch?.signalWeight?.retail,    -1, 1, cur.signalWeight.retail    ?? defaultSignalWeight(true).retail),
+    wholesale: clamp(patch?.signalWeight?.wholesale, -1, 1, cur.signalWeight.wholesale ?? defaultSignalWeight(true).wholesale),
+  };
+
+  const next: EffectivePrefs = {
+    host: h,
+    city: (patch.city ?? cur.city)?.toString().trim() || undefined,
+    preferSmallMid,
     sizeWeight,
     signalWeight,
+    categoriesAllow: lowerUniq(patch.categoriesAllow ?? cur.categoriesAllow),
+    categoriesBlock: lowerUniq(patch.categoriesBlock ?? cur.categoriesBlock),
+    inboundOptIn: Boolean(patch.inboundOptIn ?? cur.inboundOptIn),
 
-    categoriesAllow: uniqLower(r.categoriesAllow || DEFAULTS.categoriesAllow),
-    titlesPreferred: uniqLower(r.titlesPreferred || DEFAULTS.titlesPreferred),
-    materialsAllow: uniqLower(r.materialsAllow || DEFAULTS.materialsAllow),
-    materialsBlock: uniqLower(r.materialsBlock || DEFAULTS.materialsBlock),
-    certsRequired: uniqLower(r.certsRequired || DEFAULTS.certsRequired),
-    excludeHosts: uniqLower(r.excludeHosts || DEFAULTS.excludeHosts),
-    keywordsAdd: uniqLower(r.keywordsAdd || DEFAULTS.keywordsAdd),
-    keywordsAvoid: uniqLower(r.keywordsAvoid || DEFAULTS.keywordsAvoid),
-
-    inboundOptIn: Boolean(r.inboundOptIn),
+    // Optional overlays: forward only if arrays; otherwise keep existing if any
+    titlesPreferred: Array.isArray(patch.titlesPreferred) ? lowerUniq(patch.titlesPreferred) : cur.titlesPreferred,
+    materialsAllow:  Array.isArray(patch.materialsAllow)  ? lowerUniq(patch.materialsAllow)  : cur.materialsAllow,
+    materialsBlock:  Array.isArray(patch.materialsBlock)  ? lowerUniq(patch.materialsBlock)  : cur.materialsBlock,
+    certsRequired:   Array.isArray(patch.certsRequired)   ? lowerUniq(patch.certsRequired)   : cur.certsRequired,
+    excludeHosts:    Array.isArray(patch.excludeHosts)    ? lowerUniq(patch.excludeHosts)    : cur.excludeHosts,
+    keywordsAdd:     Array.isArray(patch.keywordsAdd)     ? lowerUniq(patch.keywordsAdd)     : cur.keywordsAdd,
+    keywordsAvoid:   Array.isArray(patch.keywordsAvoid)   ? lowerUniq(patch.keywordsAvoid)   : cur.keywordsAvoid,
   };
+
+  // legacy mirror to help any heuristic code: categoriesAllow -> likeTags
+  (next as any).likeTags = next.categoriesAllow;
+
+  STORE.set(h, next);
+  return next;
 }
 
-/* --------------------------------- API ------------------------------------ */
-
-export function setPrefs(hostRaw: string, patch: PrefsPatch): EffectivePrefs {
-  const host = normalizeHost(hostRaw);
-  if (!host) throw new Error("bad_host");
-
-  const cur = STORE.get(host) || {};
-  const next: RawPrefs = { ...cur };
-
-  if (typeof patch.city === "string") next.city = patch.city.trim() || undefined;
-  if (typeof patch.preferSmallMid === "boolean") next.preferSmallMid = patch.preferSmallMid;
-
-  if (patch.sizeWeight) {
-    next.sizeWeight = {
-      micro: patch.sizeWeight.micro ?? cur.sizeWeight?.micro,
-      small: patch.sizeWeight.small ?? cur.sizeWeight?.small,
-      mid: patch.sizeWeight.mid ?? cur.sizeWeight?.mid,
-      large: patch.sizeWeight.large ?? cur.sizeWeight?.large,
-    };
-  }
-
-  if (patch.signalWeight) {
-    next.signalWeight = {
-      local: patch.signalWeight.local ?? cur.signalWeight?.local,
-      ecommerce: patch.signalWeight.ecommerce ?? cur.signalWeight?.ecommerce,
-      retail: patch.signalWeight.retail ?? cur.signalWeight?.retail,
-      wholesale: patch.signalWeight.wholesale ?? cur.signalWeight?.wholesale,
-    };
-  }
-
-  if (patch.categoriesAllow) next.categoriesAllow = uniqLower(patch.categoriesAllow);
-  if (patch.titlesPreferred) next.titlesPreferred = uniqLower(patch.titlesPreferred);
-  if (patch.materialsAllow) next.materialsAllow = uniqLower(patch.materialsAllow);
-  if (patch.materialsBlock) next.materialsBlock = uniqLower(patch.materialsBlock);
-  if (patch.certsRequired) next.certsRequired = uniqLower(patch.certsRequired);
-  if (patch.excludeHosts) next.excludeHosts = uniqLower(patch.excludeHosts);
-  if (patch.keywordsAdd) next.keywordsAdd = uniqLower(patch.keywordsAdd);
-  if (patch.keywordsAvoid) next.keywordsAvoid = uniqLower(patch.keywordsAvoid);
-
-  if (typeof patch.inboundOptIn === "boolean") next.inboundOptIn = patch.inboundOptIn;
-
-  STORE.set(host, next);
-  return toEffective(next);
-}
-
-export function getPrefs(hostRaw: string): EffectivePrefs {
-  const host = normalizeHost(hostRaw);
-  if (!host) return { ...DEFAULTS };
-  return toEffective(STORE.get(host));
-}
-
-// --- compatibility shims used by various routes ---
-export const getEffective = getPrefs;
-export const getEffectivePrefs = getPrefs;
-/** Some legacy code calls Prefs.get(host) */
-export const get = getPrefs;
-
+/** One-line human summary for UIs. */
 export function prefsSummary(p: EffectivePrefs): string {
   const bits: string[] = [];
-  if (p.city) bits.push(`near ${p.city}`);
-  if (p.categoriesAllow.length) bits.push(`${p.categoriesAllow.slice(0, 4).join(", ")}`);
-  bits.push(
-    `size[micro:${p.sizeWeight.micro.toFixed(2)}, small:${p.sizeWeight.small.toFixed(2)}, mid:${p.sizeWeight.mid.toFixed(2)}, large:${p.sizeWeight.large.toFixed(2)}]`
-  );
-  bits.push(
-    `signal[local:${p.signalWeight.local.toFixed(2)}, ecom:${p.signalWeight.ecommerce.toFixed(2)}, retail:${p.signalWeight.retail.toFixed(2)}, wholesale:${p.signalWeight.wholesale.toFixed(2)}]`
-  );
+  if (p.city) bits.push(`city:${p.city}`);
+  const cats = p.categoriesAllow.slice(0, 4);
+  if (cats.length) bits.push(`focus:${cats.join("/")}`);
+  bits.push(`size[μ:${p.sizeWeight.micro.toFixed(1)}, s:${p.sizeWeight.small.toFixed(1)}, m:${p.sizeWeight.mid.toFixed(1)}, L:${p.sizeWeight.large.toFixed(1)}]`);
+  bits.push(`local:${p.signalWeight.local.toFixed(1)}`);
   if (p.inboundOptIn) bits.push("inbound:yes");
   return bits.join(" • ");
 }
 
-export default {
-  normalizeHost,
-  setPrefs,
-  getPrefs,
-  getEffective,
-  getEffectivePrefs,
-  get,
-  prefsSummary,
-};
+/** Testing/ops escape hatch. */
+export function __clearPrefsStore() { STORE.clear(); }
