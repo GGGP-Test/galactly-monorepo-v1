@@ -11,7 +11,7 @@
     --text:#e9f1f7; --muted:#90a7ba; --muted2:#a9bfd1;
     --divider:#1b2531; --ring:#24435f;
     --chip:#1a2433; --chipActive:#103247;
-    --cta:#6de1ff; --ctaText:#082433; --cta2:#0e2538;
+    --cta:#6de1ff; --ctaText:#082433;
     --ok:#38e08f; --warn:#ffd166; --bad:#ff6b6b;
   }
   *{box-sizing:border-box}
@@ -23,7 +23,7 @@
   .left-advanced{display:none}
   .h{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
   label{font-size:13px;color:var(--muted2);display:block;margin-bottom:6px}
-  input[type=text],input[type=url]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:#var(--text);outline:none}
+  input[type=text],input[type=url]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
   input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
   .row{display:flex;gap:8px;align-items:center}
   .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;border:1px solid var(--divider);background:#152333;color:#cfe0ee;cursor:pointer}
@@ -66,7 +66,7 @@
   .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
   .slider-row{display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:center;margin:10px 0}
   .one-line{background:#0e1622;border:1px solid var(--divider);border-radius:12px;padding:12px}
-  .edit-note{font-size:12px;color:var(--muted);cursor:pointer}
+  .edit-note{font-size:12px;color:#var(--muted);cursor:pointer}
   .x{background:transparent;color:#9bb3c6;border:none;font-size:18px;cursor:pointer}
   .gear{background:transparent;border:none;color:#99b4c7;cursor:pointer}
   @media (max-width:940px){.wrap{grid-template-columns:1fr} .grid{grid-template-columns:1fr}}
@@ -79,7 +79,7 @@
     <div class="h">Connection</div>
     <label>API base (root or /api)</label>
     <div class="row">
-      <input id="apiBase" type="text" placeholder="https://YOUR-NORTHFLANK.code.run or …/api">
+      <input id="apiBase" type="text" placeholder="https://YOUR-DEPLOY.code.run or …/api">
       <button id="saveApi" class="btn">Save</button>
     </div>
     <div class="row" style="margin-top:8px">
@@ -156,7 +156,7 @@
         </div>
       </div>
 
-      <!-- dynamic buyer priorities (exactly three by default, or from persona.metrics) -->
+      <!-- dynamic buyer priorities -->
       <div class="card" style="padding:12px;margin-top:14px">
         <div class="h">Buyer priorities (dynamic)</div>
         <div id="metricBox"></div>
@@ -219,20 +219,16 @@
     if (httpLog) httpLog.textContent = `[${now}] ${line}\n` + (httpLog.textContent||"");
   }
 
-  // ---------- small fetch helpers ----------
+  // ---------- soft/strict fetch ----------
   async function fetchJSON(url, init){
     let r, text;
     try{ r = await fetch(url, API.withKey(init)); }
     catch(e){ logHttp(`ERR ${url} — ${e.message}`); throw e; }
     text = await r.text();
-    if (!r.ok){
-      logHttp(`${r.status} ${url} — ${text.slice(0,120)}`);
-      throw new Error(text||r.statusText);
-    }
+    if (!r.ok){ logHttp(`${r.status} ${url} — ${text.slice(0,120)}`); throw new Error(text||r.statusText); }
     logHttp(`${r.status} ${url}`);
     try{ return JSON.parse(text); }catch{ return text; }
   }
-  // Soft GET that treats 404 as "null" (used for inbound/status & ping)
   async function fetchJSONSoft(url, init){
     let r, text;
     try{ r = await fetch(url, API.withKey(init)); }
@@ -295,10 +291,7 @@
       `https://${h}/favicon.ico`
     ];
     let i = 0;
-    function tryNext(){
-      if (i >= sources.length){ el.removeAttribute("src"); return; }
-      const url = sources[i++]; el.src = url;
-    }
+    function tryNext(){ if (i >= sources.length){ el.removeAttribute("src"); return; } el.src = sources[i++]; }
     el.onerror = tryNext; tryNext();
   }
   function openDrawer(){ drawer.classList.add("show"); drawer.setAttribute("aria-hidden","false"); }
@@ -366,9 +359,8 @@
       ["Prefer retail brands", !!gen.retail]
     ].forEach(([lab, on])=> chip(lab, genChips, on));
 
-    // inbound section visibility depends on backend ping (soft)
-    inboundRow.style.display = ""; 
-    inboundNote.textContent = state.inboundAvail ? "" : "Listing endpoint not available on this deployment.";
+    // inbound section note (availability checked later)
+    inboundRow.style.display = ""; // visible; note will clarify support
 
     // products
     prodChips.innerHTML="";
@@ -380,12 +372,12 @@
 
     // targeting
     const cities = (p.targeting?.cities && p.targeting.cities.length) ? p.targeting.cities
-                 : (p.targeting?.city ? [p.targeting.city] : ["Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"]);
+                   : (p.targeting?.city ? [p.targeting.city] : ["Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"]);
     cityChips.innerHTML=""; cities.forEach(c=>chip(c,cityChips,true));
     sectorChips.innerHTML=""; (p.sectorHints||["food","beverage","cosmetics"]).forEach(s=>chip(s,sectorChips,true));
   }
 
-  // ---------- applying & fetching ----------
+  // ---------- apply/fetch ----------
   function collectPersona(){
     const host = company.textContent.trim();
     const p = state.persona || {};
@@ -407,8 +399,8 @@
       metrics: state.metrics,
       targeting: { 
         city: getActiveChips(cityChips)[0]||"", 
-        sectors: getActiveChips(sectorChips).join(", "),
-        cities: getActiveChips(cityChips)
+        cities: getActiveChips(cityChips),
+        sectors: getActiveChips(sectorChips).join(", ")
       }
     };
   }
@@ -431,7 +423,9 @@
     const q = new URLSearchParams({
       host: p.host || company.textContent.trim(),
       limit: String(12),
-      city: p.targeting.city||""
+      city: p.targeting.city||"",
+      sectors: p.sectorHints.join(","),
+      tags: p.productTags.join(",")
     }).toString();
 
     // Primary (matches our backend), then fallbacks
@@ -462,12 +456,11 @@
     }
   }
 
-  // ---------- inbound listing (all endpoints “soft”) ----------
+  // ---------- inbound listing (soft 404s; never throws) ----------
   async function checkInboundAvailable(){
     const base = API.get();
     const ping = await fetchJSONSoft(base + "/inbound/ping", {method:"GET"});
     state.inboundAvail = !!(ping && ping.ok);
-    inboundRow.style.display = ""; 
     inboundNote.textContent = state.inboundAvail ? "" : "Listing endpoint not available on this deployment.";
   }
   async function refreshInboundStatus(){
@@ -501,7 +494,7 @@
     API.set(apiBaseInput.value); // keep original; we normalize when reading
     logHttp("API base set to " + normalized.replace(/\/api$/,''));
   });
-  gearBtn?.addEventListener("click",()=> saveApiBtn?.click());
+  gearBtn?.addEventListener("click",()=> document.getElementById("advToggle").click());
   pingBtn?.addEventListener("click", ping);
   clearLogBtn?.addEventListener("click", ()=> { if (httpLog) httpLog.textContent=""; });
   profileBtn.addEventListener("click", openDrawer);
@@ -531,11 +524,10 @@
   (async function init(){
     if (apiBaseInput) apiBaseInput.value = (getStored("apiBase","") || "").replace(/\/+$/,"");
 
-    // import persona from Step 3 (strict handoff)
+    // import persona saved by Step 3
     let p = null;
     try{ p = JSON.parse(getStored("fp.persona","")); }catch{}
     if (!p){
-      // keep UI non-empty as a fallback
       p = {
         host:"yourcompany.com",
         productTags:["boxes","mailers","pallets"],
@@ -548,6 +540,7 @@
     }
     renderPersona(p);
 
+    // inbound features: soft-check only; no hard 404s
     await checkInboundAvailable();
     await refreshInboundStatus();
   })();
