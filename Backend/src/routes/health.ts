@@ -1,17 +1,18 @@
 // src/routes/health.ts
 //
 // Lightweight health + status without extra deps.
-// - GET /api/health            -> uptime/env + catalog summary (safe against shape drift)
+// - GET /api/health            -> uptime/env + catalog summary
 // - GET /api/health/ping       -> simple pong
-//
-// No external packages. Default export = Router.
+// - (helper) registerHealthz(app) -> GET /healthz  (plain text "ok" for container healthchecks)
 
-import { Router, Request, Response } from "express";
+import { Router, type Request, type Response, type Express } from "express";
 import { getCatalog, type BuyerRow } from "../shared/catalog";
+import { summarizeForHealth } from "../shared/env";
 
 const r = Router();
 
-// ---- tiny helpers (avoid implicit-any) ----
+/* ----------------------------- tiny helpers ------------------------------ */
+
 type Loaded = unknown;
 
 function toArray(cat: Loaded): BuyerRow[] {
@@ -31,21 +32,23 @@ function arr(v: unknown): string[] {
   return (v as unknown[]).map((x) => asStr(x)).filter(Boolean);
 }
 
-// ---- routes ----
+/* -------------------------------- routes --------------------------------- */
 
-// Simple liveness
+// Simple liveness for API namespace
 r.get("/ping", (_req: Request, res: Response) => {
   res.json({ pong: true, at: new Date().toISOString() });
 });
 
-// Uptime + small catalog snapshot (safe in prod logs)
+// Uptime + tiny catalog snapshot (safe for logs; no heavy compute)
 r.get("/", (_req: Request, res: Response) => {
   try {
-    const startedAt = Number(process.uptime ? Date.now() - process.uptime() * 1000 : Date.now());
-    const cat = getCatalog(); // cached build from env
+    const upSec = Math.round(typeof process.uptime === "function" ? process.uptime() : 0);
+    const startedAt = new Date(Date.now() - upSec * 1000).toISOString();
+
+    const cat = getCatalog(); // cached build from env/file
     const rows = toArray(cat);
 
-    // summarize tiers & a tiny sample (no heavy work)
+    // summarize tiers + small sample
     const byTier: Record<string, number> = {};
     for (const row of rows.slice(0, 200)) {
       const tiers = arr((row as any).tiers);
@@ -65,22 +68,26 @@ r.get("/", (_req: Request, res: Response) => {
       ok: true,
       service: "buyers-api",
       now: new Date().toISOString(),
-      uptimeSec: Math.round(process.uptime ? process.uptime() : 0),
-      startedAtIso: new Date(startedAt).toISOString(),
-      env: {
-        node: process.version,
-        port: Number(process.env.PORT || 8080),
-        allowOrigins: String(process.env.ALLOW_ORIGINS || ""),
-      },
+      uptimeSec: upSec,
+      startedAtIso: startedAt,
+      env: summarizeForHealth(), // safe summary from shared/env.ts
       catalog: {
         total: rows.length,
         byTier,
         sample,
       },
     });
-  } catch (err: any) {
-    res.status(200).json({ ok: false, error: String(err?.message || err) });
+  } catch (err: unknown) {
+    const msg = (err as any)?.message || String(err);
+    res.status(200).json({ ok: false, error: msg });
   }
 });
+
+/* ------------------------ root healthcheck helper ------------------------ */
+
+// Call this from index.ts so /healthz exists at the root (matches Dockerfile)
+export function registerHealthz(app: Express) {
+  app.get("/healthz", (_req, res) => res.status(200).type("text/plain").send("ok"));
+}
 
 export default r;
