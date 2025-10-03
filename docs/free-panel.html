@@ -23,7 +23,7 @@
   .left-advanced{display:none}
   .h{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
   label{font-size:13px;color:var(--muted2);display:block;margin-bottom:6px}
-  input[type=text],input[type=url]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input[type=text],input[type=url]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:#var(--text);outline:none}
   input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
   .row{display:flex;gap:8px;align-items:center}
   .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;border:1px solid var(--divider);background:#152333;color:#cfe0ee;cursor:pointer}
@@ -42,7 +42,6 @@
   .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-flex;gap:6px;align-items:center}
   .pill.good{color:#0d3b23;background:#08301a;border:1px solid #174b2c}
   .sep{flex:1}
-  select{background:#0d1520;border:1px solid var(--divider);color:var(--text);border-radius:10px;padding:8px 10px}
   .ghost-gear{background:transparent;border:none;color:#9bb3c6;cursor:pointer}
 
   /* table */
@@ -68,7 +67,7 @@
   .slider-row{display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:center;margin:10px 0}
   .one-line{background:#0e1622;border:1px solid var(--divider);border-radius:12px;padding:12px}
   .edit-note{font-size:12px;color:var(--muted);cursor:pointer}
-  .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
+  .x{background:transparent;color:#9bb3c6;border:none;font-size:18px;cursor:pointer}
   .gear{background:transparent;border:none;color:#99b4c7;cursor:pointer}
   @media (max-width:940px){.wrap{grid-template-columns:1fr} .grid{grid-template-columns:1fr}}
 </style>
@@ -87,12 +86,6 @@
       <button id="ping" class="btn">Ping</button>
       <button id="clearLog" class="btn">Clear Log</button>
     </div>
-
-    <div class="h" style="margin-top:16px">How many leads</div>
-    <select id="count">
-      <option>3</option><option selected>12</option><option>25</option><option>50</option>
-    </select>
-    <div class="muted" style="margin-top:8px">Used by <b>Find buyers</b>. The supplier host is locked to your profile to keep the panel minimal.</div>
 
     <div class="h" style="margin-top:16px">HTTP Log</div>
     <pre id="httpLog" class="log" aria-live="polite"></pre>
@@ -239,7 +232,7 @@
     logHttp(`${r.status} ${url}`);
     try{ return JSON.parse(text); }catch{ return text; }
   }
-  // Soft GET that treats 404 as "null" (used for inbound/status)
+  // Soft GET that treats 404 as "null" (used for inbound/status & ping)
   async function fetchJSONSoft(url, init){
     let r, text;
     try{ r = await fetch(url, API.withKey(init)); }
@@ -373,8 +366,8 @@
       ["Prefer retail brands", !!gen.retail]
     ].forEach(([lab, on])=> chip(lab, genChips, on));
 
-    // inbound section visibility depends on backend ping
-    inboundRow.style.display = state.inboundAvail ? "" : "";
+    // inbound section visibility depends on backend ping (soft)
+    inboundRow.style.display = ""; 
     inboundNote.textContent = state.inboundAvail ? "" : "Listing endpoint not available on this deployment.";
 
     // products
@@ -386,7 +379,9 @@
     renderMetrics(m);
 
     // targeting
-    cityChips.innerHTML=""; (p.targeting?.cities?.length ? p.targeting.cities : (p.targeting?.city? [p.targeting.city] : ["Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"])).forEach(c=>chip(c,cityChips,true));
+    const cities = (p.targeting?.cities && p.targeting.cities.length) ? p.targeting.cities
+                 : (p.targeting?.city ? [p.targeting.city] : ["Chicago","Los Angeles","New York","Dallas","Atlanta","Miami"]);
+    cityChips.innerHTML=""; cities.forEach(c=>chip(c,cityChips,true));
     sectorChips.innerHTML=""; (p.sectorHints||["food","beverage","cosmetics"]).forEach(s=>chip(s,sectorChips,true));
   }
 
@@ -467,12 +462,12 @@
     }
   }
 
-  // ---------- inbound listing (soft 404s) ----------
+  // ---------- inbound listing (all endpoints “soft”) ----------
   async function checkInboundAvailable(){
     const base = API.get();
     const ping = await fetchJSONSoft(base + "/inbound/ping", {method:"GET"});
     state.inboundAvail = !!(ping && ping.ok);
-    inboundRow.style.display = ""; // always visible, note will explain if not available
+    inboundRow.style.display = ""; 
     inboundNote.textContent = state.inboundAvail ? "" : "Listing endpoint not available on this deployment.";
   }
   async function refreshInboundStatus(){
@@ -536,7 +531,7 @@
   (async function init(){
     if (apiBaseInput) apiBaseInput.value = (getStored("apiBase","") || "").replace(/\/+$/,"");
 
-    // auto-import persona from Step 3 (strict)
+    // import persona from Step 3 (strict handoff)
     let p = null;
     try{ p = JSON.parse(getStored("fp.persona","")); }catch{}
     if (!p){
@@ -548,7 +543,7 @@
         general:{mids:true,avoidBig:true,near:true,ecom:true,wholesale:false,retail:false},
         metrics: defaultMetrics(),
         line:{host:"yourcompany.com",verb:"supplies",products:"packaging",audience:"brands",region:"the U.S.",contacts:"Operations, Procurement"},
-        targeting:{city:"Chicago"}
+        targeting:{city:"Chicago", cities:["Chicago"]}
       };
     }
     renderPersona(p);
