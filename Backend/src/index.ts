@@ -1,8 +1,10 @@
 // src/index.ts
 // Express bootstrap with strict CORS, tiny logger, canonical /api/* mounts,
-// plus /ping endpoints, /classify root alias, and graceful shutdown.
+// plus /ping endpoints and a root alias for /classify (to satisfy the modal’s
+// fallback). Metrics logic stays in routes/classify.ts.
 
 import express, { Request, Response, NextFunction } from "express";
+import * as path from "path";
 
 import HealthRouter from "./routes/health";
 import PrefsRouter from "./routes/prefs";
@@ -10,11 +12,11 @@ import LeadsRouter from "./routes/leads";
 import CatalogRouter from "./routes/catalog";
 import PlacesRouter from "./routes/places";
 import ClassifyRouter from "./routes/classify";
-import EventsRouter from "./routes/events";              // <-- new: events router
-import BuyersRouter, { RootAlias as FindAlias } from "./routes/buyers";
+import BuyersRouter from "./routes/buyers";
+import EventsRouter from "./routes/events";
+import AuditRouter from "./routes/audit";
 
 import { CFG, isOriginAllowed } from "./shared/env";
-import { enableGracefulShutdown } from "./shared/shutdown"; // <-- use YOUR existing API
 
 const app = express();
 
@@ -22,7 +24,7 @@ const app = express();
 /* Basic hardening                                                            */
 /* -------------------------------------------------------------------------- */
 app.disable("x-powered-by");
-app.set("trust proxy", true);
+app.set("trust proxy", true); // keep client IPs correct when behind a proxy
 
 /* -------------------------------------------------------------------------- */
 /* Tiny request logger                                                        */
@@ -39,7 +41,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 /* -------------------------------------------------------------------------- */
-/* Strict CORS                                                                */
+/* Strict CORS (env-driven allowlist)                                         */
 /* -------------------------------------------------------------------------- */
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin as string | undefined;
@@ -65,7 +67,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(express.json({ limit: "512kb" }));
 
 /* -------------------------------------------------------------------------- */
-/* Health & Ping                                                              */
+/* Health & Ping (used by the modal’s API auto-detection)                     */
 /* -------------------------------------------------------------------------- */
 const okText = (_req: Request, res: Response) => res.type("text/plain").send("ok");
 app.get("/healthz", okText);
@@ -84,11 +86,24 @@ app.use("/api/catalog", CatalogRouter);
 app.use("/api/places", PlacesRouter);
 app.use("/api/classify", ClassifyRouter);
 app.use("/api/buyers", BuyersRouter);
-app.use("/api/find", FindAlias);
-app.use("/api/events", EventsRouter);  // <-- mount events
+app.use("/api/events", EventsRouter);
+app.use("/api/audit", AuditRouter);
 
 /* -------------------------------------------------------------------------- */
-/* Root alias for /classify                                                   */
+/* Static files (for admin dashboard etc.)                                    */
+/* -------------------------------------------------------------------------- */
+const publicDir = path.join(process.cwd(), "public");
+app.use(express.static(publicDir, { extensions: ["html"] }));
+
+/* Optional helper: /admin -> serve public/admin.html if present */
+app.get("/admin", (_req, res) => {
+  res.sendFile(path.join(publicDir, "admin.html"), (err) => {
+    if (err) res.status(404).type("text/plain").send("admin.html not found");
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Root alias for /classify (frontend sometimes tries /classify)              */
 /* -------------------------------------------------------------------------- */
 app.use("/classify", ClassifyRouter);
 
@@ -107,14 +122,11 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 /* -------------------------------------------------------------------------- */
-/* Boot + graceful shutdown                                                   */
+/* Boot                                                                       */
 /* -------------------------------------------------------------------------- */
 const port = Number(CFG.port || process.env.PORT || 8787);
-const server = app.listen(port, () => {
+app.listen(port, () => {
   console.log(`buyers-api listening on :${port} (env=${CFG.nodeEnv}) — /healthz, /ping, /api/*`);
 });
-
-// Use your existing shutdown helper (takes the Server)
-enableGracefulShutdown(server, { timeoutMs: 10_000 });
 
 export default app;
