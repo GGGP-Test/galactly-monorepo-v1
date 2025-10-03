@@ -1,5 +1,6 @@
-// Deterministic ontology + extractors for packaging
-// No external deps. Keep fast and safe under strict TS.
+// src/shared/ontology.ts
+// Deterministic ontology + extractors for packaging.
+// Pure string/regex logic, no I/O, no external deps.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -14,8 +15,7 @@ export type CanonicalProduct =
   | "bottles" | "jars" | "closures" | "caps"
   | "rigid" | "flexible"
   | "clamshells"
-  | "tins" | "cans"
-  ;
+  | "tins" | "cans";
 
 export type CanonicalSector =
   | "Food"
@@ -30,14 +30,12 @@ export type CanonicalSector =
   | "Logistics"
   | "General";
 
-function normWords(s: string): string {
-  return (s || "").toLowerCase();
-}
+/* --------------------------------- utils ---------------------------------- */
+
+function normWords(s: string): string { return (s || "").toLowerCase(); }
 
 function scoreHits(text: string, pats: RegExp[]): number {
-  let n = 0;
-  for (const re of pats) if (re.test(text)) n++;
-  return n;
+  let n = 0; for (const re of pats) if (re.test(text)) n++; return n;
 }
 
 function uniqLower(a: string[]): string[] {
@@ -49,9 +47,7 @@ function uniqLower(a: string[]): string[] {
   return Array.from(out);
 }
 
-/* -------------------------------------------------------------------------- */
-/* Product extraction                                                          */
-/* -------------------------------------------------------------------------- */
+/* ------------------------------ products ---------------------------------- */
 
 type ProductLex = { tag: CanonicalProduct; pats: RegExp[] };
 
@@ -59,7 +55,7 @@ const PRODUCT_LEX: ProductLex[] = [
   { tag: "boxes",      pats: [/box(es)?/i, /custom\s*box/i] },
   { tag: "cartons",    pats: [/carton(s)?/i] },
   { tag: "corrugate",  pats: [/corrugat(ed|e|ion)/i, /\bect\b/i] },
-  { tag: "labels",     pats: [/label(s|ing)?/i, /psa/i] },
+  { tag: "labels",     pats: [/label(s|ing)?/i, /\bpsa\b/i] },
   { tag: "tape",       pats: [/tape(s)?/i] },
   { tag: "film",       pats: [/\bfilm(s)?\b/i] },
   { tag: "shrink",     pats: [/shrink( wrap| film)?/i] },
@@ -68,19 +64,20 @@ const PRODUCT_LEX: ProductLex[] = [
   { tag: "trays",      pats: [/tray(s)?/i] },
   { tag: "pouches",    pats: [/pouch(es)?/i] },
   { tag: "bags",       pats: [/\bbag(s)?\b/i, /polybag(s)?/i] },
-  { tag: "mailer",     pats: [/mailer(s)?/i, /mailing bag(s)?/i] },
+  { tag: "mailer",     pats: [/mailer(s)?/i, /mail(ing)?\s*bag(s)?/i] },
   { tag: "foam",       pats: [/foam/i, /cushion(ing)?/i] },
   { tag: "bottles",    pats: [/bottle(s)?/i] },
   { tag: "jars",       pats: [/jar(s)?/i] },
-  { tag: "closures",   pats: [/closure(s)?/i, /child[- ]resistant/i, /\bcr cap/i] },
+  { tag: "closures",   pats: [/closure(s)?/i, /child[- ]resistant/i, /\bcr\s*cap/i] },
   { tag: "caps",       pats: [/\bcap(s)?\b/i, /screwcap/i] },
   { tag: "rigid",      pats: [/rigid/i] },
-  { tag: "flexible",   pats: [/flexible/i, /\bflex pack/i] },
+  { tag: "flexible",   pats: [/flexible/i, /\bflex\s*pack/i] },
   { tag: "clamshells", pats: [/clamshell(s)?/i] },
   { tag: "tins",       pats: [/\btin(s)?\b/i] },
   { tag: "cans",       pats: [/\bcan(s)?\b/i] },
 ];
 
+/** Extract normalized product tags from site text (+ optional meta keywords). */
 export function productsFrom(textRaw: string, keywords?: string[]): string[] {
   const text = normWords(textRaw);
   const kw = uniqLower(keywords || []);
@@ -91,7 +88,6 @@ export function productsFrom(textRaw: string, keywords?: string[]): string[] {
     if (s > 0) hits.push({ tag: p.tag, score: s });
   }
 
-  // Merge near-synonyms (film/shrink/stretch => keep distinct but contiguous)
   hits.sort((a, b) => b.score - a.score);
   const out: string[] = [];
   const seen = new Set<string>();
@@ -104,25 +100,24 @@ export function productsFrom(textRaw: string, keywords?: string[]): string[] {
   return out;
 }
 
-/* -------------------------------------------------------------------------- */
-/* Sector extraction                                                           */
-/* -------------------------------------------------------------------------- */
+/* ------------------------------- sectors ---------------------------------- */
 
 type SectorLex = { name: CanonicalSector; pats: RegExp[] };
 
 const SECTOR_LEX: SectorLex[] = [
-  { name: "Food",        pats: [/food/i, /retort/i, /fda/i, /usda/i, /snack/i, /meat|dairy|produce/i] },
+  { name: "Food",        pats: [/food/i, /retort/i, /\bfda\b/i, /\busda\b/i, /snack/i, /meat|dairy|produce/i] },
   { name: "Beverage",    pats: [/beverage|brew|distill|bottl(e|ing)/i, /drink|juice|soda/i] },
-  { name: "Industrial",  pats: [/industrial/i, /mro/i, /maintenance/i, /warehouse/i, /pallet/i] },
+  { name: "Industrial",  pats: [/industrial/i, /\bmro\b/i, /maintenance/i, /warehouse/i, /pallet/i] },
   { name: "Automotive",  pats: [/automotive|auto\s?parts?/i, /tier\s?[1-3]/i] },
-  { name: "Pharma",      pats: [/pharma(cy|ceutical)?/i, /gmp/i, /sterile/i] },
+  { name: "Pharma",      pats: [/pharma(cy|ceutical)?/i, /\bgmp\b/i, /sterile/i] },
   { name: "Cosmetics",   pats: [/cosmetic(s)?/i, /beauty/i, /personal care/i] },
-  { name: "Cannabis",    pats: [/cannabis|hemp|thc|cbd/i, /child[- ]resistant/i] },
-  { name: "Electronics", pats: [/electronics?/i, /esd/i, /anti[- ]static/i] },
+  { name: "Cannabis",    pats: [/cannabis|hemp|\bthc\b|\bcbd\b/i, /child[- ]resistant/i] },
+  { name: "Electronics", pats: [/electronics?/i, /\besd\b/i, /anti[- ]static/i] },
   { name: "Apparel",     pats: [/apparel|garment|fashion/i] },
-  { name: "Logistics",   pats: [/3pl|logistics|fulfillment|warehouse/i] },
+  { name: "Logistics",   pats: [/\b3pl\b|logistics|fulfillment|warehouse/i] },
 ];
 
+/** Extract normalized sector/audience hints from site text (+ optional keywords). */
 export function sectorsFrom(textRaw: string, keywords?: string[]): CanonicalSector[] {
   const text = normWords(textRaw);
   const kw = uniqLower(keywords || []);
@@ -139,21 +134,18 @@ export function sectorsFrom(textRaw: string, keywords?: string[]): CanonicalSect
   return Array.from(new Set(out)).slice(0, 6);
 }
 
-/* -------------------------------------------------------------------------- */
-/* Metrics (bottom-up first, then fallbacks)                                   */
-/* -------------------------------------------------------------------------- */
+/* -------------------------------- metrics --------------------------------- */
 
 type MetricHint = { phrase: string; re: RegExp };
 
 const H: Record<string, MetricHint[]> = {
-  // Cross-sector phrases we can “detect” directly in copy
   general: [
     { phrase: "lead time", re: /lead[- ]time/i },
-    { phrase: "moq / minimum order", re: /moq|minimum order/i },
+    { phrase: "moq / minimum order", re: /\bmoq\b|minimum order/i },
     { phrase: "on-time delivery", re: /on[- ]time delivery/i },
     { phrase: "unit cost per pack", re: /unit cost|cost per/i },
-    { phrase: "sustainability (PCR%, recyclability)", re: /pcr|recycl/i },
-    { phrase: "quality certifications (ISO, SQF)", re: /iso|sqf/i },
+    { phrase: "sustainability (PCR%, recyclability)", re: /\bpcr\b|recycl/i },
+    { phrase: "quality certifications (ISO, SQF)", re: /\biso\b|\bsqf\b/i },
   ],
   film: [
     { phrase: "load stability in transit", re: /load (stability|secure)/i },
@@ -174,12 +166,11 @@ const H: Record<string, MetricHint[]> = {
     { phrase: "hot-fill/retort seal integrity", re: /hot[- ]fill|retort|seal integrity/i },
   ],
   closures: [
-    { phrase: "child-resistant compliance", re: /child[- ]resistant|cr\s?cap/i },
+    { phrase: "child-resistant compliance", re: /child[- ]resistant|\bcr\s?cap/i },
     { phrase: "torque window / application", re: /torque|apply/i },
   ],
 };
 
-/** Sector fallback libraries (used if no direct matches found). */
 const SECTOR_DEFAULTS: Record<CanonicalSector, string[]> = {
   Food: [
     "Food-contact compliance (FDA/EC)",
@@ -239,18 +230,17 @@ const SECTOR_DEFAULTS: Record<CanonicalSector, string[]> = {
 };
 
 /**
- * Choose metrics per sector from the given text, then fallback so it’s never empty.
- * Also enrich with product-specific metrics when relevant.
+ * Bottom-up hot metrics by sector, with guaranteed non-empty fallbacks.
+ * Also enrich with product-specific metric families when relevant.
  */
 export function metricsBySector(
   textRaw: string,
   sectors: string[],
-  products: string[]
+  products: string[],
 ): Record<string, string[]> {
   const text = normWords(textRaw);
   const chosen = new Map<CanonicalSector, string[]>();
 
-  // Helper: push metric if not present
   const add = (sec: CanonicalSector, metric: string) => {
     const cur = chosen.get(sec) || [];
     if (!cur.includes(metric)) cur.push(metric);
@@ -261,9 +251,8 @@ export function metricsBySector(
     (sectors && sectors.length ? (sectors as CanonicalSector[]) : ["General"]);
 
   for (const sec of sectorsNorm) {
-    // 1) Bottom-up: look for explicit phrase hits tied to products
-    // Map some products to hint families
     const prods = new Set(products.map(p => p.toLowerCase()));
+
     if (prods.has("film") || prods.has("shrink") || prods.has("stretch") || prods.has("pallets")) {
       for (const h of H.film) if (h.re.test(text)) add(sec, h.phrase);
     }
@@ -280,26 +269,21 @@ export function metricsBySector(
       for (const h of H.closures) if (h.re.test(text)) add(sec, h.phrase);
     }
 
-    // 2) Always consider general phrases present on the site
     for (const g of H.general) if (g.re.test(text)) add(sec, g.phrase);
 
-    // 3) Fallback: if still sparse, use sector defaults
     const have = chosen.get(sec) || [];
     if (have.length < 3) {
       const def = SECTOR_DEFAULTS[sec] || SECTOR_DEFAULTS.General;
       for (const m of def) add(sec, m);
     }
 
-    // 4) Cap to a tidy set
     chosen.set(sec, (chosen.get(sec) || []).slice(0, 8));
   }
 
-  // If no sectors detected at all (shouldn't happen), ensure General
   if (chosen.size === 0) {
     chosen.set("General", SECTOR_DEFAULTS.General.slice(0, 6));
   }
 
-  // Return as plain record
   const out: Record<string, string[]> = {};
   for (const [k, v] of chosen.entries()) out[k] = v;
   return out;
