@@ -5,6 +5,8 @@
 // names (extractProducts, extractSectors, extractMetrics).
 // Pure, deterministic; no network calls.
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import {
   productsFrom as ontologyProductsFrom,
   sectorsFrom as ontologySectorsFrom,
@@ -49,7 +51,7 @@ export const metricsBySector = extractMetrics;
 export const productsFrom = extractProducts;
 export const sectorsFrom = extractSectors;
 
-/** Optional aggregator name some code uses; currently same as extractMetrics. */
+/** Optional aggregator some code uses; currently same as extractMetrics. */
 export function aggregateBottomUp(
   text: string,
   sectorHints: string[],
