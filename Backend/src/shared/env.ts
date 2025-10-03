@@ -40,7 +40,7 @@ export interface AppConfig {
   freeClicksPerDay: number;
   freeCooldownMin: number;
 
-  // places
+  // places (optional)
   googlePlacesApiKey?: string;
   placesLimitDefault: number;
 
