@@ -6,6 +6,12 @@
 // GET  /api/classify?host=acme.com[&maxPages=8]
 // POST /api/classify  { host, maxPages? }
 
+/* eslint-disable @typescript-eslint/no-var-requires */
+/* ---- TRC guard (never crash if missing) ---------------------------------- */
+let _TRC: any = null;
+try { _TRC = require("../shared/trc"); } catch { /* optional; ignore */ }
+/* ------------------------------------------------------------------------- */
+
 import { Router, Request, Response } from "express";
 import { withCache, daily } from "../shared/guards";
 import { CFG } from "../shared/env";
@@ -15,10 +21,6 @@ import {
   extractSectors,
   extractMetrics,
 } from "../shared/extractor";
-
-// ARTEMIS-B v1: shared hot-metrics fallback
-// (ensures Step-3 always gets non-empty priorities)
-const TRC: any = require("../shared/trc");
 
 type Role = "packaging_supplier" | "packaging_buyer" | "neither";
 
@@ -124,34 +126,6 @@ function extractGeoHints(text: string): { citiesTop: string[]; statesTop: string
   return { citiesTop, statesTop };
 }
 
-function normListLower(list: string[]): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const v of (Array.isArray(list) ? list : [])) {
-    const s = String(v || "").toLowerCase().trim();
-    if (s && !seen.has(s)) { seen.add(s); out.push(s); }
-  }
-  return out;
-}
-
-function ensureHotMetrics(sectorHints: string[], text: string, productTags: string[]) {
-  // Try bottom-up extractor first
-  const extracted = extractMetrics(text, sectorHints, productTags) || {};
-  // Fill any missing/empty sectors with TRC fallback
-  const fallback = TRC?.hotMetricsForSectors
-    ? TRC.hotMetricsForSectors(sectorHints)
-    : (TRC?.HOT_METRICS_BY_SECTOR || { general: ["Line automation / fulfillment","Fast turnaround (≤ 2 weeks)","Lowest unit cost"] });
-
-  const out: Record<string, string[]> = {};
-  const sectors = sectorHints.length ? sectorHints : ["general"];
-  for (const s of sectors) {
-    const k = String(s || "general").toLowerCase();
-    const arr = Array.isArray(extracted[k]) ? extracted[k] : [];
-    out[k] = (arr.length ? arr : (fallback[k] || fallback.general || [])).slice(0, 3);
-  }
-  return out;
-}
-
 // ---------- core -------------------------------------------------------------
 
 async function classifyHost(host: string, maxPages: number) {
@@ -171,18 +145,16 @@ async function classifyHost(host: string, maxPages: number) {
   const roleGuess = roleFromSignals(text + " " + title + " " + description);
 
   const productTags = extractProducts(text, keywords);
-  const sectorHints = normListLower(extractSectors(text, keywords));
+  const sectorHints = extractSectors(text, keywords);
 
-  // Bottom-up metrics (fallback to deterministic catalog if sparse)
-  const hotMetricsBySector = ensureHotMetrics(sectorHints, text, productTags);
+  // Bottom-up metrics (guaranteed non-empty per sector by extractor/ontology)
+  const hotMetricsBySector = extractMetrics(text, sectorHints, productTags);
 
-  // Geo hints
   const geoHints = extractGeoHints(text);
 
-  // One-liner
   const summary = composeOneLiner(host, roleGuess.role, productTags, sectorHints);
 
-  // Naive favicon guess (useful for some UIs; harmless if unused)
+  // Favicon guess (Step3 will try this, then fall back to letter SVG)
   const favicon = `https://${host.replace(/^www\./, "")}/favicon.ico`;
 
   return {
