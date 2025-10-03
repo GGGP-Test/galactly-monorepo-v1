@@ -180,20 +180,44 @@
 
 <script>
 (function(){
-  /* ---------------------- tiny helpers ---------------------- */
+  /* ---------- tiny helpers ---------- */
   const $ = (q,r=document)=>r.querySelector(q);
   const $$ = (q,r=document)=>Array.from(r.querySelectorAll(q));
   const normHost = s => (s||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
   const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
   const fmtM = v => "$" + v.toString() + "M";
-  const LS = {
-    seed:"onb.seed", apiBase:"apiBase", persona:"fp.persona",
-    muted:"fp.muted.industries"
-  };
+  const LS = { seed:"onb.seed", apiBase:"apiBase", persona:"fp.persona", muted:"fp.muted.industries" };
+
+  /* ---------- city sanitization ---------- */
+  // Drop streets/addresses/venues; keep likely city/town names (letters, spaces, apostrophes, hyphens), no digits.
+  const BAD_TOKENS = /\b(rd|road|st|street|ave|avenue|blvd|boulevard|dr|drive|ln|lane|hwy|highway|pkwy|parkway|ct|court|ctr|center|mall|plaza|trl|trail|county|state|airport|campus|university|college|park|winery|vineyard|blvd)\b/i;
+  function titleCase(s){ return String(s).toLowerCase().replace(/\b\w/g,m=>m.toUpperCase()); }
+  function isLikelyCity(s){
+    if (!s) return false;
+    const t = String(s).trim();
+    if (!t || /\d/.test(t)) return false;
+    if (/,/.test(t)) return false; // skip "City, ST"
+    if (BAD_TOKENS.test(t)) return false;
+    if (t.length < 2 || t.length > 32) return false;
+    return /^[A-Za-z .'-]+$/.test(t);
+  }
+  function sanitizeCities(list){
+    const out = [];
+    const seen = new Set();
+    for (const raw of (list||[])){
+      const c = titleCase(String(raw||"").trim());
+      if (!isLikelyCity(c)) continue;
+      if (seen.has(c)) continue;
+      seen.add(c);
+      out.push(c);
+      if (out.length >= 8) break;
+    }
+    return out;
+  }
 
   const displaySector = s => {
     const k = String(s||"").toLowerCase();
-    if (k === "home") return "Home Care";   // fix: “home” reads as Home Care
+    if (k === "home") return "Home Care";
     if (k === "industrial") return "Industrial";
     return String(s||"").replace(/\b\w/g,m=>m.toUpperCase());
   };
@@ -223,14 +247,14 @@
     const b=getApiBase(); apiBadge.textContent = b? ("API: " + b.replace(/https?:\/\//,"")) : "API: not set";
   };
 
-  /* ---------------------- state ---------------------- */
+  /* ---------- state ---------- */
   const seed = getSeed();
-  const host = normHost(seed.host || seed?.contact?.email?.split("@")[1] || localStorage.getItem("fp.supplier.host") || "");
+  const hostSeed = normHost(seed.host || seed?.contact?.email?.split("@")[1] || localStorage.getItem("fp.supplier.host") || "");
   const state = {
-    host,
+    host: hostSeed,
     classify:null,
-    industries:[],          // from sectorHints (+ careful fallback)
-    muted:new Set(),        // names
+    industries:[],
+    muted:new Set(),
     showMuted:false,
     sel:0,
     titlesDefault:["Operations","Procurement","COO","Logistics","Supply Chain"],
@@ -244,17 +268,16 @@
       cannabis:["Compliance","Operations","Procurement"]
     },
     products:[],
-    metricsBySector:{},   // from API
+    metricsBySector:{},
     geo:{citiesTop:[],statesTop:[]}
   };
 
-  /* ---------------------- one-liner (fallback) ---------------------- */
+  /* ---------- one-liner helpers ---------- */
   function joinForLine(list){
     if (!list || !list.length) return "";
     if (list.length === 1) return list[0];
     if (list.length === 2) return list[0] + " & " + list[1];
     if (list.length === 3) return list[0] + ", " + list[1] + " & " + list[2];
-    // > 3 — show 3 then “etc.”
     return list[0] + ", " + list[1] + ", " + list[2] + ", etc.";
   }
   function composeOneLiner(data){
@@ -272,17 +295,11 @@
     return line;
   }
 
-  /* ---------------------- classify fetch ---------------------- */
+  /* ---------- classify fetch ---------- */
   async function fetchClassify(h){
     const base = ensureApi(); if (!base) return null;
-    const u1 = new URL(join(base,"/classify")); 
-    u1.searchParams.set("host", h);
-    u1.searchParams.set("maxPages", "16"); // deep crawl
-
-    const u2 = new URL(join(base.replace(/\/api\/?$/i,""),"/api/classify"));
-    u2.searchParams.set("host", h);
-    u2.searchParams.set("maxPages", "16"); // deep crawl
-
+    const u1 = new URL(join(base,"/classify")); u1.searchParams.set("host", h); u1.searchParams.set("maxPages","16");
+    const u2 = new URL(join(base.replace(/\/api\/?$/i,""),"/api/classify")); u2.searchParams.set("host", h); u2.searchParams.set("maxPages","16");
     const tryFetch = async (url)=>{
       const r = await fetch(url, {credentials:"omit"});
       const t = await r.text();
@@ -293,7 +310,7 @@
     return d;
   }
 
-  /* ---------------------- chips ---------------------- */
+  /* ---------- chips ---------- */
   function chip(label, box, on=true){
     const s=document.createElement("span"); s.className="chip"+(on?" on":""); s.textContent=label;
     s.addEventListener("click",()=> s.classList.toggle("on"));
@@ -306,13 +323,10 @@
     });
   }
 
-  /* ---------------------- rotor ---------------------- */
+  /* ---------- rotor ---------- */
   const rotor=$("#rotor"), rotorList=$("#rotorList");
-  const mutedKey = LS.muted + ":" + (host||"");
-  try{
-    const arr = JSON.parse(localStorage.getItem(mutedKey)||"[]");
-    if (Array.isArray(arr)) arr.forEach(x=>state.muted.add(String(x)));
-  }catch{}
+  const mutedKey = LS.muted + ":" + (state.host||"");
+  try{ const arr = JSON.parse(localStorage.getItem(mutedKey)||"[]"); if (Array.isArray(arr)) arr.forEach(x=>state.muted.add(String(x))); }catch{}
 
   function setMutedPersist(){
     try{ localStorage.setItem(mutedKey, JSON.stringify(Array.from(state.muted))); }catch{}
@@ -320,11 +334,8 @@
   }
 
   function buildIndustries(d){
-    // prefer only site sectors; if none, fallback to ["general"]
     const s = Array.isArray(d?.sectorHints) ? d.sectorHints.filter(Boolean) : [];
-    const uniq = [];
-    const seen = new Set();
-    const source = s.length ? s : ["general"];
+    const uniq = []; const seen = new Set(); const source = s.length ? s : ["general"];
     for (const x of source){
       const k = String(x||"").toLowerCase().trim();
       if (!k || seen.has(k)) continue;
@@ -367,7 +378,6 @@
     const itemH = 36;
     const top = (boxH/2) - (itemH/2) - (selVisibleIndex*itemH);
     rotorList.style.transition = center ? "" : "transform .12s ease";
-    rotorList.style.transform = `translateY=${Math.round(top)}px`;
     rotorList.style.transform = `translateY(${Math.round(top)}px)`;
     if (!center) setTimeout(()=> rotorList.style.transition = "", 150);
 
@@ -382,7 +392,6 @@
     const idx = state.industries.indexOf(name);
     if (idx>=0){ state.sel = idx; renderRotor(false); }
   }
-
   function stepSelection(delta){
     const visible = state.industries.filter(i => state.showMuted || !state.muted.has(i));
     const curName = state.industries[state.sel];
@@ -409,7 +418,7 @@
     setMutedPersist(); renderRotor(true);
   });
 
-  /* ---------------------- metrics render ---------------------- */
+  /* ---------- metrics render ---------- */
   const metricBox=$("#metricBox"), titlesBox=$("#titlesBox");
   const cityInput=$("#cityInput"), tagInput=$("#tagInput");
   const cityChips=document.createElement("div"); cityChips.id="cityChipsInner"; $("#cityChips").appendChild(cityChips);
@@ -442,7 +451,7 @@
     }
   }
 
-  /* ---------------------- revenue dual range ---------------------- */
+  /* ---------- revenue dual range ---------- */
   const revMin=$("#revMin"), revMax=$("#revMax"), revFill=$("#revFill"), revMinVal=$("#revMinVal"), revMaxVal=$("#revMaxVal");
   function syncDual(){
     let a = parseInt(revMin.value,10), b = parseInt(revMax.value,10);
@@ -457,7 +466,7 @@
   revMax.addEventListener("input", syncDual);
   window.addEventListener("resize", syncDual);
 
-  /* ---------------------- employees ---------------------- */
+  /* ---------- employees ---------- */
   const emp=$("#emp"), empVal=$("#empVal"), empHint=$("#empHint");
   function syncEmp(){
     const n = parseInt(emp.value,10);
@@ -466,7 +475,7 @@
   }
   emp.addEventListener("input", syncEmp);
 
-  /* ---------------------- one-liner edit/refresh ---------------------- */
+  /* ---------- one-liner edit/refresh ---------- */
   const oneLine=$("#oneLine");
   $("#editOne").addEventListener("click", (e)=>{
     if ((e.target||{}).id==="refreshLink") return;
@@ -478,11 +487,11 @@
     e.preventDefault(); await loadFromSite(state.host,true);
   });
 
-  /* ---------------------- apply/save ---------------------- */
+  /* ---------- apply/save ---------- */
   function collectPersona(){
     const sector = state.industries[state.sel] || "general";
     const titles = getOnChips(titlesBox);
-    const cities = getOnChips(cityChips);
+    const cities = sanitizeCities(getOnChips(cityChips));
     const tags = getOnChips(tagChips);
     const revA = parseInt(revMin.value,10), revB = parseInt(revMax.value,10);
     const minRev = Math.min(revA, revB), maxRev = Math.max(revA, revB);
@@ -523,20 +532,23 @@
       if (ok) { try{ localStorage.setItem("fp.supplier.host", state.host); }catch{} }
       $("#statusLine").textContent = ok ? "Profile applied." : ("Apply failed: " + (txt||res.status));
       $("#statusLine").className = ok? "ok" : "bad";
-    }catch(err){
+    }catch{
       $("#statusLine").textContent = "Network error applying profile.";
       $("#statusLine").className = "bad";
     }
   }
 
   function saveLocal(){
-    try{ 
-      localStorage.setItem(LS.persona, JSON.stringify(collectPersona())); 
+    try{
+      const persona = collectPersona();
+      localStorage.setItem(LS.persona, JSON.stringify(persona));
       localStorage.setItem("fp.supplier.host", state.host);
-      $("#statusLine").textContent="Saved locally."; 
-      $("#statusLine").className="ok"; 
+      $("#statusLine").textContent="Saved locally.";
+      $("#statusLine").className="ok";
+    }catch{
+      $("#statusLine").textContent="Save failed.";
+      $("#statusLine").className="bad";
     }
-    catch{ $("#statusLine").textContent="Save failed."; $("#statusLine").className="bad"; }
   }
 
   $("#apply").addEventListener("click", applyToApi);
@@ -547,7 +559,7 @@
     window.location.href = "free-panel.html";
   });
 
-  /* ---------------------- product refinement (shrink/film heuristic) ------ */
+  /* ---------- product refinement (shrink/film heuristic) ---------- */
   function refineProductTags(host, list){
     const L = (list||[]).map(s=>String(s).toLowerCase());
     const shrinky = L.some(t => /shrink|stretch|film/.test(t));
@@ -562,8 +574,8 @@
     return keep;
   }
 
-  /* ---------------------- load classify + hydrate ---------------------- */
-  async function loadFromSite(h, forceRefresh=false){
+  /* ---------- load classify + hydrate ---------- */
+  async function loadFromSite(h){
     updApiBadge();
     if (!h){ oneLine.textContent = "Missing website/domain."; return; }
     $("#statusLine").textContent = `Reading ${h}…`;
@@ -577,38 +589,31 @@
     state.geo = data.geoHints || {citiesTop:[],statesTop:[]};
     state.host = data.host || h;
 
-    // Prefer backend summary; fallback to local composition
     const serverLine = (typeof data.summary === "string" && data.summary.trim()) ? data.summary.trim() : "";
     oneLine.textContent = serverLine || composeOneLiner(data);
 
     // industries
     buildIndustries(data);
 
-    // product focus: refined & prefilled
+    // products
     let prods = Array.isArray(data.productTags)? data.productTags.slice(0,12) : [];
     prods = refineProductTags(state.host, prods);
     $("#tagChips").innerHTML=""; const tagBox=document.createElement("div"); tagBox.id="tagChipsInner"; $("#tagChips").appendChild(tagBox);
     prods.forEach(t=> chip(t, tagBox, true));
 
-    // cities: only from geo (no seed cities); prefill if present
+    // cities (sanitized)
     $("#cityChips").innerHTML=""; const cityBox=document.createElement("div"); cityBox.id="cityChipsInner"; $("#cityChips").appendChild(cityBox);
-    const citySeeds = (state.geo.citiesTop && state.geo.citiesTop.length) ? state.geo.citiesTop : [];
+    const citySeeds = sanitizeCities(state.geo.citiesTop || []);
     citySeeds.forEach(c=> chip(c, cityBox, true));
 
     $("#statusLine").textContent = "Pre-filled from your site.";
     $("#statusLine").className = "ok";
 
-    // sliders initial
     revMin.value = 0; revMax.value = clamp(revMax.value|0, 0, 200); syncDual();
     emp.value = 120; syncEmp();
   }
 
-  /* ---------------------- inputs wiring ---------------------- */
-  function addOnEnter(input, box){
-    input.addEventListener("keydown",(e)=>{
-      if(e.key==="Enter"){ e.preventDefault(); const v=input.value.trim(); if(!v) return; chip(v, box, true); input.value=""; }
-    });
-  }
+  /* ---------- inputs wiring ---------- */
   addOnEnter($("#cityInput"), $("#cityChips"));
   addOnEnter($("#tagInput"), $("#tagChips"));
   $("#setApi").addEventListener("click", ()=>{
@@ -618,12 +623,12 @@
     updApiBadge();
   });
 
-  /* ---------------------- boot ---------------------- */
+  /* ---------- boot ---------- */
   updApiBadge();
-  const initHost = host || prompt("Your website / domain? (e.g., acme.com)","")||"";
+  const initHost = state.host || prompt("Your website / domain? (e.g., acme.com)","")||"";
   state.host = normHost(initHost);
   try{ if (state.host) localStorage.setItem("fp.supplier.host", state.host); }catch{}
-  loadFromSite(state.host, true);
+  loadFromSite(state.host);
   syncDual(); syncEmp();
 })();
 </script>
