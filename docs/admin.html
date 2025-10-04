@@ -1,207 +1,193 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Admin / Monitor</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin / Monitor — Artemis BV1</title>
 <style>
-  :root{
-    --bg:#0b0f14; --panel:#121822; --panel2:#0e141c; --card:#0f1724;
-    --text:#e9f1f7; --muted:#8aa0b2; --accent:#6de1ff; --ring:#2a4e6d;
-    --ok:#38e08f; --warn:#ffd166; --bad:#ff6b6b; --border:#1b2531;
-  }
-  *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-    font:14px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
-  a{color:inherit}
-  .wrap{max-width:1200px;margin:0 auto;padding:16px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px}
-  .grid{display:grid;grid-template-columns:360px 1fr;gap:16px}
-  @media (max-width:980px){ .grid{grid-template-columns:1fr} }
-  .top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px}
-  .sep{flex:1}
-  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:8px 12px;border-radius:10px;border:1px solid var(--border);
-    background:#152333;color:#cfe0ee;cursor:pointer}
-  .btn.primary{background:var(--accent);border:none;color:#082433;font-weight:800}
-  .btn:active{transform:translateY(1px)}
-  input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0d1520;color:var(--text);outline:none}
-  input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
-  label{display:block;color:#9bb2c8;margin:8px 0 6px}
-  .log{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0a121b;border:1px solid var(--border);border-radius:10px;padding:8px;height:260px;overflow:auto;color:#a5bed1;margin-top:8px}
-  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
-  .h{font-size:12px;color:#8aa0b2;letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
-  .kv{display:grid;grid-template-columns:160px 1fr;gap:8px;font-family:ui-monospace,Menlo,Consolas,monospace}
-  .kv div{padding:4px 0;border-bottom:1px dashed #152233}
-  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+  :root { color-scheme: dark; }
+  body{margin:0;background:#0b0f14;color:#e9f1f7;font:14px/1.4 system-ui,Segoe UI,Roboto,Inter,Arial}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #15202b;background:#0e141b}
+  h1{font-size:16px;margin:0}
+  .muted{color:#9ab0c0}
+  main{padding:18px;display:grid;grid-template-columns:360px 1fr;gap:16px}
+  .card{background:#121822;border:1px solid #1c2532;border-radius:12px;padding:12px}
+  input,button{border-radius:10px;border:1px solid #223042;background:#0d1520;color:#e9f1f7}
+  input{padding:10px;width:100%}
+  button{padding:10px 14px;border:0;background:#6de1ff;color:#082433;font-weight:700;cursor:pointer}
+  .btn{margin-left:8px}
+  .row{display:grid;gap:10px}
+  .log{font:12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;white-space:pre-wrap;height:280px;overflow:auto;background:#0d1520;border-radius:10px;border:1px solid #223042;padding:10px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}
+  dt{color:#9ab0c0}
+  .switch{display:flex;align-items:center;gap:8px}
+  .small{font-size:12px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="top card" style="margin-bottom:16px">
-    <strong>Admin / Monitor</strong>
-    <span id="liveDot" class="pill">SSE: connecting…</span>
-    <span class="sep"></span>
-    <button id="pingBtn" class="btn">Ping</button>
-    <button id="healthBtn" class="btn">Health</button>
-    <button id="reloadBtn" class="btn">Reload catalog</button>
-  </div>
+  <header>
+    <h1>Admin / Monitor <span class="muted" id="sseNote">SSE: error</span></h1>
+    <div>
+      <button class="btn" id="btnPing">Ping</button>
+      <button class="btn" id="btnHealth">Health</button>
+      <button class="btn" id="btnReload">Reload catalog</button>
+    </div>
+  </header>
 
-  <div class="grid">
-    <!-- LEFT: settings & quick actions -->
-    <aside class="card">
-      <div class="h">API</div>
-      <label>Base</label>
-      <input id="apiBase" type="url" placeholder="https://YOUR.code.run/api">
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button id="saveApi" class="btn">Save</button>
-        <button id="testApi" class="btn">Test</button>
+  <main>
+    <section class="card">
+      <div class="row" style="gap:8px">
+        <label class="muted small">Base</label>
+        <input id="base" placeholder="https://YOUR.code.run/api">
+        <div>
+          <button id="save">Save</button>
+          <button id="test" class="btn">Test</button>
+        </div>
       </div>
 
-      <div class="h" style="margin-top:16px">Find buyers</div>
-      <label>Host</label>
-      <input id="hostInput" type="text" placeholder="yourcompany.com">
-      <label>City (optional)</label>
-      <input id="cityInput" type="text" placeholder="e.g., San Diego">
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button id="findBtn" class="btn primary">Find buyers</button>
+      <div class="row" style="margin-top:16px">
+        <label class="muted small">Find buyers</label>
+        <input id="host" placeholder="yourcompany.com">
+        <input id="city" placeholder="e.g., San Diego">
+        <button id="find" class="btn">Find buyers</button>
       </div>
 
-      <div class="h" style="margin-top:16px">Prefs</div>
-      <label>Quick apply demo prefs for current host</label>
-      <button id="applyPrefs" class="btn">Apply demo prefs</button>
-
-      <div class="h" style="margin-top:16px">Options</div>
-      <label><input id="autoScroll" type="checkbox" checked> Auto-scroll logs</label>
-    </aside>
-
-    <!-- RIGHT: live stream + snapshots -->
-    <main>
-      <div class="card">
-        <div class="h">Live stream (SSE)</div>
-        <pre id="liveLog" class="log" aria-live="polite"></pre>
+      <div class="row" style="margin-top:16px">
+        <label class="muted small">Prefs</label>
+        <button id="applyPrefs">Apply demo prefs</button>
       </div>
 
-      <div class="card" style="margin-top:16px">
-        <div class="h">Last health snapshot</div>
-        <div id="healthBox" class="kv"></div>
+      <div class="row" style="margin-top:16px">
+        <label class="muted small">Options</label>
+        <label class="switch"><input type="checkbox" id="autoscroll" checked> <span class="small muted">Auto-scroll logs</span></label>
       </div>
-    </main>
-  </div>
-</div>
+    </section>
+
+    <section class="card">
+      <div class="log" id="log"></div>
+    </section>
+
+    <section class="card" style="grid-column:1 / -1">
+      <div class="grid2">
+        <div>
+          <div class="muted small" style="margin-bottom:8px">LAST HEALTH SNAPSHOT</div>
+          <dl id="healthDl">
+            <dt>service</dt><dd>-</dd>
+            <dt>uptimeSec</dt><dd>-</dd>
+            <dt>allowTiers</dt><dd>-</dd>
+            <dt>catalog.total</dt><dd>-</dd>
+            <dt>catalog.byTier</dt><dd>-</dd>
+            <dt>now</dt><dd>-</dd>
+          </dl>
+        </div>
+      </div>
+    </section>
+  </main>
 
 <script>
 (function(){
-  // --- constants (pre-filled with your live API; can be overridden & saved) ---
-  const DEFAULT_API = "https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api";
+  const $ = (s)=>document.querySelector(s);
+  const logEl = $("#log");
+  const healthDl = $("#healthDl");
 
-  // --- tiny helpers ---
-  const $ = (q, r=document)=>r.querySelector(q);
-  const logBox = $("#liveLog");
-  const dot = $("#liveDot");
-  const healthBox = $("#healthBox");
-
-  const LS_KEY = "admin.apiBase";
-  function getBase(){ return (localStorage.getItem(LS_KEY) || DEFAULT_API).replace(/\/+$/,""); }
-  function setBase(v){ localStorage.setItem(LS_KEY, String(v||"").trim()); }
-  function post(u, body){ return fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})}); }
-  function get(u){ return fetch(u,{method:"GET"}); }
-  function kv(obj){
-    healthBox.innerHTML="";
-    const add=(k,v)=>{ const a=document.createElement("div"); a.textContent=k; const b=document.createElement("div"); b.textContent=v; healthBox.append(a,b); };
-    if (!obj){ add("status","-"); return; }
-    add("service", obj.service || "-");
-    add("uptimeSec", obj.uptimeSec);
-    add("allowTiers", obj.env?.allowTiers);
-    add("catalog.total", obj.catalog?.total);
-    add("catalog.byTier", JSON.stringify(obj.catalog?.byTier||{}));
-    add("now", obj.now);
+  // ---- Base handling ----
+  const DEFAULT_BASE = "https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api";
+  function getBase(){
+    const v = (localStorage.getItem("apiBase") || DEFAULT_BASE).trim();
+    return v.replace(/\/+$/,""); // strip trailing slashes
   }
-  function log(line){
-    const at = new Date().toISOString().slice(11,19);
-    logBox.textContent += `[${at}] ${line}\n`;
-    if ($("#autoScroll").checked) logBox.scrollTop = logBox.scrollHeight;
+  function setBase(v){
+    const val = (v||"").trim().replace(/\/+$/,"");
+    localStorage.setItem("apiBase", val);
+    $("#base").value = val;
   }
+  $("#base").value = getBase();
 
-  // --- wire base input ---
-  const apiInput = $("#apiBase");
-  apiInput.value = getBase();
-  $("#saveApi").addEventListener("click", ()=>{ setBase(apiInput.value); log("API base saved."); });
-  $("#testApi").addEventListener("click", async ()=>{
+  // ---- tiny helpers ----
+  function say(s){
+    const t = `[${new Date().toTimeString().slice(0,8)}] ${s}\n`;
+    logEl.textContent += t;
+    if ($("#autoscroll").checked) logEl.scrollTop = logEl.scrollHeight;
+  }
+  async function hit(method, path, body){
+    const url = getBase() + path;     // <<< ALWAYS use saved Base
+    const init = { method, headers: { "Content-Type":"application/json" } };
+    if (body) init.body = JSON.stringify(body);
     try{
-      const r = await get(getBase()+"/ping");
-      log("Test: /ping -> " + r.status);
-    }catch(e){ log("Test failed: " + (e.message||e)); }
-  });
+      const r = await fetch(url, init);
+      const txt = await r.text();
+      let data = txt;
+      try { data = JSON.parse(txt); } catch {}
+      return { ok:r.ok, status:r.status, data, url };
+    }catch(e){
+      return { ok:false, status:0, data:String(e), url };
+    }
+  }
+  function setHealth(h){
+    const map = {
+      service: h?.service, uptimeSec: h?.uptimeSec, allowTiers: h?.env?.allowTiers ?? h?.allowTiers,
+      "catalog.total": h?.catalog?.total, "catalog.byTier": JSON.stringify(h?.catalog?.byTier ?? {}),
+      now: h?.now
+    };
+    healthDl.innerHTML = Object.entries(map).map(([k,v])=>(
+      `<dt>${k}</dt><dd>${(v===undefined||v===null)?'-':String(v)}</dd>`
+    )).join("");
+  }
 
-  // --- buttons ---
-  $("#pingBtn").addEventListener("click", async ()=>{
-    const r = await get(getBase()+"/api/ping");
-    log("Ping -> "+r.status);
-  });
-  $("#healthBtn").addEventListener("click", async ()=>{
-    const r = await get(getBase()+"/health");
-    const j = await r.json().catch(()=>null);
-    kv(j||{});
-    log("Health -> " + r.status + " (catalog.total=" + (j?.catalog?.total||0) + ")");
-  });
-  $("#reloadBtn").addEventListener("click", async ()=>{
-    const r = await post(getBase()+"/catalog/reload",{});
-    const j = await r.json().catch(()=>null);
-    log("Catalog reload -> " + r.status + " " + JSON.stringify(j||{}));
-  });
+  // ---- UI wiring ----
+  $("#save").onclick = ()=>{ setBase($("#base").value); say("API base saved."); };
+  $("#test").onclick = async ()=>{
+    const r = await hit("GET","/ping");
+    say(`Test: /ping -> ${r.status}`);
+  };
+  $("#btnPing").onclick = async ()=>{
+    const r = await hit("GET","/ping");        // <<< fixed to use Base
+    say(`Ping -> ${r.status}`);
+  };
+  $("#btnHealth").onclick = async ()=>{
+    const r = await hit("GET","/health");
+    say(`Health -> ${r.status}`);
+    if (r.ok && r.data) setHealth(r.data);
+  };
+  $("#btnReload").onclick = async ()=>{
+    const r = await hit("POST","/catalog/reload",{});
+    say(`Reload -> ${r.status}`);
+  };
 
-  $("#findBtn").addEventListener("click", async ()=>{
-    const host = $("#hostInput").value.trim();
-    const city = $("#cityInput").value.trim();
-    if (!host){ log("find: please enter host"); return; }
-    const q = new URLSearchParams({ host, limit:"8", city }).toString();
-    const r = await get(getBase()+"/leads/find-buyers?"+q);
-    const j = await r.json().catch(()=>null);
-    log("find-buyers -> " + r.status + " " + JSON.stringify(j?.summary||j||{}));
-  });
+  $("#find").onclick = async ()=>{
+    const host = ($("#host").value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
+    const city = ($("#city").value||"").trim();
+    if(!host){ say("Find: missing host"); return; }
+    const q = new URLSearchParams({ host }); if(city) q.set("city",city);
+    const r = await hit("GET","/leads/find-buyers?"+q.toString());
+    say(`Find buyers -> ${r.status}`);
+    if (r.ok) say(JSON.stringify(r.data, null, 2));
+  };
 
-  $("#applyPrefs").addEventListener("click", async ()=>{
-    const host = $("#hostInput").value.trim();
-    if (!host){ log("prefs: please enter host"); return; }
-    const payload = {
-      host,
-      productTags:["film","labels"],
-      sectorHints:["Food","Beverage"],
-      general:{ mids:true, avoidBig:true, near:true, ecom:false, wholesale:true, retail:true },
-      metrics:[{label:"Fast turnaround", value:8},{label:"Lowest unit cost", value:7}],
-      targeting:{ city: $("#cityInput").value.trim() || "San Diego" },
+  $("#applyPrefs").onclick = async ()=>{
+    // same safe demo persona we used before
+    const demo = {
+      city:"San Diego",
+      general:{ mids:true, near:true, ecommerce:false, retail:true, wholesale:true },
+      likeTags:["film","labels","food","beverage"],
+      preferSmallMid:true,
+      sizeWeight:{ micro:1.2, small:1.0, mid:0.6, large:-1.2 },
+      signalWeight:{ local:1.6, ecommerce:0.1, retail:0.35, wholesale:0.35 },
       inboundOptIn:true
     };
-    const r = await post(getBase()+"/prefs/upsert", payload);
-    const j = await r.json().catch(()=>null);
-    log("prefs.upsert -> " + r.status + " " + (j?.summary || JSON.stringify(j||{})));
-  });
+    const r = await hit("POST","/prefs/upsert", demo);
+    say(`Prefs upsert -> ${r.status}`);
+  };
 
-  // --- SSE stream ---
-  function connectSSE(){
-    const url = getBase().replace(/\/api$/,"") + "/api/events/stream";
-    let es;
-    try{
-      es = new EventSource(url, { withCredentials:false });
-    }catch(e){ log("SSE init failed: " + (e.message||e)); dot.textContent="SSE: failed"; dot.className="pill bad"; return; }
+  // initial health poll
+  (async ()=>{ const r = await hit("GET","/health"); say(`Health -> ${r.status}${r.ok && r.data?.catalog?` (catalog.total=${r.data.catalog.total})`:""}`); if (r.ok) setHealth(r.data); })();
 
-    dot.textContent = "SSE: connecting…"; dot.className="pill";
-    es.onopen = ()=>{ dot.textContent="SSE: live"; dot.className="pill ok"; log("SSE connected"); };
-    es.onerror = ()=>{ dot.textContent="SSE: error"; dot.className="pill warn"; };
-    es.onmessage = (ev)=>{
-      try{
-        const data = JSON.parse(ev.data);
-        log("evt " + (data.type||"message") + " " + JSON.stringify(data));
-      }catch{
-        log("evt " + ev.data);
-      }
-    };
-  }
-
-  // boot
-  connectSSE();
-  // fetch an initial health snapshot automatically
-  $("#healthBtn").click();
+  // light periodic health poll (SSE not required)
+  setInterval(async ()=>{
+    const r = await hit("GET","/health");
+    if (r.ok && r.data) setHealth(r.data);
+  }, 30000);
 })();
 </script>
 </body>
