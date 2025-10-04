@@ -7,10 +7,10 @@ This doc explains how to use the **Admin Dashboard** and **Debug Console** to sa
 ## Quick open links (your repo)
 
 - **Admin dashboard:**  
-  https://gggp-test.github.io/galactly-monorepo-v1/docs/admin.html
+  https://gggp-test.github.io/galactly-monorepo-v1/admin.html
 
 - **Debug console:**  
-  https://gggp-test.github.io/galactly-monorepo-v1/docs/debug.html
+  https://gggp-test.github.io/galactly-monorepo-v1/debug.html
 
 These pages remember the API base in your browser only.
 
