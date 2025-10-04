@@ -7,10 +7,11 @@
 // Endpoints:
 //   GET  /api/catalog            -> summary stats
 //   GET  /api/catalog/sample     -> small sample list (?limit=20)
-//   POST /api/catalog/reload     -> rebuilds in-memory cache from env
+//   POST /api/catalog/reload     -> rebuilds in-memory cache from env  (ADMIN-ONLY)
 
 import { Router, Request, Response } from "express";
 import { loadCatalog, type BuyerRow } from "../shared/catalog";
+import { requireAdmin } from "../shared/admin";
 
 export const CatalogRouter = Router();
 
@@ -95,13 +96,15 @@ CatalogRouter.get("/sample", async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/catalog/reload
-CatalogRouter.post("/reload", async (_req: Request, res: Response) => {
+// POST /api/catalog/reload  (ADMIN-ONLY)
+CatalogRouter.post("/reload", requireAdmin, async (_req: Request, res: Response) => {
   try {
     await loadCatalog();
     res.json({ ok: true, reloaded: true, at: new Date().toISOString() });
   } catch (err: any) {
-    res.status(200).json({ ok: false, error: "catalog-reload-failed", detail: String(err?.message || err) });
+    res
+      .status(200)
+      .json({ ok: false, error: "catalog-reload-failed", detail: String(err?.message || err) });
   }
 });
 
