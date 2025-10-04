@@ -7,7 +7,7 @@
 //   GET  /api/prefs/get?host=acme.com    -> persona-shaped view + raw prefs
 //   GET  /api/prefs?host=acme.com        -> raw effective prefs (query form)
 //   GET  /api/prefs/:host                -> raw effective prefs (param form)
-//   POST /api/prefs/upsert               -> upsert from panel payload, returns effective prefs
+//   POST /api/prefs/upsert               -> upsert from panel payload, returns effective prefs (ADMIN-ONLY)
 //
 // Notes
 // - Stores data in the shared in-memory prefs store (no DB needed).
@@ -23,6 +23,7 @@ import {
   normalizeHost as normHostShared,
   type EffectivePrefs,
 } from "../shared/prefs";
+import { requireAdmin } from "../shared/admin"; // <<< admin lock
 
 const r = Router();
 
@@ -275,8 +276,8 @@ r.get("/:host", (req: Request, res: Response) => {
   });
 });
 
-// POST /api/prefs/upsert  (Body = PanelPayload)
-r.post("/upsert", (req: Request, res: Response) => {
+// POST /api/prefs/upsert  (Body = PanelPayload)  — ADMIN-ONLY
+r.post("/upsert", requireAdmin, (req: Request, res: Response) => {
   try {
     const body = (req.body || {}) as PanelPayload;
     const host = normHost(body.host || body.line?.host || "");
@@ -301,7 +302,7 @@ r.post("/upsert", (req: Request, res: Response) => {
         preferSmallMid: !!effective.preferSmallMid,
         sizeWeight: effective.sizeWeight,
         signalWeight: effective.signalWeight,
-        titlesPreferred: effective["titlesPreferred"] || [],
+        titlesPreferred: (effective as any)["titlesPreferred"] || [],
         inboundOptIn: effective.inboundOptIn === true,
       },
     });
