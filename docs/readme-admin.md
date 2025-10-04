@@ -102,8 +102,8 @@ If your API moves later, paste the new base into the **Base** field and click **
 - **API moves?** Open Admin/Debug → paste new base (include `/api`) → **Save**.  
 - **GitHub Pages on your domain?** Point DNS (CNAME) to Pages. No code changes needed.  
   Then use:
-https:///docs/admin.html
-https:///docs/debug.html
+Then use: https://gggp-test.github.io/galactly-monorepo-v1/docs/admin.html
+https://gggp-test.github.io/galactly-monorepo-v1/docs/debug.html
 
 ---
 
