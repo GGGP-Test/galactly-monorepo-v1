@@ -9,25 +9,54 @@
 //   scoreRow(row, prefs, city?): { score:number, reasons:string[] }
 //   HOT_METRICS_BY_SECTOR, getHotMetricsBySector(), hotMetricsForSectors()
 //
-// Row (buyer candidate) is loose: {
-//   host, tier/tiers?, city?, sector?, tags?[], segments?[],
-//   revenueM?, employees?, size?, materials?[], certs?[], roles?/contacts?/bestTitles?[]
-// }
-// Prefs is EffectivePrefs with optional overlays:
-//   titlesPreferred[],
-//   materialsAllow[] / materialsBlock[],
-//   certsRequired[],
-//   keywordsAdd[] / keywordsAvoid[],
-//   likeTags[] (alias to productTags), sectorHints[], targeting{city,cities[],revenueMinM,revenueMaxM,employees,sector},
-//   sizeWeight, signalWeight
+// Env knobs (all optional; numbers):
+//   HOT_MIN=80
+//   WARM_MIN=55
+//   SIZE_SCALE=10
+//   LOCALITY_MAX_BONUS=15
+//   TAG_HIT_BONUS=5
+//   TAG_MAX_BONUS=20
+//   ADS_ACTIVITY_WEIGHT=35
+//   SCORER_WEIGHTS_JSON='{"ADS_ACTIVITY_WEIGHT":40,"SIZE_SCALE":12,...}'
+//
+// Notes:
+// - If SCORER_WEIGHTS_JSON is present, its values override individual env vars.
+// - Ads signal is pulled from ./ads-store (0..1) and mapped to points.
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export const HOT_MIN = 80;
-export const WARM_MIN = 55;
+import { getSignal as getAdsSignal } from "./ads-store";
+
+/* ----------------------------- env helpers ----------------------------- */
+
+function envNum(name: string, dflt: number): number {
+  const v = Number(process.env[name]);
+  return Number.isFinite(v) ? v : dflt;
+}
+function parseWeightsJSON(): Partial<Record<string, number>> {
+  try {
+    const raw = process.env.SCORER_WEIGHTS_JSON;
+    if (!raw) return {};
+    const obj = JSON.parse(raw);
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      const n = Number(v);
+      if (Number.isFinite(n)) out[k] = n;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+const JW = parseWeightsJSON();
+
+/* ------------------------------ thresholds ----------------------------- */
+
+export const HOT_MIN  = (JW.HOT_MIN  ?? envNum("HOT_MIN",  80)) as number;
+export const WARM_MIN = (JW.WARM_MIN ?? envNum("WARM_MIN", 55)) as number;
 
 export type Band = "HOT" | "WARM" | "COOL";
-
 export function classifyScore(score: number): Band {
   if (score >= HOT_MIN) return "HOT";
   if (score >= WARM_MIN) return "WARM";
@@ -66,12 +95,20 @@ function intersectCount(a: Set<string>, b: Set<string>): number {
   let n = 0; a.forEach(v => { if (b.has(v)) n++; }); return n;
 }
 
-function cityBoost(anchor?: string, candidate?: string): number {
+function cityBoostPoints(anchor?: string, candidate?: string, maxBonus = 15): number {
   const A = lc(anchor), B = lc(candidate);
   if (!A || !B) return 0;
-  if (A === B) return 0.15;
-  if (B.includes(A) || A.includes(B)) return 0.10;
+  if (A === B) return maxBonus;                    // exact city match
+  if (B.includes(A) || A.includes(B)) return Math.floor(maxBonus * 0.66);
   return 0;
+}
+
+function normHost(input?: string): string {
+  return String(input || "")
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
 }
 
 /* ------------------------ hot metrics by sector ------------------------ */
@@ -143,6 +180,14 @@ export function hotMetricsForSectors(sectors?: string[]): Record<string, string[
   return out;
 }
 
+/* ------------------------------- weights ------------------------------- */
+
+const SIZE_SCALE          = (JW.SIZE_SCALE          ?? envNum("SIZE_SCALE", 10)) as number;            // maps sizeWeight to points
+const LOCALITY_MAX_BONUS  = (JW.LOCALITY_MAX_BONUS  ?? envNum("LOCALITY_MAX_BONUS", 15)) as number;    // max locality bump
+const TAG_HIT_BONUS       = (JW.TAG_HIT_BONUS       ?? envNum("TAG_HIT_BONUS", 5)) as number;          // per tag overlap
+const TAG_MAX_BONUS       = (JW.TAG_MAX_BONUS       ?? envNum("TAG_MAX_BONUS", 20)) as number;         // cap for tag overlap
+const ADS_ACTIVITY_WEIGHT = (JW.ADS_ACTIVITY_WEIGHT ?? envNum("ADS_ACTIVITY_WEIGHT", 35)) as number;   // ads 0..1 -> points
+
 /* ------------------------------- scorer -------------------------------- */
 
 /**
@@ -158,7 +203,7 @@ export function hotMetricsForSectors(sectors?: string[]): Record<string, string[
  * 9) Product focus match (materials)
  * 10) Certifications needed (boost/soft nudge)
  * 11) Keywords add/avoid (light text tokens)
- * 12) Reserved for recency/signals (not used here)
+ * 12) Ads activity signal (from ads-store)
  */
 export function scoreRow(row: any, prefs: any, panelCity?: string): { score: number; reasons: string[] } {
   let score = 50;
@@ -172,10 +217,10 @@ export function scoreRow(row: any, prefs: any, panelCity?: string): { score: num
   else if (tier === "B") { score += 6; reasons.push("tier:B"); }
   else { reasons.push("tier:C"); }
 
-  // ---- 2) City proximity
+  // ---- 2) City proximity (env-tunable max)
   const wantedCity = lc(panelCity) || lc(prefs?.targeting?.city) || (prefs?.targeting?.cities || [])[0];
-  const cBoost = cityBoost(wantedCity, row?.city);
-  if (cBoost) { const add = Math.round(cBoost * 100); score += add; reasons.push(`local+${add}`); }
+  const cAdd = cityBoostPoints(wantedCity, row?.city, LOCALITY_MAX_BONUS);
+  if (cAdd) { score += cAdd; reasons.push(`local+${cAdd}`); }
 
   // ---- 3) Tag overlap
   const wantTags = setLower([
@@ -185,7 +230,11 @@ export function scoreRow(row: any, prefs: any, panelCity?: string): { score: num
   ]);
   const rowTags = setLower([...(row?.tags || []), ...(row?.segments || [])]);
   const tagHits = wantTags.size && rowTags.size ? intersectCount(wantTags, rowTags) : 0;
-  if (tagHits) { const add = Math.min(20, tagHits * 5); score += add; reasons.push(`tags+${tagHits}`); }
+  if (tagHits) {
+    const add = Math.min(TAG_MAX_BONUS, tagHits * TAG_HIT_BONUS);
+    score += add;
+    reasons.push(`tags+${tagHits}`);
+  }
 
   // ---- 4) Sector fit
   const sector = lc(row?.sector);
@@ -251,7 +300,7 @@ export function scoreRow(row: any, prefs: any, panelCity?: string): { score: num
     if (avoidHits > 0) { score -= Math.min(9, 3 * avoidHits); reasons.push(`kw-${avoidHits}`); }
   }
 
-  // ---- (Optional) legacy size bucket (if present)
+  // ---- (Optional) legacy size bucket (if present) mapped via SIZE_SCALE
   const rowSize = sizeBucket(row?.size);
   if (rowSize) {
     const sw = prefs?.sizeWeight || {};
@@ -260,8 +309,25 @@ export function scoreRow(row: any, prefs: any, panelCity?: string): { score: num
       rowSize === "small" ? clampNum(sw.small, -3, 3, 1.0) :
       rowSize === "mid"   ? clampNum(sw.mid,   -3, 3, 0.6) :
       rowSize === "large" ? clampNum(sw.large, -3, 3, -1.2) : 0;
-    if (w) { score += w * 4; reasons.push(`size:${rowSize}@${w.toFixed(2)}`); }
+    if (w) {
+      const add = Math.max(-SIZE_SCALE, Math.min(SIZE_SCALE, Math.round(w * (SIZE_SCALE / 2))));
+      score += add;
+      reasons.push(`size:${rowSize}@${w.toFixed(2)}(+${add})`);
+    }
   }
+
+  // ---- 12) Ads activity (0..1 from ads-store) -> points
+  try {
+    const host = normHost(row?.host);
+    if (host) {
+      const sig = getAdsSignal(host); // 0..1
+      if (typeof sig === "number" && sig > 0) {
+        const add = Math.round(sig * ADS_ACTIVITY_WEIGHT);
+        score += add;
+        reasons.push(`ads:${sig.toFixed(2)}(+${add})`);
+      }
+    }
+  } catch { /* ignore */ }
 
   // ---- finalize
   score = Math.max(0, Math.min(100, score));
