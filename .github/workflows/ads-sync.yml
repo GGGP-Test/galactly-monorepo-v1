@@ -1,0 +1,29 @@
+name: Ads → API sync
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # every 6 hours
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install fetch (Node18+ has it, this pins compat)
+        run: 'node -e "require(\"node:fs\")"'
+
+      - name: Run sync
+        env:
+          API_BASE: https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: node scripts/ads-sync.mjs
