@@ -1,6 +1,6 @@
 // src/routes/classify.ts
 //
-// Deep classifier (focused crawl -> extraction -> bottom-up metrics)
+// Deep classifier (focused crawl -> extraction -> bottom-up metrics + signals)
 // Deterministic, no paid APIs.
 //
 // GET  /api/classify?host=acme.com[&maxPages=8]
@@ -21,6 +21,11 @@ import {
   extractSectors,
   extractMetrics,
 } from "../shared/extractor";
+
+/* ---- Signals registry (optional; tolerate absence) ---------------------- */
+let Signals: any = null;
+try { Signals = require("../shared/signals-registry"); } catch { /* optional */ }
+/* ------------------------------------------------------------------------- */
 
 type Role = "packaging_supplier" | "packaging_buyer" | "neither";
 
@@ -154,6 +159,19 @@ async function classifyHost(host: string, maxPages: number) {
 
   const summary = composeOneLiner(host, roleGuess.role, productTags, sectorHints);
 
+  // Optional: run unified signals
+  let signals: Record<string, any> | undefined;
+  let signalsReasons: string[] | undefined;
+  try {
+    if (Signals && typeof Signals.runAll === "function" && text) {
+      const out = Signals.runAll(text);
+      if (out?.ok) {
+        signals = out.results || undefined;
+        signalsReasons = Array.isArray(out.reasons) ? out.reasons.slice(0, 12) : undefined;
+      }
+    }
+  } catch { /* ignore — keep core result usable */ }
+
   // Favicon guess (Step3 will try this, then fall back to letter SVG)
   const favicon = `https://${host.replace(/^www\./, "")}/favicon.ico`;
 
@@ -168,6 +186,9 @@ async function classifyHost(host: string, maxPages: number) {
     sectorHints,
     hotMetricsBySector,
     geoHints,
+    // new:
+    signals,
+    signalsSummary: signalsReasons,
     favicon,
     bytes,
     fetchedAt: new Date().toISOString(),
