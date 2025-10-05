@@ -8,6 +8,8 @@
 // GET /api/leads/ping
 // GET /api/leads/find-buyers?host=acme.com[&city=&tags=a,b&sectors=x,y&minTier=A|B|C&limit=12]
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Router, Request, Response } from "express";
 import { CFG, capResults } from "../shared/env";
 
@@ -15,10 +17,34 @@ import { CFG, capResults } from "../shared/env";
 const Catalog: any = require("../shared/catalog");
 const Prefs: any = require("../shared/prefs");
 
-let TRC: any = {};
-try { TRC = require("../shared/trc"); }
-catch { console.warn("[leads] ../shared/trc not found; using heuristic scoring"); }
+// ---------- Optional TRC loader (works in CJS & ESM without extra files) ----
+let TRC: any = null;
+let _trcTried = false;
 
+async function tryLoadTRC() {
+  if (_trcTried || TRC) return;
+  _trcTried = true;
+
+  // Prefer dynamic import (works in both CJS/ESM via transpilation)
+  try { TRC = await import("../shared/trc"); return; } catch {}
+  try { TRC = await import("../shared/trc.js"); return; } catch {}
+
+  // Fallback: attempt createRequire to emulate require in ESM
+  try {
+    // @ts-ignore
+    const { createRequire } = await import("module");
+    // @ts-ignore
+    const req = (typeof require === "function") ? require : createRequire(import.meta.url);
+    try { TRC = req("../shared/trc"); return; } catch {}
+    try { TRC = req("../shared/trc.js"); return; } catch {}
+  } catch {
+    /* ignore */
+  }
+}
+// fire-and-forget; if it fails, we gracefully use the heuristic scorer
+void tryLoadTRC();
+
+// Node 18+ global fetch
 const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 const r = Router();
 
@@ -73,35 +99,37 @@ function cityBoost(city?: string, candidateCity?: string): number {
   return 0;
 }
 
-const HOT_T = Number(TRC?.HOT_MIN ?? 80);
-const WARM_T = Number(TRC?.WARM_MIN ?? 55);
+function prettyHostName(h: string): string {
+  const stem = String(h || "").replace(/^www\./, "").split(".")[0].replace(/[-_]/g, " ");
+  return stem.replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+const HOT_DEFAULT = 80;
+const WARM_DEFAULT = 55;
+const hotT = () => Number(TRC?.HOT_MIN ?? HOT_DEFAULT);
+const warmT = () => Number(TRC?.WARM_MIN ?? WARM_DEFAULT);
 
 function bandFromScore(score: number): "HOT" | "WARM" | "COOL" {
-  if (typeof TRC?.classifyScore === "function") {
+  if (TRC && typeof TRC.classifyScore === "function") {
     try { return TRC.classifyScore(score); } catch { /* noop */ }
   }
-  if (score >= HOT_T) return "HOT";
-  if (score >= WARM_T) return "WARM";
+  if (score >= hotT()) return "HOT";
+  if (score >= warmT()) return "WARM";
   return "COOL";
 }
 
 // Uncertainty ~ distance to band boundary (0..1, higher = shakier)
 function uncertainty(score: number): number {
-  const d = Math.min(Math.abs(score - HOT_T), Math.abs(score - WARM_T));
+  const d = Math.min(Math.abs(score - hotT()), Math.abs(score - warmT()));
   const u = Math.max(0, 1 - d / 10);
   return Number.isFinite(u) ? Number(u.toFixed(3)) : 0;
-}
-
-function prettyHostName(h: string): string {
-  const stem = String(h || "").replace(/^www\./, "").split(".")[0].replace(/[-_]/g, " ");
-  return stem.replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
 /* ---------------------------- scoring (fallback) --------------------------- */
 
 function safeScoreRow(row: Candidate, prefs: any, city?: string) {
   // Prefer TRC.scoreRow if present
-  if (typeof TRC?.scoreRow === "function") {
+  if (TRC && typeof TRC.scoreRow === "function") {
     try {
       const out = TRC.scoreRow(row, prefs, city);
       if (out && typeof out.score === "number") return out;
@@ -169,6 +197,9 @@ r.get("/ping", (_req: Request, res: Response) => res.json({ pong: true, at: new 
 
 r.get("/find-buyers", async (req: Request, res: Response) => {
   try {
+    // ensure TRC load has been attempted
+    void tryLoadTRC();
+
     const host = String(req.query.host || "").trim().toLowerCase();
     if (!host) return res.status(400).json({ ok: false, error: "host_required" });
 
