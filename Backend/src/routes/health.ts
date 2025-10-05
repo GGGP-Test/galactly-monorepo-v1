@@ -1,35 +1,45 @@
 // src/routes/health.ts
 //
-// Lightweight health + status without extra deps.
-// - GET /api/health            -> uptime/env + catalog summary
-// - GET /api/health/ping       -> simple pong
-// - (helper) registerHealthz(app) -> GET /healthz  (plain text "ok" for container healthchecks)
+// Lightweight health + status (zero fragile imports).
+// - GET /api/health      -> uptime/env + catalog summary
+// - GET /api/health/ping -> simple pong
+// - (optional) registerHealthz(app) -> /healthz returns "ok"
 
 import { Router, type Request, type Response, type Express } from "express";
-import { getCatalog, type BuyerRow } from "../shared/catalog";
 import { summarizeForHealth } from "../shared/env";
+
+/* eslint-disable @typescript-eslint/no-var-requires */
+let CatalogMod: any = null;
+try { CatalogMod = require("../shared/catalog"); } catch { /* optional */ }
 
 const r = Router();
 
 /* ----------------------------- tiny helpers ------------------------------ */
 
-type Loaded = unknown;
+type BuyerRow = Record<string, unknown>;
 
-function toArray(cat: Loaded): BuyerRow[] {
-  const anyCat = cat as any;
-  if (Array.isArray(anyCat)) return anyCat as BuyerRow[];
-  if (Array.isArray(anyCat?.rows)) return anyCat.rows as BuyerRow[];
-  if (Array.isArray(anyCat?.items)) return anyCat.items as BuyerRow[];
-  return [];
+function asStr(v: unknown): string { return (v == null ? "" : String(v)).trim(); }
+function arr(v: unknown): string[] { return Array.isArray(v) ? (v as unknown[]).map(asStr).filter(Boolean) : []; }
+
+function toArrayLoose(anyCat: any): BuyerRow[] {
+  // Accept array, {rows}, {items}, default[], or function getters
+  try {
+    if (!anyCat) return [];
+    if (Array.isArray(anyCat)) return anyCat as BuyerRow[];
+    if (typeof anyCat.getCatalog === "function") return toArrayLoose(anyCat.getCatalog());
+    if (typeof anyCat.get === "function") return toArrayLoose(anyCat.get());
+    if (typeof anyCat.rows === "function") return toArrayLoose(anyCat.rows());
+    if (Array.isArray(anyCat.rows)) return anyCat.rows as BuyerRow[];
+    if (Array.isArray(anyCat.items)) return anyCat.items as BuyerRow[];
+    if (Array.isArray(anyCat.catalog)) return anyCat.catalog as BuyerRow[];
+    if (typeof anyCat.all === "function") return toArrayLoose(anyCat.all());
+    if (Array.isArray(anyCat.default)) return anyCat.default as BuyerRow[];
+    return [];
+  } catch { return []; }
 }
 
-function asStr(v: unknown): string {
-  return (v == null ? "" : String(v)).trim();
-}
-
-function arr(v: unknown): string[] {
-  if (!Array.isArray(v)) return [];
-  return (v as unknown[]).map((x) => asStr(x)).filter(Boolean);
+function readCatalogRows(): BuyerRow[] {
+  return toArrayLoose(CatalogMod);
 }
 
 /* -------------------------------- routes --------------------------------- */
@@ -45,14 +55,13 @@ r.get("/", (_req: Request, res: Response) => {
     const upSec = Math.round(typeof process.uptime === "function" ? process.uptime() : 0);
     const startedAt = new Date(Date.now() - upSec * 1000).toISOString();
 
-    const cat = getCatalog(); // cached build from env/file
-    const rows = toArray(cat);
+    const rows = readCatalogRows();
 
     // summarize tiers + small sample
     const byTier: Record<string, number> = {};
     for (const row of rows.slice(0, 200)) {
       const tiers = arr((row as any).tiers);
-      if (tiers.length === 0) tiers.push("?");
+      if (tiers.length === 0) tiers.push("C"); // default to C tier when unknown
       for (const t of tiers) byTier[t] = (byTier[t] || 0) + 1;
     }
 
@@ -70,7 +79,7 @@ r.get("/", (_req: Request, res: Response) => {
       now: new Date().toISOString(),
       uptimeSec: upSec,
       startedAtIso: startedAt,
-      env: summarizeForHealth(), // safe summary from shared/env.ts
+      env: summarizeForHealth(),
       catalog: {
         total: rows.length,
         byTier,
@@ -85,7 +94,8 @@ r.get("/", (_req: Request, res: Response) => {
 
 /* ------------------------ root healthcheck helper ------------------------ */
 
-// Call this from index.ts so /healthz exists at the root (matches Dockerfile)
+// Optional: only needed if you want /healthz mounted by this router.
+// Your index.ts already registers /healthz, so this is harmless and unused.
 export function registerHealthz(app: Express) {
   app.get("/healthz", (_req, res) => res.status(200).type("text/plain").send("ok"));
 }
