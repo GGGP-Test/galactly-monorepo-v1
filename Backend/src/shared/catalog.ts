@@ -1,112 +1,86 @@
 // src/shared/catalog.ts
 //
-// Canonical catalog types + loader.
-// Always expose a consistent shape: { rows: BuyerRow[] }.
+// Centralized loader for the buyers catalog.
+// - Merges three sources (all optional):
+//   1) BUYERS_CATALOG_TIER_AB_JSON   -> {"version":1,"buyers":[...]}
+//   2) BUYERS_CATALOG_TIER_C_JSON    -> {"version":1,"buyers":[...]}
+//   3) CITY_CATALOG_FILE (JSON file)  -> [ {host,name,city,...}, ... ]
 //
-// Sources (merged in this order):
-//   1) BUYERS_CATALOG_TIER_C_JSON   (env secret: array OR {buyers:[...]})
-//   2) BUYERS_CATALOG_TIER_AB_JSON  (env secret: array OR {buyers:[...]})
-//   3) CITY_CATALOG_FILE (JSON file; default /run/secrets/city-catalog.json; array OR {buyers:[...]})
+// Exposes both async and sync shapes so existing routes can use either:
+//   - await loadCatalog()  -> full object { rows, total, byTier? }
+//   - get()/rows()/all()   -> current in-memory array (sync, deduped)
+//   - reload()             -> clears cache and rebuilds
 //
-// NOTE: Adds backward-compat shims so older code can do:
-//   - Catalog.get()       -> BuyerRow[]
-//   - Catalog.rows()      -> BuyerRow[]
-//   - Catalog.all()       -> BuyerRow[]
-//   - Catalog.catalog     -> BuyerRow[] (array snapshot)
+// Notes
+// - We keep this dependency-free and deterministic.
+// - Normalizes various shapes into a BuyerRow[]
+// - Tier defaults to "C" when missing.
+// - File path default: /run/secrets/city-catalog.json
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import type { Tier, SizeBucket } from "./prefs";
 import * as fs from "fs";
 
-/* --------------------------------- types ---------------------------------- */
+export type Tier = "A" | "B" | "C";
 
-export interface BuyerRow {
-  host: string;                    // required, unique-ish key
+export type BuyerRow = {
+  host: string;
   name?: string;
+  company?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  url?: string;
+  tier?: Tier;
+  tiers?: Tier[];
+  tags?: string[];
+  segments?: string[];
+  size?: "micro" | "small" | "mid" | "large";
+  revenueM?: number;
+  employees?: number;
+  sector?: string;
+  materials?: string[];
+  certs?: string[];
+  [k: string]: any;
+};
 
-  // Targeting + classification
-  tiers?: Tier[];                  // e.g. ["C"]
-  size?: SizeBucket;               // micro|small|mid|large (optional hint)
-  segments?: string[];             // industry buckets
-  tags?: string[];                 // free-form tags (e.g. "pouch","label","tin")
-  cityTags?: string[];             // normalized lowercase city names
+type Loaded = {
+  rows: BuyerRow[];
+  total: number;
+  byTier?: Record<string, number>;
+  loadedAt: string;
+  source: {
+    envAB: boolean;
+    envC: boolean;
+    file: string | null;
+  };
+};
 
-  // Light metadata (computed by routes, not by catalog)
-  platform?: string;
-  created?: string;
-  temp?: "warm" | "hot" | null;
-  score?: number;
-  why?: string;
-}
+const CITY_FILE = String(process.env.CITY_CATALOG_FILE || "/run/secrets/city-catalog.json");
+const TTL_MS = Math.max(10_000, Number(process.env.CATALOG_TTL_S || 600) * 1000);
 
-export interface LoadedCatalog { rows: BuyerRow[]; }
+// ------------------------------ utils ---------------------------------------
 
-/* -------------------------- env keys / file path --------------------------- */
+const lc = (v: any) => String(v ?? "").trim().toLowerCase();
 
-const KEY_TIER_C  = "BUYERS_CATALOG_TIER_C_JSON";
-const KEY_TIER_AB = "BUYERS_CATALOG_TIER_AB_JSON";
-const FILE_PATH   = String(process.env.CITY_CATALOG_FILE || "/run/secrets/city-catalog.json");
-
-/* -------------------------------- helpers --------------------------------- */
-
-function asArray(x: unknown): string[] {
-  if (Array.isArray(x)) return x.map(v => String(v ?? "").trim()).filter(Boolean);
-  if (x == null || x === "") return [];
-  return [String(x).trim()].filter(Boolean);
-}
-
-function lowerUniq(values: string[]): string[] {
-  const out = new Set<string>();
-  for (const v of values) {
-    const s = String(v || "").toLowerCase().trim();
-    if (s) out.add(s);
-  }
-  return [...out];
-}
-
-function tryParseJSON(raw: string | undefined): any | null {
-  if (!raw) return null;
-  try { return JSON.parse(raw); } catch { return null; }
-}
-
-/** Accept either a raw array OR an object with { buyers: [...] } */
-function extractBuyers(maybe: any): any[] {
-  if (!maybe) return [];
-  if (Array.isArray(maybe)) return maybe;
-  if (Array.isArray(maybe?.buyers)) return maybe.buyers;
+function asArray(x: any): any[] {
+  if (!x) return [];
+  if (Array.isArray(x)) return x;
+  if (Array.isArray(x?.rows)) return x.rows;
+  if (Array.isArray(x?.items)) return x.items;
+  if (Array.isArray(x?.buyers)) return x.buyers;
   return [];
 }
 
-function normalizeRow(anyRow: any): BuyerRow | null {
-  if (!anyRow || typeof anyRow !== "object") return null;
-
-  const host = String(anyRow.host || "")
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "")
-    .trim();
-
-  if (!host) return null;
-
-  const row: BuyerRow = {
-    host,
-    name: (anyRow.name && String(anyRow.name)) || undefined,
-    platform: (anyRow.platform && String(anyRow.platform)) || undefined,
-    created: (anyRow.created && String(anyRow.created)) || undefined,
-
-    // normalize arrays
-    tiers: lowerUniq(asArray(anyRow.tiers)) as Tier[],
-    segments: lowerUniq(asArray(anyRow.segments)),
-    tags: lowerUniq(asArray(anyRow.tags)),
-    cityTags: lowerUniq(asArray(anyRow.cityTags)),
-
-    // optional hints
-    size: (anyRow.size as SizeBucket) || undefined,
-  };
-
-  return row;
+function safeJSON(raw?: string): any {
+  try {
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
-function readFileJSON(path: string): any | null {
+function readJSONFileSync(path: string): any {
   try {
     if (!fs.existsSync(path)) return null;
     const txt = fs.readFileSync(path, "utf8");
@@ -116,94 +90,113 @@ function readFileJSON(path: string): any | null {
   }
 }
 
-/* -------------------------------- builder --------------------------------- */
+function canonRow(r: any): BuyerRow | null {
+  const host = lc(r?.host).replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+  if (!host || !/^[a-z0-9.-]+$/.test(host)) return null;
 
-function buildFromSources(): LoadedCatalog {
-  // 1) Env secrets (can be array OR {buyers:[...]})
-  const envC  = tryParseJSON(process.env[KEY_TIER_C]);
-  const envAB = tryParseJSON(process.env[KEY_TIER_AB]);
+  const tier = String(r?.tier || (Array.isArray(r?.tiers) ? r.tiers[0] : "C")).toUpperCase();
+  const t: Tier = tier === "A" || tier === "B" ? (tier as Tier) : "C";
 
-  const rawC   = extractBuyers(envC);
-  const rawAB  = extractBuyers(envAB);
+  const name = String(r?.name || r?.company || "").trim();
+  const url = r?.url ? String(r.url) : `https://${host}`;
 
-  // 2) Optional file secret
-  const fileJSON = readFileJSON(FILE_PATH);
-  const rawFile  = extractBuyers(fileJSON);
+  const row: BuyerRow = {
+    host,
+    name,
+    url,
+    city: r?.city ? String(r.city) : undefined,
+    state: r?.state ? String(r.state) : undefined,
+    country: r?.country ? String(r.country) : undefined,
+    tier: t,
+    tiers: Array.isArray(r?.tiers) ? (r.tiers as Tier[]) : [t],
+    tags: Array.isArray(r?.tags) ? r.tags : undefined,
+    segments: Array.isArray(r?.segments) ? r.segments : undefined,
+    size: r?.size,
+    revenueM: Number.isFinite(r?.revenueM) ? Number(r.revenueM) : undefined,
+    employees: Number.isFinite(r?.employees) ? Number(r.employees) : undefined,
+    sector: r?.sector ? String(r.sector) : undefined,
+    materials: Array.isArray(r?.materials) ? r.materials : undefined,
+    certs: Array.isArray(r?.certs) ? r.certs : undefined,
+  };
+  return row;
+}
 
-  // Merge w/out [].concat to avoid never[] inference weirdness
-  const merged: any[] = [];
-  if (rawC.length)   merged.push(...rawC);
-  if (rawAB.length)  merged.push(...rawAB);
-  if (rawFile.length) merged.push(...rawFile);
-
-  // Normalize + de-duplicate by host
-  const seen = new Set<string>();
-  const rows: BuyerRow[] = [];
-
-  for (const r of merged) {
-    const norm = normalizeRow(r);
-    if (!norm) continue;
-    if (seen.has(norm.host)) continue;
-    seen.add(norm.host);
-    rows.push(norm);
+function dedupByHost(rows: BuyerRow[]): BuyerRow[] {
+  const seen = new Map<string, BuyerRow>();
+  for (const r of rows) if (r && r.host) {
+    if (!seen.has(r.host)) seen.set(r.host, r);
   }
-  return { rows };
+  return [...seen.values()];
 }
 
-/* --------------------------------- cache ---------------------------------- */
+// ------------------------------- cache --------------------------------------
 
-let CACHE: LoadedCatalog | null = null;
+let _rows: BuyerRow[] = [];
+let _loadedAt = 0;
+let _lastMeta: Loaded["source"] = { envAB: false, envC: false, file: null };
 
-/* --------------------------------- API ------------------------------------ */
+function buildNow(): BuyerRow[] {
+  const envAB = safeJSON(process.env.BUYERS_CATALOG_TIER_AB_JSON);
+  const envC  = safeJSON(process.env.BUYERS_CATALOG_TIER_C_JSON);
+  const fileData = readJSONFileSync(CITY_FILE);
 
-/** Returns cached catalog; builds once from env/file on first call. */
-export function getCatalog(): LoadedCatalog {
-  if (CACHE) return CACHE;
-  CACHE = buildFromSources();
-  return CACHE;
+  const rows: BuyerRow[] = [
+    ...asArray(envAB).map(canonRow).filter(Boolean) as BuyerRow[],
+    ...asArray(envC).map(canonRow).filter(Boolean) as BuyerRow[],
+    ...asArray(fileData).map(canonRow).filter(Boolean) as BuyerRow[],
+  ];
+
+  _lastMeta = { envAB: !!envAB, envC: !!envC, file: fs.existsSync(CITY_FILE) ? CITY_FILE : null };
+  return dedupByHost(rows);
 }
 
-/** Rebuilds the catalog from env/file and returns it. */
-export function loadCatalog(): LoadedCatalog {
-  CACHE = buildFromSources();
-  return CACHE;
+function ensureFreshSync(): void {
+  const stale = Date.now() - _loadedAt > TTL_MS;
+  if (_rows.length === 0 || stale) {
+    _rows = buildNow();
+    _loadedAt = Date.now();
+  }
 }
 
-/** Clear cache (tests/ops) */
-export function __clearCatalogCache() {
-  CACHE = null;
+// ------------------------------- exports ------------------------------------
+
+export async function loadCatalog(): Promise<Loaded> {
+  // Even the async path is instant (sync IO) to keep call sites simple.
+  ensureFreshSync();
+
+  const byTier: Record<string, number> = {};
+  for (const r of _rows) {
+    const t = (r.tier || "C") as Tier;
+    byTier[t] = (byTier[t] || 0) + 1;
+  }
+
+  return {
+    rows: _rows.slice(),
+    total: _rows.length,
+    byTier,
+    loadedAt: new Date(_loadedAt || Date.now()).toISOString(),
+    source: { ..._lastMeta },
+  };
 }
 
-/* ----------------------------- compat shims --------------------------------
-   These make it work with older call-sites:
-   - leads.ts tries Catalog.get(), Catalog.rows(), Array.isArray(Catalog.catalog)
------------------------------------------------------------------------------*/
-
-/** Return BuyerRow[] (shim for legacy callers). */
 export function get(): BuyerRow[] {
-  return getCatalog().rows;
+  ensureFreshSync();
+  return _rows.slice();
 }
-/** Alias that some code calls. */
-export function rows(): BuyerRow[] {
-  return getCatalog().rows;
-}
-/** Another alias seen in older code. */
-export function all(): BuyerRow[] {
-  return getCatalog().rows;
-}
-/** Array snapshot for callers that did Array.isArray(Catalog.catalog). */
-export const catalog: BuyerRow[] = getCatalog().rows;
 
-// Re-export types for convenience
-export type { Tier, SizeBucket } from "./prefs";
+// Aliases some callers expect
+export const rows = get;
+export const all = get;
 
-export default {
-  getCatalog,
-  loadCatalog,
-  __clearCatalogCache,
-  // shims
-  get,
-  rows,
-  all,
-  catalog,
-};
+export function reload(): Loaded {
+  _rows = buildNow();
+  _loadedAt = Date.now();
+  return {
+    rows: _rows.slice(),
+    total: _rows.length,
+    loadedAt: new Date(_loadedAt).toISOString(),
+    source: { ..._lastMeta },
+  };
+}
+
+export default { loadCatalog, get, rows, all, reload };
