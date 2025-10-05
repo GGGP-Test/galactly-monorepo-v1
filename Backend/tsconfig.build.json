@@ -1,17 +1,23 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": false
+    "module": "CommonJS",
+    "target": "ES2020",
+    "moduleResolution": "Node",
+    "rootDir": "src",
+    "outDir": "dist",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "noEmit": false,
+    "sourceMap": false,
+    "declaration": false
   },
-  "include": [
-    "src/index.ts",
-    "src/**/*.d.ts"
-  ],
+  "include": ["src/**/*.ts"],
   "exclude": [
-    "src/ai/**",
+    "**/*.test.ts",
     "src/ui/**",
+    "src/ai/**",
     "src/scripts/**",
-    "**/__tests__/**",
     "node_modules",
     "dist"
   ]
