@@ -15,17 +15,42 @@
 // - Unknown fields are ignored; inputs are clamped/sanitized.
 // - Supports inboundOptIn (supplier opts in to inbound directory).
 
-import { Router, Request, Response } from "express";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { Router, type Request, type Response, type NextFunction } from "express";
 import {
   setPrefs,
-  getPrefs,
+  get as getPrefs,
   prefsSummary,
   normalizeHost as normHostShared,
   type EffectivePrefs,
 } from "../shared/prefs";
-import { requireAdmin } from "../shared/admin"; // <<< admin lock
 
 const r = Router();
+
+/* -------------------------------------------------------------------------- */
+/* Admin guard (inline; no external dependency)                               */
+/* -------------------------------------------------------------------------- */
+
+function adminKey(): string | undefined {
+  const a = String(process.env.ADMIN_KEY || "").trim();
+  const b = String(process.env.ADMIN_TOKEN || "").trim();
+  return (a || b) || undefined;
+}
+
+function adminAllowed(req: Request): boolean {
+  const need = adminKey();
+  if (!need) return true; // if no key configured, allow (dev-friendly)
+  const got = String(req.headers["x-admin-key"] || "").trim();
+  return !!got && got === need;
+}
+
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!adminAllowed(req)) {
+    return res.status(401).json({ ok: false, error: "unauthorized", need: "x-admin-key" });
+  }
+  next();
+}
 
 /* -------------------------------------------------------------------------- */
 /* Types (panel payload)                                                      */
@@ -57,13 +82,12 @@ type PanelPayload = {
     ecom?: boolean;
     retail?: boolean;
     wholesale?: boolean;
-    aiFinalize?: boolean; // Step 3 sends this; ignored by scorer but accepted
+    aiFinalize?: boolean; // accepted, not used by scorer
   };
 
   metrics?: SliderMetric[];
 
   targeting?: {
-    // Step 3 + Free Panel
     city?: string;
     cities?: string[];
     titles?: string[];
@@ -126,11 +150,10 @@ function firstNonEmpty(arr?: unknown): string | undefined {
 
 /**
  * Map panel payload -> patch for shared/prefs.setPrefs()
- * We keep it simple and deterministic:
  * - preferSmallMid from general.mids
  * - sizeWeight.large down-weighted if general.avoidBig
  * - signalWeight.local boosted if general.near
- * - signalWeight.{ecommerce,retail,wholesale} nudged from toggles
+ * - signalWeight.{ecommerce,retail,wholesale} from toggles
  * - categoriesAllow from productTags + sectorHints + targeting.sectors (split)
  * - city from targeting.city OR first of targeting.cities
  * - titlesPreferred from targeting.titles (if present) OR explicit titlesPreferred
@@ -213,11 +236,10 @@ function personaFromPrefs(host: string, prefs: EffectivePrefs) {
   };
   return {
     host,
-    lineText: "",                 // optional; UI may edit and keep locally
+    lineText: "",
     productTags,
-    sectorHints: [],              // not tracked separately; UI can treat tags as both
-    general,
-    metrics: [],                  // UI will default if empty
+    sectorHints: [],
+    metrics: [],
     targeting: {
       city: prefs.city || "",
       cities: prefs.city ? [prefs.city] : [],
@@ -276,7 +298,7 @@ r.get("/:host", (req: Request, res: Response) => {
   });
 });
 
-// POST /api/prefs/upsert  (Body = PanelPayload)  — ADMIN-ONLY
+// POST /api/prefs/upsert  (Body = PanelPayload)  — ADMIN-ONLY (x-admin-key)
 r.post("/upsert", requireAdmin, (req: Request, res: Response) => {
   try {
     const body = (req.body || {}) as PanelPayload;
@@ -308,9 +330,7 @@ r.post("/upsert", requireAdmin, (req: Request, res: Response) => {
     });
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
-    return res
-      .status(200)
-      .json({ ok: false, error: "prefs-upsert-failed", detail: msg });
+    return res.status(200).json({ ok: false, error: "prefs-upsert-failed", detail: msg });
   }
 });
 
