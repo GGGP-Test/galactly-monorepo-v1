@@ -1,18 +1,28 @@
 // src/routes/leads.ts
 //
-// Artemis B v1 — Buyer discovery (runtime-safe CommonJS output)
-// - Scores catalog rows using TRC with prefs + query overlays
+// Artemis B v1 — Buyer discovery (CJS-safe)
+// - Scores catalog rows using TRC (if present) with prefs + query overlays
 // - Adds band + uncertainty + compact reasons
 // - Soft-enriches a couple of uncertain items via /api/classify
 //
 // GET /api/leads/ping
 // GET /api/leads/find-buyers?host=acme.com[&city=&tags=a,b&sectors=x,y&minTier=A|B|C&limit=12]
 
-import { Router, Request, Response } from "express";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { Router, type Request, type Response } from "express";
 import { CFG, capResults } from "../shared/env";
-import Catalog from "../shared/catalog";                // default export object { get, rows, ... }
-import * as Prefs from "../shared/prefs";               // named API (getEffective, etc.)
-import * as TRC from "../shared/trc";                   // named API (scoreRow, HOT_MIN, ...)
+
+// Static imports only (no import.meta / dynamic import)
+import * as CatalogMod from "../shared/catalog";
+import * as Prefs from "../shared/prefs";
+import * as TRC from "../shared/trc";
+
+// Normalize default vs named export from catalog.ts
+const Catalog: any = (CatalogMod as any)?.default ?? (CatalogMod as any);
+
+// Node 18+ global fetch (typed)
+const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 
 const r = Router();
 
@@ -43,9 +53,11 @@ function uniqLower(arr: unknown): string[] {
 }
 
 function getCatalogRows(): Candidate[] {
-  // Compatible with our catalog.ts default export
-  if (typeof (Catalog as any).get === "function") return (Catalog as any).get();
-  if (Array.isArray((Catalog as any).rows)) return (Catalog as any).rows as Candidate[];
+  if (typeof Catalog?.get === "function") return Catalog.get();
+  if (typeof Catalog?.rows === "function") return Catalog.rows();
+  if (Array.isArray(Catalog?.rows)) return Catalog.rows as Candidate[];
+  if (Array.isArray(Catalog?.catalog)) return Catalog.catalog as Candidate[];
+  if (typeof Catalog?.all === "function") return Catalog.all();
   return [];
 }
 
@@ -65,6 +77,11 @@ function cityBoost(city?: string, candidateCity?: string): number {
   return 0;
 }
 
+function prettyHostName(h: string): string {
+  const stem = String(h || "").replace(/^www\./, "").split(".")[0].replace(/[-_]/g, " ");
+  return stem.replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
 const HOT_T  = Number((TRC as any)?.HOT_MIN  ?? 80);
 const WARM_T = Number((TRC as any)?.WARM_MIN ?? 55);
 
@@ -82,11 +99,6 @@ function uncertainty(score: number): number {
   const d = Math.min(Math.abs(score - HOT_T), Math.abs(score - WARM_T));
   const u = Math.max(0, 1 - d / 10);
   return Number.isFinite(u) ? Number(u.toFixed(3)) : 0;
-}
-
-function prettyHostName(h: string): string {
-  const stem = String(h || "").replace(/^www\./, "").split(".")[0].replace(/[-_]/g, " ");
-  return stem.replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
 /* ---------------------------- scoring (fallback) --------------------------- */
@@ -145,7 +157,7 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
 async function classifyHost(host: string): Promise<{ role?: string; confidence?: number; evidence?: string[] } | null> {
   try {
     const url = `http://127.0.0.1:${CFG.port}/api/classify?host=${encodeURIComponent(host)}`;
-    const res = await fetch(url, { redirect: "follow" });
+    const res = await F(url, { redirect: "follow" });
     if (!res?.ok) return null;
     const data = await res.json();
     if (data?.ok === false) return null;
