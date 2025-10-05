@@ -1,51 +1,19 @@
 // src/routes/leads.ts
 //
-// Artemis B v1 — Buyer discovery
-// - Scores catalog rows using TRC (if present) with prefs + query overlays
+// Artemis B v1 — Buyer discovery (runtime-safe CommonJS output)
+// - Scores catalog rows using TRC with prefs + query overlays
 // - Adds band + uncertainty + compact reasons
 // - Soft-enriches a couple of uncertain items via /api/classify
 //
 // GET /api/leads/ping
 // GET /api/leads/find-buyers?host=acme.com[&city=&tags=a,b&sectors=x,y&minTier=A|B|C&limit=12]
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { Router, Request, Response } from "express";
 import { CFG, capResults } from "../shared/env";
+import Catalog from "../shared/catalog";                // default export object { get, rows, ... }
+import * as Prefs from "../shared/prefs";               // named API (getEffective, etc.)
+import * as TRC from "../shared/trc";                   // named API (scoreRow, HOT_MIN, ...)
 
-// Loose imports to avoid hard coupling (works with different bundle shapes)
-const Catalog: any = require("../shared/catalog");
-const Prefs: any = require("../shared/prefs");
-
-// ---------- Optional TRC loader (works in CJS & ESM without extra files) ----
-let TRC: any = null;
-let _trcTried = false;
-
-async function tryLoadTRC() {
-  if (_trcTried || TRC) return;
-  _trcTried = true;
-
-  // Prefer dynamic import (works in both CJS/ESM via transpilation)
-  try { TRC = await import("../shared/trc"); return; } catch {}
-  try { TRC = await import("../shared/trc.js"); return; } catch {}
-
-  // Fallback: attempt createRequire to emulate require in ESM
-  try {
-    // @ts-ignore
-    const { createRequire } = await import("module");
-    // @ts-ignore
-    const req = (typeof require === "function") ? require : createRequire(import.meta.url);
-    try { TRC = req("../shared/trc"); return; } catch {}
-    try { TRC = req("../shared/trc.js"); return; } catch {}
-  } catch {
-    /* ignore */
-  }
-}
-// fire-and-forget; if it fails, we gracefully use the heuristic scorer
-void tryLoadTRC();
-
-// Node 18+ global fetch
-const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 const r = Router();
 
 /* --------------------------------- types ---------------------------------- */
@@ -75,11 +43,9 @@ function uniqLower(arr: unknown): string[] {
 }
 
 function getCatalogRows(): Candidate[] {
-  if (typeof Catalog.get === "function") return Catalog.get();
-  if (typeof Catalog.rows === "function") return Catalog.rows();
-  if (Array.isArray(Catalog.rows)) return Catalog.rows as Candidate[];
-  if (Array.isArray(Catalog.catalog)) return Catalog.catalog as Candidate[];
-  if (typeof Catalog.all === "function") return Catalog.all();
+  // Compatible with our catalog.ts default export
+  if (typeof (Catalog as any).get === "function") return (Catalog as any).get();
+  if (Array.isArray((Catalog as any).rows)) return (Catalog as any).rows as Candidate[];
   return [];
 }
 
@@ -99,39 +65,37 @@ function cityBoost(city?: string, candidateCity?: string): number {
   return 0;
 }
 
-function prettyHostName(h: string): string {
-  const stem = String(h || "").replace(/^www\./, "").split(".")[0].replace(/[-_]/g, " ");
-  return stem.replace(/\b\w/g, (m) => m.toUpperCase());
-}
-
-const HOT_DEFAULT = 80;
-const WARM_DEFAULT = 55;
-const hotT = () => Number(TRC?.HOT_MIN ?? HOT_DEFAULT);
-const warmT = () => Number(TRC?.WARM_MIN ?? WARM_DEFAULT);
+const HOT_T  = Number((TRC as any)?.HOT_MIN  ?? 80);
+const WARM_T = Number((TRC as any)?.WARM_MIN ?? 55);
 
 function bandFromScore(score: number): "HOT" | "WARM" | "COOL" {
-  if (TRC && typeof TRC.classifyScore === "function") {
-    try { return TRC.classifyScore(score); } catch { /* noop */ }
+  if (typeof (TRC as any)?.classifyScore === "function") {
+    try { return (TRC as any).classifyScore(score); } catch { /* noop */ }
   }
-  if (score >= hotT()) return "HOT";
-  if (score >= warmT()) return "WARM";
+  if (score >= HOT_T) return "HOT";
+  if (score >= WARM_T) return "WARM";
   return "COOL";
 }
 
 // Uncertainty ~ distance to band boundary (0..1, higher = shakier)
 function uncertainty(score: number): number {
-  const d = Math.min(Math.abs(score - hotT()), Math.abs(score - warmT()));
+  const d = Math.min(Math.abs(score - HOT_T), Math.abs(score - WARM_T));
   const u = Math.max(0, 1 - d / 10);
   return Number.isFinite(u) ? Number(u.toFixed(3)) : 0;
+}
+
+function prettyHostName(h: string): string {
+  const stem = String(h || "").replace(/^www\./, "").split(".")[0].replace(/[-_]/g, " ");
+  return stem.replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
 /* ---------------------------- scoring (fallback) --------------------------- */
 
 function safeScoreRow(row: Candidate, prefs: any, city?: string) {
   // Prefer TRC.scoreRow if present
-  if (TRC && typeof TRC.scoreRow === "function") {
+  if (typeof (TRC as any)?.scoreRow === "function") {
     try {
-      const out = TRC.scoreRow(row, prefs, city);
+      const out = (TRC as any).scoreRow(row, prefs, city);
       if (out && typeof out.score === "number") return out;
     } catch { /* ignore and fallback */ }
   }
@@ -141,7 +105,7 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
   const reasons: string[] = [];
 
   // Locality
-  const loc = cityBoost(city || prefs?.city, row.city);
+  const loc = cityBoost(city || (prefs?.city as string), row.city);
   if (loc) { score += loc * 100; reasons.push(`local+${(loc * 100) | 0}`); }
 
   // Tag/category overlap (row.tags/segments vs prefs.categoriesAllow)
@@ -164,7 +128,7 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
       sz === "small" ? Number(sw.small ?? 0) :
       sz === "mid"   ? Number(sw.mid   ?? 0) :
       sz === "large" ? Number(sw.large ?? 0) : 0;
-    if (w) { score += Math.max(-12, Math.min(12, w * 4)); reasons.push(`size:${sz||"?"}`); }
+    if (w) { score += Math.max(-12, Math.min(12, w * 4)); reasons.push(`size:${sz || "?"}`); }
   }
   const sig = prefs?.signalWeight || {};
   if (sig && (sig.ecommerce || sig.retail || sig.wholesale)) {
@@ -181,7 +145,7 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
 async function classifyHost(host: string): Promise<{ role?: string; confidence?: number; evidence?: string[] } | null> {
   try {
     const url = `http://127.0.0.1:${CFG.port}/api/classify?host=${encodeURIComponent(host)}`;
-    const res = await F(url, { redirect: "follow" });
+    const res = await fetch(url, { redirect: "follow" });
     if (!res?.ok) return null;
     const data = await res.json();
     if (data?.ok === false) return null;
@@ -197,9 +161,6 @@ r.get("/ping", (_req: Request, res: Response) => res.json({ pong: true, at: new 
 
 r.get("/find-buyers", async (req: Request, res: Response) => {
   try {
-    // ensure TRC load has been attempted
-    void tryLoadTRC();
-
     const host = String(req.query.host || "").trim().toLowerCase();
     if (!host) return res.status(400).json({ ok: false, error: "host_required" });
 
@@ -217,9 +178,9 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
 
     // Load effective prefs and apply overlays
     const basePrefs =
-      (typeof Prefs?.getEffective === "function" && Prefs.getEffective(host)) ||
-      (typeof Prefs?.getEffectivePrefs === "function" && Prefs.getEffectivePrefs(host)) ||
-      (typeof Prefs?.get === "function" && Prefs.get(host)) ||
+      (typeof (Prefs as any).getEffective === "function" && (Prefs as any).getEffective(host)) ||
+      (typeof (Prefs as any).getEffectivePrefs === "function" && (Prefs as any).getEffectivePrefs(host)) ||
+      (typeof (Prefs as any).get === "function" && (Prefs as any).get(host)) ||
       {};
 
     const mergedPrefs = {
