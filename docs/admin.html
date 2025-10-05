@@ -6,7 +6,7 @@
 <title>Admin / Monitor — Artemis BV1</title>
 <style>
   :root { color-scheme: dark; }
-  body{margin:0;background:#0b0f14;color:#e9f1f7;font:14px/1.4 system-ui,Segoe UI,Roboto,Inter,Arial}
+  body{margin:0;background:#0b0f14;color:#e9f1f7;font:14px/1.45 system-ui,Segoe UI,Roboto,Inter,Arial}
   header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #15202b;background:#0e141b}
   h1{font-size:16px;margin:0}
   .muted{color:#9ab0c0}
@@ -14,11 +14,11 @@
   .card{background:#121822;border:1px solid #1c2532;border-radius:12px;padding:12px}
   input,button{border-radius:10px;border:1px solid #223042;background:#0d1520;color:#e9f1f7}
   input{padding:10px;width:100%}
-  input[type="password"]{letter-spacing:0.1em}
+  input[type="password"]{letter-spacing:0.08em}
   button{padding:10px 14px;border:0;background:#6de1ff;color:#082433;font-weight:700;cursor:pointer}
   .btn{margin-left:8px}
   .row{display:grid;gap:10px}
-  .log{font:12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;white-space:pre-wrap;height:280px;overflow:auto;background:#0d1520;border-radius:10px;border:1px solid #223042;padding:10px}
+  .log{font:12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;white-space:pre-wrap;height:280px;overflow:auto;background:#0d1520;border-radius:10px;border:1px solid #223042;padding:10px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}
   dt{color:#9ab0c0}
@@ -27,11 +27,12 @@
   .rowcols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .inline{display:flex;gap:8px;align-items:center}
   .pill{font:11px;padding:4px 8px;border-radius:999px;background:#0d1520;border:1px solid #223042}
+  .sectionTitle{font-size:12px;color:#9ab0c0;margin:0 0 6px 0}
 </style>
 </head>
 <body>
   <header>
-    <h1>Admin / Monitor <span class="muted" id="sseNote">SSE: error</span></h1>
+    <h1>Admin / Monitor <span class="muted" id="sseNote">polling</span></h1>
     <div>
       <button class="btn" id="btnPing">Ping</button>
       <button class="btn" id="btnHealth">Health</button>
@@ -40,9 +41,10 @@
   </header>
 
   <main>
+    <!-- LEFT PANE -->
     <section class="card">
       <div class="row" style="gap:8px">
-        <label class="muted small">Base</label>
+        <label class="muted small">API Base</label>
         <input id="base" placeholder="https://YOUR.code.run/api">
         <div class="rowcols">
           <button id="save">Save</button>
@@ -79,12 +81,24 @@
         <label class="muted small">Options</label>
         <label class="switch"><input type="checkbox" id="autoscroll" checked> <span class="small muted">Auto-scroll logs</span></label>
       </div>
+
+      <div class="row" style="margin-top:16px">
+        <label class="muted small">Events</label>
+        <div class="rowcols">
+          <button id="evStats">Events: Stats</button>
+          <button id="evRecent" class="btn">Events: Recent</button>
+        </div>
+        <button id="evTest" class="btn">Send Test Event</button>
+        <div class="muted small">No SSE; polling stats every 30s. Use “Recent” to fetch a slice.</div>
+      </div>
     </section>
 
+    <!-- RIGHT PANE -->
     <section class="card">
       <div class="log" id="log"></div>
     </section>
 
+    <!-- HEALTH + EVENTS SNAPSHOTS -->
     <section class="card" style="grid-column:1 / -1">
       <div class="grid2">
         <div>
@@ -98,6 +112,15 @@
             <dt>now</dt><dd>-</dd>
           </dl>
         </div>
+        <div>
+          <div class="muted small" style="margin-bottom:8px">EVENTS SNAPSHOT</div>
+          <dl id="eventsDl">
+            <dt>buffered</dt><dd>-</dd>
+            <dt>byType24h</dt><dd>-</dd>
+            <dt>topPaths24h</dt><dd>-</dd>
+            <dt>since</dt><dd>-</dd>
+          </dl>
+        </div>
       </div>
     </section>
   </main>
@@ -107,9 +130,10 @@
   const $ = (s)=>document.querySelector(s);
   const logEl = $("#log");
   const healthDl = $("#healthDl");
+  const eventsDl = $("#eventsDl");
 
   // ---- Base & Admin key handling ----
-  const DEFAULT_BASE = "https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api";
+  const DEFAULT_BASE = (location.origin + "/api"); // auto works on code.run & local
   function getBase(){
     const v = (localStorage.getItem("apiBase") || DEFAULT_BASE).trim();
     return v.replace(/\/+$/,"");
@@ -160,6 +184,17 @@
       `<dt>${k}</dt><dd>${(v===undefined||v===null)?'-':String(v)}</dd>`
     )).join("");
   }
+  function setEvents(e){
+    const map = {
+      buffered: e?.total ?? e?.buffered ?? "-",
+      byType24h: e?.byType24h ? JSON.stringify(e.byType24h) : "-",
+      topPaths24h: e?.topPaths24h ? JSON.stringify(e.topPaths24h.slice(0,5)) : "-",
+      since: e?.sinceIso || e?.nowIso || "-"
+    };
+    eventsDl.innerHTML = Object.entries(map).map(([k,v])=>(
+      `<dt>${k}</dt><dd>${(v===undefined||v===null)?'-':String(v)}</dd>`
+    )).join("");
+  }
 
   // ---- UI actions ----
   $("#save").onclick = ()=>{ setBase($("#base").value); say("API base saved."); };
@@ -180,7 +215,6 @@
     if (r.ok && r.data) setHealth(r.data);
   };
   $("#btnReload").onclick = async ()=>{
-    // (optionally protected later) send key just in case
     const r = await hit("POST","/catalog/reload",{}, true);
     say(`Reload -> ${r.status}`);
     if (!r.ok && r.data) say(JSON.stringify(r.data,null,2));
@@ -214,17 +248,38 @@
     if (!r.ok && r.data) say(JSON.stringify(r.data,null,2));
   };
 
-  // initial health poll
+  // Events actions
+  $("#evStats").onclick = async ()=>{
+    const r = await hit("GET","/events/stats");
+    say(`Events: stats -> ${r.status}`);
+    if (r.ok) { setEvents(r.data); say(JSON.stringify(r.data,null,2)); }
+  };
+  $("#evRecent").onclick = async ()=>{
+    const r = await hit("GET","/events/recent?limit=50");
+    say(`Events: recent(50) -> ${r.status}`);
+    if (r.ok) say(JSON.stringify(r.data,null,2));
+  };
+  $("#evTest").onclick = async ()=>{
+    const payload = { type:"test_event", path:"/admin", meta:{ msg:"hello-from-admin" } };
+    const r = await hit("POST","/events/ingest", payload);
+    say(`Events: ingest -> ${r.status}`);
+    if (!r.ok && r.data) say(JSON.stringify(r.data,null,2));
+  };
+
+  // initial health + events poll
   (async ()=>{
-    const r = await hit("GET","/health");
-    say(`Health -> ${r.status}${r.ok && r.data?.catalog?` (catalog.total=${r.data.catalog.total})`:""}`);
-    if (r.ok) setHealth(r.data);
+    const h = await hit("GET","/health");
+    say(`Health -> ${h.status}${h.ok && h.data?.catalog?` (catalog.total=${h.data.catalog.total})`:""}`);
+    if (h.ok) setHealth(h.data);
+
+    const e = await hit("GET","/events/stats");
+    if (e.ok) setEvents(e.data);
   })();
 
-  // light periodic health poll
+  // periodic events poll
   setInterval(async ()=>{
-    const r = await hit("GET","/health");
-    if (r.ok && r.data) setHealth(r.data);
+    const e = await hit("GET","/events/stats");
+    if (e.ok && e.data) setEvents(e.data);
   }, 30000);
 })();
 </script>
