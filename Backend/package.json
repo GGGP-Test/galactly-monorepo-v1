@@ -1,7 +1,8 @@
 {
-  "name": "buyers-api",
+  "name": "buyers_api",
   "version": "1.0.0",
   "private": true,
+  "type": "commonjs",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
@@ -19,5 +20,8 @@
     "@types/node": "^20.11.17",
     "@types/pg": "^8.6.6",
     "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
