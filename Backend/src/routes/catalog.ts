@@ -1,23 +1,42 @@
 // src/routes/catalog.ts
 //
 // Read-only endpoints to inspect the loaded buyer catalog.
-// Router paths are RELATIVE to the mount point in index.ts:
-//   app.use("/api/catalog", CatalogRouter)
+// Mounted from index.ts as: app.use("/api/catalog", CatalogRouter)
 //
 // Endpoints:
-//   GET  /api/catalog            -> summary stats
+//   GET  /api/catalog            -> summary stats (+ source, loadedAt)
 //   GET  /api/catalog/sample     -> small sample list (?limit=20)
-//   POST /api/catalog/reload     -> rebuilds in-memory cache from env  (ADMIN-ONLY)
+//   POST /api/catalog/reload     -> rebuild in-memory cache from env  (ADMIN-ONLY; x-admin-key)
 
-import { Router, Request, Response } from "express";
-import { loadCatalog, type BuyerRow } from "../shared/catalog";
-import { requireAdmin } from "../shared/admin";
+import { Router, type Request, type Response, type NextFunction } from "express";
+import { loadCatalog, reload as reloadCatalog, type BuyerRow } from "../shared/catalog";
 
-export const CatalogRouter = Router();
+const CatalogRouter = Router();
+
+/* ----------------------------- inline admin ------------------------------ */
+
+function adminKey(): string | undefined {
+  const a = String(process.env.ADMIN_KEY || "").trim();
+  const b = String(process.env.ADMIN_TOKEN || "").trim();
+  return (a || b) || undefined;
+}
+function adminAllowed(req: Request): boolean {
+  const need = adminKey();
+  if (!need) return true; // allow in dev if not configured
+  const got = String(req.headers["x-admin-key"] || "").trim();
+  return !!got && got === need;
+}
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!adminAllowed(req)) {
+    return res.status(401).json({ ok: false, error: "unauthorized", need: "x-admin-key" });
+  }
+  next();
+}
+
+/* -------------------------------- helpers -------------------------------- */
 
 type Loaded = unknown;
 
-// Normalize any supported shape to an array
 function toArray(cat: Loaded): BuyerRow[] {
   const anyCat = cat as any;
   if (Array.isArray(anyCat)) return anyCat as BuyerRow[];
@@ -25,20 +44,18 @@ function toArray(cat: Loaded): BuyerRow[] {
   if (Array.isArray(anyCat?.items)) return anyCat.items as BuyerRow[];
   return [];
 }
-
-function asStr(v: unknown): string {
-  return (v == null ? "" : String(v)).trim();
-}
-
+const asStr = (v: unknown) => (v == null ? "" : String(v)).trim();
 function arr(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
   return (v as unknown[]).map((x) => asStr(x)).filter(Boolean);
 }
 
+/* -------------------------------- routes --------------------------------- */
+
 // GET /api/catalog  -> summary
 CatalogRouter.get("/", async (_req: Request, res: Response) => {
   try {
-    const cat = await loadCatalog();
+    const cat: any = await loadCatalog(); // { rows,total,byTier,loadedAt,source }
     const rows = toArray(cat);
 
     const byTier: Record<string, number> = {};
@@ -68,9 +85,17 @@ CatalogRouter.get("/", async (_req: Request, res: Response) => {
       cityTags: arr((r as any).cityTags),
     }));
 
-    res.json({ total: rows.length, byTier, topCities, exampleHosts });
+    res.json({
+      ok: true,
+      total: rows.length,
+      byTier,
+      topCities,
+      exampleHosts,
+      loadedAt: cat?.loadedAt || null,
+      source: cat?.source || null,
+    });
   } catch (err: any) {
-    res.status(200).json({ error: "catalog-stats-failed", detail: String(err?.message || err) });
+    res.status(200).json({ ok: false, error: "catalog-stats-failed", detail: String(err?.message || err) });
   }
 });
 
@@ -78,7 +103,7 @@ CatalogRouter.get("/", async (_req: Request, res: Response) => {
 CatalogRouter.get("/sample", async (req: Request, res: Response) => {
   try {
     const limit = Math.max(1, Math.min(200, Number(req.query.limit) || 20));
-    const cat = await loadCatalog();
+    const cat: any = await loadCatalog();
     const rows = toArray(cat).slice(0, limit);
 
     const items = rows.map((r) => ({
@@ -90,21 +115,27 @@ CatalogRouter.get("/sample", async (req: Request, res: Response) => {
       segments: arr((r as any).segments),
     }));
 
-    res.json({ items, total: items.length });
+    res.json({ ok: true, items, total: items.length });
   } catch (err: any) {
-    res.status(200).json({ error: "catalog-sample-failed", detail: String(err?.message || err) });
+    res.status(200).json({ ok: false, error: "catalog-sample-failed", detail: String(err?.message || err) });
   }
 });
 
-// POST /api/catalog/reload  (ADMIN-ONLY)
+// POST /api/catalog/reload  (ADMIN-ONLY; send x-admin-key)
 CatalogRouter.post("/reload", requireAdmin, async (_req: Request, res: Response) => {
   try {
-    await loadCatalog();
-    res.json({ ok: true, reloaded: true, at: new Date().toISOString() });
+    const cat: any = await reloadCatalog();
+    res.json({
+      ok: true,
+      reloaded: true,
+      at: new Date().toISOString(),
+      total: cat?.total ?? (Array.isArray(cat?.rows) ? cat.rows.length : null),
+      byTier: cat?.byTier ?? null,
+      loadedAt: cat?.loadedAt ?? null,
+      source: cat?.source ?? null,
+    });
   } catch (err: any) {
-    res
-      .status(200)
-      .json({ ok: false, error: "catalog-reload-failed", detail: String(err?.message || err) });
+    res.status(200).json({ ok: false, error: "catalog-reload-failed", detail: String(err?.message || err) });
   }
 });
 
