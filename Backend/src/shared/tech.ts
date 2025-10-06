@@ -1,14 +1,8 @@
 // src/shared/tech.ts
 //
 // Artemis BV1 — ultra-fast tech detectors (no network, no deps).
-// Feed this the HTML (and optional URL/headers) we already fetched in spider.ts.
-// Returns:
-//   - pixels: GA4 / GTM / UA (legacy) / Meta / TikTok / LinkedIn / Bing
-//   - stack:  Shopify / BigCommerce / WooCommerce / WordPress / Wix / Squarespace
-//   - pixelActivity: 0..1 (rough "ads readiness" intensity)
-//   - reasons: short trace strings for debugging
-//
-// Pure and deterministic. Safe to run on every page we crawl.
+// Shape kept compatible with your Signals module (pixels/stack as boolean maps).
+// Adds helpers: pixelsToNames(), stackToNames(), primaryPlatform().
 
 export type Pixels = {
   ga4: boolean;        // gtag.js GA4
@@ -36,10 +30,8 @@ export type TechSummary = {
   reasons: string[];       // short match notes (cap ~24)
 };
 
-type HeaderMap = Record<string, string | string[] | undefined>;
+export type HeaderMap = Record<string, string | string[] | undefined>;
 
-/* -------------------------------------------------------------------------- */
-/* helpers                                                                    */
 /* -------------------------------------------------------------------------- */
 
 const toStr = (v: unknown) => (v == null ? "" : String(v));
@@ -81,10 +73,10 @@ function detectPixels(htmlIn?: string): { pixels: Pixels; reasons: string[] } {
   const reasons: string[] = [];
   const html = lc(toStr(htmlIn));
 
-  // GA4 (gtag.js) and GTM
+  // GA4 + GTM
   const ga4 =
     has(/googletagmanager\.com\/gtag\/js\?id=g-[a-z0-9]+/i, html, reasons, "ga4:script") ||
-    has(/gtag\(\s*['"]config['"]\s*,\s*['"]g-[a-z0-9]+['"]\s*\)/i, html, reasons, "ga4:gtag-config");
+    has(/gtag\(\s*['"]config['"]\s*,\s*['"]g-[a-z0-9]+['"]\s*\)/i, html, reasons, "ga4:config");
 
   const gtm =
     has(/googletagmanager\.com\/gtm\.js/i, html, reasons, "gtm:script") ||
@@ -128,7 +120,9 @@ function detectStack(htmlIn?: string, headersIn?: HeaderMap, urlIn?: string): { 
   const reasons: string[] = [];
   const html = lc(toStr(htmlIn));
   const url = lc(toStr(urlIn));
-  const headers = Object.fromEntries(Object.entries(headersIn || {}).map(([k, v]) => [k.toLowerCase(), toStr(v)])) as HeaderMap;
+  const headers = Object.fromEntries(
+    Object.entries(headersIn || {}).map(([k, v]) => [k.toLowerCase(), toStr(v)])
+  ) as HeaderMap;
 
   // Shopify
   const shopify =
@@ -137,7 +131,6 @@ function detectStack(htmlIn?: string, headersIn?: HeaderMap, urlIn?: string): { 
     getHeader(headers, "x-shopify-stage") !== "" ||
     /myshopify\.com|\/cart\.js|shopify-checkout|\.shopify\b/.test(html) ||
     /myshopify\.com/.test(url);
-
   if (shopify) reasons.push("shopify:match");
 
   // WooCommerce / WordPress
@@ -149,7 +142,6 @@ function detectStack(htmlIn?: string, headersIn?: HeaderMap, urlIn?: string): { 
     woocommerce ||
     has(/wp-content\/|wp-includes\//i, html, reasons, "wp:paths") ||
     /wordpress/i.test(metaContent(htmlIn || "", "generator"));
-
   if (wordpress) reasons.push("wp:match");
 
   // BigCommerce
@@ -157,7 +149,6 @@ function detectStack(htmlIn?: string, headersIn?: HeaderMap, urlIn?: string): { 
     has(/cdn\.bigcommerce\.com/i, html, reasons, "bc:cdn") ||
     has(/\bbigcommerce\b/i, html, reasons, "bc:string") ||
     getHeader(headers, "x-bc-stencil-id") !== "";
-
   if (bigcommerce) reasons.push("bc:match");
 
   // Wix
@@ -165,7 +156,6 @@ function detectStack(htmlIn?: string, headersIn?: HeaderMap, urlIn?: string): { 
     has(/static\.parastorage\.com|wixstatic\.com/i, html, reasons, "wix:assets") ||
     getHeader(headers, "x-wix-request-id") !== "" ||
     /wix\.com/.test(url);
-
   if (wix) reasons.push("wix:match");
 
   // Squarespace
@@ -173,7 +163,6 @@ function detectStack(htmlIn?: string, headersIn?: HeaderMap, urlIn?: string): { 
     has(/static\.squarespace\.com/i, html, reasons, "sqsp:cdn") ||
     has(/\bsquarespace\b/i, html, reasons, "sqsp:string") ||
     /squarespace\.com/.test(url);
-
   if (squarespace) reasons.push("sqsp:match");
 
   const stack: Stack = { shopify: !!shopify, bigcommerce: !!bigcommerce, woocommerce: !!woocommerce, wordpress: !!wordpress, wix: !!wix, squarespace: !!squarespace };
@@ -181,11 +170,38 @@ function detectStack(htmlIn?: string, headersIn?: HeaderMap, urlIn?: string): { 
 }
 
 /* -------------------------------------------------------------------------- */
-/* activity score                                                             */
+/* activity + helpers                                                         */
 /* -------------------------------------------------------------------------- */
 
-// Collapse pixel booleans into a single 0..1 intensity. We treat "GA4 or GTM" as one bucket,
-// then Meta, TikTok, LinkedIn, Bing as four more buckets. UA (legacy) gives a small extra.
+export function pixelsToNames(p: Pixels): string[] {
+  const out: string[] = [];
+  if (p.ga4) out.push("ga4");
+  if (p.gtm) out.push("gtm");
+  if (p.ua) out.push("ua");
+  if (p.meta) out.push("meta");
+  if (p.tiktok) out.push("tiktok");
+  if (p.linkedin) out.push("linkedin");
+  if (p.bing) out.push("bing");
+  return out;
+}
+
+export function stackToNames(s: Stack): string[] {
+  const out: string[] = [];
+  if (s.shopify) out.push("shopify");
+  if (s.bigcommerce) out.push("bigcommerce");
+  if (s.woocommerce) out.push("woocommerce");
+  if (s.wordpress) out.push("wordpress");
+  if (s.wix) out.push("wix");
+  if (s.squarespace) out.push("squarespace");
+  return out;
+}
+
+export function primaryPlatform(s: Stack): string | undefined {
+  return stackToNames(s)[0];
+}
+
+// Collapse pixel booleans into a single 0..1 intensity.
+// Treat “GA4 or GTM” as one bucket; others as separate; UA adds a small nudge.
 function pixelActivityFrom(p: Pixels): number {
   const buckets =
     (p.ga4 || p.gtm ? 1 : 0) +
@@ -193,8 +209,8 @@ function pixelActivityFrom(p: Pixels): number {
     (p.tiktok ? 1 : 0) +
     (p.linkedin ? 1 : 0) +
     (p.bing ? 1 : 0) +
-    (p.ua && !(p.ga4 || p.gtm) ? 0.5 : 0); // UA only is weaker
-  const norm = Math.min(1, buckets / 3.5); // 3–4 active buckets ≈ 1.0
+    (p.ua && !(p.ga4 || p.gtm) ? 0.5 : 0);
+  const norm = Math.min(1, buckets / 3.5); // ~3–4 active buckets ≈ 1.0
   return Number(norm.toFixed(3));
 }
 
@@ -202,12 +218,6 @@ function pixelActivityFrom(p: Pixels): number {
 /* public API                                                                 */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Detect pixels & platform stack from a page.
- * @param html   full HTML string (raw). Safe to pass empty.
- * @param url    optional page URL (used for weak hints like *.myshopify.com).
- * @param headers optional response headers (case-insensitive object).
- */
 export function detectTech(html?: string, url?: string, headers?: HeaderMap): TechSummary {
   const pixelRes = detectPixels(html);
   const stackRes = detectStack(html, headers, url);
@@ -216,4 +226,4 @@ export function detectTech(html?: string, url?: string, headers?: HeaderMap): Te
   return { pixels: pixelRes.pixels, stack: stackRes.stack, pixelActivity, reasons };
 }
 
-export default { detectTech, pixelActivityFrom };
+export default { detectTech, pixelsToNames, stackToNames, primaryPlatform };
