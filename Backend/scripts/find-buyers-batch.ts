@@ -1,241 +1,237 @@
 // Backend/scripts/find-buyers-batch.ts
 //
-// Batch "Find buyers" runner for a CSV of companies.
-// - Reads ./data/companies.csv (or a path from argv[2])
-// - Dedupes by normalized domain
-// - POSTs each to your buyers API (same endpoint the Admin button uses)
-// - Writes JSON + CSV summaries to ./data/out/
+// Batch importer that reads a CSV of “companies” in many possible formats,
+// dedupes by domain, and calls the Artemis API to find buyers per company.
 //
-// Usage:
-//   npm run build
-//   API_BASE="https://<api-host>" ADMIN_KEY="<key>" \
-//   node dist/scripts/find-buyers-batch.js ./data/companies.csv
+// No external deps. Works on Node 20+ (built-in fetch).
+// Accepts both classic “company,domain,website” CSVs and CRM-style CSVs
+// like: Email, Lead Status, First Name, Last Name, Company, Website, City, State, Country.
 //
-// Env:
-//   API_BASE     -> defaults to http://127.0.0.1:8787
-//   ADMIN_KEY    -> sent as x-admin-key (if your API expects it)
-//   FIND_ENDPOINT -> defaults to /api/leads/find
+// Usage (local or in CI):
+//   npx -y tsx ./scripts/find-buyers-batch.ts \
+//     --csv app/Backend/data/companies.csv \
+//     --api "$API_BASE" \
+//     --adminHeader "x-admin-key" \
+//     --adminToken "$ADMIN_TOKEN" \
+//     --maxCompanies 0 \
+//     --maxBuyers 30 \
+//     --dryRun false
 //
-// CSV columns supported (case-insensitive): company, website, domain, email, city, state, country
+// Notes:
+// - Defaults match our GitHub Actions workflow.
+// - Logs each decision so you can see exactly why a row was skipped or posted.
 
 import fs from "fs";
 import path from "path";
-import os from "os";
 
 type Row = Record<string, string>;
 
-const API_BASE = (process.env.API_BASE || "http://127.0.0.1:8787").replace(/\/+$/,"");
-const ENDPOINT = process.env.FIND_ENDPOINT || "/api/leads/find";
-const ADMIN_KEY = process.env.ADMIN_KEY || process.env.X_ADMIN_KEY || "";
+type FindBuyersPayload = {
+  company?: string;
+  domain?: string;
+  website?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  max?: number; // buyers to request for this company
+};
 
-function norm(s?: string) { return String(s ?? "").trim(); }
-function lc(s?: string) { return String(s ?? "").toLowerCase(); }
-
-function normHost(input?: string): string {
-  const s = (input || "").trim();
-  if (!s) return "";
-  try {
-    const u = new URL(/^https?:\/\//i.test(s) ? s : "https://" + s);
-    return u.hostname.toLowerCase().replace(/^www\./,"");
-  } catch {
-    // maybe it's an email
-    const at = s.indexOf("@");
-    if (at > 0) return s.slice(at + 1).toLowerCase().replace(/^www\./,"");
-    // maybe it's just a bare domain
-    return s.toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
-  }
+function arg(name: string, def = ""): string {
+  const idx = process.argv.findIndex((a) => a === `--${name}`);
+  if (idx >= 0 && process.argv[idx + 1]) return process.argv[idx + 1];
+  const env = process.env[name.replace(/-/g, "_").toUpperCase()];
+  return (env ?? def) as string;
 }
 
-function parseCSVLine(line: string): string[] {
-  const out: string[] = [];
-  let cur = "";
-  let q = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (q && line[i + 1] === '"') { cur += '"'; i++; }
-      else { q = !q; }
-    } else if (ch === "," && !q) {
-      out.push(cur);
-      cur = "";
-    } else cur += ch;
-  }
-  out.push(cur);
-  return out.map(x => x.trim());
+function argBool(name: string, def = false): boolean {
+  const v = arg(name, def ? "true" : "false").toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
 }
 
-function readCSV(p: string): Row[] {
-  const txt = fs.readFileSync(p, "utf8").replace(/\r\n/g, "\n");
-  const lines = txt.split("\n").filter(l => l.trim().length);
-  if (!lines.length) return [];
-  const header = parseCSVLine(lines[0]).map(lc);
+function argInt(name: string, def: number): number {
+  const v = parseInt(arg(name, String(def)), 10);
+  return Number.isFinite(v) ? v : def;
+}
+
+// --- config from args/env ---
+const CSV_PATH = arg("csv", "app/Backend/data/companies.csv");
+const API_BASE = (arg("api") || process.env.API_BASE || "").replace(/\/+$/, "");
+const ADMIN_HEADER = arg("adminHeader", "x-admin-key");
+const ADMIN_TOKEN = arg("adminToken", process.env.ADMIN_TOKEN || "");
+const MAX_COMPANIES = argInt("maxCompanies", 0); // 0 = no limit
+const MAX_BUYERS = argInt("maxBuyers", 30);
+const DRY_RUN = argBool("dryRun", true);
+
+// ---------------- CSV utils ----------------
+
+function splitCSV(line: string): string[] {
+  // split on commas not inside quotes
+  const re = /,(?=(?:[^"]*"[^"]*")*[^"]*$)/g;
+  return line
+    .split(re)
+    .map((s) => s.replace(/^"(.*)"$/, "$1").trim());
+}
+
+function readCSV(filePath: string): Row[] {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`CSV not found: ${filePath}`);
+  }
+  const raw = fs.readFileSync(filePath, "utf8");
+  const lines = raw.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length === 0) return [];
+
+  const headers = splitCSV(lines[0]).map((h) => h.trim());
+  const lower = headers.map((h) => h.toLowerCase());
+
   const rows: Row[] = [];
   for (let i = 1; i < lines.length; i++) {
-    const vals = parseCSVLine(lines[i]);
+    const cols = splitCSV(lines[i]);
     const r: Row = {};
-    header.forEach((h, idx) => { r[h] = vals[idx] ?? ""; });
+    for (let j = 0; j < headers.length; j++) {
+      r[lower[j]] = (cols[j] ?? "").trim();
+    }
     rows.push(r);
   }
   return rows;
 }
 
-type InputCompany = {
-  company?: string;
-  website?: string;
-  email?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  host: string; // normalized landing/biz domain
-};
+function hostnameFromUrl(u?: string): string {
+  if (!u) return "";
+  try {
+    const h = new URL(u.includes("://") ? u : `https://${u}`).hostname.toLowerCase();
+    return h.replace(/^www\./, "");
+  } catch {
+    return (u || "").replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.+$/, "").toLowerCase();
+  }
+}
 
-function toInput(row: Row): InputCompany | null {
-  const company = row["company"] || row["name"] || "";
-  const website = row["website"] || row["url"] || row["domain"] || "";
-  const email = row["email"] || "";
-  const city = row["city"] || "";
-  const state = row["state"] || row["region"] || "";
-  const country = row["country"] || row["country_code"] || "";
+function domainFromEmail(e?: string): string {
+  const m = String(e || "").trim().match(/@([^>\s;]+)/);
+  return m ? hostnameFromUrl(m[1]) : "";
+}
 
-  const host = normHost(website || email);
-  if (!host) return null;
+// Accept many header variants
+function pick(row: Row, ...cands: string[]): string {
+  for (const c of cands) {
+    const v = row[c.toLowerCase()];
+    if (v && v.trim()) return v.trim();
+  }
+  return "";
+}
 
+function normalizeRow(row: Row): FindBuyersPayload | null {
+  // Try to discover company + domain/website from various fields
+  const company = pick(row, "company", "company name", "organization", "org", "business", "business name", "name");
+  const websiteRaw = pick(row, "website", "site", "url", "landing page", "landing", "homepage");
+  const email = pick(row, "email", "work email", "primary email", "contact email");
+  const domain = pick(row, "domain", "root domain") || hostnameFromUrl(websiteRaw) || domainFromEmail(email);
+
+  const website = websiteRaw ? (websiteRaw.startsWith("http") ? websiteRaw : `https://${websiteRaw}`) : (domain ? `https://${domain}` : "");
+
+  const city = pick(row, "city", "town");
+  const state = pick(row, "state", "region", "province", "state/region");
+  const country = pick(row, "country", "country code", "nation");
+
+  if (!domain && !website) {
+    return null;
+  }
   return {
-    company: norm(company),
-    website: norm(website),
-    email: norm(email),
-    city: norm(city),
-    state: norm(state),
-    country: norm(country),
-    host,
+    company: company || undefined,
+    domain: domain || undefined,
+    website: website || undefined,
+    city: city || undefined,
+    state: state || undefined,
+    country: country || undefined,
+    max: MAX_BUYERS,
   };
 }
 
-async function postFindBuyers(item: InputCompany): Promise<any> {
-  const url = API_BASE + ENDPOINT;
-  const body = {
-    host: item.host,
-    company: item.company,
-    website: item.website || ("https://" + item.host),
-    city: item.city || undefined,
-    state: item.state || undefined,
-    country: item.country || undefined,
-  };
-  const r = await fetch(url, {
+// --------------- HTTP -----------------
+
+async function postFindBuyers(payload: FindBuyersPayload): Promise<{ ok: boolean; created?: number; reason?: string }> {
+  const url = `${API_BASE}/api/leads/find`;
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(ADMIN_KEY ? { "x-admin-key": ADMIN_KEY } : {}),
-    },
-    body: JSON.stringify(body),
+      [ADMIN_HEADER]: ADMIN_TOKEN,
+    } as any,
+    body: JSON.stringify(payload),
   });
-  let data: any = {};
-  try { data = await r.json(); } catch {}
-  return { status: r.status, ok: r.ok, data };
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    return { ok: false, reason: `${res.status} ${res.statusText} ${txt.slice(0, 200)}` };
+  }
+  const data = await res.json().catch(() => ({}));
+  const created = Number((data?.created ?? data?.count ?? 0));
+  return { ok: true, created: Number.isFinite(created) ? created : undefined };
 }
 
+// --------------- main ------------------
+
 async function main() {
-  const csvArg = process.argv[2] || "./data/companies.csv";
-  const csvPath = path.resolve(csvArg);
-  if (!fs.existsSync(csvPath)) {
-    console.error(`CSV not found: ${csvPath}`);
-    process.exit(2);
+  console.log("Importer starting…");
+  console.log(`API_BASE=${API_BASE || "(missing)"}`);
+  console.log(`adminHeader=${ADMIN_HEADER}`);
+  console.log(`dryRun=${DRY_RUN}`);
+  console.log(`maxCompanies=${MAX_COMPANIES}`);
+  console.log(`maxBuyersPerCompany=${MAX_BUYERS}`);
+  if (!API_BASE) throw new Error("API_BASE is required");
+  if (!ADMIN_TOKEN) console.warn("WARN: adminToken missing; calls will fail auth.");
+
+  const csvAbs = path.resolve(CSV_PATH);
+  console.log(`CSV path: ${csvAbs}`);
+
+  const rows = readCSV(csvAbs);
+  console.log(`CSV rows: ${rows.length}`);
+
+  const normalized: FindBuyersPayload[] = [];
+  for (const r of rows) {
+    const n = normalizeRow(r);
+    if (!n) continue;
+    normalized.push(n);
   }
+  console.log(`Normalized rows (have domain/website): ${normalized.length}`);
 
-  const outDir = path.resolve("./data/out");
-  fs.mkdirSync(outDir, { recursive: true });
+  // Dedupe by domain (prefer rows that have company name)
+  const byDomain = new Map<string, FindBuyersPayload>();
+  for (const n of normalized) {
+    const key = (n.domain || hostnameFromUrl(n.website || "") || "").toLowerCase();
+    if (!key) continue;
+    const prev = byDomain.get(key);
+    if (!prev || (n.company && !prev.company)) byDomain.set(key, n);
+  }
+  let items = Array.from(byDomain.values());
+  if (MAX_COMPANIES > 0) items = items.slice(0, MAX_COMPANIES);
 
-  const raw = readCSV(csvPath);
-  const inputs = raw.map(toInput).filter(Boolean) as InputCompany[];
+  console.log(`Unique companies by domain: ${items.length}`);
 
-  // dedupe by host
-  const seen = new Set<string>();
-  const unique = inputs.filter(x => {
-    const k = x.host;
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
+  let ok = 0, fail = 0, createdTotal = 0;
 
-  console.log(`Loaded ${raw.length} rows → ${unique.length} unique companies`);
-  console.log(`API: ${API_BASE}${ENDPOINT}`);
-
-  const results: Array<{
-    host: string;
-    company?: string;
-    ok: boolean;
-    status: number;
-    buyersFound?: number;
-    error?: string;
-  }> = [];
-
-  // simple concurrency
-  const CONC = Math.max(1, Number(process.env.CONCURRENCY || 4));
-  let idx = 0;
-
-  async function worker(id: number) {
-    while (idx < unique.length) {
-      const i = idx++;
-      const item = unique[i];
-      try {
-        const r = await postFindBuyers(item);
-        const buyersFound =
-          (typeof r?.data?.count === "number" && r.data.count) ||
-          (Array.isArray(r?.data?.rows) ? r.data.rows.length : undefined) ||
-          (Array.isArray(r?.data?.buyers) ? r.data.buyers.length : undefined);
-
-        results.push({
-          host: item.host,
-          company: item.company,
-          ok: !!r.ok,
-          status: r.status,
-          buyersFound,
-          error: r.ok ? undefined : String(r?.data?.error || "request_failed"),
-        });
-
-        const tag = r.ok ? "OK" : "ERR";
-        console.log(`[${tag}] ${item.host}  buyers=${buyersFound ?? "-"}  (${i + 1}/${unique.length})`);
-      } catch (e: any) {
-        results.push({
-          host: item.host,
-          company: item.company,
-          ok: false,
-          status: 0,
-          error: String(e?.message || e),
-        });
-        console.log(`[ERR] ${item.host} ${String(e?.message || e)}`);
-      }
+  for (const it of items) {
+    const label = `${it.company || it.domain || it.website}`;
+    if (DRY_RUN) {
+      console.log(`[DRY] would POST find-buyers for: ${label}`);
+      continue;
+    }
+    const res = await postFindBuyers(it);
+    if (res.ok) {
+      ok++;
+      createdTotal += res.created ?? 0;
+      console.log(`[OK] ${label} -> created=${res.created ?? "n/a"}`);
+    } else {
+      fail++;
+      console.log(`[ERR] ${label} -> ${res.reason}`);
     }
   }
 
-  const workers = Array.from({ length: CONC }, (_, i) => worker(i));
-  await Promise.all(workers);
-
-  // write outputs
-  const ts = new Date().toISOString().replace(/[:.]/g, "-");
-  const outJSON = path.join(outDir, `buyers-run-${ts}.json`);
-  const outCSV  = path.join(outDir, `buyers-run-${ts}.csv`);
-
-  fs.writeFileSync(outJSON, JSON.stringify({ api: API_BASE + ENDPOINT, results }, null, 2), "utf8");
-
-  const csvLines = [
-    ["host","company","ok","status","buyersFound","error"].join(","),
-    ...results.map(r => [
-      r.host,
-      (r.company || "").replace(/,/g," "),
-      r.ok ? "1" : "0",
-      String(r.status),
-      r.buyersFound == null ? "" : String(r.buyersFound),
-      (r.error || "").replace(/[\r\n,]+/g," ").slice(0,200)
-    ].join(","))
-  ];
-  fs.writeFileSync(outCSV, csvLines.join(os.EOL), "utf8");
-
-  const okCount = results.filter(r => r.ok).length;
-  const sumBuyers = results.reduce((a,b) => a + (b.buyersFound || 0), 0);
-
-  console.log(`\nDone. OK=${okCount}/${results.length}  buyersFound=${sumBuyers}`);
-  console.log(`Wrote:\n  ${outJSON}\n  ${outCSV}`);
+  console.log("---- Summary ----");
+  console.log(`Total unique companies: ${items.length}`);
+  console.log(`Posted ok: ${ok}, failed: ${fail}, createdTotal: ${createdTotal}`);
+  console.log("Importer done.");
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e?.stack || e?.message || e);
+  process.exit(2);
+});
