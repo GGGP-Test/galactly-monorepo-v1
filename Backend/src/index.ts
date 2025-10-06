@@ -1,134 +1,117 @@
 // src/index.ts
-// Express bootstrap with strict CORS, tiny logger, canonical /api/* mounts,
-// plus /ping endpoints and a root alias for /classify (to satisfy the modal’s
-// fallback). Metrics logic stays in routes/classify.ts.
+//
+// Artemis BV1 — API bootstrap (Express, no external deps).
+// Mounts routes and exposes /api/health for Docker healthcheck.
 
 import express, { Request, Response, NextFunction } from "express";
-import * as path from "path";
+import path from "path";
+import fs from "fs";
+import { CFG } from "./shared/env";
+import { loadCatalog, type BuyerRow } from "./shared/catalog";
 
-import HealthRouter from "./routes/health";
-import PrefsRouter from "./routes/prefs";
+// Routers
 import LeadsRouter from "./routes/leads";
-import CatalogRouter from "./routes/catalog";
-import PlacesRouter from "./routes/places";
 import ClassifyRouter from "./routes/classify";
-import BuyersRouter from "./routes/buyers";
-import EventsRouter from "./routes/events";
+import PrefsRouter from "./routes/prefs";
+import CatalogRouter from "./routes/catalog";
 import AuditRouter from "./routes/audit";
+import EventsRouter from "./routes/events";
 import ScoresRouter from "./routes/scores";
 
-import { CFG, isOriginAllowed } from "./shared/env";
-
 const app = express();
+const startedAt = Date.now();
+const PORT = Number(CFG.port || process.env.PORT || 8787);
 
-/* -------------------------------------------------------------------------- */
-/* Basic hardening                                                            */
-/* -------------------------------------------------------------------------- */
-app.disable("x-powered-by");
-app.set("trust proxy", true); // keep client IPs correct when behind a proxy
-
-/* -------------------------------------------------------------------------- */
-/* Tiny request logger                                                        */
-/* -------------------------------------------------------------------------- */
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const t0 = process.hrtime.bigint();
-  res.on("finish", () => {
-    const dtMs = Number((process.hrtime.bigint() - t0) / BigInt(1e6));
-    console.log(
-      `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} -> ${res.statusCode} ${dtMs}ms`
-    );
-  });
+// --- tiny CORS (no dependency) ---
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-key");
+  if (req.method === "OPTIONS") return res.status(204).end();
   next();
 });
 
-/* -------------------------------------------------------------------------- */
-/* Strict CORS (env-driven allowlist)                                         */
-/* -------------------------------------------------------------------------- */
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const origin = req.headers.origin as string | undefined;
-  res.setHeader("Vary", "Origin");
-  if (origin && isOriginAllowed(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
+app.use(express.json({ limit: "1mb" }));
+
+// --- basic pings ---
+app.get("/api/ping", (_req, res) => res.json({ pong: true, now: new Date().toISOString() }));
+app.get("/ping", (_req, res) => res.json({ pong: true, now: new Date().toISOString() }));
+
+// --- health ---
+function arr(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return (v as unknown[]).map((x) => (x == null ? "" : String(x))).filter(Boolean);
+}
+function toArray(cat: unknown): BuyerRow[] {
+  const anyCat = cat as any;
+  if (Array.isArray(anyCat)) return anyCat as BuyerRow[];
+  if (Array.isArray(anyCat?.rows)) return anyCat.rows as BuyerRow[];
+  if (Array.isArray(anyCat?.items)) return anyCat.items as BuyerRow[];
+  return [];
+}
+
+app.get("/api/health", async (_req: Request, res: Response) => {
+  try {
+    const cat = await loadCatalog();
+    const rows = toArray(cat);
+
+    const byTier: Record<string, number> = {};
+    for (const r of rows) {
+      const tiers = arr((r as any).tiers);
+      if (tiers.length === 0) tiers.push("?");
+      for (const t of tiers) byTier[t] = (byTier[t] || 0) + 1;
+    }
+
+    res.json({
+      service: "buyers-api",
+      uptimeSec: Math.floor((Date.now() - startedAt) / 1000),
+      env: {
+        allowTiers: Array.from(CFG.allowTiers || new Set(["A", "B", "C"])).join(""),
+      },
+      catalog: {
+        total: rows.length,
+        byTier,
+      },
+      now: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    res.status(200).json({ ok: false, error: "health-failed", detail: String(err?.message || err) });
   }
-  if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    const reqHdrs =
-      (req.headers["access-control-request-headers"] as string | undefined) ||
-      "Content-Type,Authorization";
-    res.setHeader("Access-Control-Allow-Headers", reqHdrs);
-    return res.status(204).end();
-  }
-  next();
 });
 
-/* -------------------------------------------------------------------------- */
-/* Body parsing                                                               */
-/* -------------------------------------------------------------------------- */
-app.use(express.json({ limit: "512kb" }));
+// extra healthz for Dockerfile HEALTHCHECK
+app.get("/healthz", (_req, res) => {
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.end("ok");
+});
 
-/* -------------------------------------------------------------------------- */
-/* Health & Ping (used by the modal’s API auto-detection)                     */
-/* -------------------------------------------------------------------------- */
-const okText = (_req: Request, res: Response) => res.type("text/plain").send("ok");
-app.get("/healthz", okText);
-app.get("/ping", okText);
-app.head("/ping", okText);
-app.get("/api/ping", okText);
-app.head("/api/ping", okText);
-
-/* -------------------------------------------------------------------------- */
-/* Canonical API mounts                                                       */
-/* -------------------------------------------------------------------------- */
-app.use("/api/health", HealthRouter);
-app.use("/api/prefs", PrefsRouter);
+// --- routers ---
 app.use("/api/leads", LeadsRouter);
-app.use("/api/catalog", CatalogRouter);
-app.use("/api/places", PlacesRouter);
 app.use("/api/classify", ClassifyRouter);
-app.use("/api/buyers", BuyersRouter);
-app.use("/api/events", EventsRouter);
+app.use("/api/prefs", PrefsRouter);
+app.use("/api/catalog", CatalogRouter);
 app.use("/api/audit", AuditRouter);
+app.use("/api/events", EventsRouter);
 app.use("/api/scores", ScoresRouter);
 
-/* -------------------------------------------------------------------------- */
-/* Static files (for admin dashboard etc.)                                    */
-/* -------------------------------------------------------------------------- */
-const publicDir = path.join(process.cwd(), "public");
-app.use(express.static(publicDir, { extensions: ["html"] }));
+// --- optional: serve Docs/ if present (works locally; ignored if not copied to image) ---
+try {
+  const docsDir = path.join(__dirname, "..", "docs");
+  if (fs.existsSync(docsDir)) {
+    app.use("/", express.static(docsDir, { index: "admin.html" }));
+  }
+} catch { /* ignore */ }
 
-/* Optional helper: /admin -> serve public/admin.html if present */
-app.get("/admin", (_req, res) => {
-  res.sendFile(path.join(publicDir, "admin.html"), (err) => {
-    if (err) res.status(404).type("text/plain").send("admin.html not found");
-  });
+// --- error guard ---
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const msg = err?.message || String(err);
+  res.status(200).json({ ok: false, error: "server", detail: msg });
 });
 
-/* -------------------------------------------------------------------------- */
-/* Root alias for /classify (frontend sometimes tries /classify)              */
-/* -------------------------------------------------------------------------- */
-app.use("/classify", ClassifyRouter);
-
-/* -------------------------------------------------------------------------- */
-/* 404 handlers                                                               */
-/* -------------------------------------------------------------------------- */
-app.use("/api", (_req, res) => res.status(404).json({ ok: false, error: "not_found" }));
-app.use((_req, res) => res.status(404).type("text/plain").send("Not Found"));
-
-/* -------------------------------------------------------------------------- */
-/* Generic error handler                                                      */
-/* -------------------------------------------------------------------------- */
-app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  console.error("Unhandled error:", (err as any)?.message || err);
-  res.status(500).json({ ok: false, error: "server_error" });
-});
-
-/* -------------------------------------------------------------------------- */
-/* Boot                                                                       */
-/* -------------------------------------------------------------------------- */
-const port = Number(CFG.port || process.env.PORT || 8787);
-app.listen(port, () => {
-  console.log(`buyers-api listening on :${port} (env=${CFG.nodeEnv}) — /healthz, /ping, /api/*`);
+// --- start ---
+app.listen(PORT, () => {
+  // eslint-disable-next-line no-console
+  console.log(`[buyers-api] listening on :${PORT} (env=${process.env.NODE_ENV || "development"})`);
 });
 
 export default app;
