@@ -1,186 +1,241 @@
-// scripts/find-buyers-batch.ts
+// Backend/scripts/find-buyers-batch.ts
 //
-// Batch: suppliers -> buyer leads
-// Usage examples:
-//   ts-node scripts/find-buyers-batch.ts --in data/companies.csv --api http://localhost:8787/api --city "San Diego"
-//   ts-node scripts/find-buyers-batch.ts --in data/companies.json --api https://YOUR.code.run/api --key $ADMIN_KEY --concurrency 6
+// Batch "Find buyers" runner for a CSV of companies.
+// - Reads ./data/companies.csv (or a path from argv[2])
+// - Dedupes by normalized domain
+// - POSTs each to your buyers API (same endpoint the Admin button uses)
+// - Writes JSON + CSV summaries to ./data/out/
 //
-// Input formats:
-//  CSV: columns can be host|website|domain|url|company_website
-//  JSON array: [{ host:"acme.com" }, { website:"https://foo.com" }, ...]
+// Usage:
+//   npm run build
+//   API_BASE="https://<api-host>" ADMIN_KEY="<key>" \
+//   node dist/scripts/find-buyers-batch.js ./data/companies.csv
 //
-// Outputs:
-//  - out/find-buyers-YYYYMMDD-HHMM/  (one JSON per host)
-//  - out/find-buyers-YYYYMMDD-HHMM/merged.json
+// Env:
+//   API_BASE     -> defaults to http://127.0.0.1:8787
+//   ADMIN_KEY    -> sent as x-admin-key (if your API expects it)
+//   FIND_ENDPOINT -> defaults to /api/leads/find
+//
+// CSV columns supported (case-insensitive): company, website, domain, email, city, state, country
 
 import fs from "fs";
 import path from "path";
+import os from "os";
 
-type CompanyRec = Record<string, unknown>;
-type PrefsPatch = {
-  host: string;
-  city?: string;
-  general?: { mids?: boolean; near?: boolean; retail?: boolean; wholesale?: boolean; ecom?: boolean };
-  likeTags?: string[];
-  sizeWeight?: Record<string, number>;
-  signalWeight?: Record<string, number>;
-  inboundOptIn?: boolean;
-};
+type Row = Record<string, string>;
 
-function arg(flag: string, d?: string) {
-  const i = process.argv.indexOf(flag);
-  if (i >= 0 && i + 1 < process.argv.length) return process.argv[i + 1];
-  return d;
-}
-function has(flag: string) { return process.argv.includes(flag); }
+const API_BASE = (process.env.API_BASE || "http://127.0.0.1:8787").replace(/\/+$/,"");
+const ENDPOINT = process.env.FIND_ENDPOINT || "/api/leads/find";
+const ADMIN_KEY = process.env.ADMIN_KEY || process.env.X_ADMIN_KEY || "";
 
-const inPath = arg("--in") || arg("-i");
-const apiBase = (arg("--api") || "").replace(/\/+$/,"");
-const adminKey = arg("--key") || "";
-const city = arg("--city") || "";                 // optional targeting city
-const concurrency = Math.max(1, Number(arg("--concurrency") || 4));
-const doPrefs = !has("--no-prefs");               // default: upsert demo prefs per host
+function norm(s?: string) { return String(s ?? "").trim(); }
+function lc(s?: string) { return String(s ?? "").toLowerCase(); }
 
-if (!inPath || !apiBase) {
-  console.error("Usage: ts-node scripts/find-buyers-batch.ts --in <companies.(csv|json)> --api <http://host:port/api> [--key ADMIN] [--city CITY] [--concurrency 4] [--no-prefs]");
-  process.exit(2);
-}
-
-function read(p: string) { return fs.readFileSync(p, "utf8"); }
-function mkdirp(p: string) { fs.mkdirSync(p, { recursive: true }); }
-
-function normHost(s?: string): string {
-  return String(s||"").toLowerCase().trim()
-    .replace(/^https?:\/\//,"")
-    .replace(/^www\./,"")
-    .replace(/\/.*$/,"");
-}
-
-function extractHost(rec: CompanyRec): string {
-  const keys = ["host","website","domain","url","company_website"];
-  for (const k of keys) {
-    if (rec[k] != null) {
-      const h = normHost(String(rec[k]||""));
-      if (h) return h;
-    }
+function normHost(input?: string): string {
+  const s = (input || "").trim();
+  if (!s) return "";
+  try {
+    const u = new URL(/^https?:\/\//i.test(s) ? s : "https://" + s);
+    return u.hostname.toLowerCase().replace(/^www\./,"");
+  } catch {
+    // maybe it's an email
+    const at = s.indexOf("@");
+    if (at > 0) return s.slice(at + 1).toLowerCase().replace(/^www\./,"");
+    // maybe it's just a bare domain
+    return s.toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
   }
-  return "";
 }
 
-// --- tiny CSV ---
-function splitCsvLine(line: string): string[] {
-  const out: string[] = []; let cur = ""; let q=false;
-  for (let i=0;i<line.length;i++){
-    const ch=line[i];
-    if (ch === '"'){ if(q && line[i+1]==='"'){cur+='"'; i++;} else q=!q; }
-    else if (ch === ',' && !q){ out.push(cur); cur=""; }
-    else cur+=ch;
+function parseCSVLine(line: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let q = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (q && line[i + 1] === '"') { cur += '"'; i++; }
+      else { q = !q; }
+    } else if (ch === "," && !q) {
+      out.push(cur);
+      cur = "";
+    } else cur += ch;
   }
   out.push(cur);
-  return out.map(s=>s.trim());
+  return out.map(x => x.trim());
 }
-function parseCsv(txt: string): CompanyRec[] {
-  const lines = txt.replace(/\r/g,"").split("\n").filter(l=>l.trim().length>0);
+
+function readCSV(p: string): Row[] {
+  const txt = fs.readFileSync(p, "utf8").replace(/\r\n/g, "\n");
+  const lines = txt.split("\n").filter(l => l.trim().length);
   if (!lines.length) return [];
-  const head = splitCsvLine(lines[0]);
-  const rows: CompanyRec[] = [];
-  for (let i=1;i<lines.length;i++){
-    const cols = splitCsvLine(lines[i]);
-    const rec: CompanyRec = {};
-    for (let j=0;j<head.length;j++){ rec[head[j]] = cols[j] ?? ""; }
-    rows.push(rec);
+  const header = parseCSVLine(lines[0]).map(lc);
+  const rows: Row[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseCSVLine(lines[i]);
+    const r: Row = {};
+    header.forEach((h, idx) => { r[h] = vals[idx] ?? ""; });
+    rows.push(r);
   }
   return rows;
 }
 
-function loadCompanies(file: string): string[] {
-  const ext = path.extname(file).slice(1).toLowerCase();
-  let rows: CompanyRec[] = [];
-  if (ext === "csv") rows = parseCsv(read(file));
-  else rows = JSON.parse(read(file));
-  // If JSON is not array, try to unwrap {items:[...]}
-  if (!Array.isArray(rows) && rows && Array.isArray((rows as any).items)) rows = (rows as any).items;
-  const hosts = new Set<string>();
-  for (const r of rows) {
-    const h = extractHost(r);
-    if (h) hosts.add(h);
-  }
-  return Array.from(hosts);
-}
+type InputCompany = {
+  company?: string;
+  website?: string;
+  email?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  host: string; // normalized landing/biz domain
+};
 
-async function hit(method: string, path: string, body?: any, withKey=false) {
-  const url = apiBase + path;
-  const headers: Record<string,string> = { "Content-Type":"application/json" };
-  if (withKey && adminKey) headers["x-admin-key"] = adminKey;
-  const res = await fetch(url, { method, headers, body: body? JSON.stringify(body): undefined });
-  const txt = await res.text();
-  let data: any = txt; try { data = JSON.parse(txt); } catch {}
-  return { ok: res.ok, status: res.status, data, url };
-}
+function toInput(row: Row): InputCompany | null {
+  const company = row["company"] || row["name"] || "";
+  const website = row["website"] || row["url"] || row["domain"] || "";
+  const email = row["email"] || "";
+  const city = row["city"] || "";
+  const state = row["state"] || row["region"] || "";
+  const country = row["country"] || row["country_code"] || "";
 
-function demoPrefs(host: string): PrefsPatch {
+  const host = normHost(website || email);
+  if (!host) return null;
+
   return {
+    company: norm(company),
+    website: norm(website),
+    email: norm(email),
+    city: norm(city),
+    state: norm(state),
+    country: norm(country),
     host,
-    city: city || undefined,
-    general: { mids:true, near: !!city, retail:true, wholesale:true, ecom:false },
-    likeTags: ["film","labels","food","beverage"],
-    sizeWeight: { micro:1.2, small:1.0, mid:0.6, large:-1.2 },
-    signalWeight: { local: city ? 1.6 : 0.3, ecommerce:0.1, retail:0.35, wholesale:0.35 },
-    inboundOptIn: true,
   };
 }
 
-async function upsertPrefs(host: string) {
-  if (!doPrefs) return { ok:true, skipped:true };
-  return hit("POST", "/prefs/upsert", demoPrefs(host), true);
+async function postFindBuyers(item: InputCompany): Promise<any> {
+  const url = API_BASE + ENDPOINT;
+  const body = {
+    host: item.host,
+    company: item.company,
+    website: item.website || ("https://" + item.host),
+    city: item.city || undefined,
+    state: item.state || undefined,
+    country: item.country || undefined,
+  };
+  const r = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(ADMIN_KEY ? { "x-admin-key": ADMIN_KEY } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  let data: any = {};
+  try { data = await r.json(); } catch {}
+  return { status: r.status, ok: r.ok, data };
 }
 
-async function findBuyers(host: string) {
-  const q = new URLSearchParams({ host }); if (city) q.set("city", city);
-  return hit("GET", "/leads/find-buyers?"+q.toString());
-}
+async function main() {
+  const csvArg = process.argv[2] || "./data/companies.csv";
+  const csvPath = path.resolve(csvArg);
+  if (!fs.existsSync(csvPath)) {
+    console.error(`CSV not found: ${csvPath}`);
+    process.exit(2);
+  }
 
-async function worker(hosts: string[], outDir: string, merged: any[]) {
-  while (hosts.length) {
-    const host = hosts.shift()!;
-    try {
-      if (doPrefs) {
-        const p = await upsertPrefs(host);
-        if (!p.ok) console.log(`[prefs] ${host} -> ${p.status} ${JSON.stringify(p.data)}`);
+  const outDir = path.resolve("./data/out");
+  fs.mkdirSync(outDir, { recursive: true });
+
+  const raw = readCSV(csvPath);
+  const inputs = raw.map(toInput).filter(Boolean) as InputCompany[];
+
+  // dedupe by host
+  const seen = new Set<string>();
+  const unique = inputs.filter(x => {
+    const k = x.host;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  console.log(`Loaded ${raw.length} rows → ${unique.length} unique companies`);
+  console.log(`API: ${API_BASE}${ENDPOINT}`);
+
+  const results: Array<{
+    host: string;
+    company?: string;
+    ok: boolean;
+    status: number;
+    buyersFound?: number;
+    error?: string;
+  }> = [];
+
+  // simple concurrency
+  const CONC = Math.max(1, Number(process.env.CONCURRENCY || 4));
+  let idx = 0;
+
+  async function worker(id: number) {
+    while (idx < unique.length) {
+      const i = idx++;
+      const item = unique[i];
+      try {
+        const r = await postFindBuyers(item);
+        const buyersFound =
+          (typeof r?.data?.count === "number" && r.data.count) ||
+          (Array.isArray(r?.data?.rows) ? r.data.rows.length : undefined) ||
+          (Array.isArray(r?.data?.buyers) ? r.data.buyers.length : undefined);
+
+        results.push({
+          host: item.host,
+          company: item.company,
+          ok: !!r.ok,
+          status: r.status,
+          buyersFound,
+          error: r.ok ? undefined : String(r?.data?.error || "request_failed"),
+        });
+
+        const tag = r.ok ? "OK" : "ERR";
+        console.log(`[${tag}] ${item.host}  buyers=${buyersFound ?? "-"}  (${i + 1}/${unique.length})`);
+      } catch (e: any) {
+        results.push({
+          host: item.host,
+          company: item.company,
+          ok: false,
+          status: 0,
+          error: String(e?.message || e),
+        });
+        console.log(`[ERR] ${item.host} ${String(e?.message || e)}`);
       }
-      const r = await findBuyers(host);
-      console.log(`[find] ${host} -> ${r.status}`);
-      const item = { host, ok:r.ok, status:r.status, data:r.data };
-      fs.writeFileSync(path.join(outDir, `${host.replace(/[^\w.-]/g,"_")}.json`), JSON.stringify(item, null, 2));
-      merged.push(item);
-    } catch (e:any) {
-      console.log(`[err] ${host}: ${e?.message||e}`);
     }
   }
+
+  const workers = Array.from({ length: CONC }, (_, i) => worker(i));
+  await Promise.all(workers);
+
+  // write outputs
+  const ts = new Date().toISOString().replace(/[:.]/g, "-");
+  const outJSON = path.join(outDir, `buyers-run-${ts}.json`);
+  const outCSV  = path.join(outDir, `buyers-run-${ts}.csv`);
+
+  fs.writeFileSync(outJSON, JSON.stringify({ api: API_BASE + ENDPOINT, results }, null, 2), "utf8");
+
+  const csvLines = [
+    ["host","company","ok","status","buyersFound","error"].join(","),
+    ...results.map(r => [
+      r.host,
+      (r.company || "").replace(/,/g," "),
+      r.ok ? "1" : "0",
+      String(r.status),
+      r.buyersFound == null ? "" : String(r.buyersFound),
+      (r.error || "").replace(/[\r\n,]+/g," ").slice(0,200)
+    ].join(","))
+  ];
+  fs.writeFileSync(outCSV, csvLines.join(os.EOL), "utf8");
+
+  const okCount = results.filter(r => r.ok).length;
+  const sumBuyers = results.reduce((a,b) => a + (b.buyersFound || 0), 0);
+
+  console.log(`\nDone. OK=${okCount}/${results.length}  buyersFound=${sumBuyers}`);
+  console.log(`Wrote:\n  ${outJSON}\n  ${outCSV}`);
 }
 
-(async function main(){
-  try{
-    const hosts = loadCompanies(inPath!);
-    if (!hosts.length) { console.error("No hosts extracted from input."); process.exit(2); }
-    console.log(`Total distinct companies: ${hosts.length}`);
-
-    const stamp = new Date().toISOString().replace(/[:.]/g,"-").slice(0,16);
-    const outDir = path.join("out", `find-buyers-${stamp}`);
-    mkdirp(outDir);
-
-    const queue = hosts.slice();
-    const merged: any[] = [];
-    const workers: Promise<void>[] = [];
-    for (let i=0;i<concurrency;i++){
-      workers.push(worker(queue, outDir, merged));
-    }
-    await Promise.all(workers);
-
-    fs.writeFileSync(path.join(outDir, "merged.json"), JSON.stringify({ items: merged }, null, 2));
-    console.log(`Done. Output in ${outDir}`);
-  }catch(e:any){
-    console.error("Batch failed:", e?.message || e);
-    process.exit(1);
-  }
-})();
+main().catch(e => { console.error(e); process.exit(1); });
