@@ -18,6 +18,8 @@ import AuditRouter from "./routes/audit";
 import EventsRouter from "./routes/events";
 import ScoresRouter from "./routes/scores";
 import AdsRouter from "./routes/ads"; // NEW
+import BillingRouter from "./routes/billing";
+
 
 const app = express();
 const startedAt = Date.now();
@@ -93,6 +95,7 @@ app.use("/api/audit", AuditRouter);
 app.use("/api/events", EventsRouter);
 app.use("/api/scores", ScoresRouter);
 app.use("/api/ads", AdsRouter); // NEW
+app.use("/api/v1/billing", BillingRouter);
 
 // --- serve Docs/ or docs/ if present (admin.html) ---
 try {
