@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin / Monitor — Artemis BV1</title>
+<title>Admin / Live — Artemis BV1</title>
 <style>
   :root { color-scheme: dark; }
   body{margin:0;background:#0b0f14;color:#e9f1f7;font:14px/1.45 system-ui,Segoe UI,Roboto,Inter,Arial}
@@ -18,7 +18,7 @@
   button{padding:10px 14px;border:0;background:#6de1ff;color:#082433;font-weight:700;cursor:pointer}
   .btn{margin-left:8px}
   .row{display:grid;gap:10px}
-  .log{font:12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;white-space:pre-wrap;height:280px;overflow:auto;background:#0d1520;border-radius:10px;border:1px solid #223042;padding:10px}
+  .log{font:12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;white-space:pre-wrap;height:360px;overflow:auto;background:#0d1520;border-radius:10px;border:1px solid #223042;padding:10px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}
   dt{color:#9ab0c0}
@@ -27,12 +27,11 @@
   .rowcols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .inline{display:flex;gap:8px;align-items:center}
   .pill{font:11px;padding:4px 8px;border-radius:999px;background:#0d1520;border:1px solid #223042}
-  .sectionTitle{font-size:12px;color:#9ab0c0;margin:0 0 6px 0}
 </style>
 </head>
 <body>
   <header>
-    <h1>Admin / Monitor <span class="muted" id="sseNote">polling</span></h1>
+    <h1>Admin / Live <span class="muted" id="sseNote">disconnected</span></h1>
     <div>
       <button class="btn" id="btnPing">Ping</button>
       <button class="btn" id="btnHealth">Health</button>
@@ -41,7 +40,7 @@
   </header>
 
   <main>
-    <!-- LEFT PANE -->
+    <!-- LEFT -->
     <section class="card">
       <div class="row" style="gap:8px">
         <label class="muted small">API Base</label>
@@ -78,27 +77,29 @@
       </div>
 
       <div class="row" style="margin-top:16px">
-        <label class="muted small">Options</label>
-        <label class="switch"><input type="checkbox" id="autoscroll" checked> <span class="small muted">Auto-scroll logs</span></label>
-      </div>
-
-      <div class="row" style="margin-top:16px">
         <label class="muted small">Events</label>
         <div class="rowcols">
-          <button id="evStats">Events: Stats</button>
-          <button id="evRecent" class="btn">Events: Recent</button>
+          <button id="evStats">Stats (snapshot)</button>
+          <button id="evRecent" class="btn">Recent (50)</button>
         </div>
-        <button id="evTest" class="btn">Send Test Event</button>
-        <div class="muted small">No SSE; polling stats every 30s. Use “Recent” to fetch a slice.</div>
+        <div class="rowcols" style="margin-top:8px">
+          <button id="evStart">Start stream</button>
+          <button id="evStop" class="btn">Stop stream</button>
+        </div>
+        <div class="rowcols" style="margin-top:8px">
+          <button id="evTest2">Send test event</button>
+          <button id="evExport" class="btn">Export CSV</button>
+        </div>
+        <div class="muted small">SSE auto-reconnects and sends a 20-event backlog.</div>
       </div>
     </section>
 
-    <!-- RIGHT PANE -->
+    <!-- RIGHT -->
     <section class="card">
       <div class="log" id="log"></div>
     </section>
 
-    <!-- HEALTH + EVENTS SNAPSHOTS -->
+    <!-- HEALTH + EVENTS -->
     <section class="card" style="grid-column:1 / -1">
       <div class="grid2">
         <div>
@@ -131,48 +132,33 @@
   const logEl = $("#log");
   const healthDl = $("#healthDl");
   const eventsDl = $("#eventsDl");
+  const sseNote = $("#sseNote");
 
-  // ---- Base & Admin key handling ----
-  const DEFAULT_BASE = (location.origin + "/api"); // auto works on code.run & local
-  function getBase(){
-    const v = (localStorage.getItem("apiBase") || DEFAULT_BASE).trim();
-    return v.replace(/\/+$/,"");
-  }
-  function setBase(v){
-    const val = (v||"").trim().replace(/\/+$/,"");
-    localStorage.setItem("apiBase", val);
-    $("#base").value = val;
-  }
+  // ---- Base & Admin key ----
+  const DEFAULT_BASE = (location.origin + "/api");
+  function getBase(){ return (localStorage.getItem("apiBase") || DEFAULT_BASE).trim().replace(/\/+$/,""); }
+  function setBase(v){ const val=(v||"").trim().replace(/\/+$/,""); localStorage.setItem("apiBase",val); $("#base").value=val; }
   function getKey(){ return (localStorage.getItem("adminKey") || "").trim(); }
-  function setKey(v){ localStorage.setItem("adminKey", (v||"").trim()); $("#adminKey").value = (v||"").trim(); }
-  $("#base").value = getBase();
-  $("#adminKey").value = getKey();
+  function setKey(v){ localStorage.setItem("adminKey",(v||"").trim()); $("#adminKey").value=(v||"").trim(); }
+  $("#base").value = getBase(); $("#adminKey").value = getKey();
 
-  // ---- tiny helpers ----
+  // ---- helpers ----
   function say(s){
     const t = `[${new Date().toTimeString().slice(0,8)}] ${s}\n`;
     logEl.textContent += t;
-    if ($("#autoscroll").checked) logEl.scrollTop = logEl.scrollHeight;
+    logEl.scrollTop = logEl.scrollHeight;
   }
-  function adminHeaders(){
-    const h = { "Content-Type":"application/json" };
-    const k = getKey();
-    if (k) (h)["x-admin-key"] = k;
-    return h;
-  }
+  function adminHeaders(){ const h={"Content-Type":"application/json"}; const k=getKey(); if(k)(h)["x-admin-key"]=k; return h; }
   async function hit(method, path, body, withKey=false){
     const url = getBase() + path;
     const init = { method, headers: withKey ? adminHeaders() : { "Content-Type":"application/json" } };
     if (body) init.body = JSON.stringify(body);
-    try{
+    try {
       const r = await fetch(url, init);
       const txt = await r.text();
-      let data = txt;
-      try { data = JSON.parse(txt); } catch {}
-      return { ok:r.ok, status:r.status, data, url };
-    }catch(e){
-      return { ok:false, status:0, data:String(e), url };
-    }
+      try { return { ok:r.ok, status:r.status, data: JSON.parse(txt), url }; }
+      catch { return { ok:r.ok, status:r.status, data: txt, url }; }
+    } catch(e){ return { ok:false, status:0, data:String(e), url }; }
   }
   function setHealth(h){
     const map = {
@@ -180,45 +166,59 @@
       "catalog.total": h?.catalog?.total, "catalog.byTier": JSON.stringify(h?.catalog?.byTier ?? {}),
       now: h?.now
     };
-    healthDl.innerHTML = Object.entries(map).map(([k,v])=>(
-      `<dt>${k}</dt><dd>${(v===undefined||v===null)?'-':String(v)}</dd>`
-    )).join("");
+    healthDl.innerHTML = Object.entries(map).map(([k,v])=>`<dt>${k}</dt><dd>${v==null?'-':String(v)}</dd>`).join("");
   }
   function setEvents(e){
     const map = {
       buffered: e?.total ?? e?.buffered ?? "-",
       byType24h: e?.byType24h ? JSON.stringify(e.byType24h) : "-",
       topPaths24h: e?.topPaths24h ? JSON.stringify(e.topPaths24h.slice(0,5)) : "-",
-      since: e?.sinceIso || e?.nowIso || "-"
+      since: e?.sinceIso || "-"
     };
-    eventsDl.innerHTML = Object.entries(map).map(([k,v])=>(
-      `<dt>${k}</dt><dd>${(v===undefined||v===null)?'-':String(v)}</dd>`
-    )).join("");
+    eventsDl.innerHTML = Object.entries(map).map(([k,v])=>`<dt>${k}</dt><dd>${v==null?'-':String(v)}</dd>`).join("");
+  }
+
+  // ---- SSE ----
+  let es = null;
+  let lastTs = 0;
+  function streamUrl(){
+    const base = getBase();
+    return `${base}/events/stream?since=${lastTs||0}`;
+    // (base is ".../api")
+  }
+  function startStream(){
+    try { stopStream(); } catch {}
+    const url = streamUrl();
+    es = new EventSource(url, { withCredentials:false });
+    sseNote.textContent = "connecting…";
+    es.addEventListener("ping", (ev)=>{ sseNote.textContent = "connected"; });
+    es.addEventListener("event", (ev)=>{
+      try{
+        const data = JSON.parse(ev.data);
+        lastTs = Math.max(lastTs, Number(data.ts||0));
+        say(`EVENT ${data.type || "-"} :: ${data.path || ""} :: ${data.user || ""}`);
+      }catch(e){ /* ignore */ }
+    });
+    es.onerror = ()=>{
+      sseNote.textContent = "reconnecting…";
+      // Let EventSource auto-retry; if the server bounces for long, we’ll show this label.
+    };
+    es.onopen = ()=>{ sseNote.textContent = "connected"; };
+  }
+  function stopStream(){
+    if (es) try { es.close(); } catch {}
+    es = null; sseNote.textContent = "stopped";
   }
 
   // ---- UI actions ----
   $("#save").onclick = ()=>{ setBase($("#base").value); say("API base saved."); };
-  $("#test").onclick = async ()=>{
-    const r = await hit("GET","/ping");
-    say(`Test: /ping -> ${r.status}`);
-  };
+  $("#test").onclick = async ()=>{ const r=await hit("GET","/ping"); say(`Test: /ping -> ${r.status}`); };
   $("#saveKey").onclick = ()=>{ setKey($("#adminKey").value); say("Admin key saved locally."); };
   $("#clearKey").onclick = ()=>{ setKey(""); say("Admin key cleared."); };
 
-  $("#btnPing").onclick = async ()=>{
-    const r = await hit("GET","/ping");
-    say(`Ping -> ${r.status}`);
-  };
-  $("#btnHealth").onclick = async ()=>{
-    const r = await hit("GET","/health");
-    say(`Health -> ${r.status}`);
-    if (r.ok && r.data) setHealth(r.data);
-  };
-  $("#btnReload").onclick = async ()=>{
-    const r = await hit("POST","/catalog/reload",{}, true);
-    say(`Reload -> ${r.status}`);
-    if (!r.ok && r.data) say(JSON.stringify(r.data,null,2));
-  };
+  $("#btnPing").onclick = async ()=>{ const r=await hit("GET","/ping"); say(`Ping -> ${r.status}`); };
+  $("#btnHealth").onclick = async ()=>{ const r=await hit("GET","/health"); say(`Health -> ${r.status}`); if(r.ok&&r.data) setHealth(r.data); };
+  $("#btnReload").onclick = async ()=>{ const r=await hit("POST","/catalog/reload",{}, true); say(`Reload -> ${r.status}`); if(!r.ok&&r.data) say(JSON.stringify(r.data,null,2)); };
 
   $("#find").onclick = async ()=>{
     const host = ($("#host").value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
@@ -234,8 +234,7 @@
     const host = ($("#host").value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
     if(!host){ say("Prefs: set Host first"); return; }
     const demo = {
-      host,
-      city:"San Diego",
+      host, city:"San Diego",
       general:{ mids:true, near:true, ecommerce:false, retail:true, wholesale:true },
       likeTags:["film","labels","food","beverage"],
       preferSmallMid:true,
@@ -243,44 +242,26 @@
       signalWeight:{ local:1.6, ecommerce:0.1, retail:0.35, wholesale:0.35 },
       inboundOptIn:true
     };
-    const r = await hit("POST","/prefs/upsert", demo, true /* send x-admin-key */);
+    const r = await hit("POST","/prefs/upsert", demo, true);
     say(`Prefs upsert -> ${r.status}`);
     if (!r.ok && r.data) say(JSON.stringify(r.data,null,2));
   };
 
-  // Events actions
-  $("#evStats").onclick = async ()=>{
-    const r = await hit("GET","/events/stats");
-    say(`Events: stats -> ${r.status}`);
-    if (r.ok) { setEvents(r.data); say(JSON.stringify(r.data,null,2)); }
-  };
-  $("#evRecent").onclick = async ()=>{
-    const r = await hit("GET","/events/recent?limit=50");
-    say(`Events: recent(50) -> ${r.status}`);
-    if (r.ok) say(JSON.stringify(r.data,null,2));
-  };
-  $("#evTest").onclick = async ()=>{
-    const payload = { type:"test_event", path:"/admin", meta:{ msg:"hello-from-admin" } };
-    const r = await hit("POST","/events/ingest", payload);
-    say(`Events: ingest -> ${r.status}`);
-    if (!r.ok && r.data) say(JSON.stringify(r.data,null,2));
-  };
+  $("#evStats").onclick = async ()=>{ const r=await hit("GET","/events/stats"); say(`Events: stats -> ${r.status}`); if(r.ok){ setEvents(r.data); say(JSON.stringify(r.data,null,2)); } };
+  $("#evRecent").onclick = async ()=>{ const r=await hit("GET","/events/recent?limit=50"); say(`Events: recent(50) -> ${r.status}`); if(r.ok) say(JSON.stringify(r.data,null,2)); };
+  $("#evStart").onclick = ()=>{ startStream(); say("SSE: start"); };
+  $("#evStop").onclick = ()=>{ stopStream(); say("SSE: stop"); };
+  $("#evTest2").onclick = async ()=>{ const r=await hit("POST","/events/ingest",{type:"test_event",path:"/admin-live",meta:{from:"live"}}); say(`Events: ingest -> ${r.status}`); };
+  $("#evExport").onclick = ()=>{ window.open(getBase()+"/audit/export.csv?limit=2000","_blank"); };
 
   // initial health + events poll
   (async ()=>{
     const h = await hit("GET","/health");
-    say(`Health -> ${h.status}${h.ok && h.data?.catalog?` (catalog.total=${h.data.catalog.total})`:""}`);
-    if (h.ok) setHealth(h.data);
-
+    if (h.ok) { setHealth(h.data); say(`Health -> ${h.status}`); }
     const e = await hit("GET","/events/stats");
     if (e.ok) setEvents(e.data);
+    startStream(); // auto-connect
   })();
-
-  // periodic events poll
-  setInterval(async ()=>{
-    const e = await hit("GET","/events/stats");
-    if (e.ok && e.data) setEvents(e.data);
-  }, 30000);
 })();
 </script>
 </body>
