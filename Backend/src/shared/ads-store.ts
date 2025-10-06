@@ -1,31 +1,19 @@
 // src/shared/ads-store.ts
 //
 // Canonical in-memory store for "ad intelligence".
-// Routes (e.g. /api/ads/bulk) write here, scorers read from here.
-// No external deps. Safe across hot-reloads (per-pod memory).
-//
-// Signals exposed:
-//  - getStats(host): raw aggregates (lastSeen, platforms, density, recencyDays, etc.)
-//  - getSignal(host): 0..1 activity score with recency & density shaping
-//  - upsertBulk([{host, rows}])
-//  - clear()
+// Routes write here; TRC reads getSignal(host) for scoring.
+// No external deps. Per-pod memory (OK for free infra).
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { CFG } from "./env";
 
 export type AdRow = {
-  platform?: string;          // "meta" | "google" | "tiktok" | ...
-  landing?: string;           // landing page URL (optional)
-  seenAtISO?: string;         // ISO timestamp when observed
-  creativeUrl?: string;       // optional asset link
-  text?: string;              // optional ad text
-};
-
-export type HostAds = {
-  host: string;
-  rows: AdRow[];
-  lastSeen?: string;          // ISO
+  platform?: string;    // "google" | "meta" | "tiktok" | ...
+  landing?: string;     // landing page URL
+  seenAtISO?: string;   // when observed (ISO)
+  creativeUrl?: string; // optional asset
+  text?: string;        // optional ad text
 };
 
 type StoreRec = {
@@ -43,12 +31,10 @@ function normHost(input: string): string {
     .replace(/^www\./, "")
     .replace(/\/.*$/, "");
 }
-
 function toMs(iso?: string): number {
   const t = Date.parse(String(iso || ""));
   return Number.isFinite(t) ? t : 0;
 }
-
 function asIso(ms: number): string {
   try { return new Date(ms).toISOString(); } catch { return ""; }
 }
@@ -75,7 +61,6 @@ export function upsertHost(hostLike: string, rows: AdRow[]): void {
       text: r.text ? String(r.text) : undefined,
     });
   }
-
   if (!clean.length) return;
 
   const prev = STORE.get(host);
@@ -88,15 +73,12 @@ export function upsertHost(hostLike: string, rows: AdRow[]): void {
     return;
   }
 
-  // Merge (dedupe by platform+landing+seenAtISO)
+  // Merge (dedupe by platform|landing|seenAtISO)
   const keyOf = (x: AdRow) => `${x.platform || ""}|${x.landing || ""}|${x.seenAtISO || ""}`;
   const seen = new Set<string>(prev.rows.map(keyOf));
   for (const c of clean) {
     const k = keyOf(c);
-    if (!seen.has(k)) {
-      prev.rows.push(c);
-      seen.add(k);
-    }
+    if (!seen.has(k)) { prev.rows.push(c); seen.add(k); }
   }
   prev.lastSeenMs = Math.max(prev.lastSeenMs, last || 0);
   prev.lastSeenIso = prev.lastSeenMs ? asIso(prev.lastSeenMs) : prev.lastSeenIso;
@@ -114,12 +96,10 @@ export function upsertBulk(payload: { items?: Array<{ host: string; rows: AdRow[
   return n;
 }
 
-/** Clear the in-memory store (ops/tests). */
-export function clear() {
-  STORE.clear();
-}
+/** Clear the store (ops/tests). */
+export function clear() { STORE.clear(); }
 
-/** Raw aggregates used by debug/admin and scorers. */
+/** Raw aggregates for debug/admin/scorers. */
 export function getStats(hostLike: string): {
   host: string;
   lastSeen?: string;
@@ -132,15 +112,7 @@ export function getStats(hostLike: string): {
   const host = normHost(hostLike);
   const rec = STORE.get(host);
   if (!rec) {
-    return {
-      host,
-      lastSeen: undefined,
-      recencyDays: Number.POSITIVE_INFINITY,
-      platforms: [],
-      landings: [],
-      densityLast30: 0,
-      total: 0,
-    };
+    return { host, lastSeen: undefined, recencyDays: Number.POSITIVE_INFINITY, platforms: [], landings: [], densityLast30: 0, total: 0 };
   }
   const now = Date.now();
   const lastMs = rec.lastSeenMs || 0;
@@ -164,33 +136,23 @@ export function getStats(hostLike: string): {
 }
 
 /**
- * 0..1 ads activity signal with simple shaping:
- * - recency: exponential half-life (AD_RECENCY_HALF_LIFE_DAYS)
- * - density: saturates as recent count approaches AD_DENSITY_AT_MAX
+ * 0..1 ads activity signal with shaping:
+ * - recency: exponential half-life (AD_RECENCY_HALF_LIFE_DAYS, default 14)
+ * - density: saturates as recent count approaches AD_DENSITY_AT_MAX (default 8)
  */
 export function getSignal(hostLike: string): number {
   const s = getStats(hostLike);
   if (!Number.isFinite(s.recencyDays)) return 0;
 
-  const HL = Math.max(1, Number(process.env.AD_RECENCY_HALF_LIFE_DAYS || CFG ?  Number(CFG["AD_RECENCY_HALF_LIFE_DAYS" as keyof typeof CFG] || 14) : 14));
-  const AT = Math.max(1, Number(process.env.AD_DENSITY_AT_MAX || CFG ? Number(CFG["AD_DENSITY_AT_MAX" as keyof typeof CFG] || 8) : 8));
+  const HL = Math.max(1, Number(process.env.AD_RECENCY_HALF_LIFE_DAYS ?? (CFG as any)?.AD_RECENCY_HALF_LIFE_DAYS ?? 14));
+  const AT = Math.max(1, Number(process.env.AD_DENSITY_AT_MAX       ?? (CFG as any)?.AD_DENSITY_AT_MAX       ?? 8));
 
-  // recency decay: 1.0 at t=0, halves every HL days
-  const recencyFactor = Math.pow(0.5, s.recencyDays / HL);
-
-  // density saturates towards 1 as count approaches AT
-  const densityFactor = Math.min(1, s.densityLast30 / AT);
+  const recencyFactor = Math.pow(0.5, s.recencyDays / HL);     // halves every HL days
+  const densityFactor = Math.min(1, s.densityLast30 / AT);     // caps near 1.0
 
   const out = Math.max(0, Math.min(1, 0.6 * recencyFactor + 0.4 * densityFactor));
   return Number(out.toFixed(3));
 }
 
-// --- debug helpers for admin/debug pages (optional) ---
-export function __debugListHosts(limit = 50): Array<{ host: string; lastSeen?: string; total: number }> {
-  const items: Array<{ host: string; lastSeen?: string; total: number }> = [];
-  for (const [host, rec] of STORE.entries()) {
-    items.push({ host, lastSeen: rec.lastSeenIso || undefined, total: rec.rows.length });
-    if (items.length >= limit) break;
-  }
-  return items;
-}
+// default bag (optional)
+export default { upsertHost, upsertBulk, clear, getStats, getSignal };
