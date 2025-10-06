@@ -1,8 +1,9 @@
-# keep data out of the public repo
+# keep private data out of the public repo
 data/**
 !data/.gitkeep
 
-# normal noise
+# build/cache noise
 dist/
 node_modules/
+*.log
 .DS_Store
