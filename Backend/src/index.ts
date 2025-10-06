@@ -15,6 +15,7 @@ import ClassifyRouter from "./routes/classify";
 import BuyersRouter from "./routes/buyers";
 import EventsRouter from "./routes/events";
 import AuditRouter from "./routes/audit";
+import ScoresRouter from "./routes/scores";
 
 import { CFG, isOriginAllowed } from "./shared/env";
 
@@ -88,6 +89,7 @@ app.use("/api/classify", ClassifyRouter);
 app.use("/api/buyers", BuyersRouter);
 app.use("/api/events", EventsRouter);
 app.use("/api/audit", AuditRouter);
+app.use("/api/scores", ScoresRouter);
 
 /* -------------------------------------------------------------------------- */
 /* Static files (for admin dashboard etc.)                                    */
