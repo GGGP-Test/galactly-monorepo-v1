@@ -1,9 +1,5 @@
-# keep private data out of the public repo
-data/**
-!data/.gitkeep
-
-# build/cache noise
-dist/
-node_modules/
-*.log
-.DS_Store
+# keep any local seed data out of git
+Backend/data/*.csv
+Backend/data/*.json
+data/*.csv
+data/*.json
