@@ -1,0 +1,8 @@
+# keep data out of the public repo
+data/**
+!data/.gitkeep
+
+# normal noise
+dist/
+node_modules/
+.DS_Store
