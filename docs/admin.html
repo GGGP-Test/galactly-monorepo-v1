@@ -74,6 +74,20 @@
 
         <div class="rowcols">
           <div>
+            <label>Source</label>
+            <select id="source">
+              <option value="web" selected>Web (live)</option>
+              <option value="catalog">Catalog (fallback)</option>
+            </select>
+          </div>
+          <div>
+            <label>Limit</label>
+            <input id="limit" type="number" min="1" max="100" value="24">
+          </div>
+        </div>
+
+        <div class="rowcols">
+          <div>
             <label>Company size</label>
             <select id="sizePref">
               <option value="small" selected>Small (Tier C)</option>
@@ -82,10 +96,10 @@
             </select>
           </div>
           <div>
-            <label>Min band</label>
-            <select id="minBand">
-              <option value="COOL" selected>COOL (allow all)</option>
-              <option value="WARM">WARM</option>
+            <label>Band (exact)</label>
+            <select id="band">
+              <option value="COOL">COOL</option>
+              <option value="WARM" selected>WARM</option>
               <option value="HOT">HOT</option>
             </select>
           </div>
@@ -160,23 +174,22 @@
 
   // ---- Local storage helpers ----
   const DEFAULT_BASE = (location.origin + "/api");
-  const LS = {
-    base:        "apiBase",
-    adminKey:    "adminKey",
-    adminHeader: "adminHeader"
-  };
+  const LS = { base:"apiBase", adminKey:"adminKey", adminHeader:"adminHeader", source:"leadSource" };
   function getBase(){ return (localStorage.getItem(LS.base) || DEFAULT_BASE).trim().replace(/\/+$/,""); }
   function setBase(v){ const val=(v||"").trim().replace(/\/+$/,""); localStorage.setItem(LS.base,val); $("#base").value=val; }
   function getKey(){ return (localStorage.getItem(LS.adminKey) || "").trim(); }
   function setKey(v){ localStorage.setItem(LS.adminKey,(v||"").trim()); $("#adminKey").value=(v||"").trim(); }
   function getHeader(){ return (localStorage.getItem(LS.adminHeader) || "x-admin-key").trim(); }
   function setHeader(v){ localStorage.setItem(LS.adminHeader,(v||"x-admin-key").trim()); $("#adminHeader").value=getHeader(); $("#hdrLabel").textContent=getHeader(); }
+  function getSource(){ return (localStorage.getItem(LS.source) || "web"); }
+  function setSource(v){ localStorage.setItem(LS.source,v||"web"); $("#source").value=getSource(); }
 
   // Init inputs
   $("#base").value = getBase();
   $("#adminKey").value = getKey();
   $("#adminHeader").value = getHeader();
   $("#hdrLabel").textContent = getHeader();
+  $("#source").value = getSource();
 
   // ---- UI utils ----
   function say(s){
@@ -242,25 +255,66 @@
   }
   function stopStream(){ if (es) try{es.close();}catch{} es=null; sseNote.textContent="stopped"; }
 
-  // ---- Find buyers wiring (tiers / prefer / minBand) ----
+  // ---- Find buyers wiring (web-first, exact band) ----
   const SIZE_TO_TIER = { small:"C", medium:"B", large:"A", s:"C", m:"B", l:"A" };
 
-  function buildFindUrl(){
+  function buildWebUrl(){
     const host = ($("#host").value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
     const city = ($("#city").value||"").trim();
     const size = ($("#sizePref").value||"small").toLowerCase();
-    const minBand = ($("#minBand").value||"COOL").toUpperCase();
+    const band = ($("#band").value||"WARM").toUpperCase();
+    const limit = Math.max(1, Number($("#limit").value||24)) || 24;
+    const u = new URL(`${getBase()}/web/find`);
+    if (host) u.searchParams.set("host", host);
+    if (city) u.searchParams.set("city", city);
+    u.searchParams.set("size", size);
+    u.searchParams.set("limit", String(limit));
+    // server may ignore this today; we filter exact on client anyway
+    u.searchParams.set("band", band);
+    return u.toString();
+  }
 
+  function buildCatalogUrl(){
+    const host = ($("#host").value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
+    const city = ($("#city").value||"").trim();
+    const size = ($("#sizePref").value||"small").toLowerCase();
+    const band = ($("#band").value||"WARM").toUpperCase();
     const preferTier = SIZE_TO_TIER[size] || "C";
     const tiers = preferTier; // hard filter to chosen size
-
     const u = new URL(`${getBase()}/leads/find-buyers`);
     if (host) u.searchParams.set("host", host);
     if (city) u.searchParams.set("city", city);
     u.searchParams.set("tiers", tiers);
     u.searchParams.set("preferTier", preferTier);
-    u.searchParams.set("minBand", minBand);
+    u.searchParams.set("minBand", band); // route is "min"; we’ll exact-filter client-side
     return u.toString();
+  }
+
+  async function findBuyers(){
+    const source = ($("#source").value||"web");
+    const url = source === "web" ? buildWebUrl() : buildCatalogUrl();
+    const r = await fetch(url, { headers: adminHeaders() });
+    let data=null,status=0,ok=false;
+    try{ const rr = await r.json(); data=rr; status=r.status; ok=r.ok; } catch{ status=r.status; ok=r.ok; }
+
+    const wantBand = ($("#band").value||"WARM").toUpperCase();
+    // Exact band on client (works for both routes)
+    if (ok && data && Array.isArray(data.items)) {
+      data.items = data.items.filter(x => String(x?.band||"").toUpperCase() === wantBand);
+      // Re-tally summary to reflect exact filter
+      if (data.summary) {
+        data.summary.returned = data.items.length;
+        data.summary.hot  = data.items.filter(i=>i.band==="HOT").length;
+        data.summary.warm = data.items.filter(i=>i.band==="WARM").length;
+        data.summary.cool = data.items.filter(i=>i.band==="COOL").length;
+        data.summary.exactBand = wantBand;
+        data.summary.source = source;
+      }
+    }
+
+    say(`Find buyers [${source}] -> ${status}`);
+    if (ok && data) say(JSON.stringify(data,null,2));
+    else if (!ok) say("Find buyers failed.");
   }
 
   // ---- Actions ----
@@ -268,6 +322,8 @@
   $("#test").onclick    = async()=>{ const r=await hit("GET","/ping"); say(`Test: /ping -> ${r.status}`); };
 
   $("#adminHeader").onchange = ()=> setHeader($("#adminHeader").value);
+  $("#source").onchange = ()=> setSource($("#source").value);
+
   $("#saveKey").onclick = ()=>{ setHeader($("#adminHeader").value); setKey($("#adminKey").value); say("Admin header+key saved locally."); };
   $("#clearKey").onclick= ()=>{ setKey(""); say("Admin key cleared."); };
 
@@ -275,15 +331,7 @@
   $("#btnHealth").onclick = async()=>{ const r=await hit("GET","/health"); say(`Health -> ${r.status}`); if(r.ok&&r.data) setHealth(r.data); };
   $("#btnReload").onclick = async()=>{ const r=await hit("POST","/catalog/reload",{}, true); say(`Reload -> ${r.status}`); if(!r.ok&&r.data) say(JSON.stringify(r.data,null,2)); };
 
-  $("#find").onclick = async ()=>{
-    const url = buildFindUrl();
-    const r = await fetch(url, { headers: adminHeaders() });
-    let data=null,status=0,ok=false;
-    try{ const rr = await r.json(); data=rr; status=r.status; ok=r.ok; } catch{ status=r.status; ok=r.ok; }
-    say(`Find buyers -> ${status}`);
-    if (ok && data) say(JSON.stringify(data,null,2));
-    else if (!ok) say("Find buyers failed.");
-  };
+  $("#find").onclick = findBuyers;
 
   $("#applyPrefs").onclick = async ()=>{
     const host = ($("#host").value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
