@@ -1,0 +1,38 @@
+name: Export snapshot (zip + tree)
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to export"
+        required: true
+        default: "main"
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 1
+
+      - name: Make tree map (exclude heavy stuff)
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y tree
+          tree -a -I 'node_modules|.git|dist|build|.next|.cache|coverage' > repo-tree.txt
+          echo "---- FILE COUNT ----" >> repo-tree.txt
+          find . -path ./node_modules -prune -o -path ./.git -prune -o -type f -print | wc -l >> repo-tree.txt
+
+      - name: Create ZIP (tracked files only)
+        run: |
+          git archive --format=zip --output repo-snapshot.zip HEAD
+          # add the tree map into the zip
+          zip -q -u repo-snapshot.zip repo-tree.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-snapshot
+          path: repo-snapshot.zip
+          if-no-files-found: error
