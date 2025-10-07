@@ -1,15 +1,20 @@
 // src/routes/leads.ts
 //
-// Artemis B v1 — Buyer discovery (CJS-safe) with per-request tier control.
-// New query params:
-//   - tiers=A,B,C             hard filter (intersection with ALLOW_TIERS)
-//   - size=small|medium|large alias for tiers=C|B|A
-//   - preferTier=A|B|C        adds a scoring boost to that tier
+// Artemis B v1 — Buyer discovery (CJS-safe) with per-request tier + band control.
+// New / updated query params:
+//   - tiers=A,B,C                  hard filter (intersection with ALLOW_TIERS)
+//   - size=small|medium|large      alias for tiers=C|B|A
+//   - preferTier=A|B|C             adds a scoring boost to that tier
 //   - preferSize=small|medium|large alias for preferTier
+//   - minBand=COOL|WARM|HOT        include results at/above this band
+//       • default = COOL if preferTier=C (small) else WARM
 //
 // Existing:
 //   GET /api/leads/ping
-//   GET /api/leads/find-buyers?host=acme.com[&city=&tags=a,b&sectors=x,y&minTier=A|B|C&limit=12]
+//   GET /api/leads/find-buyers?host=acme.com
+//        [&city=&tags=a,b&sectors=x,y&minTier=A|B|C&limit=12]
+//
+// Also emits a tiny event to /api/events/ingest so Admin "Recent (50)" shows activity.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -49,6 +54,7 @@ function uniqLower(arr: unknown): string[] {
   }
   return [...set];
 }
+
 function getCatalogRows(): Candidate[] {
   if (typeof Catalog?.get === "function") return Catalog.get();
   if (typeof Catalog?.rows === "function") return Catalog.rows();
@@ -57,11 +63,13 @@ function getCatalogRows(): Candidate[] {
   if (typeof Catalog?.all === "function") return Catalog.all();
   return [];
 }
+
 function getTier(c: Candidate): "A" | "B" | "C" {
   if (c.tier === "A" || c.tier === "B" || c.tier === "C") return c.tier;
   const t = (Array.isArray(c.tiers) ? c.tiers[0] : undefined) as any;
   return t === "A" || t === "B" ? t : "C";
 }
+
 function cityBoost(city?: string, candidateCity?: string): number {
   if (!city || !candidateCity) return 0;
   const a = city.trim().toLowerCase();
@@ -71,6 +79,7 @@ function cityBoost(city?: string, candidateCity?: string): number {
   if (b.includes(a) || a.includes(b)) return 0.1;
   return 0;
 }
+
 function prettyHostName(h: string): string {
   const stem = String(h || "").replace(/^www\./, "").split(".")[0].replace(/[-_]/g, " ");
   return stem.replace(/\b\w/g, (m) => m.toUpperCase());
@@ -78,6 +87,7 @@ function prettyHostName(h: string): string {
 
 const HOT_T  = Number((TRC as any)?.HOT_MIN  ?? 80);
 const WARM_T = Number((TRC as any)?.WARM_MIN ?? 55);
+
 function bandFromScore(score: number): "HOT" | "WARM" | "COOL" {
   if (typeof (TRC as any)?.classifyScore === "function") {
     try { return (TRC as any).classifyScore(score); } catch { /* noop */ }
@@ -86,19 +96,38 @@ function bandFromScore(score: number): "HOT" | "WARM" | "COOL" {
   if (score >= WARM_T) return "WARM";
   return "COOL";
 }
+
 function uncertainty(score: number): number {
   const d = Math.min(Math.abs(score - HOT_T), Math.abs(score - WARM_T));
   const u = Math.max(0, 1 - d / 10);
   return Number.isFinite(u) ? Number(u.toFixed(3)) : 0;
 }
 
-/* ----------- request-tier parsing (tiers / size + preferTier / preferSize) ----------- */
+// fire-and-forget event so Admin "Recent (50)" shows activity
+async function emit(kind: string, data: any) {
+  try {
+    const url = `http://127.0.0.1:${CFG.port}/api/events/ingest`;
+    await F(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ kind, at: new Date().toISOString(), data }),
+    });
+  } catch { /* ignore */ }
+}
+
+/* -------- request-tier parsing (tiers/size + preferTier/preferSize) -------- */
 
 const SIZE_TO_TIER: Record<string, "A"|"B"|"C"> = {
-  large: "A", medium: "B", small: "C", l: "A", m: "B", s: "C"
+  large: "A", l: "A",
+  medium: "B", m: "B",
+  small: "C", s: "C"
 };
 
-function parseTiersParam(req: Request): { allow: Set<"A"|"B"|"C">; prefer?: "A"|"B"|"C" } {
+function parseTiersParam(req: Request): {
+  allow: Set<"A"|"B"|"C">;
+  prefer?: "A"|"B"|"C";
+  preferWasSmall: boolean;
+} {
   // base allowed from env
   const envAllow = new Set<"A"|"B"|"C">(Array.from(CFG.allowTiers ?? new Set(["A","B","C"])) as any);
 
@@ -126,10 +155,16 @@ function parseTiersParam(req: Request): { allow: Set<"A"|"B"|"C">; prefer?: "A"|
   const preferT = String(req.query.preferTier || "").trim().toUpperCase();
   const preferS = String(req.query.preferSize || "").trim().toLowerCase();
   let prefer: "A"|"B"|"C" | undefined;
-  if (preferT === "A" || preferT === "B" || preferT === "C") prefer = preferT as any;
-  else if (preferS && SIZE_TO_TIER[preferS]) prefer = SIZE_TO_TIER[preferS];
+  let preferWasSmall = false;
+  if (preferT === "A" || preferT === "B" || preferT === "C") {
+    prefer = preferT as any;
+    preferWasSmall = prefer === "C";
+  } else if (preferS && SIZE_TO_TIER[preferS]) {
+    prefer = SIZE_TO_TIER[preferS];
+    preferWasSmall = prefer === "C";
+  }
 
-  return { allow, prefer };
+  return { allow, prefer, preferWasSmall };
 }
 
 /* ---------------------------- scoring (fallback) --------------------------- */
@@ -183,8 +218,9 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
 r.get("/ping", (_req: Request, res: Response) => res.json({ pong: true, at: new Date().toISOString() }));
 
 r.get("/find-buyers", async (req: Request, res: Response) => {
+  const t0 = Date.now();
   try {
-    const host = String(req.query.host || "").trim().toLowerCase();
+    const host = String(req.query.host || req.query.domain || "").trim().toLowerCase();
     if (!host) return res.status(400).json({ ok: false, error: "host_required" });
 
     const cityQ = String(req.query.city || "").trim();
@@ -192,17 +228,27 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
     const limitQ = Number(req.query.limit ?? 0);
 
     // Per-request tier controls
-    const { allow: allowTiersReq, prefer: preferTierReq } = parseTiersParam(req);
+    const { allow: allowTiers, prefer: preferTier, preferWasSmall } = parseTiersParam(req);
 
-    const allowTiers = allowTiersReq; // already intersected with env
-    const preferTier = preferTierReq;
+    // minBand (default COOL if preferring small/C, else WARM)
+    const rawMinBand = String(req.query.minBand || req.query.bandMin || "").trim().toUpperCase();
+    const minBand: "HOT" | "WARM" | "COOL" =
+      rawMinBand === "HOT" ? "HOT" :
+      rawMinBand === "WARM" ? "WARM" :
+      rawMinBand === "COOL" ? "COOL" :
+      (preferWasSmall ? "COOL" : "WARM");
 
+    const bandOrder = { HOT: 3, WARM: 2, COOL: 1 } as const;
+
+    // Overlays
     const tagsQ    = uniqLower(String(req.query.tags || "").split(","));
     const sectorsQ = uniqLower(String(req.query.sectors || "").split(","));
     const overlayTags = [...new Set<string>([...tagsQ, ...sectorsQ])];
 
+    // Result cap (by plan)
     const cap = capResults("free", limitQ);
 
+    // Effective prefs
     const basePrefs =
       (typeof (Prefs as any).getEffective === "function" && (Prefs as any).getEffective(host)) ||
       (typeof (Prefs as any).getEffectivePrefs === "function" && (Prefs as any).getEffectivePrefs(host)) ||
@@ -240,45 +286,60 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       return { ...c, host: c.host, name, city: c.city, tier, url, score, band, uncertainty: u, reasons: trimmedReasons };
     });
 
-    // Sort HOT→WARM by score
-    const hot = scored.filter((x) => x.band === "HOT").sort((a, b) => b.score - a.score);
-    const warm = scored.filter((x) => x.band === "WARM").sort((a, b) => b.score - a.score);
-    let items = [...hot, ...warm];
+    // Keep at/above minBand
+    const kept = scored.filter((x) => bandOrder[x.band] >= bandOrder[minBand]);
+
+    // Sort HOT→WARM→COOL by score
+    const hot  = kept.filter((x) => x.band === "HOT").sort((a, b) => b.score - a.score);
+    const warm = kept.filter((x) => x.band === "WARM").sort((a, b) => b.score - a.score);
+    const cool = kept.filter((x) => x.band === "COOL").sort((a, b) => b.score - a.score);
+    let items = [...hot, ...warm, ...cool];
+
     const totalBeforeCap = items.length;
     if (cap > 0) items = items.slice(0, cap);
 
     // Enrich a couple uncertain
     const MAX_ESCALATE = 2;
-    const targets = [...items].filter((x) => x.uncertainty >= 0.6).sort((a, b) => b.uncertainty - a.uncertainty).slice(0, MAX_ESCALATE);
+    const targets = [...items]
+      .filter((x) => x.uncertainty >= 0.6)
+      .sort((a, b) => b.uncertainty - a.uncertainty)
+      .slice(0, MAX_ESCALATE);
+
     for (const t of targets) {
       try {
         const url = `http://127.0.0.1:${CFG.port}/api/classify?host=${encodeURIComponent(t.host)}`;
         const res2 = await F(url, { redirect: "follow" });
         if (res2?.ok) {
           const data = await res2.json();
-          if (data?.evidence?.length) t.reasons = [...t.reasons, ...data.evidence.map((e: string)=>`classify:${e}`)].slice(0, 12);
+          if (data?.evidence?.length) {
+            t.reasons = [...t.reasons, ...data.evidence.map((e: string)=>`classify:${e}`)].slice(0, 12);
+          }
           if (data?.role) t.reasons.push(`role:${data.role}@${(data.confidence ?? 0).toFixed(2)}`);
         }
       } catch {}
     }
 
-    return res.json({
-      ok: true,
-      items,
-      summary: {
-        requested: limitQ || null,
-        returned: items.length,
-        hot: items.filter((x) => x.band === "HOT").length,
-        warm: items.filter((x) => x.band === "WARM").length,
-        totalBeforeCap,
-        capApplied: cap,
-        city: mergedPrefs.city || null,
-        minTier: minTier || null,
-        tiersApplied: Array.from(allowTiers),
-        preferTier: preferTier || null,
-        overlays: { tags: overlayTags.slice(0, 12) },
-      },
-    });
+    const summary = {
+      requested: limitQ || null,
+      returned: items.length,
+      hot: items.filter((x) => x.band === "HOT").length,
+      warm: items.filter((x) => x.band === "WARM").length,
+      cool: items.filter((x) => x.band === "COOL").length,
+      totalBeforeCap,
+      capApplied: cap,
+      city: mergedPrefs.city || null,
+      minTier: minTier || null,
+      tiersApplied: Array.from(allowTiers),
+      preferTier: preferTier || null,
+      minBandApplied: minBand,
+      overlays: { tags: overlayTags.slice(0, 12) },
+      ms: Date.now() - t0,
+    };
+
+    // Emit event for Admin "Recent (50)"
+    emit("find_buyers", { host, ...summary }).catch(() => {});
+
+    return res.json({ ok: true, items, summary });
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
     return res.status(200).json({ ok: false, error: "find-buyers-failed", detail: msg });
