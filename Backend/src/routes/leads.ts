@@ -1,14 +1,15 @@
 // src/routes/leads.ts
 //
 // Artemis B v1 — Buyer discovery (CJS-safe)
-// - Scores catalog rows using TRC (if present) with prefs + query overlays
-// - Adds band + uncertainty + compact reasons
-// - Soft-enriches a couple of uncertain items via /api/classify
 //
-// GET /api/leads/ping
-// GET /api/leads/find-buyers?host=acme.com[&city=&tags=a,b&sectors=x,y&minTier=A|B|C&limit=12]
+// KEEP: your original /ping and /find-buyers
+// NEW : /api/leads/find   (GET & POST) — simple, fast, stable shape for batch importer
+//
+// - /find-buyers keeps TRC-based scoring + prefs overlays
+// - /find is a thin wrapper that reuses the same catalog + lightweight scoring
+//   and returns a compact stable shape: { ok, company, items, count }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Router, type Request, type Response } from "express";
 import { CFG, capResults } from "../shared/env";
@@ -167,7 +168,100 @@ async function classifyHost(host: string): Promise<{ role?: string; confidence?:
   }
 }
 
-/* --------------------------------- routes --------------------------------- */
+/* ----------------------- /api/leads/find (NEW) ----------------------------- */
+
+function pickStr(...vals: (string | undefined)[]): string | undefined {
+  for (const v of vals) {
+    const t = (v || "").trim();
+    if (t) return t;
+  }
+  return undefined;
+}
+
+function toDomain(s?: string): string | undefined {
+  if (!s) return undefined;
+  let t = s.trim();
+  if (!t) return undefined;
+  try {
+    if (!/^https?:\/\//i.test(t)) t = "http://" + t;
+    const u = new URL(t);
+    return u.hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return t.replace(/^https?:\/\//i, "").replace(/^www\./, "").split("/")[0].toLowerCase();
+  }
+}
+
+function parseFindCommon(req: Request) {
+  const isGet = req.method === "GET";
+  const q = isGet ? req.query : (req.body || {});
+  const domain = toDomain(pickStr(String(q.domain || ""), String(q.host || ""), String(q.website || "")));
+  const company = pickStr(String(q.company || ""), String(q.name || ""));
+  const city = pickStr(String(q.city || ""));
+  const region = pickStr(String(q.region || ""), String(q.state || ""));
+  const country = pickStr(String(q.country || ""));
+  const max = Math.max(1, Math.min(200, Number(q.max ?? q.limit ?? 30)));
+  return { domain, company, city, region, country, max };
+}
+
+async function findBuyersCore(params: {
+  domain?: string;
+  company?: string;
+  city?: string;
+  region?: string;
+  country?: string;
+  max: number;
+}): Promise<Candidate[]> {
+  const rows: Candidate[] = getCatalogRows();
+
+  const filtered = rows.filter((c) => {
+    const t = getTier(c);
+    return CFG.allowTiers.has(t);
+  });
+
+  // preferences: just city right now (we reuse your safeScoreRow fallbacks)
+  const prefs = { city: params.city };
+
+  const scored = filtered
+    .map((c) => {
+      const { score, reasons } = safeScoreRow(c, prefs, params.city);
+      const band = bandFromScore(score);
+      const name = c.name || c.company || prettyHostName(c.host);
+      const url = c.url || `https://${c.host}`;
+      const tier = getTier(c);
+      return { ...c, name, url, tier, score, band, reasons: reasons.slice(0, 12) };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, params.max);
+
+  return scored;
+}
+
+async function handleFind(req: Request, res: Response) {
+  try {
+    const { domain, company, city, region, country, max } = parseFindCommon(req);
+    const key = domain || company;
+    if (!key) return res.status(400).json({ ok: false, error: "domain_or_company_required" });
+
+    const items = await findBuyersCore({ domain, company, city, region, country, max });
+
+    res.json({
+      ok: true,
+      company: { domain, name: company || null, city: city || null, region: region || null, country: country || null },
+      items,
+      count: items.length,
+    });
+  } catch (err: any) {
+    res.status(200).json({ ok: false, error: "find_failed", detail: String(err?.message || err) });
+  }
+}
+
+// GET /api/leads/find?domain=acme.com&max=30
+r.get("/find", handleFind);
+
+// POST /api/leads/find { domain|host|website|company, max }
+r.post("/find", handleFind);
+
+/* --------------------------- existing routes ------------------------------- */
 
 r.get("/ping", (_req: Request, res: Response) => res.json({ pong: true, at: new Date().toISOString() }));
 
