@@ -1,19 +1,14 @@
 // src/routes/leads-web.ts
 //
 // Web-first buyer discovery with exact band filtering and optional catalog mix.
-// Endpoint:
-//   GET /api/web/find?host=acme.com
-//     [&city=&size=small|medium|large&limit=10
-//      &band=COOL|WARM|HOT
-//      &mode=hybrid|web|catalog&shareWeb=0.3
-//      &tiers=A,B,C&preferTier=C&preferSize=small]
-//
-// Notes
-// - Exact band (not minimum).
-// - Hybrid mode splits quota between web + catalog (defaults to 30% web for “free” feel).
-// - Emits a tiny event to /api/events/ingest.
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// Endpoints (both work):
+//   GET /api/web/find
+//   GET /api/web/find-buyers
+// Query:
+//   host, city, size=small|medium|large, limit=10,
+//   band=COOL|WARM|HOT,
+//   mode=hybrid|web|catalog, shareWeb=0.3,
+//   tiers=A,B,C, preferTier=C, preferSize=small
 
 import { Router, type Request, type Response } from "express";
 import { CFG, capResults } from "../shared/env";
@@ -22,16 +17,17 @@ import * as TRC from "../shared/trc";
 import * as CatalogMod from "../shared/catalog";
 import * as Sources from "../shared/sources";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 const r = Router();
 const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 
-// Normalize default vs named export from catalog.ts
 const Catalog: any = (CatalogMod as any)?.default ?? (CatalogMod as any);
 
-// ------------------------------- types & utils -------------------------------
-
+// ---------- types / utils ----------
 type Tier = "A" | "B" | "C";
 type Band = "HOT" | "WARM" | "COOL";
+
 type Candidate = {
   host: string;
   name?: string;
@@ -106,15 +102,13 @@ function uncertainty(score: number): number {
 }
 
 function safeScoreRow(row: Candidate, prefs: any, city?: string) {
-  // Prefer TRC.scoreRow if present
   if (typeof (TRC as any)?.scoreRow === "function") {
     try {
       const out = (TRC as any).scoreRow(row, prefs, city);
       if (out && typeof out.score === "number") return out;
-    } catch { /* fallback */ }
+    } catch { /* fall through */ }
   }
 
-  // Minimal deterministic heuristic
   let score = 50;
   const reasons: string[] = [];
 
@@ -141,7 +135,6 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
       sz === "large" ? Number(sw.large ?? 0) : 0;
     if (w) { score += Math.max(-12, Math.min(12, w * 4)); reasons.push(`size:${sz || "?"}`); }
   }
-
   const sig = prefs?.signalWeight || {};
   if (sig && (sig.ecommerce || sig.retail || sig.wholesale)) {
     score += Math.min(6, (Number(sig.ecommerce||0) + Number(sig.retail||0) + Number(sig.wholesale||0)) * 2);
@@ -198,10 +191,8 @@ async function emit(kind: string, data: any) {
   } catch {}
 }
 
-// ------------------------------------- route -------------------------------------
-
-// NOTE: path is "/find" (not "/find-buyers") to match Admin dashboard.
-r.get("/find", async (req: Request, res: Response) => {
+// ---------- handler ----------
+async function handleFind(req: Request, res: Response) {
   const t0 = Date.now();
   try {
     const host = String(req.query.host || req.query.domain || "").trim().toLowerCase();
@@ -211,21 +202,16 @@ r.get("/find", async (req: Request, res: Response) => {
     const sizeQ  = String(req.query.size || "").trim().toLowerCase() || undefined;
     const limitQ = Math.max(1, Math.min(100, Number(req.query.limit ?? 10) || 10));
 
-    // exact band
     const bandQ = String(req.query.band || "").trim().toUpperCase() as Band;
     const band: Band = bandQ === "HOT" ? "HOT" : bandQ === "WARM" ? "WARM" : "COOL";
 
-    // mode + hybrid share
     const mode = (String(req.query.mode || "hybrid").trim().toLowerCase()) as "web" | "catalog" | "hybrid";
     const shareWeb = Math.max(0, Math.min(1, Number(req.query.shareWeb ?? 0.3)));
 
-    // tiers
     const { allow: allowTiers, prefer: preferTier } = parseTiersParam(req);
 
-    // caps by plan (reuse existing logic)
     const cap = capResults("free", limitQ);
 
-    // prefs baseline
     const basePrefs =
       (typeof (Prefs as any).getEffective === "function" && (Prefs as any).getEffective(host)) ||
       (typeof (Prefs as any).getEffectivePrefs === "function" && (Prefs as any).getEffectivePrefs(host)) ||
@@ -234,28 +220,21 @@ r.get("/find", async (req: Request, res: Response) => {
 
     const prefs = { ...basePrefs, city, categoriesAllow: [...new Set<string>(basePrefs?.categoriesAllow || [])] };
 
-    // ---------- fetch pools ----------
+    // split quotas
     let wantWeb = 0, wantCat = 0;
     if (mode === "web") { wantWeb = cap; }
     else if (mode === "catalog") { wantCat = cap; }
-    else { // hybrid
-      wantWeb = Math.round(cap * shareWeb);
-      wantCat = cap - wantWeb;
-    }
+    else { wantWeb = Math.round(cap * shareWeb); wantCat = cap - wantWeb; }
 
     // WEB
     let webRows: Candidate[] = [];
     if (wantWeb > 0) {
       const webFound = await Sources.findBuyersFromWeb({
-        hostSeed: host,
-        city,
-        size: (sizeQ as any) || undefined,
-        limit: wantWeb * 3, // overfetch a bit; we’ll score + band + slice
+        hostSeed: host, city, size: (sizeQ as any) || undefined, limit: wantWeb * 3
       }).catch(() => []);
-      webRows = Array.isArray(webFound) ? webFound.map((w: any) => ({
-        host: w.host, name: w.name, city: w.city, url: w.url, tier: (w.tier as Tier|undefined),
-        tags: w.tags || [], provider: w.provider
-      })) : [];
+      webRows = Array.isArray(webFound)
+        ? webFound.map((w: any) => ({ host: w.host, name: w.name, city: w.city, url: w.url, tier: (w.tier as Tier|undefined), tags: w.tags || [], provider: w.provider }))
+        : [];
     }
 
     // CATALOG
@@ -265,10 +244,9 @@ r.get("/find", async (req: Request, res: Response) => {
       catRows = Array.isArray(rows) ? rows.slice() : [];
     }
 
-    // Merge pools (we’ll score/band/filter after)
     const pool: Candidate[] = [...webRows, ...catRows];
 
-    // ---------- filter by allowed tiers + score + exact band ----------
+    // score + exact band
     const scored = pool
       .filter((c) => allowTiers.has(getTier(c)))
       .map((c) => {
@@ -283,16 +261,15 @@ r.get("/find", async (req: Request, res: Response) => {
       })
       .filter((x) => x.band === band);
 
-    // Prefer web first if hybrid, otherwise simple score sort
     const sortWebFirst = (a: Candidate, b: Candidate) => {
       const aw = (a as any).provider ? 1 : 0;
       const bw = (b as any).provider ? 1 : 0;
-      if (aw !== bw) return bw - aw; // web over catalog
+      if (aw !== bw) return bw - aw; // web first
       return (b.score || 0) - (a.score || 0);
     };
 
     const ordered = mode === "hybrid" ? scored.sort(sortWebFirst) : scored.sort((a, b) => (b.score || 0) - (a.score || 0));
-    let items = ordered.slice(0, cap);
+    const items = ordered.slice(0, cap);
 
     const summary = {
       ok: true,
@@ -313,6 +290,10 @@ r.get("/find", async (req: Request, res: Response) => {
     const msg = (err as any)?.message || String(err);
     return res.status(200).json({ ok: false, error: "web-find-buyers-failed", detail: msg });
   }
-});
+}
+
+// Register handler under **both** paths
+r.get("/find", handleFind);
+r.get("/find-buyers", handleFind);
 
 export default r;
