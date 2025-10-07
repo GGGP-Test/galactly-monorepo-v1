@@ -1,6 +1,5 @@
 // Backend/scripts/find-buyers-batch.ts
-// Calls GET /api/leads/find-buyers for each domain in a private CSV.
-// Robust CSV path resolution (works from repo root or app/Backend/).
+// Batch "find buyers" importer that also logs events to /api/events/ingest.
 
 /* eslint-disable no-console */
 import * as fs from "fs";
@@ -16,6 +15,8 @@ const envBool = (k: string, d = false) =>
 const envNum = (k: string, d = 0) => {
   const n = Number(process.env[k]); return Number.isFinite(n) ? n : d;
 };
+
+/* ----------------------------- CSV utilities ----------------------------- */
 
 function readCSVFile(p: string): Row[] {
   const txt = fs.readFileSync(p, "utf8").replace(/\r/g, "");
@@ -43,11 +44,8 @@ function findCSV(): string {
     "data/companies.csv",
     "companies.csv",
   ].map(p => path.resolve(cwd, p));
-
   for (const p of candidates) if (fs.existsSync(p)) return p;
-  throw new Error(
-    "CSV not found. Tried:\n" + candidates.map(p => " - " + p).join("\n")
-  );
+  throw new Error("CSV not found. Tried:\n" + candidates.map(p => " - " + p).join("\n"));
 }
 
 function uniq<T>(a: T[]) { return [...new Set(a.filter(Boolean))]; }
@@ -67,6 +65,8 @@ function domainFromRow(r: Row): string | null {
   return null;
 }
 
+/* ------------------------------- HTTP utils ------------------------------ */
+
 function getJSON(url: string, headers: Record<string, string>) {
   return new Promise<{ status: number; json?: any; text?: string }>((resolve, reject) => {
     const u = new URL(url);
@@ -83,16 +83,37 @@ function getJSON(url: string, headers: Record<string, string>) {
   });
 }
 
+function postJSON(url: string, headers: Record<string, string>, body: any) {
+  return new Promise<{ status: number; text: string }>((resolve, reject) => {
+    const u = new URL(url);
+    const payload = Buffer.from(JSON.stringify(body));
+    const mod = u.protocol === "http:" ? http : https;
+    const req = mod.request(u, {
+      method: "POST",
+      headers: { "content-type": "application/json", "content-length": String(payload.length), ...headers },
+    }, (res) => {
+      let data = ""; res.setEncoding("utf8");
+      res.on("data", ch => data += ch);
+      res.on("end", () => resolve({ status: res.statusCode || 0, text: data }));
+    });
+    req.on("error", reject); req.write(payload); req.end();
+  });
+}
+
+/* --------------------------------- Main ---------------------------------- */
+
 async function main() {
   const API_BASE = env("API_BASE").replace(/\/+$/, "");
   const ADMIN_TOKEN = env("ADMIN_TOKEN");
   const DRY_RUN = envBool("DRY_RUN", true);
+  const LOG_EVENTS = envBool("LOG_EVENTS", true);
+
   const MAX_COMPANIES = envNum("MAX_COMPANIES", 0);
   const MAX_BUYERS = envNum("MAX_BUYERS_PER_COMPANY", 30);
 
-  // hard filters / soft preferences
-  const TIERS = env("TIERS");                 // e.g. "C" or "B,C"
-  const SIZE = env("SIZE").toLowerCase();     // small|medium|large
+  // Filters/preferences sent to /leads/find-buyers
+  const TIERS = env("TIERS");                     // e.g. "C" or "B,C"
+  const SIZE = env("SIZE").toLowerCase();         // small|medium|large
   const PREFER_TIER = env("PREFER_TIER").toUpperCase(); // A|B|C
   const PREFER_SIZE = env("PREFER_SIZE").toLowerCase(); // small|medium|large
 
@@ -122,19 +143,52 @@ async function main() {
     ];
     if (TIERS) qp.push(`tiers=${encodeURIComponent(TIERS)}`); else if (SIZE) qp.push(`size=${encodeURIComponent(SIZE)}`);
     if (PREFER_TIER) qp.push(`preferTier=${encodeURIComponent(PREFER_TIER)}`); else if (PREFER_SIZE) qp.push(`preferSize=${encodeURIComponent(PREFER_SIZE)}`);
-
     const url = `${API_BASE}/leads/find-buyers?${qp.join("&")}`;
 
-    if (DRY_RUN) { console.log(`≈ ${i + 1}/${take.length} ${d} (dryRun) -> ${url}`); ok++; continue; }
+    const t0 = Date.now();
+    if (DRY_RUN) {
+      console.log(`≈ ${i + 1}/${take.length} ${d} (dryRun) -> ${url}`);
+      if (LOG_EVENTS) {
+        await postJSON(`${API_BASE}/events/ingest`, headers, {
+          kind: "find_buyers",
+          at: new Date().toISOString(),
+          user: "batch",
+          data: { host: d, dryRun: true, url },
+        }).catch(() => {});
+      }
+      ok++;
+      continue;
+    }
 
     const res = await getJSON(url, headers);
+    const ms = Date.now() - t0;
+
     if (res.status >= 200 && res.status < 300 && res.json?.ok !== false) {
-      const ret = res.json?.summary?.returned ?? "?";
-      console.log(`✓ ${i + 1}/${take.length} ${d} -> ${res.status} returned=${ret}`);
+      const sum = res.json?.summary || {};
+      console.log(`✓ ${i + 1}/${take.length} ${d} -> ${res.status} returned=${sum.returned ?? "?"}`);
+      if (LOG_EVENTS) {
+        await postJSON(`${API_BASE}/events/ingest`, headers, {
+          kind: "find_buyers",
+          at: new Date().toISOString(),
+          user: "batch",
+          data: {
+            host: d, summary: sum, ms,
+            filters: { tiers: TIERS || null, size: SIZE || null, preferTier: PREFER_TIER || null, preferSize: PREFER_SIZE || null },
+          },
+        }).catch(() => {});
+      }
       ok++;
     } else {
       const first = (res.text || JSON.stringify(res.json) || "").split("\n")[0];
       console.log(`✗ ${i + 1}/${take.length} ${d} -> ${res.status} ${first}`);
+      if (LOG_EVENTS) {
+        await postJSON(`${API_BASE}/events/ingest`, headers, {
+          kind: "find_buyers_error",
+          at: new Date().toISOString(),
+          user: "batch",
+          data: { host: d, status: res.status, firstLine: first },
+        }).catch(() => {});
+      }
       fail++;
     }
   }
