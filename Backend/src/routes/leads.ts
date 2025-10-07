@@ -1,6 +1,16 @@
 // src/routes/leads.ts
 //
-// Artemis B v1 — Buyer discovery (CJS-safe) + event logging
+// Artemis B v1 — Buyer discovery (CJS-safe) with per-request tier control.
+// New query params:
+//   - tiers=A,B,C             hard filter (intersection with ALLOW_TIERS)
+//   - size=small|medium|large alias for tiers=C|B|A
+//   - preferTier=A|B|C        adds a scoring boost to that tier
+//   - preferSize=small|medium|large alias for preferTier
+//
+// Existing:
+//   GET /api/leads/ping
+//   GET /api/leads/find-buyers?host=acme.com[&city=&tags=a,b&sectors=x,y&minTier=A|B|C&limit=12]
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Router, type Request, type Response } from "express";
@@ -11,21 +21,8 @@ import * as TRC from "../shared/trc";
 
 const Catalog: any = (CatalogMod as any)?.default ?? (CatalogMod as any);
 const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
+
 const r = Router();
-
-/* ----------------------------- event logging ----------------------------- */
-
-const ADMIN_WRITE_KEY =
-  (process.env.ADMIN_TOKEN || process.env.ADMIN_API_KEY || process.env.ADMIN_KEY || "").trim();
-
-async function logEvent(kind: string, data: any) {
-  try {
-    const url = `http://127.0.0.1:${CFG.port}/api/events/put`;
-    const headers: any = { "content-type": "application/json" };
-    if (ADMIN_WRITE_KEY) headers["x-admin-key"] = ADMIN_WRITE_KEY;
-    await F(url, { method: "POST", headers, body: JSON.stringify({ kind, data }) });
-  } catch { /* ignore */ }
-}
 
 /* --------------------------------- types ---------------------------------- */
 
@@ -81,7 +78,6 @@ function prettyHostName(h: string): string {
 
 const HOT_T  = Number((TRC as any)?.HOT_MIN  ?? 80);
 const WARM_T = Number((TRC as any)?.WARM_MIN ?? 55);
-
 function bandFromScore(score: number): "HOT" | "WARM" | "COOL" {
   if (typeof (TRC as any)?.classifyScore === "function") {
     try { return (TRC as any).classifyScore(score); } catch { /* noop */ }
@@ -96,6 +92,46 @@ function uncertainty(score: number): number {
   return Number.isFinite(u) ? Number(u.toFixed(3)) : 0;
 }
 
+/* ----------- request-tier parsing (tiers / size + preferTier / preferSize) ----------- */
+
+const SIZE_TO_TIER: Record<string, "A"|"B"|"C"> = {
+  large: "A", medium: "B", small: "C", l: "A", m: "B", s: "C"
+};
+
+function parseTiersParam(req: Request): { allow: Set<"A"|"B"|"C">; prefer?: "A"|"B"|"C" } {
+  // base allowed from env
+  const envAllow = new Set<"A"|"B"|"C">(Array.from(CFG.allowTiers ?? new Set(["A","B","C"])) as any);
+
+  // hard filter: tiers= or size=
+  const tiersQ = String(req.query.tiers || "").trim();
+  const sizeQ  = String(req.query.size  || "").trim().toLowerCase();
+  let hardAllow: Set<"A"|"B"|"C"> | null = null;
+
+  if (tiersQ) {
+    const set = new Set<"A"|"B"|"C">();
+    for (const t of tiersQ.split(",").map(s => s.trim().toUpperCase())) {
+      if (t === "A" || t === "B" || t === "C") set.add(t);
+    }
+    if (set.size) hardAllow = set;
+  } else if (sizeQ) {
+    const mapped = SIZE_TO_TIER[sizeQ];
+    if (mapped) hardAllow = new Set([mapped]);
+  }
+
+  const allow = hardAllow
+    ? new Set<"A"|"B"|"C">([...hardAllow].filter(t => envAllow.has(t)))
+    : envAllow;
+
+  // prefer: preferTier= or preferSize=
+  const preferT = String(req.query.preferTier || "").trim().toUpperCase();
+  const preferS = String(req.query.preferSize || "").trim().toLowerCase();
+  let prefer: "A"|"B"|"C" | undefined;
+  if (preferT === "A" || preferT === "B" || preferT === "C") prefer = preferT as any;
+  else if (preferS && SIZE_TO_TIER[preferS]) prefer = SIZE_TO_TIER[preferS];
+
+  return { allow, prefer };
+}
+
 /* ---------------------------- scoring (fallback) --------------------------- */
 
 function safeScoreRow(row: Candidate, prefs: any, city?: string) {
@@ -103,7 +139,7 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
     try {
       const out = (TRC as any).scoreRow(row, prefs, city);
       if (out && typeof out.score === "number") return out;
-    } catch { /* ignore and fallback */ }
+    } catch {}
   }
 
   let score = 50;
@@ -142,27 +178,11 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
   return { score, reasons };
 }
 
-/* ------------------------------ enrichment -------------------------------- */
-
-async function classifyHost(host: string): Promise<{ role?: string; confidence?: number; evidence?: string[] } | null> {
-  try {
-    const url = `http://127.0.0.1:${CFG.port}/api/classify?host=${encodeURIComponent(host)}`;
-    const res = await F(url, { redirect: "follow" });
-    if (!res?.ok) return null;
-    const data = await res.json();
-    if (data?.ok === false) return null;
-    return { role: data?.role, confidence: data?.confidence, evidence: data?.evidence || [] };
-  } catch {
-    return null;
-  }
-}
-
 /* --------------------------------- routes --------------------------------- */
 
 r.get("/ping", (_req: Request, res: Response) => res.json({ pong: true, at: new Date().toISOString() }));
 
 r.get("/find-buyers", async (req: Request, res: Response) => {
-  const started = Date.now();
   try {
     const host = String(req.query.host || "").trim().toLowerCase();
     if (!host) return res.status(400).json({ ok: false, error: "host_required" });
@@ -170,6 +190,12 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
     const cityQ = String(req.query.city || "").trim();
     const minTier = String(req.query.minTier || "").trim().toUpperCase() as "A" | "B" | "C" | "";
     const limitQ = Number(req.query.limit ?? 0);
+
+    // Per-request tier controls
+    const { allow: allowTiersReq, prefer: preferTierReq } = parseTiersParam(req);
+
+    const allowTiers = allowTiersReq; // already intersected with env
+    const preferTier = preferTierReq;
 
     const tagsQ    = uniqLower(String(req.query.tags || "").split(","));
     const sectorsQ = uniqLower(String(req.query.sectors || "").split(","));
@@ -191,48 +217,52 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
 
     const rows: Candidate[] = getCatalogRows();
 
+    // Filter by allowed tiers + optional minTier
     const filtered = rows.filter((c) => {
       const t = getTier(c);
-      if (!CFG.allowTiers.has(t)) return false;
+      if (!allowTiers.has(t)) return false;
       if (minTier === "A" && t !== "A") return false;
       if (minTier === "B" && t === "C") return false;
       return true;
     });
 
+    // Score (+ optional preferTier boost)
     const scored = filtered.map((c) => {
-      const { score, reasons } = safeScoreRow(c, mergedPrefs, mergedPrefs.city);
+      let { score, reasons } = safeScoreRow(c, mergedPrefs, mergedPrefs.city);
+      const t = getTier(c);
+      if (preferTier && t === preferTier) { score += 8; reasons = [...reasons, `prefer:${t}`]; }
       const band = bandFromScore(score);
       const u = uncertainty(score);
       const name = c.name || c.company || prettyHostName(c.host);
       const url = c.url || `https://${c.host}`;
-      const tier = getTier(c);
+      const tier = t;
       const trimmedReasons = Array.isArray(reasons) ? reasons.slice(0, 12) : [];
       return { ...c, host: c.host, name, city: c.city, tier, url, score, band, uncertainty: u, reasons: trimmedReasons };
     });
 
+    // Sort HOT→WARM by score
     const hot = scored.filter((x) => x.band === "HOT").sort((a, b) => b.score - a.score);
     const warm = scored.filter((x) => x.band === "WARM").sort((a, b) => b.score - a.score);
     let items = [...hot, ...warm];
     const totalBeforeCap = items.length;
     if (cap > 0) items = items.slice(0, cap);
 
+    // Enrich a couple uncertain
     const MAX_ESCALATE = 2;
-    const targets = [...items]
-      .filter((x) => x.uncertainty >= 0.6)
-      .sort((a, b) => b.uncertainty - a.uncertainty)
-      .slice(0, MAX_ESCALATE);
-
+    const targets = [...items].filter((x) => x.uncertainty >= 0.6).sort((a, b) => b.uncertainty - a.uncertainty).slice(0, MAX_ESCALATE);
     for (const t of targets) {
-      const info = await classifyHost(t.host);
-      if (info?.evidence?.length) {
-        t.reasons = [...t.reasons, ...info.evidence.map((e) => `classify:${e}`)].slice(0, 12);
-      }
-      if (info?.role) {
-        t.reasons.push(`role:${info.role}@${(info.confidence ?? 0).toFixed(2)}`);
-      }
+      try {
+        const url = `http://127.0.0.1:${CFG.port}/api/classify?host=${encodeURIComponent(t.host)}`;
+        const res2 = await F(url, { redirect: "follow" });
+        if (res2?.ok) {
+          const data = await res2.json();
+          if (data?.evidence?.length) t.reasons = [...t.reasons, ...data.evidence.map((e: string)=>`classify:${e}`)].slice(0, 12);
+          if (data?.role) t.reasons.push(`role:${data.role}@${(data.confidence ?? 0).toFixed(2)}`);
+        }
+      } catch {}
     }
 
-    const payload = {
+    return res.json({
       ok: true,
       items,
       summary: {
@@ -244,18 +274,13 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
         capApplied: cap,
         city: mergedPrefs.city || null,
         minTier: minTier || null,
+        tiersApplied: Array.from(allowTiers),
+        preferTier: preferTier || null,
         overlays: { tags: overlayTags.slice(0, 12) },
-        ms: Date.now() - started,
       },
-    };
-
-    // fire-and-forget event (doesn't block response)
-    void logEvent("find_buyers", { host, ...payload.summary });
-
-    return res.json(payload);
+    });
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
-    void logEvent("find_buyers_error", { detail: msg });
     return res.status(200).json({ ok: false, error: "find-buyers-failed", detail: msg });
   }
 });
