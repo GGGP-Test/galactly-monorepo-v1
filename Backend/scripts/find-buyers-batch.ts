@@ -1,200 +1,215 @@
-// Backend/scripts/find-buyers-batch.ts
-// Batch "find buyers" importer that also logs events to /api/events/ingest.
+// scripts/find-buyers-batch.ts
+//
+// Batch "find buyers" importer for your Artemis B API.
+// - Primary: GET /api/leads/find-buyers?host=...&limit=...&minTier=...
+// - Fallback:  /api/leads/find (legacy)
+// - Auth: accepts either x-admin-key or x-admin-token (pick via --adminHeader)
+// - CSV: looks for domain | website | company columns
+//
+// CLI (from Backend/):
+//   npx tsx ./scripts/find-buyers-batch.ts \
+//     --api https://<host>/api \
+//     --csv data/companies.csv \
+//     --dryRun false \
+//     --maxCompanies 0 \
+//     --maxBuyersPerCompany 30 \
+//     --adminKey $ADMIN_TOKEN \
+//     --adminHeader x-admin-key \
+//     --minTier C
+//
+// Also reads env: API_BASE, ADMIN_TOKEN, ADMIN_HEADER, MIN_TIER
 
 /* eslint-disable no-console */
-import * as fs from "fs";
-import * as path from "path";
-import * as http from "node:http";
-import * as https from "node:https";
+import fs from "fs/promises";
+import path from "path";
 
-type Row = Record<string, string>;
+// ---------------- CLI ----------------
 
-const env = (k: string, d = "") => (process.env[k] ?? d).toString();
-const envBool = (k: string, d = false) =>
-  /^(1|true|yes)$/i.test((process.env[k] ?? (d ? "true" : "false")).toString());
-const envNum = (k: string, d = 0) => {
-  const n = Number(process.env[k]); return Number.isFinite(n) ? n : d;
-};
+type Tier = "A" | "B" | "C";
+interface Args {
+  api: string;
+  csv: string;
+  dryRun: boolean;
+  maxCompanies: number;
+  maxBuyersPerCompany: number;
+  adminKey?: string;
+  adminHeader?: string; // x-admin-key | x-admin-token
+  minTier?: Tier;       // A|B|C
+}
 
-/* ----------------------------- CSV utilities ----------------------------- */
+function parseArgs(): Args {
+  const a = new Map<string, string>();
+  for (let i = 2; i < process.argv.length; i++) {
+    const key = (process.argv[i] || "").replace(/^--/, "");
+    if (!key) continue;
+    const nxt = process.argv[i + 1];
+    if (!nxt || nxt.startsWith("--")) { a.set(key, "true"); continue; }
+    a.set(key, nxt); i++;
+  }
+  const bool = (v?: string) => String(v).toLowerCase() === "true";
+  const num  = (v?: string, def = 0) => (Number.isFinite(Number(v)) ? Number(v) : def);
+  const asTier = (v?: string): Tier|undefined => {
+    const t = String(v || "").trim().toUpperCase();
+    return t === "A" || t === "B" || t === "C" ? (t as Tier) : undefined;
+  };
 
-function readCSVFile(p: string): Row[] {
-  const txt = fs.readFileSync(p, "utf8").replace(/\r/g, "");
-  const lines = txt.split("\n").filter(Boolean);
-  if (!lines.length) return [];
-  const head = lines[0].split(",").map(s => s.trim());
-  const rows: Row[] = [];
+  const args: Args = {
+    api: (a.get("api") || process.env.API_BASE || "").replace(/\/+$/, ""),
+    csv: a.get("csv") || "data/companies.csv",
+    dryRun: bool(a.get("dryRun")),
+    maxCompanies: num(a.get("maxCompanies"), 0),
+    maxBuyersPerCompany: num(a.get("maxBuyersPerCompany"), 30),
+    adminKey: a.get("adminKey") || process.env.ADMIN_TOKEN || process.env.ADMIN_KEY_VALUE,
+    adminHeader: a.get("adminHeader") || process.env.ADMIN_HEADER || "x-admin-key",
+    minTier: asTier(a.get("minTier") || process.env.MIN_TIER),
+  };
+  if (!args.api) throw new Error("API base required: --api https://host/api");
+  return args;
+}
+
+// --------------- CSV + utils ----------------
+
+function toDomain(s?: string): string | undefined {
+  if (!s) return;
+  let t = s.trim();
+  if (!t) return;
+  if (!/^https?:\/\//i.test(t)) t = "http://" + t;
+  try { return new URL(t).hostname.toLowerCase().replace(/^www\./, ""); }
+  catch { return t.replace(/^https?:\/\//i, "").replace(/^www\./, "").split("/")[0].toLowerCase(); }
+}
+
+type CompanyRow = { company?: string; domain?: string; website?: string; city?: string; region?: string; country?: string };
+
+function parseCSV(txt: string): CompanyRow[] {
+  const lines = txt.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length === 0) return [];
+  const header = lines[0].split(",").map(h => h.trim().toLowerCase());
+  const idx = (n: string) => header.findIndex(h => h === n);
+  const iCompany = idx("company") >= 0 ? idx("company") : idx("company name");
+  const iDomain  = idx("domain");
+  const iWebsite = idx("website");
+  const iCity    = idx("city");
+  const iRegion  = idx("region") >= 0 ? idx("region") : idx("state");
+  const iCountry = idx("country");
+
+  const rows: CompanyRow[] = [];
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(",");
-    const r: Row = {};
-    for (let j = 0; j < head.length; j++) r[head[j]] = (cols[j] ?? "").trim();
-    rows.push(r);
+    rows.push({
+      company: iCompany >= 0 ? cols[iCompany]?.trim() : undefined,
+      domain:  iDomain  >= 0 ? cols[iDomain]?.trim()  : undefined,
+      website: iWebsite >= 0 ? cols[iWebsite]?.trim() : undefined,
+      city:    iCity    >= 0 ? cols[iCity]?.trim()    : undefined,
+      region:  iRegion  >= 0 ? cols[iRegion]?.trim()  : undefined,
+      country: iCountry >= 0 ? cols[iCountry]?.trim() : undefined,
+    });
   }
   return rows;
 }
 
-function findCSV(): string {
-  const cwd = process.cwd();
-  const requested = env("CSV_PATH", "data/companies.csv");
-  const candidates = [
-    requested,
-    path.join("app/Backend", requested),
-    "app/Backend/data/companies.csv",
-    "Backend/data/companies.csv",
-    "data/companies.csv",
-    "companies.csv",
-  ].map(p => path.resolve(cwd, p));
-  for (const p of candidates) if (fs.existsSync(p)) return p;
-  throw new Error("CSV not found. Tried:\n" + candidates.map(p => " - " + p).join("\n"));
+function joinApi(base: string, p: string) {
+  return base.replace(/\/+$/, "") + "/" + p.replace(/^\/+/, "");
 }
 
-function uniq<T>(a: T[]) { return [...new Set(a.filter(Boolean))]; }
+// --------------- HTTP ----------------
 
-function domainFromRow(r: Row): string | null {
-  const cands = [r.domain, r.Domain, r.website, r.Website, r.url, r.URL, r.email, r.Email].filter(Boolean) as string[];
-  for (let v of cands) {
-    v = v.trim(); if (!v) continue;
-    if (v.includes("@")) { const d = v.split("@")[1]?.toLowerCase(); if (d) return d.replace(/^www\./, ""); }
-    try {
-      if (!/^https?:\/\//i.test(v)) v = "https://" + v;
-      const u = new URL(v); return u.hostname.toLowerCase().replace(/^www\./, "");
-    } catch {
-      if (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(v)) return v.toLowerCase().replace(/^www\./, "");
+async function fetchText(url: string, opts: any): Promise<{ ok: boolean; status: number; text: string }> {
+  const r = await fetch(url, opts);
+  const t = await r.text().catch(() => "");
+  return { ok: r.ok, status: r.status, text: t };
+}
+
+async function callFind(
+  api: string,
+  domain: string,
+  limit: number,
+  minTier?: Tier,
+  adminHeader?: string,
+  adminKey?: string,
+  dryRun?: boolean
+): Promise<{ ok: boolean; status: number; text: string }> {
+  const headers: Record<string, string> = {};
+  if (adminKey && adminHeader) headers[adminHeader] = adminKey;
+
+  // Prefer the new route: /api/leads/find-buyers
+  const url = new URL(joinApi(api, "/leads/find-buyers"));
+  url.searchParams.set("host", domain);
+  if (limit > 0) url.searchParams.set("limit", String(limit));
+  if (minTier) url.searchParams.set("minTier", minTier);
+  if (dryRun) url.searchParams.set("dryRun", "1");
+
+  let res = await fetchText(url.toString(), { method: "GET", headers });
+
+  // Fallback to the legacy /api/leads/find (GET then POST)
+  if (res.status === 404 || /Cannot\s+GET/i.test(res.text)) {
+    const legacyGet = new URL(joinApi(api, "/leads/find"));
+    legacyGet.searchParams.set("host", domain);
+    if (limit > 0) legacyGet.searchParams.set("limit", String(limit));
+    if (minTier) legacyGet.searchParams.set("minTier", minTier);
+    if (dryRun) legacyGet.searchParams.set("dryRun", "1");
+    res = await fetchText(legacyGet.toString(), { method: "GET", headers });
+
+    if (res.status === 404 || /Cannot\s+GET/i.test(res.text)) {
+      const body = { host: domain, limit: limit > 0 ? limit : undefined, minTier, dryRun: !!dryRun };
+      headers["Content-Type"] = "application/json";
+      res = await fetchText(joinApi(api, "/leads/find"), { method: "POST", headers, body: JSON.stringify(body) });
     }
   }
-  return null;
+  return res;
 }
 
-/* ------------------------------- HTTP utils ------------------------------ */
-
-function getJSON(url: string, headers: Record<string, string>) {
-  return new Promise<{ status: number; json?: any; text?: string }>((resolve, reject) => {
-    const u = new URL(url);
-    const mod = u.protocol === "http:" ? http : https;
-    const req = mod.request(u, { method: "GET", headers }, (res) => {
-      let data = ""; res.setEncoding("utf8");
-      res.on("data", ch => data += ch);
-      res.on("end", () => {
-        try { resolve({ status: res.statusCode || 0, json: JSON.parse(data || "{}") }); }
-        catch { resolve({ status: res.statusCode || 0, text: data }); }
-      });
-    });
-    req.on("error", reject); req.end();
-  });
-}
-
-function postJSON(url: string, headers: Record<string, string>, body: any) {
-  return new Promise<{ status: number; text: string }>((resolve, reject) => {
-    const u = new URL(url);
-    const payload = Buffer.from(JSON.stringify(body));
-    const mod = u.protocol === "http:" ? http : https;
-    const req = mod.request(u, {
+async function pushSummaryEvent(api: string, adminHeader: string|undefined, adminKey: string|undefined, summary: any) {
+  try {
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    if (adminHeader && adminKey) headers[adminHeader] = adminKey;
+    await fetch(joinApi(api, "/events/ingest"), {
       method: "POST",
-      headers: { "content-type": "application/json", "content-length": String(payload.length), ...headers },
-    }, (res) => {
-      let data = ""; res.setEncoding("utf8");
-      res.on("data", ch => data += ch);
-      res.on("end", () => resolve({ status: res.statusCode || 0, text: data }));
+      headers,
+      body: JSON.stringify({ type: "import", user: "actions", path: "/scripts/find-buyers-batch", meta: summary }),
     });
-    req.on("error", reject); req.write(payload); req.end();
-  });
+  } catch { /* non-fatal */ }
 }
 
-/* --------------------------------- Main ---------------------------------- */
+// --------------- Main ----------------
 
 async function main() {
-  const API_BASE = env("API_BASE").replace(/\/+$/, "");
-  const ADMIN_TOKEN = env("ADMIN_TOKEN");
-  const DRY_RUN = envBool("DRY_RUN", true);
-  const LOG_EVENTS = envBool("LOG_EVENTS", true);
-
-  const MAX_COMPANIES = envNum("MAX_COMPANIES", 0);
-  const MAX_BUYERS = envNum("MAX_BUYERS_PER_COMPANY", 30);
-
-  // Filters/preferences sent to /leads/find-buyers
-  const TIERS = env("TIERS");                     // e.g. "C" or "B,C"
-  const SIZE = env("SIZE").toLowerCase();         // small|medium|large
-  const PREFER_TIER = env("PREFER_TIER").toUpperCase(); // A|B|C
-  const PREFER_SIZE = env("PREFER_SIZE").toLowerCase(); // small|medium|large
-
-  if (!API_BASE) throw new Error("API_BASE missing");
-
-  const csvPath = findCSV();
-  const rows = readCSVFile(csvPath);
-  const domains = uniq(rows.map(domainFromRow) as (string | null)[] as string[]);
-  const take = MAX_COMPANIES > 0 ? domains.slice(0, MAX_COMPANIES) : domains;
-
+  const args = parseArgs();
   console.log("Importer starting…");
-  console.log("API_BASE=%s", API_BASE.replace(/^https?:\/\//, "").replace(/\/.*/, ""));
-  console.log("dryRun=%s", DRY_RUN);
-  console.log("CSV=%s", csvPath);
-  console.log(`Unique companies (by domain): ${domains.length}. Processing: ${take.length}`);
+  console.log("API_BASE=%s", args.api.replace(/^https?:\/\//, "").replace(/\/.*/, ""));
+  console.log("dryRun=%s", args.dryRun);
+  if (args.maxCompanies) console.log("maxCompanies=%d", args.maxCompanies);
+  if (args.minTier) console.log("minTier=%s", args.minTier);
 
-  const headers: Record<string, string> = { accept: "application/json" };
-  if (ADMIN_TOKEN) headers["x-admin-key"] = ADMIN_TOKEN;
+  const csvPath = path.resolve(process.cwd(), args.csv);
+  const exists = await fs.stat(csvPath).then(() => true).catch(() => false);
+  if (!exists) throw new Error(`CSV not found: ${csvPath}`);
 
-  let ok = 0, fail = 0;
-  for (let i = 0; i < take.length; i++) {
-    const d = take[i];
+  const txt = await fs.readFile(csvPath, "utf8");
+  const rows = parseCSV(txt);
 
-    const qp: string[] = [
-      `host=${encodeURIComponent(d)}`,
-      `limit=${encodeURIComponent(String(Math.max(0, MAX_BUYERS)))}`,
-    ];
-    if (TIERS) qp.push(`tiers=${encodeURIComponent(TIERS)}`); else if (SIZE) qp.push(`size=${encodeURIComponent(SIZE)}`);
-    if (PREFER_TIER) qp.push(`preferTier=${encodeURIComponent(PREFER_TIER)}`); else if (PREFER_SIZE) qp.push(`preferSize=${encodeURIComponent(PREFER_SIZE)}`);
-    const url = `${API_BASE}/leads/find-buyers?${qp.join("&")}`;
+  const uniq = Array.from(new Set(
+    rows.map(r => toDomain(r.domain) || toDomain(r.website)).filter(Boolean) as string[]
+  ));
 
-    const t0 = Date.now();
-    if (DRY_RUN) {
-      console.log(`≈ ${i + 1}/${take.length} ${d} (dryRun) -> ${url}`);
-      if (LOG_EVENTS) {
-        await postJSON(`${API_BASE}/events/ingest`, headers, {
-          kind: "find_buyers",
-          at: new Date().toISOString(),
-          user: "batch",
-          data: { host: d, dryRun: true, url },
-        }).catch(() => {});
-      }
-      ok++;
-      continue;
-    }
+  const take = args.maxCompanies > 0 ? uniq.slice(0, args.maxCompanies) : uniq;
+  console.log(`Unique companies (by domain): ${uniq.length}. Processing: ${take.length}`);
 
-    const res = await getJSON(url, headers);
-    const ms = Date.now() - t0;
-
-    if (res.status >= 200 && res.status < 300 && res.json?.ok !== false) {
-      const sum = res.json?.summary || {};
-      console.log(`✓ ${i + 1}/${take.length} ${d} -> ${res.status} returned=${sum.returned ?? "?"}`);
-      if (LOG_EVENTS) {
-        await postJSON(`${API_BASE}/events/ingest`, headers, {
-          kind: "find_buyers",
-          at: new Date().toISOString(),
-          user: "batch",
-          data: {
-            host: d, summary: sum, ms,
-            filters: { tiers: TIERS || null, size: SIZE || null, preferTier: PREFER_TIER || null, preferSize: PREFER_SIZE || null },
-          },
-        }).catch(() => {});
-      }
-      ok++;
-    } else {
-      const first = (res.text || JSON.stringify(res.json) || "").split("\n")[0];
-      console.log(`✗ ${i + 1}/${take.length} ${d} -> ${res.status} ${first}`);
-      if (LOG_EVENTS) {
-        await postJSON(`${API_BASE}/events/ingest`, headers, {
-          kind: "find_buyers_error",
-          at: new Date().toISOString(),
-          user: "batch",
-          data: { host: d, status: res.status, firstLine: first },
-        }).catch(() => {});
-      }
+  let ok = 0, fail = 0, i = 0;
+  for (const d of take) {
+    i++;
+    const res = await callFind(args.api, d, args.maxBuyersPerCompany, args.minTier, args.adminHeader, args.adminKey, args.dryRun);
+    if (res.ok) { console.log(`✓ ${i}/${take.length} ${d} -> ${res.status}`); ok++; }
+    else {
+      const firstLine = (res.text || "").split("\n")[0];
+      console.log(`✗ ${i}/${take.length} ${d} -> ${res.status} ${firstLine}`);
       fail++;
     }
   }
 
   console.log(`Done. ok=${ok} fail=${fail}`);
-  if (!DRY_RUN && fail > 0) process.exit(2);
+  await pushSummaryEvent(args.api, args.adminHeader, args.adminKey, { ok, fail, minTier: args.minTier || null, dryRun: args.dryRun });
+
+  if (!args.dryRun && fail > 0) process.exit(2);
 }
 
-main().catch((e) => { console.error(e?.stack || e?.message || e); process.exit(1); });
+main().catch((e) => { console.error(String(e?.message || e)); process.exit(1); });
