@@ -1,44 +1,53 @@
 // src/routes/events.ts
-//
 // In-memory events with SSE stream for Admin Dashboard.
-// Reads (recent/stats) + writes (put) require x-admin-key.
-// SSE /stream is open (EventSource can't send custom headers).
-//
-// Endpoints (mounted at /api/events):
-//   GET  /api/events/ping
-//   POST /api/events/put          { kind, at?, data?, user? } | { events:[...] }
-//   GET  /api/events/recent       ?limit=50
-//   GET  /api/events/stats
-//   GET  /api/events/stream[?since=epoch_ms]
+// Writes + reads need admin auth; SSE stream stays open (no custom headers).
 
 import { Router, type Request, type Response, type NextFunction } from "express";
 
 type Json = Record<string, unknown>;
-
-export interface EventItem {
-  kind: string;
-  at: string;     // ISO timestamp
-  user?: string;
-  data?: Json;
-}
+export interface EventItem { kind: string; at: string; user?: string; data?: Json; }
 
 const r = Router();
 
-// ---------- config ----------
-const ADMIN_HEADER = "x-admin-key";
-const ADMIN_KEYS = new Set<string>(
+// ---- admin auth (accept multiple header names) ----
+const ADMIN_KEYS = new Set(
   [process.env.ADMIN_TOKEN, process.env.ADMIN_API_KEY, process.env.ADMIN_KEY]
     .map(v => (v || "").trim())
     .filter(Boolean)
 );
 
-// ---------- storage (ring buffer) ----------
+// read x-admin-key, x-admin-token, or Authorization: Bearer <key>
+function getAdminFromHeaders(req: Request): string | undefined {
+  const h1 = (req.header("x-admin-key") || "").trim();
+  const h2 = (req.header("x-admin-token") || "").trim();
+  const auth = (req.header("authorization") || "").trim();
+  if (h1) return h1;
+  if (h2) return h2;
+  if (auth.toLowerCase().startsWith("bearer ")) return auth.slice(7).trim();
+  return undefined;
+}
+
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (ADMIN_KEYS.size === 0) return next(); // allow in dev if no keys are set
+  const got = getAdminFromHeaders(req);
+  if (!got || !ADMIN_KEYS.has(got)) {
+    return res.status(401).json({
+      ok: false,
+      error: "unauthorized",
+      hint: "send x-admin-key or x-admin-token (or Authorization: Bearer …)",
+    });
+  }
+  next();
+}
+
+// ---- storage (ring buffer) ----
 const MAX_EVENTS = Number(process.env.EVENTS_MAX ?? 1000);
 const events: EventItem[] = [];
 
 function pushEvent(e: EventItem) {
   events.push(e);
-  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+  const overflow = events.length - MAX_EVENTS;
+  if (overflow > 0) events.splice(0, overflow);
 }
 
 function lastN(n: number): EventItem[] {
@@ -57,27 +66,15 @@ function sinceTs(ts: number, cap = 200): EventItem[] {
   return out.reverse();
 }
 
-// ---------- auth ----------
-function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  if (ADMIN_KEYS.size === 0) return next(); // allow in dev if no keys set
-  const got = (req.header(ADMIN_HEADER) || "").trim();
-  if (!got || !ADMIN_KEYS.has(got)) {
-    return res.status(401).json({ ok: false, error: "unauthorized" });
-  }
-  next();
-}
-
-// ---------- routes ----------
+// ---- routes ----
 r.get("/ping", (_req, res) => res.json({ pong: true, at: new Date().toISOString() }));
 
-// Write one or many events.
-// Body: { kind, at?, data?, user? }  OR  { events: [ {kind, ...}, ... ] }
+// POST /api/events/put  { kind, at?, data?, user? }  or  { events:[...] }
 r.post("/put", requireAdmin, (req: Request, res: Response) => {
   try {
-    const body: any = req.body || {};
     const nowIso = new Date().toISOString();
-
-    const addOne = (raw: any) => {
+    const body: any = req.body || {};
+    const add = (raw: any) => {
       const kind = String(raw?.kind || "").trim();
       if (!kind) return 0;
       const at = String(raw?.at || nowIso);
@@ -86,14 +83,12 @@ r.post("/put", requireAdmin, (req: Request, res: Response) => {
       pushEvent({ kind, at, user, data });
       return 1;
     };
-
     let inserted = 0;
-    if (Array.isArray(body?.events)) for (const x of body.events) inserted += addOne(x);
-    else inserted += addOne(body);
-
-    return res.json({ ok: true, inserted });
-  } catch (err: any) {
-    return res.status(200).json({ ok: false, error: "put_failed", detail: String(err?.message || err) });
+    if (Array.isArray(body?.events)) for (const x of body.events) inserted += add(x);
+    else inserted += add(body);
+    res.json({ ok: true, inserted });
+  } catch (e: any) {
+    res.status(200).json({ ok: false, error: "put_failed", detail: String(e?.message || e) });
   }
 });
 
@@ -114,7 +109,7 @@ r.get("/stats", requireAdmin, (_req: Request, res: Response) => {
   });
 });
 
-/** Live stream via Server-Sent Events (no auth; EventSource can't set headers). */
+// SSE stream (no auth; EventSource cannot send custom headers)
 r.get("/stream", (req: Request, res: Response) => {
   try {
     res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
@@ -122,24 +117,18 @@ r.get("/stream", (req: Request, res: Response) => {
     res.setHeader("Connection", "keep-alive");
     (res as any).flushHeaders?.();
 
-    // Send a tiny backlog
     const since = Number(req.query.since || 0);
-    const backlog = (Number.isFinite(since) && since > 0) ? sinceTs(since, 200) : lastN(20).reverse().reverse();
+    const backlog = Number.isFinite(since) && since > 0 ? sinceTs(since, 200) : lastN(20).reverse().reverse();
     for (const ev of backlog) {
-      res.write(`event: event\n`);
+      res.write("event: event\n");
       res.write(`data: ${JSON.stringify(ev)}\n\n`);
     }
 
-    // Keepalive ping every 25s
     const ping = setInterval(() => {
       try { res.write(`event: ping\ndata: {"t":${Date.now()}}\n\n`); } catch {}
     }, 25000);
-
-    // Cleanup on disconnect
     req.on("close", () => { clearInterval(ping); try { res.end(); } catch {} });
-  } catch {
-    try { res.end(); } catch {}
-  }
+  } catch { try { res.end(); } catch {} }
 });
 
 export default r;
