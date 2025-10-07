@@ -2,7 +2,7 @@
 //
 // Web-first buyer discovery with exact band filtering and optional catalog mix.
 // Endpoint:
-//   GET /api/web/find-buyers?host=acme.com
+//   GET /api/web/find?host=acme.com
 //     [&city=&size=small|medium|large&limit=10
 //      &band=COOL|WARM|HOT
 //      &mode=hybrid|web|catalog&shareWeb=0.3
@@ -10,8 +10,10 @@
 //
 // Notes
 // - Exact band (not minimum).
-// - Hybrid mode splits quota between web + catalog (defaults to 30% web for "free" feel).
+// - Hybrid mode splits quota between web + catalog (defaults to 30% web for “free” feel).
 // - Emits a tiny event to /api/events/ingest.
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Router, type Request, type Response } from "express";
 import { CFG, capResults } from "../shared/env";
@@ -20,18 +22,16 @@ import * as TRC from "../shared/trc";
 import * as CatalogMod from "../shared/catalog";
 import * as Sources from "../shared/sources";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 const r = Router();
 const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 
 // Normalize default vs named export from catalog.ts
 const Catalog: any = (CatalogMod as any)?.default ?? (CatalogMod as any);
 
-// ------------- types + utils shared with leads.ts (duplicated for isolation) -------------
+// ------------------------------- types & utils -------------------------------
+
 type Tier = "A" | "B" | "C";
 type Band = "HOT" | "WARM" | "COOL";
-
 type Candidate = {
   host: string;
   name?: string;
@@ -99,10 +99,6 @@ function bandFromScore(score: number): Band {
   return score >= HOT_T ? "HOT" : score >= WARM_T ? "WARM" : "COOL";
 }
 
-function toRank(b: Band): 1|2|3 {
-  return b === "HOT" ? 3 : b === "WARM" ? 2 : 1;
-}
-
 function uncertainty(score: number): number {
   const d = Math.min(Math.abs(score - HOT_T), Math.abs(score - WARM_T));
   const u = Math.max(0, 1 - d / 10);
@@ -110,14 +106,15 @@ function uncertainty(score: number): number {
 }
 
 function safeScoreRow(row: Candidate, prefs: any, city?: string) {
-  // prefer TRC.scoreRow if present
+  // Prefer TRC.scoreRow if present
   if (typeof (TRC as any)?.scoreRow === "function") {
     try {
       const out = (TRC as any).scoreRow(row, prefs, city);
       if (out && typeof out.score === "number") return out;
-    } catch { /* fall through */ }
+    } catch { /* fallback */ }
   }
 
+  // Minimal deterministic heuristic
   let score = 50;
   const reasons: string[] = [];
 
@@ -144,6 +141,7 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
       sz === "large" ? Number(sw.large ?? 0) : 0;
     if (w) { score += Math.max(-12, Math.min(12, w * 4)); reasons.push(`size:${sz || "?"}`); }
   }
+
   const sig = prefs?.signalWeight || {};
   if (sig && (sig.ecommerce || sig.retail || sig.wholesale)) {
     score += Math.min(6, (Number(sig.ecommerce||0) + Number(sig.retail||0) + Number(sig.wholesale||0)) * 2);
@@ -160,10 +158,7 @@ const SIZE_TO_TIER: Record<string, Tier> = {
   small: "C", s: "C"
 };
 
-function parseTiersParam(req: Request): {
-  allow: Set<Tier>;
-  prefer?: Tier;
-} {
+function parseTiersParam(req: Request): { allow: Set<Tier>; prefer?: Tier } {
   const envAllow = new Set<Tier>(Array.from(CFG.allowTiers ?? new Set(["A","B","C"])) as Tier[]);
   const tiersQ = String(req.query.tiers || "").trim();
   const sizeQ  = String(req.query.size  || "").trim().toLowerCase();
@@ -203,16 +198,17 @@ async function emit(kind: string, data: any) {
   } catch {}
 }
 
-// --------------------------------- routes ----------------------------------
+// ------------------------------------- route -------------------------------------
 
-r.get("/find-buyers", async (req: Request, res: Response) => {
+// NOTE: path is "/find" (not "/find-buyers") to match Admin dashboard.
+r.get("/find", async (req: Request, res: Response) => {
   const t0 = Date.now();
   try {
     const host = String(req.query.host || req.query.domain || "").trim().toLowerCase();
     if (!host) return res.status(400).json({ ok: false, error: "host_required" });
 
-    const city  = String(req.query.city || "").trim() || undefined;
-    const sizeQ = String(req.query.size || "").trim().toLowerCase() || undefined;
+    const city   = String(req.query.city || "").trim() || undefined;
+    const sizeQ  = String(req.query.size || "").trim().toLowerCase() || undefined;
     const limitQ = Math.max(1, Math.min(100, Number(req.query.limit ?? 10) || 10));
 
     // exact band
@@ -269,7 +265,7 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       catRows = Array.isArray(rows) ? rows.slice() : [];
     }
 
-    // Merge pools (but we’ll score/band/filter after)
+    // Merge pools (we’ll score/band/filter after)
     const pool: Candidate[] = [...webRows, ...catRows];
 
     // ---------- filter by allowed tiers + score + exact band ----------
@@ -296,7 +292,6 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
     };
 
     const ordered = mode === "hybrid" ? scored.sort(sortWebFirst) : scored.sort((a, b) => (b.score || 0) - (a.score || 0));
-
     let items = ordered.slice(0, cap);
 
     const summary = {
