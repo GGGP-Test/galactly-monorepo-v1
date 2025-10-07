@@ -2,12 +2,15 @@
 //
 // Artemis B v1 — Buyer discovery (CJS-safe)
 //
-// KEEP: your original /ping and /find-buyers
-// NEW : /api/leads/find   (GET & POST) — simple, fast, stable shape for batch importer
+// Routes:
+//   GET  /api/leads/ping
+//   GET  /api/leads/find           (NEW-compatible with batch importer)
+//   POST /api/leads/find           (NEW)
+//   GET  /api/leads/find-buyers    (your advanced finder)
 //
-// - /find-buyers keeps TRC-based scoring + prefs overlays
-// - /find is a thin wrapper that reuses the same catalog + lightweight scoring
-//   and returns a compact stable shape: { ok, company, items, count }
+// Change in this version:
+//   - Auto-emit an event to /api/events/put for each successful find,
+//     so Admin Dashboard → Recent(50) shows activity.
 
  /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -54,11 +57,11 @@ function uniqLower(arr: unknown): string[] {
 }
 
 function getCatalogRows(): Candidate[] {
-  if (typeof Catalog?.get === "function") return Catalog.get();
-  if (typeof Catalog?.rows === "function") return Catalog.rows();
-  if (Array.isArray(Catalog?.rows)) return Catalog.rows as Candidate[];
-  if (Array.isArray(Catalog?.catalog)) return Catalog.catalog as Candidate[];
-  if (typeof Catalog?.all === "function") return Catalog.all();
+  if (typeof (Catalog as any)?.get === "function") return (Catalog as any).get();
+  if (typeof (Catalog as any)?.rows === "function") return (Catalog as any).rows();
+  if (Array.isArray((Catalog as any)?.rows)) return (Catalog as any).rows as Candidate[];
+  if (Array.isArray((Catalog as any)?.catalog)) return (Catalog as any).catalog as Candidate[];
+  if (typeof (Catalog as any)?.all === "function") return (Catalog as any).all();
   return [];
 }
 
@@ -113,7 +116,7 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
     } catch { /* ignore and fallback */ }
   }
 
-  // Minimal, deterministic heuristic aligned with prefs.categoriesAllow
+  // Minimal deterministic heuristic aligned with prefs.categoriesAllow
   let score = 50;
   const reasons: string[] = [];
 
@@ -121,7 +124,7 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
   const loc = cityBoost(city || (prefs?.city as string), row.city);
   if (loc) { score += loc * 100; reasons.push(`local+${(loc * 100) | 0}`); }
 
-  // Tag/category overlap (row.tags/segments vs prefs.categoriesAllow)
+  // Tag/category overlap
   const want = new Set<string>(uniqLower(prefs?.categoriesAllow || []));
   if (want.size) {
     const have = new Set<string>([
@@ -132,7 +135,7 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
     if (hits) { score += Math.min(15, hits * 5); reasons.push(`tags+${hits}`); }
   }
 
-  // Gentle size/signal nudges if objects exist
+  // Gentle size/signal nudges
   const sw = prefs?.sizeWeight || {};
   if (typeof sw === "object") {
     const sz = String(row?.size || "").toLowerCase();
@@ -165,6 +168,27 @@ async function classifyHost(host: string): Promise<{ role?: string; confidence?:
     return { role: data?.role, confidence: data?.confidence, evidence: data?.evidence || [] };
   } catch {
     return null;
+  }
+}
+
+/* -------------------------- event emission helper -------------------------- */
+
+const ADMIN_HEADER = "x-admin-key";
+const ADMIN_VALUE =
+  (process.env.ADMIN_TOKEN || process.env.ADMIN_API_KEY || process.env.ADMIN_KEY || "").trim();
+
+async function emitEvent(kind: string, data: any) {
+  try {
+    const url = `http://127.0.0.1:${CFG.port}/api/events/put`;
+    const headers: any = { "Content-Type": "application/json" };
+    if (ADMIN_VALUE) headers[ADMIN_HEADER] = ADMIN_VALUE;
+    await F(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ kind, at: new Date().toISOString(), data }),
+    }).catch(() => {});
+  } catch {
+    /* non-fatal */
   }
 }
 
@@ -218,7 +242,6 @@ async function findBuyersCore(params: {
     return CFG.allowTiers.has(t);
   });
 
-  // preferences: just city right now (we reuse your safeScoreRow fallbacks)
   const prefs = { city: params.city };
 
   const scored = filtered
@@ -244,6 +267,14 @@ async function handleFind(req: Request, res: Response) {
 
     const items = await findBuyersCore({ domain, company, city, region, country, max });
 
+    // Emit an event for Admin Dashboard
+    emitEvent("leads.find", {
+      domain: domain || null,
+      company: company || null,
+      city: city || null,
+      returned: items.length,
+    }).catch(() => {});
+
     res.json({
       ok: true,
       company: { domain, name: company || null, city: city || null, region: region || null, country: country || null },
@@ -261,7 +292,7 @@ r.get("/find", handleFind);
 // POST /api/leads/find { domain|host|website|company, max }
 r.post("/find", handleFind);
 
-/* --------------------------- existing routes ------------------------------- */
+/* --------------------------- existing route (adv) -------------------------- */
 
 r.get("/ping", (_req: Request, res: Response) => res.json({ pong: true, at: new Date().toISOString() }));
 
@@ -343,6 +374,14 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       }
     }
 
+    // Emit event for the advanced finder
+    emitEvent("leads.find-buyers", {
+      host,
+      city: mergedPrefs.city || null,
+      returned: Math.min(items.length, cap || items.length),
+      minTier: minTier || null,
+    }).catch(() => {});
+
     return res.json({
       ok: true,
       items,
@@ -355,9 +394,7 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
         capApplied: cap,
         city: mergedPrefs.city || null,
         minTier: minTier || null,
-        overlays: {
-          tags: overlayTags.slice(0, 12),
-        },
+        overlays: { tags: overlayTags.slice(0, 12) },
       },
     });
   } catch (err: unknown) {
