@@ -12,21 +12,19 @@
   .muted{color:#9ab0c0}
   main{padding:18px;display:grid;grid-template-columns:360px 1fr;gap:16px}
   .card{background:#121822;border:1px solid #1c2532;border-radius:12px;padding:12px}
-  input,button{border-radius:10px;border:1px solid #223042;background:#0d1520;color:#e9f1f7}
-  input{padding:10px;width:100%}
+  input,button,select{border-radius:10px;border:1px solid #223042;background:#0d1520;color:#e9f1f7}
+  input,select{padding:10px;width:100%}
   input[type="password"]{letter-spacing:0.08em}
   button{padding:10px 14px;border:0;background:#6de1ff;color:#082433;font-weight:700;cursor:pointer}
   .btn{margin-left:8px}
   .row{display:grid;gap:10px}
+  .rowcols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .small{font-size:12px}
+  .pill{font:11px;padding:4px 8px;border-radius:999px;background:#0d1520;border:1px solid #223042}
   .log{font:12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;white-space:pre-wrap;height:360px;overflow:auto;background:#0d1520;border-radius:10px;border:1px solid #223042;padding:10px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}
-  dt{color:#9ab0c0}
-  .switch{display:flex;align-items:center;gap:8px}
-  .small{font-size:12px}
-  .rowcols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .inline{display:flex;gap:8px;align-items:center}
-  .pill{font:11px;padding:4px 8px;border-radius:999px;background:#0d1520;border:1px solid #223042}
+  label{font-size:12px;color:#9ab0c0}
 </style>
 </head>
 <body>
@@ -43,7 +41,7 @@
     <!-- LEFT -->
     <section class="card">
       <div class="row" style="gap:8px">
-        <label class="muted small">API Base</label>
+        <label>API Base</label>
         <input id="base" placeholder="https://YOUR.code.run/api">
         <div class="rowcols">
           <button id="save">Save</button>
@@ -53,10 +51,16 @@
 
       <div class="row" style="gap:8px;margin-top:14px">
         <div class="inline">
-          <label class="muted small">Admin key</label>
-          <span class="pill muted small">sent as <code>x-admin-key</code></span>
+          <label>Admin auth</label>
+          <span class="pill muted small">sent as <code id="hdrLabel">x-admin-key</code></span>
         </div>
-        <input id="adminKey" type="password" placeholder="paste your admin key">
+        <div class="rowcols">
+          <select id="adminHeader">
+            <option value="x-admin-key">x-admin-key</option>
+            <option value="x-admin-token">x-admin-token</option>
+          </select>
+          <input id="adminKey" type="password" placeholder="paste your admin key">
+        </div>
         <div class="rowcols">
           <button id="saveKey">Save key</button>
           <button id="clearKey" class="btn">Clear</button>
@@ -64,20 +68,40 @@
       </div>
 
       <div class="row" style="margin-top:16px">
-        <label class="muted small">Find buyers</label>
+        <label>Find buyers</label>
         <input id="host" placeholder="yourcompany.com">
         <input id="city" placeholder="e.g., San Diego">
+
+        <div class="rowcols">
+          <div>
+            <label>Company size</label>
+            <select id="sizePref">
+              <option value="small" selected>Small (Tier C)</option>
+              <option value="medium">Medium (Tier B)</option>
+              <option value="large">Large (Tier A)</option>
+            </select>
+          </div>
+          <div>
+            <label>Min band</label>
+            <select id="minBand">
+              <option value="COOL" selected>COOL (allow all)</option>
+              <option value="WARM">WARM</option>
+              <option value="HOT">HOT</option>
+            </select>
+          </div>
+        </div>
+
         <button id="find" class="btn">Find buyers</button>
       </div>
 
       <div class="row" style="margin-top:16px">
-        <label class="muted small">Prefs</label>
+        <label>Prefs</label>
         <button id="applyPrefs">Apply demo prefs</button>
         <div class="muted small">Upserts prefs for the Host above (requires admin key).</div>
       </div>
 
       <div class="row" style="margin-top:16px">
-        <label class="muted small">Events</label>
+        <label>Events</label>
         <div class="rowcols">
           <button id="evStats">Stats (snapshot)</button>
           <button id="evRecent" class="btn">Recent (50)</button>
@@ -128,27 +152,45 @@
 
 <script>
 (function(){
-  const $ = (s)=>document.querySelector(s);
+  const $  = (s)=>document.querySelector(s);
   const logEl = $("#log");
+  const sseNote = $("#sseNote");
   const healthDl = $("#healthDl");
   const eventsDl = $("#eventsDl");
-  const sseNote = $("#sseNote");
 
-  // ---- Base & Admin key ----
+  // ---- Local storage helpers ----
   const DEFAULT_BASE = (location.origin + "/api");
-  function getBase(){ return (localStorage.getItem("apiBase") || DEFAULT_BASE).trim().replace(/\/+$/,""); }
-  function setBase(v){ const val=(v||"").trim().replace(/\/+$/,""); localStorage.setItem("apiBase",val); $("#base").value=val; }
-  function getKey(){ return (localStorage.getItem("adminKey") || "").trim(); }
-  function setKey(v){ localStorage.setItem("adminKey",(v||"").trim()); $("#adminKey").value=(v||"").trim(); }
-  $("#base").value = getBase(); $("#adminKey").value = getKey();
+  const LS = {
+    base:        "apiBase",
+    adminKey:    "adminKey",
+    adminHeader: "adminHeader"
+  };
+  function getBase(){ return (localStorage.getItem(LS.base) || DEFAULT_BASE).trim().replace(/\/+$/,""); }
+  function setBase(v){ const val=(v||"").trim().replace(/\/+$/,""); localStorage.setItem(LS.base,val); $("#base").value=val; }
+  function getKey(){ return (localStorage.getItem(LS.adminKey) || "").trim(); }
+  function setKey(v){ localStorage.setItem(LS.adminKey,(v||"").trim()); $("#adminKey").value=(v||"").trim(); }
+  function getHeader(){ return (localStorage.getItem(LS.adminHeader) || "x-admin-key").trim(); }
+  function setHeader(v){ localStorage.setItem(LS.adminHeader,(v||"x-admin-key").trim()); $("#adminHeader").value=getHeader(); $("#hdrLabel").textContent=getHeader(); }
 
-  // ---- helpers ----
+  // Init inputs
+  $("#base").value = getBase();
+  $("#adminKey").value = getKey();
+  $("#adminHeader").value = getHeader();
+  $("#hdrLabel").textContent = getHeader();
+
+  // ---- UI utils ----
   function say(s){
     const t = `[${new Date().toTimeString().slice(0,8)}] ${s}\n`;
     logEl.textContent += t;
     logEl.scrollTop = logEl.scrollHeight;
   }
-  function adminHeaders(){ const h={"Content-Type":"application/json"}; const k=getKey(); if(k)(h)["x-admin-key"]=k; return h; }
+  function adminHeaders(){
+    const h = {"Content-Type":"application/json"};
+    const k = getKey();
+    const n = getHeader();
+    if (k) h[n] = k;
+    return h;
+  }
   async function hit(method, path, body, withKey=false){
     const url = getBase() + path;
     const init = { method, headers: withKey ? adminHeaders() : { "Content-Type":"application/json" } };
@@ -181,53 +223,66 @@
   // ---- SSE ----
   let es = null;
   let lastTs = 0;
-  function streamUrl(){
-    const base = getBase();
-    return `${base}/events/stream?since=${lastTs||0}`;
-    // (base is ".../api")
-  }
+  function streamUrl(){ return `${getBase()}/events/stream?since=${lastTs||0}`; }
   function startStream(){
     try { stopStream(); } catch {}
     const url = streamUrl();
     es = new EventSource(url, { withCredentials:false });
     sseNote.textContent = "connecting…";
-    es.addEventListener("ping", (ev)=>{ sseNote.textContent = "connected"; });
+    es.addEventListener("ping", ()=>{ sseNote.textContent = "connected"; });
     es.addEventListener("event", (ev)=>{
       try{
         const data = JSON.parse(ev.data);
         lastTs = Math.max(lastTs, Number(data.ts||0));
         say(`EVENT ${data.type || "-"} :: ${data.path || ""} :: ${data.user || ""}`);
-      }catch(e){ /* ignore */ }
+      }catch{}
     });
-    es.onerror = ()=>{
-      sseNote.textContent = "reconnecting…";
-      // Let EventSource auto-retry; if the server bounces for long, we’ll show this label.
-    };
+    es.onerror = ()=>{ sseNote.textContent = "reconnecting…"; };
     es.onopen = ()=>{ sseNote.textContent = "connected"; };
   }
-  function stopStream(){
-    if (es) try { es.close(); } catch {}
-    es = null; sseNote.textContent = "stopped";
-  }
+  function stopStream(){ if (es) try{es.close();}catch{} es=null; sseNote.textContent="stopped"; }
 
-  // ---- UI actions ----
-  $("#save").onclick = ()=>{ setBase($("#base").value); say("API base saved."); };
-  $("#test").onclick = async ()=>{ const r=await hit("GET","/ping"); say(`Test: /ping -> ${r.status}`); };
-  $("#saveKey").onclick = ()=>{ setKey($("#adminKey").value); say("Admin key saved locally."); };
-  $("#clearKey").onclick = ()=>{ setKey(""); say("Admin key cleared."); };
+  // ---- Find buyers wiring (tiers / prefer / minBand) ----
+  const SIZE_TO_TIER = { small:"C", medium:"B", large:"A", s:"C", m:"B", l:"A" };
 
-  $("#btnPing").onclick = async ()=>{ const r=await hit("GET","/ping"); say(`Ping -> ${r.status}`); };
-  $("#btnHealth").onclick = async ()=>{ const r=await hit("GET","/health"); say(`Health -> ${r.status}`); if(r.ok&&r.data) setHealth(r.data); };
-  $("#btnReload").onclick = async ()=>{ const r=await hit("POST","/catalog/reload",{}, true); say(`Reload -> ${r.status}`); if(!r.ok&&r.data) say(JSON.stringify(r.data,null,2)); };
-
-  $("#find").onclick = async ()=>{
+  function buildFindUrl(){
     const host = ($("#host").value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
     const city = ($("#city").value||"").trim();
-    if(!host){ say("Find: missing host"); return; }
-    const q = new URLSearchParams({ host }); if(city) q.set("city",city);
-    const r = await hit("GET","/leads/find-buyers?"+q.toString());
-    say(`Find buyers -> ${r.status}`);
-    if (r.ok) say(JSON.stringify(r.data, null, 2));
+    const size = ($("#sizePref").value||"small").toLowerCase();
+    const minBand = ($("#minBand").value||"COOL").toUpperCase();
+
+    const preferTier = SIZE_TO_TIER[size] || "C";
+    const tiers = preferTier; // hard filter to chosen size
+
+    const u = new URL(`${getBase()}/leads/find-buyers`);
+    if (host) u.searchParams.set("host", host);
+    if (city) u.searchParams.set("city", city);
+    u.searchParams.set("tiers", tiers);
+    u.searchParams.set("preferTier", preferTier);
+    u.searchParams.set("minBand", minBand);
+    return u.toString();
+  }
+
+  // ---- Actions ----
+  $("#save").onclick    = ()=>{ setBase($("#base").value); say("API base saved."); };
+  $("#test").onclick    = async()=>{ const r=await hit("GET","/ping"); say(`Test: /ping -> ${r.status}`); };
+
+  $("#adminHeader").onchange = ()=> setHeader($("#adminHeader").value);
+  $("#saveKey").onclick = ()=>{ setHeader($("#adminHeader").value); setKey($("#adminKey").value); say("Admin header+key saved locally."); };
+  $("#clearKey").onclick= ()=>{ setKey(""); say("Admin key cleared."); };
+
+  $("#btnPing").onclick   = async()=>{ const r=await hit("GET","/ping"); say(`Ping -> ${r.status}`); };
+  $("#btnHealth").onclick = async()=>{ const r=await hit("GET","/health"); say(`Health -> ${r.status}`); if(r.ok&&r.data) setHealth(r.data); };
+  $("#btnReload").onclick = async()=>{ const r=await hit("POST","/catalog/reload",{}, true); say(`Reload -> ${r.status}`); if(!r.ok&&r.data) say(JSON.stringify(r.data,null,2)); };
+
+  $("#find").onclick = async ()=>{
+    const url = buildFindUrl();
+    const r = await fetch(url, { headers: adminHeaders() });
+    let data=null,status=0,ok=false;
+    try{ const rr = await r.json(); data=rr; status=r.status; ok=r.ok; } catch{ status=r.status; ok=r.ok; }
+    say(`Find buyers -> ${status}`);
+    if (ok && data) say(JSON.stringify(data,null,2));
+    else if (!ok) say("Find buyers failed.");
   };
 
   $("#applyPrefs").onclick = async ()=>{
@@ -247,20 +302,20 @@
     if (!r.ok && r.data) say(JSON.stringify(r.data,null,2));
   };
 
-  $("#evStats").onclick = async ()=>{ const r=await hit("GET","/events/stats"); say(`Events: stats -> ${r.status}`); if(r.ok){ setEvents(r.data); say(JSON.stringify(r.data,null,2)); } };
-  $("#evRecent").onclick = async ()=>{ const r=await hit("GET","/events/recent?limit=50"); say(`Events: recent(50) -> ${r.status}`); if(r.ok) say(JSON.stringify(r.data,null,2)); };
-  $("#evStart").onclick = ()=>{ startStream(); say("SSE: start"); };
-  $("#evStop").onclick = ()=>{ stopStream(); say("SSE: stop"); };
-  $("#evTest2").onclick = async ()=>{ const r=await hit("POST","/events/ingest",{type:"test_event",path:"/admin-live",meta:{from:"live"}}); say(`Events: ingest -> ${r.status}`); };
+  $("#evStats").onclick  = async()=>{ const r=await hit("GET","/events/stats", null, true); say(`Events: stats -> ${r.status}`); if(r.ok){ setEvents(r.data); say(JSON.stringify(r.data,null,2)); } };
+  $("#evRecent").onclick = async()=>{ const r=await hit("GET","/events/recent?limit=50", null, true); say(`Events: recent(50) -> ${r.status}`); if(r.ok) say(JSON.stringify(r.data,null,2)); };
+  $("#evStart").onclick  = ()=>{ startStream(); say("SSE: start"); };
+  $("#evStop").onclick   = ()=>{ stopStream(); say("SSE: stop"); };
+  $("#evTest2").onclick  = async()=>{ const r=await hit("POST","/events/ingest",{type:"test_event",user:"admin",data:{hello:"world"}}, true); say(`Events: ingest -> ${r.status}`); };
   $("#evExport").onclick = ()=>{ window.open(getBase()+"/audit/export.csv?limit=2000","_blank"); };
 
-  // initial health + events poll
+  // initial health + events poll + stream
   (async ()=>{
     const h = await hit("GET","/health");
     if (h.ok) { setHealth(h.data); say(`Health -> ${h.status}`); }
-    const e = await hit("GET","/events/stats");
+    const e = await hit("GET","/events/stats", null, true);
     if (e.ok) setEvents(e.data);
-    startStream(); // auto-connect
+    startStream();
   })();
 })();
 </script>
