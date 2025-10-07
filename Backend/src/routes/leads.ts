@@ -1,17 +1,15 @@
 // src/routes/leads.ts
 //
-// Web-first buyer discovery (uses shared/sources.ts) with per-request tier + band control.
+// Artemis B v1 — Buyer discovery (CJS-safe) with per-request tier + band control.
 // Query params:
-//   - host=acme.com                 (required)
-//   - city=San Diego                (optional locality hint)
-//   - limit=12
-//   - tiers=A,B,C                   hard allow-list (intersected with env ALLOW_TIERS)
-//   - size=small|medium|large       alias for tiers=C|B|A
-//   - preferTier=A|B|C              small boost toward a tier
-//   - preferSize=small|medium|large alias for preferTier
-//   - minBand=COOL|WARM|HOT         include results at/above this band
-//   - band=HOT_ONLY|WARM_ONLY|COOL_ONLY       exact single band
-//   - bands=HOT,WARM (comma list)             exact multi-band
+//   - tiers=A,B,C
+//   - size=small|medium|large   (alias for tiers=C|B|A)
+//   - preferTier=A|B|C
+//   - preferSize=small|medium|large
+//   - minBand=COOL|WARM|HOT     (default COOL if prefer C/small else WARM)
+//
+// GET /api/leads/ping
+// GET /api/leads/find-buyers?host=acme.com[&city=&tags=&sectors=&minTier=&limit=]
 //
 // Emits a tiny event to /api/events/ingest so Admin "Recent (50)" shows activity.
 
@@ -19,17 +17,41 @@
 
 import { Router, type Request, type Response } from "express";
 import { CFG, capResults } from "../shared/env";
+import * as CatalogMod from "../shared/catalog";
 import * as Prefs from "../shared/prefs";
 import * as TRC from "../shared/trc";
-import { findBuyersFromWeb, type Candidate as WebCand } from "../shared/sources";
+
+const Catalog: any = (CatalogMod as any)?.default ?? (CatalogMod as any);
+const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 
 const r = Router();
-const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 
 /* --------------------------------- types ---------------------------------- */
 
-type Tier = "A" | "B" | "C";
+type Candidate = {
+  host: string;
+  name?: string;
+  company?: string;
+  city?: string;
+  url?: string;
+  tier?: "A" | "B" | "C";
+  tiers?: Array<"A" | "B" | "C">;
+  tags?: string[];
+  segments?: string[];
+  [k: string]: any;
+};
+
 type Band = "HOT" | "WARM" | "COOL";
+
+type Scored = Candidate & {
+  score: number;
+  band: Band;
+  uncertainty: number;
+  reasons: string[];
+  tier: "A" | "B" | "C";
+  url: string;
+  name: string;
+};
 
 /* -------------------------------- helpers --------------------------------- */
 
@@ -40,6 +62,21 @@ function uniqLower(arr: unknown): string[] {
     if (s) set.add(s);
   }
   return [...set];
+}
+
+function getCatalogRows(): Candidate[] {
+  if (typeof Catalog?.get === "function") return Catalog.get();
+  if (typeof Catalog?.rows === "function") return Catalog.rows();
+  if (Array.isArray(Catalog?.rows)) return Catalog.rows as Candidate[];
+  if (Array.isArray(Catalog?.catalog)) return Catalog.catalog as Candidate[];
+  if (typeof Catalog?.all === "function") return Catalog.all();
+  return [];
+}
+
+function getTier(c: Candidate): "A" | "B" | "C" {
+  if (c.tier === "A" || c.tier === "B" || c.tier === "C") return c.tier;
+  const t = (Array.isArray(c.tiers) ? c.tiers[0] : undefined) as any;
+  return t === "A" || t === "B" ? t : "C";
 }
 
 function cityBoost(city?: string, candidateCity?: string): number {
@@ -57,25 +94,18 @@ function prettyHostName(h: string): string {
   return stem.replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-function getTier(c: { tier?: Tier; tiers?: Tier[] }): Tier {
-  if (c.tier === "A" || c.tier === "B" || c.tier === "C") return c.tier;
-  const t = (Array.isArray(c.tiers) ? c.tiers[0] : undefined) as any;
-  return t === "A" || t === "B" ? t : "C";
-}
-
 const HOT_T  = Number((TRC as any)?.HOT_MIN  ?? 80);
 const WARM_T = Number((TRC as any)?.WARM_MIN ?? 55);
 
 function bandFromScore(score: number): Band {
   if (typeof (TRC as any)?.classifyScore === "function") {
-    try { return (TRC as any).classifyScore(score); } catch { /* noop */ }
+    try { return (TRC as any).classifyScore(score) as Band; } catch { /* noop */ }
   }
   if (score >= HOT_T) return "HOT";
   if (score >= WARM_T) return "WARM";
   return "COOL";
 }
 
-// Uncertainty ~ distance to band boundary (0..1, higher = shakier)
 function uncertainty(score: number): number {
   const d = Math.min(Math.abs(score - HOT_T), Math.abs(score - WARM_T));
   const u = Math.max(0, 1 - d / 10);
@@ -96,27 +126,27 @@ async function emit(kind: string, data: any) {
 
 /* -------- request-tier parsing (tiers/size + preferTier/preferSize) -------- */
 
-const SIZE_TO_TIER: Record<string, Tier> = {
+const SIZE_TO_TIER: Record<string, "A"|"B"|"C"> = {
   large: "A", l: "A",
   medium: "B", m: "B",
   small: "C", s: "C"
 };
 
 function parseTiersParam(req: Request): {
-  allow: Set<Tier>;
-  prefer?: Tier;
+  allow: Set<"A"|"B"|"C">;
+  prefer?: "A"|"B"|"C";
   preferWasSmall: boolean;
 } {
-  const envAllow = new Set<Tier>(Array.from(CFG.allowTiers ?? new Set(["A","B","C"])) as any);
+  const envAllow = new Set<"A"|"B"|"C">(Array.from(CFG.allowTiers ?? new Set(["A","B","C"])) as any);
 
   const tiersQ = String(req.query.tiers || "").trim();
   const sizeQ  = String(req.query.size  || "").trim().toLowerCase();
-  let hardAllow: Set<Tier> | null = null;
+  let hardAllow: Set<"A"|"B"|"C"> | null = null;
 
   if (tiersQ) {
-    const set = new Set<Tier>();
+    const set = new Set<"A"|"B"|"C">();
     for (const t of tiersQ.split(",").map(s => s.trim().toUpperCase())) {
-      if (t === "A" || t === "B" || t === "C") set.add(t as Tier);
+      if (t === "A" || t === "B" || t === "C") set.add(t);
     }
     if (set.size) hardAllow = set;
   } else if (sizeQ) {
@@ -125,16 +155,16 @@ function parseTiersParam(req: Request): {
   }
 
   const allow = hardAllow
-    ? new Set<Tier>([...hardAllow].filter(t => envAllow.has(t)))
+    ? new Set<"A"|"B"|"C">([...hardAllow].filter(t => envAllow.has(t)))
     : envAllow;
 
-  // prefer: preferTier= or preferSize=
   const preferT = String(req.query.preferTier || "").trim().toUpperCase();
   const preferS = String(req.query.preferSize || "").trim().toLowerCase();
-  let prefer: Tier | undefined;
+  let prefer: "A"|"B"|"C" | undefined;
   let preferWasSmall = false;
+
   if (preferT === "A" || preferT === "B" || preferT === "C") {
-    prefer = preferT as Tier;
+    prefer = preferT as any;
     preferWasSmall = prefer === "C";
   } else if (preferS && SIZE_TO_TIER[preferS]) {
     prefer = SIZE_TO_TIER[preferS];
@@ -144,31 +174,9 @@ function parseTiersParam(req: Request): {
   return { allow, prefer, preferWasSmall };
 }
 
-/* ----------------------- band selection parsing ---------------------- */
-
-function bandSelector(req: Request): { mode: "min" | "exact" | "multi"; min?: Band; set?: Set<Band> } {
-  const band = String(req.query.band || "").trim().toUpperCase();
-  const bands = String(req.query.bands || "").trim().toUpperCase();
-  const mb = String(req.query.minBand || req.query.bandMin || "").trim().toUpperCase();
-
-  if (band.endsWith("_ONLY")) {
-    const b = band.replace("_ONLY","") as Band;
-    if (b === "HOT" || b === "WARM" || b === "COOL") return { mode:"exact", set:new Set<Band>([b]) };
-  }
-  if (bands) {
-    const s = new Set<Band>();
-    for (const x of bands.split(",").map(v => v.trim())) {
-      if (x === "HOT" || x === "WARM" || x === "COOL") s.add(x as Band);
-    }
-    if (s.size) return { mode:"multi", set:s };
-  }
-  if (mb === "HOT" || mb === "WARM" || mb === "COOL") return { mode:"min", min: mb as Band };
-  return { mode:"min", min:"WARM" }; // sensible default
-}
-
 /* ---------------------------- scoring (fallback) --------------------------- */
 
-function safeScoreRow(row: WebCand, prefs: any, city?: string) {
+function safeScoreRow(row: Candidate, prefs: any, city?: string) {
   if (typeof (TRC as any)?.scoreRow === "function") {
     try {
       const out = (TRC as any).scoreRow(row, prefs, city);
@@ -179,19 +187,33 @@ function safeScoreRow(row: WebCand, prefs: any, city?: string) {
   let score = 50;
   const reasons: string[] = [];
 
-  // Locality
-  const loc = cityBoost(city || (prefs?.city as string), (row as any).city);
+  const loc = cityBoost(city || (prefs?.city as string), row.city);
   if (loc) { score += loc * 100; reasons.push(`local+${(loc * 100) | 0}`); }
 
-  // Contactability: website present
-  if ((row as any).url) { score += 12; reasons.push("has_site"); }
-
-  // Tag/category overlap (row.tags vs prefs.categoriesAllow)
   const want = new Set<string>(uniqLower(prefs?.categoriesAllow || []));
   if (want.size) {
-    const have = new Set<string>(uniqLower((row as any).tags || []));
+    const have = new Set<string>([
+      ...uniqLower(row.tags || []),
+      ...uniqLower(row.segments || []),
+    ]);
     let hits = 0; want.forEach((t) => { if (have.has(t)) hits++; });
     if (hits) { score += Math.min(15, hits * 5); reasons.push(`tags+${hits}`); }
+  }
+
+  const sw = prefs?.sizeWeight || {};
+  if (typeof sw === "object") {
+    const sz = String(row?.size || "").toLowerCase();
+    const w =
+      sz === "micro" ? Number(sw.micro ?? 0) :
+      sz === "small" ? Number(sw.small ?? 0) :
+      sz === "mid"   ? Number(sw.mid   ?? 0) :
+      sz === "large" ? Number(sw.large ?? 0) : 0;
+    if (w) { score += Math.max(-12, Math.min(12, w * 4)); reasons.push(`size:${sz || "?"}`); }
+  }
+  const sig = prefs?.signalWeight || {};
+  if (sig && (sig.ecommerce || sig.retail || sig.wholesale)) {
+    score += Math.min(6, (Number(sig.ecommerce||0) + Number(sig.retail||0) + Number(sig.wholesale||0)) * 2);
+    reasons.push("signals");
   }
 
   score = Math.max(0, Math.min(100, score));
@@ -208,26 +230,29 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
     const host = String(req.query.host || req.query.domain || "").trim().toLowerCase();
     if (!host) return res.status(400).json({ ok: false, error: "host_required" });
 
-    const cityQ = String(req.query.city || "").trim() || undefined;
-    const minTier = String(req.query.minTier || "").trim().toUpperCase() as Tier | "";
+    const cityQ = String(req.query.city || "").trim();
+    const minTier = String(req.query.minTier || "").trim().toUpperCase() as "A" | "B" | "C" | "";
     const limitQ = Number(req.query.limit ?? 0);
 
-    // Per-request tiers + band selection
+    // Per-request tier controls
     const { allow: allowTiers, prefer: preferTier, preferWasSmall } = parseTiersParam(req);
-    const bandSel = (() => {
-      const sel = bandSelector(req);
-      // If user preferred small (C) and provided no band at all, allow COOL by default
-      if (sel.mode === "min" && !req.query.minBand && !req.query.band && !req.query.bands) {
-        return { mode: "min" as const, min: preferWasSmall ? "COOL" : (sel.min || "WARM") };
-      }
-      return sel;
-    })();
+
+    // minBand (default COOL if preferring small/C, else WARM)
+    const rawMinBand = String(req.query.minBand || req.query.bandMin || "").trim().toUpperCase();
+    const minBand: Band =
+      rawMinBand === "HOT" ? "HOT" :
+      rawMinBand === "WARM" ? "WARM" :
+      rawMinBand === "COOL" ? "COOL" :
+      (preferWasSmall ? "COOL" : "WARM");
+
+    const bandOrder: Record<Band, number> = { HOT: 3, WARM: 2, COOL: 1 };
 
     // Overlays
     const tagsQ    = uniqLower(String(req.query.tags || "").split(","));
     const sectorsQ = uniqLower(String(req.query.sectors || "").split(","));
+    const overlayTags = [...new Set<string>([...tagsQ, ...sectorsQ])];
 
-    // Cap by plan
+    // Result cap (by plan)
     const cap = capResults("free", limitQ);
 
     // Effective prefs
@@ -239,22 +264,15 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
 
     const mergedPrefs = {
       ...basePrefs,
-      city: cityQ || (basePrefs.city || "").trim(),
-      categoriesAllow: [...new Set<string>([...(basePrefs.categoriesAllow || []), ...tagsQ, ...sectorsQ])],
+      city: (cityQ || basePrefs.city || "").trim(),
+      categoriesAllow: [...new Set<string>([...(basePrefs.categoriesAllow || []), ...overlayTags])],
     };
 
-    // Pull real candidates from the web
-    const sizeQ = String(req.query.size || "").trim().toLowerCase() || undefined;
-    const web = await findBuyersFromWeb({
-      hostSeed: host,
-      city: mergedPrefs.city || undefined,
-      size: sizeQ as any,
-      limit: Math.max(10, cap || 30) // fetch a bit more than we’ll return
-    });
+    const rows: Candidate[] = getCatalogRows();
 
     // Filter by allowed tiers + optional minTier
-    const filtered = web.filter((c) => {
-      const t = getTier(c as any);
+    const filtered = rows.filter((c) => {
+      const t = getTier(c);
       if (!allowTiers.has(t)) return false;
       if (minTier === "A" && t !== "A") return false;
       if (minTier === "B" && t === "C") return false;
@@ -262,48 +280,47 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
     });
 
     // Score (+ optional preferTier boost)
-    const scored = filtered.map((c) => {
+    const scored: Scored[] = filtered.map<Scored>((c) => {
       let { score, reasons } = safeScoreRow(c, mergedPrefs, mergedPrefs.city);
-      const t = getTier(c as any);
+      const t = getTier(c);
       if (preferTier && t === preferTier) { score += 8; reasons = [...reasons, `prefer:${t}`]; }
-      const band = bandFromScore(score);
+      const band: Band = bandFromScore(score);
       const u = uncertainty(score);
-      const name = (c as any).name || prettyHostName((c as any).host);
-      const url = (c as any).url || `https://${(c as any).host}`;
+      const name = (c.name || c.company || prettyHostName(c.host)) as string;
+      const url = (c.url || `https://${c.host}`) as string;
       const tier = t;
-      return { ...(c as any), name, url, tier, score, band, uncertainty: u, reasons: (reasons || []).slice(0, 12) };
+      const trimmedReasons = Array.isArray(reasons) ? reasons.slice(0, 12) : [];
+      return { ...c, host: c.host, name, city: c.city, tier, url, score, band, uncertainty: u, reasons: trimmedReasons };
     });
 
-    // Apply band selection
-    let items = scored;
-    if (bandSel.mode === "min") {
-      const floor = bandSel.min || "WARM";
-      const val = { HOT: 3, WARM: 2, COOL: 1 } as const;
-      items = items.filter(x => val[x.band] >= val[floor]);
-    } else {
-      const want = bandSel.set || new Set<Band>(["HOT","WARM","COOL"]);
-      items = items.filter(x => want.has(x.band));
-    }
+    // Keep at/above minBand
+    const kept: Scored[] = scored.filter((x) => bandOrder[x.band] >= bandOrder[minBand]);
 
-    // Sort HOT→WARM→COOL by score; then cap
-    const hot  = items.filter(x => x.band === "HOT").sort((a,b)=>b.score-a.score);
-    const warm = items.filter(x => x.band === "WARM").sort((a,b)=>b.score-a.score);
-    const cool = items.filter(x => x.band === "COOL").sort((a,b)=>b.score-a.score);
-    items = [...hot, ...warm, ...cool];
+    // Sort HOT→WARM→COOL by score
+    const hot  = kept.filter((x) => x.band === "HOT").sort((a, b) => b.score - a.score);
+    const warm = kept.filter((x) => x.band === "WARM").sort((a, b) => b.score - a.score);
+    const cool = kept.filter((x) => x.band === "COOL").sort((a, b) => b.score - a.score);
+    let items: Scored[] = [...hot, ...warm, ...cool];
 
     const totalBeforeCap = items.length;
     if (cap > 0) items = items.slice(0, cap);
 
-    // Enrich a couple uncertain via local classifier (optional)
+    // Enrich a couple uncertain
     const MAX_ESCALATE = 2;
-    const targets = [...items].filter(x => x.uncertainty >= 0.6).sort((a,b)=>b.uncertainty-a.uncertainty).slice(0, MAX_ESCALATE);
+    const targets = [...items]
+      .filter((x) => x.uncertainty >= 0.6)
+      .sort((a, b) => b.uncertainty - a.uncertainty)
+      .slice(0, MAX_ESCALATE);
+
     for (const t of targets) {
       try {
         const url = `http://127.0.0.1:${CFG.port}/api/classify?host=${encodeURIComponent(t.host)}`;
         const res2 = await F(url, { redirect: "follow" });
         if (res2?.ok) {
           const data = await res2.json();
-          if (data?.evidence?.length) t.reasons = [...t.reasons, ...data.evidence.map((e: string)=>`classify:${e}`)].slice(0, 12);
+          if (data?.evidence?.length) {
+            t.reasons = [...t.reasons, ...data.evidence.map((e: string)=>`classify:${e}`)].slice(0, 12);
+          }
           if (data?.role) t.reasons.push(`role:${data.role}@${(data.confidence ?? 0).toFixed(2)}`);
         }
       } catch {}
@@ -321,12 +338,14 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       minTier: minTier || null,
       tiersApplied: Array.from(allowTiers),
       preferTier: preferTier || null,
-      minBandApplied: bandSel.mode === "min" ? (bandSel.min || null) : null,
-      bandsApplied: bandSel.mode !== "min" ? Array.from(bandSel.set || []) : null,
+      minBandApplied: minBand,
+      overlays: { tags: overlayTags.slice(0, 12) },
       ms: Date.now() - t0,
     };
 
+    // Emit event for Admin "Recent (50)"
     emit("find_buyers", { host, ...summary }).catch(() => {});
+
     return res.json({ ok: true, items, summary });
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
