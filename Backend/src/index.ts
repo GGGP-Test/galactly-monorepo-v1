@@ -9,7 +9,7 @@ import fs from "fs";
 import { CFG } from "./shared/env";
 import { loadCatalog, type BuyerRow } from "./shared/catalog";
 
-// Routers
+// Routers (hard imports)
 import LeadsRouter from "./routes/leads";
 import ClassifyRouter from "./routes/classify";
 import PrefsRouter from "./routes/prefs";
@@ -18,6 +18,12 @@ import AuditRouter from "./routes/audit";
 import EventsRouter from "./routes/events";
 import ScoresRouter from "./routes/scores";
 import AdsRouter from "./routes/ads"; // ok if file exists
+
+// Optional: web-first leads finder (safe if file missing)
+function safeRequire(p: string): any {
+  try { return require(p); } catch { return null; }
+}
+const LeadsWebRouter = safeRequire("./routes/leads-web")?.default;
 
 const app = express();
 const startedAt = Date.now();
@@ -36,9 +42,6 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "1mb" }));
 
 // --- optional plan flags boot (safe if file missing) ---
-function safeRequire(p: string): any {
-  try { return require(p); } catch { return null; }
-}
 const planFlags = safeRequire("./shared/plan-flags");
 if (planFlags?.loadPlanStoreFromFile) {
   try { planFlags.loadPlanStoreFromFile(); } catch {}
@@ -95,6 +98,7 @@ app.get("/healthz", (_req, res) => {
 
 // --- routers ---
 app.use("/api/leads", LeadsRouter);
+if (LeadsWebRouter) app.use("/api/web", LeadsWebRouter); // NEW: web-first route
 app.use("/api/classify", ClassifyRouter);
 app.use("/api/prefs", PrefsRouter);
 app.use("/api/catalog", CatalogRouter);
@@ -111,7 +115,7 @@ try {
   }
 } catch { /* ignore */ }
 
-// --- optional: serve Docs/ (for local dev only; prod GH Pages serves from /docs) ---
+// --- optional: serve Docs/ (local dev; prod GH Pages serves from /docs) ---
 try {
   const docsDir = path.join(__dirname, "..", "docs");
   if (fs.existsSync(docsDir)) {
