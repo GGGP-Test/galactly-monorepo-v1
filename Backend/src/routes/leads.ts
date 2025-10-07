@@ -1,34 +1,31 @@
 // src/routes/leads.ts
 //
-// Artemis B v1 — Buyer discovery (CJS-safe)
-//
-// Routes:
-//   GET  /api/leads/ping
-//   GET  /api/leads/find           (NEW-compatible with batch importer)
-//   POST /api/leads/find           (NEW)
-//   GET  /api/leads/find-buyers    (your advanced finder)
-//
-// Change in this version:
-//   - Auto-emit an event to /api/events/put for each successful find,
-//     so Admin Dashboard → Recent(50) shows activity.
-
- /* eslint-disable @typescript-eslint/no-explicit-any */
+// Artemis B v1 — Buyer discovery (CJS-safe) + event logging
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Router, type Request, type Response } from "express";
 import { CFG, capResults } from "../shared/env";
-
-// Static imports only (no import.meta / dynamic import)
 import * as CatalogMod from "../shared/catalog";
 import * as Prefs from "../shared/prefs";
 import * as TRC from "../shared/trc";
 
-// Normalize default vs named export from catalog.ts
 const Catalog: any = (CatalogMod as any)?.default ?? (CatalogMod as any);
-
-// Node 18+ global fetch (typed)
 const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
-
 const r = Router();
+
+/* ----------------------------- event logging ----------------------------- */
+
+const ADMIN_WRITE_KEY =
+  (process.env.ADMIN_TOKEN || process.env.ADMIN_API_KEY || process.env.ADMIN_KEY || "").trim();
+
+async function logEvent(kind: string, data: any) {
+  try {
+    const url = `http://127.0.0.1:${CFG.port}/api/events/put`;
+    const headers: any = { "content-type": "application/json" };
+    if (ADMIN_WRITE_KEY) headers["x-admin-key"] = ADMIN_WRITE_KEY;
+    await F(url, { method: "POST", headers, body: JSON.stringify({ kind, data }) });
+  } catch { /* ignore */ }
+}
 
 /* --------------------------------- types ---------------------------------- */
 
@@ -55,22 +52,19 @@ function uniqLower(arr: unknown): string[] {
   }
   return [...set];
 }
-
 function getCatalogRows(): Candidate[] {
-  if (typeof (Catalog as any)?.get === "function") return (Catalog as any).get();
-  if (typeof (Catalog as any)?.rows === "function") return (Catalog as any).rows();
-  if (Array.isArray((Catalog as any)?.rows)) return (Catalog as any).rows as Candidate[];
-  if (Array.isArray((Catalog as any)?.catalog)) return (Catalog as any).catalog as Candidate[];
-  if (typeof (Catalog as any)?.all === "function") return (Catalog as any).all();
+  if (typeof Catalog?.get === "function") return Catalog.get();
+  if (typeof Catalog?.rows === "function") return Catalog.rows();
+  if (Array.isArray(Catalog?.rows)) return Catalog.rows as Candidate[];
+  if (Array.isArray(Catalog?.catalog)) return Catalog.catalog as Candidate[];
+  if (typeof Catalog?.all === "function") return Catalog.all();
   return [];
 }
-
 function getTier(c: Candidate): "A" | "B" | "C" {
   if (c.tier === "A" || c.tier === "B" || c.tier === "C") return c.tier;
   const t = (Array.isArray(c.tiers) ? c.tiers[0] : undefined) as any;
   return t === "A" || t === "B" ? t : "C";
 }
-
 function cityBoost(city?: string, candidateCity?: string): number {
   if (!city || !candidateCity) return 0;
   const a = city.trim().toLowerCase();
@@ -80,7 +74,6 @@ function cityBoost(city?: string, candidateCity?: string): number {
   if (b.includes(a) || a.includes(b)) return 0.1;
   return 0;
 }
-
 function prettyHostName(h: string): string {
   const stem = String(h || "").replace(/^www\./, "").split(".")[0].replace(/[-_]/g, " ");
   return stem.replace(/\b\w/g, (m) => m.toUpperCase());
@@ -97,8 +90,6 @@ function bandFromScore(score: number): "HOT" | "WARM" | "COOL" {
   if (score >= WARM_T) return "WARM";
   return "COOL";
 }
-
-// Uncertainty ~ distance to band boundary (0..1, higher = shakier)
 function uncertainty(score: number): number {
   const d = Math.min(Math.abs(score - HOT_T), Math.abs(score - WARM_T));
   const u = Math.max(0, 1 - d / 10);
@@ -108,7 +99,6 @@ function uncertainty(score: number): number {
 /* ---------------------------- scoring (fallback) --------------------------- */
 
 function safeScoreRow(row: Candidate, prefs: any, city?: string) {
-  // Prefer TRC.scoreRow if present
   if (typeof (TRC as any)?.scoreRow === "function") {
     try {
       const out = (TRC as any).scoreRow(row, prefs, city);
@@ -116,15 +106,12 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
     } catch { /* ignore and fallback */ }
   }
 
-  // Minimal deterministic heuristic aligned with prefs.categoriesAllow
   let score = 50;
   const reasons: string[] = [];
 
-  // Locality
   const loc = cityBoost(city || (prefs?.city as string), row.city);
   if (loc) { score += loc * 100; reasons.push(`local+${(loc * 100) | 0}`); }
 
-  // Tag/category overlap
   const want = new Set<string>(uniqLower(prefs?.categoriesAllow || []));
   if (want.size) {
     const have = new Set<string>([
@@ -135,7 +122,6 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
     if (hits) { score += Math.min(15, hits * 5); reasons.push(`tags+${hits}`); }
   }
 
-  // Gentle size/signal nudges
   const sw = prefs?.sizeWeight || {};
   if (typeof sw === "object") {
     const sz = String(row?.size || "").toLowerCase();
@@ -171,132 +157,12 @@ async function classifyHost(host: string): Promise<{ role?: string; confidence?:
   }
 }
 
-/* -------------------------- event emission helper -------------------------- */
-
-const ADMIN_HEADER = "x-admin-key";
-const ADMIN_VALUE =
-  (process.env.ADMIN_TOKEN || process.env.ADMIN_API_KEY || process.env.ADMIN_KEY || "").trim();
-
-async function emitEvent(kind: string, data: any) {
-  try {
-    const url = `http://127.0.0.1:${CFG.port}/api/events/put`;
-    const headers: any = { "Content-Type": "application/json" };
-    if (ADMIN_VALUE) headers[ADMIN_HEADER] = ADMIN_VALUE;
-    await F(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ kind, at: new Date().toISOString(), data }),
-    }).catch(() => {});
-  } catch {
-    /* non-fatal */
-  }
-}
-
-/* ----------------------- /api/leads/find (NEW) ----------------------------- */
-
-function pickStr(...vals: (string | undefined)[]): string | undefined {
-  for (const v of vals) {
-    const t = (v || "").trim();
-    if (t) return t;
-  }
-  return undefined;
-}
-
-function toDomain(s?: string): string | undefined {
-  if (!s) return undefined;
-  let t = s.trim();
-  if (!t) return undefined;
-  try {
-    if (!/^https?:\/\//i.test(t)) t = "http://" + t;
-    const u = new URL(t);
-    return u.hostname.toLowerCase().replace(/^www\./, "");
-  } catch {
-    return t.replace(/^https?:\/\//i, "").replace(/^www\./, "").split("/")[0].toLowerCase();
-  }
-}
-
-function parseFindCommon(req: Request) {
-  const isGet = req.method === "GET";
-  const q = isGet ? req.query : (req.body || {});
-  const domain = toDomain(pickStr(String(q.domain || ""), String(q.host || ""), String(q.website || "")));
-  const company = pickStr(String(q.company || ""), String(q.name || ""));
-  const city = pickStr(String(q.city || ""));
-  const region = pickStr(String(q.region || ""), String(q.state || ""));
-  const country = pickStr(String(q.country || ""));
-  const max = Math.max(1, Math.min(200, Number(q.max ?? q.limit ?? 30)));
-  return { domain, company, city, region, country, max };
-}
-
-async function findBuyersCore(params: {
-  domain?: string;
-  company?: string;
-  city?: string;
-  region?: string;
-  country?: string;
-  max: number;
-}): Promise<Candidate[]> {
-  const rows: Candidate[] = getCatalogRows();
-
-  const filtered = rows.filter((c) => {
-    const t = getTier(c);
-    return CFG.allowTiers.has(t);
-  });
-
-  const prefs = { city: params.city };
-
-  const scored = filtered
-    .map((c) => {
-      const { score, reasons } = safeScoreRow(c, prefs, params.city);
-      const band = bandFromScore(score);
-      const name = c.name || c.company || prettyHostName(c.host);
-      const url = c.url || `https://${c.host}`;
-      const tier = getTier(c);
-      return { ...c, name, url, tier, score, band, reasons: reasons.slice(0, 12) };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, params.max);
-
-  return scored;
-}
-
-async function handleFind(req: Request, res: Response) {
-  try {
-    const { domain, company, city, region, country, max } = parseFindCommon(req);
-    const key = domain || company;
-    if (!key) return res.status(400).json({ ok: false, error: "domain_or_company_required" });
-
-    const items = await findBuyersCore({ domain, company, city, region, country, max });
-
-    // Emit an event for Admin Dashboard
-    emitEvent("leads.find", {
-      domain: domain || null,
-      company: company || null,
-      city: city || null,
-      returned: items.length,
-    }).catch(() => {});
-
-    res.json({
-      ok: true,
-      company: { domain, name: company || null, city: city || null, region: region || null, country: country || null },
-      items,
-      count: items.length,
-    });
-  } catch (err: any) {
-    res.status(200).json({ ok: false, error: "find_failed", detail: String(err?.message || err) });
-  }
-}
-
-// GET /api/leads/find?domain=acme.com&max=30
-r.get("/find", handleFind);
-
-// POST /api/leads/find { domain|host|website|company, max }
-r.post("/find", handleFind);
-
-/* --------------------------- existing route (adv) -------------------------- */
+/* --------------------------------- routes --------------------------------- */
 
 r.get("/ping", (_req: Request, res: Response) => res.json({ pong: true, at: new Date().toISOString() }));
 
 r.get("/find-buyers", async (req: Request, res: Response) => {
+  const started = Date.now();
   try {
     const host = String(req.query.host || "").trim().toLowerCase();
     if (!host) return res.status(400).json({ ok: false, error: "host_required" });
@@ -305,15 +171,12 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
     const minTier = String(req.query.minTier || "").trim().toUpperCase() as "A" | "B" | "C" | "";
     const limitQ = Number(req.query.limit ?? 0);
 
-    // Overlay tags from query (comma-separated)
     const tagsQ    = uniqLower(String(req.query.tags || "").split(","));
     const sectorsQ = uniqLower(String(req.query.sectors || "").split(","));
     const overlayTags = [...new Set<string>([...tagsQ, ...sectorsQ])];
 
-    // Cap results by plan
     const cap = capResults("free", limitQ);
 
-    // Load effective prefs and apply overlays
     const basePrefs =
       (typeof (Prefs as any).getEffective === "function" && (Prefs as any).getEffective(host)) ||
       (typeof (Prefs as any).getEffectivePrefs === "function" && (Prefs as any).getEffectivePrefs(host)) ||
@@ -326,10 +189,8 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       categoriesAllow: [...new Set<string>([...(basePrefs.categoriesAllow || []), ...overlayTags])],
     };
 
-    // Read catalog
     const rows: Candidate[] = getCatalogRows();
 
-    // Filter by allowed tiers + optional minTier
     const filtered = rows.filter((c) => {
       const t = getTier(c);
       if (!CFG.allowTiers.has(t)) return false;
@@ -338,7 +199,6 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       return true;
     });
 
-    // Score
     const scored = filtered.map((c) => {
       const { score, reasons } = safeScoreRow(c, mergedPrefs, mergedPrefs.city);
       const band = bandFromScore(score);
@@ -350,14 +210,12 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       return { ...c, host: c.host, name, city: c.city, tier, url, score, band, uncertainty: u, reasons: trimmedReasons };
     });
 
-    // Sort HOT then WARM, by score desc
     const hot = scored.filter((x) => x.band === "HOT").sort((a, b) => b.score - a.score);
     const warm = scored.filter((x) => x.band === "WARM").sort((a, b) => b.score - a.score);
     let items = [...hot, ...warm];
     const totalBeforeCap = items.length;
     if (cap > 0) items = items.slice(0, cap);
 
-    // Enrich a couple of the most uncertain within the returned slice
     const MAX_ESCALATE = 2;
     const targets = [...items]
       .filter((x) => x.uncertainty >= 0.6)
@@ -374,15 +232,7 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       }
     }
 
-    // Emit event for the advanced finder
-    emitEvent("leads.find-buyers", {
-      host,
-      city: mergedPrefs.city || null,
-      returned: Math.min(items.length, cap || items.length),
-      minTier: minTier || null,
-    }).catch(() => {});
-
-    return res.json({
+    const payload = {
       ok: true,
       items,
       summary: {
@@ -395,10 +245,17 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
         city: mergedPrefs.city || null,
         minTier: minTier || null,
         overlays: { tags: overlayTags.slice(0, 12) },
+        ms: Date.now() - started,
       },
-    });
+    };
+
+    // fire-and-forget event (doesn't block response)
+    void logEvent("find_buyers", { host, ...payload.summary });
+
+    return res.json(payload);
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
+    void logEvent("find_buyers_error", { detail: msg });
     return res.status(200).json({ ok: false, error: "find-buyers-failed", detail: msg });
   }
 });
