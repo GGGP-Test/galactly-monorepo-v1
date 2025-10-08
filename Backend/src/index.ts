@@ -11,14 +11,16 @@ import { loadCatalog, type BuyerRow } from "./shared/catalog";
 
 // Routers (hard imports)
 import LeadsRouter from "./routes/leads";
-import LeadsWebRouter from "./routes/leads-web"; // <-- hard import (fixes 404 on /api/web/*)
+import LeadsWebRouter from "./routes/leads-web"; // web-first finder
 import ClassifyRouter from "./routes/classify";
 import PrefsRouter from "./routes/prefs";
 import CatalogRouter from "./routes/catalog";
 import AuditRouter from "./routes/audit";
 import EventsRouter from "./routes/events";
 import ScoresRouter from "./routes/scores";
-import AdsRouter from "./routes/ads"; // ok if file exists
+import AdsRouter from "./routes/ads";
+import LexiconRouter from "./routes/lexicon";
+import BuyersRouter, { RootAlias as BuyersRootAlias } from "./routes/buyers";
 
 // Optional safe-require helper for non-critical extras
 function safeRequire(p: string): any {
@@ -102,14 +104,17 @@ app.get("/healthz", (_req, res) => {
 
 // --- routers ---
 app.use("/api/leads", LeadsRouter);
-app.use("/api/web", LeadsWebRouter);          // <-- always mount web-first route
+app.use("/api/web", LeadsWebRouter);          // always mount web-first route
 app.use("/api/classify", ClassifyRouter);
 app.use("/api/prefs", PrefsRouter);
 app.use("/api/catalog", CatalogRouter);
 app.use("/api/audit", AuditRouter);
 app.use("/api/events", EventsRouter);
 app.use("/api/scores", ScoresRouter);
-try { app.use("/api/ads", AdsRouter); } catch { /* ok if missing */ }
+app.use("/api/ads", AdsRouter);
+app.use("/api/lexicon", LexiconRouter);
+app.use("/api/buyers", BuyersRouter);
+app.use("/api/find", BuyersRootAlias);        // exact alias for the free panel
 
 // --- optional: mount billing if available (won't break build if Stripe absent) ---
 try {
