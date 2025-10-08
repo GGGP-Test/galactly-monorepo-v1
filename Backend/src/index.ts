@@ -34,13 +34,14 @@ const app = express();
 const startedAt = Date.now();
 const PORT = Number(CFG.port || process.env.PORT || 8787);
 
-// tiny CORS
+// tiny CORS (allows admin/debug tools to send Authorization + custom headers)
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, x-admin-key, x-admin-token, x-user-email, x-user-plan"
+    // added Authorization + x-api-key so browser preflight passes
+    "Content-Type, Authorization, x-api-key, x-admin-key, x-admin-token, x-user-email, x-user-plan"
   );
   res.setHeader("Access-Control-Expose-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -153,7 +154,6 @@ try {
 } catch { /* ignore */ }
 
 // ---- docs for local dev (prod GH Pages serves /docs) -----------------------
-
 try {
   const docsDir = path.join(__dirname, "..", "docs");
   if (fs.existsSync(docsDir)) {
