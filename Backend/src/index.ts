@@ -92,7 +92,6 @@ app.get("/healthz", (_req, res) => {
 });
 
 // ---- core routers (hard imports) -------------------------------------------
-// These are required to exist; if they don’t, that’s a real build/config error.
 import LeadsRouter from "./routes/leads";
 import LeadsWebRouter from "./routes/leads-web";
 import ClassifyRouter from "./routes/classify";
@@ -143,11 +142,14 @@ try {
   if (GateRouter) app.use("/api/v1", GateRouter);
 } catch { /* ignore */ }
 
-// If you created a lexicon route, we’ll mount it when both pieces exist.
-// (If src/routes/lexicon.ts imports ../shared/lexicon, make sure that file exists.)
 try {
   const LexRoute = safeRequire("./routes/lexicon")?.default;
   if (LexRoute) app.use("/api/lexicon", LexRoute);
+} catch { /* ignore */ }
+
+try {
+  const FeedbackRouter = safeRequire("./routes/feedback")?.default;
+  if (FeedbackRouter) app.use("/api/feedback", FeedbackRouter);
 } catch { /* ignore */ }
 
 // ---- docs for local dev (prod GH Pages serves /docs) -----------------------
