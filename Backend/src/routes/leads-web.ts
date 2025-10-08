@@ -1,25 +1,27 @@
 // src/routes/leads-web.ts
 //
-// Web-first buyer discovery with exact band filtering and optional catalog mix.
-// Now with plan-based HOT gating (Free => HOT disabled) and admin bypass.
+// Web-first buyer discovery with exact band filtering + plan gating.
+// - Filters non-actionable hosts (maps.google.com, yelp, fb/ig).
+// - Optional escalation via /api/scores/explain for a few borderline rows.
+// - Plan gating: Free cannot request HOT (downgraded to WARM), unless admin headers present.
 //
 // Endpoints:
+//   GET /api/web/ping
 //   GET /api/web/find
 //   GET /api/web/find-buyers
 //
 // Query:
-//   host=acme.com
-//   &city=San+Diego
-//   &size=small|medium|large
-//   &limit=10
-//   &band=COOL|WARM|HOT            // exact band (may be clamped by plan)
-//   &mode=web|catalog|hybrid       // default: web
-//   &shareWeb=0..1                 // only when mode=hybrid
-//   &plan=Free|Pro                 // optional (fallback if header missing)
+//   host=acme.com&city=San+Diego&size=small|medium|large&limit=10
+//   &band=COOL|WARM|HOT         (exact band; may be gated down if plan=free)
+//   &mode=web|catalog|hybrid    (default: web)
+//   &shareWeb=0.3               (only used when mode=hybrid)
+//   &tiers=A,B,C&preferTier=C&preferSize=small
 //
-// Headers this route looks at:
-//   x-admin-key / x-admin-token    // admin bypass for gating (value checked if CFG.adminApiKey provided)
-//   x-user-plan: Free|Pro          // plan gating (case-insensitive)
+// Headers considered:
+//   x-user-plan: free|pro|enterprise
+//   x-user-email: optional
+//   x-admin-key | x-admin-token: if present, disables gating
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Router, type Request, type Response } from "express";
 import { CFG, capResults } from "../shared/env";
@@ -28,8 +30,6 @@ import * as TRC from "../shared/trc";
 import * as CatalogMod from "../shared/catalog";
 import * as Sources from "../shared/sources";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 const r = Router();
 const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 
@@ -37,7 +37,6 @@ const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 const Catalog: any = (CatalogMod as any)?.default ?? (CatalogMod as any);
 
 // ----------------------- types + tiny utils -----------------------
-
 type Tier = "A" | "B" | "C";
 type Band = "HOT" | "WARM" | "COOL";
 
@@ -101,7 +100,6 @@ function cityBoost(city?: string, candidateCity?: string): number {
 
 const HOT_T  = Number((TRC as any)?.HOT_MIN  ?? 80);
 const WARM_T = Number((TRC as any)?.WARM_MIN ?? 55);
-const bandOrder: Record<Band, number> = { HOT: 3, WARM: 2, COOL: 1 };
 
 function bandFromScore(score: number): Band {
   if (typeof (TRC as any)?.classifyScore === "function") {
@@ -143,7 +141,7 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
 
   const sw = prefs?.sizeWeight || {};
   if (typeof sw === "object") {
-    const sz = String(row?.size || "").toLowerCase();
+    const sz = String((row as any)?.size || "").toLowerCase();
     const w =
       sz === "micro" ? Number(sw.micro ?? 0) :
       sz === "small" ? Number(sw.small ?? 0) :
@@ -211,11 +209,9 @@ async function emit(kind: string, data: any) {
 }
 
 // ---- helpers specific to web pool ----
-
 function isActionableHost(h?: string): boolean {
   const host = String(h || "").toLowerCase();
   if (!host) return false;
-  // Filter obvious non-first-party domains returned by providers
   if (host === "maps.google.com" || host.endsWith(".google.com")) return false;
   if (host === "goo.gl" || host.endsWith("goo.gl")) return false;
   if (host.endsWith("facebook.com") || host.endsWith("instagram.com")) return false;
@@ -223,14 +219,7 @@ function isActionableHost(h?: string): boolean {
   return true;
 }
 
-// Optional: keep band from upgrading beyond a max (used for Free gating)
-function clampBand(b: Band, maxBand?: Band): Band {
-  if (!maxBand) return b;
-  return bandOrder[b] > bandOrder[maxBand] ? maxBand : b;
-}
-
-async function escalateWithSignals(items: Candidate[], targetBand: Band, maxN = 3, maxBand?: Band): Promise<void> {
-  // pick a few uncertain rows in the exact band
+async function escalateWithSignals(items: Candidate[], targetBand: Band, maxN = 3): Promise<void> {
   const picks = items
     .filter(x => String(x.band) === targetBand)
     .filter(x => (x.uncertainty ?? 0) >= 0.6 || (targetBand === "WARM" && (x.score ?? 0) >= WARM_T - 3))
@@ -245,37 +234,26 @@ async function escalateWithSignals(items: Candidate[], targetBand: Band, maxN = 
         const data = await r.json().catch(() => null);
         if (data && typeof data.score === "number" && data.band) {
           p.score = data.score;
-          p.band = clampBand(String(data.band).toUpperCase() as Band, maxBand);
+          p.band = (String(data.band).toUpperCase() as Band);
           if (!Array.isArray(p.reasons)) p.reasons = [];
           p.reasons = [...p.reasons, "signals:escalated", ...(Array.isArray(data.reasons) ? data.reasons.slice(0,4) : [])].slice(0, 12);
         }
       }
-    } catch { /* ignore per-row */ }
+    } catch {}
   }
 }
 
-// ---- plan + admin helpers ----
-
-function readPlan(req: Request): "Free" | "Pro" {
-  const h = String(req.header("x-user-plan") || req.query.plan || "Free").trim();
-  return /^pro$/i.test(h) ? "Pro" : "Free";
+// ---- plan gating ----
+function isAdmin(req: Request): boolean {
+  return !!(req.header("x-admin-key") || req.header("x-admin-token"));
+}
+function userPlan(req: Request): "free" | "pro" | "enterprise" {
+  const p = String(req.header("x-user-plan") || req.query.plan || "free").trim().toLowerCase();
+  return p === "enterprise" ? "enterprise" : p === "pro" ? "pro" : "free";
 }
 
-function hasAdminHeader(req: Request): boolean {
-  const k = String(req.header("x-admin-key") || "");
-  const t = String(req.header("x-admin-token") || "");
-  return !!(k || t);
-}
-
-function isAdminBypass(req: Request): boolean {
-  const cfgKey = (CFG as any)?.adminApiKey || "";
-  const k = String(req.header("x-admin-key") || "");
-  const t = String(req.header("x-admin-token") || "");
-  if (cfgKey) return k === cfgKey || t === cfgKey;
-  return hasAdminHeader(req); // fallback: any admin header present
-}
-
-// ------------------------------- handler -------------------------------
+// ------------------------------- routes -------------------------------
+r.get("/ping", (_req, res) => res.json({ pong: true, at: new Date().toISOString() }));
 
 async function handleFind(req: Request, res: Response) {
   const t0 = Date.now();
@@ -283,23 +261,23 @@ async function handleFind(req: Request, res: Response) {
     const host = String(req.query.host || req.query.domain || "").trim().toLowerCase();
     if (!host) return res.status(400).json({ ok: false, error: "host_required" });
 
-    const plan = readPlan(req);
-    const adminBypass = isAdminBypass(req);
-    const gatingActive = plan === "Free" && !adminBypass;
-
     const city  = String(req.query.city || "").trim() || undefined;
     const sizeQ = String(req.query.size || "").trim().toLowerCase() || undefined;
     const limitQ = Math.max(1, Math.min(100, Number(req.query.limit ?? 10) || 10));
 
-    // exact band (may be clamped by gating below)
-    const bandQ = String(req.query.band || "").trim().toUpperCase() as Band;
-    let band: Band = bandQ === "HOT" ? "HOT" : bandQ === "WARM" ? "WARM" : "COOL";
+    const plan = userPlan(req);
+    const admin = isAdmin(req);
 
-    // Plan gating: Free cannot query HOT (unless admin bypass)
-    let gated: { reason: string; requested: Band; applied: Band } | null = null;
-    if (gatingActive && band === "HOT") {
-      gated = { reason: "hot_disabled_on_free", requested: "HOT", applied: "WARM" };
+    // requested band (exact)
+    const bandQ = String(req.query.band || "").trim().toUpperCase() as Band;
+    const requestedBand: Band = bandQ === "HOT" ? "HOT" : bandQ === "WARM" ? "WARM" : "COOL";
+
+    // plan gating: Free cannot request HOT unless admin
+    let band: Band = requestedBand;
+    let gated = false;
+    if (!admin && plan === "free" && requestedBand === "HOT") {
       band = "WARM";
+      gated = true;
     }
 
     // mode + hybrid share (default: web)
@@ -310,7 +288,7 @@ async function handleFind(req: Request, res: Response) {
     const { allow: allowTiers, prefer: preferTier } = parseTiersParam(req);
 
     // caps by plan
-    const cap = capResults(plan.toLowerCase(), limitQ);
+    const cap = capResults(plan === "free" ? "free" : "pro", limitQ);
 
     // prefs baseline
     const basePrefs =
@@ -354,7 +332,6 @@ async function handleFind(req: Request, res: Response) {
       catRows = Array.isArray(rows) ? rows.slice() : [];
     }
 
-    // Merge pools (score/band/filter later)
     const pool: Candidate[] = [...webRows, ...catRows];
 
     // ---------- filter by allowed tiers + score + exact band ----------
@@ -372,15 +349,13 @@ async function handleFind(req: Request, res: Response) {
       })
       .filter((x) => x.band === band);
 
-    // escalation with signals for a few borderline rows (uses your /api/scores/explain)
-    // If gating is active, clamp any upgrades so they cannot exceed the requested band.
+    // Optional escalation (web/hybrid only)
     if ((mode === "web" || mode === "hybrid") && scored.length > 0) {
-      await escalateWithSignals(scored, band, 3, gatingActive ? band : undefined).catch(()=>{});
-      // Re-filter if any band changed during escalation (e.g., attempted upgrade to HOT)
-      scored = scored.filter(x => x.band === band).sort((a,b) => (b.score || 0) - (a.score || 0));
+      await escalateWithSignals(scored, band, 3).catch(()=>{});
+      scored = scored.sort((a,b) => (b.score || 0) - (a.score || 0));
     }
 
-    // Prefer web first if hybrid, otherwise simple score sort
+    // Prefer web first if hybrid, else by score
     const ordered = (mode === "hybrid")
       ? scored.sort((a, b) => {
           const aw = (a as any).provider ? 1 : 0;
@@ -395,7 +370,11 @@ async function handleFind(req: Request, res: Response) {
     const summary = {
       ok: true,
       returned: items.length,
-      band,
+      bandRequested: requestedBand,
+      bandApplied: band,
+      gated,
+      plan,
+      adminOverride: admin,
       mode,
       shareWeb: mode === "hybrid" ? shareWeb : (mode === "web" ? 1 : 0),
       webPool: webRows.length,
@@ -403,13 +382,9 @@ async function handleFind(req: Request, res: Response) {
       tiersApplied: Array.from(allowTiers),
       preferTier: preferTier || null,
       ms: Date.now() - t0,
-      hot: items.filter(i=>i.band==="HOT").length,   // will be 0 for Free due to clamp
+      hot: items.filter(i=>i.band==="HOT").length,
       warm: items.filter(i=>i.band==="WARM").length,
       cool: items.filter(i=>i.band==="COOL").length,
-      // gating + plan visibility:
-      plan,
-      adminBypass,
-      gated
     };
 
     await emit("find_buyers_web", { host, ...summary }).catch(() => {});
@@ -420,8 +395,6 @@ async function handleFind(req: Request, res: Response) {
   }
 }
 
-// Expose both paths so the current admin UI (…/web/find) works,
-// and we keep the long form (…/web/find-buyers) too.
 r.get("/find", handleFind);
 r.get("/find-buyers", handleFind);
 
