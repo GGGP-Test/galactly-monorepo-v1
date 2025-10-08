@@ -1,6 +1,11 @@
 // src/routes/leads-web.ts
 //
 // Web-first buyer discovery with exact band filtering and optional catalog mix.
+// Adds:
+//   • Filters non-actionable hosts (maps.google.com, yelp, facebook, instagram).
+//   • Optional escalation: call /api/scores/explain for a few borderline rows
+//     to upgrade band/score using real page signals.
+//
 // Endpoints (both work):
 //   GET /api/web/find
 //   GET /api/web/find-buyers
@@ -15,7 +20,7 @@
 //   &shareWeb=0.3                  // only used when mode=hybrid
 //   &tiers=A,B,C&preferTier=C&preferSize=small
 //
-// Emits a tiny event to /api/events/ingest.
+// Emits event to /api/events/ingest.
 
 import { Router, type Request, type Response } from "express";
 import { CFG, capResults } from "../shared/env";
@@ -205,6 +210,44 @@ async function emit(kind: string, data: any) {
   } catch {}
 }
 
+// ---- helpers specific to web pool ----
+
+function isActionableHost(h?: string): boolean {
+  const host = String(h || "").toLowerCase();
+  if (!host) return false;
+  // Filter obvious non-first-party domains returned by providers
+  if (host === "maps.google.com" || host.endsWith(".google.com")) return false;
+  if (host === "goo.gl" || host.endsWith("goo.gl")) return false;
+  if (host.endsWith("facebook.com") || host.endsWith("instagram.com")) return false;
+  if (host.endsWith("yelp.com")) return false;
+  return true;
+}
+
+async function escalateWithSignals(items: Candidate[], targetBand: Band, maxN = 3): Promise<void> {
+  // pick a few uncertain rows in the exact band
+  const picks = items
+    .filter(x => String(x.band) === targetBand)
+    .filter(x => (x.uncertainty ?? 0) >= 0.6 || (targetBand === "WARM" && (x.score ?? 0) >= WARM_T - 3))
+    .sort((a,b) => (b.uncertainty ?? 0) - (a.uncertainty ?? 0))
+    .slice(0, Math.max(0, maxN));
+
+  for (const p of picks) {
+    try {
+      const url = `http://127.0.0.1:${CFG.port}/api/scores/explain?host=${encodeURIComponent(p.host)}`;
+      const r = await F(url, { redirect: "follow" });
+      if (r?.ok) {
+        const data = await r.json().catch(() => null);
+        if (data && typeof data.score === "number" && data.band) {
+          p.score = data.score;
+          p.band = (String(data.band).toUpperCase() as Band);
+          if (!Array.isArray(p.reasons)) p.reasons = [];
+          p.reasons = [...p.reasons, "signals:escalated", ...(Array.isArray(data.reasons) ? data.reasons.slice(0,4) : [])].slice(0, 12);
+        }
+      }
+    } catch { /* ignore per-row */ }
+  }
+}
+
 // ------------------------------- handler -------------------------------
 
 async function handleFind(req: Request, res: Response) {
@@ -258,10 +301,12 @@ async function handleFind(req: Request, res: Response) {
         size: (sizeQ as any) || undefined,
         limit: wantWeb * 3, // overfetch, then score/band/slice
       }).catch(() => []);
-      webRows = Array.isArray(webFound) ? webFound.map((w: any) => ({
-        host: w.host, name: w.name, city: w.city, url: w.url, tier: (w.tier as Tier|undefined),
-        tags: w.tags || [], provider: w.provider
-      })) : [];
+      webRows = (Array.isArray(webFound) ? webFound : [])
+        .map((w: any) => ({
+          host: w.host, name: w.name, city: w.city, url: w.url, tier: (w.tier as Tier|undefined),
+          tags: w.tags || [], provider: w.provider
+        }))
+        .filter(w => isActionableHost(w.host));
     }
 
     // CATALOG
@@ -275,7 +320,7 @@ async function handleFind(req: Request, res: Response) {
     const pool: Candidate[] = [...webRows, ...catRows];
 
     // ---------- filter by allowed tiers + score + exact band ----------
-    const scored = pool
+    let scored = pool
       .filter((c) => allowTiers.has(getTier(c)))
       .map((c) => {
         let { score, reasons } = safeScoreRow(c, prefs, city);
@@ -289,6 +334,14 @@ async function handleFind(req: Request, res: Response) {
       })
       .filter((x) => x.band === band);
 
+    // escalation with signals for a few borderline rows (uses your /api/scores/explain)
+    // only when mode includes web rows and there is something to escalate
+    if ((mode === "web" || mode === "hybrid") && scored.length > 0) {
+      await escalateWithSignals(scored, band, 3).catch(()=>{});
+      // resort after potential score changes
+      scored = scored.sort((a,b) => (b.score || 0) - (a.score || 0));
+    }
+
     // Prefer web first if hybrid, otherwise simple score sort
     const ordered = (mode === "hybrid")
       ? scored.sort((a, b) => {
@@ -297,7 +350,7 @@ async function handleFind(req: Request, res: Response) {
           if (aw !== bw) return bw - aw; // web over catalog
           return (b.score || 0) - (a.score || 0);
         })
-      : scored.sort((a, b) => (b.score || 0) - (a.score || 0));
+      : scored;
 
     const items = ordered.slice(0, cap);
 
@@ -312,7 +365,6 @@ async function handleFind(req: Request, res: Response) {
       tiersApplied: Array.from(allowTiers),
       preferTier: preferTier || null,
       ms: Date.now() - t0,
-      // helpful band counts for UIs
       hot: items.filter(i=>i.band==="HOT").length,
       warm: items.filter(i=>i.band==="WARM").length,
       cool: items.filter(i=>i.band==="COOL").length,
