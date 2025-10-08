@@ -1,14 +1,15 @@
 // src/routes/leads.ts
 //
-// Artemis B v1 — Catalog-first buyer discovery with tier/band controls.
+// Artemis B v1 — Buyer discovery (CJS-safe) with per-request tier + band control.
 // Query params:
-//   host=acme.com[&city=&tags=&sectors=&limit=]
-//   &tiers=A,B,C | &size=small|medium|large
-//   &preferTier=A|B|C | &preferSize=small|medium|large
-//   &minBand=COOL|WARM|HOT (default = COOL if prefer C/small else WARM)
+//   - tiers=A,B,C
+//   - size=small|medium|large   (alias for tiers=C|B|A)
+//   - preferTier=A|B|C
+//   - preferSize=small|medium|large
+//   - minBand=COOL|WARM|HOT     (default COOL if prefer C/small else WARM)
 //
 // GET /api/leads/ping
-// GET /api/leads/find-buyers
+// GET /api/leads/find-buyers?host=acme.com[&city=&tags=&sectors=&minTier=&limit=]
 //
 // Emits a tiny event to /api/events/ingest so Admin "Recent (50)" shows activity.
 
@@ -22,10 +23,7 @@ import * as TRC from "../shared/trc";
 
 const r = Router();
 
-// ----------------------------- tiny fetch shim -----------------------------
-const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
-
-// --------------------------------- types ----------------------------------
+// ----------------------------- types --------------------------------------
 
 type Tier = "A" | "B" | "C";
 type Band = "HOT" | "WARM" | "COOL";
@@ -54,36 +52,42 @@ type Scored = Candidate & {
   name: string;
 };
 
-// -------------------------------- helpers ---------------------------------
+const Catalog: any = (CatalogMod as any)?.default ?? (CatalogMod as any);
+const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
+
+// ----------------------------- helpers ------------------------------------
 
 function uniqLower(arr: unknown): string[] {
-  const s = new Set<string>();
-  if (Array.isArray(arr)) for (const v of arr) {
-    const t = String(v ?? "").trim().toLowerCase();
-    if (t) s.add(t);
+  const out: string[] = [];
+  const seen = new Set<string>();
+  if (Array.isArray(arr)) {
+    for (const v of arr) {
+      const s = String(v ?? "").trim().toLowerCase();
+      if (s && !seen.has(s)) { seen.add(s); out.push(s); }
+    }
   }
-  return [...s];
-}
-
-function prettyHostName(h: string): string {
-  const stem = String(h || "").replace(/^www\./, "").split(".")[0].replace(/[-_]/g, " ");
-  return stem.replace(/\b\w/g, (m) => m.toUpperCase());
+  return out;
 }
 
 function getCatalogRows(): Candidate[] {
-  const C: any = (CatalogMod as any)?.default ?? (CatalogMod as any);
-  if (typeof C?.get === "function") return C.get();
-  if (typeof C?.rows === "function") return C.rows();
-  if (Array.isArray(C?.rows)) return C.rows as Candidate[];
-  if (Array.isArray(C?.catalog)) return C.catalog as Candidate[];
-  if (typeof C?.all === "function") return C.all();
+  const c: any = Catalog;
+  if (typeof c?.get === "function") return c.get();
+  if (typeof c?.rows === "function") return c.rows();
+  if (Array.isArray(c?.rows)) return c.rows as Candidate[];
+  if (Array.isArray(c?.catalog)) return c.catalog as Candidate[];
+  if (typeof c?.all === "function") return c.all();
   return [];
 }
 
 function getTier(c: Candidate): Tier {
   if (c.tier === "A" || c.tier === "B" || c.tier === "C") return c.tier;
-  const t = (Array.isArray(c.tiers) ? c.tiers[0] : undefined) as Tier | undefined;
+  const t = Array.isArray(c.tiers) ? c.tiers[0] : undefined;
   return t === "A" || t === "B" ? t : "C";
+}
+
+function prettyHostName(h: string): string {
+  const stem = String(h || "").replace(/^www\./, "").split(".")[0].replace(/[-_]/g, " ");
+  return stem.replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
 const HOT_T  = Number((TRC as any)?.HOT_MIN  ?? 80);
@@ -93,13 +97,16 @@ function bandFromScore(score: number): Band {
   if (typeof (TRC as any)?.classifyScore === "function") {
     try { return (TRC as any).classifyScore(score) as Band; } catch { /* noop */ }
   }
-  return score >= HOT_T ? "HOT" : score >= WARM_T ? "WARM" : "COOL";
+  return score >= HOT_T ? "HOT" : (score >= WARM_T ? "WARM" : "COOL");
 }
 
 function uncertainty(score: number): number {
-  const d = Math.min(Math.abs(score - HOT_T), Math.abs(score - WARM_T));
-  const u = Math.max(0, 1 - d / 10);
-  return Number.isFinite(u) ? Number(u.toFixed(3)) : 0;
+  const dHot = Math.abs(score - HOT_T);
+  const dWarm = Math.abs(score - WARM_T);
+  const d = Math.min(dHot, dWarm);
+  const u = 1 - d / 10;
+  const safe = Math.max(0, Math.min(1, u));
+  return Number(safe.toFixed(3));
 }
 
 // fire-and-forget event so Admin "Recent (50)" shows activity
@@ -118,7 +125,7 @@ async function emit(kind: string, data: any) {
 
 const SIZE_TO_TIER: Record<string, Tier> = {
   large: "A", l: "A",
-  medium: "B", mid: "B", m: "B",
+  medium: "B", m: "B",
   small: "C", s: "C"
 };
 
@@ -127,39 +134,37 @@ function parseTiersParam(req: Request): {
   prefer?: Tier;
   preferWasSmall: boolean;
 } {
-  const envAllow = new Set<Tier>(Array.from(CFG.allowTiers ?? new Set(["A","B","C"])) as Tier[]);
+  const envAllow = new Set<Tier>(Array.from(CFG.allowTiers ?? new Set<Tier>(["A","B","C"])) as Tier[]);
 
   const tiersQ = String(req.query.tiers || "").trim();
   const sizeQ  = String(req.query.size  || "").trim().toLowerCase();
-  let hardAllow: Set<Tier> | null = null;
 
+  let hardAllow: Set<Tier> | null = null;
   if (tiersQ) {
     const set = new Set<Tier>();
     for (const t of tiersQ.split(",").map(s => s.trim().toUpperCase())) {
       if (t === "A" || t === "B" || t === "C") set.add(t as Tier);
     }
-    if (set.size) hardAllow = set;
+    if (set.size > 0) hardAllow = set;
   } else if (sizeQ && SIZE_TO_TIER[sizeQ]) {
-    hardAllow = new Set([SIZE_TO_TIER[sizeQ]]);
+    hardAllow = new Set<Tier>([SIZE_TO_TIER[sizeQ]]);
   }
 
-  const allow = hardAllow
-    ? new Set<Tier>([...hardAllow].filter(t => envAllow.has(t)) as Tier[])
+  const allow: Set<Tier> = hardAllow
+    ? new Set<Tier>(Array.from(hardAllow).filter(t => envAllow.has(t)))
     : envAllow;
 
   const preferT = String(req.query.preferTier || "").trim().toUpperCase();
   const preferS = String(req.query.preferSize || "").trim().toLowerCase();
-  let prefer: Tier | undefined;
-  let preferWasSmall = false;
 
+  let prefer: Tier | undefined;
   if (preferT === "A" || preferT === "B" || preferT === "C") {
     prefer = preferT as Tier;
-    preferWasSmall = prefer === "C";
   } else if (preferS && SIZE_TO_TIER[preferS]) {
     prefer = SIZE_TO_TIER[preferS];
-    preferWasSmall = prefer === "C";
   }
 
+  const preferWasSmall = prefer === "C";
   return { allow, prefer, preferWasSmall };
 }
 
@@ -176,7 +181,7 @@ function cityBoost(city?: string, candidateCity?: string): number {
 }
 
 function safeScoreRow(row: Candidate, prefs: any, city?: string) {
-  // Prefer TRC.scoreRow if exposed
+  // prefer TRC.scoreRow if present
   if (typeof (TRC as any)?.scoreRow === "function") {
     try {
       const out = (TRC as any).scoreRow(row, prefs, city);
@@ -184,7 +189,6 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
     } catch { /* fall through */ }
   }
 
-  // Minimal deterministic fallback
   let score = 50;
   const reasons: string[] = [];
 
@@ -192,28 +196,31 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
   if (loc) { score += loc * 100; reasons.push(`local+${(loc * 100) | 0}`); }
 
   const want = new Set<string>(uniqLower(prefs?.categoriesAllow || []));
-  if (want.size) {
+  if (want.size > 0) {
     const have = new Set<string>([
       ...uniqLower(row.tags || []),
       ...uniqLower(row.segments || []),
     ]);
-    let hits = 0; want.forEach((t) => { if (have.has(t)) hits++; });
-    if (hits) { score += Math.min(15, hits * 5); reasons.push(`tags+${hits}`); }
+    let hits = 0;
+    want.forEach((t) => { if (have.has(t)) hits++; });
+    if (hits > 0) { score += Math.min(15, hits * 5); reasons.push(`tags+${hits}`); }
   }
 
   const sw = prefs?.sizeWeight || {};
   if (typeof sw === "object") {
-    const sz = String(row?.size || "").toLowerCase();
-    const w =
-      sz === "micro" ? Number(sw.micro ?? 0) :
-      sz === "small" ? Number(sw.small ?? 0) :
-      sz === "mid"   ? Number(sw.mid   ?? 0) :
-      sz === "large" ? Number(sw.large ?? 0) : 0;
+    const sz = String((row as any)?.size || "").toLowerCase();
+    let w = 0;
+    if (sz === "micro") w = Number(sw.micro ?? 0);
+    else if (sz === "small") w = Number(sw.small ?? 0);
+    else if (sz === "mid") w = Number(sw.mid ?? 0);
+    else if (sz === "large") w = Number(sw.large ?? 0);
     if (w) { score += Math.max(-12, Math.min(12, w * 4)); reasons.push(`size:${sz || "?"}`); }
   }
+
   const sig = prefs?.signalWeight || {};
   if (sig && (sig.ecommerce || sig.retail || sig.wholesale)) {
-    score += Math.min(6, (Number(sig.ecommerce||0) + Number(sig.retail||0) + Number(sig.wholesale||0)) * 2);
+    const add = (Number(sig.ecommerce || 0) + Number(sig.retail || 0) + Number(sig.wholesale || 0)) * 2;
+    score += Math.min(6, add);
     reasons.push("signals");
   }
 
@@ -221,11 +228,9 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
   return { score, reasons };
 }
 
-// --------------------------------- routes ---------------------------------
+/* --------------------------------- routes --------------------------------- */
 
-r.get("/ping", (_req: Request, res: Response) => {
-  res.json({ pong: true, at: new Date().toISOString() });
-});
+r.get("/ping", (_req: Request, res: Response) => res.json({ pong: true, at: new Date().toISOString() }));
 
 r.get("/find-buyers", async (req: Request, res: Response) => {
   const t0 = Date.now();
@@ -233,49 +238,47 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
     const host = String(req.query.host || req.query.domain || "").trim().toLowerCase();
     if (!host) return res.status(400).json({ ok: false, error: "host_required" });
 
-    const cityQ   = String(req.query.city || "").trim();
+    const cityQ = String(req.query.city || "").trim();
     const minTier = String(req.query.minTier || "").trim().toUpperCase() as Tier | "";
-    const limitQ  = Number(req.query.limit ?? 0);
+    const limitQ = Number(req.query.limit ?? 0);
 
     // Per-request tier controls
     const { allow: allowTiers, prefer: preferTier, preferWasSmall } = parseTiersParam(req);
 
     // minBand (default COOL if preferring small/C, else WARM)
     const rawMinBand = String(req.query.minBand || req.query.bandMin || "").trim().toUpperCase();
-    const minBand: Band =
-      rawMinBand === "HOT" ? "HOT" :
-      rawMinBand === "WARM" ? "WARM" :
-      rawMinBand === "COOL" ? "COOL" :
-      (preferWasSmall ? "COOL" : "WARM");
+    let minBand: Band = preferWasSmall ? "COOL" : "WARM";
+    if (rawMinBand === "HOT" || rawMinBand === "WARM" || rawMinBand === "COOL") {
+      minBand = rawMinBand as Band;
+    }
 
     const bandOrder: Record<Band, number> = { HOT: 3, WARM: 2, COOL: 1 };
 
-    // Overlays from query
+    // Overlays
     const tagsQ    = uniqLower(String(req.query.tags || "").split(","));
     const sectorsQ = uniqLower(String(req.query.sectors || "").split(","));
-    const overlayTags = [...new Set<string>>([...tagsQ, ...sectorsQ])];
+    const overlayTags = Array.from(new Set<string>([...tagsQ, ...sectorsQ]));
 
-    // Result cap (by plan; leads route = free cap)
+    // Result cap (by plan)
     const cap = capResults("free", limitQ);
 
-    // Effective prefs (various exports supported)
+    // Effective prefs
     const basePrefs =
       (typeof (Prefs as any).getEffective === "function" && (Prefs as any).getEffective(host)) ||
       (typeof (Prefs as any).getEffectivePrefs === "function" && (Prefs as any).getEffectivePrefs(host)) ||
       (typeof (Prefs as any).get === "function" && (Prefs as any).get(host)) ||
       {};
 
-    const prefs = {
+    const mergedPrefs = {
       ...basePrefs,
       city: (cityQ || basePrefs.city || "").trim(),
-      categoriesAllow: [...new Set<string>([...(basePrefs.categoriesAllow || []), ...overlayTags])],
+      categoriesAllow: Array.from(new Set<string>([...(basePrefs.categoriesAllow || []), ...overlayTags])),
     };
 
-    // --------- pool: catalog only (this route = catalog-first) -------------
     const rows: Candidate[] = getCatalogRows();
 
     // Filter by allowed tiers + optional minTier
-    const filtered = rows.filter((c) => {
+    const filtered: Candidate[] = rows.filter((c) => {
       const t = getTier(c);
       if (!allowTiers.has(t)) return false;
       if (minTier === "A" && t !== "A") return false;
@@ -283,17 +286,24 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       return true;
     });
 
-    // Score each row (+ optional preferTier boost)
-    const scored: Scored[] = filtered.map<Scored>((c) => {
-      let { score, reasons } = safeScoreRow(c, prefs, prefs.city);
+    // Score (+ optional preferTier boost)
+    const scored: Scored[] = filtered.map((c): Scored => {
+      const s = safeScoreRow(c, mergedPrefs, mergedPrefs.city);
+      let score = s.score;
+      let reasons = Array.isArray(s.reasons) ? s.reasons.slice(0, 12) : [];
+
       const t = getTier(c);
-      if (preferTier && t === preferTier) { score += 8; reasons = [...reasons, `prefer:${t}`]; }
-      const band = bandFromScore(score);
+      if (preferTier && t === preferTier) {
+        score += 8;
+        reasons = reasons.concat([`prefer:${t}`]).slice(0, 12);
+      }
+
+      const b: Band = bandFromScore(score);
       const u = uncertainty(score);
       const name = (c.name || c.company || prettyHostName(c.host)) as string;
-      const url  = (c.url  || `https://${c.host}`) as string;
-      const trimmedReasons = Array.isArray(reasons) ? reasons.slice(0, 12) : [];
-      return { ...c, host: c.host, name, city: c.city, tier: t, url, score, band, uncertainty: u, reasons: trimmedReasons };
+      const url = (c.url || `https://${c.host}`) as string;
+
+      return { ...c, host: c.host, name, city: c.city, tier: t, url, score, band: b, uncertainty: u, reasons };
     });
 
     // Keep at/above minBand
@@ -303,14 +313,14 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
     const hot  = kept.filter((x) => x.band === "HOT").sort((a, b) => b.score - a.score);
     const warm = kept.filter((x) => x.band === "WARM").sort((a, b) => b.score - a.score);
     const cool = kept.filter((x) => x.band === "COOL").sort((a, b) => b.score - a.score);
-    let items: Scored[] = [...hot, ...warm, ...cool];
+    let items: Scored[] = hot.concat(warm, cool);
 
     const totalBeforeCap = items.length;
     if (cap > 0) items = items.slice(0, cap);
 
-    // Optional enrichment: classify 2 uncertain rows (adds reasons)
+    // Enrich a couple uncertain
     const MAX_ESCALATE = 2;
-    const targets = [...items]
+    const targets = items
       .filter((x) => x.uncertainty >= 0.6)
       .sort((a, b) => b.uncertainty - a.uncertainty)
       .slice(0, MAX_ESCALATE);
@@ -321,10 +331,14 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
         const res2 = await F(url, { redirect: "follow" });
         if (res2?.ok) {
           const data = await res2.json().catch(() => null);
-          if (data?.evidence?.length) {
-            t.reasons = [...t.reasons, ...data.evidence.map((e: string)=>`classify:${e}`)].slice(0, 12);
+          if (data && Array.isArray(data.evidence) && data.evidence.length) {
+            const addReasons = data.evidence.slice(0, 4).map((e: string) => `classify:${String(e)}`);
+            t.reasons = t.reasons.concat(addReasons).slice(0, 12);
           }
-          if (data?.role) t.reasons = [...t.reasons, `role:${data.role}@${Number(data.confidence ?? 0).toFixed(2)}`].slice(0, 12);
+          if (data && data.role) {
+            const conf = Number(data.confidence ?? 0);
+            t.reasons = t.reasons.concat([`role:${String(data.role)}@${conf.toFixed(2)}`]).slice(0, 12);
+          }
         }
       } catch { /* ignore */ }
     }
@@ -337,7 +351,7 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       cool: items.filter((x) => x.band === "COOL").length,
       totalBeforeCap,
       capApplied: cap,
-      city: prefs.city || null,
+      city: mergedPrefs.city || null,
       minTier: minTier || null,
       tiersApplied: Array.from(allowTiers),
       preferTier: preferTier || null,
@@ -346,7 +360,9 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       ms: Date.now() - t0,
     };
 
+    // Emit event for Admin "Recent (50)"
     emit("find_buyers", { host, ...summary }).catch(() => {});
+
     return res.json({ ok: true, items, summary });
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
