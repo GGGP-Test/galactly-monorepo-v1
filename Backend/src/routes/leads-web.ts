@@ -243,6 +243,59 @@ async function escalateWithSignals(items: Candidate[], targetBand: Band, maxN = 
   }
 }
 
+// ---- auto-tap learning (new) ----
+function topN(arr: string[], n: number): string[] {
+  const m = new Map<string, number>();
+  for (const v of arr) if (v) m.set(v, (m.get(v) || 0) + 1);
+  return [...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,n).map(([k])=>k);
+}
+
+async function autoTapLearn(hostSeed: string, items: Candidate[], band: Band, plan: string) {
+  // gate by env flag if desired; default ON
+  const enabled = String((CFG as any)?.autoTapFeedback ?? "1") !== "0";
+  if (!enabled || !items?.length) return;
+
+  const picks = items.slice(0, Math.min(8, items.length));
+  const tags = topN(
+    picks.flatMap(i => Array.isArray(i.tags) ? i.tags.map(t => String(t || "").toLowerCase()) : []),
+    24
+  );
+  const cities = topN(
+    picks.map(i => String(i.city || "").toLowerCase()).filter(Boolean),
+    6
+  );
+  const providers = topN(
+    picks.map(i => String(i.provider || "")).filter(Boolean),
+    3
+  );
+
+  const payload = {
+    source: "leads-web:auto",
+    hostSeed,
+    band,
+    plan,
+    learned: { tags, cities, providers },
+    sample: picks.map(p => ({ host: p.host, city: p.city || null, tags: (p.tags || []).slice(0, 8) })),
+  };
+
+  const base = `http://127.0.0.1:${CFG.port}`;
+  try {
+    const r = await F(`${base}/api/feedback/learn`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!r?.ok) {
+      // fallback to generic endpoint if route shape differs
+      await F(`${base}/api/feedback`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind: "auto_tap", ...payload }),
+      }).catch(()=>{});
+    }
+  } catch { /* never block request */ }
+}
+
 // ---- plan gating ----
 function isAdmin(req: Request): boolean {
   return !!(req.header("x-admin-key") || req.header("x-admin-token"));
@@ -386,6 +439,9 @@ async function handleFind(req: Request, res: Response) {
       warm: items.filter(i=>i.band==="WARM").length,
       cool: items.filter(i=>i.band==="COOL").length,
     };
+
+    // NEW: fire-and-forget auto-tap learning (never blocks response)
+    autoTapLearn(host, items, band, plan).catch(()=>{});
 
     await emit("find_buyers_web", { host, ...summary }).catch(() => {});
     return res.json({ ok: true, items, summary });
