@@ -1,20 +1,20 @@
 // src/shared/sources.ts
 //
-// Web-first buyer discovery (Artemis B v1 — expanded).
-// - Families/verticals for primary + secondary packaging buyers (cross-size).
-// - Size is a HINT only; verticals can be small/mid/large simultaneously.
-// - Optional overlays: sectors[] and products[] to bias queries.
-// - Google Places Text Search (+limited Details) → OSM fallback.
-// - Filters non-actionable hosts (google, yelp, fb/ig, job boards, directories).
-// - Hard dedupe by host; caps lookups to keep quotas safe.
+// Web-first buyer discovery (hardened + expanded).
+// - Google Places Text Search + optional Details (if PLACES_API_KEY is set)
+// - Fallback to OpenStreetMap Nominatim (no key)
+// - Size-aware + vertical-aware default queries (micro/small/mid/large)
+// - Covers primary, secondary and tertiary packaging buyers
+// - Filters non-actionable hosts (maps.google, yelp, facebook, instagram)
+// - Limits Places Details lookups to avoid quota burn
+// - Normalizes to Candidate shape
 //
-// Notes
-// • This is deterministic and keyless-safe (OSM path). If PLACES_API_KEY
-//   is present we prefer Places for higher precision sites.
-// • We purposely search for BUYERS (co-packers, 3PLs, warehouses, plants,
-//   franchise HQs, producers, etc.) — not packaging suppliers.
+// Notes:
+// • All query tokens are quoted (even those starting with digits like "3pl").
+// • If you pass opts.queries, those override the generated defaults.
+// • Keep query lists modest(ish); we still overfetch and dedupe strictly.
 
- /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 type Tier = "A" | "B" | "C";
 
@@ -24,12 +24,144 @@ export type Candidate = {
   url?: string;              // https://example.com
   city?: string;
   tier?: Tier;               // inferred size (A=large, B=mid, C=small)
-  tags?: string[];           // categories/types returned by provider
+  tags?: string[];           // categories/types from provider
   provider: "places" | "osm";
   raw?: any;                 // provider blob (optional)
 };
 
 const F: (u: string, i?: any) => Promise<any> = (globalThis as any).fetch;
+
+/* -------------------------------------------------------------------------- */
+/* Query lexicon (evergreen, safe to extend)                                   */
+/* -------------------------------------------------------------------------- */
+
+/** Micro / Small buyers (high count, often primary/secondary, low-medium AOV) */
+const Q_MICRO_SMALL: string[] = [
+  // foodservice & beverage (primary + some secondary)
+  "cafe","coffee shop","bakery","cupcake shop","donut shop","gelato shop",
+  "ice cream shop","juice bar","tea shop","boba tea","sandwich shop",
+  "delicatessen","restaurant","pizzeria","food truck","caterer","meal prep",
+  "ghost kitchen","butcher shop","seafood market","greengrocer",
+  "grocery","corner store","mini market","convenience store","farm stand",
+  "farmers market vendor",
+  // CPG micro brands & ecom
+  "coffee roaster","micro roastery","artisan chocolate","candy shop",
+  "snack brand","baked goods brand","sauce company","hot sauce brand",
+  "jam and preserves","condiments brand","spice company",
+  "tea brand","supplement brand","vitamin brand","niche cosmetics brand",
+  "candle company","soap company","etsy shop","small ecommerce brand",
+  // fulfillment / shipping lite
+  "shipping store","pack and ship","print and ship",
+  "mailing center","independent bookstore",
+  // industrial-lite / maintenance buyers
+  "machine shop","print shop","screen printing","t-shirt printing",
+  "craft brewery taproom","nano brewery",
+  // warehousing / tertiary even when small
+  "small warehouse","micro warehouse","micro fulfillment","self storage business",
+  "local 3pl","local third party logistics","parcel fulfillment center",
+  // misc retail that consumes secondary packaging
+  "pet boutique","pet store","health food store","natural foods store",
+  "bottle shop","wine shop","liquor store","vape shop","dispensary",
+];
+
+/** Mid-size buyers (secondary + tertiary heavy; higher AOV; regional ops) */
+const Q_MID: string[] = [
+  // food & beverage processing / wholesale
+  "wholesale bakery","commissary kitchen","food manufacturer","snack manufacturer",
+  "frozen foods plant","meat processor","seafood processor",
+  "dairy processor","cheese manufacturer","coffee roastery","coffee distributor",
+  "tea importer","beverage co-packer","craft brewery","brewery production",
+  "distillery production","winery production","bottling line",
+  // health & beauty, pharma-lite
+  "cosmetics manufacturer","skincare manufacturer","contract manufacturer cosmetics",
+  "nutraceutical manufacturer","supplement manufacturer","vitamin packager",
+  "personal care manufacturer",
+  // ecom ops / fulfillment / 3PL
+  "ecommerce fulfillment center","order fulfillment center",
+  "regional 3pl","third party logistics","returns center","kitting center",
+  "co-packer","contract packager","repackaging service",
+  // general distribution & wholesale
+  "food distributor","beverage distributor","wholesale foods","wholesale beverage",
+  "produce distributor","meat distributor","seafood distributor",
+  "dairy distributor","frozen distributor","broadline distributor",
+  // warehousing / logistics
+  "distribution center","cross dock","cold storage warehouse",
+  "temperature controlled warehouse","ambient warehouse","bonded warehouse",
+  // retail chains / multi-unit buyers
+  "regional grocery chain","regional convenience store chain",
+  "regional restaurant chain","franchise operator",
+  // manufacturing segments that burn stretch/shrink/void/tape
+  "pet food manufacturer","household goods manufacturer",
+  "electronics assembly","medical device assembly",
+  "apparel fulfillment","shoe fulfillment",
+  // misc
+  "printing and labeling service","label converter","flexographic printer",
+];
+
+/** Large buyers (A-tier; tertiary heavy; high velocity and pallet volume) */
+const Q_LARGE: string[] = [
+  // large manufacturing & DCs
+  "national distribution center","mega distribution center",
+  "automotive parts manufacturer","appliance manufacturer",
+  "electronics manufacturer","medical device manufacturer",
+  "pharmaceutical distribution center","national grocery distribution",
+  "big box retail distribution center","omnichannel fulfillment center",
+  "third party logistics campus","national 3pl","ecommerce mega fulfillment",
+  "cold chain logistics hub","high-bay warehouse",
+  // co-pack & industrial packaging
+  "contract packaging facility","high speed bottling","beverage bottling plant",
+  "food processing plant","large meat processing plant","poultry processing plant",
+  "confectionery factory","dairy processing plant",
+  // heavy film & load secure consumers
+  "palletizing operation","automated stretch wrap line","shrink tunnel line",
+  "case packing line","form fill seal line","thermoforming line",
+  // bulk bags / sacks
+  "grain elevator","bulk commodity terminal","chemical distributor",
+  "bulk bag user","fibc bulk bag user",
+];
+
+/** Cross-vertical product-intent overlays (used across sizes) */
+const Q_PRODUCT_OVERLAYS: string[] = [
+  "stretch film","stretch wrap","pallet wrap","hand wrap","machine wrap",
+  "shrink film","shrink wrap","shrink tunnel","heat tunnel",
+  "void fill","air pillows","bubble wrap","foam-in-place","packing peanuts",
+  "tape dispenser","tape gun","case tape","strapping","strapping machine",
+  "palletizing","pallet banding",
+  "poly bag","poly mailer","mailer bag","zipper pouch","stand up pouch",
+  "labels and printing","thermal labels","ribbon printing","label applicator",
+  "corrugated boxes","custom corrugate","mailers","box supplier",
+  "fibc bulk bags","bulk sacks","drum liners",
+  "packaging automation","carton erector","case sealer",
+  "conveyor system","weighing and filling","form fill seal",
+];
+
+/** Alias for tiny users who select “micro” (maps to Tier C too). */
+const Q_MICRO_ONLY: string[] = [
+  "home bakery","cottage bakery","home-based food business",
+  "farmers market seller","etsy seller","craft seller","cottage foods",
+];
+
+/** Combine a size with overlays. We keep this intentionally simple and safe. */
+function queriesForSize(size?: "micro"|"small"|"medium"|"large"): string[] {
+  const base =
+    size === "large"  ? Q_LARGE :
+    size === "medium" ? Q_MID :
+    size === "micro"  ? Q_MICRO_ONLY.concat(Q_MICRO_SMALL) :
+                        Q_MICRO_SMALL; // default small
+  // Include product-intent overlays (helps find secondary/tertiary users)
+  const blended = base.concat(Q_PRODUCT_OVERLAYS);
+  // Dedup + cap to keep Text Search reasonable
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const q of blended) {
+    const s = String(q || "").trim().toLowerCase();
+    if (!s || seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+    if (out.length >= 80) break; // guardrail: keep it tight(ish)
+  }
+  return out;
+}
 
 /* -------------------------------------------------------------------------- */
 /* helpers                                                                    */
@@ -48,21 +180,15 @@ function sizeToTier(input?: string): Tier | undefined {
   if (!s) return;
   if (s === "large" || s === "l" || s === "a") return "A";
   if (s === "medium" || s === "mid" || s === "m" || s === "b") return "B";
-  if (s === "small" || s === "s" || s === "c") return "C";
+  if (s === "small" || s === "s" || s === "c" || s === "micro") return "C";
 }
 
 function isActionableHost(h?: string): boolean {
   const host = String(h || "").toLowerCase();
   if (!host) return false;
-  // obvious non-sites or directories
   if (host === "maps.google.com" || host.endsWith(".google.com")) return false;
-  if (host.endsWith("googleusercontent.com")) return false;
   if (host.endsWith("yelp.com")) return false;
   if (host.endsWith("facebook.com") || host.endsWith("instagram.com")) return false;
-  if (host.endsWith("linkedin.com") || host.endsWith("angel.co")) return false;
-  if (host.endsWith("glassdoor.com") || host.endsWith("indeed.com")) return false;
-  if (host.endsWith("yellowpages.com") || host.endsWith("tripadvisor.com")) return false;
-  if (host.endsWith("doordash.com") || host.endsWith("ubereats.com") || host.endsWith("grubhub.com")) return false;
   return true;
 }
 
@@ -79,260 +205,8 @@ function dedupeByHost(items: Candidate[], cap: number): Candidate[] {
   return out;
 }
 
-function uniqLower(a?: unknown[]): string[] {
-  const s = new Set<string>();
-  if (Array.isArray(a)) for (const v of a) {
-    const t = String(v ?? "").trim().toLowerCase();
-    if (t) s.add(t);
-  }
-  return [...s];
-}
-
 /* -------------------------------------------------------------------------- */
-/* verticals/families + size overlays                                         */
-/* -------------------------------------------------------------------------- */
-
-// Each family contains search phrases that typically identify PACKAGING BUYERS.
-// These intentionally span primary + secondary packaging consumption.
-
-const FAMILY: Record<string, string[]> = {
-  // Food & beverage production (buyers of corrugate, film, labels, closures…)
-  food_mfg: [
-    "food manufacturer", "food processing plant", "food plant",
-    "co-packer", "contract packager", "private label food",
-    "bottling plant", "canning facility", "retort facility",
-    "meat processor", "poultry processor", "seafood processor",
-    "produce packer", "fresh cut facility", "dairy plant", "cheese factory",
-    "snack manufacturer", "frozen foods manufacturer", "meal prep facility",
-    "sauce manufacturer", "condiment manufacturer", "bakery plant",
-    "candy manufacturer", "chocolate factory"
-  ],
-
-  beverage: [
-    "beverage manufacturer", "beverage co-packer",
-    "brewery", "microbrewery", "cider house",
-    "distillery", "craft distillery", "winery", "bottling company",
-    "juice bottling", "kombucha brewery", "coffee roastery", "tea factory",
-    "soda bottler", "energy drink manufacturer"
-  ],
-
-  // E-commerce & fulfillment (mailers, labels, void fill, tape, stretch…)
-  ecommerce_3pl: [
-    "fulfillment center", "ecommerce fulfillment", "micro fulfillment",
-    "third party logistics", "3pl", "order fulfillment", "pick and pack",
-    "subscription box company", "merch fulfillment", "print on demand",
-    "amazon prep center", "fba prep center", "crowd fulfillment",
-    "returns processing center"
-  ],
-
-  // Warehousing & distribution (secondary packaging heavy: stretch, shrink, strap)
-  logistics_warehouse: [
-    "warehouse", "distribution center", "cold storage warehouse",
-    "cross dock", "regional distribution center", "last mile hub",
-    "freight consolidation", "palletizing service", "public warehouse"
-  ],
-
-  // Health/beauty & CPG (cartons, labels, jar/pouch, compliance)
-  beauty_personal: [
-    "cosmetics manufacturer", "skincare manufacturer", "beauty co-packer",
-    "hair care manufacturer", "soap manufacturer", "candle manufacturer",
-    "fragrance manufacturer", "lip balm manufacturer", "body care manufacturer",
-    "nail polish manufacturer"
-  ],
-
-  pharma_nutra: [
-    "pharmaceutical manufacturer", "pharma packaging", "compounding pharmacy lab",
-    "nutraceutical manufacturer", "vitamin manufacturer", "supplement manufacturer",
-    "medical device manufacturer", "sterile packaging lab"
-  ],
-
-  cannabis: [
-    "cannabis processor", "cannabis manufacturer", "edibles manufacturer",
-    "pre-roll manufacturer", "vape manufacturer", "cannabis packaging facility",
-    "dispensary chain headquarters"
-  ],
-
-  industrial_mfg: [
-    "contract manufacturer", "light manufacturing", "assembly plant",
-    "machine shop", "metal fabrication", "injection molding",
-    "plastic extrusion", "foam fabricator", "gasket manufacturer",
-    "chemical manufacturer", "paint manufacturer", "adhesives manufacturer",
-    "cleaning products manufacturer", "janitorial products manufacturer"
-  ],
-
-  electronics_auto: [
-    "electronics assembly", "pcb assembler", "ems provider",
-    "semiconductor packaging", "cable assembly", "battery pack assembler",
-    "auto parts manufacturer", "aerospace parts manufacturer",
-    "aftermarket parts distributor"
-  ],
-
-  apparel_merch: [
-    "screen printing shop", "embroidery shop", "apparel fulfillment",
-    "merch fulfillment", "dtg printing", "garment manufacturer",
-    "textile manufacturer", "fashion brand headquarters"
-  ],
-
-  pet_agri: [
-    "pet food manufacturer", "pet treats manufacturer", "pet supplies e-commerce",
-    "animal health manufacturer", "seed company", "produce shipper",
-    "packing shed", "nursery grower", "horticulture greenhouse"
-  ],
-
-  home_furniture: [
-    "furniture manufacturer", "mattress manufacturer", "home goods warehouse",
-    "kitchen cabinet manufacturer", "wood products manufacturer"
-  ],
-
-  printing_label_kitting: [
-    "kitting and assembly", "contract kitting", "promo kitting",
-    "subscription box kitting", "label printing in-house", "mail house",
-    "direct mail facility", "commercial printer with fulfillment"
-  ],
-
-  hospitality_edu_events: [
-    "restaurant group headquarters", "franchise headquarters", "catering company",
-    "stadium concessions", "venue concessions", "hotel distribution center",
-    "university dining services", "school district nutrition services"
-  ],
-};
-
-// Size overlays (hint words appended to many families when size is requested)
-const SIZE_HINT: Record<"small" | "medium" | "large", string[]> = {
-  small: [
-    "local", "independent", "small batch", "artisan", "micro",
-    "family owned", "startup"
-  ],
-  medium: ["regional", "multi-location", "growing"],
-  large: ["corporate", "national", "headquarters", "regional distribution center"]
-};
-
-// Product hooks → add/bias certain families
-const PRODUCT_HOOKS: Record<string, string[]> = {
-  // secondary packaging heavy
-  "stretch": ["logistics_warehouse", "ecommerce_3pl", "home_furniture"],
-  "stretch film": ["logistics_warehouse", "ecommerce_3pl", "home_furniture"],
-  "pallet wrap": ["logistics_warehouse", "ecommerce_3pl"],
-  "void fill": ["ecommerce_3pl", "printing_label_kitting", "home_furniture"],
-  "bubble": ["ecommerce_3pl", "home_furniture"],
-  "mailers": ["ecommerce_3pl", "apparel_merch", "printing_label_kitting"],
-  "corrugate": ["ecommerce_3pl", "food_mfg", "industrial_mfg"],
-  "corrugated": ["ecommerce_3pl", "food_mfg", "industrial_mfg"],
-  "fibc": ["industrial_mfg", "pet_agri", "food_mfg"],
-  "bulk bag": ["industrial_mfg", "pet_agri"],
-  "labels": ["food_mfg", "beverage", "beauty_personal", "pharma_nutra"],
-  "ribbons": ["food_mfg", "beverage"],
-  "shrink": ["beverage", "food_mfg", "logistics_warehouse"],
-  "shrink film": ["beverage", "food_mfg", "logistics_warehouse"],
-  "tape": ["ecommerce_3pl", "logistics_warehouse"],
-  "strapping": ["logistics_warehouse", "industrial_mfg"],
-  "poly bag": ["food_mfg", "industrial_mfg", "apparel_merch"],
-  "pouch": ["food_mfg", "beauty_personal", "cannabis"],
-  "bottle": ["beverage", "beauty_personal"],
-  "jar": ["beverage", "beauty_personal"],
-};
-
-// A broader generic set we ALWAYS include to keep recall high across sizes.
-const GENERIC_ALWAYS: string[] = [
-  "wholesale distributor", "brand headquarters", "contract manufacturer",
-  "co-manufacturer", "private label manufacturer",
-  "regional warehouse", "corporate distribution center"
-];
-
-/* -------------------------------------------------------------------------- */
-/* query builder                                                              */
-/* -------------------------------------------------------------------------- */
-
-type Size = "small" | "medium" | "large";
-type BuildOpts = {
-  size?: Size;
-  sectors?: string[];   // free-form (beauty, pharma, ecommerce, etc.)
-  products?: string[];  // free-form (stretch, corrugate, mailer, fibc, etc.)
-};
-
-function pickFamiliesFromSectors(sectors?: string[]): string[] {
-  const s = uniqLower(sectors);
-  if (!s.length) return Object.keys(FAMILY); // default: all families
-  const out = new Set<string>();
-
-  const map: Record<string, string[]> = {
-    food: ["food_mfg", "beverage"],
-    beverage: ["beverage", "food_mfg"],
-    beer: ["beverage"],
-    wine: ["beverage"],
-    spirits: ["beverage"],
-    ecommerce: ["ecommerce_3pl", "printing_label_kitting", "apparel_merch"],
-    logistics: ["logistics_warehouse", "ecommerce_3pl"],
-    3pl: ["ecommerce_3pl", "logistics_warehouse"],
-    warehouse: ["logistics_warehouse"],
-    beauty: ["beauty_personal"],
-    cosmetics: ["beauty_personal"],
-    personalcare: ["beauty_personal"],
-    pharma: ["pharma_nutra"],
-    nutraceuticals: ["pharma_nutra"],
-    cannabis: ["cannabis"],
-    industrial: ["industrial_mfg"],
-    electronics: ["electronics_auto"],
-    auto: ["electronics_auto"],
-    apparel: ["apparel_merch"],
-    pet: ["pet_agri"],
-    agriculture: ["pet_agri"],
-    furniture: ["home_furniture"],
-    printing: ["printing_label_kitting"],
-    hospitality: ["hospitality_edu_events"],
-    education: ["hospitality_edu_events"],
-    events: ["hospitality_edu_events"],
-  };
-
-  for (const k of s) {
-    const fams = map[k] || [];
-    if (fams.length) fams.forEach(f => out.add(f));
-  }
-  // if nothing matched, fall back to all
-  return out.size ? [...out] : Object.keys(FAMILY);
-}
-
-function familiesFromProducts(products?: string[]): string[] {
-  const out = new Set<string>();
-  for (const raw of uniqLower(products)) {
-    for (const key of Object.keys(PRODUCT_HOOKS)) {
-      if (raw.includes(key)) {
-        for (const fam of PRODUCT_HOOKS[key]) out.add(fam);
-      }
-    }
-  }
-  return [...out];
-}
-
-function buildQueries(opts: BuildOpts): string[] {
-  const famBase = new Set<string>(pickFamiliesFromSectors(opts.sectors));
-  // product hooks can add more families
-  for (const f of familiesFromProducts(opts.products)) famBase.add(f);
-
-  const phrases = new Set<string>(GENERIC_ALWAYS);
-  for (const fam of famBase) {
-    for (const q of (FAMILY[fam] || [])) phrases.add(q);
-  }
-
-  // Size hints: apply by concatenating “hint + phrase” (keeps recall wide)
-  const hints = opts.size ? SIZE_HINT[opts.size] : [];
-  const out = new Set<string>();
-
-  if (hints.length) {
-    for (const p of phrases) {
-      out.add(p);
-      for (const h of hints) out.add(`${h} ${p}`);
-    }
-  } else {
-    for (const p of phrases) out.add(p);
-  }
-
-  // return ~200+ phrases but the fetchers will cap via limit & dedupe
-  return [...out];
-}
-
-/* -------------------------------------------------------------------------- */
-/* providers                                                                  */
+/* Google Places                                                              */
 /* -------------------------------------------------------------------------- */
 
 const PLACES_DETAILS_MAX = Math.max(
@@ -343,21 +217,22 @@ const PLACES_DETAILS_MAX = Math.max(
 async function placesSearch(q: string, city?: string, limit = 30): Promise<any[]> {
   const key = process.env.PLACES_API_KEY || process.env.GOOGLE_PLACES_API_KEY;
   if (!key) return [];
-  const query = encodeURIComponent(city ? `${q} near ${city}` : q);
-  const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=${key}`;
+  const query = encodeURIComponent(city ? (q + " near " + city) : q);
+  const url = "https://maps.googleapis.com/maps/api/place/textsearch/json?query=" + query + "&key=" + key;
   const r = await F(url).catch(() => null);
-  if (!r?.ok) return [];
+  if (!r || !r.ok) return [];
   const data = await r.json().catch(() => ({}));
-  return Array.isArray((data as any)?.results) ? (data as any).results.slice(0, limit) : [];
+  return Array.isArray((data as any).results) ? (data as any).results.slice(0, limit) : [];
 }
 
 async function placesDetails(place_id: string): Promise<{ website?: string } | null> {
   const key = process.env.PLACES_API_KEY || process.env.GOOGLE_PLACES_API_KEY;
   if (!key || !place_id) return null;
   const fields = "website,url";
-  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&fields=${fields}&key=${key}`;
+  const url = "https://maps.googleapis.com/maps/api/place/details/json?place_id=" +
+              encodeURIComponent(place_id) + "&fields=" + fields + "&key=" + key;
   const r = await F(url).catch(() => null);
-  if (!r?.ok) return null;
+  if (!r || !r.ok) return null;
   const data = await r.json().catch(() => ({}));
   const site = (data as any)?.result?.website || (data as any)?.result?.url;
   return { website: site };
@@ -371,13 +246,13 @@ async function fromGoogle(qs: string[], city: string | undefined, limit: number)
     const res = await placesSearch(q, city, Math.ceil(limit * 1.5));
     for (let i = 0; i < res.length; i++) {
       const r = res[i];
-      if ((r as any)?.business_status === "CLOSED_PERMANENTLY") continue;
+      if ((r && r.business_status) === "CLOSED_PERMANENTLY") continue;
 
       let website: string | undefined = (r as any)?.website; // usually undefined in Text Search
-      if (!website && (r as any)?.place_id && detailsLookups < PLACES_DETAILS_MAX) {
+      if (!website && r && r.place_id && detailsLookups < PLACES_DETAILS_MAX) {
         try {
-          const det = await placesDetails((r as any).place_id);
-          website = det?.website;
+          const det = await placesDetails(r.place_id);
+          website = det ? det.website : undefined;
         } catch { /* ignore */ }
         detailsLookups++;
       }
@@ -387,13 +262,13 @@ async function fromGoogle(qs: string[], city: string | undefined, limit: number)
 
       out.push({
         provider: "places",
-        name: (r as any)?.name || "",
+        name: (r && r.name) ? r.name : "",
         url: website,
         host,
-        city: (r as any)?.formatted_address || "",
-        tags: Array.isArray((r as any)?.types) ? (r as any).types.slice(0, 6) : [],
+        city: (r && r.formatted_address) ? r.formatted_address : "",
+        tags: Array.isArray((r && r.types) ? r.types : []) ? (r.types as string[]).slice(0, 6) : [],
         tier: undefined,
-        raw: undefined,
+        raw: undefined
       });
 
       if (out.length >= limit * 2) break; // we'll dedupe + cap later
@@ -403,11 +278,15 @@ async function fromGoogle(qs: string[], city: string | undefined, limit: number)
   return out;
 }
 
+/* -------------------------------------------------------------------------- */
+/* OpenStreetMap                                                              */
+/* -------------------------------------------------------------------------- */
+
 async function osmSearch(q: string, city?: string, limit = 40): Promise<any[]> {
-  const query = encodeURIComponent(city ? `${q} near ${city}` : q);
-  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${query}&limit=${limit}`;
-  const r = await F(url, { headers: { "User-Agent": "galactly-buyer-finder/1.0" } }).catch(() => null);
-  if (!r?.ok) return [];
+  const query = encodeURIComponent(city ? (q + " near " + city) : q);
+  const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&q=" + query + "&limit=" + String(limit);
+  const r = await F(url, { headers: { "User-Agent": "buyers-finder/1.0" } }).catch(() => null);
+  if (!r || !r.ok) return [];
   const data = await r.json().catch(() => []);
   return Array.isArray(data) ? data : [];
 }
@@ -417,20 +296,21 @@ async function fromOSM(qs: string[], city: string | undefined, limit: number): P
   for (const q of qs) {
     const res = await osmSearch(q, city, Math.ceil(limit * 1.5));
     for (const r of res) {
-      const name = (r as any)?.display_name?.split(",")[0] || (r as any)?.namedetail?.name || "Business";
-      const site = (r as any)?.extratags?.website || (r as any)?.extratags?.contact_website || (r as any)?.extratags?.url;
+      const name = (r && r.display_name) ? String(r.display_name).split(",")[0] : (r && r.namedetail && r.namedetail.name) ? r.namedetail.name : "Business";
+      const site = (r && r.extratags && (r.extratags.website || r.extratags.contact_website || r.extratags.url)) ? (r.extratags.website || r.extratags.contact_website || r.extratags.url) : undefined;
       const host = toHost(site);
       if (!host || !isActionableHost(host)) continue;
 
+      const tags = r && r.extratags ? Object.keys(r.extratags) : [];
       out.push({
         provider: "osm",
         name,
         url: site,
         host,
-        city: (r as any)?.display_name || "",
-        tags: Object.keys((r as any)?.extratags || {}).slice(0, 6),
+        city: (r && r.display_name) ? r.display_name : "",
+        tags: Array.isArray(tags) ? tags.slice(0, 6) : [],
         tier: undefined,
-        raw: undefined,
+        raw: undefined
       });
       if (out.length >= limit * 2) break;
     }
@@ -440,38 +320,32 @@ async function fromOSM(qs: string[], city: string | undefined, limit: number): P
 }
 
 /* -------------------------------------------------------------------------- */
-/* public API                                                                 */
+/* Public API                                                                 */
 /* -------------------------------------------------------------------------- */
 
 export async function findBuyersFromWeb(opts: {
   hostSeed: string;
   city?: string;
-  size?: "small" | "medium" | "large";
+  size?: "micro" | "small" | "medium" | "large";
   limit: number;
-  queries?: string[];     // hard override (rare)
-  sectors?: string[];     // NEW: bias vertical families
-  products?: string[];    // NEW: bias via packaging SKUs (stretch, corrugate, etc.)
+  queries?: string[];
 }): Promise<Candidate[]> {
-  // Build the phrase set: custom > builder(size/sectors/products)
   const sizeTier = sizeToTier(opts.size);
-  const qs = (opts.queries && opts.queries.length)
-    ? opts.queries
-    : buildQueries({ size: opts.size as any, sectors: opts.sectors, products: opts.products });
+  const qs = (opts.queries && opts.queries.length ? opts.queries : queriesForSize(opts.size));
 
-  // Providers
   const results: Candidate[] = [];
   const gp = await fromGoogle(qs, opts.city, opts.limit).catch(() => []);
   results.push(...gp);
 
-  if (results.length < Math.max(1, opts.limit)) {
+  if (results.length < opts.limit) {
     const os = await fromOSM(qs, opts.city, opts.limit).catch(() => []);
     results.push(...os);
   }
 
   // Attach size tier hint if requested
-  for (const r of results) if (sizeTier && !r.tier) r.tier = sizeTier;
+  if (sizeTier) for (const r of results) if (!r.tier) r.tier = sizeTier;
 
-  // Keep only actionable, dedupe by host, cap
+  // Keep only actionable, dedup by host, cap
   const normalized = results.filter(r => !!r.host && isActionableHost(r.host));
   return dedupeByHost(normalized, Math.max(1, opts.limit));
 }
