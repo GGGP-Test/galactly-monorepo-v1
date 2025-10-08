@@ -16,30 +16,54 @@
   h1{margin:0 0 10px;font-size:18px}
   .card{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:12px;margin-top:12px}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  input{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
-  input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
-  .btn{font:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--divider);background:#152333;color:#cfe0ee;cursor:pointer}
-  .btn.primary{background:var(--accent);border:none;color:var(--accentText);font-weight:800}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .pill{font-size:12px;padding:4px 8px;border-radius:999px;background:#0e1520;border:1px solid #213042;color:#9ab0c0}
+  input,select,button,textarea{font:inherit}
+  input,select,textarea{padding:10px 12px;border-radius:10px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input:focus,select:focus,textarea:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
+  button{padding:9px 12px;border-radius:10px;border:1px solid var(--divider);background:#152333;color:#cfe0ee;cursor:pointer}
+  button.primary{background:var(--accent);border:none;color:var(--accentText);font-weight:800}
   .h{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
-  pre{margin:0;background:#0a121b;border:1px solid var(--divider);border-radius:10px;padding:10px;color:#a5bed1;overflow:auto;max-height:460px}
+  pre{margin:0;background:#0a121b;border:1px solid var(--divider);border-radius:10px;padding:10px;color:#a5bed1;overflow:auto;max-height:520px}
   .muted{color:var(--muted)}
+  .rangeWrap{display:flex;align-items:center;gap:10px}
+  .rangeWrap input[type=range]{width:320px}
+  .hint{font-size:12px;color:#9bb2c6}
+  .sep{flex:1}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Artemis BV1 — Debug Console</h1>
+  <h1>Artemis BV1 — Debug Console <span class="pill" id="hdrMode">x-admin-key + Bearer</span></h1>
 
-  <!-- API base -->
+  <!-- API base + headers -->
   <div class="card">
-    <div class="h">API base</div>
+    <div class="h">Connection</div>
     <div class="row">
       <input id="apiBase" type="text" style="min-width:420px" placeholder="https://…/api">
-      <button id="saveApi" class="btn">Save</button>
-      <button id="ping" class="btn">Ping</button>
-      <button id="health" class="btn">Health</button>
-      <button id="status" class="btn">Status</button>
+      <button id="saveApi">Save</button>
+      <button id="ping">Ping</button>
+      <button id="health">Health</button>
+      <button id="status">Status</button>
+      <span class="sep"></span>
+      <span class="hint">Headers sent on “admin” calls:</span>
+      <select id="adminHeader">
+        <option value="x-admin-key">x-admin-key</option>
+        <option value="x-admin-token">x-admin-token</option>
+      </select>
+      <input id="adminKey" type="password" placeholder="paste admin key" style="width:240px">
+      <button id="saveKey">Save key</button>
+      <button id="clearKey">Clear</button>
     </div>
-    <div class="muted" style="margin-top:6px">This page remembers the API base in your browser only.</div>
+    <div class="row" style="margin-top:8px">
+      <label class="hint">Plan:</label>
+      <select id="userPlan">
+        <option>Free</option><option>Pro</option><option>Enterprise</option>
+      </select>
+      <label class="hint">User email:</label>
+      <input id="userEmail" placeholder="you@company.com" style="width:260px">
+    </div>
+    <div class="muted" style="margin-top:6px">This page remembers settings in your browser only.</div>
   </div>
 
   <!-- Classify -->
@@ -48,30 +72,58 @@
     <div class="row">
       <input id="host" type="text" placeholder="host e.g. peekpackaging.com" style="min-width:280px">
       <input id="email" type="text" placeholder="email (optional)">
-      <button id="classify" class="btn primary">GET /classify (auto-fallback)</button>
+      <button id="classify" class="primary">GET /classify (auto-fallback)</button>
+      <span id="reqUrl" class="hint"></span>
     </div>
-    <div class="muted" id="reqUrl" style="margin-top:6px">Request URL will appear here</div>
   </div>
 
   <!-- Prefs -->
   <div class="card">
     <div class="h">Prefs</div>
     <div class="row">
-      <button id="prefsGet" class="btn">GET /prefs?host=…</button>
-      <button id="prefsUp" class="btn">POST /prefs/upsert (demo)</button>
+      <button id="prefsGet">GET /prefs?host=…</button>
+      <button id="prefsUp">POST /prefs/upsert (demo)</button>
     </div>
-    <div class="muted" style="margin-top:6px">Demo upsert sets city “San Diego”, mids+near on, and tags film/labels/food/beverage.</div>
+    <div class="hint" style="margin-top:6px">Demo upsert: city “San Diego”, mids+near on; tags film/labels/food/beverage.</div>
   </div>
 
-  <!-- Leads & Catalog -->
+  <!-- Leads / Web -->
   <div class="card">
-    <div class="h">Leads & Catalog</div>
+    <div class="h">Leads & Web-first</div>
     <div class="row">
       <input id="city" type="text" placeholder="city (optional)">
-      <button id="find" class="btn primary">GET /leads/find-buyers</button>
-      <button id="catSum" class="btn">GET /catalog</button>
-      <button id="catSample" class="btn">GET /catalog/sample?limit=10</button>
-      <button id="catReload" class="btn">POST /catalog/reload</button>
+      <select id="source">
+        <option value="web" selected>Web (live)</option>
+        <option value="catalog">Catalog (fallback)</option>
+        <option value="hybrid">Hybrid (mix)</option>
+      </select>
+      <select id="sizePref">
+        <option value="small" selected>Small (Tier C)</option>
+        <option value="medium">Medium (Tier B)</option>
+        <option value="large">Large (Tier A)</option>
+      </select>
+      <select id="band">
+        <option>COOL</option><option selected>WARM</option><option>HOT</option>
+      </select>
+      <label class="hint">Limit</label>
+      <input id="limit" type="number" min="1" max="100" value="24" style="width:100px">
+      <span id="wsWrap" class="rangeWrap">
+        <label class="hint">Web share</label>
+        <input id="webShare" type="range" min="0" max="1" step="0.05" value="0.30">
+        <span id="wsVal" class="hint">0.30</span>
+      </span>
+      <button id="find" class="primary">Find</button>
+    </div>
+  </div>
+
+  <!-- Scoreboard + Feedback -->
+  <div class="card">
+    <div class="h">Scoreboard & Feedback</div>
+    <div class="row">
+      <button id="scoreProbe">GET /metrics/scoreboard?probe=1</button>
+      <button id="thumbUp">👍 /feedback/thumb (up)</button>
+      <button id="thumbDown">👎 /feedback/thumb (down)</button>
+      <span class="hint">Tags sent: stretch wrap, rfq, shopify</span>
     </div>
   </div>
 
@@ -81,9 +133,25 @@
     <div class="row">
       <input id="q" type="text" placeholder="search (e.g., coffee shop)">
       <input id="city2" type="text" placeholder="city (e.g., San Diego)">
-      <button id="places" class="btn">GET /places/search</button>
+      <button id="places">GET /places/search</button>
+      <span class="hint">Requires PLACES_API_KEY on the API.</span>
     </div>
-    <div class="muted" style="margin-top:6px">Requires GOOGLE_PLACES_API_KEY configured on the API.</div>
+  </div>
+
+  <!-- Raw request -->
+  <div class="card">
+    <div class="h">Raw request</div>
+    <div class="row">
+      <select id="rawMethod">
+        <option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option>
+      </select>
+      <input id="rawPath" style="min-width:360px" placeholder="/leads/find-buyers?host=…">
+      <button id="rawSend" class="primary">Send</button>
+      <button id="copyCurl">Copy as curl</button>
+      <span class="sep"></span>
+      <label class="hint"><input id="rawAdmin" type="checkbox" checked> include admin headers</label>
+    </div>
+    <textarea id="rawBody" rows="4" style="width:100%;margin-top:8px" placeholder='(optional JSON body)'></textarea>
   </div>
 
   <!-- Output -->
@@ -95,36 +163,84 @@
 
 <script>
 (function(){
-  const DEF = "https://p01--animated-cellar--vz4ftkwrzdfs.code.run/api"; // your Northflank API
-  const LS = "bv1.debug.api";
+  /* ------------ storage + basics ------------ */
+  const DEF = (location.origin + "/api");  // safe default
+  const LS = {
+    api:"bv1.debug.api", key:"bv1.debug.key", hdr:"bv1.debug.hdr",
+    plan:"bv1.debug.plan", email:"bv1.debug.email",
+    source:"bv1.debug.source", share:"bv1.debug.share"
+  };
   const $ = (q,r=document)=>r.querySelector(q);
-  const out = $("#out"), reqUrl=$("#reqUrl"), apiIn=$("#apiBase");
-  function getBase(){ return (localStorage.getItem(LS)||DEF).replace(/\/+$/,""); }
-  function setBase(v){ localStorage.setItem(LS, String(v||"").trim()); }
+  const out=$("#out"), reqUrl=$("#reqUrl"), apiIn=$("#apiBase");
+
+  function getBase(){ return (localStorage.getItem(LS.api)||DEF).replace(/\/+$/,""); }
+  function setBase(v){ localStorage.setItem(LS.api, String(v||"").trim()); }
   function path(p){ return getBase() + (String(p).startsWith("/")? p : "/"+p); }
+  function normHost(h){ return String(h||"").toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/[/?#].*$/,""); }
   function log(obj, title){
     const t = title ? "# "+title+"\n" : "";
-    out.textContent = t + JSON.stringify(obj,null,2) + "\n\n" + out.textContent;
+    out.textContent = t + (typeof obj==="string" ? obj : JSON.stringify(obj,null,2)) + "\n\n" + out.textContent;
   }
-  async function j(url, init){
-    const r = await fetch(url, Object.assign({headers:{'Content-Type':'application/json'}}, init||{}));
+
+  /* ------------ headers ------------ */
+  function getKey(){ return localStorage.getItem(LS.key)||""; }
+  function setKey(v){ localStorage.setItem(LS.key, String(v||"")); }
+  function getHdr(){ return localStorage.getItem(LS.hdr)||"x-admin-key"; }
+  function setHdr(v){ localStorage.setItem(LS.hdr, v||"x-admin-key"); }
+  function getPlan(){ return localStorage.getItem(LS.plan)||"Free"; }
+  function setPlan(v){ localStorage.setItem(LS.plan, v||"Free"); }
+  function getEmail(){ return localStorage.getItem(LS.email)||""; }
+  function setEmail(v){ localStorage.setItem(LS.email, (v||"").trim()); }
+
+  function adminHeaders(){
+    const h = {"Content-Type":"application/json"};
+    const key = getKey(); const hdr = getHdr();
+    if (key){ h[hdr]=key; h["Authorization"]="Bearer "+key; }
+    h["x-user-plan"]=getPlan();
+    const em=getEmail(); if (em) h["x-user-email"]=em;
+    return h;
+  }
+  function headersFor(withAdmin){
+    return withAdmin ? adminHeaders() : {"Content-Type":"application/json"};
+  }
+
+  /* ------------ fetch helpers ------------ */
+  async function j(url, init, withAdmin=false){
+    const r = await fetch(url, Object.assign({headers: headersFor(withAdmin)}, init||{}));
     let data; try{ data = await r.json(); }catch{ data = { status:r.status, text: await r.text().catch(()=>"(no body)") }; }
     return data;
   }
-  function normHost(h){ return String(h||"").toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/[/#?].*$/,""); }
 
+  /* ------------ init UI ------------ */
   apiIn.value = getBase();
+  $("#adminKey").value = getKey();
+  $("#adminHeader").value = getHdr();
+  $("#userPlan").value = getPlan();
+  $("#userEmail").value = getEmail();
+  const hdrMode=$("#hdrMode"); hdrMode.textContent = (getHdr()+" + Bearer");
 
+  const sourceSel=$("#source"), shareInp=$("#webShare"), wsWrap=$("#wsWrap"), wsVal=$("#wsVal");
+  sourceSel.value = localStorage.getItem(LS.source) || "web";
+  shareInp.value = localStorage.getItem(LS.share) || "0.30";
+  wsVal.textContent = Number(shareInp.value||0).toFixed(2);
+  wsWrap.style.display = sourceSel.value==="hybrid" ? "flex" : "none";
+
+  /* ------------ actions: connection ------------ */
   $("#saveApi").onclick = ()=>{ setBase(apiIn.value); log({saved:getBase()},"Saved"); };
-  $("#ping").onclick = async ()=> log(await fetch(path("/ping")).then(r=>({status:r.status})), "Ping");
+  $("#saveKey").onclick = ()=>{ setHdr($("#adminHeader").value); setKey($("#adminKey").value); hdrMode.textContent=(getHdr()+" + Bearer"); log("admin key saved","Auth"); };
+  $("#clearKey").onclick = ()=>{ setKey(""); $("#adminKey").value=""; log("admin key cleared","Auth"); };
+  $("#adminHeader").onchange = ()=>{ setHdr($("#adminHeader").value); hdrMode.textContent=(getHdr()+" + Bearer"); };
+  $("#userPlan").onchange = ()=> setPlan($("#userPlan").value);
+  $("#userEmail").onchange = ()=> setEmail($("#userEmail").value);
+
+  $("#ping").onclick   = async ()=> log(await fetch(path("/ping")).then(r=>({status:r.status})), "Ping");
   $("#health").onclick = async ()=> log(await j(path("/health")), "Health");
   $("#status").onclick = async ()=> log(await j(path("/status")), "Status");
 
-  // ---- classify with auto-fallback (/classify then /api/classify) ----
+  /* ------------ classifier ------------ */
   $("#classify").onclick = async ()=>{
-    const host = normHost($("#host").value||"");
-    const email = ($("#email").value||"").trim();
-    if(!host){ log({error:"host required"},"Error"); return; }
+    const host = normHost($("#host").value||""); const email=($("#email").value||"").trim();
+    if(!host){ log({error:"host required"},"Classify"); return; }
     const base = getBase();
     const u1 = new URL(base.replace(/\/+$/,"") + "/classify");
     const u2 = new URL(base.replace(/\/api\/?$/i,"") + "/api/classify");
@@ -132,50 +248,121 @@
     u2.searchParams.set("host", host); if(email) u2.searchParams.set("email", email);
 
     reqUrl.textContent = u1.toString();
-    let used = u1; let data = await j(u1.toString());
+    let used = u1, data = await j(u1.toString());
     if (data && data.ok === false && /not_found|Cannot GET/i.test(JSON.stringify(data))) {
-      reqUrl.textContent += "\n(fallback) " + u2.toString();
+      reqUrl.textContent += "  (fallback) " + u2.toString();
       used = u2; data = await j(u2.toString());
     }
     log(data, "Classify " + used.pathname);
   };
 
-  // ---- prefs ----
+  /* ------------ prefs ------------ */
   $("#prefsGet").onclick = async ()=>{
     const host = normHost($("#host").value||"");
     if(!host) return log({error:"host required"},"Prefs GET");
     log(await j(path("/prefs?host="+encodeURIComponent(host))), "Prefs GET");
   };
   $("#prefsUp").onclick = async ()=>{
-    const host = normHost($("#host").value||"");
-    if(!host) return log({error:"host required"},"Prefs UPSERT");
+    const host = normHost($("#host").value||""); if(!host) return log({error:"host required"},"Prefs UPSERT");
     const body = {
       host, inboundOptIn:true,
       productTags:["film","labels"], sectorHints:["food","beverage"],
-      general:{ mids:true, avoidBig:true, near:true, retail:true, wholesale:true, ecom:false },
+      general:{ mids:true, avoidBig:true, near:true, retail:true, wholesale:true, ecom:false, aiFinalize:true },
       metrics:[{label:"Fast turnaround", value:8},{label:"Lowest unit cost", value:7}],
       targeting:{ city: ($("#city").value||"San Diego") }
     };
-    log(await j(path("/prefs/upsert"), {method:"POST", body: JSON.stringify(body)}), "Prefs UPSERT");
+    log(await j(path("/prefs/upsert"), {method:"POST", body: JSON.stringify(body)}, true), "Prefs UPSERT");
   };
 
-  // ---- leads & catalog ----
+  /* ------------ leads / web finder ------------ */
+  function clamp01(x){ const v=Number(x)||0; return Math.max(0,Math.min(1,v)); }
+  function updateHybridUI(){ wsWrap.style.display = sourceSel.value==="hybrid" ? "flex" : "none"; }
+  sourceSel.onchange = ()=>{ localStorage.setItem(LS.source, sourceSel.value); updateHybridUI(); };
+  shareInp.oninput = (e)=>{ const v=clamp01(e.target.value); wsVal.textContent=v.toFixed(2); };
+  shareInp.onchange = (e)=>{ const v=clamp01(e.target.value); localStorage.setItem(LS.share,String(v)); };
+
+  function buildWebUrl(){
+    const host = normHost($("#host").value||""); const city=($("#city").value||"").trim();
+    const size = ($("#sizePref").value||"small").toLowerCase();
+    const band = ($("#band").value||"WARM").toUpperCase();
+    const limit = Math.max(1, Number($("#limit").value||24)) || 24;
+    const mode = ($("#source").value||"web"); const ws = Number(shareInp.value||0.30);
+    const u = new URL(path("/web/find"));
+    if (host) u.searchParams.set("host", host);
+    if (city) u.searchParams.set("city", city);
+    u.searchParams.set("size", size);
+    u.searchParams.set("limit", String(limit));
+    u.searchParams.set("band", band);
+    u.searchParams.set("mode", mode);
+    if (mode==="hybrid") u.searchParams.set("shareWeb", ws.toString());
+    return u.toString();
+  }
+  function buildCatalogUrl(){
+    const host = normHost($("#host").value||""); const city=($("#city").value||"").trim();
+    const band = ($("#band").value||"WARM").toUpperCase();
+    const size = ($("#sizePref").value||"small").toLowerCase();
+    const tier = size==="large"?"A": size==="medium"?"B":"C";
+    const u = new URL(path("/leads/find-buyers"));
+    if (host) u.searchParams.set("host", host);
+    if (city) u.searchParams.set("city", city);
+    u.searchParams.set("tiers", tier);
+    u.searchParams.set("preferTier", tier);
+    u.searchParams.set("minBand", band);
+    return u.toString();
+  }
   $("#find").onclick = async ()=>{
-    const host = normHost($("#host").value||"");
-    if(!host) return log({error:"host required"},"Leads");
-    const qs = new URLSearchParams({
-      host, limit:"8", city: ($("#city").value||"").trim()
-    }).toString();
-    log(await j(path("/leads/find-buyers?"+qs)), "Leads find-buyers");
+    const mode = ($("#source").value||"web");
+    const url = mode==="catalog" ? buildCatalogUrl() : buildWebUrl();
+    const data = await j(url, null, true);
+    // exact-band filter when catalog/minBand used
+    const wantBand = ($("#band").value||"WARM").toUpperCase();
+    if (data && Array.isArray(data.items)) data.items = data.items.filter(x=>String(x?.band||"").toUpperCase()===wantBand);
+    log(data, "Find ("+mode+")");
   };
-  $("#catSum").onclick = async ()=> log(await j(path("/catalog")), "Catalog summary");
-  $("#catSample").onclick = async ()=> log(await j(path("/catalog/sample?limit=10")), "Catalog sample");
-  $("#catReload").onclick = async ()=> log(await j(path("/catalog/reload"), {method:"POST"}), "Catalog reload");
 
-  // ---- places (optional) ----
+  /* ------------ scoreboard + feedback ------------ */
+  $("#scoreProbe").onclick = async ()=>{
+    const host = normHost($("#host").value||""); if(!host) return log({error:"host required"},"Scoreboard");
+    const u = new URL(path("/metrics/scoreboard")); u.searchParams.set("host", host); u.searchParams.set("probe","1");
+    log(await j(u.toString(), null, true), "Scoreboard");
+  };
+  async function sendThumb(up){
+    const host = normHost($("#host").value||""); if(!host) return log({error:"host required"},"Feedback");
+    const body={ host, tags:["stretch wrap","rfq","shopify"], up:!!up, down:!up };
+    log(await j(path("/feedback/thumb"), {method:"POST", body: JSON.stringify(body)}, true), "Feedback "+(up?"up":"down"));
+  }
+  $("#thumbUp").onclick = ()=>sendThumb(true);
+  $("#thumbDown").onclick = ()=>sendThumb(false);
+
+  /* ------------ places ------------ */
   $("#places").onclick = async ()=>{
-    const qs = new URLSearchParams({ q:($("#q").value||"").trim(), city:($("#city2").value||"").trim(), limit:"5" }).toString();
+    const qs = new URLSearchParams({ q:($("#q").value||"").trim(), city:($("#city2").value||"").trim(), limit:"6" }).toString();
     log(await j(path("/places/search?"+qs)), "Places search");
+  };
+
+  /* ------------ raw request + curl ------------ */
+  function curlFor(method, url, body, withAdmin){
+    const h = headersFor(withAdmin);
+    const lines = ["curl -i \\\n  -X "+method.toUpperCase()+" \\\n" + Object.entries(h).map(([k,v])=>`  -H ${JSON.stringify(k+": "+v)} \\`).join("\n")];
+    if (body) lines.push("  --data " + JSON.stringify(body) + " \\");
+    lines.push("  " + JSON.stringify(url));
+    return lines.join("\n");
+  }
+  $("#rawSend").onclick = async ()=>{
+    const m = $("#rawMethod").value||"GET";
+    const p = $("#rawPath").value||"/ping";
+    const withAdmin = $("#rawAdmin").checked;
+    let body=null; const raw=$("#rawBody").value.trim(); if (raw) { try{ body=JSON.parse(raw);}catch(e){ return log({error:"bad JSON body"}, "Raw"); } }
+    const data = await j(path(p), {method:m, body: body? JSON.stringify(body): undefined}, withAdmin);
+    log(data, "Raw "+m+" "+p);
+  };
+  $("#copyCurl").onclick = async ()=>{
+    const m = $("#rawMethod").value||"GET";
+    const p = $("#rawPath").value||"/ping";
+    const withAdmin = $("#rawAdmin").checked;
+    let body=null; const raw=$("#rawBody").value.trim(); if (raw) { try{ body=JSON.parse(raw);}catch{} }
+    const cmd = curlFor(m, path(p), body, withAdmin);
+    try{ await navigator.clipboard.writeText(cmd); log("copied curl to clipboard","curl"); }catch{ log(cmd,"curl"); }
   };
 })();
 </script>
