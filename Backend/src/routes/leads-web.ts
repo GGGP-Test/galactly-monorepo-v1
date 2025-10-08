@@ -1,27 +1,28 @@
 // src/routes/leads-web.ts
 //
-// Web-first buyer discovery with exact band filtering (server-side),
-// route aliasing, and stricter web-host filtering.
-// Routes (both work):
+// Web-first buyer discovery with exact band filtering and optional catalog mix.
+// Endpoints (both work):
 //   GET /api/web/find
 //   GET /api/web/find-buyers
 //
 // Query:
-//   host=acme.com&city=&size=small|medium|large&limit=10
-//   &band=COOL|WARM|HOT
-//   &mode=web|hybrid|catalog&shareWeb=0.3
+//   host=acme.com
+//   &city=San+Diego
+//   &size=small|medium|large
+//   &limit=10
+//   &band=COOL|WARM|HOT            // exact band
+//   &mode=web|catalog|hybrid       // default: web
+//   &shareWeb=0.3                  // only used when mode=hybrid
 //   &tiers=A,B,C&preferTier=C&preferSize=small
 //
-// Defaults changed:
-//   - mode defaults to "web" (previously hybrid)
-//   - we drop aggregator hosts (maps.google.com, facebook.com, etc.)
+// Emits a tiny event to /api/events/ingest.
 
 import { Router, type Request, type Response } from "express";
 import { CFG, capResults } from "../shared/env";
 import * as Prefs from "../shared/prefs";
+import * as TRC from "../shared/trc";
 import * as CatalogMod from "../shared/catalog";
 import * as Sources from "../shared/sources";
-import { scoreBuyer } from "../shared/score";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -31,7 +32,7 @@ const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 // Normalize default vs named export from catalog.ts
 const Catalog: any = (CatalogMod as any)?.default ?? (CatalogMod as any);
 
-// ---------------------- local types + utils ----------------------
+// ----------------------- types + tiny utils -----------------------
 
 type Tier = "A" | "B" | "C";
 type Band = "HOT" | "WARM" | "COOL";
@@ -46,9 +47,10 @@ type Candidate = {
   tiers?: Tier[];
   tags?: string[];
   segments?: string[];
-  provider?: "places" | "osm" | "catalog";
+  provider?: "places" | "osm";
   score?: number;
   band?: Band;
+  uncertainty?: number;
   reasons?: string[];
   [k: string]: any;
 };
@@ -77,22 +79,81 @@ function getTier(c: Candidate): Tier {
   const t = (Array.isArray(c.tiers) ? c.tiers[0] : undefined) as any;
   return t === "A" || t === "B" ? t : "C";
 }
+
 function prettyHostName(h: string): string {
   const stem = String(h || "").replace(/^www\./, "").split(".")[0].replace(/[-_]/g, " ");
   return stem.replace(/\b\w/g, (m) => m.toUpperCase());
 }
-function mapLabelToBand(label: "hot" | "warm" | "cold"): Band {
-  return label === "hot" ? "HOT" : label === "warm" ? "WARM" : "COOL";
+
+function cityBoost(city?: string, candidateCity?: string): number {
+  if (!city || !candidateCity) return 0;
+  const a = city.trim().toLowerCase();
+  const b = candidateCity.trim().toLowerCase();
+  if (!a || !b) return 0;
+  if (a === b) return 0.15;
+  if (b.includes(a) || a.includes(b)) return 0.1;
+  return 0;
 }
 
-// Drop aggregator/non-outreach domains
-const BAD_HOST_RE = /(^(?:maps\.|www\.)?google\.[a-z.]+$)|(^facebook\.com$)|(^instagram\.com$)|(^yelp\.com$)|(^tripadvisor\.[a-z.]+$)|(^linkedin\.com$)/i;
-function isOutreachableHost(h?: string) {
-  if (!h) return false;
-  const host = String(h).toLowerCase().replace(/^www\./, "");
-  if (!host.includes(".")) return false;
-  if (BAD_HOST_RE.test(host)) return false;
-  return true;
+const HOT_T  = Number((TRC as any)?.HOT_MIN  ?? 80);
+const WARM_T = Number((TRC as any)?.WARM_MIN ?? 55);
+
+function bandFromScore(score: number): Band {
+  if (typeof (TRC as any)?.classifyScore === "function") {
+    try { return (TRC as any).classifyScore(score) as Band; } catch { /* ignore */ }
+  }
+  return score >= HOT_T ? "HOT" : score >= WARM_T ? "WARM" : "COOL";
+}
+
+function uncertainty(score: number): number {
+  const d = Math.min(Math.abs(score - HOT_T), Math.abs(score - WARM_T));
+  const u = Math.max(0, 1 - d / 10);
+  return Number.isFinite(u) ? Number(u.toFixed(3)) : 0;
+}
+
+function safeScoreRow(row: Candidate, prefs: any, city?: string) {
+  // prefer TRC.scoreRow if present
+  if (typeof (TRC as any)?.scoreRow === "function") {
+    try {
+      const out = (TRC as any).scoreRow(row, prefs, city);
+      if (out && typeof out.score === "number") return out;
+    } catch { /* fall through */ }
+  }
+
+  let score = 50;
+  const reasons: string[] = [];
+
+  const loc = cityBoost(city || (prefs?.city as string), row.city);
+  if (loc) { score += loc * 100; reasons.push(`local+${(loc * 100) | 0}`); }
+
+  const want = new Set<string>(uniqLower(prefs?.categoriesAllow || []));
+  if (want.size) {
+    const have = new Set<string>([
+      ...uniqLower(row.tags || []),
+      ...uniqLower(row.segments || []),
+    ]);
+    let hits = 0; want.forEach((t) => { if (have.has(t)) hits++; });
+    if (hits) { score += Math.min(15, hits * 5); reasons.push(`tags+${hits}`); }
+  }
+
+  const sw = prefs?.sizeWeight || {};
+  if (typeof sw === "object") {
+    const sz = String(row?.size || "").toLowerCase();
+    const w =
+      sz === "micro" ? Number(sw.micro ?? 0) :
+      sz === "small" ? Number(sw.small ?? 0) :
+      sz === "mid"   ? Number(sw.mid   ?? 0) :
+      sz === "large" ? Number(sw.large ?? 0) : 0;
+    if (w) { score += Math.max(-12, Math.min(12, w * 4)); reasons.push(`size:${sz || "?"}`); }
+  }
+  const sig = prefs?.signalWeight || {};
+  if (sig && (sig.ecommerce || sig.retail || sig.wholesale)) {
+    score += Math.min(6, (Number(sig.ecommerce||0) + Number(sig.retail||0) + Number(sig.wholesale||0)) * 2);
+    reasons.push("signals");
+  }
+
+  score = Math.max(0, Math.min(100, score));
+  return { score, reasons };
 }
 
 const SIZE_TO_TIER: Record<string, Tier> = {
@@ -144,10 +205,9 @@ async function emit(kind: string, data: any) {
   } catch {}
 }
 
-// ------------------------------- route -------------------------------
+// ------------------------------- handler -------------------------------
 
-// Alias both paths so Admin can call /web/find OR /web/find-buyers
-r.get(["/find", "/find-buyers"], async (req: Request, res: Response) => {
+async function handleFind(req: Request, res: Response) {
   const t0 = Date.now();
   try {
     const host = String(req.query.host || req.query.domain || "").trim().toLowerCase();
@@ -157,11 +217,11 @@ r.get(["/find", "/find-buyers"], async (req: Request, res: Response) => {
     const sizeQ = String(req.query.size || "").trim().toLowerCase() || undefined;
     const limitQ = Math.max(1, Math.min(100, Number(req.query.limit ?? 10) || 10));
 
-    // exact band required
-    const bandQ = String(req.query.band || "").trim().toUpperCase();
+    // exact band
+    const bandQ = String(req.query.band || "").trim().toUpperCase() as Band;
     const band: Band = bandQ === "HOT" ? "HOT" : bandQ === "WARM" ? "WARM" : "COOL";
 
-    // mode + hybrid share (DEFAULT NOW = "web")
+    // mode + hybrid share (default: web)
     const mode = (String(req.query.mode || "web").trim().toLowerCase()) as "web" | "catalog" | "hybrid";
     const shareWeb = Math.max(0, Math.min(1, Number(req.query.shareWeb ?? 0.3)));
 
@@ -177,6 +237,7 @@ r.get(["/find", "/find-buyers"], async (req: Request, res: Response) => {
       (typeof (Prefs as any).getEffectivePrefs === "function" && (Prefs as any).getEffectivePrefs(host)) ||
       (typeof (Prefs as any).get === "function" && (Prefs as any).get(host)) ||
       {};
+
     const prefs = { ...basePrefs, city, categoriesAllow: [...new Set<string>(basePrefs?.categoriesAllow || [])] };
 
     // ---------- fetch pools ----------
@@ -195,68 +256,50 @@ r.get(["/find", "/find-buyers"], async (req: Request, res: Response) => {
         hostSeed: host,
         city,
         size: (sizeQ as any) || undefined,
-        limit: wantWeb * 3, // overfetch a bit
+        limit: wantWeb * 3, // overfetch, then score/band/slice
       }).catch(() => []);
-      webRows = (Array.isArray(webFound) ? webFound : [])
-        .map((w: any) => ({
-          host: w.host, name: w.name, city: w.city, url: w.url, tier: (w.tier as Tier|undefined),
-          tags: w.tags || [], provider: w.provider || "places"
-        }))
-        // NEW: keep only real, outreachable domains (no maps / socials)
-        .filter((w) => isOutreachableHost(w.host));
+      webRows = Array.isArray(webFound) ? webFound.map((w: any) => ({
+        host: w.host, name: w.name, city: w.city, url: w.url, tier: (w.tier as Tier|undefined),
+        tags: w.tags || [], provider: w.provider
+      })) : [];
     }
 
     // CATALOG
     let catRows: Candidate[] = [];
     if (wantCat > 0) {
       const rows = getCatalogRows();
-      catRows = (Array.isArray(rows) ? rows.slice() : []).map(r => ({ ...r, provider: "catalog" }));
+      catRows = Array.isArray(rows) ? rows.slice() : [];
     }
 
-    // Merge pools
+    // Merge pools (score/band/filter later)
     const pool: Candidate[] = [...webRows, ...catRows];
 
-    // ---------- score + exact band ----------
+    // ---------- filter by allowed tiers + score + exact band ----------
     const scored = pool
       .filter((c) => allowTiers.has(getTier(c)))
       .map((c) => {
+        let { score, reasons } = safeScoreRow(c, prefs, city);
         const t = getTier(c);
-        const rowLike = {
-          host: c.host,
-          tiers: [t],
-          tags: uniqLower(c.tags || []),
-          segments: uniqLower(c.segments || []),
-          cityTags: c.city ? [String(c.city).trim().toLowerCase()] : [],
-        };
-        const s = scoreBuyer({ row: rowLike as any, prefs });
-        const b = mapLabelToBand(s.label);
+        if (preferTier && t === preferTier) { score += 8; reasons = [...reasons, `prefer:${t}`]; }
+        const b = bandFromScore(score);
+        const u = uncertainty(score);
         const name = c.name || c.company || prettyHostName(c.host);
         const url = c.url || `https://${c.host}`;
-        const reasons = [...(s.reasons || [])];
-        if (preferTier && t === preferTier) reasons.push(`prefer:${t}`);
-        return { ...c, name, url, score: s.total, band: b, reasons: reasons.slice(0, 12) };
+        return { ...c, name, url, score, band: b, uncertainty: u, reasons: Array.isArray(reasons) ? reasons.slice(0, 12) : [] };
       })
       .filter((x) => x.band === band);
 
-    // Dedup by host
-    const seen = new Set<string>();
-    const deduped = scored.filter((x) => {
-      const h = (x.host || "").toLowerCase();
-      if (!h || seen.has(h)) return false;
-      seen.add(h);
-      return true;
-    });
+    // Prefer web first if hybrid, otherwise simple score sort
+    const ordered = (mode === "hybrid")
+      ? scored.sort((a, b) => {
+          const aw = (a as any).provider ? 1 : 0;
+          const bw = (b as any).provider ? 1 : 0;
+          if (aw !== bw) return bw - aw; // web over catalog
+          return (b.score || 0) - (a.score || 0);
+        })
+      : scored.sort((a, b) => (b.score || 0) - (a.score || 0));
 
-    // Prefer web rows first when hybrid; else by score
-    const sortWebFirst = (a: Candidate, b: Candidate) => {
-      const aw = (a.provider === "places" || a.provider === "osm") ? 1 : 0;
-      const bw = (b.provider === "places" || b.provider === "osm") ? 1 : 0;
-      if (aw !== bw) return bw - aw; // web over catalog
-      return (b.score || 0) - (a.score || 0);
-    };
-    const ordered = mode === "hybrid" ? deduped.sort(sortWebFirst) : deduped.sort((a, b) => (b.score || 0) - (a.score || 0));
-
-    let items = ordered.slice(0, cap);
+    const items = ordered.slice(0, cap);
 
     const summary = {
       ok: true,
@@ -269,6 +312,10 @@ r.get(["/find", "/find-buyers"], async (req: Request, res: Response) => {
       tiersApplied: Array.from(allowTiers),
       preferTier: preferTier || null,
       ms: Date.now() - t0,
+      // helpful band counts for UIs
+      hot: items.filter(i=>i.band==="HOT").length,
+      warm: items.filter(i=>i.band==="WARM").length,
+      cool: items.filter(i=>i.band==="COOL").length,
     };
 
     await emit("find_buyers_web", { host, ...summary }).catch(() => {});
@@ -277,6 +324,11 @@ r.get(["/find", "/find-buyers"], async (req: Request, res: Response) => {
     const msg = (err as any)?.message || String(err);
     return res.status(200).json({ ok: false, error: "web-find-buyers-failed", detail: msg });
   }
-});
+}
+
+// Expose both paths so the current admin UI (…/web/find) works,
+// and we keep the long form (…/web/find-buyers) too.
+r.get("/find", handleFind);
+r.get("/find-buyers", handleFind);
 
 export default r;
