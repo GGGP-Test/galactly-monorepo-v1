@@ -25,6 +25,7 @@
   .log{font:12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;white-space:pre-wrap;height:360px;overflow:auto;background:#0d1520;border-radius:10px;border:1px solid #223042;padding:10px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   label{font-size:12px;color:#9ab0c0}
+  .sliderRow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
 </style>
 </head>
 <body>
@@ -49,6 +50,7 @@
         </div>
       </div>
 
+      <!-- AUTH + PLAN -->
       <div class="row" style="gap:8px;margin-top:14px">
         <div class="inline">
           <label>Admin auth</label>
@@ -65,8 +67,23 @@
           <button id="saveKey">Save key</button>
           <button id="clearKey" class="btn">Clear</button>
         </div>
+
+        <div class="rowcols" style="margin-top:6px">
+          <div>
+            <label>Plan (header: x-user-plan)</label>
+            <select id="plan">
+              <option value="free" selected>Free</option>
+              <option value="pro">Pro</option>
+            </select>
+          </div>
+          <div>
+            <label>User email (optional)</label>
+            <input id="userEmail" placeholder="you@company.com">
+          </div>
+        </div>
       </div>
 
+      <!-- FIND BUYERS -->
       <div class="row" style="margin-top:16px">
         <label>Find buyers</label>
         <input id="host" placeholder="yourcompany.com">
@@ -74,16 +91,23 @@
 
         <div class="rowcols">
           <div>
-            <label>Source</label>
+            <label>Source / Mode</label>
             <select id="source">
               <option value="web" selected>Web (live)</option>
               <option value="catalog">Catalog (fallback)</option>
+              <option value="hybrid">Hybrid (mix)</option>
             </select>
           </div>
           <div>
             <label>Limit</label>
             <input id="limit" type="number" min="1" max="100" value="24">
           </div>
+        </div>
+
+        <div class="sliderRow" style="margin-top:2px">
+          <label class="small muted">Web share (hybrid)</label>
+          <input id="shareWeb" type="range" min="0" max="1" step="0.05" value="0.30">
+          <span id="shareWebVal" class="small muted">0.30</span>
         </div>
 
         <div class="rowcols">
@@ -108,12 +132,14 @@
         <button id="find" class="btn">Find buyers</button>
       </div>
 
+      <!-- PREFS -->
       <div class="row" style="margin-top:16px">
         <label>Prefs</label>
         <button id="applyPrefs">Apply demo prefs</button>
         <div class="muted small">Upserts prefs for the Host above (requires admin key).</div>
       </div>
 
+      <!-- EVENTS -->
       <div class="row" style="margin-top:16px">
         <label>Events</label>
         <div class="rowcols">
@@ -174,7 +200,10 @@
 
   // ---- Local storage helpers ----
   const DEFAULT_BASE = (location.origin + "/api");
-  const LS = { base:"apiBase", adminKey:"adminKey", adminHeader:"adminHeader", source:"leadSource" };
+  const LS = {
+    base:"apiBase", adminKey:"adminKey", adminHeader:"adminHeader",
+    source:"leadSource", plan:"userPlan", userEmail:"userEmail"
+  };
   function getBase(){ return (localStorage.getItem(LS.base) || DEFAULT_BASE).trim().replace(/\/+$/,""); }
   function setBase(v){ const val=(v||"").trim().replace(/\/+$/,""); localStorage.setItem(LS.base,val); $("#base").value=val; }
   function getKey(){ return (localStorage.getItem(LS.adminKey) || "").trim(); }
@@ -183,6 +212,10 @@
   function setHeader(v){ localStorage.setItem(LS.adminHeader,(v||"x-admin-key").trim()); $("#adminHeader").value=getHeader(); $("#hdrLabel").textContent=getHeader(); }
   function getSource(){ return (localStorage.getItem(LS.source) || "web"); }
   function setSource(v){ localStorage.setItem(LS.source,v||"web"); $("#source").value=getSource(); }
+  function getPlan(){ return (localStorage.getItem(LS.plan) || "free"); }
+  function setPlan(v){ localStorage.setItem(LS.plan, v || "free"); $("#plan").value = getPlan(); }
+  function getUserEmail(){ return (localStorage.getItem(LS.userEmail) || ""); }
+  function setUserEmail(v){ localStorage.setItem(LS.userEmail, (v||"").trim()); $("#userEmail").value = getUserEmail(); }
 
   // Init inputs
   $("#base").value = getBase();
@@ -190,6 +223,20 @@
   $("#adminHeader").value = getHeader();
   $("#hdrLabel").textContent = getHeader();
   $("#source").value = getSource();
+  $("#plan").value = getPlan();
+  $("#userEmail").value = getUserEmail();
+
+  // shareWeb slider UI
+  const shareEl = $("#shareWeb");
+  const shareVal = $("#shareWebVal");
+  function setShareLabel(){ shareVal.textContent = Number(shareEl.value).toFixed(2); }
+  shareEl.oninput = setShareLabel; setShareLabel();
+  function syncHybridUI(){
+    const mode = ($("#source").value||"web");
+    const disabled = (mode !== "hybrid");
+    $("#shareWeb").disabled = disabled;
+  }
+  syncHybridUI();
 
   // ---- UI utils ----
   function say(s){
@@ -201,7 +248,11 @@
     const h = {"Content-Type":"application/json"};
     const k = getKey();
     const n = getHeader();
+    const plan = $("#plan").value || "free";
+    const email = ($("#userEmail").value || "").trim();
     if (k) h[n] = k;
+    if (plan) h["x-user-plan"] = plan;
+    if (email) h["x-user-email"] = email;
     return h;
   }
   async function hit(method, path, body, withKey=false){
@@ -264,13 +315,16 @@
     const size = ($("#sizePref").value||"small").toLowerCase();
     const band = ($("#band").value||"WARM").toUpperCase();
     const limit = Math.max(1, Number($("#limit").value||24)) || 24;
+    const mode = ($("#source").value||"web").toLowerCase();
+    const shareWeb = Number($("#shareWeb").value||"0.30");
     const u = new URL(`${getBase()}/web/find`);
     if (host) u.searchParams.set("host", host);
     if (city) u.searchParams.set("city", city);
     u.searchParams.set("size", size);
     u.searchParams.set("limit", String(limit));
-    // server may ignore this today; we filter exact on client anyway
     u.searchParams.set("band", band);
+    u.searchParams.set("mode", mode);
+    if (mode === "hybrid") u.searchParams.set("shareWeb", String(shareWeb));
     return u.toString();
   }
 
@@ -286,13 +340,13 @@
     if (city) u.searchParams.set("city", city);
     u.searchParams.set("tiers", tiers);
     u.searchParams.set("preferTier", preferTier);
-    u.searchParams.set("minBand", band); // route is "min"; we’ll exact-filter client-side
+    u.searchParams.set("minBand", band); // server uses "min"; we client-exact-filter
     return u.toString();
   }
 
   async function findBuyers(){
-    const source = ($("#source").value||"web");
-    const url = source === "web" ? buildWebUrl() : buildCatalogUrl();
+    const mode = ($("#source").value||"web");
+    const url = mode === "catalog" ? buildCatalogUrl() : buildWebUrl();
     const r = await fetch(url, { headers: adminHeaders() });
     let data=null,status=0,ok=false;
     try{ const rr = await r.json(); data=rr; status=r.status; ok=r.ok; } catch{ status=r.status; ok=r.ok; }
@@ -301,18 +355,17 @@
     // Exact band on client (works for both routes)
     if (ok && data && Array.isArray(data.items)) {
       data.items = data.items.filter(x => String(x?.band||"").toUpperCase() === wantBand);
-      // Re-tally summary to reflect exact filter
       if (data.summary) {
         data.summary.returned = data.items.length;
         data.summary.hot  = data.items.filter(i=>i.band==="HOT").length;
         data.summary.warm = data.items.filter(i=>i.band==="WARM").length;
         data.summary.cool = data.items.filter(i=>i.band==="COOL").length;
         data.summary.exactBand = wantBand;
-        data.summary.source = source;
+        data.summary.source = mode;
       }
     }
 
-    say(`Find buyers [${source}] -> ${status}`);
+    say(`Find buyers [${mode}] -> ${status}`);
     if (ok && data) say(JSON.stringify(data,null,2));
     else if (!ok) say("Find buyers failed.");
   }
@@ -322,7 +375,10 @@
   $("#test").onclick    = async()=>{ const r=await hit("GET","/ping"); say(`Test: /ping -> ${r.status}`); };
 
   $("#adminHeader").onchange = ()=> setHeader($("#adminHeader").value);
-  $("#source").onchange = ()=> setSource($("#source").value);
+  $("#source").onchange = ()=>{ setSource($("#source").value); syncHybridUI(); };
+  $("#plan").onchange = ()=> setPlan($("#plan").value);
+  $("#userEmail").onchange = ()=> setUserEmail($("#userEmail").value);
+  $("#shareWeb").oninput = setShareLabel;
 
   $("#saveKey").onclick = ()=>{ setHeader($("#adminHeader").value); setKey($("#adminKey").value); say("Admin header+key saved locally."); };
   $("#clearKey").onclick= ()=>{ setKey(""); say("Admin key cleared."); };
