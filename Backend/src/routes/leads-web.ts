@@ -2,9 +2,10 @@
 //
 // Web-first buyer discovery with exact band filtering and optional catalog mix.
 // Adds:
+//   • Blocks HOT for Free plan (header: x-user-plan|x-plan, query: ?plan=; default free).
 //   • Filters non-actionable hosts (maps.google.com, yelp, facebook, instagram).
-//   • Optional escalation: call /api/scores/explain for a few borderline rows
-//     to upgrade band/score using real page signals.
+//   • Optional escalation via /api/scores/explain (but never upgrades to HOT on Free).
+//   • Optional smarter web queries via shared/query-map.ts if present.
 //
 // Endpoints (both work):
 //   GET /api/web/find
@@ -15,10 +16,11 @@
 //   &city=San+Diego
 //   &size=small|medium|large
 //   &limit=10
-//   &band=COOL|WARM|HOT            // exact band
+//   &band=COOL|WARM|HOT            // exact band (HOT coerced to WARM on Free)
 //   &mode=web|catalog|hybrid       // default: web
 //   &shareWeb=0.3                  // only used when mode=hybrid
 //   &tiers=A,B,C&preferTier=C&preferSize=small
+//   &plan=free|pro                 // optional (header wins)
 //
 // Emits event to /api/events/ingest.
 
@@ -28,6 +30,8 @@ import * as Prefs from "../shared/prefs";
 import * as TRC from "../shared/trc";
 import * as CatalogMod from "../shared/catalog";
 import * as Sources from "../shared/sources";
+// Optional persona→query seeds (safe if file missing at build time)
+import * as QueryMap from "../shared/query-map";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -41,6 +45,7 @@ const Catalog: any = (CatalogMod as any)?.default ?? (CatalogMod as any);
 
 type Tier = "A" | "B" | "C";
 type Band = "HOT" | "WARM" | "COOL";
+type Plan = "free" | "pro";
 
 type Candidate = {
   host: string;
@@ -59,6 +64,14 @@ type Candidate = {
   reasons?: string[];
   [k: string]: any;
 };
+
+function getPlan(req: Request): Plan {
+  const h =
+    String(req.header("x-user-plan") || req.header("x-plan") || req.query.plan || "")
+      .trim()
+      .toLowerCase();
+  return h === "pro" ? "pro" : "free";
+}
 
 function uniqLower(arr: unknown): string[] {
   const set = new Set<string>();
@@ -215,7 +228,6 @@ async function emit(kind: string, data: any) {
 function isActionableHost(h?: string): boolean {
   const host = String(h || "").toLowerCase();
   if (!host) return false;
-  // Filter obvious non-first-party domains returned by providers
   if (host === "maps.google.com" || host.endsWith(".google.com")) return false;
   if (host === "goo.gl" || host.endsWith("goo.gl")) return false;
   if (host.endsWith("facebook.com") || host.endsWith("instagram.com")) return false;
@@ -223,8 +235,7 @@ function isActionableHost(h?: string): boolean {
   return true;
 }
 
-async function escalateWithSignals(items: Candidate[], targetBand: Band, maxN = 3): Promise<void> {
-  // pick a few uncertain rows in the exact band
+async function escalateWithSignals(items: Candidate[], targetBand: Band, plan: Plan, maxN = 3): Promise<void> {
   const picks = items
     .filter(x => String(x.band) === targetBand)
     .filter(x => (x.uncertainty ?? 0) >= 0.6 || (targetBand === "WARM" && (x.score ?? 0) >= WARM_T - 3))
@@ -239,7 +250,10 @@ async function escalateWithSignals(items: Candidate[], targetBand: Band, maxN = 
         const data = await r.json().catch(() => null);
         if (data && typeof data.score === "number" && data.band) {
           p.score = data.score;
-          p.band = (String(data.band).toUpperCase() as Band);
+          let newBand = (String(data.band).toUpperCase() as Band);
+          // Never allow HOT on Free
+          if (plan === "free" && newBand === "HOT") newBand = "WARM";
+          p.band = newBand;
           if (!Array.isArray(p.reasons)) p.reasons = [];
           p.reasons = [...p.reasons, "signals:escalated", ...(Array.isArray(data.reasons) ? data.reasons.slice(0,4) : [])].slice(0, 12);
         }
@@ -253,6 +267,8 @@ async function escalateWithSignals(items: Candidate[], targetBand: Band, maxN = 
 async function handleFind(req: Request, res: Response) {
   const t0 = Date.now();
   try {
+    const plan: Plan = getPlan(req);
+
     const host = String(req.query.host || req.query.domain || "").trim().toLowerCase();
     if (!host) return res.status(400).json({ ok: false, error: "host_required" });
 
@@ -260,9 +276,12 @@ async function handleFind(req: Request, res: Response) {
     const sizeQ = String(req.query.size || "").trim().toLowerCase() || undefined;
     const limitQ = Math.max(1, Math.min(100, Number(req.query.limit ?? 10) || 10));
 
-    // exact band
+    // exact band request
     const bandQ = String(req.query.band || "").trim().toUpperCase() as Band;
-    const band: Band = bandQ === "HOT" ? "HOT" : bandQ === "WARM" ? "WARM" : "COOL";
+    let band: Band = bandQ === "HOT" ? "HOT" : bandQ === "WARM" ? "WARM" : "COOL";
+    // Gate: Free plan cannot ask for HOT (force WARM)
+    let hotBlocked = false;
+    if (plan === "free" && band === "HOT") { band = "WARM"; hotBlocked = true; }
 
     // mode + hybrid share (default: web)
     const mode = (String(req.query.mode || "web").trim().toLowerCase()) as "web" | "catalog" | "hybrid";
@@ -272,7 +291,7 @@ async function handleFind(req: Request, res: Response) {
     const { allow: allowTiers, prefer: preferTier } = parseTiersParam(req);
 
     // caps by plan
-    const cap = capResults("free", limitQ);
+    const cap = capResults(plan, limitQ);
 
     // prefs baseline
     const basePrefs =
@@ -292,15 +311,25 @@ async function handleFind(req: Request, res: Response) {
       wantCat = cap - wantWeb;
     }
 
-    // WEB
+    // Optional persona → query mapping (safe if module absent)
+    const buildQuerySeeds = (QueryMap as any)?.buildQuerySeeds as
+      | ((input: { hostSeed?: string; city?: string; likeTags?: string[]; categoriesAllow?: string[]; }) => string[])
+      | undefined;
+
     let webRows: Candidate[] = [];
     if (wantWeb > 0) {
+      const queries = buildQuerySeeds
+        ? buildQuerySeeds({ hostSeed: host, city, likeTags: prefs?.categoriesAllow || [], categoriesAllow: prefs?.categoriesAllow || [] })
+        : undefined;
+
       const webFound = await Sources.findBuyersFromWeb({
         hostSeed: host,
         city,
         size: (sizeQ as any) || undefined,
         limit: wantWeb * 3, // overfetch, then score/band/slice
+        queries
       }).catch(() => []);
+
       webRows = (Array.isArray(webFound) ? webFound : [])
         .map((w: any) => ({
           host: w.host, name: w.name, city: w.city, url: w.url, tier: (w.tier as Tier|undefined),
@@ -334,11 +363,9 @@ async function handleFind(req: Request, res: Response) {
       })
       .filter((x) => x.band === band);
 
-    // escalation with signals for a few borderline rows (uses your /api/scores/explain)
-    // only when mode includes web rows and there is something to escalate
+    // escalation with signals (never upgrade to HOT on Free)
     if ((mode === "web" || mode === "hybrid") && scored.length > 0) {
-      await escalateWithSignals(scored, band, 3).catch(()=>{});
-      // resort after potential score changes
+      await escalateWithSignals(scored, band, plan, 3).catch(()=>{});
       scored = scored.sort((a,b) => (b.score || 0) - (a.score || 0));
     }
 
@@ -356,6 +383,7 @@ async function handleFind(req: Request, res: Response) {
 
     const summary = {
       ok: true,
+      plan,
       returned: items.length,
       band,
       mode,
@@ -368,6 +396,7 @@ async function handleFind(req: Request, res: Response) {
       hot: items.filter(i=>i.band==="HOT").length,
       warm: items.filter(i=>i.band==="WARM").length,
       cool: items.filter(i=>i.band==="COOL").length,
+      hotBlocked
     };
 
     await emit("find_buyers_web", { host, ...summary }).catch(() => {});
