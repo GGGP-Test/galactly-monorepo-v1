@@ -24,8 +24,11 @@
   .pill{font:11px;padding:4px 8px;border-radius:999px;background:#0d1520;border:1px solid #223042}
   .log{font:12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;white-space:pre-wrap;height:360px;overflow:auto;background:#0d1520;border-radius:10px;border:1px solid #223042;padding:10px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .rowlabel{display:flex;align-items:center;justify-content:space-between}
+  .rangeWrap{display:flex;align-items:center;gap:10px}
+  .rangeWrap input[type="range"]{width:100%}
+  .disabled{opacity:.45;pointer-events:none}
   label{font-size:12px;color:#9ab0c0}
-  .sliderRow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
 </style>
 </head>
 <body>
@@ -50,7 +53,6 @@
         </div>
       </div>
 
-      <!-- AUTH + PLAN -->
       <div class="row" style="gap:8px;margin-top:14px">
         <div class="inline">
           <label>Admin auth</label>
@@ -67,13 +69,15 @@
           <button id="saveKey">Save key</button>
           <button id="clearKey" class="btn">Clear</button>
         </div>
+      </div>
 
-        <div class="rowcols" style="margin-top:6px">
+      <div class="row" style="margin-top:10px">
+        <div class="rowcols">
           <div>
             <label>Plan (header: x-user-plan)</label>
-            <select id="plan">
-              <option value="free" selected>Free</option>
-              <option value="pro">Pro</option>
+            <select id="userPlan">
+              <option value="Free">Free</option>
+              <option value="Pro">Pro</option>
             </select>
           </div>
           <div>
@@ -83,7 +87,6 @@
         </div>
       </div>
 
-      <!-- FIND BUYERS -->
       <div class="row" style="margin-top:16px">
         <label>Find buyers</label>
         <input id="host" placeholder="yourcompany.com">
@@ -104,10 +107,14 @@
           </div>
         </div>
 
-        <div class="sliderRow" style="margin-top:2px">
-          <label class="small muted">Web share (hybrid)</label>
-          <input id="shareWeb" type="range" min="0" max="1" step="0.05" value="0.30">
-          <span id="shareWebVal" class="small muted">0.30</span>
+        <div class="row">
+          <div class="rowlabel">
+            <label>Web share (hybrid)</label>
+            <span class="small muted"><code id="wsVal">0.30</code></span>
+          </div>
+          <div class="rangeWrap" id="wsWrap">
+            <input type="range" id="webShare" min="0" max="1" step="0.05" value="0.30">
+          </div>
         </div>
 
         <div class="rowcols">
@@ -132,29 +139,10 @@
         <button id="find" class="btn">Find buyers</button>
       </div>
 
-      <!-- PREFS -->
       <div class="row" style="margin-top:16px">
         <label>Prefs</label>
         <button id="applyPrefs">Apply demo prefs</button>
         <div class="muted small">Upserts prefs for the Host above (requires admin key).</div>
-      </div>
-
-      <!-- EVENTS -->
-      <div class="row" style="margin-top:16px">
-        <label>Events</label>
-        <div class="rowcols">
-          <button id="evStats">Stats (snapshot)</button>
-          <button id="evRecent" class="btn">Recent (50)</button>
-        </div>
-        <div class="rowcols" style="margin-top:8px">
-          <button id="evStart">Start stream</button>
-          <button id="evStop" class="btn">Stop stream</button>
-        </div>
-        <div class="rowcols" style="margin-top:8px">
-          <button id="evTest2">Send test event</button>
-          <button id="evExport" class="btn">Export CSV</button>
-        </div>
-        <div class="muted small">SSE auto-reconnects and sends a 20-event backlog.</div>
       </div>
     </section>
 
@@ -202,8 +190,10 @@
   const DEFAULT_BASE = (location.origin + "/api");
   const LS = {
     base:"apiBase", adminKey:"adminKey", adminHeader:"adminHeader",
-    source:"leadSource", plan:"userPlan", userEmail:"userEmail"
+    source:"leadSource", webShare:"webShare", userPlan:"userPlan", userEmail:"userEmail"
   };
+  const clamp01 = (x)=> Math.max(0, Math.min(1, Number(x)||0));
+
   function getBase(){ return (localStorage.getItem(LS.base) || DEFAULT_BASE).trim().replace(/\/+$/,""); }
   function setBase(v){ const val=(v||"").trim().replace(/\/+$/,""); localStorage.setItem(LS.base,val); $("#base").value=val; }
   function getKey(){ return (localStorage.getItem(LS.adminKey) || "").trim(); }
@@ -211,11 +201,13 @@
   function getHeader(){ return (localStorage.getItem(LS.adminHeader) || "x-admin-key").trim(); }
   function setHeader(v){ localStorage.setItem(LS.adminHeader,(v||"x-admin-key").trim()); $("#adminHeader").value=getHeader(); $("#hdrLabel").textContent=getHeader(); }
   function getSource(){ return (localStorage.getItem(LS.source) || "web"); }
-  function setSource(v){ localStorage.setItem(LS.source,v||"web"); $("#source").value=getSource(); }
-  function getPlan(){ return (localStorage.getItem(LS.plan) || "free"); }
-  function setPlan(v){ localStorage.setItem(LS.plan, v || "free"); $("#plan").value = getPlan(); }
+  function setSource(v){ localStorage.setItem(LS.source,v||"web"); $("#source").value=getSource(); updateHybridUI(); }
+  function getShare(){ return clamp01(localStorage.getItem(LS.webShare) ?? "0.30"); }
+  function setShare(v){ const x = clamp01(v); localStorage.setItem(LS.webShare, String(x)); $("#webShare").value=String(x); $("#wsVal").textContent=x.toFixed(2); }
+  function getPlan(){ return (localStorage.getItem(LS.userPlan) || "Free"); }
+  function setPlan(v){ localStorage.setItem(LS.userPlan, v||"Free"); $("#userPlan").value=getPlan(); }
   function getUserEmail(){ return (localStorage.getItem(LS.userEmail) || ""); }
-  function setUserEmail(v){ localStorage.setItem(LS.userEmail, (v||"").trim()); $("#userEmail").value = getUserEmail(); }
+  function setUserEmail(v){ localStorage.setItem(LS.userEmail, (v||"").trim()); $("#userEmail").value=getUserEmail(); }
 
   // Init inputs
   $("#base").value = getBase();
@@ -223,20 +215,11 @@
   $("#adminHeader").value = getHeader();
   $("#hdrLabel").textContent = getHeader();
   $("#source").value = getSource();
-  $("#plan").value = getPlan();
+  $("#webShare").value = String(getShare());
+  $("#wsVal").textContent = getShare().toFixed(2);
+  $("#userPlan").value = getPlan();
   $("#userEmail").value = getUserEmail();
-
-  // shareWeb slider UI
-  const shareEl = $("#shareWeb");
-  const shareVal = $("#shareWebVal");
-  function setShareLabel(){ shareVal.textContent = Number(shareEl.value).toFixed(2); }
-  shareEl.oninput = setShareLabel; setShareLabel();
-  function syncHybridUI(){
-    const mode = ($("#source").value||"web");
-    const disabled = (mode !== "hybrid");
-    $("#shareWeb").disabled = disabled;
-  }
-  syncHybridUI();
+  updateHybridUI();
 
   // ---- UI utils ----
   function say(s){
@@ -248,11 +231,11 @@
     const h = {"Content-Type":"application/json"};
     const k = getKey();
     const n = getHeader();
-    const plan = $("#plan").value || "free";
-    const email = ($("#userEmail").value || "").trim();
     if (k) h[n] = k;
-    if (plan) h["x-user-plan"] = plan;
-    if (email) h["x-user-email"] = email;
+    // user plan + optional email for server-side gating
+    h["x-user-plan"] = getPlan();
+    const em = getUserEmail();
+    if (em) h["x-user-email"] = em;
     return h;
   }
   async function hit(method, path, body, withKey=false){
@@ -278,7 +261,7 @@
     const map = {
       buffered: e?.total ?? e?.buffered ?? "-",
       byType24h: e?.byType24h ? JSON.stringify(e.byType24h) : "-",
-      topPaths24h: e?.topPaths24h ? JSON.stringify(e.topPaths24h.slice(0,5)) : "-",
+      topPaths24h: e?.topPaths24h ? JSON.stringify(e.byType24h?.slice ? e.topPaths24h.slice(0,5) : e.topPaths24h) : "-",
       since: e?.sinceIso || "-"
     };
     eventsDl.innerHTML = Object.entries(map).map(([k,v])=>`<dt>${k}</dt><dd>${v==null?'-':String(v)}</dd>`).join("");
@@ -306,7 +289,14 @@
   }
   function stopStream(){ if (es) try{es.close();}catch{} es=null; sseNote.textContent="stopped"; }
 
-  // ---- Find buyers wiring (web-first, exact band) ----
+  // ---- Hybrid UI enable/disable ----
+  function updateHybridUI(){
+    const isHybrid = ($("#source").value||"web") === "hybrid";
+    $("#wsWrap").classList.toggle("disabled", !isHybrid);
+    $("#webShare").disabled = !isHybrid;
+  }
+
+  // ---- URL builders ----
   const SIZE_TO_TIER = { small:"C", medium:"B", large:"A", s:"C", m:"B", l:"A" };
 
   function buildWebUrl(){
@@ -315,16 +305,16 @@
     const size = ($("#sizePref").value||"small").toLowerCase();
     const band = ($("#band").value||"WARM").toUpperCase();
     const limit = Math.max(1, Number($("#limit").value||24)) || 24;
-    const mode = ($("#source").value||"web").toLowerCase();
-    const shareWeb = Number($("#shareWeb").value||"0.30");
+    const mode = ($("#source").value||"web");
+    const ws = getShare();
     const u = new URL(`${getBase()}/web/find`);
     if (host) u.searchParams.set("host", host);
     if (city) u.searchParams.set("city", city);
     u.searchParams.set("size", size);
     u.searchParams.set("limit", String(limit));
     u.searchParams.set("band", band);
-    u.searchParams.set("mode", mode);
-    if (mode === "hybrid") u.searchParams.set("shareWeb", String(shareWeb));
+    u.searchParams.set("mode", mode);              // web | hybrid
+    if (mode === "hybrid") u.searchParams.set("shareWeb", ws.toString());
     return u.toString();
   }
 
@@ -340,19 +330,18 @@
     if (city) u.searchParams.set("city", city);
     u.searchParams.set("tiers", tiers);
     u.searchParams.set("preferTier", preferTier);
-    u.searchParams.set("minBand", band); // server uses "min"; we client-exact-filter
+    u.searchParams.set("minBand", band); // server uses min; client will exact-filter
     return u.toString();
   }
 
   async function findBuyers(){
-    const mode = ($("#source").value||"web");
-    const url = mode === "catalog" ? buildCatalogUrl() : buildWebUrl();
+    const source = ($("#source").value||"web");
+    const url = source === "catalog" ? buildCatalogUrl() : buildWebUrl();
     const r = await fetch(url, { headers: adminHeaders() });
     let data=null,status=0,ok=false;
     try{ const rr = await r.json(); data=rr; status=r.status; ok=r.ok; } catch{ status=r.status; ok=r.ok; }
 
     const wantBand = ($("#band").value||"WARM").toUpperCase();
-    // Exact band on client (works for both routes)
     if (ok && data && Array.isArray(data.items)) {
       data.items = data.items.filter(x => String(x?.band||"").toUpperCase() === wantBand);
       if (data.summary) {
@@ -361,27 +350,31 @@
         data.summary.warm = data.items.filter(i=>i.band==="WARM").length;
         data.summary.cool = data.items.filter(i=>i.band==="COOL").length;
         data.summary.exactBand = wantBand;
-        data.summary.source = mode;
+        data.summary.source = source;
+        if (source === "hybrid") data.summary.shareWeb = getShare();
       }
     }
 
-    say(`Find buyers [${mode}] -> ${status}`);
+    say(`Find buyers [${source}] -> ${status}`);
     if (ok && data) say(JSON.stringify(data,null,2));
     else if (!ok) say("Find buyers failed.");
   }
 
-  // ---- Actions ----
+  // ---- Handlers ----
   $("#save").onclick    = ()=>{ setBase($("#base").value); say("API base saved."); };
   $("#test").onclick    = async()=>{ const r=await hit("GET","/ping"); say(`Test: /ping -> ${r.status}`); };
 
   $("#adminHeader").onchange = ()=> setHeader($("#adminHeader").value);
-  $("#source").onchange = ()=>{ setSource($("#source").value); syncHybridUI(); };
-  $("#plan").onchange = ()=> setPlan($("#plan").value);
-  $("#userEmail").onchange = ()=> setUserEmail($("#userEmail").value);
-  $("#shareWeb").oninput = setShareLabel;
-
   $("#saveKey").onclick = ()=>{ setHeader($("#adminHeader").value); setKey($("#adminKey").value); say("Admin header+key saved locally."); };
   $("#clearKey").onclick= ()=>{ setKey(""); say("Admin key cleared."); };
+
+  $("#userPlan").onchange = ()=> setPlan($("#userPlan").value);
+  $("#userEmail").onchange = ()=> setUserEmail($("#userEmail").value);
+
+  $("#source").onchange = ()=> setSource($("#source").value);
+
+  $("#webShare").oninput = (e)=>{ setShare(e.target.value); };
+  $("#webShare").onchange = (e)=>{ setShare(e.target.value); };
 
   $("#btnPing").onclick   = async()=>{ const r=await hit("GET","/ping"); say(`Ping -> ${r.status}`); };
   $("#btnHealth").onclick = async()=>{ const r=await hit("GET","/health"); say(`Health -> ${r.status}`); if(r.ok&&r.data) setHealth(r.data); };
@@ -406,21 +399,19 @@
     if (!r.ok && r.data) say(JSON.stringify(r.data,null,2));
   };
 
-  $("#evStats").onclick  = async()=>{ const r=await hit("GET","/events/stats", null, true); say(`Events: stats -> ${r.status}`); if(r.ok){ setEvents(r.data); say(JSON.stringify(r.data,null,2)); } };
-  $("#evRecent").onclick = async()=>{ const r=await hit("GET","/events/recent?limit=50", null, true); say(`Events: recent(50) -> ${r.status}`); if(r.ok) say(JSON.stringify(r.data,null,2)); };
-  $("#evStart").onclick  = ()=>{ startStream(); say("SSE: start"); };
-  $("#evStop").onclick   = ()=>{ stopStream(); say("SSE: stop"); };
-  $("#evTest2").onclick  = async()=>{ const r=await hit("POST","/events/ingest",{type:"test_event",user:"admin",data:{hello:"world"}}, true); say(`Events: ingest -> ${r.status}`); };
-  $("#evExport").onclick = ()=>{ window.open(getBase()+"/audit/export.csv?limit=2000","_blank"); };
-
-  // initial health + events poll + stream
+  // initial health + events + SSE
   (async ()=>{
     const h = await hit("GET","/health");
     if (h.ok) { setHealth(h.data); say(`Health -> ${h.status}`); }
-    const e = await hit("GET","/events/stats", null, true);
-    if (e.ok) setEvents(e.data);
+    try{
+      const url = getBase() + "/events/stats";
+      const r = await fetch(url, { headers: adminHeaders() });
+      const d = await r.json().catch(()=>null);
+      if (r.ok && d) setEvents(d);
+    }catch{}
     startStream();
   })();
+
 })();
 </script>
 </body>
