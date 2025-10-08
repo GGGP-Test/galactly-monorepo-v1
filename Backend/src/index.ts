@@ -11,6 +11,7 @@ import { loadCatalog, type BuyerRow } from "./shared/catalog";
 
 // Routers (hard imports)
 import LeadsRouter from "./routes/leads";
+import LeadsWebRouter from "./routes/leads-web"; // <-- hard import (fixes 404 on /api/web/*)
 import ClassifyRouter from "./routes/classify";
 import PrefsRouter from "./routes/prefs";
 import CatalogRouter from "./routes/catalog";
@@ -19,11 +20,10 @@ import EventsRouter from "./routes/events";
 import ScoresRouter from "./routes/scores";
 import AdsRouter from "./routes/ads"; // ok if file exists
 
-// Optional: web-first leads finder (safe if file missing)
+// Optional safe-require helper for non-critical extras
 function safeRequire(p: string): any {
   try { return require(p); } catch { return null; }
 }
-const LeadsWebRouter = safeRequire("./routes/leads-web")?.default;
 
 const app = express();
 const startedAt = Date.now();
@@ -33,14 +33,12 @@ const PORT = Number(CFG.port || process.env.PORT || 8787);
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  // ⬇️ include x-user-plan so Admin can send the plan for gating tests
+  // include x-user-plan so Admin can send the plan for gating tests
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Content-Type, x-admin-key, x-admin-token, x-user-email, x-user-plan"
   );
-  // (optional) expose a couple headers if we ever echo them
   res.setHeader("Access-Control-Expose-Headers", "Content-Type");
-
   if (req.method === "OPTIONS") return res.status(204).end();
   next();
 });
@@ -104,7 +102,7 @@ app.get("/healthz", (_req, res) => {
 
 // --- routers ---
 app.use("/api/leads", LeadsRouter);
-if (LeadsWebRouter) app.use("/api/web", LeadsWebRouter); // web-first route
+app.use("/api/web", LeadsWebRouter);          // <-- always mount web-first route
 app.use("/api/classify", ClassifyRouter);
 app.use("/api/prefs", PrefsRouter);
 app.use("/api/catalog", CatalogRouter);
@@ -116,9 +114,7 @@ try { app.use("/api/ads", AdsRouter); } catch { /* ok if missing */ }
 // --- optional: mount billing if available (won't break build if Stripe absent) ---
 try {
   const billing = safeRequire("./billing"); // expects export function mountBilling(app)
-  if (billing?.mountBilling) {
-    billing.mountBilling(app);
-  }
+  if (billing?.mountBilling) billing.mountBilling(app);
 } catch { /* ignore */ }
 
 // --- optional: serve Docs/ (local dev; prod GH Pages serves from /docs) ---
