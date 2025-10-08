@@ -1,22 +1,20 @@
 // src/routes/leads-web.ts
 //
 // Web-first buyer discovery with exact band filtering (server-side),
-// hybrid mixing (web+catalog), and route aliasing.
-// Routes:
+// route aliasing, and stricter web-host filtering.
+// Routes (both work):
 //   GET /api/web/find
 //   GET /api/web/find-buyers
 //
 // Query:
 //   host=acme.com&city=&size=small|medium|large&limit=10
 //   &band=COOL|WARM|HOT
-//   &mode=hybrid|web|catalog&shareWeb=0.3
+//   &mode=web|hybrid|catalog&shareWeb=0.3
 //   &tiers=A,B,C&preferTier=C&preferSize=small
 //
-// Notes
-// - Exact band (not minimum) is enforced here.
-// - Hybrid mode splits quota between web + catalog (default 30% web feel).
-// - Uses score.ts (fit+intent+recency) to produce bands.
-// - Exposes both /find and /find-buyers so Admin “/web/find” works.
+// Defaults changed:
+//   - mode defaults to "web" (previously hybrid)
+//   - we drop aggregator hosts (maps.google.com, facebook.com, etc.)
 
 import { Router, type Request, type Response } from "express";
 import { CFG, capResults } from "../shared/env";
@@ -87,6 +85,16 @@ function mapLabelToBand(label: "hot" | "warm" | "cold"): Band {
   return label === "hot" ? "HOT" : label === "warm" ? "WARM" : "COOL";
 }
 
+// Drop aggregator/non-outreach domains
+const BAD_HOST_RE = /(^(?:maps\.|www\.)?google\.[a-z.]+$)|(^facebook\.com$)|(^instagram\.com$)|(^yelp\.com$)|(^tripadvisor\.[a-z.]+$)|(^linkedin\.com$)/i;
+function isOutreachableHost(h?: string) {
+  if (!h) return false;
+  const host = String(h).toLowerCase().replace(/^www\./, "");
+  if (!host.includes(".")) return false;
+  if (BAD_HOST_RE.test(host)) return false;
+  return true;
+}
+
 const SIZE_TO_TIER: Record<string, Tier> = {
   large: "A", l: "A",
   medium: "B", m: "B",
@@ -153,8 +161,8 @@ r.get(["/find", "/find-buyers"], async (req: Request, res: Response) => {
     const bandQ = String(req.query.band || "").trim().toUpperCase();
     const band: Band = bandQ === "HOT" ? "HOT" : bandQ === "WARM" ? "WARM" : "COOL";
 
-    // mode + hybrid share
-    const mode = (String(req.query.mode || "hybrid").trim().toLowerCase()) as "web" | "catalog" | "hybrid";
+    // mode + hybrid share (DEFAULT NOW = "web")
+    const mode = (String(req.query.mode || "web").trim().toLowerCase()) as "web" | "catalog" | "hybrid";
     const shareWeb = Math.max(0, Math.min(1, Number(req.query.shareWeb ?? 0.3)));
 
     // tiers
@@ -189,10 +197,13 @@ r.get(["/find", "/find-buyers"], async (req: Request, res: Response) => {
         size: (sizeQ as any) || undefined,
         limit: wantWeb * 3, // overfetch a bit
       }).catch(() => []);
-      webRows = Array.isArray(webFound) ? webFound.map((w: any) => ({
-        host: w.host, name: w.name, city: w.city, url: w.url, tier: (w.tier as Tier|undefined),
-        tags: w.tags || [], provider: w.provider || "places"
-      })) : [];
+      webRows = (Array.isArray(webFound) ? webFound : [])
+        .map((w: any) => ({
+          host: w.host, name: w.name, city: w.city, url: w.url, tier: (w.tier as Tier|undefined),
+          tags: w.tags || [], provider: w.provider || "places"
+        }))
+        // NEW: keep only real, outreachable domains (no maps / socials)
+        .filter((w) => isOutreachableHost(w.host));
     }
 
     // CATALOG
@@ -210,7 +221,6 @@ r.get(["/find", "/find-buyers"], async (req: Request, res: Response) => {
       .filter((c) => allowTiers.has(getTier(c)))
       .map((c) => {
         const t = getTier(c);
-        // minimal row-like shape for scorer
         const rowLike = {
           host: c.host,
           tiers: [t],
@@ -222,7 +232,6 @@ r.get(["/find", "/find-buyers"], async (req: Request, res: Response) => {
         const b = mapLabelToBand(s.label);
         const name = c.name || c.company || prettyHostName(c.host);
         const url = c.url || `https://${c.host}`;
-        // slight prefer chosen tier
         const reasons = [...(s.reasons || [])];
         if (preferTier && t === preferTier) reasons.push(`prefer:${t}`);
         return { ...c, name, url, score: s.total, band: b, reasons: reasons.slice(0, 12) };
