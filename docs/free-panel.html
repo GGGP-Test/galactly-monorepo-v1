@@ -53,6 +53,10 @@
   .filter-chip.warm.on{box-shadow:0 0 0 2px var(--warm) inset}
   .filter-chip.cool.on{box-shadow:0 0 0 2px var(--cool) inset}
 
+  /* gated ribbon */
+  .ribbon{margin:6px 0 0;padding:8px 10px;border:1px dashed #3c2f16;background:#0e0c08;border-radius:10px;color:#e9d6a8;font-size:13px;display:none}
+  .ribbon.show{display:block}
+
   /* table */
   table{width:100%;border-collapse:separate;border-spacing:0 8px}
   thead th{font-size:12px;color:#90a7ba;text-align:left;padding:0 10px}
@@ -83,16 +87,17 @@
   .chips{user-select:none}
   .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
   .chip.active{background:var(--chipActive);color:#eaf7ff;border-color:#1b4862}
-  .slider-row{display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:center;margin:10px 0}
+  .slider-row{display:grid;grid-template-columns:1fr 180px 52px;gap:10px;align-items:center;margin:8px 0}
   .one-line{background:#0e1622;border:1px solid var(--divider);border-radius:12px;padding:12px}
   .edit-note{font-size:12px;color:#8fb0c6;cursor:pointer}
   .x{background:transparent;color:#9bb3c6;border:none;font-size:18px;cursor:pointer}
   .gear{background:transparent;border:none;color:#99b4c7;cursor:pointer}
+  .note{font-size:12px;color:#9bb3c6}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <!-- LEFT: connection & log (hidden by default; toggle with gear) -->
+  <!-- LEFT: connection & log (advanced) -->
   <aside id="leftCol" class="card left-advanced" aria-hidden="true">
     <div class="h">Connection</div>
     <label>API base (root or /api)</label>
@@ -124,7 +129,7 @@
 
     <div class="card" style="margin-top:14px">
       <div class="muted" style="margin-bottom:8px">
-        Tip: click <b>Profile</b> to review/edit preferences. You can filter by band or export results to CSV.
+        Tip: click <b>Profile</b> to review/edit preferences. Select bands to show. Export to CSV.
         <span id="status" style="margin-left:8px"></span>
       </div>
 
@@ -136,6 +141,7 @@
         <span class="sep"></span>
         <button id="exportCsv" class="btn badge">Export CSV</button>
       </div>
+      <div id="gatedRibbon" class="ribbon">Hot leads are gated on Free plan. Upgrade to unlock HOT.</div>
 
       <table>
         <thead>
@@ -184,10 +190,11 @@
         </div>
       </div>
 
-      <!-- dynamic buyer priorities -->
+      <!-- dynamic buyer priorities (ALL metrics) -->
       <div class="card" style="padding:12px;margin-top:14px">
-        <div class="h">Buyer priorities (dynamic)</div>
+        <div class="h">Buyer priorities — metrics</div>
         <div id="metricBox"></div>
+        <div class="note">These are saved 1:1 with Step 3 and sent to the API.</div>
       </div>
 
       <!-- targeting -->
@@ -202,6 +209,15 @@
           <div class="h">Buyer targeting — Sectors</div>
           <input id="sectorInput" type="text" placeholder="add sector and press Enter">
           <div id="sectorChips" class="chips"></div>
+        </div>
+      </div>
+
+      <!-- size hints -->
+      <div class="card" style="padding:12px;margin-top:14px">
+        <div class="h">Size hints</div>
+        <div class="row">
+          <div class="pill" id="revHint">$0–$0M revenue</div>
+          <div class="pill" id="empHint">employees: 0</div>
         </div>
       </div>
     </div>
@@ -232,11 +248,14 @@
   const API = {
     get(){ const raw=getStored("apiBase","") || (window.API_BASE||""); return normalizeApiBase(raw); },
     set(v){ setStored("apiBase", v); },
-    withKey(init={}){
-      const k=getStored("xApiKey","");
-      const h=Object.assign({"Content-Type":"application/json"}, init.headers||{});
-      if (k) h["x-api-key"]=k;
-      return Object.assign({}, init, {headers:h});
+    headers(initHeaders){
+      const h=Object.assign({"Content-Type":"application/json"}, initHeaders||{});
+      // User plan is always Free here (user-side gating)
+      h["x-user-plan"] = "free";
+      const email = getStored("fp.user.email","");
+      if (email) h["x-user-email"] = email;
+      const k=getStored("xApiKey",""); if (k) h["x-api-key"]=k;
+      return h;
     }
   };
 
@@ -249,10 +268,9 @@
   }
   async function fetchJSON(url, init){
     let r, text;
-    try{ r = await fetch(url, API.withKey(init)); }
+    try{ r = await fetch(url, Object.assign({headers: API.headers((init||{}).headers||{})}, init)); }
     catch(e){ logHttp(`ERR ${url} — ${e.message}`); throw e; }
     text = await r.text();
-    if (!r.ok){ logHttp(`${r.status} ${url} — ${text.slice(0,160)}`); throw new Error(text||r.statusText); }
     logHttp(`${r.status} ${url}`);
     try{ return JSON.parse(text); }catch{ return text; }
   }
@@ -271,10 +289,10 @@
   const applyAndFindBtn = document.getElementById("applyAndFindBtn");
   const exportCsvBtn = document.getElementById("exportCsv");
   const statusEl = document.getElementById("status");
+  const gatedRibbon = document.getElementById("gatedRibbon");
 
   const drawer = document.getElementById("drawer");
   const closeX = document.getElementById("close");
-  const gearBtn = document.getElementById("gear");
 
   const fav = document.getElementById("fav");
   const fav2 = document.getElementById("fav2");
@@ -293,6 +311,8 @@
   const sectorInput = document.getElementById("sectorInput");
   const sectorChips = document.getElementById("sectorChips");
   const saveLocalBtn = document.getElementById("saveLocal");
+  const revHint = document.getElementById("revHint");
+  const empHint = document.getElementById("empHint");
 
   /* ---------- utils ---------- */
   function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
@@ -331,15 +351,16 @@
   }
   function getActiveChips(box){ return Array.from(box.querySelectorAll(".chip.active")).map(x=>x.textContent.trim()); }
 
-  function renderMetrics(metrics){
+  function renderMetricsAll(metrics){
     metricBox.innerHTML="";
-    const keep = (metrics||[]).slice(0,3);
-    keep.forEach(m=>{
+    const list = Array.isArray(metrics) && metrics.length ? metrics.slice(0, 30) : defaultMetrics();
+    list.forEach((m,idx)=>{
       const row=document.createElement("div"); row.className="slider-row";
-      const lab=document.createElement("div"); lab.textContent=m.label || String(m);
-      const input=document.createElement("input"); input.type="range"; input.min="0"; input.max="10"; input.value=Number(m.value ?? 8);
-      input.addEventListener("input",()=>{ m.value = Number(input.value); });
-      row.appendChild(lab); row.appendChild(input);
+      const lab=document.createElement("div"); lab.textContent = m.label || String(m);
+      const slider=document.createElement("input"); slider.type="range"; slider.min="0"; slider.max="10"; slider.step="1"; slider.value=Number(m.value ?? 8);
+      const val=document.createElement("div"); val.textContent = String(slider.value);
+      slider.addEventListener("input",()=>{ m.value = Number(slider.value); val.textContent = slider.value; });
+      row.appendChild(lab); row.appendChild(slider); row.appendChild(val);
       metricBox.appendChild(row);
     });
   }
@@ -347,7 +368,10 @@
     return [
       {label:"Line automation / fulfillment", value:8},
       {label:"Fast turnaround (≤ 2 weeks)", value:7},
-      {label:"Lowest unit cost", value:8}
+      {label:"Lowest unit cost", value:8},
+      {label:"Quality & compliance", value:8},
+      {label:"Eco materials", value:6},
+      {label:"Shelf-ready packaging", value:5}
     ];
   }
 
@@ -356,6 +380,11 @@
     if (s >= HOT_MIN) return "HOT";
     if (s >= WARM_MIN) return "WARM";
     return "COOL";
+  }
+
+  function sizeFromEmployees(n){
+    const e = Number(n||0);
+    return e<=20 ? "micro" : e<=200 ? "small" : e<=1000 ? "mid" : "large";
   }
 
   /* ---------- persona render/collect ---------- */
@@ -384,25 +413,43 @@
       ["Prioritize nearby buyers", !!gen.near],
       ["Prefer e-commerce sites", !!gen.ecom],
       ["Prefer wholesalers / distributors", !!gen.wholesale],
-      ["Prefer retail brands", !!gen.retail]
+      ["Prefer retail brands", !!gen.retail],
+      ["AI finalize conflicts", !!gen.aiFinalize]
     ].forEach(([lab, on])=> chip(lab, genChips, on));
 
     // products
     prodChips.innerHTML="";
     (p.productTags||[]).forEach(t=> chip(t, prodChips, true));
 
-    // metrics
-    renderMetrics((Array.isArray(p.metrics)&&p.metrics.length) ? p.metrics : defaultMetrics());
+    // metrics (ALL)
+    renderMetricsAll(Array.isArray(p.metrics)? p.metrics : defaultMetrics());
 
     // targeting
-    cityChips.innerHTML=""; (p.targeting?.cities?.length ? p.targeting.cities : (p.targeting?.city? [p.targeting.city] : [])).forEach(c=>chip(c,cityChips,true));
+    cityChips.innerHTML=""; (p.targeting?.cities||[]).forEach(c=>chip(c,cityChips,true));
     sectorChips.innerHTML=""; (p.sectorHints||[]).forEach(s=>chip(s,sectorChips,true));
+
+    // size hints
+    const rMin = p.targeting?.revenueMinM|0, rMax = p.targeting?.revenueMaxM|0;
+    revHint.textContent = `$${rMin||0}–$${rMax||0}M revenue`;
+    empHint.textContent = `employees: ${p.targeting?.employees||0}`;
   }
 
   function collectPersona(){
     const host = company.textContent.trim();
     const p = state.persona || {};
     const lineText = oneLine.textContent.trim();
+    const metrics = Array.isArray(p.metrics)&&p.metrics.length
+      ? p.metrics
+      : defaultMetrics();
+
+    // values may have been updated by sliders
+    const updated = Array.from(metricBox.querySelectorAll(".slider-row")).map(row=>{
+      const label = row.firstChild.textContent.trim();
+      const val = Number(row.querySelector("input[type=range]").value||"8");
+      return { label, value: val };
+    });
+
+    const t = p.targeting || {};
     return {
       host,
       line: p.line || {host, verb:"supplies", products:"packaging", audience:"brands", region:"the U.S.", contacts:"Operations, Procurement"},
@@ -415,10 +462,18 @@
         near: genChips.textContent.includes("Prioritize nearby"),
         ecom: genChips.textContent.includes("Prefer e-commerce"),
         wholesale: genChips.textContent.includes("Prefer wholesalers"),
-        retail: genChips.textContent.includes("Prefer retail")
+        retail: genChips.textContent.includes("Prefer retail brands"),
+        aiFinalize: genChips.textContent.includes("AI finalize")
       },
-      metrics: (state.persona?.metrics?.length ? state.persona.metrics : defaultMetrics()),
-      targeting: { cities: getActiveChips(cityChips), city: getActiveChips(cityChips)[0]||"" }
+      metrics: updated.length ? updated : metrics,
+      targeting: {
+        cities: getActiveChips(cityChips),
+        city: getActiveChips(cityChips)[0]||"",
+        titles: t.titles || [],
+        revenueMinM: Number(t.revenueMinM||0),
+        revenueMaxM: Number(t.revenueMaxM||0),
+        employees: Number(t.employees||0)
+      }
     };
   }
 
@@ -427,11 +482,13 @@
     const base = API.get();
     const payload = collectPersona();
     try{
-      await fetchJSON(base + "/prefs/upsert", {method:"POST", body: JSON.stringify(payload)});
+      const r = await fetchJSON(base + "/prefs/upsert", {method:"POST", body: JSON.stringify(payload)});
       pill.textContent = "profile applied"; pill.classList.add("good");
+      return r;
     }catch(e){
       logHttp("Apply failed (offline?): " + (e.message||e));
       pill.textContent = "saved locally (offline)"; pill.classList.add("good");
+      return null;
     }
   }
 
@@ -468,30 +525,25 @@
     for (const it of visible){
       const tr = document.createElement("tr");
 
-      // Score
       const tdScore = document.createElement("td");
       tdScore.className = "score";
       tdScore.textContent = (it.score ?? "-");
       tr.appendChild(tdScore);
 
-      // Band
       const tdBand = document.createElement("td");
       const band = (it.band || classifyScore(it.score)).toUpperCase();
       tdBand.appendChild(bandBadge(band));
       tr.appendChild(tdBand);
 
-      // Buyer name
       const tdBuyer = document.createElement("td");
       tdBuyer.textContent = it.name || it.company || it.host || "-";
       tr.appendChild(tdBuyer);
 
-      // Why / reasons
       const tdWhy = document.createElement("td");
       tdWhy.className = "why";
       reasonsToChips(tdWhy, it.reasons || it.why || it.reason || []);
       tr.appendChild(tdWhy);
 
-      // Action
       const tdAct = document.createElement("td");
       tdAct.className = "action";
       const open = document.createElement("button");
@@ -536,34 +588,77 @@
     }));
   }
 
+  function dedupeAndSort(items){
+    const byHost = new Map();
+    for (const it of items){
+      const key = (it.host||it.url||it.name||"").toLowerCase();
+      const prev = byHost.get(key);
+      if (!prev || (Number(it.score||0) > Number(prev.score||0))) byHost.set(key, it);
+    }
+    return Array.from(byHost.values()).sort((a,b)=>(b.score||0)-(a.score||0));
+  }
+
+  async function fetchWebBand(base, band, p, limitPerBand){
+    const u = new URL(base + "/web/find");
+    u.searchParams.set("host", p.host || company.textContent.trim());
+    if (p.targeting?.city) u.searchParams.set("city", p.targeting.city);
+    const size = sizeFromEmployees(p.targeting?.employees||0);
+    if (size && size!=="micro") u.searchParams.set("size", size); // keep simple; micro maps to Tier C anyway
+    u.searchParams.set("band", band);
+    u.searchParams.set("limit", String(limitPerBand));
+    try{
+      const d = await fetchJSON(u.toString(), { method:"GET" });
+      return Array.isArray(d?.items) ? d.items : [];
+    }catch{
+      return [];
+    }
+  }
+
+  async function fetchCatalogFallback(base, bands, p, limit){
+    // Try /leads/find-buyers (minBand) then exact-filter client-side
+    const u = new URL(base + "/leads/find-buyers");
+    u.searchParams.set("host", p.host || company.textContent.trim());
+    if (p.targeting?.city) u.searchParams.set("city", p.targeting.city);
+    u.searchParams.set("tiers", "C"); // small by default
+    u.searchParams.set("preferTier", "C");
+    u.searchParams.set("minBand", "COOL");
+    u.searchParams.set("limit", String(limit));
+    try{
+      const d = await fetchJSON(u.toString(), { method:"GET" });
+      const list = Array.isArray(d?.items) ? d.items : [];
+      return list.filter(x=> bands.has((x.band||classifyScore(x.score)).toUpperCase()));
+    }catch{ return []; }
+  }
+
   async function findBuyers(){
     rows.innerHTML="";
     statusEl.textContent = "Finding…";
     const base = API.get();
     const p = collectPersona();
-    const q = new URLSearchParams({
-      host: p.host || company.textContent.trim(),
-      limit: String(24),
-      city: p.targeting.city||"",
-      sectors: (p.sectorHints||[]).join(","),
-      tags: (p.productTags||[]).join(",")
-    }).toString();
 
-    const paths = ["/leads/find-buyers", "/buyers/find", "/buyers/search", "/find"];
-    let data=null;
-    for (const path of paths){
-      try{
-        data = await fetchJSON(base + path + "?" + q, {method:"GET"});
-        if (data) break;
-      }catch(e){ /* try next */ }
+    // gating hint if HOT selected
+    const wantsHot = state.activeBands.has("HOT");
+    gatedRibbon.classList.toggle("show", !!wantsHot);
+
+    const activeBands = Array.from(state.activeBands);
+    const limitTotal = 24;
+    const limitPerBand = Math.max(6, Math.floor(limitTotal / Math.max(1, activeBands.length)));
+
+    // Try web-first per selected band
+    let collected = [];
+    for (const b of activeBands){
+      const chunk = await fetchWebBand(base, b, p, limitPerBand);
+      collected = collected.concat(chunk || []);
     }
 
-    const list = data
-      ? (Array.isArray(data)? data : (data.items||data.results||[]))
-      : offlineMockLeads(p, 12);
+    // Fallback if nothing
+    if (!collected.length){
+      const fallback = await fetchCatalogFallback(base, state.activeBands, p, limitTotal);
+      collected = fallback.length ? fallback : offlineMockLeads(p, 12);
+    }
 
-    state.results = list;
-    renderRows(list);
+    state.results = dedupeAndSort(collected);
+    renderRows(state.results);
   }
 
   /* ---------- events ---------- */
@@ -587,14 +682,10 @@
   drawer.addEventListener("click", (e)=>{ if (e.target === drawer) closeDrawer(); });
   window.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeDrawer(); });
 
-  document.getElementById("applyBtn2").addEventListener("click", async ()=>{
-    await applyPrefs();
-  });
-  applyAndFindBtn.addEventListener("click", async ()=>{
-    await applyPrefs();
-    await findBuyers();
-  });
+  document.getElementById("applyBtn2").addEventListener("click", async ()=>{ await applyPrefs(); });
+  applyAndFindBtn.addEventListener("click", async ()=>{ await applyPrefs(); await findBuyers(); });
   findBtn.addEventListener("click", findBuyers);
+
   editToggle.addEventListener("click", ()=> {
     const ed = oneLine.isContentEditable;
     oneLine.contentEditable = !ed;
@@ -623,6 +714,8 @@
       btn.classList.toggle("on");
       if (btn.classList.contains("on")) state.activeBands.add(band);
       else state.activeBands.delete(band);
+      // gating banner if hot selected
+      gatedRibbon.classList.toggle("show", state.activeBands.has("HOT"));
       renderRows(state.results||[]);
     });
   });
@@ -650,7 +743,7 @@
     // 2) Step 3 persona
     let p = null; try{ p = JSON.parse(getStored("fp.persona","")); }catch{}
     if (p){ renderPersona(p); pill.textContent="persona (local)"; pill.classList.add("good"); }
-    else { renderPersona({ host, productTags:[], sectorHints:[], metrics: defaultMetrics(), targeting:{cities:[]} }); }
+    else { renderPersona({ host, productTags:[], sectorHints:[], metrics: defaultMetrics(), targeting:{cities:[], employees:0, revenueMinM:0, revenueMaxM:0} }); }
 
     // Auto-apply once if Step 3 flagged it
     if (getStored("fp.autoImport","") === "1" && p){
