@@ -1,18 +1,18 @@
 // src/shared/sources.ts
 //
-// Web-first buyer discovery (hardened + expanded).
+// Web-first buyer discovery (hardened + expanded + learned-blend).
 // - Google Places Text Search + optional Details (if PLACES_API_KEY is set)
 // - Fallback to OpenStreetMap Nominatim (no key)
 // - Size-aware + vertical-aware default queries (micro/small/mid/large)
 // - Covers primary, secondary and tertiary packaging buyers
+// - Blends in learned queries from shared/lexicon-store (safe, capped)
 // - Filters non-actionable hosts (maps.google, yelp, facebook, instagram)
 // - Limits Places Details lookups to avoid quota burn
 // - Normalizes to Candidate shape
 //
 // Notes:
-// • All query tokens are quoted (even those starting with digits like "3pl").
-// • If you pass opts.queries, those override the generated defaults.
-// • Keep query lists modest(ish); we still overfetch and dedupe strictly.
+// • If opts.queries is provided, we still pass them through the learned blender.
+// • Learned overlays are deduped and hard-capped so quotas stay sane.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -30,6 +30,10 @@ export type Candidate = {
 };
 
 const F: (u: string, i?: any) => Promise<any> = (globalThis as any).fetch;
+
+// Optional learned store (safe if missing)
+let Lex: any = null;
+try { Lex = require("./lexicon-store"); } catch { Lex = null; }
 
 /* -------------------------------------------------------------------------- */
 /* Query lexicon (evergreen, safe to extend)                                   */
@@ -141,16 +145,14 @@ const Q_MICRO_ONLY: string[] = [
   "farmers market seller","etsy seller","craft seller","cottage foods",
 ];
 
-/** Combine a size with overlays. We keep this intentionally simple and safe. */
-function queriesForSize(size?: "micro"|"small"|"medium"|"large"): string[] {
+/** Combine a size with overlays then prune/dedup/cap. */
+function baseQueriesForSize(size?: "micro"|"small"|"medium"|"large"): string[] {
   const base =
     size === "large"  ? Q_LARGE :
     size === "medium" ? Q_MID :
     size === "micro"  ? Q_MICRO_ONLY.concat(Q_MICRO_SMALL) :
                         Q_MICRO_SMALL; // default small
-  // Include product-intent overlays (helps find secondary/tertiary users)
   const blended = base.concat(Q_PRODUCT_OVERLAYS);
-  // Dedup + cap to keep Text Search reasonable
   const seen = new Set<string>();
   const out: string[] = [];
   for (const q of blended) {
@@ -158,7 +160,7 @@ function queriesForSize(size?: "micro"|"small"|"medium"|"large"): string[] {
     if (!s || seen.has(s)) continue;
     seen.add(s);
     out.push(s);
-    if (out.length >= 80) break; // guardrail: keep it tight(ish)
+    if (out.length >= 80) break; // guardrail: keep it reasonable
   }
   return out;
 }
@@ -331,7 +333,32 @@ export async function findBuyersFromWeb(opts: {
   queries?: string[];
 }): Promise<Candidate[]> {
   const sizeTier = sizeToTier(opts.size);
-  const qs = (opts.queries && opts.queries.length ? opts.queries : queriesForSize(opts.size));
+
+  // Base queries (either caller-supplied or generated from size)
+  const base = (opts.queries && opts.queries.length ? opts.queries : baseQueriesForSize(opts.size))
+    .map((s) => String(s || "").trim().toLowerCase())
+    .filter(Boolean);
+
+  // Blend in learned overlays (safe no-op if store missing)
+  let qs: string[] = base.slice(0, 80);
+  try {
+    if (Lex && typeof Lex.blendQueries === "function") {
+      const blended = Lex.blendQueries(qs, {
+        hostSeed: String(opts.hostSeed || ""),
+        city: String(opts.city || ""),
+        size: String(opts.size || ""),
+        // keep strict caps inside the store too
+        maxAdd: 20,    // at most 20 learned tokens appended
+        maxTotal: 100, // final guardrail
+      });
+      if (Array.isArray(blended?.queries)) {
+        qs = blended.queries
+          .map((s: any) => String(s || "").trim().toLowerCase())
+          .filter(Boolean)
+          .slice(0, 100);
+      }
+    }
+  } catch { /* ignore + fall back to base */ }
 
   const results: Candidate[] = [];
   const gp = await fromGoogle(qs, opts.city, opts.limit).catch(() => []);
