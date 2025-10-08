@@ -22,13 +22,15 @@
   .inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .small{font-size:12px}
   .pill{font:11px;padding:4px 8px;border-radius:999px;background:#0d1520;border:1px solid #223042}
-  .log{font:12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;white-space:pre-wrap;height:360px;overflow:auto;background:#0d1520;border-radius:10px;border:1px solid #223042;padding:10px}
+  .log{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;height:420px;overflow:auto;background:#0d1520;border-radius:10px;border:1px solid #223042;padding:10px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .rowlabel{display:flex;align-items:center;justify-content:space-between}
   .rangeWrap{display:flex;align-items:center;gap:10px}
   .rangeWrap input[type="range"]{width:100%}
   .disabled{opacity:.45;pointer-events:none}
   label{font-size:12px;color:#9ab0c0}
+  dt{font-weight:700} dd{margin:0 0 8px}
+  a.link{color:#8ae3ff;text-decoration:none}
 </style>
 </head>
 <body>
@@ -38,6 +40,7 @@
       <button class="btn" id="btnPing">Ping</button>
       <button class="btn" id="btnHealth">Health</button>
       <button class="btn" id="btnReload">Reload catalog</button>
+      <button class="btn" id="btnScoreboard">Scoreboard</button>
     </div>
   </header>
 
@@ -56,7 +59,7 @@
       <div class="row" style="gap:8px;margin-top:14px">
         <div class="inline">
           <label>Admin auth</label>
-          <span class="pill muted small">sent as <code id="hdrLabel">x-admin-key</code></span>
+          <span class="pill muted small">sent as <code id="hdrLabel">x-admin-key</code> + <code>Authorization: Bearer</code></span>
         </div>
         <div class="rowcols">
           <select id="adminHeader">
@@ -78,6 +81,7 @@
             <select id="userPlan">
               <option value="Free">Free</option>
               <option value="Pro">Pro</option>
+              <option value="Enterprise">Enterprise</option>
             </select>
           </div>
           <div>
@@ -144,9 +148,27 @@
         <button id="applyPrefs">Apply demo prefs</button>
         <div class="muted small">Upserts prefs for the Host above (requires admin key).</div>
       </div>
+
+      <div class="row" style="margin-top:16px">
+        <label>Feedback (trains lexicon)</label>
+        <div class="rowcols">
+          <button id="thumbUp">👍 Thumb up</button>
+          <button id="thumbDown" class="btn">👎 Thumb down</button>
+        </div>
+        <div class="muted small">Sends <code>/api/feedback/thumb</code> with sample tags.</div>
+      </div>
+
+      <div class="row" style="margin-top:16px">
+        <label>Events</label>
+        <div class="rowcols">
+          <button id="eventsStats">/events/stats</button>
+          <button id="sseToggle" class="btn">SSE on/off</button>
+        </div>
+        <div class="muted small">Stats are snapshot; SSE logs live “event” lines below.</div>
+      </div>
     </section>
 
-    <!-- RIGHT -->
+    <!-- RIGHT: log -->
     <section class="card">
       <div class="log" id="log"></div>
     </section>
@@ -168,10 +190,10 @@
         <div>
           <div class="muted small" style="margin-bottom:8px">EVENTS SNAPSHOT</div>
           <dl id="eventsDl">
-            <dt>buffered</dt><dd>-</dd>
-            <dt>byType24h</dt><dd>-</dd>
-            <dt>topPaths24h</dt><dd>-</dd>
+            <dt>total</dt><dd>-</dd>
+            <dt>by (top)</dt><dd>-</dd>
             <dt>since</dt><dd>-</dd>
+            <dt>latest</dt><dd>-</dd>
           </dl>
         </div>
       </div>
@@ -231,7 +253,7 @@
     const h = {"Content-Type":"application/json"};
     const k = getKey();
     const n = getHeader();
-    if (k) h[n] = k;
+    if (k) { h[n] = k; h["Authorization"] = "Bearer " + k; }
     // user plan + optional email for server-side gating
     h["x-user-plan"] = getPlan();
     const em = getUserEmail();
@@ -257,37 +279,43 @@
     };
     healthDl.innerHTML = Object.entries(map).map(([k,v])=>`<dt>${k}</dt><dd>${v==null?'-':String(v)}</dd>`).join("");
   }
-  function setEvents(e){
+  function setEventsStats(d){
+    const by = d?.by || {};
+    const top = Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`${k}:${v}`).join(", ");
     const map = {
-      buffered: e?.total ?? e?.buffered ?? "-",
-      byType24h: e?.byType24h ? JSON.stringify(e.byType24h) : "-",
-      topPaths24h: e?.topPaths24h ? JSON.stringify(e.byType24h?.slice ? e.topPaths24h.slice(0,5) : e.topPaths24h) : "-",
-      since: e?.sinceIso || "-"
+      total: d?.total ?? "-",
+      "by (top)": top || "-",
+      since: d?.since || "-",
+      latest: d?.latest || "-"
     };
     eventsDl.innerHTML = Object.entries(map).map(([k,v])=>`<dt>${k}</dt><dd>${v==null?'-':String(v)}</dd>`).join("");
   }
 
   // ---- SSE ----
   let es = null;
-  let lastTs = 0;
-  function streamUrl(){ return `${getBase()}/events/stream?since=${lastTs||0}`; }
+  let lastAtMs = 0;
+  function streamUrl(){
+    const since = lastAtMs && Number.isFinite(lastAtMs) ? lastAtMs : 0;
+    return `${getBase()}/events/stream?since=${since}`;
+  }
   function startStream(){
     try { stopStream(); } catch {}
-    const url = streamUrl();
-    es = new EventSource(url, { withCredentials:false });
+    es = new EventSource(streamUrl(), { withCredentials:false });
     sseNote.textContent = "connecting…";
     es.addEventListener("ping", ()=>{ sseNote.textContent = "connected"; });
     es.addEventListener("event", (ev)=>{
       try{
-        const data = JSON.parse(ev.data);
-        lastTs = Math.max(lastTs, Number(data.ts||0));
-        say(`EVENT ${data.type || "-"} :: ${data.path || ""} :: ${data.user || ""}`);
+        const data = JSON.parse(ev.data); // { kind, at, user?, data? }
+        const t = Date.parse(data.at || "") || Date.now();
+        lastAtMs = Math.max(lastAtMs, t);
+        say(`EVENT ${data.kind || "-"}  @ ${data.at || "-"}  ${data.user ? "• "+data.user : ""}`);
       }catch{}
     });
     es.onerror = ()=>{ sseNote.textContent = "reconnecting…"; };
     es.onopen = ()=>{ sseNote.textContent = "connected"; };
   }
   function stopStream(){ if (es) try{es.close();}catch{} es=null; sseNote.textContent="stopped"; }
+  $("#sseToggle").onclick = ()=>{ if (es) stopStream(); else startStream(); };
 
   // ---- Hybrid UI enable/disable ----
   function updateHybridUI(){
@@ -330,7 +358,7 @@
     if (city) u.searchParams.set("city", city);
     u.searchParams.set("tiers", tiers);
     u.searchParams.set("preferTier", preferTier);
-    u.searchParams.set("minBand", band); // server uses min; client will exact-filter
+    u.searchParams.set("minBand", band); // server uses min; we exact-filter client-side
     return u.toString();
   }
 
@@ -343,6 +371,7 @@
 
     const wantBand = ($("#band").value||"WARM").toUpperCase();
     if (ok && data && Array.isArray(data.items)) {
+      // exact band filter for catalog/minBand
       data.items = data.items.filter(x => String(x?.band||"").toUpperCase() === wantBand);
       if (data.summary) {
         data.summary.returned = data.items.length;
@@ -358,6 +387,43 @@
     say(`Find buyers [${source}] -> ${status}`);
     if (ok && data) say(JSON.stringify(data,null,2));
     else if (!ok) say("Find buyers failed.");
+  }
+
+  async function sendThumb(up){
+    const host = ($("#host").value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
+    if (!host){ say("Feedback: set Host first"); return; }
+    const body={ host, tags:["stretch wrap","rfq","shopify"], up:!!up, down:!up };
+    const r = await hit("POST","/feedback/thumb", body, true);
+    say(`Feedback ${up?"up":"down"} -> ${r.status}`);
+    if (!r.ok) say(JSON.stringify(r.data,null,2));
+  }
+
+  async function fetchEventsStats(){
+    try{
+      const r = await hit("GET","/events/stats", null, true);
+      if (r.ok) setEventsStats(r.data);
+      say(`Events stats -> ${r.status}`);
+      if (!r.ok) say(JSON.stringify(r.data,null,2));
+    }catch(e){ say("Events stats failed: "+(e.message||e)); }
+  }
+
+  async function fetchScoreboard(){
+    const host = ($("#host").value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
+    if (!host){ say("Scoreboard: set Host first"); return; }
+    const u = new URL(getBase() + "/metrics/scoreboard");
+    u.searchParams.set("host", host);
+    u.searchParams.set("probe","1");
+    try{
+      const r = await fetch(u.toString(), { headers: adminHeaders() });
+      const d = await r.json().catch(()=>null);
+      say(`Scoreboard -> ${r.status}`);
+      if (r.ok && d){
+        const brief = { host:d.host, probed:d.probed, band:d?.probe?.band||null, score:d?.probe?.score||null, metrics:(d.metrics||[]).length };
+        say(JSON.stringify(brief,null,2));
+      } else if (!r.ok) {
+        say(JSON.stringify(d||{},null,2));
+      }
+    }catch(e){ say("Scoreboard failed: "+(e.message||e)); }
   }
 
   // ---- Handlers ----
@@ -379,36 +445,18 @@
   $("#btnPing").onclick   = async()=>{ const r=await hit("GET","/ping"); say(`Ping -> ${r.status}`); };
   $("#btnHealth").onclick = async()=>{ const r=await hit("GET","/health"); say(`Health -> ${r.status}`); if(r.ok&&r.data) setHealth(r.data); };
   $("#btnReload").onclick = async()=>{ const r=await hit("POST","/catalog/reload",{}, true); say(`Reload -> ${r.status}`); if(!r.ok&&r.data) say(JSON.stringify(r.data,null,2)); };
+  $("#btnScoreboard").onclick = fetchScoreboard;
 
   $("#find").onclick = findBuyers;
-
-  $("#applyPrefs").onclick = async ()=>{
-    const host = ($("#host").value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/.*$/,"");
-    if(!host){ say("Prefs: set Host first"); return; }
-    const demo = {
-      host, city:"San Diego",
-      general:{ mids:true, near:true, ecommerce:false, retail:true, wholesale:true },
-      likeTags:["film","labels","food","beverage"],
-      preferSmallMid:true,
-      sizeWeight:{ micro:1.2, small:1.0, mid:0.6, large:-1.2 },
-      signalWeight:{ local:1.6, ecommerce:0.1, retail:0.35, wholesale:0.35 },
-      inboundOptIn:true
-    };
-    const r = await hit("POST","/prefs/upsert", demo, true);
-    say(`Prefs upsert -> ${r.status}`);
-    if (!r.ok && r.data) say(JSON.stringify(r.data,null,2));
-  };
+  $("#thumbUp").onclick = ()=>sendThumb(true);
+  $("#thumbDown").onclick = ()=>sendThumb(false);
+  $("#eventsStats").onclick = fetchEventsStats;
 
   // initial health + events + SSE
   (async ()=>{
     const h = await hit("GET","/health");
     if (h.ok) { setHealth(h.data); say(`Health -> ${h.status}`); }
-    try{
-      const url = getBase() + "/events/stats";
-      const r = await fetch(url, { headers: adminHeaders() });
-      const d = await r.json().catch(()=>null);
-      if (r.ok && d) setEvents(d);
-    }catch{}
+    await fetchEventsStats();
     startStream();
   })();
 
