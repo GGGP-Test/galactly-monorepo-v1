@@ -1,74 +1,115 @@
 // src/routes/feedback.ts
 //
-// Thin feedback API that trains the shared lexicon from user clicks.
-// Mount path: app.use("/api/feedback", FeedbackRouter)
+// Feedback API that teaches the persistent lexicon-store.
+// Mount: app.use("/api/feedback", FeedbackRouter)
+/* eslint-disable @typescript-eslint/no-var-requires */
 
 import { Router, Request, Response } from "express";
 
-// We tolerate missing file to keep builds green if someone deletes it.
+// Tolerate missing store so builds stay green.
 let Lex: any = null;
-try { Lex = require("../shared/lexicon"); } catch { Lex = {}; }
+try { Lex = require("../shared/lexicon-store"); } catch { Lex = {}; }
 
 const FeedbackRouter = Router();
 
-type ThumbBody = {
-  host?: string;         // optional; for logs later
-  tags?: string[];       // normalized tags like ["stretch wrap","rfq","shopify"]
-  up?: boolean;          // true for thumbs-up
-  down?: boolean;        // true for thumbs-down
-};
+/* ------------------------------ helpers ---------------------------------- */
 
-// helper: normalize short arrays of strings
-function normTags(v: unknown): string[] {
+function uniqLower(arr: unknown): string[] {
   const out: string[] = [];
-  if (Array.isArray(v)) {
-    for (const x of v) {
-      const s = String(x ?? "").trim().toLowerCase();
-      if (s) out.push(s);
+  const seen = new Set<string>();
+  if (Array.isArray(arr)) {
+    for (const v of arr) {
+      const s = String(v ?? "").trim().toLowerCase();
+      if (s && !seen.has(s)) { seen.add(s); out.push(s); }
     }
   }
-  // hard cap to keep it safe
-  return Array.from(new Set(out)).slice(0, 24);
+  return out.slice(0, 60);
 }
+
+function bool(v: unknown): boolean {
+  return v === true || String(v).toLowerCase() === "true";
+}
+
+/* ------------------------------- routes ---------------------------------- */
 
 FeedbackRouter.get("/ping", (_req, res) => {
   res.json({ pong: true, at: new Date().toISOString() });
 });
 
-// POST /api/feedback/thumb { host?, tags:[], up?:true, down?:true }
-FeedbackRouter.post("/thumb", (req: Request, res: Response) => {
-  const body = (req.body || {}) as ThumbBody;
-  const tags = normTags(body.tags);
-  const up = !!body.up && !body.down;
-  const down = !!body.down && !body.up;
-
-  if (tags.length === 0) {
-    return res.status(400).json({ ok: false, error: "tags_required" });
-  }
-
+// POST /api/feedback/learn
+// Body accepts either:
+//  { learned: { tags?:[], cities?:[], providers?:[] }, hostSeed?, source?, band?, plan? }
+//  or a flat convenience form: { tags?:[], cities?:[], providers?:[] }
+FeedbackRouter.post("/learn", (req: Request, res: Response) => {
   try {
-    if (up && typeof Lex.onGoodResult === "function") Lex.onGoodResult(tags);
-    if (down && typeof Lex.onBadResult === "function") Lex.onBadResult(tags);
+    const b = (req.body || {}) as any;
+    const learned = b.learned || b;
 
-    // If neither up nor down was set, treat as neutral “seen good”
-    if (!up && !down && typeof Lex.onGoodResult === "function") Lex.onGoodResult(tags);
+    const tags = uniqLower(learned?.tags);
+    const cities = uniqLower(learned?.cities);
+    const providers = uniqLower(learned?.providers);
 
-    return res.json({ ok: true, learned: { up, down, tags } });
+    if (!tags.length && !cities.length && !providers.length) {
+      return res.status(400).json({ ok: false, error: "nothing_to_learn" });
+    }
+
+    const payload = {
+      source: String(b.source || "feedback"),
+      hostSeed: String(b.hostSeed || ""),
+      band: String(b.band || ""),
+      plan: String(b.plan || ""),
+      learned: { tags, cities, providers },
+    };
+
+    const fn = Lex?.recordLearn;
+    if (typeof fn !== "function") {
+      return res.status(501).json({ ok: false, error: "lexicon_store_unavailable" });
+    }
+
+    const result = fn(payload);
+    return res.json({ ok: true, ...result });
   } catch (e: any) {
-    return res.status(200).json({ ok: false, error: "feedback-failed", detail: String(e?.message || e) });
+    return res.status(200).json({ ok: false, error: "learn_failed", detail: String(e?.message || e) });
   }
 });
 
-// POST /api/feedback/promote  -> fold winners from learn-bucket into core
-FeedbackRouter.post("/promote", (_req: Request, res: Response) => {
+// POST /api/feedback/thumb  { tags:[], up?:true, down?:true }
+// Thumbs-up (or neutral) records as positive learning; thumbs-down ignores.
+FeedbackRouter.post("/thumb", (req: Request, res: Response) => {
   try {
-    const fn = Lex?.promoteLearned;
-    if (typeof fn !== "function") return res.status(501).json({ ok: false, error: "promote_unavailable" });
-    const result = fn();
-    return res.json({ ok: true, promoted: result || true });
+    const tags = uniqLower((req.body || {}).tags);
+    const up = bool((req.body || {}).up);
+    const down = bool((req.body || {}).down);
+
+    if (!tags.length) return res.status(400).json({ ok: false, error: "tags_required" });
+
+    // Only learn on up/neutral. Down = no-op (we avoid poisoning the store).
+    if (!down) {
+      const result = Lex?.recordLearn
+        ? Lex.recordLearn({ source: "thumb", learned: { tags } })
+        : null;
+      return res.json({ ok: true, learned: { tags, up: !!up, down: !!down }, result });
+    }
+    return res.json({ ok: true, learned: { tags, up: false, down: true } });
   } catch (e: any) {
-    return res.status(200).json({ ok: false, error: "promote-failed", detail: String(e?.message || e) });
+    return res.status(200).json({ ok: false, error: "thumb_failed", detail: String(e?.message || e) });
   }
+});
+
+// GET /api/feedback/summary  -> tiny admin/debug summary of learned store
+FeedbackRouter.get("/summary", (_req: Request, res: Response) => {
+  try {
+    const sum = typeof Lex?.summarize === "function" ? Lex.summarize() : null;
+    if (!sum) return res.status(501).json({ ok: false, error: "lexicon_store_unavailable" });
+    return res.json({ ok: true, ...sum });
+  } catch (e: any) {
+    return res.status(200).json({ ok: false, error: "summary_failed", detail: String(e?.message || e) });
+  }
+});
+
+// POST /api/feedback/promote  -> reserved for BV2 (not used in BV1)
+FeedbackRouter.post("/promote", (_req: Request, res: Response) => {
+  return res.status(501).json({ ok: false, error: "not_implemented_in_bv1" });
 });
 
 export default FeedbackRouter;
