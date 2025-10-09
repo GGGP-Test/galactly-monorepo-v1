@@ -1,156 +1,101 @@
 // src/routes/scores.ts
 //
-// Explainable scoring for a single host.
-// - GET  /api/scores/ping
-// - GET  /api/scores/explain?host=acme.com[&ads=0..1][&url=...]
-// - POST /api/scores/explain { host, ads?, url? }
+// Signals → score → band explainer used by /api/web/find-buyers escalation.
+// GET /api/scores/ping
+// GET /api/scores/explain?host=acme.com
 //
-// What it does (no external deps):
-//   1) fetches one page (homepage unless ?url= supplied) with timeout
-//   2) runs tech + signals extraction (pixels, stack, CTA, pricing, cart, recency)
-//   3) builds a lightweight "row" view from those signals
-//   4) fetches prefs for the host and scores the row via trc.scoreRow()
-//   5) returns score, band, reasons + a signals summary for debugging
+// Deterministic, no paid APIs. One-shot fetch of homepage HTML with timeout.
 
-import { Router, Request, Response } from "express";
-import { getPrefs, normalizeHost as normHost } from "../shared/prefs";
+import { Router, type Request, type Response } from "express";
+import { CFG } from "../shared/env";
+import * as TRC from "../shared/trc";             // thresholds if present
 import { computeSignals, summarizeSignals } from "../shared/signals";
-import { scoreRow, classifyScore } from "../shared/trc";
 
 const r = Router();
+const F: (u: string, i?: any) => Promise<any> = (globalThis as any).fetch;
 
-// ---- tiny helpers -------------------------------------------------------
-
-const F: (u: string, init?: any) => Promise<{
-  ok: boolean; status: number; url: string; text(): Promise<string>;
-  headers: { get(name: string): string | null };
-}> = (globalThis as any).fetch;
-
-function toURL(hostOrUrl: string): string {
-  const s = String(hostOrUrl || "").trim();
-  if (!s) return "";
-  if (/^https?:\/\//i.test(s)) return s;
-  const host = s.replace(/^https?:\/\//i, "");
-  return `https://${host}`;
+function normHost(raw?: string): string | undefined {
+  if (!raw) return;
+  const h = String(raw).trim().toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
+  return /^[a-z0-9.-]+$/.test(h) ? h : undefined;
 }
 
-async function fetchHtml(url: string, timeoutMs = 7000) {
+async function fetchWithTimeout(url: string, timeoutMs: number): Promise<string> {
   const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), Math.max(500, timeoutMs));
+  const t = setTimeout(() => ac.abort(), Math.max(1000, timeoutMs));
   try {
-    const res = await F(url, { redirect: "follow", signal: ac.signal as any });
-    const html = await res.text();
-    return { ok: res.ok, status: res.status, url: res.url || url, html, headers: res.headers };
-  } catch {
-    return { ok: false, status: 0, url, html: "", headers: new Map() as any };
-  } finally {
-    clearTimeout(t);
+    const res = await F(url, { redirect: "follow", signal: ac.signal as any, headers: { "User-Agent": "scores/1.0" } });
+    if (!res?.ok) return "";
+    return await res.text();
+  } catch { return ""; } finally { clearTimeout(t); }
+}
+
+function bandFromScore(score: number): "HOT" | "WARM" | "COOL" {
+  const HOT_T  = Number((TRC as any)?.HOT_MIN  ?? 80);
+  const WARM_T = Number((TRC as any)?.WARM_MIN ?? 55);
+  if (typeof (TRC as any)?.classifyScore === "function") {
+    try { return (TRC as any).classifyScore(score) as any; } catch { /* fall through */ }
   }
+  return score >= HOT_T ? "HOT" : score >= WARM_T ? "WARM" : "COOL";
 }
 
-function rowFromSignals(host: string, s: ReturnType<typeof computeSignals>) {
-  // Build tags deterministically from signals booleans
-  const tags = new Set<string>();
+/** Heuristic scoring from signals (0..100), returns [score, reasons[]]. */
+function scoreFromSignals(sig: ReturnType<typeof computeSignals>): { score: number; reasons: string[] } {
+  let s = 50;
+  const reasons: string[] = [];
 
-  // stack (shopify, wordpress, wix, squarespace, woocommerce, bigcommerce)
-  const st = s.stack || ({} as any);
-  if (st.shopify) tags.add("shopify");
-  if (st.wordpress) tags.add("wordpress");
-  if (st.woocommerce) tags.add("woocommerce");
-  if (st.wix) tags.add("wix");
-  if (st.squarespace) tags.add("squarespace");
-  if (st.bigcommerce) tags.add("bigcommerce");
+  // Pixel/ads intensity
+  const pa = Number(sig.pixelActivity || 0);           // 0..1
+  const aa = Number(sig.adsActivity || 0);             // 0..1
+  if (pa) { s += Math.min(18, Math.round(pa * 18)); reasons.push(`pixels:${pa.toFixed(2)}`); }
+  if (aa) { s += Math.min(12, Math.round(aa * 12)); reasons.push(`ads:${aa.toFixed(2)}`); }
 
-  // pixels
-  const px = s.pixels || ({} as any);
-  if (px.ga4 || px.gtm) tags.add("ga4");
-  if (px.ua) tags.add("ga-ua");
-  if (px.meta) tags.add("meta");
-  if (px.tiktok) tags.add("tiktok");
-  if (px.linkedin) tags.add("linkedin");
-  if (px.bing) tags.add("bing");
+  // CTAs
+  const c = sig.cta || ({} as any);
+  const ctaCount = Number(c.count || 0);
+  if (ctaCount) { s += Math.min(16, ctaCount * 4); reasons.push(`cta:${ctaCount}`); }
 
-  // commerce & CTA
-  if (s.commerce.hasCart || s.commerce.hasCheckout) tags.add("ecom");
-  if (s.commerce.hasCheckout) tags.add("checkout");
-  if (s.commerce.hasSku) tags.add("sku");
-  if (s.commerce.hasPriceWord) tags.add("pricing");
-  if (s.cta.hasQuote) tags.add("rfq");
-  if (s.cta.hasBuy) tags.add("buy");
-  if (s.cta.hasForm) tags.add("form");
-  if (s.cta.hasPhone) tags.add("phone");
-  if (s.cta.hasEmail) tags.add("email");
+  // Commerce hints
+  const com = sig.commerce || ({} as any);
+  const knobs = ["hasCart","hasCheckout","hasSku","hasPriceWord"].filter(k => (com as any)[k]);
+  if (knobs.length) { s += Math.min(14, knobs.length * 3); reasons.push(`commerce:${knobs.length}`); }
 
-  // recency
-  if (s.recency.hasUpdateWords) tags.add("launch");
-  if (s.recency.hasRecentYear) tags.add(String(s.recency.recentYear));
+  // Recency
+  const rec = sig.recency || ({} as any);
+  if (rec.hasUpdateWords) { s += 3; reasons.push("recency:launch"); }
+  if (rec.hasRecentYear)  { s += 2; reasons.push(`recency:${rec.recentYear}`); }
 
-  return {
-    host,
-    // no "platform" field in our Stack — keep tags only
-    tags: Array.from(tags).slice(0, 24),
-    segments: [],
-  };
+  s = Math.max(0, Math.min(100, s));
+  return { score: s, reasons: Array.from(new Set(reasons)).slice(0, 12) };
 }
 
-// ---- routes -------------------------------------------------------------
+r.get("/ping", (_req, res) => res.json({ ok: true, at: new Date().toISOString() }));
 
-r.get("/ping", (_req: Request, res: Response) => {
-  res.json({ pong: true, at: new Date().toISOString() });
-});
-
-async function handleExplain(req: Request, res: Response) {
+r.get("/explain", async (req: Request, res: Response) => {
   try {
-    const q = { ...req.query, ...(req.body || {}) } as Record<string, unknown>;
-    const hostInput = String(q.host || "").trim();
-    const adsOverride = q.ads != null ? Number(q.ads) : undefined;
-    const urlInput = String(q.url || "").trim();
+    const host = normHost(String(req.query.host || ""));
+    if (!host) return res.status(400).json({ ok: false, error: "bad_host" });
 
-    const host = normHost(hostInput || urlInput);
-    if (!host) return res.status(400).json({ ok: false, error: "host_required" });
+    const html = await fetchWithTimeout(`https://${host}`, Math.max(4000, CFG.fetchTimeoutMs || 7000));
+    const sig = computeSignals({ html, url: `https://${host}` });
+    const { score, reasons } = scoreFromSignals(sig);
+    const band = bandFromScore(score);
 
-    const url = toURL(urlInput || host);
-    const t0 = Date.now();
-    const fetched = await fetchHtml(url);
-    const fetchMs = Date.now() - t0;
-
-    const signals = computeSignals({
-      html: fetched.html,
-      url: fetched.url,
-      headers: Object.create(null),
-      adsActivity: Number.isFinite(adsOverride as number)
-        ? Math.max(0, Math.min(1, adsOverride as number))
-        : undefined,
-    });
-
-    const row = rowFromSignals(host, signals);
-    const prefs = getPrefs(host);
-    const scored = scoreRow(row as any, prefs as any, (prefs as any)?.city);
-    const band = classifyScore(scored.score);
-
-    res.json({
+    return res.json({
       ok: true,
       host,
-      url: fetched.url,
-      http: { ok: fetched.ok, status: fetched.status, ms: fetchMs, bytes: Buffer.byteLength(fetched.html, "utf8") },
-      score: scored.score,
+      score,
       band,
-      reasons: scored.reasons,
-      signals: summarizeSignals(signals),
-      rowPreview: row,
-      prefsSummary: {
-        city: (prefs as any)?.city || null,
-        likeTags: ((prefs as any)?.categoriesAllow || []).slice(0, 12),
-        sectors: [], // sectors are inferred elsewhere; not part of EffectivePrefs
-      },
+      reasons,
+      signals: summarizeSignals(sig),
       at: new Date().toISOString(),
     });
-  } catch (err: any) {
-    res.status(200).json({ ok: false, error: "scores-explain-failed", detail: String(err?.message || err) });
+  } catch (e: any) {
+    return res.status(200).json({ ok: false, error: "scores-explain-failed", detail: String(e?.message || e) });
   }
-}
-
-r.get("/explain", handleExplain);
-r.post("/explain", handleExplain);
+});
 
 export default r;
