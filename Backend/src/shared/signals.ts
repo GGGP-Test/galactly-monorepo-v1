@@ -1,20 +1,16 @@
 // src/shared/signals.ts
 //
 // Artemis BV1 — site "Signals" extractor.
-// Merges cheap, deterministic signals from a fetched page (no network calls):
+// Cheap, deterministic signals from a fetched page (no extra network calls):
 //   - Tech: ad pixels + platform stack (via detectTech)
 //   - CTA strength: phone/email/form/quote/buy
 //   - Commerce hints: cart/checkout/sku/pricing words/currency marks
-//   - Recency hints: current-year + "new/launch" phrasing
-//   - Optional adsActivity (0..1) if caller has ads-store data
+//   - Recency hints: recent year + “new/launch” phrasing (dynamic years)
+//   - Optional adsActivity (0..1) if caller supplies it
 //
 // Pure, dependency-free. Safe to run on every crawled HTML.
-//
-// Typical use:
-//   const sig = computeSignals({ html, url, headers, adsActivity });
-//   // feed into scorer or /api/scores/explain
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { detectTech, type TechSummary } from "./tech";
 
@@ -39,7 +35,7 @@ export type Commerce = {
 
 export type Recency = {
   hasRecentYear: boolean;
-  recentYear?: number;      // 2023..2026 if found
+  recentYear?: number;      // latest acceptable year seen
   hasUpdateWords: boolean;  // "new", "now available", "launch", "just dropped"
 };
 
@@ -59,6 +55,7 @@ export type Signals = {
 const toStr = (v: unknown) => (v == null ? "" : String(v));
 const lc = (s: string) => s.toLowerCase();
 
+// strip visible text (coarse, but fast and deterministic)
 function stripTags(html: string): string {
   let s = html;
   s = s.replace(/<script[\s\S]*?<\/script>/gi, " ");
@@ -66,7 +63,13 @@ function stripTags(html: string): string {
   s = s.replace(/<noscript[\s\S]*?<\/noscript>/gi, " ");
   s = s.replace(/<!--[\s\S]*?-->/g, " ");
   s = s.replace(/<\/?[^>]+>/g, " ");
-  s = s.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  s = s
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
   return s.replace(/\s+/g, " ").trim();
 }
 
@@ -76,13 +79,20 @@ function count(re: RegExp, s: string, capN = 999): number {
   while ((m = r.exec(s))) { n++; if (n >= capN) break; }
   return n;
 }
+const bool = (re: RegExp, s: string) => re.test(s);
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
-function bool(re: RegExp, s: string): boolean {
-  return re.test(s);
-}
-
-function clamp01(x: number): number {
-  return Math.max(0, Math.min(1, x));
+// find the most recent reasonable year in text (current year ±1, min 2019)
+function findRecentYear(text: string): number | undefined {
+  const now = new Date();
+  const maxYear = now.getFullYear() + 1;
+  const re = /\b(20\d{2})\b/g;
+  let best = 0; let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    const y = Number(m[1]);
+    if (y >= 2019 && y <= maxYear && y > best) best = y;
+  }
+  return best || undefined;
 }
 
 export type ComputeInput = {
@@ -98,14 +108,17 @@ export function computeSignals(input: ComputeInput): Signals {
   const html = lc(htmlRaw);
   const text = lc(input.pageText || stripTags(htmlRaw));
 
-  // 1) Tech (pixels + platform stack)
-  const tech = detectTech(htmlRaw, input.url, input.headers);
-  const pixelActivity = tech.pixelActivity;
+  // 1) Tech (pixels + platform stack) — defensive in case detectTech hiccups
+  let tech: TechSummary;
+  try {
+    tech = detectTech(htmlRaw, input.url, input.headers) as TechSummary;
+  } catch {
+    tech = { pixels: {} as any, stack: {} as any, pixelActivity: 0, reasons: ["tech:err"] } as any;
+  }
+  const pixelActivity = Number(tech?.pixelActivity || 0);
 
   // 2) CTA signals
-  // phone: (xxx) xxx-xxxx, xxx-xxx-xxxx, +1 xxx xxx xxxx, etc.
   const hasPhone = bool(/\b(?:\+?\d{1,2}\s*)?(?:\(?\d{3}\)?[\s\-\.]?\d{3}[\s\-\.]?\d{4})\b/, text);
-  // email/mailto (simple, avoids false positives)
   const hasEmail = bool(/mailto:|[\w.\-]+@[\w.\-]+\.[a-z]{2,}/i, htmlRaw);
   const hasForm = bool(/<form[\s>]/i, htmlRaw);
   const hasQuote = bool(/\b(request\s+a\s+quote|get\s+a\s+quote|rfq|quote\s*request)\b/i, text);
@@ -123,9 +136,8 @@ export function computeSignals(input: ComputeInput): Signals {
   const currencyMarks = Math.min(200, count(/[$€£]/g, htmlRaw));
   const commerce: Commerce = { hasCart, hasCheckout, hasSku, hasPriceWord, currencyMarks };
 
-  // 4) Recency hints
-  const yearMatch = text.match(/\b(2023|2024|2025|2026)\b/);
-  const recentYear = yearMatch ? Number(yearMatch[1]) : undefined;
+  // 4) Recency hints (dynamic year)
+  const recentYear = findRecentYear(text);
   const hasRecentYear = !!recentYear;
   const hasUpdateWords = bool(/\b(new(?!sletter)|now\s+available|launch(ed|ing)?|just\s+(dropped|launched|released))\b/i, text);
   const recency: Recency = { hasRecentYear, recentYear, hasUpdateWords };
@@ -140,12 +152,12 @@ export function computeSignals(input: ComputeInput): Signals {
   if (commerce.hasCheckout) keywordHits.push("checkout");
   if (commerce.hasCart) keywordHits.push("cart");
   if (commerce.hasPriceWord) keywordHits.push("pricing");
-  if (recency.hasUpdateWords) keywordHits.push("launch");
-  if (recency.hasRecentYear) keywordHits.push(String(recency.recentYear));
+  if (hasUpdateWords) keywordHits.push("launch");
+  if (hasRecentYear && recentYear) keywordHits.push(String(recentYear));
 
   // 7) Reasons (trace)
   const reasons = [
-    ...(tech.reasons || []),
+    ...(Array.isArray((tech as any).reasons) ? (tech as any).reasons : []),
     cta.hasQuote ? "cta:quote" : "",
     cta.hasBuy ? "cta:buy" : "",
     cta.hasForm ? "cta:form" : "",
@@ -155,16 +167,16 @@ export function computeSignals(input: ComputeInput): Signals {
     commerce.hasCheckout ? "commerce:checkout" : "",
     commerce.hasSku ? "commerce:sku" : "",
     commerce.hasPriceWord ? "commerce:pricing" : "",
-    recency.hasUpdateWords ? "recency:launch" : "",
-    recency.hasRecentYear ? `recency:${recency.recentYear}` : "",
+    hasUpdateWords ? "recency:launch" : "",
+    hasRecentYear && recentYear ? `recency:${recentYear}` : "",
     adsActivity > 0 ? `ads:${adsActivity.toFixed(2)}` : "",
   ].filter(Boolean);
   if (reasons.length > 32) reasons.length = 32;
 
   return {
     tech,
-    pixels: tech.pixels,
-    stack: tech.stack,
+    pixels: (tech as any).pixels,
+    stack: (tech as any).stack,
     pixelActivity,
     adsActivity,
     cta,
@@ -175,7 +187,7 @@ export function computeSignals(input: ComputeInput): Signals {
   };
 }
 
-// Tiny helper for logs/UIs: keep only the essentials
+// Keep only essentials for logs/UIs
 export function summarizeSignals(s: Signals) {
   return {
     pixelActivity: s.pixelActivity,
