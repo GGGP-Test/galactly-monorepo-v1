@@ -1,25 +1,24 @@
 // src/routes/status.ts
 //
-// Unified status route:
-// - NEW:  GET /api/status           -> compact env/audit + quota snapshot
-// - LEGACY: /api/v1/status          -> same shape you used before (uid/plan/quota)
-// Backward compatible: exports a Router (default) AND an app-level registrar.
+// Unified status route (compact, dependency-free):
+// - GET  /api/status         → env summary, identity → plan flags, band gating, audit snapshot, quota
+// - GET  /api/v1/status      → legacy shape (uid/plan/quota) + minimal gating
 //
-// Safe if shared/audit is missing; safe if no ctx is provided.
+// Safe fallbacks if optional modules are absent (audit, plan store).
+// Keeps your previous helpers (Ctx, attachQuotaHelpers) for compatibility.
 
 import { Router, type Request, type Response, type Express } from "express";
 import { summarizeForHealth } from "../shared/env";
 
-// ---- Optional audit import (don’t crash if absent) --------------------------
+// ---- optional audit (won't crash if missing) -------------------------------
 let Audit: any = {};
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  Audit = require("../shared/audit");
-} catch {
-  /* optional */
-}
+try { Audit = require("../shared/audit"); } catch { /* optional */ }
 
-// ---- Legacy ctx types (kept for compatibility) ------------------------------
+// ---- plan flags + gating (adds value vs. your last file) -------------------
+let Plan: any = {};
+try { Plan = require("../shared/plan-flags"); } catch { /* optional; guarded below */ }
+
+// ---- legacy ctx types (kept) -----------------------------------------------
 export type Ctx = {
   users: Map<string, { reveals: number; finds: number }>;
   devUnlimited: boolean;
@@ -42,7 +41,7 @@ export function attachQuotaHelpers(ctx: Ctx) {
   };
 }
 
-// ---- tiny utils --------------------------------------------------------------
+// ---- tiny utils -------------------------------------------------------------
 function uidFrom(req: Request): string {
   return String(req.header("x-galactly-user") || req.header("x-user-id") || "anon");
 }
@@ -57,33 +56,91 @@ function auditSnapshot() {
   } catch { return { ok: false, totals: {}, byType: {}, recent: [] }; }
 }
 async function quotaFor(uid: string, ctx?: Ctx) {
-  // Prefer ctx.quota if present
   if (ctx?.quota && typeof ctx.quota.status === "function") {
     try { return await ctx.quota.status(uid); } catch { /* fall through */ }
   }
-  // Fallback: devUnlimited => big numbers; else defaults (3 reveals / 30 finds)
   const unlimited = !!ctx?.devUnlimited;
+  return { revealsLeft: unlimited ? 9_999 : 3, findsLeft: unlimited ? 9_999 : 30 };
+}
+
+// ---- helpers for plan/gating (all optional) --------------------------------
+type PlanTier = "free" | "pro" | "scale";
+type Band = "HOT" | "WARM" | "COOL";
+function readIdentity(headers: Record<string,string|undefined>) {
+  if (Plan?.readIdentityFromHeaders) return Plan.readIdentityFromHeaders(headers);
+  const h: Record<string,string> = {};
+  for (const [k,v] of Object.entries(headers||{})) h[k.toLowerCase()] = String(v ?? "");
+  const email = (h["x-user-email"]||"").toLowerCase();
+  const plan: PlanTier = (["pro","scale"].includes((h["x-user-plan"]||"").toLowerCase())) ? (h["x-user-plan"] as PlanTier) : "free";
+  const domain = (h["x-user-domain"] || (email.split("@")[1]||"")).toLowerCase();
+  const adminOverride = !!h["x-admin-key"];
+  return { email, domain, plan, adminOverride };
+}
+function flagsFor(who: {email?:string; domain?:string}, overrides?: any) {
+  if (Plan?.flagsFor) return Plan.flagsFor(who, overrides);
+  // safe default when plan-flags is missing
   return {
-    revealsLeft: unlimited ? 9_999 : 3,
-    findsLeft:   unlimited ? 9_999 : 30,
+    plan: "free",
+    limits: { leadsPerDay: 50, streamCooldownSec: 45, maxConcurrentFinds: 2 },
+    features: { fastLane:false, dir2Collectors:false, exportsCSV:true, contactResolver:false },
+  };
+}
+function summarizeGating(plan: PlanTier, requested: Band, adminOverride: boolean) {
+  if (Plan?.summarizeGating) return Plan.summarizeGating(plan, requested, adminOverride);
+  const allowed = requested !== "HOT" || plan !== "free" || adminOverride;
+  return {
+    bandRequested: requested,
+    bandApplied: allowed ? requested : "WARM",
+    gated: !allowed,
+    plan,
+    adminOverride,
+    tiersApplied: plan === "free" ? ["C"] : plan === "pro" ? ["B","C"] : ["A","B","C"],
+    preferTier: plan === "free" ? "C" : null,
   };
 }
 
-// ---- Router (mounted at /api/status in index.ts) ----------------------------
+// ---- Router (mounted at /api/status) ---------------------------------------
 const r = Router();
 
 r.get("/", async (req: Request, res: Response) => {
   try {
+    const now = new Date().toISOString();
     const env = summarizeForHealth?.() ?? {};
     const a = auditSnapshot();
+
+    // identity → plan → flags → gating summaries
+    const id = readIdentity(req.headers as any);
+    const planFlags = flagsFor({ email: id.email, domain: id.domain });
+    const reqBand = String(req.query.band || "HOT").toUpperCase() as Band;
+    const band: Band = (reqBand === "HOT" || reqBand === "WARM" || reqBand === "COOL") ? reqBand : "HOT";
+
+    const gating = {
+      forRequested: summarizeGating(id.plan as PlanTier, band, id.adminOverride),
+      forHOT:       summarizeGating(id.plan as PlanTier, "HOT",  id.adminOverride),
+      forWARM:      summarizeGating(id.plan as PlanTier, "WARM", id.adminOverride),
+      forCOOL:      summarizeGating(id.plan as PlanTier, "COOL", id.adminOverride),
+    };
+
+    // neutral quota (no ctx here)
     const uid = uidFrom(req);
-    // We don’t have ctx here in router form; provide neutral quota so dashboards work.
     const quota = await quotaFor(uid, undefined);
 
     res.json({
       ok: true,
-      now: new Date().toISOString(),
+      now,
       env,
+      identity: {
+        email: id.email || null,
+        domain: id.domain || null,
+        headerPlan: id.plan,
+        adminOverride: !!id.adminOverride,
+      },
+      plan: {
+        plan: planFlags.plan,
+        limits: planFlags.limits,
+        features: planFlags.features,
+      },
+      gating,
       audit: {
         ok: !!a.ok || true,
         totals: a.totals || {},
@@ -92,25 +149,26 @@ r.get("/", async (req: Request, res: Response) => {
         count: num(a.totals?.all ?? a.count ?? 0),
       },
       uid,
-      plan: "free",
       quota,
     });
   } catch (err: any) {
-    res.status(200).json({ ok: false, error: String(err?.message || err) });
+    res.status(200).json({ ok: false, error: "status-failed", detail: String(err?.message || err) });
   }
 });
 
 export default r;
 
-// ---- Legacy registrar (adds /api/v1/status for old callers) -----------------
+// ---- Legacy registrar (adds /api/v1/status for old callers) ----------------
 export function registerStatusRoutes(app: Express, ctx?: Ctx) {
   app.get("/api/v1/status", async (req: Request, res: Response) => {
     try {
       const uid = uidFrom(req);
       const quota = await quotaFor(uid, ctx);
-      res.json({ ok: true, uid, plan: "free", quota, devUnlimited: !!ctx?.devUnlimited });
+      const id = readIdentity(req.headers as any);
+      const gating = summarizeGating((id.plan as PlanTier) || "free", "HOT", !!id.adminOverride);
+      res.json({ ok: true, uid, plan: id.plan || "free", quota, devUnlimited: !!ctx?.devUnlimited, gating });
     } catch (err: any) {
-      res.status(200).json({ ok: false, error: String(err?.message || err) });
+      res.status(200).json({ ok: false, error: "status-failed", detail: String(err?.message || err) });
     }
   });
 }
