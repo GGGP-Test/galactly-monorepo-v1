@@ -87,7 +87,12 @@ function mergeFlags(base: PlanFlags, patch?: Partial<PlanFlags>): PlanFlags {
 export function flagsFor(who: Who, overrides?: Partial<PlanFlags>): PlanFlags {
   const email = normEmail(who.email);
   const domain = normDomain(who.domain || (email.includes("@") ? email.split("@")[1] : ""));
-  const rec = (email && STORE.byEmail[email]) || (domain && STORE.byDomain[domain]);
+
+  // IMPORTANT: avoid `email && store[...]` which types as `string | StoreRec`
+  const recEmail: StoreRec | undefined = email ? STORE.byEmail[email] : undefined;
+  const recDomain: StoreRec | undefined = domain ? STORE.byDomain[domain] : undefined;
+  const rec: StoreRec | undefined = recEmail ?? recDomain;
+
   const tier: PlanTier = rec?.plan || planFromEnvFallback();
   const base = DEFAULTS[tier] || DEFAULTS.free;
   return mergeFlags(base, overrides);
@@ -138,7 +143,7 @@ export function readIdentityFromHeaders(
     h[k.toLowerCase()] = Array.isArray(v) ? v.join(",") : String(v ?? "");
   }
   const email = normEmail(h["x-user-email"]);
-  const domain = normDomain(h["x-user-domain"] || email.split("@")[1] || "");
+  const domain = normDomain(h["x-user-domain"] || (email.includes("@") ? email.split("@")[1] : ""));
   const rawPlan = String(h["x-user-plan"] || "").toLowerCase() as PlanTier;
   const plan: PlanTier = rawPlan === "pro" || rawPlan === "scale" ? rawPlan : "free";
   const adminOverride = !!h["x-admin-key"]; // presence is enough for route-level bypass
@@ -173,7 +178,7 @@ export type BandDecision = {
 };
 
 export function applyBandPolicy(plan: PlanTier, requested: Band, adminOverride = false): BandDecision {
-  const pol = BAND_POLICY[plan] || BAND_POLICY.free;
+  const pol = (BAND_POLICY as Record<PlanTier, typeof BAND_POLICY.free>)[plan] || BAND_POLICY.free;
   const allowed = pol.allowed.has(requested);
   const gated = !adminOverride && !allowed;
   const exactBand: Band = gated && requested === "HOT" ? "WARM" : requested;
