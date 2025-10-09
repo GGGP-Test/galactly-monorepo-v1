@@ -1,29 +1,21 @@
 // src/routes/leads.ts
 //
-// Artemis B v1 — Buyer discovery (CJS-safe) with per-request tier + band control.
-// Query params:
-//   - tiers=A,B,C
-//   - size=small|medium|large   (alias for tiers=C|B|A)
-//   - preferTier=A|B|C
-//   - preferSize=small|medium|large
-//   - minBand=COOL|WARM|HOT     (default COOL if prefer C/small else WARM)
+// Artemis B v1 — Buyer discovery with per-request tier/band controls
+// + plan gating (shared/plan-flags) and dynamic caps by plan.
 //
 // GET /api/leads/ping
 // GET /api/leads/find-buyers?host=acme.com[&city=&tags=&sectors=&minTier=&limit=]
-//
-// Emits a tiny event to /api/events/ingest so Admin "Recent (50)" shows activity.
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// Optional headers for plan gating:
+//   x-user-email, x-user-plan (free|pro|scale), x-admin-key (bypass gating)
 
 import { Router, type Request, type Response } from "express";
 import { CFG, capResults } from "../shared/env";
 import * as CatalogMod from "../shared/catalog";
 import * as Prefs from "../shared/prefs";
 import * as TRC from "../shared/trc";
+import * as Plan from "../shared/plan-flags";
 
 const r = Router();
-
-// ----------------------------- types --------------------------------------
 
 type Tier = "A" | "B" | "C";
 type Band = "HOT" | "WARM" | "COOL";
@@ -55,8 +47,7 @@ type Scored = Candidate & {
 const Catalog: any = (CatalogMod as any)?.default ?? (CatalogMod as any);
 const F: (url: string, init?: any) => Promise<any> = (globalThis as any).fetch;
 
-// ----------------------------- helpers ------------------------------------
-
+// ---------- tiny helpers ----------
 function uniqLower(arr: unknown): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -68,7 +59,6 @@ function uniqLower(arr: unknown): string[] {
   }
   return out;
 }
-
 function getCatalogRows(): Candidate[] {
   const c: any = Catalog;
   if (typeof c?.get === "function") return c.get();
@@ -78,28 +68,23 @@ function getCatalogRows(): Candidate[] {
   if (typeof c?.all === "function") return c.all();
   return [];
 }
-
 function getTier(c: Candidate): Tier {
   if (c.tier === "A" || c.tier === "B" || c.tier === "C") return c.tier;
   const t = Array.isArray(c.tiers) ? c.tiers[0] : undefined;
   return t === "A" || t === "B" ? t : "C";
 }
-
 function prettyHostName(h: string): string {
   const stem = String(h || "").replace(/^www\./, "").split(".")[0].replace(/[-_]/g, " ");
   return stem.replace(/\b\w/g, (m) => m.toUpperCase());
 }
-
 const HOT_T  = Number((TRC as any)?.HOT_MIN  ?? 80);
 const WARM_T = Number((TRC as any)?.WARM_MIN ?? 55);
-
 function bandFromScore(score: number): Band {
   if (typeof (TRC as any)?.classifyScore === "function") {
     try { return (TRC as any).classifyScore(score) as Band; } catch { /* noop */ }
   }
   return score >= HOT_T ? "HOT" : (score >= WARM_T ? "WARM" : "COOL");
 }
-
 function uncertainty(score: number): number {
   const dHot = Math.abs(score - HOT_T);
   const dWarm = Math.abs(score - WARM_T);
@@ -108,8 +93,6 @@ function uncertainty(score: number): number {
   const safe = Math.max(0, Math.min(1, u));
   return Number(safe.toFixed(3));
 }
-
-// fire-and-forget event so Admin "Recent (50)" shows activity
 async function emit(kind: string, data: any) {
   try {
     const url = `http://127.0.0.1:${CFG.port}/api/events/ingest`;
@@ -121,13 +104,8 @@ async function emit(kind: string, data: any) {
   } catch { /* ignore */ }
 }
 
-/* -------- request-tier parsing (tiers/size + preferTier/preferSize) -------- */
-
-const SIZE_TO_TIER: Record<string, Tier> = {
-  large: "A", l: "A",
-  medium: "B", m: "B",
-  small: "C", s: "C"
-};
+// -------- request-tier parsing (tiers/size + preferTier/preferSize) --------
+const SIZE_TO_TIER: Record<string, Tier> = { large: "A", l: "A", medium: "B", m: "B", small: "C", s: "C" };
 
 function parseTiersParam(req: Request): {
   allow: Set<Tier>;
@@ -135,7 +113,6 @@ function parseTiersParam(req: Request): {
   preferWasSmall: boolean;
 } {
   const envAllow = new Set<Tier>(Array.from(CFG.allowTiers ?? new Set<Tier>(["A","B","C"])) as Tier[]);
-
   const tiersQ = String(req.query.tiers || "").trim();
   const sizeQ  = String(req.query.size  || "").trim().toLowerCase();
 
@@ -168,8 +145,7 @@ function parseTiersParam(req: Request): {
   return { allow, prefer, preferWasSmall };
 }
 
-/* ---------------------------- scoring (fallback) --------------------------- */
-
+// ---------------------------- scoring (fallback) ---------------------------
 function cityBoost(city?: string, candidateCity?: string): number {
   if (!city || !candidateCity) return 0;
   const a = city.trim().toLowerCase();
@@ -179,19 +155,15 @@ function cityBoost(city?: string, candidateCity?: string): number {
   if (b.includes(a) || a.includes(b)) return 0.1;
   return 0;
 }
-
 function safeScoreRow(row: Candidate, prefs: any, city?: string) {
-  // prefer TRC.scoreRow if present
   if (typeof (TRC as any)?.scoreRow === "function") {
     try {
       const out = (TRC as any).scoreRow(row, prefs, city);
       if (out && typeof out.score === "number") return out;
     } catch { /* fall through */ }
   }
-
   let score = 50;
   const reasons: string[] = [];
-
   const loc = cityBoost(city || (prefs?.city as string), row.city);
   if (loc) { score += loc * 100; reasons.push(`local+${(loc * 100) | 0}`); }
 
@@ -228,8 +200,7 @@ function safeScoreRow(row: Candidate, prefs: any, city?: string) {
   return { score, reasons };
 }
 
-/* --------------------------------- routes --------------------------------- */
-
+// --------------------------------- routes ---------------------------------
 r.get("/ping", (_req: Request, res: Response) => res.json({ pong: true, at: new Date().toISOString() }));
 
 r.get("/find-buyers", async (req: Request, res: Response) => {
@@ -239,18 +210,31 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
     if (!host) return res.status(400).json({ ok: false, error: "host_required" });
 
     const cityQ = String(req.query.city || "").trim();
-    const minTier = String(req.query.minTier || "").trim().toUpperCase() as Tier | "";
+    const minTierQ = String(req.query.minTier || "").trim().toUpperCase() as Tier | "";
     const limitQ = Number(req.query.limit ?? 0);
 
-    // Per-request tier controls
-    const { allow: allowTiers, prefer: preferTier, preferWasSmall } = parseTiersParam(req);
+    // Per-request tier controls (from query)…
+    const qTiers = parseTiersParam(req);
 
-    // minBand (default COOL if preferring small/C, else WARM)
-    const rawMinBand = String(req.query.minBand || req.query.bandMin || "").trim().toUpperCase();
-    let minBand: Band = preferWasSmall ? "COOL" : "WARM";
-    if (rawMinBand === "HOT" || rawMinBand === "WARM" || rawMinBand === "COOL") {
-      minBand = rawMinBand as Band;
-    }
+    // …then apply plan gating (from headers)
+    const ident = Plan.readIdentityFromHeaders(req.headers as any);
+    const requestedMinBandRaw = String(req.query.minBand || req.query.bandMin || "").trim().toUpperCase() as Band | "";
+    const requestedMinBand: Band =
+      requestedMinBandRaw === "HOT" || requestedMinBandRaw === "WARM" || requestedMinBandRaw === "COOL"
+        ? requestedMinBandRaw
+        : (qTiers.preferWasSmall ? "COOL" : "WARM");
+
+    const decision = Plan.applyBandPolicy(ident.plan, requestedMinBand, ident.adminOverride);
+
+    // Intersect allowed tiers (env + query) with plan policy tiers
+    const policyTiers = new Set<Tier>(decision.tiersApplied as Tier[]);
+    const allowTiers = new Set<Tier>(Array.from(qTiers.allow).filter(t => policyTiers.has(t)));
+
+    // Prefer tier: query wins; else plan hint; else none
+    const preferTier = (qTiers.prefer || decision.preferTier || undefined) as Tier | undefined;
+
+    // minBand actually applied after gating:
+    const minBand = decision.exactBand;
 
     const bandOrder: Record<Band, number> = { HOT: 3, WARM: 2, COOL: 1 };
 
@@ -259,8 +243,9 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
     const sectorsQ = uniqLower(String(req.query.sectors || "").split(","));
     const overlayTags = Array.from(new Set<string>([...tagsQ, ...sectorsQ]));
 
-    // Result cap (by plan)
-    const cap = capResults("free", limitQ);
+    // Dynamic cap by plan (plan-flags uses free|pro|scale; env.capResults wants free|pro|ultimate)
+    const planForCap = ident.plan === "pro" || ident.plan === "scale" ? "pro" : "free";
+    const cap = capResults(planForCap, limitQ);
 
     // Effective prefs
     const basePrefs =
@@ -277,12 +262,12 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
 
     const rows: Candidate[] = getCatalogRows();
 
-    // Filter by allowed tiers + optional minTier
+    // Filter by allowed tiers + optional minTier (from query)
     const filtered: Candidate[] = rows.filter((c) => {
       const t = getTier(c);
       if (!allowTiers.has(t)) return false;
-      if (minTier === "A" && t !== "A") return false;
-      if (minTier === "B" && t === "C") return false;
+      if (minTierQ === "A" && t !== "A") return false;
+      if (minTierQ === "B" && t === "C") return false;
       return true;
     });
 
@@ -306,7 +291,7 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       return { ...c, host: c.host, name, city: c.city, tier: t, url, score, band: b, uncertainty: u, reasons };
     });
 
-    // Keep at/above minBand
+    // Keep at/above minBand (after gating)
     const kept: Scored[] = scored.filter((x) => bandOrder[x.band] >= bandOrder[minBand]);
 
     // Sort HOT→WARM→COOL by score
@@ -318,7 +303,7 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
     const totalBeforeCap = items.length;
     if (cap > 0) items = items.slice(0, cap);
 
-    // Enrich a couple uncertain
+    // Opportunistic enrichment for uncertain rows
     const MAX_ESCALATE = 2;
     const targets = items
       .filter((x) => x.uncertainty >= 0.6)
@@ -343,6 +328,7 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       } catch { /* ignore */ }
     }
 
+    const gating = Plan.summarizeGating(ident.plan, requestedMinBand, ident.adminOverride);
     const summary = {
       requested: limitQ || null,
       returned: items.length,
@@ -352,17 +338,17 @@ r.get("/find-buyers", async (req: Request, res: Response) => {
       totalBeforeCap,
       capApplied: cap,
       city: mergedPrefs.city || null,
-      minTier: minTier || null,
+      minTier: minTierQ || null,
       tiersApplied: Array.from(allowTiers),
       preferTier: preferTier || null,
+      minBandRequested: requestedMinBand,
       minBandApplied: minBand,
+      gating,
       overlays: { tags: overlayTags.slice(0, 12) },
       ms: Date.now() - t0,
     };
 
-    // Emit event for Admin "Recent (50)"
     emit("find_buyers", { host, ...summary }).catch(() => {});
-
     return res.json({ ok: true, items, summary });
   } catch (err: unknown) {
     const msg = (err as any)?.message || String(err);
