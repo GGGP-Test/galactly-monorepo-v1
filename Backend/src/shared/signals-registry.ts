@@ -10,9 +10,8 @@
 //   - has(key): boolean
 //
 // Notes:
-// - This registry is "best effort": for each module we try several function
-//   names (extractX / analyzeX / extract). We normalize {score,reasons[]} when
-//   possible but always return the raw object under results[key].
+// - For each module we try several function names. We normalize {score,reasons[]}
+//   when possible but always return the raw object under results[key].
 
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/ban-types */
 
@@ -28,7 +27,7 @@ function asReasons(x: any): string[] {
   if (Array.isArray(x)) return x.map((s) => String(s)).filter(Boolean).slice(0, 12);
   return [];
 }
-function pick<T extends object>(o: any, keys: (keyof any)[]): any {
+function pick(o: any, keys: string[]): any {
   if (!o || typeof o !== "object") return undefined;
   for (const k of keys) if (k in o) return (o as any)[k];
   return undefined;
@@ -41,14 +40,24 @@ function tryRequire(path: string): any | null {
   } catch { return null; }
 }
 
-function buildRunner(modPath: string, fnCandidates: string[], scoreKeys: string[], summaryFn?: string): Runner | null {
+// Build a generic runner for modules that take (text) and return an object.
+function buildRunner(
+  modPath: string,
+  fnCandidates: string[],
+  scoreKeys: string[],
+  summaryFn?: string
+): Runner | null {
   const mod = tryRequire(modPath) || tryRequire(modPath + ".js");
   if (!mod) return null;
 
   // pick the first available function
   let fn: Function | null = null;
   for (const name of fnCandidates) {
-    const f = (mod as any)[name] || (mod as any).default?.[name] || (typeof (mod as any).default === "function" && name === "extract" ? (mod as any).default : undefined);
+    const f =
+      (mod as any)[name] ||
+      (mod as any).default?.[name] ||
+      // allow default export being the function when candidate is "extract"
+      (typeof (mod as any).default === "function" && name === "extract" ? (mod as any).default : undefined);
     if (typeof f === "function") { fn = f; break; }
   }
   if (!fn) return null;
@@ -57,7 +66,6 @@ function buildRunner(modPath: string, fnCandidates: string[], scoreKeys: string[
 
   return (text: string) => {
     const raw = fn!(String(text || ""));
-    // Normalize if possible
     const scoreRaw =
       pick(raw, ["score", ...scoreKeys]) ??
       pick((raw || {}), ["signal", "strength"]);
@@ -65,23 +73,21 @@ function buildRunner(modPath: string, fnCandidates: string[], scoreKeys: string[
 
     const reasons =
       asReasons(raw?.reasons) ||
-      (typeof summarize === "function" ? [String(summarize(raw))] : []);
+      (typeof summarize === "function" ? [String((summarize as any)(raw))] : []);
 
     return { ...raw, score, reasons };
   };
 }
 
-// ----------------------------- registry table ------------------------------
-
+/* ----------------------------- registry table ----------------------------- */
 /**
- * Each entry describes:
- *   key        -> report key users/routers will reference
- *   mod        -> relative module path in src/shared/*
- *   fns        -> function name candidates to call
- *   scoreKeys  -> preferred numeric fields to map into score (0..1)
- *   summary    -> optional summarize function name for fallback reason
+ * key       -> name in the output
+ * mod       -> relative module under src/shared/*
+ * fns       -> function name candidates to call
+ * scoreKeys -> numeric fields to map into score (0..1)
+ * summary   -> optional summarize() name to produce a reason when none provided
  *
- * If a module or function is missing, the entry is skipped.
+ * Missing modules/functions are skipped silently.
  */
 const ENTRIES: Array<{
   key: string;
@@ -90,24 +96,28 @@ const ENTRIES: Array<{
   scoreKeys: string[];
   summary?: string;
 }> = [
-  { key: "tech",          mod: "./tech",           fns: ["extractTech", "analyzeTech", "extract"],        scoreKeys: ["techScore", "platformScore"],     summary: "summarizeTech" },
-  { key: "inventory",     mod: "./inventory",      fns: ["extractInventory", "analyzeInventory", "extract"], scoreKeys: ["inventoryScore"],                summary: "summarizeInventory" },
-  { key: "hiring",        mod: "./hiring",         fns: ["extractHiring", "analyzeHiring", "extract"],    scoreKeys: ["hiringScore"],                    summary: "summarizeHiring" },
-  { key: "geo",           mod: "./geo",            fns: ["extractGeo", "extractGeoPresence", "extract"],  scoreKeys: ["geoScore", "presenceScore"],      summary: "summarizeGeo" },
-  { key: "promo",         mod: "./promo",          fns: ["extractPromotions", "extractPromo", "extract"], scoreKeys: ["promoScore"],                     summary: "summarizePromotions" },
-  { key: "specs",         mod: "./specs",          fns: ["extractSpecs", "analyzeSpecs", "extract"],      scoreKeys: ["specsScore"],                     summary: "summarizeSpecs" },
-  { key: "marketplaces",  mod: "./marketplaces",   fns: ["extractMarketplaces", "extract", "analyzeMarketplace"], scoreKeys: ["marketplaceScore"],     summary: "summarizeMarketplaces" },
-  { key: "stockists",     mod: "./stockists",      fns: ["extractStockists", "extract", "analyzeStockists"], scoreKeys: ["stockistScore"],               summary: "summarizeStockists" },
-  { key: "partners",      mod: "./partners",       fns: ["extractPartners", "extract"],                   scoreKeys: ["partnerScore"],                   summary: "summarizePartners" },
-  { key: "tradeflow",     mod: "./tradeflow",      fns: ["extractTradeflow", "extract"],                  scoreKeys: ["tradeScore", "tradeflowScore"],   summary: "summarizeTradeflow" },
-  { key: "socialproof",   mod: "./socialproof",    fns: ["extractSocialProof", "extract"],                scoreKeys: ["socialScore", "proofScore"],      summary: "summarizeSocialProof" },
-  { key: "support",       mod: "./support",        fns: ["extractSupport", "extract"],                    scoreKeys: ["supportScore"],                   summary: "summarizeSupport" },
-  { key: "contactability",mod: "./contactability", fns: ["extractContactability", "analyzeContactability", "extract"], scoreKeys: ["contactScore"],     summary: "summarizeContactability" },
-  // Optional bilingual sugar — will be ignored if file is absent:
-  { key: "signals_es",    mod: "./signals.es",     fns: ["extractSignalsEs", "extract"],                  scoreKeys: ["score"],                          summary: "summarizeSignalsEs" },
+  // IMPORTANT: our tech module exports detectTech(html?:string, url?:string, headers?:HeaderMap)
+  // We’ll pass page text/HTML as the first arg; score from pixelActivity (0..1).
+  { key: "tech",          mod: "./tech",           fns: ["detectTech", "extractTech", "analyzeTech", "extract"], scoreKeys: ["pixelActivity","techScore","platformScore"], summary: undefined },
+
+  // The rest are optional; if you don’t ship these files yet, they’re ignored.
+  { key: "inventory",     mod: "./inventory",      fns: ["extractInventory", "analyzeInventory", "extract"],      scoreKeys: ["inventoryScore"],                summary: "summarizeInventory" },
+  { key: "hiring",        mod: "./hiring",         fns: ["extractHiring", "analyzeHiring", "extract"],            scoreKeys: ["hiringScore"],                   summary: "summarizeHiring" },
+  { key: "geo",           mod: "./geo",            fns: ["extractGeo", "extractGeoPresence", "extract"],          scoreKeys: ["geoScore","presenceScore"],      summary: "summarizeGeo" },
+  { key: "promo",         mod: "./promo",          fns: ["extractPromotions", "extractPromo", "extract"],         scoreKeys: ["promoScore"],                    summary: "summarizePromotions" },
+  { key: "specs",         mod: "./specs",          fns: ["extractSpecs", "analyzeSpecs", "extract"],              scoreKeys: ["specsScore"],                    summary: "summarizeSpecs" },
+  { key: "marketplaces",  mod: "./marketplaces",   fns: ["extractMarketplaces", "extract", "analyzeMarketplace"], scoreKeys: ["marketplaceScore"],              summary: "summarizeMarketplaces" },
+  { key: "stockists",     mod: "./stockists",      fns: ["extractStockists", "extract", "analyzeStockists"],      scoreKeys: ["stockistScore"],                 summary: "summarizeStockists" },
+  { key: "partners",      mod: "./partners",       fns: ["extractPartners", "extract"],                           scoreKeys: ["partnerScore"],                  summary: "summarizePartners" },
+  { key: "tradeflow",     mod: "./tradeflow",      fns: ["extractTradeflow", "extract"],                          scoreKeys: ["tradeScore","tradeflowScore"],   summary: "summarizeTradeflow" },
+  { key: "socialproof",   mod: "./socialproof",    fns: ["extractSocialProof", "extract"],                        scoreKeys: ["socialScore","proofScore"],      summary: "summarizeSocialProof" },
+  { key: "support",       mod: "./support",        fns: ["extractSupport", "extract"],                            scoreKeys: ["supportScore"],                  summary: "summarizeSupport" },
+  { key: "contactability",mod: "./contactability", fns: ["extractContactability","analyzeContactability","extract"], scoreKeys: ["contactScore"],               summary: "summarizeContactability" },
+  // Optional bilingual sugar — ignored if absent:
+  { key: "signals_es",    mod: "./signals.es",     fns: ["extractSignalsEs", "extract"],                          scoreKeys: ["score"],                         summary: "summarizeSignalsEs" },
 ];
 
-// Lazy-built singletons
+// Lazy-built singleton
 let _registry: Record<string, Runner> | null = null;
 
 export function getRegistry(): Record<string, Runner> {
@@ -117,7 +127,7 @@ export function getRegistry(): Record<string, Runner> {
   for (const e of ENTRIES) {
     const runner =
       buildRunner(e.mod, e.fns, e.scoreKeys, e.summary) ||
-      // Final attempt: default export as a function
+      // final attempt: default export is a function
       (() => {
         const mod = tryRequire(e.mod) || tryRequire(e.mod + ".js");
         const def = mod?.default;
@@ -131,7 +141,7 @@ export function getRegistry(): Record<string, Runner> {
         return null;
       })();
 
-    if (runner) reg[e.key] = runner;
+    if (runner) reg[lc(e.key)] = runner;
   }
 
   _registry = reg;
@@ -144,7 +154,10 @@ export function has(key: string): boolean {
 
 export function runAll(text: string, onlyKeys?: string[]): { ok: true; results: Record<string, any>; reasons: string[] } {
   const reg = getRegistry();
-  const keys = (onlyKeys && onlyKeys.length ? onlyKeys : Object.keys(reg)).map(lc).filter((k) => reg[k]);
+  const keys = (onlyKeys && onlyKeys.length ? onlyKeys : Object.keys(reg))
+    .map(lc)
+    .filter((k) => reg[k]);
+
   const results: Record<string, any> = {};
   const reasons: string[] = [];
 
