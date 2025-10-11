@@ -1,94 +1,143 @@
 // src/routes/claim.ts
 //
-// Own / Hide API (with tiny daily counter).
-// - GET  /api/claim/_ping
-// - POST /api/claim/own   { host, note? }
-// - POST /api/claim/hide  { host, note? }
+// Claim / Hide feature (MVP, in-memory).
+// Endpoints (all JSON):
+//   GET    /api/claim/_ping
+//   GET    /api/claim/limits
+//   GET    /api/claim/status?host=example.com
+//   POST   /api/claim/own     { host }
+//   POST   /api/claim/hide    { host }      // VIP only
+//   POST   /api/claim/unhide  { host }      // VIP only
 //
-// Uses: middleware/with-plan (to know email & plan)
+// Notes:
+// - Uses shared/plan to determine the user's plan and daily limits.
+// - Stores data in-memory for now (resets on deploy). Good enough for BV1.
 
 import { Router, Request, Response } from "express";
-import withPlan from "../middleware/with-plan";
+import { planForReq, dailyLimit, isPro, isVip } from "../shared/plan";
 
-const router = Router();
+type ClaimRecord = {
+  owner?: string;        // email of claimer
+  ownedAt?: number;      // ms epoch
+  hiddenBy?: string;     // email who hid it (VIP)
+  hiddenAt?: number;     // ms epoch
+};
 
-// attach userEmail + plan to every request
-router.use(withPlan());
+const r = Router();
 
-// in-memory daily counters (email + bucket)
-type BucketKey = string; // `${email}|${bucket}|${day}`
-type BucketVal = { used: number; resetAt: number };
-const usage = new Map<BucketKey, BucketVal>();
+// very small, in-memory “db”: host -> record
+const CLAIMS = new Map<string, ClaimRecord>();
 
-function epochDay(ms: number) {
-  const DAY = 24 * 60 * 60 * 1000;
-  return Math.floor(ms / DAY);
-}
-function keyFor(email: string, bucket: string) {
-  const now = Date.now();
-  const k = `${email}|${bucket}|${epochDay(now)}`;
-  const end = (epochDay(now) + 1) * 24 * 60 * 60 * 1000;
-  return { k, resetAt: end };
-}
-function limitFor(tier: "free" | "pro" | "vip"): number {
-  if (tier === "vip") return 100;
-  if (tier === "pro") return Number(process.env.PRO_DAILY || 25);
-  return Number(process.env.FREE_DAILY || 3);
+function normHost(raw: unknown): string {
+  const h = String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
+  return h;
 }
 
-router.get("/_ping", (_req, res) => res.json({ ok: true, name: "claim", ver: 1 }));
-
-function validate(req: Request, res: Response) {
-  const email = (req as any).userEmail as string | undefined;
-  const plan = (req as any).plan as { tier: "free" | "pro" | "vip" } | undefined;
-  const host = String(req.body?.host || "").trim().toLowerCase();
-
+function needEmail(req: Request, res: Response): string | null {
+  const email = String(req.headers["x-user-email"] || "").trim().toLowerCase();
   if (!email || !email.includes("@")) {
-    res.status(400).json({ ok: false, error: "email-required" });
+    res.status(401).json({ ok: false, error: "no-email", detail: "x-user-email header required" });
     return null;
   }
-  if (!host) {
-    res.status(400).json({ ok: false, error: "host-required" });
-    return null;
-  }
-  const tier = (plan?.tier || "free") as "free" | "pro" | "vip";
-  return { email, tier, host };
+  return email;
 }
 
-function checkAndBump(email: string, bucket: "own" | "hide", tier: "free" | "pro" | "vip") {
-  const { k, resetAt } = keyFor(email, bucket);
-  const lim = limitFor(tier);
-  const cur = usage.get(k) || { used: 0, resetAt };
-  // rollover
-  if (cur.resetAt !== resetAt) { cur.used = 0; cur.resetAt = resetAt; }
-  if (cur.used >= lim) return { ok: false as const, limit: lim, used: cur.used, resetAfterMs: Math.max(0, cur.resetAt - Date.now()) };
-  cur.used += 1;
-  usage.set(k, cur);
-  return { ok: true as const, limit: lim, used: cur.used, remaining: Math.max(0, lim - cur.used) };
-}
+/* ---------------------- routes ---------------------- */
 
-async function handleAction(req: Request, res: Response, action: "own" | "hide") {
-  const v = validate(req, res);
-  if (!v) return;
-  const { email, tier, host } = v;
+r.get("/_ping", (_req: Request, res: Response) => {
+  res.json({ ok: true, now: new Date().toISOString(), route: "claim" });
+});
 
-  const c = checkAndBump(email, action, tier);
-  if (!c.ok) {
-    return res.status(429).json({ ok: false, error: "DAILY_LIMIT", ...c, tier });
-  }
-
-  // (Logging will be wired to audit-log later; this endpoint just confirms.)
-  return res.json({
+r.get("/limits", async (req: Request, res: Response) => {
+  const { email, plan } = await planForReq(req);
+  res.json({
     ok: true,
-    action,
-    host,
-    tier,
-    usedToday: c.used,
-    remainingToday: c.remaining,
+    email,
+    plan,
+    dailyLimit: dailyLimit(plan),
+    canHide: isVip(plan),
   });
-}
+});
 
-router.post("/own",  (req, res) => { void handleAction(req, res, "own");  });
-router.post("/hide", (req, res) => { void handleAction(req, res, "hide"); });
+r.get("/status", (req: Request, res: Response) => {
+  const host = normHost(req.query.host);
+  if (!host) return res.status(400).json({ ok: false, error: "host" });
 
-export default router;
+  const rec = CLAIMS.get(host) || {};
+  res.json({
+    ok: true,
+    host,
+    owner: rec.owner || null,
+    ownedAt: rec.ownedAt || null,
+    hiddenBy: rec.hiddenBy || null,
+    hiddenAt: rec.hiddenAt || null,
+  });
+});
+
+r.post("/own", async (req: Request, res: Response) => {
+  const { plan } = await planForReq(req);
+  const email = needEmail(req, res); if (!email) return;
+
+  if (!isPro(plan)) {
+    return res.status(403).json({ ok: false, error: "plan", detail: "Pro or VIP required" });
+  }
+
+  const host = normHost(req.body?.host);
+  if (!host) return res.status(400).json({ ok: false, error: "host" });
+
+  const rec = CLAIMS.get(host) || {};
+  if (rec.owner && rec.owner !== email) {
+    return res.status(409).json({ ok: false, error: "owned", owner: rec.owner });
+  }
+
+  rec.owner = email;
+  rec.ownedAt = Date.now();
+  CLAIMS.set(host, rec);
+
+  res.json({ ok: true, host, owner: email, ownedAt: rec.ownedAt });
+});
+
+r.post("/hide", async (req: Request, res: Response) => {
+  const { plan } = await planForReq(req);
+  const email = needEmail(req, res); if (!email) return;
+
+  if (!isVip(plan)) {
+    return res.status(403).json({ ok: false, error: "plan", detail: "VIP required" });
+  }
+
+  const host = normHost(req.body?.host);
+  if (!host) return res.status(400).json({ ok: false, error: "host" });
+
+  const rec = CLAIMS.get(host) || {};
+  rec.hiddenBy = email;
+  rec.hiddenAt = Date.now();
+  CLAIMS.set(host, rec);
+
+  res.json({ ok: true, host, hiddenBy: email, hiddenAt: rec.hiddenAt });
+});
+
+r.post("/unhide", async (req: Request, res: Response) => {
+  const { plan } = await planForReq(req);
+  const email = needEmail(req, res); if (!email) return;
+
+  if (!isVip(plan)) {
+    return res.status(403).json({ ok: false, error: "plan", detail: "VIP required" });
+  }
+
+  const host = normHost(req.body?.host);
+  if (!host) return res.status(400).json({ ok: false, error: "host" });
+
+  const rec = CLAIMS.get(host) || {};
+  rec.hiddenBy = undefined;
+  rec.hiddenAt = undefined;
+  CLAIMS.set(host, rec);
+
+  res.json({ ok: true, host, hiddenBy: null, hiddenAt: null });
+});
+
+export default r;
