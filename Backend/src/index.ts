@@ -40,13 +40,21 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    // added Authorization + x-api-key so browser preflight passes
     "Content-Type, Authorization, x-api-key, x-admin-key, x-admin-token, x-user-email, x-user-plan"
   );
   res.setHeader("Access-Control-Expose-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(204).end();
   next();
 });
+
+/**
+ * Mount Stripe webhook BEFORE express.json so the route can use express.raw().
+ * The router file is routes/stripe-webhook.ts (added next).
+ */
+try {
+  const StripeWebhook = safeRequire("./routes/stripe-webhook")?.default;
+  if (StripeWebhook) app.use("/api/stripe/webhook", StripeWebhook);
+} catch { /* ignore */ }
 
 app.use(express.json({ limit: "1mb" }));
 
