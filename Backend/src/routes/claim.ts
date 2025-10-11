@@ -1,124 +1,94 @@
 // src/routes/claim.ts
 //
-// Own & Hide endpoints
-// - POST /api/claim/own  { host, url?, note? }   -> Pro & VIP
-// - POST /api/claim/hide { host, reason? }       -> VIP only
-// Counters reset daily (in-memory). Env is optional.
+// Own / Hide API (with tiny daily counter).
+// - GET  /api/claim/_ping
+// - POST /api/claim/own   { host, note? }
+// - POST /api/claim/hide  { host, note? }
 //
-// Optional env knobs (you DON'T need to set these now):
-//   OWN_PRO_DAILY   (default 10)
-//   OWN_VIP_DAILY   (default 100)
-//   HIDE_VIP_DAILY  (default 20)
+// Uses: middleware/with-plan (to know email & plan)
 
 import { Router, Request, Response } from "express";
 import withPlan from "../middleware/with-plan";
 
-type Counts = { owns: number; hides: number; dayKey: string };
-const store = new Map<string, Counts>(); // key = email
-
-function dayKey() {
-  const d = new Date();
-  return `${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`;
-}
-
-function getCaps(tier: "free"|"pro"|"vip") {
-  const n = (v: any, d: number) => {
-    const x = Number(v); return Number.isFinite(x) && x >= 0 ? x : d;
-  };
-  return {
-    proOwn: n(process.env.OWN_PRO_DAILY, 10),
-    vipOwn: n(process.env.OWN_VIP_DAILY, 100),
-    vipHide: n(process.env.HIDE_VIP_DAILY, 20),
-    tier,
-  };
-}
-
-function bucket(email: string): Counts {
-  const k = dayKey();
-  const cur = store.get(email);
-  if (!cur || cur.dayKey !== k) {
-    const fresh = { owns: 0, hides: 0, dayKey: k };
-    store.set(email, fresh);
-    return fresh;
-  }
-  return cur;
-}
-
 const router = Router();
-router.use(withPlan()); // attaches req.plan + x-plan-tier header
 
-router.get("/_ping", (_req, res) => res.json({ ok: true, where: "claim" }));
+// attach userEmail + plan to every request
+router.use(withPlan());
 
-router.post("/own", (req: Request, res: Response) => {
-  const email = req.userEmail || "";
-  const plan = req.plan!;
-  const host = String(req.body?.host || "").trim();
+// in-memory daily counters (email + bucket)
+type BucketKey = string; // `${email}|${bucket}|${day}`
+type BucketVal = { used: number; resetAt: number };
+const usage = new Map<BucketKey, BucketVal>();
 
-  if (!host) return res.status(400).json({ ok: false, error: "host-required" });
+function epochDay(ms: number) {
+  const DAY = 24 * 60 * 60 * 1000;
+  return Math.floor(ms / DAY);
+}
+function keyFor(email: string, bucket: string) {
+  const now = Date.now();
+  const k = `${email}|${bucket}|${epochDay(now)}`;
+  const end = (epochDay(now) + 1) * 24 * 60 * 60 * 1000;
+  return { k, resetAt: end };
+}
+function limitFor(tier: "free" | "pro" | "vip"): number {
+  if (tier === "vip") return 100;
+  if (tier === "pro") return Number(process.env.PRO_DAILY || 25);
+  return Number(process.env.FREE_DAILY || 3);
+}
 
-  if (plan.tier === "free") {
-    return res.status(402).json({ ok: false, error: "upgrade-required", need: "pro" });
+router.get("/_ping", (_req, res) => res.json({ ok: true, name: "claim", ver: 1 }));
+
+function validate(req: Request, res: Response) {
+  const email = (req as any).userEmail as string | undefined;
+  const plan = (req as any).plan as { tier: "free" | "pro" | "vip" } | undefined;
+  const host = String(req.body?.host || "").trim().toLowerCase();
+
+  if (!email || !email.includes("@")) {
+    res.status(400).json({ ok: false, error: "email-required" });
+    return null;
+  }
+  if (!host) {
+    res.status(400).json({ ok: false, error: "host-required" });
+    return null;
+  }
+  const tier = (plan?.tier || "free") as "free" | "pro" | "vip";
+  return { email, tier, host };
+}
+
+function checkAndBump(email: string, bucket: "own" | "hide", tier: "free" | "pro" | "vip") {
+  const { k, resetAt } = keyFor(email, bucket);
+  const lim = limitFor(tier);
+  const cur = usage.get(k) || { used: 0, resetAt };
+  // rollover
+  if (cur.resetAt !== resetAt) { cur.used = 0; cur.resetAt = resetAt; }
+  if (cur.used >= lim) return { ok: false as const, limit: lim, used: cur.used, resetAfterMs: Math.max(0, cur.resetAt - Date.now()) };
+  cur.used += 1;
+  usage.set(k, cur);
+  return { ok: true as const, limit: lim, used: cur.used, remaining: Math.max(0, lim - cur.used) };
+}
+
+async function handleAction(req: Request, res: Response, action: "own" | "hide") {
+  const v = validate(req, res);
+  if (!v) return;
+  const { email, tier, host } = v;
+
+  const c = checkAndBump(email, action, tier);
+  if (!c.ok) {
+    return res.status(429).json({ ok: false, error: "DAILY_LIMIT", ...c, tier });
   }
 
-  const caps = getCaps(plan.tier);
-  const c = bucket(email);
-
-  const limit = plan.tier === "vip" ? caps.vipOwn : caps.proOwn;
-  if (c.owns >= limit) {
-    return res.status(429).json({
-      ok: false,
-      error: "own-daily-limit",
-      limit,
-      used: c.owns,
-      resetAt: `${c.dayKey}T23:59:59Z`
-    });
-  }
-
-  c.owns += 1;
-  // (Future: persist to DB / audit log)
+  // (Logging will be wired to audit-log later; this endpoint just confirms.)
   return res.json({
     ok: true,
-    action: "own",
+    action,
     host,
-    plan: plan.tier,
-    counts: { owns: c.owns, hides: c.hides },
+    tier,
+    usedToday: c.used,
+    remainingToday: c.remaining,
   });
-});
+}
 
-router.post("/hide", (req: Request, res: Response) => {
-  const email = req.userEmail || "";
-  const plan = req.plan!;
-  const host = String(req.body?.host || "").trim();
-
-  if (!host) return res.status(400).json({ ok: false, error: "host-required" });
-
-  if (plan.tier !== "vip") {
-    return res.status(402).json({ ok: false, error: "upgrade-required", need: "vip" });
-  }
-
-  const caps = getCaps(plan.tier);
-  const c = bucket(email);
-
-  const limit = caps.vipHide;
-  if (c.hides >= limit) {
-    return res.status(429).json({
-      ok: false,
-      error: "hide-daily-limit",
-      limit,
-      used: c.hides,
-      resetAt: `${c.dayKey}T23:59:59Z`
-    });
-  }
-
-  c.hides += 1;
-  // (Future: persist to DB / audit log)
-  return res.json({
-    ok: true,
-    action: "hide",
-    host,
-    plan: plan.tier,
-    counts: { owns: c.owns, hides: c.hides },
-  });
-});
+router.post("/own",  (req, res) => { void handleAction(req, res, "own");  });
+router.post("/hide", (req, res) => { void handleAction(req, res, "hide"); });
 
 export default router;
