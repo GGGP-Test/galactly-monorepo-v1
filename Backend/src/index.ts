@@ -10,11 +10,12 @@ import fs from "fs";
 import { CFG } from "./shared/env";
 import { loadCatalog, type BuyerRow } from "./shared/catalog";
 
-// ✅ force-include routers so bundlers can't drop them
+// ✅ force-include core routers so bundlers can't drop them
 import StripeWebhook from "./routes/stripe-webhook";
-import GateRouter from "./routes/gate";      // /api/v1/*
-import ClaimRouter from "./routes/claim";    // /api/claim/*
-import AuditRouter from "./routes/audit";    // /api/audit/*
+import GateRouter    from "./routes/gate";         // /api/v1/*
+import ClaimRouter   from "./routes/claim";        // /api/claim/*
+import AuditRouter   from "./routes/audit";        // /api/audit/*
+import ClaimAdmin    from "./routes/claim-admin";  // /api/claim-admin/*  <-- NEW
 
 // ---- helpers ---------------------------------------------------------------
 function safeRequire(p: string): any { try { return require(p); } catch { return null; } }
@@ -36,14 +37,14 @@ const startedAt = Date.now();
 const PORT = Number(CFG.port || process.env.PORT || 8787);
 
 // tiny CORS
-app.use((req, res, next) => {
+app.use((_, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers","Content-Type, Authorization, x-api-key, x-admin-key, x-admin-token, x-user-email, x-user-plan");
   res.setHeader("Access-Control-Expose-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.status(204).end();
   next();
 });
+app.use((req, res, next) => { if (req.method === "OPTIONS") return res.status(204).end(); next(); });
 
 // ---- STRIPE WEBHOOK (mount BEFORE express.json) ----------------------------
 app.use("/api/stripe/webhook", StripeWebhook);
@@ -52,10 +53,11 @@ app.get("/api/stripe/webhook/_ping", (_req, res) => res.type("text/plain").send(
 // JSON body parser for the rest of the API
 app.use(express.json({ limit: "1mb" }));
 
-// ---- Gate / Claim / Audit (statically mounted) -----------------------------
-app.use("/api/v1",     GateRouter);   // _ping, whoami, limits, onboard
-app.use("/api/claim",  ClaimRouter);  // _ping, own, hide
-app.use("/api/audit",  AuditRouter);  // ping, window, stats, export.csv
+// ---- Gate / Claim / Audit / Claim-Admin (statically mounted) ---------------
+app.use("/api/v1",          GateRouter);   // _ping, whoami, limits, onboard
+app.use("/api/claim",       ClaimRouter);  // _ping, own, hide
+app.use("/api/audit",       AuditRouter);  // ping, window, stats, export.csv
+app.use("/api/claim-admin", ClaimAdmin);   // _ping, list, export.csv, unhide, clear
 
 // optional boot: plan flags
 const planFlags = safeRequire("./shared/plan-flags");
@@ -90,13 +92,13 @@ app.get("/api/health", async (_req: Request, res: Response) => {
 app.get("/healthz", (_req, res) => { res.setHeader("Content-Type","text/plain; charset=utf-8"); res.end("ok"); });
 
 // ---- core routers (hard imports) -------------------------------------------
-import LeadsRouter from "./routes/leads";
-import LeadsWebRouter from "./routes/leads-web";
-import ClassifyRouter from "./routes/classify";
-import PrefsRouter from "./routes/prefs";
-import CatalogRouter from "./routes/catalog";
-import EventsRouter from "./routes/events";
-import ScoresRouter from "./routes/scores";
+import LeadsRouter     from "./routes/leads";
+import LeadsWebRouter  from "./routes/leads-web";
+import ClassifyRouter  from "./routes/classify";
+import PrefsRouter     from "./routes/prefs";
+import CatalogRouter   from "./routes/catalog";
+import EventsRouter    from "./routes/events";
+import ScoresRouter    from "./routes/scores";
 
 app.use("/api/leads",    LeadsRouter);
 app.use("/api/web",      LeadsWebRouter);
@@ -135,10 +137,11 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 // ---- start -----------------------------------------------------------------
 app.listen(PORT, () => {
   console.log(`[buyers-api] listening on :${PORT} (env=${process.env.NODE_ENV || "development"})`);
-  console.log("[buyers-api] webhook route mounted at /api/stripe/webhook");
-  console.log("[buyers-api] gate mounted at /api/v1");
-  console.log("[buyers-api] claim mounted at /api/claim");
-  console.log("[buyers-api] audit mounted at /api/audit");
+  console.log("[buyers-api] webhook    mounted at /api/stripe/webhook");
+  console.log("[buyers-api] gate       mounted at /api/v1");
+  console.log("[buyers-api] claim      mounted at /api/claim");
+  console.log("[buyers-api] audit      mounted at /api/audit");
+  console.log("[buyers-api] claim-admin mounted at /api/claim-admin");
 });
 
 export default app;
