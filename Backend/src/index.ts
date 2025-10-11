@@ -41,7 +41,7 @@ app.use((req, res, next) => {
 
 // ---- STRIPE WEBHOOK (mount BEFORE express.json) ----------------------------
 app.use("/api/stripe/webhook", StripeWebhook);
-// easy browser ping (should show "stripe-webhook-ok")
+// easy browser ping (should show "stripe-webhook-mounted")
 app.get("/api/stripe/webhook/_ping", (_req, res) => res.type("text/plain").send("stripe-webhook-mounted"));
 
 // JSON body parser for the rest of the API
