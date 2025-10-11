@@ -10,8 +10,9 @@ import fs from "fs";
 import { CFG } from "./shared/env";
 import { loadCatalog, type BuyerRow } from "./shared/catalog";
 
-// ✅ force-include the webhook router at build time
+// ✅ force-include routers so bundlers can't drop them
 import StripeWebhook from "./routes/stripe-webhook";
+import GateRouter from "./routes/gate";           // <-- NEW: static import
 
 // ---- helpers ---------------------------------------------------------------
 function safeRequire(p: string): any { try { return require(p); } catch { return null; } }
@@ -41,15 +42,17 @@ app.use((req, res, next) => {
 
 // ---- STRIPE WEBHOOK (mount BEFORE express.json) ----------------------------
 app.use("/api/stripe/webhook", StripeWebhook);
-// easy browser ping (should show "stripe-webhook-mounted")
 app.get("/api/stripe/webhook/_ping", (_req, res) => res.type("text/plain").send("stripe-webhook-mounted"));
 
 // JSON body parser for the rest of the API
 app.use(express.json({ limit: "1mb" }));
 
+// ---- Gate (v1) — MUST be statically imported/mounted -----------------------
+app.use("/api/v1", GateRouter); // <--- ensures /api/v1/_ping, /whoami, /limits, /onboard exist
+
 // optional boot: plan flags
 const planFlags = safeRequire("./shared/plan-flags");
-if (planFlags?.loadPlanStoreFromFile) { try { planFlags.loadPlanStoreFromFile(); } catch { /* ignore */ } }
+if (planFlags?.loadPlanStoreFromFile) { try { planFlags.loadPlanStoreFromFile(); } catch {} }
 
 // ---- pings & health --------------------------------------------------------
 app.get("/api/ping", (_req, res) => res.json({ pong: true, now: new Date().toISOString() }));
@@ -100,7 +103,6 @@ try { const Buyers = safeRequire("./routes/buyers"); if (Buyers?.default) app.us
 try { const MetricsRouter  = safeRequire("./routes/metrics")?.default;  if (MetricsRouter)  app.use("/api/metrics",  MetricsRouter); }  catch {}
 try { const CreditsRouter  = safeRequire("./routes/credits")?.default;  if (CreditsRouter)  app.use("/api/credits",  CreditsRouter); }  catch {}
 try { const ContextRouter  = safeRequire("./routes/context")?.default;  if (ContextRouter)  app.use("/api/context",  ContextRouter); }  catch {}
-try { const GateRouter     = safeRequire("./routes/gate")?.default;     if (GateRouter)     app.use("/api/v1",      GateRouter); }     catch {}
 try { const LexRoute       = safeRequire("./routes/lexicon")?.default;  if (LexRoute)       app.use("/api/lexicon", LexRoute); }       catch {}
 try { const FeedbackRouter = safeRequire("./routes/feedback")?.default; if (FeedbackRouter) app.use("/api/feedback", FeedbackRouter); } catch {}
 
@@ -120,6 +122,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 app.listen(PORT, () => {
   console.log(`[buyers-api] listening on :${PORT} (env=${process.env.NODE_ENV || "development"})`);
   console.log("[buyers-api] webhook route mounted at /api/stripe/webhook");
+  console.log("[buyers-api] gate mounted at /api/v1");
 });
 
 export default app;
