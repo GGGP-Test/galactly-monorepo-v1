@@ -1,7 +1,7 @@
 // src/index.ts
 //
 // Artemis BV1 — API bootstrap (Express, no external deps).
-// Mounts Stripe webhook EARLY (before express.json).
+// Mount Stripe webhook EARLY (before express.json).
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 import express, { Request, Response, NextFunction } from "express";
@@ -12,11 +12,16 @@ import { loadCatalog, type BuyerRow } from "./shared/catalog";
 
 // ✅ force-include routers so bundlers can't drop them
 import StripeWebhook from "./routes/stripe-webhook";
-import GateRouter from "./routes/gate";           // <-- NEW: static import
+import GateRouter from "./routes/gate";      // /api/v1/*
+import ClaimRouter from "./routes/claim";    // /api/claim/*
+import AuditRouter from "./routes/audit";    // /api/audit/*
 
 // ---- helpers ---------------------------------------------------------------
 function safeRequire(p: string): any { try { return require(p); } catch { return null; } }
-function arr(v: unknown): string[] { if (!Array.isArray(v)) return []; return (v as unknown[]).map((x)=> (x==null?"":String(x))).filter(Boolean); }
+function arr(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return (v as unknown[]).map((x)=> (x==null?"":String(x))).filter(Boolean);
+}
 function toArray(cat: unknown): BuyerRow[] {
   const anyCat = cat as any;
   if (Array.isArray(anyCat)) return anyCat as BuyerRow[];
@@ -47,8 +52,10 @@ app.get("/api/stripe/webhook/_ping", (_req, res) => res.type("text/plain").send(
 // JSON body parser for the rest of the API
 app.use(express.json({ limit: "1mb" }));
 
-// ---- Gate (v1) — MUST be statically imported/mounted -----------------------
-app.use("/api/v1", GateRouter); // <--- ensures /api/v1/_ping, /whoami, /limits, /onboard exist
+// ---- Gate / Claim / Audit (statically mounted) -----------------------------
+app.use("/api/v1",     GateRouter);   // _ping, whoami, limits, onboard
+app.use("/api/claim",  ClaimRouter);  // _ping, own, hide
+app.use("/api/audit",  AuditRouter);  // ping, window, stats, export.csv
 
 // optional boot: plan flags
 const planFlags = safeRequire("./shared/plan-flags");
@@ -63,7 +70,11 @@ app.get("/api/health", async (_req: Request, res: Response) => {
     const cat = await loadCatalog();
     const rows = toArray(cat);
     const byTier: Record<string, number> = {};
-    for (const r of rows) { const tiers = arr((r as any).tiers); if (tiers.length===0) tiers.push("?"); for (const t of tiers) byTier[t]=(byTier[t]||0)+1; }
+    for (const r of rows) {
+      const tiers = arr((r as any).tiers);
+      if (tiers.length===0) tiers.push("?");
+      for (const t of tiers) byTier[t]=(byTier[t]||0)+1;
+    }
     res.json({
       service: "buyers-api",
       uptimeSec: Math.floor((Date.now() - startedAt) / 1000),
@@ -84,7 +95,6 @@ import LeadsWebRouter from "./routes/leads-web";
 import ClassifyRouter from "./routes/classify";
 import PrefsRouter from "./routes/prefs";
 import CatalogRouter from "./routes/catalog";
-import AuditRouter from "./routes/audit";
 import EventsRouter from "./routes/events";
 import ScoresRouter from "./routes/scores";
 
@@ -93,17 +103,21 @@ app.use("/api/web",      LeadsWebRouter);
 app.use("/api/classify", ClassifyRouter);
 app.use("/api/prefs",    PrefsRouter);
 app.use("/api/catalog",  CatalogRouter);
-app.use("/api/audit",    AuditRouter);
 app.use("/api/events",   EventsRouter);
 app.use("/api/scores",   ScoresRouter);
 
 // ---- optional routers ------------------------------------------------------
 try { const AdsRouter = safeRequire("./routes/ads")?.default; if (AdsRouter) app.use("/api/ads", AdsRouter); } catch {}
-try { const Buyers = safeRequire("./routes/buyers"); if (Buyers?.default) app.use("/api/buyers", Buyers.default); if (Buyers?.RootAlias) app.use("/api/find", Buyers.RootAlias);} catch {}
-try { const MetricsRouter  = safeRequire("./routes/metrics")?.default;  if (MetricsRouter)  app.use("/api/metrics",  MetricsRouter); }  catch {}
-try { const CreditsRouter  = safeRequire("./routes/credits")?.default;  if (CreditsRouter)  app.use("/api/credits",  CreditsRouter); }  catch {}
-try { const ContextRouter  = safeRequire("./routes/context")?.default;  if (ContextRouter)  app.use("/api/context",  ContextRouter); }  catch {}
-try { const LexRoute       = safeRequire("./routes/lexicon")?.default;  if (LexRoute)       app.use("/api/lexicon", LexRoute); }       catch {}
+try {
+  const Buyers = safeRequire("./routes/buyers");
+  if (Buyers?.default)   app.use("/api/buyers", Buyers.default);
+  if (Buyers?.RootAlias) app.use("/api/find",   Buyers.RootAlias);
+} catch {}
+try { const MetricsRouter = safeRequire("./routes/metrics")?.default; if (MetricsRouter) app.use("/api/metrics", MetricsRouter); } catch {}
+try { const CreditsRouter = safeRequire("./routes/credits")?.default; if (CreditsRouter) app.use("/api/credits", CreditsRouter); } catch {}
+try { const ContextRouter = safeRequire("./routes/context")?.default; if (ContextRouter) app.use("/api/context", ContextRouter); } catch {}
+try { const GateV1Alt = safeRequire("./routes/GATE")?.default; if (GateV1Alt) app.use("/api/v1", GateV1Alt); } catch {} // safety if file named GATE.ts on disk
+try { const LexRoute = safeRequire("./routes/lexicon")?.default; if (LexRoute) app.use("/api/lexicon", LexRoute); } catch {}
 try { const FeedbackRouter = safeRequire("./routes/feedback")?.default; if (FeedbackRouter) app.use("/api/feedback", FeedbackRouter); } catch {}
 
 // ---- docs for local dev ----------------------------------------------------
@@ -123,6 +137,8 @@ app.listen(PORT, () => {
   console.log(`[buyers-api] listening on :${PORT} (env=${process.env.NODE_ENV || "development"})`);
   console.log("[buyers-api] webhook route mounted at /api/stripe/webhook");
   console.log("[buyers-api] gate mounted at /api/v1");
+  console.log("[buyers-api] claim mounted at /api/claim");
+  console.log("[buyers-api] audit mounted at /api/audit");
 });
 
 export default app;
