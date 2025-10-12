@@ -1,9 +1,10 @@
+// src/shared/spider.ts
 // Lightweight multi-page spider (no external deps)
 // - BFS crawl limited by pages, bytes and time
 // - Extracts title, meta description/keywords and visible text
 // - Returns an aggregate + per-page details
 //
-// Used by routes/classify.ts
+// Used by routes/metrics.ts
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -119,7 +120,11 @@ function pickKeywords(html: string): string[] {
     .slice(0, 24);
 }
 
-async function fetchWithTimeout(url: string, timeoutMs: number, ua?: string): Promise<{ ok: boolean; status: number; text: string; bytes: number; html: string }> {
+async function fetchWithTimeout(
+  url: string,
+  timeoutMs: number,
+  ua?: string
+): Promise<{ ok: boolean; status: number; text: string; bytes: number; html: string }> {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), Math.max(100, timeoutMs));
   try {
