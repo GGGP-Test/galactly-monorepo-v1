@@ -11,7 +11,7 @@
 <!--
   index.html (Landing + Onboarding Steps 1–2)
   - Gold aurora background
-  - Right-side "Lead Constellation": Your website → Signal → Score → Buyers
+  - Right-side "Lead Constellation" that shows noisy market -> your domain -> 3 surfaced buyers
   - CTA opens modal (steps 1–2), then redirect to step3.html
 -->
 
@@ -71,190 +71,20 @@
   .miniCard{
     position:absolute;z-index:2;min-width:170px;max-width:220px;padding:10px 12px;border-radius:12px;
     background:rgba(12,18,28,.86);backdrop-filter: blur(6px);
-    border:1px solid rgba(255,255,255,.1); box-shadow:0 10px 26px rgba(0,0,0,.38);
+    border:1px solid rgba(255,255,255,.08); box-shadow:0 8px 24px rgba(0,0,0,.35);
     transform:translate(-50%,-50%); pointer-events:none;
   }
   .miniCard .k{font-size:11px;color:#9bb2c8}
-  .miniCard .v{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .miniCard .v{font-weight:700}
   .domainTag{
     position:absolute;z-index:2;left:14px;top:14px;padding:6px 10px;border-radius:999px;font-size:12px;
     background:rgba(230,195,107,.12);color:var(--gold-300);border:1px solid rgba(230,195,107,.25)
   }
 
   /* MODAL */
-  .modal{position:fixed;inset:0;background:rgba(6,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
-  .modal.show{display:flex}
-  .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--stroke);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
-  .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:linear-gradient(180deg,#0f1622,#0d1420);border-bottom:1px solid var(--stroke)}
-  .steps{display:flex;gap:8px;align-items:center}
-  .dot{width:8px;height:8px;border-radius:50%;background:#2a3444}
-  .dot.on{background:var(--gold)}
-  .api-badge{font-size:12px;padding:4px 8px;border-radius:10px;border:1px solid var(--stroke);color:#a8c3d8}
-  .card-bd{padding:16px}
-  .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 16px;border-top:1px solid var(--stroke)}
-  .scroll{max-height:70vh;overflow:auto;padding:6px}
+  .
 
-  /* Inputs */
-  .accordion{border:1px solid var(--stroke);border-radius:14px;background:#0f1724;margin:14px 0}
-  .acc-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #142031;cursor:pointer}
-  .acc-hd h4{margin:0;font-size:16px}
-  .acc-bd{padding:12px 14px;display:block}
-  .field{margin:10px 0}
-  label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
-  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px;border-radius:12px;border:1px solid var(--stroke);background:#0d1520;color:var(--text);outline:none}
-  input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
-
-  .chips{user-select:none}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#162032;color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
-  .chip.active{background:#0f283c;color:#eaf7ff;border-color:#1b4862}
-
-  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
-  .hint{font-size:12px;color:#9bb2c8}
-  .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
-
-  /* Reduced motion */
-  @media (prefers-reduced-motion: reduce){
-    #heroFx{display:none}
-    #constFx{display:none}
-    .btn{transition:none}
-  }
-</style>
-</head>
-<body>
-  <!-- HERO -->
-  <section class="hero" aria-label="Hero">
-    <canvas id="heroFx" aria-hidden="true"></canvas>
-    <div class="hero-grid">
-      <div class="hero-copy">
-        <span class="badge">Built for packaging suppliers</span>
-        <h1>Find real packaging buyers.</h1>
-        <p class="lead">We filter the noise and surface real companies already signaling intent in your strengths.</p>
-        <div class="actions">
-          <button id="cta" type="button" class="btn primary">✨ Get qualified leads free</button>
-          <a href="https://www.youtube.com" class="btn ghost" target="_blank" rel="noopener">▶︎ Watch 60-sec demo</a>
-        </div>
-      </div>
-
-      <!-- Right: Lead Constellation -->
-      <div class="const-wrap" aria-hidden="true">
-        <span class="domainTag" id="domainTag">yourcompany.com</span>
-        <canvas id="constFx"></canvas>
-        <div class="const-legend">Your website → Signal → Score → Buyers</div>
-        <!-- Floating buyer cards (positions adjusted by JS to remain readable) -->
-        <div class="miniCard" id="cardA">
-          <div class="k">Buyer</div><div class="v" id="cardA_name">Acme Drinks Co.</div>
-          <div class="k">City</div><div class="v" id="cardA_city">Chicago, IL</div>
-        </div>
-        <div class="miniCard" id="cardB">
-          <div class="k">Buyer</div><div class="v" id="cardB_name">Northstar Foods</div>
-          <div class="k">City</div><div class="v" id="cardB_city">Dallas, TX</div>
-        </div>
-        <div class="miniCard" id="cardC">
-          <div class="k">Buyer</div><div class="v" id="cardC_name">Atlas Beauty</div>
-          <div class="k">City</div><div class="v" id="cardC_city">Toronto, ON</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- MODAL (Onboarding Step 1–2) -->
-  <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="card" role="document">
-      <div class="card-hd">
-        <div class="steps" aria-label="Steps">
-          <span class="dot on" data-step-dot="0"></span>
-          <span class="dot" data-step-dot="1"></span>
-        </div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <span id="apiBadge" class="api-badge">Ready</span>
-          <button id="close" class="x" aria-label="Close">✕</button>
-        </div>
-      </div>
-
-      <div class="card-bd">
-        <div class="scroll">
-
-          <!-- STEP 1 -->
-          <section class="step" id="step1">
-            <div class="pill">Get set up in 60 seconds</div>
-            <h2 style="margin:10px 0 14px;">Pick your side</h2>
-
-            <div class="accordion">
-              <div class="acc-hd" role="button" tabindex="0">
-                <h4>Role</h4>
-                <div class="hint">Required</div>
-              </div>
-              <div class="acc-bd">
-                <div class="chips" id="roleChips">
-                  <span id="opt-supplier" class="chip active">🙌 I sell packaging (Supplier)</span>
-                  <span id="opt-buyer" class="chip">🛒 I buy packaging (Buyer)</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- STEP 2 -->
-          <section class="step" id="step2" hidden>
-            <div class="pill">Step 2 of 3</div>
-            <h2 style="margin:10px 0 14px;">Tell us who you are</h2>
-
-            <div class="accordion">
-              <div class="acc-hd" role="button" tabindex="0">
-                <h4>Contact & company</h4>
-                <div class="hint">Required</div>
-              </div>
-              <div class="acc-bd">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-                  <div>
-                    <div class="field">
-                      <label>Your name</label>
-                      <input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter">
-                    </div>
-                    <div class="field">
-                      <label>Phone (required for alerts) *</label>
-                      <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/>
-                      <div class="hint">Include country code (e.g., “+1”).</div>
-                    </div>
-                  </div>
-                  <div>
-                    <div class="field">
-                      <label>Business email *</label>
-                      <input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required/>
-                    </div>
-                    <div class="field">
-                      <label>Website / Domain</label>
-                      <input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/>
-                      <div class="hint">Auto-filled from your email. You can edit.</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="hint" id="apiStatus" style="margin-top:8px">Step 3 opens in a new screen.</div>
-              </div>
-            </div>
-          </section>
-
-        </div>
-
-        <div class="card-ft">
-          <button id="back" class="btn ghost" type="button">Back</button>
-          <button id="next" class="btn primary" type="button">Continue</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-<script>
-(()=>{
-  // ------- tiny helpers -------
-  const $  = (q)=>document.querySelector(q);
-  const $$ = (q)=>Array.from(document.querySelectorAll(q));
-  const LS = window.localStorage;
-  const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
-  const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
-
-  // ------- elements -------
-  const modal=$("#modal"), openBtn=$("#cta"), closeBtn=$("#close");
-  const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
+const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
   const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
   const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
   const apiBadge=$("#apiBadge");
@@ -306,16 +136,9 @@
   optSupplier.addEventListener("click",()=>setRole("supplier"));
   optBuyer.addEventListener("click",()=>setRole("buyer"));
 
-  // convenience + domain tag
-  function syncDomain(){
-    const dFromEmail = domainFromEmail(emailEl.value);
-    const d = normHost(hostEl.value || dFromEmail || "");
-    if (dFromEmail && !hostEl.value) hostEl.value = dFromEmail;
-    const tag=$("#domainTag"); if (tag) tag.textContent = d || "yourcompany.com";
-  }
-  emailEl.addEventListener("input",syncDomain); emailEl.addEventListener("change",syncDomain);
-  hostEl.addEventListener("input",syncDomain); hostEl.addEventListener("change",syncDomain);
-  setTimeout(syncDomain, 80);
+  // convenience
+  function syncDomain(){ const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d; const tag=$("#domainTag"); if (tag&&d) tag.textContent=d; }
+  emailEl.addEventListener("input",syncDomain); emailEl.addEventListener("change",syncDomain); setTimeout(syncDomain, 80);
 
   // minimal badge
   apiBadge.textContent = "Ready";
@@ -354,7 +177,9 @@
         { x: 0.68 + Math.cos(t*0.7)*0.06, y: 0.55 + Math.sin(t*0.6)*0.05, r: 0.65, a: 0.14 }
       ];
       for (const b of blobs){
-        const rg = ctx.createRadialGradient(w*b.x, h*b.y, 0, w*b.x, h*b.y, Math.min(w,h)*b.r);
+        const rg = ctx.createRadialGradient(w*b.x, h*b.y, 0, w*b.x, h*b.
+
+y, Math.min(w,h)*b.r);
         rg.addColorStop(0, `rgba(230,195,107,${b.a})`);
         rg.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(w*b.x, h*b.y, Math.min(w,h)*b.r, 0, Math.PI*2); ctx.fill();
@@ -395,11 +220,11 @@
       c.style.width=W+"px"; c.style.height=H+"px";
       ctx.setTransform(DPR,0,0,DPR,0,0);
 
-      // Generate nodes
+      // Generate nodes (biased to right half for "market noise")
       const N = 42;
       nodes = [];
       for (let i=0;i<N;i++){
-        const x = 0.28 + Math.random()*0.68;
+        const x = 0.28 + Math.random()*0.68; // 28%..96% (right-weighted)
         const y = 0.06 + Math.random()*0.88;
         const s = 0.15 + Math.random()*0.85;
         const vx = (Math.random()-0.5) * 0.18;
@@ -407,56 +232,36 @@
         nodes.push({x:x*W, y:y*H, s, vx, vy});
       }
 
-      // Supplier anchor
+      // Supplier anchor (left-center of panel)
       const anchor = { x: 0.18*W, y: 0.52*H };
       nodes.unshift({x:anchor.x, y:anchor.y, s:1.8, vx:0, vy:0, anchor:true });
 
-      // choose 3 highlights on the right
+      // choose 3 highlights from far-right area
       const candidates = nodes.filter(n=>!n.anchor && n.x>W*0.52);
       highlights = [];
       for (let i=0;i<3;i++){
         const n = candidates[Math.floor(Math.random()*candidates.length)];
         if (!n) break;
         highlights.push(n);
+        // remove chosen to avoid duplicates
         const idx = candidates.indexOf(n); if (idx>=0) candidates.splice(idx,1);
       }
-
-      // place cards with minimal-overlap nudges
-      const placed=[];
-      const approx = { w:200, h:90 };
-      function intersects(a,b){
-        return !(a.x+approx.w < b.x || b.x+approx.w < a.x || a.y+approx.h < b.y || b.y+approx.h < a.y);
-      }
-      function place(el, baseX, baseY){
-        let x = baseX, y = baseY, tries=0;
-        while (tries<8){
-          const box = {x:x-approx.w/2, y:y-approx.h/2};
-          let clash=false;
-          for (const p of placed){ if (intersects(box,p)){ clash=true; break; } }
-          if (!clash){ placed.push(box); break; }
-          // nudge in a small spiral
-          x += (tries%2? -26: 26);
-          y += (tries%3?  18: -18);
-          tries++;
-        }
-        el.style.left = x + "px";
-        el.style.top  = y + "px";
-      }
-
+      // position mini cards near highlights
       const cardPoints = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
       cardPoints.forEach((p, i)=>{
         const el = cards[i]?.el; if (!el) return;
+        el.style.left = (p.x + (i===1? -24: 18)) + "px";
+        el.style.top  = (p.y + (i===2?  24: -18)) + "px";
         const d = cardData[(Math.random()*cardData.length)|0];
-        el.querySelectorAll(".v")[0].textContent = d.name;
-        el.querySelectorAll(".v")[1].textContent = d.city;
-        const offsetX = i===1? -18 : 22;
-        const offsetY = i===2?  22 : -16;
-        place(el, p.x + offsetX, p.y + offsetY);
+        const nEl = el.querySelector(".v"); // first .v is name
+        if (nEl) nEl.textContent = d.name;
+        const cityEl = el.querySelectorAll(".v")[1];
+        if (cityEl) cityEl.textContent = d.city;
       });
     }
 
     function step(dt){
-      for (let i=1;i<nodes.length;i++){
+      for (let i=1;i<nodes.length;i++){ // skip anchor at 0
         const n = nodes[i];
         n.x += n.vx*dt; n.y += n.vy*dt;
         if (n.x < 0) n.x = W;
@@ -475,7 +280,7 @@
       grad.addColorStop(1, "rgba(230,195,107,0.0)");
       ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
 
-      // connections
+      // connections within radius
       const R = 110;
       for (let i=0;i<nodes.length;i++){
         const a = nodes[i];
@@ -483,7 +288,8 @@
           const b = nodes[j];
           const dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
           if (d2 < R*R){
-            const aLine = 0.08 + 0.22*(1 - Math.sqrt(d2)/R);
+
+const aLine = 0.08 + 0.22*(1 - Math.sqrt(d2)/R);
             ctx.strokeStyle=`rgba(230,195,107,${aLine})`;
             ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
@@ -513,7 +319,7 @@
 
     function loop(now){
       if (prev===0) prev=now;
-      const dt = Math.min(33, now - prev) * 0.06;
+      const dt = Math.min(33, now - prev) * 0.06; // damped velocity
       prev = now; t += dt;
       step(noMotion ? 0 : dt);
       draw();
@@ -526,9 +332,8 @@
     addEventListener("resize", reset);
 
     // initial domain tag from LS/email
-    const seed = LS.getItem("onb.seed");
-    const host = seed ? (JSON.parse(seed||"{}")?.host||"") : "";
-    if (hostTag && host) hostTag.textContent = host;
+    const d = (LS.getItem("onb.seed") && JSON.parse(LS.getItem("onb.seed")||"{}")?.host) || "";
+    if (hostTag && d) hostTag.textContent = d;
   })();
 
   // boot
