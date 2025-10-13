@@ -4,79 +4,117 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Galactly — Find real packaging buyers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&display=swap" rel="stylesheet">
 
 <!--
-  index.html  (Landing + Onboarding Steps 1–2 only)
+  index.html (Landing + Onboarding Steps 1–2)
+  - Hero with gold theme + animated aurora canvas
   - CTA opens modal
-  - Step 1: pick role
-  - Step 2: contact + company
-  - Next from Step 2 → validate, persist seed, redirect to step3.html (no interstitial)
+  - Step 1: role
+  - Step 2: contact + company → persist → step3.html
 -->
 
 <style>
   :root{
-    --bg:#0b0f14; --panel:#121822; --panel-2:#0e141c;
-    --muted:#8aa0b2; --text:#e9f1f7; --brand:#8ae3ff;
-    --cta:#6de1ff; --ctaText:#082433; --divider:#1b2531;
-  }
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-    font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
-  .hero{min-height:100vh;display:grid;place-items:center;padding:4rem 1rem;
-    background: radial-gradient(1200px 600px at 50% -200px, #102132 0, transparent 70%)}
-  .hero-inner{max-width:920px;text-align:center}
-  h1{font-size:clamp(32px,6vw,56px);margin:0 0 12px}
-  p.lead{color:var(--muted);margin:0 0 28px}
-  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:12px;
-    background:var(--cta);color:var(--ctaText);font-weight:700;border:none;cursor:pointer}
-  .btn.sec{background:#152333;color:#cfe0ee}
-  .btn.smol{padding:6px 10px;border-radius:10px;font-weight:600}
-  .btn:active{transform:translateY(1px)}
-  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
-  .chips{user-select:none}
-  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#172233;
-    color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
-  .chip.active{background:#103247;color:#eaf7ff;border-color:#1b4862}
-  .hint{font-size:12px;color:#9bb2c8}
+    /* Core theme */
+    --bg:#0a0e14;            /* page background */
+    --panel:#101622;         /* cards */
+    --stroke:#1b2531;        /* subtle borders */
+    --text:#e9f1f7;          /* main text */
+    --muted:#91a6b8;         /* secondary text */
 
-  /* modal */
-  .modal{position:fixed;inset:0;background:rgba(5,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
+    /* Gold accents */
+    --gold:#e6c36b;
+    --gold-700:#b8913d;
+    --gold-300:#f2dca0;
+
+    /* Buttons */
+    --ctaText:#1b1405;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+  a{color:inherit;text-decoration:none}
+  button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+
+  /* HERO */
+  .hero{position:relative;min-height:100svh;display:grid;place-items:center;padding:5rem 1.25rem;overflow:hidden}
+  #heroFx{position:absolute;inset:-10% -10% -10% -10%;z-index:0;filter:saturate(110%) blur(0.2px)}
+  .hero-inner{position:relative;z-index:1;max-width:980px;text-align:center}
+  .badge{display:inline-block;margin-bottom:12px;padding:6px 10px;border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--muted);font-size:12px}
+  h1{font:600 clamp(34px,6vw,64px) "Newsreader", Georgia, serif;letter-spacing:.2px;margin:0 0 10px}
+  .lead{color:var(--muted);font-size:clamp(16px,2.6vw,19px);margin:0 0 26px}
+
+  .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:999px;border:1px solid var(--stroke);cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{
+    color:var(--ctaText);
+    background:linear-gradient(180deg, var(--gold), var(--gold-700));
+    border:none; box-shadow:0 10px 30px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset;
+  }
+  .btn.primary:hover{filter:brightness(1.02)}
+  .btn.ghost{background:transparent;color:#cfe0ee;border-color:var(--stroke)}
+  .btn.ghost:hover{border-color:#284560}
+
+  /* MODAL */
+  .modal{position:fixed;inset:0;background:rgba(6,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
   .modal.show{display:flex}
-  .card{width:min(980px,92vw);background:#0f1622;border:1px solid var(--divider);border-radius:18px;
-    box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
-  .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;
-    background:linear-gradient(180deg,#0f1622,#0e1520);border-bottom:1px solid var(--divider)}
+  .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--stroke);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
+  .card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:linear-gradient(180deg,#0f1622,#0d1420);border-bottom:1px solid var(--stroke)}
   .steps{display:flex;gap:8px;align-items:center}
   .dot{width:8px;height:8px;border-radius:50%;background:#2a3444}
-  .dot.on{background:#5bd0ff}
-  .api-badge{font-size:12px;padding:4px 8px;border-radius:10px;border:1px solid var(--divider);color:#a8c3d8}
-  .api-badge.ok{color:#0f0} .api-badge.err{color:#ff8}
-  .card-bd{padding:18px}
-  .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--divider)}
+  .dot.on{background:var(--gold)}
+  .api-badge{font-size:12px;padding:4px 8px;border-radius:10px;border:1px solid var(--stroke);color:#a8c3d8}
+  .card-bd{padding:16px}
+  .card-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 16px;border-top:1px solid var(--stroke)}
   .scroll{max-height:70vh;overflow:auto;padding:6px}
 
-  /* inputs */
-  .accordion{border:1px solid var(--divider);border-radius:14px;background:#0f1724;margin:14px 0}
+  /* Inputs */
+  .accordion{border:1px solid var(--stroke);border-radius:14px;background:#0f1724;margin:14px 0}
   .acc-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #142031;cursor:pointer}
   .acc-hd h4{margin:0;font-size:16px}
   .acc-bd{padding:12px 14px;display:block}
   .field{margin:10px 0}
   label{display:block;font-size:13px;color:#9abbcc;margin:0 0 6px}
-  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
+  input[type=text],input[type=email],input[type=tel]{width:100%;padding:12px;border-radius:12px;border:1px solid var(--stroke);background:#0d1520;color:var(--text);outline:none}
   input:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
 
+  .chips{user-select:none}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#162032;color:#cfe0ee;margin:6px 8px 0 0;border:1px solid #203041;cursor:pointer}
+  .chip.active{background:#0f283c;color:#eaf7ff;border-color:#1b4862}
+
+  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-block}
+  .hint{font-size:12px;color:#9bb2c8}
   .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    #heroFx{display:none}
+    .btn{transition:none}
+  }
 </style>
 </head>
 <body>
-  <div class="hero">
+  <!-- HERO -->
+  <section class="hero" aria-label="Hero">
+    <canvas id="heroFx" aria-hidden="true"></canvas>
     <div class="hero-inner">
+      <span class="badge">Built for packaging suppliers</span>
       <h1>Find real packaging buyers.</h1>
       <p class="lead">Laser-targeted leads, tuned to your strengths.</p>
-      <button id="cta" type="button" class="btn"><span>✨</span> Get qualified leads free</button>
+      <div class="actions">
+        <button id="cta" type="button" class="btn primary">✨ Get qualified leads free</button>
+        <a href="https://www.youtube.com" class="btn ghost" target="_blank" rel="noopener">▶︎ Watch 60-sec demo</a>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <!-- modal -->
+  <!-- MODAL (Onboarding Step 1–2) -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="card" role="document">
       <div class="card-hd">
@@ -155,8 +193,8 @@
         </div>
 
         <div class="card-ft">
-          <button id="back" class="btn sec" type="button">Back</button>
-          <button id="next" class="btn" type="button">Next</button>
+          <button id="back" class="btn ghost" type="button">Back</button>
+          <button id="next" class="btn primary" type="button">Continue</button>
         </div>
       </div>
     </div>
@@ -164,24 +202,27 @@
 
 <script>
 (()=>{
-  // ------- helpers -------
+  // ------- OPTIONAL: set backend if cross-origin testing -------
+  // window.API_BASE = "https://YOUR-BACKEND.example.com/api";
+
+  // ------- tiny helpers -------
   const $  = (q)=>document.querySelector(q);
   const $$ = (q)=>Array.from(document.querySelectorAll(q));
+  const LS = window.localStorage;
   const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
   const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
 
   // ------- elements -------
   const modal=$("#modal"), openBtn=$("#cta"), closeBtn=$("#close");
   const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
-  const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone");
-  const nameEl=$("#name");
+  const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
   const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
   const apiBadge=$("#apiBadge");
 
   // ------- state -------
   const state={ step:0, role:"supplier" };
 
-  // ------- CTA / nav -------
+  // ------- nav -------
   function show(step){
     state.step=step;
     ["#step1","#step2"].forEach((id,i)=>{const el=$(id); if(!el) return; el.hidden=i!==step; dots[i]?.classList.toggle("on", i===step);});
@@ -194,6 +235,7 @@
   openBtn.addEventListener("click", open);
   closeBtn.addEventListener("click", close);
   backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+
   nextBtn.addEventListener("click", ()=>{
     if (state.step===0){ show(1); return; }
     if (state.step===1){
@@ -205,40 +247,34 @@
 
       const seed = {
         role: state.role,
-        contact: {
-          name: nameEl.value.trim(),
-          phone: phoneEl.value.trim(),
-          email: emailEl.value.trim()
-        },
+        contact: { name: nameEl.value.trim(), phone: phoneEl.value.trim(), email: emailEl.value.trim() },
         host: hostCandidate
       };
       try{
-        localStorage.setItem("onb.seed", JSON.stringify(seed));
-        localStorage.setItem("fp.supplier.host", hostCandidate);
-        localStorage.setItem("email", seed.contact.email);
-        localStorage.setItem("contact.name", seed.contact.name||"");
-        localStorage.setItem("contact.phone", seed.contact.phone||"");
+        LS.setItem("onb.seed", JSON.stringify(seed));
+        LS.setItem("fp.supplier.host", hostCandidate);
+        LS.setItem("email", seed.contact.email);
+        LS.setItem("contact.name", seed.contact.name||"");
+        LS.setItem("contact.phone", seed.contact.phone||"");
       }catch{}
 
       window.location.href = "step3.html";
     }
   });
 
-  // ------- role chips -------
+  // role toggles
   function setRole(r){ state.role=r; optSupplier.classList.toggle("active", r==="supplier"); optBuyer.classList.toggle("active", r==="buyer"); }
   optSupplier.addEventListener("click",()=>setRole("supplier"));
   optBuyer.addEventListener("click",()=>setRole("buyer"));
 
-  // ------- convenience -------
+  // convenience
   function syncDomain(){ const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d; }
-  emailEl.addEventListener("input",syncDomain);
-  emailEl.addEventListener("change",syncDomain);
-  setTimeout(syncDomain, 80);
+  emailEl.addEventListener("input",syncDomain); emailEl.addEventListener("change",syncDomain); setTimeout(syncDomain, 80);
 
-  // minimal badge (no dependency on backend here)
+  // minimal badge
   apiBadge.textContent = "Ready";
 
-  // keyboard helpers
+  // keys
   modal.addEventListener("keydown",(e)=>{
     if (e.key==="Escape"){ e.preventDefault(); close(); return; }
     if (e.key==="Enter"){
@@ -247,6 +283,41 @@
       e.preventDefault(); nextBtn.click();
     }
   });
+
+  // ------- hero canvas aurora (lightweight) -------
+  const fx = document.getElementById("heroFx");
+  const preferNoMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (fx && !preferNoMotion){
+    const ctx = fx.getContext("2d");
+    let w=fx.width=window.innerWidth*2, h=fx.height=window.innerHeight*2, t=0;
+    window.addEventListener("resize", ()=>{ w=fx.width=window.innerWidth*2; h=fx.height=window.innerHeight*2; });
+
+    function draw(){
+      t+=0.0035;
+      ctx.clearRect(0,0,w,h);
+
+      // base vignette
+      const g = ctx.createRadialGradient(w*0.5, h*0.3, h*0.05, w*0.5, h*0.5, h*0.8);
+      g.addColorStop(0, "rgba(250,225,150,0.08)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+
+      // two golden blobs drifting
+      const blobs = [
+        { x: 0.35 + Math.sin(t*0.9)*0.05, y: 0.35 + Math.cos(t*0.8)*0.04, r: 0.55, a: 0.18 },
+        { x: 0.65 + Math.cos(t*0.7)*0.06, y: 0.55 + Math.sin(t*0.6)*0.05, r: 0.65, a: 0.14 }
+      ];
+      for (const b of blobs){
+        const rg = ctx.createRadialGradient(w*b.x, h*b.y, 0, w*b.x, h*b.y, Math.min(w,h)*b.r);
+        rg.addColorStop(0, `rgba(230,195,107,${b.a})`);
+        rg.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(w*b.x, h*b.y, Math.min(w,h)*b.r, 0, Math.PI*2); ctx.fill();
+      }
+
+      requestAnimationFrame(draw);
+    }
+    draw();
+  }
 
   // boot
   show(0);
