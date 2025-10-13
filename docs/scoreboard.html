@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Galactly — Scoreboard</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121822; --panel2:#0e141c; --card:#0f1724;
+    --ink:#e9f1f7; --mut:#90a7ba; --divider:#1b2531; --ring:#24435f;
+    --good:#38e08f; --warn:#ffd166; --bad:#ff6b6b; --accent:#6de1ff; --accentText:#082433;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,Segoe UI,Inter,Arial}
+  .wrap{max-width:1100px;margin:26px auto;padding:0 18px}
+  .top{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:10px 12px}
+  .sep{flex:1}
+  input[type=text]{flex:1;min-width:220px;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--ink);outline:none}
+  input[type=text]:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
+  button{border:1px solid var(--divider);background:#152333;color:#cfe0ee;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
+  button.primary{background:var(--accent);border:none;color:var(--accentText)}
+  .mut{color:var(--mut);font-size:13px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+  .tile{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:14px}
+  .k{color:var(--mut);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+  .v{font-size:26px;font-weight:800}
+  .pct{font-size:14px;color:var(--mut)}
+  .list{margin-top:8px}
+  .chip{display:inline-block;margin:4px 6px 0 0;padding:6px 10px;border-radius:999px;background:#0f1a27;border:1px solid #1f2f41;font-size:12px;color:#cfe0ee}
+  .note{font-size:12px;color:var(--mut)}
+  .log{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0a121b;border:1px solid var(--divider);border-radius:10px;padding:8px;height:120px;overflow:auto;color:#a5bed1;margin-top:12px}
+  .warn{color:var(--warn)}
+  .good{color:var(--good)}
+  .bad{color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <strong>Scoreboard</strong>
+    <input id="host" type="text" placeholder="brand or domain (e.g., acme.com)"/>
+    <button id="probe" class="primary">Probe</button>
+    <div class="sep"></div>
+    <button id="setApi">API</button>
+  </div>
+  <div class="mut" style="margin:8px 4px">Shows KPIs for a target host via <code>/api/metrics/scoreboard?host=…&probe=1</code>. Resilient to missing fields.</div>
+
+  <div class="grid" id="cards">
+    <!-- Tiles populate here -->
+  </div>
+
+  <pre id="httpLog" class="log" aria-live="polite"></pre>
+</div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const log = msg => { const now=new Date().toISOString().slice(11,19); $("#httpLog").textContent = `[${now}] ${msg}\n` + $("#httpLog").textContent; };
+  const LS = { api:"apiBase", lastHost:"sb.lastHost" };
+
+  function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
+  function getApiBase(){
+    const raw = localStorage.getItem(LS.api) || "";
+    let b = (raw||"").trim().replace(/\/+$/,"");
+    const m=b.match(/^(.*?)(?:\/api(?:\/.*)?)$/i); if (m) b = m[1];
+    return b ? (b + "/api") : (location.origin + "/api");
+  }
+  function setApiBase(v){ localStorage.setItem(LS.api, v || ""); }
+
+  async function jget(url){
+    const res = await fetch(url, { headers: { "Content-Type":"application/json" }});
+    const text = await res.text(); log(`${res.status} ${url}`);
+    try{ return JSON.parse(text); }catch{ return { ok:false, error:"bad_json", raw:text }; }
+  }
+
+  function pct(n){ const x = Number(n); return Number.isFinite(x) ? (x.toFixed(0) + "%") : "—"; }
+  function num(n){ const x = Number(n); return Number.isFinite(x) ? x.toLocaleString() : "—"; }
+
+  function tile(k, v, sub){
+    const div = document.createElement("div");
+    div.className = "tile";
+    div.innerHTML = `<div class="k">${k}</div><div class="v">${v}</div>${sub? `<div class="pct">${sub}</div>`:""}`;
+    return div;
+  }
+  function listTile(k, items){
+    const div = document.createElement("div");
+    div.className="tile";
+    div.innerHTML = `<div class="k">${k}</div><div class="list" id="list-${k}"></div>`;
+    const box = div.querySelector(".list");
+    (items||[]).slice(0,12).forEach(s=>{
+      const span=document.createElement("span"); span.className="chip"; span.textContent=String(s).trim();
+      box.appendChild(span);
+    });
+    return div;
+  }
+
+  function render(d){
+    const cards = $("#cards"); cards.innerHTML="";
+    if (!d || d.ok===false){
+      cards.appendChild(tile("Status", "—", "No data (check host or API)"));
+      return;
+    }
+    // Try to read common scoreboard fields; fall back gently.
+    const totalPages = d.pagesScanned || d.pages || d.kpis?.pages || d.kpi?.pages;
+    const buyers = d.buyersFound || d.buyers || d.kpis?.buyers || d.kpi?.buyers;
+    const hot = d.hot || d.kpis?.hot || 0;
+    const warm = d.warm || d.kpis?.warm || 0;
+    const cool = d.cool || d.kpis?.cool || 0;
+    const coverage = d.coveragePct || d.coverage || d.kpis?.coveragePct;
+    const confidence = d.confidencePct || d.confidence || d.kpis?.confidencePct;
+    const sectors = d.topSectors || d.kpis?.topSectors || d.top?.sectors || [];
+    const reasons = d.topReasons || d.kpis?.topReasons || d.reasonHints || [];
+
+    cards.appendChild(tile("Pages scanned", num(totalPages)));
+    cards.appendChild(tile("Buyers found", num(buyers)));
+    cards.appendChild(tile("HOT", num(hot)));
+    cards.appendChild(tile("WARM", num(warm)));
+    cards.appendChild(tile("COOL", num(cool)));
+    cards.appendChild(tile("Coverage", pct(coverage)));
+    cards.appendChild(tile("Confidence", pct(confidence)));
+    cards.appendChild(listTile("Top sectors", sectors));
+    cards.appendChild(listTile("Top reasons", reasons));
+  }
+
+  async function probe(){
+    const host = normHost($("#host").value || localStorage.getItem(LS.lastHost) || "");
+    if (!host){ alert("Enter a host/domain"); return; }
+    localStorage.setItem(LS.lastHost, host);
+    const base = getApiBase();
+    const url = new URL(base + "/metrics/scoreboard");
+    url.searchParams.set("host", host);
+    url.searchParams.set("probe","1");
+    const data = await jget(url.toString());
+    render(data);
+  }
+
+  $("#probe").addEventListener("click", probe);
+  $("#host").addEventListener("keydown",(e)=>{ if (e.key==="Enter") probe(); });
+  $("#setApi").addEventListener("click", ()=>{
+    const cur = (localStorage.getItem(LS.api)||"");
+    const v = prompt("API base (root or /api).", cur||"")||"";
+    if (v!=null) setApiBase(v);
+  });
+
+  // boot
+  const last = localStorage.getItem(LS.lastHost)||"";
+  if (last) $("#host").value = last;
+})();
+</script>
+</body>
+</html>
