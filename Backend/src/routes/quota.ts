@@ -1,25 +1,25 @@
 // Backend/src/routes/quota.ts
 //
 // Thin Quota API wrapper around shared/quota-store.
-// - GET  /api/quota/peek?email=... [&plan=free|pro|vip] [&limit=number]
-// - POST /api/quota/bump { email, plan?, inc?, limit? }   (requires x-admin-key)
-// Notes:
-//   • Plan limits default to free=3, pro=25, vip=100 unless an explicit limit is passed.
-//   • Admin guard: header x-admin-key must match process.env.ADMIN_KEY.
-//     In dev, if ALLOW_TEST=1 and no ADMIN_KEY is set, we allow and log a warning.
+// Endpoints:
+//   • GET  /api/quota/                 -> help + (optional quick peek if ?email= is provided)
+//   • GET  /api/quota/help             -> same help
+//   • GET  /api/quota/peek?email=... [&plan=free|pro|vip] [&limit=number]
+//   • POST /api/quota/bump { email, plan?, inc?, limit? }  (requires x-admin-key)
+//
+// Defaults: free=3, pro=25, bundle/vip=100 unless limit is provided explicitly.
 
 import express, { Request, Response } from "express";
 import { quota } from "../shared/quota-store";
 
 const router = express.Router();
 
-// ---- helpers ---------------------------------------------------------------
-
-type PlanCode = "free" | "pro" | "vip";
+type PlanCode = "free" | "pro" | "vip" | "bundle";
 
 function parsePlan(v: unknown): PlanCode {
   const s = String(v || "").toLowerCase();
-  return s === "pro" ? "pro" : s === "vip" ? "vip" : "free";
+  if (s === "vip" || s === "bundle") return "vip";
+  return s === "pro" ? "pro" : "free";
 }
 function defaultLimit(plan: PlanCode): number {
   return plan === "vip" ? 100 : plan === "pro" ? 25 : 3;
@@ -32,7 +32,6 @@ function adminAllowed(req: Request): boolean {
   const hdr = String(req.headers["x-admin-key"] || "");
   const envKey = process.env.ADMIN_KEY || "";
   if (envKey) return hdr === envKey;
-  // No ADMIN_KEY set — allow in dev if ALLOW_TEST=1
   if (process.env.ALLOW_TEST === "1") {
     console.warn("[quota] ADMIN_KEY not set; honoring request due to ALLOW_TEST=1");
     return true;
@@ -40,8 +39,41 @@ function adminAllowed(req: Request): boolean {
   return false;
 }
 
-// ---- routes ----------------------------------------------------------------
+function helpJSON() {
+  return {
+    ok: true,
+    service: "quota",
+    routes: {
+      ping:       "GET /api/quota/_ping",
+      root_help:  "GET /api/quota (this document) or /api/quota/help",
+      peek:       "GET /api/quota/peek?email=you@example.com&plan=pro|vip|free&limit=number(optional)",
+      bump:       "POST /api/quota/bump { email, plan?, inc?, limit? }  (header x-admin-key required)"
+    },
+    plans: { free: 3, pro: 25, vip_or_bundle: 100 }
+  };
+}
 
+// ---- lightweight ping ------------------------------------------------------
+router.get("/_ping", (_req, res) => res.status(200).json({ ok: true, service: "quota" }));
+
+// ---- root help (and optional quick peek if ?email= present) ----------------
+router.get("/", async (req: Request, res: Response) => {
+  const email = String(req.query.email || "").trim().toLowerCase();
+  if (!email) return res.status(200).json(helpJSON());
+
+  const plan = parsePlan(req.query.plan);
+  const limit = toInt(req.query.limit, defaultLimit(plan));
+  try {
+    const result = await quota.peek(email, plan, { limit });
+    return res.status(200).json({ ok: true, ...result, note: "root quick-peek" });
+  } catch (err: any) {
+    return res.status(200).json({ ok: false, error: "server", detail: err?.message || String(err) });
+  }
+});
+
+router.get("/help", (_req: Request, res: Response) => res.status(200).json(helpJSON()));
+
+// ---- peek ------------------------------------------------------------------
 router.get("/peek", async (req: Request, res: Response) => {
   try {
     const email = String(req.query.email || "").trim().toLowerCase();
@@ -57,12 +89,12 @@ router.get("/peek", async (req: Request, res: Response) => {
   }
 });
 
+// ---- bump (admin) ----------------------------------------------------------
 router.post("/bump", express.json(), async (req: Request, res: Response) => {
   try {
     if (!adminAllowed(req)) {
       return res.status(200).json({ ok: false, error: "forbidden", detail: "x-admin-key required" });
     }
-
     const body = req.body || {};
     const email = String(body.email || "").trim().toLowerCase();
     if (!email) return res.status(200).json({ ok: false, error: "missing_email" });
@@ -77,8 +109,5 @@ router.post("/bump", express.json(), async (req: Request, res: Response) => {
     return res.status(200).json({ ok: false, error: "server", detail: err?.message || String(err) });
   }
 });
-
-// Lightweight ping for ops checks
-router.get("/_ping", (_req, res) => res.status(200).json({ ok: true, service: "quota" }));
 
 export default router;
