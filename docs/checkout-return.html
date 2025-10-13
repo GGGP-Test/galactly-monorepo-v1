@@ -5,103 +5,111 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Galactly — Checkout</title>
 <style>
-  :root{--bg:#0b0f14;--panel:#121822;--divider:#1b2531;--text:#e9f1f7;--muted:#8aa0b2;--cta:#6de1ff;--ctaText:#082433}
-  *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Inter,Arial}
-  .wrap{max-width:760px;margin:10vh auto;padding:18px}
-  .card{background:var(--panel);border:1px solid var(--divider);border-radius:16px;padding:18px}
-  h1{margin:0 0 8px} .muted{color:var(--muted)}
-  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;border:1px solid var(--divider);background:#152333;color:#cfe0ee;cursor:pointer;text-decoration:none}
+  :root{--bg:#0b0f14;--panel:#121822;--divider:#1b2531;--ink:#e9f1f7;--mut:#8aa0b2;--cta:#6de1ff;--ctaText:#082433;--bad:#ff6b6b}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,Segoe UI,Inter,Arial}
+  .wrap{max-width:760px;margin:15vh auto;padding:18px}
+  .card{background:var(--panel);border:1px solid var(--divider);border-radius:16px;padding:22px;text-align:center}
+  h1{margin:0 0 8px;font-weight:800}
+  p{margin:6px 0 14px}
+  .mut{color:var(--mut)}
+  .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 16px;border-radius:12px;border:1px solid var(--divider);background:#152333;color:#cfe0ee;text-decoration:none;cursor:pointer}
   .btn.primary{background:var(--cta);border:none;color:var(--ctaText);font-weight:800}
-  .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#0d1a26;border:1px solid #203041;color:#9dc2d8}
-  pre{background:#0a121b;border:1px solid var(--divider);border-radius:8px;padding:10px;overflow:auto}
+  .err{color:var(--bad)}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <h1 id="title">Processing…</h1>
-    <div class="pill" id="planPill" style="display:none"></div>
-    <p id="subtitle" class="muted">Verifying your checkout result…</p>
-
+    <h1 id="title">Finishing up…</h1>
+    <p id="msg" class="mut">Verifying your checkout session.</p>
     <div class="row">
-      <a class="btn" href="free-panel.html">Open Free Panel</a>
-      <a id="manageBilling" class="btn" href="#" style="display:none">Manage Billing</a>
-      <a id="pricing" class="btn" href="pricing.html">Pricing</a>
+      <a class="btn" href="free-panel.html">Go to Dashboard</a>
+      <a id="manage" class="btn" href="manage-billing.html" style="display:none">Manage Billing</a>
+      <a id="retry" class="btn" href="#" style="display:none">Retry</a>
     </div>
-
-    <div id="dbg" style="margin-top:14px;display:none">
-      <div class="muted" style="margin-bottom:6px">Debug</div>
-      <pre id="log"></pre>
-    </div>
+    <p id="detail" class="mut" style="margin-top:10px"></p>
   </div>
 </div>
 
 <script>
 (function(){
-  // ---------- tiny helpers ----------
-  const qs = new URLSearchParams(location.search);
-  const result = (qs.get("result")||"").toLowerCase(); // "success" | "canceled" | ""
-  const sessionId = qs.get("session_id")||"";
-  const showDbg = qs.get("debug")==="1";
-  function log(...a){ if(!showDbg) return; const el=document.getElementById("dbg"); el.style.display="block"; const L=document.getElementById("log"); L.textContent += a.join(" ")+"\n"; }
+  const $ = s => document.querySelector(s);
+  const qs = Object.fromEntries(new URLSearchParams(location.search).entries());
+  const sessionId = qs.session_id || "";
+  const canceled = "canceled" in qs || qs.canceled === "1";
+  const success  = "success"  in qs || qs.success  === "1";
 
-  function getApiBase(){
-    // allow local override; default to same-origin /api
-    const raw = localStorage.getItem("apiBase") || "";
+  function apiBase(){
+    const raw = localStorage.getItem("apiBase")||"";
     let b = raw.trim().replace(/\/+$/,"");
-    const m = b.match(/^(.*?)(?:\/api(?:\/.*)?)$/i); if (m) b = m[1];
-    return b ? (b + "/api") : (location.origin + "/api");
-  }
-  async function getJSON(url, init){
-    const h = Object.assign({"Content-Type":"application/json","x-user-plan":"free"}, (init||{}).headers||{});
-    const email = localStorage.getItem("fp.user.email")||""; if(email) h["x-user-email"] = email;
-    const r = await fetch(url, Object.assign({headers:h}, init||{}));
-    const t = await r.text(); try{ return JSON.parse(t); }catch{ return t; }
+    const m=b.match(/^(.*?)(?:\/api(?:\/.*)?)$/i); if(m) b=m[1];
+    return (b? b : location.origin) + "/api";
   }
 
-  // ---------- UI ----------
-  const title = document.getElementById("title");
-  const subtitle = document.getElementById("subtitle");
-  const pill = document.getElementById("planPill");
-  const manageBilling = document.getElementById("manageBilling");
+  async function verify(){
+    $("#retry").style.display="none";
+    $("#title").textContent = "Finishing up…";
+    $("#msg").textContent = "Verifying your checkout session.";
+    $("#detail").textContent = "";
 
-  function setPlan(plan){
-    pill.style.display="inline-block";
-    pill.textContent = "Plan: " + (String(plan||"free").toUpperCase());
-  }
+    const base = apiBase();
+    const headers = {"Content-Type":"application/json"};
+    const email = localStorage.getItem("fp.user.email")||localStorage.getItem("x-user-email")||"";
+    if (email) headers["x-user-email"] = email;
 
-  async function hydrate(){
-    const base = getApiBase();
-    log("API", base, "result=", result, "session_id=", sessionId||"(none)");
-
-    // 1) whoami: see current plan after checkout redirect
-    try{
-      const me = await getJSON(base + "/v1/whoami", { method:"GET" });
-      setPlan(me?.plan || me?.data?.plan || "free");
-      log("whoami:", JSON.stringify(me));
-    }catch(e){ log("whoami error:", e?.message||e); }
-
-    // 2) render message
-    if (result === "success" || sessionId){
-      title.textContent = "You're all set!";
-      subtitle.textContent = "Your purchase completed. Open the panel or manage billing below.";
-      manageBilling.style.display = "inline-flex";
-      // optional: fetch a portal link (if you expose it)
+    // prefer /v1/onboard/verify; fallback to /events/checkout/verify
+    async function tryVerify(url){
       try{
-        const portal = await getJSON(base + "/v1/onboard/portal", { method:"POST", body: "{}" });
-        if (portal?.url) manageBilling.href = portal.url;
-      }catch(e){ /* fine if not implemented */ }
-    } else if (result === "canceled"){
-      title.textContent = "Checkout canceled";
-      subtitle.textContent = "No charges made. You can resume from Pricing when ready.";
-    } else {
-      title.textContent = "Checkout";
-      subtitle.textContent = "Use the buttons below to continue.";
+        const r = await fetch(url, {method:"POST", headers, body: JSON.stringify({ session_id: sessionId })});
+        if (!r.ok) return null;
+        return await r.json();
+      }catch{ return null; }
     }
+
+    const u1 = `${base}/v1/onboard/verify${sessionId?`?session_id=${encodeURIComponent(sessionId)}`:""}`;
+    const u2 = `${base}/events/checkout/verify${sessionId?`?session_id=${encodeURIComponent(sessionId)}`:""}`;
+    let data = await tryVerify(u1); if(!data) data = await tryVerify(u2);
+
+    // Interpret result
+    if (data && data.ok !== false){
+      const plan  = data.plan || data.tier || data.status || (success? "pro" : "free");
+      const em    = data.email || email || "";
+      if (em) localStorage.setItem("fp.user.email", em);
+      if (plan) localStorage.setItem("x-user-plan", plan);
+
+      $("#title").textContent = success ? "Welcome aboard!" : (canceled ? "Checkout canceled" : "Updated");
+      $("#msg").textContent   = success
+        ? `You’re on plan: ${plan.toUpperCase()}.`
+        : (canceled ? "No charges were made." : `Your plan is: ${plan.toUpperCase()}.`);
+      $("#manage").style.display = "inline-flex";
+      $("#detail").textContent = data.message || "";
+      return;
+    }
+
+    // If backend doesn’t expose a verifier, still show a sane outcome
+    if (success){
+      $("#title").textContent = "Success";
+      $("#msg").textContent = "Your payment succeeded. You can manage billing or go to the dashboard.";
+      $("#manage").style.display = "inline-flex";
+      return;
+    }
+    if (canceled){
+      $("#title").textContent = "Checkout canceled";
+      $("#msg").textContent = "No charges occurred. You can try again anytime.";
+      return;
+    }
+
+    $("#title").textContent = "We couldn’t verify the session";
+    $("#msg").innerHTML = "Your backend did not respond to <code>/api/v1/onboard/verify</code> or <code>/api/events/checkout/verify</code>.";
+    $("#detail").textContent = "Add one of these endpoints, or keep this page as a soft landing.";
+    $("#retry").style.display="inline-flex";
   }
 
-  hydrate();
+  $("#retry").onclick = (e)=>{ e.preventDefault(); verify(); };
+  verify();
 })();
 </script>
 </body>
