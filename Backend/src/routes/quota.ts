@@ -4,30 +4,36 @@
 // Endpoints:
 //   • GET  /api/quota/                 -> help + (optional quick peek if ?email= is provided)
 //   • GET  /api/quota/help             -> same help
-//   • GET  /api/quota/peek?email=... [&plan=free|pro|vip] [&limit=number]
+//   • GET  /api/quota/peek?email=... [&plan=free|pro|vip|bundle] [&limit=number]
 //   • POST /api/quota/bump { email, plan?, inc?, limit? }  (requires x-admin-key)
 //
-// Defaults: free=3, pro=25, bundle/vip=100 unless limit is provided explicitly.
+// NOTE: "bundle" is treated as VIP for limits/logic, but the TYPE we pass into quota-store
+//       remains "free" | "pro" | "vip" to satisfy TypeScript.
 
 import express, { Request, Response } from "express";
 import { quota } from "../shared/quota-store";
 
 const router = express.Router();
 
-type PlanCode = "free" | "pro" | "vip" | "bundle";
+// IMPORTANT: keep the type EXACTLY as quota-store expects.
+type Plan = "free" | "pro" | "vip";
 
-function parsePlan(v: unknown): PlanCode {
+// Accept user inputs including "bundle", but map to a valid Plan.
+function parsePlanInput(v: unknown): Plan {
   const s = String(v || "").toLowerCase();
   if (s === "vip" || s === "bundle") return "vip";
   return s === "pro" ? "pro" : "free";
 }
-function defaultLimit(plan: PlanCode): number {
+
+function defaultLimit(plan: Plan): number {
   return plan === "vip" ? 100 : plan === "pro" ? 25 : 3;
 }
+
 function toInt(n: unknown, d = 0): number {
   const x = Number(n);
   return Number.isFinite(x) ? x : d;
 }
+
 function adminAllowed(req: Request): boolean {
   const hdr = String(req.headers["x-admin-key"] || "");
   const envKey = process.env.ADMIN_KEY || "";
@@ -53,7 +59,7 @@ function helpJSON() {
   };
 }
 
-// ---- lightweight ping ------------------------------------------------------
+// ---- ping ------------------------------------------------------------------
 router.get("/_ping", (_req, res) => res.status(200).json({ ok: true, service: "quota" }));
 
 // ---- root help (and optional quick peek if ?email= present) ----------------
@@ -61,7 +67,7 @@ router.get("/", async (req: Request, res: Response) => {
   const email = String(req.query.email || "").trim().toLowerCase();
   if (!email) return res.status(200).json(helpJSON());
 
-  const plan = parsePlan(req.query.plan);
+  const plan = parsePlanInput(req.query.plan);
   const limit = toInt(req.query.limit, defaultLimit(plan));
   try {
     const result = await quota.peek(email, plan, { limit });
@@ -79,7 +85,7 @@ router.get("/peek", async (req: Request, res: Response) => {
     const email = String(req.query.email || "").trim().toLowerCase();
     if (!email) return res.status(200).json({ ok: false, error: "missing_email" });
 
-    const plan = parsePlan(req.query.plan || req.headers["x-user-plan"]);
+    const plan = parsePlanInput(req.query.plan || req.headers["x-user-plan"]);
     const limit = toInt(req.query.limit, defaultLimit(plan));
 
     const result = await quota.peek(email, plan, { limit });
@@ -99,7 +105,7 @@ router.post("/bump", express.json(), async (req: Request, res: Response) => {
     const email = String(body.email || "").trim().toLowerCase();
     if (!email) return res.status(200).json({ ok: false, error: "missing_email" });
 
-    const plan = parsePlan(body.plan || req.headers["x-user-plan"]);
+    const plan = parsePlanInput(body.plan || req.headers["x-user-plan"]);
     const inc = toInt(body.inc, 1);
     const limit = toInt(body.limit, defaultLimit(plan));
 
