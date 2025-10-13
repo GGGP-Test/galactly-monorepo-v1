@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Plan & Quotas — Galactly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#fff; --mut:#b9bfd4; --bg:#000; --panel:#0a0b10; --stroke:rgba(255,255,255,.10);
+    --good:#86f7d6; --accent:#57a4ff; --warn:#ffc857; --bad:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#000;color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+  .wrap{max-width:880px;margin:40px auto;padding:24px}
+  .h1{font-family:Montserrat,Inter,sans-serif;font-weight:800;letter-spacing:.3px;font-size:28px;margin:0 0 12px}
+  .mut{color:var(--mut);font-size:13px}
+  .card{background:var(--panel);border:1px solid var(--stroke);border-radius:14px;padding:18px 18px 16px;margin-top:16px}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .k{font-size:13px;color:var(--mut)}
+  .v{font-weight:800}
+  .sep{flex:1}
+  button{border:1px solid var(--stroke);background:#0b0d14;color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+  button:hover{border-color:#2a66ff}
+  .ok{color:var(--good)}
+  .bad{color:var(--bad)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+  input,select{background:#0b0d14;border:1px solid var(--stroke);border-radius:10px;padding:8px 10px;color:#fff}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:#0b0d14;border:1px solid var(--stroke);padding:3px 6px;border-radius:6px}
+  .small{font-size:12px;color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="h1">Plan & Quotas</div>
+  <div class="mut">Know your plan, today’s cap, and how much signal you can still pull.</div>
+
+  <div class="card" id="dev">
+    <div class="row">
+      <div class="k">Dev headers (optional):</div>
+      <input id="email" placeholder="x-user-email (dev only)"/>
+      <select id="plan">
+        <option value="">auto</option>
+        <option value="free">free</option>
+        <option value="pro">pro</option>
+        <option value="bundle">bundle</option>
+        <option value="vip">vip</option>
+      </select>
+      <button id="save">Save</button>
+      <div class="sep"></div>
+      <span class="small">If <code>ALLOW_TEST=1</code>, these headers let you simulate users.</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <div>
+        <div class="k">Email</div>
+        <div class="v" id="whoEmail">…</div>
+      </div>
+      <div>
+        <div class="k">Plan</div>
+        <div class="v" id="whoPlan">…</div>
+      </div>
+      <div>
+        <div class="k">Daily limit</div>
+        <div class="v" id="limit">…</div>
+      </div>
+      <div>
+        <div class="k">Used today</div>
+        <div class="v" id="used">…</div>
+      </div>
+      <div>
+        <div class="k">Remaining</div>
+        <div class="v" id="remaining">…</div>
+      </div>
+      <div>
+        <div class="k">Backend</div>
+        <div class="v" id="backend">…</div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button id="upgradePro">Upgrade to Pro</button>
+      <button id="upgradeBundle">Upgrade to Bundle</button>
+      <div class="sep"></div>
+      <span class="small">Returns Stripe Checkout link using <code>/api/v1/onboard?plan=…</code>.</span>
+    </div>
+    <div class="small" id="msg" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<script>
+const API = location.origin; // same origin (GitHub Pages → CORS to backend if configured)
+const qs = Object.fromEntries(new URLSearchParams(location.search).entries());
+const $ = sel => document.querySelector(sel);
+
+function devHeaders() {
+  const email = localStorage.getItem("x-user-email") || "";
+  const plan  = localStorage.getItem("x-user-plan")  || "";
+  const h = {};
+  if (email) h["x-user-email"] = email;
+  if (plan)  h["x-user-plan"]  = plan;
+  return h;
+}
+function setStatus(t){ $("#msg").textContent = t || ""; }
+
+async function jget(path){
+  const res = await fetch(API + path, { headers: devHeaders() });
+  return res.json();
+}
+async function jpost(path, body){
+  const res = await fetch(API + path, {
+    method:"POST",
+    headers: { "Content-Type":"application/json", ...devHeaders() },
+    body: JSON.stringify(body||{})
+  });
+  return res.json();
+}
+
+async function refresh(){
+  setStatus("Loading whoami/limits…");
+  const who = await jget("/api/v1/whoami");
+  const lim = await jget("/api/v1/limits");
+  $("#whoEmail").textContent = who?.email || "(unknown)";
+  $("#whoPlan").textContent  = who?.plan || "(free)";
+  $("#limit").textContent    = lim?.limit ?? "–";
+  $("#used").textContent     = lim?.used ?? "–";
+  $("#remaining").textContent= lim?.remaining ?? "–";
+  $("#backend").textContent  = lim?.backend || "–";
+
+  if (lim?.ok === false) {
+    setStatus("Limits error: " + (lim?.error || "unknown"));
+  } else {
+    setStatus("");
+  }
+}
+
+$("#save").onclick = () => {
+  const email = $("#email").value.trim();
+  const plan  = $("#plan").value.trim();
+  if (email) localStorage.setItem("x-user-email", email); else localStorage.removeItem("x-user-email");
+  if (plan)  localStorage.setItem("x-user-plan",  plan);  else localStorage.removeItem("x-user-plan");
+  refresh();
+};
+
+$("#upgradePro").onclick = async () => {
+  setStatus("Creating Checkout for Pro…");
+  const r = await jpost("/api/v1/onboard?plan=pro", {});
+  if (r?.url) { location.href = r.url; return; }
+  setStatus("Could not create Checkout (backend did not return url).");
+};
+$("#upgradeBundle").onclick = async () => {
+  setStatus("Creating Checkout for Bundle…");
+  const r = await jpost("/api/v1/onboard?plan=bundle", {});
+  if (r?.url) { location.href = r.url; return; }
+  setStatus("Could not create Checkout (backend did not return url).");
+};
+
+// Prefill dev controls
+$("#email").value = localStorage.getItem("x-user-email") || (qs.email || "");
+$("#plan").value  = localStorage.getItem("x-user-plan")  || (qs.plan  || "");
+refresh();
+</script>
+</body>
+</html>
