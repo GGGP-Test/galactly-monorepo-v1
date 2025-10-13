@@ -11,7 +11,7 @@
 <!--
   index.html (Landing + Onboarding Steps 1–2)
   - Gold aurora background
-  - Right-side "Lead Constellation" that shows noisy market -> your domain -> 3 surfaced buyers
+  - Right-side "Lead Constellation": Your website → Signal → Score → Buyers
   - CTA opens modal (steps 1–2), then redirect to step3.html
 -->
 
@@ -71,11 +71,11 @@
   .miniCard{
     position:absolute;z-index:2;min-width:170px;max-width:220px;padding:10px 12px;border-radius:12px;
     background:rgba(12,18,28,.86);backdrop-filter: blur(6px);
-    border:1px solid rgba(255,255,255,.08); box-shadow:0 8px 24px rgba(0,0,0,.35);
+    border:1px solid rgba(255,255,255,.1); box-shadow:0 10px 26px rgba(0,0,0,.38);
     transform:translate(-50%,-50%); pointer-events:none;
   }
   .miniCard .k{font-size:11px;color:#9bb2c8}
-  .miniCard .v{font-weight:700}
+  .miniCard .v{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .domainTag{
     position:absolute;z-index:2;left:14px;top:14px;padding:6px 10px;border-radius:999px;font-size:12px;
     background:rgba(230,195,107,.12);color:var(--gold-300);border:1px solid rgba(230,195,107,.25)
@@ -139,8 +139,8 @@
       <div class="const-wrap" aria-hidden="true">
         <span class="domainTag" id="domainTag">yourcompany.com</span>
         <canvas id="constFx"></canvas>
-        <div class="const-legend">Signal → Score → Buyers</div>
-        <!-- Floating buyer cards (positions driven by JS) -->
+        <div class="const-legend">Your website → Signal → Score → Buyers</div>
+        <!-- Floating buyer cards (positions adjusted by JS to remain readable) -->
         <div class="miniCard" id="cardA">
           <div class="k">Buyer</div><div class="v" id="cardA_name">Acme Drinks Co.</div>
           <div class="k">City</div><div class="v" id="cardA_city">Chicago, IL</div>
@@ -306,9 +306,16 @@
   optSupplier.addEventListener("click",()=>setRole("supplier"));
   optBuyer.addEventListener("click",()=>setRole("buyer"));
 
-  // convenience
-  function syncDomain(){ const d=domainFromEmail(emailEl.value); if (d) hostEl.value=d; const tag=$("#domainTag"); if (tag&&d) tag.textContent=d; }
-  emailEl.addEventListener("input",syncDomain); emailEl.addEventListener("change",syncDomain); setTimeout(syncDomain, 80);
+  // convenience + domain tag
+  function syncDomain(){
+    const dFromEmail = domainFromEmail(emailEl.value);
+    const d = normHost(hostEl.value || dFromEmail || "");
+    if (dFromEmail && !hostEl.value) hostEl.value = dFromEmail;
+    const tag=$("#domainTag"); if (tag) tag.textContent = d || "yourcompany.com";
+  }
+  emailEl.addEventListener("input",syncDomain); emailEl.addEventListener("change",syncDomain);
+  hostEl.addEventListener("input",syncDomain); hostEl.addEventListener("change",syncDomain);
+  setTimeout(syncDomain, 80);
 
   // minimal badge
   apiBadge.textContent = "Ready";
@@ -388,11 +395,11 @@
       c.style.width=W+"px"; c.style.height=H+"px";
       ctx.setTransform(DPR,0,0,DPR,0,0);
 
-      // Generate nodes (biased to right half for "market noise")
+      // Generate nodes
       const N = 42;
       nodes = [];
       for (let i=0;i<N;i++){
-        const x = 0.28 + Math.random()*0.68; // 28%..96% (right-weighted)
+        const x = 0.28 + Math.random()*0.68;
         const y = 0.06 + Math.random()*0.88;
         const s = 0.15 + Math.random()*0.85;
         const vx = (Math.random()-0.5) * 0.18;
@@ -400,36 +407,56 @@
         nodes.push({x:x*W, y:y*H, s, vx, vy});
       }
 
-      // Supplier anchor (left-center of panel)
+      // Supplier anchor
       const anchor = { x: 0.18*W, y: 0.52*H };
       nodes.unshift({x:anchor.x, y:anchor.y, s:1.8, vx:0, vy:0, anchor:true });
 
-      // choose 3 highlights from far-right area
+      // choose 3 highlights on the right
       const candidates = nodes.filter(n=>!n.anchor && n.x>W*0.52);
       highlights = [];
       for (let i=0;i<3;i++){
         const n = candidates[Math.floor(Math.random()*candidates.length)];
         if (!n) break;
         highlights.push(n);
-        // remove chosen to avoid duplicates
         const idx = candidates.indexOf(n); if (idx>=0) candidates.splice(idx,1);
       }
-      // position mini cards near highlights
+
+      // place cards with minimal-overlap nudges
+      const placed=[];
+      const approx = { w:200, h:90 };
+      function intersects(a,b){
+        return !(a.x+approx.w < b.x || b.x+approx.w < a.x || a.y+approx.h < b.y || b.y+approx.h < a.y);
+      }
+      function place(el, baseX, baseY){
+        let x = baseX, y = baseY, tries=0;
+        while (tries<8){
+          const box = {x:x-approx.w/2, y:y-approx.h/2};
+          let clash=false;
+          for (const p of placed){ if (intersects(box,p)){ clash=true; break; } }
+          if (!clash){ placed.push(box); break; }
+          // nudge in a small spiral
+          x += (tries%2? -26: 26);
+          y += (tries%3?  18: -18);
+          tries++;
+        }
+        el.style.left = x + "px";
+        el.style.top  = y + "px";
+      }
+
       const cardPoints = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
       cardPoints.forEach((p, i)=>{
         const el = cards[i]?.el; if (!el) return;
-        el.style.left = (p.x + (i===1? -24: 18)) + "px";
-        el.style.top  = (p.y + (i===2?  24: -18)) + "px";
         const d = cardData[(Math.random()*cardData.length)|0];
-        const nEl = el.querySelector(".v"); // first .v is name
-        if (nEl) nEl.textContent = d.name;
-        const cityEl = el.querySelectorAll(".v")[1];
-        if (cityEl) cityEl.textContent = d.city;
+        el.querySelectorAll(".v")[0].textContent = d.name;
+        el.querySelectorAll(".v")[1].textContent = d.city;
+        const offsetX = i===1? -18 : 22;
+        const offsetY = i===2?  22 : -16;
+        place(el, p.x + offsetX, p.y + offsetY);
       });
     }
 
     function step(dt){
-      for (let i=1;i<nodes.length;i++){ // skip anchor at 0
+      for (let i=1;i<nodes.length;i++){
         const n = nodes[i];
         n.x += n.vx*dt; n.y += n.vy*dt;
         if (n.x < 0) n.x = W;
@@ -448,7 +475,7 @@
       grad.addColorStop(1, "rgba(230,195,107,0.0)");
       ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
 
-      // connections within radius
+      // connections
       const R = 110;
       for (let i=0;i<nodes.length;i++){
         const a = nodes[i];
@@ -486,7 +513,7 @@
 
     function loop(now){
       if (prev===0) prev=now;
-      const dt = Math.min(33, now - prev) * 0.06; // damped velocity
+      const dt = Math.min(33, now - prev) * 0.06;
       prev = now; t += dt;
       step(noMotion ? 0 : dt);
       draw();
@@ -499,8 +526,9 @@
     addEventListener("resize", reset);
 
     // initial domain tag from LS/email
-    const d = (LS.getItem("onb.seed") && JSON.parse(LS.getItem("onb.seed")||"{}")?.host) || "";
-    if (hostTag && d) hostTag.textContent = d;
+    const seed = LS.getItem("onb.seed");
+    const host = seed ? (JSON.parse(seed||"{}")?.host||"") : "";
+    if (hostTag && host) hostTag.textContent = host;
   })();
 
   // boot
