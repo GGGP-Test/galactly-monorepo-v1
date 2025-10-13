@@ -1,4 +1,4 @@
-// Backend/src/index.ts
+// src/index.ts
 //
 // Artemis BV1 — API bootstrap (Express, no external deps).
 // Webhook FIRST (raw body inside the router), then JSON parser, then the rest.
@@ -16,7 +16,8 @@ import GateRouter    from "./routes/gate";         // /api/v1/*
 import ClaimRouter   from "./routes/claim";        // /api/claim/*
 import AuditRouter   from "./routes/audit";        // /api/audit/*
 import ClaimAdmin    from "./routes/claim-admin";  // /api/claim-admin/*
-import QuotaRouter   from "./routes/quota";        // /api/quota/*   <-- NEW
+import QuotaRouter   from "./routes/quota";        // /api/quota/*
+import MetricsRouter from "./routes/metrics";      // /api/metrics/*  <-- HARD import
 
 // other core routers
 import LeadsRouter     from "./routes/leads";
@@ -69,7 +70,8 @@ app.use("/api/v1",          GateRouter);    // _ping, whoami, limits, onboard
 app.use("/api/claim",       ClaimRouter);   // _ping, own, hide
 app.use("/api/audit",       AuditRouter);   // ping, window, stats, export.csv
 app.use("/api/claim-admin", ClaimAdmin);    // _ping, list, export.csv, unhide, clear
-app.use("/api/quota",       QuotaRouter);   // _ping, peek, bump  <-- NEW
+app.use("/api/quota",       QuotaRouter);   // _ping, peek, bump
+app.use("/api/metrics",     MetricsRouter); // ping, healthz, preview, scoreboard  <-- HERE
 
 // optional boot: plan flags (file-based overrides for dev)
 const planFlags = safeRequire("./shared/plan-flags");
@@ -119,7 +121,6 @@ try {
   if (Buyers?.default)   app.use("/api/buyers", Buyers.default);
   if (Buyers?.RootAlias) app.use("/api/find",   Buyers.RootAlias);
 } catch {}
-try { const MetricsRouter = safeRequire("./routes/metrics")?.default; if (MetricsRouter) app.use("/api/metrics", MetricsRouter); } catch {}
 try { const CreditsRouter = safeRequire("./routes/credits")?.default; if (CreditsRouter) app.use("/api/credits", CreditsRouter); } catch {}
 try { const ContextRouter = safeRequire("./routes/context")?.default; if (ContextRouter) app.use("/api/context", ContextRouter); } catch {}
 try { const GateV1Alt = safeRequire("./routes/GATE")?.default; if (GateV1Alt) app.use("/api/v1", GateV1Alt); } catch {}
@@ -146,7 +147,8 @@ app.listen(PORT, () => {
   console.log("[buyers-api] claim       mounted at /api/claim");
   console.log("[buyers-api] audit       mounted at /api/audit");
   console.log("[buyers-api] claim-admin mounted at /api/claim-admin");
-  console.log("[buyers-api] quota       mounted at /api/quota"); // <-- NEW
+  console.log("[buyers-api] quota       mounted at /api/quota");
+  console.log("[buyers-api] metrics     mounted at /api/metrics"); // <-- NEW LOG
 });
 
 export default app;
