@@ -1,8 +1,8 @@
-name: Deploy public docs to Pages
+name: Deploy Pages (safe subset from docs)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 permissions:
@@ -12,30 +12,64 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+env:
+  PUBLIC_SRC: docs
+  PUBLIC_OUT: public
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Build a safe publish folder with only the public-facing files.
+      - name: Assemble public site
+        run: |
+          set -euo pipefail
+          rm -rf "$PUBLIC_OUT"
+          mkdir -p "$PUBLIC_OUT"
+
+          # ----- allow-list: ONLY these files/dirs are deployed -----
+          # Hero & onboarding flow
+          cp -v "$PUBLIC_SRC/index.html"            "$PUBLIC_OUT/" || true
+          cp -v "$PUBLIC_SRC/step3.html"            "$PUBLIC_OUT/" || true
+          cp -v "$PUBLIC_SRC/free-panel.html"       "$PUBLIC_OUT/" || true
+
+          # Small helpers & shared JS/CSS/assets you actually need on the public site
+          # (add lines as you create them)
+          cp -v "$PUBLIC_SRC/fe-quota-helper.js"    "$PUBLIC_OUT/" || true
+          [ -d "$PUBLIC_SRC/assets" ]  && rsync -a --delete "$PUBLIC_SRC/assets/"  "$PUBLIC_OUT/assets/"  || true
+          [ -d "$PUBLIC_SRC/img" ]     && rsync -a --delete "$PUBLIC_SRC/img/"     "$PUBLIC_OUT/img/"     || true
+          [ -d "$PUBLIC_SRC/css" ]     && rsync -a --delete "$PUBLIC_SRC/css/"     "$PUBLIC_OUT/css/"     || true
+          [ -d "$PUBLIC_SRC/js" ]      && rsync -a --delete "$PUBLIC_SRC/js/"      "$PUBLIC_OUT/js/"      || true
+
+          # Prevent Jekyll munging, enable nice 404
+          printf "" > "$PUBLIC_OUT/.nojekyll"
+          [ -f "$PUBLIC_SRC/404.html" ] && cp -v "$PUBLIC_SRC/404.html" "$PUBLIC_OUT/404.html" || true
+
+          # ----- explicit deny: never ship internal/ops pages -----
+          # (These may exist in docs/, but we DO NOT publish them.)
+          for F in admin.html admin/* vault.html debug.html scoreboard.html panel-plan.html readme-admin.md README-api.md; do
+            [ -e "$PUBLIC_OUT/$F" ] && rm -rf "$PUBLIC_OUT/$F"
+          done
+
+          echo "Public site contents:"
+          find "$PUBLIC_OUT" -maxdepth 3 -type f | sed "s#^#$PUBLIC_OUT/#" || true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Build public site (whitelist)
-        run: |
-          rm -rf _site
-          mkdir -p _site
-          cp docs/index.html _site/
-          cp docs/step3.html _site/
-          cp docs/free-panel.html _site/
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
