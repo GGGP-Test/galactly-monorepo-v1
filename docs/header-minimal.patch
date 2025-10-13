@@ -1,0 +1,122 @@
+diff --git a/docs/index.html b/docs/index.html
+index 1111111..2222222 100644
+--- a/docs/index.html
++++ b/docs/index.html
+@@ -1,200 +1,230 @@
+ <!doctype html>
+ <html lang="en">
+ <head>
+@@
+-  /* HEADER (fixed, glassy) */
+-  .site-header{
+-    position:fixed; inset:0 0 auto 0; height:60px; z-index:50;
+-    display:flex; align-items:center; justify-content:center;
+-    backdrop-filter:saturate(120%) blur(10px);
+-    background:linear-gradient(180deg, rgba(10,14,20,.65), rgba(10,14,20,.35));
+-    border-bottom:1px solid rgba(255,255,255,.06);
+-  }
+-  .site-header .inner{width:100%; max-width:1140px; padding:0 16px; display:flex; align-items:center; gap:10px}
+-  .brand{display:flex; align-items:center; gap:10px; font-weight:800}
+-  .brand-badge{
+-    width:28px; height:28px; border-radius:8px;
+-    background:linear-gradient(180deg, var(--gold), var(--gold-700));
+-    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset;
+-    display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px;
+-  }
+-  .brand-name{font:800 16px Inter, system-ui; letter-spacing:.2px}
+-  nav{margin-left:auto; display:flex; align-items:center; gap:14px}
+-  .nav-link{
+-    display:inline-block; padding:8px 10px; border-radius:10px; font-weight:600; color:#cfe0ee;
+-    border:1px solid transparent;
+-  }
+-  .nav-link:hover{border-color:#284560; background:rgba(255,255,255,.03)}
+-  .nav-cta{
+-    padding:8px 14px; border-radius:999px; color:var(--ctaText);
+-    background:linear-gradient(180deg, var(--gold), var(--gold-700));
+-    border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset;
+-  }
++  /* HEADER (transparent, centered, logo-only) */
++  .site-header{
++    position:fixed; inset:0 0 auto 0; height:60px; z-index:50;
++    display:grid; place-items:center; background:transparent;
++    backdrop-filter:none; border:0;
++  }
++  .site-header .inner{
++    width:100%; max-width:1140px; padding:0 16px;
++    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px;
++  }
++  .brand{display:flex; align-items:center; gap:10px}
++  .brand-badge{
++    width:28px; height:28px; border-radius:8px;
++    background:linear-gradient(180deg, var(--gold), var(--gold-700));
++    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset;
++    display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px;
++  }
++  .brand-name{display:none} /* logo-only (no “Galactly” word) */
++
++  /* centered primary nav with 3 links */
++  nav#nav-primary{display:flex; justify-content:center; align-items:center; gap:18px}
++  .nav-link{
++    position:relative; display:inline-block; padding:8px 2px; font-weight:600; color:#cfe0ee; opacity:.92;
++  }
++  .nav-link:focus-visible, .nav-link:hover{opacity:1}
++  .nav-link::after{
++    content:""; position:absolute; left:50%; bottom:4px; height:1px; width:0;
++    background:linear-gradient(90deg, var(--gold-300), var(--gold-700));
++    transform:translateX(-50%); transition:width .18s ease;
++  }
++  .nav-link:hover::after, .nav-link:focus-visible::after{width:60%}
++
++  /* right-side actions */
++  .nav-actions{display:flex; align-items:center; gap:12px}
++  .nav-login{font-weight:600; color:#cfe0ee; opacity:.85}
++  .nav-login:hover,.nav-login:focus-visible{opacity:1}
++  .nav-cta{
++    padding:8px 14px; border-radius:999px; color:var(--ctaText);
++    background:linear-gradient(180deg, var(--gold), var(--gold-700));
++    border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset;
++    white-space:nowrap;
++  }
+@@
+-  <!-- HEADER -->
+-  <header class="site-header" aria-label="Site">
+-    <div class="inner">
+-      <a href="index.html" class="brand" aria-label="Galactly Home">
+-        <span class="brand-badge">G</span>
+-        <span class="brand-name">Galactly</span>
+-      </a>
+-      <nav aria-label="Primary">
+-        <a class="nav-link" href="pricing.html">Pricing</a>
+-        <a class="nav-link" href="sectors.html">Sectors</a>
+-        <a class="nav-link" href="docs.html">Docs</a>
+-        <a class="nav-link" href="credits.html">Credits</a>
+-        <a class="nav-link" href="panel-plan.html">Plan</a>
+-        <a class="nav-link" href="free-panel.html">Free Panel</a>
+-        <a class="nav-link" href="login.html">Login</a>
+-        <a class="nav-cta" href="#get-started" id="navStart">Start Free</a>
+-      </nav>
+-    </div>
+-  </header>
++  <!-- HEADER -->
++  <header class="site-header" aria-label="Site">
++    <div class="inner">
++      <!-- Left: logo-only -->
++      <a href="index.html" class="brand" aria-label="Galactly Home">
++        <span class="brand-badge" aria-hidden="true">G</span>
++        <span class="brand-name">Galactly</span>
++      </a>
++
++      <!-- Center: exactly 3 links -->
++      <nav id="nav-primary" aria-label="Primary">
++        <a class="nav-link" href="#how">How it works</a>
++        <a class="nav-link" href="sectors.html">Sectors</a>
++        <a class="nav-link" href="pricing.html">Pricing</a>
++      </nav>
++
++      <!-- Right: CTA + Login -->
++      <div class="nav-actions">
++        <a class="nav-login" href="login.html">Login</a>
++        <a class="nav-cta" href="#get-started" id="navStart">Start free</a>
++      </div>
++    </div>
++  </header>
