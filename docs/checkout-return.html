@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Galactly — Checkout</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#121822;--divider:#1b2531;--text:#e9f1f7;--muted:#8aa0b2;--cta:#6de1ff;--ctaText:#082433}
+  *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Inter,Arial}
+  .wrap{max-width:760px;margin:10vh auto;padding:18px}
+  .card{background:var(--panel);border:1px solid var(--divider);border-radius:16px;padding:18px}
+  h1{margin:0 0 8px} .muted{color:var(--muted)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;border:1px solid var(--divider);background:#152333;color:#cfe0ee;cursor:pointer;text-decoration:none}
+  .btn.primary{background:var(--cta);border:none;color:var(--ctaText);font-weight:800}
+  .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#0d1a26;border:1px solid #203041;color:#9dc2d8}
+  pre{background:#0a121b;border:1px solid var(--divider);border-radius:8px;padding:10px;overflow:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1 id="title">Processing…</h1>
+    <div class="pill" id="planPill" style="display:none"></div>
+    <p id="subtitle" class="muted">Verifying your checkout result…</p>
+
+    <div class="row">
+      <a class="btn" href="free-panel.html">Open Free Panel</a>
+      <a id="manageBilling" class="btn" href="#" style="display:none">Manage Billing</a>
+      <a id="pricing" class="btn" href="pricing.html">Pricing</a>
+    </div>
+
+    <div id="dbg" style="margin-top:14px;display:none">
+      <div class="muted" style="margin-bottom:6px">Debug</div>
+      <pre id="log"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---------- tiny helpers ----------
+  const qs = new URLSearchParams(location.search);
+  const result = (qs.get("result")||"").toLowerCase(); // "success" | "canceled" | ""
+  const sessionId = qs.get("session_id")||"";
+  const showDbg = qs.get("debug")==="1";
+  function log(...a){ if(!showDbg) return; const el=document.getElementById("dbg"); el.style.display="block"; const L=document.getElementById("log"); L.textContent += a.join(" ")+"\n"; }
+
+  function getApiBase(){
+    // allow local override; default to same-origin /api
+    const raw = localStorage.getItem("apiBase") || "";
+    let b = raw.trim().replace(/\/+$/,"");
+    const m = b.match(/^(.*?)(?:\/api(?:\/.*)?)$/i); if (m) b = m[1];
+    return b ? (b + "/api") : (location.origin + "/api");
+  }
+  async function getJSON(url, init){
+    const h = Object.assign({"Content-Type":"application/json","x-user-plan":"free"}, (init||{}).headers||{});
+    const email = localStorage.getItem("fp.user.email")||""; if(email) h["x-user-email"] = email;
+    const r = await fetch(url, Object.assign({headers:h}, init||{}));
+    const t = await r.text(); try{ return JSON.parse(t); }catch{ return t; }
+  }
+
+  // ---------- UI ----------
+  const title = document.getElementById("title");
+  const subtitle = document.getElementById("subtitle");
+  const pill = document.getElementById("planPill");
+  const manageBilling = document.getElementById("manageBilling");
+
+  function setPlan(plan){
+    pill.style.display="inline-block";
+    pill.textContent = "Plan: " + (String(plan||"free").toUpperCase());
+  }
+
+  async function hydrate(){
+    const base = getApiBase();
+    log("API", base, "result=", result, "session_id=", sessionId||"(none)");
+
+    // 1) whoami: see current plan after checkout redirect
+    try{
+      const me = await getJSON(base + "/v1/whoami", { method:"GET" });
+      setPlan(me?.plan || me?.data?.plan || "free");
+      log("whoami:", JSON.stringify(me));
+    }catch(e){ log("whoami error:", e?.message||e); }
+
+    // 2) render message
+    if (result === "success" || sessionId){
+      title.textContent = "You're all set!";
+      subtitle.textContent = "Your purchase completed. Open the panel or manage billing below.";
+      manageBilling.style.display = "inline-flex";
+      // optional: fetch a portal link (if you expose it)
+      try{
+        const portal = await getJSON(base + "/v1/onboard/portal", { method:"POST", body: "{}" });
+        if (portal?.url) manageBilling.href = portal.url;
+      }catch(e){ /* fine if not implemented */ }
+    } else if (result === "canceled"){
+      title.textContent = "Checkout canceled";
+      subtitle.textContent = "No charges made. You can resume from Pricing when ready.";
+    } else {
+      title.textContent = "Checkout";
+      subtitle.textContent = "Use the buttons below to continue.";
+    }
+  }
+
+  hydrate();
+})();
+</script>
+</body>
+</html>
