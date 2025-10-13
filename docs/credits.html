@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Credits — Galactly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#e9eef7; --mut:#9fb0c5; --mut2:#c4cedb;
+    --bg:#000; --panel:#0a0b10; --panel2:#0c1018; --stroke:rgba(255,255,255,.10);
+    --accent:#57a4ff; --good:#86f7d6; --warn:#ffc857; --bad:#ff6b6b;
+    --ring:#24435f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+  a{color:var(--mut2); text-decoration:none; border-bottom:1px dashed rgba(255,255,255,.15)}
+  a:hover{color:#fff; border-bottom-color:var(--accent)}
+  .wrap{max-width:980px;margin:40px auto;padding:24px}
+  .h1{font-family:Montserrat,Inter,sans-serif;font-weight:800;letter-spacing:.3px;font-size:30px;margin:0 0 8px}
+  .mut{color:var(--mut);font-size:13px;margin-bottom:8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--stroke);border-radius:14px;padding:16px}
+  .card h3{margin:0 0 8px;font-family:Montserrat,Inter,sans-serif;font-weight:800;font-size:16px}
+  .kv{display:flex;gap:10px;align-items:center;margin:6px 0}
+  .k{width:120px;color:var(--mut);font-size:13px}
+  .v{font-weight:700}
+  .pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid var(--stroke);background:var(--panel2);font-size:12px;color:var(--mut2)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .btn{border:1px solid var(--stroke);background:#0b0d14;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+  .btn:hover{border-color:#2a66ff}
+  .ok{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  ul{margin:8px 0 0 18px;padding:0}
+  li{margin:3px 0}
+  .hr{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);margin:18px 0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:#0b0d14;border:1px solid var(--stroke);padding:3px 6px;border-radius:6px}
+  .tiny{font-size:12px;color:var(--mut)}
+  .right{display:flex;gap:8px;justify-content:flex-end}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="row" style="justify-content:space-between;align-items:flex-end">
+    <div>
+      <div class="h1">Credits</div>
+      <div class="mut">People, tools, and signals that power Galactly BV1.</div>
+    </div>
+    <div class="row">
+      <a class="pill" href="./index.html">Home</a>
+      <a class="pill" href="./free-panel.html">Free panel</a>
+      <a class="pill" href="./panel-plan.html">Plan</a>
+      <a class="pill" href="./manage-billing.html">Billing</a>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:10px">
+    <section class="card">
+      <h3>Product & Engineering</h3>
+      <ul>
+        <li>Core: Artemis BV1 — deterministic scoring + persona metrics</li>
+        <li>Lead finding: catalog + web signals with guardrails</li>
+        <li>Payments: Stripe Checkout & Billing</li>
+      </ul>
+      <div class="hr"></div>
+      <div class="kv"><div class="k">Frontend</div><div class="v">Static (GitHub Pages) — dark, minimal, Inter + Montserrat</div></div>
+      <div class="kv"><div class="k">Backend</div><div class="v" id="bk">–</div></div>
+      <div class="kv"><div class="k">Health</div><div class="v" id="health">–</div></div>
+      <div class="kv"><div class="k">Whoami</div><div class="v" id="who">–</div></div>
+    </section>
+
+    <section class="card">
+      <h3>Open-source & Services</h3>
+      <ul>
+        <li>API & runtime: <a href="https://expressjs.com" target="_blank" rel="noreferrer">Express</a></li>
+        <li>Hosting/Deploy: Northflank / GitHub Actions / GitHub Pages</li>
+        <li>Payments: <a href="https://stripe.com" target="_blank" rel="noreferrer">Stripe</a></li>
+        <li>Icons: DuckDuckGo Favicons, Google S2 Favicons</li>
+        <li>Fonts: Google Fonts (Inter, Montserrat)</li>
+      </ul>
+      <div class="hr"></div>
+      <div class="tiny">All trademarks belong to their owners. Aggregated signals are used strictly for lead scoring and never resold.</div>
+    </section>
+
+    <section class="card">
+      <h3>Legal & Contact</h3>
+      <ul>
+        <li><a href="./privacy.html">Privacy</a> • <a href="./terms.html">Terms</a> • <a href="./404.html">Status / 404</a></li>
+        <li>Support: <a href="mailto:support@galactly.example">support@galactly.example</a></li>
+      </ul>
+      <div class="hr"></div>
+      <div class="kv"><div class="k">Build</div><div class="v" id="build">–</div></div>
+      <div class="kv"><div class="k">Commit</div><div class="v" id="sha">–</div></div>
+    </section>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>Attribution</h3>
+    <ul>
+      <li>Signal detection heuristics inspired by public docs from analytics pixels and ecommerce platforms.</li>
+      <li>No paid data brokers. We operate on first-party inputs + crawlable public metadata with respectful timeouts.</li>
+    </ul>
+    <div class="hr"></div>
+    <div class="right">
+      <a class="btn" href="./index.html">Back to site</a>
+      <button class="btn" id="rehydrate">Re-check backend</button>
+    </div>
+  </div>
+
+  <div class="tiny" style="margin-top:10px">
+    © <span id="yr"></span> Galactly. Built for packaging suppliers to find qualified buyers with minimal noise.
+  </div>
+</div>
+
+<script>
+  // Small utility to show live backend state on credits page
+  const API = location.origin.replace(/\/+$/,'');
+  const $  = s => document.querySelector(s);
+
+  function set(id, val){ const el=$(id); if(!el) return; el.textContent = val; }
+  function fmt(obj){ try{ return JSON.stringify(obj); } catch{ return String(obj); } }
+
+  async function jget(path){
+    try{
+      const r = await fetch(API + path, { headers: { "x-user-plan": localStorage.getItem("x-user-plan") || "free",
+                                                     "x-user-email": localStorage.getItem("x-user-email") || "" }});
+      if (!r.ok) return null;
+      return await r.json();
+    }catch{ return null; }
+  }
+
+  async function rehydrate(){
+    set("#bk","checking…"); set("#health","…"); set("#who","…");
+    const ping   = await jget("/api/ping");
+    const health = await jget("/api/health");
+    const who    = await jget("/api/v1/whoami");
+    set("#bk", ping ? "online" : "offline");
+    set("#health", health ? (health.service ? `${health.service} • rows:${health?.catalog?.total ?? "?"}` : "ok") : "n/a");
+    set("#who", who ? `${who.email || "(anon)"} • ${who.plan || "free"}` : "n/a");
+  }
+
+  document.getElementById("rehydrate").onclick = rehydrate;
+  document.getElementById("yr").textContent = String(new Date().getFullYear());
+  set("#build", window.BUILD_TAG || "dev");
+  set("#sha", (window.GIT_SHA || "").slice(0,7) || "—");
+  rehydrate();
+</script>
+</body>
+</html>
