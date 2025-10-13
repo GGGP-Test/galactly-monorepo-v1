@@ -3,148 +3,164 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Scoreboard</title>
+<title>Scoreboard — Buyers API</title>
 <style>
   :root{
     --bg:#0b0f14; --panel:#121822; --panel2:#0e141c; --card:#0f1724;
-    --ink:#e9f1f7; --mut:#90a7ba; --divider:#1b2531; --ring:#24435f;
-    --good:#38e08f; --warn:#ffd166; --bad:#ff6b6b; --accent:#6de1ff; --accentText:#082433;
+    --text:#e9f1f7; --muted:#8aa0b2; --divider:#1b2531; --ring:#24435f;
+    --accent:#6de1ff; --accentText:#082433; --ok:#38e08f; --warn:#ffd166; --bad:#ff6b6b;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,Segoe UI,Inter,Arial}
-  .wrap{max-width:1100px;margin:26px auto;padding:0 18px}
-  .top{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:10px 12px}
-  .sep{flex:1}
-  input[type=text]{flex:1;min-width:220px;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--ink);outline:none}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Inter,Arial}
+  .wrap{max-width:980px;margin:18px auto;padding:0 16px}
+  .card{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:12px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  label{font-size:13px;color:var(--muted)}
+  input[type=text]{flex:1;min-width:240px;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text);outline:none}
   input[type=text]:focus{border-color:#385dff66;box-shadow:0 0 0 4px #2a3f5a66}
-  button{border:1px solid var(--divider);background:#152333;color:#cfe0ee;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
-  button.primary{background:var(--accent);border:none;color:var(--accentText)}
-  .mut{color:var(--mut);font-size:13px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
-  .tile{background:var(--panel);border:1px solid var(--divider);border-radius:14px;padding:14px}
-  .k{color:var(--mut);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
-  .v{font-size:26px;font-weight:800}
-  .pct{font-size:14px;color:var(--mut)}
-  .list{margin-top:8px}
-  .chip{display:inline-block;margin:4px 6px 0 0;padding:6px 10px;border-radius:999px;background:#0f1a27;border:1px solid #1f2f41;font-size:12px;color:#cfe0ee}
-  .note{font-size:12px;color:var(--mut)}
-  .log{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0a121b;border:1px solid var(--divider);border-radius:10px;padding:8px;height:120px;overflow:auto;color:#a5bed1;margin-top:12px}
-  .warn{color:var(--warn)}
-  .good{color:var(--good)}
-  .bad{color:var(--bad)}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:10px 14px;border-radius:12px;border:1px solid var(--divider);background:#152333;color:#cfe0ee;cursor:pointer}
+  .btn.primary{background:var(--accent);border:none;color:var(--accentText);font-weight:800}
+  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px;display:inline-flex;gap:6px;align-items:center}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:10px}
+  thead th{font-size:12px;color:#90a7ba;text-align:left;padding:0 10px}
+  tbody td{background:var(--panel2);border:1px solid var(--divider);padding:12px 10px;vertical-align:top}
+  tbody td:first-child{border-radius:12px 0 0 12px}
+  tbody td:last-child{border-radius:0 12px 12px 0}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  .log{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0a121b;border:1px solid var(--divider);
+       border-radius:10px;padding:8px;max-height:160px;overflow:auto;color:#a5bed1;margin-top:10px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top">
-    <strong>Scoreboard</strong>
-    <input id="host" type="text" placeholder="brand or domain (e.g., acme.com)"/>
-    <button id="probe" class="primary">Probe</button>
-    <div class="sep"></div>
-    <button id="setApi">API</button>
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <strong>API Scoreboard Probe</strong>
+      <span id="apiBadge" class="pill">API: not set</span>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label for="apiBase">API base</label>
+      <input id="apiBase" type="text" placeholder="https://YOUR-SERVICE.code.run/api" />
+      <button id="saveApi" class="btn">Save</button>
+      <button id="pingBtn" class="btn">Ping</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label for="host">Host</label>
+      <input id="host" type="text" placeholder="example.com" />
+      <button id="warmBtn" class="btn">Warm preview</button>
+      <button id="scoreBtn" class="btn primary">Show scoreboard</button>
+    </div>
+    <div class="muted" id="status" style="margin-top:6px"></div>
   </div>
-  <div class="mut" style="margin:8px 4px">Shows KPIs for a target host via <code>/api/metrics/scoreboard?host=…&probe=1</code>. Resilient to missing fields.</div>
 
-  <div class="grid" id="cards">
-    <!-- Tiles populate here -->
+  <div class="card" style="margin-top:12px">
+    <table>
+      <thead><tr><th>Metric</th><th>Value</th><th>Note</th></tr></thead>
+      <tbody id="rows">
+        <!-- filled dynamically -->
+      </tbody>
+    </table>
+    <pre id="log" class="log" aria-live="polite"></pre>
   </div>
-
-  <pre id="httpLog" class="log" aria-live="polite"></pre>
 </div>
 
 <script>
 (function(){
-  const $ = s => document.querySelector(s);
-  const log = msg => { const now=new Date().toISOString().slice(11,19); $("#httpLog").textContent = `[${now}] ${msg}\n` + $("#httpLog").textContent; };
-  const LS = { api:"apiBase", lastHost:"sb.lastHost" };
+  /* ---------- helpers ---------- */
+  const $ = (q,r=document)=>r.querySelector(q);
+  const set = (el, txt, cls)=>{ el.textContent = txt; el.className = cls||""; };
+  const normHost = s => (s||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+  const store = { get:k=>localStorage.getItem(k)||"", set:(k,v)=>localStorage.setItem(k,v) };
 
-  function normHost(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); }
-  function getApiBase(){
-    const raw = localStorage.getItem(LS.api) || "";
-    let b = (raw||"").trim().replace(/\/+$/,"");
-    const m=b.match(/^(.*?)(?:\/api(?:\/.*)?)$/i); if (m) b = m[1];
-    return b ? (b + "/api") : (location.origin + "/api");
+  function normalizeApiBase(raw){
+    let b=(raw||"").trim(); if(!b) return "";
+    // allow root or /api; ensure we end with /api
+    b=b.replace(/\/+$/,"");
+    if(!/\/api$/i.test(b)) b=b+"/api";
+    return b;
   }
-  function setApiBase(v){ localStorage.setItem(LS.api, v || ""); }
+  function api(){ return normalizeApiBase(store.get("apiBase")||$("#apiBase").value); }
+  function badge(){ const b=api(); $("#apiBadge").textContent = b?("API: "+b.replace(/^https?:\/\//,"")):"API: not set"; }
 
-  async function jget(url){
-    const res = await fetch(url, { headers: { "Content-Type":"application/json" }});
-    const text = await res.text(); log(`${res.status} ${url}`);
-    try{ return JSON.parse(text); }catch{ return { ok:false, error:"bad_json", raw:text }; }
-  }
-
-  function pct(n){ const x = Number(n); return Number.isFinite(x) ? (x.toFixed(0) + "%") : "—"; }
-  function num(n){ const x = Number(n); return Number.isFinite(x) ? x.toLocaleString() : "—"; }
-
-  function tile(k, v, sub){
-    const div = document.createElement("div");
-    div.className = "tile";
-    div.innerHTML = `<div class="k">${k}</div><div class="v">${v}</div>${sub? `<div class="pct">${sub}</div>`:""}`;
-    return div;
-  }
-  function listTile(k, items){
-    const div = document.createElement("div");
-    div.className="tile";
-    div.innerHTML = `<div class="k">${k}</div><div class="list" id="list-${k}"></div>`;
-    const box = div.querySelector(".list");
-    (items||[]).slice(0,12).forEach(s=>{
-      const span=document.createElement("span"); span.className="chip"; span.textContent=String(s).trim();
-      box.appendChild(span);
-    });
-    return div;
+  async function getJSON(url){
+    const r = await fetch(url, {credentials:"omit"});
+    const t = await r.text();
+    try{ return { ok:r.ok, status:r.status, data: JSON.parse(t) }; }
+    catch{ return { ok:r.ok, status:r.status, data:t }; }
   }
 
-  function render(d){
-    const cards = $("#cards"); cards.innerHTML="";
-    if (!d || d.ok===false){
-      cards.appendChild(tile("Status", "—", "No data (check host or API)"));
-      return;
-    }
-    // Try to read common scoreboard fields; fall back gently.
-    const totalPages = d.pagesScanned || d.pages || d.kpis?.pages || d.kpi?.pages;
-    const buyers = d.buyersFound || d.buyers || d.kpis?.buyers || d.kpi?.buyers;
-    const hot = d.hot || d.kpis?.hot || 0;
-    const warm = d.warm || d.kpis?.warm || 0;
-    const cool = d.cool || d.kpis?.cool || 0;
-    const coverage = d.coveragePct || d.coverage || d.kpis?.coveragePct;
-    const confidence = d.confidencePct || d.confidence || d.kpis?.confidencePct;
-    const sectors = d.topSectors || d.kpis?.topSectors || d.top?.sectors || [];
-    const reasons = d.topReasons || d.kpis?.topReasons || d.reasonHints || [];
-
-    cards.appendChild(tile("Pages scanned", num(totalPages)));
-    cards.appendChild(tile("Buyers found", num(buyers)));
-    cards.appendChild(tile("HOT", num(hot)));
-    cards.appendChild(tile("WARM", num(warm)));
-    cards.appendChild(tile("COOL", num(cool)));
-    cards.appendChild(tile("Coverage", pct(coverage)));
-    cards.appendChild(tile("Confidence", pct(confidence)));
-    cards.appendChild(listTile("Top sectors", sectors));
-    cards.appendChild(listTile("Top reasons", reasons));
+  function log(line){
+    const el=$("#log");
+    const now=new Date().toISOString().slice(11,19);
+    el.textContent = `[${now}] ${line}\n` + el.textContent;
   }
 
-  async function probe(){
-    const host = normHost($("#host").value || localStorage.getItem(LS.lastHost) || "");
-    if (!host){ alert("Enter a host/domain"); return; }
-    localStorage.setItem(LS.lastHost, host);
-    const base = getApiBase();
-    const url = new URL(base + "/metrics/scoreboard");
-    url.searchParams.set("host", host);
-    url.searchParams.set("probe","1");
-    const data = await jget(url.toString());
-    render(data);
+  function renderScoreboard(obj){
+    const rows=$("#rows"); rows.innerHTML="";
+    const add=(k,v,note="")=>{
+      const tr=document.createElement("tr");
+      const td1=document.createElement("td"); td1.textContent=k;
+      const td2=document.createElement("td"); td2.textContent=(v==null?"-":String(v));
+      const td3=document.createElement("td"); td3.textContent=note;
+      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+      rows.appendChild(tr);
+    };
+    // very tolerant to shapes: {kpis:{…}} or direct
+    const src = obj?.kpis || obj || {};
+    Object.keys(src).forEach(k=> add(k, src[k]));
   }
 
-  $("#probe").addEventListener("click", probe);
-  $("#host").addEventListener("keydown",(e)=>{ if (e.key==="Enter") probe(); });
-  $("#setApi").addEventListener("click", ()=>{
-    const cur = (localStorage.getItem(LS.api)||"");
-    const v = prompt("API base (root or /api).", cur||"")||"";
-    if (v!=null) setApiBase(v);
+  /* ---------- actions ---------- */
+  $("#saveApi").addEventListener("click", ()=>{
+    const v = normalizeApiBase($("#apiBase").value);
+    if (v) store.set("apiBase", v);
+    badge();
+  });
+  $("#pingBtn").addEventListener("click", async ()=>{
+    const base = api(); if (!base){ set($("#status"), "Set API base first", "bad"); return; }
+    const u = base.replace(/\/api$/,"") + "/api/ping";
+    const {ok,status,data} = await getJSON(u);
+    set($("#status"), ok?"API reachable":"Ping failed "+status, ok?"ok":"bad");
+    log(`PING ${status} ${u}`);
   });
 
-  // boot
-  const last = localStorage.getItem(LS.lastHost)||"";
-  if (last) $("#host").value = last;
+  async function warm(){
+    const base = api(); const host = normHost($("#host").value);
+    if(!base){ set($("#status"), "Set API base first", "bad"); return; }
+    if(!host){ set($("#status"), "Enter a host", "bad"); return; }
+    const u = `${base}/metrics/preview?host=${encodeURIComponent(host)}&maxPages=12`;
+    const {ok,status,data} = await getJSON(u);
+    log(`PREVIEW ${status} ${u}`);
+    if (!ok){ set($("#status"), `Preview failed (${status}) ${data?.error||""}`, "warn"); return; }
+    set($("#status"), "Preview cached. Now fetch scoreboard…", "ok");
+  }
+  async function scoreboard(){
+    const base = api(); const host = normHost($("#host").value);
+    if(!base){ set($("#status"), "Set API base first", "bad"); return; }
+    if(!host){ set($("#status"), "Enter a host", "bad"); return; }
+    const u = `${base}/metrics/scoreboard?host=${encodeURIComponent(host)}&probe=1`;
+    const {ok,status,data} = await getJSON(u);
+    log(`SCORE ${status} ${u}`);
+    if (!ok){
+      // common cases: 404 until warmed; 429 quota
+      const msg = (data && (data.error||data.detail)) ? ` — ${data.error||data.detail}` : "";
+      set($("#status"), `Scoreboard not ready (${status})${msg}. Try Warm preview first.`, "warn");
+      return;
+    }
+    renderScoreboard(data);
+    set($("#status"), "Scoreboard ready.", "ok");
+  }
+
+  $("#warmBtn").addEventListener("click", warm);
+  $("#scoreBtn").addEventListener("click", scoreboard);
+
+  /* ---------- boot ---------- */
+  (function init(){
+    const b = store.get("apiBase")||"";
+    if (b) $("#apiBase").value = b;
+    badge();
+  })();
 })();
 </script>
 </body>
