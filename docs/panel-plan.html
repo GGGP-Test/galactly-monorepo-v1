@@ -3,33 +3,38 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Plan & Quotas — Galactly</title>
+<title>Plans & Quotas — Galactly</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --ink:#fff; --mut:#b9bfd4; --bg:#000; --panel:#0a0b10; --stroke:rgba(255,255,255,.10);
-    --good:#86f7d6; --accent:#57a4ff; --warn:#ffc857; --bad:#ff6b6b;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0;background:#000;color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
-  .wrap{max-width:880px;margin:40px auto;padding:24px}
-  .h1{font-family:Montserrat,Inter,sans-serif;font-weight:800;letter-spacing:.3px;font-size:28px;margin:0 0 12px}
-  .mut{color:var(--mut);font-size:13px}
-  .card{background:var(--panel);border:1px solid var(--stroke);border-radius:14px;padding:18px 18px 16px;margin-top:16px}
-  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .k{font-size:13px;color:var(--mut)}
-  .v{font-weight:800}
-  .sep{flex:1}
-  button{border:1px solid var(--stroke);background:#0b0d14;color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
-  button:hover{border-color:#2a66ff}
-  .ok{color:var(--good)}
-  .bad{color:var(--bad)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
-  input,select{background:#0b0d14;border:1px solid var(--stroke);border-radius:10px;padding:8px 10px;color:#fff}
-  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:#0b0d14;border:1px solid var(--stroke);padding:3px 6px;border-radius:6px}
-  .small{font-size:12px;color:var(--mut)}
+:root{
+  --ink:#fff; --mut:#b9bfd4; --bg:#000; --panel:#0a0b10; --stroke:rgba(255,255,255,.1);
+  --good:#86f7d6; --accent:#57a4ff; --warn:#ffc857; --bad:#ff6b6b; --vip:gold;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+.wrap{max-width:960px;margin:40px auto;padding:24px}
+.h1{font-family:Montserrat,Inter,sans-serif;font-weight:800;letter-spacing:.3px;font-size:28px;margin:0 0 12px}
+.mut{color:var(--mut);font-size:13px}
+.card{background:var(--panel);border:1px solid var(--stroke);border-radius:14px;padding:18px;margin-top:16px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.k{font-size:13px;color:var(--mut)}.v{font-weight:800}.sep{flex:1}
+button{border:1px solid var(--stroke);background:#0b0d14;color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+button:hover{border-color:var(--accent)}.ok{color:var(--good)}.bad{color:var(--bad)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+input,select{background:#0b0d14;border:1px solid var(--stroke);border-radius:10px;padding:8px 10px;color:#fff}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:#0b0d14;border:1px solid var(--stroke);
+  padding:3px 6px;border-radius:6px}
+.small{font-size:12px;color:var(--mut)}
+.plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:20px}
+.plan{background:var(--panel);border:1px solid var(--stroke);border-radius:12px;padding:18px;text-align:center}
+.plan h2{margin:0 0 4px;font-size:20px;font-weight:800;font-family:Montserrat}
+.plan .price{font-size:24px;font-weight:700;margin:6px 0}
+.plan ul{list-style:none;padding:0;margin:10px 0;text-align:left;font-size:13px;color:var(--mut)}
+.plan li{margin:3px 0}
+.plan .btn{display:inline-block;margin-top:10px;padding:9px 14px;border-radius:8px;background:var(--accent);color:#fff;font-weight:700;text-decoration:none}
+.plan.vip{border-color:var(--vip)}
 </style>
 </head>
 <body>
@@ -39,7 +44,7 @@
 
   <div class="card" id="dev">
     <div class="row">
-      <div class="k">Dev headers (optional):</div>
+      <div class="k">Dev headers:</div>
       <input id="email" placeholder="x-user-email (dev only)"/>
       <select id="plan">
         <option value="">auto</option>
@@ -56,111 +61,110 @@
 
   <div class="card">
     <div class="grid">
-      <div>
-        <div class="k">Email</div>
-        <div class="v" id="whoEmail">…</div>
-      </div>
-      <div>
-        <div class="k">Plan</div>
-        <div class="v" id="whoPlan">…</div>
-      </div>
-      <div>
-        <div class="k">Daily limit</div>
-        <div class="v" id="limit">…</div>
-      </div>
-      <div>
-        <div class="k">Used today</div>
-        <div class="v" id="used">…</div>
-      </div>
-      <div>
-        <div class="k">Remaining</div>
-        <div class="v" id="remaining">…</div>
-      </div>
-      <div>
-        <div class="k">Backend</div>
-        <div class="v" id="backend">…</div>
-      </div>
+      <div><div class="k">Email</div><div class="v" id="whoEmail">…</div></div>
+      <div><div class="k">Plan</div><div class="v" id="whoPlan">…</div></div>
+      <div><div class="k">Daily limit</div><div class="v" id="limit">…</div></div>
+      <div><div class="k">Used today</div><div class="v" id="used">…</div></div>
+      <div><div class="k">Remaining</div><div class="v" id="remaining">…</div></div>
+      <div><div class="k">Backend</div><div class="v" id="backend">…</div></div>
     </div>
     <div class="row" style="margin-top:14px">
       <button id="upgradePro">Upgrade to Pro</button>
       <button id="upgradeBundle">Upgrade to Bundle</button>
       <div class="sep"></div>
-      <span class="small">Returns Stripe Checkout link using <code>/api/v1/onboard?plan=…</code>.</span>
+      <span class="small">Uses <code>/api/v1/onboard?plan=…</code> to create Stripe Checkout links.</span>
     </div>
     <div class="small" id="msg" style="margin-top:10px"></div>
   </div>
+
+  <div class="h1" style="margin-top:40px">Available Plans</div>
+  <div class="mut">Upgrade anytime for more daily scans and lead intelligence depth.</div>
+  <div class="plan-grid" id="plans"></div>
 </div>
 
 <script>
-const API = location.origin; // same origin (GitHub Pages → CORS to backend if configured)
+const API = location.origin;
 const qs = Object.fromEntries(new URLSearchParams(location.search).entries());
 const $ = sel => document.querySelector(sel);
 
-function devHeaders() {
+function devHeaders(){
   const email = localStorage.getItem("x-user-email") || "";
   const plan  = localStorage.getItem("x-user-plan")  || "";
   const h = {};
-  if (email) h["x-user-email"] = email;
-  if (plan)  h["x-user-plan"]  = plan;
+  if(email) h["x-user-email"]=email;
+  if(plan)  h["x-user-plan"]=plan;
   return h;
 }
-function setStatus(t){ $("#msg").textContent = t || ""; }
+function setStatus(t){ $("#msg").textContent=t||""; }
 
 async function jget(path){
-  const res = await fetch(API + path, { headers: devHeaders() });
+  const res=await fetch(API+path,{headers:devHeaders()});
   return res.json();
 }
-async function jpost(path, body){
-  const res = await fetch(API + path, {
+async function jpost(path,body){
+  const res=await fetch(API+path,{
     method:"POST",
-    headers: { "Content-Type":"application/json", ...devHeaders() },
-    body: JSON.stringify(body||{})
+    headers:{"Content-Type":"application/json",...devHeaders()},
+    body:JSON.stringify(body||{})
   });
   return res.json();
 }
 
 async function refresh(){
   setStatus("Loading whoami/limits…");
-  const who = await jget("/api/v1/whoami");
-  const lim = await jget("/api/v1/limits");
-  $("#whoEmail").textContent = who?.email || "(unknown)";
-  $("#whoPlan").textContent  = who?.plan || "(free)";
-  $("#limit").textContent    = lim?.limit ?? "–";
-  $("#used").textContent     = lim?.used ?? "–";
-  $("#remaining").textContent= lim?.remaining ?? "–";
-  $("#backend").textContent  = lim?.backend || "–";
-
-  if (lim?.ok === false) {
-    setStatus("Limits error: " + (lim?.error || "unknown"));
-  } else {
-    setStatus("");
-  }
+  const who=await jget("/api/v1/whoami");
+  const lim=await jget("/api/v1/limits");
+  $("#whoEmail").textContent=who?.email||"(unknown)";
+  $("#whoPlan").textContent=who?.plan||"(free)";
+  $("#limit").textContent=lim?.limit??"–";
+  $("#used").textContent=lim?.used??"–";
+  $("#remaining").textContent=lim?.remaining??"–";
+  $("#backend").textContent=lim?.backend||"–";
+  if(lim?.ok===false) setStatus("Limits error: "+(lim?.error||"unknown")); else setStatus("");
 }
 
-$("#save").onclick = () => {
-  const email = $("#email").value.trim();
-  const plan  = $("#plan").value.trim();
-  if (email) localStorage.setItem("x-user-email", email); else localStorage.removeItem("x-user-email");
-  if (plan)  localStorage.setItem("x-user-plan",  plan);  else localStorage.removeItem("x-user-plan");
+$("#save").onclick=()=>{const e=$("#email").value.trim();const p=$("#plan").value.trim();
+  if(e)localStorage.setItem("x-user-email",e);else localStorage.removeItem("x-user-email");
+  if(p)localStorage.setItem("x-user-plan",p);else localStorage.removeItem("x-user-plan");
   refresh();
 };
-
-$("#upgradePro").onclick = async () => {
-  setStatus("Creating Checkout for Pro…");
-  const r = await jpost("/api/v1/onboard?plan=pro", {});
-  if (r?.url) { location.href = r.url; return; }
+$("#upgradePro").onclick=async()=>{setStatus("Creating Checkout for Pro…");
+  const r=await jpost("/api/v1/onboard?plan=pro",{});if(r?.url){location.href=r.url;return;}
   setStatus("Could not create Checkout (backend did not return url).");
 };
-$("#upgradeBundle").onclick = async () => {
-  setStatus("Creating Checkout for Bundle…");
-  const r = await jpost("/api/v1/onboard?plan=bundle", {});
-  if (r?.url) { location.href = r.url; return; }
+$("#upgradeBundle").onclick=async()=>{setStatus("Creating Checkout for Bundle…");
+  const r=await jpost("/api/v1/onboard?plan=bundle",{});if(r?.url){location.href=r.url;return;}
   setStatus("Could not create Checkout (backend did not return url).");
 };
 
 // Prefill dev controls
-$("#email").value = localStorage.getItem("x-user-email") || (qs.email || "");
-$("#plan").value  = localStorage.getItem("x-user-plan")  || (qs.plan  || "");
+$("#email").value=localStorage.getItem("x-user-email")||(qs.email||"");
+$("#plan").value=localStorage.getItem("x-user-plan")||(qs.plan||"");
+
+// Plan cards
+const plans=[
+  {id:"free",name:"Free",price:"$0",features:["25 scans/day","Basic lead view"],cta:"Stay Free"},
+  {id:"pro",name:"Pro",price:"$39/mo",features:["200 scans/day","Priority ranking","Email export"],cta:"Upgrade to Pro"},
+  {id:"bundle",name:"Bundle",price:"$79/mo",features:["800 scans/day","Multi-domain","Automation access"],cta:"Upgrade to Bundle"},
+  {id:"vip",name:"VIP",price:"$149/mo",features:["5 000 scans/day","Dedicated AI tuning","Early features"],cta:"Join VIP"}
+];
+const grid=document.getElementById("plans");
+const api=(localStorage.getItem("apiBase")||location.origin)+"/api/v1/onboard";
+plans.forEach(p=>{
+  const el=document.createElement("div");
+  el.className="plan"+(p.id==="vip"?" vip":"");
+  el.innerHTML=`<h2>${p.name}</h2><div class="price">${p.price}</div>
+    <ul>${p.features.map(f=>`<li>${f}</li>`).join("")}</ul>
+    <a class="btn" href="#">${p.cta}</a>`;
+  el.querySelector(".btn").onclick=async e=>{
+    e.preventDefault();
+    const r=await fetch(`${api}?plan=${p.id}`,{method:"POST",headers:{"Content-Type":"application/json"}});
+    const j=await r.json();
+    if(j?.url)location.href=j.url;else alert("Checkout unavailable.");
+  };
+  grid.appendChild(el);
+});
+
 refresh();
 </script>
 </body>
