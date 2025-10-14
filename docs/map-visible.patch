@@ -1,44 +1,50 @@
 diff --git a/docs/index.html b/docs/index.html
-index 1111111..2222222 100644
+index 0000000..0000001 100644
 --- a/docs/index.html
 +++ b/docs/index.html
-@@ -118,6 +118,42 @@
-   .domainTag{
-     position:absolute;z-index:2;left:14px;top:14px;padding:6px 10px;border-radius:999px;font-size:12px;
-     background:rgba(230,195,107,.12);color:var(--gold-300);border:1px solid rgba(230,195,107,.25)
+@@ -1,9999 +1,9999 @@
+*** Start of context to help placement (unchanged lines just give the patch an anchor) ***
+   /* Reduced motion */
+   @media (prefers-reduced-motion: reduce){
+     #heroFx{display:none}
+     #constFx{display:none}
+     .btn{transition:none}
    }
-+
 +  /* ---------- MAP CSS (Your Company → Competitors / Metrics / Partners) ---------- */
-+  /* GALACTLY:START map-css */
-+  #map{padding:3.5rem 1.25rem 4rem}
++  #map{padding:3.5rem 0 0}
 +  .map-wrap{
-+    position:relative; max-width:1140px; margin:0 auto; border-radius:18px; overflow:hidden; isolation:isolate;
++    position:relative; max-width:1140px; margin:0 auto; height:520px;
++    border-radius:18px; overflow:hidden; isolation:isolate;
 +    background:linear-gradient(180deg,#0b121d,#0b1119);
-+    box-shadow:0 0 0 1px rgba(255,255,255,.06) inset, 0 20px 60px rgba(0,0,0,.45);
-+    padding:28px;
++    box-shadow:0 0 0 1px var(--stroke) inset, 0 22px 60px rgba(0,0,0,.35);
 +  }
++  #mapFx{position:absolute; inset:0; z-index:0}
 +  .map-label{
-+    position:absolute; z-index:1; top:14px; left:14px; font-size:12px; padding:6px 10px; border-radius:999px;
-+    background:rgba(230,195,107,.12); color:var(--gold-300); border:1px solid rgba(230,195,107,.25)
++    position:absolute; z-index:2; top:12px; left:12px;
++    padding:6px 10px; border-radius:999px; font-size:12px;
++    background:rgba(230,195,107,.12); color:var(--gold-300);
++    border:1px solid rgba(230,195,107,.25)
 +  }
 +  .map-cols{
-+    display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:18px;
++    position:relative; z-index:1;
++    display:grid; grid-template-columns:repeat(3,1fr); gap:18px;
++    padding:72px 18px 72px;
 +  }
-+  @media (max-width:900px){ .map-cols{grid-template-columns:1fr; gap:16px} }
-+  .map-col{background:rgba(255,255,255,.03); border:1px solid var(--stroke); border-radius:14px; padding:16px}
-+  .map-h{margin:0 0 8px; font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
-+  .map-list{margin:0; padding:0 0 0 18px; color:#cfe0ee}
-+  .map-cta{margin-top:18px; display:flex; gap:12px; flex-wrap:wrap}
-+  /* GALACTLY:END map-css */
-+
-   /* GALACTLY:START modal-css */
-   .modal{position:fixed;inset:0;background:rgba(6,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
-   .modal.show{display:flex}
-@@ -248,6 +284,45 @@
-   </section>
++  @media (max-width:900px){ .map-cols{grid-template-columns:1fr; padding:60px 16px 72px} }
++  .map-col{
++    background:rgba(255,255,255,.03);
++    border:1px solid var(--stroke); border-radius:14px; padding:14px;
++  }
++  .map-h{margin:0 0 8px; font:600 16px Inter,system-ui,sans-serif; color:#e9f1f7}
++  .map-col ul{margin:0; padding-left:18px; color:#9bb2c8; font-size:14px}
++  .map-cta{position:absolute; inset:auto 0 12px 0; display:flex; justify-content:center; z-index:2}
+ </style>
+*** End of context for placement ***
+@@ -1,9999 +1,9999 @@
+*** Start of second anchor (hero end to place HTML after) ***
    <!-- GALACTLY:END hero -->
  
-+  <!-- ---------- MAP SECTION (Your Company → Competitors / Metrics / Partners) ---------- -->
++  <!-- MAP SECTION (Your Company → Competitors / Metrics / Partners) -->
 +  <!-- GALACTLY:START map -->
 +  <section id="map" aria-label="Company map">
 +    <div class="map-wrap">
@@ -47,38 +53,40 @@ index 1111111..2222222 100644
 +      <div class="map-cols">
 +        <div class="map-col">
 +          <h3 class="map-h">Competitors</h3>
-+          <ul class="map-list">
++          <ul>
 +            <li>Top 5 overlap</li>
 +            <li>Share-of-voice trend</li>
 +            <li>Ad cadence</li>
 +          </ul>
 +        </div>
++
 +        <div class="map-col">
 +          <h3 class="map-h">Metrics</h3>
-+          <ul class="map-list">
-+            <li>Intent signals</li>
-+            <li>Win-rate lift</li>
-+            <li>Time-to-first-meeting</li>
++          <ul>
++            <li>Verified companies</li>
++            <li>Hot leads</li>
++            <li>CSAT lift</li>
 +          </ul>
 +        </div>
++
 +        <div class="map-col">
 +          <h3 class="map-h">Partners</h3>
-+          <ul class="map-list">
-+            <li>Distributors</li>
++          <ul>
++            <li>Preferred shippers</li>
 +            <li>Co-packers</li>
-+            <li>Certifications</li>
++            <li>Compliance</li>
 +          </ul>
 +        </div>
 +      </div>
 +
 +      <div class="map-cta">
-+        <a href="#get-started" class="btn primary">Start free</a>
-+        <a href="free-panel.html" class="btn ghost">Try the demo</a>
++        <a class="btn primary" href="#get-started">Start Free</a>
 +      </div>
++
++      <canvas id="mapFx" aria-hidden="true"></canvas>
 +    </div>
 +  </section>
 +  <!-- GALACTLY:END map -->
 +
+*** End of second anchor ***
    <!-- MODAL (Onboarding Step 1–2) -->
-   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
-     <div class="card" role="document">
