@@ -935,6 +935,201 @@
     if (!noMotion) requestAnimationFrame(tick);
   })();
 
+  /* =============== SECTION 3: ORBIT — SPLIT 3 (interactions & content) =============== */
+  (function(){
+    const stage = document.getElementById("orbitStage");
+    const card  = document.getElementById("orbitCard");
+    if (!stage || !card) return;
+
+    // references from Split 1
+    const cardTitle = document.getElementById("orbitCardTitle");
+    const cardMeta  = document.getElementById("orbitCardMeta");
+    const cardList  = document.getElementById("orbitCardList");
+    const cardBig   = document.getElementById("orbitCardBig");
+    const closeBtn  = document.getElementById("orbitClose");
+
+    // nodes created in Split 2
+    const nodes = Array.from(stage.querySelectorAll(".orbit-node"));
+
+    // rotation loop from Split 2 runs inside its own IIFE; we’ll politely pause it
+    // We can pause by toggling a data attr the Split 2 loop reads (angle delta = 0)
+    // To keep Split 2 unchanged, we’ll temporarily override requestAnimationFrame usage by setting a flag on stage.
+    function setPaused(v){
+      stage.dataset.paused = v ? "1" : "0";
+    }
+
+    // Hijack layout by dispatching a custom event Split 2 listens to? We didn’t add one, so we’ll recalc positions here when we center.
+    // Helper: compute center position for a node index on its ring to bring it near the top (12 o’clock)
+    function centerNode(el){
+      // Move the clicked node to visual "front/top" by setting a transform hint (not layout-breaking).
+      nodes.forEach(n => n.classList.remove("active"));
+      el.classList.add("active");
+    }
+
+    // Content model (titles + concise bullets)
+    const content = {
+      competition: {
+        title: "Competition",
+        meta: "Signals from buyers’ current suppliers",
+        bullets: [
+          "Top suppliers buyers already work with",
+          "Shared traits across those suppliers (materials, formats, MOQs)",
+          "Repeat purchase patterns & partnership depth",
+          "Public directories & spec footprints cross-checked"
+        ],
+        big: "Learn from competitors’ buyers to match fit faster."
+      },
+      buyers: {
+        title: "Buyers",
+        meta: "Real demand signals across the web",
+        bullets: [
+          "Estimated demand from launches & merchandising velocity",
+          "Creative volume across platforms (non-ad phrasing)",
+          "Marketing intensity & campaign cadence",
+          "Search intent & keyword trails for packaging terms",
+          "Event & trade-show activity; product news & PR"
+        ],
+        big: "We scan the web every 30 seconds for fresh buyer signals."
+      },
+      rfp: {
+        title: "RFPs & Docs",
+        meta: "Document-level activity",
+        bullets: [
+          "New RFPs spotted in public channels",
+          "Spec sheets & technical doc downloads",
+          "Document change frequency & recency",
+          "Approval and vendor-list references"
+        ],
+        big: "Surface readiness: who’s actively specifying packaging."
+      },
+      buzz: {
+        title: "Market Buzz",
+        meta: "Momentum & conversation",
+        bullets: [
+          "Mentions & product posts across official channels",
+          "Launch announcements and retail rollout notes",
+          "Category trend velocity vs. baseline",
+          "Peer signals in neighboring SKUs"
+        ],
+        big: "Context around buyers—minus the noise."
+      },
+      hiring: {
+        title: "Hiring",
+        meta: "Team signals",
+        bullets: [
+          "Open roles in ops & procurement",
+          "Manufacturing & packaging engineer postings",
+          "Sourcing titles trending by region",
+          "Org changes indicating scale-up"
+        ],
+        big: "Hiring shifts often precede purchasing."
+      },
+      heat: {
+        title: "Buyer Heat",
+        meta: "Quality tiers explained",
+        bullets: [
+          "Cool: in-audience, low immediacy",
+          "Warm: verified demand & active exploration",
+          "Hot: time-sensitive purchase behavior",
+          "Hot+: VIP buyers—we can sell for you, automatically"
+        ],
+        big: "Prioritized tiers so your team acts at the right moment."
+      }
+    };
+
+    // Render the side card
+    function openCard(kind){
+      const c = content[kind];
+      if (!c) return;
+      cardTitle.textContent = c.title;
+      cardMeta.textContent  = c.meta;
+
+      // bullets
+      cardList.innerHTML = "";
+      c.bullets.forEach(b=>{
+        const li = document.createElement("li");
+        li.textContent = b;
+        cardList.appendChild(li);
+      });
+
+      cardBig.textContent = c.big;
+
+      card.hidden = false;
+      card.setAttribute("aria-hidden","false");
+      setPaused(true);
+
+      // mobile behavior: ensure card is visible on small screens
+      const cardRect = card.getBoundingClientRect();
+      const needsScroll = (cardRect.top < 70 || cardRect.bottom > innerHeight);
+      if (needsScroll){
+        const section = document.getElementById("orbit");
+        section && section.scrollIntoView({ behavior:"smooth", block:"start" });
+      }
+    }
+
+    function closeCard(){
+      card.hidden = true;
+      card.setAttribute("aria-hidden","true");
+      setPaused(false);
+      nodes.forEach(n=>n.classList.remove("active"));
+    }
+
+    // Click handling
+    nodes.forEach(el=>{
+      el.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        const id = el.dataset.id;
+        if (!id) return;
+        // toggle behavior
+        if (!card.hidden && el.classList.contains("active")){
+          closeCard();
+          return;
+        }
+        centerNode(el);
+        openCard(id);
+      });
+    });
+
+    // Close on background click or Esc
+    stage.addEventListener("click", (e)=>{
+      // click on empty canvas area (not on a node)
+      if (!(e.target instanceof HTMLElement)) return;
+      if (e.target.classList.contains("orbit-node")) return;
+      if (!card.hidden) closeCard();
+    });
+
+    closeBtn.addEventListener("click",(e)=>{ e.stopPropagation(); closeCard(); });
+
+    document.addEventListener("keydown",(e)=>{
+      if (e.key === "Escape" && !card.hidden) closeCard();
+    });
+
+    // Basic keyboard focus ring for nodes
+    nodes.forEach(n=>{
+      n.setAttribute("tabindex","0");
+      n.addEventListener("keydown",(e)=>{
+        if (e.key==="Enter" || e.key===" "){
+          e.preventDefault();
+          n.click();
+        }
+      });
+    });
+
+    // Keep host label in center sync if LS changes mid-session
+    window.addEventListener("storage",(e)=>{
+      if (e.key==="onb.seed"){
+        try{
+          const data = JSON.parse(e.newValue||"{}");
+          const host = data?.host || "";
+          const hostOut = document.getElementById("orbitHost");
+          const domain  = document.getElementById("orbitDomain");
+          if (hostOut) hostOut.textContent = host || "yourcompany.com";
+          if (domain)  domain.textContent  = host || "yourcompany.com";
+        }catch{}
+      }
+    });
+  })();
+  /* ======================= END SECTION 3: interactions ======================= */
   // boot modal to step 0
   show(0);
 })();
