@@ -21,6 +21,7 @@
     /* Core theme */
     --bg:#0a0e14;            /* page background */
     --panel:#101623;         /* cards */
+    --panel-alt:#0f1622;     /* softer panel */
     --stroke:#1b2531;        /* subtle borders */
     --text:#e9f1f7;          /* main text */
     --muted:#91a6b8;         /* secondary text */
@@ -123,6 +124,38 @@
     background:rgba(230,195,107,.12);color:var(--gold-300);border:1px solid rgba(230,195,107,.25)
   }
 
+  /* ========= SECTION 2: PROOF / COUNTERS ========= */
+  .section{border-top:1px solid var(--stroke); padding:72px 16px}
+  .section .inner{max-width:1140px; margin:0 auto}
+  .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
+  .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
+  .section-hd .sub{color:var(--muted);font-size:14px}
+  .proof-wrap{background:linear-gradient(180deg,#0d1520,#0c141f);border:1px solid var(--stroke);border-radius:16px;padding:16px}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:12px}
+  @media (max-width:900px){ .kpi-grid{grid-template-columns:repeat(2, minmax(0,1fr))} }
+  @media (max-width:520px){ .kpi-grid{grid-template-columns:1fr} }
+
+  .kpi{
+    height:140px; /* fixed height → no layout shift */
+    background:var(--panel);
+    border:1px solid var(--stroke);
+    border-radius:14px;
+    padding:14px;
+    display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+  }
+  .kpi .label{font-size:12px; color:#9db2c5; letter-spacing:.2px; text-transform:uppercase}
+  .kpi .num{
+    font-weight:800; font-size:clamp(22px,6vw,36px); line-height:1.05;
+    background:linear-gradient(180deg, var(--gold-300), var(--gold-700));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    margin-top:6px;
+  }
+  .kpi .hint{font-size:12px;color:#7fa1b9;margin-top:6px}
+
+  .proof-cta{display:flex;justify-content:flex-end;margin-top:14px}
+  .btn.small{padding:10px 14px;font-size:14px}
+
   /* MODAL */
   .modal{position:fixed;inset:0;background:rgba(6,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
   .modal.show{display:flex}
@@ -223,6 +256,45 @@
     </div>
   </section>
   <!-- GALACTLY:END hero -->
+
+  <!-- ===== SECTION 2: PROOF / COUNTERS (new) ===== -->
+  <section class="section" id="proof" aria-label="Proof">
+    <div class="inner">
+      <div class="section-hd">
+        <h2>Proof it works — for <span id="proofHost" style="color:var(--gold-300)"></span></h2>
+        <div class="sub">Signals → Verified companies → Hot leads → Time-to-first lead</div>
+      </div>
+
+      <div class="proof-wrap">
+        <div class="kpi-grid" id="kpiGrid">
+          <div class="kpi">
+            <div class="label">Signals captured</div>
+            <div class="num" data-to="42000" data-format="int">0</div>
+            <div class="hint">From your site + public sources</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Verified companies</div>
+            <div class="num" data-to="1306" data-format="int">0</div>
+            <div class="hint">Auto-deduped + enriched</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Hot leads this week</div>
+            <div class="num" data-to="87" data-format="int">0</div>
+            <div class="hint">High-intent fit, ranked</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Time to first lead</div>
+            <div class="num" data-to="2.3" data-format="dec1">0</div>
+            <div class="hint">Days from kickoff to signal</div>
+          </div>
+        </div>
+
+        <div class="proof-cta">
+          <button class="btn primary small" id="proofStart">✨ Start Free</button>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- MODAL (Onboarding Step 1–2) -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
@@ -486,7 +558,6 @@
         const n = candidates[Math.floor(Math.random()*candidates.length)];
         if (!n) break;
         highlights.push(n);
-        // remove chosen to avoid duplicates
         const idx = candidates.indexOf(n); if (idx>=0) candidates.splice(idx,1);
       }
       // position mini cards near highlights
@@ -496,7 +567,7 @@
         el.style.left = (p.x + (i===1? -24: 18)) + "px";
         el.style.top  = (p.y + (i===2?  24: -18)) + "px";
         const d = cardData[(Math.random()*cardData.length)|0];
-        const nEl = el.querySelector(".v"); // first .v is name
+        const nEl = el.querySelector(".v");
         if (nEl) nEl.textContent = d.name;
         const cityEl = el.querySelectorAll(".v")[1];
         if (cityEl) cityEl.textContent = d.city;
@@ -504,7 +575,7 @@
     }
 
     function step(dt){
-      for (let i=1;i<nodes.length;i++){ // skip anchor at 0
+      for (let i=1;i<nodes.length;i++){
         const n = nodes[i];
         n.x += n.vx*dt; n.y += n.vy*dt;
         if (n.x < 0) n.x = W;
@@ -515,15 +586,13 @@
     }
 
     function draw(){
+      const ctx = c.getContext("2d");
       ctx.clearRect(0,0,W,H);
-
-      // matrix glow
       const grad = ctx.createLinearGradient(0,0,W,H);
       grad.addColorStop(0, "rgba(230,195,107,0.06)");
       grad.addColorStop(1, "rgba(230,195,107,0.0)");
       ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
 
-      // connections within radius
       const R = 110;
       for (let i=0;i<nodes.length;i++){
         const a = nodes[i];
@@ -539,7 +608,6 @@
         }
       }
 
-      // anchor pulses + rays to highlights
       const anchor = nodes[0];
       const pulse = 8 + Math.sin(t*0.0022)*4;
       ctx.fillStyle="rgba(230,195,107,0.16)";
@@ -551,7 +619,6 @@
         ctx.beginPath(); ctx.moveTo(anchor.x,anchor.y); ctx.lineTo(h.x,h.y); ctx.stroke();
       });
 
-      // draw nodes
       for (const n of nodes){
         const r = n.anchor ? 4 : Math.max(1, 1.2*n.s);
         ctx.fillStyle = n.anchor ? "rgba(242,220,160,0.95)" : "rgba(230,195,107,0.75)";
@@ -561,7 +628,7 @@
 
     function loop(now){
       if (prev===0) prev=now;
-      const dt = Math.min(33, now - prev) * 0.06; // damped velocity
+      const dt = Math.min(33, now - prev) * 0.06;
       prev = now; t += dt;
       step(noMotion ? 0 : dt);
       draw();
@@ -573,12 +640,69 @@
     reset(); loop(0);
     addEventListener("resize", reset);
 
-    // initial domain tag from LS/email
     const d = (LS.getItem("onb.seed") && JSON.parse(LS.getItem("onb.seed")||"{}")?.host) || "";
     if (hostTag && d) hostTag.textContent = d;
   })();
 
-  // boot
+  // ------- Section 2: Proof counters (animate once, no layout shift) -------
+  (function(){
+    const section = document.getElementById("proof");
+    if (!section) return;
+
+    // personalize host label from LS/email
+    const hostOut = document.getElementById("proofHost");
+    try{
+      const seed = JSON.parse(LS.getItem("onb.seed")||"{}");
+      const host = seed?.host || "";
+      hostOut.textContent = host || "yourcompany.com";
+    }catch{ hostOut.textContent = "yourcompany.com"; }
+
+    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const nums = Array.from(section.querySelectorAll(".num"));
+    let fired = false;
+
+    function format(v, fmt){
+      if (fmt==="dec1") return v.toFixed(1);
+      const s = Math.round(v).toString();
+      return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    function animate(el){
+      const to = parseFloat(el.dataset.to||"0");
+      const fmt = el.dataset.format||"int";
+      if (noMotion){ el.textContent = format(to, fmt); return; }
+
+      const dur = 1200;
+      const start = performance.now();
+      function tick(now){
+        const p = Math.min(1, (now - start)/dur);
+        const ease = 1 - Math.pow(1-p, 3); // cubic out
+        const val = to * ease;
+        el.textContent = format(val, fmt);
+        if (p<1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if (!fired && e.isIntersecting){
+          fired = true;
+          nums.forEach(animate);
+          io.disconnect();
+        }
+      });
+    }, { root:null, threshold:0.35 });
+
+    io.observe(section);
+
+    // mirror CTA to open modal
+    const proofStart = document.getElementById("proofStart");
+    const openFromProof = ()=>{ const cta = document.getElementById("cta"); cta && cta.click(); };
+    proofStart && proofStart.addEventListener("click", openFromProof);
+  })();
+
+  // boot modal to step 0
   show(0);
 })();
 </script>
