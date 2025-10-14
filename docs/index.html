@@ -14,6 +14,8 @@
   - Gold aurora background
   - Right-side "Lead Constellation" → Your Website → Signal → Score → Buyers
   - CTA opens modal (steps 1–2), then redirect to step3.html
+
+  NOTE: Section 3 (Orbit) styles are fully scoped to .orbit-* to avoid touching other sections.
 -->
 
 <style>
@@ -124,8 +126,8 @@
     background:rgba(230,195,107,.12);color:var(--gold-300);border:1px solid rgba(230,195,107,.25)
   }
 
-  /* ========= SECTION 2: PROOF / COUNTERS ========= */
-  .section{border-top:1px solid var(--stroke); padding:72px 16px}
+  /* ========= SECTION 2: PROOF / COUNTERS (kept as-is) ========= */
+  .section{padding:72px 16px} /* no global borders to avoid visible seams */
   .section .inner{max-width:1140px; margin:0 auto}
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
   .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
@@ -134,9 +136,8 @@
   .kpi-grid{display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:12px}
   @media (max-width:900px){ .kpi-grid{grid-template-columns:repeat(2, minmax(0,1fr))} }
   @media (max-width:520px){ .kpi-grid{grid-template-columns:1fr} }
-
   .kpi{
-    height:140px; /* fixed height → no layout shift */
+    height:140px;
     background:var(--panel);
     border:1px solid var(--stroke);
     border-radius:14px;
@@ -152,11 +153,118 @@
     margin-top:6px;
   }
   .kpi .hint{font-size:12px;color:#7fa1b9;margin-top:6px}
-
   .proof-cta{display:flex;justify-content:flex-end;margin-top:14px}
   .btn.small{padding:10px 14px;font-size:14px}
 
-  /* MODAL */
+  /* ========= SECTION 3: ORBIT (scoped) ========= */
+  /* container */
+  .orbit-section{padding:80px 16px 96px}
+  .orbit-inner{max-width:1140px; margin:0 auto}
+  .orbit-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 0 16px}
+  .orbit-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
+  .orbit-hd .sub{color:var(--muted);font-size:14px}
+
+  /* panel */
+  .orbit-panel{
+    position:relative;
+    background:radial-gradient(120% 120% at 20% 10%, rgba(230,195,107,.06), rgba(11,17,25,1) 60%),
+               linear-gradient(180deg,#0d1520,#0c141f);
+    border:1px solid var(--stroke);
+    border-radius:16px;
+    overflow:hidden;
+    min-height:540px;
+    display:grid; place-items:center;
+    padding:18px;
+  }
+  @media (max-width:900px){ .orbit-panel{min-height:460px} }
+  @media (max-width:520px){ .orbit-panel{min-height:420px} }
+
+  /* rings */
+  .orbit-stage{
+    position:relative;
+    width:min(820px, 92vw);
+    height:min(820px, 92vw);
+    max-height:620px; max-width:620px;
+    border-radius:50%;
+    display:grid; place-items:center;
+    isolation:isolate;
+  }
+  .orbit-ring{
+    position:absolute; border-radius:50%;
+    border:1px solid rgba(255,255,255,.06);
+    inset:8%; pointer-events:none;
+  }
+  .orbit-ring.r2{inset:18%}
+  .orbit-ring.r3{inset:30%}
+  .orbit-ring.r4{inset:44%}
+
+  /* center nucleus */
+  .orbit-center{
+    position:relative; z-index:2;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    transform:translateZ(0);
+  }
+  .orbit-core{
+    width:72px; height:72px; border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, var(--gold-300) 0%, var(--gold) 35%, var(--gold-700) 70%);
+    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 14px 34px rgba(230,195,107,.18);
+  }
+  .orbit-domain{
+    font-size:12px; color:#cfe0ee; padding:6px 10px; border-radius:999px;
+    background:rgba(255,255,255,.05); border:1px solid var(--stroke);
+    white-space:nowrap;
+  }
+
+  /* nodes */
+  .orbit-node{
+    position:absolute; z-index:1;
+    width:44px; height:44px; border-radius:999px;
+    display:grid; place-items:center; cursor:pointer;
+    color:#0c0f14;
+    background:linear-gradient(180deg, var(--gold-300), var(--gold));
+    border:1px solid rgba(255,255,255,.35);
+    box-shadow:0 8px 22px rgba(0,0,0,.35);
+    transition:transform .35s ease, box-shadow .35s ease, opacity .35s ease;
+    user-select:none;
+  }
+  .orbit-node span{font-weight:700; font-size:11px; letter-spacing:.2px; color:#1b1405}
+  .orbit-node:hover{box-shadow:0 12px 30px rgba(0,0,0,.45); transform:scale(1.05)}
+  .orbit-node[data-size="l"]{width:56px;height:56px}
+  .orbit-node[data-size="s"]{width:38px;height:38px}
+
+  /* soft aura behind nodes */
+  .orbit-node::after{
+    content:""; position:absolute; inset:-8px; border-radius:inherit;
+    background:radial-gradient(circle, rgba(230,195,107,.28), rgba(230,195,107,0) 60%);
+    opacity:.35; transition:opacity .35s ease;
+  }
+  .orbit-node.is-related::after{opacity:.85}
+
+  /* info card (hidden by default; JS will position & show) */
+  .orbit-card{
+    position:absolute; z-index:4; width:min(320px, 86vw);
+    background:rgba(16,22,35,.9); backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.18); border-radius:14px;
+    box-shadow:0 18px 50px rgba(0,0,0,.45);
+    padding:12px 14px; transform:translate(-50%, -14px); display:none;
+  }
+  .orbit-card.show{display:block}
+  .orbit-card .kicker{display:flex;align-items:center;gap:8px;color:#a8bacb;font-size:11px;text-transform:uppercase;letter-spacing:.25px}
+  .orbit-card h3{margin:6px 0 6px;font:600 16px/1.2 "Newsreader", Georgia, serif}
+  .orbit-card ul{margin:8px 0 8px 16px;padding:0;color:#cfe0ee;font-size:13px}
+  .orbit-card li{margin:6px 0}
+  .orbit-card .heroMetric{
+    margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(230,195,107,.08);
+    border:1px solid rgba(230,195,107,.25); color:var(--gold-300); font-weight:700; font-size:13px;
+  }
+  .orbit-card .fine{color:#9db2c5;font-size:12px;margin-top:6px}
+
+  /* mobile safety: when card would overflow, let it center */
+  @media (max-width:700px){
+    .orbit-card{left:50%!important; top:auto!important; bottom:14px; transform:translate(-50%,0)}
+  }
+
+  /* MODAL (unchanged) */
   .modal{position:fixed;inset:0;background:rgba(6,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
   .modal.show{display:flex}
   .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--stroke);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
@@ -257,12 +365,12 @@
   </section>
   <!-- GALACTLY:END hero -->
 
-  <!-- ===== SECTION 2: PROOF / COUNTERS (new) ===== -->
+  <!-- ===== SECTION 2: PROOF / COUNTERS (unchanged) ===== -->
   <section class="section" id="proof" aria-label="Proof">
     <div class="inner">
       <div class="section-hd">
         <h2>Proof it works — for <span id="proofHost" style="color:var(--gold-300)"></span></h2>
-        <div class="sub">Signals → Verified companies → Hot leads → Time-to-first lead</div>
+        <div class="sub">Signals → Verified companies → Hot buyers → Time-to-first buyer</div>
       </div>
 
       <div class="proof-wrap">
@@ -278,12 +386,12 @@
             <div class="hint">Auto-deduped + enriched</div>
           </div>
           <div class="kpi">
-            <div class="label">Hot leads this week</div>
+            <div class="label">Hot buyers this week</div>
             <div class="num" data-to="87" data-format="int">0</div>
             <div class="hint">High-intent fit, ranked</div>
           </div>
           <div class="kpi">
-            <div class="label">Time to first lead</div>
+            <div class="label">Time to first buyer</div>
             <div class="num" data-to="2.3" data-format="dec1">0</div>
             <div class="hint">Days from kickoff to signal</div>
           </div>
@@ -296,7 +404,52 @@
     </div>
   </section>
 
-  <!-- MODAL (Onboarding Step 1–2) -->
+  <!-- ===== SECTION 3: ORBIT MAP (HTML scaffold only; JS arrives in Split 2/3) ===== -->
+  <section class="orbit-section" id="orbit" aria-label="Where your buyers light up">
+    <div class="orbit-inner">
+      <div class="orbit-hd">
+        <h2>Where your buyers light up</h2>
+        <div class="sub">Simple orbit map of the strongest intent signals for <span id="orbitHost" style="color:var(--gold-300)"></span></div>
+      </div>
+
+      <div class="orbit-panel">
+        <div class="orbit-stage" id="orbitStage">
+          <!-- concentric rings -->
+          <div class="orbit-ring r1"></div>
+          <div class="orbit-ring r2"></div>
+          <div class="orbit-ring r3"></div>
+          <div class="orbit-ring r4"></div>
+
+          <!-- center -->
+          <div class="orbit-center">
+            <div class="orbit-core" aria-hidden="true"></div>
+            <div class="orbit-domain" id="orbitDomain">yourcompany.com</div>
+          </div>
+
+          <!-- nodes (positions + interaction wired in Split 2/3) -->
+          <button class="orbit-node" data-id="competition" data-size="l"><span>Competition</span></button>
+          <button class="orbit-node" data-id="buyers"><span>Buyers</span></button>
+          <button class="orbit-node" data-id="rfp"><span>RFPs &amp; Docs</span></button>
+          <button class="orbit-node" data-id="buzz"><span>Market Buzz</span></button>
+          <button class="orbit-node" data-id="hiring" data-size="s"><span>Hiring</span></button>
+          <button class="orbit-node" data-id="heat" data-size="l"><span>Buyer&nbsp;Heat</span></button>
+
+          <!-- info card (single reused card; JS fills content & positions) -->
+          <div class="orbit-card" id="orbitCard" role="dialog" aria-modal="false" aria-live="polite">
+            <div class="kicker"><span>Signal</span><span id="cardTag">•</span></div>
+            <h3 id="cardTitle">Title</h3>
+            <ul id="cardList">
+              <li>Metric item</li>
+            </ul>
+            <div class="heroMetric" id="cardHero">Hero metric</div>
+            <div class="fine" id="cardFine"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+    <!-- MODAL (Onboarding Step 1–2) -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="card" role="document">
       <div class="card-hd">
@@ -454,6 +607,9 @@
     const d=domainFromEmail(emailEl.value);
     if (d) hostEl.value=d;
     const tag=$("#domainTag"); if (tag && (d || hostEl.value)) tag.textContent = d || hostEl.value || "YourCompany.com";
+    const orbitDomain=$("#orbitDomain"); const orbitHost=$("#orbitHost");
+    if (orbitDomain){ orbitDomain.textContent = (d || hostEl.value || "yourcompany.com"); }
+    if (orbitHost){ orbitHost.textContent = (d || hostEl.value || "yourcompany.com"); }
   }
   emailEl.addEventListener("input",syncDomain); emailEl.addEventListener("change",syncDomain); setTimeout(syncDomain, 80);
 
@@ -525,7 +681,7 @@
     const ctx = c.getContext("2d");
 
     let W=0,H=0, nodes=[], highlights=[], t=0;
-    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const noMotion2 = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     function reset(){
       const rect = wrap.getBoundingClientRect();
@@ -535,11 +691,10 @@
       c.style.width=W+"px"; c.style.height=H+"px";
       ctx.setTransform(DPR,0,0,DPR,0,0);
 
-      // Generate nodes (biased to right half for "market noise")
       const N = 42;
       nodes = [];
       for (let i=0;i<N;i++){
-        const x = 0.28 + Math.random()*0.68; // 28%..96% (right-weighted)
+        const x = 0.28 + Math.random()*0.68;
         const y = 0.06 + Math.random()*0.88;
         const s = 0.15 + Math.random()*0.85;
         const vx = (Math.random()-0.5) * 0.18;
@@ -547,11 +702,9 @@
         nodes.push({x:x*W, y:y*H, s, vx, vy});
       }
 
-      // Supplier anchor (left-center of panel)
       const anchor = { x: 0.18*W, y: 0.52*H };
       nodes.unshift({x:anchor.x, y:anchor.y, s:1.8, vx:0, vy:0, anchor:true });
 
-      // choose 3 highlights from far-right area
       const candidates = nodes.filter(n=>!n.anchor && n.x>W*0.52);
       highlights = [];
       for (let i=0;i<3;i++){
@@ -560,7 +713,6 @@
         highlights.push(n);
         const idx = candidates.indexOf(n); if (idx>=0) candidates.splice(idx,1);
       }
-      // position mini cards near highlights
       const cardPoints = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
       cardPoints.forEach((p, i)=>{
         const el = cards[i]?.el; if (!el) return;
@@ -586,7 +738,6 @@
     }
 
     function draw(){
-      const ctx = c.getContext("2d");
       ctx.clearRect(0,0,W,H);
       const grad = ctx.createLinearGradient(0,0,W,H);
       grad.addColorStop(0, "rgba(230,195,107,0.06)");
@@ -630,9 +781,9 @@
       if (prev===0) prev=now;
       const dt = Math.min(33, now - prev) * 0.06;
       prev = now; t += dt;
-      step(noMotion ? 0 : dt);
+      step(noMotion2 ? 0 : dt);
       draw();
-      if (!noMotion) requestAnimationFrame(loop);
+      if (!noMotion2) requestAnimationFrame(loop);
       else draw();
     }
 
@@ -644,12 +795,11 @@
     if (hostTag && d) hostTag.textContent = d;
   })();
 
-  // ------- Section 2: Proof counters (animate once, no layout shift) -------
+  // ------- Section 2: Proof counters (animate once) -------
   (function(){
     const section = document.getElementById("proof");
     if (!section) return;
 
-    // personalize host label from LS/email
     const hostOut = document.getElementById("proofHost");
     try{
       const seed = JSON.parse(LS.getItem("onb.seed")||"{}");
@@ -676,7 +826,7 @@
       const start = performance.now();
       function tick(now){
         const p = Math.min(1, (now - start)/dur);
-        const ease = 1 - Math.pow(1-p, 3); // cubic out
+        const ease = 1 - Math.pow(1-p, 3);
         const val = to * ease;
         el.textContent = format(val, fmt);
         if (p<1) requestAnimationFrame(tick);
@@ -696,10 +846,93 @@
 
     io.observe(section);
 
-    // mirror CTA to open modal
     const proofStart = document.getElementById("proofStart");
     const openFromProof = ()=>{ const cta = document.getElementById("cta"); cta && cta.click(); };
     proofStart && proofStart.addEventListener("click", openFromProof);
+  })();
+
+  // ================== SECTION 3: ORBIT — data + rotation/layout only ==================
+  (function(){
+    const stage = document.getElementById("orbitStage");
+    const card  = document.getElementById("orbitCard"); // hidden until Split 3
+    if (!stage) return;
+
+    // personalize center labels from LS/email
+    (function setHost(){
+      const hostOut = document.getElementById("orbitHost");
+      const domain  = document.getElementById("orbitDomain");
+      try{
+        const seed = JSON.parse(LS.getItem("onb.seed")||"{}");
+        const host = seed?.host || "";
+        if (hostOut) hostOut.textContent = host || "yourcompany.com";
+        if (domain)  domain.textContent  = host || "yourcompany.com";
+      }catch{
+        if (hostOut) hostOut.textContent = "yourcompany.com";
+        if (domain)  domain.textContent  = "yourcompany.com";
+      }
+    })();
+
+    // Node catalog (titles cleaned)
+    const nodes = [
+      { id:"competition", label:"Competition", ring:0.80, size:"l", energy:80 },
+      { id:"buyers",      label:"Buyers",      ring:0.80, size:"m", energy:70 },
+      { id:"rfp",         label:"RFPs & Docs", ring:0.64, size:"m", energy:60 },
+      { id:"buzz",        label:"Market Buzz", ring:0.50, size:"m", energy:55 },
+      { id:"hiring",      label:"Hiring",      ring:0.38, size:"s", energy:45 },
+      { id:"heat",        label:"Buyer Heat",  ring:0.28, size:"l", energy:85 }
+    ];
+
+    // Map buttons to nodes
+    const btns = nodes.map(n=>{
+      const el = stage.querySelector(`.orbit-node[data-id="${n.id}"]`);
+      if (el){ el.dataset.size = n.size; }
+      return { ...n, el };
+    }).filter(x=>x.el);
+
+    // rotation state (slow, premium)
+    let angle = 0;
+    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const center = { x: stage.clientWidth/2, y: stage.clientHeight/2 };
+    function resize(){
+      center.x = stage.clientWidth/2;
+      center.y = stage.clientHeight/2;
+      layout(0); // static layout on resize
+    }
+    window.addEventListener("resize", resize);
+
+    // layout helpers
+    function layout(delta){
+      angle = (angle + delta) % 360;
+      const TWO_PI = Math.PI*2;
+      const step = TWO_PI / btns.length;
+      btns.forEach((n, i)=>{
+        const base = i*step;
+        const a = base + (angle*Math.PI/180);
+        const radius = (Math.min(stage.clientWidth, stage.clientHeight)/2) * n.ring;
+        const x = center.x + radius * Math.cos(a);
+        const y = center.y + radius * Math.sin(a);
+        n.el.style.left = `${x}px`;
+        n.el.style.top  = `${y}px`;
+        // subtle depth via opacity
+        const depth = (Math.sin(a)+1)/2; // 0..1
+        n.el.style.opacity = String(0.55 + 0.45*depth);
+        n.el.style.zIndex = String(100 + Math.round(depth*50));
+      });
+    }
+
+    // animation loop (no interactions yet)
+    let prev=0;
+    function tick(now){
+      if (!prev) prev = now;
+      const dt = Math.min(33, now - prev);
+      prev = now;
+      layout(noMotion ? 0 : dt*0.006); // slow rotate
+      if (!noMotion) requestAnimationFrame(tick);
+    }
+
+    // initial paint
+    layout(0);
+    if (!noMotion) requestAnimationFrame(tick);
   })();
 
   // boot modal to step 0
