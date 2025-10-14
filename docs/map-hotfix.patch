@@ -1,0 +1,70 @@
+diff --git a/docs/index.html b/docs/index.html
+index 1111111..2222222 100644
+--- a/docs/index.html
++++ b/docs/index.html
+@@ -174,6 +174,20 @@
+     #constFx{display:none}
+     .btn{transition:none}
+   }
++  /* GALACTLY:START map-css */
++  .map{padding:3.5rem 1.25rem 4.5rem}
++  .map-wrap{position:relative;max-width:1140px;margin:0 auto;height:520px;border-radius:18px;overflow:hidden;isolation:isolate;background:linear-gradient(180deg,#0b121d,#0b1119);box-shadow:0 0 0 1px rgba(255,255,255,.07) inset}
++  .map-label{position:absolute;z-index:10;padding:8px 12px;border-radius:999px;background:rgba(230,195,107,.12);color:var(--gold-300);border:1px solid rgba(230,195,107,.25);font-size:12px}
++  .map-kpi{position:absolute;z-index:12;min-width:160px;max-width:220px;padding:10px 12px;border-radius:12px;background:rgba(12,18,28,.86);border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 24px rgba(0,0,0,.35)}
++  .map-kpi .k{font-size:11px;color:#9bb2c8}
++  .map-kpi .v{font-weight:800}
++  .map-cta{position:absolute;right:14px;bottom:14px;z-index:12}
++  #mapFx{position:absolute;inset:0;z-index:0}
++  /* GALACTLY:END map-css */
+ </style>
+ </head>
+ <body>
+@@ -249,6 +263,23 @@
+   </section>
+   <!-- GALACTLY:END hero -->
+ 
++  <!-- MAP SECTION (Your Company → Competitors / Metrics / Partners) -->
++  <section class="map" aria-label="From your company to the market">
++    <div class="map-wrap">
++      <canvas id="mapFx" aria-hidden="true"></canvas>
++      <div class="map-label" style="left:18px;top:18px">Your Company</div>
++      <div class="map-label" style="right:18px;top:22px">Competitors</div>
++      <div class="map-label" style="left:20px;bottom:22px">Metrics</div>
++      <div class="map-label" style="right:18px;bottom:22px">Partners</div>
++      <div class="map-kpi" style="left:34%;top:22%"><div class="k">Leads found</div><div class="v" id="kpi1">1,248</div></div>
++      <div class="map-kpi" style="left:53%;top:58%"><div class="k">Verified companies</div><div class="v" id="kpi2">782</div></div>
++      <div class="map-kpi" style="left:72%;top:34%"><div class="k">Hot leads</div><div class="v" id="kpi3">132</div></div>
++      <a class="map-cta btn primary" href="#get-started">Start free</a>
++    </div>
++  </section>
++
+   <!-- MODAL (Onboarding Step 1–2) -->
+   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+@@ -441,6 +472,27 @@
+     if (hostTag && d) hostTag.textContent = d;
+   })();
+ 
++  // ------- Map section (fixed-height, lightweight) -------
++  (function(){
++    const c = document.getElementById("mapFx");
++    if (!c) return;
++    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
++    const ctx = c.getContext("2d");
++    function size(){
++      const r=c.parentElement.getBoundingClientRect();
++      c.width=Math.floor(r.width*DPR); c.height=Math.floor(r.height*DPR);
++      c.style.width=r.width+"px"; c.style.height=r.height+"px";
++      ctx.setTransform(DPR,0,0,DPR,0,0);
++    }
++    size(); addEventListener("resize", size);
++    (function draw(){
++      const {width:w,height:h}=c; ctx.clearRect(0,0,w,h);
++      const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,"rgba(230,195,107,0.06)"); g.addColorStop(1,"rgba(230,195,107,0.0)");
++      ctx.fillStyle=g; ctx.fillRect(0,0,w,h); requestAnimationFrame(draw);
++    })();
++    const up=(el,n)=>{ if(!el) return; const T=800,s=performance.now(); function step(now){ const p=Math.min(1,(now-s)/T); el.textContent=Math.floor(n*p).toLocaleString(); if(p<1) requestAnimationFrame(step);} requestAnimationFrame(step); };
++    up(document.getElementById("kpi1"),1248); up(document.getElementById("kpi2"),782); up(document.getElementById("kpi3"),132);
++  })();
+   // boot
+   show(0);
+ })();
