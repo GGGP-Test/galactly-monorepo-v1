@@ -1,5 +1,7 @@
-*** Begin Patch
-*** Update File: docs/index.html
+diff --git a/docs/index.html b/docs/index.html
+index 1111111..2222222 100644
+--- a/docs/index.html
++++ b/docs/index.html
 @@
    .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
  
@@ -29,7 +31,7 @@
 +  .map-cta{display:flex; justify-content:center; margin:16px 0 0}
 +  /* GALACTLY:END map-css */
 +
-   /* Reduced motion */
+@@
    @media (prefers-reduced-motion: reduce){
      #heroFx{display:none}
      #constFx{display:none}
@@ -62,33 +64,7 @@
 +  </section>
 +  <!-- GALACTLY:END map -->
 +
-   <!-- MODAL (Onboarding Step 1–2) -->
-   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
-     <div class="card" role="document">
 @@
-       for (const n of nodes){
-         const r = n.anchor ? 4 : Math.max(1, 1.2*n.s);
-         ctx.fillStyle = n.anchor ? "rgba(242,220,160,0.95)" : "rgba(230,195,107,0.75)";
-         ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2); ctx.fill();
-       }
-     }
- 
-     function loop(now){
-       if (prev===0) prev=now;
-       const dt = Math.min(33, now - prev) * 0.06; // damped velocity
-       prev = now; t += dt;
-       step(noMotion ? 0 : dt);
-       draw();
-       if (!noMotion) requestAnimationFrame(loop);
-       else draw();
-     }
- 
-     let prev=0;
-     reset(); loop(0);
-     addEventListener("resize", reset);
- 
-     // initial domain tag from LS/email
-     const d = (LS.getItem("onb.seed") && JSON.parse(LS.getItem("onb.seed")||"{}")?.host) || "";
      if (hostTag && d) hostTag.textContent = d;
    })();
  
@@ -102,7 +78,7 @@
 +    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 +
 +    let W=0, H=0, t=0;
-+    const P = { cx:0, cy:0, rx:0, ty:0, my:0, by:0 }; // cached points
++    const P = { cx:0, cy:0, rx:0, ty:0, my:0, by:0 };
 +
 +    function size(){
 +      const r = wrap.getBoundingClientRect();
@@ -110,7 +86,6 @@
 +      c.width = Math.floor(W*DPR); c.height = Math.floor(H*DPR);
 +      c.style.width = W+"px"; c.style.height = H+"px";
 +      ctx.setTransform(DPR,0,0,DPR,0,0);
-+      // anchor and node positions
 +      P.cx = Math.round(W*0.18); P.cy = Math.round(H*0.50);
 +      P.rx = Math.round(W*0.82);
 +      P.ty = Math.round(H*0.22);
@@ -122,25 +97,19 @@
 +    function link(y){
 +      ctx.beginPath();
 +      ctx.moveTo(P.cx, P.cy);
-+      // gentle S-curve
 +      ctx.bezierCurveTo(W*0.36, P.cy, W*0.64, y, P.rx, y);
 +      ctx.stroke();
 +    }
 +
 +    function draw(){
 +      ctx.clearRect(0,0,W,H);
-+      // subtle gold wash
 +      const g = ctx.createLinearGradient(0,0,W,H);
 +      g.addColorStop(0,"rgba(230,195,107,0.05)"); g.addColorStop(1,"rgba(0,0,0,0)");
 +      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-+
-+      // animated shimmer
 +      const pulse = noMotion ? 0.12 : 0.12 + 0.06*Math.sin(t*0.004);
 +      ctx.lineWidth = 1.6;
 +      ctx.strokeStyle = `rgba(242,220,160,${0.55 + pulse})`;
 +      link(P.ty); link(P.my); link(P.by);
-+
-+      // anchor + nodes
 +      function dot(x,y,r,fill){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=fill; ctx.fill(); }
 +      dot(P.cx,P.cy,5,"rgba(242,220,160,0.95)");
 +      dot(P.rx,P.ty,4,"rgba(230,195,107,0.9)");
@@ -179,5 +148,3 @@
    // boot
    show(0);
  })();
- </script>
-*** End Patch
