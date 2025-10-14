@@ -1,0 +1,183 @@
+*** Begin Patch
+*** Update File: docs/index.html
+@@
+   .x{background:transparent;color:#9fb3c6;border:none;font-size:18px;cursor:pointer}
+ 
++  /* ---------------- MAP SECTION (Your Company → Competitors / Metrics / Partners) ---------------- */
++  /* GALACTLY:START map-css */
++  #map.section{padding:3.5rem 1.25rem}
++  .map-wrap{
++    position:relative; max-width:1140px; margin:0 auto; height:520px; border-radius:18px;
++    background:linear-gradient(180deg,#0b121d,#0b1119); overflow:hidden; isolation:isolate;
++    box-shadow:0 0 0 1px var(--stroke) inset;
++  }
++  #mapFx{position:absolute; inset:0; z-index:0}
++  .map-label{
++    position:absolute; z-index:1; padding:8px 12px; border-radius:999px;
++    background:rgba(255,255,255,.04); border:1px solid var(--stroke); color:#cfe0ee; font-weight:600;
++    box-shadow:0 6px 18px rgba(0,0,0,.25);
++  }
++  .map-label.center{left:18px; top:50%; transform:translateY(-50%)}
++  .map-label.top{right:18px; top:22%}
++  .map-label.mid{right:18px; top:50%; transform:translateY(-50%)}
++  .map-label.bot{right:18px; top:78%}
++  .tags{position:absolute; right:18px; top:calc(50% + 40px); width:230px; display:grid; gap:8px; z-index:1}
++  .tag{display:flex; justify-content:space-between; align-items:center; gap:10px;
++       padding:8px 10px; border-radius:10px; background:rgba(255,255,255,.03); border:1px solid var(--stroke); font-size:13px}
++  .tag .k{color:#9bb2c8}
++  .tag .v{font-weight:800; color:var(--gold-300)}
++  .map-cta{display:flex; justify-content:center; margin:16px 0 0}
++  /* GALACTLY:END map-css */
++
+   /* Reduced motion */
+   @media (prefers-reduced-motion: reduce){
+     #heroFx{display:none}
+     #constFx{display:none}
++    #mapFx{display:none}
+     .btn{transition:none}
+   }
+ </style>
+@@
+   </section>
+   <!-- GALACTLY:END hero -->
+ 
++  <!-- ================= YOUR COMPANY MAP (NEW) ================= -->
++  <!-- GALACTLY:START map -->
++  <section id="map" class="section" aria-label="Your company map">
++    <div class="map-wrap" id="mapWrap">
++      <canvas id="mapFx" aria-hidden="true"></canvas>
++      <div class="map-label center">Your Company</div>
++      <div class="map-label top">Competitors</div>
++      <div class="map-label mid">Metrics</div>
++      <div class="map-label bot">Partners</div>
++      <div class="tags" id="metricTags">
++        <div class="tag"><span class="k">Leads found</span><span class="v" id="m1">0</span></div>
++        <div class="tag"><span class="k">Verified companies</span><span class="v" id="m2">0</span></div>
++        <div class="tag"><span class="k">Hot leads</span><span class="v" id="m3">0</span></div>
++      </div>
++    </div>
++    <div class="map-cta">
++      <a href="#get-started" class="btn primary">Start free</a>
++    </div>
++  </section>
++  <!-- GALACTLY:END map -->
++
+   <!-- MODAL (Onboarding Step 1–2) -->
+   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+     <div class="card" role="document">
+@@
+       for (const n of nodes){
+         const r = n.anchor ? 4 : Math.max(1, 1.2*n.s);
+         ctx.fillStyle = n.anchor ? "rgba(242,220,160,0.95)" : "rgba(230,195,107,0.75)";
+         ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2); ctx.fill();
+       }
+     }
+ 
+     function loop(now){
+       if (prev===0) prev=now;
+       const dt = Math.min(33, now - prev) * 0.06; // damped velocity
+       prev = now; t += dt;
+       step(noMotion ? 0 : dt);
+       draw();
+       if (!noMotion) requestAnimationFrame(loop);
+       else draw();
+     }
+ 
+     let prev=0;
+     reset(); loop(0);
+     addEventListener("resize", reset);
+ 
+     // initial domain tag from LS/email
+     const d = (LS.getItem("onb.seed") && JSON.parse(LS.getItem("onb.seed")||"{}")?.host) || "";
+     if (hostTag && d) hostTag.textContent = d;
+   })();
+ 
++  // ------- Your Company Map (minimal, fixed height) -------
++  (function(){
++    const wrap = document.getElementById("mapWrap");
++    const c = document.getElementById("mapFx");
++    if (!wrap || !c) return;
++    const ctx = c.getContext("2d");
++    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
++    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
++
++    let W=0, H=0, t=0;
++    const P = { cx:0, cy:0, rx:0, ty:0, my:0, by:0 }; // cached points
++
++    function size(){
++      const r = wrap.getBoundingClientRect();
++      W = Math.max(600, Math.floor(r.width)); H = Math.max(300, Math.floor(r.height));
++      c.width = Math.floor(W*DPR); c.height = Math.floor(H*DPR);
++      c.style.width = W+"px"; c.style.height = H+"px";
++      ctx.setTransform(DPR,0,0,DPR,0,0);
++      // anchor and node positions
++      P.cx = Math.round(W*0.18); P.cy = Math.round(H*0.50);
++      P.rx = Math.round(W*0.82);
++      P.ty = Math.round(H*0.22);
++      P.my = Math.round(H*0.50);
++      P.by = Math.round(H*0.78);
++    }
++    size(); addEventListener("resize", size);
++
++    function link(y){
++      ctx.beginPath();
++      ctx.moveTo(P.cx, P.cy);
++      // gentle S-curve
++      ctx.bezierCurveTo(W*0.36, P.cy, W*0.64, y, P.rx, y);
++      ctx.stroke();
++    }
++
++    function draw(){
++      ctx.clearRect(0,0,W,H);
++      // subtle gold wash
++      const g = ctx.createLinearGradient(0,0,W,H);
++      g.addColorStop(0,"rgba(230,195,107,0.05)"); g.addColorStop(1,"rgba(0,0,0,0)");
++      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
++
++      // animated shimmer
++      const pulse = noMotion ? 0.12 : 0.12 + 0.06*Math.sin(t*0.004);
++      ctx.lineWidth = 1.6;
++      ctx.strokeStyle = `rgba(242,220,160,${0.55 + pulse})`;
++      link(P.ty); link(P.my); link(P.by);
++
++      // anchor + nodes
++      function dot(x,y,r,fill){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=fill; ctx.fill(); }
++      dot(P.cx,P.cy,5,"rgba(242,220,160,0.95)");
++      dot(P.rx,P.ty,4,"rgba(230,195,107,0.9)");
++      dot(P.rx,P.my,4,"rgba(230,195,107,0.9)");
++      dot(P.rx,P.by,4,"rgba(230,195,107,0.9)");
++    }
++
++    let prev=0;
++    function loop(now){
++      if (prev===0) prev=now;
++      const dt = Math.min(33, now-prev);
++      prev = now; t += dt;
++      draw();
++      if (!noMotion) requestAnimationFrame(loop); else draw();
++    }
++    loop(0);
++
++    // metric counters
++    const counters = [
++      { id:"m1", to:128, ms:1200 },
++      { id:"m2", to:62,  ms:1100 },
++      { id:"m3", to:17,  ms:900  }
++    ];
++    counters.forEach(({id,to,ms})=>{
++      const el = document.getElementById(id); if (!el) return;
++      const start = performance.now();
++      function step(now){
++        const p = Math.min(1, (now-start)/ms);
++        el.textContent = Math.round(to*p).toString();
++        if (p<1) requestAnimationFrame(step);
++      }
++      requestAnimationFrame(step);
++    });
++  })();
++
+   // boot
+   show(0);
+ })();
+ </script>
+*** End Patch
