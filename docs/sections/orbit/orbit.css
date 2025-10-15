@@ -1,94 +1,77 @@
-/* ===== ORBIT SECTION (scoped) ===== */
-:root{
-  --stroke:#1b2531;
-  --muted:#91a6b8;
-  --text:#e9f1f7;
-  --gold:#e6c36b; --gold-300:#f2dca0; --gold-700:#b8913d;
+/* ===== ORBIT SECTION (standalone + scoped) ===== */
+
+.orbit-section{padding:84px 16px 104px}
+.orbit-inner{max-width:1140px;margin:0 auto}
+.orbit-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 0 16px}
+.orbit-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
+.orbit-hd .sub{color:#91a6b8;font-size:14px}
+
+/* Panel: match hero’s vibe (gold haze + deep panel) */
+.orbit-panel{
+  position:relative;overflow:hidden;border-radius:16px;padding:18px;
+  background:
+    radial-gradient(120% 120% at 26% 6%, rgba(230,195,107,.08), rgba(0,0,0,0) 60%),
+    linear-gradient(180deg,#0d1520,#0c141f);
+  border:1px solid #1b2531; box-shadow:0 26px 60px rgba(0,0,0,.45);
+  display:grid;place-items:center;min-height:560px;
 }
 
-/* layout */
-.orbit-section{position:relative; padding:88px 16px 110px; overflow:hidden}
-.orbit-inner{max-width:1140px; margin:0 auto; position:relative; z-index:1}
-.orbit-hd{display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin:0 0 20px}
-.orbit-hd h2{margin:0; font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
-.orbit-hd .sub{color:var(--muted); font-size:14px}
-
-/* hero-like aurora behind section */
-#orbitFx{position:absolute; inset:-12% -8% -10% -8%; z-index:0; filter:saturate(110%) blur(.2px); pointer-events:none}
-
-/* stage (no rectangular pane) */
+/* Stage is ALWAYS a perfect square. */
 .orbit-stage{
   position:relative;
-  height:min(70vw,580px);
-  display:grid; place-items:center;
+  width:min(680px, 92vw);
+  aspect-ratio:1 / 1;          /* 👈 keeps it circular */
+  max-width:680px;
   isolation:isolate;
 }
 
-/* single orbit ring (the “one line”) */
+/* Rings: centered true circles */
 .orbit-ring{
-  position:absolute; width:84%; height:84%; border-radius:50%;
-  border:1px solid rgba(255,255,255,.08);
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  border:1px solid rgba(255,255,255,.10);border-radius:50%;
+  width:100%;height:100%;pointer-events:none;
 }
+.orbit-ring.r2{width:82%;height:82%}
+.orbit-ring.r3{width:64%;height:64%}
+.orbit-ring.r4{width:46%;height:46%}
 
-/* center */
-.orbit-center{position:absolute; display:flex; flex-direction:column; align-items:center; gap:10px}
+/* Center nucleus */
+.orbit-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:10px;z-index:3}
 .orbit-core{
-  width:72px; height:72px; border-radius:50%;
-  background:radial-gradient(circle at 35% 35%, var(--gold-300) 0%, var(--gold) 35%, var(--gold-700) 70%);
+  width:72px;height:72px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, #f2dca0 0%, #e6c36b 35%, #b8913d 70%);
   box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 14px 34px rgba(230,195,107,.18);
 }
 .orbit-domain{
-  font-size:12px; color:#cfe0ee; padding:6px 10px; border-radius:999px;
-  background:rgba(255,255,255,.05); border:1px solid var(--stroke); white-space:nowrap;
+  font-size:12px;color:#cfe0ee;padding:6px 10px;border-radius:999px;
+  background:rgba(255,255,255,.05);border:1px solid #1b2531;white-space:nowrap
 }
 
-/* nodes – outlined, icon in center (not gold pills) */
+/* Nodes */
 .orbit-node{
-  position:absolute; width:64px; height:64px; border-radius:50%;
-  display:grid; place-items:center;
-  background:radial-gradient(circle at 50% 40%, rgba(255,255,255,.04), rgba(255,255,255,.01));
-  border:1px solid rgba(255,255,255,.35);
-  box-shadow:0 10px 30px rgba(0,0,0,.35), 0 0 30px rgba(255,255,255,.08) inset;
-  transform:translate(-50%,-50%);
-  cursor:pointer; user-select:none;
-  transition:transform .25s ease, box-shadow .25s ease, opacity .25s ease;
+  position:absolute;left:0;top:0;transform:translate(-50%,-50%);
+  display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:999px;
+  background:rgba(15,21,32,.86);backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.16);box-shadow:0 10px 28px rgba(0,0,0,.35);
+  color:#e9f1f7; cursor:pointer; user-select:none; z-index:2;
+  will-change: transform, left, top, opacity;
 }
-.orbit-node svg{width:22px; height:22px; stroke:#e8eef5; stroke-width:1.7; fill:none; opacity:.95}
-.orbit-node:hover{transform:translate(-50%,-50%) scale(1.05); box-shadow:0 18px 46px rgba(0,0,0,.5), 0 0 40px rgba(255,255,255,.14) inset}
-.orbit-label{
-  position:absolute; transform:translate(-50%, calc(-50% + 56px));
-  font-weight:600; font-size:14px; color:#cfe0ee; letter-spacing:.2px; text-shadow:0 2px 8px rgba(0,0,0,.6);
-  pointer-events:none; white-space:nowrap;
-}
+.orbit-node[data-size="l"]{padding:10px 12px}
+.orbit-node[data-size="s"]{padding:7px 9px}
 
-/* info card shown on click */
-.orbit-card{
-  position:absolute; z-index:4; width:min(340px, 88vw);
-  background:rgba(16,22,35,.92); backdrop-filter:blur(8px);
-  border:1px solid rgba(255,255,255,.18); border-radius:14px;
-  box-shadow:0 18px 50px rgba(0,0,0,.45);
-  padding:12px 14px; display:none; transform:translate(-50%,-12px);
-}
-.orbit-card.show{display:block}
-.orbit-card .kicker{display:flex;align-items:center;gap:8px;color:#a8bacb;font-size:11px;text-transform:uppercase;letter-spacing:.25px}
-.orbit-card h3{margin:6px 0 6px;font:600 16px/1.2 "Newsreader", Georgia, serif}
-.orbit-card ul{margin:8px 0 8px 16px;padding:0;color:#cfe0ee;font-size:13px}
-.orbit-card li{margin:6px 0}
-.orbit-card .heroMetric{
-  margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(230,195,107,.08);
-  border:1px solid rgba(230,195,107,.25); color:var(--gold-300); font-weight:700; font-size:13px;
-}
-.orbit-card .fine{color:#9db2c5;font-size:12px;margin-top:6px}
+.orbit-node .ico{font-size:14px;opacity:.9}
+.orbit-node .tx{font-weight:700;font-size:12px;letter-spacing:.2px}
+.orbit-node .tx{ text-shadow:0 1px 2px rgba(0,0,0,.9), 0 0 1px rgba(0,0,0,.8); }
 
-/* mobile safety */
-@media (max-width:680px){
-  .orbit-stage{height:520px}
-  .orbit-node{width:58px;height:58px}
-  .orbit-label{transform:translate(-50%, calc(-50% + 50px)); font-size:13px}
-  .orbit-card{left:50%!important; top:auto!important; bottom:14px; transform:translate(-50%,0)}
+/* soft aura */
+.orbit-node::after{
+  content:"";position:absolute;inset:-10px;border-radius:inherit;z-index:-1;
+  background:radial-gradient(circle, rgba(230,195,107,.25), rgba(230,195,107,0) 60%);opacity:.35
 }
+.orbit-node:hover{box-shadow:0 14px 34px rgba(0,0,0,.48);transform:translate(-50%,-50%) scale(1.04)}
 
-/* reduced motion */
-@media (prefers-reduced-motion: reduce){
-  #orbitFx{display:none}
+/* Small helper badge in header */
+.orbit-badge{color:#a8bacb;font-size:12px}
+@media (max-width:900px){
+  .orbit-panel{min-height:480px}
 }
