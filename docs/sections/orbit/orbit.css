@@ -1,31 +1,27 @@
 /* Section 3 — Orbit (scoped styles only) */
 /* Uses the same palette vars defined in index.html :root */
 
+/* ---------- section + header ---------- */
 .orbit-section{padding:80px 16px 96px}
 .orbit-inner{max-width:1140px;margin:0 auto}
 .orbit-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 0 16px}
 .orbit-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
 .orbit-hd .sub{color:var(--muted);font-size:14px}
 
-/* Panel uses a soft gold aurora like the hero */
+/* ---------- panel: transparent, no border/shadow ---------- */
 .orbit-panel{
   position:relative;
-  border:1px solid var(--stroke);
-  border-radius:16px;
-  overflow:hidden;
+  display:grid; place-items:center;
   min-height:560px;
-  padding:18px;
-  display:grid;place-items:center;
-  background:
-    radial-gradient(120% 120% at 22% 12%, rgba(230,195,107,.10), rgba(11,17,25,0) 55%),
-    radial-gradient(80% 80% at 72% 70%, rgba(230,195,107,.06), rgba(0,0,0,0) 60%),
-    linear-gradient(180deg,#0d1520,#0c141f);
-  box-shadow:0 30px 80px rgba(0,0,0,.35) inset, 0 10px 30px rgba(0,0,0,.25);
+  padding:0;                /* no padding halo */
+  border:none;              /* no frame */
+  background:transparent;   /* no pane */
+  box-shadow:none;          /* no inner/outer shadow */
 }
 @media (max-width:900px){ .orbit-panel{min-height:480px} }
 @media (max-width:520px){ .orbit-panel{min-height:420px} }
 
-/* Stage: always a perfect square so the orbit is a circle */
+/* ---------- stage: always a perfect square so orbit is a circle ---------- */
 .orbit-stage{
   position:relative; isolation:isolate;
   width:min(820px,92vw);
@@ -34,7 +30,7 @@
   display:grid; place-items:center;
 }
 
-/* A single ring, matching the requested one-line orbit */
+/* single ring only (requested) */
 .orbit-ring{
   position:absolute; inset:10%; border-radius:50%;
   border:1px solid rgba(255,255,255,.14);
@@ -42,19 +38,43 @@
   pointer-events:none;
 }
 
-/* Center nucleus */
+/* ---------- center nucleus with soft glow + pulse ---------- */
+@keyframes corePulse {
+  0%,100% { transform:scale(1); box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 18px 50px rgba(230,195,107,.20); }
+  50%     { transform:scale(1.04); box-shadow:0 0 0 1px rgba(255,255,255,.10) inset, 0 26px 70px rgba(230,195,107,.30); }
+}
+@keyframes coreHalo {
+  0%,100% { transform:scale(.95); opacity:.35; }
+  50%     { transform:scale(1.08); opacity:.75; }
+}
+@keyframes corePing {
+  0%   { box-shadow:0 0 0 0 rgba(230,195,107,.35); opacity:.8; }
+  100% { box-shadow:0 0 0 28px rgba(230,195,107,0); opacity:0; }
+}
+
 .orbit-center{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:10px}
 .orbit-core{
+  position:relative;
   width:76px;height:76px;border-radius:50%;
   background:radial-gradient(circle at 35% 35%, var(--gold-300) 0%, var(--gold) 38%, var(--gold-700) 72%);
-  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 18px 50px rgba(230,195,107,.20);
+  animation: corePulse 3s ease-in-out infinite;
+}
+.orbit-core::before{
+  content:""; position:absolute; inset:-10px; border-radius:50%;
+  background:radial-gradient(circle, rgba(230,195,107,.55), rgba(230,195,107,0) 60%);
+  filter:blur(10px);
+  animation: coreHalo 3s ease-in-out infinite;
+}
+.orbit-core::after{
+  content:""; position:absolute; inset:0; border-radius:50%;
+  animation: corePing 2.8s ease-out infinite;
 }
 .orbit-domain{
   font-size:12px;color:#cfe0ee;padding:6px 10px;border-radius:999px;
   background:rgba(255,255,255,.05);border:1px solid var(--stroke);white-space:nowrap
 }
 
-/* Nodes = clickable chips pinned to the ring */
+/* ---------- nodes: readable chips pinned to the ring ---------- */
 .orbit-node{
   position:absolute; z-index:3;
   display:inline-flex; align-items:center; gap:8px;
@@ -63,19 +83,16 @@
   background:rgba(12,18,28,.72); backdrop-filter:blur(8px);
   border:1px solid rgba(255,255,255,.16);
   box-shadow:0 10px 26px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04) inset;
-  transform:translate(-50%,-50%); /* center on the computed x/y */
+  transform:translate(-50%,-50%);
   transition:transform .25s ease, box-shadow .25s ease, background-color .25s ease, opacity .25s ease;
   cursor:pointer; user-select:none; white-space:nowrap;
 }
-.orbit-node .ico{font-size:14px;filter:saturate(110%)}
-.orbit-node .t{opacity:.95}
+.orbit-node .ico{font-size:14px}
 .orbit-node:hover{
   background:rgba(16,22,35,.82);
   box-shadow:0 16px 36px rgba(0,0,0,.45);
   transform:translate(-50%,-50%) scale(1.03);
 }
-
-/* Subtle glow behind nodes */
 .orbit-node::after{
   content:""; position:absolute; inset:-10px; border-radius:inherit; z-index:-1;
   background:radial-gradient(circle, rgba(230,195,107,.20), rgba(230,195,107,0) 60%);
@@ -84,23 +101,21 @@
 .orbit-node:focus-visible::after,
 .orbit-node:hover::after{opacity:.7}
 
-/* Info card (auto-positioned; shown briefly) */
+/* info card (kept, hidden until used) */
 .orbit-card{
-  position:absolute; z-index:4;
-  width:min(320px, 88vw);
-  background:rgba(16,22,35,.92);
-  backdrop-filter:blur(10px);
-  border:1px solid rgba(255,255,255,.18);
-  border-radius:14px; padding:12px 14px;
-  transform:translate(-50%, -14px); display:none;
-  color:#d8e7f7; box-shadow:0 20px 50px rgba(0,0,0,.45);
+  position:absolute; z-index:4; width:min(320px, 88vw);
+  background:rgba(16,22,35,.92); backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.18); border-radius:14px;
+  padding:12px 14px; transform:translate(-50%, -14px); display:none; color:#d8e7f7;
+  box-shadow:0 20px 50px rgba(0,0,0,.45);
 }
 .orbit-card.show{display:block}
 .orbit-card .kicker{color:#9fb4c9;font-size:11px;text-transform:uppercase;letter-spacing:.25px}
 .orbit-card h3{margin:6px 0 4px;font:600 16px/1.2 "Newsreader", Georgia, serif}
 .orbit-card .fine{color:#9db2c5;font-size:12px}
 
-/* Reduced motion = no hover scale shimmer */
+/* reduced motion */
 @media (prefers-reduced-motion: reduce){
-  .orbit-node, .orbit-card{transition:none}
+  .orbit-core,.orbit-core::before,.orbit-core::after{animation:none}
+  .orbit-node,.orbit-card{transition:none}
 }
