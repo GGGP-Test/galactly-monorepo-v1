@@ -25,39 +25,38 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # Build a safe publish folder with only the public-facing files.
       - name: Assemble public site
         run: |
           set -euo pipefail
+
           rm -rf "$PUBLIC_OUT"
           mkdir -p "$PUBLIC_OUT"
 
           # ----- allow-list: ONLY these files/dirs are deployed -----
-          # Hero & onboarding flow
-          cp -v "$PUBLIC_SRC/index.html"            "$PUBLIC_OUT/" || true
-          cp -v "$PUBLIC_SRC/step3.html"            "$PUBLIC_OUT/" || true
-          cp -v "$PUBLIC_SRC/free-panel.html"       "$PUBLIC_OUT/" || true
-
-          # Small helpers & shared JS/CSS/assets you actually need on the public site
-          # (add lines as you create them)
-          cp -v "$PUBLIC_SRC/fe-quota-helper.js"    "$PUBLIC_OUT/" || true
-          [ -d "$PUBLIC_SRC/assets" ]  && rsync -a --delete "$PUBLIC_SRC/assets/"  "$PUBLIC_OUT/assets/"  || true
-          [ -d "$PUBLIC_SRC/img" ]     && rsync -a --delete "$PUBLIC_SRC/img/"     "$PUBLIC_OUT/img/"     || true
-          [ -d "$PUBLIC_SRC/css" ]     && rsync -a --delete "$PUBLIC_SRC/css/"     "$PUBLIC_OUT/css/"     || true
-          [ -d "$PUBLIC_SRC/js" ]      && rsync -a --delete "$PUBLIC_SRC/js/"      "$PUBLIC_OUT/js/"      || true
-
-          # Prevent Jekyll munging, enable nice 404
-          printf "" > "$PUBLIC_OUT/.nojekyll"
+          # Core public pages
+          cp -v "$PUBLIC_SRC/index.html"      "$PUBLIC_OUT/" || true
+          cp -v "$PUBLIC_SRC/step3.html"      "$PUBLIC_OUT/" || true
+          cp -v "$PUBLIC_SRC/free-panel.html" "$PUBLIC_OUT/" || true
           [ -f "$PUBLIC_SRC/404.html" ] && cp -v "$PUBLIC_SRC/404.html" "$PUBLIC_OUT/404.html" || true
+          [ -f "$PUBLIC_SRC/favicon.ico" ] && cp -v "$PUBLIC_SRC/favicon.ico" "$PUBLIC_OUT/favicon.ico" || true
 
-          # ----- explicit deny: never ship internal/ops pages -----
-          # (These may exist in docs/, but we DO NOT publish them.)
-          for F in admin.html admin/* vault.html debug.html scoreboard.html panel-plan.html readme-admin.md README-api.md; do
-            [ -e "$PUBLIC_OUT/$F" ] && rm -rf "$PUBLIC_OUT/$F"
-          done
+          # Shared assets (copy if present)
+          [ -d "$PUBLIC_SRC/assets" ] && rsync -a --delete "$PUBLIC_SRC/assets/" "$PUBLIC_OUT/assets/" || true
+          [ -d "$PUBLIC_SRC/img"    ] && rsync -a --delete "$PUBLIC_SRC/img/"    "$PUBLIC_OUT/img/"    || true
+          [ -d "$PUBLIC_SRC/css"    ] && rsync -a --delete "$PUBLIC_SRC/css/"    "$PUBLIC_OUT/css/"    || true
+          [ -d "$PUBLIC_SRC/js"     ] && rsync -a --delete "$PUBLIC_SRC/js/"     "$PUBLIC_OUT/js/"     || true
+
+          # Section bundles (Orbit)
+          if [ -d "$PUBLIC_SRC/sections/orbit" ]; then
+            mkdir -p "$PUBLIC_OUT/sections/orbit"
+            rsync -a --delete "$PUBLIC_SRC/sections/orbit/" "$PUBLIC_OUT/sections/orbit/"
+          fi
+
+          # Prevent Jekyll munging
+          printf "" > "$PUBLIC_OUT/.nojekyll"
 
           echo "Public site contents:"
-          find "$PUBLIC_OUT" -maxdepth 3 -type f | sed "s#^#$PUBLIC_OUT/#" || true
+          find "$PUBLIC_OUT" -maxdepth 4 -type f | sed "s#^#$PUBLIC_OUT/#" || true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
