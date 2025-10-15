@@ -385,11 +385,11 @@
   const navStart = document.getElementById("navStart");
   if (navStart) navStart.addEventListener("click", (e)=>{ e.preventDefault(); open(); });
 
-  openBtn.addEventListener("click", open);
-  closeBtn.addEventListener("click", close);
-  backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+  openBtn && openBtn.addEventListener("click", open);
+  closeBtn && closeBtn.addEventListener("click", close);
+  backBtn && backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
 
-  nextBtn.addEventListener("click", ()=>{
+  nextBtn && nextBtn.addEventListener("click", ()=>{
     if (state.step===0){ show(1); return; }
     if (state.step===1){
       if (!emailEl.value || !phoneEl.value){
@@ -416,8 +416,8 @@
 
   // role toggles
   function setRole(r){ state.role=r; optSupplier.classList.toggle("active", r==="supplier"); optBuyer.classList.toggle("active", r==="buyer"); }
-  optSupplier.addEventListener("click",()=>setRole("supplier"));
-  optBuyer.addEventListener("click",()=>setRole("buyer"));
+  optSupplier && optSupplier.addEventListener("click",()=>setRole("supplier"));
+  optBuyer && optBuyer.addEventListener("click",()=>setRole("buyer"));
 
   // convenience
   function syncDomain(){
@@ -428,13 +428,15 @@
     if (orbitDomain){ orbitDomain.textContent = (d || hostEl.value || "yourcompany.com"); }
     if (orbitHost){ orbitHost.textContent = (d || hostEl.value || "yourcompany.com"); }
   }
-  emailEl.addEventListener("input",syncDomain); emailEl.addEventListener("change",syncDomain); setTimeout(syncDomain, 80);
+  emailEl && emailEl.addEventListener("input",syncDomain);
+  emailEl && emailEl.addEventListener("change",syncDomain);
+  setTimeout(syncDomain, 80);
 
   // minimal badge
-  apiBadge.textContent = "Ready";
+  apiBadge && (apiBadge.textContent = "Ready");
 
   // keys
-  modal.addEventListener("keydown",(e)=>{
+  modal && modal.addEventListener("keydown",(e)=>{
     if (e.key==="Escape"){ e.preventDefault(); close(); return; }
     if (e.key==="Enter"){
       const tag=(e.target&&e.target.tagName)||"";
@@ -665,14 +667,7 @@
 
     const proofStart = document.getElementById("proofStart");
     const openFromProof = ()=>{ const cta = document.getElementById("cta"); cta && cta.click(); };
-    proofStart && proofStart.addEventListener("click", 
-
-
-    
-
-    // initial paint
-    layout(0);
-    if (!noMotion) requestAnimationFrame(tick);
+    proofStart && proofStart.addEventListener("click", openFromProof);
   })();
 
   // boot modal to step 0
