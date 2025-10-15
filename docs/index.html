@@ -448,8 +448,7 @@
       </div>
     </div>
   </section>
-  
-    <!-- MODAL (Onboarding Step 1–2) -->
+  <!-- MODAL (Onboarding Step 1–2) -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="card" role="document">
       <div class="card-hd">
@@ -935,204 +934,302 @@
     if (!noMotion) requestAnimationFrame(tick);
   })();
 
-  /* =============== SECTION 3: ORBIT — SPLIT 3 (interactions & content) =============== */
-  (function(){
-    const stage = document.getElementById("orbitStage");
-    const card  = document.getElementById("orbitCard");
-    if (!stage || !card) return;
+<!-- ========== SPLIT 3: ORBIT v2 (append-only) ========== -->
+<style id="orbit-v2-overrides">
+  /* make Section 3 look minimal, warm, and frameless */
+  #orbit .orbit-panel{
+    border:none !important;
+    background:
+      radial-gradient(120% 120% at 20% 10%, rgba(230,195,107,.08), rgba(11,17,25,1) 55%),
+      linear-gradient(180deg,#0d1520,#0c141f) !important;
+    box-shadow: none !important;
+  }
+  /* hide old multi-ring stage completely */
+  #orbit .orbit-stage:not(.orbit-stage-v2){ display:none !important; }
+  /* keep exactly one ring */
+  #orbit .orbit-ring{ display:none }
+  #orbit .orbit-stage-v2 .orbit-ring-sole{
+    position:absolute; inset:8%;
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,.12);
+    opacity:.9;
+  }
+  /* center glow */
+  #orbit .orbit-stage-v2 .orbit-core{
+    width:76px; height:76px; border-radius:50%;
+    background:radial-gradient(circle at 36% 36%, var(--gold-300) 0%, var(--gold) 36%, var(--gold-700) 72%);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.06) inset,
+      0 18px 40px rgba(230,195,107,.22),
+      0 0 60px rgba(230,195,107,.18);
+    transition:filter .6s ease;
+  }
+  /* domain chip under the core */
+  #orbit .orbit-stage-v2 .orbit-domain{
+    margin-top:10px; font-size:12px; color:#cfe0ee;
+    padding:6px 10px; border-radius:999px;
+    background:rgba(255,255,255,.05); border:1px solid var(--stroke);
+    white-space:nowrap;
+  }
+  /* nodes (reuse palette, gentle depth) */
+  #orbit .orbit-stage-v2 .orbit-node{
+    position:absolute; z-index:1;
+    width:46px; height:46px; border-radius:999px;
+    display:grid; place-items:center; cursor:pointer; user-select:none;
+    color:#1b1405; background:linear-gradient(180deg, var(--gold-300), var(--gold));
+    border:1px solid rgba(255,255,255,.35);
+    box-shadow:0 8px 22px rgba(0,0,0,.35);
+    transition:transform .35s ease, box-shadow .35s ease, opacity .35s ease, filter .35s ease;
+  }
+  #orbit .orbit-stage-v2 .orbit-node[data-size="l"]{ width:58px; height:58px }
+  #orbit .orbit-stage-v2 .orbit-node[data-size="s"]{ width:38px; height:38px }
+  #orbit .orbit-stage-v2 .orbit-node span{ font-weight:700; font-size:11px; letter-spacing:.2px }
+  #orbit .orbit-stage-v2 .orbit-node:hover{ box-shadow:0 12px 30px rgba(0,0,0,.45); transform:scale(1.05) }
+  #orbit .orbit-stage-v2 .orbit-node::after{
+    content:""; position:absolute; inset:-10px; border-radius:inherit;
+    background:radial-gradient(circle, rgba(230,195,107,.28), rgba(230,195,107,0) 60%);
+    opacity:.35; transition:opacity .35s ease;
+  }
+  #orbit .orbit-stage-v2 .orbit-node.is-related::after{ opacity:.85 }
 
-    // references from Split 1
-    const cardTitle = document.getElementById("orbitCardTitle");
-    const cardMeta  = document.getElementById("orbitCardMeta");
-    const cardList  = document.getElementById("orbitCardList");
-    const cardBig   = document.getElementById("orbitCardBig");
-    const closeBtn  = document.getElementById("orbitClose");
+  /* info card: reuse existing #orbitCard but restyle for minimal feel */
+  #orbit .orbit-card{
+    background:rgba(16,22,35,.92) !important;
+    border:1px solid rgba(255,255,255,.16) !important;
+    border-radius:14px !important;
+    box-shadow:0 18px 50px rgba(0,0,0,.45) !important;
+    padding:12px 14px !important;
+  }
+  #orbit .orbit-card .kicker{ color:#a8bacb; font-size:11px; text-transform:uppercase; letter-spacing:.25px }
+  #orbit .orbit-card h3{ margin:6px 0 6px; font:600 16px/1.2 "Newsreader", Georgia, serif }
+  #orbit .orbit-card ul{ margin:8px 0 8px 16px; padding:0; color:#cfe0ee; font-size:13px }
+  #orbit .orbit-card li{ margin:6px 0 }
+  #orbit .orbit-card .heroMetric{
+    margin-top:8px; padding:10px 12px; border-radius:12px;
+    background:rgba(230,195,107,.08); border:1px solid rgba(230,195,107,.25);
+    color:var(--gold-300); font-weight:700; font-size:13px;
+  }
+  #orbit .orbit-card .fine{ color:#9db2c5; font-size:12px; margin-top:6px }
+  @media (max-width:700px){
+    #orbit .orbit-card{ left:50% !important; top:auto !important; bottom:14px; transform:translate(-50%,0) !important }
+  }
 
-    // nodes created in Split 2
-    const nodes = Array.from(stage.querySelectorAll(".orbit-node"));
+  /* stage sizing */
+  #orbit .orbit-stage-v2{
+    position:relative; isolation:isolate;
+    width:min(820px, 92vw); height:min(820px, 92vw);
+    max-width:620px; max-height:620px; border-radius:50%;
+    display:grid; place-items:center; margin:0 auto;
+  }
+</style>
 
-    // rotation loop from Split 2 runs inside its own IIFE; we’ll politely pause it
-    // We can pause by toggling a data attr the Split 2 loop reads (angle delta = 0)
-    // To keep Split 2 unchanged, we’ll temporarily override requestAnimationFrame usage by setting a flag on stage.
-    function setPaused(v){
-      stage.dataset.paused = v ? "1" : "0";
+<script>
+(()=>{
+  // ===== ORBIT v2 (single ring, slow rotation, click to top + card) =====
+  const panel = document.querySelector('#orbit .orbit-panel');
+  if (!panel) return;
+
+  // build a new minimal stage and hide old one
+  const oldStage = panel.querySelector('.orbit-stage');
+  if (oldStage) oldStage.style.display = 'none';
+
+  const stage = document.createElement('div');
+  stage.className = 'orbit-stage orbit-stage-v2';
+  stage.innerHTML = `
+    <div class="orbit-ring-sole" aria-hidden="true"></div>
+    <div class="orbit-center">
+      <div class="orbit-core" aria-hidden="true"></div>
+      <div class="orbit-domain" id="orbitDomainV2"></div>
+    </div>`;
+  panel.appendChild(stage);
+
+  // move the existing card into v2 so we reuse markup/aria
+  const card = document.getElementById('orbitCard');
+  if (card) stage.appendChild(card);
+
+  // copy domain text from earlier or fallback
+  const domainText =
+    (document.getElementById('orbitDomain')?.textContent || '').trim() || 'yourcompany.com';
+  const domainV2 = document.getElementById('orbitDomainV2');
+  if (domainV2) domainV2.textContent = domainText;
+
+  // data (titles cleaned + minimal bullets)
+  const DATA = [
+    {
+      id:'competition', label:'Competition', size:'l', energy:80,
+      bullets:[
+        'Active packaging vendors buyers use',
+        'Shared suppliers across peers',
+        'Repeat-purchase patterns',
+        'Approx. order sizes & MOQs',
+        'Public specs & docs activity'
+      ],
+      hero:'Learning from competitors → clearer fit list',
+      fine:'Directional signals only; no private contracts.',
+      related:['buyers','rfp']
+    },
+    {
+      id:'buyers', label:'Buyers', size:'m', energy:70,
+      bullets:[
+        'Estimated demand trend (90-day)',
+        'Creative volume across public channels',
+        'Coarse marketing spend signals',
+        'New launches, events, announcements',
+        'Search interest for packaging keywords',
+        'Web-wide checks every 30s'
+      ],
+      hero:'Buyer demand score (0–100)',
+      related:['competition','buzz','heat']
+    },
+    {
+      id:'rfp', label:'RFPs & Docs', size:'m', energy:60,
+      bullets:[
+        'New RFP mentions for packaging',
+        'Spec-sheet downloads & doc trails',
+        'Vendor-list updates / shortlists',
+        'Directory changes'
+      ],
+      hero:'Active RFP threads this week',
+      related:['buyers','competition']
+    },
+    {
+      id:'buzz', label:'Market Buzz', size:'m', energy:55,
+      bullets:[
+        'News & PR momentum',
+        'Industry/forum mentions',
+        'Keyword velocity & share of voice',
+        'Trade-show activity'
+      ],
+      hero:'Buzz index',
+      related:['buyers']
+    },
+    {
+      id:'hiring', label:'Hiring', size:'s', energy:45,
+      bullets:[
+        'Ops & procurement roles posted',
+        'Packaging engineer openings',
+        'Manufacturing capacity roles'
+      ],
+      hero:'Hiring momentum',
+      related:['buyers']
+    },
+    {
+      id:'heat', label:'Buyer Heat', size:'l', energy:85,
+      bullets:[
+        'Cool: target audience, low readiness',
+        'Warm: intent signals present',
+        'Hot: time-sensitive purchase behavior',
+        'Hot+: we can automatically sell for you'
+      ],
+      hero:'Hot / Hot+ buyers surfaced first',
+      related:['buyers']
     }
+  ];
 
-    // Hijack layout by dispatching a custom event Split 2 listens to? We didn’t add one, so we’ll recalc positions here when we center.
-    // Helper: compute center position for a node index on its ring to bring it near the top (12 o’clock)
-    function centerNode(el){
-      // Move the clicked node to visual "front/top" by setting a transform hint (not layout-breaking).
-      nodes.forEach(n => n.classList.remove("active"));
-      el.classList.add("active");
+  // create nodes laid out on one ring
+  const nodes = DATA.map((d, i) => {
+    const b = document.createElement('button');
+    b.className = 'orbit-node';
+    b.dataset.id = d.id;
+    if (d.size && d.size !== 'm') b.dataset.size = d.size; // s or l
+    b.innerHTML = `<span>${d.label}</span>`;
+    stage.appendChild(b);
+    return { ...d, el: b, baseAngle: (i / DATA.length) * (Math.PI * 2) };
+  });
+
+  // gentle rotation + “snap selected to top”
+  let angle = -Math.PI / 2;       // top of circle
+  let targetAngle = angle;
+  let activeId = null;
+
+  function layout(){
+    const rect = stage.getBoundingClientRect();
+    const cx = rect.width / 2, cy = rect.height / 2;
+    const R = Math.min(cx, cy) * 0.68;
+
+    nodes.forEach(n => {
+      const a = n.baseAngle + angle;
+      const x = cx + R * Math.cos(a);
+      const y = cy + R * Math.sin(a);
+      n.el.style.left = x + 'px';
+      n.el.style.top  = y + 'px';
+
+      const depth = (Math.sin(a) + 1) / 2; // 0..1
+      n.el.style.opacity = String(0.55 + 0.45 * depth);
+      n.el.style.zIndex = String(100 + Math.round(depth * 50));
+      n.el.classList.toggle('is-related', !!activeId && (n.related||[]).includes(activeId));
+    });
+
+    // place/open card at the top when active
+    if (activeId && card){
+      const topX = cx, topY = cy - R - 10;
+      card.style.left = `${topX}px`;
+      card.style.top  = `${topY}px`;
     }
+  }
 
-    // Content model (titles + concise bullets)
-    const content = {
-      competition: {
-        title: "Competition",
-        meta: "Signals from buyers’ current suppliers",
-        bullets: [
-          "Top suppliers buyers already work with",
-          "Shared traits across those suppliers (materials, formats, MOQs)",
-          "Repeat purchase patterns & partnership depth",
-          "Public directories & spec footprints cross-checked"
-        ],
-        big: "Learn from competitors’ buyers to match fit faster."
-      },
-      buyers: {
-        title: "Buyers",
-        meta: "Real demand signals across the web",
-        bullets: [
-          "Estimated demand from launches & merchandising velocity",
-          "Creative volume across platforms (non-ad phrasing)",
-          "Marketing intensity & campaign cadence",
-          "Search intent & keyword trails for packaging terms",
-          "Event & trade-show activity; product news & PR"
-        ],
-        big: "We scan the web every 30 seconds for fresh buyer signals."
-      },
-      rfp: {
-        title: "RFPs & Docs",
-        meta: "Document-level activity",
-        bullets: [
-          "New RFPs spotted in public channels",
-          "Spec sheets & technical doc downloads",
-          "Document change frequency & recency",
-          "Approval and vendor-list references"
-        ],
-        big: "Surface readiness: who’s actively specifying packaging."
-      },
-      buzz: {
-        title: "Market Buzz",
-        meta: "Momentum & conversation",
-        bullets: [
-          "Mentions & product posts across official channels",
-          "Launch announcements and retail rollout notes",
-          "Category trend velocity vs. baseline",
-          "Peer signals in neighboring SKUs"
-        ],
-        big: "Context around buyers—minus the noise."
-      },
-      hiring: {
-        title: "Hiring",
-        meta: "Team signals",
-        bullets: [
-          "Open roles in ops & procurement",
-          "Manufacturing & packaging engineer postings",
-          "Sourcing titles trending by region",
-          "Org changes indicating scale-up"
-        ],
-        big: "Hiring shifts often precede purchasing."
-      },
-      heat: {
-        title: "Buyer Heat",
-        meta: "Quality tiers explained",
-        bullets: [
-          "Cool: in-audience, low immediacy",
-          "Warm: verified demand & active exploration",
-          "Hot: time-sensitive purchase behavior",
-          "Hot+: VIP buyers—we can sell for you, automatically"
-        ],
-        big: "Prioritized tiers so your team acts at the right moment."
-      }
-    };
+  function step(){
+    angle += (targetAngle - angle) * 0.075; // eased rotation
+    layout();
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+  window.addEventListener('resize', layout);
 
-    // Render the side card
-    function openCard(kind){
-      const c = content[kind];
-      if (!c) return;
-      cardTitle.textContent = c.title;
-      cardMeta.textContent  = c.meta;
+  function rotateNodeToTop(n){
+    const current = n.baseAngle + angle;
+    const desired = -Math.PI / 2; // top
+    // shortest signed delta: wrap into [-PI, PI]
+    const TWO = Math.PI * 2;
+    const delta = ((desired - current + 3*Math.PI) % TWO) - Math.PI;
+    targetAngle = angle + delta;
+  }
 
-      // bullets
-      cardList.innerHTML = "";
-      c.bullets.forEach(b=>{
-        const li = document.createElement("li");
-        li.textContent = b;
-        cardList.appendChild(li);
-      });
-
-      cardBig.textContent = c.big;
-
-      card.hidden = false;
-      card.setAttribute("aria-hidden","false");
-      setPaused(true);
-
-      // mobile behavior: ensure card is visible on small screens
-      const cardRect = card.getBoundingClientRect();
-      const needsScroll = (cardRect.top < 70 || cardRect.bottom > innerHeight);
-      if (needsScroll){
-        const section = document.getElementById("orbit");
-        section && section.scrollIntoView({ behavior:"smooth", block:"start" });
-      }
+  function fillCard(n){
+    if (!card) return;
+    // header bits
+    document.getElementById('cardTag')?.replaceChildren(document.createTextNode('•'));
+    document.getElementById('cardTitle')?.replaceChildren(document.createTextNode(n.label));
+    // bullets
+    const list = document.getElementById('cardList');
+    if (list){
+      list.innerHTML = n.bullets.map(item => `<li>${item}</li>`).join('');
     }
+    // hero metric + fine
+    const hero = document.getElementById('cardHero'); if (hero) hero.textContent = n.hero || '';
+    const fine = document.getElementById('cardFine'); if (fine) fine.textContent = n.fine || '';
+    card.classList.add('show');
+  }
 
-    function closeCard(){
-      card.hidden = true;
-      card.setAttribute("aria-hidden","true");
-      setPaused(false);
-      nodes.forEach(n=>n.classList.remove("active"));
-    }
+  function clearCard(){
+    if (card) card.classList.remove('show');
+    activeId = null;
+  }
 
-    // Click handling
-    nodes.forEach(el=>{
-      el.addEventListener("click",(e)=>{
-        e.stopPropagation();
-        const id = el.dataset.id;
-        if (!id) return;
-        // toggle behavior
-        if (!card.hidden && el.classList.contains("active")){
-          closeCard();
-          return;
-        }
-        centerNode(el);
-        openCard(id);
-      });
+  // interactions
+  nodes.forEach(n=>{
+    n.el.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      activeId = n.id;
+      rotateNodeToTop(n);
+      fillCard(n);
     });
+  });
 
-    // Close on background click or Esc
-    stage.addEventListener("click", (e)=>{
-      // click on empty canvas area (not on a node)
-      if (!(e.target instanceof HTMLElement)) return;
-      if (e.target.classList.contains("orbit-node")) return;
-      if (!card.hidden) closeCard();
-    });
+  // close card on background click
+  stage.addEventListener('click', (e)=>{
+    if (e.target === stage || e.target.classList.contains('orbit-ring-sole')) clearCard();
+  });
 
-    closeBtn.addEventListener("click",(e)=>{ e.stopPropagation(); closeCard(); });
+  // personalize section subtitle (already done earlier; this is a safety pass)
+  const orbitHost = document.getElementById('orbitHost');
+  if (orbitHost && !orbitHost.textContent) orbitHost.textContent = domainText;
 
-    document.addEventListener("keydown",(e)=>{
-      if (e.key === "Escape" && !card.hidden) closeCard();
-    });
-
-    // Basic keyboard focus ring for nodes
-    nodes.forEach(n=>{
-      n.setAttribute("tabindex","0");
-      n.addEventListener("keydown",(e)=>{
-        if (e.key==="Enter" || e.key===" "){
-          e.preventDefault();
-          n.click();
-        }
-      });
-    });
-
-    // Keep host label in center sync if LS changes mid-session
-    window.addEventListener("storage",(e)=>{
-      if (e.key==="onb.seed"){
-        try{
-          const data = JSON.parse(e.newValue||"{}");
-          const host = data?.host || "";
-          const hostOut = document.getElementById("orbitHost");
-          const domain  = document.getElementById("orbitDomain");
-          if (hostOut) hostOut.textContent = host || "yourcompany.com";
-          if (domain)  domain.textContent  = host || "yourcompany.com";
-        }catch{}
-      }
-    });
-  })();
-  /* ======================= END SECTION 3: interactions ======================= */
-  // boot modal to step 0
-  show(0);
+  // initial paint
+  layout();
 })();
 </script>
 </body>
 </html>
+
+
