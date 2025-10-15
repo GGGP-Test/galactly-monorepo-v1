@@ -1,0 +1,94 @@
+/* ===== ORBIT SECTION (scoped) ===== */
+:root{
+  --stroke:#1b2531;
+  --muted:#91a6b8;
+  --text:#e9f1f7;
+  --gold:#e6c36b; --gold-300:#f2dca0; --gold-700:#b8913d;
+}
+
+/* layout */
+.orbit-section{position:relative; padding:88px 16px 110px; overflow:hidden}
+.orbit-inner{max-width:1140px; margin:0 auto; position:relative; z-index:1}
+.orbit-hd{display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin:0 0 20px}
+.orbit-hd h2{margin:0; font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
+.orbit-hd .sub{color:var(--muted); font-size:14px}
+
+/* hero-like aurora behind section */
+#orbitFx{position:absolute; inset:-12% -8% -10% -8%; z-index:0; filter:saturate(110%) blur(.2px); pointer-events:none}
+
+/* stage (no rectangular pane) */
+.orbit-stage{
+  position:relative;
+  height:min(70vw,580px);
+  display:grid; place-items:center;
+  isolation:isolate;
+}
+
+/* single orbit ring (the “one line”) */
+.orbit-ring{
+  position:absolute; width:84%; height:84%; border-radius:50%;
+  border:1px solid rgba(255,255,255,.08);
+}
+
+/* center */
+.orbit-center{position:absolute; display:flex; flex-direction:column; align-items:center; gap:10px}
+.orbit-core{
+  width:72px; height:72px; border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, var(--gold-300) 0%, var(--gold) 35%, var(--gold-700) 70%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 14px 34px rgba(230,195,107,.18);
+}
+.orbit-domain{
+  font-size:12px; color:#cfe0ee; padding:6px 10px; border-radius:999px;
+  background:rgba(255,255,255,.05); border:1px solid var(--stroke); white-space:nowrap;
+}
+
+/* nodes – outlined, icon in center (not gold pills) */
+.orbit-node{
+  position:absolute; width:64px; height:64px; border-radius:50%;
+  display:grid; place-items:center;
+  background:radial-gradient(circle at 50% 40%, rgba(255,255,255,.04), rgba(255,255,255,.01));
+  border:1px solid rgba(255,255,255,.35);
+  box-shadow:0 10px 30px rgba(0,0,0,.35), 0 0 30px rgba(255,255,255,.08) inset;
+  transform:translate(-50%,-50%);
+  cursor:pointer; user-select:none;
+  transition:transform .25s ease, box-shadow .25s ease, opacity .25s ease;
+}
+.orbit-node svg{width:22px; height:22px; stroke:#e8eef5; stroke-width:1.7; fill:none; opacity:.95}
+.orbit-node:hover{transform:translate(-50%,-50%) scale(1.05); box-shadow:0 18px 46px rgba(0,0,0,.5), 0 0 40px rgba(255,255,255,.14) inset}
+.orbit-label{
+  position:absolute; transform:translate(-50%, calc(-50% + 56px));
+  font-weight:600; font-size:14px; color:#cfe0ee; letter-spacing:.2px; text-shadow:0 2px 8px rgba(0,0,0,.6);
+  pointer-events:none; white-space:nowrap;
+}
+
+/* info card shown on click */
+.orbit-card{
+  position:absolute; z-index:4; width:min(340px, 88vw);
+  background:rgba(16,22,35,.92); backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.18); border-radius:14px;
+  box-shadow:0 18px 50px rgba(0,0,0,.45);
+  padding:12px 14px; display:none; transform:translate(-50%,-12px);
+}
+.orbit-card.show{display:block}
+.orbit-card .kicker{display:flex;align-items:center;gap:8px;color:#a8bacb;font-size:11px;text-transform:uppercase;letter-spacing:.25px}
+.orbit-card h3{margin:6px 0 6px;font:600 16px/1.2 "Newsreader", Georgia, serif}
+.orbit-card ul{margin:8px 0 8px 16px;padding:0;color:#cfe0ee;font-size:13px}
+.orbit-card li{margin:6px 0}
+.orbit-card .heroMetric{
+  margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(230,195,107,.08);
+  border:1px solid rgba(230,195,107,.25); color:var(--gold-300); font-weight:700; font-size:13px;
+}
+.orbit-card .fine{color:#9db2c5;font-size:12px;margin-top:6px}
+
+/* mobile safety */
+@media (max-width:680px){
+  .orbit-stage{height:520px}
+  .orbit-node{width:58px;height:58px}
+  .orbit-label{transform:translate(-50%, calc(-50% + 50px)); font-size:13px}
+  .orbit-card{left:50%!important; top:auto!important; bottom:14px; transform:translate(-50%,0)}
+}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce){
+  #orbitFx{display:none}
+}
