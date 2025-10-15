@@ -9,13 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&display=swap" rel="stylesheet">
 
 <!--
-  index.html (Landing + Onboarding Steps 1–2)
+  index.html (Landing + Onboarding Steps 1–2 + Section 2: Proof + Section 3: Signals Orbit)
   - Transparent header (no stripe), centered nav, logo-only
-  - Gold aurora background
-  - Right-side "Lead Constellation" → Your Website → Signal → Score → Buyers
-  - CTA opens modal (steps 1–2), then redirect to step3.html
-
-  NOTE: Section 3 (Orbit) styles are fully scoped to .orbit-* to avoid touching other sections.
+  - Gold aurora background (hero)
+  - Section 2: Proof counters (animate-once)
+  - Section 3: Minimal single-orbit UI (no pane box)
 -->
 
 <style>
@@ -126,8 +124,8 @@
     background:rgba(230,195,107,.12);color:var(--gold-300);border:1px solid rgba(230,195,107,.25)
   }
 
-  /* ========= SECTION 2: PROOF / COUNTERS (kept as-is) ========= */
-  .section{padding:72px 16px} /* no global borders to avoid visible seams */
+  /* ========= SECTION 2: PROOF / COUNTERS ========= */
+  .section{border-top:1px solid var(--stroke); padding:72px 16px}
   .section .inner{max-width:1140px; margin:0 auto}
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
   .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
@@ -136,8 +134,9 @@
   .kpi-grid{display:grid;grid-template-columns:repeat(4, minmax(0,1fr));gap:12px}
   @media (max-width:900px){ .kpi-grid{grid-template-columns:repeat(2, minmax(0,1fr))} }
   @media (max-width:520px){ .kpi-grid{grid-template-columns:1fr} }
+
   .kpi{
-    height:140px;
+    height:140px; /* fixed height → no layout shift */
     background:var(--panel);
     border:1px solid var(--stroke);
     border-radius:14px;
@@ -153,118 +152,96 @@
     margin-top:6px;
   }
   .kpi .hint{font-size:12px;color:#7fa1b9;margin-top:6px}
+
   .proof-cta{display:flex;justify-content:flex-end;margin-top:14px}
   .btn.small{padding:10px 14px;font-size:14px}
 
-  /* ========= SECTION 3: ORBIT (scoped) ========= */
-  /* container */
-  .orbit-section{padding:80px 16px 96px}
-  .orbit-inner{max-width:1140px; margin:0 auto}
-  .orbit-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 0 16px}
-  .orbit-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
-  .orbit-hd .sub{color:var(--muted);font-size:14px}
+  /* ========= SECTION 3: MINIMAL SIGNALS ORBIT (panel-less) ========= */
+  .signals{padding:72px 16px}
+  .signals .inner{max-width:1140px;margin:0 auto}
+  .signals .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
+  .signals .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
+  .signals .section-hd .sub{color:var(--muted);font-size:14px}
 
-  /* panel */
-  .orbit-panel{
-    position:relative;
-    background:radial-gradient(120% 120% at 20% 10%, rgba(230,195,107,.06), rgba(11,17,25,1) 60%),
-               linear-gradient(180deg,#0d1520,#0c141f);
-    border:1px solid var(--stroke);
-    border-radius:16px;
-    overflow:hidden;
-    min-height:540px;
-    display:grid; place-items:center;
-    padding:18px;
+  /* Orbit canvas area — no borders, no card chrome */
+  .sig-orbit{
+    position:relative; isolation:isolate;
+    height:560px; border-radius:18px; overflow:visible;
+    background:
+      radial-gradient(120% 120% at 20% 10%, rgba(230,195,107,.06), rgba(11,17,25,1) 60%),
+      linear-gradient(180deg,#0b121d,#0b1119);
   }
-  @media (max-width:900px){ .orbit-panel{min-height:460px} }
-  @media (max-width:520px){ .orbit-panel{min-height:420px} }
+  @media (max-width:900px){ .sig-orbit{height:480px} }
+  @media (max-width:540px){ .sig-orbit{height:440px} }
 
-  /* rings */
-  .orbit-stage{
-    position:relative;
-    width:min(820px, 92vw);
-    height:min(820px, 92vw);
-    max-height:620px; max-width:620px;
-    border-radius:50%;
-    display:grid; place-items:center;
-    isolation:isolate;
+  .sig-stage{
+    position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
   }
-  .orbit-ring{
-    position:absolute; border-radius:50%;
-    border:1px solid rgba(255,255,255,.06);
-    inset:8%; pointer-events:none;
+  .sig-center{
+    position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:10px; pointer-events:auto;
   }
-  .orbit-ring.r2{inset:18%}
-  .orbit-ring.r3{inset:30%}
-  .orbit-ring.r4{inset:44%}
-
-  /* center nucleus */
-  .orbit-center{
-    position:relative; z-index:2;
-    display:flex; flex-direction:column; align-items:center; gap:10px;
-    transform:translateZ(0);
-  }
-  .orbit-core{
+  .sig-core{
     width:72px; height:72px; border-radius:50%;
     background:radial-gradient(circle at 35% 35%, var(--gold-300) 0%, var(--gold) 35%, var(--gold-700) 70%);
     box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 14px 34px rgba(230,195,107,.18);
   }
-  .orbit-domain{
+  .sig-host{
     font-size:12px; color:#cfe0ee; padding:6px 10px; border-radius:999px;
-    background:rgba(255,255,255,.05); border:1px solid var(--stroke);
-    white-space:nowrap;
+    background:rgba(255,255,255,.05); border:1px solid var(--stroke); white-space:nowrap;
   }
 
-  /* nodes */
-  .orbit-node{
+  /* Single orbit ring */
+  .sig-ring{
+    position:absolute; inset:10% 10% 10% 10%; border-radius:50%;
+    border:1px dashed rgba(255,255,255,.06); pointer-events:none;
+  }
+
+  /* Orbiting nodes */
+  .sig-node{
     position:absolute; z-index:1;
-    width:44px; height:44px; border-radius:999px;
-    display:grid; place-items:center; cursor:pointer;
-    color:#0c0f14;
+    width:44px; height:44px; border-radius:999px; display:grid; place-items:center;
+    color:#1b1405; font-weight:800; font-size:11px; letter-spacing:.2px;
     background:linear-gradient(180deg, var(--gold-300), var(--gold));
     border:1px solid rgba(255,255,255,.35);
     box-shadow:0 8px 22px rgba(0,0,0,.35);
-    transition:transform .35s ease, box-shadow .35s ease, opacity .35s ease;
-    user-select:none;
+    transform:translate(-50%,-50%);
+    transition:transform .35s ease, box-shadow .35s ease, opacity .35s ease, left .4s ease, top .4s ease;
+    cursor:pointer; user-select:none; pointer-events:auto;
   }
-  .orbit-node span{font-weight:700; font-size:11px; letter-spacing:.2px; color:#1b1405}
-  .orbit-node:hover{box-shadow:0 12px 30px rgba(0,0,0,.45); transform:scale(1.05)}
-  .orbit-node[data-size="l"]{width:56px;height:56px}
-  .orbit-node[data-size="s"]{width:38px;height:38px}
-
-  /* soft aura behind nodes */
-  .orbit-node::after{
+  .sig-node[data-size="l"]{width:56px;height:56px}
+  .sig-node[data-size="s"]{width:38px;height:38px}
+  .sig-node:hover{box-shadow:0 12px 30px rgba(0,0,0,.45); transform:translate(-50%,-50%) scale(1.05)}
+  .sig-node::after{
     content:""; position:absolute; inset:-8px; border-radius:inherit;
     background:radial-gradient(circle, rgba(230,195,107,.28), rgba(230,195,107,0) 60%);
     opacity:.35; transition:opacity .35s ease;
   }
-  .orbit-node.is-related::after{opacity:.85}
+  .sig-node.is-related::after{opacity:.85}
 
-  /* info card (hidden by default; JS will position & show) */
-  .orbit-card{
-    position:absolute; z-index:4; width:min(320px, 86vw);
-    background:rgba(16,22,35,.9); backdrop-filter:blur(8px);
-    border:1px solid rgba(255,255,255,.18); border-radius:14px;
+  /* Minimal floating card (appears when a node is active) */
+  .sig-card{
+    position:absolute; left:50%; top:16px; transform:translate(-50%,0);
+    z-index:4; width:min(560px, 92vw);
+    background:rgba(16,22,35,.92); backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.15); border-radius:14px;
     box-shadow:0 18px 50px rgba(0,0,0,.45);
-    padding:12px 14px; transform:translate(-50%, -14px); display:none;
+    padding:12px 14px; display:none;
   }
-  .orbit-card.show{display:block}
-  .orbit-card .kicker{display:flex;align-items:center;gap:8px;color:#a8bacb;font-size:11px;text-transform:uppercase;letter-spacing:.25px}
-  .orbit-card h3{margin:6px 0 6px;font:600 16px/1.2 "Newsreader", Georgia, serif}
-  .orbit-card ul{margin:8px 0 8px 16px;padding:0;color:#cfe0ee;font-size:13px}
-  .orbit-card li{margin:6px 0}
-  .orbit-card .heroMetric{
+  .sig-card.show{display:block}
+  .sig-card .kicker{display:flex;align-items:center;gap:8px;color:#a8bacb;font-size:11px;text-transform:uppercase;letter-spacing:.25px}
+  .sig-card h3{margin:6px 0 6px;font:600 16px/1.2 "Newsreader", Georgia, serif}
+  .sig-card ul{margin:8px 0 8px 16px;padding:0;color:#cfe0ee;font-size:13px}
+  .sig-card li{margin:6px 0}
+  .sig-card .heroMetric{
     margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(230,195,107,.08);
     border:1px solid rgba(230,195,107,.25); color:var(--gold-300); font-weight:700; font-size:13px;
   }
-  .orbit-card .fine{color:#9db2c5;font-size:12px;margin-top:6px}
-
-  /* mobile safety: when card would overflow, let it center */
+  .sig-card .fine{color:#9db2c5;font-size:12px;margin-top:6px}
   @media (max-width:700px){
-    .orbit-card{left:50%!important; top:auto!important; bottom:14px; transform:translate(-50%,0)}
+    .sig-card{left:50%; top:10px; transform:translate(-50%,0)}
   }
 
-  /* MODAL (unchanged) */
+  /* MODAL */
   .modal{position:fixed;inset:0;background:rgba(6,10,16,.55);display:none;align-items:center;justify-content:center;z-index:20}
   .modal.show{display:flex}
   .card{width:min(980px,92vw);background:var(--panel);border:1px solid var(--stroke);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
@@ -327,8 +304,7 @@
     </div>
   </header>
 
-  <!-- HERO -->
-  <!-- GALACTLY:START hero -->
+  <!-- HERO (unchanged) -->
   <section class="hero" aria-label="Hero">
     <canvas id="heroFx" aria-hidden="true"></canvas>
     <div class="hero-grid">
@@ -363,14 +339,13 @@
       </div>
     </div>
   </section>
-  <!-- GALACTLY:END hero -->
 
   <!-- ===== SECTION 2: PROOF / COUNTERS (unchanged) ===== -->
   <section class="section" id="proof" aria-label="Proof">
     <div class="inner">
       <div class="section-hd">
         <h2>Proof it works — for <span id="proofHost" style="color:var(--gold-300)"></span></h2>
-        <div class="sub">Signals → Verified companies → Hot buyers → Time-to-first buyer</div>
+        <div class="sub">Signals → Verified companies → Hot leads → Time-to-first lead</div>
       </div>
 
       <div class="proof-wrap">
@@ -386,12 +361,12 @@
             <div class="hint">Auto-deduped + enriched</div>
           </div>
           <div class="kpi">
-            <div class="label">Hot buyers this week</div>
+            <div class="label">Hot leads this week</div>
             <div class="num" data-to="87" data-format="int">0</div>
             <div class="hint">High-intent fit, ranked</div>
           </div>
           <div class="kpi">
-            <div class="label">Time to first buyer</div>
+            <div class="label">Time to first lead</div>
             <div class="num" data-to="2.3" data-format="dec1">0</div>
             <div class="hint">Days from kickoff to signal</div>
           </div>
@@ -404,50 +379,47 @@
     </div>
   </section>
 
-  <!-- ===== SECTION 3: ORBIT MAP (HTML scaffold only; JS arrives in Split 2/3) ===== -->
-  <section class="orbit-section" id="orbit" aria-label="Where your buyers light up">
-    <div class="orbit-inner">
-      <div class="orbit-hd">
+  <!-- ===== SECTION 3: SIGNALS ORBIT (new minimal) ===== -->
+  <section class="signals" id="signals" aria-label="Signals orbit">
+    <div class="inner">
+      <div class="section-hd">
         <h2>Where your buyers light up</h2>
-        <div class="sub">Simple orbit map of the strongest intent signals for <span id="orbitHost" style="color:var(--gold-300)"></span></div>
+        <div class="sub">Single orbit of the strongest intent signals for <span id="sigHost" style="color:var(--gold-300)"></span></div>
       </div>
 
-      <div class="orbit-panel">
-        <div class="orbit-stage" id="orbitStage">
-          <!-- concentric rings -->
-          <div class="orbit-ring r1"></div>
-          <div class="orbit-ring r2"></div>
-          <div class="orbit-ring r3"></div>
-          <div class="orbit-ring r4"></div>
+      <div class="sig-orbit" id="sigOrbit">
+        <div class="sig-stage" id="sigStage">
+          <div class="sig-ring" aria-hidden="true"></div>
 
           <!-- center -->
-          <div class="orbit-center">
-            <div class="orbit-core" aria-hidden="true"></div>
-            <div class="orbit-domain" id="orbitDomain">yourcompany.com</div>
+          <div class="sig-center">
+            <div class="sig-core" aria-hidden="true"></div>
+            <div class="sig-host" id="sigHostBadge">yourcompany.com</div>
           </div>
 
-          <!-- nodes (positions + interaction wired in Split 2/3) -->
-          <button class="orbit-node" data-id="competition" data-size="l"><span>Competition</span></button>
-          <button class="orbit-node" data-id="buyers"><span>Buyers</span></button>
-          <button class="orbit-node" data-id="rfp"><span>RFPs &amp; Docs</span></button>
-          <button class="orbit-node" data-id="buzz"><span>Market Buzz</span></button>
-          <button class="orbit-node" data-id="hiring" data-size="s"><span>Hiring</span></button>
-          <button class="orbit-node" data-id="heat" data-size="l"><span>Buyer&nbsp;Heat</span></button>
+          <!-- orbiting nodes (positions wired via JS) -->
+          <button class="sig-node" data-id="competition" data-size="l">Competition</button>
+          <button class="sig-node" data-id="buyers">Buyers</button>
+          <button class="sig-node" data-id="rfp">RFPs&nbsp;&amp;&nbsp;Docs</button>
+          <button class="sig-node" data-id="buzz">Market&nbsp;Buzz</button>
+          <button class="sig-node" data-id="hiring" data-size="s">Hiring</button>
+          <button class="sig-node" data-id="heat" data-size="l">Buyer&nbsp;Heat</button>
 
-          <!-- info card (single reused card; JS fills content & positions) -->
-          <div class="orbit-card" id="orbitCard" role="dialog" aria-modal="false" aria-live="polite">
-            <div class="kicker"><span>Signal</span><span id="cardTag">•</span></div>
-            <h3 id="cardTitle">Title</h3>
-            <ul id="cardList">
-              <li>Metric item</li>
+          <!-- floating info card (filled/controlled by JS) -->
+          <div class="sig-card" id="sigCard" role="dialog" aria-modal="false" aria-live="polite">
+            <div class="kicker"><span id="sigTag">Signal</span></div>
+            <h3 id="sigTitle">—</h3>
+            <ul id="sigList">
+              <li>—</li>
             </ul>
-            <div class="heroMetric" id="cardHero">Hero metric</div>
-            <div class="fine" id="cardFine"></div>
+            <div class="heroMetric" id="sigHero">—</div>
+            <div class="fine" id="sigFine"></div>
           </div>
         </div>
       </div>
     </div>
   </section>
+
   <!-- MODAL (Onboarding Step 1–2) -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="card" role="document">
@@ -536,24 +508,24 @@
 
 <script>
 (()=>{
-  // ------- tiny helpers -------
+  /* ====================== tiny helpers ====================== */
   const $  = (q)=>document.querySelector(q);
   const $$ = (q)=>Array.from(document.querySelectorAll(q));
   const LS = window.localStorage;
   const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
   const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
+  const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // ------- elements -------
+  /* ====================== modal + onboarding ====================== */
   const modal=$("#modal"), openBtn=$("#cta"), closeBtn=$("#close");
   const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
   const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
   const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
-  const apiBadge=$("#apiBadge");
+  const apiBadge=$("#apiBadge"); apiBadge.textContent="Ready";
+  const navStart = document.getElementById("navStart");
 
-  // ------- state -------
   const state={ step:0, role:"supplier" };
 
-  // ------- nav -------
   function show(step){
     state.step=step;
     ["#step1","#step2"].forEach((id,i)=>{const el=$(id); if(!el) return; el.hidden=i!==step; dots[i]?.classList.toggle("on", i===step);});
@@ -563,20 +535,15 @@
   function open(){ modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); show(0); }
   function close(){ modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
 
-  // header CTA mirrors main CTA
-  const navStart = document.getElementById("navStart");
-  if (navStart) navStart.addEventListener("click", (e)=>{ e.preventDefault(); open(); });
+  openBtn?.addEventListener("click", (e)=>{ e.preventDefault(); open(); });
+  navStart?.addEventListener("click", (e)=>{ e.preventDefault(); open(); });
+  closeBtn?.addEventListener("click", close);
+  backBtn?.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
 
-  openBtn.addEventListener("click", open);
-  closeBtn.addEventListener("click", close);
-  backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
-
-  nextBtn.addEventListener("click", ()=>{
+  nextBtn?.addEventListener("click", ()=>{
     if (state.step===0){ show(1); return; }
     if (state.step===1){
-      if (!emailEl.value || !phoneEl.value){
-        alert("Business email and phone are required."); return;
-      }
+      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
       const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
       if (!hostCandidate){ alert("Please provide your website/domain (from email is fine)."); return; }
 
@@ -596,27 +563,29 @@
     }
   });
 
-  // role toggles
   function setRole(r){ state.role=r; optSupplier.classList.toggle("active", r==="supplier"); optBuyer.classList.toggle("active", r==="buyer"); }
-  optSupplier.addEventListener("click",()=>setRole("supplier"));
-  optBuyer.addEventListener("click",()=>setRole("buyer"));
+  optSupplier?.addEventListener("click",()=>setRole("supplier"));
+  optBuyer?.addEventListener("click",()=>setRole("buyer"));
 
-  // convenience
+  // convenience: keep domain tag mirrored
   function syncDomain(){
     const d=domainFromEmail(emailEl.value);
     if (d) hostEl.value=d;
     const tag=$("#domainTag"); if (tag && (d || hostEl.value)) tag.textContent = d || hostEl.value || "YourCompany.com";
-    const orbitDomain=$("#orbitDomain"); const orbitHost=$("#orbitHost");
-    if (orbitDomain){ orbitDomain.textContent = (d || hostEl.value || "yourcompany.com"); }
-    if (orbitHost){ orbitHost.textContent = (d || hostEl.value || "yourcompany.com"); }
+    const proofHost=$("#proofHost"); if (proofHost) proofHost.textContent = d || hostEl.value || "yourcompany.com";
+    const sigHost=$("#sigHost"); if (sigHost) sigHost.textContent = d || hostEl.value || "yourcompany.com";
+    const sigBadge=$("#sigHostBadge"); if (sigBadge) sigBadge.textContent = d || hostEl.value || "yourcompany.com";
   }
-  emailEl.addEventListener("input",syncDomain); emailEl.addEventListener("change",syncDomain); setTimeout(syncDomain, 80);
+  emailEl?.addEventListener("input",syncDomain); emailEl?.addEventListener("change",syncDomain);
+  setTimeout(()=>{
+    try{
+      const seed = JSON.parse(LS.getItem("onb.seed")||"{}");
+      if (seed?.host){ hostEl.value = seed.host; }
+      syncDomain();
+    }catch{}
+  }, 60);
 
-  // minimal badge
-  apiBadge.textContent = "Ready";
-
-  // keys
-  modal.addEventListener("keydown",(e)=>{
+  modal?.addEventListener("keydown",(e)=>{
     if (e.key==="Escape"){ e.preventDefault(); close(); return; }
     if (e.key==="Enter"){
       const tag=(e.target&&e.target.tagName)||"";
@@ -625,9 +594,8 @@
     }
   });
 
-  // ------- hero canvas aurora (lightweight) -------
+  /* ====================== hero aurora (lightweight) ====================== */
   const fx = document.getElementById("heroFx");
-  const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (fx && !noMotion){
     const ctx = fx.getContext("2d");
     const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
@@ -658,29 +626,14 @@
     })();
   }
 
-  // ------- Lead Constellation (right panel) -------
+  /* ====================== lead constellation (right hero) ====================== */
   (function(){
-    const hostTag = $("#domainTag");
     const wrap = document.querySelector(".const-wrap");
     const c = document.getElementById("constFx");
     if (!wrap || !c) return;
-    const cards = [
-      { el: $("#cardA"), id:"A" },
-      { el: $("#cardB"), id:"B" },
-      { el: $("#cardC"), id:"C" },
-    ];
-    const cardData = [
-      { name:"Acme Drinks Co.", city:"Chicago, IL" },
-      { name:"Northstar Foods", city:"Dallas, TX" },
-      { name:"Atlas Beauty", city:"Toronto, ON" },
-      { name:"Cygnet Petcare", city:"Portland, OR" },
-      { name:"Volt Homecare", city:"Denver, CO" },
-    ];
-    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
     const ctx = c.getContext("2d");
-
+    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
     let W=0,H=0, nodes=[], highlights=[], t=0;
-    const noMotion2 = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     function reset(){
       const rect = wrap.getBoundingClientRect();
@@ -690,38 +643,43 @@
       c.style.width=W+"px"; c.style.height=H+"px";
       ctx.setTransform(DPR,0,0,DPR,0,0);
 
-      const N = 42;
       nodes = [];
+      const N=40;
       for (let i=0;i<N;i++){
         const x = 0.28 + Math.random()*0.68;
-        const y = 0.06 + Math.random()*0.88;
+        const y = 0.08 + Math.random()*0.84;
         const s = 0.15 + Math.random()*0.85;
-        const vx = (Math.random()-0.5) * 0.18;
-        const vy = (Math.random()-0.5) * 0.18;
+        const vx = (Math.random()-0.5) * 0.16;
+        const vy = (Math.random()-0.5) * 0.16;
         nodes.push({x:x*W, y:y*H, s, vx, vy});
       }
-
       const anchor = { x: 0.18*W, y: 0.52*H };
       nodes.unshift({x:anchor.x, y:anchor.y, s:1.8, vx:0, vy:0, anchor:true });
 
       const candidates = nodes.filter(n=>!n.anchor && n.x>W*0.52);
-      highlights = [];
-      for (let i=0;i<3;i++){
-        const n = candidates[Math.floor(Math.random()*candidates.length)];
-        if (!n) break;
-        highlights.push(n);
-        const idx = candidates.indexOf(n); if (idx>=0) candidates.splice(idx,1);
-      }
-      const cardPoints = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
-      cardPoints.forEach((p, i)=>{
+      highlights = candidates.sort(()=>Math.random()-0.5).slice(0,3);
+
+      // place demo miniCards near highlights
+      const cards = [
+        { el: $("#cardA") },
+        { el: $("#cardB") },
+        { el: $("#cardC") },
+      ];
+      const demoData = [
+        { name:"Acme Drinks Co.", city:"Chicago, IL" },
+        { name:"Northstar Foods", city:"Dallas, TX" },
+        { name:"Atlas Beauty", city:"Toronto, ON" },
+        { name:"Cygnet Petcare", city:"Portland, OR" },
+        { name:"Volt Homecare", city:"Denver, CO" },
+      ];
+      highlights.forEach((p, i)=>{
         const el = cards[i]?.el; if (!el) return;
         el.style.left = (p.x + (i===1? -24: 18)) + "px";
         el.style.top  = (p.y + (i===2?  24: -18)) + "px";
-        const d = cardData[(Math.random()*cardData.length)|0];
-        const nEl = el.querySelector(".v");
-        if (nEl) nEl.textContent = d.name;
-        const cityEl = el.querySelectorAll(".v")[1];
-        if (cityEl) cityEl.textContent = d.city;
+        const d = demoData[(Math.random()*demoData.length)|0];
+        const vs = el.querySelectorAll(".v");
+        if (vs[0]) vs[0].textContent = d.name;
+        if (vs[1]) vs[1].textContent = d.city;
       });
     }
 
@@ -738,6 +696,7 @@
 
     function draw(){
       ctx.clearRect(0,0,W,H);
+
       const grad = ctx.createLinearGradient(0,0,W,H);
       grad.addColorStop(0, "rgba(230,195,107,0.06)");
       grad.addColorStop(1, "rgba(230,195,107,0.0)");
@@ -776,460 +735,265 @@
       }
     }
 
+    let prev=0;
     function loop(now){
       if (prev===0) prev=now;
-      const dt = Math.min(33, now - prev) * 0.06;
+      const dt = Math.min(33, now - prev) * (noMotion?0:0.06);
       prev = now; t += dt;
-      step(noMotion2 ? 0 : dt);
+      if (!noMotion) step(dt);
       draw();
-      if (!noMotion2) requestAnimationFrame(loop);
+      if (!noMotion) requestAnimationFrame(loop);
       else draw();
     }
 
-    let prev=0;
     reset(); loop(0);
     addEventListener("resize", reset);
-
-    const d = (LS.getItem("onb.seed") && JSON.parse(LS.getItem("onb.seed")||"{}")?.host) || "";
-    if (hostTag && d) hostTag.textContent = d;
   })();
 
-  // ------- Section 2: Proof counters (animate once) -------
+  /* ====================== Section 2: counters ====================== */
   (function(){
-    const section = document.getElementById("proof");
-    if (!section) return;
+    const grid = $("#kpiGrid"); if (!grid) return;
+    const nums = grid.querySelectorAll(".num");
+    const opts = { threshold: 0.35 };
+    let done=false;
 
-    const hostOut = document.getElementById("proofHost");
-    try{
-      const seed = JSON.parse(LS.getItem("onb.seed")||"{}");
-      const host = seed?.host || "";
-      hostOut.textContent = host || "yourcompany.com";
-    }catch{ hostOut.textContent = "yourcompany.com"; }
-
-    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const nums = Array.from(section.querySelectorAll(".num"));
-    let fired = false;
-
-    function format(v, fmt){
-      if (fmt==="dec1") return v.toFixed(1);
-      const s = Math.round(v).toString();
-      return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    }
-
-    function animate(el){
-      const to = parseFloat(el.dataset.to||"0");
-      const fmt = el.dataset.format||"int";
-      if (noMotion){ el.textContent = format(to, fmt); return; }
-
-      const dur = 1200;
+    function animateNum(el, to, format){
       const start = performance.now();
-      function tick(now){
-        const p = Math.min(1, (now - start)/dur);
-        const ease = 1 - Math.pow(1-p, 3);
-        const val = to * ease;
-        el.textContent = format(val, fmt);
-        if (p<1) requestAnimationFrame(tick);
+      const dur = 1200 + Math.random()*600;
+      const from = 0;
+      function step(now){
+        const p = Math.min(1, (now-start)/dur);
+        const v = from + (to-from) * (0.5 - Math.cos(p*Math.PI)/2); // ease-in-out
+        if (format==="int") el.textContent = Math.round(v).toLocaleString();
+        else if (format==="dec1") el.textContent = (Math.round(v*10)/10).toLocaleString();
+        else el.textContent = Math.round(v).toLocaleString();
+        if (p<1) requestAnimationFrame(step);
       }
-      requestAnimationFrame(tick);
+      requestAnimationFrame(step);
     }
 
     const io = new IntersectionObserver((entries)=>{
-      entries.forEach(e=>{
-        if (!fired && e.isIntersecting){
-          fired = true;
-          nums.forEach(animate);
-          io.disconnect();
+      entries.forEach(en=>{
+        if (en.isIntersecting && !done){
+          nums.forEach(el=>{
+            const to = parseFloat(el.getAttribute("data-to")||"0");
+            const format = el.getAttribute("data-format")||"int";
+            animateNum(el, to, format);
+          });
+          done=true; io.disconnect();
         }
       });
-    }, { root:null, threshold:0.35 });
+    }, opts);
 
-    io.observe(section);
-
-    const proofStart = document.getElementById("proofStart");
-    const openFromProof = ()=>{ const cta = document.getElementById("cta"); cta && cta.click(); };
-    proofStart && proofStart.addEventListener("click", openFromProof);
+    io.observe(grid);
   })();
 
-  // ================== SECTION 3: ORBIT — data + rotation/layout only ==================
+  /* ====================== Section 3: Signals Orbit ====================== */
   (function(){
-    const stage = document.getElementById("orbitStage");
-    const card  = document.getElementById("orbitCard"); // hidden until Split 3
-    if (!stage) return;
+    const orbit = $("#sigOrbit"), stage=$("#sigStage"), card=$("#sigCard");
+    if (!orbit || !stage || !card) return;
 
-    // personalize center labels from LS/email
-    (function setHost(){
-      const hostOut = document.getElementById("orbitHost");
-      const domain  = document.getElementById("orbitDomain");
-      try{
-        const seed = JSON.parse(LS.getItem("onb.seed")||"{}");
-        const host = seed?.host || "";
-        if (hostOut) hostOut.textContent = host || "yourcompany.com";
-        if (domain)  domain.textContent  = host || "yourcompany.com";
-      }catch{
-        if (hostOut) hostOut.textContent = "yourcompany.com";
-        if (domain)  domain.textContent  = "yourcompany.com";
-      }
-    })();
+    const hostOut = $("#sigHost");
+    const hostBadge = $("#sigHostBadge");
+    try{
+      const saved = JSON.parse(LS.getItem("onb.seed")||"{}");
+      const h = saved?.host || LS.getItem("fp.supplier.host") || "";
+      if (h){ if (hostOut) hostOut.textContent=h; if (hostBadge) hostBadge.textContent=h; $("#proofHost")?.textContent=h; $("#domainTag")?.textContent=h; }
+    }catch{}
 
-    // Node catalog (titles cleaned)
-    const nodes = [
-      { id:"competition", label:"Competition", ring:0.80, size:"l", energy:80 },
-      { id:"buyers",      label:"Buyers",      ring:0.80, size:"m", energy:70 },
-      { id:"rfp",         label:"RFPs & Docs", ring:0.64, size:"m", energy:60 },
-      { id:"buzz",        label:"Market Buzz", ring:0.50, size:"m", energy:55 },
-      { id:"hiring",      label:"Hiring",      ring:0.38, size:"s", energy:45 },
-      { id:"heat",        label:"Buyer Heat",  ring:0.28, size:"l", energy:85 }
+    // Node catalog (clean labels, single ring layout)
+    const NODES = [
+      { id:"competition", label:"Competition", size:"l", angle: 330, related:["buyers","rfp"] },
+      { id:"buyers",      label:"Buyers",      size:"m", angle:  30, related:["heat","competition"] },
+      { id:"rfp",         label:"RFPs & Docs", size:"m", angle:  90, related:["buyers","buzz"] },
+      { id:"buzz",        label:"Market Buzz", size:"m", angle: 150, related:["rfp"] },
+      { id:"hiring",      label:"Hiring",      size:"s", angle: 210, related:["buzz"] },
+      { id:"heat",        label:"Buyer Heat",  size:"l", angle: 270, related:["buyers"] },
     ];
 
-    // Map buttons to nodes
-    const btns = nodes.map(n=>{
-      const el = stage.querySelector(`.orbit-node[data-id="${n.id}"]`);
-      if (el){ el.dataset.size = n.size; }
-      return { ...n, el };
-    }).filter(x=>x.el);
+    // Card content per node (polished, non-narrow)
+    const CONTENT = {
+      competition: {
+        tag: "Signal",
+        title: "Learning from competition",
+        list: [
+          "Who buyers regularly work with across packaging suppliers",
+          "Overlap patterns and repeat purchasing behavior",
+          "Public directories & showcase footprints",
+          "Spec/requirement themes shared by top buyers"
+        ],
+        hero: "Goal: map what buyers actually want via competitor proximity",
+        fine: "High-level signals only — no private data or unverifiable claims."
+      },
+      buyers: {
+        tag: "Signal",
+        title: "Buyer activity & demand",
+        list: [
+          "Estimated demand velocity and recency",
+          "Creative volume and public campaign intensity",
+          "New product launches, events, and news",
+          "Search interest & keyword momentum across platforms"
+        ],
+        hero: "We scan the open web roughly every 30s for major shifts.",
+        fine: "Signals are ranked by fit to your strengths and historical success."
+      },
+      rfp: {
+        tag: "Signal",
+        title: "RFP-like activity & documents",
+        list: [
+          "RFP mentions and solicitations in public sources",
+          "Spec sheet interest and related downloads",
+          "Requirement language trending by category",
+          "Document footprint growth over time"
+        ],
+        hero: "Intent strength: rising when docs and specs move together.",
+        fine: "We avoid brittle claims — only broad, defensible indicators are shown."
+      },
+      buzz: {
+        tag: "Signal",
+        title: "Market buzz & mentions",
+        list: [
+          "Press and industry news",
+          "Community and review chatter",
+          "Social mentions & topic velocity",
+          "Regional trend deltas"
+        ],
+        hero: "Momentum score: higher when mentions cluster with buyer pages.",
+        fine: "Kept minimal and warm to match your brand palette."
+      },
+      hiring: {
+        tag: "Signal",
+        title: "Hiring & resourcing",
+        list: [
+          "Open roles tied to packaging operations",
+          "Ops/Procurement headcount changes",
+          "Tooling & capability signals in postings",
+          "Org motion aligned to active projects"
+        ],
+        hero: "Capacity shift index: moderate change often precedes buying."
+      },
+      heat: {
+        tag: "Signal",
+        title: "Buyer heat (cool → warm → hot → hot+)",
+        list: [
+          "Purchase intent tiering using behavior & recency",
+          "Typical order size tendencies (MOQ, scale) by peer cohort",
+          "Loyalty & repeat indicators",
+          "Hot+ (opt-in): we can auto-sell for you when timing is critical"
+        ],
+        hero: "Priority: time-sensitive buyers first, matched to strengths.",
+        fine: "Definitions are transparent in-app; no guessy black boxes."
+      }
+    };
 
-    // rotation state (slow, premium)
-    let angle = 0;
-    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const center = { x: stage.clientWidth/2, y: stage.clientHeight/2 };
-    function resize(){
-      center.x = stage.clientWidth/2;
-      center.y = stage.clientHeight/2;
-      layout(0); // static layout on resize
+    // map DOM buttons
+    const btns = NODES.map(n=>{
+      const el = stage.querySelector(`.sig-node[data-id="${n.id}"]`);
+      if (el) el.dataset.size = n.size;
+      return { ...n, el, x:0, y:0 };
+    }).filter(b=>b.el);
+
+    // geometry
+    let W=0,H=0,CX=0,CY=0, R=0, angleOffset=0;
+    function size(){
+      const rect = orbit.getBoundingClientRect();
+      W = Math.floor(rect.width); H = Math.floor(rect.height);
+      CX = W/2; CY = H/2;
+      R = Math.min(W,H) * 0.36; // single ring radius (soft, warm)
+      layout(0);
     }
-    window.addEventListener("resize", resize);
+    addEventListener("resize", size); size();
 
-    // layout helpers
     function layout(delta){
-      angle = (angle + delta) % 360;
-      const TWO_PI = Math.PI*2;
-      const step = TWO_PI / btns.length;
-      btns.forEach((n, i)=>{
-        const base = i*step;
-        const a = base + (angle*Math.PI/180);
-        const radius = (Math.min(stage.clientWidth, stage.clientHeight)/2) * n.ring;
-        const x = center.x + radius * Math.cos(a);
-        const y = center.y + radius * Math.sin(a);
-        n.el.style.left = `${x}px`;
-        n.el.style.top  = `${y}px`;
-        // subtle depth via opacity
+      angleOffset = (angleOffset + delta) % 360;
+      btns.forEach((b)=>{
+        const a = ((b.angle + angleOffset) % 360) * Math.PI/180;
+        b.x = CX + R * Math.cos(a);
+        b.y = CY + R * Math.sin(a);
+        b.el.style.left = `${b.x}px`;
+        b.el.style.top  = `${b.y}px`;
         const depth = (Math.sin(a)+1)/2; // 0..1
-        n.el.style.opacity = String(0.55 + 0.45*depth);
-        n.el.style.zIndex = String(100 + Math.round(depth*50));
+        b.el.style.opacity = String(0.55 + 0.45*depth);
+        b.el.style.zIndex = String(100 + Math.round(depth*50));
       });
     }
 
-    // animation loop (no interactions yet)
-    let prev=0;
+    // animation (slow, premium)
+    let prev=0, autoRotate=!noMotion, selected=null;
     function tick(now){
-      if (!prev) prev = now;
-      const dt = Math.min(33, now - prev);
+      if (!prev) prev=now;
+      const dt = Math.min(40, now - prev);
       prev = now;
-      layout(noMotion ? 0 : dt*0.006); // slow rotate
-      if (!noMotion) requestAnimationFrame(tick);
+      layout(autoRotate ? dt*0.006 : 0);
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    // card helpers
+    function showCard(id){
+      const d = CONTENT[id];
+      if (!d) return;
+      $("#sigTag").textContent = d.tag||"Signal";
+      $("#sigTitle").textContent = d.title||"";
+      const list = $("#sigList"); list.innerHTML="";
+      (d.list||[]).forEach(li=>{
+        const it = document.createElement("li");
+        it.textContent = li; list.appendChild(it);
+      });
+      $("#sigHero").textContent = d.hero||"";
+      if (d.fine) $("#sigFine").textContent = d.fine; else $("#sigFine").textContent="";
+      card.classList.add("show");
+    }
+    function hideCard(){ card.classList.remove("show"); }
+
+    function select(id){
+      selected = id;
+      autoRotate = false;
+      // rotate so selected is at top (270deg visual top baseline)
+      const node = NODES.find(n=>n.id===id);
+      if (node){
+        const targetAngle = 270 - node.angle; // bring to 12 o'clock
+        angleOffset = (angleOffset + targetAngle) % 360;
+      }
+
+      // related aura + dim others
+      const rel = new Set((NODES.find(n=>n.id===id)?.related)||[]);
+      btns.forEach(b=>{
+        b.el.classList.remove("is-related");
+        b.el.style.opacity = b.id===id ? "1" : (rel.has(b.id) ? "0.95" : "0.55");
+        if (rel.has(b.id)) b.el.classList.add("is-related");
+      });
+
+      showCard(id);
+      layout(0);
     }
 
-    // initial paint
-    layout(0);
-    if (!noMotion) requestAnimationFrame(tick);
+    function clearSelection(){
+      selected = null; autoRotate = !noMotion; hideCard();
+      btns.forEach(b=>{ b.el.classList.remove("is-related"); b.el.style.opacity=""; });
+    }
+
+    // bind clicks
+    btns.forEach(b=>{
+      b.el.addEventListener("click",(e)=>{ e.stopPropagation(); select(b.id); });
+    });
+    orbit.addEventListener("click",(e)=>{ if (e.target===orbit || e.target===stage) clearSelection(); });
+    document.addEventListener("keydown",(e)=>{ if (e.key==="Escape") clearSelection(); });
+
+    // subtle center pulse via CSS box-shadow toggle
+    const corePulse = document.querySelector(".sig-core");
+    if (corePulse && !noMotion){
+      let t=0;
+      (function pulse(){
+        t+=0.02;
+        const a = 0.12 + 0.06*Math.sin(t);
+        corePulse.style.boxShadow = `0 0 0 1px rgba(255,255,255,.08) inset, 0 14px 34px rgba(230,195,107,${a.toFixed(2)})`;
+        requestAnimationFrame(pulse);
+      })();
+    }
   })();
 
-<!-- ========== SPLIT 3: ORBIT v2 (append-only) ========== -->
-<style id="orbit-v2-overrides">
-  /* make Section 3 look minimal, warm, and frameless */
-  #orbit .orbit-panel{
-    border:none !important;
-    background:
-      radial-gradient(120% 120% at 20% 10%, rgba(230,195,107,.08), rgba(11,17,25,1) 55%),
-      linear-gradient(180deg,#0d1520,#0c141f) !important;
-    box-shadow: none !important;
-  }
-  /* hide old multi-ring stage completely */
-  #orbit .orbit-stage:not(.orbit-stage-v2){ display:none !important; }
-  /* keep exactly one ring */
-  #orbit .orbit-ring{ display:none }
-  #orbit .orbit-stage-v2 .orbit-ring-sole{
-    position:absolute; inset:8%;
-    border-radius:50%;
-    border:1px solid rgba(255,255,255,.12);
-    opacity:.9;
-  }
-  /* center glow */
-  #orbit .orbit-stage-v2 .orbit-core{
-    width:76px; height:76px; border-radius:50%;
-    background:radial-gradient(circle at 36% 36%, var(--gold-300) 0%, var(--gold) 36%, var(--gold-700) 72%);
-    box-shadow:
-      0 0 0 1px rgba(255,255,255,.06) inset,
-      0 18px 40px rgba(230,195,107,.22),
-      0 0 60px rgba(230,195,107,.18);
-    transition:filter .6s ease;
-  }
-  /* domain chip under the core */
-  #orbit .orbit-stage-v2 .orbit-domain{
-    margin-top:10px; font-size:12px; color:#cfe0ee;
-    padding:6px 10px; border-radius:999px;
-    background:rgba(255,255,255,.05); border:1px solid var(--stroke);
-    white-space:nowrap;
-  }
-  /* nodes (reuse palette, gentle depth) */
-  #orbit .orbit-stage-v2 .orbit-node{
-    position:absolute; z-index:1;
-    width:46px; height:46px; border-radius:999px;
-    display:grid; place-items:center; cursor:pointer; user-select:none;
-    color:#1b1405; background:linear-gradient(180deg, var(--gold-300), var(--gold));
-    border:1px solid rgba(255,255,255,.35);
-    box-shadow:0 8px 22px rgba(0,0,0,.35);
-    transition:transform .35s ease, box-shadow .35s ease, opacity .35s ease, filter .35s ease;
-  }
-  #orbit .orbit-stage-v2 .orbit-node[data-size="l"]{ width:58px; height:58px }
-  #orbit .orbit-stage-v2 .orbit-node[data-size="s"]{ width:38px; height:38px }
-  #orbit .orbit-stage-v2 .orbit-node span{ font-weight:700; font-size:11px; letter-spacing:.2px }
-  #orbit .orbit-stage-v2 .orbit-node:hover{ box-shadow:0 12px 30px rgba(0,0,0,.45); transform:scale(1.05) }
-  #orbit .orbit-stage-v2 .orbit-node::after{
-    content:""; position:absolute; inset:-10px; border-radius:inherit;
-    background:radial-gradient(circle, rgba(230,195,107,.28), rgba(230,195,107,0) 60%);
-    opacity:.35; transition:opacity .35s ease;
-  }
-  #orbit .orbit-stage-v2 .orbit-node.is-related::after{ opacity:.85 }
-
-  /* info card: reuse existing #orbitCard but restyle for minimal feel */
-  #orbit .orbit-card{
-    background:rgba(16,22,35,.92) !important;
-    border:1px solid rgba(255,255,255,.16) !important;
-    border-radius:14px !important;
-    box-shadow:0 18px 50px rgba(0,0,0,.45) !important;
-    padding:12px 14px !important;
-  }
-  #orbit .orbit-card .kicker{ color:#a8bacb; font-size:11px; text-transform:uppercase; letter-spacing:.25px }
-  #orbit .orbit-card h3{ margin:6px 0 6px; font:600 16px/1.2 "Newsreader", Georgia, serif }
-  #orbit .orbit-card ul{ margin:8px 0 8px 16px; padding:0; color:#cfe0ee; font-size:13px }
-  #orbit .orbit-card li{ margin:6px 0 }
-  #orbit .orbit-card .heroMetric{
-    margin-top:8px; padding:10px 12px; border-radius:12px;
-    background:rgba(230,195,107,.08); border:1px solid rgba(230,195,107,.25);
-    color:var(--gold-300); font-weight:700; font-size:13px;
-  }
-  #orbit .orbit-card .fine{ color:#9db2c5; font-size:12px; margin-top:6px }
-  @media (max-width:700px){
-    #orbit .orbit-card{ left:50% !important; top:auto !important; bottom:14px; transform:translate(-50%,0) !important }
-  }
-
-  /* stage sizing */
-  #orbit .orbit-stage-v2{
-    position:relative; isolation:isolate;
-    width:min(820px, 92vw); height:min(820px, 92vw);
-    max-width:620px; max-height:620px; border-radius:50%;
-    display:grid; place-items:center; margin:0 auto;
-  }
-</style>
-
-<script>
-(()=>{
-  // ===== ORBIT v2 (single ring, slow rotation, click to top + card) =====
-  const panel = document.querySelector('#orbit .orbit-panel');
-  if (!panel) return;
-
-  // build a new minimal stage and hide old one
-  const oldStage = panel.querySelector('.orbit-stage');
-  if (oldStage) oldStage.style.display = 'none';
-
-  const stage = document.createElement('div');
-  stage.className = 'orbit-stage orbit-stage-v2';
-  stage.innerHTML = `
-    <div class="orbit-ring-sole" aria-hidden="true"></div>
-    <div class="orbit-center">
-      <div class="orbit-core" aria-hidden="true"></div>
-      <div class="orbit-domain" id="orbitDomainV2"></div>
-    </div>`;
-  panel.appendChild(stage);
-
-  // move the existing card into v2 so we reuse markup/aria
-  const card = document.getElementById('orbitCard');
-  if (card) stage.appendChild(card);
-
-  // copy domain text from earlier or fallback
-  const domainText =
-    (document.getElementById('orbitDomain')?.textContent || '').trim() || 'yourcompany.com';
-  const domainV2 = document.getElementById('orbitDomainV2');
-  if (domainV2) domainV2.textContent = domainText;
-
-  // data (titles cleaned + minimal bullets)
-  const DATA = [
-    {
-      id:'competition', label:'Competition', size:'l', energy:80,
-      bullets:[
-        'Active packaging vendors buyers use',
-        'Shared suppliers across peers',
-        'Repeat-purchase patterns',
-        'Approx. order sizes & MOQs',
-        'Public specs & docs activity'
-      ],
-      hero:'Learning from competitors → clearer fit list',
-      fine:'Directional signals only; no private contracts.',
-      related:['buyers','rfp']
-    },
-    {
-      id:'buyers', label:'Buyers', size:'m', energy:70,
-      bullets:[
-        'Estimated demand trend (90-day)',
-        'Creative volume across public channels',
-        'Coarse marketing spend signals',
-        'New launches, events, announcements',
-        'Search interest for packaging keywords',
-        'Web-wide checks every 30s'
-      ],
-      hero:'Buyer demand score (0–100)',
-      related:['competition','buzz','heat']
-    },
-    {
-      id:'rfp', label:'RFPs & Docs', size:'m', energy:60,
-      bullets:[
-        'New RFP mentions for packaging',
-        'Spec-sheet downloads & doc trails',
-        'Vendor-list updates / shortlists',
-        'Directory changes'
-      ],
-      hero:'Active RFP threads this week',
-      related:['buyers','competition']
-    },
-    {
-      id:'buzz', label:'Market Buzz', size:'m', energy:55,
-      bullets:[
-        'News & PR momentum',
-        'Industry/forum mentions',
-        'Keyword velocity & share of voice',
-        'Trade-show activity'
-      ],
-      hero:'Buzz index',
-      related:['buyers']
-    },
-    {
-      id:'hiring', label:'Hiring', size:'s', energy:45,
-      bullets:[
-        'Ops & procurement roles posted',
-        'Packaging engineer openings',
-        'Manufacturing capacity roles'
-      ],
-      hero:'Hiring momentum',
-      related:['buyers']
-    },
-    {
-      id:'heat', label:'Buyer Heat', size:'l', energy:85,
-      bullets:[
-        'Cool: target audience, low readiness',
-        'Warm: intent signals present',
-        'Hot: time-sensitive purchase behavior',
-        'Hot+: we can automatically sell for you'
-      ],
-      hero:'Hot / Hot+ buyers surfaced first',
-      related:['buyers']
-    }
-  ];
-
-  // create nodes laid out on one ring
-  const nodes = DATA.map((d, i) => {
-    const b = document.createElement('button');
-    b.className = 'orbit-node';
-    b.dataset.id = d.id;
-    if (d.size && d.size !== 'm') b.dataset.size = d.size; // s or l
-    b.innerHTML = `<span>${d.label}</span>`;
-    stage.appendChild(b);
-    return { ...d, el: b, baseAngle: (i / DATA.length) * (Math.PI * 2) };
-  });
-
-  // gentle rotation + “snap selected to top”
-  let angle = -Math.PI / 2;       // top of circle
-  let targetAngle = angle;
-  let activeId = null;
-
-  function layout(){
-    const rect = stage.getBoundingClientRect();
-    const cx = rect.width / 2, cy = rect.height / 2;
-    const R = Math.min(cx, cy) * 0.68;
-
-    nodes.forEach(n => {
-      const a = n.baseAngle + angle;
-      const x = cx + R * Math.cos(a);
-      const y = cy + R * Math.sin(a);
-      n.el.style.left = x + 'px';
-      n.el.style.top  = y + 'px';
-
-      const depth = (Math.sin(a) + 1) / 2; // 0..1
-      n.el.style.opacity = String(0.55 + 0.45 * depth);
-      n.el.style.zIndex = String(100 + Math.round(depth * 50));
-      n.el.classList.toggle('is-related', !!activeId && (n.related||[]).includes(activeId));
-    });
-
-    // place/open card at the top when active
-    if (activeId && card){
-      const topX = cx, topY = cy - R - 10;
-      card.style.left = `${topX}px`;
-      card.style.top  = `${topY}px`;
-    }
-  }
-
-  function step(){
-    angle += (targetAngle - angle) * 0.075; // eased rotation
-    layout();
-    requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-  window.addEventListener('resize', layout);
-
-  function rotateNodeToTop(n){
-    const current = n.baseAngle + angle;
-    const desired = -Math.PI / 2; // top
-    // shortest signed delta: wrap into [-PI, PI]
-    const TWO = Math.PI * 2;
-    const delta = ((desired - current + 3*Math.PI) % TWO) - Math.PI;
-    targetAngle = angle + delta;
-  }
-
-  function fillCard(n){
-    if (!card) return;
-    // header bits
-    document.getElementById('cardTag')?.replaceChildren(document.createTextNode('•'));
-    document.getElementById('cardTitle')?.replaceChildren(document.createTextNode(n.label));
-    // bullets
-    const list = document.getElementById('cardList');
-    if (list){
-      list.innerHTML = n.bullets.map(item => `<li>${item}</li>`).join('');
-    }
-    // hero metric + fine
-    const hero = document.getElementById('cardHero'); if (hero) hero.textContent = n.hero || '';
-    const fine = document.getElementById('cardFine'); if (fine) fine.textContent = n.fine || '';
-    card.classList.add('show');
-  }
-
-  function clearCard(){
-    if (card) card.classList.remove('show');
-    activeId = null;
-  }
-
-  // interactions
-  nodes.forEach(n=>{
-    n.el.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      activeId = n.id;
-      rotateNodeToTop(n);
-      fillCard(n);
-    });
-  });
-
-  // close card on background click
-  stage.addEventListener('click', (e)=>{
-    if (e.target === stage || e.target.classList.contains('orbit-ring-sole')) clearCard();
-  });
-
-  // personalize section subtitle (already done earlier; this is a safety pass)
-  const orbitHost = document.getElementById('orbitHost');
-  if (orbitHost && !orbitHost.textContent) orbitHost.textContent = domainText;
-
-  // initial paint
-  layout();
 })();
 </script>
 </body>
 </html>
-
-
