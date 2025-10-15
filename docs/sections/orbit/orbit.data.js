@@ -1,89 +1,21 @@
-/* sections/orbit/orbit.data.js
-   Centralizes content/metrics for the orbit nodes.
-   Load this BEFORE orbit.js. orbit.js reads window.ORBIT_DATA. */
-(function () {
-  const LS = window.localStorage;
-  let host = "yourcompany.com";
-  try { host = JSON.parse(LS.getItem("onb.seed") || "{}")?.host || host; } catch {}
-
-  // tiny helper to format ints
-  const n = (x) => x.toLocaleString();
-
-  window.ORBIT_DATA = {
-    host,
-    nodes: {
-      heat: {
-        tag: "Signal",
-        title: "Buyer Heat",
-        hero: "Top 12 active buyers this week",
-        items: [
-          `High-intent visits to ${host}`,
-          `Repeat visits from target accounts`,
-          `Time-on-page > 90s on product pages`,
-          "3+ pricing page views per account",
-        ],
-        fine: "Based on web + partner signals, deduped by company."
-      },
-      buyers: {
-        tag: "Companies",
-        title: "Buyers",
-        hero: `${n(87)} ranked this week`,
-        items: [
-          "Company, location, industry, size",
-          "Decision-maker discovery",
-          "Email/phone enrichment (opt-in)",
-          "Fit score + intent score"
-        ],
-        fine: "Sorted by blended fit × intent."
-      },
-      rfp: {
-        tag: "Docs",
-        title: "RFPs & Documents",
-        hero: `${n(26)} fresh RFPs`,
-        items: [
-          "Packaging RFPs and bid portals",
-          "Specs scraped & summarized",
-          "Deadlines + required certifications",
-          "Auto-watch keywords"
-        ],
-        fine: "Sources include public portals + curated feeds."
-      },
-      buzz: {
-        tag: "Market",
-        title: "Market Buzz",
-        hero: `${n(1_240)} mentions scanned`,
-        items: [
-          "News, PR, funding + expansion",
-          "Sustainability & regulatory triggers",
-          "New product launches",
-          "Social & forum chatter (noise filtered)"
-        ],
-        fine: "Only high-confidence mentions are counted."
-      },
-      hiring: {
-        tag: "Ops",
-        title: "Hiring",
-        hero: `${n(53)} roles flagged`,
-        items: [
-          "Ops/packaging/engineering roles",
-          "Lines, materials, machinery named",
-          "Urgency & seniority signals",
-          "Region + plant locations"
-        ],
-        fine: "Great for timing capacity or outreach."
-      },
-      competition: {
-        tag: "Landscape",
-        title: "Competition",
-        hero: `${n(14)} overlapping deals`,
-        items: [
-          "Competitor site changes",
-          "Head-to-head wins/losses",
-          "Ad spend spikes & keywords",
-          "Pricing page deltas"
-        ],
-        fine: "Competitive set tuned to your sector."
-      }
-    }
-  };
-})();
+/* Minimal data for Section 3 */
+window.ORBIT = {
+  title: "Where your buyers light up",
+  subtitlePrefix: "Simple orbit map of the strongest intent signals for ",
+  nodes: [
+    { id:"competition", label:"Competition", ring:0.86, size:"l" },
+    { id:"buyers",      label:"Buyers",      ring:0.86, size:"m" },
+    { id:"rfp",         label:"RFPs & Docs", ring:0.70, size:"m" },
+    { id:"buzz",        label:"Market Buzz", ring:0.56, size:"m" },
+    { id:"hiring",      label:"Hiring",      ring:0.42, size:"s" },
+    { id:"heat",        label:"Buyer Heat",  ring:0.30, size:"l" }
+  ],
+  cards: {
+    competition: { title:"Competitors gaining ground", points:["Share-of-voice up 18%","Pricing pages trending","Feature parity claims rising"], heroMetric:"18% ↑ SOV (30d)" },
+    buyers:      { title:"Companies ready to talk",     points:["Fit score ≥ 82","Recent website activity","Decision titles detected"],   heroMetric:"87 hot buyers" },
+    rfp:         { title:"Active RFPs & docs",          points:["Procurement portals","PDF/RFP mentions","Submission windows open"],      heroMetric:"23 live docs" },
+    buzz:        { title:"Market buzz",                  points:["News velocity +12%","Forum chatter ↑","Regulatory mentions"],           heroMetric:"+12% velocity" },
+    hiring:      { title:"Buyer-side hiring",            points:["Ops & packaging roles","New plants announced","Capex notes"],           heroMetric:"41 openings" },
+    heat:        { title:"Buyer heat",                   points:["High-intent clusters","Repeat sessions","C-level engagement"],          heroMetric:"85/100 peak" }
+  }
+};
