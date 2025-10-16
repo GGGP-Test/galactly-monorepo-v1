@@ -1,22 +1,21 @@
-// docs/sections/process/process.js  (v3 — data-ext + idempotent)
+// docs/sections/process/process.js  (v2.1 – calmer entry + sparse links)
 // Mounts into <div id="section-process"></div>
 (function(){
   const mount = document.getElementById("section-process");
-  if (!mount || mount.dataset.mounted === "1") return; // prevent double render
-  mount.dataset.mounted = "1";
+  if (!mount) return;
 
   // ---------------- CONFIG ----------------
   const CFG = {
     stickyTopPx: 96,
     ringGapFrac: 0.17,
-    nodeFanDeg: 100,
-    nodeFanStartDeg: -150,
-    linkCurviness: 0.22
+    nodeFanDeg: 82,          // tighter fan → fewer crossovers
+    nodeFanStartDeg: -145,
+    linkCurviness: 0.18,     // gentler curves
+    maxNeighborLinks: 2      // << key change: sparse links
   };
 
   // ---------------- DATA ----------------
-  // Prefer external data (process.data.js), otherwise fall back.
-  const FALLBACK = {
+  const DATA = {
     title: "How the scoring engine works",
     sub: "We score each lead across four lenses, then surface the fastest wins.",
     columns: [
@@ -67,9 +66,6 @@
       {id:"result",title:"Result",body:"Prioritised list with the reasoning attached."}
     ]
   };
-  const DATA = (window.PROCESS_DATA && typeof window.PROCESS_DATA === "object")
-    ? window.PROCESS_DATA
-    : FALLBACK;
 
   // ---------------- DOM ----------------
   const railStepsHTML = DATA.steps.map(s=>`
@@ -179,23 +175,42 @@
     });
 
     const Rmax=radii[radii.length-1];
-    res.style.left = (CX + Rmax + 140) + "px";
+    res.style.left = (CX + Rmax + 128) + "px";
     res.style.top  = CY + "px";
   }
   layout();
   addEventListener("resize", layout, {passive:true});
 
-  // Links (only for active pair)
+  // Helpers for links
   function clearLinks(){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
   function drawPairLinks(fromArr, toArr){
     clearLinks();
     const curv = CFG.linkCurviness;
+    if (!fromArr || !toArr) return;
+
     fromArr.forEach(a=>{
       const ax=parseFloat(a.el.style.left), ay=parseFloat(a.el.style.top);
       const vax=ax-CX, vay=ay-CY;
-      toArr.forEach(b=>{
+
+      // index in target column to connect near the "matching" position
+      const tCount = toArr.length;
+      const anchorIdx = Math.round((a.nodeIdx/(fromArr.length-1 || 1))*(tCount-1));
+      const reach = CFG.maxNeighborLinks;              // e.g. 2 → two neighbours
+      const targets = new Set();
+
+      for (let k=-Math.floor(reach/2); k<=Math.floor((reach-1)/2); k++){
+        const j = Math.min(tCount-1, Math.max(0, anchorIdx + k));
+        targets.add(j);
+      }
+
+      // Always guarantee at least one link
+      if (targets.size===0) targets.add(anchorIdx);
+
+      targets.forEach(j=>{
+        const b = toArr[j];
         const bx=parseFloat(b.el.style.left), by=parseFloat(b.el.style.top);
         const vbx=bx-CX, vby=by-CY;
+
         const p=document.createElementNS(svgNS,"path");
         const c1x=ax+vax*curv, c1y=ay+vay*curv;
         const c2x=bx+vbx*curv, c2y=by+vby*curv;
@@ -210,6 +225,12 @@
   const stepEls = Array.from(rail.querySelectorAll(".proc-step"));
   const stepById = Object.fromEntries(stepEls.map(el=>[el.dataset.step,el]));
 
+  function neutral(){
+    clearLinks();
+    rings.forEach(r=>{ r.style.borderColor="rgba(255,255,255,.10)"; r.style.boxShadow="none"; });
+    nodes.forEach(n=>{ n.el.style.opacity="1"; n.el.style.filter="none"; });
+  }
+
   function setActive(colId){
     // Rail bullets
     stepEls.forEach(s=>s.classList.remove("is-current","is-done"));
@@ -220,11 +241,13 @@
     });
     if (colId && stepById[colId]) stepById[colId].classList.add("is-current");
 
+    if (!colId || colId==="intro" || colId==="result"){ neutral(); return; }
+
     // Node emphasis
     nodes.forEach(n=>{
       const active = DATA.columns[n.colIdx]?.id===colId;
-      n.el.style.opacity = active ? "1" : (colId ? ".35" : "1");
-      n.el.style.filter  = active ? "none" : (colId ? "grayscale(.2)" : "none");
+      n.el.style.opacity = active ? "1" : ".35";
+      n.el.style.filter  = active ? "none" : "grayscale(.2)";
     });
 
     // Ring emphasis
@@ -234,9 +257,8 @@
       r.style.boxShadow   = on ? "0 0 18px rgba(242,220,160,.25)" : "none";
     });
 
-    // Links: only active pair
+    // Links: only active pair (nearest neighbours)
     const idx = DATA.columns.findIndex(c=>c.id===colId);
-    if (idx<0){ clearLinks(); return; }
     const next = nodesByCol[idx+1], prev = nodesByCol[idx-1];
     if (next)      drawPairLinks(nodesByCol[idx], next);
     else if (prev) drawPairLinks(prev, nodesByCol[idx]);
@@ -251,43 +273,30 @@
     prog.style.height = (t * r.height) + "px";
   }
 
-  // Observe steps (fallback to scroll if IO missing)
-  if ("IntersectionObserver" in window){
-    const io = new IntersectionObserver((entries)=>{
-      entries.forEach(e=>{
-        if (!e.isIntersecting) return;
-        const id=e.target.dataset.step;
-        if (id==="intro" || id==="result"){
-          clearLinks();
-          rings.forEach(r=>{r.style.borderColor="rgba(255,255,255,.10)"; r.style.boxShadow="none";});
-          nodes.forEach(n=>{n.el.style.opacity="1"; n.el.style.filter="none";});
-        } else {
-          setActive(id);
-        }
-        updateProgress();
-      });
-    },{threshold:0.55});
-    stepEls.forEach(el=>io.observe(el));
-  } else {
-    // simple fallback: activate based on scroll position
-    addEventListener("scroll", ()=>{
-      let current = "intro";
-      stepEls.forEach(el=>{
-        const r = el.getBoundingClientRect();
-        if (r.top < innerHeight*0.45) current = el.dataset.step;
-      });
-      if (current==="intro" || current==="result"){
-        clearLinks();
-        rings.forEach(r=>{r.style.borderColor="rgba(255,255,255,.10)"; r.style.boxShadow="none";});
-        nodes.forEach(n=>{n.el.style.opacity="1"; n.el.style.filter="none";});
-      } else {
-        setActive(current);
-      }
-      updateProgress();
-    }, {passive:true});
-  }
+  // Intersection observers
+  const ioSteps = new IntersectionObserver((entries)=>{
+    // pick the most visible step among entries
+    let best = null, bestRatio = 0;
+    entries.forEach(e=>{
+      if (e.intersectionRatio > bestRatio){ bestRatio = e.intersectionRatio; best = e; }
+    });
+    if (!best) return;
+    const id = best.target.dataset.step;
+    setActive(id);
+    updateProgress();
+  },{threshold:[0.15,0.35,0.55,0.75]});
+  stepEls.forEach(el=>ioSteps.observe(el));
 
-  // Click node → scroll rail to its step
+  // Ensure neutral when section is just entering/leaving the viewport
+  const ioSection = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if (!e.isIntersecting) { neutral(); clearLinks(); }
+      else { /* stay neutral until a step takes over */ }
+    });
+  },{threshold:0.01});
+  ioSection.observe(mount.querySelector(".proc-section"));
+
+  // Node click → jump to its rail step
   nodes.forEach(n=>{
     n.el.addEventListener("click",(ev)=>{
       ev.preventDefault();
@@ -297,8 +306,7 @@
     });
   });
 
-  // Initial state
-  setActive("intent");
+  // Initial neutral state (no spaghetti on section entry)
+  neutral();
   updateProgress();
-  addEventListener("scroll", updateProgress, {passive:true});
 })();
