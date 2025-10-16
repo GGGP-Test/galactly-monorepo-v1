@@ -1,5 +1,4 @@
-<!-- docs/sections/process/process.js -->
-<script>
+// docs/sections/process/process.js
 /* Process section (scrollytelling) — single-file renderer
    - Mounts into <div id="section-process"></div>
    - Sticky left graph, right copy rail + progress
@@ -196,9 +195,9 @@
 
     rings.forEach((ring,i)=>{
       const d = 2*radii[i];
-      ring.style.width=d+"px"; ring.style.height=d+"px";
-      ring.style.left=(CX - radii[i])+"px";
-      ring.style.top =(CY - radii[i])+"px";
+      ring.style.width = d + "px"; ring.style.height = d + "px";
+      ring.style.left = (CX - radii[i]) + "px";
+      ring.style.top  = (CY - radii[i]) + "px";
     });
 
     // Column captions (top of ring)
@@ -227,7 +226,6 @@
       const a = L.from, b = L.to;
       const ax = parseFloat(a.el.style.left), ay = parseFloat(a.el.style.top);
       const bx = parseFloat(b.el.style.left), by = parseFloat(b.el.style.top);
-      const mx = (ax+bx)/2, my = (ay+by)/2;
 
       // Bezier control points push outward from center for a nice fan
       const vax = ax - CX, vay = ay - CY;
@@ -288,7 +286,6 @@
     entries.forEach(e=>{
       if (!e.isIntersecting) return;
       const id = e.target.dataset.step;
-      // only switch when a real column id or "result"
       if (id==="intro") { setActive(null); }
       else if (id==="result"){ setActive(null); }
       else { setActive(id); }
@@ -309,4 +306,3 @@
     });
   });
 })();
-</script>
