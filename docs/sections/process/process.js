@@ -1,8 +1,9 @@
-// docs/sections/process/process.js  (v2 - calmer, focused)
+// docs/sections/process/process.js  (v3 — data-ext + idempotent)
 // Mounts into <div id="section-process"></div>
 (function(){
   const mount = document.getElementById("section-process");
-  if (!mount) return;
+  if (!mount || mount.dataset.mounted === "1") return; // prevent double render
+  mount.dataset.mounted = "1";
 
   // ---------------- CONFIG ----------------
   const CFG = {
@@ -14,7 +15,8 @@
   };
 
   // ---------------- DATA ----------------
-  const DATA = {
+  // Prefer external data (process.data.js), otherwise fall back.
+  const FALLBACK = {
     title: "How the scoring engine works",
     sub: "We score each lead across four lenses, then surface the fastest wins.",
     columns: [
@@ -65,6 +67,9 @@
       {id:"result",title:"Result",body:"Prioritised list with the reasoning attached."}
     ]
   };
+  const DATA = (window.PROCESS_DATA && typeof window.PROCESS_DATA === "object")
+    ? window.PROCESS_DATA
+    : FALLBACK;
 
   // ---------------- DOM ----------------
   const railStepsHTML = DATA.steps.map(s=>`
@@ -180,7 +185,7 @@
   layout();
   addEventListener("resize", layout, {passive:true});
 
-  // Draw links only for active pair
+  // Links (only for active pair)
   function clearLinks(){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
   function drawPairLinks(fromArr, toArr){
     clearLinks();
@@ -246,17 +251,41 @@
     prog.style.height = (t * r.height) + "px";
   }
 
-  // Observe steps
-  const io = new IntersectionObserver((entries)=>{
-    entries.forEach(e=>{
-      if (!e.isIntersecting) return;
-      const id=e.target.dataset.step;
-      if (id==="intro" || id==="result"){ clearLinks(); rings.forEach(r=>{r.style.borderColor="rgba(255,255,255,.10)"; r.style.boxShadow="none";}); nodes.forEach(n=>{n.el.style.opacity="1"; n.el.style.filter="none";}); }
-      else setActive(id);
+  // Observe steps (fallback to scroll if IO missing)
+  if ("IntersectionObserver" in window){
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if (!e.isIntersecting) return;
+        const id=e.target.dataset.step;
+        if (id==="intro" || id==="result"){
+          clearLinks();
+          rings.forEach(r=>{r.style.borderColor="rgba(255,255,255,.10)"; r.style.boxShadow="none";});
+          nodes.forEach(n=>{n.el.style.opacity="1"; n.el.style.filter="none";});
+        } else {
+          setActive(id);
+        }
+        updateProgress();
+      });
+    },{threshold:0.55});
+    stepEls.forEach(el=>io.observe(el));
+  } else {
+    // simple fallback: activate based on scroll position
+    addEventListener("scroll", ()=>{
+      let current = "intro";
+      stepEls.forEach(el=>{
+        const r = el.getBoundingClientRect();
+        if (r.top < innerHeight*0.45) current = el.dataset.step;
+      });
+      if (current==="intro" || current==="result"){
+        clearLinks();
+        rings.forEach(r=>{r.style.borderColor="rgba(255,255,255,.10)"; r.style.boxShadow="none";});
+        nodes.forEach(n=>{n.el.style.opacity="1"; n.el.style.filter="none";});
+      } else {
+        setActive(current);
+      }
       updateProgress();
-    });
-  },{threshold:0.55});
-  stepEls.forEach(el=>io.observe(el));
+    }, {passive:true});
+  }
 
   // Click node → scroll rail to its step
   nodes.forEach(n=>{
@@ -271,4 +300,5 @@
   // Initial state
   setActive("intent");
   updateProgress();
+  addEventListener("scroll", updateProgress, {passive:true});
 })();
