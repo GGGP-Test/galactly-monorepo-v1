@@ -1,123 +1,76 @@
-/* global window */
-/* Lead Intelligence workflow (content + structure only)
-   Used by sections/process/process.js to render the scrollytelling graph.
+/* docs/sections/process/process.data.js
+   External, editable copy for the Process section.
+   process.js will read window.PROCESS_DATA (if present) instead of its internal fallback.
 */
-window.PROCESS_DATA = {
-  title: "Lead Intelligence — from signal to result",
+(function () {
+  window.PROCESS_DATA = {
+    title: "How the scoring engine works",
+    sub: "We score each lead across four lenses, then surface the fastest wins.",
 
-  // Gate before columns
-  gate: { id: "gate", label: "Score System", outcomeYes: "Lead ✓" },
+    columns: [
+      {
+        id: "intent",
+        label: "Intent Score",
+        emoji: "⚡",
+        nodes: [
+          { id: "search",   emoji: "🔎", label: "Search velocity" },
+          { id: "tech",     emoji: "🛠️", label: "Warehouse tech" },
+          { id: "ltv",      emoji: "📈", label: "Customer LTV/CAC" },
+          { id: "tools",    emoji: "🧰", label: "Tools interacted" },
+          { id: "size",     emoji: "🏢", label: "Company size" }
+        ]
+      },
+      {
+        id: "weight",
+        label: "Weight Score",
+        emoji: "⚖️",
+        nodes: [
+          { id: "posting",  emoji: "🗞️", label: "Posting behaviour" },
+          { id: "goodwill", emoji: "🎁", label: "Offers / lead magnets" },
+          { id: "nature",   emoji: "🏭", label: "Nature of business" },
+          { id: "freq",     emoji: "🔁", label: "Purchase frequency" }
+        ]
+      },
+      {
+        id: "character",
+        label: "Character Score",
+        emoji: "🧠",
+        nodes: [
+          { id: "reviews",  emoji: "⭐",  label: "Past reviews" },
+          { id: "jumps",    emoji: "↔️", label: "Vendor switching" },
+          { id: "values",   emoji: "💬", label: "Language → values" },
+          { id: "culture",  emoji: "🌐", label: "Language → culture" }
+        ]
+      },
+      {
+        id: "platform",
+        label: "Platform Score",
+        emoji: "📡",
+        nodes: [
+          { id: "posts",    emoji: "🗂️", label: "# posts / platform" },
+          { id: "comments", emoji: "💬", label: "# comments / platform" },
+          { id: "reply",    emoji: "✉️", label: "Intent to respond" }
+        ]
+      }
+    ],
 
-  /* Columns appear left→right. Keep labels brief; details live in steps[]. */
-  columns: [
-    {
-      id: "intent",
-      label: "Intent Score",
-      aim: "How fast will they buy?",
-      nodes: [
-        { id: "searches",  label: "Searches / time block", emoji: "🔎" },
-        { id: "stack",     label: "Warehouse tech stack",  emoji: "🧱" },
-        { id: "ltv_cac",   label: "Customer LTV/CAC",      emoji: "📈" },
-        { id: "tools",     label: "Tools interacted",      emoji: "🛠️" },
-        { id: "size",      label: "Company size",          emoji: "🏢" }
-      ],
-      wiring: "dense" // renderer will draw many-to-many to next column
+    result: {
+      title: "Result",
+      bullets: [
+        "Fastest-to-buy window",
+        "Likely retention horizon",
+        "Advocacy potential",
+        "Best first contact channel"
+      ]
     },
-    {
-      id: "weight",
-      label: "Weight Score",
-      aim: "How long will they stay?",
-      nodes: [
-        { id: "posting",   label: "Posting behavior",      emoji: "🗓️" },
-        { id: "goodwill",  label: "Goodwill / free offers",emoji: "🎁" },
-        { id: "nature",    label: "Nature of business",    emoji: "🏭" },
-        { id: "frequency", label: "Purchase frequency",    emoji: "🔁" }
-      ],
-      wiring: "dense"
-    },
-    {
-      id: "character",
-      label: "Character Score",
-      aim: "What kind of partner are they?",
-      nodes: [
-        { id: "reviews",   label: "Past review scores",    emoji: "⭐" },
-        { id: "churn",     label: "Supplier switching",    emoji: "🔀" },
-        { id: "value_lang",label: "Value & culture (lang)",emoji: "💬" },
-        { id: "advocacy",  label: "Referral/advocacy bias",emoji: "📣" }
-      ],
-      wiring: "dense"
-    },
-    {
-      id: "platform",
-      label: "Platform Score",
-      aim: "Where to reach first?",
-      nodes: [
-        { id: "posts",     label: "Posts per platform",    emoji: "🧵" },
-        { id: "comments",  label: "Comments per firm",     emoji: "💬" },
-        { id: "reply",     label: "Intent to respond",     emoji: "✅" }
-      ],
-      wiring: "dense"
-    }
-  ],
 
-  // Final result card
-  result: {
-    id: "result",
-    label: "Result",
-    emoji: "🎯",
-    bullets: [
-      "Buy window: hot/warm/cool with days-to-contact",
-      "Retention risk band + renewal cue",
-      "Advocacy likelihood (review/referral)",
-      "Primary outreach channel (email/SMS/DM) with fallback"
+    steps: [
+      { id: "intro",     title: "Score System",    body: "We only advance leads that match your persona." },
+      { id: "intent",    title: "Intent score",    body: "How fast they’re likely to buy." },
+      { id: "weight",    title: "Weight score",    body: "How commercially meaningful they are." },
+      { id: "character", title: "Character score", body: "How they behave with suppliers & customers." },
+      { id: "platform",  title: "Platform score",  body: "Where they’ll most likely reply first." },
+      { id: "result",    title: "Result",          body: "Prioritised list with the reasoning attached." }
     ]
-  },
-
-  /* Scrollytelling copy (right rail). The renderer will pin the canvas and
-     step through these with a progress spine. */
-  steps: [
-    {
-      id: "gate",
-      title: "Gate: Is this a lead?",
-      body:
-        "We run your persona gate first (Step 3 data + classifier v1). If it passes, it enters the scoring pipeline."
-    },
-    {
-      id: "intent",
-      title: "Intent Score — speed to buy",
-      body:
-        "Signals that correlate with immediacy: recent searches, stack changes, customer economics, touched tools, and size."
-    },
-    {
-      id: "weight",
-      title: "Weight Score — stay length",
-      body:
-        "Behavioral + structural anchors: posting rhythm, goodwill patterns, business nature, and purchase cadence."
-    },
-    {
-      id: "character",
-      title: "Character Score — partner quality",
-      body:
-        "History and language give away temperament: reviews, switching events, value framing, and advocacy bias."
-    },
-    {
-      id: "platform",
-      title: "Platform Score — first touch channel",
-      body:
-        "We pick the highest-yield channel based on activity and reply history, with a smart fallback."
-    },
-    {
-      id: "result",
-      title: "Result — a ranked, actionable lead",
-      body:
-        "One card per company with buy-window, retention band, advocacy odds, and the primary outreach channel."
-    }
-  ],
-
-  /* Theme + renderer hints (the JS will read these and fall back to defaults) */
-  theme: {
-    ringRadiusPx: 280,          // base radius for the column rings (visual only)
-    nodeDensity: "high",        // influences connector count
-    bg: { aurora: true, faint: true } // keep the section muted but congruent
-  }
-};
+  };
+})();
