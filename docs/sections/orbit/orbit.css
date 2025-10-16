@@ -1,9 +1,9 @@
 /* -------------------------
    Section 3: Orbit (styles)
-   - No “pane”; the stage is transparent and sits on the page background.
-   - Centered sun + single orbit ring.
-   - Cute, readable chips.
-   - Very light aurora wash inside the section only (not a box).
+   - Transparent stage (no pane)
+   - Centered sun + single ring
+   - Cute, readable chips
+   - Faint aurora backdrop
    ------------------------- */
 
 .orbit-section { padding: 36px 0 84px; }
@@ -53,10 +53,23 @@
   z-index:1;
 }
 
-/* Sun at exact center */
-.orbit-center{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:2; text-align:center; }
+/* ---- SUN & LABEL (precise centering) ----
+   Trick: make the centering box zero-size so the label
+   cannot pull the sun off the true geometric center.
+*/
+.orbit-center{
+  position:absolute; left:50%; top:50%;
+  transform: translate(-50%, -50%);
+  width:0; height:0; /* zero-size anchor */
+  z-index:2;
+}
+
+/* ~10% smaller than before (was 84px) */
 .orbit-core{
-  width:84px; height:84px; border-radius:50%;
+  --sun: 76px;
+  position:absolute; left:0; top:0;
+  width:var(--sun); height:var(--sun); border-radius:50%;
+  transform: translate(-50%, -50%);
   background: radial-gradient(ellipse at 40% 40%, #ffd978 0%, #f0b93e 48%, #c08f1d 100%);
   box-shadow:
     0 0 60px rgba(240,185,62,.45),
@@ -68,8 +81,11 @@
   50%{ filter:brightness(1.18) }
   100%{ filter:brightness(1.00) }
 }
+
+/* Place the label BELOW the true center by (sun/2 + 10px) */
 .orbit-domain{
-  margin-top: 10px;
+  position:absolute; left:0; top: calc(var(--sun)/2 + 10px);
+  transform: translate(-50%, 0);
   display:inline-block;
   padding:6px 10px;
   border-radius:999px;
