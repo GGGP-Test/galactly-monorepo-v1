@@ -2,29 +2,18 @@
 /* Uses the same palette vars defined in index.html :root */
 
 /* ---------- section + header ---------- */
-.orbit-section{padding:80px 16px 96px}
+.orbit-section{
+  position:relative;            /* needed for the section-wide aurora */
+  padding:80px 16px 96px;
+}
 .orbit-inner{max-width:1140px;margin:0 auto}
 .orbit-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 0 16px}
 .orbit-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
 .orbit-hd .sub{color:var(--muted);font-size:14px}
 
-/* ---------- panel: transparent; no frame; subtle aurora background ---------- */
-.orbit-panel{
-  position:relative;
-  display:grid; place-items:center;
-  min-height:560px;
-  padding:0;
-  border:none;
-  background:transparent;
-  box-shadow:none;
-}
-@media (max-width:900px){ .orbit-panel{min-height:480px} }
-@media (max-width:520px){ .orbit-panel{min-height:420px} }
-
-/* faint gold/blue haloes (congruent with hero, but dimmer & more sources) */
-.orbit-panel::before{
-  content:""; position:absolute; inset:-10%; z-index:0; pointer-events:none;
-  /* six very soft light blobs */
+/* ---------- section-wide aurora (no pane) ---------- */
+.orbit-section::before{
+  content:""; position:absolute; inset:-10% -6% -8% -6%; z-index:0; pointer-events:none;
   background:
     radial-gradient(60% 40% at 20% 18%, rgba(230,195,107,.08), rgba(230,195,107,0) 60%),
     radial-gradient(50% 35% at 82% 30%, rgba(210,225,255,.05), rgba(210,225,255,0) 60%),
@@ -36,25 +25,36 @@
   opacity:.7;
 }
 
-/* ---------- stage: always a perfect square so orbit is a circle ---------- */
+/* ---------- panel: completely transparent (pane removed) ---------- */
+.orbit-panel{
+  position:relative;
+  display:grid; place-items:center;
+  min-height:560px;
+  padding:0;
+  border:none; background:transparent; box-shadow:none;
+  z-index:1; /* above the aurora */
+}
+@media (max-width:900px){ .orbit-panel{min-height:480px} }
+@media (max-width:520px){ .orbit-panel{min-height:420px} }
+
+/* ---------- stage: perfect square so orbit is a circle ---------- */
 .orbit-stage{
   position:relative; isolation:isolate;
-  z-index:1;
   width:min(820px,92vw);
   height:min(820px,92vw);
   max-width:680px; max-height:680px;
   display:grid; place-items:center;
 }
 
-/* single ring only (requested) */
+/* single ring only — diameter ~8% smaller (from inset 10% → 13%) */
 .orbit-ring{
-  position:absolute; inset:10%; border-radius:50%;
+  position:absolute; inset:13%; border-radius:50%;
   border:1px solid rgba(255,255,255,.14);
   box-shadow:0 0 0 1px rgba(255,255,255,.03) inset;
   pointer-events:none;
 }
 
-/* ---------- center nucleus with soft shimmer (no ripple) ---------- */
+/* ---------- center nucleus with soft shimmer (no outward ripple) ---------- */
 @keyframes coreShimmer {
   0%,100% {
     transform:scale(1.0);
@@ -69,7 +69,6 @@
     box-shadow:0 0 0 1px rgba(255,255,255,.10) inset;
   }
 }
-
 .orbit-center{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:10px}
 .orbit-core{
   position:relative;
@@ -78,15 +77,12 @@
   animation: coreShimmer 2.6s ease-in-out infinite;
   will-change: transform, filter, box-shadow;
 }
-/* soft ambient halo that breathes with the core (no outward ring) */
 .orbit-core::before{
   content:""; position:absolute; inset:-12px; border-radius:50%;
   background:radial-gradient(circle, rgba(230,195,107,.55), rgba(230,195,107,0) 60%);
   filter:blur(12px);
   opacity:.6;
 }
-
-/* --------- domain pill --------- */
 .orbit-domain{
   font-size:12px;color:#cfe0ee;padding:6px 10px;border-radius:999px;
   background:rgba(255,255,255,.05);border:1px solid var(--stroke);white-space:nowrap
@@ -111,15 +107,12 @@
   box-shadow:0 16px 36px rgba(0,0,0,.45);
   transform:translate(-50%,-50%) scale(1.03);
 }
-.orbit-node::after{
-  content:""; position:absolute; inset:-10px; border-radius:inherit; z-index:-1;
-  background:radial-gradient(circle, rgba(230,195,107,.20), rgba(230,195,107,0) 60%);
-  opacity:.35; transition:opacity .25s ease;
+.orbit-node.locked{
+  background:rgba(20,26,38,.9);
+  box-shadow:0 18px 40px rgba(0,0,0,.5);
 }
-.orbit-node:focus-visible::after,
-.orbit-node:hover::after{opacity:.7}
 
-/* info card (kept, hidden until used) */
+/* info card (kept for future) */
 .orbit-card{
   position:absolute; z-index:4; width:min(320px, 88vw);
   background:rgba(16,22,35,.92); backdrop-filter:blur(10px);
@@ -128,9 +121,6 @@
   box-shadow:0 20px 50px rgba(0,0,0,.45);
 }
 .orbit-card.show{display:block}
-.orbit-card .kicker{color:#9fb4c9;font-size:11px;text-transform:uppercase;letter-spacing:.25px}
-.orbit-card h3{margin:6px 0 4px;font:600 16px/1.2 "Newsreader", Georgia, serif}
-.orbit-card .fine{color:#9db2c5;font-size:12px}
 
 /* reduced motion */
 @media (prefers-reduced-motion: reduce){
