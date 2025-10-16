@@ -1,45 +1,36 @@
-// docs/sections/process/process.js (v3)
-// Renders the Process section into <div id="section-process"></div>
-// - Reads window.PROCESS_DATA (provided by process.data.js)
-// - Clipped stage, fewer links (nearest-neighbour), stronger scroll states
-
+// docs/sections/process/process.js  — Linear Track mode (cleaner)
+// Mounts into <div id="section-process"></div>
 (function(){
   const mount = document.getElementById("section-process");
   if (!mount) return;
 
-  // ------- DATA -------
-  const DATA = (typeof window !== "undefined" && window.PROCESS_DATA && typeof window.PROCESS_DATA === "object")
+  // -------- DATA (from process.data.js if available) --------
+  const DATA = (window.PROCESS_DATA && typeof window.PROCESS_DATA === "object")
     ? window.PROCESS_DATA
     : {
         title: "How the scoring engine works",
         sub: "We score each lead across four lenses, then surface the fastest wins.",
         columns: [
-          { id:"intent",    label:"Intent Score",    emoji:"⚡", nodes:[
-            {id:"search",emoji:"🔎",label:"Search velocity"},
-            {id:"tech",emoji:"🛠️",label:"Warehouse tech"},
-            {id:"ltv",emoji:"📈",label:"Customer LTV/CAC"},
-            {id:"tools",emoji:"🧰",label:"Tools interacted"},
-            {id:"size",emoji:"🏢",label:"Company size"},
-          ]},
-          { id:"weight",    label:"Weight Score",    emoji:"⚖️", nodes:[
-            {id:"posting",emoji:"🗞️",label:"Posting behaviour"},
-            {id:"goodwill",emoji:"🎁",label:"Offers / lead magnets"},
-            {id:"nature",emoji:"🏭",label:"Nature of business"},
-            {id:"freq",emoji:"🔁",label:"Purchase frequency"},
-          ]},
-          { id:"character", label:"Character Score", emoji:"🧠", nodes:[
-            {id:"reviews",emoji:"⭐",label:"Past reviews"},
-            {id:"jumps",emoji:"↔️",label:"Vendor switching"},
-            {id:"values",emoji:"💬",label:"Language → values"},
-            {id:"culture",emoji:"🌐",label:"Language → culture"},
-          ]},
-          { id:"platform",  label:"Platform Score",  emoji:"📡", nodes:[
-            {id:"posts",emoji:"🗂️",label:"# posts / platform"},
-            {id:"comments",emoji:"💬",label:"# comments / platform"},
-            {id:"reply",emoji:"✉️",label:"Intent to respond"},
-          ]},
+          { id:"intent",    label:"Intent score",    emoji:"⚡",
+            nodes:[ {id:"search",emoji:"🔎",label:"Search velocity"},
+                    {id:"tools",emoji:"🧰",label:"Tools interacted"},
+                    {id:"size",emoji:"🏢",label:"Company size"} ]},
+          { id:"weight",    label:"Weight score",    emoji:"⚖️",
+            nodes:[ {id:"posting",emoji:"🗞️",label:"Posting behaviour"},
+                    {id:"offers",emoji:"🎁",label:"Offers / lead magnets"},
+                    {id:"nature",emoji:"🏭",label:"Nature of business"},
+                    {id:"freq",emoji:"🔁",label:"Purchase frequency"} ]},
+          { id:"character", label:"Character score", emoji:"🧠",
+            nodes:[ {id:"reviews",emoji:"⭐",label:"Past reviews"},
+                    {id:"jumps",emoji:"↔️",label:"Vendor switching"},
+                    {id:"values",emoji:"💬",label:"Language → values"},
+                    {id:"culture",emoji:"🌐",label:"Language → culture"} ]},
+          { id:"platform",  label:"Platform score",  emoji:"📡",
+            nodes:[ {id:"posts",emoji:"🗂️",label:"# posts / platform"},
+                    {id:"comments",emoji:"💬",label:"# comments / platform"},
+                    {id:"reply",emoji:"✉️",label:"Intent to respond"} ]}
         ],
-        result: {
+        result:{
           title:"Result",
           bullets:[
             "Fastest-to-buy window",
@@ -48,7 +39,7 @@
             "Best first contact channel"
           ]
         },
-        steps: [
+        steps:[
           {id:"intro",title:"Score System",body:"We only advance leads that match your persona."},
           {id:"intent",title:"Intent score",body:"How fast they’re likely to buy."},
           {id:"weight",title:"Weight score",body:"How commercially meaningful they are."},
@@ -58,20 +49,21 @@
         ]
       };
 
-  // ------- CONFIG (tunable) -------
-  const CFG = Object.assign({
-    stickyTopPx: 96,
-    ringGapFrac: 0.17,
-    nodeFanDeg: 100,
-    nodeFanStartDeg: -150,
-    maxLinksPerNode: 2,     // cap connections per source node
-    linkCurviness: 0.22,
-    ioThreshold: 0.45,
-    ioRootMargin: "-10% 0px -55% 0px"
-  }, (window.PROCESS_CFG||{}));
+  // -------- CONFIG (visual knobs) --------
+  const CFG = {
+    stickyTopPx: 96,            // matches CSS var --proc-top
+    colPadY: 14,                // vertical spacing between chips in a column
+    colWidth: 180,              // target column width (chips wrap inside)
+    colGap: 70,                 // gap between columns (desktop)
+    colGapSm: 36,               // gap between columns (mobile)
+    stagePad: 18,               // inner padding for stage layout
+    flowStroke: 2,              // base flow line width
+    flowActiveStroke: 4,        // active (to-step) line width
+    fadeOpacity: 0.28           // non-active chips opacity
+  };
 
-  // ------- DOM scaffold -------
-  const railStepsHTML = (DATA.steps||[]).map(s=>`
+  // -------- DOM scaffold --------
+  const railStepsHTML = DATA.steps.map(s => `
     <div class="proc-step" data-step="${s.id}">
       <div class="proc-bullet"></div>
       <h3>${s.title}</h3>
@@ -79,259 +71,259 @@
     </div>`).join("");
 
   mount.innerHTML = `
-  <section class="proc-section" aria-label="Process">
-    <div class="proc-inner">
-      <header class="proc-hd">
-        <h2>${DATA.title||""}</h2>
-        <div class="sub">${DATA.sub||""}</div>
-      </header>
+    <section class="proc-section" aria-label="Process">
+      <div class="proc-inner">
+        <header class="proc-hd">
+          <h2>${DATA.title}</h2>
+          <div class="sub">${DATA.sub}</div>
+        </header>
 
-      <div class="proc-stage" id="procStage" style="--proc-top:${CFG.stickyTopPx}px">
-        <div class="proc-canvas" id="procCanvas"></div>
-        <div class="proc-core" aria-hidden="true"></div>
+        <div class="proc-stage" id="procStage" style="--proc-top:${CFG.stickyTopPx}px">
+          <div class="proc-canvas" id="procCanvas"></div>
+        </div>
+
+        <aside class="proc-rail" id="procRail">
+          <div class="proc-progress" id="procProg"></div>
+          ${railStepsHTML}
+        </aside>
       </div>
+    </section>
+  `;
 
-      <aside class="proc-rail" id="procRail">
-        <div class="proc-progress" id="procProg"></div>
-        ${railStepsHTML}
-      </aside>
-    </div>
-  </section>`;
-
+  // Handles
   const stage  = document.getElementById("procStage");
   const canvas = document.getElementById("procCanvas");
   const rail   = document.getElementById("procRail");
   const prog   = document.getElementById("procProg");
 
-  // SVG overlay for links
+  // SVG flow line (one path + one active overlay)
   const svgNS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(svgNS,"svg");
-  svg.setAttribute("class","proc-svg");
-  Object.assign(svg.style,{position:"absolute",left:"0",top:"0",width:"100%",height:"100%",overflow:"visible"});
+  const svg = document.createElementNS(svgNS, "svg");
+  Object.assign(svg, { className: "proc-svg" });
+  Object.assign(svg.style, { position:"absolute", left:"0", top:"0", width:"100%", height:"100%", overflow:"visible" });
   canvas.appendChild(svg);
 
-  // ------- Build rings, titles, nodes -------
-  const rings=[], titles=[], nodes=[], nodesByCol = DATA.columns.map(()=>[]);
-  DATA.columns.forEach((col,ci)=>{
-    const ring = document.createElement("div");
-    ring.className="proc-ring"; ring.dataset.col=col.id;
-    canvas.appendChild(ring); rings.push(ring);
+  const flowBase  = document.createElementNS(svgNS, "path");
+  const flowActive= document.createElementNS(svgNS, "path");
+  [flowBase, flowActive].forEach(p=>{
+    p.setAttribute("fill","none");
+    p.setAttribute("vector-effect","non-scaling-stroke");
+    svg.appendChild(p);
+  });
 
+  // Column titles + nodes
+  const colTitles = [];
+  const nodeRefs  = [];            // { el, colIdx }
+  const byCol     = DATA.columns.map(()=>[]);
+
+  DATA.columns.forEach((col, ci) => {
     const title = document.createElement("div");
-    title.className="proc-col-title";
+    title.className = "proc-col-title";
     title.textContent = `${col.emoji} ${col.label}`;
-    canvas.appendChild(title); titles.push(title);
+    canvas.appendChild(title);
+    colTitles.push(title);
 
-    const count = col.nodes.length;
-    const stepAngle = count>1 ? CFG.nodeFanDeg/(count-1) : 0;
-    for(let i=0;i<count;i++){
-      const angle = CFG.nodeFanStartDeg + stepAngle*i;
-      const n = col.nodes[i];
+    col.nodes.forEach((n, ni) => {
       const el = document.createElement("button");
-      el.className = "proc-node"; el.dataset.col = col.id; el.dataset.node = n.id;
+      el.className = "proc-node";
+      el.dataset.col = col.id; el.dataset.node = n.id;
       el.innerHTML = `<span class="ico">${n.emoji}</span>${n.label}`;
       canvas.appendChild(el);
-      const ref = { el, colIdx:ci, nodeIdx:i, polar:{ r:0, deg:angle }, x:0, y:0 };
-      nodes.push(ref);
-      nodesByCol[ci].push(ref);
-    }
+      nodeRefs.push({ el, colIdx: ci });
+      byCol[ci].push(el);
+    });
   });
 
   // Result pill
   const res = document.createElement("div");
-  res.className="proc-result";
+  res.className = "proc-result";
   res.innerHTML = `<h4>🎯 ${DATA.result.title}</h4>
     <ul>${DATA.result.bullets.map(b=>`<li>${b}</li>`).join("")}</ul>`;
   canvas.appendChild(res);
 
-  // ------- Geometry / layout -------
-  let W=0,H=0,CX=0,CY=0,radii=[];
+  // -------- Layout (responsive) --------
+  let W=0,H=0,isMobile=false,colCenters=[]; // [{x,y}]
   function layout(){
     const r = stage.getBoundingClientRect();
-    W = Math.max(320, r.width|0);
-    H = Math.max(360, r.height|0);
-    CX = W/2; CY = H/2;
+    W = r.width; H = r.height;
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
 
-    const base = Math.min(W,H)*0.22;
-    const gap  = Math.min(W,H)*CFG.ringGapFrac;
-    radii = DATA.columns.map((_,i)=> base + gap*i);
+    isMobile = W < 560;
 
-    rings.forEach((ring,i)=>{
-      const d = 2*radii[i];
-      ring.style.width = d+"px"; ring.style.height = d+"px";
-      ring.style.left = (CX - radii[i])+"px";
-      ring.style.top  = (CY - radii[i])+"px";
+    // Stage inner box
+    const pad = CFG.stagePad;
+    const innerW = W - pad*2;
+    const innerH = H - pad*2;
+
+    // Column x positions (left → right)
+    const gap = isMobile ? CFG.colGapSm : CFG.colGap;
+    const colW = Math.min(CFG.colWidth, Math.max(140, (innerW - gap*(DATA.columns.length-1))/DATA.columns.length));
+    const totalW = colW*DATA.columns.length + gap*(DATA.columns.length-1);
+    const leftX = pad + (innerW - totalW)/2;
+
+    // Vertical packing inside each column
+    const titleY = pad + 8 + (isMobile ? 0 : 6);
+    const stackTop = titleY + 26; // just under title
+    const stackLineH = 28 + CFG.colPadY;
+
+    // Centers for the flow path (one per column)
+    colCenters = DATA.columns.map((_,i)=>{
+      const x = leftX + i*(colW+gap) + colW/2;
+      const y = pad + innerH*0.58; // a gentle arc-ish baseline
+      return {x,y};
     });
 
-    titles.forEach((el,i)=>{
-      el.style.left = CX+"px";
-      el.style.top  = (CY - radii[i] - 18) + "px";
-    });
+    // Place titles and nodes
+    DATA.columns.forEach((col, ci)=>{
+      // title
+      const t = colTitles[ci];
+      t.style.left = (leftX + ci*(colW+gap) + colW/2) + "px";
+      t.style.top  = titleY + "px";
 
-    nodes.forEach(n=>{
-      n.polar.r = radii[n.colIdx];
-      const rad = n.polar.deg*Math.PI/180;
-      n.x = CX + n.polar.r*Math.cos(rad);
-      n.y = CY + n.polar.r*Math.sin(rad);
-      n.el.style.left = n.x+"px";
-      n.el.style.top  = n.y+"px";
-    });
-
-    // Keep result pill inside the stage bounds
-    const Rmax = radii[radii.length-1];
-    const targetX = CX + Rmax + 120;
-    const clampedX = Math.min(W - 130, Math.max(130, targetX));
-    res.style.left = clampedX + "px";
-    res.style.top  = CY + "px";
-  }
-  layout();
-
-  // Debounced resize
-  let resizeT=0;
-  window.addEventListener("resize", ()=>{ clearTimeout(resizeT); resizeT=setTimeout(layout, 100); }, {passive:true});
-
-  // ------- Links (reduced clutter) -------
-  function clearLinks(){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
-
-  function nearestTargets(from, to, k){
-    // k nearest by absolute angular distance, no repeats
-    const picked = new Set();
-    return from.map(a=>{
-      const sorted = to
-        .map(b=>({b, dist: Math.abs(a.polar.deg - b.polar.deg)}))
-        .sort((u,v)=>u.dist-v.dist)
-        .filter(x=>!picked.has(x.b))      // avoid heavy overlap
-        .slice(0, k)
-        .map(x=>{ picked.add(x.b); return x.b; });
-    });
-  }
-
-  function drawPairLinks(fromArr, toArr){
-    clearLinks();
-    if (!fromArr || !toArr) return;
-    const k = Math.max(1, CFG.maxLinksPerNode|0);
-    const lists = nearestTargets(fromArr, toArr, k);
-    const curv = CFG.linkCurviness;
-    lists.forEach((targets, idx)=>{
-      const a = fromArr[idx];
-      if (!a) return;
-      const ax = a.x, ay = a.y;
-      const vax = ax - CX, vay = ay - CY;
-      targets.forEach(b=>{
-        const bx=b.x, by=b.y, vbx=bx-CX, vby=by-CY;
-        const c1x=ax+vax*curv, c1y=ay+vay*curv;
-        const c2x=bx+vbx*curv, c2y=by+vby*curv;
-        const p=document.createElementNS(svgNS,"path");
-        p.setAttribute("class","proc-link is-active");
-        p.setAttribute("d",`M ${ax} ${ay} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${bx} ${by}`);
-        svg.appendChild(p);
+      // nodes (stack)
+      const stack = byCol[ci];
+      const startY = stackTop + (isMobile ? 6 : 0);
+      stack.forEach((el, idx)=>{
+        const x = leftX + ci*(colW+gap) + colW/2;
+        const y = startY + idx*stackLineH;
+        el.style.left = x + "px";
+        el.style.top  = y + "px";
       });
     });
+
+    // Result pill (to the right of last column, vertically centered near centers)
+    const last = colCenters[colCenters.length-1];
+    res.style.left = Math.min(W - pad - 150, last.x + gap/2 + colW/2 + 90) + "px";
+    res.style.top  = (last.y - 4) + "px";
+
+    // Flow path (straight segments M + L)
+    const d = colCenters.reduce((acc, p, i)=>{
+      return acc + (i===0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`);
+    }, "");
+    flowBase.setAttribute("d", d);
+    flowActive.setAttribute("d", d);
+
+    flowBase.setAttribute("stroke", "rgba(200,220,240,.20)");
+    flowBase.setAttribute("stroke-width", CFG.flowStroke);
+    flowActive.setAttribute("stroke", "url(#procFlowGrad)");
+
+    // gradient for active path
+    defineGradient();
+
+    flowActive.setAttribute("stroke-width", CFG.flowActiveStroke);
+    flowActive.setAttribute("stroke-linecap", "round");
+
+    // Reset dash to full, step logic will trim
+    flowActive.removeAttribute("stroke-dasharray");
   }
 
-  // ------- Step state / highlighting -------
+  function defineGradient(){
+    // build/replace a linearGradient
+    let defs = svg.querySelector("defs");
+    if (!defs){ defs = document.createElementNS(svgNS, "defs"); svg.insertBefore(defs, svg.firstChild); }
+    let grad = defs.querySelector("#procFlowGrad");
+    if (!grad){
+      grad = document.createElementNS(svgNS, "linearGradient");
+      grad.setAttribute("id", "procFlowGrad");
+      grad.setAttribute("x1","0%"); grad.setAttribute("y1","0%");
+      grad.setAttribute("x2","100%"); grad.setAttribute("y2","0%");
+      defs.appendChild(grad);
+    }
+    grad.innerHTML = `
+      <stop offset="0%"  stop-color="rgba(242,220,160,.95)"/>
+      <stop offset="100%" stop-color="rgba(242,220,160,.45)"/>
+    `;
+  }
+
+  layout();
+  addEventListener("resize", layout, {passive:true});
+
+  // -------- Step state & interactions --------
   const stepEls = Array.from(rail.querySelectorAll(".proc-step"));
   const stepById = Object.fromEntries(stepEls.map(el=>[el.dataset.step, el]));
 
   function setActive(colId){
-    // Rail state
+    // rail
     stepEls.forEach(s=>s.classList.remove("is-current","is-done"));
-    let passed=true;
+    let passed = true;
     stepEls.forEach(s=>{
       if (passed && s.dataset.step!==colId) s.classList.add("is-done");
-      else passed=false;
+      else passed = false;
     });
-    if (colId && stepById[colId]) stepById[colId].classList.add("is-current");
+    if (stepById[colId]) stepById[colId].classList.add("is-current");
 
-    // Node + ring emphasis
-    nodes.forEach(n=>{
-      const active = DATA.columns[n.colIdx]?.id === colId;
-      n.el.classList.toggle("is-active", active);
-      n.el.classList.toggle("is-dim", !!colId && !active);
-    });
-    rings.forEach((r,i)=>{
-      const on = DATA.columns[i].id===colId;
-      r.style.borderColor = on ? "rgba(242,220,160,.6)" : "rgba(255,255,255,.10)";
-      r.style.boxShadow   = on ? "0 0 18px rgba(242,220,160,.25)" : "none";
+    // nodes fade
+    nodeRefs.forEach(n=>{
+      const on = (DATA.columns[n.colIdx]?.id === colId);
+      n.el.style.opacity = on ? "1" : (colId ? String(CFG.fadeOpacity) : "1");
+      n.el.style.filter  = on ? "none" : (colId ? "grayscale(.15)" : "none");
     });
 
-    // Links: only active adjacent pair
+    // titles emphasis
+    DATA.columns.forEach((c, i)=>{
+      const t = colTitles[i];
+      const on = (c.id === colId);
+      t.style.filter = on ? "brightness(1.1)" : "none";
+      t.style.opacity = on ? "1" : (colId ? ".75" : "1");
+      t.style.boxShadow = on ? "0 0 0 1px rgba(242,220,160,.35) inset" : "none";
+    });
+
+    // active flow length up to current column index
     const idx = DATA.columns.findIndex(c=>c.id===colId);
-    if (idx<0){ clearLinks(); return; }
-    const next = nodesByCol[idx+1], prev = nodesByCol[idx-1];
-    if (next)      drawPairLinks(nodesByCol[idx], next);
-    else if (prev) drawPairLinks(prev, nodesByCol[idx]);
-    else clearLinks();
+    if (idx < 0){
+      flowActive.setAttribute("stroke-dasharray","0 1"); // hide
+      return;
+    }
+
+    // compute cumulative length to the current center
+    const totalLen = flowActive.getTotalLength();
+    // Build piecewise linear length manually to avoid browser quirks
+    let cum = 0, target = 0;
+    for(let i=1;i<=idx;i++){
+      const a = colCenters[i-1], b = colCenters[i];
+      const seg = Math.hypot(b.x-a.x, b.y-a.y);
+      cum += seg;
+    }
+    target = cum;
+    flowActive.setAttribute("stroke-dasharray", `${target} ${Math.max(0,totalLen-target)+1}`);
   }
 
-  // Progress spine
   function updateProgress(){
     const r = rail.getBoundingClientRect();
-    const vh = window.innerHeight || document.documentElement.clientHeight || 800;
+    const vh = innerHeight;
     const t = Math.max(0, Math.min(1, (vh*0.15 - r.top) / (r.height - vh*0.3)));
     prog.style.height = (t * r.height) + "px";
   }
 
-  // IntersectionObserver (robust with margins) + scroll fallback
+  // Observe steps
   const io = new IntersectionObserver((entries)=>{
     entries.forEach(e=>{
       if (!e.isIntersecting) return;
       const id = e.target.dataset.step;
       if (id==="intro" || id==="result"){
-        clearLinks();
-        nodes.forEach(n=>{ n.el.classList.remove("is-dim","is-active"); });
-        rings.forEach(r=>{ r.style.borderColor="rgba(255,255,255,.10)"; r.style.boxShadow="none"; });
+        // reset to neutral
+        nodeRefs.forEach(n=>{ n.el.style.opacity="1"; n.el.style.filter="none"; });
+        colTitles.forEach(t=>{ t.style.opacity="1"; t.style.boxShadow="none"; t.style.filter="none"; });
+        flowActive.setAttribute("stroke-dasharray","0 1");
       }else{
         setActive(id);
       }
       updateProgress();
     });
-  }, { threshold: CFG.ioThreshold, root:null, rootMargin: CFG.ioRootMargin });
-
+  }, {threshold: 0.55});
   stepEls.forEach(el=>io.observe(el));
 
-  // Fallback: make the step whose center is closest to viewport center active
-  let ticking=false;
-  function onScroll(){
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(()=>{
-      const mid = (window.innerHeight||800)/2;
-      let best=null, bestDist=1e9;
-      stepEls.forEach(el=>{
-        const r = el.getBoundingClientRect();
-        const center = r.top + r.height/2;
-        const d = Math.abs(center - mid);
-        if (d < bestDist){ bestDist=d; best=el; }
-      });
-      if (best){
-        const id = best.dataset.step;
-        if (id==="intro" || id==="result"){
-          clearLinks();
-          nodes.forEach(n=>{ n.el.classList.remove("is-dim","is-active"); });
-          rings.forEach(r=>{ r.style.borderColor="rgba(255,255,255,.10)"; r.style.boxShadow="none"; });
-        }else{
-          setActive(id);
-        }
-      }
-      updateProgress();
-      ticking=false;
-    });
-  }
-  window.addEventListener("scroll", onScroll, {passive:true});
-
-  // Click node → scroll rail to its step
-  nodes.forEach(n=>{
-    n.el.addEventListener("click",(ev)=>{
+  // Click chip → scroll rail to that column’s step
+  nodeRefs.forEach(n=>{
+    n.el.addEventListener("click", (ev)=>{
       ev.preventDefault();
       const colId = DATA.columns[n.colIdx].id;
       const tgt = stepById[colId];
-      if (tgt) tgt.scrollIntoView({behavior:"smooth",block:"center"});
+      if (tgt) tgt.scrollIntoView({ behavior:"smooth", block:"center" });
     });
   });
 
-  // Initial state
-  setActive(DATA.columns[0]?.id || "intent");
+  // Initial
+  setActive("intent");
   updateProgress();
 })();
