@@ -1,96 +1,98 @@
-/* docs/sections/process/process.css  (FLOWGRID v1)
-   Pairs with process.js (LANES v3)
-   - Left: 4-column flowgrid (Intent → Weight → Character → Platform)
-   - Right: sticky explanation rail
-*/
+/* docs/sections/process/process.css  — FLOWGRID v2 (clean, visual) */
+
+:root{
+  --proc-panel: #0e1522;
+  --proc-stroke: #1b2531;
+  --proc-ink: #dbe9f4;
+  --proc-muted: #9fb4c7;
+  --gold-300:#f2dca0;
+  --gold-700:#b8913d;
+}
 
 /* ---- Section shell ---- */
-.proc-section{padding:96px 16px 120px;background:transparent}
+.proc-section{padding:80px 16px}
 .proc-inner{max-width:1140px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:28px;align-items:start}
-@media (max-width:980px){.proc-inner{grid-template-columns:1fr;gap:22px}}
-.proc-hd{grid-column:1/-1;margin-bottom:12px}
-.proc-hd h2{margin:0 0 6px;font:600 clamp(22px,3.8vw,32px) "Newsreader", Georgia, serif}
-.proc-hd .sub{color:#9db2c5}
+@media (max-width:980px){.proc-inner{grid-template-columns:1fr}}
+.proc-hd h2{margin:0 0 6px;font:600 clamp(22px,3.8vw,30px) "Newsreader", Georgia, serif}
+.proc-hd .sub{color:var(--proc-muted);font-size:14px}
 
-/* ---- Flowgrid panel ---- */
+/* ---- Lanes board ---- */
 .lanes-board{
-  background:linear-gradient(180deg,#0d1520,#0c141f);
-  border:1px solid #1b2531; border-radius:16px; padding:14px;
-  display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;
-  box-shadow:0 10px 30px rgba(0,0,0,.25);
+  position:relative;
+  background:linear-gradient(180deg,#0c1420,#0b111a);
+  border:1px solid var(--proc-stroke);
+  border-radius:16px;
+  padding:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,.28);
+  overflow:visible;
 }
 
-/* Header row: “category” chips */
-.lanes-head{grid-column:1/-1; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+/* Header tags (lane selectors) */
+.lanes-head{display:flex;flex-wrap:wrap;gap:8px 10px;margin:2px 0 12px}
 .lens-tag{
-  display:inline-flex; align-items:center; gap:.55rem; justify-content:center;
-  width:100%;
-  padding:10px 12px; border-radius:999px; font-weight:700;
-  background:rgba(255,255,255,.04); color:#cfe0ee;
-  border:1px solid rgba(255,255,255,.08);
-  box-shadow:0 2px 0 rgba(0,0,0,.3) inset;
+  border:none;border-radius:999px;padding:8px 12px;cursor:pointer;
+  background:rgba(255,255,255,.05);
+  color:#cfe0ee;font-weight:700;display:inline-flex;gap:.5rem;align-items:center;
+  box-shadow:0 0 0 1px rgba(255,255,255,.06) inset;
 }
-.lens-tag .ico{filter:saturate(105%)}
+.lens-tag .ico{filter:saturate(115%)}
+.lens-tag:hover{background:rgba(255,255,255,.08)}
 
-/* Each column (lane) */
-.lane{display:grid; align-content:start; gap:12px; padding:8px}
-.lane.is-active{background:linear-gradient(180deg,rgba(230,195,107,.06),rgba(0,0,0,0));
-  border-radius:12px; box-shadow:0 0 0 1px rgba(230,195,107,.20) inset}
-.lane[data-lane="result"]{grid-column:1/-1; padding-top:10px}
+/* Grid of lanes (columns) */
+.lanes-board{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:14px}
+@media (max-width:980px){.lanes-board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:580px){.lanes-board{grid-template-columns:1fr}}
 
-/* Chips (signals) */
+.lane{display:grid;grid-auto-rows:minmax(38px,auto);gap:10px;padding:10px;border-radius:12px;
+  background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05)}
+.lane.is-active{box-shadow:0 0 0 1px rgba(242,220,160,.35) inset, 0 0 30px rgba(242,220,160,.08)}
+/* Result lane spans wider to read easily */
+#lane-result{grid-column:2 / span 2}
+@media (max-width:980px){#lane-result{grid-column:1 / -1}}
+
+/* Pills / chips */
 .chip{
-  --bg:rgba(13,20,31,.86);
-  display:inline-flex; align-items:center; gap:.55rem;
-  width:100%; padding:10px 12px; border-radius:999px; text-align:left;
-  background:var(--bg); border:1px solid rgba(255,255,255,.08);
-  color:#d9e6f2; box-shadow:0 8px 18px rgba(0,0,0,.35);
-  transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+  --bg:rgba(9,14,22,.9);
+  display:inline-flex;align-items:center;gap:.55rem;
+  padding:10px 12px;border-radius:999px;color:var(--proc-ink);
+  background:var(--bg);backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 6px 18px rgba(0,0,0,.3);
+  text-align:left;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+  font-weight:700;
 }
-.chip .ico{filter:drop-shadow(0 0 0 rgba(0,0,0,0))}
-.chip:hover{transform:translateY(-1px); border-color:#284560}
+.chip .ico{filter:saturate(115%)}
+.chip:hover{border-color:#284560;transform:translateY(-1px)}
+.chip:active{transform:translateY(0)}
+#lane-result .chip{border-radius:14px;white-space:normal}
 
-/* Dim non-active lanes on wide screens */
-@media (min-width:981px){
-  .lanes-board:not(:hover) .lane:not(.is-active) .chip{opacity:.55; filter:saturate(.9)}
-}
+/* ---- SVG arrows ---- */
+.lanes-svg{z-index:0}
+.lanes-svg path{stroke-linecap:round;mix-blend-mode:screen}
+.lanes-svg path.a-head{stroke-width:1.6;opacity:.65}
+.lanes-svg path.a-chip{stroke-width:1.4;opacity:.5}
 
-/* Simple “Result” pill */
-.lane[data-lane="result"] .chip{
-  justify-content:flex-start; width:auto; max-width:440px;
-  padding:12px 14px; background:rgba(20,26,36,.86)
+/* ---- Right rail ---- */
+.proc-rail{position:relative;border-left:1px solid var(--proc-stroke);padding-left:18px}
+.proc-progress{
+  position:absolute;left:-1px;top:0;width:2px;height:0;
+  background:linear-gradient(180deg,var(--gold-300),var(--gold-700));
+  border-radius:2px;transition:height .25s;
 }
-.lane[data-lane="result"] .chip::before{
-  content:"🎯"; display:inline-block; margin-right:.55rem
-}
-
-/* ---- Right explanation rail ---- */
-.proc-rail{position:relative; padding-left:18px; border-left:1px solid #263243}
-.proc-progress{position:absolute; left:-1px; top:0; width:2px; height:0; background:linear-gradient(180deg,#f2dca0,#b8913d); border-radius:2px}
-.proc-step{padding:14px 0 16px}
-.proc-step h3{margin:0 0 6px; font-weight:800; color:#e5f0fb}
-.proc-step p{margin:0; color:#9db2c5}
+.proc-step{margin:18px 0 26px}
+.proc-step h3{margin:0 0 4px;font-weight:800}
+.proc-step p{margin:0;color:var(--proc-muted)}
 .proc-bullet{
-  width:8px; height:8px; border-radius:50%;
-  background:radial-gradient(circle at 30% 30%, #f2dca0, #b8913d);
-  display:inline-block; margin-right:10px; transform:translateY(-1px)
+  display:inline-block;width:9px;height:9px;border-radius:50%;
+  margin-right:8px;transform:translateY(1px);
+  background:radial-gradient(circle at 30% 30%, var(--gold-300), var(--gold-700));
+  box-shadow:0 0 12px rgba(242,220,160,.4);
 }
-.proc-step.is-current h3{color:#f2dca0}
-.proc-step.is-done h3{color:#b7c9da}
-.proc-step.is-done .proc-bullet{background:#6f8396}
+.proc-step.is-done .proc-bullet{filter:grayscale(.35);opacity:.6}
+.proc-step.is-current h3{color:var(--gold-300)}
+.proc-step.is-current p{color:#cfe0ee}
 
-/* ---- Responsiveness ---- */
-@media (max-width:900px){
-  .lanes-board{padding:12px; grid-template-columns:1fr 1fr}
-  .lanes-head{grid-template-columns:1fr 1fr}
-}
-@media (max-width:560px){
-  .lanes-board{grid-template-columns:1fr}
-  .lanes-head{grid-template-columns:1fr}
-  .chip{font-size:14px}
-}
-
-/* Utility for focus/keyboard */
-.chip:focus-visible, .lens-tag:focus-visible{
-  outline:2px solid #f2dca0; outline-offset:2px
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce){
+  .chip,.lens-tag{transition:none}
 }
