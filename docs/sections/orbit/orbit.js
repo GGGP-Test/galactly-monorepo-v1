@@ -1,4 +1,3 @@
-<script>
 /* Section 3: Orbit
    - Pane removed; aurora is section-wide (CSS).
    - Single ring; ~8% smaller diameter.
@@ -49,7 +48,7 @@
   const nodes = Array.from(stage.querySelectorAll(".orbit-node"));
 
   // Equally spaced base angles (degrees)
-  const baseAngles = [10, 76, 200, 260, 320]; // look nice on load
+  const baseAngles = [10, 76, 200, 260, 320];
   const model = nodes.map((el, i) => ({ el, base: baseAngles[i] || (i * (360/nodes.length)) }));
 
   // Rotation state
@@ -59,7 +58,6 @@
   let locked = null;                  // {el, base} when a node is locked
   let angTarget = null;               // number (deg) when tweening to top
   let tweenStart = 0, tweenDur = 650; // ms
-  let resumeStart = 0, resumeDur = 1400;
 
   // geometry
   const center = { x:0, y:0 };
@@ -69,11 +67,16 @@
     const r = ring.getBoundingClientRect();
     center.x = s.width/2;
     center.y = s.height/2;
-    // radius from ring rect
     radius = (r.width)/2;
   }
   measure();
   addEventListener("resize", measure, { passive:true });
+
+  function toRad(d){ return d * Math.PI / 180; }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function normalizeDeg(d){
+    let x = d % 360; if (x > 180) x -= 360; if (x < -180) x += 360; return x;
+  }
 
   // layout
   function place(){
@@ -95,14 +98,12 @@
     if (!prev) prev = now;
     const dt = Math.min(33, now - prev); prev = now;
 
-    // If tweening to top, ease angle toward angTarget.
     if (angTarget != null){
       const t = Math.min(1, (now - tweenStart)/tweenDur);
       const ease = 1 - Math.pow(1 - t, 3);
       angle = lerp(angle, angTarget, ease);
       if (t >= 1){ angTarget = null; }
     } else {
-      // normal rotation with velocity easing
       angle += vel * dt;
       vel = lerp(vel, velTarget, 0.06);
     }
@@ -116,16 +117,15 @@
   nodes.forEach((el, i)=>{
     el.addEventListener("click", (e)=>{
       e.stopPropagation();
-      // Lock this node
       nodes.forEach(n=>n.classList.remove("locked"));
       el.classList.add("locked");
       locked = model[i];
 
       // Pause rotation smoothly
       velTarget = 0;
-      // Compute angle needed to bring this node to top (-90deg on unit circle)
+      // Bring this node to the top (-90deg)
       const current = (locked.base + angle) % 360;
-      const desired = -90; // top
+      const desired = -90;
       const delta = normalizeDeg(desired - current);
       angTarget = angle + delta;
       tweenStart = performance.now();
@@ -138,16 +138,7 @@
     locked.el.classList.remove("locked");
     locked = null;
     angTarget = null;
-    resumeStart = performance.now();
     vel = 0;
-    velTarget = 0.018; // full-speed target
+    velTarget = 0.018;
   });
-
-  // utilities
-  function toRad(d){ return d * Math.PI / 180; }
-  function lerp(a,b,t){ return a + (b-a)*t; }
-  function normalizeDeg(d){
-    let x = d % 360; if (x > 180) x -= 360; if (x < -180) x += 360; return x;
-  }
 })();
-</script>
