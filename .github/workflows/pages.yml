@@ -1,4 +1,4 @@
-name: Deploy Pages (docs → public)
+name: Deploy Pages (safe subset from docs)
 
 on:
   push:
@@ -32,37 +32,35 @@ jobs:
           rm -rf "$PUBLIC_OUT"
           mkdir -p "$PUBLIC_OUT"
 
-          # ----- allow-list: FRONT-END ONLY (safe to publish) -----
+          # ----- allow-list: ONLY these files/dirs are deployed -----
+          # Core public pages
+          cp -v "$PUBLIC_SRC/index.html"      "$PUBLIC_OUT/" || true
+          cp -v "$PUBLIC_SRC/step3.html"      "$PUBLIC_OUT/" || true
+          cp -v "$PUBLIC_SRC/free-panel.html" "$PUBLIC_OUT/" || true
+          [ -f "$PUBLIC_SRC/404.html" ] && cp -v "$PUBLIC_SRC/404.html" "$PUBLIC_OUT/404.html" || true
+          [ -f "$PUBLIC_SRC/favicon.ico" ] && cp -v "$PUBLIC_SRC/favicon.ico" "$PUBLIC_OUT/favicon.ico" || true
 
-          # Core HTML at repo root (copy if present)
-          for f in index.html step3.html free-panel.html sectors.html pricing.html login.html 404.html terms.html privacy.html; do
-            [ -f "$PUBLIC_SRC/$f" ] && cp -v "$PUBLIC_SRC/$f" "$PUBLIC_OUT/$f" || true
-          done
+          # Shared assets
+          [ -d "$PUBLIC_SRC/assets" ] && rsync -a --delete "$PUBLIC_SRC/assets/" "$PUBLIC_OUT/assets/" || true
+          [ -d "$PUBLIC_SRC/img"    ] && rsync -a --delete "$PUBLIC_SRC/img/"    "$PUBLIC_OUT/img/"    || true
+          [ -d "$PUBLIC_SRC/css"    ] && rsync -a --delete "$PUBLIC_SRC/css/"    "$PUBLIC_OUT/css/"    || true
+          [ -d "$PUBLIC_SRC/js"     ] && rsync -a --delete "$PUBLIC_SRC/js/"     "$PUBLIC_OUT/js/"     || true
 
-          # Shared assets (copy whole folders if they exist)
-          for d in assets img css js fonts media; do
-            [ -d "$PUBLIC_SRC/$d" ] && rsync -a --delete "$PUBLIC_SRC/$d/" "$PUBLIC_OUT/$d/" || true
-          done
-
-          # Section bundles used by index.html (Orbit, Process, Trust, CTA, FAQ, future)
-          if [ -d "$PUBLIC_SRC/sections" ]; then
-            mkdir -p "$PUBLIC_OUT/sections"
-            rsync -a --delete \
-              --include='*/' \
-              --include='*.html' \
-              --include='*.css'  --include='*.js'  --include='*.data.js' --include='*.mjs' \
-              --include='*.json' \
-              --include='*.png'  --include='*.jpg' --include='*.jpeg' --include='*.webp' --include='*.gif' --include='*.svg' \
-              --include='*.woff' --include='*.woff2' --include='*.ttf' \
-              --exclude='*' \
-              "$PUBLIC_SRC/sections/" "$PUBLIC_OUT/sections/"
+          # Section bundles (Process + Orbit)
+          if [ -d "$PUBLIC_SRC/sections/process" ]; then
+            mkdir -p "$PUBLIC_OUT/sections/process"
+            rsync -a --delete "$PUBLIC_SRC/sections/process/" "$PUBLIC_OUT/sections/process/"
+          fi
+          if [ -d "$PUBLIC_SRC/sections/orbit" ]; then
+            mkdir -p "$PUBLIC_OUT/sections/orbit"
+            rsync -a --delete "$PUBLIC_SRC/sections/orbit/" "$PUBLIC_OUT/sections/orbit/"
           fi
 
-          # Prevent Jekyll from processing
-          : > "$PUBLIC_OUT/.nojekyll"
+          # Prevent Jekyll munging
+          printf "" > "$PUBLIC_OUT/.nojekyll"
 
           echo "Public site contents:"
-          find "$PUBLIC_OUT" -maxdepth 4 -type f -print
+          find "$PUBLIC_OUT" -maxdepth 4 -type f | sed "s#^#$PUBLIC_OUT/#" || true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
