@@ -1,187 +1,316 @@
-/* docs/sections/process/process.css */
-/* Section 3 – Process (V2: numbers-only stepper → dock left, board reveals) */
+/* Section 3 – Process (Docked Steps + Flow Board)
+   This CSS expects process.js to mount markup under <div id="section-process"></div>.
+   It uses CSS variables so JS can inject colors from PROCESS_DATA.theme.
+*/
 
-:root{
-  --proc-gap: 24px;
-  --proc-panel: rgba(12,18,28,.72);
-  --proc-stroke: rgba(255,255,255,.08);
-  --proc-soft: rgba(255,255,255,.04);
-  --proc-chip: rgba(14,22,34,.85);
-  --gold-300: #f2dca0;
-  --gold-700: #b8913d;
-}
+/* -------------------- Vars + base -------------------- */
+#section-process {
+  /* fallbacks; JS will overwrite these via element.style.setProperty */
+  --p-bg: #0b1119;
+  --p-text: #e9f1f7;
+  --p-muted: #97a9bc;
+  --p-stroke: rgba(255,255,255,.08);
 
-.procV2{position:relative; padding:86px 16px 90px; overflow:hidden}
-.procV2 .inner{max-width:1140px; margin:0 auto; position:relative}
+  --p-primary: #E6C36B;   /* warm gold */
+  --p-secondary: #7FB2FF; /* cool blue */
+  --p-tertiary: #F471B5;  /* magenta */
 
-/* Head */
-.procV2 .hd{margin-bottom:16px}
-.procV2 h2{margin:0; font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
-.procV2 .sub{color:#9fb4c8; font-size:14px}
+  --p-cable: rgba(242,220,160,.55);
+  --p-cable-dim: rgba(242,220,160,.18);
 
-/* Layout shells */
-.procV2 .stage{
-  position:relative;
-  display:grid;
-  grid-template-columns: 1fr 420px; /* board | rail */
-  gap: var(--proc-gap);
-  min-height: 540px;
-}
+  --glass-fill: rgba(255,255,255,.06);
+  --glass-stroke: rgba(255,255,255,.12);
+  --glass-hover: rgba(255,255,255,.10);
+  --glass-active: rgba(255,255,255,.16);
+  --glass-blur: 10px;
 
-/* ============== INTRO MODE (numbers only) ============== */
-.procV2.mode-intro .stage{
-  grid-template-columns: 1fr;
-}
-.procV2.mode-intro .board{
-  opacity:0; transform:translateX(24px) scale(.98);
-  filter:saturate(.9); pointer-events:none;
-}
-.procV2.mode-intro .rail{
-  justify-self:center;
-  width:min(460px, 92vw);
+  --pad: 18px;
+  --dock-w: 320px;
+  --lane-gap: 22px;
+  --chip-gap: 12px;
+  --radius: 14px;
+  --shadow: 0 10px 30px rgba(0,0,0,.28);
+  --muted-shadow: 0 10px 24px rgba(0,0,0,.22);
 }
 
-/* ============== OVERVIEW/DOCKED MODE ============== */
-.procV2.mode-overview .board{
-  opacity:1; transform:none; filter:none; pointer-events:auto;
-  transition:opacity .35s ease, transform .35s ease, filter .35s ease;
-}
-.procV2 .rail{
-  position:relative; align-self:center;
-  display:grid; grid-auto-rows: min-content;
-  gap:16px;
+.proc-section {
+  position: relative;
+  padding: 72px 16px;
+  color: var(--p-text);
+  background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(9,14,22,.35) 100%);
+  isolation: isolate;
+  overflow: hidden;
 }
 
-/* Stepper (numbers only) */
-.stepper{
-  border:1px solid var(--proc-stroke);
-  background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
-  border-radius:16px; padding:18px 16px;
-  backdrop-filter: blur(6px);
-  box-shadow:0 10px 30px rgba(0,0,0,.25);
-}
-.stepper ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; align-items:center; gap:12px}
-.stepper .dot{
-  width:36px; height:36px; border-radius:999px; display:grid; place-items:center;
-  font-weight:700; color:#dbe7f4;
-  background:linear-gradient(180deg, #263449, #1b2736);
-  border:1px solid var(--proc-stroke);
-  box-shadow:0 6px 18px rgba(0,0,0,.28), 0 0 0 1px rgba(255,255,255,.03) inset;
-  transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
-}
-.stepper .dot:is(:hover,:focus-visible){transform:translateY(-1px)}
-.stepper .dot.is-active{
-  color:#1b1405;
-  background:linear-gradient(180deg, var(--gold-300), var(--gold-700));
-  box-shadow:0 10px 26px rgba(230,195,107,.25), 0 0 0 1px rgba(255,255,255,.06) inset;
-}
-.stepper .dot.is-done{
-  background:linear-gradient(180deg, #30445c, #24364b);
-  color:#b9cbe0;
-  position:relative;
-}
-.stepper .dot.is-done::after{
-  content:"✓"; position:absolute; inset:0; display:grid; place-items:center; font-weight:800; font-size:16px;
+.proc-inner {
+  max-width: 1140px;
+  margin: 0 auto;
 }
 
-/* Stepper controls */
-.stepper-ctrls{margin-top:14px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
-.stepper-ctrls .btn{
-  padding:10px 14px; border-radius:999px; font-weight:700; border:1px solid var(--proc-stroke); cursor:pointer;
-  background:linear-gradient(180deg,#122030,#0d1826); color:#cfe0ee;
+.proc-hd h2 {
+  font: 600 clamp(22px,3.6vw,32px) "Newsreader", Georgia, serif;
+  margin: 0 0 8px;
 }
-.stepper-ctrls .btn.primary{
-  color:#1b1405; border:none;
-  background:linear-gradient(180deg, var(--gold-300), var(--gold-700));
-  box-shadow:0 10px 30px rgba(230,195,107,.20), 0 0 0 1px rgba(255,255,255,.06) inset;
-}
-.stepper-ctrls .btn:active{transform:translateY(1px)}
-
-/* Rail notes (appear only after dock) */
-.rail-notes{border-left:1px solid var(--proc-stroke); padding-left:16px; margin-left:6px; display:grid; gap:16px}
-.rail-notes .note h4{margin:0 0 4px; font-weight:800}
-.rail-notes .note p{margin:0; color:#99b0c8; font-size:14px}
-.procV2.mode-intro .rail-notes{display:none}
-
-/* Board (the workflow cards) */
-.board{
-  position:relative;
-  border-radius:16px;
-  background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-  border:1px solid var(--proc-stroke);
-  padding:16px;
-  min-height:520px;
-  box-shadow:0 14px 40px rgba(0,0,0,.35);
-  transition:opacity .2s ease, transform .2s ease;
+.proc-hd .sub {
+  color: var(--p-muted);
+  font-size: 14px;
+  margin-bottom: 18px;
 }
 
-/* Lanes (columns) */
-.lanes{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
-  gap:16px;
-}
-@media (min-width: 980px){
-  .lanes{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+/* -------------------- Layout grid -------------------- */
+.p-wrap {
+  display: grid;
+  grid-template-columns: var(--dock-w) 1fr;
+  gap: 20px;
+  align-items: start;
 }
 
-.lane{
-  background:var(--proc-panel);
-  border:1px solid var(--proc-stroke);
-  border-radius:14px; padding:12px; position:relative;
-  box-shadow:0 10px 30px rgba(0,0,0,.28);
-  transition:filter .25s ease, transform .25s ease, box-shadow .25s ease;
-}
-.lane.is-dim{filter:saturate(.75) brightness(.9)}
-.lane.is-focus{
-  transform:translateY(-2px);
-  box-shadow:0 16px 38px rgba(0,0,0,.35), 0 0 0 1px rgba(242,220,160,.22) inset;
+/* -------------------- Dock (vertical numbers + CTAs) -------------------- */
+.p-dock {
+  position: sticky;
+  top: 96px;              /* same as header offset */
+  align-self: start;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 14px;
+  padding: var(--pad);
+  border: 1px solid var(--p-stroke);
+  border-radius: 16px;
+  background: rgba(255,255,255,.03);
+  box-shadow: var(--muted-shadow);
+  backdrop-filter: saturate(110%) blur(4px);
 }
 
-.lane-hd{
-  display:flex; align-items:center; gap:8px; margin-bottom:10px;
-  font-weight:800; color:#d7e6f5;
+.p-stepper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
 }
-.lane-hd .tag{padding:4px 8px; border-radius:999px; font-size:12px;
-  background:rgba(255,255,255,.06); border:1px solid var(--proc-stroke)}
+.p-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.p-dot {
+  width: 34px; height: 34px;
+  border-radius: 999px;
+  display: grid; place-items: center;
+  font-weight: 700;
+  color: #0e0e0e;
+  user-select: none;
+  background: radial-gradient(180deg, var(--p-secondary), #4f8fe6);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.10) inset,
+    0 6px 18px rgba(127,178,255,.30);
+  transform: translateZ(0); /* tiny 3D feel */
+}
+.p-step.is-done .p-dot {
+  background: radial-gradient(180deg, var(--p-primary), #b8913d);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.10) inset,
+    0 6px 18px rgba(230,195,107,.30);
+}
+.p-step.is-current .p-dot {
+  outline: 2px solid rgba(255,255,255,.25);
+  outline-offset: 2px;
+}
+.p-label {
+  color: var(--p-muted);
+  font-size: 13px;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: 160ms ease;
+}
+.p-dock.is-open .p-label { opacity: .85; transform: none; }
 
-/* Chips (nodes) */
-.chips{display:grid; gap:10px}
-.chip{
-  display:flex; align-items:center; gap:8px;
-  padding:10px 12px; border-radius:12px;
-  background:var(--proc-chip);
-  border:1px solid var(--proc-stroke);
-  color:#cfe0ee; font-weight:600;
-  box-shadow:0 6px 18px rgba(0,0,0,.28);
+/* Glass CTAs (Next / Prev) */
+.p-ctas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
-.chip .ico{opacity:.9}
+.btn-glass {
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-stroke);
+  color: var(--p-text);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0,0,0,.28), 0 0 0 1px rgba(255,255,255,.05) inset;
+  transition: background .18s ease, transform .12s ease, border-color .18s ease;
+}
+.btn-glass:hover   { background: var(--glass-hover); border-color: rgba(255,255,255,.18); }
+.btn-glass:active  { background: var(--glass-active); transform: translateY(1px); }
+.btn-glass[disabled] { opacity:.45; cursor:not-allowed; }
+
+/* -------------------- Flow board -------------------- */
+.p-board {
+  position: relative;
+  border: 1px solid var(--p-stroke);
+  border-radius: 16px;
+  padding: calc(var(--pad) + 8px);
+  overflow: visible;
+  box-shadow: var(--shadow);
+  background:
+    radial-gradient(100% 140% at 0% 0%,
+      rgba(127,178,255,.10) 0%,
+      rgba(0,0,0,0) 48%),
+    radial-gradient(120% 160% at 100% 100%,
+      rgba(244,113,181,.08) 0%,
+      rgba(0,0,0,0) 40%);
+  min-height: 560px;
+}
+
+/* SVG cable layer (neon) */
+.proc-svg {
+  position: absolute; inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 0 8px rgba(242,220,160,.35));
+}
+.proc-cable {
+  stroke: var(--p-cable);
+  stroke-width: 1.4;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: cablePulse var(--pulse,2600ms) ease-in-out infinite;
+}
+.proc-cable.is-dim { stroke: var(--p-cable-dim); animation: none; }
+@keyframes cablePulse {
+  0%   { filter: drop-shadow(0 0 0 rgba(242,220,160,.0)); }
+  35%  { filter: drop-shadow(0 0 10px rgba(242,220,160,.45)); }
+  70%  { filter: drop-shadow(0 0 0 rgba(242,220,160,.0)); }
+  100% { filter: drop-shadow(0 0 0 rgba(242,220,160,.0)); }
+}
+
+/* Lanes */
+.p-lanes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: var(--lane-gap);
+  align-items: start;
+}
+.p-lane {
+  position: relative;
+  display: grid;
+  gap: var(--chip-gap);
+  padding: 8px;
+}
+.p-lane-hd {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  color: var(--p-text);
+}
+.p-lane-hd .badge {
+  font-weight: 700;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #0f0f0f;
+  background: linear-gradient(180deg, var(--p-primary), #b8913d);
+  box-shadow: 0 8px 18px rgba(230,195,107,.25);
+}
+
+/* Chips (nodes) – minimal, alive, not “heavy boxes” */
+.p-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  color: var(--p-text);
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  box-shadow: 0 6px 18px rgba(0,0,0,.25), 0 0 0 1px rgba(255,255,255,.04) inset;
+  white-space: nowrap;
+  transform: translateZ(0);
+  transition: filter .18s ease, transform .12s ease, background .18s ease, border-color .18s ease;
+}
+.p-chip .ico { filter: drop-shadow(0 0 6px rgba(127,178,255,.25)); }
+.p-chip:hover {
+  background: rgba(127,178,255,.08);
+  border-color: rgba(127,178,255,.22);
+  transform: translateY(-1px);
+  filter: saturate(110%);
+}
+.p-chip.is-focus {
+  background: rgba(244,113,181,.10);
+  border-color: rgba(244,113,181,.28);
+  box-shadow: 0 10px 26px rgba(244,113,181,.18);
+}
 
 /* Result card */
-.result{
-  grid-column: 1 / -1;
-  background:linear-gradient(180deg, rgba(14,22,34,.92), rgba(14,22,34,.88));
-  border:1px solid var(--proc-stroke);
-  border-radius:14px; padding:12px;
+.p-result {
+  grid-column: span 4;
+  justify-self: end;
+  max-width: 380px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  box-shadow: var(--muted-shadow);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
-.result h4{margin:0 0 6px; font-weight:800}
-.result ul{margin:0; padding-left:18px; color:#9fb2c6}
-
-/* Sticky helper (used when docked) */
-.procV2 .rail .sentinel{position:sticky; top:96px}
-
-/* ======= Responsive (≤ 900px): stack, show everything vertically ======= */
-@media (max-width: 900px){
-  .procV2{padding:60px 14px 70px}
-  .procV2 .stage{grid-template-columns: 1fr; gap:16px}
-  .procV2 .rail{justify-self:stretch}
-  .stepper ol{flex-direction:row; justify-content:center; flex-wrap:wrap}
-  .rail-notes{display:none}
-  .board{min-height: auto}
-  .lanes{grid-template-columns: 1fr}
+.p-result h4 {
+  margin: 0 0 6px;
+  font-weight: 800;
+}
+.p-result ul {
+  margin: 0; padding-left: 18px;
+  color: var(--p-muted);
+  font-size: 14px;
 }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce){
-  .procV2 *{transition:none !important; animation:none !important}
+/* -------------------- Right rail copy (desktop) -------------------- */
+.proc-rail {
+  margin-top: 16px;
+  padding-left: 8px;
+}
+.proc-step {
+  border-left: 2px solid rgba(255,255,255,.12);
+  padding: 10px 0 10px 14px;
+}
+.proc-step h3 { margin: 0 0 4px; font-size: 16px; }
+.proc-step p  { margin: 0; color: var(--p-muted); font-size: 14px; }
+.proc-step.is-current {
+  border-left-color: var(--p-primary);
+}
+.proc-step.is-current h3 { color: var(--p-primary); }
+
+/* -------------------- Mobile / Tablet -------------------- */
+@media (max-width: 820px) {
+  .p-wrap { grid-template-columns: 1fr; }
+  .p-dock { position: relative; top: auto; order: 0; }
+  .p-board { order: 1; min-height: 520px; }
+  .p-lanes { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .p-result { grid-column: span 2; justify-self: stretch; }
+  .p-stepper { flex-direction: row; justify-content: center; flex-wrap: wrap; }
+  .p-step { grid-template-columns: auto; }
+  .p-label { display:none; }
+}
+
+/* -------------------- Reduced motion -------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .p-chip, .btn-glass { transition: none; }
+  .proc-cable { animation: none; }
+}
+
+/* -------------------- Legacy hooks (safe no-op look) -------------------- */
+/* If older process.js is still present, keep it quiet so it doesn’t look broken */
+.proc-stage, .proc-canvas, .proc-core, .proc-ring, .proc-col-title, .proc-node {
+  pointer-events: none;
+  opacity: .0;
 }
