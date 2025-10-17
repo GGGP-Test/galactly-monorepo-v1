@@ -1,150 +1,187 @@
 /* docs/sections/process/process.css */
-/* Score Carousel – 3D ribbon of category panels */
-.proc3{
-  /* Local tokens (fall back to your site tokens where possible) */
-  --railW: 380px;
-  --topStick: 96px;
-  --card: var(--panel, #0c1420);
-  --stroke: var(--stroke, #1b2531);
-  --muted: #8ea7bd;
-  --chip: #0e1930;
-  --gold: var(--gold, #e6c36b);
-  --gold-300: var(--gold-300, #f2dca0);
-  --glow: rgba(230,195,107,.16);
+/* Section 3 – Process (V2: numbers-only stepper → dock left, board reveals) */
 
-  padding: 72px 16px;
+:root{
+  --proc-gap: 24px;
+  --proc-panel: rgba(12,18,28,.72);
+  --proc-stroke: rgba(255,255,255,.08);
+  --proc-soft: rgba(255,255,255,.04);
+  --proc-chip: rgba(14,22,34,.85);
+  --gold-300: #f2dca0;
+  --gold-700: #b8913d;
 }
-.proc3 .inner{ max-width:1140px; margin:0 auto; }
-.proc3-hd h2{ margin:0 0 6px; font:600 clamp(22px,3.6vw,30px) "Newsreader", Georgia, serif; }
-.proc3-hd .sub{ color:var(--muted); font-size:14px; margin-bottom:18px; }
 
-.proc3-grid{
+.procV2{position:relative; padding:86px 16px 90px; overflow:hidden}
+.procV2 .inner{max-width:1140px; margin:0 auto; position:relative}
+
+/* Head */
+.procV2 .hd{margin-bottom:16px}
+.procV2 h2{margin:0; font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
+.procV2 .sub{color:#9fb4c8; font-size:14px}
+
+/* Layout shells */
+.procV2 .stage{
+  position:relative;
   display:grid;
-  grid-template-columns: var(--railW) 1fr;
-  gap:24px;
-  align-items:start;
+  grid-template-columns: 1fr 420px; /* board | rail */
+  gap: var(--proc-gap);
+  min-height: 540px;
 }
 
-/* -------- Left rail -------- */
-.proc3-rail{ position:sticky; top:var(--topStick); padding:14px 0; }
-.proc3-steps{ position:relative; margin-left:22px; }
-.proc3-progress{
-  position:absolute; left:9px; top:0; bottom:0; width:2px;
-  background:linear-gradient(180deg,var(--glow),transparent);
-  border-radius:2px; opacity:.7;
+/* ============== INTRO MODE (numbers only) ============== */
+.procV2.mode-intro .stage{
+  grid-template-columns: 1fr;
 }
-.proc3-step{ position:relative; padding:12px 0 14px; }
-.proc3-step h3{ margin:0 0 4px; font-weight:800; font-size:16px; }
-.proc3-step p{ margin:0; color:var(--muted); font-size:14px; }
-.proc3-bullet{
-  position:absolute; left:-22px; top:18px; width:9px; height:9px; border-radius:50%;
-  background:radial-gradient(circle at 40% 40%, var(--glow), #fff0);
-  box-shadow:0 0 0 2px rgba(255,255,255,.06);
+.procV2.mode-intro .board{
+  opacity:0; transform:translateX(24px) scale(.98);
+  filter:saturate(.9); pointer-events:none;
 }
-.proc3-step.is-current h3{ color:#fff; }
-.proc3-step.is-current .proc3-bullet{
-  box-shadow:0 0 0 3px rgba(230,195,107,.25), 0 0 12px rgba(230,195,107,.45);
-  background:radial-gradient(circle at 40% 40%, var(--gold-300), #fff0);
-}
-.proc3-step.is-done .proc3-bullet{ background:#9aacc0; }
-
-/* -------- Stage / 3D belt -------- */
-.proc3 .stage{
-  position:relative; height:520px; border-radius:16px;
-  background:
-    radial-gradient(1200px 520px at 60% 40%, rgba(230,195,107,.08), transparent 60%),
-    linear-gradient(180deg,#0b121d,#0b1119);
-  border:1px solid var(--stroke);
-  overflow:hidden;
-  cursor:grab;
-}
-.proc3 .stage:active{ cursor:grabbing; }
-
-.proc3 .r3d-wrap{ position:absolute; inset:0; perspective:1200px; perspective-origin:60% 50%; }
-.proc3 .r3d-belt{
-  position:absolute; left:50%; top:50%;
-  transform-style:preserve-3d;
-  transition:transform .9s cubic-bezier(.2,.8,.2,1);
-  will-change:transform;
+.procV2.mode-intro .rail{
+  justify-self:center;
+  width:min(460px, 92vw);
 }
 
-/* -------- Panels (cards on the ring) -------- */
-.proc3 .panel{
-  position:absolute; width:380px; transform-style:preserve-3d;
-  border:1px solid var(--stroke); border-radius:16px; padding:12px; color:#dbe8f5;
-  background:linear-gradient(180deg, #0e1726, #0b1322);
-  box-shadow:
-    0 20px 60px rgba(0,0,0,.35),
-    0 0 0 1px rgba(255,255,255,.05) inset;
-  -webkit-backface-visibility:hidden; backface-visibility:hidden;
+/* ============== OVERVIEW/DOCKED MODE ============== */
+.procV2.mode-overview .board{
+  opacity:1; transform:none; filter:none; pointer-events:auto;
+  transition:opacity .35s ease, transform .35s ease, filter .35s ease;
 }
-.proc3 .panel::after{
-  /* soft glassy highlight */
-  content:""; position:absolute; inset:-1px;
-  background:linear-gradient(180deg, rgba(255,255,255,.04), transparent 30%, transparent 70%, rgba(255,255,255,.03));
-  border-radius:16px; pointer-events:none;
-}
-.proc3 .panel .ph{ display:flex; align-items:center; gap:10px; margin:2px 0 10px; font-weight:800; }
-.proc3 .panel .pill{
-  font-size:12px; border:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.03); padding:6px 10px; border-radius:999px;
-}
-.proc3 .panel .chips{ display:grid; grid-template-columns:1fr; gap:8px; }
-
-/* Chips */
-.proc3 .chip{
-  display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:999px;
-  border:1px solid rgba(255,255,255,.06);
-  background:linear-gradient(180deg, var(--chip), #0a1524);
-  box-shadow:0 8px 18px rgba(0,0,0,.25);
-  color:#d7e6f3;
-}
-.proc3 .chip .ico{ width:18px; text-align:center; opacity:.95; }
-.proc3 .chip:focus-visible{ outline:none; box-shadow:0 0 0 3px rgba(230,195,107,.35); }
-.proc3 .chip:hover{ filter:brightness(1.05); }
-
-/* Emphasis for the panel at front */
-.proc3 .panel.is-front{
-  box-shadow:
-    0 30px 90px rgba(230,195,107,.18),
-    0 0 0 1px rgba(230,195,107,.18) inset;
-}
-.proc3 .panel.dim .chip{ opacity:.35; filter:grayscale(.25); }
-
-/* Result panel specifics */
-.proc3 .panel.result{
-  background:linear-gradient(180deg, #0f1d2e, #0c1626);
-}
-.proc3 .panel.result h4{ margin:6px 0 6px; }
-.proc3 .panel.result ul{ margin:4px 0 0; padding-left:18px; }
-
-/* Tip */
-.proc3 .stage-tip{
-  position:absolute; right:12px; bottom:12px; font-size:12px; color:var(--muted);
-  background:rgba(255,255,255,.04); border:1px solid var(--stroke);
-  border-radius:10px; padding:6px 8px;
+.procV2 .rail{
+  position:relative; align-self:center;
+  display:grid; grid-auto-rows: min-content;
+  gap:16px;
 }
 
-/* -------- Responsive -------- */
-@media (max-width: 1180px){
-  .proc3{ --railW: 340px; }
+/* Stepper (numbers only) */
+.stepper{
+  border:1px solid var(--proc-stroke);
+  background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+  border-radius:16px; padding:18px 16px;
+  backdrop-filter: blur(6px);
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
-@media (max-width: 980px){
-  .proc3{ --railW: 100%; }
-  .proc3-grid{ grid-template-columns:1fr; }
-  .proc3-rail{ position:static; }
-  .proc3 .stage{ height:520px; }
+.stepper ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; align-items:center; gap:12px}
+.stepper .dot{
+  width:36px; height:36px; border-radius:999px; display:grid; place-items:center;
+  font-weight:700; color:#dbe7f4;
+  background:linear-gradient(180deg, #263449, #1b2736);
+  border:1px solid var(--proc-stroke);
+  box-shadow:0 6px 18px rgba(0,0,0,.28), 0 0 0 1px rgba(255,255,255,.03) inset;
+  transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
 }
-@media (max-width: 760px){
-  .proc3 .panel{ width:320px; }
-  .proc3 .stage{ height:500px; }
+.stepper .dot:is(:hover,:focus-visible){transform:translateY(-1px)}
+.stepper .dot.is-active{
+  color:#1b1405;
+  background:linear-gradient(180deg, var(--gold-300), var(--gold-700));
+  box-shadow:0 10px 26px rgba(230,195,107,.25), 0 0 0 1px rgba(255,255,255,.06) inset;
 }
-@media (max-width: 640px){
-  .proc3 .panel{ width:300px; }
+.stepper .dot.is-done{
+  background:linear-gradient(180deg, #30445c, #24364b);
+  color:#b9cbe0;
+  position:relative;
+}
+.stepper .dot.is-done::after{
+  content:"✓"; position:absolute; inset:0; display:grid; place-items:center; font-weight:800; font-size:16px;
 }
 
-/* -------- Reduced motion -------- */
+/* Stepper controls */
+.stepper-ctrls{margin-top:14px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+.stepper-ctrls .btn{
+  padding:10px 14px; border-radius:999px; font-weight:700; border:1px solid var(--proc-stroke); cursor:pointer;
+  background:linear-gradient(180deg,#122030,#0d1826); color:#cfe0ee;
+}
+.stepper-ctrls .btn.primary{
+  color:#1b1405; border:none;
+  background:linear-gradient(180deg, var(--gold-300), var(--gold-700));
+  box-shadow:0 10px 30px rgba(230,195,107,.20), 0 0 0 1px rgba(255,255,255,.06) inset;
+}
+.stepper-ctrls .btn:active{transform:translateY(1px)}
+
+/* Rail notes (appear only after dock) */
+.rail-notes{border-left:1px solid var(--proc-stroke); padding-left:16px; margin-left:6px; display:grid; gap:16px}
+.rail-notes .note h4{margin:0 0 4px; font-weight:800}
+.rail-notes .note p{margin:0; color:#99b0c8; font-size:14px}
+.procV2.mode-intro .rail-notes{display:none}
+
+/* Board (the workflow cards) */
+.board{
+  position:relative;
+  border-radius:16px;
+  background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+  border:1px solid var(--proc-stroke);
+  padding:16px;
+  min-height:520px;
+  box-shadow:0 14px 40px rgba(0,0,0,.35);
+  transition:opacity .2s ease, transform .2s ease;
+}
+
+/* Lanes (columns) */
+.lanes{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap:16px;
+}
+@media (min-width: 980px){
+  .lanes{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+}
+
+.lane{
+  background:var(--proc-panel);
+  border:1px solid var(--proc-stroke);
+  border-radius:14px; padding:12px; position:relative;
+  box-shadow:0 10px 30px rgba(0,0,0,.28);
+  transition:filter .25s ease, transform .25s ease, box-shadow .25s ease;
+}
+.lane.is-dim{filter:saturate(.75) brightness(.9)}
+.lane.is-focus{
+  transform:translateY(-2px);
+  box-shadow:0 16px 38px rgba(0,0,0,.35), 0 0 0 1px rgba(242,220,160,.22) inset;
+}
+
+.lane-hd{
+  display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  font-weight:800; color:#d7e6f5;
+}
+.lane-hd .tag{padding:4px 8px; border-radius:999px; font-size:12px;
+  background:rgba(255,255,255,.06); border:1px solid var(--proc-stroke)}
+
+/* Chips (nodes) */
+.chips{display:grid; gap:10px}
+.chip{
+  display:flex; align-items:center; gap:8px;
+  padding:10px 12px; border-radius:12px;
+  background:var(--proc-chip);
+  border:1px solid var(--proc-stroke);
+  color:#cfe0ee; font-weight:600;
+  box-shadow:0 6px 18px rgba(0,0,0,.28);
+}
+.chip .ico{opacity:.9}
+
+/* Result card */
+.result{
+  grid-column: 1 / -1;
+  background:linear-gradient(180deg, rgba(14,22,34,.92), rgba(14,22,34,.88));
+  border:1px solid var(--proc-stroke);
+  border-radius:14px; padding:12px;
+}
+.result h4{margin:0 0 6px; font-weight:800}
+.result ul{margin:0; padding-left:18px; color:#9fb2c6}
+
+/* Sticky helper (used when docked) */
+.procV2 .rail .sentinel{position:sticky; top:96px}
+
+/* ======= Responsive (≤ 900px): stack, show everything vertically ======= */
+@media (max-width: 900px){
+  .procV2{padding:60px 14px 70px}
+  .procV2 .stage{grid-template-columns: 1fr; gap:16px}
+  .procV2 .rail{justify-self:stretch}
+  .stepper ol{flex-direction:row; justify-content:center; flex-wrap:wrap}
+  .rail-notes{display:none}
+  .board{min-height: auto}
+  .lanes{grid-template-columns: 1fr}
+}
+
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce){
-  .proc3 .r3d-belt{ transition:none; }
-  .proc3 .chip{ transition:none; }
+  .procV2 *{transition:none !important; animation:none !important}
 }
