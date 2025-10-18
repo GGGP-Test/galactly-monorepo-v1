@@ -1,232 +1,302 @@
-/* Section 3 – Process (no pane)
-   - Step 0 on load (numbers only)
-   - Step 1: left copy + glowing domain node on the right + neon line to board edge
-   - No “pane”/box; just the board background you already have
-*/
+// docs/sections/process/process.js
+(()=>{
 
-(() => {
-  'use strict';
+  const mount = document.getElementById("section-process");
+  if (!mount) return;
 
-  // Destroy any previous mount to prevent “already declared” issues
-  if (window.__PROC && typeof window.__PROC.destroy === 'function') {
-    window.__PROC.destroy();
+  /* ----------------- SCOPED STYLES ----------------- */
+  const style = document.createElement("style");
+  style.textContent = `
+  :root{
+    --ink:#0b1117;
+    --copyMax:300px;
+    --accent:#63D3FF; /* cyan */
+    --accent2:#F2DCA0; /* warm gold */
+  }
+  #section-process{ position:relative; isolation:isolate; }
+  #section-process .proc{ position:relative; min-height:560px; padding:44px 12px 40px; overflow:visible; }
+
+  /* steps rail */
+  #section-process .railWrap{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.88);
+    z-index:5; transition:left .45s cubic-bezier(.22,.61,.36,1), transform .45s cubic-bezier(.22,.61,.36,1);
+  }
+  #section-process .railWrap.is-docked{ left:clamp(12px,5vw,70px); transform:translate(0,-50%) scale(.86); }
+  #section-process .rail{ position:relative; display:flex; flex-direction:column; align-items:center; gap:16px; }
+  #section-process .rail svg{ position:absolute; inset:0; overflow:visible; pointer-events:none; }
+
+  #section-process .p-step{
+    width:50px;height:50px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center; user-select:none; cursor:pointer;
+    font:700 17px/1 Inter, system-ui; color:#eaf0f6;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+    backdrop-filter:blur(6px); box-shadow:0 6px 16px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.05);
+    transition:transform .14s ease, background .15s ease, box-shadow .18s ease;
+  }
+  #section-process .p-step:hover{ transform:translateY(-1px) }
+  #section-process .p-step.is-current{
+    color:#07212a;
+    background:radial-gradient(circle at 50% 45%, rgba(255,255,255,.34), rgba(255,255,255,0) 60%), linear-gradient(180deg, var(--accent), #26b9ff);
+    border-color:rgba(255,255,255,.22);
+    box-shadow:0 14px 34px rgba(38,185,255,.30), 0 0 0 2px rgba(255,255,255,.20) inset, 0 0 18px rgba(99,211,255,.45);
   }
 
-  const DATA = window.PROCESS_DATA;
-  const host = document.getElementById('section-process');
-  if (!host || !DATA) return;
+  #section-process .ctas{ display:flex; gap:10px; margin-top:10px; }
+  #section-process .btn-glass{
+    padding:10px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.14);
+    background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
+    color:#eaf0f6; font-weight:700; cursor:pointer; backdrop-filter:blur(8px);
+    box-shadow:0 8px 24px rgba(0,0,0,.30), inset 0 0 0 1px rgba(255,255,255,.06);
+    transition:transform .08s ease, filter .15s ease;
+  }
+  #section-process .btn-glass:hover{ filter:brightness(1.06) } #section-process .btn-glass:active{ transform:translateY(1px) }
+  #section-process .btn-glass[disabled]{ opacity:.45; cursor:not-allowed }
 
-  // ---------- theme tokens -> section scope ----------
-  const applyTheme = () => {
-    const t = DATA.theme || {};
-    const set = (k, v) => v != null && host.style.setProperty(k, String(v));
-    set('--p-bg', t.bg);            set('--p-text', t.text);
-    set('--p-muted', t.muted);      set('--p-stroke', t.stroke);
-    set('--p-primary', t.primary);  set('--p-secondary', t.secondary);
-    set('--p-tertiary', t.tertiary);
-    set('--p-cable', t.cable);      set('--p-cable-dim', t.cableDim);
-    if (t.glass) {
-      set('--glass-fill', t.glass.fill);
-      set('--glass-stroke', t.glass.stroke);
-      set('--glass-blur', `${t.glass.blurPx || 10}px`);
-      set('--glass-hover', t.glass.hoverFill);
-      set('--glass-active', t.glass.activeFill);
-    }
-  };
-
-  // ---------- helpers ----------
-  const el = (tag, cls, html) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (html != null) n.innerHTML = html;
-    return n;
-  };
-
-  // ---------- skeleton ----------
-  host.innerHTML = '';
-
-  const section = el('section', 'proc-section');
-  const inner   = el('div', 'proc-inner');
-  const wrap    = el('div', 'p-wrap');
-
-  // Left dock (0..5 + CTAs)
-  const dock    = el('aside', 'p-dock');
-  const stepper = el('div', 'p-stepper');
-  const TOTAL_STEPS = 6; // 0..5
-
-  for (let i = 0; i < TOTAL_STEPS; i++) {
-    const row = el('div', 'p-step');
-    row.append(el('div', 'p-dot', String(i)), el('div', 'p-label', ''));
-    stepper.appendChild(row);
+  /* lamp seam */
+  #section-process .lamp{
+    position:absolute; top:50%; transform:translateY(-50%); left:0; width:0;
+    height:min(72vh,560px); border-radius:16px; opacity:0; pointer-events:none; z-index:1;
+    background:
+      radial-gradient(120% 92% at 0% 50%, rgba(99,211,255,.20) 0, rgba(99,211,255,.08) 34%, rgba(99,211,255,0) 70%),
+      radial-gradient(80% 60% at 0% 50%, rgba(242,220,160,.08) 0, rgba(242,220,160,0) 56%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 6px);
+    filter:saturate(110%) blur(.35px);
+    transition:opacity .45s ease, left .45s cubic-bezier(.22,.61,.36,1), width .45s cubic-bezier(.22,.61,.36,1);
+  }
+  #section-process .lamp::before{
+    content:""; position:absolute; inset:0 auto 0 -1px; width:2px; border-radius:2px;
+    background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.03));
+    box-shadow:0 0 10px rgba(99,211,255,.28), 0 0 22px rgba(240,210,120,.12);
   }
 
-  const ctas    = el('div', 'p-ctas');
-  const prevBtn = el('button', 'btn-glass', 'Prev step');
-  const nextBtn = el('button', 'btn-glass', 'Next step');
-  ctas.append(prevBtn, nextBtn);
-  dock.append(stepper, ctas);
+  /* right canvas + copy */
+  #section-process .canvas{ position:absolute; inset:0; z-index:2; pointer-events:none; }
+  #section-process .copy{
+    position:absolute; max-width:var(--copyMax); pointer-events:auto;
+    opacity:0; transform:translateY(6px); transition:opacity .35s ease, transform .35s ease;
+  }
+  #section-process .copy.show{ opacity:1; transform:translateY(0) }
+  #section-process .copy h3{ margin:0 0 .45rem; color:#eaf0f6; font:600 clamp(20px,2.4vw,26px) "Newsreader", Georgia, serif; }
+  #section-process .copy p{ margin:.35rem 0 0; font:400 15px/1.6 Inter, system-ui; color:#a7bacb }
 
-  // Right board (no pane; only SVG cable + stage content)
-  const board   = el('section', 'p-board');
-  const svg     = el('svg', 'proc-svg');
-  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  svg.setAttribute('width', '100%');
-  svg.setAttribute('height', '100%');
-  const cable   = el('path', 'proc-cable is-dim');
-  svg.appendChild(cable);
+  /* SVG strokes */
+  #section-process .stroke-only{ fill:none; stroke:url(#gradNeon); stroke-width:2.5; }
+  #section-process .glow{
+    filter:
+      drop-shadow(0 0 6px rgba(242,220,160,.35))
+      drop-shadow(0 0 14px rgba(99,211,255,.30))
+      drop-shadow(0 0 24px rgba(99,211,255,.18));
+  }
+  #section-process .trail{ stroke:url(#gradTrail); stroke-width:2.5; stroke-linecap:round; }
+  #section-process .dash{ stroke-dasharray:700; stroke-dashoffset:700; animation:dashIn 1.1s ease forwards .06s }
+  @keyframes dashIn{ to{ stroke-dashoffset:0 } }
+  /* traveling spark along the trail */
+  @keyframes travel { to { offset-distance: 100%; } }
+  #section-process .spark{ offset-path:path('M0 0 L 100 0'); offset-distance:0%; animation:travel 2.2s linear infinite .6s }
 
-  const stage   = el('div'); // holds step content; no class -> CSS won’t style it as a pane
-  Object.assign(stage.style, { position: 'relative', minHeight: '420px' });
+  /* responsive clamps */
+  @media (max-width:900px){ :root{ --copyMax:260px } #section-process .railWrap.is-docked{ left:12px; transform:translate(0,-50%) scale(.84) } }
+  @media (max-width:640px){ :root{ --copyMax:240px } #section-process .proc{ min-height:600px } #section-process .railWrap{ transform:translate(-50%,-50%) scale(.82) } }
+  `;
+  document.head.appendChild(style);
 
-  board.append(svg, stage);
-  wrap.append(dock, board);
-  inner.appendChild(wrap);
-  section.appendChild(inner);
-  host.appendChild(section);
+  /* ----------------- MARKUP ----------------- */
+  const steps = [0,1,2,3,4,5];
+  mount.innerHTML = `
+    <section class="proc" aria-label="Process">
+      <div class="lamp" id="lamp"></div>
+      <div class="canvas" id="canvas"></div>
 
-  applyTheme();
+      <div class="railWrap" id="railWrap">
+        <div class="rail" id="rail">
+          <svg id="railSvg" viewBox="0 0 1 1" preserveAspectRatio="none"></svg>
+          ${steps.map(i=>`<button class="p-step" data-i="${i}">${i}</button>`).join("")}
+          <div class="ctas">
+            <button class="btn-glass" id="prevBtn" type="button">Prev step</button>
+            <button class="btn-glass" id="nextBtn" type="button">Next step</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
 
-  // ---------- state ----------
-  let current = 0; // force step 0 on load
-  const rows = Array.from(stepper.querySelectorAll('.p-step'));
-  let activeNode = null;
+  /* ----------------- ELEMENTS ----------------- */
+  const stage   = mount.querySelector(".proc");
+  const railWrap= mount.querySelector("#railWrap");
+  const rail    = mount.querySelector("#rail");
+  const railSvg = mount.querySelector("#railSvg");
+  const lamp    = mount.querySelector("#lamp");
+  const canvas  = mount.querySelector("#canvas");
+  const dots    = Array.from(mount.querySelectorAll(".p-step"));
+  const prevBtn = mount.querySelector("#prevBtn");
+  const nextBtn = mount.querySelector("#nextBtn");
 
-  const setButtons = () => {
-    prevBtn.disabled = current <= 0;
-    nextBtn.disabled = current >= TOTAL_STEPS - 1;
-  };
+  let step = 1;   // show Step 1 for your screenshot flow
 
-  const markStepper = () => {
-    rows.forEach((r, i) => {
-      r.classList.toggle('is-current', i === current);
-      r.classList.toggle('is-done', i < current);
+  /* ----------------- UTILS ----------------- */
+  function setStep(n){
+    step = Math.max(0, Math.min(steps.length-1, n|0));
+    dots.forEach((el,i)=>{ el.classList.toggle("is-current", i===step); el.classList.toggle("is-done", i<step); });
+    prevBtn.disabled = step<=0; nextBtn.disabled = step>=steps.length-1;
+    railWrap.classList.toggle("is-docked", step>0);
+    drawRail();
+    placeLamp();
+    drawScene();
+  }
+
+  function drawRail(){
+    const r = rail.getBoundingClientRect();
+    railSvg.setAttribute("viewBox", `0 0 ${r.width} ${r.height}`);
+    while (railSvg.firstChild) railSvg.removeChild(railSvg.firstChild);
+    const pts = dots.map(el=>{
+      const b = el.getBoundingClientRect();
+      return { x:(b.left+b.right)/2 - r.left, y:(b.top+b.bottom)/2 - r.top };
     });
-  };
+    for (let i=0;i<pts.length-1;i++){
+      const a=pts[i], b=pts[i+1];
+      const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+      line.setAttribute("x1", a.x); line.setAttribute("y1", a.y);
+      line.setAttribute("x2", b.x); line.setAttribute("y2", b.y);
+      line.setAttribute("stroke", i<step ? "rgba(99,211,255,.70)" : "rgba(255,255,255,.12)");
+      line.setAttribute("stroke-width", 2); line.setAttribute("stroke-linecap","round");
+      railSvg.appendChild(line);
+    }
+  }
 
-  const clearStage = () => {
-    stage.innerHTML = '';
-    activeNode = null;
-    cable.setAttribute('d', '');
-    cable.classList.add('is-dim');
-  };
+  function bounds(){
+    const s = stage.getBoundingClientRect();
+    const w = railWrap.getBoundingClientRect();
+    const gap = 42; // space between rail and lamp/copy
+    const left = Math.max(0, w.right + gap - s.left);
+    const width = Math.max(360, s.right - s.left - left - 12);
+    return { sLeft:s.left, sTop:s.top, sW:s.width, sH:s.height, left, width, top:18, railRight:w.right - s.left };
+  }
 
-  // Compute a soft cubic path from node → board right edge
-  const drawCableFromNode = () => {
-    if (!activeNode) return;
-    const bb = board.getBoundingClientRect();
-    const rb = activeNode.getBoundingClientRect();
+  function placeLamp(){
+    const b = bounds();
+    if (step>0){
+      lamp.style.left = b.left + "px";
+      lamp.style.width = b.width + "px";
+      lamp.style.opacity = ".32";
+    } else {
+      lamp.style.opacity = "0"; lamp.style.width="0px";
+    }
+  }
 
-    const sx = rb.right - bb.left;                   // start at node’s right edge
-    const sy = rb.top + rb.height * 0.6 - bb.top;    // gently below mid
-    const ex = bb.width - 18;                         // just inside board edge
-    const ey = sy + 6;
+  function clearCanvas(){ while (canvas.firstChild) canvas.removeChild(canvas.firstChild); }
 
-    const c1x = sx + Math.max(60, bb.width * 0.10);
-    const c2x = sx + Math.max(140, bb.width * 0.28);
+  /* ----------------- STEP 1 SCENE ----------------- */
+  function drawScene(){
+    clearCanvas();
+    if (step!==1) return;
 
-    cable.setAttribute('d', `M ${sx} ${sy} C ${c1x} ${sy}, ${c2x} ${ey}, ${ex} ${ey}`);
-    cable.classList.remove('is-dim');
-  };
+    const b = bounds();
+    const ns = "http://www.w3.org/2000/svg";
 
-  // Resize -> redraw path
-  const onResize = (() => {
-    let raf = 0;
-    return () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(drawCableFromNode);
+    /* helper: build gradient defs once per svg */
+    const makeDefs = ()=>{
+      const defs = document.createElementNS(ns,"defs");
+
+      const g1 = document.createElementNS(ns,"linearGradient");
+      g1.id="gradNeon"; g1.setAttribute("x1","0%"); g1.setAttribute("y1","0%"); g1.setAttribute("x2","100%"); g1.setAttribute("y2","0%");
+      [["0%","rgba(242,220,160,.95)"],["35%","rgba(255,255,255,.95)"],["75%","rgba(99,211,255,.95)"],["100%","rgba(99,211,255,.60)"]]
+        .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); g1.appendChild(s); });
+
+      const g2 = document.createElementNS(ns,"linearGradient");
+      g2.id="gradTrail"; g2.setAttribute("x1","0%"); g2.setAttribute("y1","0%"); g2.setAttribute("x2","100%"); g2.setAttribute("y2","0%");
+      [["0%","rgba(242,220,160,.92)"],["45%","rgba(99,211,255,.90)"],["100%","rgba(99,211,255,.18)"]]
+        .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); g2.appendChild(s); });
+
+      defs.appendChild(g1); defs.appendChild(g2);
+      return defs;
     };
-  })();
-  window.addEventListener('resize', onResize);
 
-  // ---------- renderers ----------
-  const renderStep0 = () => {
-    clearStage();
-    // nothing on the board; numbers-only tease
-  };
+    /* node svg (stroke-only rounded pill) */
+    const nodeSVG = document.createElementNS(ns,"svg");
+    const nodeW = b.width, nodeH = Math.min(560, b.sH-40);
+    nodeSVG.style.left = b.left + "px"; nodeSVG.style.top = b.top + "px";
+    nodeSVG.setAttribute("width", nodeW); nodeSVG.setAttribute("height", nodeH);
+    nodeSVG.setAttribute("viewBox", `0 0 ${nodeW} ${nodeH}`);
+    nodeSVG.appendChild(makeDefs());
 
-  const renderStep1 = () => {
-    clearStage();
+    const pillW = Math.min(440, nodeW*0.48), pillH = 80;
+    const pillX = Math.max(18, nodeW*0.50), pillY = Math.max(12, nodeH*0.20), r = 16;
 
-    // Left copy (kept clear of the dock; constrained width)
-    const copy = el('div', '');
-    Object.assign(copy.style, {
-      position: 'absolute',
-      left: '18px',
-      top: '18px',
-      maxWidth: '360px',
-      lineHeight: '1.35'
-    });
+    const d = `M ${pillX+r} ${pillY} H ${pillX+pillW-r} Q ${pillX+pillW} ${pillY} ${pillX+pillW} ${pillY+r}
+               V ${pillY+pillH-r} Q ${pillX+pillW} ${pillY+pillH} ${pillX+pillW-r} ${pillY+pillH}
+               H ${pillX+r} Q ${pillX} ${pillY+pillH} ${pillX} ${pillY+pillH-r}
+               V ${pillY+r} Q ${pillX} ${pillY} ${pillX+r} ${pillY} Z`;
+
+    const outline = document.createElementNS(ns,"path");
+    outline.setAttribute("d", d);
+    outline.setAttribute("class","stroke-only glow dash");
+    nodeSVG.appendChild(outline);
+
+    const label = document.createElementNS(ns,"text");
+    label.setAttribute("x", pillX + 18); label.setAttribute("y", pillY + pillH/2 + 6);
+    label.setAttribute("fill","#ddeaef"); label.setAttribute("font-weight","800");
+    label.setAttribute("font-size","18"); label.setAttribute("font-family","Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif");
+    label.textContent = "yourcompany.com";
+    nodeSVG.appendChild(label);
+
+    canvas.appendChild(nodeSVG);
+
+    /* full-width continuation trail to the right edge */
+    const trailSVG = document.createElementNS(ns,"svg");
+    trailSVG.style.left = "0px"; trailSVG.style.top = "0px";
+    trailSVG.setAttribute("width", b.sW); trailSVG.setAttribute("height", b.sH);
+    trailSVG.setAttribute("viewBox", `0 0 ${b.sW} ${b.sH}`);
+    trailSVG.appendChild(makeDefs());
+
+    const x1 = b.left + pillX + pillW;
+    const y1 = b.top + pillY + pillH/2;
+    const x2 = b.sW - 10;
+
+    const trail = document.createElementNS(ns,"line");
+    trail.setAttribute("x1", x1); trail.setAttribute("y1", y1);
+    trail.setAttribute("x2", x2); trail.setAttribute("y2", y1);
+    trail.setAttribute("class","trail dash glow");
+    trailSVG.appendChild(trail);
+
+    // luminous end-dot to scream "continues"
+    const endDot = document.createElementNS(ns,"circle");
+    endDot.setAttribute("cx", x2); endDot.setAttribute("cy", y1);
+    endDot.setAttribute("r", 3.5); endDot.setAttribute("fill","rgba(99,211,255,.95)");
+    endDot.style.filter = "drop-shadow(0 0 10px rgba(99,211,255,.6)) drop-shadow(0 0 18px rgba(242,220,160,.45))";
+    trailSVG.appendChild(endDot);
+
+    // traveling spark along the trail (tiny, subtle)
+    const spark = document.createElementNS(ns,"div"); // use HTML element for offset-path animation
+    spark.className = "spark";
+    spark.style.position = "absolute"; spark.style.width="6px"; spark.style.height="6px"; spark.style.borderRadius="50%";
+    spark.style.background="radial-gradient(circle, rgba(255,255,255,.95), rgba(99,211,255,.0) 70%)";
+    spark.style.left = x1 + "px"; spark.style.top = (y1-3) + "px";
+    spark.style.offsetPath = `path('M0 0 L ${x2-x1} 0')`;
+    canvas.appendChild(trailSVG);
+    canvas.appendChild(spark);
+
+    /* copy column – guaranteed clear of the rail */
+    const copy = document.createElement("div");
+    copy.className = "copy";
+    const leftClamp = Math.max(b.railRight + 20, 14);
+    copy.style.left = leftClamp + "px";
+    copy.style.top  = (b.top + pillY - 2) + "px";
     copy.innerHTML = `
-      <h3 style="margin:0 0 8px; font:800 22px/1.1 'Newsreader', Georgia, serif;">
-        We start with your company.
-      </h3>
-      <p style="margin:0; color:var(--p-muted); font-size:14px;">
-        We read your company and data to learn what matters. Then our system
-        builds simple metrics around your strengths. With that map in hand, we
-        move forward to find real buyers who match your persona.
-      </p>
+      <h3>We start with your company.</h3>
+      <p>We read your company and data to learn what matters. Then our system builds simple metrics around your strengths.
+      With that map in hand, we move forward to find real buyers who match your persona.</p>
     `;
+    canvas.appendChild(copy);
+    requestAnimationFrame(()=> copy.classList.add("show"));
+  }
 
-    // Glowing domain node (stroke-only look)
-    const node = el('div', '');
-    Object.assign(node.style, {
-      position: 'absolute',
-      right: '52px',
-      top: '64px',
-      padding: '12px 18px',
-      borderRadius: '12px',
-      color: 'var(--p-text)',
-      background: 'transparent',
-      border: '2px solid rgba(127,178,255,.92)',
-      boxShadow: '0 0 18px rgba(127,178,255,.35), inset 0 0 8px rgba(127,178,255,.12)',
-      fontWeight: '800',
-      letterSpacing: '.2px',
-      whiteSpace: 'nowrap'
-    });
-    node.textContent = 'yourcompany.com';
+  /* ----------------- EVENTS ----------------- */
+  dots.forEach(d=> d.addEventListener("click", ()=> setStep(+d.dataset.i)));
+  prevBtn.addEventListener("click", ()=> setStep(step-1));
+  nextBtn.addEventListener("click", ()=> setStep(step+1));
+  addEventListener("resize", ()=>{ drawRail(); placeLamp(); drawScene(); }, {passive:true});
+  railWrap.addEventListener("transitionend", e=>{ if (e.propertyName==="left"||e.propertyName==="transform"){ drawRail(); placeLamp(); drawScene(); } });
 
-    stage.append(copy, node);
-
-    // draw path after layout
-    requestAnimationFrame(() => {
-      activeNode = node;
-      drawCableFromNode();
-    });
-  };
-
-  const render = () => {
-    if (current === 0) renderStep0();
-    else if (current === 1) renderStep1();
-    else clearStage(); // later steps will fill in as you approve
-    setButtons();
-    markStepper();
-  };
-
-  // ---------- interactions ----------
-  prevBtn.addEventListener('click', () => {
-    current = Math.max(0, current - 1);
-    render();
-  });
-  nextBtn.addEventListener('click', () => {
-    current = Math.min(TOTAL_STEPS - 1, current + 1);
-    render();
-  });
-  rows.forEach((row, idx) => {
-    row.addEventListener('click', () => {
-      current = idx;
-      render();
-    });
-  });
-
-  // Initial state: 0 (numbers only)
-  current = 0;
-  render();
-
-  // Expose destroy for hot reloads
-  window.__PROC = {
-    destroy() {
-      window.removeEventListener('resize', onResize);
-      if (host.contains(section)) host.removeChild(section);
-    }
-  };
+  /* ----------------- INIT ----------------- */
+  setStep(1); // show Step 1 per your flow
 })();
