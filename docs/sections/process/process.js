@@ -1,15 +1,16 @@
-// docs/sections/process/process.js
+<!-- docs/sections/process/process.js -->
+<script>
 (()=>{
   const mount = document.getElementById("section-process");
   if (!mount) return;
 
-  /* ----------------- SCOPED STYLES (unchanged visuals) ----------------- */
+  /* ----------------- SCOPED STYLES ----------------- */
   const style = document.createElement("style");
   style.textContent = `
   :root{
     --ink:#0b1117;
     --copyMax:300px;
-    --accent:#63D3FF; /* cyan */
+    --accent:#63D3FF;  /* cyan */
     --accent2:#F2DCA0; /* warm gold */
   }
   #section-process{ position:relative; isolation:isolate; }
@@ -78,7 +79,7 @@
   #section-process .copy h3{ margin:0 0 .45rem; color:#eaf0f6; font:600 clamp(20px,2.4vw,26px) "Newsreader", Georgia, serif; }
   #section-process .copy p{ margin:.35rem 0 0; font:400 15px/1.6 Inter, system-ui; color:#a7bacb }
 
-  /* SVG strokes */
+  /* SVG strokes + pulse */
   #section-process .stroke-only{ fill:none; stroke:url(#gradNeon); stroke-width:2.5; }
   #section-process .glow{
     filter:
@@ -86,12 +87,17 @@
       drop-shadow(0 0 14px rgba(99,211,255,.30))
       drop-shadow(0 0 24px rgba(99,211,255,.18));
   }
+  #section-process .pulse { animation:pulseGlow 2.6s ease-in-out infinite; }
+  @keyframes pulseGlow{
+    0%,100%{ filter: drop-shadow(0 0 6px rgba(242,220,160,.25)) drop-shadow(0 0 10px rgba(99,211,255,.22)); }
+    50%   { filter: drop-shadow(0 0 10px rgba(242,220,160,.45)) drop-shadow(0 0 18px rgba(99,211,255,.45)); }
+  }
+
   #section-process .trail{ stroke:url(#gradTrail); stroke-width:2.5; stroke-linecap:round; }
-  #section-process .dash{ stroke-dasharray:700; stroke-dashoffset:700; animation:dashIn 1.1s ease forwards .06s }
-  @keyframes dashIn{ to{ stroke-dashoffset:0 } }
   @keyframes travel { to { offset-distance: 100%; } }
   #section-process .spark{ offset-path:path('M0 0 L 100 0'); offset-distance:0%; animation:travel 2.2s linear infinite .6s }
 
+  /* responsive clamps */
   @media (max-width:900px){ :root{ --copyMax:260px } #section-process .railWrap.is-docked{ left:12px; transform:translate(0,-50%) scale(.84) } }
   @media (max-width:640px){ :root{ --copyMax:240px } #section-process .proc{ min-height:600px } #section-process .railWrap{ transform:translate(-50%,-50%) scale(.82) } }
   `;
@@ -128,7 +134,7 @@
   const prevBtn = mount.querySelector("#prevBtn");
   const nextBtn = mount.querySelector("#nextBtn");
 
-  // START AT STEP 0 (empty), not 1
+  // Start truly at Step 0 (empty)
   let step = 0;
 
   /* ----------------- UTILS ----------------- */
@@ -161,11 +167,11 @@
     }
   }
 
-  // Added bigger safety gap so copy never kisses the lamp/rail
+  // Larger safety gap so copy never kisses the lamp/rail
   function bounds(){
     const s = stage.getBoundingClientRect();
     const w = railWrap.getBoundingClientRect();
-    const gap = 56; // ← was 42
+    const gap = 56; // was 42
     const left = Math.max(0, w.right + gap - s.left);
     const width = Math.max(380, s.right - s.left - left - 16);
     return { sLeft:s.left, sTop:s.top, sW:s.width, sH:s.height, left, width, top:18, railRight:w.right - s.left };
@@ -192,7 +198,7 @@
     const b = bounds();
     const ns = "http://www.w3.org/2000/svg";
 
-    // gradients
+    // gradients (scoped per svg)
     const makeDefs = ()=>{
       const defs = document.createElementNS(ns,"defs");
       const g1 = document.createElementNS(ns,"linearGradient");
@@ -210,6 +216,7 @@
     // node svg (stroke-only rounded pill)
     const nodeSVG = document.createElementNS(ns,"svg");
     const nodeW = b.width, nodeH = Math.min(560, b.sH-40);
+    nodeSVG.style.position = "absolute";
     nodeSVG.style.left = b.left + "px"; nodeSVG.style.top = b.top + "px";
     nodeSVG.setAttribute("width", nodeW); nodeSVG.setAttribute("height", nodeH);
     nodeSVG.setAttribute("viewBox", `0 0 ${nodeW} ${nodeH}`);
@@ -225,8 +232,17 @@
 
     const outline = document.createElementNS(ns,"path");
     outline.setAttribute("d", d);
-    outline.setAttribute("class","stroke-only glow dash");
+    outline.setAttribute("class","stroke-only glow pulse");
     nodeSVG.appendChild(outline);
+
+    // Use the real path length so the outline animates fully (no “broken box”)
+    const len = outline.getTotalLength();
+    outline.style.strokeDasharray  = String(len);
+    outline.style.strokeDashoffset = String(len);
+    // force layout, then animate in
+    outline.getBoundingClientRect();
+    outline.style.transition = "stroke-dashoffset 1100ms cubic-bezier(.22,.61,.36,1)";
+    requestAnimationFrame(()=> outline.style.strokeDashoffset = "0");
 
     const label = document.createElementNS(ns,"text");
     label.setAttribute("x", pillX + 18); label.setAttribute("y", pillY + pillH/2 + 6);
@@ -239,6 +255,7 @@
 
     // continuation trail to screen edge
     const trailSVG = document.createElementNS(ns,"svg");
+    trailSVG.style.position = "absolute";
     trailSVG.style.left = "0px"; trailSVG.style.top = "0px";
     trailSVG.setAttribute("width", b.sW); trailSVG.setAttribute("height", b.sH);
     trailSVG.setAttribute("viewBox", `0 0 ${b.sW} ${b.sH}`);
@@ -251,9 +268,10 @@
     const trail = document.createElementNS(ns,"line");
     trail.setAttribute("x1", x1); trail.setAttribute("y1", y1);
     trail.setAttribute("x2", x2); trail.setAttribute("y2", y1);
-    trail.setAttribute("class","trail dash glow");
+    trail.setAttribute("class","trail glow");
     trailSVG.appendChild(trail);
 
+    // luminous end-dot to show continuation
     const endDot = document.createElementNS(ns,"circle");
     endDot.setAttribute("cx", x2); endDot.setAttribute("cy", y1);
     endDot.setAttribute("r", 3.5); endDot.setAttribute("fill","rgba(99,211,255,.95)");
@@ -267,13 +285,14 @@
     spark.style.background="radial-gradient(circle, rgba(255,255,255,.95), rgba(99,211,255,.0) 70%)";
     spark.style.left = x1 + "px"; spark.style.top = (y1-3) + "px";
     spark.style.offsetPath = `path('M0 0 L ${x2-x1} 0')`;
+
     canvas.appendChild(trailSVG);
     canvas.appendChild(spark);
 
     // copy column – kept clear of rail with larger padding
     const copy = document.createElement("div");
     copy.className = "copy";
-    const leftClamp = Math.max(b.railRight + 32, 24); // was +20
+    const leftClamp = Math.max(b.railRight + 32, 24);
     copy.style.left = leftClamp + "px";
     copy.style.top  = (b.top + pillY - 2) + "px";
     copy.innerHTML = `
@@ -297,12 +316,11 @@
   });
 
   /* ----------------- INIT ----------------- */
-  // Start truly empty (Step 0). Nothing docks, no lamp, no copy until Next.
   function init(){
-    setStep(0);
-    // one more pass after layout/fonts settle to lock positions
-    requestAnimationFrame(()=>{ drawRail(); placeLamp(); });
+    setStep(0); // empty first
+    requestAnimationFrame(()=>{ drawRail(); placeLamp(); }); // lock after fonts/layout
   }
   if (document.readyState === "complete") init();
   else addEventListener("load", init, {once:true});
 })();
+</script>
