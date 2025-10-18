@@ -1,123 +1,203 @@
 // sections/process/process.step1.js
 (() => {
-  // Safety: ensure registry exists even if this loads early
+  // Step 1: "Who buys the fastest?" (intent score)
+  // Registers with the scene router defined in sections/process/process.js
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
 
-  // STEP 1 scene: copy left + 2 flowing pills on right
-  window.PROCESS_SCENES[1] = function(ctx){
+  window.PROCESS_SCENES[1] = function (ctx) {
     const { canvas, bounds, makeFlowGradients, mountCopy } = ctx;
-    const b = bounds;
+    const b  = bounds;
     const ns = "http://www.w3.org/2000/svg";
 
-    // --- left-side copy (inside lamp) ---
-    const leftClamp = Math.max(b.railRight + 28, b.left + 24);
+    // ------ Layout knobs (uniform sizes + thinner strokes) ------
+    const H      = Math.min(560, b.sH - 40);
+    const W      = b.width;          // SVG width == lamp width
+    const COL_W  = Math.min(300, W * 0.40); // slimmer column so everything fits in the lamp
+    const BOX_H  = 52;               // uniform height across shapes
+    const GAP_Y  = 72;
+    const START_Y= Math.max(18, H * 0.18);
+    const STROKE = 1.8;              // thinner stroke as requested
+
+    // Column X (to the right side, but inside the lamp)
+    const baseX  = Math.max(18, W * 0.54);
+
+    // Where the copy sits (inside lamp, left of shapes)
+    const copyLeftClamp = Math.max(b.railRight + 28, b.left + 24);
+
+    // ----- Left copy (SEO-tuned for packaging suppliers) -----
     const copy = mountCopy({
-      top:  b.top + 56,
-      left: leftClamp,
+      top:  b.top + START_Y - 4,
+      left: copyLeftClamp,
       html: `
-        <h3>We analyze your signals.</h3>
-        <p>We connect what your site says with market activity and build a clean signal stream.
-        Then we score it so your sales team sees the real heat first.</p>
-      `,
+        <h3>Who buys the fastest?</h3>
+        <p>We rank accounts by a live <strong>intent score</strong> built for packaging suppliers:
+        searches per time block, technology on site, customer scale by LTV/CAC, tools they interact with,
+        and company size. The score bubbles up buyers most likely to convert <em>now</em> so your team
+        prioritizes quotes, samples, and demos that close quickly.</p>
+      `
     });
 
-    // --- right canvas ---
-    const nodeW = b.width, nodeH = Math.min(560, b.sH - 40);
+    // ----- Right SVG canvas -----
     const svg = document.createElementNS(ns, "svg");
     svg.style.position = "absolute";
     svg.style.left = b.left + "px";
     svg.style.top  = b.top  + "px";
-    svg.setAttribute("width",  nodeW);
-    svg.setAttribute("height", nodeH);
-    svg.setAttribute("viewBox", `0 0 ${nodeW} ${nodeH}`);
+    svg.setAttribute("width",  W);
+    svg.setAttribute("height", H);
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     canvas.appendChild(svg);
 
-    // pill geometry
-    const pillW = Math.min(320, nodeW * 0.40);
-    const pillH = 68;
-    const r = 16;
+    // Right-edge in this SVG’s space
+    const xRight = (b.sW - 10) - b.left;
 
-    // place both pills toward the right half
-    const baseX = Math.max(24, nodeW * 0.56);
-    const p1 = { x: baseX,     y: Math.max(24, nodeH * 0.25) };
-    const p2 = { x: baseX,     y: Math.max(24, nodeH * 0.25) + 120 };
+    // Flowing gradients (outline + right trail) seeded from the first box
+    svg.appendChild(makeFlowGradients({
+      pillX: baseX, pillY: START_Y, pillW: COL_W,
+      yMid: START_Y + BOX_H/2, xTrailEnd: xRight
+    }));
 
-    // right edge for trail (in this svg space)
-    const xTrailEnd = (b.sW - 10) - b.left;
-
-    // defs: reuse the same flowing colors helper
-    const defs = makeFlowGradients({
-      pillX: p1.x, pillY: p1.y, pillW,
-      yMid: p1.y + pillH/2,
-      xTrailEnd
-    });
+    // Also add a left-side flowing trail for continuity coming in
+    const defs = document.createElementNS(ns, "defs");
+    const gLeft = document.createElementNS(ns, "linearGradient");
+    gLeft.id = "gradTrailLeft";
+    gLeft.setAttribute("gradientUnits", "userSpaceOnUse");
+    gLeft.setAttribute("x1", 0); gLeft.setAttribute("y1", START_Y + BOX_H/2);
+    gLeft.setAttribute("x2", baseX); gLeft.setAttribute("y2", START_Y + BOX_H/2);
+    [["0%","rgba(99,211,255,.18)"],["55%","rgba(99,211,255,.90)"],["100%","rgba(230,195,107,.92)"]]
+      .forEach(([o,c]) => { const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gLeft.appendChild(s); });
+    const animL = document.createElementNS(ns, "animateTransform");
+    animL.setAttribute("attributeName","gradientTransform");
+    animL.setAttribute("type","translate");
+    animL.setAttribute("from","0 0"); animL.setAttribute("to", `${baseX} 0`);
+    animL.setAttribute("dur","6s"); animL.setAttribute("repeatCount","indefinite");
+    gLeft.appendChild(animL);
+    defs.appendChild(gLeft);
     svg.appendChild(defs);
 
-    // helper to draw a rounded “pill” outline with flowing stroke
-    const pillPath = (x,y) => {
-      const d = `M ${x+r} ${y} H ${x+pillW-r} Q ${x+pillW} ${y} ${x+pillW} ${y+r}
-                 V ${y+pillH-r} Q ${x+pillW} ${y+pillH} ${x+pillW-r} ${y+pillH}
-                 H ${x+r} Q ${x} ${y+pillH} ${x} ${y+pillH-r}
-                 V ${y+r} Q ${x} ${y} ${x+r} ${y} Z`;
-      const path = document.createElementNS(ns,"path");
-      path.setAttribute("d", d);
-      path.setAttribute("fill","none");
-      path.setAttribute("stroke","url(#gradFlow)");
-      path.setAttribute("stroke-width","2.5");
-      path.setAttribute("stroke-linejoin","round");
-      path.setAttribute("class","glow");
-      svg.appendChild(path);
-
-      // pleasant draw-in
+    // Helpers
+    const drawIn = (path) => {
       const len = path.getTotalLength();
       path.style.strokeDasharray  = String(len);
       path.style.strokeDashoffset = String(len);
       path.getBoundingClientRect();
       path.style.transition = "stroke-dashoffset 1100ms cubic-bezier(.22,.61,.36,1)";
-      requestAnimationFrame(()=> path.style.strokeDashoffset = "0");
-      return path;
+      requestAnimationFrame(() => (path.style.strokeDashoffset = "0"));
     };
 
-    pillPath(p1.x, p1.y);
-    pillPath(p2.x, p2.y);
-
-    // labels
-    const label = (x,y,t) => {
-      const text = document.createElementNS(ns,"text");
-      text.setAttribute("x", x + 16);
-      text.setAttribute("y", y + pillH/2 + 6);
-      text.setAttribute("fill","#ddeaef");
-      text.setAttribute("font-weight","800");
-      text.setAttribute("font-size","16");
-      text.setAttribute("font-family","Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif");
-      text.textContent = t;
-      svg.appendChild(text);
+    const addLabel = (x, y, text) => {
+      const t = document.createElementNS(ns, "text");
+      t.setAttribute("x", x);
+      t.setAttribute("y", y);
+      t.setAttribute("fill", "#ddeaef");
+      t.setAttribute("font-size", "15");
+      t.setAttribute("font-weight", "800");
+      t.setAttribute("font-family", "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif");
+      t.textContent = text;
+      svg.appendChild(t);
     };
-    label(p1.x, p1.y, "Signals");
-    label(p2.x, p2.y, "Score");
 
-    // connectors (same liquid trail)
-    const mkLine = (x1,y1,x2,y2) => {
-      const line = document.createElementNS(ns,"line");
-      line.setAttribute("x1", x1); line.setAttribute("y1", y1);
-      line.setAttribute("x2", x2); line.setAttribute("y2", y2);
-      line.setAttribute("stroke","url(#gradTrailFlow)");
-      line.setAttribute("stroke-width","2.5");
-      line.setAttribute("stroke-linecap","round");
-      line.setAttribute("class","glow");
-      svg.appendChild(line);
-    };
-    // p1 -> right edge
-    mkLine(p1.x + pillW, p1.y + pillH/2, xTrailEnd, p1.y + pillH/2);
-    // p2 -> right edge
-    mkLine(p2.x + pillW, p2.y + pillH/2, xTrailEnd, p2.y + pillH/2);
+    // ----- Continuous cable left→stack and stack→right -----
+    const yCable = START_Y + BOX_H/2;
+    const lineL = document.createElementNS(ns, "line");
+    lineL.setAttribute("x1", 0);         lineL.setAttribute("y1", yCable);
+    lineL.setAttribute("x2", baseX - 10); lineL.setAttribute("y2", yCable);
+    lineL.setAttribute("stroke", "url(#gradTrailLeft)");
+    lineL.setAttribute("stroke-width", String(STROKE));
+    lineL.setAttribute("stroke-linecap","round");
+    lineL.setAttribute("class","glow");
+    svg.appendChild(lineL);
 
-    // push copy a bit left of the first pill, if needed
+    const lineR = document.createElementNS(ns, "line");
+    lineR.setAttribute("x1", baseX + COL_W + 10); lineR.setAttribute("y1", yCable);
+    lineR.setAttribute("x2", xRight);             lineR.setAttribute("y2", yCable);
+    lineR.setAttribute("stroke", "url(#gradTrailFlow)");
+    lineR.setAttribute("stroke-width", String(STROKE));
+    lineR.setAttribute("stroke-linecap","round");
+    lineR.setAttribute("class","glow");
+    svg.appendChild(lineR);
+
+    // ----- Uniform stack of shapes (exact order you specified) -----
+    const items = [
+      { kind: "rect",      text: "Number of Searches / TimeBlock" },
+      { kind: "rect",      text: "Technologies used at the location" },
+      { kind: "roundrect", text: "Number of customers based on LTV/CAC" },
+      { kind: "oval",      text: "Tools interacted" },
+      { kind: "diamond",   text: "Company Size" },
+    ];
+
+    items.forEach((s, i) => {
+      const x = baseX, y = START_Y + i * GAP_Y, w = COL_W, h = BOX_H;
+
+      if (s.kind === "rect" || s.kind === "roundrect") {
+        const r = s.kind === "roundrect" ? 16 : 4;
+        const d = `M ${x+r} ${y} H ${x+w-r} Q ${x+w} ${y} ${x+w} ${y+r}
+                   V ${y+h-r} Q ${x+w} ${y+h} ${x+w-r} ${y+h}
+                   H ${x+r} Q ${x} ${y+h} ${x} ${y+h-r}
+                   V ${y+r} Q ${x} ${y} ${x+r} ${y} Z`;
+        const path = document.createElementNS(ns, "path");
+        path.setAttribute("d", d);
+        path.setAttribute("fill","none");
+        path.setAttribute("stroke","url(#gradFlow)");
+        path.setAttribute("stroke-width", String(STROKE));
+        path.setAttribute("stroke-linejoin","round");
+        path.setAttribute("class","glow");
+        svg.appendChild(path);
+        drawIn(path);
+        addLabel(x + 16, y + h/2 + 5, s.text);
+      }
+
+      if (s.kind === "oval") {
+        const cx = x + w/2, cy = y + h/2, rx = w/2, ry = h/2;
+        const el = document.createElementNS(ns, "ellipse");
+        el.setAttribute("cx", cx); el.setAttribute("cy", cy);
+        el.setAttribute("rx", rx); el.setAttribute("ry", ry);
+        el.setAttribute("fill","none");
+        el.setAttribute("stroke","url(#gradFlow)");
+        el.setAttribute("stroke-width", String(STROKE));
+        el.setAttribute("class","glow");
+        svg.appendChild(el);
+        // draw-in animation for ellipse (via invisible path)
+        const fake = document.createElementNS(ns,"path");
+        fake.setAttribute("d", `M ${x} ${cy} A ${rx} ${ry} 0 1 1 ${x+w-0.1} ${cy} A ${rx} ${ry} 0 1 1 ${x} ${cy}`);
+        fake.setAttribute("fill","none"); fake.setAttribute("stroke","transparent");
+        svg.appendChild(fake); drawIn(fake); svg.removeChild(fake);
+        addLabel(x + 16, y + h/2 + 5, s.text);
+      }
+
+      if (s.kind === "diamond") {
+        const cx = x + w/2, cy = y + h/2, rx = w/2, ry = h/2;
+        const d = `M ${cx} ${cy-ry} L ${cx+rx} ${cy} L ${cx} ${cy+ry} L ${cx-rx} ${cy} Z`;
+        const path = document.createElementNS(ns, "path");
+        path.setAttribute("d", d);
+        path.setAttribute("fill","none");
+        path.setAttribute("stroke","url(#gradFlow)");
+        path.setAttribute("stroke-width", String(STROKE));
+        path.setAttribute("stroke-linejoin","round");
+        path.setAttribute("class","glow");
+        svg.appendChild(path);
+        drawIn(path);
+        addLabel(x + 16, y + h/2 + 5, s.text);
+      }
+    });
+
+    // Three dots below (indicating more factors)
+    const lastY = START_Y + (items.length - 1) * GAP_Y + BOX_H + 18;
+    [0,1,2].forEach(k => {
+      const c = document.createElementNS(ns, "circle");
+      c.setAttribute("cx", baseX + COL_W/2);
+      c.setAttribute("cy", lastY + k * 14);
+      c.setAttribute("r", 3.5);
+      c.setAttribute("fill", "rgba(99,211,255,.95)");
+      c.setAttribute("class","glow");
+      svg.appendChild(c);
+    });
+
+    // Keep copy neatly left of the first box
     requestAnimationFrame(() => {
-      const boxLeftAbs = b.left + p1.x;
+      const boxLeftAbs = b.left + baseX;
       const copyBox    = copy.getBoundingClientRect();
       let idealLeft    = Math.min(copyBox.left, boxLeftAbs - 44 - copyBox.width);
-      idealLeft        = Math.max(idealLeft, leftClamp);
+      idealLeft        = Math.max(idealLeft, copyLeftClamp);
       copy.style.left  = idealLeft + "px";
     });
   };
