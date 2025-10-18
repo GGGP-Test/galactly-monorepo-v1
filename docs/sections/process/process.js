@@ -4,10 +4,12 @@
   if (!mount) return;
 
   /* ----------------- GLOBALS ----------------- */
+  // Step files (process.step1.js … step5.js) register on this map:
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
+  // Shared knobs; keep your step1 defaults here so you can tweak in console.
   window.PROCESS_CONFIG = Object.assign(
     {
-      step1: { // tuning for the pill scene (now used when step=0, phase=content)
+      step1: {
         NUDGE_X: 130,
         NUDGE_Y: 50,
         COPY_GAP: 44,
@@ -120,7 +122,7 @@
   let step = 0;
   let phase = 0;
 
-  /* ----------------- HELPERS ----------------- */
+  /* ----------------- SHARED HELPERS ----------------- */
   const ns = "http://www.w3.org/2000/svg";
 
   function makeFlowGradients({ pillX, pillY, pillW, yMid, xTrailEnd }) {
@@ -155,7 +157,7 @@
     defs.appendChild(gFlow); defs.appendChild(gTrail);
     return defs;
   }
-  // Expose for step2…step5 to reuse the same flowing colors
+  // Export for step files
   window.PROCESS_UTILS = Object.assign({}, window.PROCESS_UTILS, { makeFlowGradients });
 
   function mountCopy({ top, left, html }) {
@@ -177,10 +179,10 @@
     const width = Math.max(380, s.right - s.left - left - 16);
     return { sLeft:s.left, sTop:s.top, sW:s.width, sH:s.height, left, width, top:18, railRight:w.right - s.left };
   }
+  window.PROCESS_GET_BOUNDS = bounds; // helpful for debugging/tuning
 
   function placeLamp(){
     const b = bounds();
-    // Dock for any real content (all steps >0 OR step 0 when phase=1)
     if (step>0 || (step===0 && phase===1)){
       lamp.style.left = b.left + "px";
       lamp.style.width = b.width + "px";
@@ -192,10 +194,10 @@
 
   function clearCanvas(){ while (canvas.firstChild) canvas.removeChild(canvas.firstChild); }
 
-  /* ----------------- SCENE: PILL (used for step 0, phase=1) ----------------- */
-  function scenePill(ctx){
+  /* ----------------- STEP 0 "pill" scene (phase=1) ----------------- */
+  function scenePill(){
     const C = window.PROCESS_CONFIG.step1;
-    const b = ctx.bounds;
+    const b = bounds();
 
     const nodeW = b.width, nodeH = Math.min(560, b.sH-40);
     const svg = document.createElementNS(ns,"svg");
@@ -214,8 +216,8 @@
     const pillY      = Math.max(12, nodeH * 0.20 + C.NUDGE_Y);
     const r          = 16;
     const yMid       = pillY + pillH/2;
-
     const xTrailEnd  = (b.sW - 10) - b.left;
+
     svg.appendChild(makeFlowGradients({ pillX, pillY, pillW, yMid, xTrailEnd }));
 
     const d = `M ${pillX+r} ${pillY} H ${pillX+pillW-r} Q ${pillX+pillW} ${pillY} ${pillX+pillW} ${pillY+r}
@@ -278,7 +280,7 @@
     });
   }
 
-  /* ----------------- RENDER RAIL ----------------- */
+  /* ----------------- RAIL ----------------- */
   function drawRail(){
     const r = rail.getBoundingClientRect();
     railSvg.setAttribute("viewBox", `0 0 ${r.width} ${r.height}`);
@@ -302,70 +304,55 @@
     dots.forEach((el,i)=>{
       el.classList.toggle("is-current", i===step);
       el.classList.toggle("is-done",    i<step);
-      // numbers except completed steps become a check
       el.textContent = (i<step) ? "✓" : String(i);
     });
   }
 
-  /* ----------------- STEP/SCENE ROUTER ----------------- */
+  /* ----------------- ROUTER ----------------- */
   function drawScene(){
     clearCanvas();
-    // treat 0/content as our pill scene
-    if (step===0 && phase===1) return scenePill({ bounds: bounds() });
+    if (step===0 && phase===1){ scenePill(); return; }
 
-    // scene files (1..5) register themselves on window.PROCESS_SCENES[n]
     const scene = window.PROCESS_SCENES[step];
     if (typeof scene === "function") {
-      return scene({ ns, canvas, bounds: bounds(), config: window.PROCESS_CONFIG, makeFlowGradients, mountCopy });
+      try{
+        scene({ ns, canvas, bounds: bounds(), config: window.PROCESS_CONFIG, makeFlowGradients, mountCopy });
+      }catch(err){
+        console.error("process scene error (step "+step+"):", err);
+      }
     }
-    // otherwise: intentionally empty (0/phase=0 or unimplemented steps)
   }
 
   function setStep(n, opts={}){
-    const clamped = Math.max(0, Math.min(steps.length-1, n|0));
-    step = clamped;
+    step = Math.max(0, Math.min(steps.length-1, n|0));
 
-    // default phase rules:
-    // - if we move to step 0 and no explicit phase provided, show content (phase=1),
-    //   except on very first load where init() sets phase=0.
-    if (typeof opts.phase === "number") phase = opts.phase;
-    else if (step === 0 && phase === 0 && opts.fromInit) phase = 0;
-    else if (step === 0) phase = 1;
-    else phase = 1;
+    // phase rules
+    if (typeof opts.phase === "number")       phase = opts.phase;
+    else if (step === 0 && phase === 0 && opts.fromInit) phase = 0; // initial 0 (empty)
+    else if (step === 0)                      phase = 1;            // clicking/advancing to 0 shows content
+    else                                      phase = 1;
 
-    // dock when any content is visible
     railWrap.classList.toggle("is-docked", step>0 || (step===0 && phase===1));
-
     renderDots();
     prevBtn.disabled = (step===0 && phase===0);
     nextBtn.disabled = step>=steps.length-1;
 
-    drawRail();
-    placeLamp();
-    drawScene();
+    drawRail(); placeLamp(); drawScene();
   }
 
   /* ----------------- EVENTS ----------------- */
   dots.forEach(d=> d.addEventListener("click", ()=>{
     const i = +d.dataset.i;
-    if (i===0){
-      // clicking 0 toggles content on
-      setStep(0, { phase: 1 });
-    } else {
-      setStep(i, { phase: 1 });
-    }
+    if (i===0){ setStep(0, { phase: 1 }); } else { setStep(i, { phase: 1 }); }
   }));
 
   prevBtn.addEventListener("click", ()=>{
-    // special two-phase handling for step 0
     if (step===0 && phase===1){ setStep(0, { phase: 0 }); return; }
     setStep(step-1, { phase: 1 });
   });
 
   nextBtn.addEventListener("click", ()=>{
-    // first press: 0a -> 0b (stay on 0, show content)
-    if (step===0 && phase===0){ setStep(0, { phase: 1 }); return; }
-    // subsequent presses: advance normally; completed dots flip to ✓ automatically
+    if (step===0 && phase===0){ setStep(0, { phase: 1 }); return; } // stay on 0, show content
     setStep(step+1, { phase: 1 });
   });
 
@@ -376,9 +363,12 @@
     }
   });
 
+  /* ----------------- PUBLIC HELPERS ----------------- */
+  window.PROCESS_REPAINT = () => { drawRail(); placeLamp(); drawScene(); };
+
   /* ----------------- INIT ----------------- */
   function init(){
-    phase = 0;              // start at 0 (empty)
+    phase = 0;                // start at 0 (empty)
     setStep(0, { fromInit:true });
     requestAnimationFrame(()=>{ drawRail(); placeLamp(); });
   }
