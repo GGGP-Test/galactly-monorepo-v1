@@ -1,5 +1,4 @@
-<!-- docs/sections/process/process.js -->
-<script>
+
 (()=>{
   const mount = document.getElementById("section-process");
   if (!mount) return;
