@@ -1,38 +1,30 @@
-/* Section 3 – Process (vanilla JS)
-   - Starts on step 0 (numbers only)
-   - On Next, gently slides board left and reveals Step 1
-   - Lamp behaves like a pane without edges (soft light only)
-   - Step 1 draws a live neon path from the domain node to the board’s right edge
+/* Section 3 – Process (no pane)
+   - Step 0 on load (numbers only)
+   - Step 1: left copy + glowing domain node on the right + neon line to board edge
+   - No “pane”/box; just the board background you already have
 */
 
 (() => {
   'use strict';
 
-  // ---- hard guard: if we’ve mounted before, cleanly destroy ----
+  // Destroy any previous mount to prevent “already declared” issues
   if (window.__PROC && typeof window.__PROC.destroy === 'function') {
     window.__PROC.destroy();
   }
 
   const DATA = window.PROCESS_DATA;
   const host = document.getElementById('section-process');
-  if (!host || !DATA) {
-    // Fail quietly if container or data is missing
-    return;
-  }
+  if (!host || !DATA) return;
 
-  // ---- apply theme tokens from PROCESS_DATA.theme to :root of the section ----
+  // ---------- theme tokens -> section scope ----------
   const applyTheme = () => {
     const t = DATA.theme || {};
     const set = (k, v) => v != null && host.style.setProperty(k, String(v));
-    set('--p-bg', t.bg);
-    set('--p-text', t.text);
-    set('--p-muted', t.muted);
-    set('--p-stroke', t.stroke);
-    set('--p-primary', t.primary);
-    set('--p-secondary', t.secondary);
+    set('--p-bg', t.bg);            set('--p-text', t.text);
+    set('--p-muted', t.muted);      set('--p-stroke', t.stroke);
+    set('--p-primary', t.primary);  set('--p-secondary', t.secondary);
     set('--p-tertiary', t.tertiary);
-    set('--p-cable', t.cable);
-    set('--p-cable-dim', t.cableDim);
+    set('--p-cable', t.cable);      set('--p-cable-dim', t.cableDim);
     if (t.glass) {
       set('--glass-fill', t.glass.fill);
       set('--glass-stroke', t.glass.stroke);
@@ -42,7 +34,7 @@
     }
   };
 
-  // ---- element helpers ----
+  // ---------- helpers ----------
   const el = (tag, cls, html) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -50,23 +42,21 @@
     return n;
   };
 
-  // ---- build static shell ----
-  host.innerHTML = ''; // clean slate
+  // ---------- skeleton ----------
+  host.innerHTML = '';
 
   const section = el('section', 'proc-section');
   const inner   = el('div', 'proc-inner');
   const wrap    = el('div', 'p-wrap');
 
-  // left dock (numbers 0..5 + CTAs)
+  // Left dock (0..5 + CTAs)
   const dock    = el('aside', 'p-dock');
   const stepper = el('div', 'p-stepper');
   const TOTAL_STEPS = 6; // 0..5
 
   for (let i = 0; i < TOTAL_STEPS; i++) {
-    const row  = el('div', 'p-step');
-    const dot  = el('div', 'p-dot', String(i));
-    const lbl  = el('div', 'p-label', ''); // reserved, kept hidden by CSS
-    row.append(dot, lbl);
+    const row = el('div', 'p-step');
+    row.append(el('div', 'p-dot', String(i)), el('div', 'p-label', ''));
     stepper.appendChild(row);
   }
 
@@ -76,32 +66,19 @@
   ctas.append(prevBtn, nextBtn);
   dock.append(stepper, ctas);
 
-  // right board (lamp pane + svg cable + stage)
+  // Right board (no pane; only SVG cable + stage content)
   const board   = el('section', 'p-board');
-  const lamp    = el('div');       // soft lamp pane (no borders)
   const svg     = el('svg', 'proc-svg');
-  const cable   = el('path', 'proc-cable is-dim');
-  const stage   = el('div', 'p-stage');
-
-  // configure svg
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   svg.setAttribute('width', '100%');
   svg.setAttribute('height', '100%');
+  const cable   = el('path', 'proc-cable is-dim');
   svg.appendChild(cable);
 
-  // lamp as pane – subtle gradients, no edges
-  Object.assign(lamp.style, {
-    position: 'absolute',
-    inset: '0',
-    pointerEvents: 'none',
-    mixBlendMode: 'screen',
-    // soft key-light from the left “seam” + faint fill
-    background:
-      'radial-gradient(90% 120% at 30% 50%, rgba(127,178,255,.12) 0%, rgba(127,178,255,0) 60%)' +
-      ', radial-gradient(70% 90% at 40% 48%, rgba(230,195,107,.08) 0%, rgba(230,195,107,0) 55%)'
-  });
+  const stage   = el('div'); // holds step content; no class -> CSS won’t style it as a pane
+  Object.assign(stage.style, { position: 'relative', minHeight: '420px' });
 
-  board.append(svg, stage, lamp);
+  board.append(svg, stage);
   wrap.append(dock, board);
   inner.appendChild(wrap);
   section.appendChild(inner);
@@ -109,9 +86,10 @@
 
   applyTheme();
 
-  // ---- state + utilities ----
-  let current = 0;                 // force step 0 on load
+  // ---------- state ----------
+  let current = 0; // force step 0 on load
   const rows = Array.from(stepper.querySelectorAll('.p-step'));
+  let activeNode = null;
 
   const setButtons = () => {
     prevBtn.disabled = current <= 0;
@@ -119,131 +97,112 @@
   };
 
   const markStepper = () => {
-    rows.forEach((r, idx) => {
-      r.classList.toggle('is-current', idx === current);
-      r.classList.toggle('is-done', idx < current);
+    rows.forEach((r, i) => {
+      r.classList.toggle('is-current', i === current);
+      r.classList.toggle('is-done', i < current);
     });
   };
 
   const clearStage = () => {
     stage.innerHTML = '';
-    // hide cable until we need it
+    activeNode = null;
     cable.setAttribute('d', '');
     cable.classList.add('is-dim');
   };
 
-  // Live path computation from a DOM node to the board’s right edge
-  let activeNode = null;
+  // Compute a soft cubic path from node → board right edge
   const drawCableFromNode = () => {
     if (!activeNode) return;
     const bb = board.getBoundingClientRect();
     const rb = activeNode.getBoundingClientRect();
 
-    const startX = rb.right  - bb.left;                  // right edge of node
-    const startY = rb.top + (rb.height * 0.66) - bb.top; // a touch below mid
-    const endX   = bb.width - 20;                        // near board edge
-    const endY   = startY + 8;
+    const sx = rb.right - bb.left;                   // start at node’s right edge
+    const sy = rb.top + rb.height * 0.6 - bb.top;    // gently below mid
+    const ex = bb.width - 18;                         // just inside board edge
+    const ey = sy + 6;
 
-    // cubic bezier control points for a gentle rightward arc
-    const c1x = startX + Math.max(60, bb.width * 0.10);
-    const c2x = startX + Math.max(140, bb.width * 0.28);
+    const c1x = sx + Math.max(60, bb.width * 0.10);
+    const c2x = sx + Math.max(140, bb.width * 0.28);
 
-    const d = `M ${startX} ${startY} C ${c1x} ${startY}, ${c2x} ${endY}, ${endX} ${endY}`;
-    cable.setAttribute('d', d);
+    cable.setAttribute('d', `M ${sx} ${sy} C ${c1x} ${sy}, ${c2x} ${ey}, ${ex} ${ey}`);
     cable.classList.remove('is-dim');
   };
 
+  // Resize -> redraw path
   const onResize = (() => {
-    let ticking = false;
+    let raf = 0;
     return () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        drawCableFromNode();
-        ticking = false;
-      });
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(drawCableFromNode);
     };
   })();
   window.addEventListener('resize', onResize);
 
-  // ---- renderers ----
+  // ---------- renderers ----------
   const renderStep0 = () => {
     clearStage();
-    // small hint glow only; no content
-    stage.style.transition = 'none';
-    stage.style.opacity = '1';
+    // nothing on the board; numbers-only tease
   };
 
   const renderStep1 = () => {
     clearStage();
 
-    // subtle entrance
-    stage.style.opacity = '0';
-    stage.style.transform = 'translateX(10px)';
-    stage.style.transition = 'opacity .35s ease, transform .35s ease';
-
-    // left copy block (constrained, away from lamp seam)
+    // Left copy (kept clear of the dock; constrained width)
     const copy = el('div', '');
     Object.assign(copy.style, {
       position: 'absolute',
-      left: '24px',
-      top: '28px',
+      left: '18px',
+      top: '18px',
       maxWidth: '360px',
       lineHeight: '1.35'
     });
     copy.innerHTML = `
-      <h3 style="margin:0 0 8px; font: 800 22px/1.1 'Newsreader', Georgia, serif;">
+      <h3 style="margin:0 0 8px; font:800 22px/1.1 'Newsreader', Georgia, serif;">
         We start with your company.
       </h3>
-      <p style="margin:0; color: var(--p-muted); font-size:14px;">
-        We read your company and data to learn what matters. Then our system builds
-        simple metrics around your strengths. With that map in hand, we move forward
-        to find real buyers who match your persona.
+      <p style="margin:0; color:var(--p-muted); font-size:14px;">
+        We read your company and data to learn what matters. Then our system
+        builds simple metrics around your strengths. With that map in hand, we
+        move forward to find real buyers who match your persona.
       </p>
     `;
 
-    // glowing domain node on the right (stroke-only feel)
+    // Glowing domain node (stroke-only look)
     const node = el('div', '');
     Object.assign(node.style, {
       position: 'absolute',
-      right: '60px',
-      top: '78px',
+      right: '52px',
+      top: '64px',
       padding: '12px 18px',
       borderRadius: '12px',
       color: 'var(--p-text)',
       background: 'transparent',
-      border: '2px solid rgba(127,178,255,.9)',
-      boxShadow:
-        '0 0 20px rgba(127,178,255,.35),' +   // outer glow
-        'inset 0 0 8px rgba(127,178,255,.10)', // inner alive
+      border: '2px solid rgba(127,178,255,.92)',
+      boxShadow: '0 0 18px rgba(127,178,255,.35), inset 0 0 8px rgba(127,178,255,.12)',
+      fontWeight: '800',
       letterSpacing: '.2px',
-      fontWeight: '800'
+      whiteSpace: 'nowrap'
     });
     node.textContent = 'yourcompany.com';
 
     stage.append(copy, node);
 
-    // after paint, draw the cable
+    // draw path after layout
     requestAnimationFrame(() => {
       activeNode = node;
       drawCableFromNode();
-      stage.style.opacity = '1';
-      stage.style.transform = 'none';
     });
   };
 
   const render = () => {
     if (current === 0) renderStep0();
     else if (current === 1) renderStep1();
-    else {
-      clearStage();
-      // placeholders for future steps (2..5) – stay blank for now
-    }
+    else clearStage(); // later steps will fill in as you approve
     setButtons();
     markStepper();
   };
 
-  // ---- interactions ----
+  // ---------- interactions ----------
   prevBtn.addEventListener('click', () => {
     current = Math.max(0, current - 1);
     render();
@@ -252,8 +211,6 @@
     current = Math.min(TOTAL_STEPS - 1, current + 1);
     render();
   });
-
-  // Allow clicking the dots to jump (still start at 0 by default)
   rows.forEach((row, idx) => {
     row.addEventListener('click', () => {
       current = idx;
@@ -261,11 +218,11 @@
     });
   });
 
-  // ---- initial state: force 0, keep board quiet until user advances ----
+  // Initial state: 0 (numbers only)
   current = 0;
   render();
 
-  // ---- public destroy (for hot reloads / re-entry) ----
+  // Expose destroy for hot reloads
   window.__PROC = {
     destroy() {
       window.removeEventListener('resize', onResize);
