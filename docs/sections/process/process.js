@@ -30,9 +30,9 @@
   }
 
   /* LEFT RAIL */
-  #section-process .railWrap{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  #section-process .railWrap{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.94);
     transition:left .45s cubic-bezier(.22,.61,.36,1), transform .45s cubic-bezier(.22,.61,.36,1); z-index:2; }
-  #section-process .railWrap.is-docked{ left:clamp(18px,6vw,80px); transform:translate(0,-50%); }
+  #section-process .railWrap.is-docked{ left:clamp(18px,6vw,80px); transform:translate(0,-50%) scale(.94); }
   #section-process .rail{ position:relative; display:flex; flex-direction:column; align-items:center; gap:16px; }
   #section-process .rail-svg{ position:absolute; inset:0; z-index:0; pointer-events:none; overflow:visible;
     filter:drop-shadow(0 0 6px rgba(99,211,255,.12)); }
@@ -268,7 +268,7 @@
     line.setAttribute("class","cont-line dash-anim slow neonPulse");
     svg.appendChild(line);
 
-    // Domain text inside box (fixed label per request)
+    // Domain text inside box (fixed label)
     const label = document.createElementNS(svg.namespaceURI, "text");
     label.setAttribute("x", boxX + 16); label.setAttribute("y", boxY + boxH/2 + 6);
     label.setAttribute("fill", "#ddeaef");
@@ -307,7 +307,6 @@
   }
 
   // ---------- events ----------
-  const dotEls = Array.from(mount.querySelectorAll(".p-step"));
   dotEls.forEach(el => el.addEventListener("click", ()=> setStep(+el.dataset.i)));
   prevBtn.addEventListener("click", ()=> setStep(step-1));
   nextBtn.addEventListener("click", ()=> setStep(step+1));
