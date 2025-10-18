@@ -1,36 +1,51 @@
 // sections/process/steps/process.step1.js
 (() => {
-  // Register STEP 1 scene. process.js will call us with a fresh config clone.
-  window.PROCESS_SCENES = window.PROCESS_SCENES || {};
-  window.PROCESS_SCENES[1] = function sceneStep1(ctx){
-    const ns = (ctx && ctx.ns) || "http://www.w3.org/2000/svg";
-    const canvas = ctx.canvas;
-    const b = (ctx && ctx.bounds) || (window.PROCESS_GET_BOUNDS && window.PROCESS_GET_BOUNDS()) || {left:0, top:0, width:800, sH:560, sW:1200};
-    const makeFlowGradients = (ctx && ctx.makeFlowGradients) || (()=>document.createElementNS(ns,"defs"));
+  const ns = "http://www.w3.org/2000/svg";
 
-    // ----- defaults (all ratios are of the lamp area) -----
-    const C = Object.assign({
-      // stack sizing/placement (independent from copy)
-      BOX_W_RATIO: 0.32,   // width ≈ 32% lamp width (squarer)
-      BOX_H_RATIO: 0.12,   // height ≈ 12% lamp height
-      GAP_RATIO:    0.06,  // vertical gap between boxes
-      STACK_X_RATIO: 0.69, // horizontal anchor of stack center
-      STACK_TOP_RATIO: 0.24,
+  // Ensure globals exist and give Step 1 its own bucket
+  window.PROCESS_CONFIG = window.PROCESS_CONFIG || {};
+  const ROOT = window.PROCESS_CONFIG;
+  ROOT.step1 = ROOT.step1 || {};
+  ROOT.step1.COPY = ROOT.step1.COPY || {};
+
+  // Safe repaint helper (works even if process.js didn’t define one)
+  if (typeof window.PROCESS_REPAINT !== "function") {
+    window.PROCESS_REPAINT = () => {
+      // process.js redraws on resize; this piggybacks that path.
+      window.dispatchEvent(new Event("resize"));
+    };
+  }
+
+  // Register the scene for step 1
+  window.PROCESS_SCENES = window.PROCESS_SCENES || {};
+  window.PROCESS_SCENES[1] = function sceneStep1(ctx) {
+    const canvas = ctx.canvas;
+    const b = ctx.bounds; // already an object (not a function)
+    const makeFlowGradients = ctx.makeFlowGradients || (() => document.createElementNS(ns, "defs"));
+
+    // ---- defaults (all ratios are of the lamp area) ----
+    const DEF = {
+      // stack sizing / placement (independent of copy)
+      BOX_W_RATIO: 0.34,   // squarer boxes
+      BOX_H_RATIO: 0.12,
+      GAP_RATIO:    0.065,
+      STACK_X_RATIO: 0.70, // center of the stack within the lamp
+      STACK_TOP_RATIO: 0.22,
       NUDGE_X: 0,          // px fine-tune (boxes only)
       NUDGE_Y: 0,          // px fine-tune (boxes only)
 
-      // fonts
-      FONT_PT: 13,         // base font size for rectangles
-      FONT_PT_PILL: 13,    // for capsule/oval
-      FONT_PT_DIAMOND: 12,
+      // label sizes
+      FONT_PT: 12,
+      FONT_PT_PILL: 12,
+      FONT_PT_DIAMOND: 11,
 
       // rails
-      LEFT_STOP_RATIO: 0.40,   // left rail stops before copy (as % of lamp width)
-      RIGHT_MARGIN_PX: 10,     // how far to the right edge it should go
+      LEFT_STOP_RATIO: 0.38,  // how early the left rail stops
+      RIGHT_MARGIN_PX: 10,    // right rail padding from screen edge
 
-      // copy (independent from stack)
+      // copy (independent)
       COPY: {
-        LEFT_MARGIN_PX: 24,    // inside lamp
+        LEFT_MARGIN_PX: 24,   // inside lamp seam
         TOP_RATIO: 0.18,
         WIDTH_MAX: 320,
         TITLE: "Who buys the fastest?",
@@ -41,9 +56,13 @@
                that close quickly.</p>`,
         NUDGE_X: 0,
         NUDGE_Y: 0,
-        SHOW_LEFT_LINE: true,
+        SHOW_LEFT_LINE: true
       }
-    }, ctx && ctx.config ? ctx.config : {});
+    };
+
+    // Merge ROOT.step1 over defaults (including nested COPY)
+    const C = Object.assign({}, DEF, ROOT.step1);
+    C.COPY = Object.assign({}, DEF.COPY, ROOT.step1.COPY || {});
 
     // ----- derived sizes -----
     const W = b.width;
@@ -52,19 +71,29 @@
     const boxH = Math.max(56,  C.BOX_H_RATIO * H);
     const gap  = Math.max(12,  C.GAP_RATIO    * H);
 
-    // stack anchor (center of first row)
-    const stackX = b.left + C.STACK_X_RATIO * W + C.NUDGE_X;
-    const stackTop = b.top + C.STACK_TOP_RATIO * H + C.NUDGE_Y;
+    const stackX   = b.left + C.STACK_X_RATIO * W + C.NUDGE_X; // visual center of boxes
+    const stackTop = b.top  + C.STACK_TOP_RATIO * H + C.NUDGE_Y;
 
-    // helper: create SVG stage
-    const svg = document.createElementNS(ns,"svg");
-    svg.style.position="absolute"; svg.style.left=b.left+"px"; svg.style.top=b.top+"px";
-    svg.setAttribute("width", W); svg.setAttribute("height", H);
+    // SVG stage
+    const svg = document.createElementNS(ns, "svg");
+    svg.style.position = "absolute";
+    svg.style.left = b.left + "px";
+    svg.style.top  = b.top  + "px";
+    svg.setAttribute("width",  W);
+    svg.setAttribute("height", H);
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     canvas.appendChild(svg);
 
-    // helper: text in the middle
-    function addCenteredText(x, y, str, size, weight=800){
+    // Helpers
+    const rr = (x,y,w,h,r) => (
+      `M ${x+r} ${y} H ${x+w-r} Q ${x+w} ${y} ${x+w} ${y+r} V ${y+h-r} Q ${x+w} ${y+h} ${x+w-r} ${y+h}` +
+      ` H ${x+r} Q ${x} ${y+h} ${x} ${y+h-r} V ${y+r} Q ${x} ${y} ${x+r} ${y} Z`
+    );
+    const diamond = (x,y,w,h) => {
+      const cx = x + w/2, cy = y + h/2;
+      return `M ${cx} ${y} L ${x+w} ${cy} L ${cx} ${y+h} L ${x} ${cy} Z`;
+    };
+    const addCenteredText = (x, y, str, size, weight=800) => {
       const t = document.createElementNS(ns,"text");
       t.setAttribute("x", x);
       t.setAttribute("y", y);
@@ -76,64 +105,27 @@
       t.setAttribute("dominant-baseline", "middle");
       t.textContent = str;
       return t;
-    }
+    };
 
-    // helper: rounded rect path (radius)
-    function rr(x,y,w,h,r){
-      const d = [
-        `M ${x+r} ${y}`,
-        `H ${x+w-r}`,
-        `Q ${x+w} ${y} ${x+w} ${y+r}`,
-        `V ${y+h-r}`,
-        `Q ${x+w} ${y+h} ${x+w-r} ${y+h}`,
-        `H ${x+r}`,
-        `Q ${x} ${y+h} ${x} ${y+h-r}`,
-        `V ${y+r}`,
-        `Q ${x} ${y} ${x+r} ${y}`,
-        `Z`
-      ].join(" ");
-      return d;
-    }
-
-    // helper: diamond path
-    function diamond(x,y,w,h){
-      const cx=x+w/2, cy=y+h/2;
-      return `M ${cx} ${y} L ${x+w} ${cy} L ${cx} ${y+h} L ${x} ${cy} Z`;
-    }
-
-    // stack positions
+    // Rows: 2 rounded-rects → capsule → oval → diamond
     const rows = [
-      { key:"r1", label:"Number of Searches / TimeBlock", kind:"rect"    },
-      { key:"r2", label:"Technologies used at the location", kind:"rect" },
-      { key:"r3", label:"Number of customers based on LTV/CAC", kind:"capsule" },
-      { key:"r4", label:"Tools interacted", kind:"oval" },
-      { key:"r5", label:"Company Size", kind:"diamond" },
+      { label:"Number of Searches / TimeBlock",               kind:"rect"    },
+      { label:"Technologies used at the location",            kind:"rect"    },
+      { label:"Number of customers based on LTV/CAC",         kind:"capsule" },
+      { label:"Tools interacted",                              kind:"oval"    },
+      { label:"Company Size",                                  kind:"diamond" },
     ];
 
-    // gradient flow anchored to first box leading to right edge
+    // Flow gradients anchored to the first box
     const firstX = stackX - boxW/2;
     const firstY = stackTop;
     const yMidFirst = firstY + boxH/2;
     const xRightEnd = (b.sW - C.RIGHT_MARGIN_PX) - b.left;
     svg.appendChild(makeFlowGradients({
-      pillX: firstX, pillY: firstY, pillW: boxW,
-      yMid: yMidFirst, xTrailEnd: xRightEnd
+      pillX: firstX, pillY: firstY, pillW: boxW, yMid: yMidFirst, xTrailEnd: xRightEnd
     }));
 
-    // draw left rail (stops before copy) and right rail (connected to first box)
-    // Left rail Y is aligned with copy title baseline; we’ll compute after mounting copy.
-    const leftLine = document.createElementNS(ns,"line");
-    const leftRailStartX = 0; // visually from lamp’s left edge
-    const leftRailEndX   = C.LEFT_STOP_RATIO * W;
-    leftLine.setAttribute("x1", leftRailStartX);
-    leftLine.setAttribute("x2", leftRailEndX);
-    // y1/y2 set later after copy is placed
-    leftLine.setAttribute("stroke","url(#gradTrailFlow)");
-    leftLine.setAttribute("stroke-width","2.5");
-    leftLine.setAttribute("stroke-linecap","round");
-    leftLine.setAttribute("class","glow");
-    svg.appendChild(leftLine);
-
+    // Right rail: connected to the first box, not through it
     const rightLine = document.createElementNS(ns,"line");
     rightLine.setAttribute("x1", firstX + boxW);
     rightLine.setAttribute("y1", yMidFirst);
@@ -145,93 +137,96 @@
     rightLine.setAttribute("class","glow");
     svg.appendChild(rightLine);
 
-    // draw each row
-    rows.forEach((row, i)=>{
+    // Draw the stack
+    rows.forEach((row, i) => {
       const x = stackX - boxW/2;
-      const y = stackTop + i*(boxH + gap);
-      const group = document.createElementNS(ns,"g"); svg.appendChild(group);
+      const y = stackTop + i * (boxH + gap);
+      const g = document.createElementNS(ns,"g");
+      svg.appendChild(g);
 
-      if (row.kind==="rect" || row.kind==="capsule"){
-        const r = row.kind==="rect" ? Math.min(12, boxH*0.18) : Math.min(boxH/2, 18); // capsule is very round
+      if (row.kind === "rect" || row.kind === "capsule") {
+        const r = row.kind === "rect" ? Math.min(12, boxH*0.18) : Math.min(boxH/2, 18);
         const p = document.createElementNS(ns,"path");
         p.setAttribute("d", rr(x,y,boxW,boxH,r));
         p.setAttribute("fill","none"); p.setAttribute("stroke","url(#gradFlow)");
         p.setAttribute("stroke-width","2.2"); p.setAttribute("class","glow");
-        group.appendChild(p);
+        g.appendChild(p);
 
-        const txt = addCenteredText(x+boxW/2, y+boxH/2, row.label, C.FONT_PT);
-        group.appendChild(txt);
+        g.appendChild(addCenteredText(x+boxW/2, y+boxH/2, row.label, C.FONT_PT));
       }
-      else if (row.kind==="oval"){
+      else if (row.kind === "oval") {
         const cx = x + boxW/2, cy = y + boxH/2;
-        const rx = boxW/2, ry = boxH/2;
         const o = document.createElementNS(ns,"ellipse");
         o.setAttribute("cx", cx); o.setAttribute("cy", cy);
-        o.setAttribute("rx", rx); o.setAttribute("ry", ry);
+        o.setAttribute("rx", boxW/2); o.setAttribute("ry", boxH/2);
         o.setAttribute("fill","none"); o.setAttribute("stroke","url(#gradFlow)");
         o.setAttribute("stroke-width","2.2"); o.setAttribute("class","glow");
-        group.appendChild(o);
+        g.appendChild(o);
 
-        const txt = addCenteredText(cx, cy, row.label, C.FONT_PT_PILL);
-        group.appendChild(txt);
+        g.appendChild(addCenteredText(cx, cy, row.label, C.FONT_PT_PILL));
       }
-      else if (row.kind==="diamond"){
+      else if (row.kind === "diamond") {
         const d = document.createElementNS(ns,"path");
         d.setAttribute("d", diamond(x,y,boxW,boxH));
         d.setAttribute("fill","none"); d.setAttribute("stroke","url(#gradFlow)");
         d.setAttribute("stroke-width","2.2"); d.setAttribute("class","glow");
-        group.appendChild(d);
+        g.appendChild(d);
 
-        const txt = addCenteredText(x+boxW/2, y+boxH/2, row.label, C.FONT_PT_DIAMOND);
-        group.appendChild(txt);
+        g.appendChild(addCenteredText(x+boxW/2, y+boxH/2, row.label, C.FONT_PT_DIAMOND));
 
-        // three dots below the diamond
-        const dotCx = x + boxW/2;
-        const dotStartY = y + boxH + 18;
+        // trailing dots
+        const cx = x + boxW/2;
+        const startY = y + boxH + 18;
         for (let k=0;k<3;k++){
-          const circ = document.createElementNS(ns,"circle");
-          circ.setAttribute("cx", dotCx);
-          circ.setAttribute("cy", dotStartY + k*12);
-          circ.setAttribute("r", 2.3);
-          circ.setAttribute("fill", "rgba(242,220,160,0.95)");
-          circ.setAttribute("class","glow");
-          group.appendChild(circ);
+          const c = document.createElementNS(ns,"circle");
+          c.setAttribute("cx", cx);
+          c.setAttribute("cy", startY + k*12);
+          c.setAttribute("r", 2.3);
+          c.setAttribute("fill", "rgba(242,220,160,0.95)");
+          c.setAttribute("class","glow");
+          g.appendChild(c);
         }
       }
 
-      // connector downwards (subtle)
-      if (i < rows.length-1){
-        const line = document.createElementNS(ns,"line");
-        line.setAttribute("x1", stackX); line.setAttribute("x2", stackX);
-        line.setAttribute("y1", y + boxH); line.setAttribute("y2", y + boxH + gap);
-        line.setAttribute("stroke","rgba(242,220,160,.45)");
-        line.setAttribute("stroke-width","1.4");
-        svg.appendChild(line);
+      // subtle vertical connector between rows
+      if (i < rows.length - 1) {
+        const v = document.createElementNS(ns,"line");
+        v.setAttribute("x1", stackX); v.setAttribute("x2", stackX);
+        v.setAttribute("y1", y + boxH); v.setAttribute("y2", y + boxH + gap);
+        v.setAttribute("stroke","rgba(242,220,160,.45)");
+        v.setAttribute("stroke-width","1.4");
+        svg.appendChild(v);
       }
     });
 
-    // ----- copy block (independent) -----
-    const copyLeft = b.left + Math.max(C.COPY.LEFT_MARGIN_PX, 24) + (C.COPY.NUDGE_X||0);
-    const copyTop  = b.top + C.COPY.TOP_RATIO*H + (C.COPY.NUDGE_Y||0);
+    // Copy block (independent of stack)
+    const copyLeft = b.left + Math.max(C.COPY.LEFT_MARGIN_PX, 24) + (C.COPY.NUDGE_X || 0);
+    const copyTop  = b.top  + C.COPY.TOP_RATIO * H + (C.COPY.NUDGE_Y || 0);
+    const copy = document.createElement("div");
+    copy.className = "copy";
+    copy.style.left = `${copyLeft}px`;
+    copy.style.top  = `${copyTop}px`;
+    copy.style.maxWidth = (C.COPY.WIDTH_MAX || 320) + "px";
+    copy.innerHTML = `<h3>${C.COPY.TITLE}</h3>${C.COPY.HTML}`;
+    canvas.appendChild(copy);
+    requestAnimationFrame(() => copy.classList.add("show"));
 
-    const copyEl = document.createElement("div");
-    copyEl.className = "copy";
-    copyEl.style.left = `${copyLeft}px`;
-    copyEl.style.top  = `${copyTop}px`;
-    copyEl.style.maxWidth = (C.COPY.WIDTH_MAX||320) + "px";
-    copyEl.innerHTML = `<h3>${C.COPY.TITLE}</h3>${C.COPY.HTML}`;
-    canvas.appendChild(copyEl);
-    requestAnimationFrame(()=>copyEl.classList.add("show"));
-
-    // position left rail on the title baseline and stop before the copy
-    if (C.COPY.SHOW_LEFT_LINE){
-      const h3 = copyEl.querySelector("h3");
-      const r = h3 ? h3.getBoundingClientRect() : { top: copyTop+4, height: 24 };
-      const baseline = (r.top - b.top) + r.height*0.62; // local Y inside SVG
+    // Left rail: stops before the copy (aligned to title baseline)
+    if (C.COPY.SHOW_LEFT_LINE) {
+      const leftLine = document.createElementNS(ns,"line");
+      const stopX = C.LEFT_STOP_RATIO * W;
+      const title = copy.querySelector("h3");
+      const r = title ? title.getBoundingClientRect() : { top: copyTop + 4, height: 24 };
+      const baseline = (r.top - b.top) + r.height * 0.62; // svg-local Y
+      leftLine.setAttribute("x1", 0);
+      leftLine.setAttribute("x2", stopX);
       leftLine.setAttribute("y1", baseline);
       leftLine.setAttribute("y2", baseline);
-    } else {
-      svg.removeChild(leftLine);
+      leftLine.setAttribute("stroke","url(#gradTrailFlow)");
+      leftLine.setAttribute("stroke-width","2.5");
+      leftLine.setAttribute("stroke-linecap","round");
+      leftLine.setAttribute("class","glow");
+      svg.appendChild(leftLine);
     }
   };
 })();
