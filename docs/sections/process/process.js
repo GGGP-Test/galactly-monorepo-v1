@@ -239,7 +239,7 @@
     // >>> placement tweak: center the node, then bias a little LEFT (feels more important than the copy)
     const lampCenter = nodeW / 2;
     const leftBias   = Math.min(80, nodeW * 0.08);     // up to 80px left of exact center
-    const NUDGE_X = 130, NUDGE_Y = 75;
+    const NUDGE_X = 130, NUDGE_Y = 125;
     const pillX      = Math.max(18, lampCenter - leftBias - pillW/2 + NUDGE_X);
     const pillY      = Math.max(12, nodeH * 0.20 + NUDGE_Y);
     const r          = 16;
