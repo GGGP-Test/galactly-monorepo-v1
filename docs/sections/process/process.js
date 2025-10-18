@@ -3,7 +3,24 @@
   const mount = document.getElementById("section-process");
   if (!mount) return;
 
-  /* ----------------- SCOPED STYLES ----------------- */
+  // ----------------- PUBLIC CONFIG (tweak without editing code) -----------------
+  window.PROCESS_CONFIG = Object.assign(
+    {
+      rail: { gap: 56 },         // space between rail + lamp
+      step1: {
+        NUDGE_X: 130,            // move the pill horizontally
+        NUDGE_Y: 50,             // move the pill vertically (copy won’t follow)
+        COPY_GAP: 44             // space between pill and copy block
+      }
+    },
+    window.PROCESS_CONFIG || {}
+  );
+
+  // ----------------- SCENE REGISTRY (steps plug in here) -----------------
+  // Other files can register scenes: window.PROCESS_SCENES[2] = (ctx)=>{...}
+  window.PROCESS_SCENES = window.PROCESS_SCENES || {};
+
+  // ----------------- SCOPED STYLES -----------------
   const style = document.createElement("style");
   style.textContent = `
   :root{
@@ -51,7 +68,7 @@
   #section-process .btn-glass:hover{ filter:brightness(1.06) } #section-process .btn-glass:active{ transform:translateY(1px) }
   #section-process .btn-glass[disabled]{ opacity:.45; cursor:not-allowed }
 
-  /* lamp seam (kept) */
+  /* lamp seam */
   #section-process .lamp{
     position:absolute; top:50%; transform:translateY(-50%); left:0; width:0;
     height:min(72vh,560px); border-radius:16px; opacity:0; pointer-events:none; z-index:1;
@@ -68,7 +85,7 @@
     box-shadow:0 0 10px rgba(99,211,255,.28), 0 0 22px rgba(240,210,120,.12);
   }
 
-  /* right canvas + copy */
+  /* canvas + copy */
   #section-process .canvas{ position:absolute; inset:0; z-index:2; pointer-events:none; }
   #section-process .copy{
     position:absolute; max-width:var(--copyMax); pointer-events:auto;
@@ -96,7 +113,7 @@
   `;
   document.head.appendChild(style);
 
-  /* ----------------- MARKUP ----------------- */
+  // ----------------- MARKUP -----------------
   const steps = [0,1,2,3,4,5];
   mount.innerHTML = `
     <section class="proc" aria-label="Process">
@@ -116,7 +133,7 @@
     </section>
   `;
 
-  /* ----------------- ELEMENTS ----------------- */
+  // ----------------- ELEMENTS -----------------
   const stage   = mount.querySelector(".proc");
   const railWrap= mount.querySelector("#railWrap");
   const rail    = mount.querySelector("#rail");
@@ -129,17 +146,7 @@
 
   let step = 0; // start empty
 
-  /* ----------------- UTILS ----------------- */
-  function setStep(n){
-    step = Math.max(0, Math.min(steps.length-1, n|0));
-    dots.forEach((el,i)=>{ el.classList.toggle("is-current", i===step); el.classList.toggle("is-done", i<step); });
-    prevBtn.disabled = step<=0; nextBtn.disabled = step>=steps.length-1;
-    railWrap.classList.toggle("is-docked", step>0);
-    drawRail();
-    placeLamp();
-    drawScene();
-  }
-
+  // ----------------- HELPERS -----------------
   function drawRail(){
     const r = rail.getBoundingClientRect();
     railSvg.setAttribute("viewBox", `0 0 ${r.width} ${r.height}`);
@@ -162,7 +169,7 @@
   function bounds(){
     const s = stage.getBoundingClientRect();
     const w = railWrap.getBoundingClientRect();
-    const gap = 56;
+    const gap = window.PROCESS_CONFIG.rail.gap;
     const left = Math.max(0, w.right + gap - s.left);
     const width = Math.max(380, s.right - s.left - left - 16);
     return { sLeft:s.left, sTop:s.top, sW:s.width, sH:s.height, left, width, top:18, railRight:w.right - s.left };
@@ -181,76 +188,120 @@
 
   function clearCanvas(){ while (canvas.firstChild) canvas.removeChild(canvas.firstChild); }
 
-  /* ----------------- STEP 1 SCENE ----------------- */
+  // handy: create flowing gradients for the “alive” stroke
+  function makeFlowGradients(ns, m) {
+    const {pillX, pillY, pillW, yMid, xTrailEnd} = m;
+    const defs = document.createElementNS(ns,"defs");
+
+    const gFlow = document.createElementNS(ns,"linearGradient");
+    gFlow.id = "gradFlow";
+    gFlow.setAttribute("gradientUnits","userSpaceOnUse");
+    gFlow.setAttribute("x1", pillX); gFlow.setAttribute("y1", pillY);
+    gFlow.setAttribute("x2", pillX + pillW); gFlow.setAttribute("y2", pillY);
+    [["0%","rgba(230,195,107,.95)"],["35%","rgba(255,255,255,.95)"],["75%","rgba(99,211,255,.95)"],["100%","rgba(99,211,255,.60)"]]
+      .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gFlow.appendChild(s); });
+    const a1 = document.createElementNS(ns,"animateTransform");
+    a1.setAttribute("attributeName","gradientTransform");
+    a1.setAttribute("type","translate");
+    a1.setAttribute("from","0 0"); a1.setAttribute("to", `${pillW} 0`);
+    a1.setAttribute("dur","6s"); a1.setAttribute("repeatCount","indefinite");
+    gFlow.appendChild(a1);
+
+    const gTrail = document.createElementNS(ns,"linearGradient");
+    gTrail.id = "gradTrailFlow";
+    gTrail.setAttribute("gradientUnits","userSpaceOnUse");
+    gTrail.setAttribute("x1", pillX + pillW); gTrail.setAttribute("y1", yMid);
+    gTrail.setAttribute("x2", xTrailEnd);      gTrail.setAttribute("y2", yMid);
+    [["0%","rgba(230,195,107,.92)"],["45%","rgba(99,211,255,.90)"],["100%","rgba(99,211,255,.18)"]]
+      .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gTrail.appendChild(s); });
+    const a2 = document.createElementNS(ns,"animateTransform");
+    a2.setAttribute("attributeName","gradientTransform");
+    a2.setAttribute("type","translate");
+    a2.setAttribute("from","0 0"); a2.setAttribute("to", `${(xTrailEnd - (pillX + pillW))} 0`);
+    a2.setAttribute("dur","6s"); a2.setAttribute("repeatCount","indefinite");
+    gTrail.appendChild(a2);
+
+    defs.appendChild(gFlow); defs.appendChild(gTrail);
+    return defs;
+  }
+
+  // ----------------- CONTROLLER: SET STEP -----------------
+  function setStep(n){
+    step = Math.max(0, Math.min(steps.length-1, n|0));
+    dots.forEach((el,i)=>{ el.classList.toggle("is-current", i===step); el.classList.toggle("is-done", i<step); });
+    prevBtn.disabled = step<=0; nextBtn.disabled = step>=steps.length-1;
+    railWrap.classList.toggle("is-docked", step>0);
+    drawRail();
+    placeLamp();
+    drawScene();
+  }
+
+  // ----------------- DRAW SCENE (delegates to registered step) -----------------
   function drawScene(){
     clearCanvas();
-    if (step!==1) return;
-
-    const b = bounds();
+    if (step===0) return; // empty teaser
+    const b  = bounds();
     const ns = "http://www.w3.org/2000/svg";
 
-    // === flowing gradients (liquid color) ===
-    const makeFlowGradients = (m) => {
-      const {pillX, pillY, pillW, yMid, xTrailEnd} = m;
-      const defs = document.createElementNS(ns,"defs");
-
-      const gFlow = document.createElementNS(ns,"linearGradient");
-      gFlow.id = "gradFlow";
-      gFlow.setAttribute("gradientUnits","userSpaceOnUse");
-      gFlow.setAttribute("x1", pillX); gFlow.setAttribute("y1", pillY);
-      gFlow.setAttribute("x2", pillX + pillW); gFlow.setAttribute("y2", pillY);
-      [["0%","rgba(230,195,107,.95)"],["35%","rgba(255,255,255,.95)"],["75%","rgba(99,211,255,.95)"],["100%","rgba(99,211,255,.60)"]]
-        .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gFlow.appendChild(s); });
-      const a1 = document.createElementNS(ns,"animateTransform");
-      a1.setAttribute("attributeName","gradientTransform");
-      a1.setAttribute("type","translate");
-      a1.setAttribute("from","0 0"); a1.setAttribute("to", `${pillW} 0`);
-      a1.setAttribute("dur","6s"); a1.setAttribute("repeatCount","indefinite");
-      gFlow.appendChild(a1);
-
-      const gTrail = document.createElementNS(ns,"linearGradient");
-      gTrail.id = "gradTrailFlow";
-      gTrail.setAttribute("gradientUnits","userSpaceOnUse");
-      gTrail.setAttribute("x1", pillX + pillW); gTrail.setAttribute("y1", yMid);
-      gTrail.setAttribute("x2", xTrailEnd);      gTrail.setAttribute("y2", yMid);
-      [["0%","rgba(230,195,107,.92)"],["45%","rgba(99,211,255,.90)"],["100%","rgba(99,211,255,.18)"]]
-        .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gTrail.appendChild(s); });
-      const a2 = document.createElementNS(ns,"animateTransform");
-      a2.setAttribute("attributeName","gradientTransform");
-      a2.setAttribute("type","translate");
-      a2.setAttribute("from","0 0"); a2.setAttribute("to", `${(xTrailEnd - (pillX + pillW))} 0`);
-      a2.setAttribute("dur","6s"); a2.setAttribute("repeatCount","indefinite");
-      gTrail.appendChild(a2);
-
-      defs.appendChild(gFlow); defs.appendChild(gTrail);
-      return defs;
+    // shared context handed to each step scene
+    const ctx = {
+      ns,
+      canvas,
+      lamp,
+      bounds: b,
+      config: window.PROCESS_CONFIG,
+      makeFlowGradients: (metrics)=> makeFlowGradients(ns, metrics),
+      // copy helper
+      mountCopy({top, left, html}){
+        const copy = document.createElement("div");
+        copy.className = "copy";
+        copy.style.top = `${top}px`;
+        copy.style.left = `${left}px`;
+        copy.innerHTML = html;
+        canvas.appendChild(copy);
+        requestAnimationFrame(()=> copy.classList.add("show"));
+        return copy;
+      }
     };
 
-    // === node svg ===
-    const nodeSVG = document.createElementNS(ns,"svg");
+    // If a scene is registered for this step, use it; else do nothing.
+    if (window.PROCESS_SCENES[step]) {
+      window.PROCESS_SCENES[step](ctx);
+    }
+  }
+
+  // ----------------- STEP 1 (inline baseline scene) -----------------
+  window.PROCESS_SCENES[1] = function sceneStep1(ctx){
+    const { ns, canvas, bounds: b, config, makeFlowGradients, mountCopy } = ctx;
     const nodeW = b.width, nodeH = Math.min(560, b.sH-40);
+
+    const nodeSVG = document.createElementNS(ns,"svg");
     nodeSVG.style.position = "absolute";
     nodeSVG.style.left = b.left + "px"; nodeSVG.style.top = b.top + "px";
     nodeSVG.setAttribute("width", nodeW); nodeSVG.setAttribute("height", nodeH);
     nodeSVG.setAttribute("viewBox", `0 0 ${nodeW} ${nodeH}`);
 
     const pillW = Math.min(440, nodeW*0.48), pillH = 80;
-
-    // >>> placement tweak: center the node, then bias a little LEFT (feels more important than the copy)
     const lampCenter = nodeW / 2;
-    const leftBias   = Math.min(80, nodeW * 0.08);     // up to 80px left of exact center
-    const NUDGE_X = 130, NUDGE_Y = 50;
-    const pillX      = Math.max(18, lampCenter - leftBias - pillW/2 + NUDGE_X);
-    const pillY      = Math.max(12, nodeH * 0.20 + NUDGE_Y);
-    const r          = 16;
-    const yMid       = pillY + pillH/2;
+    const leftBias   = Math.min(80, nodeW * 0.08);
+    const { NUDGE_X, NUDGE_Y, COPY_GAP } = config.step1;
+
+    // base Y anchor (copy will use this; not affected by NUDGE_Y)
+    const basePillY  = Math.max(12, nodeH * 0.20);
+
+    // box (pill) position with nudges
+    const pillX = Math.max(18, lampCenter - leftBias - pillW/2 + NUDGE_X);
+    const pillY = basePillY + NUDGE_Y;
+    const r     = 16;
+    const yMid  = pillY + pillH/2;
 
     // map right edge into this svg's space
-    const xScreenEnd = b.sW - 10;
-    const xTrailEnd  = xScreenEnd - b.left;
+    const xTrailEnd  = (b.sW - 10) - b.left;
 
+    // defs for liquid gradient
     nodeSVG.appendChild(makeFlowGradients({pillX, pillY, pillW, yMid, xTrailEnd}));
 
+    // rounded pill path
     const d = `M ${pillX+r} ${pillY} H ${pillX+pillW-r} Q ${pillX+pillW} ${pillY} ${pillX+pillW} ${pillY+r}
                V ${pillY+pillH-r} Q ${pillX+pillW} ${pillY+pillH} ${pillX+pillW-r} ${pillY+pillH}
                H ${pillX+r} Q ${pillX} ${pillY+pillH} ${pillX} ${pillY+pillH-r}
@@ -279,7 +330,7 @@
     label.textContent = "yourcompany.com";
     nodeSVG.appendChild(label);
 
-    // continuous connector (same liquid gradient), reaching the screen's right edge
+    // continuous connector to screen edge
     const trail = document.createElementNS(ns,"line");
     trail.setAttribute("x1", pillX + pillW); trail.setAttribute("y1", yMid);
     trail.setAttribute("x2", xTrailEnd);     trail.setAttribute("y2", yMid);
@@ -291,32 +342,31 @@
 
     canvas.appendChild(nodeSVG);
 
-    // === copy: inside lamp, auto-spaced from node ===
-    const copy = document.createElement("div");
-    copy.className = "copy";
-    copy.style.top  = (b.top + pillY - 2) + "px";
+    // copy inside lamp (Y anchored to basePillY, not the nudge)
     const minInsideLamp = b.left + 24;
     const fromRail      = Math.max(b.railRight + 32, minInsideLamp);
-    copy.style.left     = fromRail + "px";
-    copy.innerHTML = `
-      <h3>We start with your company.</h3>
-      <p>We read your company and data to learn what matters. Then our system builds simple metrics around your strengths.
-      With that map in hand, we move forward to find real buyers who match your persona.</p>
-    `;
-    canvas.appendChild(copy);
+    const copyTop       = (b.top + basePillY - 2);
+    const copy = mountCopy({
+      top: copyTop,
+      left: fromRail,
+      html: `
+        <h3>We start with your company.</h3>
+        <p>We read your company and data to learn what matters. Then our system builds simple metrics around your strengths.
+        With that map in hand, we move forward to find real buyers who match your persona.</p>
+      `
+    });
 
+    // keep a nice gap between pill and copy
     requestAnimationFrame(() => {
       const boxLeftAbs = b.left + pillX;
       const copyBox    = copy.getBoundingClientRect();
-      const desiredGap = 44; // a touch more separation now that the node is more central
-      let idealLeft = Math.min(copyBox.left, boxLeftAbs - desiredGap - copyBox.width);
+      let idealLeft = Math.min(copyBox.left, boxLeftAbs - config.step1.COPY_GAP - copyBox.width);
       idealLeft = Math.max(idealLeft, minInsideLamp);
       copy.style.left = idealLeft + "px";
-      copy.classList.add("show");
     });
-  }
+  };
 
-  /* ----------------- EVENTS ----------------- */
+  // ----------------- EVENTS -----------------
   dots.forEach(d=> d.addEventListener("click", ()=> setStep(+d.dataset.i)));
   prevBtn.addEventListener("click", ()=> setStep(step-1));
   nextBtn.addEventListener("click", ()=> setStep(step+1));
@@ -327,9 +377,9 @@
     }
   });
 
-  /* ----------------- INIT ----------------- */
+  // ----------------- INIT -----------------
   function init(){
-    setStep(0);
+    setStep(0); // truly empty
     requestAnimationFrame(()=>{ drawRail(); placeLamp(); });
   }
   if (document.readyState === "complete") init();
