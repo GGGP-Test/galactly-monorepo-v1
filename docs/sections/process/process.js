@@ -12,7 +12,7 @@
         NUDGE_X: 130,
         NUDGE_Y: 50,
         COPY_GAP: 44,
-        LABEL: "yourcompany.com",
+        LABEL: "YourCompany.com",
       },
       // Step 1..5 configs live here, but scenes will get their own clone.
       step1: {},
