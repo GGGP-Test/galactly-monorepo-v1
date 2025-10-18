@@ -7,9 +7,10 @@
   const style = document.createElement("style");
   style.textContent = `
   :root{
+    --ink:#0b1117;
     --copyMax:300px;
     --accent:#63D3FF;  /* cyan */
-    --gold:#F2DCA0;    /* warm gold */
+    --accent2:#F2DCA0; /* warm gold */
   }
   #section-process{ position:relative; isolation:isolate; }
   #section-process .proc{ position:relative; min-height:560px; padding:44px 12px 40px; overflow:visible; }
@@ -77,26 +78,19 @@
   #section-process .copy h3{ margin:0 0 .45rem; color:#eaf0f6; font:600 clamp(20px,2.4vw,26px) "Newsreader", Georgia, serif; }
   #section-process .copy p{ margin:.35rem 0 0; font:400 15px/1.6 Inter, system-ui; color:#a7bacb }
 
-  /* SVG strokes + neon */
-  #section-process .stroke-only{ fill:none; stroke:url(#gradNeon); stroke-width:2.5; }
+  /* glow helpers */
   #section-process .glow{
     filter:
       drop-shadow(0 0 6px rgba(242,220,160,.35))
       drop-shadow(0 0 14px rgba(99,211,255,.30))
       drop-shadow(0 0 24px rgba(99,211,255,.18));
   }
-  #section-process .trail{ stroke:url(#gradTrail); stroke-width:2.5; stroke-linecap:round; }
-  #section-process .dash{ stroke-dasharray:700; stroke-dashoffset:700; animation:dashIn 1.1s ease forwards .06s }
-  @keyframes dashIn{ to{ stroke-dashoffset:0 } }
+  #section-process .pulse { animation:pulseGlow 2.6s ease-in-out infinite; }
+  @keyframes pulseGlow{
+    0%,100%{ filter: drop-shadow(0 0 6px rgba(242,220,160,.25)) drop-shadow(0 0 10px rgba(99,211,255,.22)); }
+    50%   { filter: drop-shadow(0 0 10px rgba(242,220,160,.45)) drop-shadow(0 0 18px rgba(99,211,255,.45)); }
+  }
 
-  /* flowing sheen along the connector (no dots/balls) */
-  #section-process .trailFlow{ stroke:url(#gradFlow); stroke-width:3; stroke-linecap:round; opacity:.75 }
-
-  /* tiny traveling spark (subtle) */
-  @keyframes travel { to { offset-distance: 100%; } }
-  #section-process .spark{ offset-path:path('M0 0 L 100 0'); offset-distance:0%; animation:travel 2.6s linear infinite .3s }
-
-  /* responsive clamps */
   @media (max-width:900px){ :root{ --copyMax:260px } #section-process .railWrap.is-docked{ left:12px; transform:translate(0,-50%) scale(.84) } }
   @media (max-width:640px){ :root{ --copyMax:240px } #section-process .proc{ min-height:600px } #section-process .railWrap{ transform:translate(-50%,-50%) scale(.82) } }
   `;
@@ -133,15 +127,14 @@
   const prevBtn = mount.querySelector("#prevBtn");
   const nextBtn = mount.querySelector("#nextBtn");
 
-  // Start at 0 (empty)
-  let step = 0;
+  let step = 0; // start empty
 
   /* ----------------- UTILS ----------------- */
   function setStep(n){
     step = Math.max(0, Math.min(steps.length-1, n|0));
     dots.forEach((el,i)=>{ el.classList.toggle("is-current", i===step); el.classList.toggle("is-done", i<step); });
     prevBtn.disabled = step<=0; nextBtn.disabled = step>=steps.length-1;
-    railWrap.classList.toggle("is-docked", step>0);   // docks only after you leave 0
+    railWrap.classList.toggle("is-docked", step>0);
     drawRail();
     placeLamp();
     drawScene();
@@ -166,7 +159,6 @@
     }
   }
 
-  // generous gap so copy never kisses the lamp/rail
   function bounds(){
     const s = stage.getBoundingClientRect();
     const w = railWrap.getBoundingClientRect();
@@ -197,59 +189,66 @@
     const b = bounds();
     const ns = "http://www.w3.org/2000/svg";
 
-    // helper: gradient defs (neon outline + base trail + animated flow sheen)
-    const makeDefs = ()=>{
+    // === flowing gradients (liquid color) ===
+    const makeFlowGradients = (m) => {
+      const {pillX, pillY, pillW, yMid, xTrailEnd} = m;
       const defs = document.createElementNS(ns,"defs");
 
-      const g1 = document.createElementNS(ns,"linearGradient");
-      g1.id="gradNeon"; g1.setAttribute("x1","0%"); g1.setAttribute("y1","0%"); g1.setAttribute("x2","100%"); g1.setAttribute("y2","0%");
-      [["0%","rgba(242,220,160,.95)"],["35%","rgba(255,255,255,.95)"],["75%","rgba(99,211,255,.95)"],["100%","rgba(99,211,255,.60)"]]
-        .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); g1.appendChild(s); });
+      const gFlow = document.createElementNS(ns,"linearGradient");
+      gFlow.id = "gradFlow";
+      gFlow.setAttribute("gradientUnits","userSpaceOnUse");
+      gFlow.setAttribute("x1", pillX); gFlow.setAttribute("y1", pillY);
+      gFlow.setAttribute("x2", pillX + pillW); gFlow.setAttribute("y2", pillY);
+      [["0%","rgba(230,195,107,.95)"],["35%","rgba(255,255,255,.95)"],["75%","rgba(99,211,255,.95)"],["100%","rgba(99,211,255,.60)"]]
+        .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gFlow.appendChild(s); });
+      const a1 = document.createElementNS(ns,"animateTransform");
+      a1.setAttribute("attributeName","gradientTransform");
+      a1.setAttribute("type","translate");
+      a1.setAttribute("from","0 0"); a1.setAttribute("to", `${pillW} 0`);
+      a1.setAttribute("dur","6s"); a1.setAttribute("repeatCount","indefinite");
+      gFlow.appendChild(a1);
 
-      const g2 = document.createElementNS(ns,"linearGradient");
-      g2.id="gradTrail"; g2.setAttribute("x1","0%"); g2.setAttribute("y1","0%"); g2.setAttribute("x2","100%"); g2.setAttribute("y2","0%");
-      [["0%","rgba(242,220,160,.92)"],["45%","rgba(99,211,255,.90)"],["100%","rgba(99,211,255,.18)"]]
-        .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); g2.appendChild(s); });
+      const gTrail = document.createElementNS(ns,"linearGradient");
+      gTrail.id = "gradTrailFlow";
+      gTrail.setAttribute("gradientUnits","userSpaceOnUse");
+      gTrail.setAttribute("x1", pillX + pillW); gTrail.setAttribute("y1", yMid);
+      gTrail.setAttribute("x2", xTrailEnd);      gTrail.setAttribute("y2", yMid);
+      [["0%","rgba(230,195,107,.92)"],["45%","rgba(99,211,255,.90)"],["100%","rgba(99,211,255,.18)"]]
+        .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gTrail.appendChild(s); });
+      const a2 = document.createElementNS(ns,"animateTransform");
+      a2.setAttribute("attributeName","gradientTransform");
+      a2.setAttribute("type","translate");
+      a2.setAttribute("from","0 0"); a2.setAttribute("to", `${(xTrailEnd - (pillX + pillW))} 0`);
+      a2.setAttribute("dur","6s"); a2.setAttribute("repeatCount","indefinite");
+      gTrail.appendChild(a2);
 
-      // animated sheen that travels along the connector
-      const g3 = document.createElementNS(ns,"linearGradient");
-      g3.id="gradFlow"; g3.setAttribute("x1","0%"); g3.setAttribute("y1","0%"); g3.setAttribute("x2","100%"); g3.setAttribute("y2","0%");
-      g3.setAttribute("gradientUnits","objectBoundingBox");
-      [
-        ["0%","rgba(255,255,255,0)"],
-        ["40%","rgba(255,255,255,.85)"],
-        ["60%","rgba(255,255,255,0)"]
-      ].forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); g3.appendChild(s); });
-      const anim = document.createElementNS(ns,"animateTransform");
-      anim.setAttribute("attributeName","gradientTransform");
-      anim.setAttribute("type","translate");
-      anim.setAttribute("from","-1 0");
-      anim.setAttribute("to","1 0");
-      anim.setAttribute("dur","2.8s");
-      anim.setAttribute("repeatCount","indefinite");
-      g3.appendChild(anim);
-
-      defs.appendChild(g1); defs.appendChild(g2); defs.appendChild(g3);
+      defs.appendChild(gFlow); defs.appendChild(gTrail);
       return defs;
     };
 
-    // --- node svg (stroke-only rounded pill) ---
+    // === node svg ===
     const nodeSVG = document.createElementNS(ns,"svg");
     const nodeW = b.width, nodeH = Math.min(560, b.sH-40);
+    nodeSVG.style.position = "absolute";
     nodeSVG.style.left = b.left + "px"; nodeSVG.style.top = b.top + "px";
     nodeSVG.setAttribute("width", nodeW); nodeSVG.setAttribute("height", nodeH);
     nodeSVG.setAttribute("viewBox", `0 0 ${nodeW} ${nodeH}`);
-    nodeSVG.appendChild(makeDefs());
 
-    const pillW = Math.min(440, nodeW*0.48), pillH = 80, r = 16;
+    const pillW = Math.min(440, nodeW*0.48), pillH = 80;
 
-    // placement: centered inside lamp, biased slightly left, then your requested nudges
-    const NUDGE_X = 20; // → right
-    const NUDGE_Y = 12; // ↓ down
-    const centerX  = nodeW / 2;
-    const leftBias = Math.min(60, nodeW * 0.06);
-    const pillX = Math.max(18, centerX - pillW/2 - leftBias + NUDGE_X);
-    const pillY = Math.max(12, nodeH * 0.20 + NUDGE_Y);
+    // >>> placement tweak: center the node, then bias a little LEFT (feels more important than the copy)
+    const lampCenter = nodeW / 2;
+    const leftBias   = Math.min(80, nodeW * 0.08);     // up to 80px left of exact center
+    const pillX      = Math.max(18, lampCenter - leftBias - pillW/2);
+    const pillY      = Math.max(12, nodeH * 0.20);
+    const r          = 16;
+    const yMid       = pillY + pillH/2;
+
+    // map right edge into this svg's space
+    const xScreenEnd = b.sW - 10;
+    const xTrailEnd  = xScreenEnd - b.left;
+
+    nodeSVG.appendChild(makeFlowGradients({pillX, pillY, pillW, yMid, xTrailEnd}));
 
     const d = `M ${pillX+r} ${pillY} H ${pillX+pillW-r} Q ${pillX+pillW} ${pillY} ${pillX+pillW} ${pillY+r}
                V ${pillY+pillH-r} Q ${pillX+pillW} ${pillY+pillH} ${pillX+pillW-r} ${pillY+pillH}
@@ -258,8 +257,19 @@
 
     const outline = document.createElementNS(ns,"path");
     outline.setAttribute("d", d);
-    outline.setAttribute("class","stroke-only glow dash");
+    outline.setAttribute("fill","none");
+    outline.setAttribute("stroke","url(#gradFlow)");
+    outline.setAttribute("stroke-width","2.5");
+    outline.setAttribute("stroke-linejoin","round");
+    outline.setAttribute("class","glow pulse");
     nodeSVG.appendChild(outline);
+
+    const len = outline.getTotalLength();
+    outline.style.strokeDasharray  = String(len);
+    outline.style.strokeDashoffset = String(len);
+    outline.getBoundingClientRect();
+    outline.style.transition = "stroke-dashoffset 1100ms cubic-bezier(.22,.61,.36,1)";
+    requestAnimationFrame(()=> outline.style.strokeDashoffset = "0");
 
     const label = document.createElementNS(ns,"text");
     label.setAttribute("x", pillX + 18); label.setAttribute("y", pillY + pillH/2 + 6);
@@ -268,48 +278,41 @@
     label.textContent = "yourcompany.com";
     nodeSVG.appendChild(label);
 
+    // continuous connector (same liquid gradient), reaching the screen's right edge
+    const trail = document.createElementNS(ns,"line");
+    trail.setAttribute("x1", pillX + pillW); trail.setAttribute("y1", yMid);
+    trail.setAttribute("x2", xTrailEnd);     trail.setAttribute("y2", yMid);
+    trail.setAttribute("stroke","url(#gradTrailFlow)");
+    trail.setAttribute("stroke-width","2.5");
+    trail.setAttribute("stroke-linecap","round");
+    trail.setAttribute("class","glow");
+    nodeSVG.appendChild(trail);
+
     canvas.appendChild(nodeSVG);
 
-    // --- full-width continuation trail to the right edge (continuous + flowing) ---
-    const trailSVG = document.createElementNS(ns,"svg");
-    trailSVG.style.left = "0px"; trailSVG.style.top = "0px";
-    trailSVG.setAttribute("width", b.sW); trailSVG.setAttribute("height", b.sH);
-    trailSVG.setAttribute("viewBox", `0 0 ${b.sW} ${b.sH}`);
-    trailSVG.appendChild(makeDefs());
-
-    const x1 = b.left + pillX + pillW;
-    const y1 = b.top + pillY + pillH/2;
-    const x2 = b.sW - 10;
-
-    // base neon stroke
-    const trail = document.createElementNS(ns,"line");
-    trail.setAttribute("x1", x1); trail.setAttribute("y1", y1);
-    trail.setAttribute("x2", x2); trail.setAttribute("y2", y1);
-    trail.setAttribute("class","trail dash glow");
-    trailSVG.appendChild(trail);
-
-    // animated sheen gliding along the path (gives "flow" without dots)
-    const trailFlow = document.createElementNS(ns,"line");
-    trailFlow.setAttribute("x1", x1); trailFlow.setAttribute("y1", y1);
-    trailFlow.setAttribute("x2", x2); trailFlow.setAttribute("y2", y1);
-    trailFlow.setAttribute("class","trailFlow");
-    trailSVG.appendChild(trailFlow);
-
-    canvas.appendChild(trailSVG);
-
-    // copy inside the lamp area, safely away from rail
+    // === copy: inside lamp, auto-spaced from node ===
     const copy = document.createElement("div");
     copy.className = "copy";
-    const leftClamp = Math.max(b.railRight + 32, 24);
-    copy.style.left = leftClamp + "px";
     copy.style.top  = (b.top + pillY - 2) + "px";
+    const minInsideLamp = b.left + 24;
+    const fromRail      = Math.max(b.railRight + 32, minInsideLamp);
+    copy.style.left     = fromRail + "px";
     copy.innerHTML = `
       <h3>We start with your company.</h3>
       <p>We read your company and data to learn what matters. Then our system builds simple metrics around your strengths.
       With that map in hand, we move forward to find real buyers who match your persona.</p>
     `;
     canvas.appendChild(copy);
-    requestAnimationFrame(()=> copy.classList.add("show"));
+
+    requestAnimationFrame(() => {
+      const boxLeftAbs = b.left + pillX;
+      const copyBox    = copy.getBoundingClientRect();
+      const desiredGap = 44; // a touch more separation now that the node is more central
+      let idealLeft = Math.min(copyBox.left, boxLeftAbs - desiredGap - copyBox.width);
+      idealLeft = Math.max(idealLeft, minInsideLamp);
+      copy.style.left = idealLeft + "px";
+      copy.classList.add("show");
+    });
   }
 
   /* ----------------- EVENTS ----------------- */
@@ -325,7 +328,7 @@
 
   /* ----------------- INIT ----------------- */
   function init(){
-    setStep(0);                                  // truly empty on load
+    setStep(0);
     requestAnimationFrame(()=>{ drawRail(); placeLamp(); });
   }
   if (document.readyState === "complete") init();
