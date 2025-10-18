@@ -490,9 +490,17 @@
 })();
 </script>
 
-<!-- Section 3 (Process) script -->
+<!-- Section 3 (Process) scripts -->
 <script defer src="./sections/process/process.data.js"></script>
 <script defer src="./sections/process/process.js"></script>
+
+<!-- Step scenes (load AFTER the core) -->
+<!-- If Step 1 already lives inside process.js, you may omit step1.js -->
+<script defer src="./sections/process/steps/process.step1.js"></script>
+<script defer src="./sections/process/steps/process.step2.js"></script>
+<script defer src="./sections/process/steps/process.step3.js"></script>
+<script defer src="./sections/process/steps/process.step4.js"></script>
+<script defer src="./sections/process/steps/process.step5.js"></script>
 <!-- Section 4 (Orbit) scripts -->
 <script defer src="./sections/orbit/orbit.data.js"></script>
 <script defer src="./sections/orbit/orbit.js"></script>
