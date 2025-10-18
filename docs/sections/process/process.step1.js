@@ -1,232 +1,290 @@
-// sections/process/steps/process.step1.js
+// Step 1 – "Who buys the fastest?"
+// Independent geometry, flowing rails anchored to the stack, shrink-to-fit labels.
 (() => {
-  const ns = "http://www.w3.org/2000/svg";
+  const stepIndex = 1; // this scene renders when step === 1
 
-  // Ensure globals exist and give Step 1 its own bucket
+  /* ---------- ensure global registries exist ---------- */
+  window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_CONFIG = window.PROCESS_CONFIG || {};
-  const ROOT = window.PROCESS_CONFIG;
-  ROOT.step1 = ROOT.step1 || {};
-  ROOT.step1.COPY = ROOT.step1.COPY || {};
 
-  // Safe repaint helper (works even if process.js didn’t define one)
-  if (typeof window.PROCESS_REPAINT !== "function") {
-    window.PROCESS_REPAINT = () => {
-      // process.js redraws on resize; this piggybacks that path.
-      window.dispatchEvent(new Event("resize"));
-    };
+  /* ---------- defaults (overridable at runtime) ---------- */
+  // Ratios are relative to the "lamp" width/height for responsiveness across screens.
+  const defaults = {
+    // Box geometry + placement
+    BOX_W_RATIO:    0.20,   // width = lampW * ratio  (closer to square)
+    BOX_H_RATIO:    0.10,   // height = lampH * ratio
+    GAP_RATIO:      0.060,  // vertical gap between boxes
+    STACK_X_RATIO:  0.70,   // horizontal position of the stack center in the lamp (0..1)
+    STACK_TOP_RATIO:0.20,   // top Y of first box in the lamp (0..1)
+    NUDGE_X:        0,      // px fine-tune
+    NUDGE_Y:        0,      // px fine-tune
+
+    // Copy block (independent from boxes)
+    COPY_LEFT_RATIO:0.08,   // inside the lamp (0..1 from left edge of lamp)
+    COPY_TOP_RATIO: 0.18,   // inside the lamp (0..1 from top edge of lamp)
+    COPY_W_MAX_PX:  320,    // max width of copy block
+
+    // Rails
+    LEFT_STOP_RATIO: 0.46,  // where the left rail starts inside lamp (0..1 from lamp left)
+    RIGHT_MARGIN_PX: 10,    // padding before lamp right
+    STROKE_W:        2.5,   // stroke width of outlines/rails
+    FLOW_SPEED_S:    6,     // gradient translate cycle duration
+
+    // Text inside shapes
+    TEXT_PAD:       8,      // px inner padding for labels
+    FONT_PT:        12,     // default size
+    FONT_PT_PILL:   12,
+    FONT_PT_OVAL:   12,
+    FONT_PT_DIAMOND:11,
+    MIN_PT:          9,     // minimum when auto-shrinking
+
+    // Glow intensities (purely visual; same look as step 0/your palette)
+    GLOW_GOLD:  "rgba(242,220,160,.35)",
+    GLOW_CYAN:  "rgba(99,211,255,.30)",
+    GLOW_SOFT:  "rgba(99,211,255,.18)",
+  };
+
+  // Merge defaults once; you can change values live via window.PROCESS_CONFIG.step1.*
+  window.PROCESS_CONFIG.step1 = Object.assign({}, defaults, window.PROCESS_CONFIG.step1 || {});
+  const C = window.PROCESS_CONFIG.step1;
+
+  /* ---------- util: make flowing linear gradient for any segment ---------- */
+  function makeFlowGradient(ns, id, x1, y1, x2, y2, speedS) {
+    const g = document.createElementNS(ns, "linearGradient");
+    g.id = id;
+    g.setAttribute("gradientUnits", "userSpaceOnUse");
+    g.setAttribute("x1", x1); g.setAttribute("y1", y1);
+    g.setAttribute("x2", x2); g.setAttribute("y2", y2);
+    [
+      ["0%","rgba(230,195,107,.95)"],  // warm gold
+      ["40%","rgba(255,255,255,.95)"], // white tip
+      ["80%","rgba(99,211,255,.95)"],  // cyan
+      ["100%","rgba(99,211,255,.60)"]
+    ].forEach(([o,c])=>{
+      const s = document.createElementNS(ns,"stop");
+      s.setAttribute("offset", o);
+      s.setAttribute("stop-color", c);
+      g.appendChild(s);
+    });
+    const anim = document.createElementNS(ns, "animateTransform");
+    anim.setAttribute("attributeName", "gradientTransform");
+    anim.setAttribute("type", "translate");
+    anim.setAttribute("from", "0 0");
+    anim.setAttribute("to", `${Math.max(1, Math.abs(x2-x1))} 0`);
+    anim.setAttribute("dur", `${speedS||C.FLOW_SPEED_S}s`);
+    anim.setAttribute("repeatCount", "indefinite");
+    g.appendChild(anim);
+    return g;
   }
 
-  // Register the scene for step 1
-  window.PROCESS_SCENES = window.PROCESS_SCENES || {};
-  window.PROCESS_SCENES[1] = function sceneStep1(ctx) {
-    const canvas = ctx.canvas;
-    const b = ctx.bounds; // already an object (not a function)
-    const makeFlowGradients = ctx.makeFlowGradients || (() => document.createElementNS(ns, "defs"));
+  /* ---------- util: HTML text inside SVG with shrink-to-fit ---------- */
+  function addLabelFO(ns, svg, x, y, w, h, text, basePt, minPt, pad, weight="800"){
+    const fo = document.createElementNS(ns,"foreignObject");
+    fo.setAttribute("x", x + pad);
+    fo.setAttribute("y", y + pad);
+    fo.setAttribute("width",  Math.max(1, w - pad*2));
+    fo.setAttribute("height", Math.max(1, h - pad*2));
+    const div = document.createElement("div");
+    div.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
+    div.style.cssText = `
+      height:100%;width:100%;display:flex;align-items:center;justify-content:center;
+      text-align:center;line-height:1.15;color:#ddeaef;font-weight:${weight};
+      word-break:break-word;overflow:hidden;`;
+    div.textContent = text;
+    fo.appendChild(div);
+    svg.appendChild(fo);
 
-    // ---- defaults (all ratios are of the lamp area) ----
-    const DEF = {
-      // stack sizing / placement (independent of copy)
-      BOX_W_RATIO: 0.34,   // squarer boxes
-      BOX_H_RATIO: 0.12,
-      GAP_RATIO:    0.065,
-      STACK_X_RATIO: 0.70, // center of the stack within the lamp
-      STACK_TOP_RATIO: 0.22,
-      NUDGE_X: 0,          // px fine-tune (boxes only)
-      NUDGE_Y: 0,          // px fine-tune (boxes only)
+    // shrink to fit if needed
+    let size = basePt;
+    div.style.fontSize = size + "px";
+    const min = minPt || C.MIN_PT;
+    // try a few times — cheap and robust
+    for (let i=0;i<40;i++){
+      if ((div.scrollHeight <= fo.clientHeight) && (div.scrollWidth <= fo.clientWidth)) break;
+      size -= 0.5;
+      if (size <= min) { size = min; break; }
+      div.style.fontSize = size + "px";
+    }
+  }
 
-      // label sizes
-      FONT_PT: 12,
-      FONT_PT_PILL: 12,
-      FONT_PT_DIAMOND: 11,
-
-      // rails
-      LEFT_STOP_RATIO: 0.38,  // how early the left rail stops
-      RIGHT_MARGIN_PX: 10,    // right rail padding from screen edge
-
-      // copy (independent)
-      COPY: {
-        LEFT_MARGIN_PX: 24,   // inside lamp seam
-        TOP_RATIO: 0.18,
-        WIDTH_MAX: 320,
-        TITLE: "Who buys the fastest?",
-        HTML: `<p>We rank accounts by a <b>live intent score</b> built for packaging suppliers:
-               searches per time block, technology on site, customer scale by <b>LTV/CAC</b>,
-               the tools they interact with, and company size. The score bubbles up buyers most
-               likely to convert <b>now</b> so your team prioritizes quotes, samples, and demos
-               that close quickly.</p>`,
-        NUDGE_X: 0,
-        NUDGE_Y: 0,
-        SHOW_LEFT_LINE: true
-      }
-    };
-
-    // Merge ROOT.step1 over defaults (including nested COPY)
-    const C = Object.assign({}, DEF, ROOT.step1);
-    C.COPY = Object.assign({}, DEF.COPY, ROOT.step1.COPY || {});
-
-    // ----- derived sizes -----
-    const W = b.width;
-    const H = Math.min(560, b.sH - 40);
-    const boxW = Math.max(180, C.BOX_W_RATIO * W);
-    const boxH = Math.max(56,  C.BOX_H_RATIO * H);
-    const gap  = Math.max(12,  C.GAP_RATIO    * H);
-
-    const stackX   = b.left + C.STACK_X_RATIO * W + C.NUDGE_X; // visual center of boxes
-    const stackTop = b.top  + C.STACK_TOP_RATIO * H + C.NUDGE_Y;
+  /* ---------- main scene ---------- */
+  window.PROCESS_SCENES[stepIndex] = function sceneStep1({ ns, canvas, bounds, mountCopy }) {
+    const b = bounds;
+    const lampW = b.width;
+    const lampH = Math.min(560, b.sH - 40);
 
     // SVG stage
     const svg = document.createElementNS(ns, "svg");
     svg.style.position = "absolute";
     svg.style.left = b.left + "px";
     svg.style.top  = b.top  + "px";
-    svg.setAttribute("width",  W);
-    svg.setAttribute("height", H);
-    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("width",  lampW);
+    svg.setAttribute("height", lampH);
+    svg.setAttribute("viewBox", `0 0 ${lampW} ${lampH}`);
     canvas.appendChild(svg);
 
-    // Helpers
-    const rr = (x,y,w,h,r) => (
-      `M ${x+r} ${y} H ${x+w-r} Q ${x+w} ${y} ${x+w} ${y+r} V ${y+h-r} Q ${x+w} ${y+h} ${x+w-r} ${y+h}` +
-      ` H ${x+r} Q ${x} ${y+h} ${x} ${y+h-r} V ${y+r} Q ${x} ${y} ${x+r} ${y} Z`
-    );
-    const diamond = (x,y,w,h) => {
-      const cx = x + w/2, cy = y + h/2;
-      return `M ${cx} ${y} L ${x+w} ${cy} L ${cx} ${y+h} L ${x} ${cy} Z`;
-    };
-    const addCenteredText = (x, y, str, size, weight=800) => {
-      const t = document.createElementNS(ns,"text");
-      t.setAttribute("x", x);
-      t.setAttribute("y", y);
-      t.setAttribute("fill", "#eaf3f9");
-      t.setAttribute("font-size", String(size));
-      t.setAttribute("font-weight", String(weight));
-      t.setAttribute("font-family", "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif");
-      t.setAttribute("text-anchor", "middle");
-      t.setAttribute("dominant-baseline", "middle");
-      t.textContent = str;
-      return t;
-    };
+    // <defs> gradients for outlines + rails
+    const defs = document.createElementNS(ns, "defs");
+    svg.appendChild(defs);
 
-    // Rows: 2 rounded-rects → capsule → oval → diamond
-    const rows = [
-      { label:"Number of Searches / TimeBlock",               kind:"rect"    },
-      { label:"Technologies used at the location",            kind:"rect"    },
-      { label:"Number of customers based on LTV/CAC",         kind:"capsule" },
-      { label:"Tools interacted",                              kind:"oval"    },
-      { label:"Company Size",                                  kind:"diamond" },
+    // Geometry (responsive + tweakable)
+    const boxW   = Math.max(120, lampW * C.BOX_W_RATIO);
+    const boxH   = Math.max(36,  lampH * C.BOX_H_RATIO);
+    const gap    = Math.max(8,   lampW * C.GAP_RATIO);
+    const stackX = lampW * C.STACK_X_RATIO + C.NUDGE_X;
+    const topY   = lampH * C.STACK_TOP_RATIO + C.NUDGE_Y;
+
+    // Stack items
+    const items = [
+      { kind:"rect",   r:14, text:"Number of Searches / TimeBlock",   font:C.FONT_PT_PILL },
+      { kind:"rect",   r:14, text:"Technologies used at the location", font:C.FONT_PT_PILL },
+      { kind:"pill",   r:boxH/2, text:"Number of customers based on LTV/CAC", font:C.FONT_PT_PILL },
+      { kind:"oval",   text:"Tools interacted",                        font:C.FONT_PT_OVAL },
+      { kind:"diamond",text:"Company Size",                            font:C.FONT_PT_DIAMOND },
+      { kind:"dots" }
     ];
 
-    // Flow gradients anchored to the first box
-    const firstX = stackX - boxW/2;
-    const firstY = stackTop;
-    const yMidFirst = firstY + boxH/2;
-    const xRightEnd = (b.sW - C.RIGHT_MARGIN_PX) - b.left;
-    svg.appendChild(makeFlowGradients({
-      pillX: firstX, pillY: firstY, pillW: boxW, yMid: yMidFirst, xTrailEnd: xRightEnd
-    }));
+    // helper class for glow — matches your palette
+    const glowCSS = `
+      filter:
+        drop-shadow(0 0 6px ${C.GLOW_GOLD})
+        drop-shadow(0 0 14px ${C.GLOW_CYAN})
+        drop-shadow(0 0 24px ${C.GLOW_SOFT});
+    `;
 
-    // Right rail: connected to the first box, not through it
-    const rightLine = document.createElementNS(ns,"line");
-    rightLine.setAttribute("x1", firstX + boxW);
-    rightLine.setAttribute("y1", yMidFirst);
-    rightLine.setAttribute("x2", xRightEnd);
-    rightLine.setAttribute("y2", yMidFirst);
-    rightLine.setAttribute("stroke","url(#gradTrailFlow)");
-    rightLine.setAttribute("stroke-width","2.5");
-    rightLine.setAttribute("stroke-linecap","round");
-    rightLine.setAttribute("class","glow");
-    svg.appendChild(rightLine);
-
-    // Draw the stack
-    rows.forEach((row, i) => {
+    // draw shapes
+    const centers = []; // for connectors
+    items.forEach((it, i) => {
+      if (it.kind === "dots") return; // draw later
       const x = stackX - boxW/2;
-      const y = stackTop + i * (boxH + gap);
-      const g = document.createElementNS(ns,"g");
-      svg.appendChild(g);
+      const y = topY + i*(boxH + gap);
+      const cx = stackX;
+      const cy = y + boxH/2;
+      centers.push({cx, cy, x, y});
 
-      if (row.kind === "rect" || row.kind === "capsule") {
-        const r = row.kind === "rect" ? Math.min(12, boxH*0.18) : Math.min(boxH/2, 18);
-        const p = document.createElementNS(ns,"path");
-        p.setAttribute("d", rr(x,y,boxW,boxH,r));
-        p.setAttribute("fill","none"); p.setAttribute("stroke","url(#gradFlow)");
-        p.setAttribute("stroke-width","2.2"); p.setAttribute("class","glow");
-        g.appendChild(p);
+      // per-shape flowing outline gradient
+      const gid = `g_step1_${i}_${Math.random().toString(36).slice(2)}`;
+      defs.appendChild(makeFlowGradient(ns, gid, x, y, x+boxW, y, C.FLOW_SPEED_S));
 
-        g.appendChild(addCenteredText(x+boxW/2, y+boxH/2, row.label, C.FONT_PT));
+      let el;
+      if (it.kind === "rect" || it.kind === "pill"){
+        el = document.createElementNS(ns, "rect");
+        el.setAttribute("x", x);
+        el.setAttribute("y", y);
+        el.setAttribute("width", boxW);
+        el.setAttribute("height", boxH);
+        el.setAttribute("rx", it.kind === "pill" ? Math.min(it.r, boxH/2) : it.r);
+        el.setAttribute("ry", it.kind === "pill" ? Math.min(it.r, boxH/2) : it.r);
+      } else if (it.kind === "oval"){
+        el = document.createElementNS(ns, "ellipse");
+        el.setAttribute("cx", cx);
+        el.setAttribute("cy", cy);
+        el.setAttribute("rx", boxW/2);
+        el.setAttribute("ry", boxH/2);
+      } else if (it.kind === "diamond"){
+        const p = document.createElementNS(ns, "path");
+        const rx = boxW/2, ry = boxH/2;
+        const d = `M ${cx} ${cy-ry} L ${cx+rx} ${cy} L ${cx} ${cy+ry} L ${cx-rx} ${cy} Z`;
+        p.setAttribute("d", d);
+        el = p;
       }
-      else if (row.kind === "oval") {
-        const cx = x + boxW/2, cy = y + boxH/2;
-        const o = document.createElementNS(ns,"ellipse");
-        o.setAttribute("cx", cx); o.setAttribute("cy", cy);
-        o.setAttribute("rx", boxW/2); o.setAttribute("ry", boxH/2);
-        o.setAttribute("fill","none"); o.setAttribute("stroke","url(#gradFlow)");
-        o.setAttribute("stroke-width","2.2"); o.setAttribute("class","glow");
-        g.appendChild(o);
+      el.setAttribute("fill", "none");
+      el.setAttribute("stroke", `url(#${gid})`);
+      el.setAttribute("stroke-width", C.STROKE_W);
+      el.style.cssText = glowCSS;
+      el.setAttribute("stroke-linejoin","round");
+      el.setAttribute("stroke-linecap","round");
+      svg.appendChild(el);
 
-        g.appendChild(addCenteredText(cx, cy, row.label, C.FONT_PT_PILL));
-      }
-      else if (row.kind === "diamond") {
-        const d = document.createElementNS(ns,"path");
-        d.setAttribute("d", diamond(x,y,boxW,boxH));
-        d.setAttribute("fill","none"); d.setAttribute("stroke","url(#gradFlow)");
-        d.setAttribute("stroke-width","2.2"); d.setAttribute("class","glow");
-        g.appendChild(d);
-
-        g.appendChild(addCenteredText(x+boxW/2, y+boxH/2, row.label, C.FONT_PT_DIAMOND));
-
-        // trailing dots
-        const cx = x + boxW/2;
-        const startY = y + boxH + 18;
-        for (let k=0;k<3;k++){
-          const c = document.createElementNS(ns,"circle");
-          c.setAttribute("cx", cx);
-          c.setAttribute("cy", startY + k*12);
-          c.setAttribute("r", 2.3);
-          c.setAttribute("fill", "rgba(242,220,160,0.95)");
-          c.setAttribute("class","glow");
-          g.appendChild(c);
-        }
-      }
-
-      // subtle vertical connector between rows
-      if (i < rows.length - 1) {
-        const v = document.createElementNS(ns,"line");
-        v.setAttribute("x1", stackX); v.setAttribute("x2", stackX);
-        v.setAttribute("y1", y + boxH); v.setAttribute("y2", y + boxH + gap);
-        v.setAttribute("stroke","rgba(242,220,160,.45)");
-        v.setAttribute("stroke-width","1.4");
-        svg.appendChild(v);
-      }
+      // label that wraps and shrinks to fit
+      addLabelFO(ns, svg, x, y, boxW, boxH, it.text,
+                 it.font || C.FONT_PT, C.MIN_PT, C.TEXT_PAD, "800");
     });
 
-    // Copy block (independent of stack)
-    const copyLeft = b.left + Math.max(C.COPY.LEFT_MARGIN_PX, 24) + (C.COPY.NUDGE_X || 0);
-    const copyTop  = b.top  + C.COPY.TOP_RATIO * H + (C.COPY.NUDGE_Y || 0);
+    // dotted "more" indicator under the diamond
+    const last = centers[centers.length-1];
+    if (last){
+      const gDots = document.createElementNS(ns, "g");
+      svg.appendChild(gDots);
+      for (let i=1; i<=3; i++){
+        const c = document.createElementNS(ns,"circle");
+        c.setAttribute("cx", last.cx);
+        c.setAttribute("cy", last.cy + i*10 + 6);
+        c.setAttribute("r", 2.2);
+        c.setAttribute("fill","rgba(99,211,255,.85)");
+        c.style.cssText = glowCSS;
+        gDots.appendChild(c);
+      }
+    }
+
+    // vertical connectors between boxes (subtle)
+    for (let i=0; i<centers.length-1; i++){
+      const a = centers[i], b2 = centers[i+1];
+      const id = `g_step1_vert_${i}_${Math.random().toString(36).slice(2)}`;
+      defs.appendChild(makeFlowGradient(ns, id, a.cx, a.cy, b2.cx, b2.cy, C.FLOW_SPEED_S));
+      const line = document.createElementNS(ns,"line");
+      line.setAttribute("x1", a.cx); line.setAttribute("y1", a.cy + boxH/2);
+      line.setAttribute("x2", b2.cx); line.setAttribute("y2", b2.cy - boxH/2);
+      line.setAttribute("stroke", `url(#${id})`);
+      line.setAttribute("stroke-width", Math.max(1.2, C.STROKE_W*0.6));
+      line.setAttribute("stroke-linecap","round");
+      line.style.cssText = glowCSS;
+      svg.appendChild(line);
+    }
+
+    // rails: anchored to TOP BOX centerline
+    if (centers.length){
+      const first = centers[0];
+      // LEFT rail: starts inside lamp, ends at box left edge (never detaches)
+      const xLeftStart = lampW * Math.max(0, Math.min(1, C.LEFT_STOP_RATIO));
+      const xLeftEnd   = first.x - 12; // 12px before outline
+      if (xLeftEnd > xLeftStart){
+        const gL = `g_step1_left_${Math.random().toString(36).slice(2)}`;
+        defs.appendChild(makeFlowGradient(ns, gL, xLeftStart, first.cy, xLeftEnd, first.cy, C.FLOW_SPEED_S));
+        const l = document.createElementNS(ns,"line");
+        l.setAttribute("x1", xLeftStart); l.setAttribute("y1", first.cy);
+        l.setAttribute("x2", xLeftEnd);   l.setAttribute("y2", first.cy);
+        l.setAttribute("stroke", `url(#${gL})`);
+        l.setAttribute("stroke-width", C.STROKE_W);
+        l.setAttribute("stroke-linecap","round");
+        l.style.cssText = glowCSS;
+        svg.appendChild(l);
+      }
+
+      // RIGHT rail: begins at box right edge, ends before lamp right edge
+      const xRightStart = first.x + boxW + 12;
+      const xRightEnd   = lampW - C.RIGHT_MARGIN_PX;
+      if (xRightEnd > xRightStart){
+        const gR = `g_step1_right_${Math.random().toString(36).slice(2)}`;
+        defs.appendChild(makeFlowGradient(ns, gR, xRightStart, first.cy, xRightEnd, first.cy, C.FLOW_SPEED_S));
+        const r = document.createElementNS(ns,"line");
+        r.setAttribute("x1", xRightStart); r.setAttribute("y1", first.cy);
+        r.setAttribute("x2", xRightEnd);   r.setAttribute("y2", first.cy);
+        r.setAttribute("stroke", `url(#${gR})`);
+        r.setAttribute("stroke-width", C.STROKE_W);
+        r.setAttribute("stroke-linecap","round");
+        r.style.cssText = glowCSS;
+        svg.appendChild(r);
+      }
+    }
+
+    // COPY block (independent placement; doesn’t affect rails or boxes)
+    const copyLeft = b.left + lampW * C.COPY_LEFT_RATIO;
+    const copyTop  = b.top  + lampH * C.COPY_TOP_RATIO;
     const copy = document.createElement("div");
     copy.className = "copy";
-    copy.style.left = `${copyLeft}px`;
-    copy.style.top  = `${copyTop}px`;
-    copy.style.maxWidth = (C.COPY.WIDTH_MAX || 320) + "px";
-    copy.innerHTML = `<h3>${C.COPY.TITLE}</h3>${C.COPY.HTML}`;
+    copy.style.left = copyLeft + "px";
+    copy.style.top  = copyTop + "px";
+    copy.style.maxWidth = C.COPY_W_MAX_PX + "px";
+    copy.innerHTML = `
+      <h3>Who buys the fastest?</h3>
+      <p>We rank accounts by a <strong>live intent score</strong> built for packaging suppliers: searches per time block, technology on site, customer scale by LTV/CAC, the tools they interact with, and company size. The score bubbles up buyers most likely to convert <em>now</em> so your team prioritizes quotes, samples, and demos that close quickly.</p>`;
     canvas.appendChild(copy);
-    requestAnimationFrame(() => copy.classList.add("show"));
-
-    // Left rail: stops before the copy (aligned to title baseline)
-    if (C.COPY.SHOW_LEFT_LINE) {
-      const leftLine = document.createElementNS(ns,"line");
-      const stopX = C.LEFT_STOP_RATIO * W;
-      const title = copy.querySelector("h3");
-      const r = title ? title.getBoundingClientRect() : { top: copyTop + 4, height: 24 };
-      const baseline = (r.top - b.top) + r.height * 0.62; // svg-local Y
-      leftLine.setAttribute("x1", 0);
-      leftLine.setAttribute("x2", stopX);
-      leftLine.setAttribute("y1", baseline);
-      leftLine.setAttribute("y2", baseline);
-      leftLine.setAttribute("stroke","url(#gradTrailFlow)");
-      leftLine.setAttribute("stroke-width","2.5");
-      leftLine.setAttribute("stroke-linecap","round");
-      leftLine.setAttribute("class","glow");
-      svg.appendChild(leftLine);
-    }
+    requestAnimationFrame(()=> copy.classList.add("show"));
   };
+
+  /* ---------- simple repaint hook (resize triggers the scene to redraw) ---------- */
+  if (typeof window.PROCESS_REPAINT !== "function"){
+    window.PROCESS_REPAINT = () => window.dispatchEvent(new Event("resize"));
+  }
 })();
