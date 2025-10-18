@@ -1,113 +1,86 @@
-// docs/sections/process/process.js
+// sections/process/process.js
 (() => {
   const mount = document.getElementById("section-process");
   if (!mount) return;
 
-  /* ----------------- GLOBAL SCENE REGISTRY + KNOBS ----------------- */
-  // Scenes can attach themselves (e.g., process.step2.js sets PROCESS_SCENES[2]).
-  window.PROCESS_SCENES  = window.PROCESS_SCENES  || {};
-  window.PROCESS_CONFIG  = Object.assign(
+  /* ----------------- GLOBALS ----------------- */
+  window.PROCESS_SCENES = window.PROCESS_SCENES || {};
+  window.PROCESS_CONFIG = Object.assign(
     {
-      step1: {            // you can tune these at runtime from the console
-        NUDGE_X: 130,     // horizontal nudge for the Step 1 pill
-        NUDGE_Y: 50,      // vertical nudge for the Step 1 pill (copy won’t follow)
-        COPY_GAP: 44,     // space between pill and copy block
-        LABEL:  "yourcompany.com"
-      }
+      step1: { // tuning for the pill scene (now used when step=0, phase=content)
+        NUDGE_X: 130,
+        NUDGE_Y: 50,
+        COPY_GAP: 44,
+        LABEL: "yourcompany.com",
+      },
     },
     window.PROCESS_CONFIG || {}
   );
 
-  /* ----------------- SCOPED STYLES (your existing look) ----------------- */
+  /* ----------------- STYLES (unchanged visuals) ----------------- */
   const style = document.createElement("style");
   style.textContent = `
-  :root{
-    --ink:#0b1117;
-    --copyMax:300px;
-    --accent:#63D3FF;  /* cyan */
-    --accent2:#F2DCA0; /* warm gold */
-  }
+  :root{ --ink:#0b1117; --copyMax:300px; --accent:#63D3FF; --accent2:#F2DCA0; }
   #section-process{ position:relative; isolation:isolate; }
   #section-process .proc{ position:relative; min-height:560px; padding:44px 12px 40px; overflow:visible; }
 
-  /* steps rail */
-  #section-process .railWrap{
-    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.88);
-    z-index:5; transition:left .45s cubic-bezier(.22,.61,.36,1), transform .45s cubic-bezier(.22,.61,.36,1);
-  }
-  #section-process .railWrap.is-docked{ left:clamp(12px,5vw,70px); transform:translate(0,-50%) scale(.86); }
-  #section-process .rail{ position:relative; display:flex; flex-direction:column; align-items:center; gap:16px; }
-  #section-process .rail svg{ position:absolute; inset:0; overflow:visible; pointer-events:none; }
+  .railWrap{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.88);
+    z-index:5; transition:left .45s cubic-bezier(.22,.61,.36,1), transform .45s cubic-bezier(.22,.61,.36,1); }
+  .railWrap.is-docked{ left:clamp(12px,5vw,70px); transform:translate(0,-50%) scale(.86); }
+  .rail{ position:relative; display:flex; flex-direction:column; align-items:center; gap:16px; }
+  .rail svg{ position:absolute; inset:0; overflow:visible; pointer-events:none; }
 
-  #section-process .p-step{
-    width:50px;height:50px;border-radius:50%;
+  .p-step{ width:50px;height:50px;border-radius:50%;
     display:flex;align-items:center;justify-content:center; user-select:none; cursor:pointer;
     font:700 17px/1 Inter, system-ui; color:#eaf0f6;
     background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
     backdrop-filter:blur(6px); box-shadow:0 6px 16px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.05);
-    transition:transform .14s ease, background .15s ease, box-shadow .18s ease;
-  }
-  #section-process .p-step:hover{ transform:translateY(-1px) }
-  #section-process .p-step.is-current{
+    transition:transform .14s ease, background .15s ease, box-shadow .18s ease; }
+  .p-step:hover{ transform:translateY(-1px) }
+  .p-step.is-current{
     color:#07212a;
     background:radial-gradient(circle at 50% 45%, rgba(255,255,255,.34), rgba(255,255,255,0) 60%), linear-gradient(180deg, var(--accent), #26b9ff);
     border-color:rgba(255,255,255,.22);
-    box-shadow:0 14px 34px rgba(38,185,255,.30), 0 0 0 2px rgba(255,255,255,.20) inset, 0 0 18px rgba(99,211,255,.45);
-  }
+    box-shadow:0 14px 34px rgba(38,185,255,.30), 0 0 0 2px rgba(255,255,255,.20) inset, 0 0 18px rgba(99,211,255,.45); }
 
-  #section-process .ctas{ display:flex; gap:10px; margin-top:10px; }
-  #section-process .btn-glass{
+  .ctas{ display:flex; gap:10px; margin-top:10px; }
+  .btn-glass{
     padding:10px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.14);
     background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
     color:#eaf0f6; font-weight:700; cursor:pointer; backdrop-filter:blur(8px);
     box-shadow:0 8px 24px rgba(0,0,0,.30), inset 0 0 0 1px rgba(255,255,255,.06);
-    transition:transform .08s ease, filter .15s ease;
-  }
-  #section-process .btn-glass:hover{ filter:brightness(1.06) } #section-process .btn-glass:active{ transform:translateY(1px) }
-  #section-process .btn-glass[disabled]{ opacity:.45; cursor:not-allowed }
+    transition:transform .08s ease, filter .15s ease; }
+  .btn-glass:hover{ filter:brightness(1.06) } .btn-glass:active{ transform:translateY(1px) }
+  .btn-glass[disabled]{ opacity:.45; cursor:not-allowed }
 
-  /* lamp seam (kept) */
-  #section-process .lamp{
-    position:absolute; top:50%; transform:translateY(-50%); left:0; width:0;
+  .lamp{ position:absolute; top:50%; transform:translateY(-50%); left:0; width:0;
     height:min(72vh,560px); border-radius:16px; opacity:0; pointer-events:none; z-index:1;
     background:
       radial-gradient(120% 92% at 0% 50%, rgba(99,211,255,.20) 0, rgba(99,211,255,.08) 34%, rgba(99,211,255,0) 70%),
       radial-gradient(80% 60% at 0% 50%, rgba(242,220,160,.08) 0, rgba(242,220,160,0) 56%),
       repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 6px);
     filter:saturate(110%) blur(.35px);
-    transition:opacity .45s ease, left .45s cubic-bezier(.22,.61,.36,1), width .45s cubic-bezier(.22,.61,.36,1);
-  }
-  #section-process .lamp::before{
+    transition:opacity .45s ease, left .45s cubic-bezier(.22,.61,.36,1), width .45s cubic-bezier(.22,.61,.36,1); }
+  .lamp::before{
     content:""; position:absolute; inset:0 auto 0 -1px; width:2px; border-radius:2px;
     background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.03));
-    box-shadow:0 0 10px rgba(99,211,255,.28), 0 0 22px rgba(240,210,120,.12);
-  }
+    box-shadow:0 0 10px rgba(99,211,255,.28), 0 0 22px rgba(240,210,120,.12); }
 
-  /* right canvas + copy */
-  #section-process .canvas{ position:absolute; inset:0; z-index:2; pointer-events:none; }
-  #section-process .copy{
-    position:absolute; max-width:var(--copyMax); pointer-events:auto;
-    opacity:0; transform:translateY(6px); transition:opacity .35s ease, transform .35s ease;
-  }
-  #section-process .copy.show{ opacity:1; transform:translateY(0) }
-  #section-process .copy h3{ margin:0 0 .45rem; color:#eaf0f6; font:600 clamp(20px,2.4vw,26px) "Newsreader", Georgia, serif; }
-  #section-process .copy p{ margin:.35rem 0 0; font:400 15px/1.6 Inter, system-ui; color:#a7bacb }
+  .canvas{ position:absolute; inset:0; z-index:2; pointer-events:none; }
+  .copy{ position:absolute; max-width:var(--copyMax); pointer-events:auto;
+    opacity:0; transform:translateY(6px); transition:opacity .35s ease, transform .35s ease; }
+  .copy.show{ opacity:1; transform:translateY(0) }
+  .copy h3{ margin:0 0 .45rem; color:#eaf0f6; font:600 clamp(20px,2.4vw,26px) "Newsreader", Georgia, serif; }
+  .copy p{ margin:.35rem 0 0; font:400 15px/1.6 Inter, system-ui; color:#a7bacb }
 
-  /* glow helpers */
-  #section-process .glow{
+  .glow{
     filter:
       drop-shadow(0 0 6px rgba(242,220,160,.35))
       drop-shadow(0 0 14px rgba(99,211,255,.30))
-      drop-shadow(0 0 24px rgba(99,211,255,.18));
-  }
-  #section-process .pulse { animation:pulseGlow 2.6s ease-in-out infinite; }
-  @keyframes pulseGlow{
-    0%,100%{ filter: drop-shadow(0 0 6px rgba(242,220,160,.25)) drop-shadow(0 0 10px rgba(99,211,255,.22)); }
-    50%   { filter: drop-shadow(0 0 10px rgba(242,220,160,.45)) drop-shadow(0 0 18px rgba(99,211,255,.45)); }
-  }
+      drop-shadow(0 0 24px rgba(99,211,255,.18)); }
 
-  @media (max-width:900px){ :root{ --copyMax:260px } #section-process .railWrap.is-docked{ left:12px; transform:translate(0,-50%) scale(.84) } }
-  @media (max-width:640px){ :root{ --copyMax:240px } #section-process .proc{ min-height:600px } #section-process .railWrap{ transform:translate(-50%,-50%) scale(.82) } }
+  @media (max-width:900px){ :root{ --copyMax:260px } .railWrap.is-docked{ left:12px; transform:translate(0,-50%) scale(.84) } }
+  @media (max-width:640px){ :root{ --copyMax:240px } .proc{ min-height:600px } .railWrap{ transform:translate(-50%,-50%) scale(.82) } }
   `;
   document.head.appendChild(style);
 
@@ -142,67 +115,48 @@
   const prevBtn = mount.querySelector("#prevBtn");
   const nextBtn = mount.querySelector("#nextBtn");
 
-  let step = 0; // start empty
+  /* ----------------- STATE ----------------- */
+  // step: 0..5; phase: 0 = empty (only for step 0), 1 = content
+  let step = 0;
+  let phase = 0;
 
-  /* ----------------- HELPERS SHARED BY ALL SCENES ----------------- */
+  /* ----------------- HELPERS ----------------- */
   const ns = "http://www.w3.org/2000/svg";
 
   function makeFlowGradients({ pillX, pillY, pillW, yMid, xTrailEnd }) {
     const defs = document.createElementNS(ns,"defs");
 
-    // Liquid outline for pill
+    // flowing outline
     const gFlow = document.createElementNS(ns,"linearGradient");
     gFlow.id = "gradFlow";
     gFlow.setAttribute("gradientUnits","userSpaceOnUse");
     gFlow.setAttribute("x1", pillX); gFlow.setAttribute("y1", pillY);
     gFlow.setAttribute("x2", pillX + pillW); gFlow.setAttribute("y2", pillY);
-    [
-      ["0%","rgba(230,195,107,.95)"],
-      ["35%","rgba(255,255,255,.95)"],
-      ["75%","rgba(99,211,255,.95)"],
-      ["100%","rgba(99,211,255,.60)"]
-    ].forEach(([o,c]) => {
-      const s = document.createElementNS(ns,"stop");
-      s.setAttribute("offset",o); s.setAttribute("stop-color",c);
-      gFlow.appendChild(s);
-    });
+    [["0%","rgba(230,195,107,.95)"],["35%","rgba(255,255,255,.95)"],["75%","rgba(99,211,255,.95)"],["100%","rgba(99,211,255,.60)"]]
+      .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gFlow.appendChild(s); });
     const a1 = document.createElementNS(ns,"animateTransform");
-    a1.setAttribute("attributeName","gradientTransform");
-    a1.setAttribute("type","translate");
-    a1.setAttribute("from","0 0");
-    a1.setAttribute("to", `${pillW} 0`);
-    a1.setAttribute("dur","6s");
-    a1.setAttribute("repeatCount","indefinite");
-    gFlow.appendChild(a1);
-    defs.appendChild(gFlow);
+    a1.setAttribute("attributeName","gradientTransform"); a1.setAttribute("type","translate");
+    a1.setAttribute("from","0 0"); a1.setAttribute("to", `${pillW} 0`);
+    a1.setAttribute("dur","6s"); a1.setAttribute("repeatCount","indefinite"); gFlow.appendChild(a1);
 
-    // Liquid trail for outgoing cable
+    // flowing trail
     const gTrail = document.createElementNS(ns,"linearGradient");
     gTrail.id = "gradTrailFlow";
     gTrail.setAttribute("gradientUnits","userSpaceOnUse");
     gTrail.setAttribute("x1", pillX + pillW); gTrail.setAttribute("y1", yMid);
-    gTrail.setAttribute("x2", xTrailEnd);      gTrail.setAttribute("y2", yMid);
-    [
-      ["0%","rgba(230,195,107,.92)"],
-      ["45%","rgba(99,211,255,.90)"],
-      ["100%","rgba(99,211,255,.18)"]
-    ].forEach(([o,c]) => {
-      const s = document.createElementNS(ns,"stop");
-      s.setAttribute("offset",o); s.setAttribute("stop-color",c);
-      gTrail.appendChild(s);
-    });
+    gTrail.setAttribute("x2", xTrailEnd); gTrail.setAttribute("y2", yMid);
+    [["0%","rgba(230,195,107,.92)"],["45%","rgba(99,211,255,.90)"],["100%","rgba(99,211,255,.18)"]]
+      .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gTrail.appendChild(s); });
     const a2 = document.createElementNS(ns,"animateTransform");
-    a2.setAttribute("attributeName","gradientTransform");
-    a2.setAttribute("type","translate");
-    a2.setAttribute("from","0 0");
-    a2.setAttribute("to", `${(xTrailEnd - (pillX + pillW))} 0`);
-    a2.setAttribute("dur","6s");
-    a2.setAttribute("repeatCount","indefinite");
-    gTrail.appendChild(a2);
-    defs.appendChild(gTrail);
+    a2.setAttribute("attributeName","gradientTransform"); a2.setAttribute("type","translate");
+    a2.setAttribute("from","0 0"); a2.setAttribute("to", `${(xTrailEnd - (pillX + pillW))} 0`);
+    a2.setAttribute("dur","6s"); a2.setAttribute("repeatCount","indefinite"); gTrail.appendChild(a2);
 
+    defs.appendChild(gFlow); defs.appendChild(gTrail);
     return defs;
   }
+  // Expose for step2…step5 to reuse the same flowing colors
+  window.PROCESS_UTILS = Object.assign({}, window.PROCESS_UTILS, { makeFlowGradients });
 
   function mountCopy({ top, left, html }) {
     const el = document.createElement("div");
@@ -226,7 +180,8 @@
 
   function placeLamp(){
     const b = bounds();
-    if (step>0){
+    // Dock for any real content (all steps >0 OR step 0 when phase=1)
+    if (step>0 || (step===0 && phase===1)){
       lamp.style.left = b.left + "px";
       lamp.style.width = b.width + "px";
       lamp.style.opacity = ".32";
@@ -237,12 +192,11 @@
 
   function clearCanvas(){ while (canvas.firstChild) canvas.removeChild(canvas.firstChild); }
 
-  /* ----------------- STEP 1 (scene) ----------------- */
-  function sceneStep1(ctx){
+  /* ----------------- SCENE: PILL (used for step 0, phase=1) ----------------- */
+  function scenePill(ctx){
     const C = window.PROCESS_CONFIG.step1;
     const b = ctx.bounds;
 
-    // SVG stage
     const nodeW = b.width, nodeH = Math.min(560, b.sH-40);
     const svg = document.createElementNS(ns,"svg");
     svg.style.position = "absolute";
@@ -261,12 +215,9 @@
     const r          = 16;
     const yMid       = pillY + pillH/2;
 
-    // right edge, in this svg’s space
     const xTrailEnd  = (b.sW - 10) - b.left;
-
     svg.appendChild(makeFlowGradients({ pillX, pillY, pillW, yMid, xTrailEnd }));
 
-    // outline
     const d = `M ${pillX+r} ${pillY} H ${pillX+pillW-r} Q ${pillX+pillW} ${pillY} ${pillX+pillW} ${pillY+r}
                V ${pillY+pillH-r} Q ${pillX+pillW} ${pillY+pillH} ${pillX+pillW-r} ${pillY+pillH}
                H ${pillX+r} Q ${pillX} ${pillY+pillH} ${pillX} ${pillY+pillH-r}
@@ -287,7 +238,6 @@
     outline.style.transition = "stroke-dashoffset 1100ms cubic-bezier(.22,.61,.36,1)";
     requestAnimationFrame(()=> outline.style.strokeDashoffset = "0");
 
-    // label
     const label = document.createElementNS(ns,"text");
     label.setAttribute("x", pillX + 18);
     label.setAttribute("y", pillY + pillH/2 + 6);
@@ -298,7 +248,6 @@
     label.textContent = C.LABEL;
     svg.appendChild(label);
 
-    // outgoing cable to the right edge
     const trail = document.createElementNS(ns,"line");
     trail.setAttribute("x1", pillX + pillW); trail.setAttribute("y1", yMid);
     trail.setAttribute("x2", xTrailEnd);     trail.setAttribute("y2", yMid);
@@ -308,19 +257,16 @@
     trail.setAttribute("class","glow");
     svg.appendChild(trail);
 
-    // copy inside lamp, anchored to base Y (not moved by NUDGE_Y)
+    // copy inside lamp (anchored to base Y)
     const basePillY   = Math.max(12, nodeH * 0.20);
     const minInside   = b.left + 24;
     const fromRail    = Math.max(b.railRight + 32, minInside);
     const copyTop     = (b.top + basePillY - 2);
     const copy = mountCopy({
-      top: copyTop,
-      left: fromRail,
-      html: `
-        <h3>We start with your company.</h3>
-        <p>We read your company and data to learn what matters. Then our system builds simple metrics around your strengths.
-        With that map in hand, we move forward to find real buyers who match your persona.</p>
-      `
+      top: copyTop, left: fromRail,
+      html: `<h3>We start with your company.</h3>
+             <p>We read your company and data to learn what matters. Then our system builds simple metrics around your strengths.
+             With that map in hand, we move forward to find real buyers who match your persona.</p>`
     });
 
     requestAnimationFrame(() => {
@@ -332,7 +278,7 @@
     });
   }
 
-  /* ----------------- LAYOUT / RAIL LOGIC ----------------- */
+  /* ----------------- RENDER RAIL ----------------- */
   function drawRail(){
     const r = rail.getBoundingClientRect();
     railSvg.setAttribute("viewBox", `0 0 ${r.width} ${r.height}`);
@@ -352,34 +298,77 @@
     }
   }
 
-  function setStep(n){
-    step = Math.max(0, Math.min(steps.length-1, n|0));
-    dots.forEach((el,i)=>{ el.classList.toggle("is-current", i===step); el.classList.toggle("is-done", i<step); });
-    prevBtn.disabled = step<=0; nextBtn.disabled = step>=steps.length-1;
-    railWrap.classList.toggle("is-docked", step>0);
+  function renderDots(){
+    dots.forEach((el,i)=>{
+      el.classList.toggle("is-current", i===step);
+      el.classList.toggle("is-done",    i<step);
+      // numbers except completed steps become a check
+      el.textContent = (i<step) ? "✓" : String(i);
+    });
+  }
+
+  /* ----------------- STEP/SCENE ROUTER ----------------- */
+  function drawScene(){
+    clearCanvas();
+    // treat 0/content as our pill scene
+    if (step===0 && phase===1) return scenePill({ bounds: bounds() });
+
+    // scene files (1..5) register themselves on window.PROCESS_SCENES[n]
+    const scene = window.PROCESS_SCENES[step];
+    if (typeof scene === "function") {
+      return scene({ ns, canvas, bounds: bounds(), config: window.PROCESS_CONFIG, makeFlowGradients, mountCopy });
+    }
+    // otherwise: intentionally empty (0/phase=0 or unimplemented steps)
+  }
+
+  function setStep(n, opts={}){
+    const clamped = Math.max(0, Math.min(steps.length-1, n|0));
+    step = clamped;
+
+    // default phase rules:
+    // - if we move to step 0 and no explicit phase provided, show content (phase=1),
+    //   except on very first load where init() sets phase=0.
+    if (typeof opts.phase === "number") phase = opts.phase;
+    else if (step === 0 && phase === 0 && opts.fromInit) phase = 0;
+    else if (step === 0) phase = 1;
+    else phase = 1;
+
+    // dock when any content is visible
+    railWrap.classList.toggle("is-docked", step>0 || (step===0 && phase===1));
+
+    renderDots();
+    prevBtn.disabled = (step===0 && phase===0);
+    nextBtn.disabled = step>=steps.length-1;
+
     drawRail();
     placeLamp();
     drawScene();
   }
 
-  /* ----------------- SCENE ROUTER ----------------- */
-  function drawScene(){
-    clearCanvas();
-    if (step === 1) {
-      return sceneStep1({ ns, canvas, bounds: bounds(), config: window.PROCESS_CONFIG, makeFlowGradients, mountCopy });
+  /* ----------------- EVENTS ----------------- */
+  dots.forEach(d=> d.addEventListener("click", ()=>{
+    const i = +d.dataset.i;
+    if (i===0){
+      // clicking 0 toggles content on
+      setStep(0, { phase: 1 });
+    } else {
+      setStep(i, { phase: 1 });
     }
-    // If a scene file has registered itself (e.g., Step 2), call it.
-    const scene = window.PROCESS_SCENES[step];
-    if (typeof scene === "function") {
-      return scene({ ns, canvas, bounds: bounds(), config: window.PROCESS_CONFIG, makeFlowGradients, mountCopy });
-    }
-    // Step 0 or unimplemented steps: intentionally empty.
-  }
+  }));
 
-  /* ----------------- EVENTS + INIT ----------------- */
-  dots.forEach(d=> d.addEventListener("click", ()=> setStep(+d.dataset.i)));
-  prevBtn.addEventListener("click", ()=> setStep(step-1));
-  nextBtn.addEventListener("click", ()=> setStep(step+1));
+  prevBtn.addEventListener("click", ()=>{
+    // special two-phase handling for step 0
+    if (step===0 && phase===1){ setStep(0, { phase: 0 }); return; }
+    setStep(step-1, { phase: 1 });
+  });
+
+  nextBtn.addEventListener("click", ()=>{
+    // first press: 0a -> 0b (stay on 0, show content)
+    if (step===0 && phase===0){ setStep(0, { phase: 1 }); return; }
+    // subsequent presses: advance normally; completed dots flip to ✓ automatically
+    setStep(step+1, { phase: 1 });
+  });
+
   addEventListener("resize", ()=>{ drawRail(); placeLamp(); drawScene(); }, {passive:true});
   railWrap.addEventListener("transitionend", e=>{
     if (e.propertyName==="left"||e.propertyName==="transform"){
@@ -387,8 +376,10 @@
     }
   });
 
+  /* ----------------- INIT ----------------- */
   function init(){
-    setStep(0);
+    phase = 0;              // start at 0 (empty)
+    setStep(0, { fromInit:true });
     requestAnimationFrame(()=>{ drawRail(); placeLamp(); });
   }
   if (document.readyState === "complete") init();
