@@ -1,31 +1,65 @@
 // docs/sections/process/process.js
-// Step rail: centered at first; docks left on step > 0 with a gentle slide.
+// Step rail (0–5). When step > 0 the rail docks left and a soft "lamp" wash
+// blooms to the right to draw attention to the empty canvas area.
 (function () {
   const mount = document.getElementById("section-process");
   if (!mount) return;
 
-  // ---------- styles (scoped) ----------
+  // ---------- styles ----------
   const css = `
   :root{
-    --accent:#63D3FF;            /* electric cyan */
+    --accent:#63D3FF;           /* electric cyan for active */
     --accent-ink:#0b1117;
   }
+
   #section-process{position:relative}
   #section-process .proc-only{
     position:relative;
-    min-height: 500px;           /* slightly shorter (was 520) */
-    padding: 44px 16px;
+    min-height:500px;           /* slightly shorter for tighter scroll */
+    padding:44px 16px;
     overflow:visible;
   }
-  /* Wrap we can move from center → left */
+
+  /* The lamp: a soft rightward glow that appears when docked */
+  #section-process .lamp{
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    left:0; width:0;            /* JS sets when docked */
+    height:min(72vh,560px);
+    pointer-events:none;
+    opacity:0;
+    z-index:0;
+    transition:
+      opacity .45s ease,
+      left .45s cubic-bezier(.22,.61,.36,1),
+      width .45s cubic-bezier(.22,.61,.36,1);
+    /* layered gradients: cyan core + warm rim + faint scan lines */
+    background:
+      radial-gradient(120% 90% at 0% 50%, rgba(99,211,255,.28) 0%, rgba(99,211,255,.16) 32%, rgba(99,211,255,0) 70%),
+      radial-gradient(80% 60% at 0% 50%, rgba(242,220,160,.18) 0%, rgba(242,220,160,0) 58%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.04) 0 1px, transparent 1px 6px);
+    filter:saturate(110%) blur(.4px);
+    border-radius:16px;
+  }
+  /* slender divider line at the lamp's left edge */
+  #section-process .lamp::before{
+    content:"";
+    position:absolute; inset:0 auto 0 -1px; width:2px;
+    background:linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.02));
+    box-shadow:0 0 10px rgba(99,211,255,.35), 0 0 26px rgba(240,210,120,.14);
+    border-radius:2px;
+  }
+
+  /* Wrap that slides center → left */
   #section-process .railWrap{
     position:absolute;
     left:50%; top:50%;
     transform:translate(-50%,-50%);
-    transition: left .45s cubic-bezier(.22,.61,.36,1), transform .45s cubic-bezier(.22,.61,.36,1);
+    transition:left .45s cubic-bezier(.22,.61,.36,1), transform .45s cubic-bezier(.22,.61,.36,1);
     will-change:left, transform;
+    z-index:2; /* above lamp */
   }
-  /* Docked to the left gutter */
   #section-process .railWrap.is-docked{
     left:clamp(18px, 6vw, 80px);
     transform:translate(0,-50%);
@@ -33,14 +67,14 @@
 
   #section-process .rail{
     position: relative;
-    display:flex; flex-direction:column; align-items:center; gap:16px; /* smaller gap */
+    display:flex; flex-direction:column; align-items:center; gap:16px;
   }
   #section-process .rail-svg{
     position:absolute; inset:0; z-index:0; pointer-events:none; overflow:visible;
     filter: drop-shadow(0 0 6px rgba(99,211,255,.12));
   }
 
-  /* Dots (slightly smaller: 52→50) */
+  /* Dots */
   #section-process .p-step{
     position:relative; z-index:1;
     width:50px; height:50px; border-radius:50%;
@@ -59,7 +93,7 @@
   #section-process .p-step.is-current{
     color:var(--accent-ink);
     background:
-      radial-gradient(circle at 50% 45%, rgba(255,255,255,.32), rgba(255,255,255,0) 58%),
+      radial-gradient(circle at 50% 45%, rgba(255,255,255,.34), rgba(255,255,255,0) 60%),
       linear-gradient(180deg, var(--accent), #26b9ff);
     border-color:rgba(255,255,255,.22);
     box-shadow:
@@ -69,7 +103,7 @@
   }
   #section-process .p-step.is-done{ opacity:.88 }
 
-  /* Glass CTAs (unchanged styling) */
+  /* Glass CTAs */
   #section-process .ctas{ display:flex; gap:10px; margin-top:16px; justify-content:center; }
   #section-process .btn-glass{
     padding:10px 14px; border-radius:999px;
@@ -83,12 +117,15 @@
   #section-process .btn-glass:active{ transform:translateY(1px) }
   #section-process .btn-glass[disabled]{ opacity:.45; cursor:not-allowed }
   `;
-  const style = document.createElement("style"); style.textContent = css; document.head.appendChild(style);
+  const style = document.createElement("style");
+  style.textContent = css;
+  document.head.appendChild(style);
 
   // ---------- markup ----------
   const steps = [0,1,2,3,4,5];
   mount.innerHTML = `
     <section class="proc-only" aria-label="Process">
+      <div class="lamp" id="procLamp" aria-hidden="true"></div>
       <div class="railWrap" id="railWrap">
         <div class="rail" id="rail">
           <svg class="rail-svg" id="railSvg" viewBox="0 0 1 1" preserveAspectRatio="none"></svg>
@@ -103,10 +140,12 @@
   `;
 
   // ---------- behavior ----------
-  const wrap   = mount.querySelector("#railWrap");
-  const rail   = mount.querySelector("#rail");
-  const svg    = mount.querySelector("#railSvg");
-  const dotEls = Array.from(mount.querySelectorAll(".p-step"));
+  const stage   = mount.querySelector(".proc-only");
+  const wrap    = mount.querySelector("#railWrap");
+  const rail    = mount.querySelector("#rail");
+  const svg     = mount.querySelector("#railSvg");
+  const lamp    = mount.querySelector("#procLamp");
+  const dotEls  = Array.from(mount.querySelectorAll(".p-step"));
   const prevBtn = mount.querySelector("#prevBtn");
   const nextBtn = mount.querySelector("#nextBtn");
 
@@ -121,15 +160,15 @@
     prevBtn.disabled = (step<=0);
     nextBtn.disabled = (step>=steps.length-1);
 
-    // Dock to left once we advance beyond 0, undock when we return to 0
+    // Dock/undock
     wrap.classList.toggle("is-docked", step>0);
 
     drawConnectors();
+    positionLamp();
   }
 
   // connectors between dot centers
   function drawConnectors(){
-    if (!svg) return;
     const r = rail.getBoundingClientRect();
     svg.setAttribute("viewBox", `0 0 ${r.width} ${r.height}`);
     while (svg.firstChild) svg.removeChild(svg.firstChild);
@@ -145,11 +184,30 @@
       line.setAttribute("x1", a.x); line.setAttribute("y1", a.y);
       line.setAttribute("x2", b.x); line.setAttribute("y2", b.y);
       const isTrail = i < step;
-      const stroke = isTrail ? "rgba(99,211,255,.58)" : "rgba(255,255,255,.14)";
-      line.setAttribute("stroke", stroke);
+      line.setAttribute("stroke", isTrail ? "rgba(99,211,255,.58)" : "rgba(255,255,255,.14)");
       line.setAttribute("stroke-width", 2);
       line.setAttribute("stroke-linecap","round");
       svg.appendChild(line);
+    }
+  }
+
+  // Lamp follows the rail's right edge and fills the remaining area
+  function positionLamp(){
+    if (!lamp) return;
+    const stageR = stage.getBoundingClientRect();
+    const wrapR  = wrap.getBoundingClientRect();
+
+    if (step>0){
+      const gap = 24; // breathing space between rail and glow
+      const left = Math.max(0, wrapR.right + gap - stageR.left);
+      const width = Math.max(260, stageR.right - stageR.left - left - 12);
+      lamp.style.left = left + "px";
+      lamp.style.width = width + "px";
+      lamp.style.opacity = "0.38";  // subtle; tweakable
+    }else{
+      lamp.style.opacity = "0";
+      lamp.style.width   = "0px";
+      lamp.style.left    = "0px";
     }
   }
 
@@ -157,12 +215,20 @@
   dotEls.forEach(el => el.addEventListener("click", ()=> setStep(+el.dataset.i)));
   prevBtn.addEventListener("click", ()=> setStep(step-1));
   nextBtn.addEventListener("click", ()=> setStep(step+1));
-  addEventListener("resize", drawConnectors, {passive:true});
-  // re-measure connectors after the slide ends
+
+  addEventListener("resize", ()=>{
+    drawConnectors();
+    positionLamp();
+  }, {passive:true});
+
+  // re-measure after slide completes
   wrap.addEventListener("transitionend", e=>{
-    if (e.propertyName==="left" || e.propertyName==="transform") drawConnectors();
+    if (e.propertyName==="left" || e.propertyName==="transform"){
+      drawConnectors();
+      positionLamp();
+    }
   });
 
-  // initial state
+  // initial
   setStep(0);
 })();
