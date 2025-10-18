@@ -1,6 +1,4 @@
 // docs/sections/process/process.js
-// Rail (0–5). When step>0: dock left + show right-side canvas.
-// Step 1: neon-stroked yourcompany.com + explanatory copy + continuation line.
 (function () {
   const mount = document.getElementById("section-process");
   if (!mount) return;
@@ -11,7 +9,7 @@
 
   #section-process{position:relative}
   #section-process .proc-only{
-    position:relative; min-height:500px; padding:44px 16px; overflow:visible;
+    position:relative; min-height:520px; padding:44px 16px; overflow:visible;
   }
 
   /* RIGHT-SIDE "LAMP" */
@@ -20,8 +18,8 @@
     left:0; width:0; height:min(72vh,560px); pointer-events:none; opacity:0; z-index:0;
     transition:opacity .45s ease, left .45s cubic-bezier(.22,.61,.36,1), width .45s cubic-bezier(.22,.61,.36,1);
     background:
-      radial-gradient(120% 90% at 0% 50%, rgba(99,211,255,.28) 0%, rgba(99,211,255,.16) 32%, rgba(99,211,255,0) 70%),
-      radial-gradient(80% 60% at 0% 50%, rgba(242,220,160,.18) 0%, rgba(242,220,160,0) 58%),
+      radial-gradient(120% 90% at 0% 50%, rgba(99,211,255,.26) 0%, rgba(99,211,255,.14) 32%, rgba(99,211,255,0) 70%),
+      radial-gradient(80% 60% at 0% 50%, rgba(242,220,160,.14) 0%, rgba(242,220,160,0) 58%),
       repeating-linear-gradient(0deg, rgba(255,255,255,.04) 0 1px, transparent 1px 6px);
     filter:saturate(110%) blur(.4px); border-radius:16px;
   }
@@ -57,7 +55,7 @@
   }
   #section-process .p-step.is-done{ opacity:.88 }
 
-  #section-process .ctas{ display:flex; gap:10px; margin-top:16px; justify-content:center; }
+  #section-process .ctas{ display:flex; gap:10px; margin-top:10px; justify-content:center; }
   #section-process .btn-glass{
     padding:10px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.14);
     background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
@@ -76,18 +74,27 @@
     color:#eaf0f6; opacity:0; transform:translateY(8px);
     transition:opacity .38s ease, transform .38s ease;
   }
-  #section-process .canvas .copy p{ margin:.4rem 0 0; font-weight:400; color:#a7bacb; font-size:clamp(14px,1.55vw,16px); line-height:1.6 }
+  #section-process .canvas .copy .title{
+    font:600 clamp(20px,2.4vw,26px) "Newsreader", Georgia, serif; letter-spacing:.2px; margin:0 0 .35rem;
+  }
+  #section-process .canvas .copy p{ margin:.35rem 0 0; font-weight:400; color:#a7bacb; font-size:clamp(14px,1.55vw,16px); line-height:1.6 }
   #section-process .canvas.show .copy{ opacity:1; transform:translateY(0) }
 
   /* Neon stroked box + line */
   #section-process .canvas svg{ position:absolute; overflow:visible; }
-  .neon-stroke{ fill:rgba(11,17,23,.2); stroke:url(#gradNeon); stroke-width:2.2; }
+  .neon-stroke{ fill:rgba(11,17,23,.16); stroke:url(#gradNeon); stroke-width:2.2; border-radius:14px; }
   .cont-line{ stroke:url(#gradTrail); stroke-width:2.2; stroke-linecap:round; }
 
-  /* draw-on animation */
+  /* draw + alive pulse */
   .dash-anim{ stroke-dasharray:600; stroke-dashoffset:600; animation:draw .9s ease forwards .08s; }
   .dash-anim.slow{ animation-duration:1.15s }
   @keyframes draw{ to{ stroke-dashoffset:0 } }
+
+  .neonPulse{ animation:neonPulse 2.6s ease-in-out infinite }
+  @keyframes neonPulse{
+    0%,100%{ filter:drop-shadow(0 0 8px rgba(242,220,160,.35)) drop-shadow(0 0 18px rgba(99,211,255,.18)); }
+    50%     { filter:drop-shadow(0 0 14px rgba(242,220,160,.55)) drop-shadow(0 0 28px rgba(99,211,255,.28)); }
+  }
   `;
   const style = document.createElement("style");
   style.textContent = css;
@@ -128,15 +135,6 @@
   let step = 0;
 
   // ---------- helpers ----------
-  function lsHost(){
-    try{
-      const seed = JSON.parse(localStorage.getItem("onb.seed")||"{}");
-      const a = seed?.host || localStorage.getItem("fp.supplier.host") || "";
-      const s = (a||"").trim().toLowerCase();
-      return s || "yourcompany.com";
-    }catch{ return "yourcompany.com"; }
-  }
-
   function setStep(n){
     step = Math.max(0, Math.min(steps.length-1, n|0));
     dotEls.forEach((el,i)=>{
@@ -149,7 +147,7 @@
     wrap.classList.toggle("is-docked", step>0);
     drawRailConnectors();
     positionLamp();
-    renderCanvas();           // <— new
+    renderCanvas();
   }
 
   function drawRailConnectors(){
@@ -181,7 +179,7 @@
     if (step>0){
       const gap = 24;
       const left = Math.max(0, wrapR.right + gap - stageR.left);
-      const width = Math.max(260, stageR.right - stageR.left - left - 12);
+      const width = Math.max(300, stageR.right - stageR.left - left - 12);
       lamp.style.left = left + "px";
       lamp.style.width = width + "px";
       lamp.style.opacity = "0.38";
@@ -197,9 +195,9 @@
     const gap = 24;
     const left = Math.max(0, w.right + gap - s.left);
     const right= s.right - s.left - 12;
-    const top  = 22;  // gentle top margin
+    const top  = 22;
     const height = Math.min(s.height - 44, 560);
-    return { left, right, top, width: Math.max(260, right-left), height };
+    return { left, right, top, width: Math.max(300, right-left), height };
   }
 
   function clearCanvas(){ while (canvas.firstChild) canvas.removeChild(canvas.firstChild); canvas.classList.remove("show"); }
@@ -220,14 +218,15 @@
 
     // defs: gradients for neon + trail
     const defs = document.createElementNS(svg.namespaceURI, "defs");
+
     const gradNeon = document.createElementNS(svg.namespaceURI, "linearGradient");
     gradNeon.id = "gradNeon";
     gradNeon.setAttribute("x1","0%"); gradNeon.setAttribute("y1","0%");
     gradNeon.setAttribute("x2","100%"); gradNeon.setAttribute("y2","0%");
     [
       {o:"0%", c:"rgba(242,220,160,.95)"},
-      {o:"35%", c:"rgba(255,255,255,.95)"},
-      {o:"70%", c:"rgba(99,211,255,.95)"},
+      {o:"38%", c:"rgba(255,255,255,.95)"},
+      {o:"72%", c:"rgba(99,211,255,.95)"},
       {o:"100%",c:"rgba(99,211,255,.65)"}
     ].forEach(s=>{
       const st=document.createElementNS(svg.namespaceURI,"stop"); st.setAttribute("offset",s.o); st.setAttribute("stop-color",s.c); gradNeon.appendChild(st);
@@ -239,7 +238,7 @@
     gradTrail.setAttribute("x2","100%"); gradTrail.setAttribute("y2","0%");
     [
       {o:"0%", c:"rgba(242,220,160,.85)"},
-      {o:"40%", c:"rgba(99,211,255,.85)"},
+      {o:"45%", c:"rgba(99,211,255,.85)"},
       {o:"100%",c:"rgba(99,211,255,.18)"}
     ].forEach(s=>{
       const st=document.createElementNS(svg.namespaceURI,"stop"); st.setAttribute("offset",s.o); st.setAttribute("stop-color",s.c); gradTrail.appendChild(st);
@@ -247,48 +246,59 @@
 
     defs.appendChild(gradNeon); defs.appendChild(gradTrail); svg.appendChild(defs);
 
-    // Neon stroked rounded box
-    const boxW = Math.min(360, area.width * 0.48);
-    const boxH = 74;
+    // Layout numbers
+    const boxW = Math.min(420, area.width * 0.44);
+    const boxH = 78;
     const boxX = 16;
-    const boxY = Math.max(10, area.height * 0.16);
+    const boxY = Math.max(10, area.height * 0.18);
+
+    // Neon stroked rounded box (alive + draw)
     const rect = document.createElementNS(svg.namespaceURI, "rect");
     rect.setAttribute("x", boxX); rect.setAttribute("y", boxY);
     rect.setAttribute("width", boxW); rect.setAttribute("height", boxH);
     rect.setAttribute("rx", 14); rect.setAttribute("ry", 14);
-    rect.setAttribute("class","neon-stroke dash-anim");
+    rect.setAttribute("class","neon-stroke dash-anim neonPulse");
     svg.appendChild(rect);
 
-    // Continuation line from box center-right → right edge
+    // Continuation line from box center-right → far right edge of Section 3
     const midY = boxY + boxH/2;
     const line = document.createElementNS(svg.namespaceURI, "line");
     line.setAttribute("x1", boxX + boxW); line.setAttribute("y1", midY);
-    line.setAttribute("x2", area.width - 10); line.setAttribute("y2", midY);
-    line.setAttribute("class","cont-line dash-anim slow");
+    line.setAttribute("x2", area.width - 6); line.setAttribute("y2", midY);
+    line.setAttribute("class","cont-line dash-anim slow neonPulse");
     svg.appendChild(line);
 
-    // Domain text inside box
+    // Domain text inside box (fixed label per request)
     const label = document.createElementNS(svg.namespaceURI, "text");
     label.setAttribute("x", boxX + 16); label.setAttribute("y", boxY + boxH/2 + 6);
     label.setAttribute("fill", "#ddeaef");
     label.setAttribute("font-family", "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif");
-    label.setAttribute("font-weight","700");
+    label.setAttribute("font-weight","800");
     label.setAttribute("font-size","18");
-    label.textContent = lsHost();
+    label.textContent = "yourcompany.com";
     svg.appendChild(label);
 
     canvas.appendChild(svg);
 
-    // Copy block (heading + paragraph)
+    // Copy block to the RIGHT of the box; if space is tight, place below.
     const copy = document.createElement("div");
     copy.className = "copy";
-    copy.style.left = (area.left + 16) + "px";
-    copy.style.top  = (midY + 26) + "px";
+    const rightRoom = area.width - (boxX + boxW + 24);
+    const sideBySide = rightRoom > 280;
+
+    if (sideBySide){
+      copy.style.left = (area.left + boxX + boxW + 24) + "px";
+      copy.style.top  = (area.top + boxY - 2) + "px";
+      copy.style.maxWidth = Math.min(520, rightRoom) + "px";
+    } else {
+      copy.style.left = (area.left + boxX) + "px";
+      copy.style.top  = (area.top + boxY + boxH + 20) + "px";
+      copy.style.maxWidth = Math.min(520, area.width - 32) + "px";
+    }
+
     copy.innerHTML = `
-      <div style="font:600 clamp(20px,2.4vw,26px) 'Newsreader', Georgia, serif; letter-spacing:.2px;">
-        We start with <span style="background:linear-gradient(180deg,#fff,#cfe9ff);-webkit-background-clip:text;background-clip:text;color:transparent">your company</span>.
-      </div>
-      <p>We read your site and data to learn what matters, then our system builds simple metrics around your strengths. With that map in hand, we move forward to find real buyers who match it.</p>
+      <div class="title">We start with your company.</div>
+      <p>We read your company and data to learn what matters. Then our system builds simple metrics around your strengths. With that map, we move forward to find real buyers who match your persona.</p>
     `;
     canvas.appendChild(copy);
 
@@ -297,6 +307,7 @@
   }
 
   // ---------- events ----------
+  const dotEls = Array.from(mount.querySelectorAll(".p-step"));
   dotEls.forEach(el => el.addEventListener("click", ()=> setStep(+el.dataset.i)));
   prevBtn.addEventListener("click", ()=> setStep(step-1));
   nextBtn.addEventListener("click", ()=> setStep(step+1));
