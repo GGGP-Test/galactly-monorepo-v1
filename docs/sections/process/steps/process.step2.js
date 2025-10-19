@@ -106,14 +106,14 @@
 
       // Items drawn in order (4 metrics + trailing dots). You can tweak labels & per-item sizes.
       ITEMS: [
-        { type: "circle",  label: "Product-packaging reliance",          // how much output depends on packaging fit/quality
+        { type: "circle",  label: "Product-Packaging Reliance",          // how much output depends on packaging fit/quality
           circleDiamRatio: null,  // null => use CIRCLE_DESKTOP_DIAM_RATIO; number => override
           fontPt: null },         // null => use FONT_PT_CIRCLE
-        { type: "pill",    label: "Ops lock-in (lines/specs)",           // packaging embedded in ops & change cost
+        { type: "pill",    label: "Ops Lock-In (lines/specs)",           // packaging embedded in ops & change cost
           heightRatio: null, fontPt: null },                             
-        { type: "rect",    label: "Cadence & SKU velocity",              // reorder frequency / SKU churn
+        { type: "rect",    label: "Cadence & SKU Velocity",              // reorder frequency / SKU churn
           heightRatio: null, fontPt: null },
-        { type: "oval",    label: "Switching risk / approvals",          // legal/spec/compliance friction
+        { type: "oval",    label: "Switching Risk / Approvals",          // legal/spec/compliance friction
           heightRatio: null, fontPt: null }
       ]
     };
