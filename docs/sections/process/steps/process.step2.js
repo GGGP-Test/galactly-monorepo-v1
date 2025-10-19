@@ -3,52 +3,52 @@
   const STEP = 2;
   const NS = "http://www.w3.org/2000/svg";
 
-  // ------- config (desktop unchanged; add mobile knobs + SEO copy) -------
+  // --- config (desktop defaults preserved; add mobile knobs & copy) ---
   function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step2 = root.step2 || {};
     const dflt = {
-      /* ===== DESKTOP knobs (match Step 1 proportions; visuals intact) ===== */
-      BOX_W_RATIO: 0.1, BOX_H_RATIO: 0.12, GAP_RATIO: 0.040,
-      STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.20, NUDGE_X: -230, NUDGE_Y: -20,
-      RADIUS_RECT: 14, RADIUS_PILL: 999, RADIUS_OVAL: 999, DIAMOND_SCALE: 1.0,
-      SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true, LEFT_STOP_RATIO: 0.35,
-      RIGHT_MARGIN_PX: 16, H_LINE_Y_BIAS: -0.06, CONNECT_X_PAD: 8, LINE_STROKE_PX: 2.5,
-
-      FONT_PT_BOX: 8, FONT_PT_PILL: 8, FONT_PT_CIRCLE: 8, FONT_PT_DIAMOND: 7,
-      FONT_WEIGHT_BOX: 525,
-      FONT_FAMILY_BOX: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-      FONT_LETTER_SPACING: 0.3, LINE_HEIGHT_EM: 1.15, PADDING_X: 4, PADDING_Y: 4, UPPERCASE: false,
-
-      // === Labels (short, scannable; retention-focused) ===
+      /* ===== CONTENT ===== */
+      TITLE_SHOW: true,
+      TITLE_TEXT: "Weight Score — Who stays the longest?",
+      TITLE_PT: 14, TITLE_WEIGHT: 700,
+      TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      TITLE_LETTER_SPACING: 0.2,
+      // shape labels
       LABEL_PILL_1:    "Product–packaging reliance",
       LABEL_CIRCLE_2:  "Ops lock-in (lines/specs)",
       LABEL_RECT_3:    "Reorder cadence / SKU velocity",
       LABEL_DIAMOND_4: "Switching & compliance risk",
+      // left copy (desktop) & mobile copy
+      COPY_H_HTML: "Who becomes a long-term customer?",
+      COPY_BODY_HTML:
+        "Our <b>Weight Score</b> estimates retention by combining reliance on your packaging, operational lock-in, reorder cadence, and switching risk. It surfaces packaging buyers with high lifetime value and low churn risk so sales focuses on durable relationships.",
 
-      TITLE_SHOW: true, TITLE_TEXT: "Weight Score — Who stays the longest?",
-      TITLE_PT: 14, TITLE_WEIGHT: 700,
-      TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-      TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -28, TITLE_LETTER_SPACING: 0.2,
-
+      /* ===== DESKTOP knobs (kept aligned with step1) ===== */
+      BOX_W_RATIO: 0.10, BOX_H_RATIO: 0.12, GAP_RATIO: 0.040,
+      STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.20, NUDGE_X: -230, NUDGE_Y: -20,
+      RADIUS_PILL: 999, RADIUS_RECT: 14, DIAMOND_SCALE: 1.0,
+      SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true, LEFT_STOP_RATIO: 0.35,
+      RIGHT_MARGIN_PX: 16, H_LINE_Y_BIAS: -0.06, CONNECT_X_PAD: 8, LINE_STROKE_PX: 2.5,
+      FONT_WEIGHT_BOX: 525,
+      FONT_FAMILY_BOX: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      FONT_PT_PILL: 8, FONT_PT_CIRCLE: 8, FONT_PT_BOX: 8, FONT_PT_DIAMOND: 7,
+      FONT_LETTER_SPACING: 0.3, LINE_HEIGHT_EM: 1.15, PADDING_X: 4, PADDING_Y: 4, UPPERCASE: false,
       COPY_LEFT_RATIO: 0.035, COPY_TOP_RATIO: 0.18, COPY_NUDGE_X: 0, COPY_NUDGE_Y: 0,
       COPY_MAX_W_PX: 300, COPY_H_PT: 24, COPY_H_WEIGHT: 500,
       COPY_BODY_PT: 12, COPY_BODY_WEIGHT: 400,
       COPY_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       COPY_LINE_HEIGHT: 1.6,
-
       STROKE_PX: 2.8, GLOW_PX: 16, FLOW_SPEED_S: 6.5,
       COLOR_CYAN: "rgba(99,211,255,0.95)", COLOR_GOLD: "rgba(242,220,160,0.92)",
       REDUCE_MOTION: false, DOTS_COUNT: 3, DOTS_SIZE_PX: 2.2, DOTS_GAP_PX: 26, DOTS_Y_OFFSET: 26,
 
-      BP_SMALL_W: 640, BP_MED_W: 900,
-      BP_SMALL_SCALE: 0.84, BP_MED_SCALE: 0.92,
-
-      /* ===== MOBILE knobs (do NOT affect desktop) ===== */
+      /* ===== MOBILE knobs (phones only) ===== */
       MOBILE_BREAKPOINT: 640,
       M_MAX_W: 520, M_SIDE_PAD: 16,
-      M_STACK_GAP: 14, M_BOX_MIN_H: 56, M_BORDER_PX: 2,
-      M_FONT_PT: 11, M_TITLE_PT: 16, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14
+      M_STACK_GAP: 14, M_BOX_MIN_H: 56,
+      M_BORDER_PX: 2, M_FONT_PT: 11,
+      M_TITLE_PT: 16, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14
     };
     for (const k in dflt) if (!(k in root.step2)) root.step2[k] = dflt[k];
     return root.step2;
@@ -57,7 +57,7 @@
   const reduceMotion = () =>
     (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) || C().REDUCE_MOTION;
 
-  // -------------------- shared SVG helpers (desktop) --------------------
+  /* --------------------- DESKTOP (SVG utilities – unchanged) --------------------- */
   function makeFlowGradients(svg, { spanX, y }) {
     const defs = document.createElementNS(NS, "defs");
 
@@ -96,16 +96,40 @@
     defs.appendChild(gTrail);
     svg.appendChild(defs);
   }
-  function rr(x,y,w,h,r){
+  function makeSegmentGradient(svg, x1, y, x2) {
+    const id = "seg_" + Math.random().toString(36).slice(2, 8);
+    let defs = svg.querySelector("defs");
+    if (!defs) { defs = document.createElementNS(NS, "defs"); svg.appendChild(defs); }
+    const g = document.createElementNS(NS, "linearGradient");
+    g.setAttribute("id", id);
+    g.setAttribute("gradientUnits", "userSpaceOnUse");
+    g.setAttribute("x1", x1); g.setAttribute("y1", y);
+    g.setAttribute("x2", x2); g.setAttribute("y2", y);
+    [["0%",C().COLOR_GOLD],["35%","rgba(255,255,255,.95)"],["75%",C().COLOR_CYAN],["100%","rgba(99,211,255,.60)"]]
+      .forEach(([o,c])=>{ const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); g.appendChild(s); });
+    if (!reduceMotion() && C().FLOW_SPEED_S>0){
+      const a = document.createElementNS(NS,"animateTransform");
+      a.setAttribute("attributeName","gradientTransform");
+      a.setAttribute("type","translate");
+      a.setAttribute("from","0 0"); a.setAttribute("to", `${(x2 - x1)} 0`);
+      a.setAttribute("dur", `${C().FLOW_SPEED_S}s`);
+      a.setAttribute("repeatCount","indefinite");
+      g.appendChild(a);
+    }
+    defs.appendChild(g);
+    return `url(#${id})`;
+  }
+  const rr = (x,y,w,h,r) => {
     const R = Math.min(r, Math.min(w,h)/2);
     return `M ${x+R} ${y} H ${x+w-R} Q ${x+w} ${y} ${x+w} ${y+R}
             V ${y+h-R} Q ${x+w} ${y+h} ${x+w-R} ${y+h}
             H ${x+R}   Q ${x}   ${y+h} ${x}   ${y+h-R}
             V ${y+R}   Q ${x}   ${y}   ${x+R} ${y} Z`;
-  }
-  function diamondPath(cx,cy,w,h){
+  };
+  const diamond = (cx,cy,w,h) => {
     const hw=w/2, hh=h/2; return `M ${cx} ${cy-hh} L ${cx+hw} ${cy} L ${cx} ${cy+hh} L ${cx-hw} ${cy} Z`;
-  }
+  };
+  const circlePath = (cx,cy,r) => `M ${cx-r} ${cy} a ${r} ${r} 0 1 0 ${2*r} 0 a ${r} ${r} 0 1 0 ${-2*r} 0`;
   function addPath(svg, d, stroke, sw){
     const p = document.createElementNS(NS,"path");
     p.setAttribute("d", d); p.setAttribute("fill","none");
@@ -126,78 +150,96 @@
     }, styles||{});
     d.innerHTML = html; fo.appendChild(d); svg.appendChild(fo);
   }
-  function addCircle(svg, cx, cy, r, stroke, sw){
-    const c = document.createElementNS(NS,"circle");
-    c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", r);
-    c.setAttribute("fill","none"); c.setAttribute("stroke", stroke);
-    c.setAttribute("stroke-width", sw); c.setAttribute("class","glow");
-    svg.appendChild(c); return c;
-  }
 
-  // -------------------- MOBILE (DOM, no rails/glow) --------------------
-  function ensureMobileCSS(){
-    const id="p2m-style"; if (document.getElementById(id)) return;
-    const s=document.createElement("style"); s.id=id;
-    const bp=C().MOBILE_BREAKPOINT; const cyan=C().COLOR_CYAN;
+  /* --------------------- MOBILE (DOM/CSS; no nested scroll) --------------------- */
+  function ensureMobileCSS() {
+    const id = "p2m-style";
+    if (document.getElementById(id)) return;
+    const s = document.createElement("style"); s.id = id;
+    const bp = C().MOBILE_BREAKPOINT, cyan = C().COLOR_CYAN;
+
     s.textContent = `
       @media (max-width:${bp}px){
-        #section-process, html, body { overflow-x:hidden; }
-        .p2m-wrap{ position:relative; margin:0 auto; max-width:${C().M_MAX_W}px; padding:0 ${C().M_SIDE_PAD}px 8px; }
-        .p2m-title{ text-align:center; color:#ddeaef;
+        html, body, #section-process { overflow-x:hidden; }
+        .p2m-wrap{ position:relative; margin:0 auto; max-width:${C().M_MAX_W}px; padding:0 ${C().M_SIDE_PAD}px 10px; }
+        .p2m-title{
+          text-align:center; color:#ddeaef;
           font:${C().TITLE_WEIGHT} ${C().M_TITLE_PT}pt ${C().TITLE_FAMILY};
-          letter-spacing:${C().TITLE_LETTER_SPACING}px; margin:6px 0 10px; }
+          letter-spacing:${C().TITLE_LETTER_SPACING}px; margin:6px 0 10px;
+        }
         .p2m-copy{ margin:0 auto 14px; color:#a7bacb; }
         .p2m-copy h3{ margin:0 0 8px; color:#eaf0f6; font:600 ${C().M_COPY_H_PT}px "Newsreader", Georgia, serif; }
-        .p2m-copy p{ margin:0; font:400 ${C().M_COPY_BODY_PT}px/1.55 Inter, system-ui; }
-        .p2m-stack{ display:flex; flex-direction:column; gap:${C().M_STACK_GAP}px; align-items:center; }
-        .p2m-shape{ width:100%; display:flex; justify-content:center; align-items:center; }
-        .p2m-pill, .p2m-rect{ border:${C().M_BORDER_PX}px solid ${cyan}; color:#ddeaef;
-          padding:10px 12px; text-align:center; background:rgba(255,255,255,.02);
+        .p2m-copy p { margin:0; font:400 ${C().M_COPY_BODY_PT}px/1.55 Inter, system-ui; }
+
+        .p2m-stack{ display:flex; flex-direction:column; align-items:center; gap:${C().M_STACK_GAP}px; }
+        .p2m-pill{
+          width:100%; min-height:${C().M_BOX_MIN_H}px;
+          border:${C().M_BORDER_PX}px solid ${cyan}; border-radius:9999px;
+          padding:10px 12px; display:flex; align-items:center; justify-content:center;
+          text-align:center; color:#ddeaef; background:rgba(255,255,255,.02);
           font:${C().FONT_WEIGHT_BOX} ${C().M_FONT_PT}pt ${C().FONT_FAMILY_BOX};
-          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em; }
-        .p2m-pill{ border-radius:9999px; min-height:${C().M_BOX_MIN_H}px; }
-        .p2m-rect{ border-radius:12px; min-height:${C().M_BOX_MIN_H}px; }
-        .p2m-circle{ width:75%; aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
+          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+        }
+        .p2m-circle{
+          width:56%; aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
           border-radius:9999px; display:flex; align-items:center; justify-content:center;
-          color:#ddeaef; background:rgba(255,255,255,.02);
-          font:${C().FONT_WEIGHT_BOX} ${C().M_FONT_PT}pt ${C().FONT_FAMILY_BOX}; padding:6px 10px; text-align:center; }
-        .p2m-diamond{ width:60%; aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
-          transform:rotate(45deg); background:rgba(255,255,255,.02);
-          display:flex; align-items:center; justify-content:center; }
-        .p2m-diamond > span{ transform:rotate(-45deg);
-          color:#ddeaef; font:${C().FONT_WEIGHT_BOX} ${Math.max(8,C().M_FONT_PT-1)}pt ${C().FONT_FAMILY_BOX};
-          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em; padding:8px 10px; text-align:center; }
+          padding:8px; background:rgba(255,255,255,.02); text-align:center; color:#ddeaef;
+          font:${C().FONT_WEIGHT_BOX} ${Math.max(10,C().M_FONT_PT)}pt ${C().FONT_FAMILY_BOX};
+          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+        }
+        .p2m-rect{
+          width:100%; min-height:${C().M_BOX_MIN_H}px;
+          border:${C().M_BORDER_PX}px solid ${cyan}; border-radius:14px;
+          padding:10px 12px; display:flex; align-items:center; justify-content:center;
+          text-align:center; color:#ddeaef; background:rgba(255,255,255,.02);
+          font:${C().FONT_WEIGHT_BOX} ${C().M_FONT_PT}pt ${C().FONT_FAMILY_BOX};
+          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+        }
+        .p2m-diamond{
+          width:50%; aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
+          transform:rotate(45deg); background:rgba(255,255,255,.02); margin-top:2px;
+          display:flex; align-items:center; justify-content:center;
+        }
+        .p2m-diamond > span{
+          transform:rotate(-45deg); display:flex; align-items:center; justify-content:center;
+          width:80%; height:80%; text-align:center; color:#ddeaef;
+          font:${C().FONT_WEIGHT_BOX} ${Math.max(9, C().M_FONT_PT - 1)}pt ${C().FONT_FAMILY_BOX};
+          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+          padding:4px 6px;
+        }
         .p2m-dots{ display:flex; gap:14px; justify-content:center; padding-top:6px }
         .p2m-dots i{ width:6px; height:6px; border-radius:50%; background:${cyan}; display:inline-block; }
-      }`;
+      }
+    `;
     document.head.appendChild(s);
   }
 
   function drawMobile(ctx){
     ensureMobileCSS();
-    ctx.canvas.style.position="relative"; ctx.canvas.style.inset="auto"; ctx.canvas.style.pointerEvents="auto";
+    // participate in page flow (prevents nested scrolling)
+    ctx.canvas.style.position = "relative";
+    ctx.canvas.style.inset = "auto";
+    ctx.canvas.style.pointerEvents = "auto";
 
-    const wrap=document.createElement("div"); wrap.className="p2m-wrap";
+    const wrap = document.createElement("div");
+    wrap.className = "p2m-wrap";
     wrap.innerHTML = `
       ${C().TITLE_SHOW ? `<div class="p2m-title">${C().TITLE_TEXT}</div>` : ``}
       <div class="p2m-copy">
-        <h3>Who becomes a long-term customer?</h3>
-        <p>Our <b>Weight Score</b> predicts buyer longevity by measuring reliance on your
-        packaging, operational lock-in, reorder cadence, and the risk of switching.
-        It prioritizes accounts with high lifetime value and low churn risk so your team
-        focuses on durable relationships.</p>
+        <h3>${C().COPY_H_HTML}</h3>
+        <p>${C().COPY_BODY_HTML}</p>
       </div>
       <div class="p2m-stack">
-        <div class="p2m-shape"><div class="p2m-pill">${C().LABEL_PILL_1}</div></div>
-        <div class="p2m-shape"><div class="p2m-circle">${C().LABEL_CIRCLE_2}</div></div>
-        <div class="p2m-shape"><div class="p2m-rect">${C().LABEL_RECT_3}</div></div>
-        <div class="p2m-shape"><div class="p2m-diamond"><span>${C().LABEL_DIAMOND_4}</span></div></div>
+        <div class="p2m-pill">${C().LABEL_PILL_1}</div>
+        <div class="p2m-circle">${C().LABEL_CIRCLE_2}</div>
+        <div class="p2m-rect">${C().LABEL_RECT_3}</div>
+        <div class="p2m-diamond"><span>${C().LABEL_DIAMOND_4}</span></div>
         <div class="p2m-dots"><i></i><i></i><i></i></div>
       </div>`;
     ctx.canvas.appendChild(wrap);
   }
 
-  // -------------------- DESKTOP DRAW (unchanged rails/feel) --------------------
+  /* --------------------- DESKTOP DRAW (right stack unchanged) ------------------- */
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx){
     const b = ctx.bounds;
@@ -205,7 +247,6 @@
                      (window.innerWidth <= C().MOBILE_BREAKPOINT);
     if (isMobile) return drawMobile(ctx);
 
-    // DESKTOP scene (keep behavior identical to Step 1; change shapes + labels)
     const W = b.width, H = Math.min(560, b.sH-40);
     const svg = document.createElementNS(NS,"svg");
     svg.style.position="absolute"; svg.style.left=b.left+"px"; svg.style.top=b.top+"px";
@@ -222,7 +263,7 @@
     const cx = x + boxW/2;
     const items = [];
 
-    // 1) pill
+    // 1) Pill
     { const d = rr(x,y,boxW,boxH,C().RADIUS_PILL);
       addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
       addFO(svg, x,y,boxW,boxH, C().LABEL_PILL_1,
@@ -232,16 +273,17 @@
           padding:`${C().PADDING_Y}px ${C().PADDING_X}px` });
       items.push({x,y,w:boxW,h:boxH}); y += boxH + gap;
     }
-    // 2) circle
-    { const r = Math.min(boxW, boxH) * 0.5;
-      const cxC = x + boxW/2, cyC = y + r;
-      addCircle(svg, cxC, cyC, r - Math.max(2, C().STROKE_PX/2), "url(#gradFlow)", C().STROKE_PX);
-      addFO(svg, x, y, boxW, r*2, C().LABEL_CIRCLE_2,
+    // 2) Circle (fits inside the standard track height)
+    { const r = Math.min(boxH, boxW)*0.48;
+      const cy = y + boxH/2;
+      const d = circlePath(cx, cy, r);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x, y, boxW, boxH, C().LABEL_CIRCLE_2,
         { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_CIRCLE}pt ${C().FONT_FAMILY_BOX}`,
           letterSpacing:`${C().FONT_LETTER_SPACING}px`, lineHeight:`${C().LINE_HEIGHT_EM}em` });
-      items.push({x, y, w:boxW, h:r*2}); y += (r*2) + gap;
+      items.push({x,y,w:boxW,h:boxH}); y += boxH + gap;
     }
-    // 3) rounded rectangle
+    // 3) Rounded rectangle
     { const d = rr(x,y,boxW,boxH,C().RADIUS_RECT);
       addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
       addFO(svg, x,y,boxW,boxH, C().LABEL_RECT_3,
@@ -249,9 +291,9 @@
           letterSpacing:`${C().FONT_LETTER_SPACING}px`, lineHeight:`${C().LINE_HEIGHT_EM}em` });
       items.push({x,y,w:boxW,h:boxH}); y += boxH + gap;
     }
-    // 4) diamond
+    // 4) Diamond
     { const h = boxH * C().DIAMOND_SCALE;
-      const d = diamondPath(cx, y + h/2, boxW, h);
+      const d = diamond(cx, y + h/2, boxW, h);
       addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
       addFO(svg, x,y,boxW,h, C().LABEL_DIAMOND_4,
         { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_DIAMOND}pt ${C().FONT_FAMILY_BOX}`,
@@ -260,7 +302,7 @@
       items.push({x,y,w:boxW,h}); y += h + C().DOTS_Y_OFFSET;
     }
 
-    // dots (same as Step 1)
+    // dots
     if (C().DOTS_COUNT > 0) {
       const centerX = x + boxW/2; let dotY = y;
       for (let i=0;i<C().DOTS_COUNT;i++){
@@ -275,77 +317,55 @@
     if (C().TITLE_SHOW){
       const t = document.createElementNS(NS,"text");
       const topBox = items[0];
-      t.setAttribute("x", (topBox.x + topBox.w/2) + C().TITLE_OFFSET_X);
-      t.setAttribute("y", (topBox.y) + C().TITLE_OFFSET_Y);
+      t.setAttribute("x", (topBox.x + topBox.w/2));
+      t.setAttribute("y", (topBox.y) + (-28));
       t.setAttribute("text-anchor","middle"); t.setAttribute("fill","#ddeaef");
       t.setAttribute("font-family", C().TITLE_FAMILY);
       t.setAttribute("font-weight", C().TITLE_WEIGHT);
       t.setAttribute("font-size", `${C().TITLE_PT}pt`);
-      t.textContent = C().TITLE_TEXT;
       t.style.letterSpacing = `${C().TITLE_LETTER_SPACING}px`;
+      t.textContent = C().TITLE_TEXT;
       svg.appendChild(t);
     }
 
-    // rails (unchanged)
+    // H rails (unchanged)
     if (items.length){
       const first = items[0];
       const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
-      const makeSeg = (xs, xe) => {
-        if (xe > xs){
-          const stroke = (() => {
-            const id = "seg_" + Math.random().toString(36).slice(2,8);
-            let defs = svg.querySelector("defs");
-            if (!defs) { defs=document.createElementNS(NS,"defs"); svg.appendChild(defs); }
-            const g=document.createElementNS(NS,"linearGradient");
-            g.setAttribute("id",id); g.setAttribute("gradientUnits","userSpaceOnUse");
-            g.setAttribute("x1",xs); g.setAttribute("y1",attachY);
-            g.setAttribute("x2",xe); g.setAttribute("y2",attachY);
-            [["0%",C().COLOR_GOLD],["35%","rgba(255,255,255,.95)"],["75%",C().COLOR_CYAN],["100%","rgba(99,211,255,.60)"]]
-              .forEach(([o,c])=>{ const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); g.appendChild(s); });
-            if (!reduceMotion() && C().FLOW_SPEED_S>0){
-              const a=document.createElementNS(NS,"animateTransform");
-              a.setAttribute("attributeName","gradientTransform"); a.setAttribute("type","translate");
-              a.setAttribute("from","0 0"); a.setAttribute("to", `${(xe-xs)} 0`);
-              a.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a.setAttribute("repeatCount","indefinite"); g.appendChild(a);
-            }
-            defs.appendChild(g); return `url(#${id})`;
-          })();
-          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
-        }
-      };
       if (C().SHOW_LEFT_LINE){
         const xs = W * Math.max(0, Math.min(1, C().LEFT_STOP_RATIO));
-        const xe = first.x - C().CONNECT_X_PAD; makeSeg(xs, xe);
+        const xe = first.x - C().CONNECT_X_PAD;
+        if (xe > xs){ const stroke = makeSegmentGradient(svg, xs, attachY, xe);
+          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX); }
       }
       if (C().SHOW_RIGHT_LINE){
         const xs = first.x + first.w + C().CONNECT_X_PAD;
-        const xe = W - C().RIGHT_MARGIN_PX;    makeSeg(xs, xe);
+        const xe = W - C().RIGHT_MARGIN_PX;
+        if (xe > xs){ const stroke = makeSegmentGradient(svg, xs, attachY, xe);
+          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX); }
       }
     }
 
-    // vertical connectors
+    // V connectors
     for (let i=0;i<items.length-1;i++){
-      const a=items[i], b2=items[i+1];
-      const xMid = a.x + a.w/2, y1=a.y+a.h, y2=b2.y, pad=Math.max(2, C().STROKE_PX);
+      const a = items[i], b2 = items[i+1];
+      const xMid = a.x + a.w/2;
+      const y1 = a.y + a.h;
+      const y2 = b2.y;
+      const pad = Math.max(2, C().STROKE_PX);
       addPath(svg, `M ${xMid} ${y1+pad} V ${y2-pad}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
     }
 
-    // copy (left)
+    // left copy (desktop)
     const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
     const top  = b.top  + H * C().COPY_TOP_RATIO  + C().COPY_NUDGE_Y;
-    const html = `
-      <h3>Who becomes a long-term customer?</h3>
-      <p>Our <b>Weight Score</b> estimates retention by combining four signals:
-      how much the <b>product depends on packaging</b>, how deeply packaging is
-      <b>embedded in operations</b>, the <b>reorder cadence & SKU velocity</b>, and
-      the <b>risk of switching</b> due to specs, approvals, or compliance.
-      It highlights accounts likely to stay and grow, not just click.</p>`;
+    const html = `<h3>${C().COPY_H_HTML}</h3><p>${C().COPY_BODY_HTML}</p>`;
     if (typeof ctx.mountCopy === "function"){
       const el = ctx.mountCopy({ top, left, html });
       el.style.maxWidth = `${C().COPY_MAX_W_PX}px`;
       el.style.fontFamily = C().COPY_FAMILY;
-      const h3 = el.querySelector("h3"); if (h3) h3.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
-      const p  = el.querySelector("p");  if (p)  p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
+      const h = el.querySelector("h3"); if (h) h.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
+      const p = el.querySelector("p"); if (p) p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
     }
   };
 })();
