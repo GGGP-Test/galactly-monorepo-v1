@@ -64,7 +64,7 @@
       MOBILE_BREAKPOINT: 640,   // <= triggers the mobile DOM layout
       M_MAX_W: 520,             // max content width
       M_SIDE_PAD: 16,           // page side padding
-      M_STACK_GAP: 14,          // gap between mobile shapes
+      M_STACK_GAP: 44,          // gap between mobile shapes
       M_BOX_MIN_H: 56,          // min height of each mobile box
       M_BORDER_PX: 2,           // outline weight (mobile)
       M_FONT_PT: 11,            // label size inside mobile shapes
