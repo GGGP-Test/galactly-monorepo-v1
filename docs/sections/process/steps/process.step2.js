@@ -3,131 +3,164 @@
   const STEP = 2;
   const NS = "http://www.w3.org/2000/svg";
 
-  // --- config (desktop kept intact; add per-shape + mobile knobs) ---
+  // -------------------- CONFIG (DESKTOP UNCHANGED; MOBILE ONLY VIA M_* KNOBS) --------------------
   function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step2 = root.step2 || {};
     const dflt = {
-      /* ================== CONTENT ================== */
-      TITLE_SHOW: true,
-      TITLE_TEXT: "Weight Score — Who stays the longest?",
-      TITLE_PT: 14, TITLE_WEIGHT: 700,
-      TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-      TITLE_LETTER_SPACING: 0.2,
-
-      // left copy (SEO-tuned)
-      COPY_H_HTML: "Who becomes a long-term customer?",
-      COPY_BODY_HTML:
-        "Our <b>Weight Score</b> estimates retention by combining reliance on your packaging, operational lock-in, reorder cadence, and switching risk. It highlights packaging buyers with higher lifetime value and lower churn risk so your team focuses on durable relationships.",
-
-      // labels
-      LABEL_PILL_1:    "Product–packaging reliance",
-      LABEL_CIRCLE_2:  "Ops lock-in (lines/specs)",
-      LABEL_RECT_3:    "Reorder cadence / SKU velocity",
-      LABEL_DIAMOND_4: "Switching & compliance risk",
-
-      /* ================== DESKTOP (unchanged rails/placement) ================== */
-      // Stack position (right column)
+      // ===== DESKTOP knobs (mirrors step1 so visuals/layout stay consistent) =====
+      BOX_W_RATIO: 0.10,
+      BOX_H_RATIO: 0.12,
+      GAP_RATIO: 0.035,
       STACK_X_RATIO: 0.705,
-      STACK_TOP_RATIO: 0.20,
-      GAP_RATIO: 0.040,
+      STACK_TOP_RATIO: 0.21,
       NUDGE_X: -230,
       NUDGE_Y: -20,
+      RADIUS_RECT: 14,
+      RADIUS_PILL: 18,
+      RADIUS_OVAL: 999,
+      DIAMOND_SCALE: 1,
+      SHOW_LEFT_LINE: true,
+      SHOW_RIGHT_LINE: true,
+      LEFT_STOP_RATIO: 0.35,
+      RIGHT_MARGIN_PX: 16,
+      H_LINE_Y_BIAS: -0.06,
+      CONNECT_X_PAD: 8,
+      LINE_STROKE_PX: 2.5,
 
-      // Per-shape sizing (each shape uses its own W/H ratios)
-      PILL_W_RATIO:    0.10,  PILL_H_RATIO:    0.12,  PILL_RADIUS: 999,
-      CIRCLE_W_RATIO:  0.10,  CIRCLE_DIAM_RATIO:0.12, CIRCLE_LABEL_PT: 8,
-      RECT_W_RATIO:    0.10,  RECT_H_RATIO:    0.12,  RECT_RADIUS: 14,
-      DIAMOND_W_RATIO: 0.10,  DIAMOND_H_RATIO: 0.12,  DIAMOND_SCALE: 1.0,
-
-      // Lines/rails (same look as step 1)
-      SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true,
-      LEFT_STOP_RATIO: 0.35, RIGHT_MARGIN_PX: 16,
-      H_LINE_Y_BIAS: -0.06, CONNECT_X_PAD: 8, LINE_STROKE_PX: 2.5,
-
-      // Typography inside shapes (desktop)
+      FONT_PT_CIRCLE: 8,
+      FONT_PT_BOX: 8,
+      FONT_PT_DIAMOND: 7,
       FONT_WEIGHT_BOX: 525,
-      FONT_FAMILY_BOX: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-      FONT_PT_PILL: 8, FONT_PT_BOX: 8, FONT_PT_DIAMOND: 7,
-      FONT_LETTER_SPACING: 0.3, LINE_HEIGHT_EM: 1.15,
-      PADDING_X: 4, PADDING_Y: 4, UPPERCASE: false,
+      FONT_FAMILY_BOX:
+        'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      FONT_LETTER_SPACING: 0.3,
+      LINE_HEIGHT_EM: 1.15,
+      PADDING_X: 4,
+      PADDING_Y: 4,
+      UPPERCASE: false,
+
+      // Title (desktop)
+      TITLE_SHOW: true,
+      TITLE_TEXT: "Weight Score — Who stays the longest?",
+      TITLE_PT: 14,
+      TITLE_WEIGHT: 700,
+      TITLE_FAMILY:
+        'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      TITLE_OFFSET_X: 0,
+      TITLE_OFFSET_Y: -28,
+      TITLE_LETTER_SPACING: 0.2,
 
       // Left copy block (desktop)
-      COPY_LEFT_RATIO: 0.035, COPY_TOP_RATIO: 0.18,
-      COPY_NUDGE_X: 0, COPY_NUDGE_Y: 0,
+      COPY_LEFT_RATIO: 0.035,
+      COPY_TOP_RATIO: 0.18,
+      COPY_NUDGE_X: 0,
+      COPY_NUDGE_Y: 0,
       COPY_MAX_W_PX: 300,
-      COPY_H_PT: 24, COPY_H_WEIGHT: 500,
-      COPY_BODY_PT: 12, COPY_BODY_WEIGHT: 400,
-      COPY_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      COPY_H_PT: 24,
+      COPY_H_WEIGHT: 500,
+      COPY_BODY_PT: 12,
+      COPY_BODY_WEIGHT: 400,
+      COPY_FAMILY:
+        'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       COPY_LINE_HEIGHT: 1.6,
 
       // Animation & colors
-      STROKE_PX: 2.8, GLOW_PX: 16, FLOW_SPEED_S: 6.5, // 0 disables flow
-      REDUCE_MOTION: false,
-      COLOR_CYAN: "rgba(99,211,255,0.95)", COLOR_GOLD: "rgba(242,220,160,0.92)",
+      STROKE_PX: 2.8,
+      GLOW_PX: 16,
+      FLOW_SPEED_S: 6.5,      // 0 disables flow animation
+      REDUCE_MOTION: false,   // force-off animations (overrides user pref)
+      COLOR_CYAN: "rgba(99,211,255,0.95)",
+      COLOR_GOLD: "rgba(242,220,160,0.92)",
 
-      // Dots under last shape
-      DOTS_COUNT: 3, DOTS_SIZE_PX: 2.2, DOTS_GAP_PX: 26, DOTS_Y_OFFSET: 26,
+      // Dots under the last shape
+      DOTS_COUNT: 3,
+      DOTS_SIZE_PX: 2.2,
+      DOTS_GAP_PX: 26,
+      DOTS_Y_OFFSET: 26,
 
-      /* ================== MOBILE (phones only; desktop unaffected) ================== */
-      MOBILE_BREAKPOINT: 640,            // <= px uses the mobile DOM stack
-      M_MAX_W: 520,                      // max content width inside the phone layout
-      M_SIDE_PAD: 16,                    // page side padding
-      M_STACK_GAP: 14,                   // gap between mobile shapes
-      M_BORDER_PX: 2,                    // outline weight on mobile
-      M_FONT_PT: 11,                     // base label size in mobile shapes
-      M_TITLE_PT: 16,                    // mobile title size
-      M_COPY_H_PT: 22,                   // <h3> size in mobile copy
-      M_COPY_BODY_PT: 14,                // body copy size in mobile copy
-      // per-shape sizing on mobile (percent of wrap width / fixed min heights)
-      M_PILL_MIN_H: 56,
-      M_CIRCLE_SIZE_PCT: 0.58,           // 0..1 of wrap width (diameter)
-      M_RECT_MIN_H: 56,
-      M_DIAMOND_SIZE_PCT: 0.50           // 0..1 of wrap width
+      // ===== MOBILE (only phones; desktop unaffected) =====
+      MOBILE_BREAKPOINT: 640,   // <= px uses the mobile DOM stack
+      M_MAX_W: 520,             // max content width inside the phone layout
+      M_SIDE_PAD: 16,           // page side padding
+      M_STACK_GAP: 14,          // gap between mobile shapes
+      M_BOX_MIN_H: 56,          // min height for rectangle / oval
+      M_BORDER_PX: 2,           // outline weight on mobile
+      M_FONT_PT: 11,            // label text size in mobile shapes
+      M_TITLE_PT: 16,           // mobile title size
+      M_COPY_H_PT: 22,          // <h3> size in mobile copy
+      M_COPY_BODY_PT: 14,       // body copy size in mobile copy
+
+      // Shape sizes (desktop + mobile)
+      CIRCLE_DESKTOP_DIAM_RATIO: 0.10, // of scene width
+      CIRCLE_MOBILE_DIAM_PX: 96,       // mobile circle diameter
+
+      // ===== Labels for Step 2 (SEO-tuned) =====
+      TITLE_SEO: "Who becomes a long-term customer?",
+      COPY_SEO_HTML:
+        '<h3>Who becomes a long-term customer?</h3>\
+         <p>Our <b>Weight Score</b> estimates retention by combining four signals:\
+         how much the product depends on packaging, how deeply packaging is embedded in operations,\
+         reorder cadence & SKU velocity, and the risk of switching due to specs, approvals, or compliance.\
+         It highlights accounts likely to stay and grow — not just click.</p>',
+
+      // Items drawn in order (4 metrics + trailing dots). You can tweak labels & per-item sizes.
+      ITEMS: [
+        { type: "circle",  label: "Product-packaging reliance",          // how much output depends on packaging fit/quality
+          circleDiamRatio: null,  // null => use CIRCLE_DESKTOP_DIAM_RATIO; number => override
+          fontPt: null },         // null => use FONT_PT_CIRCLE
+        { type: "pill",    label: "Ops lock-in (lines/specs)",           // packaging embedded in ops & change cost
+          heightRatio: null, fontPt: null },                             
+        { type: "rect",    label: "Cadence & SKU velocity",              // reorder frequency / SKU churn
+          heightRatio: null, fontPt: null },
+        { type: "oval",    label: "Switching risk / approvals",          // legal/spec/compliance friction
+          heightRatio: null, fontPt: null }
+      ]
     };
+    // fill in any missing keys without overwriting user overrides
     for (const k in dflt) if (!(k in root.step2)) root.step2[k] = dflt[k];
     return root.step2;
   }
 
+  // -------------------- helpers (standalone; do NOT change desktop styles) --------------------
   const reduceMotion = () =>
     (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) || C().REDUCE_MOTION;
 
-  /* ---------------- SVG helpers (desktop) ---------------- */
   function makeFlowGradients(svg, { spanX, y }) {
     const defs = document.createElementNS(NS, "defs");
+
     const gFlow = document.createElementNS(NS, "linearGradient");
-    gFlow.id = "gradFlow";
-    gFlow.setAttribute("gradientUnits","userSpaceOnUse");
+    gFlow.id = "gradFlow"; gFlow.setAttribute("gradientUnits", "userSpaceOnUse");
     gFlow.setAttribute("x1", 0); gFlow.setAttribute("y1", y);
     gFlow.setAttribute("x2", spanX); gFlow.setAttribute("y2", y);
-    [["0%",C().COLOR_GOLD],["35%","rgba(255,255,255,.95)"],["75%",C().COLOR_CYAN],["100%","rgba(99,211,255,.60)"]]
-      .forEach(([o,c])=>{ const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gFlow.appendChild(s); });
-    if (!reduceMotion() && C().FLOW_SPEED_S>0){
-      const a1 = document.createElementNS(NS,"animateTransform");
-      a1.setAttribute("attributeName","gradientTransform"); a1.setAttribute("type","translate");
-      a1.setAttribute("from","0 0"); a1.setAttribute("to", `${spanX} 0`);
-      a1.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a1.setAttribute("repeatCount","indefinite");
+    [["0%", C().COLOR_GOLD], ["35%", "rgba(255,255,255,.95)"], ["75%", C().COLOR_CYAN], ["100%", "rgba(99,211,255,.60)"]]
+      .forEach(([o, c]) => { const s = document.createElementNS(NS, "stop"); s.setAttribute("offset", o); s.setAttribute("stop-color", c); gFlow.appendChild(s); });
+    if (!reduceMotion() && C().FLOW_SPEED_S > 0) {
+      const a1 = document.createElementNS(NS, "animateTransform");
+      a1.setAttribute("attributeName", "gradientTransform"); a1.setAttribute("type", "translate");
+      a1.setAttribute("from", "0 0"); a1.setAttribute("to", `${spanX} 0`);
+      a1.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a1.setAttribute("repeatCount", "indefinite");
       gFlow.appendChild(a1);
     }
     defs.appendChild(gFlow);
 
-    const gTrail = document.createElementNS(NS,"linearGradient");
-    gTrail.id = "gradTrailFlow";
-    gTrail.setAttribute("gradientUnits","userSpaceOnUse");
+    const gTrail = document.createElementNS(NS, "linearGradient");
+    gTrail.id = "gradTrailFlow"; gTrail.setAttribute("gradientUnits", "userSpaceOnUse");
     gTrail.setAttribute("x1", spanX); gTrail.setAttribute("y1", y);
-    gTrail.setAttribute("x2", spanX*2); gTrail.setAttribute("y2", y);
-    [["0%",C().COLOR_GOLD],["45%",C().COLOR_CYAN],["100%","rgba(99,211,255,.18)"]]
-      .forEach(([o,c])=>{ const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gTrail.appendChild(s); });
-    if (!reduceMotion() && C().FLOW_SPEED_S>0){
-      const a2 = document.createElementNS(NS,"animateTransform");
-      a2.setAttribute("attributeName","gradientTransform"); a2.setAttribute("type","translate");
-      a2.setAttribute("from","0 0"); a2.setAttribute("to", `${spanX} 0`);
-      a2.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a2.setAttribute("repeatCount","indefinite");
+    gTrail.setAttribute("x2", spanX * 2); gTrail.setAttribute("y2", y);
+    [["0%", C().COLOR_GOLD], ["45%", C().COLOR_CYAN], ["100%", "rgba(99,211,255,.18)"]]
+      .forEach(([o, c]) => { const s = document.createElementNS(NS, "stop"); s.setAttribute("offset", o); s.setAttribute("stop-color", c); gTrail.appendChild(s); });
+    if (!reduceMotion() && C().FLOW_SPEED_S > 0) {
+      const a2 = document.createElementNS(NS, "animateTransform");
+      a2.setAttribute("attributeName", "gradientTransform"); a2.setAttribute("type", "translate");
+      a2.setAttribute("from", "0 0"); a2.setAttribute("to", `${spanX} 0`);
+      a2.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a2.setAttribute("repeatCount", "indefinite");
       gTrail.appendChild(a2);
     }
     defs.appendChild(gTrail);
     svg.appendChild(defs);
   }
+
   function makeSegmentGradient(svg, x1, y, x2) {
     const id = "seg_" + Math.random().toString(36).slice(2, 8);
     let defs = svg.querySelector("defs");
@@ -137,287 +170,284 @@
     g.setAttribute("gradientUnits", "userSpaceOnUse");
     g.setAttribute("x1", x1); g.setAttribute("y1", y);
     g.setAttribute("x2", x2); g.setAttribute("y2", y);
-    [["0%",C().COLOR_GOLD],["35%","rgba(255,255,255,.95)"],["75%",C().COLOR_CYAN],["100%","rgba(99,211,255,.60)"]]
-      .forEach(([o,c])=>{ const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); g.appendChild(s); });
-    if (!reduceMotion() && C().FLOW_SPEED_S>0){
-      const a = document.createElementNS(NS,"animateTransform");
-      a.setAttribute("attributeName","gradientTransform"); a.setAttribute("type","translate");
-      a.setAttribute("from","0 0"); a.setAttribute("to", `${(x2 - x1)} 0`);
-      a.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a.setAttribute("repeatCount","indefinite");
+    [["0%", C().COLOR_GOLD], ["35%", "rgba(255,255,255,.95)"], ["75%", C().COLOR_CYAN], ["100%", "rgba(99,211,255,.60)"]]
+      .forEach(([o, c]) => { const s = document.createElementNS(NS, "stop"); s.setAttribute("offset", o); s.setAttribute("stop-color", c); g.appendChild(s); });
+    if (!reduceMotion() && C().FLOW_SPEED_S > 0) {
+      const a = document.createElementNS(NS, "animateTransform");
+      a.setAttribute("attributeName", "gradientTransform");
+      a.setAttribute("type", "translate"); a.setAttribute("from", "0 0"); a.setAttribute("to", `${(x2 - x1)} 0`);
+      a.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a.setAttribute("repeatCount", "indefinite");
       g.appendChild(a);
     }
     defs.appendChild(g);
     return `url(#${id})`;
   }
-  const rr = (x,y,w,h,r) => {
-    const R = Math.min(r, Math.min(w,h)/2);
-    return `M ${x+R} ${y} H ${x+w-R} Q ${x+w} ${y} ${x+w} ${y+R}
-            V ${y+h-R} Q ${x+w} ${y+h} ${x+w-R} ${y+h}
-            H ${x+R}   Q ${x}   ${y+h} ${x}   ${y+h-R}
-            V ${y+R}   Q ${x}   ${y}   ${x+R} ${y} Z`;
-  };
-  const diamond = (cx,cy,w,h) => {
-    const hw=w/2, hh=h/2; return `M ${cx} ${cy-hh} L ${cx+hw} ${cy} L ${cx} ${cy+hh} L ${cx-hw} ${cy} Z`;
-  };
-  const circlePath = (cx,cy,r) => `M ${cx-r} ${cy} a ${r} ${r} 0 1 0 ${2*r} 0 a ${r} ${r} 0 1 0 ${-2*r} 0`;
 
-  function addPath(svg, d, stroke, sw){
-    const p = document.createElementNS(NS,"path");
-    p.setAttribute("d", d); p.setAttribute("fill","none");
-    p.setAttribute("stroke", stroke); p.setAttribute("stroke-width", sw);
-    p.setAttribute("stroke-linejoin","round"); p.setAttribute("stroke-linecap","round");
-    p.setAttribute("class","glow"); svg.appendChild(p); return p;
+  const rr = (x, y, w, h, r) => {
+    const R = Math.min(r, Math.min(w, h) / 2);
+    return `M ${x + R} ${y} H ${x + w - R} Q ${x + w} ${y} ${x + w} ${y + R}
+            V ${y + h - R} Q ${x + w} ${y + h} ${x + w - R} ${y + h}
+            H ${x + R} Q ${x} ${y + h} ${x} ${y + h - R}
+            V ${y + R} Q ${x} ${y} ${x + R} ${y} Z`;
+  };
+
+  function addPath(svg, d, stroke, sw) {
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", d);
+    p.setAttribute("fill", "none");
+    p.setAttribute("stroke", stroke);
+    p.setAttribute("stroke-width", sw);
+    p.setAttribute("stroke-linejoin", "round");
+    p.setAttribute("stroke-linecap", "round");
+    p.setAttribute("class", "glow");
+    svg.appendChild(p);
+    return p;
   }
-  function addFO(svg, x,y,w,h, html, styles){
-    const fo = document.createElementNS(NS,"foreignObject");
-    fo.setAttribute("x",x); fo.setAttribute("y",y); fo.setAttribute("width",w); fo.setAttribute("height",h);
+
+  function addCircle(svg, cx, cy, r, stroke, sw) {
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", r);
+    c.setAttribute("fill", "none"); c.setAttribute("stroke", stroke);
+    c.setAttribute("stroke-width", sw); c.setAttribute("class", "glow");
+    svg.appendChild(c);
+    return c;
+  }
+
+  function addFO(svg, x, y, w, h, html, styles) {
+    const fo = document.createElementNS(NS, "foreignObject");
+    fo.setAttribute("x", x); fo.setAttribute("y", y);
+    fo.setAttribute("width", w); fo.setAttribute("height", h);
     const d = document.createElement("div");
-    d.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
+    d.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
     Object.assign(d.style, {
-      width:"100%", height:"100%", display:"flex",
-      alignItems:"center", justifyContent:"center", textAlign:"center",
-      color:"#ddeaef", whiteSpace:"pre-wrap", wordBreak:"break-word",
-      pointerEvents:"none"
-    }, styles||{});
-    d.innerHTML = html; fo.appendChild(d); svg.appendChild(fo);
+      width: "100%", height: "100%", display: "flex",
+      alignItems: "center", justifyContent: "center", textAlign: "center",
+      color: "#ddeaef", whiteSpace: "pre-wrap", wordBreak: "break-word", pointerEvents: "none"
+    }, styles || {});
+    d.innerHTML = html;
+    fo.appendChild(d);
+    svg.appendChild(fo);
   }
 
-  /* ---------------- MOBILE (DOM/CSS; no nested scroll) ---------------- */
+  // -------------------- MOBILE: DOM layout (no rail; prevents nested scroll) --------------------
   function ensureMobileCSS() {
     const id = "p2m-style";
     if (document.getElementById(id)) return;
-    const bp = C().MOBILE_BREAKPOINT, cyan = C().COLOR_CYAN;
 
     const s = document.createElement("style"); s.id = id;
-    s.textContent = `
-      @media (max-width:${bp}px){
-        html, body, #section-process { overflow-x:hidden; }
-        .p2m-wrap{ position:relative; margin:0 auto; max-width:${C().M_MAX_W}px; padding:0 ${C().M_SIDE_PAD}px 10px; }
-        .p2m-title{
-          text-align:center; color:#ddeaef;
-          font:${C().TITLE_WEIGHT} ${C().M_TITLE_PT}pt ${C().TITLE_FAMILY};
-          letter-spacing:${C().TITLE_LETTER_SPACING}px; margin:6px 0 10px;
-        }
-        .p2m-copy{ margin:0 auto 14px; color:#a7bacb; }
-        .p2m-copy h3{ margin:0 0 8px; color:#eaf0f6; font:600 ${C().M_COPY_H_PT}px "Newsreader", Georgia, serif; }
-        .p2m-copy p { margin:0; font:400 ${C().M_COPY_BODY_PT}px/1.55 Inter, system-ui; }
+    const bp = C().MOBILE_BREAKPOINT;
+    const cyan = C().COLOR_CYAN;
 
-        .p2m-stack{ display:flex; flex-direction:column; align-items:center; gap:${C().M_STACK_GAP}px; }
-
-        .p2m-pill{
-          width:100%; min-height:${C().M_PILL_MIN_H}px;
-          border:${C().M_BORDER_PX}px solid ${cyan}; border-radius:9999px;
-          padding:10px 12px; display:flex; align-items:center; justify-content:center;
-          text-align:center; color:#ddeaef; background:rgba(255,255,255,.02);
-          font:${C().FONT_WEIGHT_BOX} ${C().M_FONT_PT}pt ${C().FONT_FAMILY_BOX};
-          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
-        }
-        .p2m-circle{
-          width:${Math.round(C().M_CIRCLE_SIZE_PCT*100)}%;
-          aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
-          border-radius:9999px; display:flex; align-items:center; justify-content:center;
-          padding:8px; background:rgba(255,255,255,.02); text-align:center; color:#ddeaef;
-          font:${C().FONT_WEIGHT_BOX} ${Math.max(10,C().M_FONT_PT)}pt ${C().FONT_FAMILY_BOX};
-          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
-        }
-        .p2m-rect{
-          width:100%; min-height:${C().M_RECT_MIN_H}px;
-          border:${C().M_BORDER_PX}px solid ${cyan}; border-radius:14px;
-          padding:10px 12px; display:flex; align-items:center; justify-content:center;
-          text-align:center; color:#ddeaef; background:rgba(255,255,255,.02);
-          font:${C().FONT_WEIGHT_BOX} ${C().M_FONT_PT}pt ${C().FONT_FAMILY_BOX};
-          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
-        }
-        .p2m-diamond{
-          width:${Math.round(C().M_DIAMOND_SIZE_PCT*100)}%;
-          aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
-          transform:rotate(45deg); background:rgba(255,255,255,.02); margin-top:2px;
-          display:flex; align-items:center; justify-content:center;
-        }
-        .p2m-diamond > span{
-          transform:rotate(-45deg); display:flex; align-items:center; justify-content:center;
-          width:80%; height:80%; text-align:center; color:#ddeaef;
-          font:${C().FONT_WEIGHT_BOX} ${Math.max(9, C().M_FONT_PT - 1)}pt ${C().FONT_FAMILY_BOX};
-          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
-          padding:4px 6px;
-        }
-        .p2m-dots{ display:flex; gap:14px; justify-content:center; padding-top:6px }
-        .p2m-dots i{ width:6px; height:6px; border-radius:50%; background:${cyan}; display:inline-block; }
-      }
-    `;
+    s.textContent =
+      "@media (max-width:" + bp + "px){" +
+      "  html,body,#section-process{overflow-x:hidden}" +
+      "  .p2m-wrap{position:relative;margin:0 auto;max-width:" + C().M_MAX_W + "px;padding:0 " + C().M_SIDE_PAD + "px 12px}" +
+      "  .p2m-title{text-align:center;color:#ddeaef;font:" + C().TITLE_WEIGHT + " " + C().M_TITLE_PT + "pt " + C().TITLE_FAMILY + ";letter-spacing:" + C().TITLE_LETTER_SPACING + "px;margin:6px 0 10px}" +
+      "  .p2m-copy{margin:0 auto 14px;color:#a7bacb}" +
+      "  .p2m-copy h3{margin:0 0 8px;color:#eaf0f6;font:600 " + C().M_COPY_H_PT + "px Newsreader, Georgia, serif}" +
+      "  .p2m-copy p{margin:0;font:400 " + C().M_COPY_BODY_PT + "px/1.55 Inter, system-ui}" +
+      "  .p2m-stack{display:flex;flex-direction:column;align-items:center;gap:" + C().M_STACK_GAP + "px}" +
+      "  .p2m-box{width:100%;min-height:" + C().M_BOX_MIN_H + "px;border:" + C().M_BORDER_PX + "px solid " + cyan + ";border-radius:14px;padding:10px 12px;display:flex;align-items:center;justify-content:center;text-align:center;color:#ddeaef;background:rgba(255,255,255,.02);font:" + C().FONT_WEIGHT_BOX + " " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:" + C().FONT_LETTER_SPACING + "px;line-height:" + C().LINE_HEIGHT_EM + "em}" +
+      "  .p2m-oval{border-radius:9999px}" +
+      "  .p2m-circle{width:" + C().CIRCLE_MOBILE_DIAM_PX + "px;height:" + C().CIRCLE_MOBILE_DIAM_PX + "px;border:" + C().M_BORDER_PX + "px solid " + cyan + ";border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.02);color:#ddeaef;text-align:center;padding:6px;font:" + C().FONT_WEIGHT_BOX + " " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:" + C().FONT_LETTER_SPACING + "px;line-height:" + C().LINE_HEIGHT_EM + "em}" +
+      "  .p2m-dots{display:flex;gap:14px;justify-content:center;padding-top:8px}" +
+      "  .p2m-dots i{width:6px;height:6px;border-radius:50%;background:" + cyan + ";display:inline-block}" +
+      "}";
     document.head.appendChild(s);
   }
 
-  function drawMobile(ctx){
+  function drawMobile(ctx) {
     ensureMobileCSS();
-    ctx.canvas.style.position = "relative"; // participate in page flow
+
+    // let the canvas flow with the page (prevents the “scroll-inside-scroll” trap)
+    ctx.canvas.style.position = "relative";
     ctx.canvas.style.inset = "auto";
     ctx.canvas.style.pointerEvents = "auto";
 
     const wrap = document.createElement("div");
     wrap.className = "p2m-wrap";
-    wrap.innerHTML = `
-      ${C().TITLE_SHOW ? `<div class="p2m-title">${C().TITLE_TEXT}</div>` : ``}
-      <div class="p2m-copy">
-        <h3>${C().COPY_H_HTML}</h3>
-        <p>${C().COPY_BODY_HTML}</p>
-      </div>
-      <div class="p2m-stack">
-        <div class="p2m-pill">${C().LABEL_PILL_1}</div>
-        <div class="p2m-circle">${C().LABEL_CIRCLE_2}</div>
-        <div class="p2m-rect">${C().LABEL_RECT_3}</div>
-        <div class="p2m-diamond"><span>${C().LABEL_DIAMOND_4}</span></div>
-        <div class="p2m-dots"><i></i><i></i><i></i></div>
-      </div>`;
+
+    wrap.innerHTML =
+      (C().TITLE_SHOW ? '<div class="p2m-title">' + C().TITLE_TEXT + "</div>" : "") +
+      '<div class="p2m-copy">' + C().COPY_SEO_HTML + "</div>" +
+      '<div class="p2m-stack">' +
+      // circle first
+      '<div class="p2m-circle">' + C().ITEMS[0].label + "</div>" +
+      // pill / rect / oval
+      '<div class="p2m-box">' + C().ITEMS[1].label + "</div>" +
+      '<div class="p2m-box">' + C().ITEMS[2].label + "</div>" +
+      '<div class="p2m-box p2m-oval">' + C().ITEMS[3].label + "</div>" +
+      '<div class="p2m-dots"><i></i><i></i><i></i></div>' +
+      "</div>";
+
     ctx.canvas.appendChild(wrap);
   }
 
-  /* ---------------- DESKTOP DRAW (right stack; rails unchanged) ---------------- */
+  // -------------------- DESKTOP: identical behavior to Step 1 --------------------
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
-  window.PROCESS_SCENES[STEP] = function draw(ctx){
+  window.PROCESS_SCENES[STEP] = function draw(ctx) {
     const b = ctx.bounds;
-    const isMobile = (window.PROCESS_FORCE_MOBILE === true) ||
-                     (window.innerWidth <= C().MOBILE_BREAKPOINT);
-    if (isMobile) return drawMobile(ctx);
+    const isMobile =
+      (window.PROCESS_FORCE_MOBILE === true) ||
+      (window.innerWidth <= C().MOBILE_BREAKPOINT);
 
-    const W = b.width, H = Math.min(560, b.sH-40);
-    const svg = document.createElementNS(NS,"svg");
-    svg.style.position="absolute"; svg.style.left=b.left+"px"; svg.style.top=b.top+"px";
-    svg.setAttribute("width",W); svg.setAttribute("height",H); svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+    if (isMobile) { drawMobile(ctx); return; }
+
+    // DESKTOP: keep original rail + right-side visuals layout
+    const W = b.width, H = Math.min(560, b.sH - 40);
+    const svg = document.createElementNS(NS, "svg");
+    svg.style.position = "absolute";
+    svg.style.left = b.left + "px";
+    svg.style.top = b.top + "px";
+    svg.setAttribute("width", W);
+    svg.setAttribute("height", H);
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     ctx.canvas.appendChild(svg);
 
-    makeFlowGradients(svg, { spanX: W*0.15, y: 0 });
+    makeFlowGradients(svg, { spanX: W * 0.15, y: 0 });
 
-    const gap  = H * C().GAP_RATIO;
+    const boxW = W * C().BOX_W_RATIO;
+    const boxH = H * C().BOX_H_RATIO;
+    const gap = H * C().GAP_RATIO;
     let x = W * C().STACK_X_RATIO + C().NUDGE_X;
     let y = H * C().STACK_TOP_RATIO + C().NUDGE_Y;
-    const items = [];
+    const itemsDrawn = [];
 
-    // 1) PILL
+    // item 1: circle
     {
-      const boxW = W * C().PILL_W_RATIO;
-      const boxH = H * C().PILL_H_RATIO;
-      const cx = x + boxW/2;
-      const d = rr(x,y,boxW,boxH,C().PILL_RADIUS);
-      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
-      addFO(svg, x,y,boxW,boxH, C().LABEL_PILL_1, {
-        font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_PILL}pt ${C().FONT_FAMILY_BOX}`,
-        letterSpacing:`${C().FONT_LETTER_SPACING}px`, lineHeight:`${C().LINE_HEIGHT_EM}em`,
-        textTransform:C().UPPERCASE?'uppercase':'none',
-        padding:`${C().PADDING_Y}px ${C().PADDING_X}px`
+      const diam = (C().ITEMS[0].circleDiamRatio || C().CIRCLE_DESKTOP_DIAM_RATIO) * W;
+      const r = diam / 2;
+      const cx = x + boxW / 2;
+      const cy = y + r;
+      addCircle(svg, cx, cy, r, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, cx - r, cy - r, diam, diam, C().ITEMS[0].label, {
+        font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_CIRCLE}pt ${C().FONT_FAMILY_BOX}`,
+        letterSpacing: `${C().FONT_LETTER_SPACING}px`,
+        lineHeight: `${C().LINE_HEIGHT_EM}em`,
+        padding: "3px 4px"
       });
-      items.push({x,y,w:boxW,h:boxH, cx}); y += boxH + gap;
+      itemsDrawn.push({ x: cx - r, y: cy - r, w: diam, h: diam, cx, cy });
+      y += diam + gap;
     }
 
-    // 2) CIRCLE
+    // item 2: pill
     {
-      const boxW = W * C().CIRCLE_W_RATIO;
-      const boxH = H * C().CIRCLE_DIAM_RATIO; // area reserved for layout
-      const cx = x + boxW/2, cy = y + boxH/2;
-      const r = Math.min(boxW, boxH) * 0.48;
-      const d = circlePath(cx, cy, r);
+      const h = boxH * (C().ITEMS[1].heightRatio || 1);
+      const d = rr(x, y, boxW, h, C().RADIUS_PILL);
       addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
-      addFO(svg, x,y,boxW,boxH, C().LABEL_CIRCLE_2, {
-        font:`${C().FONT_WEIGHT_BOX} ${C().CIRCLE_LABEL_PT}pt ${C().FONT_FAMILY_BOX}`,
-        letterSpacing:`${C().FONT_LETTER_SPACING}px`, lineHeight:`${C().LINE_HEIGHT_EM}em`
+      addFO(svg, x, y, boxW, h, C().ITEMS[1].label, {
+        font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_BOX}pt ${C().FONT_FAMILY_BOX}`,
+        letterSpacing: `${C().FONT_LETTER_SPACING}px`,
+        lineHeight: `${C().LINE_HEIGHT_EM}em`,
+        padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
       });
-      items.push({x,y,w:boxW,h:boxH, cx}); y += boxH + gap;
+      itemsDrawn.push({ x, y, w: boxW, h });
+      y += h + gap;
     }
 
-    // 3) ROUNDED RECT
+    // item 3: rect (rounded)
     {
-      const boxW = W * C().RECT_W_RATIO;
-      const boxH = H * C().RECT_H_RATIO;
-      const cx = x + boxW/2;
-      const d = rr(x,y,boxW,boxH,C().RECT_RADIUS);
+      const h = boxH * (C().ITEMS[2].heightRatio || 1);
+      const d = rr(x, y, boxW, h, C().RADIUS_RECT);
       addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
-      addFO(svg, x,y,boxW,boxH, C().LABEL_RECT_3, {
-        font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_BOX}pt ${C().FONT_FAMILY_BOX}`,
-        letterSpacing:`${C().FONT_LETTER_SPACING}px`, lineHeight:`${C().LINE_HEIGHT_EM}em`
+      addFO(svg, x, y, boxW, h, C().ITEMS[2].label, {
+        font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_BOX}pt ${C().FONT_FAMILY_BOX}`,
+        letterSpacing: `${C().FONT_LETTER_SPACING}px`,
+        lineHeight: `${C().LINE_HEIGHT_EM}em`,
+        padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
       });
-      items.push({x,y,w:boxW,h:boxH, cx}); y += boxH + gap;
+      itemsDrawn.push({ x, y, w: boxW, h });
+      y += h + gap;
     }
 
-    // 4) DIAMOND
+    // item 4: oval
     {
-      const boxW = W * C().DIAMOND_W_RATIO;
-      const boxH = H * C().DIAMOND_H_RATIO * C().DIAMOND_SCALE;
-      const cx = x + boxW/2;
-      const d = diamond(cx, y + boxH/2, boxW, boxH);
+      const h = boxH * (C().ITEMS[3].heightRatio || 1);
+      const d = rr(x, y, boxW, h, C().RADIUS_OVAL);
       addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
-      addFO(svg, x,y,boxW,boxH, C().LABEL_DIAMOND_4, {
-        font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_DIAMOND}pt ${C().FONT_FAMILY_BOX}`,
-        letterSpacing:`${C().FONT_LETTER_SPACING}px`, lineHeight:`${C().LINE_HEIGHT_EM}em`,
-        padding:`${Math.max(2,C().PADDING_Y-2)}px ${C().PADDING_X}px`
+      addFO(svg, x, y, boxW, h, C().ITEMS[3].label, {
+        font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_BOX}pt ${C().FONT_FAMILY_BOX}`,
+        letterSpacing: `${C().FONT_LETTER_SPACING}px`,
+        lineHeight: `${C().LINE_HEIGHT_EM}em`,
+        padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
       });
-      items.push({x,y,w:boxW,h:boxH, cx});
-      y += boxH + C().DOTS_Y_OFFSET;
+      itemsDrawn.push({ x, y, w: boxW, h });
+      y += h + C().DOTS_Y_OFFSET;
     }
 
     // dots
     if (C().DOTS_COUNT > 0) {
-      const last = items[items.length-1];
-      const centerX = last.x + last.w/2; let dotY = y;
-      for (let i=0;i<C().DOTS_COUNT;i++){
-        const c = document.createElementNS(NS,"circle");
-        c.setAttribute("cx", centerX); c.setAttribute("cy", dotY);
-        c.setAttribute("r", C().DOTS_SIZE_PX); c.setAttribute("fill", C().COLOR_CYAN);
-        c.setAttribute("class","glow"); svg.appendChild(c); dotY += C().DOTS_GAP_PX;
+      const centerX = x + boxW / 2; let dotY = y;
+      for (let i = 0; i < C().DOTS_COUNT; i++) {
+        const c = document.createElementNS(NS, "circle");
+        c.setAttribute("cx", centerX);
+        c.setAttribute("cy", dotY);
+        c.setAttribute("r", C().DOTS_SIZE_PX);
+        c.setAttribute("fill", C().COLOR_CYAN);
+        c.setAttribute("class", "glow");
+        svg.appendChild(c);
+        dotY += C().DOTS_GAP_PX;
       }
     }
 
-    // title (same positioning convention as step1)
-    if (C().TITLE_SHOW){
-      const t = document.createElementNS(NS,"text");
-      const top = items[0];
-      t.setAttribute("x", (top.x + top.w/2));
-      t.setAttribute("y", (top.y) + (-28));
-      t.setAttribute("text-anchor","middle"); t.setAttribute("fill","#ddeaef");
+    // Title
+    if (C().TITLE_SHOW) {
+      const t = document.createElementNS(NS, "text");
+      const topBox = itemsDrawn[0];
+      const tx = (topBox.x + topBox.w / 2) + C().TITLE_OFFSET_X;
+      const ty = (topBox.y) + C().TITLE_OFFSET_Y;
+      t.setAttribute("x", tx);
+      t.setAttribute("y", ty);
+      t.setAttribute("text-anchor", "middle");
+      t.setAttribute("fill", "#ddeaef");
       t.setAttribute("font-family", C().TITLE_FAMILY);
       t.setAttribute("font-weight", C().TITLE_WEIGHT);
       t.setAttribute("font-size", `${C().TITLE_PT}pt`);
-      t.style.letterSpacing = `${C().TITLE_LETTER_SPACING}px`;
       t.textContent = C().TITLE_TEXT;
+      t.style.letterSpacing = `${C().TITLE_LETTER_SPACING}px`;
       svg.appendChild(t);
     }
 
-    // H rails (unchanged)
-    if (items.length){
-      const first = items[0];
+    // Horizontal rails from scene 1 rules
+    if (itemsDrawn.length) {
+      const first = itemsDrawn[0];
       const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
-      if (C().SHOW_LEFT_LINE){
+      if (C().SHOW_LEFT_LINE) {
         const xs = W * Math.max(0, Math.min(1, C().LEFT_STOP_RATIO));
-        const xe = first.x - C().CONNECT_X_PAD;
-        if (xe > xs){ const stroke = makeSegmentGradient(svg, xs, attachY, xe);
-          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX); }
+        const xe = itemsDrawn[0].x - C().CONNECT_X_PAD;
+        if (xe > xs) {
+          const stroke = makeSegmentGradient(svg, xs, attachY, xe);
+          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
+        }
       }
-      if (C().SHOW_RIGHT_LINE){
-        const xs = first.x + first.w + C().CONNECT_X_PAD;
+      if (C().SHOW_RIGHT_LINE) {
+        const xs = itemsDrawn[0].x + itemsDrawn[0].w + C().CONNECT_X_PAD;
         const xe = W - C().RIGHT_MARGIN_PX;
-        if (xe > xs){ const stroke = makeSegmentGradient(svg, xs, attachY, xe);
-          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX); }
+        if (xe > xs) {
+          const stroke = makeSegmentGradient(svg, xs, attachY, xe);
+          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
+        }
       }
     }
 
-    // vertical connectors
-    for (let i=0;i<items.length-1;i++){
-      const a = items[i], b2 = items[i+1];
-      const xMid = a.x + a.w/2;
+    // Vertical connectors between items
+    for (let i = 0; i < itemsDrawn.length - 1; i++) {
+      const a = itemsDrawn[i], b2 = itemsDrawn[i + 1];
+      const xMid = a.x + a.w / 2;
       const y1 = a.y + a.h;
       const y2 = b2.y;
       const pad = Math.max(2, C().STROKE_PX);
-      addPath(svg, `M ${xMid} ${y1+pad} V ${y2-pad}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
+      addPath(svg, `M ${xMid} ${y1 + pad} V ${y2 - pad}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
     }
 
-    // left copy (desktop)
+    // Left copy (desktop)
     const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
-    const top  = b.top  + H * C().COPY_TOP_RATIO  + C().COPY_NUDGE_Y;
-    const html = `<h3>${C().COPY_H_HTML}</h3><p>${C().COPY_BODY_HTML}</p>`;
-    if (typeof ctx.mountCopy === "function"){
-      const el = ctx.mountCopy({ top, left, html });
+    const top = b.top + H * C().COPY_TOP_RATIO + C().COPY_NUDGE_Y;
+    if (typeof ctx.mountCopy === "function") {
+      const el = ctx.mountCopy({ top, left, html: C().COPY_SEO_HTML });
       el.style.maxWidth = `${C().COPY_MAX_W_PX}px`;
       el.style.fontFamily = C().COPY_FAMILY;
-      const h = el.querySelector("h3"); if (h) h.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
+      const h3 = el.querySelector("h3"); if (h3) h3.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
       const p = el.querySelector("p"); if (p) p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
     }
   };
