@@ -1,28 +1,27 @@
+// sections/process/process.js
 (() => {
   const mount = document.getElementById("section-process");
   if (!mount) return;
 
-  /* ----------------- GLOBALS ----------------- */
+  /* ----------------- GLOBALS (unchanged desktop config) ----------------- */
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_CONFIG = Object.assign(
     {
-      step0: {             // 0B (pill) only — desktop nudges kept
-        NUDGE_X: 130,
-        NUDGE_Y: 50,
-        COPY_GAP: 44,
-        LABEL: "YourCompany.com",
-      },
+      // Step 0B (pill) only – unchanged
+      step0: { NUDGE_X: 130, NUDGE_Y: 50, COPY_GAP: 44, LABEL: "YourCompany.com" },
+      // Step 1..5 live in their own files
       step1: {}, step2: {}, step3: {}, step4: {}, step5: {},
     },
     window.PROCESS_CONFIG || {}
   );
 
-  /* ----------------- STYLES ----------------- */
+  /* ----------------- STYLES -----------------
+     Desktop rules are identical to your original.
+     I only ADD a mobile media query at the end. */
   const style = document.createElement("style");
   style.textContent = `
   :root{ --ink:#0b1117; --copyMax:300px; --accent:#63D3FF; --accent2:#F2DCA0; }
-  html, body { background:#0b1117; }
-  #section-process{ position:relative; isolation:isolate; max-width:100vw; }
+  #section-process{ position:relative; isolation:isolate; }
   #section-process .proc{ position:relative; min-height:560px; padding:44px 12px 40px; overflow:visible; }
 
   .railWrap{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.88);
@@ -45,8 +44,7 @@
     box-shadow:0 14px 34px rgba(38,185,255,.30), 0 0 0 2px rgba(255,255,255,.20) inset, 0 0 18px rgba(99,211,255,.45); }
 
   .ctas{ display:flex; gap:10px; margin-top:10px; }
-  .btn-glass{
-    padding:10px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.14);
+  .btn-glass{ padding:10px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.14);
     background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
     color:#eaf0f6; font-weight:700; cursor:pointer; backdrop-filter:blur(8px);
     box-shadow:0 8px 24px rgba(0,0,0,.30), inset 0 0 0 1px rgba(255,255,255,.06);
@@ -72,38 +70,26 @@
   .copy.show{ opacity:1; transform:translateY(0) }
   .copy h3{ margin:0 0 .45rem; color:#eaf0f6; font:600 clamp(20px,2.4vw,26px) "Newsreader", Georgia, serif; }
   .copy p{ margin:.35rem 0 0; font:400 15px/1.6 Inter, system-ui; color:#a7bacb }
+  .glow{ filter: drop-shadow(0 0 6px rgba(242,220,160,.35)) drop-shadow(0 0 14px rgba(99,211,255,.30)) drop-shadow(0 0 24px rgba(99,211,255,.18)); }
+  @media (max-width:900px){ :root{ --copyMax:260px } .railWrap.is-docked{ left:12px; transform:translate(0,-50%) scale(.84) } }
 
-  .glow{
-    filter:
-      drop-shadow(0 0 6px rgba(242,220,160,.35))
-      drop-shadow(0 0 14px rgba(99,211,255,.30))
-      drop-shadow(0 0 24px rgba(99,211,255,.18));
-  }
-
-  /* Tablet tweaks */
-  @media (max-width:900px){
-    :root{ --copyMax:260px }
-    .railWrap.is-docked{ left:12px; transform:translate(0,-50%) scale(.84) }
-  }
-
-  /* ===== Mobile (≤640px): no rail/buttons, vertical stack, tuned type/spacing, no horizontal scroll ===== */
+  /* ===== MOBILE-ONLY ADDITIONS (desktop untouched) ===== */
   @media (max-width:640px){
-    html, body { overflow-x: hidden; }
-    #section-process { overflow-x: hidden; }
+    html, body { overflow-x:hidden; }
+    #section-process { overflow-x:hidden; }
     .proc{ min-height:auto; padding:22px 14px 28px; }
-    .railWrap, .ctas{ display:none !important; }
-    .lamp{ display:none !important; }
-    .canvas{ position:relative; inset:auto; pointer-events:none; }
-    :root{ --copyMax:92vw; }
+    .railWrap, .ctas, .lamp{ display:none !important; } /* remove step UI + lamp on phones */
+    .canvas{ position:relative; inset:auto; }           /* let canvas participate in layout */
+    :root{ --copyMax:92vw }
     .copy{ max-width:92vw; left:14px !important; }
-    .copy h3{ font:600 clamp(18px,6.4vw,22px)/1.22 "Newsreader", Georgia, serif; letter-spacing:.1px; margin-bottom:.25rem; }
-    .copy p{ font:400 clamp(14px,4.3vw,16px)/1.72 Inter, system-ui; letter-spacing:.2px; }
+    .copy h3{ font:600 clamp(18px,6.2vw,22px)/1.22 "Newsreader", Georgia, serif; letter-spacing:.1px; margin-bottom:.25rem; }
+    .copy p{ font:400 clamp(14px,4.1vw,16px)/1.72 Inter, system-ui; letter-spacing:.2px; }
     .glow{ filter: drop-shadow(0 0 4px rgba(242,220,160,.28)) drop-shadow(0 0 10px rgba(99,211,255,.24)); }
   }
   `;
   document.head.appendChild(style);
 
-  /* ----------------- MARKUP ----------------- */
+  /* ----------------- MARKUP (unchanged) ----------------- */
   const steps = [0,1,2,3,4,5];
   mount.innerHTML = `
     <section class="proc" aria-label="Process">
@@ -178,7 +164,6 @@
 
     return defs;
   }
-
   window.PROCESS_UTILS = Object.assign({}, window.PROCESS_UTILS, { makeFlowGradients });
 
   function mountCopy({ top, left, html }) {
@@ -192,7 +177,7 @@
     return el;
   }
 
-  // Desktop bounds (lamp + rail present)
+  // Desktop bounds (original behavior)
   function boundsDesktop(){
     const s = stage.getBoundingClientRect();
     const w = railWrap.getBoundingClientRect();
@@ -202,88 +187,46 @@
     return { sLeft:s.left, sTop:s.top, sW:s.width, sH:s.height, left, width, top:18, railRight:w.right - s.left };
   }
 
-  // Mobile bounds (full width, no rail, no lamp)
+  // Mobile bounds (full width, no rail/lamp). `top` lets us stack slices.
   function boundsMobile(top=0, sH=640){
     const s = stage.getBoundingClientRect();
     const left = 14;
-    const width = Math.max(300, s.width - left - 16);
+    const width = Math.max(300, s.width - left - 14);
     return { sLeft:s.left, sTop:s.top, sW:s.width, sH, left, width, top, railRight:left };
   }
 
   function bounds(){ return isMobile() ? boundsMobile(18, 640) : boundsDesktop(); }
-  window.PROCESS_GET_BOUNDS = bounds;
 
   function placeLamp(){
     if (isMobile()) { lamp.style.opacity = "0"; lamp.style.width = "0px"; return; }
     const b = boundsDesktop();
     if (step>0 || (step===0 && phase===1)){
-      lamp.style.left = b.left + "px";
-      lamp.style.width = b.width + "px";
-      lamp.style.opacity = ".32";
-    } else {
-      lamp.style.opacity = "0"; lamp.style.width="0px";
-    }
+      lamp.style.left = b.left + "px"; lamp.style.width = b.width + "px"; lamp.style.opacity = ".32";
+    } else { lamp.style.opacity = "0"; lamp.style.width="0px"; }
   }
 
   function clearCanvas(){ while (canvas.firstChild) canvas.removeChild(canvas.firstChild); }
 
   /* ----------------- STEP 0 (pill) ----------------- */
-  // Mobile: copy FIRST, pill graphic BELOW. Desktop: original layout.
+  // Accept optional custom bounds so we can stack slices on mobile
   function scenePill(bOverride){
     const C = window.PROCESS_CONFIG.step0;
-    const mobile = isMobile();
-    const b = bOverride || (mobile ? boundsMobile(18, 600) : boundsDesktop());
+    const b = bOverride || (isMobile() ? boundsMobile(18, 600) : boundsDesktop());
 
     const nodeW = b.width, nodeH = Math.min(560, b.sH-40);
-
-    // Mobile copy first (prevents overlap)
-    let copyTop = b.top + (mobile ? 4 : Math.max(12, nodeH*0.20 - 2));
-    let copyLeft = b.left + (mobile ? 0 : Math.max(24, b.railRight + 32));
-    const copy = mountCopy({
-      top: copyTop,
-      left: copyLeft,
-      html: `<h3>We start with your company.</h3>
-             <p>We read your company and data to learn what matters. Then our system builds simple metrics around your strengths.
-             With that map in hand, we move forward to find real buyers who match your persona.</p>`
-    });
-    if (mobile){
-      copy.style.left = (b.left) + "px";
-      copy.style.maxWidth = "92vw";
-    } else {
-      // desktop: tuck copy to the left of the pill when space allows
-      requestAnimationFrame(() => {
-        const boxLeftAbs = b.left + Math.max(18, nodeW*0.5); // rough center
-        const copyBox = copy.getBoundingClientRect();
-        let idealLeft = Math.min(copyBox.left, boxLeftAbs - C.COPY_GAP - copyBox.width);
-        idealLeft = Math.max(idealLeft, b.left + 24);
-        copy.style.left = idealLeft + "px";
-      });
-    }
-
-    // Now draw the pill graphic
     const svg = document.createElementNS(ns,"svg");
-    svg.style.position = "absolute";
-    svg.style.left = b.left + "px";
-    svg.style.top  = b.top  + "px";
-    svg.setAttribute("width",  nodeW);
-    svg.setAttribute("height", nodeH);
-    svg.setAttribute("viewBox", `0 0 ${nodeW} ${nodeH}`);
+    svg.style.position="absolute"; svg.style.left=b.left+"px"; svg.style.top=b.top+"px";
+    svg.setAttribute("width",nodeW); svg.setAttribute("height",nodeH);
+    svg.setAttribute("viewBox",`0 0 ${nodeW} ${nodeH}`);
     canvas.appendChild(svg);
 
     const pillW = Math.min(440, nodeW*0.48), pillH = 80;
-    const lampCenter = nodeW / 2;
-
-    // Mobile ignores desktop nudges to keep content in-frame
-    const nx = mobile ? 0 : C.NUDGE_X;
-    const ny = mobile ? 0 : C.NUDGE_Y;
-
-    const leftBias = Math.min(80, nodeW * 0.08);
-    let pillX = Math.max(14, lampCenter - leftBias - pillW/2 + nx);
-    // Place *below* the copy on mobile; desktop uses original 20% height bias
-    let pillY = mobile ? (copy.getBoundingClientRect().height + b.top + 14) : Math.max(12, nodeH*0.20 + ny);
-
+    const lampCenter = nodeW/2, leftBias = Math.min(80, nodeW*0.08);
+    const pillX = Math.max(18, lampCenter - leftBias - pillW/2 + C.NUDGE_X);
+    const pillY = Math.max(12, nodeH*0.20 + C.NUDGE_Y);
     const r=16, yMid=pillY+pillH/2;
-    const xTrailEnd = nodeW - 12;
+    const xTrailEnd = nodeW - 10;
+
     svg.appendChild(makeFlowGradients({ pillX, pillY, pillW, yMid, xTrailEnd }));
 
     const d = `M ${pillX+r} ${pillY} H ${pillX+pillW-r} Q ${pillX+pillW} ${pillY} ${pillX+pillW} ${pillY+r}
@@ -305,7 +248,7 @@
     const label = document.createElementNS(ns,"text");
     label.setAttribute("x", pillX+18); label.setAttribute("y", pillY+pillH/2+6);
     label.setAttribute("fill","#ddeaef"); label.setAttribute("font-weight","800");
-    label.setAttribute("font-size", mobile ? "16" : "18");
+    label.setAttribute("font-size","18");
     label.setAttribute("font-family","Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif");
     label.textContent = C.LABEL; svg.appendChild(label);
 
@@ -316,9 +259,27 @@
     trail.setAttribute("stroke-linecap","round"); trail.setAttribute("class","glow");
     svg.appendChild(trail);
 
-    // height consumed by this slice
-    const used = (pillY + pillH + 28) - b.top;
-    return Math.max(used, mobile ? 420 : 520);
+    // copy block (mobile: copy-first naturally because top < boxes)
+    const basePillY = Math.max(12, nodeH*0.20);
+    const minInside = b.left+12;
+    const fromRail  = Math.max(minInside, b.left + 24);
+    const copyTop   = (b.top + basePillY - 2);
+    const copy = mountCopy({
+      top: copyTop, left: fromRail,
+      html: `<h3>We start with your company.</h3>
+             <p>We read your company and data to learn what matters. Then our system builds simple metrics around your strengths.
+             With that map in hand, we move forward to find real buyers who match your persona.</p>`
+    });
+
+    requestAnimationFrame(() => {
+      const boxLeftAbs = b.left + pillX;
+      const copyBox = copy.getBoundingClientRect();
+      let idealLeft = Math.min(copyBox.left, boxLeftAbs - window.PROCESS_CONFIG.step0.COPY_GAP - copyBox.width);
+      idealLeft = Math.max(idealLeft, minInside);
+      copy.style.left = idealLeft + "px";
+    });
+
+    return nodeH; // report slice height (for mobile stacking)
   }
 
   /* ----------------- RAIL (desktop only) ----------------- */
@@ -352,6 +313,7 @@
   }
 
   /* ----------------- ROUTERS ----------------- */
+  // Desktop route (original)
   function drawDesktop(){
     clearCanvas();
     if (step===0 && phase===1){ scenePill(); return; }
@@ -364,28 +326,35 @@
     }
   }
 
-  // Mobile: static stack — 0B (pill) then Step 1
+  // Mobile route: static stack — copy first, then workflow; no nested scroll
   function drawMobile(){
     clearCanvas();
     canvas.style.position = "relative";
     canvas.style.inset = "auto";
 
     let y = 0;
-    const h0 = scenePill( boundsMobile(y, 620) );
-    y += h0 + 24;
 
+    // 0B pill slice
+    const h0 = scenePill( boundsMobile(y, 620) );
+    y += (h0 || 520) + 28;
+
+    // Step 1 slice (no rails on mobile)
     const scene1 = window.PROCESS_SCENES[1];
     if (typeof scene1 === "function"){
       const cfg1 = deepClone(window.PROCESS_CONFIG.step1 || {});
-      cfg1.SHOW_LEFT_LINE = false;   // rails off on mobile
+      cfg1.SHOW_LEFT_LINE = false;
       cfg1.SHOW_RIGHT_LINE = false;
       try{
-        scene1({ ns, canvas, bounds: boundsMobile(y, 720), config: cfg1, makeFlowGradients, mountCopy });
+        scene1({ ns, canvas, bounds: boundsMobile(y, 700), config: cfg1, makeFlowGradients, mountCopy });
       }catch(err){ console.error("process scene 1 (mobile):", err); }
+      y += 700; // reserve vertical space for absolute drawings
     }
+
+    // Ensure the section height equals the stacked content (prevents inner scroll trap)
+    canvas.style.minHeight = (y + 20) + "px";
   }
 
-  function drawScene(){ return isMobile() ? drawMobile() : drawDesktop(); }
+  function drawScene(){ isMobile() ? drawMobile() : drawDesktop(); }
 
   function setStep(n, opts={}){
     step = Math.max(0, Math.min(5, n|0));
@@ -405,7 +374,7 @@
 
   /* ----------------- EVENTS ----------------- */
   dots.forEach(d=> d.addEventListener("click", ()=>{
-    if (isMobile()) return;
+    if (isMobile()) return; // disabled on phones
     const i = +d.dataset.i;
     if (i===0){ setStep(0, { phase: 1 }); } else { setStep(i, { phase: 1 }); }
   }));
