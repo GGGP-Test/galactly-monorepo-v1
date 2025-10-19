@@ -27,11 +27,11 @@
       PADDING_X: 4, PADDING_Y: 4, UPPERCASE: false,
 
       // ===== Default labels for time-sensitive "intent" =====
-      LABEL_RECT_1: "Search burst (last 14d)",
-      LABEL_RECT_2: "RFQ/RFP keywords detected",
-      LABEL_ROUND_3: "Pricing & sample page hits",
-      LABEL_OVAL_4:  "Buyer activity in tools",
-      LABEL_DIAMOND_5: "Decision team size",
+      LABEL_RECT_1: "Back-To-Back Search (last 14d)",
+      LABEL_RECT_2: "RFQ/RFP Keywords Detected",
+      LABEL_ROUND_3: "Pricing & Sample Page Hits",
+      LABEL_OVAL_4:  "Rising # of Ad Creatives (last 14d)",
+      LABEL_DIAMOND_5: "Import/Export End of Cycle",
 
       // Title (desktop)
       TITLE_SHOW: true,
