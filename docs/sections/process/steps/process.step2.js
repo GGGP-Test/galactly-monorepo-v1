@@ -1,192 +1,351 @@
-// sections/process/process.step2.js
+// sections/process/steps/process.step2.js
 (() => {
+  const STEP = 2;
+  const NS = "http://www.w3.org/2000/svg";
+
+  // ------- config (desktop unchanged; add mobile knobs + SEO copy) -------
+  function C() {
+    const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
+    root.step2 = root.step2 || {};
+    const dflt = {
+      /* ===== DESKTOP knobs (match Step 1 proportions; visuals intact) ===== */
+      BOX_W_RATIO: 0.1, BOX_H_RATIO: 0.12, GAP_RATIO: 0.040,
+      STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.20, NUDGE_X: -230, NUDGE_Y: -20,
+      RADIUS_RECT: 14, RADIUS_PILL: 999, RADIUS_OVAL: 999, DIAMOND_SCALE: 1.0,
+      SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true, LEFT_STOP_RATIO: 0.35,
+      RIGHT_MARGIN_PX: 16, H_LINE_Y_BIAS: -0.06, CONNECT_X_PAD: 8, LINE_STROKE_PX: 2.5,
+
+      FONT_PT_BOX: 8, FONT_PT_PILL: 8, FONT_PT_CIRCLE: 8, FONT_PT_DIAMOND: 7,
+      FONT_WEIGHT_BOX: 525,
+      FONT_FAMILY_BOX: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      FONT_LETTER_SPACING: 0.3, LINE_HEIGHT_EM: 1.15, PADDING_X: 4, PADDING_Y: 4, UPPERCASE: false,
+
+      // === Labels (short, scannable; retention-focused) ===
+      LABEL_PILL_1:    "Product–packaging reliance",
+      LABEL_CIRCLE_2:  "Ops lock-in (lines/specs)",
+      LABEL_RECT_3:    "Reorder cadence / SKU velocity",
+      LABEL_DIAMOND_4: "Switching & compliance risk",
+
+      TITLE_SHOW: true, TITLE_TEXT: "Weight Score — Who stays the longest?",
+      TITLE_PT: 14, TITLE_WEIGHT: 700,
+      TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -28, TITLE_LETTER_SPACING: 0.2,
+
+      COPY_LEFT_RATIO: 0.035, COPY_TOP_RATIO: 0.18, COPY_NUDGE_X: 0, COPY_NUDGE_Y: 0,
+      COPY_MAX_W_PX: 300, COPY_H_PT: 24, COPY_H_WEIGHT: 500,
+      COPY_BODY_PT: 12, COPY_BODY_WEIGHT: 400,
+      COPY_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      COPY_LINE_HEIGHT: 1.6,
+
+      STROKE_PX: 2.8, GLOW_PX: 16, FLOW_SPEED_S: 6.5,
+      COLOR_CYAN: "rgba(99,211,255,0.95)", COLOR_GOLD: "rgba(242,220,160,0.92)",
+      REDUCE_MOTION: false, DOTS_COUNT: 3, DOTS_SIZE_PX: 2.2, DOTS_GAP_PX: 26, DOTS_Y_OFFSET: 26,
+
+      BP_SMALL_W: 640, BP_MED_W: 900,
+      BP_SMALL_SCALE: 0.84, BP_MED_SCALE: 0.92,
+
+      /* ===== MOBILE knobs (do NOT affect desktop) ===== */
+      MOBILE_BREAKPOINT: 640,
+      M_MAX_W: 520, M_SIDE_PAD: 16,
+      M_STACK_GAP: 14, M_BOX_MIN_H: 56, M_BORDER_PX: 2,
+      M_FONT_PT: 11, M_TITLE_PT: 16, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14
+    };
+    for (const k in dflt) if (!(k in root.step2)) root.step2[k] = dflt[k];
+    return root.step2;
+  }
+
+  const reduceMotion = () =>
+    (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) || C().REDUCE_MOTION;
+
+  // -------------------- shared SVG helpers (desktop) --------------------
+  function makeFlowGradients(svg, { spanX, y }) {
+    const defs = document.createElementNS(NS, "defs");
+
+    const gFlow = document.createElementNS(NS, "linearGradient");
+    gFlow.id = "gradFlow";
+    gFlow.setAttribute("gradientUnits", "userSpaceOnUse");
+    gFlow.setAttribute("x1", 0); gFlow.setAttribute("y1", y);
+    gFlow.setAttribute("x2", spanX); gFlow.setAttribute("y2", y);
+    [["0%",C().COLOR_GOLD],["35%","rgba(255,255,255,.95)"],["75%",C().COLOR_CYAN],["100%","rgba(99,211,255,.60)"]]
+      .forEach(([o,c])=>{ const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gFlow.appendChild(s); });
+    if (!reduceMotion() && C().FLOW_SPEED_S>0){
+      const a1 = document.createElementNS(NS,"animateTransform");
+      a1.setAttribute("attributeName","gradientTransform");
+      a1.setAttribute("type","translate");
+      a1.setAttribute("from","0 0"); a1.setAttribute("to", `${spanX} 0`);
+      a1.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a1.setAttribute("repeatCount","indefinite");
+      gFlow.appendChild(a1);
+    }
+    defs.appendChild(gFlow);
+
+    const gTrail = document.createElementNS(NS,"linearGradient");
+    gTrail.id = "gradTrailFlow";
+    gTrail.setAttribute("gradientUnits","userSpaceOnUse");
+    gTrail.setAttribute("x1", spanX); gTrail.setAttribute("y1", y);
+    gTrail.setAttribute("x2", spanX*2); gTrail.setAttribute("y2", y);
+    [["0%",C().COLOR_GOLD],["45%",C().COLOR_CYAN],["100%","rgba(99,211,255,.18)"]]
+      .forEach(([o,c])=>{ const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gTrail.appendChild(s); });
+    if (!reduceMotion() && C().FLOW_SPEED_S>0){
+      const a2 = document.createElementNS(NS,"animateTransform");
+      a2.setAttribute("attributeName","gradientTransform");
+      a2.setAttribute("type","translate");
+      a2.setAttribute("from","0 0"); a2.setAttribute("to", `${spanX} 0`);
+      a2.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a2.setAttribute("repeatCount","indefinite");
+      gTrail.appendChild(a2);
+    }
+    defs.appendChild(gTrail);
+    svg.appendChild(defs);
+  }
+  function rr(x,y,w,h,r){
+    const R = Math.min(r, Math.min(w,h)/2);
+    return `M ${x+R} ${y} H ${x+w-R} Q ${x+w} ${y} ${x+w} ${y+R}
+            V ${y+h-R} Q ${x+w} ${y+h} ${x+w-R} ${y+h}
+            H ${x+R}   Q ${x}   ${y+h} ${x}   ${y+h-R}
+            V ${y+R}   Q ${x}   ${y}   ${x+R} ${y} Z`;
+  }
+  function diamondPath(cx,cy,w,h){
+    const hw=w/2, hh=h/2; return `M ${cx} ${cy-hh} L ${cx+hw} ${cy} L ${cx} ${cy+hh} L ${cx-hw} ${cy} Z`;
+  }
+  function addPath(svg, d, stroke, sw){
+    const p = document.createElementNS(NS,"path");
+    p.setAttribute("d", d); p.setAttribute("fill","none");
+    p.setAttribute("stroke", stroke); p.setAttribute("stroke-width", sw);
+    p.setAttribute("stroke-linejoin","round"); p.setAttribute("stroke-linecap","round");
+    p.setAttribute("class","glow"); svg.appendChild(p); return p;
+  }
+  function addFO(svg, x,y,w,h, html, styles){
+    const fo = document.createElementNS(NS,"foreignObject");
+    fo.setAttribute("x",x); fo.setAttribute("y",y); fo.setAttribute("width",w); fo.setAttribute("height",h);
+    const d = document.createElement("div");
+    d.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
+    Object.assign(d.style, {
+      width:"100%", height:"100%", display:"flex",
+      alignItems:"center", justifyContent:"center", textAlign:"center",
+      color:"#ddeaef", whiteSpace:"pre-wrap", wordBreak:"break-word",
+      pointerEvents:"none"
+    }, styles||{});
+    d.innerHTML = html; fo.appendChild(d); svg.appendChild(fo);
+  }
+  function addCircle(svg, cx, cy, r, stroke, sw){
+    const c = document.createElementNS(NS,"circle");
+    c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", r);
+    c.setAttribute("fill","none"); c.setAttribute("stroke", stroke);
+    c.setAttribute("stroke-width", sw); c.setAttribute("class","glow");
+    svg.appendChild(c); return c;
+  }
+
+  // -------------------- MOBILE (DOM, no rails/glow) --------------------
+  function ensureMobileCSS(){
+    const id="p2m-style"; if (document.getElementById(id)) return;
+    const s=document.createElement("style"); s.id=id;
+    const bp=C().MOBILE_BREAKPOINT; const cyan=C().COLOR_CYAN;
+    s.textContent = `
+      @media (max-width:${bp}px){
+        #section-process, html, body { overflow-x:hidden; }
+        .p2m-wrap{ position:relative; margin:0 auto; max-width:${C().M_MAX_W}px; padding:0 ${C().M_SIDE_PAD}px 8px; }
+        .p2m-title{ text-align:center; color:#ddeaef;
+          font:${C().TITLE_WEIGHT} ${C().M_TITLE_PT}pt ${C().TITLE_FAMILY};
+          letter-spacing:${C().TITLE_LETTER_SPACING}px; margin:6px 0 10px; }
+        .p2m-copy{ margin:0 auto 14px; color:#a7bacb; }
+        .p2m-copy h3{ margin:0 0 8px; color:#eaf0f6; font:600 ${C().M_COPY_H_PT}px "Newsreader", Georgia, serif; }
+        .p2m-copy p{ margin:0; font:400 ${C().M_COPY_BODY_PT}px/1.55 Inter, system-ui; }
+        .p2m-stack{ display:flex; flex-direction:column; gap:${C().M_STACK_GAP}px; align-items:center; }
+        .p2m-shape{ width:100%; display:flex; justify-content:center; align-items:center; }
+        .p2m-pill, .p2m-rect{ border:${C().M_BORDER_PX}px solid ${cyan}; color:#ddeaef;
+          padding:10px 12px; text-align:center; background:rgba(255,255,255,.02);
+          font:${C().FONT_WEIGHT_BOX} ${C().M_FONT_PT}pt ${C().FONT_FAMILY_BOX};
+          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em; }
+        .p2m-pill{ border-radius:9999px; min-height:${C().M_BOX_MIN_H}px; }
+        .p2m-rect{ border-radius:12px; min-height:${C().M_BOX_MIN_H}px; }
+        .p2m-circle{ width:75%; aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
+          border-radius:9999px; display:flex; align-items:center; justify-content:center;
+          color:#ddeaef; background:rgba(255,255,255,.02);
+          font:${C().FONT_WEIGHT_BOX} ${C().M_FONT_PT}pt ${C().FONT_FAMILY_BOX}; padding:6px 10px; text-align:center; }
+        .p2m-diamond{ width:60%; aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
+          transform:rotate(45deg); background:rgba(255,255,255,.02);
+          display:flex; align-items:center; justify-content:center; }
+        .p2m-diamond > span{ transform:rotate(-45deg);
+          color:#ddeaef; font:${C().FONT_WEIGHT_BOX} ${Math.max(8,C().M_FONT_PT-1)}pt ${C().FONT_FAMILY_BOX};
+          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em; padding:8px 10px; text-align:center; }
+        .p2m-dots{ display:flex; gap:14px; justify-content:center; padding-top:6px }
+        .p2m-dots i{ width:6px; height:6px; border-radius:50%; background:${cyan}; display:inline-block; }
+      }`;
+    document.head.appendChild(s);
+  }
+
+  function drawMobile(ctx){
+    ensureMobileCSS();
+    ctx.canvas.style.position="relative"; ctx.canvas.style.inset="auto"; ctx.canvas.style.pointerEvents="auto";
+
+    const wrap=document.createElement("div"); wrap.className="p2m-wrap";
+    wrap.innerHTML = `
+      ${C().TITLE_SHOW ? `<div class="p2m-title">${C().TITLE_TEXT}</div>` : ``}
+      <div class="p2m-copy">
+        <h3>Who becomes a long-term customer?</h3>
+        <p>Our <b>Weight Score</b> predicts buyer longevity by measuring reliance on your
+        packaging, operational lock-in, reorder cadence, and the risk of switching.
+        It prioritizes accounts with high lifetime value and low churn risk so your team
+        focuses on durable relationships.</p>
+      </div>
+      <div class="p2m-stack">
+        <div class="p2m-shape"><div class="p2m-pill">${C().LABEL_PILL_1}</div></div>
+        <div class="p2m-shape"><div class="p2m-circle">${C().LABEL_CIRCLE_2}</div></div>
+        <div class="p2m-shape"><div class="p2m-rect">${C().LABEL_RECT_3}</div></div>
+        <div class="p2m-shape"><div class="p2m-diamond"><span>${C().LABEL_DIAMOND_4}</span></div></div>
+        <div class="p2m-dots"><i></i><i></i><i></i></div>
+      </div>`;
+    ctx.canvas.appendChild(wrap);
+  }
+
+  // -------------------- DESKTOP DRAW (unchanged rails/feel) --------------------
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
+  window.PROCESS_SCENES[STEP] = function draw(ctx){
+    const b = ctx.bounds;
+    const isMobile = (window.PROCESS_FORCE_MOBILE === true) ||
+                     (window.innerWidth <= C().MOBILE_BREAKPOINT);
+    if (isMobile) return drawMobile(ctx);
 
-  window.PROCESS_SCENES[2] = function(ctx){
-    const { canvas, bounds, makeFlowGradients, mountCopy } = ctx;
-    const b  = bounds;
-    const ns = "http://www.w3.org/2000/svg";
+    // DESKTOP scene (keep behavior identical to Step 1; change shapes + labels)
+    const W = b.width, H = Math.min(560, b.sH-40);
+    const svg = document.createElementNS(NS,"svg");
+    svg.style.position="absolute"; svg.style.left=b.left+"px"; svg.style.top=b.top+"px";
+    svg.setAttribute("width",W); svg.setAttribute("height",H); svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+    ctx.canvas.appendChild(svg);
 
-    // ----- Left copy (inside lamp), SEO-tuned for packaging suppliers -----
-    const leftClamp = Math.max(b.railRight + 28, b.left + 24);
-    const copy = mountCopy({
-      top:  b.top + 54,
-      left: leftClamp,
-      html: `
-        <h3>Who buys the fastest?</h3>
-        <p>We rank buyers by a live <strong>intent score</strong> built for packaging suppliers:
-        searches per time block, tech in their facility, customer scale by LTV/CAC, tools they touch,
-        and company size. The score surfaces accounts most likely to convert <em>now</em> so your team
-        prioritizes demos, quotes, and samples that close quickly.</p>
-      `,
-    });
+    makeFlowGradients(svg, { spanX: W*0.15, y: 0 });
 
-    // ----- Right canvas (SVG) -----
-    const nodeW = b.width, nodeH = Math.min(560, b.sH - 40);
-    const svg = document.createElementNS(ns, "svg");
-    svg.style.position = "absolute";
-    svg.style.left = b.left + "px";
-    svg.style.top  = b.top  + "px";
-    svg.setAttribute("width",  nodeW);
-    svg.setAttribute("height", nodeH);
-    svg.setAttribute("viewBox", `0 0 ${nodeW} ${nodeH}`);
-    canvas.appendChild(svg);
+    const boxW = W * C().BOX_W_RATIO;
+    const boxH = H * C().BOX_H_RATIO;
+    const gap  = H * C().GAP_RATIO;
+    let x = W * C().STACK_X_RATIO + C().NUDGE_X;
+    let y = H * C().STACK_TOP_RATIO + C().NUDGE_Y;
+    const cx = x + boxW/2;
+    const items = [];
 
-    // Layout
-    const W = nodeW;
-    const H = nodeH;
-    const baseX = Math.max(24, W * 0.58);        // right half stack
-    const colW  = Math.min(360, W * 0.44);
-    const gapY  = 86;
-    const startY= Math.max(18, H * 0.16);
+    // 1) pill
+    { const d = rr(x,y,boxW,boxH,C().RADIUS_PILL);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,boxH, C().LABEL_PILL_1,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_PILL}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`, lineHeight:`${C().LINE_HEIGHT_EM}em`,
+          textTransform:C().UPPERCASE?'uppercase':'none',
+          padding:`${C().PADDING_Y}px ${C().PADDING_X}px` });
+      items.push({x,y,w:boxW,h:boxH}); y += boxH + gap;
+    }
+    // 2) circle
+    { const r = Math.min(boxW, boxH) * 0.5;
+      const cxC = x + boxW/2, cyC = y + r;
+      addCircle(svg, cxC, cyC, r - Math.max(2, C().STROKE_PX/2), "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x, y, boxW, r*2, C().LABEL_CIRCLE_2,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_CIRCLE}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`, lineHeight:`${C().LINE_HEIGHT_EM}em` });
+      items.push({x, y, w:boxW, h:r*2}); y += (r*2) + gap;
+    }
+    // 3) rounded rectangle
+    { const d = rr(x,y,boxW,boxH,C().RADIUS_RECT);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,boxH, C().LABEL_RECT_3,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_BOX}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`, lineHeight:`${C().LINE_HEIGHT_EM}em` });
+      items.push({x,y,w:boxW,h:boxH}); y += boxH + gap;
+    }
+    // 4) diamond
+    { const h = boxH * C().DIAMOND_SCALE;
+      const d = diamondPath(cx, y + h/2, boxW, h);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,h, C().LABEL_DIAMOND_4,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_DIAMOND}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`, lineHeight:`${C().LINE_HEIGHT_EM}em`,
+          padding:`${Math.max(2,C().PADDING_Y-2)}px ${C().PADDING_X}px` });
+      items.push({x,y,w:boxW,h}); y += h + C().DOTS_Y_OFFSET;
+    }
 
-    // Right edge (screen space → this SVG space)
-    const xRight = (b.sW - 10) - b.left;
-
-    // Flowing gradients (outline + right trail)
-    svg.appendChild(makeFlowGradients({
-      pillX: baseX, pillY: startY, pillW: colW,
-      yMid: startY + 54/2, xTrailEnd: xRight
-    }));
-
-    // Add a left-side flowing trail as well (for continuity coming in)
-    const gradLeft = document.createElementNS(ns, "linearGradient");
-    gradLeft.id = "gradTrailLeft";
-    gradLeft.setAttribute("gradientUnits", "userSpaceOnUse");
-    gradLeft.setAttribute("x1", 0); gradLeft.setAttribute("y1", startY + 54/2);
-    gradLeft.setAttribute("x2", baseX); gradLeft.setAttribute("y2", startY + 54/2);
-    [["0%","rgba(99,211,255,.18)"],["55%","rgba(99,211,255,.90)"],["100%","rgba(230,195,107,.92)"]]
-      .forEach(([o,c])=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gradLeft.appendChild(s); });
-    const aL = document.createElementNS(ns,"animateTransform");
-    aL.setAttribute("attributeName","gradientTransform"); aL.setAttribute("type","translate");
-    aL.setAttribute("from","0 0"); aL.setAttribute("to", `${baseX} 0`);
-    aL.setAttribute("dur","6s"); aL.setAttribute("repeatCount","indefinite");
-    gradLeft.appendChild(aL);
-    const defsExtra = document.createElementNS(ns,"defs"); defsExtra.appendChild(gradLeft); svg.appendChild(defsExtra);
-
-    // Helpers
-    const drawIn = (path) => {
-      const len = path.getTotalLength();
-      path.style.strokeDasharray  = String(len);
-      path.style.strokeDashoffset = String(len);
-      path.getBoundingClientRect();
-      path.style.transition = "stroke-dashoffset 1100ms cubic-bezier(.22,.61,.36,1)";
-      requestAnimationFrame(()=> path.style.strokeDashoffset = "0");
-    };
-
-    const addText = (x, y, label, size=15, weight="800") => {
-      const t = document.createElementNS(ns,"text");
-      t.setAttribute("x", x); t.setAttribute("y", y);
-      t.setAttribute("fill","#ddeaef");
-      t.setAttribute("font-size", String(size));
-      t.setAttribute("font-weight", weight);
-      t.setAttribute("font-family","Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif");
-      t.textContent = label; svg.appendChild(t);
-    };
-
-    // ----- Continuous trails (left in, right out) -----
-    const yCable = startY + 54/2; // align with first box center
-    const lineL = document.createElementNS(ns,"line");
-    lineL.setAttribute("x1", 0);        lineL.setAttribute("y1", yCable);
-    lineL.setAttribute("x2", baseX-10); lineL.setAttribute("y2", yCable);
-    lineL.setAttribute("stroke","url(#gradTrailLeft)");
-    lineL.setAttribute("stroke-width","2.5");
-    lineL.setAttribute("stroke-linecap","round");
-    lineL.setAttribute("class","glow");
-    svg.appendChild(lineL);
-
-    const lineR = document.createElementNS(ns,"line");
-    lineR.setAttribute("x1", baseX + colW + 10); lineR.setAttribute("y1", yCable);
-    lineR.setAttribute("x2", xRight);            lineR.setAttribute("y2", yCable);
-    lineR.setAttribute("stroke","url(#gradTrailFlow)");
-    lineR.setAttribute("stroke-width","2.5");
-    lineR.setAttribute("stroke-linecap","round");
-    lineR.setAttribute("class","glow");
-    svg.appendChild(lineR);
-
-    // ----- Shapes (exact order + styles you requested) -----
-    const shapes = [
-      { kind:"rect",        h:54,  text:"Number of Searches / TimeBlock" },
-      { kind:"rect",        h:54,  text:"Technologies used at the location" },
-      { kind:"roundrect",   h:62,  text:"Number of customers based on LTV/CAC" },
-      { kind:"oval",        h:56,  text:"Tools interacted" },
-      { kind:"diamond",     h:72,  text:"Company Size" },
-    ];
-
-    shapes.forEach((s, i)=>{
-      const x = baseX, y = startY + i*gapY, w = colW, h = s.h;
-
-      if (s.kind === "rect" || s.kind === "roundrect"){
-        const r = s.kind === "roundrect" ? 16 : 3;
-        const d = `M ${x+r} ${y} H ${x+w-r} Q ${x+w} ${y} ${x+w} ${y+r}
-                   V ${y+h-r} Q ${x+w} ${y+h} ${x+w-r} ${y+h}
-                   H ${x+r} Q ${x} ${y+h} ${x} ${y+h-r}
-                   V ${y+r} Q ${x} ${y} ${x+r} ${y} Z`;
-        const path = document.createElementNS(ns,"path");
-        path.setAttribute("d", d);
-        path.setAttribute("fill","none");
-        path.setAttribute("stroke","url(#gradFlow)");
-        path.setAttribute("stroke-width","2.5");
-        path.setAttribute("stroke-linejoin","round");
-        path.setAttribute("class","glow");
-        svg.appendChild(path);
-        drawIn(path);
-        addText(x+16, y + h/2 + 5, s.text, 15, "800");
+    // dots (same as Step 1)
+    if (C().DOTS_COUNT > 0) {
+      const centerX = x + boxW/2; let dotY = y;
+      for (let i=0;i<C().DOTS_COUNT;i++){
+        const c = document.createElementNS(NS,"circle");
+        c.setAttribute("cx", centerX); c.setAttribute("cy", dotY);
+        c.setAttribute("r", C().DOTS_SIZE_PX); c.setAttribute("fill", C().COLOR_CYAN);
+        c.setAttribute("class","glow"); svg.appendChild(c); dotY += C().DOTS_GAP_PX;
       }
+    }
 
-      if (s.kind === "oval"){
-        const cx = x + w/2, cy = y + h/2, rx = w/2, ry = h/2;
-        const el = document.createElementNS(ns,"ellipse");
-        el.setAttribute("cx", cx); el.setAttribute("cy", cy);
-        el.setAttribute("rx", rx); el.setAttribute("ry", ry);
-        el.setAttribute("fill","none");
-        el.setAttribute("stroke","url(#gradFlow)");
-        el.setAttribute("stroke-width","2.5");
-        el.setAttribute("class","glow");
-        svg.appendChild(el);
-        // emulate draw-in for ellipse
-        const fake = document.createElementNS(ns,"path");
-        fake.setAttribute("d", `M ${x} ${cy} A ${rx} ${ry} 0 1 1 ${x+w-0.1} ${cy} A ${rx} ${ry} 0 1 1 ${x} ${cy}`);
-        fake.setAttribute("fill","none"); fake.setAttribute("stroke","transparent");
-        svg.appendChild(fake); drawIn(fake); svg.removeChild(fake);
-        addText(x+16, y + h/2 + 5, s.text, 15, "800");
+    // title
+    if (C().TITLE_SHOW){
+      const t = document.createElementNS(NS,"text");
+      const topBox = items[0];
+      t.setAttribute("x", (topBox.x + topBox.w/2) + C().TITLE_OFFSET_X);
+      t.setAttribute("y", (topBox.y) + C().TITLE_OFFSET_Y);
+      t.setAttribute("text-anchor","middle"); t.setAttribute("fill","#ddeaef");
+      t.setAttribute("font-family", C().TITLE_FAMILY);
+      t.setAttribute("font-weight", C().TITLE_WEIGHT);
+      t.setAttribute("font-size", `${C().TITLE_PT}pt`);
+      t.textContent = C().TITLE_TEXT;
+      t.style.letterSpacing = `${C().TITLE_LETTER_SPACING}px`;
+      svg.appendChild(t);
+    }
+
+    // rails (unchanged)
+    if (items.length){
+      const first = items[0];
+      const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
+      const makeSeg = (xs, xe) => {
+        if (xe > xs){
+          const stroke = (() => {
+            const id = "seg_" + Math.random().toString(36).slice(2,8);
+            let defs = svg.querySelector("defs");
+            if (!defs) { defs=document.createElementNS(NS,"defs"); svg.appendChild(defs); }
+            const g=document.createElementNS(NS,"linearGradient");
+            g.setAttribute("id",id); g.setAttribute("gradientUnits","userSpaceOnUse");
+            g.setAttribute("x1",xs); g.setAttribute("y1",attachY);
+            g.setAttribute("x2",xe); g.setAttribute("y2",attachY);
+            [["0%",C().COLOR_GOLD],["35%","rgba(255,255,255,.95)"],["75%",C().COLOR_CYAN],["100%","rgba(99,211,255,.60)"]]
+              .forEach(([o,c])=>{ const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); g.appendChild(s); });
+            if (!reduceMotion() && C().FLOW_SPEED_S>0){
+              const a=document.createElementNS(NS,"animateTransform");
+              a.setAttribute("attributeName","gradientTransform"); a.setAttribute("type","translate");
+              a.setAttribute("from","0 0"); a.setAttribute("to", `${(xe-xs)} 0`);
+              a.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a.setAttribute("repeatCount","indefinite"); g.appendChild(a);
+            }
+            defs.appendChild(g); return `url(#${id})`;
+          })();
+          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
+        }
+      };
+      if (C().SHOW_LEFT_LINE){
+        const xs = W * Math.max(0, Math.min(1, C().LEFT_STOP_RATIO));
+        const xe = first.x - C().CONNECT_X_PAD; makeSeg(xs, xe);
       }
-
-      if (s.kind === "diamond"){
-        const cx = x + w/2, cy = y + h/2, rx = w/2, ry = h/2;
-        const d = `M ${cx} ${cy-ry} L ${cx+rx} ${cy} L ${cx} ${cy+ry} L ${cx-rx} ${cy} Z`;
-        const path = document.createElementNS(ns,"path");
-        path.setAttribute("d", d);
-        path.setAttribute("fill","none");
-        path.setAttribute("stroke","url(#gradFlow)");
-        path.setAttribute("stroke-width","2.5");
-        path.setAttribute("stroke-linejoin","round");
-        path.setAttribute("class","glow");
-        svg.appendChild(path);
-        drawIn(path);
-        addText(x+16, y + h/2 + 5, s.text, 15, "800");
+      if (C().SHOW_RIGHT_LINE){
+        const xs = first.x + first.w + C().CONNECT_X_PAD;
+        const xe = W - C().RIGHT_MARGIN_PX;    makeSeg(xs, xe);
       }
-    });
+    }
 
-    // ----- Three dots below (suggesting more factors) -----
-    const lastY = startY + (shapes.length-1)*gapY + shapes[shapes.length-1].h + 18;
-    [0,1,2].forEach((k)=>{
-      const c = document.createElementNS(ns,"circle");
-      c.setAttribute("cx", baseX + colW/2);
-      c.setAttribute("cy", lastY + k*14);
-      c.setAttribute("r", 3.5);
-      c.setAttribute("fill","rgba(99,211,255,.95)");
-      c.setAttribute("class","glow");
-      svg.appendChild(c);
-    });
+    // vertical connectors
+    for (let i=0;i<items.length-1;i++){
+      const a=items[i], b2=items[i+1];
+      const xMid = a.x + a.w/2, y1=a.y+a.h, y2=b2.y, pad=Math.max(2, C().STROKE_PX);
+      addPath(svg, `M ${xMid} ${y1+pad} V ${y2-pad}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
+    }
 
-    // Keep copy nicely left of the first box
-    requestAnimationFrame(() => {
-      const boxLeftAbs = b.left + baseX;
-      const copyBox    = copy.getBoundingClientRect();
-      let idealLeft    = Math.min(copyBox.left, boxLeftAbs - 44 - copyBox.width);
-      idealLeft        = Math.max(idealLeft, leftClamp);
-      copy.style.left  = idealLeft + "px";
-    });
+    // copy (left)
+    const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
+    const top  = b.top  + H * C().COPY_TOP_RATIO  + C().COPY_NUDGE_Y;
+    const html = `
+      <h3>Who becomes a long-term customer?</h3>
+      <p>Our <b>Weight Score</b> estimates retention by combining four signals:
+      how much the <b>product depends on packaging</b>, how deeply packaging is
+      <b>embedded in operations</b>, the <b>reorder cadence & SKU velocity</b>, and
+      the <b>risk of switching</b> due to specs, approvals, or compliance.
+      It highlights accounts likely to stay and grow, not just click.</p>`;
+    if (typeof ctx.mountCopy === "function"){
+      const el = ctx.mountCopy({ top, left, html });
+      el.style.maxWidth = `${C().COPY_MAX_W_PX}px`;
+      el.style.fontFamily = C().COPY_FAMILY;
+      const h3 = el.querySelector("h3"); if (h3) h3.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
+      const p  = el.querySelector("p");  if (p)  p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
+    }
   };
 })();
