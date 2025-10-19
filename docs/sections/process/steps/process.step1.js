@@ -9,11 +9,11 @@
     root.step1 = root.step1 || {};
     const dflt = {
       // ===== DESKTOP knobs (UNCHANGED SHAPES/POSITIONS) =====
-      BOX_W_RATIO: 0.10,        // width of each shape (as % of scene W)
-      BOX_H_RATIO: 0.12,        // height of each rounded box (as % of scene H)
-      GAP_RATIO: 0.035,         // vertical gap between shapes (as % of scene H)
-      STACK_X_RATIO: 0.705,     // column X position (as % of scene W)
-      STACK_TOP_RATIO: 0.21,    // top Y position (as % of scene H)
+      BOX_W_RATIO: 0.10,
+      BOX_H_RATIO: 0.12,
+      GAP_RATIO: 0.035,
+      STACK_X_RATIO: 0.705,
+      STACK_TOP_RATIO: 0.21,
       NUDGE_X: -230, NUDGE_Y: -20,
       RADIUS_RECT: 18, RADIUS_PILL: 18, RADIUS_OVAL: 999, DIAMOND_SCALE: 1.2,
       SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true,
@@ -26,7 +26,7 @@
       FONT_LETTER_SPACING: 0.3, LINE_HEIGHT_EM: 1.15,
       PADDING_X: 4, PADDING_Y: 4, UPPERCASE: false,
 
-      // ===== Default labels for time-sensitive "intent" =====
+      // Labels
       LABEL_RECT_1: "Back-To-Back Search (last 14d)",
       LABEL_RECT_2: "RFQ/RFP Keywords Detected",
       LABEL_ROUND_3: "Pricing & Sample Page Hits",
@@ -38,11 +38,9 @@
       TITLE_TEXT: "Time-to-Buy Intent",
       TITLE_PT: 14, TITLE_WEIGHT: 700,
       TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-      TITLE_OFFSET_X: 0,
-      TITLE_OFFSET_Y: -28,
-      TITLE_LETTER_SPACING: 0.2,
+      TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -28, TITLE_LETTER_SPACING: 0.2,
 
-      // Copy block (desktop, left)
+      // Copy block (desktop)
       COPY_LEFT_RATIO: 0.035, COPY_TOP_RATIO: 0.18,
       COPY_NUDGE_X: 0, COPY_NUDGE_Y: 0,
       COPY_MAX_W_PX: 300,
@@ -57,20 +55,24 @@
       COLOR_GOLD: "rgba(242,220,160,0.92)",
       REDUCE_MOTION: false,
 
-      // Dots under the last shape
+      // Dots
       DOTS_COUNT: 3, DOTS_SIZE_PX: 2.2, DOTS_GAP_PX: 26, DOTS_Y_OFFSET: 26,
 
       // ===== MOBILE knobs (phones only; desktop unaffected) =====
-      MOBILE_BREAKPOINT: 640,   // <= triggers the mobile DOM layout
-      M_MAX_W: 520,             // max content width
-      M_SIDE_PAD: 16,           // page side padding
-      M_STACK_GAP: 14,          // gap between mobile shapes
-      M_BOX_MIN_H: 56,          // min height of each mobile box
-      M_BORDER_PX: 2,           // outline weight (mobile)
-      M_FONT_PT: 11,            // label size inside mobile shapes
-      M_TITLE_PT: 16,           // mobile title size
-      M_COPY_H_PT: 22,          // mobile <h3> size
-      M_COPY_BODY_PT: 14        // mobile body size
+      MOBILE_BREAKPOINT: 640,  // triggers the mobile DOM layout
+      M_MAX_W: 520,            // max content width
+      M_SIDE_PAD: 16,          // page side padding
+      M_STACK_GAP: 14,         // gap between shapes INSIDE step 1
+      M_BOX_MIN_H: 56,         // min height of each mobile box
+      M_BORDER_PX: 2,          // outline weight
+      M_FONT_PT: 11,           // label size inside shapes
+      M_TITLE_PT: 16,          // mobile title size
+      M_COPY_H_PT: 22,         // mobile <h3> size
+      M_COPY_BODY_PT: 14,      // mobile body size
+
+      // NEW: inter-step spacing for phones (affects distance from other steps)
+      M_SECTION_TOP: 40,       // top margin for step 1 block
+      M_SECTION_BOTTOM: 72     // bottom margin for step 1 block
     };
     for (const k in dflt) if (!(k in root.step1)) root.step1[k] = dflt[k];
     return root.step1;
@@ -82,7 +84,6 @@
   // ---------------- DESKTOP SVG helpers (unchanged visuals) ----------------
   function makeFlowGradients(svg, { spanX, y }) {
     const defs = document.createElementNS(NS, "defs");
-
     const gFlow = document.createElementNS(NS, "linearGradient");
     gFlow.id = "gradFlow";
     gFlow.setAttribute("gradientUnits", "userSpaceOnUse");
@@ -185,7 +186,12 @@
       @media (max-width:${bp}px){
         html, body, #section-process { overflow-x:hidden; }
 
-        .p1m-wrap{ position:relative; margin:0 auto; max-width:${C().M_MAX_W}px; padding:0 ${C().M_SIDE_PAD}px 8px; }
+        /* Make wrap participate in normal flow; specific .s1 class beats global style */
+        #section-process .p1m-wrap.s1{
+          position:relative; margin:${C().M_SECTION_TOP}px auto ${C().M_SECTION_BOTTOM}px !important;
+          max-width:${C().M_MAX_W}px; padding:0 ${C().M_SIDE_PAD}px 8px; z-index:0;
+        }
+
         .p1m-title{
           text-align:center; color:#ddeaef;
           font:${C().TITLE_WEIGHT} ${C().M_TITLE_PT}pt ${C().TITLE_FAMILY};
@@ -233,7 +239,7 @@
     ctx.canvas.style.pointerEvents = "auto";
 
     const wrap = document.createElement("div");
-    wrap.className = "p1m-wrap";
+    wrap.className = "p1m-wrap s1";   // <- specific class so our margins override global mobile css
 
     const copyHTML = `
       <h3>Who’s ready now?</h3>
@@ -253,7 +259,6 @@
         <div class="p1m-dots"><i></i><i></i><i></i></div>
       </div>
     `;
-
     ctx.canvas.appendChild(wrap);
   }
 
@@ -266,7 +271,7 @@
 
     if (isMobile) return drawMobile(ctx);  // MOBILE path only
 
-    // DESKTOP path: original SVG scene
+    // DESKTOP path: original SVG scene (UNCHANGED)
     const W = b.width, H = Math.min(560, b.sH-40);
     const svg = document.createElementNS(NS,"svg");
     svg.style.position="absolute"; svg.style.left=b.left+"px"; svg.style.top=b.top+"px";
