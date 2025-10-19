@@ -36,7 +36,7 @@
       BP_SMALL_FONT_PT: { PILL: 11, ROUND: 11, OVAL: 11, DIAMOND: 10 },
 
       // ===== MOBILE knobs (do NOT affect desktop) =====
-      MOBILE_BREAKPOINT: 640,   // <= px triggers mobile layout
+      MOBILE_BREAKPOINT: 1440,   // <= px triggers mobile layout
       M_MAX_W: 520,             // max content width on phones
       M_SIDE_PAD: 16,           // page-side padding
       M_STACK_GAP: 14,          // gap between shapes
