@@ -3,12 +3,12 @@
   const STEP = 1;
   const NS = "http://www.w3.org/2000/svg";
 
-  // read config safely (desktop values kept as-is)
+  // read config safely (desktop kept intact; add mobile knobs)
   function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step1 = root.step1 || {};
     const dflt = {
-      // DESKTOP knobs (unchanged)
+      // ===== DESKTOP knobs (UNCHANGED) =====
       BOX_W_RATIO: 0.1, BOX_H_RATIO: 0.12, GAP_RATIO: 0.035,
       STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.21, NUDGE_X: -230, NUDGE_Y: -20,
       RADIUS_RECT: 18, RADIUS_PILL: 18, RADIUS_OVAL: 999, DIAMOND_SCALE: 1,
@@ -35,17 +35,17 @@
       BP_MED_W: 900, BP_MED_SCALE: 0.92, BP_SMALL_W: 640, BP_SMALL_SCALE: 0.84,
       BP_SMALL_FONT_PT: { PILL: 11, ROUND: 11, OVAL: 11, DIAMOND: 10 },
 
-      // NEW: MOBILE knobs (do not affect desktop)
-      MOBILE_BREAKPOINT: 640,     // <= px uses mobile layout
-      M_BOX_W_PCT: 0.90,          // width inside lamp area (0..1)
-      M_GAP_PX: 14,               // vertical gap between items
-      M_BOX_MIN_H: 56,            // min height of pill/rect/oval
-      M_BORDER_PX: 2,             // border thickness
-      M_PADDING_X: 10,            // inner padding X
-      M_PADDING_Y: 8,             // inner padding Y
-      M_FONT_PT: 11,              // font size inside shapes
-      M_TITLE_PT: 14,             // title size
-      M_COPY_MAX_W: 440           // copy width on phones
+      // ===== MOBILE knobs (do NOT affect desktop) =====
+      MOBILE_BREAKPOINT: 640,   // <= px triggers mobile layout
+      M_MAX_W: 520,             // max content width on phones
+      M_SIDE_PAD: 16,           // page-side padding
+      M_STACK_GAP: 14,          // gap between shapes
+      M_BOX_MIN_H: 56,          // min height of rounded/oval boxes
+      M_BORDER_PX: 2,           // outline thickness
+      M_FONT_PT: 11,            // shape label size
+      M_TITLE_PT: 16,           // title size
+      M_COPY_H_PT: 22,          // copy h3 size
+      M_COPY_BODY_PT: 14        // body copy size
     };
     for (const k in dflt) if (!(k in root.step1)) root.step1[k] = dflt[k];
     return root.step1;
@@ -54,9 +54,10 @@
   const reduceMotion = () =>
     (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) || C().REDUCE_MOTION;
 
-  /* ---------------- DESKTOP (SVG) ---------------- */
+  /* ==================== DESKTOP UTILS (unchanged visuals) ==================== */
   function makeFlowGradients(svg, { spanX, y }) {
     const defs = document.createElementNS(NS, "defs");
+
     const gFlow = document.createElementNS(NS, "linearGradient");
     gFlow.id = "gradFlow";
     gFlow.setAttribute("gradientUnits", "userSpaceOnUse");
@@ -146,77 +147,70 @@
     d.innerHTML = html; fo.appendChild(d); svg.appendChild(fo);
   }
 
-  /* ---------------- MOBILE (DOM/CSS) ---------------- */
+  /* ==================== MOBILE LAYOUT (DOM/CSS) ==================== */
   function ensureMobileCSS() {
     const id = "p1m-style";
     if (document.getElementById(id)) return;
-    const s = document.createElement("style"); s.id = id;
 
-    const bp   = C().MOBILE_BREAKPOINT;
-    const boxW = Math.round(C().M_BOX_W_PCT * 100) + "%";
-    const gap  = C().M_GAP_PX + "px";
-    const minH = C().M_BOX_MIN_H + "px";
-    const bpx  = C().M_BORDER_PX + "px";
-    const padX = C().M_PADDING_X + "px";
-    const padY = C().M_PADDING_Y + "px";
-    const fpt  = C().M_FONT_PT;
-    const titlePt = C().M_TITLE_PT;
+    const s = document.createElement("style"); s.id = id;
+    const bp = C().MOBILE_BREAKPOINT;
     const cyan = C().COLOR_CYAN;
 
     s.textContent = `
-    @media (max-width:${bp}px){
-      .p1m-wrap{ position:absolute; z-index:3; }
-      .p1m-title{
-        text-align:center; color:#ddeaef;
-        font:${C().TITLE_WEIGHT} ${titlePt}pt ${C().TITLE_FAMILY};
-        letter-spacing:${C().TITLE_LETTER_SPACING}px; margin:6px 0 10px;
-      }
-      .p1m-copy{ margin:0 auto 14px; max-width:${C().M_COPY_MAX_W}px; color:#a7bacb; }
-      .p1m-copy h3{ margin:0 0 6px; color:#eaf0f6; font:600 20px "Newsreader", Georgia, serif; }
-      .p1m-copy p{ margin:0; font:400 14px/1.55 Inter, system-ui; }
+      @media (max-width:${bp}px){
+        /* keep section in normal page flow, no horizontal swipe */
+        #section-process, html, body { overflow-x:hidden; }
 
-      .p1m-stack{ display:flex; flex-direction:column; align-items:center; gap:${gap}; }
-      .p1m-box{
-        width:${boxW}; min-height:${minH};
-        border:${bpx} solid ${cyan}; border-radius:12px;
-        padding:${padY} ${padX}; display:flex; align-items:center; justify-content:center;
-        text-align:center; color:#ddeaef; background:rgba(255,255,255,.02);
-        font:${C().FONT_WEIGHT_BOX} ${fpt}pt ${C().FONT_FAMILY_BOX};
-        letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+        .p1m-wrap{ position:relative; margin:0 auto; max-width:${C().M_MAX_W}px; padding:0 ${C().M_SIDE_PAD}px 8px; }
+        .p1m-title{
+          text-align:center; color:#ddeaef;
+          font:${C().TITLE_WEIGHT} ${C().M_TITLE_PT}pt ${C().TITLE_FAMILY};
+          letter-spacing:${C().TITLE_LETTER_SPACING}px; margin:6px 0 10px;
+        }
+        .p1m-copy{ margin:0 auto 14px; color:#a7bacb; }
+        .p1m-copy h3{ margin:0 0 8px; color:#eaf0f6; font:600 ${C().M_COPY_H_PT}px "Newsreader", Georgia, serif; }
+        .p1m-copy p { margin:0; font:400 ${C().M_COPY_BODY_PT}px/1.55 Inter, system-ui; }
+
+        .p1m-stack{ display:flex; flex-direction:column; align-items:center; gap:${C().M_STACK_GAP}px; }
+        .p1m-box{
+          width:100%; min-height:${C().M_BOX_MIN_H}px;
+          border:${C().M_BORDER_PX}px solid ${cyan}; border-radius:14px;
+          padding:10px 12px; display:flex; align-items:center; justify-content:center;
+          text-align:center; color:#ddeaef; background:rgba(255,255,255,.02);
+          font:${C().FONT_WEIGHT_BOX} ${C().M_FONT_PT}pt ${C().FONT_FAMILY_BOX};
+          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+        }
+        .p1m-box.oval{ border-radius:9999px }
+        .p1m-diamond{
+          width:100%; aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
+          transform:rotate(45deg); background:rgba(255,255,255,.02); margin-top:2px;
+          display:flex; align-items:center; justify-content:center;
+        }
+        .p1m-diamond > span{
+          transform:rotate(-45deg); display:flex; align-items:center; justify-content:center;
+          width:100%; height:100%; text-align:center; color:#ddeaef;
+          font:${C().FONT_WEIGHT_BOX} ${Math.max(8, C().M_FONT_PT - 1)}pt ${C().FONT_FAMILY_BOX};
+          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+          padding:10px 12px;
+        }
+        .p1m-dots{ display:flex; gap:14px; justify-content:center; padding-top:6px }
+        .p1m-dots i{ width:6px; height:6px; border-radius:50%; background:${cyan}; display:inline-block; }
       }
-      .p1m-box.round{ border-radius:14px }
-      .p1m-box.oval{ border-radius:9999px }
-      .p1m-diamond{
-        width:${boxW}; aspect-ratio:1/1; border:${bpx} solid ${cyan};
-        transform:rotate(45deg); background:rgba(255,255,255,.02); margin-top:2px;
-        display:flex; align-items:center; justify-content:center;
-      }
-      .p1m-diamond > span{
-        transform:rotate(-45deg); display:flex; align-items:center; justify-content:center;
-        width:100%; height:100%; text-align:center; color:#ddeaef;
-        font:${C().FONT_WEIGHT_BOX} ${fpt - 1}pt ${C().FONT_FAMILY_BOX};
-        letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
-        padding:${padY} ${padX};
-      }
-      .p1m-dots{ display:flex; gap:16px; justify-content:center; padding-top:6px }
-      .p1m-dots i{ width:6px; height:6px; border-radius:50%; background:${cyan}; display:inline-block; }
-    }`;
+    `;
     document.head.appendChild(s);
   }
 
-  function drawMobile({ canvas, bounds }) {
+  function drawMobile(ctx) {
     ensureMobileCSS();
 
-    const W = bounds.width;
-    const H = Math.min(560, bounds.sH - 40);
+    // make the canvas participate in page flow on phones (prevents nested scroll)
+    ctx.canvas.style.position = "relative";
+    ctx.canvas.style.inset = "auto";
+    ctx.canvas.style.pointerEvents = "auto";
 
     const wrap = document.createElement("div");
     wrap.className = "p1m-wrap";
-    wrap.style.left = bounds.left + "px";
-    wrap.style.top  = (bounds.top + 6) + "px";
-    wrap.style.width = W + "px";
 
-    // Title + copy + vertical stack of shapes (no glow/rails)
     wrap.innerHTML = `
       ${C().TITLE_SHOW ? `<div class="p1m-title">${C().TITLE_TEXT}</div>` : ``}
       <div class="p1m-copy">
@@ -226,28 +220,30 @@
         tools they interact with, and company size. The score bubbles up buyers most likely to
         convert now so your team prioritizes quotes, samples, and demos that close quickly.</p>
       </div>
+
       <div class="p1m-stack">
-        <div class="p1m-box round">${C().LABEL_RECT_1}</div>
-        <div class="p1m-box round">${C().LABEL_RECT_2}</div>
-        <div class="p1m-box round">${C().LABEL_ROUND_3}</div>
+        <div class="p1m-box">${C().LABEL_RECT_1}</div>
+        <div class="p1m-box">${C().LABEL_RECT_2}</div>
+        <div class="p1m-box">${C().LABEL_ROUND_3}</div>
         <div class="p1m-box oval">${C().LABEL_OVAL_4}</div>
         <div class="p1m-diamond"><span>${C().LABEL_DIAMOND_5}</span></div>
         <div class="p1m-dots"><i></i><i></i><i></i></div>
       </div>
     `;
-    canvas.appendChild(wrap);
+
+    ctx.canvas.appendChild(wrap);
   }
 
-  /* ---------------- DESKTOP DRAW ---------------- */
+  /* ==================== DESKTOP DRAW (unchanged) ==================== */
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx){
     const b = ctx.bounds;
-    const isMobile = window.innerWidth <= C().MOBILE_BREAKPOINT;
+    const isMobile = (window.PROCESS_FORCE_MOBILE === true) ||
+                     (window.innerWidth <= C().MOBILE_BREAKPOINT);
 
-    // MOBILE: simple DOM layout, no SVG/glow/rails
-    if (isMobile) return drawMobile(ctx);
+    if (isMobile) return drawMobile(ctx);  // MOBILE path only
 
-    // DESKTOP: original SVG scene (unchanged visuals)
+    // DESKTOP path: original SVG scene
     const W = b.width, H = Math.min(560, b.sH-40);
     const svg = document.createElementNS(NS,"svg");
     svg.style.position="absolute"; svg.style.left=b.left+"px"; svg.style.top=b.top+"px";
@@ -342,7 +338,7 @@
       svg.appendChild(t);
     }
 
-    // H rails (segment gradient = completes the run)
+    // H rails (segment gradient so the flow completes the run)
     if (items.length){
       const first = items[0];
       const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
