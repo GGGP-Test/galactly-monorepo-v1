@@ -1,293 +1,298 @@
-// docs/sections/process/steps/process.step1.js
+// sections/process/steps/process.step1.js
 (() => {
-  // Register Step 1 scene. This file draws the “Intent Score” stack.
-  const SCENES = (window.PROCESS_SCENES = window.PROCESS_SCENES || {});
-  const CFG     = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
-  CFG.step1     = CFG.step1 || {};
+  const STEP = 1;
+  const NS = "http://www.w3.org/2000/svg";
 
-  SCENES[1] = function renderStep1(ctx){
-    // ---- safety / env ----
-    const ns     = ctx.ns || "http://www.w3.org/2000/svg";
-    const b      = (typeof ctx.bounds === "function") ? ctx.bounds() : ctx.bounds;
-    const C      = CFG.step1;
+  // read config safely
+  function C() {
+    const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
+    root.step1 = root.step1 || {};
+    // very small fallbacks so scene still draws if no knobs were pasted yet
+    const dflt = {
+      BOX_W_RATIO: 0.1, BOX_H_RATIO: 0.12, GAP_RATIO: 0.035,
+      STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.21, NUDGE_X: 0, NUDGE_Y: 0,
+      RADIUS_RECT: 18, RADIUS_PILL: 18, RADIUS_OVAL: 999, DIAMOND_SCALE: 0.8,
+      SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true, LEFT_STOP_RATIO: 0.35,
+      RIGHT_MARGIN_PX: 16, H_LINE_Y_BIAS: -0.06, CONNECT_X_PAD: 8, LINE_STROKE_PX: 2.5,
+      FONT_PT_PILL: 8, FONT_PT_ROUND: 8, FONT_PT_OVAL: 8, FONT_PT_DIAMOND: 7,
+      FONT_WEIGHT_BOX: 525, FONT_FAMILY_BOX: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      FONT_LETTER_SPACING: 0.3, LINE_HEIGHT_EM: 1.15, PADDING_X: 4, PADDING_Y: 4, UPPERCASE: false,
+      LABEL_RECT_1: "Number of Searches / TimeBlock",
+      LABEL_RECT_2: "Technologies used at the location",
+      LABEL_ROUND_3: "Number of customers based on LTV/CAC",
+      LABEL_OVAL_4:  "Tools interacted",
+      LABEL_DIAMOND_5:"Company Size",
+      TITLE_SHOW: true, TITLE_TEXT: "Intent Score", TITLE_PT: 14, TITLE_WEIGHT: 700,
+      TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -28, TITLE_LETTER_SPACING: 0.2,
+      COPY_LEFT_RATIO: 0.035, COPY_TOP_RATIO: 0.18, COPY_NUDGE_X: 0, COPY_NUDGE_Y: 0,
+      COPY_MAX_W_PX: 300, COPY_H_PT: 24, COPY_H_WEIGHT: 500, COPY_BODY_PT: 12, COPY_BODY_WEIGHT: 400,
+      COPY_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      COPY_LINE_HEIGHT: 1.6,
+      STROKE_PX: 2.8, GLOW_PX: 16, FLOW_SPEED_S: 6.5,
+      COLOR_CYAN: "rgba(99,211,255,0.95)", COLOR_GOLD: "rgba(242,220,160,0.92)",
+      REDUCE_MOTION: false, DOTS_COUNT: 3, DOTS_SIZE_PX: 2.2, DOTS_GAP_PX: 26, DOTS_Y_OFFSET: 26,
+      BP_MED_W: 900, BP_MED_SCALE: 0.92, BP_SMALL_W: 640, BP_SMALL_SCALE: 0.84,
+      BP_SMALL_FONT_PT: { PILL: 11, ROUND: 11, OVAL: 11, DIAMOND: 10 }
+    };
+    for (const k in dflt) if (!(k in root.step1)) root.step1[k] = dflt[k];
+    return root.step1;
+  }
 
-    if (!ctx.canvas || !b || !b.width || !b.sH) return; // hard-guard to avoid NaN
+  const reduceMotion = () =>
+    (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) || C().REDUCE_MOTION;
 
-    // ---- stage ----
-    const nodeW = b.width;
-    const nodeH = Math.min(560, b.sH - 40);
-    const svg   = document.createElementNS(ns, "svg");
-    svg.setAttribute("width",  nodeW);
-    svg.setAttribute("height", nodeH);
-    svg.setAttribute("viewBox", `0 0 ${nodeW} ${nodeH}`);
-    svg.style.position = "absolute";
-    svg.style.left = b.left + "px";
-    svg.style.top  = b.top  + "px";
+  function makeFlowGradients(svg, { spanX, y }) {
+    // Use the SAME ids/stop recipe as step 0 so the look matches exactly.
+    // (scoped to this SVG; ids can repeat in other SVGs).
+    const defs = document.createElementNS(NS, "defs");
 
-    // unique ids so multiple repaints don’t collide
-    const uid = "s1_" + Math.random().toString(36).slice(2, 8);
-
-    // ---- helpers ----
-    const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
-
-    function rrPath(cx, cy, w, h, r){
-      r = clamp(r, 0, Math.min(w, h)/2);
-      const x = cx - w/2, y = cy - h/2;
-      const xr = x + w, yr = y + h, r2 = r * 2;
-      return [
-        `M ${x+r} ${y}`,
-        `H ${xr-r}`,
-        `Q ${xr} ${y} ${xr} ${y+r}`,
-        `V ${yr-r}`,
-        `Q ${xr} ${yr} ${xr-r} ${yr}`,
-        `H ${x+r}`,
-        `Q ${x} ${yr} ${x} ${yr-r}`,
-        `V ${y+r}`,
-        `Q ${x} ${y} ${x+r} ${y}`,
-        "Z"
-      ].join(" ");
-    }
-    function diamondPath(cx, cy, w, h, scale=1){
-      const hw = (w*scale)/2, hh = (h*scale)/2;
-      return `M ${cx} ${cy-hh} L ${cx+hw} ${cy} L ${cx} ${cy+hh} L ${cx-hw} ${cy} Z`;
-    }
-
-    // flowing gradients (cyan↔gold), matching Step 0
-    function makeStrokeGradient(id, x1, y1, x2, y2, moveBy, dur){
-      const g = document.createElementNS(ns, "linearGradient");
-      g.setAttribute("id", id);
-      g.setAttribute("gradientUnits", "userSpaceOnUse");
-      g.setAttribute("x1", x1); g.setAttribute("y1", y1);
-      g.setAttribute("x2", x2); g.setAttribute("y2", y2);
-
-      // same stop recipe you loved on step 0
-      const stops = [
-        ["0%",   "rgba(230,195,107,.95)"], // warm gold
-        ["35%",  "rgba(255,255,255,.95)"], // white pop
-        ["75%",  "rgba(99,211,255,.95)"],  // cyan
-        ["100%", "rgba(99,211,255,.60)"]
-      ];
-      for (const [o,c] of stops){
-        const s = document.createElementNS(ns, "stop");
-        s.setAttribute("offset", o); s.setAttribute("stop-color", c);
-        g.appendChild(s);
-      }
-      // flow across the ENTIRE segment (so it completes its journey)
-      const a = document.createElementNS(ns, "animateTransform");
-      a.setAttribute("attributeName","gradientTransform");
-      a.setAttribute("type","translate");
-      a.setAttribute("from","0 0");
-      a.setAttribute("to", `${moveBy} 0`);
-      a.setAttribute("dur", (C.FLOW_SPEED_S || 6.5) + "s");
-      a.setAttribute("repeatCount","indefinite");
-      g.appendChild(a);
-      return g;
-    }
-
-    // ---- sizes / placement from config (your exact knobs) ----
-    const BOX_W = nodeW * (C.BOX_W_RATIO   ?? 0.100);
-    const BOX_H = nodeW * (C.BOX_H_RATIO   ?? 0.12);
-    const GAP   = nodeW * (C.GAP_RATIO     ?? 0.035);
-
-    const stackCX = (nodeW * (C.STACK_X_RATIO ?? 0.705)) + (C.NUDGE_X || 0);
-    const stackTop= (nodeH * (C.STACK_TOP_RATIO ?? 0.21)) + (C.NUDGE_Y || 0);
-
-    const R_RECT   = (C.RADIUS_RECT   ?? 18);
-    const R_PILL   = (C.RADIUS_PILL   ?? 18);
-    const R_OVAL   = (C.RADIUS_OVAL   ?? 999);
-    const DIA_SCALE= (C.DIAMOND_SCALE ?? 1);
-
-    const STROKE_PX = (C.STROKE_PX ?? 2.8);
-    const LINE_STROKE = (C.LINE_STROKE_PX ?? 2.5);
-    const GLOW = (C.GLOW_PX ?? 16);
-
-    const CONNECT_X_PAD = (C.CONNECT_X_PAD ?? 8);
-    const LEFT_STOP  = b.left + b.width * (C.LEFT_STOP_RATIO ?? 0.35);
-    const RIGHT_END  = b.left + b.width - (C.RIGHT_MARGIN_PX ?? 16);
-
-    // ---- defs (all gradients) ----
-    const defs = document.createElementNS(ns, "defs");
-    svg.appendChild(defs);
-
-    // gradient for long horizontal rail
-    const railYAnchorBias = (C.H_LINE_Y_BIAS ?? -0.06); // vs first box center
-    // we know first box center y now (compute first)
-    const y1 = stackTop + BOX_H/2 + railYAnchorBias*BOX_H;
-
-    const gradRailId  = `grad-rail-${uid}`;
-    defs.appendChild(makeStrokeGradient(gradRailId, LEFT_STOP, y1, RIGHT_END, y1, (RIGHT_END - LEFT_STOP), (C.FLOW_SPEED_S || 6.5)));
-
-    // gradient for shapes (each built with its own width to ensure full traversal)
-    function gradForShape(xStart, xEnd, idSuffix){
-      const id = `grad-shape-${idSuffix}-${uid}`;
-      defs.appendChild(makeStrokeGradient(id, xStart, y1, xEnd, y1, (xEnd - xStart), (C.FLOW_SPEED_S || 6.5)));
-      return id;
-    }
-
-    // ---- group
-    const g = document.createElementNS(ns,"g");
-    g.setAttribute("filter", `drop-shadow(0 0 ${GLOW}px rgba(99,211,255,.40)) drop-shadow(0 0 ${GLOW*0.6}px rgba(242,220,160,.30))`);
-    svg.appendChild(g);
-
-    // ---- title (optional)
-    if (C.TITLE_SHOW){
-      const tx = stackCX + (C.TITLE_OFFSET_X || 0);
-      const ty = (stackTop - BOX_H*0.8) + (C.TITLE_OFFSET_Y || 0);
-      const title = document.createElementNS(ns,"text");
-      title.setAttribute("x", tx);
-      title.setAttribute("y", ty);
-      title.setAttribute("text-anchor","middle");
-      title.setAttribute("fill","#cfe3f3");
-      title.setAttribute("font-size", (C.TITLE_PT||14));
-      title.setAttribute("font-weight", (C.TITLE_WEIGHT||700));
-      title.setAttribute("font-family", C.TITLE_FAMILY || 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif');
-      if (C.TITLE_LETTER_SPACING!=null) title.style.letterSpacing = C.TITLE_LETTER_SPACING+"px";
-      title.textContent = C.TITLE_TEXT || "Intent Score";
-      g.appendChild(title);
-    }
-
-    // ---- boxes layout
-    const items = [
-      { kind:"rect",   label:C.LABEL_RECT_1   || "Number of Searches / TimeBlock",  r:R_PILL },
-      { kind:"rect",   label:C.LABEL_RECT_2   || "Technologies used at the location", r:R_PILL },
-      { kind:"rect",   label:C.LABEL_ROUND_3  || "Number of customers based on LTV/CAC", r:R_RECT },
-      { kind:"oval",   label:C.LABEL_OVAL_4   || "Tools interacted" },
-      { kind:"diamond",label:C.LABEL_DIAMOND_5|| "Company Size" }
+    const gFlow = document.createElementNS(NS, "linearGradient");
+    gFlow.id = "gradFlow";
+    gFlow.setAttribute("gradientUnits", "userSpaceOnUse");
+    gFlow.setAttribute("x1", 0); gFlow.setAttribute("y1", y);
+    gFlow.setAttribute("x2", spanX); gFlow.setAttribute("y2", y);
+    const stops = [
+      ["0%",  C().COLOR_GOLD],
+      ["35%", "rgba(255,255,255,.95)"],
+      ["75%", C().COLOR_CYAN],
+      ["100%","rgba(99,211,255,.60)"]
     ];
+    stops.forEach(([o,c])=>{ const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gFlow.appendChild(s); });
 
-    const centers = []; // keep for connectors
-    let cy = stackTop + BOX_H/2;
+    if (!reduceMotion() && C().FLOW_SPEED_S>0){
+      const a1 = document.createElementNS(NS,"animateTransform");
+      a1.setAttribute("attributeName","gradientTransform");
+      a1.setAttribute("type","translate");
+      a1.setAttribute("from","0 0"); a1.setAttribute("to", `${spanX} 0`);
+      a1.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a1.setAttribute("repeatCount","indefinite");
+      gFlow.appendChild(a1);
+    }
+    defs.appendChild(gFlow);
 
-    items.forEach((it, i)=>{
-      const cx = stackCX;
-      centers.push({cx, cy});
+    const gTrail = document.createElementNS(NS,"linearGradient");
+    gTrail.id = "gradTrailFlow";
+    gTrail.setAttribute("gradientUnits","userSpaceOnUse");
+    gTrail.setAttribute("x1", spanX); gTrail.setAttribute("y1", y);
+    gTrail.setAttribute("x2", spanX*2); gTrail.setAttribute("y2", y);
+    [["0%",C().COLOR_GOLD],["45%",C().COLOR_CYAN],["100%","rgba(99,211,255,.18)"]]
+      .forEach(([o,c])=>{ const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gTrail.appendChild(s); });
+    if (!reduceMotion() && C().FLOW_SPEED_S>0){
+      const a2 = document.createElementNS(NS,"animateTransform");
+      a2.setAttribute("attributeName","gradientTransform");
+      a2.setAttribute("type","translate");
+      a2.setAttribute("from","0 0"); a2.setAttribute("to", `${spanX} 0`);
+      a2.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a2.setAttribute("repeatCount","indefinite");
+      gTrail.appendChild(a2);
+    }
+    defs.appendChild(gTrail);
 
-      // gradient along this shape width so flow completes the entire outline
-      const gradId = gradForShape(cx-BOX_W/2, cx+BOX_W/2, "box"+i);
+    svg.appendChild(defs);
+  }
 
-      if (it.kind==="oval"){
-        const ellipse = document.createElementNS(ns,"ellipse");
-        ellipse.setAttribute("cx", cx);
-        ellipse.setAttribute("cy", cy);
-        ellipse.setAttribute("rx", BOX_W/2);
-        ellipse.setAttribute("ry", BOX_H/2);
-        ellipse.setAttribute("fill","none");
-        ellipse.setAttribute("stroke", `url(#${gradId})`);
-        ellipse.setAttribute("stroke-width", STROKE_PX);
-        g.appendChild(ellipse);
-      } else if (it.kind==="diamond"){
-        const p = document.createElementNS(ns,"path");
-        p.setAttribute("d", diamondPath(cx, cy, BOX_W, BOX_H, (DIA_SCALE || 1)));
-        p.setAttribute("fill","none");
-        p.setAttribute("stroke", `url(#${gradId})`);
-        p.setAttribute("stroke-width", STROKE_PX);
-        g.appendChild(p);
-      } else {
-        const p = document.createElementNS(ns,"path");
-        p.setAttribute("d", rrPath(cx, cy, BOX_W, BOX_H, it.r || R_RECT));
-        p.setAttribute("fill","none");
-        p.setAttribute("stroke", `url(#${gradId})`);
-        p.setAttribute("stroke-linejoin","round");
-        p.setAttribute("stroke-width", STROKE_PX);
-        g.appendChild(p);
+  function rr(x,y,w,h,r){
+    const R = Math.min(r, Math.min(w,h)/2);
+    return `M ${x+R} ${y} H ${x+w-R} Q ${x+w} ${y} ${x+w} ${y+R}
+            V ${y+h-R} Q ${x+w} ${y+h} ${x+w-R} ${y+h}
+            H ${x+R}   Q ${x}   ${y+h} ${x}   ${y+h-R}
+            V ${y+R}   Q ${x}   ${y}   ${x+R} ${y} Z`;
+  }
+  function diamond(cx,cy,w,h){ const hw=w/2, hh=h/2; return `M ${cx} ${cy-hh} L ${cx+hw} ${cy} L ${cx} ${cy+hh} L ${cx-hw} ${cy} Z`; }
+
+  function addPath(svg, d, stroke, sw){
+    const p = document.createElementNS(NS,"path");
+    p.setAttribute("d", d); p.setAttribute("fill","none");
+    p.setAttribute("stroke", stroke); p.setAttribute("stroke-width", sw);
+    p.setAttribute("stroke-linejoin","round"); p.setAttribute("stroke-linecap","round");
+    p.setAttribute("class","glow"); svg.appendChild(p); return p;
+  }
+  function addFO(svg, x,y,w,h, html, styles){
+    const fo = document.createElementNS(NS,"foreignObject");
+    fo.setAttribute("x",x); fo.setAttribute("y",y); fo.setAttribute("width",w); fo.setAttribute("height",h);
+    const d = document.createElement("div");
+    d.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
+    Object.assign(d.style, {
+      width:"100%", height:"100%", display:"flex",
+      alignItems:"center", justifyContent:"center", textAlign:"center",
+      color:"#ddeaef", whiteSpace:"pre-wrap", wordBreak:"break-word",
+      pointerEvents:"none"
+    }, styles||{});
+    d.innerHTML = html; fo.appendChild(d); svg.appendChild(fo);
+  }
+
+  window.PROCESS_SCENES = window.PROCESS_SCENES || {};
+  window.PROCESS_SCENES[STEP] = function draw({ canvas, bounds, mountCopy }){
+    const b = bounds; const W = b.width; const H = Math.min(560, b.sH-40);
+
+    const svg = document.createElementNS(NS,"svg");
+    svg.style.position="absolute"; svg.style.left=b.left+"px"; svg.style.top=b.top+"px";
+    svg.setAttribute("width",W); svg.setAttribute("height",H); svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+    canvas.appendChild(svg);
+
+    // gradients matching step 0
+    makeFlowGradients(svg, { spanX: W*0.15, y: 0 });
+
+    // geometry
+    const boxW = W * C().BOX_W_RATIO;
+    const boxH = H * C().BOX_H_RATIO;
+    const gap  = H * C().GAP_RATIO;
+    let x = W * C().STACK_X_RATIO + C().NUDGE_X;
+    let y = H * C().STACK_TOP_RATIO + C().NUDGE_Y;
+    const cx = x + boxW/2;
+
+    // shapes list (we’ll also create connectors between them)
+    const items = [];
+
+    // rect 1
+    {
+      const d = rr(x,y,boxW,boxH,C().RADIUS_PILL);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,boxH,
+        C().LABEL_RECT_1,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_PILL}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`,
+          lineHeight:`${C().LINE_HEIGHT_EM}em`,
+          textTransform:C().UPPERCASE?'uppercase':'none',
+          padding:`${C().PADDING_Y}px ${C().PADDING_X}px` });
+      items.push({x,y,w:boxW,h:boxH});
+      y += boxH + gap;
+    }
+    // rect 2
+    {
+      const d = rr(x,y,boxW,boxH,C().RADIUS_PILL);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,boxH,
+        C().LABEL_RECT_2,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_PILL}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`,
+          lineHeight:`${C().LINE_HEIGHT_EM}em`,
+          textTransform:C().UPPERCASE?'uppercase':'none',
+          padding:`${C().PADDING_Y}px ${C().PADDING_X}px` });
+      items.push({x,y,w:boxW,h:boxH});
+      y += boxH + gap;
+    }
+    // rounded 3
+    {
+      const d = rr(x,y,boxW,boxH,C().RADIUS_PILL);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,boxH,
+        C().LABEL_ROUND_3,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_ROUND}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`,
+          lineHeight:`${C().LINE_HEIGHT_EM}em`,
+          textTransform:C().UPPERCASE?'uppercase':'none',
+          padding:`${C().PADDING_Y}px ${C().PADDING_X}px` });
+      items.push({x,y,w:boxW,h:boxH});
+      y += boxH + gap;
+    }
+    // oval 4
+    {
+      const d = rr(x,y,boxW,boxH,999);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,boxH,
+        C().LABEL_OVAL_4,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_OVAL}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`,
+          lineHeight:`${C().LINE_HEIGHT_EM}em`,
+          textTransform:C().UPPERCASE?'uppercase':'none',
+          padding:`${C().PADDING_Y}px ${C().PADDING_X}px` });
+      items.push({x,y,w:boxW,h:boxH});
+      y += boxH + gap;
+    }
+    // diamond 5
+    {
+      const h = boxH * C().DIAMOND_SCALE;
+      const d = diamond(cx, y + h/2, boxW, h);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,h,
+        C().LABEL_DIAMOND_5,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_DIAMOND}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`,
+          lineHeight:`${C().LINE_HEIGHT_EM}em`,
+          textTransform:C().UPPERCASE?'uppercase':'none',
+          padding:`${Math.max(2,C().PADDING_Y-2)}px ${C().PADDING_X}px` });
+      items.push({x,y,w:boxW,h});
+      y += h + C().DOTS_Y_OFFSET;
+    }
+
+    // three dots — color matches stroke theme (cyan/gold). Use cyan for better pop.
+    if (C().DOTS_COUNT > 0) {
+      const centerX = x + boxW/2;
+      let dotY = y;
+      for (let i=0;i<C().DOTS_COUNT;i++){
+        const c = document.createElementNS(NS,"circle");
+        c.setAttribute("cx", centerX);
+        c.setAttribute("cy", dotY);
+        c.setAttribute("r", C().DOTS_SIZE_PX);
+        c.setAttribute("fill", C().COLOR_CYAN); // same family as strokes
+        c.setAttribute("class","glow");
+        svg.appendChild(c);
+        dotY += C().DOTS_GAP_PX;
       }
+    }
 
-      // label via foreignObject for wrapping + padding
-      const fo = document.createElementNS(ns,"foreignObject");
-      const padX = (C.PADDING_X ?? 4), padY = (C.PADDING_Y ?? 4);
-      fo.setAttribute("x", (cx - BOX_W/2 + padX));
-      fo.setAttribute("y", (cy - BOX_H/2 + padY));
-      fo.setAttribute("width",  Math.max(1, BOX_W - padX*2));
-      fo.setAttribute("height", Math.max(1, BOX_H - padY*2));
+    // Title
+    if (C().TITLE_SHOW){
+      const t = document.createElementNS(NS,"text");
+      const topBox = items[0];
+      t.setAttribute("x", (topBox.x + topBox.w/2) + C().TITLE_OFFSET_X);
+      t.setAttribute("y", (topBox.y) + C().TITLE_OFFSET_Y);
+      t.setAttribute("text-anchor","middle");
+      t.setAttribute("fill","#ddeaef");
+      t.setAttribute("font-family", C().TITLE_FAMILY);
+      t.setAttribute("font-weight", C().TITLE_WEIGHT);
+      t.setAttribute("font-size", `${C().TITLE_PT}pt`);
+      t.textContent = C().TITLE_TEXT;
+      t.style.letterSpacing = `${C().TITLE_LETTER_SPACING}px`;
+      svg.appendChild(t);
+    }
+
+    // H rails (left/right) anchored to first box edge — never pierce the stroke.
+    if (items.length){
+      const first = items[0];
+      const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
+      if (C().SHOW_LEFT_LINE){
+        const xs = W * Math.max(0, Math.min(1, C().LEFT_STOP_RATIO));
+        const xe = first.x - C().CONNECT_X_PAD;
+        addPath(svg, `M ${xs} ${attachY} H ${xe}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
+      }
+      if (C().SHOW_RIGHT_LINE){
+        const xs = first.x + first.w + C().CONNECT_X_PAD;
+        const xe = W - C().RIGHT_MARGIN_PX;
+        addPath(svg, `M ${xs} ${attachY} H ${xe}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
+      }
+    }
+
+    // V connectors between boxes (requested). Use same trail gradient.
+    for (let i=0;i<items.length-1;i++){
+      const a = items[i], b2 = items[i+1];
+      const xMid = a.x + a.w/2;
+      const y1 = a.y + a.h;                 // bottom edge of upper box
+      const y2 = b2.y;                       // top edge of next box
+      const pad = Math.max(2, C().STROKE_PX); // avoid piercing
+      addPath(svg, `M ${xMid} ${y1+pad} V ${y2-pad}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
+    }
+
+    // Copy block (independent)
+    const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
+    const top  = b.top  + H * C().COPY_TOP_RATIO  + C().COPY_NUDGE_Y;
+    const html = `
+      <h3>Who buys the fastest?</h3>
+      <p>We rank accounts by a live <b>intent score</b> built for packaging suppliers:
+      searches per time block, technology on site, customer scale by <b>LTV/CAC</b>,
+      tools they interact with, and company size. The score bubbles up buyers most likely to
+      convert now so your team prioritizes quotes, samples, and demos that close quickly.</p>`;
+    if (typeof mountCopy === "function"){
+      const el = mountCopy({ top, left, html });
+      el.style.maxWidth = `${C().COPY_MAX_W_PX}px`;
+      el.style.fontFamily = C().COPY_FAMILY;
+      const h = el.querySelector("h3"); if (h) h.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
+      const p = el.querySelector("p"); if (p) p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
+    } else {
       const div = document.createElement("div");
-      div.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
-      div.style.width = "100%";
-      div.style.height= "100%";
-      div.style.display="grid";
-      div.style.placeItems="center";
-      div.style.textAlign="center";
-      div.style.color = "#eaf6ff";
-      div.style.fontFamily = C.FONT_FAMILY_BOX || 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
-      div.style.fontWeight = (C.FONT_WEIGHT_BOX ?? 525);
-      div.style.letterSpacing = (C.FONT_LETTER_SPACING ?? 0.3) + "px";
-      div.style.lineHeight = (C.LINE_HEIGHT_EM ?? 1.15);
-      const size =
-        (it.kind==="diamond") ? (C.FONT_PT_DIAMOND ?? 7) :
-        (it.kind==="oval")    ? (C.FONT_PT_OVAL    ?? 8) :
-        (C.FONT_PT_PILL ?? C.FONT_PT_ROUND ?? 8);
-      div.style.fontSize = size + "pt";
-      div.textContent = C.UPPERCASE ? (it.label || "").toUpperCase() : (it.label || "");
-      fo.appendChild(div);
-      g.appendChild(fo);
-
-      cy += BOX_H + GAP;
-    });
-
-    // ---- horizontal rails (left & right), connected to first box
-    if (C.SHOW_LEFT_LINE || C.SHOW_RIGHT_LINE){
-      const first = centers[0];
-      const yRail = first.cy + (C.H_LINE_Y_BIAS ?? -0.06)*BOX_H;
-      const leftAttach  = first.cx - BOX_W/2 - CONNECT_X_PAD;
-      const rightAttach = first.cx + BOX_W/2 + CONNECT_X_PAD;
-
-      // long gradient already sized LEFT_STOP -> RIGHT_END so it traverses the full journey
-      const makeLine = (x1, x2)=>{
-        const line = document.createElementNS(ns,"line");
-        line.setAttribute("x1", x1);
-        line.setAttribute("y1", yRail);
-        line.setAttribute("x2", x2);
-        line.setAttribute("y2", yRail);
-        line.setAttribute("stroke", `url(#${gradRailId})`);
-        line.setAttribute("stroke-width", LINE_STROKE);
-        line.setAttribute("stroke-linecap","round");
-        g.appendChild(line);
-      };
-
-      if (C.SHOW_LEFT_LINE && xFinite(LEFT_STOP) && xFinite(leftAttach) && LEFT_STOP < leftAttach){
-        makeLine(LEFT_STOP, leftAttach);
-      }
-      if (C.SHOW_RIGHT_LINE && xFinite(rightAttach) && xFinite(RIGHT_END) && rightAttach < RIGHT_END){
-        makeLine(rightAttach, RIGHT_END);
-      }
+      div.className="copy show";
+      Object.assign(div.style,{position:"absolute",left:`${left}px`,top:`${top}px`,maxWidth:`${C().COPY_MAX_W_PX}px`,pointerEvents:"auto",fontFamily:C().COPY_FAMILY});
+      div.innerHTML = html; canvas.appendChild(div);
     }
-
-    // ---- vertical connectors between shapes (the “rails” you asked for)
-    for (let i=0;i<centers.length-1;i++){
-      const a = centers[i], b2 = centers[i+1];
-      const x = a.cx;
-      const y1c = a.cy + BOX_H/2 + 4;
-      const y2c = b2.cy - BOX_H/2 - 4;
-      const gradId = gradForShape(x-1, x+1, "v"+i);
-      const line = document.createElementNS(ns,"line");
-      line.setAttribute("x1", x); line.setAttribute("y1", y1c);
-      line.setAttribute("x2", x); line.setAttribute("y2", y2c);
-      line.setAttribute("stroke", `url(#${gradId})`);
-      line.setAttribute("stroke-width", LINE_STROKE);
-      g.appendChild(line);
-    }
-
-    // ---- the three dots (same cyan family)
-    const dotsGroup = document.createElementNS(ns,"g");
-    const dotCount = (C.DOTS_COUNT ?? 3);
-    const size = (C.DOTS_SIZE_PX ?? 2.2);
-    let dy = (C.DOTS_Y_OFFSET ?? 26);
-    const gap = (C.DOTS_GAP_PX ?? 26);
-    const last = centers[centers.length-1];
-    for (let i=0;i<dotCount;i++){
-      const c = document.createElementNS(ns,"circle");
-      c.setAttribute("cx", last.cx);
-      c.setAttribute("cy", last.cy + BOX_H/2 + dy);
-      c.setAttribute("r", size);
-      c.setAttribute("fill", C.COLOR_CYAN || "rgba(99,211,255,0.95)");
-      dotsGroup.appendChild(c);
-      dy += gap;
-    }
-    g.appendChild(dotsGroup);
-
-    // mount svg
-    ctx.canvas.appendChild(svg);
-
-    // ---- helpers ----
-    function xFinite(v){ return Number.isFinite(v) && !Number.isNaN(v); }
   };
 })();
