@@ -73,7 +73,7 @@
       M_COPY_BODY_PT: 14,       // mobile body size
 
       // >>> NEW: section spacing knobs (control distance BETWEEN steps on mobile)
-      M_SECTION_MARGIN_TOP: 36,     // px above this step
+      M_SECTION_MARGIN_TOP: 360,     // px above this step
       M_SECTION_MARGIN_BOTTOM: 48,  // px below this step
 
       // >>> Optional comfort knobs for internal spacing (still mobile-only)
