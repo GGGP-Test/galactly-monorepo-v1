@@ -239,7 +239,7 @@
       <h3>Who’s ready now?</h3>
       <p>Our <b>Time-to-Buy Intent</b> finds accounts most likely to purchase in the next cycle.
       We weight <b>recent</b> signals like search bursts, RFQ/RFP language, visits to pricing & sample pages,
-      and tool activity, then surface the prospects your team should contact today.</p>`;
+      and events/trade shows activities, new product launches, new product shelf openings at big wholesalers and 38 more metrics, then surface the prospects your team should contact today.</p>`;
 
     wrap.innerHTML = `
       ${C().TITLE_SHOW ? `<div class="p1m-title">${C().TITLE_TEXT}</div>` : ``}
