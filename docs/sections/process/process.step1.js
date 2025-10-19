@@ -60,8 +60,8 @@
       // Dots under the last shape
       DOTS_COUNT: 3, DOTS_SIZE_PX: 2.2, DOTS_GAP_PX: 26, DOTS_Y_OFFSET: 26,
 
-      // ===== MOBILE knobs (phones only; desktop unaffected) =====
-      MOBILE_BREAKPOINT: 640,   // <= triggers the mobile DOM layout
+      // ===== MOBILE knobs (phones/tablets only; desktop unaffected) =====
+      MOBILE_BREAKPOINT: 640,   // <= triggers the mobile DOM layout (global helper can override)
       M_MAX_W: 520,             // max content width
       M_SIDE_PAD: 16,           // page side padding
       M_STACK_GAP: 44,          // gap between mobile shapes
@@ -70,7 +70,15 @@
       M_FONT_PT: 11,            // label size inside mobile shapes
       M_TITLE_PT: 16,           // mobile title size
       M_COPY_H_PT: 22,          // mobile <h3> size
-      M_COPY_BODY_PT: 14        // mobile body size
+      M_COPY_BODY_PT: 14,       // mobile body size
+
+      // >>> NEW: section spacing knobs (control distance BETWEEN steps on mobile)
+      M_SECTION_MARGIN_TOP: 36,     // px above this step
+      M_SECTION_MARGIN_BOTTOM: 48,  // px below this step
+
+      // >>> Optional comfort knobs for internal spacing (still mobile-only)
+      M_TITLE_MARGIN_BOTTOM: 10,    // px below the mobile title block
+      M_COPY_MARGIN_BOTTOM: 14      // px below the mobile copy block
     };
     for (const k in dflt) if (!(k in root.step1)) root.step1[k] = dflt[k];
     return root.step1;
@@ -185,13 +193,21 @@
       @media (max-width:${bp}px){
         html, body, #section-process { overflow-x:hidden; }
 
-        .p1m-wrap{ position:relative; margin:0 auto; max-width:${C().M_MAX_W}px; padding:0 ${C().M_SIDE_PAD}px 8px; }
+        /* wrapper margins = distance BETWEEN steps (new knobs) */
+        .p1m-wrap{
+          position:relative;
+          margin:${C().M_SECTION_MARGIN_TOP}px auto ${C().M_SECTION_MARGIN_BOTTOM}px;
+          max-width:${C().M_MAX_W}px;
+          padding:0 ${C().M_SIDE_PAD}px 8px;
+        }
+
         .p1m-title{
           text-align:center; color:#ddeaef;
           font:${C().TITLE_WEIGHT} ${C().M_TITLE_PT}pt ${C().TITLE_FAMILY};
-          letter-spacing:${C().TITLE_LETTER_SPACING}px; margin:6px 0 10px;
+          letter-spacing:${C().TITLE_LETTER_SPACING}px; 
+          margin:6px 0 ${C().M_TITLE_MARGIN_BOTTOM}px;
         }
-        .p1m-copy{ margin:0 auto 14px; color:#a7bacb; }
+        .p1m-copy{ margin:0 auto ${C().M_COPY_MARGIN_BOTTOM}px; color:#a7bacb; }
         .p1m-copy h3{ margin:0 0 8px; color:#eaf0f6; font:600 ${C().M_COPY_H_PT}px "Newsreader", Georgia, serif; }
         .p1m-copy p { margin:0; font:400 ${C().M_COPY_BODY_PT}px/1.55 Inter, system-ui; }
 
