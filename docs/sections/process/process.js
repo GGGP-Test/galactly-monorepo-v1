@@ -1,5 +1,3 @@
-<!-- sections/process/process.js -->
-<script>
 (() => {
   const mount = document.getElementById("section-process");
   if (!mount) return;
@@ -86,13 +84,12 @@
       drop-shadow(0 0 24px rgba(99,211,255,.18));
   }
 
-  /* Tablet */
   @media (max-width:900px){
     :root{ --copyMax:260px }
     .railWrap.is-docked{ left:12px; transform:translate(0,-50%) scale(.84) }
   }
 
-  /* ===== Mobile: lock width, hide rail, stack scenes, kill horizontal swipe ===== */
+  /* Mobile: lock width, hide rail/buttons, stack scenes, kill horizontal swipe */
   @media (max-width:640px){
     html, body { overflow-x: hidden; }
     #section-process { overflow-x: hidden; }
@@ -111,7 +108,6 @@
     <section class="proc" aria-label="Process">
       <div class="lamp" id="lamp"></div>
       <div class="canvas" id="canvas"></div>
-
       <div class="railWrap" id="railWrap">
         <div class="rail" id="rail">
           <svg id="railSvg" viewBox="0 0 1 1" preserveAspectRatio="none"></svg>
@@ -231,7 +227,6 @@
   function clearCanvas(){ while (canvas.firstChild) canvas.removeChild(canvas.firstChild); }
 
   /* ----------------- STEP 0 (pill) ----------------- */
-  // Accept optional custom bounds so we can stack slices on mobile
   function scenePill(bOverride){
     const C = window.PROCESS_CONFIG.step0;
     const b = bOverride || (isMobile() ? boundsMobile(18, 600) : boundsDesktop());
@@ -255,7 +250,7 @@
     const yMid       = pillY + pillH/2;
 
     // gradients
-    const xTrailEnd  = b.left + nodeW - 10 - b.left; // equals nodeW-10
+    const xTrailEnd  = nodeW - 10;
     svg.appendChild(makeFlowGradients({ pillX, pillY, pillW, yMid, xTrailEnd }));
 
     const d = `M ${pillX+r} ${pillY} H ${pillX+pillW-r} Q ${pillX+pillW} ${pillY} ${pillX+pillW} ${pillY+r}
@@ -351,7 +346,6 @@
   }
 
   /* ----------------- ROUTERS ----------------- */
-  // Desktop route (original behavior)
   function drawDesktop(){
     clearCanvas();
     if (step===0 && phase===1){ scenePill(); return; }
@@ -364,18 +358,16 @@
     }
   }
 
-  // Mobile route: static, stacked slices — pill (0B) then Step 1
+  // Mobile: static stack — pill (0B) then Step 1
   function drawMobile(){
     clearCanvas();
     canvas.style.position = "relative";
     canvas.style.inset = "auto";
     let y = 0;
 
-    // 0B pill slice
     const h0 = scenePill( boundsMobile(y, 620) );
     y += (h0 || 520) + 28;
 
-    // Step 1 slice (no rail attachments on mobile)
     const scene1 = window.PROCESS_SCENES[1];
     if (typeof scene1 === "function"){
       const cfg1 = deepClone(window.PROCESS_CONFIG.step1 || {});
@@ -410,7 +402,7 @@
 
   /* ----------------- EVENTS ----------------- */
   dots.forEach(d=> d.addEventListener("click", ()=>{
-    if (isMobile()) return;            // no UI on mobile
+    if (isMobile()) return;
     const i = +d.dataset.i;
     if (i===0){ setStep(0, { phase: 1 }); } else { setStep(i, { phase: 1 }); }
   }));
@@ -444,4 +436,3 @@
   if (document.readyState === "complete") init();
   else addEventListener("load", init, {once:true});
 })();
-</script>
