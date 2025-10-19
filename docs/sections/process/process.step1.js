@@ -3,11 +3,12 @@
   const STEP = 1;
   const NS = "http://www.w3.org/2000/svg";
 
-  // read config safely (unchanged)
+  // read config safely (desktop values kept as-is)
   function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step1 = root.step1 || {};
     const dflt = {
+      // DESKTOP knobs (unchanged)
       BOX_W_RATIO: 0.1, BOX_H_RATIO: 0.12, GAP_RATIO: 0.035,
       STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.21, NUDGE_X: -230, NUDGE_Y: -20,
       RADIUS_RECT: 18, RADIUS_PILL: 18, RADIUS_OVAL: 999, DIAMOND_SCALE: 1,
@@ -32,7 +33,19 @@
       COLOR_CYAN: "rgba(99,211,255,0.95)", COLOR_GOLD: "rgba(242,220,160,0.92)",
       REDUCE_MOTION: false, DOTS_COUNT: 3, DOTS_SIZE_PX: 2.2, DOTS_GAP_PX: 26, DOTS_Y_OFFSET: 26,
       BP_MED_W: 900, BP_MED_SCALE: 0.92, BP_SMALL_W: 640, BP_SMALL_SCALE: 0.84,
-      BP_SMALL_FONT_PT: { PILL: 11, ROUND: 11, OVAL: 11, DIAMOND: 10 }
+      BP_SMALL_FONT_PT: { PILL: 11, ROUND: 11, OVAL: 11, DIAMOND: 10 },
+
+      // NEW: MOBILE knobs (do not affect desktop)
+      MOBILE_BREAKPOINT: 640,     // <= px uses mobile layout
+      M_BOX_W_PCT: 0.90,          // width inside lamp area (0..1)
+      M_GAP_PX: 14,               // vertical gap between items
+      M_BOX_MIN_H: 56,            // min height of pill/rect/oval
+      M_BORDER_PX: 2,             // border thickness
+      M_PADDING_X: 10,            // inner padding X
+      M_PADDING_Y: 8,             // inner padding Y
+      M_FONT_PT: 11,              // font size inside shapes
+      M_TITLE_PT: 14,             // title size
+      M_COPY_MAX_W: 440           // copy width on phones
     };
     for (const k in dflt) if (!(k in root.step1)) root.step1[k] = dflt[k];
     return root.step1;
@@ -41,10 +54,9 @@
   const reduceMotion = () =>
     (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) || C().REDUCE_MOTION;
 
-  // original gradients (kept)
+  /* ---------------- DESKTOP (SVG) ---------------- */
   function makeFlowGradients(svg, { spanX, y }) {
     const defs = document.createElementNS(NS, "defs");
-
     const gFlow = document.createElementNS(NS, "linearGradient");
     gFlow.id = "gradFlow";
     gFlow.setAttribute("gradientUnits", "userSpaceOnUse");
@@ -78,16 +90,12 @@
       gTrail.appendChild(a2);
     }
     defs.appendChild(gTrail);
-
     svg.appendChild(defs);
   }
-
-  // NEW: per-segment gradient so the flow traverses the whole rail before looping
   function makeSegmentGradient(svg, x1, y, x2) {
     const id = "seg_" + Math.random().toString(36).slice(2, 8);
     let defs = svg.querySelector("defs");
     if (!defs) { defs = document.createElementNS(NS, "defs"); svg.appendChild(defs); }
-
     const g = document.createElementNS(NS, "linearGradient");
     g.setAttribute("id", id);
     g.setAttribute("gradientUnits", "userSpaceOnUse");
@@ -99,8 +107,7 @@
       const a = document.createElementNS(NS,"animateTransform");
       a.setAttribute("attributeName","gradientTransform");
       a.setAttribute("type","translate");
-      a.setAttribute("from","0 0");
-      a.setAttribute("to", `${(x2 - x1)} 0`);   // traverse full span
+      a.setAttribute("from","0 0"); a.setAttribute("to", `${(x2 - x1)} 0`);
       a.setAttribute("dur", `${C().FLOW_SPEED_S}s`);
       a.setAttribute("repeatCount","indefinite");
       g.appendChild(a);
@@ -108,16 +115,16 @@
     defs.appendChild(g);
     return `url(#${id})`;
   }
-
-  function rr(x,y,w,h,r){
+  const rr = (x,y,w,h,r) => {
     const R = Math.min(r, Math.min(w,h)/2);
     return `M ${x+R} ${y} H ${x+w-R} Q ${x+w} ${y} ${x+w} ${y+R}
             V ${y+h-R} Q ${x+w} ${y+h} ${x+w-R} ${y+h}
             H ${x+R}   Q ${x}   ${y+h} ${x}   ${y+h-R}
             V ${y+R}   Q ${x}   ${y}   ${x+R} ${y} Z`;
-  }
-  function diamond(cx,cy,w,h){ const hw=w/2, hh=h/2; return `M ${cx} ${cy-hh} L ${cx+hw} ${cy} L ${cx} ${cy+hh} L ${cx-hw} ${cy} Z`; }
-
+  };
+  const diamond = (cx,cy,w,h) => {
+    const hw=w/2, hh=h/2; return `M ${cx} ${cy-hh} L ${cx+hw} ${cy} L ${cx} ${cy+hh} L ${cx-hw} ${cy} Z`;
+  };
   function addPath(svg, d, stroke, sw){
     const p = document.createElementNS(NS,"path");
     p.setAttribute("d", d); p.setAttribute("fill","none");
@@ -139,27 +146,122 @@
     d.innerHTML = html; fo.appendChild(d); svg.appendChild(fo);
   }
 
-  window.PROCESS_SCENES = window.PROCESS_SCENES || {};
-  window.PROCESS_SCENES[STEP] = function draw({ canvas, bounds, mountCopy }){
-    const b = bounds; const W = b.width; const H = Math.min(560, b.sH-40);
+  /* ---------------- MOBILE (DOM/CSS) ---------------- */
+  function ensureMobileCSS() {
+    const id = "p1m-style";
+    if (document.getElementById(id)) return;
+    const s = document.createElement("style"); s.id = id;
 
+    const bp   = C().MOBILE_BREAKPOINT;
+    const boxW = Math.round(C().M_BOX_W_PCT * 100) + "%";
+    const gap  = C().M_GAP_PX + "px";
+    const minH = C().M_BOX_MIN_H + "px";
+    const bpx  = C().M_BORDER_PX + "px";
+    const padX = C().M_PADDING_X + "px";
+    const padY = C().M_PADDING_Y + "px";
+    const fpt  = C().M_FONT_PT;
+    const titlePt = C().M_TITLE_PT;
+    const cyan = C().COLOR_CYAN;
+
+    s.textContent = `
+    @media (max-width:${bp}px){
+      .p1m-wrap{ position:absolute; z-index:3; }
+      .p1m-title{
+        text-align:center; color:#ddeaef;
+        font:${C().TITLE_WEIGHT} ${titlePt}pt ${C().TITLE_FAMILY};
+        letter-spacing:${C().TITLE_LETTER_SPACING}px; margin:6px 0 10px;
+      }
+      .p1m-copy{ margin:0 auto 14px; max-width:${C().M_COPY_MAX_W}px; color:#a7bacb; }
+      .p1m-copy h3{ margin:0 0 6px; color:#eaf0f6; font:600 20px "Newsreader", Georgia, serif; }
+      .p1m-copy p{ margin:0; font:400 14px/1.55 Inter, system-ui; }
+
+      .p1m-stack{ display:flex; flex-direction:column; align-items:center; gap:${gap}; }
+      .p1m-box{
+        width:${boxW}; min-height:${minH};
+        border:${bpx} solid ${cyan}; border-radius:12px;
+        padding:${padY} ${padX}; display:flex; align-items:center; justify-content:center;
+        text-align:center; color:#ddeaef; background:rgba(255,255,255,.02);
+        font:${C().FONT_WEIGHT_BOX} ${fpt}pt ${C().FONT_FAMILY_BOX};
+        letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+      }
+      .p1m-box.round{ border-radius:14px }
+      .p1m-box.oval{ border-radius:9999px }
+      .p1m-diamond{
+        width:${boxW}; aspect-ratio:1/1; border:${bpx} solid ${cyan};
+        transform:rotate(45deg); background:rgba(255,255,255,.02); margin-top:2px;
+        display:flex; align-items:center; justify-content:center;
+      }
+      .p1m-diamond > span{
+        transform:rotate(-45deg); display:flex; align-items:center; justify-content:center;
+        width:100%; height:100%; text-align:center; color:#ddeaef;
+        font:${C().FONT_WEIGHT_BOX} ${fpt - 1}pt ${C().FONT_FAMILY_BOX};
+        letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+        padding:${padY} ${padX};
+      }
+      .p1m-dots{ display:flex; gap:16px; justify-content:center; padding-top:6px }
+      .p1m-dots i{ width:6px; height:6px; border-radius:50%; background:${cyan}; display:inline-block; }
+    }`;
+    document.head.appendChild(s);
+  }
+
+  function drawMobile({ canvas, bounds }) {
+    ensureMobileCSS();
+
+    const W = bounds.width;
+    const H = Math.min(560, bounds.sH - 40);
+
+    const wrap = document.createElement("div");
+    wrap.className = "p1m-wrap";
+    wrap.style.left = bounds.left + "px";
+    wrap.style.top  = (bounds.top + 6) + "px";
+    wrap.style.width = W + "px";
+
+    // Title + copy + vertical stack of shapes (no glow/rails)
+    wrap.innerHTML = `
+      ${C().TITLE_SHOW ? `<div class="p1m-title">${C().TITLE_TEXT}</div>` : ``}
+      <div class="p1m-copy">
+        <h3>Who buys the fastest?</h3>
+        <p>We rank accounts by a live <b>intent score</b> built for packaging suppliers:
+        searches per time block, technology on site, customer scale by <b>LTV/CAC</b>,
+        tools they interact with, and company size. The score bubbles up buyers most likely to
+        convert now so your team prioritizes quotes, samples, and demos that close quickly.</p>
+      </div>
+      <div class="p1m-stack">
+        <div class="p1m-box round">${C().LABEL_RECT_1}</div>
+        <div class="p1m-box round">${C().LABEL_RECT_2}</div>
+        <div class="p1m-box round">${C().LABEL_ROUND_3}</div>
+        <div class="p1m-box oval">${C().LABEL_OVAL_4}</div>
+        <div class="p1m-diamond"><span>${C().LABEL_DIAMOND_5}</span></div>
+        <div class="p1m-dots"><i></i><i></i><i></i></div>
+      </div>
+    `;
+    canvas.appendChild(wrap);
+  }
+
+  /* ---------------- DESKTOP DRAW ---------------- */
+  window.PROCESS_SCENES = window.PROCESS_SCENES || {};
+  window.PROCESS_SCENES[STEP] = function draw(ctx){
+    const b = ctx.bounds;
+    const isMobile = window.innerWidth <= C().MOBILE_BREAKPOINT;
+
+    // MOBILE: simple DOM layout, no SVG/glow/rails
+    if (isMobile) return drawMobile(ctx);
+
+    // DESKTOP: original SVG scene (unchanged visuals)
+    const W = b.width, H = Math.min(560, b.sH-40);
     const svg = document.createElementNS(NS,"svg");
     svg.style.position="absolute"; svg.style.left=b.left+"px"; svg.style.top=b.top+"px";
     svg.setAttribute("width",W); svg.setAttribute("height",H); svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
-    canvas.appendChild(svg);
+    ctx.canvas.appendChild(svg);
 
-    // gradients matching step 0 (kept)
     makeFlowGradients(svg, { spanX: W*0.15, y: 0 });
 
-    // geometry
     const boxW = W * C().BOX_W_RATIO;
     const boxH = H * C().BOX_H_RATIO;
     const gap  = H * C().GAP_RATIO;
     let x = W * C().STACK_X_RATIO + C().NUDGE_X;
     let y = H * C().STACK_TOP_RATIO + C().NUDGE_Y;
     const cx = x + boxW/2;
-
-    // shapes list
     const items = [];
 
     // rect 1
@@ -214,7 +316,7 @@
       items.push({x,y,w:boxW,h}); y += h + C().DOTS_Y_OFFSET;
     }
 
-    // dots (same color family)
+    // dots
     if (C().DOTS_COUNT > 0) {
       const centerX = x + boxW/2; let dotY = y;
       for (let i=0;i<C().DOTS_COUNT;i++){
@@ -225,7 +327,7 @@
       }
     }
 
-    // title (unchanged)
+    // title
     if (C().TITLE_SHOW){
       const t = document.createElementNS(NS,"text");
       const topBox = items[0];
@@ -240,30 +342,25 @@
       svg.appendChild(t);
     }
 
-    // H rails — ONLY CHANGE: use per-segment gradient so flow completes the run
+    // H rails (segment gradient = completes the run)
     if (items.length){
       const first = items[0];
       const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
-
       if (C().SHOW_LEFT_LINE){
         const xs = W * Math.max(0, Math.min(1, C().LEFT_STOP_RATIO));
         const xe = first.x - C().CONNECT_X_PAD;
-        if (xe > xs){
-          const stroke = makeSegmentGradient(svg, xs, attachY, xe);
-          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
-        }
+        if (xe > xs){ const stroke = makeSegmentGradient(svg, xs, attachY, xe);
+          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX); }
       }
       if (C().SHOW_RIGHT_LINE){
         const xs = first.x + first.w + C().CONNECT_X_PAD;
         const xe = W - C().RIGHT_MARGIN_PX;
-        if (xe > xs){
-          const stroke = makeSegmentGradient(svg, xs, attachY, xe);
-          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
-        }
+        if (xe > xs){ const stroke = makeSegmentGradient(svg, xs, attachY, xe);
+          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX); }
       }
     }
 
-    // V connectors (unchanged)
+    // V connectors
     for (let i=0;i<items.length-1;i++){
       const a = items[i], b2 = items[i+1];
       const xMid = a.x + a.w/2;
@@ -273,7 +370,7 @@
       addPath(svg, `M ${xMid} ${y1+pad} V ${y2-pad}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
     }
 
-    // Copy block (unchanged)
+    // Copy block (desktop)
     const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
     const top  = b.top  + H * C().COPY_TOP_RATIO  + C().COPY_NUDGE_Y;
     const html = `
@@ -282,17 +379,12 @@
       searches per time block, technology on site, customer scale by <b>LTV/CAC</b>,
       tools they interact with, and company size. The score bubbles up buyers most likely to
       convert now so your team prioritizes quotes, samples, and demos that close quickly.</p>`;
-    if (typeof mountCopy === "function"){
-      const el = mountCopy({ top, left, html });
+    if (typeof ctx.mountCopy === "function"){
+      const el = ctx.mountCopy({ top, left, html });
       el.style.maxWidth = `${C().COPY_MAX_W_PX}px`;
       el.style.fontFamily = C().COPY_FAMILY;
-      const h = el.querySelector("h3"); if (h) h.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
-      const p = el.querySelector("p"); if (p) p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
-    } else {
-      const div = document.createElement("div");
-      div.className="copy show";
-      Object.assign(div.style,{position:"absolute",left:`${left}px`,top:`${top}px`,maxWidth:`${C().COPY_MAX_W_PX}px`,pointerEvents:"auto",fontFamily:C().COPY_FAMILY});
-      div.innerHTML = html; canvas.appendChild(div);
+      const h3 = el.querySelector("h3"); if (h3) h3.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
+      const p = el.querySelector("p"); if (p)  p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
     }
   };
 })();
