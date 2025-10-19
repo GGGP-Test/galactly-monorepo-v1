@@ -182,13 +182,13 @@
         }
         .p1m-box.oval{ border-radius:9999px }
         .p1m-diamond{
-          width:100%; aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
+          width:45%; aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
           transform:rotate(45deg); background:rgba(255,255,255,.02); margin-top:2px;
           display:flex; align-items:center; justify-content:center;
         }
         .p1m-diamond > span{
           transform:rotate(-45deg); display:flex; align-items:center; justify-content:center;
-          width:100%; height:100%; text-align:center; color:#ddeaef;
+          width:45%; height:45%; text-align:center; color:#ddeaef;
           font:${C().FONT_WEIGHT_BOX} ${Math.max(8, C().M_FONT_PT - 1)}pt ${C().FONT_FAMILY_BOX};
           letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
           padding:10px 12px;
