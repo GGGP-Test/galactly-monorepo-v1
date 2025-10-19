@@ -3,21 +3,32 @@
   const mount = document.getElementById("section-process");
   if (!mount) return;
 
-  /* ----------------- GLOBALS (unchanged desktop config) ----------------- */
-  window.PROCESS_SCENES = window.PROCESS_SCENES || {};
-  window.PROCESS_CONFIG = Object.assign(
+  /* ----------------- GLOBALS (desktop unchanged) ----------------- */
+  window.PROCESS_SCENES  = window.PROCESS_SCENES  || {};
+  window.PROCESS_CONFIG  = Object.assign(
     {
       // Step 0B (pill) only – unchanged
       step0: { NUDGE_X: 130, NUDGE_Y: 50, COPY_GAP: 44, LABEL: "YourCompany.com" },
-      // Step 1..5 live in their own files
+
+      // Per-step buckets (steps 1..5 live in their own files)
       step1: {}, step2: {}, step3: {}, step4: {}, step5: {},
+
+      // >>> Phone/tablet stack controls (one place to tweak)
+      mobile: {
+        BP: 640,                 // <= px uses mobile stack (change to 1024 to include tablets)
+        GAP_AFTER_PILL: 28,      // space after Step 0 pill before Step 1 starts
+        STACK_GAP_Y: 24,         // gap between subsequent steps (Step 1 -> Step 2, etc.)
+        STEP_HEIGHTS: {          // reserved vertical budgets (safe defaults)
+          1: 700,
+          2: 700
+          // you can add 3..5 later
+        }
+      }
     },
     window.PROCESS_CONFIG || {}
   );
 
-  /* ----------------- STYLES -----------------
-     Desktop rules are identical to your original.
-     I only ADD a mobile media query at the end. */
+  /* ----------------- STYLES (desktop identical) ----------------- */
   const style = document.createElement("style");
   style.textContent = `
   :root{ --ink:#0b1117; --copyMax:300px; --accent:#63D3FF; --accent2:#F2DCA0; }
@@ -125,9 +136,11 @@
 
   /* ----------------- HELPERS ----------------- */
   const ns = "http://www.w3.org/2000/svg";
-  const isMobile = () =>
-    (window.PROCESS_FORCE_MOBILE === true) ||
-    (window.matchMedia && window.matchMedia("(max-width:640px)").matches);
+  const isMobile = () => {
+    const BP = (window.PROCESS_CONFIG?.mobile?.BP) ?? 640;
+    return (window.PROCESS_FORCE_MOBILE === true) ||
+           (window.matchMedia && window.matchMedia(`(max-width:${BP}px)`).matches);
+  };
 
   function deepClone(o){ return JSON.parse(JSON.stringify(o||{})); }
 
@@ -326,28 +339,57 @@
     }
   }
 
-  // Mobile route: static stack — copy first, then workflow; no nested scroll
+  // Utility: append a spacer block to the canvas (normal flow)
+  function push(yPx){
+    if (yPx <= 0) return;
+    const spacer = document.createElement("div");
+    spacer.style.height = `${yPx}px`;
+    spacer.style.width  = "1px";
+    spacer.style.pointerEvents = "none";
+    canvas.appendChild(spacer);
+  }
+
+  // Mobile route: static stack — Step 0 (pill) → Step 1 → Step 2; no nested scroll
   function drawMobile(){
     clearCanvas();
     canvas.style.position = "relative";
     canvas.style.inset = "auto";
 
+    const M = window.PROCESS_CONFIG.mobile || {};
+    const H = (n, fallback) => (M.STEP_HEIGHTS && M.STEP_HEIGHTS[n]) || fallback;
+
     let y = 0;
 
-    // 0B pill slice
+    // 0B pill slice (absolute inside its own SVG); we reserve its vertical space in y
     const h0 = scenePill( boundsMobile(y, 620) );
-    y += (h0 || 520) + 28;
+    y += (h0 || 520) + (M.GAP_AFTER_PILL ?? 28);
 
-    // Step 1 slice (no rails on mobile)
+    // Push normal-flow content below the absolute Step 0 artwork
+    push(y);
+
+    // Step 1 (no rails on mobile)
     const scene1 = window.PROCESS_SCENES[1];
     if (typeof scene1 === "function"){
       const cfg1 = deepClone(window.PROCESS_CONFIG.step1 || {});
       cfg1.SHOW_LEFT_LINE = false;
       cfg1.SHOW_RIGHT_LINE = false;
       try{
-        scene1({ ns, canvas, bounds: boundsMobile(y, 700), config: cfg1, makeFlowGradients, mountCopy });
+        // pass the offset too — Step 1 reads ctx.bounds.top and adds marginTop inline
+        scene1({ ns, canvas, bounds: boundsMobile(y, H(1,700)), config: cfg1, makeFlowGradients, mountCopy });
       }catch(err){ console.error("process scene 1 (mobile):", err); }
-      y += 700; // reserve vertical space for absolute drawings
+      y += H(1,700) + (M.STACK_GAP_Y ?? 24);
+    }
+
+    // Step 2
+    const scene2 = window.PROCESS_SCENES[2];
+    if (typeof scene2 === "function"){
+      const cfg2 = deepClone(window.PROCESS_CONFIG.step2 || {});
+      cfg2.SHOW_LEFT_LINE = false;
+      cfg2.SHOW_RIGHT_LINE = false;
+      try{
+        scene2({ ns, canvas, bounds: boundsMobile(y, H(2,700)), config: cfg2, makeFlowGradients, mountCopy });
+      }catch(err){ console.error("process scene 2 (mobile):", err); }
+      y += H(2,700) + (M.STACK_GAP_Y ?? 24);
     }
 
     // Ensure the section height equals the stacked content (prevents inner scroll trap)
