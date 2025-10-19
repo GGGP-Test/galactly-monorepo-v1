@@ -1,345 +1,298 @@
 // sections/process/steps/process.step1.js
 (() => {
-  // Register step 1 scene. process.js calls this with { ns, canvas, bounds(), ... }
   const STEP = 1;
+  const NS = "http://www.w3.org/2000/svg";
 
-  // Safe defaults so the scene works even if knobs were never set
-  const DEF = {
-    BOX_W_RATIO: 0.095, BOX_H_RATIO: 0.22, GAP_RATIO: 0.075,
-    STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.21, NUDGE_X: 0, NUDGE_Y: 0,
-    RADIUS_RECT: 18, RADIUS_PILL: 18, RADIUS_OVAL: 999, DIAMOND_SCALE: 0.80,
-    SHOW_RECT_1: true, SHOW_RECT_2: true, SHOW_ROUND_3: true, SHOW_OVAL_4: true, SHOW_DIAMOND_5: true,
-    DOTS_COUNT: 3, DOTS_SIZE_PX: 5.5, DOTS_GAP_PX: 12, DOTS_Y_OFFSET: 10,
-
-    LEFT_STOP_RATIO: 0.365, RIGHT_MARGIN_PX: 12, H_LINE_Y_BIAS: -0.06, CONNECT_X_PAD: 8,
-    LINE_STROKE_PX: 2.0, LINE_GLOW_PX: 14, SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true,
-
-    FONT_PT: 12, FONT_PT_PILL: 12, FONT_PT_ROUND: 12, FONT_PT_OVAL: 12, FONT_PT_DIAMOND: 11,
-    FONT_FAMILY_BOX: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-    FONT_WEIGHT_BOX: 800, FONT_LETTER_SPACING: 0.2, LINE_HEIGHT_EM: 1.05,
-    PADDING_X: 12, PADDING_Y: 10, UPPERCASE: false,
-
-    LABEL_RECT_1: "Number of Searches / TimeBlock",
-    LABEL_RECT_2: "Technologies used at the location",
-    LABEL_ROUND_3:"Number of customers based on LTV/CAC",
-    LABEL_OVAL_4: "Tools interacted",
-    LABEL_DIAMOND_5:"Company Size",
-
-    TITLE_SHOW: true, TITLE_TEXT: "Intent score factors",
-    TITLE_PT: 14, TITLE_WEIGHT: 700,
-    TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-    TITLE_OFFSET_X: -8, TITLE_OFFSET_Y: -18, TITLE_LETTER_SPACING: 0.2,
-
-    COPY_LEFT_RATIO: 0.035, COPY_TOP_RATIO: 0.18, COPY_NUDGE_X: 0, COPY_NUDGE_Y: 0, COPY_MAX_W_PX: 300,
-    COPY_H_PT: 26, COPY_H_WEIGHT: 600, COPY_BODY_PT: 15, COPY_BODY_WEIGHT: 400,
-    COPY_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-    COPY_LINE_HEIGHT: 1.6,
-
-    STROKE_PX: 2.2, GLOW_PX: 16, FLOW_SPEED_S: 6.5,
-    COLOR_CYAN: "rgba(99,211,255,0.95)", COLOR_GOLD: "rgba(242,220,160,0.92)",
-    REDUCE_MOTION: false,
-
-    BP_MED_W: 900, BP_MED_SCALE: 0.92,
-    BP_SMALL_W: 640, BP_SMALL_SCALE: 0.84,
-    BP_SMALL_FONT_PT: { PILL: 11, ROUND: 11, OVAL: 11, DIAMOND: 10 }
-  };
-
-  function getC(){
+  // read config safely
+  function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step1 = root.step1 || {};
-    // shallow fill
-    for (const k in DEF) if (!(k in root.step1)) root.step1[k] = DEF[k];
+    // very small fallbacks so scene still draws if no knobs were pasted yet
+    const dflt = {
+      BOX_W_RATIO: 0.1, BOX_H_RATIO: 0.12, GAP_RATIO: 0.035,
+      STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.21, NUDGE_X: 0, NUDGE_Y: 0,
+      RADIUS_RECT: 18, RADIUS_PILL: 18, RADIUS_OVAL: 999, DIAMOND_SCALE: 0.8,
+      SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true, LEFT_STOP_RATIO: 0.35,
+      RIGHT_MARGIN_PX: 16, H_LINE_Y_BIAS: -0.06, CONNECT_X_PAD: 8, LINE_STROKE_PX: 2.5,
+      FONT_PT_PILL: 8, FONT_PT_ROUND: 8, FONT_PT_OVAL: 8, FONT_PT_DIAMOND: 7,
+      FONT_WEIGHT_BOX: 525, FONT_FAMILY_BOX: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      FONT_LETTER_SPACING: 0.3, LINE_HEIGHT_EM: 1.15, PADDING_X: 4, PADDING_Y: 4, UPPERCASE: false,
+      LABEL_RECT_1: "Number of Searches / TimeBlock",
+      LABEL_RECT_2: "Technologies used at the location",
+      LABEL_ROUND_3: "Number of customers based on LTV/CAC",
+      LABEL_OVAL_4:  "Tools interacted",
+      LABEL_DIAMOND_5:"Company Size",
+      TITLE_SHOW: true, TITLE_TEXT: "Intent Score", TITLE_PT: 14, TITLE_WEIGHT: 700,
+      TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -28, TITLE_LETTER_SPACING: 0.2,
+      COPY_LEFT_RATIO: 0.035, COPY_TOP_RATIO: 0.18, COPY_NUDGE_X: 0, COPY_NUDGE_Y: 0,
+      COPY_MAX_W_PX: 300, COPY_H_PT: 24, COPY_H_WEIGHT: 500, COPY_BODY_PT: 12, COPY_BODY_WEIGHT: 400,
+      COPY_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      COPY_LINE_HEIGHT: 1.6,
+      STROKE_PX: 2.8, GLOW_PX: 16, FLOW_SPEED_S: 6.5,
+      COLOR_CYAN: "rgba(99,211,255,0.95)", COLOR_GOLD: "rgba(242,220,160,0.92)",
+      REDUCE_MOTION: false, DOTS_COUNT: 3, DOTS_SIZE_PX: 2.2, DOTS_GAP_PX: 26, DOTS_Y_OFFSET: 26,
+      BP_MED_W: 900, BP_MED_SCALE: 0.92, BP_SMALL_W: 640, BP_SMALL_SCALE: 0.84,
+      BP_SMALL_FONT_PT: { PILL: 11, ROUND: 11, OVAL: 11, DIAMOND: 10 }
+    };
+    for (const k in dflt) if (!(k in root.step1)) root.step1[k] = dflt[k];
     return root.step1;
   }
 
-  // Helpers
-  const NS = "http://www.w3.org/2000/svg";
-  const prefersReduced = () =>
-    (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) || getC().REDUCE_MOTION;
+  const reduceMotion = () =>
+    (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) || C().REDUCE_MOTION;
 
-  function makeFlowGradients(svg, { x1, y1, x2, y2, speedSec }){
-    const defs = document.createElementNS(NS,"defs");
-    const grad = document.createElementNS(NS,"linearGradient");
-    grad.id = "gradFlowStep1";
-    grad.setAttribute("gradientUnits","userSpaceOnUse");
-    grad.setAttribute("x1", x1); grad.setAttribute("y1", y1);
-    grad.setAttribute("x2", x2); grad.setAttribute("y2", y2);
+  function makeFlowGradients(svg, { spanX, y }) {
+    // Use the SAME ids/stop recipe as step 0 so the look matches exactly.
+    // (scoped to this SVG; ids can repeat in other SVGs).
+    const defs = document.createElementNS(NS, "defs");
 
-    const C = getC();
+    const gFlow = document.createElementNS(NS, "linearGradient");
+    gFlow.id = "gradFlow";
+    gFlow.setAttribute("gradientUnits", "userSpaceOnUse");
+    gFlow.setAttribute("x1", 0); gFlow.setAttribute("y1", y);
+    gFlow.setAttribute("x2", spanX); gFlow.setAttribute("y2", y);
     const stops = [
-      ["0%",  C.COLOR_GOLD],
+      ["0%",  C().COLOR_GOLD],
       ["35%", "rgba(255,255,255,.95)"],
-      ["75%", C.COLOR_CYAN],
-      ["100%", "rgba(99,211,255,.60)"]
+      ["75%", C().COLOR_CYAN],
+      ["100%","rgba(99,211,255,.60)"]
     ];
-    stops.forEach(([o, col]) => {
-      const s = document.createElementNS(NS,"stop");
-      s.setAttribute("offset", o); s.setAttribute("stop-color", col); grad.appendChild(s);
-    });
+    stops.forEach(([o,c])=>{ const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gFlow.appendChild(s); });
 
-    if (!prefersReduced() && speedSec>0){
-      const anim = document.createElementNS(NS,"animateTransform");
-      anim.setAttribute("attributeName","gradientTransform");
-      anim.setAttribute("type","translate");
-      anim.setAttribute("from","0 0");
-      anim.setAttribute("to", `${(x2-x1)} 0`);
-      anim.setAttribute("dur", `${speedSec}s`);
-      anim.setAttribute("repeatCount","indefinite");
-      grad.appendChild(anim);
+    if (!reduceMotion() && C().FLOW_SPEED_S>0){
+      const a1 = document.createElementNS(NS,"animateTransform");
+      a1.setAttribute("attributeName","gradientTransform");
+      a1.setAttribute("type","translate");
+      a1.setAttribute("from","0 0"); a1.setAttribute("to", `${spanX} 0`);
+      a1.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a1.setAttribute("repeatCount","indefinite");
+      gFlow.appendChild(a1);
     }
-    defs.appendChild(grad);
+    defs.appendChild(gFlow);
 
-    const trail = document.createElementNS(NS,"linearGradient");
-    trail.id = "gradTrailStep1";
-    trail.setAttribute("gradientUnits","userSpaceOnUse");
-    trail.setAttribute("x1", x2); trail.setAttribute("y1", y1);
-    trail.setAttribute("x2", x2 + Math.abs(x2-x1)); trail.setAttribute("y2", y1);
-
-    [["0%", C.COLOR_GOLD],["45%",C.COLOR_CYAN],["100%","rgba(99,211,255,.18)"]]
-      .forEach(([o, col]) => { const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",col); trail.appendChild(s); });
-
-    if (!prefersReduced() && speedSec>0){
-      const anim2 = document.createElementNS(NS,"animateTransform");
-      anim2.setAttribute("attributeName","gradientTransform");
-      anim2.setAttribute("type","translate");
-      anim2.setAttribute("from","0 0");
-      anim2.setAttribute("to", `${Math.abs(x2-x1)} 0`);
-      anim2.setAttribute("dur", `${speedSec}s`);
-      anim2.setAttribute("repeatCount","indefinite");
-      trail.appendChild(anim2);
+    const gTrail = document.createElementNS(NS,"linearGradient");
+    gTrail.id = "gradTrailFlow";
+    gTrail.setAttribute("gradientUnits","userSpaceOnUse");
+    gTrail.setAttribute("x1", spanX); gTrail.setAttribute("y1", y);
+    gTrail.setAttribute("x2", spanX*2); gTrail.setAttribute("y2", y);
+    [["0%",C().COLOR_GOLD],["45%",C().COLOR_CYAN],["100%","rgba(99,211,255,.18)"]]
+      .forEach(([o,c])=>{ const s=document.createElementNS(NS,"stop"); s.setAttribute("offset",o); s.setAttribute("stop-color",c); gTrail.appendChild(s); });
+    if (!reduceMotion() && C().FLOW_SPEED_S>0){
+      const a2 = document.createElementNS(NS,"animateTransform");
+      a2.setAttribute("attributeName","gradientTransform");
+      a2.setAttribute("type","translate");
+      a2.setAttribute("from","0 0"); a2.setAttribute("to", `${spanX} 0`);
+      a2.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a2.setAttribute("repeatCount","indefinite");
+      gTrail.appendChild(a2);
     }
-    defs.appendChild(trail);
+    defs.appendChild(gTrail);
+
     svg.appendChild(defs);
   }
 
-  function addPath(svg, d, stroke, strokeWidth){
+  function rr(x,y,w,h,r){
+    const R = Math.min(r, Math.min(w,h)/2);
+    return `M ${x+R} ${y} H ${x+w-R} Q ${x+w} ${y} ${x+w} ${y+R}
+            V ${y+h-R} Q ${x+w} ${y+h} ${x+w-R} ${y+h}
+            H ${x+R}   Q ${x}   ${y+h} ${x}   ${y+h-R}
+            V ${y+R}   Q ${x}   ${y}   ${x+R} ${y} Z`;
+  }
+  function diamond(cx,cy,w,h){ const hw=w/2, hh=h/2; return `M ${cx} ${cy-hh} L ${cx+hw} ${cy} L ${cx} ${cy+hh} L ${cx-hw} ${cy} Z`; }
+
+  function addPath(svg, d, stroke, sw){
     const p = document.createElementNS(NS,"path");
-    p.setAttribute("d", d);
-    p.setAttribute("fill","none");
-    p.setAttribute("stroke", stroke);
-    p.setAttribute("stroke-width", strokeWidth);
-    p.setAttribute("stroke-linejoin","round");
-    p.setAttribute("stroke-linecap","round");
-    p.setAttribute("class","glow");
-    return svg.appendChild(p), p;
+    p.setAttribute("d", d); p.setAttribute("fill","none");
+    p.setAttribute("stroke", stroke); p.setAttribute("stroke-width", sw);
+    p.setAttribute("stroke-linejoin","round"); p.setAttribute("stroke-linecap","round");
+    p.setAttribute("class","glow"); svg.appendChild(p); return p;
   }
-
-  function addRoundedRectPath(x,y,w,h,r){
-    const rr = Math.min(r, Math.min(w,h)/2);
-    return `M ${x+rr} ${y}
-            H ${x+w-rr} Q ${x+w} ${y} ${x+w} ${y+rr}
-            V ${y+h-rr} Q ${x+w} ${y+h} ${x+w-rr} ${y+h}
-            H ${x+rr}   Q ${x}   ${y+h} ${x}   ${y+h-rr}
-            V ${y+rr}   Q ${x}   ${y}   ${x+rr} ${y} Z`;
-  }
-
-  function addDiamondPath(cx,cy,w,h){
-    const hw=w/2, hh=h/2;
-    return `M ${cx} ${cy-hh} L ${cx+hw} ${cy} L ${cx} ${cy+hh} L ${cx-hw} ${cy} Z`;
-  }
-
-  function addForeignLabel(svg, x,y,w,h, html, styles){
+  function addFO(svg, x,y,w,h, html, styles){
     const fo = document.createElementNS(NS,"foreignObject");
-    fo.setAttribute("x", x); fo.setAttribute("y", y);
-    fo.setAttribute("width", w); fo.setAttribute("height", h);
-    const div = document.createElement("div");
-    div.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
-    Object.assign(div.style, {
-      width: "100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center",
-      textAlign:"center", color:"#ddeaef", pointerEvents:"none",
-      whiteSpace:"pre-wrap", wordBreak:"break-word"
+    fo.setAttribute("x",x); fo.setAttribute("y",y); fo.setAttribute("width",w); fo.setAttribute("height",h);
+    const d = document.createElement("div");
+    d.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
+    Object.assign(d.style, {
+      width:"100%", height:"100%", display:"flex",
+      alignItems:"center", justifyContent:"center", textAlign:"center",
+      color:"#ddeaef", whiteSpace:"pre-wrap", wordBreak:"break-word",
+      pointerEvents:"none"
     }, styles||{});
-    div.innerHTML = html;
-    fo.appendChild(div);
-    svg.appendChild(fo);
+    d.innerHTML = html; fo.appendChild(d); svg.appendChild(fo);
   }
 
-  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
-
-  // Scene renderer
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
-  window.PROCESS_SCENES[STEP] = function draw(ctx){
-    const C = getC();
-    const b = ctx.bounds;           // {left,width,top,sH,...}
-    const W = b.width;
-    const H = Math.min(560, b.sH - 40);
+  window.PROCESS_SCENES[STEP] = function draw({ canvas, bounds, mountCopy }){
+    const b = bounds; const W = b.width; const H = Math.min(560, b.sH-40);
 
-    // Create SVG stage
     const svg = document.createElementNS(NS,"svg");
-    svg.style.position = "absolute";
-    svg.style.left = b.left + "px";
-    svg.style.top  = b.top  + "px";
-    svg.setAttribute("width",  W);
-    svg.setAttribute("height", H);
-    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    ctx.canvas.appendChild(svg);
+    svg.style.position="absolute"; svg.style.left=b.left+"px"; svg.style.top=b.top+"px";
+    svg.setAttribute("width",W); svg.setAttribute("height",H); svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+    canvas.appendChild(svg);
 
-    // Responsiveness
-    let scale = 1;
-    const sw = b.sW || (b.sLeft + b.width); // rough
-    if (sw < C.BP_MED_W)   scale *= C.BP_MED_SCALE;
-    if (sw < C.BP_SMALL_W) scale *= C.BP_SMALL_SCALE;
+    // gradients matching step 0
+    makeFlowGradients(svg, { spanX: W*0.15, y: 0 });
 
-    const boxW = W * C.BOX_W_RATIO * scale;
-    const boxH = H * C.BOX_H_RATIO * scale;
-    const gap  = H * C.GAP_RATIO * scale;
+    // geometry
+    const boxW = W * C().BOX_W_RATIO;
+    const boxH = H * C().BOX_H_RATIO;
+    const gap  = H * C().GAP_RATIO;
+    let x = W * C().STACK_X_RATIO + C().NUDGE_X;
+    let y = H * C().STACK_TOP_RATIO + C().NUDGE_Y;
+    const cx = x + boxW/2;
 
-    let stackX = W * C.STACK_X_RATIO + C.NUDGE_X;
-    let stackY = H * C.STACK_TOP_RATIO + C.NUDGE_Y;
-
-    // Flow gradients shared by shapes + rails
-    makeFlowGradients(svg, { x1: 0, y1: 0, x2: boxW, y2: 0, speedSec: C.FLOW_SPEED_S });
-
-    // Shapes (x is center-aligned)
-    const cx = stackX + boxW/2;
-    let y = stackY;
-
+    // shapes list (we’ll also create connectors between them)
     const items = [];
 
-    function pushRounded(label, r, fontPt){
-      const x = stackX, h = boxH;
-      const d = addRoundedRectPath(x, y, boxW, h, r);
-      addPath(svg, d, "url(#gradFlowStep1)", C.STROKE_PX);
-      // label via foreignObject (wrapping + padding)
-      const pt = fontPt || C.FONT_PT_PILL;
-      const styles = {
-        font: `${C.FONT_WEIGHT_BOX} ${pt}pt ${C.FONT_FAMILY_BOX}`,
-        letterSpacing: `${C.FONT_LETTER_SPACING}px`,
-        lineHeight: `${C.LINE_HEIGHT_EM}em`,
-        textTransform: C.UPPERCASE? "uppercase" : "none",
-        padding: `${C.PADDING_Y}px ${C.PADDING_X}px`
-      };
-      addForeignLabel(svg, x, y, boxW, h, label, styles);
-      items.push({ x, y, w:boxW, h });
-      y += h + gap;
+    // rect 1
+    {
+      const d = rr(x,y,boxW,boxH,C().RADIUS_PILL);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,boxH,
+        C().LABEL_RECT_1,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_PILL}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`,
+          lineHeight:`${C().LINE_HEIGHT_EM}em`,
+          textTransform:C().UPPERCASE?'uppercase':'none',
+          padding:`${C().PADDING_Y}px ${C().PADDING_X}px` });
+      items.push({x,y,w:boxW,h:boxH});
+      y += boxH + gap;
+    }
+    // rect 2
+    {
+      const d = rr(x,y,boxW,boxH,C().RADIUS_PILL);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,boxH,
+        C().LABEL_RECT_2,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_PILL}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`,
+          lineHeight:`${C().LINE_HEIGHT_EM}em`,
+          textTransform:C().UPPERCASE?'uppercase':'none',
+          padding:`${C().PADDING_Y}px ${C().PADDING_X}px` });
+      items.push({x,y,w:boxW,h:boxH});
+      y += boxH + gap;
+    }
+    // rounded 3
+    {
+      const d = rr(x,y,boxW,boxH,C().RADIUS_PILL);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,boxH,
+        C().LABEL_ROUND_3,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_ROUND}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`,
+          lineHeight:`${C().LINE_HEIGHT_EM}em`,
+          textTransform:C().UPPERCASE?'uppercase':'none',
+          padding:`${C().PADDING_Y}px ${C().PADDING_X}px` });
+      items.push({x,y,w:boxW,h:boxH});
+      y += boxH + gap;
+    }
+    // oval 4
+    {
+      const d = rr(x,y,boxW,boxH,999);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,boxH,
+        C().LABEL_OVAL_4,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_OVAL}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`,
+          lineHeight:`${C().LINE_HEIGHT_EM}em`,
+          textTransform:C().UPPERCASE?'uppercase':'none',
+          padding:`${C().PADDING_Y}px ${C().PADDING_X}px` });
+      items.push({x,y,w:boxW,h:boxH});
+      y += boxH + gap;
+    }
+    // diamond 5
+    {
+      const h = boxH * C().DIAMOND_SCALE;
+      const d = diamond(cx, y + h/2, boxW, h);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x,y,boxW,h,
+        C().LABEL_DIAMOND_5,
+        { font:`${C().FONT_WEIGHT_BOX} ${C().FONT_PT_DIAMOND}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing:`${C().FONT_LETTER_SPACING}px`,
+          lineHeight:`${C().LINE_HEIGHT_EM}em`,
+          textTransform:C().UPPERCASE?'uppercase':'none',
+          padding:`${Math.max(2,C().PADDING_Y-2)}px ${C().PADDING_X}px` });
+      items.push({x,y,w:boxW,h});
+      y += h + C().DOTS_Y_OFFSET;
     }
 
-    function pushOval(label, fontPt){
-      const x = stackX, h = boxH;
-      const d = addRoundedRectPath(x, y, boxW, h, C.RADIUS_OVAL);
-      addPath(svg, d, "url(#gradFlowStep1)", C.STROKE_PX);
-      const pt = fontPt || C.FONT_PT_OVAL;
-      const styles = {
-        font: `${C.FONT_WEIGHT_BOX} ${pt}pt ${C.FONT_FAMILY_BOX}`,
-        letterSpacing: `${C.FONT_LETTER_SPACING}px`,
-        lineHeight: `${C.LINE_HEIGHT_EM}em`,
-        textTransform: C.UPPERCASE? "uppercase" : "none",
-        padding: `${C.PADDING_Y}px ${C.PADDING_X}px`
-      };
-      addForeignLabel(svg, x, y, boxW, h, label, styles);
-      items.push({ x, y, w:boxW, h });
-      y += h + gap;
-    }
-
-    function pushDiamond(label, fontPt){
-      const h = boxH * C.DIAMOND_SCALE;
-      const d = addDiamondPath(cx, y + h/2, boxW, h);
-      addPath(svg, d, "url(#gradFlowStep1)", C.STROKE_PX);
-      const pt = fontPt || C.FONT_PT_DIAMOND;
-      const styles = {
-        font: `${C.FONT_WEIGHT_BOX} ${pt}pt ${C.FONT_FAMILY_BOX}`,
-        letterSpacing: `${C.FONT_LETTER_SPACING}px`,
-        lineHeight: `${C.LINE_HEIGHT_EM}em`,
-        textTransform: C.UPPERCASE? "uppercase" : "none",
-        padding: `${Math.max(4,C.PADDING_Y-2)}px ${C.PADDING_X}px`
-      };
-      // foreignObject area for diamond: use its bbox rectangle
-      addForeignLabel(svg, stackX, y, boxW, h, label, styles);
-      items.push({ x: stackX, y, w:boxW, h });
-      y += h + gap;
-    }
-
-    // 1 rect, 2 rect, 3 rounded, 4 oval, 5 diamond
-    if (C.SHOW_RECT_1)   pushRounded(C.LABEL_RECT_1, C.RADIUS_RECT,  C.FONT_PT_PILL);
-    if (C.SHOW_RECT_2)   pushRounded(C.LABEL_RECT_2, C.RADIUS_PILL,  C.FONT_PT_PILL);
-    if (C.SHOW_ROUND_3)  pushRounded(C.LABEL_ROUND_3, C.RADIUS_PILL, C.FONT_PT_ROUND);
-    if (C.SHOW_OVAL_4)   pushOval   (C.LABEL_OVAL_4,  C.FONT_PT_OVAL);
-    const lastItemTop = y;
-    if (C.SHOW_DIAMOND_5) pushDiamond(C.LABEL_DIAMOND_5, C.FONT_PT_DIAMOND);
-
-    // Dots under diamond
-    if (C.DOTS_COUNT>0 && items.length){
-      const last = items[items.length-1];
-      const cxDot = last.x + last.w/2;
-      let dy = last.y + last.h + C.DOTS_Y_OFFSET;
-      for (let i=0;i<C.DOTS_COUNT;i++){
+    // three dots — color matches stroke theme (cyan/gold). Use cyan for better pop.
+    if (C().DOTS_COUNT > 0) {
+      const centerX = x + boxW/2;
+      let dotY = y;
+      for (let i=0;i<C().DOTS_COUNT;i++){
         const c = document.createElementNS(NS,"circle");
-        c.setAttribute("cx", cxDot);
-        c.setAttribute("cy", dy);
-        c.setAttribute("r", C.DOTS_SIZE_PX);
-        c.setAttribute("fill", C.COLOR_GOLD);
+        c.setAttribute("cx", centerX);
+        c.setAttribute("cy", dotY);
+        c.setAttribute("r", C().DOTS_SIZE_PX);
+        c.setAttribute("fill", C().COLOR_CYAN); // same family as strokes
         c.setAttribute("class","glow");
         svg.appendChild(c);
-        dy += C.DOTS_GAP_PX;
+        dotY += C().DOTS_GAP_PX;
       }
     }
 
-    // Title above stack
-    if (C.TITLE_SHOW && items.length){
-      const topBox = items[0];
-      const tx = topBox.x + topBox.w/2 + C.TITLE_OFFSET_X;
-      const ty = topBox.y + C.TITLE_OFFSET_Y;
+    // Title
+    if (C().TITLE_SHOW){
       const t = document.createElementNS(NS,"text");
-      t.setAttribute("x", tx); t.setAttribute("y", ty);
+      const topBox = items[0];
+      t.setAttribute("x", (topBox.x + topBox.w/2) + C().TITLE_OFFSET_X);
+      t.setAttribute("y", (topBox.y) + C().TITLE_OFFSET_Y);
       t.setAttribute("text-anchor","middle");
       t.setAttribute("fill","#ddeaef");
-      t.setAttribute("font-family", C.TITLE_FAMILY);
-      t.setAttribute("font-weight", C.TITLE_WEIGHT);
-      t.setAttribute("font-size", `${C.TITLE_PT}pt`);
-      t.textContent = C.TITLE_TEXT;
-      t.style.letterSpacing = `${C.TITLE_LETTER_SPACING}px`;
+      t.setAttribute("font-family", C().TITLE_FAMILY);
+      t.setAttribute("font-weight", C().TITLE_WEIGHT);
+      t.setAttribute("font-size", `${C().TITLE_PT}pt`);
+      t.textContent = C().TITLE_TEXT;
+      t.style.letterSpacing = `${C().TITLE_LETTER_SPACING}px`;
       svg.appendChild(t);
     }
 
-    // Rails (left/right) — anchor to the first box center (won’t pierce stroke)
+    // H rails (left/right) anchored to first box edge — never pierce the stroke.
     if (items.length){
       const first = items[0];
-      const yAttach = first.y + first.h * (0.5 + C.H_LINE_Y_BIAS);
-      // left
-      if (C.SHOW_LEFT_LINE){
-        const xStart = W * clamp(C.LEFT_STOP_RATIO, 0, 1);
-        const xEnd   = first.x - C.CONNECT_X_PAD;
-        const d = `M ${xStart} ${yAttach} H ${xEnd}`;
-        addPath(svg, d, "url(#gradTrailStep1)", C.LINE_STROKE_PX);
+      const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
+      if (C().SHOW_LEFT_LINE){
+        const xs = W * Math.max(0, Math.min(1, C().LEFT_STOP_RATIO));
+        const xe = first.x - C().CONNECT_X_PAD;
+        addPath(svg, `M ${xs} ${attachY} H ${xe}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
       }
-      // right
-      if (C.SHOW_RIGHT_LINE){
-        const xStart = first.x + first.w + C.CONNECT_X_PAD;
-        const xEnd   = W - C.RIGHT_MARGIN_PX;
-        const d = `M ${xStart} ${yAttach} H ${xEnd}`;
-        addPath(svg, d, "url(#gradTrailStep1)", C.LINE_STROKE_PX);
+      if (C().SHOW_RIGHT_LINE){
+        const xs = first.x + first.w + C().CONNECT_X_PAD;
+        const xe = W - C().RIGHT_MARGIN_PX;
+        addPath(svg, `M ${xs} ${attachY} H ${xe}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
       }
     }
 
-    // Copy block (independent coords). Use mountCopy if host provided one.
-    const mountCopy = ctx.mountCopy;
-    const left = b.left + W * C.COPY_LEFT_RATIO + C.COPY_NUDGE_X;
-    const top  = b.top  + H * C.COPY_TOP_RATIO  + C.COPY_NUDGE_Y;
+    // V connectors between boxes (requested). Use same trail gradient.
+    for (let i=0;i<items.length-1;i++){
+      const a = items[i], b2 = items[i+1];
+      const xMid = a.x + a.w/2;
+      const y1 = a.y + a.h;                 // bottom edge of upper box
+      const y2 = b2.y;                       // top edge of next box
+      const pad = Math.max(2, C().STROKE_PX); // avoid piercing
+      addPath(svg, `M ${xMid} ${y1+pad} V ${y2-pad}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
+    }
 
-    const copyHTML = `
+    // Copy block (independent)
+    const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
+    const top  = b.top  + H * C().COPY_TOP_RATIO  + C().COPY_NUDGE_Y;
+    const html = `
       <h3>Who buys the fastest?</h3>
       <p>We rank accounts by a live <b>intent score</b> built for packaging suppliers:
       searches per time block, technology on site, customer scale by <b>LTV/CAC</b>,
       tools they interact with, and company size. The score bubbles up buyers most likely to
-      convert now so your team prioritizes quotes, samples, and demos that close quickly.</p>
-    `;
-
+      convert now so your team prioritizes quotes, samples, and demos that close quickly.</p>`;
     if (typeof mountCopy === "function"){
-      const el = mountCopy({ top, left, html: copyHTML });
-      el.style.maxWidth = `${C.COPY_MAX_W_PX}px`;
-      el.style.fontFamily = C.COPY_FAMILY;
-      el.querySelector("h3") && (el.querySelector("h3").style.font =
-        `${C.COPY_H_WEIGHT} ${C.COPY_H_PT}pt ${C.COPY_FAMILY}`);
-      el.querySelector("p") && (el.querySelector("p").style.cssText =
-        `font:${C.COPY_BODY_WEIGHT} ${C.COPY_BODY_PT}pt ${C.COPY_FAMILY}; line-height:${C.COPY_LINE_HEIGHT}`);
+      const el = mountCopy({ top, left, html });
+      el.style.maxWidth = `${C().COPY_MAX_W_PX}px`;
+      el.style.fontFamily = C().COPY_FAMILY;
+      const h = el.querySelector("h3"); if (h) h.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
+      const p = el.querySelector("p"); if (p) p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
     } else {
-      // fallback
       const div = document.createElement("div");
-      div.className = "copy show";
-      Object.assign(div.style, { position:"absolute", left:`${left}px`, top:`${top}px`,
-        maxWidth:`${C.COPY_MAX_W_PX}px`, pointerEvents:"auto" });
-      div.innerHTML = copyHTML;
-      ctx.canvas.appendChild(div);
+      div.className="copy show";
+      Object.assign(div.style,{position:"absolute",left:`${left}px`,top:`${top}px`,maxWidth:`${C().COPY_MAX_W_PX}px`,pointerEvents:"auto",fontFamily:C().COPY_FAMILY});
+      div.innerHTML = html; canvas.appendChild(div);
     }
   };
 })();
