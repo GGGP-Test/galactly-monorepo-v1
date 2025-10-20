@@ -8,7 +8,7 @@
   window.PROCESS_CONFIG  = Object.assign(
     {
       // Step 0B (pill) only – unchanged
-      step0: { NUDGE_X: 130, NUDGE_Y: 50, COPY_GAP: 44, LABEL: "YourCompany.com" },
+      step0: { NUDGE_X: 0, NUDGE_Y: -50, COPY_GAP: 44, LABEL: "YourCompany.com" },
 
       // Per-step buckets (steps 1..5 live in their own files)
       step1: {}, step2: {}, step3: {}, step4: {}, step5: {},
