@@ -13,24 +13,84 @@
       // Per-step buckets (steps 1..5 live in their own files)
       step1: {}, step2: {}, step3: {}, step4: {}, step5: {},
 
-      // >>> Phone/tablet stack controls (all mobile tuning lives here)
+      // >>> Phones/tablets: all mobile-only tuning lives here (desktop is untouched)
       mobile: {
-        BP: 1024,                // <= px uses mobile stack (includes tablets by default)
-        MODE: "dom",             // "dom" = render mobile here; "scenes" = call step files
+        BP: 1024,                 // <= px uses mobile path (set 640 if you want phones only)
+        MODE: "dom",              // "dom" = render mobile here; "scenes" = call per-step files
         SHOW_STEPS: { 1: true, 2: false, 3: false, 4: false, 5: false },
+        GAP_AFTER_PILL: 28,       // space after Step 0 pill before Step 1 begins
 
-        // Space after Step 0 pill before first step block
-        GAP_AFTER_PILL: 28,
-
-        // Per-step DOM options
+        // ===== Step 1: Mobile-only knobs (tweak away) =====
         step1: {
-          top: 40, bottom: 72,
-          stackGap: 14,
-          order: ["rect1","rect2","round3","oval4","diamond5"],
-          hide: [],
-          copyHTML: null
+          // Layout wrapper
+          maxW: 520,              // max content width inside phones
+          sidePad: 16,            // left/right padding
+          top: 40,                // top margin of Step 1 block
+          bottom: 72,             // bottom margin
+          nudgeX: 0,              // translate whole Step 1 block (px)
+          nudgeY: 0,
+
+          // Title block
+          titleShow: true,
+          titlePt: 16,            // pt
+          titleWeight: 700,
+          titleLetter: 0.2,       // px
+          titleAlign: "center",
+          titleMarginTop: 6,
+          titleMarginBottom: 10,
+
+          // Copy block
+          copyHpt: 22,            // h3 size (px)
+          copyBodyPt: 14,         // paragraph size (px)
+          copyLine: 1.55,
+          copyColor: "#a7bacb",
+          copyHColor: "#eaf0f6",
+          copyGapBottom: 14,      // space below copy block
+
+          // Stack / boxes (defaults used unless overridden per item)
+          stackGap: 14,           // gap between boxes
+          box: {
+            widthPct: 100,        // % width of each box (e.g., 92 to create side gutters)
+            minH: 56,             // px
+            padX: 12, padY: 10,   // px
+            border: 2,            // px
+            radius: 14,           // px
+            fontPt: 11,           // pt
+            fontWeight: 525,
+            letter: 0.3,          // px
+            lineEm: 1.15,
+            align: "center"
+          },
+
+          // Diamond settings
+          diamond: {
+            widthPct: 45,         // % of maxW for the diamond wrapper
+            border: 2,            // px
+            labelPt: 10,          // pt
+            pad: 10               // px inside rotated label span
+          },
+
+          // Dots under the last shape
+          dots: {
+            show: true,
+            count: 3,
+            size: 6,              // px
+            gap: 14,              // px between dots
+            padTop: 6             // px spacing above dots row
+          },
+
+          // Per-item overrides + nudges (override any "box" fields; add nudgeX / nudgeY)
+          overrides: {
+            rect1:  { nudgeX: 0, nudgeY: 0 },
+            rect2:  { nudgeX: 0, nudgeY: 0 },
+            round3: { nudgeX: 0, nudgeY: 0 },
+            oval4:  { nudgeX: 0, nudgeY: 0, radius: 9999 }, // keep oval unless you change it
+            diamond5:{ nudgeX: 0, nudgeY: 0 }               // diamond sizing comes from diamond{}
+          },
+
+          // Order is the visual flow — keep as-is unless you want to rearrange
+          order: ["rect1","rect2","round3","oval4","diamond5"]
         }
-        // You can add step2..step5 later with the same shape.
       }
     },
     window.PROCESS_CONFIG || {}
@@ -92,54 +152,29 @@
   .glow{ filter: drop-shadow(0 0 6px rgba(242,220,160,.35)) drop-shadow(0 0 14px rgba(99,211,255,.30)) drop-shadow(0 0 24px rgba(99,211,255,.18)); }
   @media (max-width:900px){ :root{ --copyMax:260px } .railWrap.is-docked{ left:12px; transform:translate(0,-50%) scale(.84) } }
 
-  /* ===== MOBILE-ONLY ADDITIONS (desktop untouched) ===== */
+  /* ===== MOBILE-ONLY BASE (desktop untouched) ===== */
   @media (max-width:640px){
     html, body { overflow-x:hidden; }
     #section-process { overflow-x:hidden; }
     .proc{ min-height:auto; padding:22px 14px 28px; }
-    .railWrap, .ctas, .lamp{ display:none !important; } /* remove step UI + lamp on phones */
-    .canvas{ position:relative; inset:auto; }           /* let canvas participate in layout */
+    .railWrap, .ctas, .lamp{ display:none !important; }
+    .canvas{ position:relative; inset:auto; }
     :root{ --copyMax:92vw }
-    .copy{ max-width:92vw; left:14px !important; }
-    .copy h3{ font:600 clamp(18px,6.2vw,22px)/1.22 "Newsreader", Georgia, serif; letter-spacing:.1px; margin-bottom:.25rem; }
-    .copy p{ font:400 clamp(14px,4.1vw,16px)/1.72 Inter, system-ui; letter-spacing:.2px; }
     .glow{ filter: drop-shadow(0 0 4px rgba(242,220,160,.28)) drop-shadow(0 0 10px rgba(99,211,255,.24)); }
   }
 
-  /* ===== MOBILE DOM MODE (rendered from process.js when MODE="dom") ===== */
+  /* ===== MOBILE DOM MODE container classes (values are inlined per config) ===== */
   @media (max-width: ${ (window.PROCESS_CONFIG?.mobile?.BP || 1024) }px){
-    #section-process .mstep{
-      position:relative; max-width:520px; margin:0 auto; padding:0 16px; z-index:0;
-    }
-    #section-process .mstep-title{
-      text-align:center; color:#ddeaef;
-      font:700 16pt Inter, system-ui; letter-spacing:.2px; margin:6px 0 10px;
-    }
-    #section-process .mstep-copy{ margin:0 auto 14px; color:#a7bacb; }
-    #section-process .mstep-copy h3{ margin:0 0 8px; color:#eaf0f6; font:600 22px "Newsreader", Georgia, serif; }
-    #section-process .mstep-copy p { margin:0; font:400 14px/1.6 Inter, system-ui; }
-
-    #section-process .mstack{ display:flex; flex-direction:column; align-items:center; gap:14px; }
-    #section-process .mbox{
-      width:100%; min-height:56px;
-      border:2px solid rgba(99,211,255,.95); border-radius:14px;
-      padding:10px 12px; display:flex; align-items:center; justify-content:center;
-      text-align:center; color:#ddeaef; background:rgba(255,255,255,.02);
-      font:525 11pt Inter, system-ui; letter-spacing:.3px; line-height:1.15em;
-    }
+    #section-process .mstep{ position:relative; margin:0 auto; z-index:0; }
+    #section-process .mstep-title{ color:#ddeaef; }
+    #section-process .mstep-copy{ color:#a7bacb; }
+    #section-process .mstack{ display:flex; flex-direction:column; align-items:center; }
+    #section-process .mbox{ color:#ddeaef; background:rgba(255,255,255,.02); border-style:solid; display:flex; align-items:center; justify-content:center; text-align:center; }
     #section-process .mbox.oval{ border-radius:9999px }
-    #section-process .mdiamond{
-      width:45%; aspect-ratio:1/1; border:2px solid rgba(99,211,255,.95);
-      transform:rotate(45deg); background:rgba(255,255,255,.02); margin-top:2px;
-      display:flex; align-items:center; justify-content:center;
-    }
-    #section-process .mdiamond > span{
-      transform:rotate(-45deg); display:flex; align-items:center; justify-content:center;
-      width:70%; height:70%; text-align:center; color:#ddeaef;
-      font:525 10pt Inter, system-ui; letter-spacing:.3px; line-height:1.15em; padding:10px 12px;
-    }
-    #section-process .mdots{ display:flex; gap:14px; justify-content:center; padding-top:6px }
-    #section-process .mdots i{ width:6px; height:6px; border-radius:50%; background:rgba(99,211,255,.95); display:inline-block; }
+    #section-process .mdiamond{ aspect-ratio:1/1; transform:rotate(45deg); background:rgba(255,255,255,.02); display:flex; align-items:center; justify-content:center; }
+    #section-process .mdiamond > span{ transform:rotate(-45deg); display:flex; align-items:center; justify-content:center; text-align:center; color:#ddeaef; }
+    #section-process .mdots{ display:flex; justify-content:center; }
+    #section-process .mdots i{ border-radius:50%; background:rgba(99,211,255,.95); display:inline-block; }
   }
   `;
   document.head.appendChild(style);
@@ -203,8 +238,7 @@
     a1.setAttribute("attributeName","gradientTransform"); a1.setAttribute("type","translate");
     a1.setAttribute("from","0 0"); a1.setAttribute("to", `${pillW} 0`);
     a1.setAttribute("dur","6s"); a1.setAttribute("repeatCount","indefinite");
-    gFlow.appendChild(a1);
-    defs.appendChild(gFlow);
+    gFlow.appendChild(a1); defs.appendChild(gFlow);
 
     const gTrail = document.createElementNS(ns,"linearGradient");
     gTrail.id = "gradTrailFlow";
@@ -217,8 +251,7 @@
     a2.setAttribute("attributeName","gradientTransform"); a2.setAttribute("type","translate");
     a2.setAttribute("from","0 0"); a2.setAttribute("to", `${(xTrailEnd - (pillX + pillW))} 0`);
     a2.setAttribute("dur","6s"); a2.setAttribute("repeatCount","indefinite");
-    gTrail.appendChild(a2);
-    defs.appendChild(gTrail);
+    gTrail.appendChild(a2); defs.appendChild(gTrail);
 
     return defs;
   }
@@ -369,39 +402,84 @@
     });
   }
 
-  /* ----------------- MOBILE DOM RENDERERS (process.js-only) ----------------- */
-  function mStepContainer(stepNum, { top=40, bottom=72 }){
+  /* ----------------- MOBILE: Step 1 DOM (all values are inlined from config) ----------------- */
+  function mStepContainer({ top=40, bottom=72, maxW=520, sidePad=16, nudgeX=0, nudgeY=0 }){
     const el = document.createElement("div");
     el.className = "mstep";
     el.style.marginTop = `${top}px`;
     el.style.marginBottom = `${bottom}px`;
+    el.style.maxWidth = `${maxW}px`;
+    el.style.padding = `0 ${sidePad}px`;
+    el.style.transform = `translate(${nudgeX}px, ${nudgeY}px)`;
     return el;
+  }
+
+  function applyBoxStyles(node, base, ov){
+    const b = Object.assign({}, base, ov||{});
+    node.style.width = `${b.widthPct ?? 100}%`;
+    node.style.minHeight = `${b.minH ?? 56}px`;
+    node.style.padding = `${b.padY ?? 10}px ${b.padX ?? 12}px`;
+    node.style.borderWidth = `${b.border ?? 2}px`;
+    node.style.borderColor = "rgba(99,211,255,.95)";
+    node.style.borderRadius = `${b.radius ?? 14}px`;
+    node.style.font = `${b.fontWeight ?? 525} ${b.fontPt ?? 11}pt Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
+    node.style.letterSpacing = `${b.letter ?? 0.3}px`;
+    node.style.lineHeight = `${b.lineEm ?? 1.15}em`;
+    node.style.textAlign = b.align || "center";
+    if (ov && (ov.nudgeX || ov.nudgeY)){
+      node.style.transform = `translate(${ov.nudgeX|0}px, ${(ov.nudgeY|0)}px)`;
+    }
   }
 
   function renderStep1_DOM(){
     const cfg = window.PROCESS_CONFIG.step1 || {};
-    const M = MCFG().step1 || {};
-    const titleText = (cfg.TITLE_SHOW !== false) ? (cfg.TITLE_TEXT || "Time-to-Buy Intent") : null;
+    const M = (window.PROCESS_CONFIG.mobile?.step1) || {};
 
-    const wrap = mStepContainer(1, { top: M.top ?? 40, bottom: M.bottom ?? 72 });
+    const wrap = mStepContainer({
+      top: M.top ?? 40,
+      bottom: M.bottom ?? 72,
+      maxW: M.maxW ?? 520,
+      sidePad: M.sidePad ?? 16,
+      nudgeX: M.nudgeX ?? 0,
+      nudgeY: M.nudgeY ?? 0
+    });
 
-    if (titleText){
+    // Title
+    if (M.titleShow !== false){
       const t = document.createElement("div");
       t.className = "mstep-title";
-      t.textContent = titleText;
+      t.textContent = (cfg.TITLE_TEXT || "Time-to-Buy Intent");
+      t.style.textAlign = (M.titleAlign || "center");
+      t.style.fontWeight = String(M.titleWeight ?? 700);
+      t.style.fontSize = `${M.titlePt ?? 16}pt`;
+      t.style.letterSpacing = `${M.titleLetter ?? 0.2}px`;
+      t.style.marginTop = `${M.titleMarginTop ?? 6}px`;
+      t.style.marginBottom = `${M.titleMarginBottom ?? 10}px`;
       wrap.appendChild(t);
     }
 
+    // Copy
     const copy = document.createElement("div");
     copy.className = "mstep-copy";
-    copy.innerHTML = (M.copyHTML ?? `
-      <h3>Who’s ready now?</h3>
-      <p>Our <b>Time-to-Buy Intent</b> finds accounts most likely to purchase in the next cycle.
-      We weight <b>recent</b> signals like search bursts, RFQ/RFP language, visits to pricing & sample pages,
-      and events/trade shows, new product launches, and 38+ more metrics, then surface the prospects your team should contact today.</p>
-    `);
+    copy.style.marginBottom = `${M.copyGapBottom ?? 14}px`;
+    copy.innerHTML = `
+      <h3 style="
+        margin:0 0 8px;
+        color:${M.copyHColor ?? "#eaf0f6"};
+        font:600 ${(M.copyHpt ?? 22)}px 'Newsreader', Georgia, serif;">
+        Who’s ready now?
+      </h3>
+      <p style="
+        margin:0;
+        color:${M.copyColor ?? "#a7bacb"};
+        font:${400} ${(M.copyBodyPt ?? 14)}px/${(M.copyLine ?? 1.55)} Inter, system-ui;">
+        Our <b>Time-to-Buy Intent</b> finds accounts most likely to purchase in the next cycle.
+        We weight <b>recent</b> signals like search bursts, RFQ/RFP language, visits to pricing & sample pages,
+        and events/trade shows, new product launches, and 38+ more metrics, then surface the prospects your team should contact today.
+      </p>`;
     wrap.appendChild(copy);
 
+    // Stack
     const stack = document.createElement("div");
     stack.className = "mstack";
     stack.style.gap = `${M.stackGap ?? 14}px`;
@@ -415,36 +493,59 @@
     };
 
     const order = Array.isArray(M.order) ? M.order : ["rect1","rect2","round3","oval4","diamond5"];
-    const hide  = new Set(Array.isArray(M.hide) ? M.hide : []);
+    const baseBox = M.box || {};
+    const OVR = M.overrides || {};
 
     for (const key of order){
-      if (hide.has(key)) continue;
+      const ov = OVR[key] || {};
       if (key === "diamond5"){
-        const d = document.createElement("div");
-        d.className = "mdiamond";
+        const dWrap = document.createElement("div");
+        dWrap.className = "mdiamond";
+        dWrap.style.width = `${(M.diamond?.widthPct ?? 45)}%`;
+        dWrap.style.border = `${(M.diamond?.border ?? 2)}px solid rgba(99,211,255,.95)`;
+        if (ov.nudgeX || ov.nudgeY) dWrap.style.transform = `translate(${ov.nudgeX|0}px, ${ov.nudgeY|0}px) rotate(45deg)`;
         const s = document.createElement("span");
         s.textContent = labels[key];
-        d.appendChild(s); stack.appendChild(d);
+        s.style.width = "70%";
+        s.style.height = "70%";
+        s.style.font = `${(baseBox.fontWeight ?? 525)} ${(M.diamond?.labelPt ?? 10)}pt Inter, system-ui`;
+        s.style.letterSpacing = `${baseBox.letter ?? 0.3}px`;
+        s.style.lineHeight = `${baseBox.lineEm ?? 1.15}em`;
+        s.style.padding = `${(M.diamond?.pad ?? 10)}px`;
+        dWrap.appendChild(s); stack.appendChild(dWrap);
       } else {
         const box = document.createElement("div");
         box.className = "mbox" + (key==="oval4" ? " oval" : "");
         box.textContent = labels[key];
+        // Merge base + override (including oval radius override)
+        applyBoxStyles(box, baseBox, Object.assign({}, key==="oval4" ? { radius: 9999 } : {}, ov));
         stack.appendChild(box);
       }
     }
 
-    // optional dots
-    const dots = document.createElement("div");
-    dots.className = "mdots";
-    dots.innerHTML = "<i></i><i></i><i></i>";
-    stack.appendChild(dots);
+    // Dots
+    const dots = (M.dots || {});
+    if (dots.show !== false){
+      const row = document.createElement("div");
+      row.className = "mdots";
+      row.style.gap = `${dots.gap ?? 14}px`;
+      row.style.paddingTop = `${dots.padTop ?? 6}px`;
+      const n = Math.max(0, dots.count ?? 3);
+      for (let i=0;i<n;i++){
+        const dot = document.createElement("i");
+        const size = `${dots.size ?? 6}px`;
+        dot.style.width = size; dot.style.height = size;
+        row.appendChild(dot);
+      }
+      stack.appendChild(row);
+    }
 
     wrap.appendChild(stack);
     canvas.appendChild(wrap);
   }
 
   /* ----------------- ROUTERS ----------------- */
-  // Desktop route (original)
+  // Desktop route (original — unchanged)
   function drawDesktop(){
     clearCanvas();
     if (step===0 && phase===1){ scenePill(); return; }
@@ -467,25 +568,20 @@
     canvas.appendChild(spacer);
   }
 
-  // Mobile route
+  // Mobile route (DOM mode only affects phones/tablets; desktop untouched)
   function drawMobile(){
     clearCanvas();
     canvas.style.position = "relative";
     canvas.style.inset = "auto";
     canvas.style.pointerEvents = "auto";
 
-    // Step 0 pill (absolute SVG) + reserve space below it
     const h0 = scenePill( boundsMobile(0, 620) );
     push( (h0 || 520) + (MCFG().GAP_AFTER_PILL ?? 28) );
 
-    // Two modes: "dom" (render here) or "scenes" (call per-step files)
     const MODE = (MCFG().MODE || "dom").toLowerCase();
-
     if (MODE === "dom"){
       if (MCFG().SHOW_STEPS?.[1]) renderStep1_DOM();
-      // Extend later: if you want Step 2 DOM here, clone the pattern above.
     } else {
-      // Legacy path: call scenes (but we pass mobile bounds so they behave)
       const scene1 = window.PROCESS_SCENES[1];
       if (MCFG().SHOW_STEPS?.[1] && typeof scene1 === "function"){
         const cfg1 = deepClone(window.PROCESS_CONFIG.step1 || {});
@@ -494,7 +590,6 @@
         catch(err){ console.error("process scene 1 (mobile):", err); }
       }
     }
-    // Let natural content height drive the section; no inner scroll trap.
     canvas.style.minHeight = "auto";
   }
 
