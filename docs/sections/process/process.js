@@ -45,7 +45,7 @@
             radius: 16,           // corner radius (px)
             stroke: 2.5,          // outline width (px)
             nudgeX: 0,            // translate just the pill (not the text above)
-            nudgeY: 0,
+            nudgeY: 15,
             showTrail: false      // the glowing trail to the right (usually off on mobile)
           },
 
