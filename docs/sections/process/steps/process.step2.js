@@ -112,7 +112,7 @@
     const d = {
       BP: (root.mobile.BP ?? 1024), // inherit site-wide mobile BP unless overridden
       // Wrapper layout
-      top: 40, bottom: 72, maxW: 520, sidePad: 16, nudgeX: 0, nudgeY: 0,
+      top: 40, bottom: 72, maxW: 520, sidePad: 16, nudgeX: 0, nudgeY: 40,
       // Title
       titleShow: true,
       titleText: C().TITLE_SEO || C().TITLE_TEXT,
