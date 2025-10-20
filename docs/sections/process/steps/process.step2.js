@@ -3,12 +3,12 @@
   const STEP = 2;
   const NS = "http://www.w3.org/2000/svg";
 
-  // -------------------- CONFIG (DESKTOP UNCHANGED; MOBILE ONLY VIA M_* KNOBS) --------------------
+  // -------------------- DESKTOP CONFIG (unchanged) --------------------
   function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step2 = root.step2 || {};
     const dflt = {
-      // ===== DESKTOP knobs (mirrors step1 so visuals/layout stay consistent) =====
+      // ===== DESKTOP knobs (keep visuals/layout identical to before) =====
       BOX_W_RATIO: 0.10,
       BOX_H_RATIO: 0.12,
       GAP_RATIO: 0.035,
@@ -68,34 +68,18 @@
       // Animation & colors
       STROKE_PX: 2.8,
       GLOW_PX: 16,
-      FLOW_SPEED_S: 6.5,      // 0 disables flow animation
-      REDUCE_MOTION: false,   // force-off animations (overrides user pref)
+      FLOW_SPEED_S: 6.5,
+      REDUCE_MOTION: false,
       COLOR_CYAN: "rgba(99,211,255,0.95)",
       COLOR_GOLD: "rgba(242,220,160,0.92)",
 
-      // Dots under the last shape
+      // Dots
       DOTS_COUNT: 3,
       DOTS_SIZE_PX: 2.2,
       DOTS_GAP_PX: 26,
       DOTS_Y_OFFSET: 26,
 
-      // ===== MOBILE (only phones; desktop unaffected) =====
-      MOBILE_BREAKPOINT: 640,   // <= px uses the mobile DOM stack
-      M_MAX_W: 520,             // max content width inside the phone layout
-      M_SIDE_PAD: 16,           // page side padding
-      M_STACK_GAP: 14,          // gap between mobile shapes
-      M_BOX_MIN_H: 56,          // min height for rectangle / oval
-      M_BORDER_PX: 2,           // outline weight on mobile
-      M_FONT_PT: 11,            // label text size in mobile shapes
-      M_TITLE_PT: 16,           // mobile title size
-      M_COPY_H_PT: 22,          // <h3> size in mobile copy
-      M_COPY_BODY_PT: 14,       // body copy size in mobile copy
-
-      // Shape sizes (desktop + mobile)
-      CIRCLE_DESKTOP_DIAM_RATIO: 0.10, // of scene width
-      CIRCLE_MOBILE_DIAM_PX: 96,       // mobile circle diameter
-
-      // ===== Labels for Step 2 (SEO-tuned) =====
+      // ===== Labels (shared defaults used by mobile unless overridden) =====
       TITLE_SEO: "Who becomes a long-term customer?",
       COPY_SEO_HTML:
         '<h3>Who becomes a long-term customer?</h3>\
@@ -104,25 +88,69 @@
          reorder cadence & SKU velocity, and the risk of switching due to specs, approvals, or compliance.\
          It highlights accounts likely to stay and grow — not just click.</p>',
 
-      // Items drawn in order (4 metrics + trailing dots). You can tweak labels & per-item sizes.
       ITEMS: [
-        { type: "circle",  label: "Product-Packaging Reliance",          // how much output depends on packaging fit/quality
-          circleDiamRatio: null,  // null => use CIRCLE_DESKTOP_DIAM_RATIO; number => override
-          fontPt: null },         // null => use FONT_PT_CIRCLE
-        { type: "pill",    label: "Ops Lock-In (lines/specs)",           // packaging embedded in ops & change cost
-          heightRatio: null, fontPt: null },                             
-        { type: "rect",    label: "Cadence & SKU Velocity",              // reorder frequency / SKU churn
-          heightRatio: null, fontPt: null },
-        { type: "oval",    label: "Switching Risk / Approvals",          // legal/spec/compliance friction
-          heightRatio: null, fontPt: null }
-      ]
+        { type: "circle",  label: "Product-Packaging Reliance", circleDiamRatio: null, fontPt: null },
+        { type: "pill",    label: "Ops Lock-In (lines/specs)", heightRatio: null, fontPt: null },
+        { type: "rect",    label: "Cadence & SKU Velocity",    heightRatio: null, fontPt: null },
+        { type: "oval",    label: "Switching Risk / Approvals",heightRatio: null, fontPt: null }
+      ],
+
+      // legacy mobile bits kept for fallback calc only (desktop path unaffected)
+      MOBILE_BREAKPOINT: 640,
+      CIRCLE_DESKTOP_DIAM_RATIO: 0.10
     };
-    // fill in any missing keys without overwriting user overrides
     for (const k in dflt) if (!(k in root.step2)) root.step2[k] = dflt[k];
     return root.step2;
   }
 
-  // -------------------- helpers (standalone; do NOT change desktop styles) --------------------
+  // -------------------- MOBILE CONFIG (tweakable; DOM flow; no clipping) --------------------
+  function MCFG() {
+    const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
+    root.mobile = root.mobile || {};
+    root.mobile.step2 = root.mobile.step2 || {};
+    const m = root.mobile.step2;
+    const d = {
+      BP: (root.mobile.BP ?? 1024), // inherit site-wide mobile BP unless overridden
+      // Wrapper layout
+      top: 40, bottom: 72, maxW: 520, sidePad: 16, nudgeX: 0, nudgeY: 0,
+      // Title
+      titleShow: true,
+      titleText: C().TITLE_SEO || C().TITLE_TEXT,
+      titlePt: 16, titleWeight: 700, titleLetter: 0.2, titleAlign: "center",
+      titleMarginTop: 6, titleMarginBottom: 10,
+      // Copy
+      copyHTML: C().COPY_SEO_HTML,
+      copyHpt: 22, copyBodyPt: 14, copyLine: 1.55,
+      copyColor: "#a7bacb", copyHColor: "#eaf0f6", copyGapBottom: 14,
+      // Stack/boxes
+      stackGap: 14,
+      box: {
+        widthPct: 100, minH: 56, padX: 12, padY: 10, border: 2, radius: 14,
+        fontPt: 11, fontWeight: 525, letter: 0.3, lineEm: 1.15, align: "center"
+      },
+      circle: { diamPx: 96, fontPt: 11, fontWeight: 525, letter: 0.3, lineEm: 1.15 },
+      dots: { show: true, count: 3, size: 6, gap: 14, padTop: 8 },
+      // Per-item overrides + nudges
+      overrides: {
+        circle1: { nudgeX: 0, nudgeY: 0 },     // adds translate on the circle
+        pill2:   { nudgeX: 0, nudgeY: 0, radius: 18 },
+        rect3:   { nudgeX: 0, nudgeY: 0 },
+        oval4:   { nudgeX: 0, nudgeY: 0, radius: 9999 }
+      },
+      // Visual order
+      order: ["circle1","pill2","rect3","oval4"]
+    };
+    // fill missing keys w/o overwriting user-specified values
+    for (const k in d) if (!(k in m)) m[k] = d[k];
+    if (!m.box) m.box = d.box;
+    if (!m.circle) m.circle = d.circle;
+    if (!m.dots) m.dots = d.dots;
+    if (!m.overrides) m.overrides = d.overrides;
+    if (!m.order) m.order = d.order;
+    return m;
+  }
+
+  // -------------------- helpers (desktop keep same) --------------------
   const reduceMotion = () =>
     (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) || C().REDUCE_MOTION;
 
@@ -229,71 +257,181 @@
     svg.appendChild(fo);
   }
 
-  // -------------------- MOBILE: DOM layout (no rail; prevents nested scroll) --------------------
-  function ensureMobileCSS() {
-    const id = "p2m-style";
-    if (document.getElementById(id)) return;
+  // -------------------- MOBILE: DOM layout (block flow, auto-growing) --------------------
+  const isMobile = () => {
+    const BP = MCFG().BP ?? 640;
+    return (window.PROCESS_FORCE_MOBILE === true) ||
+           (window.matchMedia && window.matchMedia(`(max-width:${BP}px)`).matches);
+  };
 
-    const s = document.createElement("style"); s.id = id;
-    const bp = C().MOBILE_BREAKPOINT;
-    const cyan = C().COLOR_CYAN;
-
-    s.textContent =
-      "@media (max-width:" + bp + "px){" +
-      "  html,body,#section-process{overflow-x:hidden}" +
-      "  .p2m-wrap{position:relative;margin:0 auto;max-width:" + C().M_MAX_W + "px;padding:0 " + C().M_SIDE_PAD + "px 12px}" +
-      "  .p2m-title{text-align:center;color:#ddeaef;font:" + C().TITLE_WEIGHT + " " + C().M_TITLE_PT + "pt " + C().TITLE_FAMILY + ";letter-spacing:" + C().TITLE_LETTER_SPACING + "px;margin:6px 0 10px}" +
-      "  .p2m-copy{margin:0 auto 14px;color:#a7bacb}" +
-      "  .p2m-copy h3{margin:0 0 8px;color:#eaf0f6;font:600 " + C().M_COPY_H_PT + "px Newsreader, Georgia, serif}" +
-      "  .p2m-copy p{margin:0;font:400 " + C().M_COPY_BODY_PT + "px/1.55 Inter, system-ui}" +
-      "  .p2m-stack{display:flex;flex-direction:column;align-items:center;gap:" + C().M_STACK_GAP + "px}" +
-      "  .p2m-box{width:100%;min-height:" + C().M_BOX_MIN_H + "px;border:" + C().M_BORDER_PX + "px solid " + cyan + ";border-radius:14px;padding:10px 12px;display:flex;align-items:center;justify-content:center;text-align:center;color:#ddeaef;background:rgba(255,255,255,.02);font:" + C().FONT_WEIGHT_BOX + " " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:" + C().FONT_LETTER_SPACING + "px;line-height:" + C().LINE_HEIGHT_EM + "em}" +
-      "  .p2m-oval{border-radius:9999px}" +
-      "  .p2m-circle{width:" + C().CIRCLE_MOBILE_DIAM_PX + "px;height:" + C().CIRCLE_MOBILE_DIAM_PX + "px;border:" + C().M_BORDER_PX + "px solid " + cyan + ";border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.02);color:#ddeaef;text-align:center;padding:6px;font:" + C().FONT_WEIGHT_BOX + " " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:" + C().FONT_LETTER_SPACING + "px;line-height:" + C().LINE_HEIGHT_EM + "em}" +
-      "  .p2m-dots{display:flex;gap:14px;justify-content:center;padding-top:8px}" +
-      "  .p2m-dots i{width:6px;height:6px;border-radius:50%;background:" + cyan + ";display:inline-block}" +
-      "}";
-    document.head.appendChild(s);
+  function m2Container({ top, bottom, maxW, sidePad, nudgeX, nudgeY }){
+    const el = document.createElement("div");
+    el.className = "mstep mstep2";
+    el.style.marginTop = `${top}px`;
+    el.style.marginBottom = `${bottom}px`;
+    el.style.maxWidth = `${maxW}px`;
+    el.style.padding = `0 ${sidePad}px`;
+    el.style.transform = `translate(${nudgeX}px, ${nudgeY}px)`;
+    return el;
   }
 
-  function drawMobile(ctx) {
-    ensureMobileCSS();
+  function applyBoxStyles(node, base, ov){
+    const b = Object.assign({}, base, ov||{});
+    node.style.width = `${b.widthPct ?? 100}%`;
+    node.style.minHeight = `${b.minH ?? 56}px`;
+    node.style.padding = `${b.padY ?? 10}px ${b.padX ?? 12}px`;
+    node.style.borderWidth = `${b.border ?? 2}px`;
+    node.style.borderStyle = "solid";
+    node.style.borderColor = "rgba(99,211,255,.95)";
+    node.style.borderRadius = `${b.radius ?? 14}px`;
+    node.style.font = `${b.fontWeight ?? 525} ${b.fontPt ?? 11}pt ${C().FONT_FAMILY_BOX}`;
+    node.style.letterSpacing = `${b.letter ?? 0.3}px`;
+    node.style.lineHeight = `${b.lineEm ?? 1.15}em`;
+    node.style.textAlign = b.align || "center";
+    node.style.color = "#ddeaef";
+    node.style.background = "rgba(255,255,255,.02)";
+    node.style.display = "flex";
+    node.style.alignItems = "center";
+    node.style.justifyContent = "center";
+    if (ov && (ov.nudgeX || ov.nudgeY)){
+      node.style.transform = `translate(${ov.nudgeX|0}px, ${(ov.nudgeY|0)}px)`;
+    }
+  }
 
-    // let the canvas flow with the page (prevents the “scroll-inside-scroll” trap)
+  function renderStep2_DOM(ctx){
+    // ensure canvas is in normal doc flow (no absolute clipping)
     ctx.canvas.style.position = "relative";
     ctx.canvas.style.inset = "auto";
     ctx.canvas.style.pointerEvents = "auto";
 
-    const wrap = document.createElement("div");
-    wrap.className = "p2m-wrap";
+    const M = MCFG();
 
-    wrap.innerHTML =
-      (C().TITLE_SHOW ? '<div class="p2m-title">' + C().TITLE_TEXT + "</div>" : "") +
-      '<div class="p2m-copy">' + C().COPY_SEO_HTML + "</div>" +
-      '<div class="p2m-stack">' +
-      // circle first
-      '<div class="p2m-circle">' + C().ITEMS[0].label + "</div>" +
-      // pill / rect / oval
-      '<div class="p2m-box">' + C().ITEMS[1].label + "</div>" +
-      '<div class="p2m-box">' + C().ITEMS[2].label + "</div>" +
-      '<div class="p2m-box p2m-oval">' + C().ITEMS[3].label + "</div>" +
-      '<div class="p2m-dots"><i></i><i></i><i></i></div>' +
-      "</div>";
+    const wrap = m2Container({
+      top: M.top ?? 40,
+      bottom: M.bottom ?? 72,
+      maxW: M.maxW ?? 520,
+      sidePad: M.sidePad ?? 16,
+      nudgeX: M.nudgeX ?? 0,
+      nudgeY: M.nudgeY ?? 0
+    });
 
+    // Title
+    if (M.titleShow !== false){
+      const t = document.createElement("div");
+      t.textContent = (M.titleText || C().TITLE_SEO || C().TITLE_TEXT);
+      t.style.textAlign = (M.titleAlign || "center");
+      t.style.color = "#ddeaef";
+      t.style.fontWeight = String(M.titleWeight ?? 700);
+      t.style.fontSize = `${M.titlePt ?? 16}pt`;
+      t.style.letterSpacing = `${M.titleLetter ?? 0.2}px`;
+      t.style.marginTop = `${M.titleMarginTop ?? 6}px`;
+      t.style.marginBottom = `${M.titleMarginBottom ?? 10}px`;
+      wrap.appendChild(t);
+    }
+
+    // Copy
+    const copy = document.createElement("div");
+    copy.style.marginBottom = `${M.copyGapBottom ?? 14}px`;
+    copy.innerHTML = (M.copyHTML || C().COPY_SEO_HTML);
+    // style inner bits
+    const h3 = copy.querySelector("h3");
+    if (h3){
+      h3.style.margin = "0 0 8px";
+      h3.style.color = (M.copyHColor ?? "#eaf0f6");
+      h3.style.font = `600 ${(M.copyHpt ?? 22)}px 'Newsreader', Georgia, serif`;
+    }
+    const p = copy.querySelector("p");
+    if (p){
+      p.style.margin = "0";
+      p.style.color = (M.copyColor ?? "#a7bacb");
+      p.style.font = `400 ${(M.copyBodyPt ?? 14)}px/${(M.copyLine ?? 1.55)} Inter, system-ui`;
+    }
+    wrap.appendChild(copy);
+
+    // Stack
+    const stack = document.createElement("div");
+    stack.style.display = "flex";
+    stack.style.flexDirection = "column";
+    stack.style.alignItems = "center";
+    stack.style.gap = `${M.stackGap ?? 14}px`;
+
+    const labels = {
+      circle1: C().ITEMS[0]?.label || "Product-Packaging Reliance",
+      pill2:   C().ITEMS[1]?.label || "Ops Lock-In (lines/specs)",
+      rect3:   C().ITEMS[2]?.label || "Cadence & SKU Velocity",
+      oval4:   C().ITEMS[3]?.label || "Switching Risk / Approvals"
+    };
+
+    const baseBox = M.box || {};
+    const OVR = M.overrides || {};
+    const order = Array.isArray(M.order) ? M.order : ["circle1","pill2","rect3","oval4"];
+
+    for (const key of order){
+      const ov = OVR[key] || {};
+      if (key === "circle1"){
+        const c = document.createElement("div");
+        const diam = (M.circle?.diamPx ?? 96);
+        c.textContent = labels[key];
+        c.style.width = `${diam}px`;
+        c.style.height = `${diam}px`;
+        c.style.border = `${baseBox.border ?? 2}px solid rgba(99,211,255,.95)`;
+        c.style.borderRadius = "9999px";
+        c.style.display = "flex"; c.style.alignItems = "center"; c.style.justifyContent = "center";
+        c.style.background = "rgba(255,255,255,.02)";
+        c.style.textAlign = "center"; c.style.padding = "6px";
+        c.style.color = "#ddeaef";
+        c.style.font = `${M.circle?.fontWeight ?? 525} ${(M.circle?.fontPt ?? baseBox.fontPt ?? 11)}pt ${C().FONT_FAMILY_BOX}`;
+        c.style.letterSpacing = `${M.circle?.letter ?? baseBox.letter ?? 0.3}px`;
+        c.style.lineHeight = `${M.circle?.lineEm ?? baseBox.lineEm ?? 1.15}em`;
+        if (ov && (ov.nudgeX || ov.nudgeY)){
+          c.style.transform = `translate(${ov.nudgeX|0}px, ${(ov.nudgeY|0)}px)`;
+        }
+        stack.appendChild(c);
+      } else {
+        const box = document.createElement("div");
+        box.textContent = labels[key];
+        // base style
+        applyBoxStyles(
+          box,
+          Object.assign({}, baseBox, key==="oval4" ? { radius: 9999 } : {}),
+          ov
+        );
+        stack.appendChild(box);
+      }
+    }
+
+    // Dots
+    const dots = (M.dots || {});
+    if (dots.show !== false){
+      const row = document.createElement("div");
+      row.style.display = "flex";
+      row.style.justifyContent = "center";
+      row.style.gap = `${dots.gap ?? 14}px`;
+      row.style.paddingTop = `${dots.padTop ?? 8}px`;
+      const n = Math.max(0, dots.count ?? 3);
+      for (let i=0;i<n;i++){
+        const dot = document.createElement("i");
+        const size = `${dots.size ?? 6}px`;
+        dot.style.width = size; dot.style.height = size;
+        dot.style.borderRadius = "50%";
+        dot.style.background = "rgba(99,211,255,.95)";
+        dot.style.display = "inline-block";
+        row.appendChild(dot);
+      }
+      stack.appendChild(row);
+    }
+
+    wrap.appendChild(stack);
     ctx.canvas.appendChild(wrap);
   }
 
-  // -------------------- DESKTOP: identical behavior to Step 1 --------------------
+  // -------------------- DESKTOP: identical behavior to before --------------------
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx) {
+    if (isMobile()) { renderStep2_DOM(ctx); return; }
+
+    // === DESKTOP SVG path (unchanged) ===
     const b = ctx.bounds;
-    const isMobile =
-      (window.PROCESS_FORCE_MOBILE === true) ||
-      (window.innerWidth <= C().MOBILE_BREAKPOINT);
-
-    if (isMobile) { drawMobile(ctx); return; }
-
-    // DESKTOP: keep original rail + right-side visuals layout
     const W = b.width, H = Math.min(560, b.sH - 40);
     const svg = document.createElementNS(NS, "svg");
     svg.style.position = "absolute";
@@ -345,7 +483,7 @@
       y += h + gap;
     }
 
-    // item 3: rect (rounded)
+    // item 3: rect
     {
       const h = boxH * (C().ITEMS[2].heightRatio || 1);
       const d = rr(x, y, boxW, h, C().RADIUS_RECT);
@@ -408,7 +546,7 @@
       svg.appendChild(t);
     }
 
-    // Horizontal rails from scene 1 rules
+    // Horizontal rails
     if (itemsDrawn.length) {
       const first = itemsDrawn[0];
       const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
@@ -430,7 +568,7 @@
       }
     }
 
-    // Vertical connectors between items
+    // Vertical connectors
     for (let i = 0; i < itemsDrawn.length - 1; i++) {
       const a = itemsDrawn[i], b2 = itemsDrawn[i + 1];
       const xMid = a.x + a.w / 2;
