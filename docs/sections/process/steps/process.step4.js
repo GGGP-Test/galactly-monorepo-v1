@@ -1,4 +1,3 @@
-// sections/process/steps/process.step4.js
 (() => {
   const STEP = 4;
   const NS = "http://www.w3.org/2000/svg";
@@ -8,10 +7,10 @@
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step4 = root.step4 || {};
     const dflt = {
-      // ===== DESKTOP knobs =====
+      // ===== DESKTOP knobs (same visuals) =====
       BOX_W_RATIO: 0.10, BOX_H_RATIO: 0.12, GAP_RATIO: 0.035,
       STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.19, NUDGE_X: -230, NUDGE_Y: -16,
-      RADIUS_RECT: 14, RADIUS_PILL: 18, RADIUS_OVAL: 999, DIAMOND_SCALE: 1.00,
+      RADIUS_RECT: 14, RADIUS_PILL: 18, RADIUS_OVAL: 999, DIAMOND_SCALE: 1.0,
       SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true,
       LEFT_STOP_RATIO: 0.35, RIGHT_MARGIN_PX: 16, H_LINE_Y_BIAS: -0.02,
       CONNECT_X_PAD: 8, LINE_STROKE_PX: 2.5,
@@ -24,7 +23,7 @@
 
       // Title (desktop)
       TITLE_SHOW: true,
-      TITLE_TEXT: "Right Channel Now",
+      TITLE_TEXT: "Platform Score", // ends with “Score” as requested
       TITLE_PT: 14, TITLE_WEIGHT: 700,
       TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -26, TITLE_LETTER_SPACING: 0.2,
@@ -54,19 +53,25 @@
       // ===== Labels / copy =====
       TITLE_SEO: "Platform Score — Right channel, right now",
       COPY_SEO_HTML:
-        '<h3>Right channel, right now</h3>\
-         <p>We grade every <b>platform</b> your packaging buyer actually uses — email, phone, LinkedIn, Instagram, web chat, SMS/WhatsApp, procurement portals, marketplaces, and trade shows.\
-         Then we recommend the <b>single best channel to contact first</b>.</p>\
-         <p><b>Lead tiers:</b> <b>Cool</b> (researching), <b>Warm</b> (engaging), <b>Hot</b> (in-cycle), <b>Hot+</b> (deadline-driven).\
-         Signals include post frequency, comment/message velocity, inbound:outbound ratio, response latency, reply probability, and CTA friction.\
-         Perfect for inside sales teams hunting B2B packaging leads with time pressure.</p>',
+        '<h3>Right channel, right now (Platform Score)</h3>\
+         <p><b>We rank the platforms where your packaging buyer actually answers</b> — email, phone, LinkedIn, Instagram, web chat, SMS/WhatsApp, procurement portals, marketplaces, and trade shows — and recommend the <b>single best channel to contact first</b>.</p>\
+         <p><b>Lead tiers:</b> <b>Cool</b> (researching), <b>Warm</b> (engaging), <b>Hot</b> (in-cycle), <b>Hot+</b> (deadline-driven; same-day replies). <b>Signals:</b> post frequency, comment/message velocity, inbound:outbound ratio, response latency, reply probability, and CTA friction. Built for inside sales teams selling B2B packaging under time pressure.</p>\
+         <p>Outcome: a <b>Recommended Channel</b> with confidence and urgency cues — so your team moves first where the buyer will respond.</p>',
 
+      // Shapes/labels (diamond -> pill -> circle -> rectangle)
       ITEMS: [
-        { type: "diamond", label: "Posts / Platform (freq)", heightRatio: 1, fontPt: null },
+        { type: "diamond", label: "Posts / Platform (frequency)", heightRatio: 1, fontPt: null },
         { type: "pill",    label: "Comments & Messages / Platform (velocity)", heightRatio: 1, fontPt: null },
-        { type: "circle",  label: "Reply Probability (intent)", circleDiamRatio: 0.10, fontPt: null },
-        { type: "rect",    label: "Recommended Channel (Phone / Email / DM)", heightRatio: 1, fontPt: null }
-      ]
+        { type: "circle",  label: "Intent to Respond (reply probability)", circleDiamRatio: 0.10, fontPt: null },
+        { type: "rect",    label: "Recommended Channel", heightRatio: 1, fontPt: null }
+      ],
+
+      // ===== UX sugar / SPHERE-3 handoff =====
+      RECO_CHANNEL: (window.SPHERE3 && window.SPHERE3.recommended) || "Phone",
+      RECO_CONFIDENCE: (window.SPHERE3 && typeof window.SPHERE3.confidence === "number")
+                        ? window.SPHERE3.confidence : 0.82, // 0..1
+      LEAD_TIER: (window.SPHERE3 && window.SPHERE3.leadTier) || "warm", // "cool"|"warm"|"hot"|"hot+"
+      PULSE_ON_HOTPLUS: true
     };
     for (const k in dflt) if (!(k in root.step4)) root.step4[k] = dflt[k];
     return root.step4;
@@ -111,6 +116,28 @@
     svg.appendChild(defs);
   }
 
+  function makeSegmentGradient(svg, x1, y, x2) {
+    const id = "seg_" + Math.random().toString(36).slice(2, 8);
+    let defs = svg.querySelector("defs");
+    if (!defs) { defs = document.createElementNS(NS, "defs"); svg.appendChild(defs); }
+    const g = document.createElementNS(NS, "linearGradient");
+    g.setAttribute("id", id);
+    g.setAttribute("gradientUnits", "userSpaceOnUse");
+    g.setAttribute("x1", x1); g.setAttribute("y1", y);
+    g.setAttribute("x2", x2); g.setAttribute("y2", y);
+    [["0%", C().COLOR_GOLD], ["35%", "rgba(255,255,255,.95)"], ["75%", C().COLOR_CYAN], ["100%", "rgba(99,211,255,.60)"]]
+      .forEach(([o, c]) => { const s = document.createElementNS(NS, "stop"); s.setAttribute("offset", o); s.setAttribute("stop-color", c); g.appendChild(s); });
+    if (!reduceMotion() && C().FLOW_SPEED_S > 0) {
+      const a = document.createElementNS(NS, "animateTransform");
+      a.setAttribute("attributeName", "gradientTransform");
+      a.setAttribute("type", "translate"); a.setAttribute("from", "0 0"); a.setAttribute("to", `${(x2 - x1)} 0`);
+      a.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a.setAttribute("repeatCount", "indefinite");
+      g.appendChild(a);
+    }
+    defs.appendChild(g);
+    return `url(#${id})`;
+  }
+
   const rr = (x, y, w, h, r) => {
     const R = Math.min(r, Math.min(w, h) / 2);
     return `M ${x + R} ${y} H ${x + w - R} Q ${x + w} ${y} ${x + w} ${y + R}
@@ -119,13 +146,17 @@
             V ${y + R} Q ${x} ${y} ${x + R} ${y} Z`;
   };
 
-  function addPath(svg, d, stroke, sw) {
+  function addPath(svg, d, stroke, sw, cls) {
     const p = document.createElementNS(NS, "path");
-    p.setAttribute("d", d); p.setAttribute("fill", "none");
-    p.setAttribute("stroke", stroke); p.setAttribute("stroke-width", sw);
-    p.setAttribute("stroke-linejoin", "round"); p.setAttribute("stroke-linecap", "round");
-    p.setAttribute("class", "glow");
-    svg.appendChild(p); return p;
+    p.setAttribute("d", d);
+    p.setAttribute("fill", "none");
+    p.setAttribute("stroke", stroke);
+    p.setAttribute("stroke-width", sw);
+    p.setAttribute("stroke-linejoin", "round");
+    p.setAttribute("stroke-linecap", "round");
+    p.setAttribute("class", "glow" + (cls ? " " + cls : ""));
+    svg.appendChild(p);
+    return p;
   }
 
   function addCircle(svg, cx, cy, r, stroke, sw) {
@@ -133,7 +164,8 @@
     c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", r);
     c.setAttribute("fill", "none"); c.setAttribute("stroke", stroke);
     c.setAttribute("stroke-width", sw); c.setAttribute("class", "glow");
-    svg.appendChild(c); return c;
+    svg.appendChild(c);
+    return c;
   }
 
   function addFO(svg, x, y, w, h, html, styles) {
@@ -147,7 +179,10 @@
       alignItems: "center", justifyContent: "center", textAlign: "center",
       color: "#ddeaef", whiteSpace: "pre-wrap", wordBreak: "break-word", pointerEvents: "none"
     }, styles || {});
-    d.innerHTML = html; fo.appendChild(d); svg.appendChild(fo);
+    d.innerHTML = html;
+    fo.appendChild(d);
+    svg.appendChild(fo);
+    return fo;
   }
 
   function addDiamond(svg, cx, cy, w, h, stroke, sw, label, fontPt) {
@@ -162,10 +197,31 @@
     });
   }
 
-  // -------------------- MOBILE --------------------
+  function addChip(svg, x, y, text) {
+    // Small chip overlaid in the "Recommended Channel" rect
+    const chip = document.createElementNS(NS, "foreignObject");
+    chip.setAttribute("x", x); chip.setAttribute("y", y);
+    chip.setAttribute("width", 160); chip.setAttribute("height", 26);
+    const d = document.createElement("div");
+    d.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+    Object.assign(d.style, {
+      width: "auto", height: "auto", display: "inline-flex",
+      alignItems: "center", justifyContent: "center",
+      padding: "3px 8px", borderRadius: "9999px",
+      background: "rgba(99,211,255,.14)", color: "#ddeaef",
+      border: `1px solid ${C().COLOR_CYAN}`, font: `600 10pt ${C().FONT_FAMILY_BOX}`,
+      letterSpacing: "0.3px", pointerEvents: "none"
+    });
+    d.textContent = text;
+    chip.appendChild(d); svg.appendChild(chip);
+    return chip;
+  }
+
+  // -------------------- MOBILE: DOM layout --------------------
   function ensureMobileCSS() {
     const id = "p4m-style";
     if (document.getElementById(id)) return;
+
     const s = document.createElement("style"); s.id = id;
     const bp = C().MOBILE_BREAKPOINT; const cyan = C().COLOR_CYAN;
 
@@ -183,18 +239,22 @@
       "  .p4m-circle{width:" + C().CIRCLE_MOBILE_DIAM_PX + "px;height:" + C().CIRCLE_MOBILE_DIAM_PX + "px;border:" + C().M_BORDER_PX + "px solid " + cyan + ";border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.02);color:#ddeaef;text-align:center;padding:6px;font:" + C().FONT_WEIGHT_BOX + " " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:" + C().FONT_LETTER_SPACING + "px;line-height:" + C().LINE_HEIGHT_EM + "em}" +
       "  .p4m-diamond{position:relative;width:120px;height:120px;transform:rotate(45deg);border:" + C().M_BORDER_PX + "px solid " + cyan + ";background:rgba(255,255,255,.02)}" +
       "  .p4m-diamond span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:rotate(-45deg);color:#ddeaef;padding:8px;text-align:center;font:" + C().FONT_WEIGHT_BOX + " " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:" + C().FONT_LETTER_SPACING + "px;line-height:" + C().LINE_HEIGHT_EM + "em}" +
+      "  .p4m-chip{display:inline-flex;align-items:center;justify-content:center;margin-top:8px;border-radius:9999px;border:1px solid " + cyan + ";padding:3px 8px;background:rgba(99,211,255,.14);color:#ddeaef;font:600 " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:.3px}" +
       "}";
     document.head.appendChild(s);
   }
 
   function drawMobile(ctx) {
     ensureMobileCSS();
+
     ctx.canvas.style.position = "relative";
     ctx.canvas.style.inset = "auto";
     ctx.canvas.style.pointerEvents = "auto";
 
     const wrap = document.createElement("div");
     wrap.className = "p4m-wrap s4";
+
+    const chipText = C().RECO_CHANNEL + " • " + (Math.round(C().RECO_CONFIDENCE * 100) / 100);
 
     wrap.innerHTML =
       (C().TITLE_SHOW ? '<div class="p4m-title">' + C().TITLE_TEXT + "</div>" : "") +
@@ -203,8 +263,7 @@
         '<div class="p4m-diamond"><span>' + C().ITEMS[0].label + '</span></div>' +
         '<div class="p4m-box">' + C().ITEMS[1].label + "</div>" +
         '<div class="p4m-circle">' + C().ITEMS[2].label + "</div>" +
-        '<div class="p4m-box">' + C().ITEMS[3].label + "</div>" +
-        '<div class="p4m-oval p4m-box" style="visibility:hidden;height:0;padding:0;border:0;margin:0"></div>' +
+        '<div class="p4m-box">' + C().ITEMS[3].label + '<div class="p4m-chip">' + chipText + '</div></div>' +
       "</div>";
 
     ctx.canvas.appendChild(wrap);
@@ -222,7 +281,8 @@
     svg.style.position = "absolute";
     svg.style.left = b.left + "px";
     svg.style.top = b.top + "px";
-    svg.setAttribute("width", W); svg.setAttribute("height", H);
+    svg.setAttribute("width", W);
+    svg.setAttribute("height", H);
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     ctx.canvas.appendChild(svg);
 
@@ -235,7 +295,7 @@
     let y = H * C().STACK_TOP_RATIO + C().NUDGE_Y;
     const itemsDrawn = [];
 
-    // 1: diamond (posts/platform)
+    // 1: diamond
     {
       const w = boxW * 0.95 * C().DIAMOND_SCALE;
       const h = boxH * 0.95 * C().DIAMOND_SCALE;
@@ -244,7 +304,7 @@
       itemsDrawn.push({ x: cx - w/2, y: cy - h/2, w, h, cx, cy });
       y += h + gap;
     }
-    // 2: pill (comments/messages velocity)
+    // 2: pill
     {
       const h = boxH * (C().ITEMS[1].heightRatio || 1);
       addPath(svg, rr(x, y, boxW, h, C().RADIUS_PILL), "url(#gradFlow)", C().STROKE_PX);
@@ -255,7 +315,7 @@
       });
       itemsDrawn.push({ x, y, w: boxW, h }); y += h + gap;
     }
-    // 3: circle (reply probability)
+    // 3: circle
     {
       const diam = (C().ITEMS[2].circleDiamRatio || 0.10) * W;
       const r = diam / 2;
@@ -270,16 +330,22 @@
       itemsDrawn.push({ x: cx - r, y: cy - r, w: diam, h: diam, cx, cy });
       y += diam + gap;
     }
-    // 4: rect (recommended channel)
+    // 4: rect (Recommended Channel)
+    let rectBox;
     {
       const h = boxH * (C().ITEMS[3].heightRatio || 1);
       addPath(svg, rr(x, y, boxW, h, C().RADIUS_RECT), "url(#gradFlow)", C().STROKE_PX);
-      addFO(svg, x, y, boxW, h, C().ITEMS[3].label, {
+      const fo = addFO(svg, x, y, boxW, h, `<div>${C().ITEMS[3].label}</div>`, {
         font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_BOX}pt ${C().FONT_FAMILY_BOX}`,
         letterSpacing: `${C().FONT_LETTER_SPACING}px`, lineHeight: `${C().LINE_HEIGHT_EM}em`,
-        padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
+        padding: `${C().PADDING_Y}px ${C().PADDING_X}px`, position: "relative"
       });
-      itemsDrawn.push({ x, y, w: boxW, h }); y += h + C().DOTS_Y_OFFSET;
+      rectBox = { x, y, w: boxW, h, fo }; 
+      itemsDrawn.push(rectBox); y += h + C().DOTS_Y_OFFSET;
+
+      // Chip (UX sugar)
+      const chipText = `${C().RECO_CHANNEL} • ${Math.round(C().RECO_CONFIDENCE * 100) / 100}`;
+      addChip(svg, x + boxW/2 - 80, rectBox.y + rectBox.h + 6, chipText);
     }
 
     // dots
@@ -291,7 +357,8 @@
         c.setAttribute("r", C().DOTS_SIZE_PX);
         c.setAttribute("fill", C().COLOR_CYAN);
         c.setAttribute("class", "glow");
-        svg.appendChild(c); dotY += C().DOTS_GAP_PX;
+        svg.appendChild(c);
+        dotY += C().DOTS_GAP_PX;
       }
     }
 
@@ -312,6 +379,7 @@
     }
 
     // Horizontal rails
+    let leftRail, rightRail;
     if (itemsDrawn.length) {
       const first = itemsDrawn[0];
       const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
@@ -320,7 +388,7 @@
         const xe = itemsDrawn[0].x - C().CONNECT_X_PAD;
         if (xe > xs) {
           const stroke = makeSegmentGradient(svg, xs, attachY, xe);
-          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
+          leftRail = addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX, "rail");
         }
       }
       if (C().SHOW_RIGHT_LINE) {
@@ -328,19 +396,21 @@
         const xe = W - C().RIGHT_MARGIN_PX;
         if (xe > xs) {
           const stroke = makeSegmentGradient(svg, xs, attachY, xe);
-          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
+          rightRail = addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX, "rail");
         }
       }
     }
 
     // Vertical connectors
+    const connectors = [];
     for (let i = 0; i < itemsDrawn.length - 1; i++) {
       const a = itemsDrawn[i], b2 = itemsDrawn[i + 1];
       const xMid = a.x + a.w / 2;
       const y1 = a.y + a.h;
       const y2 = b2.y;
       const pad = Math.max(2, C().STROKE_PX);
-      addPath(svg, `M ${xMid} ${y1 + pad} V ${y2 - pad}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
+      const conn = addPath(svg, `M ${xMid} ${y1 + pad} V ${y2 - pad}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX, "rail");
+      connectors.push(conn);
     }
 
     // Left copy (desktop)
@@ -354,5 +424,31 @@
       el.querySelectorAll("p").forEach(p => p.style.cssText =
         `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`);
     }
+
+    // ---------- SPHERE-3 urgency pulse ----------
+    function applyUrgencyPulse(tier) {
+      const urgent = C().PULSE_ON_HOTPLUS && (String(tier || "").toLowerCase() === "hot+");
+      if (!urgent || reduceMotion()) return;
+      [...svg.querySelectorAll(".rail")].forEach(path => {
+        const a = document.createElementNS(NS, "animate");
+        a.setAttribute("attributeName", "stroke-width");
+        a.setAttribute("values", `${C().LINE_STROKE_PX};${C().LINE_STROKE_PX + 1.5};${C().LINE_STROKE_PX}`);
+        a.setAttribute("dur", "1.8s");
+        a.setAttribute("repeatCount", "indefinite");
+        path.appendChild(a);
+        const b = document.createElementNS(NS, "animate");
+        b.setAttribute("attributeName", "stroke-opacity");
+        b.setAttribute("values", "1;1;1");
+        b.setAttribute("dur", "1.8s");
+        b.setAttribute("repeatCount", "indefinite");
+        path.appendChild(b);
+      });
+    }
+    applyUrgencyPulse(C().LEAD_TIER);
+
+    // React to global SPHERE-3 updates (optional)
+    window.addEventListener("SPHERE3:update", (e) => {
+      try { applyUrgencyPulse(e.detail && e.detail.leadTier); } catch (err) {}
+    });
   };
 })();
