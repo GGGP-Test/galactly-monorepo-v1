@@ -7,88 +7,72 @@
   window.PROCESS_SCENES  = window.PROCESS_SCENES  || {};
   window.PROCESS_CONFIG  = Object.assign(
     {
-      // Step 0B (pill) only – unchanged
+      // Desktop Step 0 (unchanged — used on desktop only)
       step0: { NUDGE_X: 150, NUDGE_Y: 50, COPY_GAP: 44, LABEL: "YourCompany.com" },
 
       // Per-step buckets (steps 1..5 live in their own files)
       step1: {}, step2: {}, step3: {}, step4: {}, step5: {},
 
-      // >>> Phones/tablets: all mobile-only tuning lives here (desktop is untouched)
+      // >>> Phones/tablets: all mobile-only tuning lives here (desktop untouched)
       mobile: {
-        BP: 1024,                 // <= px uses mobile path (set 640 if you want phones only)
+        BP: 1024,                 // <= px uses mobile path (set 640 for phones only)
         MODE: "dom",              // "dom" = render mobile here; "scenes" = call per-step files
-        SHOW_STEPS: { 1: true, 2: false, 3: false, 4: false, 5: false },
-        GAP_AFTER_PILL: 28,       // space after Step 0 pill before Step 1 begins
 
-        // ===== Step 1: Mobile-only knobs (tweak away) =====
-        step1: {
+        // ===== Step 0 (Pill) : Mobile-only knobs =====
+        step0: {
           // Layout wrapper
-          maxW: 520,              // max content width inside phones
-          sidePad: 16,            // left/right padding
-          top: 40,                // top margin of Step 1 block
-          bottom: 72,             // bottom margin
-          nudgeX: 0,              // translate whole Step 1 block (px)
+          top: 18,                // margin-top for Step 0 block
+          bottom: 20,             // margin-bottom for Step 0 block
+          sidePad: 16,            // left/right padding inside the block
+          maxW: 560,              // max block width
+          nudgeX: 0,              // translate the whole Step 0 block
           nudgeY: 0,
 
-          // Title block
-          titleShow: true,
-          titlePt: 16,            // pt
-          titleWeight: 700,
-          titleLetter: 0.2,       // px
-          titleAlign: "center",
-          titleMarginTop: 6,
-          titleMarginBottom: 10,
-
           // Copy block
+          copyHTML: null,         // optional override HTML for the copy block
           copyHpt: 22,            // h3 size (px)
-          copyBodyPt: 14,         // paragraph size (px)
-          copyLine: 1.55,
-          copyColor: "#a7bacb",
+          copyHWeight: 600,
           copyHColor: "#eaf0f6",
-          copyGapBottom: 14,      // space below copy block
+          copyBodyPt: 15,         // paragraph size (px)
+          copyLine: 1.65,
+          copyColor: "#a7bacb",
+          copyGapBottom: 14,      // space between copy and pill
 
-          // Stack / boxes (defaults used unless overridden per item)
-          stackGap: 14,           // gap between boxes
-          box: {
-            widthPct: 100,        // % width of each box (e.g., 92 to create side gutters)
-            minH: 56,             // px
-            padX: 12, padY: 10,   // px
-            border: 2,            // px
-            radius: 14,           // px
-            fontPt: 11,           // pt
-            fontWeight: 525,
-            letter: 0.3,          // px
-            lineEm: 1.15,
-            align: "center"
+          // Pill visuals
+          pill: {
+            widthPct: 92,         // pill width as % of inner width
+            height: 64,           // pill height (px)
+            radius: 16,           // corner radius (px)
+            stroke: 2.5,          // outline width (px)
+            nudgeX: 0,            // translate just the pill (not the text above)
+            nudgeY: 0,
+            showTrail: false      // the glowing trail to the right (usually off on mobile)
           },
 
-          // Diamond settings
-          diamond: {
-            widthPct: 45,         // % of maxW for the diamond wrapper
-            border: 2,            // px
-            labelPt: 10,          // pt
-            pad: 10               // px inside rotated label span
-          },
+          // Label inside pill
+          labelText: null,        // defaults to window.PROCESS_CONFIG.step0.LABEL
+          labelPadX: 16,          // left padding for label text (px)
+          labelPt: 16,            // font size (px)
+          labelWeight: 800,
+          labelColor: "#ddeaef",
 
-          // Dots under the last shape
-          dots: {
-            show: true,
-            count: 3,
-            size: 6,              // px
-            gap: 14,              // px between dots
-            padTop: 6             // px spacing above dots row
-          },
+          // Extra spacing before Step 1
+          gapAfterPill: 28
+        },
 
-          // Per-item overrides + nudges (override any "box" fields; add nudgeX / nudgeY)
-          overrides: {
-            rect1:  { nudgeX: 0, nudgeY: 0 },
-            rect2:  { nudgeX: 0, nudgeY: 0 },
-            round3: { nudgeX: 0, nudgeY: 0 },
-            oval4:  { nudgeX: 0, nudgeY: 0, radius: 9999 }, // keep oval unless you change it
-            diamond5:{ nudgeX: 0, nudgeY: 0 }               // diamond sizing comes from diamond{}
-          },
+        // Which steps to show after Step 0
+        SHOW_STEPS: { 1: true, 2: false, 3: false, 4: false, 5: false },
 
-          // Order is the visual flow — keep as-is unless you want to rearrange
+        // ===== Step 1: Mobile-only knobs (existing) =====
+        step1: {
+          maxW: 520, sidePad: 16, top: 40, bottom: 72, nudgeX: 0, nudgeY: 0,
+          titleShow: true, titlePt: 16, titleWeight: 700, titleLetter: 0.2, titleAlign: "center", titleMarginTop: 6, titleMarginBottom: 10,
+          copyHpt: 22, copyBodyPt: 14, copyLine: 1.55, copyColor: "#a7bacb", copyHColor: "#eaf0f6", copyGapBottom: 14,
+          stackGap: 14,
+          box: { widthPct: 100, minH: 56, padX: 12, padY: 10, border: 2, radius: 14, fontPt: 11, fontWeight: 525, letter: 0.3, lineEm: 1.15, align: "center" },
+          diamond: { widthPct: 45, border: 2, labelPt: 10, pad: 10 },
+          dots: { show: true, count: 3, size: 6, gap: 14, padTop: 6 },
+          overrides: { rect1:{}, rect2:{}, round3:{}, oval4:{ radius:9999 }, diamond5:{} },
           order: ["rect1","rect2","round3","oval4","diamond5"]
         }
       }
@@ -163,7 +147,7 @@
     .glow{ filter: drop-shadow(0 0 4px rgba(242,220,160,.28)) drop-shadow(0 0 10px rgba(99,211,255,.24)); }
   }
 
-  /* ===== MOBILE DOM MODE container classes (values are inlined per config) ===== */
+  /* ===== MOBILE DOM MODE base classes ===== */
   @media (max-width: ${ (window.PROCESS_CONFIG?.mobile?.BP || 1024) }px){
     #section-process .mstep{ position:relative; margin:0 auto; z-index:0; }
     #section-process .mstep-title{ color:#ddeaef; }
@@ -221,7 +205,6 @@
     return (window.PROCESS_FORCE_MOBILE === true) ||
            (window.matchMedia && window.matchMedia(`(max-width:${BP}px)`).matches);
   };
-
   function deepClone(o){ return JSON.parse(JSON.stringify(o||{})); }
 
   function makeFlowGradients({ pillX, pillY, pillW, yMid, xTrailEnd }) {
@@ -278,14 +261,13 @@
     return { sLeft:s.left, sTop:s.top, sW:s.width, sH:s.height, left, width, top:18, railRight:w.right - s.left };
   }
 
-  // Mobile bounds (full width, no rail/lamp). `top` lets us stack slices.
+  // Mobile bounds (full width, no rail/lamp)
   function boundsMobile(top=0, sH=640){
     const s = stage.getBoundingClientRect();
     const left = 14;
     const width = Math.max(300, s.width - left - 14);
     return { sLeft:s.left, sTop:s.top, sW:s.width, sH, left, width, top, railRight:left };
   }
-
   function bounds(){ return isMobile() ? boundsMobile(18, 640) : boundsDesktop(); }
 
   function placeLamp(){
@@ -295,10 +277,9 @@
       lamp.style.left = b.left + "px"; lamp.style.width = b.width + "px"; lamp.style.opacity = ".32";
     } else { lamp.style.opacity = "0"; lamp.style.width="0px"; }
   }
-
   function clearCanvas(){ while (canvas.firstChild) canvas.removeChild(canvas.firstChild); }
 
-  /* ----------------- STEP 0 (pill) ----------------- */
+  /* ----------------- STEP 0: Desktop SVG (unchanged) ----------------- */
   function scenePill(bOverride){
     const C = window.PROCESS_CONFIG.step0;
     const b = bOverride || (isMobile() ? boundsMobile(18, 600) : boundsDesktop());
@@ -344,12 +325,12 @@
 
     const trail = document.createElementNS(ns,"line");
     trail.setAttribute("x1", pillX+pillW); trail.setAttribute("y1", yMid);
-    trail.setAttribute("x2", xTrailEnd);   trail.setAttribute("y2", yMid);
+    trail.setAttribute("x2", nodeW - 10);   trail.setAttribute("y2", yMid);
     trail.setAttribute("stroke","url(#gradTrailFlow)"); trail.setAttribute("stroke-width","2.5");
     trail.setAttribute("stroke-linecap","round"); trail.setAttribute("class","glow");
     svg.appendChild(trail);
 
-    // copy block (mobile: copy-first naturally because top < boxes)
+    // Desktop copy (absolute)
     const basePillY = Math.max(12, nodeH*0.20);
     const minInside = b.left+12;
     const fromRail  = Math.max(minInside, b.left + 24);
@@ -369,7 +350,114 @@
       copy.style.left = idealLeft + "px";
     });
 
-    return nodeH; // report slice height (for mobile stacking)
+    return nodeH;
+  }
+
+  /* ----------------- STEP 0: Mobile DOM renderer (copy ABOVE, pill BELOW) ----------------- */
+  function renderStep0_DOM(){
+    const M0 = (window.PROCESS_CONFIG.mobile?.step0) || {};
+    const LABEL = M0.labelText || (window.PROCESS_CONFIG.step0?.LABEL || "YourCompany.com");
+
+    // Wrapper
+    const wrap = document.createElement("div");
+    wrap.className = "mstep mstep0";
+    wrap.style.marginTop = `${M0.top ?? 18}px`;
+    wrap.style.marginBottom = `${M0.bottom ?? 20}px`;
+    wrap.style.maxWidth = `${M0.maxW ?? 560}px`;
+    wrap.style.padding = `0 ${M0.sidePad ?? 16}px`;
+    wrap.style.transform = `translate(${M0.nudgeX ?? 0}px, ${M0.nudgeY ?? 0}px)`;
+    canvas.appendChild(wrap);
+
+    // Copy block
+    const copy = document.createElement("div");
+    copy.className = "mstep-copy";
+    copy.style.marginBottom = `${M0.copyGapBottom ?? 14}px`;
+    if (M0.copyHTML){
+      copy.innerHTML = M0.copyHTML;
+    } else {
+      copy.innerHTML = `
+        <h3 style="margin:0 0 8px; color:${M0.copyHColor ?? "#eaf0f6"};
+                   font:${M0.copyHWeight ?? 600} ${(M0.copyHpt ?? 22)}px 'Newsreader', Georgia, serif;">
+          We start with your company.
+        </h3>
+        <p style="margin:0; color:${M0.copyColor ?? "#a7bacb"};
+                  font:400 ${(M0.copyBodyPt ?? 15)}px/${(M0.copyLine ?? 1.65)} Inter, system-ui;">
+          We read your company and data to learn what matters. Then our system builds simple metrics around your strengths.
+          With that map in hand, we move forward to find real buyers who match your persona.
+        </p>`;
+    }
+    wrap.appendChild(copy);
+
+    // Pill container (block flow, no overlap)
+    const pillWrap = document.createElement("div");
+    pillWrap.style.position = "relative";
+    pillWrap.style.width = "100%";
+    pillWrap.style.height = `${M0.pill?.height ?? 64}px`;
+    pillWrap.style.pointerEvents = "none"; // visual only
+    wrap.appendChild(pillWrap);
+
+    // Draw pill after layout so we know widths
+    requestAnimationFrame(() => {
+      const innerW = pillWrap.getBoundingClientRect().width;
+      const P = M0.pill || {};
+      const pillW = Math.round(innerW * ((P.widthPct ?? 92)/100));
+      const pillH = P.height ?? 64;
+      const pillX = Math.round((innerW - pillW)/2 + (P.nudgeX ?? 0));
+      const pillY = Math.max(0, ((pillWrap.clientHeight - pillH)/2) + (P.nudgeY ?? 0));
+      const r = P.radius ?? 16;
+      const yMid = pillY + pillH/2;
+
+      const svg = document.createElementNS(ns,"svg");
+      svg.setAttribute("width", innerW);
+      svg.setAttribute("height", pillWrap.clientHeight);
+      svg.setAttribute("viewBox", `0 0 ${innerW} ${pillWrap.clientHeight}`);
+      svg.style.display = "block";
+      pillWrap.appendChild(svg);
+
+      svg.appendChild(makeFlowGradients({
+        pillX, pillY, pillW, yMid, xTrailEnd: innerW - 10
+      }));
+
+      // Outline
+      const d = `M ${pillX+r} ${pillY} H ${pillX+pillW-r} Q ${pillX+pillW} ${pillY} ${pillX+pillW} ${pillY+r}
+                 V ${pillY+pillH-r} Q ${pillX+pillW} ${pillY+pillH} ${pillX+pillW-r} ${pillY+pillH}
+                 H ${pillX+r} Q ${pillX} ${pillY+pillH} ${pillX} ${pillY+pillH-r}
+                 V ${pillY+r} Q ${pillX} ${pillY} ${pillX+r} ${pillY} Z`;
+      const outline = document.createElementNS(ns,"path");
+      outline.setAttribute("d", d);
+      outline.setAttribute("fill","none");
+      outline.setAttribute("stroke","url(#gradFlow)");
+      outline.setAttribute("stroke-width", String(P.stroke ?? 2.5));
+      outline.setAttribute("stroke-linejoin","round");
+      outline.setAttribute("class","glow");
+      svg.appendChild(outline);
+
+      // Draw trail only if enabled (off by default on mobile to avoid overflow)
+      if (P.showTrail){
+        const trail = document.createElementNS(ns,"line");
+        trail.setAttribute("x1", pillX+pillW); trail.setAttribute("y1", yMid);
+        trail.setAttribute("x2", innerW - 10); trail.setAttribute("y2", yMid);
+        trail.setAttribute("stroke","url(#gradTrailFlow)");
+        trail.setAttribute("stroke-width", String(P.stroke ?? 2.5));
+        trail.setAttribute("stroke-linecap","round");
+        trail.setAttribute("class","glow");
+        svg.appendChild(trail);
+      }
+
+      // Label
+      const label = document.createElementNS(ns,"text");
+      label.setAttribute("x", pillX + (M0.labelPadX ?? 16));
+      label.setAttribute("y", pillY + pillH/2 + 6);
+      label.setAttribute("fill", M0.labelColor ?? "#ddeaef");
+      label.setAttribute("font-weight", String(M0.labelWeight ?? 800));
+      label.setAttribute("font-size", String(M0.labelPt ?? 16));
+      label.setAttribute("font-family","Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif");
+      label.textContent = LABEL;
+      svg.appendChild(label);
+    });
+
+    // Return height so callers can add spacing if desired
+    return pillWrap.getBoundingClientRect().height + (M0.copyGapBottom ?? 14);
   }
 
   /* ----------------- RAIL (desktop only) ----------------- */
@@ -392,7 +480,6 @@
       railSvg.appendChild(line);
     }
   }
-
   function renderDots(){
     if (isMobile()) return;
     dots.forEach((el,i)=>{
@@ -402,7 +489,7 @@
     });
   }
 
-  /* ----------------- MOBILE: Step 1 DOM (all values are inlined from config) ----------------- */
+  /* ----------------- MOBILE: Step 1 DOM (existing) ----------------- */
   function mStepContainer({ top=40, bottom=72, maxW=520, sidePad=16, nudgeX=0, nudgeY=0 }){
     const el = document.createElement("div");
     el.className = "mstep";
@@ -413,7 +500,6 @@
     el.style.transform = `translate(${nudgeX}px, ${nudgeY}px)`;
     return el;
   }
-
   function applyBoxStyles(node, base, ov){
     const b = Object.assign({}, base, ov||{});
     node.style.width = `${b.widthPct ?? 100}%`;
@@ -430,21 +516,16 @@
       node.style.transform = `translate(${ov.nudgeX|0}px, ${(ov.nudgeY|0)}px)`;
     }
   }
-
   function renderStep1_DOM(){
     const cfg = window.PROCESS_CONFIG.step1 || {};
     const M = (window.PROCESS_CONFIG.mobile?.step1) || {};
 
     const wrap = mStepContainer({
-      top: M.top ?? 40,
-      bottom: M.bottom ?? 72,
-      maxW: M.maxW ?? 520,
-      sidePad: M.sidePad ?? 16,
-      nudgeX: M.nudgeX ?? 0,
-      nudgeY: M.nudgeY ?? 0
+      top: M.top ?? 40, bottom: M.bottom ?? 72,
+      maxW: M.maxW ?? 520, sidePad: M.sidePad ?? 16,
+      nudgeX: M.nudgeX ?? 0, nudgeY: M.nudgeY ?? 0
     });
 
-    // Title
     if (M.titleShow !== false){
       const t = document.createElement("div");
       t.className = "mstep-title";
@@ -458,28 +539,20 @@
       wrap.appendChild(t);
     }
 
-    // Copy
     const copy = document.createElement("div");
     copy.className = "mstep-copy";
     copy.style.marginBottom = `${M.copyGapBottom ?? 14}px`;
     copy.innerHTML = `
-      <h3 style="
-        margin:0 0 8px;
-        color:${M.copyHColor ?? "#eaf0f6"};
-        font:600 ${(M.copyHpt ?? 22)}px 'Newsreader', Georgia, serif;">
-        Who’s ready now?
-      </h3>
-      <p style="
-        margin:0;
-        color:${M.copyColor ?? "#a7bacb"};
-        font:${400} ${(M.copyBodyPt ?? 14)}px/${(M.copyLine ?? 1.55)} Inter, system-ui;">
+      <h3 style="margin:0 0 8px; color:${M.copyHColor ?? "#eaf0f6"};
+                 font:600 ${(M.copyHpt ?? 22)}px 'Newsreader', Georgia, serif;">Who’s ready now?</h3>
+      <p style="margin:0; color:${M.copyColor ?? "#a7bacb"};
+                font:400 ${(M.copyBodyPt ?? 14)}px/${(M.copyLine ?? 1.55)} Inter, system-ui;">
         Our <b>Time-to-Buy Intent</b> finds accounts most likely to purchase in the next cycle.
         We weight <b>recent</b> signals like search bursts, RFQ/RFP language, visits to pricing & sample pages,
         and events/trade shows, new product launches, and 38+ more metrics, then surface the prospects your team should contact today.
       </p>`;
     wrap.appendChild(copy);
 
-    // Stack
     const stack = document.createElement("div");
     stack.className = "mstack";
     stack.style.gap = `${M.stackGap ?? 14}px`;
@@ -517,13 +590,11 @@
         const box = document.createElement("div");
         box.className = "mbox" + (key==="oval4" ? " oval" : "");
         box.textContent = labels[key];
-        // Merge base + override (including oval radius override)
         applyBoxStyles(box, baseBox, Object.assign({}, key==="oval4" ? { radius: 9999 } : {}, ov));
         stack.appendChild(box);
       }
     }
 
-    // Dots
     const dots = (M.dots || {});
     if (dots.show !== false){
       const row = document.createElement("div");
@@ -568,20 +639,23 @@
     canvas.appendChild(spacer);
   }
 
-  // Mobile route (DOM mode only affects phones/tablets; desktop untouched)
+  // Mobile route (DOM mode only; desktop untouched)
   function drawMobile(){
     clearCanvas();
     canvas.style.position = "relative";
     canvas.style.inset = "auto";
     canvas.style.pointerEvents = "auto";
 
-    const h0 = scenePill( boundsMobile(0, 620) );
-    push( (h0 || 520) + (MCFG().GAP_AFTER_PILL ?? 28) );
-
     const MODE = (MCFG().MODE || "dom").toLowerCase();
+
     if (MODE === "dom"){
+      const h0 = renderStep0_DOM();
+      push( (window.PROCESS_CONFIG.mobile?.step0?.gapAfterPill ?? 28) );
       if (MCFG().SHOW_STEPS?.[1]) renderStep1_DOM();
     } else {
+      // Legacy path: reuse the desktop scene but pass mobile bounds
+      const h0 = scenePill( boundsMobile(0, 620) );
+      push( (window.PROCESS_CONFIG.mobile?.step0?.gapAfterPill ?? 28) );
       const scene1 = window.PROCESS_SCENES[1];
       if (MCFG().SHOW_STEPS?.[1] && typeof scene1 === "function"){
         const cfg1 = deepClone(window.PROCESS_CONFIG.step1 || {});
@@ -613,7 +687,7 @@
 
   /* ----------------- EVENTS ----------------- */
   dots.forEach(d=> d.addEventListener("click", ()=>{
-    if (isMobile()) return; // disabled on phones
+    if (isMobile()) return;
     const i = +d.dataset.i;
     if (i===0){ setStep(0, { phase: 1 }); } else { setStep(i, { phase: 1 }); }
   }));
