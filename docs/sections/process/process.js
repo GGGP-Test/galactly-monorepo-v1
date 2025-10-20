@@ -353,11 +353,13 @@
     return nodeH;
   }
 
-  /* ----------------- STEP 0: Mobile DOM renderer (copy ABOVE, pill BELOW) ----------------- */
+
+
+    // STEP 0: Mobile DOM renderer (copy ABOVE, pill BELOW)
   function renderStep0_DOM(){
     const M0 = (window.PROCESS_CONFIG.mobile?.step0) || {};
     const LABEL = M0.labelText || (window.PROCESS_CONFIG.step0?.LABEL || "YourCompany.com");
-
+  
     // Wrapper
     const wrap = document.createElement("div");
     wrap.className = "mstep mstep0";
@@ -367,7 +369,7 @@
     wrap.style.padding = `0 ${M0.sidePad ?? 16}px`;
     wrap.style.transform = `translate(${M0.nudgeX ?? 0}px, ${M0.nudgeY ?? 0}px)`;
     canvas.appendChild(wrap);
-
+  
     // Copy block
     const copy = document.createElement("div");
     copy.className = "mstep-copy";
@@ -387,38 +389,50 @@
         </p>`;
     }
     wrap.appendChild(copy);
-
-    // Pill container (block flow, no overlap)
+  
+    // Pill container (block flow; auto-grows so nudges never clip)
     const pillWrap = document.createElement("div");
     pillWrap.style.position = "relative";
     pillWrap.style.width = "100%";
-    pillWrap.style.height = `${M0.pill?.height ?? 64}px`;
-    pillWrap.style.pointerEvents = "none"; // visual only
+    pillWrap.style.pointerEvents = "none";
     wrap.appendChild(pillWrap);
-
+  
     // Draw pill after layout so we know widths
     requestAnimationFrame(() => {
       const innerW = pillWrap.getBoundingClientRect().width;
       const P = M0.pill || {};
-      const pillW = Math.round(innerW * ((P.widthPct ?? 92)/100));
       const pillH = P.height ?? 64;
+      const PAD = 10;                          // breathing room
+      const baseHeight = pillH + PAD*2;
+      const nudgeY = +P.nudgeY || 0;
+  
+      // Compute extra space so nudging never gets clipped by the SVG viewport
+      const idealTop = PAD + nudgeY;           // where we'd like the pill to start
+      const extraTop = Math.max(0, -idealTop); // grow above if nudged up too far
+      const extraBottom = Math.max(0, idealTop + pillH - baseHeight); // grow below if nudged down
+      const finalH = baseHeight + extraTop + extraBottom;
+  
+      pillWrap.style.height = `${finalH}px`;
+  
+      const pillW = Math.round(innerW * ((P.widthPct ?? 92)/100));
       const pillX = Math.round((innerW - pillW)/2 + (P.nudgeX ?? 0));
-      const pillY = Math.max(0, ((pillWrap.clientHeight - pillH)/2) + (P.nudgeY ?? 0));
-      const r = P.radius ?? 16;
-      const yMid = pillY + pillH/2;
-
+      const pillY = idealTop + extraTop;       // corrected Y inside the grown viewport
+      const yMid  = pillY + pillH/2;
+  
       const svg = document.createElementNS(ns,"svg");
       svg.setAttribute("width", innerW);
-      svg.setAttribute("height", pillWrap.clientHeight);
-      svg.setAttribute("viewBox", `0 0 ${innerW} ${pillWrap.clientHeight}`);
+      svg.setAttribute("height", finalH);
+      svg.setAttribute("viewBox", `0 0 ${innerW} ${finalH}`);
       svg.style.display = "block";
       pillWrap.appendChild(svg);
-
+  
       svg.appendChild(makeFlowGradients({
         pillX, pillY, pillW, yMid, xTrailEnd: innerW - 10
       }));
-
+  
       // Outline
+      const r = P.radius ?? 16;
+      const strokeW = String(P.stroke ?? 2.5);
       const d = `M ${pillX+r} ${pillY} H ${pillX+pillW-r} Q ${pillX+pillW} ${pillY} ${pillX+pillW} ${pillY+r}
                  V ${pillY+pillH-r} Q ${pillX+pillW} ${pillY+pillH} ${pillX+pillW-r} ${pillY+pillH}
                  H ${pillX+r} Q ${pillX} ${pillY+pillH} ${pillX} ${pillY+pillH-r}
@@ -427,23 +441,23 @@
       outline.setAttribute("d", d);
       outline.setAttribute("fill","none");
       outline.setAttribute("stroke","url(#gradFlow)");
-      outline.setAttribute("stroke-width", String(P.stroke ?? 2.5));
+      outline.setAttribute("stroke-width", strokeW);
       outline.setAttribute("stroke-linejoin","round");
       outline.setAttribute("class","glow");
       svg.appendChild(outline);
-
-      // Draw trail only if enabled (off by default on mobile to avoid overflow)
+  
+      // Optional trail (off by default on mobile)
       if (P.showTrail){
         const trail = document.createElementNS(ns,"line");
         trail.setAttribute("x1", pillX+pillW); trail.setAttribute("y1", yMid);
         trail.setAttribute("x2", innerW - 10); trail.setAttribute("y2", yMid);
         trail.setAttribute("stroke","url(#gradTrailFlow)");
-        trail.setAttribute("stroke-width", String(P.stroke ?? 2.5));
+        trail.setAttribute("stroke-width", strokeW);
         trail.setAttribute("stroke-linecap","round");
         trail.setAttribute("class","glow");
         svg.appendChild(trail);
       }
-
+  
       // Label
       const label = document.createElementNS(ns,"text");
       label.setAttribute("x", pillX + (M0.labelPadX ?? 16));
@@ -455,9 +469,9 @@
       label.textContent = LABEL;
       svg.appendChild(label);
     });
-
-    // Return height so callers can add spacing if desired
-    return pillWrap.getBoundingClientRect().height + (M0.copyGapBottom ?? 14);
+  
+    // Return height so callers can add spacing if desired (kept for parity)
+    return (M0.pill?.height ?? 64) + (M0.copyGapBottom ?? 14);
   }
 
   /* ----------------- RAIL (desktop only) ----------------- */
