@@ -1,22 +1,24 @@
 // sections/process/steps/process.step2.js
 (() => {
+  // NOTE: per request, this registers as STEP 2 so timing shows second.
+  // If you later want it to be the third step again, change STEP to 3.
   const STEP = 2;
   const NS = "http://www.w3.org/2000/svg";
 
-  // -------------------- CONFIG (DESKTOP UNCHANGED; MOBILE ONLY VIA M_* KNOBS) --------------------
+  // -------------------- CONFIG (desktop visuals unchanged; phones use M_* knobs) --------------------
   function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
-    root.step2 = root.step2 || {};
+    root.step3 = root.step3 || {};
     const dflt = {
-      // ===== DESKTOP knobs (same visuals) =====
+      // ===== DESKTOP layout knobs (kept consistent with other steps) =====
       BOX_W_RATIO: 0.10, BOX_H_RATIO: 0.12, GAP_RATIO: 0.035,
       STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.21, NUDGE_X: -230, NUDGE_Y: -20,
-      RADIUS_RECT: 14, RADIUS_PILL: 18, RADIUS_OVAL: 999, DIAMOND_SCALE: 1,
+      RADIUS_RECT: 14, RADIUS_PILL: 18, RADIUS_OVAL: 999,
       SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true,
       LEFT_STOP_RATIO: 0.35, RIGHT_MARGIN_PX: 16, H_LINE_Y_BIAS: -0.06,
       CONNECT_X_PAD: 8, LINE_STROKE_PX: 2.5,
 
-      FONT_PT_CIRCLE: 8, FONT_PT_BOX: 8, FONT_PT_DIAMOND: 7,
+      FONT_PT_CIRCLE: 8, FONT_PT_BOX: 8,
       FONT_WEIGHT_BOX: 525,
       FONT_FAMILY_BOX: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       FONT_LETTER_SPACING: 0.3, LINE_HEIGHT_EM: 1.15,
@@ -24,12 +26,12 @@
 
       // Title (desktop)
       TITLE_SHOW: true,
-      TITLE_TEXT: "Weight Score — Who stays the longest?",
+      TITLE_TEXT: "Right-Time Score",
       TITLE_PT: 14, TITLE_WEIGHT: 700,
       TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -28, TITLE_LETTER_SPACING: 0.2,
 
-      // Left copy (desktop)
+      // Left copy (desktop) — SEO-optimized
       COPY_LEFT_RATIO: 0.035, COPY_TOP_RATIO: 0.18,
       COPY_NUDGE_X: 0, COPY_NUDGE_Y: 0, COPY_MAX_W_PX: 300,
       COPY_H_PT: 24, COPY_H_WEIGHT: 500, COPY_BODY_PT: 12, COPY_BODY_WEIGHT: 400,
@@ -48,33 +50,32 @@
       M_MAX_W: 520, M_SIDE_PAD: 16, M_STACK_GAP: 14,
       M_BOX_MIN_H: 56, M_BORDER_PX: 2, M_FONT_PT: 11,
       M_TITLE_PT: 16, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14,
+      M_SECTION_TOP: 40, M_SECTION_BOTTOM: 72,
 
-      // NEW: inter-step spacing for phones, same idea as step1
-      M_SECTION_TOP: 40,
-      M_SECTION_BOTTOM: 72,
-
-      // Shape sizes (desktop + mobile)
+      // Shape sizes
       CIRCLE_DESKTOP_DIAM_RATIO: 0.10,
       CIRCLE_MOBILE_DIAM_PX: 96,
 
-      // ===== Labels / copy =====
-      TITLE_SEO: "Who becomes a long-term customer?",
+      // ===== Labels / copy (Time > everything) =====
+      TITLE_SEO: "Who needs packaging right now?",
       COPY_SEO_HTML:
-        '<h3>Who becomes a long-term customer?</h3>\
-         <p>Our <b>Weight Score</b> estimates retention by combining four signals:\
-         how much the product depends on packaging, how deeply packaging is embedded in operations,\
-         reorder cadence & SKU velocity, and the risk of switching due to specs, approvals, or compliance.\
-         It highlights accounts likely to stay and grow — not just click.</p>',
+        '<h3>Who needs packaging right now?</h3>\
+         <p>Our <b>Right-Time Score</b> finds buyers in an active window to purchase — not just “interested.”\
+         Artemis-B (v2) + <b>SPHERE-1</b> math + <b>SPHERE-2</b> LLM signals are orchestrated by <b>SPHERE-3</b>\
+         to weight <b>fresh</b> triggers: deadlines and events, last-72-hour intent bursts, and operations clocks\
+         like PO due dates and stockouts. It’s built for queries like “<i>rush packaging</i>,” “<i>need boxes by Friday</i>,”\
+         and “<i>trade-show packaging ASAP</i>.” We surface accounts where timing — not just loyalty — says “go now.”</p>',
 
+      // You asked for this exact shape order: OVAL → ROUNDED RECT → CIRCLE → RECTANGLE
       ITEMS: [
-        { type: "circle", label: "Product-Packaging Reliance", circleDiamRatio: null, fontPt: null },
-        { type: "pill",   label: "Ops Lock-In (lines/specs)",  heightRatio: null, fontPt: null },
-        { type: "rect",   label: "Cadence & SKU Velocity",     heightRatio: null, fontPt: null },
-        { type: "oval",   label: "Switching Risk / Approvals", heightRatio: null, fontPt: null }
+        { type: "oval",  label: "Deadline Window (T-48h → T-30d)",  heightRatio: 1.00, fontPt: null },
+        { type: "pill",  label: "Trigger Events (Launch/Expo/Recall)", heightRatio: 1.00, fontPt: null },
+        { type: "circle",label: "Intent Burst (last 72h)", circleDiamRatio: null, fontPt: null },
+        { type: "rect",  label: "Ops Clock (PO due, stockouts)", heightRatio: 1.00, fontPt: null }
       ]
     };
-    for (const k in dflt) if (!(k in root.step2)) root.step2[k] = dflt[k];
-    return root.step2;
+    for (const k in dflt) if (!(k in root.step3)) root.step3[k] = dflt[k];
+    return root.step3;
   }
 
   // -------------------- helpers --------------------
@@ -184,9 +185,9 @@
     svg.appendChild(fo);
   }
 
-  // -------------------- MOBILE: DOM layout (no rail; prevents nested scroll) --------------------
+  // -------------------- MOBILE DOM (phones; avoids nested scroll) --------------------
   function ensureMobileCSS() {
-    const id = "p2m-style";
+    const id = "p3m-style";
     if (document.getElementById(id)) return;
 
     const s = document.createElement("style"); s.id = id;
@@ -196,18 +197,17 @@
     s.textContent =
       "@media (max-width:" + bp + "px){" +
       "  html,body,#section-process{overflow-x:hidden}" +
-      // same spacing philosophy as step1 (distinct class .s2 so it only affects step2)
-      "  #section-process .p2m-wrap.s2{position:relative;margin:" + C().M_SECTION_TOP + "px auto " + C().M_SECTION_BOTTOM + "px !important;max-width:" + C().M_MAX_W + "px;padding:0 " + C().M_SIDE_PAD + "px 12px;z-index:0}" +
-      "  .p2m-title{text-align:center;color:#ddeaef;font:" + C().TITLE_WEIGHT + " " + C().M_TITLE_PT + "pt " + C().TITLE_FAMILY + ";letter-spacing:" + C().TITLE_LETTER_SPACING + "px;margin:6px 0 10px}" +
-      "  .p2m-copy{margin:0 auto 14px;color:#a7bacb}" +
-      "  .p2m-copy h3{margin:0 0 8px;color:#eaf0f6;font:600 " + C().M_COPY_H_PT + "px Newsreader, Georgia, serif}" +
-      "  .p2m-copy p{margin:0;font:400 " + C().M_COPY_BODY_PT + "px/1.55 Inter, system-ui}" +
-      "  .p2m-stack{display:flex;flex-direction:column;align-items:center;gap:" + C().M_STACK_GAP + "px}" +
-      "  .p2m-box{width:100%;min-height:" + C().M_BOX_MIN_H + "px;border:" + C().M_BORDER_PX + "px solid " + cyan + ";border-radius:14px;padding:10px 12px;display:flex;align-items:center;justify-content:center;text-align:center;color:#ddeaef;background:rgba(255,255,255,.02);font:" + C().FONT_WEIGHT_BOX + " " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:" + C().FONT_LETTER_SPACING + "px;line-height:" + C().LINE_HEIGHT_EM + "em}" +
-      "  .p2m-oval{border-radius:9999px}" +
-      "  .p2m-circle{width:" + C().CIRCLE_MOBILE_DIAM_PX + "px;height:" + C().CIRCLE_MOBILE_DIAM_PX + "px;border:" + C().M_BORDER_PX + "px solid " + cyan + ";border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.02);color:#ddeaef;text-align:center;padding:6px;font:" + C().FONT_WEIGHT_BOX + " " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:" + C().FONT_LETTER_SPACING + "px;line-height:" + C().LINE_HEIGHT_EM + "em}" +
-      "  .p2m-dots{display:flex;gap:14px;justify-content:center;padding-top:8px}" +
-      "  .p2m-dots i{width:6px;height:6px;border-radius:50%;background:" + cyan + ";display:inline-block}" +
+      "  #section-process .p3m-wrap.s3{position:relative;margin:" + C().M_SECTION_TOP + "px auto " + C().M_SECTION_BOTTOM + "px !important;max-width:" + C().M_MAX_W + "px;padding:0 " + C().M_SIDE_PAD + "px 12px;z-index:0}" +
+      "  .p3m-title{text-align:center;color:#ddeaef;font:" + C().TITLE_WEIGHT + " " + C().M_TITLE_PT + "pt " + C().TITLE_FAMILY + ";letter-spacing:" + C().TITLE_LETTER_SPACING + "px;margin:6px 0 10px}" +
+      "  .p3m-copy{margin:0 auto 14px;color:#a7bacb}" +
+      "  .p3m-copy h3{margin:0 0 8px;color:#eaf0f6;font:600 " + C().M_COPY_H_PT + "px Newsreader, Georgia, serif}" +
+      "  .p3m-copy p{margin:0;font:400 " + C().M_COPY_BODY_PT + "px/1.55 Inter, system-ui}" +
+      "  .p3m-stack{display:flex;flex-direction:column;align-items:center;gap:" + C().M_STACK_GAP + "px}" +
+      "  .p3m-box{width:100%;min-height:" + C().M_BOX_MIN_H + "px;border:" + C().M_BORDER_PX + "px solid " + cyan + ";border-radius:14px;padding:10px 12px;display:flex;align-items:center;justify-content:center;text-align:center;color:#ddeaef;background:rgba(255,255,255,.02);font:" + C().FONT_WEIGHT_BOX + " " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:" + C().FONT_LETTER_SPACING + "px;line-height:" + C().LINE_HEIGHT_EM + "em}" +
+      "  .p3m-oval{border-radius:9999px}" +
+      "  .p3m-circle{width:" + C().CIRCLE_MOBILE_DIAM_PX + "px;height:" + C().CIRCLE_MOBILE_DIAM_PX + "px;border:" + C().M_BORDER_PX + "px solid " + cyan + ";border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.02);color:#ddeaef;text-align:center;padding:6px;font:" + C().FONT_WEIGHT_BOX + " " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:" + C().FONT_LETTER_SPACING + "px;line-height:" + C().LINE_HEIGHT_EM + "em}" +
+      "  .p3m-dots{display:flex;gap:14px;justify-content:center;padding-top:8px}" +
+      "  .p3m-dots i{width:6px;height:6px;border-radius:50%;background:" + cyan + ";display:inline-block}" +
       "}";
     document.head.appendChild(s);
   }
@@ -215,39 +215,40 @@
   function drawMobile(ctx) {
     ensureMobileCSS();
 
-    // let the canvas flow with the page (prevents the “scroll-inside-scroll” trap)
     ctx.canvas.style.position = "relative";
     ctx.canvas.style.inset = "auto";
     ctx.canvas.style.pointerEvents = "auto";
 
     const wrap = document.createElement("div");
-    wrap.className = "p2m-wrap s2";
+    wrap.className = "p3m-wrap s3";
 
     wrap.innerHTML =
-      (C().TITLE_SHOW ? '<div class="p2m-title">' + C().TITLE_TEXT + "</div>" : "") +
-      '<div class="p2m-copy">' + C().COPY_SEO_HTML + "</div>" +
-      '<div class="p2m-stack">' +
-      // circle first
-      '<div class="p2m-circle">' + C().ITEMS[0].label + "</div>" +
-      // pill / rect / oval
-      '<div class="p2m-box">' + C().ITEMS[1].label + "</div>" +
-      '<div class="p2m-box">' + C().ITEMS[2].label + "</div>" +
-      '<div class="p2m-box p2m-oval">' + C().ITEMS[3].label + "</div>" +
-      '<div class="p2m-dots"><i></i><i></i><i></i></div>' +
+      (C().TITLE_SHOW ? '<div class="p3m-title">' + C().TITLE_TEXT + "</div>" : "") +
+      '<div class="p3m-copy">' + C().COPY_SEO_HTML + "</div>" +
+      '<div class="p3m-stack">' +
+      // 1) OVAL
+      '<div class="p3m-box p3m-oval">' + C().ITEMS[0].label + "</div>" +
+      // 2) ROUNDED RECT (pill)
+      '<div class="p3m-box">' + C().ITEMS[1].label + "</div>" +
+      // 3) CIRCLE
+      '<div class="p3m-circle">' + C().ITEMS[2].label + "</div>" +
+      // 4) RECT
+      '<div class="p3m-box">' + C().ITEMS[3].label + "</div>" +
+      '<div class="p3m-dots"><i></i><i></i><i></i></div>' +
       "</div>";
 
     ctx.canvas.appendChild(wrap);
   }
 
-  // -------------------- DESKTOP: identical behavior to Step 1 --------------------
+  // -------------------- DESKTOP (keeps the same right-side scene style) --------------------
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx) {
     const b = ctx.bounds;
-    const isMobile = (window.PROCESS_FORCE_MOBILE === true) || (window.innerWidth <= C().MOBILE_BREAKPOINT);
+    const isMobile =
+      (window.PROCESS_FORCE_MOBILE === true) || (window.innerWidth <= C().MOBILE_BREAKPOINT);
 
     if (isMobile) { drawMobile(ctx); return; }
 
-    // DESKTOP: keep original rail + right-side visuals layout
     const W = b.width, H = Math.min(560, b.sH - 40);
     const svg = document.createElementNS(NS, "svg");
     svg.style.position = "absolute";
@@ -267,22 +268,19 @@
     let y = H * C().STACK_TOP_RATIO + C().NUDGE_Y;
     const itemsDrawn = [];
 
-    // 1: circle
+    // 1: OVAL
     {
-      const diam = (C().ITEMS[0].circleDiamRatio || C().CIRCLE_DESKTOP_DIAM_RATIO) * W;
-      const r = diam / 2;
-      const cx = x + boxW / 2;
-      const cy = y + r;
-      addCircle(svg, cx, cy, r, "url(#gradFlow)", C().STROKE_PX);
-      addFO(svg, cx - r, cy - r, diam, diam, C().ITEMS[0].label, {
-        font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_CIRCLE}pt ${C().FONT_FAMILY_BOX}`,
+      const h = boxH * (C().ITEMS[0].heightRatio || 1);
+      addPath(svg, rr(x, y, boxW, h, C().RADIUS_OVAL), "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, x, y, boxW, h, C().ITEMS[0].label, {
+        font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_BOX}pt ${C().FONT_FAMILY_BOX}`,
         letterSpacing: `${C().FONT_LETTER_SPACING}px`, lineHeight: `${C().LINE_HEIGHT_EM}em`,
-        padding: "3px 4px"
+        padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
       });
-      itemsDrawn.push({ x: cx - r, y: cy - r, w: diam, h: diam, cx, cy });
-      y += diam + gap;
+      itemsDrawn.push({ x, y, w: boxW, h }); y += h + gap;
     }
-    // 2: pill
+
+    // 2: ROUNDED RECT (PILL)
     {
       const h = boxH * (C().ITEMS[1].heightRatio || 1);
       addPath(svg, rr(x, y, boxW, h, C().RADIUS_PILL), "url(#gradFlow)", C().STROKE_PX);
@@ -293,21 +291,27 @@
       });
       itemsDrawn.push({ x, y, w: boxW, h }); y += h + gap;
     }
-    // 3: rect
+
+    // 3: CIRCLE
     {
-      const h = boxH * (C().ITEMS[2].heightRatio || 1);
-      addPath(svg, rr(x, y, boxW, h, C().RADIUS_RECT), "url(#gradFlow)", C().STROKE_PX);
-      addFO(svg, x, y, boxW, h, C().ITEMS[2].label, {
-        font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_BOX}pt ${C().FONT_FAMILY_BOX}`,
+      const diam = (C().ITEMS[2].circleDiamRatio || C().CIRCLE_DESKTOP_DIAM_RATIO) * W;
+      const r = diam / 2;
+      const cx = x + boxW / 2;
+      const cy = y + r;
+      addCircle(svg, cx, cy, r, "url(#gradFlow)", C().STROKE_PX);
+      addFO(svg, cx - r, cy - r, diam, diam, C().ITEMS[2].label, {
+        font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_CIRCLE}pt ${C().FONT_FAMILY_BOX}`,
         letterSpacing: `${C().FONT_LETTER_SPACING}px`, lineHeight: `${C().LINE_HEIGHT_EM}em`,
-        padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
+        padding: "3px 4px"
       });
-      itemsDrawn.push({ x, y, w: boxW, h }); y += h + gap;
+      itemsDrawn.push({ x: cx - r, y: cy - r, w: diam, h: diam, cx, cy });
+      y += diam + gap;
     }
-    // 4: oval
+
+    // 4: RECTANGLE
     {
       const h = boxH * (C().ITEMS[3].heightRatio || 1);
-      addPath(svg, rr(x, y, boxW, h, C().RADIUS_OVAL), "url(#gradFlow)", C().STROKE_PX);
+      addPath(svg, rr(x, y, boxW, h, C().RADIUS_RECT), "url(#gradFlow)", C().STROKE_PX);
       addFO(svg, x, y, boxW, h, C().ITEMS[3].label, {
         font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_BOX}pt ${C().FONT_FAMILY_BOX}`,
         letterSpacing: `${C().FONT_LETTER_SPACING}px`, lineHeight: `${C().LINE_HEIGHT_EM}em`,
@@ -346,7 +350,7 @@
       svg.appendChild(t);
     }
 
-    // Horizontal rails
+    // Horizontal rails from the first item
     if (itemsDrawn.length) {
       const first = itemsDrawn[0];
       const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
@@ -378,7 +382,7 @@
       addPath(svg, `M ${xMid} ${y1 + pad} V ${y2 - pad}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
     }
 
-    // Left copy (desktop)
+    // Left copy (SEO)
     const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
     const top = b.top + H * C().COPY_TOP_RATIO + C().COPY_NUDGE_Y;
     if (typeof ctx.mountCopy === "function") {
@@ -386,7 +390,8 @@
       el.style.maxWidth = `${C().COPY_MAX_W_PX}px`;
       el.style.fontFamily = C().COPY_FAMILY;
       const h3 = el.querySelector("h3"); if (h3) h3.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
-      const p = el.querySelector("p"); if (p) p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
+      const p = el.querySelector("p"); if (p) p.style.cssText =
+        `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
     }
   };
 })();
