@@ -61,8 +61,18 @@
         },
 
         // Which steps to show after Step 0
-        SHOW_STEPS: { 1: true, 2: false, 3: false, 4: false, 5: false },
-
+        SHOW_STEPS: { 1: true, 2: true, 3: true, 4: true, 5: true }, // turn on all slots
+        
+        // If a step doesn't render (no file yet or disabled), still show a blank space
+        SHOW_EMPTY: true,
+        
+        // Placeholder sizing for empty steps (mobile only)
+        PLACEHOLDER: {
+          top: 40,       // margin-top for each placeholder block
+          bottom: 72,    // margin-bottom
+          height: 380    // reserved height (tweak to taste)
+        },
+        
         // ===== Step 1: Mobile-only knobs (existing) =====
         step1: {
           maxW: 520, sidePad: 16, top: 40, bottom: 72, nudgeX: 0, nudgeY: 0,
@@ -353,9 +363,7 @@
     return nodeH;
   }
 
-
-
-    // STEP 0: Mobile DOM renderer (copy ABOVE, pill BELOW)
+  // STEP 0: Mobile DOM renderer (copy ABOVE, pill BELOW)
   function renderStep0_DOM(){
     const M0 = (window.PROCESS_CONFIG.mobile?.step0) || {};
     const LABEL = M0.labelText || (window.PROCESS_CONFIG.step0?.LABEL || "YourCompany.com");
@@ -652,6 +660,20 @@
     spacer.style.pointerEvents = "none";
     canvas.appendChild(spacer);
   }
+  
+  // Simple mobile placeholder (used when a step isn’t rendered yet)
+  function renderPlaceholder(stepNo){
+    const PH = Object.assign({ top:40, bottom:72, height:380 }, (MCFG().PLACEHOLDER || {}));
+    const el = document.createElement("div");
+    el.className = `mstep mstep-ph s${stepNo}`;
+    el.style.marginTop = `${PH.top}px`;
+    el.style.marginBottom = `${PH.bottom}px`;
+    el.style.maxWidth = `${(MCFG().step1?.maxW ?? 520)}px`;  // keep same content width feel
+    el.style.padding = `0 ${(MCFG().step1?.sidePad ?? 16)}px`;
+    el.style.height = `${PH.height}px`;
+    el.style.pointerEvents = "none";
+    canvas.appendChild(el);
+  }
 
   // Mobile route (DOM mode only; desktop untouched)
   function drawMobile(){
@@ -659,25 +681,44 @@
     canvas.style.position = "relative";
     canvas.style.inset = "auto";
     canvas.style.pointerEvents = "auto";
-
+  
     const MODE = (MCFG().MODE || "dom").toLowerCase();
-
-    if (MODE === "dom"){
-      const h0 = renderStep0_DOM();
-      push( (window.PROCESS_CONFIG.mobile?.step0?.gapAfterPill ?? 28) );
-      if (MCFG().SHOW_STEPS?.[1]) renderStep1_DOM();
-    } else {
-      // Legacy path: reuse the desktop scene but pass mobile bounds
-      const h0 = scenePill( boundsMobile(0, 620) );
-      push( (window.PROCESS_CONFIG.mobile?.step0?.gapAfterPill ?? 28) );
-      const scene1 = window.PROCESS_SCENES[1];
-      if (MCFG().SHOW_STEPS?.[1] && typeof scene1 === "function"){
-        const cfg1 = deepClone(window.PROCESS_CONFIG.step1 || {});
-        cfg1.SHOW_LEFT_LINE = false; cfg1.SHOW_RIGHT_LINE = false;
-        try{ scene1({ ns, canvas, bounds: boundsMobile(0, 700), config: cfg1, makeFlowGradients, mountCopy }); }
-        catch(err){ console.error("process scene 1 (mobile):", err); }
+  
+    // Step 0: unchanged (copy above + pill below), then a small gap
+    renderStep0_DOM();
+    push( (window.PROCESS_CONFIG.mobile?.step0?.gapAfterPill ?? 28) );
+  
+    // Steps 1..5: render scene if present (and allowed), otherwise show a placeholder
+    const seq = [1,2,3,4,5];
+  
+    for (const i of seq){
+      let rendered = false;
+  
+      // Built-in DOM for Step 1 (the rest live in their own files)
+      if (i === 1){
+        if (MCFG().SHOW_STEPS?.[1]) { renderStep1_DOM(); rendered = true; }
+      } else {
+        const scene = window.PROCESS_SCENES?.[i];
+        if (MCFG().SHOW_STEPS?.[i] && typeof scene === "function"){
+          try{
+            // Call the step file’s renderer; each step handles its own mobile path
+            scene({
+              ns,
+              canvas,
+              bounds: boundsMobile(0, 700),
+              config: deepClone(window.PROCESS_CONFIG["step"+i] || {}),
+              makeFlowGradients,
+              mountCopy
+            });
+            rendered = true;
+          }catch(err){ console.error("process scene "+i+" (mobile):", err); }
+        }
       }
+  
+      // If nothing rendered (file not present or disabled), reserve space
+      if (!rendered && (MCFG().SHOW_EMPTY !== false)) renderPlaceholder(i);
     }
+  
     canvas.style.minHeight = "auto";
   }
 
