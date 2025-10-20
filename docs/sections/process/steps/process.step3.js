@@ -1,6 +1,6 @@
 // sections/process/steps/process.step3.js
 (() => {
-  const STEP = 2;
+  const STEP = 3;
   const NS = "http://www.w3.org/2000/svg";
 
   // -------------------- CONFIG (DESKTOP UNCHANGED; MOBILE ONLY VIA M_* KNOBS) --------------------
