@@ -13,16 +13,24 @@
       // Per-step buckets (steps 1..5 live in their own files)
       step1: {}, step2: {}, step3: {}, step4: {}, step5: {},
 
-      // >>> Phone/tablet stack controls (one place to tweak)
+      // >>> Phone/tablet stack controls (all mobile tuning lives here)
       mobile: {
-        BP: 1024,                 // <= px uses mobile stack (change to 1024 to include tablets)
-        GAP_AFTER_PILL: 28,      // space after Step 0 pill before Step 1 starts
-        STACK_GAP_Y: 24,         // gap between subsequent steps (Step 1 -> Step 2, etc.)
-        STEP_HEIGHTS: {          // reserved vertical budgets (safe defaults)
-          1: 700,
-          2: 700
-          // you can add 3..5 later
+        BP: 1024,                // <= px uses mobile stack (includes tablets by default)
+        MODE: "dom",             // "dom" = render mobile here; "scenes" = call step files
+        SHOW_STEPS: { 1: true, 2: false, 3: false, 4: false, 5: false },
+
+        // Space after Step 0 pill before first step block
+        GAP_AFTER_PILL: 28,
+
+        // Per-step DOM options
+        step1: {
+          top: 40, bottom: 72,
+          stackGap: 14,
+          order: ["rect1","rect2","round3","oval4","diamond5"],
+          hide: [],
+          copyHTML: null
         }
+        // You can add step2..step5 later with the same shape.
       }
     },
     window.PROCESS_CONFIG || {}
@@ -97,6 +105,42 @@
     .copy p{ font:400 clamp(14px,4.1vw,16px)/1.72 Inter, system-ui; letter-spacing:.2px; }
     .glow{ filter: drop-shadow(0 0 4px rgba(242,220,160,.28)) drop-shadow(0 0 10px rgba(99,211,255,.24)); }
   }
+
+  /* ===== MOBILE DOM MODE (rendered from process.js when MODE="dom") ===== */
+  @media (max-width: ${ (window.PROCESS_CONFIG?.mobile?.BP || 1024) }px){
+    #section-process .mstep{
+      position:relative; max-width:520px; margin:0 auto; padding:0 16px; z-index:0;
+    }
+    #section-process .mstep-title{
+      text-align:center; color:#ddeaef;
+      font:700 16pt Inter, system-ui; letter-spacing:.2px; margin:6px 0 10px;
+    }
+    #section-process .mstep-copy{ margin:0 auto 14px; color:#a7bacb; }
+    #section-process .mstep-copy h3{ margin:0 0 8px; color:#eaf0f6; font:600 22px "Newsreader", Georgia, serif; }
+    #section-process .mstep-copy p { margin:0; font:400 14px/1.6 Inter, system-ui; }
+
+    #section-process .mstack{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+    #section-process .mbox{
+      width:100%; min-height:56px;
+      border:2px solid rgba(99,211,255,.95); border-radius:14px;
+      padding:10px 12px; display:flex; align-items:center; justify-content:center;
+      text-align:center; color:#ddeaef; background:rgba(255,255,255,.02);
+      font:525 11pt Inter, system-ui; letter-spacing:.3px; line-height:1.15em;
+    }
+    #section-process .mbox.oval{ border-radius:9999px }
+    #section-process .mdiamond{
+      width:45%; aspect-ratio:1/1; border:2px solid rgba(99,211,255,.95);
+      transform:rotate(45deg); background:rgba(255,255,255,.02); margin-top:2px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    #section-process .mdiamond > span{
+      transform:rotate(-45deg); display:flex; align-items:center; justify-content:center;
+      width:70%; height:70%; text-align:center; color:#ddeaef;
+      font:525 10pt Inter, system-ui; letter-spacing:.3px; line-height:1.15em; padding:10px 12px;
+    }
+    #section-process .mdots{ display:flex; gap:14px; justify-content:center; padding-top:6px }
+    #section-process .mdots i{ width:6px; height:6px; border-radius:50%; background:rgba(99,211,255,.95); display:inline-block; }
+  }
   `;
   document.head.appendChild(style);
 
@@ -136,8 +180,9 @@
 
   /* ----------------- HELPERS ----------------- */
   const ns = "http://www.w3.org/2000/svg";
+  const MCFG = () => (window.PROCESS_CONFIG?.mobile || {});
   const isMobile = () => {
-    const BP = (window.PROCESS_CONFIG?.mobile?.BP) ?? 640;
+    const BP = MCFG().BP ?? 640;
     return (window.PROCESS_FORCE_MOBILE === true) ||
            (window.matchMedia && window.matchMedia(`(max-width:${BP}px)`).matches);
   };
@@ -221,7 +266,6 @@
   function clearCanvas(){ while (canvas.firstChild) canvas.removeChild(canvas.firstChild); }
 
   /* ----------------- STEP 0 (pill) ----------------- */
-  // Accept optional custom bounds so we can stack slices on mobile
   function scenePill(bOverride){
     const C = window.PROCESS_CONFIG.step0;
     const b = bOverride || (isMobile() ? boundsMobile(18, 600) : boundsDesktop());
@@ -325,6 +369,80 @@
     });
   }
 
+  /* ----------------- MOBILE DOM RENDERERS (process.js-only) ----------------- */
+  function mStepContainer(stepNum, { top=40, bottom=72 }){
+    const el = document.createElement("div");
+    el.className = "mstep";
+    el.style.marginTop = `${top}px`;
+    el.style.marginBottom = `${bottom}px`;
+    return el;
+  }
+
+  function renderStep1_DOM(){
+    const cfg = window.PROCESS_CONFIG.step1 || {};
+    const M = MCFG().step1 || {};
+    const titleText = (cfg.TITLE_SHOW !== false) ? (cfg.TITLE_TEXT || "Time-to-Buy Intent") : null;
+
+    const wrap = mStepContainer(1, { top: M.top ?? 40, bottom: M.bottom ?? 72 });
+
+    if (titleText){
+      const t = document.createElement("div");
+      t.className = "mstep-title";
+      t.textContent = titleText;
+      wrap.appendChild(t);
+    }
+
+    const copy = document.createElement("div");
+    copy.className = "mstep-copy";
+    copy.innerHTML = (M.copyHTML ?? `
+      <h3>Who’s ready now?</h3>
+      <p>Our <b>Time-to-Buy Intent</b> finds accounts most likely to purchase in the next cycle.
+      We weight <b>recent</b> signals like search bursts, RFQ/RFP language, visits to pricing & sample pages,
+      and events/trade shows, new product launches, and 38+ more metrics, then surface the prospects your team should contact today.</p>
+    `);
+    wrap.appendChild(copy);
+
+    const stack = document.createElement("div");
+    stack.className = "mstack";
+    stack.style.gap = `${M.stackGap ?? 14}px`;
+
+    const labels = {
+      rect1:    cfg.LABEL_RECT_1    ?? "Back-To-Back Search (last 14d)",
+      rect2:    cfg.LABEL_RECT_2    ?? "RFQ/RFP Keywords Detected",
+      round3:   cfg.LABEL_ROUND_3   ?? "Pricing & Sample Page Hits",
+      oval4:    cfg.LABEL_OVAL_4    ?? "Rising # of Ad Creatives (last 14d)",
+      diamond5: cfg.LABEL_DIAMOND_5 ?? "Import/Export End of Cycle"
+    };
+
+    const order = Array.isArray(M.order) ? M.order : ["rect1","rect2","round3","oval4","diamond5"];
+    const hide  = new Set(Array.isArray(M.hide) ? M.hide : []);
+
+    for (const key of order){
+      if (hide.has(key)) continue;
+      if (key === "diamond5"){
+        const d = document.createElement("div");
+        d.className = "mdiamond";
+        const s = document.createElement("span");
+        s.textContent = labels[key];
+        d.appendChild(s); stack.appendChild(d);
+      } else {
+        const box = document.createElement("div");
+        box.className = "mbox" + (key==="oval4" ? " oval" : "");
+        box.textContent = labels[key];
+        stack.appendChild(box);
+      }
+    }
+
+    // optional dots
+    const dots = document.createElement("div");
+    dots.className = "mdots";
+    dots.innerHTML = "<i></i><i></i><i></i>";
+    stack.appendChild(dots);
+
+    wrap.appendChild(stack);
+    canvas.appendChild(wrap);
+  }
+
   /* ----------------- ROUTERS ----------------- */
   // Desktop route (original)
   function drawDesktop(){
@@ -339,7 +457,7 @@
     }
   }
 
-  // Utility: append a spacer block to the canvas (normal flow)
+  // Spacer utility
   function push(yPx){
     if (yPx <= 0) return;
     const spacer = document.createElement("div");
@@ -349,51 +467,35 @@
     canvas.appendChild(spacer);
   }
 
-  // Mobile route: static stack — Step 0 (pill) → Step 1 → Step 2; no nested scroll
+  // Mobile route
   function drawMobile(){
     clearCanvas();
     canvas.style.position = "relative";
     canvas.style.inset = "auto";
+    canvas.style.pointerEvents = "auto";
 
-    const M = window.PROCESS_CONFIG.mobile || {};
-    const H = (n, fallback) => (M.STEP_HEIGHTS && M.STEP_HEIGHTS[n]) || fallback;
+    // Step 0 pill (absolute SVG) + reserve space below it
+    const h0 = scenePill( boundsMobile(0, 620) );
+    push( (h0 || 520) + (MCFG().GAP_AFTER_PILL ?? 28) );
 
-    let y = 0;
+    // Two modes: "dom" (render here) or "scenes" (call per-step files)
+    const MODE = (MCFG().MODE || "dom").toLowerCase();
 
-    // 0B pill slice (absolute inside its own SVG); we reserve its vertical space in y
-    const h0 = scenePill( boundsMobile(y, 620) );
-    y += (h0 || 520) + (M.GAP_AFTER_PILL ?? 28);
-
-    // Push normal-flow content below the absolute Step 0 artwork
-    push(y);
-
-    // Step 1 (no rails on mobile)
-    const scene1 = window.PROCESS_SCENES[1];
-    if (typeof scene1 === "function"){
-      const cfg1 = deepClone(window.PROCESS_CONFIG.step1 || {});
-      cfg1.SHOW_LEFT_LINE = false;
-      cfg1.SHOW_RIGHT_LINE = false;
-      try{
-        // pass the offset too — Step 1 reads ctx.bounds.top and adds marginTop inline
-        scene1({ ns, canvas, bounds: boundsMobile(y, H(1,700)), config: cfg1, makeFlowGradients, mountCopy });
-      }catch(err){ console.error("process scene 1 (mobile):", err); }
-      y += H(1,700) + (M.STACK_GAP_Y ?? 24);
+    if (MODE === "dom"){
+      if (MCFG().SHOW_STEPS?.[1]) renderStep1_DOM();
+      // Extend later: if you want Step 2 DOM here, clone the pattern above.
+    } else {
+      // Legacy path: call scenes (but we pass mobile bounds so they behave)
+      const scene1 = window.PROCESS_SCENES[1];
+      if (MCFG().SHOW_STEPS?.[1] && typeof scene1 === "function"){
+        const cfg1 = deepClone(window.PROCESS_CONFIG.step1 || {});
+        cfg1.SHOW_LEFT_LINE = false; cfg1.SHOW_RIGHT_LINE = false;
+        try{ scene1({ ns, canvas, bounds: boundsMobile(0, 700), config: cfg1, makeFlowGradients, mountCopy }); }
+        catch(err){ console.error("process scene 1 (mobile):", err); }
+      }
     }
-
-    // Step 2
-    const scene2 = window.PROCESS_SCENES[2];
-    if (typeof scene2 === "function"){
-      const cfg2 = deepClone(window.PROCESS_CONFIG.step2 || {});
-      cfg2.SHOW_LEFT_LINE = false;
-      cfg2.SHOW_RIGHT_LINE = false;
-      try{
-        scene2({ ns, canvas, bounds: boundsMobile(y, H(2,700)), config: cfg2, makeFlowGradients, mountCopy });
-      }catch(err){ console.error("process scene 2 (mobile):", err); }
-      y += H(2,700) + (M.STACK_GAP_Y ?? 24);
-    }
-
-    // Ensure the section height equals the stacked content (prevents inner scroll trap)
-    canvas.style.minHeight = (y + 20) + "px";
+    // Let natural content height drive the section; no inner scroll trap.
+    canvas.style.minHeight = "auto";
   }
 
   function drawScene(){ isMobile() ? drawMobile() : drawDesktop(); }
