@@ -15,7 +15,7 @@
 
       // >>> Phone/tablet stack controls (one place to tweak)
       mobile: {
-        BP: 640,                 // <= px uses mobile stack (change to 1024 to include tablets)
+        BP: 1024,                 // <= px uses mobile stack (change to 1024 to include tablets)
         GAP_AFTER_PILL: 28,      // space after Step 0 pill before Step 1 starts
         STACK_GAP_Y: 24,         // gap between subsequent steps (Step 1 -> Step 2, etc.)
         STEP_HEIGHTS: {          // reserved vertical budgets (safe defaults)
