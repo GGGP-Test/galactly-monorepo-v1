@@ -66,16 +66,7 @@
         { type: "rect",    label: "Recommended Channel", heightRatio: 1, fontPt: null }
       ],
 
-      // ===== UX sugar / SPHERE-3 handoff =====
-      RECO_CHANNEL: (window.SPHERE3 && window.SPHERE3.recommended) || "Phone",
-      RECO_CONFIDENCE: (window.SPHERE3 && typeof window.SPHERE3.confidence === "number")
-                        ? window.SPHERE3.confidence : 0.82, // 0..1
-      LEAD_TIER: (window.SPHERE3 && window.SPHERE3.leadTier) || "warm", // "cool"|"warm"|"hot"|"hot+"
-      PULSE_ON_HOTPLUS: true
-    };
-    for (const k in dflt) if (!(k in root.step4)) root.step4[k] = dflt[k];
-    return root.step4;
-  }
+
 
   // -------------------- helpers --------------------
   const reduceMotion = () =>
