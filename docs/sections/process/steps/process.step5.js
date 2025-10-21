@@ -20,7 +20,7 @@
 
       // ---- strokes (global defaults)
       SHAPE_COLOR: "#63d3ff", SHAPE_WIDTH: 2.2,
-      LINE_COLOR:  "rgba(242,220,160,0.95)", LINE_WIDTH: 1.25,
+      LINE_COLOR:  "rgba(242,220,160,0.95)", LINE_WIDTH: 1.15,
       CONNECT_GAP: 3,
 
       // ---- optional per-step overrides (unchanged)
@@ -77,7 +77,7 @@
       COPY_LINE_HEIGHT: 1.6,
 
       // ---- mobile (unchanged)
-      MOBILE_BREAKPOINT: 640,
+      MOBILE_BREAKPOINT: 840,
       M_MAX_W: 520, M_SIDE_PAD: 16,
       M_SECTION_TOP: 40, M_SECTION_BOTTOM: 72,
       M_TITLE_PT: 16, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14,
