@@ -11,7 +11,7 @@
       // ===== Layout in the right rail (desktop) =====
       STACK_X_RATIO: 0.705,     // push orchestration graphic to the right
       STACK_TOP_RATIO: 0.18,    // vertical start
-      WIDTH_RATIO: 0.64,        // how wide the orchestration graphic can be
+      WIDTH_RATIO: 0.54,        // how wide the orchestration graphic can be
       HEIGHT_MAX_PX: 560,
       NUDGE_X: -230, NUDGE_Y: -12,
 
