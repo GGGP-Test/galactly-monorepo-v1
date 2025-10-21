@@ -48,9 +48,9 @@
 
       // ---- headings (titles) — NOW ONE-LINE SVG TEXT WITH REAL SIZING
       HEADINGS_SHOW: true,
-      HEADINGS: ["yourcompany.com", "Intent Score", "Weight Score", "Character Score", "Platform Score"],
+      HEADINGS: ["yourcompany.com", "Intent Score", "Time Score", "Weight Score", "Platform Score"],
       HEAD_PT: 8,               // desktop font size (pt) — changes apply immediately
-      M_HEAD_PT: 12,            // mobile font size (pt)
+      M_HEAD_PT: 6.5,            // mobile font size (pt)
       HEAD_WEIGHT: 850,
       HEAD_COLOR: "#ddeaef",
       HEAD_LETTER_SPACING: 0.2,
