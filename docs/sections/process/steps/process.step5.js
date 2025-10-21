@@ -93,7 +93,7 @@
       M_CONNECT_GAP: null,
 
       M_COL_W_MULTS: null,
-      M_COL_Y_OFFSETS: { step0:110, step1:0, step2:0, step3:0, step4:0 },
+      M_COL_Y_OFFSETS: { step0:35, step1:0, step2:0, step3:0, step4:0 },
       M_COL_X_OFFSETS: null,
       M_ITEM_Y_OFFSETS: null,
       M_ITEM_H_MULTS: null,
