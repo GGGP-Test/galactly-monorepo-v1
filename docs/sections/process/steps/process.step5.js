@@ -27,7 +27,7 @@
       // width multipliers per step (affects shape width only)
       COL_W_MULTS: { step0:1, step1:1, step2:1, step3:1, step4:1 },
       // y-offset (moves entire column up/down; lines follow)
-      COL_Y_OFFSETS: { step0:0, step1:0, step2:0, step3:0, step4:0 },
+      COL_Y_OFFSETS: { step0:180, step1:0, step2:0, step3:0, step4:0 },
       // x-offset per column if you want micro nudges
       COL_X_OFFSETS: { step0:0, step1:0, step2:0, step3:0, step4:0 },
       // per-item y nudges (arrays) within each step
