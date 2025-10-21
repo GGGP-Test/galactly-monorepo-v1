@@ -15,12 +15,12 @@
 
       // ---- columns/boxes geometry (global)
       COL_GAP_RATIO: 0.06, COL_W_RATIO: 0.13,
-      ITEM_H_RATIO: 0.12, ITEM_GAP_RATIO: 0.015,
+      ITEM_H_RATIO: 0.12, ITEM_GAP_RATIO: 0.02,
       RADIUS_RECT: 14, RADIUS_PILL: 22, RADIUS_OVAL: 999,
 
       // ---- strokes (global defaults)
       SHAPE_COLOR: "#63d3ff", SHAPE_WIDTH: 2.2,
-      LINE_COLOR:  "rgba(242,220,160,0.95)", LINE_WIDTH: 2,
+      LINE_COLOR:  "rgba(242,220,160,0.95)", LINE_WIDTH: 1.25,
       CONNECT_GAP: 3, // keeps lines outside shapes
 
       // ---- optional per-step overrides
