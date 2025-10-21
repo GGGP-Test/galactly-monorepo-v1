@@ -15,7 +15,7 @@
 
       // ---- columns/boxes geometry (global)
       COL_GAP_RATIO: 0.06, COL_W_RATIO: 0.13,
-      ITEM_H_RATIO: 0.12, ITEM_GAP_RATIO: 0.04,
+      ITEM_H_RATIO: 0.12, ITEM_GAP_RATIO: 0.015,
       RADIUS_RECT: 14, RADIUS_PILL: 22, RADIUS_OVAL: 999,
 
       // ---- strokes (global defaults)
