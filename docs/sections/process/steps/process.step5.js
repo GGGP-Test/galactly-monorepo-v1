@@ -21,48 +21,48 @@
       // ---- strokes (global defaults)
       SHAPE_COLOR: "#63d3ff", SHAPE_WIDTH: 2.2,
       LINE_COLOR:  "rgba(242,220,160,0.95)", LINE_WIDTH: 1.25,
-      CONNECT_GAP: 3, // keeps lines outside shapes
+      CONNECT_GAP: 3,
 
-      // ---- optional per-step overrides
-      // width multipliers per step (affects shape width only)
+      // ---- optional per-step overrides (unchanged)
       COL_W_MULTS: { step0:1, step1:1, step2:1, step3:1, step4:1 },
-      // y-offset (moves entire column up/down; lines follow)
       COL_Y_OFFSETS: { step0:125, step1:0, step2:0, step3:0, step4:0 },
-      // x-offset per column if you want micro nudges
       COL_X_OFFSETS: { step0:0, step1:0, step2:0, step3:0, step4:0 },
-      // per-item y nudges (arrays) within each step
       ITEM_Y_OFFSETS: { step0:[], step1:[], step2:[], step3:[], step4:[] },
-      // per-item height multipliers within each step
       ITEM_H_MULTS:   { step0:[], step1:[], step2:[], step3:[], step4:[] },
-      // optional per-step shape stroke colors/widths
       SHAPE_COLOR_BY_STEP: {}, SHAPE_WIDTH_BY_STEP: {},
 
-      // ---- line styling per adjacent pair (overrides global)
-      // keys are "step0->step1", "step1->step2", ...
-      LINE_STYLE_BY_PAIR: {
-        // "step1->step2": { color:"#FAD659", width:2.5 }
+      // ---- line styling per adjacent pair (unchanged)
+      LINE_STYLE_BY_PAIR: { },
+
+      // ---- dim/blur control for the LAST box (unchanged)
+      LAST_DIM: {
+        step0:{opacity:1, blur:0},
+        step1:{opacity:1, blur:0},
+        step2:{opacity:0.35, blur:1.5},
+        step3:{opacity:0.35, blur:1.5},
+        step4:{opacity:0.35, blur:1.5}
       },
 
-      // ---- dim/blur control for the LAST box in a step
-      LAST_DIM: { step0:{opacity:1, blur:0},
-                  step1:{opacity:1, blur:0},
-                  step2:{opacity:0.35, blur:1.5},
-                  step3:{opacity:0.35, blur:1.5},
-                  step4:{opacity:0.35, blur:1.5} },
-
-      // ---- dots under a column (cheap CPU)
+      // ---- dots (unchanged)
       DOT_SIZE: 2.4, DOT_GAP: 22, DOT_COLOR: "rgba(242,220,160,0.95)",
 
-      // ---- headings (always on top; multi-line, resizable)
+      // ---- headings (titles) — NOW ONE-LINE SVG TEXT WITH REAL SIZING
       HEADINGS_SHOW: true,
       HEADINGS: ["yourcompany.com", "Intent Score", "Weight Score", "Character Score", "Platform Score"],
-      HEAD_PT: 8, HEAD_WEIGHT: 850, HEAD_COLOR: "#ddeaef",
-      HEAD_LETTER_SPACING: 0.2, HEAD_LINE_HEIGHT: 1.2, HEAD_ALIGN: "center",
-      HEAD_MAX_LINES: 1, HEAD_BOX_H: 26, HEAD_SPACING: 8, HEAD_OFFSET_Y: 0,
-      // mobile title size
-      M_HEAD_PT: 12,
+      HEAD_PT: 8,               // desktop font size (pt) — changes apply immediately
+      M_HEAD_PT: 12,            // mobile font size (pt)
+      HEAD_WEIGHT: 850,
+      HEAD_COLOR: "#ddeaef",
+      HEAD_LETTER_SPACING: 0.2,
+      HEAD_ALIGN: "center",
+      HEAD_BOX_H: 26,           // reserved vertical space above the column
+      HEAD_SPACING: 8,          // gap from title box to first shape
+      HEAD_OFFSET_Y: 0,         // nudge the whole title block up/down
+      HEAD_ONE_LINE: true,      // force single line (no wrapping)
+      HEAD_MAX_WIDTH_PCT: 0.95, // % of column width the title may occupy
+      HEAD_BASELINE_BIAS: 0.74, // 0..1 baseline inside the title box (tweak vertical feel)
 
-      // ---- section title
+      // ---- section title (unchanged)
       TITLE_SHOW: true, TITLE_TEXT: "AI Orchestrator — Weight What Matters",
       TITLE_PT: 14, TITLE_WEIGHT: 850, TITLE_COLOR: "#ddeaef",
       TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
@@ -76,16 +76,15 @@
       COPY_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       COPY_LINE_HEIGHT: 1.6,
 
-      // ---- mobile
+      // ---- mobile (unchanged)
       MOBILE_BREAKPOINT: 640,
       M_MAX_W: 520, M_SIDE_PAD: 16,
       M_SECTION_TOP: 40, M_SECTION_BOTTOM: 72,
       M_TITLE_PT: 16, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14,
 
-      // ---- exact step recipes (match your Figma; no text inside)
-      // Types: "rect" (rounded 14), "pill" (rounded 22), "oval" (fully round), "circle", "diamond"
+      // ---- exact step recipes (unchanged)
       COLS: [
-        { key:"step0", items:["pill"] }, // yourcompany.com (rounded rectangle)
+        { key:"step0", items:["pill"] },
         { key:"step1", items:["rect","rect","pill","circle","diamond"] },
         { key:"step2", items:["pill","pill","circle","rect"], dots:3 },
         { key:"step3", items:["circle","pill","pill","rect"], dots:3 },
@@ -96,12 +95,41 @@
     return root.step5;
   }
 
-  // ---------------- helpers ----------------
+  // ---------------- helpers (unchanged except heading draw) ----------------
   const rr=(x,y,w,h,r)=>{const R=Math.min(r,Math.min(w,h)/2);return`M ${x+R} ${y} H ${x+w-R} Q ${x+w} ${y} ${x+w} ${y+R} V ${y+h-R} Q ${x+w} ${y+h} ${x+w-R} ${y+h} H ${x+R} Q ${x} ${y+h} ${x} ${y+h-R} V ${y+R} Q ${x} ${y} ${x+R} ${y} Z`;};
   const diamondPath=(cx,cy,w,h)=>`M ${cx} ${cy-h/2} L ${cx+w/2} ${cy} L ${cx} ${cy+h/2} L ${cx-w/2} ${cy} Z`;
   const addPath=(svg,d,stroke,sw,opacity=1,filterId=null)=>{const p=document.createElementNS(NS,"path");p.setAttribute("d",d);p.setAttribute("fill","none");p.setAttribute("stroke",stroke);p.setAttribute("stroke-width",sw);p.setAttribute("stroke-linejoin","round");p.setAttribute("stroke-linecap","round");p.style.opacity=opacity;if(filterId)p.setAttribute("filter",`url(#${filterId})`);svg.appendChild(p);return p;};
   const addCircle=(svg,cx,cy,r,stroke,sw,opacity=1,filterId=null)=>{const c=document.createElementNS(NS,"circle");c.setAttribute("cx",cx);c.setAttribute("cy",cy);c.setAttribute("r",r);c.setAttribute("fill","none");c.setAttribute("stroke",stroke);c.setAttribute("stroke-width",sw);c.style.opacity=opacity;if(filterId)c.setAttribute("filter",`url(#${filterId})`);svg.appendChild(c);return c;};
-  const addFO=(svg,x,y,w,h,html,styles={})=>{const fo=document.createElementNS(NS,"foreignObject");fo.setAttribute("x",x);fo.setAttribute("y",y);fo.setAttribute("width",w);fo.setAttribute("height",h);const d=document.createElement("div");d.setAttribute("xmlns","http://www.w3.org/1999/xhtml");Object.assign(d.style,{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",textAlign:C().HEAD_ALIGN,color:C().HEAD_COLOR,whiteSpace:"normal",wordBreak:"break-word",pointerEvents:"none",lineHeight:String(C().HEAD_LINE_HEIGHT)} ,styles);d.innerHTML=html;fo.appendChild(d);svg.appendChild(fo);return fo;};
+
+  // SVG title helper — one line, size obeys HEAD_PT/M_HEAD_PT, clipped to width
+  function drawHead(svg, {text, x, y, w, h, isMobile, idx}) {
+    const id = `p5h_clip_${idx}_${Math.random().toString(36).slice(2,7)}`;
+    const defs = svg.querySelector("defs") || svg.appendChild(document.createElementNS(NS, "defs"));
+    const clip = document.createElementNS(NS, "clipPath"); clip.setAttribute("id", id);
+    const rect = document.createElementNS(NS, "rect");
+    rect.setAttribute("x", x); rect.setAttribute("y", y); rect.setAttribute("width", w); rect.setAttribute("height", h);
+    clip.appendChild(rect); defs.appendChild(clip);
+
+    const g = document.createElementNS(NS, "g"); g.setAttribute("clip-path", `url(#${id})`);
+    const t = document.createElementNS(NS, "text");
+    const size = (isMobile ? C().M_HEAD_PT : C().HEAD_PT);
+    t.setAttribute("x", x + w/2);
+    // baseline inside the box (bias 0..1 from top to bottom)
+    t.setAttribute("y", y + h*C().HEAD_BASELINE_BIAS);
+    t.setAttribute("text-anchor", "middle");
+    t.setAttribute("fill", C().HEAD_COLOR);
+    t.setAttribute("font-family", C().COPY_FAMILY);
+    t.setAttribute("font-weight", C().HEAD_WEIGHT);
+    t.setAttribute("font-size", `${size}pt`);
+    t.style.letterSpacing = `${C().HEAD_LETTER_SPACING}px`;
+    // force one line
+    if (C().HEAD_ONE_LINE) {
+      // nothing to wrap in SVG <text>; ensuring no tspans added
+    }
+    t.textContent = text || "";
+    g.appendChild(t);
+    svg.appendChild(g);
+  }
 
   // SEO copy (unchanged)
   function seoCopyHTML(){
@@ -110,7 +138,7 @@
 <p>Keywords: packaging lead scoring • time-to-buy signal • intent scoring • platform fit • AI orchestrator • SPHERE-3 • Artemis-B • B2B packaging buyers • hot plus leads.</p>';
   }
 
-  // ---------------- mobile CSS (static) ----------------
+  // ---------------- mobile CSS (unchanged) ----------------
   function ensureMobileCSS(){
     const id="p5m-style"; if(document.getElementById(id))return;
     const s=document.createElement("style"); s.id=id; const bp=C().MOBILE_BREAKPOINT;
@@ -135,7 +163,7 @@
     wrap.appendChild(svg); ctx.canvas.appendChild(wrap); return svg;
   }
 
-  // ---------------- main draw ----------------
+  // ---------------- main draw (unchanged except title rendering) ----------------
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx){
     const isMobile=(window.PROCESS_FORCE_MOBILE===true)||(window.innerWidth<=C().MOBILE_BREAKPOINT);
@@ -155,13 +183,13 @@
       svg.setAttribute("viewBox",`0 0 ${ctx.bounds.width} ${H}`); ctx.canvas.appendChild(svg);
     }
 
-    // blur filter for LAST_DIM
+    // blur filter (unchanged)
     const defs=document.createElementNS(NS,"defs");
     const f=document.createElementNS(NS,"filter"); f.setAttribute("id","p5blur");
     const g=document.createElementNS(NS,"feGaussianBlur"); g.setAttribute("stdDeviation","1.5");
     f.appendChild(g); defs.appendChild(f); svg.appendChild(defs);
 
-    // Section title (desktop)
+    // Section title (unchanged)
     if(!isMobile && C().TITLE_SHOW){
       const t=document.createElementNS(NS,"text");
       t.setAttribute("x",(x0 + (W/2)) + C().TITLE_OFFSET_X);
@@ -175,7 +203,6 @@
       t.textContent=C().TITLE_TEXT; svg.appendChild(t);
     }
 
-    // column box
     const baseColW=W*C().COL_W_RATIO, colGap=W*C().COL_GAP_RATIO;
     const colWArray=C().COLS.map(c=>baseColW*(C().COL_W_MULTS[c.key]||1));
     const innerW=colWArray.reduce((a,b)=>a+b,0) + (C().COLS.length-1)*colGap;
@@ -184,11 +211,9 @@
 
     const baseH=H*C().ITEM_H_RATIO, gap=H*C().ITEM_GAP_RATIO;
 
-    // record anchors per column (edges) so lines auto-follow moves
-    const anchorsByCol=[]; // [{left:[{x,y}], right:[{x,y}]}]
-    const headBoxes=[];    // later to render headings on top
+    const anchorsByCol=[];
+    const headBoxes=[];
 
-    // lay out columns + shapes
     let xCursor=left;
     C().COLS.forEach((col,ci)=>{
       const key=col.key;
@@ -196,13 +221,13 @@
       const colW = colWArray[ci];
       const colY0 = top + (C().COL_Y_OFFSETS[key]||0);
 
-      // heading box metrics (no negative y; prevents clipping)
-      const headW = colW*0.95;
-      const headX = colX + (colW-headW)/2;
+      // title metrics
+      const headW = colW * C().HEAD_MAX_WIDTH_PCT;
+      const headX = colX + (colW - headW)/2;
       const headY = Math.max(0, colY0 + C().HEAD_OFFSET_Y);
-      headBoxes.push({x:headX,y:headY,w:headW,h:C().HEAD_BOX_H, idx:ci});
+      headBoxes.push({x:headX,y:headY,w:headW,h:C().HEAD_BOX_H,idx:ci});
 
-      // start Y after heading + spacing
+      // shapes start under title
       let y = headY + C().HEAD_BOX_H + C().HEAD_SPACING;
 
       const leftAnch=[], rightAnch=[];
@@ -214,12 +239,10 @@
         const h=(type==="circle"||type==="diamond") ? baseH*0.9*hm : baseH*hm;
         const yAdj=y + (yOffsets[i]||0);
 
-        // per-step stroke overrides
         const stroke=C().SHAPE_COLOR_BY_STEP[key] || C().SHAPE_COLOR;
         const sWidth=C().SHAPE_WIDTH_BY_STEP[key] || C().SHAPE_WIDTH;
 
         let cx, cy, r, d;
-        // last-box dim/blur
         const isLast=(i===col.items.length-1);
         const dimSpec=C().LAST_DIM[key]||{};
         const opacity=isLast?(dimSpec.opacity??1):1;
@@ -232,7 +255,6 @@
         else if(type==="circle"){ r=Math.min(colW,h)/2; cx=colX+colW/2; cy=yAdj+h/2; addCircle(svg,cx,cy,r,stroke,sWidth,opacity,filterId); }
         else if(type==="diamond"){ cx=colX+colW/2; cy=yAdj+h/2; d=diamondPath(cx,cy,colW*0.9,h*0.9); addPath(svg,d,stroke,sWidth,opacity,filterId); }
 
-        // edge anchors so lines never enter shapes
         let leftX,rightX;
         if(type==="circle"){ leftX=cx-(r); rightX=cx+(r); }
         else if(type==="diamond"){ leftX=cx-(colW*0.9)/2; rightX=cx+(colW*0.9)/2; }
@@ -246,7 +268,6 @@
       anchorsByCol.push({ key, left:leftAnch, right:rightAnch });
       xCursor += colW + colGap;
 
-      // dots under column
       if(col.dots>0){
         const dotsY = y + 6;
         for(let k=0;k<col.dots;k++){
@@ -260,7 +281,7 @@
       }
     });
 
-    // lines between adjacent columns (use per-pair overrides if present)
+    // connections (unchanged)
     for(let i=0;i<anchorsByCol.length-1;i++){
       const A=anchorsByCol[i], B=anchorsByCol[i+1];
       const pairKey = `${A.key}->${B.key}`;
@@ -272,16 +293,19 @@
       }}
     }
 
-    // headings LAST so they’re never hidden or clipped
+    // HEADINGS — render last, as one-line SVG text clipped to width
     if(C().HEADINGS_SHOW){
       headBoxes.forEach(({x,y,w,h,idx})=>{
-        const size = (isMobile ? C().M_HEAD_PT : C().HEAD_PT);
-        addFO(svg, x, y, w, h,
-          `<div style="font:${C().HEAD_WEIGHT} ${size}pt ${C().COPY_FAMILY};letter-spacing:${C().HEAD_LETTER_SPACING}px;display:-webkit-box;-webkit-line-clamp:${C().HEAD_MAX_LINES};-webkit-box-orient:vertical;overflow:hidden;">${C().HEADINGS[idx]||""}</div>`);
+        drawHead(svg, {
+          text: (C().HEADINGS[idx] || ""),
+          x, y, w, h,
+          idx,
+          isMobile
+        });
       });
     }
 
-    // left SEO copy (desktop)
+    // left SEO copy (unchanged)
     if(!isMobile && typeof ctx.mountCopy==="function"){
       const l=ctx.bounds.left + ctx.bounds.width*C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
       const t=ctx.bounds.top  + H*C().COPY_TOP_RATIO  + C().COPY_NUDGE_Y;
