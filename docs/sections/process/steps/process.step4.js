@@ -55,7 +55,7 @@
       COPY_SEO_HTML:
         '<h3>Right channel, right now (Platform Score)</h3>\
          <p><b>We rank the platforms where your packaging buyer actually answers</b> — email, phone, LinkedIn, Instagram, web chat, SMS/WhatsApp, procurement portals, marketplaces, and trade shows — and recommend the <b>single best channel to contact first</b>.</p>\
-         — so your team moves first where the buyer will respond.</p>',
+         <p><b>— so your team moves first where the buyer will respond.<b></p>',
 
       // Shapes/labels (diamond -> pill -> circle -> rectangle)
       ITEMS: [
