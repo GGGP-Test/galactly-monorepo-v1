@@ -46,21 +46,14 @@
       // ---- dots (unchanged)
       DOT_SIZE: 2.4, DOT_GAP: 22, DOT_COLOR: "rgba(242,220,160,0.95)",
 
-      // ---- headings (titles) — NOW ONE-LINE SVG TEXT WITH REAL SIZING
+      // ---- headings (titles)
       HEADINGS_SHOW: true,
       HEADINGS: ["yourcompany.com", "Intent Score", "Time Score", "Weight Score", "Platform Score"],
-      HEAD_PT: 7.8,               // desktop font size (pt) — changes apply immediately
-      M_HEAD_PT: 6.5,            // mobile font size (pt)
-      HEAD_WEIGHT: 850,
-      HEAD_COLOR: "#ddeaef",
-      HEAD_LETTER_SPACING: 0.2,
-      HEAD_ALIGN: "center",
-      HEAD_BOX_H: 26,           // reserved vertical space above the column
-      HEAD_SPACING: 8,          // gap from title box to first shape
-      HEAD_OFFSET_Y: 0,         // nudge the whole title block up/down
-      HEAD_ONE_LINE: true,      // force single line (no wrapping)
-      HEAD_MAX_WIDTH_PCT: 1.95, // % of column width the title may occupy
-      HEAD_BASELINE_BIAS: 0.74, // 0..1 baseline inside the title box (tweak vertical feel)
+      HEAD_PT: 7.8, M_HEAD_PT: 6.5,
+      HEAD_WEIGHT: 850, HEAD_COLOR: "#ddeaef",
+      HEAD_LETTER_SPACING: 0.2, HEAD_ALIGN: "center",
+      HEAD_BOX_H: 26, HEAD_SPACING: 8, HEAD_OFFSET_Y: 0,
+      HEAD_ONE_LINE: true, HEAD_MAX_WIDTH_PCT: 1.95, HEAD_BASELINE_BIAS: 0.74,
 
       // ---- section title (unchanged)
       TITLE_SHOW: true, TITLE_TEXT: "Decides how much each variable matter",
@@ -101,40 +94,10 @@
   const addPath=(svg,d,stroke,sw,opacity=1,filterId=null)=>{const p=document.createElementNS(NS,"path");p.setAttribute("d",d);p.setAttribute("fill","none");p.setAttribute("stroke",stroke);p.setAttribute("stroke-width",sw);p.setAttribute("stroke-linejoin","round");p.setAttribute("stroke-linecap","round");p.style.opacity=opacity;if(filterId)p.setAttribute("filter",`url(#${filterId})`);svg.appendChild(p);return p;};
   const addCircle=(svg,cx,cy,r,stroke,sw,opacity=1,filterId=null)=>{const c=document.createElementNS(NS,"circle");c.setAttribute("cx",cx);c.setAttribute("cy",cy);c.setAttribute("r",r);c.setAttribute("fill","none");c.setAttribute("stroke",stroke);c.setAttribute("stroke-width",sw);c.style.opacity=opacity;if(filterId)c.setAttribute("filter",`url(#${filterId})`);svg.appendChild(c);return c;};
 
-  // SVG title helper — one line, size obeys HEAD_PT/M_HEAD_PT, clipped to width
-  function drawHead(svg, {text, x, y, w, h, isMobile, idx}) {
-    const id = `p5h_clip_${idx}_${Math.random().toString(36).slice(2,7)}`;
-    const defs = svg.querySelector("defs") || svg.appendChild(document.createElementNS(NS, "defs"));
-    const clip = document.createElementNS(NS, "clipPath"); clip.setAttribute("id", id);
-    const rect = document.createElementNS(NS, "rect");
-    rect.setAttribute("x", x); rect.setAttribute("y", y); rect.setAttribute("width", w); rect.setAttribute("height", h);
-    clip.appendChild(rect); defs.appendChild(clip);
-
-    const g = document.createElementNS(NS, "g"); g.setAttribute("clip-path", `url(#${id})`);
-    const t = document.createElementNS(NS, "text");
-    const size = (isMobile ? C().M_HEAD_PT : C().HEAD_PT);
-    t.setAttribute("x", x + w/2);
-    // baseline inside the box (bias 0..1 from top to bottom)
-    t.setAttribute("y", y + h*C().HEAD_BASELINE_BIAS);
-    t.setAttribute("text-anchor", "middle");
-    t.setAttribute("fill", C().HEAD_COLOR);
-    t.setAttribute("font-family", C().COPY_FAMILY);
-    t.setAttribute("font-weight", C().HEAD_WEIGHT);
-    t.setAttribute("font-size", `${size}pt`);
-    t.style.letterSpacing = `${C().HEAD_LETTER_SPACING}px`;
-    // force one line
-    if (C().HEAD_ONE_LINE) {
-      // nothing to wrap in SVG <text>; ensuring no tspans added
-    }
-    t.textContent = text || "";
-    g.appendChild(t);
-    svg.appendChild(g);
-  }
-
-  // SEO copy (unchanged)
+  // FIXED: properly closed string and function
   function seoCopyHTML(){
     return '<h3>Our realtime AI Orchestrator</h3>\
-<p><b>SPHERE-3</b> Blends our Olympiad-grade math structure with multi-LLM reasoning to set live weights across <b>Intent Scoring</b>, <b>Timing</b>, <b>Loyalty</b>, and <b>Platform</b> Scoring. It routes every company to <b>cool / warm / hot / hot+</b> B2B packaging buyers categories and a <b>right-channel-now score</b> where conversion is most likely.</p>\
+<p><b>SPHERE-3</b> Blends our Olympiad-grade math structure with multi-LLM reasoning to set live weights across <b>Intent Scoring</b>, <b>Timing</b>, <b>Loyalty</b>, and <b>Platform</b> Scoring. It routes every company to <b>cool / warm / hot / hot+</b> B2B packaging buyers categories and a <b>right-channel-now score</b> where conversion is most likely.</p>';
   }
 
   // ---------------- mobile CSS (unchanged) ----------------
@@ -292,7 +255,7 @@
       }}
     }
 
-    // HEADINGS — render last, as one-line SVG text clipped to width
+    // titles (unchanged; now render because script compiles)
     if(C().HEADINGS_SHOW){
       headBoxes.forEach(({x,y,w,h,idx})=>{
         drawHead(svg, {
