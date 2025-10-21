@@ -61,8 +61,8 @@
       ITEMS: [
         { type: "diamond", label: "Posts / Platform (frequency)", heightRatio: 1, fontPt: null },
         { type: "pill",    label: "Comments & Messages / Platform (velocity)", heightRatio: 1, fontPt: null },
-        { type: "circle",  label: "Intent to Respond (reply probability)", circleDiamRatio: 0.10, fontPt: null },
-        { type: "rect",    label: "Recommended Channel", heightRatio: 1, fontPt: null }
+        { type: "circle",  label: "Buyer's Sale Channel(s)", circleDiamRatio: 0.10, fontPt: null },
+        { type: "rect",    label: "Quotes Sent/Channel", heightRatio: 1, fontPt: null }
       ],
 
 
