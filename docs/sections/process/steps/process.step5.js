@@ -44,6 +44,7 @@
 
       // ---- dots
       DOT_SIZE: 2.4, DOT_GAP: 22, DOT_COLOR: "rgba(242,220,160,0.95)",
+      DOTS_TOP_PAD: 6, // NEW: px padding from last item center to first dot (desktop)
 
       // ---- headings (titles)
       HEADINGS_SHOW: true,
@@ -75,26 +76,23 @@
       COPY_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       COPY_LINE_HEIGHT: 1.6,
 
-      // ================= MOBILE OVERRIDES (new knobs; defaults mirror desktop) =================
+      // ================= MOBILE OVERRIDES (defaults mirror desktop) =================
       MOBILE_BREAKPOINT: 840,
       M_MAX_W: 520, M_SIDE_PAD: 16,
       M_SECTION_TOP: 40, M_SECTION_BOTTOM: 72,
       M_TITLE_PT: 16, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14,
 
-      // Mobile layout/geometry (use when present; otherwise fall back to desktop values)
-      M_COL_GAP_RATIO: null,      // e.g. 0.10
-      M_COL_W_RATIO: null,        // e.g. 0.15
-      M_ITEM_H_RATIO: null,       // e.g. 0.115
-      M_ITEM_GAP_RATIO: null,     // e.g. 0.03
+      M_COL_GAP_RATIO: null,
+      M_COL_W_RATIO: null,
+      M_ITEM_H_RATIO: null,
+      M_ITEM_GAP_RATIO: null,
       M_RADIUS_RECT: null, M_RADIUS_PILL: null, M_RADIUS_OVAL: null,
 
-      // Mobile strokes / colors / connections
       M_SHAPE_COLOR: null, M_SHAPE_WIDTH: null,
       M_LINE_COLOR: null,  M_LINE_WIDTH: null,
       M_CONNECT_GAP: null,
 
-      // Mobile per-step overrides
-      M_COL_W_MULTS: null,        // same shape as desktop COL_W_MULTS
+      M_COL_W_MULTS: null,
       M_COL_Y_OFFSETS: null,
       M_COL_X_OFFSETS: null,
       M_ITEM_Y_OFFSETS: null,
@@ -102,17 +100,19 @@
       M_SHAPE_COLOR_BY_STEP: null,
       M_SHAPE_WIDTH_BY_STEP: null,
       M_LINE_STYLE_BY_PAIR: null,
-      M_LAST_DIM: null,           // { stepN:{opacity,blur} }
+      M_LAST_DIM: null,
 
-      // Mobile headings fine-tune
+      // Mobile headings
       M_HEAD_BOX_H: null,
       M_HEAD_SPACING: null,
       M_HEAD_OFFSET_Y: null,
       M_HEAD_MAX_WIDTH_PCT: null,
       M_HEAD_BASELINE_BIAS: null,
-      // separate title nudges on mobile if you want
       M_TITLE_OFFSET_X: null,
       M_TITLE_OFFSET_Y: null,
+
+      // NEW: mobile-specific padding from last item to first dot
+      M_DOTS_TOP_PAD: null,
 
       // ---- exact step recipes (unchanged)
       COLS: [
@@ -134,19 +134,18 @@
   const addPath=(svg,d,stroke,sw,opacity=1,filterId=null)=>{const p=document.createElementNS(NS,"path");p.setAttribute("d",d);p.setAttribute("fill","none");p.setAttribute("stroke",stroke);p.setAttribute("stroke-width",sw);p.setAttribute("stroke-linejoin","round");p.setAttribute("stroke-linecap","round");p.style.opacity=opacity;if(filterId)p.setAttribute("filter",`url(#${filterId})`);svg.appendChild(p);return p;};
   const addCircle=(svg,cx,cy,r,stroke,sw,opacity=1,filterId=null)=>{const c=document.createElementNS(NS,"circle");c.setAttribute("cx",cx);c.setAttribute("cy",cy);c.setAttribute("r",r);c.setAttribute("fill","none");c.setAttribute("stroke",stroke);c.setAttribute("stroke-width",sw);c.style.opacity=opacity;if(filterId)c.setAttribute("filter",`url(#${filterId})`);svg.appendChild(c);return c;};
 
-  // pull a value with mobile override
+  // mobile override helpers
   const pick = (isMobile, key) => {
     const mKey = ("M_" + key);
     const cfg = C();
     return isMobile && mKey in cfg && cfg[mKey] != null ? cfg[mKey] : cfg[key];
   };
-  // pull a step-map with mobile override
   const pickMap = (isMobile, key) => {
     const m = pick(isMobile, key);
     return m || C()[key];
   };
 
-  // SVG title helper — one line, size obeys HEAD_PT/M_HEAD_PT, clipped to width
+  // SVG title helper
   function drawHead(svg, {text, x, y, w, h, isMobile, idx}) {
     const id = `p5h_clip_${idx}_${Math.random().toString(36).slice(2,7)}`;
     const defsNode = svg.querySelector("defs") || svg.appendChild(document.createElementNS(NS, "defs"));
@@ -200,7 +199,7 @@
 
     const wrap=document.createElement("div"); wrap.className="p5m-wrap";
 
-    // ORDER FIX: copy first, then the workflow title, then SVG
+    // ORDER: copy, title, svg
     wrap.innerHTML = `<div class="p5m-copy">${seoCopyHTML()}</div>`
       + (C().TITLE_SHOW ? `<div class="p5m-title" style="transform:translate(${pick(true,'TITLE_OFFSET_X')||0}px,${pick(true,'TITLE_OFFSET_Y')??0}px)">${C().TITLE_TEXT}</div>` : "");
 
@@ -214,7 +213,6 @@
   window.PROCESS_SCENES[STEP] = function draw(ctx){
     const isMobile=(window.PROCESS_FORCE_MOBILE===true)||(window.innerWidth<=C().MOBILE_BREAKPOINT);
 
-    // overall canvas bounds (desktop rail math still drives W/H; behavior unchanged)
     const railW=ctx.bounds.width*C().WIDTH_RATIO;
     const W=Math.max(300,railW);
     const H=Math.min(C().HEIGHT_MAX_PX, ctx.bounds.sH-40);
@@ -328,7 +326,11 @@
       xCursor += colW + colGap;
 
       if(col.dots>0){
-        const dotsY = (anchorsByCol[anchorsByCol.length-1]?.right?.slice(-1)[0]?.y || (y + 6)) + 6;
+        // NEW: use configurable padding from last item to first dot
+        const lastRight = anchorsByCol[anchorsByCol.length-1]?.right || [];
+        const lastY = lastRight.length ? lastRight[lastRight.length-1].y : y;
+        const pad = pick(isMobile, "DOTS_TOP_PAD"); // desktop or mobile override
+        const dotsY = lastY + (pad ?? 6);
         for(let k=0;k<col.dots;k++){
           const dot=document.createElementNS(NS,"circle");
           dot.setAttribute("cx", colX+colW/2);
@@ -340,7 +342,7 @@
       }
     });
 
-    // connections (use mobile pair overrides if set)
+    // connections
     const pairStyles = pick(isMobile,"LINE_STYLE_BY_PAIR") || C().LINE_STYLE_BY_PAIR || {};
     for(let i=0;i<anchorsByCol.length-1;i++){
       const A=anchorsByCol[i], B=anchorsByCol[i+1];
@@ -353,7 +355,7 @@
       }}
     }
 
-    // HEADINGS — render last
+    // titles
     if(C().HEADINGS_SHOW){
       headBoxes.forEach(({x,y,w,h,idx})=>{
         drawHead(svg, {
