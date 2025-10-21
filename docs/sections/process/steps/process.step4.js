@@ -247,7 +247,7 @@
     const wrap = document.createElement("div");
     wrap.className = "p4m-wrap s4";
 
-    const chipText = C().RECO_CHANNEL + " • " + (Math.round(C().RECO_CONFIDENCE * 100) / 100);
+    // removed chip text usage to avoid undefined/NaN display
 
     wrap.innerHTML =
       (C().TITLE_SHOW ? '<div class="p4m-title">' + C().TITLE_TEXT + "</div>" : "") +
@@ -256,7 +256,7 @@
         '<div class="p4m-diamond"><span>' + C().ITEMS[0].label + '</span></div>' +
         '<div class="p4m-box">' + C().ITEMS[1].label + "</div>" +
         '<div class="p4m-circle">' + C().ITEMS[2].label + "</div>" +
-        '<div class="p4m-box">' + C().ITEMS[3].label + '<div class="p4m-chip">' + chipText + '</div></div>' +
+        '<div class="p4m-box">' + C().ITEMS[3].label + "</div>" +
       "</div>";
 
     ctx.canvas.appendChild(wrap);
@@ -336,9 +336,7 @@
       rectBox = { x, y, w: boxW, h, fo }; 
       itemsDrawn.push(rectBox); y += h + C().DOTS_Y_OFFSET;
 
-      // Chip (UX sugar)
-      const chipText = `${C().RECO_CHANNEL} • ${Math.round(C().RECO_CONFIDENCE * 100) / 100}`;
-      addChip(svg, x + boxW/2 - 80, rectBox.y + rectBox.h + 6, chipText);
+      // removed chip rendering to avoid undefined/NaN display
     }
 
     // dots
