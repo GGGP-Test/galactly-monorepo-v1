@@ -89,18 +89,18 @@
       M_RADIUS_RECT: null, M_RADIUS_PILL: null, M_RADIUS_OVAL: null,
 
       M_SHAPE_COLOR: null, M_SHAPE_WIDTH: null,
-      M_LINE_COLOR: null,  M_LINE_WIDTH: null,
+      M_LINE_COLOR: null,  M_LINE_WIDTH: 0.70,
       M_CONNECT_GAP: null,
 
       M_COL_W_MULTS: null,
-      M_COL_Y_OFFSETS: null,
+      M_COL_Y_OFFSETS: { step0:110, step1:0, step2:0, step3:0, step4:0 },
       M_COL_X_OFFSETS: null,
       M_ITEM_Y_OFFSETS: null,
       M_ITEM_H_MULTS: null,
       M_SHAPE_COLOR_BY_STEP: null,
       M_SHAPE_WIDTH_BY_STEP: null,
       M_LINE_STYLE_BY_PAIR: null,
-      M_LAST_DIM: null,
+      M_LAST_DIM: 1.0,
 
       // Mobile headings
       M_HEAD_BOX_H: null,
