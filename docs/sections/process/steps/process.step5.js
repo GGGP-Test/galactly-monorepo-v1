@@ -44,7 +44,7 @@
 
       // ---- dots
       DOT_SIZE: 2.4, DOT_GAP: 22, DOT_COLOR: "rgba(242,220,160,0.95)",
-      DOTS_TOP_PAD: 6, // NEW: px padding from last item center to first dot (desktop)
+      DOTS_TOP_PAD: 15, // NEW: px padding from last item center to first dot (desktop)
 
       // ---- headings (titles)
       HEADINGS_SHOW: true,
