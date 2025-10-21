@@ -109,7 +109,7 @@
       M_HEAD_MAX_WIDTH_PCT: null,
       M_HEAD_BASELINE_BIAS: null,
       M_TITLE_OFFSET_X: null,
-      M_TITLE_OFFSET_Y: 95,
+      M_TITLE_OFFSET_Y: 150,
 
       // NEW: mobile-specific padding from last item to first dot
       M_DOTS_TOP_PAD: 30,
