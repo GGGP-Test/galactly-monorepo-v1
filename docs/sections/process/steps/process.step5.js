@@ -9,7 +9,7 @@
 
     const dflt = {
       // ===== Layout in the right rail (desktop) =====
-      STACK_X_RATIO: 0.405,     // push orchestration graphic to the right
+      STACK_X_RATIO: 0.555,     // push orchestration graphic to the right
       STACK_TOP_RATIO: 0.18,    // vertical start
       WIDTH_RATIO: 0.54,        // how wide the orchestration graphic can be
       HEIGHT_MAX_PX: 560,
