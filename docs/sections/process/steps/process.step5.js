@@ -78,9 +78,9 @@
 
       // ================= MOBILE OVERRIDES (defaults mirror desktop) =================
       MOBILE_BREAKPOINT: 840,
-      M_MAX_W: 520, M_SIDE_PAD: 16,
+      M_MAX_W: 820, M_SIDE_PAD: 16,
       M_SECTION_TOP: 40, M_SECTION_BOTTOM: 72,
-      M_TITLE_PT: 16, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14,
+      M_TITLE_PT: 12, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14,
 
       M_COL_GAP_RATIO: 0.090,
       M_COL_W_RATIO: null,
@@ -93,14 +93,14 @@
       M_CONNECT_GAP: null,
 
       M_COL_W_MULTS: null,
-      M_COL_Y_OFFSETS: { step0:35, step1:0, step2:0, step3:0, step4:0 },
+      M_COL_Y_OFFSETS: { step0:70, step1:0, step2:0, step3:0, step4:0 },
       M_COL_X_OFFSETS: null,
       M_ITEM_Y_OFFSETS: null,
       M_ITEM_H_MULTS: null,
       M_SHAPE_COLOR_BY_STEP: null,
       M_SHAPE_WIDTH_BY_STEP: null,
       M_LINE_STYLE_BY_PAIR: null,
-      M_LAST_DIM: 1.0,
+      M_LAST_DIM: 0.85,
 
       // Mobile headings
       M_HEAD_BOX_H: null,
@@ -109,7 +109,7 @@
       M_HEAD_MAX_WIDTH_PCT: null,
       M_HEAD_BASELINE_BIAS: null,
       M_TITLE_OFFSET_X: null,
-      M_TITLE_OFFSET_Y: null,
+      M_TITLE_OFFSET_Y: 80,
 
       // NEW: mobile-specific padding from last item to first dot
       M_DOTS_TOP_PAD: 30,
