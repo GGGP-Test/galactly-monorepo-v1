@@ -37,10 +37,10 @@
       // ---- dim/blur control for the LAST box (unchanged)
       LAST_DIM: {
         step0:{opacity:1, blur:0},
-        step1:{opacity:1, blur:0},
-        step2:{opacity:0.35, blur:1.5},
-        step3:{opacity:0.35, blur:1.5},
-        step4:{opacity:0.35, blur:1.5}
+        step1:{opacity:0.85, blur:1.5},
+        step2:{opacity:0.85, blur:1.5},
+        step3:{opacity:0.85, blur:1.5},
+        step4:{opacity:0.85, blur:1.5}
       },
 
       // ---- dots (unchanged)
@@ -48,7 +48,7 @@
 
       // ---- headings (titles) — NOW ONE-LINE SVG TEXT WITH REAL SIZING
       HEADINGS_SHOW: true,
-      HEADINGS: ["yourcompany.com", "Intent Score", "Time Score", "Weight Score", "Platform Score"],
+      HEADINGS: ["Yourcompany.com", "Intent Score", "Time Score", "Weight Score", "Platform Score"],
       HEAD_PT: 7.8,               // desktop font size (pt)
       M_HEAD_PT: 6.5,             // mobile font size (pt)
       HEAD_WEIGHT: 850,
@@ -85,10 +85,10 @@
       // ---- exact step recipes (unchanged)
       COLS: [
         { key:"step0", items:["pill"] },
-        { key:"step1", items:["rect","rect","pill","circle","diamond"] },
+        { key:"step1", items:["rect","rect","pill","circle","diamond"], dots:2 },
         { key:"step2", items:["pill","pill","circle","rect"], dots:3 },
         { key:"step3", items:["circle","pill","pill","rect"], dots:3 },
-        { key:"step4", items:["diamond","pill","circle","pill"] }
+        { key:"step4", items:["diamond","pill","circle","pill"], dots:3 }
       ]
     };
     for (const k in dflt) if (!(k in root.step5)) root.step5[k] = dflt[k];
@@ -129,7 +129,7 @@
   // SEO copy (unchanged, fixed string termination)
   function seoCopyHTML(){
     return '<h3>Our realtime AI Orchestrator</h3>\
-<p><b>It</b> Blends our Olympiad-grade math structure with multi-LLM reasoning to set live weights across <b>Intent Scoring</b>, <b>Timing</b>, <b>Loyalty</b>, and <b>Platform</b> Scoring. It routes every company to <b>cool / warm / hot / hot+</b> B2B packaging buyers categories and a <b>right-channel-now score</b> where conversion is most likely.</p>';
+<p><b>It</b> Blends our Olympiad-grade math structure with multi-LLM reasoning to set live weights across <b>Intent Scoring</b>, <b>Timing</b>, <b>Loyalty</b>, and <b>Platform Scoring</b>. It routes every company to <b>cool / warm / hot / hot+</b> B2B packaging buyers categories and a <b>right-channel-now score</b> where conversion is most likely.</p>';
   }
 
   // ---------------- mobile CSS (unchanged) ----------------
