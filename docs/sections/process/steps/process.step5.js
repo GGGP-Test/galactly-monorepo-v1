@@ -56,7 +56,7 @@
       // ---- headings (always on top; multi-line, resizable)
       HEADINGS_SHOW: true,
       HEADINGS: ["yourcompany.com", "Intent Score", "Weight Score", "Character Score", "Platform Score"],
-      HEAD_PT: 7, HEAD_WEIGHT: 850, HEAD_COLOR: "#ddeaef",
+      HEAD_PT: 8, HEAD_WEIGHT: 850, HEAD_COLOR: "#ddeaef",
       HEAD_LETTER_SPACING: 0.2, HEAD_LINE_HEIGHT: 1.2, HEAD_ALIGN: "center",
       HEAD_MAX_LINES: 1, HEAD_BOX_H: 26, HEAD_SPACING: 8, HEAD_OFFSET_Y: 0,
       // mobile title size
@@ -64,7 +64,7 @@
 
       // ---- section title
       TITLE_SHOW: true, TITLE_TEXT: "AI Orchestrator — Weight What Matters",
-      TITLE_PT: 9, TITLE_WEIGHT: 850, TITLE_COLOR: "#ddeaef",
+      TITLE_PT: 14, TITLE_WEIGHT: 850, TITLE_COLOR: "#ddeaef",
       TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       TITLE_LETTER_SPACING: 0.2, TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -28,
 
