@@ -64,7 +64,7 @@
 
       // ---- section title
       TITLE_SHOW: true, TITLE_TEXT: "AI Orchestrator — Weight What Matters",
-      TITLE_PT: 14, TITLE_WEIGHT: 700, TITLE_COLOR: "#ddeaef",
+      TITLE_PT: 9, TITLE_WEIGHT: 850, TITLE_COLOR: "#ddeaef",
       TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       TITLE_LETTER_SPACING: 0.2, TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -28,
 
