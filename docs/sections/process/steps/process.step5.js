@@ -36,10 +36,10 @@
       // ---- dim/blur control for the LAST box (DESKTOP)
       LAST_DIM: {
         step0:{opacity:1, blur:0},
-        step1:{opacity:0.85, blur:1.5},
-        step2:{opacity:0.85, blur:1.5},
-        step3:{opacity:0.85, blur:1.5},
-        step4:{opacity:0.85, blur:1.5}
+        step1:{opacity:0.85, blur:1.0},
+        step2:{opacity:0.85, blur:1.0},
+        step3:{opacity:0.85, blur:1.0},
+        step4:{opacity:0.85, blur:1.0}
       },
 
       // ---- dots
