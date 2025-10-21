@@ -26,7 +26,7 @@
 
       // ---- optional per-step overrides (DESKTOP)
       COL_W_MULTS: { step0:1, step1:1, step2:1, step3:1, step4:1 },
-      COL_Y_OFFSETS: { step0:110, step1:0, step2:0, step3:0, step4:0 },
+      COL_Y_OFFSETS: { step0:100, step1:0, step2:0, step3:0, step4:0 },
       COL_X_OFFSETS: { step0:0, step1:0, step2:0, step3:0, step4:0 },
       ITEM_Y_OFFSETS: { step0:[], step1:[], step2:[], step3:[], step4:[] },
       ITEM_H_MULTS:   { step0:[], step1:[], step2:[], step3:[], step4:[] },
