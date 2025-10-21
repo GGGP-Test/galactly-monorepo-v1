@@ -44,7 +44,7 @@
 
       // ---- dots
       DOT_SIZE: 2.4, DOT_GAP: 22, DOT_COLOR: "rgba(242,220,160,0.95)",
-      DOTS_TOP_PAD: 55, // NEW: px padding from last item center to first dot (desktop)
+      DOTS_TOP_PAD: 45, // NEW: px padding from last item center to first dot (desktop)
 
       // ---- headings (titles)
       HEADINGS_SHOW: true,
@@ -82,10 +82,10 @@
       M_SECTION_TOP: 40, M_SECTION_BOTTOM: 72,
       M_TITLE_PT: 16, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14,
 
-      M_COL_GAP_RATIO: null,
+      M_COL_GAP_RATIO: 0.80,
       M_COL_W_RATIO: null,
-      M_ITEM_H_RATIO: null,
-      M_ITEM_GAP_RATIO: null,
+      M_ITEM_H_RATIO: 0.5,
+      M_ITEM_GAP_RATIO: 0.10,
       M_RADIUS_RECT: null, M_RADIUS_PILL: null, M_RADIUS_OVAL: null,
 
       M_SHAPE_COLOR: null, M_SHAPE_WIDTH: null,
@@ -112,7 +112,7 @@
       M_TITLE_OFFSET_Y: null,
 
       // NEW: mobile-specific padding from last item to first dot
-      M_DOTS_TOP_PAD: null,
+      M_DOTS_TOP_PAD: 30,
 
       // ---- exact step recipes (unchanged)
       COLS: [
