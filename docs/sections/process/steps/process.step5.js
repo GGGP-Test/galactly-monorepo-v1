@@ -14,8 +14,8 @@
       NUDGE_X: -230, NUDGE_Y: -12,
 
       // ---- columns/boxes geometry (global)
-      COL_GAP_RATIO: 0.06, COL_W_RATIO: 0.13,
-      ITEM_H_RATIO: 0.12, ITEM_GAP_RATIO: 0.02,
+      COL_GAP_RATIO: 0.08, COL_W_RATIO: 0.13,
+      ITEM_H_RATIO: 0.10, ITEM_GAP_RATIO: 0.02,
       RADIUS_RECT: 14, RADIUS_PILL: 22, RADIUS_OVAL: 999,
 
       // ---- strokes (global defaults)
@@ -25,7 +25,7 @@
 
       // ---- optional per-step overrides (unchanged)
       COL_W_MULTS: { step0:1, step1:1, step2:1, step3:1, step4:1 },
-      COL_Y_OFFSETS: { step0:125, step1:0, step2:0, step3:0, step4:0 },
+      COL_Y_OFFSETS: { step0:110, step1:0, step2:0, step3:0, step4:0 },
       COL_X_OFFSETS: { step0:0, step1:0, step2:0, step3:0, step4:0 },
       ITEM_Y_OFFSETS: { step0:[], step1:[], step2:[], step3:[], step4:[] },
       ITEM_H_MULTS:   { step0:[], step1:[], step2:[], step3:[], step4:[] },
@@ -49,7 +49,7 @@
       // ---- headings (titles) — NOW ONE-LINE SVG TEXT WITH REAL SIZING
       HEADINGS_SHOW: true,
       HEADINGS: ["yourcompany.com", "Intent Score", "Time Score", "Weight Score", "Platform Score"],
-      HEAD_PT: 8,               // desktop font size (pt) — changes apply immediately
+      HEAD_PT: 7.8,               // desktop font size (pt) — changes apply immediately
       M_HEAD_PT: 6.5,            // mobile font size (pt)
       HEAD_WEIGHT: 850,
       HEAD_COLOR: "#ddeaef",
