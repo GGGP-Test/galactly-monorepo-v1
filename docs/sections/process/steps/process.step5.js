@@ -82,9 +82,9 @@
       M_SECTION_TOP: 40, M_SECTION_BOTTOM: 72,
       M_TITLE_PT: 16, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14,
 
-      M_COL_GAP_RATIO: 0.80,
+      M_COL_GAP_RATIO: 0.010,
       M_COL_W_RATIO: null,
-      M_ITEM_H_RATIO: 0.5,
+      M_ITEM_H_RATIO: 0.05,
       M_ITEM_GAP_RATIO: 0.10,
       M_RADIUS_RECT: null, M_RADIUS_PILL: null, M_RADIUS_OVAL: null,
 
