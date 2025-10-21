@@ -53,8 +53,8 @@
       // ===== Labels / copy =====
       TITLE_SEO: "Platform Score — Right channel, right now",
       COPY_SEO_HTML:
-        '<h3>Right channel, right now (Platform Score)</h3>\
-         <p><b>We rank the platforms where your packaging buyer actually answers</b> — email, phone, LinkedIn, Instagram, web chat, SMS/WhatsApp, procurement portals, marketplaces, and trade shows — and recommend the <b>single best channel to contact first — so your team moves first where the buyer will respond</b>.</p>\
+        '<h3>Right channel, right now (Platform Score)</h3>' +
+        '<p><b>We rank the platforms where your packaging buyer actually answers</b> — email, phone, LinkedIn, Instagram, web chat, SMS/WhatsApp, procurement portals, marketplaces, and trade shows — and recommend the <b>single best channel to contact first — so your team moves first where the buyer will respond</b>.</p>',
 
       // Shapes/labels (diamond -> pill -> circle -> rectangle)
       ITEMS: [
@@ -63,8 +63,12 @@
         { type: "circle",  label: "Buyer's Sale Channel(s)", circleDiamRatio: 0.10, fontPt: null },
         { type: "rect",    label: "Quotes Sent/Channel", heightRatio: 1, fontPt: null }
       ],
+    };
 
-
+    // (restore tiny merge/return so C() works)
+    for (const k in dflt) if (!(k in root.step4)) root.step4[k] = dflt[k];
+    return root.step4;
+  }
 
   // -------------------- helpers --------------------
   const reduceMotion = () =>
