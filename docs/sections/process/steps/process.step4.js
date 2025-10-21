@@ -55,8 +55,7 @@
       COPY_SEO_HTML:
         '<h3>Right channel, right now (Platform Score)</h3>\
          <p><b>We rank the platforms where your packaging buyer actually answers</b> — email, phone, LinkedIn, Instagram, web chat, SMS/WhatsApp, procurement portals, marketplaces, and trade shows — and recommend the <b>single best channel to contact first</b>.</p>\
-         <p><b>Lead tiers:</b> <b>Cool</b> (researching), <b>Warm</b> (engaging), <b>Hot</b> (in-cycle), <b>Hot+</b> (deadline-driven; same-day replies). <b>Signals:</b> post frequency, comment/message velocity, inbound:outbound ratio, response latency, reply probability, and CTA friction. Built for inside sales teams selling B2B packaging under time pressure.</p>\
-         <p>Outcome: a <b>Recommended Channel</b> with confidence and urgency cues — so your team moves first where the buyer will respond.</p>',
+         — so your team moves first where the buyer will respond.</p>',
 
       // Shapes/labels (diamond -> pill -> circle -> rectangle)
       ITEMS: [
