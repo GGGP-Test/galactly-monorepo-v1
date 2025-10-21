@@ -50,7 +50,7 @@
       HEADINGS_SHOW: true,
       HEADINGS: ["Yourcompany.com", "Intent Score", "Time Score", "Weight Score", "Platform Score"],
       HEAD_PT: 7.8,                 // desktop
-      M_HEAD_PT: 6.5,               // mobile
+      M_HEAD_PT: 4.5,               // mobile
       HEAD_WEIGHT: 850,
       HEAD_COLOR: "#ddeaef",
       HEAD_LETTER_SPACING: 0.2,
@@ -105,11 +105,11 @@
       // Mobile headings
       M_HEAD_BOX_H: null,
       M_HEAD_SPACING: null,
-      M_HEAD_OFFSET_Y: null,
+      M_HEAD_OFFSET_Y: 20,
       M_HEAD_MAX_WIDTH_PCT: null,
       M_HEAD_BASELINE_BIAS: null,
       M_TITLE_OFFSET_X: null,
-      M_TITLE_OFFSET_Y: 80,
+      M_TITLE_OFFSET_Y: 95,
 
       // NEW: mobile-specific padding from last item to first dot
       M_DOTS_TOP_PAD: 30,
