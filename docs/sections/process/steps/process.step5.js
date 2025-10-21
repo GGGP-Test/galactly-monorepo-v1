@@ -174,7 +174,7 @@
   // SEO copy (unchanged)
   function seoCopyHTML(){
     return '<h3>Our realtime AI Orchestrator</h3>\
-<p><b>It</b> Blends our Olympiad-grade math structure with multi-LLM reasoning to set live weights across <b>Intent Scoring</b>, <b>Timing</b>, <b>Loyalty</b>, and <b>Platform Scoring</b>. It routes every company to <b>cool / warm / hot / hot+</b> B2B packaging buyer categories and a <b>right-channel-now score</b> to engage where conversion is most likely.</p>';
+<p><b>It</b> Blends our Olympiad-grade math structure with multi-LLM reasoning to set live weights across <b>Intent Scoring</b>, <b>Timing</b>, <b>Loyalty</b>, and <b>Platform Scoring</b>. It routes every company to <b>cool / warm / hot / hot+</b> B2B packaging buyer categories and a <b>right-channel-now score</b> so engagement has the highest chance of conversion.</p>';
   }
 
   // ---------------- mobile CSS ----------------
