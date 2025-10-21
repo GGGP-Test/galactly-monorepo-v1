@@ -59,11 +59,11 @@
       HEAD_SPACING: 8,          // gap from title box to first shape
       HEAD_OFFSET_Y: 0,         // nudge the whole title block up/down
       HEAD_ONE_LINE: true,      // force single line (no wrapping)
-      HEAD_MAX_WIDTH_PCT: 0.95, // % of column width the title may occupy
+      HEAD_MAX_WIDTH_PCT: 1.95, // % of column width the title may occupy
       HEAD_BASELINE_BIAS: 0.74, // 0..1 baseline inside the title box (tweak vertical feel)
 
       // ---- section title (unchanged)
-      TITLE_SHOW: true, TITLE_TEXT: "AI Orchestrator — Weight What Matters",
+      TITLE_SHOW: true, TITLE_TEXT: "Decides how much each variable matter",
       TITLE_PT: 14, TITLE_WEIGHT: 850, TITLE_COLOR: "#ddeaef",
       TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       TITLE_LETTER_SPACING: 0.2, TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -28,
@@ -133,9 +133,8 @@
 
   // SEO copy (unchanged)
   function seoCopyHTML(){
-    return '<h3>SPHERE-3: our AI Orchestrator</h3>\
-<p><b>SPHERE-3</b> blends Olympiad-grade math with multi-LLM reasoning to set live weights across <b>Intent</b>, <b>Weight</b>, <b>Character</b>, and <b>Platform</b>. It routes every company to <b>cool / warm / hot / hot+</b> and a <b>right-channel-now score</b> so packaging teams engage where conversion is most likely.</p>\
-<p>Keywords: packaging lead scoring • time-to-buy signal • intent scoring • platform fit • AI orchestrator • SPHERE-3 • Artemis-B • B2B packaging buyers • hot plus leads.</p>';
+    return '<h3>Our realtime AI Orchestrator</h3>\
+<p><b>SPHERE-3</b> Blends our Olympiad-grade math structure with multi-LLM reasoning to set live weights across <b>Intent Scoring</b>, <b>Timing</b>, <b>Loyalty</b>, and <b>Platform</b> Scoring. It routes every company to <b>cool / warm / hot / hot+</b> B2B packaging buyers categories and a <b>right-channel-now score</b> where conversion is most likely.</p>\
   }
 
   // ---------------- mobile CSS (unchanged) ----------------
