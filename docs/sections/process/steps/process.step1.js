@@ -400,8 +400,8 @@
     const html = `
       <h3>Who buys packaging?</h3>
       <p>Our <b>Intent Score</b> inside our olympiad-grade math structure + multiple LLM reasoning structure finds accounts most likely to purchase in the next cycle.
-      We weight and score <b>existing</b> metrics from your website (we build them for you), and match them with outside metrics like RFQ/RFP language, visits to pricing & sample pages,
-      new locations/events/trade shows activities, new product launches, product shelf openings at big wholesales and 38 more metrics, then surface the prospects your team should contact.</p>`;
+      We weight and score <b>existing</b> metrics from your website (we build them for you), and match them with outside metrics like RFQ/RFP language,
+      new locations/events/trade shows activities, new product launches & shelf openings at big wholesales - (38 more metrics & counting), then surface the prospects your team should contact.</p>`;
     if (typeof ctx.mountCopy === "function"){
       const el = ctx.mountCopy({ top, left, html });
       el.style.maxWidth = `${C().COPY_MAX_W_PX}px`;
