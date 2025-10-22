@@ -27,100 +27,61 @@
   }
 
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-    font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+  html,body{
+    margin:0;height:100%;
+    background:var(--bg);color:var(--text);
+    font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  }
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
   /* ---------------- DESKTOP (unchanged) ---------------- */
   @media (min-width:901px){
     body::before{content:none!important}
-    .hero::after{content:none!important}
-    .site-header .inner,.hero-grid,.section .inner{max-width:var(--container-max);width:100%;margin-inline:auto}
+    .site-header .inner,
+    .hero-grid,
+    .section .inner{max-width:var(--container-max);width:100%;margin-inline:auto}
     .section{background:linear-gradient(180deg,#0b121a 0%, #0a0e14 100%)}
-    .blend-up::before,.blend-down::after{content:none!important}
   }
 
-  /* ---------------- MOBILE (rebuilt to match screenshot) ---------------- */
+  /* ---------------- MOBILE: only the continuous background ---------------- */
   @media (max-width:900px){
-    /* one giant canvas behind the whole page so the hero blends into the rest */
+    /* keep layout as-is; just supply one scrolling background that ends dark at section 2 */
+    body{ position:relative; }
     body::before{
       content:"";
-      position:fixed; inset:0 0 auto 0; height:520vh; z-index:-1; pointer-events:none;
+      position:absolute; left:0; right:0; top:0;
+      height:var(--mobile-bg-height, 2800px); /* set by JS below */
+      z-index:-1; pointer-events:none;
+
+      /* same “gold → transparent → dark” language as your screenshot */
       background:
         radial-gradient(170% 130% at 50% -26%, rgba(230,195,107,.16), rgba(0,0,0,0) 60%),
         radial-gradient(90% 80% at 18% 12%, rgba(230,195,107,.07), rgba(0,0,0,0) 74%),
         linear-gradient(to bottom,
-          rgba(10,14,20,0) 0%,
-          rgba(10,14,20,.46) 38%,
-          rgba(10,14,20,.86) 68%,
-          var(--zone-dark) 100%);
-    }
-    /* gentle bridge just under the hero to avoid any seam on some GPUs */
-    .hero::after{
-      content:""; position:absolute; left:0; right:0; bottom:-26svh; height:54svh; z-index:0; pointer-events:none;
-      background:linear-gradient(to bottom, rgba(10,14,20,0), rgba(10,14,20,.62) 60%, #0a0e14 100%);
+          rgba(10,14,20,0)    0%,
+          rgba(10,14,20,.35)  28%,
+          rgba(10,14,20,.68)  54%,
+          rgba(10,14,20,.92)  82%,
+          var(--zone-dark)   100%);
     }
 
-    /* header stays glass but with a touch more contrast like in the shot */
-    .site-header{
-      background:rgba(12,18,28,.42);
-      -webkit-backdrop-filter:blur(12px) saturate(140%);
-      backdrop-filter:blur(12px) saturate(140%);
-      border-bottom:1px solid rgba(255,255,255,.06);
-    }
-
-    /* hero layout: left-aligned, full width CTA */
-    :root{ --font-sans:"Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif }
-    .const-wrap{display:none}
-    .hero{
-      min-height:92svh;
-      padding:calc(64px + env(safe-area-inset-top, 10px)) 16px 28px;
-      isolation:isolate;
-    }
-    .hero-grid{grid-template-columns:1fr; gap:18px}
-    .hero-copy{max-width:32rem; margin:0 auto}
-    .badge{display:inline-block; margin:0 0 12px 0; padding:6px 12px; border-radius:999px;
-      border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03); color:var(--muted); font-size:12px}
-    h1{font:800 clamp(34px,8vw,44px) var(--font-sans); letter-spacing:-0.01em; margin:0 0 10px}
-    .h1-accent{background:linear-gradient(180deg,var(--gold-300),var(--gold-700)); -webkit-background-clip:text; background-clip:text; color:transparent}
-    .lead{color:#c6d3de; font-size:clamp(16px,3.8vw,18px); margin:0 0 24px}
-
-    /* action stack that matches the screenshot’s “continuous” look */
-    .actions{width:100%; justify-content:center}
-    .actions.show-mobile{flex-direction:column; gap:12px; position:relative}
-    .actions.show-mobile .btn{width:100%; padding:16px 20px; justify-content:center; text-align:center}
-
-    .btn.primary{
-      color:var(--ctaText);
-      background:linear-gradient(180deg,var(--gold),var(--gold-700));
-      border:none; border-radius:999px;
-      box-shadow:0 10px 30px rgba(230,195,107,.18), 0 0 0 1px rgba(255,255,255,.06) inset;
-    }
-    /* the darker rounded “rail” behind the demo row like in your shot */
-    .actions.show-mobile::after{
-      content:""; display:block;
-      height:56px; border-radius:18px;
-      background:rgba(255,255,255,.03);
-      border:1px solid var(--stroke);
-      box-shadow:0 8px 24px rgba(0,0,0,.35) inset;
-      /* sit behind the ghost link; spacing mirrors the screenshot */
-      margin-top:-4px;
-    }
-    .btn.ghost{
-      order:10; /* keep under primary */
-      background:transparent; color:#cfe0ee; border-color:transparent;
-      position:absolute; left:0; right:0; bottom:0; height:56px; display:flex; align-items:center; justify-content:center;
-    }
-
-    /* sections after the hero stay transparent so the background stays continuous */
+    /* sections stay transparent so the page reads as one continuous surface */
     .section{background:transparent}
   }
 
-  /* shared stuff */
-  .site-header{position:fixed; inset:0 0 auto 0; height:60px; z-index:50; display:grid; place-items:center}
-  .site-header .inner{width:100%; padding:0 var(--gutter);
-    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px}
+  /* HEADER */
+  .site-header{
+    position:fixed; inset:0 0 auto 0; height:60px; z-index:50; display:grid; place-items:center;
+    background:rgba(12,18,28,.38);
+    -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%);
+    border-bottom:1px solid rgba(255,255,255,.06)
+  }
+  .site-header .inner{
+    width:100%;
+    padding:0 var(--gutter);
+    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px
+  }
   .brand{display:flex; align-items:center; gap:10px}
   .brand-badge{width:28px;height:28px;border-radius:8px;background:linear-gradient(180deg,var(--gold),var(--gold-700));
     box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px}
@@ -146,32 +107,36 @@
   .hamburger[aria-expanded="true"] span:nth-child(2){ transform:rotate(-45deg); }
   @media (max-width:900px){ nav#nav-primary, .nav-actions{display:none} .hamburger{display:inline-block} }
 
-  #mobileMenu{position:fixed; inset:0; z-index:55; display:grid; background:rgba(5,8,12,.35);
-    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); opacity:0; pointer-events:none; transition:opacity .18s}
-  #mobileMenu.open{opacity:1; pointer-events:auto}
-  #mobileMenu .sheet{margin:70px 12px 12px; width:calc(100% - 24px); border-radius:16px;
-    border:1px solid rgba(255,255,255,.08); background:rgba(12,18,28,.86);
-    -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%);
-    padding:12px; transform:translateY(-8px); opacity:0; transition:transform .22s, opacity .22s}
-  #mobileMenu.open .sheet{transform:translateY(0); opacity:1}
-  #mobileMenu .sheet a{display:block; padding:14px 12px; font-weight:600; color:#cfe0ee; border-radius:12px}
-  #mobileMenu .sheet a:hover{background:rgba(255,255,255,.04)}
-  #mobileMenu .sheet .mm-cta{background:linear-gradient(180deg,var(--gold),var(--gold-700)); color:var(--ctaText); text-align:center; margin-bottom:8px}
-  #mobileMenu .sheet hr{border:0; border-top:1px solid var(--stroke); margin:8px 0}
-
-  .hero{position:relative;display:flex;align-items:center;justify-content:center;
-    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate;}
+  /* HERO & sections (unchanged layout/typography; no mobile overrides) */
+  .hero{
+    position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
+    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate;
+  }
   #heroFx{position:absolute;inset:-10% -10% -10% -10%;z-index:0;filter:saturate(110%) blur(.2px)}
-  .hero-grid{position:relative;z-index:1;display:grid;align-items:center;grid-template-columns:1.12fr 1fr;gap:clamp(28px, 4vw, 48px);width:100%}
+  .hero-grid{
+    position:relative;z-index:1;display:grid;align-items:center;
+    grid-template-columns:1.12fr 1fr;
+    gap:clamp(28px, 4vw, 48px);
+    width:100%;
+  }
+  @media (max-width:900px){.hero-grid{grid-template-columns:1fr;gap:18px}}
   .hero-copy{max-width:680px}
-  .lead{color:var(--muted)}
+  .badge{display:inline-block;margin-bottom:12px;padding:6px 10px;border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--muted);font-size:12px}
+  h1{font:600 clamp(34px,6vw,64px) "Newsreader", Georgia, serif;letter-spacing:.2px;margin:0 0 10px}
+  .lead{color:var(--muted);font-size:clamp(16px,2.6vw,19px);margin:0 0 26px}
   .actions{display:flex;gap:12px;flex-wrap:wrap}
   .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:999px;border:1px solid var(--stroke);cursor:pointer}
   .btn:active{transform:translateY(1px)}
+  .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));
+    border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
   .btn.ghost{background:transparent;color:#cfe0ee;border-color:var(--stroke)}
   .btn.ghost:hover{border-color:#284560}
 
-  .const-wrap{position:relative;isolation:isolate;height:520px;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,#0b121d,#0b1119)}
+  .const-wrap{
+    position:relative;isolation:isolate;height:520px;border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,#0b121d,#0b1119)
+  }
   #constFx{position:absolute;inset:0;z-index:0}
   .const-legend{position:absolute;inset:auto 12px 12px auto;z-index:2;font-size:12px;color:#a8bacb;
     background:rgba(255,255,255,.03);border:1px solid var(--stroke);padding:6px 8px;border-radius:10px}
@@ -183,7 +148,6 @@
   .domainTag{position:absolute;z-index:2;left:14px;top:14px;padding:6px 10px;border-radius:999px;font-size:12px;
     background:rgba(230,195,107,.12);color:var(--gold-300);border:1px solid rgba(230,195,107,.25)}
 
-  /* sections */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate;}
   .section .inner{margin:0 auto}
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
@@ -200,28 +164,36 @@
     background:linear-gradient(180deg,var(--gold-300),var(--gold-700));-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px}
   .kpi .hint{font-size:12px;color:#7fa1b9;margin-top:6px}
 
-  /* a11y: reduced motion */
   @media (prefers-reduced-motion: reduce){
-    #heroFx{display:none} #constFx{display:none} .btn{transition:none}
+    #heroFx{display:none}
+    #constFx{display:none}
+    .btn{transition:none}
   }
+
   .show-desktop{display:block}
   .show-mobile{display:none}
-  @media (max-width:900px){.show-desktop{display:none}.show-mobile{display:block}}
+  @media (max-width:900px){
+    .show-desktop{display:none}
+    .show-mobile{display:block}
+  }
 </style>
 </head>
 <body>
   <header class="site-header" aria-label="Site">
     <div class="inner">
       <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge" aria-hidden="true">G</span></a>
+
       <nav id="nav-primary" aria-label="Primary">
         <a class="nav-link" href="#get-started">How it works</a>
         <a class="nav-link" href="sectors.html">Sectors</a>
         <a class="nav-link" href="pricing.html">Pricing</a>
       </nav>
+
       <div class="nav-actions">
         <a class="nav-login" href="login.html">Login</a>
         <a class="nav-cta" href="#get-started" id="navStart">Start Free</a>
       </div>
+
       <button id="burger" class="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
         <span aria-hidden="true"></span><span aria-hidden="true"></span>
       </button>
@@ -430,9 +402,9 @@
   optBuyer && optBuyer.addEventListener("click",()=>setRole("buyer"));
 
   function syncDomain(){
-    const d=domainFromEmail(emailEl.value);
+    const d=(emailEl.value.toLowerCase().match(/@([a-z0-9.-]+)/)||[])[1]||"";
     if (d) hostEl.value=d;
-    const tag=document.getElementById("domainTag"); if (tag && (d || hostEl.value)) tag.textContent = d || hostEl.value || "YourCompany.com";
+    const tag=$("#domainTag"); if (tag && (d || hostEl.value)) tag.textContent = d || hostEl.value || "YourCompany.com";
   }
   emailEl && emailEl.addEventListener("input",syncDomain);
   emailEl && emailEl.addEventListener("change",syncDomain);
@@ -598,6 +570,25 @@
     },{threshold:0.35});
     io.observe(section);
   })();
+
+  /* ------- MOBILE background height controller ------- */
+  (function(){
+    const mq = window.matchMedia("(max-width:900px)");
+    function setBgHeight(){
+      if(!mq.matches) return;
+      const proof = document.getElementById("proof");
+      const end = proof ? (proof.offsetTop + proof.offsetHeight) : document.body.scrollHeight;
+      const buffer = 80; // a little breathing room for rounding/layout changes
+      document.documentElement.style.setProperty("--mobile-bg-height", (Math.ceil(end + buffer)) + "px");
+    }
+    window.addEventListener("load", setBgHeight);
+    window.addEventListener("resize", setBgHeight);
+    const proof = document.getElementById("proof");
+    if (window.ResizeObserver && proof){
+      const ro = new ResizeObserver(setBgHeight);
+      ro.observe(proof);
+    }
+  })();
 })();
 </script>
 
@@ -627,6 +618,7 @@
 })();
 </script>
 
+<!-- Section 3 (Process) scripts -->
 <script defer src="./sections/process/process.data.js"></script>
 <script defer src="./sections/process/process.js"></script>
 <script defer src="./sections/process/process.mobile.global.js"></script>
@@ -636,6 +628,7 @@
 <script defer src="./sections/process/steps/process.step4.js"></script>
 <script defer src="./sections/process/steps/process.step5.js"></script>
 
+<!-- Section 4 (Orbit) scripts -->
 <script defer src="./sections/orbit/orbit.data.js"></script>
 <script defer src="./sections/orbit/orbit.js"></script>
 </body>
