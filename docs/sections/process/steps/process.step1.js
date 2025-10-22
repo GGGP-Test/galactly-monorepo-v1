@@ -244,8 +244,8 @@
     const copyHTML = `
       <h3>Who buys packaging?</h3>
       <p>Our <b>Intent Score</b> uses our olympiad-grade math structure + multiple LLM reasoning that finds accounts most likely to purchase in the next cycle.
-      We weight and score <b>existing</b> metrics from your website (we create them using our model) and match them with metrics like RFQ/RFP language, visits to pricing & sample pages,
-      events/trade shows activities, new product launches, new product shelf openings at big wholesalers and 38 more metrics, then surface the prospects your team should contact.</p>`;
+      We weight and score <b>existing</b> metrics from your website (we create them using our model) and match them with metrics like RFQ/RFP language,
+      events/trade shows activities, new product launches & shelf openings at big wholesalers and 38 more metrics (counting), then surface the prospects your team should contact.</p>`;
 
     wrap.innerHTML = `
       ${C().TITLE_SHOW ? `<div class="p1m-title">${C().TITLE_TEXT}</div>` : ``}
