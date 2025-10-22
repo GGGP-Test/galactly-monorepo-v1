@@ -6,12 +6,15 @@
 <title>Galactly — Find real packaging buyers</title>
 <meta name="description" content="Galactly helps packaging suppliers find qualified B2B buyers. Turn website and market signals into ranked leads to grow your sales pipeline—no cold spam." />
 
+<!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
+<!-- Section styles (unchanged) -->
 <link rel="stylesheet" href="./sections/process/process.css">
 <link rel="stylesheet" href="./sections/orbit/orbit.css">
+
 <link rel="icon" href="data:,">
 
 <style>
@@ -22,6 +25,7 @@
     --ctaText:#1b1405;
     --zone-dark:#070b11;
 
+    /* New: consistent desktop container + gutters */
     --container-max: clamp(1100px, 86vw, 1320px);
     --gutter: clamp(16px, 4vw, 40px);
   }
@@ -35,39 +39,50 @@
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* ---------------- DESKTOP (unchanged) ---------------- */
+  /* ---------------- DESKTOP: crisp stack on a shared container ---------------- */
   @media (min-width:901px){
-    body::before{content:none!important}
+    /* no global background blend on desktop */
+    body::before{content:none !important;}
+    .hero::after{content:none !important;}
+
+    /* align all sections to the same rails */
     .site-header .inner,
     .hero-grid,
-    .section .inner{max-width:var(--container-max);width:100%;margin-inline:auto}
-    .section{background:linear-gradient(180deg,#0b121a 0%, #0a0e14 100%)}
-  }
-
-  /* ---------------- MOBILE: only the continuous background ---------------- */
-  @media (max-width:900px){
-    /* keep layout as-is; just supply one scrolling background that ends dark at section 2 */
-    body{ position:relative; }
-    body::before{
-      content:"";
-      position:absolute; left:0; right:0; top:0;
-      height:var(--mobile-bg-height, 2800px); /* set by JS below */
-      z-index:-1; pointer-events:none;
-
-      /* same “gold → transparent → dark” language as your screenshot */
-      background:
-        radial-gradient(170% 130% at 50% -26%, rgba(230,195,107,.16), rgba(0,0,0,0) 60%),
-        radial-gradient(90% 80% at 18% 12%, rgba(230,195,107,.07), rgba(0,0,0,0) 74%),
-        linear-gradient(to bottom,
-          rgba(10,14,20,0)    0%,
-          rgba(10,14,20,.35)  28%,
-          rgba(10,14,20,.68)  54%,
-          rgba(10,14,20,.92)  82%,
-          var(--zone-dark)   100%);
+    .section .inner{
+      max-width:var(--container-max);
+      width:100%;
+      margin-inline:auto;
     }
 
-    /* sections stay transparent so the page reads as one continuous surface */
-    .section{background:transparent}
+    /* section surfaces get their own background so nothing underlaps */
+    .section{background:linear-gradient(180deg,#0b121a 0%, #0a0e14 100%);}
+
+    /* disable cross-section blend helpers on desktop */
+    .blend-up::before, .blend-down::after{content:none !important;}
+  }
+
+  /* ---------------- MOBILE: keep your approved continuous fade ---------------- */
+  @media (max-width:900px){
+    body::before{
+      content:"";
+      position:fixed; left:0; right:0; top:0; height:420vh;
+      z-index:-1; pointer-events:none;
+      background:
+        radial-gradient(170% 130% at 50% -26%, rgba(230,195,107,.16), rgba(0,0,0,0) 60%),
+        radial-gradient(90% 80%  at 18% 12%,  rgba(230,195,107,.07), rgba(0,0,0,0) 74%),
+        linear-gradient(to bottom,
+          rgba(10,14,20,0) 0%,
+          rgba(10,14,20,.46) 42%,
+          rgba(10,14,20,.86) 72%,
+          var(--zone-dark) 100%);
+    }
+    /* gentle bridge under hero on mobile only */
+    .hero::after{
+      content:"";
+      position:absolute; left:0; right:0; bottom:-24svh; height:48svh;
+      pointer-events:none; z-index:0;
+      background:linear-gradient(to bottom, rgba(10,14,20,0), rgba(10,14,20,.62) 65%, #0a0e14 100%);
+    }
   }
 
   /* HEADER */
@@ -98,7 +113,7 @@
     background:linear-gradient(180deg,var(--gold),var(--gold-700));
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
 
-  /* burger + mobile menu */
+  /* Hamburger (mobile only) */
   .hamburger{display:none; justify-self:end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
   .hamburger span{position:absolute; left:2px; right:2px; height:2px; top:11px; border-radius:2px; background:currentColor; transition:transform .25s, top .25s}
   .hamburger span:nth-child(2){ top:21px; }
@@ -107,7 +122,21 @@
   .hamburger[aria-expanded="true"] span:nth-child(2){ transform:rotate(-45deg); }
   @media (max-width:900px){ nav#nav-primary, .nav-actions{display:none} .hamburger{display:inline-block} }
 
-  /* HERO & sections (unchanged layout/typography; no mobile overrides) */
+  /* Mobile glass menu */
+  #mobileMenu{position:fixed; inset:0; z-index:55; display:grid; background:rgba(5,8,12,.35);
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); opacity:0; pointer-events:none; transition:opacity .18s}
+  #mobileMenu.open{opacity:1; pointer-events:auto}
+  #mobileMenu .sheet{margin:70px 12px 12px; width:calc(100% - 24px); border-radius:16px;
+    border:1px solid rgba(255,255,255,.08); background:rgba(12,18,28,.86);
+    -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%);
+    padding:12px; transform:translateY(-8px); opacity:0; transition:transform .22s, opacity .22s}
+  #mobileMenu.open .sheet{transform:translateY(0); opacity:1}
+  #mobileMenu .sheet a{display:block; padding:14px 12px; font-weight:600; color:#cfe0ee; border-radius:12px}
+  #mobileMenu .sheet a:hover{background:rgba(255,255,255,.04)}
+  #mobileMenu .sheet .mm-cta{background:linear-gradient(180deg,var(--gold),var(--gold-700)); color:var(--ctaText); text-align:center; margin-bottom:8px}
+  #mobileMenu .sheet hr{border:0; border-top:1px solid var(--stroke); margin:8px 0}
+
+  /* HERO */
   .hero{
     position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
     padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate;
@@ -133,6 +162,7 @@
   .btn.ghost{background:transparent;color:#cfe0ee;border-color:var(--stroke)}
   .btn.ghost:hover{border-color:#284560}
 
+  /* Constellation (desktop) */
   .const-wrap{
     position:relative;isolation:isolate;height:520px;border-radius:18px;overflow:hidden;
     background:linear-gradient(180deg,#0b121d,#0b1119)
@@ -148,6 +178,7 @@
   .domainTag{position:absolute;z-index:2;left:14px;top:14px;padding:6px 10px;border-radius:999px;font-size:12px;
     background:rgba(230,195,107,.12);color:var(--gold-300);border:1px solid rgba(230,195,107,.25)}
 
+  /* SECTION 2 */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate;}
   .section .inner{margin:0 auto}
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
@@ -163,13 +194,30 @@
   .kpi .num{font-weight:800;font-size:clamp(22px,6vw,36px);line-height:1.05;
     background:linear-gradient(180deg,var(--gold-300),var(--gold-700));-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px}
   .kpi .hint{font-size:12px;color:#7fa1b9;margin-top:6px}
+  .btn.small{padding:10px 14px;font-size:14px}
 
+  /* ---------- MOBILE-ONLY visual tweaks kept from last pass ---------- */
+  @media (max-width:900px){
+    .const-wrap{display:none}
+    .hero{min-height:92svh; padding:calc(60px + env(safe-area-inset-top, 10px)) 16px 28px;}
+    .hero-copy{margin-inline:auto; text-align:center; max-width:28rem;}
+    :root{ --font-sans: "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    h1{ font-family: var(--font-sans); font-weight:800; letter-spacing:-0.01em; }
+    .h1-accent{ background:linear-gradient(180deg,var(--gold-300),var(--gold-700)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .badge,.lead{ margin-left:auto; margin-right:auto; }
+    .actions{ justify-content:center; width:100%; }
+    .actions.show-mobile{ flex-direction:column; gap:12px; }
+    .actions.show-mobile .btn{ width:100%; padding:16px 20px; justify-content:center; text-align:center; }
+  }
+
+  /* Reduced motion */
   @media (prefers-reduced-motion: reduce){
     #heroFx{display:none}
     #constFx{display:none}
     .btn{transition:none}
   }
 
+  /* Helpers for per-viewport content */
   .show-desktop{display:block}
   .show-mobile{display:none}
   @media (max-width:900px){
@@ -179,6 +227,7 @@
 </style>
 </head>
 <body>
+  <!-- HEADER -->
   <header class="site-header" aria-label="Site">
     <div class="inner">
       <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge" aria-hidden="true">G</span></a>
@@ -283,6 +332,7 @@
 
   <!-- SECTION 3 – Process -->
   <div id="section-process"></div>
+
   <!-- SECTION 4 – Orbit -->
   <div id="section-orbit"></div>
 
@@ -402,7 +452,7 @@
   optBuyer && optBuyer.addEventListener("click",()=>setRole("buyer"));
 
   function syncDomain(){
-    const d=(emailEl.value.toLowerCase().match(/@([a-z0-9.-]+)/)||[])[1]||"";
+    const d=domainFromEmail(emailEl.value);
     if (d) hostEl.value=d;
     const tag=$("#domainTag"); if (tag && (d || hostEl.value)) tag.textContent = d || hostEl.value || "YourCompany.com";
   }
@@ -569,25 +619,6 @@
       entries.forEach(e=>{ if (!fired && e.isIntersecting){ fired=true; nums.forEach(animate); io.disconnect(); }});
     },{threshold:0.35});
     io.observe(section);
-  })();
-
-  /* ------- MOBILE background height controller ------- */
-  (function(){
-    const mq = window.matchMedia("(max-width:900px)");
-    function setBgHeight(){
-      if(!mq.matches) return;
-      const proof = document.getElementById("proof");
-      const end = proof ? (proof.offsetTop + proof.offsetHeight) : document.body.scrollHeight;
-      const buffer = 80; // a little breathing room for rounding/layout changes
-      document.documentElement.style.setProperty("--mobile-bg-height", (Math.ceil(end + buffer)) + "px");
-    }
-    window.addEventListener("load", setBgHeight);
-    window.addEventListener("resize", setBgHeight);
-    const proof = document.getElementById("proof");
-    if (window.ResizeObserver && proof){
-      const ro = new ResizeObserver(setBgHeight);
-      ro.observe(proof);
-    }
   })();
 })();
 </script>
