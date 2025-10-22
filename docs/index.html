@@ -23,28 +23,27 @@
     --text:#e9f1f7; --muted:#91a6b8;
     --gold:#e6c36b; --gold-700:#b8913d; --gold-300:#f2dca0;
     --ctaText:#1b1405;
-    --zone-dark:#070b11;
 
     --container-max: clamp(1100px, 86vw, 1320px);
     --gutter: clamp(16px, 4vw, 40px);
 
     /* ===== Desktop constellation “container-ish” knobs ===== */
-    --const-radius: 18px;               /* corner radius of right panel */
-    --const-stroke-w: 1px;              /* inner stroke width */
-    --const-stroke-a: .06;              /* inner stroke alpha (white) */
-    --const-vignette-a: .18;            /* edge darkening (inset shadow) */
-    --const-drop-a: .14;                /* outer drop shadow strength */
-    --const-edge-tint: rgba(230,195,107,.05); /* warm edge tint */
-    --const-grid-sheen-a: .05;          /* faint right-edge sheen */
+    --const-radius: 18px;
+    --const-stroke-w: 1px;
+    --const-stroke-a: .06;
+    --const-vignette-a: .18;
+    --const-drop-a: .14;
+    --const-edge-tint: rgba(230,195,107,.05);
+    --const-grid-sheen-a: .05;
 
-    /* Mini cards (still very subtle) */
+    /* Mini cards */
     --miniCard-radius: 12px;
     --miniCard-bg: rgba(12,18,28,.86);
     --miniCard-blur: 6px;
     --miniCard-stroke-a: .08;
     --miniCard-shadow-a: .30;
 
-    /* Legend typography knobs */
+    /* Legend */
     --legend-fs: 12px;
     --legend-color: #a8bacb;
 
@@ -58,7 +57,7 @@
     background:var(--bg);color:var(--text);
     font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   }
-  body{ position:relative; } /* allow body::before to sit behind content and scroll */
+  body{ position:relative; } /* let ::before scroll with page */
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
@@ -67,35 +66,34 @@
     content:"";
     position:absolute; left:0; right:0; top:0; height:var(--glowH);
     z-index:-1; pointer-events:none;
-    /* Same warm “hero” look, frozen; extends through Section 2 and fades to darkness */
     background:
       radial-gradient(170% 130% at 50% -26%, rgba(230,195,107,.16), rgba(0,0,0,0) 60%),
       radial-gradient(90% 80%  at 18% 12%,  rgba(230,195,107,.07), rgba(0,0,0,0) 74%),
+      /* fades to page background exactly at end of Section 2 */
       linear-gradient(to bottom,
         rgba(10,14,20,0) 0%,
         rgba(10,14,20,.46) 52%,
         rgba(10,14,20,.86) 78%,
-        var(--zone-dark) 100%);
+        var(--bg) 100%);
     filter:saturate(110%) blur(.2px);
   }
 
   /* ---------------- DESKTOP ---------------- */
   @media (min-width:901px){
-    /* remove old per-section backgrounds so the single page glow shows through */
     .site-header .inner,
     .hero-grid,
     .section .inner{max-width:var(--container-max);width:100%;margin-inline:auto}
 
-    /* Let Section 2 be transparent to reveal the continuous glow */
+    /* Remove per-section background so the global glow shows through in Section 2 */
     #proof{ background:transparent; }
 
-    /* no extra blend overlays */
+    /* Kill old blend overlays (we don’t need them) */
     .blend-up::before,.blend-down::after{content:none!important}
   }
 
   /* ---------------- MOBILE ---------------- */
   @media (max-width:900px){
-    /* kill the old mobile-only overlays so we use the single static glow everywhere */
+    /* Remove old mobile overlay to keep single static glow */
     .hero::after{ content:none!important; }
   }
 
@@ -128,7 +126,7 @@
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
 
   /* Hamburger (mobile only) */
-  .hamburger{display:none; justify-self:end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
+  .hamburger{display:none; justify-self=end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
   .hamburger span{position:absolute; left:2px; right:2px; height:2px; top:11px; border-radius:2px; background:currentColor; transition:transform .25s, top .25s}
   .hamburger span:nth-child(2){ top:21px; }
   .hamburger[aria-expanded="true"] span{ top:17px; }
@@ -155,7 +153,7 @@
     position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
     padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate;
   }
-  /* Disable the animated canvas — static glow handles the look */
+  /* Disable animated canvas — static glow handles the look */
   #heroFx{display:none}
   .hero-grid{
     position:relative;z-index:1;display:grid;align-items:center;
@@ -186,17 +184,14 @@
     filter: drop-shadow(0 10px 24px rgba(0,0,0,var(--const-drop-a)));
   }
   .const-wrap::before{
-    /* subtle inner stroke + vignette */
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
     box-shadow:
       inset 0 0 0 var(--const-stroke-w) rgba(255,255,255,var(--const-stroke-a)),
       inset 0 0 60px rgba(0,0,0,var(--const-vignette-a));
   }
   .const-wrap::after{
-    /* a whisper of warm edge tint on the right to feel “contained”, not boxed */
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background:
-      linear-gradient(90deg, transparent 0%, var(--const-edge-tint) 96%, transparent 100%);
+    background:linear-gradient(90deg, transparent 0%, var(--const-edge-tint) 96%, transparent 100%);
     opacity:var(--const-grid-sheen-a);
   }
 
@@ -226,7 +221,7 @@
     border:1px solid rgba(230,195,107,.25)
   }
 
-  /* SECTION 2 (unchanged styles; background is transparent via rule above) */
+  /* SECTION 2 (content styles unchanged; background is transparent via rule above) */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate;}
   .section .inner{margin:0 auto}
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
@@ -543,27 +538,10 @@
     const c = document.getElementById("constFx");
     if (!wrap || !c) return;
 
-    /* === TUNING KNOBS (unchanged) === */
     const KNOBS_DEFAULT = {
-      nodes: {
-        count: 42,
-        linkRadius: 110,
-        linkAlphaBase: 0.08,
-        linkAlphaBoost: 0.22
-      },
-      highlights: {
-        regionLeft: 0.55,
-        regionTop:  0.08,
-        regionBottom: 0.90
-      },
-      cards: {
-        safeLeft: 0.60,
-        safeRight: 0.03,
-        safeTop: 0.10,
-        safeBottom: 0.22,
-        jitter: 14,
-        spacing: 26
-      },
+      nodes: { count: 42, linkRadius: 110, linkAlphaBase: 0.08, linkAlphaBoost: 0.22 },
+      highlights: { regionLeft: 0.55, regionTop: 0.08, regionBottom: 0.90 },
+      cards: { safeLeft: 0.60, safeRight: 0.03, safeTop: 0.10, safeBottom: 0.22, jitter: 14, spacing: 26 },
       legendAvoidancePx: 14
     };
     const KNOBS = (window.CONST_KNOBS = Object.assign({}, KNOBS_DEFAULT, window.CONST_KNOBS||{}));
@@ -572,7 +550,7 @@
         if(patch[k]) KNOBS[k] = Object.assign({}, KNOBS[k], patch[k]);
       });
       Object.keys(patch).forEach(k=>{
-        if(!["nodes","highlights","cards"].includes(k)) KNOBS[k]=patch[k]);
+        if(!["nodes","highlights","cards"].includes(k)) KNOBS[k] = patch[k];
       });
       reset();
     };
@@ -603,7 +581,7 @@
       c.style.width=W+"px"; c.style.height=H+"px";
       ctx.setTransform(DPR,0,0,DPR,0,0);
 
-      // ----- nodes (as before) -----
+      // nodes
       const N = KNOBS.nodes.count; nodes = [];
       for (let i=0;i<N;i++){
         const x = 0.20 + Math.random()*0.78;
@@ -616,7 +594,7 @@
       const anchor = { x: 0.18*W, y: 0.52*H };
       nodes.unshift({x:anchor.x, y:anchor.y, s:1.8, vx:0, vy:0, anchor:true });
 
-      // ----- right-band highlights -----
+      // highlights (right band)
       const hr = KNOBS.highlights;
       const candidates = nodes.filter(n =>
         !n.anchor &&
