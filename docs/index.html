@@ -185,7 +185,13 @@
     /* Big stacked CTAs for quick taps */
     .actions{ justify-content:center; width:100%; }
     .actions.show-mobile{ flex-direction:column; gap:12px; }
-    .actions.show-mobile .btn{ width:100%; padding:16px 20px; } /* bigger targets */
+    /* Center button label on mobile */
+    .actions.show-mobile .btn{
+      width:100%;
+      padding:16px 20px;
+      justify-content:center;   /* <— centers the text inside the flex button */
+      text-align:center;        /* helpful if the label wraps to 2 lines */
+    }
   }
 
   /* Reduced motion */
