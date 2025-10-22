@@ -61,7 +61,7 @@
       COPY_SEO_HTML:
         '<h3>Who needs packaging right now?</h3>\
          <p>Our <b>Right-Time Score</b> finds buyers in an active window to purchase — not just “interested.”\
-         deadlines and events, last-72-hour Back-to-Back Search, and operations clocks\
+         deadlines and events, last-72-hour Back-to-Back Search, operations clocks\
          like PO due dates and stockouts - (and 118 more & counting). It’s built for queries like “<i>rush packaging</i>,” “<i>need boxes by Friday</i>,”\
          and “<i>trade-show packaging ASAP</i>," and etc. We surface accounts where timing — not just loyalty — says “go now.”</p>',
 
