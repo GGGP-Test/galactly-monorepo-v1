@@ -25,9 +25,28 @@
     --ctaText:#1b1405;
     --zone-dark:#070b11;
 
-    /* New: consistent desktop container + gutters */
     --container-max: clamp(1100px, 86vw, 1320px);
     --gutter: clamp(16px, 4vw, 40px);
+
+    /* ===== Desktop constellation “container-ish” knobs ===== */
+    --const-radius: 18px;               /* corner radius of right panel */
+    --const-stroke-w: 1px;              /* inner stroke width */
+    --const-stroke-a: .06;              /* inner stroke alpha (white) */
+    --const-vignette-a: .18;            /* edge darkening (inset shadow) */
+    --const-drop-a: .14;                /* outer drop shadow strength */
+    --const-edge-tint: rgba(230,195,107,.05); /* warm edge tint */
+    --const-grid-sheen-a: .05;          /* faint right-edge sheen */
+
+    /* Mini cards (still very subtle) */
+    --miniCard-radius: 12px;
+    --miniCard-bg: rgba(12,18,28,.86);
+    --miniCard-blur: 6px;
+    --miniCard-stroke-a: .08;
+    --miniCard-shadow-a: .30;
+
+    /* Legend typography knobs */
+    --legend-fs: 12px;
+    --legend-color: #a8bacb;
   }
 
   *{box-sizing:border-box}
@@ -39,29 +58,21 @@
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* ---------------- DESKTOP: crisp stack on a shared container ---------------- */
+  /* ---------------- DESKTOP ---------------- */
   @media (min-width:901px){
-    /* no global background blend on desktop */
-    body::before{content:none !important;}
-    .hero::after{content:none !important;}
+    body::before{content:none!important}
+    .hero::after{content:none!important}
 
-    /* align all sections to the same rails */
     .site-header .inner,
     .hero-grid,
-    .section .inner{
-      max-width:var(--container-max);
-      width:100%;
-      margin-inline:auto;
-    }
+    .section .inner{max-width:var(--container-max);width:100%;margin-inline:auto}
 
-    /* section surfaces get their own background so nothing underlaps */
-    .section{background:linear-gradient(180deg,#0b121a 0%, #0a0e14 100%);}
+    .section{background:linear-gradient(180deg,#0b121a 0%, #0a0e14 100%)}
 
-    /* disable cross-section blend helpers on desktop */
-    .blend-up::before, .blend-down::after{content:none !important;}
+    .blend-up::before,.blend-down::after{content:none!important}
   }
 
-  /* ---------------- MOBILE: keep your approved continuous fade ---------------- */
+  /* ---------------- MOBILE (unchanged) ---------------- */
   @media (max-width:900px){
     body::before{
       content:"";
@@ -76,7 +87,6 @@
           rgba(10,14,20,.86) 72%,
           var(--zone-dark) 100%);
     }
-    /* gentle bridge under hero on mobile only */
     .hero::after{
       content:"";
       position:absolute; left:0; right:0; bottom:-24svh; height:48svh;
@@ -162,23 +172,56 @@
   .btn.ghost{background:transparent;color:#cfe0ee;border-color:var(--stroke)}
   .btn.ghost:hover{border-color:#284560}
 
-  /* Constellation (desktop) */
+  /* ============ DESKTOP CONSTELLATION PANEL (right side) ============ */
   .const-wrap{
-    position:relative;isolation:isolate;height:520px;border-radius:18px;overflow:hidden;
-    background:linear-gradient(180deg,#0b121d,#0b1119)
+    position:relative; isolation:isolate; height:520px;
+    border-radius:var(--const-radius);
+    overflow:hidden;
+    background:linear-gradient(180deg,#0b121d,#0b1119);
+    filter: drop-shadow(0 10px 24px rgba(0,0,0,var(--const-drop-a)));
   }
-  #constFx{position:absolute;inset:0;z-index:0}
-  .const-legend{position:absolute;inset:auto 12px 12px auto;z-index:2;font-size:12px;color:#a8bacb;
-    background:rgba(255,255,255,.03);border:1px solid var(--stroke);padding:6px 8px;border-radius:10px}
-  .miniCard{position:absolute;z-index:2;min-width:170px;max-width:220px;padding:10px 12px;border-radius:12px;
-    background:rgba(12,18,28,.86);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.08);
-    box-shadow:0 8px 24px rgba(0,0,0,.35);transform:translate(-50%,-50%);pointer-events:none}
+  .const-wrap::before{
+    /* subtle inner stroke + vignette */
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    box-shadow:
+      inset 0 0 0 var(--const-stroke-w) rgba(255,255,255,var(--const-stroke-a)),
+      inset 0 0 60px rgba(0,0,0,var(--const-vignette-a));
+  }
+  .const-wrap::after{
+    /* a whisper of warm edge tint on the right to feel “contained”, not boxed */
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background:
+      linear-gradient(90deg, transparent 0%, var(--const-edge-tint) 96%, transparent 100%);
+    opacity:var(--const-grid-sheen-a);
+  }
+
+  #constFx{position:absolute; inset:0; z-index:0}
+  .const-legend{
+    position:absolute; inset:auto 12px 12px auto; z-index:2;
+    font-size:var(--legend-fs); color:var(--legend-color);
+    background:rgba(255,255,255,.03); border:1px solid var(--stroke);
+    padding:6px 8px; border-radius:10px
+  }
+  .miniCard{
+    position:absolute; z-index:2; min-width:170px; max-width:220px;
+    padding:10px 12px; border-radius:var(--miniCard-radius);
+    background:var(--miniCard-bg);
+    -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
+    border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
+    box-shadow:0 8px 24px rgba(0,0,0,var(--miniCard-shadow-a));
+    transform:translate(-50%,-50%); pointer-events:none
+  }
   .miniCard .k{font-size:11px;color:#9bb2c8}
   .miniCard .v{font-weight:700}
-  .domainTag{position:absolute;z-index:2;left:14px;top:14px;padding:6px 10px;border-radius:999px;font-size:12px;
-    background:rgba(230,195,107,.12);color:var(--gold-300);border:1px solid rgba(230,195,107,.25)}
 
-  /* SECTION 2 */
+  .domainTag{
+    position:absolute; z-index:2; left:14px; top:14px;
+    padding:6px 10px; border-radius:999px; font-size:12px;
+    background:rgba(230,195,107,.12); color:var(--gold-300);
+    border:1px solid rgba(230,195,107,.25)
+  }
+
+  /* SECTION 2 (unchanged) */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate;}
   .section .inner{margin:0 auto}
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
@@ -194,9 +237,8 @@
   .kpi .num{font-weight:800;font-size:clamp(22px,6vw,36px);line-height:1.05;
     background:linear-gradient(180deg,var(--gold-300),var(--gold-700));-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px}
   .kpi .hint{font-size:12px;color:#7fa1b9;margin-top:6px}
-  .btn.small{padding:10px 14px;font-size:14px}
 
-  /* ---------- MOBILE-ONLY visual tweaks kept from last pass ---------- */
+  /* ---------- MOBILE KEEP-AS-IS ---------- */
   @media (max-width:900px){
     .const-wrap{display:none}
     .hero{min-height:92svh; padding:calc(60px + env(safe-area-inset-top, 10px)) 16px 28px;}
@@ -217,7 +259,6 @@
     .btn{transition:none}
   }
 
-  /* Helpers for per-viewport content */
   .show-desktop{display:block}
   .show-mobile{display:none}
   @media (max-width:900px){
@@ -288,22 +329,28 @@
 
         <!-- Desktop actions -->
         <div class="actions show-desktop" id="get-started-desktop">
-          <button id="cta-desktop" type="button" class="btn primary">✨ START FOR FREE</button>
-          <a href="https://www.youtube.com" class="btn ghost" target="_blank" rel="noopener">▶︎ GET A DEMO</a>
+          <button id="cta-desktop" type="button" class="btn primary">✨ Get qualified leads free</button>
+          <a href="https://www.youtube.com" class="btn ghost" target="_blank" rel="noopener">▶︎ Watch 60-sec demo</a>
         </div>
 
         <!-- Mobile actions -->
         <div class="actions show-mobile" id="get-started">
-          <button id="cta" type="button" class="btn primary">START FOR FREE</button>
-          <a href="https://www.youtube.com" class="btn ghost" target="_blank" rel="noopener">▶︎ GET A DEMO</a>
+          <button id="cta" type="button" class="btn primary">Get a demo</button>
+          <a href="https://www.youtube.com" class="btn ghost" target="_blank" rel="noopener">▶︎ Watch 60-sec demo</a>
         </div>
       </div>
 
       <!-- Constellation (desktop only) -->
       <div class="const-wrap" aria-hidden="true">
-        <span class="domainTag" id="domainTag">YourCompany.com</span>
+        <!-- domain pill -->
+        <span class="domainTag" id="domainTag">yourcompany.com</span>
+
         <canvas id="constFx"></canvas>
-        <div class="const-legend">Your Website → Signal → Score → Buyers</div>
+
+        <!-- workflow legend (Score -> Timing) -->
+        <div class="const-legend">Your Website → Signal → <strong>Timing</strong> → Buyers</div>
+
+        <!-- sample cards (positions set by JS) -->
         <div class="miniCard" id="cardA"><div class="k">Buyer</div><div class="v" id="cardA_name">Acme Drinks Co.</div><div class="k">City</div><div class="v" id="cardA_city">Chicago, IL</div></div>
         <div class="miniCard" id="cardB"><div class="k">Buyer</div><div class="v" id="cardB_name">Northstar Foods</div><div class="k">City</div><div class="v" id="cardB_city">Dallas, TX</div></div>
         <div class="miniCard" id="cardC"><div class="k">Buyer</div><div class="v" id="cardC_name">Atlas Beauty</div><div class="k">City</div><div class="v" id="cardC_city">Toronto, ON</div></div>
@@ -332,7 +379,6 @@
 
   <!-- SECTION 3 – Process -->
   <div id="section-process"></div>
-
   <!-- SECTION 4 – Orbit -->
   <div id="section-orbit"></div>
 
@@ -347,7 +393,7 @@
   const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
   const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
 
-  /* ------- Build modal ------- */
+  /* ------- Build modal (unchanged) ------- */
   const modal = $("#modal");
   modal.innerHTML = `
     <div class="card" role="document">
@@ -454,7 +500,8 @@
   function syncDomain(){
     const d=domainFromEmail(emailEl.value);
     if (d) hostEl.value=d;
-    const tag=$("#domainTag"); if (tag && (d || hostEl.value)) tag.textContent = d || hostEl.value || "YourCompany.com";
+    const tag=document.getElementById("domainTag");
+    if (tag){ tag.textContent = d || hostEl.value || "yourcompany.com"; }
   }
   emailEl && emailEl.addEventListener("input",syncDomain);
   emailEl && emailEl.addEventListener("change",syncDomain);
@@ -470,7 +517,7 @@
     }
   });
 
-  /* ------- Hero aurora ------- */
+  /* ------- Hero aurora (unchanged) ------- */
   const fx = document.getElementById("heroFx");
   const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (fx && !noMotion){
@@ -504,6 +551,48 @@
     const wrap = document.querySelector(".const-wrap");
     const c = document.getElementById("constFx");
     if (!wrap || !c) return;
+
+    /* === TUNING KNOBS (JS) ===========================================
+       Change these live via the console:
+         updateConstKnobs({ cards: { safeLeft:.60, jitter:8 } })
+       ================================================================= */
+    const KNOBS_DEFAULT = {
+      // nodes rendering (background graph)
+      nodes: {
+        count: 42,
+        linkRadius: 110,
+        linkAlphaBase: 0.08,
+        linkAlphaBoost: 0.22
+      },
+      // highlight pick region (where we choose nodes to “feature”)
+      highlights: {
+        regionLeft: 0.55,   // only pick nodes with x > W*regionLeft
+        regionTop:  0.08,
+        regionBottom: 0.90
+      },
+      // card placement “safe zone” on the right side
+      cards: {
+        safeLeft: 0.60,     // left boundary (% of width)
+        safeRight: 0.03,    // right margin
+        safeTop: 0.10,      // keep away from top rounded corner
+        safeBottom: 0.22,   // keep away from bottom + legend
+        jitter: 14,         // px max random offset applied to each card
+        spacing: 26         // px minimal separation between cards
+      },
+      legendAvoidancePx: 14 // additional clearance above legend box
+    };
+    const KNOBS = (window.CONST_KNOBS = Object.assign({}, KNOBS_DEFAULT, window.CONST_KNOBS||{}));
+    window.updateConstKnobs = (patch={})=>{
+      // deep-ish merge for cards/highlights/nodes
+      ["nodes","highlights","cards"].forEach(k=>{
+        if(patch[k]) KNOBS[k] = Object.assign({}, KNOBS[k], patch[k]);
+      });
+      Object.keys(patch).forEach(k=>{
+        if(!["nodes","highlights","cards"].includes(k)) KNOBS[k]=patch[k];
+      });
+      reset();
+    };
+
     const cards = [{ el: $("#cardA") },{ el: $("#cardB") },{ el: $("#cardC") }];
     const cardData = [
       { name:"Acme Drinks Co.", city:"Chicago, IL" },
@@ -512,10 +601,15 @@
       { name:"Cygnet Petcare", city:"Portland, OR" },
       { name:"Volt Homecare", city:"Denver, CO" },
     ];
+
     const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
     const ctx = c.getContext("2d");
     let W=0,H=0, nodes=[], highlights=[], t=0;
+
     const noMotion2 = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function rand(min,max){ return min + Math.random()*(max-min); }
+    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
 
     function reset(){
       const rect = wrap.getBoundingClientRect();
@@ -525,9 +619,10 @@
       c.style.width=W+"px"; c.style.height=H+"px";
       ctx.setTransform(DPR,0,0,DPR,0,0);
 
-      const N = 42; nodes = [];
+      // ----- nodes (full canvas; not constrained) -----
+      const N = KNOBS.nodes.count; nodes = [];
       for (let i=0;i<N;i++){
-        const x = 0.28 + Math.random()*0.68;
+        const x = 0.20 + Math.random()*0.78;
         const y = 0.06 + Math.random()*0.88;
         const s = 0.15 + Math.random()*0.85;
         const vx = (Math.random()-0.5) * 0.18;
@@ -537,18 +632,79 @@
       const anchor = { x: 0.18*W, y: 0.52*H };
       nodes.unshift({x:anchor.x, y:anchor.y, s:1.8, vx:0, vy:0, anchor:true });
 
-      const candidates = nodes.filter(n=>!n.anchor && n.x>W*0.52);
+      // ----- highlight candidates only in the right band -----
+      const hr = KNOBS.highlights;
+      const candidates = nodes.filter(n =>
+        !n.anchor &&
+        n.x > W*hr.regionLeft &&
+        n.y > H*hr.regionTop &&
+        n.y < H*hr.regionBottom
+      );
       highlights = [];
       for (let i=0;i<3;i++){
-        const n = candidates[Math.floor(Math.random()*candidates.length)];
-        if (!n) break; highlights.push(n);
-        const idx = candidates.indexOf(n); if (idx>=0) candidates.splice(idx,1);
+        const n = candidates[(Math.random()*candidates.length)|0];
+        if (!n) break;
+        highlights.push(n);
       }
+
+      placeCards();
+      draw(); // initial paint
+    }
+
+    function placeCards(){
+      // compute safe rect for cards (right side) + avoid legend
+      const cs = KNOBS.cards;
+      const safe = {
+        left:  W*cs.safeLeft,
+        top:   H*cs.safeTop,
+        right: W*(1 - cs.safeRight),
+        bottom:H*(1 - cs.safeBottom)
+      };
+      // avoid legend area precisely
+      const legend = wrap.querySelector(".const-legend");
+      if (legend){
+        const lr = legend.getBoundingClientRect();
+        const wr = wrap.getBoundingClientRect();
+        const legendTop = lr.top - wr.top;
+        safe.bottom = Math.min(safe.bottom, legendTop - KNOBS.legendAvoidancePx);
+      }
+
+      // helper: ensure new position doesn't overlap previous cards
+      const placed = [];
+      function nonOverlapping(x,y,w,h){
+        const pad = KNOBS.cards.spacing;
+        return placed.every(p => Math.abs(p.x - x) > (p.w/2 + w/2 + pad) || Math.abs(p.y - y) > (p.h/2 + h/2 + pad));
+      }
+
+      // choose target points near highlights, then clamp into safe rect
       const pts = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
       pts.forEach((p, i)=>{
         const el = cards[i]?.el; if (!el) return;
-        el.style.left = (p.x + (i===1? -24: 18)) + "px";
-        el.style.top  = (p.y + (i===2?  24: -18)) + "px";
+        const rect = el.getBoundingClientRect();
+        const w = rect.width || 190, h = rect.height || 96;
+
+        // base position: around highlight but nudged right; then clamp to safe zone
+        const jitter = KNOBS.cards.jitter;
+        let x = (p?.x ?? (safe.left + (i+1)/4*(safe.right-safe.left))) + (i===1? -12: 12) + rand(-jitter,jitter);
+        let y = (p?.y ?? (safe.top + (i+1)/4*(safe.bottom-safe.top))) + (i===2?  14: -10) + rand(-jitter,jitter);
+
+        // hard clamp into safe rectangle
+        const halfW=w/2, halfH=h/2;
+        x = clamp(x, safe.left + halfW, safe.right - halfW);
+        y = clamp(y, safe.top + halfH, safe.bottom - halfH);
+
+        // jitter until non-overlapping (few tries)
+        let tries=0;
+        while(!nonOverlapping(x,y,w,h) && tries<18){
+          x = clamp(x + rand(-jitter,jitter), safe.left + halfW, safe.right - halfW);
+          y = clamp(y + rand(-jitter,jitter), safe.top + halfH, safe.bottom - halfH);
+          tries++;
+        }
+        placed.push({x,y,w,h});
+        el.style.left = x+"px";
+        el.style.top  = y+"px";
+
+        // rotate sample content a bit for variation
         const d = cardData[(Math.random()*cardData.length)|0];
         const vs = el.querySelectorAll(".v");
         if (vs[0]) vs[0].textContent = d.name;
@@ -564,19 +720,17 @@
         if (n.y < 0) n.y = H; if (n.y > H) n.y = 0;
       }
     }
+
     function draw(){
       ctx.clearRect(0,0,W,H);
-      const grad = ctx.createLinearGradient(0,0,W,H);
-      grad.addColorStop(0, "rgba(230,195,107,0.06)"); grad.addColorStop(1, "rgba(230,195,107,0.0)");
-      ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
-      const R = 110;
+      const R = KNOBS.nodes.linkRadius;
       for (let i=0;i<nodes.length;i++){
         const a = nodes[i];
         for (let j=i+1;j<nodes.length;j++){
           const b = nodes[j];
           const dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
           if (d2 < R*R){
-            const aLine = 0.08 + 0.22*(1 - Math.sqrt(d2)/R);
+            const aLine = KNOBS.nodes.linkAlphaBase + KNOBS.nodes.linkAlphaBoost*(1 - Math.sqrt(d2)/R);
             ctx.strokeStyle=`rgba(230,195,107,${aLine})`;
             ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
           }
@@ -586,23 +740,34 @@
       const pulse = 8 + Math.sin(t*0.0022)*4;
       ctx.fillStyle="rgba(230,195,107,0.16)";
       ctx.beginPath(); ctx.arc(anchor.x, anchor.y, 24+pulse, 0, Math.PI*2); ctx.fill();
-      highlights.forEach(h=>{ ctx.strokeStyle="rgba(242,220,160,0.9)"; ctx.lineWidth=1.6;
-        ctx.beginPath(); ctx.moveTo(anchor.x,anchor.y); ctx.lineTo(h.x,h.y); ctx.stroke(); });
+
+      // soft focus gradient
+      const grad = ctx.createLinearGradient(0,0,W,H);
+      grad.addColorStop(0, "rgba(230,195,107,0.06)");
+      grad.addColorStop(1, "rgba(230,195,107,0.0)");
+      ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+
       for (const n of nodes){
         const r = n.anchor ? 4 : Math.max(1,1.2*n.s);
         ctx.fillStyle = n.anchor ? "rgba(242,220,160,0.95)" : "rgba(230,195,107,0.75)";
         ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2); ctx.fill();
       }
     }
+
     function loop(now){
       if (!prev) prev=now; const dt=Math.min(33, now-prev)*0.06; prev=now; t+=dt;
       step(noMotion2?0:dt); draw(); if (!noMotion2) requestAnimationFrame(loop); else draw();
     }
     let prev=0; reset(); loop(0); addEventListener("resize", reset);
-    try{ const d=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host; if (d) { const tag=$("#domainTag"); if (tag) tag.textContent=d; } }catch{}
+
+    // domain pill: prefer LS, else default to yourcompany.com
+    try{
+      const d=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host;
+      const tag=$("#domainTag"); if (tag) tag.textContent=d || "yourcompany.com";
+    }catch{}
   })();
 
-  /* ------- Section 2 counters ------- */
+  /* ------- Section 2 counters (unchanged) ------- */
   (function(){
     const section = document.getElementById("proof"); if (!section) return;
     const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -624,7 +789,7 @@
 </script>
 
 <script>
-/* header hamburger */
+/* header hamburger (unchanged) */
 (function(){
   const burger = document.getElementById('burger');
   const menu = document.getElementById('mobileMenu');
