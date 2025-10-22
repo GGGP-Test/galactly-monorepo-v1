@@ -24,6 +24,10 @@
     --gold:#e6c36b; --gold-700:#b8913d; --gold-300:#f2dca0;
     --ctaText:#1b1405;
     --zone-dark:#070b11;
+
+    /* New: consistent desktop container + gutters */
+    --container-max: clamp(1100px, 86vw, 1320px);
+    --gutter: clamp(16px, 4vw, 40px);
   }
 
   *{box-sizing:border-box}
@@ -35,15 +39,24 @@
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* ---------------- DESKTOP: crisp stack, no page-wide blend ---------------- */
+  /* ---------------- DESKTOP: crisp stack on a shared container ---------------- */
   @media (min-width:901px){
-    /* kill any global background layer on desktop */
+    /* no global background blend on desktop */
     body::before{content:none !important;}
-    /* no hero->section bridge on desktop (clear handoff) */
     .hero::after{content:none !important;}
+
+    /* align all sections to the same rails */
+    .site-header .inner,
+    .hero-grid,
+    .section .inner{
+      max-width:var(--container-max);
+      width:100%;
+      margin-inline:auto;
+    }
+
     /* section surfaces get their own background so nothing underlaps */
     .section{background:linear-gradient(180deg,#0b121a 0%, #0a0e14 100%);}
-    .section .inner{position:relative; z-index:1;}
+
     /* disable cross-section blend helpers on desktop */
     .blend-up::before, .blend-down::after{content:none !important;}
   }
@@ -72,17 +85,22 @@
     }
   }
 
-  /* HEADER (unchanged) */
-  .site-header{position:fixed; inset:0 0 auto 0; height:60px; z-index:50; display:grid; place-items:center;
+  /* HEADER */
+  .site-header{
+    position:fixed; inset:0 0 auto 0; height:60px; z-index:50; display:grid; place-items:center;
     background:rgba(12,18,28,.38);
     -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%);
-    border-bottom:1px solid rgba(255,255,255,.06)}
-  .site-header .inner{width:100%; max-width:1140px; padding:0 16px;
-    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px}
+    border-bottom:1px solid rgba(255,255,255,.06)
+  }
+  .site-header .inner{
+    width:100%;
+    padding:0 var(--gutter);
+    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px
+  }
   .brand{display:flex; align-items:center; gap:10px}
   .brand-badge{width:28px;height:28px;border-radius:8px;background:linear-gradient(180deg,var(--gold),var(--gold-700));
     box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px}
-  nav#nav-primary{display:flex; justify-content:center; align-items:center; gap:18px}
+  nav#nav-primary{display:flex; justify-content:center; align-items:center; gap:22px}
   .nav-link{position:relative; display:inline-block; padding:8px 2px; font-weight:600; color:#cfe0ee; opacity:.92}
   .nav-link::after{content:""; position:absolute; left:50%; bottom:4px; height:1px; width:0;
     background:linear-gradient(90deg,var(--gold-300),var(--gold-700)); transform:translateX(-50%); transition:width .18s}
@@ -119,10 +137,17 @@
   #mobileMenu .sheet hr{border:0; border-top:1px solid var(--stroke); margin:8px 0}
 
   /* HERO */
-  .hero{position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
-    padding:calc(5rem + 30px) 1.25rem 5rem;overflow:hidden; isolation:isolate;}
+  .hero{
+    position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
+    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate;
+  }
   #heroFx{position:absolute;inset:-10% -10% -10% -10%;z-index:0;filter:saturate(110%) blur(.2px)}
-  .hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:1.15fr 1fr;gap:40px;align-items:center;max-width:1140px;width:100%}
+  .hero-grid{
+    position:relative;z-index:1;display:grid;align-items:center;
+    grid-template-columns:1.12fr 1fr;
+    gap:clamp(28px, 4vw, 48px);
+    width:100%;
+  }
   @media (max-width:900px){.hero-grid{grid-template-columns:1fr;gap:18px}}
   .hero-copy{max-width:680px}
   .badge{display:inline-block;margin-bottom:12px;padding:6px 10px;border-radius:999px;
@@ -138,7 +163,10 @@
   .btn.ghost:hover{border-color:#284560}
 
   /* Constellation (desktop) */
-  .const-wrap{position:relative;isolation:isolate;height:520px;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,#0b121d,#0b1119)}
+  .const-wrap{
+    position:relative;isolation:isolate;height:520px;border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,#0b121d,#0b1119)
+  }
   #constFx{position:absolute;inset:0;z-index:0}
   .const-legend{position:absolute;inset:auto 12px 12px auto;z-index:2;font-size:12px;color:#a8bacb;
     background:rgba(255,255,255,.03);border:1px solid var(--stroke);padding:6px 8px;border-radius:10px}
@@ -151,8 +179,8 @@
     background:rgba(230,195,107,.12);color:var(--gold-300);border:1px solid rgba(230,195,107,.25)}
 
   /* SECTION 2 */
-  .section{padding:72px 16px; isolation:isolate;}
-  .section .inner{max-width:1140px;margin:0 auto}
+  .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate;}
+  .section .inner{margin:0 auto}
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
   .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
   .section-hd .sub{color:var(--muted);font-size:14px}
