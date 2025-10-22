@@ -399,7 +399,7 @@
     const top  = b.top  + H * C().COPY_TOP_RATIO  + C().COPY_NUDGE_Y;
     const html = `
       <h3>Who buys packaging?</h3>
-      <p>Our <b>Intent Score</b> inside our olympiad-grade math structure + multiple LLM reasoning structure finds accounts most likely to purchase in the next cycle.
+      <p>Our <b>Intent Score</b> inside our olympiad-grade math structure + multiple LLM reasoning finds accounts most likely to purchase in the next cycle.
       We weight and score <b>existing</b> metrics from your website (we build them for you), and match them with outside metrics like RFQ/RFP language,
       new locations/events/trade shows activities, new product launches & shelf openings at big wholesales - (38 more metrics & counting), then surface the prospects your team should contact.</p>`;
     if (typeof ctx.mountCopy === "function"){
