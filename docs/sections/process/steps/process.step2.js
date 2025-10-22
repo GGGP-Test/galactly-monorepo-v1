@@ -62,7 +62,7 @@
         '<h3>Who needs packaging right now?</h3>\
          <p>Our <b>Right-Time Score</b> finds buyers in an active window to purchase — not just “interested.”\
          Artemis-B (v2) + <b>SPHERE-1</b> math + <b>SPHERE-2</b> LLM signals are orchestrated by <b>SPHERE-3</b>\
-         to weight <b>fresh</b> triggers: deadlines and events, last-72-hour intent bursts, and operations clocks\
+         to weight <b>fresh</b> triggers: deadlines and events, last-72-hour Back-to-Back Search, and operations clocks\
          like PO due dates and stockouts. It’s built for queries like “<i>rush packaging</i>,” “<i>need boxes by Friday</i>,”\
          and “<i>trade-show packaging ASAP</i>.” We surface accounts where timing — not just loyalty — says “go now.”</p>',
 
