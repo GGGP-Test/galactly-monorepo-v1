@@ -60,19 +60,39 @@
     background:linear-gradient(180deg,var(--gold),var(--gold-700));
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
 
-  /* Hamburger (mobile only) */
-  .hamburger{display:none; justify-self:end; width:42px; height:42px; border-radius:12px;
-    border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04);
-    -webkit-backdrop-filter:blur(10px) saturate(140%); backdrop-filter:blur(10px) saturate(140%);
-    position:relative}
-  .hamburger span{position:absolute; left:10px; right:10px; height:2px; background:#ddeaef; border-radius:2px;
-    top:14px; transition:transform .25s ease, top .25s ease, opacity .2s ease}
-  .hamburger span:nth-child(2){top:20px}
-  .hamburger span:nth-child(3){top:26px}
-  .hamburger[aria-expanded="true"] span:nth-child(1){top:20px; transform:rotate(45deg)}
-  .hamburger[aria-expanded="true"] span:nth-child(2){opacity:0}
-  .hamburger[aria-expanded="true"] span:nth-child(3){top:20px; transform:rotate(-45deg)}
-
+    /* Hamburger (mobile only) — minimal two-line icon */
+    .hamburger{
+      display:none;            /* shown by media query below 900px */
+      justify-self:end;
+      position:relative;
+      width:34px; height:34px; /* good tap target */
+      padding:0;
+      background:none; border:none;
+      color:var(--gold-300);   /* uses your gold; tweak here if you want */
+      cursor:pointer;
+    }
+    @media (hover:hover){ .hamburger:hover{ color:var(--gold); } }  /* subtle brighten */
+    .hamburger:focus-visible{ outline:2px solid var(--gold-700); outline-offset:4px; }
+    
+    .hamburger span{
+      position:absolute; left:2px; right:2px; height:2px;
+      top:11px; border-radius:2px; background:currentColor;
+      transition:transform .25s ease, top .25s ease, opacity .2s ease;
+    }
+    /* second line */
+    .hamburger span:nth-child(2){ top:21px; }
+    
+    /* morph to X when open */
+    .hamburger[aria-expanded="true"] span{ top:17px; }
+    .hamburger[aria-expanded="true"] span:nth-child(1){ transform:rotate(45deg); }
+    .hamburger[aria-expanded="true"] span:nth-child(2){ transform:rotate(-45deg); }
+    
+    /* keep existing media rule that shows the button on mobile */
+    @media (max-width:900px){
+      nav#nav-primary, .nav-actions{ display:none; }
+      .hamburger{ display:inline-block; }
+    }
+    
   /* Mobile glass menu */
   #mobileMenu{position:fixed; inset:0; z-index:55; display:grid; background:rgba(5,8,12,.35);
     -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); opacity:0; pointer-events:none; transition:opacity .18s ease}
@@ -174,8 +194,10 @@
       </div>
 
       <!-- Mobile hamburger -->
-      <button id="burger" class="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
-        <span></span><span></span><span></span>
+      <button id="burger" class="hamburger"
+        aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
       </button>
     </div>
   </header>
