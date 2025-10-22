@@ -19,9 +19,9 @@
 <!--
   index.html (Landing + Onboarding Steps 1–2)
   - Transparent header (no stripe), centered nav, logo-only
-  - Gold aurora background in hero
-  - Right-side "Lead Constellation"
-  - CTA opens modal (steps 1–2), then redirect to step3.html
+  - Gold aurora background in hero (desktop only)
+  - Right-side "Lead Constellation" (desktop only)
+  - Mobile hero = minimal, two-tone headline, two CTAs
 -->
 <style>
   :root{
@@ -29,6 +29,7 @@
     --text:#e9f1f7; --muted:#91a6b8;
     --gold:#e6c36b; --gold-700:#b8913d; --gold-300:#f2dca0;
     --ctaText:#1b1405;
+    --accent: var(--gold-300); /* mobile headline accent */
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
@@ -41,7 +42,12 @@
     background:rgba(12,18,28,.38);
     -webkit-backdrop-filter:blur(12px) saturate(140%);
     backdrop-filter:blur(12px) saturate(140%);
-    border-bottom:1px solid rgba(255,255,255,.06)}
+    border-bottom:1px solid rgba(255,255,255,.06); transition:background .18s ease,border-color .18s ease}
+  /* Mobile: feel “invisible” at top, then glass on scroll */
+  @media (max-width:900px){
+    .site-header{ background:transparent; border-bottom-color:transparent }
+    .site-header.scrolled{ background:rgba(12,18,28,.38); border-bottom-color:rgba(255,255,255,.06) }
+  }
   .site-header .inner{width:100%; max-width:1140px; padding:0 16px;
     display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px}
   .brand{display:flex; align-items:center; gap:10px}
@@ -60,39 +66,22 @@
     background:linear-gradient(180deg,var(--gold),var(--gold-700));
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
 
-    /* Hamburger (mobile only) — minimal two-line icon */
-    .hamburger{
-      display:none;            /* shown by media query below 900px */
-      justify-self:end;
-      position:relative;
-      width:34px; height:34px; /* good tap target */
-      padding:0;
-      background:none; border:none;
-      color:var(--gold-300);   /* uses your gold; tweak here if you want */
-      cursor:pointer;
-    }
-    @media (hover:hover){ .hamburger:hover{ color:var(--gold); } }  /* subtle brighten */
-    .hamburger:focus-visible{ outline:2px solid var(--gold-700); outline-offset:4px; }
-    
-    .hamburger span{
-      position:absolute; left:2px; right:2px; height:2px;
-      top:11px; border-radius:2px; background:currentColor;
-      transition:transform .25s ease, top .25s ease, opacity .2s ease;
-    }
-    /* second line */
-    .hamburger span:nth-child(2){ top:21px; }
-    
-    /* morph to X when open */
-    .hamburger[aria-expanded="true"] span{ top:17px; }
-    .hamburger[aria-expanded="true"] span:nth-child(1){ transform:rotate(45deg); }
-    .hamburger[aria-expanded="true"] span:nth-child(2){ transform:rotate(-45deg); }
-    
-    /* keep existing media rule that shows the button on mobile */
-    @media (max-width:900px){
-      nav#nav-primary, .nav-actions{ display:none; }
-      .hamburger{ display:inline-block; }
-    }
-    
+  /* Hamburger (mobile only) — minimal two-line icon */
+  .hamburger{
+    display:none; justify-self:end; position:relative; width:34px; height:34px;
+    padding:0; background:none; border:none; color:var(--gold-300); cursor:pointer;
+  }
+  @media (hover:hover){ .hamburger:hover{ color:var(--gold); } }
+  .hamburger:focus-visible{ outline:2px solid var(--gold-700); outline-offset:4px; }
+  .hamburger span{
+    position:absolute; left:2px; right:2px; height:2px; border-radius:2px; background:currentColor;
+    top:11px; transition:transform .25s ease, top .25s ease, opacity .2s ease;
+  }
+  .hamburger span:nth-child(2){ top:21px; }
+  .hamburger[aria-expanded="true"] span{ top:17px; }
+  .hamburger[aria-expanded="true"] span:nth-child(1){ transform:rotate(45deg); }
+  .hamburger[aria-expanded="true"] span:nth-child(2){ transform:rotate(-45deg); }
+
   /* Mobile glass menu */
   #mobileMenu{position:fixed; inset:0; z-index:55; display:grid; background:rgba(5,8,12,.35);
     -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); opacity:0; pointer-events:none; transition:opacity .18s ease}
@@ -117,6 +106,7 @@
   .badge{display:inline-block;margin-bottom:12px;padding:6px 10px;border-radius:999px;
     border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--muted);font-size:12px}
   h1{font:600 clamp(34px,6vw,64px) "Newsreader", Georgia, serif;letter-spacing:.2px;margin:0 0 10px}
+  h1 .accent{color:var(--accent)}
   .lead{color:var(--muted);font-size:clamp(16px,2.6vw,19px);margin:0 0 26px}
   .actions{display:flex;gap:12px;flex-wrap:wrap}
   .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:999px;border:1px solid var(--stroke);cursor:pointer}
@@ -127,9 +117,9 @@
   .btn.ghost{background:transparent;color:#cfe0ee;border-color:var(--stroke)}
   .btn.ghost:hover{border-color:#284560}
 
-  /* Right: Lead Constellation */
+  /* Right: Lead Constellation (hidden on mobile for minimal look) */
   .const-wrap{position:relative;isolation:isolate;height:520px;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,#0b121d,#0b1119)}
-  @media (max-width:900px){.const-wrap{height:400px}}
+  @media (max-width:900px){.const-wrap{display:none}}
   #constFx{position:absolute;inset:0;z-index:0}
   .const-legend{position:absolute;inset:auto 12px 12px auto;z-index:2;font-size:12px;color:#a8bacb;
     background:rgba(255,255,255,.03);border:1px solid var(--stroke);padding:6px 8px;border-radius:10px}
@@ -167,10 +157,14 @@
     .btn{transition:none}
   }
 
-  /* Mobile layout rules for header visibility */
+  /* Mobile layout rules for header visibility + minimal hero */
   @media (max-width:900px){
     nav#nav-primary, .nav-actions{display:none}
     .hamburger{display:inline-block}
+    #heroFx{display:none} /* cleaner, darker top area */
+    .hero{min-height:88svh; padding:calc(4.2rem + 18px) 1.25rem 3.2rem}
+    .hero-copy{max-width:660px}
+    .badge{opacity:.92}
   }
 </style>
 </head>
@@ -193,7 +187,7 @@
         <a class="nav-cta" href="#get-started" id="navStart">Start Free</a>
       </div>
 
-      <!-- Mobile hamburger -->
+      <!-- Mobile hamburger (two-line) -->
       <button id="burger" class="hamburger"
         aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
         <span aria-hidden="true"></span>
@@ -220,15 +214,26 @@
     <div class="hero-grid">
       <div class="hero-copy">
         <span class="badge">Built for packaging suppliers</span>
-        <h1>Find real packaging buyers.</h1>
-        <p class="lead">We filter the noise and surface real companies already signaling intent in your strengths.</p>
+
+        <!-- Two-tone headline (concise, SEO/ChatGPT-friendly) -->
+        <h1>
+          We help packaging suppliers<br>
+          find & close <span class="accent">qualified buyers</span>.
+        </h1>
+
+        <!-- Tight, keyword-rich subcopy (no “call required”, one-stop platform) -->
+        <p class="lead">
+          One platform to capture buyer intent signals, verify companies, rank fit, and deliver
+          in-market RFQs—without cold spam or sales calls.
+        </p>
+
         <div class="actions" id="get-started">
-          <button id="cta" type="button" class="btn primary">✨ Get qualified leads free</button>
+          <button id="cta" type="button" class="btn primary">✨ Get a demo</button>
           <a href="https://www.youtube.com" class="btn ghost" target="_blank" rel="noopener">▶︎ Watch 60-sec demo</a>
         </div>
       </div>
 
-      <!-- Constellation -->
+      <!-- Constellation (desktop only; hidden on mobile by CSS) -->
       <div class="const-wrap" aria-hidden="true">
         <span class="domainTag" id="domainTag">YourCompany.com</span>
         <canvas id="constFx"></canvas>
@@ -409,10 +414,11 @@
     }
   });
 
-  // ------- hero canvas aurora -------
+  // ------- hero canvas aurora (desktop only) -------
   const fx = document.getElementById("heroFx");
   const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (fx && !noMotion){
+  const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
+  if (fx && !noMotion && !isMobile){
     const ctx = fx.getContext("2d");
     const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
     function size(){ fx.width = innerWidth*DPR; fx.height = innerHeight*DPR; }
@@ -438,8 +444,9 @@
     })();
   }
 
-  // ------- Constellation (right panel) -------
+  // ------- Constellation (right panel) — skip entirely on mobile -------
   (function(){
+    if (window.matchMedia && window.matchMedia("(max-width: 900px)").matches) return;
     const wrap = document.querySelector(".const-wrap");
     const c = document.getElementById("constFx");
     if (!wrap || !c) return;
@@ -543,37 +550,17 @@
     let prev=0; reset(); loop(0); addEventListener("resize", reset);
     try{ const d=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host; if (d) { const tag=$("#domainTag"); if (tag) tag.textContent=d; } }catch{}
   })();
-
-  // ------- Section 2 counters -------
-  (function(){
-    const section = document.getElementById("proof"); if (!section) return;
-    const hostOut = document.getElementById("proofHost");
-    try{ const seed = JSON.parse(LS.getItem("onb.seed")||"{}"); const host = seed?.host || ""; hostOut.textContent = host || "yourcompany.com"; }
-    catch{ hostOut.textContent = "yourcompany.com"; }
-    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const nums = Array.from(section.querySelectorAll(".num")); let fired=false;
-    function format(v, fmt){ if (fmt==="dec1") return v.toFixed(1); const s=Math.round(v).toString(); return s.replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-    function animate(el){
-      const to = parseFloat(el.dataset.to||"0"); const fmt = el.dataset.format||"int";
-      if (noMotion){ el.textContent = format(to, fmt); return; }
-      const dur = 1200; const start = performance.now();
-      function tick(now){ const p=Math.min(1,(now-start)/dur); const ease=1-Math.pow(1-p,3); const val=to*ease; el.textContent=format(val,fmt); if (p<1) requestAnimationFrame(tick); }
-      requestAnimationFrame(tick);
-    }
-    const io = new IntersectionObserver((entries)=>{
-      entries.forEach(e=>{ if (!fired && e.isIntersecting){ fired=true; nums.forEach(animate); io.disconnect(); }});
-    },{threshold:0.35});
-    io.observe(section);
-    const proofStart = document.getElementById("proofStart");
-    const openFromProof = ()=>{ const cta = document.getElementById("cta"); cta && cta.click(); };
-    proofStart && proofStart.addEventListener("click", openFromProof);
-  })();
 })();
 </script>
 
-<!-- Header-only JS (hamburger toggle) -->
+<!-- Header-only JS (hamburger toggle + mobile glass-on-scroll) -->
 <script>
 (function(){
+  const header = document.querySelector('.site-header');
+  function onScroll(){ if(!header) return; if (window.matchMedia('(max-width:900px)').matches){ header.classList.toggle('scrolled', window.scrollY > 6); } }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
   const burger = document.getElementById('burger');
   const menu = document.getElementById('mobileMenu');
   if(!burger || !menu) return;
@@ -606,7 +593,6 @@
 <script defer src="./sections/process/process.mobile.global.js"></script>
 
 <!-- Step scenes (load AFTER the core) -->
-<!-- If Step 1 already lives inside process.js, -->
 <script defer src="./sections/process/steps/process.step1.js"></script>
 <script defer src="./sections/process/steps/process.step2.js"></script>
 <script defer src="./sections/process/steps/process.step3.js"></script>
