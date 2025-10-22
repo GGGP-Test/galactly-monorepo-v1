@@ -398,10 +398,10 @@
     const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
     const top  = b.top  + H * C().COPY_TOP_RATIO  + C().COPY_NUDGE_Y;
     const html = `
-      <h3>Who’s ready now?</h3>
-      <p>Our <b>Time-to-Buy Intent</b> finds accounts most likely to purchase in the next cycle.
-      We weight <b>recent</b> signals like search bursts, RFQ/RFP language, visits to pricing & sample pages,
-      new locations/events/trade shows activities, new product launches, product shelf openings at big wholesales and 38 more metrics, then surface the prospects your team should contact today.</p>`;
+      <h3>Who buys packaging?</h3>
+      <p>Our <b>Intent Score</b> inside our olympiad-grade math structure + multiple LLM reasoning structure finds accounts most likely to purchase in the next cycle.
+      We weight and score <b>existing</b> metrics from your website (we build them for you), and match them with outside metrics like RFQ/RFP language, visits to pricing & sample pages,
+      new locations/events/trade shows activities, new product launches, product shelf openings at big wholesales and 38 more metrics, then surface the prospects your team should contact.</p>`;
     if (typeof ctx.mountCopy === "function"){
       const el = ctx.mountCopy({ top, left, html });
       el.style.maxWidth = `${C().COPY_MAX_W_PX}px`;
