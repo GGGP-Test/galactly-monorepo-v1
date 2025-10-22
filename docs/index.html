@@ -4,15 +4,18 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Galactly — Find real packaging buyers</title>
+<meta name="description" content="Galactly helps packaging suppliers find qualified B2B buyers. Turn website and market signals into ranked leads to grow your sales pipeline—no cold spam." />
 
-<meta name="description" content="Galactly helps packaging suppliers find qualified B2B buyers. Turn website and market signals into ranked leads to grow your sales pipeline fast—no cold spam." />
+<!-- Fonts
+  - Desktop keeps Inter + Newsreader (unchanged look)
+  - Mobile overrides to Plus Jakarta Sans for a clean, minimal feel
+-->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Section 3 (Process) styles -->
+<!-- Section styles (unchanged) -->
 <link rel="stylesheet" href="./sections/process/process.css">
-<!-- Section 4 (Orbit) styles -->
 <link rel="stylesheet" href="./sections/orbit/orbit.css">
 
 <link rel="icon" href="data:,">
@@ -23,14 +26,22 @@
     --text:#e9f1f7; --muted:#91a6b8;
     --gold:#e6c36b; --gold-700:#b8913d; --gold-300:#f2dca0;
     --ctaText:#1b1405;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-    font:16px/1.55 Inter, system-ui,-apple-system, Segoe UI, Roboto, Arial, sans-serif}
-  a{color:inherit;text-decoration:none}
-  button{font:600 16px Inter, system-ui,-apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* HEADER (glassy across all views) */
+    /* Font tokens */
+    --font-sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    --font-serif: "Newsreader", Georgia, serif;
+  }
+
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;height:100%;
+    background:var(--bg);color:var(--text);
+    font:16px/1.55 var(--font-sans);
+  }
+  a{color:inherit;text-decoration:none}
+  button{font:600 16px var(--font-sans)}
+
+  /* HEADER (glassy, unchanged) */
   .site-header{position:fixed; inset:0 0 auto 0; height:60px; z-index:50; display:grid; place-items:center;
     background:rgba(12,18,28,.38);
     -webkit-backdrop-filter:blur(12px) saturate(140%);
@@ -55,9 +66,8 @@
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
 
   /* Hamburger (mobile only) */
-  .hamburger{display:none; justify-self:end; position:relative; width:34px; height:34px;
-    background:none; border:none; color:var(--gold-300); cursor:pointer;}
-  .hamburger span{position:absolute; left:2px; right:2px; height:2px; top:11px; border-radius:2px; background:currentColor; transition:transform .25s, top .25s, opacity .2s}
+  .hamburger{display:none; justify-self:end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
+  .hamburger span{position:absolute; left:2px; right:2px; height:2px; top:11px; border-radius:2px; background:currentColor; transition:transform .25s, top .25s}
   .hamburger span:nth-child(2){ top:21px; }
   .hamburger[aria-expanded="true"] span{ top:17px; }
   .hamburger[aria-expanded="true"] span:nth-child(1){ transform:rotate(45deg); }
@@ -80,14 +90,15 @@
 
   /* HERO */
   .hero{position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
+    /* DESKTOP padding lives here — tweak if needed */
     padding:calc(5rem + 30px) 1.25rem 5rem;overflow:hidden}
   #heroFx{position:absolute;inset:-10% -10% -10% -10%;z-index:0;filter:saturate(110%) blur(.2px)}
   .hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:1.15fr 1fr;gap:40px;align-items:center;max-width:1140px;width:100%}
-  @media (max-width:900px){.hero-grid{grid-template-columns:1fr;gap:24px}}
+  @media (max-width:900px){.hero-grid{grid-template-columns:1fr;gap:18px}}
   .hero-copy{max-width:680px}
   .badge{display:inline-block;margin-bottom:12px;padding:6px 10px;border-radius:999px;
     border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--muted);font-size:12px}
-  h1{font:600 clamp(34px,6vw,64px) "Newsreader", Georgia, serif;letter-spacing:.2px;margin:0 0 10px}
+  h1{font:600 clamp(34px,6vw,64px) var(--font-serif);letter-spacing:.2px;margin:0 0 10px}
   .lead{color:var(--muted);font-size:clamp(16px,2.6vw,19px);margin:0 0 26px}
   .actions{display:flex;gap:12px;flex-wrap:wrap}
   .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:999px;border:1px solid var(--stroke);cursor:pointer}
@@ -97,9 +108,8 @@
   .btn.ghost{background:transparent;color:#cfe0ee;border-color:var(--stroke)}
   .btn.ghost:hover{border-color:#284560}
 
-  /* Right: Lead Constellation (desktop only) */
+  /* Constellation (desktop) */
   .const-wrap{position:relative;isolation:isolate;height:520px;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,#0b121d,#0b1119)}
-  @media (max-width:900px){.const-wrap{display:none}} /* HIDE ON MOBILE ONLY */
   #constFx{position:absolute;inset:0;z-index:0}
   .const-legend{position:absolute;inset:auto 12px 12px auto;z-index:2;font-size:12px;color:#a8bacb;
     background:rgba(255,255,255,.03);border:1px solid var(--stroke);padding:6px 8px;border-radius:10px}
@@ -111,37 +121,11 @@
   .domainTag{position:absolute;z-index:2;left:14px;top:14px;padding:6px 10px;border-radius:999px;font-size:12px;
     background:rgba(230,195,107,.12);color:var(--gold-300);border:1px solid rgba(230,195,107,.25)}
 
-  /* SHOW/HIDE helpers so desktop remains unchanged */
-  .show-desktop{display:block}
-  .show-mobile{display:none}
-  @media (max-width:900px){
-    .show-desktop{display:none}
-    .show-mobile{display:block}
-  }
-
-  /* Mobile-only hero refinements for the “reference” feel */
-  @media (max-width:900px){
-    /* Slightly darker top so the glass header feels invisible at first */
-    .hero::before{
-      content:"";
-      position:absolute; inset:0;
-      background:
-        radial-gradient(120% 140% at 50% -20%, rgba(0,0,0,.65) 0%, rgba(0,0,0,0) 60%),
-        radial-gradient(60% 60% at 20% 20%, rgba(230,195,107,.06), rgba(0,0,0,0) 70%);
-      pointer-events:none; z-index:0;
-    }
-    /* Two-tone H1 like the reference */
-    .h1-accent{background:linear-gradient(180deg,var(--gold-300),var(--gold-700));-webkit-background-clip:text;background-clip:text;color:transparent;}
-    
-    /* Slightly larger primary button for thumb reach */
-    .actions .btn.primary{padding:14px 20px}
-  }
-
-  /* SECTION 2: Proof / Counters (unchanged) */
+  /* SECTION 2 (unchanged) */
   .section{padding:72px 16px}
   .section .inner{max-width:1140px;margin:0 auto}
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
-  .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
+  .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) var(--font-serif)}
   .section-hd .sub{color:var(--muted);font-size:14px}
   .proof-wrap{background:linear-gradient(180deg,#0d1520,#0c141f);border:1px solid var(--stroke);border-radius:16px;padding:16px}
   .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
@@ -156,11 +140,67 @@
   .proof-cta{display:flex;justify-content:flex-end;margin-top:14px}
   .btn.small{padding:10px 14px;font-size:14px}
 
+  /* ---------- MOBILE-ONLY CHANGES ---------- */
+  @media (max-width:900px){
+    /* Hide constellation only on mobile */
+    .const-wrap{display:none}
+
+    /* Make header feel “invisible” over black until scroll (like the reference) */
+    .hero::before{
+      content:"";
+      position:absolute; inset:0;
+      background:radial-gradient(120% 140% at 50% -20%, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 60%),
+                 radial-gradient(60% 60% at 20% 20%, rgba(230,195,107,.06), rgba(0,0,0,0) 70%);
+      pointer-events:none; z-index:0;
+    }
+
+    /* Less padding so hero fills screen.
+       -> Tweak these to move copy up/down on mobile. */
+    .hero{
+      min-height:92svh;
+      padding:calc(60px + env(safe-area-inset-top, 0px)) 16px 28px;
+    }
+
+    /* Center the copy block + limit line length */
+    .hero-copy{
+      margin-inline:auto;
+      text-align:center;
+      max-width:28rem; /* ~448px for comfortable reading */
+    }
+
+    /* Mobile type: switch to Plus Jakarta Sans, tighter leading */
+    :root{ --font-sans: "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    h1{ font-family: var(--font-sans); font-weight:800; letter-spacing:-0.01em; }
+
+    /* Two-tone accent for the second H1 phrase */
+    .h1-accent{
+      background:linear-gradient(180deg,var(--gold-300),var(--gold-700));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+
+    /* Center the badge + lead text */
+    .badge{ margin-left:auto; margin-right:auto; }
+    .lead{ margin-left:auto; margin-right:auto; }
+
+    /* Big stacked CTAs for quick taps */
+    .actions{ justify-content:center; width:100%; }
+    .actions.show-mobile{ flex-direction:column; gap:12px; }
+    .actions.show-mobile .btn{ width:100%; padding:16px 20px; } /* bigger targets */
+  }
+
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce){
     #heroFx{display:none}
     #constFx{display:none}
     .btn{transition:none}
+  }
+
+  /* Helpers for per-viewport content */
+  .show-desktop{display:block}
+  .show-mobile{display:none}
+  @media (max-width:900px){
+    .show-desktop{display:none}
+    .show-mobile{display:block}
   }
 </style>
 </head>
@@ -170,24 +210,19 @@
     <div class="inner">
       <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge" aria-hidden="true">G</span></a>
 
-      <!-- Desktop nav (hidden on mobile) -->
       <nav id="nav-primary" aria-label="Primary">
         <a class="nav-link" href="#get-started">How it works</a>
         <a class="nav-link" href="sectors.html">Sectors</a>
         <a class="nav-link" href="pricing.html">Pricing</a>
       </nav>
 
-      <!-- Desktop actions (hidden on mobile) -->
       <div class="nav-actions">
         <a class="nav-login" href="login.html">Login</a>
         <a class="nav-cta" href="#get-started" id="navStart">Start Free</a>
       </div>
 
-      <!-- Mobile hamburger -->
-      <button id="burger" class="hamburger"
-        aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
-        <span aria-hidden="true"></span>
-        <span aria-hidden="true"></span>
+      <button id="burger" class="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
+        <span aria-hidden="true"></span><span aria-hidden="true"></span>
       </button>
     </div>
   </header>
@@ -211,36 +246,38 @@
       <div class="hero-copy">
         <span class="badge">Built for packaging suppliers</span>
 
-        <!-- DESKTOP H1 (unchanged) -->
+        <!-- Desktop headline (unchanged) -->
         <h1 class="show-desktop">Find real packaging buyers.</h1>
 
-        <!-- MOBILE H1 (two-tone like the reference) -->
+        <!-- Mobile headline (two-tone + centered) -->
         <h1 class="show-mobile">
           <span>We help packaging suppliers</span> <span class="h1-accent">win qualified buyers.</span>
         </h1>
 
-        <!-- DESKTOP lead (unchanged) -->
-        <p class="lead show-desktop">We filter the noise and surface real companies already signaling intent in your strengths.</p>
+        <!-- Desktop lead (unchanged) -->
+        <p class="lead show-desktop">
+          We filter the noise and surface real companies already signaling intent in your strengths.
+        </p>
 
-        <!-- MOBILE lead (lean, SEO'd for ChatGPT retrieval) -->
+        <!-- Mobile lead (centered, short and searchable) -->
         <p class="lead show-mobile">
           One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.
         </p>
 
-        <!-- DESKTOP actions (unchanged) -->
+        <!-- Desktop actions (unchanged) -->
         <div class="actions show-desktop" id="get-started-desktop">
           <button id="cta-desktop" type="button" class="btn primary">✨ Get qualified leads free</button>
           <a href="https://www.youtube.com" class="btn ghost" target="_blank" rel="noopener">▶︎ Watch 60-sec demo</a>
         </div>
 
-        <!-- MOBILE actions (clean two-CTA layout like the reference) -->
+        <!-- Mobile actions (stacked) -->
         <div class="actions show-mobile" id="get-started">
           <button id="cta" type="button" class="btn primary">Get a demo</button>
           <a href="https://www.youtube.com" class="btn ghost" target="_blank" rel="noopener">▶︎ Watch 60-sec demo</a>
         </div>
       </div>
 
-      <!-- Constellation (hidden on mobile, unchanged on desktop) -->
+      <!-- Constellation (desktop only) -->
       <div class="const-wrap" aria-hidden="true">
         <span class="domainTag" id="domainTag">YourCompany.com</span>
         <canvas id="constFx"></canvas>
@@ -252,7 +289,7 @@
     </div>
   </section>
 
-  <!-- SECTION 2: Proof / Counters -->
+  <!-- SECTION 2 -->
   <section class="section" id="proof" aria-label="Proof">
     <div class="inner">
       <div class="section-hd">
@@ -278,7 +315,7 @@
   <!-- SECTION 4 – Orbit -->
   <div id="section-orbit"></div>
 
-  <!-- MODAL (Onboarding Step 1–2) -->
+  <!-- MODAL -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none"></div>
 
 <script>
@@ -289,7 +326,7 @@
   const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
   const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
 
-  /* ---------- Build modal content (unchanged) ---------- */
+  /* ------- Build modal ------- */
   const modal = $("#modal");
   modal.innerHTML = `
     <div class="card" role="document">
@@ -346,16 +383,13 @@
     </div>
   `;
 
-  /* ---------- elements ---------- */
-  const openBtnMobile=$("#cta");           // mobile hero CTA
-  const openBtnDesktop=$("#cta-desktop");  // desktop hero CTA
+  /* ------- elements & state ------- */
+  const openBtnMobile=$("#cta"), openBtnDesktop=$("#cta-desktop");
   const closeBtn=$("#close");
   const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
   const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
   const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
   const apiBadge=$("#apiBadge");
-
-  /* ---------- state ---------- */
   const state={ step:0, role:"supplier" };
 
   function show(step){
@@ -367,10 +401,8 @@
   function open(){ modal.classList.add("show"); modal.style.display="flex"; modal.setAttribute("aria-hidden","false"); show(0); }
   function close(){ modal.classList.remove("show"); modal.style.display="none"; modal.setAttribute("aria-hidden","true"); }
 
-  // header CTA mirrors main CTA
   const navStart = document.getElementById("navStart");
-  if (navStart) navStart.addEventListener("click", (e)=>{ e.preventDefault(); open(); });
-
+  navStart && navStart.addEventListener("click",(e)=>{e.preventDefault();open();});
   openBtnMobile && openBtnMobile.addEventListener("click", open);
   openBtnDesktop && openBtnDesktop.addEventListener("click", open);
   closeBtn && closeBtn.addEventListener("click", close);
@@ -406,7 +438,6 @@
   emailEl && emailEl.addEventListener("input",syncDomain);
   emailEl && emailEl.addEventListener("change",syncDomain);
   setTimeout(syncDomain, 80);
-
   apiBadge && (apiBadge.textContent = "Ready");
 
   modal && modal.addEventListener("keydown",(e)=>{
@@ -418,7 +449,7 @@
     }
   });
 
-  /* ---------- hero canvas aurora ---------- */
+  /* ------- Hero aurora ------- */
   const fx = document.getElementById("heroFx");
   const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (fx && !noMotion){
@@ -447,7 +478,7 @@
     })();
   }
 
-  /* ---------- Constellation (desktop) ---------- */
+  /* ------- Constellation (desktop) ------- */
   (function(){
     const wrap = document.querySelector(".const-wrap");
     const c = document.getElementById("constFx");
@@ -492,8 +523,8 @@
         if (!n) break; highlights.push(n);
         const idx = candidates.indexOf(n); if (idx>=0) candidates.splice(idx,1);
       }
-      const cardPoints = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
-      cardPoints.forEach((p, i)=>{
+      const pts = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
+      pts.forEach((p, i)=>{
         const el = cards[i]?.el; if (!el) return;
         el.style.left = (p.x + (i===1? -24: 18)) + "px";
         el.style.top  = (p.y + (i===2?  24: -18)) + "px";
@@ -534,10 +565,8 @@
       const pulse = 8 + Math.sin(t*0.0022)*4;
       ctx.fillStyle="rgba(230,195,107,0.16)";
       ctx.beginPath(); ctx.arc(anchor.x, anchor.y, 24+pulse, 0, Math.PI*2); ctx.fill();
-
       highlights.forEach(h=>{ ctx.strokeStyle="rgba(242,220,160,0.9)"; ctx.lineWidth=1.6;
         ctx.beginPath(); ctx.moveTo(anchor.x,anchor.y); ctx.lineTo(h.x,h.y); ctx.stroke(); });
-
       for (const n of nodes){
         const r = n.anchor ? 4 : Math.max(1,1.2*n.s);
         ctx.fillStyle = n.anchor ? "rgba(242,220,160,0.95)" : "rgba(230,195,107,0.75)";
@@ -552,7 +581,7 @@
     try{ const d=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host; if (d) { const tag=$("#domainTag"); if (tag) tag.textContent=d; } }catch{}
   })();
 
-  /* ---------- Section 2 counters ---------- */
+  /* ------- Section 2 counters ------- */
   (function(){
     const section = document.getElementById("proof"); if (!section) return;
     const hostOut = document.getElementById("proofHost");
@@ -579,8 +608,8 @@
 })();
 </script>
 
-<!-- Header-only JS (hamburger toggle) -->
 <script>
+/* header hamburger */
 (function(){
   const burger = document.getElementById('burger');
   const menu = document.getElementById('mobileMenu');
@@ -596,15 +625,12 @@
   menu.addEventListener('click', (e)=>{ if (e.target === menu) toggle(); });
   document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape' && menu.classList.contains('open')) toggle(); });
 
-  // Mobile Start Free → open the same modal as CTAs
   const mobileStart = document.getElementById('mobileStart');
-  if (mobileStart){
-    mobileStart.addEventListener('click', (e)=>{
-      e.preventDefault();
-      toggle();
-      (document.getElementById('cta') || document.getElementById('cta-desktop'))?.click();
-    });
-  }
+  mobileStart && mobileStart.addEventListener('click', (e)=>{
+    e.preventDefault();
+    toggle();
+    (document.getElementById('cta') || document.getElementById('cta-desktop'))?.click();
+  });
 })();
 </script>
 
@@ -612,11 +638,9 @@
 <script defer src="./sections/process/process.data.js"></script>
 <script defer src="./sections/process/process.js"></script>
 <script defer src="./sections/process/process.mobile.global.js"></script>
-
-<!-- Step scenes -->
 <script defer src="./sections/process/steps/process.step1.js"></script>
 <script defer src="./sections/process/steps/process.step2.js"></script>
-<script defer src="./sections/process/steps/process.step3.js"></script>"
+<script defer src="./sections/process/steps/process.step3.js"></script>
 <script defer src="./sections/process/steps/process.step4.js"></script>
 <script defer src="./sections/process/steps/process.step5.js"></script>
 
