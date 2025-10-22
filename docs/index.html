@@ -29,15 +29,15 @@
     --gutter: clamp(16px, 4vw, 40px);
 
     /* ===== Desktop constellation “container-ish” knobs ===== */
-    --const-radius: 18px;               /* corner radius of right panel */
-    --const-stroke-w: 1px;              /* inner stroke width */
-    --const-stroke-a: .06;              /* inner stroke alpha (white) */
-    --const-vignette-a: .18;            /* edge darkening (inset shadow) */
-    --const-drop-a: .14;                /* outer drop shadow strength */
-    --const-edge-tint: rgba(230,195,107,.05); /* warm edge tint */
-    --const-grid-sheen-a: .05;          /* faint right-edge sheen */
+    --const-radius: 18px;
+    --const-stroke-w: 1px;
+    --const-stroke-a: .06;
+    --const-vignette-a: .18;
+    --const-drop-a: .14;
+    --const-edge-tint: rgba(230,195,107,.05);
+    --const-grid-sheen-a: .05;
 
-    /* Mini cards (still very subtle) */
+    /* Mini cards */
     --miniCard-radius: 12px;
     --miniCard-bg: rgba(12,18,28,.86);
     --miniCard-blur: 6px;
@@ -58,18 +58,31 @@
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* ---------------- DESKTOP ---------------- */
+  /* ---------------- DESKTOP (static shared background) ---------------- */
   @media (min-width:901px){
-    body::before{content:none!important}
-    .hero::after{content:none!important}
+    /* Single static page background for hero + section 2 (and beyond) */
+    body{ position:relative; }
+    body::before{
+      content:"";
+      position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background:
+        radial-gradient(1200px 800px at 50% -10%, rgba(230,195,107,.16), rgba(0,0,0,0) 60%),
+        radial-gradient(900px 650px  at 18% 20%,  rgba(230,195,107,.08), rgba(0,0,0,0) 74%),
+        radial-gradient(1000px 700px at 80% 46%, rgba(230,195,107,.06), rgba(0,0,0,0) 76%),
+        linear-gradient(to bottom,
+          rgba(11,18,26,0) 0%,
+          rgba(11,18,26,.52) 34%,
+          rgba(10,14,20,.88) 72%,
+          var(--zone-dark) 100%);
+    }
 
-    .site-header .inner,
-    .hero-grid,
-    .section .inner{max-width:var(--container-max);width:100%;margin-inline:auto}
+    /* Let the static page background show through the sections */
+    .hero{background:transparent!important}
+    .section{background:transparent!important}
 
-    .section{background:linear-gradient(180deg,#0b121a 0%, #0a0e14 100%)}
-
+    /* Remove extra blends & the animated canvas on desktop */
     .blend-up::before,.blend-down::after{content:none!important}
+    #heroFx{display:none!important}
   }
 
   /* ---------------- MOBILE (unchanged) ---------------- */
@@ -124,7 +137,7 @@
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
 
   /* Hamburger (mobile only) */
-  .hamburger{display:none; justify-self:end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
+  .hamburger{display:none; justify-self=end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
   .hamburger span{position:absolute; left:2px; right:2px; height:2px; top:11px; border-radius:2px; background:currentColor; transition:transform .25s, top .25s}
   .hamburger span:nth-child(2){ top:21px; }
   .hamburger[aria-expanded="true"] span{ top:17px; }
@@ -181,17 +194,14 @@
     filter: drop-shadow(0 10px 24px rgba(0,0,0,var(--const-drop-a)));
   }
   .const-wrap::before{
-    /* subtle inner stroke + vignette */
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
     box-shadow:
       inset 0 0 0 var(--const-stroke-w) rgba(255,255,255,var(--const-stroke-a)),
       inset 0 0 60px rgba(0,0,0,var(--const-vignette-a));
   }
   .const-wrap::after{
-    /* a whisper of warm edge tint on the right to feel “contained”, not boxed */
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background:
-      linear-gradient(90deg, transparent 0%, var(--const-edge-tint) 96%, transparent 100%);
+    background:linear-gradient(90deg, transparent 0%, var(--const-edge-tint) 96%, transparent 100%);
     opacity:var(--const-grid-sheen-a);
   }
 
@@ -221,7 +231,7 @@
     border:1px solid rgba(230,195,107,.25)
   }
 
-  /* SECTION 2 (unchanged) */
+  /* SECTION 2 (unchanged content) */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate;}
   .section .inner{margin:0 auto}
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
@@ -454,7 +464,7 @@
   const openBtnMobile=$("#cta"), openBtnDesktop=$("#cta-desktop");
   const closeBtn=$("#close");
   const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
-  const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
+  const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name"]);
   const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
   const apiBadge=$("#apiBadge");
   const state={ step:0, role:"supplier" };
@@ -517,10 +527,11 @@
     }
   });
 
-  /* ------- Hero aurora (unchanged) ------- */
+  /* ------- Hero aurora (desktop disabled) ------- */
   const fx = document.getElementById("heroFx");
   const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (fx && !noMotion){
+  const isDesktop = window.matchMedia && window.matchMedia("(min-width:901px)").matches;
+  if (fx && !noMotion && !isDesktop){
     const ctx = fx.getContext("2d");
     const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
     function size(){ fx.width = innerWidth*DPR; fx.height = innerHeight*DPR; }
@@ -552,44 +563,16 @@
     const c = document.getElementById("constFx");
     if (!wrap || !c) return;
 
-    /* === TUNING KNOBS (JS) ===========================================
-       Change these live via the console:
-         updateConstKnobs({ cards: { safeLeft:.60, jitter:8 } })
-       ================================================================= */
     const KNOBS_DEFAULT = {
-      // nodes rendering (background graph)
-      nodes: {
-        count: 42,
-        linkRadius: 110,
-        linkAlphaBase: 0.08,
-        linkAlphaBoost: 0.22
-      },
-      // highlight pick region (where we choose nodes to “feature”)
-      highlights: {
-        regionLeft: 0.55,   // only pick nodes with x > W*regionLeft
-        regionTop:  0.08,
-        regionBottom: 0.90
-      },
-      // card placement “safe zone” on the right side
-      cards: {
-        safeLeft: 0.60,     // left boundary (% of width)
-        safeRight: 0.03,    // right margin
-        safeTop: 0.10,      // keep away from top rounded corner
-        safeBottom: 0.22,   // keep away from bottom + legend
-        jitter: 14,         // px max random offset applied to each card
-        spacing: 26         // px minimal separation between cards
-      },
-      legendAvoidancePx: 14 // additional clearance above legend box
+      nodes: { count: 42, linkRadius: 110, linkAlphaBase: 0.08, linkAlphaBoost: 0.22 },
+      highlights: { regionLeft: 0.55, regionTop: 0.08, regionBottom: 0.90 },
+      cards: { safeLeft: 0.60, safeRight: 0.03, safeTop: 0.10, safeBottom: 0.22, jitter: 14, spacing: 26 },
+      legendAvoidancePx: 14
     };
     const KNOBS = (window.CONST_KNOBS = Object.assign({}, KNOBS_DEFAULT, window.CONST_KNOBS||{}));
     window.updateConstKnobs = (patch={})=>{
-      // deep-ish merge for cards/highlights/nodes
-      ["nodes","highlights","cards"].forEach(k=>{
-        if(patch[k]) KNOBS[k] = Object.assign({}, KNOBS[k], patch[k]);
-      });
-      Object.keys(patch).forEach(k=>{
-        if(!["nodes","highlights","cards"].includes(k)) KNOBS[k]=patch[k];
-      });
+      ["nodes","highlights","cards"].forEach(k=>{ if(patch[k]) KNOBS[k] = Object.assign({}, KNOBS[k], patch[k]); });
+      Object.keys(patch).forEach(k=>{ if(!["nodes","highlights","cards"].includes(k)) KNOBS[k]=patch[k]; });
       reset();
     };
 
@@ -619,7 +602,6 @@
       c.style.width=W+"px"; c.style.height=H+"px";
       ctx.setTransform(DPR,0,0,DPR,0,0);
 
-      // ----- nodes (full canvas; not constrained) -----
       const N = KNOBS.nodes.count; nodes = [];
       for (let i=0;i<N;i++){
         const x = 0.20 + Math.random()*0.78;
@@ -632,13 +614,9 @@
       const anchor = { x: 0.18*W, y: 0.52*H };
       nodes.unshift({x:anchor.x, y:anchor.y, s:1.8, vx:0, vy:0, anchor:true });
 
-      // ----- highlight candidates only in the right band -----
       const hr = KNOBS.highlights;
       const candidates = nodes.filter(n =>
-        !n.anchor &&
-        n.x > W*hr.regionLeft &&
-        n.y > H*hr.regionTop &&
-        n.y < H*hr.regionBottom
+        !n.anchor && n.x > W*hr.regionLeft && n.y > H*hr.regionTop && n.y < H*hr.regionBottom
       );
       highlights = [];
       for (let i=0;i<3;i++){
@@ -648,11 +626,10 @@
       }
 
       placeCards();
-      draw(); // initial paint
+      draw();
     }
 
     function placeCards(){
-      // compute safe rect for cards (right side) + avoid legend
       const cs = KNOBS.cards;
       const safe = {
         left:  W*cs.safeLeft,
@@ -660,7 +637,6 @@
         right: W*(1 - cs.safeRight),
         bottom:H*(1 - cs.safeBottom)
       };
-      // avoid legend area precisely
       const legend = wrap.querySelector(".const-legend");
       if (legend){
         const lr = legend.getBoundingClientRect();
@@ -669,42 +645,36 @@
         safe.bottom = Math.min(safe.bottom, legendTop - KNOBS.legendAvoidancePx);
       }
 
-      // helper: ensure new position doesn't overlap previous cards
       const placed = [];
       function nonOverlapping(x,y,w,h){
         const pad = KNOBS.cards.spacing;
         return placed.every(p => Math.abs(p.x - x) > (p.w/2 + w/2 + pad) || Math.abs(p.y - y) > (p.h/2 + h/2 + pad));
       }
 
-      // choose target points near highlights, then clamp into safe rect
       const pts = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
       pts.forEach((p, i)=>{
         const el = cards[i]?.el; if (!el) return;
         const rect = el.getBoundingClientRect();
         const w = rect.width || 190, h = rect.height || 96;
 
-        // base position: around highlight but nudged right; then clamp to safe zone
         const jitter = KNOBS.cards.jitter;
-        let x = (p?.x ?? (safe.left + (i+1)/4*(safe.right-safe.left))) + (i===1? -12: 12) + rand(-jitter,jitter);
-        let y = (p?.y ?? (safe.top + (i+1)/4*(safe.bottom-safe.top))) + (i===2?  14: -10) + rand(-jitter,jitter);
+        let x = (p?.x ?? (safe.left + (i+1)/4*(safe.right-safe.left))) + (i===1? -12: 12) + (Math.random()*2-1)*jitter;
+        let y = (p?.y ?? (safe.top + (i+1)/4*(safe.bottom-safe.top))) + (i===2?  14: -10) + (Math.random()*2-1)*jitter;
 
-        // hard clamp into safe rectangle
         const halfW=w/2, halfH=h/2;
-        x = clamp(x, safe.left + halfW, safe.right - halfW);
-        y = clamp(y, safe.top + halfH, safe.bottom - halfH);
+        x = Math.max(safe.left + halfW, Math.min(safe.right - halfW, x));
+        y = Math.max(safe.top + halfH, Math.min(safe.bottom - halfH, y));
 
-        // jitter until non-overlapping (few tries)
         let tries=0;
         while(!nonOverlapping(x,y,w,h) && tries<18){
-          x = clamp(x + rand(-jitter,jitter), safe.left + halfW, safe.right - halfW);
-          y = clamp(y + rand(-jitter,jitter), safe.top + halfH, safe.bottom - halfH);
+          x = Math.max(safe.left + halfW, Math.min(safe.right - halfW, x + (Math.random()*2-1)*jitter));
+          y = Math.max(safe.top + halfH, Math.min(safe.bottom - halfH, y + (Math.random()*2-1)*jitter));
           tries++;
         }
         placed.push({x,y,w,h});
         el.style.left = x+"px";
         el.style.top  = y+"px";
 
-        // rotate sample content a bit for variation
         const d = cardData[(Math.random()*cardData.length)|0];
         const vs = el.querySelectorAll(".v");
         if (vs[0]) vs[0].textContent = d.name;
@@ -741,7 +711,6 @@
       ctx.fillStyle="rgba(230,195,107,0.16)";
       ctx.beginPath(); ctx.arc(anchor.x, anchor.y, 24+pulse, 0, Math.PI*2); ctx.fill();
 
-      // soft focus gradient
       const grad = ctx.createLinearGradient(0,0,W,H);
       grad.addColorStop(0, "rgba(230,195,107,0.06)");
       grad.addColorStop(1, "rgba(230,195,107,0.0)");
@@ -760,7 +729,6 @@
     }
     let prev=0; reset(); loop(0); addEventListener("resize", reset);
 
-    // domain pill: prefer LS, else default to yourcompany.com
     try{
       const d=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host;
       const tag=$("#domainTag"); if (tag) tag.textContent=d || "yourcompany.com";
