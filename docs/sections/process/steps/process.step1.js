@@ -27,7 +27,7 @@
       PADDING_X: 4, PADDING_Y: 4, UPPERCASE: false,
 
       // Labels
-      LABEL_RECT_1: "Back-To-Back Search (last 14d)",
+      LABEL_RECT_1: "Metrics Match Score (daily)",
       LABEL_RECT_2: "RFQ/RFP Keywords Detected",
       LABEL_ROUND_3: "Pricing & Sample Page Hits",
       LABEL_OVAL_4:  "Rising # of Ad Creatives (last 14d)",
@@ -35,7 +35,7 @@
 
       // Title (desktop)
       TITLE_SHOW: true,
-      TITLE_TEXT: "Time-to-Buy Intent",
+      TITLE_TEXT: "Intent Score",
       TITLE_PT: 14, TITLE_WEIGHT: 700,
       TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -28, TITLE_LETTER_SPACING: 0.2,
@@ -242,10 +242,10 @@
     wrap.className = "p1m-wrap s1";   // <- specific class so our margins override global mobile css
 
     const copyHTML = `
-      <h3>Who’s ready now?</h3>
-      <p>Our <b>Time-to-Buy Intent</b> finds accounts most likely to purchase in the next cycle.
-      We weight <b>recent</b> signals like search bursts, RFQ/RFP language, visits to pricing & sample pages,
-      and events/trade shows activities, new product launches, new product shelf openings at big wholesalers and 38 more metrics, then surface the prospects your team should contact today.</p>`;
+      <h3>Who buys packaging?</h3>
+      <p>Our <b>Intent Score</b> uses our olympiad-grade math structure + multiple LLM reasoning that finds accounts most likely to purchase in the next cycle.
+      We weight and score <b>existing</b> metrics from your website (we create them using our model) and match them with metrics like RFQ/RFP language, visits to pricing & sample pages,
+      events/trade shows activities, new product launches, new product shelf openings at big wholesalers and 38 more metrics, then surface the prospects your team should contact.</p>`;
 
     wrap.innerHTML = `
       ${C().TITLE_SHOW ? `<div class="p1m-title">${C().TITLE_TEXT}</div>` : ``}
