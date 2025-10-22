@@ -61,16 +61,15 @@
       COPY_SEO_HTML:
         '<h3>Who needs packaging right now?</h3>\
          <p>Our <b>Right-Time Score</b> finds buyers in an active window to purchase — not just “interested.”\
-         Artemis-B (v2) + <b>SPHERE-1</b> math + <b>SPHERE-2</b> LLM signals are orchestrated by <b>SPHERE-3</b>\
-         to weight <b>fresh</b> triggers: deadlines and events, last-72-hour Back-to-Back Search, and operations clocks\
+         deadlines and events, last-72-hour Back-to-Back Search, and operations clocks\
          like PO due dates and stockouts. It’s built for queries like “<i>rush packaging</i>,” “<i>need boxes by Friday</i>,”\
-         and “<i>trade-show packaging ASAP</i>.” We surface accounts where timing — not just loyalty — says “go now.”</p>',
+         and “<i>trade-show packaging ASAP</i>," and etc. We surface accounts where timing — not just loyalty — says “go now.”</p>',
 
       // You asked for this exact shape order: OVAL → ROUNDED RECT → CIRCLE → RECTANGLE
       ITEMS: [
         { type: "oval",  label: "Deadline Window (T-48h → T-30d)",  heightRatio: 1.00, fontPt: null },
         { type: "pill",  label: "Trigger Events (Launch/Expo/Recall)", heightRatio: 1.00, fontPt: null },
-        { type: "circle",label: "Intent Burst (last 72h)", circleDiamRatio: null, fontPt: null },
+        { type: "circle",label: "Back-to-Back Search (last 72h)", circleDiamRatio: null, fontPt: null },
         { type: "rect",  label: "Ops Clock (PO due, stockouts)", heightRatio: 1.00, fontPt: null }
       ]
     };
