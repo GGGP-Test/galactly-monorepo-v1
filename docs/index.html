@@ -19,6 +19,7 @@
 
 <style>
   :root{
+    /* core palette */
     --bg:#0a0e14; --panel:#101623; --panel-alt:#0f1622; --stroke:#1b2531;
     --text:#e9f1f7; --muted:#91a6b8;
     --gold:#e6c36b; --gold-700:#b8913d; --gold-300:#f2dca0;
@@ -28,7 +29,7 @@
     --container-max: clamp(1100px, 86vw, 1320px);
     --gutter: clamp(16px, 4vw, 40px);
 
-    /* Constellation panel knobs (unchanged) */
+    /* constellation panel */
     --const-radius: 18px; --const-stroke-w: 1px; --const-stroke-a: .06; --const-vignette-a: .18;
     --const-drop-a: .14; --const-edge-tint: rgba(230,195,107,.05); --const-grid-sheen-a: .05;
 
@@ -37,16 +38,23 @@
 
     --legend-fs: 12px; --legend-color: #a8bacb;
 
-    /* Desktop background geometry */
-    --r1-size: 180% 140%;
-    --r1-at: 50% -12%;   /* put the bright dome above hero so hero is lit */
-    --r1-alpha: .18;
-    --r1-fade: 58%;
+    /* ---- WALLPAPER KNOBS (CSS side) ---- */
+    /* spacing knob between Hero and Section 2 */
+    --gap-hero-proof: 0px; /* tweak with setSectionGap(...) */
 
-    --r2-size: 100% 86%;
-    --r2-at: 22% 10%;
-    --r2-alpha: .08;
-    --r2-fade: 72%;
+    /* height of the wallpaper area (computed in JS by default) */
+    --wp-h: 220vh;
+
+    /* desktop radial defaults (overridden by JS knobs on load) */
+    --wp-r1-size: 180% 140%;
+    --wp-r1-at: 50% -14%;
+    --wp-r1-alpha: .18;
+    --wp-r1-fade: 58%;
+
+    --wp-r2-size: 110% 90%;
+    --wp-r2-at: 22% 12%;
+    --wp-r2-alpha: .10;
+    --wp-r2-fade: 72%;
   }
 
   *{box-sizing:border-box}
@@ -55,40 +63,41 @@
     background:var(--bg);color:var(--text);
     font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   }
+  body{position:relative} /* anchor wallpaper */
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* One fixed, static background that spans hero + Section 2 and fades to dark */
-  .page-bg{
-    position:fixed; inset:0; z-index:0; pointer-events:none;
+  /* ---- STATIC WALLPAPER (no parallax) ----
+     This sits behind content, anchored to the document, not the viewport. */
+  .page-wallpaper{
+    position:absolute; left:0; right:0; top:0; height:var(--wp-h);
+    z-index:0; pointer-events:none;
     background:
-      radial-gradient(var(--r1-size) at var(--r1-at), rgba(230,195,107,var(--r1-alpha)), rgba(0,0,0,0) var(--r1-fade)),
-      radial-gradient(var(--r2-size) at var(--r2-at), rgba(230,195,107,var(--r2-alpha)), rgba(0,0,0,0) var(--r2-fade)),
-      linear-gradient(180deg, #0b121a 0%, #0a0e14 70%, #091019 88%, var(--zone-dark) 100%);
-    background-attachment:fixed, fixed, fixed; /* static lighting */
-    background-repeat:no-repeat,no-repeat,no-repeat;
+      radial-gradient(var(--wp-r1-size) at var(--wp-r1-at), rgba(230,195,107,var(--wp-r1-alpha)), rgba(0,0,0,0) var(--wp-r1-fade)),
+      radial-gradient(var(--wp-r2-size) at var(--wp-r2-at), rgba(230,195,107,var(--wp-r2-alpha)), rgba(0,0,0,0) var(--wp-r2-fade)),
+      linear-gradient(180deg,#0b121a 0%, #0a0e14 70%, #091019 88%, var(--zone-dark) 100%);
+    background-repeat:no-repeat,no-repeat,no-repeat; /* scroll with page (no attachment fixed) */
   }
 
-  /* Mobile tuning so hero is lit similarly and Section 2 lands in shadow */
+  /* mobile radial defaults (JS will apply) */
   @media (max-width:900px){
     :root{
-      --r1-size: 190% 165%;
-      --r1-at: 50% -18%;
-      --r1-alpha: .18;
-      --r1-fade: 60%;
-
-      --r2-size: 120% 95%;
-      --r2-at: 26% 12%;
-      --r2-alpha: .10;
-      --r2-fade: 74%;
+      --wp-r1-size: 200% 165%;
+      --wp-r1-at: 50% -18%;
+      --wp-r1-alpha: .18;
+      --wp-r1-fade: 60%;
+      --wp-r2-size: 130% 95%;
+      --wp-r2-at: 26% 16%;
+      --wp-r2-alpha: .10;
+      --wp-r2-fade: 74%;
     }
   }
 
-  /* Sections transparent so fixed bg shows through; kill any old overlays */
+  /* sections transparent so wallpaper shows through; kill any dim overlays */
   .hero,.section{background:transparent}
   body::before, body::after, .hero::before, .hero::after{content:none!important}
 
-  /* Desktop layout widths */
+  /* layout widths */
   @media (min-width:901px){
     .site-header .inner,
     .hero-grid,
@@ -149,10 +158,9 @@
   /* HERO */
   .hero{
     position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
-    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate;
+    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate; z-index:1; /* above wallpaper */
   }
-  /* Keep hero effects disabled to honor “static lighting” */
-  #heroFx{display:none!important}
+  #heroFx{display:none!important} /* no dynamic effects */
   .hero-grid{
     position:relative;z-index:1;display:grid;align-items:center;
     grid-template-columns:1.12fr 1fr;
@@ -217,21 +225,64 @@
   }
 
   /* SECTION 2 */
-  .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate;}
+  .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
   .section .inner{margin:0 auto}
+  /* optional spacing knob between sections */
+  #proof{ margin-top: var(--gap-hero-proof); }
+
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
   .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
   .section-hd .sub{color:var(--muted);font-size:14px}
-  .proof-wrap{background:linear-gradient(180deg,#0d1520,#0c141f);border:1px solid var(--stroke);border-radius:16px;padding:16px}
-  .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-  @media (max-width:900px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+  /* ---- GLASS PANEL like the screenshot ---- */
+  .proof-wrap{
+    position:relative;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.12);
+    background:
+      radial-gradient(120% 160% at 20% 0%, rgba(93,140,200,.16), rgba(0,0,0,0) 60%),
+      radial-gradient(120% 160% at 80% 10%, rgba(35,130,255,.12), rgba(0,0,0,0) 62%),
+      linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    backdrop-filter: blur(10px) saturate(140%);
+    box-shadow:
+      0 20px 50px rgba(0,0,0,.35),
+      inset 0 1px 0 rgba(255,255,255,.06);
+    padding:22px;
+  }
+  .proof-wrap::after{
+    /* soft inner border to sell the glass */
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+  }
+
+  /* metrics inside glass: one row, subtle separators */
+  .kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:0; /* single panel feel */
+  }
+  @media (max-width:900px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
   @media (max-width:520px){.kpi-grid{grid-template-columns:1fr}}
-  .kpi{height:140px;background:var(--panel);border:1px solid var(--stroke);border-radius:14px;padding:14px;
-    display:flex;flex-direction:column;justify-content:center;align-items:flex-start;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-  .kpi .label{font-size:12px;color:#9db2c5;letter-spacing:.2px;text-transform:uppercase}
-  .kpi .num{font-weight:800;font-size:clamp(22px,6vw,36px);line-height:1.05;
-    background:linear-gradient(180deg,var(--gold-300),var(--gold-700));-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px}
-  .kpi .hint{font-size:12px;color:#7fa1b9;margin-top:6px}
+
+  .kpi{
+    background:transparent; border:none; box-shadow:none;
+    height:auto; padding:18px 18px 16px;
+    position:relative;
+  }
+  .kpi + .kpi{ border-left:1px solid rgba(255,255,255,.06); }
+  @media (max-width:900px){
+    .kpi:nth-child(odd){ border-left:none; }
+    .kpi:nth-child(n+3){ border-top:1px solid rgba(255,255,255,.06); }
+  }
+
+  .kpi .label{font-size:12px;color:#a8bbcd;letter-spacing:.2px;text-transform:uppercase}
+  .kpi .num{
+    font-weight:800;font-size:clamp(28px,5vw,42px);line-height:1.05;
+    background:linear-gradient(180deg,var(--gold-300),var(--gold-700));
+    -webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px
+  }
+  .kpi .hint{font-size:12px;color:#8ba6bf;margin-top:6px}
 
   /* ---------- MOBILE TYPE TWEAKS (unchanged) ---------- */
   @media (max-width:900px){
@@ -262,8 +313,8 @@
 </style>
 </head>
 <body>
-  <!-- STATIC BACKGROUND (one layer for all viewports) -->
-  <div class="page-bg" aria-hidden="true"></div>
+  <!-- STATIC WALLPAPER (no parallax) -->
+  <div id="pageWallpaper" class="page-wallpaper" aria-hidden="true"></div>
 
   <!-- HEADER -->
   <header class="site-header" aria-label="Site">
@@ -380,11 +431,76 @@
 <script>
 (()=>{
   'use strict';
-  var $  = function(q){ return document.querySelector(q); };
-  var $$ = function(q){ return Array.prototype.slice.call(document.querySelectorAll(q)); };
+  var $  = (q)=>document.querySelector(q);
+  var $$ = (q)=>Array.from(document.querySelectorAll(q));
   var LS = window.localStorage;
-  var normHost=function(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); };
-  var domainFromEmail=function(e){ var m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
+  var normHost=(h)=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+  var domainFromEmail=(e)=>{var m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
+
+  /* ========= STATIC WALLPAPER BUILDER (no parallax) =========
+     Knobs live on window.WALLPAPER (desktop/mobile). Call updateWallpaperKnobs()
+     to tweak, or setSectionGap(px) for spacing between sections.
+  ============================================================ */
+  const WP_DEFAULT = {
+    r1: { size:'var(--wp-r1-size)', at:'var(--wp-r1-at)', alpha:0.18, fade:'58%' },
+    r2: { size:'var(--wp-r2-size)', at:'var(--wp-r2-at)', alpha:0.10, fade:'72%' },
+    base: 'linear-gradient(180deg,#0b121a 0%, #0a0e14 70%, #091019 88%, var(--zone-dark) 100%)',
+    height: 'auto' /* 'auto' = hero+gap+section2; or set a CSS value string/number(px) */
+  };
+  window.WALLPAPER = {
+    desktop: JSON.parse(JSON.stringify(WP_DEFAULT)),
+    mobile:  {
+      r1: { size:'200% 165%', at:'50% -18%', alpha:0.18, fade:'60%' },
+      r2: { size:'130% 95%',  at:'26% 16%',  alpha:0.10, fade:'74%' },
+      base: WP_DEFAULT.base,
+      height: 'auto'
+    }
+  };
+  function buildRadial(k){
+    return `radial-gradient(${k.size} at ${k.at}, rgba(230,195,107,${k.alpha}), rgba(0,0,0,0) ${k.fade})`;
+  }
+  function buildBg(cfg){
+    return [ buildRadial(cfg.r1), buildRadial(cfg.r2), cfg.base ].join(',');
+  }
+  function deepMerge(base, patch){
+    const out = JSON.parse(JSON.stringify(base));
+    if(!patch) return out;
+    for(const k in patch){
+      if (patch[k] && typeof patch[k]==='object' && !Array.isArray(patch[k])){
+        out[k] = deepMerge(base[k]||{}, patch[k]);
+      }else out[k]=patch[k];
+    }
+    return out;
+  }
+  function applyWallpaper(){
+    const el = document.getElementById('pageWallpaper'); if(!el) return;
+    const mq = window.matchMedia('(max-width:900px)');
+    const cfg = mq.matches ? window.WALLPAPER.mobile : window.WALLPAPER.desktop;
+
+    // compute height when 'auto'
+    let h = cfg.height;
+    if (h === 'auto'){
+      const hero = document.querySelector('.hero');
+      const proof = document.getElementById('proof');
+      const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap-hero-proof'))||0;
+      h = ((hero?.offsetHeight||0) + gap + (proof?.offsetHeight||0)) + 80; // small tail
+      h = Math.max(h, (window.innerHeight*1.6)); // ensure generous default
+    }
+    el.style.height = (typeof h==='number') ? (h+'px') : String(h);
+    el.style.background = buildBg(cfg);
+  }
+  window.updateWallpaperKnobs = function(mode, patch){
+    const key = (mode==='mobile') ? 'mobile' : 'desktop';
+    window.WALLPAPER[key] = deepMerge(window.WALLPAPER[key], patch||{});
+    applyWallpaper();
+  };
+  window.setSectionGap = function(value){
+    const v = (typeof value==='number')? value+'px' : String(value);
+    document.documentElement.style.setProperty('--gap-hero-proof', v);
+    applyWallpaper();
+  };
+  window.addEventListener('resize', applyWallpaper);
+  document.addEventListener('DOMContentLoaded', applyWallpaper);
 
   /* ------- Build modal ------- */
   var modal = $("#modal");
@@ -452,11 +568,7 @@
 
   function show(step){
     state.step=step;
-    ["#step1","#step2"].forEach(function(id,i){
-      var el=$(id); if(!el) return;
-      el.hidden = i!==step;
-      if (dots[i]) dots[i].classList.toggle("on", i===step);
-    });
+    ["#step1","#step2"].forEach((id,i)=>{const el=$(id); if(!el) return; el.hidden=i!==step; dots[i]?.classList.toggle("on", i===step);});
     backBtn.style.visibility = step===0 ? "hidden" : "visible";
     nextBtn.textContent = step===0 ? "Next" : "Continue";
   }
@@ -464,55 +576,49 @@
   function close(){ modal.classList.remove("show"); modal.style.display="none"; modal.setAttribute("aria-hidden","true"); }
 
   var navStart = document.getElementById("navStart");
-  if (navStart) navStart.addEventListener("click", function(e){ e.preventDefault(); open(); });
-  if (openBtnMobile) openBtnMobile.addEventListener("click", open);
-  if (openBtnDesktop) openBtnDesktop.addEventListener("click", open);
-  if (closeBtn) closeBtn.addEventListener("click", close);
-  if (backBtn) backBtn.addEventListener("click", function(){ show(Math.max(0, state.step-1)); });
+  navStart && navStart.addEventListener("click",(e)=>{e.preventDefault();open();});
+  openBtnMobile && openBtnMobile.addEventListener("click", open);
+  openBtnDesktop && openBtnDesktop.addEventListener("click", open);
+  closeBtn && closeBtn.addEventListener("click", close);
+  backBtn && backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
 
-  if (nextBtn) nextBtn.addEventListener("click", function(){
+  nextBtn && nextBtn.addEventListener("click", ()=>{
     if (state.step===0){ show(1); return; }
     if (state.step===1){
       if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
-      var hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
+      const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
       if (!hostCandidate){ alert("Please provide your website/domain (from email is fine)."); return; }
-      var seed = { role: state.role, contact: { name: nameEl.value.trim(), phone: phoneEl.value.trim(), email: emailEl.value.trim() }, host: hostCandidate };
+      const seed = { role: state.role, contact: { name: nameEl.value.trim(), phone: phoneEl.value.trim(), email: emailEl.value.trim() }, host: hostCandidate };
       try{
         LS.setItem("onb.seed", JSON.stringify(seed));
         LS.setItem("fp.supplier.host", hostCandidate);
         LS.setItem("email", seed.contact.email);
         LS.setItem("contact.name", seed.contact.name||"");
         LS.setItem("contact.phone", seed.contact.phone||"");
-      }catch(e){}
+      }catch{}
       window.location.href = "step3.html";
     }
   });
 
-  function setRole(r){
-    state.role=r;
-    if (optSupplier) optSupplier.classList.toggle("active", r==="supplier");
-    if (optBuyer) optBuyer.classList.toggle("active", r==="buyer");
-  }
-  if (optSupplier) optSupplier.addEventListener("click", function(){ setRole("supplier"); });
-  if (optBuyer) optBuyer.addEventListener("click", function(){ setRole("buyer"); });
+  function setRole(r){ state.role=r; optSupplier?.classList.toggle("active", r==="supplier"); optBuyer?.classList.toggle("active", r==="buyer"); }
+  optSupplier && optSupplier.addEventListener("click",()=>setRole("supplier"));
+  optBuyer && optBuyer.addEventListener("click",()=>setRole("buyer"));
 
   function syncDomain(){
-    var d=domainFromEmail(emailEl.value);
+    const d=domainFromEmail(emailEl.value);
     if (d) hostEl.value=d;
-    var tag=document.getElementById("domainTag");
-    if (tag){ tag.textContent = d || hostEl.value || "yourcompany.com"; }
+    const tag=document.getElementById("domainTag");
+    tag && (tag.textContent = d || hostEl.value || "yourcompany.com");
   }
-  if (emailEl){
-    emailEl.addEventListener("input",syncDomain);
-    emailEl.addEventListener("change",syncDomain);
-  }
+  emailEl && emailEl.addEventListener("input",syncDomain);
+  emailEl && emailEl.addEventListener("change",syncDomain);
   setTimeout(syncDomain, 80);
-  if (apiBadge) apiBadge.textContent = "Ready";
+  apiBadge && (apiBadge.textContent = "Ready");
 
-  modal && modal.addEventListener("keydown",function(e){
+  modal && modal.addEventListener("keydown",(e)=>{
     if (e.key==="Escape"){ e.preventDefault(); close(); return; }
     if (e.key==="Enter"){
-      var tag=(e.target&&e.target.tagName)||"";
+      const tag=(e.target&&e.target.tagName)||"";
       if (tag==="INPUT"||tag==="TEXTAREA"||tag==="A"||tag==="BUTTON") return;
       e.preventDefault(); nextBtn.click();
     }
@@ -520,39 +626,31 @@
 
   /* ------- Constellation (desktop) ------- */
   (function(){
-    var wrap = document.querySelector(".const-wrap");
-    var c = document.getElementById("constFx");
+    const wrap = document.querySelector(".const-wrap");
+    const c = document.getElementById("constFx");
     if (!wrap || !c) return;
 
-    var KNOBS_DEFAULT = {
+    const KNOBS_DEFAULT = {
       nodes: { count: 42, linkRadius: 110, linkAlphaBase: 0.08, linkAlphaBoost: 0.22 },
       highlights: { regionLeft: 0.55, regionTop: 0.08, regionBottom: 0.90 },
       cards: { safeLeft: 0.60, safeRight: 0.03, safeTop: 0.10, safeBottom: 0.22, jitter: 14, spacing: 26 },
       legendAvoidancePx: 14
     };
-
     function deepMerge(base, patch){
-      if (!patch) return JSON.parse(JSON.stringify(base));
-      var out = Array.isArray(base) ? base.slice() : Object.assign({}, base);
-      Object.keys(patch).forEach(function(k){
-        var bv = base != null ? base[k] : undefined;
-        var pv = patch[k];
-        if (pv && typeof pv === 'object' && !Array.isArray(pv)){
-          out[k] = deepMerge(bv || {}, pv);
-        }else{
-          out[k] = pv;
-        }
-      });
+      const out = JSON.parse(JSON.stringify(base||{}));
+      if(!patch) return out;
+      for(const k in patch){
+        if (patch[k] && typeof patch[k]==='object' && !Array.isArray(patch[k])){
+          out[k] = deepMerge(base?.[k]||{}, patch[k]);
+        } else out[k] = patch[k];
+      }
       return out;
     }
+    let KNOBS = window.CONST_KNOBS ? deepMerge(KNOBS_DEFAULT, window.CONST_KNOBS) : KNOBS_DEFAULT;
+    window.updateConstKnobs = (patch)=>{ KNOBS = deepMerge(KNOBS, patch||{}); reset(); };
 
-    var KNOBS = window.CONST_KNOBS ? deepMerge(KNOBS_DEFAULT, window.CONST_KNOBS) : deepMerge(KNOBS_DEFAULT, null);
-    window.updateConstKnobs = function(patch){
-      KNOBS = deepMerge(KNOBS, patch || {}); reset();
-    };
-
-    var cards = [{ el: $("#cardA") },{ el: $("#cardB") },{ el: $("#cardC") }];
-    var cardData = [
+    const cards = [{ el: $("#cardA") },{ el: $("#cardB") },{ el: $("#cardC") }];
+    const cardData = [
       { name:"Acme Drinks Co.", city:"Chicago, IL" },
       { name:"Northstar Foods", city:"Dallas, TX" },
       { name:"Atlas Beauty", city:"Toronto, ON" },
@@ -560,40 +658,38 @@
       { name:"Volt Homecare", city:"Denver, CO" }
     ];
 
-    var DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
-    var ctx = c.getContext("2d");
-    var W=0,H=0, nodes=[], highlights=[], t=0;
+    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
+    const ctx = c.getContext("2d");
+    let W=0,H=0, nodes=[], highlights=[];
 
     function rand(min,max){ return min + Math.random()*(max-min); }
     function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
 
     function reset(){
-      var rect = wrap.getBoundingClientRect();
+      const rect = wrap.getBoundingClientRect();
       W = Math.max(320, Math.floor(rect.width));
       H = Math.max(260, Math.floor(rect.height));
       c.width = Math.floor(W*DPR); c.height = Math.floor(H*DPR);
       c.style.width=W+"px"; c.style.height=H+"px";
       ctx.setTransform(DPR,0,0,DPR,0,0);
 
-      var N = KNOBS.nodes.count; nodes = [];
-      for (var i=0;i<N;i++){
-        var x = 0.20 + Math.random()*0.78;
-        var y = 0.06 + Math.random()*0.88;
-        var s = 0.15 + Math.random()*0.85;
-        var vx = (Math.random()-0.5) * 0.18;
-        var vy = (Math.random()-0.5) * 0.18;
-        nodes.push({x:x*W, y:y*H, s:s, vx:vx, vy:vy});
+      const N = KNOBS.nodes.count; nodes = [];
+      for (let i=0;i<N;i++){
+        const x = 0.20 + Math.random()*0.78;
+        const y = 0.06 + Math.random()*0.88;
+        const s = 0.15 + Math.random()*0.85;
+        const vx = (Math.random()-0.5) * 0.18;
+        const vy = (Math.random()-0.5) * 0.18;
+        nodes.push({x:x*W, y:y*H, s, vx, vy});
       }
-      var anchor = { x: 0.18*W, y: 0.52*H };
+      const anchor = { x: 0.18*W, y: 0.52*H };
       nodes.unshift({x:anchor.x, y:anchor.y, s:1.8, vx:0, vy:0, anchor:true });
 
-      var hr = KNOBS.highlights;
-      var candidates = nodes.filter(function(n){
-        return !n.anchor && n.x > W*hr.regionLeft && n.y > H*hr.regionTop && n.y < H*hr.regionBottom;
-      });
+      const hr = KNOBS.highlights;
+      const candidates = nodes.filter(n => !n.anchor && n.x > W*hr.regionLeft && n.y > H*hr.regionTop && n.y < H*hr.regionBottom);
       highlights = [];
-      for (var j=0;j<3;j++){
-        var n = candidates[(Math.random()*candidates.length)|0];
+      for (let j=0;j<3;j++){
+        const n = candidates[(Math.random()*candidates.length)|0];
         if (!n) break;
         highlights.push(n);
       }
@@ -603,98 +699,93 @@
     }
 
     function placeCards(){
-      var cs = KNOBS.cards;
-      var safe = {
+      const cs = KNOBS.cards;
+      const safe = {
         left:  W*cs.safeLeft,
         top:   H*cs.safeTop,
         right: W*(1 - cs.safeRight),
         bottom:H*(1 - cs.safeBottom)
       };
-      var legend = wrap.querySelector(".const-legend");
+      const legend = wrap.querySelector(".const-legend");
       if (legend){
-        var lr = legend.getBoundingClientRect();
-        var wr = wrap.getBoundingClientRect();
-        var legendTop = lr.top - wr.top;
+        const lr = legend.getBoundingClientRect();
+        const wr = wrap.getBoundingClientRect();
+        const legendTop = lr.top - wr.top;
         safe.bottom = Math.min(safe.bottom, legendTop - KNOBS.legendAvoidancePx);
       }
-
-      var placed = [];
+      const placed = [];
       function nonOverlapping(x,y,w,h){
-        var pad = KNOBS.cards.spacing;
-        return placed.every(function(p){
-          return Math.abs(p.x - x) > (p.w/2 + w/2 + pad) || Math.abs(p.y - y) > (p.h/2 + h/2 + pad);
-        });
+        const pad = KNOBS.cards.spacing;
+        return placed.every(p => Math.abs(p.x - x) > (p.w/2 + w/2 + pad) || Math.abs(p.y - y) > (p.h/2 + h/2 + pad));
       }
+      const pts = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
+      pts.forEach((p, i)=>{
+        const el = cards[i]?.el; if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const w = rect.width || 190, h = rect.height || 96;
 
-      var pts = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
-      pts.forEach(function(p, i){
-        var el = cards[i] && cards[i].el; if (!el) return;
-        var rect = el.getBoundingClientRect();
-        var w = rect.width || 190, h = rect.height || 96;
+        const jitter = KNOBS.cards.jitter;
+        let x = (p?.x ?? (safe.left + (i+1)/4*(safe.right-safe.left))) + (i===1? -12: 12) + rand(-jitter,jitter);
+        let y = (p?.y ?? (safe.top + (i+1)/4*(safe.bottom-safe.top))) + (i===2?  14: -10) + rand(-jitter,jitter);
 
-        var jitter = KNOBS.cards.jitter;
-        var x = (p && p.x ? p.x : (safe.left + (i+1)/4*(safe.right-safe.left))) + (i===1? -12: 12) + rand(-jitter,jitter);
-        var y = (p && p.y ? p.y : (safe.top + (i+1)/4*(safe.bottom-safe.top))) + (i===2?  14: -10) + rand(-jitter,jitter);
-
-        var halfW=w/2, halfH=h/2;
+        const halfW=w/2, halfH=h/2;
         x = clamp(x, safe.left + halfW, safe.right - halfW);
         y = clamp(y, safe.top + halfH, safe.bottom - halfH);
 
-        var tries=0;
+        let tries=0;
         while(!nonOverlapping(x,y,w,h) && tries<18){
           x = clamp(x + rand(-jitter,jitter), safe.left + halfW, safe.right - halfW);
           y = clamp(y + rand(-jitter,jitter), safe.top + halfH, safe.bottom - halfH);
           tries++;
         }
-        placed.push({x:x,y:y,w:w,h:h});
+        placed.push({x,y,w,h});
         el.style.left = x+"px";
         el.style.top  = y+"px";
 
-        var d = cardData[(Math.random()*cardData.length)|0];
-        var vs = el.querySelectorAll(".v");
-        if (vs[0]) vs[0].textContent = d.name;
-        if (vs[1]) vs[1].textContent = d.city;
+        const d = cardData[(Math.random()*cardData.length)|0];
+        const vs = el.querySelectorAll(".v");
+        vs[0] && (vs[0].textContent = d.name);
+        vs[1] && (vs[1].textContent = d.city);
       });
     }
 
     function draw(){
       ctx.clearRect(0,0,W,H);
-      var R = KNOBS.nodes.linkRadius;
-      for (var i=0;i<nodes.length;i++){
-        var a = nodes[i];
-        for (var j=i+1;j<nodes.length;j++){
-          var b = nodes[j];
-          var dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
+      const R = KNOBS.nodes.linkRadius;
+      for (let i=0;i<nodes.length;i++){
+        const a = nodes[i];
+        for (let j=i+1;j<nodes.length;j++){
+          const b = nodes[j];
+          const dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
           if (d2 < R*R){
-            var aLine = KNOBS.nodes.linkAlphaBase + KNOBS.nodes.linkAlphaBoost*(1 - Math.sqrt(d2)/R);
-            ctx.strokeStyle="rgba(230,195,107,"+aLine+")";
+            const aLine = KNOBS.nodes.linkAlphaBase + KNOBS.nodes.linkAlphaBoost*(1 - Math.sqrt(d2)/R);
+            ctx.strokeStyle=`rgba(230,195,107,${aLine})`;
             ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
           }
         }
       }
-      var anchor = nodes[0];
-      var pulse = 8 + Math.sin(performance.now()*0.0022)*4;
+      const anchor = nodes[0];
+      const pulse = 8 + Math.sin(performance.now()*0.0022)*4;
       ctx.fillStyle="rgba(230,195,107,0.16)";
       ctx.beginPath(); ctx.arc(anchor.x, anchor.y, 24+pulse, 0, Math.PI*2); ctx.fill();
 
-      var grad = ctx.createLinearGradient(0,0,W,H);
+      const grad = ctx.createLinearGradient(0,0,W,H);
       grad.addColorStop(0, "rgba(230,195,107,0.06)");
       grad.addColorStop(1, "rgba(230,195,107,0.0)");
       ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
 
-      for (var k=0;k<nodes.length;k++){
-        var n2 = nodes[k];
-        var r = n2.anchor ? 4 : Math.max(1,1.2*n2.s);
-        ctx.fillStyle = n2.anchor ? "rgba(242,220,160,0.95)" : "rgba(230,195,107,0.75)";
-        ctx.beginPath(); ctx.arc(n2.x,n2.y,r,0,Math.PI*2); ctx.fill();
+      for (const n of nodes){
+        const r = n.anchor ? 4 : Math.max(1,1.2*n.s);
+        ctx.fillStyle = n.anchor ? "rgba(242,220,160,0.95)" : "rgba(230,195,107,0.75)";
+        ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2); ctx.fill();
       }
     }
 
     function loop(now){
-      if (!loop.prev) loop.prev=now; var dt=Math.min(33, now-loop.prev)*0.06; loop.prev=now;
+      if (!loop.prev) loop.prev=now; const dt=Math.min(33, now-loop.prev)*0.06; loop.prev=now;
       if (!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)){
-        for (var i=1;i<nodes.length;i++){
-          var n = nodes[i]; n.x += n.vx*dt; n.y += n.vy*dt;
+        for (let i=1;i<nodes.length;i++){
+          const n = nodes[i]; n.x += n.vx*dt; n.y += n.vy*dt;
           if (n.x < 0) n.x = W; if (n.x > W) n.x = 0;
           if (n.y < 0) n.y = H; if (n.y > H) n.y = 0;
         }
@@ -704,26 +795,26 @@
     reset(); loop(0); addEventListener("resize", reset);
 
     try{
-      var d=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host;
-      var tag=$("#domainTag"); if (tag) tag.textContent=d || "yourcompany.com";
-    }catch(e){}
+      const d=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host;
+      const tag=$("#domainTag"); tag && (tag.textContent=d || "yourcompany.com");
+    }catch{}
   })();
 
   /* ------- Section 2 counters ------- */
   (function(){
-    var section = document.getElementById("proof"); if (!section) return;
-    var noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var nums = Array.prototype.slice.call(section.querySelectorAll(".num")); var fired=false;
-    function format(v, fmt){ if (fmt==="dec1") return v.toFixed(1); var s=Math.round(v).toString(); return s.replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+    const section = document.getElementById("proof"); if (!section) return;
+    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const nums = Array.from(section.querySelectorAll(".num")); let fired=false;
+    function format(v, fmt){ if (fmt==="dec1") return v.toFixed(1); const s=Math.round(v).toString(); return s.replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
     function animate(el){
-      var to = parseFloat(el.dataset.to||"0"); var fmt = el.dataset.format||"int";
+      const to = parseFloat(el.dataset.to||"0"); const fmt = el.dataset.format||"int";
       if (noMotion){ el.textContent = format(to, fmt); return; }
-      var dur = 1200; var start = performance.now();
-      function tick(now){ var p=Math.min(1,(now-start)/dur); var ease=1-Math.pow(1-p,3); var val=to*ease; el.textContent=format(val,fmt); if (p<1) requestAnimationFrame(tick); }
+      const dur = 1200; const start = performance.now();
+      function tick(now){ const p=Math.min(1,(now-start)/dur); const ease=1-Math.pow(1-p,3); const val=to*ease; el.textContent=format(val,fmt); if (p<1) requestAnimationFrame(tick); }
       requestAnimationFrame(tick);
     }
-    var io = new IntersectionObserver(function(entries){
-      entries.forEach(function(e){ if (!fired && e.isIntersecting){ fired=true; nums.forEach(animate); io.disconnect(); }});
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{ if (!fired && e.isIntersecting){ fired=true; nums.forEach(animate); io.disconnect(); }});
     },{threshold:0.30});
     io.observe(section);
   })();
@@ -733,26 +824,25 @@
 <script>
 /* header hamburger (unchanged) */
 (function(){
-  var burger = document.getElementById('burger');
-  var menu = document.getElementById('mobileMenu');
+  const burger = document.getElementById('burger');
+  const menu = document.getElementById('mobileMenu');
   if(!burger || !menu) return;
 
   function toggle(){
-    var open = burger.getAttribute('aria-expanded') === 'true';
+    const open = burger.getAttribute('aria-expanded') === 'true';
     burger.setAttribute('aria-expanded', String(!open));
     menu.classList.toggle('open', !open);
     document.body.style.overflow = !open ? 'hidden' : '';
   }
   burger.addEventListener('click', toggle);
-  menu.addEventListener('click', function(e){ if (e.target === menu) toggle(); });
-  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && menu.classList.contains('open')) toggle(); });
+  menu.addEventListener('click', (e)=>{ if (e.target === menu) toggle(); });
+  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape' && menu.classList.contains('open')) toggle(); });
 
-  var mobileStart = document.getElementById('mobileStart');
-  if (mobileStart) mobileStart.addEventListener('click', function(e){
+  const mobileStart = document.getElementById('mobileStart');
+  mobileStart && mobileStart.addEventListener('click', (e)=>{
     e.preventDefault();
     toggle();
-    var t = document.getElementById('cta') || document.getElementById('cta-desktop');
-    if (t) t.click();
+    (document.getElementById('cta') || document.getElementById('cta-desktop'))?.click();
   });
 })();
 </script>
