@@ -28,7 +28,7 @@
     --container-max: clamp(1100px, 86vw, 1320px);
     --gutter: clamp(16px, 4vw, 40px);
 
-    /* Constellation panel knobs (unchanged) */
+    /* Constellation panel knobs (unchanged CSS variables) */
     --const-radius: 18px; --const-stroke-w: 1px; --const-stroke-a: .06; --const-vignette-a: .18;
     --const-drop-a: .14; --const-edge-tint: rgba(230,195,107,.05); --const-grid-sheen-a: .05;
 
@@ -139,7 +139,7 @@
   .btn.ghost{background:transparent;color:#cfe0ee;border-color:var(--stroke)}
   .btn.ghost:hover{border-color:#284560}
 
-  /* Constellation panel (unchanged) */
+  /* Constellation panel */
   .const-wrap{
     position:relative; isolation:isolate; height:520px;
     border-radius:var(--const-radius);
@@ -437,7 +437,7 @@
           </div>\
         </section>\
         <section class="step" id="step2" hidden>\
-          <div class="pill">Step 2 of 3</div>\
+          <div class="pill">Step 2 of 2</div>\
           <h2 style="margin:10px 0 14px;">Tell us who you are</h2>\
           <div class="accordion">\
             <div class="acc-hd" role="button" tabindex="0"><h4>Contact & company</h4><div class="hint">Required</div></div>\
@@ -556,15 +556,44 @@
       cards: { safeLeft: 0.60, safeRight: 0.03, safeTop: 0.10, safeBottom: 0.22, jitter: 14, spacing: 26 },
       legendAvoidancePx: 14
     };
-    var KNOBS = (window.CONST_KNOBS = Object.assign({}, KNOBS_DEFAULT, window.CONST_KNOBS||{}));
-    window.updateConstKnobs = function(patch){
-      patch = patch || {};
-      ["nodes","highlights","cards"].forEach(function(k){
-        if(patch[k]) KNOBS[k] = Object.assign({}, KNOBS[k], patch[k]);
-      });
+
+    // Deep merge to keep nested defaults intact when partial overrides are provided.
+    function deepMerge(base, patch){
+      if (!patch) return JSON.parse(JSON.stringify(base));
+      var out = Array.isArray(base) ? base.slice() : Object.assign({}, base);
       Object.keys(patch).forEach(function(k){
-        if(!["nodes","highlights","cards"].includes(k)) KNOBS[k]=patch[k];
+        var bv = base != null ? base[k] : undefined;
+        var pv = patch[k];
+        if (pv && typeof pv === 'object' && !Array.isArray(pv)){
+          out[k] = deepMerge(bv || {}, pv);
+        }else{
+          out[k] = pv;
+        }
       });
+      return out;
+    }
+
+    // Build initial knobs from window.CONST_KNOBS but keep defaults.
+    var KNOBS = window.CONST_KNOBS ? deepMerge(KNOBS_DEFAULT, window.CONST_KNOBS) : deepMerge(KNOBS_DEFAULT, null);
+
+    // Sanitize/normalize numeric values
+    function saneNum(v, fallback){ return (typeof v === 'number' && isFinite(v)) ? v : fallback; }
+    function applySane(){
+      KNOBS.nodes = deepMerge(KNOBS_DEFAULT.nodes, KNOBS.nodes || {});
+      KNOBS.nodes.count = Math.max(3, Math.round(saneNum(KNOBS.nodes.count, KNOBS_DEFAULT.nodes.count)));
+      KNOBS.nodes.linkRadius = Math.max(20, saneNum(KNOBS.nodes.linkRadius, KNOBS_DEFAULT.nodes.linkRadius));
+      KNOBS.nodes.linkAlphaBase = Math.max(0, saneNum(KNOBS.nodes.linkAlphaBase, KNOBS_DEFAULT.nodes.linkAlphaBase));
+      KNOBS.nodes.linkAlphaBoost = Math.max(0, saneNum(KNOBS.nodes.linkAlphaBoost, KNOBS_DEFAULT.nodes.linkAlphaBoost));
+
+      KNOBS.highlights = deepMerge(KNOBS_DEFAULT.highlights, KNOBS.highlights || {});
+      KNOBS.cards = deepMerge(KNOBS_DEFAULT.cards, KNOBS.cards || {});
+      KNOBS.legendAvoidancePx = Math.max(0, saneNum(KNOBS.legendAvoidancePx, KNOBS_DEFAULT.legendAvoidancePx));
+    }
+
+    // Public updater keeps defaults via deep merge too.
+    window.updateConstKnobs = function(patch){
+      KNOBS = deepMerge(KNOBS, patch || {});
+      window.CONST_KNOBS = deepMerge(window.CONST_KNOBS || {}, patch || {});
       reset();
     };
     /* =============================================================== */
@@ -581,12 +610,13 @@
     var DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
     var ctx = c.getContext("2d");
     var W=0,H=0, nodes=[], highlights=[], t=0;
-    var noMotion2 = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     function rand(min,max){ return min + Math.random()*(max-min); }
     function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
 
     function reset(){
+      applySane();
+
       var rect = wrap.getBoundingClientRect();
       W = Math.max(320, Math.floor(rect.width));
       H = Math.max(260, Math.floor(rect.height));
@@ -629,6 +659,11 @@
         right: W*(1 - cs.safeRight),
         bottom:H*(1 - cs.safeBottom)
       };
+
+      // Ensure safe box is valid
+      if (safe.right <= safe.left){ safe.left = W*0.55; safe.right = W*0.97; }
+      if (safe.bottom <= safe.top){ safe.top = H*0.10; safe.bottom = H*0.78; }
+
       var legend = wrap.querySelector(".const-legend");
       if (legend){
         var lr = legend.getBoundingClientRect();
@@ -678,14 +713,17 @@
 
     function draw(){
       ctx.clearRect(0,0,W,H);
-      var R = KNOBS.nodes.linkRadius;
+      var R = Math.max(30, +KNOBS.nodes.linkRadius || 110);
+      var baseA = (typeof KNOBS.nodes.linkAlphaBase === 'number') ? KNOBS.nodes.linkAlphaBase : 0.08;
+      var boostA = (typeof KNOBS.nodes.linkAlphaBoost === 'number') ? KNOBS.nodes.linkAlphaBoost : 0.22;
+
       for (var i=0;i<nodes.length;i++){
         var a = nodes[i];
         for (var j=i+1;j<nodes.length;j++){
           var b = nodes[j];
           var dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
           if (d2 < R*R){
-            var aLine = KNOBS.nodes.linkAlphaBase + KNOBS.nodes.linkAlphaBoost*(1 - Math.sqrt(d2)/R);
+            var aLine = baseA + boostA*(1 - Math.sqrt(d2)/R);
             ctx.strokeStyle="rgba(230,195,107,"+aLine+")";
             ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
           }
@@ -711,7 +749,6 @@
 
     function loop(now){
       if (!loop.prev) loop.prev=now; var dt=Math.min(33, now-loop.prev)*0.06; loop.prev=now;
-      // very gentle drift; respect reduced motion
       if (!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)){
         for (var i=1;i<nodes.length;i++){
           var n = nodes[i]; n.x += n.vx*dt; n.y += n.vy*dt;
@@ -762,6 +799,7 @@
     burger.setAttribute('aria-expanded', String(!open));
     menu.classList.toggle('open', !open);
     document.body.style.overflow = !open ? 'hidden' : '';
+    menu.setAttribute('aria-hidden', open ? 'true' : 'false');
   }
   burger.addEventListener('click', toggle);
   menu.addEventListener('click', function(e){ if (e.target === menu) toggle(); });
