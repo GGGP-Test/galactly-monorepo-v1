@@ -28,7 +28,7 @@
     --container-max: clamp(1100px, 86vw, 1320px);
     --gutter: clamp(16px, 4vw, 40px);
 
-    /* ===== Desktop constellation “container-ish” knobs ===== */
+    /* Desktop constellation panel knobs (unchanged) */
     --const-radius: 18px;
     --const-stroke-w: 1px;
     --const-stroke-a: .06;
@@ -37,14 +37,12 @@
     --const-edge-tint: rgba(230,195,107,.05);
     --const-grid-sheen-a: .05;
 
-    /* Mini cards */
     --miniCard-radius: 12px;
     --miniCard-bg: rgba(12,18,28,.86);
     --miniCard-blur: 6px;
     --miniCard-stroke-a: .08;
     --miniCard-shadow-a: .30;
 
-    /* Legend typography knobs */
     --legend-fs: 12px;
     --legend-color: #a8bacb;
   }
@@ -58,31 +56,27 @@
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* ---------------- DESKTOP (static shared background) ---------------- */
+  /* ---------------- DESKTOP ---------------- */
   @media (min-width:901px){
-    /* Single static page background for hero + section 2 (and beyond) */
-    body{ position:relative; }
-    body::before{
-      content:"";
-      position:fixed; inset:0; z-index:-1; pointer-events:none;
-      background:
-        radial-gradient(1200px 800px at 50% -10%, rgba(230,195,107,.16), rgba(0,0,0,0) 60%),
-        radial-gradient(900px 650px  at 18% 20%,  rgba(230,195,107,.08), rgba(0,0,0,0) 74%),
-        radial-gradient(1000px 700px at 80% 46%, rgba(230,195,107,.06), rgba(0,0,0,0) 76%),
-        linear-gradient(to bottom,
-          rgba(11,18,26,0) 0%,
-          rgba(11,18,26,.52) 34%,
-          rgba(10,14,20,.88) 72%,
-          var(--zone-dark) 100%);
-    }
+    /* Turn off the old pseudo background layers */
+    body::before{content:none!important}
+    .hero::after{content:none!important}
 
-    /* Let the static page background show through the sections */
-    .hero{background:transparent!important}
-    .section{background:transparent!important}
+    /* NEW: single fixed background behind hero + section two */
+    .page-bg{display:block}
 
-    /* Remove extra blends & the animated canvas on desktop */
+    /* Turn off animated canvas on desktop (static requested) */
+    #heroFx{display:none}
+
+    .site-header .inner,
+    .hero-grid,
+    .section .inner{max-width:var(--container-max);width:100%;margin-inline:auto}
+
+    /* Transparent sections so the fixed bg shows through */
+    .hero{background:transparent}
+    .section{background:transparent}
+
     .blend-up::before,.blend-down::after{content:none!important}
-    #heroFx{display:none!important}
   }
 
   /* ---------------- MOBILE (unchanged) ---------------- */
@@ -137,7 +131,7 @@
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
 
   /* Hamburger (mobile only) */
-  .hamburger{display:none; justify-self=end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
+  .hamburger{display:none; justify-self:end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
   .hamburger span{position:absolute; left:2px; right:2px; height:2px; top:11px; border-radius:2px; background:currentColor; transition:transform .25s, top .25s}
   .hamburger span:nth-child(2){ top:21px; }
   .hamburger[aria-expanded="true"] span{ top:17px; }
@@ -185,7 +179,7 @@
   .btn.ghost{background:transparent;color:#cfe0ee;border-color:var(--stroke)}
   .btn.ghost:hover{border-color:#284560}
 
-  /* ============ DESKTOP CONSTELLATION PANEL (right side) ============ */
+  /* Constellation panel (unchanged) */
   .const-wrap{
     position:relative; isolation:isolate; height:520px;
     border-radius:var(--const-radius);
@@ -204,7 +198,6 @@
     background:linear-gradient(90deg, transparent 0%, var(--const-edge-tint) 96%, transparent 100%);
     opacity:var(--const-grid-sheen-a);
   }
-
   #constFx{position:absolute; inset:0; z-index:0}
   .const-legend{
     position:absolute; inset:auto 12px 12px auto; z-index:2;
@@ -223,7 +216,6 @@
   }
   .miniCard .k{font-size:11px;color:#9bb2c8}
   .miniCard .v{font-weight:700}
-
   .domainTag{
     position:absolute; z-index:2; left:14px; top:14px;
     padding:6px 10px; border-radius:999px; font-size:12px;
@@ -231,7 +223,7 @@
     border:1px solid rgba(230,195,107,.25)
   }
 
-  /* SECTION 2 (unchanged content) */
+  /* SECTION 2 (unchanged) */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate;}
   .section .inner{margin:0 auto}
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
@@ -275,9 +267,23 @@
     .show-desktop{display:none}
     .show-mobile{display:block}
   }
+
+  /* NEW: desktop-wide static background layer */
+  .page-bg{
+    display:none;                 /* enabled on desktop via media query */
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(170% 130% at 50% -26%, rgba(230,195,107,.16), rgba(0,0,0,0) 60%),
+      radial-gradient(90% 80%  at 18% 12%,  rgba(230,195,107,.07), rgba(0,0,0,0) 74%),
+      linear-gradient(180deg,#0b121a 0%, #0a0e14 100%);
+    background-attachment:fixed, fixed, fixed;
+  }
 </style>
 </head>
 <body>
+  <!-- DESKTOP STATIC BG -->
+  <div class="page-bg" aria-hidden="true"></div>
+
   <!-- HEADER -->
   <header class="site-header" aria-label="Site">
     <div class="inner">
@@ -352,15 +358,10 @@
 
       <!-- Constellation (desktop only) -->
       <div class="const-wrap" aria-hidden="true">
-        <!-- domain pill -->
         <span class="domainTag" id="domainTag">yourcompany.com</span>
-
         <canvas id="constFx"></canvas>
-
-        <!-- workflow legend (Score -> Timing) -->
         <div class="const-legend">Your Website → Signal → <strong>Timing</strong> → Buyers</div>
 
-        <!-- sample cards (positions set by JS) -->
         <div class="miniCard" id="cardA"><div class="k">Buyer</div><div class="v" id="cardA_name">Acme Drinks Co.</div><div class="k">City</div><div class="v" id="cardA_city">Chicago, IL</div></div>
         <div class="miniCard" id="cardB"><div class="k">Buyer</div><div class="v" id="cardB_name">Northstar Foods</div><div class="k">City</div><div class="v" id="cardB_city">Dallas, TX</div></div>
         <div class="miniCard" id="cardC"><div class="k">Buyer</div><div class="v" id="cardC_name">Atlas Beauty</div><div class="k">City</div><div class="v" id="cardC_city">Toronto, ON</div></div>
@@ -397,160 +398,169 @@
 
 <script>
 (()=>{
-  const $  = (q)=>document.querySelector(q);
-  const $$ = (q)=>Array.from(document.querySelectorAll(q));
-  const LS = window.localStorage;
-  const normHost=h=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
-  const domainFromEmail=e=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/);return m?m[1]:""};
+  var $  = function(q){ return document.querySelector(q); };
+  var $$ = function(q){ return Array.prototype.slice.call(document.querySelectorAll(q)); };
+  var LS = window.localStorage;
+  var normHost=function(h){ return (h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,""); };
+  var domainFromEmail=function(e){ var m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
 
   /* ------- Build modal (unchanged) ------- */
-  const modal = $("#modal");
-  modal.innerHTML = `
-    <div class="card" role="document">
-      <div class="card-hd">
-        <div class="steps" aria-label="Steps">
-          <span class="dot on" data-step-dot="0"></span>
-          <span class="dot" data-step-dot="1"></span>
-        </div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <span id="apiBadge" class="api-badge">Ready</span>
-          <button id="close" class="x" aria-label="Close">✕</button>
-        </div>
-      </div>
-      <div class="card-bd"><div class="scroll">
-        <section class="step" id="step1">
-          <div class="pill">Get set up in 60 seconds</div>
-          <h2 style="margin:10px 0 14px;">Pick your side</h2>
-          <div class="accordion">
-            <div class="acc-hd" role="button" tabindex="0"><h4>Role</h4><div class="hint">Required</div></div>
-            <div class="acc-bd">
-              <div class="chips" id="roleChips">
-                <span id="opt-supplier" class="chip active">🙌 I sell packaging (Supplier)</span>
-                <span id="opt-buyer" class="chip">🛒 I buy packaging (Buyer)</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="step" id="step2" hidden>
-          <div class="pill">Step 2 of 3</div>
-          <h2 style="margin:10px 0 14px;">Tell us who you are</h2>
-          <div class="accordion">
-            <div class="acc-hd" role="button" tabindex="0"><h4>Contact & company</h4><div class="hint">Required</div></div>
-            <div class="acc-bd">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-                <div>
-                  <div class="field"><label>Your name</label><input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter"></div>
-                  <div class="field"><label>Phone (required for alerts) *</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/><div class="hint">Include country code (e.g., “+1”).</div></div>
-                </div>
-                <div>
-                  <div class="field"><label>Business email *</label><input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required/></div>
-                  <div class="field"><label>Website / Domain</label><input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/><div class="hint">Auto-filled from your email. You can edit.</div></div>
-                </div>
-              </div>
-              <div class="hint" id="apiStatus" style="margin-top:8px">Step 3 opens in a new screen.</div>
-            </div>
-          </div>
-        </section>
-      </div>
-      <div class="card-ft">
-        <button id="back" class="btn ghost" type="button">Back</button>
-        <button id="next" class="btn primary" type="button">Continue</button>
-      </div></div>
-    </div>
-  `;
+  var modal = $("#modal");
+  modal.innerHTML =
+    '<div class="card" role="document">\
+      <div class="card-hd">\
+        <div class="steps" aria-label="Steps">\
+          <span class="dot on" data-step-dot="0"></span>\
+          <span class="dot" data-step-dot="1"></span>\
+        </div>\
+        <div style="display:flex;gap:10px;align-items:center">\
+          <span id="apiBadge" class="api-badge">Ready</span>\
+          <button id="close" class="x" aria-label="Close">✕</button>\
+        </div>\
+      </div>\
+      <div class="card-bd"><div class="scroll">\
+        <section class="step" id="step1">\
+          <div class="pill">Get set up in 60 seconds</div>\
+          <h2 style="margin:10px 0 14px;">Pick your side</h2>\
+          <div class="accordion">\
+            <div class="acc-hd" role="button" tabindex="0"><h4>Role</h4><div class="hint">Required</div></div>\
+            <div class="acc-bd">\
+              <div class="chips" id="roleChips">\
+                <span id="opt-supplier" class="chip active">🙌 I sell packaging (Supplier)</span>\
+                <span id="opt-buyer" class="chip">🛒 I buy packaging (Buyer)</span>\
+              </div>\
+            </div>\
+          </div>\
+        </section>\
+        <section class="step" id="step2" hidden>\
+          <div class="pill">Step 2 of 3</div>\
+          <h2 style="margin:10px 0 14px;">Tell us who you are</h2>\
+          <div class="accordion">\
+            <div class="acc-hd" role="button" tabindex="0"><h4>Contact & company</h4><div class="hint">Required</div></div>\
+            <div class="acc-bd">\
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">\
+                <div>\
+                  <div class="field"><label>Your name</label><input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter"></div>\
+                  <div class="field"><label>Phone (required for alerts) *</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/><div class="hint">Include country code (e.g., “+1”).</div></div>\
+                </div>\
+                <div>\
+                  <div class="field"><label>Business email *</label><input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required/></div>\
+                  <div class="field"><label>Website / Domain</label><input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/><div class="hint">Auto-filled from your email. You can edit.</div></div>\
+                </div>\
+              </div>\
+              <div class="hint" id="apiStatus" style="margin-top:8px">Step 3 opens in a new screen.</div>\
+            </div>\
+          </div>\
+        </section>\
+      </div>\
+      <div class="card-ft">\
+        <button id="back" class="btn ghost" type="button">Back</button>\
+        <button id="next" class="btn primary" type="button">Continue</button>\
+      </div></div>\
+    </div>';
 
   /* ------- elements & state ------- */
-  const openBtnMobile=$("#cta"), openBtnDesktop=$("#cta-desktop");
-  const closeBtn=$("#close");
-  const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
-  const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name"]);
-  const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
-  const apiBadge=$("#apiBadge");
-  const state={ step:0, role:"supplier" };
+  var openBtnMobile=$("#cta"), openBtnDesktop=$("#cta-desktop");
+  var closeBtn=$("#close");
+  var backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
+  var emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
+  var optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
+  var apiBadge=$("#apiBadge");
+  var state={ step:0, role:"supplier" };
 
   function show(step){
     state.step=step;
-    ["#step1","#step2"].forEach((id,i)=>{const el=$(id); if(!el) return; el.hidden=i!==step; dots[i]?.classList.toggle("on", i===step);});
+    ["#step1","#step2"].forEach(function(id,i){
+      var el=$(id); if(!el) return;
+      el.hidden = i!==step;
+      if (dots[i]) dots[i].classList.toggle("on", i===step);
+    });
     backBtn.style.visibility = step===0 ? "hidden" : "visible";
     nextBtn.textContent = step===0 ? "Next" : "Continue";
   }
   function open(){ modal.classList.add("show"); modal.style.display="flex"; modal.setAttribute("aria-hidden","false"); show(0); }
   function close(){ modal.classList.remove("show"); modal.style.display="none"; modal.setAttribute("aria-hidden","true"); }
 
-  const navStart = document.getElementById("navStart");
-  navStart && navStart.addEventListener("click",(e)=>{e.preventDefault();open();});
-  openBtnMobile && openBtnMobile.addEventListener("click", open);
-  openBtnDesktop && openBtnDesktop.addEventListener("click", open);
-  closeBtn && closeBtn.addEventListener("click", close);
-  backBtn && backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+  var navStart = document.getElementById("navStart");
+  if (navStart) navStart.addEventListener("click", function(e){ e.preventDefault(); open(); });
+  if (openBtnMobile) openBtnMobile.addEventListener("click", open);
+  if (openBtnDesktop) openBtnDesktop.addEventListener("click", open);
+  if (closeBtn) closeBtn.addEventListener("click", close);
+  if (backBtn) backBtn.addEventListener("click", function(){ show(Math.max(0, state.step-1)); });
 
-  nextBtn && nextBtn.addEventListener("click", ()=>{
+  if (nextBtn) nextBtn.addEventListener("click", function(){
     if (state.step===0){ show(1); return; }
     if (state.step===1){
       if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
-      const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
+      var hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
       if (!hostCandidate){ alert("Please provide your website/domain (from email is fine)."); return; }
-      const seed = { role: state.role, contact: { name: nameEl.value.trim(), phone: phoneEl.value.trim(), email: emailEl.value.trim() }, host: hostCandidate };
+      var seed = { role: state.role, contact: { name: nameEl.value.trim(), phone: phoneEl.value.trim(), email: emailEl.value.trim() }, host: hostCandidate };
       try{
         LS.setItem("onb.seed", JSON.stringify(seed));
         LS.setItem("fp.supplier.host", hostCandidate);
         LS.setItem("email", seed.contact.email);
         LS.setItem("contact.name", seed.contact.name||"");
         LS.setItem("contact.phone", seed.contact.phone||"");
-      }catch{}
+      }catch(e){}
       window.location.href = "step3.html";
     }
   });
 
-  function setRole(r){ state.role=r; optSupplier.classList.toggle("active", r==="supplier"); optBuyer.classList.toggle("active", r==="buyer"); }
-  optSupplier && optSupplier.addEventListener("click",()=>setRole("supplier"));
-  optBuyer && optBuyer.addEventListener("click",()=>setRole("buyer"));
+  function setRole(r){
+    state.role=r;
+    if (optSupplier) optSupplier.classList.toggle("active", r==="supplier");
+    if (optBuyer) optBuyer.classList.toggle("active", r==="buyer");
+  }
+  if (optSupplier) optSupplier.addEventListener("click", function(){ setRole("supplier"); });
+  if (optBuyer) optBuyer.addEventListener("click", function(){ setRole("buyer"); });
 
   function syncDomain(){
-    const d=domainFromEmail(emailEl.value);
+    var d=domainFromEmail(emailEl.value);
     if (d) hostEl.value=d;
-    const tag=document.getElementById("domainTag");
+    var tag=document.getElementById("domainTag");
     if (tag){ tag.textContent = d || hostEl.value || "yourcompany.com"; }
   }
-  emailEl && emailEl.addEventListener("input",syncDomain);
-  emailEl && emailEl.addEventListener("change",syncDomain);
+  if (emailEl){
+    emailEl.addEventListener("input",syncDomain);
+    emailEl.addEventListener("change",syncDomain);
+  }
   setTimeout(syncDomain, 80);
-  apiBadge && (apiBadge.textContent = "Ready");
+  if (apiBadge) apiBadge.textContent = "Ready";
 
-  modal && modal.addEventListener("keydown",(e)=>{
+  if (modal) modal.addEventListener("keydown",function(e){
     if (e.key==="Escape"){ e.preventDefault(); close(); return; }
     if (e.key==="Enter"){
-      const tag=(e.target&&e.target.tagName)||"";
+      var tag=(e.target&&e.target.tagName)||"";
       if (tag==="INPUT"||tag==="TEXTAREA"||tag==="A"||tag==="BUTTON") return;
       e.preventDefault(); nextBtn.click();
     }
   });
 
-  /* ------- Hero aurora (desktop disabled) ------- */
-  const fx = document.getElementById("heroFx");
-  const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const isDesktop = window.matchMedia && window.matchMedia("(min-width:901px)").matches;
+  /* ------- Hero aurora (leave running on mobile only) ------- */
+  var fx = document.getElementById("heroFx");
+  var noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var isDesktop = window.matchMedia && window.matchMedia("(min-width: 901px)").matches;
   if (fx && !noMotion && !isDesktop){
-    const ctx = fx.getContext("2d");
-    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
+    var ctx = fx.getContext("2d");
+    var DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
     function size(){ fx.width = innerWidth*DPR; fx.height = innerHeight*DPR; }
     size(); addEventListener("resize", size);
-    let t=0;
+    var t=0;
     (function draw(){
       t+=0.0035;
-      const w=fx.width, h=fx.height;
+      var w=fx.width, h=fx.height;
       ctx.clearRect(0,0,w,h);
-      const g = ctx.createRadialGradient(w*0.48, h*0.28, h*0.05, w*0.5, h*0.5, h*0.82);
+      var g = ctx.createRadialGradient(w*0.48, h*0.28, h*0.05, w*0.5, h*0.5, h*0.82);
       g.addColorStop(0, "rgba(250,225,150,0.08)"); g.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
-      const blobs = [
+      var blobs = [
         { x: 0.32 + Math.sin(t*0.9)*0.05, y: 0.36 + Math.cos(t*0.8)*0.04, r: 0.55, a: 0.18 },
         { x: 0.68 + Math.cos(t*0.7)*0.06, y: 0.55 + Math.sin(t*0.6)*0.05, r: 0.65, a: 0.14 }
       ];
-      for (const b of blobs){
-        const rg = ctx.createRadialGradient(w*b.x, h*b.y, 0, w*b.x, h*b.y, Math.min(w,h)*b.r);
-        rg.addColorStop(0, `rgba(230,195,107,${b.a})`); rg.addColorStop(1, "rgba(0,0,0,0)");
+      for (var i=0;i<blobs.length;i++){
+        var b=blobs[i];
+        var rg = ctx.createRadialGradient(w*b.x, h*b.y, 0, w*b.x, h*b.y, Math.min(w,h)*b.r);
+        rg.addColorStop(0, "rgba(230,195,107,"+b.a+")"); rg.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(w*b.x, h*b.y, Math.min(w,h)*b.r, 0, Math.PI*2); ctx.fill();
       }
       requestAnimationFrame(draw);
@@ -559,68 +569,74 @@
 
   /* ------- Constellation (desktop) ------- */
   (function(){
-    const wrap = document.querySelector(".const-wrap");
-    const c = document.getElementById("constFx");
+    var wrap = document.querySelector(".const-wrap");
+    var c = document.getElementById("constFx");
     if (!wrap || !c) return;
 
-    const KNOBS_DEFAULT = {
+    var KNOBS_DEFAULT = {
       nodes: { count: 42, linkRadius: 110, linkAlphaBase: 0.08, linkAlphaBoost: 0.22 },
       highlights: { regionLeft: 0.55, regionTop: 0.08, regionBottom: 0.90 },
       cards: { safeLeft: 0.60, safeRight: 0.03, safeTop: 0.10, safeBottom: 0.22, jitter: 14, spacing: 26 },
       legendAvoidancePx: 14
     };
-    const KNOBS = (window.CONST_KNOBS = Object.assign({}, KNOBS_DEFAULT, window.CONST_KNOBS||{}));
-    window.updateConstKnobs = (patch={})=>{
-      ["nodes","highlights","cards"].forEach(k=>{ if(patch[k]) KNOBS[k] = Object.assign({}, KNOBS[k], patch[k]); });
-      Object.keys(patch).forEach(k=>{ if(!["nodes","highlights","cards"].includes(k)) KNOBS[k]=patch[k]; });
+    var KNOBS = (window.CONST_KNOBS = Object.assign({}, KNOBS_DEFAULT, window.CONST_KNOBS||{}));
+    window.updateConstKnobs = function(patch){
+      patch = patch || {};
+      ["nodes","highlights","cards"].forEach(function(k){
+        if(patch[k]) KNOBS[k] = Object.assign({}, KNOBS[k], patch[k]);
+      });
+      Object.keys(patch).forEach(function(k){
+        if(!["nodes","highlights","cards"].includes(k)) KNOBS[k]=patch[k];
+      });
       reset();
     };
 
-    const cards = [{ el: $("#cardA") },{ el: $("#cardB") },{ el: $("#cardC") }];
-    const cardData = [
+    var $id = function(q){ return document.querySelector(q); };
+    var cards = [{ el: $id("#cardA") },{ el: $id("#cardB") },{ el: $id("#cardC") }];
+    var cardData = [
       { name:"Acme Drinks Co.", city:"Chicago, IL" },
       { name:"Northstar Foods", city:"Dallas, TX" },
       { name:"Atlas Beauty", city:"Toronto, ON" },
       { name:"Cygnet Petcare", city:"Portland, OR" },
-      { name:"Volt Homecare", city:"Denver, CO" },
+      { name:"Volt Homecare", city:"Denver, CO" }
     ];
 
-    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
-    const ctx = c.getContext("2d");
-    let W=0,H=0, nodes=[], highlights=[], t=0;
+    var DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
+    var ctx = c.getContext("2d");
+    var W=0,H=0, nodes=[], highlights=[], t=0;
 
-    const noMotion2 = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var noMotion2 = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     function rand(min,max){ return min + Math.random()*(max-min); }
     function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
 
     function reset(){
-      const rect = wrap.getBoundingClientRect();
+      var rect = wrap.getBoundingClientRect();
       W = Math.max(320, Math.floor(rect.width));
       H = Math.max(260, Math.floor(rect.height));
       c.width = Math.floor(W*DPR); c.height = Math.floor(H*DPR);
       c.style.width=W+"px"; c.style.height=H+"px";
       ctx.setTransform(DPR,0,0,DPR,0,0);
 
-      const N = KNOBS.nodes.count; nodes = [];
-      for (let i=0;i<N;i++){
-        const x = 0.20 + Math.random()*0.78;
-        const y = 0.06 + Math.random()*0.88;
-        const s = 0.15 + Math.random()*0.85;
-        const vx = (Math.random()-0.5) * 0.18;
-        const vy = (Math.random()-0.5) * 0.18;
-        nodes.push({x:x*W, y:y*H, s, vx, vy});
+      var N = KNOBS.nodes.count; nodes = [];
+      for (var i=0;i<N;i++){
+        var x = 0.20 + Math.random()*0.78;
+        var y = 0.06 + Math.random()*0.88;
+        var s = 0.15 + Math.random()*0.85;
+        var vx = (Math.random()-0.5) * 0.18;
+        var vy = (Math.random()-0.5) * 0.18;
+        nodes.push({x:x*W, y:y*H, s:s, vx:vx, vy:vy});
       }
-      const anchor = { x: 0.18*W, y: 0.52*H };
+      var anchor = { x: 0.18*W, y: 0.52*H };
       nodes.unshift({x:anchor.x, y:anchor.y, s:1.8, vx:0, vy:0, anchor:true });
 
-      const hr = KNOBS.highlights;
-      const candidates = nodes.filter(n =>
-        !n.anchor && n.x > W*hr.regionLeft && n.y > H*hr.regionTop && n.y < H*hr.regionBottom
-      );
+      var hr = KNOBS.highlights;
+      var candidates = nodes.filter(function(n){
+        return !n.anchor && n.x > W*hr.regionLeft && n.y > H*hr.regionTop && n.y < H*hr.regionBottom;
+      });
       highlights = [];
-      for (let i=0;i<3;i++){
-        const n = candidates[(Math.random()*candidates.length)|0];
+      for (var j=0;j<3;j++){
+        var n = candidates[(Math.random()*candidates.length)|0];
         if (!n) break;
         highlights.push(n);
       }
@@ -630,61 +646,63 @@
     }
 
     function placeCards(){
-      const cs = KNOBS.cards;
-      const safe = {
+      var cs = KNOBS.cards;
+      var safe = {
         left:  W*cs.safeLeft,
         top:   H*cs.safeTop,
         right: W*(1 - cs.safeRight),
         bottom:H*(1 - cs.safeBottom)
       };
-      const legend = wrap.querySelector(".const-legend");
+      var legend = wrap.querySelector(".const-legend");
       if (legend){
-        const lr = legend.getBoundingClientRect();
-        const wr = wrap.getBoundingClientRect();
-        const legendTop = lr.top - wr.top;
+        var lr = legend.getBoundingClientRect();
+        var wr = wrap.getBoundingClientRect();
+        var legendTop = lr.top - wr.top;
         safe.bottom = Math.min(safe.bottom, legendTop - KNOBS.legendAvoidancePx);
       }
 
-      const placed = [];
+      var placed = [];
       function nonOverlapping(x,y,w,h){
-        const pad = KNOBS.cards.spacing;
-        return placed.every(p => Math.abs(p.x - x) > (p.w/2 + w/2 + pad) || Math.abs(p.y - y) > (p.h/2 + h/2 + pad));
+        var pad = KNOBS.cards.spacing;
+        return placed.every(function(p){
+          return Math.abs(p.x - x) > (p.w/2 + w/2 + pad) || Math.abs(p.y - y) > (p.h/2 + h/2 + pad);
+        });
       }
 
-      const pts = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
-      pts.forEach((p, i)=>{
-        const el = cards[i]?.el; if (!el) return;
-        const rect = el.getBoundingClientRect();
-        const w = rect.width || 190, h = rect.height || 96;
+      var pts = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
+      pts.forEach(function(p, i){
+        var el = cards[i] && cards[i].el; if (!el) return;
+        var rect = el.getBoundingClientRect();
+        var w = rect.width || 190, h = rect.height || 96;
 
-        const jitter = KNOBS.cards.jitter;
-        let x = (p?.x ?? (safe.left + (i+1)/4*(safe.right-safe.left))) + (i===1? -12: 12) + (Math.random()*2-1)*jitter;
-        let y = (p?.y ?? (safe.top + (i+1)/4*(safe.bottom-safe.top))) + (i===2?  14: -10) + (Math.random()*2-1)*jitter;
+        var jitter = KNOBS.cards.jitter;
+        var x = (p && p.x ? p.x : (safe.left + (i+1)/4*(safe.right-safe.left))) + (i===1? -12: 12) + rand(-jitter,jitter);
+        var y = (p && p.y ? p.y : (safe.top + (i+1)/4*(safe.bottom-safe.top))) + (i===2?  14: -10) + rand(-jitter,jitter);
 
-        const halfW=w/2, halfH=h/2;
-        x = Math.max(safe.left + halfW, Math.min(safe.right - halfW, x));
-        y = Math.max(safe.top + halfH, Math.min(safe.bottom - halfH, y));
+        var halfW=w/2, halfH=h/2;
+        x = clamp(x, safe.left + halfW, safe.right - halfW);
+        y = clamp(y, safe.top + halfH, safe.bottom - halfH);
 
-        let tries=0;
+        var tries=0;
         while(!nonOverlapping(x,y,w,h) && tries<18){
-          x = Math.max(safe.left + halfW, Math.min(safe.right - halfW, x + (Math.random()*2-1)*jitter));
-          y = Math.max(safe.top + halfH, Math.min(safe.bottom - halfH, y + (Math.random()*2-1)*jitter));
+          x = clamp(x + rand(-jitter,jitter), safe.left + halfW, safe.right - halfW);
+          y = clamp(y + rand(-jitter,jitter), safe.top + halfH, safe.bottom - halfH);
           tries++;
         }
-        placed.push({x,y,w,h});
+        placed.push({x:x,y:y,w:w,h:h});
         el.style.left = x+"px";
         el.style.top  = y+"px";
 
-        const d = cardData[(Math.random()*cardData.length)|0];
-        const vs = el.querySelectorAll(".v");
+        var d = cardData[(Math.random()*cardData.length)|0];
+        var vs = el.querySelectorAll(".v");
         if (vs[0]) vs[0].textContent = d.name;
         if (vs[1]) vs[1].textContent = d.city;
       });
     }
 
     function step(dt){
-      for (let i=1;i<nodes.length;i++){
-        const n = nodes[i];
+      for (var i=1;i<nodes.length;i++){
+        var n = nodes[i];
         n.x += n.vx*dt; n.y += n.vy*dt;
         if (n.x < 0) n.x = W; if (n.x > W) n.x = 0;
         if (n.y < 0) n.y = H; if (n.y > H) n.y = 0;
@@ -693,63 +711,64 @@
 
     function draw(){
       ctx.clearRect(0,0,W,H);
-      const R = KNOBS.nodes.linkRadius;
-      for (let i=0;i<nodes.length;i++){
-        const a = nodes[i];
-        for (let j=i+1;j<nodes.length;j++){
-          const b = nodes[j];
-          const dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
+      var R = KNOBS.nodes.linkRadius;
+      for (var i=0;i<nodes.length;i++){
+        var a = nodes[i];
+        for (var j=i+1;j<nodes.length;j++){
+          var b = nodes[j];
+          var dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
           if (d2 < R*R){
-            const aLine = KNOBS.nodes.linkAlphaBase + KNOBS.nodes.linkAlphaBoost*(1 - Math.sqrt(d2)/R);
-            ctx.strokeStyle=`rgba(230,195,107,${aLine})`;
+            var aLine = KNOBS.nodes.linkAlphaBase + KNOBS.nodes.linkAlphaBoost*(1 - Math.sqrt(d2)/R);
+            ctx.strokeStyle="rgba(230,195,107,"+aLine+")";
             ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
           }
         }
       }
-      const anchor = nodes[0];
-      const pulse = 8 + Math.sin(t*0.0022)*4;
+      var anchor = nodes[0];
+      var pulse = 8 + Math.sin(t*0.0022)*4;
       ctx.fillStyle="rgba(230,195,107,0.16)";
       ctx.beginPath(); ctx.arc(anchor.x, anchor.y, 24+pulse, 0, Math.PI*2); ctx.fill();
 
-      const grad = ctx.createLinearGradient(0,0,W,H);
+      var grad = ctx.createLinearGradient(0,0,W,H);
       grad.addColorStop(0, "rgba(230,195,107,0.06)");
       grad.addColorStop(1, "rgba(230,195,107,0.0)");
       ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
 
-      for (const n of nodes){
-        const r = n.anchor ? 4 : Math.max(1,1.2*n.s);
-        ctx.fillStyle = n.anchor ? "rgba(242,220,160,0.95)" : "rgba(230,195,107,0.75)";
-        ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2); ctx.fill();
+      for (var k=0;k<nodes.length;k++){
+        var n2 = nodes[k];
+        var r = n2.anchor ? 4 : Math.max(1,1.2*n2.s);
+        ctx.fillStyle = n2.anchor ? "rgba(242,220,160,0.95)" : "rgba(230,195,107,0.75)";
+        ctx.beginPath(); ctx.arc(n2.x,n2.y,r,0,Math.PI*2); ctx.fill();
       }
     }
 
     function loop(now){
-      if (!prev) prev=now; const dt=Math.min(33, now-prev)*0.06; prev=now; t+=dt;
+      if (!loop.prev) loop.prev=now; var dt=Math.min(33, now-loop.prev)*0.06; loop.prev=now; t+=dt;
       step(noMotion2?0:dt); draw(); if (!noMotion2) requestAnimationFrame(loop); else draw();
     }
-    let prev=0; reset(); loop(0); addEventListener("resize", reset);
+    reset(); loop(0); addEventListener("resize", reset);
 
     try{
-      const d=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host;
-      const tag=$("#domainTag"); if (tag) tag.textContent=d || "yourcompany.com";
-    }catch{}
+      var d=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host;
+      var tag=$("#domainTag"); if (tag) tag.textContent=d || "yourcompany.com";
+    }catch(e){}
   })();
 
   /* ------- Section 2 counters (unchanged) ------- */
   (function(){
-    const section = document.getElementById("proof"); if (!section) return;
-    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const nums = Array.from(section.querySelectorAll(".num")); let fired=false;
-    function format(v, fmt){ if (fmt==="dec1") return v.toFixed(1); const s=Math.round(v).toString(); return s.replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+    var section = document.getElementById("proof"); if (!section) return;
+    var noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var nums = Array.prototype.slice.call(section.querySelectorAll(".num")); var fired=false;
+    function format(v, fmt){ if (fmt==="dec1") return v.toFixed(1); var s=Math.round(v).toString(); return s.replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
     function animate(el){
-      const to = parseFloat(el.dataset.to||"0"); const fmt = el.dataset.format||"int";
+      var to = parseFloat(el.dataset.to||"0"); var fmt = el.dataset.format||"int";
       if (noMotion){ el.textContent = format(to, fmt); return; }
-      const dur = 1200; const start = performance.now();
-      function tick(now){ const p=Math.min(1,(now-start)/dur); const ease=1-Math.pow(1-p,3); const val=to*ease; el.textContent=format(val,fmt); if (p<1) requestAnimationFrame(tick); }
+      var dur = 1200; var start = performance.now();
+      function tick(now){ var p=Math.min(1,(now-start)/dur); var ease=1-Math.pow(1-p,3); var val=to*ease; el.textContent=format(val,fmt); if (p<1) requestAnimationFrame(tick); }
       requestAnimationFrame(tick);
     }
-    const io = new IntersectionObserver((entries)=>{
-      entries.forEach(e=>{ if (!fired && e.isIntersecting){ fired=true; nums.forEach(animate); io.disconnect(); }});
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if (!fired && e.isIntersecting){ fired=true; nums.forEach(animate); io.disconnect(); }});
     },{threshold:0.35});
     io.observe(section);
   })();
@@ -759,25 +778,26 @@
 <script>
 /* header hamburger (unchanged) */
 (function(){
-  const burger = document.getElementById('burger');
-  const menu = document.getElementById('mobileMenu');
+  var burger = document.getElementById('burger');
+  var menu = document.getElementById('mobileMenu');
   if(!burger || !menu) return;
 
   function toggle(){
-    const open = burger.getAttribute('aria-expanded') === 'true';
+    var open = burger.getAttribute('aria-expanded') === 'true';
     burger.setAttribute('aria-expanded', String(!open));
     menu.classList.toggle('open', !open);
     document.body.style.overflow = !open ? 'hidden' : '';
   }
   burger.addEventListener('click', toggle);
-  menu.addEventListener('click', (e)=>{ if (e.target === menu) toggle(); });
-  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape' && menu.classList.contains('open')) toggle(); });
+  menu.addEventListener('click', function(e){ if (e.target === menu) toggle(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && menu.classList.contains('open')) toggle(); });
 
-  const mobileStart = document.getElementById('mobileStart');
-  mobileStart && mobileStart.addEventListener('click', (e)=>{
+  var mobileStart = document.getElementById('mobileStart');
+  if (mobileStart) mobileStart.addEventListener('click', function(e){
     e.preventDefault();
     toggle();
-    (document.getElementById('cta') || document.getElementById('cta-desktop'))?.click();
+    var t = document.getElementById('cta') || document.getElementById('cta-desktop');
+    if (t) t.click();
   });
 })();
 </script>
