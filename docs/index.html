@@ -36,21 +36,18 @@
     --miniCard-radius: 12px; --miniCard-bg: rgba(12,18,28,.86); --miniCard-blur: 6px;
     --miniCard-stroke-a: .08; --miniCard-shadow-a: .30;
 
-    --legend-fs: 12px; --legend-color: #a8bacb;
+    --legend-fs: 12px; --legend-color: #b9cbe0; /* slightly brighter */
+    --legend-bg: rgba(255,255,255,.06);
 
     /* ---- WALLPAPER KNOBS (CSS side) ---- */
-    /* spacing knob between Hero and Section 2 */
-    --gap-hero-proof: 0px; /* tweak with setSectionGap(...) */
-
-    /* height of the wallpaper area (computed in JS by default) */
+    --gap-hero-proof: 0px; /* adjustable via setSectionGap(...) */
     --wp-h: 220vh;
 
-    /* desktop radial defaults (overridden by JS knobs on load) */
+    /* desktop base wallpaper (kept) */
     --wp-r1-size: 180% 140%;
     --wp-r1-at: 50% -14%;
     --wp-r1-alpha: .18;
     --wp-r1-fade: 58%;
-
     --wp-r2-size: 110% 90%;
     --wp-r2-at: 22% 12%;
     --wp-r2-alpha: .10;
@@ -67,8 +64,7 @@
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* ---- STATIC WALLPAPER (no parallax) ----
-     This sits behind content, anchored to the document, not the viewport. */
+  /* ---- STATIC WALLPAPER (no parallax) ---- */
   .page-wallpaper{
     position:absolute; left:0; right:0; top:0; height:var(--wp-h);
     z-index:0; pointer-events:none;
@@ -76,10 +72,9 @@
       radial-gradient(var(--wp-r1-size) at var(--wp-r1-at), rgba(230,195,107,var(--wp-r1-alpha)), rgba(0,0,0,0) var(--wp-r1-fade)),
       radial-gradient(var(--wp-r2-size) at var(--wp-r2-at), rgba(230,195,107,var(--wp-r2-alpha)), rgba(0,0,0,0) var(--wp-r2-fade)),
       linear-gradient(180deg,#0b121a 0%, #0a0e14 70%, #091019 88%, var(--zone-dark) 100%);
-    background-repeat:no-repeat,no-repeat,no-repeat; /* scroll with page (no attachment fixed) */
+    background-repeat:no-repeat,no-repeat,no-repeat;
   }
 
-  /* mobile radial defaults (JS will apply) */
   @media (max-width:900px){
     :root{
       --wp-r1-size: 200% 165%;
@@ -93,7 +88,7 @@
     }
   }
 
-  /* sections transparent so wallpaper shows through; kill any dim overlays */
+  /* sections transparent so wallpaper shows through */
   .hero,.section{background:transparent}
   body::before, body::after, .hero::before, .hero::after{content:none!important}
 
@@ -158,9 +153,9 @@
   /* HERO */
   .hero{
     position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
-    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate; z-index:1; /* above wallpaper */
+    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate; z-index:1;
   }
-  #heroFx{display:none!important} /* no dynamic effects */
+  #heroFx{display:none!important}
   .hero-grid{
     position:relative;z-index:1;display:grid;align-items:center;
     grid-template-columns:1.12fr 1fr;
@@ -172,7 +167,7 @@
   .badge{display:inline-block;margin-bottom:12px;padding:6px 10px;border-radius:999px;
     border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--muted);font-size:12px}
   h1{font:600 clamp(34px,6vw,64px) "Newsreader", Georgia, serif;letter-spacing:.2px;margin:0 0 10px}
-  .lead{color:var(--muted);font-size:clamp(16px,2.6vw,19px);margin:0 0 26px}
+  .lead{color:#c7d7e6;font-size:clamp(16px,2.6vw,19px);margin:0 0 26px}
   .actions{display:flex;gap:12px;flex-wrap:wrap}
   .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:999px;border:1px solid var(--stroke);cursor:pointer}
   .btn:active{transform:translateY(1px)}
@@ -200,23 +195,49 @@
     opacity:var(--const-grid-sheen-a);
   }
   #constFx{position:absolute; inset:0; z-index:0}
+
   .const-legend{
     position:absolute; inset:auto 12px 12px auto; z-index:2;
     font-size:var(--legend-fs); color:var(--legend-color);
-    background:rgba(255,255,255,.03); border:1px solid var(--stroke);
+    background:var(--legend-bg); border:1px solid var(--stroke);
     padding:6px 8px; border-radius:10px
   }
+  .const-caption{
+    position:absolute; right:12px; top:12px; z-index:2;
+    font-size:11px; letter-spacing:.2px; color:#cfe2ff; opacity:.9;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
+    padding:5px 7px; border-radius:8px;
+  }
+
   .miniCard{
-    position:absolute; z-index:2; min-width:170px; max-width:220px;
+    position:absolute; z-index:2; min-width:176px; max-width:228px;
     padding:10px 12px; border-radius:var(--miniCard-radius);
     background:var(--miniCard-bg);
     -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
     border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
     box-shadow:0 8px 24px rgba(0,0,0,var(--miniCard-shadow-a));
-    transform:translate(-50%,-50%); pointer-events:none
+    transform:translate(-50%,-50%); pointer-events:auto; color:#e8f1fb;
   }
-  .miniCard .k{font-size:11px;color:#9bb2c8}
+  /* subtle inner glow to lift contrast on dark panel */
+  .miniCard::before{
+    content:""; position:absolute; inset:-1px; border-radius:inherit; z-index:-1;
+    background: radial-gradient(120% 100% at 50% 0%, rgba(255,255,255,.08), rgba(0,0,0,0) 70%);
+    filter: blur(6px);
+  }
+  .miniCard .k{font-size:11px;color:#a9bfd6}
   .miniCard .v{font-weight:700}
+
+  /* tooltip on hover */
+  .miniCard[data-tip]:hover::after{
+    content: attr(data-tip);
+    position:absolute; left:50%; transform:translateX(-50%);
+    bottom:calc(100% + 8px);
+    white-space:nowrap; font-size:11px; color:#eaf2ff;
+    background:rgba(10,14,20,.86); border:1px solid rgba(255,255,255,.12);
+    padding:6px 8px; border-radius:8px; opacity:1; pointer-events:none;
+  }
+  .miniCard::after{opacity:0; transition:opacity .18s ease;}
+
   .domainTag{
     position:absolute; z-index:2; left:14px; top:14px;
     padding:6px 10px; border-radius:999px; font-size:12px;
@@ -224,17 +245,15 @@
     border:1px solid rgba(230,195,107,.25)
   }
 
-  /* SECTION 2 */
+  /* SECTION 2 (unchanged) */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
   .section .inner{margin:0 auto}
-  /* optional spacing knob between sections */
   #proof{ margin-top: var(--gap-hero-proof); }
 
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
   .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
   .section-hd .sub{color:var(--muted);font-size:14px}
 
-  /* ---- GLASS PANEL like the screenshot ---- */
   .proof-wrap{
     position:relative;
     border-radius:18px;
@@ -251,31 +270,24 @@
     padding:22px;
   }
   .proof-wrap::after{
-    /* soft inner border to sell the glass */
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
   }
 
-  /* metrics inside glass: one row, subtle separators */
   .kpi-grid{
     display:grid;
     grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:0; /* single panel feel */
+    gap:0;
   }
   @media (max-width:900px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
   @media (max-width:520px){.kpi-grid{grid-template-columns:1fr}}
 
-  .kpi{
-    background:transparent; border:none; box-shadow:none;
-    height:auto; padding:18px 18px 16px;
-    position:relative;
-  }
+  .kpi{background:transparent;border:none;box-shadow:none;height:auto;padding:18px 18px 16px;position:relative;}
   .kpi + .kpi{ border-left:1px solid rgba(255,255,255,.06); }
   @media (max-width:900px){
     .kpi:nth-child(odd){ border-left:none; }
     .kpi:nth-child(n+3){ border-top:1px solid rgba(255,255,255,.06); }
   }
-
   .kpi .label{font-size:12px;color:#a8bbcd;letter-spacing:.2px;text-transform:uppercase}
   .kpi .num{
     font-weight:800;font-size:clamp(28px,5vw,42px);line-height:1.05;
@@ -284,7 +296,7 @@
   }
   .kpi .hint{font-size:12px;color:#8ba6bf;margin-top:6px}
 
-  /* ---------- MOBILE TYPE TWEAKS (unchanged) ---------- */
+  /* ---------- MOBILE TYPE TWEAKS ---------- */
   @media (max-width:900px){
     .const-wrap{display:none}
     .hero{min-height:92svh; padding:calc(60px + env(safe-area-inset-top, 10px)) 16px 28px;}
@@ -298,7 +310,6 @@
     .actions.show-mobile .btn{ width:100%; padding:16px 20px; justify-content:center; text-align:center; }
   }
 
-  /* Reduced motion */
   @media (prefers-reduced-motion: reduce){
     #constFx{display:none}
     .btn{transition:none}
@@ -313,7 +324,7 @@
 </style>
 </head>
 <body>
-  <!-- STATIC WALLPAPER (no parallax) -->
+  <!-- STATIC WALLPAPER (document-anchored) -->
   <div id="pageWallpaper" class="page-wallpaper" aria-hidden="true"></div>
 
   <!-- HEADER -->
@@ -391,12 +402,22 @@
       <!-- Constellation (desktop only) -->
       <div class="const-wrap" aria-hidden="true">
         <span class="domainTag" id="domainTag">yourcompany.com</span>
+        <span class="const-caption">Signals clustered by timing</span>
         <canvas id="constFx"></canvas>
         <div class="const-legend">Your Website → Signal → <strong>Timing</strong> → Buyers</div>
 
-        <div class="miniCard" id="cardA"><div class="k">Buyer</div><div class="v" id="cardA_name">Acme Drinks Co.</div><div class="k">City</div><div class="v" id="cardA_city">Chicago, IL</div></div>
-        <div class="miniCard" id="cardB"><div class="k">Buyer</div><div class="v" id="cardB_name">Northstar Foods</div><div class="k">City</div><div class="v" id="cardB_city">Dallas, TX</div></div>
-        <div class="miniCard" id="cardC"><div class="k">Buyer</div><div class="v" id="cardC_name">Atlas Beauty</div><div class="k">City</div><div class="v" id="cardC_city">Toronto, ON</div></div>
+        <div class="miniCard" id="cardA" data-tip="High intent this week">
+          <div class="k">Buyer</div><div class="v" id="cardA_name">Acme Drinks Co.</div>
+          <div class="k">City</div><div class="v" id="cardA_city">Chicago, IL</div>
+        </div>
+        <div class="miniCard" id="cardB" data-tip="High intent this week">
+          <div class="k">Buyer</div><div class="v" id="cardB_name">Northstar Foods</div>
+          <div class="k">City</div><div class="v" id="cardB_city">Dallas, TX</div>
+        </div>
+        <div class="miniCard" id="cardC" data-tip="High intent this week">
+          <div class="k">Buyer</div><div class="v" id="cardC_name">Atlas Beauty</div>
+          <div class="k">City</div><div class="v" id="cardC_city">Toronto, ON</div>
+        </div>
       </div>
     </div>
   </section>
@@ -431,21 +452,18 @@
 <script>
 (()=>{
   'use strict';
-  var $  = (q)=>document.querySelector(q);
-  var $$ = (q)=>Array.from(document.querySelectorAll(q));
-  var LS = window.localStorage;
-  var normHost=(h)=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
-  var domainFromEmail=(e)=>{var m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
+  const $  = (q)=>document.querySelector(q);
+  const $$ = (q)=>Array.from(document.querySelectorAll(q));
+  const LS = window.localStorage;
+  const normHost=(h)=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+  const domainFromEmail=(e)=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
 
-  /* ========= STATIC WALLPAPER BUILDER (no parallax) =========
-     Knobs live on window.WALLPAPER (desktop/mobile). Call updateWallpaperKnobs()
-     to tweak, or setSectionGap(px) for spacing between sections.
-  ============================================================ */
+  /* ========= STATIC WALLPAPER (kept) ========= */
   const WP_DEFAULT = {
     r1: { size:'var(--wp-r1-size)', at:'var(--wp-r1-at)', alpha:0.18, fade:'58%' },
     r2: { size:'var(--wp-r2-size)', at:'var(--wp-r2-at)', alpha:0.10, fade:'72%' },
     base: 'linear-gradient(180deg,#0b121a 0%, #0a0e14 70%, #091019 88%, var(--zone-dark) 100%)',
-    height: 'auto' /* 'auto' = hero+gap+section2; or set a CSS value string/number(px) */
+    height: 'auto'
   };
   window.WALLPAPER = {
     desktop: JSON.parse(JSON.stringify(WP_DEFAULT)),
@@ -456,35 +474,28 @@
       height: 'auto'
     }
   };
-  function buildRadial(k){
-    return `radial-gradient(${k.size} at ${k.at}, rgba(230,195,107,${k.alpha}), rgba(0,0,0,0) ${k.fade})`;
-  }
-  function buildBg(cfg){
-    return [ buildRadial(cfg.r1), buildRadial(cfg.r2), cfg.base ].join(',');
-  }
+  const buildRadial=(k)=>`radial-gradient(${k.size} at ${k.at}, rgba(230,195,107,${k.alpha}), rgba(0,0,0,0) ${k.fade})`;
+  const buildBg=(cfg)=>[ buildRadial(cfg.r1), buildRadial(cfg.r2), cfg.base ].join(',');
   function deepMerge(base, patch){
-    const out = JSON.parse(JSON.stringify(base));
+    const out = JSON.parse(JSON.stringify(base||{}));
     if(!patch) return out;
     for(const k in patch){
-      if (patch[k] && typeof patch[k]==='object' && !Array.isArray(patch[k])){
-        out[k] = deepMerge(base[k]||{}, patch[k]);
-      }else out[k]=patch[k];
+      if (patch[k] && typeof patch[k]==='object' && !Array.isArray(patch[k])) out[k] = deepMerge(base?.[k]||{}, patch[k]);
+      else out[k]=patch[k];
     }
     return out;
   }
   function applyWallpaper(){
-    const el = document.getElementById('pageWallpaper'); if(!el) return;
+    const el = $('#pageWallpaper'); if(!el) return;
     const mq = window.matchMedia('(max-width:900px)');
     const cfg = mq.matches ? window.WALLPAPER.mobile : window.WALLPAPER.desktop;
-
-    // compute height when 'auto'
     let h = cfg.height;
     if (h === 'auto'){
       const hero = document.querySelector('.hero');
       const proof = document.getElementById('proof');
       const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap-hero-proof'))||0;
-      h = ((hero?.offsetHeight||0) + gap + (proof?.offsetHeight||0)) + 80; // small tail
-      h = Math.max(h, (window.innerHeight*1.6)); // ensure generous default
+      h = ((hero?.offsetHeight||0) + gap + (proof?.offsetHeight||0)) + 80;
+      h = Math.max(h, (window.innerHeight*1.6));
     }
     el.style.height = (typeof h==='number') ? (h+'px') : String(h);
     el.style.background = buildBg(cfg);
@@ -502,8 +513,8 @@
   window.addEventListener('resize', applyWallpaper);
   document.addEventListener('DOMContentLoaded', applyWallpaper);
 
-  /* ------- Build modal ------- */
-  var modal = $("#modal");
+  /* ------- Build modal (unchanged) ------- */
+  const modal = $("#modal");
   modal.innerHTML =
     '<div class="card" role="document">\
       <div class="card-hd">\
@@ -558,13 +569,13 @@
     </div>';
 
   /* ------- elements & state ------- */
-  var openBtnMobile=$("#cta"), openBtnDesktop=$("#cta-desktop");
-  var closeBtn=$("#close");
-  var backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
-  var emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
-  var optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
-  var apiBadge=$("#apiBadge");
-  var state={ step:0, role:"supplier" };
+  const openBtnMobile=$("#cta"), openBtnDesktop=$("#cta-desktop");
+  const closeBtn=$("#close");
+  const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
+  const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
+  const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
+  const apiBadge=$("#apiBadge");
+  const state={ step:0, role:"supplier" };
 
   function show(step){
     state.step=step;
@@ -575,14 +586,13 @@
   function open(){ modal.classList.add("show"); modal.style.display="flex"; modal.setAttribute("aria-hidden","false"); show(0); }
   function close(){ modal.classList.remove("show"); modal.style.display="none"; modal.setAttribute("aria-hidden","true"); }
 
-  var navStart = document.getElementById("navStart");
-  navStart && navStart.addEventListener("click",(e)=>{e.preventDefault();open();});
-  openBtnMobile && openBtnMobile.addEventListener("click", open);
-  openBtnDesktop && openBtnDesktop.addEventListener("click", open);
-  closeBtn && closeBtn.addEventListener("click", close);
-  backBtn && backBtn.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+  $("#navStart")?.addEventListener("click",(e)=>{e.preventDefault();open();});
+  openBtnMobile?.addEventListener("click", open);
+  openBtnDesktop?.addEventListener("click", open);
+  closeBtn?.addEventListener("click", close);
+  backBtn?.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
 
-  nextBtn && nextBtn.addEventListener("click", ()=>{
+  nextBtn?.addEventListener("click", ()=>{
     if (state.step===0){ show(1); return; }
     if (state.step===1){
       if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
@@ -601,21 +611,24 @@
   });
 
   function setRole(r){ state.role=r; optSupplier?.classList.toggle("active", r==="supplier"); optBuyer?.classList.toggle("active", r==="buyer"); }
-  optSupplier && optSupplier.addEventListener("click",()=>setRole("supplier"));
-  optBuyer && optBuyer.addEventListener("click",()=>setRole("buyer"));
+  optSupplier?.addEventListener("click",()=>setRole("supplier"));
+  optBuyer?.addEventListener("click",()=>setRole("buyer"));
 
   function syncDomain(){
     const d=domainFromEmail(emailEl.value);
     if (d) hostEl.value=d;
-    const tag=document.getElementById("domainTag");
+    const tag=$("#domainTag");
     tag && (tag.textContent = d || hostEl.value || "yourcompany.com");
+    // also update card sector when domain changes
+    const detected = detectSector(tag?.textContent||"");
+    setSectorCards(detected);
   }
-  emailEl && emailEl.addEventListener("input",syncDomain);
-  emailEl && emailEl.addEventListener("change",syncDomain);
+  emailEl?.addEventListener("input",syncDomain);
+  emailEl?.addEventListener("change",syncDomain);
   setTimeout(syncDomain, 80);
   apiBadge && (apiBadge.textContent = "Ready");
 
-  modal && modal.addEventListener("keydown",(e)=>{
+  modal?.addEventListener("keydown",(e)=>{
     if (e.key==="Escape"){ e.preventDefault(); close(); return; }
     if (e.key==="Enter"){
       const tag=(e.target&&e.target.tagName)||"";
@@ -630,37 +643,80 @@
     const c = document.getElementById("constFx");
     if (!wrap || !c) return;
 
+    /* marketing-friendly defaults per your brief */
     const KNOBS_DEFAULT = {
-      nodes: { count: 42, linkRadius: 110, linkAlphaBase: 0.08, linkAlphaBoost: 0.22 },
+      nodes: { count: 28, linkRadius: 96, linkAlphaBase: 0.06, linkAlphaBoost: 0.18, speed: 0.14 },
       highlights: { regionLeft: 0.55, regionTop: 0.08, regionBottom: 0.90 },
-      cards: { safeLeft: 0.60, safeRight: 0.03, safeTop: 0.10, safeBottom: 0.22, jitter: 14, spacing: 26 },
+      cards: { safeLeft: 0.58, safeRight: 0.03, safeTop: 0.12, safeBottom: 0.24, jitter: 10, spacing: 22 },
       legendAvoidancePx: 14
     };
     function deepMerge(base, patch){
       const out = JSON.parse(JSON.stringify(base||{}));
       if(!patch) return out;
       for(const k in patch){
-        if (patch[k] && typeof patch[k]==='object' && !Array.isArray(patch[k])){
-          out[k] = deepMerge(base?.[k]||{}, patch[k]);
-        } else out[k] = patch[k];
+        if (patch[k] && typeof patch[k]==='object' && !Array.isArray(patch[k])) out[k] = deepMerge(base?.[k]||{}, patch[k]);
+        else out[k] = patch[k];
       }
       return out;
     }
     let KNOBS = window.CONST_KNOBS ? deepMerge(KNOBS_DEFAULT, window.CONST_KNOBS) : KNOBS_DEFAULT;
     window.updateConstKnobs = (patch)=>{ KNOBS = deepMerge(KNOBS, patch||{}); reset(); };
 
-    const cards = [{ el: $("#cardA") },{ el: $("#cardB") },{ el: $("#cardC") }];
-    const cardData = [
-      { name:"Acme Drinks Co.", city:"Chicago, IL" },
-      { name:"Northstar Foods", city:"Dallas, TX" },
-      { name:"Atlas Beauty", city:"Toronto, ON" },
-      { name:"Cygnet Petcare", city:"Portland, OR" },
-      { name:"Volt Homecare", city:"Denver, CO" }
-    ];
+    /* sector-aware card content */
+    const sectorCards = {
+      'foodbev': [
+        { name:"Northstar Foods", city:"Dallas, TX" },
+        { name:"Acme Drinks Co.", city:"Chicago, IL" },
+        { name:"GreenLeaf Snacks", city:"Portland, OR" }
+      ],
+      'beauty': [
+        { name:"Atlas Beauty", city:"Toronto, ON" },
+        { name:"Lumina Skincare", city:"Austin, TX" },
+        { name:"Vera Cosmetics", city:"Los Angeles, CA" }
+      ],
+      'pharma': [
+        { name:"Volt Pharma", city:"Denver, CO" },
+        { name:"Cygnet Biologics", city:"Cambridge, MA" },
+        { name:"Nova Health Labs", city:"San Diego, CA" }
+      ],
+      'general': [
+        { name:"Pioneer Homecare", city:"Boise, ID" },
+        { name:"Swift Petcare", city:"Raleigh, NC" },
+        { name:"Everpack Industrial", city:"Cleveland, OH" }
+      ]
+    };
+    function detectSector(host){
+      const h = (host||"").toLowerCase();
+      if (/(food|snack|drink|brew|bev|coffee|tea|taste)/.test(h)) return 'foodbev';
+      if (/(beauty|cosmet|makeup|skincare|fragrance)/.test(h)) return 'beauty';
+      if (/(pharm|med|bio|lab|health|clinic|rx)/.test(h)) return 'pharma';
+      return 'general';
+    }
 
+    const cardEls = [{ el: $("#cardA") },{ el: $("#cardB") },{ el: $("#cardC") }];
+
+    function setSectorCards(sector){
+      const pool = sectorCards[sector] || sectorCards.general;
+      // rotate selections for variety
+      const picks = [...pool].sort(()=>Math.random()-0.5).slice(0,3);
+      cardEls.forEach((c,i)=>{
+        const d = picks[i] || pool[i%pool.length];
+        c.el?.querySelectorAll(".v")[0] && (c.el.querySelectorAll(".v")[0].textContent = d.name);
+        c.el?.querySelectorAll(".v")[1] && (c.el.querySelectorAll(".v")[1].textContent = d.city);
+      });
+    }
+    // initial sector setup from saved seed or default
+    try{
+      const host=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "yourcompany.com";
+      $("#domainTag") && ($("#domainTag").textContent = host);
+      setSectorCards(detectSector(host));
+    }catch{ setSectorCards('general'); }
+
+    /* canvas plumbing */
     const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
     const ctx = c.getContext("2d");
     let W=0,H=0, nodes=[], highlights=[];
+    let calmStart=0, motionCalm=true, anchorPulseActive=true;
 
     function rand(min,max){ return min + Math.random()*(max-min); }
     function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
@@ -678,23 +734,23 @@
         const x = 0.20 + Math.random()*0.78;
         const y = 0.06 + Math.random()*0.88;
         const s = 0.15 + Math.random()*0.85;
-        const vx = (Math.random()-0.5) * 0.18;
-        const vy = (Math.random()-0.5) * 0.18;
+        const vx = (Math.random()-0.5) * KNOBS.nodes.speed;
+        const vy = (Math.random()-0.5) * KNOBS.nodes.speed;
         nodes.push({x:x*W, y:y*H, s, vx, vy});
       }
+      // anchor
       const anchor = { x: 0.18*W, y: 0.52*H };
       nodes.unshift({x:anchor.x, y:anchor.y, s:1.8, vx:0, vy:0, anchor:true });
 
       const hr = KNOBS.highlights;
       const candidates = nodes.filter(n => !n.anchor && n.x > W*hr.regionLeft && n.y > H*hr.regionTop && n.y < H*hr.regionBottom);
       highlights = [];
-      for (let j=0;j<3;j++){
-        const n = candidates[(Math.random()*candidates.length)|0];
-        if (!n) break;
-        highlights.push(n);
-      }
+      for (let j=0;j<3;j++){ const n = candidates[(Math.random()*candidates.length)|0]; if (n) highlights.push(n); }
 
       placeCards();
+      calmStart = performance.now();
+      motionCalm = false;
+      anchorPulseActive = true;
       draw();
     }
 
@@ -720,7 +776,7 @@
       }
       const pts = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
       pts.forEach((p, i)=>{
-        const el = cards[i]?.el; if (!el) return;
+        const el = cardEls[i]?.el; if (!el) return;
         const rect = el.getBoundingClientRect();
         const w = rect.width || 190, h = rect.height || 96;
 
@@ -741,11 +797,6 @@
         placed.push({x,y,w,h});
         el.style.left = x+"px";
         el.style.top  = y+"px";
-
-        const d = cardData[(Math.random()*cardData.length)|0];
-        const vs = el.querySelectorAll(".v");
-        vs[0] && (vs[0].textContent = d.name);
-        vs[1] && (vs[1].textContent = d.city);
       });
     }
 
@@ -764,11 +815,17 @@
           }
         }
       }
+      // anchor pulse (±2px) — freeze after 3s
       const anchor = nodes[0];
-      const pulse = 8 + Math.sin(performance.now()*0.0022)*4;
+      const elapsed = performance.now() - calmStart;
+      const pulseAmp = (anchorPulseActive && elapsed < 3000) ? 2 : 0;
+      if (elapsed >= 3000) anchorPulseActive = false;
+
+      const pulse = pulseAmp * Math.sin(performance.now()*0.006);
       ctx.fillStyle="rgba(230,195,107,0.16)";
       ctx.beginPath(); ctx.arc(anchor.x, anchor.y, 24+pulse, 0, Math.PI*2); ctx.fill();
 
+      // subtle gold wash
       const grad = ctx.createLinearGradient(0,0,W,H);
       grad.addColorStop(0, "rgba(230,195,107,0.06)");
       grad.addColorStop(1, "rgba(230,195,107,0.0)");
@@ -781,26 +838,55 @@
       }
     }
 
+    /* motion loop with 30fps cap + pause offscreen */
+    let lastFrame = 0;
+    let isVisible = true;
     function loop(now){
-      if (!loop.prev) loop.prev=now; const dt=Math.min(33, now-loop.prev)*0.06; loop.prev=now;
-      if (!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)){
+      const prefersReduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (prefersReduce || !isVisible){ requestAnimationFrame(loop); return; }
+
+      const FRAME_MS = 1000/30;
+      if (now - lastFrame >= FRAME_MS){
+        const dt = Math.min(33, now-(lastFrame||now)) * 0.06;
+        lastFrame = now;
+
+        // ease velocities to a calm stop after 3s
+        const elapsed = now - calmStart;
+        const damping = elapsed > 3000 ? 0.94 : 1.0;
         for (let i=1;i<nodes.length;i++){
-          const n = nodes[i]; n.x += n.vx*dt; n.y += n.vy*dt;
+          const n = nodes[i];
+          n.vx *= damping; n.vy *= damping;
+          n.x += n.vx*dt; n.y += n.vy*dt;
           if (n.x < 0) n.x = W; if (n.x > W) n.x = 0;
           if (n.y < 0) n.y = H; if (n.y > H) n.y = 0;
         }
+        draw();
       }
-      draw(); requestAnimationFrame(loop);
+      requestAnimationFrame(loop);
     }
-    reset(); loop(0); addEventListener("resize", reset);
 
-    try{
-      const d=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host;
-      const tag=$("#domainTag"); tag && (tag.textContent=d || "yourcompany.com");
-    }catch{}
+    // visibility observers
+    const io = new IntersectionObserver((entries)=>{ isVisible = entries.some(e=>e.isIntersecting); }, {threshold:0.1});
+    io.observe(wrap);
+    document.addEventListener('visibilitychange', ()=>{ isVisible = !document.hidden; });
+
+    // re-animate on hover
+    wrap.addEventListener('mouseenter', ()=>{
+      calmStart = performance.now(); anchorPulseActive = true;
+      // give nodes a tiny nudge so it feels alive again
+      for (let i=1;i<nodes.length;i++){
+        nodes[i].vx += (Math.random()-0.5)*0.08;
+        nodes[i].vy += (Math.random()-0.5)*0.08;
+      }
+    });
+
+    // kick things off
+    function start(){ reset(); lastFrame=0; requestAnimationFrame(loop); }
+    start();
+    addEventListener("resize", reset);
   })();
 
-  /* ------- Section 2 counters ------- */
+  /* ------- Section 2 counters (unchanged) ------- */
   (function(){
     const section = document.getElementById("proof"); if (!section) return;
     const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
