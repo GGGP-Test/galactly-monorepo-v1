@@ -40,10 +40,10 @@
     --legend-bg: rgba(255,255,255,.06);
 
     /* ---- WALLPAPER KNOBS (CSS side) ---- */
-    --gap-hero-proof: 0px; /* adjustable via setSectionGap(...) */
+    --gap-hero-proof: 0px;
     --wp-h: 220vh;
 
-    /* desktop base wallpaper (kept) */
+    /* wallpaper radials */
     --wp-r1-size: 180% 140%;
     --wp-r1-at: 50% -14%;
     --wp-r1-alpha: .18;
@@ -60,11 +60,11 @@
     background:var(--bg);color:var(--text);
     font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   }
-  body{position:relative} /* anchor wallpaper */
+  body{position:relative}
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* ---- STATIC WALLPAPER (no parallax) ---- */
+  /* ---- STATIC WALLPAPER (document-anchored) ---- */
   .page-wallpaper{
     position:absolute; left:0; right:0; top:0; height:var(--wp-h);
     z-index:0; pointer-events:none;
@@ -88,7 +88,6 @@
     }
   }
 
-  /* sections transparent so wallpaper shows through */
   .hero,.section{background:transparent}
   body::before, body::after, .hero::before, .hero::after{content:none!important}
 
@@ -123,35 +122,18 @@
   .nav-actions{display:flex; align-items:center; gap:12px}
   .nav-login{font-weight:600; color:#cfe0ee; opacity:.8}
   .nav-login:hover,.nav-login:focus-visible{opacity:1}
-  .nav-cta{padding:8px 14px; border-radius:999px; color:var(--ctaText);
-    background:linear-gradient(180deg,var(--gold),var(--gold-700));
-    border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
-    
-  /* Header "Get Demo" — secondary next to Start Free */
+  /* Header Get Demo (secondary) */
   .nav-demo{
-    display:inline-block;
-    padding:8px 12px;
-    border-radius:999px;
-    border:1px solid var(--stroke);
-    background:rgba(255,255,255,.02);
-    color:#cfe0ee;
-    font-weight:600;
-    opacity:.9;
+    display:inline-block; padding:8px 12px; border-radius:999px;
+    border:1px solid var(--stroke); background:rgba(255,255,255,.02);
+    color:#cfe0ee; font-weight:600; opacity:.9;
   }
-  .nav-demo:hover,.nav-demo:focus-visible{
-    opacity:1;
-    border-color:#2b445c;
-  }
-  
-  /* Keep Start Free as the clear primary */
+  .nav-demo:hover,.nav-demo:focus-visible{opacity:1; border-color:#2b445c}
+  /* Primary */
   .nav-cta{
-    padding:8px 14px;
-    border-radius:999px;
-    color:var(--ctaText);
+    padding:8px 14px; border-radius:999px; color:var(--ctaText);
     background:linear-gradient(180deg,var(--gold),var(--gold-700));
-    border:none;
-    box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset;
-    white-space:nowrap;
+    border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap
   }
 
   /* Hamburger (mobile only) */
@@ -192,7 +174,7 @@
   @media (max-width:900px){.hero-grid{grid-template-columns:1fr;gap:18px}}
   .hero-copy{max-width:680px}
   .badge{display:inline-block;margin-bottom:12px;padding:6px 10px;border-radius:999px;
-    border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--muted);font-size:12px}
+    border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#91a6b8;font-size:12px}
   h1{font:600 clamp(34px,6vw,64px) "Newsreader", Georgia, serif;letter-spacing:.2px;margin:0 0 10px}
   .lead{color:#c7d7e6;font-size:clamp(16px,2.6vw,19px);margin:0 0 26px}
   .actions{display:flex;gap:12px;flex-wrap:wrap}
@@ -200,10 +182,8 @@
   .btn:active{transform:translateY(1px)}
   .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));
     border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
-  .btn.ghost{background:transparent;color:#cfe0ee;border-color:var(--stroke)}
-  .btn.ghost:hover{border-color:#284560}
 
-  /* Constellation (desktop) */
+  /* Constellation */
   .const-wrap{
     position:relative; isolation:isolate; height:520px;
     border-radius:var(--const-radius);
@@ -244,8 +224,8 @@
     border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
     box-shadow:0 8px 24px rgba(0,0,0,var(--miniCard-shadow-a));
     transform:translate(-50%,-50%); pointer-events:auto; color:#e8f1fb;
+    transition: left .22s ease, top .22s ease; /* smooth snaps into slots */
   }
-  /* subtle inner glow to lift contrast on dark panel */
   .miniCard::before{
     content:""; position:absolute; inset:-1px; border-radius:inherit; z-index:-1;
     background: radial-gradient(120% 100% at 50% 0%, rgba(255,255,255,.08), rgba(0,0,0,0) 70%);
@@ -254,7 +234,6 @@
   .miniCard .k{font-size:11px;color:#a9bfd6}
   .miniCard .v{font-weight:700}
 
-  /* tooltip on hover */
   .miniCard[data-tip]:hover::after{
     content: attr(data-tip);
     position:absolute; left:50%; transform:translateX(-50%);
@@ -301,11 +280,7 @@
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
   }
 
-  .kpi-grid{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:0;
-  }
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;}
   @media (max-width:900px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
   @media (max-width:520px){.kpi-grid{grid-template-columns:1fr}}
 
@@ -351,7 +326,7 @@
 </style>
 </head>
 <body>
-  <!-- STATIC WALLPAPER (document-anchored) -->
+  <!-- STATIC WALLPAPER -->
   <div id="pageWallpaper" class="page-wallpaper" aria-hidden="true"></div>
 
   <!-- HEADER -->
@@ -485,7 +460,7 @@
   const normHost=(h)=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
   const domainFromEmail=(e)=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
 
-  /* ========= STATIC WALLPAPER (kept) ========= */
+  /* ========= STATIC WALLPAPER ========= */
   const WP_DEFAULT = {
     r1: { size:'var(--wp-r1-size)', at:'var(--wp-r1-at)', alpha:0.18, fade:'58%' },
     r2: { size:'var(--wp-r2-size)', at:'var(--wp-r2-at)', alpha:0.10, fade:'72%' },
@@ -646,7 +621,6 @@
     if (d) hostEl.value=d;
     const tag=$("#domainTag");
     tag && (tag.textContent = d || hostEl.value || "yourcompany.com");
-    // also update card sector when domain changes
     const detected = detectSector(tag?.textContent||"");
     setSectorCards(detected);
   }
@@ -670,11 +644,16 @@
     const c = document.getElementById("constFx");
     if (!wrap || !c) return;
 
-    /* marketing-friendly defaults per your brief */
+    /* Calm, sales-friendly defaults + stacking layout */
     const KNOBS_DEFAULT = {
       nodes: { count: 28, linkRadius: 96, linkAlphaBase: 0.06, linkAlphaBoost: 0.18, speed: 0.14 },
-      highlights: { regionLeft: 0.55, regionTop: 0.08, regionBottom: 0.90 },
-      cards: { safeLeft: 0.58, safeRight: 0.03, safeTop: 0.12, safeBottom: 0.24, jitter: 10, spacing: 22 },
+      highlights: { regionLeft: 0.55, regionTop: 0.08, regionBottom: 0.92 },
+      cards: {
+        safeLeft: 0.58, safeRight: 0.03, safeTop: 0.12, safeBottom: 0.24,
+        jitter: 8, /* organic wiggle */
+        spacing: 20, /* extra vertical gap between cards */
+        vPad: 10   /* internal padding for slot math */
+      },
       legendAvoidancePx: 14
     };
     function deepMerge(base, patch){
@@ -724,15 +703,14 @@
 
     function setSectorCards(sector){
       const pool = sectorCards[sector] || sectorCards.general;
-      // rotate selections for variety
       const picks = [...pool].sort(()=>Math.random()-0.5).slice(0,3);
       cardEls.forEach((c,i)=>{
         const d = picks[i] || pool[i%pool.length];
-        c.el?.querySelectorAll(".v")[0] && (c.el.querySelectorAll(".v")[0].textContent = d.name);
-        c.el?.querySelectorAll(".v")[1] && (c.el.querySelectorAll(".v")[1].textContent = d.city);
+        const vs = c.el?.querySelectorAll(".v");
+        vs && vs[0] && (vs[0].textContent = d.name);
+        vs && vs[1] && (vs[1].textContent = d.city);
       });
     }
-    // initial sector setup from saved seed or default
     try{
       const host=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "yourcompany.com";
       $("#domainTag") && ($("#domainTag").textContent = host);
@@ -743,7 +721,7 @@
     const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
     const ctx = c.getContext("2d");
     let W=0,H=0, nodes=[], highlights=[];
-    let calmStart=0, motionCalm=true, anchorPulseActive=true;
+    let calmStart=0, anchorPulseActive=true;
 
     function rand(min,max){ return min + Math.random()*(max-min); }
     function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
@@ -774,13 +752,13 @@
       highlights = [];
       for (let j=0;j<3;j++){ const n = candidates[(Math.random()*candidates.length)|0]; if (n) highlights.push(n); }
 
-      placeCards();
+      placeCards(); /* snapped vertical stack */
       calmStart = performance.now();
-      motionCalm = false;
       anchorPulseActive = true;
       draw();
     }
 
+    /* --------- SLOT LAYOUT: tidy, never overlaps --------- */
     function placeCards(){
       const cs = KNOBS.cards;
       const safe = {
@@ -789,6 +767,7 @@
         right: W*(1 - cs.safeRight),
         bottom:H*(1 - cs.safeBottom)
       };
+      // keep clear of legend
       const legend = wrap.querySelector(".const-legend");
       if (legend){
         const lr = legend.getBoundingClientRect();
@@ -796,36 +775,29 @@
         const legendTop = lr.top - wr.top;
         safe.bottom = Math.min(safe.bottom, legendTop - KNOBS.legendAvoidancePx);
       }
-      const placed = [];
-      function nonOverlapping(x,y,w,h){
-        const pad = KNOBS.cards.spacing;
-        return placed.every(p => Math.abs(p.x - x) > (p.w/2 + w/2 + pad) || Math.abs(p.y - y) > (p.h/2 + h/2 + pad));
-      }
-      const pts = [highlights[0], highlights[1], highlights[2]].filter(Boolean);
-      pts.forEach((p, i)=>{
-        const el = cardEls[i]?.el; if (!el) return;
+
+      const baseX = clamp(safe.right - 8, safe.left, safe.right); // right-aligned feel
+      cardEls.forEach((c,i)=>{
+        const el = c.el; if (!el) return;
         const rect = el.getBoundingClientRect();
         const w = rect.width || 190, h = rect.height || 96;
 
-        const jitter = KNOBS.cards.jitter;
-        let x = (p?.x ?? (safe.left + (i+1)/4*(safe.right-safe.left))) + (i===1? -12: 12) + rand(-jitter,jitter);
-        let y = (p?.y ?? (safe.top + (i+1)/4*(safe.bottom-safe.top))) + (i===2?  14: -10) + rand(-jitter,jitter);
+        // Compute 3 vertical slots with consistent spacing
+        const totalH = (h*3) + (cs.spacing*2) + (cs.vPad*2);
+        const startY = clamp((safe.top + safe.bottom)/2 - totalH/2, safe.top + h/2 + cs.vPad, safe.bottom - h/2 - cs.vPad);
 
-        const halfW=w/2, halfH=h/2;
-        x = clamp(x, safe.left + halfW, safe.right - halfW);
-        y = clamp(y, safe.top + halfH, safe.bottom - halfH);
+        const slotY = startY + i*(h + cs.spacing);
+        const jitterX = rand(-cs.jitter, cs.jitter);
+        const jitterY = rand(-cs.jitter, cs.jitter);
 
-        let tries=0;
-        while(!nonOverlapping(x,y,w,h) && tries<18){
-          x = clamp(x + rand(-jitter,jitter), safe.left + halfW, safe.right - halfW);
-          y = clamp(y + rand(-jitter,jitter), safe.top + halfH, safe.bottom - halfH);
-          tries++;
-        }
-        placed.push({x,y,w,h});
+        const x = clamp(baseX - w/2 - 12 + jitterX, safe.left + w/2, safe.right - w/2);
+        const y = clamp(slotY + jitterY, safe.top + h/2, safe.bottom - h/2);
+
         el.style.left = x+"px";
         el.style.top  = y+"px";
       });
     }
+    /* ----------------------------------------------------- */
 
     function draw(){
       ctx.clearRect(0,0,W,H);
@@ -865,7 +837,7 @@
       }
     }
 
-    /* motion loop with 30fps cap + pause offscreen */
+    /* 30fps cap + pause offscreen + re-animate on hover */
     let lastFrame = 0;
     let isVisible = true;
     function loop(now){
@@ -877,7 +849,6 @@
         const dt = Math.min(33, now-(lastFrame||now)) * 0.06;
         lastFrame = now;
 
-        // ease velocities to a calm stop after 3s
         const elapsed = now - calmStart;
         const damping = elapsed > 3000 ? 0.94 : 1.0;
         for (let i=1;i<nodes.length;i++){
@@ -891,23 +862,18 @@
       }
       requestAnimationFrame(loop);
     }
-
-    // visibility observers
     const io = new IntersectionObserver((entries)=>{ isVisible = entries.some(e=>e.isIntersecting); }, {threshold:0.1});
     io.observe(wrap);
     document.addEventListener('visibilitychange', ()=>{ isVisible = !document.hidden; });
 
-    // re-animate on hover
     wrap.addEventListener('mouseenter', ()=>{
       calmStart = performance.now(); anchorPulseActive = true;
-      // give nodes a tiny nudge so it feels alive again
       for (let i=1;i<nodes.length;i++){
         nodes[i].vx += (Math.random()-0.5)*0.08;
         nodes[i].vy += (Math.random()-0.5)*0.08;
       }
     });
 
-    // kick things off
     function start(){ reset(); lastFrame=0; requestAnimationFrame(loop); }
     start();
     addEventListener("resize", reset);
