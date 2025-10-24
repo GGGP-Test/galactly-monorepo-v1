@@ -39,8 +39,8 @@
     --gap-hero-proof: 0px; --wp-h: 220vh;
 
     /* wallpaper radials */
-    --wp-r1-size: 180% 140%; --wp-r1-at: 50% -14%; --wp-r1-alpha: .18; --wp-r1-fade: 58%;
-    --wp-r2-size: 110% 90%; --wp-r2-at: 22% 12%; --wp-r2-alpha: .10; --wp-r2-fade: 72%;
+    --wp-r1-size: 180% 140%; --wp-r1-at: 50% -14%; --wp-r1-alpha: 0; --wp-r1-fade: 58%;
+    --wp-r2-size: 110% 90%; --wp-r2-at: 22% 12%; --wp-r2-alpha: 0; --wp-r2-fade: 72%;
   }
 
   *{box-sizing:border-box}
@@ -255,6 +255,20 @@
     transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.42;
     animation: probPulse var(--prob-pulse,1400ms) ease-out infinite;
   }
+    /* static visible stack behind the live card */
+  .cardStack .miniCard.static{
+    pointer-events:none;
+    opacity:.80;
+    transform:translate(-50%,-50%) scale(.94) translate(16px,12px);
+  }
+  .cardStack .miniCard.static.s2{
+    opacity:.66;
+    transform:translate(-50%,-50%) scale(.88) translate(30px,24px);
+  }
+  .cardStack .miniCard.static.s3{
+    opacity:.52;
+    transform:translate(-50%,-50%) scale(.82) translate(42px,34px);
+  }
   @keyframes probPulse{
     0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor;         opacity:.42 }
     100% { transform:scale(2.25); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
@@ -435,21 +449,17 @@
 window.SCOREBOARD_KNOBS = {
   /* where the stack sits (relative to the constellation panel) */
   stack: {
-    left: 0.78,       /* fraction [0..1] from left edge */
-    top:  0.58,       /* fraction [0..1] from top edge  */
-    width: 260,       /* px width of the live card rail */
-    angle: -3,        /* degrees tilt of the whole stack */
-    clickAdvance: true,  /* click/tap the live card to advance */
-    autoPlay: true, autoMs: 5200,  /* autoplay cadence */
-    /* ghost sheets behind the live card (only edges visible) */
-    ghosts: { count: 22, offsetX: 10, offsetY: 3, spread: 0.86 }
+    left: 0.78,
+    top:  0.58,
+    width: 260,
+    angle: -3,
+    clickAdvance: true,                 // keep click-to-advance
+    autoPlay: true, autoMs: 5200,       // keep autoplay
+    ghosts: { count: 8, offsetX: 10, offsetY: 3, spread: 0.90 } // lighter stack
   },
-
-  /* static anchor glow + lines into the stack (no RAF) */
-  anchorGlow: { size: 64, pulseMs: 2600, coreA:.95, midA:.55, edgeA:.06 },
-  lines: { count: 5, jitter: 14, width: 1, alpha: .16 },
-
-  /* card content knobs */
+  anchorGlow: { size: 64, pulseMs: 2200, coreA:.95, midA:.55, edgeA:.06 }, // gentle CSS pulse
+  lines: { count: 4, jitter: 12, width: 1, alpha: .14 },
+    /* card content knobs */
   probLabel: 'Win rate',
   probHue: { min: 5, max: 130 },           /* HSL hue range for prob dot */
   fonts: { k: "11px Inter, system-ui", v: "700 14px Inter, system-ui", name: "700 15px Inter, system-ui" },
@@ -526,6 +536,7 @@ window.SCOREBOARD_KNOBS = {
   addEventListener('resize', ()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t = setTimeout(applyWallpaper, 60); });
   document.addEventListener('DOMContentLoaded', applyWallpaper);
 
+  
   /* ===== Constellation (STATIC CANVAS) ===== */
   const wrap = document.querySelector('.const-wrap');
   const c = document.getElementById('constFx');
@@ -578,6 +589,23 @@ window.SCOREBOARD_KNOBS = {
   const stack = $('#cardStack');
   const rail = $('#stackRail');
   const liveCard = $('#cardA');
+  
+    /*-- static stack cards (no JS) -->
+  <div class="miniCard static s1" aria-hidden="true">
+    <div class="row"><span class="k">Buyer</span><span class="v name">Volt Homecare — Denver, CO</span></div>
+    <div class="row"><span class="k">Distance</span><span class="v">15 mi</span></div>
+    <div class="row"><span class="k">Need</span><span class="v">Stand-up pouches</span></div>
+  </div>
+  <div class="miniCard static s2" aria-hidden="true">
+    <div class="row"><span class="k">Buyer</span><span class="v name">Northstar Foods — Dallas, TX</span></div>
+    <div class="row"><span class="k">Distance</span><span class="v">42 mi</span></div>
+    <div class="row"><span class="k">Need</span><span class="v">PET bottles</span></div>
+  </div>
+  <div class="miniCard static s3" aria-hidden="true">
+    <div class="row"><span class="k">Buyer</span><span class="v name">Lumina Skincare — Austin, TX</span></div>
+    <div class="row"><span class="k">Distance</span><span class="v">Same city</span></div>
+    <div class="row"><span class="k">Need</span><span class="v">Shrink sleeves</span></div>
+  </div>
 
   function hslProb(p){
     const H=KN.probHue.min, L=KN.probHue.max;
@@ -734,13 +762,31 @@ window.SCOREBOARD_KNOBS = {
     placeGlow();
     drawStaticLines();
 
-    // autoplay (optional)
-    let timer;
-    function setAuto(){
+    // autoplay (optimized: pauses when hidden/offscreen/reduced-motion)
+    let timer, isOnScreen = true, isDocVisible = document.visibilityState !== 'hidden';
+    const noMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    
+    function restartAuto(){
       clearInterval(timer);
-      if (KN.stack.autoPlay) timer = setInterval(showNext, KN.stack.autoMs||5200);
+      if (KN.stack.autoPlay && isOnScreen && isDocVisible && !noMotion){
+        timer = setInterval(showNext, KN.stack.autoMs || 5200);
+      }
     }
-    setAuto();
+    
+    // pause when hero panel is offscreen
+    const io = new IntersectionObserver((entries)=>{
+      isOnScreen = entries.some(e => e.isIntersecting);
+      restartAuto();
+    },{ threshold: 0.25 });
+    io.observe(wrap);
+    
+    // pause when tab not visible
+    document.addEventListener('visibilitychange', ()=>{
+      isDocVisible = document.visibilityState !== 'hidden';
+      restartAuto();
+    });
+    
+    restartAuto();
 
     // click/tap to advance (no visible buttons)
     if (KN.stack.clickAdvance){
@@ -763,8 +809,8 @@ window.SCOREBOARD_KNOBS = {
   window.updateScoreboardKnobs = function(patch){
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
     Object.assign(_KN, window.SCOREBOARD_KNOBS);
-    // apply visuals
     positionStack(); buildGhosts(); setProbLabel(); placeGlow(); drawStaticLines();
+    typeof restartAuto === 'function' && restartAuto();
   };
 
   /* ===== Section 2 counters (unchanged) ===== */
