@@ -19,12 +19,10 @@
 
 <style>
   :root{
-    /* core palette */
     --bg:#0a0e14; --panel:#101623; --panel-alt:#0f1622; --stroke:#1b2531;
     --text:#e9f1f7; --muted:#91a6b8;
     --gold:#e6c36b; --gold-700:#b8913d; --gold-300:#f2dca0;
-    --ctaText:#1b1405;
-    --zone-dark:#060a10;
+    --ctaText:#1b1405; --zone-dark:#060a10;
 
     --container-max: clamp(1100px, 86vw, 1320px);
     --gutter: clamp(16px, 4vw, 40px);
@@ -34,37 +32,25 @@
     --const-drop-a: .14; --const-edge-tint: rgba(230,195,107,.05); --const-grid-sheen-a: .05;
 
     --miniCard-radius: 12px; --miniCard-bg: rgba(12,18,28,.86); --miniCard-blur: 6px;
-    --miniCard-stroke-a: .08; --miniCard-shadow-a: .30;
+    --miniCard-stroke-a: .10; --miniCard-shadow-a: .30;
 
-    --legend-fs: 12px; --legend-color: #b9cbe0; /* slightly brighter */
-    --legend-bg: rgba(255,255,255,.06);
+    --legend-fs: 12px; --legend-color: #b9cbe0; --legend-bg: rgba(255,255,255,.06);
 
-    /* ---- WALLPAPER KNOBS (CSS side) ---- */
-    --gap-hero-proof: 0px;
-    --wp-h: 220vh;
+    --gap-hero-proof: 0px; --wp-h: 220vh;
 
     /* wallpaper radials */
-    --wp-r1-size: 180% 140%;
-    --wp-r1-at: 50% -14%;
-    --wp-r1-alpha: .18;
-    --wp-r1-fade: 58%;
-    --wp-r2-size: 110% 90%;
-    --wp-r2-at: 22% 12%;
-    --wp-r2-alpha: .10;
-    --wp-r2-fade: 72%;
+    --wp-r1-size: 180% 140%; --wp-r1-at: 50% -14%; --wp-r1-alpha: .18; --wp-r1-fade: 58%;
+    --wp-r2-size: 110% 90%; --wp-r2-at: 22% 12%; --wp-r2-alpha: .10; --wp-r2-fade: 72%;
   }
 
   *{box-sizing:border-box}
-  html,body{
-    margin:0;height:100%;
-    background:var(--bg);color:var(--text);
-    font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  }
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
   body{position:relative}
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* ---- STATIC WALLPAPER (document-anchored) ---- */
+  /* ---- STATIC WALLPAPER ---- */
   .page-wallpaper{
     position:absolute; left:0; right:0; top:0; height:var(--wp-h);
     z-index:0; pointer-events:none;
@@ -74,18 +60,9 @@
       linear-gradient(180deg,#0b121a 0%, #0a0e14 70%, #091019 88%, var(--zone-dark) 100%);
     background-repeat:no-repeat,no-repeat,no-repeat;
   }
-
   @media (max-width:900px){
-    :root{
-      --wp-r1-size: 200% 165%;
-      --wp-r1-at: 50% -18%;
-      --wp-r1-alpha: .18;
-      --wp-r1-fade: 60%;
-      --wp-r2-size: 130% 95%;
-      --wp-r2-at: 26% 16%;
-      --wp-r2-alpha: .10;
-      --wp-r2-fade: 74%;
-    }
+    :root{ --wp-r1-size: 200% 165%; --wp-r1-at: 50% -18%; --wp-r1-fade: 60%;
+           --wp-r2-size: 130% 95%;  --wp-r2-at: 26% 16%;  --wp-r2-fade: 74%; }
   }
 
   .hero,.section{background:transparent}
@@ -93,9 +70,7 @@
 
   /* layout widths */
   @media (min-width:901px){
-    .site-header .inner,
-    .hero-grid,
-    .section .inner{max-width:var(--container-max);width:100%;margin-inline:auto}
+    .site-header .inner, .hero-grid, .section .inner{max-width:var(--container-max);width:100%;margin-inline:auto}
   }
 
   /* HEADER */
@@ -105,11 +80,8 @@
     -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%);
     border-bottom:1px solid rgba(255,255,255,.06)
   }
-  .site-header .inner{
-    width:100%;
-    padding:0 var(--gutter);
-    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px
-  }
+  .site-header .inner{width:100%; padding:0 var(--gutter);
+    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px}
   .brand{display:flex; align-items:center; gap:10px}
   .brand-badge{width:28px;height:28px;border-radius:8px;background:linear-gradient(180deg,var(--gold),var(--gold-700));
     box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px}
@@ -122,19 +94,12 @@
   .nav-actions{display:flex; align-items:center; gap:12px}
   .nav-login{font-weight:600; color:#cfe0ee; opacity:.8}
   .nav-login:hover,.nav-login:focus-visible{opacity:1}
-  /* Header Get Demo (secondary) */
-  .nav-demo{
-    display:inline-block; padding:8px 12px; border-radius:999px;
-    border:1px solid var(--stroke); background:rgba(255,255,255,.02);
-    color:#cfe0ee; font-weight:600; opacity:.9;
-  }
+  .nav-demo{display:inline-block; padding:8px 12px; border-radius:999px; border:1px solid var(--stroke);
+    background:rgba(255,255,255,.02); color:#cfe0ee; font-weight:600; opacity:.9}
   .nav-demo:hover,.nav-demo:focus-visible{opacity:1; border-color:#2b445c}
-  /* Primary */
-  .nav-cta{
-    padding:8px 14px; border-radius:999px; color:var(--ctaText);
+  .nav-cta{padding:8px 14px; border-radius:999px; color:var(--ctaText);
     background:linear-gradient(180deg,var(--gold),var(--gold-700));
-    border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap
-  }
+    border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
 
   /* Hamburger (mobile only) */
   .hamburger{display:none; justify-self:end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
@@ -160,17 +125,11 @@
   #mobileMenu .sheet hr{border:0; border-top:1px solid var(--stroke); margin:8px 0}
 
   /* HERO */
-  .hero{
-    position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
-    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate; z-index:1;
-  }
+  .hero{position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
+    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate; z-index:1;}
   #heroFx{display:none!important}
-  .hero-grid{
-    position:relative;z-index:1;display:grid;align-items:center;
-    grid-template-columns:1.12fr 1fr;
-    gap:clamp(28px, 4vw, 48px);
-    width:100%;
-  }
+  .hero-grid{position:relative;z-index:1;display:grid;align-items:center;
+    grid-template-columns:1.12fr 1fr; gap:clamp(28px, 4vw, 48px); width:100%;}
   @media (max-width:900px){.hero-grid{grid-template-columns:1fr;gap:18px}}
   .hero-copy{max-width:680px}
   .badge{display:inline-block;margin-bottom:12px;padding:6px 10px;border-radius:999px;
@@ -183,11 +142,10 @@
   .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));
     border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
 
-  /* Constellation */
+  /* Constellation / Scoreboard */
   .const-wrap{
-    position:relative; isolation:isolate; height:520px;
-    border-radius:var(--const-radius);
-    overflow:hidden;
+    position:relative; isolation:isolate; height:560px;
+    border-radius:var(--const-radius); overflow:hidden;
     background:linear-gradient(180deg,#0b121d,#0b1119);
     filter: drop-shadow(0 10px 24px rgba(0,0,0,var(--const-drop-a)));
   }
@@ -215,35 +173,6 @@
     background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
     padding:5px 7px; border-radius:8px;
   }
-
-  .miniCard{
-    position:absolute; z-index:2; min-width:176px; max-width:228px;
-    padding:10px 12px; border-radius:var(--miniCard-radius);
-    background:var(--miniCard-bg);
-    -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
-    border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
-    box-shadow:0 8px 24px rgba(0,0,0,var(--miniCard-shadow-a));
-    transform:translate(-50%,-50%); pointer-events:auto; color:#e8f1fb;
-    transition: left .22s ease, top .22s ease; /* smooth snaps into slots */
-  }
-  .miniCard::before{
-    content:""; position:absolute; inset:-1px; border-radius:inherit; z-index:-1;
-    background: radial-gradient(120% 100% at 50% 0%, rgba(255,255,255,.08), rgba(0,0,0,0) 70%);
-    filter: blur(6px);
-  }
-  .miniCard .k{font-size:11px;color:#a9bfd6}
-  .miniCard .v{font-weight:700}
-
-  .miniCard[data-tip]:hover::after{
-    content: attr(data-tip);
-    position:absolute; left:50%; transform:translateX(-50%);
-    bottom:calc(100% + 8px);
-    white-space:nowrap; font-size:11px; color:#eaf2ff;
-    background:rgba(10,14,20,.86); border:1px solid rgba(255,255,255,.12);
-    padding:6px 8px; border-radius:8px; opacity:1; pointer-events:none;
-  }
-  .miniCard::after{opacity:0; transition:opacity .18s ease;}
-
   .domainTag{
     position:absolute; z-index:2; left:14px; top:14px;
     padding:6px 10px; border-radius:999px; font-size:12px;
@@ -251,39 +180,51 @@
     border:1px solid rgba(230,195,107,.25)
   }
 
+  /* Scoreboard cards */
+  .miniCard{
+    position:absolute; z-index:2; min-width:200px; max-width:260px;
+    padding:12px 12px 10px; border-radius:var(--miniCard-radius);
+    background:var(--miniCard-bg);
+    -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
+    border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
+    box-shadow:0 8px 24px rgba(0,0,0,var(--miniCard-shadow-a));
+    transform:translate(-50%,-50%); pointer-events:auto; color:#e8f1fb;
+    transition:left .22s ease, top .22s ease, width .22s ease;
+  }
+  .miniCard .row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:2px 0}
+  .miniCard .k{font-size:11px;color:#a9bfd6}
+  .miniCard .v{font-weight:700; font-size:14px}
+  .miniCard .name{font-size:15px; line-height:1.2}
+  .miniCard .stage{
+    display:inline-flex; align-items:center; gap:6px; font-weight:700; font-size:11px;
+    padding:5px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06)
+  }
+  .miniCard .prob{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700}
+  .miniCard .prob .dot{width:10px; height:10px; border-radius:999px; box-shadow:0 0 8px currentColor;}
+  .miniCard .chips{display:flex; flex-wrap:wrap; gap:6px}
+  .miniCard .chip{font-size:11px; padding:4px 7px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:rgba(255,255,255,.04)}
+  .miniCard .ai{display:flex; align-items:center; gap:8px}
+  .miniCard .ai svg{width:12px; height:12px; opacity:.9}
+
   /* SECTION 2 (unchanged) */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
   .section .inner{margin:0 auto}
   #proof{ margin-top: var(--gap-hero-proof); }
-
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
   .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
   .section-hd .sub{color:var(--muted);font-size:14px}
-
-  .proof-wrap{
-    position:relative;
-    border-radius:18px;
-    border:1px solid rgba(255,255,255,.12);
-    background:
-      radial-gradient(120% 160% at 20% 0%, rgba(93,140,200,.16), rgba(0,0,0,0) 60%),
-      radial-gradient(120% 160% at 80% 10%, rgba(35,130,255,.12), rgba(0,0,0,0) 62%),
-      linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-    -webkit-backdrop-filter: blur(10px) saturate(140%);
-    backdrop-filter: blur(10px) saturate(140%);
-    box-shadow:
-      0 20px 50px rgba(0,0,0,.35),
-      inset 0 1px 0 rgba(255,255,255,.06);
-    padding:22px;
-  }
-  .proof-wrap::after{
-    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
-  }
-
+  .proof-wrap{position:relative;border-radius:18px;border:1px solid rgba(255,255,255,.12);
+    background:radial-gradient(120% 160% at 20% 0%, rgba(93,140,200,.16), rgba(0,0,0,0) 60%),
+               radial-gradient(120% 160% at 80% 10%, rgba(35,130,255,.12), rgba(0,0,0,0) 62%),
+               linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%);
+    box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+    padding:22px;}
+  .proof-wrap::after{content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);}
   .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;}
   @media (max-width:900px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
   @media (max-width:520px){.kpi-grid{grid-template-columns:1fr}}
-
   .kpi{background:transparent;border:none;box-shadow:none;height:auto;padding:18px 18px 16px;position:relative;}
   .kpi + .kpi{ border-left:1px solid rgba(255,255,255,.06); }
   @media (max-width:900px){
@@ -291,14 +232,10 @@
     .kpi:nth-child(n+3){ border-top:1px solid rgba(255,255,255,.06); }
   }
   .kpi .label{font-size:12px;color:#a8bbcd;letter-spacing:.2px;text-transform:uppercase}
-  .kpi .num{
-    font-weight:800;font-size:clamp(28px,5vw,42px);line-height:1.05;
-    background:linear-gradient(180deg,var(--gold-300),var(--gold-700));
-    -webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px
-  }
+  .kpi .num{font-weight:800;font-size:clamp(28px,5vw,42px);line-height:1.05;
+    background:linear-gradient(180deg,var(--gold-300),var(--gold-700));-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px}
   .kpi .hint{font-size:12px;color:#8ba6bf;margin-top:6px}
 
-  /* ---------- MOBILE TYPE TWEAKS ---------- */
   @media (max-width:900px){
     .const-wrap{display:none}
     .hero{min-height:92svh; padding:calc(60px + env(safe-area-inset-top, 10px)) 16px 28px;}
@@ -311,41 +248,28 @@
     .actions.show-mobile{ flex-direction:column; gap:12px; }
     .actions.show-mobile .btn{ width:100%; padding:16px 20px; justify-content:center; text-align:center; }
   }
-
-  @media (prefers-reduced-motion: reduce){
-    #constFx{display:none}
-    .btn{transition:none}
-  }
-
-  .show-desktop{display:block}
-  .show-mobile{display:none}
-  @media (max-width:900px){
-    .show-desktop{display:none}
-    .show-mobile{display:block}
-  }
+  @media (prefers-reduced-motion: reduce){ #constFx{display:none} .btn{transition:none} }
+  .show-desktop{display:block} .show-mobile{display:none}
+  @media (max-width:900px){ .show-desktop{display:none} .show-mobile{display:block} }
 </style>
 </head>
 <body>
-  <!-- STATIC WALLPAPER -->
   <div id="pageWallpaper" class="page-wallpaper" aria-hidden="true"></div>
 
   <!-- HEADER -->
   <header class="site-header" aria-label="Site">
     <div class="inner">
       <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge" aria-hidden="true">G</span></a>
-
       <nav id="nav-primary" aria-label="Primary">
         <a class="nav-link" href="#get-started">How it works</a>
         <a class="nav-link" href="sectors.html">Sectors</a>
         <a class="nav-link" href="pricing.html">Pricing</a>
       </nav>
-
       <div class="nav-actions">
         <a class="nav-login" href="login.html">Login</a>
         <a class="nav-demo" href="https://www.youtube.com" target="_blank" rel="noopener">Get Demo</a>
         <a class="nav-cta" href="#get-started" id="navStart">Start Free</a>
       </div>
-
       <button id="burger" class="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
         <span aria-hidden="true"></span><span aria-hidden="true"></span>
       </button>
@@ -371,55 +295,77 @@
     <div class="hero-grid">
       <div class="hero-copy">
         <span class="badge">Built for packaging suppliers</span>
-
-        <!-- Desktop headline -->
         <h1 class="show-desktop">Find real packaging buyers.</h1>
-
-        <!-- Mobile headline -->
-        <h1 class="show-mobile">
-          <span>We help packaging suppliers</span> <span class="h1-accent">win qualified buyers</span>
-        </h1>
-
-        <!-- Desktop lead -->
-        <p class="lead show-desktop">
-          We filter the noise and surface real companies already signaling intent in your strengths.
-        </p>
-
-        <!-- Mobile lead -->
-        <p class="lead show-mobile">
-          One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.
-        </p>
-
-        <!-- Desktop actions -->
+        <h1 class="show-mobile"><span>We help packaging suppliers</span> <span class="h1-accent">win qualified buyers</span></h1>
+        <p class="lead show-desktop">We filter the noise and surface real companies already signaling intent in your strengths.</p>
+        <p class="lead show-mobile">One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.</p>
         <div class="actions show-desktop" id="get-started-desktop">
           <button id="cta-desktop" type="button" class="btn primary">✨ START FOR FREE</button>
         </div>
-
-        <!-- Mobile actions -->
         <div class="actions show-mobile" id="get-started">
           <button id="cta" type="button" class="btn primary">Start Free</button>
         </div>
       </div>
 
-      <!-- Constellation (desktop only) -->
+      <!-- Scoreboard panel (desktop only) -->
       <div class="const-wrap" aria-hidden="true">
         <span class="domainTag" id="domainTag">yourcompany.com</span>
         <span class="const-caption">Signals clustered by timing</span>
         <canvas id="constFx"></canvas>
         <div class="const-legend">Your Website → Signal → <strong>Timing</strong> → Buyers</div>
 
-        <div class="miniCard" id="cardA" data-tip="High intent this week">
-          <div class="k">Buyer</div><div class="v" id="cardA_name">Acme Drinks Co.</div>
-          <div class="k">City</div><div class="v" id="cardA_city">Chicago, IL</div>
+        <!-- Cards: structure is richer; content filled by JS -->
+        <div class="miniCard" id="cardA" role="group" aria-label="Lead A">
+          <div class="row">
+            <span class="stage" data-stage>A</span>
+            <span class="prob"><span class="dot" data-prob-dot></span><span class="pct" data-prob>72%</span></span>
+          </div>
+          <div class="row"><span class="k">Buyer</span><span class="v name" data-name>—</span></div>
+          <div class="row"><span class="k">Distance</span><span class="v" data-distance>—</span></div>
+          <div class="row"><span class="k">Need</span><span class="v" data-need>—</span></div>
+          <div class="row ai">
+            <span class="k"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 1 7 7v1h1a2 2 0 1 1 0 4h-1v1a7 7 0 0 1-7 7 1 1 0 1 1 0-2 5 5 0 0 0 5-5v-1H7v1a5 5 0 0 0 5 5 1 1 0 1 1 0 2 7 7 0 0 1-7-7v-1H4a2 2 0 1 1 0-4h1V9a7 7 0 0 1 7-7Z"/></svg>
+              <span data-ai-label>Sales AI</span></span>
+            <span class="v" data-ai>74%</span>
+          </div>
+          <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
+          <div class="chips" data-tags></div>
         </div>
-        <div class="miniCard" id="cardB" data-tip="High intent this week">
-          <div class="k">Buyer</div><div class="v" id="cardB_name">Northstar Foods</div>
-          <div class="k">City</div><div class="v" id="cardB_city">Dallas, TX</div>
+
+        <div class="miniCard" id="cardB" role="group" aria-label="Lead B">
+          <div class="row">
+            <span class="stage" data-stage>B</span>
+            <span class="prob"><span class="dot" data-prob-dot></span><span class="pct" data-prob>58%</span></span>
+          </div>
+          <div class="row"><span class="k">Buyer</span><span class="v name" data-name>—</span></div>
+          <div class="row"><span class="k">Distance</span><span class="v" data-distance>—</span></div>
+          <div class="row"><span class="k">Need</span><span class="v" data-need>—</span></div>
+          <div class="row ai">
+            <span class="k"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 1 7 7v1h1a2 2 0 1 1 0 4h-1v1a7 7 0 0 1-7 7 1 1 0 1 1 0-2 5 5 0 0 0 5-5v-1H7v1a5 5 0 0 0 5 5 1 1 0 1 1 0 2 7 7 0 0 1-7-7v-1H4a2 2 0 1 1 0-4h1V9a7 7 0 0 1 7-7Z"/></svg>
+              <span data-ai-label>Ops AI</span></span>
+            <span class="v" data-ai>44%</span>
+          </div>
+          <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
+          <div class="chips" data-tags></div>
         </div>
-        <div class="miniCard" id="cardC" data-tip="High intent this week">
-          <div class="k">Buyer</div><div class="v" id="cardC_name">Atlas Beauty</div>
-          <div class="k">City</div><div class="v" id="cardC_city">Toronto, ON</div>
+
+        <div class="miniCard" id="cardC" role="group" aria-label="Lead C">
+          <div class="row">
+            <span class="stage" data-stage>C</span>
+            <span class="prob"><span class="dot" data-prob-dot></span><span class="pct" data-prob>49%</span></span>
+          </div>
+          <div class="row"><span class="k">Buyer</span><span class="v name" data-name>—</span></div>
+          <div class="row"><span class="k">Distance</span><span class="v" data-distance>—</span></div>
+          <div class="row"><span class="k">Need</span><span class="v" data-need>—</span></div>
+          <div class="row ai">
+            <span class="k"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 1 7 7v1h1a2 2 0 1 1 0 4h-1v1a7 7 0 0 1-7 7 1 1 0 1 1 0-2 5 5 0 0 0 5-5v-1H7v1a5 5 0 0 0 5 5 1 1 0 1 1 0 2 7 7 0 0 1-7-7v-1H4a2 2 0 1 1 0-4h1V9a7 7 0 0 1 7-7Z"/></svg>
+              <span data-ai-label>Pricing AI</span></span>
+            <span class="v" data-ai>29%</span>
+          </div>
+          <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
+          <div class="chips" data-tags></div>
         </div>
+
       </div>
     </div>
   </section>
@@ -431,7 +377,6 @@
         <h2>Proof it works</h2>
         <div class="sub">Signals → Verified companies → Hot buyers → Time-to-first buyer</div>
       </div>
-
       <div class="proof-wrap">
         <div class="kpi-grid" id="kpiGrid">
           <div class="kpi"><div class="label">Signals captured</div><div class="num" data-to="42000" data-format="int">0</div><div class="hint">From your site + public sources</div></div>
@@ -451,6 +396,78 @@
   <!-- MODAL -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none"></div>
 
+<!-- ===== SCOREBOARD KNOBS (safe top-level script; not nested) ===== -->
+<script>
+/* Everything tweakable lives here. Edit and reload. */
+window.SCOREBOARD_KNOBS = {
+  /* layout: 'absolute' (use slots below) or 'stack' (auto vertical) */
+  layout: 'absolute',
+
+  /* panel safe area (fractions of panel width/height) */
+  safe: { left:0.58, right:0.03, top:0.12, bottom:0.22 },
+
+  /* spacing/jitter for 'stack' mode or when resolving overlaps */
+  spacing: 22, jitter: 8, vPad: 10, minPad: 10, /* px between cards; set <10 to allow "kiss" */
+
+  /* rotation speeds */
+  rotateMs: { warm: 7000, hot: 6500, hotp: 6200 },  /* content swap interval per stage */
+  pulseMs: 3200,                                     /* anchor pulse freeze time */
+
+  /* stage colors */
+  stages: {
+    warm: { label:'Warm',  color:'#e6c36b' },
+    hot:  { label:'Hot',   color:'#ff9a5a' },
+    hotp: { label:'Hot+',  color:'#42d17a' }
+  },
+
+  /* probability color map (red -> green) */
+  probHue: { min: 5, max: 130 },                     /* HSL hue range for prob dot */
+
+  /* typography overrides per card (optional) */
+  fonts: { k: "11px Inter, system-ui", v: "700 14px Inter, system-ui", name: "700 15px Inter, system-ui" },
+
+  /* per-card slots (absolute mode) — left/top can be 'rel' [0..1] or 'px' */
+  slots: {
+    A: { mode:'rel', left:0.83, top:0.26, width:250, z:3, stage:'hotp', lock:true, jitterX:2, jitterY:2 },
+    B: { mode:'rel', left:0.83, top:0.53, width:242, z:2, stage:'hot',  lock:true, jitterX:2, jitterY:2 },
+    C: { mode:'rel', left:0.77, top:0.78, width:250, z:1, stage:'warm', lock:true, jitterX:1, jitterY:1 }
+    /* D: { mode:'rel', left:0.66, top:0.40, width:240, z:1, stage:'warm' } // enable if you want a 4th */
+  },
+
+  /* content pools (5+ examples each) */
+  pools: {
+    buyers: [
+      {name:"Pioneer Homecare", city:"Boise, ID"},
+      {name:"Swift Petcare", city:"Raleigh, NC"},
+      {name:"Acme Drinks Co.", city:"Chicago, IL"},
+      {name:"Northstar Foods", city:"Dallas, TX"},
+      {name:"Everpack Industrial", city:"Cleveland, OH"},
+      {name:"Atlas Beauty", city:"Toronto, ON"},
+      {name:"Lumina Skincare", city:"Austin, TX"},
+      {name:"Volt Pharma", city:"Denver, CO"}
+    ],
+    distance: ["Same city", "3.2 mi", "5.1 mi", "12.4 mi", "28 mi", "46 mi", "120 mi", "210 mi"],
+    needs: [
+      "PET bottles", "Stand-up pouches", "Rigid boxes", "Corrugated prints · 5k MOQ",
+      "Mailer boxes", "Shrink sleeves", "Paper labels", "Glass jars", "Pulp trays", "Poly mailers"
+    ],
+    next: {
+      warm: ["Share case study", "Send intro email", "Qualify on call", "Add to sequence", "Nurture newsletter"],
+      hot:  ["Send samples", "Book discovery", "Quote now", "Share spec sheet", "Loop in engineer"],
+      hotp: ["Call now", "Priority quote", "Hold calendar", "Send contract", "Arrange site visit"]
+    },
+    aiLabels: ["Sales AI", "Ops AI", "Pricing AI"]
+  },
+
+  /* stage-based ranges */
+  ranges: {
+    probability: { warm:[46,58], hot:[59,75], hotp:[72,92] },    /* % chance to close */
+    aiOptim:     { warm:[18,35], hot:[42,60], hotp:[70,90] },    /* % “Your <AI> optimized” */
+    distanceBias:{ warm:[5,210], hot:[3,50], hotp:[0,15] }       /* prefer nearer for hotter */
+  }
+};
+</script>
+
 <script>
 (()=>{
   'use strict';
@@ -467,15 +484,9 @@
     base: 'linear-gradient(180deg,#0b121a 0%, #0a0e14 70%, #091019 88%, var(--zone-dark) 100%)',
     height: 'auto'
   };
-  window.WALLPAPER = {
-    desktop: JSON.parse(JSON.stringify(WP_DEFAULT)),
-    mobile:  {
-      r1: { size:'200% 165%', at:'50% -18%', alpha:0.18, fade:'60%' },
-      r2: { size:'130% 95%',  at:'26% 16%',  alpha:0.10, fade:'74%' },
-      base: WP_DEFAULT.base,
-      height: 'auto'
-    }
-  };
+  window.WALLPAPER = { desktop: JSON.parse(JSON.stringify(WP_DEFAULT)),
+    mobile:{ r1:{size:'200% 165%', at:'50% -18%', alpha:0.18, fade:'60%'},
+             r2:{size:'130% 95%',  at:'26% 16%',  alpha:0.10, fade:'74%'}, base:WP_DEFAULT.base, height:'auto'} };
   const buildRadial=(k)=>`radial-gradient(${k.size} at ${k.at}, rgba(230,195,107,${k.alpha}), rgba(0,0,0,0) ${k.fade})`;
   const buildBg=(cfg)=>[ buildRadial(cfg.r1), buildRadial(cfg.r2), cfg.base ].join(',');
   function deepMerge(base, patch){
@@ -489,8 +500,7 @@
   }
   function applyWallpaper(){
     const el = $('#pageWallpaper'); if(!el) return;
-    const mq = window.matchMedia('(max-width:900px)');
-    const cfg = mq.matches ? window.WALLPAPER.mobile : window.WALLPAPER.desktop;
+    const cfg = (window.matchMedia('(max-width:900px)').matches) ? window.WALLPAPER.mobile : window.WALLPAPER.desktop;
     let h = cfg.height;
     if (h === 'auto'){
       const hero = document.querySelector('.hero');
@@ -570,7 +580,7 @@
       </div></div>\
     </div>';
 
-  /* ------- elements & state ------- */
+  /* ------- modal interactions ------- */
   const openBtnMobile=$("#cta"), openBtnDesktop=$("#cta-desktop");
   const closeBtn=$("#close");
   const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
@@ -617,12 +627,10 @@
   optBuyer?.addEventListener("click",()=>setRole("buyer"));
 
   function syncDomain(){
-    const d=domainFromEmail(emailEl.value);
+    const d=(emailEl && domainFromEmail(emailEl.value)) || "";
     if (d) hostEl.value=d;
     const tag=$("#domainTag");
-    tag && (tag.textContent = d || hostEl.value || "yourcompany.com");
-    const detected = detectSector(tag?.textContent||"");
-    setSectorCards(detected);
+    tag && (tag.textContent = d || hostEl?.value || "yourcompany.com");
   }
   emailEl?.addEventListener("input",syncDomain);
   emailEl?.addEventListener("change",syncDomain);
@@ -637,352 +645,68 @@
       e.preventDefault(); nextBtn.click();
     }
   });
-  
-  
-  
-    <script>
-    /* === Per-card master config you can edit any time === */
-    window.CONST_KNOBS = {
-      cards: {
-        /* stack = tidy auto layout; absolute = use slots A/B/C below (your exact positions) */
-        layout: 'absolute', /* 'absolute' or 'stack' */
-    
-        /* panel safe area (fractions of width/height) */
-        safeLeft: 0.58, safeRight: 0.03, safeTop: 0.12, safeBottom: 0.24,
-    
-        /* defaults if you switch back to 'stack' */
-        spacing: 20, jitter: 8, vPad: 10,
-    
-        /* Per-card slots (A, B, C) */
-        slots: {
-          A: {
-            /* mode: 'rel' = 0..1 within the safe area; 'px' = absolute pixels from panel origin */
-            mode: 'rel',
-            left: 0.84, top: 0.28,      /* position */
-            width: 228,                 /* px; omit for auto */
-            jitterX: 2, jitterY: 2,     /* px wiggle; 0 = no jitter */
-            z: 3,                       /* z-index; larger comes on top */
-            lock: true,                 /* true = ignore stack layout nudges */
-            /* Typography */
-            kFont: "11px Inter, system-ui",
-            vFont: "700 16px Inter, system-ui",
-            /* Copy */
-            copy: {
-              kBuyer: "Buyer",  buyer: "Pioneer Homecare",
-              kCity:  "City",   city:  "Boise, ID",
-              tip: "High intent this week"
-            },
-            /* Colors / theming (per card) */
-            theme: {
-              bg: "rgba(12,18,28,.86)",     /* card glass */
-              text: "#e8f1fb",
-              kColor: "#a9bfd6",
-              vColor: "#ffffff",
-              strokeA: 0.10,                /* border alpha */
-              shadowA: 0.30,                /* drop shadow alpha */
-              radius: 12                    /* border radius px */
-            }
-          },
-          B: {
-            mode: 'rel', left: 0.84, top: 0.52, width: 220,
-            jitterX: 1, jitterY: 1, z: 2, lock: true,
-            kFont: "11px Inter, system-ui",
-            vFont: "700 16px Inter, system-ui",
-            copy: { kBuyer:"Buyer", buyer:"Swift Petcare", kCity:"City", city:"Raleigh, NC", tip:"High intent this week" },
-            theme:{ bg:"rgba(12,18,28,.86)", text:"#e8f1fb", kColor:"#a9bfd6", vColor:"#ffffff", strokeA:0.10, shadowA:0.30, radius:12 }
-          },
-          C: {
-            mode: 'rel', left: 0.78, top: 0.74, width: 228,
-            jitterX: 1, jitterY: 1, z: 1, lock: true,
-            kFont: "11px Inter, system-ui",
-            vFont: "700 16px Inter, system-ui",
-            copy: { kBuyer:"Buyer", buyer:"Everpack Industrial", kCity:"City", city:"Cleveland, OH", tip:"High intent this week" },
-            theme:{ bg:"rgba(12,18,28,.86)", text:"#e8f1fb", kColor:"#a9bfd6", vColor:"#ffffff", strokeA:0.10, shadowA:0.30, radius:12 }
-          }
-        }
-      }
-    };
-    </script>
 
-  /* ------- Constellation (desktop) ------- */
+  /* ------- Constellation + Scoreboard ------- */
   (function(){
     const wrap = document.querySelector(".const-wrap");
     const c = document.getElementById("constFx");
     if (!wrap || !c) return;
 
-    /* Calm, sales-friendly defaults + stacking layout */
-    const KNOBS_DEFAULT = {
-      nodes: { count: 28, linkRadius: 96, linkAlphaBase: 0.06, linkAlphaBoost: 0.18, speed: 0.14 },
-      highlights: { regionLeft: 0.55, regionTop: 0.08, regionBottom: 0.92 },
-      cards: {
-        /* stack layout defaults (used if layout:'stack') */
-        safeLeft: 0.58, safeRight: 0.03, safeTop: 0.12, safeBottom: 0.24,
-        spacing: 20, jitter: 8, vPad: 10,
-        /* choose 'stack' or 'absolute' (can be overridden via window.CONST_KNOBS) */
-        layout: 'stack',
-        /* per-card slot defaults (used if layout:'absolute') */
-        slots: {
-          A: { mode:'rel', left:0.84, top:0.28, width:228, jitterX:2, jitterY:2, z:3, lock:true,
-               kFont:"11px Inter, system-ui", vFont:"700 16px Inter, system-ui",
-               copy:{kBuyer:"Buyer",buyer:"Card A",kCity:"City",city:"City A",tip:""},
-               theme:{ bg:"rgba(12,18,28,.86)", text:"#e8f1fb", kColor:"#a9bfd6", vColor:"#ffffff", strokeA:0.10, shadowA:0.30, radius:12 } },
-          B: { mode:'rel', left:0.84, top:0.52, width:220, jitterX:1, jitterY:1, z:2, lock:true,
-               kFont:"11px Inter, system-ui", vFont:"700 16px Inter, system-ui",
-               copy:{kBuyer:"Buyer",buyer:"Card B",kCity:"City",city:"City B",tip:""},
-               theme:{ bg:"rgba(12,18,28,.86)", text:"#e8f1fb", kColor:"#a9bfd6", vColor:"#ffffff", strokeA:0.10, shadowA:0.30, radius:12 } },
-          C: { mode:'rel', left:0.78, top:0.74, width:228, jitterX:1, jitterY:1, z:1, lock:true,
-               kFont:"11px Inter, system-ui", vFont:"700 16px Inter, system-ui",
-               copy:{kBuyer:"Buyer",buyer:"Card C",kCity:"City",city:"City C",tip:""},
-               theme:{ bg:"rgba(12,18,28,.86)", text:"#e8f1fb", kColor:"#a9bfd6", vColor:"#ffffff", strokeA:0.10, shadowA:0.30, radius:12 } }
-        }
-      },
-      legendAvoidancePx: 14
+    const KN = window.SCOREBOARD_KNOBS || {};
+    function dm(base, patch){ return deepMerge(base, patch); }
+
+    /* Canvas backdrop */
+    const backdrop = {
+      nodes: { count: 28, linkRadius: 96, linkAlphaBase: 0.06, linkAlphaBoost: 0.18, speed: 0.14 }
     };
-    function deepMerge(base, patch){
-      const out = JSON.parse(JSON.stringify(base||{}));
-      if(!patch) return out;
-      for(const k in patch){
-        if (patch[k] && typeof patch[k]==='object' && !Array.isArray(patch[k])) out[k] = deepMerge(base?.[k]||{}, patch[k]);
-        else out[k] = patch[k];
-      }
-      return out;
-    }
-    let KNOBS = window.CONST_KNOBS ? deepMerge(KNOBS_DEFAULT, window.CONST_KNOBS) : KNOBS_DEFAULT;
-    window.updateConstKnobs = (patch)=>{ KNOBS = deepMerge(KNOBS, patch||{}); reset(); };
 
-    /* sector-aware card content */
-    const sectorCards = {
-      'foodbev': [
-        { name:"Northstar Foods", city:"Dallas, TX" },
-        { name:"Acme Drinks Co.", city:"Chicago, IL" },
-        { name:"GreenLeaf Snacks", city:"Portland, OR" }
-      ],
-      'beauty': [
-        { name:"Atlas Beauty", city:"Toronto, ON" },
-        { name:"Lumina Skincare", city:"Austin, TX" },
-        { name:"Vera Cosmetics", city:"Los Angeles, CA" }
-      ],
-      'pharma': [
-        { name:"Volt Pharma", city:"Denver, CO" },
-        { name:"Cygnet Biologics", city:"Cambridge, MA" },
-        { name:"Nova Health Labs", city:"San Diego, CA" }
-      ],
-      'general': [
-        { name:"Pioneer Homecare", city:"Boise, ID" },
-        { name:"Swift Petcare", city:"Raleigh, NC" },
-        { name:"Everpack Industrial", city:"Cleveland, OH" }
-      ]
-    };
-    function detectSector(host){
-      const h = (host||"").toLowerCase();
-      if (/(food|snack|drink|brew|bev|coffee|tea|taste)/.test(h)) return 'foodbev';
-      if (/(beauty|cosmet|makeup|skincare|fragrance)/.test(h)) return 'beauty';
-      if (/(pharm|med|bio|lab|health|clinic|rx)/.test(h)) return 'pharma';
-      return 'general';
-    }
-
-    const cardEls = [{ el: $("#cardA") },{ el: $("#cardB") },{ el: $("#cardC") }];
-
-    function setSectorCards(sector){
-      const pool = sectorCards[sector] || sectorCards.general;
-      const picks = [...pool].sort(()=>Math.random()-0.5).slice(0,3);
-      cardEls.forEach((c,i)=>{
-        const d = picks[i] || pool[i%pool.length];
-        const vs = c.el?.querySelectorAll(".v");
-        vs && vs[0] && (vs[0].textContent = d.name);
-        vs && vs[1] && (vs[1].textContent = d.city);
-      });
-    }
-    try{
-      const host=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "yourcompany.com";
-      $("#domainTag") && ($("#domainTag").textContent = host);
-      setSectorCards(detectSector(host));
-    }catch{ setSectorCards('general'); }
-
-    /* canvas plumbing */
     const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
     const ctx = c.getContext("2d");
-    let W=0,H=0, nodes=[], highlights=[];
-    let calmStart=0, anchorPulseActive=true;
+    let W=0,H=0,nodes=[];
 
-    function rand(min,max){ return min + Math.random()*(max-min); }
-    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
-
-    function reset(){
-      const rect = wrap.getBoundingClientRect();
-      W = Math.max(320, Math.floor(rect.width));
-      H = Math.max(260, Math.floor(rect.height));
+    function resetCanvas(){
+      const r = wrap.getBoundingClientRect();
+      W = Math.max(320, Math.floor(r.width));
+      H = Math.max(260, Math.floor(r.height));
       c.width = Math.floor(W*DPR); c.height = Math.floor(H*DPR);
       c.style.width=W+"px"; c.style.height=H+"px";
       ctx.setTransform(DPR,0,0,DPR,0,0);
 
-      const N = KNOBS.nodes.count; nodes = [];
+      const N = backdrop.nodes.count; nodes = [];
       for (let i=0;i<N;i++){
         const x = 0.20 + Math.random()*0.78;
         const y = 0.06 + Math.random()*0.88;
         const s = 0.15 + Math.random()*0.85;
-        const vx = (Math.random()-0.5) * KNOBS.nodes.speed;
-        const vy = (Math.random()-0.5) * KNOBS.nodes.speed;
+        const vx = (Math.random()-0.5) * backdrop.nodes.speed;
+        const vy = (Math.random()-0.5) * backdrop.nodes.speed;
         nodes.push({x:x*W, y:y*H, s, vx, vy});
       }
-      // anchor
-      const anchor = { x: 0.18*W, y: 0.52*H };
-      nodes.unshift({x:anchor.x, y:anchor.y, s:1.8, vx:0, vy:0, anchor:true });
-
-      const hr = KNOBS.highlights;
-      const candidates = nodes.filter(n => !n.anchor && n.x > W*hr.regionLeft && n.y > H*hr.regionTop && n.y < H*hr.regionBottom);
-      highlights = [];
-      for (let j=0;j<3;j++){ const n = candidates[(Math.random()*candidates.length)|0]; if (n) highlights.push(n); }
-
-      placeCards(); /* snapped vertical stack */
-      calmStart = performance.now();
-      anchorPulseActive = true;
-      draw();
+      nodes.unshift({x:0.18*W, y:0.52*H, s:1.8, vx:0, vy:0, anchor:true });
     }
 
-    /* --------- SLOT LAYOUT: tidy, never overlaps --------- */
-    function placeCards(){
-      const cs = KNOBS.cards;
-    
-      const safe = {
-        left:  W*cs.safeLeft,
-        top:   H*cs.safeTop,
-        right: W*(1 - cs.safeRight),
-        bottom:H*(1 - cs.safeBottom)
-      };
-    
-      // keep clear of legend
-      const legend = wrap.querySelector(".const-legend");
-      if (legend){
-        const lr = legend.getBoundingClientRect();
-        const wr = wrap.getBoundingClientRect();
-        const legendTop = lr.top - wr.top;
-        safe.bottom = Math.min(safe.bottom, legendTop - KNOBS.legendAvoidancePx);
-      }
-    
-      const ids = ['A','B','C'];
-      const els = [$("#cardA"), $("#cardB"), $("#cardC")];
-    
-      const clamp = (v,min,max)=>Math.max(min, Math.min(max, v));
-      const relToPx = (f, min, max)=> min + f * (max - min);
-    
-      if (cs.layout === 'absolute'){
-        ids.forEach((id, i)=>{
-          const el = els[i]; if(!el) return;
-          const slot = (cs.slots && cs.slots[id]) || {};
-          const rect = el.getBoundingClientRect();
-          const w = slot.width || rect.width || 200;
-          const h = rect.height || 96;
-    
-          // position: rel (0..1 within safe) or px (from panel origin)
-          let x, y;
-          if (slot.mode === 'px'){
-            x = slot.left ?? (safe.right - w/2);
-            y = slot.top  ?? (safe.top + h/2);
-          }else{
-            const fx = (slot.left ?? 0.85);
-            const fy = (slot.top  ?? 0.30);
-            x = relToPx(fx, safe.left + w/2, safe.right - w/2);
-            y = relToPx(fy, safe.top  + h/2, safe.bottom - h/2);
-          }
-    
-          // jitter
-          const jx = (slot.jitterX||0) * (Math.random()*2 - 1);
-          const jy = (slot.jitterY||0) * (Math.random()*2 - 1);
-    
-          x = clamp(x + jx, safe.left + w/2, safe.right - w/2);
-          y = clamp(y + jy, safe.top  + h/2, safe.bottom - h/2);
-    
-          // apply geometry
-          el.style.left = x + 'px';
-          el.style.top  = y + 'px';
-          if (slot.width) el.style.width = slot.width + 'px';
-          if (slot.z != null) el.style.zIndex = String(slot.z);
-    
-          // theme + radius
-          const th = slot.theme||{};
-          if (th.bg)      el.style.setProperty('--miniCard-bg', th.bg);
-          if (th.text)    el.style.color = th.text;
-          if (th.radius)  el.style.borderRadius = th.radius + 'px';
-          if (typeof th.shadowA === 'number') el.style.setProperty('--miniCard-shadow-a', th.shadowA);
-          if (typeof th.strokeA === 'number') el.style.borderColor = `rgba(255,255,255,${th.strokeA})`;
-    
-          // fonts
-          const ks = el.querySelectorAll('.k'); ks.forEach(k=>{ if(slot.kFont) k.style.font = slot.kFont; if(th.kColor) k.style.color = th.kColor; });
-          const vs = el.querySelectorAll('.v'); vs.forEach(v=>{ if(slot.vFont) v.style.font = slot.vFont; if(th.vColor) v.style.color = th.vColor; });
-    
-          // copy
-          const cp = slot.copy||{};
-          const kEls = el.querySelectorAll('.k');
-          const vEls = el.querySelectorAll('.v');
-          if (kEls[0] && cp.kBuyer) kEls[0].textContent = cp.kBuyer;
-          if (vEls[0] && cp.buyer)  vEls[0].textContent = cp.buyer;
-          if (kEls[1] && cp.kCity)  kEls[1].textContent = cp.kCity;
-          if (vEls[1] && cp.city)   vEls[1].textContent = cp.city;
-          if (cp.tip != null) el.setAttribute('data-tip', cp.tip);
-    
-          // lock prevents later stack nudges (kept for API symmetry)
-          el.dataset.locked = slot.lock ? '1' : '0';
-        });
-        return;
-      }
-    
-      /* --- fallback: tidy vertical stack (original behavior) --- */
-      const placed = [];
-      function nonOverlapping(x,y,w,h){
-        const pad = cs.spacing;
-        return placed.every(p => Math.abs(p.x - x) > (p.w/2 + w/2 + pad) || Math.abs(p.y - y) > (p.h/2 + h/2 + pad));
-      }
-      const baseX = clamp(safe.right - 8, safe.left, safe.right);
-      els.forEach((el,i)=>{
-        if(!el) return;
-        const rect = el.getBoundingClientRect();
-        const w = rect.width || 190, h = rect.height || 96;
-        const totalH = (h*3) + (cs.spacing*2) + (cs.vPad*2);
-        const startY = clamp((safe.top + safe.bottom)/2 - totalH/2, safe.top + h/2 + cs.vPad, safe.bottom - h/2 - cs.vPad);
-        let x = clamp(baseX - w/2 - 12 + (Math.random()*2-1)*cs.jitter, safe.left + w/2, safe.right - w/2);
-        let y = clamp(startY + i*(h + cs.spacing) + (Math.random()*2-1)*cs.jitter, safe.top + h/2, safe.bottom - h/2);
-        let tries=0;
-        while(!nonOverlapping(x,y,w,h) && tries<12){
-          x = clamp(x + (Math.random()*2-1)*cs.jitter, safe.left + w/2, safe.right - w/2);
-          y = clamp(y + (Math.random()*2-1)*cs.jitter, safe.top + h/2, safe.bottom - h/2);
-          tries++;
-        }
-        placed.push({x,y,w,h});
-        el.style.left = x+"px"; el.style.top  = y+"px";
-      });
-    }
-    /* ----------------------------------------------------- */
-
-    function draw(){
+    function drawCanvas(){
       ctx.clearRect(0,0,W,H);
-      const R = KNOBS.nodes.linkRadius;
+      const R = backdrop.nodes.linkRadius;
       for (let i=0;i<nodes.length;i++){
         const a = nodes[i];
         for (let j=i+1;j<nodes.length;j++){
           const b = nodes[j];
           const dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
           if (d2 < R*R){
-            const aLine = KNOBS.nodes.linkAlphaBase + KNOBS.nodes.linkAlphaBoost*(1 - Math.sqrt(d2)/R);
+            const aLine = backdrop.nodes.linkAlphaBase + backdrop.nodes.linkAlphaBoost*(1 - Math.sqrt(d2)/R);
             ctx.strokeStyle=`rgba(230,195,107,${aLine})`;
-            ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+            ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
           }
         }
       }
-      // anchor pulse (±2px) — freeze after 3s
       const anchor = nodes[0];
-      const elapsed = performance.now() - calmStart;
-      const pulseAmp = (anchorPulseActive && elapsed < 3000) ? 2 : 0;
-      if (elapsed >= 3000) anchorPulseActive = false;
-
-      const pulse = pulseAmp * Math.sin(performance.now()*0.006);
+      const t = Math.min(1, (performance.now()%KN.pulseMs)/KN.pulseMs);
+      const pulse = 2*Math.sin(t*Math.PI*2);
       ctx.fillStyle="rgba(230,195,107,0.16)";
       ctx.beginPath(); ctx.arc(anchor.x, anchor.y, 24+pulse, 0, Math.PI*2); ctx.fill();
 
-      // subtle gold wash
       const grad = ctx.createLinearGradient(0,0,W,H);
-      grad.addColorStop(0, "rgba(230,195,107,0.06)");
-      grad.addColorStop(1, "rgba(230,195,107,0.0)");
+      grad.addColorStop(0,"rgba(230,195,107,0.06)"); grad.addColorStop(1,"rgba(230,195,107,0.0)");
       ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
 
       for (const n of nodes){
@@ -992,49 +716,195 @@
       }
     }
 
-    /* 30fps cap + pause offscreen + re-animate on hover */
-    let lastFrame = 0;
-    let isVisible = true;
-    function loop(now){
-      const prefersReduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (prefersReduce || !isVisible){ requestAnimationFrame(loop); return; }
+    /* --- Scoreboard cards data + layout --- */
+    const cards = [
+      { id:'A', el: $('#cardA') },
+      { id:'B', el: $('#cardB') },
+      { id:'C', el: $('#cardC') }
+    ].filter(c=>c.el);
 
-      const FRAME_MS = 1000/30;
-      if (now - lastFrame >= FRAME_MS){
-        const dt = Math.min(33, now-(lastFrame||now)) * 0.06;
-        lastFrame = now;
-
-        const elapsed = now - calmStart;
-        const damping = elapsed > 3000 ? 0.94 : 1.0;
-        for (let i=1;i<nodes.length;i++){
-          const n = nodes[i];
-          n.vx *= damping; n.vy *= damping;
-          n.x += n.vx*dt; n.y += n.vy*dt;
-          if (n.x < 0) n.x = W; if (n.x > W) n.x = 0;
-          if (n.y < 0) n.y = H; if (n.y > H) n.y = 0;
-        }
-        draw();
-      }
-      requestAnimationFrame(loop);
+    function hslProb(percent){
+      const hue = KN.probHue.min + (KN.probHue.max-KN.probHue.min)*(percent/100);
+      return `hsl(${hue}, 78%, 54%)`;
     }
-    const io = new IntersectionObserver((entries)=>{ isVisible = entries.some(e=>e.isIntersecting); }, {threshold:0.1});
-    io.observe(wrap);
-    document.addEventListener('visibilitychange', ()=>{ isVisible = !document.hidden; });
 
-    wrap.addEventListener('mouseenter', ()=>{
-      calmStart = performance.now(); anchorPulseActive = true;
-      for (let i=1;i<nodes.length;i++){
-        nodes[i].vx += (Math.random()-0.5)*0.08;
-        nodes[i].vy += (Math.random()-0.5)*0.08;
+    function range([a,b]){ return a + Math.random()*(b-a); }
+    function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
+
+    function stageOf(cardId){
+      const slot = KN.slots[cardId]||{};
+      return slot.stage||'warm';
+    }
+
+    function layoutCards(){
+      const safe = {
+        left:  W*KN.safe.left,
+        right: W*(1-KN.safe.right),
+        top:   H*KN.safe.top,
+        bottom:H*(1-KN.safe.bottom)
+      };
+      const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+      const relToPx=(f, min, max)=> min + f * (max - min);
+
+      const placed=[];
+      function nonOverlap(x,y,w,h){
+        const pad=KN.minPad;
+        return placed.every(p => Math.abs(p.x-x)>(p.w/2+w/2+pad) || Math.abs(p.y-y)>(p.h/2+h/2+pad));
       }
-    });
 
-    function start(){ reset(); lastFrame=0; requestAnimationFrame(loop); }
-    start();
-    addEventListener("resize", reset);
+      cards.forEach((c)=>{
+        const slot = KN.slots[c.id]||{};
+        const rect = c.el.getBoundingClientRect();
+        const w = slot.width || rect.width || 230;
+        const h = rect.height || 128;
+
+        let x,y;
+        if (KN.layout==='absolute'){
+          if (slot.mode==='px'){ x = slot.left ?? (safe.right-w/2); y = slot.top ?? (safe.top+h/2); }
+          else{ x = relToPx(slot.left ?? 0.85, safe.left+w/2, safe.right-w/2);
+                y = relToPx(slot.top  ?? 0.30, safe.top +h/2, safe.bottom-h/2); }
+          x += (slot.jitterX||0)*(Math.random()*2-1);
+          y += (slot.jitterY||0)*(Math.random()*2-1);
+          x = clamp(x, safe.left+w/2, safe.right-w/2);
+          y = clamp(y, safe.top +h/2, safe.bottom-h/2);
+
+          // allow slight "kiss" but resolve true overlaps
+          let tries=0;
+          while(!nonOverlap(x,y,w,h) && tries<10){
+            x = clamp(x + (Math.random()*2-1)*4, safe.left+w/2, safe.right-w/2);
+            y = clamp(y + (Math.random()*2-1)*4, safe.top +h/2, safe.bottom-h/2);
+            tries++;
+          }
+        }else{
+          // stack mode
+          const i = cards.findIndex(k=>k.id===c.id);
+          const baseX = clamp(safe.right - w/2 - 12, safe.left+w/2, safe.right-w/2);
+          const totalH = (h*cards.length) + KN.spacing*(cards.length-1);
+          const startY = clamp((safe.top+safe.bottom)/2 - totalH/2, safe.top+h/2, safe.bottom-h/2);
+          x = baseX + (Math.random()*2-1)*KN.jitter;
+          y = startY + i*(h+KN.spacing) + (Math.random()*2-1)*KN.jitter;
+        }
+
+        c.el.style.left = x+'px';
+        c.el.style.top  = y+'px';
+        if (slot.width) c.el.style.width = slot.width+'px';
+        if (slot.z != null) c.el.style.zIndex = String(slot.z);
+        placed.push({x,y,w,h});
+      });
+    }
+
+    function populateCard(c){
+      const stage = stageOf(c.id);
+      const ranges = KN.ranges;
+      const p = Math.round(range(ranges.probability[stage]));
+      const ai = Math.round(range(ranges.aiOptim[stage]));
+
+      // choose buyer, distance (biased by stage), need, next action
+      const buyer = pick(KN.pools.buyers);
+      const needs = pick(KN.pools.needs);
+      const aiLabel = pick(KN.pools.aiLabels);
+
+      // distance bias: favor nearer values for hotter stages
+      const bias = ranges.distanceBias[stage];
+      const dVal = Math.round(range(bias));
+      const distance = (dVal<=1) ? "Same city" : (dVal<8 ? (dVal.toFixed(1)+" mi") : (dVal+" mi"));
+
+      // paint
+      const el = c.el;
+      const stageEl = el.querySelector('[data-stage]');
+      const probEl  = el.querySelector('[data-prob]');
+      const probDot = el.querySelector('[data-prob-dot]');
+      const nameEl  = el.querySelector('[data-name]');
+      const distEl  = el.querySelector('[data-distance]');
+      const needEl  = el.querySelector('[data-need]');
+      const aiLblEl = el.querySelector('[data-ai-label]');
+      const aiEl    = el.querySelector('[data-ai]');
+      const chips   = el.querySelector('[data-tags]');
+
+      const stageMeta = KN.stages[stage] || KN.stages.warm;
+      stageEl.textContent = stageMeta.label + (stage==='hotp' ? ' 🔥' : '');
+      stageEl.style.borderColor = stageMeta.color;
+      stageEl.style.color = stageMeta.color;
+
+      probEl.textContent = p + '%';
+      probDot.style.color = hslProb(p);
+
+      nameEl.textContent = buyer.name + " — " + buyer.city;
+      distEl.textContent = distance;
+      needEl.textContent = needs;
+      aiLblEl.textContent = `${aiLabel} optimized`;
+      aiEl.textContent = ai + '%';
+
+      // small helper chips (cute, minimal)
+      chips.innerHTML = '';
+      const tag1 = document.createElement('span'); tag1.className='chip'; tag1.textContent='🏷️ ' + stageMeta.label;
+      const tag2 = document.createElement('span'); tag2.className='chip'; tag2.textContent= p>=70 ? 'High intent' : (p>=58?'Rising intent':'Warming');
+      chips.appendChild(tag1); chips.appendChild(tag2);
+
+      // fonts
+      el.querySelectorAll('.k').forEach(k=>{ k.style.font = KN.fonts.k; });
+      el.querySelectorAll('.v').forEach(v=>{ v.style.font = KN.fonts.v; });
+      el.querySelectorAll('.name').forEach(n=>{ n.style.font = KN.fonts.name; });
+    }
+
+    // Rotation loop per card
+    const timers = new Map();
+    function scheduleRotation(c){
+      clearTimeout(timers.get(c.id));
+      const stage = stageOf(c.id);
+      const ms = (KN.rotateMs && KN.rotateMs[stage]) || 6500;
+      timers.set(c.id, setTimeout(()=>{ populateCard(c); scheduleRotation(c); }, ms + Math.random()*800));
+    }
+
+    function init(){
+      // domain badge from local storage if present
+      try{
+        const host=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "yourcompany.com";
+        $("#domainTag") && ($("#domainTag").textContent = host);
+      }catch{}
+
+      resetCanvas();
+      cards.forEach(populateCard);
+      layoutCards();
+
+      // start the animation loop (30fps cap / pause offscreen)
+      let last=0, vis=true;
+      const FRAME=1000/30;
+      function loop(now){
+        if (document.hidden || !vis){ requestAnimationFrame(loop); return; }
+        if (now-last>=FRAME){
+          for (let i=1;i<nodes.length;i++){
+            const n = nodes[i]; n.x+=n.vx; n.y+=n.vy;
+            if (n.x<0) n.x=W; if (n.x>W) n.x=0; if (n.y<0) n.y=H; if (n.y>H) n.y=0;
+          }
+          drawCanvas(); last=now;
+        }
+        requestAnimationFrame(loop);
+      }
+      const io = new IntersectionObserver((es)=>{ vis = es.some(e=>e.isIntersecting); },{threshold:0.1});
+      io.observe(wrap); requestAnimationFrame(loop);
+
+      // hover = wake up nodes slightly
+      wrap.addEventListener('mouseenter', ()=>{
+        for (let i=1;i<nodes.length;i++){ nodes[i].vx += (Math.random()-0.5)*0.08; nodes[i].vy += (Math.random()-0.5)*0.08; }
+      });
+
+      // schedule content rotation
+      cards.forEach(scheduleRotation);
+      addEventListener('resize', ()=>{ resetCanvas(); layoutCards(); });
+    }
+    init();
+
+    // public knob updater
+    window.updateScoreboardKnobs = function(patch){
+      window.SCOREBOARD_KNOBS = dm(window.SCOREBOARD_KNOBS, patch||{});
+      Object.assign(KN, window.SCOREBOARD_KNOBS);
+      layoutCards();
+      cards.forEach(populateCard);
+    };
   })();
 
-  /* ------- Section 2 counters (unchanged) ------- */
+  /* ------- Section 2 counters ------- */
   (function(){
     const section = document.getElementById("proof"); if (!section) return;
     const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
