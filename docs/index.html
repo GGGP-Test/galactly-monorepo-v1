@@ -126,6 +126,33 @@
   .nav-cta{padding:8px 14px; border-radius:999px; color:var(--ctaText);
     background:linear-gradient(180deg,var(--gold),var(--gold-700));
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
+    
+  /* Header "Get Demo" — secondary next to Start Free */
+  .nav-demo{
+    display:inline-block;
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid var(--stroke);
+    background:rgba(255,255,255,.02);
+    color:#cfe0ee;
+    font-weight:600;
+    opacity:.9;
+  }
+  .nav-demo:hover,.nav-demo:focus-visible{
+    opacity:1;
+    border-color:#2b445c;
+  }
+  
+  /* Keep Start Free as the clear primary */
+  .nav-cta{
+    padding:8px 14px;
+    border-radius:999px;
+    color:var(--ctaText);
+    background:linear-gradient(180deg,var(--gold),var(--gold-700));
+    border:none;
+    box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset;
+    white-space:nowrap;
+  }
 
   /* Hamburger (mobile only) */
   .hamburger{display:none; justify-self:end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
@@ -340,6 +367,7 @@
 
       <div class="nav-actions">
         <a class="nav-login" href="login.html">Login</a>
+        <a class="nav-demo" href="https://www.youtube.com" target="_blank" rel="noopener">Get Demo</a>
         <a class="nav-cta" href="#get-started" id="navStart">Start Free</a>
       </div>
 
@@ -354,6 +382,7 @@
     <div class="sheet" role="menu">
       <a id="mobileStart" class="mm-cta" href="#get-started" role="menuitem">✨ Start Free</a>
       <a class="mm-link" href="login.html" role="menuitem">Login</a>
+      <a class="mm-link" href="https://www.youtube.com" target="_blank" rel="noopener" role="menuitem">Get Demo</a>
       <hr>
       <a class="mm-link" href="#get-started" role="menuitem">How it works</a>
       <a class="mm-link" href="sectors.html" role="menuitem">Sectors</a>
@@ -389,13 +418,11 @@
         <!-- Desktop actions -->
         <div class="actions show-desktop" id="get-started-desktop">
           <button id="cta-desktop" type="button" class="btn primary">✨ START FOR FREE</button>
-          <a href="https://www.youtube.com" class="btn ghost" target="_blank" rel="noopener">▶︎ GET DEMO</a>
         </div>
 
         <!-- Mobile actions -->
         <div class="actions show-mobile" id="get-started">
-          <button id="cta" type="button" class="btn primary">Get a demo</button>
-          <a href="https://www.youtube.com" class="btn ghost" target="_blank" rel="noopener">▶︎ Watch 60-sec demo</a>
+          <button id="cta" type="button" class="btn primary">Start Free</button>
         </div>
       </div>
 
