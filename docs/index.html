@@ -637,6 +637,72 @@
       e.preventDefault(); nextBtn.click();
     }
   });
+  
+  
+  
+    <script>
+    /* === Per-card master config you can edit any time === */
+    window.CONST_KNOBS = {
+      cards: {
+        /* stack = tidy auto layout; absolute = use slots A/B/C below (your exact positions) */
+        layout: 'absolute', /* 'absolute' or 'stack' */
+    
+        /* panel safe area (fractions of width/height) */
+        safeLeft: 0.58, safeRight: 0.03, safeTop: 0.12, safeBottom: 0.24,
+    
+        /* defaults if you switch back to 'stack' */
+        spacing: 20, jitter: 8, vPad: 10,
+    
+        /* Per-card slots (A, B, C) */
+        slots: {
+          A: {
+            /* mode: 'rel' = 0..1 within the safe area; 'px' = absolute pixels from panel origin */
+            mode: 'rel',
+            left: 0.84, top: 0.28,      /* position */
+            width: 228,                 /* px; omit for auto */
+            jitterX: 2, jitterY: 2,     /* px wiggle; 0 = no jitter */
+            z: 3,                       /* z-index; larger comes on top */
+            lock: true,                 /* true = ignore stack layout nudges */
+            /* Typography */
+            kFont: "11px Inter, system-ui",
+            vFont: "700 16px Inter, system-ui",
+            /* Copy */
+            copy: {
+              kBuyer: "Buyer",  buyer: "Pioneer Homecare",
+              kCity:  "City",   city:  "Boise, ID",
+              tip: "High intent this week"
+            },
+            /* Colors / theming (per card) */
+            theme: {
+              bg: "rgba(12,18,28,.86)",     /* card glass */
+              text: "#e8f1fb",
+              kColor: "#a9bfd6",
+              vColor: "#ffffff",
+              strokeA: 0.10,                /* border alpha */
+              shadowA: 0.30,                /* drop shadow alpha */
+              radius: 12                    /* border radius px */
+            }
+          },
+          B: {
+            mode: 'rel', left: 0.84, top: 0.52, width: 220,
+            jitterX: 1, jitterY: 1, z: 2, lock: true,
+            kFont: "11px Inter, system-ui",
+            vFont: "700 16px Inter, system-ui",
+            copy: { kBuyer:"Buyer", buyer:"Swift Petcare", kCity:"City", city:"Raleigh, NC", tip:"High intent this week" },
+            theme:{ bg:"rgba(12,18,28,.86)", text:"#e8f1fb", kColor:"#a9bfd6", vColor:"#ffffff", strokeA:0.10, shadowA:0.30, radius:12 }
+          },
+          C: {
+            mode: 'rel', left: 0.78, top: 0.74, width: 228,
+            jitterX: 1, jitterY: 1, z: 1, lock: true,
+            kFont: "11px Inter, system-ui",
+            vFont: "700 16px Inter, system-ui",
+            copy: { kBuyer:"Buyer", buyer:"Everpack Industrial", kCity:"City", city:"Cleveland, OH", tip:"High intent this week" },
+            theme:{ bg:"rgba(12,18,28,.86)", text:"#e8f1fb", kColor:"#a9bfd6", vColor:"#ffffff", strokeA:0.10, shadowA:0.30, radius:12 }
+          }
+        }
+      }
+    };
+    </script>
 
   /* ------- Constellation (desktop) ------- */
   (function(){
@@ -649,10 +715,26 @@
       nodes: { count: 28, linkRadius: 96, linkAlphaBase: 0.06, linkAlphaBoost: 0.18, speed: 0.14 },
       highlights: { regionLeft: 0.55, regionTop: 0.08, regionBottom: 0.92 },
       cards: {
+        /* stack layout defaults (used if layout:'stack') */
         safeLeft: 0.58, safeRight: 0.03, safeTop: 0.12, safeBottom: 0.24,
-        jitter: 8, /* organic wiggle */
-        spacing: 20, /* extra vertical gap between cards */
-        vPad: 30   /* internal padding for slot math */
+        spacing: 20, jitter: 8, vPad: 10,
+        /* choose 'stack' or 'absolute' (can be overridden via window.CONST_KNOBS) */
+        layout: 'stack',
+        /* per-card slot defaults (used if layout:'absolute') */
+        slots: {
+          A: { mode:'rel', left:0.84, top:0.28, width:228, jitterX:2, jitterY:2, z:3, lock:true,
+               kFont:"11px Inter, system-ui", vFont:"700 16px Inter, system-ui",
+               copy:{kBuyer:"Buyer",buyer:"Card A",kCity:"City",city:"City A",tip:""},
+               theme:{ bg:"rgba(12,18,28,.86)", text:"#e8f1fb", kColor:"#a9bfd6", vColor:"#ffffff", strokeA:0.10, shadowA:0.30, radius:12 } },
+          B: { mode:'rel', left:0.84, top:0.52, width:220, jitterX:1, jitterY:1, z:2, lock:true,
+               kFont:"11px Inter, system-ui", vFont:"700 16px Inter, system-ui",
+               copy:{kBuyer:"Buyer",buyer:"Card B",kCity:"City",city:"City B",tip:""},
+               theme:{ bg:"rgba(12,18,28,.86)", text:"#e8f1fb", kColor:"#a9bfd6", vColor:"#ffffff", strokeA:0.10, shadowA:0.30, radius:12 } },
+          C: { mode:'rel', left:0.78, top:0.74, width:228, jitterX:1, jitterY:1, z:1, lock:true,
+               kFont:"11px Inter, system-ui", vFont:"700 16px Inter, system-ui",
+               copy:{kBuyer:"Buyer",buyer:"Card C",kCity:"City",city:"City C",tip:""},
+               theme:{ bg:"rgba(12,18,28,.86)", text:"#e8f1fb", kColor:"#a9bfd6", vColor:"#ffffff", strokeA:0.10, shadowA:0.30, radius:12 } }
+        }
       },
       legendAvoidancePx: 14
     };
@@ -761,12 +843,14 @@
     /* --------- SLOT LAYOUT: tidy, never overlaps --------- */
     function placeCards(){
       const cs = KNOBS.cards;
+    
       const safe = {
         left:  W*cs.safeLeft,
         top:   H*cs.safeTop,
         right: W*(1 - cs.safeRight),
         bottom:H*(1 - cs.safeBottom)
       };
+    
       // keep clear of legend
       const legend = wrap.querySelector(".const-legend");
       if (legend){
@@ -775,26 +859,97 @@
         const legendTop = lr.top - wr.top;
         safe.bottom = Math.min(safe.bottom, legendTop - KNOBS.legendAvoidancePx);
       }
-
-      const baseX = clamp(safe.right - 8, safe.left, safe.right); // right-aligned feel
-      cardEls.forEach((c,i)=>{
-        const el = c.el; if (!el) return;
+    
+      const ids = ['A','B','C'];
+      const els = [$("#cardA"), $("#cardB"), $("#cardC")];
+    
+      const clamp = (v,min,max)=>Math.max(min, Math.min(max, v));
+      const relToPx = (f, min, max)=> min + f * (max - min);
+    
+      if (cs.layout === 'absolute'){
+        ids.forEach((id, i)=>{
+          const el = els[i]; if(!el) return;
+          const slot = (cs.slots && cs.slots[id]) || {};
+          const rect = el.getBoundingClientRect();
+          const w = slot.width || rect.width || 200;
+          const h = rect.height || 96;
+    
+          // position: rel (0..1 within safe) or px (from panel origin)
+          let x, y;
+          if (slot.mode === 'px'){
+            x = slot.left ?? (safe.right - w/2);
+            y = slot.top  ?? (safe.top + h/2);
+          }else{
+            const fx = (slot.left ?? 0.85);
+            const fy = (slot.top  ?? 0.30);
+            x = relToPx(fx, safe.left + w/2, safe.right - w/2);
+            y = relToPx(fy, safe.top  + h/2, safe.bottom - h/2);
+          }
+    
+          // jitter
+          const jx = (slot.jitterX||0) * (Math.random()*2 - 1);
+          const jy = (slot.jitterY||0) * (Math.random()*2 - 1);
+    
+          x = clamp(x + jx, safe.left + w/2, safe.right - w/2);
+          y = clamp(y + jy, safe.top  + h/2, safe.bottom - h/2);
+    
+          // apply geometry
+          el.style.left = x + 'px';
+          el.style.top  = y + 'px';
+          if (slot.width) el.style.width = slot.width + 'px';
+          if (slot.z != null) el.style.zIndex = String(slot.z);
+    
+          // theme + radius
+          const th = slot.theme||{};
+          if (th.bg)      el.style.setProperty('--miniCard-bg', th.bg);
+          if (th.text)    el.style.color = th.text;
+          if (th.radius)  el.style.borderRadius = th.radius + 'px';
+          if (typeof th.shadowA === 'number') el.style.setProperty('--miniCard-shadow-a', th.shadowA);
+          if (typeof th.strokeA === 'number') el.style.borderColor = `rgba(255,255,255,${th.strokeA})`;
+    
+          // fonts
+          const ks = el.querySelectorAll('.k'); ks.forEach(k=>{ if(slot.kFont) k.style.font = slot.kFont; if(th.kColor) k.style.color = th.kColor; });
+          const vs = el.querySelectorAll('.v'); vs.forEach(v=>{ if(slot.vFont) v.style.font = slot.vFont; if(th.vColor) v.style.color = th.vColor; });
+    
+          // copy
+          const cp = slot.copy||{};
+          const kEls = el.querySelectorAll('.k');
+          const vEls = el.querySelectorAll('.v');
+          if (kEls[0] && cp.kBuyer) kEls[0].textContent = cp.kBuyer;
+          if (vEls[0] && cp.buyer)  vEls[0].textContent = cp.buyer;
+          if (kEls[1] && cp.kCity)  kEls[1].textContent = cp.kCity;
+          if (vEls[1] && cp.city)   vEls[1].textContent = cp.city;
+          if (cp.tip != null) el.setAttribute('data-tip', cp.tip);
+    
+          // lock prevents later stack nudges (kept for API symmetry)
+          el.dataset.locked = slot.lock ? '1' : '0';
+        });
+        return;
+      }
+    
+      /* --- fallback: tidy vertical stack (original behavior) --- */
+      const placed = [];
+      function nonOverlapping(x,y,w,h){
+        const pad = cs.spacing;
+        return placed.every(p => Math.abs(p.x - x) > (p.w/2 + w/2 + pad) || Math.abs(p.y - y) > (p.h/2 + h/2 + pad));
+      }
+      const baseX = clamp(safe.right - 8, safe.left, safe.right);
+      els.forEach((el,i)=>{
+        if(!el) return;
         const rect = el.getBoundingClientRect();
         const w = rect.width || 190, h = rect.height || 96;
-
-        // Compute 3 vertical slots with consistent spacing
         const totalH = (h*3) + (cs.spacing*2) + (cs.vPad*2);
         const startY = clamp((safe.top + safe.bottom)/2 - totalH/2, safe.top + h/2 + cs.vPad, safe.bottom - h/2 - cs.vPad);
-
-        const slotY = startY + i*(h + cs.spacing);
-        const jitterX = rand(-cs.jitter, cs.jitter);
-        const jitterY = rand(-cs.jitter, cs.jitter);
-
-        const x = clamp(baseX - w/2 - 12 + jitterX, safe.left + w/2, safe.right - w/2);
-        const y = clamp(slotY + jitterY, safe.top + h/2, safe.bottom - h/2);
-
-        el.style.left = x+"px";
-        el.style.top  = y+"px";
+        let x = clamp(baseX - w/2 - 12 + (Math.random()*2-1)*cs.jitter, safe.left + w/2, safe.right - w/2);
+        let y = clamp(startY + i*(h + cs.spacing) + (Math.random()*2-1)*cs.jitter, safe.top + h/2, safe.bottom - h/2);
+        let tries=0;
+        while(!nonOverlapping(x,y,w,h) && tries<12){
+          x = clamp(x + (Math.random()*2-1)*cs.jitter, safe.left + w/2, safe.right - w/2);
+          y = clamp(y + (Math.random()*2-1)*cs.jitter, safe.top + h/2, safe.bottom - h/2);
+          tries++;
+        }
+        placed.push({x,y,w,h});
+        el.style.left = x+"px"; el.style.top  = y+"px";
       });
     }
     /* ----------------------------------------------------- */
