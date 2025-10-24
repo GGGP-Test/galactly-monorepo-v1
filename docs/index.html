@@ -31,16 +31,16 @@
     --const-radius: 18px; --const-stroke-w: 1px; --const-stroke-a: .06; --const-vignette-a: .18;
     --const-drop-a: .14; --const-edge-tint: rgba(230,195,107,.05); --const-grid-sheen-a: .05;
 
-    --miniCard-radius: 12px; --miniCard-bg: rgba(12,18,28,.86); --miniCard-blur: 6px;
-    --miniCard-stroke-a: .10; --miniCard-shadow-a: .30;
+    --miniCard-radius: 12px; --miniCard-bg: rgba(12,18,28,.86); --miniCard-blur: 5px;
+    --miniCard-stroke-a: .10; --miniCard-shadow-a: .26;
 
     --legend-fs: 12px; --legend-color: #b9cbe0; --legend-bg: rgba(255,255,255,.06);
 
     --gap-hero-proof: 0px; --wp-h: 220vh;
 
-    /* wallpaper radials (alpha 0 = flat gradient) */
-    --wp-r1-size: 180% 140%; --wp-r1-at: 50% -14%; --wp-r1-alpha: .18; --wp-r1-fade: 58%;
-    --wp-r2-size: 110% 90%; --wp-r2-at: 22% 12%; --wp-r2-alpha: .10; --wp-r2-fade: 72%;
+    /* wallpaper radials */
+    --wp-r1-size: 180% 140%; --wp-r1-at: 50% -14%; --wp-r1-alpha: .16; --wp-r1-fade: 58%;
+    --wp-r2-size: 110% 90%;  --wp-r2-at: 22% 12%;  --wp-r2-alpha: .08; --wp-r2-fade: 72%;
   }
 
   *{box-sizing:border-box}
@@ -142,7 +142,7 @@
   .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));
     border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
 
-  /* Constellation / Scoreboard */
+  /* Constellation / Scoreboard panel */
   .const-wrap{
     position:relative; isolation:isolate; height:560px;
     border-radius:var(--const-radius); overflow:hidden;
@@ -160,18 +160,18 @@
     opacity:var(--const-grid-sheen-a);
   }
 
-  /* overlay layers inside constellation panel */
-  #constFx{position:absolute; inset:0; z-index:0}            /* STATIC canvas (no RAF) */
+  /* overlay layers */
+  #constFx{position:absolute; inset:0; z-index:0}        /* STATIC canvas (no RAF) */
   #constOverlay{position:absolute; inset:0; z-index:1; pointer-events:none} /* static lines */
   #anchorGlow{
     position:absolute; pointer-events:none; z-index:1; border-radius:999px;
     transform: translate(-50%,-50%) scale(1);
-    animation: anchorBreath var(--anchor-pulse,2400ms) ease-in-out infinite;
+    animation: anchorBreath var(--anchor-pulse,2200ms) ease-in-out infinite;
     box-shadow:0 0 40px rgba(230,195,107,.30), 0 0 120px rgba(230,195,107,.18);
   }
   @keyframes anchorBreath{
-    0%,100%{ transform: translate(-50%,-50%) scale(.94); opacity:.9 }
-    50%{    transform: translate(-50%,-50%) scale(1.06); opacity:1  }
+    0%,100%{ transform: translate(-50%,-50%) scale(.96); opacity:.95 }
+    50%{    transform: translate(-50%,-50%) scale(1.04); opacity:1  }
   }
 
   .const-legend{
@@ -193,28 +193,22 @@
     border:1px solid rgba(230,195,107,.25)
   }
 
-  /* STACK: the live card sits inside this stack. No buttons, click-to-advance optional. */
-  .cardStack{
-    position:absolute; z-index:2;
-    transform-origin: center center;
-  }
-  .cardStack .rail{
-    position:relative; width:260px; height:170px;            /* fits a miniCard */
-    pointer-events:auto;
-  }
+  /* STACK: live card + static hints behind it. No tilt by default. */
+  .cardStack{ position:absolute; z-index:2; transform-origin:center center; }
+  .cardStack .rail{ position:relative; width:260px; height:170px; pointer-events:auto; }
+
+  /* Static “paper” behind the live card (very cheap) */
   .stackGhost{
-    position:absolute; inset:auto 0 0 auto; width:210px; height:120px; border-radius:12px;
-    border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.03);
-    transform-origin:bottom right;
-    box-shadow:0 8px 18px rgba(0,0,0,.35);
+    position:absolute; inset:auto 0 0 auto; width:200px; height:114px; border-radius:12px;
+    border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03);
+    transform-origin:bottom right; box-shadow:0 8px 18px rgba(0,0,0,.30);
   }
   .stackGhost::after{
     content:""; position:absolute; inset:0; border-radius:inherit;
-    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-    opacity:.6
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
   }
 
-  /* Scoreboard card (unchanged visuals) but centered in rail */
+  /* Card */
   .miniCard{
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
     z-index:3; min-width:220px; max-width:260px;
@@ -222,8 +216,11 @@
     background:var(--miniCard-bg);
     -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
     border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
-    box-shadow:0 8px 24px rgba(0,0,0,var(--miniCard-shadow-a));
+    box-shadow:0 8px 22px rgba(0,0,0,var(--miniCard-shadow-a));
     color:#e8f1fb;
+  }
+  @supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))){
+    .miniCard{ background:rgba(16,22,35,.92); } /* GPU-friendly fallback */
   }
   .miniCard .row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:2px 0}
   .miniCard .k{font-size:11px;color:#a9bfd6}
@@ -239,12 +236,12 @@
   .miniCard .ai{display:flex; align-items:center; gap:8px}
   .miniCard .ai svg{width:12px; height:12px; opacity:.9}
 
-  /* Solid glowing probability ball + tiny label */
+  /* Win-rate dot (tiny pulse; can be set to 0 via knob) */
   .miniCard .prob .lbl{ font-size:11px; color:#a9bfd6; opacity:.95; letter-spacing:.1px }
   .miniCard .prob .dot{
     position:relative; width:var(--prob-dot-size,12px); height:var(--prob-dot-size,12px);
     border-radius:999px; background: currentColor;
-    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.35);
+    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.30);
   }
   .miniCard .prob .dot::before{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
@@ -252,30 +249,18 @@
   }
   .miniCard .prob .dot::after{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.42;
-    animation: probPulse var(--prob-pulse,1400ms) ease-out infinite;
+    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.40;
+    animation: probPulse var(--prob-pulse,1200ms) ease-out infinite;
   }
-
-  /* static visible stack behind the live card */
-  .cardStack .miniCard.static{
-    z-index:2;                 /* ensure they sit behind the live card */
-    pointer-events:none;
-    opacity:.80;
-    transform:translate(-50%,-50%) scale(.94) translate(16px,12px);
-  }
-  .cardStack .miniCard.static.s2{
-    opacity:.66;
-    transform:translate(-50%,-50%) scale(.88) translate(30px,24px);
-  }
-  .cardStack .miniCard.static.s3{
-    opacity:.52;
-    transform:translate(-50%,-50%) scale(.82) translate(42px,34px);
-  }
-
   @keyframes probPulse{
-    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor;         opacity:.42 }
-    100% { transform:scale(2.25); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
+    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor;         opacity:.40 }
+    100% { transform:scale(2.1); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
   }
+
+  /* Faint “other cards” behind the live one (no tilt) */
+  .miniCard.static{ z-index:2; pointer-events:none; opacity:.82; transform:translate(-50%,-50%) scale(.94) translate(16px,12px); }
+  .miniCard.static.s2{ opacity:.68; transform:translate(-50%,-50%) scale(.88) translate(30px,22px); }
+  .miniCard.static.s3{ opacity:.54; transform:translate(-50%,-50%) scale(.82) translate(42px,32px); }
 
   /* SECTION 2 (unchanged) */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
@@ -283,7 +268,7 @@
   #proof{ margin-top: var(--gap-hero-proof); }
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
   .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
-  .section-hd .sub{color:var(--muted);font-size:14px}
+  .section-hd .sub{color:#8fb2ce;font-size:14px}
   .proof-wrap{position:relative;border-radius:18px;border:1px solid rgba(255,255,255,.12);
     background:radial-gradient(120% 160% at 20% 0%, rgba(93,140,200,.16), rgba(0,0,0,0) 60%),
                radial-gradient(120% 160% at 80% 10%, rgba(35,130,255,.12), rgba(0,0,0,0) 62%),
@@ -319,7 +304,12 @@
     .actions.show-mobile{ flex-direction:column; gap:12px; }
     .actions.show-mobile .btn{ width:100%; padding:16px 20px; justify-content:center; text-align:center; }
   }
-  @media (prefers-reduced-motion: reduce){ #constFx{display:none} .btn{transition:none} }
+  @media (prefers-reduced-motion: reduce){
+    #constFx{display:none}
+    .miniCard .prob .dot::after{ animation:none }
+    #anchorGlow{ animation:none }
+    .btn{transition:none}
+  }
   .show-desktop{display:block} .show-mobile{display:none}
   @media (max-width:900px){ .show-desktop{display:none} .show-mobile{display:block} }
 </style>
@@ -378,26 +368,21 @@
         </div>
       </div>
 
-      <!-- Scoreboard panel -->
+      <!-- Constellation / Scoreboard -->
       <div class="const-wrap" aria-hidden="true">
         <span class="domainTag" id="domainTag">yourcompany.com</span>
         <span class="const-caption">Signals clustered by timing</span>
 
-        <!-- STATIC canvas background (no animation loop) -->
         <canvas id="constFx"></canvas>
-
-        <!-- glow + static lines sit behind the stack -->
         <svg id="constOverlay"></svg>
         <div id="anchorGlow" aria-hidden="true"></div>
 
         <div class="const-legend">Your Website → Signal → <strong>Timing</strong> → Buyers</div>
 
-        <!-- STACK: the live card appears here inside the stack -->
+        <!-- Stack lives here -->
         <div class="cardStack" id="cardStack" aria-label="Lead deck">
           <div class="rail" id="stackRail" tabindex="0" aria-label="Lead card">
-            <!-- Ghost sheets are injected by JS -->
-
-            <!-- Live card (A) -->
+            <!-- live card -->
             <div class="miniCard" id="cardA" role="group" aria-label="Lead">
               <div class="row">
                 <span class="stage" data-stage>A</span>
@@ -415,26 +400,32 @@
               <div class="chips" data-tags></div>
             </div>
 
-            <!-- static visible stack behind the live card -->
-            <div class="miniCard static s1" aria-hidden="true">
-              <div class="row"><span class="k">Buyer</span><span class="v name">Volt Homecare — Denver, CO</span></div>
+            <!-- faint static “cards” to sell the stack (hidden if mode:'single') -->
+            <div class="miniCard static s1" data-static>
+              <div class="row"><span class="k">Buyer</span><span class="v name">Volt Pharma — Denver, CO</span></div>
               <div class="row"><span class="k">Distance</span><span class="v">15 mi</span></div>
               <div class="row"><span class="k">Need</span><span class="v">Stand-up pouches</span></div>
             </div>
-            <div class="miniCard static s2" aria-hidden="true">
+            <div class="miniCard static s2" data-static>
               <div class="row"><span class="k">Buyer</span><span class="v name">Northstar Foods — Dallas, TX</span></div>
               <div class="row"><span class="k">Distance</span><span class="v">42 mi</span></div>
               <div class="row"><span class="k">Need</span><span class="v">PET bottles</span></div>
             </div>
-            <div class="miniCard static s3" aria-hidden="true">
+            <div class="miniCard static s3" data-static>
               <div class="row"><span class="k">Buyer</span><span class="v name">Lumina Skincare — Austin, TX</span></div>
               <div class="row"><span class="k">Distance</span><span class="v">Same city</span></div>
               <div class="row"><span class="k">Need</span><span class="v">Shrink sleeves</span></div>
             </div>
 
+            <!-- ghost paper layers -->
+            <div class="stackGhost" data-ghost></div>
+            <div class="stackGhost" data-ghost></div>
+            <div class="stackGhost" data-ghost></div>
+            <div class="stackGhost" data-ghost></div>
+            <div class="stackGhost" data-ghost></div>
+            <div class="stackGhost" data-ghost></div>
           </div>
         </div>
-
       </div>
     </div>
   </section>
@@ -465,36 +456,34 @@
   <!-- MODAL -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none"></div>
 
-<!-- ===== SCOREBOARD KNOBS (tweak here) ===== -->
+<!-- ===== KNOBS ===== -->
 <script>
-/* Everything tweakable lives here. */
 window.SCOREBOARD_KNOBS = {
-  /* where the stack sits (relative to the constellation panel) */
+  /* placement + behavior */
   stack: {
-    left: 0.78,
+    mode: 'stack',      // 'stack' (preferred) or 'single'
+    left: 0.78,         // relative inside panel
     top:  0.58,
     width: 260,
-    angle: -3,
-    clickAdvance: true,                 // keep click-to-advance
-    autoPlay: true, autoMs: 5200,       // keep autoplay
-    ghosts: { count: 8, offsetX: 10, offsetY: 3, spread: 0.90 } // lighter stack
+    angle: 0,           // not tilted
+    clickAdvance: true,
+    autoPlay: true, autoMs: 5200
   },
-  anchorGlow: { size: 64, pulseMs: 2200, coreA:.95, midA:.55, edgeA:.06 }, // gentle CSS pulse
+
+  /* lightweight visuals */
+  anchorGlow: { size: 60, pulseMs: 2000, coreA:.95, midA:.52, edgeA:.06 },
   lines: { count: 4, jitter: 12, width: 1, alpha: .14 },
 
-  /* card content knobs */
+  /* content + look */
   probLabel: 'Win rate',
-  probHue: { min: 5, max: 130 },           /* HSL hue range for prob dot */
+  probDot: { size: 12, pulseMs: 1200 },   // set to 0 to disable
+  probHue: { min: 5, max: 130 },
   fonts: { k: "11px Inter, system-ui", v: "700 14px Inter, system-ui", name: "700 15px Inter, system-ui" },
-
-  /* stage colors / labels / emojis */
   stages: {
     warm: { label:'Warm',  color:'#e6c36b', emoji:'🏷️' },
     hot:  { label:'Hot',   color:'#ff9a5a', emoji:'🔥' },
     hotp: { label:'Hot+',  color:'#42d17a', emoji:'🔥' }
   },
-
-  /* content pools */
   pools: {
     buyers: [
       {name:"Pioneer Homecare", city:"Boise, ID"},
@@ -507,18 +496,16 @@ window.SCOREBOARD_KNOBS = {
       {name:"Volt Pharma", city:"Denver, CO"}
     ],
     needs: [
-      "PET bottles", "Stand-up pouches", "Rigid boxes", "Corrugated prints · 5k MOQ",
-      "Mailer boxes", "Shrink sleeves", "Paper labels", "Glass jars", "Pulp trays", "Poly mailers"
+      "PET bottles","Stand-up pouches","Rigid boxes","Corrugated prints · 5k MOQ",
+      "Mailer boxes","Shrink sleeves","Paper labels","Glass jars","Pulp trays","Poly mailers"
     ],
     next: {
-      warm: ["Share case study", "Send intro email", "Qualify on call", "Add to sequence", "Nurture newsletter"],
-      hot:  ["Send samples", "Book discovery", "Quote now", "Share spec sheet", "Loop in engineer"],
-      hotp: ["Call now", "Priority quote", "Hold calendar", "Send contract", "Arrange site visit"]
+      warm: ["Share case study","Send intro email","Qualify on call","Add to sequence","Nurture newsletter"],
+      hot:  ["Send samples","Book discovery","Quote now","Share spec sheet","Loop in engineer"],
+      hotp: ["Call now","Priority quote","Hold calendar","Send contract","Arrange site visit"]
     },
-    aiLabels: ["Sales AI", "Ops AI", "Pricing AI"]
+    aiLabels: ["Sales AI","Ops AI","Pricing AI"]
   },
-
-  /* stage ranges */
   ranges: {
     probability: { warm:[46,58], hot:[59,75], hotp:[72,92] },
     aiOptim:     { warm:[18,35], hot:[42,60], hotp:[70,90] },
@@ -531,298 +518,179 @@ window.SCOREBOARD_KNOBS = {
 (()=>{
   'use strict';
   const $ = (q)=>document.querySelector(q);
-  const LS = window.localStorage;
 
-  /* ===== Helpers ===== */
-  function deepMerge(base, patch){
-    const out = Array.isArray(base)? [...base]: {...base};
-    for(const k in patch){
-      const v = patch[k];
-      out[k] = (v && typeof v==='object' && !Array.isArray(v)) ? deepMerge(base[k]||{}, v) : v;
-    }
-    return out;
-  }
-  function range([a,b]){ return a + Math.random()*(b-a); }
-  function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
-  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
-
-  /* ===== Wallpaper (unchanged, static) ===== */
-  function applyWallpaper(){
-    const el = $('#pageWallpaper'); if(!el) return;
-    const base = getComputedStyle(document.documentElement);
-    const hero = document.querySelector('.hero');
-    const proof = document.getElementById('proof');
-    const gap = parseFloat(base.getPropertyValue('--gap-hero-proof'))||0;
-    const h = Math.max((hero?.offsetHeight||0) + gap + (proof?.offsetHeight||0) + 80, window.innerHeight*1.6);
-    el.style.height = h + 'px';
-  }
-  addEventListener('resize', ()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t = setTimeout(applyWallpaper, 60); });
-  document.addEventListener('DOMContentLoaded', applyWallpaper);
-
-  /* ===== Constellation (STATIC CANVAS) ===== */
-  const wrap = document.querySelector('.const-wrap');
-  const c = document.getElementById('constFx');
-  const ctx = c?.getContext('2d');
-
-  function drawBackdrop(){
-    if(!wrap || !c) return;
-    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
-    const r = wrap.getBoundingClientRect();
-    const W = Math.floor(r.width), H = Math.floor(r.height);
-    c.width = Math.floor(W*DPR); c.height = Math.floor(H*DPR);
-    c.style.width = W+'px'; c.style.height = H+'px';
-    ctx.setTransform(DPR,0,0,DPR,0,0);
-    ctx.clearRect(0,0,W,H);
-
-    // sprinkle nodes + short links ONCE (no animation loop)
-    const N=24, linkR=96;
-    const pts = [];
-    for(let i=0;i<N;i++){
-      const x = 0.18 + Math.random()*0.78;
-      const y = 0.08 + Math.random()*0.86;
-      pts.push({x:x*W, y:y*H});
-    }
-    // lines
-    ctx.lineWidth=1;
-    for(let i=0;i<N;i++){
-      for(let j=i+1;j<N;j++){
-        const a=pts[i], b=pts[j];
-        const dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
-        if(d2<linkR*linkR){
-          const aLine=.06+.18*(1-Math.sqrt(d2)/linkR);
-          ctx.strokeStyle=`rgba(230,195,107,${aLine})`;
-          ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
-        }
-      }
-    }
-    // draw points
-    for(const p of pts){
-      ctx.fillStyle="rgba(230,195,107,0.75)";
-      ctx.beginPath(); ctx.arc(p.x,p.y,1.6,0,Math.PI*2); ctx.fill();
-    }
-    // anchor point
-    const ax = 0.18*W, ay = 0.52*H;
-    ctx.fillStyle="rgba(242,220,160,0.95)";
-    ctx.beginPath(); ctx.arc(ax,ay,3.5,0,Math.PI*2); ctx.fill();
-  }
-
-  /* ===== Stack + Card content ===== */
+  /* --- utils --- */
   const KN = window.SCOREBOARD_KNOBS;
-  const stack = $('#cardStack');
-  const rail = $('#stackRail');
-  const liveCard = $('#cardA');
+  const deepMerge=(b,p)=>{const o=Array.isArray(b)?[...b]:{...b}; for(const k in p){const v=p[k]; o[k]=(v&&typeof v==='object'&&!Array.isArray(v))?deepMerge(b[k]||{},v):v;} return o;};
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const pick=(a)=>a[(Math.random()*a.length)|0];
+  const range=([a,b])=>a+Math.random()*(b-a);
 
-  function hslProb(p){
-    const H=KN.probHue.min, L=KN.probHue.max;
-    const hue = H + (L-H)*(p/100);
-    return `hsl(${hue},78%,54%)`;
+  /* --- wallpaper height (static) --- */
+  function applyWallpaper(){
+    const el=$('#pageWallpaper'); if(!el) return;
+    const hero=$('.hero'); const proof=$('#proof');
+    const h=Math.max((hero?.offsetHeight||0)+(proof?.offsetHeight||0)+80, window.innerHeight*1.6);
+    el.style.height=h+'px';
   }
+  addEventListener('resize',()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t=setTimeout(applyWallpaper,60); });
+  document.addEventListener('DOMContentLoaded',applyWallpaper);
+
+  /* --- static constellation canvas --- */
+  const wrap=$('.const-wrap'); const cvs=$('#constFx'); const ctx=cvs?.getContext('2d');
+  function drawBackdrop(){
+    if(!wrap||!cvs) return;
+    const DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+    const r=wrap.getBoundingClientRect(); const W=r.width|0, H=r.height|0;
+    cvs.width=(W*DPR)|0; cvs.height=(H*DPR)|0; cvs.style.width=W+'px'; cvs.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H);
+    const N=24, linkR=96; const pts=[];
+    for(let i=0;i<N;i++){ pts.push({x:(0.18+Math.random()*0.78)*W, y:(0.08+Math.random()*0.86)*H}); }
+    ctx.lineWidth=1;
+    for(let i=0;i<N;i++) for(let j=i+1;j<N;j++){
+      const a=pts[i], b=pts[j], dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
+      if(d2<linkR*linkR){ const aLine=.05+.16*(1-Math.sqrt(d2)/linkR); ctx.strokeStyle=`rgba(230,195,107,${aLine})`; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); }
+    }
+    for(const p of pts){ ctx.fillStyle="rgba(230,195,107,0.72)"; ctx.beginPath(); ctx.arc(p.x,p.y,1.5,0,Math.PI*2); ctx.fill(); }
+    ctx.fillStyle="rgba(242,220,160,0.95)"; ctx.beginPath(); ctx.arc(0.18*W,0.52*H,3.5,0,Math.PI*2); ctx.fill();
+  }
+
+  /* --- stack + content --- */
+  const stack=$('#cardStack'), rail=$('#stackRail'), card=$('#cardA');
+  const overlay=$('#constOverlay'), glow=$('#anchorGlow');
+
+  function hslProb(p){ const H=KN.probHue.min, L=KN.probHue.max; return `hsl(${H+(L-H)*(p/100)},78%,54%)`; }
 
   function positionStack(){
-    if(!wrap) return;
-    const r = wrap.getBoundingClientRect();
-    const left = clamp(KN.stack.left, 0, 1) * r.width;
-    const top  = clamp(KN.stack.top,  0, 1) * r.height;
-    stack.style.left = left+'px';
-    stack.style.top  = top +'px';
+    const r=wrap.getBoundingClientRect();
+    stack.style.left = (clamp(KN.stack.left,0,1)*r.width)+'px';
+    stack.style.top  = (clamp(KN.stack.top,0,1)*r.height)+'px';
     stack.style.transform = `translate(-50%,-50%) rotate(${KN.stack.angle||0}deg)`;
-    rail.style.width = (KN.stack.width||260)+'px';
-    rail.style.height = '170px';
-  }
-
-  function buildGhosts(){
-    const gCfg = KN.stack.ghosts || {};
-    rail.querySelectorAll('.stackGhost').forEach(n=>n.remove());
-    const n = Math.max(1, gCfg.count || 18);
-    const ox = gCfg.offsetX ?? 10, oy = gCfg.offsetY ?? 3, spread = gCfg.spread ?? .86;
-    for(let i=0;i<n;i++){
-      const g = document.createElement('div');
-      g.className='stackGhost';
-      g.style.transform = `translate(${i*ox}px, ${-i*oy}px) scale(${1 - (i/n)*(1-spread)})`;
-      g.style.opacity = String(1 - i/n*0.92);
-      rail.appendChild(g);
-    }
+    rail.style.width=(KN.stack.width||260)+'px';
+    rail.style.height='170px';
+    const mode=(KN.stack.mode||'stack').toLowerCase();
+    // show or hide faint statics + paper ghosts
+    document.querySelectorAll('[data-static]').forEach(n=> n.style.display = mode==='stack' ? '' : 'none');
+    document.querySelectorAll('[data-ghost]').forEach(n=> n.style.display = mode==='stack' ? '' : 'none');
   }
 
   function setProbLabel(){
-    const lbl = liveCard.querySelector('.prob .lbl');
-    if(lbl) lbl.textContent = KN.probLabel || 'Win rate';
-    document.documentElement.style.setProperty('--prob-dot-size','12px');
-    document.documentElement.style.setProperty('--prob-pulse','1400ms');
+    card.querySelector('.prob .lbl').textContent = KN.probLabel || 'Win rate';
+    document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||12)+'px');
+    document.documentElement.style.setProperty('--prob-pulse', (KN.probDot?.pulseMs||0)+'ms');
   }
 
   function genLead(stage){
-    const r = KN.ranges;
-    const p = Math.round(range(r.probability[stage]));
-    const ai= Math.round(range(r.aiOptim[stage]));
+    const r=KN.ranges;
+    const p=Math.round(range(r.probability[stage]));
+    const ai=Math.round(range(r.aiOptim[stage]));
     const buyer=pick(KN.pools.buyers);
     const need=pick(KN.pools.needs);
-    const b=r.distanceBias[stage]; const dVal=Math.round(range(b));
+    const dVal=Math.round(range(r.distanceBias[stage]));
     const distance=(dVal<=1)?"Same city":(dVal<8?(dVal.toFixed(1)+" mi"):(dVal+" mi"));
     const aiLabel=pick(KN.pools.aiLabels);
     return {stage,p,ai,buyer,need,distance,aiLabel};
   }
 
-  function paintLead(el, data){
-    const meta = KN.stages[data.stage]||KN.stages.warm;
-    const stageEl = el.querySelector('[data-stage]');
-    stageEl.textContent = `${meta.label} ${meta.emoji||''}`.trim();
-    stageEl.style.borderColor = meta.color; stageEl.style.color = meta.color;
+  function paintLead(el,data){
+    const meta=KN.stages[data.stage]||KN.stages.warm;
+    const stEl=el.querySelector('[data-stage]');
+    stEl.textContent = `${meta.label} ${meta.emoji||''}`.trim();
+    stEl.style.borderColor=meta.color; stEl.style.color=meta.color;
 
-    el.querySelector('[data-prob]').textContent = data.p + '%';
+    el.querySelector('[data-prob]').textContent = data.p+'%';
     el.querySelector('[data-prob-dot]').style.color = hslProb(data.p);
     el.querySelector('[data-name]').textContent = `${data.buyer.name} — ${data.buyer.city}`;
     el.querySelector('[data-distance]').textContent = data.distance;
     el.querySelector('[data-need]').textContent = data.need;
     el.querySelector('[data-ai-label]').textContent = `${data.aiLabel} optimized`;
-    el.querySelector('[data-ai]').textContent = data.ai + '%';
+    el.querySelector('[data-ai]').textContent = data.ai+'%';
 
-    const chips = el.querySelector('[data-tags]'); chips.innerHTML='';
+    const chips=el.querySelector('[data-tags]'); chips.innerHTML='';
     const c1=document.createElement('span'); c1.className='chip'; c1.textContent=`${meta.emoji||'🏷️'} ${meta.label}`;
-    const c2=document.createElement('span'); c2.className='chip'; c2.textContent= data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
+    const c2=document.createElement('span'); c2.className='chip'; c2.textContent=data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
     chips.appendChild(c1); chips.appendChild(c2);
 
     // fonts
-    el.querySelectorAll('.k').forEach(k=> k.style.font = KN.fonts.k);
-    el.querySelectorAll('.v').forEach(v=> v.style.font = KN.fonts.v);
-    el.querySelectorAll('.name').forEach(n=> n.style.font = KN.fonts.name);
+    el.querySelectorAll('.k').forEach(k=> k.style.font=KN.fonts.k);
+    el.querySelectorAll('.v').forEach(v=> v.style.font=KN.fonts.v);
+    el.querySelectorAll('.name').forEach(n=> n.style.font=KN.fonts.name);
   }
 
-  /* autoplay deck — data only; the live card never leaves the stack */
-  const stages = ['hotp','hot','warm'];
-  let deck = [];
-  function rebuildDeck(){
-    deck.length=0;
-    const N = 24;
-    for(let i=0;i<N;i++) deck.push(genLead(stages[i%stages.length]));
-  }
-  function showNext(){
-    if(!deck.length) return;
-    deck.push(deck.shift());
-    paintLead(liveCard, deck[0]);
-  }
+  // data deck (cheap) + autoplay with visibility gating
+  const stages=['hotp','hot','warm']; let deck=[];
+  function rebuildDeck(){ deck.length=0; for(let i=0;i<24;i++) deck.push(genLead(stages[i%stages.length])); }
+  function showNext(){ deck.push(deck.shift()); paintLead(card, deck[0]); }
 
-  /* ===== Anchor glow + static lines ===== */
-  const overlay = document.getElementById('constOverlay');
-  const glow = document.getElementById('anchorGlow');
-
-  function anchorPos(){
-    const r = wrap.getBoundingClientRect();
-    return { x: 0.18*r.width, y: 0.52*r.height };
-  }
+  /* --- anchor glow + static lines (no RAF) --- */
+  function anchorPos(){ const r=wrap.getBoundingClientRect(); return { x: .18*r.width, y: .52*r.height }; }
   function placeGlow(){
-    const a = anchorPos();
-    glow.style.left = a.x+'px';
-    glow.style.top  = a.y+'px';
-    const G = KN.anchorGlow;
-    glow.style.width = glow.style.height = (G.size||64)+'px';
-    document.documentElement.style.setProperty('--anchor-pulse', (G.pulseMs||2600)+'ms');
-    const core = G.coreA ?? .95, mid=G.midA ?? .55, edge=G.edgeA ?? .06;
-    glow.style.background = `radial-gradient(circle at 50% 50%,
-      rgba(255,245,210,${core}) 0%,
-      rgba(242,220,160,${mid}) 46%,
-      rgba(230,195,107,${edge}) 100%)`;
+    const a=anchorPos(); const G=KN.anchorGlow;
+    glow.style.left=a.x+'px'; glow.style.top=a.y+'px';
+    glow.style.width=glow.style.height=(G.size||60)+'px';
+    document.documentElement.style.setProperty('--anchor-pulse',(G.pulseMs||2000)+'ms');
+    glow.style.background=`radial-gradient(circle at 50% 50%,
+      rgba(255,245,210,${G.coreA??.95}) 0%,
+      rgba(242,220,160,${G.midA??.52}) 46%,
+      rgba(230,195,107,${G.edgeA??.06}) 100%)`;
   }
-  function drawStaticLines(){
+  function drawLines(){
     while(overlay.firstChild) overlay.removeChild(overlay.firstChild);
-    const r = wrap.getBoundingClientRect();
-    overlay.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
-    const a = anchorPos();
-
-    // target points: hidden under the stack card (so user can't see where they end)
-    const s = stack.getBoundingClientRect();
-    const p = wrap.getBoundingClientRect();
-    const targetBase = {
-      x: (s.left - p.left) + s.width*0.18,
-      y: (s.top  - p.top)  + s.height*0.78
-    };
-
-    const L = KN.lines || {};
-    for(let i=0;i<(L.count||5);i++){
-      const dx = (Math.random()*2-1)*(L.jitter||14);
-      const dy = (Math.random()*2-1)*(L.jitter||14);
-      const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
-      ln.setAttribute('x1', a.x); ln.setAttribute('y1', a.y);
-      ln.setAttribute('x2', targetBase.x+dx); ln.setAttribute('y2', targetBase.y+dy);
-      ln.setAttribute('stroke', `rgba(230,195,107,${L.alpha??.16})`);
-      ln.setAttribute('stroke-width', String(L.width||1));
+    const r=wrap.getBoundingClientRect(); overlay.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
+    const a=anchorPos(), L=KN.lines||{};
+    const s=stack.getBoundingClientRect(), p=wrap.getBoundingClientRect();
+    const target={ x:(s.left-p.left)+s.width*0.22, y:(s.top-p.top)+s.height*0.78 };
+    for(let i=0;i<(L.count||4);i++){
+      const dx=(Math.random()*2-1)*(L.jitter||12), dy=(Math.random()*2-1)*(L.jitter||12);
+      const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1',a.x); ln.setAttribute('y1',a.y);
+      ln.setAttribute('x2',target.x+dx); ln.setAttribute('y2',target.y+dy);
+      ln.setAttribute('stroke',`rgba(230,195,107,${L.alpha??.14})`);
+      ln.setAttribute('stroke-width',String(L.width||1));
       overlay.appendChild(ln);
     }
   }
 
-  /* ===== Init ===== */
-  // expose-able reference so updateScoreboardKnobs can restart autoplay
-  let restartAutoRef = null;
-
+  /* --- init --- */
   function init(){
-    // domain badge from local storage
     try{
-      const host=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "yourcompany.com";
-      $("#domainTag") && ($("#domainTag").textContent = host);
+      const seed=JSON.parse(localStorage.getItem('onb.seed')||'{}');
+      if(seed?.host) $('#domainTag').textContent=seed.host;
     }catch{}
-
     drawBackdrop();
     positionStack();
-    buildGhosts();
     rebuildDeck();
     setProbLabel();
-    paintLead(liveCard, deck[0]);
-    placeGlow();
-    drawStaticLines();
+    paintLead(card, deck[0]);
+    placeGlow(); drawLines();
 
-    // autoplay (optimized: pauses when hidden/offscreen/reduced-motion)
-    let timer, isOnScreen = true, isDocVisible = document.visibilityState !== 'hidden';
-    const noMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    function restartAuto(){
+    // autoplay gate
+    let timer, onScreen=true, visible=document.visibilityState!=='hidden';
+    const noMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function restart(){
       clearInterval(timer);
-      if (KN.stack.autoPlay && isOnScreen && isDocVisible && !noMotion){
-        timer = setInterval(showNext, KN.stack.autoMs || 5200);
+      if(KN.stack.autoPlay && onScreen && visible && !noMotion){
+        timer=setInterval(showNext, KN.stack.autoMs||5200);
       }
     }
-    restartAutoRef = restartAuto;
-
-    // pause when hero panel is offscreen
-    const io = new IntersectionObserver((entries)=>{
-      isOnScreen = entries.some(e => e.isIntersecting);
-      restartAuto();
-    },{ threshold: 0.25 });
+    restart();
+    const io=new IntersectionObserver((es)=>{ onScreen=es.some(e=>e.isIntersecting); restart(); },{threshold:.25});
     io.observe(wrap);
+    document.addEventListener('visibilitychange',()=>{ visible=document.visibilityState!=='hidden'; restart(); });
+    if(KN.stack.clickAdvance){ rail.addEventListener('click',()=>showNext()); rail.addEventListener('keydown',e=>{ if(['ArrowRight',' ','Enter'].includes(e.key)){ e.preventDefault(); showNext(); } }); }
 
-    // pause when tab not visible
-    document.addEventListener('visibilitychange', ()=>{
-      isDocVisible = document.visibilityState !== 'hidden';
-      restartAuto();
-    });
-
-    restartAuto();
-
-    // click/tap to advance (no visible buttons)
-    if (KN.stack.clickAdvance){
-      rail.addEventListener('click', ()=>{ showNext(); });
-      rail.addEventListener('keydown', (e)=>{ if(e.key==='ArrowRight'||e.key===' '||e.key==='Enter'){ e.preventDefault(); showNext(); }});
-    }
-
-    // throttled resize
-    addEventListener('resize', ()=>{
-      clearTimeout(init._r);
-      init._r = setTimeout(()=>{
-        drawBackdrop(); positionStack(); buildGhosts(); placeGlow(); drawStaticLines();
-      }, 60);
-    });
+    addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackdrop(); positionStack(); placeGlow(); drawLines(); },80); });
   }
   init();
 
-  /* Expose live knob patcher */
-  const _KN = KN;
-  window.updateScoreboardKnobs = function(patch){
+  /* --- live knob patch --- */
+  window.updateScoreboardKnobs=function(patch){
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
-    Object.assign(_KN, window.SCOREBOARD_KNOBS);
-    positionStack(); buildGhosts(); setProbLabel(); placeGlow(); drawStaticLines();
-    if (typeof restartAutoRef === 'function') restartAutoRef();
+    Object.assign(KN, window.SCOREBOARD_KNOBS);
+    positionStack(); setProbLabel(); placeGlow(); drawLines();
   };
 
-  /* ===== Section 2 counters (unchanged) ===== */
+  /* --- counters (unchanged) --- */
   (function(){
     const section = document.getElementById("proof"); if (!section) return;
     const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -841,7 +709,7 @@ window.SCOREBOARD_KNOBS = {
     io.observe(section);
   })();
 
-  /* ===== Modal (unchanged) ===== */
+  /* --- modal (unchanged) --- */
   (function(){
     const modal = $("#modal");
     modal.innerHTML =
