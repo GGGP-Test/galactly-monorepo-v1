@@ -38,7 +38,7 @@
 
     --gap-hero-proof: 0px; --wp-h: 220vh;
 
-    /* wallpaper radials */
+    /* wallpaper radials (alpha 0 = flat gradient) */
     --wp-r1-size: 180% 140%; --wp-r1-at: 50% -14%; --wp-r1-alpha: 0; --wp-r1-fade: 58%;
     --wp-r2-size: 110% 90%; --wp-r2-at: 22% 12%; --wp-r2-alpha: 0; --wp-r2-fade: 72%;
   }
@@ -255,8 +255,10 @@
     transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.42;
     animation: probPulse var(--prob-pulse,1400ms) ease-out infinite;
   }
-    /* static visible stack behind the live card */
+
+  /* static visible stack behind the live card */
   .cardStack .miniCard.static{
+    z-index:2;                 /* ensure they sit behind the live card */
     pointer-events:none;
     opacity:.80;
     transform:translate(-50%,-50%) scale(.94) translate(16px,12px);
@@ -269,6 +271,7 @@
     opacity:.52;
     transform:translate(-50%,-50%) scale(.82) translate(42px,34px);
   }
+
   @keyframes probPulse{
     0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor;         opacity:.42 }
     100% { transform:scale(2.25); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
@@ -393,6 +396,7 @@
         <div class="cardStack" id="cardStack" aria-label="Lead deck">
           <div class="rail" id="stackRail" tabindex="0" aria-label="Lead card">
             <!-- Ghost sheets are injected by JS -->
+
             <!-- Live card (A) -->
             <div class="miniCard" id="cardA" role="group" aria-label="Lead">
               <div class="row">
@@ -410,6 +414,24 @@
               <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
               <div class="chips" data-tags></div>
             </div>
+
+            <!-- static visible stack behind the live card -->
+            <div class="miniCard static s1" aria-hidden="true">
+              <div class="row"><span class="k">Buyer</span><span class="v name">Volt Homecare — Denver, CO</span></div>
+              <div class="row"><span class="k">Distance</span><span class="v">15 mi</span></div>
+              <div class="row"><span class="k">Need</span><span class="v">Stand-up pouches</span></div>
+            </div>
+            <div class="miniCard static s2" aria-hidden="true">
+              <div class="row"><span class="k">Buyer</span><span class="v name">Northstar Foods — Dallas, TX</span></div>
+              <div class="row"><span class="k">Distance</span><span class="v">42 mi</span></div>
+              <div class="row"><span class="k">Need</span><span class="v">PET bottles</span></div>
+            </div>
+            <div class="miniCard static s3" aria-hidden="true">
+              <div class="row"><span class="k">Buyer</span><span class="v name">Lumina Skincare — Austin, TX</span></div>
+              <div class="row"><span class="k">Distance</span><span class="v">Same city</span></div>
+              <div class="row"><span class="k">Need</span><span class="v">Shrink sleeves</span></div>
+            </div>
+
           </div>
         </div>
 
@@ -459,7 +481,8 @@ window.SCOREBOARD_KNOBS = {
   },
   anchorGlow: { size: 64, pulseMs: 2200, coreA:.95, midA:.55, edgeA:.06 }, // gentle CSS pulse
   lines: { count: 4, jitter: 12, width: 1, alpha: .14 },
-    /* card content knobs */
+
+  /* card content knobs */
   probLabel: 'Win rate',
   probHue: { min: 5, max: 130 },           /* HSL hue range for prob dot */
   fonts: { k: "11px Inter, system-ui", v: "700 14px Inter, system-ui", name: "700 15px Inter, system-ui" },
@@ -536,7 +559,6 @@ window.SCOREBOARD_KNOBS = {
   addEventListener('resize', ()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t = setTimeout(applyWallpaper, 60); });
   document.addEventListener('DOMContentLoaded', applyWallpaper);
 
-  
   /* ===== Constellation (STATIC CANVAS) ===== */
   const wrap = document.querySelector('.const-wrap');
   const c = document.getElementById('constFx');
@@ -589,23 +611,6 @@ window.SCOREBOARD_KNOBS = {
   const stack = $('#cardStack');
   const rail = $('#stackRail');
   const liveCard = $('#cardA');
-  
-    /*-- static stack cards (no JS) -->
-  <div class="miniCard static s1" aria-hidden="true">
-    <div class="row"><span class="k">Buyer</span><span class="v name">Volt Homecare — Denver, CO</span></div>
-    <div class="row"><span class="k">Distance</span><span class="v">15 mi</span></div>
-    <div class="row"><span class="k">Need</span><span class="v">Stand-up pouches</span></div>
-  </div>
-  <div class="miniCard static s2" aria-hidden="true">
-    <div class="row"><span class="k">Buyer</span><span class="v name">Northstar Foods — Dallas, TX</span></div>
-    <div class="row"><span class="k">Distance</span><span class="v">42 mi</span></div>
-    <div class="row"><span class="k">Need</span><span class="v">PET bottles</span></div>
-  </div>
-  <div class="miniCard static s3" aria-hidden="true">
-    <div class="row"><span class="k">Buyer</span><span class="v name">Lumina Skincare — Austin, TX</span></div>
-    <div class="row"><span class="k">Distance</span><span class="v">Same city</span></div>
-    <div class="row"><span class="k">Need</span><span class="v">Shrink sleeves</span></div>
-  </div>
 
   function hslProb(p){
     const H=KN.probHue.min, L=KN.probHue.max;
@@ -746,6 +751,9 @@ window.SCOREBOARD_KNOBS = {
   }
 
   /* ===== Init ===== */
+  // expose-able reference so updateScoreboardKnobs can restart autoplay
+  let restartAutoRef = null;
+
   function init(){
     // domain badge from local storage
     try{
@@ -765,27 +773,28 @@ window.SCOREBOARD_KNOBS = {
     // autoplay (optimized: pauses when hidden/offscreen/reduced-motion)
     let timer, isOnScreen = true, isDocVisible = document.visibilityState !== 'hidden';
     const noMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    
+
     function restartAuto(){
       clearInterval(timer);
       if (KN.stack.autoPlay && isOnScreen && isDocVisible && !noMotion){
         timer = setInterval(showNext, KN.stack.autoMs || 5200);
       }
     }
-    
+    restartAutoRef = restartAuto;
+
     // pause when hero panel is offscreen
     const io = new IntersectionObserver((entries)=>{
       isOnScreen = entries.some(e => e.isIntersecting);
       restartAuto();
     },{ threshold: 0.25 });
     io.observe(wrap);
-    
+
     // pause when tab not visible
     document.addEventListener('visibilitychange', ()=>{
       isDocVisible = document.visibilityState !== 'hidden';
       restartAuto();
     });
-    
+
     restartAuto();
 
     // click/tap to advance (no visible buttons)
@@ -810,7 +819,7 @@ window.SCOREBOARD_KNOBS = {
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
     Object.assign(_KN, window.SCOREBOARD_KNOBS);
     positionStack(); buildGhosts(); setProbLabel(); placeGlow(); drawStaticLines();
-    typeof restartAuto === 'function' && restartAuto();
+    if (typeof restartAutoRef === 'function') restartAutoRef();
   };
 
   /* ===== Section 2 counters (unchanged) ===== */
