@@ -251,6 +251,70 @@
   @media (prefers-reduced-motion: reduce){ #constFx{display:none} .btn{transition:none} }
   .show-desktop{display:block} .show-mobile{display:none}
   @media (max-width:900px){ .show-desktop{display:none} .show-mobile{display:block} }
+
+
+
+  /* ---------- PATCH: probability ball + label ---------- */
+  .miniCard .prob{ gap:6px; align-items:center }
+  .miniCard .prob .lbl{ font-size:11px; color:#a9bfd6; opacity:.95; letter-spacing:.1px }
+  .miniCard .prob .dot{
+    position:relative; width:var(--prob-dot-size,12px); height:var(--prob-dot-size,12px);
+    border-radius:999px; background: currentColor; /* SOLID fill */
+    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.35);
+  }
+  .miniCard .prob .dot::before{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.95) 0 35%, rgba(255,255,255,.15) 60%, rgba(255,255,255,0) 75%);
+  }
+  .miniCard .prob .dot::after{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.42;
+    animation: probPulse var(--prob-pulse,1400ms) ease-out infinite;
+  }
+  @keyframes probPulse{
+    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor;         opacity:.42 }
+    100% { transform:scale(2.25); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
+  }
+  
+  /* ---------- PATCH: deck UI (stack of cards) ---------- */
+  .cardDeck{ position:absolute; right:14px; bottom:14px; z-index:2; pointer-events:auto }
+  .cardDeck .rail{ position:relative; width:160px; height:110px; }
+  .cardDeck .ghost{
+    position:absolute; inset:auto 0 0 auto; width:140px; height:84px; border-radius:12px;
+    border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.03);
+    box-shadow:0 8px 18px rgba(0,0,0,.35); transform-origin:bottom right;
+  }
+  .cardDeck .ghost::after{
+    content:""; position:absolute; inset:0; border-radius:inherit;
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    opacity:.6
+  }
+  .cardDeck .controls{ position:absolute; right:0; bottom:100%; display:flex; gap:6px; margin-bottom:8px }
+  .cardDeck .ctrl{
+    width:26px; height:26px; border-radius:999px; border:1px solid rgba(255,255,255,.14);
+    background:rgba(12,18,28,.7); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    display:grid; place-items:center; cursor:pointer; font-weight:700; user-select:none
+  }
+  .cardDeck .ctrl:active{ transform:translateY(1px) }
+  
+  /* ---------- PATCH: anchor glow overlay (ball) ---------- */
+  #anchorGlow{
+    position:absolute; pointer-events:none; z-index:1; border-radius:999px;
+    transform: translate(-50%,-50%) scale(1);
+    animation: anchorBreath var(--anchor-pulse,2400ms) ease-in-out infinite;
+  }
+  @keyframes anchorBreath{
+    0%,100%{ transform: translate(-50%,-50%) scale(.94); opacity:.9 }
+    50%{    transform: translate(-50%,-50%) scale(1.06); opacity:1  }
+  }
+  
+  /* ---------- PATCH: SVG overlay for anchor→card links ---------- */
+  #constOverlay{ position:absolute; inset:0; z-index:1; pointer-events:none }
+  
+
+
+
+  
 </style>
 </head>
 <body>
@@ -964,5 +1028,202 @@ window.SCOREBOARD_KNOBS = {
 <!-- Section 4 (Orbit) scripts -->
 <script defer src="./sections/orbit/orbit.data.js"></script>
 <script defer src="./sections/orbit/orbit.js"></script>
+<script>
+(()=>{
+  /* ----- merge new knobs into your existing SCOREBOARD_KNOBS ----- */
+  const base = (window.SCOREBOARD_KNOBS ||= {});
+  const patch = {
+    probLabel: 'Win rate',
+    probDot: { size: 12, pulseMs: 1400 },
+    anchorGlow: { size: 54, pulseMs: 2400, coreA:.95, midA:.55, edgeA:.0 },
+    anchorLinks: { enabled:true, perCard:3, jitter:14, width:1, alpha:.16 },
+    deck: {
+      enabled:true, count:18, offsetX:10, offsetY:3, spread:0.85,
+      autoPlay:true, autoMs:5200, target:'A',
+      emojis:{ warm:'🏷️', hot:'🔥', hotp:'🔥🔥' }
+    }
+  };
+  function dm(b, p){ const o = Array.isArray(b)?[...b]:{...b};
+    for(const k in p){ const v=p[k]; o[k] = (v && typeof v==='object' && !Array.isArray(v))? dm(b[k]||{}, v) : v; }
+    return o;
+  }
+  window.SCOREBOARD_KNOBS = dm(base, patch);
+
+  /* ask the earlier code to stop its auto-rotation; deck drives content */
+  window.updateScoreboardKnobs && window.updateScoreboardKnobs({ rotateMs:{ warm:1e9, hot:1e9, hotp:1e9 } });
+
+  const wrap = document.querySelector('.const-wrap');
+  if(!wrap) return;
+
+  const KN = window.SCOREBOARD_KNOBS;
+
+  /* ----- add "Win rate" label next to % ----- */
+  document.querySelectorAll('.miniCard .prob').forEach(p=>{
+    if(!p.querySelector('.lbl')){
+      const s = document.createElement('span');
+      s.className = 'lbl'; s.setAttribute('data-prob-label','');
+      s.textContent = KN.probLabel || 'Win rate';
+      p.insertBefore(s, p.querySelector('.pct'));
+    }
+  });
+  document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||12)+'px');
+  document.documentElement.style.setProperty('--prob-pulse', (KN.probDot?.pulseMs||1400)+'ms');
+
+  /* ----- anchor glow overlay ----- */
+  let glow = document.getElementById('anchorGlow');
+  if(!glow){ glow = document.createElement('div'); glow.id='anchorGlow'; wrap.appendChild(glow); }
+  const overlay = document.getElementById('constOverlay') || (()=>{ const s=document.createElementNS('http://www.w3.org/2000/svg','svg'); s.id='constOverlay'; wrap.appendChild(s); return s; })();
+
+  function panelRect(){ return wrap.getBoundingClientRect(); }
+  function anchorPos(){ const r = panelRect(); return { x: r.width*0.18, y: r.height*0.52 }; }
+  function placeGlow(){
+    const a = anchorPos();
+    const sz = KN.anchorGlow?.size || 54;
+    glow.style.left = a.x + 'px';
+    glow.style.top  = a.y + 'px';
+    glow.style.width = glow.style.height = sz + 'px';
+    document.documentElement.style.setProperty('--anchor-pulse', (KN.anchorGlow?.pulseMs||2400)+'ms');
+    const core = KN.anchorGlow?.coreA ?? .95, mid = KN.anchorGlow?.midA ?? .55, edge = KN.anchorGlow?.edgeA ?? .0;
+    glow.style.background = `radial-gradient(circle at 50% 50%,
+      rgba(255,245,210,${core}) 0%,
+      rgba(242,220,160,${mid}) 44%,
+      rgba(230,195,107,${edge}) 100%)`;
+    glow.style.boxShadow = '0 0 40px rgba(230,195,107,.30), 0 0 120px rgba(230,195,107,.18)';
+  }
+
+  /* ----- anchor → cards lines (SVG overlay) ----- */
+  function cardCenters(){
+    const p = wrap.getBoundingClientRect();
+    return Array.from(document.querySelectorAll('.miniCard')).map(el=>{
+      const b = el.getBoundingClientRect();
+      return { x: b.left - p.left + b.width/2, y: b.top - p.top + b.height/2 };
+    });
+  }
+  function drawLinks(){
+    while(overlay.firstChild) overlay.removeChild(overlay.firstChild);
+    const r = panelRect(); overlay.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
+    const a = anchorPos();
+    const cc = cardCenters();
+    if(!KN.anchorLinks?.enabled) return;
+    const per = KN.anchorLinks.perCard ?? 2;
+    const jitter = KN.anchorLinks.jitter ?? 12;
+    const alpha  = KN.anchorLinks.alpha  ?? .16;
+    const width  = KN.anchorLinks.width  ?? 1;
+    cc.forEach(pt=>{
+      for(let i=0;i<per;i++){
+        const dx = (Math.random()*2-1)*jitter, dy = (Math.random()*2-1)*jitter;
+        const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+        line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+        line.setAttribute('x2', pt.x+dx); line.setAttribute('y2', pt.y+dy);
+        line.setAttribute('stroke', `rgba(230,195,107,${alpha})`);
+        line.setAttribute('stroke-width', String(width));
+        overlay.appendChild(line);
+      }
+    });
+  }
+  ['resize','orientationchange'].forEach(ev=>addEventListener(ev,()=>{ placeGlow(); drawLinks(); }));
+  document.querySelectorAll('.miniCard').forEach(el=>{
+    el.addEventListener('transitionend', (e)=>{ if(e.propertyName==='left' || e.propertyName==='top') drawLinks(); });
+  });
+
+  /* ----- deck (stack of cards) UI + autoplay ----- */
+  let deckUI = document.querySelector('.cardDeck');
+  if(!deckUI){
+    deckUI = document.createElement('div'); deckUI.className='cardDeck';
+    deckUI.innerHTML = `<div class="controls">
+      <button class="ctrl" data-deck-prev aria-label="Previous">‹</button>
+      <button class="ctrl" data-deck-next aria-label="Next">›</button>
+    </div><div class="rail"></div>`;
+    wrap.appendChild(deckUI);
+  }
+  const rail = deckUI.querySelector('.rail');
+
+  function buildGhosts(){
+    rail.innerHTML = '';
+    const n = Math.max(1, KN.deck?.count||14);
+    const ox = KN.deck?.offsetX ?? 10, oy = KN.deck?.offsetY ?? 3, spread = KN.deck?.spread ?? .85;
+    for(let i=0;i<n;i++){
+      const g = document.createElement('div'); g.className='ghost';
+      g.style.transform = `translate(${i*ox}px, ${-i*oy}px) scale(${1 - (i/n)*(1-spread)})`;
+      g.style.opacity = String(1 - i/n*0.9);
+      rail.appendChild(g);
+    }
+  }
+
+  function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
+  function range([a,b]){ return a + Math.random()*(b-a); }
+  function hslProb(percent){
+    const H = KN.probHue?.min ?? 5, L = KN.probHue?.max ?? 130;
+    const hue = H + (L-H)*(percent/100);
+    return `hsl(${hue}, 78%, 54%)`;
+  }
+  function genCard(stage){
+    const r = KN.ranges;
+    const p  = Math.round(range(r.probability[stage]));
+    const ai = Math.round(range(r.aiOptim[stage]));
+    const buyer = pick(KN.pools.buyers);
+    const need  = pick(KN.pools.needs);
+    const b = r.distanceBias[stage]; const dVal = Math.round(range(b));
+    const distance = (dVal<=1) ? "Same city" : (dVal<8 ? (dVal.toFixed(1)+" mi") : (dVal+" mi"));
+    const aiLabel = pick(KN.pools.aiLabels);
+    return { stage, p, ai, buyer, need, distance, aiLabel };
+  }
+  function paintCard(el, data){
+    const stages = KN.stages; const meta = stages[data.stage] || stages.warm;
+    const stageEl = el.querySelector('[data-stage]');
+    stageEl.textContent = `${meta.label} ${KN.deck?.emojis?.[data.stage] ?? (data.stage==='hotp'?'🔥':'')}`.trim();
+    stageEl.style.borderColor = meta.color; stageEl.style.color = meta.color;
+    el.querySelector('[data-prob]').textContent = data.p + '%';
+    el.querySelector('[data-prob-dot]').style.color = hslProb(data.p);
+    const lbl = el.querySelector('.prob .lbl'); if (lbl) lbl.textContent = KN.probLabel || 'Win rate';
+    el.querySelector('[data-name]').textContent = `${data.buyer.name} — ${data.buyer.city}`;
+    el.querySelector('[data-distance]').textContent = data.distance;
+    el.querySelector('[data-need]').textContent = data.need;
+    el.querySelector('[data-ai-label]').textContent = `${data.aiLabel} optimized`;
+    el.querySelector('[data-ai]').textContent = data.ai + '%';
+    const chips = el.querySelector('[data-tags]'); chips.innerHTML='';
+    const t1=document.createElement('span'); t1.className='chip'; t1.textContent=(KN.deck?.emojis?.[data.stage]||'🏷️')+' '+meta.label;
+    const t2=document.createElement('span'); t2.className='chip'; t2.textContent=data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
+    chips.appendChild(t1); chips.appendChild(t2);
+  }
+
+  const order = ['A','B','C'];
+  let target = (KN.deck?.target || 'A');
+  let deck = [];
+  function rebuildDeck(){
+    deck = [];
+    const stages = ['hotp','hot','warm'];
+    const N = Math.max(6, KN.deck?.count || 18);
+    for(let i=0;i<N;i++) deck.push(genCard(stages[i%stages.length]));
+  }
+  function showNext(dir=1){
+    if(!deck.length) return;
+    if(dir<0){ deck.unshift(deck.pop()); } else { deck.push(deck.shift()); }
+    const data = deck[0];
+    const el = document.getElementById('card'+target);
+    if(el) paintCard(el, data);
+    drawLinks();
+    const kids = Array.from(rail.children);
+    if(kids.length){ if(dir<0){ rail.insertBefore(kids[kids.length-1], kids[0]); } else { rail.appendChild(kids[0]); } }
+  }
+  deckUI.querySelector('[data-deck-prev]').addEventListener('click', ()=>showNext(-1));
+  deckUI.querySelector('[data-deck-next]').addEventListener('click', ()=>showNext(1));
+  document.querySelectorAll('.miniCard').forEach(el=>{ el.addEventListener('click', ()=>{ target = el.id.replace('card',''); }); });
+
+  let timer; function setAuto(){ clearInterval(timer); if(KN.deck?.autoPlay) timer=setInterval(()=>showNext(1),(KN.deck.autoMs||5200)); }
+
+  const _origUpdate = window.updateScoreboardKnobs;
+  window.updateScoreboardKnobs = function(p){
+    _origUpdate && _origUpdate(p||{});
+    Object.assign(KN, window.SCOREBOARD_KNOBS);
+    document.querySelectorAll('.miniCard .prob .lbl').forEach(n=> n.textContent = KN.probLabel || 'Win rate');
+    document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||12)+'px');
+    document.documentElement.style.setProperty('--prob-pulse', (KN.probDot?.pulseMs||1400)+'ms');
+    buildGhosts(); rebuildDeck(); setAuto(); placeGlow(); drawLinks();
+  };
+
+  buildGhosts(); rebuildDeck(); setAuto(); placeGlow(); drawLinks();
+})();
+</script>
 </body>
 </html>
