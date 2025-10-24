@@ -159,7 +159,20 @@
     background: linear-gradient(90deg, transparent 0%, var(--const-edge-tint) 96%, transparent 100%);
     opacity:var(--const-grid-sheen-a);
   }
-  #constFx{position:absolute; inset:0; z-index:0}
+
+  /* overlay layers inside constellation panel */
+  #constFx{position:absolute; inset:0; z-index:0}            /* STATIC canvas (no RAF) */
+  #constOverlay{position:absolute; inset:0; z-index:1; pointer-events:none} /* static lines */
+  #anchorGlow{
+    position:absolute; pointer-events:none; z-index:1; border-radius:999px;
+    transform: translate(-50%,-50%) scale(1);
+    animation: anchorBreath var(--anchor-pulse,2400ms) ease-in-out infinite;
+    box-shadow:0 0 40px rgba(230,195,107,.30), 0 0 120px rgba(230,195,107,.18);
+  }
+  @keyframes anchorBreath{
+    0%,100%{ transform: translate(-50%,-50%) scale(.94); opacity:.9 }
+    50%{    transform: translate(-50%,-50%) scale(1.06); opacity:1  }
+  }
 
   .const-legend{
     position:absolute; inset:auto 12px 12px auto; z-index:2;
@@ -180,16 +193,37 @@
     border:1px solid rgba(230,195,107,.25)
   }
 
-  /* Scoreboard cards */
+  /* STACK: the live card sits inside this stack. No buttons, click-to-advance optional. */
+  .cardStack{
+    position:absolute; z-index:2;
+    transform-origin: center center;
+  }
+  .cardStack .rail{
+    position:relative; width:260px; height:170px;            /* fits a miniCard */
+    pointer-events:auto;
+  }
+  .stackGhost{
+    position:absolute; inset:auto 0 0 auto; width:210px; height:120px; border-radius:12px;
+    border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.03);
+    transform-origin:bottom right;
+    box-shadow:0 8px 18px rgba(0,0,0,.35);
+  }
+  .stackGhost::after{
+    content:""; position:absolute; inset:0; border-radius:inherit;
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    opacity:.6
+  }
+
+  /* Scoreboard card (unchanged visuals) but centered in rail */
   .miniCard{
-    position:absolute; z-index:2; min-width:200px; max-width:260px;
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    z-index:3; min-width:220px; max-width:260px;
     padding:12px 12px 10px; border-radius:var(--miniCard-radius);
     background:var(--miniCard-bg);
     -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
     border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
     box-shadow:0 8px 24px rgba(0,0,0,var(--miniCard-shadow-a));
-    transform:translate(-50%,-50%); pointer-events:auto; color:#e8f1fb;
-    transition:left .22s ease, top .22s ease, width .22s ease;
+    color:#e8f1fb;
   }
   .miniCard .row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:2px 0}
   .miniCard .k{font-size:11px;color:#a9bfd6}
@@ -200,11 +234,31 @@
     padding:5px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06)
   }
   .miniCard .prob{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700}
-  .miniCard .prob .dot{width:10px; height:10px; border-radius:999px; box-shadow:0 0 8px currentColor;}
   .miniCard .chips{display:flex; flex-wrap:wrap; gap:6px}
   .miniCard .chip{font-size:11px; padding:4px 7px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:rgba(255,255,255,.04)}
   .miniCard .ai{display:flex; align-items:center; gap:8px}
   .miniCard .ai svg{width:12px; height:12px; opacity:.9}
+
+  /* Solid glowing probability ball + tiny label */
+  .miniCard .prob .lbl{ font-size:11px; color:#a9bfd6; opacity:.95; letter-spacing:.1px }
+  .miniCard .prob .dot{
+    position:relative; width:var(--prob-dot-size,12px); height:var(--prob-dot-size,12px);
+    border-radius:999px; background: currentColor;
+    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.35);
+  }
+  .miniCard .prob .dot::before{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.95) 0 35%, rgba(255,255,255,.15) 60%, rgba(255,255,255,0) 75%);
+  }
+  .miniCard .prob .dot::after{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.42;
+    animation: probPulse var(--prob-pulse,1400ms) ease-out infinite;
+  }
+  @keyframes probPulse{
+    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor;         opacity:.42 }
+    100% { transform:scale(2.25); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
+  }
 
   /* SECTION 2 (unchanged) */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
@@ -251,70 +305,6 @@
   @media (prefers-reduced-motion: reduce){ #constFx{display:none} .btn{transition:none} }
   .show-desktop{display:block} .show-mobile{display:none}
   @media (max-width:900px){ .show-desktop{display:none} .show-mobile{display:block} }
-
-
-
-  /* ---------- PATCH: probability ball + label ---------- */
-  .miniCard .prob{ gap:6px; align-items:center }
-  .miniCard .prob .lbl{ font-size:11px; color:#a9bfd6; opacity:.95; letter-spacing:.1px }
-  .miniCard .prob .dot{
-    position:relative; width:var(--prob-dot-size,12px); height:var(--prob-dot-size,12px);
-    border-radius:999px; background: currentColor; /* SOLID fill */
-    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.35);
-  }
-  .miniCard .prob .dot::before{
-    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.95) 0 35%, rgba(255,255,255,.15) 60%, rgba(255,255,255,0) 75%);
-  }
-  .miniCard .prob .dot::after{
-    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.42;
-    animation: probPulse var(--prob-pulse,1400ms) ease-out infinite;
-  }
-  @keyframes probPulse{
-    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor;         opacity:.42 }
-    100% { transform:scale(2.25); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
-  }
-  
-  /* ---------- PATCH: deck UI (stack of cards) ---------- */
-  .cardDeck{ position:absolute; right:14px; bottom:14px; z-index:2; pointer-events:auto }
-  .cardDeck .rail{ position:relative; width:160px; height:110px; }
-  .cardDeck .ghost{
-    position:absolute; inset:auto 0 0 auto; width:140px; height:84px; border-radius:12px;
-    border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.03);
-    box-shadow:0 8px 18px rgba(0,0,0,.35); transform-origin:bottom right;
-  }
-  .cardDeck .ghost::after{
-    content:""; position:absolute; inset:0; border-radius:inherit;
-    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-    opacity:.6
-  }
-  .cardDeck .controls{ position:absolute; right:0; bottom:100%; display:flex; gap:6px; margin-bottom:8px }
-  .cardDeck .ctrl{
-    width:26px; height:26px; border-radius:999px; border:1px solid rgba(255,255,255,.14);
-    background:rgba(12,18,28,.7); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-    display:grid; place-items:center; cursor:pointer; font-weight:700; user-select:none
-  }
-  .cardDeck .ctrl:active{ transform:translateY(1px) }
-  
-  /* ---------- PATCH: anchor glow overlay (ball) ---------- */
-  #anchorGlow{
-    position:absolute; pointer-events:none; z-index:1; border-radius:999px;
-    transform: translate(-50%,-50%) scale(1);
-    animation: anchorBreath var(--anchor-pulse,2400ms) ease-in-out infinite;
-  }
-  @keyframes anchorBreath{
-    0%,100%{ transform: translate(-50%,-50%) scale(.94); opacity:.9 }
-    50%{    transform: translate(-50%,-50%) scale(1.06); opacity:1  }
-  }
-  
-  /* ---------- PATCH: SVG overlay for anchor→card links ---------- */
-  #constOverlay{ position:absolute; inset:0; z-index:1; pointer-events:none }
-  
-
-
-
-  
 </style>
 </head>
 <body>
@@ -371,63 +361,42 @@
         </div>
       </div>
 
-      <!-- Scoreboard panel (desktop only) -->
+      <!-- Scoreboard panel -->
       <div class="const-wrap" aria-hidden="true">
         <span class="domainTag" id="domainTag">yourcompany.com</span>
         <span class="const-caption">Signals clustered by timing</span>
+
+        <!-- STATIC canvas background (no animation loop) -->
         <canvas id="constFx"></canvas>
+
+        <!-- glow + static lines sit behind the stack -->
+        <svg id="constOverlay"></svg>
+        <div id="anchorGlow" aria-hidden="true"></div>
+
         <div class="const-legend">Your Website → Signal → <strong>Timing</strong> → Buyers</div>
 
-        <!-- Cards: structure is richer; content filled by JS -->
-        <div class="miniCard" id="cardA" role="group" aria-label="Lead A">
-          <div class="row">
-            <span class="stage" data-stage>A</span>
-            <span class="prob"><span class="dot" data-prob-dot></span><span class="pct" data-prob>72%</span></span>
+        <!-- STACK: the live card appears here inside the stack -->
+        <div class="cardStack" id="cardStack" aria-label="Lead deck">
+          <div class="rail" id="stackRail" tabindex="0" aria-label="Lead card">
+            <!-- Ghost sheets are injected by JS -->
+            <!-- Live card (A) -->
+            <div class="miniCard" id="cardA" role="group" aria-label="Lead">
+              <div class="row">
+                <span class="stage" data-stage>A</span>
+                <span class="prob"><span class="dot" data-prob-dot></span><span class="lbl"></span><span class="pct" data-prob>72%</span></span>
+              </div>
+              <div class="row"><span class="k">Buyer</span><span class="v name" data-name>—</span></div>
+              <div class="row"><span class="k">Distance</span><span class="v" data-distance>—</span></div>
+              <div class="row"><span class="k">Need</span><span class="v" data-need>—</span></div>
+              <div class="row ai">
+                <span class="k"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 1 7 7v1h1a2 2 0 1 1 0 4h-1v1a7 7 0 0 1-7 7 1 1 0 1 1 0-2 5 5 0 0 0 5-5v-1H7v1a5 5 0 0 0 5 5 1 1 0 1 1 0 2 7 7 0 0 1-7-7v-1H4a2 2 0 1 1 0-4h1V9a7 7 0 0 1 7-7Z"/></svg>
+                  <span data-ai-label>Sales AI</span></span>
+                <span class="v" data-ai>74%</span>
+              </div>
+              <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
+              <div class="chips" data-tags></div>
+            </div>
           </div>
-          <div class="row"><span class="k">Buyer</span><span class="v name" data-name>—</span></div>
-          <div class="row"><span class="k">Distance</span><span class="v" data-distance>—</span></div>
-          <div class="row"><span class="k">Need</span><span class="v" data-need>—</span></div>
-          <div class="row ai">
-            <span class="k"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 1 7 7v1h1a2 2 0 1 1 0 4h-1v1a7 7 0 0 1-7 7 1 1 0 1 1 0-2 5 5 0 0 0 5-5v-1H7v1a5 5 0 0 0 5 5 1 1 0 1 1 0 2 7 7 0 0 1-7-7v-1H4a2 2 0 1 1 0-4h1V9a7 7 0 0 1 7-7Z"/></svg>
-              <span data-ai-label>Sales AI</span></span>
-            <span class="v" data-ai>74%</span>
-          </div>
-          <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
-          <div class="chips" data-tags></div>
-        </div>
-
-        <div class="miniCard" id="cardB" role="group" aria-label="Lead B">
-          <div class="row">
-            <span class="stage" data-stage>B</span>
-            <span class="prob"><span class="dot" data-prob-dot></span><span class="pct" data-prob>58%</span></span>
-          </div>
-          <div class="row"><span class="k">Buyer</span><span class="v name" data-name>—</span></div>
-          <div class="row"><span class="k">Distance</span><span class="v" data-distance>—</span></div>
-          <div class="row"><span class="k">Need</span><span class="v" data-need>—</span></div>
-          <div class="row ai">
-            <span class="k"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 1 7 7v1h1a2 2 0 1 1 0 4h-1v1a7 7 0 0 1-7 7 1 1 0 1 1 0-2 5 5 0 0 0 5-5v-1H7v1a5 5 0 0 0 5 5 1 1 0 1 1 0 2 7 7 0 0 1-7-7v-1H4a2 2 0 1 1 0-4h1V9a7 7 0 0 1 7-7Z"/></svg>
-              <span data-ai-label>Ops AI</span></span>
-            <span class="v" data-ai>44%</span>
-          </div>
-          <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
-          <div class="chips" data-tags></div>
-        </div>
-
-        <div class="miniCard" id="cardC" role="group" aria-label="Lead C">
-          <div class="row">
-            <span class="stage" data-stage>C</span>
-            <span class="prob"><span class="dot" data-prob-dot></span><span class="pct" data-prob>49%</span></span>
-          </div>
-          <div class="row"><span class="k">Buyer</span><span class="v name" data-name>—</span></div>
-          <div class="row"><span class="k">Distance</span><span class="v" data-distance>—</span></div>
-          <div class="row"><span class="k">Need</span><span class="v" data-need>—</span></div>
-          <div class="row ai">
-            <span class="k"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 1 7 7v1h1a2 2 0 1 1 0 4h-1v1a7 7 0 0 1-7 7 1 1 0 1 1 0-2 5 5 0 0 0 5-5v-1H7v1a5 5 0 0 0 5 5 1 1 0 1 1 0 2 7 7 0 0 1-7-7v-1H4a2 2 0 1 1 0-4h1V9a7 7 0 0 1 7-7Z"/></svg>
-              <span data-ai-label>Pricing AI</span></span>
-            <span class="v" data-ai>29%</span>
-          </div>
-          <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
-          <div class="chips" data-tags></div>
         </div>
 
       </div>
@@ -460,45 +429,39 @@
   <!-- MODAL -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none"></div>
 
-<!-- ===== SCOREBOARD KNOBS (safe top-level script; not nested) ===== -->
+<!-- ===== SCOREBOARD KNOBS (tweak here) ===== -->
 <script>
-/* Everything tweakable lives here. Edit and reload. */
+/* Everything tweakable lives here. */
 window.SCOREBOARD_KNOBS = {
-  /* layout: 'absolute' (use slots below) or 'stack' (auto vertical) */
-  layout: 'absolute',
-
-  /* panel safe area (fractions of panel width/height) */
-  safe: { left:0.58, right:0.03, top:0.12, bottom:0.22 },
-
-  /* spacing/jitter for 'stack' mode or when resolving overlaps */
-  spacing: 22, jitter: 8, vPad: 10, minPad: 10, /* px between cards; set <10 to allow "kiss" */
-
-  /* rotation speeds */
-  rotateMs: { warm: 7000, hot: 6500, hotp: 6200 },  /* content swap interval per stage */
-  pulseMs: 3200,                                     /* anchor pulse freeze time */
-
-  /* stage colors */
-  stages: {
-    warm: { label:'Warm',  color:'#e6c36b' },
-    hot:  { label:'Hot',   color:'#ff9a5a' },
-    hotp: { label:'Hot+',  color:'#42d17a' }
+  /* where the stack sits (relative to the constellation panel) */
+  stack: {
+    left: 0.78,       /* fraction [0..1] from left edge */
+    top:  0.58,       /* fraction [0..1] from top edge  */
+    width: 260,       /* px width of the live card rail */
+    angle: -3,        /* degrees tilt of the whole stack */
+    clickAdvance: true,  /* click/tap the live card to advance */
+    autoPlay: true, autoMs: 5200,  /* autoplay cadence */
+    /* ghost sheets behind the live card (only edges visible) */
+    ghosts: { count: 22, offsetX: 10, offsetY: 3, spread: 0.86 }
   },
 
-  /* probability color map (red -> green) */
-  probHue: { min: 5, max: 130 },                     /* HSL hue range for prob dot */
+  /* static anchor glow + lines into the stack (no RAF) */
+  anchorGlow: { size: 64, pulseMs: 2600, coreA:.95, midA:.55, edgeA:.06 },
+  lines: { count: 5, jitter: 14, width: 1, alpha: .16 },
 
-  /* typography overrides per card (optional) */
+  /* card content knobs */
+  probLabel: 'Win rate',
+  probHue: { min: 5, max: 130 },           /* HSL hue range for prob dot */
   fonts: { k: "11px Inter, system-ui", v: "700 14px Inter, system-ui", name: "700 15px Inter, system-ui" },
 
-  /* per-card slots (absolute mode) — left/top can be 'rel' [0..1] or 'px' */
-  slots: {
-    A: { mode:'rel', left:0.83, top:0.26, width:250, z:3, stage:'hotp', lock:true, jitterX:2, jitterY:2 },
-    B: { mode:'rel', left:0.83, top:0.53, width:242, z:2, stage:'hot',  lock:true, jitterX:2, jitterY:2 },
-    C: { mode:'rel', left:0.77, top:0.78, width:250, z:1, stage:'warm', lock:true, jitterX:1, jitterY:1 }
-    /* D: { mode:'rel', left:0.66, top:0.40, width:240, z:1, stage:'warm' } // enable if you want a 4th */
+  /* stage colors / labels / emojis */
+  stages: {
+    warm: { label:'Warm',  color:'#e6c36b', emoji:'🏷️' },
+    hot:  { label:'Hot',   color:'#ff9a5a', emoji:'🔥' },
+    hotp: { label:'Hot+',  color:'#42d17a', emoji:'🔥' }
   },
 
-  /* content pools (5+ examples each) */
+  /* content pools */
   pools: {
     buyers: [
       {name:"Pioneer Homecare", city:"Boise, ID"},
@@ -510,7 +473,6 @@ window.SCOREBOARD_KNOBS = {
       {name:"Lumina Skincare", city:"Austin, TX"},
       {name:"Volt Pharma", city:"Denver, CO"}
     ],
-    distance: ["Same city", "3.2 mi", "5.1 mi", "12.4 mi", "28 mi", "46 mi", "120 mi", "210 mi"],
     needs: [
       "PET bottles", "Stand-up pouches", "Rigid boxes", "Corrugated prints · 5k MOQ",
       "Mailer boxes", "Shrink sleeves", "Paper labels", "Glass jars", "Pulp trays", "Poly mailers"
@@ -523,11 +485,11 @@ window.SCOREBOARD_KNOBS = {
     aiLabels: ["Sales AI", "Ops AI", "Pricing AI"]
   },
 
-  /* stage-based ranges */
+  /* stage ranges */
   ranges: {
-    probability: { warm:[46,58], hot:[59,75], hotp:[72,92] },    /* % chance to close */
-    aiOptim:     { warm:[18,35], hot:[42,60], hotp:[70,90] },    /* % “Your <AI> optimized” */
-    distanceBias:{ warm:[5,210], hot:[3,50], hotp:[0,15] }       /* prefer nearer for hotter */
+    probability: { warm:[46,58], hot:[59,75], hotp:[72,92] },
+    aiOptim:     { warm:[18,35], hot:[42,60], hotp:[70,90] },
+    distanceBias:{ warm:[5,210], hot:[3,50], hotp:[0,15] }
   }
 };
 </script>
@@ -535,440 +497,277 @@ window.SCOREBOARD_KNOBS = {
 <script>
 (()=>{
   'use strict';
-  const $  = (q)=>document.querySelector(q);
-  const $$ = (q)=>Array.from(document.querySelectorAll(q));
+  const $ = (q)=>document.querySelector(q);
   const LS = window.localStorage;
-  const normHost=(h)=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
-  const domainFromEmail=(e)=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
 
-  /* ========= STATIC WALLPAPER ========= */
-  const WP_DEFAULT = {
-    r1: { size:'var(--wp-r1-size)', at:'var(--wp-r1-at)', alpha:0.18, fade:'58%' },
-    r2: { size:'var(--wp-r2-size)', at:'var(--wp-r2-at)', alpha:0.10, fade:'72%' },
-    base: 'linear-gradient(180deg,#0b121a 0%, #0a0e14 70%, #091019 88%, var(--zone-dark) 100%)',
-    height: 'auto'
-  };
-  window.WALLPAPER = { desktop: JSON.parse(JSON.stringify(WP_DEFAULT)),
-    mobile:{ r1:{size:'200% 165%', at:'50% -18%', alpha:0.18, fade:'60%'},
-             r2:{size:'130% 95%',  at:'26% 16%',  alpha:0.10, fade:'74%'}, base:WP_DEFAULT.base, height:'auto'} };
-  const buildRadial=(k)=>`radial-gradient(${k.size} at ${k.at}, rgba(230,195,107,${k.alpha}), rgba(0,0,0,0) ${k.fade})`;
-  const buildBg=(cfg)=>[ buildRadial(cfg.r1), buildRadial(cfg.r2), cfg.base ].join(',');
+  /* ===== Helpers ===== */
   function deepMerge(base, patch){
-    const out = JSON.parse(JSON.stringify(base||{}));
-    if(!patch) return out;
+    const out = Array.isArray(base)? [...base]: {...base};
     for(const k in patch){
-      if (patch[k] && typeof patch[k]==='object' && !Array.isArray(patch[k])) out[k] = deepMerge(base?.[k]||{}, patch[k]);
-      else out[k]=patch[k];
+      const v = patch[k];
+      out[k] = (v && typeof v==='object' && !Array.isArray(v)) ? deepMerge(base[k]||{}, v) : v;
     }
     return out;
   }
+  function range([a,b]){ return a + Math.random()*(b-a); }
+  function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+  /* ===== Wallpaper (unchanged, static) ===== */
   function applyWallpaper(){
     const el = $('#pageWallpaper'); if(!el) return;
-    const cfg = (window.matchMedia('(max-width:900px)').matches) ? window.WALLPAPER.mobile : window.WALLPAPER.desktop;
-    let h = cfg.height;
-    if (h === 'auto'){
-      const hero = document.querySelector('.hero');
-      const proof = document.getElementById('proof');
-      const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap-hero-proof'))||0;
-      h = ((hero?.offsetHeight||0) + gap + (proof?.offsetHeight||0)) + 80;
-      h = Math.max(h, (window.innerHeight*1.6));
-    }
-    el.style.height = (typeof h==='number') ? (h+'px') : String(h);
-    el.style.background = buildBg(cfg);
+    const base = getComputedStyle(document.documentElement);
+    const hero = document.querySelector('.hero');
+    const proof = document.getElementById('proof');
+    const gap = parseFloat(base.getPropertyValue('--gap-hero-proof'))||0;
+    const h = Math.max((hero?.offsetHeight||0) + gap + (proof?.offsetHeight||0) + 80, window.innerHeight*1.6);
+    el.style.height = h + 'px';
   }
-  window.updateWallpaperKnobs = function(mode, patch){
-    const key = (mode==='mobile') ? 'mobile' : 'desktop';
-    window.WALLPAPER[key] = deepMerge(window.WALLPAPER[key], patch||{});
-    applyWallpaper();
-  };
-  window.setSectionGap = function(value){
-    const v = (typeof value==='number')? value+'px' : String(value);
-    document.documentElement.style.setProperty('--gap-hero-proof', v);
-    applyWallpaper();
-  };
-  window.addEventListener('resize', applyWallpaper);
+  addEventListener('resize', ()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t = setTimeout(applyWallpaper, 60); });
   document.addEventListener('DOMContentLoaded', applyWallpaper);
 
-  /* ------- Build modal (unchanged) ------- */
-  const modal = $("#modal");
-  modal.innerHTML =
-    '<div class="card" role="document">\
-      <div class="card-hd">\
-        <div class="steps" aria-label="Steps">\
-          <span class="dot on" data-step-dot="0"></span>\
-          <span class="dot" data-step-dot="1"></span>\
-        </div>\
-        <div style="display:flex;gap:10px;align-items:center">\
-          <span id="apiBadge" class="api-badge">Ready</span>\
-          <button id="close" class="x" aria-label="Close">✕</button>\
-        </div>\
-      </div>\
-      <div class="card-bd"><div class="scroll">\
-        <section class="step" id="step1">\
-          <div class="pill">Get set up in 60 seconds</div>\
-          <h2 style="margin:10px 0 14px;">Pick your side</h2>\
-          <div class="accordion">\
-            <div class="acc-hd" role="button" tabindex="0"><h4>Role</h4><div class="hint">Required</div></div>\
-            <div class="acc-bd">\
-              <div class="chips" id="roleChips">\
-                <span id="opt-supplier" class="chip active">🙌 I sell packaging (Supplier)</span>\
-                <span id="opt-buyer" class="chip">🛒 I buy packaging (Buyer)</span>\
-              </div>\
-            </div>\
-          </div>\
-        </section>\
-        <section class="step" id="step2" hidden>\
-          <div class="pill">Step 2 of 2</div>\
-          <h2 style="margin:10px 0 14px;">Tell us who you are</h2>\
-          <div class="accordion">\
-            <div class="acc-hd" role="button" tabindex="0"><h4>Contact & company</h4><div class="hint">Required</div></div>\
-            <div class="acc-bd">\
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">\
-                <div>\
-                  <div class="field"><label>Your name</label><input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter"></div>\
-                  <div class="field"><label>Phone (required for alerts) *</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/><div class="hint">Include country code (e.g., “+1”).</div></div>\
-                </div>\
-                <div>\
-                  <div class="field"><label>Business email *</label><input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required/></div>\
-                  <div class="field"><label>Website / Domain</label><input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/><div class="hint">Auto-filled from your email. You can edit.</div></div>\
-                </div>\
-              </div>\
-              <div class="hint" id="apiStatus" style="margin-top:8px">Step 3 opens in a new screen.</div>\
-            </div>\
-          </div>\
-        </section>\
-      </div>\
-      <div class="card-ft">\
-        <button id="back" class="btn ghost" type="button">Back</button>\
-        <button id="next" class="btn primary" type="button">Continue</button>\
-      </div></div>\
-    </div>';
+  /* ===== Constellation (STATIC CANVAS) ===== */
+  const wrap = document.querySelector('.const-wrap');
+  const c = document.getElementById('constFx');
+  const ctx = c?.getContext('2d');
 
-  /* ------- modal interactions ------- */
-  const openBtnMobile=$("#cta"), openBtnDesktop=$("#cta-desktop");
-  const closeBtn=$("#close");
-  const backBtn=$("#back"), nextBtn=$("#next"), dots=$$("[data-step-dot]");
-  const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
-  const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
-  const apiBadge=$("#apiBadge");
-  const state={ step:0, role:"supplier" };
-
-  function show(step){
-    state.step=step;
-    ["#step1","#step2"].forEach((id,i)=>{const el=$(id); if(!el) return; el.hidden=i!==step; dots[i]?.classList.toggle("on", i===step);});
-    backBtn.style.visibility = step===0 ? "hidden" : "visible";
-    nextBtn.textContent = step===0 ? "Next" : "Continue";
-  }
-  function open(){ modal.classList.add("show"); modal.style.display="flex"; modal.setAttribute("aria-hidden","false"); show(0); }
-  function close(){ modal.classList.remove("show"); modal.style.display="none"; modal.setAttribute("aria-hidden","true"); }
-
-  $("#navStart")?.addEventListener("click",(e)=>{e.preventDefault();open();});
-  openBtnMobile?.addEventListener("click", open);
-  openBtnDesktop?.addEventListener("click", open);
-  closeBtn?.addEventListener("click", close);
-  backBtn?.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
-
-  nextBtn?.addEventListener("click", ()=>{
-    if (state.step===0){ show(1); return; }
-    if (state.step===1){
-      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
-      const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
-      if (!hostCandidate){ alert("Please provide your website/domain (from email is fine)."); return; }
-      const seed = { role: state.role, contact: { name: nameEl.value.trim(), phone: phoneEl.value.trim(), email: emailEl.value.trim() }, host: hostCandidate };
-      try{
-        LS.setItem("onb.seed", JSON.stringify(seed));
-        LS.setItem("fp.supplier.host", hostCandidate);
-        LS.setItem("email", seed.contact.email);
-        LS.setItem("contact.name", seed.contact.name||"");
-        LS.setItem("contact.phone", seed.contact.phone||"");
-      }catch{}
-      window.location.href = "step3.html";
-    }
-  });
-
-  function setRole(r){ state.role=r; optSupplier?.classList.toggle("active", r==="supplier"); optBuyer?.classList.toggle("active", r==="buyer"); }
-  optSupplier?.addEventListener("click",()=>setRole("supplier"));
-  optBuyer?.addEventListener("click",()=>setRole("buyer"));
-
-  function syncDomain(){
-    const d=(emailEl && domainFromEmail(emailEl.value)) || "";
-    if (d) hostEl.value=d;
-    const tag=$("#domainTag");
-    tag && (tag.textContent = d || hostEl?.value || "yourcompany.com");
-  }
-  emailEl?.addEventListener("input",syncDomain);
-  emailEl?.addEventListener("change",syncDomain);
-  setTimeout(syncDomain, 80);
-  apiBadge && (apiBadge.textContent = "Ready");
-
-  modal?.addEventListener("keydown",(e)=>{
-    if (e.key==="Escape"){ e.preventDefault(); close(); return; }
-    if (e.key==="Enter"){
-      const tag=(e.target&&e.target.tagName)||"";
-      if (tag==="INPUT"||tag==="TEXTAREA"||tag==="A"||tag==="BUTTON") return;
-      e.preventDefault(); nextBtn.click();
-    }
-  });
-
-  /* ------- Constellation + Scoreboard ------- */
-  (function(){
-    const wrap = document.querySelector(".const-wrap");
-    const c = document.getElementById("constFx");
-    if (!wrap || !c) return;
-
-    const KN = window.SCOREBOARD_KNOBS || {};
-    function dm(base, patch){ return deepMerge(base, patch); }
-
-    /* Canvas backdrop */
-    const backdrop = {
-      nodes: { count: 28, linkRadius: 96, linkAlphaBase: 0.06, linkAlphaBoost: 0.18, speed: 0.14 }
-    };
-
+  function drawBackdrop(){
+    if(!wrap || !c) return;
     const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
-    const ctx = c.getContext("2d");
-    let W=0,H=0,nodes=[];
+    const r = wrap.getBoundingClientRect();
+    const W = Math.floor(r.width), H = Math.floor(r.height);
+    c.width = Math.floor(W*DPR); c.height = Math.floor(H*DPR);
+    c.style.width = W+'px'; c.style.height = H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.clearRect(0,0,W,H);
 
-    function resetCanvas(){
-      const r = wrap.getBoundingClientRect();
-      W = Math.max(320, Math.floor(r.width));
-      H = Math.max(260, Math.floor(r.height));
-      c.width = Math.floor(W*DPR); c.height = Math.floor(H*DPR);
-      c.style.width=W+"px"; c.style.height=H+"px";
-      ctx.setTransform(DPR,0,0,DPR,0,0);
-
-      const N = backdrop.nodes.count; nodes = [];
-      for (let i=0;i<N;i++){
-        const x = 0.20 + Math.random()*0.78;
-        const y = 0.06 + Math.random()*0.88;
-        const s = 0.15 + Math.random()*0.85;
-        const vx = (Math.random()-0.5) * backdrop.nodes.speed;
-        const vy = (Math.random()-0.5) * backdrop.nodes.speed;
-        nodes.push({x:x*W, y:y*H, s, vx, vy});
-      }
-      nodes.unshift({x:0.18*W, y:0.52*H, s:1.8, vx:0, vy:0, anchor:true });
+    // sprinkle nodes + short links ONCE (no animation loop)
+    const N=24, linkR=96;
+    const pts = [];
+    for(let i=0;i<N;i++){
+      const x = 0.18 + Math.random()*0.78;
+      const y = 0.08 + Math.random()*0.86;
+      pts.push({x:x*W, y:y*H});
     }
-
-    function drawCanvas(){
-      ctx.clearRect(0,0,W,H);
-      const R = backdrop.nodes.linkRadius;
-      for (let i=0;i<nodes.length;i++){
-        const a = nodes[i];
-        for (let j=i+1;j<nodes.length;j++){
-          const b = nodes[j];
-          const dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
-          if (d2 < R*R){
-            const aLine = backdrop.nodes.linkAlphaBase + backdrop.nodes.linkAlphaBoost*(1 - Math.sqrt(d2)/R);
-            ctx.strokeStyle=`rgba(230,195,107,${aLine})`;
-            ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
-          }
+    // lines
+    ctx.lineWidth=1;
+    for(let i=0;i<N;i++){
+      for(let j=i+1;j<N;j++){
+        const a=pts[i], b=pts[j];
+        const dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
+        if(d2<linkR*linkR){
+          const aLine=.06+.18*(1-Math.sqrt(d2)/linkR);
+          ctx.strokeStyle=`rgba(230,195,107,${aLine})`;
+          ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
         }
       }
-      const anchor = nodes[0];
-      const t = Math.min(1, (performance.now()%KN.pulseMs)/KN.pulseMs);
-      const pulse = 2*Math.sin(t*Math.PI*2);
-      ctx.fillStyle="rgba(230,195,107,0.16)";
-      ctx.beginPath(); ctx.arc(anchor.x, anchor.y, 24+pulse, 0, Math.PI*2); ctx.fill();
-
-      const grad = ctx.createLinearGradient(0,0,W,H);
-      grad.addColorStop(0,"rgba(230,195,107,0.06)"); grad.addColorStop(1,"rgba(230,195,107,0.0)");
-      ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
-
-      for (const n of nodes){
-        const r = n.anchor ? 4 : Math.max(1,1.2*n.s);
-        ctx.fillStyle = n.anchor ? "rgba(242,220,160,0.95)" : "rgba(230,195,107,0.75)";
-        ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2); ctx.fill();
-      }
     }
-
-    /* --- Scoreboard cards data + layout --- */
-    const cards = [
-      { id:'A', el: $('#cardA') },
-      { id:'B', el: $('#cardB') },
-      { id:'C', el: $('#cardC') }
-    ].filter(c=>c.el);
-
-    function hslProb(percent){
-      const hue = KN.probHue.min + (KN.probHue.max-KN.probHue.min)*(percent/100);
-      return `hsl(${hue}, 78%, 54%)`;
+    // draw points
+    for(const p of pts){
+      ctx.fillStyle="rgba(230,195,107,0.75)";
+      ctx.beginPath(); ctx.arc(p.x,p.y,1.6,0,Math.PI*2); ctx.fill();
     }
+    // anchor point
+    const ax = 0.18*W, ay = 0.52*H;
+    ctx.fillStyle="rgba(242,220,160,0.95)";
+    ctx.beginPath(); ctx.arc(ax,ay,3.5,0,Math.PI*2); ctx.fill();
+  }
 
-    function range([a,b]){ return a + Math.random()*(b-a); }
-    function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
+  /* ===== Stack + Card content ===== */
+  const KN = window.SCOREBOARD_KNOBS;
+  const stack = $('#cardStack');
+  const rail = $('#stackRail');
+  const liveCard = $('#cardA');
 
-    function stageOf(cardId){
-      const slot = KN.slots[cardId]||{};
-      return slot.stage||'warm';
+  function hslProb(p){
+    const H=KN.probHue.min, L=KN.probHue.max;
+    const hue = H + (L-H)*(p/100);
+    return `hsl(${hue},78%,54%)`;
+  }
+
+  function positionStack(){
+    if(!wrap) return;
+    const r = wrap.getBoundingClientRect();
+    const left = clamp(KN.stack.left, 0, 1) * r.width;
+    const top  = clamp(KN.stack.top,  0, 1) * r.height;
+    stack.style.left = left+'px';
+    stack.style.top  = top +'px';
+    stack.style.transform = `translate(-50%,-50%) rotate(${KN.stack.angle||0}deg)`;
+    rail.style.width = (KN.stack.width||260)+'px';
+    rail.style.height = '170px';
+  }
+
+  function buildGhosts(){
+    const gCfg = KN.stack.ghosts || {};
+    rail.querySelectorAll('.stackGhost').forEach(n=>n.remove());
+    const n = Math.max(1, gCfg.count || 18);
+    const ox = gCfg.offsetX ?? 10, oy = gCfg.offsetY ?? 3, spread = gCfg.spread ?? .86;
+    for(let i=0;i<n;i++){
+      const g = document.createElement('div');
+      g.className='stackGhost';
+      g.style.transform = `translate(${i*ox}px, ${-i*oy}px) scale(${1 - (i/n)*(1-spread)})`;
+      g.style.opacity = String(1 - i/n*0.92);
+      rail.appendChild(g);
     }
+  }
 
-    function layoutCards(){
-      const safe = {
-        left:  W*KN.safe.left,
-        right: W*(1-KN.safe.right),
-        top:   H*KN.safe.top,
-        bottom:H*(1-KN.safe.bottom)
-      };
-      const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-      const relToPx=(f, min, max)=> min + f * (max - min);
+  function setProbLabel(){
+    const lbl = liveCard.querySelector('.prob .lbl');
+    if(lbl) lbl.textContent = KN.probLabel || 'Win rate';
+    document.documentElement.style.setProperty('--prob-dot-size','12px');
+    document.documentElement.style.setProperty('--prob-pulse','1400ms');
+  }
 
-      const placed=[];
-      function nonOverlap(x,y,w,h){
-        const pad=KN.minPad;
-        return placed.every(p => Math.abs(p.x-x)>(p.w/2+w/2+pad) || Math.abs(p.y-y)>(p.h/2+h/2+pad));
-      }
+  function genLead(stage){
+    const r = KN.ranges;
+    const p = Math.round(range(r.probability[stage]));
+    const ai= Math.round(range(r.aiOptim[stage]));
+    const buyer=pick(KN.pools.buyers);
+    const need=pick(KN.pools.needs);
+    const b=r.distanceBias[stage]; const dVal=Math.round(range(b));
+    const distance=(dVal<=1)?"Same city":(dVal<8?(dVal.toFixed(1)+" mi"):(dVal+" mi"));
+    const aiLabel=pick(KN.pools.aiLabels);
+    return {stage,p,ai,buyer,need,distance,aiLabel};
+  }
 
-      cards.forEach((c)=>{
-        const slot = KN.slots[c.id]||{};
-        const rect = c.el.getBoundingClientRect();
-        const w = slot.width || rect.width || 230;
-        const h = rect.height || 128;
+  function paintLead(el, data){
+    const meta = KN.stages[data.stage]||KN.stages.warm;
+    const stageEl = el.querySelector('[data-stage]');
+    stageEl.textContent = `${meta.label} ${meta.emoji||''}`.trim();
+    stageEl.style.borderColor = meta.color; stageEl.style.color = meta.color;
 
-        let x,y;
-        if (KN.layout==='absolute'){
-          if (slot.mode==='px'){ x = slot.left ?? (safe.right-w/2); y = slot.top ?? (safe.top+h/2); }
-          else{ x = relToPx(slot.left ?? 0.85, safe.left+w/2, safe.right-w/2);
-                y = relToPx(slot.top  ?? 0.30, safe.top +h/2, safe.bottom-h/2); }
-          x += (slot.jitterX||0)*(Math.random()*2-1);
-          y += (slot.jitterY||0)*(Math.random()*2-1);
-          x = clamp(x, safe.left+w/2, safe.right-w/2);
-          y = clamp(y, safe.top +h/2, safe.bottom-h/2);
+    el.querySelector('[data-prob]').textContent = data.p + '%';
+    el.querySelector('[data-prob-dot]').style.color = hslProb(data.p);
+    el.querySelector('[data-name]').textContent = `${data.buyer.name} — ${data.buyer.city}`;
+    el.querySelector('[data-distance]').textContent = data.distance;
+    el.querySelector('[data-need]').textContent = data.need;
+    el.querySelector('[data-ai-label]').textContent = `${data.aiLabel} optimized`;
+    el.querySelector('[data-ai]').textContent = data.ai + '%';
 
-          // allow slight "kiss" but resolve true overlaps
-          let tries=0;
-          while(!nonOverlap(x,y,w,h) && tries<10){
-            x = clamp(x + (Math.random()*2-1)*4, safe.left+w/2, safe.right-w/2);
-            y = clamp(y + (Math.random()*2-1)*4, safe.top +h/2, safe.bottom-h/2);
-            tries++;
-          }
-        }else{
-          // stack mode
-          const i = cards.findIndex(k=>k.id===c.id);
-          const baseX = clamp(safe.right - w/2 - 12, safe.left+w/2, safe.right-w/2);
-          const totalH = (h*cards.length) + KN.spacing*(cards.length-1);
-          const startY = clamp((safe.top+safe.bottom)/2 - totalH/2, safe.top+h/2, safe.bottom-h/2);
-          x = baseX + (Math.random()*2-1)*KN.jitter;
-          y = startY + i*(h+KN.spacing) + (Math.random()*2-1)*KN.jitter;
-        }
+    const chips = el.querySelector('[data-tags]'); chips.innerHTML='';
+    const c1=document.createElement('span'); c1.className='chip'; c1.textContent=`${meta.emoji||'🏷️'} ${meta.label}`;
+    const c2=document.createElement('span'); c2.className='chip'; c2.textContent= data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
+    chips.appendChild(c1); chips.appendChild(c2);
 
-        c.el.style.left = x+'px';
-        c.el.style.top  = y+'px';
-        if (slot.width) c.el.style.width = slot.width+'px';
-        if (slot.z != null) c.el.style.zIndex = String(slot.z);
-        placed.push({x,y,w,h});
-      });
-    }
+    // fonts
+    el.querySelectorAll('.k').forEach(k=> k.style.font = KN.fonts.k);
+    el.querySelectorAll('.v').forEach(v=> v.style.font = KN.fonts.v);
+    el.querySelectorAll('.name').forEach(n=> n.style.font = KN.fonts.name);
+  }
 
-    function populateCard(c){
-      const stage = stageOf(c.id);
-      const ranges = KN.ranges;
-      const p = Math.round(range(ranges.probability[stage]));
-      const ai = Math.round(range(ranges.aiOptim[stage]));
+  /* autoplay deck — data only; the live card never leaves the stack */
+  const stages = ['hotp','hot','warm'];
+  let deck = [];
+  function rebuildDeck(){
+    deck.length=0;
+    const N = 24;
+    for(let i=0;i<N;i++) deck.push(genLead(stages[i%stages.length]));
+  }
+  function showNext(){
+    if(!deck.length) return;
+    deck.push(deck.shift());
+    paintLead(liveCard, deck[0]);
+  }
 
-      // choose buyer, distance (biased by stage), need, next action
-      const buyer = pick(KN.pools.buyers);
-      const needs = pick(KN.pools.needs);
-      const aiLabel = pick(KN.pools.aiLabels);
+  /* ===== Anchor glow + static lines ===== */
+  const overlay = document.getElementById('constOverlay');
+  const glow = document.getElementById('anchorGlow');
 
-      // distance bias: favor nearer values for hotter stages
-      const bias = ranges.distanceBias[stage];
-      const dVal = Math.round(range(bias));
-      const distance = (dVal<=1) ? "Same city" : (dVal<8 ? (dVal.toFixed(1)+" mi") : (dVal+" mi"));
+  function anchorPos(){
+    const r = wrap.getBoundingClientRect();
+    return { x: 0.18*r.width, y: 0.52*r.height };
+  }
+  function placeGlow(){
+    const a = anchorPos();
+    glow.style.left = a.x+'px';
+    glow.style.top  = a.y+'px';
+    const G = KN.anchorGlow;
+    glow.style.width = glow.style.height = (G.size||64)+'px';
+    document.documentElement.style.setProperty('--anchor-pulse', (G.pulseMs||2600)+'ms');
+    const core = G.coreA ?? .95, mid=G.midA ?? .55, edge=G.edgeA ?? .06;
+    glow.style.background = `radial-gradient(circle at 50% 50%,
+      rgba(255,245,210,${core}) 0%,
+      rgba(242,220,160,${mid}) 46%,
+      rgba(230,195,107,${edge}) 100%)`;
+  }
+  function drawStaticLines(){
+    while(overlay.firstChild) overlay.removeChild(overlay.firstChild);
+    const r = wrap.getBoundingClientRect();
+    overlay.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
+    const a = anchorPos();
 
-      // paint
-      const el = c.el;
-      const stageEl = el.querySelector('[data-stage]');
-      const probEl  = el.querySelector('[data-prob]');
-      const probDot = el.querySelector('[data-prob-dot]');
-      const nameEl  = el.querySelector('[data-name]');
-      const distEl  = el.querySelector('[data-distance]');
-      const needEl  = el.querySelector('[data-need]');
-      const aiLblEl = el.querySelector('[data-ai-label]');
-      const aiEl    = el.querySelector('[data-ai]');
-      const chips   = el.querySelector('[data-tags]');
-
-      const stageMeta = KN.stages[stage] || KN.stages.warm;
-      stageEl.textContent = stageMeta.label + (stage==='hotp' ? ' 🔥' : '');
-      stageEl.style.borderColor = stageMeta.color;
-      stageEl.style.color = stageMeta.color;
-
-      probEl.textContent = p + '%';
-      probDot.style.color = hslProb(p);
-
-      nameEl.textContent = buyer.name + " — " + buyer.city;
-      distEl.textContent = distance;
-      needEl.textContent = needs;
-      aiLblEl.textContent = `${aiLabel} optimized`;
-      aiEl.textContent = ai + '%';
-
-      // small helper chips (cute, minimal)
-      chips.innerHTML = '';
-      const tag1 = document.createElement('span'); tag1.className='chip'; tag1.textContent='🏷️ ' + stageMeta.label;
-      const tag2 = document.createElement('span'); tag2.className='chip'; tag2.textContent= p>=70 ? 'High intent' : (p>=58?'Rising intent':'Warming');
-      chips.appendChild(tag1); chips.appendChild(tag2);
-
-      // fonts
-      el.querySelectorAll('.k').forEach(k=>{ k.style.font = KN.fonts.k; });
-      el.querySelectorAll('.v').forEach(v=>{ v.style.font = KN.fonts.v; });
-      el.querySelectorAll('.name').forEach(n=>{ n.style.font = KN.fonts.name; });
-    }
-
-    // Rotation loop per card
-    const timers = new Map();
-    function scheduleRotation(c){
-      clearTimeout(timers.get(c.id));
-      const stage = stageOf(c.id);
-      const ms = (KN.rotateMs && KN.rotateMs[stage]) || 6500;
-      timers.set(c.id, setTimeout(()=>{ populateCard(c); scheduleRotation(c); }, ms + Math.random()*800));
-    }
-
-    function init(){
-      // domain badge from local storage if present
-      try{
-        const host=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "yourcompany.com";
-        $("#domainTag") && ($("#domainTag").textContent = host);
-      }catch{}
-
-      resetCanvas();
-      cards.forEach(populateCard);
-      layoutCards();
-
-      // start the animation loop (30fps cap / pause offscreen)
-      let last=0, vis=true;
-      const FRAME=1000/30;
-      function loop(now){
-        if (document.hidden || !vis){ requestAnimationFrame(loop); return; }
-        if (now-last>=FRAME){
-          for (let i=1;i<nodes.length;i++){
-            const n = nodes[i]; n.x+=n.vx; n.y+=n.vy;
-            if (n.x<0) n.x=W; if (n.x>W) n.x=0; if (n.y<0) n.y=H; if (n.y>H) n.y=0;
-          }
-          drawCanvas(); last=now;
-        }
-        requestAnimationFrame(loop);
-      }
-      const io = new IntersectionObserver((es)=>{ vis = es.some(e=>e.isIntersecting); },{threshold:0.1});
-      io.observe(wrap); requestAnimationFrame(loop);
-
-      // hover = wake up nodes slightly
-      wrap.addEventListener('mouseenter', ()=>{
-        for (let i=1;i<nodes.length;i++){ nodes[i].vx += (Math.random()-0.5)*0.08; nodes[i].vy += (Math.random()-0.5)*0.08; }
-      });
-
-      // schedule content rotation
-      cards.forEach(scheduleRotation);
-      addEventListener('resize', ()=>{ resetCanvas(); layoutCards(); });
-    }
-    init();
-
-    // public knob updater
-    window.updateScoreboardKnobs = function(patch){
-      window.SCOREBOARD_KNOBS = dm(window.SCOREBOARD_KNOBS, patch||{});
-      Object.assign(KN, window.SCOREBOARD_KNOBS);
-      layoutCards();
-      cards.forEach(populateCard);
+    // target points: hidden under the stack card (so user can't see where they end)
+    const s = stack.getBoundingClientRect();
+    const p = wrap.getBoundingClientRect();
+    const targetBase = {
+      x: (s.left - p.left) + s.width*0.18,
+      y: (s.top  - p.top)  + s.height*0.78
     };
-  })();
 
-  /* ------- Section 2 counters ------- */
+    const L = KN.lines || {};
+    for(let i=0;i<(L.count||5);i++){
+      const dx = (Math.random()*2-1)*(L.jitter||14);
+      const dy = (Math.random()*2-1)*(L.jitter||14);
+      const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1', a.x); ln.setAttribute('y1', a.y);
+      ln.setAttribute('x2', targetBase.x+dx); ln.setAttribute('y2', targetBase.y+dy);
+      ln.setAttribute('stroke', `rgba(230,195,107,${L.alpha??.16})`);
+      ln.setAttribute('stroke-width', String(L.width||1));
+      overlay.appendChild(ln);
+    }
+  }
+
+  /* ===== Init ===== */
+  function init(){
+    // domain badge from local storage
+    try{
+      const host=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "yourcompany.com";
+      $("#domainTag") && ($("#domainTag").textContent = host);
+    }catch{}
+
+    drawBackdrop();
+    positionStack();
+    buildGhosts();
+    rebuildDeck();
+    setProbLabel();
+    paintLead(liveCard, deck[0]);
+    placeGlow();
+    drawStaticLines();
+
+    // autoplay (optional)
+    let timer;
+    function setAuto(){
+      clearInterval(timer);
+      if (KN.stack.autoPlay) timer = setInterval(showNext, KN.stack.autoMs||5200);
+    }
+    setAuto();
+
+    // click/tap to advance (no visible buttons)
+    if (KN.stack.clickAdvance){
+      rail.addEventListener('click', ()=>{ showNext(); });
+      rail.addEventListener('keydown', (e)=>{ if(e.key==='ArrowRight'||e.key===' '||e.key==='Enter'){ e.preventDefault(); showNext(); }});
+    }
+
+    // throttled resize
+    addEventListener('resize', ()=>{
+      clearTimeout(init._r);
+      init._r = setTimeout(()=>{
+        drawBackdrop(); positionStack(); buildGhosts(); placeGlow(); drawStaticLines();
+      }, 60);
+    });
+  }
+  init();
+
+  /* Expose live knob patcher */
+  const _KN = KN;
+  window.updateScoreboardKnobs = function(patch){
+    window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
+    Object.assign(_KN, window.SCOREBOARD_KNOBS);
+    // apply visuals
+    positionStack(); buildGhosts(); setProbLabel(); placeGlow(); drawStaticLines();
+  };
+
+  /* ===== Section 2 counters (unchanged) ===== */
   (function(){
     const section = document.getElementById("proof"); if (!section) return;
     const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -986,32 +785,114 @@ window.SCOREBOARD_KNOBS = {
     },{threshold:0.30});
     io.observe(section);
   })();
-})();
-</script>
 
-<script>
-/* header hamburger (unchanged) */
-(function(){
-  const burger = document.getElementById('burger');
-  const menu = document.getElementById('mobileMenu');
-  if(!burger || !menu) return;
+  /* ===== Modal (unchanged) ===== */
+  (function(){
+    const modal = $("#modal");
+    modal.innerHTML =
+      '<div class="card" role="document">\
+        <div class="card-hd">\
+          <div class="steps" aria-label="Steps">\
+            <span class="dot on" data-step-dot="0"></span>\
+            <span class="dot" data-step-dot="1"></span>\
+          </div>\
+          <div style="display:flex;gap:10px;align-items:center">\
+            <span id="apiBadge" class="api-badge">Ready</span>\
+            <button id="close" class="x" aria-label="Close">✕</button>\
+          </div>\
+        </div>\
+        <div class="card-bd"><div class="scroll">\
+          <section class="step" id="step1">\
+            <div class="pill">Get set up in 60 seconds</div>\
+            <h2 style="margin:10px 0 14px;">Pick your side</h2>\
+            <div class="accordion">\
+              <div class="acc-hd" role="button" tabindex="0"><h4>Role</h4><div class="hint">Required</div></div>\
+              <div class="acc-bd">\
+                <div class="chips" id="roleChips">\
+                  <span id="opt-supplier" class="chip active">🙌 I sell packaging (Supplier)</span>\
+                  <span id="opt-buyer" class="chip">🛒 I buy packaging (Buyer)</span>\
+                </div>\
+              </div>\
+            </div>\
+          </section>\
+          <section class="step" id="step2" hidden>\
+            <div class="pill">Step 2 of 2</div>\
+            <h2 style="margin:10px 0 14px;">Tell us who you are</h2>\
+            <div class="accordion">\
+              <div class="acc-hd" role="button" tabindex="0"><h4>Contact & company</h4><div class="hint">Required</div></div>\
+              <div class="acc-bd">\
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">\
+                  <div>\
+                    <div class="field"><label>Your name</label><input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter"></div>\
+                    <div class="field"><label>Phone (required for alerts) *</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/><div class="hint">Include country code (e.g., “+1”).</div></div>\
+                  </div>\
+                  <div>\
+                    <div class="field"><label>Business email *</label><input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required/></div>\
+                    <div class="field"><label>Website / Domain</label><input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/><div class="hint">Auto-filled from your email. You can edit.</div></div>\
+                  </div>\
+                </div>\
+                <div class="hint" id="apiStatus" style="margin-top:8px">Step 3 opens in a new screen.</div>\
+              </div>\
+            </div>\
+          </section>\
+        </div>\
+        <div class="card-ft">\
+          <button id="back" class="btn ghost" type="button">Back</button>\
+          <button id="next" class="btn primary" type="button">Continue</button>\
+        </div></div>\
+      </div>';
 
-  function toggle(){
-    const open = burger.getAttribute('aria-expanded') === 'true';
-    burger.setAttribute('aria-expanded', String(!open));
-    menu.classList.toggle('open', !open);
-    document.body.style.overflow = !open ? 'hidden' : '';
-  }
-  burger.addEventListener('click', toggle);
-  menu.addEventListener('click', (e)=>{ if (e.target === menu) toggle(); });
-  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape' && menu.classList.contains('open')) toggle(); });
-
-  const mobileStart = document.getElementById('mobileStart');
-  mobileStart && mobileStart.addEventListener('click', (e)=>{
-    e.preventDefault();
-    toggle();
-    (document.getElementById('cta') || document.getElementById('cta-desktop'))?.click();
-  });
+    const normHost=(h)=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+    const domainFromEmail=(e)=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
+    const openBtnMobile=$("#cta"), openBtnDesktop=$("#cta-desktop");
+    const closeBtn=$("#close"); const backBtn=$("#back"), nextBtn=$("#next");
+    const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
+    const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
+    const apiBadge=$("#apiBadge"); const dots=[...document.querySelectorAll("[data-step-dot]")];
+    const state={ step:0, role:"supplier" };
+    function show(step){
+      state.step=step;
+      ["#step1","#step2"].forEach((id,i)=>{const el=$(id); if(!el) return; el.hidden=i!==step; dots[i]?.classList.toggle("on", i===step);});
+      backBtn.style.visibility = step===0 ? "hidden" : "visible";
+      nextBtn.textContent = step===0 ? "Next" : "Continue";
+    }
+    function open(){ $("#modal").classList.add("show"); $("#modal").style.display="flex"; $("#modal").setAttribute("aria-hidden","false"); show(0); }
+    function close(){ $("#modal").classList.remove("show"); $("#modal").style.display="none"; $("#modal").setAttribute("aria-hidden","true"); }
+    $("#navStart")?.addEventListener("click",(e)=>{e.preventDefault();open();});
+    openBtnMobile?.addEventListener("click", open); openBtnDesktop?.addEventListener("click", open); closeBtn?.addEventListener("click", close);
+    backBtn?.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+    nextBtn?.addEventListener("click", ()=>{
+      if (state.step===0){ show(1); return; }
+      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
+      const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
+      if (!hostCandidate){ alert("Please provide your website/domain."); return; }
+      const seed = { role: state.role, contact: { name: nameEl.value.trim(), phone: phoneEl.value.trim(), email: emailEl.value.trim() }, host: hostCandidate };
+      try{
+        localStorage.setItem("onb.seed", JSON.stringify(seed));
+        localStorage.setItem("fp.supplier.host", hostCandidate);
+        localStorage.setItem("email", seed.contact.email);
+        localStorage.setItem("contact.name", seed.contact.name||"");
+        localStorage.setItem("contact.phone", seed.contact.phone||"");
+      }catch{}
+      window.location.href = "step3.html";
+    });
+    function setRole(r){ state.role=r; optSupplier?.classList.toggle("active", r==="supplier"); optBuyer?.classList.toggle("active", r==="buyer"); }
+    optSupplier?.addEventListener("click",()=>setRole("supplier"));
+    optBuyer?.addEventListener("click",()=>setRole("buyer"));
+    function syncDomain(){
+      const d=(emailEl && domainFromEmail(emailEl.value)) || "";
+      if (d) hostEl.value=d;
+      const tag=$("#domainTag");
+      tag && (tag.textContent = d || hostEl?.value || "yourcompany.com");
+    }
+    emailEl?.addEventListener("input",syncDomain); emailEl?.addEventListener("change",syncDomain); setTimeout(syncDomain, 80);
+    apiBadge && (apiBadge.textContent = "Ready");
+    $("#modal")?.addEventListener("keydown",(e)=>{
+      if (e.key==="Escape"){ e.preventDefault(); close(); return; }
+      const tag=(e.target&&e.target.tagName)||"";
+      if(e.key==="Enter" && !(tag==="INPUT"||tag==="TEXTAREA"||tag==="A"||tag==="BUTTON")){ e.preventDefault(); nextBtn.click(); }
+    });
+  })();
 })();
 </script>
 
@@ -1028,202 +909,5 @@ window.SCOREBOARD_KNOBS = {
 <!-- Section 4 (Orbit) scripts -->
 <script defer src="./sections/orbit/orbit.data.js"></script>
 <script defer src="./sections/orbit/orbit.js"></script>
-<script>
-(()=>{
-  /* ----- merge new knobs into your existing SCOREBOARD_KNOBS ----- */
-  const base = (window.SCOREBOARD_KNOBS ||= {});
-  const patch = {
-    probLabel: 'Win rate',
-    probDot: { size: 12, pulseMs: 1400 },
-    anchorGlow: { size: 54, pulseMs: 2400, coreA:.95, midA:.55, edgeA:.0 },
-    anchorLinks: { enabled:true, perCard:3, jitter:14, width:1, alpha:.16 },
-    deck: {
-      enabled:true, count:18, offsetX:10, offsetY:3, spread:0.85,
-      autoPlay:true, autoMs:5200, target:'A',
-      emojis:{ warm:'🏷️', hot:'🔥', hotp:'🔥🔥' }
-    }
-  };
-  function dm(b, p){ const o = Array.isArray(b)?[...b]:{...b};
-    for(const k in p){ const v=p[k]; o[k] = (v && typeof v==='object' && !Array.isArray(v))? dm(b[k]||{}, v) : v; }
-    return o;
-  }
-  window.SCOREBOARD_KNOBS = dm(base, patch);
-
-  /* ask the earlier code to stop its auto-rotation; deck drives content */
-  window.updateScoreboardKnobs && window.updateScoreboardKnobs({ rotateMs:{ warm:1e9, hot:1e9, hotp:1e9 } });
-
-  const wrap = document.querySelector('.const-wrap');
-  if(!wrap) return;
-
-  const KN = window.SCOREBOARD_KNOBS;
-
-  /* ----- add "Win rate" label next to % ----- */
-  document.querySelectorAll('.miniCard .prob').forEach(p=>{
-    if(!p.querySelector('.lbl')){
-      const s = document.createElement('span');
-      s.className = 'lbl'; s.setAttribute('data-prob-label','');
-      s.textContent = KN.probLabel || 'Win rate';
-      p.insertBefore(s, p.querySelector('.pct'));
-    }
-  });
-  document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||12)+'px');
-  document.documentElement.style.setProperty('--prob-pulse', (KN.probDot?.pulseMs||1400)+'ms');
-
-  /* ----- anchor glow overlay ----- */
-  let glow = document.getElementById('anchorGlow');
-  if(!glow){ glow = document.createElement('div'); glow.id='anchorGlow'; wrap.appendChild(glow); }
-  const overlay = document.getElementById('constOverlay') || (()=>{ const s=document.createElementNS('http://www.w3.org/2000/svg','svg'); s.id='constOverlay'; wrap.appendChild(s); return s; })();
-
-  function panelRect(){ return wrap.getBoundingClientRect(); }
-  function anchorPos(){ const r = panelRect(); return { x: r.width*0.18, y: r.height*0.52 }; }
-  function placeGlow(){
-    const a = anchorPos();
-    const sz = KN.anchorGlow?.size || 54;
-    glow.style.left = a.x + 'px';
-    glow.style.top  = a.y + 'px';
-    glow.style.width = glow.style.height = sz + 'px';
-    document.documentElement.style.setProperty('--anchor-pulse', (KN.anchorGlow?.pulseMs||2400)+'ms');
-    const core = KN.anchorGlow?.coreA ?? .95, mid = KN.anchorGlow?.midA ?? .55, edge = KN.anchorGlow?.edgeA ?? .0;
-    glow.style.background = `radial-gradient(circle at 50% 50%,
-      rgba(255,245,210,${core}) 0%,
-      rgba(242,220,160,${mid}) 44%,
-      rgba(230,195,107,${edge}) 100%)`;
-    glow.style.boxShadow = '0 0 40px rgba(230,195,107,.30), 0 0 120px rgba(230,195,107,.18)';
-  }
-
-  /* ----- anchor → cards lines (SVG overlay) ----- */
-  function cardCenters(){
-    const p = wrap.getBoundingClientRect();
-    return Array.from(document.querySelectorAll('.miniCard')).map(el=>{
-      const b = el.getBoundingClientRect();
-      return { x: b.left - p.left + b.width/2, y: b.top - p.top + b.height/2 };
-    });
-  }
-  function drawLinks(){
-    while(overlay.firstChild) overlay.removeChild(overlay.firstChild);
-    const r = panelRect(); overlay.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
-    const a = anchorPos();
-    const cc = cardCenters();
-    if(!KN.anchorLinks?.enabled) return;
-    const per = KN.anchorLinks.perCard ?? 2;
-    const jitter = KN.anchorLinks.jitter ?? 12;
-    const alpha  = KN.anchorLinks.alpha  ?? .16;
-    const width  = KN.anchorLinks.width  ?? 1;
-    cc.forEach(pt=>{
-      for(let i=0;i<per;i++){
-        const dx = (Math.random()*2-1)*jitter, dy = (Math.random()*2-1)*jitter;
-        const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-        line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
-        line.setAttribute('x2', pt.x+dx); line.setAttribute('y2', pt.y+dy);
-        line.setAttribute('stroke', `rgba(230,195,107,${alpha})`);
-        line.setAttribute('stroke-width', String(width));
-        overlay.appendChild(line);
-      }
-    });
-  }
-  ['resize','orientationchange'].forEach(ev=>addEventListener(ev,()=>{ placeGlow(); drawLinks(); }));
-  document.querySelectorAll('.miniCard').forEach(el=>{
-    el.addEventListener('transitionend', (e)=>{ if(e.propertyName==='left' || e.propertyName==='top') drawLinks(); });
-  });
-
-  /* ----- deck (stack of cards) UI + autoplay ----- */
-  let deckUI = document.querySelector('.cardDeck');
-  if(!deckUI){
-    deckUI = document.createElement('div'); deckUI.className='cardDeck';
-    deckUI.innerHTML = `<div class="controls">
-      <button class="ctrl" data-deck-prev aria-label="Previous">‹</button>
-      <button class="ctrl" data-deck-next aria-label="Next">›</button>
-    </div><div class="rail"></div>`;
-    wrap.appendChild(deckUI);
-  }
-  const rail = deckUI.querySelector('.rail');
-
-  function buildGhosts(){
-    rail.innerHTML = '';
-    const n = Math.max(1, KN.deck?.count||14);
-    const ox = KN.deck?.offsetX ?? 10, oy = KN.deck?.offsetY ?? 3, spread = KN.deck?.spread ?? .85;
-    for(let i=0;i<n;i++){
-      const g = document.createElement('div'); g.className='ghost';
-      g.style.transform = `translate(${i*ox}px, ${-i*oy}px) scale(${1 - (i/n)*(1-spread)})`;
-      g.style.opacity = String(1 - i/n*0.9);
-      rail.appendChild(g);
-    }
-  }
-
-  function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
-  function range([a,b]){ return a + Math.random()*(b-a); }
-  function hslProb(percent){
-    const H = KN.probHue?.min ?? 5, L = KN.probHue?.max ?? 130;
-    const hue = H + (L-H)*(percent/100);
-    return `hsl(${hue}, 78%, 54%)`;
-  }
-  function genCard(stage){
-    const r = KN.ranges;
-    const p  = Math.round(range(r.probability[stage]));
-    const ai = Math.round(range(r.aiOptim[stage]));
-    const buyer = pick(KN.pools.buyers);
-    const need  = pick(KN.pools.needs);
-    const b = r.distanceBias[stage]; const dVal = Math.round(range(b));
-    const distance = (dVal<=1) ? "Same city" : (dVal<8 ? (dVal.toFixed(1)+" mi") : (dVal+" mi"));
-    const aiLabel = pick(KN.pools.aiLabels);
-    return { stage, p, ai, buyer, need, distance, aiLabel };
-  }
-  function paintCard(el, data){
-    const stages = KN.stages; const meta = stages[data.stage] || stages.warm;
-    const stageEl = el.querySelector('[data-stage]');
-    stageEl.textContent = `${meta.label} ${KN.deck?.emojis?.[data.stage] ?? (data.stage==='hotp'?'🔥':'')}`.trim();
-    stageEl.style.borderColor = meta.color; stageEl.style.color = meta.color;
-    el.querySelector('[data-prob]').textContent = data.p + '%';
-    el.querySelector('[data-prob-dot]').style.color = hslProb(data.p);
-    const lbl = el.querySelector('.prob .lbl'); if (lbl) lbl.textContent = KN.probLabel || 'Win rate';
-    el.querySelector('[data-name]').textContent = `${data.buyer.name} — ${data.buyer.city}`;
-    el.querySelector('[data-distance]').textContent = data.distance;
-    el.querySelector('[data-need]').textContent = data.need;
-    el.querySelector('[data-ai-label]').textContent = `${data.aiLabel} optimized`;
-    el.querySelector('[data-ai]').textContent = data.ai + '%';
-    const chips = el.querySelector('[data-tags]'); chips.innerHTML='';
-    const t1=document.createElement('span'); t1.className='chip'; t1.textContent=(KN.deck?.emojis?.[data.stage]||'🏷️')+' '+meta.label;
-    const t2=document.createElement('span'); t2.className='chip'; t2.textContent=data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
-    chips.appendChild(t1); chips.appendChild(t2);
-  }
-
-  const order = ['A','B','C'];
-  let target = (KN.deck?.target || 'A');
-  let deck = [];
-  function rebuildDeck(){
-    deck = [];
-    const stages = ['hotp','hot','warm'];
-    const N = Math.max(6, KN.deck?.count || 18);
-    for(let i=0;i<N;i++) deck.push(genCard(stages[i%stages.length]));
-  }
-  function showNext(dir=1){
-    if(!deck.length) return;
-    if(dir<0){ deck.unshift(deck.pop()); } else { deck.push(deck.shift()); }
-    const data = deck[0];
-    const el = document.getElementById('card'+target);
-    if(el) paintCard(el, data);
-    drawLinks();
-    const kids = Array.from(rail.children);
-    if(kids.length){ if(dir<0){ rail.insertBefore(kids[kids.length-1], kids[0]); } else { rail.appendChild(kids[0]); } }
-  }
-  deckUI.querySelector('[data-deck-prev]').addEventListener('click', ()=>showNext(-1));
-  deckUI.querySelector('[data-deck-next]').addEventListener('click', ()=>showNext(1));
-  document.querySelectorAll('.miniCard').forEach(el=>{ el.addEventListener('click', ()=>{ target = el.id.replace('card',''); }); });
-
-  let timer; function setAuto(){ clearInterval(timer); if(KN.deck?.autoPlay) timer=setInterval(()=>showNext(1),(KN.deck.autoMs||5200)); }
-
-  const _origUpdate = window.updateScoreboardKnobs;
-  window.updateScoreboardKnobs = function(p){
-    _origUpdate && _origUpdate(p||{});
-    Object.assign(KN, window.SCOREBOARD_KNOBS);
-    document.querySelectorAll('.miniCard .prob .lbl').forEach(n=> n.textContent = KN.probLabel || 'Win rate');
-    document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||12)+'px');
-    document.documentElement.style.setProperty('--prob-pulse', (KN.probDot?.pulseMs||1400)+'ms');
-    buildGhosts(); rebuildDeck(); setAuto(); placeGlow(); drawLinks();
-  };
-
-  buildGhosts(); rebuildDeck(); setAuto(); placeGlow(); drawLinks();
-})();
-</script>
 </body>
 </html>
