@@ -204,7 +204,7 @@
       + (C().TITLE_SHOW ? `<div class="p5m-title" style="transform:translate(${pick(true,'TITLE_OFFSET_X')||0}px,${pick(true,'TITLE_OFFSET_Y')??0}px)">${C().TITLE_TEXT}</div>` : "");
 
     const svg=document.createElementNS(NS,"svg"); svg.classList.add("p5m-svg");
-    svg.setAttribute("viewBox",`0 0 ${dims.W} ${dims.H}`); svg.setAttribute("width","100%"); svg.setAttribute("height","auto");
+    svg.setAttribute("viewBox",`0 0 ${dims.W} ${dims.H}`); svg.setAttribute("width","100%"); svg.setAttribute("height","100%");
     wrap.appendChild(svg); ctx.canvas.appendChild(wrap); return svg;
   }
 
