@@ -158,8 +158,11 @@
   }
 
   /* ===== MOBILE DOM MODE base classes ===== */
-  @media (max-width: ${ (window.PROCESS_CONFIG?.mobile?.BP || 640, MODE: "dom") }px){
-    #section-process .mstep{ position:relative; margin:0 auto; z-index:0; }
+  /* Keep the fixed header from covering Section 3 on mobile-sized screens */
+  @media (max-width: ${ (window.PROCESS_CONFIG?.mobile?.BP || 640) }px){
+    html { scroll-padding-top: 64px; }   /* anchor/hash links land below header */
+    #section-process { position: relative; z-index: 1; overflow: visible !important; }
+    #section-process .mstep { scroll-margin-top: 64px; }
     #section-process .mstep-title{ color:#ddeaef; }
     #section-process .mstep-copy{ color:#a7bacb; }
     #section-process .mstack{ display:flex; flex-direction:column; align-items:center; }
