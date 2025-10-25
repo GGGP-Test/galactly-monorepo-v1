@@ -592,8 +592,8 @@ window.SCOREBOARD_KNOBS = {
     if(h1m){ h1m.innerHTML = `<span>${H.h1MobileTop||'We help packaging suppliers'}</span> <span class="h1-accent">${H.h1MobileAccent||'win qualified buyers'}</span>`; }
     $('#copy-hero-lead-desktop') && ($('#copy-hero-lead-desktop').textContent = H.leadDesktop||'');
     $('#copy-hero-lead-mobile') && ($('#copy-hero-lead-mobile').textContent = H.leadMobile||'');
-    $('#cta-desktop') && ($('#cta-desktop').textContent = H.ctaDesktop||'Start'));
-    $('#cta') && ($('#cta').textContent = H.ctaMobile||'Start'));
+    $('#cta-desktop') && ($('#cta-desktop').textContent = (H.ctaDesktop || '✨ START FOR FREE'));
+    $('#cta') && ($('#cta').textContent = (H.ctaMobile || 'Start Free'));
     $('#copy-proof-h2') && ($('#copy-proof-h2').textContent = (P.h2||'Proof it works'));
     $('#copy-proof-sub') && ($('#copy-proof-sub').textContent = (P.sub||''));
   }
