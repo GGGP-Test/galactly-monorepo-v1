@@ -32,7 +32,7 @@
     --const-drop-a: .14; --const-edge-tint: rgba(230,195,107,.05); --const-grid-sheen-a: .05;
 
     --miniCard-radius: 12px; --miniCard-bg: rgba(12,18,28,.86); --miniCard-blur: 5px;
-    --miniCard-stroke-a: .10; --miniCard-shadow-a: .26;
+    --miniCard-stroke-a: .10; --miniCard-shadow-a: .24;
 
     --legend-fs: 12px; --legend-color: #b9cbe0; --legend-bg: rgba(255,255,255,.06);
 
@@ -166,8 +166,8 @@
   #anchorGlow{
     position:absolute; pointer-events:none; z-index:1; border-radius:999px;
     transform: translate(-50%,-50%) scale(1);
-    animation: anchorBreath var(--anchor-pulse,2200ms) ease-in-out infinite;
-    box-shadow:0 0 40px rgba(230,195,107,.30), 0 0 120px rgba(230,195,107,.18);
+    animation: anchorBreath var(--anchor-pulse,2000ms) ease-in-out infinite;
+    box-shadow:0 0 40px rgba(230,195,107,.28), 0 0 120px rgba(230,195,107,.16);
   }
   @keyframes anchorBreath{
     0%,100%{ transform: translate(-50%,-50%) scale(.96); opacity:.95 }
@@ -193,15 +193,16 @@
     border:1px solid rgba(230,195,107,.25)
   }
 
-  /* STACK: live card + static hints behind it. No tilt by default. */
+  /* STACK (vertical ladder) */
   .cardStack{ position:absolute; z-index:2; transform-origin:center center; }
-  .cardStack .rail{ position:relative; width:260px; height:170px; pointer-events:auto; }
+  .cardStack .rail{ position:relative; width:260px; height:192px; pointer-events:auto; }
 
-  /* Static “paper” behind the live card (very cheap) */
+  /* Static “paper” behind the live card (cheap) */
   .stackGhost{
-    position:absolute; inset:auto 0 0 auto; width:200px; height:114px; border-radius:12px;
+    position:absolute; left:50%; bottom:0; width:210px; height:118px; border-radius:12px;
+    transform:translateX(-50%);
     border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03);
-    transform-origin:bottom right; box-shadow:0 8px 18px rgba(0,0,0,.30);
+    box-shadow:0 8px 18px rgba(0,0,0,.28);
   }
   .stackGhost::after{
     content:""; position:absolute; inset:0; border-radius:inherit;
@@ -220,7 +221,7 @@
     color:#e8f1fb;
   }
   @supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))){
-    .miniCard{ background:rgba(16,22,35,.92); } /* GPU-friendly fallback */
+    .miniCard{ background:rgba(16,22,35,.92); } /* cheap fallback */
   }
   .miniCard .row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:2px 0}
   .miniCard .k{font-size:11px;color:#a9bfd6}
@@ -236,12 +237,12 @@
   .miniCard .ai{display:flex; align-items:center; gap:8px}
   .miniCard .ai svg{width:12px; height:12px; opacity:.9}
 
-  /* Win-rate dot (tiny pulse; can be set to 0 via knob) */
+  /* Win-rate dot (tiny pulse; can be dropped to 0ms) */
   .miniCard .prob .lbl{ font-size:11px; color:#a9bfd6; opacity:.95; letter-spacing:.1px }
   .miniCard .prob .dot{
     position:relative; width:var(--prob-dot-size,12px); height:var(--prob-dot-size,12px);
     border-radius:999px; background: currentColor;
-    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.30);
+    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.28);
   }
   .miniCard .prob .dot::before{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
@@ -249,18 +250,18 @@
   }
   .miniCard .prob .dot::after{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.40;
-    animation: probPulse var(--prob-pulse,1200ms) ease-out infinite;
+    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.38;
+    animation: probPulse var(--prob-pulse,1100ms) ease-out infinite;
   }
   @keyframes probPulse{
-    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor;         opacity:.40 }
-    100% { transform:scale(2.1); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
+    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor;         opacity:.38 }
+    100% { transform:scale(2.0); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
   }
 
-  /* Faint “other cards” behind the live one (no tilt) */
-  .miniCard.static{ z-index:2; pointer-events:none; opacity:.82; transform:translate(-50%,-50%) scale(.94) translate(16px,12px); }
-  .miniCard.static.s2{ opacity:.68; transform:translate(-50%,-50%) scale(.88) translate(30px,22px); }
-  .miniCard.static.s3{ opacity:.54; transform:translate(-50%,-50%) scale(.82) translate(42px,32px); }
+  /* Faint “other cards” behind the live one (vertical ladder) */
+  .miniCard.static{ z-index:2; pointer-events:none; opacity:.82; }
+  .miniCard.static.s2{ opacity:.66; }
+  .miniCard.static.s3{ opacity:.52; }
 
   /* SECTION 2 (unchanged) */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
@@ -400,7 +401,7 @@
               <div class="chips" data-tags></div>
             </div>
 
-            <!-- faint static “cards” to sell the stack (hidden if mode:'single') -->
+            <!-- faint static “cards” to sell the stack (vertical ladder) -->
             <div class="miniCard static s1" data-static>
               <div class="row"><span class="k">Buyer</span><span class="v name">Volt Pharma — Denver, CO</span></div>
               <div class="row"><span class="k">Distance</span><span class="v">15 mi</span></div>
@@ -417,10 +418,7 @@
               <div class="row"><span class="k">Need</span><span class="v">Shrink sleeves</span></div>
             </div>
 
-            <!-- ghost paper layers -->
-            <div class="stackGhost" data-ghost></div>
-            <div class="stackGhost" data-ghost></div>
-            <div class="stackGhost" data-ghost></div>
+            <!-- light ghost paper layers -->
             <div class="stackGhost" data-ghost></div>
             <div class="stackGhost" data-ghost></div>
             <div class="stackGhost" data-ghost></div>
@@ -461,22 +459,19 @@
 window.SCOREBOARD_KNOBS = {
   /* placement + behavior */
   stack: {
-    mode: 'stack',      // 'stack' (preferred) or 'single'
-    left: 0.78,         // relative inside panel
+    layout: 'vertical',   // 'vertical' (selected) or 'fan'
+    left: 0.78,           // relative inside panel
     top:  0.58,
     width: 260,
-    angle: 0,           // not tilted
+    angle: 0,             // not tilted
     clickAdvance: true,
     autoPlay: true, autoMs: 5200
   },
-
-  /* lightweight visuals */
-  anchorGlow: { size: 60, pulseMs: 2000, coreA:.95, midA:.52, edgeA:.06 },
+  anchorGlow: { size: 58, pulseMs: 2000, coreA:.95, midA:.50, edgeA:.06 },
   lines: { count: 4, jitter: 12, width: 1, alpha: .14 },
 
-  /* content + look */
   probLabel: 'Win rate',
-  probDot: { size: 12, pulseMs: 1200 },   // set to 0 to disable
+  probDot: { size: 12, pulseMs: 1100 },   // set to 0 to disable entirely
   probHue: { min: 5, max: 130 },
   fonts: { k: "11px Inter, system-ui", v: "700 14px Inter, system-ui", name: "700 15px Inter, system-ui" },
   stages: {
@@ -567,11 +562,24 @@ window.SCOREBOARD_KNOBS = {
     stack.style.top  = (clamp(KN.stack.top,0,1)*r.height)+'px';
     stack.style.transform = `translate(-50%,-50%) rotate(${KN.stack.angle||0}deg)`;
     rail.style.width=(KN.stack.width||260)+'px';
-    rail.style.height='170px';
-    const mode=(KN.stack.mode||'stack').toLowerCase();
-    // show or hide faint statics + paper ghosts
-    document.querySelectorAll('[data-static]').forEach(n=> n.style.display = mode==='stack' ? '' : 'none');
-    document.querySelectorAll('[data-ghost]').forEach(n=> n.style.display = mode==='stack' ? '' : 'none');
+    rail.style.height='192px';
+
+    // set layout for the three faint statics
+    const mode=(KN.stack.layout||'vertical').toLowerCase();
+    const statics=[...document.querySelectorAll('[data-static]')];
+    if(mode==='vertical'){
+      // ladder: 12px vertical step, tiny scale down
+      statics.forEach((el,i)=>{
+        const stepY = 14*(i+1); const scale = 1 - 0.06*(i+1);
+        el.style.transform = `translate(-50%,-50%) translateY(${stepY}px) scale(${scale})`;
+      });
+    }else{
+      // fan (slight offset): still cheap, but a bit diagonal
+      statics.forEach((el,i)=>{
+        const stepY = 10*(i+1), stepX = 10*(i+1); const scale = 1 - 0.06*(i+1);
+        el.style.transform = `translate(-50%,-50%) translate(${stepX}px, ${stepY}px) scale(${scale})`;
+      });
+    }
   }
 
   function setProbLabel(){
@@ -611,7 +619,6 @@ window.SCOREBOARD_KNOBS = {
     const c2=document.createElement('span'); c2.className='chip'; c2.textContent=data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
     chips.appendChild(c1); chips.appendChild(c2);
 
-    // fonts
     el.querySelectorAll('.k').forEach(k=> k.style.font=KN.fonts.k);
     el.querySelectorAll('.v').forEach(v=> v.style.font=KN.fonts.v);
     el.querySelectorAll('.name').forEach(n=> n.style.font=KN.fonts.name);
@@ -627,11 +634,11 @@ window.SCOREBOARD_KNOBS = {
   function placeGlow(){
     const a=anchorPos(); const G=KN.anchorGlow;
     glow.style.left=a.x+'px'; glow.style.top=a.y+'px';
-    glow.style.width=glow.style.height=(G.size||60)+'px';
+    glow.style.width=glow.style.height=(G.size||58)+'px';
     document.documentElement.style.setProperty('--anchor-pulse',(G.pulseMs||2000)+'ms');
     glow.style.background=`radial-gradient(circle at 50% 50%,
       rgba(255,245,210,${G.coreA??.95}) 0%,
-      rgba(242,220,160,${G.midA??.52}) 46%,
+      rgba(242,220,160,${G.midA??.50}) 46%,
       rgba(230,195,107,${G.edgeA??.06}) 100%)`;
   }
   function drawLines(){
@@ -679,7 +686,23 @@ window.SCOREBOARD_KNOBS = {
     document.addEventListener('visibilitychange',()=>{ visible=document.visibilityState!=='hidden'; restart(); });
     if(KN.stack.clickAdvance){ rail.addEventListener('click',()=>showNext()); rail.addEventListener('keydown',e=>{ if(['ArrowRight',' ','Enter'].includes(e.key)){ e.preventDefault(); showNext(); } }); }
 
+    // light/throttled resize
     addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackdrop(); positionStack(); placeGlow(); drawLines(); },80); });
+
+    // auto low-power mode for small CPUs
+    try{
+      const cores = navigator.hardwareConcurrency||2;
+      if(cores <= 4){
+        document.documentElement.style.setProperty('--miniCard-blur','0px');
+        document.querySelectorAll('.miniCard').forEach(el=>{
+          el.style.backdropFilter=''; el.style.webkitBackdropFilter='';
+          el.style.background='rgba(16,22,35,.92)';
+          el.style.boxShadow='0 6px 16px rgba(0,0,0,.22)';
+        });
+        // chill the pulse
+        window.updateScoreboardKnobs?.({ probDot:{ pulseMs:0 } });
+      }
+    }catch{}
   }
   init();
 
@@ -711,7 +734,7 @@ window.SCOREBOARD_KNOBS = {
 
   /* --- modal (unchanged) --- */
   (function(){
-    const modal = $("#modal");
+    const modal = document.getElementById("modal");
     modal.innerHTML =
       '<div class="card" role="document">\
         <div class="card-hd">\
@@ -767,21 +790,21 @@ window.SCOREBOARD_KNOBS = {
 
     const normHost=(h)=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
     const domainFromEmail=(e)=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
-    const openBtnMobile=$("#cta"), openBtnDesktop=$("#cta-desktop");
-    const closeBtn=$("#close"); const backBtn=$("#back"), nextBtn=$("#next");
-    const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
-    const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
-    const apiBadge=$("#apiBadge"); const dots=[...document.querySelectorAll("[data-step-dot]")];
+    const openBtnMobile=document.getElementById("cta"), openBtnDesktop=document.getElementById("cta-desktop");
+    const closeBtn=document.getElementById("close"); const backBtn=document.getElementById("back"), nextBtn=document.getElementById("next");
+    const emailEl=document.getElementById("email"), hostEl=document.getElementById("host"), phoneEl=document.getElementById("phone"), nameEl=document.getElementById("name");
+    const optSupplier=document.getElementById("opt-supplier"), optBuyer=document.getElementById("opt-buyer");
+    const dots=[...document.querySelectorAll("[data-step-dot]")];
     const state={ step:0, role:"supplier" };
     function show(step){
       state.step=step;
-      ["#step1","#step2"].forEach((id,i)=>{const el=$(id); if(!el) return; el.hidden=i!==step; dots[i]?.classList.toggle("on", i===step);});
+      ["#step1","#step2"].forEach((id,i)=>{const el=document.querySelector(id); if(!el) return; el.hidden=i!==step; dots[i]?.classList.toggle("on", i===step);});
       backBtn.style.visibility = step===0 ? "hidden" : "visible";
       nextBtn.textContent = step===0 ? "Next" : "Continue";
     }
-    function open(){ $("#modal").classList.add("show"); $("#modal").style.display="flex"; $("#modal").setAttribute("aria-hidden","false"); show(0); }
-    function close(){ $("#modal").classList.remove("show"); $("#modal").style.display="none"; $("#modal").setAttribute("aria-hidden","true"); }
-    $("#navStart")?.addEventListener("click",(e)=>{e.preventDefault();open();});
+    function open(){ const m=document.getElementById("modal"); m.classList.add("show"); m.style.display="flex"; m.setAttribute("aria-hidden","false"); show(0); }
+    function close(){ const m=document.getElementById("modal"); m.classList.remove("show"); m.style.display="none"; m.setAttribute("aria-hidden","true"); }
+    document.getElementById("navStart")?.addEventListener("click",(e)=>{e.preventDefault();open();});
     openBtnMobile?.addEventListener("click", open); openBtnDesktop?.addEventListener("click", open); closeBtn?.addEventListener("click", close);
     backBtn?.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
     nextBtn?.addEventListener("click", ()=>{
@@ -805,12 +828,11 @@ window.SCOREBOARD_KNOBS = {
     function syncDomain(){
       const d=(emailEl && domainFromEmail(emailEl.value)) || "";
       if (d) hostEl.value=d;
-      const tag=$("#domainTag");
+      const tag=document.getElementById("domainTag");
       tag && (tag.textContent = d || hostEl?.value || "yourcompany.com");
     }
     emailEl?.addEventListener("input",syncDomain); emailEl?.addEventListener("change",syncDomain); setTimeout(syncDomain, 80);
-    apiBadge && (apiBadge.textContent = "Ready");
-    $("#modal")?.addEventListener("keydown",(e)=>{
+    document.getElementById("modal")?.addEventListener("keydown",(e)=>{
       if (e.key==="Escape"){ e.preventDefault(); close(); return; }
       const tag=(e.target&&e.target.tagName)||"";
       if(e.key==="Enter" && !(tag==="INPUT"||tag==="TEXTAREA"||tag==="A"||tag==="BUTTON")){ e.preventDefault(); nextBtn.click(); }
