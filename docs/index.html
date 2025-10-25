@@ -41,6 +41,11 @@
     /* wallpaper radials */
     --wp-r1-size: 180% 140%; --wp-r1-at: 50% -14%; --wp-r1-alpha: .16; --wp-r1-fade: 58%;
     --wp-r2-size: 110% 90%;  --wp-r2-at: 22% 12%;  --wp-r2-alpha: .08; --wp-r2-fade: 72%;
+
+    /* NEW: reveal & card sizing knobs (overridable from JS) */
+    --reveal-dur: 420ms; --reveal-ease: cubic-bezier(.22,.61,.36,1);
+    --reveal-in-y: 22px; --reveal-out-y: -18px;
+    --card-w: 260px; --rail-h: 192px; --card-pad: 12px 12px 10px;
   }
 
   *{box-sizing:border-box}
@@ -125,6 +130,7 @@
   #mobileMenu .sheet hr{border:0; border-top:1px solid var(--stroke); margin:8px 0}
 
   /* HERO */
+  /* add class 'reveal' to enable scroll in/out */
   .hero{position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
     padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate; z-index:1;}
   #heroFx{display:none!important}
@@ -195,11 +201,11 @@
 
   /* STACK (vertical ladder) */
   .cardStack{ position:absolute; z-index:2; transform-origin:center center; }
-  .cardStack .rail{ position:relative; width:260px; height:192px; pointer-events:auto; }
+  .cardStack .rail{ position:relative; width:var(--card-w); height:var(--rail-h); pointer-events:auto; } /* size knobs */
 
   /* Static “paper” behind the live card (cheap) */
   .stackGhost{
-    position:absolute; left:50%; bottom:0; width:210px; height:118px; border-radius:12px;
+    position:absolute; left:50%; bottom:0; width:calc(var(--card-w) - 50px); height:118px; border-radius:12px;
     transform:translateX(-50%);
     border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03);
     box-shadow:0 8px 18px rgba(0,0,0,.28);
@@ -212,8 +218,8 @@
   /* Card */
   .miniCard{
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    z-index:3; min-width:220px; max-width:260px;
-    padding:12px 12px 10px; border-radius:var(--miniCard-radius);
+    z-index:3; min-width:220px; max-width:260px; width:var(--card-w);
+    padding:var(--card-pad); border-radius:var(--miniCard-radius);
     background:var(--miniCard-bg);
     -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
     border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
@@ -263,7 +269,7 @@
   .miniCard.static.s2{ opacity:.66; }
   .miniCard.static.s3{ opacity:.52; }
 
-  /* SECTION 2 (unchanged) */
+  /* SECTION 2 (unchanged visuals) */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
   .section .inner{margin:0 auto}
   #proof{ margin-top: var(--gap-hero-proof); }
@@ -293,6 +299,13 @@
     background:linear-gradient(180deg,var(--gold-300),var(--gold-700));-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px}
   .kpi .hint{font-size:12px;color:#8ba6bf;margin-top:6px}
 
+  /* NEW: reveal animation states (kept light) */
+  .reveal{opacity:0; transform:translateY(var(--reveal-in-y)) scale(.995);
+    transition: opacity var(--reveal-dur) var(--reveal-ease),
+               transform var(--reveal-dur) var(--reveal-ease);}
+  .reveal.reveal-in{opacity:1; transform:translateY(0) scale(1);}
+  .reveal.reveal-out{opacity:0; transform:translateY(var(--reveal-out-y)) scale(.995);}
+
   @media (max-width:900px){
     .const-wrap{display:none}
     .hero{min-height:92svh; padding:calc(60px + env(safe-area-inset-top, 10px)) 16px 28px;}
@@ -310,6 +323,7 @@
     .miniCard .prob .dot::after{ animation:none }
     #anchorGlow{ animation:none }
     .btn{transition:none}
+    .reveal{opacity:1!important; transform:none!important; transition:none!important}
   }
   .show-desktop{display:block} .show-mobile{display:none}
   @media (max-width:900px){ .show-desktop{display:none} .show-mobile{display:block} }
@@ -321,18 +335,18 @@
   <!-- HEADER -->
   <header class="site-header" aria-label="Site">
     <div class="inner">
-      <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge" aria-hidden="true">G</span></a>
+      <a href="index.html" class="brand" aria-label="Home" data-track-id="brand"><span class="brand-badge" aria-hidden="true">G</span></a>
       <nav id="nav-primary" aria-label="Primary">
-        <a class="nav-link" href="#get-started">How it works</a>
-        <a class="nav-link" href="sectors.html">Sectors</a>
-        <a class="nav-link" href="pricing.html">Pricing</a>
+        <a class="nav-link" href="#get-started" data-track-id="nav-how">How it works</a>
+        <a class="nav-link" href="sectors.html" data-track-id="nav-sectors">Sectors</a>
+        <a class="nav-link" href="pricing.html" data-track-id="nav-pricing">Pricing</a>
       </nav>
       <div class="nav-actions">
-        <a class="nav-login" href="login.html">Login</a>
-        <a class="nav-demo" href="https://www.youtube.com" target="_blank" rel="noopener">Get Demo</a>
-        <a class="nav-cta" href="#get-started" id="navStart">Start Free</a>
+        <a class="nav-login" href="login.html" data-track-id="nav-login">Login</a>
+        <a class="nav-demo" href="https://www.youtube.com" target="_blank" rel="noopener" data-track-id="nav-demo">Get Demo</a>
+        <a class="nav-cta" href="#get-started" id="navStart" data-track-id="nav-start">Start Free</a>
       </div>
-      <button id="burger" class="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
+      <button id="burger" class="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false" data-track-id="burger">
         <span aria-hidden="true"></span><span aria-hidden="true"></span>
       </button>
     </div>
@@ -341,31 +355,31 @@
   <!-- Mobile glass menu -->
   <div id="mobileMenu" aria-hidden="true">
     <div class="sheet" role="menu">
-      <a id="mobileStart" class="mm-cta" href="#get-started" role="menuitem">✨ Start Free</a>
-      <a class="mm-link" href="login.html" role="menuitem">Login</a>
-      <a class="mm-link" href="https://www.youtube.com" target="_blank" rel="noopener" role="menuitem">Get Demo</a>
+      <a id="mobileStart" class="mm-cta" href="#get-started" role="menuitem" data-track-id="mm-start">✨ Start Free</a>
+      <a class="mm-link" href="login.html" role="menuitem" data-track-id="mm-login">Login</a>
+      <a class="mm-link" href="https://www.youtube.com" target="_blank" rel="noopener" role="menuitem" data-track-id="mm-demo">Get Demo</a>
       <hr>
-      <a class="mm-link" href="#get-started" role="menuitem">How it works</a>
-      <a class="mm-link" href="sectors.html" role="menuitem">Sectors</a>
-      <a class="mm-link" href="pricing.html" role="menuitem">Pricing</a>
+      <a class="mm-link" href="#get-started" role="menuitem" data-track-id="mm-how">How it works</a>
+      <a class="mm-link" href="sectors.html" role="menuitem" data-track-id="mm-sectors">Sectors</a>
+      <a class="mm-link" href="pricing.html" role="menuitem" data-track-id="mm-pricing">Pricing</a>
     </div>
   </div>
 
   <!-- HERO -->
-  <section class="hero" aria-label="Hero">
+  <section class="hero reveal" aria-label="Hero" data-track-section="hero">
     <canvas id="heroFx" aria-hidden="true"></canvas>
     <div class="hero-grid">
       <div class="hero-copy">
-        <span class="badge">Built for packaging suppliers</span>
-        <h1 class="show-desktop">Find real packaging buyers.</h1>
-        <h1 class="show-mobile"><span>We help packaging suppliers</span> <span class="h1-accent">win qualified buyers</span></h1>
-        <p class="lead show-desktop">We filter the noise and surface real companies already signaling intent in your strengths.</p>
-        <p class="lead show-mobile">One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.</p>
+        <span class="badge" id="copy-hero-badge">Built for packaging suppliers</span>
+        <h1 class="show-desktop" id="copy-hero-h1-desktop">Find real packaging buyers.</h1>
+        <h1 class="show-mobile" id="copy-hero-h1-mobile"><span>We help packaging suppliers</span> <span class="h1-accent">win qualified buyers</span></h1>
+        <p class="lead show-desktop" id="copy-hero-lead-desktop">We filter the noise and surface real companies already signaling intent in your strengths.</p>
+        <p class="lead show-mobile" id="copy-hero-lead-mobile">One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.</p>
         <div class="actions show-desktop" id="get-started-desktop">
-          <button id="cta-desktop" type="button" class="btn primary">✨ START FOR FREE</button>
+          <button id="cta-desktop" type="button" class="btn primary" data-track-id="cta-desktop">✨ START FOR FREE</button>
         </div>
         <div class="actions show-mobile" id="get-started">
-          <button id="cta" type="button" class="btn primary">Start Free</button>
+          <button id="cta" type="button" class="btn primary" data-track-id="cta-mobile">Start Free</button>
         </div>
       </div>
 
@@ -429,11 +443,11 @@
   </section>
 
   <!-- SECTION 2 -->
-  <section class="section" id="proof" aria-label="Proof">
+  <section class="section reveal" id="proof" aria-label="Proof" data-track-section="proof">
     <div class="inner">
       <div class="section-hd">
-        <h2>Proof it works</h2>
-        <div class="sub">Signals → Verified companies → Hot buyers → Time-to-first buyer</div>
+        <h2 id="copy-proof-h2">Proof it works</h2>
+        <div class="sub" id="copy-proof-sub">Signals → Verified companies → Hot buyers → Time-to-first buyer</div>
       </div>
       <div class="proof-wrap">
         <div class="kpi-grid" id="kpiGrid">
@@ -447,31 +461,77 @@
   </section>
 
   <!-- SECTION 3 – Process -->
-  <div id="section-process"></div>
+  <div id="section-process" class="reveal" data-track-section="process"></div>
   <!-- SECTION 4 – Orbit -->
-  <div id="section-orbit"></div>
+  <div id="section-orbit" class="reveal" data-track-section="orbit"></div>
 
   <!-- MODAL -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none"></div>
 
 <!-- ===== KNOBS ===== -->
 <script>
+/* NEW: Copy knobs — tweak hero/proof copy without touching HTML */
+window.COPY_KNOBS = {
+  hero: {
+    badge: 'Built for packaging suppliers',
+    h1Desktop: 'Find real packaging buyers.',
+    h1MobileTop: 'We help packaging suppliers',
+    h1MobileAccent: 'win qualified buyers',
+    leadDesktop: 'We filter the noise and surface real companies already signaling intent in your strengths.',
+    leadMobile: 'One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.',
+    ctaDesktop: '✨ START FOR FREE',
+    ctaMobile: 'Start Free'
+  },
+  proof: {
+    h2: 'Proof it works',
+    sub: 'Signals → Verified companies → Hot buyers → Time-to-first buyer'
+  }
+};
+
+/* NEW: Section animation knobs */
+window.ANIM_KNOBS = {
+  enable: true,
+  inThreshold: 0.28,
+  outThreshold: 0.08,
+  rootMarginIn: '0px 0px -20% 0px',
+  rootMarginOut: '-35% 0px -40% 0px',
+  durationMs: 420,
+  ease: 'cubic-bezier(.22,.61,.36,1)',
+  inY: 22,
+  outY: -18,
+  unmountHidden: false
+};
+
+/* NEW: Lightweight analytics knobs */
+window.ANALYTICS_KNOBS = {
+  enabled: true,
+  endpoint: '',      // set to your collector to use sendBeacon
+  sampleRate: 1.0,   // 0–1
+  dwellMinMs: 700,
+  heartbeatMs: 6000,
+  rage: { clicks: 3, withinMs: 800, radius: 28 },
+  repeatClickMs: 700
+};
+
 window.SCOREBOARD_KNOBS = {
   /* placement + behavior */
   stack: {
-    layout: 'vertical',   // 'vertical' (selected) or 'fan'
+    layout: 'vertical',   // 'vertical' or 'fan'
     left: 0.78,           // relative inside panel
     top:  0.58,
-    width: 260,
+    width: 260,           // rail width (also used for card via CSS var)
     angle: 0,             // not tilted
     clickAdvance: true,
     autoPlay: true, autoMs: 5200
   },
+  /* NEW: card sizing knobs (wired to CSS variables) */
+  card: { width: 260, railHeight: 192, padding: '12px 12px 10px' },
+
   anchorGlow: { size: 58, pulseMs: 2000, coreA:.95, midA:.50, edgeA:.06 },
   lines: { count: 4, jitter: 12, width: 1, alpha: .14 },
 
   probLabel: 'Win rate',
-  probDot: { size: 12, pulseMs: 1100 },   // set to 0 to disable entirely
+  probDot: { size: 12, pulseMs: 1100 },   // set pulseMs:0 to fully stop
   probHue: { min: 5, max: 130 },
   fonts: { k: "11px Inter, system-ui", v: "700 14px Inter, system-ui", name: "700 15px Inter, system-ui" },
   stages: {
@@ -512,7 +572,8 @@ window.SCOREBOARD_KNOBS = {
 <script>
 (()=>{
   'use strict';
-  const $ = (q)=>document.querySelector(q);
+  const $  = (q)=>document.querySelector(q);
+  const $$ = (q)=>Array.from(document.querySelectorAll(q));
 
   /* --- utils --- */
   const KN = window.SCOREBOARD_KNOBS;
@@ -520,6 +581,22 @@ window.SCOREBOARD_KNOBS = {
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const pick=(a)=>a[(Math.random()*a.length)|0];
   const range=([a,b])=>a+Math.random()*(b-a);
+
+  /* --- copy apply --- */
+  function applyCopy(){
+    const C=window.COPY_KNOBS||{};
+    const H=C.hero||{}, P=C.proof||{};
+    const h1m=$('#copy-hero-h1-mobile');
+    $('#copy-hero-badge') && ($('#copy-hero-badge').textContent = H.badge||'');
+    $('#copy-hero-h1-desktop') && ($('#copy-hero-h1-desktop').textContent = H.h1Desktop||'');
+    if(h1m){ h1m.innerHTML = `<span>${H.h1MobileTop||'We help packaging suppliers'}</span> <span class="h1-accent">${H.h1MobileAccent||'win qualified buyers'}</span>`; }
+    $('#copy-hero-lead-desktop') && ($('#copy-hero-lead-desktop').textContent = H.leadDesktop||'');
+    $('#copy-hero-lead-mobile') && ($('#copy-hero-lead-mobile').textContent = H.leadMobile||'');
+    $('#cta-desktop') && ($('#cta-desktop').textContent = H.ctaDesktop||'Start'));
+    $('#cta') && ($('#cta').textContent = H.ctaMobile||'Start'));
+    $('#copy-proof-h2') && ($('#copy-proof-h2').textContent = (P.h2||'Proof it works'));
+    $('#copy-proof-sub') && ($('#copy-proof-sub').textContent = (P.sub||''));
+  }
 
   /* --- wallpaper height (static) --- */
   function applyWallpaper(){
@@ -534,7 +611,7 @@ window.SCOREBOARD_KNOBS = {
   /* --- static constellation canvas --- */
   const wrap=$('.const-wrap'); const cvs=$('#constFx'); const ctx=cvs?.getContext('2d');
   function drawBackdrop(){
-    if(!wrap||!cvs) return;
+    if(!wrap||!cvs||!ctx) return;
     const DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
     const r=wrap.getBoundingClientRect(); const W=r.width|0, H=r.height|0;
     cvs.width=(W*DPR)|0; cvs.height=(H*DPR)|0; cvs.style.width=W+'px'; cvs.style.height=H+'px';
@@ -555,6 +632,14 @@ window.SCOREBOARD_KNOBS = {
   const overlay=$('#constOverlay'), glow=$('#anchorGlow');
 
   function hslProb(p){ const H=KN.probHue.min, L=KN.probHue.max; return `hsl(${H+(L-H)*(p/100)},78%,54%)`; }
+
+  function applyCardSizing(){
+    const dims=KN.card||{};
+    const w=(dims.width||KN.stack?.width||260);
+    document.documentElement.style.setProperty('--card-w', w+'px');
+    document.documentElement.style.setProperty('--rail-h', (dims.railHeight||192)+'px');
+    document.documentElement.style.setProperty('--card-pad', (dims.padding||'12px 12px 10px'));
+  }
 
   function positionStack(){
     const r=wrap.getBoundingClientRect();
@@ -583,7 +668,8 @@ window.SCOREBOARD_KNOBS = {
   }
 
   function setProbLabel(){
-    card.querySelector('.prob .lbl').textContent = KN.probLabel || 'Win rate';
+    const lbl=card.querySelector('.prob .lbl');
+    if(lbl){ lbl.textContent = KN.probLabel || 'Win rate'; }
     document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||12)+'px');
     document.documentElement.style.setProperty('--prob-pulse', (KN.probDot?.pulseMs||0)+'ms');
   }
@@ -658,13 +744,92 @@ window.SCOREBOARD_KNOBS = {
     }
   }
 
+  /* --- reveal engine (in/out on scroll; saves CPU offscreen) --- */
+  const AK = window.ANIM_KNOBS||{};
+  function setupReveals(){
+    if(!AK.enable || !('IntersectionObserver' in window)){
+      $$('.reveal').forEach(el=>el.classList.add('reveal-in'));
+      return;
+    }
+    // wire CSS vars from knobs
+    document.documentElement.style.setProperty('--reveal-dur', (AK.durationMs||420)+'ms');
+    document.documentElement.style.setProperty('--reveal-ease', AK.ease||'cubic-bezier(.22,.61,.36,1)');
+    document.documentElement.style.setProperty('--reveal-in-y', (AK.inY||22)+'px');
+    document.documentElement.style.setProperty('--reveal-out-y',(AK.outY||-18)+'px');
+
+    const ioIn = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if(e.intersectionRatio >= (AK.inThreshold||0.28)) e.target.classList.add('reveal-in');
+      });
+    },{root:null, rootMargin:AK.rootMarginIn||'0px 0px -20% 0px', threshold:[0,0.25,0.5,0.75,1]});
+
+    const ioOut = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if(e.intersectionRatio <= (AK.outThreshold||0.08)) e.target.classList.add('reveal-out');
+        else e.target.classList.remove('reveal-out');
+      });
+    },{root:null, rootMargin:AK.rootMarginOut||'-35% 0px -40% 0px', threshold:[0,0.15,0.3,0.6,1]});
+
+    $$('.reveal').forEach(el=>{ ioIn.observe(el); ioOut.observe(el); });
+
+    // hard fail-safe so first screen is visible
+    setTimeout(()=>{ const hero=$('section.hero'); hero && hero.classList.add('reveal-in'); }, 150);
+  }
+
+  /* --- analytics (clicks, dwell, rage/repeat) --- */
+  const AN = window.ANALYTICS_KNOBS||{};
+  const Analytics=(function(){
+    const enabled = !!AN.enabled && Math.random() < (AN.sampleRate??1);
+    const send=(ev)=>{
+      if(!enabled) return;
+      const payload = JSON.stringify(ev);
+      if(AN.endpoint && navigator.sendBeacon){
+        try{ navigator.sendBeacon(AN.endpoint, payload); }catch{ console.log('[analytics→]', ev); }
+      }else{
+        console.log('[analytics]', ev);
+      }
+    };
+    const secState=new Map();
+    function secEnter(id){ const s=secState.get(id)||{}; s.t0=performance.now(); secState.set(id,s); send({t:'section_view', id, ts:Date.now()}); }
+    function secLeave(id){ const s=secState.get(id); if(!s||!s.t0) return; const dt=performance.now()-s.t0; s.t0=0; if(dt>(AN.dwellMinMs||700)) send({t:'section_dwell', id, ms:Math.round(dt), ts:Date.now()}); }
+    function instrumentSections(){
+      if(!('IntersectionObserver' in window)) return;
+      const io=new IntersectionObserver((entries)=>{
+        entries.forEach(e=>{ const id=e.target.getAttribute('data-track-section')||''; if(e.isIntersecting){secEnter(id);} else {secLeave(id);} });
+      },{threshold:0.25});
+      document.querySelectorAll('[data-track-section]').forEach(s=>io.observe(s));
+    }
+    function onClick(e){
+      const t=e.target.closest('[data-track-id]')||e.target;
+      const id=t.getAttribute?.('data-track-id')||(t.id||t.tagName);
+      const sec=e.target.closest('[data-track-section]')?.getAttribute('data-track-section')||'';
+      send({t:'click', id, sec, tag:(t.tagName||''), ts:Date.now()});
+      // rage / repeat
+      onClick.buf=onClick.buf||[];
+      const now=performance.now(); const x=e.clientX, y=e.clientY;
+      onClick.buf.push({x,y,now});
+      const R=AN.rage||{clicks:3,withinMs:800,radius:28};
+      while(onClick.buf.length && now-onClick.buf[0].now>(R.withinMs||800)) onClick.buf.shift();
+      const close=onClick.buf.filter(p=>Math.hypot(p.x-x,p.y-y)<(R.radius||28));
+      if(close.length>=(R.clicks||3)){ send({t:'rage_click', n:close.length, id, sec, ts:Date.now()}); onClick.buf.length=0; }
+      onClick.last=onClick.last||{id:'',ts:0,count:0};
+      if(id===onClick.last.id && now-onClick.last.ts<(AN.repeatClickMs||700)){ onClick.last.count++; if(onClick.last.count>=2) send({t:'repeat_click', id, sec, n:onClick.last.count+1, ts:Date.now()}); } else { onClick.last={id,ts:now,count:0}; }
+    }
+    function start(){ if(!enabled) return; try{ instrumentSections(); document.addEventListener('click', onClick, {capture:true, passive:true}); }catch{} }
+    return { start };
+  })();
+
   /* --- init --- */
   function init(){
+    // copy knobs → DOM
+    applyCopy();
+
     try{
       const seed=JSON.parse(localStorage.getItem('onb.seed')||'{}');
       if(seed?.host) $('#domainTag').textContent=seed.host;
     }catch{}
     drawBackdrop();
+    applyCardSizing();
     positionStack();
     rebuildDeck();
     setProbLabel();
@@ -681,13 +846,15 @@ window.SCOREBOARD_KNOBS = {
       }
     }
     restart();
-    const io=new IntersectionObserver((es)=>{ onScreen=es.some(e=>e.isIntersecting); restart(); },{threshold:.25});
-    io.observe(wrap);
+    if('IntersectionObserver' in window && wrap){
+      const io=new IntersectionObserver((es)=>{ onScreen=es.some(e=>e.isIntersecting); restart(); },{threshold:.25});
+      io.observe(wrap);
+    }
     document.addEventListener('visibilitychange',()=>{ visible=document.visibilityState!=='hidden'; restart(); });
     if(KN.stack.clickAdvance){ rail.addEventListener('click',()=>showNext()); rail.addEventListener('keydown',e=>{ if(['ArrowRight',' ','Enter'].includes(e.key)){ e.preventDefault(); showNext(); } }); }
 
     // light/throttled resize
-    addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackdrop(); positionStack(); placeGlow(); drawLines(); },80); });
+    addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackdrop(); applyCardSizing(); positionStack(); placeGlow(); drawLines(); },80); });
 
     // auto low-power mode for small CPUs
     try{
@@ -703,6 +870,19 @@ window.SCOREBOARD_KNOBS = {
         window.updateScoreboardKnobs?.({ probDot:{ pulseMs:0 } });
       }
     }catch{}
+
+    // NEW: set up section reveals + analytics
+    setupReveals();
+    Analytics.start();
+
+    // NEW: mobile menu toggle (kept tiny)
+    (function(){
+      const burger=$('#burger'), menu=$('#mobileMenu');
+      if(!burger||!menu) return;
+      function set(open){ menu.classList.toggle('open', open); menu.setAttribute('aria-hidden', String(!open)); burger.setAttribute('aria-expanded', String(open)); }
+      burger.addEventListener('click', ()=> set(!menu.classList.contains('open')));
+      menu.addEventListener('click', (e)=>{ if(e.target===menu) set(false); }, {passive:true});
+    })();
   }
   init();
 
@@ -710,8 +890,10 @@ window.SCOREBOARD_KNOBS = {
   window.updateScoreboardKnobs=function(patch){
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
     Object.assign(KN, window.SCOREBOARD_KNOBS);
-    positionStack(); setProbLabel(); placeGlow(); drawLines();
+    applyCardSizing(); positionStack(); setProbLabel(); placeGlow(); drawLines();
   };
+  window.updateCopyKnobs=function(patch){ window.COPY_KNOBS = deepMerge(window.COPY_KNOBS, patch||{}); applyCopy(); };
+  window.updateAnimKnobs=function(patch){ window.ANIM_KNOBS = deepMerge(window.ANIM_KNOBS, patch||{}); };
 
   /* --- counters (unchanged) --- */
   (function(){
