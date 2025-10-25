@@ -161,17 +161,17 @@
     position:relative; isolation:isolate; height:560px;
     border-radius:var(--const-radius); overflow:hidden;
     background:linear-gradient(180deg,#0b121d,#0b1119);
-    filter: drop-shadow(0 10px 24px rgba(0,0,0,var(--const-drop-a)));
+    filter: drop-shadow(0 10px 24px rgba(0,0,0,.14));
   }
   .const-wrap::before{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    box-shadow: inset 0 0 0 var(--const-stroke-w) rgba(255,255,255,var(--const-stroke-a)),
-               inset 0 0 60px rgba(0,0,0,var(--const-vignette-a));
+    box-shadow: inset 0 0 0 var(--const-stroke-w) rgba(255,255,255,.06),
+               inset 0 0 60px rgba(0,0,0,.18);
   }
   .const-wrap::after{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background: linear-gradient(90deg, transparent 0%, var(--const-edge-tint) 96%, transparent 100%);
-    opacity:var(--const-grid-sheen-a);
+    background: linear-gradient(90deg, transparent 0%, rgba(230,195,107,.05) 96%, transparent 100%);
+    opacity:.05;
   }
 
   /* overlay layers */
@@ -190,8 +190,8 @@
 
   .const-legend{
     position:absolute; inset:auto 12px 12px auto; z-index:2;
-    font-size:var(--legend-fs); color:var(--legend-color);
-    background:var(--legend-bg); border:1px solid var(--stroke);
+    font-size:12px; color:#b9cbe0;
+    background:rgba(255,255,255,.06); border:1px solid var(--stroke);
     padding:6px 8px; border-radius:10px
   }
   .const-caption{
@@ -203,7 +203,7 @@
   .domainTag{
     position:absolute; z-index:2; left:14px; top:14px;
     padding:6px 10px; border-radius:999px; font-size:12px;
-    background:rgba(230,195,107,.12); color:var(--gold-300);
+    background:rgba(230,195,107,.12); color:#f2dca0;
     border:1px solid rgba(230,195,107,.25)
   }
 
@@ -230,8 +230,8 @@
     padding:var(--card-pad); border-radius:var(--miniCard-radius);
     background:var(--miniCard-bg);
     -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
-    border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
-    box-shadow:0 8px 22px rgba(0,0,0,var(--miniCard-shadow-a));
+    border:1px solid rgba(255,255,255,.10);
+    box-shadow:0 8px 22px rgba(0,0,0,.24);
     color:#e8f1fb;
   }
   @supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))){
@@ -251,7 +251,7 @@
   .miniCard .ai{display:flex; align-items:center; gap:8px}
   .miniCard .ai svg{width:12px; height:12px; opacity:.9}
 
-  /* Win-rate dot (tiny pulse; can be dropped to 0ms) */
+  /* Win-rate dot */
   .miniCard .prob .lbl{ font-size:11px; color:#a9bfd6; opacity:.95; letter-spacing:.1px }
   .miniCard .prob .dot{
     position:relative; width:var(--prob-dot-size,12px); height:var(--prob-dot-size,12px);
@@ -272,7 +272,6 @@
     100% { transform:scale(2.0); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
   }
 
-  /* faint “other cards” */
   .miniCard.static{ z-index:2; pointer-events:none; opacity:.82; }
   .miniCard.static.s2{ opacity:.66; }
   .miniCard.static.s3{ opacity:.52; }
@@ -483,14 +482,14 @@
 /* Animation knobs (scroll reveal + out) */
 window.ANIM_KNOBS = {
   enableReveal: true,
-  rootMargin: '0px 0px -20% 0px',   // start reveal a bit before center
-  exitMargin:  '-35% 0px -40% 0px', // when to mark as "out"
-  inThreshold: 0.25,                // how much visible to "in"
-  outThreshold: 0.05,               // how little visible to "out"
+  rootMargin: '0px 0px -20% 0px',
+  exitMargin:  '-35% 0px -40% 0px',
+  inThreshold: 0.25,
+  outThreshold: 0.05,
   durationMs: 420,
   ease: 'cubic-bezier(.22,.61,.36,1)',
   fromY: 20,  toY: -16,
-  unmountHidden: false              // if true, sets visibility:hidden after out (layout kept)
+  unmountHidden: false
 };
 
 /* Copy knobs (edit marketing text without touching HTML) */
@@ -522,8 +521,8 @@ window.SCOREBOARD_KNOBS = {
     autoPlay: true, autoMs: 5200
   },
   card: {
-    width: 260,           // live card width
-    railHeight: 192,      // visible area height
+    width: 260,
+    railHeight: 192,
     padding: '12px 12px 10px'
   },
   anchorGlow: { size: 58, pulseMs: 2000, coreA:.95, midA:.50, edgeA:.06 },
@@ -568,14 +567,14 @@ window.SCOREBOARD_KNOBS = {
   }
 };
 
-/* Analytics knobs (lightweight, privacy-friendly by default) */
+/* Analytics knobs */
 window.ANALYTICS_KNOBS = {
   enabled: true,
-  endpoint: '',     // e.g., '/a/collect' — empty = console only
-  sampleRate: 1.0,  // 0..1
+  endpoint: '',     // set to your collector path to enable sendBeacon
+  sampleRate: 1.0,
   dwell: { heartbeatMs: 5000, minMs: 600 },
-  rage:  { clicks: 3, withinMs: 800, radius: 30 }, // rage-click cluster
-  repeatClickMs: 700                                // back-to-back on same target
+  rage:  { clicks: 3, withinMs: 800, radius: 30 },
+  repeatClickMs: 700
 };
 </script>
 
@@ -596,17 +595,16 @@ window.ANALYTICS_KNOBS = {
   function applyCopy(){
     const C = window.COPY_KNOBS||{};
     const H = C.hero||{}, P=C.proof||{};
-    $('#copy-hero-badge') && ($('#copy-hero-badge').textContent = H.badge||'');
-    $('#copy-hero-h1-desktop') && ($('#copy-hero-h1-desktop').textContent = H.h1Desktop||'');
-    // mobile H1 split
+    if($('#copy-hero-badge')) $('#copy-hero-badge').textContent = H.badge||'';
+    if($('#copy-hero-h1-desktop')) $('#copy-hero-h1-desktop').textContent = H.h1Desktop||'';
     const h1m = $('#copy-hero-h1-mobile');
     if(h1m){ h1m.innerHTML = `<span>${H.h1MobileTop||'We help packaging suppliers'}</span> <span class="h1-accent">${H.h1MobileAccent||'win qualified buyers'}</span>`; }
-    $('#copy-hero-lead-desktop') && ($('#copy-hero-lead-desktop').textContent = H.leadDesktop||'');
-    $('#copy-hero-lead-mobile') && ($('#copy-hero-lead-mobile').textContent = H.leadMobile||'');
-    $('#cta-desktop') && ($('#cta-desktop').textContent = H.ctaDesktop||'Start'));
-    $('#cta') && ($('#cta').textContent = H.ctaMobile||'Start'));
-    $('#copy-proof-h2') && ($('#copy-proof-h2').textContent = P.h2||'Proof it works');
-    $('#copy-proof-sub') && ($('#copy-proof-sub').textContent = P.sub||'');
+    if($('#copy-hero-lead-desktop')) $('#copy-hero-lead-desktop').textContent = H.leadDesktop||'';
+    if($('#copy-hero-lead-mobile'))  $('#copy-hero-lead-mobile').textContent  = H.leadMobile||'';
+    if($('#cta-desktop')) $('#cta-desktop').textContent = H.ctaDesktop || 'Start';
+    if($('#cta'))         $('#cta').textContent         = H.ctaMobile  || 'Start';
+    if($('#copy-proof-h2'))  $('#copy-proof-h2').textContent  = P.h2||'Proof it works';
+    if($('#copy-proof-sub')) $('#copy-proof-sub').textContent = P.sub||'';
   }
 
   /* ========= WALLPAPER HEIGHT ========= */
@@ -661,7 +659,6 @@ window.ANALYTICS_KNOBS = {
     stack.style.top  = top +'px';
     stack.style.transform = `translate(-50%,-50%) rotate(${KN.stack.angle||0}deg)`;
 
-    // layout for faint statics
     const mode=(KN.stack.layout||'vertical').toLowerCase();
     const statics=[...document.querySelectorAll('[data-static]')];
     if(mode==='vertical'){
@@ -709,7 +706,6 @@ window.ANALYTICS_KNOBS = {
     const c2=document.createElement('span'); c2.className='chip'; c2.textContent= data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
     chips.appendChild(c1); chips.appendChild(c2);
 
-    // fonts
     el.querySelectorAll('.k').forEach(k=> k.style.font = KN.fonts.k);
     el.querySelectorAll('.v').forEach(v=> v.style.font = KN.fonts.v);
     el.querySelectorAll('.name').forEach(n=> n.style.font = KN.fonts.name);
@@ -748,12 +744,11 @@ window.ANALYTICS_KNOBS = {
     }
   }
 
-  /* ========= REVEAL ENGINE (scroll in/out, GPU-only) ========= */
+  /* ========= REVEAL ENGINE ========= */
   const AK = window.ANIM_KNOBS || {};
   function setupReveals(){
     if(!AK.enableReveal) return;
     const els = $$('.reveal');
-    // set CSS vars from knobs
     document.documentElement.style.setProperty('--reveal-dur', (AK.durationMs||420)+'ms');
     document.documentElement.style.setProperty('--reveal-ease', AK.ease||'cubic-bezier(.22,.61,.36,1)');
     document.documentElement.style.setProperty('--reveal-from', (AK.fromY||20)+'px');
@@ -785,10 +780,10 @@ window.ANALYTICS_KNOBS = {
   }
   function buildThresholds(n){ const t=[]; for(let i=0;i<=n;i++) t.push(i/n); return t; }
 
-  /* ========= ANALYTICS (views, dwell, clicks, rage-clicks) ========= */
+  /* ========= ANALYTICS ========= */
   const AN = window.ANALYTICS_KNOBS || {};
   const Analytics = (function(){
-    const q=[]; const enabled = !!AN.enabled && Math.random() < (AN.sampleRate??1);
+    const enabled = !!AN.enabled && Math.random() < (AN.sampleRate??1);
     function send(ev){
       if(!enabled) return;
       const payload = JSON.stringify(ev);
@@ -798,7 +793,6 @@ window.ANALYTICS_KNOBS = {
         console.log('[analytics]', ev);
       }
     }
-    // section dwell
     const states = new Map();
     function sectionEnter(id){ const s=states.get(id)||{}; if(!s.enter){ s.enter=performance.now(); s.viewed=(s.viewed||0)+1; states.set(id,s); send({t:'section_view', id, ts: Date.now()}); } }
     function sectionLeave(id){
@@ -806,7 +800,6 @@ window.ANALYTICS_KNOBS = {
       const dur=performance.now()-s.enter; s.enter=0; states.set(id,s);
       if(dur >= (AN.dwell?.minMs||600)) send({t:'section_dwell', id, ms: Math.round(dur), ts: Date.now()});
     }
-    // clicks + rage cluster
     const recent=[]; let lastByTarget = { id:'', ts:0, count:0 };
     function onClick(e){
       const x=e.clientX, y=e.clientY, ts=performance.now();
@@ -815,22 +808,18 @@ window.ANALYTICS_KNOBS = {
       const sec = e.target.closest('[data-track-section]')?.getAttribute('data-track-section') || '';
       const isInteractive = ['A','BUTTON','INPUT','SELECT','TEXTAREA','SUMMARY'].includes(target.tagName) || target.getAttribute?.('role')==='button';
       send({t:'click', id, sec, tag: target.tagName, interactive: !!isInteractive, x, y, ts: Date.now()});
-
-      // rage cluster detection
+      // rage cluster
       recent.push({x,y,ts});
       const R = AN.rage||{clicks:3,withinMs:800,radius:30};
       while(recent.length && ts - recent[0].ts > (R.withinMs||800)) recent.shift();
       const near = recent.filter(p => Math.hypot(p.x-x, p.y-y) < (R.radius||30));
       if(near.length >= (R.clicks||3)) { send({t:'rage_click', id, sec, n: near.length, ts: Date.now()}); recent.length=0; }
-
-      // repeated clicks on same target
+      // repeated target
       if(id === lastByTarget.id && ts - lastByTarget.ts < (AN.repeatClickMs||700)){
         lastByTarget.count++;
         if(lastByTarget.count>=2) send({t:'repeat_click', id, sec, n:lastByTarget.count+1, ts: Date.now()});
       }else{ lastByTarget = { id, ts, count:0 }; }
     }
-
-    // attach section observers
     function instrumentSections(){
       const io = new IntersectionObserver((entries)=>{
         entries.forEach(e=>{
@@ -838,9 +827,9 @@ window.ANALYTICS_KNOBS = {
           if(e.isIntersecting){ sectionEnter(id); } else { sectionLeave(id); }
         });
       },{threshold:0.25});
-      $$('[data-track-section]').forEach(s=>io.observe(s));
+      $$('.[data-track-section]'); // just to avoid unused-var lint in some toolchains
+      Array.from(document.querySelectorAll('[data-track-section]')).forEach(s=>io.observe(s));
     }
-
     function start(){ if(!enabled) return; instrumentSections(); document.addEventListener('click', onClick, {capture:true, passive:true}); }
     return { start, send };
   })();
@@ -848,16 +837,13 @@ window.ANALYTICS_KNOBS = {
   /* ========= INIT ========= */
   let restartAutoRef = null;
   function init(){
-    // apply copy
     applyCopy();
 
-    // domain badge from local storage
     try{
       const host=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "";
       $("#domainTag") && ( $("#domainTag").textContent = host || "yourcompany.com" );
     }catch{}
 
-    // canvases + stack
     drawBackdrop();
     applyCardSizing();
     positionStack();
@@ -866,7 +852,7 @@ window.ANALYTICS_KNOBS = {
     paintLead(liveCard, deck[0]);
     placeGlow(); drawLines();
 
-    // autoplay (pause when offscreen / tab hidden / reduced motion)
+    // autoplay gate
     let timer, isOnScreen = true, isDocVisible = document.visibilityState !== 'hidden';
     const noMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     function restartAuto(){
@@ -885,13 +871,11 @@ window.ANALYTICS_KNOBS = {
 
     document.addEventListener('visibilitychange', ()=>{ isDocVisible = document.visibilityState !== 'hidden'; restartAuto(); });
 
-    // click/tap to advance
     if (KN.stack.clickAdvance){
       rail.addEventListener('click', ()=>{ showNext(); }, {passive:true});
       rail.addEventListener('keydown', (e)=>{ if(e.key==='ArrowRight'||e.key===' '||e.key==='Enter'){ e.preventDefault(); showNext(); }});
     }
 
-    // throttled resize
     addEventListener('resize', ()=>{
       clearTimeout(init._r);
       init._r = setTimeout(()=>{
@@ -899,7 +883,6 @@ window.ANALYTICS_KNOBS = {
       }, 80);
     });
 
-    // auto low-power for small CPUs
     try{
       const cores = navigator.hardwareConcurrency||2;
       if(cores <= 4){
@@ -913,7 +896,6 @@ window.ANALYTICS_KNOBS = {
       }
     }catch{}
 
-    // reveal engine + analytics
     setupReveals();
     Analytics.start();
   }
@@ -928,135 +910,6 @@ window.ANALYTICS_KNOBS = {
   };
   window.updateAnimKnobs = function(patch){ window.ANIM_KNOBS = deepMerge(window.ANIM_KNOBS, patch||{}); };
   window.updateCopyKnobs = function(patch){ window.COPY_KNOBS = deepMerge(window.COPY_KNOBS, patch||{}); applyCopy(); };
-
-  /* ========= COUNTERS (unchanged) ========= */
-  (function(){
-    const section = document.getElementById("proof"); if (!section) return;
-    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const nums = Array.from(section.querySelectorAll(".num")); let fired=false;
-    function format(v, fmt){ if (fmt==="dec1") return v.toFixed(1); const s=Math.round(v).toString(); return s.replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-    function animate(el){
-      const to = parseFloat(el.dataset.to||"0"); const fmt = el.dataset.format||"int";
-      if (noMotion){ el.textContent = format(to, fmt); return; }
-      const dur = 1200; const start = performance.now();
-      function tick(now){ const p=Math.min(1,(now-start)/dur); const ease=1-Math.pow(1-p,3); const val=to*ease; el.textContent=format(val,fmt); if (p<1) requestAnimationFrame(tick); }
-      requestAnimationFrame(tick);
-    }
-    const io = new IntersectionObserver((entries)=>{
-      entries.forEach(e=>{ if (!fired && e.isIntersecting){ fired=true; nums.forEach(animate); io.disconnect(); }});
-    },{threshold:0.30});
-    io.observe(section);
-  })();
-
-  /* ========= MODAL (unchanged) ========= */
-  (function(){
-    const modal = $("#modal");
-    modal.innerHTML =
-      '<div class="card" role="document">\
-        <div class="card-hd">\
-          <div class="steps" aria-label="Steps">\
-            <span class="dot on" data-step-dot="0"></span>\
-            <span class="dot" data-step-dot="1"></span>\
-          </div>\
-          <div style="display:flex;gap:10px;align-items:center">\
-            <span id="apiBadge" class="api-badge">Ready</span>\
-            <button id="close" class="x" aria-label="Close">✕</button>\
-          </div>\
-        </div>\
-        <div class="card-bd"><div class="scroll">\
-          <section class="step" id="step1">\
-            <div class="pill">Get set up in 60 seconds</div>\
-            <h2 style="margin:10px 0 14px;">Pick your side</h2>\
-            <div class="accordion">\
-              <div class="acc-hd" role="button" tabindex="0"><h4>Role</h4><div class="hint">Required</div></div>\
-              <div class="acc-bd">\
-                <div class="chips" id="roleChips">\
-                  <span id="opt-supplier" class="chip active">🙌 I sell packaging (Supplier)</span>\
-                  <span id="opt-buyer" class="chip">🛒 I buy packaging (Buyer)</span>\
-                </div>\
-              </div>\
-            </div>\
-          </section>\
-          <section class="step" id="step2" hidden>\
-            <div class="pill">Step 2 of 2</div>\
-            <h2 style="margin:10px 0 14px;">Tell us who you are</h2>\
-            <div class="accordion">\
-              <div class="acc-hd" role="button" tabindex="0"><h4>Contact & company</h4><div class="hint">Required</div></div>\
-              <div class="acc-bd">\
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">\
-                  <div>\
-                    <div class="field"><label>Your name</label><input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter"></div>\
-                    <div class="field"><label>Phone (required for alerts) *</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/><div class="hint">Include country code (e.g., “+1”).</div></div>\
-                  </div>\
-                  <div>\
-                    <div class="field"><label>Business email *</label><input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required/></div>\
-                    <div class="field"><label>Website / Domain</label><input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/><div class="hint">Auto-filled from your email. You can edit.</div></div>\
-                  </div>\
-                </div>\
-                <div class="hint" id="apiStatus" style="margin-top:8px">Step 3 opens in a new screen.</div>\
-              </div>\
-            </div>\
-          </section>\
-        </div>\
-        <div class="card-ft">\
-          <button id="back" class="btn ghost" type="button">Back</button>\
-          <button id="next" class="btn primary" type="button">Continue</button>\
-        </div></div>\
-      </div>';
-
-    const normHost=(h)=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
-    const domainFromEmail=(e)=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
-    const openBtnMobile=$("#cta"), openBtnDesktop=$("#cta-desktop");
-    const closeBtn=$("#close"); const backBtn=$("#back"), nextBtn=$("#next");
-    const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
-    const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
-    const dots=[...document.querySelectorAll("[data-step-dot]")];
-    const state={ step:0, role:"supplier" };
-    function show(step){
-      state.step=step;
-      ["#step1","#step2"].forEach((id,i)=>{const el=document.querySelector(id); if(!el) return; el.hidden=i!==step; dots[i]?.classList.toggle("on", i===step);});
-      backBtn.style.visibility = step===0 ? "hidden" : "visible";
-      nextBtn.textContent = step===0 ? "Next" : "Continue";
-    }
-    function open(){ $("#modal").classList.add("show"); $("#modal").style.display="flex"; $("#modal").setAttribute("aria-hidden","false"); show(0); }
-    function close(){ $("#modal").classList.remove("show"); $("#modal").style.display="none"; $("#modal").setAttribute("aria-hidden","true"); }
-    $("#navStart")?.addEventListener("click",(e)=>{e.preventDefault();open();});
-    openBtnMobile?.addEventListener("click", open); openBtnDesktop?.addEventListener("click", open); closeBtn?.addEventListener("click", close);
-    backBtn?.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
-    nextBtn?.addEventListener("click", ()=>{
-      if (state.step===0){ show(1); return; }
-      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
-      const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
-      if (!hostCandidate){ alert("Please provide your website/domain."); return; }
-      const seed = { role: state.role, contact: { name: nameEl.value.trim(), phone: phoneEl.value.trim(), email: emailEl.value.trim() }, host: hostCandidate };
-      try{
-        localStorage.setItem("onb.seed", JSON.stringify(seed));
-        localStorage.setItem("fp.supplier.host", hostCandidate);
-        localStorage.setItem("email", seed.contact.email);
-        localStorage.setItem("contact.name", seed.contact.name||"");
-        localStorage.setItem("contact.phone", seed.contact.phone||"");
-      }catch{}
-      window.location.href = "step3.html";
-    });
-    function setRole(r){ state.role=r; optSupplier?.classList.toggle("active", r==="supplier"); optBuyer?.classList.toggle("active", r==="buyer"); }
-    optSupplier?.addEventListener("click",()=>setRole("supplier"));
-    optBuyer?.addEventListener("click",()=>setRole("buyer"));
-    function syncDomain(){
-      const d=(emailEl && domainFromEmail(emailEl.value)) || "";
-      if (d) hostEl.value=d;
-      const tag=$("#domainTag");
-      tag && (tag.textContent = d || hostEl?.value || "yourcompany.com");
-    }
-    emailEl?.addEventListener("input",syncDomain); emailEl?.addEventListener("change",syncDomain); setTimeout(syncDomain, 80);
-    $("#modal")?.addEventListener("keydown",(e)=>{
-      if (e.key==="Escape"){ e.preventDefault(); close(); return; }
-      const tag=(e.target&&e.target.tagName)||"";
-      if(e.key==="Enter" && !(tag==="INPUT"||tag==="TEXTAREA"||tag==="A"||tag==="BUTTON")){ e.preventDefault(); nextBtn.click(); }
-    });
-  })();
-
-  /* ========= COPY + REVEAL + ANALYTICS re-run on knobs change ========= */
-  window.addEventListener('copyKnobsChanged', applyCopy);
 
 })();
 </script>
