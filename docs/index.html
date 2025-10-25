@@ -102,7 +102,6 @@
   .nav-demo{display:inline-block; padding:8px 12px; border-radius:999px; border:1px solid var(--stroke);
     background:rgba(255,255,255,.02); color:#cfe0ee; font-weight:600; opacity:.9}
   .nav-demo:hover,.nav-demo:focus-visible{opacity:1; border-color:#2b445c}
-  <!-– Start button now goes directly to start.html –->
   .nav-cta{padding:8px 14px; border-radius:999px; color:var(--ctaText);
     background:linear-gradient(180deg,var(--gold),var(--gold-700));
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
@@ -168,8 +167,8 @@
   }
 
   /* overlay layers */
-  #constFx{position:absolute; inset:0; z-index:0}
-  #constOverlay{position:absolute; inset:0; z-index:1; pointer-events:none}
+  #constFx{position:absolute; inset:0; z-index:0}        /* STATIC canvas (no RAF) */
+  #constOverlay{position:absolute; inset:0; z-index:1; pointer-events:none} /* static lines */
   #anchorGlow{
     position:absolute; pointer-events:none; z-index:1; border-radius:999px;
     transform: translate(-50%,-50%) scale(1);
@@ -202,9 +201,9 @@
 
   /* STACK (vertical ladder) */
   .cardStack{ position:absolute; z-index:2; transform-origin:center center; }
-  .cardStack .rail{ position:relative; width:var(--card-w); height:var(--rail-h); pointer-events:auto; }
+  .cardStack .rail{ position:relative; width:var(--card-w); height:var(--rail-h); pointer-events:auto; } /* size knobs */
 
-  /* Static paper behind the live card */
+  /* Static “paper” behind the live card (cheap) */
   .stackGhost{
     position:absolute; left:50%; bottom:0; width:calc(var(--card-w) - 50px); height:118px; border-radius:12px;
     transform:translateX(-50%);
@@ -228,7 +227,7 @@
     color:#e8f1fb;
   }
   @supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))){
-    .miniCard{ background:rgba(16,22,35,.92); }
+    .miniCard{ background:rgba(16,22,35,.92); } /* cheap fallback */
   }
   .miniCard .row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:2px 0}
   .miniCard .k{font-size:11px;color:#a9bfd6}
@@ -239,12 +238,6 @@
     padding:5px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06)
   }
   .miniCard .prob{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700}
-  .miniCard .chips{display:flex; flex-wrap:wrap; gap:6px}
-  .miniCard .chip{font-size:11px; padding:4px 7px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:rgba(255,255,255,.04)}
-  .miniCard .ai{display:flex; align-items:center; gap:8px}
-  .miniCard .ai svg{width:12px; height:12px; opacity:.9}
-
-  /* Prob dot */
   .miniCard .prob .lbl{ font-size:11px; color:#a9bfd6; opacity:.95; letter-spacing:.1px }
   .miniCard .prob .dot{
     position:relative; width:var(--prob-dot-size,12px); height:var(--prob-dot-size,12px);
@@ -265,6 +258,7 @@
     100% { transform:scale(2.0); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
   }
 
+  /* Faint “other cards” behind the live one (vertical ladder) */
   .miniCard.static{ z-index:2; pointer-events:none; opacity:.82; }
   .miniCard.static.s2{ opacity:.66; }
   .miniCard.static.s3{ opacity:.52; }
@@ -299,6 +293,7 @@
     background:linear-gradient(180deg,var(--gold-300),var(--gold-700));-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px}
   .kpi .hint{font-size:12px;color:#8ba6bf;margin-top:6px}
 
+  /* NEW: reveal animation states (kept light) */
   .reveal{opacity:0; transform:translateY(var(--reveal-in-y)) scale(.995);
     transition: opacity var(--reveal-dur) var(--reveal-ease),
                transform var(--reveal-dur) var(--reveal-ease);}
@@ -316,8 +311,10 @@
     .actions{ justify-content:center; width:100%; }
     .actions.show-mobile{ flex-direction:column; gap:12px; }
     .actions.show-mobile .btn{ width:100%; padding:16px 20px; justify-content:center; text-align:center; }
+    /* Accessible skip label */
     .visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
     
+    /* Input + button group */
     .actions .inputGroup{
       display:flex; align-items:stretch; gap:10px;
     }
@@ -335,7 +332,8 @@
     .actions .inputGroup input:focus{
       border-color:#2b445c; box-shadow:0 8px 22px rgba(0,0,0,.22), 0 0 0 2px rgba(99,211,255,.18) inset;
     }
-
+    
+    /* Mobile: center + stack */
     @media (max-width:900px){
       .actions.show-mobile{ justify-content:center; width:100%; }
       .actions.show-mobile .inputGroup{
@@ -371,7 +369,7 @@
       <div class="nav-actions">
         <a class="nav-login" href="login.html" data-track-id="nav-login">Login</a>
         <a class="nav-demo" href="https://www.youtube.com" target="_blank" rel="noopener" data-track-id="nav-demo">Get Demo</a>
-        <a class="nav-cta" href="start.html" id="navStart" data-track-id="nav-start">Start Free</a>
+        <a class="nav-cta" href="#get-started" id="navStart" data-track-id="nav-start">Start Free</a>
       </div>
       <button id="burger" class="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false" data-track-id="burger">
         <span aria-hidden="true"></span><span aria-hidden="true"></span>
@@ -382,7 +380,7 @@
   <!-- Mobile glass menu -->
   <div id="mobileMenu" aria-hidden="true">
     <div class="sheet" role="menu">
-      <a id="mobileStart" class="mm-cta" href="start.html" role="menuitem" data-track-id="mm-start">✨ Start Free</a>
+      <a id="mobileStart" class="mm-cta" href="#get-started" role="menuitem" data-track-id="mm-start">✨ Start Free</a>
       <a class="mm-link" href="login.html" role="menuitem" data-track-id="mm-login">Login</a>
       <a class="mm-link" href="https://www.youtube.com" target="_blank" rel="noopener" role="menuitem" data-track-id="mm-demo">Get Demo</a>
       <hr>
@@ -402,7 +400,7 @@
         <h1 class="show-mobile" id="copy-hero-h1-mobile"><span>We help packaging suppliers</span> <span class="h1-accent">win qualified buyers</span></h1>
         <p class="lead show-desktop" id="copy-hero-lead-desktop">We filter the noise and surface real companies already signaling intent in your strengths.</p>
         <p class="lead show-mobile" id="copy-hero-lead-mobile">One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.</p>
-         <!-- Desktop CTA -->
+         <!-- Desktop CTA: replace this whole block -->
         <div class="actions show-desktop" id="get-started-desktop">
           <div class="inputGroup">
             <label class="visually-hidden" for="hostHeroDesktop">Your website</label>
@@ -413,7 +411,7 @@
             </button>
           </div>
         </div>
-        <!-- Mobile CTA -->
+        <!-- Mobile CTA: replace this whole block -->
         <div class="actions show-mobile" id="get-started">
           <div class="inputGroup">
             <label class="visually-hidden" for="hostHeroMobile">Your website</label>
@@ -458,7 +456,7 @@
               <div class="chips" data-tags></div>
             </div>
 
-            <!-- faint static “cards” -->
+            <!-- faint static “cards” to sell the stack (vertical ladder) -->
             <div class="miniCard static s1" data-static>
               <div class="row"><span class="k">Buyer</span><span class="v name">Volt Pharma — Denver, CO</span></div>
               <div class="row"><span class="k">Distance</span><span class="v">15 mi</span></div>
@@ -508,8 +506,12 @@
   <!-- SECTION 4 – Orbit -->
   <div id="section-orbit" class="reveal" data-track-section="orbit"></div>
 
+  <!-- MODAL -->
+  <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none"></div>
+
 <!-- ===== KNOBS ===== -->
 <script>
+/* NEW: Copy knobs — tweak hero/proof copy without touching HTML */
 window.COPY_KNOBS = {
   hero: {
     badge: 'Built for packaging suppliers',
@@ -527,6 +529,7 @@ window.COPY_KNOBS = {
   }
 };
 
+/* NEW: Section animation knobs */
 window.ANIM_KNOBS = {
   enable: true,
   inThreshold: 0.28,
@@ -540,10 +543,11 @@ window.ANIM_KNOBS = {
   unmountHidden: false
 };
 
+/* NEW: Lightweight analytics knobs */
 window.ANALYTICS_KNOBS = {
   enabled: true,
-  endpoint: '',
-  sampleRate: 1.0,
+  endpoint: '',      // set to your collector to use sendBeacon
+  sampleRate: 1.0,   // 0–1
   dwellMinMs: 700,
   heartbeatMs: 6000,
   rage: { clicks: 3, withinMs: 800, radius: 28 },
@@ -551,20 +555,24 @@ window.ANALYTICS_KNOBS = {
 };
 
 window.SCOREBOARD_KNOBS = {
+  /* placement + behavior */
   stack: {
-    layout: 'vertical',
-    left: 0.78,
+    layout: 'vertical',   // 'vertical' or 'fan'
+    left: 0.78,           // relative inside panel
     top:  0.58,
-    width: 260,
-    angle: 0,
+    width: 260,           // rail width (also used for card via CSS var)
+    angle: 0,             // not tilted
     clickAdvance: true,
     autoPlay: true, autoMs: 5200
   },
+  /* NEW: card sizing knobs (wired to CSS variables) */
   card: { width: 260, railHeight: 192, padding: '12px 12px 10px' },
+
   anchorGlow: { size: 58, pulseMs: 2000, coreA:.95, midA:.50, edgeA:.06 },
   lines: { count: 4, jitter: 12, width: 1, alpha: .14 },
+
   probLabel: 'Win rate',
-  probDot: { size: 12, pulseMs: 1100 },
+  probDot: { size: 12, pulseMs: 1100 },   // set pulseMs:0 to fully stop
   probHue: { min: 5, max: 130 },
   fonts: { k: "11px Inter, system-ui", v: "700 14px Inter, system-ui", name: "700 15px Inter, system-ui" },
   stages: {
@@ -608,12 +616,14 @@ window.SCOREBOARD_KNOBS = {
   const $  = (q)=>document.querySelector(q);
   const $$ = (q)=>Array.from(document.querySelectorAll(q));
 
+  /* --- utils --- */
   const KN = window.SCOREBOARD_KNOBS;
   const deepMerge=(b,p)=>{const o=Array.isArray(b)?[...b]:{...b}; for(const k in p){const v=p[k]; o[k]=(v&&typeof v==='object'&&!Array.isArray(v))?deepMerge(b[k]||{},v):v;} return o;};
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const pick=(a)=>a[(Math.random()*a.length)|0];
   const range=([a,b])=>a+Math.random()*(b-a);
 
+  /* --- copy apply --- */
   function applyCopy(){
     const C=window.COPY_KNOBS||{};
     const H=C.hero||{}, P=C.proof||{};
@@ -629,6 +639,7 @@ window.SCOREBOARD_KNOBS = {
     $('#copy-proof-sub') && ($('#copy-proof-sub').textContent = (P.sub||''));
   }
 
+  /* --- wallpaper height (static) --- */
   function applyWallpaper(){
     const el=$('#pageWallpaper'); if(!el) return;
     const hero=$('.hero'); const proof=$('#proof');
@@ -638,7 +649,7 @@ window.SCOREBOARD_KNOBS = {
   addEventListener('resize',()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t=setTimeout(applyWallpaper,60); });
   document.addEventListener('DOMContentLoaded',applyWallpaper);
 
-  /* static constellation canvas */
+  /* --- static constellation canvas --- */
   const wrap=$('.const-wrap'); const cvs=$('#constFx'); const ctx=cvs?.getContext('2d');
   function drawBackdrop(){
     if(!wrap||!cvs||!ctx) return;
@@ -657,6 +668,7 @@ window.SCOREBOARD_KNOBS = {
     ctx.fillStyle="rgba(242,220,160,0.95)"; ctx.beginPath(); ctx.arc(0.18*W,0.52*H,3.5,0,Math.PI*2); ctx.fill();
   }
 
+  /* --- stack + content --- */
   const stack=$('#cardStack'), rail=$('#stackRail'), card=$('#cardA');
   const overlay=$('#constOverlay'), glow=$('#anchorGlow');
 
@@ -678,14 +690,17 @@ window.SCOREBOARD_KNOBS = {
     rail.style.width=(KN.stack.width||260)+'px';
     rail.style.height='192px';
 
+    // set layout for the three faint statics
     const mode=(KN.stack.layout||'vertical').toLowerCase();
     const statics=[...document.querySelectorAll('[data-static]')];
     if(mode==='vertical'){
+      // ladder: 12px vertical step, tiny scale down
       statics.forEach((el,i)=>{
         const stepY = 14*(i+1); const scale = 1 - 0.06*(i+1);
         el.style.transform = `translate(-50%,-50%) translateY(${stepY}px) scale(${scale})`;
       });
     }else{
+      // fan (slight offset): still cheap, but a bit diagonal
       statics.forEach((el,i)=>{
         const stepY = 10*(i+1), stepX = 10*(i+1); const scale = 1 - 0.06*(i+1);
         el.style.transform = `translate(-50%,-50%) translate(${stepX}px, ${stepY}px) scale(${scale})`;
@@ -736,10 +751,12 @@ window.SCOREBOARD_KNOBS = {
     el.querySelectorAll('.name').forEach(n=> n.style.font=KN.fonts.name);
   }
 
+  // data deck (cheap) + autoplay with visibility gating
   const stages=['hotp','hot','warm']; let deck=[];
   function rebuildDeck(){ deck.length=0; for(let i=0;i<24;i++) deck.push(genLead(stages[i%stages.length])); }
   function showNext(){ deck.push(deck.shift()); paintLead(card, deck[0]); }
 
+  /* --- anchor glow + static lines (no RAF) --- */
   function anchorPos(){ const r=wrap.getBoundingClientRect(); return { x: .18*r.width, y: .52*r.height }; }
   function placeGlow(){
     const a=anchorPos(); const G=KN.anchorGlow;
@@ -768,12 +785,14 @@ window.SCOREBOARD_KNOBS = {
     }
   }
 
+  /* --- reveal engine (in/out on scroll; saves CPU offscreen) --- */
   const AK = window.ANIM_KNOBS||{};
   function setupReveals(){
     if(!AK.enable || !('IntersectionObserver' in window)){
       $$('.reveal').forEach(el=>el.classList.add('reveal-in'));
       return;
     }
+    // wire CSS vars from knobs
     document.documentElement.style.setProperty('--reveal-dur', (AK.durationMs||420)+'ms');
     document.documentElement.style.setProperty('--reveal-ease', AK.ease||'cubic-bezier(.22,.61,.36,1)');
     document.documentElement.style.setProperty('--reveal-in-y', (AK.inY||22)+'px');
@@ -794,9 +813,11 @@ window.SCOREBOARD_KNOBS = {
 
     $$('.reveal').forEach(el=>{ ioIn.observe(el); ioOut.observe(el); });
 
+    // hard fail-safe so first screen is visible
     setTimeout(()=>{ const hero=$('section.hero'); hero && hero.classList.add('reveal-in'); }, 150);
   }
 
+  /* --- analytics (clicks, dwell, rage/repeat) --- */
   const AN = window.ANALYTICS_KNOBS||{};
   const Analytics=(function(){
     const enabled = !!AN.enabled && Math.random() < (AN.sampleRate??1);
@@ -824,6 +845,7 @@ window.SCOREBOARD_KNOBS = {
       const id=t.getAttribute?.('data-track-id')||(t.id||t.tagName);
       const sec=e.target.closest('[data-track-section]')?.getAttribute('data-track-section')||'';
       send({t:'click', id, sec, tag:(t.tagName||''), ts:Date.now()});
+      // rage / repeat
       onClick.buf=onClick.buf||[];
       const now=performance.now(); const x=e.clientX, y=e.clientY;
       onClick.buf.push({x,y,now});
@@ -838,12 +860,14 @@ window.SCOREBOARD_KNOBS = {
     return { start };
   })();
 
+  /* --- init --- */
   function init(){
+    // copy knobs → DOM
     applyCopy();
 
     try{
       const seed=JSON.parse(localStorage.getItem('onb.seed')||'{}');
-      if(seed?.host) document.querySelector('#domainTag').textContent=seed.host;
+      if(seed?.host) $('#domainTag').textContent=seed.host;
     }catch{}
     drawBackdrop();
     applyCardSizing();
@@ -853,6 +877,7 @@ window.SCOREBOARD_KNOBS = {
     paintLead(card, deck[0]);
     placeGlow(); drawLines();
 
+    // autoplay gate
     let timer, onScreen=true, visible=document.visibilityState!=='hidden';
     const noMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     function restart(){
@@ -869,8 +894,10 @@ window.SCOREBOARD_KNOBS = {
     document.addEventListener('visibilitychange',()=>{ visible=document.visibilityState!=='hidden'; restart(); });
     if(KN.stack.clickAdvance){ rail.addEventListener('click',()=>showNext()); rail.addEventListener('keydown',e=>{ if(['ArrowRight',' ','Enter'].includes(e.key)){ e.preventDefault(); showNext(); } }); }
 
+    // light/throttled resize
     addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackdrop(); applyCardSizing(); positionStack(); placeGlow(); drawLines(); },80); });
 
+    // auto low-power mode for small CPUs
     try{
       const cores = navigator.hardwareConcurrency||2;
       if(cores <= 4){
@@ -880,15 +907,18 @@ window.SCOREBOARD_KNOBS = {
           el.style.background='rgba(16,22,35,.92)';
           el.style.boxShadow='0 6px 16px rgba(0,0,0,.22)';
         });
+        // chill the pulse
         window.updateScoreboardKnobs?.({ probDot:{ pulseMs:0 } });
       }
     }catch{}
 
+    // NEW: set up section reveals + analytics
     setupReveals();
     Analytics.start();
 
+    // NEW: mobile menu toggle (kept tiny)
     (function(){
-      const burger=document.getElementById('burger'), menu=document.getElementById('mobileMenu');
+      const burger=$('#burger'), menu=$('#mobileMenu');
       if(!burger||!menu) return;
       function set(open){ menu.classList.toggle('open', open); menu.setAttribute('aria-hidden', String(!open)); burger.setAttribute('aria-expanded', String(open)); }
       burger.addEventListener('click', ()=> set(!menu.classList.contains('open')));
@@ -897,6 +927,7 @@ window.SCOREBOARD_KNOBS = {
   }
   init();
 
+  /* --- live knob patch --- */
   window.updateScoreboardKnobs=function(patch){
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
     Object.assign(KN, window.SCOREBOARD_KNOBS);
@@ -904,36 +935,158 @@ window.SCOREBOARD_KNOBS = {
   };
   window.updateCopyKnobs=function(patch){ window.COPY_KNOBS = deepMerge(window.COPY_KNOBS, patch||{}); applyCopy(); };
   window.updateAnimKnobs=function(patch){ window.ANIM_KNOBS = deepMerge(window.ANIM_KNOBS, patch||{}); };
-})();
-</script>
 
-<!-- Lightweight CTA handoff (captures host → start.html) -->
-<script>
-(function(){
-  function normHost(h){
-    return (h||'').trim().toLowerCase()
-      .replace(/^[a-z]+:\/\//,'').replace(/^www\./,'').replace(/\/.*$/,'').replace(/:\d+$/,'').replace(/\s/g,'');
-  }
-  function handoff(raw){
-    const host = normHost(raw);
-    try{
-      const seed = JSON.parse(localStorage.getItem('onb.seed') || '{}');
-      if(host) seed.host = host;
-      localStorage.setItem('onb.seed', JSON.stringify(seed));
-      if(host) localStorage.setItem('fp.supplier.host', host);
-    }catch{}
-    const url = 'start.html' + (host ? ('?host=' + encodeURIComponent(host)) : '');
-    window.location.href = url;
-  }
-  const hd = document.getElementById('hostHeroDesktop');
-  const hm = document.getElementById('hostHeroMobile');
-  const bd = document.getElementById('cta-desktop');
-  const bm = document.getElementById('cta');
-  bd?.addEventListener('click', ()=> handoff(hd?.value));
-  bm?.addEventListener('click', ()=> handoff(hm?.value));
-  [hd, hm].forEach(el => el?.addEventListener('keydown', e=>{
-    if(e.key==='Enter'){ e.preventDefault(); (el===hd?bd:bm)?.click(); }
-  }));
+  /* --- counters (unchanged) --- */
+  (function(){
+    const section = document.getElementById("proof"); if (!section) return;
+    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const nums = Array.from(section.querySelectorAll(".num")); let fired=false;
+    function format(v, fmt){ if (fmt==="dec1") return v.toFixed(1); const s=Math.round(v).toString(); return s.replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+    function animate(el){
+      const to = parseFloat(el.dataset.to||"0"); const fmt = el.dataset.format||"int";
+      if (noMotion){ el.textContent = format(to, fmt); return; }
+      const dur = 1200; const start = performance.now();
+      function tick(now){ const p=Math.min(1,(now-start)/dur); const ease=1-Math.pow(1-p,3); const val=to*ease; el.textContent=format(val,fmt); if (p<1) requestAnimationFrame(tick); }
+      requestAnimationFrame(tick);
+    }
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{ if (!fired && e.isIntersecting){ fired=true; nums.forEach(animate); io.disconnect(); }});
+    },{threshold:0.30});
+    io.observe(section);
+  })();
+
+  /* --- modal (unchanged) --- */
+  (function(){
+    const modal = document.getElementById("modal");
+    modal.innerHTML =
+      '<div class="card" role="document">\
+        <div class="card-hd">\
+          <div class="steps" aria-label="Steps">\
+            <span class="dot on" data-step-dot="0"></span>\
+            <span class="dot" data-step-dot="1"></span>\
+          </div>\
+          <div style="display:flex;gap:10px;align-items:center">\
+            <span id="apiBadge" class="api-badge">Ready</span>\
+            <button id="close" class="x" aria-label="Close">✕</button>\
+          </div>\
+        </div>\
+        <div class="card-bd"><div class="scroll">\
+          <section class="step" id="step1">\
+            <div class="pill">Get set up in 60 seconds</div>\
+            <h2 style="margin:10px 0 14px;">Pick your side</h2>\
+            <div class="accordion">\
+              <div class="acc-hd" role="button" tabindex="0"><h4>Role</h4><div class="hint">Required</div></div>\
+              <div class="acc-bd">\
+                <div class="chips" id="roleChips">\
+                  <span id="opt-supplier" class="chip active">🙌 I sell packaging (Supplier)</span>\
+                  <span id="opt-buyer" class="chip">🛒 I buy packaging (Buyer)</span>\
+                </div>\
+              </div>\
+            </div>\
+          </section>\
+          <section class="step" id="step2" hidden>\
+            <div class="pill">Step 2 of 2</div>\
+            <h2 style="margin:10px 0 14px;">Tell us who you are</h2>\
+            <div class="accordion">\
+              <div class="acc-hd" role="button" tabindex="0"><h4>Contact & company</h4><div class="hint">Required</div></div>\
+              <div class="acc-bd">\
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">\
+                  <div>\
+                    <div class="field"><label>Your name</label><input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter"></div>\
+                    <div class="field"><label>Phone (required for alerts) *</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/><div class="hint">Include country code (e.g., “+1”).</div></div>\
+                  </div>\
+                  <div>\
+                    <div class="field"><label>Business email *</label><input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required/></div>\
+                    <div class="field"><label>Website / Domain</label><input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/><div class="hint">Auto-filled from your email. You can edit.</div></div>\
+                  </div>\
+                </div>\
+                <div class="hint" id="apiStatus" style="margin-top:8px">Step 3 opens in a new screen.</div>\
+              </div>\
+            </div>\
+          </section>\
+        </div>\
+        <div class="card-ft">\
+          <button id="back" class="btn ghost" type="button">Back</button>\
+          <button id="next" class="btn primary" type="button">Continue</button>\
+        </div></div>\
+      </div>';
+
+    const normHost=(h)=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+    const domainFromEmail=(e)=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
+    const openBtnMobile=document.getElementById("cta"), openBtnDesktop=document.getElementById("cta-desktop");
+    // NEW: hero inputs
+    const heroHostD = document.getElementById("hostHeroDesktop");
+    const heroHostM = document.getElementById("hostHeroMobile");
+    
+    // Helper: pull + normalize the host from either hero field
+    function heroHost(){
+      const raw = (heroHostD?.value || heroHostM?.value || "").trim();
+      const h = normHost(raw);
+      return h;
+    }
+    const closeBtn=document.getElementById("close"); const backBtn=document.getElementById("back"), nextBtn=document.getElementById("next");
+    const emailEl=document.getElementById("email"), hostEl=document.getElementById("host"), phoneEl=document.getElementById("phone"), nameEl=document.getElementById("name");
+    const optSupplier=document.getElementById("opt-supplier"), optBuyer=document.getElementById("opt-buyer");
+    const dots=[...document.querySelectorAll("[data-step-dot]")];
+    const state={ step:0, role:"supplier" };
+    function show(step){
+      state.step=step;
+      ["#step1","#step2"].forEach((id,i)=>{const el=document.querySelector(id); if(!el) return; el.hidden=i!==step; dots[i]?.classList.toggle("on", i===step);});
+      backBtn.style.visibility = step===0 ? "hidden" : "visible";
+      nextBtn.textContent = step===0 ? "Next" : "Continue";
+    }
+    function open(){ const m=document.getElementById("modal"); m.classList.add("show"); m.style.display="flex"; m.setAttribute("aria-hidden","false"); show(0); }
+    function close(){ const m=document.getElementById("modal"); m.classList.remove("show"); m.style.display="none"; m.setAttribute("aria-hidden","true"); }
+    document.getElementById("navStart")?.addEventListener("click",(e)=>{e.preventDefault();open();});
+    // Replace the old button listeners with these:
+    openBtnDesktop?.addEventListener("click", () => {
+      const h = heroHost();
+      if (h) { hostEl.value = h; document.getElementById("domainTag")?.textContent = h; }
+      open();
+    });
+    openBtnMobile?.addEventListener("click", () => {
+      const h = heroHost();
+      if (h) { hostEl.value = h; document.getElementById("domainTag")?.textContent = h; }
+      open();
+    
+    [heroHostD, heroHostM].forEach(el=>{
+      el?.addEventListener("keydown", (e)=>{
+        if(e.key === "Enter"){ e.preventDefault(); (el.id==="hostHeroDesktop"?openBtnDesktop:openBtnMobile)?.click(); }
+      });
+    });
+    closeBtn?.addEventListener("click", close);
+    backBtn?.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+    nextBtn?.addEventListener("click", ()=>{
+      if (state.step===0){ show(1); return; }
+      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
+      const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
+      if (!hostCandidate){ alert("Please provide your website/domain."); return; }
+      const seed = { role: state.role, contact: { name: nameEl.value.trim(), phone: phoneEl.value.trim(), email: emailEl.value.trim() }, host: hostCandidate };
+      try{
+        localStorage.setItem("onb.seed", JSON.stringify(seed));
+        localStorage.setItem("fp.supplier.host", hostCandidate);
+        localStorage.setItem("email", seed.contact.email);
+        localStorage.setItem("contact.name", seed.contact.name||"");
+        localStorage.setItem("contact.phone", seed.contact.phone||"");
+      }catch{}
+      window.location.href = "step3.html";
+    });
+    function setRole(r){ state.role=r; optSupplier?.classList.toggle("active", r==="supplier"); optBuyer?.classList.toggle("active", r==="buyer"); }
+    optSupplier?.addEventListener("click",()=>setRole("supplier"));
+    optBuyer?.addEventListener("click",()=>setRole("buyer"));
+    function syncDomain(){
+      const d=(emailEl && domainFromEmail(emailEl.value)) || "";
+      if (d) hostEl.value=d;
+      const tag=document.getElementById("domainTag");
+      tag && (tag.textContent = d || hostEl?.value || "yourcompany.com");
+    }
+    emailEl?.addEventListener("input",syncDomain); emailEl?.addEventListener("change",syncDomain); setTimeout(syncDomain, 80);
+    document.getElementById("modal")?.addEventListener("keydown",(e)=>{
+      if (e.key==="Escape"){ e.preventDefault(); close(); return; }
+      const tag=(e.target&&e.target.tagName)||"";
+      if(e.key==="Enter" && !(tag==="INPUT"||tag==="TEXTAREA"||tag==="A"||tag==="BUTTON")){ e.preventDefault(); nextBtn.click(); }
+    });
+  })();
 })();
 </script>
 
@@ -947,13 +1100,23 @@ window.SCOREBOARD_KNOBS = {
 <script defer src="./sections/process/steps/process.step4.js"></script>
 <script defer src="./sections/process/steps/process.step5.js"></script>
 <script>
+  // Re-assert mobile config after all process scripts have loaded
   addEventListener('load', () => {
     const M = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {}).mobile ||
               (window.PROCESS_CONFIG.mobile = {});
+    // Phones only
     M.BP = 640;
+
+    // DOM mode = the renderer that actually builds mstep blocks
     M.MODE = 'dom';
+
+    // Show all steps in the mobile flow
     M.SHOW_STEPS = { 1:true, 2:true, 3:true, 4:true, 5:true };
+
+    // Ensure placeholders appear for any step without a mobile renderer
     M.SHOW_EMPTY = true;
+
+    // Repaint with the corrected config
     window.PROCESS_REPAINT && window.PROCESS_REPAINT();
   });
 </script>
