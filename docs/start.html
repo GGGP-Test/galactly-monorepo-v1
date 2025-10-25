@@ -69,11 +69,25 @@
   .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:999px;border:1px solid var(--stroke);cursor:pointer;background:rgba(255,255,255,.02);color:#cfe0ee;font-weight:600}
   .btn.ghost{background:transparent}
   .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
+  .btn.inline{padding:8px 12px;border-radius:10px}
   .btn:active{transform:translateY(1px)}
   .topbar{display:flex;align-items:center;gap:10px}
   .topbar a{opacity:.9}
   .topbar a:hover{opacity:1}
 
+  /* Step 2B website confirmation */
+  .website-card{
+    display:flex;align-items:center;gap:12px;
+    padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.03);
+  }
+  .site-chip{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.05); font-weight:700;
+  }
+  .lock{width:16px;height:16px;opacity:.9}
+  .ghost-note{font-size:12px;color:#9fb3c7}
   .center{display:grid;place-items:center}
 </style>
 </head>
@@ -94,7 +108,7 @@
         <div class="steps" aria-label="Steps">
           <span class="dot on" data-step-dot="0"></span>
           <span class="dot" data-step-dot="1"></span>
-          <span class="dot" aria-hidden="true" style="opacity:.35"></span><!-- visual 3rd -->
+          <span class="dot" data-step-dot="2"></span>
         </div>
         <div style="display:flex;gap:10px;align-items:center">
           <span id="apiBadge" class="api-badge">Ready</span>
@@ -117,12 +131,12 @@
           </div>
         </section>
 
-        <!-- Step 2 -->
-        <section class="step" id="step2" hidden>
+        <!-- Step 2A -->
+        <section class="step" id="step2a" hidden>
           <div class="pill">Step 2 of 3</div>
           <h2>Tell us who you are</h2>
           <div class="accordion" role="group" aria-labelledby="contactLegend">
-            <div class="acc-hd"><h4 id="contactLegend" style="margin:0">Contact & company</h4><div class="hint">Required</div></div>
+            <div class="acc-hd"><h4 id="contactLegend" style="margin:0">Contact</h4><div class="hint">Email required</div></div>
             <div class="acc-bd">
               <div class="grid2">
                 <div>
@@ -131,37 +145,51 @@
                     <input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter">
                   </div>
                   <div class="field">
-                    <label for="phone">Phone (required for alerts) *</label>
+                    <label for="phone">Phone <span class="ghost-note">(optional — for alerts)</span></label>
                     <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567">
-                    <div class="hint">Include country code (e.g., “+1”).</div>
                   </div>
                 </div>
                 <div>
                   <div class="field">
                     <label for="email">Business email *</label>
-                    <input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required>
-                  </div>
-                  <div class="field">
-                    <label for="host">Website / Domain</label>
-                    <input id="host" type="text" inputmode="url" placeholder="yourcompany.com">
-                    <div class="hint">Auto-filled from your email. You can edit.</div>
+                    <input id="email" type="email" autocomplete="email" placeholder="name@yourcompany.com" required>
+                    <div id="emailHint" class="hint" aria-live="polite"></div>
                   </div>
                 </div>
               </div>
-              <div class="hint" id="apiStatus" style="margin-top:8px">Step 3 opens in a new screen.</div>
+              <div class="hint" style="margin-top:8px">
+                Your website will be detected from your email domain and confirmed next.
+              </div>
             </div>
+          </div>
+        </section>
+
+        <!-- Step 2B -->
+        <section class="step" id="step2b" hidden>
+          <div class="pill">Step 3 of 3</div>
+          <h2>Confirm your website</h2>
+          <div class="website-card" role="group" aria-labelledby="webLegend">
+            <svg class="lock" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/>
+            </svg>
+            <span class="site-chip" id="siteChip">yourcompany.com</span>
+          </div>
+          <div class="hint" style="margin-top:10px">We lock your domain to match your business email.</div>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+            <button id="confirmSite" class="btn primary" type="button">Yes, that’s my website</button>
+            <button id="changeSite" class="btn inline" type="button">Not my website</button>
           </div>
         </section>
       </div>
 
       <div class="card-ft">
         <button id="back" class="btn ghost" type="button">Back</button>
-        <button id="next" class="btn primary" type="button">Continue</button>
+        <button id="next" class="btn primary" type="button">Next</button>
       </div>
     </div>
   </main>
 
-  <!-- Shared helpers -->
+  <!-- Shared helpers (created earlier) -->
   <script src="./js/onb.common.js"></script>
 
   <script>
@@ -169,78 +197,185 @@
     const dots = [...document.querySelectorAll("[data-step-dot]")];
     const backBtn = document.getElementById("back");
     const nextBtn = document.getElementById("next");
+    const confirmBtn = document.getElementById("confirmSite");
+    const changeBtn  = document.getElementById("changeSite");
+
     const optSupplier = document.getElementById("opt-supplier");
     const optBuyer = document.getElementById("opt-buyer");
+
     const emailEl = document.getElementById("email");
-    const hostEl  = document.getElementById("host");
+    const emailHint = document.getElementById("emailHint");
     const phoneEl = document.getElementById("phone");
     const nameEl  = document.getElementById("name");
-    const state = { step: 0, role: "supplier" };
+    const siteChip = document.getElementById("siteChip");
 
+    const state = {
+      step: 0,               // 0: role, 1: step2a, 2: step2b
+      role: "supplier",
+      host: "",              // normalized domain
+      userEditedEmailDomain: false
+    };
+
+    /* ---------- UI helpers ---------- */
     function show(step){
       state.step = step;
       document.getElementById("step1").hidden = step !== 0;
-      document.getElementById("step2").hidden = step !== 1;
-      dots.forEach((d,i)=> d.classList.toggle("on", i === step));
+      document.getElementById("step2a").hidden = step !== 1;
+      document.getElementById("step2b").hidden = step !== 2;
+      dots.forEach((d,i)=> d.classList.toggle("on", i <= step));
       backBtn.style.visibility = step === 0 ? "hidden" : "visible";
-      nextBtn.textContent = step === 0 ? "Next" : "Continue";
+      nextBtn.style.display = (step === 2) ? "none" : "";
+      if (step === 0) nextBtn.textContent = "Next";
+      if (step === 1) nextBtn.textContent = "Continue";
+      if (step === 2) updateSiteChip();
     }
 
     function setRole(r){
       state.role = r;
-      ONB.setRoleUI(r);
+      ONB.setRoleUI?.(r);
       optSupplier?.setAttribute("aria-pressed", String(r==="supplier"));
       optBuyer?.setAttribute("aria-pressed", String(r==="buyer"));
+      optSupplier?.classList.toggle("active", r==="supplier");
+      optBuyer?.classList.toggle("active", r==="buyer");
     }
 
+    function updateSiteChip(){
+      const h = state.host || "yourcompany.com";
+      siteChip.textContent = h;
+      emailHint.textContent = state.host ? ("We’ll use your domain: @" + h) : "";
+    }
+
+    function setHost(raw, source){
+      const h = ONB.normHost(raw||"");
+      if (!h) return;
+      state.host = h;
+      // If user hasn't manually changed the email domain, keep the domain part in sync.
+      const v = emailEl.value.trim();
+      const hasAt = v.includes("@");
+      if (!state.userEditedEmailDomain){
+        if (!hasAt && v){
+          // v = local-part only; append @host live.
+          emailEl.value = v + "@" + h;
+        }else if (hasAt){
+          const local = v.split("@")[0];
+          emailEl.value = local + "@" + h;
+        }
+      }
+      updateSiteChip();
+    }
+
+    function domainFromEmailLive(){
+      const v = emailEl.value.trim();
+      const d = ONB.domainFromEmail(v);
+      return d || "";
+    }
+
+    /* ---------- Event wiring ---------- */
     // Role chips
     optSupplier?.addEventListener("click", ()=> setRole("supplier"));
     optBuyer?.addEventListener("click", ()=> setRole("buyer"));
     optSupplier?.addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setRole("supplier"); }});
     optBuyer?.addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setRole("buyer"); }});
 
-    // Email → host autofill
-    function syncDomain(){
-      const d = ONB.domainFromEmail(emailEl.value);
-      if (d && !hostEl.value) hostEl.value = d;
-    }
-    emailEl?.addEventListener("input", syncDomain);
-    emailEl?.addEventListener("change", syncDomain);
+    // Email typing: detect whether user edits domain part; live-sync host.
+    emailEl?.addEventListener("input", ()=>{
+      const v = emailEl.value;
+      const at = v.indexOf("@");
+      if (at >= 0){
+        const right = v.slice(at+1);
+        // If they touched the domain portion, mark as manual.
+        state.userEditedEmailDomain = right.length > 0;
+        const d = ONB.normHost(right);
+        if (d){ state.host = d; updateSiteChip(); }
+      }else{
+        // No '@' yet → if we already know host, softly show hint only.
+        updateSiteChip();
+      }
+    });
 
-    // Nav buttons
-    backBtn?.addEventListener("click", ()=> show(Math.max(0, state.step - 1)));
+    // On blur, if they never typed '@' but we have host, auto-complete email.
+    emailEl?.addEventListener("blur", ()=>{
+      const v = emailEl.value.trim();
+      if (v && !v.includes("@") && state.host){
+        emailEl.value = v + "@" + state.host;
+        state.userEditedEmailDomain = false;
+      }
+    });
+
+    // Footer nav
+    backBtn?.addEventListener("click", ()=>{
+      show(Math.max(0, state.step - 1));
+      if (state.step === 1){ emailEl.focus(); }
+    });
+
     nextBtn?.addEventListener("click", ()=>{
       if (state.step === 0){ show(1); return; }
-      // Step 2 validation + persist → Step 3
-      if (!emailEl.value || !phoneEl.value){
-        alert("Business email and phone are required."); return;
+      if (state.step === 1){
+        // Validate email + derive host
+        const email = emailEl.value.trim();
+        if (!email || !email.includes("@")){ alert("Please enter your business email."); emailEl.focus(); return; }
+        const d = domainFromEmailLive();
+        if (!d){ alert("Please use a business email (with a valid domain)."); emailEl.focus(); return; }
+        setHost(d, "email");
+        show(2);
+        return;
       }
-      const finalHost = ONB.normHost(hostEl.value || ONB.domainFromEmail(emailEl.value));
-      if (!finalHost){ alert("Please provide your website/domain."); return; }
+    });
 
+    // Step 2B actions
+    confirmBtn?.addEventListener("click", ()=>{
+      // Persist seed and go to step3.html
       const seed = ONB.writeSeed({
         role: state.role,
-        host: finalHost,
-        contact: { name: nameEl.value, phone: phoneEl.value, email: emailEl.value }
+        host: state.host,
+        contact: { name: nameEl.value.trim(), phone: phoneEl.value.trim(), email: emailEl.value.trim() }
       });
-
-      // Handoff to your existing Step 3 page (same palette).
       ONB.goToStep3(seed, "step3.html");
     });
 
-    // Prefill from seed / query on load
-    const initial = ONB.readSeed();
-    setRole(initial.role || "supplier");
-    ONB.prefillFromSeed(initial);
-    show(0);
+    changeBtn?.addEventListener("click", ()=>{
+      // Go back so they can change email (domain).
+      show(1);
+      // Put cursor after '@' if present, to nudge them to change domain.
+      emailEl.focus();
+      const v = emailEl.value; const at = v.indexOf("@");
+      if (at >= 0){
+        emailEl.setSelectionRange(at+1, v.length);
+      }
+      // Let them take over domain edits now.
+      state.userEditedEmailDomain = true;
+    });
 
     // Enter to advance (but not inside inputs)
     document.addEventListener("keydown",(e)=>{
       const tag = (e.target && e.target.tagName) || "";
       if(e.key==="Enter" && !["INPUT","TEXTAREA","BUTTON","A","SELECT"].includes(tag)){
-        e.preventDefault(); nextBtn.click();
+        e.preventDefault();
+        if (state.step === 2){ confirmBtn.click(); } else { nextBtn.click(); }
       }
     });
+
+    /* ---------- Prefill from seed / query ---------- */
+    const initial = ONB.readSeed?.() || {};
+    setRole(initial.role || "supplier");
+
+    // Seed: host from landing hero
+    if (initial.host){ setHost(initial.host, "seed"); }
+
+    // Seed: contact fields
+    if (initial.contact){
+      if (initial.contact.name)  nameEl.value  = initial.contact.name;
+      if (initial.contact.phone) phoneEl.value = initial.contact.phone;
+      if (initial.contact.email){
+        emailEl.value = initial.contact.email;
+        const d = ONB.domainFromEmail(initial.contact.email);
+        if (d) setHost(d, "email");
+      }
+    }
+
+    // If we have a host but email lacks '@', show suffix hint
+    updateSiteChip();
+    show(0);
   })();
   </script>
 </body>
