@@ -35,6 +35,7 @@ jobs:
           # ----- allow-list: ONLY these files/dirs are deployed -----
           # Core public pages
           cp -v "$PUBLIC_SRC/index.html"      "$PUBLIC_OUT/" || true
+          cp -v "$PUBLIC_SRC/start.html"      "$PUBLIC_OUT/" || true
           cp -v "$PUBLIC_SRC/step3.html"      "$PUBLIC_OUT/" || true
           cp -v "$PUBLIC_SRC/free-panel.html" "$PUBLIC_OUT/" || true
           [ -f "$PUBLIC_SRC/404.html" ] && cp -v "$PUBLIC_SRC/404.html" "$PUBLIC_OUT/404.html" || true
