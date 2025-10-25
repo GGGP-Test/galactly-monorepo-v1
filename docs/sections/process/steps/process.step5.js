@@ -77,7 +77,7 @@
       COPY_LINE_HEIGHT: 1.6,
 
       // ================= MOBILE OVERRIDES (defaults mirror desktop) =================
-      MOBILE_BREAKPOINT: 840,
+      MOBILE_BREAKPOINT: (window.PROCESS_CONFIG?.mobile?.BP ?? 840),
       M_MAX_W: 820, M_SIDE_PAD: 16,
       M_SECTION_TOP: 40, M_SECTION_BOTTOM: 72,
       M_TITLE_PT: 12, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14,
