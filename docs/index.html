@@ -29,24 +29,18 @@
 
     /* constellation panel */
     --const-radius: 18px; --const-stroke-w: 1px; --const-stroke-a: .06; --const-vignette-a: .18;
+    --const-drop-a: .14; --const-edge-tint: rgba(230,195,107,.05); --const-grid-sheen-a: .05;
 
     --miniCard-radius: 12px; --miniCard-bg: rgba(12,18,28,.86); --miniCard-blur: 5px;
-    --miniCard-stroke-a: .10; --miniCard-shadow-a: .24;
+    --miniCard-stroke-a: .10; --miniCard-shadow-a: .26;
+
+    --legend-fs: 12px; --legend-color: #b9cbe0; --legend-bg: rgba(255,255,255,.06);
 
     --gap-hero-proof: 0px; --wp-h: 220vh;
 
     /* wallpaper radials */
     --wp-r1-size: 180% 140%; --wp-r1-at: 50% -14%; --wp-r1-alpha: .16; --wp-r1-fade: 58%;
     --wp-r2-size: 110% 90%;  --wp-r2-at: 22% 12%;  --wp-r2-alpha: .08; --wp-r2-fade: 72%;
-
-    /* reveal system (JS-tweakable) */
-    --reveal-dur: 420ms; --reveal-ease: cubic-bezier(.22,.61,.36,1);
-    --reveal-from: 20px; --reveal-to: -16px;
-
-    /* card sizing (JS-tweakable) */
-    --card-w: 260px;
-    --rail-h: 192px;
-    --card-pad: 12px 12px 10px;
   }
 
   *{box-sizing:border-box}
@@ -56,7 +50,7 @@
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* Wallpaper */
+  /* ---- STATIC WALLPAPER ---- */
   .page-wallpaper{
     position:absolute; left:0; right:0; top:0; height:var(--wp-h);
     z-index:0; pointer-events:none;
@@ -72,13 +66,9 @@
   }
 
   .hero,.section{background:transparent}
+  body::before, body::after, .hero::before, .hero::after{content:none!important}
 
-  /* Offscreen savings + intrinsic size to avoid jumps */
-  .hero, .section{content-visibility:auto; contain-intrinsic-size: 1000px 800px;}
-  @supports not (content-visibility:auto){
-    .hero, .section{contain:none}
-  }
-
+  /* layout widths */
   @media (min-width:901px){
     .site-header .inner, .hero-grid, .section .inner{max-width:var(--container-max);width:100%;margin-inline:auto}
   }
@@ -152,26 +142,32 @@
   .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));
     border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
 
-  /* Constellation panel */
+  /* Constellation / Scoreboard panel */
   .const-wrap{
     position:relative; isolation:isolate; height:560px;
-    border-radius:18px; overflow:hidden;
+    border-radius:var(--const-radius); overflow:hidden;
     background:linear-gradient(180deg,#0b121d,#0b1119);
-    filter: drop-shadow(0 10px 24px rgba(0,0,0,.14));
+    filter: drop-shadow(0 10px 24px rgba(0,0,0,var(--const-drop-a)));
   }
   .const-wrap::before{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), inset 0 0 60px rgba(0,0,0,.18);
+    box-shadow: inset 0 0 0 var(--const-stroke-w) rgba(255,255,255,var(--const-stroke-a)),
+               inset 0 0 60px rgba(0,0,0,var(--const-vignette-a));
   }
-  .const-wrap::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background: linear-gradient(90deg, transparent 0%, rgba(230,195,107,.05) 96%, transparent 100%); opacity:.05; }
+  .const-wrap::after{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background: linear-gradient(90deg, transparent 0%, var(--const-edge-tint) 96%, transparent 100%);
+    opacity:var(--const-grid-sheen-a);
+  }
 
-  #constFx{position:absolute; inset:0; z-index:0}
-  #constOverlay{position:absolute; inset:0; z-index:1; pointer-events:none}
+  /* overlay layers */
+  #constFx{position:absolute; inset:0; z-index:0}        /* STATIC canvas (no RAF) */
+  #constOverlay{position:absolute; inset:0; z-index:1; pointer-events:none} /* static lines */
   #anchorGlow{
     position:absolute; pointer-events:none; z-index:1; border-radius:999px;
     transform: translate(-50%,-50%) scale(1);
-    animation: anchorBreath var(--anchor-pulse,2000ms) ease-in-out infinite;
-    box-shadow:0 0 40px rgba(230,195,107,.28), 0 0 120px rgba(230,195,107,.16);
+    animation: anchorBreath var(--anchor-pulse,2200ms) ease-in-out infinite;
+    box-shadow:0 0 40px rgba(230,195,107,.30), 0 0 120px rgba(230,195,107,.18);
   }
   @keyframes anchorBreath{
     0%,100%{ transform: translate(-50%,-50%) scale(.96); opacity:.95 }
@@ -180,8 +176,9 @@
 
   .const-legend{
     position:absolute; inset:auto 12px 12px auto; z-index:2;
-    font-size:12px; color:#b9cbe0; background:rgba(255,255,255,.06);
-    border:1px solid var(--stroke); padding:6px 8px; border-radius:10px
+    font-size:var(--legend-fs); color:var(--legend-color);
+    background:var(--legend-bg); border:1px solid var(--stroke);
+    padding:6px 8px; border-radius:10px
   }
   .const-caption{
     position:absolute; right:12px; top:12px; z-index:2;
@@ -192,36 +189,38 @@
   .domainTag{
     position:absolute; z-index:2; left:14px; top:14px;
     padding:6px 10px; border-radius:999px; font-size:12px;
-    background:rgba(230,195,107,.12); color:#f2dca0;
+    background:rgba(230,195,107,.12); color:var(--gold-300);
     border:1px solid rgba(230,195,107,.25)
   }
 
-  /* Stack */
+  /* STACK: live card + static hints behind it. No tilt by default. */
   .cardStack{ position:absolute; z-index:2; transform-origin:center center; }
-  .cardStack .rail{ position:relative; width:var(--card-w); height:var(--rail-h); pointer-events:auto; }
+  .cardStack .rail{ position:relative; width:260px; height:170px; pointer-events:auto; }
 
+  /* Static “paper” behind the live card (very cheap) */
   .stackGhost{
-    position:absolute; left:50%; bottom:0; width:calc(var(--card-w) - 50px); height:118px; border-radius:12px;
-    transform:translateX(-50%);
+    position:absolute; inset:auto 0 0 auto; width:200px; height:114px; border-radius:12px;
     border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03);
-    box-shadow:0 8px 18px rgba(0,0,0,.28);
+    transform-origin:bottom right; box-shadow:0 8px 18px rgba(0,0,0,.30);
   }
   .stackGhost::after{
     content:""; position:absolute; inset:0; border-radius:inherit;
     background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
   }
 
+  /* Card */
   .miniCard{
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    z-index:3; width:var(--card-w);
-    padding:var(--card-pad); border-radius:var(--miniCard-radius);
+    z-index:3; min-width:220px; max-width:260px;
+    padding:12px 12px 10px; border-radius:var(--miniCard-radius);
     background:var(--miniCard-bg);
     -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
-    border:1px solid rgba(255,255,255,.10);
-    box-shadow:0 8px 22px rgba(0,0,0,.24); color:#e8f1fb;
+    border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
+    box-shadow:0 8px 22px rgba(0,0,0,var(--miniCard-shadow-a));
+    color:#e8f1fb;
   }
   @supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))){
-    .miniCard{ background:rgba(16,22,35,.92); }
+    .miniCard{ background:rgba(16,22,35,.92); } /* GPU-friendly fallback */
   }
   .miniCard .row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:2px 0}
   .miniCard .k{font-size:11px;color:#a9bfd6}
@@ -236,11 +235,13 @@
   .miniCard .chip{font-size:11px; padding:4px 7px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:rgba(255,255,255,.04)}
   .miniCard .ai{display:flex; align-items:center; gap:8px}
   .miniCard .ai svg{width:12px; height:12px; opacity:.9}
+
+  /* Win-rate dot (tiny pulse; can be set to 0 via knob) */
   .miniCard .prob .lbl{ font-size:11px; color:#a9bfd6; opacity:.95; letter-spacing:.1px }
   .miniCard .prob .dot{
     position:relative; width:var(--prob-dot-size,12px); height:var(--prob-dot-size,12px);
     border-radius:999px; background: currentColor;
-    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.28);
+    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.30);
   }
   .miniCard .prob .dot::before{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
@@ -248,19 +249,20 @@
   }
   .miniCard .prob .dot::after{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.38;
-    animation: probPulse var(--prob-pulse,1100ms) ease-out infinite;
+    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.40;
+    animation: probPulse var(--prob-pulse,1200ms) ease-out infinite;
   }
   @keyframes probPulse{
-    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor;         opacity:.38 }
-    100% { transform:scale(2.0); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
+    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor;         opacity:.40 }
+    100% { transform:scale(2.1); box-shadow:0 0 0 10px rgba(0,0,0,0);     opacity:0   }
   }
 
-  .miniCard.static{ z-index:2; pointer-events:none; opacity:.82; }
-  .miniCard.static.s2{ opacity:.66; }
-  .miniCard.static.s3{ opacity:.52; }
+  /* Faint “other cards” behind the live one (no tilt) */
+  .miniCard.static{ z-index:2; pointer-events:none; opacity:.82; transform:translate(-50%,-50%) scale(.94) translate(16px,12px); }
+  .miniCard.static.s2{ opacity:.68; transform:translate(-50%,-50%) scale(.88) translate(30px,22px); }
+  .miniCard.static.s3{ opacity:.54; transform:translate(-50%,-50%) scale(.82) translate(42px,32px); }
 
-  /* Section 2, KPIs (unchanged visuals) */
+  /* SECTION 2 (unchanged) */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
   .section .inner{margin:0 auto}
   #proof{ margin-top: var(--gap-hero-proof); }
@@ -290,14 +292,6 @@
     background:linear-gradient(180deg,var(--gold-300),var(--gold-700));-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px}
   .kpi .hint{font-size:12px;color:#8ba6bf;margin-top:6px}
 
-  /* Reveal system */
-  .reveal{opacity:0; transform: translateY(var(--reveal-from)) scale(.995);
-    transition: opacity var(--reveal-dur) var(--reveal-ease),
-               transform var(--reveal-dur) var(--reveal-ease);}
-  .reveal.in{opacity:1; transform: translateY(0) scale(1);}
-  .reveal.out{opacity:0; transform: translateY(var(--reveal-to)) scale(.995);}
-  .reveal.animating{ will-change: transform, opacity; }
-
   @media (max-width:900px){
     .const-wrap{display:none}
     .hero{min-height:92svh; padding:calc(60px + env(safe-area-inset-top, 10px)) 16px 28px;}
@@ -315,7 +309,6 @@
     .miniCard .prob .dot::after{ animation:none }
     #anchorGlow{ animation:none }
     .btn{transition:none}
-    .reveal{ transition:none!important; opacity:1!important; transform:none!important }
   }
   .show-desktop{display:block} .show-mobile{display:none}
   @media (max-width:900px){ .show-desktop{display:none} .show-mobile{display:block} }
@@ -327,18 +320,18 @@
   <!-- HEADER -->
   <header class="site-header" aria-label="Site">
     <div class="inner">
-      <a href="index.html" class="brand" aria-label="Home" data-track-id="brand"><span class="brand-badge" aria-hidden="true">G</span></a>
+      <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge" aria-hidden="true">G</span></a>
       <nav id="nav-primary" aria-label="Primary">
-        <a class="nav-link" href="#get-started" data-track-id="nav-how">How it works</a>
-        <a class="nav-link" href="sectors.html" data-track-id="nav-sectors">Sectors</a>
-        <a class="nav-link" href="pricing.html" data-track-id="nav-pricing">Pricing</a>
+        <a class="nav-link" href="#get-started">How it works</a>
+        <a class="nav-link" href="sectors.html">Sectors</a>
+        <a class="nav-link" href="pricing.html">Pricing</a>
       </nav>
       <div class="nav-actions">
-        <a class="nav-login" href="login.html" data-track-id="nav-login">Login</a>
-        <a class="nav-demo" href="https://www.youtube.com" target="_blank" rel="noopener" data-track-id="nav-demo">Get Demo</a>
-        <a class="nav-cta" href="#get-started" id="navStart" data-track-id="nav-start">Start Free</a>
+        <a class="nav-login" href="login.html">Login</a>
+        <a class="nav-demo" href="https://www.youtube.com" target="_blank" rel="noopener">Get Demo</a>
+        <a class="nav-cta" href="#get-started" id="navStart">Start Free</a>
       </div>
-      <button id="burger" class="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false" data-track-id="nav-burger">
+      <button id="burger" class="hamburger" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
         <span aria-hidden="true"></span><span aria-hidden="true"></span>
       </button>
     </div>
@@ -347,31 +340,31 @@
   <!-- Mobile glass menu -->
   <div id="mobileMenu" aria-hidden="true">
     <div class="sheet" role="menu">
-      <a id="mobileStart" class="mm-cta" href="#get-started" role="menuitem" data-track-id="mobile-start">✨ Start Free</a>
-      <a class="mm-link" href="login.html" role="menuitem" data-track-id="mobile-login">Login</a>
-      <a class="mm-link" href="https://www.youtube.com" target="_blank" rel="noopener" role="menuitem" data-track-id="mobile-demo">Get Demo</a>
+      <a id="mobileStart" class="mm-cta" href="#get-started" role="menuitem">✨ Start Free</a>
+      <a class="mm-link" href="login.html" role="menuitem">Login</a>
+      <a class="mm-link" href="https://www.youtube.com" target="_blank" rel="noopener" role="menuitem">Get Demo</a>
       <hr>
-      <a class="mm-link" href="#get-started" role="menuitem" data-track-id="mobile-how">How it works</a>
-      <a class="mm-link" href="sectors.html" role="menuitem" data-track-id="mobile-sectors">Sectors</a>
-      <a class="mm-link" href="pricing.html" role="menuitem" data-track-id="mobile-pricing">Pricing</a>
+      <a class="mm-link" href="#get-started" role="menuitem">How it works</a>
+      <a class="mm-link" href="sectors.html" role="menuitem">Sectors</a>
+      <a class="mm-link" href="pricing.html" role="menuitem">Pricing</a>
     </div>
   </div>
 
   <!-- HERO -->
-  <section class="hero reveal" aria-label="Hero" data-track-section="hero">
+  <section class="hero" aria-label="Hero">
     <canvas id="heroFx" aria-hidden="true"></canvas>
     <div class="hero-grid">
       <div class="hero-copy">
-        <span class="badge" id="copy-hero-badge">Built for packaging suppliers</span>
-        <h1 class="show-desktop" id="copy-hero-h1-desktop">Find real packaging buyers.</h1>
-        <h1 class="show-mobile" id="copy-hero-h1-mobile"><span>We help packaging suppliers</span> <span class="h1-accent">win qualified buyers</span></h1>
-        <p class="lead show-desktop" id="copy-hero-lead-desktop">We filter the noise and surface real companies already signaling intent in your strengths.</p>
-        <p class="lead show-mobile" id="copy-hero-lead-mobile">One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.</p>
+        <span class="badge">Built for packaging suppliers</span>
+        <h1 class="show-desktop">Find real packaging buyers.</h1>
+        <h1 class="show-mobile"><span>We help packaging suppliers</span> <span class="h1-accent">win qualified buyers</span></h1>
+        <p class="lead show-desktop">We filter the noise and surface real companies already signaling intent in your strengths.</p>
+        <p class="lead show-mobile">One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.</p>
         <div class="actions show-desktop" id="get-started-desktop">
-          <button id="cta-desktop" type="button" class="btn primary" data-track-id="cta-desktop">✨ START FOR FREE</button>
+          <button id="cta-desktop" type="button" class="btn primary">✨ START FOR FREE</button>
         </div>
         <div class="actions show-mobile" id="get-started">
-          <button id="cta" type="button" class="btn primary" data-track-id="cta-mobile">Start Free</button>
+          <button id="cta" type="button" class="btn primary">Start Free</button>
         </div>
       </div>
 
@@ -386,8 +379,10 @@
 
         <div class="const-legend">Your Website → Signal → <strong>Timing</strong> → Buyers</div>
 
+        <!-- Stack lives here -->
         <div class="cardStack" id="cardStack" aria-label="Lead deck">
           <div class="rail" id="stackRail" tabindex="0" aria-label="Lead card">
+            <!-- live card -->
             <div class="miniCard" id="cardA" role="group" aria-label="Lead">
               <div class="row">
                 <span class="stage" data-stage>A</span>
@@ -405,7 +400,7 @@
               <div class="chips" data-tags></div>
             </div>
 
-            <!-- faint static “cards” (ladder) -->
+            <!-- faint static “cards” to sell the stack (hidden if mode:'single') -->
             <div class="miniCard static s1" data-static>
               <div class="row"><span class="k">Buyer</span><span class="v name">Volt Pharma — Denver, CO</span></div>
               <div class="row"><span class="k">Distance</span><span class="v">15 mi</span></div>
@@ -422,7 +417,10 @@
               <div class="row"><span class="k">Need</span><span class="v">Shrink sleeves</span></div>
             </div>
 
-            <!-- light ghost papers -->
+            <!-- ghost paper layers -->
+            <div class="stackGhost" data-ghost></div>
+            <div class="stackGhost" data-ghost></div>
+            <div class="stackGhost" data-ghost></div>
             <div class="stackGhost" data-ghost></div>
             <div class="stackGhost" data-ghost></div>
             <div class="stackGhost" data-ghost></div>
@@ -433,11 +431,11 @@
   </section>
 
   <!-- SECTION 2 -->
-  <section class="section reveal" id="proof" aria-label="Proof" data-track-section="proof">
+  <section class="section" id="proof" aria-label="Proof">
     <div class="inner">
       <div class="section-hd">
-        <h2 id="copy-proof-h2">Proof it works</h2>
-        <div class="sub" id="copy-proof-sub">Signals → Verified companies → Hot buyers → Time-to-first buyer</div>
+        <h2>Proof it works</h2>
+        <div class="sub">Signals → Verified companies → Hot buyers → Time-to-first buyer</div>
       </div>
       <div class="proof-wrap">
         <div class="kpi-grid" id="kpiGrid">
@@ -451,105 +449,84 @@
   </section>
 
   <!-- SECTION 3 – Process -->
-  <div id="section-process" class="reveal" data-track-section="process"></div>
-
+  <div id="section-process"></div>
   <!-- SECTION 4 – Orbit -->
-  <div id="section-orbit" class="reveal" data-track-section="orbit"></div>
+  <div id="section-orbit"></div>
 
   <!-- MODAL -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none"></div>
 
 <!-- ===== KNOBS ===== -->
 <script>
-/* Animation knobs (scroll reveal + out) */
-window.ANIM_KNOBS = {
-  enableReveal: true,
-  rootMargin: '0px 0px -20% 0px',
-  exitMargin:  '-35% 0px -40% 0px',
-  inThreshold: 0.25,
-  outThreshold: 0.05,
-  durationMs: 420,
-  ease: 'cubic-bezier(.22,.61,.36,1)',
-  fromY: 20,  toY: -16,
-  unmountHidden: false
-};
-
-/* Copy knobs */
-window.COPY_KNOBS = {
-  hero: {
-    badge: 'Built for packaging suppliers',
-    h1Desktop: 'Find real packaging buyers.',
-    h1MobileTop: 'We help packaging suppliers',
-    h1MobileAccent: 'win qualified buyers',
-    leadDesktop: 'We filter the noise and surface real companies already signaling intent in your strengths.',
-    leadMobile: 'One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.',
-    ctaDesktop: '✨ START FOR FREE',
-    ctaMobile:  'Start Free'
-  },
-  proof: {
-    h2: 'Proof it works',
-    sub: 'Signals → Verified companies → Hot buyers → Time-to-first buyer'
-  }
-};
-
-/* Scoreboard knobs (includes card sizing) */
 window.SCOREBOARD_KNOBS = {
-  stack: { layout:'vertical', left:0.78, top:0.58, angle:0, clickAdvance:true, autoPlay:true, autoMs:5200 },
-  card:  { width:260, railHeight:192, padding:'12px 12px 10px' },
-  anchorGlow: { size:58, pulseMs:2000, coreA:.95, midA:.50, edgeA:.06 },
-  lines: { count:4, jitter:12, width:1, alpha:.14 },
-  probLabel:'Win rate', probDot:{ size:12, pulseMs:1100 }, probHue:{ min:5, max:130 },
-  fonts:{ k:"11px Inter, system-ui", v:"700 14px Inter, system-ui", name:"700 15px Inter, system-ui" },
-  stages:{ warm:{label:'Warm',color:'#e6c36b',emoji:'🏷️'}, hot:{label:'Hot',color:'#ff9a5a',emoji:'🔥'}, hotp:{label:'Hot+',color:'#42d17a',emoji:'🔥'} },
-  pools:{
-    buyers:[{name:"Pioneer Homecare", city:"Boise, ID"},{name:"Swift Petcare", city:"Raleigh, NC"},{name:"Acme Drinks Co.", city:"Chicago, IL"},{name:"Northstar Foods", city:"Dallas, TX"},{name:"Everpack Industrial", city:"Cleveland, OH"},{name:"Atlas Beauty", city:"Toronto, ON"},{name:"Lumina Skincare", city:"Austin, TX"},{name:"Volt Pharma", city:"Denver, CO"}],
-    needs:["PET bottles","Stand-up pouches","Rigid boxes","Corrugated prints · 5k MOQ","Mailer boxes","Shrink sleeves","Paper labels","Glass jars","Pulp trays","Poly mailers"],
-    next:{ warm:["Share case study","Send intro email","Qualify on call","Add to sequence","Nurture newsletter"], hot:["Send samples","Book discovery","Quote now","Share spec sheet","Loop in engineer"], hotp:["Call now","Priority quote","Hold calendar","Send contract","Arrange site visit"] },
-    aiLabels:["Sales AI","Ops AI","Pricing AI"]
+  /* placement + behavior */
+  stack: {
+    mode: 'stack',      // 'stack' (preferred) or 'single'
+    left: 0.78,         // relative inside panel
+    top:  0.58,
+    width: 260,
+    angle: 0,           // not tilted
+    clickAdvance: true,
+    autoPlay: true, autoMs: 5200
   },
-  ranges:{ probability:{warm:[46,58],hot:[59,75],hotp:[72,92]}, aiOptim:{warm:[18,35],hot:[42,60],hotp:[70,90]}, distanceBias:{warm:[5,210],hot:[3,50],hotp:[0,15]} }
-};
 
-/* Analytics knobs */
-window.ANALYTICS_KNOBS = {
-  enabled: true,
-  endpoint: '',     // set to your collector path to enable sendBeacon
-  sampleRate: 1.0,
-  dwell: { heartbeatMs: 5000, minMs: 600 },
-  rage:  { clicks: 3, withinMs: 800, radius: 30 },
-  repeatClickMs: 700
+  /* lightweight visuals */
+  anchorGlow: { size: 60, pulseMs: 2000, coreA:.95, midA:.52, edgeA:.06 },
+  lines: { count: 4, jitter: 12, width: 1, alpha: .14 },
+
+  /* content + look */
+  probLabel: 'Win rate',
+  probDot: { size: 12, pulseMs: 1200 },   // set to 0 to disable
+  probHue: { min: 5, max: 130 },
+  fonts: { k: "11px Inter, system-ui", v: "700 14px Inter, system-ui", name: "700 15px Inter, system-ui" },
+  stages: {
+    warm: { label:'Warm',  color:'#e6c36b', emoji:'🏷️' },
+    hot:  { label:'Hot',   color:'#ff9a5a', emoji:'🔥' },
+    hotp: { label:'Hot+',  color:'#42d17a', emoji:'🔥' }
+  },
+  pools: {
+    buyers: [
+      {name:"Pioneer Homecare", city:"Boise, ID"},
+      {name:"Swift Petcare", city:"Raleigh, NC"},
+      {name:"Acme Drinks Co.", city:"Chicago, IL"},
+      {name:"Northstar Foods", city:"Dallas, TX"},
+      {name:"Everpack Industrial", city:"Cleveland, OH"},
+      {name:"Atlas Beauty", city:"Toronto, ON"},
+      {name:"Lumina Skincare", city:"Austin, TX"},
+      {name:"Volt Pharma", city:"Denver, CO"}
+    ],
+    needs: [
+      "PET bottles","Stand-up pouches","Rigid boxes","Corrugated prints · 5k MOQ",
+      "Mailer boxes","Shrink sleeves","Paper labels","Glass jars","Pulp trays","Poly mailers"
+    ],
+    next: {
+      warm: ["Share case study","Send intro email","Qualify on call","Add to sequence","Nurture newsletter"],
+      hot:  ["Send samples","Book discovery","Quote now","Share spec sheet","Loop in engineer"],
+      hotp: ["Call now","Priority quote","Hold calendar","Send contract","Arrange site visit"]
+    },
+    aiLabels: ["Sales AI","Ops AI","Pricing AI"]
+  },
+  ranges: {
+    probability: { warm:[46,58], hot:[59,75], hotp:[72,92] },
+    aiOptim:     { warm:[18,35], hot:[42,60], hotp:[70,90] },
+    distanceBias:{ warm:[5,210], hot:[3,50], hotp:[0,15] }
+  }
 };
 </script>
 
 <script>
-(()=>{'use strict';
-  const $  = (q)=>document.querySelector(q);
-  const $$ = (q)=>Array.from(document.querySelectorAll(q));
-  const LS = window.localStorage;
+(()=>{
+  'use strict';
+  const $ = (q)=>document.querySelector(q);
 
-  /* Utils */
+  /* --- utils --- */
+  const KN = window.SCOREBOARD_KNOBS;
   const deepMerge=(b,p)=>{const o=Array.isArray(b)?[...b]:{...b}; for(const k in p){const v=p[k]; o[k]=(v&&typeof v==='object'&&!Array.isArray(v))?deepMerge(b[k]||{},v):v;} return o;};
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const pick=(a)=>a[(Math.random()*a.length)|0];
   const range=([a,b])=>a+Math.random()*(b-a);
 
-  /* Apply copy */
-  function applyCopy(){
-    const C = window.COPY_KNOBS||{};
-    const H = C.hero||{}, P=C.proof||{};
-    $('#copy-hero-badge') && ($('#copy-hero-badge').textContent = H.badge||'');
-    $('#copy-hero-h1-desktop') && ($('#copy-hero-h1-desktop').textContent = H.h1Desktop||'');
-    const h1m = $('#copy-hero-h1-mobile');
-    if(h1m){ h1m.innerHTML = `<span>${H.h1MobileTop||'We help packaging suppliers'}</span> <span class="h1-accent">${H.h1MobileAccent||'win qualified buyers'}</span>`; }
-    $('#copy-hero-lead-desktop') && ($('#copy-hero-lead-desktop').textContent = H.leadDesktop||'');
-    $('#copy-hero-lead-mobile')  && ($('#copy-hero-lead-mobile').textContent  = H.leadMobile||'');
-    $('#cta-desktop') && ($('#cta-desktop').textContent = H.ctaDesktop||'Start');
-    $('#cta')         && ($('#cta').textContent         = H.ctaMobile ||'Start');
-    $('#copy-proof-h2')  && ($('#copy-proof-h2').textContent  = P.h2||'Proof it works');
-    $('#copy-proof-sub') && ($('#copy-proof-sub').textContent = P.sub||'');
-  }
-
-  /* Wallpaper height */
+  /* --- wallpaper height (static) --- */
   function applyWallpaper(){
     const el=$('#pageWallpaper'); if(!el) return;
     const hero=$('.hero'); const proof=$('#proof');
@@ -559,7 +536,7 @@ window.ANALYTICS_KNOBS = {
   addEventListener('resize',()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t=setTimeout(applyWallpaper,60); });
   document.addEventListener('DOMContentLoaded',applyWallpaper);
 
-  /* Static constellation */
+  /* --- static constellation canvas --- */
   const wrap=$('.const-wrap'); const cvs=$('#constFx'); const ctx=cvs?.getContext('2d');
   function drawBackdrop(){
     if(!wrap||!cvs) return;
@@ -578,39 +555,27 @@ window.ANALYTICS_KNOBS = {
     ctx.fillStyle="rgba(242,220,160,0.95)"; ctx.beginPath(); ctx.arc(0.18*W,0.52*H,3.5,0,Math.PI*2); ctx.fill();
   }
 
-  /* Scoreboard */
-  const KN = window.SCOREBOARD_KNOBS;
+  /* --- stack + content --- */
   const stack=$('#cardStack'), rail=$('#stackRail'), card=$('#cardA');
   const overlay=$('#constOverlay'), glow=$('#anchorGlow');
 
   function hslProb(p){ const H=KN.probHue.min, L=KN.probHue.max; return `hsl(${H+(L-H)*(p/100)},78%,54%)`; }
 
-  function applyCardSizing(){
-    const dims = KN.card||{};
-    document.documentElement.style.setProperty('--card-w', (dims.width||260)+'px');
-    document.documentElement.style.setProperty('--rail-h', (dims.railHeight||192)+'px');
-    document.documentElement.style.setProperty('--card-pad', dims.padding||'12px 12px 10px');
-  }
-
   function positionStack(){
-    if(!wrap) return;
     const r=wrap.getBoundingClientRect();
     stack.style.left = (clamp(KN.stack.left,0,1)*r.width)+'px';
     stack.style.top  = (clamp(KN.stack.top,0,1)*r.height)+'px';
     stack.style.transform = `translate(-50%,-50%) rotate(${KN.stack.angle||0}deg)`;
-
-    const mode=(KN.stack.layout||'vertical').toLowerCase();
-    const statics=[...document.querySelectorAll('[data-static]')];
-    if(mode==='vertical'){
-      statics.forEach((el,i)=>{ const stepY=14*(i+1), scale=1-0.06*(i+1); el.style.transform=`translate(-50%,-50%) translateY(${stepY}px) scale(${scale})`; });
-    }else{
-      statics.forEach((el,i)=>{ const stepY=10*(i+1), stepX=10*(i+1), scale=1-0.06*(i+1); el.style.transform=`translate(-50%,-50%) translate(${stepX}px,${stepY}px) scale(${scale})`; });
-    }
+    rail.style.width=(KN.stack.width||260)+'px';
+    rail.style.height='170px';
+    const mode=(KN.stack.mode||'stack').toLowerCase();
+    // show or hide faint statics + paper ghosts
+    document.querySelectorAll('[data-static]').forEach(n=> n.style.display = mode==='stack' ? '' : 'none');
+    document.querySelectorAll('[data-ghost]').forEach(n=> n.style.display = mode==='stack' ? '' : 'none');
   }
 
   function setProbLabel(){
-    const lbl=card.querySelector('.prob .lbl');
-    if(lbl) lbl.textContent = KN.probLabel || 'Win rate';
+    card.querySelector('.prob .lbl').textContent = KN.probLabel || 'Win rate';
     document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||12)+'px');
     document.documentElement.style.setProperty('--prob-pulse', (KN.probDot?.pulseMs||0)+'ms');
   }
@@ -646,24 +611,27 @@ window.ANALYTICS_KNOBS = {
     const c2=document.createElement('span'); c2.className='chip'; c2.textContent=data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
     chips.appendChild(c1); chips.appendChild(c2);
 
+    // fonts
     el.querySelectorAll('.k').forEach(k=> k.style.font=KN.fonts.k);
     el.querySelectorAll('.v').forEach(v=> v.style.font=KN.fonts.v);
     el.querySelectorAll('.name').forEach(n=> n.style.font=KN.fonts.name);
   }
 
+  // data deck (cheap) + autoplay with visibility gating
   const stages=['hotp','hot','warm']; let deck=[];
   function rebuildDeck(){ deck.length=0; for(let i=0;i<24;i++) deck.push(genLead(stages[i%stages.length])); }
   function showNext(){ deck.push(deck.shift()); paintLead(card, deck[0]); }
 
-  function anchorPos(){ const r=wrap.getBoundingClientRect(); return { x:.18*r.width, y:.52*r.height }; }
+  /* --- anchor glow + static lines (no RAF) --- */
+  function anchorPos(){ const r=wrap.getBoundingClientRect(); return { x: .18*r.width, y: .52*r.height }; }
   function placeGlow(){
     const a=anchorPos(); const G=KN.anchorGlow;
     glow.style.left=a.x+'px'; glow.style.top=a.y+'px';
-    glow.style.width=glow.style.height=(G.size||58)+'px';
+    glow.style.width=glow.style.height=(G.size||60)+'px';
     document.documentElement.style.setProperty('--anchor-pulse',(G.pulseMs||2000)+'ms');
     glow.style.background=`radial-gradient(circle at 50% 50%,
       rgba(255,245,210,${G.coreA??.95}) 0%,
-      rgba(242,220,160,${G.midA??.50}) 46%,
+      rgba(242,220,160,${G.midA??.52}) 46%,
       rgba(230,195,107,${G.edgeA??.06}) 100%)`;
   }
   function drawLines(){
@@ -683,158 +651,171 @@ window.ANALYTICS_KNOBS = {
     }
   }
 
-  /* Reveal engine (with safe fallback) */
-  const AK = window.ANIM_KNOBS||{};
-  function buildThresholds(n){ const t=[]; for(let i=0;i<=n;i++) t.push(i/n); return t; }
-  function setupReveals(){
-    if(!AK.enableReveal || !('IntersectionObserver' in window)) {
-      $$('.reveal').forEach(el=>el.classList.add('in'));
-      return;
-    }
-    document.documentElement.style.setProperty('--reveal-dur', (AK.durationMs||420)+'ms');
-    document.documentElement.style.setProperty('--reveal-ease', AK.ease||'cubic-bezier(.22,.61,.36,1)');
-    document.documentElement.style.setProperty('--reveal-from', (AK.fromY||20)+'px');
-    document.documentElement.style.setProperty('--reveal-to',   (AK.toY||-16)+'px');
-
-    const ioIn = new IntersectionObserver((entries)=>{
-      for(const e of entries){
-        const el=e.target;
-        if(e.intersectionRatio >= (AK.inThreshold||0.25)){
-          el.classList.add('in'); el.classList.remove('out');
-          el.classList.add('animating'); setTimeout(()=>el.classList.remove('animating'), (AK.durationMs||420)+40);
-        }
-      }
-    },{root:null, rootMargin: AK.rootMargin||'0px', threshold: buildThresholds(8)});
-
-    const ioOut = new IntersectionObserver((entries)=>{
-      for(const e of entries){
-        const el=e.target;
-        if(e.intersectionRatio <= (AK.outThreshold||0.05)){
-          el.classList.remove('in'); el.classList.add('out');
-          el.classList.add('animating'); setTimeout(()=>el.classList.remove('animating'), (AK.durationMs||420)+40);
-        }
-      }
-    },{root:null, rootMargin: AK.exitMargin||'-35% 0px -40% 0px', threshold: buildThresholds(6)});
-
-    $$('.reveal').forEach(el=>{ ioIn.observe(el); ioOut.observe(el); });
-
-    /* safety: if something prevents IO fire, show content anyway */
-    setTimeout(()=>{ $$('.reveal').forEach(el=>{ if(!el.classList.contains('in')) el.classList.add('in'); }); }, 900);
-  }
-
-  /* Analytics (defensive, zero-throw) */
-  const AN = window.ANALYTICS_KNOBS||{};
-  const Analytics=(function(){
-    const enabled = !!AN.enabled && Math.random() < (AN.sampleRate??1);
-    function send(ev){
-      if(!enabled) return;
-      const payload = JSON.stringify(ev);
-      if(AN.endpoint && navigator.sendBeacon){
-        try{ navigator.sendBeacon(AN.endpoint, payload); }catch{ console.log('[analytics→]', ev); }
-      }else{ console.log('[analytics]', ev); }
-    }
-    const states=new Map();
-    function sectionEnter(id){ const s=states.get(id)||{}; if(!s.enter){ s.enter=performance.now(); s.viewed=(s.viewed||0)+1; states.set(id,s); send({t:'section_view', id, ts: Date.now()}); } }
-    function sectionLeave(id){ const s=states.get(id); if(!s||!s.enter) return; const dur=performance.now()-s.enter; s.enter=0; states.set(id,s); if(dur>=(AN.dwell?.minMs||600)) send({t:'section_dwell', id, ms:Math.round(dur), ts: Date.now()}); }
-    function onClick(e){
-      const x=e.clientX, y=e.clientY, ts=performance.now();
-      const target=e.target.closest('[data-track-id]')||e.target;
-      const id=target.getAttribute?.('data-track-id')||(target.id||target.tagName);
-      const sec=e.target.closest('[data-track-section]')?.getAttribute('data-track-section')||'';
-      const isInteractive=['A','BUTTON','INPUT','SELECT','TEXTAREA','SUMMARY'].includes(target.tagName)||target.getAttribute?.('role')==='button';
-      send({t:'click', id, sec, tag:target.tagName, interactive:!!isInteractive, x, y, ts: Date.now()});
-      // rage + repeat detection
-      ((onClick._buf=onClick._buf||[])).push({x,y,ts});
-      const R=AN.rage||{clicks:3,withinMs:800,radius:30};
-      while(onClick._buf.length && ts-onClick._buf[0].ts>(R.withinMs||800)) onClick._buf.shift();
-      const near=onClick._buf.filter(p=>Math.hypot(p.x-x,p.y-y)<(R.radius||30));
-      if(near.length>=(R.clicks||3)){ send({t:'rage_click', id, sec, n:near.length, ts: Date.now()}); onClick._buf.length=0; }
-      onClick._last=onClick._last||{id:'',ts:0,count:0};
-      if(id===onClick._last.id && ts-onClick._last.ts<(AN.repeatClickMs||700)){ onClick._last.count++; if(onClick._last.count>=2) send({t:'repeat_click', id, sec, n:onClick._last.count+1, ts:Date.now()}); } else { onClick._last={id,ts,count:0}; }
-    }
-    function instrumentSections(){
-      if(!('IntersectionObserver' in window)) return;
-      const io=new IntersectionObserver((entries)=>{ entries.forEach(e=>{ const id=e.target.getAttribute('data-track-section')||''; if(e.isIntersecting){sectionEnter(id);} else {sectionLeave(id);} }); },{threshold:0.25});
-      document.querySelectorAll('[data-track-section]').forEach(s=>io.observe(s));
-    }
-    function start(){ if(!(!!enabled)) return; try{ instrumentSections(); document.addEventListener('click', onClick, {capture:true, passive:true}); }catch(e){ /* never throw */ } }
-    return { start, send };
-  })();
-
-  /* Mobile menu toggle (cheap) */
-  (function(){
-    const burger=$('#burger'), menu=$('#mobileMenu');
-    if(!burger||!menu) return;
-    function set(open){ menu.classList.toggle('open', open); menu.setAttribute('aria-hidden', String(!open)); burger.setAttribute('aria-expanded', String(open)); }
-    burger.addEventListener('click', ()=> set(!menu.classList.contains('open')));
-    menu.addEventListener('click', (e)=>{ if(e.target===menu) set(false); }, {passive:true});
-  })();
-
-  /* Init */
-  let restartAutoRef=null;
+  /* --- init --- */
   function init(){
-    applyCopy();
     try{
-      const host=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "";
-      $("#domainTag") && ($("#domainTag").textContent = host || "yourcompany.com");
+      const seed=JSON.parse(localStorage.getItem('onb.seed')||'{}');
+      if(seed?.host) $('#domainTag').textContent=seed.host;
     }catch{}
     drawBackdrop();
-    applyCardSizing();
     positionStack();
     rebuildDeck();
     setProbLabel();
     paintLead(card, deck[0]);
     placeGlow(); drawLines();
 
-    // autoplay gating
+    // autoplay gate
     let timer, onScreen=true, visible=document.visibilityState!=='hidden';
     const noMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function restart(){ clearInterval(timer); if(KN.stack.autoPlay && onScreen && visible && !noMotion){ timer=setInterval(showNext, KN.stack.autoMs||5200); } }
-    restartAutoRef=restart;
-
-    if('IntersectionObserver' in window && wrap){
-      const io=new IntersectionObserver((es)=>{ onScreen=es.some(e=>e.isIntersecting); restart(); },{threshold:.25});
-      io.observe(wrap);
-    }
-    document.addEventListener('visibilitychange', ()=>{ visible=document.visibilityState!=='hidden'; restart(); });
-
-    if (KN.stack.clickAdvance){
-      rail.addEventListener('click', ()=>showNext(), {passive:true});
-      rail.addEventListener('keydown', e=>{ if(['ArrowRight',' ','Enter'].includes(e.key)){ e.preventDefault(); showNext(); }});
-    }
-
-    addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackdrop(); applyCardSizing(); positionStack(); placeGlow(); drawLines(); applyWallpaper(); },80); });
-
-    try{
-      const cores = navigator.hardwareConcurrency||2;
-      if(cores <= 4){
-        document.documentElement.style.setProperty('--miniCard-blur','0px');
-        document.querySelectorAll('.miniCard').forEach(el=>{
-          el.style.backdropFilter=''; el.style.webkitBackdropFilter='';
-          el.style.background='rgba(16,22,35,.92)';
-          el.style.boxShadow='0 6px 16px rgba(0,0,0,.22)';
-        });
-        window.updateScoreboardKnobs?.({ probDot:{ pulseMs:0 } });
+    function restart(){
+      clearInterval(timer);
+      if(KN.stack.autoPlay && onScreen && visible && !noMotion){
+        timer=setInterval(showNext, KN.stack.autoMs||5200);
       }
-    }catch{}
+    }
+    restart();
+    const io=new IntersectionObserver((es)=>{ onScreen=es.some(e=>e.isIntersecting); restart(); },{threshold:.25});
+    io.observe(wrap);
+    document.addEventListener('visibilitychange',()=>{ visible=document.visibilityState!=='hidden'; restart(); });
+    if(KN.stack.clickAdvance){ rail.addEventListener('click',()=>showNext()); rail.addEventListener('keydown',e=>{ if(['ArrowRight',' ','Enter'].includes(e.key)){ e.preventDefault(); showNext(); } }); }
 
-    setupReveals();
-    Analytics.start();
-
-    /* Safety: ensure first-screen content visible even if observers fail */
-    setTimeout(()=>{ const hero=$('section.hero'); hero && hero.classList.add('in'); }, 150);
+    addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackdrop(); positionStack(); placeGlow(); drawLines(); },80); });
   }
   init();
 
-  /* Live patchers */
+  /* --- live knob patch --- */
   window.updateScoreboardKnobs=function(patch){
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
     Object.assign(KN, window.SCOREBOARD_KNOBS);
-    applyCardSizing(); positionStack(); setProbLabel(); placeGlow(); drawLines();
-    if(typeof restartAutoRef==='function') restartAutoRef();
+    positionStack(); setProbLabel(); placeGlow(); drawLines();
   };
-  window.updateAnimKnobs=function(patch){ window.ANIM_KNOBS = deepMerge(window.ANIM_KNOBS, patch||{}); };
-  window.updateCopyKnobs=function(patch){ window.COPY_KNOBS = deepMerge(window.COPY_KNOBS, patch||{}); applyCopy(); };
+
+  /* --- counters (unchanged) --- */
+  (function(){
+    const section = document.getElementById("proof"); if (!section) return;
+    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const nums = Array.from(section.querySelectorAll(".num")); let fired=false;
+    function format(v, fmt){ if (fmt==="dec1") return v.toFixed(1); const s=Math.round(v).toString(); return s.replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+    function animate(el){
+      const to = parseFloat(el.dataset.to||"0"); const fmt = el.dataset.format||"int";
+      if (noMotion){ el.textContent = format(to, fmt); return; }
+      const dur = 1200; const start = performance.now();
+      function tick(now){ const p=Math.min(1,(now-start)/dur); const ease=1-Math.pow(1-p,3); const val=to*ease; el.textContent=format(val,fmt); if (p<1) requestAnimationFrame(tick); }
+      requestAnimationFrame(tick);
+    }
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{ if (!fired && e.isIntersecting){ fired=true; nums.forEach(animate); io.disconnect(); }});
+    },{threshold:0.30});
+    io.observe(section);
+  })();
+
+  /* --- modal (unchanged) --- */
+  (function(){
+    const modal = $("#modal");
+    modal.innerHTML =
+      '<div class="card" role="document">\
+        <div class="card-hd">\
+          <div class="steps" aria-label="Steps">\
+            <span class="dot on" data-step-dot="0"></span>\
+            <span class="dot" data-step-dot="1"></span>\
+          </div>\
+          <div style="display:flex;gap:10px;align-items:center">\
+            <span id="apiBadge" class="api-badge">Ready</span>\
+            <button id="close" class="x" aria-label="Close">✕</button>\
+          </div>\
+        </div>\
+        <div class="card-bd"><div class="scroll">\
+          <section class="step" id="step1">\
+            <div class="pill">Get set up in 60 seconds</div>\
+            <h2 style="margin:10px 0 14px;">Pick your side</h2>\
+            <div class="accordion">\
+              <div class="acc-hd" role="button" tabindex="0"><h4>Role</h4><div class="hint">Required</div></div>\
+              <div class="acc-bd">\
+                <div class="chips" id="roleChips">\
+                  <span id="opt-supplier" class="chip active">🙌 I sell packaging (Supplier)</span>\
+                  <span id="opt-buyer" class="chip">🛒 I buy packaging (Buyer)</span>\
+                </div>\
+              </div>\
+            </div>\
+          </section>\
+          <section class="step" id="step2" hidden>\
+            <div class="pill">Step 2 of 2</div>\
+            <h2 style="margin:10px 0 14px;">Tell us who you are</h2>\
+            <div class="accordion">\
+              <div class="acc-hd" role="button" tabindex="0"><h4>Contact & company</h4><div class="hint">Required</div></div>\
+              <div class="acc-bd">\
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">\
+                  <div>\
+                    <div class="field"><label>Your name</label><input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter"></div>\
+                    <div class="field"><label>Phone (required for alerts) *</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567"/><div class="hint">Include country code (e.g., “+1”).</div></div>\
+                  </div>\
+                  <div>\
+                    <div class="field"><label>Business email *</label><input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required/></div>\
+                    <div class="field"><label>Website / Domain</label><input id="host" type="text" inputmode="url" placeholder="yourcompany.com"/><div class="hint">Auto-filled from your email. You can edit.</div></div>\
+                  </div>\
+                </div>\
+                <div class="hint" id="apiStatus" style="margin-top:8px">Step 3 opens in a new screen.</div>\
+              </div>\
+            </div>\
+          </section>\
+        </div>\
+        <div class="card-ft">\
+          <button id="back" class="btn ghost" type="button">Back</button>\
+          <button id="next" class="btn primary" type="button">Continue</button>\
+        </div></div>\
+      </div>';
+
+    const normHost=(h)=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+    const domainFromEmail=(e)=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
+    const openBtnMobile=$("#cta"), openBtnDesktop=$("#cta-desktop");
+    const closeBtn=$("#close"); const backBtn=$("#back"), nextBtn=$("#next");
+    const emailEl=$("#email"), hostEl=$("#host"), phoneEl=$("#phone"), nameEl=$("#name");
+    const optSupplier=$("#opt-supplier"), optBuyer=$("#opt-buyer");
+    const apiBadge=$("#apiBadge"); const dots=[...document.querySelectorAll("[data-step-dot]")];
+    const state={ step:0, role:"supplier" };
+    function show(step){
+      state.step=step;
+      ["#step1","#step2"].forEach((id,i)=>{const el=$(id); if(!el) return; el.hidden=i!==step; dots[i]?.classList.toggle("on", i===step);});
+      backBtn.style.visibility = step===0 ? "hidden" : "visible";
+      nextBtn.textContent = step===0 ? "Next" : "Continue";
+    }
+    function open(){ $("#modal").classList.add("show"); $("#modal").style.display="flex"; $("#modal").setAttribute("aria-hidden","false"); show(0); }
+    function close(){ $("#modal").classList.remove("show"); $("#modal").style.display="none"; $("#modal").setAttribute("aria-hidden","true"); }
+    $("#navStart")?.addEventListener("click",(e)=>{e.preventDefault();open();});
+    openBtnMobile?.addEventListener("click", open); openBtnDesktop?.addEventListener("click", open); closeBtn?.addEventListener("click", close);
+    backBtn?.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
+    nextBtn?.addEventListener("click", ()=>{
+      if (state.step===0){ show(1); return; }
+      if (!emailEl.value || !phoneEl.value){ alert("Business email and phone are required."); return; }
+      const hostCandidate = normHost(hostEl.value || domainFromEmail(emailEl.value));
+      if (!hostCandidate){ alert("Please provide your website/domain."); return; }
+      const seed = { role: state.role, contact: { name: nameEl.value.trim(), phone: phoneEl.value.trim(), email: emailEl.value.trim() }, host: hostCandidate };
+      try{
+        localStorage.setItem("onb.seed", JSON.stringify(seed));
+        localStorage.setItem("fp.supplier.host", hostCandidate);
+        localStorage.setItem("email", seed.contact.email);
+        localStorage.setItem("contact.name", seed.contact.name||"");
+        localStorage.setItem("contact.phone", seed.contact.phone||"");
+      }catch{}
+      window.location.href = "step3.html";
+    });
+    function setRole(r){ state.role=r; optSupplier?.classList.toggle("active", r==="supplier"); optBuyer?.classList.toggle("active", r==="buyer"); }
+    optSupplier?.addEventListener("click",()=>setRole("supplier"));
+    optBuyer?.addEventListener("click",()=>setRole("buyer"));
+    function syncDomain(){
+      const d=(emailEl && domainFromEmail(emailEl.value)) || "";
+      if (d) hostEl.value=d;
+      const tag=$("#domainTag");
+      tag && (tag.textContent = d || hostEl?.value || "yourcompany.com");
+    }
+    emailEl?.addEventListener("input",syncDomain); emailEl?.addEventListener("change",syncDomain); setTimeout(syncDomain, 80);
+    apiBadge && (apiBadge.textContent = "Ready");
+    $("#modal")?.addEventListener("keydown",(e)=>{
+      if (e.key==="Escape"){ e.preventDefault(); close(); return; }
+      const tag=(e.target&&e.target.tagName)||"";
+      if(e.key==="Enter" && !(tag==="INPUT"||tag==="TEXTAREA"||tag==="A"||tag==="BUTTON")){ e.preventDefault(); nextBtn.click(); }
+    });
+  })();
 })();
 </script>
 
