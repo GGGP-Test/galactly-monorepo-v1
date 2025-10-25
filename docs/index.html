@@ -29,12 +29,9 @@
 
     /* constellation panel */
     --const-radius: 18px; --const-stroke-w: 1px; --const-stroke-a: .06; --const-vignette-a: .18;
-    --const-drop-a: .14; --const-edge-tint: rgba(230,195,107,.05); --const-grid-sheen-a: .05;
 
     --miniCard-radius: 12px; --miniCard-bg: rgba(12,18,28,.86); --miniCard-blur: 5px;
     --miniCard-stroke-a: .10; --miniCard-shadow-a: .24;
-
-    --legend-fs: 12px; --legend-color: #b9cbe0; --legend-bg: rgba(255,255,255,.06);
 
     --gap-hero-proof: 0px; --wp-h: 220vh;
 
@@ -42,13 +39,13 @@
     --wp-r1-size: 180% 140%; --wp-r1-at: 50% -14%; --wp-r1-alpha: .16; --wp-r1-fade: 58%;
     --wp-r2-size: 110% 90%;  --wp-r2-at: 22% 12%;  --wp-r2-alpha: .08; --wp-r2-fade: 72%;
 
-    /* reveal system (tweak via JS too) */
+    /* reveal system (JS-tweakable) */
     --reveal-dur: 420ms; --reveal-ease: cubic-bezier(.22,.61,.36,1);
     --reveal-from: 20px; --reveal-to: -16px;
 
-    /* card sizing vars (also set via JS knobs) */
-    --card-w: 260px;        /* live card width */
-    --rail-h: 192px;        /* stack rail height (card area) */
+    /* card sizing (JS-tweakable) */
+    --card-w: 260px;
+    --rail-h: 192px;
     --card-pad: 12px 12px 10px;
   }
 
@@ -59,7 +56,7 @@
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* ---- STATIC WALLPAPER ---- */
+  /* Wallpaper */
   .page-wallpaper{
     position:absolute; left:0; right:0; top:0; height:var(--wp-h);
     z-index:0; pointer-events:none;
@@ -76,13 +73,12 @@
 
   .hero,.section{background:transparent}
 
-  /* content-visibility eliminates offscreen work; intrinsic size avoids layout jumps */
+  /* Offscreen savings + intrinsic size to avoid jumps */
   .hero, .section{content-visibility:auto; contain-intrinsic-size: 1000px 800px;}
   @supports not (content-visibility:auto){
     .hero, .section{contain:none}
   }
 
-  /* layout widths */
   @media (min-width:901px){
     .site-header .inner, .hero-grid, .section .inner{max-width:var(--container-max);width:100%;margin-inline:auto}
   }
@@ -156,27 +152,21 @@
   .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));
     border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
 
-  /* Constellation / Scoreboard panel */
+  /* Constellation panel */
   .const-wrap{
     position:relative; isolation:isolate; height:560px;
-    border-radius:var(--const-radius); overflow:hidden;
+    border-radius:18px; overflow:hidden;
     background:linear-gradient(180deg,#0b121d,#0b1119);
     filter: drop-shadow(0 10px 24px rgba(0,0,0,.14));
   }
   .const-wrap::before{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    box-shadow: inset 0 0 0 var(--const-stroke-w) rgba(255,255,255,.06),
-               inset 0 0 60px rgba(0,0,0,.18);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), inset 0 0 60px rgba(0,0,0,.18);
   }
-  .const-wrap::after{
-    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background: linear-gradient(90deg, transparent 0%, rgba(230,195,107,.05) 96%, transparent 100%);
-    opacity:.05;
-  }
+  .const-wrap::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background: linear-gradient(90deg, transparent 0%, rgba(230,195,107,.05) 96%, transparent 100%); opacity:.05; }
 
-  /* overlay layers */
-  #constFx{position:absolute; inset:0; z-index:0}        /* STATIC canvas (no RAF) */
-  #constOverlay{position:absolute; inset:0; z-index:1; pointer-events:none} /* static lines */
+  #constFx{position:absolute; inset:0; z-index:0}
+  #constOverlay{position:absolute; inset:0; z-index:1; pointer-events:none}
   #anchorGlow{
     position:absolute; pointer-events:none; z-index:1; border-radius:999px;
     transform: translate(-50%,-50%) scale(1);
@@ -190,9 +180,8 @@
 
   .const-legend{
     position:absolute; inset:auto 12px 12px auto; z-index:2;
-    font-size:12px; color:#b9cbe0;
-    background:rgba(255,255,255,.06); border:1px solid var(--stroke);
-    padding:6px 8px; border-radius:10px
+    font-size:12px; color:#b9cbe0; background:rgba(255,255,255,.06);
+    border:1px solid var(--stroke); padding:6px 8px; border-radius:10px
   }
   .const-caption{
     position:absolute; right:12px; top:12px; z-index:2;
@@ -207,11 +196,10 @@
     border:1px solid rgba(230,195,107,.25)
   }
 
-  /* STACK (vertical ladder) */
+  /* Stack */
   .cardStack{ position:absolute; z-index:2; transform-origin:center center; }
   .cardStack .rail{ position:relative; width:var(--card-w); height:var(--rail-h); pointer-events:auto; }
 
-  /* Static “paper” behind the live card (cheap) */
   .stackGhost{
     position:absolute; left:50%; bottom:0; width:calc(var(--card-w) - 50px); height:118px; border-radius:12px;
     transform:translateX(-50%);
@@ -223,7 +211,6 @@
     background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
   }
 
-  /* Card */
   .miniCard{
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
     z-index:3; width:var(--card-w);
@@ -231,8 +218,7 @@
     background:var(--miniCard-bg);
     -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
     border:1px solid rgba(255,255,255,.10);
-    box-shadow:0 8px 22px rgba(0,0,0,.24);
-    color:#e8f1fb;
+    box-shadow:0 8px 22px rgba(0,0,0,.24); color:#e8f1fb;
   }
   @supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))){
     .miniCard{ background:rgba(16,22,35,.92); }
@@ -250,8 +236,6 @@
   .miniCard .chip{font-size:11px; padding:4px 7px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:rgba(255,255,255,.04)}
   .miniCard .ai{display:flex; align-items:center; gap:8px}
   .miniCard .ai svg{width:12px; height:12px; opacity:.9}
-
-  /* Win-rate dot */
   .miniCard .prob .lbl{ font-size:11px; color:#a9bfd6; opacity:.95; letter-spacing:.1px }
   .miniCard .prob .dot{
     position:relative; width:var(--prob-dot-size,12px); height:var(--prob-dot-size,12px);
@@ -276,7 +260,7 @@
   .miniCard.static.s2{ opacity:.66; }
   .miniCard.static.s3{ opacity:.52; }
 
-  /* SECTION 2 */
+  /* Section 2, KPIs (unchanged visuals) */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
   .section .inner{margin:0 auto}
   #proof{ margin-top: var(--gap-hero-proof); }
@@ -306,10 +290,10 @@
     background:linear-gradient(180deg,var(--gold-300),var(--gold-700));-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px}
   .kpi .hint{font-size:12px;color:#8ba6bf;margin-top:6px}
 
-  /* === Reveal system (sections & hero) === */
-  .reveal{opacity:0; transform: translateY(var(--reveal-from)) scale(.995); transition:
-    opacity var(--reveal-dur) var(--reveal-ease),
-    transform var(--reveal-dur) var(--reveal-ease);}
+  /* Reveal system */
+  .reveal{opacity:0; transform: translateY(var(--reveal-from)) scale(.995);
+    transition: opacity var(--reveal-dur) var(--reveal-ease),
+               transform var(--reveal-dur) var(--reveal-ease);}
   .reveal.in{opacity:1; transform: translateY(0) scale(1);}
   .reveal.out{opacity:0; transform: translateY(var(--reveal-to)) scale(.995);}
   .reveal.animating{ will-change: transform, opacity; }
@@ -402,10 +386,8 @@
 
         <div class="const-legend">Your Website → Signal → <strong>Timing</strong> → Buyers</div>
 
-        <!-- Stack lives here -->
         <div class="cardStack" id="cardStack" aria-label="Lead deck">
           <div class="rail" id="stackRail" tabindex="0" aria-label="Lead card">
-            <!-- live card -->
             <div class="miniCard" id="cardA" role="group" aria-label="Lead">
               <div class="row">
                 <span class="stage" data-stage>A</span>
@@ -423,7 +405,7 @@
               <div class="chips" data-tags></div>
             </div>
 
-            <!-- faint static “cards” to sell the stack (ladder) -->
+            <!-- faint static “cards” (ladder) -->
             <div class="miniCard static s1" data-static>
               <div class="row"><span class="k">Buyer</span><span class="v name">Volt Pharma — Denver, CO</span></div>
               <div class="row"><span class="k">Distance</span><span class="v">15 mi</span></div>
@@ -440,7 +422,7 @@
               <div class="row"><span class="k">Need</span><span class="v">Shrink sleeves</span></div>
             </div>
 
-            <!-- light ghost paper layers -->
+            <!-- light ghost papers -->
             <div class="stackGhost" data-ghost></div>
             <div class="stackGhost" data-ghost></div>
             <div class="stackGhost" data-ghost></div>
@@ -492,7 +474,7 @@ window.ANIM_KNOBS = {
   unmountHidden: false
 };
 
-/* Copy knobs (edit marketing text without touching HTML) */
+/* Copy knobs */
 window.COPY_KNOBS = {
   hero: {
     badge: 'Built for packaging suppliers',
@@ -510,61 +492,22 @@ window.COPY_KNOBS = {
   }
 };
 
-/* Scoreboard knobs (now with card sizing you can tweak) */
+/* Scoreboard knobs (includes card sizing) */
 window.SCOREBOARD_KNOBS = {
-  stack: {
-    layout: 'vertical',   // 'vertical' or 'fan'
-    left: 0.78,
-    top:  0.58,
-    angle: 0,
-    clickAdvance: true,
-    autoPlay: true, autoMs: 5200
+  stack: { layout:'vertical', left:0.78, top:0.58, angle:0, clickAdvance:true, autoPlay:true, autoMs:5200 },
+  card:  { width:260, railHeight:192, padding:'12px 12px 10px' },
+  anchorGlow: { size:58, pulseMs:2000, coreA:.95, midA:.50, edgeA:.06 },
+  lines: { count:4, jitter:12, width:1, alpha:.14 },
+  probLabel:'Win rate', probDot:{ size:12, pulseMs:1100 }, probHue:{ min:5, max:130 },
+  fonts:{ k:"11px Inter, system-ui", v:"700 14px Inter, system-ui", name:"700 15px Inter, system-ui" },
+  stages:{ warm:{label:'Warm',color:'#e6c36b',emoji:'🏷️'}, hot:{label:'Hot',color:'#ff9a5a',emoji:'🔥'}, hotp:{label:'Hot+',color:'#42d17a',emoji:'🔥'} },
+  pools:{
+    buyers:[{name:"Pioneer Homecare", city:"Boise, ID"},{name:"Swift Petcare", city:"Raleigh, NC"},{name:"Acme Drinks Co.", city:"Chicago, IL"},{name:"Northstar Foods", city:"Dallas, TX"},{name:"Everpack Industrial", city:"Cleveland, OH"},{name:"Atlas Beauty", city:"Toronto, ON"},{name:"Lumina Skincare", city:"Austin, TX"},{name:"Volt Pharma", city:"Denver, CO"}],
+    needs:["PET bottles","Stand-up pouches","Rigid boxes","Corrugated prints · 5k MOQ","Mailer boxes","Shrink sleeves","Paper labels","Glass jars","Pulp trays","Poly mailers"],
+    next:{ warm:["Share case study","Send intro email","Qualify on call","Add to sequence","Nurture newsletter"], hot:["Send samples","Book discovery","Quote now","Share spec sheet","Loop in engineer"], hotp:["Call now","Priority quote","Hold calendar","Send contract","Arrange site visit"] },
+    aiLabels:["Sales AI","Ops AI","Pricing AI"]
   },
-  card: {
-    width: 260,
-    railHeight: 192,
-    padding: '12px 12px 10px'
-  },
-  anchorGlow: { size: 58, pulseMs: 2000, coreA:.95, midA:.50, edgeA:.06 },
-  lines: { count: 4, jitter: 12, width: 1, alpha: .14 },
-
-  probLabel: 'Win rate',
-  probDot: { size: 12, pulseMs: 1100 },
-  probHue: { min: 5, max: 130 },
-  fonts: { k: "11px Inter, system-ui", v: "700 14px Inter, system-ui", name: "700 15px Inter, system-ui" },
-
-  stages: {
-    warm: { label:'Warm',  color:'#e6c36b', emoji:'🏷️' },
-    hot:  { label:'Hot',   color:'#ff9a5a', emoji:'🔥' },
-    hotp: { label:'Hot+',  color:'#42d17a', emoji:'🔥' }
-  },
-  pools: {
-    buyers: [
-      {name:"Pioneer Homecare", city:"Boise, ID"},
-      {name:"Swift Petcare", city:"Raleigh, NC"},
-      {name:"Acme Drinks Co.", city:"Chicago, IL"},
-      {name:"Northstar Foods", city:"Dallas, TX"},
-      {name:"Everpack Industrial", city:"Cleveland, OH"},
-      {name:"Atlas Beauty", city:"Toronto, ON"},
-      {name:"Lumina Skincare", city:"Austin, TX"},
-      {name:"Volt Pharma", city:"Denver, CO"}
-    ],
-    needs: [
-      "PET bottles","Stand-up pouches","Rigid boxes","Corrugated prints · 5k MOQ",
-      "Mailer boxes","Shrink sleeves","Paper labels","Glass jars","Pulp trays","Poly mailers"
-    ],
-    next: {
-      warm: ["Share case study","Send intro email","Qualify on call","Add to sequence","Nurture newsletter"],
-      hot:  ["Send samples","Book discovery","Quote now","Share spec sheet","Loop in engineer"],
-      hotp: ["Call now","Priority quote","Hold calendar","Send contract","Arrange site visit"]
-    },
-    aiLabels: ["Sales AI","Ops AI","Pricing AI"]
-  },
-  ranges: {
-    probability: { warm:[46,58], hot:[59,75], hotp:[72,92] },
-    aiOptim:     { warm:[18,35], hot:[42,60], hotp:[70,90] },
-    distanceBias:{ warm:[5,210], hot:[3,50], hotp:[0,15] }
-  }
+  ranges:{ probability:{warm:[46,58],hot:[59,75],hotp:[72,92]}, aiOptim:{warm:[18,35],hot:[42,60],hotp:[70,90]}, distanceBias:{warm:[5,210],hot:[3,50],hotp:[0,15]} }
 };
 
 /* Analytics knobs */
@@ -579,45 +522,44 @@ window.ANALYTICS_KNOBS = {
 </script>
 
 <script>
-(()=>{
-  'use strict';
+(()=>{'use strict';
   const $  = (q)=>document.querySelector(q);
   const $$ = (q)=>Array.from(document.querySelectorAll(q));
   const LS = window.localStorage;
 
-  /* ========= UTIL ========= */
+  /* Utils */
   const deepMerge=(b,p)=>{const o=Array.isArray(b)?[...b]:{...b}; for(const k in p){const v=p[k]; o[k]=(v&&typeof v==='object'&&!Array.isArray(v))?deepMerge(b[k]||{},v):v;} return o;};
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const pick=(a)=>a[(Math.random()*a.length)|0];
   const range=([a,b])=>a+Math.random()*(b-a);
 
-  /* ========= APPLY COPY ========= */
+  /* Apply copy */
   function applyCopy(){
     const C = window.COPY_KNOBS||{};
     const H = C.hero||{}, P=C.proof||{};
-    if($('#copy-hero-badge')) $('#copy-hero-badge').textContent = H.badge||'';
-    if($('#copy-hero-h1-desktop')) $('#copy-hero-h1-desktop').textContent = H.h1Desktop||'';
+    $('#copy-hero-badge') && ($('#copy-hero-badge').textContent = H.badge||'');
+    $('#copy-hero-h1-desktop') && ($('#copy-hero-h1-desktop').textContent = H.h1Desktop||'');
     const h1m = $('#copy-hero-h1-mobile');
     if(h1m){ h1m.innerHTML = `<span>${H.h1MobileTop||'We help packaging suppliers'}</span> <span class="h1-accent">${H.h1MobileAccent||'win qualified buyers'}</span>`; }
-    if($('#copy-hero-lead-desktop')) $('#copy-hero-lead-desktop').textContent = H.leadDesktop||'';
-    if($('#copy-hero-lead-mobile'))  $('#copy-hero-lead-mobile').textContent  = H.leadMobile||'';
-    if($('#cta-desktop')) $('#cta-desktop').textContent = H.ctaDesktop || 'Start';
-    if($('#cta'))         $('#cta').textContent         = H.ctaMobile  || 'Start';
-    if($('#copy-proof-h2'))  $('#copy-proof-h2').textContent  = P.h2||'Proof it works';
-    if($('#copy-proof-sub')) $('#copy-proof-sub').textContent = P.sub||'';
+    $('#copy-hero-lead-desktop') && ($('#copy-hero-lead-desktop').textContent = H.leadDesktop||'');
+    $('#copy-hero-lead-mobile')  && ($('#copy-hero-lead-mobile').textContent  = H.leadMobile||'');
+    $('#cta-desktop') && ($('#cta-desktop').textContent = H.ctaDesktop||'Start');
+    $('#cta')         && ($('#cta').textContent         = H.ctaMobile ||'Start');
+    $('#copy-proof-h2')  && ($('#copy-proof-h2').textContent  = P.h2||'Proof it works');
+    $('#copy-proof-sub') && ($('#copy-proof-sub').textContent = P.sub||'');
   }
 
-  /* ========= WALLPAPER HEIGHT ========= */
+  /* Wallpaper height */
   function applyWallpaper(){
-    const el = $('#pageWallpaper'); if(!el) return;
-    const hero = $('.hero'); const proof = $('#proof');
-    const h = Math.max((hero?.offsetHeight||0) + (proof?.offsetHeight||0) + 80, window.innerHeight*1.6);
-    el.style.height = h + 'px';
+    const el=$('#pageWallpaper'); if(!el) return;
+    const hero=$('.hero'); const proof=$('#proof');
+    const h=Math.max((hero?.offsetHeight||0)+(proof?.offsetHeight||0)+80, window.innerHeight*1.6);
+    el.style.height=h+'px';
   }
   addEventListener('resize',()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t=setTimeout(applyWallpaper,60); });
   document.addEventListener('DOMContentLoaded',applyWallpaper);
 
-  /* ========= STATIC CONSTELLATION CANVAS ========= */
+  /* Static constellation */
   const wrap=$('.const-wrap'); const cvs=$('#constFx'); const ctx=cvs?.getContext('2d');
   function drawBackdrop(){
     if(!wrap||!cvs) return;
@@ -636,10 +578,10 @@ window.ANALYTICS_KNOBS = {
     ctx.fillStyle="rgba(242,220,160,0.95)"; ctx.beginPath(); ctx.arc(0.18*W,0.52*H,3.5,0,Math.PI*2); ctx.fill();
   }
 
-  /* ========= SCOREBOARD ========= */
+  /* Scoreboard */
   const KN = window.SCOREBOARD_KNOBS;
-  const stack = $('#cardStack'); const rail = $('#stackRail'); const liveCard = $('#cardA');
-  const overlay = $('#constOverlay'); const glow = $('#anchorGlow');
+  const stack=$('#cardStack'), rail=$('#stackRail'), card=$('#cardA');
+  const overlay=$('#constOverlay'), glow=$('#anchorGlow');
 
   function hslProb(p){ const H=KN.probHue.min, L=KN.probHue.max; return `hsl(${H+(L-H)*(p/100)},78%,54%)`; }
 
@@ -652,11 +594,9 @@ window.ANALYTICS_KNOBS = {
 
   function positionStack(){
     if(!wrap) return;
-    const r = wrap.getBoundingClientRect();
-    const left = clamp(KN.stack.left, 0, 1) * r.width;
-    const top  = clamp(KN.stack.top,  0, 1) * r.height;
-    stack.style.left = left+'px';
-    stack.style.top  = top +'px';
+    const r=wrap.getBoundingClientRect();
+    stack.style.left = (clamp(KN.stack.left,0,1)*r.width)+'px';
+    stack.style.top  = (clamp(KN.stack.top,0,1)*r.height)+'px';
     stack.style.transform = `translate(-50%,-50%) rotate(${KN.stack.angle||0}deg)`;
 
     const mode=(KN.stack.layout||'vertical').toLowerCase();
@@ -669,7 +609,7 @@ window.ANALYTICS_KNOBS = {
   }
 
   function setProbLabel(){
-    const lbl = liveCard.querySelector('.prob .lbl');
+    const lbl=card.querySelector('.prob .lbl');
     if(lbl) lbl.textContent = KN.probLabel || 'Win rate';
     document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||12)+'px');
     document.documentElement.style.setProperty('--prob-pulse', (KN.probDot?.pulseMs||0)+'ms');
@@ -687,68 +627,70 @@ window.ANALYTICS_KNOBS = {
     return {stage,p,ai,buyer,need,distance,aiLabel};
   }
 
-  function paintLead(el, data){
+  function paintLead(el,data){
     const meta=KN.stages[data.stage]||KN.stages.warm;
-    const stageEl=el.querySelector('[data-stage]');
-    stageEl.textContent = `${meta.label} ${meta.emoji||''}`.trim();
-    stageEl.style.borderColor = meta.color; stageEl.style.color = meta.color;
+    const stEl=el.querySelector('[data-stage]');
+    stEl.textContent = `${meta.label} ${meta.emoji||''}`.trim();
+    stEl.style.borderColor=meta.color; stEl.style.color=meta.color;
 
-    el.querySelector('[data-prob]').textContent = data.p + '%';
+    el.querySelector('[data-prob]').textContent = data.p+'%';
     el.querySelector('[data-prob-dot]').style.color = hslProb(data.p);
     el.querySelector('[data-name]').textContent = `${data.buyer.name} — ${data.buyer.city}`;
     el.querySelector('[data-distance]').textContent = data.distance;
     el.querySelector('[data-need]').textContent = data.need;
     el.querySelector('[data-ai-label]').textContent = `${data.aiLabel} optimized`;
-    el.querySelector('[data-ai]').textContent = data.ai + '%';
+    el.querySelector('[data-ai]').textContent = data.ai+'%';
 
-    const chips = el.querySelector('[data-tags]'); chips.innerHTML='';
+    const chips=el.querySelector('[data-tags]'); chips.innerHTML='';
     const c1=document.createElement('span'); c1.className='chip'; c1.textContent=`${meta.emoji||'🏷️'} ${meta.label}`;
-    const c2=document.createElement('span'); c2.className='chip'; c2.textContent= data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
+    const c2=document.createElement('span'); c2.className='chip'; c2.textContent=data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
     chips.appendChild(c1); chips.appendChild(c2);
 
-    el.querySelectorAll('.k').forEach(k=> k.style.font = KN.fonts.k);
-    el.querySelectorAll('.v').forEach(v=> v.style.font = KN.fonts.v);
-    el.querySelectorAll('.name').forEach(n=> n.style.font = KN.fonts.name);
+    el.querySelectorAll('.k').forEach(k=> k.style.font=KN.fonts.k);
+    el.querySelectorAll('.v').forEach(v=> v.style.font=KN.fonts.v);
+    el.querySelectorAll('.name').forEach(n=> n.style.font=KN.fonts.name);
   }
 
-  const stages = ['hotp','hot','warm']; let deck = [];
+  const stages=['hotp','hot','warm']; let deck=[];
   function rebuildDeck(){ deck.length=0; for(let i=0;i<24;i++) deck.push(genLead(stages[i%stages.length])); }
-  function showNext(){ if(!deck.length) return; deck.push(deck.shift()); paintLead(liveCard, deck[0]); }
+  function showNext(){ deck.push(deck.shift()); paintLead(card, deck[0]); }
 
-  function anchorPos(){ const r = wrap.getBoundingClientRect(); return { x: 0.18*r.width, y: 0.52*r.height }; }
+  function anchorPos(){ const r=wrap.getBoundingClientRect(); return { x:.18*r.width, y:.52*r.height }; }
   function placeGlow(){
-    const a = anchorPos(); const G = KN.anchorGlow;
-    glow.style.left = a.x+'px'; glow.style.top  = a.y+'px';
-    glow.style.width = glow.style.height = (G.size||58)+'px';
-    document.documentElement.style.setProperty('--anchor-pulse', (G.pulseMs||2000)+'ms');
-    glow.style.background = `radial-gradient(circle at 50% 50%,
+    const a=anchorPos(); const G=KN.anchorGlow;
+    glow.style.left=a.x+'px'; glow.style.top=a.y+'px';
+    glow.style.width=glow.style.height=(G.size||58)+'px';
+    document.documentElement.style.setProperty('--anchor-pulse',(G.pulseMs||2000)+'ms');
+    glow.style.background=`radial-gradient(circle at 50% 50%,
       rgba(255,245,210,${G.coreA??.95}) 0%,
       rgba(242,220,160,${G.midA??.50}) 46%,
       rgba(230,195,107,${G.edgeA??.06}) 100%)`;
   }
   function drawLines(){
     while(overlay.firstChild) overlay.removeChild(overlay.firstChild);
-    const r = wrap.getBoundingClientRect(); overlay.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
-    const a = anchorPos(); const L = KN.lines || {};
-    const s = stack.getBoundingClientRect(); const p = wrap.getBoundingClientRect();
-    const targetBase = { x: (s.left - p.left) + s.width*0.22, y: (s.top  - p.top)  + s.height*0.78 };
+    const r=wrap.getBoundingClientRect(); overlay.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
+    const a=anchorPos(), L=KN.lines||{};
+    const s=stack.getBoundingClientRect(), p=wrap.getBoundingClientRect();
+    const target={ x:(s.left-p.left)+s.width*0.22, y:(s.top-p.top)+s.height*0.78 };
     for(let i=0;i<(L.count||4);i++){
-      const dx = (Math.random()*2-1)*(L.jitter||12);
-      const dy = (Math.random()*2-1)*(L.jitter||12);
-      const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
-      ln.setAttribute('x1', a.x); ln.setAttribute('y1', a.y);
-      ln.setAttribute('x2', targetBase.x+dx); ln.setAttribute('y2', targetBase.y+dy);
-      ln.setAttribute('stroke', `rgba(230,195,107,${L.alpha??.14})`);
-      ln.setAttribute('stroke-width', String(L.width||1));
+      const dx=(Math.random()*2-1)*(L.jitter||12), dy=(Math.random()*2-1)*(L.jitter||12);
+      const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1',a.x); ln.setAttribute('y1',a.y);
+      ln.setAttribute('x2',target.x+dx); ln.setAttribute('y2',target.y+dy);
+      ln.setAttribute('stroke',`rgba(230,195,107,${L.alpha??.14})`);
+      ln.setAttribute('stroke-width',String(L.width||1));
       overlay.appendChild(ln);
     }
   }
 
-  /* ========= REVEAL ENGINE ========= */
-  const AK = window.ANIM_KNOBS || {};
+  /* Reveal engine (with safe fallback) */
+  const AK = window.ANIM_KNOBS||{};
+  function buildThresholds(n){ const t=[]; for(let i=0;i<=n;i++) t.push(i/n); return t; }
   function setupReveals(){
-    if(!AK.enableReveal) return;
-    const els = $$('.reveal');
+    if(!AK.enableReveal || !('IntersectionObserver' in window)) {
+      $$('.reveal').forEach(el=>el.classList.add('in'));
+      return;
+    }
     document.documentElement.style.setProperty('--reveal-dur', (AK.durationMs||420)+'ms');
     document.documentElement.style.setProperty('--reveal-ease', AK.ease||'cubic-bezier(.22,.61,.36,1)');
     document.documentElement.style.setProperty('--reveal-from', (AK.fromY||20)+'px');
@@ -760,7 +702,6 @@ window.ANALYTICS_KNOBS = {
         if(e.intersectionRatio >= (AK.inThreshold||0.25)){
           el.classList.add('in'); el.classList.remove('out');
           el.classList.add('animating'); setTimeout(()=>el.classList.remove('animating'), (AK.durationMs||420)+40);
-          if(AK.unmountHidden) el.style.visibility='visible';
         }
       }
     },{root:null, rootMargin: AK.rootMargin||'0px', threshold: buildThresholds(8)});
@@ -771,117 +712,98 @@ window.ANALYTICS_KNOBS = {
         if(e.intersectionRatio <= (AK.outThreshold||0.05)){
           el.classList.remove('in'); el.classList.add('out');
           el.classList.add('animating'); setTimeout(()=>el.classList.remove('animating'), (AK.durationMs||420)+40);
-          if(AK.unmountHidden) el.style.visibility='hidden';
         }
       }
     },{root:null, rootMargin: AK.exitMargin||'-35% 0px -40% 0px', threshold: buildThresholds(6)});
 
-    els.forEach(el=>{ ioIn.observe(el); ioOut.observe(el); });
-  }
-  function buildThresholds(n){ const t=[]; for(let i=0;i<=n;i++) t.push(i/n); return t; }
+    $$('.reveal').forEach(el=>{ ioIn.observe(el); ioOut.observe(el); });
 
-  /* ========= ANALYTICS ========= */
-  const AN = window.ANALYTICS_KNOBS || {};
-  const Analytics = (function(){
+    /* safety: if something prevents IO fire, show content anyway */
+    setTimeout(()=>{ $$('.reveal').forEach(el=>{ if(!el.classList.contains('in')) el.classList.add('in'); }); }, 900);
+  }
+
+  /* Analytics (defensive, zero-throw) */
+  const AN = window.ANALYTICS_KNOBS||{};
+  const Analytics=(function(){
     const enabled = !!AN.enabled && Math.random() < (AN.sampleRate??1);
     function send(ev){
       if(!enabled) return;
       const payload = JSON.stringify(ev);
       if(AN.endpoint && navigator.sendBeacon){
         try{ navigator.sendBeacon(AN.endpoint, payload); }catch{ console.log('[analytics→]', ev); }
-      }else{
-        console.log('[analytics]', ev);
-      }
+      }else{ console.log('[analytics]', ev); }
     }
-    const states = new Map();
+    const states=new Map();
     function sectionEnter(id){ const s=states.get(id)||{}; if(!s.enter){ s.enter=performance.now(); s.viewed=(s.viewed||0)+1; states.set(id,s); send({t:'section_view', id, ts: Date.now()}); } }
-    function sectionLeave(id){
-      const s=states.get(id); if(!s||!s.enter) return;
-      const dur=performance.now()-s.enter; s.enter=0; states.set(id,s);
-      if(dur >= (AN.dwell?.minMs||600)) send({t:'section_dwell', id, ms: Math.round(dur), ts: Date.now()});
-    }
-    const recent=[]; let lastByTarget = { id:'', ts:0, count:0 };
+    function sectionLeave(id){ const s=states.get(id); if(!s||!s.enter) return; const dur=performance.now()-s.enter; s.enter=0; states.set(id,s); if(dur>=(AN.dwell?.minMs||600)) send({t:'section_dwell', id, ms:Math.round(dur), ts: Date.now()}); }
     function onClick(e){
       const x=e.clientX, y=e.clientY, ts=performance.now();
-      const target = e.target.closest('[data-track-id]') || e.target;
-      const id = target.getAttribute?.('data-track-id') || (target.id||target.tagName);
-      const sec = e.target.closest('[data-track-section]')?.getAttribute('data-track-section') || '';
-      const isInteractive = ['A','BUTTON','INPUT','SELECT','TEXTAREA','SUMMARY'].includes(target.tagName) || target.getAttribute?.('role')==='button';
-      send({t:'click', id, sec, tag: target.tagName, interactive: !!isInteractive, x, y, ts: Date.now()});
-      // rage cluster
-      recent.push({x,y,ts});
-      const R = AN.rage||{clicks:3,withinMs:800,radius:30};
-      while(recent.length && ts - recent[0].ts > (R.withinMs||800)) recent.shift();
-      const near = recent.filter(p => Math.hypot(p.x-x, p.y-y) < (R.radius||30));
-      if(near.length >= (R.clicks||3)) { send({t:'rage_click', id, sec, n: near.length, ts: Date.now()}); recent.length=0; }
-      // repeated target
-      if(id === lastByTarget.id && ts - lastByTarget.ts < (AN.repeatClickMs||700)){
-        lastByTarget.count++;
-        if(lastByTarget.count>=2) send({t:'repeat_click', id, sec, n:lastByTarget.count+1, ts: Date.now()});
-      }else{ lastByTarget = { id, ts, count:0 }; }
+      const target=e.target.closest('[data-track-id]')||e.target;
+      const id=target.getAttribute?.('data-track-id')||(target.id||target.tagName);
+      const sec=e.target.closest('[data-track-section]')?.getAttribute('data-track-section')||'';
+      const isInteractive=['A','BUTTON','INPUT','SELECT','TEXTAREA','SUMMARY'].includes(target.tagName)||target.getAttribute?.('role')==='button';
+      send({t:'click', id, sec, tag:target.tagName, interactive:!!isInteractive, x, y, ts: Date.now()});
+      // rage + repeat detection
+      ((onClick._buf=onClick._buf||[])).push({x,y,ts});
+      const R=AN.rage||{clicks:3,withinMs:800,radius:30};
+      while(onClick._buf.length && ts-onClick._buf[0].ts>(R.withinMs||800)) onClick._buf.shift();
+      const near=onClick._buf.filter(p=>Math.hypot(p.x-x,p.y-y)<(R.radius||30));
+      if(near.length>=(R.clicks||3)){ send({t:'rage_click', id, sec, n:near.length, ts: Date.now()}); onClick._buf.length=0; }
+      onClick._last=onClick._last||{id:'',ts:0,count:0};
+      if(id===onClick._last.id && ts-onClick._last.ts<(AN.repeatClickMs||700)){ onClick._last.count++; if(onClick._last.count>=2) send({t:'repeat_click', id, sec, n:onClick._last.count+1, ts:Date.now()}); } else { onClick._last={id,ts,count:0}; }
     }
     function instrumentSections(){
-      const io = new IntersectionObserver((entries)=>{
-        entries.forEach(e=>{
-          const id = e.target.getAttribute('data-track-section')||'';
-          if(e.isIntersecting){ sectionEnter(id); } else { sectionLeave(id); }
-        });
-      },{threshold:0.25});
-      $$('.[data-track-section]'); // just to avoid unused-var lint in some toolchains
-      Array.from(document.querySelectorAll('[data-track-section]')).forEach(s=>io.observe(s));
+      if(!('IntersectionObserver' in window)) return;
+      const io=new IntersectionObserver((entries)=>{ entries.forEach(e=>{ const id=e.target.getAttribute('data-track-section')||''; if(e.isIntersecting){sectionEnter(id);} else {sectionLeave(id);} }); },{threshold:0.25});
+      document.querySelectorAll('[data-track-section]').forEach(s=>io.observe(s));
     }
-    function start(){ if(!enabled) return; instrumentSections(); document.addEventListener('click', onClick, {capture:true, passive:true}); }
+    function start(){ if(!(!!enabled)) return; try{ instrumentSections(); document.addEventListener('click', onClick, {capture:true, passive:true}); }catch(e){ /* never throw */ } }
     return { start, send };
   })();
 
-  /* ========= INIT ========= */
-  let restartAutoRef = null;
+  /* Mobile menu toggle (cheap) */
+  (function(){
+    const burger=$('#burger'), menu=$('#mobileMenu');
+    if(!burger||!menu) return;
+    function set(open){ menu.classList.toggle('open', open); menu.setAttribute('aria-hidden', String(!open)); burger.setAttribute('aria-expanded', String(open)); }
+    burger.addEventListener('click', ()=> set(!menu.classList.contains('open')));
+    menu.addEventListener('click', (e)=>{ if(e.target===menu) set(false); }, {passive:true});
+  })();
+
+  /* Init */
+  let restartAutoRef=null;
   function init(){
     applyCopy();
-
     try{
       const host=(JSON.parse(LS.getItem("onb.seed")||"{}")||{}).host || "";
-      $("#domainTag") && ( $("#domainTag").textContent = host || "yourcompany.com" );
+      $("#domainTag") && ($("#domainTag").textContent = host || "yourcompany.com");
     }catch{}
-
     drawBackdrop();
     applyCardSizing();
     positionStack();
     rebuildDeck();
     setProbLabel();
-    paintLead(liveCard, deck[0]);
+    paintLead(card, deck[0]);
     placeGlow(); drawLines();
 
-    // autoplay gate
-    let timer, isOnScreen = true, isDocVisible = document.visibilityState !== 'hidden';
-    const noMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function restartAuto(){
-      clearInterval(timer);
-      if (KN.stack.autoPlay && isOnScreen && isDocVisible && !noMotion){
-        timer = setInterval(showNext, KN.stack.autoMs || 5200);
-      }
+    // autoplay gating
+    let timer, onScreen=true, visible=document.visibilityState!=='hidden';
+    const noMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function restart(){ clearInterval(timer); if(KN.stack.autoPlay && onScreen && visible && !noMotion){ timer=setInterval(showNext, KN.stack.autoMs||5200); } }
+    restartAutoRef=restart;
+
+    if('IntersectionObserver' in window && wrap){
+      const io=new IntersectionObserver((es)=>{ onScreen=es.some(e=>e.isIntersecting); restart(); },{threshold:.25});
+      io.observe(wrap);
     }
-    restartAutoRef = restartAuto;
-
-    const io = new IntersectionObserver((entries)=>{
-      isOnScreen = entries.some(e => e.isIntersecting);
-      restartAuto();
-    },{ threshold: 0.25 });
-    if(wrap) io.observe(wrap);
-
-    document.addEventListener('visibilitychange', ()=>{ isDocVisible = document.visibilityState !== 'hidden'; restartAuto(); });
+    document.addEventListener('visibilitychange', ()=>{ visible=document.visibilityState!=='hidden'; restart(); });
 
     if (KN.stack.clickAdvance){
-      rail.addEventListener('click', ()=>{ showNext(); }, {passive:true});
-      rail.addEventListener('keydown', (e)=>{ if(e.key==='ArrowRight'||e.key===' '||e.key==='Enter'){ e.preventDefault(); showNext(); }});
+      rail.addEventListener('click', ()=>showNext(), {passive:true});
+      rail.addEventListener('keydown', e=>{ if(['ArrowRight',' ','Enter'].includes(e.key)){ e.preventDefault(); showNext(); }});
     }
 
-    addEventListener('resize', ()=>{
-      clearTimeout(init._r);
-      init._r = setTimeout(()=>{
-        drawBackdrop(); applyCardSizing(); positionStack(); placeGlow(); drawLines(); applyWallpaper();
-      }, 80);
-    });
+    addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackdrop(); applyCardSizing(); positionStack(); placeGlow(); drawLines(); applyWallpaper(); },80); });
 
     try{
       const cores = navigator.hardwareConcurrency||2;
@@ -898,19 +820,21 @@ window.ANALYTICS_KNOBS = {
 
     setupReveals();
     Analytics.start();
+
+    /* Safety: ensure first-screen content visible even if observers fail */
+    setTimeout(()=>{ const hero=$('section.hero'); hero && hero.classList.add('in'); }, 150);
   }
   init();
 
-  /* ========= LIVE PATCHERS ========= */
-  window.updateScoreboardKnobs = function(patch){
+  /* Live patchers */
+  window.updateScoreboardKnobs=function(patch){
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
     Object.assign(KN, window.SCOREBOARD_KNOBS);
     applyCardSizing(); positionStack(); setProbLabel(); placeGlow(); drawLines();
-    if (typeof restartAutoRef === 'function') restartAutoRef();
+    if(typeof restartAutoRef==='function') restartAutoRef();
   };
-  window.updateAnimKnobs = function(patch){ window.ANIM_KNOBS = deepMerge(window.ANIM_KNOBS, patch||{}); };
-  window.updateCopyKnobs = function(patch){ window.COPY_KNOBS = deepMerge(window.COPY_KNOBS, patch||{}); applyCopy(); };
-
+  window.updateAnimKnobs=function(patch){ window.ANIM_KNOBS = deepMerge(window.ANIM_KNOBS, patch||{}); };
+  window.updateCopyKnobs=function(patch){ window.COPY_KNOBS = deepMerge(window.COPY_KNOBS, patch||{}); applyCopy(); };
 })();
 </script>
 
