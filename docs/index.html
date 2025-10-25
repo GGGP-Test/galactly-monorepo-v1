@@ -1032,6 +1032,27 @@ window.SCOREBOARD_KNOBS = {
 <script defer src="./sections/process/steps/process.step3.js"></script>
 <script defer src="./sections/process/steps/process.step4.js"></script>
 <script defer src="./sections/process/steps/process.step5.js"></script>
+<script>
+  // Re-assert mobile config after all process scripts have loaded
+  addEventListener('load', () => {
+    const M = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {}).mobile ||
+              (window.PROCESS_CONFIG.mobile = {});
+    // Phones only
+    M.BP = 640;
+
+    // DOM mode = the renderer that actually builds mstep blocks
+    M.MODE = 'dom';
+
+    // Show all steps in the mobile flow
+    M.SHOW_STEPS = { 1:true, 2:true, 3:true, 4:true, 5:true };
+
+    // Ensure placeholders appear for any step without a mobile renderer
+    M.SHOW_EMPTY = true;
+
+    // Repaint with the corrected config
+    window.PROCESS_REPAINT && window.PROCESS_REPAINT();
+  });
+</script>
 
 <!-- Section 4 (Orbit) scripts -->
 <script defer src="./sections/orbit/orbit.data.js"></script>
