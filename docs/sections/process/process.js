@@ -15,7 +15,7 @@
 
       // >>> Phones/tablets: all mobile-only tuning lives here (desktop untouched)
       mobile: {
-        BP: 1024,                 // <= px uses mobile path (set 640 for phones only)
+        BP: 640,                 // <= px uses mobile path (set 640 for phones only)
         MODE: "dom",              // "dom" = render mobile here; "scenes" = call per-step files
 
         // ===== Step 0 (Pill) : Mobile-only knobs =====
