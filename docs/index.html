@@ -317,6 +317,37 @@
     .actions{ justify-content:center; width:100%; }
     .actions.show-mobile{ flex-direction:column; gap:12px; }
     .actions.show-mobile .btn{ width:100%; padding:16px 20px; justify-content:center; text-align:center; }
+    /* Accessible skip label */
+    .visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
+    
+    /* Input + button group */
+    .actions .inputGroup{
+      display:flex; align-items:stretch; gap:10px;
+    }
+    .actions .inputGroup input{
+      flex:1; min-width:240px;
+      padding:12px 14px; border-radius:999px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.02);
+      color:var(--text);
+      box-shadow:0 6px 18px rgba(0,0,0,.18), inset 0 0 0 1px rgba(255,255,255,.05);
+      outline:none;
+      font:500 15px/1.2 Inter, system-ui;
+    }
+    .actions .inputGroup input::placeholder{ color:#9fb3c7; opacity:.95 }
+    .actions .inputGroup input:focus{
+      border-color:#2b445c; box-shadow:0 8px 22px rgba(0,0,0,.22), 0 0 0 2px rgba(99,211,255,.18) inset;
+    }
+    
+    /* Mobile: center + stack */
+    @media (max-width:900px){
+      .actions.show-mobile{ justify-content:center; width:100%; }
+      .actions.show-mobile .inputGroup{
+        flex-direction:column; align-items:stretch;
+        width:100%; max-width:28rem; margin-inline:auto;
+      }
+      .actions.show-mobile .inputGroup input,
+      .actions.show-mobile .inputGroup .btn{ width:100%; }
   }
   @media (prefers-reduced-motion: reduce){
     #constFx{display:none}
@@ -375,11 +406,27 @@
         <h1 class="show-mobile" id="copy-hero-h1-mobile"><span>We help packaging suppliers</span> <span class="h1-accent">win qualified buyers</span></h1>
         <p class="lead show-desktop" id="copy-hero-lead-desktop">We filter the noise and surface real companies already signaling intent in your strengths.</p>
         <p class="lead show-mobile" id="copy-hero-lead-mobile">One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.</p>
+         <!-- Desktop CTA: replace this whole block -->
         <div class="actions show-desktop" id="get-started-desktop">
-          <button id="cta-desktop" type="button" class="btn primary" data-track-id="cta-desktop">✨ START FOR FREE</button>
+          <div class="inputGroup">
+            <label class="visually-hidden" for="hostHeroDesktop">Your website</label>
+            <input id="hostHeroDesktop" type="url" inputmode="url"
+                   placeholder="yourcompany.com" autocomplete="url" />
+            <button id="cta-desktop" type="button" class="btn primary" data-track-id="cta-desktop">
+              ✨ START FOR FREE
+            </button>
+          </div>
         </div>
+        <!-- Mobile CTA: replace this whole block -->
         <div class="actions show-mobile" id="get-started">
-          <button id="cta" type="button" class="btn primary" data-track-id="cta-mobile">Start Free</button>
+          <div class="inputGroup">
+            <label class="visually-hidden" for="hostHeroMobile">Your website</label>
+            <input id="hostHeroMobile" type="url" inputmode="url"
+                   placeholder="yourcompany.com" autocomplete="url" />
+            <button id="cta" type="button" class="btn primary" data-track-id="cta-mobile">
+              Start Free
+            </button>
+          </div>
         </div>
       </div>
 
@@ -973,6 +1020,16 @@ window.SCOREBOARD_KNOBS = {
     const normHost=(h)=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
     const domainFromEmail=(e)=>{const m=(e||"").toLowerCase().match(/@([a-z0-9.-]+)/); return m?m[1]:""; };
     const openBtnMobile=document.getElementById("cta"), openBtnDesktop=document.getElementById("cta-desktop");
+    // NEW: hero inputs
+    const heroHostD = document.getElementById("hostHeroDesktop");
+    const heroHostM = document.getElementById("hostHeroMobile");
+    
+    // Helper: pull + normalize the host from either hero field
+    function heroHost(){
+      const raw = (heroHostD?.value || heroHostM?.value || "").trim();
+      const h = normHost(raw);
+      return h;
+    }
     const closeBtn=document.getElementById("close"); const backBtn=document.getElementById("back"), nextBtn=document.getElementById("next");
     const emailEl=document.getElementById("email"), hostEl=document.getElementById("host"), phoneEl=document.getElementById("phone"), nameEl=document.getElementById("name");
     const optSupplier=document.getElementById("opt-supplier"), optBuyer=document.getElementById("opt-buyer");
@@ -987,7 +1044,23 @@ window.SCOREBOARD_KNOBS = {
     function open(){ const m=document.getElementById("modal"); m.classList.add("show"); m.style.display="flex"; m.setAttribute("aria-hidden","false"); show(0); }
     function close(){ const m=document.getElementById("modal"); m.classList.remove("show"); m.style.display="none"; m.setAttribute("aria-hidden","true"); }
     document.getElementById("navStart")?.addEventListener("click",(e)=>{e.preventDefault();open();});
-    openBtnMobile?.addEventListener("click", open); openBtnDesktop?.addEventListener("click", open); closeBtn?.addEventListener("click", close);
+    // Replace the old button listeners with these:
+    openBtnDesktop?.addEventListener("click", () => {
+      const h = heroHost();
+      if (h) { hostEl.value = h; document.getElementById("domainTag")?.textContent = h; }
+      open();
+    });
+    openBtnMobile?.addEventListener("click", () => {
+      const h = heroHost();
+      if (h) { hostEl.value = h; document.getElementById("domainTag")?.textContent = h; }
+      open();
+    
+    [heroHostD, heroHostM].forEach(el=>{
+      el?.addEventListener("keydown", (e)=>{
+        if(e.key === "Enter"){ e.preventDefault(); (el.id==="hostHeroDesktop"?openBtnDesktop:openBtnMobile)?.click(); }
+      });
+    });
+    closeBtn?.addEventListener("click", close);
     backBtn?.addEventListener("click", ()=> show(Math.max(0, state.step-1)));
     nextBtn?.addEventListener("click", ()=>{
       if (state.step===0){ show(1); return; }
