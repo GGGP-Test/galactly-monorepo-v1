@@ -1,0 +1,247 @@
+<!-- docs/start.html -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Get started — Galactly</title>
+
+<!-- Fonts (match landing) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="icon" href="data:,">
+
+<style>
+  :root{
+    --bg:#0a0e14; --panel:#101623; --stroke:#1b2531;
+    --text:#e9f1f7; --muted:#91a6b8;
+    --gold:#e6c36b; --gold-700:#b8913d; --gold-300:#f2dca0;
+    --ctaText:#1b1405;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
+  a{color:inherit;text-decoration:none}
+
+  /* Header (simple, consistent) */
+  .site-header{position:sticky;top:0;z-index:10;height:60px;display:grid;place-items:center;
+    background:rgba(12,18,28,.38); -webkit-backdrop-filter:blur(12px) saturate(140%);
+    backdrop-filter:blur(12px) saturate(140%); border-bottom:1px solid rgba(255,255,255,.06)}
+  .site-header .inner{max-width:1100px;width:100%;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand-badge{width:28px;height:28px;border-radius:8px;background:linear-gradient(180deg,var(--gold),var(--gold-700));
+    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px}
+
+  /* Layout */
+  .wrap{min-height:calc(100svh - 60px); display:grid; place-items:center; padding:40px 16px}
+  .card{width:min(860px, 92vw); border-radius:18px; background:linear-gradient(180deg,#0b121d,#0b1119);
+    border:1px solid rgba(255,255,255,.10); box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+    display:flex; flex-direction:column; overflow:hidden}
+  .card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
+  .steps{display:flex;gap:8px;align-items:center}
+  .steps .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.22);box-shadow:0 0 0 1px rgba(255,255,255,.12) inset}
+  .steps .dot.on{background:linear-gradient(180deg,var(--gold),var(--gold-700))}
+  .api-badge{font-size:12px;color:#cfe2ff;opacity:.9;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:5px 7px;border-radius:8px}
+  .card-bd{padding:14px 16px}
+  .pill{display:inline-block;margin:2px 0 6px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#91a6b8;font-size:12px}
+  h2{font:600 clamp(22px,3.2vw,28px) "Newsreader", Georgia, serif; margin:10px 0 14px}
+  .accordion{border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03);overflow:hidden}
+  .acc-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06)}
+  .acc-bd{padding:14px}
+
+  .chips{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.05);cursor:pointer}
+  .chip.active{background:linear-gradient(180deg,var(--gold),var(--gold-700)); color:var(--ctaText); border:none}
+  .hint{font-size:12px;color:#8ba6bf}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:720px){ .grid2{grid-template-columns:1fr} }
+
+  .field{display:flex;flex-direction:column;gap:8px}
+  .field label{font-weight:600;color:#cfe0ee}
+  .field input{padding:12px 14px;border-radius:10px;border:1px solid var(--stroke);background:rgba(255,255,255,.02);color:var(--text);outline:none}
+  .field input::placeholder{color:#9fb3c7;opacity:.95}
+  .field input:focus{border-color:#2b445c; box-shadow:0 0 0 2px rgba(99,211,255,.18) inset}
+
+  .card-ft{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-top:1px solid rgba(255,255,255,.06)}
+  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:999px;border:1px solid var(--stroke);cursor:pointer;background:rgba(255,255,255,.02);color:#cfe0ee;font-weight:600}
+  .btn.ghost{background:transparent}
+  .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
+  .btn:active{transform:translateY(1px)}
+  .topbar{display:flex;align-items:center;gap:10px}
+  .topbar a{opacity:.9}
+  .topbar a:hover{opacity:1}
+
+  .center{display:grid;place-items:center}
+</style>
+</head>
+<body>
+  <!-- Simple header -->
+  <header class="site-header" aria-label="Site">
+    <div class="inner">
+      <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge" aria-hidden="true">G</span></a>
+      <div class="topbar">
+        <a href="index.html">Back to site</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="card" role="region" aria-label="Onboarding">
+      <div class="card-hd">
+        <div class="steps" aria-label="Steps">
+          <span class="dot on" data-step-dot="0"></span>
+          <span class="dot" data-step-dot="1"></span>
+          <span class="dot" aria-hidden="true" style="opacity:.35"></span><!-- visual 3rd -->
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span id="apiBadge" class="api-badge">Ready</span>
+        </div>
+      </div>
+
+      <div class="card-bd">
+        <!-- Step 1 -->
+        <section class="step" id="step1">
+          <div class="pill">Get set up in 60 seconds</div>
+          <h2>Pick your side</h2>
+          <div class="accordion" role="group" aria-labelledby="roleLegend">
+            <div class="acc-hd"><h4 id="roleLegend" style="margin:0">Role</h4><div class="hint">Required</div></div>
+            <div class="acc-bd">
+              <div class="chips" id="roleChips">
+                <span id="opt-supplier" class="chip active" role="button" tabindex="0" aria-pressed="true">🙌 I sell packaging (Supplier)</span>
+                <span id="opt-buyer" class="chip" role="button" tabindex="0" aria-pressed="false">🛒 I buy packaging (Buyer)</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Step 2 -->
+        <section class="step" id="step2" hidden>
+          <div class="pill">Step 2 of 3</div>
+          <h2>Tell us who you are</h2>
+          <div class="accordion" role="group" aria-labelledby="contactLegend">
+            <div class="acc-hd"><h4 id="contactLegend" style="margin:0">Contact & company</h4><div class="hint">Required</div></div>
+            <div class="acc-bd">
+              <div class="grid2">
+                <div>
+                  <div class="field">
+                    <label for="name">Your name</label>
+                    <input id="name" type="text" autocomplete="name" placeholder="e.g., Sam Carter">
+                  </div>
+                  <div class="field">
+                    <label for="phone">Phone (required for alerts) *</label>
+                    <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567">
+                    <div class="hint">Include country code (e.g., “+1”).</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="field">
+                    <label for="email">Business email *</label>
+                    <input id="email" type="email" autocomplete="email" placeholder="you@yourcompany.com" required>
+                  </div>
+                  <div class="field">
+                    <label for="host">Website / Domain</label>
+                    <input id="host" type="text" inputmode="url" placeholder="yourcompany.com">
+                    <div class="hint">Auto-filled from your email. You can edit.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="hint" id="apiStatus" style="margin-top:8px">Step 3 opens in a new screen.</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="card-ft">
+        <button id="back" class="btn ghost" type="button">Back</button>
+        <button id="next" class="btn primary" type="button">Continue</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Shared helpers -->
+  <script src="./js/onb.common.js"></script>
+
+  <script>
+  (function(){
+    const dots = [...document.querySelectorAll("[data-step-dot]")];
+    const backBtn = document.getElementById("back");
+    const nextBtn = document.getElementById("next");
+    const optSupplier = document.getElementById("opt-supplier");
+    const optBuyer = document.getElementById("opt-buyer");
+    const emailEl = document.getElementById("email");
+    const hostEl  = document.getElementById("host");
+    const phoneEl = document.getElementById("phone");
+    const nameEl  = document.getElementById("name");
+    const state = { step: 0, role: "supplier" };
+
+    function show(step){
+      state.step = step;
+      document.getElementById("step1").hidden = step !== 0;
+      document.getElementById("step2").hidden = step !== 1;
+      dots.forEach((d,i)=> d.classList.toggle("on", i === step));
+      backBtn.style.visibility = step === 0 ? "hidden" : "visible";
+      nextBtn.textContent = step === 0 ? "Next" : "Continue";
+    }
+
+    function setRole(r){
+      state.role = r;
+      ONB.setRoleUI(r);
+      optSupplier?.setAttribute("aria-pressed", String(r==="supplier"));
+      optBuyer?.setAttribute("aria-pressed", String(r==="buyer"));
+    }
+
+    // Role chips
+    optSupplier?.addEventListener("click", ()=> setRole("supplier"));
+    optBuyer?.addEventListener("click", ()=> setRole("buyer"));
+    optSupplier?.addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setRole("supplier"); }});
+    optBuyer?.addEventListener("keydown",(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setRole("buyer"); }});
+
+    // Email → host autofill
+    function syncDomain(){
+      const d = ONB.domainFromEmail(emailEl.value);
+      if (d && !hostEl.value) hostEl.value = d;
+    }
+    emailEl?.addEventListener("input", syncDomain);
+    emailEl?.addEventListener("change", syncDomain);
+
+    // Nav buttons
+    backBtn?.addEventListener("click", ()=> show(Math.max(0, state.step - 1)));
+    nextBtn?.addEventListener("click", ()=>{
+      if (state.step === 0){ show(1); return; }
+      // Step 2 validation + persist → Step 3
+      if (!emailEl.value || !phoneEl.value){
+        alert("Business email and phone are required."); return;
+      }
+      const finalHost = ONB.normHost(hostEl.value || ONB.domainFromEmail(emailEl.value));
+      if (!finalHost){ alert("Please provide your website/domain."); return; }
+
+      const seed = ONB.writeSeed({
+        role: state.role,
+        host: finalHost,
+        contact: { name: nameEl.value, phone: phoneEl.value, email: emailEl.value }
+      });
+
+      // Handoff to your existing Step 3 page (same palette).
+      ONB.goToStep3(seed, "step3.html");
+    });
+
+    // Prefill from seed / query on load
+    const initial = ONB.readSeed();
+    setRole(initial.role || "supplier");
+    ONB.prefillFromSeed(initial);
+    show(0);
+
+    // Enter to advance (but not inside inputs)
+    document.addEventListener("keydown",(e)=>{
+      const tag = (e.target && e.target.tagName) || "";
+      if(e.key==="Enter" && !["INPUT","TEXTAREA","BUTTON","A","SELECT"].includes(tag)){
+        e.preventDefault(); nextBtn.click();
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
