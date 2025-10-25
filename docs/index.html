@@ -42,7 +42,7 @@
     --wp-r1-size: 180% 140%; --wp-r1-at: 50% -14%; --wp-r1-alpha: .16; --wp-r1-fade: 58%;
     --wp-r2-size: 110% 90%;  --wp-r2-at: 22% 12%;  --wp-r2-alpha: .08; --wp-r2-fade: 72%;
 
-    /* NEW: reveal & card sizing knobs (overridable from JS) */
+    /* reveal & card sizing knobs */
     --reveal-dur: 420ms; --reveal-ease: cubic-bezier(.22,.61,.36,1);
     --reveal-in-y: 22px; --reveal-out-y: -18px;
     --card-w: 260px; --rail-h: 192px; --card-pad: 12px 12px 10px;
@@ -54,6 +54,9 @@
   body{position:relative}
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+
+  /* Make the “visually-hidden” helper global so the label never shows on desktop */
+  .visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
 
   /* ---- STATIC WALLPAPER ---- */
   .page-wallpaper{
@@ -107,7 +110,7 @@
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
 
   /* Hamburger (mobile only) */
-  .hamburger{display:none; justify-self:end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
+  .hamburger{display:none; justify-self=end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
   .hamburger span{position:absolute; left:2px; right:2px; height:2px; top:11px; border-radius:2px; background:currentColor; transition:transform .25s, top .25s}
   .hamburger span:nth-child(2){ top:21px; }
   .hamburger[aria-expanded="true"] span{ top:17px; }
@@ -147,6 +150,30 @@
   .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));
     border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
 
+  /* === Glass CTA (desktop) === */
+  .glass-cta{
+    display:flex; align-items:center; gap:10px;
+    width:min(620px, 100%);
+    padding:6px; border-radius:999px;
+    background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    backdrop-filter: blur(10px) saturate(140%);
+    border:1px solid rgba(255,255,255,.10);
+    box-shadow:0 12px 26px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .glass-input{
+    flex:1; min-width:240px;
+    padding:14px 16px; border-radius:999px;
+    border:0; outline:none; background:transparent; color:var(--text);
+    font:500 15px/1.2 Inter, system-ui;
+  }
+  .glass-input::placeholder{ color:#9fb3c7; opacity:.95 }
+  .glass-cta:focus-within{
+    box-shadow:0 14px 28px rgba(0,0,0,.26), 0 0 0 1px rgba(99,211,255,.14) inset;
+    border-color:#2b445c;
+  }
+  .glass-btn{ box-shadow:0 12px 26px rgba(230,195,107,.20), 0 0 0 1px rgba(255,255,255,.06) inset; }
+
   /* Constellation / Scoreboard panel */
   .const-wrap{
     position:relative; isolation:isolate; height:560px;
@@ -181,8 +208,8 @@
 
   .const-legend{
     position:absolute; inset:auto 12px 12px auto; z-index:2;
-    font-size:var(--legend-fs); color:var(--legend-color);
-    background:var(--legend-bg); border:1px solid var(--stroke);
+    font-size:12px; color:#b9cbe0;
+    background:rgba(255,255,255,.06); border:1px solid var(--stroke);
     padding:6px 8px; border-radius:10px
   }
   .const-caption{
@@ -208,10 +235,8 @@
     border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03);
     box-shadow:0 8px 18px rgba(0,0,0,.28);
   }
-  .stackGhost::after{
-    content:""; position:absolute; inset:0; border-radius:inherit;
-    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-  }
+  .stackGhost::after{ content:""; position:absolute; inset:0; border-radius:inherit;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); }
 
   /* Card */
   .miniCard{
@@ -221,7 +246,7 @@
     background:var(--miniCard-bg);
     -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
     border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
-    box-shadow:0 8px 22px rgba(0,0,0,var(--miniCard-shadow-a));
+    box-shadow:0 8px 22px rgba(0,0,0,.24);
     color:#e8f1fb;
   }
   @supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))){
@@ -309,27 +334,15 @@
     h1{ font-family: var(--font-sans); font-weight:800; letter-spacing:-0.01em; }
     .h1-accent{ background:linear-gradient(180deg,var(--gold-300),var(--gold-700)); -webkit-background-clip:text; background-clip:text; color:transparent; }
     .badge,.lead{ margin-left:auto; margin-right:auto; }
-    .actions{ justify-content:center; width:100%; }
-    .actions.show-mobile{ flex-direction:column; gap:12px; }
+
+    /* Mobile CTA remains stacked for better tap targets; give the input the same glass look */
+    .actions.show-mobile{ flex-direction:column; gap:12px; width:100%; }
+    .actions.show-mobile .inputGroup{ display:flex; flex-direction:column; align-items:stretch; width:100%; max-width:28rem; margin-inline:auto; gap:12px; }
+    .actions.show-mobile .inputGroup input{ border:1px solid rgba(255,255,255,.10); border-radius:999px; background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06)); -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%); color:var(--text); padding:14px 16px; box-shadow:0 8px 22px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.06); }
+    .actions.show-mobile .inputGroup input::placeholder{ color:#9fb3c7; opacity:.95 }
     .actions.show-mobile .btn{ width:100%; padding:16px 20px; justify-content:center; text-align:center; }
-    .visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
-    .actions .inputGroup{ display:flex; align-items:stretch; gap:10px; }
-    .actions .inputGroup input{
-      flex:1; min-width:240px;
-      padding:12px 14px; border-radius:999px;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.02);
-      color:var(--text);
-      box-shadow:0 6px 18px rgba(0,0,0,.18), inset 0 0 0 1px rgba(255,255,255,.05);
-      outline:none; font:500 15px/1.2 Inter, system-ui;
-    }
-    .actions .inputGroup input::placeholder{ color:#9fb3c7; opacity:.95 }
-    .actions .inputGroup input:focus{
-      border-color:#2b445c; box-shadow:0 8px 22px rgba(0,0,0,.22), 0 0 0 2px rgba(99,211,255,.18) inset;
-    }
-    .actions.show-mobile .inputGroup{ flex-direction:column; align-items:stretch; width:100%; max-width:28rem; margin-inline:auto; }
-    .actions.show-mobile .inputGroup input, .actions.show-mobile .inputGroup .btn{ width:100%; }
   }
+
   @media (prefers-reduced-motion: reduce){
     #constFx{display:none}
     .miniCard .prob .dot::after{ animation:none }
@@ -387,22 +400,24 @@
         <h1 class="show-mobile" id="copy-hero-h1-mobile"><span>We help packaging suppliers</span> <span class="h1-accent">win qualified buyers</span></h1>
         <p class="lead show-desktop" id="copy-hero-lead-desktop">We filter the noise and surface real companies already signaling intent in your strengths.</p>
         <p class="lead show-mobile" id="copy-hero-lead-mobile">One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.</p>
-        <!-- Desktop CTA -->
+
+        <!-- Desktop CTA: input + button inside a single glass pill -->
         <div class="actions show-desktop" id="get-started-desktop">
-          <div class="inputGroup">
-            <label class="visually-hidden" for="hostHeroDesktop">Your website</label>
-            <input id="hostHeroDesktop" type="url" inputmode="url"
+          <label class="visually-hidden" for="hostHeroDesktop">Your website</label>
+          <div class="glass-cta" role="group" aria-label="Start for free">
+            <input id="hostHeroDesktop" class="glass-input" type="url" inputmode="url"
                    placeholder="yourcompany.com" autocomplete="url" />
-            <button id="cta-desktop" type="button" class="btn primary" data-track-id="cta-desktop">
+            <button id="cta-desktop" type="button" class="btn primary glass-btn" data-track-id="cta-desktop">
               ✨ START FOR FREE
             </button>
           </div>
         </div>
-        <!-- Mobile CTA -->
+
+        <!-- Mobile CTA: stacked (bigger button for thumbs) with glass input -->
         <div class="actions show-mobile" id="get-started">
           <div class="inputGroup">
             <label class="visually-hidden" for="hostHeroMobile">Your website</label>
-            <input id="hostHeroMobile" type="url" inputmode="url"
+            <input id="hostHeroMobile" class="glass-input" type="url" inputmode="url"
                    placeholder="yourcompany.com" autocomplete="url" />
             <button id="cta" type="button" class="btn primary" data-track-id="cta-mobile">
               Start Free
@@ -443,7 +458,7 @@
               <div class="chips" data-tags></div>
             </div>
 
-            <!-- faint static cards -->
+            <!-- faint static “cards” -->
             <div class="miniCard static s1" data-static>
               <div class="row"><span class="k">Buyer</span><span class="v name">Volt Pharma — Denver, CO</span></div>
               <div class="row"><span class="k">Distance</span><span class="v">15 mi</span></div>
@@ -819,10 +834,9 @@ window.SCOREBOARD_KNOBS = {
   function init(){
     applyCopy();
 
-    // Lock default domain tag — no localStorage override
-    const DEFAULT_HOST = 'yourcompany.com';
+    // Keep default domain label consistent
     const tagEl = document.getElementById('domainTag');
-    if(tagEl) tagEl.textContent = DEFAULT_HOST;
+    if(tagEl) tagEl.textContent = 'yourcompany.com';
 
     drawBackdrop();
     applyCardSizing();
@@ -832,15 +846,10 @@ window.SCOREBOARD_KNOBS = {
     paintLead(card, deck[0]);
     placeGlow(); drawLines();
 
-    // autoplay gate
+    // autoplay gating
     let timer, onScreen=true, visible=document.visibilityState!=='hidden';
     const noMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function restart(){
-      clearInterval(timer);
-      if(KN.stack.autoPlay && onScreen && visible && !noMotion){
-        timer=setInterval(showNext, KN.stack.autoMs||5200);
-      }
-    }
+    function restart(){ clearInterval(timer); if(KN.stack.autoPlay && onScreen && visible && !noMotion){ timer=setInterval(showNext, KN.stack.autoMs||5200); } }
     restart();
     if('IntersectionObserver' in window && wrap){
       const io=new IntersectionObserver((es)=>{ onScreen=es.some(e=>e.isIntersecting); restart(); },{threshold:.25});
@@ -867,7 +876,7 @@ window.SCOREBOARD_KNOBS = {
     setupReveals();
     Analytics.start();
 
-    // mobile menu toggle
+    // Mobile menu
     (function(){
       const burger=$('#burger'), menu=$('#mobileMenu');
       if(!burger||!menu) return;
@@ -876,7 +885,7 @@ window.SCOREBOARD_KNOBS = {
       menu.addEventListener('click', (e)=>{ if(e.target===menu) set(false); }, {passive:true});
     })();
 
-    // ----- Onboarding now lives on start.html -----
+    // Onboarding moved to start.html; keep IDs the same
     const heroHostD = document.getElementById("hostHeroDesktop");
     const heroHostM = document.getElementById("hostHeroMobile");
     const ctaDesktop = document.getElementById("cta-desktop");
@@ -899,7 +908,6 @@ window.SCOREBOARD_KNOBS = {
     navStart  ?.addEventListener('click', (e)=>{ e.preventDefault(); goStart(); });
     mobileStart?.addEventListener('click', (e)=>{ e.preventDefault(); goStart(); });
 
-    // Enter in either hero input triggers CTA
     [heroHostD, heroHostM].forEach(el=>{
       el?.addEventListener("keydown", (e)=>{
         if(e.key === "Enter"){ e.preventDefault(); goStart(); }
@@ -916,7 +924,7 @@ window.SCOREBOARD_KNOBS = {
   window.updateCopyKnobs=function(patch){ window.COPY_KNOBS = deepMerge(window.COPY_KNOBS, patch||{}); applyCopy(); };
   window.updateAnimKnobs=function(patch){ window.ANIM_KNOBS = deepMerge(window.ANIM_KNOBS, patch||{}); };
 
-  // KPI counters (as before) + tiny fallback
+  // KPI counters + fallback
   (function(){
     const section = document.getElementById("proof"); if (!section) return;
     const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -933,8 +941,6 @@ window.SCOREBOARD_KNOBS = {
       entries.forEach(e=>{ if (!fired && e.isIntersecting){ fired=true; nums.forEach(animate); io.disconnect(); }});
     },{threshold:0.30});
     io.observe(section);
-
-    // Fallback in case IO is blocked by anything: animate once after load.
     addEventListener('load', ()=>{ if(!fired){ fired=true; nums.forEach(animate); }});
   })();
 })();
