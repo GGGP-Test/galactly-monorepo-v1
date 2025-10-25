@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Section styles (unchanged) -->
+<!-- Section styles -->
 <link rel="stylesheet" href="./sections/process/process.css">
 <link rel="stylesheet" href="./sections/orbit/orbit.css">
 
@@ -45,18 +45,16 @@
     /* reveal & card sizing knobs */
     --reveal-dur: 420ms; --reveal-ease: cubic-bezier(.22,.61,.36,1);
     --reveal-in-y: 22px; --reveal-out-y: -18px;
-    --card-w: 260px; --rail-h: 192px; --card-pad: 12px 12px 10px;
+    --card-w: 280px; --rail-h: 206px; --card-pad: 12px 12px 10px;
   }
 
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-    font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;}
+    font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
   body{position:relative}
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
-  /* Make the “visually-hidden” helper global so the label never shows on desktop */
   .visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
 
   /* ---- STATIC WALLPAPER ---- */
@@ -77,7 +75,6 @@
   .hero,.section{background:transparent}
   body::before, body::after, .hero::before, .hero::after{content:none!important}
 
-  /* layout widths */
   @media (min-width:901px){
     .site-header .inner, .hero-grid, .section .inner{max-width:var(--container-max);width:100%;margin-inline:auto}
   }
@@ -143,8 +140,7 @@
   .hero-copy{max-width:680px}
   .badge{display:inline-block;margin-bottom:12px;padding:6px 10px;border-radius:999px;
     border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#91a6b8;font-size:12px}
-  /* Micro-typography tune: calmer, denser headline without changing font */
-  h1{font:600 clamp(34px,6vw,64px) "Newsreader", Georgia, serif;letter-spacing:0;margin:0 0 10px;line-height:1.06}
+  h1{font:600 clamp(34px,6vw,64px) "Newsreader", Georgia, serif;letter-spacing:.2px;margin:0 0 10px}
   .lead{color:#c7d7e6;font-size:clamp(16px,2.6vw,19px);margin:0 0 26px}
   .actions{display:flex;gap:12px;flex-wrap:wrap}
   .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 18px;border-radius:999px;border:1px solid var(--stroke);cursor:pointer}
@@ -178,11 +174,10 @@
 
   /* Constellation / Scoreboard panel */
   .const-wrap{
-    position:relative; isolation:isolate; height:560px;
+    position:relative; isolation:isolate; height:540px;
     border-radius:var(--const-radius); overflow:hidden;
     background:linear-gradient(180deg,#0b121d,#0b1119);
     filter: drop-shadow(0 10px 24px rgba(0,0,0,var(--const-drop-a)));
-    contain:paint;
   }
   .const-wrap::before{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
@@ -201,12 +196,12 @@
   #anchorGlow{
     position:absolute; pointer-events:none; z-index:1; border-radius:999px;
     transform: translate(-50%,-50%) scale(1);
-    animation: anchorBreath var(--anchor-pulse,1800ms) ease-in-out infinite;
-    box-shadow:0 0 40px rgba(230,195,107,.22), 0 0 120px rgba(230,195,107,.12);
+    animation: anchorBreath var(--anchor-pulse,2000ms) ease-in-out infinite;
+    box-shadow:0 0 40px rgba(230,195,107,.22), 0 0 100px rgba(230,195,107,.12);
   }
   @keyframes anchorBreath{
-    0%,100%{ transform: translate(-50%,-50%) scale(.97); opacity:.95 }
-    50%{    transform: translate(-50%,-50%) scale(1.03); opacity:1  }
+    0%,100%{ transform: translate(-50%,-50%) scale(.96); opacity:.95 }
+    50%{    transform: translate(-50%,-50%) scale(1.04); opacity:1  }
   }
 
   .const-legend{
@@ -228,23 +223,17 @@
     border:1px solid rgba(230,195,107,.25)
   }
 
-  /* STACK (vertical ladder) */
+  /* STACK */
   .cardStack{ position:absolute; z-index:2; transform-origin:center center; }
   .cardStack .rail{ position:relative; width:var(--card-w); height:var(--rail-h); pointer-events:auto; }
 
-  .stackGhost{
-    position:absolute; left:50%; bottom:0; width:calc(var(--card-w) - 50px); height:118px; border-radius:12px;
-    transform:translateX(-50%);
-    border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03);
-    box-shadow:0 8px 18px rgba(0,0,0,.28);
-  }
-  .stackGhost::after{ content:""; position:absolute; inset:0; border-radius:inherit;
-    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); }
+  /* Hide static ladder for a cleaner, more “product” hero */
+  .miniCard.static,[data-ghost]{ display:none !important; }
 
   /* Card */
   .miniCard{
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    z-index:3; min-width:220px; max-width:260px; width:var(--card-w);
+    z-index:3; min-width:240px; max-width:300px; width:var(--card-w);
     padding:var(--card-pad); border-radius:var(--miniCard-radius);
     background:var(--miniCard-bg);
     -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
@@ -271,9 +260,9 @@
 
   .miniCard .prob .lbl{ font-size:11px; color:#a9bfd6; opacity:.95; letter-spacing:.1px }
   .miniCard .prob .dot{
-    position:relative; width:var(--prob-dot-size,10px); height:var(--prob-dot-size,10px);
+    position:relative; width:var(--prob-dot-size,12px); height:var(--prob-dot-size,12px);
     border-radius:999px; background: currentColor;
-    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.20);
+    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.28);
   }
   .miniCard .prob .dot::before{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
@@ -281,14 +270,13 @@
   }
   .miniCard .prob .dot::after{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.34;
+    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.32;
     animation: probPulse var(--prob-pulse,900ms) ease-out infinite;
   }
-  @keyframes probPulse{0%{transform:scale(1);box-shadow:0 0 0 0 currentColor;opacity:.34}100%{transform:scale(1.9);box-shadow:0 0 0 10px rgba(0,0,0,0);opacity:0}}
-
-  .miniCard.static{ z-index:2; pointer-events:none; opacity:.82; }
-  .miniCard.static.s2{ opacity:.66; }
-  .miniCard.static.s3{ opacity:.52; }
+  @keyframes probPulse{
+    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor; opacity:.32 }
+    100% { transform:scale(1.9); box-shadow:0 0 0 10px rgba(0,0,0,0); opacity:0 }
+  }
 
   /* SECTION 2 */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
@@ -335,7 +323,7 @@
     .h1-accent{ background:linear-gradient(180deg,var(--gold-300),var(--gold-700)); -webkit-background-clip:text; background-clip:text; color:transparent; }
     .badge,.lead{ margin-left:auto; margin-right:auto; }
 
-    /* Mobile CTA remains stacked for better tap targets; give the input the same glass look */
+    /* Mobile CTA stacked with glass input */
     .actions.show-mobile{ flex-direction:column; gap:12px; width:100%; }
     .actions.show-mobile .inputGroup{ display:flex; flex-direction:column; align-items:stretch; width:100%; max-width:28rem; margin-inline:auto; gap:12px; }
     .actions.show-mobile .inputGroup input{ border:1px solid rgba(255,255,255,.10); border-radius:999px; background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06)); -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%); color:var(--text); padding:14px 16px; box-shadow:0 8px 22px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.06); }
@@ -437,10 +425,8 @@
 
         <div class="const-legend">Your Website → Signal → <strong>Timing</strong> → Buyers</div>
 
-        <!-- Stack lives here -->
         <div class="cardStack" id="cardStack" aria-label="Lead deck">
           <div class="rail" id="stackRail" tabindex="0" aria-label="Lead card">
-            <!-- live card -->
             <div class="miniCard" id="cardA" role="group" aria-label="Lead">
               <div class="row">
                 <span class="stage" data-stage>A</span>
@@ -458,7 +444,7 @@
               <div class="chips" data-tags></div>
             </div>
 
-            <!-- faint static “cards” -->
+            <!-- (Static ladder intentionally hidden via CSS for professionalism) -->
             <div class="miniCard static s1" data-static>
               <div class="row"><span class="k">Buyer</span><span class="v name">Volt Pharma — Denver, CO</span></div>
               <div class="row"><span class="k">Distance</span><span class="v">15 mi</span></div>
@@ -507,10 +493,10 @@
   <!-- SECTION 4 – Orbit -->
   <div id="section-orbit" class="reveal" data-track-section="orbit"></div>
 
-  <!-- MODAL container (kept) -->
+  <!-- MODAL container (kept for later pages) -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none"></div>
 
-<!-- ===== KNOBS (unchanged copy) ===== -->
+<!-- ===== KNOBS (copy unchanged) ===== -->
 <script>
 window.COPY_KNOBS = {
   hero: {
@@ -552,26 +538,14 @@ window.ANALYTICS_KNOBS = {
   repeatClickMs: 700
 };
 
-/* === PRO PASS: calmer composition on the right side === */
+/* Polished defaults for a simpler, more professional hero */
 window.SCOREBOARD_KNOBS = {
-  /* placement + behavior */
-  stack: {
-    layout: 'vertical',
-    left: 0.82,           /* nudge right for breathing room */
-    top:  0.60,
-    width: 248,
-    angle: 0,
-    clickAdvance: true,
-    autoPlay: true, autoMs: 5200
-  },
-  /* card sizing */
-  card: { width: 248, railHeight: 182, padding: '12px 12px 10px' },
-
-  anchorGlow: { size: 44, pulseMs: 1800, coreA:.90, midA:.45, edgeA:.05 },
-  lines: { count: 3, jitter: 8, width: 1, alpha: .10 },
-
+  stack: { layout: 'vertical', left: 0.80, top: 0.62, width: 280, angle: 0, clickAdvance: true, autoPlay: true, autoMs: 5200 },
+  card: { width: 280, railHeight: 206, padding: '12px 12px 10px' },
+  anchorGlow: { size: 46, pulseMs: 1800, coreA:.90, midA:.45, edgeA:.05 },
+  lines: { count: 3, jitter: 10, width: 1, alpha: .10 },
   probLabel: 'Win rate',
-  probDot: { size: 10, pulseMs: 900 },
+  probDot: { size: 11, pulseMs: 900 },
   probHue: { min: 5, max: 130 },
   fonts: { k: "11px Inter, system-ui", v: "700 14px Inter, system-ui", name: "700 15px Inter, system-ui" },
   stages: {
@@ -648,20 +622,20 @@ window.SCOREBOARD_KNOBS = {
   const wrap=$('.const-wrap'); const cvs=$('#constFx'); const ctx=cvs?.getContext('2d');
   function drawBackdrop(){
     if(!wrap||!cvs||!ctx) return;
-    const DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+    const DPR=Math.max(1,Math.min(1.5,window.devicePixelRatio||1)); // cap DPR for perf
     const r=wrap.getBoundingClientRect(); const W=r.width|0, H=r.height|0;
     cvs.width=(W*DPR)|0; cvs.height=(H*DPR)|0; cvs.style.width=W+'px'; cvs.style.height=H+'px';
     ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H);
-    /* fewer points/links → clearer, calmer composition */
-    const N=20, linkR=88; const pts=[];
-    for(let i=0;i<N;i++){ pts.push({x:(0.18+Math.random()*0.78)*W, y:(0.08+Math.random()*0.86)*H}); }
+    const N=16, linkR=88; const pts=[];
+    for(let i=0;i<N;i++){ pts.push({x:(0.18+Math.random()*0.78)*W, y:(0.10+Math.random()*0.82)*H}); }
     ctx.lineWidth=1;
     for(let i=0;i<N;i++) for(let j=i+1;j<N;j++){
       const a=pts[i], b=pts[j], dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
       if(d2<linkR*linkR){ const aLine=.04+.14*(1-Math.sqrt(d2)/linkR); ctx.strokeStyle=`rgba(230,195,107,${aLine})`; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); }
     }
-    for(const p of pts){ ctx.fillStyle="rgba(230,195,107,0.68)"; ctx.beginPath(); ctx.arc(p.x,p.y,1.2,0,Math.PI*2); ctx.fill(); }
-    ctx.fillStyle="rgba(242,220,160,0.90)"; ctx.beginPath(); ctx.arc(0.18*W,0.52*H,3.2,0,Math.PI*2); ctx.fill();
+    for(const p of pts){ ctx.fillStyle="rgba(230,195,107,0.68)"; ctx.beginPath(); ctx.arc(p.x,p.y,1.5,0,Math.PI*2); ctx.fill(); }
+    // anchor dot
+    ctx.fillStyle="rgba(242,220,160,0.92)"; ctx.beginPath(); ctx.arc(0.18*W,0.52*H,3.2,0,Math.PI*2); ctx.fill();
   }
 
   const stack=$('#cardStack'), rail=$('#stackRail'), card=$('#cardA');
@@ -671,9 +645,9 @@ window.SCOREBOARD_KNOBS = {
 
   function applyCardSizing(){
     const dims=KN.card||{};
-    const w=(dims.width||KN.stack?.width||248);
+    const w=(dims.width||KN.stack?.width||280);
     document.documentElement.style.setProperty('--card-w', w+'px');
-    document.documentElement.style.setProperty('--rail-h', (dims.railHeight||182)+'px');
+    document.documentElement.style.setProperty('--rail-h', (dims.railHeight||206)+'px');
     document.documentElement.style.setProperty('--card-pad', (dims.padding||'12px 12px 10px'));
   }
 
@@ -682,28 +656,14 @@ window.SCOREBOARD_KNOBS = {
     stack.style.left = (clamp(KN.stack.left,0,1)*r.width)+'px';
     stack.style.top  = (clamp(KN.stack.top,0,1)*r.height)+'px';
     stack.style.transform = `translate(-50%,-50%) rotate(${KN.stack.angle||0}deg)`;
-    rail.style.width=(KN.stack.width||248)+'px';
-    rail.style.height='182px';
-
-    const mode=(KN.stack.layout||'vertical').toLowerCase();
-    const statics=[...document.querySelectorAll('[data-static]')];
-    if(mode==='vertical'){
-      statics.forEach((el,i)=>{
-        const stepY = 14*(i+1); const scale = 1 - 0.06*(i+1);
-        el.style.transform = `translate(-50%,-50%) translateY(${stepY}px) scale(${scale})`;
-      });
-    }else{
-      statics.forEach((el,i)=>{
-        const stepY = 10*(i+1), stepX = 10*(i+1); const scale = 1 - 0.06*(i+1);
-        el.style.transform = `translate(-50%,-50%) translate(${stepX}px, ${stepY}px) scale(${scale})`;
-      });
-    }
+    rail.style.width=(KN.stack.width||280)+'px';
+    rail.style.height='206px';
   }
 
   function setProbLabel(){
     const lbl=card.querySelector('.prob .lbl');
     if(lbl){ lbl.textContent = KN.probLabel || 'Win rate'; }
-    document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||10)+'px');
+    document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||11)+'px');
     document.documentElement.style.setProperty('--prob-pulse', (KN.probDot?.pulseMs||900)+'ms');
   }
 
@@ -744,17 +704,17 @@ window.SCOREBOARD_KNOBS = {
   }
 
   const stages=['hotp','hot','warm']; let deck=[];
-  function rebuildDeck(){ deck.length=0; for(let i=0;i<24;i++) deck.push(genLead(stages[i%stages.length])); }
+  function rebuildDeck(){ deck.length=0; for(let i=0;i<12;i++) deck.push(genLead(stages[i%stages.length])); }
   function showNext(){ deck.push(deck.shift()); paintLead(card, deck[0]); }
 
   function anchorPos(){ const r=wrap.getBoundingClientRect(); return { x: .18*r.width, y: .52*r.height }; }
   function placeGlow(){
     const a=anchorPos(); const G=KN.anchorGlow;
     glow.style.left=a.x+'px'; glow.style.top=a.y+'px';
-    glow.style.width=glow.style.height=(G.size||44)+'px';
+    glow.style.width=glow.style.height=(G.size||46)+'px';
     document.documentElement.style.setProperty('--anchor-pulse',(G.pulseMs||1800)+'ms');
     glow.style.background=`radial-gradient(circle at 50% 50%,
-      rgba(255,245,210,${G.coreA??.90}) 0%,
+      rgba(255,245,210,${G.coreA??.9}) 0%,
       rgba(242,220,160,${G.midA??.45}) 46%,
       rgba(230,195,107,${G.edgeA??.05}) 100%)`;
   }
@@ -765,7 +725,7 @@ window.SCOREBOARD_KNOBS = {
     const s=stack.getBoundingClientRect(), p=wrap.getBoundingClientRect();
     const target={ x:(s.left-p.left)+s.width*0.22, y:(s.top-p.top)+s.height*0.78 };
     for(let i=0;i<(L.count||3);i++){
-      const dx=(Math.random()*2-1)*(L.jitter||8), dy=(Math.random()*2-1)*(L.jitter||8);
+      const dx=(Math.random()*2-1)*(L.jitter||10), dy=(Math.random()*2-1)*(L.jitter||10);
       const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
       ln.setAttribute('x1',a.x); ln.setAttribute('y1',a.y);
       ln.setAttribute('x2',target.x+dx); ln.setAttribute('y2',target.y+dy);
@@ -800,7 +760,6 @@ window.SCOREBOARD_KNOBS = {
     },{root:null, rootMargin:AK.rootMarginOut||'-35% 0px -40% 0px', threshold:[0,0.15,0.3,0.6,1]});
 
     $$('.reveal').forEach(el=>{ ioIn.observe(el); ioOut.observe(el); });
-
     setTimeout(()=>{ const hero=$('section.hero'); hero && hero.classList.add('reveal-in'); }, 150);
   }
 
@@ -848,7 +807,7 @@ window.SCOREBOARD_KNOBS = {
   function init(){
     applyCopy();
 
-    // Keep default domain label consistent
+    // Always start with this neutral domain label
     const tagEl = document.getElementById('domainTag');
     if(tagEl) tagEl.textContent = 'yourcompany.com';
 
@@ -899,7 +858,7 @@ window.SCOREBOARD_KNOBS = {
       menu.addEventListener('click', (e)=>{ if(e.target===menu) set(false); }, {passive:true});
     })();
 
-    // Onboarding moved to start.html; keep IDs the same
+    // Handoff to start.html (onboarding lives there)
     const heroHostD = document.getElementById("hostHeroDesktop");
     const heroHostM = document.getElementById("hostHeroMobile");
     const ctaDesktop = document.getElementById("cta-desktop");
