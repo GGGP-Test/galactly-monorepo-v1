@@ -158,7 +158,7 @@
   }
 
   /* ===== MOBILE DOM MODE base classes ===== */
-  @media (max-width: ${ (window.PROCESS_CONFIG?.mobile?.BP || 1024) }px){
+  @media (max-width: ${ (window.PROCESS_CONFIG?.mobile?.BP || 640, MODE: "dom") }px){
     #section-process .mstep{ position:relative; margin:0 auto; z-index:0; }
     #section-process .mstep-title{ color:#ddeaef; }
     #section-process .mstep-copy{ color:#a7bacb; }
