@@ -4,14 +4,14 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Galactly — Find real packaging buyers</title>
-<meta name="description" content="Galactly helps packaging suppliers find qualified B2B buyers. Turn website and market signals into ranked leads to grow your sales pipeline—no cold spam.">
+<meta name="description" content="Galactly helps packaging suppliers find qualified B2B buyers. Turn website and market signals into ranked leads to grow your sales pipeline—no cold spam." />
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Section styles (unchanged external files) -->
+<!-- Section styles (unchanged) -->
 <link rel="stylesheet" href="./sections/process/process.css">
 <link rel="stylesheet" href="./sections/orbit/orbit.css">
 
@@ -28,8 +28,19 @@
     --gutter: clamp(16px, 4vw, 40px);
 
     /* panel */
-    --const-radius: 18px;
+    --const-radius: 18px; --const-stroke-w: 1px; --const-stroke-a: .06; --const-vignette-a: .18;
+    --const-drop-a: .14; --const-edge-tint: rgba(230,195,107,.05); --const-grid-sheen-a: .05;
+
+    --miniCard-radius: 12px; --miniCard-bg: rgba(12,18,28,.86); --miniCard-blur: 5px;
+    --miniCard-stroke-a: .10; --miniCard-shadow-a: .24;
+
+    --legend-fs: 12px; --legend-color: #b9cbe0; --legend-bg: rgba(255,255,255,.06);
+
     --gap-hero-proof: 0px; --wp-h: 220vh;
+
+    /* wallpaper radials */
+    --wp-r1-size: 180% 140%; --wp-r1-at: 50% -14%; --wp-r1-alpha: .16; --wp-r1-fade: 58%;
+    --wp-r2-size: 110% 90%;  --wp-r2-at: 22% 12%;  --wp-r2-alpha: .08; --wp-r2-fade: 72%;
 
     /* reveal & card sizing knobs */
     --reveal-dur: 420ms; --reveal-ease: cubic-bezier(.22,.61,.36,1);
@@ -50,10 +61,14 @@
     position:absolute; left:0; right:0; top:0; height:var(--wp-h);
     z-index:0; pointer-events:none;
     background:
-      radial-gradient(180% 140% at 50% -14%, rgba(230,195,107,.16), transparent 58%),
-      radial-gradient(110% 90% at 22% 12%, rgba(230,195,107,.08), transparent 72%),
+      radial-gradient(var(--wp-r1-size) at var(--wp-r1-at), rgba(230,195,107,var(--wp-r1-alpha)), rgba(0,0,0,0) var(--wp-r1-fade)),
+      radial-gradient(var(--wp-r2-size) at var(--wp-r2-at), rgba(230,195,107,var(--wp-r2-alpha)), rgba(0,0,0,0) var(--wp-r2-fade)),
       linear-gradient(180deg,#0b121a 0%, #0a0e14 70%, #091019 88%, var(--zone-dark) 100%);
     background-repeat:no-repeat,no-repeat,no-repeat;
+  }
+  @media (max-width:900px){
+    :root{ --wp-r1-size: 200% 165%; --wp-r1-at: 50% -18%; --wp-r1-fade: 60%;
+           --wp-r2-size: 130% 95%;  --wp-r2-at: 26% 16%;  --wp-r2-fade: 74%; }
   }
 
   .hero,.section{background:transparent}
@@ -116,7 +131,8 @@
 
   /* HERO */
   .hero{position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
-    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:visible; isolation:isolate; z-index:1;}
+    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate; z-index:1;}
+  #heroFx{display:none!important}
   .hero-grid{position:relative;z-index:1;display:grid;align-items:center;
     grid-template-columns:1.12fr 1fr; gap:clamp(28px, 4vw, 48px); width:100%;}
   @media (max-width:900px){.hero-grid{grid-template-columns:1fr;gap:18px}}
@@ -131,65 +147,85 @@
   .btn.primary{color:var(--ctaText);background:linear-gradient(180deg,var(--gold),var(--gold-700));
     border:none;box-shadow:0 10px 30px rgba(230,195,107,.15),0 0 0 1px rgba(255,255,255,.06) inset}
 
-  /* === Right column === */
-  .viz-col{position:relative; isolation:isolate;}
+  /* === Glass CTA (desktop) === */
+  .glass-cta{
+    display:flex; align-items:center; gap:10px;
+    width:min(620px, 100%);
+    padding:6px; border-radius:999px;
+    background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    backdrop-filter: blur(10px) saturate(140%);
+    border:1px solid rgba(255,255,255,.10);
+    box-shadow:0 12px 26px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .glass-input{
+    flex:1; min-width:240px;
+    padding:14px 16px; border-radius:999px;
+    border:0; outline:none; background:transparent; color:var(--text);
+    font:500 15px/1.2 Inter, system-ui;
+  }
+  .glass-input::placeholder{ color:#9fb3c7; opacity:.95 }
+  .glass-cta:focus-within{
+    box-shadow:0 14px 28px rgba(0,0,0,.26), 0 0 0 1px rgba(99,211,255,.14) inset;
+    border-color:#2b445c;
+  }
+  .glass-btn{ box-shadow:0 12px 26px rgba(230,195,107,.20), 0 0 0 1px rgba(255,255,255,.06) inset; }
+
+  /* Blueprint panel container */
   .const-wrap{
-    position:relative; height:540px; border-radius:var(--const-radius); overflow:hidden;
+    position:relative; isolation:isolate; height:540px;
+    filter: drop-shadow(0 10px 24px rgba(0,0,0,var(--const-drop-a)));
+  }
+  /* Clipping layer keeps rounded corners for the art while allowing the card to spill out */
+  .const-clip{
+    position:absolute; inset:0; border-radius:var(--const-radius); overflow:hidden;
     background:linear-gradient(180deg,#0b121d,#0b1119);
-    filter: drop-shadow(0 10px 24px rgba(0,0,0,.14));
-    border:1px solid rgba(255,255,255,.06);
   }
-  .const-wrap::before{
-    content:""; position:absolute; inset:0; pointer-events:none;
-    box-shadow: inset 0 0 60px rgba(0,0,0,.22);
-    border-radius:inherit;
+  .const-clip::before{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    box-shadow: inset 0 0 0 var(--const-stroke-w) rgba(255,255,255,var(--const-stroke-a)),
+               inset 0 0 60px rgba(0,0,0,var(--const-vignette-a));
   }
-  /* ultra-light “sweep” — very slow */
-  .const-wrap::after{
-    content:""; position:absolute; inset:-20% -40%; pointer-events:none;
-    background:radial-gradient(120% 60% at 0% 50%, rgba(255,255,255,.06), rgba(0,0,0,0) 60%);
-    transform:translateX(-30%);
-    animation:sweep 40s linear infinite;
-  }
-  @keyframes sweep { to { transform:translateX(30%);} }
-  @media (prefers-reduced-motion: reduce){
-    .const-wrap::after{ animation:none; opacity:0; }
+  .const-clip::after{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background: linear-gradient(90deg, transparent 0%, var(--const-edge-tint) 96%, transparent 100%);
+    opacity:var(--const-grid-sheen-a);
   }
 
-  /* Packaging + data SVG */
-  #packSvg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
-  .picon{ opacity:.26; }
-  .picon line,.picon path,.picon rect,.picon circle{ stroke:#f2dca0; fill:none; stroke-width:1; vector-effect:non-scaling-stroke; }
-  .node{ fill:#e6c36b; opacity:.55 }
-  .node.big{ opacity:.85 }
-  .slow-float{ animation:floatSlow 28s ease-in-out infinite; }
-  .slow-drift{ animation:floatSlow 36s ease-in-out infinite reverse; }
-  @keyframes floatSlow{
-    0%,100%{ transform:translateY(0px); }
-    50%{ transform:translateY(-6px); }
+  .const-legend{
+    position:absolute; inset:auto 12px 12px auto; z-index:2;
+    font-size:12px; color:#b9cbe0;
+    background:rgba(255,255,255,.06); border:1px solid var(--stroke);
+    padding:6px 8px; border-radius:10px
   }
-  @media (prefers-reduced-motion: reduce){
-    .slow-float,.slow-drift{ animation:none; }
+  .const-caption{
+    position:absolute; right:12px; top:12px; z-index:2;
+    font-size:11px; letter-spacing:.2px; color:#cfe2ff; opacity:.9;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
+    padding:5px 7px; border-radius:8px;
+  }
+  .domainTag{
+    position:absolute; z-index:2; left:14px; top:14px;
+    padding:6px 10px; border-radius:999px; font-size:12px;
+    background:rgba(230,195,107,.12); color:var(--gold-300);
+    border:1px solid rgba(230,195,107,.25)
   }
 
-  /* Card stack POP-OUT (outside the panel) */
-  .card-stack-pop{
-    position:absolute; z-index:3;
-    right:-10%; top:58%;
-    transform:translateY(-50%) rotate(1deg);
-    filter: drop-shadow(0 18px 40px rgba(0,0,0,.35));
-    pointer-events:auto;
-  }
-  @media (max-width:1200px){ .card-stack-pop{ right:-6%; } }
-  @media (max-width:1020px){ .card-stack-pop{ position:relative; right:auto; top:auto; transform:none; margin-top:-40px; } }
+  /* STACK */
+  .cardStack{ position:absolute; z-index:3; transform-origin:center center; }
+  .cardStack .rail{ position:relative; width:var(--card-w); height:var(--rail-h); pointer-events:auto; }
+
+  /* Hide static ladder for a cleaner hero */
+  .miniCard.static,[data-ghost]{ display:none !important; }
 
   /* Card */
   .miniCard{
-    min-width:240px; max-width:320px; width:var(--card-w);
-    padding:var(--card-pad); border-radius:12px;
-    background:rgba(12,18,28,.86);
-    -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px);
-    border:1px solid rgba(255,255,255,.10);
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    z-index:3; min-width:240px; max-width:320px; width:var(--card-w);
+    padding:var(--card-pad); border-radius:var(--miniCard-radius);
+    background:var(--miniCard-bg);
+    -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
+    border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
     box-shadow:0 8px 22px rgba(0,0,0,.24);
     color:#e8f1fb;
   }
@@ -205,6 +241,11 @@
     padding:5px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06)
   }
   .miniCard .prob{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700}
+  .miniCard .chips{display:flex; flex-wrap:wrap; gap:6px}
+  .miniCard .chip{font-size:11px; padding:4px 7px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:rgba(255,255,255,.04)}
+  .miniCard .ai{display:flex; align-items:center; gap:8px}
+  .miniCard .ai svg{width:12px; height:12px; opacity:.9}
+
   .miniCard .prob .lbl{ font-size:11px; color:#a9bfd6; opacity:.95; letter-spacing:.1px }
   .miniCard .prob .dot{
     position:relative; width:var(--prob-dot-size,11px); height:var(--prob-dot-size,11px);
@@ -224,19 +265,15 @@
     0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor; opacity:.30 }
     100% { transform:scale(1.9); box-shadow:0 0 0 10px rgba(0,0,0,0); opacity:0 }
   }
-  .miniCard .chips{display:flex; flex-wrap:wrap; gap:6px}
-  .miniCard .chip{font-size:11px; padding:4px 7px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:rgba(255,255,255,.04)}
-  .miniCard .ai{display:flex; align-items:center; gap:8px}
-  .miniCard .ai svg{width:12px; height:12px; opacity:.9}
 
-  /* KPI “pills” row */
-  .stats{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  /* Tiny KPI pills row */
+  .stats{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
   .pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 7px;
          border-radius:8px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04);
          font-size:11px; }
   .pill .n{ font-weight:800; }
 
-  /* Section 2 */
+  /* SECTION 2 */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
   .section .inner{margin:0 auto}
   #proof{ margin-top: var(--gap-hero-proof); }
@@ -271,6 +308,26 @@
                transform var(--reveal-dur) var(--reveal-ease);}
   .reveal.reveal-in{opacity:1; transform:translateY(0) scale(1);}
   .reveal.reveal-out{opacity:0; transform:translateY(var(--reveal-out-y)) scale(.995);}
+
+  @media (max-width:900px){
+    .const-wrap{height:auto}
+    .hero{min-height:92svh; padding:calc(60px + env(safe-area-inset-top, 10px)) 16px 28px;}
+    .hero-copy{margin-inline:auto; text-align:center; max-width:28rem;}
+    :root{ --font-sans: "Plus Jakarta Sans", Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    h1{ font-family: var(--font-sans); font-weight:800; letter-spacing:-0.01em; }
+    .h1-accent{ background:linear-gradient(180deg,var(--gold-300),var(--gold-700)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .badge,.lead{ margin-left:auto; margin-right:auto; }
+    .actions.show-mobile{ flex-direction:column; gap:12px; width:100%; }
+    .actions.show-mobile .inputGroup{ display:flex; flex-direction:column; align-items:stretch; width:100%; max-width:28rem; margin-inline:auto; gap:12px; }
+    .actions.show-mobile .inputGroup input{ border:1px solid rgba(255,255,255,.10); border-radius:999px; background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06)); -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%); color:var(--text); padding:14px 16px; box-shadow:0 8px 22px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.06); }
+    .actions.show-mobile .inputGroup input::placeholder{ color:#9fb3c7; opacity:.95 }
+    .actions.show-mobile .btn{ width:100%; padding:16px 20px; justify-content:center; text-align:center; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .btn{transition:none}
+    .reveal{opacity:1!important; transform:none!important; transition:none!important}
+  }
 
   .show-desktop{display:block} .show-mobile{display:none}
   @media (max-width:900px){ .show-desktop{display:none} .show-mobile{display:block} }
@@ -327,8 +384,10 @@
           <label class="visually-hidden" for="hostHeroDesktop">Your website</label>
           <div class="glass-cta" role="group" aria-label="Start for free">
             <input id="hostHeroDesktop" class="glass-input" type="url" inputmode="url"
-                   placeholder="yourcompany.com" autocomplete="url"/>
-            <button id="cta-desktop" type="button" class="btn primary glass-btn" data-track-id="cta-desktop">✨ START FOR FREE</button>
+                   placeholder="yourcompany.com" autocomplete="url" />
+            <button id="cta-desktop" type="button" class="btn primary glass-btn" data-track-id="cta-desktop">
+              ✨ START FOR FREE
+            </button>
           </div>
         </div>
 
@@ -337,95 +396,54 @@
           <div class="inputGroup">
             <label class="visually-hidden" for="hostHeroMobile">Your website</label>
             <input id="hostHeroMobile" class="glass-input" type="url" inputmode="url"
-                   placeholder="yourcompany.com" autocomplete="url"/>
-            <button id="cta" type="button" class="btn primary" data-track-id="cta-mobile">Start Free</button>
+                   placeholder="yourcompany.com" autocomplete="url" />
+            <button id="cta" type="button" class="btn primary" data-track-id="cta-mobile">
+              Start Free
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- RIGHT COLUMN -->
-      <div class="viz-col">
-
-        <!-- Professional, calm visual panel (no arcs) -->
-        <div class="const-wrap" aria-hidden="true">
-          <svg id="packSvg" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-            <!-- light grid guide -->
-            <g opacity=".10">
-              <path d="M120 60 V560 M260 60 V560 M400 60 V560 M540 60 V560 M680 60 V560 M820 60 V560" stroke="#ffffff"/>
-              <path d="M60 120 H940 M60 240 H940 M60 360 H940 M60 480 H940" stroke="#ffffff"/>
-            </g>
-
-            <!-- packaging glyphs -->
-            <!-- box -->
-            <g class="picon slow-float">
-              <path d="M210 190 l60 -20 80 22 -60 20 -80 -22 Z" />
-              <path d="M210 190 v80 l80 22 v-80 Z" />
-              <path d="M350 192 v80 l-60 20" />
-            </g>
-            <!-- bottle -->
-            <g class="picon slow-drift">
-              <rect x="540" y="150" width="60" height="120" rx="12"/>
-              <rect x="555" y="120" width="30" height="28" rx="6"/>
-              <path d="M540 200 h60"/>
-            </g>
-            <!-- stand-up pouch -->
-            <g class="picon slow-float" transform="translate(110,160)">
-              <path d="M610 110 h120 l-10 160 a18 18 0 0 1 -18 16 h-64 a18 18 0 0 1 -18-16 Z"/>
-              <path d="M620 150 h100"/>
-              <path d="M660 110 v-18 h20 v18"/>
-            </g>
-            <!-- jar -->
-            <g class="picon slow-drift" transform="translate(-40,90)">
-              <rect x="270" y="330" width="120" height="90" rx="10"/>
-              <rect x="288" y="318" width="84" height="18" rx="4"/>
-            </g>
-
-            <!-- “data nodes” connecting products to insight -->
-            <circle class="node big" cx="150" cy="470" r="4"/>
-            <circle class="node" cx="210" cy="420" r="3"/>
-            <circle class="node" cx="280" cy="450" r="2.6"/>
-            <circle class="node" cx="610" cy="420" r="3.2"/>
-            <circle class="node" cx="720" cy="300" r="2.6"/>
-            <circle class="node" cx="840" cy="360" r="3.2"/>
-
-            <!-- subtle connectors -->
-            <g stroke="rgba(242,220,160,.24)" stroke-width="1">
-              <path d="M150 470 C 260 420, 420 420, 610 420"/>
-              <path d="M610 420 C 670 360, 720 340, 720 300"/>
-              <path d="M720 300 C 780 330, 820 340, 840 360"/>
-            </g>
-          </svg>
+      <!-- Blueprint Panel + Card -->
+      <div class="const-wrap" aria-hidden="false">
+        <div class="const-clip">
+          <canvas id="constFx" aria-hidden="true"></canvas>
+          <span class="domainTag" id="domainTag">yourcompany.com</span>
+          <span class="const-caption">Signals clustered by timing</span>
+          <div class="const-legend">Your Website → Signal → <strong>Timing</strong> → Buyers</div>
         </div>
 
-        <!-- POP-OUT CARD (moved outside panel, no messy sparkline) -->
-        <div class="card-stack-pop" id="cardStack" aria-label="Lead deck">
-          <div class="miniCard" id="cardA" role="group" aria-label="Lead">
-            <div class="row">
-              <span class="stage" data-stage>A</span>
-              <span class="prob"><span class="dot" data-prob-dot></span><span class="lbl"></span><span class="pct" data-prob>72%</span></span>
-            </div>
-            <div class="row"><span class="k">Buyer</span><span class="v name" data-name>—</span></div>
-            <div class="row"><span class="k">Distance</span><span class="v" data-distance>—</span></div>
-            <div class="row"><span class="k">Need</span><span class="v" data-need>—</span></div>
-            <div class="row ai">
-              <span class="k"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 1 7 7v1h1a2 2 0 1 1 0 4h-1v1a7 7 0 0 1-7 7 1 1 0 1 1 0-2 5 5 0 0 0 5-5v-1H7v1a5 5 0 0 0 5 5 1 1 0 1 1 0 2 7 7 0 0 1-7-7v-1H4a2 2 0 1 1 0-4h1V9a7 7 0 0 1 7-7Z"/></svg>
-                <span data-ai-label>Sales AI</span></span>
-              <span class="v" data-ai>74%</span>
-            </div>
-            <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
-            <div class="chips" data-tags></div>
-            <!-- removed the yellow sparkline completely -->
-            <div class="stats" aria-hidden="true">
-              <div class="pill"><span class="n" id="m1">1770</span><span>Contacted</span></div>
-              <div class="pill"><span class="n" id="m2">338</span><span>Opened</span></div>
-              <div class="pill"><span class="n" id="m3">44</span><span>Replied</span></div>
-              <div class="pill"><span class="n" id="m4">13</span><span>Positive</span></div>
+        <!-- Card sits OUTSIDE the clipped panel (no arcs, no messy ribbon) -->
+        <div class="cardStack" id="cardStack" aria-label="Lead deck">
+          <div class="rail" id="stackRail" tabindex="0" aria-label="Lead card">
+            <div class="miniCard" id="cardA" role="group" aria-label="Lead">
+              <div class="row">
+                <span class="stage" data-stage>A</span>
+                <span class="prob"><span class="dot" data-prob-dot></span><span class="lbl"></span><span class="pct" data-prob>72%</span></span>
+              </div>
+              <div class="row"><span class="k">Buyer</span><span class="v name" data-name>—</span></div>
+              <div class="row"><span class="k">Distance</span><span class="v" data-distance>—</span></div>
+              <div class="row"><span class="k">Need</span><span class="v" data-need>—</span></div>
+              <div class="row ai">
+                <span class="k"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 1 7 7v1h1a2 2 0 1 1 0 4h-1v1a7 7 0 0 1-7 7 1 1 0 1 1 0-2 5 5 0 0 0 5-5v-1H7v1a5 5 0 0 0 5 5 1 1 0 1 1 0 2 7 7 0 0 1-7-7v-1H4a2 2 0 1 1 0-4h1V9a7 7 0 0 1 7-7Z"/></svg>
+                  <span data-ai-label>Sales AI</span></span>
+                <span class="v" data-ai>74%</span>
+              </div>
+              <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
+              <div class="chips" data-tags></div>
+
+              <div class="stats" aria-hidden="true">
+                <div class="pill"><span class="n" id="m1">1770</span><span>Contacted</span></div>
+                <div class="pill"><span class="n" id="m2">338</span><span>Opened</span></div>
+                <div class="pill"><span class="n" id="m3">44</span><span>Replied</span></div>
+                <div class="pill"><span class="n" id="m4">13</span><span>Positive</span></div>
+              </div>
             </div>
           </div>
         </div>
-
-      </div><!-- /viz-col -->
-    </div><!-- /hero-grid -->
+      </div>
+      <!-- /Blueprint + Card -->
+    </div>
   </section>
 
   <!-- SECTION 2 -->
@@ -451,10 +469,10 @@
   <!-- SECTION 4 – Orbit -->
   <div id="section-orbit" class="reveal" data-track-section="orbit"></div>
 
-  <!-- MODAL container -->
+  <!-- MODAL container (kept for later pages) -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none"></div>
 
-<!-- ===== KNOBS (copy unchanged) ===== -->
+<!-- ===== KNOBS (unchanged copy) ===== -->
 <script>
 window.COPY_KNOBS = {
   hero: {
@@ -498,7 +516,7 @@ window.ANALYTICS_KNOBS = {
 
 /* Defaults tuned for the hero card */
 window.SCOREBOARD_KNOBS = {
-  stack: { layout: 'vertical', left: 0.80, top: 0.62, width: 280, angle: 0, clickAdvance: true, autoPlay: true, autoMs: 5200 },
+  stack: { layout: 'vertical', left: 0.92, top: 0.70, width: 280, angle: 0, clickAdvance: true, autoPlay: true, autoMs: 5200 },
   card: { width: 280, railHeight: 232, padding: '12px 12px 10px' },
   probLabel: 'Win rate',
   probDot: { size: 11, pulseMs: 900 },
@@ -547,8 +565,14 @@ window.SCOREBOARD_KNOBS = {
 
   const KN = window.SCOREBOARD_KNOBS;
   const deepMerge=(b,p)=>{const o=Array.isArray(b)?[...b]:{...b}; for(const k in p){const v=p[k]; o[k]=(v&&typeof v==='object'&&!Array.isArray(v))?deepMerge(b[k]||{},v):v;} return o;};
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const pick=(a)=>a[(Math.random()*a.length)|0];
   const range=([a,b])=>a+Math.random()*(b-a);
+
+  /* ------- Variant (kept for future A/B) ------- */
+  function getParam(k){ return new URLSearchParams(location.search).get(k)||''; }
+  const HERO_VARIANT = (getParam('hero')||'const').toLowerCase(); // 'const' | 'bokeh'
+  document.documentElement.setAttribute('data-hero-variant', HERO_VARIANT);
 
   function applyCopy(){
     const C=window.COPY_KNOBS||{};
@@ -574,10 +598,114 @@ window.SCOREBOARD_KNOBS = {
   addEventListener('resize',()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t=setTimeout(applyWallpaper,60); });
   document.addEventListener('DOMContentLoaded',applyWallpaper);
 
+  /* ---------- BLUEPRINT ART ---------- */
+  const wrapClip=$('.const-clip'); const cvs=$('#constFx'); const ctx=cvs?.getContext('2d');
+
+  function drawBlueprint(){
+    if(!wrapClip||!cvs||!ctx) return;
+    const DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+    const r=wrapClip.getBoundingClientRect(); const W=r.width|0, H=r.height|0;
+    cvs.width=(W*DPR)|0; cvs.height=(H*DPR)|0; cvs.style.width=W+'px'; cvs.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H);
+
+    // base gradient
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#0b121d'); bg.addColorStop(1,'#0b1119');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+    // faint grid
+    ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1;
+    const gx=5, gy=4; // columns x rows
+    for(let i=1;i<gx;i++){ const x=(i/gx)*W; ctx.beginPath(); ctx.moveTo(x,18); ctx.lineTo(x,H-18); ctx.stroke(); }
+    for(let j=1;j<gy;j++){ const y=(j/gy)*H; ctx.beginPath(); ctx.moveTo(18,y); ctx.lineTo(W-18,y); ctx.stroke(); }
+
+    // packaging outlines
+    ctx.strokeStyle='rgba(255,255,255,0.42)'; ctx.lineWidth=1.4;
+
+    // box (left)
+    ctx.beginPath();
+    const bx=W*0.22, by=H*0.42, bw=110, bh=86;
+    ctx.rect(bx,by,bw,bh);
+    ctx.moveTo(bx+bw*0.48,by); ctx.lineTo(bx+bw*0.48,by+bh);
+    ctx.moveTo(bx,by+bh*0.5); ctx.lineTo(bx+bw*0.7,by+bh*0.32);
+    ctx.moveTo(bx+bw,by+bh*0.5); ctx.lineTo(bx+bw*0.48,by+bh*0.32);
+    ctx.stroke();
+
+    // jar (bottom-left)
+    ctx.beginPath();
+    const jx=W*0.30, jy=H*0.62, jw=120, jh=90, r2=16;
+    ctx.moveTo(jx+r2,jy); ctx.lineTo(jx+jw-r2,jy);
+    ctx.quadraticCurveTo(jx+jw,jy, jx+jw,jy+r2);
+    ctx.lineTo(jx+jw,jy+jh-r2);
+    ctx.quadraticCurveTo(jx+jw,jy+jh, jx+jw-r2,jy+jh);
+    ctx.lineTo(jx+r2,jy+jh);
+    ctx.quadraticCurveTo(jx,jy+jh, jx,jy+jh-r2);
+    ctx.lineTo(jx,jy+r2);
+    ctx.quadraticCurveTo(jx,jy, jx+r2,jy);
+    // lid
+    ctx.moveTo(jx+16,jy-10); ctx.lineTo(jx+jw-16,jy-10);
+    ctx.stroke();
+
+    // bottle (mid-right)
+    ctx.beginPath();
+    const ox=W*0.58, oy=H*0.44;
+    ctx.moveTo(ox,oy);
+    ctx.lineTo(ox,oy-30);
+    ctx.quadraticCurveTo(ox,oy-40, ox+10,oy-40);
+    ctx.lineTo(ox+22,oy-40);
+    ctx.quadraticCurveTo(ox+32,oy-40, ox+32,oy-30);
+    ctx.lineTo(ox+32,oy);
+    ctx.quadraticCurveTo(ox+52,oy+60, ox+32,oy+110);
+    ctx.lineTo(ox,oy+110);
+    ctx.quadraticCurveTo(ox-20,oy+60, ox,oy);
+    ctx.stroke();
+
+    // pouch (far right)
+    ctx.beginPath();
+    const px=W*0.72, py=H*0.32, pw=140, ph=160;
+    ctx.moveTo(px,py+ph);
+    ctx.lineTo(px+pw,py+ph);
+    ctx.lineTo(px+pw-16,py);
+    ctx.lineTo(px+16,py);
+    ctx.closePath(); ctx.stroke();
+
+    // subtle sweep shadow
+    const sweep=ctx.createLinearGradient(0,H*0.78,0,H*0.92);
+    sweep.addColorStop(0,'rgba(0,0,0,0)'); sweep.addColorStop(1,'rgba(0,0,0,0.35)');
+    ctx.fillStyle=sweep; ctx.beginPath();
+    ctx.moveTo(18,H*0.87); ctx.quadraticCurveTo(W*0.38,H*0.76, W-18,H*0.86);
+    ctx.lineTo(W-18,H-18); ctx.lineTo(18,H-18); ctx.closePath(); ctx.fill();
+
+    // few signal dots
+    ctx.fillStyle='rgba(230,195,107,0.75)';
+    for(let i=0;i<8;i++){ const x=W*(0.08+0.84*Math.random()), y=H*(0.12+0.78*Math.random()); if(y<H*0.84){ ctx.fillRect(x,y,2,2); } }
+  }
+
+  function drawBackground(){ drawBlueprint(); }
+
+  const stack=$('#cardStack'), rail=$('#stackRail'), card=$('#cardA');
+
   function hslProb(p){ const H=KN.probHue.min, L=KN.probHue.max; return `hsl(${H+(L-H)*(p/100)},78%,54%)`; }
 
+  function applyCardSizing(){
+    const dims=KN.card||{};
+    const w=(dims.width||KN.stack?.width||280);
+    document.documentElement.style.setProperty('--card-w', w+'px');
+    document.documentElement.style.setProperty('--rail-h', (dims.railHeight||232)+'px');
+    document.documentElement.style.setProperty('--card-pad', (dims.padding||'12px 12px 10px'));
+  }
+
+  function positionStack(){
+    const r=wrapClip.getBoundingClientRect();
+    stack.style.left = (clamp(KN.stack.left,0,1)*r.width)+'px';
+    stack.style.top  = (clamp(KN.stack.top,0,1)*r.height)+'px';
+    stack.style.transform = `translate(-50%,-50%) rotate(${KN.stack.angle||0}deg)`;
+    rail.style.width=(KN.stack.width||280)+'px';
+    rail.style.height='232px';
+  }
+
   function setProbLabel(){
-    const lbl=document.querySelector('#cardA .prob .lbl');
+    const lbl=card.querySelector('.prob .lbl');
     if(lbl){ lbl.textContent = KN.probLabel || 'Win rate'; }
     document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||11)+'px');
     document.documentElement.style.setProperty('--prob-pulse', (KN.probDot?.pulseMs||900)+'ms');
@@ -592,7 +720,8 @@ window.SCOREBOARD_KNOBS = {
     const dVal=Math.round(range(r.distanceBias[stage]));
     const distance=(dVal<=1)?"Same city":(dVal<8?(dVal.toFixed(1)+" mi"):(dVal+" mi"));
     const aiLabel=pick(KN.pools.aiLabels);
-    return {stage,p,ai,buyer,need,distance,aiLabel};
+    const nx=pick(KN.pools.next[stage]);
+    return {stage,p,ai,buyer,need,distance,aiLabel,next:nx};
   }
 
   function paintLead(el,data){
@@ -608,6 +737,7 @@ window.SCOREBOARD_KNOBS = {
     el.querySelector('[data-need]').textContent = data.need;
     el.querySelector('[data-ai-label]').textContent = `${data.aiLabel} optimized`;
     el.querySelector('[data-ai]').textContent = data.ai+'%';
+    el.querySelector('[data-next]').textContent = data.next||'—';
 
     const chips=el.querySelector('[data-tags]'); chips.innerHTML='';
     const c1=document.createElement('span'); c1.className='chip'; c1.textContent=`${meta.emoji||'🏷️'} ${meta.label}`;
@@ -674,6 +804,15 @@ window.SCOREBOARD_KNOBS = {
       const id=t.getAttribute?.('data-track-id')||(t.id||t.tagName);
       const sec=e.target.closest('[data-track-section]')?.getAttribute('data-track-section')||'';
       send({t:'click', id, sec, tag:(t.tagName||''), ts:Date.now()});
+      onClick.buf=onClick.buf||[];
+      const now=performance.now(); const x=e.clientX, y=e.clientY;
+      onClick.buf.push({x,y,now});
+      const R=AN.rage||{clicks:3,withinMs:800,radius:28};
+      while(onClick.buf.length && now-onClick.buf[0].now>(R.withinMs||800)) onClick.buf.shift();
+      const close=onClick.buf.filter(p=>Math.hypot(p.x-x,p.y-y)<(R.radius||28));
+      if(close.length>=(R.clicks||3)){ send({t:'rage_click', n:close.length, id, sec, ts:Date.now()}); onClick.buf.length=0; }
+      onClick.last=onClick.last||{id:'',ts:0,count:0};
+      if(id===onClick.last.id && now-onClick.last.ts<(AN.repeatClickMs||700)){ onClick.last.count++; if(onClick.last.count>=2) send({t:'repeat_click', id, sec, n:onClick.last.count+1, ts:Date.now()}); } else { onClick.last={id,ts:now,count:0}; }
     }
     function start(){ if(!enabled) return; try{ instrumentSections(); document.addEventListener('click', onClick, {capture:true, passive:true}); }catch{} }
     return { start };
@@ -681,30 +820,50 @@ window.SCOREBOARD_KNOBS = {
 
   function init(){
     applyCopy();
-    applyWallpaper();
 
-    // Deck
-    const card = document.getElementById('cardA');
+    // neutral domain tag
+    const tagEl = document.getElementById('domainTag');
+    if(tagEl) tagEl.textContent = 'yourcompany.com';
+
+    drawBackground();
+    applyCardSizing();
+    positionStack();
     const stages=['hotp','hot','warm']; let deck=[];
-    for(let i=0;i<12;i++) deck.push(genLead(stages[i%stages.length]));
+    function rebuildDeck(){ deck.length=0; for(let i=0;i<12;i++) deck.push(genLead(stages[i%stages.length])); }
+    window.__deck=deck; rebuildDeck();
     setProbLabel();
     paintLead(card, deck[0]);
 
-    // autoplay (very light)
+    // autoplay gating
     let timer, onScreen=true, visible=document.visibilityState!=='hidden';
     const noMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     function showNext(){ deck.push(deck.shift()); paintLead(card, deck[0]); }
     function restart(){ clearInterval(timer); if(KN.stack.autoPlay && onScreen && visible && !noMotion){ timer=setInterval(showNext, KN.stack.autoMs||5200); } }
     restart();
-    if('IntersectionObserver' in window){
+    if('IntersectionObserver' in window && wrapClip){
       const io=new IntersectionObserver((es)=>{ onScreen=es.some(e=>e.isIntersecting); restart(); },{threshold:.25});
-      const panel=document.querySelector('.const-wrap'); panel && io.observe(panel);
+      io.observe(wrapClip);
     }
     document.addEventListener('visibilitychange',()=>{ visible=document.visibilityState!=='hidden'; restart(); });
+    if(KN.stack.clickAdvance){ rail.addEventListener('click',()=>showNext()); rail.addEventListener('keydown',e=>{ if(['ArrowRight',' ','Enter'].includes(e.key)){ e.preventDefault(); showNext(); } }); }
 
-    // click/keyboard advance
-    document.getElementById('cardStack')?.addEventListener('click',()=>showNext());
-    document.addEventListener('keydown',(e)=>{ if(['ArrowRight',' ','Enter'].includes(e.key)){ e.preventDefault(); showNext(); } });
+    addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackground(); applyCardSizing(); positionStack(); },80); });
+
+    try{
+      const cores = navigator.hardwareConcurrency||2;
+      if(cores <= 4){
+        document.documentElement.style.setProperty('--miniCard-blur','0px');
+        document.querySelectorAll('.miniCard').forEach(el=>{
+          el.style.backdropFilter=''; el.style.webkitBackdropFilter='';
+          el.style.background='rgba(16,22,35,.92)';
+          el.style.boxShadow='0 6px 16px rgba(0,0,0,.22)';
+        });
+        window.updateScoreboardKnobs?.({ probDot:{ pulseMs:0 } });
+      }
+    }catch{}
+
+    setupReveals();
+    Analytics.start();
 
     // Mobile menu
     (function(){
@@ -715,7 +874,7 @@ window.SCOREBOARD_KNOBS = {
       menu.addEventListener('click', (e)=>{ if(e.target===menu) set(false); }, {passive:true});
     })();
 
-    // CTA routing
+    // Onboarding lives on start.html
     const heroHostD = document.getElementById("hostHeroDesktop");
     const heroHostM = document.getElementById("hostHeroMobile");
     const ctaDesktop = document.getElementById("cta-desktop");
@@ -723,13 +882,16 @@ window.SCOREBOARD_KNOBS = {
     const navStart   = document.getElementById("navStart");
     const mobileStart= document.getElementById("mobileStart");
 
-    const normHost=(h)=>(h||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+    const normHost=(h)=>(h||"").trim().toLowerCase()
+      .replace(/^https?:\/\//,"").replace(/^www\./,"").replace(/\/.*$/,"");
+
     function goStart(){
       const raw = (heroHostD?.value || heroHostM?.value || "").trim();
       const h = normHost(raw);
       const url = h ? `start.html?host=${encodeURIComponent(h)}` : `start.html`;
       window.location.href = url;
     }
+
     ctaDesktop?.addEventListener('click', goStart);
     ctaMobile ?.addEventListener('click', goStart);
     navStart  ?.addEventListener('click', (e)=>{ e.preventDefault(); goStart(); });
@@ -737,21 +899,37 @@ window.SCOREBOARD_KNOBS = {
     [heroHostD, heroHostM].forEach(el=>{
       el?.addEventListener("keydown", (e)=>{ if(e.key === "Enter"){ e.preventDefault(); goStart(); } });
     });
-
-    // Reveal animations + lightweight analytics
-    setupReveals();
-    (window.ANALYTICS_KNOBS?.enabled) && (Analytics.start());
   }
   init();
 
-  // Public knobs (kept)
+  // Public knobs
   window.updateScoreboardKnobs=function(patch){
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
     Object.assign(KN, window.SCOREBOARD_KNOBS);
-    setProbLabel();
+    applyCardSizing(); positionStack(); setProbLabel();
   };
   window.updateCopyKnobs=function(patch){ window.COPY_KNOBS = deepMerge(window.COPY_KNOBS, patch||{}); applyCopy(); };
   window.updateAnimKnobs=function(patch){ window.ANIM_KNOBS = deepMerge(window.ANIM_KNOBS, patch||{}); };
+
+  // KPI counters (fixed to always animate)
+  (function(){
+    const section = document.getElementById("proof"); if (!section) return;
+    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const nums = Array.from(section.querySelectorAll(".num")); let fired=false;
+    function format(v, fmt){ if (fmt==="dec1") return v.toFixed(1); const s=Math.round(v).toString(); return s.replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+    function animate(el){
+      const to = parseFloat(el.dataset.to||"0"); const fmt = el.dataset.format||"int";
+      if (noMotion){ el.textContent = format(to, fmt); return; }
+      const dur = 1200; const start = performance.now();
+      function tick(now){ const p=Math.min(1,(now-start)/dur); const ease=1-Math.pow(1-p,3); const val=to*ease; el.textContent=format(val,fmt); if (p<1) requestAnimationFrame(tick); }
+      requestAnimationFrame(tick);
+    }
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{ if (!fired && e.isIntersecting){ fired=true; nums.forEach(animate); io.disconnect(); }});
+    },{threshold:0.30});
+    io.observe(section);
+    addEventListener('load', ()=>{ if(!fired){ fired=true; nums.forEach(animate); }});
+  })();
 })();
 </script>
 
