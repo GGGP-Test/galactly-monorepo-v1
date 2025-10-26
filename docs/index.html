@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Section styles -->
+<!-- Section styles (unchanged) -->
 <link rel="stylesheet" href="./sections/process/process.css">
 <link rel="stylesheet" href="./sections/orbit/orbit.css">
 
@@ -45,7 +45,7 @@
     /* reveal & card sizing knobs */
     --reveal-dur: 420ms; --reveal-ease: cubic-bezier(.22,.61,.36,1);
     --reveal-in-y: 22px; --reveal-out-y: -18px;
-    --card-w: 280px; --rail-h: 206px; --card-pad: 12px 12px 10px;
+    --card-w: 280px; --rail-h: 232px; --card-pad: 12px 12px 10px;
   }
 
   *{box-sizing:border-box}
@@ -54,7 +54,6 @@
   body{position:relative}
   a{color:inherit;text-decoration:none}
   button{font:600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
-
   .visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
 
   /* ---- STATIC WALLPAPER ---- */
@@ -227,13 +226,13 @@
   .cardStack{ position:absolute; z-index:2; transform-origin:center center; }
   .cardStack .rail{ position:relative; width:var(--card-w); height:var(--rail-h); pointer-events:auto; }
 
-  /* Hide static ladder for a cleaner, more “product” hero */
+  /* Hide static ladder for a cleaner, professional hero */
   .miniCard.static,[data-ghost]{ display:none !important; }
 
   /* Card */
   .miniCard{
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    z-index:3; min-width:240px; max-width:300px; width:var(--card-w);
+    z-index:3; min-width:240px; max-width:320px; width:var(--card-w);
     padding:var(--card-pad); border-radius:var(--miniCard-radius);
     background:var(--miniCard-bg);
     -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
@@ -260,7 +259,7 @@
 
   .miniCard .prob .lbl{ font-size:11px; color:#a9bfd6; opacity:.95; letter-spacing:.1px }
   .miniCard .prob .dot{
-    position:relative; width:var(--prob-dot-size,12px); height:var(--prob-dot-size,12px);
+    position:relative; width:var(--prob-dot-size,11px); height:var(--prob-dot-size,11px);
     border-radius:999px; background: currentColor;
     box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.28);
   }
@@ -270,13 +269,21 @@
   }
   .miniCard .prob .dot::after{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.32;
+    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.30;
     animation: probPulse var(--prob-pulse,900ms) ease-out infinite;
   }
   @keyframes probPulse{
-    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor; opacity:.32 }
+    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor; opacity:.30 }
     100% { transform:scale(1.9); box-shadow:0 0 0 10px rgba(0,0,0,0); opacity:0 }
   }
+
+  /* --- Mini “dashboard” extras inside the card (sparkline + KPI pills) --- */
+  .spark{ width:100%; height:44px; margin:6px 0 2px; display:block; }
+  .stats{ display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+  .pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 7px;
+         border-radius:8px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04);
+         font-size:11px; }
+  .pill .n{ font-weight:800; }
 
   /* SECTION 2 */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
@@ -338,8 +345,14 @@
     .btn{transition:none}
     .reveal{opacity:1!important; transform:none!important; transition:none!important}
   }
+
   .show-desktop{display:block} .show-mobile{display:none}
   @media (max-width:900px){ .show-desktop{display:none} .show-mobile{display:block} }
+
+  /* Variant-specific toggles */
+  [data-hero-variant="bokeh"] #constOverlay,
+  [data-hero-variant="bokeh"] .const-caption,
+  [data-hero-variant="bokeh"] .const-legend{ display:none !important; }
 </style>
 </head>
 <body>
@@ -442,9 +455,18 @@
               </div>
               <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
               <div class="chips" data-tags></div>
+
+              <!-- Mini sparkline + KPI pills (purely decorative, helps “product feel”) -->
+              <svg id="sparkline" class="spark" viewBox="0 0 300 44" aria-hidden="true" focusable="false"></svg>
+              <div class="stats" aria-hidden="true">
+                <div class="pill"><span class="n" id="m1">1770</span><span>Contacted</span></div>
+                <div class="pill"><span class="n" id="m2">338</span><span>Opened</span></div>
+                <div class="pill"><span class="n" id="m3">44</span><span>Replied</span></div>
+                <div class="pill"><span class="n" id="m4">13</span><span>Positive</span></div>
+              </div>
             </div>
 
-            <!-- (Static ladder intentionally hidden via CSS for professionalism) -->
+            <!-- Static ladder kept in DOM but hidden via CSS -->
             <div class="miniCard static s1" data-static>
               <div class="row"><span class="k">Buyer</span><span class="v name">Volt Pharma — Denver, CO</span></div>
               <div class="row"><span class="k">Distance</span><span class="v">15 mi</span></div>
@@ -538,10 +560,10 @@ window.ANALYTICS_KNOBS = {
   repeatClickMs: 700
 };
 
-/* Polished defaults for a simpler, more professional hero */
+/* Defaults tuned for the hero card */
 window.SCOREBOARD_KNOBS = {
   stack: { layout: 'vertical', left: 0.80, top: 0.62, width: 280, angle: 0, clickAdvance: true, autoPlay: true, autoMs: 5200 },
-  card: { width: 280, railHeight: 206, padding: '12px 12px 10px' },
+  card: { width: 280, railHeight: 232, padding: '12px 12px 10px' },
   anchorGlow: { size: 46, pulseMs: 1800, coreA:.90, midA:.45, edgeA:.05 },
   lines: { count: 3, jitter: 10, width: 1, alpha: .10 },
   probLabel: 'Win rate',
@@ -595,6 +617,11 @@ window.SCOREBOARD_KNOBS = {
   const pick=(a)=>a[(Math.random()*a.length)|0];
   const range=([a,b])=>a+Math.random()*(b-a);
 
+  /* ------- Variant handling (A/B) ------- */
+  function getParam(k){ return new URLSearchParams(location.search).get(k)||''; }
+  const HERO_VARIANT = (getParam('hero')||'const').toLowerCase(); // 'const' | 'bokeh'
+  document.documentElement.setAttribute('data-hero-variant', HERO_VARIANT);
+
   function applyCopy(){
     const C=window.COPY_KNOBS||{};
     const H=C.hero||{}, P=C.proof||{};
@@ -619,10 +646,11 @@ window.SCOREBOARD_KNOBS = {
   addEventListener('resize',()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t=setTimeout(applyWallpaper,60); });
   document.addEventListener('DOMContentLoaded',applyWallpaper);
 
+  /* ---------- BACKGROUNDS ---------- */
   const wrap=$('.const-wrap'); const cvs=$('#constFx'); const ctx=cvs?.getContext('2d');
-  function drawBackdrop(){
+  function drawConstellation(){
     if(!wrap||!cvs||!ctx) return;
-    const DPR=Math.max(1,Math.min(1.5,window.devicePixelRatio||1)); // cap DPR for perf
+    const DPR=Math.max(1,Math.min(1.5,window.devicePixelRatio||1)); // perf cap
     const r=wrap.getBoundingClientRect(); const W=r.width|0, H=r.height|0;
     cvs.width=(W*DPR)|0; cvs.height=(H*DPR)|0; cvs.style.width=W+'px'; cvs.style.height=H+'px';
     ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H);
@@ -634,8 +662,44 @@ window.SCOREBOARD_KNOBS = {
       if(d2<linkR*linkR){ const aLine=.04+.14*(1-Math.sqrt(d2)/linkR); ctx.strokeStyle=`rgba(230,195,107,${aLine})`; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); }
     }
     for(const p of pts){ ctx.fillStyle="rgba(230,195,107,0.68)"; ctx.beginPath(); ctx.arc(p.x,p.y,1.5,0,Math.PI*2); ctx.fill(); }
-    // anchor dot
     ctx.fillStyle="rgba(242,220,160,0.92)"; ctx.beginPath(); ctx.arc(0.18*W,0.52*H,3.2,0,Math.PI*2); ctx.fill();
+  }
+
+  function drawBokeh(){
+    if(!wrap||!cvs||!ctx) return;
+    const DPR=Math.max(1,Math.min(1.5,window.devicePixelRatio||1));
+    const r=wrap.getBoundingClientRect(); const W=r.width|0, H=r.height|0;
+    cvs.width=(W*DPR)|0; cvs.height=(H*DPR)|0; cvs.style.width=W+'px'; cvs.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H);
+
+    // soft vignette base
+    const grd=ctx.createRadialGradient(W*0.5,H*0.4,10, W*0.5,H*0.4, Math.max(W,H)*0.9);
+    grd.addColorStop(0, 'rgba(255,255,255,0.03)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
+
+    // golden bokeh orbs
+    const orbs=18;
+    for(let i=0;i<orbs;i++){
+      const x = (0.12+Math.random()*0.80)*W;
+      const y = (0.12+Math.random()*0.76)*H;
+      const r0 = 12 + Math.random()*42;
+      const g = ctx.createRadialGradient(x,y,0, x,y,r0);
+      const a = 0.06 + Math.random()*0.10;
+      g.addColorStop(0, `rgba(242,220,160,${a+0.05})`);
+      g.addColorStop(0.6, `rgba(230,195,107,${a})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r0,0,Math.PI*2); ctx.fill();
+    }
+
+    // sparse stars
+    ctx.fillStyle="rgba(230,195,107,0.75)";
+    for(let i=0;i<22;i++){ const x=Math.random()*W, y=Math.random()*H; ctx.fillRect(x,y,1,1); }
+  }
+
+  function drawBackground(){
+    if(HERO_VARIANT==='bokeh'){ drawBokeh(); }
+    else{ drawConstellation(); }
   }
 
   const stack=$('#cardStack'), rail=$('#stackRail'), card=$('#cardA');
@@ -647,17 +711,20 @@ window.SCOREBOARD_KNOBS = {
     const dims=KN.card||{};
     const w=(dims.width||KN.stack?.width||280);
     document.documentElement.style.setProperty('--card-w', w+'px');
-    document.documentElement.style.setProperty('--rail-h', (dims.railHeight||206)+'px');
+    document.documentElement.style.setProperty('--rail-h', (dims.railHeight||232)+'px');
     document.documentElement.style.setProperty('--card-pad', (dims.padding||'12px 12px 10px'));
   }
 
   function positionStack(){
     const r=wrap.getBoundingClientRect();
-    stack.style.left = (clamp(KN.stack.left,0,1)*r.width)+'px';
-    stack.style.top  = (clamp(KN.stack.top,0,1)*r.height)+'px';
+    // Slight nudge for bokeh variant
+    const left = HERO_VARIANT==='bokeh' ? 0.78 : KN.stack.left;
+    const top  = HERO_VARIANT==='bokeh' ? 0.64 : KN.stack.top;
+    stack.style.left = (clamp(left,0,1)*r.width)+'px';
+    stack.style.top  = (clamp(top,0,1)*r.height)+'px';
     stack.style.transform = `translate(-50%,-50%) rotate(${KN.stack.angle||0}deg)`;
     rail.style.width=(KN.stack.width||280)+'px';
-    rail.style.height='206px';
+    rail.style.height='232px';
   }
 
   function setProbLabel(){
@@ -703,10 +770,51 @@ window.SCOREBOARD_KNOBS = {
     el.querySelectorAll('.name').forEach(n=> n.style.font=KN.fonts.name);
   }
 
-  const stages=['hotp','hot','warm']; let deck=[];
-  function rebuildDeck(){ deck.length=0; for(let i=0;i<12;i++) deck.push(genLead(stages[i%stages.length])); }
-  function showNext(){ deck.push(deck.shift()); paintLead(card, deck[0]); }
+  /* ------- Sparkline ------- */
+  function drawSparkline(){
+    const svg = document.getElementById('sparkline'); if(!svg) return;
+    const W=300, H=44, pad=6, maxY=H-pad*2;
+    svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+    svg.innerHTML='';
 
+    // Fake “last year” trend: rising with noise
+    const N=28; const pts=[];
+    let y = maxY*0.75;
+    for(let i=0;i<N;i++){
+      const t=i/(N-1);
+      y = maxY*(0.75-0.45*t) + (Math.random()*6-3) + (i>18? (i-18)*0.6 : 0);
+      y = Math.max(6, Math.min(maxY-2, y));
+      const x = pad + (W-pad*2)*t;
+      pts.push([x, y]);
+    }
+
+    // Gradient
+    const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+    const lg=document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+    lg.setAttribute('id','g1'); lg.setAttribute('x1','0'); lg.setAttribute('y1','0'); lg.setAttribute('x2','0'); lg.setAttribute('y2','1');
+    const s1=document.createElementNS(lg.namespaceURI,'stop'); s1.setAttribute('offset','0%'); s1.setAttribute('stop-color','rgba(242,220,160,0.65)');
+    const s2=document.createElementNS(lg.namespaceURI,'stop'); s2.setAttribute('offset','100%'); s2.setAttribute('stop-color','rgba(230,195,107,0.15)');
+    lg.appendChild(s1); lg.appendChild(s2); defs.appendChild(lg); svg.appendChild(defs);
+
+    // Area under curve
+    const pathPts = pts.map(p=>`${p[0]},${p[1]}`).join(' L ');
+    const area=`M ${pts[0][0]},${H-pad} L ${pathPts} L ${pts[pts.length-1][0]},${H-pad} Z`;
+    const areaEl=document.createElementNS('http://www.w3.org/2000/svg','path');
+    areaEl.setAttribute('d', area); areaEl.setAttribute('fill','url(#g1)'); areaEl.setAttribute('opacity','0.35');
+    svg.appendChild(areaEl);
+
+    // Line
+    const line=document.createElementNS('http://www.w3.org/2000/svg','path');
+    line.setAttribute('d', `M ${pathPts}`);
+    line.setAttribute('fill','none');
+    line.setAttribute('stroke','rgba(242,220,160,0.9)');
+    line.setAttribute('stroke-width','2');
+    line.setAttribute('stroke-linejoin','round'); line.setAttribute('stroke-linecap','round');
+    svg.appendChild(line);
+  }
+
+  /* ---------- Overlay wiring ---------- */
+  const overlay=$('#constOverlay'), glow=$('#anchorGlow');
   function anchorPos(){ const r=wrap.getBoundingClientRect(); return { x: .18*r.width, y: .52*r.height }; }
   function placeGlow(){
     const a=anchorPos(); const G=KN.anchorGlow;
@@ -719,6 +827,7 @@ window.SCOREBOARD_KNOBS = {
       rgba(230,195,107,${G.edgeA??.05}) 100%)`;
   }
   function drawLines(){
+    if(HERO_VARIANT==='bokeh'){ overlay.innerHTML=''; return; }
     while(overlay.firstChild) overlay.removeChild(overlay.firstChild);
     const r=wrap.getBoundingClientRect(); overlay.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
     const a=anchorPos(), L=KN.lines||{};
@@ -807,21 +916,25 @@ window.SCOREBOARD_KNOBS = {
   function init(){
     applyCopy();
 
-    // Always start with this neutral domain label
+    // Neutral default domain label
     const tagEl = document.getElementById('domainTag');
     if(tagEl) tagEl.textContent = 'yourcompany.com';
 
-    drawBackdrop();
+    drawBackground();
     applyCardSizing();
     positionStack();
-    rebuildDeck();
+    const stages=['hotp','hot','warm']; let deck=[];
+    function rebuildDeck(){ deck.length=0; for(let i=0;i<12;i++) deck.push(genLead(stages[i%stages.length])); }
+    window.__deck=deck; rebuildDeck();
     setProbLabel();
     paintLead(card, deck[0]);
     placeGlow(); drawLines();
+    drawSparkline();
 
     // autoplay gating
     let timer, onScreen=true, visible=document.visibilityState!=='hidden';
     const noMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function showNext(){ deck.push(deck.shift()); paintLead(card, deck[0]); }
     function restart(){ clearInterval(timer); if(KN.stack.autoPlay && onScreen && visible && !noMotion){ timer=setInterval(showNext, KN.stack.autoMs||5200); } }
     restart();
     if('IntersectionObserver' in window && wrap){
@@ -831,7 +944,7 @@ window.SCOREBOARD_KNOBS = {
     document.addEventListener('visibilitychange',()=>{ visible=document.visibilityState!=='hidden'; restart(); });
     if(KN.stack.clickAdvance){ rail.addEventListener('click',()=>showNext()); rail.addEventListener('keydown',e=>{ if(['ArrowRight',' ','Enter'].includes(e.key)){ e.preventDefault(); showNext(); } }); }
 
-    addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackdrop(); applyCardSizing(); positionStack(); placeGlow(); drawLines(); },80); });
+    addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackground(); applyCardSizing(); positionStack(); placeGlow(); drawLines(); drawSparkline(); },80); });
 
     try{
       const cores = navigator.hardwareConcurrency||2;
@@ -858,7 +971,7 @@ window.SCOREBOARD_KNOBS = {
       menu.addEventListener('click', (e)=>{ if(e.target===menu) set(false); }, {passive:true});
     })();
 
-    // Handoff to start.html (onboarding lives there)
+    // Onboarding lives on start.html
     const heroHostD = document.getElementById("hostHeroDesktop");
     const heroHostM = document.getElementById("hostHeroMobile");
     const ctaDesktop = document.getElementById("cta-desktop");
@@ -880,15 +993,13 @@ window.SCOREBOARD_KNOBS = {
     ctaMobile ?.addEventListener('click', goStart);
     navStart  ?.addEventListener('click', (e)=>{ e.preventDefault(); goStart(); });
     mobileStart?.addEventListener('click', (e)=>{ e.preventDefault(); goStart(); });
-
     [heroHostD, heroHostM].forEach(el=>{
-      el?.addEventListener("keydown", (e)=>{
-        if(e.key === "Enter"){ e.preventDefault(); goStart(); }
-      });
+      el?.addEventListener("keydown", (e)=>{ if(e.key === "Enter"){ e.preventDefault(); goStart(); } });
     });
   }
   init();
 
+  // Public knobs
   window.updateScoreboardKnobs=function(patch){
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
     Object.assign(KN, window.SCOREBOARD_KNOBS);
