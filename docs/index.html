@@ -285,6 +285,13 @@
          font-size:11px; }
   .pill .n{ font-weight:800; }
 
+  /* NEW: tiny sparkline badges */
+  .miniBadges{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  .miniBadge{ display:flex; align-items:center; gap:6px; padding:4px 6px; border-radius:10px;
+              border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); }
+  .miniBadge .lbl{ font-size:10px; color:#a9bfd6; }
+  .miniSpark{ width:60px; height:18px; display:block; }
+
   /* SECTION 2 */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
   .section .inner{margin:0 auto}
@@ -456,8 +463,21 @@
               <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
               <div class="chips" data-tags></div>
 
-              <!-- Mini sparkline + KPI pills (purely decorative, helps “product feel”) -->
+              <!-- Big sparkline (existing) -->
               <svg id="sparkline" class="spark" viewBox="0 0 300 44" aria-hidden="true" focusable="false"></svg>
+
+              <!-- NEW: tiny sparkline badges -->
+              <div class="miniBadges" aria-hidden="true">
+                <div class="miniBadge">
+                  <span class="lbl">This week</span>
+                  <svg id="miniSpark1" class="miniSpark" viewBox="0 0 80 20"></svg>
+                </div>
+                <div class="miniBadge">
+                  <span class="lbl">Next 7 days</span>
+                  <svg id="miniSpark2" class="miniSpark" viewBox="0 0 80 20"></svg>
+                </div>
+              </div>
+
               <div class="stats" aria-hidden="true">
                 <div class="pill"><span class="n" id="m1">1770</span><span>Contacted</span></div>
                 <div class="pill"><span class="n" id="m2">338</span><span>Opened</span></div>
@@ -703,7 +723,7 @@ window.SCOREBOARD_KNOBS = {
   }
 
   const stack=$('#cardStack'), rail=$('#stackRail'), card=$('#cardA');
-  const overlay=$('#constOverlay'), glow=$('#anchorGlow');
+  const overlay=$('#constOverlay'), glow=$('#anchorGlow'); /* fixed: single declaration */
 
   function hslProb(p){ const H=KN.probHue.min, L=KN.probHue.max; return `hsl(${H+(L-H)*(p/100)},78%,54%)`; }
 
@@ -770,7 +790,7 @@ window.SCOREBOARD_KNOBS = {
     el.querySelectorAll('.name').forEach(n=> n.style.font=KN.fonts.name);
   }
 
-  /* ------- Sparkline ------- */
+  /* ------- Sparkline (big) ------- */
   function drawSparkline(){
     const svg = document.getElementById('sparkline'); if(!svg) return;
     const W=300, H=44, pad=6, maxY=H-pad*2;
@@ -813,9 +833,43 @@ window.SCOREBOARD_KNOBS = {
     svg.appendChild(line);
   }
 
+  /* ------- Tiny sparkline badges ------- */
+  function drawMiniSpark(svgId){
+    const s = document.getElementById(svgId); if(!s) return;
+    const W=80, H=20, pad=3, maxY=H-pad*2;
+    s.setAttribute('viewBox',`0 0 ${W} ${H}`);
+    s.innerHTML='';
+    const N=10; const pts=[]; let y=maxY*(0.65+Math.random()*0.15);
+    for(let i=0;i<N;i++){
+      const t=i/(N-1);
+      y = clamp(y + (Math.random()*6-3), 3, maxY-2);
+      const x = pad + (W-pad*2)*t;
+      pts.push([x,y]);
+    }
+    const d = pts.map(p=>`${p[0]},${p[1]}`).join(' L ');
+    const path1=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path1.setAttribute('d', `M ${d}`);
+    path1.setAttribute('fill','none');
+    path1.setAttribute('stroke','rgba(242,220,160,0.95)');
+    path1.setAttribute('stroke-width','1.8');
+    path1.setAttribute('stroke-linejoin','round'); path1.setAttribute('stroke-linecap','round');
+    const len = 200;
+    path1.style.strokeDasharray = len;
+    path1.style.strokeDashoffset = len;
+    s.appendChild(path1);
+    // simple draw-on animation
+    let t0=performance.now();
+    function tick(now){
+      const p=Math.min(1,(now-t0)/900);
+      path1.style.strokeDashoffset = (1-p)*len;
+      if(p<1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
   /* ---------- Overlay wiring ---------- */
-  const overlay=$('#constOverlay'), glow=$('#anchorGlow');
   function anchorPos(){ const r=wrap.getBoundingClientRect(); return { x: .18*r.width, y: .52*r.height }; }
+
   function placeGlow(){
     const a=anchorPos(); const G=KN.anchorGlow;
     glow.style.left=a.x+'px'; glow.style.top=a.y+'px';
@@ -826,11 +880,24 @@ window.SCOREBOARD_KNOBS = {
       rgba(242,220,160,${G.midA??.45}) 46%,
       rgba(230,195,107,${G.edgeA??.05}) 100%)`;
   }
-  function drawLines(){
-    if(HERO_VARIANT==='bokeh'){ overlay.innerHTML=''; return; }
+
+  /* NEW: animated arc labels (“This week”, “Next 7 days”) */
+  let arcAnim = null;
+  function drawArcLabels(){
+    if(!overlay) return;
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     while(overlay.firstChild) overlay.removeChild(overlay.firstChild);
-    const r=wrap.getBoundingClientRect(); overlay.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
-    const a=anchorPos(), L=KN.lines||{};
+
+    const r = wrap.getBoundingClientRect();
+    overlay.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
+
+    // groups
+    const gLines = document.createElementNS('http://www.w3.org/2000/svg','g'); // legacy lines
+    const gArcs  = document.createElementNS('http://www.w3.org/2000/svg','g'); // new arcs
+    overlay.appendChild(gLines); overlay.appendChild(gArcs);
+
+    // legacy fan-out lines toward card stack (kept)
+    const L=KN.lines||{}; const a=anchorPos();
     const s=stack.getBoundingClientRect(), p=wrap.getBoundingClientRect();
     const target={ x:(s.left-p.left)+s.width*0.22, y:(s.top-p.top)+s.height*0.78 };
     for(let i=0;i<(L.count||3);i++){
@@ -840,8 +907,72 @@ window.SCOREBOARD_KNOBS = {
       ln.setAttribute('x2',target.x+dx); ln.setAttribute('y2',target.y+dy);
       ln.setAttribute('stroke',`rgba(230,195,107,${L.alpha??.10})`);
       ln.setAttribute('stroke-width',String(L.width||1));
-      overlay.appendChild(ln);
+      gLines.appendChild(ln);
     }
+
+    // arcs
+    const baseAngle = Math.atan2(target.y-a.y, target.x-a.x); // direction to stack
+    const arcs = [
+      { radius: 110, spread: 70*Math.PI/180, label:'This week',  speed: 0.7 },
+      { radius: 160, spread: 90*Math.PI/180, label:'Next 7 days', speed: 0.5 }
+    ];
+
+    const arcState=[];
+    arcs.forEach((cfg,idx)=>{
+      const a0 = baseAngle - cfg.spread/2, a1 = baseAngle + cfg.spread/2;
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      const largeArc = cfg.spread > Math.PI ? 1 : 0;
+      const p0 = {x:a.x + cfg.radius*Math.cos(a0), y:a.y + cfg.radius*Math.sin(a0)};
+      const p1 = {x:a.x + cfg.radius*Math.cos(a1), y:a.y + cfg.radius*Math.sin(a1)};
+      const d  = `M ${p0.x},${p0.y} A ${cfg.radius},${cfg.radius} 0 ${largeArc} 1 ${p1.x},${p1.y}`;
+      path.setAttribute('d', d);
+      path.setAttribute('fill','none');
+      path.setAttribute('stroke','rgba(242,220,160,0.20)');
+      path.setAttribute('stroke-width','2');
+      path.setAttribute('stroke-linecap','round');
+      path.setAttribute('id', `arcPath_${idx}`);
+      path.setAttribute('stroke-dasharray', '4 10');
+      gArcs.appendChild(path);
+
+      // moving dot runner
+      const runner = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      runner.setAttribute('r','3');
+      runner.setAttribute('fill','rgba(242,220,160,0.95)');
+      gArcs.appendChild(runner);
+
+      // text along arc
+      const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+      text.setAttribute('font-size','12');
+      text.setAttribute('fill','#cfe2ff');
+      text.setAttribute('opacity','0.9');
+      const tp = document.createElementNS('http://www.w3.org/2000/svg','textPath');
+      tp.setAttributeNS('http://www.w3.org/1999/xlink','href', `#arcPath_${idx}`);
+      tp.setAttribute('startOffset','50%');
+      tp.setAttribute('text-anchor','middle');
+      tp.textContent = cfg.label;
+      text.appendChild(tp);
+      gArcs.appendChild(text);
+
+      arcState.push({ path, runner, len: path.getTotalLength(), speed: cfg.speed });
+    });
+
+    // animate dash offset + runner position
+    if(arcAnim){ cancelAnimationFrame(arcAnim); arcAnim=null; }
+    const start=performance.now();
+    function step(now){
+      const t = now-start;
+      arcState.forEach((st,i)=>{
+        const off = (t*0.05*st.speed)%1000;
+        st.path.style.strokeDashoffset = String(-off);
+        if(!reduce){
+          const pos = ( (t*0.00035*st.speed) % 1 ) * st.len;
+          const pt = st.path.getPointAtLength(pos);
+          st.runner.setAttribute('cx', pt.x); st.runner.setAttribute('cy', pt.y);
+        }
+      });
+      arcAnim = requestAnimationFrame(step);
+    }
+    arcAnim = requestAnimationFrame(step);
   }
 
   const AK = window.ANIM_KNOBS||{};
@@ -928,8 +1059,11 @@ window.SCOREBOARD_KNOBS = {
     window.__deck=deck; rebuildDeck();
     setProbLabel();
     paintLead(card, deck[0]);
-    placeGlow(); drawLines();
+    placeGlow(); 
     drawSparkline();
+    drawMiniSpark('miniSpark1');
+    drawMiniSpark('miniSpark2');
+    drawArcLabels();
 
     // autoplay gating
     let timer, onScreen=true, visible=document.visibilityState!=='hidden';
@@ -944,7 +1078,13 @@ window.SCOREBOARD_KNOBS = {
     document.addEventListener('visibilitychange',()=>{ visible=document.visibilityState!=='hidden'; restart(); });
     if(KN.stack.clickAdvance){ rail.addEventListener('click',()=>showNext()); rail.addEventListener('keydown',e=>{ if(['ArrowRight',' ','Enter'].includes(e.key)){ e.preventDefault(); showNext(); } }); }
 
-    addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackground(); applyCardSizing(); positionStack(); placeGlow(); drawLines(); drawSparkline(); },80); });
+    addEventListener('resize',()=>{
+      clearTimeout(init._r);
+      init._r=setTimeout(()=>{
+        drawBackground(); applyCardSizing(); positionStack(); placeGlow(); drawArcLabels(); 
+        drawSparkline(); drawMiniSpark('miniSpark1'); drawMiniSpark('miniSpark2');
+      },80);
+    });
 
     try{
       const cores = navigator.hardwareConcurrency||2;
@@ -1003,7 +1143,7 @@ window.SCOREBOARD_KNOBS = {
   window.updateScoreboardKnobs=function(patch){
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
     Object.assign(KN, window.SCOREBOARD_KNOBS);
-    applyCardSizing(); positionStack(); setProbLabel(); placeGlow(); drawLines();
+    applyCardSizing(); positionStack(); setProbLabel(); placeGlow(); drawArcLabels();
   };
   window.updateCopyKnobs=function(patch){ window.COPY_KNOBS = deepMerge(window.COPY_KNOBS, patch||{}); applyCopy(); };
   window.updateAnimKnobs=function(patch){ window.ANIM_KNOBS = deepMerge(window.ANIM_KNOBS, patch||{}); };
