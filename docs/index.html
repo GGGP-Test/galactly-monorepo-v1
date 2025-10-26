@@ -13,7 +13,6 @@
 
 <!-- Section styles (unchanged external files) -->
 <link rel="stylesheet" href="./sections/process/process.css">
-<link rel="stylesheet" href="./sections/orbit/orbit.css">
 
 <link rel="icon" href="data:,">
 
@@ -434,7 +433,7 @@
         </div>
       </div>
 
-      <!-- Blueprint Panel + Card -->
+      <!-- Timing-focused Blueprint Panel + Card -->
       <div class="const-wrap" aria-hidden="false">
         <div class="const-clip">
           <canvas id="constFx" aria-hidden="true"></canvas>
@@ -521,7 +520,7 @@
           </div>
         </div>
       </div>
-      <!-- /Blueprint + Card -->
+      <!-- /Timing-focused Panel + Card -->
     </div>
   </section>
 
@@ -545,8 +544,6 @@
 
   <!-- SECTION 3 – Process -->
   <div id="section-process" class="reveal-in" data-track-section="process"></div>
-  <!-- SECTION 4 – Orbit -->
-  <div id="section-orbit" class="reveal" data-track-section="orbit"></div>
 
   <!-- MODAL container (kept for later pages) -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none"></div>
@@ -678,7 +675,7 @@ window.SCOREBOARD_KNOBS = {
   addEventListener('resize',()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t=setTimeout(applyWallpaper,60); });
   document.addEventListener('DOMContentLoaded',applyWallpaper);
 
-  /* ---------- BLUEPRINT ART (clean, no arc ribbon) ---------- */
+  /* ---------- BLUEPRINT ART (minimal: gradient + grid only) ---------- */
   const wrapClip=$('.const-clip'); const cvs=$('#constFx'); const ctx=cvs?.getContext('2d');
 
   function drawBlueprint(){
@@ -698,63 +695,7 @@ window.SCOREBOARD_KNOBS = {
     const gx=5, gy=4;
     for(let i=1;i<gx;i++){ const x=(i/gx)*W; ctx.beginPath(); ctx.moveTo(x,18); ctx.lineTo(x,H-18); ctx.stroke(); }
     for(let j=1;j<gy;j++){ const y=(j/gy)*H; ctx.beginPath(); ctx.moveTo(18,y); ctx.lineTo(W-18,y); ctx.stroke(); }
-
-    // packaging outlines
-    ctx.strokeStyle='rgba(255,255,255,0.42)'; ctx.lineWidth=1.4;
-
-    // box (left)
-    ctx.beginPath();
-    const bx=W*0.22, by=H*0.42, bw=110, bh=86;
-    ctx.rect(bx,by,bw,bh);
-    ctx.moveTo(bx+bw*0.48,by); ctx.lineTo(bx+bw*0.48,by+bh);
-    ctx.moveTo(bx,by+bh*0.5); ctx.lineTo(bx+bw*0.7,by+bh*0.32);
-    ctx.moveTo(bx+bw,by+bh*0.5); ctx.lineTo(bx+bw*0.48,by+bh*0.32);
-    ctx.stroke();
-
-    // jar (bottom-left)
-    ctx.beginPath();
-    const jx=W*0.30, jy=H*0.62, jw=120, jh=90, r2=16;
-    ctx.moveTo(jx+r2,jy); ctx.lineTo(jx+jw-r2,jy);
-    ctx.quadraticCurveTo(jx+jw,jy, jx+jw,jy+r2);
-    ctx.lineTo(jx+jw,jy+jh-r2);
-    ctx.quadraticCurveTo(jx+jw,jy+jh, jx+jw-r2,jy+jh);
-    ctx.lineTo(jx+r2,jy+jh);
-    ctx.quadraticCurveTo(jx,jy+jh, jx,jy+jh-r2);
-    ctx.lineTo(jx,jy+r2);
-    ctx.quadraticCurveTo(jx,jy, jx+r2,jy);
-    // lid
-    ctx.moveTo(jx+16,jy-10); ctx.lineTo(jx+jw-16,jy-10);
-    ctx.stroke();
-
-    // bottle (mid-right)
-    ctx.beginPath();
-    const ox=W*0.58, oy=H*0.44;
-    ctx.moveTo(ox,oy);
-    ctx.lineTo(ox,oy-30);
-    ctx.quadraticCurveTo(ox,oy-40, ox+10,oy-40);
-    ctx.lineTo(ox+22,oy-40);
-    ctx.quadraticCurveTo(ox+32,oy-40, ox+32,oy-30);
-    ctx.lineTo(ox+32,oy);
-    ctx.quadraticCurveTo(ox+52,oy+60, ox+32,oy+110);
-    ctx.lineTo(ox,oy+110);
-    ctx.quadraticCurveTo(ox-20,oy+60, ox,oy);
-    ctx.stroke();
-
-    // pouch (far right)
-    ctx.beginPath();
-    const px=W*0.72, py=H*0.32, pw=140, ph=160;
-    ctx.moveTo(px,py+ph);
-    ctx.lineTo(px+pw,py+ph);
-    ctx.lineTo(px+pw-16,py);
-    ctx.lineTo(px+16,py);
-    ctx.closePath(); ctx.stroke();
-
-    // tiny signal dots (sparse, no ribbon)
-    ctx.fillStyle='rgba(230,195,107,0.75)';
-    for(let i=0;i<7;i++){
-      const x=W*(0.12+0.78*Math.random()), y=H*(0.14+0.66*Math.random());
-      ctx.fillRect(x,y,2,2);
-    }
+    // (Intentionally no packaging outlines; timing framework takes the spotlight.)
   }
 
   function drawBackground(){ drawBlueprint(); }
@@ -1145,9 +1086,5 @@ window.SCOREBOARD_KNOBS = {
     window.PROCESS_REPAINT && window.PROCESS_REPAINT();
   });
 </script>
-
-<!-- Section 4 (Orbit) scripts -->
-<script defer src="./sections/orbit/orbit.data.js"></script>
-<script defer src="./sections/orbit/orbit.js"></script>
 </body>
 </html>
