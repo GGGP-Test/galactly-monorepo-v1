@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Section styles (unchanged) -->
+<!-- Section styles (unchanged external files) -->
 <link rel="stylesheet" href="./sections/process/process.css">
 <link rel="stylesheet" href="./sections/orbit/orbit.css">
 
@@ -331,6 +331,36 @@
 
   .show-desktop{display:block} .show-mobile{display:none}
   @media (max-width:900px){ .show-desktop{display:none} .show-mobile{display:block} }
+
+  /* === Timing Framework styles === */
+  .tf{ position:absolute; inset:0; z-index:1; pointer-events:none; }
+  .tf svg{ width:100%; height:100%; display:block; }
+  .tf .axisLine{ stroke:url(#axisGrad); stroke-width:1; }
+  .tf .winRect{ fill:var(--tf-window-fill, rgba(255,255,255,.04)); stroke:var(--tf-window-stroke, rgba(255,255,255,.10)); }
+  .tf .winLbl{ font:600 11px/1 Inter, system-ui; fill:var(--tf-win-label, #b9cbe0); opacity:.9; letter-spacing:.2px; }
+  .tf .nowDot{ fill:var(--tf-accent, #e6c36b); filter:url(#softGlow); }
+  .tf .nowLbl{ font:600 11px/1 Inter, system-ui; fill:var(--tf-now-label, #e6c36b); opacity:.95; }
+  .tf .rail{ fill:none; stroke:rgba(255,255,255,.10); stroke-width:1.2; }
+  .tf .rail-gen{ stroke:var(--tf-gen, rgba(230,195,107,.20)); }
+  .tf .rail-save{ stroke:var(--tf-save, rgba(150,210,255,.16)); }
+  .tf .railLabel{ font:600 11px/1 Inter, system-ui; fill:#9fb3c7; opacity:.85; }
+  .tf .ping{ transform-box:fill-box; transform-origin:center; }
+  .tf .ping .dot{ fill:var(--tf-ping-dot, rgba(230,195,107,.85)); }
+  .tf .ping .ring{
+    fill:none; stroke:var(--tf-ping-ring, rgba(230,195,107,.35)); stroke-width:1.2;
+    opacity:.6; transform:scale(.6);
+    animation: tf-ping var(--tf-ping-dur, 3.2s) ease-out infinite;
+    animation-delay: var(--d, 0s);
+  }
+  @keyframes tf-ping{
+    0%   { opacity:.45; transform:scale(.6); }
+    60%  { opacity:.12; transform:scale(2.2); }
+    100% { opacity:0;   transform:scale(2.6); }
+  }
+  .tf.paused .ring{ animation-play-state: paused; }
+  @media (prefers-reduced-motion: reduce){
+    .tf .ring{ animation:none; opacity:.25; }
+  }
 </style>
 </head>
 <body>
@@ -379,7 +409,7 @@
         <p class="lead show-desktop" id="copy-hero-lead-desktop">We filter the noise and surface real companies already signaling intent in your strengths.</p>
         <p class="lead show-mobile" id="copy-hero-lead-mobile">One platform that turns your website + market signals into ranked B2B packaging leads—verified companies with purchase intent, ready for sales.</p>
 
-        <!-- Desktop CTA: input + button inside a single glass pill -->
+        <!-- Desktop CTA -->
         <div class="actions show-desktop" id="get-started-desktop">
           <label class="visually-hidden" for="hostHeroDesktop">Your website</label>
           <div class="glass-cta" role="group" aria-label="Start for free">
@@ -408,12 +438,61 @@
       <div class="const-wrap" aria-hidden="false">
         <div class="const-clip">
           <canvas id="constFx" aria-hidden="true"></canvas>
+
+          <!-- TIMING FRAMEWORK (underlay; non-interactive) -->
+          <div id="timingFramework" class="tf" aria-hidden="true">
+            <svg id="tfSvg" viewBox="0 0 800 540" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <linearGradient id="axisGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.05"/>
+                  <stop offset="72%" stop-color="#ffffff" stop-opacity="0.08"/>
+                  <stop offset="88%" stop-color="#e6c36b" stop-opacity="0.25"/>
+                  <stop offset="100%" stop-color="#e6c36b" stop-opacity="0.08"/>
+                </linearGradient>
+                <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="4" result="b"/>
+                  <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+
+              <!-- Time axis -->
+              <g class="axis">
+                <line x1="80" y1="440" x2="720" y2="440" class="axisLine"/>
+                <!-- windows -->
+                <g class="win" data-w="30d">
+                  <rect x="180" y="402" width="220" height="76" rx="10" class="winRect"/>
+                  <text x="190" y="396" class="winLbl">30 days</text>
+                </g>
+                <g class="win" data-w="week">
+                  <rect x="420" y="402" width="160" height="76" rx="10" class="winRect"/>
+                  <text x="430" y="396" class="winLbl">This week</text>
+                </g>
+                <!-- Now -->
+                <g class="now">
+                  <circle cx="600" cy="440" r="4.5" class="nowDot"/>
+                  <text x="590" y="468" class="nowLbl">Now</text>
+                </g>
+              </g>
+
+              <!-- AI lanes converging on "Now" -->
+              <g class="rails">
+                <path d="M120,190 C260,220 420,300 600,440" class="rail rail-gen"/>
+                <path d="M120,260 C260,290 420,340 600,440" class="rail rail-save"/>
+                <text class="railLabel" x="124" y="184">AI Money Generator</text>
+                <text class="railLabel" x="124" y="254">AI Saver</text>
+              </g>
+
+              <!-- Lightweight signal pings (positions set by JS once; no RAF) -->
+              <g id="tfPings" class="pings"></g>
+            </svg>
+          </div>
+
           <span class="domainTag" id="domainTag">yourcompany.com</span>
           <span class="const-caption">Signals clustered by timing</span>
           <div class="const-legend">Your Website → Signal → <strong>Timing</strong> → Buyers</div>
         </div>
 
-        <!-- Card sits OUTSIDE the clipped panel (no arcs, no messy ribbon) -->
+        <!-- Card sits OUTSIDE the clipped panel -->
         <div class="cardStack" id="cardStack" aria-label="Lead deck">
           <div class="rail" id="stackRail" tabindex="0" aria-label="Lead card">
             <div class="miniCard" id="cardA" role="group" aria-label="Lead">
@@ -472,7 +551,7 @@
   <!-- MODAL container (kept for later pages) -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none"></div>
 
-<!-- ===== KNOBS (unchanged copy) ===== -->
+<!-- ===== COPY / ANIM / SCOREBOARD KNOBS ===== -->
 <script>
 window.COPY_KNOBS = {
   hero: {
@@ -557,6 +636,7 @@ window.SCOREBOARD_KNOBS = {
 };
 </script>
 
+<!-- ===== PAGE SCRIPT (draws background, cards, counters, menu, etc.) ===== -->
 <script>
 (()=>{
   'use strict';
@@ -598,7 +678,7 @@ window.SCOREBOARD_KNOBS = {
   addEventListener('resize',()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t=setTimeout(applyWallpaper,60); });
   document.addEventListener('DOMContentLoaded',applyWallpaper);
 
-  /* ---------- BLUEPRINT ART ---------- */
+  /* ---------- BLUEPRINT ART (clean, no arc ribbon) ---------- */
   const wrapClip=$('.const-clip'); const cvs=$('#constFx'); const ctx=cvs?.getContext('2d');
 
   function drawBlueprint(){
@@ -615,7 +695,7 @@ window.SCOREBOARD_KNOBS = {
 
     // faint grid
     ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1;
-    const gx=5, gy=4; // columns x rows
+    const gx=5, gy=4;
     for(let i=1;i<gx;i++){ const x=(i/gx)*W; ctx.beginPath(); ctx.moveTo(x,18); ctx.lineTo(x,H-18); ctx.stroke(); }
     for(let j=1;j<gy;j++){ const y=(j/gy)*H; ctx.beginPath(); ctx.moveTo(18,y); ctx.lineTo(W-18,y); ctx.stroke(); }
 
@@ -669,16 +749,12 @@ window.SCOREBOARD_KNOBS = {
     ctx.lineTo(px+16,py);
     ctx.closePath(); ctx.stroke();
 
-    // subtle sweep shadow
-    const sweep=ctx.createLinearGradient(0,H*0.78,0,H*0.92);
-    sweep.addColorStop(0,'rgba(0,0,0,0)'); sweep.addColorStop(1,'rgba(0,0,0,0.35)');
-    ctx.fillStyle=sweep; ctx.beginPath();
-    ctx.moveTo(18,H*0.87); ctx.quadraticCurveTo(W*0.38,H*0.76, W-18,H*0.86);
-    ctx.lineTo(W-18,H-18); ctx.lineTo(18,H-18); ctx.closePath(); ctx.fill();
-
-    // few signal dots
+    // tiny signal dots (sparse, no ribbon)
     ctx.fillStyle='rgba(230,195,107,0.75)';
-    for(let i=0;i<8;i++){ const x=W*(0.08+0.84*Math.random()), y=H*(0.12+0.78*Math.random()); if(y<H*0.84){ ctx.fillRect(x,y,2,2); } }
+    for(let i=0;i<7;i++){
+      const x=W*(0.12+0.78*Math.random()), y=H*(0.14+0.66*Math.random());
+      ctx.fillRect(x,y,2,2);
+    }
   }
 
   function drawBackground(){ drawBlueprint(); }
@@ -930,6 +1006,122 @@ window.SCOREBOARD_KNOBS = {
     io.observe(section);
     addEventListener('load', ()=>{ if(!fired){ fired=true; nums.forEach(animate); }});
   })();
+})();
+</script>
+
+<!-- ===== TIMING FRAMEWORK JS (knobs + one-time layout + pause/offscreen) ===== -->
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const dm=(b,p)=>{const o=Array.isArray(b)?[...b]:{...b}; for(const k in p){const v=p[k]; o[k]=(v&&typeof v==='object'&&!Array.isArray(v))?dm(b[k]||{},v):v;} return o;};
+
+  const DEFAULTS = {
+    colors: {
+      accent:'#e6c36b',
+      gen:'rgba(230,195,107,.20)',
+      save:'rgba(150,210,255,.16)',
+      pingDot:'rgba(230,195,107,.85)',
+      pingRing:'rgba(230,195,107,.35)',
+      winFill:'rgba(255,255,255,.04)',
+      winStroke:'rgba(255,255,255,.10)',
+      winLabel:'#b9cbe0',
+      nowLabel:'#e6c36b'
+    },
+    axis: { x1:80, x2:720, y:440, nowX:600, nowLabelOffsetY:28 },
+    windows: [
+      { key:'30d',  label:'30 days',  x:180, y:402, w:220, h:76, rx:10 },
+      { key:'week', label:'This week',x:420, y:402, w:160, h:76, rx:10 }
+    ],
+    rails: [
+      { key:'gen',  label:'AI Money Generator', start:[120,190], c1:[260,220], c2:[420,300] },
+      { key:'save', label:'AI Saver',           start:[120,260], c1:[260,290], c2:[420,340] }
+    ],
+    pings: { count:10, x:[140,660], y:[120,340], dur:3.2, staggerMax:2.4 }
+  };
+  window.TIMING_KNOBS = window.TIMING_KNOBS ? dm(DEFAULTS, window.TIMING_KNOBS) : DEFAULTS;
+
+  function applyVars(tf, K){
+    tf.style.setProperty('--tf-accent', K.colors.accent);
+    tf.style.setProperty('--tf-gen', K.colors.gen);
+    tf.style.setProperty('--tf-save', K.colors.save);
+    tf.style.setProperty('--tf-ping-dot', K.colors.pingDot);
+    tf.style.setProperty('--tf-ping-ring', K.colors.pingRing);
+    tf.style.setProperty('--tf-window-fill', K.colors.winFill);
+    tf.style.setProperty('--tf-window-stroke', K.colors.winStroke);
+    tf.style.setProperty('--tf-win-label', K.colors.winLabel);
+    tf.style.setProperty('--tf-now-label', K.colors.nowLabel);
+    tf.style.setProperty('--tf-ping-dur', (window.TIMING_KNOBS.pings.dur||3.2)+'s');
+  }
+
+  function buildTiming(){
+    const tf = $('#timingFramework'), svg=$('#tfSvg'); if(!tf||!svg) return;
+    const K = window.TIMING_KNOBS; applyVars(tf,K);
+
+    // Axis + "Now"
+    const axisLine = svg.querySelector('.axisLine');
+    axisLine.setAttribute('x1', K.axis.x1); axisLine.setAttribute('x2', K.axis.x2);
+    axisLine.setAttribute('y1', K.axis.y);  axisLine.setAttribute('y2', K.axis.y);
+
+    const nowDot = svg.querySelector('.now .nowDot');
+    nowDot.setAttribute('cx', K.axis.nowX); nowDot.setAttribute('cy', K.axis.y);
+
+    const nowLbl = svg.querySelector('.now .nowLbl');
+    nowLbl.setAttribute('x', K.axis.nowX - 10);
+    nowLbl.setAttribute('y', K.axis.y + (K.axis.nowLabelOffsetY||28));
+
+    // Windows
+    K.windows.forEach(w=>{
+      const g=svg.querySelector(`.win[data-w="${w.key}"]`); if(!g) return;
+      const r=g.querySelector('.winRect'), t=g.querySelector('.winLbl');
+      r.setAttribute('x', w.x); r.setAttribute('y', w.y);
+      r.setAttribute('width', w.w); r.setAttribute('height', w.h);
+      r.setAttribute('rx', w.rx||10);
+      t.textContent=w.label; t.setAttribute('x', w.x+10); t.setAttribute('y', w.y-6);
+    });
+
+    // Rails (Bezier into "Now")
+    const end=[K.axis.nowX, K.axis.y];
+    const toPath=(s,c1,c2,e)=>`M${s[0]},${s[1]} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${e[0]},${e[1]}`;
+    const rails = svg.querySelectorAll('.rails .rail');
+    const labels= svg.querySelectorAll('.rails .railLabel');
+
+    rails[0].setAttribute('d', toPath(K.rails[0].start, K.rails[0].c1, K.rails[0].c2, end));
+    rails[1].setAttribute('d', toPath(K.rails[1].start, K.rails[1].c1, K.rails[1].c2, end));
+    labels[0].textContent=K.rails[0].label; labels[0].setAttribute('x', K.rails[0].start[0]+4); labels[0].setAttribute('y', K.rails[0].start[1]-6);
+    labels[1].textContent=K.rails[1].label; labels[1].setAttribute('x', K.rails[1].start[0]+4); labels[1].setAttribute('y', K.rails[1].start[1]-6);
+
+    // Pings
+    const noMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const pWrap = $('#tfPings'); pWrap.innerHTML='';
+    const n = Math.max(0, Math.min(40, K.pings.count||10));
+    const [x0,x1] = K.pings.x; const [y0,y1] = K.pings.y;
+    for(let i=0;i<n;i++){
+      const x=x0+Math.random()*(x1-x0), y=y0+Math.random()*(y1-y0);
+      const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+      g.setAttribute('class','ping'); g.setAttribute('transform',`translate(${x.toFixed(1)},${y.toFixed(1)})`);
+      const dot=document.createElementNS('http://www.w3.org/2000/svg','circle'); dot.setAttribute('class','dot'); dot.setAttribute('r','2'); dot.setAttribute('cx','0'); dot.setAttribute('cy','0');
+      const ring=document.createElementNS('http://www.w3.org/2000/svg','circle'); ring.setAttribute('class','ring'); ring.setAttribute('r','7'); ring.setAttribute('cx','0'); ring.setAttribute('cy','0');
+      if(!noMotion){ g.style.setProperty('--d', (Math.random()*(K.pings.staggerMax||2.4)).toFixed(2)+'s'); }
+      g.appendChild(dot); g.appendChild(ring); pWrap.appendChild(g);
+    }
+
+    // Pause when offscreen
+    if('IntersectionObserver' in window){
+      if(buildTiming._io) buildTiming._io.disconnect();
+      const io=new IntersectionObserver((entries)=>{
+        const vis=entries.some(e=>e.isIntersecting);
+        tf.classList.toggle('paused', !vis);
+      },{threshold:.25});
+      io.observe(tf.closest('.const-clip')||tf);
+      buildTiming._io=io;
+    }
+  }
+
+  // public API
+  window.updateTimingKnobs = function(patch){ window.TIMING_KNOBS = dm(window.TIMING_KNOBS, patch||{}); buildTiming(); };
+
+  if(document.readyState==='complete' || document.readyState==='interactive'){ buildTiming(); }
+  else { document.addEventListener('DOMContentLoaded', buildTiming); }
 })();
 </script>
 
