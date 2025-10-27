@@ -789,7 +789,7 @@ window.SCOREBOARD_KNOBS = {
 
   // ---- US MAP knobs (global/cluster/per-state) + runtime updater ----
   window.USMAP_KNOBS = {
-    dotSize: 9,                         // px (also applied to --us-dot-size)
+    dotSize: 5,                         // px (also applied to --us-dot-size)
     globalOffset: { xPct: 0, yPct: 0 }, // shift all dots by % of SVG width/height
     clusterOffset: {
       DEFAULT: { xPct: 0, yPct: 0 },
@@ -798,24 +798,24 @@ window.SCOREBOARD_KNOBS = {
       NE: { xPct: 0, yPct: 0 }          // CT, MA, ME, NH, RI, VT, NJ, DE, MD, NY, PA
     },
     overrides: {
-      'ID': { dxPct: 28.7, dyPct: 31.8 },
-      'MT': { dxPct: 38.7, dyPct: 22.8 },
-      'WY': { dxPct: 42.7, dyPct: 34.8 },
-      'ND': { dxPct: 55.7, dyPct: 23.8 },
-      'SD': { dxPct: 56.7, dyPct: 32.8 },
-      'MN': { dxPct: 66.7, dyPct: 27.8 },
-      'IA': { dxPct: 39.7, dyPct: 39.8 },
-      'WI': { dxPct: 75.7, dyPct: 31.8 },
-      'CA': { dxPct: 14.7, dyPct: 47.8 },
-      'UT': { dxPct: 33.7, dyPct: 44.8 },
-      'CO': { dxPct: 44.7, dyPct: 47.8 },
-      'NE': { dxPct: 56.7, dyPct: 40.8 },
-      'AZ': { dxPct: 31.7, dyPct: 59.8 },
-      'NM': { dxPct: 43.7, dyPct: 60.8 },
-      'TX': { dxPct: 56.7, dyPct: 69.8 },
-      'OK': { dxPct: 61.7, dyPct: 59.8 },
-      'AR': { dxPct: 72.7, dyPct: 59.8 },
-      'LA': { dxPct: 71.7, dyPct: 69.8 },
+      'ID': { xPct: 28.7, yPct: 31.8 },
+      'MT': { xPct: 38.7, yPct: 22.8 },
+      'WY': { xPct: 42.7, yPct: 34.8 },
+      'ND': { xPct: 55.7, yPct: 23.8 },
+      'SD': { xPct: 56.7, yPct: 32.8 },
+      'MN': { xPct: 66.7, yPct: 27.8 },
+      'IA': { xPct: 39.7, yPct: 39.8 },
+      'WI': { xPct: 75.7, yPct: 31.8 },
+      'CA': { xPct: 14.7, yPct: 47.8 },
+      'UT': { xPct: 33.7, yPct: 44.8 },
+      'CO': { xPct: 44.7, yPct: 47.8 },
+      'NE': { xPct: 56.7, yPct: 40.8 },
+      'AZ': { xPct: 31.7, yPct: 59.8 },
+      'NM': { xPct: 43.7, yPct: 60.8 },
+      'TX': { xPct: 56.7, yPct: 69.8 },
+      'OK': { xPct: 61.7, yPct: 59.8 },
+      'AR': { xPct: 72.7, yPct: 59.8 },
+      'LA': { xPct: 71.7, yPct: 69.8 },
     
       // Example tweaks you can enable:
       // 'MI': { dxPct: 0.35, dyPct: -0.2 },  // relative nudge
