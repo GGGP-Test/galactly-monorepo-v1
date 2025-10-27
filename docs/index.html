@@ -48,10 +48,12 @@
     --card-w: 280px; --rail-h: 232px; --card-pad: 12px 12px 10px;
 
     /* US map */
-    --us-stroke-w: 1.2px; /* match old rail thickness */
+    --us-stroke-w: 1.2px;
     --us-stroke: rgba(255,255,255,.12);
     --us-stroke-highlight: rgba(255,255,255,.18);
     --us-edge-fade: 8%;
+    /* independent size control for map dots (reverted smaller) */
+    --us-dot-size: 9px;
   }
 
   *{box-sizing:border-box}
@@ -113,7 +115,7 @@
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
 
   /* Hamburger (mobile only) */
-  .hamburger{display:none; justify-self=end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
+  .hamburger{display:none; justify-self:end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
   .hamburger span{position:absolute; left:2px; right:2px; height:2px; top:11px; border-radius:2px; background:currentColor; transition:transform .25s, top .25s}
   .hamburger span:nth-child(2){ top:21px; }
   .hamburger[aria-expanded="true"] span{ top:17px; }
@@ -333,8 +335,7 @@
   }
 
   /* ===== US MAP LAYER ===== */
-  .tf{ display:none !important; } /* remove previous arcs + labels entirely */
-
+  .tf{ display:none !important; } /* hide/remove old rails/arcs */
   .us-layer{ position:absolute; inset:0; z-index:1; pointer-events:none; }
   .us-layer .fadeEdge{
     width:100%; height:100%;
@@ -345,22 +346,17 @@
   .us-strokes{ fill:none; stroke:var(--us-stroke); stroke-width:var(--us-stroke-w); }
   .us-strokes .state:hover{ stroke:var(--us-stroke-highlight); }
 
-  /* the 50 small lights: identical visual & animation profile as the card's win-rate dot */
+  /* 50 small lights – same glow profile, size decoupled via --us-dot-size */
   #usDots{ position:absolute; inset:0; z-index:2; pointer-events:none; }
   #usDots .dot{
-    position:absolute; width:var(--prob-dot-size,11px); height:var(--prob-dot-size,11px);
+    position:absolute; width:var(--us-dot-size); height:var(--us-dot-size);
     border-radius:999px; background: currentColor;
-    color: var(--gold); /* keep exact glow color */
+    color: var(--gold);
     box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.28);
     transform: translate(-50%,-50%);
   }
-  /* baseline: no pulsing unless we trigger it on a single state per card change */
-  #usDots .dot::after{
-    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.30; animation:none;
-  }
+  #usDots .dot::after{ content:""; position:absolute; inset:0; border-radius:inherit; opacity:.30; transform:scale(1); box-shadow:0 0 0 0 currentColor; animation:none; }
   #usDots .dot.flash::after{ animation: probPulse var(--prob-pulse,900ms) ease-out 1; }
-
 </style>
 </head>
 <body>
@@ -439,7 +435,7 @@
         <div class="const-clip">
           <canvas id="constFx" aria-hidden="true"></canvas>
 
-          <!-- === U.S. MAP LAYER (replaces old arcs) === -->
+          <!-- === U.S. MAP LAYER === -->
           <div class="us-layer">
             <svg id="usMap" class="fadeEdge" viewBox="0 0 800 540" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
               <g class="us-strokes" id="usStates"></g>
@@ -447,7 +443,7 @@
             <div id="usDots" aria-hidden="true"></div>
           </div>
 
-          <!-- Old timing framework left in DOM but hidden for accessibility/layout parity -->
+          <!-- Hidden timing framework placeholder for layout parity -->
           <div id="timingFramework" class="tf" aria-hidden="true"></div>
 
           <span class="domainTag" id="domainTag">yourcompany.com</span>
@@ -598,7 +594,7 @@ window.SCOREBOARD_KNOBS = {
 };
 </script>
 
-<!-- ===== PAGE SCRIPT (draws background, cards, counters, menu, etc.) ===== -->
+<!-- ===== PAGE SCRIPT (bg, cards, menu, analytics, US map integration) ===== -->
 <script>
 (()=>{
   'use strict';
@@ -607,8 +603,6 @@ window.SCOREBOARD_KNOBS = {
 
   const KN = window.SCOREBOARD_KNOBS;
   const deepMerge=(b,p)=>{const o=Array.isArray(b)?[...b]:{...b}; for(const k in p){const v=p[k]; o[k]=(v&&typeof v==='object'&&!Array.isArray(v))?deepMerge(b[k]||{},v):v;} return o;};
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const pick=(a)=>a[(Math.random()*a.length)|0];
   const range=([a,b])=>a+Math.random()*(b-a);
 
   function getParam(k){ return new URLSearchParams(location.search).get(k)||''; }
@@ -793,8 +787,63 @@ window.SCOREBOARD_KNOBS = {
     return { start };
   })();
 
-  // ---- US map module (render + one-dot pulse control) ----
-  window.USMAP = { flash: ()=>{} }; // stub; replaced when map is ready
+  // ---- US MAP knobs (global/cluster/per-state) + runtime updater ----
+  window.USMAP_KNOBS = {
+    dotSize: 9,                         // px (also applied to --us-dot-size)
+    globalOffset: { xPct: 0, yPct: 0 }, // shift all dots by % of SVG width/height
+    clusterOffset: {
+      DEFAULT: { xPct: 0, yPct: 0 },
+      AK: { xPct: 0, yPct: 0 },
+      HI: { xPct: 0, yPct: 0 },
+      NE: { xPct: 0, yPct: 0 }          // CT, MA, ME, NH, RI, VT, NJ, DE, MD, NY, PA
+    },
+    overrides: {
+      // Example tweaks you can enable:
+      // 'MI': { dxPct: 0.35, dyPct: -0.2 },  // relative nudge
+      // 'MA': { xPct: 52.05, yPct: 27.8 }    // absolute placement
+    }
+  };
+  window.updateMapKnobs = function(patch){
+    const deepMerge=(b,p)=>{const o=Array.isArray(b)?[...b]:{...b}; for(const k in p){const v=p[k]; o[k]=(v&&typeof v==='object'&&!Array.isArray(v))?deepMerge(b[k]||{},v):v;} return o;};
+    window.USMAP_KNOBS = deepMerge(window.USMAP_KNOBS, patch||{});
+    document.documentElement.style.setProperty('--us-dot-size', (USMAP_KNOBS.dotSize||9)+'px');
+    refreshDotPositions();
+  };
+
+  // recompute visible positions from stored base % + offsets/overrides
+  function refreshDotPositions(){
+    const K = window.USMAP_KNOBS||{};
+    const dots = document.querySelectorAll('#usDots .dot');
+    dots.forEach(dot=>{
+      const baseX = parseFloat(dot.getAttribute('data-base-xp'));
+      const baseY = parseFloat(dot.getAttribute('data-base-yp'));
+      if(isNaN(baseX) || isNaN(baseY)) return;
+
+      const abbr = dot.getAttribute('data-state');
+      const cluster = dot.getAttribute('data-cluster') || 'DEFAULT';
+      let x = baseX, y = baseY;
+
+      const c = (K.clusterOffset && K.clusterOffset[cluster]) || {xPct:0,yPct:0};
+      x += +c.xPct || 0; y += +c.yPct || 0;
+
+      const o = (K.overrides && K.overrides[abbr]) || null;
+      if(o){
+        if(typeof o.xPct === 'number') x = o.xPct;
+        if(typeof o.yPct === 'number') y = o.yPct;
+        if(typeof o.dxPct === 'number') x += o.dxPct;
+        if(typeof o.dyPct === 'number') y += o.dyPct;
+      }
+
+      x += +(K.globalOffset?.xPct||0);
+      y += +(K.globalOffset?.yPct||0);
+
+      dot.style.left = x+'%';
+      dot.style.top  = y+'%';
+    });
+  }
+
+  // public flasher (replaced after map builds)
+  window.USMAP = { flash: ()=>{} };
 
   function buildUSMap(){
     const svg = document.getElementById('usMap'); const g = document.getElementById('usStates'); const dotsLayer = document.getElementById('usDots');
@@ -803,12 +852,13 @@ window.SCOREBOARD_KNOBS = {
     const W = svg.viewBox.baseVal.width || 800;
     const H = svg.viewBox.baseVal.height || 540;
 
-    // Fetch US TopoJSON and draw states (50 only)
+    const NE = new Set(['CT','MA','ME','NH','RI','VT','NJ','DE','MD','NY','PA']);
+
     fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
       .then(r=>r.json())
       .then(topo=>{
-        const states = topojson.feature(topo, topo.objects.states).features;
-        // Exclude DC (11)
+        const features = topojson.feature(topo, topo.objects.states).features;
+
         const STATE_ABBR = {
           1:'AL',2:'AK',4:'AZ',5:'AR',6:'CA',8:'CO',9:'CT',10:'DE',12:'FL',13:'GA',
           15:'HI',16:'ID',17:'IL',18:'IN',19:'IA',20:'KS',21:'KY',22:'LA',23:'ME',24:'MD',
@@ -819,57 +869,79 @@ window.SCOREBOARD_KNOBS = {
 
         const proj = d3.geoAlbersUsa();
         const fitRect = [[W*0.06, H*0.06],[W*0.94, H*0.94]];
-        proj.fitExtent(fitRect, {type:'FeatureCollection', features:states});
+        proj.fitExtent(fitRect, {type:'FeatureCollection', features});
 
         const path = d3.geoPath(proj);
 
         // draw strokes
         g.innerHTML = '';
-        states.forEach(f=>{
-          const id = +f.id;
-          if(!STATE_ABBR[id]) return; // skip DC
+        features.forEach(f=>{
+          const abbr = STATE_ABBR[+f.id];
+          if(!abbr) return;
           const p = document.createElementNS('http://www.w3.org/2000/svg','path');
           p.setAttribute('class','state');
           p.setAttribute('d', path(f));
           g.appendChild(p);
         });
 
-        // build 50 lights
-        dotsLayer.innerHTML = '';
-        const placed = [];
-        function place(x,y){
-          // avoid overlaps for tiny NE states
-          let nx=x, ny=y, tries=0;
-          while(tries<60 && placed.some(p=>Math.hypot(p[0]-nx,p[1]-ny)<14)){ nx+= (Math.random()-.5)*10; ny+= (Math.random()-.5)*10; tries++; }
-          placed.push([nx,ny]); return [nx,ny];
+        // helper: pick a point inside feature (centroid or random-search-in-bounds)
+        function insidePoint(feature){
+          let ll = d3.geoCentroid(feature);
+          if(d3.geoContains(feature, ll)) return ll;
+          const [min,max] = d3.geoBounds(feature);
+          const lonMin=min[0], latMin=min[1], lonMax=max[0], latMax=max[1];
+          for(let i=0;i<250;i++){
+            const lon = lonMin + Math.random()*(lonMax-lonMin);
+            const lat = latMin + Math.random()*(latMax-latMin);
+            const cand=[lon,lat];
+            if(d3.geoContains(feature, cand)) return cand;
+          }
+          return ll;
         }
-        states.forEach(f=>{
-          const id = +f.id; if(!STATE_ABBR[id]) return;
-          const c = path.centroid(f); if(isNaN(c[0])||isNaN(c[1])) return;
-          const [x,y] = place(c[0], c[1]);
+
+        // place one dot per state
+        dotsLayer.innerHTML='';
+        const K = window.USMAP_KNOBS||{};
+        document.documentElement.style.setProperty('--us-dot-size', (K.dotSize||9)+'px');
+
+        features.forEach(f=>{
+          const abbr = STATE_ABBR[+f.id]; if(!abbr) return;
+
+          let cluster='DEFAULT';
+          if(abbr==='AK') cluster='AK';
+          else if(abbr==='HI') cluster='HI';
+          else if(NE.has(abbr)) cluster='NE';
+
+          const ll = insidePoint(f);
+          const pt = proj(ll); if(!pt) return;
+          const xPct = (pt[0] / W) * 100;
+          const yPct = (pt[1] / H) * 100;
+
           const dot = document.createElement('span');
           dot.className='dot';
-          dot.style.left = x+'px';
-          dot.style.top  = y+'px';
-          dot.setAttribute('data-state', STATE_ABBR[id]);
+          dot.setAttribute('data-state', abbr);
+          dot.setAttribute('data-cluster', cluster);
+          dot.setAttribute('data-base-xp', xPct.toFixed(4));
+          dot.setAttribute('data-base-yp', yPct.toFixed(4));
           dotsLayer.appendChild(dot);
         });
 
-        // expose flasher
+        // apply offsets/overrides
+        refreshDotPositions();
+
+        // expose one-at-a-time pulser
         const all = Array.from(dotsLayer.querySelectorAll('.dot'));
         let last=null, idx=0;
         window.USMAP.flash = function(){
           if(!all.length) return;
           if(last){ last.classList.remove('flash'); }
-          // one-at-a-time, randomized but cycle through to avoid repeats clustering
           idx = (idx + 1 + Math.floor(Math.random()*7)) % all.length;
-          const dot = all[idx];
-          // restart the animation
-          dot.classList.remove('flash'); void dot.offsetWidth; dot.classList.add('flash');
-          last = dot;
+          const d = all[idx];
+          d.classList.remove('flash'); void d.offsetWidth; d.classList.add('flash');
+          last = d;
         };
       })
-      .catch(()=>{/* fail silent; panel still looks fine without outlines */});
+      .catch(()=>{ /* silent fail; panel still looks fine without outlines */});
   }
 
   function init(){
@@ -933,12 +1005,13 @@ window.SCOREBOARD_KNOBS = {
       el?.addEventListener("keydown", (e)=>{ if(e.key === "Enter"){ e.preventDefault(); goStart(); } });
     });
 
-    // Build US map once libs are available
+    // Build US map
     if(window.d3 && window.topojson) buildUSMap();
     else addEventListener('load', buildUSMap);
   }
   init();
 
+  // Public knobs (existing)
   window.updateScoreboardKnobs=function(patch){
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
     Object.assign(KN, window.SCOREBOARD_KNOBS);
@@ -949,7 +1022,7 @@ window.SCOREBOARD_KNOBS = {
 })();
 </script>
 
-<!-- Load tiny helper libs for the accurate US state boundaries -->
+<!-- D3 + TopoJSON for accurate state borders -->
 <script defer src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 
@@ -958,7 +1031,7 @@ window.SCOREBOARD_KNOBS = {
 <script defer src="./sections/process/process.js"></script>
 <script defer src="./sections/process/process.mobile.global.js"></script>
 <script defer src="./sections/process/steps/process.step1.js"></script>
-<script defer src="./sections/process/steps/process.step2.js"></script>
+script defer src="./sections/process/steps/process.step2.js"></script>
 <script defer src="./sections/process/steps/process.step3.js"></script>
 <script defer src="./sections/process/steps/process.step4.js"></script>
 <script defer src="./sections/process/steps/process.step5.js"></script>
@@ -966,6 +1039,53 @@ window.SCOREBOARD_KNOBS = {
 <!-- Section 4 (Orbit) scripts -->
 <script defer src="./sections/orbit/orbit.data.js"></script>
 <script defer src="./sections/orbit/orbit.js"></script>
+
+<!-- KPI Counters (Section 2) -->
+<script>
+  (function(){
+    const proof = document.getElementById('proof');
+    if(!proof) return;
+
+    const nums = Array.from(proof.querySelectorAll('.kpi .num'));
+    function fmt(val, kind){
+      if(kind==='dec1') return (Math.round(val*10)/10).toFixed(1);
+      return Math.round(val).toLocaleString('en-US');
+    }
+
+    function animate(){
+      const D = 1100; // ms
+      const t0 = performance.now();
+      const targets = nums.map(el=>{
+        const to = parseFloat(el.getAttribute('data-to')||'0');
+        const f  = (el.getAttribute('data-format')||'int').toLowerCase();
+        return { el:el, to:to, f:f };
+      });
+      function tick(now){
+        const p = Math.min(1, (now - t0)/D);
+        const ease = 1 - Math.pow(1-p, 3); // easeOutCubic
+        targets.forEach(({el,to,f})=>{
+          el.textContent = fmt(to*ease, f);
+        });
+        if(p<1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    let ran=false;
+    if('IntersectionObserver' in window){
+      const io = new IntersectionObserver(es=>{
+        if(ran) return;
+        if(es.some(e=>e.isIntersecting)){
+          ran=true; animate(); io.disconnect();
+        }
+      },{threshold:0.35});
+      io.observe(proof);
+    }else{
+      addEventListener('load', animate, {once:true});
+    }
+  })();
+</script>
+
 <script>
   addEventListener('load', () => {
     const M = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {}).mobile ||
