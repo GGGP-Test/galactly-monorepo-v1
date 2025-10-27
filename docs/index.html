@@ -46,6 +46,12 @@
     --reveal-dur: 420ms; --reveal-ease: cubic-bezier(.22,.61,.36,1);
     --reveal-in-y: 22px; --reveal-out-y: -18px;
     --card-w: 280px; --rail-h: 232px; --card-pad: 12px 12px 10px;
+
+    /* US map */
+    --us-stroke-w: 1.2px; /* match old rail thickness */
+    --us-stroke: rgba(255,255,255,.12);
+    --us-stroke-highlight: rgba(255,255,255,.18);
+    --us-edge-fade: 8%;
   }
 
   *{box-sizing:border-box}
@@ -107,7 +113,7 @@
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
 
   /* Hamburger (mobile only) */
-  .hamburger{display:none; justify-self:end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
+  .hamburger{display:none; justify-self=end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
   .hamburger span{position:absolute; left:2px; right:2px; height:2px; top:11px; border-radius:2px; background:currentColor; transition:transform .25s, top .25s}
   .hamburger span:nth-child(2){ top:21px; }
   .hamburger[aria-expanded="true"] span{ top:17px; }
@@ -176,7 +182,6 @@
     position:relative; isolation:isolate; height:540px;
     filter: drop-shadow(0 10px 24px rgba(0,0,0,var(--const-drop-a)));
   }
-  /* Clipping layer keeps rounded corners for the art while allowing the card to spill out */
   .const-clip{
     position:absolute; inset:0; border-radius:var(--const-radius); overflow:hidden;
     background:linear-gradient(180deg,#0b121d,#0b1119);
@@ -215,10 +220,8 @@
   .cardStack{ position:absolute; z-index:3; transform-origin:center center; }
   .cardStack .rail{ position:relative; width:var(--card-w); height:var(--rail-h); pointer-events:auto; }
 
-  /* Hide static ladder for a cleaner hero */
   .miniCard.static,[data-ghost]{ display:none !important; }
 
-  /* Card */
   .miniCard{
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
     z-index:3; min-width:240px; max-width:320px; width:var(--card-w);
@@ -262,7 +265,6 @@
     100% { transform:scale(1.9); box-shadow:0 0 0 10px rgba(0,0,0,0); opacity:0 }
   }
 
-  /* Tiny KPI pills row */
   .stats{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
   .pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 7px;
          border-radius:8px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04);
@@ -321,7 +323,6 @@
     .actions.show-mobile .inputGroup input{ border:1px solid rgba(255,255,255,.10); border-radius:999px; background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06)); -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%); color:var(--text); padding:14px 16px; box-shadow:0 8px 22px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.06); }
     .actions.show-mobile .inputGroup input::placeholder{ color:#9fb3c7; opacity:.95 }
     .actions.show-mobile .btn{ width:100%; padding:16px 20px; justify-content:center; text-align:center; }
-    /* hide hero’s right panel on mobile */
     .show-desktop{display:none}
     .show-mobile{display:block}
   }
@@ -331,30 +332,35 @@
     .reveal{opacity:1!important; transform:none!important; transition:none!important}
   }
 
-  /* === Timing Framework styles === */
-  .tf{ position:absolute; inset:0; z-index:1; pointer-events:none; }
-  .tf svg{ width:100%; height:100%; display:block; }
-  .tf .axisLine{ stroke:url(#axisGrad); stroke-width:1; }
-  .tf .winRect{ fill:var(--tf-window-fill, rgba(255,255,255,.04)); stroke:var(--tf-window-stroke, rgba(255,255,255,.10)); }
-  .tf .winLbl{ font:600 11px/1 Inter, system-ui; fill:var(--tf-win-label, #b9cbe0); opacity:.9; letter-spacing:.2px; }
-  .tf .nowDot{ fill:var(--tf-accent, #e6c36b); filter:url(#softGlow); }
-  .tf .nowLbl{ font:600 11px/1 Inter, system-ui; fill:var(--tf-now-label, #e6c36b); opacity:.95; }
-  .tf .rail{ fill:none; stroke:rgba(255,255,255,.10); stroke-width:1.2; }
-  .tf .rail-gen{ stroke:var(--tf-gen, rgba(230,195,107,.20)); }
-  .tf .rail-save{ stroke:var(--tf-save, rgba(150,210,255,.16)); }
-  .tf .railLabel{ font:600 11px/1 Inter, system-ui; fill:#9fb3c7; opacity:.85; }
-  .tf .ping{ transform-box:fill-box; transform-origin:center; }
-  .tf .ping .dot{ fill:var(--tf-ping-dot, rgba(230,195,107,.85)); }
-  .tf .ping .ring{
-    fill:none; stroke:var(--tf-ping-ring, rgba(230,195,107,.35)); stroke-width:1.2;
-    opacity:.6; transform:scale(.6);
-    animation: tf-ping var(--tf-ping-dur, 3.2s) ease-out infinite;
-    animation-delay: var(--d, 0s);
+  /* ===== US MAP LAYER ===== */
+  .tf{ display:none !important; } /* remove previous arcs + labels entirely */
+
+  .us-layer{ position:absolute; inset:0; z-index:1; pointer-events:none; }
+  .us-layer .fadeEdge{
+    width:100%; height:100%;
+    -webkit-mask-image: radial-gradient(140% 115% at 50% 50%, #000 calc(100% - var(--us-edge-fade)), transparent 100%);
+            mask-image: radial-gradient(140% 115% at 50% 50%, #000 calc(100% - var(--us-edge-fade)), transparent 100%);
   }
-  .tf.paused .ring{ animation-play-state: paused; }
-  @media (prefers-reduced-motion: reduce){
-    .tf .ring{ animation:none; opacity:.25; }
+  #usMap{ width:100%; height:100%; display:block; filter: drop-shadow(0 2px 8px rgba(0,0,0,.35)); }
+  .us-strokes{ fill:none; stroke:var(--us-stroke); stroke-width:var(--us-stroke-w); }
+  .us-strokes .state:hover{ stroke:var(--us-stroke-highlight); }
+
+  /* the 50 small lights: identical visual & animation profile as the card's win-rate dot */
+  #usDots{ position:absolute; inset:0; z-index:2; pointer-events:none; }
+  #usDots .dot{
+    position:absolute; width:var(--prob-dot-size,11px); height:var(--prob-dot-size,11px);
+    border-radius:999px; background: currentColor;
+    color: var(--gold); /* keep exact glow color */
+    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.28);
+    transform: translate(-50%,-50%);
   }
+  /* baseline: no pulsing unless we trigger it on a single state per card change */
+  #usDots .dot::after{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.30; animation:none;
+  }
+  #usDots .dot.flash::after{ animation: probPulse var(--prob-pulse,900ms) ease-out 1; }
+
 </style>
 </head>
 <body>
@@ -428,65 +434,28 @@
         </div>
       </div>
 
-      <!-- Timing-focused Blueprint Panel + Card (desktop only) -->
+      <!-- Blueprint Panel + Card (desktop only) -->
       <div class="const-wrap show-desktop" aria-hidden="false">
         <div class="const-clip">
           <canvas id="constFx" aria-hidden="true"></canvas>
 
-          <!-- TIMING FRAMEWORK (underlay; non-interactive) -->
-          <div id="timingFramework" class="tf" aria-hidden="true">
-            <svg id="tfSvg" viewBox="0 0 800 540" preserveAspectRatio="xMidYMid slice">
-              <defs>
-                <linearGradient id="axisGrad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.05"/>
-                  <stop offset="72%" stop-color="#ffffff" stop-opacity="0.08"/>
-                  <stop offset="88%" stop-color="#e6c36b" stop-opacity="0.25"/>
-                  <stop offset="100%" stop-color="#e6c36b" stop-opacity="0.08"/>
-                </linearGradient>
-                <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="4" result="b"/>
-                  <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-                </filter>
-              </defs>
-
-              <!-- Time axis -->
-              <g class="axis">
-                <line x1="80" y1="440" x2="720" y2="440" class="axisLine"/>
-                <!-- windows -->
-                <g class="win" data-w="30d">
-                  <rect x="180" y="402" width="220" height="76" rx="10" class="winRect"/>
-                  <text x="190" y="396" class="winLbl">30 days</text>
-                </g>
-                <g class="win" data-w="week">
-                  <rect x="420" y="402" width="160" height="76" rx="10" class="winRect"/>
-                  <text x="430" y="396" class="winLbl">This week</text>
-                </g>
-                <!-- Now -->
-                <g class="now">
-                  <circle cx="600" cy="440" r="4.5" class="nowDot"/>
-                  <text x="590" y="468" class="nowLbl">Now</text>
-                </g>
-              </g>
-
-              <!-- AI lanes converging on "Now" -->
-              <g class="rails">
-                <path d="M120,190 C260,220 420,300 600,440" class="rail rail-gen"/>
-                <path d="M120,260 C260,290 420,340 600,440" class="rail rail-save"/>
-                <text class="railLabel" x="124" y="184">AI Money Generator</text>
-                <text class="railLabel" x="124" y="254">AI Saver</text>
-              </g>
-
-              <!-- Lightweight signal pings -->
-              <g id="tfPings" class="pings"></g>
+          <!-- === U.S. MAP LAYER (replaces old arcs) === -->
+          <div class="us-layer">
+            <svg id="usMap" class="fadeEdge" viewBox="0 0 800 540" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <g class="us-strokes" id="usStates"></g>
             </svg>
+            <div id="usDots" aria-hidden="true"></div>
           </div>
 
+          <!-- Old timing framework left in DOM but hidden for accessibility/layout parity -->
+          <div id="timingFramework" class="tf" aria-hidden="true"></div>
+
           <span class="domainTag" id="domainTag">yourcompany.com</span>
-          <span class="const-caption">Signals clustered by timing</span>
-          <div class="const-legend">Your Website → Signal → <strong>Timing</strong> → Buyers</div>
+          <span class="const-caption">Signals clustered by location</span>
+          <div class="const-legend">Your Website → Signal → <strong>USA coverage</strong> → Buyers</div>
         </div>
 
-        <!-- Card sits OUTSIDE the clipped panel -->
+        <!-- Card OUTSIDE the clipped panel -->
         <div class="cardStack" id="cardStack" aria-label="Lead deck">
           <div class="rail" id="stackRail" tabindex="0" aria-label="Lead card">
             <div class="miniCard" id="cardA" role="group" aria-label="Lead">
@@ -515,7 +484,7 @@
           </div>
         </div>
       </div>
-      <!-- /Timing-focused Panel + Card -->
+      <!-- /Panel + Card -->
     </div>
   </section>
 
@@ -542,7 +511,6 @@
   <!-- SECTION 4 – Orbit -->
   <div id="section-orbit" class="reveal" data-track-section="orbit"></div>
 
-  <!-- MODAL container (kept for later pages) -->
   <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none"></div>
 
 <!-- ===== COPY / ANIM / SCOREBOARD KNOBS ===== -->
@@ -671,7 +639,7 @@ window.SCOREBOARD_KNOBS = {
   addEventListener('resize',()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t=setTimeout(applyWallpaper,60); });
   document.addEventListener('DOMContentLoaded',applyWallpaper);
 
-  /* ---------- BLUEPRINT ART (minimal: gradient + grid only) ---------- */
+  /* ---------- BLUEPRINT BG (gradient + faint grid) ---------- */
   const wrapClip=$('.const-clip'); const cvs=$('#constFx'); const ctx=cvs?.getContext('2d');
 
   function drawBlueprint(){
@@ -681,18 +649,15 @@ window.SCOREBOARD_KNOBS = {
     cvs.width=(W*DPR)|0; cvs.height=(H*DPR)|0; cvs.style.width=W+'px'; cvs.style.height=H+'px';
     ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H);
 
-    // base gradient
     const bg=ctx.createLinearGradient(0,0,0,H);
     bg.addColorStop(0,'#0b121d'); bg.addColorStop(1,'#0b1119');
     ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
 
-    // faint grid
     ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1;
     const gx=5, gy=4;
     for(let i=1;i<gx;i++){ const x=(i/gx)*W; ctx.beginPath(); ctx.moveTo(x,18); ctx.lineTo(x,H-18); ctx.stroke(); }
     for(let j=1;j<gy;j++){ const y=(j/gy)*H; ctx.beginPath(); ctx.moveTo(18,y); ctx.lineTo(W-18,y); ctx.stroke(); }
   }
-
   function drawBackground(){ drawBlueprint(); }
 
   const stack=$('#cardStack'), rail=$('#stackRail'), card=$('#cardA');
@@ -828,26 +793,99 @@ window.SCOREBOARD_KNOBS = {
     return { start };
   })();
 
+  // ---- US map module (render + one-dot pulse control) ----
+  window.USMAP = { flash: ()=>{} }; // stub; replaced when map is ready
+
+  function buildUSMap(){
+    const svg = document.getElementById('usMap'); const g = document.getElementById('usStates'); const dotsLayer = document.getElementById('usDots');
+    if(!svg || !g || !window.d3 || !window.topojson) return;
+
+    const W = svg.viewBox.baseVal.width || 800;
+    const H = svg.viewBox.baseVal.height || 540;
+
+    // Fetch US TopoJSON and draw states (50 only)
+    fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
+      .then(r=>r.json())
+      .then(topo=>{
+        const states = topojson.feature(topo, topo.objects.states).features;
+        // Exclude DC (11)
+        const STATE_ABBR = {
+          1:'AL',2:'AK',4:'AZ',5:'AR',6:'CA',8:'CO',9:'CT',10:'DE',12:'FL',13:'GA',
+          15:'HI',16:'ID',17:'IL',18:'IN',19:'IA',20:'KS',21:'KY',22:'LA',23:'ME',24:'MD',
+          25:'MA',26:'MI',27:'MN',28:'MS',29:'MO',30:'MT',31:'NE',32:'NV',33:'NH',34:'NJ',
+          35:'NM',36:'NY',37:'NC',38:'ND',39:'OH',40:'OK',41:'OR',42:'PA',44:'RI',45:'SC',
+          46:'SD',47:'TN',48:'TX',49:'UT',50:'VT',51:'VA',53:'WA',54:'WV',55:'WI',56:'WY'
+        };
+
+        const proj = d3.geoAlbersUsa();
+        const fitRect = [[W*0.06, H*0.06],[W*0.94, H*0.94]];
+        proj.fitExtent(fitRect, {type:'FeatureCollection', features:states});
+
+        const path = d3.geoPath(proj);
+
+        // draw strokes
+        g.innerHTML = '';
+        states.forEach(f=>{
+          const id = +f.id;
+          if(!STATE_ABBR[id]) return; // skip DC
+          const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+          p.setAttribute('class','state');
+          p.setAttribute('d', path(f));
+          g.appendChild(p);
+        });
+
+        // build 50 lights
+        dotsLayer.innerHTML = '';
+        const placed = [];
+        function place(x,y){
+          // avoid overlaps for tiny NE states
+          let nx=x, ny=y, tries=0;
+          while(tries<60 && placed.some(p=>Math.hypot(p[0]-nx,p[1]-ny)<14)){ nx+= (Math.random()-.5)*10; ny+= (Math.random()-.5)*10; tries++; }
+          placed.push([nx,ny]); return [nx,ny];
+        }
+        states.forEach(f=>{
+          const id = +f.id; if(!STATE_ABBR[id]) return;
+          const c = path.centroid(f); if(isNaN(c[0])||isNaN(c[1])) return;
+          const [x,y] = place(c[0], c[1]);
+          const dot = document.createElement('span');
+          dot.className='dot';
+          dot.style.left = x+'px';
+          dot.style.top  = y+'px';
+          dot.setAttribute('data-state', STATE_ABBR[id]);
+          dotsLayer.appendChild(dot);
+        });
+
+        // expose flasher
+        const all = Array.from(dotsLayer.querySelectorAll('.dot'));
+        let last=null, idx=0;
+        window.USMAP.flash = function(){
+          if(!all.length) return;
+          if(last){ last.classList.remove('flash'); }
+          // one-at-a-time, randomized but cycle through to avoid repeats clustering
+          idx = (idx + 1 + Math.floor(Math.random()*7)) % all.length;
+          const dot = all[idx];
+          // restart the animation
+          dot.classList.remove('flash'); void dot.offsetWidth; dot.classList.add('flash');
+          last = dot;
+        };
+      })
+      .catch(()=>{/* fail silent; panel still looks fine without outlines */});
+  }
+
   function init(){
     applyCopy();
+    const tagEl = document.getElementById('domainTag'); if(tagEl) tagEl.textContent = 'yourcompany.com';
+    drawBackground(); applyCardSizing(); positionStack();
 
-    // neutral domain tag
-    const tagEl = document.getElementById('domainTag');
-    if(tagEl) tagEl.textContent = 'yourcompany.com';
-
-    drawBackground();
-    applyCardSizing();
-    positionStack();
     const stages=['hotp','hot','warm']; let deck=[];
     function rebuildDeck(){ deck.length=0; for(let i=0;i<12;i++) deck.push(genLead(stages[i%stages.length])); }
     window.__deck=deck; rebuildDeck();
     setProbLabel();
     paintLead(document.getElementById('cardA'), deck[0]);
 
-    // autoplay gating
     let timer, onScreen=true, visible=document.visibilityState!=='hidden';
     const noMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function showNext(){ deck.push(deck.shift()); paintLead(document.getElementById('cardA'), deck[0]); }
+    function showNext(){ deck.push(deck.shift()); paintLead(document.getElementById('cardA'), deck[0]); try{ window.USMAP.flash(); }catch{} }
     function restart(){ clearInterval(timer); if(KN.stack.autoPlay && onScreen && visible && !noMotion){ timer=setInterval(showNext, KN.stack.autoMs||5200); } }
     restart();
     if('IntersectionObserver' in window && wrapClip){
@@ -890,13 +928,17 @@ window.SCOREBOARD_KNOBS = {
     ctaMobile ?.addEventListener('click', goStart);
     navStart  ?.addEventListener('click', (e)=>{ e.preventDefault(); goStart(); });
     mobileStart?.addEventListener('click', (e)=>{ e.preventDefault(); goStart(); });
+
     [heroHostD, heroHostM].forEach(el=>{
       el?.addEventListener("keydown", (e)=>{ if(e.key === "Enter"){ e.preventDefault(); goStart(); } });
     });
+
+    // Build US map once libs are available
+    if(window.d3 && window.topojson) buildUSMap();
+    else addEventListener('load', buildUSMap);
   }
   init();
 
-  // Public knobs
   window.updateScoreboardKnobs=function(patch){
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
     Object.assign(KN, window.SCOREBOARD_KNOBS);
@@ -907,116 +949,9 @@ window.SCOREBOARD_KNOBS = {
 })();
 </script>
 
-<!-- ===== TIMING FRAMEWORK JS (knobs + one-time layout + pause/offscreen) ===== -->
-<script>
-(function(){
-  const $=s=>document.querySelector(s);
-  const dm=(b,p)=>{const o=Array.isArray(b)?[...b]:{...b}; for(const k in p){const v=p[k]; o[k]=(v&&typeof v==='object'&&!Array.isArray(v))?dm(b[k]||{},v):v;} return o;};
-
-  const DEFAULTS = {
-    colors: {
-      accent:'#e6c36b',
-      gen:'rgba(230,195,107,.20)',
-      save:'rgba(150,210,255,.16)',
-      pingDot:'rgba(230,195,107,.85)',
-      pingRing:'rgba(230,195,107,.35)',
-      winFill:'rgba(255,255,255,.04)',
-      winStroke:'rgba(255,255,255,.10)',
-      winLabel:'#b9cbe0',
-      nowLabel:'#e6c36b'
-    },
-    axis: { x1:80, x2:720, y:440, nowX:600, nowLabelOffsetY:28 },
-    windows: [
-      { key:'30d',  label:'30 days',  x:180, y:402, w:220, h:76, rx:10 },
-      { key:'week', label:'This week',x:420, y:402, w:160, h:76, rx:10 }
-    ],
-    rails: [
-      { key:'gen',  label:'AI Money Generator', start:[120,190], c1:[260,220], c2:[420,300] },
-      { key:'save', label:'AI Saver',           start:[120,260], c1:[260,290], c2:[420,340] }
-    ],
-    pings: { count:10, x:[140,660], y:[120,340], dur:3.2, staggerMax:2.4 }
-  };
-  window.TIMING_KNOBS = window.TIMING_KNOBS ? dm(DEFAULTS, window.TIMING_KNOBS) : DEFAULTS;
-
-  function applyVars(tf, K){
-    tf.style.setProperty('--tf-accent', K.colors.accent);
-    tf.style.setProperty('--tf-gen', K.colors.gen);
-    tf.style.setProperty('--tf-save', K.colors.save);
-    tf.style.setProperty('--tf-ping-dot', K.colors.pingDot);
-    tf.style.setProperty('--tf-ping-ring', K.colors.pingRing);
-    tf.style.setProperty('--tf-window-fill', K.colors.winFill);
-    tf.style.setProperty('--tf-window-stroke', K.colors.winStroke);
-    tf.style.setProperty('--tf-win-label', K.colors.winLabel);
-    tf.style.setProperty('--tf-now-label', K.colors.nowLabel);
-    tf.style.setProperty('--tf-ping-dur', (window.TIMING_KNOBS.pings.dur||3.2)+'s');
-  }
-
-  function buildTiming(){
-    const tf = $('#timingFramework'), svg=$('#tfSvg'); if(!tf||!svg) return;
-    const K = window.TIMING_KNOBS; applyVars(tf,K);
-
-    const axisLine = svg.querySelector('.axisLine');
-    axisLine.setAttribute('x1', K.axis.x1); axisLine.setAttribute('x2', K.axis.x2);
-    axisLine.setAttribute('y1', K.axis.y);  axisLine.setAttribute('y2', K.axis.y);
-
-    const nowDot = svg.querySelector('.now .nowDot');
-    nowDot.setAttribute('cx', K.axis.nowX); nowDot.setAttribute('cy', K.axis.y);
-
-    const nowLbl = svg.querySelector('.now .nowLbl');
-    nowLbl.setAttribute('x', K.axis.nowX - 10);
-    nowLbl.setAttribute('y', K.axis.y + (K.axis.nowLabelOffsetY||28));
-
-    K.windows.forEach(w=>{
-      const g=svg.querySelector(`.win[data-w="${w.key}"]`); if(!g) return;
-      const r=g.querySelector('.winRect'), t=g.querySelector('.winLbl');
-      r.setAttribute('x', w.x); r.setAttribute('y', w.y);
-      r.setAttribute('width', w.w); r.setAttribute('height', w.h);
-      r.setAttribute('rx', w.rx||10);
-      t.textContent=w.label; t.setAttribute('x', w.x+10); t.setAttribute('y', w.y-6);
-    });
-
-    const end=[K.axis.nowX, K.axis.y];
-    const toPath=(s,c1,c2,e)=>`M${s[0]},${s[1]} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${e[0]},${e[1]}`;
-    const rails = svg.querySelectorAll('.rails .rail');
-    const labels= svg.querySelectorAll('.rails .railLabel');
-
-    rails[0].setAttribute('d', toPath(K.rails[0].start, K.rails[0].c1, K.rails[0].c2, end));
-    rails[1].setAttribute('d', toPath(K.rails[1].start, K.rails[1].c1, K.rails[1].c2, end));
-    labels[0].textContent=K.rails[0].label; labels[0].setAttribute('x', K.rails[0].start[0]+4); labels[0].setAttribute('y', K.rails[0].start[1]-6);
-    labels[1].textContent=K.rails[1].label; labels[1].setAttribute('x', K.rails[1].start[0]+4); labels[1].setAttribute('y', K.rails[1].start[1]-6);
-
-    // Pings
-    const noMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const pWrap = $('#tfPings'); pWrap.innerHTML='';
-    const n = Math.max(0, Math.min(40, K.pings.count||10));
-    const [x0,x1] = K.pings.x; const [y0,y1] = K.pings.y;
-    for(let i=0;i<n;i++){
-      const x=x0+Math.random()*(x1-x0), y=y0+Math.random()*(y1-y0);
-      const g=document.createElementNS('http://www.w3.org/2000/svg','g');
-      g.setAttribute('class','ping'); g.setAttribute('transform',`translate(${x.toFixed(1)},${y.toFixed(1)})`);
-      const dot=document.createElementNS('http://www.w3.org/2000/svg','circle'); dot.setAttribute('class','dot'); dot.setAttribute('r','2'); dot.setAttribute('cx','0'); dot.setAttribute('cy','0');
-      const ring=document.createElementNS('http://www.w3.org/2000/svg','circle'); ring.setAttribute('class','ring'); ring.setAttribute('r','7'); ring.setAttribute('cx','0'); ring.setAttribute('cy','0');
-      if(!noMotion){ g.style.setProperty('--d', (Math.random()*(K.pings.staggerMax||2.4)).toFixed(2)+'s'); }
-      g.appendChild(dot); g.appendChild(ring); pWrap.appendChild(g);
-    }
-
-    if('IntersectionObserver' in window){
-      if(buildTiming._io) buildTiming._io.disconnect();
-      const io=new IntersectionObserver((entries)=>{
-        const vis=entries.some(e=>e.isIntersecting);
-        tf.classList.toggle('paused', !vis);
-      },{threshold:.25});
-      io.observe(tf.closest('.const-clip')||tf);
-      buildTiming._io=io;
-    }
-  }
-
-  window.updateTimingKnobs = function(patch){ window.TIMING_KNOBS = dm(window.TIMING_KNOBS, patch||{}); buildTiming(); };
-
-  if(document.readyState==='complete' || document.readyState==='interactive'){ buildTiming(); }
-  else { document.addEventListener('DOMContentLoaded', buildTiming); }
-})();
-</script>
+<!-- Load tiny helper libs for the accurate US state boundaries -->
+<script defer src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 
 <!-- Section 3 (Process) scripts -->
 <script defer src="./sections/process/process.data.js"></script>
