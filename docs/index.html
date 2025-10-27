@@ -13,9 +13,7 @@
 
 <!-- Section styles (unchanged external files) -->
 <link rel="stylesheet" href="./sections/process/process.css">
-  
 <link rel="stylesheet" href="./sections/orbit/orbit.css">
-  
 
 <link rel="icon" href="data:,">
 
@@ -227,7 +225,7 @@
     padding:var(--card-pad); border-radius:var(--miniCard-radius);
     background:var(--miniCard-bg);
     -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
-    border:1px solid rgba(255,255,255,var(--miniCard-stroke-a));
+    border:1px solid rgba(255,255,255,.10);
     box-shadow:0 8px 22px rgba(0,0,0,.24);
     color:#e8f1fb;
   }
@@ -254,10 +252,6 @@
     border-radius:999px; background: currentColor;
     box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.28);
   }
-  .miniCard .prob .dot::before{
-    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.95) 0 35%, rgba(255,255,255,.15) 60%, rgba(255,255,255,0) 75%);
-  }
   .miniCard .prob .dot::after{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
     transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.30;
@@ -282,6 +276,7 @@
   .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
   .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
   .section-hd .sub{color:#8fb2ce;font-size:14px}
+
   .proof-wrap{position:relative;border-radius:18px;border:1px solid rgba(255,255,255,.12);
     background:radial-gradient(120% 160% at 20% 0%, rgba(93,140,200,.16), rgba(0,0,0,0) 60%),
                radial-gradient(120% 160% at 80% 10%, rgba(35,130,255,.12), rgba(0,0,0,0) 62%),
@@ -291,6 +286,7 @@
     padding:22px;}
   .proof-wrap::after{content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);}
+
   .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;}
   @media (max-width:900px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
   @media (max-width:520px){.kpi-grid{grid-template-columns:1fr}}
@@ -311,6 +307,7 @@
   .reveal.reveal-in{opacity:1; transform:translateY(0) scale(1);}
   .reveal.reveal-out{opacity:0; transform:translateY(var(--reveal-out-y)) scale(.995);}
 
+  .show-desktop{display:block} .show-mobile{display:none}
   @media (max-width:900px){
     .const-wrap{height:auto}
     .hero{min-height:92svh; padding:calc(60px + env(safe-area-inset-top, 10px)) 16px 28px;}
@@ -324,15 +321,15 @@
     .actions.show-mobile .inputGroup input{ border:1px solid rgba(255,255,255,.10); border-radius:999px; background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06)); -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%); color:var(--text); padding:14px 16px; box-shadow:0 8px 22px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.06); }
     .actions.show-mobile .inputGroup input::placeholder{ color:#9fb3c7; opacity:.95 }
     .actions.show-mobile .btn{ width:100%; padding:16px 20px; justify-content:center; text-align:center; }
+    /* hide hero’s right panel on mobile */
+    .show-desktop{display:none}
+    .show-mobile{display:block}
   }
 
   @media (prefers-reduced-motion: reduce){
     .btn{transition:none}
     .reveal{opacity:1!important; transform:none!important; transition:none!important}
   }
-
-  .show-desktop{display:block} .show-mobile{display:none}
-  @media (max-width:900px){ .show-desktop{display:none} .show-mobile{display:block} }
 
   /* === Timing Framework styles === */
   .tf{ position:absolute; inset:0; z-index:1; pointer-events:none; }
@@ -353,11 +350,6 @@
     opacity:.6; transform:scale(.6);
     animation: tf-ping var(--tf-ping-dur, 3.2s) ease-out infinite;
     animation-delay: var(--d, 0s);
-  }
-  @keyframes tf-ping{
-    0%   { opacity:.45; transform:scale(.6); }
-    60%  { opacity:.12; transform:scale(2.2); }
-    100% { opacity:0;   transform:scale(2.6); }
   }
   .tf.paused .ring{ animation-play-state: paused; }
   @media (prefers-reduced-motion: reduce){
@@ -436,8 +428,8 @@
         </div>
       </div>
 
-      <!-- Timing-focused Blueprint Panel + Card -->
-      <div class="const-wrap" aria-hidden="false">
+      <!-- Timing-focused Blueprint Panel + Card (desktop only) -->
+      <div class="const-wrap show-desktop" aria-hidden="false">
         <div class="const-clip">
           <canvas id="constFx" aria-hidden="true"></canvas>
 
@@ -484,7 +476,7 @@
                 <text class="railLabel" x="124" y="254">AI Saver</text>
               </g>
 
-              <!-- Lightweight signal pings (positions set by JS once; no RAF) -->
+              <!-- Lightweight signal pings -->
               <g id="tfPings" class="pings"></g>
             </svg>
           </div>
@@ -547,7 +539,7 @@
 
   <!-- SECTION 3 – Process -->
   <div id="section-process" class="reveal-in" data-track-section="process"></div>
-  
+  <!-- SECTION 4 – Orbit -->
   <div id="section-orbit" class="reveal" data-track-section="orbit"></div>
 
   <!-- MODAL container (kept for later pages) -->
@@ -651,9 +643,8 @@ window.SCOREBOARD_KNOBS = {
   const pick=(a)=>a[(Math.random()*a.length)|0];
   const range=([a,b])=>a+Math.random()*(b-a);
 
-  /* ------- Variant (kept for future A/B) ------- */
   function getParam(k){ return new URLSearchParams(location.search).get(k)||''; }
-  const HERO_VARIANT = (getParam('hero')||'const').toLowerCase(); // 'const' | 'bokeh'
+  const HERO_VARIANT = (getParam('hero')||'const').toLowerCase();
   document.documentElement.setAttribute('data-hero-variant', HERO_VARIANT);
 
   function applyCopy(){
@@ -700,7 +691,6 @@ window.SCOREBOARD_KNOBS = {
     const gx=5, gy=4;
     for(let i=1;i<gx;i++){ const x=(i/gx)*W; ctx.beginPath(); ctx.moveTo(x,18); ctx.lineTo(x,H-18); ctx.stroke(); }
     for(let j=1;j<gy;j++){ const y=(j/gy)*H; ctx.beginPath(); ctx.moveTo(18,y); ctx.lineTo(W-18,y); ctx.stroke(); }
-    // (Intentionally no packaging outlines; timing framework takes the spotlight.)
   }
 
   function drawBackground(){ drawBlueprint(); }
@@ -718,15 +708,16 @@ window.SCOREBOARD_KNOBS = {
   }
 
   function positionStack(){
+    if(!stack) return;
     const r=wrapClip.getBoundingClientRect();
-    stack.style.left = (clamp(KN.stack.left,0,1)*r.width)+'px';
-    stack.style.top  = (clamp(KN.stack.top,0,1)*r.height)+'px';
+    stack.style.left = (Math.max(0,Math.min(1,KN.stack.left))*r.width)+'px';
+    stack.style.top  = (Math.max(0,Math.min(1,KN.stack.top))*r.height)+'px';
     stack.style.transform = `translate(-50%,-50%) rotate(${KN.stack.angle||0}deg)`;
-    rail.style.width=(KN.stack.width||280)+'px';
-    rail.style.height='232px';
+    if(rail){ rail.style.width=(KN.stack.width||280)+'px'; rail.style.height='232px'; }
   }
 
   function setProbLabel(){
+    if(!card) return;
     const lbl=card.querySelector('.prob .lbl');
     if(lbl){ lbl.textContent = KN.probLabel || 'Win rate'; }
     document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||11)+'px');
@@ -737,16 +728,17 @@ window.SCOREBOARD_KNOBS = {
     const r=KN.ranges;
     const p=Math.round(range(r.probability[stage]));
     const ai=Math.round(range(r.aiOptim[stage]));
-    const buyer=pick(KN.pools.buyers);
-    const need=pick(KN.pools.needs);
+    const buyer=(KN.pools.buyers[(Math.random()*KN.pools.buyers.length)|0]);
+    const need=(KN.pools.needs[(Math.random()*KN.pools.needs.length)|0]);
     const dVal=Math.round(range(r.distanceBias[stage]));
     const distance=(dVal<=1)?"Same city":(dVal<8?(dVal.toFixed(1)+" mi"):(dVal+" mi"));
-    const aiLabel=pick(KN.pools.aiLabels);
-    const nx=pick(KN.pools.next[stage]);
+    const aiLabel=(KN.pools.aiLabels[(Math.random()*KN.pools.aiLabels.length)|0]);
+    const nx=(KN.pools.next[stage][(Math.random()*KN.pools.next[stage].length)|0]);
     return {stage,p,ai,buyer,need,distance,aiLabel,next:nx};
   }
 
   function paintLead(el,data){
+    if(!el) return;
     const meta=KN.stages[data.stage]||KN.stages.warm;
     const stEl=el.querySelector('[data-stage]');
     stEl.textContent = `${meta.label} ${meta.emoji||''}`.trim();
@@ -765,10 +757,6 @@ window.SCOREBOARD_KNOBS = {
     const c1=document.createElement('span'); c1.className='chip'; c1.textContent=`${meta.emoji||'🏷️'} ${meta.label}`;
     const c2=document.createElement('span'); c2.className='chip'; c2.textContent=data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
     chips.appendChild(c1); chips.appendChild(c2);
-
-    el.querySelectorAll('.k').forEach(k=> k.style.font=KN.fonts.k);
-    el.querySelectorAll('.v').forEach(v=> v.style.font=KN.fonts.v);
-    el.querySelectorAll('.name').forEach(n=> n.style.font=KN.fonts.name);
   }
 
   const AK = window.ANIM_KNOBS||{};
@@ -854,12 +842,12 @@ window.SCOREBOARD_KNOBS = {
     function rebuildDeck(){ deck.length=0; for(let i=0;i<12;i++) deck.push(genLead(stages[i%stages.length])); }
     window.__deck=deck; rebuildDeck();
     setProbLabel();
-    paintLead(card, deck[0]);
+    paintLead(document.getElementById('cardA'), deck[0]);
 
     // autoplay gating
     let timer, onScreen=true, visible=document.visibilityState!=='hidden';
     const noMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function showNext(){ deck.push(deck.shift()); paintLead(card, deck[0]); }
+    function showNext(){ deck.push(deck.shift()); paintLead(document.getElementById('cardA'), deck[0]); }
     function restart(){ clearInterval(timer); if(KN.stack.autoPlay && onScreen && visible && !noMotion){ timer=setInterval(showNext, KN.stack.autoMs||5200); } }
     restart();
     if('IntersectionObserver' in window && wrapClip){
@@ -867,22 +855,6 @@ window.SCOREBOARD_KNOBS = {
       io.observe(wrapClip);
     }
     document.addEventListener('visibilitychange',()=>{ visible=document.visibilityState!=='hidden'; restart(); });
-    if(KN.stack.clickAdvance){ rail.addEventListener('click',()=>showNext()); rail.addEventListener('keydown',e=>{ if(['ArrowRight',' ','Enter'].includes(e.key)){ e.preventDefault(); showNext(); } }); }
-
-    addEventListener('resize',()=>{ clearTimeout(init._r); init._r=setTimeout(()=>{ drawBackground(); applyCardSizing(); positionStack(); },80); });
-
-    try{
-      const cores = navigator.hardwareConcurrency||2;
-      if(cores <= 4){
-        document.documentElement.style.setProperty('--miniCard-blur','0px');
-        document.querySelectorAll('.miniCard').forEach(el=>{
-          el.style.backdropFilter=''; el.style.webkitBackdropFilter='';
-          el.style.background='rgba(16,22,35,.92)';
-          el.style.boxShadow='0 6px 16px rgba(0,0,0,.22)';
-        });
-        window.updateScoreboardKnobs?.({ probDot:{ pulseMs:0 } });
-      }
-    }catch{}
 
     setupReveals();
     Analytics.start();
@@ -932,26 +904,6 @@ window.SCOREBOARD_KNOBS = {
   };
   window.updateCopyKnobs=function(patch){ window.COPY_KNOBS = deepMerge(window.COPY_KNOBS, patch||{}); applyCopy(); };
   window.updateAnimKnobs=function(patch){ window.ANIM_KNOBS = deepMerge(window.ANIM_KNOBS, patch||{}); };
-
-  // KPI counters (fixed to always animate)
-  (function(){
-    const section = document.getElementById("proof"); if (!section) return;
-    const noMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const nums = Array.from(section.querySelectorAll(".num")); let fired=false;
-    function format(v, fmt){ if (fmt==="dec1") return v.toFixed(1); const s=Math.round(v).toString(); return s.replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-    function animate(el){
-      const to = parseFloat(el.dataset.to||"0"); const fmt = el.dataset.format||"int";
-      if (noMotion){ el.textContent = format(to, fmt); return; }
-      const dur = 1200; const start = performance.now();
-      function tick(now){ const p=Math.min(1,(now-start)/dur); const ease=1-Math.pow(1-p,3); const val=to*ease; el.textContent=format(val,fmt); if (p<1) requestAnimationFrame(tick); }
-      requestAnimationFrame(tick);
-    }
-    const io = new IntersectionObserver((entries)=>{
-      entries.forEach(e=>{ if (!fired && e.isIntersecting){ fired=true; nums.forEach(animate); io.disconnect(); }});
-    },{threshold:0.30});
-    io.observe(section);
-    addEventListener('load', ()=>{ if(!fired){ fired=true; nums.forEach(animate); }});
-  })();
 })();
 </script>
 
@@ -1003,7 +955,6 @@ window.SCOREBOARD_KNOBS = {
     const tf = $('#timingFramework'), svg=$('#tfSvg'); if(!tf||!svg) return;
     const K = window.TIMING_KNOBS; applyVars(tf,K);
 
-    // Axis + "Now"
     const axisLine = svg.querySelector('.axisLine');
     axisLine.setAttribute('x1', K.axis.x1); axisLine.setAttribute('x2', K.axis.x2);
     axisLine.setAttribute('y1', K.axis.y);  axisLine.setAttribute('y2', K.axis.y);
@@ -1015,7 +966,6 @@ window.SCOREBOARD_KNOBS = {
     nowLbl.setAttribute('x', K.axis.nowX - 10);
     nowLbl.setAttribute('y', K.axis.y + (K.axis.nowLabelOffsetY||28));
 
-    // Windows
     K.windows.forEach(w=>{
       const g=svg.querySelector(`.win[data-w="${w.key}"]`); if(!g) return;
       const r=g.querySelector('.winRect'), t=g.querySelector('.winLbl');
@@ -1025,7 +975,6 @@ window.SCOREBOARD_KNOBS = {
       t.textContent=w.label; t.setAttribute('x', w.x+10); t.setAttribute('y', w.y-6);
     });
 
-    // Rails (Bezier into "Now")
     const end=[K.axis.nowX, K.axis.y];
     const toPath=(s,c1,c2,e)=>`M${s[0]},${s[1]} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${e[0]},${e[1]}`;
     const rails = svg.querySelectorAll('.rails .rail');
@@ -1051,7 +1000,6 @@ window.SCOREBOARD_KNOBS = {
       g.appendChild(dot); g.appendChild(ring); pWrap.appendChild(g);
     }
 
-    // Pause when offscreen
     if('IntersectionObserver' in window){
       if(buildTiming._io) buildTiming._io.disconnect();
       const io=new IntersectionObserver((entries)=>{
@@ -1063,7 +1011,6 @@ window.SCOREBOARD_KNOBS = {
     }
   }
 
-  // public API
   window.updateTimingKnobs = function(patch){ window.TIMING_KNOBS = dm(window.TIMING_KNOBS, patch||{}); buildTiming(); };
 
   if(document.readyState==='complete' || document.readyState==='interactive'){ buildTiming(); }
@@ -1081,6 +1028,7 @@ window.SCOREBOARD_KNOBS = {
 <script defer src="./sections/process/steps/process.step4.js"></script>
 <script defer src="./sections/process/steps/process.step5.js"></script>
 
+<!-- Section 4 (Orbit) scripts -->
 <script defer src="./sections/orbit/orbit.data.js"></script>
 <script defer src="./sections/orbit/orbit.js"></script>
 <script>
