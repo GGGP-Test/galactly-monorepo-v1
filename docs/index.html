@@ -28,8 +28,8 @@
     --gutter: clamp(16px, 4vw, 40px);
     
     /* === CARD KNOBS === */
-    --card-left: 5.92;              /* 0..1 inside the panel (X)  */
-    --card-top: 5.70;               /* 0..1 inside the panel (Y)  */
+    --card-left: 0.92;              /* 0..1 inside the panel (X)  */
+    --card-top: 0.70;               /* 0..1 inside the panel (Y)  */
     --card-angle: 0deg;             /* rotation */
     --card-width: 280px;
     --card-rail-h: 232px;
@@ -768,11 +768,29 @@ window.SCOREBOARD_KNOBS = {
 
   function positionStack(){
     if(!stack) return;
-    const r=wrapClip.getBoundingClientRect();
-    stack.style.left = (Math.max(0,Math.min(1,KN.stack.left))*r.width)+'px';
-    stack.style.top  = (Math.max(0,Math.min(1,KN.stack.top))*r.height)+'px';
-    stack.style.transform = `translate(-50%,-50%) rotate(${KN.stack.angle||0}deg)`;
-    if(rail){ rail.style.width=(KN.stack.width||280)+'px'; rail.style.height='232px'; }
+  
+    // Read from KN first, fall back to current CSS variable values
+    const cs   = getComputedStyle(document.documentElement);
+    const left = (KN.stack?.left ?? parseFloat(cs.getPropertyValue('--card-left')) || 0.5);
+    const top  = (KN.stack?.top  ?? parseFloat(cs.getPropertyValue('--card-top'))  || 0.5);
+    const ang  = (KN.stack?.angle ?? 0);
+    const w    = (KN.stack?.width ?? KN.card?.width ?? 280);
+    const railH= (KN.card?.railHeight ?? 232);
+    const pad  = (KN.card?.padding ?? '12px 12px 10px');
+  
+    // Clear any old inline overrides so CSS can take control
+    stack.style.left = '';
+    stack.style.top = '';
+    stack.style.transform = '';
+  
+    // Drive everything via CSS custom properties
+    const root = document.documentElement.style;
+    root.setProperty('--card-left', String(left));
+    root.setProperty('--card-top',  String(top));
+    root.setProperty('--card-angle', `${ang}deg`);
+    root.setProperty('--card-w', `${w}px`);
+    root.setProperty('--rail-h', `${railH}px`);
+    root.setProperty('--card-pad', pad);
   }
 
   function setProbLabel(){
