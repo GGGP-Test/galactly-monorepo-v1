@@ -991,7 +991,7 @@ window.SCOREBOARD_KNOBS = {
   window.updateMapKnobs = function(patch){
     const deepMerge=(b,p)=>{const o=Array.isArray(b)?[...b]:{...b}; for(const k in p){const v=p[k]; o[k]=(v&&typeof v==='object'&&!Array.isArray(v))?deepMerge(b[k]||{},v):v;} return o;};
     window.USMAP_KNOBS = deepMerge(window.USMAP_KNOBS, patch||{});
-    document.documentElement.style.setProperty('--us-dot-size', (USMAP_KNOBS.dotSize||9)+'px');
+    document.documentElement.style.setProperty('--us-dot-size', ((window.USMAP_KNOBS?.dotSize ?? 9) + 'px'));
     refreshDotPositions();
   };
 
