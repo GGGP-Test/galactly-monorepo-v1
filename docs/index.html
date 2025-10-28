@@ -27,6 +27,27 @@
     --container-max: clamp(1100px, 86vw, 1320px);
     --gutter: clamp(16px, 4vw, 40px);
     
+    /* === CARD KNOBS === */
+    --card-left: 0.92;              /* 0..1 inside the panel (X)  */
+    --card-top: 0.70;               /* 0..1 inside the panel (Y)  */
+    --card-angle: 0deg;             /* rotation */
+    --card-width: 280px;
+    --card-rail-h: 232px;
+    --card-pad: 12px 12px 10px;
+    
+    --card-bg: rgba(12,18,28,.86);
+    --card-stroke: rgba(255,255,255,.10);
+    --card-shadow-a: .24;
+    --card-radius: 12px;
+    
+    --card-text: #e8f1fb;
+    --card-k-fs: 11px;      --card-k-color:#a9bfd6;  /* left small labels */
+    --card-v-fs: 14px;      --card-name-fs: 15px;
+    --card-line-h: 1.2;     --card-gap: 10px;        /* spacing inside rows */
+    --card-chip-fs: 11px;
+    
+    --card-stage-border:#ffffff24;  --card-stage-bg:#ffffff0f;
+    
     /* === PULSE KNOBS === */
     --pulse-dur: 900ms;                 /* default speed */
     --pulse-dur-map: var(--pulse-dur);  /* map-only speed */
@@ -44,6 +65,22 @@
     --miniCard-stroke-a: .10; --miniCard-shadow-a: .24;
 
     --legend-fs: 12px; --legend-color: #b9cbe0; --legend-bg: rgba(255,255,255,.06);
+    
+    /* positions + extras for legend/caption/tag */
+    --legend-left:auto; --legend-right:12px; --legend-top:auto; --legend-bottom:12px;
+    --legend-stroke: rgba(255,255,255,.12);
+    
+    --caption-fg:#cfe2ff; --caption-bg:rgba(255,255,255,.05); --caption-stroke:rgba(255,255,255,.08);
+    --caption-fs:11px; --caption-pad:5px 7px; --caption-radius:8px;
+    --caption-left:auto; --caption-right:12px; --caption-top:12px; --caption-bottom:auto;
+    
+    --tag-fg: var(--gold-300); --tag-bg:rgba(230,195,107,.12); --tag-stroke:rgba(230,195,107,.25);
+    --tag-fs:12px; --tag-pad:6px 10px; --tag-radius:999px; --tag-left:14px; --tag-top:14px;
+    
+    /* grid styling knobs */
+    --blueprint-gx: 5; --blueprint-gy: 4;
+    --blueprint-stroke-a: .06; --blueprint-margin: 18;
+    --blueprint-top:#0b121d; --blueprint-bot:#0b1119;
 
     --gap-hero-proof: 0px; --wp-h: 220vh;
 
@@ -209,7 +246,9 @@
   }
 
   .const-legend{
-    position:absolute; inset:auto 12px 12px auto; z-index:2;
+    position:absolute; left:var(--legend-left); right:var(--legend-right);
+    top:var(--legend-top);  bottom:var(--legend-bottom);
+    border:1px solid var(--legend-stroke); z-index:2;
     font-size:12px; color:#b9cbe0;
     background:rgba(255,255,255,.06); border:1px solid var(--stroke);
     padding:6px 8px; border-radius:10px
@@ -221,42 +260,50 @@
     padding:5px 7px; border-radius:8px;
   }
   .domainTag{
-    position:absolute; z-index:2; left:14px; top:14px;
-    padding:6px 10px; border-radius:999px; font-size:12px;
-    background:rgba(230,195,107,.12); color:var(--gold-300);
-    border:1px solid rgba(230,195,107,.25)
+    position:absolute; z-index:2; left:var(--tag-left); top:var(--tag-top);
+    padding:var(--tag-pad); border-radius:var(--tag-radius); font-size:var(--tag-fs);
+    background:var(--tag-bg); color:var(--tag-fg);
+    border:1px solid var(--tag-stroke)
   }
 
   /* STACK */
+  .miniCard[data-off~="distance"] [data-field="distance"],
+  .miniCard[data-off~="need"]     [data-field="need"],
+  .miniCard[data-off~="ai"]       [data-field="ai"],
+  .miniCard[data-off~="next"]     [data-field="next"],
+  .miniCard[data-off~="tags"]     [data-field="tags"]{ display:none !important; }
   .cardStack{ position:absolute; z-index:3; transform-origin:center center; }
+  .cardStack{ left: calc(var(--card-left) * 100%);
+    top:  calc(var(--card-top)  * 100%);
+    transform: translate(-50%,-50%) rotate(var(--card-angle)); }
   .cardStack .rail{ position:relative; width:var(--card-w); height:var(--rail-h); pointer-events:auto; }
 
   .miniCard.static,[data-ghost]{ display:none !important; }
 
   .miniCard{
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    z-index:3; min-width:240px; max-width:320px; width:var(--card-w);
-    padding:var(--card-pad); border-radius:var(--miniCard-radius);
-    background:var(--miniCard-bg);
+    z-index:3; min-width:240px; max-width:320px; width: var(--card-w);
+    padding: var(--card-pad); border-radius: var(--card-radius);
+    background: var(--card-bg);
     -webkit-backdrop-filter:blur(var(--miniCard-blur)); backdrop-filter:blur(var(--miniCard-blur));
-    border:1px solid rgba(255,255,255,.10);
-    box-shadow:0 8px 22px rgba(0,0,0,.24);
-    color:#e8f1fb;
+    border: 1px solid var(--card-stroke);
+    box-shadow: 0 8px 22px rgba(0,0,0,var(--card-shadow-a));
+    color: var(--card-text);
   }
   @supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))){
     .miniCard{ background:rgba(16,22,35,.92); }
   }
-  .miniCard .row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:2px 0}
-  .miniCard .k{font-size:11px;color:#a9bfd6}
-  .miniCard .v{font-weight:700; font-size:14px}
-  .miniCard .name{font-size:15px; line-height:1.2}
+  .miniCard .row{display:flex; align-items:center; justify-content:space-between; gap: var(--card-gap); margin:2px 0}
+  .miniCard .k{font-size: var(--card-k-fs);color: var(--card-k-color)}
+  .miniCard .v{font-weight:700; font-size: var(--card-v-fs)}
+  .miniCard .name{font-size: var(--card-name-fs); line-height: var(--card-line-h)}
   .miniCard .stage{
-    display:inline-flex; align-items:center; gap:6px; font-weight:700; font-size:11px;
-    padding:5px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06)
+    display:inline-flex; align-items:center; gap:9px; font-weight:700; font-size:11px;
+    padding:5px 8px; border-radius:999px; border: 1px solid var(--card-stage-border); background: var(--card-stage-bg)
   }
   .miniCard .prob{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700}
   .miniCard .chips{display:flex; flex-wrap:wrap; gap:6px}
-  .miniCard .chip{font-size:11px; padding:4px 7px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:rgba(255,255,255,.04)}
+  .miniCard .chip{font-size: var(--card-chip-fs); padding:4px 7px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:rgba(255,255,255,.04)}
   .miniCard .ai{display:flex; align-items:center; gap:8px}
   .miniCard .ai svg{width:12px; height:12px; opacity:.9}
 
@@ -649,33 +696,71 @@ window.SCOREBOARD_KNOBS = {
   document.addEventListener('DOMContentLoaded',applyWallpaper);
 
   /* ---------- BLUEPRINT BG (gradient + faint grid) ---------- */
-  const wrapClip=$('.const-clip'); const cvs=$('#constFx'); const ctx=cvs?.getContext('2d');
-
+  const wrapClip = $('.const-clip');
+  const cvs = $('#constFx');
+  const ctx = cvs?.getContext('2d');
+  
   function drawBlueprint(){
-    if(!wrapClip||!cvs||!ctx) return;
-    const DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
-    const r=wrapClip.getBoundingClientRect(); const W=r.width|0, H=r.height|0;
-    cvs.width=(W*DPR)|0; cvs.height=(H*DPR)|0; cvs.style.width=W+'px'; cvs.style.height=H+'px';
-    ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H);
-
-    const bg=ctx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,'#0b121d'); bg.addColorStop(1,'#0b1119');
-    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-
-    ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1;
-    const gx=5, gy=4;
-    for(let i=1;i<gx;i++){ const x=(i/gx)*W; ctx.beginPath(); ctx.moveTo(x,18); ctx.lineTo(x,H-18); ctx.stroke(); }
-    for(let j=1;j<gy;j++){ const y=(j/gy)*H; ctx.beginPath(); ctx.moveTo(18,y); ctx.lineTo(W-18,y); ctx.stroke(); }
+    if(!wrapClip || !cvs || !ctx) return;
+  
+    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const r = wrapClip.getBoundingClientRect();
+    const W = r.width|0, H = r.height|0;
+  
+    // canvas sizing & reset
+    cvs.width = (W*DPR)|0;
+    cvs.height = (H*DPR)|0;
+    cvs.style.width = W+'px';
+    cvs.style.height = H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.clearRect(0,0,W,H);
+  
+    // read CSS variables
+    const cs     = getComputedStyle(document.documentElement);
+    const topCol = (cs.getPropertyValue('--blueprint-top').trim()      || '#0b121d');
+    const botCol = (cs.getPropertyValue('--blueprint-bot').trim()      || '#0b1119');
+    const alpha  = parseFloat(cs.getPropertyValue('--blueprint-stroke-a')) || .06;
+    const gx     = parseInt(cs.getPropertyValue('--blueprint-gx')) || 5;
+    const gy     = parseInt(cs.getPropertyValue('--blueprint-gy')) || 4;
+    const inset  = parseFloat(cs.getPropertyValue('--blueprint-margin')) || 18;
+  
+    // background gradient
+    const bg = ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0, topCol);
+    bg.addColorStop(1, botCol);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0,0,W,H);
+  
+    // grid strokes
+    ctx.strokeStyle = `rgba(255,255,255,${isNaN(alpha)?0.06:alpha})`;
+    ctx.lineWidth = 1;
+  
+    // vertical lines
+    for(let i=1; i<gx; i++){
+      const x = (i/gx)*W;
+      ctx.beginPath();
+      ctx.moveTo(x, inset);
+      ctx.lineTo(x, H - inset);
+      ctx.stroke();
+    }
+    // horizontal lines
+    for(let j=1; j<gy; j++){
+      const y = (j/gy)*H;
+      ctx.beginPath();
+      ctx.moveTo(inset, y);
+      ctx.lineTo(W - inset, y);
+      ctx.stroke();
+    }
   }
   function drawBackground(){ drawBlueprint(); }
-
-  const stack=$('#cardStack'), rail=$('#stackRail'), card=$('#cardA');
-
+  
+  const stack = $('#cardStack'), rail = $('#stackRail'), card = $('#cardA');
+  
   function hslProb(p){ const H=KN.probHue.min, L=KN.probHue.max; return `hsl(${H+(L-H)*(p/100)},78%,54%)`; }
-
+  
   function applyCardSizing(){
-    const dims=KN.card||{};
-    const w=(dims.width||KN.stack?.width||280);
+    const dims = KN.card || {};
+    const w = (dims.width || KN.stack?.width || 280);
     document.documentElement.style.setProperty('--card-w', w+'px');
     document.documentElement.style.setProperty('--rail-h', (dims.railHeight||232)+'px');
     document.documentElement.style.setProperty('--card-pad', (dims.padding||'12px 12px 10px'));
