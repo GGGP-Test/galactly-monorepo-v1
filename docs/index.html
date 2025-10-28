@@ -767,30 +767,46 @@ window.SCOREBOARD_KNOBS = {
   }
 
   function positionStack(){
-    if(!stack) return;
+    if(!stack || !wrapClip) return;
   
-    // Read from KN first, fall back to current CSS variable values
-    const cs   = getComputedStyle(document.documentElement);
-    const left = (KN.stack?.left ?? parseFloat(cs.getPropertyValue('--card-left')) || 0.5);
-    const top  = (KN.stack?.top  ?? parseFloat(cs.getPropertyValue('--card-top'))  || 0.5);
-    const ang  = (KN.stack?.angle ?? 0);
-    const w    = (KN.stack?.width ?? KN.card?.width ?? 280);
-    const railH= (KN.card?.railHeight ?? 232);
-    const pad  = (KN.card?.padding ?? '12px 12px 10px');
+    const cs = getComputedStyle(document.documentElement);
   
-    // Clear any old inline overrides so CSS can take control
-    stack.style.left = '';
-    stack.style.top = '';
-    stack.style.transform = '';
+    // Helper to read a CSS var as number with safe fallback
+    const readVar = (name, fallback) => {
+      const raw = parseFloat(cs.getPropertyValue(name));
+      return Number.isFinite(raw) ? raw : fallback;
+    };
   
-    // Drive everything via CSS custom properties
+    // Read from KN first; fall back to CSS variables (parenthesized to avoid ??/|| mixing)
+    const cssLeft  = readVar('--card-left', 0.5);
+    const cssTop   = readVar('--card-top',  0.5);
+    const cssAngle = parseFloat(cs.getPropertyValue('--card-angle')) || 0;
+  
+    const left   = (KN?.stack?.left  ?? cssLeft);
+    const top    = (KN?.stack?.top   ?? cssTop);
+    const angle  = (KN?.stack?.angle ?? cssAngle);
+    const width  = (KN?.stack?.width ?? KN?.card?.width ?? 280);
+    const railH  = (KN?.card?.railHeight ?? 232);
+    const pad    = (KN?.card?.padding ?? '12px 12px 10px');
+  
+    // Clamp 0..1 for percent positions
+    const L = Math.max(0, Math.min(1, left));
+    const T = Math.max(0, Math.min(1, top));
+  
+    // Write CSS custom properties that your .cardStack rule consumes
     const root = document.documentElement.style;
-    root.setProperty('--card-left', String(left));
-    root.setProperty('--card-top',  String(top));
-    root.setProperty('--card-angle', `${ang}deg`);
-    root.setProperty('--card-w', `${w}px`);
-    root.setProperty('--rail-h', `${railH}px`);
-    root.setProperty('--card-pad', pad);
+    root.setProperty('--card-left', String(L));
+    root.setProperty('--card-top',  String(T));
+    root.setProperty('--card-angle', angle + 'deg');
+    root.setProperty('--card-w',     width + 'px');
+    root.setProperty('--rail-h',     railH + 'px');
+    root.setProperty('--card-pad',   pad);
+  
+    // Keep the rail’s intrinsic box in sync for hit-testing
+    if (rail){
+      rail.style.width  = width + 'px';
+      rail.style.height = railH + 'px';
+    }
   }
 
   function setProbLabel(){
