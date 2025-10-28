@@ -26,6 +26,15 @@
 
     --container-max: clamp(1100px, 86vw, 1320px);
     --gutter: clamp(16px, 4vw, 40px);
+    
+    /* === PULSE KNOBS === */
+    --pulse-dur: 900ms;                 /* default speed */
+    --pulse-dur-map: var(--pulse-dur);  /* map-only speed */
+    --pulse-dur-card: var(--pulse-dur); /* card-only speed */
+    --pulse-scale: 1.9;                 /* ring growth */
+    --pulse-spread: 10px;               /* ring thickness */
+    --pulse-opacity: .30;               /* start alpha */
+    --us-dot-color: var(--gold);        /* map dot + ring color */
 
     /* panel */
     --const-radius: 18px; --const-stroke-w: 1px; --const-stroke-a: .06; --const-vignette-a: .18;
@@ -260,12 +269,17 @@
   .miniCard .prob .dot::after{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
     transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.30;
-    animation: probPulse var(--prob-pulse,900ms) ease-out infinite;
+    animation: probPulse var(--pulse-dur-card, var(--pulse-dur, 900ms)) ease-out infinite;
   }
-  @keyframes probPulse{
-    0%   { transform:scale(1);   box-shadow:0 0 0 0 currentColor; opacity:.30 }
-    100% { transform:scale(1.9); box-shadow:0 0 0 10px rgba(0,0,0,0); opacity:0 }
-  }
+  
+    @keyframes probPulse{
+      0%   { transform: scale(1);
+             box-shadow: 0 0 0 0 currentColor;
+             opacity: var(--pulse-opacity, .30); }
+      100% { transform: scale(var(--pulse-scale, 1.9));
+             box-shadow: 0 0 0 var(--pulse-spread, 10px) rgba(0,0,0,0);
+             opacity: 0; }
+    }
 
   .stats{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
   .pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 7px;
@@ -351,12 +365,13 @@
   #usDots .dot{
     position:absolute; width:var(--us-dot-size); height:var(--us-dot-size);
     border-radius:999px; background: currentColor;
-    color: var(--gold);
+    color: var(--us-dot-color, var(--gold));
     box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.28);
     transform: translate(-50%,-50%);
   }
   #usDots .dot::after{ content:""; position:absolute; inset:0; border-radius:inherit; opacity:.30; transform:scale(1); box-shadow:0 0 0 0 currentColor; animation:none; }
-  #usDots .dot.flash::after{ animation: probPulse var(--prob-pulse,900ms) ease-out 1; }
+  #usDots .dot.flash::after{ 
+    animation: probPulse var(--pulse-dur-map, var(--pulse-dur, 900ms)) ease-out 1; }
 </style>
 </head>
 <body>
