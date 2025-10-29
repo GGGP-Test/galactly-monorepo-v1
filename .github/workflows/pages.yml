@@ -37,6 +37,7 @@ jobs:
           cp -v "$PUBLIC_SRC/index.html"      "$PUBLIC_OUT/" || true
           cp -v "$PUBLIC_SRC/start.html"      "$PUBLIC_OUT/" || true
           cp -v "$PUBLIC_SRC/step3.html"      "$PUBLIC_OUT/" || true
+          cp -v "$PUBLIC_SRC/pricing.html" "$PUBLIC_OUT/" || true
           cp -v "$PUBLIC_SRC/free-panel.html" "$PUBLIC_OUT/" || true
           [ -f "$PUBLIC_SRC/404.html" ] && cp -v "$PUBLIC_SRC/404.html" "$PUBLIC_OUT/404.html" || true
           [ -f "$PUBLIC_SRC/favicon.ico" ] && cp -v "$PUBLIC_SRC/favicon.ico" "$PUBLIC_OUT/favicon.ico" || true
