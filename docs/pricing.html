@@ -95,22 +95,35 @@ main{position:relative; z-index:1; padding-top:calc(60px + 24px)}
 .hero{padding:var(--section-top) 0 10px; text-align:center}
 .hero p{color:#c7d7e6; margin:8px 0 14px}
 
-/* ===== gold glass toggle (no overlap) ===== */
+/* ===== gold glass toggle (no overlap; darker gold) ===== */
 .billing-toggle{display:flex; justify-content:center; margin:12px 0 4px}
 .toggle{
-  position:relative; height:var(--toggle-h); display:inline-grid; grid-auto-flow:column; gap:6px;
-  padding:var(--toggle-pad); border-radius:999px; border:1px solid rgba(255,255,255,.10);
-  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03)); backdrop-filter:blur(10px) saturate(140%);
+  --thumb-x: 0px;                /* computed by JS */
+  --thumb-w: 0px;                /* computed by JS */
+  position:relative;
+  display:inline-flex; align-items:center; gap:8px;
+  height:var(--toggle-h);
+  padding:var(--toggle-pad);
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  backdrop-filter:blur(10px) saturate(140%);
 }
 .toggle button{
-  position:relative; z-index:1; cursor:pointer; padding:0 14px; border:0; background:transparent;
-  color:#cfe0ee; font-weight:800; white-space:nowrap
+  position:relative; z-index:1; cursor:pointer;
+  padding:0 16px; border:0; background:transparent;
+  color:#cfe0ee; font-weight:800; white-space:nowrap; line-height:1;
 }
 .toggle .thumb{
-  position:absolute; top:var(--toggle-pad); left:var(--toggle-pad);
-  width:calc(50% - var(--toggle-pad)); height:calc(100% - var(--toggle-pad)*2);
-  border-radius:999px; background:linear-gradient(180deg,var(--gold-300),var(--gold-700));
-  box-shadow:0 8px 20px rgba(230,195,107,.22); transition:left .22s ease;
+  position:absolute; top:var(--toggle-pad);
+  left:calc(var(--thumb-x) + var(--toggle-pad));
+  width:var(--thumb-w);
+  height:calc(100% - var(--toggle-pad)*2);
+  border-radius:999px;
+  /* darker gold */
+  background:linear-gradient(180deg,#caa34a,#8f6f2e);
+  box-shadow:0 10px 22px rgba(202,163,74,.25), inset 0 0 0 1px rgba(255,255,255,.08);
+  transition:left .18s ease,width .18s ease;
 }
 .toggle[data-yr="1"] .thumb{left:calc(50% + var(--toggle-pad))}
 
@@ -327,23 +340,37 @@ tbody td{border-bottom:1px solid var(--line)}
     </section>
   </main>
 
+
 <script>
 /* ====== knobs for logic ====== */
 const CONFIG = { discount: 0.213, decimals: 2 };
 
-/* toggle */
-const toggle = document.getElementById('toggle');
-const btnM = document.getElementById('bill-m');
-const btnY = document.getElementById('bill-y');
+/* toggle wiring */
+const track  = document.getElementById('toggle');
+const btnM   = document.getElementById('bill-m');
+const btnY   = document.getElementById('bill-y');
 const priceEls = Array.from(document.querySelectorAll('[data-price-m]'));
 const perEls   = Array.from(document.querySelectorAll('[data-per]'));
 
 const fix = (n,d)=> (Math.round(n*Math.pow(10,d))/Math.pow(10,d)).toFixed(d);
 
+/* compute thumb position/width to exactly cover selected button */
+function updateThumb(){
+  if(!track) return;
+  const selected = track.querySelector('[aria-selected="true"]');
+  if(!selected) return;
+  const rTrack = track.getBoundingClientRect();
+  const rBtn   = selected.getBoundingClientRect();
+  const x = rBtn.left - rTrack.left;      // button offset inside track
+  const w = rBtn.width;
+  track.style.setProperty('--thumb-x',  x + 'px');
+  track.style.setProperty('--thumb-w',  w + 'px');
+}
+
+/* pricing period switch */
 function setYearly(on){
-  toggle.dataset.yr = on ? '1' : '0';
-  btnM.setAttribute('aria-selected', on?'false':'true');
-  btnY.setAttribute('aria-selected', on?'true':'false');
+  btnM.setAttribute('aria-selected', on ? 'false' : 'true');
+  btnY.setAttribute('aria-selected', on ? 'true'  : 'false');
 
   priceEls.forEach(el=>{
     const m = parseFloat(el.getAttribute('data-price-m')||'0');
@@ -352,10 +379,16 @@ function setYearly(on){
     el.textContent = on ? fix(y, CONFIG.decimals) : (m===0 ? '0' : String(m));
   });
   perEls.forEach(el=> el.textContent = on ? 'year' : 'month');
+
+  requestAnimationFrame(updateThumb); // run after layout
 }
 
+/* events */
 btnM.addEventListener('click',()=>setYearly(false));
 btnY.addEventListener('click',()=>setYearly(true));
+window.addEventListener('resize', updateThumb);
+
+/* init */
 setYearly(false);
 </script>
 </body>
