@@ -23,7 +23,7 @@
   --section-top:64px;      /* top padding per section */
   --section-bottom:64px;   /* bottom padding per section */
 
-  /* cards (exact, tight like screenshot) */
+  /* cards (tight like your screenshot) */
   --card-bg:#0e1117;
   --card-border:#2a2f3a;
   --card-radius:12px;
@@ -62,7 +62,7 @@ html,body{margin:0;background:var(--bg);color:var(--text);
 h1,h2{font-family:"Newsreader",Georgia,serif;font-weight:600;margin:0}
 a{color:inherit;text-decoration:none}
 
-/* cloudy wallpaper (orbit vibe; not blue) */
+/* cloudy wallpaper (orbit vibe; subtle) */
 .page-wallpaper{
   position:fixed; inset:0; z-index:0; pointer-events:none;
   background:
@@ -95,7 +95,7 @@ main{position:relative; z-index:1; padding-top:calc(60px + 24px)}
 .hero{padding:var(--section-top) 0 10px; text-align:center}
 .hero p{color:#c7d7e6; margin:8px 0 14px}
 
-/* ===== gold glass toggle (no overlap; darker gold) ===== */
+/* ===== darker-gold glass toggle (auto-sizes, no overlap) ===== */
 .billing-toggle{display:flex; justify-content:center; margin:12px 0 4px}
 .toggle{
   --thumb-x: 0px;                /* computed by JS */
@@ -125,9 +125,8 @@ main{position:relative; z-index:1; padding-top:calc(60px + 24px)}
   box-shadow:0 10px 22px rgba(202,163,74,.25), inset 0 0 0 1px rgba(255,255,255,.08);
   transition:left .18s ease,width .18s ease;
 }
-.toggle[data-yr="1"] .thumb{left:calc(50% + var(--toggle-pad))}
 
-/* ===== black minimal cards (match screenshot) ===== */
+/* ===== black minimal cards (unchanged visual) ===== */
 .cards{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--cards-gap); margin-top:16px}
 @media (max-width:900px){ .cards{grid-template-columns:1fr} }
 
@@ -148,6 +147,9 @@ main{position:relative; z-index:1; padding-top:calc(60px + 24px)}
   margin-top:14px; display:block; width:100%; height:var(--cta-h); border-radius:10px;
   border:1px solid #333a47; background:#131823; color:var(--text); font-weight:800; text-align:center; line-height:var(--cta-h);
 }
+
+/* tiny footnote under cards for proof stats */
+.card .micro{margin-top:10px;color:#a8bbcd;font-size:12px}
 
 /* hover-card (pure CSS) */
 .hovercard{position:relative; display:inline-block}
@@ -173,7 +175,12 @@ thead th{font-weight:800; border-bottom:1px solid var(--line)}
 tbody td{border-bottom:1px solid var(--line)}
 .t-center{text-align:center}
 
-/* ===== FAQs (big + on left; lines only) ===== */
+/* ===== sector workflow lines (no pane, just lines) ===== */
+.workflows{margin-top:18px}
+.workflows .line{display:flex; justify-content:space-between; gap:16px; padding:10px 2px; border-bottom:1px solid var(--line); font-size:14px}
+.workflows .line b{font-weight:800}
+
+/* ===== FAQs (big +/– on left, spaced) ===== */
 .faqs{padding:calc(var(--section-top) + 12px) 0 var(--section-bottom)}
 .faqs h2{text-align:center; margin-bottom:14px}
 .faq{border-bottom:1px solid var(--line)}
@@ -234,8 +241,15 @@ tbody td{border-bottom:1px solid var(--line)}
             </li>
             <li><span class="dot"></span> Fair-Play score & tags</li>
             <li><span class="dot"></span> Heat Shield (basic)</li>
+            <li><span class="dot"></span> Outcome Receipts
+              <span class="hovercard">
+                <span class="trigger"> (anonymized)</span>
+                <span class="hc"><strong>Outcome Receipts</strong><br/>Auto before→after snapshots you can share privately; logo off by default.</span>
+              </span>
+            </li>
             <li><span class="dot"></span> 1 seat</li>
           </ul>
+          <div class="micro" id="free-micro"></div>
           <a class="cta" href="start.html">Start free</a>
         </article>
 
@@ -252,8 +266,10 @@ tbody td{border-bottom:1px solid var(--line)}
             <li><span class="dot"></span> Operator AI (prioritize + draft next step)</li>
             <li><span class="dot"></span> CRM/CMS integrations (HubSpot, SFDC)</li>
             <li><span class="dot"></span> API access</li>
+            <li><span class="dot"></span> Outcome Receipts + logo controls</li>
             <li><span class="dot"></span> 3 seats • email support</li>
           </ul>
+          <div class="micro" id="pro-micro"></div>
           <a class="cta" href="start.html">Get started</a>
         </article>
 
@@ -271,10 +287,24 @@ tbody td{border-bottom:1px solid var(--line)}
               <span class="hovercard"><span class="trigger">Sales AI</span>
               <span class="hc"><strong>Sales AI</strong><br/>We sell for you: multi-channel outreach, appointment setting, and hand-offs.</span></span> + automation
             </li>
+            <li><span class="dot"></span>
+              <span class="hovercard">
+                <span class="trigger">Leaderboard access</span>
+                <span class="hc">
+                  <strong>Top signals this month</strong><br/>
+                  <table style="width:100%;margin-top:6px;font-size:12px;border-collapse:separate;border-spacing:0">
+                    <tr><td>Stretch film</td><td style="text-align:right" id="ld-sf">—</td></tr>
+                    <tr><td>Corrugated</td><td style="text-align:right" id="ld-cg">—</td></tr>
+                    <tr><td>Labels</td><td style="text-align:right" id="ld-lb">—</td></tr>
+                  </table>
+                </span>
+              </span>
+            </li>
             <li><span class="dot"></span> Custom scoring & sectors • orchestration layer</li>
-            <li><span class="dot"></span> Dedicated success engineer • priority support</li>
+            <li><span class="dot"></span> Case-study concierge • priority support</li>
             <li><span class="dot"></span> 8 seats</li>
           </ul>
+          <div class="micro" id="vip-micro"></div>
           <a class="cta" href="start.html">Talk to sales</a>
         </article>
       </div>
@@ -312,9 +342,14 @@ tbody td{border-bottom:1px solid var(--line)}
         </table>
         <p class="small" style="margin-top:8px">*Reasonable-use policy to keep the ecosystem healthy.</p>
       </div>
+
+      <!-- Workflow snapshots (one line per sector; no pane) -->
+      <div class="workflows" id="wf-lines">
+        <!-- JS injects workflow lines here -->
+      </div>
     </section>
 
-    <!-- Section 3: FAQs (big +/– on left, spaced) -->
+    <!-- Section 3: FAQs (big +/–, spaced) -->
     <section class="container faqs">
       <h2>FAQs</h2>
 
@@ -340,34 +375,47 @@ tbody td{border-bottom:1px solid var(--line)}
     </section>
   </main>
 
-
 <script>
-/* ====== knobs for logic ====== */
+/* ====== knobs for logic (+ demo data) ====== */
 const CONFIG = { discount: 0.213, decimals: 2 };
 
-/* toggle wiring */
+/* Demo metrics used to populate micro-proof and workflow lines
+   — purely front-end, zero backend cost. Edit freely. */
+const DATA = {
+  micro: {
+    free: { text: "New this month: 50 verified companies • 3 Warm Buyers" },
+    pro:  { text: "Avg 7 days: 9 Hot Buyers • +$18.4k pipeline" },
+    vip:  { text: "Avg 30 days: 12 Hot+ • +$72.6k pipeline • 3 case studies" }
+  },
+  leaderboard: { stretchHot: 41, corrHot: 36, labelsHot: 29 }, // counts this month
+  workflows: [
+    { sector:"Stretch film",   window:"7 days",  hotRate:0.38, hotPlus:0.12, pipeline:18400 },
+    { sector:"Corrugated",     window:"30 days", hotRate:0.31, hotPlus:0.09, pipeline:32400 },
+    { sector:"Labels",         window:"14 days", hotRate:0.27, hotPlus:0.07, pipeline:15200 },
+    { sector:"Folding carton", window:"21 days", hotRate:0.22, hotPlus:0.06, pipeline:16750 },
+    { sector:"Flexible film",  window:"30 days", hotRate:0.33, hotPlus:0.10, pipeline:28950 },
+    { sector:"etc.",           window:"—",      hotRate:null,  hotPlus:null, pipeline:null }
+  ]
+};
+
+/* ===== Toggle wiring (auto-sized darker-gold thumb; no overlap) ===== */
 const track  = document.getElementById('toggle');
 const btnM   = document.getElementById('bill-m');
 const btnY   = document.getElementById('bill-y');
 const priceEls = Array.from(document.querySelectorAll('[data-price-m]'));
 const perEls   = Array.from(document.querySelectorAll('[data-per]'));
-
 const fix = (n,d)=> (Math.round(n*Math.pow(10,d))/Math.pow(10,d)).toFixed(d);
 
-/* compute thumb position/width to exactly cover selected button */
 function updateThumb(){
   if(!track) return;
   const selected = track.querySelector('[aria-selected="true"]');
   if(!selected) return;
   const rTrack = track.getBoundingClientRect();
   const rBtn   = selected.getBoundingClientRect();
-  const x = rBtn.left - rTrack.left;      // button offset inside track
-  const w = rBtn.width;
-  track.style.setProperty('--thumb-x',  x + 'px');
-  track.style.setProperty('--thumb-w',  w + 'px');
+  track.style.setProperty('--thumb-x',  (rBtn.left - rTrack.left) + 'px');
+  track.style.setProperty('--thumb-w',  rBtn.width + 'px');
 }
 
-/* pricing period switch */
 function setYearly(on){
   btnM.setAttribute('aria-selected', on ? 'false' : 'true');
   btnY.setAttribute('aria-selected', on ? 'true'  : 'false');
@@ -379,17 +427,45 @@ function setYearly(on){
     el.textContent = on ? fix(y, CONFIG.decimals) : (m===0 ? '0' : String(m));
   });
   perEls.forEach(el=> el.textContent = on ? 'year' : 'month');
-
-  requestAnimationFrame(updateThumb); // run after layout
+  requestAnimationFrame(updateThumb);
 }
-
-/* events */
 btnM.addEventListener('click',()=>setYearly(false));
 btnY.addEventListener('click',()=>setYearly(true));
 window.addEventListener('resize', updateThumb);
 
+/* ===== inject micro-proof text and leaderboard numbers ===== */
+document.getElementById('free-micro').textContent = DATA.micro.free.text;
+document.getElementById('pro-micro').textContent  = DATA.micro.pro.text;
+document.getElementById('vip-micro').textContent  = DATA.micro.vip.text;
+document.getElementById('ld-sf').textContent = DATA.leaderboard.stretchHot + " Hot";
+document.getElementById('ld-cg').textContent = DATA.leaderboard.corrHot + " Hot";
+document.getElementById('ld-lb').textContent = DATA.leaderboard.labelsHot + " Hot";
+
+/* ===== render workflow lines (Section 2 add-on) ===== */
+function renderWorkflows(){
+  const wrap = document.getElementById('wf-lines');
+  wrap.innerHTML = "";
+  DATA.workflows.forEach(w=>{
+    const li = document.createElement('div');
+    li.className = 'line';
+    const left = document.createElement('div');
+    left.innerHTML = `<b>${w.sector}</b>`;
+    const right = document.createElement('div');
+    if(w.hotRate==null){
+      right.textContent = "…and more sectors";
+    }else{
+      right.textContent =
+        `${Math.round(w.hotRate*100)}% reached Hot in ${w.window} • `
+        + `${Math.round(w.hotPlus*100)}% Hot+ • ~$${w.pipeline.toLocaleString()} pipeline`;
+    }
+    li.append(left,right);
+    wrap.append(li);
+  });
+}
+
 /* init */
 setYearly(false);
+renderWorkflows();
 </script>
 </body>
 </html>
