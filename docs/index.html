@@ -664,8 +664,23 @@ window.SCOREBOARD_KNOBS = {
       {name:"Volt Pharma", city:"Denver, CO"}
     ],
     needs: [
-      "PET bottles","Stand-up pouches","Rigid boxes","Corrugated prints · 5k MOQ",
-      "Mailer boxes","Shrink sleeves","Paper labels","Glass jars","Pulp trays","Poly mailers"
+      // PRIMARY (consumer-contact)
+      { sector:'primary',   label:'PET bottles',       spec:'28mm PCO • 16oz amber',  moq:'250k MOQ',
+        timing:{hotp:'≤3d',   hot:'≤1w',   warm:'≤2w'} },
+      { sector:'primary',   label:'Shrink sleeves',    spec:'PETG 45µ • full wrap',   moq:'10k MOQ',
+        timing:{hotp:'rush 3d', hot:'≤1w',  warm:'≤2w'} },
+
+      // SECONDARY (retail/boxes)
+      { sector:'secondary', label:'Mailer boxes',      spec:'E-flute • 2-color flexo', moq:'1k MOQ',
+        timing:{hotp:'≤5d',   hot:'≤10d',  warm:'≤3w'} },
+      { sector:'secondary', label:'Rigid boxes',       spec:'Magnetic lid • EVA insert', moq:'2k MOQ',
+        timing:{hotp:'rush 7d', hot:'≤14d', warm:'≤4w'} },
+
+      // TERTIARY (transport)
+      { sector:'tertiary',  label:'Pallet wrap',       spec:'23µ pre-stretch • 18″',  moq:'40 rolls',
+        timing:{hotp:'≤72h',  hot:'≤1w',   warm:'≤2w'} },
+      { sector:'tertiary',  label:'Corrugated prints', spec:'B-flute • 4-color',      moq:'5k MOQ',
+        timing:{hotp:'≤7d',   hot:'≤14d',  warm:'≤4w'} }
     ],
     next: {
       warm: ["Share case study","Send intro email","Qualify on call","Add to sequence","Nurture newsletter"],
@@ -879,26 +894,49 @@ window.SCOREBOARD_KNOBS = {
 
   function paintLead(el,data){
     if(!el) return;
-    const meta=KN.stages[data.stage]||KN.stages.warm;
-    const stEl=el.querySelector('[data-stage]');
-    stEl.textContent = `${meta.label} ${meta.emoji||''}`.trim();
-    stEl.style.borderColor=meta.color; stEl.style.color=meta.color;
+    const meta = KN.stages[data.stage] || KN.stages.warm;
 
-    el.querySelector('[data-prob]').textContent = data.p+'%';
+    // Stage tag (kept)
+    const stEl = el.querySelector('[data-stage]');
+    stEl.textContent = `${meta.label} ${meta.emoji||''}`.trim();
+    stEl.style.borderColor = meta.color;
+    stEl.style.color       = meta.color;
+
+    // Win rate + color dot
+    el.querySelector('[data-prob]').textContent = data.p + '%';
     el.querySelector('[data-prob-dot]').style.color = hslProb(data.p);
-    el.querySelector('[data-name]').textContent = `${data.buyer.name} — ${data.buyer.city}`;
-    el.querySelector('[data-distance]').textContent = data.distance;
-    el.querySelector('[data-need]').textContent = data.need;
-    el.querySelector('[data-ai-label]').textContent = `${data.aiLabel} optimized`;
-    el.querySelector('[data-ai]').textContent = data.ai+'%';
-    el.querySelector('[data-next]').textContent = data.next||'—';
+
+    // Recency row
     el.querySelector('[data-time]').textContent = data.timeAgo || '—';
 
-    // Chips: intent ONLY (remove temperature chip)
-    const chips=el.querySelector('[data-tags]'); chips.innerHTML='';
+    // Buyer + distance
+    el.querySelector('[data-name]').textContent = `${data.buyer.name} — ${data.buyer.city}`;
+    el.querySelector('[data-distance]').textContent = data.distance;
+
+    // Need: object-aware (sector detail + either timing or MOQ)
+    const n = data.need;
+    let needText = '—';
+    if (n && typeof n === 'object'){
+      const showTiming = Math.random() < 0.5;
+      const detail = showTiming ? (n.timing && n.timing[data.stage]) : n.moq;
+      needText = [ `${n.label} — ${n.spec}`, detail ].filter(Boolean).join(' • ');
+    } else if (typeof n === 'string'){
+      needText = n;
+    }
+    el.querySelector('[data-need]').textContent = needText;
+
+    // Personalized AI copy
+    el.querySelector('[data-ai-label]').textContent = data.aiLabel;          // e.g., "Your Ops AI"
+    el.querySelector('[data-ai]').textContent       = `${data.ai}% optimized`;
+
+    // Next action
+    el.querySelector('[data-next]').textContent = data.next || '—';
+
+    // Intent-only chip
+    const chips = el.querySelector('[data-tags]'); chips.innerHTML = '';
     const intent = (data.stage==='hotp') ? 'High intent' : (data.stage==='hot' ? 'Rising intent' : 'Warming');
-    const cIntent=document.createElement('span'); cIntent.className='chip intent'; cIntent.textContent=intent;
-    chips.appendChild(cIntent);
+    const c = document.createElement('span'); c.className = 'chip intent'; c.textContent = intent;
+    chips.appendChild(c);
   }
 
   const AK = window.ANIM_KNOBS||{};
