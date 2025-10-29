@@ -3,156 +3,333 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Galactly — Pricing</title>
+<title>Pricing — Galactly</title>
+<meta name="description" content="Simple plans for real packaging-buyer signals. Start free, upgrade when the leads justify it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&display=swap" rel="stylesheet">
+<link rel="icon" href="data:,">
 <style>
   :root{
-    --bg:#0b0f14; --panel:#121822; --card:#0f1724; --divider:#1b2531;
-    --text:#e9f1f7; --muted:#8aa0b2; --accent:#6de1ff; --accentText:#082433;
-    --good:#38e08f; --warn:#ffd166;
+    /* inherit core theme from index */
+    --bg:#0a0e14; --panel:#101623; --stroke:#1b2531;
+    --text:#e9f1f7; --muted:#9fb3c7;
+    --gold:#e6c36b; --gold-700:#b8913d; --gold-300:#f2dca0;
+    --ctaText:#1b1405; --zone-dark:#060a10;
+    --container-max: clamp(1100px, 86vw, 1320px);
+    --gutter: clamp(16px, 4vw, 40px);
+    /* pricing wallpaper knobs (cloudy/musty blobs) */
+    --p-r1: rgba(230,195,107,.16);   /* warm gold glow */
+    --p-r2: rgba(72,115,178,.12);    /* cool slate glow (very subtle) */
+    --p-r3: rgba(255,255,255,.06);   /* neutral fog */
   }
   *{box-sizing:border-box}
-  html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Inter,Arial}
-  a{color:inherit}
-  .wrap{max-width:1100px;margin:28px auto;padding:0 18px}
-  .top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-  .sep{flex:1}
-  .pill{padding:6px 10px;border-radius:999px;background:#0d1a26;color:#8fb0c6;font-size:12px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
-  .card{background:var(--panel);border:1px solid var(--divider);border-radius:16px;padding:16px}
-  .h{font-weight:800;font-size:20px;margin:0 0 6px}
-  .price{font-size:34px;font-weight:900;margin:2px 0 12px}
-  .feat{display:flex;align-items:center;gap:8px;margin:8px 0;color:#cfe0ee}
-  .feat .dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
-  .muted{color:var(--muted)}
-  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:12px 16px;border-radius:12px;border:1px solid var(--divider);
-       background:#152333;color:#cfe0ee;cursor:pointer}
-  .btn.primary{background:var(--accent);border:none;color:var(--accentText);font-weight:800}
-  .row{display:flex;gap:10px;align-items:center;margin-top:10px}
-  .note{font-size:12px;color:var(--muted);margin-top:8px}
-  .gear{background:transparent;border:1px solid var(--divider);color:#9bb2c6;border-radius:10px;padding:6px 8px}
-  input[type=text]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--divider);background:#0d1520;color:var(--text)}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
+  a{color:inherit;text-decoration:none}
+
+  /* Wallpaper: “cloudy, musty, blurry light blobs” (no blue screen) */
+  .page-wallpaper{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(120% 75% at 16% -10%, var(--p-r1), transparent 55%),
+      radial-gradient(140% 100% at 85% 10%, var(--p-r2), transparent 62%),
+      radial-gradient(120% 90% at 50% 110%, var(--p-r3), transparent 64%),
+      linear-gradient(180deg,#0b121a 0%, #0a0e14 70%, #091019 88%, var(--zone-dark) 100%);
+    filter: blur(0.2px); /* micro anti-banding */
+    background-repeat:no-repeat;
+  }
+
+  /* Header (copied from index for parity) */
+  .site-header{position:fixed; inset:0 0 auto 0; height:60px; z-index:50; display:grid; place-items:center;
+    background:rgba(12,18,28,.38); -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%);
+    border-bottom:1px solid rgba(255,255,255,.06)}
+  .site-header .inner{width:100%; max-width:var(--container-max); padding:0 var(--gutter);
+    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px}
+  .brand-badge{width:28px;height:28px;border-radius:8px;background:linear-gradient(180deg,var(--gold),var(--gold-700));
+    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px}
+  nav#nav-primary{display:flex; justify-content:center; align-items:center; gap:22px}
+  .nav-link{position:relative; display:inline-block; padding:8px 2px; font-weight:600; color:#cfe0ee; opacity:.92}
+  .nav-link::after{content:""; position:absolute; left:50%; bottom:4px; height:1px; width:0;
+    background:linear-gradient(90deg,var(--gold-300),var(--gold-700)); transform:translateX(-50%); transition:width .18s}
+  .nav-link:hover,.nav-link:focus-visible{opacity:1}
+  .nav-link:hover::after,.nav-link:focus-visible::after{width:60%}
+  .nav-link.is-active{opacity:1}
+  .nav-link.is-active::after{width:60%}
+  .nav-actions{display:flex; align-items:center; gap:12px}
+  .nav-login{font-weight:600; color:#cfe0ee; opacity:.8}
+  .nav-login:hover{opacity:1}
+  .nav-demo{display:inline-block; padding:8px 12px; border-radius:999px; border:1px solid var(--stroke);
+    background:rgba(255,255,255,.02); color:#cfe0ee; font-weight:600; opacity:.9}
+  .nav-cta{padding:8px 14px; border-radius:999px; color:var(--ctaText);
+    background:linear-gradient(180deg,var(--gold),var(--gold-700));
+    border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
+  .hamburger{display:none}
+  @media (max-width:900px){ nav#nav-primary, .nav-actions{display:none} .hamburger{display:inline-block} }
+
+  /* Page layout */
+  main{ position:relative; z-index:1; padding-top:calc(60px + 36px); }
+  .container{ max-width:var(--container-max); margin:0 auto; padding:0 var(--gutter); }
+
+  h1,h2{ font-family:"Newsreader", Georgia, serif; }
+  h1{ font-weight:600; font-size:clamp(34px,6vw,56px); margin:0 0 10px; }
+  p.lead{ color:#c7d7e6; margin:0 0 26px; font-size:clamp(16px,2.6vw,19px); }
+
+  /* Toggle */
+  .billing-toggle{ display:flex; align-items:center; justify-content:center; gap:10px; }
+  .toggle{
+    position:relative; display:inline-grid; grid-auto-flow:column; gap:2px; padding:4px;
+    border-radius:999px; border:1px solid rgba(255,255,255,.10);
+    background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%);
+  }
+  .toggle button{
+    position:relative; z-index:1; cursor:pointer;
+    padding:8px 14px; border-radius:999px; border:0; background:transparent; color:#cfe0ee; font-weight:700;
+  }
+  .toggle .thumb{
+    position:absolute; top:4px; left:4px; width:50%; height:calc(100% - 8px); border-radius:999px; transition:left .22s;
+    background:linear-gradient(180deg,var(--gold-300),var(--gold-700)); box-shadow:0 6px 18px rgba(230,195,107,.18);
+  }
+  .toggle[data-yr="1"] .thumb{ left: calc(50% + 4px); }
+
+  /* Pricing cards (glass) */
+  .plans{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin-top:22px; }
+  @media (max-width:900px){ .plans{ grid-template-columns:1fr; } }
+  .card{
+    position:relative; border-radius:16px; padding:20px; overflow:hidden;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+    -webkit-backdrop-filter: blur(12px) saturate(140%); backdrop-filter: blur(12px) saturate(140%);
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow: 0 18px 44px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .card.popular{
+    box-shadow:
+      0 30px 80px rgba(230,195,107,.12),
+      0 18px 44px rgba(0,0,0,.32),
+      inset 0 1px 0 rgba(255,255,255,.06);
+    border-color: rgba(230,195,107,.30);
+  }
+  .pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-weight:700;
+    background:rgba(230,195,107,.12); color:var(--gold-300); border:1px solid rgba(230,195,107,.25); }
+  .price{ font-size:42px; font-weight:800; letter-spacing:.2px; margin:6px 0 2px; }
+  .per{ color:#a8bbcd; font-weight:600; margin-left:6px; }
+  .desc{ color:#c7d7e6; margin:10px 0 16px; }
+  .cta{ display:block; width:100%; padding:12px 16px; border-radius:12px; font-weight:800; text-align:center; border:1px solid var(--stroke);
+    background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04)); color:#e9f1f7; }
+  .card.popular .cta{ color:var(--ctaText); border:none; background:linear-gradient(180deg,var(--gold),var(--gold-700)); box-shadow:0 12px 28px rgba(230,195,107,.16); }
+  .feat{ margin-top:14px; padding-top:14px; border-top:1px solid rgba(255,255,255,.08); }
+  .feat h4{ margin:0 0 8px; font-size:13px; letter-spacing:.2px; color:#a8bbcd; text-transform:uppercase }
+  .feat ul{ list-style:none; padding:0; margin:0; display:grid; gap:8px; }
+  .feat li{ display:flex; align-items:center; gap:10px; color:#d6e2ee; font-size:15px; }
+  .feat .dot{ width:9px; height:9px; border-radius:999px; background:linear-gradient(180deg,var(--gold-300),var(--gold-700)); box-shadow:0 0 8px rgba(230,195,107,.35); }
+
+  /* Comparison table (glass slab) */
+  .compare{ margin:60px 0 20px; }
+  .glass-slab{
+    border-radius:18px; padding:14px; overflow:auto;
+    background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    -webkit-backdrop-filter: blur(12px) saturate(140%); backdrop-filter: blur(12px) saturate(140%);
+    border:1px solid rgba(255,255,255,.08); box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  table{ width:100%; border-collapse:separate; border-spacing:0; min-width:720px; }
+  th,td{ padding:14px 12px; text-align:left; }
+  thead th{ position:sticky; top:0; background:rgba(12,18,28,.52); backdrop-filter:blur(6px); border-bottom:1px solid rgba(255,255,255,.08); }
+  tbody tr:not(:last-child) td{ border-bottom:1px solid rgba(255,255,255,.06); }
+  .t-center{text-align:center}
+  .check{ display:inline-grid; place-items:center; width:18px; height:18px; border-radius:4px; background:rgba(230,195,107,.18); color:var(--ctaText);
+    box-shadow:0 0 0 1px rgba(230,195,107,.28) inset; font-weight:900; }
+
+  /* FAQs (native details/summary with glass) */
+  .faqs{ margin:56px 0 40px; display:grid; gap:12px;}
+  details{
+    border-radius:12px; padding:12px 14px;
+    background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+    -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  summary{ cursor:pointer; font-weight:700; outline:none; list-style:none; }
+  summary::-webkit-details-marker{ display:none; }
+  details[open]{ box-shadow:0 10px 28px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.05); }
+  details p{ color:#cfe0ee; margin:8px 0 4px; }
+
+  /* Head hero */
+  .pricing-hero{ text-align:center; padding:60px 0 16px; }
+  .badge{ display:inline-block; margin-bottom:12px; padding:6px 10px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03); color:#91a6b8; font-size:12px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="top">
-    <div style="font-weight:900">Galactly • Plans</div>
-    <span id="apiBadge" class="pill">API: not set</span>
-    <span class="sep"></span>
-    <button id="setApi" class="gear">⚙️ API</button>
-  </div>
+  <div class="page-wallpaper" aria-hidden="true"></div>
 
-  <div class="card" style="margin-bottom:16px">
-    <div class="row" style="gap:8px;align-items:center">
-      <div class="muted">Optional email (for receipt association):</div>
-      <input id="email" type="text" placeholder="you@company.com" style="max-width:280px">
-      <button id="saveEmail" class="btn">Save</button>
-    </div>
-    <div class="note">We pass your email as metadata to Stripe so the session links back to your account.</div>
-  </div>
-
-  <div class="grid">
-    <!-- PRO -->
-    <div class="card">
-      <div class="h">Pro</div>
-      <div class="muted">Unlock warm + hot leads in the app. Higher daily limits.</div>
-      <div class="price">$<span style="font-variant-numeric:tabular-nums">99</span> / mo</div>
-      <div class="feat"><span class="dot"></span> HOT leads visible (no blur)</div>
-      <div class="feat"><span class="dot"></span> Daily finds ↑ (5× free)</div>
-      <div class="feat"><span class="dot"></span> “Don’t show to competitors” toggle (per-lead)</div>
-      <div class="feat"><span class="dot"></span> Priority crawling</div>
-      <div class="row">
-        <button id="buyPro" class="btn primary">Upgrade to Pro</button>
-        <button id="tryPro" class="btn">Try with demo host</button>
+  <header class="site-header" aria-label="Site">
+    <div class="inner">
+      <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge">G</span></a>
+      <nav id="nav-primary" aria-label="Primary">
+        <a class="nav-link" href="index.html#get-started">How it works</a>
+        <a class="nav-link" href="sectors.html">Sectors</a>
+        <a class="nav-link is-active" href="pricing.html">Pricing</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="nav-login" href="login.html">Login</a>
+        <a class="nav-demo" href="https://www.youtube.com" target="_blank" rel="noopener">Get Demo</a>
+        <a class="nav-cta" href="start.html">Start Free</a>
       </div>
-      <div id="proMsg" class="note"></div>
     </div>
+  </header>
 
-    <!-- VIP / Bundle -->
-    <div class="card">
-      <div class="h">VIP (Bundle)</div>
-      <div class="muted">Hands-off. We email you CSVs daily. First in line for HOT.</div>
-      <div class="price">$<span style="font-variant-numeric:tabular-nums">399</span> / mo</div>
-      <div class="feat"><span class="dot"></span> Automated daily CSV to your inbox</div>
-      <div class="feat"><span class="dot"></span> HOT leads delivered first</div>
-      <div class="feat"><span class="dot"></span> Competitor suppression on saved leads</div>
-      <div class="feat"><span class="dot"></span> White-glove tuning</div>
-      <div class="row">
-        <button id="buyVip" class="btn primary">Upgrade to VIP</button>
-        <button id="tryVip" class="btn">See sample CSV</button>
+  <main>
+    <section class="container pricing-hero">
+      <span class="badge">Transparent pricing</span>
+      <h1>Plans that scale with real buyer intent</h1>
+      <p class="lead">Start free. Upgrade when the live signals and closed-won math say it’s worth it.</p>
+
+      <div class="billing-toggle" style="margin-top:14px;">
+        <div id="toggle" class="toggle" role="tablist" aria-label="Billing period" data-yr="0">
+          <div class="thumb" aria-hidden="true"></div>
+          <button id="bill-m" role="tab" aria-selected="true">Monthly</button>
+          <button id="bill-y" role="tab" aria-selected="false">Yearly <span style="opacity:.75;font-weight:800;margin-left:4px;">– save 20%</span></button>
+        </div>
       </div>
-      <div id="vipMsg" class="note"></div>
-    </div>
-  </div>
 
-  <div id="status" class="note" style="margin-top:16px"></div>
-</div>
+      <div class="plans" id="plans">
+        <!-- Free -->
+        <article class="card" data-plan="free">
+          <div class="pill">Free</div>
+          <div style="display:flex;align-items:flex-end;gap:6px;">
+            <div class="price"><span data-price-m="0" data-price-y="0">$0</span></div>
+            <div class="per">/ <span data-per>month</span></div>
+          </div>
+          <p class="desc">Try Live Leads on your site. No credit card.</p>
+          <a class="cta" href="start.html">Start free</a>
+          <div class="feat">
+            <h4>Includes</h4>
+            <ul>
+              <li><span class="dot"></span> Live Signals feed (throttled)</li>
+              <li><span class="dot"></span> 50 verified companies / mo</li>
+              <li><span class="dot"></span> Fair-Play score &amp; tags</li>
+              <li><span class="dot"></span> Heat Shield (basic)</li>
+              <li><span class="dot"></span> 1 seat</li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- Pro (most popular) -->
+        <article class="card popular" data-plan="pro">
+          <div class="pill">Most popular</div>
+          <div style="display:flex;align-items:flex-end;gap:6px;">
+            <div class="price">$<span data-price-m="149" data-price-y="119">149</span></div>
+            <div class="per">/ <span data-per>month</span></div>
+          </div>
+          <p class="desc">Full buyer-intent workflow for growing suppliers.</p>
+          <a class="cta" href="start.html">Get started</a>
+          <div class="feat">
+            <h4>Everything in Free, plus</h4>
+            <ul>
+              <li><span class="dot"></span> Real-time “Hot buyers” ranking</li>
+              <li><span class="dot"></span> Export &amp; CRM sync</li>
+              <li><span class="dot"></span> AI “Next step” suggestions</li>
+              <li><span class="dot"></span> Heat Shield (advanced)</li>
+              <li><span class="dot"></span> 3 seats • email support</li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- VIP -->
+        <article class="card" data-plan="vip">
+          <div class="pill">VIP</div>
+          <div style="display:flex;align-items:flex-end;gap:6px;">
+            <div class="price">$<span data-price-m="449" data-price-y="359">449</span></div>
+            <div class="per">/ <span data-per>month</span></div>
+          </div>
+          <p class="desc">Hands-on growth partner + custom pipelines.</p>
+          <a class="cta" href="start.html">Talk to sales</a>
+          <div class="feat">
+            <h4>Everything in Pro, plus</h4>
+            <ul>
+              <li><span class="dot"></span> Dedicated success engineer</li>
+              <li><span class="dot"></span> Priority enrichment &amp; audits</li>
+              <li><span class="dot"></span> Custom scoring &amp; sectors</li>
+              <li><span class="dot"></span> SLA &amp; security reviews</li>
+              <li><span class="dot"></span> 8 seats • priority support</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Section 2: Comparison -->
+    <section class="container compare">
+      <h2 style="margin:0 0 10px;">Compare plans</h2>
+      <div class="glass-slab">
+        <table aria-describedby="compare">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th class="t-center">Free</th>
+              <th class="t-center">Pro</th>
+              <th class="t-center">VIP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Live Signals feed</td><td class="t-center"><span class="check">✓</span></td><td class="t-center"><span class="check">✓</span></td><td class="t-center"><span class="check">✓</span></td></tr>
+            <tr><td>Verified companies / mo</td><td class="t-center">50</td><td class="t-center">Unlimited*</td><td class="t-center">Unlimited*</td></tr>
+            <tr><td>Fair-Play score & tags</td><td class="t-center"><span class="check">✓</span></td><td class="t-center"><span class="check">✓</span></td><td class="t-center"><span class="check">✓</span></td></tr>
+            <tr><td>AI “Next step”</td><td class="t-center">—</td><td class="t-center"><span class="check">✓</span></td><td class="t-center"><span class="check">✓</span></td></tr>
+            <tr><td>CRM sync & export</td><td class="t-center">CSV</td><td class="t-center">HubSpot/SFDC</td><td class="t-center">Custom</td></tr>
+            <tr><td>Seats</td><td class="t-center">1</td><td class="t-center">3</td><td class="t-center">8</td></tr>
+            <tr><td>Support</td><td class="t-center">Community</td><td class="t-center">Email</td><td class="t-center">Priority + SLA</td></tr>
+          </tbody>
+        </table>
+        <p style="color:#9fb3c7; margin:10px 8px 0;">*Reasonable-use policy to keep the ecosystem healthy.</p>
+      </div>
+    </section>
+
+    <!-- Section 3: FAQs -->
+    <section class="container faqs">
+      <h2 style="margin:0 0 10px;">FAQs</h2>
+
+      <details>
+        <summary>Can I stay on Free as long as I want?</summary>
+        <p>Yes. Free is meant to prove there are real buyers in your niche. Upgrade when you want more volume and automation.</p>
+      </details>
+      <details>
+        <summary>What happens on Yearly?</summary>
+        <p>You’re billed once for 12 months at ~20% off. You keep the discount even if we add new Pro features during your term.</p>
+      </details>
+      <details>
+        <summary>Do you offer onboarding help?</summary>
+        <p>Pro includes quick-start guidance. VIP includes a dedicated success engineer who tunes signals and scoring to your stack.</p>
+      </details>
+      <details>
+        <summary>Security & compliance?</summary>
+        <p>We follow least-privilege access, audit trails, and vendor reviews. VIP supports custom DPA/SLA.</p>
+      </details>
+    </section>
+  </main>
 
 <script>
-(function(){
-  // ----- tiny storage + api base helpers -----
-  function getStored(k,d=""){ try{ const v=localStorage.getItem(k); return v===null? d: v; }catch{ return d; } }
-  function setStored(k,v){ try{ localStorage.setItem(k,v); }catch{} }
-  function normalizeApiBase(input){
-    let b=(input||"").trim().replace(/\/+$/,"");
-    const m=b.match(/^(.*?)(?:\/api(?:\/.*)?)$/i); if(m) b=m[1];
-    return b ? (b + "/api") : (window.location.origin + "/api");
+  // Toggle monthly/yearly
+  const toggle = document.getElementById('toggle');
+  const btnM = document.getElementById('bill-m');
+  const btnY = document.getElementById('bill-y');
+  const priceEls = Array.from(document.querySelectorAll('[data-price-m]'));
+  const perEls = Array.from(document.querySelectorAll('[data-per]'));
+  function setYearly(on){
+    toggle.dataset.yr = on ? '1' : '0';
+    btnM.setAttribute('aria-selected', on?'false':'true');
+    btnY.setAttribute('aria-selected', on?'true':'false');
+    priceEls.forEach(el=>{
+      const y=el.getAttribute('data-price-y'), m=el.getAttribute('data-price-m');
+      el.textContent = on ? y : m;
+    });
+    perEls.forEach(el=> el.textContent = on ? 'year' : 'month');
   }
-  const API = {
-    get(){ const raw=getStored("apiBase","") || (window.API_BASE||""); return normalizeApiBase(raw); },
-    headers(){
-      const h={"Content-Type":"application/json"};
-      const email = getStored("fp.user.email",""); if (email) h["x-user-email"]=email;
-      return h;
-    }
-  };
-  const apiBadge = document.getElementById("apiBadge");
-  function updBadge(){ const b=API.get(); apiBadge.textContent = "API: " + b.replace(/^https?:\/\//,""); }
-
-  // ----- wire inputs -----
-  document.getElementById("setApi").addEventListener("click", ()=>{
-    const cur = getStored("apiBase","");
-    const v = prompt("API base (root or /api):", cur || "");
-    if (v!=null){ setStored("apiBase", v); updBadge(); }
-  });
-  document.getElementById("saveEmail").addEventListener("click", ()=>{
-    const v = document.getElementById("email").value.trim();
-    if (v){ setStored("fp.user.email", v); document.getElementById("status").textContent = "Email saved."; }
-  });
-
-  // ----- checkout helper -----
-  async function go(plan, msgEl){
-    msgEl.textContent = "Starting checkout…";
-    const base = API.get();
-    try{
-      const r = await fetch(base + "/v1/onboard/checkout", {
-        method:"POST",
-        headers: API.headers(),
-        body: JSON.stringify({ plan })
-      });
-      const t = await r.text();
-      let d; try{ d = JSON.parse(t); }catch{ d = { ok:false, error:"bad_json", raw:t }; }
-      if (d && d.ok && d.url){ window.location.href = d.url; return; }
-      msgEl.textContent = "Checkout failed: " + (d?.error || r.status);
-    }catch(e){ msgEl.textContent = "Network error."; }
-  }
-
-  document.getElementById("buyPro").addEventListener("click", ()=> go("pro",  document.getElementById("proMsg")));
-  document.getElementById("buyVip").addEventListener("click", ()=> go("vip",  document.getElementById("vipMsg")));
-
-  // demo buttons (non-purchase)
-  document.getElementById("tryPro").addEventListener("click", ()=>{
-    window.location.href = "free-panel.html";
-  });
-  document.getElementById("tryVip").addEventListener("click", ()=>{
-    alert("We’ll drop a sample CSV generator in BV1. For now, VIP includes daily CSV delivery and competitor suppression.");
-  });
-
-  // boot
-  updBadge();
-  const savedEmail = getStored("fp.user.email",""); if (savedEmail) document.getElementById("email").value = savedEmail;
-})();
+  btnM.addEventListener('click',()=>setYearly(false));
+  btnY.addEventListener('click',()=>setYearly(true));
+  // default monthly
+  setYearly(false);
 </script>
 </body>
 </html>
