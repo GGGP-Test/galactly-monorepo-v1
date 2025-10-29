@@ -1,68 +1,68 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Pricing — Galactly</title>
-<meta name="description" content="Simple plans for real packaging-buyer signals. Start free, upgrade when the signals and closed-won math say it’s worth it." />
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&display=swap" rel="stylesheet">
 
 <style>
 /* =========================
-   KNOBS — tweak freely
+   KNOBS (tweak freely)
    ========================= */
 :root{
-  /* Brand palette */
+  /* brand + gold */
   --bg:#0a0e14; --text:#e9f1f7; --muted:#9fb3c7;
   --gold-100:#f7e7b7; --gold-300:#f2dca0; --gold-500:#e6c36b; --gold-700:#b8913d;
 
-  /* Layout */
-  --container-max:clamp(1040px,86vw,1240px);
+  /* containers / layout */
+  --container-max:clamp(1040px,86vw,1200px);
   --gutter:clamp(16px,3.6vw,36px);
-  --section-pad-top:64px;
-  --section-pad-bottom:64px;
+  --section-top:64px;      /* top padding per section */
+  --section-bottom:64px;   /* bottom padding per section */
 
-  /* Cards & table sizing */
-  --card-radius:16px;
-  --cards-gap:18px;
+  /* cards (exact, tight like screenshot) */
+  --card-bg:#0e1117;
+  --card-border:#2a2f3a;
+  --card-radius:12px;
   --card-pad:18px;
-  --price-size:34px;        /* price figure */
-  --plan-title-size:18px;   /* Free / Pro / VIP label */
-  --cta-h:40px;
+  --cards-gap:18px;
+  --plan-title-size:16px;   /* FREE / PRO / VIP label size */
+  --price-size:30px;        /* main price */
+  --per-size:14px;          /* “/ month” size */
+  --feat-gap:8px;
+  --cta-h:38px;
 
-  /* Toggle */
-  --toggle-h:40px;
+  /* toggle */
+  --toggle-h:38px;
   --toggle-pad:6px;
-  --toggle-thumb-shadow:0 8px 20px rgba(230,195,107,.22);
 
-  /* Table */
-  --row-h:46px;
+  /* table */
   --line:rgba(255,255,255,.10);
+  --row-h:44px;
 
   /* FAQ */
   --faq-gap:16px;
-  --faq-pad-y:18px;
-  --faq-title-size:22px;
   --faq-q-size:18px;
-  --faq-plus-size:26px;
+  --faq-plus-size:28px;
+  --faq-spacer:18px;
 
-  /* Cloud wallpaper intensity */
+  /* wallpaper intensity */
   --p-r1: rgba(230,195,107,.16);
   --p-r2: rgba(72,115,178,.10);
   --p-r3: rgba(255,255,255,.06);
 }
 
-/* ============ Base ============ */
+/* ===== base ===== */
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);
-  font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
-h1,h2{font-family:"Newsreader", Georgia, serif; font-weight:600; margin:0}
+  font:16px/1.55 Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+h1,h2{font-family:"Newsreader",Georgia,serif;font-weight:600;margin:0}
 a{color:inherit;text-decoration:none}
 
-/* Cloudy wallpaper (orbit vibe) */
+/* cloudy wallpaper (orbit vibe; not blue) */
 .page-wallpaper{
   position:fixed; inset:0; z-index:0; pointer-events:none;
   background:
@@ -71,40 +71,32 @@ a{color:inherit;text-decoration:none}
     radial-gradient(120% 90% at 50% 110%, var(--p-r3), transparent 64%),
     linear-gradient(180deg,#0b121a 0%, #0a0e14 70%, #091019 88%, #070b12 100%);
   filter:blur(.3px);
-  background-repeat:no-repeat;
 }
 
-/* Header — with “Pricing” lit */
+/* header (Pricing lit) */
 .site-header{position:fixed; inset:0 0 auto 0; height:60px; z-index:50; display:grid; place-items:center;
   background:rgba(12,18,28,.38); backdrop-filter:blur(12px) saturate(140%); border-bottom:1px solid rgba(255,255,255,.06)}
 .site-header .inner{width:100%; max-width:var(--container-max); padding:0 var(--gutter);
   display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px}
 .brand-badge{width:28px;height:28px;border-radius:8px;background:linear-gradient(180deg,var(--gold-500),var(--gold-700));
-  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px}
-nav#nav-primary{display:flex; gap:22px; justify-content:center}
-.nav-link{position:relative; padding:8px 2px; font-weight:600; color:#cfe0ee; opacity:.92}
-.nav-link::after{content:""; position:absolute; left:50%; bottom:4px; height:2px; width:0;
-  background:linear-gradient(90deg,var(--gold-300),var(--gold-700));
-  transform:translateX(-50%); transition:width .18s}
-.nav-link:hover{opacity:1}
-.nav-link:hover::after{width:60%}
-.nav-link.is-active{opacity:1; text-shadow:0 0 16px rgba(230,195,107,.35)}
+  display:grid;place-items:center;color:#1b1405;font-weight:800;font-size:14px; box-shadow:0 0 0 1px rgba(255,255,255,.08) inset}
+nav#nav-primary{display:flex;gap:22px;justify-content:center}
+.nav-link{position:relative;padding:8px 2px;font-weight:600;color:#cfe0ee;opacity:.92}
+.nav-link::after{content:"";position:absolute;left:50%;bottom:4px;height:2px;width:0;
+  background:linear-gradient(90deg,var(--gold-300),var(--gold-700));transform:translateX(-50%);transition:width .18s}
+.nav-link:hover{opacity:1}.nav-link:hover::after{width:60%}
+.nav-link.is-active{opacity:1;text-shadow:0 0 16px rgba(230,195,107,.35)}
 .nav-link.is-active::after{width:60%}
-.nav-actions{display:flex; align-items:center; gap:10px}
-.nav-cta{padding:8px 14px; border-radius:999px; color:#1b1405;
-  background:linear-gradient(180deg,var(--gold-500),var(--gold-700));
-  box-shadow:0 6px 18px rgba(230,195,107,.15)}
 
-/* Containers */
 main{position:relative; z-index:1; padding-top:calc(60px + 24px)}
 .container{max-width:var(--container-max); margin:0 auto; padding:0 var(--gutter)}
 
-/* ======= Hero ======= */
-.hero{padding:var(--section-pad-top) 0 16px; text-align:center}
-.hero p.lead{color:#c7d7e6; margin:8px 0 14px}
+/* ===== hero ===== */
+.hero{padding:var(--section-top) 0 10px; text-align:center}
+.hero p{color:#c7d7e6; margin:8px 0 14px}
 
-/* ======= Billing Toggle (gold glass, no overlap) ======= */
-.billing-toggle{display:flex; justify-content:center; margin:14px 0 6px}
+/* ===== gold glass toggle (no overlap) ===== */
+.billing-toggle{display:flex; justify-content:center; margin:12px 0 4px}
 .toggle{
   position:relative; height:var(--toggle-h); display:inline-grid; grid-auto-flow:column; gap:6px;
   padding:var(--toggle-pad); border-radius:999px; border:1px solid rgba(255,255,255,.10);
@@ -118,76 +110,69 @@ main{position:relative; z-index:1; padding-top:calc(60px + 24px)}
   position:absolute; top:var(--toggle-pad); left:var(--toggle-pad);
   width:calc(50% - var(--toggle-pad)); height:calc(100% - var(--toggle-pad)*2);
   border-radius:999px; background:linear-gradient(180deg,var(--gold-300),var(--gold-700));
-  box-shadow:var(--toggle-thumb-shadow); transition:left .22s ease;
+  box-shadow:0 8px 20px rgba(230,195,107,.22); transition:left .22s ease;
 }
 .toggle[data-yr="1"] .thumb{left:calc(50% + var(--toggle-pad))}
 
-/* ======= Cards (tight like screenshot) ======= */
-.cards{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--cards-gap); margin-top:18px}
+/* ===== black minimal cards (match screenshot) ===== */
+.cards{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--cards-gap); margin-top:16px}
 @media (max-width:900px){ .cards{grid-template-columns:1fr} }
+
 .card{
-  border:1px solid rgba(255,255,255,.10); border-radius:var(--card-radius); padding:var(--card-pad);
-  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); backdrop-filter:blur(10px) saturate(140%);
+  background:var(--card-bg);
+  border:1px solid var(--card-border);
+  border-radius:var(--card-radius);
+  padding:var(--card-pad);
+  box-shadow:0 10px 26px rgba(0,0,0,.28);
 }
-.card .plan{font-size:var(--plan-title-size); font-weight:800; letter-spacing:.2px}
-.card .price{font-size:var(--price-size); font-weight:800; margin:4px 0 2px}
-.card .per{color:#a8bbcd; font-weight:600}
-.card ul{list-style:none; margin:12px 0 0; padding:0; display:grid; gap:8px}
+.card .plan{font-size:var(--plan-title-size); font-weight:800; letter-spacing:.2px; margin-bottom:6px}
+.card .price{font-size:var(--price-size); font-weight:800; margin:0}
+.card .per{font-size:var(--per-size); color:#a8bbcd; font-weight:600}
+.card ul{list-style:none; padding:0; margin:12px 0 0; display:grid; gap:var(--feat-gap)}
 .card li{display:flex; align-items:center; gap:10px}
-.card .dot{width:8px;height:8px; border-radius:999px; background:linear-gradient(180deg,var(--gold-300),var(--gold-700))}
+.card .dot{width:7px;height:7px;border-radius:50%;background:#737b8a}
 .card .cta{
   margin-top:14px; display:block; width:100%; height:var(--cta-h); border-radius:10px;
-  border:1px solid rgba(255,255,255,.12); font-weight:800; background:rgba(255,255,255,.04); color:var(--text);
+  border:1px solid #333a47; background:#131823; color:var(--text); font-weight:800; text-align:center; line-height:var(--cta-h);
 }
 
-/* ======= Hover card (for term explanations) ======= */
+/* hover-card (pure CSS) */
 .hovercard{position:relative; display:inline-block}
 .hovercard .trigger{color:#b5d2ff; text-decoration:underline dotted 2px; cursor:help}
-.hovercard .card{
+.hovercard .hc{
   position:absolute; left:0; bottom:calc(100% + 10px); min-width:260px; max-width:360px;
-  background:rgba(12,18,28,.95); color:#d9e6f2; border:1px solid rgba(255,255,255,.10); border-radius:12px;
+  background:#0b111a; color:#d9e6f2; border:1px solid rgba(255,255,255,.10); border-radius:12px;
   padding:12px 14px; box-shadow:0 20px 40px rgba(0,0,0,.35); opacity:0; transform:translateY(6px);
   pointer-events:none; transition:opacity .16s ease, transform .16s ease; z-index:20;
 }
-.hovercard .card::after{
-  content:""; position:absolute; left:24px; top:100%; border:8px solid transparent; border-top-color:rgba(12,18,28,.95);
-}
-.hovercard:hover .card{opacity:1; transform:translateY(0)}
+.hovercard .hc::after{content:""; position:absolute; left:24px; top:100%; border:8px solid transparent; border-top-color:#0b111a}
+.hovercard:hover .hc{opacity:1; transform:translateY(0)}
 
-/* ======= Compare (no pane) ======= */
-.compare{padding:var(--section-pad-top) 0 var(--section-pad-bottom)}
-.compare h2{margin-bottom:12px}
+/* ===== compare (lines only, centered; plan columns under cards) ===== */
+.compare{padding:var(--section-top) 0 var(--section-bottom)}
+.compare h2{margin-bottom:12px; text-align:center}
 .table-wrap{overflow:auto}
 table{width:100%; border-collapse:separate; border-spacing:0; min-width:820px; table-layout:fixed}
-colgroup col:nth-child(1){width:34%} /* feature column wider */
+colgroup col:nth-child(1){width:34%}
 colgroup col:nth-child(n+2){width:22%}
 th,td{height:var(--row-h); padding:10px 10px; text-align:left}
 thead th{font-weight:800; border-bottom:1px solid var(--line)}
 tbody td{border-bottom:1px solid var(--line)}
 .t-center{text-align:center}
-.check{font-weight:900}
 
-/* ======= FAQs (big + on left, lines only) ======= */
-.faqs{padding:calc(var(--section-pad-top) + 12px) 0 var(--section-pad-bottom)}
-.faqs h2{font-size:var(--faq-title-size); margin-bottom:14px}
+/* ===== FAQs (big + on left; lines only) ===== */
+.faqs{padding:calc(var(--section-top) + 12px) 0 var(--section-bottom)}
+.faqs h2{text-align:center; margin-bottom:14px}
 .faq{border-bottom:1px solid var(--line)}
 .faq summary{
   list-style:none; cursor:pointer; display:flex; align-items:flex-start; gap:12px;
-  padding:var(--faq-pad-y) 0; font-size:var(--faq-q-size); font-weight:800;
+  padding:var(--faq-spacer) 0; font-size:var(--faq-q-size); font-weight:800;
 }
 .faq summary::-webkit-details-marker{display:none}
-.faq summary::before{
-  content:"+"; font-size:var(--faq-plus-size); line-height:1; color:#cfe0ee; margin-top:2px; width:20px; text-align:center;
-}
+.faq summary::before{content:"+"; font-size:var(--faq-plus-size); line-height:1; color:#cfe0ee; margin-top:2px; width:20px; text-align:center}
 .faq[open] summary::before{content:"–"}
-.faq .ans{color:#cfe0ee; padding:0 0 var(--faq-pad-y) 32px}
-
-/* Utilities */
-.center{text-align:center}
-.mute{color:var(--muted)}
-.badge{display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; color:#1b1405;
-  background:linear-gradient(180deg,var(--gold-500),var(--gold-700))}
-.small{font-size:12px; color:#b6c9db}
+.faq .ans{color:#cfe0ee; padding:0 0 var(--faq-spacer) 32px}
+.small{font-size:12px;color:#9fb3c7}
 </style>
 </head>
 <body>
@@ -199,21 +184,20 @@ tbody td{border-bottom:1px solid var(--line)}
       <nav id="nav-primary" aria-label="Primary">
         <a class="nav-link" href="index.html#get-started">How it works</a>
         <a class="nav-link" href="sectors.html">Sectors</a>
-        <a class="nav-link is-active" href="pricing.html">Pricing</a><!-- lit + underline -->
+        <a class="nav-link is-active" href="pricing.html">Pricing</a>
       </nav>
-      <div class="nav-actions">
-        <a class="nav-cta" href="start.html">Start Free</a>
+      <div style="display:flex;gap:10px">
+        <a class="nav-link" href="start.html" style="padding:8px 12px;border:1px solid rgba(255,255,255,.10);border-radius:999px;background:rgba(255,255,255,.02)">Start Free</a>
       </div>
     </div>
   </header>
 
   <main>
-    <!-- Section 1: Plans -->
+    <!-- Section 1: Black minimal cards -->
     <section class="container hero">
       <h1>Plans that scale with real buyer intent</h1>
-      <p class="lead mute">Start free. Upgrade when the live signals and closed-won math say it’s worth it.</p>
+      <p>Start free. Upgrade when the live signals and closed-won math say it’s worth it.</p>
 
-      <!-- Gold glass toggle; “Yearly — save 21.3%” -->
       <div class="billing-toggle">
         <div id="toggle" class="toggle" data-yr="0" role="tablist" aria-label="Billing period">
           <div class="thumb" aria-hidden="true"></div>
@@ -226,13 +210,13 @@ tbody td{border-bottom:1px solid var(--line)}
         <!-- Free -->
         <article class="card" data-plan="free">
           <div class="plan">Free</div>
-          <div class="price"><span data-price-m="0" data-price-y="0">0</span><span class="per"> / <span data-per>month</span></span></div>
+          <p class="price"><span data-price-m="0" data-price-y="0">0</span><span class="per"> / <span data-per>month</span></span></p>
           <ul>
             <li><span class="dot"></span> Live Signals (throttled)</li>
             <li><span class="dot"></span> 3
               <span class="hovercard">
-                <span class="trigger">Warm buyers/mo</span>
-                <span class="card"><strong>Warm Buyers</strong><br/>Known companies showing intent but not yet contacting you; verified, industry-fit, mid-heat.</span>
+                <span class="trigger">Warm Buyers/mo</span>
+                <span class="hc"><strong>Warm Buyers</strong><br/>Verified companies showing mid-level intent; fit + timing look promising.</span>
               </span>
             </li>
             <li><span class="dot"></span> Fair-Play score & tags</li>
@@ -242,50 +226,37 @@ tbody td{border-bottom:1px solid var(--line)}
           <a class="cta" href="start.html">Start free</a>
         </article>
 
-        <!-- Pro -->
+        <!-- Pro $97 -->
         <article class="card" data-plan="pro">
           <div class="plan">Pro</div>
-          <div class="price">$<span data-price-m="97" data-price-y="76.34">97</span><span class="per"> / <span data-per>month</span></span></div>
+          <p class="price">$<span data-price-m="97" data-price-y="76.34">97</span><span class="per"> / <span data-per>month</span></span></p>
           <ul>
             <li><span class="dot"></span> Everything in Free</li>
             <li><span class="dot"></span>
-              Access to
-              <span class="hovercard">
-                <span class="trigger">Hot Buyers</span>
-                <span class="card"><strong>Hot Buyers</strong><br/>High-fit, high-activity buyers (multiple strong signals) ready to talk.</span>
-              </span>
+              Access to <span class="hovercard"><span class="trigger">Hot Buyers</span>
+              <span class="hc"><strong>Hot Buyers</strong><br/>High-fit buyers with multiple strong signals; ready to talk.</span></span>
             </li>
-            <li><span class="dot"></span> Your own
-              <span class="hovercard">
-                <span class="trigger">AI</span>
-                <span class="card"><strong>Operator AI</strong><br/>Prioritizes signals, drafts outreach, and suggests the next step from context.</span>
-              </span>
-            </li>
-            <li><span class="dot"></span> CRM / CMS integrations (HubSpot, SFDC)</li>
+            <li><span class="dot"></span> Operator AI (prioritize + draft next step)</li>
+            <li><span class="dot"></span> CRM/CMS integrations (HubSpot, SFDC)</li>
             <li><span class="dot"></span> API access</li>
             <li><span class="dot"></span> 3 seats • email support</li>
           </ul>
           <a class="cta" href="start.html">Get started</a>
         </article>
 
-        <!-- VIP -->
+        <!-- VIP $497 -->
         <article class="card" data-plan="vip">
           <div class="plan">VIP</div>
-          <div class="price">$<span data-price-m="497" data-price-y="391.14">497</span><span class="per"> / <span data-per>month</span></span></div>
+          <p class="price">$<span data-price-m="497" data-price-y="391.14">497</span><span class="per"> / <span data-per>month</span></span></p>
           <ul>
             <li><span class="dot"></span> Everything in Pro</li>
             <li><span class="dot"></span>
-              Access to
-              <span class="hovercard">
-                <span class="trigger">Hot+ Buyers</span>
-                <span class="card"><strong>Hot+ Buyers</strong><br/>Highest intent tier; multi-source confirmation and recency spikes.</span>
-              </span>
+              Access to <span class="hovercard"><span class="trigger">Hot+ Buyers</span>
+              <span class="hc"><strong>Hot+ Buyers</strong><br/>Top intent tier with multi-source confirmation and recency spikes.</span></span>
             </li>
             <li><span class="dot"></span>
-              <span class="hovercard">
-                <span class="trigger">Sales AI</span>
-                <span class="card"><strong>Sales AI</strong><br/>We sell for you: orchestrated outreach across channels, appointment setting, and hand-offs.</span>
-              </span> + automation
+              <span class="hovercard"><span class="trigger">Sales AI</span>
+              <span class="hc"><strong>Sales AI</strong><br/>We sell for you: multi-channel outreach, appointment setting, and hand-offs.</span></span> + automation
             </li>
             <li><span class="dot"></span> Custom scoring & sectors • orchestration layer</li>
             <li><span class="dot"></span> Dedicated success engineer • priority support</li>
@@ -295,12 +266,12 @@ tbody td{border-bottom:1px solid var(--line)}
         </article>
       </div>
 
-      <p class="small center" style="margin-top:10px">Yearly shows effective monthly price and is billed annually.</p>
+      <p class="small" style="text-align:center;margin-top:10px">Yearly shows effective monthly price and is billed annually.</p>
     </section>
 
-    <!-- Section 2: Compare (no panel, lines only) -->
+    <!-- Section 2: Compare (centered, lines only) -->
     <section class="container compare">
-      <h2 class="center">Compare plans</h2>
+      <h2>Compare plans</h2>
       <div class="table-wrap">
         <table aria-describedby="compare-plans">
           <colgroup><col/><col/><col/><col/></colgroup>
@@ -315,7 +286,7 @@ tbody td{border-bottom:1px solid var(--line)}
           <tbody>
             <tr><td>Live Signals feed</td><td class="t-center">✓</td><td class="t-center">✓</td><td class="t-center">✓</td></tr>
             <tr><td>Verified companies / mo</td><td class="t-center">50</td><td class="t-center">Unlimited*</td><td class="t-center">Unlimited*</td></tr>
-            <tr><td>Warm buyers / mo</td><td class="t-center">3</td><td class="t-center">5–15</td><td class="t-center">Custom</td></tr>
+            <tr><td>Warm Buyers / mo</td><td class="t-center">3</td><td class="t-center">5–15</td><td class="t-center">Custom</td></tr>
             <tr><td>Hot Buyers access</td><td class="t-center">—</td><td class="t-center">✓</td><td class="t-center">✓</td></tr>
             <tr><td>Hot+ Buyers</td><td class="t-center">—</td><td class="t-center">—</td><td class="t-center">✓</td></tr>
             <tr><td>AI “Next step” suggestions</td><td class="t-center">—</td><td class="t-center">✓</td><td class="t-center">✓</td></tr>
@@ -330,9 +301,9 @@ tbody td{border-bottom:1px solid var(--line)}
       </div>
     </section>
 
-    <!-- Section 3: FAQs -->
+    <!-- Section 3: FAQs (big +/– on left, spaced) -->
     <section class="container faqs">
-      <h2 class="center">FAQs</h2>
+      <h2>FAQs</h2>
 
       <details class="faq">
         <summary>Can I stay on Free as long as I want?</summary>
@@ -341,7 +312,7 @@ tbody td{border-bottom:1px solid var(--line)}
 
       <details class="faq">
         <summary>What happens on Yearly?</summary>
-        <div class="ans">You’re billed once for 12 months at a 21.3% discount. Your effective monthly price adjusts on the toggle above.</div>
+        <div class="ans">You’re billed once for 12 months at a 21.3% discount. The toggle shows effective monthly pricing.</div>
       </details>
 
       <details class="faq">
@@ -357,21 +328,17 @@ tbody td{border-bottom:1px solid var(--line)}
   </main>
 
 <script>
-/* ========= Config (knobs) ========= */
-const CONFIG = {
-  discount: 0.213,             // 21.3% yearly savings
-  prices: { free: 0, pro: 97, vip: 497 }, // monthly base
-  decimals: 2                   // decimals for yearly per-month
-};
+/* ====== knobs for logic ====== */
+const CONFIG = { discount: 0.213, decimals: 2 };
 
-/* ========= Toggle logic ========= */
+/* toggle */
 const toggle = document.getElementById('toggle');
 const btnM = document.getElementById('bill-m');
 const btnY = document.getElementById('bill-y');
 const priceEls = Array.from(document.querySelectorAll('[data-price-m]'));
 const perEls   = Array.from(document.querySelectorAll('[data-per]'));
 
-function toFixed(n, d){ return (Math.round(n * Math.pow(10,d)) / Math.pow(10,d)).toFixed(d); }
+const fix = (n,d)=> (Math.round(n*Math.pow(10,d))/Math.pow(10,d)).toFixed(d);
 
 function setYearly(on){
   toggle.dataset.yr = on ? '1' : '0';
@@ -379,18 +346,16 @@ function setYearly(on){
   btnY.setAttribute('aria-selected', on?'true':'false');
 
   priceEls.forEach(el=>{
-    const m = parseFloat(el.getAttribute('data-price-m'));
-    const y = parseFloat(el.getAttribute('data-price-y') || '0');
-    // compute yearly per-month if not provided:
-    const yComputed = y || (m * (1 - CONFIG.discount));
-    el.textContent = on ? toFixed(yComputed, CONFIG.decimals) : (m === 0 ? '0' : String(m));
+    const m = parseFloat(el.getAttribute('data-price-m')||'0');
+    const provided = parseFloat(el.getAttribute('data-price-y')||'NaN');
+    const y = isNaN(provided) ? m*(1-CONFIG.discount) : provided;
+    el.textContent = on ? fix(y, CONFIG.decimals) : (m===0 ? '0' : String(m));
   });
   perEls.forEach(el=> el.textContent = on ? 'year' : 'month');
 }
 
-// Bind
-btnM.addEventListener('click', ()=>setYearly(false));
-btnY.addEventListener('click', ()=>setYearly(true));
+btnM.addEventListener('click',()=>setYearly(false));
+btnY.addEventListener('click',()=>setYearly(true));
 setYearly(false);
 </script>
 </body>
