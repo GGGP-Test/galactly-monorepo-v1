@@ -2,9 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Galactly — Find real packaging buyers</title>
 <meta name="description" content="Galactly helps packaging suppliers find qualified B2B buyers. Turn website and market signals into ranked leads to grow your sales pipeline—no cold spam." />
+<meta name="theme-color" content="#0a0e14"/>
+<meta name="color-scheme" content="dark light"/>
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,21 +44,21 @@
     --card-radius: 12px;
     
     --card-text: #e8f1fb;
-    --card-k-fs: 11px;      --card-k-color:#a9bfd6;  /* left small labels */
+    --card-k-fs: 11px;      --card-k-color:#a9bfd6;
     --card-v-fs: 14px;      --card-name-fs: 15px;
-    --card-line-h: 1.2;     --card-gap: 10px;        /* spacing inside rows */
+    --card-line-h: 1.2;     --card-gap: 10px;
     --card-chip-fs: 11px;
     
     --card-stage-border:#ffffff24;  --card-stage-bg:#ffffff0f;
     
     /* === PULSE KNOBS === */
-    --pulse-dur: 900ms;                 /* default speed */
-    --pulse-dur-map: var(--pulse-dur);  /* map-only speed */
-    --pulse-dur-card: var(--pulse-dur); /* card-only speed */
-    --pulse-scale: 2.3;                 /* ring growth */
-    --pulse-spread: 16px;               /* ring thickness */
-    --pulse-opacity: .45;               /* start alpha */
-    --us-dot-color: var(--gold);        /* map dot + ring color */
+    --pulse-dur: 900ms;
+    --pulse-dur-map: var(--pulse-dur);
+    --pulse-dur-card: var(--pulse-dur);
+    --pulse-scale: 2.3;
+    --pulse-spread: 16px;
+    --pulse-opacity: .45;
+    --us-dot-color: var(--gold);
 
     /* panel */
     --const-radius: 18px; --const-stroke-w: 1px; --const-stroke-a: .06; --const-vignette-a: .18;
@@ -160,7 +163,7 @@
     border:none; box-shadow:0 6px 18px rgba(230,195,107,.15), 0 0 0 1px rgba(255,255,255,.06) inset; white-space:nowrap}
 
   /* Hamburger (mobile only) */
-  .hamburger{display:none; justify-self:end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
+  .hamburger{display:none; justify-self=end; position:relative; width:34px; height:34px; background:none; border:none; color:var(--gold-300); cursor:pointer;}
   .hamburger span{position:absolute; left:2px; right:2px; height:2px; top:11px; border-radius:2px; background:currentColor; transition:transform .25s, top .25s}
   .hamburger span:nth-child(2){ top:21px; }
   .hamburger[aria-expanded="true"] span{ top:17px; }
@@ -183,8 +186,13 @@
   #mobileMenu .sheet hr{border:0; border-top:1px solid var(--stroke); margin:8px 0}
 
   /* HERO */
-  .hero{position:relative;min-height:100svh;display:flex;align-items:center;justify-content:center;
-    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate; z-index:1;}
+  .hero{
+    position:relative;
+    min-height:100vh;            /* fallback */
+    min-height:100svh;           /* modern small-viewport units */
+    display:flex;align-items:center;justify-content:center;
+    padding:calc(5rem + 30px) var(--gutter) 5rem;overflow:hidden; isolation:isolate; z-index:1;
+  }
   #heroFx{display:none!important}
   .hero-grid{position:relative;z-index:1;display:grid;align-items:center;
     grid-template-columns:1.12fr 1fr; gap:clamp(28px, 4vw, 48px); width:100%;}
@@ -266,7 +274,6 @@
   }
 
   /* ==================== STACK (CARD) ==================== */
-  /* LEGO toggles — set data-off="distance ai tags stats" on .miniCard to hide */
   .miniCard[data-off~="buyer"]    [data-field="buyer"]{ display:none!important; }
   .miniCard[data-off~="distance"] [data-field="distance"]{ display:none!important; }
   .miniCard[data-off~="need"]     [data-field="need"]{ display:none!important; }
@@ -295,6 +302,7 @@
   }
   @supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))){
     .miniCard{ background:rgba(16,22,35,.92); }
+    .site-header, #mobileMenu .sheet, .glass-cta { background:rgba(16,22,35,.96); }
   }
   .miniCard .row{display:flex; align-items:center; justify-content:space-between; gap: var(--card-gap); margin:2px 0}
   .miniCard .k{font-size: var(--card-k-fs);color: var(--card-k-color)}
@@ -322,14 +330,10 @@
     animation: probPulse var(--pulse-dur-card, var(--pulse-dur, 900ms)) ease-out infinite;
   }
   
-    @keyframes probPulse{
-      0%   { transform: scale(1);
-             box-shadow: 0 0 0 0 currentColor;
-             opacity: var(--pulse-opacity, .30); }
-      100% { transform: scale(var(--pulse-scale, 1.9));
-             box-shadow: 0 0 0 var(--pulse-spread, 10px) rgba(0,0,0,0);
-             opacity: 0; }
-    }
+  @keyframes probPulse{
+    0%   { transform: scale(1); box-shadow: 0 0 0 0 currentColor; opacity: var(--pulse-opacity, .30); }
+    100% { transform: scale(var(--pulse-scale, 1.9)); box-shadow: 0 0 0 var(--pulse-spread, 10px) rgba(0,0,0,0); opacity: 0; }
+  }
 
   .stats{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
   .pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 7px;
@@ -399,7 +403,7 @@
   }
 
   /* ===== US MAP LAYER ===== */
-  .tf{ display:none !important; } /* hide/remove old rails/arcs */
+  .tf{ display:none !important; }
   .us-layer{ position:absolute; inset:0; z-index:1; pointer-events:none; }
   .us-layer .fadeEdge{
     width:100%; height:100%;
@@ -410,7 +414,6 @@
   .us-strokes{ fill:none; stroke:var(--us-stroke); stroke-width:var(--us-stroke-w); }
   .us-strokes .state:hover{ stroke:var(--us-stroke-highlight); }
 
-  /* 50 small lights – same glow profile, size decoupled via --us-dot-size */
   #usDots{ position:absolute; inset:0; z-index:2; pointer-events:none; }
   #usDots .dot{
     position:absolute; width:var(--us-dot-size); height:var(--us-dot-size);
@@ -420,8 +423,7 @@
     transform: translate(-50%,-50%);
   }
   #usDots .dot::after{ content:""; position:absolute; inset:0; border-radius:inherit; opacity:.30; transform:scale(1); box-shadow:0 0 0 0 currentColor; animation:none; }
-  #usDots .dot.flash::after{ 
-    animation: probPulse var(--pulse-dur-map, var(--pulse-dur, 900ms)) ease-out 1; }
+  #usDots .dot.flash::after{ animation: probPulse var(--pulse-dur-map, var(--pulse-dur, 900ms)) ease-out 1; }
 </style>
 </head>
 <body>
@@ -508,7 +510,6 @@
             <div id="usDots" aria-hidden="true"></div>
           </div>
 
-          <!-- Hidden timing framework placeholder for layout parity -->
           <div id="timingFramework" class="tf" aria-hidden="true"></div>
 
           <span class="domainTag" id="domainTag">yourcompany.com</span>
@@ -738,7 +739,6 @@ window.SCOREBOARD_KNOBS = {
     ctx.strokeStyle = `rgba(255,255,255,${isNaN(alpha)?0.06:alpha})`;
     ctx.lineWidth = 1;
   
-    // vertical lines
     for(let i=1; i<gx; i++){
       const x = (i/gx)*W;
       ctx.beginPath();
@@ -746,7 +746,6 @@ window.SCOREBOARD_KNOBS = {
       ctx.lineTo(x, H - inset);
       ctx.stroke();
     }
-    // horizontal lines
     for (let j = 1; j < gy; j++) {
       const y = (j/gy)*H;
       ctx.beginPath();
@@ -774,13 +773,11 @@ window.SCOREBOARD_KNOBS = {
   
     const cs = getComputedStyle(document.documentElement);
   
-    // Helper to read a CSS var as number with safe fallback
     const readVar = (name, fallback) => {
       const raw = parseFloat(cs.getPropertyValue(name));
       return Number.isFinite(raw) ? raw : fallback;
     };
   
-    // Read from KN first; fall back to CSS variables
     const cssLeft  = readVar('--card-left', 0.5);
     const cssTop   = readVar('--card-top',  0.5);
     const cssAngle = parseFloat(cs.getPropertyValue('--card-angle')) || 0;
@@ -792,11 +789,9 @@ window.SCOREBOARD_KNOBS = {
     const railH  = (KN?.card?.railHeight ?? 232);
     const pad    = (KN?.card?.padding ?? '12px 12px 10px');
   
-    // Clamp 0..1 for percent positions
     const L = Math.max(0, Math.min(1, left));
     const T = Math.max(0, Math.min(1, top));
   
-    // Write CSS custom properties that your .cardStack rule consumes
     const root = document.documentElement.style;
     root.setProperty('--card-left', String(L));
     root.setProperty('--card-top',  String(T));
@@ -936,56 +931,23 @@ window.SCOREBOARD_KNOBS = {
       NE: { xPct: 0, yPct: 0 }
     },
     overrides: {
-      'ID': { xPct: 28.7, yPct: 31.8 },
-      'MT': { xPct: 38.7, yPct: 22.8 },
-      'WY': { xPct: 42.7, yPct: 34.8 },
-      'ND': { xPct: 55.7, yPct: 23.8 },
-      'SD': { xPct: 56.7, yPct: 32.8 },
-      'MN': { xPct: 66.7, yPct: 27.8 },
-      'IA': { xPct: 69.7, yPct: 39.8 },
-      'WI': { xPct: 75.7, yPct: 31.8 },
-      'CA': { xPct: 14.7, yPct: 47.8 },
-      'UT': { xPct: 33.7, yPct: 44.8 },
-      'CO': { xPct: 44.7, yPct: 47.8 },
-      'NE': { xPct: 56.7, yPct: 40.8 },
-      'AZ': { xPct: 31.7, yPct: 59.8 },
-      'NM': { xPct: 43.7, yPct: 60.8 },
-      'TX': { xPct: 56.7, yPct: 69.8 },
-      'OK': { xPct: 61.7, yPct: 59.8 },
-      'AR': { xPct: 72.7, yPct: 59.8 },
-      'KS': { xPct: 59.7, yPct: 49.8 },
-      'LA': { xPct: 71.7, yPct: 69.8 },
-      'NV': { xPct: 23.7, yPct: 41.8 },
-      'HI': { xPct: 43.7, yPct: 85.8 },
-      'IL': { xPct: 77.7, yPct: 44.8 },
-      'MS': { xPct: 78.7, yPct: 65.8 },
-      'AL': { xPct: 84.7, yPct: 65.8 },
-      'GA': { xPct: 92.7, yPct: 65.8 },
-      'TN': { xPct: 84.7, yPct: 56.8 },
-      'KY': { xPct: 87.7, yPct: 50.8 },
-      'IN': { xPct: 84.7, yPct: 44.8 },
-      'MI': { xPct: 85.7, yPct: 33.8 },
-      'MO': { xPct: 71.7, yPct: 50.8 },
-      'PA': { xPct: 99.7, yPct: 39.8 },
-      'OH': { xPct: 90.7, yPct: 42.8 },
-      'NY': { xPct: 102.7, yPct: 32.8 },
-      'VA': { xPct: 100.7, yPct: 49.8 },
-      'NC': { xPct: 97.7, yPct: 55.8 },
-      'FL': { xPct: 90.7, yPct: 76.8 },
-      'ME': { xPct: 90.7, yPct: 76.8 },
-      'MD': { xPct: 104.7, yPct: 44.8 },
-      'WV': { xPct: 95.7, yPct: 47.8 },
-      'NJ': { xPct: 90.7, yPct: 76.8 },
-      'CT': { xPct: 90.7, yPct: 76.8 },
-      'DE': { xPct: 90.7, yPct: 76.8 },
-      'RI': { xPct: 90.7, yPct: 76.8 },
-      'VT': { xPct: 90.7, yPct: 76.8 },
-      'NH': { xPct: 90.7, yPct: 76.8 },
-      'AK': { xPct: 19.7, yPct: 76.8 },
-      'MA': { xPct: 90.7, yPct: 76.8 },
-      'OR': { xPct: 18.7, yPct: 27.8 },
-      'SC': { xPct: 98.7, yPct: 60.8 },
-      'WA': { xPct: 21.7, yPct: 17.8 }
+      'ID': { xPct: 28.7, yPct: 31.8 }, 'MT': { xPct: 38.7, yPct: 22.8 }, 'WY': { xPct: 42.7, yPct: 34.8 },
+      'ND': { xPct: 55.7, yPct: 23.8 }, 'SD': { xPct: 56.7, yPct: 32.8 }, 'MN': { xPct: 66.7, yPct: 27.8 },
+      'IA': { xPct: 69.7, yPct: 39.8 }, 'WI': { xPct: 75.7, yPct: 31.8 }, 'CA': { xPct: 14.7, yPct: 47.8 },
+      'UT': { xPct: 33.7, yPct: 44.8 }, 'CO': { xPct: 44.7, yPct: 47.8 }, 'NE': { xPct: 56.7, yPct: 40.8 },
+      'AZ': { xPct: 31.7, yPct: 59.8 }, 'NM': { xPct: 43.7, yPct: 60.8 }, 'TX': { xPct: 56.7, yPct: 69.8 },
+      'OK': { xPct: 61.7, yPct: 59.8 }, 'AR': { xPct: 72.7, yPct: 59.8 }, 'KS': { xPct: 59.7, yPct: 49.8 },
+      'LA': { xPct: 71.7, yPct: 69.8 }, 'NV': { xPct: 23.7, yPct: 41.8 }, 'HI': { xPct: 43.7, yPct: 85.8 },
+      'IL': { xPct: 77.7, yPct: 44.8 }, 'MS': { xPct: 78.7, yPct: 65.8 }, 'AL': { xPct: 84.7, yPct: 65.8 },
+      'GA': { xPct: 92.7, yPct: 65.8 }, 'TN': { xPct: 84.7, yPct: 56.8 }, 'KY': { xPct: 87.7, yPct: 50.8 },
+      'IN': { xPct: 84.7, yPct: 44.8 }, 'MI': { xPct: 85.7, yPct: 33.8 }, 'MO': { xPct: 71.7, yPct: 50.8 },
+      'PA': { xPct: 99.7, yPct: 39.8 }, 'OH': { xPct: 90.7, yPct: 42.8 }, 'NY': { xPct: 102.7, yPct: 32.8 },
+      'VA': { xPct: 100.7, yPct: 49.8 }, 'NC': { xPct: 97.7, yPct: 55.8 }, 'FL': { xPct: 90.7, yPct: 76.8 },
+      'ME': { xPct: 90.7, yPct: 76.8 }, 'MD': { xPct: 104.7, yPct: 44.8 }, 'WV': { xPct: 95.7, yPct: 47.8 },
+      'NJ': { xPct: 90.7, yPct: 76.8 }, 'CT': { xPct: 90.7, yPct: 76.8 }, 'DE': { xPct: 90.7, yPct: 76.8 },
+      'RI': { xPct: 90.7, yPct: 76.8 }, 'VT': { xPct: 90.7, yPct: 76.8 }, 'NH': { xPct: 90.7, yPct: 76.8 },
+      'AK': { xPct: 19.7, yPct: 76.8 }, 'MA': { xPct: 90.7, yPct: 76.8 }, 'OR': { xPct: 18.7, yPct: 27.8 },
+      'SC': { xPct: 98.7, yPct: 60.8 }, 'WA': { xPct: 21.7, yPct: 17.8 }
     }
   };
   window.updateMapKnobs = function(patch){
@@ -1039,7 +1001,9 @@ window.SCOREBOARD_KNOBS = {
 
     const NE = new Set(['CT','MA','ME','NH','RI','VT','NJ','DE','MD','NY','PA']);
 
-    fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
+    // Fetch topojson with graceful failure
+    (window.fetch ? fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json') :
+      Promise.reject('no-fetch'))
       .then(r=>r.json())
       .then(topo=>{
         const features = topojson.feature(topo, topo.objects.states).features;
@@ -1069,7 +1033,7 @@ window.SCOREBOARD_KNOBS = {
           g.appendChild(p);
         });
 
-        // helper: pick a point inside feature (centroid or random-search-in-bounds)
+        // helper: point inside feature
         function insidePoint(feature){
           let ll = d3.geoCentroid(feature);
           if(d3.geoContains(feature, ll)) return ll;
@@ -1111,10 +1075,8 @@ window.SCOREBOARD_KNOBS = {
           dotsLayer.appendChild(dot);
         });
 
-        // apply offsets/overrides
         refreshDotPositions();
 
-        // expose one-at-a-time pulser
         const all = Array.from(dotsLayer.querySelectorAll('.dot'));
         let last=null, idx=0;
         window.USMAP.flash = function(){
@@ -1126,7 +1088,7 @@ window.SCOREBOARD_KNOBS = {
           last = d;
         };
       })
-      .catch(()=>{ /* silent fail */});
+      .catch(()=>{ /* No fetch or network: quietly skip the map */ });
   }
 
   function init(){
@@ -1186,11 +1148,7 @@ window.SCOREBOARD_KNOBS = {
     navStart  ?.addEventListener('click', (e)=>{ e.preventDefault(); goStart(); });
     mobileStart?.addEventListener('click', (e)=>{ e.preventDefault(); goStart(); });
 
-    [heroHostD, heroHostM].forEach(el=>{
-      el?.addEventListener("keydown", (e)=>{ if(e.key === "Enter"){ e.preventDefault(); goStart(); } });
-    });
-
-    // Build US map
+    // Build US map (deferred libs)
     if(window.d3 && window.topojson) buildUSMap();
     else addEventListener('load', buildUSMap);
   }
@@ -1282,5 +1240,15 @@ window.SCOREBOARD_KNOBS = {
     window.PROCESS_REPAINT && window.PROCESS_REPAINT();
   });
 </script>
+
+<noscript>
+  <style>
+    .reveal{opacity:1 !important; transform:none !important}
+    .show-desktop,.show-mobile{display:block}
+  </style>
+  <div style="max-width:720px;margin:100px auto;padding:16px;color:#cfe2ff">
+    JavaScript is disabled — interactive map and counters are skipped, but you can still get started above.
+  </div>
+</noscript>
 </body>
 </html>
