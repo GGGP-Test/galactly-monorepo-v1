@@ -47,7 +47,14 @@
     --card-chip-fs: 11px;
     
     --card-stage-border:#ffffff24;  --card-stage-bg:#ffffff0f;
-    
+
+    /* === TIME ROW KNOBS (new) === */
+    --card-time-fs: 18px;           /* time value size */
+    --card-time-weight: 800;        /* time value weight */
+    --card-time-lh: 1.15;           /* time value line-height */
+    --card-time-color: var(--card-text);
+    --card-time-gap: 8px;           /* extra gap above/below time row */
+
     /* === PULSE KNOBS === */
     --pulse-dur: 900ms;                 /* default speed */
     --pulse-dur-map: var(--pulse-dur);  /* map-only speed */
@@ -304,6 +311,7 @@
   .miniCard .prob{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700}
   .miniCard .chips{display:flex; flex-wrap:wrap; gap:6px}
   .miniCard .chip{font-size: var(--card-chip-fs); padding:4px 7px; border:1px solid rgba(255,255,255,.12); border-radius:8px; background:rgba(255,255,255,.04)}
+  .miniCard .chip.intent{font-weight:800;}
   .miniCard .ai{display:flex; align-items:center; gap:8px}
   .miniCard .ai svg{width:12px; height:12px; opacity:.9}
 
@@ -318,6 +326,16 @@
     transform:scale(1); box-shadow:0 0 0 0 currentColor; opacity:.30;
     animation: probPulse var(--pulse-dur-card, var(--pulse-dur, 900ms)) ease-out infinite;
   }
+
+  /* Time row emphasis */
+  .miniCard .timeRow{ margin: var(--card-time-gap) 0; }
+  .miniCard .timeRow .v{
+    font-size: var(--card-time-fs);
+    font-weight: var(--card-time-weight);
+    line-height: var(--card-time-lh);
+    color: var(--card-time-color);
+    letter-spacing:.1px;
+  }
   
     @keyframes probPulse{
       0%   { transform: scale(1);
@@ -327,12 +345,6 @@
              box-shadow: 0 0 0 var(--pulse-spread, 10px) rgba(0,0,0,0);
              opacity: 0; }
     }
-
-  .stats{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
-  .pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 7px;
-         border-radius:8px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04);
-         font-size:11px; }
-  .pill .n{ font-weight:800; }
 
   /* SECTION 2 */
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
@@ -521,6 +533,13 @@
                 <span class="stage" data-stage>A</span>
                 <span class="prob"><span class="dot" data-prob-dot></span><span class="lbl"></span><span class="pct" data-prob>72%</span></span>
               </div>
+
+              <!-- TIME ROW (new & emphasized) -->
+              <div class="row timeRow">
+                <span class="k" data-time-label>Seen</span>
+                <span class="v time" data-time>—</span>
+              </div>
+
               <div class="row"><span class="k">Buyer</span><span class="v name" data-name>—</span></div>
               <div class="row"><span class="k">Distance</span><span class="v" data-distance>—</span></div>
               <div class="row"><span class="k">Need</span><span class="v" data-need>—</span></div>
@@ -530,14 +549,11 @@
                 <span class="v" data-ai>74%</span>
               </div>
               <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
+
+              <!-- Chips: intent ONLY -->
               <div class="chips" data-tags></div>
 
-              <div class="stats" aria-hidden="true">
-                <div class="pill"><span class="n" id="m1">1770</span><span>Contacted</span></div>
-                <div class="pill"><span class="n" id="m2">338</span><span>Opened</span></div>
-                <div class="pill"><span class="n" id="m3">44</span><span>Replied</span></div>
-                <div class="pill"><span class="n" id="m4">13</span><span>Positive</span></div>
-              </div>
+              <!-- Stats pills removed per request -->
             </div>
           </div>
         </div>
@@ -625,6 +641,16 @@ window.SCOREBOARD_KNOBS = {
     warm: { label:'Warm',  color:'#e6c36b', emoji:'🏷️' },
     hot:  { label:'Hot',   color:'#ff9a5a', emoji:'🔥' },
     hotp: { label:'Hot+',  color:'#42d17a', emoji:'🔥' }
+  },
+  /* === Time windows in seconds (new) ===
+     hotp: seconds → minutes; hot: minutes → hours; warm: hours → days */
+  time: {
+    label: 'Seen',
+    windows: {
+      hotp: [10, 300],        // 10s – 5m
+      hot:  [180, 14400],     // 3m – 4h
+      warm: [86400, 864000]   // 1d – 10d
+    }
   },
   pools: {
     buyers: [
@@ -775,9 +801,9 @@ window.SCOREBOARD_KNOBS = {
     const readVar = (name, fallback) => {
       const raw = parseFloat(cs.getPropertyValue(name));
       return Number.isFinite(raw) ? raw : fallback;
-    };
+      };
   
-    // Read from KN first; fall back to CSS variables (parenthesized to avoid ??/|| mixing)
+    // Read from KN first; fall back to CSS variables
     const cssLeft  = readVar('--card-left', 0.5);
     const cssTop   = readVar('--card-top',  0.5);
     const cssAngle = parseFloat(cs.getPropertyValue('--card-angle')) || 0;
@@ -789,11 +815,9 @@ window.SCOREBOARD_KNOBS = {
     const railH  = (KN?.card?.railHeight ?? 232);
     const pad    = (KN?.card?.padding ?? '12px 12px 10px');
   
-    // Clamp 0..1 for percent positions
     const L = Math.max(0, Math.min(1, left));
     const T = Math.max(0, Math.min(1, top));
   
-    // Write CSS custom properties that your .cardStack rule consumes
     const root = document.documentElement.style;
     root.setProperty('--card-left', String(L));
     root.setProperty('--card-top',  String(T));
@@ -802,7 +826,6 @@ window.SCOREBOARD_KNOBS = {
     root.setProperty('--rail-h',     railH + 'px');
     root.setProperty('--card-pad',   pad);
   
-    // Keep the rail’s intrinsic box in sync for hit-testing
     if (rail){
       rail.style.width  = width + 'px';
       rail.style.height = railH + 'px';
@@ -815,6 +838,29 @@ window.SCOREBOARD_KNOBS = {
     if(lbl){ lbl.textContent = KN.probLabel || 'Win rate'; }
     document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||11)+'px');
     document.documentElement.style.setProperty('--prob-pulse', (KN.probDot?.pulseMs||900)+'ms');
+    // time label knob
+    const tl = card.querySelector('[data-time-label]');
+    if(tl){ tl.textContent = (KN.time?.label || 'Seen'); }
+  }
+
+  function fmtAgo(sec){
+    sec = Math.max(1, Math.round(sec));
+    if(sec < 60) return `${sec} ${sec===1?'second':'seconds'} ago`;
+    const min = Math.round(sec/60);
+    if(min < 60) return `${min} ${min===1?'minute':'minutes'} ago`;
+    const hr = Math.round(min/60);
+    if(hr < 24) return `${hr} ${hr===1?'hour':'hours'} ago`;
+    const d = Math.round(hr/24);
+    if(d < 14) return `${d} ${d===1?'day':'days'} ago`;
+    const w = Math.round(d/7);
+    return `${w} ${w===1?'week':'weeks'} ago`;
+  }
+
+  function randomTimeAgo(stage){
+    const W = KN.time?.windows?.[stage];
+    if(!W) return '—';
+    const s = W[0] + Math.random()*(W[1]-W[0]);
+    return fmtAgo(s);
   }
 
   function genLead(stage){
@@ -827,7 +873,8 @@ window.SCOREBOARD_KNOBS = {
     const distance=(dVal<=1)?"Same city":(dVal<8?(dVal.toFixed(1)+" mi"):(dVal+" mi"));
     const aiLabel=(KN.pools.aiLabels[(Math.random()*KN.pools.aiLabels.length)|0]);
     const nx=(KN.pools.next[stage][(Math.random()*KN.pools.next[stage].length)|0]);
-    return {stage,p,ai,buyer,need,distance,aiLabel,next:nx};
+    const timeAgo = randomTimeAgo(stage);
+    return {stage,p,ai,buyer,need,distance,aiLabel,next:nx,timeAgo};
   }
 
   function paintLead(el,data){
@@ -845,11 +892,13 @@ window.SCOREBOARD_KNOBS = {
     el.querySelector('[data-ai-label]').textContent = `${data.aiLabel} optimized`;
     el.querySelector('[data-ai]').textContent = data.ai+'%';
     el.querySelector('[data-next]').textContent = data.next||'—';
+    el.querySelector('[data-time]').textContent = data.timeAgo || '—';
 
+    // Chips: intent ONLY (remove temperature chip)
     const chips=el.querySelector('[data-tags]'); chips.innerHTML='';
-    const c1=document.createElement('span'); c1.className='chip'; c1.textContent=`${meta.emoji||'🏷️'} ${meta.label}`;
-    const c2=document.createElement('span'); c2.className='chip'; c2.textContent=data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
-    chips.appendChild(c1); chips.appendChild(c2);
+    const intent = (data.stage==='hotp') ? 'High intent' : (data.stage==='hot' ? 'Rising intent' : 'Warming');
+    const cIntent=document.createElement('span'); cIntent.className='chip intent'; cIntent.textContent=intent;
+    chips.appendChild(cIntent);
   }
 
   const AK = window.ANIM_KNOBS||{};
@@ -923,13 +972,13 @@ window.SCOREBOARD_KNOBS = {
 
   // ---- US MAP knobs (global/cluster/per-state) + runtime updater ----
   window.USMAP_KNOBS = {
-    dotSize: 6,                         // px (also applied to --us-dot-size)
-    globalOffset: { xPct: -9, yPct: 0 }, // shift all dots by % of SVG width/height
+    dotSize: 6,                         
+    globalOffset: { xPct: -9, yPct: 0 }, 
     clusterOffset: {
       DEFAULT: { xPct: 0, yPct: 0 },
       AK: { xPct: 0, yPct: 0 },
       HI: { xPct: 0, yPct: 0 },
-      NE: { xPct: 0, yPct: 0 }          // CT, MA, ME, NH, RI, VT, NJ, DE, MD, NY, PA
+      NE: { xPct: 0, yPct: 0 }          
     },
     overrides: {
       'ID': { xPct: 28.7, yPct: 31.8 },
@@ -981,11 +1030,7 @@ window.SCOREBOARD_KNOBS = {
       'MA': { xPct: 90.7, yPct: 76.8 },
       'OR': { xPct: 18.7, yPct: 27.8 },
       'SC': { xPct: 98.7, yPct: 60.8 },
-      'WA': { xPct: 21.7, yPct: 17.8 },
-    
-      // Example tweaks you can enable:
-      // 'MI': { dxPct: 0.35, dyPct: -0.2 },  // relative nudge
-      // 'MA': { xPct: 52.05, yPct: 27.8 }    // absolute placement
+      'WA': { xPct: 21.7, yPct: 17.8 }
     }
   };
   window.updateMapKnobs = function(patch){
@@ -995,7 +1040,6 @@ window.SCOREBOARD_KNOBS = {
     refreshDotPositions();
   };
 
-  // recompute visible positions from stored base % + offsets/overrides
   function refreshDotPositions(){
     const K = window.USMAP_KNOBS||{};
     const dots = document.querySelectorAll('#usDots .dot');
@@ -1058,7 +1102,6 @@ window.SCOREBOARD_KNOBS = {
 
         const path = d3.geoPath(proj);
 
-        // draw strokes
         g.innerHTML = '';
         features.forEach(f=>{
           const abbr = STATE_ABBR[+f.id];
@@ -1069,7 +1112,6 @@ window.SCOREBOARD_KNOBS = {
           g.appendChild(p);
         });
 
-        // helper: pick a point inside feature (centroid or random-search-in-bounds)
         function insidePoint(feature){
           let ll = d3.geoCentroid(feature);
           if(d3.geoContains(feature, ll)) return ll;
@@ -1084,7 +1126,6 @@ window.SCOREBOARD_KNOBS = {
           return ll;
         }
 
-        // place one dot per state
         dotsLayer.innerHTML='';
         const K = window.USMAP_KNOBS||{};
         document.documentElement.style.setProperty('--us-dot-size', (K.dotSize||9)+'px');
@@ -1111,10 +1152,8 @@ window.SCOREBOARD_KNOBS = {
           dotsLayer.appendChild(dot);
         });
 
-        // apply offsets/overrides
         refreshDotPositions();
 
-        // expose one-at-a-time pulser
         const all = Array.from(dotsLayer.querySelectorAll('.dot'));
         let last=null, idx=0;
         window.USMAP.flash = function(){
@@ -1185,10 +1224,6 @@ window.SCOREBOARD_KNOBS = {
     ctaMobile ?.addEventListener('click', goStart);
     navStart  ?.addEventListener('click', (e)=>{ e.preventDefault(); goStart(); });
     mobileStart?.addEventListener('click', (e)=>{ e.preventDefault(); goStart(); });
-
-    [heroHostD, heroHostM].forEach(el=>{
-      el?.addEventListener("keydown", (e)=>{ if(e.key === "Enter"){ e.preventDefault(); goStart(); } });
-    });
 
     // Build US map
     if(window.d3 && window.topojson) buildUSMap();
