@@ -1,354 +1,397 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Pricing — Galactly</title>
+<meta name="description" content="Simple plans for real packaging-buyer signals. Start free, upgrade when the signals and closed-won math say it’s worth it." />
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Newsreader:wght@600&display=swap" rel="stylesheet">
-<link rel="icon" href="data:,">
+
 <style>
-  /* ===========================
-     KNOBS — tweak freely
-     =========================== */
-  :root{
-    /* containers */
-    --kn-container: clamp(880px, 84vw, 1080px);
-    --kn-container-wide: clamp(880px, 90vw, 1200px);
+/* =========================
+   KNOBS — tweak freely
+   ========================= */
+:root{
+  /* Brand palette */
+  --bg:#0a0e14; --text:#e9f1f7; --muted:#9fb3c7;
+  --gold-100:#f7e7b7; --gold-300:#f2dca0; --gold-500:#e6c36b; --gold-700:#b8913d;
 
-    /* section spacing */
-    --kn-gap-hero: 56px;          /* top padding under header */
-    --kn-gap-between-1-2: 80px;   /* space between cards & compare */
-    --kn-gap-between-2-3: 84px;   /* space between compare & FAQ */
+  /* Layout */
+  --container-max:clamp(1040px,86vw,1240px);
+  --gutter:clamp(16px,3.6vw,36px);
+  --section-pad-top:64px;
+  --section-pad-bottom:64px;
 
-    /* page colors (orbit vibe, neutral UI) */
-    --bg:#0a0e14; --ink:#e9f1f7; --muted:#9fb3c7;
-    --line: rgba(255,255,255,.10);
-    --line-subtle: rgba(255,255,255,.08);
+  /* Cards & table sizing */
+  --card-radius:16px;
+  --cards-gap:18px;
+  --card-pad:18px;
+  --price-size:34px;        /* price figure */
+  --plan-title-size:18px;   /* Free / Pro / VIP label */
+  --cta-h:40px;
 
-    /* gold for the billing toggle only */
-    --gold-1:#f2dca0; --gold-2:#b8913d; --gold-shadow:rgba(230,195,107,.22);
+  /* Toggle */
+  --toggle-h:40px;
+  --toggle-pad:6px;
+  --toggle-thumb-shadow:0 8px 20px rgba(230,195,107,.22);
 
-    /* toggle sizing */
-    --toggle-h: 36px;
-    --toggle-fs: 14px;
-    --toggle-pad: 4px;
-    --toggle-radius: 999px;
+  /* Table */
+  --row-h:46px;
+  --line:rgba(255,255,255,.10);
 
-    /* card sizing */
-    --card-radius: 14px;
-    --card-pad: 18px;
-    --card-gap: 16px;     /* gap between cards */
-    --plan-name-fs: 12px; /* small badges in the screenshot */
-    --price-fs: 30px;     /* smaller than before, compact */
-    --per-fs: 13px;
-    --desc-fs: 14px;
-    --feat-fs: 14px;
-    --feat-gap: 10px;
-    --btn-h: 36px;
-    --btn-fs: 14px;
+  /* FAQ */
+  --faq-gap:16px;
+  --faq-pad-y:18px;
+  --faq-title-size:22px;
+  --faq-q-size:18px;
+  --faq-plus-size:26px;
 
-    /* comparison table */
-    --tbl-fs: 14px;
-    --tbl-head-fs: 13px;
-    --tbl-row-h: 44px;
-    --tbl-line: rgba(255,255,255,.12);
+  /* Cloud wallpaper intensity */
+  --p-r1: rgba(230,195,107,.16);
+  --p-r2: rgba(72,115,178,.10);
+  --p-r3: rgba(255,255,255,.06);
+}
 
-    /* FAQ sizing */
-    --faq-title-fs: 18px;
-    --faq-plus-size: 22px;   /* big plus */
-    --faq-line: rgba(255,255,255,.12);
+/* ============ Base ============ */
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+h1,h2{font-family:"Newsreader", Georgia, serif; font-weight:600; margin:0}
+a{color:inherit;text-decoration:none}
 
-    /* wallpaper blobs (orbit feel, very subtle, NO blue screen) */
-    --p-r1: rgba(230,195,107,.16);
-    --p-r2: rgba(72,115,178,.10);
-    --p-r3: rgba(255,255,255,.06);
-  }
+/* Cloudy wallpaper (orbit vibe) */
+.page-wallpaper{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(120% 80% at 16% -10%, var(--p-r1), transparent 55%),
+    radial-gradient(130% 90% at 85% 8%,  var(--p-r2), transparent 62%),
+    radial-gradient(120% 90% at 50% 110%, var(--p-r3), transparent 64%),
+    linear-gradient(180deg,#0b121a 0%, #0a0e14 70%, #091019 88%, #070b12 100%);
+  filter:blur(.3px);
+  background-repeat:no-repeat;
+}
 
-  /* Base */
-  *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
-    font:16px/1.55 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
-  a{color:inherit;text-decoration:none}
+/* Header — with “Pricing” lit */
+.site-header{position:fixed; inset:0 0 auto 0; height:60px; z-index:50; display:grid; place-items:center;
+  background:rgba(12,18,28,.38); backdrop-filter:blur(12px) saturate(140%); border-bottom:1px solid rgba(255,255,255,.06)}
+.site-header .inner{width:100%; max-width:var(--container-max); padding:0 var(--gutter);
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px}
+.brand-badge{width:28px;height:28px;border-radius:8px;background:linear-gradient(180deg,var(--gold-500),var(--gold-700));
+  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px}
+nav#nav-primary{display:flex; gap:22px; justify-content:center}
+.nav-link{position:relative; padding:8px 2px; font-weight:600; color:#cfe0ee; opacity:.92}
+.nav-link::after{content:""; position:absolute; left:50%; bottom:4px; height:2px; width:0;
+  background:linear-gradient(90deg,var(--gold-300),var(--gold-700));
+  transform:translateX(-50%); transition:width .18s}
+.nav-link:hover{opacity:1}
+.nav-link:hover::after{width:60%}
+.nav-link.is-active{opacity:1; text-shadow:0 0 16px rgba(230,195,107,.35)}
+.nav-link.is-active::after{width:60%}
+.nav-actions{display:flex; align-items:center; gap:10px}
+.nav-cta{padding:8px 14px; border-radius:999px; color:#1b1405;
+  background:linear-gradient(180deg,var(--gold-500),var(--gold-700));
+  box-shadow:0 6px 18px rgba(230,195,107,.15)}
 
-  /* Cloudy/musty “orbit” wallpaper */
-  .wall{
-    position:fixed; inset:0; z-index:0; pointer-events:none;
-    background:
-      radial-gradient(60% 40% at 18% 8%, var(--p-r1), transparent 62%),
-      radial-gradient(50% 36% at 80% 12%, var(--p-r2), transparent 64%),
-      radial-gradient(70% 46% at 50% 110%, var(--p-r3), transparent 66%),
-      linear-gradient(180deg, #0b121a 0%, #0a0e14 70%, #091019 88%, #060a10 100%);
-    filter: blur(.3px);
-    background-repeat:no-repeat;
-  }
+/* Containers */
+main{position:relative; z-index:1; padding-top:calc(60px + 24px)}
+.container{max-width:var(--container-max); margin:0 auto; padding:0 var(--gutter)}
 
-  /* Header (matching index) */
-  .site-header{position:fixed; inset:0 0 auto 0; height:60px; z-index:50; display:grid; place-items:center;
-    background:rgba(12,18,28,.38); -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%);
-    border-bottom:1px solid rgba(255,255,255,.06)}
-  .site-header .inner{width:100%; max-width:var(--kn-container-wide); padding:0 24px;
-    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px}
-  .brand-badge{width:28px;height:28px;border-radius:8px;background:linear-gradient(180deg,var(--gold-1),var(--gold-2));
-    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset; display:grid; place-items:center; color:#1b1405; font-weight:800; font-size:14px}
-  nav.primary{display:flex; justify-content:center; gap:22px}
-  .nav-link{position:relative; padding:8px 2px; font-weight:600; color:#cfe0ee; opacity:.92}
-  .nav-link.is-active{opacity:1}
-  .actions{display:flex; align-items:center; gap:12px}
-  .btn-ghost{padding:8px 12px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.02); color:#cfe0ee; font-weight:600}
+/* ======= Hero ======= */
+.hero{padding:var(--section-pad-top) 0 16px; text-align:center}
+.hero p.lead{color:#c7d7e6; margin:8px 0 14px}
 
-  main{position:relative; z-index:1; padding-top:calc(60px + var(--kn-gap-hero));}
-  .container{max-width:var(--kn-container); margin:0 auto; padding:0 24px;}
+/* ======= Billing Toggle (gold glass, no overlap) ======= */
+.billing-toggle{display:flex; justify-content:center; margin:14px 0 6px}
+.toggle{
+  position:relative; height:var(--toggle-h); display:inline-grid; grid-auto-flow:column; gap:6px;
+  padding:var(--toggle-pad); border-radius:999px; border:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03)); backdrop-filter:blur(10px) saturate(140%);
+}
+.toggle button{
+  position:relative; z-index:1; cursor:pointer; padding:0 14px; border:0; background:transparent;
+  color:#cfe0ee; font-weight:800; white-space:nowrap
+}
+.toggle .thumb{
+  position:absolute; top:var(--toggle-pad); left:var(--toggle-pad);
+  width:calc(50% - var(--toggle-pad)); height:calc(100% - var(--toggle-pad)*2);
+  border-radius:999px; background:linear-gradient(180deg,var(--gold-300),var(--gold-700));
+  box-shadow:var(--toggle-thumb-shadow); transition:left .22s ease;
+}
+.toggle[data-yr="1"] .thumb{left:calc(50% + var(--toggle-pad))}
 
-  h1,h2{font-family:"Newsreader", Georgia, serif;}
-  h1{font-weight:600; font-size:clamp(32px,5.8vw,48px); margin:0 0 10px; text-align:center;}
-  p.lead{color:#c7d7e6; margin:0 0 22px; font-size:clamp(15px,2.4vw,18px); text-align:center;}
+/* ======= Cards (tight like screenshot) ======= */
+.cards{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--cards-gap); margin-top:18px}
+@media (max-width:900px){ .cards{grid-template-columns:1fr} }
+.card{
+  border:1px solid rgba(255,255,255,.10); border-radius:var(--card-radius); padding:var(--card-pad);
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); backdrop-filter:blur(10px) saturate(140%);
+}
+.card .plan{font-size:var(--plan-title-size); font-weight:800; letter-spacing:.2px}
+.card .price{font-size:var(--price-size); font-weight:800; margin:4px 0 2px}
+.card .per{color:#a8bbcd; font-weight:600}
+.card ul{list-style:none; margin:12px 0 0; padding:0; display:grid; gap:8px}
+.card li{display:flex; align-items:center; gap:10px}
+.card .dot{width:8px;height:8px; border-radius:999px; background:linear-gradient(180deg,var(--gold-300),var(--gold-700))}
+.card .cta{
+  margin-top:14px; display:block; width:100%; height:var(--cta-h); border-radius:10px;
+  border:1px solid rgba(255,255,255,.12); font-weight:800; background:rgba(255,255,255,.04); color:var(--text);
+}
 
-  /* Billing toggle — compact, gold thumb, true fit */
-  .billing-toggle{display:flex; justify-content:center; margin-top:12px;}
-  .toggle{
-    position:relative; display:inline-grid; grid-auto-flow:column; gap:2px;
-    border:1px solid var(--line); border-radius:var(--toggle-radius);
-    height:var(--toggle-h); padding:var(--toggle-pad);
-    background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-    -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%);
-  }
-  .toggle button{
-    position:relative; z-index:1; cursor:pointer; user-select:none;
-    padding:0 14px; border:0; background:transparent; color:#d5e5f3; font-weight:700;
-    line-height:calc(var(--toggle-h) - 2*var(--toggle-pad)); font-size:var(--toggle-fs);
-    white-space:nowrap;
-  }
-  .toggle .thumb{
-    position:absolute; top:var(--toggle-pad); left:0;
-    width:var(--thumb-w, 0px); height:calc(var(--toggle-h) - 2*var(--toggle-pad));
-    border-radius:var(--toggle-radius);
-    background:linear-gradient(180deg,var(--gold-1),var(--gold-2));
-    box-shadow:0 8px 22px var(--gold-shadow), inset 0 1px 0 rgba(255,255,255,.35);
-    transition:left .22s ease, width .22s ease;
-  }
+/* ======= Hover card (for term explanations) ======= */
+.hovercard{position:relative; display:inline-block}
+.hovercard .trigger{color:#b5d2ff; text-decoration:underline dotted 2px; cursor:help}
+.hovercard .card{
+  position:absolute; left:0; bottom:calc(100% + 10px); min-width:260px; max-width:360px;
+  background:rgba(12,18,28,.95); color:#d9e6f2; border:1px solid rgba(255,255,255,.10); border-radius:12px;
+  padding:12px 14px; box-shadow:0 20px 40px rgba(0,0,0,.35); opacity:0; transform:translateY(6px);
+  pointer-events:none; transition:opacity .16s ease, transform .16s ease; z-index:20;
+}
+.hovercard .card::after{
+  content:""; position:absolute; left:24px; top:100%; border:8px solid transparent; border-top-color:rgba(12,18,28,.95);
+}
+.hovercard:hover .card{opacity:1; transform:translateY(0)}
 
-  /* Cards — EXACTLY like your screenshot (compact, monochrome) */
-  .plans{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--card-gap); margin-top:18px;}
-  @media (max-width:960px){ .plans{grid-template-columns:1fr;}}
-  .card{
-    position:relative; border-radius:var(--card-radius); padding:var(--card-pad); overflow:hidden;
-    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
-    border:1px solid var(--line); box-shadow:0 10px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.04);
-  }
-  .card.popular{border-color:rgba(255,255,255,.18); box-shadow:0 16px 36px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);}
-  .badge{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; font-size:var(--plan-name-fs); font-weight:700;
-    color:#dbe7f3; border:1px solid var(--line); background:rgba(255,255,255,.02);}
-  .badge .tag{opacity:.75; font-weight:700}
-  .price{font-size:var(--price-fs); font-weight:800; margin:10px 0 4px;}
-  .per{font-size:var(--per-fs); color:#a8bbcd; font-weight:600;}
-  .desc{font-size:var(--desc-fs); color:#c7d7e6; margin:8px 0 12px;}
-  .features{list-style:none; padding:0; margin:0; display:grid; gap:var(--feat-gap);}
-  .features li{display:flex; align-items:center; gap:10px; font-size:var(--feat-fs); color:#dbe7f3;}
-  .dot{width:13px; height:13px; border-radius:999px; border:2px solid rgba(255,255,255,.35);}
-  .btn{display:grid; place-items:center; height:var(--btn-h); font-weight:700; font-size:var(--btn-fs);
-    border-radius:10px; border:1px solid var(--line); color:#e9f1f7;
-    background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03)); margin-top:12px;}
-  .card.popular .btn{border-color:#ffffff24; background:linear-gradient(180deg,#ffffff29,#ffffff14); color:#fff}
+/* ======= Compare (no pane) ======= */
+.compare{padding:var(--section-pad-top) 0 var(--section-pad-bottom)}
+.compare h2{margin-bottom:12px}
+.table-wrap{overflow:auto}
+table{width:100%; border-collapse:separate; border-spacing:0; min-width:820px; table-layout:fixed}
+colgroup col:nth-child(1){width:34%} /* feature column wider */
+colgroup col:nth-child(n+2){width:22%}
+th,td{height:var(--row-h); padding:10px 10px; text-align:left}
+thead th{font-weight:800; border-bottom:1px solid var(--line)}
+tbody td{border-bottom:1px solid var(--line)}
+.t-center{text-align:center}
+.check{font-weight:900}
 
-  /* Section 2 — Compare (centered, just lines) */
-  .compare{max-width:var(--kn-container); margin:var(--kn-gap-between-1-2) auto 0; padding:0 24px;}
-  table{width:100%; border-collapse:collapse; font-size:var(--tbl-fs);}
-  thead th{font-size:var(--tbl-head-fs); color:#cfe0ee; text-align:left; padding:10px 8px; border-bottom:1px solid var(--tbl-line);}
-  tbody td, tbody th{height:var(--tbl-row-h); border-bottom:1px solid var(--tbl-line); padding:0 8px;}
-  .t-center{text-align:center}
-  .check{font-weight:900}
+/* ======= FAQs (big + on left, lines only) ======= */
+.faqs{padding:calc(var(--section-pad-top) + 12px) 0 var(--section-pad-bottom)}
+.faqs h2{font-size:var(--faq-title-size); margin-bottom:14px}
+.faq{border-bottom:1px solid var(--line)}
+.faq summary{
+  list-style:none; cursor:pointer; display:flex; align-items:flex-start; gap:12px;
+  padding:var(--faq-pad-y) 0; font-size:var(--faq-q-size); font-weight:800;
+}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::before{
+  content:"+"; font-size:var(--faq-plus-size); line-height:1; color:#cfe0ee; margin-top:2px; width:20px; text-align:center;
+}
+.faq[open] summary::before{content:"–"}
+.faq .ans{color:#cfe0ee; padding:0 0 var(--faq-pad-y) 32px}
 
-  /* Section 3 — FAQs (centered, big left plus, lines only) */
-  .faqs{max-width:var(--kn-container); margin:var(--kn-gap-between-2-3) auto 60px; padding:0 24px;}
-  .faq{border-top:1px solid var(--faq-line);}
-  .faq:last-of-type{border-bottom:1px solid var(--faq-line);}
-  details{padding:14px 0;}
-  summary{
-    font-size:var(--faq-title-fs); font-weight:700; list-style:none; outline:none;
-    display:flex; align-items:center; gap:12px;
-  }
-  summary::-webkit-details-marker{display:none}
-  summary::before{
-    content:"+"; font-weight:900; font-size:var(--faq-plus-size); line-height:1; width:24px; text-align:center; color:#e9f1f7;
-  }
-  details[open] summary::before{content:"–";}
-  details p{color:#cfe0ee; margin:8px 2px 0 36px; max-width:70ch;}
-
-  /* Wallpaper element behind content */
+/* Utilities */
+.center{text-align:center}
+.mute{color:var(--muted)}
+.badge{display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; color:#1b1405;
+  background:linear-gradient(180deg,var(--gold-500),var(--gold-700))}
+.small{font-size:12px; color:#b6c9db}
 </style>
 </head>
 <body>
-  <div class="wall" aria-hidden="true"></div>
+  <div class="page-wallpaper" aria-hidden="true"></div>
 
-  <header class="site-header">
+  <header class="site-header" aria-label="Site">
     <div class="inner">
-      <a href="index.html" aria-label="Home"><span class="brand-badge">G</span></a>
-      <nav class="primary" aria-label="Primary">
+      <a href="index.html" class="brand" aria-label="Home"><span class="brand-badge">G</span></a>
+      <nav id="nav-primary" aria-label="Primary">
         <a class="nav-link" href="index.html#get-started">How it works</a>
         <a class="nav-link" href="sectors.html">Sectors</a>
-        <a class="nav-link is-active" href="pricing.html">Pricing</a>
+        <a class="nav-link is-active" href="pricing.html">Pricing</a><!-- lit + underline -->
       </nav>
-      <div class="actions">
-        <a class="nav-link" href="login.html">Login</a>
-        <a class="btn-ghost" href="https://www.youtube.com" target="_blank" rel="noopener">Get Demo</a>
+      <div class="nav-actions">
+        <a class="nav-cta" href="start.html">Start Free</a>
       </div>
     </div>
   </header>
 
   <main>
-    <!-- Section 1: Cards -->
-    <section class="container" style="text-align:center;">
-      <h1>Select the plan that best suits your needs.</h1>
-      <p class="lead">Start free; upgrade when signals and closed-won math say it’s worth it.</p>
+    <!-- Section 1: Plans -->
+    <section class="container hero">
+      <h1>Plans that scale with real buyer intent</h1>
+      <p class="lead mute">Start free. Upgrade when the live signals and closed-won math say it’s worth it.</p>
 
-      <!-- Gold toggle (compact, resizes thumb to button) -->
+      <!-- Gold glass toggle; “Yearly — save 21.3%” -->
       <div class="billing-toggle">
-        <div id="billingToggle" class="toggle" data-yr="0" aria-label="Billing period">
+        <div id="toggle" class="toggle" data-yr="0" role="tablist" aria-label="Billing period">
           <div class="thumb" aria-hidden="true"></div>
-          <button id="bill-m" data-val="0" aria-selected="true">Monthly</button>
-          <button id="bill-y" data-val="1" aria-selected="false">Yearly <span style="opacity:.75;font-weight:800;">– save 20%</span></button>
+          <button id="bill-m" role="tab" aria-selected="true">Monthly</button>
+          <button id="bill-y" role="tab" aria-selected="false">Yearly <span class="small">— save 21.3%</span></button>
         </div>
       </div>
 
-      <div class="plans" id="plans">
-        <!-- Basic -->
-        <article class="card" data-plan="basic">
-          <div class="badge">Basic</div>
-          <div class="price">$<span data-price-m="29" data-price-y="23">29</span><span class="per">/month</span></div>
-          <p class="desc">Perfect for small businesses and individuals.</p>
-          <ul class="features">
-            <li><span class="dot"></span> 3 Pages</li>
-            <li><span class="dot"></span> Basic SEO</li>
-            <li><span class="dot"></span> Email Support</li>
-            <li><span class="dot"></span> Responsive Design</li>
+      <div class="cards" id="plan-cards">
+        <!-- Free -->
+        <article class="card" data-plan="free">
+          <div class="plan">Free</div>
+          <div class="price"><span data-price-m="0" data-price-y="0">0</span><span class="per"> / <span data-per>month</span></span></div>
+          <ul>
+            <li><span class="dot"></span> Live Signals (throttled)</li>
+            <li><span class="dot"></span> 3
+              <span class="hovercard">
+                <span class="trigger">warm buyers/mo</span>
+                <span class="card"><strong>Warm leads</strong><br/>Known companies showing intent but not yet contacting you; verified, industry-fit, mid-heat.</span>
+              </span>
+            </li>
+            <li><span class="dot"></span> Fair-Play score & tags</li>
+            <li><span class="dot"></span> Heat Shield (basic)</li>
+            <li><span class="dot"></span> 1 seat</li>
           </ul>
-          <a class="btn" href="start.html">Choose Basic</a>
-        </article>
-
-        <!-- Standard (Most popular) -->
-        <article class="card popular" data-plan="standard">
-          <div class="badge">Standard <span class="tag">• Most popular</span></div>
-          <div class="price">$<span data-price-m="59" data-price-y="47">59</span><span class="per">/month</span></div>
-          <p class="desc">Best for growing businesses with more needs.</p>
-          <ul class="features">
-            <li><span class="dot"></span> 10 Pages</li>
-            <li><span class="dot"></span> Advanced SEO</li>
-            <li><span class="dot"></span> CMS Integration</li>
-            <li><span class="dot"></span> 24/7 Chat Support</li>
-          </ul>
-          <a class="btn" href="start.html">Choose Standard</a>
+          <a class="cta" href="start.html">Start free</a>
         </article>
 
         <!-- Pro -->
         <article class="card" data-plan="pro">
-          <div class="badge">Pro</div>
-          <div class="price">$<span data-price-m="99" data-price-y="79">99</span><span class="per">/month</span></div>
-          <p class="desc">Ideal for larger businesses that need scalability.</p>
-          <ul class="features">
-            <li><span class="dot"></span> Unlimited Pages</li>
-            <li><span class="dot"></span> E-commerce Integration</li>
-            <li><span class="dot"></span> Priority Support</li>
-            <li><span class="dot"></span> Custom API Integration</li>
+          <div class="plan">Pro</div>
+          <div class="price">$<span data-price-m="97" data-price-y="76.34">97</span><span class="per"> / <span data-per>month</span></span></div>
+          <ul>
+            <li><span class="dot"></span> Everything in Free</li>
+            <li><span class="dot"></span>
+              Access to
+              <span class="hovercard">
+                <span class="trigger">HotLeads</span>
+                <span class="card"><strong>Hot leads</strong><br/>High-fit, high-activity buyers (multiple strong signals) ready to talk.</span>
+              </span>
+            </li>
+            <li><span class="dot"></span> Your own
+              <span class="hovercard">
+                <span class="trigger">AI</span>
+                <span class="card"><strong>Operator AI</strong><br/>Prioritizes signals, drafts outreach, and suggests the next step from context.</span>
+              </span>
+            </li>
+            <li><span class="dot"></span> CRM / CMS integrations (HubSpot, SFDC)</li>
+            <li><span class="dot"></span> API access</li>
+            <li><span class="dot"></span> 3 seats • email support</li>
           </ul>
-          <a class="btn" href="start.html">Choose Pro</a>
+          <a class="cta" href="start.html">Get started</a>
         </article>
+
+        <!-- VIP -->
+        <article class="card" data-plan="vip">
+          <div class="plan">VIP</div>
+          <div class="price">$<span data-price-m="497" data-price-y="391.14">497</span><span class="per"> / <span data-per>month</span></span></div>
+          <ul>
+            <li><span class="dot"></span> Everything in Pro</li>
+            <li><span class="dot"></span>
+              Access to
+              <span class="hovercard">
+                <span class="trigger">Hot+ leads</span>
+                <span class="card"><strong>Hot+ leads</strong><br/>Highest intent tier; multi-source confirmation and recency spikes.</span>
+              </span>
+            </li>
+            <li><span class="dot"></span>
+              <span class="hovercard">
+                <span class="trigger">Sales AI</span>
+                <span class="card"><strong>Sales AI</strong><br/>We sell for you: orchestrated outreach across channels, appointment setting, and hand-offs.</span>
+              </span> + automation
+            </li>
+            <li><span class="dot"></span> Custom scoring & sectors • orchestration layer</li>
+            <li><span class="dot"></span> Dedicated success engineer • priority support</li>
+            <li><span class="dot"></span> 8 seats</li>
+          </ul>
+          <a class="cta" href="start.html">Talk to sales</a>
+        </article>
+      </div>
+
+      <p class="small center" style="margin-top:10px">Yearly shows effective monthly price and is billed annually.</p>
+    </section>
+
+    <!-- Section 2: Compare (no panel, lines only) -->
+    <section class="container compare">
+      <h2 class="center">Compare plans</h2>
+      <div class="table-wrap">
+        <table aria-describedby="compare-plans">
+          <colgroup><col/><col/><col/><col/></colgroup>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th class="t-center">Free</th>
+              <th class="t-center">Pro</th>
+              <th class="t-center">VIP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Live Signals feed</td><td class="t-center">✓</td><td class="t-center">✓</td><td class="t-center">✓</td></tr>
+            <tr><td>Verified companies / mo</td><td class="t-center">50</td><td class="t-center">Unlimited*</td><td class="t-center">Unlimited*</td></tr>
+            <tr><td>Warm buyers / mo</td><td class="t-center">3</td><td class="t-center">5–15</td><td class="t-center">Custom</td></tr>
+            <tr><td>HotLeads access</td><td class="t-center">—</td><td class="t-center">✓</td><td class="t-center">✓</td></tr>
+            <tr><td>Hot+ leads</td><td class="t-center">—</td><td class="t-center">—</td><td class="t-center">✓</td></tr>
+            <tr><td>AI “Next step” suggestions</td><td class="t-center">—</td><td class="t-center">✓</td><td class="t-center">✓</td></tr>
+            <tr><td>Operator / Orchestrator</td><td class="t-center">—</td><td class="t-center">Operator</td><td class="t-center">Operator + Orchestrator</td></tr>
+            <tr><td>CRM / CMS sync</td><td class="t-center">CSV</td><td class="t-center">HubSpot / SFDC</td><td class="t-center">Custom</td></tr>
+            <tr><td>API access</td><td class="t-center">—</td><td class="t-center">✓</td><td class="t-center">✓</td></tr>
+            <tr><td>Seats</td><td class="t-center">1</td><td class="t-center">3</td><td class="t-center">8</td></tr>
+            <tr><td>Support</td><td class="t-center">Community</td><td class="t-center">Email</td><td class="t-center">Priority + SLA</td></tr>
+          </tbody>
+        </table>
+        <p class="small" style="margin-top:8px">*Reasonable-use policy to keep the ecosystem healthy.</p>
       </div>
     </section>
 
-    <!-- Section 2: Compare (centered, no pane) -->
-    <section class="compare" aria-label="Compare plans">
-      <table>
-        <thead>
-          <tr>
-            <th>Feature</th>
-            <th class="t-center">Basic</th>
-            <th class="t-center">Standard</th>
-            <th class="t-center">Pro</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>Pages</td><td class="t-center">3</td><td class="t-center">10</td><td class="t-center">Unlimited</td></tr>
-          <tr><td>SEO</td><td class="t-center">Basic</td><td class="t-center">Advanced</td><td class="t-center">Advanced</td></tr>
-          <tr><td>CMS integration</td><td class="t-center">—</td><td class="t-center"><span class="check">✓</span></td><td class="t-center"><span class="check">✓</span></td></tr>
-          <tr><td>24/7 chat support</td><td class="t-center">—</td><td class="t-center"><span class="check">✓</span></td><td class="t-center"><span class="check">✓</span></td></tr>
-          <tr><td>E-commerce</td><td class="t-center">—</td><td class="t-center">—</td><td class="t-center"><span class="check">✓</span></td></tr>
-          <tr><td>API access</td><td class="t-center">—</td><td class="t-center">—</td><td class="t-center"><span class="check">✓</span></td></tr>
-        </tbody>
-      </table>
-    </section>
+    <!-- Section 3: FAQs -->
+    <section class="container faqs">
+      <h2 class="center">FAQs</h2>
 
-    <!-- Section 3: FAQs (centered, big left plus) -->
-    <section class="faqs" aria-label="FAQs">
-      <div class="faq"><details>
-        <summary>Can I stay on Basic as long as I want?</summary>
-        <p>Yes. Use Basic to validate fit; upgrade when volume or automation becomes worthwhile.</p>
-      </details></div>
+      <details class="faq">
+        <summary>Can I stay on Free as long as I want?</summary>
+        <div class="ans">Yes. Free is to prove real demand. Upgrade when signals and ROI justify it.</div>
+      </details>
 
-      <div class="faq"><details>
+      <details class="faq">
         <summary>What happens on Yearly?</summary>
-        <p>Billing switches to one annual charge (~20% off). Your discount holds for the term.</p>
-      </details></div>
+        <div class="ans">You’re billed once for 12 months at a 21.3% discount. Your effective monthly price adjusts on the toggle above.</div>
+      </details>
 
-      <div class="faq"><details>
-        <summary>Do you migrate my existing site or data?</summary>
-        <p>Standard includes guided setup. Pro includes hands-on migration and API assistance.</p>
-      </details></div>
+      <details class="faq">
+        <summary>Do you offer onboarding help?</summary>
+        <div class="ans">Pro includes quick-start guidance. VIP includes a dedicated success engineer and custom scoring.</div>
+      </details>
 
-      <div class="faq"><details>
-        <summary>Security & compliance?</summary>
-        <p>Least-privilege access, audit trails, and vendor reviews; Pro supports custom DPA/SLA.</p>
-      </details></div>
+      <details class="faq">
+        <summary>Security &amp; compliance?</summary>
+        <div class="ans">Least-privilege access, audit trails, and vendor reviews. VIP supports custom DPA/SLA.</div>
+      </details>
     </section>
   </main>
 
 <script>
-  // ====== Billing toggle: resize thumb to selected button (no overlap) ======
-  const t = document.getElementById('billingToggle');
-  const bm = document.getElementById('bill-m');
-  const by = document.getElementById('bill-y');
-  const priceEls = Array.from(document.querySelectorAll('[data-price-m]'));
-  const perEls = Array.from(document.querySelectorAll('.per'));
-  const thumb = t.querySelector('.thumb');
+/* ========= Config (knobs) ========= */
+const CONFIG = {
+  discount: 0.213,             // 21.3% yearly savings
+  prices: { free: 0, pro: 97, vip: 497 }, // monthly base
+  decimals: 2                   // decimals for yearly per-month
+};
 
-  function placeThumb(btn){
-    const r = btn.getBoundingClientRect();
-    const rT = t.getBoundingClientRect();
-    const x = btn.offsetLeft;              // inside toggle
-    const w = btn.clientWidth;
-    thumb.style.left = x + 'px';
-    thumb.style.width = w + 'px';
-  }
+/* ========= Toggle logic ========= */
+const toggle = document.getElementById('toggle');
+const btnM = document.getElementById('bill-m');
+const btnY = document.getElementById('bill-y');
+const priceEls = Array.from(document.querySelectorAll('[data-price-m]'));
+const perEls   = Array.from(document.querySelectorAll('[data-per]'));
 
-  function setYearly(on){
-    t.dataset.yr = on ? '1' : '0';
-    bm.setAttribute('aria-selected', on ? 'false' : 'true');
-    by.setAttribute('aria-selected', on ? 'true' : 'false');
-    const target = on ? by : bm;
-    placeThumb(target);
-    priceEls.forEach(el=>{
-      el.textContent = on ? el.getAttribute('data-price-y') : el.getAttribute('data-price-m');
-    });
-    // update the /month text
-    document.querySelectorAll('.per span[data-per]').forEach(()=>{});
-    document.querySelectorAll('.per').forEach(el=>{
-      el.lastChild && (el.lastChild.nodeType === 3) && el.removeChild(el.lastChild);
-    });
-    document.querySelectorAll('.per').forEach(el=> el.innerHTML = '/'+(on?'year':'month'));
-  }
+function toFixed(n, d){ return (Math.round(n * Math.pow(10,d)) / Math.pow(10,d)).toFixed(d); }
 
-  // initialize
-  window.addEventListener('load', ()=>{
-    placeThumb(bm);
-    setYearly(false);
+function setYearly(on){
+  toggle.dataset.yr = on ? '1' : '0';
+  btnM.setAttribute('aria-selected', on?'false':'true');
+  btnY.setAttribute('aria-selected', on?'true':'false');
+
+  priceEls.forEach(el=>{
+    const m = parseFloat(el.getAttribute('data-price-m'));
+    const y = parseFloat(el.getAttribute('data-price-y') || '0');
+    // compute yearly per-month if not provided:
+    const yComputed = y || (m * (1 - CONFIG.discount));
+    el.textContent = on ? toFixed(yComputed, CONFIG.decimals) : (m === 0 ? '0' : String(m));
   });
-  window.addEventListener('resize', ()=>{
-    const on = t.dataset.yr === '1';
-    placeThumb(on ? by : bm);
-  });
-  bm.addEventListener('click', ()=> setYearly(false));
-  by.addEventListener('click', ()=> setYearly(true));
+  perEls.forEach(el=> el.textContent = on ? 'year' : 'month');
+}
+
+// Bind
+btnM.addEventListener('click', ()=>setYearly(false));
+btnY.addEventListener('click', ()=>setYearly(true));
+setYearly(false);
 </script>
 </body>
 </html>
