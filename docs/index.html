@@ -98,6 +98,7 @@
     --us-stroke: rgba(255,255,255,.12);
     --us-stroke-highlight: rgba(255,255,255,.18);
     --us-edge-fade: 8%;
+    /* independent size control for map dots (reverted smaller) */
     --us-dot-size: 9px;
   }
 
@@ -265,16 +266,12 @@
     border:1px solid var(--tag-stroke)
   }
 
-  /* ==================== STACK (CARD) ==================== */
-  /* LEGO toggles — set data-off="distance ai tags stats" on .miniCard to hide */
-  .miniCard[data-off~="buyer"]    [data-field="buyer"]{ display:none!important; }
-  .miniCard[data-off~="distance"] [data-field="distance"]{ display:none!important; }
-  .miniCard[data-off~="need"]     [data-field="need"]{ display:none!important; }
-  .miniCard[data-off~="ai"]       [data-field="ai"]{ display:none!important; }
-  .miniCard[data-off~="next"]     [data-field="next"]{ display:none!important; }
-  .miniCard[data-off~="tags"]     [data-field="tags"]{ display:none!important; }
-  .miniCard[data-off~="stats"]    [data-field="stats"]{ display:none!important; }
-
+  /* STACK */
+  .miniCard[data-off~="distance"] [data-field="distance"],
+  .miniCard[data-off~="need"]     [data-field="need"],
+  .miniCard[data-off~="ai"]       [data-field="ai"],
+  .miniCard[data-off~="next"]     [data-field="next"],
+  .miniCard[data-off~="tags"]     [data-field="tags"]{ display:none !important; }
   .cardStack{ position:absolute; z-index:3; transform-origin:center center; }
   .cardStack{ left: calc(var(--card-left) * 100%);
     top:  calc(var(--card-top)  * 100%);
@@ -520,22 +517,22 @@
         <div class="cardStack" id="cardStack" aria-label="Lead deck">
           <div class="rail" id="stackRail" tabindex="0" aria-label="Lead card">
             <div class="miniCard" id="cardA" role="group" aria-label="Lead">
-              <div class="row" data-field="meta">
+              <div class="row">
                 <span class="stage" data-stage>A</span>
                 <span class="prob"><span class="dot" data-prob-dot></span><span class="lbl"></span><span class="pct" data-prob>72%</span></span>
               </div>
-              <div class="row" data-field="buyer"><span class="k">Buyer</span><span class="v name" data-name>—</span></div>
-              <div class="row" data-field="distance"><span class="k">Distance</span><span class="v" data-distance>—</span></div>
-              <div class="row" data-field="need"><span class="k">Need</span><span class="v" data-need>—</span></div>
-              <div class="row ai" data-field="ai">
+              <div class="row"><span class="k">Buyer</span><span class="v name" data-name>—</span></div>
+              <div class="row"><span class="k">Distance</span><span class="v" data-distance>—</span></div>
+              <div class="row"><span class="k">Need</span><span class="v" data-need>—</span></div>
+              <div class="row ai">
                 <span class="k"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 1 7 7v1h1a2 2 0 1 1 0 4h-1v1a7 7 0 0 1-7 7 1 1 0 1 1 0-2 5 5 0 0 0 5-5v-1H7v1a5 5 0 0 0 5 5 1 1 0 1 1 0 2 7 7 0 0 1-7-7v-1H4a2 2 0 1 1 0-4h1V9a7 7 0 0 1 7-7Z"/></svg>
                   <span data-ai-label>Sales AI</span></span>
                 <span class="v" data-ai>74%</span>
               </div>
-              <div class="row" data-field="next"><span class="k">Next</span><span class="v" data-next>—</span></div>
-              <div class="chips" data-tags data-field="tags"></div>
+              <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
+              <div class="chips" data-tags></div>
 
-              <div class="stats" data-field="stats" aria-hidden="true">
+              <div class="stats" aria-hidden="true">
                 <div class="pill"><span class="n" id="m1">1770</span><span>Contacted</span></div>
                 <div class="pill"><span class="n" id="m2">338</span><span>Opened</span></div>
                 <div class="pill"><span class="n" id="m3">44</span><span>Replied</span></div>
@@ -757,7 +754,7 @@ window.SCOREBOARD_KNOBS = {
   }
   function drawBackground(){ drawBlueprint(); }
   
-  const stack = $('#cardStack'), rail = $('#stackRail'), card = $('#cardA']);
+  const stack = $('#cardStack'), rail = $('#stackRail'), card = $('#cardA');
   
   function hslProb(p){ const H=KN.probHue.min, L=KN.probHue.max; return `hsl(${H+(L-H)*(p/100)},78%,54%)`; }
   
@@ -780,7 +777,7 @@ window.SCOREBOARD_KNOBS = {
       return Number.isFinite(raw) ? raw : fallback;
     };
   
-    // Read from KN first; fall back to CSS variables
+    // Read from KN first; fall back to CSS variables (parenthesized to avoid ??/|| mixing)
     const cssLeft  = readVar('--card-left', 0.5);
     const cssTop   = readVar('--card-top',  0.5);
     const cssAngle = parseFloat(cs.getPropertyValue('--card-angle')) || 0;
@@ -805,6 +802,7 @@ window.SCOREBOARD_KNOBS = {
     root.setProperty('--rail-h',     railH + 'px');
     root.setProperty('--card-pad',   pad);
   
+    // Keep the rail’s intrinsic box in sync for hit-testing
     if (rail){
       rail.style.width  = width + 'px';
       rail.style.height = railH + 'px';
@@ -848,12 +846,10 @@ window.SCOREBOARD_KNOBS = {
     el.querySelector('[data-ai]').textContent = data.ai+'%';
     el.querySelector('[data-next]').textContent = data.next||'—';
 
-    const chips=el.querySelector('[data-tags]'); if(chips){
-      chips.innerHTML='';
-      const c1=document.createElement('span'); c1.className='chip'; c1.textContent=`${meta.emoji||'🏷️'} ${meta.label}`;
-      const c2=document.createElement('span'); c2.className='chip'; c2.textContent=data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
-      chips.appendChild(c1); chips.appendChild(c2);
-    }
+    const chips=el.querySelector('[data-tags]'); chips.innerHTML='';
+    const c1=document.createElement('span'); c1.className='chip'; c1.textContent=`${meta.emoji||'🏷️'} ${meta.label}`;
+    const c2=document.createElement('span'); c2.className='chip'; c2.textContent=data.p>=70?'High intent':(data.p>=58?'Rising intent':'Warming');
+    chips.appendChild(c1); chips.appendChild(c2);
   }
 
   const AK = window.ANIM_KNOBS||{};
@@ -927,13 +923,13 @@ window.SCOREBOARD_KNOBS = {
 
   // ---- US MAP knobs (global/cluster/per-state) + runtime updater ----
   window.USMAP_KNOBS = {
-    dotSize: 6,
-    globalOffset: { xPct: -9, yPct: 0 },
+    dotSize: 6,                         // px (also applied to --us-dot-size)
+    globalOffset: { xPct: -9, yPct: 0 }, // shift all dots by % of SVG width/height
     clusterOffset: {
       DEFAULT: { xPct: 0, yPct: 0 },
       AK: { xPct: 0, yPct: 0 },
       HI: { xPct: 0, yPct: 0 },
-      NE: { xPct: 0, yPct: 0 }
+      NE: { xPct: 0, yPct: 0 }          // CT, MA, ME, NH, RI, VT, NJ, DE, MD, NY, PA
     },
     overrides: {
       'ID': { xPct: 28.7, yPct: 31.8 },
@@ -985,7 +981,11 @@ window.SCOREBOARD_KNOBS = {
       'MA': { xPct: 90.7, yPct: 76.8 },
       'OR': { xPct: 18.7, yPct: 27.8 },
       'SC': { xPct: 98.7, yPct: 60.8 },
-      'WA': { xPct: 21.7, yPct: 17.8 }
+      'WA': { xPct: 21.7, yPct: 17.8 },
+    
+      // Example tweaks you can enable:
+      // 'MI': { dxPct: 0.35, dyPct: -0.2 },  // relative nudge
+      // 'MA': { xPct: 52.05, yPct: 27.8 }    // absolute placement
     }
   };
   window.updateMapKnobs = function(patch){
@@ -1126,7 +1126,7 @@ window.SCOREBOARD_KNOBS = {
           last = d;
         };
       })
-      .catch(()=>{ /* silent fail */});
+      .catch(()=>{ /* silent fail; panel still looks fine without outlines */});
   }
 
   function init(){
