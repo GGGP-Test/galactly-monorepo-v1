@@ -37,6 +37,22 @@
   -->
   <style>
     .g-footer{
+      --ft-col-count: 3;                /* how many link columns */
+      --ft-brand-gap: clamp(8px,3vw,28px); /* space between brand and columns */
+    }
+    
+    .g-footer--stack .ft-brand{
+      grid-column: 1 / -1;              /* brand spans full width */
+      margin-bottom: var(--ft-brand-gap);
+    }
+    
+    .g-footer--stack .inner{
+      /* brand takes row 1; columns become a new full-width grid in row 2 */
+      grid-template-columns: repeat(var(--ft-col-count), minmax(var(--ft-col-min,200px), 1fr));
+    }
+    
+    .g-footer--stack .ft-col{ grid-row: 2; } /* force link columns to the row under the brand */
+    .g-footer--stack .ft-bar{ grid-column: 1 / -1; } /* bottom bar stays full width */
       /* -------- defaults (edit or override from page) -------- */
       --ft-text:  var(--text, #e9f1f7);
       --ft-muted: var(--muted, #9fb3c7);
