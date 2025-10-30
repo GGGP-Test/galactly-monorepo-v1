@@ -49,6 +49,7 @@ jobs:
           [ -d "$PUBLIC_SRC/img" ]      && rsync -a --delete "$PUBLIC_SRC/img/"      "$PUBLIC_OUT/img/"      || true
           [ -d "$PUBLIC_SRC/css" ]      && rsync -a --delete "$PUBLIC_SRC/css/"      "$PUBLIC_OUT/css/"      || true
           [ -d "$PUBLIC_SRC/js" ]       && rsync -a --delete "$PUBLIC_SRC/js/"       "$PUBLIC_OUT/js/"       || true
+          [ -d "$PUBLIC_SRC/fragments" ] && rsync -a --delete "$PUBLIC_SRC/fragments/" "$PUBLIC_OUT/fragments/" || true
 
           # NEW: Fragments (header/footer/layout partials, e.g., fragments/layout.js)
           if [ -d "$PUBLIC_SRC/fragments" ]; then
