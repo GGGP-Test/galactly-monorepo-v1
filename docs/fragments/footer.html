@@ -1,0 +1,171 @@
+<!-- fragments/footer.html -->
+<footer class="g-footer" role="contentinfo" aria-label="Site footer">
+  <style>
+    /* ===== Footer – scoped ===== */
+    .g-footer{ 
+      position: relative;
+      padding: clamp(44px, 6vw, 72px) 0 clamp(32px, 5vw, 56px);
+      /* No hard section seam: transparent base + faint top fade */
+      background: transparent;
+      isolation:isolate;
+    }
+    .g-footer::before{
+      content:"";
+      position:absolute; inset:0 0 auto 0; height:120px;
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+      pointer-events:none; 
+      /* This creates the “continuous background” feel */
+    }
+    .g-footer .inner{
+      width:100%; 
+      max-width: var(--container-max, 1200px);
+      margin:0 auto; 
+      padding: 0 var(--gutter, 20px);
+    }
+
+    /* Top row: logo + columns */
+    .g-footer .grid{
+      display:grid;
+      grid-template-columns: 1.1fr repeat(3, minmax(0, 1fr));
+      gap: clamp(18px, 3.6vw, 28px);
+      align-items:start;
+    }
+    @media (max-width: 900px){
+      .g-footer .grid{ grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px){
+      .g-footer .grid{ grid-template-columns: 1fr; }
+    }
+
+    .g-footer .brand{
+      display:flex; gap:12px; align-items:center;
+      color: var(--text, #e9f1f7);
+      text-decoration:none; font-weight:800;
+      letter-spacing:.2px;
+    }
+    .g-footer .brand-badge{
+      width:30px; height:30px; border-radius:8px;
+      display:grid; place-items:center;
+      background: linear-gradient(180deg, var(--gold-500, #e6c36b), var(--gold-700, #8f6f2e));
+      color:#1b1405; font-weight:800;
+      box-shadow:0 0 0 1px rgba(255,255,255,.08) inset;
+    }
+    .g-footer .brand-name{ font-size:18px; }
+
+    .g-footer .social{
+      display:flex; gap:10px; margin-top:10px;
+    }
+    .g-footer .social a{
+      display:grid; place-items:center;
+      width:34px; height:34px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      color:#cfe0ee;
+    }
+    .g-footer .social a:hover{ border-color: rgba(255,255,255,.18); }
+
+    .g-footer h4{
+      margin:0 0 10px; 
+      font: 800 14px/1.2 Inter, system-ui;
+      color: var(--text, #e9f1f7);
+      letter-spacing:.2px;
+    }
+    .g-footer ul{ list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+    .g-footer a{ color:#cfe0ee; text-decoration:none; }
+    .g-footer a:hover{ text-decoration:underline; text-decoration-thickness:1px; }
+
+    /* Bottom bar */
+    .g-footer .bar{
+      margin-top: clamp(22px, 4.4vw, 36px);
+      padding-top: 14px;
+      border-top:1px solid rgba(255,255,255,.06);
+      display:grid; gap:10px;
+    }
+    .g-footer .copy{ font-size:12px; color: var(--muted, #9fb3c7); }
+    .g-footer .disclosure{
+      font-size:11px; 
+      color: var(--muted, #9fb3c7);
+      opacity:.9;
+      max-width: 72ch;
+    }
+  </style>
+
+  <div class="inner">
+    <div class="grid">
+      <!-- Brand + socials -->
+      <div>
+        <a class="brand" href="index.html" aria-label="Galactly home">
+          <span class="brand-badge">G</span>
+          <span class="brand-name">Galactly</span>
+        </a>
+        <div class="social" aria-label="Social links">
+          <a href="#" aria-label="LinkedIn" title="LinkedIn">
+            <!-- LinkedIn -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M4.98 3.5a2.5 2.5 0 1 0 0 5.001 2.5 2.5 0 0 0 0-5ZM3 9h3.96v12H3V9Zm7.2 0H14v1.64h.06c.67-1.2 2.3-2 3.91-2 4.19 0 4.97 2.76 4.97 6.35V21H19V15.9c0-1.21-.02-2.77-1.69-2.77-1.69 0-1.95 1.32-1.95 2.68V21h-3.96V9Z"/>
+            </svg>
+          </a>
+          <a href="#" aria-label="YouTube" title="YouTube">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M23.5 6.2a4 4 0 0 0-2.8-2.8C18.8 3 12 3 12 3s-6.8 0-8.7.4A4 4 0 0 0 .5 6.2 41 41 0 0 0 0 12a41 41 0 0 0 .5 5.8 4 4 0 0 0 2.8 2.8C5.2 21 12 21 12 21s6.8 0 8.7-.4a4 4 0 0 0 2.8-2.8A41 41 0 0 0 24 12a41 41 0 0 0-.5-5.8ZM9.6 15.4V8.6L15.8 12l-6.2 3.4Z"/>
+            </svg>
+          </a>
+          <a href="#" aria-label="Instagram" title="Instagram">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 8.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4Zm6.4-8.4a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4ZM24 7.1v9.8A7.1 7.1 0 0 1 16.9 24H7.1A7.1 7.1 0 0 1 0 16.9V7.1A7.1 7.1 0 0 1 7.1 0h9.8A7.1 7.1 0 0 1 24 7.1Zm-2 0A5.1 5.1 0 0 0 16.9 2H7.1A5.1 5.1 0 0 0 2 7.1v9.8A5.1 5.1 0 0 0 7.1 22h9.8A5.1 5.1 0 0 0 22 16.9V7.1Z"/>
+            </svg>
+          </a>
+          <a href="#" aria-label="X (Twitter)" title="X">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M18.9 2H22l-7.1 8.1L23.2 22h-6.8l-5.3-6.7L4.9 22H2l7.6-8.7L.8 2h6.9l4.8 6.1L18.9 2Zm-1.2 18h1.9L7.4 4H5.5l12.2 16Z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Columns -->
+      <nav aria-label="Quick links">
+        <h4>Quick links</h4>
+        <ul>
+          <li><a href="index.html#get-started">How it works</a></li>
+          <li><a href="pricing.html">Pricing</a></li>
+          <li><a href="sectors.html">Sectors</a></li>
+          <li><a href="start.html">Start Free</a></li>
+          <li><a href="wall-of-love.html">Wall of Love</a></li>
+          <li><a href="case-studies.html">Case Studies</a></li>
+        </ul>
+      </nav>
+
+      <nav aria-label="Support">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="help.html">Help Desk</a></li>
+          <li><a href="roadmap.html">Roadmap</a></li>
+          <li><a href="community.html">Slack Community</a></li>
+          <li><a href="experts.html">Experts</a></li>
+          <li><a href="affiliate.html">Affiliate</a></li>
+        </ul>
+      </nav>
+
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="terms.html">Terms</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a href="privacy-center.html">Privacy Center</a></li>
+          <li><a href="do-not-sell.html">Do Not Sell My Info</a></li>
+          <li><a href="cookies.html">Cookie Declaration</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="bar">
+      <div class="copy">© 2025 Galactly — Sales Engagement & Lead Intelligence</div>
+      <div class="disclosure">
+        Disclosure: results and testimonials reflect individual experiences and are not a guarantee of future performance. 
+        We aggregate anonymized intent and outcome data to improve rankings and product quality. See Privacy Center for controls.
+      </div>
+    </div>
+  </div>
+</footer>
