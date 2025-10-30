@@ -1,34 +1,40 @@
-/* fragments/layout.js */
+/* docs/fragments/layout.js */
 (() => {
-  // Figure out where the fragments live.
-  // 1) If you pass data-root on the script tag, we use that.
-  // 2) Else we use the folder this JS was loaded from.
-  const me = document.currentScript || document.querySelector('script[src*="layout.js"]');
+  // Find the script element reliably (Safari/iOS safe)
+  const scripts = document.getElementsByTagName('script');
+  const me = document.currentScript || scripts[scripts.length - 1];
+
+  // Base URL for fragments (from data-root or the script's folder)
   const baseURL = new URL(me?.getAttribute('data-root') || './', me?.src || location.href);
 
   async function inject(targetId, file) {
-    const host = document.getElementById(targetId);
-    if (!host) return;
+    const mount = document.getElementById(targetId);
+    if (!mount) return;
     const url = new URL(file, baseURL).toString();
     try {
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      host.innerHTML = await res.text();
+      mount.innerHTML = await res.text();
 
-      // Small niceties: current year + mark active link
-      const y = host.querySelector('[data-year]');
+      // niceties
+      const y = mount.querySelector('[data-year]');
       if (y) y.textContent = new Date().getFullYear();
-      const here = location.pathname.replace(/\/+$/, '');
-      host.querySelectorAll('a[data-nav]').forEach(a => {
-        const p = new URL(a.getAttribute('href'), location.href).pathname.replace(/\/+$/, '');
-        if (p && p === here) a.classList.add('is-active');
+
+      const here = new URL(location.href);
+      here.hash = ''; here.search = '';
+      mount.querySelectorAll('a[data-nav]').forEach(a => {
+        const p = new URL(a.getAttribute('href'), location.href);
+        p.hash = ''; p.search = '';
+        if (p.pathname.replace(/\/+$/, '') === here.pathname.replace(/\/+$/, '')) {
+          a.classList.add('is-active');
+        }
       });
     } catch (err) {
-      console.error('[fragments]', 'failed', url, err);
-      host.innerHTML = `<!-- failed to load ${url} -->`;
+      console.error('[fragments] failed:', url, err);
+      mount.innerHTML = `<!-- failed to load ${url} -->`;
     }
   }
 
-  // Add more fragments later if you want (header, etc.)
+  // Inject footer (add more later if you want)
   inject('site-footer', 'footer.html');
 })();
