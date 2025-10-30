@@ -1,24 +1,25 @@
 <!-- docs/fragments/footer.html -->
 <footer class="g-footer g-footer--stack" role="contentinfo" aria-label="Site footer">
-  <!-- KNOBS: override any of these in page CSS if you want -->
   <style>
     .g-footer{
+      /* ===== DESKTOP KNOBS (base) ===== */
       /* layout */
-      --ft-pad-y: clamp(42px, 7vw, 80px);      /* vertical padding */
-      --ft-col-count: 3;                       /* number of columns */
-      --ft-col-min: 180px;                     /* min width before wrap */
-      --ft-gap-x: clamp(5px,2.0vw,10px);      /* column gap (x) */
-      --ft-gap-y: 16px;                        /* row gap (y) */
-      --ft-brand-gap: clamp(12px,3vw,32px);    /* space brand → columns */
-      --ft-border-a: .20;                        /* bottom divider alpha (0 hides) */
-      --ft-top-fade-a: 0;                      /* subtle top fade alpha (0 hides) */
+      --ft-pad-y: clamp(42px, 7vw, 80px);
+      --ft-col-count: 3;
+      --ft-col-min: 220px;
+      --ft-gap-x: clamp(18px, 3.6vw, 28px);
+      --ft-gap-y: 16px;
+      --ft-brand-gap: clamp(12px, 3vw, 32px);
+      --ft-border-a: 0;            /* 0 hides the divider */
+      --ft-top-fade-a: 0;          /* 0 disables top fade */
 
-      /* typography */
+      /* type */
       --ft-head-fs: 14px;
       --ft-link-fs: 15px;
       --ft-link-weight: 600;
       --ft-link-color: #cfe0ee;
-      --ft-link-hover-underline: 1;            /* 0/1 */
+      --ft-link-pad-y: 2px;        /* bigger = easier taps */
+      --ft-link-hover-underline: 1;
 
       /* wordmark */
       --ft-brand-name: "Galactly";
@@ -26,91 +27,111 @@
       --ft-brand-weight: 800;
       --ft-brand-ls: -0.01em;
       --ft-brand-line: .92;
-      --ft-brand-offset-y: 0px;                /* nudge up/down */
+      --ft-brand-offset-y: 0px;
       --ft-brand-gradient:
         linear-gradient(180deg,#eef5ff 0%,#d2e2ff 45%,#a9c1ff 70%,#eef5ff 100%);
-      --ft-glow-1: rgba(166,197,255,.55);      /* inner glow */
-      --ft-glow-2: rgba(94,157,255,.28);       /* outer glow */
+      --ft-glow-1: rgba(166,197,255,.55);
+      --ft-glow-2: rgba(94,157,255,.28);
       --ft-glow-blur: 14px;
       --ft-glow-strength: 2.1;
 
       /* palette passthroughs */
       --ft-text:  var(--text, #e9f1f7);
-      --ft-muted: var(--muted,#9fb3c7);
+      --ft-muted: var(--muted, #9fb3c7);
+
+      /* ===== TABLET OVERRIDES (≤1024px) — *optional* ===== */
+      --ftt-col-count: 3;                 /* set to 2 if you want */
+      --ftt-col-min: 210px;
+      --ftt-gap-x: 22px;
+      --ftt-gap-y: 14px;
+      --ftt-brand-gap: 18px;
+      --ftt-brand-fs: clamp(60px, 12vw, 180px);
+      --ftt-brand-offset-y: 0px;
+      --ftt-head-fs: 14px;
+      --ftt-link-fs: 15px;
+      --ftt-link-pad-y: 4px;
+      --ftt-glow-blur: 14px;
+      --ftt-glow-strength: 2.0;
+
+      /* ===== MOBILE OVERRIDES (≤640px) ===== */
+      --ftm-col-count: 2;                 /* 1 = single stack */
+      --ftm-col-min: 180px;
+      --ftm-gap-x: 18px;
+      --ftm-gap-y: 12px;
+      --ftm-brand-gap: 12px;
+      --ftm-brand-fs: clamp(44px, 18vw, 108px);
+      --ftm-brand-offset-y: 0px;
+      --ftm-head-fs: 13px;
+      --ftm-link-fs: 14px;
+      --ftm-link-pad-y: 6px;
+      --ftm-glow-blur: 12px;
+      --ftm-glow-strength: 1.9;
+      --ftm-bottom-extra: 6px;            /* extra bottom padding */
+      --ftm-center: 1;                    /* 1 = center brand + socials */
+
+      /* ===== XS OVERRIDES (≤380px) ===== */
+      --ftxs-col-count: 1;
+      --ftxs-col-min: 160px;
+      --ftxs-brand-fs: clamp(36px, 22vw, 72px);
+      --ftxs-link-fs: 14px;
+      --ftxs-link-pad-y: 7px;
 
       position:relative;
-      background:transparent;                  /* no pane */
+      background:transparent;
       color:var(--ft-text);
-      padding:var(--ft-pad-y) 0;
+      padding: var(--ft-pad-y) 0 calc(var(--ft-pad-y) + env(safe-area-inset-bottom, 0px));
       isolation:isolate;
     }
 
-    /* optional “soft seam” with the section above (default off) */
+    /* optional soft seam with previous section (kept off by default) */
     .g-footer::before{
-      content:""; position:absolute; inset:0 0 auto 0; height:120px;
-      pointer-events:none;
+      content:""; position:absolute; inset:0 0 auto 0; height:120px; pointer-events:none;
       background:linear-gradient(180deg,
         rgba(255,255,255,calc(var(--ft-top-fade-a))) 0%,
         rgba(255,255,255,0) 100%);
     }
 
-    .g-footer .inner{
-      width:100%; max-width:var(--container-max, 1200px);
-      margin:0 auto; padding:0 var(--gutter,20px);
-    }
-
-    /* ===== STACK LAYOUT: brand full-width, columns below ===== */
+    .g-footer .inner{ width:100%; max-width:var(--container-max,1200px); margin:0 auto; padding:0 var(--gutter,20px); }
     .g-footer--stack .grid{
       display:grid;
-      grid-template-columns: repeat(var(--ft-col-count), minmax(var(--ft-col-min),1fr));
+      grid-template-columns: repeat(var(--ft-col-count), minmax(var(--ft-col-min), 1fr));
       gap: var(--ft-gap-y) var(--ft-gap-x);
       align-items:start;
     }
-    .g-footer--stack .ft-brand{
-      grid-column:1 / -1;                      /* brand spans all columns */
+
+    /* brand row (full width) */
+    .ft-brand{
+      grid-column:1 / -1;
       margin-bottom: var(--ft-brand-gap);
       transform: translateY(var(--ft-brand-offset-y));
       display:grid; gap:10px;
+      text-align: left;
     }
-
-    /* wordmark */
     .ft-wordmark{
-      margin:0;
-      font-weight:var(--ft-brand-weight);
-      font-size:var(--ft-brand-fs);
-      letter-spacing:var(--ft-brand-ls);
+      margin:0; font-weight:var(--ft-brand-weight);
+      font-size:var(--ft-brand-fs); letter-spacing:var(--ft-brand-ls);
       line-height:var(--ft-brand-line);
-      background:var(--ft-brand-gradient);
+      background: var(--ft-brand-gradient);
       -webkit-background-clip:text; background-clip:text; color:transparent;
       text-shadow:
         0 0 var(--ft-glow-blur) var(--ft-glow-1),
         0 0 calc(var(--ft-glow-blur) * var(--ft-glow-strength)) var(--ft-glow-2);
     }
-    .ft-social{ display:flex; gap:10px; }
-    .ft-social a{
-      display:grid; place-items:center;
-      width:34px; height:34px; border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.03); color:#cfe0ee;
-    }
+    .ft-social{ display:flex; gap:10px; justify-content:flex-start; }
+    .ft-social a{ display:grid; place-items:center; width:34px; height:34px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.03); color:#cfe0ee; }
     .ft-social a:hover{ border-color:rgba(255,255,255,.18); }
 
     /* columns */
     .ft-col{ min-width:var(--ft-col-min); }
-    .ft-col h4{
-      margin:0 0 10px; letter-spacing:.2px;
-      font: 800 var(--ft-head-fs)/1.2 Inter, system-ui;
-      color:var(--ft-text);
-    }
+    .ft-col h4{ margin:0 0 10px; letter-spacing:.2px; font:800 var(--ft-head-fs)/1.2 Inter, system-ui; color:var(--ft-text); }
     .ft-col ul{ list-style:none; margin:0; padding:0; display:grid; gap:8px; }
     .ft-col a{
       font: var(--ft-link-weight) var(--ft-link-fs)/1.35 Inter, system-ui;
-      color:var(--ft-link-color); text-decoration:none; border-radius:6px; padding:2px 0;
+      color:var(--ft-link-color); text-decoration:none; border-radius:6px;
+      padding: var(--ft-link-pad-y) 0;
     }
-    .ft-col a:hover{
-      text-decoration: calc(var(--ft-link-hover-underline)) underline;
-      text-decoration-thickness:1px;
-    }
+    .ft-col a:hover{ text-decoration: calc(var(--ft-link-hover-underline)) underline; text-decoration-thickness:1px; }
 
     /* bottom bar */
     .ft-bar{
@@ -123,18 +144,72 @@
     .ft-copy{ font-size:12px; color:var(--ft-muted); }
     .ft-disclosure{ font-size:11px; color:var(--ft-muted); opacity:.9; max-width:72ch; }
 
-    /* responsive: columns wrap automatically when space < --ft-col-min */
-    @media (max-width:900px){
-      .g-footer{ --ft-col-min:200px; }
+    /* ===== TABLET APPLY (≤1024px) ===== */
+    @media (max-width:1024px){
+      .g-footer{
+        --ft-col-count: var(--ftt-col-count);
+        --ft-col-min: var(--ftt-col-min);
+        --ft-gap-x: var(--ftt-gap-x);
+        --ft-gap-y: var(--ftt-gap-y);
+        --ft-brand-gap: var(--ftt-brand-gap);
+        --ft-brand-fs: var(--ftt-brand-fs);
+        --ft-brand-offset-y: var(--ftt-brand-offset-y);
+        --ft-head-fs: var(--ftt-head-fs);
+        --ft-link-fs: var(--ftt-link-fs);
+        --ft-link-pad-y: var(--ftt-link-pad-y);
+        --ft-glow-blur: var(--ftt-glow-blur);
+        --ft-glow-strength: var(--ftt-glow-strength);
+      }
     }
-    @media (max-width:560px){
-      .g-footer{ --ft-col-min:160px; }
+
+    /* ===== MOBILE APPLY (≤640px) ===== */
+    @media (max-width:640px){
+      .g-footer{
+        --ft-col-count: var(--ftm-col-count);
+        --ft-col-min: var(--ftm-col-min);
+        --ft-gap-x: var(--ftm-gap-x);
+        --ft-gap-y: var(--ftm-gap-y);
+        --ft-brand-gap: var(--ftm-brand-gap);
+        --ft-brand-fs: var(--ftm-brand-fs);
+        --ft-brand-offset-y: var(--ftm-brand-offset-y);
+        --ft-head-fs: var(--ftm-head-fs);
+        --ft-link-fs: var(--ftm-link-fs);
+        --ft-link-pad-y: var(--ftm-link-pad-y);
+        --ft-glow-blur: var(--ftm-glow-blur);
+        --ft-glow-strength: var(--ftm-glow-strength);
+        padding-bottom: calc(var(--ft-pad-y) + env(safe-area-inset-bottom, 0px) + var(--ftm-bottom-extra));
+      }
+      .ft-brand{ text-align: calc(var(--ftm-center)) center; }
+      .ft-social{ justify-content: calc(var(--ftm-center)) center; }
+    }
+
+    /* ===== XS APPLY (≤380px) ===== */
+    @media (max-width:380px){
+      .g-footer{
+        --ft-col-count: var(--ftxs-col-count);
+        --ft-col-min: var(--ftxs-col-min);
+        --ft-brand-fs: var(--ftxs-brand-fs);
+        --ft-link-fs: var(--ftxs-link-fs);
+        --ft-link-pad-y: var(--ftxs-link-pad-y);
+      }
+    }
+
+    /* orientation guard: when height is cramped, shrink brand a bit */
+    @media (max-height:520px) and (orientation:landscape){
+      .g-footer{ --ft-brand-fs: clamp(36px, 12vw, 96px); }
+    }
+
+    /* accessibility: respect reduced motion (no change needed here, but future-proof) */
+    @media (prefers-reduced-motion: reduce){
+      .ft-wordmark{ text-shadow:
+        0 0 var(--ft-glow-blur) var(--ft-glow-1),
+        0 0 calc(var(--ft-glow-blur) * 1.3) var(--ft-glow-2); }
     }
   </style>
 
   <div class="inner">
     <div class="grid">
-      <!-- Brand row (full width) -->
+      <!-- Brand (full-width row) -->
       <div class="ft-brand">
         <h2 class="ft-wordmark" id="ft-brand-word">Galactly</h2>
         <div class="ft-social" aria-label="Social links">
@@ -161,7 +236,7 @@
         </div>
       </div>
 
-      <!-- Columns (wrap automatically if narrow) -->
+      <!-- Columns -->
       <nav class="ft-col" aria-label="Quick links" id="ft-col-quick">
         <h4>Quick links</h4>
         <ul>
@@ -207,25 +282,16 @@
     </div>
   </div>
 
-  <!-- Optional JS overrides (set window.FOOTER_KNOBS before this loads) -->
+  <!-- Optional JS overrides (unchanged) -->
   <script>
     (function(){
       const K = window.FOOTER_KNOBS || {};
       if (K.brandName) document.getElementById('ft-brand-word').textContent = K.brandName;
-
-      // Replace column items programmatically if needed:
-      // FOOTER_KNOBS.columns = {
-      //   quick:  [{label:'Warmup', href:'warmup.html'}, ...],
-      //   support:[...],
-      //   company:[...]
-      // }
       function fill(id, rows){
-        const el = document.querySelector(id + ' ul');
-        if(!el || !Array.isArray(rows)) return;
+        const el = document.querySelector(id + ' ul'); if(!el || !Array.isArray(rows)) return;
         el.innerHTML = '';
         rows.forEach(r=>{
-          const li = document.createElement('li');
-          const a  = document.createElement('a');
+          const li=document.createElement('li'), a=document.createElement('a');
           a.href = r.href || '#'; a.textContent = r.label || '';
           li.appendChild(a); el.appendChild(li);
         });
