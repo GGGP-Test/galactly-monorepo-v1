@@ -1,36 +1,91 @@
 <!-- fragments/footer.html -->
 <footer class="g-footer" role="contentinfo" aria-label="Site footer">
+  <!--
+    KNOBS (tweak via CSS vars below or override them from your page CSS):
+      Layout
+        --ft-pad-y            : vertical padding of footer
+        --ft-grid             : grid template (brand + columns)
+        --ft-gap              : gap between brand block and columns
+        --ft-col-gap          : gap between links inside a column
+        --ft-col-min          : min column width before wrapping
+        --ft-border-a         : top divider opacity (0 = none)
+        --ft-top-fade-a       : subtle top fade alpha (0 = none)
+
+      Typography
+        --ft-head-fs          : “Quick links/Support/Company” heading size
+        --ft-link-fs          : link size
+        --ft-link-weight      : link weight
+        --ft-link-color       : link color
+        --ft-link-hover-underline : 0/1 underline on hover
+
+      Wordmark (big brand)
+        --ft-brand-name       : text content fallback (JS can override)
+        --ft-brand-fs         : size of the big wordmark
+        --ft-brand-weight     : weight
+        --ft-brand-ls         : letter-spacing
+        --ft-brand-line       : line-height
+        --ft-brand-gradient   : CSS gradient for text fill
+        --ft-glow-1           : inner glow color
+        --ft-glow-2           : outer glow color
+        --ft-glow-blur        : base blur radius
+        --ft-glow-strength    : multiplier for outer glow
+        --ft-brand-offset-y   : nudge the wordmark up/down
+
+      Palette
+        --ft-text             : body text
+        --ft-muted            : muted text
+  -->
   <style>
-    :root{
-      /* knobs you can tweak without touching rules */
-      --footer-pane-alpha: .02;      /* 0 → fully invisible panes; .02–.05 = glassy */
-      --footer-outline-a: .08;       /* 1px outline strength on nav panes */
-      --footer-blur: 14px;           /* glass blur */
-      --footer-sat: 120%;            /* glass saturation */
-      --footer-wordmark-a: .07;      /* giant brand opacity; set 0 to hide */
-      --footer-wordmark-size: clamp(38px, 8vw, 72px);
-    }
-
-    /* ===== Footer – no background, no seam ===== */
     .g-footer{
-      position: relative;
-      padding: clamp(44px, 6vw, 72px) 0 clamp(32px, 5vw, 56px);
-      background: transparent;   /* no section background */
-      isolation: isolate;        /* layers without a panel */
-    }
-    .g-footer::before{ content:none } /* kill old fade so there’s no edge */
+      /* -------- defaults (edit or override from page) -------- */
+      --ft-text:  var(--text, #e9f1f7);
+      --ft-muted: var(--muted, #9fb3c7);
 
-    /* Optional giant wordmark (very faint, behind links) */
-    .g-footer .wordmark{
-      position:absolute; inset:auto 0 100% 0; /* sits above the grid area */
-      display:grid; place-items:center; pointer-events:none;
-      transform: translateY(calc(-1 * clamp(6px, 1.6vw, 16px)));
-      font: 800 var(--footer-wordmark-size) "Plus Jakarta Sans", Inter, system-ui;
-      letter-spacing:-.02em;
-      background: linear-gradient(180deg, var(--gold-300,#f2dca0), var(--gold-700,#b8913d));
-      -webkit-background-clip:text; background-clip:text; color:transparent;
-      opacity: var(--footer-wordmark-a);
-      mix-blend-mode: screen;
+      /* layout knobs */
+      --ft-pad-y: clamp(42px, 7vw, 80px);
+      /* brand column + 3 link columns; change repeat(3,…) to 4,2,… if you like */
+      --ft-grid: minmax(0, 1.35fr) repeat(3, minmax(var(--ft-col-min, 200px), 1fr));
+      --ft-gap: clamp(16px, 3.6vw, 32px);
+      --ft-col-gap: 8px;
+      --ft-border-a: 0;                  /* 0 = no divider edge */
+      --ft-top-fade-a: 0;                /* 0 = no top fade */
+
+      /* type knobs */
+      --ft-head-fs: 14px;
+      --ft-link-fs: 15px;
+      --ft-link-weight: 600;
+      --ft-link-color: #cfe0ee;
+      --ft-link-hover-underline: 1;      /* 0/1 */
+
+      /* wordmark knobs */
+      --ft-brand-name: "Galactly";
+      --ft-brand-fs: clamp(42px, 10vw, 120px);
+      --ft-brand-weight: 800;
+      --ft-brand-ls: -0.5px;
+      --ft-brand-line: 0.9;
+      --ft-brand-offset-y: 0px;
+
+      --ft-brand-gradient:
+        linear-gradient(180deg, #eaf3ff 0%, #cfe0ff 45%, #a9c1ff 70%, #eaf3ff 100%);
+      --ft-glow-1: rgba(166, 197, 255, .55);
+      --ft-glow-2: rgba(94, 157, 255, .28);
+      --ft-glow-blur: 12px;
+      --ft-glow-strength: 2.2;
+
+      position: relative;
+      background: transparent;           /* no panes; seamless */
+      padding: var(--ft-pad-y) 0;
+      color: var(--ft-text);
+      isolation: isolate;
+    }
+
+    /* optional seam-softener (off by default) */
+    .g-footer::before{
+      content:""; pointer-events:none;
+      position:absolute; inset:0 0 auto 0; height:120px;
+      background: linear-gradient(180deg,
+        rgba(255,255,255, calc(var(--ft-top-fade-a))) 0%,
+        rgba(255,255,255, 0) 100%);
     }
 
     .g-footer .inner{
@@ -38,144 +93,189 @@
       max-width: var(--container-max, 1200px);
       margin:0 auto;
       padding: 0 var(--gutter, 20px);
-    }
-
-    /* Grid */
-    .g-footer .grid{
       display:grid;
-      grid-template-columns: 1.1fr repeat(3, minmax(0, 1fr));
-      gap: clamp(18px, 3.6vw, 28px);
-      align-items:start;
+      grid-template-columns: var(--ft-grid);
+      gap: var(--ft-gap);
+      align-items: start;
     }
-    @media (max-width: 900px){ .g-footer .grid{ grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 560px){ .g-footer .grid{ grid-template-columns: 1fr; } }
 
-    /* Brand block */
-    .g-footer .brand{
-      display:flex; gap:12px; align-items:center;
-      color: var(--text, #e9f1f7); text-decoration:none; font-weight:800; letter-spacing:.2px;
+    /* ========== Wordmark block ========== */
+    .ft-brand{
+      display:grid; gap:10px; align-content:start;
+      transform: translateY(var(--ft-brand-offset-y));
     }
-    .g-footer .brand-badge{
-      width:30px; height:30px; border-radius:8px; display:grid; place-items:center;
-      background: linear-gradient(180deg, var(--gold-500, #e6c36b), var(--gold-700, #8f6f2e));
-      color:#1b1405; font-weight:800;
-      box-shadow:0 0 0 1px rgba(255,255,255,.08) inset;
+    .ft-wordmark{
+      margin:0;
+      font-weight: var(--ft-brand-weight);
+      font-size: var(--ft-brand-fs);
+      letter-spacing: var(--ft-brand-ls);
+      line-height: var(--ft-brand-line);
+      background: var(--ft-brand-gradient);
+      -webkit-background-clip: text; background-clip: text;
+      color: transparent;
+      /* twin-layer glow; tweak colors/blur/strength via knobs */
+      text-shadow:
+        0 0 var(--ft-glow-blur) var(--ft-glow-1),
+        0 0 calc(var(--ft-glow-blur) * var(--ft-glow-strength)) var(--ft-glow-2);
     }
-    .g-footer .brand-name{ font-size:18px; }
-
-    .g-footer .social{ display:flex; gap:10px; margin-top:10px; }
-    .g-footer .social a{
-      display:grid; place-items:center; width:34px; height:34px; border-radius:999px;
+    .ft-social{ display:flex; gap:10px; }
+    .ft-social a{
+      display:grid; place-items:center;
+      width:34px; height:34px; border-radius:999px;
       border:1px solid rgba(255,255,255,.10);
       background: rgba(255,255,255,.03);
       color:#cfe0ee;
     }
-    .g-footer .social a:hover{ border-color: rgba(255,255,255,.18); }
+    .ft-social a:hover{ border-color: rgba(255,255,255,.18); }
 
-    /* Glass columns (no section panel; just the columns feel glassy) */
-    .g-footer nav{
-      padding:12px 14px; border-radius:12px;
-      background: rgba(255,255,255,var(--footer-pane-alpha));
-      border: 1px solid rgba(255,255,255,var(--footer-outline-a));
-      -webkit-backdrop-filter: blur(var(--footer-blur)) saturate(var(--footer-sat));
-              backdrop-filter: blur(var(--footer-blur)) saturate(var(--footer-sat));
+    /* ========== Link columns ========== */
+    .ft-col{ min-width: var(--ft-col-min, 200px); }
+    .ft-col h4{
+      margin:0 0 10px;
+      font: 800 var(--ft-head-fs)/1.2 Inter, system-ui;
+      color: var(--ft-text);
+      letter-spacing:.2px;
     }
-    /* When you truly want NO pane at all, set --footer-pane-alpha:0 and outline to 0 */
-    .g-footer[data-minimal="true"] nav{
-      background: transparent; border-color: transparent;
-      -webkit-backdrop-filter:none; backdrop-filter:none;
-      padding:0;
+    .ft-col ul{ list-style:none; margin:0; padding:0; display:grid; gap: var(--ft-col-gap); }
+    .ft-col a{
+      font: var(--ft-link-weight) var(--ft-link-fs) / 1.35 Inter, system-ui;
+      color: var(--ft-link-color);
+      text-decoration: none;
+      border-radius:6px;
+      padding: 2px 0;
+    }
+    .ft-col a:hover{
+      text-decoration: calc(var(--ft-link-hover-underline)) underline;
+      text-decoration-thickness: 1px;
     }
 
-    .g-footer h4{
-      margin:0 0 10px; font: 800 14px/1.2 Inter, system-ui;
-      color: var(--text, #e9f1f7); letter-spacing:.2px;
-    }
-    .g-footer ul{ list-style:none; margin:0; padding:0; display:grid; gap:8px; }
-    .g-footer a{ color:#cfe0ee; text-decoration:none; }
-    .g-footer a:hover{ text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:2px; }
-
-    /* Bottom bar (kept subtle; internal separation only) */
-    .g-footer .bar{
-      margin-top: clamp(22px, 4.4vw, 36px);
+    /* ========== Bottom bar ========== */
+    .ft-bar{
+      grid-column: 1 / -1;
+      margin-top: clamp(20px, 4vw, 34px);
       padding-top: 14px;
-      border-top:1px solid rgba(255,255,255,.06);
+      border-top: 1px solid rgba(255,255,255, var(--ft-border-a));
       display:grid; gap:10px;
     }
-    .g-footer .copy{ font-size:12px; color: var(--muted, #9fb3c7); }
-    .g-footer .disclosure{ font-size:11px; color: var(--muted, #9fb3c7); opacity:.9; max-width: 72ch; }
+    .ft-copy{ font-size:12px; color: var(--ft-muted); }
+    .ft-disclosure{ font-size:11px; color: var(--ft-muted); opacity:.9; max-width: 72ch; }
+
+    /* Responsive stacking */
+    @media (max-width: 900px){
+      .g-footer .inner{
+        grid-template-columns: 1fr 1fr;
+      }
+      .ft-brand{ order: 0; }
+    }
+    @media (max-width: 560px){
+      .g-footer .inner{
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 
-  <!-- faint oversized brand; set --footer-wordmark-a:0 to hide completely -->
-  <div class="wordmark">Galactly</div>
-
   <div class="inner">
-    <div class="grid">
-      <!-- Brand + socials -->
-      <div>
-        <a class="brand" href="index.html" aria-label="Galactly home">
-          <span class="brand-badge">G</span>
-          <span class="brand-name">Galactly</span>
+    <!-- Big brand block (closer to columns, no background) -->
+    <div class="ft-brand">
+      <h2 class="ft-wordmark" id="ft-brand-word">Galactly</h2>
+      <div class="ft-social" aria-label="Social links">
+        <a href="#" aria-label="LinkedIn" title="LinkedIn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M4.98 3.5a2.5 2.5 0 1 0 0 5.001 2.5 2.5 0 0 0 0-5ZM3 9h3.96v12H3V9Zm7.2 0H14v1.64h.06c.67-1.2 2.3-2 3.91-2 4.19 0 4.97 2.76 4.97 6.35V21H19V15.9c0-1.21-.02-2.77-1.69-2.77-1.69 0-1.95 1.32-1.95 2.68V21h-3.96V9Z"/>
+          </svg>
         </a>
-        <div class="social" aria-label="Social links">
-          <a href="#" aria-label="LinkedIn" title="LinkedIn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 0 0 5.001 2.5 2.5 0 0 0 0-5ZM3 9h3.96v12H3V9Zm7.2 0H14v1.64h.06c.67-1.2 2.3-2 3.91-2 4.19 0 4.97 2.76 4.97 6.35V21H19V15.9c0-1.21-.02-2.77-1.69-2.77-1.69 0-1.95 1.32-1.95 2.68V21h-3.96V9Z"/></svg>
-          </a>
-          <a href="#" aria-label="YouTube" title="YouTube">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a4 4 0 0 0-2.8-2.8C18.8 3 12 3 12 3s-6.8 0-8.7.4A4 4 0 0 0 .5 6.2 41 41 0 0 0 0 12a41 41 0 0 0 .5 5.8 4 4 0 0 0 2.8 2.8C5.2 21 12 21 12 21s6.8 0 8.7-.4a4 4 0 0 0 2.8-2.8A41 41 0 0 0 24 12a41 41 0 0 0-.5-5.8ZM9.6 15.4V8.6L15.8 12l-6.2 3.4Z"/></svg>
-          </a>
-          <a href="#" aria-label="Instagram" title="Instagram">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 8.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4Zm6.4-8.4a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4ZM24 7.1v9.8A7.1 7.1 0 0 1 16.9 24H7.1A7.1 7.1 0 0 1 0 16.9V7.1A7.1 7.1 0 0 1 7.1 0h9.8A7.1 7.1 0 0 1 24 7.1Zm-2 0A5.1 5.1 0 0 0 16.9 2H7.1A5.1 5.1 0 0 0 2 7.1v9.8A5.1 5.1 0 0 0 7.1 22h9.8A5.1 5.1 0 0 0 22 16.9V7.1Z"/></svg>
-          </a>
-          <a href="#" aria-label="X (Twitter)" title="X">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-7.1 8.1L23.2 22h-6.8l-5.3-6.7L4.9 22H2l7.6-8.7L.8 2h6.9l4.8 6.1L18.9 2Zm-1.2 18h1.9L7.4 4H5.5l12.2 16Z"/></svg>
-          </a>
-        </div>
+        <a href="#" aria-label="YouTube" title="YouTube">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M23.5 6.2a4 4 0 0 0-2.8-2.8C18.8 3 12 3 12 3s-6.8 0-8.7.4A4 4 0 0 0 .5 6.2 41 41 0 0 0 0 12a41 41 0 0 0 .5 5.8 4 4 0 0 0 2.8 2.8C5.2 21 12 21 12 21s6.8 0 8.7-.4a4 4 0 0 0 2.8-2.8A41 41 0 0 0 24 12a41 41 0 0 0-.5-5.8ZM9.6 15.4V8.6L15.8 12l-6.2 3.4Z"/>
+          </svg>
+        </a>
+        <a href="#" aria-label="Instagram" title="Instagram">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 8.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4Zm6.4-8.4a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4ZM24 7.1v9.8A7.1 7.1 0 0 1 16.9 24H7.1A7.1 7.1 0 0 1 0 16.9V7.1A7.1 7.1 0 0 1 7.1 0h9.8A7.1 7.1 0 0 1 24 7.1Zm-2 0A5.1 5.1 0 0 0 16.9 2H7.1A5.1 5.1 0 0 0 2 7.1v9.8A5.1 5.1 0 0 0 7.1 22h9.8A5.1 5.1 0 0 0 22 16.9V7.1Z"/>
+          </svg>
+        </a>
+        <a href="#" aria-label="X (Twitter)" title="X">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M18.9 2H22l-7.1 8.1L23.2 22h-6.8l-5.3-6.7L4.9 22H2l7.6-8.7L.8 2h6.9l4.8 6.1L18.9 2Zm-1.2 18h1.9L7.4 4H5.5l12.2 16Z"/>
+          </svg>
+        </a>
       </div>
-
-      <!-- Columns -->
-      <nav aria-label="Quick links">
-        <h4>Quick links</h4>
-        <ul>
-          <li><a href="index.html#get-started">How it works</a></li>
-          <li><a href="pricing.html">Pricing</a></li>
-          <li><a href="sectors.html">Sectors</a></li>
-          <li><a href="start.html">Start Free</a></li>
-          <li><a href="wall-of-love.html">Wall of Love</a></li>
-          <li><a href="case-studies.html">Case Studies</a></li>
-        </ul>
-      </nav>
-
-      <nav aria-label="Support">
-        <h4>Support</h4>
-        <ul>
-          <li><a href="help.html">Help Desk</a></li>
-          <li><a href="roadmap.html">Roadmap</a></li>
-          <li><a href="community.html">Slack Community</a></li>
-          <li><a href="experts.html">Experts</a></li>
-          <li><a href="affiliate.html">Affiliate</a></li>
-        </ul>
-      </nav>
-
-      <nav aria-label="Company">
-        <h4>Company</h4>
-        <ul>
-          <li><a href="terms.html">Terms</a></li>
-          <li><a href="privacy.html">Privacy</a></li>
-          <li><a href="privacy-center.html">Privacy Center</a></li>
-          <li><a href="do-not-sell.html">Do Not Sell My Info</a></li>
-          <li><a href="cookies.html">Cookie Declaration</a></li>
-        </ul>
-      </nav>
     </div>
 
-    <!-- Bottom bar -->
-    <div class="bar">
-      <div class="copy">© 2025 Galactly — Sales Engagement & Lead Intelligence</div>
-      <div class="disclosure">
+    <!-- Link columns -->
+    <nav class="ft-col" aria-label="Quick links" id="ft-col-quick">
+      <h4>Quick links</h4>
+      <ul>
+        <li><a href="index.html#get-started">How it works</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
+        <li><a href="sectors.html">Sectors</a></li>
+        <li><a href="start.html">Start Free</a></li>
+        <li><a href="wall-of-love.html">Wall of Love</a></li>
+        <li><a href="case-studies.html">Case Studies</a></li>
+      </ul>
+    </nav>
+
+    <nav class="ft-col" aria-label="Support" id="ft-col-support">
+      <h4>Support</h4>
+      <ul>
+        <li><a href="help.html">Help Desk</a></li>
+        <li><a href="roadmap.html">Roadmap</a></li>
+        <li><a href="community.html">Slack Community</a></li>
+        <li><a href="experts.html">Experts</a></li>
+        <li><a href="affiliate.html">Affiliate</a></li>
+      </ul>
+    </nav>
+
+    <nav class="ft-col" aria-label="Company" id="ft-col-company">
+      <h4>Company</h4>
+      <ul>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="privacy-center.html">Privacy Center</a></li>
+        <li><a href="do-not-sell.html">Do Not Sell My Info</a></li>
+        <li><a href="cookies.html">Cookie Declaration</a></li>
+      </ul>
+    </nav>
+
+    <!-- Bottom bar (no pane; divider opacity is knobbed) -->
+    <div class="ft-bar">
+      <div class="ft-copy">© 2025 Galactly — Sales Engagement & Lead Intelligence</div>
+      <div class="ft-disclosure">
         Disclosure: results and testimonials reflect individual experiences and are not a guarantee of future performance.
         We aggregate anonymized intent and outcome data to improve rankings and product quality. See Privacy Center for controls.
       </div>
     </div>
   </div>
+
+  <!-- Optional data-driven overrides (set window.FOOTER_KNOBS before this loads) -->
+  <script>
+    (function(){
+      const K = window.FOOTER_KNOBS || {};
+      if (K.brandName) document.getElementById('ft-brand-word').textContent = K.brandName;
+
+      // You can pass arrays to replace columns:
+      // FOOTER_KNOBS.columns = {
+      //   quick:  [{label:'Warmup', href:'warmup.html'}, ...],
+      //   support:[...],
+      //   company:[...]
+      // }
+      function fill(id, rows){
+        const el = document.querySelector(id + ' ul');
+        if(!el || !Array.isArray(rows)) return;
+        el.innerHTML = '';
+        rows.forEach(r=>{
+          const li=document.createElement('li');
+          const a=document.createElement('a');
+          a.href = r.href || '#';
+          a.textContent = r.label || '';
+          li.appendChild(a); el.appendChild(li);
+        });
+      }
+      if (K.columns){
+        fill('#ft-col-quick',   K.columns.quick);
+        fill('#ft-col-support', K.columns.support);
+        fill('#ft-col-company', K.columns.company);
+      }
+    })();
+  </script>
 </footer>
