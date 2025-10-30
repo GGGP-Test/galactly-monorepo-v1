@@ -1,40 +1,23 @@
-/* docs/fragments/layout.js */
-(() => {
-  // Find the script element reliably (Safari/iOS safe)
-  const scripts = document.getElementsByTagName('script');
-  const me = document.currentScript || scripts[scripts.length - 1];
+// /docs/fragments/layout.js
+(()=> {
+  const S = document.currentScript;
+  const rootRaw = (S?.dataset?.root || 'fragments/').trim();
 
-  // Base URL for fragments (from data-root or the script's folder)
-  const baseURL = new URL(me?.getAttribute('data-root') || './', me?.src || location.href);
+  // Resolve root relative to the PAGE (location), not the script file
+  const base = new URL('.', window.location.href);
+  const root = new URL(rootRaw.replace(/^\.\//,''), base);     // e.g. /fragments/
 
-  async function inject(targetId, file) {
-    const mount = document.getElementById(targetId);
-    if (!mount) return;
-    const url = new URL(file, baseURL).toString();
-    try {
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      mount.innerHTML = await res.text();
+  const urlFor = f => new URL(f, root).href;
 
-      // niceties
-      const y = mount.querySelector('[data-year]');
-      if (y) y.textContent = new Date().getFullYear();
-
-      const here = new URL(location.href);
-      here.hash = ''; here.search = '';
-      mount.querySelectorAll('a[data-nav]').forEach(a => {
-        const p = new URL(a.getAttribute('href'), location.href);
-        p.hash = ''; p.search = '';
-        if (p.pathname.replace(/\/+$/, '') === here.pathname.replace(/\/+$/, '')) {
-          a.classList.add('is-active');
-        }
-      });
-    } catch (err) {
-      console.error('[fragments] failed:', url, err);
-      mount.innerHTML = `<!-- failed to load ${url} -->`;
-    }
+  async function inject(sel, file){
+    const host = document.querySelector(sel);
+    if(!host) return;
+    const url = urlFor(file);
+    const res = await fetch(url);
+    if(!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    host.innerHTML = await res.text();
   }
 
-  // Inject footer (add more later if you want)
-  inject('site-footer', 'footer.html');
+  inject('#site-footer', 'footer.html')
+    .catch(err => console.error('[fragments] failed:', urlFor('footer.html'), err));
 })();
