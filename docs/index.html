@@ -27,7 +27,7 @@
     --container-max: clamp(1100px, 86vw, 1320px);
     --gutter: clamp(16px, 4vw, 40px);
     
-    /* === CARD KNOBS === */
+    /* === CARD KNOBS (hero demo) === */
     --card-left: 0.88;              /* 0..1 inside the panel (X)  */
     --card-top: 0.67;               /* 0..1 inside the panel (Y)  */
     --card-angle: 0deg;             /* rotation */
@@ -48,7 +48,7 @@
     
     --card-stage-border:#ffffff24;  --card-stage-bg:#ffffff0f;
 
-    /* === TIME ROW KNOBS (new) === */
+    /* === TIME ROW KNOBS (hero card) === */
     --card-time-fs: 18px;           /* time value size */
     --card-time-weight: 800;        /* time value weight */
     --card-time-lh: 1.15;           /* time value line-height */
@@ -105,8 +105,7 @@
     --us-stroke: rgba(255,255,255,.12);
     --us-stroke-highlight: rgba(255,255,255,.18);
     --us-edge-fade: 8%;
-    /* independent size control for map dots (reverted smaller) */
-    --us-dot-size: 9px;
+    --us-dot-size: 9px; /* independent size control for map dots */
   }
 
   *{box-sizing:border-box}
@@ -273,7 +272,7 @@
     border:1px solid var(--tag-stroke)
   }
 
-  /* STACK */
+  /* STACK (hero demo) */
   .miniCard[data-off~="distance"] [data-field="distance"],
   .miniCard[data-off~="need"]     [data-field="need"],
   .miniCard[data-off~="ai"]       [data-field="ai"],
@@ -337,45 +336,189 @@
     letter-spacing:.1px;
   }
   
-    @keyframes probPulse{
-      0%   { transform: scale(1);
-             box-shadow: 0 0 0 0 currentColor;
-             opacity: var(--pulse-opacity, .30); }
-      100% { transform: scale(var(--pulse-scale, 1.9));
-             box-shadow: 0 0 0 var(--pulse-spread, 10px) rgba(0,0,0,0);
-             opacity: 0; }
-    }
+  @keyframes probPulse{
+    0%   { transform: scale(1);
+           box-shadow: 0 0 0 0 currentColor;
+           opacity: var(--pulse-opacity, .30); }
+    100% { transform: scale(var(--pulse-scale, 1.9));
+           box-shadow: 0 0 0 var(--pulse-spread, 10px) rgba(0,0,0,0);
+           opacity: 0; }
+  }
 
-  /* SECTION 2 */
+  /* ===== US MAP LAYER ===== */
+  .tf{ display:none !important; } /* hide/remove old rails/arcs */
+  .us-layer{ position:absolute; inset:0; z-index:1; pointer-events:none; }
+  .us-layer .fadeEdge{
+    width:100%; height:100%;
+    -webkit-mask-image: radial-gradient(140% 115% at 50% 50%, #000 calc(100% - var(--us-edge-fade)), transparent 100%);
+            mask-image: radial-gradient(140% 115% at 50% 50%, #000 calc(100% - var(--us-edge-fade)), transparent 100%);
+  }
+  #usMap{ width:100%; height:100%; display:block; filter: drop-shadow(0 2px 8px rgba(0,0,0,.35)); }
+  .us-strokes{ fill:none; stroke:var(--us-stroke); stroke-width:var(--us-stroke-w); }
+  .us-strokes .state:hover{ stroke:var(--us-stroke-highlight); }
+
+  /* 50 small lights – same glow profile, size decoupled via --us-dot-size */
+  #usDots{ position:absolute; inset:0; z-index:2; pointer-events:none; }
+  #usDots .dot{
+    position:absolute; width:var(--us-dot-size); height:var(--us-dot-size);
+    border-radius:999px; background: currentColor;
+    color: var(--us-dot-color, var(--gold));
+    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.28);
+    transform: translate(-50%,-50%);
+  }
+  #usDots .dot::after{ content:""; position:absolute; inset:0; border-radius:inherit; opacity:.30; transform:scale(1); box-shadow:0 0 0 0 currentColor; animation:none; }
+  #usDots .dot.flash::after{ 
+    animation: probPulse var(--pulse-dur-map, var(--pulse-dur, 900ms)) ease-out 1; }
+
+  /* -----------------------------------
+     SECTION 2A + 2B (STATIC, with knobs)
+     ----------------------------------- */
+  :root{
+    /* Section spacing */
+    --s2-overlap-y: 24px;                /* pull 2A toward hero (negative raises it) */
+    --s2-gap: clamp(40px, 6vw, 84px);
+
+    /* 2A glass panel */
+    --s2a-radius: 18px;
+    --s2a-blur: 14px;
+    --s2a-bg-a: .86;
+    --s2a-stroke-a: .10;
+    --s2a-inner-stroke-a: .06;
+    --s2a-shadow-a: .26;
+    --s2a-pad: clamp(18px, 3vw, 28px) clamp(18px, 3vw, 32px);
+    --s2a-col-gap: clamp(16px, 4vw, 42px);
+    --s2a-title-w: min(480px, 42%);
+    --s2a-metric-w: 1fr;
+    --s2a-metric-div-a: .06;
+    --s2a-title-fs: clamp(22px, 4vw, 34px);
+    --s2a-title-lh: 1.05;
+    --s2a-note-fs: 12px;
+
+    /* 2A numbers */
+    --s2a-num-fs: clamp(26px, 5vw, 42px);
+    --s2a-num-wt: 800;
+    --s2a-num-grad: linear-gradient(180deg, var(--gold-300), var(--gold-700));
+    --s2a-num-color: transparent;
+    --s2a-num-tt: none;
+
+    /* 2B grid */
+    --s2b-gap: clamp(16px, 2.6vw, 22px);
+    --s2b-radius: 16px;
+    --s2b-blur: 14px;
+    --s2b-bg-a: .86;
+    --s2b-stroke-a: .10;
+    --s2b-inner-stroke-a: .06;
+    --s2b-shadow-a: .22;
+    --s2b-h2-fs: clamp(20px, 3.2vw, 30px);
+    --s2b-sub-fs: clamp(13px, 2vw, 16px);
+
+    /* Card-scale knobs (2B tiles) */
+    --tile-pad: clamp(16px,2.2vw,22px);
+    --tile-title-fs: clamp(14px,1.8vw,16px);
+    --tile-body-fs: clamp(12px,1.7vw,14px);
+    --tile-glow: rgba(230,195,107,.22);
+  }
+
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
   .section .inner{margin:0 auto}
-  #proof{ margin-top: var(--gap-hero-proof); }
-  .section-hd{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
-  .section-hd h2{margin:0;font:600 clamp(22px,3.4vw,30px) "Newsreader", Georgia, serif}
-  .section-hd .sub{color:#8fb2ce;font-size:14px}
+  .section-2A { margin-top: var(--s2-overlap-y); }
+  .section-2B { margin-top: var(--s2-gap); }
 
-  .proof-wrap{position:relative;border-radius:18px;border:1px solid rgba(255,255,255,.08);
-    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-    -webkit-backdrop-filter: blur(14px) saturate(120%); backdrop-filter: blur(14px) saturate(120%);
-    box-shadow:0 16px 40px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.04);
-    padding:22px;}
-  .proof-wrap::after{content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);}
-    
-  .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;}
-  @media (max-width:900px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
-  @media (max-width:520px){.kpi-grid{grid-template-columns:1fr}}
-  .kpi{background:transparent;border:none;box-shadow:none;height:auto;padding:18px 18px 16px;position:relative;}
-  .kpi + .kpi{ border-left:1px solid rgba(255,255,255,.06); }
-  @media (max-width:900px){
-    .kpi:nth-child(odd){ border-left:none; }
-    .kpi:nth-child(n+3){ border-top:1px solid rgba(255,255,255,.06); }
+  /* Glass helper */
+  .glass{
+    position:relative;
+    border-radius: var(--s2a-radius);
+    background: rgba(12,18,28, var(--s2a-bg-a));
+    border: 1px solid rgba(255,255,255, var(--s2a-stroke-a));
+    -webkit-backdrop-filter: blur(var(--s2a-blur)) saturate(120%);
+    backdrop-filter: blur(var(--s2a-blur)) saturate(120%);
+    box-shadow: 0 18px 48px rgba(0,0,0,var(--s2a-shadow-a));
   }
-  .kpi .label{font-size:12px;color:#a8bbcd;letter-spacing:.2px;text-transform:uppercase}
-  .kpi .num{font-weight:800;font-size:clamp(28px,5vw,42px);line-height:1.05;
-    background:linear-gradient(180deg,var(--gold-300),var(--gold-700));-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px}
-  .kpi .hint{font-size:12px;color:#8ba6bf;margin-top:6px}
+  .glass::after{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255, var(--s2a-inner-stroke-a));
+  }
 
+  /* 2A Proof card */
+  .proof-card{
+    padding: var(--s2a-pad);
+    display:grid;
+    grid-template-columns: var(--s2a-title-w) repeat(3, var(--s2a-metric-w));
+    gap: var(--s2a-col-gap);
+    align-items:center;
+  }
+  @media (max-width: 980px){
+    .proof-card{ grid-template-columns: 1fr; gap: 18px; }
+  }
+  .proof-title{
+    font: 800 var(--s2a-title-fs)/var(--s2a-title-lh) Inter, system-ui;
+    letter-spacing:-.01em;
+    margin:0 0 8px;
+  }
+  .proof-note{ margin:6px 0 0; font-size: var(--s2a-note-fs); color: var(--muted); opacity:.95; }
+
+  .metric{ position:relative; padding-left: clamp(4px,1vw,8px); }
+  .metric:not(:first-child){ border-left: 1px solid rgba(255,255,255, var(--s2a-metric-div-a)); }
+  .m-value{
+    font-weight: var(--s2a-num-wt);
+    font-size: var(--s2a-num-fs);
+    line-height:1.05;
+    background: var(--s2a-num-grad);
+    -webkit-background-clip:text; background-clip:text;
+    color: var(--s2a-num-color);
+    text-transform: var(--s2a-num-tt);
+  }
+  .m-hint{ margin-top:6px; font-size:12px; color:#8ba6bf; }
+
+  /* 2B Growth system */
+  .growth-wrap{ max-width: var(--container-max); margin:0 auto; }
+  .growth-hd{ text-align:center; margin-bottom: clamp(14px, 2vw, 18px); }
+  .growth-hd h3{
+    margin:0 0 6px; font: 800 var(--s2b-h2-fs)/1.15 Inter, system-ui; letter-spacing:-.01em;
+  }
+  .growth-hd .sub{ color:#b7c9da; font-size: var(--s2b-sub-fs); }
+
+  .g-grid{
+    display:grid;
+    grid-template-columns: 1.05fr 1fr 1fr;
+    gap: var(--s2b-gap);
+    align-items:stretch;
+  }
+  @media (max-width: 1080px){ .g-grid{ grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 640px){ .g-grid{ grid-template-columns: 1fr; } }
+
+  .tile{
+    position:relative;
+    padding: var(--tile-pad);
+    border-radius: var(--s2b-radius);
+    background: rgba(12,18,28,var(--s2b-bg-a));
+    border: 1px solid rgba(255,255,255,var(--s2b-stroke-a));
+    -webkit-backdrop-filter: blur(var(--s2b-blur)) saturate(120%);
+    backdrop-filter: blur(var(--s2b-blur)) saturate(120%);
+    box-shadow: 0 16px 36px rgba(0,0,0,var(--s2b-shadow-a));
+  }
+  .tile::after{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,var(--s2b-inner-stroke-a));
+  }
+  .tile h4{ margin:0 0 8px; font:800 var(--tile-title-fs)/1.2 Inter, system-ui; }
+  .tile p{ margin:0 0 12px; font-size: var(--tile-body-fs); color:#a9bfd6; }
+
+  .tile.customers{ grid-row: span 2; }     /* tall left */
+  .tile.pipelines{ grid-column: span 2; }  /* wide top-right */
+  .tile.ai-sdr{ grid-column: span 1; }
+
+  .face-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; }
+  .face{ aspect-ratio:1/1; border-radius:10px; background:rgba(255,255,255,.05);
+         border:1px solid rgba(255,255,255,.08); }
+  .bar{ height:12px; border-radius:8px; margin:8px 0;
+        background:linear-gradient(90deg, var(--tile-glow), rgba(255,255,255,.04)); }
+  .bar.thin{ height:8px; }
+  .kv{ display:flex; align-items:center; justify-content:space-between; gap:12px; font-weight:700; }
+  .kv .v{ font-weight:800; }
+  .badge-note{ position:absolute; left:12px; bottom:12px; font-size:11px; color:#9db3c9; }
+
+  /* Reveal helpers */
   .reveal{opacity:0; transform:translateY(var(--reveal-in-y)) scale(.995);
     transition: opacity var(--reveal-dur) var(--reveal-ease),
                transform var(--reveal-dur) var(--reveal-ease);}
@@ -404,31 +547,6 @@
     .btn{transition:none}
     .reveal{opacity:1!important; transform:none!important; transition:none!important}
   }
-
-  /* ===== US MAP LAYER ===== */
-  .tf{ display:none !important; } /* hide/remove old rails/arcs */
-  .us-layer{ position:absolute; inset:0; z-index:1; pointer-events:none; }
-  .us-layer .fadeEdge{
-    width:100%; height:100%;
-    -webkit-mask-image: radial-gradient(140% 115% at 50% 50%, #000 calc(100% - var(--us-edge-fade)), transparent 100%);
-            mask-image: radial-gradient(140% 115% at 50% 50%, #000 calc(100% - var(--us-edge-fade)), transparent 100%);
-  }
-  #usMap{ width:100%; height:100%; display:block; filter: drop-shadow(0 2px 8px rgba(0,0,0,.35)); }
-  .us-strokes{ fill:none; stroke:var(--us-stroke); stroke-width:var(--us-stroke-w); }
-  .us-strokes .state:hover{ stroke:var(--us-stroke-highlight); }
-
-  /* 50 small lights – same glow profile, size decoupled via --us-dot-size */
-  #usDots{ position:absolute; inset:0; z-index:2; pointer-events:none; }
-  #usDots .dot{
-    position:absolute; width:var(--us-dot-size); height:var(--us-dot-size);
-    border-radius:999px; background: currentColor;
-    color: var(--us-dot-color, var(--gold));
-    box-shadow: 0 0 10px currentColor, 0 0 18px rgba(230,195,107,.28);
-    transform: translate(-50%,-50%);
-  }
-  #usDots .dot::after{ content:""; position:absolute; inset:0; border-radius:inherit; opacity:.30; transform:scale(1); box-shadow:0 0 0 0 currentColor; animation:none; }
-  #usDots .dot.flash::after{ 
-    animation: probPulse var(--pulse-dur-map, var(--pulse-dur, 900ms)) ease-out 1; }
 </style>
 </head>
 <body>
@@ -532,7 +650,7 @@
                 <span class="prob"><span class="dot" data-prob-dot></span><span class="lbl"></span><span class="pct" data-prob>72%</span></span>
               </div>
 
-              <!-- TIME ROW (new & emphasized) -->
+              <!-- TIME ROW (emphasized) -->
               <div class="row timeRow">
                 <span class="k" data-time-label>Seen</span>
                 <span class="v time" data-time>—</span>
@@ -548,10 +666,8 @@
               </div>
               <div class="row"><span class="k">Next</span><span class="v" data-next>—</span></div>
 
-              <!-- Chips: intent ONLY -->
+              <!-- Intent chip only -->
               <div class="chips" data-tags></div>
-
-              <!-- Stats pills removed per request -->
             </div>
           </div>
         </div>
@@ -560,20 +676,105 @@
     </div>
   </section>
 
-  <!-- SECTION 2 -->
-  <section class="section reveal" id="proof" aria-label="Proof" data-track-section="proof">
+  <!-- =========================
+       SECTION 2A – Proof (glass)
+       ========================= -->
+  <section class="section section-2A" id="proof" aria-label="Proof" data-track-section="proof">
     <div class="inner">
-      <div class="section-hd">
-        <h2 id="copy-proof-h2">Proof it works</h2>
-        <div class="sub" id="copy-proof-sub">Signals → Verified companies → Hot buyers → Time-to-first buyer</div>
-      </div>
-      <div class="proof-wrap">
-        <div class="kpi-grid" id="kpiGrid">
-          <div class="kpi"><div class="label">Signals captured</div><div class="num" data-to="42000" data-format="int">0</div><div class="hint">From your site + public sources</div></div>
-          <div class="kpi"><div class="label">Verified companies</div><div class="num" data-to="1306" data-format="int">0</div><div class="hint">Auto-deduped + enriched</div></div>
-          <div class="kpi"><div class="label">Hot buyers this week</div><div class="num" data-to="87" data-format="int">0</div><div class="hint">High-intent fit, ranked</div></div>
-          <div class="kpi"><div class="label">Time to first buyer</div><div class="num" data-to="2.3" data-format="dec1">0</div><div class="hint">Days from kickoff to signal</div></div>
+      <div class="glass proof-card" role="region" aria-labelledby="proof-h">
+        <div>
+          <h2 id="proof-h" class="proof-title">Results that speak for themselves.</h2>
+          <p class="proof-note">*Aggregated across packaging clients. Individual performance varies by mix, seasonality, and sales execution.</p>
         </div>
+
+        <!-- Metric 1 -->
+        <div class="metric">
+          <div class="m-value">$1.28M</div>
+          <div class="m-hint">avg qualified pipeline in 90 days</div>
+        </div>
+
+        <!-- Metric 2 -->
+        <div class="metric">
+          <div class="m-value">9.3 days</div>
+          <div class="m-hint">avg time to first RFQ</div>
+        </div>
+
+        <!-- Metric 3 -->
+        <div class="metric">
+          <div class="m-value">42%</div>
+          <div class="m-hint">quote-to-win on hot buyers</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================
+       SECTION 2B – Growth system
+       ========================= -->
+  <section class="section section-2B" id="growth" aria-label="Growth system" data-track-section="growth">
+    <div class="growth-wrap">
+      <div class="growth-hd">
+        <h3>Your AI-Powered Growth System</h3>
+        <div class="sub">From verified buyers to quotes—one glassy command center that packaging teams can trust.</div>
+      </div>
+
+      <div class="g-grid">
+
+        <!-- Customers (tall left) -->
+        <article class="tile customers" aria-label="Customers">
+          <h4>Customers</h4>
+          <p>Organize company + contact data in one place.</p>
+          <div class="kv"><span>Companies</span><span class="v">1,773</span></div>
+          <div class="kv"><span>Active buyers</span><span class="v">+37.5%</span></div>
+          <div class="face-grid" aria-hidden="true">
+            <div class="face"></div><div class="face"></div><div class="face"></div>
+            <div class="face"></div><div class="face"></div><div class="face"></div>
+            <div class="face"></div><div class="face"></div><div class="face"></div>
+          </div>
+          <span class="badge-note">Drop PNG avatars later</span>
+        </article>
+
+        <!-- Pipelines (wide) -->
+        <article class="tile pipelines" aria-label="Pipelines">
+          <h4>Pipelines</h4>
+          <p>Track packaging stages at a glance—Lead, Qualified, Proposal, Negotiation, Closed.</p>
+          <div class="kv"><span>Lead</span><span class="v">45</span></div><div class="bar"></div>
+          <div class="kv"><span>Qualified</span><span class="v">32</span></div><div class="bar"></div>
+          <div class="kv"><span>Proposal</span><span class="v">18</span></div><div class="bar"></div>
+          <div class="kv"><span>Negotiation</span><span class="v">7</span></div><div class="bar thin"></div>
+          <div class="kv"><span>Closed</span><span class="v">3</span></div><div class="bar thin"></div>
+        </article>
+
+        <!-- Real-time signals -->
+        <article class="tile realtime" aria-label="Real-time Signals">
+          <h4>Real-time Signals</h4>
+          <p>&lt; 30-second lead indicator from web + market activity.</p>
+          <div class="kv"><span>Signals today</span><span class="v">126</span></div>
+          <div class="bar"></div>
+          <div class="kv"><span>High-intent</span><span class="v">18%</span></div>
+          <div class="bar thin"></div>
+        </article>
+
+        <!-- Sales AI -->
+        <article class="tile ai-sdr" aria-label="Sales AI">
+          <h4>Sales AI</h4>
+          <p>Convert hot buyers into booked calls—auto snippets, follow-ups, and hand-offs.</p>
+          <div class="kv"><span>Booked this week</span><span class="v">14</span></div>
+          <div class="bar"></div>
+          <div class="kv"><span>Reply rate</span><span class="v">21%</span></div>
+          <div class="bar thin"></div>
+        </article>
+
+        <!-- Quotes / Pricing -->
+        <article class="tile quotes" aria-label="Quotes">
+          <h4>Quotes</h4>
+          <p>Specs to quote in one click—bottles, films, corrugate, labels, and more.</p>
+          <div class="kv"><span>Avg RFQ value</span><span class="v">$18.7k</span></div>
+          <div class="bar"></div>
+          <div class="kv"><span>Samples sent</span><span class="v">23</span></div>
+          <div class="bar thin"></div>
+        </article>
+
       </div>
     </div>
   </section>
@@ -640,8 +841,6 @@ window.SCOREBOARD_KNOBS = {
     hot:  { label:'Hot',   color:'#ff9a5a', emoji:'🔥' },
     hotp: { label:'Hot+',  color:'#42d17a', emoji:'🔥' }
   },
-  /* === Time windows in seconds (new) ===
-     hotp: seconds → minutes; hot: minutes → hours; warm: hours → days */
   time: {
     label: 'Seen',
     windows: {
@@ -662,19 +861,14 @@ window.SCOREBOARD_KNOBS = {
       {name:"Volt Pharma", city:"Denver, CO"}
     ],
     needs: [
-      // PRIMARY (consumer-contact)
       { sector:'primary',   label:'PET bottles',       spec:'28mm PCO • 16oz amber',  moq:'250k MOQ',
         timing:{hotp:'≤3d',   hot:'≤1w',   warm:'≤2w'} },
       { sector:'primary',   label:'Shrink sleeves',    spec:'PETG 45µ • full wrap',   moq:'10k MOQ',
         timing:{hotp:'rush 3d', hot:'≤1w',  warm:'≤2w'} },
-
-      // SECONDARY (retail/boxes)
       { sector:'secondary', label:'Mailer boxes',      spec:'E-flute • 2-color flexo', moq:'1k MOQ',
         timing:{hotp:'≤5d',   hot:'≤10d',  warm:'≤3w'} },
       { sector:'secondary', label:'Rigid boxes',       spec:'Magnetic lid • EVA insert', moq:'2k MOQ',
         timing:{hotp:'rush 7d', hot:'≤14d', warm:'≤4w'} },
-
-      // TERTIARY (transport)
       { sector:'tertiary',  label:'Pallet wrap',       spec:'23µ pre-stretch • 18″',  moq:'40 rolls',
         timing:{hotp:'≤72h',  hot:'≤1w',   warm:'≤2w'} },
       { sector:'tertiary',  label:'Corrugated prints', spec:'B-flute • 4-color',      moq:'5k MOQ',
@@ -721,6 +915,8 @@ window.SCOREBOARD_KNOBS = {
     $('#copy-hero-lead-mobile') && ($('#copy-hero-lead-mobile').textContent = H.leadMobile||'');
     $('#cta-desktop') && ($('#cta-desktop').textContent = (H.ctaDesktop || '✨ START FOR FREE'));
     $('#cta') && ($('#cta').textContent = (H.ctaMobile || 'Start Free'));
+
+    // safe no-ops if IDs missing
     $('#copy-proof-h2') && ($('#copy-proof-h2').textContent = (P.h2||'Proof it works'));
     $('#copy-proof-sub') && ($('#copy-proof-sub').textContent = (P.sub||''));
   }
@@ -809,14 +1005,11 @@ window.SCOREBOARD_KNOBS = {
     if(!stack || !wrapClip) return;
   
     const cs = getComputedStyle(document.documentElement);
-  
-    // Helper to read a CSS var as number with safe fallback
     const readVar = (name, fallback) => {
       const raw = parseFloat(cs.getPropertyValue(name));
       return Number.isFinite(raw) ? raw : fallback;
       };
   
-    // Read from KN first; fall back to CSS variables
     const cssLeft  = readVar('--card-left', 0.5);
     const cssTop   = readVar('--card-top',  0.5);
     const cssAngle = parseFloat(cs.getPropertyValue('--card-angle')) || 0;
@@ -851,7 +1044,6 @@ window.SCOREBOARD_KNOBS = {
     if(lbl){ lbl.textContent = KN.probLabel || 'Win rate'; }
     document.documentElement.style.setProperty('--prob-dot-size', (KN.probDot?.size||11)+'px');
     document.documentElement.style.setProperty('--prob-pulse', (KN.probDot?.pulseMs||900)+'ms');
-    // time label knob
     const tl = card.querySelector('[data-time-label]');
     if(tl){ tl.textContent = (KN.time?.label || 'Seen'); }
   }
@@ -911,7 +1103,7 @@ window.SCOREBOARD_KNOBS = {
     el.querySelector('[data-name]').textContent = `${data.buyer.name} — ${data.buyer.city}`;
     el.querySelector('[data-distance]').textContent = data.distance;
 
-    // Need: object-aware (sector detail + either timing or MOQ)
+    // Need
     const n = data.need;
     let needText = '—';
     if (n && typeof n === 'object'){
@@ -924,7 +1116,7 @@ window.SCOREBOARD_KNOBS = {
     el.querySelector('[data-need]').textContent = needText;
 
     // Personalized AI copy
-    el.querySelector('[data-ai-label]').textContent = data.aiLabel;          // e.g., "Your Ops AI"
+    el.querySelector('[data-ai-label]').textContent = data.aiLabel;
     el.querySelector('[data-ai]').textContent       = `${data.ai}% optimized`;
 
     // Next action
@@ -1267,7 +1459,7 @@ window.SCOREBOARD_KNOBS = {
   }
   init();
 
-  // Public knobs (existing)
+  // Public knobs for hero card
   window.updateScoreboardKnobs=function(patch){
     window.SCOREBOARD_KNOBS = deepMerge(window.SCOREBOARD_KNOBS, patch||{});
     Object.assign(KN, window.SCOREBOARD_KNOBS);
@@ -1296,63 +1488,6 @@ window.SCOREBOARD_KNOBS = {
 <script defer src="./sections/orbit/orbit.data.js"></script>
 <script defer src="./sections/orbit/orbit.js"></script>
 
-<!-- KPI Counters (Section 2) -->
-<script>
-  (function(){
-    const proof = document.getElementById('proof');
-    if(!proof) return;
-
-    const nums = Array.from(proof.querySelectorAll('.kpi .num'));
-    function fmt(val, kind){
-      if(kind==='dec1') return (Math.round(val*10)/10).toFixed(1);
-      return Math.round(val).toLocaleString('en-US');
-    }
-
-    function animate(){
-      const D = 1100; // ms
-      const t0 = performance.now();
-      const targets = nums.map(el=>{
-        const to = parseFloat(el.getAttribute('data-to')||'0');
-        const f  = (el.getAttribute('data-format')||'int').toLowerCase();
-        return { el:el, to:to, f:f };
-      });
-      function tick(now){
-        const p = Math.min(1, (now - t0)/D);
-        const ease = 1 - Math.pow(1-p, 3); // easeOutCubic
-        targets.forEach(({el,to,f})=>{
-          el.textContent = fmt(to*ease, f);
-        });
-        if(p<1) requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-    }
-
-    let ran=false;
-    if('IntersectionObserver' in window){
-      const io = new IntersectionObserver(es=>{
-        if(ran) return;
-        if(es.some(e=>e.isIntersecting)){
-          ran=true; animate(); io.disconnect();
-        }
-      },{threshold:0.35});
-      io.observe(proof);
-    }else{
-      addEventListener('load', animate, {once:true});
-    }
-  })();
-</script>
-
-<script>
-  addEventListener('load', () => {
-    const M = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {}).mobile ||
-              (window.PROCESS_CONFIG.mobile = {});
-    M.BP = 640;
-    M.MODE = 'dom';
-    M.SHOW_STEPS = { 1:true, 2:true, 3:true, 4:true, 5:true };
-    M.SHOW_EMPTY = true;
-    window.PROCESS_REPAINT && window.PROCESS_REPAINT();
-  });
-</script>
 <div id="site-footer"></div>
 <script defer src="/galactly-monorepo-v1/fragments/layout.js?v=4"
         data-root="/galactly-monorepo-v1/fragments/"></script>
