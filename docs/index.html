@@ -110,47 +110,133 @@
   
 
   /* ⬇️ INSERT THE NEW KNOBS BLOCK RIGHT HERE ⬇️ */
+  /* SECTION 2 KNOBS ONLY — hero is untouched */
   :root{
-    /* Card placement per device */
-    --card-left-desktop:.50; --card-top-desktop:.50;
-    --card-left-tablet:.50;  --card-top-tablet:.50;
-    --card-left-phone:.50;   --card-top-phone:.50;
+    /* ===== 2A: “Proof it works” glass card ===== */
+    --s2a-pad: 22px;
+    --s2a-radius: 18px;
+    --s2a-blur: 14px;
+    --s2a-bgA: .04;                /* glass gradient top alpha */
+    --s2a-bgB: .02;                /* glass gradient bottom alpha */
+    --s2a-stroke-a: .08;           /* outer stroke alpha */
+    --s2a-inset-stroke-a: .05;     /* thin inner inset line alpha */
+    --s2a-shadow-a: .28;           /* outer drop shadow alpha */
   
-    /* Card sizes per device */
-    --card-w-desktop:320px;  --rail-h-desktop:240px;
-    --card-w-tablet:300px;   --rail-h-tablet:232px;
-    --card-w-phone:280px;    --rail-h-phone:224px;
+    /* KPI grid columns */
+    --s2a-cols-desktop: 4;
+    --s2a-cols-tablet: 2;
+    --s2a-cols-phone: 1;
   
-    /* Text alignment knobs */
-    --card-copy-align:left;  /* left|center|right */
-    --tile-copy-align:left;
+    /* KPI text + alignment */
+    --s2a-align: left;             /* left | center | right */
+    --s2a-kpi-label-fs: 12px;
+    --s2a-kpi-num-fs-min: 28px;
+    --s2a-kpi-num-fs-max: 42px;
+    --s2a-kpi-hint-fs: 12px;
   
-    /* Section-2B grid columns */
-    --g-cols-desktop:3; --g-cols-tablet:2; --g-cols-phone:1;
+    /* ===== 2B: System tiles/cards (no-op if #system not present) ===== */
+    --s2b-cols-desktop: 5;
+    --s2b-cols-tablet: 3;
+    --s2b-cols-phone: 1;
+  
+    --s2b-gap: 12px;
+    --s2b-card-pad: 14px;
+    --s2b-card-radius: 14px;
+    --s2b-card-blur: 10px;
+    --s2b-card-stroke-a: .08;
+    --s2b-card-bgA: .05;
+    --s2b-card-bgB: .03;
+    --s2b-title-fs: 13px;
+    --s2b-metric-fs: 22px;
+    --s2b-align: left;             /* left | center | right */
   }
   
-  /* Wire-up per breakpoint */
-  @media (min-width:901px){
-    :root{ --card-left:var(--card-left-desktop); --card-top:var(--card-top-desktop);
-           --card-w:var(--card-w-desktop); --rail-h:var(--rail-h-desktop); }
-    .g-grid{ grid-template-columns:repeat(var(--g-cols-desktop),1fr); }
+  /* ===== 2A: Proof (scoped) ===== */
+  #proof .proof-wrap{
+    position:relative;
+    border-radius: var(--s2a-radius);
+    border: 1px solid rgba(255,255,255, var(--s2a-stroke-a));
+    background: linear-gradient(180deg,
+                rgba(255,255,255, var(--s2a-bgA)),
+                rgba(255,255,255, var(--s2a-bgB)));
+    -webkit-backdrop-filter: blur(var(--s2a-blur)) saturate(120%);
+            backdrop-filter: blur(var(--s2a-blur)) saturate(120%);
+    box-shadow: 0 16px 40px rgba(0,0,0, var(--s2a-shadow-a)),
+                inset 0 1px 0 rgba(255,255,255, var(--s2a-inset-stroke-a));
+    padding: var(--s2a-pad);
   }
-  @media (max-width:900px) and (min-width:641px){
-    :root{ --card-left:var(--card-left-tablet); --card-top:var(--card-top-tablet);
-           --card-w:var(--card-w-tablet); --rail-h:var(--rail-h-tablet); }
-    .g-grid{ grid-template-columns:repeat(var(--g-cols-tablet),1fr); }
+  #proof .proof-wrap::after{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255, var(--s2a-inset-stroke-a));
+  }
+  
+  /* KPI grid + borders */
+  #proof .kpi-grid{
+    display:grid;
+    grid-template-columns: repeat(var(--s2a-cols-desktop), minmax(0,1fr));
+    gap: 0;
+  }
+  @media (max-width:900px){
+    #proof .kpi-grid{ grid-template-columns: repeat(var(--s2a-cols-tablet), minmax(0,1fr)); }
+  }
+  @media (max-width:520px){
+    #proof .kpi-grid{ grid-template-columns: repeat(var(--s2a-cols-phone), minmax(0,1fr)); }
+  }
+  
+  #proof .kpi{
+    background:transparent; border:none; box-shadow:none; height:auto;
+    padding:18px 18px 16px; position:relative;
+    text-align: var(--s2a-align);
+  }
+  #proof .kpi + .kpi{ border-left:1px solid rgba(255,255,255,.06); }
+  @media (max-width:900px){
+    #proof .kpi:nth-child(odd){ border-left:none; }
+    #proof .kpi:nth-child(n+3){ border-top:1px solid rgba(255,255,255,.06); }
+  }
+  
+  /* KPI typography */
+  #proof .kpi .label{ font-size: var(--s2a-kpi-label-fs); color:#a8bbcd; letter-spacing:.2px; text-transform:uppercase }
+  #proof .kpi .num{
+    font-weight:800;
+    font-size: clamp(var(--s2a-kpi-num-fs-min), 5vw, var(--s2a-kpi-num-fs-max));
+    line-height:1.05; margin-top:6px;
+    background: linear-gradient(180deg, var(--gold-300), var(--gold-700));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  #proof .kpi .hint{ font-size: var(--s2a-kpi-hint-fs); color:#8ba6bf; margin-top:6px }
+  
+  /* ===== 2B: System tiles (safe if #system not yet in DOM) ===== */
+  #system .g-grid{
+    display:grid; gap: var(--s2b-gap);
+    grid-template-columns: repeat(var(--s2b-cols-desktop), minmax(0,1fr));
+  }
+  @media (max-width:900px){
+    #system .g-grid{ grid-template-columns: repeat(var(--s2b-cols-tablet), minmax(0,1fr)); }
   }
   @media (max-width:640px){
-    :root{ --card-left:var(--card-left-phone); --card-top:var(--card-top-phone);
-           --card-w:var(--card-w-phone); --rail-h:var(--rail-h-phone); }
-    .g-grid{ grid-template-columns:repeat(var(--g-cols-phone),1fr); }
+    #system .g-grid{ grid-template-columns: repeat(var(--s2b-cols-phone), minmax(0,1fr)); }
   }
-  
-  /* Alignment utilities */
-  .miniCard{ text-align:var(--card-copy-align); }
-  .tile{ text-align:var(--tile-copy-align); }
-  .miniCard.center-copy .row{ display:grid; grid-auto-flow:column; justify-content:center; align-items:center; gap:8px; }
-  .miniCard.center-copy .row.timeRow{ grid-auto-flow:row; }
+  #system .tile{
+    padding: var(--s2b-card-pad);
+    border-radius: var(--s2b-card-radius);
+    text-align: var(--s2b-align);
+    background: linear-gradient(180deg,
+                rgba(255,255,255, var(--s2b-card-bgA)),
+                rgba(255,255,255, var(--s2b-card-bgB)));
+    -webkit-backdrop-filter: blur(var(--s2b-card-blur)) saturate(120%);
+            backdrop-filter: blur(var(--s2b-card-blur)) saturate(120%);
+    border:1px solid rgba(255,255,255, var(--s2b-card-stroke-a));
+  }
+  #system .tile h4{
+    margin:0 0 8px;
+    font: 800 var(--s2b-title-fs)/1.2 Inter, system-ui;
+    letter-spacing:.2px; color: var(--text);
+  }
+  #system .tile .metric{
+    font: 800 var(--s2b-metric-fs)/1.05 Inter, system-ui;
+    background: linear-gradient(180deg, var(--gold-300), var(--gold-700));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
   /* ⬆️ END INSERT ⬆️ */
   
   
