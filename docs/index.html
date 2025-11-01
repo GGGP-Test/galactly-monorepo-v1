@@ -817,7 +817,7 @@
     background: linear-gradient(180deg, var(--progress-fill-1), var(--progress-fill-2));
   
     /* B) Or SOLID fill — uncomment to use and comment the gradient line */
-  // background: var(--progress-fill-1);
+    /* background: var(--progress-fill-1); */
   
     box-shadow:
       inset 0 0 8px rgba(0,0,0,.18),
@@ -914,23 +914,7 @@
     background:rgba(255,255,255,.02);
   }
   
-  /* 5) Bars — single source of truth: --pct */
-  /* Replace your current :root progress colors with this block */
-  :root{
-    --progress-fill-start:#C9B05A;   /* muted amber (top) */
-    --progress-fill-end:#9E8742;     /* deeper amber (bottom) */
-    --progress-track:#0D1522;        /* dark track so the fill reads clean */
-    --progress-track-stroke:rgba(255,255,255,.10);
-  }
-  #growth .bar{ position:relative; height:12px; border-radius:8px; margin:8px 0;
-    background:var(--progress-track); border:1px solid var(--progress-track-stroke); overflow:hidden; }
-  #growth .bar.thin{ height:8px; }
-  #growth .bar>i{ position:absolute; left:0; top:0; bottom:0;
-    width:calc(var(--pct,0) * 1%);
-    border-radius:inherit;
-    background:linear-gradient(180deg,var(--progress-fill-start),var(--progress-fill-end));
-    box-shadow:0 0 14px rgba(230,195,107,.25); }
-  #growth .bar>i::after{ content:none !important; }
+
 
 
 
