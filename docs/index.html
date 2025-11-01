@@ -213,97 +213,6 @@
   }
   
   
-  
-  
-  /* ===== 2A: Proof (scoped) ===== */
-  #proof .proof-wrap{
-    position:relative;
-    border-radius: var(--s2a-radius);
-    border: 1px solid rgba(255,255,255, var(--s2a-stroke-a));
-    background: linear-gradient(180deg,
-                rgba(255,255,255, var(--s2a-bgA)),
-                rgba(255,255,255, var(--s2a-bgB)));
-    -webkit-backdrop-filter: blur(var(--s2a-blur)) saturate(120%);
-            backdrop-filter: blur(var(--s2a-blur)) saturate(120%);
-    box-shadow: 0 16px 40px rgba(0,0,0, var(--s2a-shadow-a)),
-                inset 0 1px 0 rgba(255,255,255, var(--s2a-inset-stroke-a));
-    padding: var(--s2a-pad);
-  }
-  #proof .proof-wrap::after{
-    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255, var(--s2a-inset-stroke-a));
-  }
-  
-  /* KPI grid + borders */
-  #proof .kpi-grid{
-    display:grid;
-    grid-template-columns: repeat(var(--s2a-cols-desktop), minmax(0,1fr));
-    gap: 0;
-  }
-  @media (max-width:900px){
-    #proof .kpi-grid{ grid-template-columns: repeat(var(--s2a-cols-tablet), minmax(0,1fr)); }
-  }
-  @media (max-width:520px){
-    #proof .kpi-grid{ grid-template-columns: repeat(var(--s2a-cols-phone), minmax(0,1fr)); }
-  }
-  
-  #proof .kpi{
-    background:transparent; border:none; box-shadow:none; height:auto;
-    padding:18px 18px 16px; position:relative;
-    text-align: var(--s2a-align);
-  }
-  #proof .kpi + .kpi{ border-left:1px solid rgba(255,255,255,.06); }
-  @media (max-width:900px){
-    #proof .kpi:nth-child(odd){ border-left:none; }
-    #proof .kpi:nth-child(n+3){ border-top:1px solid rgba(255,255,255,.06); }
-  }
-  
-  /* KPI typography */
-  #proof .kpi .label{ font-size: var(--s2a-kpi-label-fs); color:#a8bbcd; letter-spacing:.2px; text-transform:uppercase }
-  #proof .kpi .num{
-    font-weight:800;
-    font-size: clamp(var(--s2a-kpi-num-fs-min), 5vw, var(--s2a-kpi-num-fs-max));
-    line-height:1.05; margin-top:6px;
-    background: linear-gradient(180deg, var(--gold-300), var(--gold-700));
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-  }
-  #proof .kpi .hint{ font-size: var(--s2a-kpi-hint-fs); color:#8ba6bf; margin-top:6px }
-  
-  /* ===== 2B: System tiles (safe if #system not yet in DOM) ===== */
-  #system .g-grid{
-    display:grid; gap: var(--s2b-gap);
-    grid-template-columns: repeat(var(--s2b-cols-desktop), minmax(0,1fr));
-  }
-  @media (max-width:900px){
-    #system .g-grid{ grid-template-columns: repeat(var(--s2b-cols-tablet), minmax(0,1fr)); }
-  }
-  @media (max-width:640px){
-    #system .g-grid{ grid-template-columns: repeat(var(--s2b-cols-phone), minmax(0,1fr)); }
-  }
-  #system .tile{
-    padding: var(--s2b-card-pad);
-    border-radius: var(--s2b-card-radius);
-    text-align: var(--s2b-align);
-    background: linear-gradient(180deg,
-                rgba(255,255,255, var(--s2b-card-bgA)),
-                rgba(255,255,255, var(--s2b-card-bgB)));
-    -webkit-backdrop-filter: blur(var(--s2b-card-blur)) saturate(120%);
-            backdrop-filter: blur(var(--s2b-card-blur)) saturate(120%);
-    border:1px solid rgba(255,255,255, var(--s2b-card-stroke-a));
-  }
-  #system .tile h4{
-    margin:0 0 8px;
-    font: 800 var(--s2b-title-fs)/1.2 Inter, system-ui;
-    letter-spacing:.2px; color: var(--text);
-  }
-  #system .tile .metric{
-    font: 800 var(--s2b-metric-fs)/1.05 Inter, system-ui;
-    background: linear-gradient(180deg, var(--gold-300), var(--gold-700));
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-  }
-  /* ⬆️ END INSERT ⬆️ */
-  
-  
 
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
@@ -676,22 +585,6 @@
   .growth-hd .sub{ color:#b7c9da; font-size: var(--s2b-sub-fs); }
 
 
-  /* Section 2B grid now fully knobbed */
-  .g-grid{
-    display:grid;
-    gap: var(--s2b-gap);
-    grid-template-columns: repeat(var(--s2b-cols-desktop, 3), minmax(0,1fr));
-    align-items:stretch;
-    grid-auto-flow: dense;          /* <-- add this: packs tiles to fill gaps */
-    /* optional, gives masonry-like row units: */
-    /* grid-auto-rows: 12rem; */
-  }
-  @media (max-width:1080px){
-    .g-grid{ grid-template-columns: repeat(var(--s2b-cols-tablet, 3), minmax(0,1fr)); }
-  }
-  @media (max-width:640px){
-    .g-grid{ grid-template-columns: repeat(var(--s2b-cols-phone, 1),  minmax(0,1fr)); }
-  }
   
   
     /* Single source of truth for columns + wrapping */
@@ -738,7 +631,6 @@
     --row: 1;
     grid-column: span var(--col);
     grid-row:    span var(--row);
-    min-height: calc(var(--row) * 12rem); /* 12rem matches grid-auto-rows */
   }
 
 
@@ -959,7 +851,7 @@
   
   /* “nl” = new line for desktop, inline on smaller screens */
   .nl{ display: inline; }
-  @media (min-width: 901px){ .nl{ display: block; }  .force-break{ display:block; } }
+  @media (min-width: 901px){ .nl{ display: block; }  }
   
   /* Optional: center the block (your .growth-hd is already centered, but this is safe) */
   .growth-hd{ text-align: center; }
@@ -1438,7 +1330,7 @@ window.SCOREBOARD_KNOBS = {
         '2B': {
           /* grid + cards */
           gap: 'clamp(16px, 2.6vw, 22px)',
-          cols: { desktop: 5, tablet: 3, phone: 1 }, /* grid columns */
+          cols: { desktop: 3, tablet: 3, phone: 1 }, /* grid columns */
           cardPad: 'clamp(16px,2.2vw,22px)',
           radius: '16px',
           blur: '14px',
