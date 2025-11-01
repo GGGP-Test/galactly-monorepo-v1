@@ -807,7 +807,36 @@
 
 
 
-
+  /* === 2B: static progress bars (no JS) === */
+  :root{
+    --progress-fill-start:#f6e7b2;     /* warmer gold */
+    --progress-fill-end:#d9ae43;
+    --progress-track:#0e1624;          /* darker track so the gold pops */
+    --progress-track-stroke:rgba(255,255,255,.14);
+  }
+  
+  #growth .bar{
+    position:relative;
+    height:12px;
+    border-radius:8px;
+    margin:8px 0;
+    background:var(--progress-track);
+    border:1px solid var(--progress-track-stroke);
+    overflow:hidden;
+  }
+  #growth .bar.thin{ height:8px; }
+  
+  /* Width now comes purely from CSS variables: --v (value) over --max (max) */
+  #growth .bar > i{
+    position:absolute; inset:0 auto 0 0;
+    width: calc( (var(--v, 0) / var(--max, 100)) * 100% );
+    border-radius:inherit;
+    background:linear-gradient(180deg, var(--progress-fill-start), var(--progress-fill-end));
+    box-shadow: 0 0 14px rgba(230,195,107,.25);
+  }
+  
+  /* Kill moving stripes entirely */
+  #growth .bar > i::after{ content:none !important; }
 
 
 
@@ -976,7 +1005,7 @@
   </section>
 
   <!-- =========================
-       SECTION 2B – Growth system
+       SECTION 2B – Growth system (STATIC BARS)
        ========================= -->
   <section class="section section-2B" id="growth" aria-label="Growth system" data-track-section="growth">
     <div class="growth-wrap">
@@ -991,8 +1020,8 @@
         <article class="tile customers" data-tile="customers" aria-label="Customers">
           <h4>Customers</h4>
           <p>Organize company + contact data in one place.</p>
-          <div class="kv"><span>Companies</span><span class="v" data-count="1773">1,773</span></div>
-          <div class="kv"><span>Active buyers</span><span class="v" data-count="37.5%">+37.5%</span></div>
+          <div class="kv"><span>Companies</span><span class="v">1,773</span></div>
+          <div class="kv"><span>Active buyers</span><span class="v">+37.5%</span></div>
       
           <div class="face-grid" aria-hidden="true">
             <div class="face"></div><div class="face"></div><div class="face"></div>
@@ -1019,20 +1048,25 @@
           <h4>Pipelines</h4>
           <p>Track packaging stages at a glance—Lead, Qualified, Proposal, Negotiation, Closed.</p>
       
-          <div class="kv"><span>Lead</span><span class="v" data-count="45">45</span></div>
-          <div class="bar"><i></i></div>
+          <div class="kv"><span>Lead</span><span class="v">45</span></div>
+          <!-- 45 / 45 = 100% -->
+          <div class="bar"><i style="--pct: 100"></i></div>
       
-          <div class="kv"><span>Qualified</span><span class="v" data-count="32">32</span></div>
-          <div class="bar"><i></i></div>
+          <div class="kv"><span>Qualified</span><span class="v">32</span></div>
+          <!-- 32 / 45 = 71.11% -->
+          <div class="bar"><i style="--pct: 71.11"></i></div>
       
-          <div class="kv"><span>Proposal</span><span class="v" data-count="18">18</span></div>
-          <div class="bar"><i></i></div>
+          <div class="kv"><span>Proposal</span><span class="v">18</span></div>
+          <!-- 18 / 45 = 40% -->
+          <div class="bar"><i style="--pct: 40"></i></div>
       
-          <div class="kv"><span>Negotiation</span><span class="v" data-count="7">7</span></div>
-          <div class="bar thin"><i></i></div>
+          <div class="kv"><span>Negotiation</span><span class="v">7</span></div>
+          <!-- 7 / 45 = 15.56% -->
+          <div class="bar thin"><i style="--pct: 15.56"></i></div>
       
-          <div class="kv"><span>Closed</span><span class="v" data-count="3">3</span></div>
-          <div class="bar thin"><i></i></div>
+          <div class="kv"><span>Closed</span><span class="v">3</span></div>
+          <!-- 3 / 45 = 6.67% -->
+          <div class="bar thin"><i style="--pct: 6.67"></i></div>
       
           <!-- tiny node accent -->
           <svg class="asset" width="130" height="90" viewBox="0 0 130 90" aria-hidden="true">
@@ -1048,11 +1082,12 @@
           <h4>Real-time Signals</h4>
           <p>&lt; 30-second lead indicator from web + market activity.</p>
       
-          <div class="kv"><span>Signals today</span><span class="v" data-count="126">126</span></div>
-          <div class="bar"><i></i></div>
+          <div class="kv"><span>Signals today</span><span class="v">126</span></div>
+          <!-- No shared max — show as full bar -->
+          <div class="bar"><i style="--pct: 100"></i></div>
       
-          <div class="kv"><span>High-intent</span><span class="v" data-count="18%">18%</span></div>
-          <div class="bar thin"><i></i></div>
+          <div class="kv"><span>High-intent</span><span class="v">18%</span></div>
+          <div class="bar thin"><i style="--pct: 18"></i></div>
       
           <!-- sparkline accent -->
           <svg class="asset" width="160" height="60" viewBox="0 0 160 60" aria-hidden="true">
@@ -1067,11 +1102,11 @@
           <h4>Sales AI</h4>
           <p>Convert hot buyers into booked calls—auto snippets, follow-ups, and hand-offs.</p>
       
-          <div class="kv"><span>Booked this week</span><span class="v" data-count="14">14</span></div>
-          <div class="bar"><i></i></div>
+          <div class="kv"><span>Booked this week</span><span class="v">14</span></div>
+          <div class="bar"><i style="--pct: 100"></i></div>
       
-          <div class="kv"><span>Reply rate</span><span class="v" data-count="21%">21%</span></div>
-          <div class="bar thin"><i></i></div>
+          <div class="kv"><span>Reply rate</span><span class="v">21%</span></div>
+          <div class="bar thin"><i style="--pct: 21"></i></div>
       
           <!-- ring accent -->
           <svg class="asset" width="110" height="110" viewBox="0 0 110 110" aria-hidden="true">
@@ -1089,11 +1124,11 @@
           <h4>Quotes</h4>
           <p>Specs to quote in one click—bottles, films, corrugate, labels, and more.</p>
       
-          <div class="kv"><span>Avg RFQ value</span><span class="v" data-count="52%">$18.7k</span></div>
-          <div class="bar"><i></i></div>
+          <div class="kv"><span>Avg RFQ value</span><span class="v">$18.7k</span></div>
+          <div class="bar"><i style="--pct: 52"></i></div>
       
-          <div class="kv"><span>Samples sent</span><span class="v" data-count="23">23</span></div>
-          <div class="bar thin"><i></i></div>
+          <div class="kv"><span>Samples sent</span><span class="v">23</span></div>
+          <div class="bar thin"><i style="--pct: 100"></i></div>
       
           <!-- pill accent -->
           <svg class="asset" width="140" height="60" viewBox="0 0 140 60" aria-hidden="true">
@@ -2005,7 +2040,6 @@ window.SCOREBOARD_KNOBS = {
     window.__deck=deck; rebuildDeck();
     setProbLabel();
     paintLead(document.getElementById('cardA'), deck[0]);
-    initGrowthBars();
     applyWallpaper();
 
     let timer, onScreen=true, visible=document.visibilityState!=='hidden';
