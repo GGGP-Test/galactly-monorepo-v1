@@ -752,17 +752,23 @@
   }
   
   
-  /* ===== SECTION 2 — VAR BRIDGES (safe; does not touch hero) ===== */
+  /* ===== SECTION 2 — VAR BRIDGES (wired to your DOM) ===== */
   
-  /* 2A (Proof/KPIs) — let vars drive alignment + number size */
-  #proof .kpi{ text-align: var(--s2a-align, left); }
-  #proof .kpi .num{
-    /* clamp still uses your existing viewport scaling, but pins ends by vars */
+  /* 2A: Proof card */
+  #proof .proof-card .proof-title,
+  #proof .proof-card .proof-note,
+  #proof .proof-card .metric{ text-align: var(--s2a-align, left); }
+  
+  #proof .proof-card .metric .m-value{
     font-size: clamp(var(--s2a-kpi-num-fs-min, 28px), 5vw, var(--s2a-kpi-num-fs-max, 42px));
   }
   
-  /* 2B (Your system cards) — grid obeys a single --s2b-cols var */
-  .s2b-grid{ display:grid; grid-template-columns: repeat(var(--s2b-cols, 5), 1fr); gap: 14px; }
+  /* 2B: Growth grid */
+  #growth .g-grid{
+    display:grid;
+    grid-template-columns: repeat(var(--s2b-cols, 5), 1fr);
+    gap: var(--s2b-gap, 14px);
+  }
 
 
 
