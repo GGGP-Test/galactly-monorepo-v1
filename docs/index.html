@@ -771,6 +771,44 @@
   }
 
 
+  /* === 2B – dynamic bars, stripes, and decorative assets (scoped) === */
+  #growth .bar{
+    position:relative;
+    height:12px;
+    border-radius:8px;
+    margin:8px 0;
+    background:rgba(255,255,255,.06);
+    overflow:hidden;
+  }
+  #growth .bar.thin{ height:8px; }
+  
+  #growth .bar > i{
+    position:absolute; inset:0; width:calc(var(--pct,0) * 1%);
+    border-radius:inherit;
+    background:linear-gradient(90deg, rgba(230,195,107,.45), rgba(255,255,255,.08));
+  }
+  #growth .bar > i::after{
+    content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(45deg, rgba(255,255,255,.18) 0 14px, transparent 14px 28px);
+    animation: s2bStripes 14s linear infinite; opacity:.15;
+  }
+  @keyframes s2bStripes{ to { transform: translateX(100%); } }
+  
+  /* optional tiny decorative svgs */
+  #growth .asset{
+    position:absolute; right:10px; bottom:10px;
+    opacity:.75; filter:blur(8px); pointer-events:none;
+  }
+
+
+
+
+
+
+
+
+
+
 
 </style>
 </head>
@@ -944,62 +982,122 @@
       </div>
 
       <div class="g-grid">
-
+      
         <!-- Customers (tall left) -->
-        <article class="tile customers" aria-label="Customers">
+        <article class="tile customers" data-tile="customers" aria-label="Customers">
           <h4>Customers</h4>
           <p>Organize company + contact data in one place.</p>
-          <div class="kv"><span>Companies</span><span class="v">1,773</span></div>
-          <div class="kv"><span>Active buyers</span><span class="v">+37.5%</span></div>
+          <div class="kv"><span>Companies</span><span class="v" data-count="1773">1,773</span></div>
+          <div class="kv"><span>Active buyers</span><span class="v" data-count="37.5%">+37.5%</span></div>
+      
           <div class="face-grid" aria-hidden="true">
             <div class="face"></div><div class="face"></div><div class="face"></div>
             <div class="face"></div><div class="face"></div><div class="face"></div>
             <div class="face"></div><div class="face"></div><div class="face"></div>
           </div>
+      
+          <!-- subtle grid orb (pure code, license-safe) -->
+          <svg class="asset" width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
+            <defs>
+              <radialGradient id="s2b-g1" cx="50%" cy="35%" r="60%">
+                <stop offset="0%" stop-color="#e6c36b"/><stop offset="100%" stop-color="#e6c36b" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="88" cy="88" r="28" fill="url(#s2b-g1)"/>
+            <rect x="10" y="10" width="100" height="100" rx="18" ry="18" fill="none" stroke="rgba(255,255,255,.10)"/>
+          </svg>
+      
           <span class="badge-note">Drop PNG avatars later</span>
         </article>
-
+      
         <!-- Pipelines (wide) -->
-        <article class="tile pipelines" aria-label="Pipelines">
+        <article class="tile pipelines" data-tile="pipelines" aria-label="Pipelines">
           <h4>Pipelines</h4>
           <p>Track packaging stages at a glance—Lead, Qualified, Proposal, Negotiation, Closed.</p>
-          <div class="kv"><span>Lead</span><span class="v">45</span></div><div class="bar"></div>
-          <div class="kv"><span>Qualified</span><span class="v">32</span></div><div class="bar"></div>
-          <div class="kv"><span>Proposal</span><span class="v">18</span></div><div class="bar"></div>
-          <div class="kv"><span>Negotiation</span><span class="v">7</span></div><div class="bar thin"></div>
-          <div class="kv"><span>Closed</span><span class="v">3</span></div><div class="bar thin"></div>
+      
+          <div class="kv"><span>Lead</span><span class="v" data-count="45">45</span></div>
+          <div class="bar"><i></i></div>
+      
+          <div class="kv"><span>Qualified</span><span class="v" data-count="32">32</span></div>
+          <div class="bar"><i></i></div>
+      
+          <div class="kv"><span>Proposal</span><span class="v" data-count="18">18</span></div>
+          <div class="bar"><i></i></div>
+      
+          <div class="kv"><span>Negotiation</span><span class="v" data-count="7">7</span></div>
+          <div class="bar thin"><i></i></div>
+      
+          <div class="kv"><span>Closed</span><span class="v" data-count="3">3</span></div>
+          <div class="bar thin"><i></i></div>
+      
+          <!-- tiny node accent -->
+          <svg class="asset" width="130" height="90" viewBox="0 0 130 90" aria-hidden="true">
+            <g fill="none" stroke="rgba(255,255,255,.12)">
+              <path d="M10 70 C40 10, 90 10, 120 70"/>
+              <circle cx="10" cy="70" r="4" fill="#e6c36b"/><circle cx="65" cy="30" r="4" fill="#e6c36b"/><circle cx="120" cy="70" r="4" fill="#e6c36b"/>
+            </g>
+          </svg>
         </article>
-
+      
         <!-- Real-time signals -->
-        <article class="tile realtime" aria-label="Real-time Signals">
+        <article class="tile realtime" data-tile="signals" aria-label="Real-time Signals">
           <h4>Real-time Signals</h4>
           <p>&lt; 30-second lead indicator from web + market activity.</p>
-          <div class="kv"><span>Signals today</span><span class="v">126</span></div>
-          <div class="bar"></div>
-          <div class="kv"><span>High-intent</span><span class="v">18%</span></div>
-          <div class="bar thin"></div>
+      
+          <div class="kv"><span>Signals today</span><span class="v" data-count="126">126</span></div>
+          <div class="bar"><i></i></div>
+      
+          <div class="kv"><span>High-intent</span><span class="v" data-count="18%">18%</span></div>
+          <div class="bar thin"><i></i></div>
+      
+          <!-- sparkline accent -->
+          <svg class="asset" width="160" height="60" viewBox="0 0 160 60" aria-hidden="true">
+            <defs><linearGradient id="s2b-sp" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#e6c36b" stop-opacity=".5"/><stop offset="1" stop-color="#e6c36b" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0,40 C20,25 40,45 60,28 C80,14 100,36 120,22 C140,10 160,20 160,20 L160,60 L0,60 Z" fill="url(#s2b-sp)"/>
+            <path d="M0,40 C20,25 40,45 60,28 C80,14 100,36 120,22 C140,10 160,20 160,20" stroke="#e6c36b" stroke-width="2" fill="none" opacity=".8"/>
+          </svg>
         </article>
-
+      
         <!-- Sales AI -->
-        <article class="tile ai-sdr" aria-label="Sales AI">
+        <article class="tile ai-sdr" data-tile="ai" aria-label="Sales AI">
           <h4>Sales AI</h4>
           <p>Convert hot buyers into booked calls—auto snippets, follow-ups, and hand-offs.</p>
-          <div class="kv"><span>Booked this week</span><span class="v">14</span></div>
-          <div class="bar"></div>
-          <div class="kv"><span>Reply rate</span><span class="v">21%</span></div>
-          <div class="bar thin"></div>
+      
+          <div class="kv"><span>Booked this week</span><span class="v" data-count="14">14</span></div>
+          <div class="bar"><i></i></div>
+      
+          <div class="kv"><span>Reply rate</span><span class="v" data-count="21%">21%</span></div>
+          <div class="bar thin"><i></i></div>
+      
+          <!-- ring accent -->
+          <svg class="asset" width="110" height="110" viewBox="0 0 110 110" aria-hidden="true">
+            <g fill="none" stroke="rgba(255,255,255,.12)">
+              <circle cx="55" cy="55" r="36"/>
+              <circle cx="55" cy="55" r="18"/>
+              <path d="M55 1v18 M55 92v17 M1 55h18 M92 55h17"/>
+              <circle cx="55" cy="1" r="3" fill="#e6c36b"/><circle cx="109" cy="55" r="3" fill="#e6c36b"/><circle cx="55" cy="109" r="3" fill="#e6c36b"/><circle cx="1" cy="55" r="3" fill="#e6c36b"/>
+            </g>
+          </svg>
         </article>
-
+      
         <!-- Quotes / Pricing -->
-        <article class="tile quotes" aria-label="Quotes">
+        <article class="tile quotes" data-tile="quotes" aria-label="Quotes">
           <h4>Quotes</h4>
           <p>Specs to quote in one click—bottles, films, corrugate, labels, and more.</p>
-          <div class="kv"><span>Avg RFQ value</span><span class="v">$18.7k</span></div>
-          <div class="bar"></div>
-          <div class="kv"><span>Samples sent</span><span class="v">23</span></div>
-          <div class="bar thin"></div>
+      
+          <div class="kv"><span>Avg RFQ value</span><span class="v" data-count="52%">$18.7k</span></div>
+          <div class="bar"><i></i></div>
+      
+          <div class="kv"><span>Samples sent</span><span class="v" data-count="23">23</span></div>
+          <div class="bar thin"><i></i></div>
+      
+          <!-- pill accent -->
+          <svg class="asset" width="140" height="60" viewBox="0 0 140 60" aria-hidden="true">
+            <defs><linearGradient id="s2b-pill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#f2dca0"/><stop offset="1" stop-color="#b8913d"/></linearGradient></defs>
+            <rect x="20" y="10" width="100" height="40" rx="20" fill="url(#s2b-pill)" opacity=".25"/>
+          </svg>
         </article>
-
+      
       </div>
     </div>
   </section>
@@ -1148,12 +1246,81 @@ window.SCOREBOARD_KNOBS = {
 
   function applyWallpaper(){
     const el=$('#pageWallpaper'); if(!el) return;
-    const hero=$('.hero'); const proof=$('#proof');
-    const h=Math.max((hero?.offsetHeight||0)+(proof?.offsetHeight||0)+80, window.innerHeight*1.6);
-    el.style.height=h+'px';
+    const hero=$('.hero'), proof=$('#proof'), growth=$('#growth');
+    const total = (hero?.offsetHeight||0) + (proof?.offsetHeight||0) + (growth?.offsetHeight||0) + 140;
+    const h = Math.max(total, window.innerHeight*1.8);
+    el.style.height = h + 'px';
   }
   addEventListener('resize',()=>{ clearTimeout(applyWallpaper._t); applyWallpaper._t=setTimeout(applyWallpaper,60); });
   document.addEventListener('DOMContentLoaded',applyWallpaper);
+
+  /* ---- Section 2B: read data-counts → set bar widths ---- */
+  function initGrowthBars(){
+    const tiles = Array.from(document.querySelectorAll('#growth article.tile'));
+    tiles.forEach(tile=>{
+      const counts = Array.from(tile.querySelectorAll('[data-count]')).map(el=>{
+        const raw = (el.getAttribute('data-count') || el.textContent || '').trim();
+        const isPct = raw.endsWith('%');
+        const num = parseFloat(raw.replace(/[,%\s]/g,''));
+        return { el, num: isNaN(num)?0:num, isPct };
+      });
+      if(!counts.length) return;
+  
+      // scale rule: if any value is percent → use that number as width; else scale to tile max
+      const hasPct = counts.some(c=>c.isPct);
+      const max = hasPct ? 100 : Math.max(1, ...counts.map(c=>c.num));
+  
+      let i = 0;
+      tile.querySelectorAll('.bar > i').forEach(beam=>{
+        const v = counts[i++]?.num ?? 0;
+        const pct = hasPct ? v : (v/max*100);
+        beam.style.setProperty('--pct', Math.max(0, Math.min(100, pct)).toFixed(2));
+      });
+    });
+  }
+  
+  /* optional public updater for later tweaks */
+  window.update2B = function(patch){
+    // patch example:
+    // { pipelines: { Lead: 60, Qualified: 28, Proposal: 14, Negotiation: 9, Closed: 5 },
+    //   signals: { today: 140, hi: '22%' }, ai: { booked: 16, reply: '19%' }, quotes: { rfq: '58%', samples: 31 } }
+    const map = {
+      pipelines: {
+        sel: '[data-tile="pipelines"]',
+        keys: ['Lead','Qualified','Proposal','Negotiation','Closed']
+      },
+      signals: {
+        sel: '[data-tile="signals"]',
+        keys: ['today','hi']
+      },
+      ai: {
+        sel: '[data-tile="ai"]',
+        keys: ['booked','reply']
+      },
+      quotes: {
+        sel: '[data-tile="quotes"]',
+        keys: ['rfq','samples']
+      }
+    };
+    Object.entries(patch||{}).forEach(([k,vals])=>{
+      const conf = map[k]; if(!conf) return;
+      const tile = document.querySelector('#growth '+conf.sel); if(!tile) return;
+      const nums = Array.from(tile.querySelectorAll('[data-count]'));
+      conf.keys.forEach((key, idx)=>{
+        if(vals[key] == null || nums[idx] == null) return;
+        const v = String(vals[key]);
+        nums[idx].setAttribute('data-count', v);
+        nums[idx].textContent = v.replace(/%$/,'').match(/^\d+(\.\d+)?$/) && nums[idx].textContent.includes('%')
+          ? (v + (v.endsWith('%')?'':'%'))
+          : v.replace('%','');
+      });
+    });
+    initGrowthBars();
+  };
+
+
+
+
 
   /* ---------- BLUEPRINT BG (gradient + faint grid) ---------- */
   const wrapClip = $('.const-clip');
@@ -1631,6 +1798,8 @@ window.SCOREBOARD_KNOBS = {
     window.__deck=deck; rebuildDeck();
     setProbLabel();
     paintLead(document.getElementById('cardA'), deck[0]);
+    initGrowthBars();
+    applyWallpaper();
 
     let timer, onScreen=true, visible=document.visibilityState!=='hidden';
     const noMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
