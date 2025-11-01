@@ -935,11 +935,12 @@
   }
   
   /* 5) Bars — single source of truth: --pct */
+  /* Replace your current :root progress colors with this block */
   :root{
-    --progress-fill-start:#f6e7b2;
-    --progress-fill-end:#d9ae43;
-    --progress-track:#0e1624;
-    --progress-track-stroke:rgba(255,255,255,.14);
+    --progress-fill-start:#C9B05A;   /* muted amber (top) */
+    --progress-fill-end:#9E8742;     /* deeper amber (bottom) */
+    --progress-track:#0D1522;        /* dark track so the fill reads clean */
+    --progress-track-stroke:rgba(255,255,255,.10);
   }
   #growth .bar{ position:relative; height:12px; border-radius:8px; margin:8px 0;
     background:var(--progress-track); border:1px solid var(--progress-track-stroke); overflow:hidden; }
