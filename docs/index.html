@@ -121,7 +121,10 @@
     --s2a-stroke-a: .08;           /* outer stroke alpha */
     --s2a-inset-stroke-a: .05;     /* thin inner inset line alpha */
     --s2a-shadow-a: .28;           /* outer drop shadow alpha */
-  
+    --s2a-title-align: left;          /* NEW: title + note alignment */
+    --s2a-metric-align: center;       /* NEW: KPI boxes alignment */
+    --s2a-metric-pad-left: clamp(4px, 1vw, 8px); /* NEW: left pad inside each KPI cell */
+      
     /* KPI grid columns */
     --s2a-cols-desktop: 4;
     --s2a-cols-tablet: 2;
@@ -153,14 +156,6 @@
   
   /* ===== SECTION 2 — BREAKPOINT OVERRIDES + DEBUG BADGE ===== */
 
-  /* 0) Always-on debug badge so you know the active view */
-  :root{ --bp-label: "base"; }
-  html::before{
-    content: var(--bp-label);
-    position: fixed; z-index: 9999; inset: 8px auto auto 8px;
-    padding: 2px 6px; border-radius: 6px; font: 600 11px/1 Inter, system-ui;
-    color:#0a0e14; background:#e6c36b; opacity:.85; pointer-events:none;
-  }
   
   /* 1) BASE (fallback for any size) — affects Section 2 only via its vars */
   :root{
@@ -176,7 +171,6 @@
   /* 2) DESKTOP ≥ 901px */
   @media (min-width:901px){
     :root{
-      --bp-label: "desktop";
       /* 2A (desktop-only) */
       --s2a-align: center;               /* center KPIs on desktop only */
       --s2a-kpi-num-fs-min: 32px; 
@@ -191,7 +185,6 @@
   /* 3) TABLET 641–900px */
   @media (max-width:900px) and (min-width:641px){
     :root{
-      --bp-label: "tablet";
       /* 2A (tablet-only) */
       --s2a-align: center;
       --s2a-kpi-num-fs-min: 30px; 
@@ -206,7 +199,6 @@
   /* 4) PHONE ≤ 640px */
   @media (max-width:640px){
     :root{
-      --bp-label: "phone";
       /* 2A (phone-only) */
       --s2a-align: left;                 /* phone can be different */
       --s2a-kpi-num-fs-min: 26px; 
@@ -660,7 +652,7 @@
   }
   .proof-note{ margin:6px 0 0; font-size: var(--s2a-note-fs); color: var(--muted); opacity:.95; }
 
-  .metric{ position:relative; padding-left: clamp(4px,1vw,8px); }
+  .metric{ position:relative; padding-left: var(--s2a-metric-pad-left); }
   .metric:not(:first-child){ border-left: 1px solid rgba(255,255,255, var(--s2a-metric-div-a)); }
   .m-value{
     font-weight: var(--s2a-num-wt);
@@ -763,8 +755,13 @@
   
   /* 2A: Proof card */
   #proof .proof-card .proof-title,
-  #proof .proof-card .proof-note,
-  #proof .proof-card .metric{ text-align: var(--s2a-align, left); }
+  #proof .proof-card .proof-note{
+    text-align: var(--s2a-title-align, var(--s2a-align, left));
+  }
+  
+  #proof .proof-card .metric{
+    text-align: var(--s2a-metric-align, var(--s2a-align, left));
+  }
   
   #proof .proof-card .metric .m-value{
     font-size: clamp(var(--s2a-kpi-num-fs-min, 28px), 5vw, var(--s2a-kpi-num-fs-max, 42px));
