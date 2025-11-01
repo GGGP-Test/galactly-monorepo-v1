@@ -750,6 +750,22 @@
     .btn{transition:none}
     .reveal{opacity:1!important; transform:none!important; transition:none!important}
   }
+  
+  
+  /* ===== SECTION 2 — VAR BRIDGES (safe; does not touch hero) ===== */
+  
+  /* 2A (Proof/KPIs) — let vars drive alignment + number size */
+  #proof .kpi{ text-align: var(--s2a-align, left); }
+  #proof .kpi .num{
+    /* clamp still uses your existing viewport scaling, but pins ends by vars */
+    font-size: clamp(var(--s2a-kpi-num-fs-min, 28px), 5vw, var(--s2a-kpi-num-fs-max, 42px));
+  }
+  
+  /* 2B (Your system cards) — grid obeys a single --s2b-cols var */
+  .s2b-grid{ display:grid; grid-template-columns: repeat(var(--s2b-cols, 5), 1fr); gap: 14px; }
+
+
+
 </style>
 </head>
 <body>
