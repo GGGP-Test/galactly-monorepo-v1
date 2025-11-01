@@ -151,6 +151,76 @@
     --s2b-align: center;             /* left | center | right */
   }
   
+  /* ===== SECTION 2 — BREAKPOINT OVERRIDES + DEBUG BADGE ===== */
+
+  /* 0) Always-on debug badge so you know the active view */
+  :root{ --bp-label: "base"; }
+  html::before{
+    content: var(--bp-label);
+    position: fixed; z-index: 9999; inset: 8px auto auto 8px;
+    padding: 2px 6px; border-radius: 6px; font: 600 11px/1 Inter, system-ui;
+    color:#0a0e14; background:#e6c36b; opacity:.85; pointer-events:none;
+  }
+  
+  /* 1) BASE (fallback for any size) — affects Section 2 only via its vars */
+  :root{
+    /* 2A alignment + typographic scale (base) */
+    --s2a-align: left;
+    --s2a-kpi-num-fs-min: 28px; --s2a-kpi-num-fs-max: 42px;
+  
+    /* 2B grid + alignment (base) */
+    --s2b-cols-phone: 1;  /* phone default */
+    --s2b-align: left;
+  }
+  
+  /* 2) DESKTOP ≥ 901px */
+  @media (min-width:901px){
+    :root{
+      --bp-label: "desktop";
+      /* 2A (desktop-only) */
+      --s2a-align: center;               /* center KPIs on desktop only */
+      --s2a-kpi-num-fs-min: 32px; 
+      --s2a-kpi-num-fs-max: 48px;
+  
+      /* 2B (desktop-only) */
+      --s2b-cols-desktop: 5;             /* 5 tiles per row */
+      --s2b-align: left;
+    }
+  }
+  
+  /* 3) TABLET 641–900px */
+  @media (max-width:900px) and (min-width:641px){
+    :root{
+      --bp-label: "tablet";
+      /* 2A (tablet-only) */
+      --s2a-align: center;
+      --s2a-kpi-num-fs-min: 30px; 
+      --s2a-kpi-num-fs-max: 44px;
+  
+      /* 2B (tablet-only) */
+      --s2b-cols-tablet: 3;              /* 3 tiles per row */
+      --s2b-align: center;
+    }
+  }
+  
+  /* 4) PHONE ≤ 640px */
+  @media (max-width:640px){
+    :root{
+      --bp-label: "phone";
+      /* 2A (phone-only) */
+      --s2a-align: left;                 /* phone can be different */
+      --s2a-kpi-num-fs-min: 26px; 
+      --s2a-kpi-num-fs-max: 36px;
+  
+      /* 2B (phone-only) */
+      --s2b-cols-phone: 1;               /* 1 tile per row */
+      --s2b-align: left;
+    }
+  }
+  
+  
+  
+  
   /* ===== 2A: Proof (scoped) ===== */
   #proof .proof-wrap{
     position:relative;
