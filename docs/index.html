@@ -587,12 +587,12 @@
     --s2a-title-w: min(480px, 42%);
     --s2a-metric-w: 1fr;
     --s2a-metric-div-a: 0;
-    --s2a-title-fs: clamp(22px, 4vw, 34px);
+    --s2a-title-fs: clamp(20px, 4vw, 32px);
     --s2a-title-lh: 1.05;
     --s2a-note-fs: 12px;
 
     /* 2A numbers */
-    --s2a-num-fs: clamp(26px, 5vw, 42px);
+    --s2a-num-fs: clamp(20px, 5vw, 36px);
     --s2a-num-wt: 500;
     --s2a-num-grad: linear-gradient(180deg, var(--gold-300), var(--gold-700));
     --s2a-num-color: transparent;
@@ -665,7 +665,7 @@
     color: var(--s2a-num-color);
     text-transform: var(--s2a-num-tt);
   }
-  .m-hint{ margin-top:6px; font-size:12px; color:#8ba6bf; }
+  .m-hint{ margin-top:6px; font-size:10px; color:#8ba6bf; }
 
   /* 2B Growth system */
   .growth-wrap{ max-width: var(--container-max); margin:0 auto; }
@@ -1399,7 +1399,7 @@ window.SCOREBOARD_KNOBS = {
           /* KPI numerics (bridge used by your var rules) */
           kpiLabelFs: '12px',
           kpiNumFsMin: '28px',
-          kpiNumFsMax: '42px',
+          kpiNumFsMax: '36px',
           kpiHintFs: '12px'
         },
   
@@ -1431,15 +1431,15 @@ window.SCOREBOARD_KNOBS = {
   
       /* Device-specific overrides (cascade onto base) */
       desktop: {
-        '2A': { align:'center', kpiNumFsMin:'32px', kpiNumFsMax:'48px' },
+        '2A': { align:'center', kpiNumFsMin:'26px', kpiNumFsMax:'40px' },
         '2B': { align:'left' }
       },
       tablet: {
-        '2A': { align:'center', kpiNumFsMin:'30px', kpiNumFsMax:'44px' },
+        '2A': { align:'center', kpiNumFsMin:'26px', kpiNumFsMax:'36px' },
         '2B': { align:'center' }
       },
       phone: {
-        '2A': { align:'left',   kpiNumFsMin:'26px', kpiNumFsMax:'36px' },
+        '2A': { align:'left',   kpiNumFsMin:'20px', kpiNumFsMax:'30px' },
         '2B': { align:'left' }
       }
     };
