@@ -915,6 +915,28 @@
   }
   
 
+  /* Accent + layout utilities (global) */
+  .accent-gold{
+    background: linear-gradient(180deg, var(--gold-300), var(--gold-700));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;                 /* gradient text */
+  }
+  /* If you want a solid gold instead of gradient: add .solid to the span */
+  .accent-gold.solid{
+    background: none;
+    -webkit-background-clip: initial;
+    color: var(--gold);
+  }
+  
+  .nowrap{ white-space: nowrap; }
+  
+  /* “nl” = new line for desktop, inline on smaller screens */
+  .nl{ display: inline; }
+  @media (min-width: 901px){ .nl{ display: block; } }
+  
+  /* Optional: center the block (your .growth-hd is already centered, but this is safe) */
+  .growth-hd{ text-align: center; }
 
 
 
@@ -1085,7 +1107,10 @@
   <section class="section section-2B" id="growth" aria-label="Growth system" data-track-section="growth">
     <div class="growth-wrap">
       <div class="growth-hd">
-        <h3>Your AI-Powered Growth System</h3>
+        <h3>
+          Your AI-Powered
+          <span class="accent-gold nl nowrap">Growth&nbsp;System</span>
+        </h3>
         <div class="sub">From verified buyers to quotes—one glassy command center that packaging teams can trust.</div>
       </div>
   
