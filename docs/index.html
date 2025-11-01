@@ -939,6 +939,16 @@
   .growth-hd{ text-align: center; }
 
 
+  /* local value near the element beats :root’s inline var */
+  #growth, #growth .growth-hd{
+    --s2b-h2-fs: clamp(26px, 4.8vw, 56px);
+  }
+
+
+
+
+
+
 
 </style>
 </head>
