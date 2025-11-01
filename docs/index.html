@@ -681,15 +681,22 @@
   }
   .growth-hd .sub{ color:#b7c9da; font-size: var(--s2b-sub-fs); }
 
+
+  /* Section 2B grid now fully knobbed */
   .g-grid{
     display:grid;
-    grid-template-columns: 1.05fr 1fr 1fr;
     gap: var(--s2b-gap);
+    grid-template-columns: repeat(var(--s2b-cols-desktop, 3), minmax(0,1fr));
     align-items:stretch;
   }
-  @media (max-width: 1080px){ .g-grid{ grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 640px){ .g-grid{ grid-template-columns: 1fr; } }
-
+  @media (max-width:1080px){
+    .g-grid{ grid-template-columns: repeat(var(--s2b-cols-tablet, 2), minmax(0,1fr)); }
+  }
+  @media (max-width:640px){
+    .g-grid{ grid-template-columns: repeat(var(--s2b-cols-phone, 1), minmax(0,1fr)); }
+  }
+  
+  
   .tile{
     position:relative;
     padding: var(--tile-pad);
@@ -1218,7 +1225,210 @@ window.SCOREBOARD_KNOBS = {
   'use strict';
   const $  = (q)=>document.querySelector(q);
   const $$ = (q)=>Array.from(document.querySelectorAll(q));
-
+  
+  /* ===== SECTION 2 (2A + 2B) MASTER KNOBS API ===== */
+  (function(){
+    const root = document.documentElement;
+    const rs   = root.style;
+  
+    function deepMerge(base, patch){
+      const out = Array.isArray(base) ? base.slice() : {...base};
+      for(const k in patch){
+        const v = patch[k];
+        if(v && typeof v === 'object' && !Array.isArray(v)){
+          out[k] = deepMerge(base?.[k]||{}, v);
+        }else{
+          out[k] = v;
+        }
+      }
+      return out;
+    }
+    const deepClone = (o)=>JSON.parse(JSON.stringify(o||{}));
+  
+    /* Default values mirror your current CSS so nothing visually jumps */
+    const DEFAULTS = {
+      base: {
+        /* ----- 2A (Proof glass card) ----- */
+        '2A': {
+          pad: 'clamp(18px, 3vw, 28px) clamp(18px, 3vw, 32px)',
+          radius: '18px',
+          blur: '14px',
+          bgA: '.86',            /* glass bg alpha (overall) */
+          strokeA: '.10',        /* outer stroke alpha */
+          innerStrokeA: '.06',   /* inset hairline alpha */
+          shadowA: '.26',        /* card drop alpha */
+  
+          /* layout/typography */
+          titleW: 'min(480px, 42%)',
+          colGap: 'clamp(16px, 4vw, 42px)',
+          align: 'left',
+          titleFs: 'clamp(22px, 4vw, 34px)',
+          titleLh: '1.05',
+          noteFs: '12px',
+  
+          /* KPI numerics (bridge used by your var rules) */
+          kpiLabelFs: '12px',
+          kpiNumFsMin: '28px',
+          kpiNumFsMax: '42px',
+          kpiHintFs: '12px'
+        },
+  
+        /* ----- 2B (Growth system tiles) ----- */
+        '2B': {
+          /* grid + cards */
+          gap: 'clamp(16px, 2.6vw, 22px)',
+          cols: { desktop: 5, tablet: 3, phone: 1 }, /* grid columns */
+          cardPad: 'clamp(16px,2.2vw,22px)',
+          radius: '16px',
+          blur: '14px',
+          bgA: '.86',            /* glass bg alpha (overall) */
+          strokeA: '.10',
+          innerStrokeA: '.06',
+          shadowA: '.22',
+          align: 'left',
+  
+          /* section header + tile text */
+          h2Fs: 'clamp(20px, 3.2vw, 30px)',
+          subFs: 'clamp(13px, 2vw, 16px)',
+          tileTitleFs: 'clamp(14px,1.8vw,16px)',
+          tileBodyFs: 'clamp(12px,1.7vw,14px)',
+          tileGlow: 'rgba(230,195,107,.22)'
+        },
+  
+        /* explicit 2A KPI grid columns (if you re-enable that style) */
+        cols2A: { desktop: 4, tablet: 2, phone: 1 }
+      },
+  
+      /* Device-specific overrides (cascade onto base) */
+      desktop: {
+        '2A': { align:'center', kpiNumFsMin:'32px', kpiNumFsMax:'48px' },
+        '2B': { align:'left' }
+      },
+      tablet: {
+        '2A': { align:'center', kpiNumFsMin:'30px', kpiNumFsMax:'44px' },
+        '2B': { align:'center' }
+      },
+      phone: {
+        '2A': { align:'left',   kpiNumFsMin:'26px', kpiNumFsMax:'36px' },
+        '2B': { align:'left' }
+      }
+    };
+  
+    /* Map all knob keys → CSS variables actually used in your CSS */
+    function buildCssVars(state){
+      const css = {};
+      const A = state['2A']||{};
+      const B = state['2B']||{};
+  
+      // 2A (Proof)
+      css['--s2a-pad']               = A.pad;
+      css['--s2a-radius']            = A.radius;
+      css['--s2a-blur']              = A.blur;
+      css['--s2a-bg-a']              = A.bgA;            // your “glass helper” naming
+      css['--s2a-stroke-a']          = A.strokeA;
+      css['--s2a-inner-stroke-a']    = A.innerStrokeA;
+      css['--s2a-shadow-a']          = A.shadowA;
+      css['--s2a-title-w']           = A.titleW;
+      css['--s2a-col-gap']           = A.colGap;
+      css['--s2a-align']             = A.align;
+      css['--s2a-title-fs']          = A.titleFs;
+      css['--s2a-title-lh']          = A.titleLh;
+      css['--s2a-note-fs']           = A.noteFs;
+  
+      // KPI numeric bridge (used by your var-bridges)
+      css['--s2a-kpi-label-fs']      = A.kpiLabelFs;
+      css['--s2a-kpi-num-fs-min']    = A.kpiNumFsMin;
+      css['--s2a-kpi-num-fs-max']    = A.kpiNumFsMax;
+      css['--s2a-kpi-hint-fs']       = A.kpiHintFs;
+  
+      // 2B (Growth tiles)
+      css['--s2b-gap']               = B.gap;
+      css['--s2b-card-pad']          = B.cardPad;
+      css['--s2b-card-radius']       = B.radius;
+      css['--s2b-card-blur']         = B.blur;
+      css['--s2b-card-bgA']          = B.bgA;            // gradient A
+      css['--s2b-card-bgB']          = (B.bgB ?? '.03'); // gradient B default
+      css['--s2b-card-stroke-a']     = B.strokeA;
+      css['--s2b-inner-stroke-a']    = B.innerStrokeA;
+      css['--s2b-shadow-a']          = B.shadowA;
+      css['--s2b-align']             = B.align;
+  
+      // section header + tile text
+      css['--s2b-h2-fs']             = B.h2Fs;
+      css['--s2b-sub-fs']            = B.subFs;
+      css['--tile-pad']              = B.cardPad;        // tie tile pad to cardPad
+      css['--tile-title-fs']         = B.tileTitleFs;
+      css['--tile-body-fs']          = B.tileBodyFs;
+      css['--tile-glow']             = B.tileGlow;
+  
+      // 2B columns (new CSS swap above reads these)
+      const Cb = (B.cols||{});
+      css['--s2b-cols-desktop']      = Cb.desktop;
+      css['--s2b-cols-tablet']       = Cb.tablet;
+      css['--s2b-cols-phone']        = Cb.phone;
+  
+      // (Optional) 2A KPI grid columns if you reintroduce that specific grid
+      const Ca = (state.cols2A||{});
+      css['--s2a-cols-desktop']      = Ca.desktop;
+      css['--s2a-cols-tablet']       = Ca.tablet;
+      css['--s2a-cols-phone']        = Ca.phone;
+  
+      return css;
+    }
+  
+    function applyCssVars(cssVars){
+      for(const k in cssVars){
+        const v = cssVars[k];
+        if(v !== undefined && v !== null) rs.setProperty(k, String(v));
+      }
+    }
+  
+    function composeState(targetDevice){
+      // base + device override
+      let st = deepClone(DEFAULTS.base);
+      if(targetDevice && DEFAULTS[targetDevice]){
+        st = deepMerge(st, DEFAULTS[targetDevice]);
+      }
+      return st;
+    }
+  
+    function apply(targetDevice){
+      const st  = composeState(targetDevice);
+      const css = buildCssVars(st);
+      applyCssVars(css);
+      // nice debugging badge label
+      rs.setProperty('--bp-label', `"${targetDevice ? 'forced:'+targetDevice : 'base'}"`);
+    }
+  
+    // Public API
+    window.S2 = {
+      _state: deepClone(DEFAULTS),
+      /** Patch knobs. Scope: 'base' | 'desktop' | 'tablet' | 'phone' */
+      set(patch, scope='base'){
+        if(!this._state[scope]) this._state[scope] = {};
+        this._state[scope] = deepMerge(this._state[scope], patch||{});
+        // recompute merged -> apply current force (if any) or nothing (media queries still work)
+        apply(this._force || null);
+      },
+      /** Force a device override for testing: 'desktop' | 'tablet' | 'phone' | null */
+      forceDevice(mode){
+        this._force = (mode==='desktop'||mode==='tablet'||mode==='phone') ? mode : null;
+        apply(this._force || null);
+      },
+      /** Get a deep copy of current defaults/overrides */
+      get(){ return deepClone(this._state); },
+      /** Reset to initial */
+      reset(){ this._state = deepClone(DEFAULTS); this._force=null; apply(null); }
+    };
+  
+    // Apply once on boot (no force → lets media queries adjust alignment copies you already have)
+    apply(null);
+  })();
+  
+  
+  
+  
+  
   const KN = window.SCOREBOARD_KNOBS;
   const deepMerge=(b,p)=>{const o=Array.isArray(b)?[...b]:{...b}; for(const k in p){const v=p[k]; o[k]=(v&&typeof v==='object'&&!Array.isArray(v))?deepMerge(b[k]||{},v):v;} return o;};
   const range=([a,b])=>a+Math.random()*(b-a);
