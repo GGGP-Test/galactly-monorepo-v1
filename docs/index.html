@@ -16,6 +16,8 @@
 <link rel="stylesheet" href="./sections/orbit/orbit.css">
 
 <link rel="icon" href="data:,">
+  
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
 <style>
   :root{
@@ -808,16 +810,16 @@
     opacity:.75; filter:blur(8px); pointer-events:none;
   }
   
-  #growth .asset{ display:none !important; }
 
 
 
 
-  /* === 2B: static progress bars (no JS) === */
+
+  /* === 2B: static progress bars (no JS) — unified on --pct === */
   :root{
-    --progress-fill-start:#f6e7b2;     /* warmer gold */
+    --progress-fill-start:#f6e7b2;
     --progress-fill-end:#d9ae43;
-    --progress-track:#0e1624;          /* darker track so the gold pops */
+    --progress-track:#0e1624;
     --progress-track-stroke:rgba(255,255,255,.14);
   }
   
@@ -832,20 +834,121 @@
   }
   #growth .bar.thin{ height:8px; }
   
-  /* Width now comes purely from CSS variables: --v (value) over --max (max) */
   #growth .bar > i{
-    position:absolute; inset:0 auto 0 0;
-    width: calc( (var(--v, 0) / var(--max, 100)) * 100% );
+    position:absolute; left:0; top:0; bottom:0;
+    /* 👇 this is the only thing that sets width */
+    width: calc(var(--pct, 0) * 1%);
     border-radius:inherit;
     background:linear-gradient(180deg, var(--progress-fill-start), var(--progress-fill-end));
     box-shadow: 0 0 14px rgba(230,195,107,.25);
   }
   
-  /* Kill moving stripes entirely */
+  /* No moving stripes */
   #growth .bar > i::after{ content:none !important; }
 
 
+  /* ====== SECTION 2B: VISUAL SLOTS (emoji + svg + avatars + 3D) ====== */
 
+  /* Global knobs (desktop defaults) */
+  :root{
+    /* emoji/icon before labels */
+    --slot-icon-size: 16px;
+    --slot-icon-gap: 6px;
+  
+    /* decorative asset in tile corner */
+    --slot-asset-right: 10px;
+    --slot-asset-bottom: 10px;
+    --slot-asset-scale: 1;
+    --slot-asset-opacity: .85;
+  
+    /* avatar grid */
+    --slot-avatars-size: 56px;
+    --slot-avatars-gap: 10px;
+    --slot-avatars-radius: 10px;
+    --slot-avatars-cols: 3;
+  
+    /* 3D area */
+    --slot-3d-height: 140px;
+    --slot-3d-radius: 12px;
+  }
+  
+  /* Tablet */
+  @media (max-width:900px){
+    :root{
+      --slot-icon-size: 15px;
+      --slot-asset-right: 8px; --slot-asset-bottom: 8px; --slot-asset-scale:.95;
+      --slot-avatars-size: 52px; --slot-avatars-gap: 8px; --slot-avatars-cols: 3;
+      --slot-3d-height: 150px;
+    }
+  }
+  /* Phone */
+  @media (max-width:640px){
+    :root{
+      --slot-icon-size: 14px;
+      --slot-asset-right: 6px; --slot-asset-bottom: 6px; --slot-asset-scale:.9;
+      --slot-avatars-size: 48px; --slot-avatars-gap: 8px; --slot-avatars-cols: 3;
+      --slot-3d-height: 140px;
+    }
+  }
+  
+  /* 1) Emoji/icon slot alongside any key label */
+  #growth .kv-label{
+    display:inline-flex; align-items:center; gap:var(--slot-icon-gap);
+  }
+  #growth .kv-label[data-icon]::before{
+    content: attr(data-icon);              /* you set the emoji in HTML */
+    font-size: var(--slot-icon-size);
+    line-height: 1;
+    display:inline-block;
+  }
+  
+  /* 2) Corner asset (SVG/PNG) */
+  #growth .slot-asset{
+    position:absolute; right:var(--slot-asset-right); bottom:var(--slot-asset-bottom);
+    transform: scale(var(--slot-asset-scale));
+    opacity: var(--slot-asset-opacity);
+    pointer-events:none;
+  }
+  #growth img.slot-asset, #growth svg.slot-asset{ max-width:40%; height:auto; }
+  
+  /* 3) Avatars grid */
+  #growth .slot-avatars{
+    display:grid;
+    grid-template-columns: repeat(var(--slot-avatars-cols), var(--slot-avatars-size));
+    gap: var(--slot-avatars-gap);
+    margin-top: 10px;
+  }
+  #growth .slot-avatars .avatar{
+    width:var(--slot-avatars-size); height:var(--slot-avatars-size);
+    border-radius:var(--slot-avatars-radius);
+    object-fit:cover; display:block;
+    background:#0f1622; border:1px solid rgba(255,255,255,.10);
+  }
+  
+  /* 4) 3D area (model-viewer) */
+  #growth .slot-3d{ margin-top:10px; }
+  #growth .slot-3d model-viewer{
+    width:100%; height:var(--slot-3d-height);
+    border-radius:var(--slot-3d-radius); overflow:hidden;
+    background:rgba(255,255,255,.02);
+  }
+  
+  /* 5) Bars — single source of truth: --pct */
+  :root{
+    --progress-fill-start:#f6e7b2;
+    --progress-fill-end:#d9ae43;
+    --progress-track:#0e1624;
+    --progress-track-stroke:rgba(255,255,255,.14);
+  }
+  #growth .bar{ position:relative; height:12px; border-radius:8px; margin:8px 0;
+    background:var(--progress-track); border:1px solid var(--progress-track-stroke); overflow:hidden; }
+  #growth .bar.thin{ height:8px; }
+  #growth .bar>i{ position:absolute; left:0; top:0; bottom:0;
+    width:calc(var(--pct,0) * 1%);
+    border-radius:inherit;
+    background:linear-gradient(180deg,var(--progress-fill-start),var(--progress-fill-end));
+    box-shadow:0 0 14px rgba(230,195,107,.25); }
+  #growth .bar>i::after{ content:none !important; }
 
 
 
@@ -1011,7 +1114,7 @@
   </section>
 
   <!-- =========================
-       SECTION 2B – Growth system (STATIC BARS)
+       SECTION 2B – Growth system (SLOTTED)
        ========================= -->
   <section class="section section-2B" id="growth" aria-label="Growth system" data-track-section="growth">
     <div class="growth-wrap">
@@ -1021,122 +1124,111 @@
       </div>
   
       <div class="g-grid">
-      
-        <!-- Customers (tall left) -->
+        <!-- Customers (tall) -->
         <article class="tile customers" data-tile="customers" aria-label="Customers">
           <h4>Customers</h4>
           <p>Organize company + contact data in one place.</p>
-          <div class="kv"><span>Companies</span><span class="v" data-count="1773">1,773</span></div>
-          <div class="kv"><span>Active buyers</span><span class="v" data-count="37.5%">+37.5%</span></div>
   
-          <div class="face-grid" aria-hidden="true">
-            <div class="face"></div><div class="face"></div><div class="face"></div>
-            <div class="face"></div><div class="face"></div><div class="face"></div>
-            <div class="face"></div><div class="face"></div><div class="face"></div>
+          <div class="kv">
+            <span class="kv-label" data-icon="📈">Companies</span>
+            <span class="v" data-count="1773">1,773</span>
+          </div>
+          <div class="kv">
+            <span class="kv-label" data-icon="🔥">Active buyers</span>
+            <span class="v" data-count="37.5%">+37.5%</span>
           </div>
   
-          <!-- subtle grid orb (pure code, license-safe) -->
-          <svg class="asset" width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
-            <defs>
-              <radialGradient id="s2b-g1" cx="50%" cy="35%" r="60%">
-                <stop offset="0%" stop-color="#e6c36b"/><stop offset="100%" stop-color="#e6c36b" stop-opacity="0"/>
-              </radialGradient>
-            </defs>
-            <circle cx="88" cy="88" r="28" fill="url(#s2b-g1)"/>
-            <rect x="10" y="10" width="100" height="100" rx="18" ry="18" fill="none" stroke="rgba(255,255,255,.10)"/>
-          </svg>
+          <!-- Avatars slot -->
+          <div class="slot-avatars" aria-hidden="true">
+            <img class="avatar" src="./assets/avatars/a1.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a2.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a3.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a4.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a5.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a6.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a7.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a8.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a9.webp" alt="" loading="lazy" width="56" height="56">
+          </div>
   
-          <span class="badge-note">Drop PNG avatars later</span>
+          <!-- Optional 3D slot (comment out if unused) -->
+          <div class="slot-3d" aria-hidden="true">
+            <model-viewer
+              src="./assets/models/growth.glb"
+              poster="./assets/models/growth-poster.webp"
+              autoplay camera-controls disable-zoom interaction-prompt="none"
+              exposure="1.1">
+            </model-viewer>
+          </div>
+  
+          <!-- Corner decorative asset (SVG or PNG) -->
+          <img class="slot-asset" src="./assets/s2b/corners.svg" alt="">
         </article>
-      
+  
         <!-- Pipelines (wide) -->
         <article class="tile pipelines" data-tile="pipelines" aria-label="Pipelines">
           <h4>Pipelines</h4>
           <p>Track packaging stages at a glance—Lead, Qualified, Proposal, Negotiation, Closed.</p>
   
-          <div class="kv"><span>Lead</span><span class="v">45</span></div>
+          <div class="kv"><span class="kv-label" data-icon="🧲">Lead</span><span class="v">45</span></div>
           <div class="bar"><i style="--pct:100"></i></div>
   
-          <div class="kv"><span>Qualified</span><span class="v">32</span></div>
+          <div class="kv"><span class="kv-label" data-icon="✅">Qualified</span><span class="v">32</span></div>
           <div class="bar"><i style="--pct:71.11"></i></div>
   
-          <div class="kv"><span>Proposal</span><span class="v">18</span></div>
+          <div class="kv"><span class="kv-label" data-icon="📄">Proposal</span><span class="v">18</span></div>
           <div class="bar"><i style="--pct:40"></i></div>
   
-          <div class="kv"><span>Negotiation</span><span class="v">7</span></div>
+          <div class="kv"><span class="kv-label" data-icon="🤝">Negotiation</span><span class="v">7</span></div>
           <div class="bar thin"><i style="--pct:15.56"></i></div>
   
-          <div class="kv"><span>Closed</span><span class="v">3</span></div>
+          <div class="kv"><span class="kv-label" data-icon="🏁">Closed</span><span class="v">3</span></div>
           <div class="bar thin"><i style="--pct:6.67"></i></div>
   
-          <!-- tiny node accent -->
-          <svg class="asset" width="130" height="90" viewBox="0 0 130 90" aria-hidden="true">
-            <g fill="none" stroke="rgba(255,255,255,.12)">
-              <path d="M10 70 C40 10, 90 10, 120 70"/>
-              <circle cx="10" cy="70" r="4" fill="#e6c36b"/><circle cx="65" cy="30" r="4" fill="#e6c36b"/><circle cx="120" cy="70" r="4" fill="#e6c36b"/>
-            </g>
-          </svg>
+          <img class="slot-asset" src="./assets/s2b/nodes.svg" alt="">
         </article>
-      
-        <!-- Real-time signals -->
+  
+        <!-- Real-time Signals -->
         <article class="tile realtime" data-tile="signals" aria-label="Real-time Signals">
           <h4>Real-time Signals</h4>
           <p>&lt; 30-second lead indicator from web + market activity.</p>
   
-          <div class="kv"><span>Signals today</span><span class="v">126</span></div>
+          <div class="kv"><span class="kv-label" data-icon="⚡️">Signals today</span><span class="v">126</span></div>
           <div class="bar"><i style="--pct:100"></i></div>
   
-          <div class="kv"><span>High-intent</span><span class="v">18%</span></div>
+          <div class="kv"><span class="kv-label" data-icon="🔥">High-intent</span><span class="v">18%</span></div>
           <div class="bar thin"><i style="--pct:18"></i></div>
   
-          <!-- sparkline accent -->
-          <svg class="asset" width="160" height="60" viewBox="0 0 160 60" aria-hidden="true">
-            <defs><linearGradient id="s2b-sp" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#e6c36b" stop-opacity=".5"/><stop offset="1" stop-color="#e6c36b" stop-opacity="0"/></linearGradient></defs>
-            <path d="M0,40 C20,25 40,45 60,28 C80,14 100,36 120,22 C140,10 160,20 160,20 L160,60 L0,60 Z" fill="url(#s2b-sp)"/>
-            <path d="M0,40 C20,25 40,45 60,28 C80,14 100,36 120,22 C140,10 160,20 160,20" stroke="#e6c36b" stroke-width="2" fill="none" opacity=".8"/>
-          </svg>
+          <img class="slot-asset" src="./assets/s2b/sparkline.svg" alt="">
         </article>
-      
+  
         <!-- Sales AI -->
         <article class="tile ai-sdr" data-tile="ai" aria-label="Sales AI">
           <h4>Sales AI</h4>
           <p>Convert hot buyers into booked calls—auto snippets, follow-ups, and hand-offs.</p>
   
-          <div class="kv"><span>Booked this week</span><span class="v">14</span></div>
+          <div class="kv"><span class="kv-label" data-icon="📅">Booked this week</span><span class="v">14</span></div>
           <div class="bar"><i style="--pct:78"></i></div>
   
-          <div class="kv"><span>Reply rate</span><span class="v">21%</span></div>
+          <div class="kv"><span class="kv-label" data-icon="✉️">Reply rate</span><span class="v">21%</span></div>
           <div class="bar thin"><i style="--pct:21"></i></div>
   
-          <!-- ring accent -->
-          <svg class="asset" width="110" height="110" viewBox="0 0 110 110" aria-hidden="true">
-            <g fill="none" stroke="rgba(255,255,255,.12)">
-              <circle cx="55" cy="55" r="36"/>
-              <circle cx="55" cy="55" r="18"/>
-              <path d="M55 1v18 M55 92v17 M1 55h18 M92 55h17"/>
-              <circle cx="55" cy="1" r="3" fill="#e6c36b"/><circle cx="109" cy="55" r="3" fill="#e6c36b"/><circle cx="55" cy="109" r="3" fill="#e6c36b"/><circle cx="1" cy="55" r="3" fill="#e6c36b"/>
-            </g>
-          </svg>
+          <img class="slot-asset" src="./assets/s2b/rings.svg" alt="">
         </article>
-      
-        <!-- Quotes / Pricing -->
+  
+        <!-- Quotes -->
         <article class="tile quotes" data-tile="quotes" aria-label="Quotes">
           <h4>Quotes</h4>
           <p>Specs to quote in one click—bottles, films, corrugate, labels, and more.</p>
   
-          <div class="kv"><span>Avg RFQ value</span><span class="v">$18.7k</span></div>
+          <div class="kv"><span class="kv-label" data-icon="💵">Avg RFQ value</span><span class="v">$18.7k</span></div>
           <div class="bar"><i style="--pct:52"></i></div>
   
-          <div class="kv"><span>Samples sent</span><span class="v">23</span></div>
+          <div class="kv"><span class="kv-label" data-icon="📦">Samples sent</span><span class="v">23</span></div>
           <div class="bar thin"><i style="--pct:46"></i></div>
   
-          <!-- pill accent -->
-          <svg class="asset" width="140" height="60" viewBox="0 0 140 60" aria-hidden="true">
-            <defs><linearGradient id="s2b-pill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#f2dca0"/><stop offset="1" stop-color="#b8913d"/></linearGradient></defs>
-            <rect x="20" y="10" width="100" height="40" rx="20" fill="url(#s2b-pill)" opacity=".25"/>
-          </svg>
+          <img class="slot-asset" src="./assets/s2b/pill.svg" alt="">
         </article>
-  
       </div>
     </div>
   </section>
