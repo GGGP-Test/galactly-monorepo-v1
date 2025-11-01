@@ -107,6 +107,57 @@
     --us-edge-fade: 8%;
     --us-dot-size: 9px; /* independent size control for map dots */
   }
+  
+  :root{
+    --bg:#0a0e14; --panel:#101623; /* …many vars… */
+    --us-dot-size: 9px;
+  }  /* ← END of the first :root block */
+  
+  /* ⬇️ INSERT THE NEW KNOBS BLOCK RIGHT HERE ⬇️ */
+  :root{
+    /* Card placement per device */
+    --card-left-desktop:.50; --card-top-desktop:.50;
+    --card-left-tablet:.50;  --card-top-tablet:.50;
+    --card-left-phone:.50;   --card-top-phone:.50;
+  
+    /* Card sizes per device */
+    --card-w-desktop:320px;  --rail-h-desktop:240px;
+    --card-w-tablet:300px;   --rail-h-tablet:232px;
+    --card-w-phone:280px;    --rail-h-phone:224px;
+  
+    /* Text alignment knobs */
+    --card-copy-align:left;  /* left|center|right */
+    --tile-copy-align:left;
+  
+    /* Section-2B grid columns */
+    --g-cols-desktop:3; --g-cols-tablet:2; --g-cols-phone:1;
+  }
+  
+  /* Wire-up per breakpoint */
+  @media (min-width:901px){
+    :root{ --card-left:var(--card-left-desktop); --card-top:var(--card-top-desktop);
+           --card-w:var(--card-w-desktop); --rail-h:var(--rail-h-desktop); }
+    .g-grid{ grid-template-columns:repeat(var(--g-cols-desktop),1fr); }
+  }
+  @media (max-width:900px) and (min-width:641px){
+    :root{ --card-left:var(--card-left-tablet); --card-top:var(--card-top-tablet);
+           --card-w:var(--card-w-tablet); --rail-h:var(--rail-h-tablet); }
+    .g-grid{ grid-template-columns:repeat(var(--g-cols-tablet),1fr); }
+  }
+  @media (max-width:640px){
+    :root{ --card-left:var(--card-left-phone); --card-top:var(--card-top-phone);
+           --card-w:var(--card-w-phone); --rail-h:var(--rail-h-phone); }
+    .g-grid{ grid-template-columns:repeat(var(--g-cols-phone),1fr); }
+  }
+  
+  /* Alignment utilities */
+  .miniCard{ text-align:var(--card-copy-align); }
+  .tile{ text-align:var(--tile-copy-align); }
+  .miniCard.center-copy .row{ display:grid; grid-auto-flow:column; justify-content:center; align-items:center; gap:8px; }
+  .miniCard.center-copy .row.timeRow{ grid-auto-flow:row; }
+  /* ⬆️ END INSERT ⬆️ */
+  
+  
 
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
