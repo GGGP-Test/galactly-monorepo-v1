@@ -933,39 +933,110 @@
     --hero-inner-stroke-a: 0;    /* keep any inner hairline off (0–.12 ok) */
   }
 
-  /* === RIM-ONLY GLOW OVERRIDE (clean center, edge-only) === */
+  /* === RIM-ONLY GLOW OVERRIDE (with blur/spread knobs) === */
   :root{
-    --rim-w: 12px;          /* ring thickness */
-    --rim-glow-a: .12;      /* main glow */
-    --rim-glow-b: .04;      /* soft secondary */
+    /* ring thickness */
+    --rim-w: 12px;
+  
+    /* GLOW LAYER 1 — tight rim */
+    --rim1-blur: 30px;     /* ← BLUR radius */
+    --rim1-spread: -6px;   /* ← SPREAD (negative = stays on the rim) */
+    --rim1-alpha: .12;     /* strength */
+  
+    /* GLOW LAYER 2 — wide feather */
+    --rim2-offset-y: 10px; /* bias glow downward; set 0 for even ring */
+    --rim2-blur: 90px;     /* ← BIG BLUR for the soft halo */
+    --rim2-spread: -55px;  /* ← big negative keeps center clean */
+    --rim2-alpha: .05;     /* soft strength */
   }
   
-  .glass, .tile{ border:0 !important; }  /* keep real borders off */
+  /* never draw real borders */
+  .glass, .tile{ border:0 !important; }
   
-  /* carve a thin ring and glow only on that ring */
+  /* carve a ring, then glow only on that ring */
   .glass::before,
   .tile::before{
     content:"";
-    position:absolute; inset:0;
-    border-radius:inherit; pointer-events:none;
+    position:absolute; inset:0; border-radius:inherit; pointer-events:none;
   
-    /* ring mask */
+    /* ring mask (keeps the *interior* perfectly clean) */
     padding: var(--rim-w);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
             mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
             mask-composite: exclude;
   
-    /* even edge glow, clean interior */
+    /* two inset shadows: tight rim + wide feather */
     box-shadow:
-      inset 0 0 26px rgba(var(--theme-glow-rgb), var(--rim-glow-a)),
-      inset 0 18px 60px -40px rgba(var(--theme-glow-rgb), var(--rim-glow-b));
+      inset 0 0 var(--rim1-blur) var(--rim1-spread) rgba(var(--theme-glow-rgb), var(--rim1-alpha)),
+      inset 0 var(--rim2-offset-y) var(--rim2-blur) var(--rim2-spread) rgba(var(--theme-glow-rgb), var(--rim2-alpha));
     mix-blend-mode: normal;
   }
   
-  /* kill any inner hairline */
-  .glass::after{ box-shadow: inset 0 0 0 0 rgba(255,255,255,0) !important; }
-  .tile::after { box-shadow: inset 0 0 0 0 rgba(255,255,255,0) !important; }
+  /* kill hairlines */
+  .glass::after,
+  .tile::after{ box-shadow: inset 0 0 0 0 rgba(255,255,255,0) !important; }
+  
+  /* per-component tuning (optional) */
+  .glass{
+    --rim1-blur: 34px; --rim1-spread: -8px; --rim1-alpha:.11;
+    --rim2-blur: 110px; --rim2-spread: -64px; --rim2-offset-y: 8px; --rim2-alpha:.045;
+  }
+  .tile{
+    --rim1-blur: 26px; --rim1-spread: -6px; --rim1-alpha:.12;
+    --rim2-blur: 80px;  --rim2-spread: -52px; --rim2-offset-y: 6px; --rim2-alpha:.05;
+  }
+  
+  /* Safari seam guard (optional) */
+  @supports (-webkit-backdrop-filter: blur(1px)) {
+    .glass, .tile{
+      -webkit-mask-image: radial-gradient(100% 100% at 50% 50%, #000 calc(100% - 1px), transparent 100%);
+              mask-image: radial-gradient(100% 100% at 50% 50%, #000 calc(100% - 1px), transparent 100%);
+    }
+  }
+  
+  
+  /* === OUTER STROKE OVERLAY (hairline outside the card) === */
+  :root{
+    /* stroke knobs */
+    --outer-stroke-rgb: 255,255,255; /* white-ish */
+    --outer-stroke-a: .10;           /* strength */
+    --outer-stroke-w: 1px;           /* thickness (spread) */
+    --outer-stroke-blur: 0px;        /* optional softness */
+    --outer-stroke-blend: normal;    /* try 'screen' for extra pop on very dark bg */
+  }
+  
+  /* ensure stacking order: rim glow below, stroke above */
+  .glass, .tile{ position:relative; }
+  .glass::before, .tile::before{ z-index: 1; }   /* inner rim glow (we added earlier) */
+  .glass::after,  .tile::after { z-index: 2; }   /* outer stroke lives here */
+  
+  /* draw a stroke OUTSIDE the rounded box (no real borders) */
+  .glass::after,
+  .tile::after{
+    content:"";
+    position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  
+    /* box-shadow outside the element: [x y blur spread color] */
+    box-shadow: 0 0 var(--outer-stroke-blur)
+                     var(--outer-stroke-w)
+                     rgba(var(--outer-stroke-rgb), var(--outer-stroke-a));
+  
+    /* make it “brighten” against dark backgrounds if you like */
+    mix-blend-mode: var(--outer-stroke-blend);
+  }
+  
+  /* optional: per-component tweaks */
+  .glass{
+    --outer-stroke-a:.11;  /* slightly stronger on big glass card */
+  }
+  .tile{
+    --outer-stroke-a:.10;  /* a touch softer on small tiles */
+  }
+  
+  /* if you had any old inner hairline code, keep it off */
+  .glass{ --s2a-inner-stroke-a: 0; }
+  .tile { --s2b-inner-stroke-a: 0; }
 
 
 </style>
