@@ -379,7 +379,12 @@
   .const-clip::after{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
     background: linear-gradient(90deg, transparent 0%, var(--const-edge-tint) 96%, transparent 100%);
-    opacity:var(--const-grid-sheen-a);
+    opacity: var(--const-grid-sheen-a);
+    box-shadow:
+      inset 0 0 var(--hero-glow-blur)  var(--hero-glow-spread) rgba(var(--theme-glow-rgb), var(--hero-glow-a)),
+      inset 0 2px 18px -10px                                rgba(var(--theme-glow-rgb), var(--hero-glow-b)),
+      inset 0 0 0 1px                                       rgba(255,255,255, var(--hero-inner-stroke-a));
+    mix-blend-mode: var(--hero-glow-blend);
   }
 
   .const-legend{
@@ -921,6 +926,18 @@
 
 
 
+  :root{
+    /* Hero (blueprint panel) glow knobs */
+    --hero-glow-a: .10;          /* primary glow alpha */
+    --hero-glow-b: .03;          /* soft secondary */
+    --hero-glow-blur: 26px;
+    --hero-glow-spread: -8px;    /* negative = off the rim */
+    --hero-glow-blend: normal;   /* keep corners sane */
+    --hero-inner-stroke-a: 0;    /* keep any inner hairline off (0–.12 ok) */
+  }
+
+
+
 
 </style>
 </head>
@@ -1356,8 +1373,8 @@ window.SCOREBOARD_KNOBS = {
           radius: '18px',
           blur: '14px',
           bgA: '.86',            /* glass bg alpha (overall) */
-          strokeA: '.10',        /* outer stroke alpha */
-          innerStrokeA: '.06',   /* inset hairline alpha */
+          strokeA: '0',        /* outer stroke alpha */
+          innerStrokeA: '0',   /* inset hairline alpha */
           shadowA: '.26',        /* card drop alpha */
   
           /* layout/typography */
@@ -1384,8 +1401,8 @@ window.SCOREBOARD_KNOBS = {
           radius: '16px',
           blur: '14px',
           bgA: '.86',            /* glass bg alpha (overall) */
-          strokeA: '.10',
-          innerStrokeA: '.06',
+          strokeA: '0',
+          innerStrokeA: '0',
           shadowA: '.22',
           align: 'left',
   
@@ -2178,6 +2195,8 @@ window.SCOREBOARD_KNOBS = {
 <!-- D3 + TopoJSON for accurate state borders -->
 <script defer src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+
+
 
 <!-- Section 3 (Process) scripts -->
 <script defer src="./sections/process/process.data.js"></script>
