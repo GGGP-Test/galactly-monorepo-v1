@@ -618,8 +618,9 @@
 
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
   .section .inner{margin:0 auto}
-  .section-2A { margin-top: var(--s2-overlap-y); }
-  .section-2B { margin-top: var(--s2-gap); }
+  /* Replace your current 2A/2B margins with these: */
+  .section-2A { margin-top: var(--space-hero-2a); }
+  .section-2B { margin-top: var(--space-2a-2b); }
 
   /* Glass helper */
   .glass{
@@ -652,21 +653,22 @@
 
   /* 2A Proof card */
   .proof-card{
-    padding: var(--s2a-pad);
+    padding: var(--s2a-pad-y) var(--s2a-pad-x);
     display:grid;
     grid-template-columns: var(--s2a-title-w) repeat(3, var(--s2a-metric-w));
-    gap: var(--s2a-col-gap);
+    gap: var(--s2a-row-gap) var(--s2a-col-gap);
     align-items:center;
   }
   @media (max-width: 980px){
     .proof-card{ grid-template-columns: 1fr; gap: 18px; }
   }
   .proof-title{
+    line-height: var(--s2a-title-lh);
     font: 800 var(--s2a-title-fs)/var(--s2a-title-lh) Inter, system-ui;
     letter-spacing:-.01em;
-    margin:0 0 8px;
+    margin: 0 0 var(--s2a-title-gap);
   }
-  .proof-note{ margin:6px 0 0; font-size: var(--s2a-note-fs); color: var(--muted); opacity:.95; }
+  .proof-note{ margin: 0; }
 
   .metric{ position:relative; padding-left: var(--s2a-metric-pad-left); }
   .metric:not(:first-child){ border-left: 1px solid rgba(255,255,255, var(--s2a-metric-div-a)); }
@@ -679,7 +681,7 @@
     color: var(--s2a-num-color);
     text-transform: var(--s2a-num-tt);
   }
-  .m-hint{ margin-top:6px; font-size:10px; color:#8ba6bf; }
+  .m-hint{ margin-top: var(--s2a-kpi-gap-y); }
 
   /* 2B Growth system */
   .growth-wrap{ max-width: var(--container-max); margin:0 auto; }
@@ -721,6 +723,9 @@
     backdrop-filter: blur(var(--s2b-blur)) saturate(120%);
     box-shadow: 0 16px 36px rgba(0,0,0,var(--s2b-shadow-a));
     background-clip: padding-box;
+    .tile > * + *{ margin-top: var(--tile-stack-gap); }         /* generic vertical spacing */
+    .tile .kv{ margin-top: var(--tile-kv-gap); }
+    #growth .bar{ margin: var(--tile-bar-gap) 0; }              /* spacing around progress bars */
   }
   
   .tile::before{
@@ -1131,6 +1136,61 @@
   }
   
   /* Keep your rim glow + outer stroke from earlier; they’ll layer on top. */
+
+
+
+  /* ===== MOBILE/TABLET GLASS BOOST (place at end of <style>) ===== */
+  
+  /* Tablet ≤900px */
+  @media (max-width:900px){
+    :root{
+      /* make the blur & fill stronger so it’s visible on mobile GPUs */
+      --s2a-blur: 18px;  --s2a-bg-a: .20;  --s2a-shadow-a: .30;
+      --s2b-blur: 18px;  --s2b-bg-a: .20;  --s2b-shadow-a: .28;
+    }
+    /* strengthen rim glow + outside hairline */
+    .glass::before, .tile::before{
+      --rim1-alpha:.18;               /* tight rim */
+      --rim2-alpha:.06;               /* feather halo */
+    }
+    .glass::after, .tile::after{
+      --outer-stroke-a:.16;
+      --outer-stroke-blur:.5px;
+    }
+  }
+  
+  /* Phone ≤640px */
+  @media (max-width:640px){
+    :root{
+      --s2a-blur: 22px;  --s2a-bg-a: .24;  --s2a-shadow-a: .34;
+      --s2b-blur: 20px;  --s2b-bg-a: .24;  --s2b-shadow-a: .30;
+    }
+    .glass::before, .tile::before{
+      --rim1-blur: 26px; --rim1-spread: -6px;  --rim1-alpha:.22;
+      --rim2-blur:120px; --rim2-spread:-60px;  --rim2-offset-y:6px; --rim2-alpha:.07;
+      opacity:.95;                             /* ensure it actually shows */
+    }
+    .glass::after, .tile::after{
+      --outer-stroke-a:.18; --outer-stroke-w:1.2px; --outer-stroke-blur:1px;
+    }
+  }
+  
+  /* Fallback when blur is unavailable/throttled */
+  @supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))){
+    .glass, .tile{
+      background: rgba(16,22,35,.90) !important;  /* readable “fake glass” */
+      -webkit-backdrop-filter: none !important;
+              backdrop-filter: none !important;
+      box-shadow: 0 10px 26px rgba(0,0,0,.35) !important;
+    }
+    .glass::before, .tile::before{ content:none !important; }  /* no rim glow without blur */
+    .glass::after, .tile::after{
+      box-shadow: 0 0 0 1px rgba(255,255,255,.14);  /* crisp outer stroke */
+      mix-blend-mode: normal;
+    }
+  }
+
+
 
 
 
