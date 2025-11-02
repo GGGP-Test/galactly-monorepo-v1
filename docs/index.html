@@ -125,7 +125,6 @@
     --s2a-blur: 14px;
     --s2a-bgA: .04;                /* glass gradient top alpha */
     --s2a-bgB: .02;                /* glass gradient bottom alpha */
-    --s2a-stroke-a: .08;           /* outer stroke alpha */
     --s2a-inset-stroke-a: .05;     /* thin inner inset line alpha */
     --s2a-shadow-a: .28;           /* outer drop shadow alpha */
     --s2a-title-align: left;          /* NEW: title + note alignment */
@@ -160,22 +159,21 @@
     --s2b-metric-fs: 22px;
     --s2b-align: center;             /* left | center | right */
     
-    
-    /* 2A “Proof” inner glow */
-    --s2a-glow-a: .16;
-    --s2a-glow-b: .07;
-    --s2a-glow-blur: 30px;
-    --s2a-glow-spread: -10px;
-    --s2a-glow-inset: 6px;
-    --s2a-glow-blend: screen;
-    
-    /* 2B tiles inner glow */
-    --s2b-glow-a: .14;
-    --s2b-glow-b: .06;
-    --s2b-glow-blur: 26px;
-    --s2b-glow-spread: -10px;
-    --s2b-glow-inset: 5px;
-    --s2b-glow-blend: screen;
+    /* ===== Rimless edges for 2A (glass) + 2B (tiles) ===== */
+    /* 2A – Proof card */
+    --s2a-stroke-a: 0;          /* remove the *real* outer border */
+    --s2a-inner-stroke-a: .02;  /* keep a whisper-thin inner line (or set 0) */
+    --s2a-glow-inset: 10px;     /* pull the inner glow off the rim */
+    --s2a-glow-a: .10;          /* soften the glow itself */
+    --s2a-glow-b: .03;
+    --s2a-glow-blend: normal;   /* avoid “screen” brightening at corners */
+      /* 2B – System tiles */
+    --s2b-stroke-a: 0;          /* remove the *real* outer border */
+    --s2b-inner-stroke-a: .02;  /* faint inner hairline (or set 0) */
+    --s2b-glow-inset: 10px;     /* same inward offset for the glow */
+    --s2b-glow-a: .10;
+    --s2b-glow-b: .03;
+    --s2b-glow-blend: normal;
   }
   
   /* ===== SECTION 2 — BREAKPOINT OVERRIDES + DEBUG BADGE ===== */
@@ -510,8 +508,6 @@
     --s2a-radius: 18px;
     --s2a-blur: 14px;
     --s2a-bg-a: .86;
-    --s2a-stroke-a: .10;
-    --s2a-inner-stroke-a: .06;
     --s2a-shadow-a: .26;
     --s2a-pad: clamp(18px, 3vw, 28px) clamp(18px, 3vw, 32px);
     --s2a-col-gap: clamp(16px, 4vw, 42px);
@@ -534,8 +530,6 @@
     --s2b-radius: 16px;
     --s2b-blur: 14px;
     --s2b-bg-a: .86;
-    --s2b-stroke-a: .10;
-    --s2b-inner-stroke-a: .06;
     --s2b-shadow-a: .22;
     --s2b-h2-fs: clamp(26px, 4.0vw, 50px);
     --s2b-sub-fs: clamp(9px, 2vw, 10px);
