@@ -1201,6 +1201,64 @@
   }
 
 
+  /* ===== Section 2A (Proof) responsive sizing ===== */
+  
+  /* 1) Add a min-height hook once */
+  #proof .glass{ min-height: var(--s2a-min-h, 0); }
+  
+  /* 2) Desktop ≥901px */
+  :root{
+    /* tweak these numbers freely */
+    --proof-max-desktop: 1020px;  /* narrower card on desktop (keep ≥980px if you want 4 KPIs in one row) */
+    --s2a-min-h-desktop: 79px;   /* card height */
+    --s2a-pad-y-desktop: 20px;    /* vertical padding inside the card */
+    --s2a-pad-x-desktop: 28px;    /* horizontal padding */
+  }
+  @media (min-width:901px){
+    #proof .inner{ max-width: var(--proof-max-desktop); }
+    #proof .glass{ min-height: var(--s2a-min-h-desktop); }
+    :root{
+      --s2a-pad-y: var(--s2a-pad-y-desktop);
+      --s2a-pad-x: var(--s2a-pad-x-desktop);
+    }
+  }
+  
+  /* 3) Tablet 641–900px */
+  :root{
+    --proof-max-tablet: 820px;
+    --s2a-min-h-tablet: 420px;
+    --s2a-pad-y-tablet: 32px;
+    --s2a-pad-x-tablet: 22px;
+  }
+  @media (max-width:900px) and (min-width:641px){
+    #proof .inner{ max-width: var(--proof-max-tablet); }
+    #proof .glass{ min-height: var(--s2a-min-h-tablet); }
+    :root{
+      --s2a-pad-y: var(--s2a-pad-y-tablet);
+      --s2a-pad-x: var(--s2a-pad-x-tablet);
+    }
+  }
+  
+  /* 4) Phone ≤640px */
+  :root{
+    --proof-max-phone: 560px;     /* optional cap; phones will also respect page gutters */
+    --s2a-min-h-phone: 440px;
+    --s2a-pad-y-phone: 24px;
+    --s2a-pad-x-phone: 18px;
+  }
+  @media (max-width:640px){
+    #proof .inner{ max-width: var(--proof-max-phone); }
+    #proof .glass{ min-height: var(--s2a-min-h-phone); }
+    :root{
+      --s2a-pad-y: var(--s2a-pad-y-phone);
+      --s2a-pad-x: var(--s2a-pad-x-phone);
+    }
+  }
+
+
+
+
+
 
 
 
