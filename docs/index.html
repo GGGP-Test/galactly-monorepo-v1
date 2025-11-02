@@ -69,7 +69,7 @@
     --us-dot-color: var(--gold);        /* map dot + ring color */
 
     /* panel */
-    --const-radius: 18px; --const-stroke-w: 1px; --const-stroke-a: .06; --const-vignette-a: .18;
+    --const-radius: 18px; --const-stroke-w: 1px; --const-stroke-a: 0; --const-vignette-a: .18;
     --const-drop-a: .14; --const-edge-tint: rgba(230,195,107,.05); --const-grid-sheen-a: .05;
 
     --miniCard-radius: 12px; --miniCard-bg: rgba(12,18,28,.86); --miniCard-blur: 5px;
@@ -558,7 +558,7 @@
     position:relative;
     border-radius: var(--s2a-radius);
     background: rgba(12,18,28, var(--s2a-bg-a));
-    border: 1px solid rgba(255,255,255, var(--s2a-stroke-a));
+    border:0 !important; solid rgba(255,255,255, var(--s2a-stroke-a));
     -webkit-backdrop-filter: blur(var(--s2a-blur)) saturate(120%);
     backdrop-filter: blur(var(--s2a-blur)) saturate(120%);
     box-shadow: 0 18px 48px rgba(0,0,0,var(--s2a-shadow-a));
@@ -648,7 +648,7 @@
     padding: var(--tile-pad);
     border-radius: var(--s2b-radius);
     background: rgba(12,18,28,var(--s2b-bg-a));
-    border: 1px solid rgba(255,255,255,var(--s2b-stroke-a));
+    border:0 !important; solid rgba(255,255,255,var(--s2b-stroke-a));
     -webkit-backdrop-filter: blur(var(--s2b-blur)) saturate(120%);
     backdrop-filter: blur(var(--s2b-blur)) saturate(120%);
     box-shadow: 0 16px 36px rgba(0,0,0,var(--s2b-shadow-a));
