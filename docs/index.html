@@ -723,9 +723,6 @@
     backdrop-filter: blur(var(--s2b-blur)) saturate(120%);
     box-shadow: 0 16px 36px rgba(0,0,0,var(--s2b-shadow-a));
     background-clip: padding-box;
-    .tile > * + *{ margin-top: var(--tile-stack-gap); }         /* generic vertical spacing */
-    .tile .kv{ margin-top: var(--tile-kv-gap); }
-    #growth .bar{ margin: var(--tile-bar-gap) 0; }              /* spacing around progress bars */
   }
   
   .tile::before{
@@ -746,7 +743,12 @@
   }
   .tile h4{ margin:0 0 8px; font:800 var(--tile-title-fs)/1.2 Inter, system-ui; }
   .tile p{ margin:0 0 12px; font-size: var(--tile-body-fs); color:#a9bfd6; }
+/* keep your existing .tile{…} block, but remove the nested lines from inside it */
 
+  /* put these three rules AFTER the .tile block */
+  .tile > * + *{ margin-top: var(--tile-stack-gap); }   /* generic vertical spacing */
+  .tile .kv{ margin-top: var(--tile-kv-gap); }
+  #growth .tile .bar{ margin: var(--tile-bar-gap) 0; }  /* progress bar spacing */
 
   /* === Tile span knobs (paste after your existing `.tile{…}` block) === */
   #growth .tile{
@@ -1108,7 +1110,6 @@
     /* GLASSINESS (2B) */
     --s2b-blur: 18px;
     --s2b-bg-a: .18;
-    --s2b-bg-b: .10;
     --s2b-bg-b: var(--s2b-bg-a);
   }
   
