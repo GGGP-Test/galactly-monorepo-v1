@@ -1294,6 +1294,71 @@
 
 
 
+  /* === PHONE STACK + GLOW + SPACING PACK (2A + 2B) === */
+  @media (max-width:640px){
+  
+    /* 1) Force 2B tiles to stack one-by-one in DOM order */
+    #growth .g-grid{
+      grid-template-columns: 1fr !important;  /* single column */
+      grid-auto-flow: row;                     /* disable 'dense' reordering */
+      row-gap: var(--s2b-row-gap, var(--s2b-gap));  /* phone-only row gap knob */
+    }
+    /* Reset any custom column spans; keep each tile full-width */
+    #growth .tile{
+      --col: 1 !important;
+      grid-column: 1 / -1;
+      text-align: var(--s2b-align, left);      /* phone alignment knob for tiles */
+    }
+  
+    /* 2) Phone-only inner spacing knobs inside each tile */
+    :root{
+      --tile-stack-gap: var(--tile-stack-gap, 12px); /* generic element spacing */
+      --tile-kv-gap: var(--tile-kv-gap, 12px);       /* label/value row gap */
+      --tile-bar-gap: var(--tile-bar-gap, 8px);      /* progress bar spacing */
+      --tile-title-gap: 8px;                         /* h4 → body gap (new) */
+      --s2b-hd-gap: 16px;                             /* Growth header h3 → sub gap (new) */
+    }
+    #growth .tile > * + *{ margin-top: var(--tile-stack-gap); }
+    #growth .tile h4{ margin-bottom: var(--tile-title-gap); }
+    #growth .kv{ gap: var(--tile-kv-gap); }
+    #growth .tile .bar{ margin: var(--tile-bar-gap) 0; }
+    .growth-hd h3{ margin:0 0 var(--s2b-hd-gap); }
+    .growth-hd .sub{ margin:0; }
+  
+    /* 3) Phone-only glass & glow opacity (applies to both 2A .glass and 2B .tile) */
+    :root{
+      /* background opacity of the glass gradients */
+      --s2a-bg-a: .24;  --s2a-bg-b: var(--s2a-bg-a);   /* 2A */
+      --s2b-bg-a: .22;  --s2b-bg-b: var(--s2b-bg-a);   /* 2B */
+  
+      /* rim glow strength (tight rim + wide feather) */
+      --rim1-alpha: .08;   /* inner ring opacity */
+      --rim2-alpha: .03;   /* outer aura opacity */
+      --rim-opacity: .70;  /* master opacity for ::before rim layer */
+  
+      /* outside hairline strength */
+      --outer-stroke-a: .14;
+    }
+  
+    /* If you want the phone glow *gone*, swap the block above with this tiny one: */
+    /* .glass::before, .tile::before{ box-shadow:none !important; opacity:0 !important; } */
+  }
+  
+  /* 4) Alignment knobs (2A titles/notes vs KPI cells) — works at all breakpoints */
+  :root{
+    --s2a-title-align: left;   /* left | center | right */
+    --s2a-metric-align: center;
+    --s2b-align: left;         /* tile text alignment in 2B */
+  }
+  #growth .tile{ text-align: var(--s2b-align, left); }  /* bridge for 2B */
+  
+  /* 5) Optional fixed widths by breakpoint for the 2A proof card (helps Safari) */
+  @media (min-width:901px){ .proof-card{ max-width: 960px; margin-inline:auto; } }
+  @media (max-width:900px) and (min-width:641px){ .proof-card{ max-width: 720px; margin-inline:auto; } }
+  @media (max-width:640px){ .proof-card{ max-width: 560px; margin-inline:auto; } }
+
+
+
 
 
 
