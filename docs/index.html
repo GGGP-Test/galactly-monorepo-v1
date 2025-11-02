@@ -1028,15 +1028,15 @@
   
     /* GLASSINESS (2A) — raise blur or lower alphas to feel more “glassy” */
     --s2a-blur: 24px;           /* ← visual blur strength */
-    --s2a-bg-a: .22;            /* top gradient stop opacity */
-    --s2a-bg-b: .11;            /* bottom gradient stop opacity */
+    --s2a-bg-a: .20;            /* top gradient stop opacity */
+    --s2a-bg-b: var(--s2a-bg-a);
     --s2a-shadow-a: .26;        /* outer drop shadow alpha */
   
     /* GLASSINESS (2B) */
     --s2b-blur: 18px;
-    --s2b-bg-a: .20;
+    --s2b-bg-a: .18;
     --s2b-bg-b: .10;
-    --s2b-shadow-a: .22;
+    --s2b-bg-b: var(--s2b-bg-a);
   }
   
   /* Make the cards use proper glass gradients (replaces flat rgba backgrounds) */
