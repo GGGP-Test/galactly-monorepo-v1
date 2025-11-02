@@ -1014,6 +1014,10 @@
     }
   }
 
+  :root{ --rim-opacity: .80; }                 /* 90% of current glow */
+  .glass::before, .tile::before{ opacity: var(--rim-opacity); }
+
+
 
 </style>
 </head>
