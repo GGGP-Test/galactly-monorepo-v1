@@ -49,6 +49,8 @@
     --card-chip-fs: 11px;
     
     --card-stage-border:#ffffff24;  --card-stage-bg:#ffffff0f;
+    
+
 
     /* === TIME ROW KNOBS (hero card) === */
     --card-time-fs: 18px;           /* time value size */
@@ -108,6 +110,9 @@
     --us-stroke-highlight: rgba(255,255,255,.18);
     --us-edge-fade: 8%;
     --us-dot-size: 9px; /* independent size control for map dots */
+    
+    /* Glow inside tiles */
+    --theme-glow-rgb: 156,186,255; /* icy pale blue used by both sections */
   }
   
 
@@ -154,6 +159,23 @@
     --s2b-title-fs: 10px;
     --s2b-metric-fs: 22px;
     --s2b-align: center;             /* left | center | right */
+    
+    
+    /* 2A “Proof” inner glow */
+    --s2a-glow-a: .16;
+    --s2a-glow-b: .07;
+    --s2a-glow-blur: 30px;
+    --s2a-glow-spread: -10px;
+    --s2a-glow-inset: 6px;
+    --s2a-glow-blend: screen;
+    
+    /* 2B tiles inner glow */
+    --s2b-glow-a: .14;
+    --s2b-glow-b: .06;
+    --s2b-glow-blur: 26px;
+    --s2b-glow-spread: -10px;
+    --s2b-glow-inset: 5px;
+    --s2b-glow-blend: screen;
   }
   
   /* ===== SECTION 2 — BREAKPOINT OVERRIDES + DEBUG BADGE ===== */
@@ -540,6 +562,17 @@
     backdrop-filter: blur(var(--s2a-blur)) saturate(120%);
     box-shadow: 0 18px 48px rgba(0,0,0,var(--s2a-shadow-a));
   }
+  
+  .glass::before{
+    content:"";
+    position:absolute; inset: var(--s2a-glow-inset);
+    border-radius: inherit; pointer-events:none;
+    box-shadow:
+      inset 0 0 var(--s2a-glow-blur) var(--s2a-glow-spread) rgba(var(--theme-glow-rgb), var(--s2a-glow-a)),
+      inset 0 2px 18px -10px rgba(var(--theme-glow-rgb), var(--s2a-glow-b));
+    mix-blend-mode: var(--s2a-glow-blend);
+  }
+
   .glass::after{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
     box-shadow: inset 0 0 0 1px rgba(255,255,255, var(--s2a-inner-stroke-a));
@@ -616,6 +649,17 @@
     backdrop-filter: blur(var(--s2b-blur)) saturate(120%);
     box-shadow: 0 16px 36px rgba(0,0,0,var(--s2b-shadow-a));
   }
+  
+  .tile::before{
+    content:"";
+    position:absolute; inset: var(--s2b-glow-inset);
+    border-radius: inherit; pointer-events:none;
+    box-shadow:
+      inset 0 0 var(--s2b-glow-blur) var(--s2b-glow-spread) rgba(var(--theme-glow-rgb), var(--s2b-glow-a)),
+      inset 0 2px 16px -10px rgba(var(--theme-glow-rgb), var(--s2b-glow-b));
+    mix-blend-mode: var(--s2b-glow-blend);
+  }
+  
   .tile::after{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,var(--s2b-inner-stroke-a));
@@ -964,7 +1008,7 @@
 
           <span class="domainTag" id="domainTag">yourcompany.com</span>
           <span class="const-caption">Signals clustered by location</span>
-          <div class="const-legend">Your Website → <strong>Timing</strong> → Score → <strong>Signal</strong> → <strong>Buyers</strong></div>
+          <div class="const-legend">Your Website → Score → <strong>Timing</strong> → <strong>Signal</strong> → <strong>Buyers</strong></div>
         </div>
 
         <!-- Card OUTSIDE the clipped panel -->
