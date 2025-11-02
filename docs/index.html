@@ -577,7 +577,7 @@
 
   .glass::after{
     content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255, var(--s2a-inner-stroke-a));
+    box-shadow: inset 0 0 0 0 rgba(255,255,255, var(--s2a-inner-stroke-a));
     
 
   }
@@ -933,7 +933,39 @@
     --hero-inner-stroke-a: 0;    /* keep any inner hairline off (0–.12 ok) */
   }
 
-
+  /* === RIM-ONLY GLOW OVERRIDE (clean center, edge-only) === */
+  :root{
+    --rim-w: 12px;          /* ring thickness */
+    --rim-glow-a: .12;      /* main glow */
+    --rim-glow-b: .04;      /* soft secondary */
+  }
+  
+  .glass, .tile{ border:0 !important; }  /* keep real borders off */
+  
+  /* carve a thin ring and glow only on that ring */
+  .glass::before,
+  .tile::before{
+    content:"";
+    position:absolute; inset:0;
+    border-radius:inherit; pointer-events:none;
+  
+    /* ring mask */
+    padding: var(--rim-w);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask-composite: exclude;
+  
+    /* even edge glow, clean interior */
+    box-shadow:
+      inset 0 0 26px rgba(var(--theme-glow-rgb), var(--rim-glow-a)),
+      inset 0 18px 60px -40px rgba(var(--theme-glow-rgb), var(--rim-glow-b));
+    mix-blend-mode: normal;
+  }
+  
+  /* kill any inner hairline */
+  .glass::after{ box-shadow: inset 0 0 0 0 rgba(255,255,255,0) !important; }
+  .tile::after { box-shadow: inset 0 0 0 0 rgba(255,255,255,0) !important; }
 
 
 </style>
