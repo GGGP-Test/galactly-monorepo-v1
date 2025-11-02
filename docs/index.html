@@ -116,6 +116,74 @@
   }
   
 
+
+  :root{
+    /* — Section-to-section spacing — */
+    --space-hero-2a: clamp(40px, 6vh, 60px);  /* distance from end of Hero to start of 2A */
+    --space-2a-2b:   clamp(64px, 7vw, 96px);  /* distance from 2A to 2B */
+  
+    /* — 2A (Proof card) — */
+    --s2a-pad-x: clamp(20px, 3.6vw, 32px);
+    --s2a-pad-y: clamp(18px, 3vw, 28px);
+    --s2a-col-gap: clamp(24px, 4vw, 42px);   /* space between KPI columns */
+    --s2a-row-gap: 16px;                     /* space between rows when it wraps on tablet/phone */
+    --s2a-title-lh: 1.08;                    /* line spacing inside the big H2 */
+    --s2a-title-gap: 20px;                   /* H2 → note */
+    --s2a-kpi-gap-y: 20px;                   /* KPI value → hint */
+  
+    /* — 2B (tiles & grid) — */
+    --s2b-gap: clamp(16px, 2.8vw, 24px);     /* grid gap between tiles */
+    --tile-pad: clamp(16px, 2.2vw, 22px);    /* padding inside each tile */
+    --tile-stack-gap: 12px;                  /* generic vertical spacing inside tiles */
+    --tile-kv-gap: 8px;                      /* gap between each “label/value” row */
+    --tile-bar-gap: 8px;                     /* vertical gap around progress bars */
+  }
+  
+  /* Desktop overrides */
+  @media (min-width:901px){
+    :root{
+      --space-hero-2a: 56px;
+      --space-2a-2b:   88px;
+      --s2a-title-lh: 1.06;
+      --s2a-title-gap: 12px;
+    }
+  }
+  
+  /* Tablet overrides */
+  @media (max-width:900px) and (min-width:641px){
+    :root{
+      --space-hero-2a: 44px;
+      --space-2a-2b:   72px;
+      --s2a-col-gap:   32px;
+      --s2a-row-gap:   16px;
+      --tile-pad:      18px;
+    }
+  }
+  
+  /* Phone overrides */
+  @media (max-width:640px){
+    :root{
+      --space-hero-2a: 28px;
+      --space-2a-2b:   52px;
+      --s2a-pad-x:     18px;
+      --s2a-pad-y:     16px;
+      --s2a-col-gap:   18px;
+      --s2a-row-gap:   12px;
+      --s2a-title-lh:  1.12;
+      --s2a-title-gap: 10px;
+      --tile-stack-gap:10px;
+    }
+  }
+
+
+
+
+
+
+
+
+
+
   /* ⬇️ INSERT THE NEW KNOBS BLOCK RIGHT HERE ⬇️ */
   /* SECTION 2 KNOBS ONLY — hero is untouched */
   :root{
