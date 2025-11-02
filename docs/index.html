@@ -1258,6 +1258,41 @@
 
 
 
+  /* 0) Lock Safari’s text auto-zoom so layout matches desktop emulation */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  
+  /* 1) Make sure hero height is stable on older iOS (fallback before svh) */
+  .hero { min-height: 100vh; min-height: 100svh; }
+  
+  /* 2) iOS input zoom guard (prevents weird zoom that can jiggle layout) */
+  @media (max-width:640px){
+    .glass-input { font-size: 16px; } /* 16px disables Safari focus zoom */
+  }
+  
+  /* 3) Phone-only: tame or remove the inner rim glow so it doesn’t look “off” */
+  @media (max-width:640px){
+    .glass::before, .tile::before{
+      box-shadow: none !important;      /* removes the inner glow */
+      opacity: 0 !important;
+    }
+    /* keep a subtle outside hairline so the card still reads as a card */
+    .glass::after, .tile::after{ --outer-stroke-a: .12; --outer-stroke-blur: .8px; }
+  }
+  
+  /* 4) (Optional) Pin proof-card width by breakpoint so Safari’s font metrics
+        can’t make it feel wider/narrower than intended. Adjust numbers to taste. */
+  @media (min-width:901px){
+    .proof-card{ max-width: 980px; margin-inline: auto; }
+  }
+  @media (max-width:900px) and (min-width:641px){
+    .proof-card{ max-width: 720px; margin-inline: auto; }
+  }
+  @media (max-width:640px){
+    .proof-card{ max-width: 560px; margin-inline: auto; }
+  }
+
+
+
 
 
 
