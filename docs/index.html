@@ -1018,6 +1018,111 @@
   .glass::before, .tile::before{ opacity: var(--rim-opacity); }
 
 
+  /* === GLASS SYSTEM — SECTION 2A/2B FIX (paste last) ======================= */
+  
+  /* 0) Alias old variable names so any stray references still work */
+  :root{
+    --s2a-bgA: var(--s2a-bg-a);
+    --s2b-card-bgA: var(--s2b-bg-a);
+    --s2b-card-bgB: var(--s2b-bg-b, .03);
+  }
+  
+  /* 1) Neutralize the blue tint (near-white glow) */
+  :root{
+    --theme-glow-rgb: 236,244,255;   /* less blue, more “ice/white” */
+  }
+  
+  /* 2) Glassiness knobs (THIS is what you’ll tweak) */
+  :root{
+    /* 2A (big proof card) */
+    --s2a-bg-a: .12;                 /* lower = more transparent */
+    --s2a-blur: 24px;                /* higher = more glassy blur */
+    --s2a-shadow-a: .22;
+  
+    /* 2B (tiles) */
+    --s2b-bg-a: .12;
+    --s2b-blur: 24px;
+    --s2b-shadow-a: .20;
+  }
+  
+  /* 3) Rim glow: keep only a subtle ring, not a filled inner glow */
+  :root{
+    --rim-w: 12px;                 /* width of glowing ring */
+    --rim1-blur: 28px;             /* tight inner rim softness */
+    --rim1-spread: -8px;
+    --rim1-alpha: .08;             /* rim intensity */
+    --rim2-offset-y: 6px;          /* slight downward bias (0 for even) */
+    --rim2-blur: 110px;            /* feather halo softness */
+    --rim2-spread: -64px;
+    --rim2-alpha: .025;            /* halo intensity */
+    --rim-opacity: .55;            /* master dimmer for the ring */
+  }
+  
+  /* 4) Outer hairline stroke (bright but gentle) */
+  :root{
+    --outer-stroke-rgb: 255,255,255;
+    --outer-stroke-a: .08;         /* opacity of the outside line */
+    --outer-stroke-w: 1px;         /* thickness (via spread) */
+    --outer-stroke-blur: 1px;      /* a touch of softness */
+    --outer-stroke-blend: normal;  /* avoid extra brightening */
+  }
+  
+  /* 5) Apply the glass fills (uses the correct vars now) */
+  .glass{
+    background: rgba(12,18,28, var(--s2a-bg-a)) !important;
+    -webkit-backdrop-filter: blur(var(--s2a-blur)) saturate(120%) !important;
+            backdrop-filter: blur(var(--s2a-blur)) saturate(120%) !important;
+    border: 0 !important;
+    background-clip: padding-box;
+  }
+  .tile{
+    background: rgba(12,18,28, var(--s2b-bg-a)) !important;
+    -webkit-backdrop-filter: blur(var(--s2b-blur)) saturate(120%) !important;
+            backdrop-filter: blur(var(--s2b-blur)) saturate(120%) !important;
+    border: 0 !important;
+    background-clip: padding-box;
+  }
+  
+  /* 6) Ring-only glow on the inner edge (center stays clean) */
+  .glass::before, .tile::before{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    padding: var(--rim-w);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask-composite: exclude;
+    box-shadow:
+      inset 0 0 var(--rim1-blur) var(--rim1-spread) rgba(var(--theme-glow-rgb), var(--rim1-alpha)),
+      inset 0 var(--rim2-offset-y) var(--rim2-blur) var(--rim2-spread) rgba(var(--theme-glow-rgb), var(--rim2-alpha));
+    mix-blend-mode: normal;
+    opacity: var(--rim-opacity);
+    z-index: 1;
+  }
+  
+  /* 7) Bright outside hairline (fake border), not inside the tile */
+  .glass::after, .tile::after{
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    box-shadow: 0 0 var(--outer-stroke-blur) var(--outer-stroke-w)
+                rgba(var(--outer-stroke-rgb), var(--outer-stroke-a));
+    mix-blend-mode: var(--outer-stroke-blend);
+    z-index: 2;
+  }
+  
+  /* 8) Nuke any leftover inner hairlines from earlier code */
+  .glass::after{ box-shadow: var(--__keep_outside_shadow, 0 0 var(--outer-stroke-blur) var(--outer-stroke-w) rgba(var(--outer-stroke-rgb), var(--outer-stroke-a))) !important; }
+  .glass{ --s2a-inner-stroke-a: 0 !important; }
+  .tile { --s2b-inner-stroke-a: 0 !important; }
+  
+  /* 9) Safari seam guard (optional) */
+  @supports (-webkit-backdrop-filter: blur(1px)) {
+    .glass, .tile{
+      -webkit-mask-image: radial-gradient(100% 100% at 50% 50%, #000 calc(100% - 1px), transparent 100%);
+              mask-image: radial-gradient(100% 100% at 50% 50%, #000 calc(100% - 1px), transparent 100%);
+    }
+  }
+
+
+
 
 </style>
 </head>
