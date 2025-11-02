@@ -668,7 +668,11 @@
     letter-spacing:-.01em;
     margin: 0 0 var(--s2a-title-gap);
   }
-  .proof-note{ margin: 0; }
+  #proof .proof-note{
+    font-size: var(--s2a-note-fs);
+    color: var(--muted);
+    margin: 0;
+  }
 
   .metric{ position:relative; padding-left: var(--s2a-metric-pad-left); }
   .metric:not(:first-child){ border-left: 1px solid rgba(255,255,255, var(--s2a-metric-div-a)); }
@@ -681,7 +685,12 @@
     color: var(--s2a-num-color);
     text-transform: var(--s2a-num-tt);
   }
-  .m-hint{ margin-top: var(--s2a-kpi-gap-y); }
+  #proof .metric .m-hint{
+    font-size: var(--s2a-kpi-hint-fs);
+    line-height: 1.25;
+    color: var(--muted);
+    margin-top: var(--s2a-kpi-gap-y);
+  }
 
   /* 2B Growth system */
   .growth-wrap{ max-width: var(--container-max); margin:0 auto; }
