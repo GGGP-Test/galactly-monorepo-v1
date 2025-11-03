@@ -1210,7 +1210,7 @@
   :root{
     /* tweak these numbers freely */
     --proof-max-desktop: 1020px;  /* narrower card on desktop (keep ≥980px if you want 4 KPIs in one row) */
-    --s2a-min-h-desktop: 100px;   /* card height */
+    --s2a-min-h-desktop: 300px;   /* card height */
     --s2a-pad-y-desktop: 20px;    /* vertical padding inside the card */
     --s2a-pad-x-desktop: 48px;    /* horizontal padding */
   }
@@ -1433,7 +1433,7 @@
     :root{
       --gutter: 20px;
       --s2b-gap: 16px;
-      --s2b-row-h: auto;          /* let content define height */
+      --s2b-row-h: 300px;          /* let content define height */
       --tile-pad: 18px;
       --tile-title-fs: 15px;
       --tile-body-fs: 13px;
@@ -1441,9 +1441,11 @@
       --s2b-sub-fs: 12px;
       --s2b-bg-a: .22; --s2b-bg-b: .18;  /* slightly stronger glass on phones */
     }
-    #growth .g-grid{ row-gap: var(--s2b-gap); grid-auto-rows: auto; }
-    #growth .tile{ min-height: 0; }
+    #growth .g-grid{ grid-auto-rows: minmax(var(--s2b-row-h), auto); }
+    #growth .tile{ min-height: auto; }
     .growth-hd{ margin-bottom: 22px; }
+    @media (min-width:901px){
+      #growth .g-grid{ grid-auto-flow: row; }
   }
 
 
