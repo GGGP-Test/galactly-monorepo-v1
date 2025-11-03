@@ -1395,7 +1395,7 @@
   
   /* Global tweaks for the 2B section */
   #growth .growth-hd{ margin-bottom:28px !important; }   /* tighten section header */
-
+  #growth .g-grid{ gap:16px !important; }                /* grid gap like theirs   */
   
   /* Tile internals (smaller, crisper) */
   :root{
@@ -1405,7 +1405,9 @@
     --tile-bar-gap:6px;              /* spacing around bars */
   }
   
-
+  /* Progress bar thickness */
+  #growth .bar{ height:10px !important; }
+  #growth .bar.thin{ height:6px !important; }
   
   /* Headings + body text inside tiles */
   #growth .tile h4{ margin:0 0 6px !important; font-weight:800; }
@@ -1700,44 +1702,6 @@
 
 
 
-  /* === 2B: compact scaler (beats late rules + !important) === */
-  #growth.compact { --shrink: 0.86; } /* smaller number = smaller everything */
-  
-  /* outer breathing room for the section */
-  #growth.compact .growth-wrap{ padding-inline: calc(64px * var(--shrink)); }
-  @media (max-width:900px){ #growth.compact .growth-wrap{ padding-inline: calc(40px * var(--shrink)); } }
-  @media (max-width:640px){ #growth.compact .growth-wrap{ padding-inline: calc(20px * var(--shrink)); } }
-  
-  /* grid spacing — must use !important to beat your earlier !important */
-  #growth.compact .g-grid{ gap: calc(24px * var(--shrink)) !important; }
-  @media (max-width:900px){ #growth.compact .g-grid{ gap: calc(20px * var(--shrink)) !important; } }
-  @media (max-width:640px){ #growth.compact .g-grid{ gap: calc(16px * var(--shrink)) !important; } }
-  
-  /* tile inner padding — set on the TILE itself to outrank #growth .tile {...} */
-  #growth.compact .tile{ --tile-pad: calc(22px * var(--shrink)) !important; }
-  @media (max-width:900px){ #growth.compact .tile{ --tile-pad: calc(18px * var(--shrink)) !important; } }
-  @media (max-width:640px){ #growth.compact .tile{ --tile-pad: calc(14px * var(--shrink)) !important; } }
-  
-  /* typography inside tiles (they read these vars already) */
-  #growth.compact{
-    --tile-title-fs: calc(13px * var(--shrink));
-    --tile-body-fs:  calc(12.5px * var(--shrink));
-  }
-  
-  /* progress bar thickness to match the scale */
-  #growth.compact .bar{ height: calc(10px * var(--shrink)) !important; }
-  #growth.compact .bar.thin{ height: calc(6px * var(--shrink)) !important; }
-  
-  /* visual slots */
-  #growth.compact{
-    --slot-icon-size:    calc(16px * var(--shrink));
-    --slot-avatars-size: calc(48px * var(--shrink));
-    --slot-avatars-gap:  calc(8px  * var(--shrink));
-  }
-
-
-
-
 
 
 
@@ -1910,7 +1874,108 @@
     </div>
   </section>
 
-
+  <!-- =========================
+       SECTION 2B – Growth system
+       ========================= -->
+  <section class="section section-2B" id="growth" aria-label="Growth system" data-track-section="growth">
+    <div class="growth-wrap">
+      <div class="growth-hd">
+        <h3>
+          Your AI-Powered
+          <span class="accent-gold force-break nowrap">Growth&nbsp;System</span>
+        </h3>
+        <div class="sub">From verified buyers to quotes—one glassy command center that packaging teams can trust.</div>
+      </div>
+  
+      <div class="g-grid">
+        <!-- Customers (tall) -->
+        <article class="tile customers" data-tile="customers" aria-label="Customers" style="--col:1; --row:2">
+          <h4>Customers</h4>
+          <p>Organize company + contact data in one place.</p>
+  
+          <div class="kv"><span class="kv-label" data-icon="">Companies</span><span class="v" data-count="1773">1,773</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">Active buyers</span><span class="v" data-count="37.5%">+37.5%</span></div>
+  
+          <div class="slot-avatars" aria-hidden="true">
+            <img class="avatar" src="./assets/avatars/a1.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a2.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a3.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a4.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a5.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a6.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a7.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a8.webp" alt="" loading="lazy" width="56" height="56">
+            <img class="avatar" src="./assets/avatars/a9.webp" alt="" loading="lazy" width="56" height="56">
+          </div>
+        </article>
+  
+        <!-- Pipelines (wide, tall) -->
+        <article class="tile pipelines" data-tile="pipelines" aria-label="Pipelines" style="--col:2; --row:2">
+          <h4>Pipelines</h4>
+          <p>Track packaging stages at a glance—Lead, Qualified, Proposal, Negotiation, Closed.</p>
+  
+          <div class="kv"><span class="kv-label" data-icon="">Lead</span><span class="v" data-count="45">45</span></div>
+          <div class="bar"><i style="--pct:100"></i></div>
+  
+          <div class="kv"><span class="kv-label" data-icon="">Qualified</span><span class="v" data-count="32">32</span></div>
+          <div class="bar"><i style="--pct:71.11"></i></div>
+  
+          <div class="kv"><span class="kv-label" data-icon="">Proposal</span><span class="v" data-count="18">18</span></div>
+          <div class="bar"><i style="--pct:40"></i></div>
+  
+          <div class="kv"><span class="kv-label" data-icon="">Negotiation</span><span class="v" data-count="7">7</span></div>
+          <div class="bar thin"><i style="--pct:15.56"></i></div>
+  
+          <div class="kv"><span class="kv-label" data-icon="">Closed</span><span class="v" data-count="3">3</span></div>
+          <div class="bar thin"><i style="--pct:6.67"></i></div>
+  
+          <img class="slot-asset" src="./assets/s2b/nodes.svg" alt="">
+        </article>
+  
+        <!-- Real-time Signals -->
+        <article class="tile realtime" data-tile="signals" aria-label="Real-time Signals" style="--col:1; --row:1">
+          <h4>Real-time Signals</h4>
+          <p>&lt; 30-second lead indicator from web + market activity.</p>
+  
+          <div class="kv"><span class="kv-label" data-icon="">Signals today</span><span class="v" data-count="126">126</span></div>
+          <div class="bar"><i style="--pct:100"></i></div>
+  
+          <div class="kv"><span class="kv-label" data-icon="">High-intent</span><span class="v" data-count="18%">18%</span></div>
+          <div class="bar thin"><i style="--pct:18"></i></div>
+  
+          <img class="slot-asset" src="./assets/s2b/sparkline.svg" alt="">
+        </article>
+  
+        <!-- Sales AI -->
+        <article class="tile ai-sdr" data-tile="ai" aria-label="Sales AI" style="--col:1; --row:1">
+          <h4>Sales AI</h4>
+          <p>Convert hot buyers into booked calls—auto snippets, follow-ups, and hand-offs.</p>
+  
+          <div class="kv"><span class="kv-label" data-icon="">Booked this week</span><span class="v" data-count="14">14</span></div>
+          <div class="bar"><i style="--pct:78"></i></div>
+  
+          <div class="kv"><span class="kv-label" data-icon="">Reply rate</span><span class="v" data-count="21%">21%</span></div>
+          <div class="bar thin"><i style="--pct:21"></i></div>
+  
+          <img class="slot-asset" src="./assets/s2b/rings.svg" alt="">
+        </article>
+  
+        <!-- Quotes -->
+        <article class="tile quotes" data-tile="quotes" aria-label="Quotes" style="--col:1; --row:1">
+          <h4>Quotes</h4>
+          <p>Specs to quote in one click—bottles, films, corrugate, labels, and more.</p>
+  
+          <div class="kv"><span class="kv-label" data-icon="">Avg RFQ value</span><span class="v" data-count="$18.7k">$18.7k</span></div>
+          <div class="bar"><i style="--pct:52"></i></div>
+  
+          <div class="kv"><span class="kv-label" data-icon="">Samples sent</span><span class="v" data-count="23">23</span></div>
+          <div class="bar thin"><i style="--pct:46"></i></div>
+  
+          <img class="slot-asset" src="./assets/s2b/pill.svg" alt="">
+        </article>
+      </div>
+    </div>
+  </section>
 
   <!-- SECTION 3 – Process -->
   <div id="section-process" class="reveal-in" data-track-section="process"></div>
