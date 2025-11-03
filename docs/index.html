@@ -123,7 +123,7 @@
     --space-2a-2b:   clamp(64px, 7vw, 96px);  /* distance from 2A to 2B */
   
     /* — 2A (Proof card) — */
-    --s2a-pad-x: clamp(10px, 3.6vw, 26px);
+    --s2a-pad-x: clamp(20px, 3.6vw, 32px);
     --s2a-pad-y: clamp(32px, 4.5vw, 75px);
     --s2a-col-gap: clamp(24px, 4vw, 42px);   /* space between KPI columns */
     --s2a-row-gap: 16px;                     /* space between rows when it wraps on tablet/phone */
@@ -1209,10 +1209,10 @@
   /* 2) Desktop ≥901px */
   :root{
     /* tweak these numbers freely */
-    --proof-max-desktop: 1320px;  /* narrower card on desktop (keep ≥980px if you want 4 KPIs in one row) */
+    --proof-max-desktop: 1520px;  /* narrower card on desktop (keep ≥980px if you want 4 KPIs in one row) */
     --s2a-min-h-desktop: 300px;   /* card height */
     --s2a-pad-y-desktop: 20px;    /* vertical padding inside the card */
-    --s2a-pad-x-desktop: 22px;    /* horizontal padding */
+    --s2a-pad-x-desktop: 30px;    /* horizontal padding */
   }
   @media (min-width:901px){
     #proof .inner{ max-width: var(--proof-max-desktop); }
