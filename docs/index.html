@@ -1558,6 +1558,153 @@
 
 
 
+  /* ==== S2B — FINAL OVERRIDES (exact inner-glow tiles, desktop/tablet/phone) ==== */
+  
+  /* Columns: desktop 3, tablet 3, phone 1 */
+  :root { --s2b-cols-desktop: 3; --s2b-cols-tablet: 3; --s2b-cols-phone: 1; }
+  
+  /* Outer padding + inner gutters (match reference breathing room) */
+  #growth{ padding-block:120px; }
+  @media (max-width:900px){ #growth{ padding-block:64px; } }
+  @media (max-width:640px){ #growth{ padding-block:36px; } }
+  #growth .growth-wrap{ padding-inline:64px; }
+  @media (max-width:900px){ #growth .growth-wrap{ padding-inline:40px; } }
+  @media (max-width:640px){ #growth .growth-wrap{ padding-inline:20px; } }
+  
+  /* Grid */
+  #growth .g-grid{
+    display:grid;
+    grid-template-columns: repeat(var(--s2b-cols-desktop), minmax(0,1fr));
+    gap:24px;
+    grid-auto-flow: row;         /* no dense backfilling so spans stay tidy */
+    grid-auto-rows: auto;
+    align-items:start;
+  }
+  @media (max-width:1080px){
+    #growth .g-grid{ grid-template-columns: repeat(var(--s2b-cols-tablet), minmax(0,1fr)); gap:20px; }
+  }
+  @media (max-width:640px){
+    #growth .g-grid{ grid-template-columns: 1fr; gap:16px; }
+  }
+  
+  /* Typography: tight header like reference */
+  #growth .growth-hd{ text-align:center; margin-bottom:28px; }
+  #growth .growth-hd h3{ margin:0 0 8px; font: 400 var(--s2b-h2-fs, clamp(26px, 4.8vw, 52px))/1.15 Inter, system-ui; letter-spacing:-.01em; }
+  #growth .growth-hd .sub{ color:#b7c9da; font-size: var(--s2b-sub-fs, clamp(9px, 2vw, 10px)); }
+  
+  /* Tile base — no real border, glass gradient, blur, outer shadow */
+  #growth .tile{
+    position:relative;
+    padding: var(--tile-pad, 22px);
+    border-radius: var(--s2b-radius, 16px);
+    background: linear-gradient(
+      180deg,
+      rgba(12,18,28, var(--s2b-bg-a, .18)),
+      rgba(12,18,28, var(--s2b-bg-b, .18))
+    );
+    -webkit-backdrop-filter: blur(var(--s2b-blur, 18px)) saturate(140%);
+            backdrop-filter: blur(var(--s2b-blur, 18px)) saturate(140%);
+    box-shadow: 0 16px 36px rgba(0,0,0,var(--s2b-shadow-a,.28));
+    border:0 !important;
+    overflow:hidden;              /* clip glow and bars to radius */
+    text-align: var(--s2b-align, left);
+  }
+  
+  /* Inner rim glow (inset) + outside hairline (whisper) */
+  :root{
+    /* rim thickness and strength */
+    --rim-w: 14px;
+    --rim1-blur: 38px;  --rim1-spread: -10px; --rim1-alpha:.13;
+    --rim2-blur:130px;  --rim2-spread: -72px; --rim2-offset-y:8px; --rim2-alpha:.035;
+    /* outside hairline */
+    --outer-stroke-a:.11; --outer-stroke-w:1px; --outer-stroke-blur:1.2px;
+    /* glow color */
+    --theme-glow-rgb: 160,190,255;
+  }
+  
+  /* Rim-only mask (hollow center) */
+  #growth .tile::before{
+    content:"";
+    position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    padding: var(--rim-w);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask-composite: exclude;
+    box-shadow:
+      inset 0 0 var(--rim1-blur) var(--rim1-spread) rgba(var(--theme-glow-rgb), var(--rim1-alpha)),
+      inset 0 var(--rim2-offset-y) var(--rim2-blur) var(--rim2-spread) rgba(var(--theme-glow-rgb), var(--rim2-alpha));
+    mix-blend-mode: normal;
+    z-index:1;
+  }
+  
+  /* Outside hairline */
+  #growth .tile::after{
+    content:"";
+    position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    box-shadow: 0 0 var(--outer-stroke-blur) var(--outer-stroke-w) rgba(255,255,255,var(--outer-stroke-a));
+    z-index:2;
+  }
+  
+  /* Tile internals — compact like reference */
+  :root{
+    --tile-pad:16px;
+    --tile-stack-gap:10px;
+    --tile-kv-gap:6px;
+    --tile-bar-gap:6px;
+    --tile-title-fs:13px;
+    --tile-body-fs:12.5px;
+  }
+  #growth .tile > * + *{ margin-top: var(--tile-stack-gap); }
+  #growth .tile h4{ margin:0 0 6px; font:800 var(--tile-title-fs)/1.2 Inter, system-ui; }
+  #growth .tile p{ margin:0; font-size: var(--tile-body-fs); color:#a9bfd6; }
+  
+  /* Avatars: show first 6 for tidy two rows */
+  :root{ --slot-avatars-size:48px; --slot-avatars-gap:8px; --slot-avatars-cols:3; }
+  #growth [data-tile="customers"] .slot-avatars .avatar:nth-child(n+7){ display:none; }
+  
+  /* Progress bars: cool slate palette, width via --pct */
+  :root{
+    --progress-fill-1:#6B86A3; --progress-fill-2:#3F556B;
+    --progress-track:#0E1624;  --progress-track-stroke:rgba(255,255,255,.14);
+    --progress-glow:rgba(107,134,163,.18);
+  }
+  #growth .bar{
+    position:relative; height:10px; border-radius:8px; margin: var(--tile-bar-gap) 0;
+    background: var(--progress-track); border:1px solid var(--progress-track-stroke); overflow:hidden;
+  }
+  #growth .bar.thin{ height:6px; }
+  #growth .bar>i{
+    position:absolute; inset:0 auto 0 0; width: calc(var(--pct,0)*1%);
+    border-radius:inherit;
+    background: linear-gradient(-90deg, var(--progress-fill-1), var(--progress-fill-2));
+    box-shadow: inset 0 0 8px rgba(0,0,0,.18), 0 0 10px var(--progress-glow);
+  }
+  
+  /* Spans: make first two tiles the tall duo on ≥641px, single column on phone */
+  @media (min-width:641px){
+    #growth [data-tile="pipelines"]{ --row:2 !important; }
+    #growth [data-tile="customers"]{ --row:2 !important; }
+  }
+  @media (max-width:640px){
+    #growth .tile{ --col:1 !important; grid-column:1/-1; }
+  }
+  
+  /* Mobile glass boost: keep edges crisp on mobile GPUs */
+  @media (max-width:900px){
+    :root{ --outer-stroke-a:.16; }
+  }
+  @media (max-width:640px){
+    :root{
+      --rim1-alpha:.08; --rim2-alpha:.05; --outer-stroke-a:.18;
+    }
+  }
+
+
+
+
+
+
 
 
 
@@ -1728,7 +1875,7 @@
   </section>
 
   <!-- =========================
-       SECTION 2B – Growth system (SLOTTED)
+       SECTION 2B – Growth system
        ========================= -->
   <section class="section section-2B" id="growth" aria-label="Growth system" data-track-section="growth">
     <div class="growth-wrap">
@@ -1742,21 +1889,13 @@
   
       <div class="g-grid">
         <!-- Customers (tall) -->
-        <article class="tile customers" data-tile="customers" aria-label="Customers"
-                 style="--col:1; --row:2">
+        <article class="tile customers" data-tile="customers" aria-label="Customers" style="--col:1; --row:2">
           <h4>Customers</h4>
           <p>Organize company + contact data in one place.</p>
   
-          <div class="kv">
-            <span class="kv-label" data-icon=>Companies</span>
-            <span class="v" data-count="1773">1,773</span>
-          </div>
-          <div class="kv">
-            <span class="kv-label" data-icon=>Active buyers</span>
-            <span class="v" data-count="37.5%">+37.5%</span>
-          </div>
+          <div class="kv"><span class="kv-label" data-icon="">Companies</span><span class="v" data-count="1773">1,773</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">Active buyers</span><span class="v" data-count="37.5%">+37.5%</span></div>
   
-          <!-- Avatars slot -->
           <div class="slot-avatars" aria-hidden="true">
             <img class="avatar" src="./assets/avatars/a1.webp" alt="" loading="lazy" width="56" height="56">
             <img class="avatar" src="./assets/avatars/a2.webp" alt="" loading="lazy" width="56" height="56">
@@ -1768,73 +1907,68 @@
             <img class="avatar" src="./assets/avatars/a8.webp" alt="" loading="lazy" width="56" height="56">
             <img class="avatar" src="./assets/avatars/a9.webp" alt="" loading="lazy" width="56" height="56">
           </div>
-
         </article>
   
-        <!-- Pipelines (wide) -->
-        <article class="tile pipelines" data-tile="pipelines" aria-label="Pipelines"
-                  style="--col:2; --row:1">
+        <!-- Pipelines (wide, tall) -->
+        <article class="tile pipelines" data-tile="pipelines" aria-label="Pipelines" style="--col:2; --row:2">
           <h4>Pipelines</h4>
           <p>Track packaging stages at a glance—Lead, Qualified, Proposal, Negotiation, Closed.</p>
   
-          <div class="kv"><span class="kv-label" data-icon=>Lead</span><span class="v">45</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">Lead</span><span class="v" data-count="45">45</span></div>
           <div class="bar"><i style="--pct:100"></i></div>
   
-          <div class="kv"><span class="kv-label" data-icon=>Qualified</span><span class="v">32</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">Qualified</span><span class="v" data-count="32">32</span></div>
           <div class="bar"><i style="--pct:71.11"></i></div>
   
-          <div class="kv"><span class="kv-label" data-icon=>Proposal</span><span class="v">18</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">Proposal</span><span class="v" data-count="18">18</span></div>
           <div class="bar"><i style="--pct:40"></i></div>
   
-          <div class="kv"><span class="kv-label" data-icon=>Negotiation</span><span class="v">7</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">Negotiation</span><span class="v" data-count="7">7</span></div>
           <div class="bar thin"><i style="--pct:15.56"></i></div>
   
-          <div class="kv"><span class="kv-label" data-icon=>Closed</span><span class="v">3</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">Closed</span><span class="v" data-count="3">3</span></div>
           <div class="bar thin"><i style="--pct:6.67"></i></div>
   
           <img class="slot-asset" src="./assets/s2b/nodes.svg" alt="">
         </article>
   
         <!-- Real-time Signals -->
-        <article class="tile realtime" data-tile="signals" aria-label="Real-time Signals"
-                  style="--col:1; --row:1">
+        <article class="tile realtime" data-tile="signals" aria-label="Real-time Signals" style="--col:1; --row:1">
           <h4>Real-time Signals</h4>
           <p>&lt; 30-second lead indicator from web + market activity.</p>
   
-          <div class="kv"><span class="kv-label" data-icon=>Signals today</span><span class="v">126</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">Signals today</span><span class="v" data-count="126">126</span></div>
           <div class="bar"><i style="--pct:100"></i></div>
   
-          <div class="kv"><span class="kv-label" data-icon=>High-intent</span><span class="v">18%</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">High-intent</span><span class="v" data-count="18%">18%</span></div>
           <div class="bar thin"><i style="--pct:18"></i></div>
   
           <img class="slot-asset" src="./assets/s2b/sparkline.svg" alt="">
         </article>
   
         <!-- Sales AI -->
-        <article class="tile ai-sdr" data-tile="ai" aria-label="Sales AI"
-                  style="--col:1; --row:1">
+        <article class="tile ai-sdr" data-tile="ai" aria-label="Sales AI" style="--col:1; --row:1">
           <h4>Sales AI</h4>
           <p>Convert hot buyers into booked calls—auto snippets, follow-ups, and hand-offs.</p>
   
-          <div class="kv"><span class="kv-label" data-icon=>Booked this week</span><span class="v">14</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">Booked this week</span><span class="v" data-count="14">14</span></div>
           <div class="bar"><i style="--pct:78"></i></div>
   
-          <div class="kv"><span class="kv-label" data-icon=>Reply rate</span><span class="v">21%</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">Reply rate</span><span class="v" data-count="21%">21%</span></div>
           <div class="bar thin"><i style="--pct:21"></i></div>
   
           <img class="slot-asset" src="./assets/s2b/rings.svg" alt="">
         </article>
   
         <!-- Quotes -->
-        <article class="tile quotes" data-tile="quotes" aria-label="Quotes"
-                  style="--col:1; --row:1">
+        <article class="tile quotes" data-tile="quotes" aria-label="Quotes" style="--col:1; --row:1">
           <h4>Quotes</h4>
           <p>Specs to quote in one click—bottles, films, corrugate, labels, and more.</p>
   
-          <div class="kv"><span class="kv-label" data-icon=>Avg RFQ value</span><span class="v">$18.7k</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">Avg RFQ value</span><span class="v" data-count="$18.7k">$18.7k</span></div>
           <div class="bar"><i style="--pct:52"></i></div>
   
-          <div class="kv"><span class="kv-label" data-icon=>Samples sent</span><span class="v">23</span></div>
+          <div class="kv"><span class="kv-label" data-icon="">Samples sent</span><span class="v" data-count="23">23</span></div>
           <div class="bar thin"><i style="--pct:46"></i></div>
   
           <img class="slot-asset" src="./assets/s2b/pill.svg" alt="">
