@@ -1395,7 +1395,7 @@
   
   /* Global tweaks for the 2B section */
   #growth .growth-hd{ margin-bottom:28px !important; }   /* tighten section header */
-  #growth .g-grid{ gap:16px !important; }                /* grid gap like theirs   */
+
   
   /* Tile internals (smaller, crisper) */
   :root{
@@ -1405,9 +1405,9 @@
     --tile-bar-gap:6px;              /* spacing around bars */
   }
   
-  /* Progress bar thickness */
-  #growth .bar{ height:10px !important; }
-  #growth .bar.thin{ height:6px !important; }
+
+
+
   
   /* Headings + body text inside tiles */
   #growth .tile h4{ margin:0 0 6px !important; font-weight:800; }
@@ -1705,41 +1705,30 @@
 
 
 
-  /* === 2B: compact scaler (beats late rules + !important) === */
-  #growth.compact { --shrink: 0.86; } /* smaller number = smaller everything */
-  
-  /* outer breathing room for the section */
-  #growth.compact .growth-wrap{ padding-inline: calc(64px * var(--shrink)); }
-  @media (max-width:900px){ #growth.compact .growth-wrap{ padding-inline: calc(40px * var(--shrink)); } }
-  @media (max-width:640px){ #growth.compact .growth-wrap{ padding-inline: calc(20px * var(--shrink)); } }
-  
-  /* grid spacing — must use !important to beat your earlier !important */
-  #growth.compact .g-grid{ gap: calc(24px * var(--shrink)) !important; }
-  @media (max-width:900px){ #growth.compact .g-grid{ gap: calc(20px * var(--shrink)) !important; } }
-  @media (max-width:640px){ #growth.compact .g-grid{ gap: calc(16px * var(--shrink)) !important; } }
-  
-  /* tile inner padding — set on the TILE itself to outrank #growth .tile {...} */
-  #growth.compact .tile{ --tile-pad: calc(22px * var(--shrink)) !important; }
-  @media (max-width:900px){ #growth.compact .tile{ --tile-pad: calc(18px * var(--shrink)) !important; } }
-  @media (max-width:640px){ #growth.compact .tile{ --tile-pad: calc(14px * var(--shrink)) !important; } }
-  
-  /* typography inside tiles (they read these vars already) */
-  #growth.compact{
-    --tile-title-fs: calc(13px * var(--shrink));
-    --tile-body-fs:  calc(12.5px * var(--shrink));
+  /* === GALACTLY ADD: 2B uniform pane scale v1 START === */
+  #growth .s2b-scale-outer{
+    position: relative;
+    /* 1 = 100% size. Change this ONE value to zoom the whole pane. */
+    --s2b-scale: .85;
   }
   
-  /* progress bar thickness to match the scale */
-  #growth.compact .bar{ height: calc(10px * var(--shrink)) !important; }
-  #growth.compact .bar.thin{ height: calc(6px * var(--shrink)) !important; }
-  
-  /* visual slots */
-  #growth.compact{
-    --slot-icon-size:    calc(16px * var(--shrink));
-    --slot-avatars-size: calc(48px * var(--shrink));
-    --slot-avatars-gap:  calc(8px  * var(--shrink));
+  /* Visually scales the whole grid while keeping it centered */
+  #growth .s2b-scale-inner{
+    transform: scale(var(--s2b-scale));
+    transform-origin: top center;
+    /* width compensation so the scaled grid still fits the container width */
+    width: calc(100% / var(--s2b-scale));
+    margin: 0 auto;
   }
-
+  /* === GALACTLY ADD: 2B uniform pane scale v1 END === */
+  
+  /* (Optional) Different scales by breakpoint */
+  @media (max-width:900px){
+    #growth .s2b-scale-outer{ --s2b-scale:.90; }
+  }
+  @media (max-width:640px){
+    #growth .s2b-scale-outer{ --s2b-scale:1; } /* keep normal size on phones */
+  }
 
 
 
@@ -1924,7 +1913,10 @@
         <div class="sub">From verified buyers to quotes—one glassy command center that packaging teams can trust.</div>
       </div>
   
-      <div class="g-grid">
+      <!-- === GALACTLY ADD: 2B SCALE WRAPPER v1 START === -->
+      <div id="s2b-scale" class="s2b-scale-outer" style="--s2b-scale:.85;">
+        <div class="s2b-scale-inner">
+          <div class="g-grid">
         <!-- Customers (tall) -->
         <article class="tile customers" data-tile="customers" aria-label="Customers" style="--col:1; --row:2">
           <h4>Customers</h4>
@@ -2012,6 +2004,8 @@
         </article>
       </div>
     </div>
+  </div>
+  <!-- === GALACTLY ADD: 2B SCALE WRAPPER v1 END === -->
   </section>
 
   <!-- SECTION 3 – Process -->
@@ -3019,7 +3013,34 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-
+  <!-- === GALACTLY ADD: 2B scale fit v1 START === -->
+  <script>
+  (function(){
+    const outer = document.getElementById('s2b-scale');
+    const inner = outer?.querySelector('.s2b-scale-inner');
+    if(!outer || !inner) return;
+  
+    function fit(){
+      // Use the transformed (visual) height so layout collapses correctly
+      outer.style.height = inner.getBoundingClientRect().height + 'px';
+    }
+  
+    // Update on content/layout changes
+    const ro = new ResizeObserver(fit);
+    ro.observe(inner);
+    addEventListener('resize', fit, {passive:true});
+    document.addEventListener('DOMContentLoaded', fit);
+  
+    // Quick helper so you can test from the console: setS2BScale(0.8)
+    window.setS2BScale = function(x){
+      outer.style.setProperty('--s2b-scale', x);
+      fit();
+    };
+  
+    fit();
+  })();
+  </script>
+  <!-- === GALACTLY ADD: 2B scale fit v1 END === -->
 
 
 
