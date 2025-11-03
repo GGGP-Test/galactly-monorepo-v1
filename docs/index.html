@@ -1510,6 +1510,24 @@
 
 
 
+  /* === 2B-only padding knobs === */
+  :root{
+    --s2b-pad-x-desktop: 64px;  --s2b-pad-y-desktop: 80px;  /* desktop ≥901px */
+    --s2b-pad-x-tablet:  40px;  --s2b-pad-y-tablet:  64px;  /* 641–900px     */
+    --s2b-pad-x-phone:   20px;  --s2b-pad-y-phone:   32px;  /* ≤640px        */
+  }
+  
+  /* Apply to Section 2B only */
+  .section.section-2B{ padding: var(--s2b-pad-y-desktop) var(--s2b-pad-x-desktop); }
+  @media (max-width:900px){
+    .section.section-2B{ padding: var(--s2b-pad-y-tablet) var(--s2b-pad-x-tablet); }
+  }
+  @media (max-width:640px){
+    .section.section-2B{ padding: var(--s2b-pad-y-phone) var(--s2b-pad-x-phone); }
+  }
+
+
+
 
 
 
