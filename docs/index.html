@@ -1387,9 +1387,127 @@
       grid-auto-rows: auto;
     }
   }
-
-
   
+  
+  /* ================================
+     2B — DESKTOP/TABLET/PHONE SIZING
+     ================================ */
+  
+  /* Global tweaks for the 2B section */
+  #growth .growth-hd{ margin-bottom:28px !important; }   /* tighten section header */
+  #growth .g-grid{ gap:16px !important; }                /* grid gap like theirs   */
+  
+  /* Tile internals (smaller, crisper) */
+  :root{
+    --tile-pad:16px;                 /* padding inside each tile */
+    --tile-stack-gap:10px;           /* vertical spacing between blocks */
+    --tile-kv-gap:6px;               /* spacing inside each label/value row */
+    --tile-bar-gap:6px;              /* spacing around bars */
+  }
+  
+  /* Progress bar thickness */
+  #growth .bar{ height:10px !important; }
+  #growth .bar.thin{ height:6px !important; }
+  
+  /* Headings + body text inside tiles */
+  #growth .tile h4{ margin:0 0 6px !important; font-weight:800; }
+  :root{
+    --tile-title-fs:13px;            /* h4 */
+    --tile-body-fs:12.5px;           /* paragraph */
+  }
+  
+  /* Avatars: reduce count & size so Customers = 2 tidy rows */
+  :root{
+    --slot-avatars-size:48px;
+    --slot-avatars-gap:8px;
+    --slot-avatars-cols:3;
+  }
+  #growth [data-tile="customers"] .slot-avatars .avatar:nth-child(n+7){ display:none; } /* show 6 only */
+  
+  /* Keep the first-row duo aligned: both tiles span two rows */
+  @media (min-width:641px){
+    #growth [data-tile="pipelines"]{ --row:2 !important; }
+    #growth [data-tile="customers"]{ --row:2 !important; }
+  }
+  
+  /* Columns like the reference: 3 across on desktop/tablet, 1 on phone */
+  :root{ --s2b-cols-desktop:3; --s2b-cols-tablet:3; --s2b-cols-phone:1; }
+  #growth .g-grid{
+    grid-template-columns: repeat(var(--s2b-cols-desktop), minmax(0,1fr)) !important;
+  }
+  @media (max-width:1080px){
+    #growth .g-grid{ grid-template-columns: repeat(var(--s2b-cols-tablet), minmax(0,1fr)) !important; }
+  }
+  @media (max-width:640px){
+    #growth .g-grid{ grid-template-columns: 1fr !important; }
+  }
+  
+  /* ========================
+     2B — INNER GLOW “KNOBS”
+     ======================== */
+  
+  /* Desktop ≥901px — subtle rim */
+  @media (min-width:901px){
+    :root{
+      --s2b-glow-inset:12px;   /* distance from edges */
+      --s2b-glow-blur:22px;
+      --s2b-glow-spread:-8px;
+      --s2b-glow-a:.10;        /* tight rim strength  */
+      --s2b-glow-b:.03;        /* feather strength    */
+      --s2b-glow-blend:normal;
+  
+      --outer-stroke-a:.11;    /* faint outside hairline */
+      --outer-stroke-w:1px;
+      --outer-stroke-blur:1.2px;
+    }
+  }
+  
+  /* Tablet 641–900px — a tick stronger */
+  @media (max-width:900px) and (min-width:641px){
+    :root{
+      --s2b-glow-inset:10px;
+      --s2b-glow-blur:24px;
+      --s2b-glow-spread:-8px;
+      --s2b-glow-a:.12;
+      --s2b-glow-b:.05;
+  
+      --outer-stroke-a:.12;
+      --outer-stroke-w:1.1px;
+      --outer-stroke-blur:.9px;
+    }
+  }
+  
+  /* Phone ≤640px — keep it very soft (or disable entirely if you want) */
+  @media (max-width:640px){
+    :root{
+      --s2b-glow-inset:8px;
+      --s2b-glow-blur:18px;
+      --s2b-glow-spread:-6px;
+      --s2b-glow-a:.06;
+      --s2b-glow-b:.02;
+  
+      --outer-stroke-a:.14;
+      --outer-stroke-w:1.2px;
+      --outer-stroke-blur:.8px;
+    }
+    /* If you prefer no glow on phones, uncomment:
+    #growth .tile::before{ box-shadow:none !important; opacity:0 !important; } */
+  }
+  
+  /* Wire the knobs into your existing pseudo-elements */
+  #growth .tile::before{
+    inset: var(--s2b-glow-inset);
+    box-shadow:
+      inset 0 0 var(--s2b-glow-blur) var(--s2b-glow-spread) rgba(var(--theme-glow-rgb), var(--s2b-glow-a)),
+      inset 0 2px 16px -10px                                rgba(var(--theme-glow-rgb), var(--s2b-glow-b));
+    mix-blend-mode: var(--s2b-glow-blend);
+  }
+  #growth .tile::after{
+    box-shadow: 0 0 var(--outer-stroke-blur)
+                     var(--outer-stroke-w)
+                     rgba(255,255,255,var(--outer-stroke-a));
+  }
+
 
 
 
@@ -1607,19 +1725,7 @@
             <img class="avatar" src="./assets/avatars/a8.webp" alt="" loading="lazy" width="56" height="56">
             <img class="avatar" src="./assets/avatars/a9.webp" alt="" loading="lazy" width="56" height="56">
           </div>
-  
-          <!-- Optional 3D slot (comment out if unused) -->
-          <div class="slot-3d" aria-hidden="true">
-            <model-viewer
-              src="./assets/models/growth.glb"
-              poster="./assets/models/growth-poster.webp"
-              autoplay camera-controls disable-zoom interaction-prompt="none"
-              exposure="1.1">
-            </model-viewer>
-          </div>
-  
-          <!-- Corner decorative asset (SVG or PNG) -->
-          <img class="slot-asset" src="./assets/s2b/corners.svg" alt="">
+
         </article>
   
         <!-- Pipelines (wide) -->
