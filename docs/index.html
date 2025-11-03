@@ -1705,6 +1705,43 @@
 
 
 
+  /* === 2B: compact scaler (beats late rules + !important) === */
+  #growth.compact { --shrink: 0.86; } /* smaller number = smaller everything */
+  
+  /* outer breathing room for the section */
+  #growth.compact .growth-wrap{ padding-inline: calc(64px * var(--shrink)); }
+  @media (max-width:900px){ #growth.compact .growth-wrap{ padding-inline: calc(40px * var(--shrink)); } }
+  @media (max-width:640px){ #growth.compact .growth-wrap{ padding-inline: calc(20px * var(--shrink)); } }
+  
+  /* grid spacing — must use !important to beat your earlier !important */
+  #growth.compact .g-grid{ gap: calc(24px * var(--shrink)) !important; }
+  @media (max-width:900px){ #growth.compact .g-grid{ gap: calc(20px * var(--shrink)) !important; } }
+  @media (max-width:640px){ #growth.compact .g-grid{ gap: calc(16px * var(--shrink)) !important; } }
+  
+  /* tile inner padding — set on the TILE itself to outrank #growth .tile {...} */
+  #growth.compact .tile{ --tile-pad: calc(22px * var(--shrink)) !important; }
+  @media (max-width:900px){ #growth.compact .tile{ --tile-pad: calc(18px * var(--shrink)) !important; } }
+  @media (max-width:640px){ #growth.compact .tile{ --tile-pad: calc(14px * var(--shrink)) !important; } }
+  
+  /* typography inside tiles (they read these vars already) */
+  #growth.compact{
+    --tile-title-fs: calc(13px * var(--shrink));
+    --tile-body-fs:  calc(12.5px * var(--shrink));
+  }
+  
+  /* progress bar thickness to match the scale */
+  #growth.compact .bar{ height: calc(10px * var(--shrink)) !important; }
+  #growth.compact .bar.thin{ height: calc(6px * var(--shrink)) !important; }
+  
+  /* visual slots */
+  #growth.compact{
+    --slot-icon-size:    calc(16px * var(--shrink));
+    --slot-avatars-size: calc(48px * var(--shrink));
+    --slot-avatars-gap:  calc(8px  * var(--shrink));
+  }
+
+
+
 
 
 
@@ -1877,7 +1914,7 @@
   <!-- =========================
        SECTION 2B – Growth system
        ========================= -->
-  <section class="section section-2B" id="growth" aria-label="Growth system" data-track-section="growth">
+  <section class="section section-2B compact" id="growth"
     <div class="growth-wrap">
       <div class="growth-hd">
         <h3>
