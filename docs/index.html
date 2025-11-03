@@ -1535,6 +1535,25 @@
 
 
 
+  /* ===== 2A width overrides (desktop) ===== */
+  :root{
+    /* pick your target width here */
+    --proof-card-max-desktop: 1280px;  /* try 1120–1200 to taste */
+  }
+  
+  /* Let the card fill the #proof .inner width */
+  @media (min-width:901px){
+    #proof .inner{ max-width: var(--proof-card-max-desktop) !important; }
+    #proof .proof-card{ max-width: var(--proof-card-max-desktop) !important; }
+  }
+  
+  /* (optional) If you want 2A to use the page's full container instead, do this instead:
+  @media (min-width:901px){
+    #proof .inner{ max-width: var(--container-max) !important; }
+    #proof .proof-card{ max-width: none !important; }
+  }
+  */
+
 
 
 
