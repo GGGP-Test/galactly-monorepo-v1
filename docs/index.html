@@ -1472,32 +1472,7 @@
 
 
 
-  /* === 2B: NO CROPPING / NO OVERLAP PATCH === */
-  #growth .g-grid{
-    grid-auto-flow: row;         /* keep DOM order, no backfilling */
-    grid-auto-rows: auto;        /* rows grow with content */
-    align-items: start;          /* items don't fight row height */
-  }
-  
-  /* allow tiles to grow naturally and clip inside the rounded corner */
-  #growth .tile{
-    height: auto;
-    min-height: 0;
-    overflow: hidden;            /* clip inner bars/glow to radius */
-  }
-  
-  /* Give Pipelines enough vertical room on non-phone layouts */
-  @media (min-width:641px){
-    #growth [data-tile="pipelines"]{ --row: 2 !important; }
-  }
-  
-  /* (Phone keeps your single-column stack) */
-  @media (max-width:640px){
-    #growth .g-grid{
-      grid-template-columns: 1fr !important;
-      grid-auto-rows: auto;
-    }
-  }
+
 
 
 
