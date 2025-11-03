@@ -1732,6 +1732,16 @@
 
 
 
+  /* Hard stop for any layout-width > viewport (only affects the scaled block) */
+  #growth .s2b-scale-outer{ display:block; width:100%; max-width:100%; overflow-x: clip; }
+  #growth .growth-wrap{ overflow-x: clip; } /* belt-and-suspenders */
+
+
+
+
+
+
+
 
 
 
@@ -1903,7 +1913,7 @@
   <!-- =========================
        SECTION 2B – Growth system
        ========================= -->
-  <section class="section section-2B compact" id="growth"
+  <section class="section section-2B compact" id="growth">
     <div class="growth-wrap">
       <div class="growth-hd">
         <h3>
@@ -1914,7 +1924,7 @@
       </div>
   
       <!-- === GALACTLY ADD: 2B SCALE WRAPPER v1 START === -->
-      <div id="s2b-scale" class="s2b-scale-outer" style="--s2b-scale:.85;">
+      <div id="s2b-scale" class="s2b-scale-outer" style="--s2b-scale:.80;">
         <div class="s2b-scale-inner">
           <div class="g-grid">
         <!-- Customers (tall) -->
@@ -2972,44 +2982,6 @@ window.SCOREBOARD_KNOBS = {
 })();
 </script>
 
-
-  <script>
-  /* === S2B: master shrink knob (0.60–1.00) === */
-  (function(){
-    const s = 0.80;  // <-- smaller number = more squeeze
-  
-    // Helper: wrap a value in calc() × s
-    const mul = v => `calc((${v}) * ${s})`;
-  
-    // Drive your S2 knob API (affects all tiles consistently)
-    S2.set({'2B':{
-      // tighten tile padding + grid gap
-      cardPad:  mul('clamp(16px,2.2vw,22px)'),
-      gap:      mul('clamp(16px,2.6vw,22px)'),
-  
-      // scale tile typography + section header
-      tileTitleFs: mul('clamp(14px,1.8vw,16px)'),
-      tileBodyFs:  mul('clamp(12px,1.7vw,14px)'),
-      h2Fs:        mul('clamp(26px,4.8vw,52px)'),
-      subFs:       mul('clamp(9px,2vw,10px)')
-    }});
-  
-    // Visual slots that aren’t wired through S2: scale via CSS vars
-    const root = document.documentElement;
-    root.style.setProperty('--slot-avatars-size', `calc(48px * ${s})`);
-    root.style.setProperty('--slot-avatars-gap',  `calc(8px  * ${s})`);
-    root.style.setProperty('--slot-icon-size',    `calc(16px * ${s})`);
-    root.style.setProperty('--slot-3d-height',    `calc(140px * ${s})`);
-  
-    // Progress bar thickness (visual balance at smaller scales)
-    const style = document.createElement('style');
-    style.textContent = `
-      #growth .bar{ height: calc(10px * ${s}) !important; }
-      #growth .bar.thin{ height: calc(6px * ${s}) !important; }
-    `;
-    document.head.appendChild(style);
-  })();
-  </script>
 
 
 
