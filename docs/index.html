@@ -1451,24 +1451,7 @@
 
 
   
-  /* === 2B CROPPING HOTFIX (desktop + tablet) === */
-  /* Let implicit rows be at least a baseline height but expand for content.  */
-  :root{
-    --s2b-row-h: 350px;     /* baseline row height; adjust 280–320 to taste */
-  }
-  
-  /* swap the strict row size for a flexible one */
-  #growth .g-grid{
-    grid-auto-rows: minmax(var(--s2b-row-h), auto);
-  }
-  
-  /* remove any tile-level min-height caps (if present from earlier rules) */
-  #growth .tile{ min-height: auto; }
-  
-  /* optional: keep placement predictable when items span extra rows */
-  @media (min-width:901px){
-    #growth .g-grid{ grid-auto-flow: row; }   /* not 'dense' */
-  }
+
 
 
 
