@@ -1360,6 +1360,98 @@
 
 
 
+  /* === ACQ-LIKE SIZING PRESET — Section 2B only === */
+  /* Paste near the end of <style> so it wins the cascade */
+  
+  :root{
+    /* page/container */
+    --container-max: 1160px;               /* desktop content width */
+    --gutter: clamp(24px, 6vw, 56px);      /* side padding */
+  
+    /* grid structure */
+    --s2b-cols-desktop: 3;
+    --s2b-cols-tablet:  2;
+    --s2b-cols-phone:   1;
+    --s2b-gap: 24px;                        /* tile gap */
+  
+    /* equal row height so 1x1 tiles match neatly */
+    --s2b-row-h: 260px;                     /* desktop row height */
+  
+    /* tile look + internal spacing */
+    --s2b-radius: 18px;
+    --s2b-blur: 16px;
+    --s2b-bg-a: .18;  --s2b-bg-b: .14;      /* glass opacity (desktop) */
+    --s2b-shadow-a: .22;
+    --tile-pad: 22px;
+    --tile-title-fs: 16px;
+    --tile-body-fs: 13px;
+  
+    /* section heading */
+    --s2b-h2-fs: 48px;
+    --s2b-sub-fs: 13px;
+  }
+  
+  /* honor the row height and normalize 1x1 tile heights */
+  #growth .g-grid{ grid-auto-rows: var(--s2b-row-h); }
+  #growth .tile{ min-height: var(--s2b-row-h); }
+  
+  /* heading block spacing & width like the reference */
+  .section-2B{ margin-top: 80px; padding-block: clamp(56px, 8vw, 80px); }
+  .growth-hd{ max-width: 860px; margin-inline: auto; margin-bottom: 36px; }
+  
+  /* tidy inside each tile */
+  #growth .tile h4{ margin-bottom: 10px; }
+  #growth .tile p{ margin-bottom: 12px; }
+  #growth .kv{ gap: 10px; }
+  #growth .bar{ height: 10px; margin: 8px 0 14px; }
+  #growth .bar.thin{ height: 8px; }
+  
+  /* explicit desktop placement (matches your reference layout) */
+  @media (min-width:901px){
+    #growth article[data-tile="customers"] { grid-column: 1 / span 1; grid-row: span 2; }
+    #growth article[data-tile="pipelines"] { grid-column: 2 / span 2; grid-row: span 1; }
+    #growth article[data-tile="signals"]   { grid-column: 2 / span 1; grid-row: auto; }
+    #growth article[data-tile="ai"]        { grid-column: 3 / span 1; grid-row: auto; }
+    #growth article[data-tile="quotes"]    { grid-column: 1 / span 1; grid-row: auto; }
+  }
+  
+  /* tablet: two columns, slightly smaller rows */
+  @media (max-width:900px) and (min-width:641px){
+    :root{
+      --container-max: 960px;
+      --s2b-gap: 22px;
+      --s2b-row-h: 240px;
+      --tile-pad: 20px;
+      --s2b-h2-fs: 40px;
+      --s2b-bg-a: .20; --s2b-bg-b: .16;      /* a touch more opaque on tablet */
+    }
+    #growth .g-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  }
+  
+  /* phone: single column, content-led heights, bigger glass */
+  @media (max-width:640px){
+    :root{
+      --gutter: 20px;
+      --s2b-gap: 16px;
+      --s2b-row-h: auto;          /* let content define height */
+      --tile-pad: 18px;
+      --tile-title-fs: 15px;
+      --tile-body-fs: 13px;
+      --s2b-h2-fs: 34px;          /* header size on phone */
+      --s2b-sub-fs: 12px;
+      --s2b-bg-a: .22; --s2b-bg-b: .18;  /* slightly stronger glass on phones */
+    }
+    #growth .g-grid{ row-gap: var(--s2b-gap); grid-auto-rows: auto; }
+    #growth .tile{ min-height: 0; }
+    .growth-hd{ margin-bottom: 22px; }
+  }
+
+
+
+
+
+
+
 
 
 
