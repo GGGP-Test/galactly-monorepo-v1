@@ -1510,21 +1510,27 @@
 
 
 
-  /* === 2B-only padding knobs === */
-  :root{
-    --s2b-pad-x-desktop: 124px;  --s2b-pad-y-desktop: 80px;  /* desktop ≥901px */
-    --s2b-pad-x-tablet:  40px;  --s2b-pad-y-tablet:  64px;  /* 641–900px     */
-    --s2b-pad-x-phone:   20px;  --s2b-pad-y-phone:   32px;  /* ≤640px        */
-  }
+  /* ===== 2B-only padding pack (paste at END of <style>) ===== */
   
-  /* Apply to Section 2B only */
-  .section.section-2B{ padding: var(--s2b-pad-y-desktop) var(--s2b-pad-x-desktop); }
-  @media (max-width:900px){
-    .section.section-2B{ padding: var(--s2b-pad-y-tablet) var(--s2b-pad-x-tablet); }
-  }
-  @media (max-width:640px){
-    .section.section-2B{ padding: var(--s2b-pad-y-phone) var(--s2b-pad-x-phone); }
-  }
+  /* 1) OUTER vertical breathing room just for 2B (top/bottom) */
+  #growth{ padding-block: 80px; }                 /* desktop default */
+  @media (max-width:900px){ #growth{ padding-block: 64px; } }  /* tablet */
+  @media (max-width:640px){ #growth{ padding-block: 36px; } }  /* phone */
+  
+  /* 2) INNER left/right gutters for the 2B content container */
+  #growth .growth-wrap{ padding-inline: 64px; }   /* desktop */
+  @media (max-width:900px){ #growth .growth-wrap{ padding-inline: 40px; } } /* tablet */
+  @media (max-width:640px){ #growth .growth-wrap{ padding-inline: 20px; } } /* phone */
+  
+  /* 3) SPACE BETWEEN TILES (grid gap) */
+  @media (min-width:901px){  #growth .g-grid{ gap: 24px; } }   /* desktop */
+  @media (max-width:900px){  #growth .g-grid{ gap: 20px; } }   /* tablet */
+  @media (max-width:640px){  #growth .g-grid{ gap: 16px; } }   /* phone */
+  
+  /* 4) PADDING INSIDE EACH TILE (if you want the cards themselves roomier) */
+  @media (min-width:901px){  #growth .tile{ --tile-pad: 22px; } }  /* desktop */
+  @media (max-width:900px){  #growth .tile{ --tile-pad: 18px; } }  /* tablet */
+  @media (max-width:640px){  #growth .tile{ --tile-pad: 14px; } }  /* phone */
 
 
 
