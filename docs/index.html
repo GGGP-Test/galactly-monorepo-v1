@@ -1768,7 +1768,7 @@
   /* 2) Real-time Signals — per-tile knobs */
   #growth [data-tile="signals"]{
     --tile-min-h: 390px;      /* <— makes the tile taller without moving text */
-    --slot-scale: 1.05;       /* <— size of the whole radar */
+    --slot-scale: 1.0;       /* <— size of the whole radar */
     --slot-opacity: .88;
     --slot-center-y: 58%;     /* <— nudge down a tad so labels have headroom */
   }
@@ -2031,27 +2031,12 @@
             <article class="tile realtime" data-tile="signals" data-asset="RTS.svg" style="--col:1; --row:1">
               <h4>Real-time Signals</h4>
               <p>&lt; 30-second lead indicator from web + market activity.</p>
-  
-              <div class="kv"><span class="kv-label" data-icon="">Signals today</span><span class="v" data-count="126">126</span></div>
-              <div class="bar"><i style="--pct:100"></i></div>
-  
-              <div class="kv"><span class="kv-label" data-icon="">High-intent</span><span class="v" data-count="18%">18%</span></div>
-              <div class="bar thin"><i style="--pct:18"></i></div>
-  
-
             </article>
   
             <!-- Sales AI -->
             <article class="tile ai-sdr" data-tile="ai" data-asset="rings.svg" style="--col:1; --row:1">
               <h4>Sales AI</h4>
               <p>Convert hot buyers into booked calls—auto snippets, follow-ups, and hand-offs.</p>
-  
-              <div class="kv"><span class="kv-label" data-icon="">Booked this week</span><span class="v" data-count="14">14</span></div>
-              <div class="bar"><i style="--pct:78"></i></div>
-  
-              <div class="kv"><span class="kv-label" data-icon="">Reply rate</span><span class="v" data-count="21%">21%</span></div>
-              <div class="bar thin"><i style="--pct:21"></i></div>
-  
 
             </article>
   
@@ -2059,14 +2044,6 @@
             <article class="tile quotes" data-tile="quotes" data-asset="pill.svg" style="--col:1; --row:1">
               <h4>Quotes</h4>
               <p>Specs to quote in one click—bottles, films, corrugate, labels, and more.</p>
-  
-              <div class="kv"><span class="kv-label" data-icon="">Avg RFQ value</span><span class="v" data-count="$18.7k">$18.7k</span></div>
-              <div class="bar"><i style="--pct:52"></i></div>
-  
-              <div class="kv"><span class="kv-label" data-icon="">Samples sent</span><span class="v" data-count="23">23</span></div>
-              <div class="bar thin"><i style="--pct:46"></i></div>
-  
-
             </article>
   
           </div> <!-- .g-grid -->
