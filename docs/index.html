@@ -867,15 +867,15 @@
   }
   #growth img.slot-asset, #growth svg.slot-asset{ max-width:40%; height:auto; }
   
-  /* Put art under the content (not on top) */
-  #growth .tile { position: relative; }
-  #growth .tile > *:not(.slot-asset) { position: relative; z-index: 1; }
-  #growth .tile .slot-asset { z-index: 0; }
+  /* keep tile content above the decorative art */
+  #growth .tile { position: relative; overflow: hidden; }
+  #growth .tile > *:not(.slot-asset){ position: relative; z-index: 1; }
+  #growth .tile .slot-asset{ z-index: 0; }
   
-  /* Reserve bottom-right space when a tile has a corner asset */
-  #growth .tile:has(.slot-asset){
-    --asset-pad-x: 72px;   /* horizontal room for the art */
-    --asset-pad-y: 48px;   /* vertical room for the art   */
+  /* reserve a bit of room in the bottom-right when a tile has art */
+  #growth .tile.has-asset{
+    --asset-pad-x: 72px;   /* tweak to taste */
+    --asset-pad-y: 48px;
     padding-right: calc(var(--tile-pad) + var(--asset-pad-x));
     padding-bottom: calc(var(--tile-pad) + var(--asset-pad-y));
   }
@@ -902,6 +902,14 @@
       --asset-pad-x: 40px; --asset-pad-y: 28px;
     }
   }
+  
+  
+  
+  #growth [data-tile="pipelines"]{
+    --tile-pad: 0;
+    padding: 0 !important;
+  }
+  
   
   
   
@@ -1882,7 +1890,7 @@
             </article>
   
             <!-- Pipelines (wide, tall) -->
-            <article class="tile pipelines" data-tile="pipelines" aria-label="Pipelines" style="--col:2; --row:2">
+            <article class="tile pipelines" data-tile="pipelines" style="--col:2; --row:2">
               <h4>Pipelines</h4>
               <p>Track packaging stages at a glance—Lead, Qualified, Proposal, Negotiation, Closed.</p>
   
@@ -1901,11 +1909,11 @@
               <div class="kv"><span class="kv-label" data-icon="">Closed</span><span class="v" data-count="3">3</span></div>
               <div class="bar thin"><i style="--pct:6.67"></i></div>
   
-              <img class="slot-asset" src="./assets/s2b/nodes.svg" alt="">
+
             </article>
   
             <!-- Real-time Signals -->
-            <article class="tile realtime" data-tile="signals" aria-label="Real-time Signals" style="--col:1; --row:1">
+            <article class="tile realtime" data-tile="signals" data-asset="sparkline.svg" style="--col:1; --row:1">
               <h4>Real-time Signals</h4>
               <p>&lt; 30-second lead indicator from web + market activity.</p>
   
@@ -1915,11 +1923,11 @@
               <div class="kv"><span class="kv-label" data-icon="">High-intent</span><span class="v" data-count="18%">18%</span></div>
               <div class="bar thin"><i style="--pct:18"></i></div>
   
-              <img class="slot-asset" src="./assets/s2b/sparkline.svg" alt="">
+
             </article>
   
             <!-- Sales AI -->
-            <article class="tile ai-sdr" data-tile="ai" aria-label="Sales AI" style="--col:1; --row:1">
+            <article class="tile ai-sdr" data-tile="ai" data-asset="rings.svg" style="--col:1; --row:1">
               <h4>Sales AI</h4>
               <p>Convert hot buyers into booked calls—auto snippets, follow-ups, and hand-offs.</p>
   
@@ -1929,11 +1937,11 @@
               <div class="kv"><span class="kv-label" data-icon="">Reply rate</span><span class="v" data-count="21%">21%</span></div>
               <div class="bar thin"><i style="--pct:21"></i></div>
   
-              <img class="slot-asset" src="./assets/s2b/rings.svg" alt="">
+
             </article>
   
             <!-- Quotes -->
-            <article class="tile quotes" data-tile="quotes" aria-label="Quotes" style="--col:1; --row:1">
+            <article class="tile quotes" data-tile="quotes" data-asset="pill.svg" style="--col:1; --row:1">
               <h4>Quotes</h4>
               <p>Specs to quote in one click—bottles, films, corrugate, labels, and more.</p>
   
@@ -1943,7 +1951,7 @@
               <div class="kv"><span class="kv-label" data-icon="">Samples sent</span><span class="v" data-count="23">23</span></div>
               <div class="bar thin"><i style="--pct:46"></i></div>
   
-              <img class="slot-asset" src="./assets/s2b/pill.svg" alt="">
+
             </article>
   
           </div> <!-- .g-grid -->
@@ -1951,6 +1959,28 @@
       </div> <!-- .s2b-scale-outer -->
       <!-- === GALACTLY ADD: 2B SCALE WRAPPER v1 END === -->
     </div> <!-- .growth-wrap -->
+  <script>
+  (function attachTileAssets(){
+    const BASE = './assets/s2b/';
+    document.querySelectorAll('#growth article.tile').forEach(tile => {
+      // clear any old asset nodes (defensive)
+      tile.querySelectorAll('.slot-asset').forEach(n => n.remove());
+  
+      const file = tile.getAttribute('data-asset');
+      if (!file) {
+        tile.classList.remove('has-asset');   // no asset, no extra corner space
+        return;
+      }
+      const img = document.createElement('img');
+      img.className = 'slot-asset';
+      img.alt = '';
+      img.loading = 'lazy';
+      img.src = BASE + file;
+      tile.appendChild(img);
+      tile.classList.add('has-asset');         // opt-in to reserve corner room
+    });
+  })();
+  </script>
   </section>
 
   <!-- SECTION 3 – Process -->
