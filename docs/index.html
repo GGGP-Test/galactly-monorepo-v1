@@ -1425,20 +1425,6 @@
     overflow: visible;           /* never clip the scaled grid */
   }
   
-  #growth .s2b-scale-inner{
-    width: calc(100% / var(--s2b-scale));  /* compensation so the *visual* width = container width */
-    transform: scale(var(--s2b-scale)) translateZ(0);
-    transform-origin: top center;          /* critical for perfect centering */
-    margin: 0 auto;                         /* belt + suspenders */
-  }
-  
-    /* Width compensation: visual width = 100% after scaling */
-    width: calc(100% / var(--s2b-scale));
-    display: block;
-  
-    /* tiny epsilon so rounding can’t shave the right edge */
-    padding-right: 0.1px;
-  }
   
   /* keep the container centered and uncropped */
   #growth .growth-wrap{
@@ -1575,6 +1561,13 @@
     box-shadow: 0 0 var(--outer-stroke-blur) var(--outer-stroke-w) rgba(255,255,255,var(--outer-stroke-a));
     z-index:2;
   }
+
+
+  /* ---- 2B scale: safe fallback height ---- */
+  #growth .s2b-scale-outer{ min-height: 520px; }
+  @media (max-width:900px){ #growth .s2b-scale-outer{ min-height: 560px; } }
+  @media (max-width:640px){ #growth .s2b-scale-outer{ min-height: 0; } } /* phones don't use the scaler */
+  
 
 
 
@@ -2828,7 +2821,7 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-
+  
   <script>
   (function(){
     const outer = document.getElementById('s2b-scale');
@@ -2839,19 +2832,32 @@ window.SCOREBOARD_KNOBS = {
   
     function fit(){
       if(isPhone()){
-        outer.style.height = 'auto';        // let normal flow handle height
+        outer.style.height = 'auto';
         return;
       }
-      // desktop/tablet: lock to transformed height
-      outer.style.height = inner.getBoundingClientRect().height + 'px';
+      // measure post-transform
+      const h = inner.getBoundingClientRect().height;
+      outer.style.height = Math.max(0, Math.round(h)) + 'px';
     }
   
-    const ro = new ResizeObserver(fit);
+    // Refit on everything that can change metrics
+    const ro = new ResizeObserver(()=>fit());
     ro.observe(inner);
+  
     addEventListener('resize', fit, {passive:true});
-    document.addEventListener('DOMContentLoaded', fit);
     addEventListener('load', fit);
-    fit();
+  
+    // Fonts & images can move text and tiles
+    if (document.fonts?.ready) document.fonts.ready.then(fit);
+    inner.querySelectorAll('img').forEach(img=>{
+      if(!img.complete){
+        img.addEventListener('load',  fit, {once:true});
+        img.addEventListener('error', fit, {once:true});
+      }
+    });
+  
+    // Initial double-RAF ensures layout has flushed before the first measure
+    requestAnimationFrame(()=> requestAnimationFrame(fit));
   })();
   </script>
   <!-- === GALACTLY ADD: 2B scale fit v1 END === -->
