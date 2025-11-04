@@ -693,38 +693,7 @@
   }
 
   /* 2B Growth system */
-  .growth-wrap{ max-width: var(--container-max); margin:0 auto; }
-  .growth-hd{ text-align:center; margin-bottom: clamp(60px, 2vw, 80px); }
-  .growth-hd h3{
-    margin:0 0 20px; font: 400 var(--s2b-h2-fs)/1.15 Inter, system-ui; letter-spacing:-.01em;
-  }
-  .growth-hd .sub{ color:#b7c9da; font-size: var(--s2b-sub-fs); }
-
-
   
-  
-    /* Single source of truth for columns + wrapping */
-  #growth .g-grid{
-    display:grid;
-    gap: var(--s2b-gap);
-    grid-template-columns: repeat(var(--s2b-cols-desktop, 3), minmax(0,1fr));
-    grid-auto-flow: dense;        /* lets items pack and fill holes */
-    align-items: stretch;
-  }
-  @media (max-width:1080px){
-    #growth .g-grid{ grid-template-columns: repeat(var(--s2b-cols-tablet, 3), minmax(0,1fr)); }
-  }
-  @media (max-width:640px){
-    #growth .g-grid{ grid-template-columns: repeat(var(--s2b-cols-phone, 1),  minmax(0,1fr)); }
-  }
-  
-  
-  
-  
-  
-
-/* keep your existing .tile{…} block, but remove the nested lines from inside it */
-
   /* put these three rules AFTER the .tile block */
   .tile > * + *{ margin-top: var(--tile-stack-gap); }   /* generic vertical spacing */
   .tile .kv{ margin-top: var(--tile-kv-gap); }
@@ -745,9 +714,9 @@
   .face-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; }
   .face{ aspect-ratio:1/1; border-radius:10px; background:rgba(255,255,255,.05);
          border:1px solid rgba(255,255,255,.08); }
-  .bar{ height:12px; border-radius:8px; margin:8px 0;
+  .bar{ height:10px; border-radius:8px; margin:8px 0;
         background:linear-gradient(90deg, var(--tile-glow), rgba(255,255,255,.04)); }
-  .bar.thin{ height:8px; }
+  .bar.thin{ height:6px; }
   .kv{ display:flex; align-items:center; justify-content:space-between; gap:12px; font-weight:700; }
   .kv .v{ font-weight:800; }
   .badge-note{ position:absolute; left:12px; bottom:12px; font-size:11px; color:#9db3c9; }
@@ -938,90 +907,6 @@
     --hero-glow-blend: normal;   /* keep corners sane */
     --hero-inner-stroke-a: 0;    /* keep any inner hairline off (0–.12 ok) */
   }
-
-   /* ========= RIM-ONLY GLOW + OUTER STROKE (drop-in override) ========= */
-  /* tune color once here */
-  :root{ --theme-glow-rgb: 160,190,255; } /* icy blue-white */
-  
-  :root{
-    /* ring thickness */
-    --rim-w: 14px;
-  
-    /* tight rim (crisp line on the inner edge) */
-    --rim1-blur: 38px;      /* more = softer line */
-    --rim1-spread: -10px;   /* more negative = stays on the rim */
-    --rim1-alpha: .13;      /* strength */
-  
-    /* wide feather (the “soft aura” off the rim) */
-    --rim2-offset-y: 8px;   /* >0 biases glow downward, 0 = even halo */
-    --rim2-blur: 130px;     /* the long, soft fade */
-    --rim2-spread: -72px;   /* keeps the center perfectly clean */
-    --rim2-alpha: .035;     /* subtle */
-  }
-  
-  /* never draw real borders */
-  .glass, .tile{ border:0 !important; position:relative; }
-  
-  /* carve a hollow ring and glow ONLY on that ring */
-  .glass::before,
-  .tile::before{
-    content:"";
-    position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    /* ring mask: center is punched out */
-    padding: var(--rim-w);
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-            mask-composite: exclude;
-    /* two-layer rim glow */
-    box-shadow:
-      inset 0 0 var(--rim1-blur) var(--rim1-spread) rgba(var(--theme-glow-rgb), var(--rim1-alpha)),
-      inset 0 var(--rim2-offset-y) var(--rim2-blur) var(--rim2-spread) rgba(var(--theme-glow-rgb), var(--rim2-alpha));
-    mix-blend-mode: normal;   /* avoids corner hot-spots */
-    z-index:1;
-  }
-  
-  /* faint OUTSIDE hairline (looks like their whitish stroke) */
-  :root{
-    --outer-stroke-rgb: 255,255,255;
-    --outer-stroke-a: .11;      /* strength of the outside line */
-    --outer-stroke-w: 1.0px;    /* ~thickness via spread */
-    --outer-stroke-blur: 1.5px; /* a touch of softness */
-    --outer-stroke-blend: screen; /* brighten against dark bg */
-  }
-  .glass::after,
-  .tile::after{
-    content:"";
-    position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    /* outside shadow: [x y blur spread color] */
-    box-shadow: 0 0 var(--outer-stroke-blur)
-                     var(--outer-stroke-w)
-                     rgba(var(--outer-stroke-rgb), var(--outer-stroke-a));
-    mix-blend-mode: var(--outer-stroke-blend);
-    z-index:2;
-  }
-  
-  /* per-component tiny nudges (feel free to keep or drop) */
-  .glass{
-    --rim1-alpha:.11; --rim2-alpha:.035;
-    --outer-stroke-a:.12;
-  }
-  .tile{
-    --rim1-blur: 1040px;  --rim1-spread: -110px;  --rim1-alpha:.12;
-    --rim2-blur: 1900px; --rim2-spread: -975px; --rim2-offset-y: 6px; --rim2-alpha:.035;
-    --outer-stroke-a:.10;
-  }
-  
-  /* Safari seam guard (prevents a 1px bright seam on some GPUs) */
-  @supports (-webkit-backdrop-filter: blur(1px)) {
-    .glass, .tile{
-      -webkit-mask-image: radial-gradient(100% 100% at 50% 50%, #000 calc(100% - 1px), transparent 100%);
-              mask-image: radial-gradient(100% 100% at 50% 50%, #000 calc(100% - 1px), transparent 100%);
-    }
-  }
-
-  :root{ --rim-opacity: .25; }                 /* 90% of current glow */
-  .glass::before, .tile::before{ opacity: var(--rim-opacity); }
 
 
   /* ===== FINAL GLASS OVERRIDE FOR 2A + 2B (paste at end of <style>) ===== */
@@ -1222,7 +1107,6 @@
     /* 1) Force 2B tiles to stack one-by-one in DOM order */
     #growth .g-grid{
       grid-template-columns: 1fr !important;  /* single column */
-      grid-auto-flow: row;                     /* disable 'dense' reordering */
       row-gap: var(--s2b-row-gap, var(--s2b-gap));  /* phone-only row gap knob */
     }
     /* Reset any custom column spans; keep each tile full-width */
@@ -1281,88 +1165,6 @@
 
 
 
-
-
-  /* === 2B: NO CROPPING / NO OVERLAP PATCH === */
-  #growth .g-grid{
-    grid-auto-flow: row;         /* keep DOM order, no backfilling */
-    grid-auto-rows: auto;        /* rows grow with content */
-    align-items: start;          /* items don't fight row height */
-  }
-  
-  /* allow tiles to grow naturally and clip inside the rounded corner */
-  #growth .tile{
-    height: auto;
-    min-height: 0;
-    overflow: hidden;            /* clip inner bars/glow to radius */
-  }
-  
-  /* Give Pipelines enough vertical room on non-phone layouts */
-  @media (min-width:641px){
-    #growth [data-tile="pipelines"]{ --row: 2 !important; }
-  }
-  
-  /* (Phone keeps your single-column stack) */
-  @media (max-width:640px){
-    #growth .g-grid{
-      grid-template-columns: 1fr !important;
-      grid-auto-rows: auto;
-    }
-  }
-  
-  
-  /* ================================
-     2B — DESKTOP/TABLET/PHONE SIZING
-     ================================ */
-  
-  /* Global tweaks for the 2B section */
-  #growth .growth-hd{ margin-bottom:28px !important; }   /* tighten section header */
-
-  
-  /* Tile internals (smaller, crisper) */
-  :root{
-    --tile-pad:16px;                 /* padding inside each tile */
-    --tile-stack-gap:10px;           /* vertical spacing between blocks */
-    --tile-kv-gap:6px;               /* spacing inside each label/value row */
-    --tile-bar-gap:6px;              /* spacing around bars */
-  }
-  
-
-
-
-  
-  /* Headings + body text inside tiles */
-  #growth .tile h4{ margin:0 0 6px !important; font-weight:800; }
-  :root{
-    --tile-title-fs:13px;            /* h4 */
-    --tile-body-fs:12.5px;           /* paragraph */
-  }
-  
-  /* Avatars: reduce count & size so Customers = 2 tidy rows */
-  :root{
-    --slot-avatars-size:48px;
-    --slot-avatars-gap:8px;
-    --slot-avatars-cols:3;
-  }
-  #growth [data-tile="customers"] .slot-avatars .avatar:nth-child(n+7){ display:none; } /* show 6 only */
-  
-  /* Keep the first-row duo aligned: both tiles span two rows */
-  @media (min-width:641px){
-    #growth [data-tile="pipelines"]{ --row:2 !important; }
-    #growth [data-tile="customers"]{ --row:2 !important; }
-  }
-  
-  /* Columns like the reference: 3 across on desktop/tablet, 1 on phone */
-  :root{ --s2b-cols-desktop:3; --s2b-cols-tablet:3; --s2b-cols-phone:1; }
-  #growth .g-grid{
-    grid-template-columns: repeat(var(--s2b-cols-desktop), minmax(0,1fr)) !important;
-  }
-  @media (max-width:1080px){
-    #growth .g-grid{ grid-template-columns: repeat(var(--s2b-cols-tablet), minmax(0,1fr)) !important; }
-  }
-  @media (max-width:640px){
-    #growth .g-grid{ grid-template-columns: 1fr !important; }
-  }
   
   /* ========================
      2B — INNER GLOW “KNOBS”
@@ -1432,28 +1234,6 @@
 
 
 
-  /* ===== 2B-only padding pack (paste at END of <style>) ===== */
-  
-  /* 1) OUTER vertical breathing room just for 2B (top/bottom) */
-  #growth{ padding-block: 120px; }                 /* desktop default */
-  @media (max-width:900px){ #growth{ padding-block: 64px; } }  /* tablet */
-  @media (max-width:640px){ #growth{ padding-block: 36px; } }  /* phone */
-  
-  /* 2) INNER left/right gutters for the 2B content container */
-  #growth .growth-wrap{ padding-inline: 64px; }   /* desktop */
-  @media (max-width:900px){ #growth .growth-wrap{ padding-inline: 40px; } } /* tablet */
-  @media (max-width:640px){ #growth .growth-wrap{ padding-inline: 20px; } } /* phone */
-  
-  /* 3) SPACE BETWEEN TILES (grid gap) */
-  @media (min-width:901px){  #growth .g-grid{ gap: 24px; } }   /* desktop */
-  @media (max-width:900px){  #growth .g-grid{ gap: 20px; } }   /* tablet */
-  @media (max-width:640px){  #growth .g-grid{ gap: 16px; } }   /* phone */
-  
-  /* 4) PADDING INSIDE EACH TILE (if you want the cards themselves roomier) */
-  @media (min-width:901px){  #growth .tile{ --tile-pad: 22px; } }  /* desktop */
-  @media (max-width:900px){  #growth .tile{ --tile-pad: 18px; } }  /* tablet */
-  @media (max-width:640px){  #growth .tile{ --tile-pad: 14px; } }  /* phone */
-
 
 
 
@@ -1498,9 +1278,7 @@
     display:grid;
     grid-template-columns: repeat(var(--s2b-cols-desktop), minmax(0,1fr));
     gap:24px;
-    grid-auto-flow: row;         /* no dense backfilling so spans stay tidy */
     grid-auto-rows: auto;
-    align-items:start;
   }
   @media (max-width:1080px){
     #growth .g-grid{ grid-template-columns: repeat(var(--s2b-cols-tablet), minmax(0,1fr)); gap:20px; }
@@ -1674,8 +1452,18 @@
   #growth .g-grid{ min-width: 0; }
 
 
-
-
+  
+  /* AIacquisition parity: header and spacing */
+  #growth .growth-hd{
+    margin-bottom:28px !important;
+  }
+  #growth .growth-hd h3{
+    font-weight:400; /* airy, like the reference */
+  }
+  #growth, #growth .growth-hd{
+    --s2b-h2-fs: clamp(28px, 4.6vw, 52px);
+    --s2b-sub-fs: clamp(10px, 2vw, 11px);
+  }
 
 
 
@@ -1863,7 +1651,7 @@
       </div>
   
       <!-- === GALACTLY ADD: 2B SCALE WRAPPER v1 START === -->
-      <div id="s2b-scale" class="s2b-scale-outer" style="--s2b-scale:.80;">
+      <div id="s2b-scale" class="s2b-scale-outer" style="--s2b-scale:.84;">
         <div class="s2b-scale-inner">
           <div class="g-grid">
   
