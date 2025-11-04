@@ -889,7 +889,10 @@
   }
   
   /* Per-tile fine-tunes (tweak numbers to taste) */
-  #growth [data-tile="pipelines"]{ --asset-pad-x: 90px; --asset-pad-y: 60px; }
+  #growth [data-tile="pipelines"]{
+    padding: var(--tile-pad);
+  }
+  #growth [data-tile="pipelines"] .slot-asset{ display:none !important; } /* belt & suspenders */
   #growth [data-tile="signals"]  { --asset-pad-x: 64px; --asset-pad-y: 74px; }
   #growth [data-tile="ai"]       { --asset-pad-x: 64px; --asset-pad-y: 74px; }
   #growth [data-tile="quotes"]   { --asset-pad-x: 64px; --asset-pad-y: 74px; }
@@ -904,11 +907,7 @@
   }
   
   
-  
-  #growth [data-tile="pipelines"]{
-    --tile-pad: 0;
-    padding: 0 !important;
-  }
+
   
   
   
