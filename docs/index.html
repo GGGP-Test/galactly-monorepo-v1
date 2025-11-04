@@ -867,6 +867,44 @@
   }
   #growth img.slot-asset, #growth svg.slot-asset{ max-width:40%; height:auto; }
   
+  /* Put art under the content (not on top) */
+  #growth .tile { position: relative; }
+  #growth .tile > *:not(.slot-asset) { position: relative; z-index: 1; }
+  #growth .tile .slot-asset { z-index: 0; }
+  
+  /* Reserve bottom-right space when a tile has a corner asset */
+  #growth .tile:has(.slot-asset){
+    --asset-pad-x: 72px;   /* horizontal room for the art */
+    --asset-pad-y: 48px;   /* vertical room for the art   */
+    padding-right: calc(var(--tile-pad) + var(--asset-pad-x));
+    padding-bottom: calc(var(--tile-pad) + var(--asset-pad-y));
+  }
+  
+  /* Fallback for browsers without :has() — add class="has-asset" to the tile */
+  #growth .tile.has-asset{
+    --asset-pad-x: 72px;
+    --asset-pad-y: 48px;
+    padding-right: calc(var(--tile-pad) + var(--asset-pad-x));
+    padding-bottom: calc(var(--tile-pad) + var(--asset-pad-y));
+  }
+  
+  /* Per-tile fine-tunes (tweak numbers to taste) */
+  #growth [data-tile="pipelines"]{ --asset-pad-x: 90px; --asset-pad-y: 60px; }
+  #growth [data-tile="signals"]  { --asset-pad-x: 64px; --asset-pad-y: 44px; }
+  #growth [data-tile="ai"]       { --asset-pad-x: 64px; --asset-pad-y: 44px; }
+  #growth [data-tile="quotes"]   { --asset-pad-x: 64px; --asset-pad-y: 44px; }
+  
+  /* Phone: smaller art + tighter padding */
+  @media (max-width:640px){
+    :root{ --slot-asset-scale:.85; }
+    #growth .tile:has(.slot-asset),
+    #growth .tile.has-asset{
+      --asset-pad-x: 40px; --asset-pad-y: 28px;
+    }
+  }
+  
+  
+  
   /* 3) Avatars grid */
   #growth .slot-avatars{
     display:grid;
