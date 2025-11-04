@@ -1705,21 +1705,7 @@
 
 
 
-  /* === GALACTLY ADD: 2B uniform pane scale v1 START === */
-  #growth .s2b-scale-outer{
-    position: relative;
-    /* 1 = 100% size. Change this ONE value to zoom the whole pane. */
-    --s2b-scale: .85;
-  }
-  
-  /* Visually scales the whole grid while keeping it centered */
-  #growth .s2b-scale-inner{
-    transform: scale(var(--s2b-scale));
-    transform-origin: top center;
-    /* width compensation so the scaled grid still fits the container width */
-    width: calc(100% / var(--s2b-scale));
-    margin: 0 auto;
-  }
+
   /* === GALACTLY ADD: 2B uniform pane scale v1 END === */
   
   /* (Optional) Different scales by breakpoint */
@@ -1732,39 +1718,38 @@
 
 
 
-  /* Hard stop for any layout-width > viewport (only affects the scaled block) */
-  #growth .s2b-scale-outer{ display:block; width:100%; max-width:100%; overflow-x: clip; }
-  #growth .growth-wrap{ overflow-x: clip; } /* belt-and-suspenders */
-
-
-  
-  /* === S2B scale centering + anti-clip hardening === */
+  /* === 2B SCALE — single source of truth === */
   #growth .s2b-scale-outer{
-    overflow: visible !important;      /* never crop the scaled grid */
+    position: relative;
+    /* global size knob (0.80 = 80% visual size) */
+    --s2b-scale: .80;
+    overflow: visible;               /* never clip the scaled grid */
   }
   
   #growth .s2b-scale-inner{
-    display:block;
-    transform-origin: top center;
-    transform: scale(var(--s2b-scale)) translateZ(0);  /* avoid subpixel fuzz */
-    width: calc(100% / var(--s2b-scale));              /* width compensation */
-    margin-inline: auto;                                /* true centering */
-    /* tiny epsilon so rounding can't shave the right edge at some zooms */
+    /* Center even when intrinsic width > 100% */
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%) scale(var(--s2b-scale)) translateZ(0);
+    transform-origin: top left;
+  
+    /* Width compensation: visual width = 100% after scaling */
+    width: calc(100% / var(--s2b-scale));
+    display: block;
+  
+    /* tiny epsilon so rounding can’t shave the right edge */
     padding-right: 0.1px;
   }
   
-  /* make sure the container itself stays centered */
+  /* keep the container centered and uncropped */
   #growth .growth-wrap{
     max-width: var(--container-max);
     margin-inline: auto;
-    overflow: visible !important;       /* nothing here should clip either */
+    overflow: visible;
   }
   
-  /* guard against min-content shenanigans in some browsers */
+  /* guard against min-content weirdness */
   #growth .g-grid{ min-width: 0; }
-
-
-
 
 
 
@@ -1954,7 +1939,7 @@
         </h3>
         <div class="sub">From verified buyers to quotes—one glassy command center that packaging teams can trust.</div>
       </div>
-  
+    </div>
       <!-- === GALACTLY ADD: 2B SCALE WRAPPER v1 START === -->
       <div id="s2b-scale" class="s2b-scale-outer" style="--s2b-scale:.80;">
         <div class="s2b-scale-inner">
@@ -1978,7 +1963,8 @@
             <img class="avatar" src="./assets/avatars/a8.webp" alt="" loading="lazy" width="56" height="56">
             <img class="avatar" src="./assets/avatars/a9.webp" alt="" loading="lazy" width="56" height="56">
           </div>
-        </article>
+      </div>
+    </article>
   
         <!-- Pipelines (wide, tall) -->
         <article class="tile pipelines" data-tile="pipelines" aria-label="Pipelines" style="--col:2; --row:2">
@@ -2046,6 +2032,7 @@
         </article>
       </div>
     </div>
+  </div>
   </div>
   <!-- === GALACTLY ADD: 2B SCALE WRAPPER v1 END === -->
   </section>
