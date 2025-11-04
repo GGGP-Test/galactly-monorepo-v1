@@ -1737,6 +1737,38 @@
   #growth .growth-wrap{ overflow-x: clip; } /* belt-and-suspenders */
 
 
+  
+  /* === S2B scale centering + anti-clip hardening === */
+  #growth .s2b-scale-outer{
+    overflow: visible !important;      /* never crop the scaled grid */
+  }
+  
+  #growth .s2b-scale-inner{
+    display:block;
+    transform-origin: top center;
+    transform: scale(var(--s2b-scale)) translateZ(0);  /* avoid subpixel fuzz */
+    width: calc(100% / var(--s2b-scale));              /* width compensation */
+    margin-inline: auto;                                /* true centering */
+    /* tiny epsilon so rounding can't shave the right edge at some zooms */
+    padding-right: 0.1px;
+  }
+  
+  /* make sure the container itself stays centered */
+  #growth .growth-wrap{
+    max-width: var(--container-max);
+    margin-inline: auto;
+    overflow: visible !important;       /* nothing here should clip either */
+  }
+  
+  /* guard against min-content shenanigans in some browsers */
+  #growth .g-grid{ min-width: 0; }
+
+
+
+
+
+
+
 
 
 
@@ -3002,6 +3034,7 @@ window.SCOREBOARD_KNOBS = {
     ro.observe(inner);
     addEventListener('resize', fit, {passive:true});
     document.addEventListener('DOMContentLoaded', fit);
+    window.addEventListener('load', fit);
   
     // Quick helper so you can test from the console: setS2BScale(0.8)
     window.setS2BScale = function(x){
