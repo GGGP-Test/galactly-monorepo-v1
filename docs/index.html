@@ -1613,9 +1613,21 @@
   @media (max-width:900px){ #growth .s2b-scale-outer{ min-height: 560px; } }
   @media (max-width:640px){ #growth .s2b-scale-outer{ min-height: 0; } } /* phones don't use the scaler */
   
-
-
-
+  
+  
+  
+  /* Let accent classes override the default percent ink */
+  #growth .kv .v.accent-gold{
+    background: linear-gradient(180deg, var(--gold-300), var(--gold-700));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  
+  /* optional solid gold (no gradient) */
+  #growth .kv .v.accent-gold.solid{
+    background: none;
+    -webkit-background-clip: initial;
+    color: var(--gold);
+  }
 
 
 
