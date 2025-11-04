@@ -1535,6 +1535,54 @@
 
 
 
+  /* (A) PHONE: center the 2A title + metrics */
+  @media (max-width:640px){
+    :root{
+      --s2a-title-align: center !important;
+      --s2a-metric-align: center !important;
+    }
+  }
+  
+  /* (B) RIM-ONLY GLASS: crisp inner ring + outside hairline for .glass (2A) and .tile (2B) */
+  :root{
+    /* ring + hairline knobs */
+    --rim-w: 14px;
+    --rim1-blur: 38px;  --rim1-spread: -10px; --rim1-alpha: .13;
+    --rim2-blur:130px;  --rim2-spread: -72px; --rim2-offset-y: 8px; --rim2-alpha: .035;
+    --outer-stroke-a:.12; --outer-stroke-w:1px; --outer-stroke-blur:1.2px;
+    --theme-glow-rgb: 160,190,255; /* icy blue glow */
+  }
+  
+  .glass::before, .tile::before{
+    content:"";
+    position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    padding: var(--rim-w);
+    /* hollow-center mask so the glow lives on the rim only */
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask-composite: exclude;
+    box-shadow:
+      inset 0 0 var(--rim1-blur) var(--rim1-spread) rgba(var(--theme-glow-rgb), var(--rim1-alpha)),
+      inset 0 var(--rim2-offset-y) var(--rim2-blur) var(--rim2-spread) rgba(var(--theme-glow-rgb), var(--rim2-alpha));
+    mix-blend-mode: normal;
+    z-index:1;
+  }
+  
+  .glass::after, .tile::after{
+    content:"";
+    position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    box-shadow: 0 0 var(--outer-stroke-blur) var(--outer-stroke-w) rgba(255,255,255,var(--outer-stroke-a));
+    z-index:2;
+  }
+
+
+
+
+
+
+
+
 
 
 
