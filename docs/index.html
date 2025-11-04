@@ -613,7 +613,7 @@
     --tile-pad: clamp(16px,2.2vw,22px);
     --tile-title-fs: clamp(14px,1.8vw,16px);
     --tile-body-fs: clamp(12px,1.7vw,14px);
-    --tile-glow: rgba(230,195,107,.22);
+    --tile-glow: rgba(155,183,255,.18);
   }
 
   .section{padding:clamp(64px, 8vw, 96px) var(--gutter); isolation:isolate; z-index:1;}
@@ -718,7 +718,38 @@
   .bar.thin{ height:6px; }
   .kv{ display:flex; align-items:center; justify-content:space-between; gap:12px; font-weight:700; }
   .kv .v{ font-weight:800; }
-  .badge-note{ position:absolute; left:12px; bottom:12px; font-size:11px; color:#9db3c9; }
+  .badge-note{ position:absolute; left:12px; bottom:12px; font-size:11px; color:#dbe6ff; }
+
+  /* Numbers feel more considered without being flashy */
+  #growth .kv .v{ color:#dbe6ff; font-weight:800; }
+  
+  /* Percentages get a subtle gradient ink – only when the text includes % */
+  #growth .kv .v[data-count*="%"]{
+    background: linear-gradient(180deg, #D5E3FF, #8FB3FF);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  
+  /* Avatar borders lean into the palette just a touch */
+  #growth .slot-avatars .avatar{
+    border-color: rgba(155,183,255,.20);
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   /* Reveal helpers */
   .reveal{opacity:0; transform:translateY(var(--reveal-in-y)) scale(.995);
@@ -817,6 +848,7 @@
   
   /* 1) Emoji/icon slot alongside any key label */
   #growth .kv-label{
+    color:#b3c4e9;
     display:inline-flex; align-items:center; gap:var(--slot-icon-gap);
   }
   #growth .kv-label[data-icon]::before{
@@ -914,7 +946,7 @@
   :root{
     /* base tint for the cards (bluish). Change to 10,12,16 if you want darker/neutral */
     --s2a-tint-rgb: 12,18,28;
-    --s2b-tint-rgb: 12,18,28;
+    --s2b-tint-rgb: 14,20,20;
   
     /* GLASSINESS (2A) — raise blur or lower alphas to feel more “glassy” */
     --s2a-blur: 48px;           /* ← visual blur strength */
@@ -1363,9 +1395,9 @@
   
   /* Progress bars: cool slate palette, width via --pct */
   :root{
-    --progress-fill-1:#6B86A3; --progress-fill-2:#3F556B;
+    --progress-fill-1:#9BB7FF; --progress-fill-2:#4C6FAE;
     --progress-track:#0E1624;  --progress-track-stroke:rgba(255,255,255,.14);
-    --progress-glow:rgba(107,134,163,.18);
+    --progress-glow:rgba(155,183,255,.22);
   }
   #growth .bar{
     position:relative; height:10px; border-radius:8px; margin: var(--tile-bar-gap) 0;
@@ -1536,7 +1568,7 @@
     --rim1-blur: 38px;  --rim1-spread: -10px; --rim1-alpha: .13;
     --rim2-blur:130px;  --rim2-spread: -72px; --rim2-offset-y: 8px; --rim2-alpha: .035;
     --outer-stroke-a:.12; --outer-stroke-w:1px; --outer-stroke-blur:1.2px;
-    --theme-glow-rgb: 160,190,255; /* icy blue glow */
+    --theme-glow-rgb: 155,183,255; /* icy blue glow */
   }
   
   .glass::before, .tile::before{
