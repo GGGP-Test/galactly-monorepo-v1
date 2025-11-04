@@ -1,0 +1,30 @@
+<svg width="320" height="120" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7EC3FF"/>
+      <stop offset="1" stop-color="#2A7FF0"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- faint grid -->
+  <g opacity="0.18" stroke="#ffffff" stroke-opacity="0.14">
+    <path d="M0 100H320M0 70H320M0 40H320"/>
+    <path d="M40 0V120M100 0V120M160 0V120M220 0V120M280 0V120"/>
+  </g>
+
+  <!-- line -->
+  <path d="M10 92C35 88 48 80 68 64C88 48 98 44 120 48C146 53 158 56 182 48C206 40 222 26 244 28C268 30 284 48 308 44"
+        stroke="url(#ink)" stroke-width="3" fill="none" filter="url(#glow)"/>
+
+  <!-- points -->
+  <g fill="url(#ink)" opacity="0.95" filter="url(#glow)">
+    <circle cx="68" cy="64" r="3"/>
+    <circle cx="120" cy="48" r="3"/>
+    <circle cx="182" cy="48" r="3"/>
+    <circle cx="244" cy="28" r="3"/>
+  </g>
+</svg>
