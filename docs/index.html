@@ -722,36 +722,7 @@
   
   
   
-  .tile{
-    position:relative;
-    padding: var(--tile-pad);
-    border-radius: var(--s2b-radius);
-    background: rgba(12,18,28,var(--s2b-bg-a));
-    border:0 !important;
-    -webkit-backdrop-filter: blur(var(--s2b-blur)) saturate(120%);
-    backdrop-filter: blur(var(--s2b-blur)) saturate(120%);
-    box-shadow: 0 16px 36px rgba(0,0,0,var(--s2b-shadow-a));
-    background-clip: padding-box;
-  }
-  
-  .tile::before{
-    content:"";
-    position:absolute; inset: var(--s2b-glow-inset);
-    border-radius: inherit; pointer-events:none;
-    box-shadow:
-      inset 0 0 var(--s2b-glow-blur) var(--s2b-glow-spread) rgba(var(--theme-glow-rgb), var(--s2b-glow-a)),
-      inset 0 2px 16px -10px rgba(var(--theme-glow-rgb), var(--s2b-glow-b));
-    mix-blend-mode: var(--s2b-glow-blend);
-  }
-  
-  .tile::after{
-    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,var(--s2b-inner-stroke-a));
-    
 
-  }
-  .tile h4{ margin:0 0 8px; font:800 var(--tile-title-fs)/1.2 Inter, system-ui; }
-  .tile p{ margin:0 0 12px; font-size: var(--tile-body-fs); color:#a9bfd6; }
 /* keep your existing .tile{…} block, but remove the nested lines from inside it */
 
   /* put these three rules AFTER the .tile block */
@@ -830,55 +801,6 @@
   
 
 
-
-  
-
-
-
-
-
-  /* === 2B: static progress bars (final, cool + neutral) === */
-  :root{
-    /* Slate Azure — cool, professional, dimmed */
-    --progress-fill-1: #6B86A3;        /* main fill */
-    --progress-fill-2: #3F556B;        /* subtle darker tail for depth */
-    --progress-track:  #0E1624;        /* your dark rail */
-    --progress-track-stroke: rgba(255,255,255,.14);
-    --progress-glow:  rgba(107,134,163,.18);
-  }
-  
-  #growth .bar{
-    position:relative;
-    height:12px;
-    border-radius:8px;
-    margin:8px 0;
-    background: var(--progress-track);
-    border:1px solid var(--progress-track-stroke);
-    overflow:hidden;
-  }
-  #growth .bar.thin{ height:8px; }
-  
-  /* width comes from --pct (0–100) */
-  #growth .bar > i{
-    position:absolute; inset:0 auto 0 0;
-    width: calc(var(--pct, 0) * 1%);
-    border-radius:inherit;
-  
-    /* choose ONE of the two backgrounds below */
-  
-    /* A) Subtle vertical gradient (recommended) */
-    background: linear-gradient(-90deg, var(--progress-fill-1), var(--progress-fill-2));
-  
-    /* B) Or SOLID fill — uncomment to use and comment the gradient line */
-    /* background: var(--progress-fill-1); */
-  
-    box-shadow:
-      inset 0 0 8px rgba(0,0,0,.18),
-      0 0 10px var(--progress-glow);
-  }
-  
-  /* no stripes */
-  #growth .bar > i::after{ content:none !important; }
 
 
   /* ====== SECTION 2B: VISUAL SLOTS (emoji + svg + avatars + 3D) ====== */
@@ -1939,102 +1861,103 @@
         </h3>
         <div class="sub">From verified buyers to quotes—one glassy command center that packaging teams can trust.</div>
       </div>
-    </div>
+  
       <!-- === GALACTLY ADD: 2B SCALE WRAPPER v1 START === -->
       <div id="s2b-scale" class="s2b-scale-outer" style="--s2b-scale:.80;">
         <div class="s2b-scale-inner">
           <div class="g-grid">
-        <!-- Customers (tall) -->
-        <article class="tile customers" data-tile="customers" aria-label="Customers" style="--col:1; --row:2">
-          <h4>Customers</h4>
-          <p>Organize company + contact data in one place.</p>
   
-          <div class="kv"><span class="kv-label" data-icon="">Companies</span><span class="v" data-count="1773">1,773</span></div>
-          <div class="kv"><span class="kv-label" data-icon="">Active buyers</span><span class="v" data-count="37.5%">+37.5%</span></div>
+            <!-- Customers (tall) -->
+            <article class="tile customers" data-tile="customers" aria-label="Customers" style="--col:1; --row:2">
+              <h4>Customers</h4>
+              <p>Organize company + contact data in one place.</p>
   
-          <div class="slot-avatars" aria-hidden="true">
-            <img class="avatar" src="./assets/avatars/a1.webp" alt="" loading="lazy" width="56" height="56">
-            <img class="avatar" src="./assets/avatars/a2.webp" alt="" loading="lazy" width="56" height="56">
-            <img class="avatar" src="./assets/avatars/a3.webp" alt="" loading="lazy" width="56" height="56">
-            <img class="avatar" src="./assets/avatars/a4.webp" alt="" loading="lazy" width="56" height="56">
-            <img class="avatar" src="./assets/avatars/a5.webp" alt="" loading="lazy" width="56" height="56">
-            <img class="avatar" src="./assets/avatars/a6.webp" alt="" loading="lazy" width="56" height="56">
-            <img class="avatar" src="./assets/avatars/a7.webp" alt="" loading="lazy" width="56" height="56">
-            <img class="avatar" src="./assets/avatars/a8.webp" alt="" loading="lazy" width="56" height="56">
-            <img class="avatar" src="./assets/avatars/a9.webp" alt="" loading="lazy" width="56" height="56">
-          </div>
-      </div>
-    </article>
+              <div class="kv"><span class="kv-label" data-icon="">Companies</span><span class="v" data-count="1773">1,773</span></div>
+              <div class="kv"><span class="kv-label" data-icon="">Active buyers</span><span class="v" data-count="37.5%">+37.5%</span></div>
   
-        <!-- Pipelines (wide, tall) -->
-        <article class="tile pipelines" data-tile="pipelines" aria-label="Pipelines" style="--col:2; --row:2">
-          <h4>Pipelines</h4>
-          <p>Track packaging stages at a glance—Lead, Qualified, Proposal, Negotiation, Closed.</p>
+              <div class="slot-avatars" aria-hidden="true">
+                <img class="avatar" src="./assets/avatars/a1.webp" alt="" loading="lazy" width="56" height="56">
+                <img class="avatar" src="./assets/avatars/a2.webp" alt="" loading="lazy" width="56" height="56">
+                <img class="avatar" src="./assets/avatars/a3.webp" alt="" loading="lazy" width="56" height="56">
+                <img class="avatar" src="./assets/avatars/a4.webp" alt="" loading="lazy" width="56" height="56">
+                <img class="avatar" src="./assets/avatars/a5.webp" alt="" loading="lazy" width="56" height="56">
+                <img class="avatar" src="./assets/avatars/a6.webp" alt="" loading="lazy" width="56" height="56">
+                <img class="avatar" src="./assets/avatars/a7.webp" alt="" loading="lazy" width="56" height="56">
+                <img class="avatar" src="./assets/avatars/a8.webp" alt="" loading="lazy" width="56" height="56">
+                <img class="avatar" src="./assets/avatars/a9.webp" alt="" loading="lazy" width="56" height="56">
+              </div>
+            </article>
   
-          <div class="kv"><span class="kv-label" data-icon="">Lead</span><span class="v" data-count="45">45</span></div>
-          <div class="bar"><i style="--pct:100"></i></div>
+            <!-- Pipelines (wide, tall) -->
+            <article class="tile pipelines" data-tile="pipelines" aria-label="Pipelines" style="--col:2; --row:2">
+              <h4>Pipelines</h4>
+              <p>Track packaging stages at a glance—Lead, Qualified, Proposal, Negotiation, Closed.</p>
   
-          <div class="kv"><span class="kv-label" data-icon="">Qualified</span><span class="v" data-count="32">32</span></div>
-          <div class="bar"><i style="--pct:71.11"></i></div>
+              <div class="kv"><span class="kv-label" data-icon="">Lead</span><span class="v" data-count="45">45</span></div>
+              <div class="bar"><i style="--pct:100"></i></div>
   
-          <div class="kv"><span class="kv-label" data-icon="">Proposal</span><span class="v" data-count="18">18</span></div>
-          <div class="bar"><i style="--pct:40"></i></div>
+              <div class="kv"><span class="kv-label" data-icon="">Qualified</span><span class="v" data-count="32">32</span></div>
+              <div class="bar"><i style="--pct:71.11"></i></div>
   
-          <div class="kv"><span class="kv-label" data-icon="">Negotiation</span><span class="v" data-count="7">7</span></div>
-          <div class="bar thin"><i style="--pct:15.56"></i></div>
+              <div class="kv"><span class="kv-label" data-icon="">Proposal</span><span class="v" data-count="18">18</span></div>
+              <div class="bar"><i style="--pct:40"></i></div>
   
-          <div class="kv"><span class="kv-label" data-icon="">Closed</span><span class="v" data-count="3">3</span></div>
-          <div class="bar thin"><i style="--pct:6.67"></i></div>
+              <div class="kv"><span class="kv-label" data-icon="">Negotiation</span><span class="v" data-count="7">7</span></div>
+              <div class="bar thin"><i style="--pct:15.56"></i></div>
   
-          <img class="slot-asset" src="./assets/s2b/nodes.svg" alt="">
-        </article>
+              <div class="kv"><span class="kv-label" data-icon="">Closed</span><span class="v" data-count="3">3</span></div>
+              <div class="bar thin"><i style="--pct:6.67"></i></div>
   
-        <!-- Real-time Signals -->
-        <article class="tile realtime" data-tile="signals" aria-label="Real-time Signals" style="--col:1; --row:1">
-          <h4>Real-time Signals</h4>
-          <p>&lt; 30-second lead indicator from web + market activity.</p>
+              <img class="slot-asset" src="./assets/s2b/nodes.svg" alt="">
+            </article>
   
-          <div class="kv"><span class="kv-label" data-icon="">Signals today</span><span class="v" data-count="126">126</span></div>
-          <div class="bar"><i style="--pct:100"></i></div>
+            <!-- Real-time Signals -->
+            <article class="tile realtime" data-tile="signals" aria-label="Real-time Signals" style="--col:1; --row:1">
+              <h4>Real-time Signals</h4>
+              <p>&lt; 30-second lead indicator from web + market activity.</p>
   
-          <div class="kv"><span class="kv-label" data-icon="">High-intent</span><span class="v" data-count="18%">18%</span></div>
-          <div class="bar thin"><i style="--pct:18"></i></div>
+              <div class="kv"><span class="kv-label" data-icon="">Signals today</span><span class="v" data-count="126">126</span></div>
+              <div class="bar"><i style="--pct:100"></i></div>
   
-          <img class="slot-asset" src="./assets/s2b/sparkline.svg" alt="">
-        </article>
+              <div class="kv"><span class="kv-label" data-icon="">High-intent</span><span class="v" data-count="18%">18%</span></div>
+              <div class="bar thin"><i style="--pct:18"></i></div>
   
-        <!-- Sales AI -->
-        <article class="tile ai-sdr" data-tile="ai" aria-label="Sales AI" style="--col:1; --row:1">
-          <h4>Sales AI</h4>
-          <p>Convert hot buyers into booked calls—auto snippets, follow-ups, and hand-offs.</p>
+              <img class="slot-asset" src="./assets/s2b/sparkline.svg" alt="">
+            </article>
   
-          <div class="kv"><span class="kv-label" data-icon="">Booked this week</span><span class="v" data-count="14">14</span></div>
-          <div class="bar"><i style="--pct:78"></i></div>
+            <!-- Sales AI -->
+            <article class="tile ai-sdr" data-tile="ai" aria-label="Sales AI" style="--col:1; --row:1">
+              <h4>Sales AI</h4>
+              <p>Convert hot buyers into booked calls—auto snippets, follow-ups, and hand-offs.</p>
   
-          <div class="kv"><span class="kv-label" data-icon="">Reply rate</span><span class="v" data-count="21%">21%</span></div>
-          <div class="bar thin"><i style="--pct:21"></i></div>
+              <div class="kv"><span class="kv-label" data-icon="">Booked this week</span><span class="v" data-count="14">14</span></div>
+              <div class="bar"><i style="--pct:78"></i></div>
   
-          <img class="slot-asset" src="./assets/s2b/rings.svg" alt="">
-        </article>
+              <div class="kv"><span class="kv-label" data-icon="">Reply rate</span><span class="v" data-count="21%">21%</span></div>
+              <div class="bar thin"><i style="--pct:21"></i></div>
   
-        <!-- Quotes -->
-        <article class="tile quotes" data-tile="quotes" aria-label="Quotes" style="--col:1; --row:1">
-          <h4>Quotes</h4>
-          <p>Specs to quote in one click—bottles, films, corrugate, labels, and more.</p>
+              <img class="slot-asset" src="./assets/s2b/rings.svg" alt="">
+            </article>
   
-          <div class="kv"><span class="kv-label" data-icon="">Avg RFQ value</span><span class="v" data-count="$18.7k">$18.7k</span></div>
-          <div class="bar"><i style="--pct:52"></i></div>
+            <!-- Quotes -->
+            <article class="tile quotes" data-tile="quotes" aria-label="Quotes" style="--col:1; --row:1">
+              <h4>Quotes</h4>
+              <p>Specs to quote in one click—bottles, films, corrugate, labels, and more.</p>
   
-          <div class="kv"><span class="kv-label" data-icon="">Samples sent</span><span class="v" data-count="23">23</span></div>
-          <div class="bar thin"><i style="--pct:46"></i></div>
+              <div class="kv"><span class="kv-label" data-icon="">Avg RFQ value</span><span class="v" data-count="$18.7k">$18.7k</span></div>
+              <div class="bar"><i style="--pct:52"></i></div>
   
-          <img class="slot-asset" src="./assets/s2b/pill.svg" alt="">
-        </article>
-      </div>
-    </div>
-  </div>
-  </div>
-  <!-- === GALACTLY ADD: 2B SCALE WRAPPER v1 END === -->
+              <div class="kv"><span class="kv-label" data-icon="">Samples sent</span><span class="v" data-count="23">23</span></div>
+              <div class="bar thin"><i style="--pct:46"></i></div>
+  
+              <img class="slot-asset" src="./assets/s2b/pill.svg" alt="">
+            </article>
+  
+          </div> <!-- .g-grid -->
+        </div> <!-- .s2b-scale-inner -->
+      </div> <!-- .s2b-scale-outer -->
+      <!-- === GALACTLY ADD: 2B SCALE WRAPPER v1 END === -->
+    </div> <!-- .growth-wrap -->
   </section>
 
   <!-- SECTION 3 – Process -->
