@@ -1677,6 +1677,60 @@
 
 
 
+  /* ========== REAL-TIME SIGNALS (centered + embedded) ========== */
+  :root{
+    /* knobs you can tune */
+    --signals-scale-desktop: 1.18;
+    --signals-scale-tablet:  1.12;
+    --signals-scale-phone:   1.00;
+    --signals-min-h:         260px;   /* breathing room */
+    --signals-extra-pad-y:   22px;    /* extra top/bottom padding */
+  }
+  
+  /* kill the corner-reserve padding for this one tile */
+  #growth [data-tile="signals"].has-asset{
+    padding-right: var(--tile-pad) !important;
+    padding-bottom: var(--tile-pad) !important;
+  }
+  
+  /* center the radar art */
+  #growth [data-tile="signals"] .slot-asset{
+    position: absolute;
+    left: 50%; top: 52%;
+    transform: translate(-50%, -50%) scale(var(--signals-scale-desktop));
+    max-width: none; height: auto;
+    opacity: .90;
+    mix-blend-mode: screen;            /* feels “inside” the glass */
+    /* soft edge so it melts into the tile */
+    -webkit-mask-image: radial-gradient(120% 120% at 50% 50%, #000 72%, transparent 100%);
+            mask-image: radial-gradient(120% 120% at 50% 50%, #000 72%, transparent 100%);
+    filter: drop-shadow(0 6px 16px rgba(160,190,255,.25)) saturate(115%);
+    z-index: 0;                        /* stays behind text/bars */
+  }
+  
+  /* more breathing room for the tile so the radar isn't cramped */
+  #growth [data-tile="signals"]{
+    min-height: var(--signals-min-h);
+    padding-top:    calc(var(--tile-pad) + var(--signals-extra-pad-y));
+    padding-bottom: calc(var(--tile-pad) + var(--signals-extra-pad-y));
+  }
+  
+  /* responsive scale */
+  @media (max-width:900px){
+    #growth [data-tile="signals"] .slot-asset{
+      transform: translate(-50%, -50%) scale(var(--signals-scale-tablet));
+    }
+  }
+  @media (max-width:640px){
+    #growth [data-tile="signals"] .slot-asset{
+      transform: translate(-50%, -50%) scale(var(--signals-scale-phone));
+    }
+  }
+
+
+
+
+
 
 
 
