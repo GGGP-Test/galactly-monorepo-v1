@@ -1466,6 +1466,73 @@
 
 
 
+  /* === MOBILE FIX PACK (phones) === */
+  @media (max-width:640px){
+    /* Turn OFF the scaler on phones; let the grid lay out naturally */
+    #s2b-scale{ height:auto !important; }
+    #growth .s2b-scale-inner{
+      left:auto;
+      transform:none !important;   /* kill translate/scale */
+      width:100% !important;
+      padding-right:0 !important;
+    }
+    /* One column + roomy spacing (you already set this, keeping here for safety) */
+    #growth .g-grid{
+      grid-template-columns: 1fr !important;
+      gap: 16px !important;
+    }
+  }
+  
+  /* Emoji fallback so pseudo-elements don’t show tofu boxes */
+  html, body{
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial,
+                 "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji", sans-serif;
+  }
+  #growth .kv-label::before,
+  .miniCard .stage {               /* any element that might render an emoji */
+    font-family: inherit, "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";
+  }
+  
+  /* === 2A GLASS RESTORE (card rim + inner hairline back on) === */
+  :root{
+    /* tasteful rim + hairline */
+    --s2a-inner-stroke-a: .12;      /* faint outside hairline */
+    --s2a-glow-inset: 10px;
+    --s2a-glow-blur: 32px;
+    --s2a-glow-spread: -8px;
+    --s2a-glow-a: .14;              /* tight rim */
+    --s2a-glow-b: .05;              /* feather halo */
+  }
+  #proof .glass{
+    /* keep your linear-gradient background; this only enhances the rim */
+  }
+  #proof .glass::before{
+    /* inner rim “glass” glow */
+    box-shadow:
+      inset 0 0 var(--s2a-glow-blur)  var(--s2a-glow-spread) rgba(var(--theme-glow-rgb), var(--s2a-glow-a)),
+      inset 0 2px 18px -10px                                rgba(var(--theme-glow-rgb), var(--s2a-glow-b));
+    opacity:.95;
+  }
+  #proof .glass::after{
+    /* whisper outside hairline so the edge reads as glass */
+    box-shadow: 0 0 .9px 1px rgba(255,255,255,var(--s2a-inner-stroke-a));
+  }
+
+
+  @media (max-width:640px){
+    /* Slightly smaller Growth header + tighter spacing */
+    #growth .growth-hd h3{ font-size: clamp(26px, 7vw, 34px); margin-bottom: 10px; }
+    #growth .growth-hd .sub{ font-size: 12px; }
+  
+    /* Make bars a touch thinner on phones */
+    #growth .bar{ height:8px; }
+    #growth .bar.thin{ height:5px; }
+  
+    /* Tile padding to feel “airy but compact” */
+    :root{ --tile-pad: 22px; }
+  }
+
+
 
 
 
@@ -2714,31 +2781,28 @@ window.SCOREBOARD_KNOBS = {
 
 
 
-  <!-- === GALACTLY ADD: 2B scale fit v1 START === -->
   <script>
   (function(){
     const outer = document.getElementById('s2b-scale');
     const inner = outer?.querySelector('.s2b-scale-inner');
     if(!outer || !inner) return;
   
+    const isPhone = () => matchMedia('(max-width:640px)').matches;
+  
     function fit(){
-      // Use the transformed (visual) height so layout collapses correctly
+      if(isPhone()){
+        outer.style.height = 'auto';        // let normal flow handle height
+        return;
+      }
+      // desktop/tablet: lock to transformed height
       outer.style.height = inner.getBoundingClientRect().height + 'px';
     }
   
-    // Update on content/layout changes
     const ro = new ResizeObserver(fit);
     ro.observe(inner);
     addEventListener('resize', fit, {passive:true});
     document.addEventListener('DOMContentLoaded', fit);
-    window.addEventListener('load', fit);
-  
-    // Quick helper so you can test from the console: setS2BScale(0.8)
-    window.setS2BScale = function(x){
-      outer.style.setProperty('--s2b-scale', x);
-      fit();
-    };
-  
+    addEventListener('load', fit);
     fit();
   })();
   </script>
