@@ -883,16 +883,16 @@
   /* Fallback for browsers without :has() — add class="has-asset" to the tile */
   #growth .tile.has-asset{
     --asset-pad-x: 72px;
-    --asset-pad-y: 48px;
+    --asset-pad-y: 78px;
     padding-right: calc(var(--tile-pad) + var(--asset-pad-x));
     padding-bottom: calc(var(--tile-pad) + var(--asset-pad-y));
   }
   
   /* Per-tile fine-tunes (tweak numbers to taste) */
   #growth [data-tile="pipelines"]{ --asset-pad-x: 90px; --asset-pad-y: 60px; }
-  #growth [data-tile="signals"]  { --asset-pad-x: 64px; --asset-pad-y: 44px; }
-  #growth [data-tile="ai"]       { --asset-pad-x: 64px; --asset-pad-y: 44px; }
-  #growth [data-tile="quotes"]   { --asset-pad-x: 64px; --asset-pad-y: 44px; }
+  #growth [data-tile="signals"]  { --asset-pad-x: 64px; --asset-pad-y: 74px; }
+  #growth [data-tile="ai"]       { --asset-pad-x: 64px; --asset-pad-y: 74px; }
+  #growth [data-tile="quotes"]   { --asset-pad-x: 64px; --asset-pad-y: 74px; }
   
   /* Phone: smaller art + tighter padding */
   @media (max-width:640px){
