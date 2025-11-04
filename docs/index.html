@@ -695,7 +695,6 @@
   /* 2B Growth system */
   
   /* put these three rules AFTER the .tile block */
-  .tile > * + *{ margin-top: var(--tile-stack-gap); }   /* generic vertical spacing */
   .tile .kv{ margin-top: var(--tile-kv-gap); }
   #growth .tile .bar{ margin: var(--tile-bar-gap) 0; }  /* progress bar spacing */
 
@@ -1124,7 +1123,6 @@
       --tile-title-gap: 8px;                         /* h4 → body gap (new) */
       --s2b-hd-gap: 16px;                             /* Growth header h3 → sub gap (new) */
     }
-    #growth .tile > * + *{ margin-top: var(--tile-stack-gap); }
     #growth .tile h4{ margin-bottom: var(--tile-title-gap); }
     #growth .kv{ gap: var(--tile-kv-gap); }
     #growth .tile .bar{ margin: var(--tile-bar-gap) 0; }
@@ -1418,20 +1416,21 @@
 
 
 
-  /* === 2B SCALE — single source of truth === */
+  /* === 2B SCALE — robust centering (replace the old scale rules) === */
   #growth .s2b-scale-outer{
     position: relative;
-    /* global size knob (0.80 = 80% visual size) */
-    --s2b-scale: .80;
-    overflow: visible;               /* never clip the scaled grid */
+    --s2b-scale: .84;            /* your current scale */
+    display: flex;               /* center the inner box without translate hacks */
+    justify-content: center;
+    overflow: visible;           /* never clip the scaled grid */
   }
   
   #growth .s2b-scale-inner{
-    /* Center even when intrinsic width > 100% */
-    position: relative;
-    left: 50%;
-    transform: translateX(-50%) scale(var(--s2b-scale)) translateZ(0);
-    transform-origin: top left;
+    width: calc(100% / var(--s2b-scale));  /* compensation so the *visual* width = container width */
+    transform: scale(var(--s2b-scale)) translateZ(0);
+    transform-origin: top center;          /* critical for perfect centering */
+    margin: 0 auto;                         /* belt + suspenders */
+  }
   
     /* Width compensation: visual width = 100% after scaling */
     width: calc(100% / var(--s2b-scale));
