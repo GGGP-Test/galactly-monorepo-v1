@@ -1730,6 +1730,68 @@
 
 
 
+  /* ===== 2B overlay system (centered art, real min-height) ===== */
+  
+  /* 1) Generic utilities every tile can use */
+  #growth .tile{
+    position: relative;
+    min-height: var(--tile-min-h, auto);         /* <— universal height knob */
+  }
+  #growth .tile > *:not(.slot-asset){            /* keep content above art */
+    position: relative; z-index: 1;
+  }
+  
+  /* Center + scale any decorative asset inside a tile */
+  #growth .tile .slot-asset{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%,-50%) scale(var(--slot-scale,1));
+    max-width: none; height: auto;
+    pointer-events: none;
+    z-index: 0;
+  
+    /* make it feel embedded into the glass */
+    opacity: var(--slot-opacity,.90);
+    mix-blend-mode: screen;
+    -webkit-mask-image: radial-gradient(120% 120% at 50% 50%, #000 72%, transparent 100%);
+            mask-image: radial-gradient(120% 120% at 50% 50%, #000 72%, transparent 100%);
+    filter: drop-shadow(0 6px 16px rgba(160,190,255,.25)) saturate(115%);
+  }
+  
+  /* The old “reserve corner space” rule fights us; disable it for tiles we embed */
+  #growth [data-tile].has-asset{
+    padding-right: var(--tile-pad) !important;
+    padding-bottom: var(--tile-pad) !important;
+  }
+  
+  /* 2) Real-time Signals — per-tile knobs */
+  #growth [data-tile="signals"]{
+    --tile-min-h: 300px;      /* <— makes the tile taller without moving text */
+    --slot-scale: 1.28;       /* <— size of the whole radar */
+    --slot-opacity: .92;
+    --slot-center-y: 54%;     /* <— nudge down a tad so labels have headroom */
+  }
+  /* apply the vertical bias */
+  #growth [data-tile="signals"] .slot-asset{ top: var(--slot-center-y); }
+  
+  /* Responsive scale (optional) */
+  @media (max-width:900px){
+    #growth [data-tile="signals"]{ --slot-scale: 1.18; --tile-min-h: 290px; }
+  }
+  @media (max-width:640px){
+    #growth [data-tile="signals"]{ --slot-scale: 1.06; --tile-min-h: 270px; }
+  }
+
+
+
+
+
+
+
+
+
+
 
 
 
