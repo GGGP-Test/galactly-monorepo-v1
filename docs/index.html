@@ -927,7 +927,20 @@
   .force-break{ display:block; }
 
 
+  /* Accent colors */
+  :root{
+    --indigo-300:#7EC3FF; /* light */
+    --indigo-700:#2A7FF0; /* deep */
+  }
+  .accent-indigo{
+    background: linear-gradient(180deg, var(--indigo-300), var(--indigo-700));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  
 
+  
 
   :root{
     /* Hero (blueprint panel) glow knobs */
