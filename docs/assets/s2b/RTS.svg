@@ -1,6 +1,6 @@
-<svg width="312" height="312" viewBox="0 0 312 312" xmlns="http://www.w3.org/2000/svg">
+<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <radialGradient id="ring" cx="80%" cy="80%" r="80%">
+    <radialGradient id="ring" cx="50%" cy="50%" r="50%">
       <stop offset="0" stop-color="#9BB7FF" stop-opacity=".7"/>
       <stop offset="1" stop-color="#4C6FAE" stop-opacity=".15"/>
     </radialGradient>
