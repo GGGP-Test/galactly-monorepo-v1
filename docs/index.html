@@ -1767,8 +1767,8 @@
   
   /* 2) Real-time Signals — per-tile knobs */
   #growth [data-tile="signals"]{
-    --tile-min-h: 300px;      /* <— makes the tile taller without moving text */
-    --slot-scale: 1.28;       /* <— size of the whole radar */
+    --tile-min-h: 390px;      /* <— makes the tile taller without moving text */
+    --slot-scale: 1.08;       /* <— size of the whole radar */
     --slot-opacity: .92;
     --slot-center-y: 54%;     /* <— nudge down a tad so labels have headroom */
   }
@@ -1777,7 +1777,7 @@
   
   /* Responsive scale (optional) */
   @media (max-width:900px){
-    #growth [data-tile="signals"]{ --slot-scale: 1.18; --tile-min-h: 290px; }
+    #growth [data-tile="signals"]{ --slot-scale: 1.18; --tile-min-h: 360px; }
   }
   @media (max-width:640px){
     #growth [data-tile="signals"]{ --slot-scale: 1.06; --tile-min-h: 270px; }
