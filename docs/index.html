@@ -1784,7 +1784,62 @@
   }
 
 
-
+  /* ===== 2B overlay system (centered art, real min-height) ===== */
+  
+  /* generic */
+  #growth .tile{
+    position: relative;
+    min-height: var(--tile-min-h, auto);
+  }
+  #growth .tile > *:not(.slot-asset){ position: relative; z-index: 1; }
+  
+  /* center + scale any decorative asset */
+  #growth .tile .slot-asset{
+    position: absolute;
+    left: 50%;
+    top: var(--slot-center-y, 50%);
+    transform: translate(-50%,-50%) scale(var(--slot-scale,1));
+    max-width: none; height: auto; pointer-events: none; z-index: 0;
+  
+    /* embedded feel */
+    opacity: var(--slot-opacity,.92);
+    mix-blend-mode: screen;
+    -webkit-mask-image: radial-gradient(120% 120% at 50% 50%, #000 72%, transparent 100%);
+            mask-image: radial-gradient(120% 120% at 50% 50%, #000 72%, transparent 100%);
+    filter: drop-shadow(0 6px 16px rgba(160,190,255,.25)) saturate(115%);
+  }
+  
+  /* disable “reserve corner space” on embedded tiles */
+  #growth [data-tile].has-asset{
+    padding-right: var(--tile-pad) !important;
+    padding-bottom: var(--tile-pad) !important;
+  }
+  
+  /* —— Real-time Signals: final knobs —— */
+  #growth [data-tile="signals"]{
+    --tile-min-h: 400px;   /* breathing room above/below */
+    --slot-scale: 1.18;    /* make the whole radar bigger */
+    --slot-center-y: 66%;  /* sit slightly low so copy has headroom */
+    --slot-opacity: .90;
+  }
+  #growth [data-tile="signals"] .slot-asset{ top: var(--slot-center-y); }
+  
+  /* tablet */
+  @media (max-width:900px){
+    #growth [data-tile="signals"]{
+      --slot-scale: 1.08;
+      --tile-min-h: 360px;
+      --slot-center-y: 66%;
+    }
+  }
+  /* phone */
+  @media (max-width:640px){
+    #growth [data-tile="signals"]{
+      --slot-scale: 1.00;
+      --tile-min-h: 300px;
+      --slot-center-y: 66%;
+    }
+  }
 
 
 
