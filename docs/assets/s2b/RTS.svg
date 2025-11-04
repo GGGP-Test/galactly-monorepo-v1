@@ -1,38 +1,41 @@
-<svg width="420" height="160" viewBox="0 0 420 160" xmlns="http://www.w3.org/2000/svg">
+<svg width="312" height="312" viewBox="0 0 312 312" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#9BB7FF"/>
-      <stop offset="1" stop-color="#4C6FAE"/>
+    <radialGradient id="ring" cx="80%" cy="80%" r="80%">
+      <stop offset="0" stop-color="#9BB7FF" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#4C6FAE" stop-opacity=".15"/>
+    </radialGradient>
+    <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9BB7FF" stop-opacity=".85"/>
+      <stop offset=".9" stop-color="#9BB7FF" stop-opacity="0"/>
     </linearGradient>
-    <filter id="glow" x="-20%" y="-60%" width="140%" height="220%">
-      <feGaussianBlur stdDeviation="5"/>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8"/>
     </filter>
   </defs>
 
-  <!-- track -->
-  <rect x="16" y="74" width="388" height="12" rx="6" fill="#0E1624" stroke="rgba(255,255,255,.14)"/>
+  <g transform="translate(120,120)">
+    <!-- rings -->
+    <circle r="100" fill="none" stroke="url(#ring)" stroke-width="1.4"/>
+    <circle r="70"  fill="none" stroke="url(#ring)" stroke-width="1.2"/>
+    <circle r="40"  fill="none" stroke="url(#ring)" stroke-width="1"/>
 
-  <!-- packets (3 strengths) -->
-  <g>
-    <rect x="44"  y="66" width="56" height="28" rx="14" fill="url(#beam)" filter="url(#glow)" opacity=".55"/>
-    <rect x="44"  y="68" width="56" height="24" rx="12" fill="url(#beam)"/>
-  </g>
-  <g>
-    <rect x="146" y="70" width="34" height="20" rx="10" fill="url(#beam)" filter="url(#glow)" opacity=".55"/>
-    <rect x="146" y="72" width="34" height="16" rx="8"  fill="url(#beam)"/>
-  </g>
-  <g>
-    <rect x="208" y="64" width="92" height="36" rx="18" fill="url(#beam)" filter="url(#glow)" opacity=".55"/>
-    <rect x="208" y="66" width="92" height="32" rx="16" fill="url(#beam)"/>
-  </g>
-  <g>
-    <rect x="328" y="70" width="34" height="20" rx="10" fill="url(#beam)" filter="url(#glow)" opacity=".55"/>
-    <rect x="328" y="72" width="34" height="16" rx="8"  fill="url(#beam)"/>
+    <!-- 30s sweep wedge (static art; animatable later if desired) -->
+    <path d="M0,0 L0,-100 A100,100 0 0 1 86.6,-50 Z"
+          fill="url(#sweep)" opacity=".6" filter="url(#soft)"/>
+
+    <!-- event blips -->
+    <g fill="#E6C36B">
+      <circle cx="-32" cy="-58" r="7"/>
+      <circle cx="22"  cy="-28" r="3"/>
+      <circle cx="54"  cy="36"  r="5"/>
+      <circle cx="-58" cy="14"  r="3"/>
+    </g>
+    <g stroke="#E6C36B" stroke-opacity=".5" fill="none">
+      <circle cx="-32" cy="-58" r="8"/>
+      <circle cx="54"  cy="36"  r="8"/>
+    </g>
   </g>
 
-  <!-- timestamp ticks -->
-  <g stroke="#1B2A41" stroke-opacity=".5">
-    <path d="M80 96V116M160 96V116M240 96V116M320 96V116"/>
-  </g>
-  <text x="352" y="130" text-anchor="end" font-family="Inter, system-ui" font-size="11" fill="#CFE2FF">last 30 s</text>
+  <!-- tiny label -->
+  <text x="120" y="228" text-anchor="middle" font-family="Inter, system-ui" font-size="11" fill="#CFE2FF">continuous scan · ~30 s</text>
 </svg>
