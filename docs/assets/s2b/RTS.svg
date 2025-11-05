@@ -1,42 +1,46 @@
 <svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <radialGradient id="cg" cx="50%" cy="55%" r="58%">
-      <stop offset="0" stop-color="#6FA6FF" stop-opacity=".65"/>
-      <stop offset=".6" stop-color="#2A7FF0" stop-opacity=".20"/>
+    <radialGradient id="bxGlow" cx="50%" cy="54%" r="60%">
+      <stop offset="0" stop-color="#6FA6FF" stop-opacity=".6"/>
+      <stop offset=".6" stop-color="#2A7FF0" stop-opacity=".22"/>
       <stop offset="1" stop-color="#1B2A44" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="rail" x1="0" y1="0" x2="1" y2="0">
+    <linearGradient id="bxInk" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#9BB7FF" stop-opacity=".9"/>
-      <stop offset="1" stop-color="#4C6FAE" stop-opacity=".3"/>
+      <stop offset="1" stop-color="#4C6FAE" stop-opacity=".35"/>
     </linearGradient>
-    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="8"/>
+    <filter id="bxSoft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="9"/>
     </filter>
   </defs>
 
-  <!-- center glow -->
-  <ellipse cx="120" cy="130" rx="84" ry="72" fill="url(#cg)" filter="url(#blur)"/>
+  <!-- glow -->
+  <circle cx="120" cy="132" r="82" fill="url(#bxGlow)" filter="url(#bxSoft)"/>
 
-  <!-- scanner rails (C-shape arcs) -->
-  <g fill="none" stroke="url(#rail)" stroke-linecap="round">
-    <path d="M50,150 A86,86 0 0 1 190,150" stroke-width="1.6"/>
-    <path d="M64,144 A72,72 0 0 1 176,144" stroke-width="1.3"/>
-    <path d="M80,138 A56,56 0 0 1 160,138" stroke-width="1.1"/>
+  <!-- outer square frame -->
+  <rect x="36" y="48" width="168" height="168" rx="20" fill="none" stroke="url(#bxInk)" stroke-width="1.3"/>
+
+  <!-- inner rotated “carton” diamond -->
+  <g fill="none" stroke="url(#bxInk)">
+    <rect x="84" y="96" width="72" height="72" transform="rotate(45 120 132)" rx="10" stroke-width="1.2"/>
+    <rect x="100" y="112" width="40" height="40" transform="rotate(45 120 132)" rx="6"  stroke-width="1.0"/>
   </g>
 
-  <!-- guide brackets (subtle) -->
-  <g fill="none" stroke="rgba(155,183,255,.28)" stroke-width="1">
-    <path d="M44,102 h16 v16" />
-    <path d="M180,102 h16 v16" transform="scale(-1,1) translate(-360,0)"/>
+  <!-- tiny registration ticks -->
+  <g stroke="rgba(155,183,255,.35)" stroke-width="1">
+    <path d="M120,66 v10"/>
+    <path d="M120,188 v-10"/>
+    <path d="M66,132 h10"/>
+    <path d="M174,132 h-10"/>
   </g>
 
-  <!-- gold events -->
+  <!-- gold “detections” at seams -->
   <g fill="#E6C36B">
-    <circle cx="96"  cy="142" r="4"/>
-    <circle cx="148" cy="150" r="3"/>
-    <circle cx="128" cy="128" r="3.5"/>
+    <circle cx="98"  cy="138" r="3.8"/>
+    <circle cx="142" cy="150" r="3.8"/>
+    <circle cx="120" cy="118" r="3"/>
   </g>
-  <g stroke="#E6C36B" stroke-opacity=".45" fill="none">
-    <circle cx="148" cy="150" r="7.5"/>
+  <g stroke="#E6C36B" stroke-opacity=".5" fill="none">
+    <circle cx="142" cy="150" r="8"/>
   </g>
 </svg>
