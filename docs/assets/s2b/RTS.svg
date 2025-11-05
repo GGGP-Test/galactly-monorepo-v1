@@ -1,8 +1,8 @@
 <svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <radialGradient id="cg" cx="50%" cy="62%" r="60%">
-      <stop offset="0"  stop-color="#7EC3FF" stop-opacity=".58"/>
-      <stop offset=".65" stop-color="#2A7FF0" stop-opacity=".20"/>
+      <stop offset="0"  stop-color="#6FA6FF" stop-opacity=".60"/>
+      <stop offset=".65" stop-color="#2A7FF0" stop-opacity=".22"/>
       <stop offset="1"  stop-color="#0b1119" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="rail" x1="0" y1="0" x2="1" y2="0">
@@ -10,49 +10,45 @@
       <stop offset="1" stop-color="#4C6FAE" stop-opacity=".34"/>
     </linearGradient>
     <filter id="soft"><feGaussianBlur stdDeviation="8"/></filter>
+    <filter id="txtGlow"><feGaussianBlur stdDeviation="1.2"/></filter>
   </defs>
 
   <ellipse cx="120" cy="150" rx="92" ry="76" fill="url(#cg)" filter="url(#soft)"/>
 
-  <!-- rails -->
+  <!-- micro density mesh -->
+  <g stroke="rgba(155,183,255,.14)" stroke-width="1">
+    <path d="M64,158 A76,76 0 0 1 176,158"/>
+    <path d="M76,154 A64,64 0 0 1 164,154"/>
+    <path d="M88,150 A52,52 0 0 1 152,150"/>
+    <path d="M100,146 A40,40 0 0 1 140,146"/>
+    <line x1="96" y1="142" x2="96" y2="170"/>
+    <line x1="144" y1="142" x2="144" y2="170"/>
+  </g>
+
+  <!-- main rails -->
   <g fill="none" stroke="url(#rail)" stroke-linecap="round">
     <path d="M44,168 A96,96 0 0 1 196,168" stroke-width="1.6"/>
     <path d="M56,162 A84,84 0 0 1 184,162" stroke-width="1.35"/>
     <path d="M72,156 A68,68 0 0 1 168,156" stroke-width="1.15"/>
-    <path d="M90,150 A50,50 0 0 1 150,150" stroke-width="1"/>
   </g>
 
-  <!-- cross-lines -->
-  <g stroke="rgba(155,183,255,.38)" stroke-linecap="round">
+  <!-- axes -->
+  <g stroke="rgba(155,183,255,.40)" stroke-linecap="round">
     <line x1="60" y1="150" x2="180" y2="150" stroke-width="1"/>
     <line x1="120" y1="118" x2="120" y2="182" stroke-width="1"/>
   </g>
 
-  <!-- triangulation rays from center blip -->
-  <g stroke="url(#rail)" stroke-dasharray="3 3" opacity=".9">
-    <path d="M120,150 L98,156"/>
-    <path d="M120,150 L152,166"/>
-  </g>
-
   <!-- detections -->
   <g fill="#E6C36B">
-    <circle cx="98"  cy="156" r="4"/>
-    <circle cx="120" cy="150" r="3.6"/>
-    <circle cx="152" cy="166" r="4"/>
+    <circle cx="102" cy="158" r="4"/>
+    <circle cx="134" cy="152" r="3.6"/>
+    <circle cx="156" cy="166" r="4"/>
   </g>
-  <circle cx="120" cy="150" r="8" fill="none" stroke="#E6C36B" stroke-opacity=".45"/>
+  <circle cx="134" cy="152" r="8" fill="none" stroke="#E6C36B" stroke-opacity=".45"/>
 
-  <!-- framed labels -->
-  <g font-family="Inter, system-ui" font-size="11" fill="#CFE2FF" stroke="rgba(155,183,255,.28)">
-    <!-- left chip -->
-    <g transform="translate(18,132)">
-      <rect x="0" y="0" width="84" height="22" rx="11" fill="none"/>
-      <text x="42" y="15" text-anchor="middle">web · 47s</text>
-    </g>
-    <!-- top chip -->
-    <g transform="translate(80,90)">
-      <rect x="0" y="0" width="80" height="22" rx="11" fill="none"/>
-      <text x="40" y="15" text-anchor="middle">market · 3m</text>
-    </g>
+  <!-- labels (bare neon) -->
+  <g font-family="Inter, system-ui" font-size="11" fill="#CFE2FF">
+    <text x="56"  y="150" text-anchor="end" dy="-6" filter="url(#txtGlow)">web · 18s</text>
+    <text x="120" y="112" text-anchor="middle" dy="-6" filter="url(#txtGlow)">market · last 2m</text>
   </g>
 </svg>
