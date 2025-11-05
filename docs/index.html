@@ -1843,6 +1843,45 @@
 
 
 
+  /* === Overlay: center + embed decorative asset === */
+  #growth .tile{ position:relative; min-height:var(--tile-min-h,auto); }
+  #growth .tile > *:not(.slot-asset){ position:relative; z-index:1; }
+  #growth .tile .slot-asset{
+    position:absolute; left:50%; top:var(--slot-center-y,50%);
+    transform:translate(-50%,-50%) scale(var(--slot-scale,1));
+    max-width:none; height:auto; pointer-events:none; z-index:0;
+    opacity:var(--slot-opacity,.92); mix-blend-mode:screen;
+    -webkit-mask-image:radial-gradient(120% 120% at 50% 50%, #000 72%, transparent 100%);
+            mask-image:radial-gradient(120% 120% at 50% 50%, #000 72%, transparent 100%);
+    filter:drop-shadow(0 6px 16px rgba(160,190,255,.25)) saturate(115%);
+  }
+  /* kill corner reserve when we’re centering an asset */
+  #growth [data-tile].has-asset{ padding-right:var(--tile-pad)!important; padding-bottom:var(--tile-pad)!important; }
+  
+  /* === Real-time Signals (contained) === */
+  #growth [data-tile="signals"]{
+    --tile-min-h: 380px;   /* breathing room */
+    --slot-scale: 1.14;    /* radar size */
+    --slot-center-y: 64%;  /* sits a bit low for copy headroom */
+    --slot-opacity: .90;
+  }
+  #growth [data-tile="signals"] .slot-asset{ top:var(--slot-center-y); }
+  
+  /* responsive scale */
+  @media (max-width:900px){
+    #growth [data-tile="signals"]{ --tile-min-h: 340px; --slot-scale: 1.06; }
+  }
+  @media (max-width:640px){
+    #growth [data-tile="signals"]{ --tile-min-h: 300px; --slot-scale: .98; }
+  }
+
+
+
+
+
+
+
+
 
 
 
