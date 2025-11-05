@@ -12,7 +12,6 @@
     <filter id="soft"><feGaussianBlur stdDeviation="8"/></filter>
   </defs>
 
-  <!-- dome glow -->
   <ellipse cx="120" cy="150" rx="92" ry="76" fill="url(#cg)" filter="url(#soft)"/>
 
   <!-- rails -->
@@ -20,39 +19,40 @@
     <path d="M44,168 A96,96 0 0 1 196,168" stroke-width="1.6"/>
     <path d="M56,162 A84,84 0 0 1 184,162" stroke-width="1.35"/>
     <path d="M72,156 A68,68 0 0 1 168,156" stroke-width="1.15"/>
+    <path d="M90,150 A50,50 0 0 1 150,150" stroke-width="1"/>
   </g>
 
-  <!-- L-brackets where you circled -->
-  <g stroke="rgba(155,183,255,.40)" stroke-width="1.6" stroke-linecap="round">
-    <!-- left -->
-    <path d="M92 138 v10 h12" />
-    <!-- right (mirror) -->
-    <path d="M148 138 v10 h-12" />
+  <!-- cross-lines -->
+  <g stroke="rgba(155,183,255,.38)" stroke-linecap="round">
+    <line x1="60" y1="150" x2="180" y2="150" stroke-width="1"/>
+    <line x1="120" y1="118" x2="120" y2="182" stroke-width="1"/>
+  </g>
+
+  <!-- triangulation rays from center blip -->
+  <g stroke="url(#rail)" stroke-dasharray="3 3" opacity=".9">
+    <path d="M120,150 L98,156"/>
+    <path d="M120,150 L152,166"/>
   </g>
 
   <!-- detections -->
   <g fill="#E6C36B">
-    <circle cx="100" cy="156" r="4"/>
-    <circle cx="124" cy="150" r="3.6"/>
-    <circle cx="156" cy="166" r="4"/>
+    <circle cx="98"  cy="156" r="4"/>
+    <circle cx="120" cy="150" r="3.6"/>
+    <circle cx="152" cy="166" r="4"/>
   </g>
-  <circle cx="124" cy="150" r="8" fill="none" stroke="#E6C36B" stroke-opacity=".45"/>
+  <circle cx="120" cy="150" r="8" fill="none" stroke="#E6C36B" stroke-opacity=".45"/>
 
-  <!-- framed chips (thin capsule, no fill) -->
-  <g font-family="'Plus Jakarta Sans', Inter, system-ui" font-size="11" fill="#CFE2FF" stroke="rgba(155,183,255,.28)">
+  <!-- framed labels -->
+  <g font-family="Inter, system-ui" font-size="11" fill="#CFE2FF" stroke="rgba(155,183,255,.28)">
     <!-- left chip -->
-    <g transform="translate(34,126)">
-      <rect x="0" y="0" width="88" height="22" rx="11" fill="none"/>
-      <text x="44" y="15" text-anchor="middle">
-        web · <tspan fill="#E6C36B">24s</tspan>
-      </text>
+    <g transform="translate(18,132)">
+      <rect x="0" y="0" width="84" height="22" rx="11" fill="none"/>
+      <text x="42" y="15" text-anchor="middle">web · 47s</text>
     </g>
-    <!-- right chip -->
-    <g transform="translate(138,126)">
-      <rect x="0" y="0" width="90" height="22" rx="11" fill="none"/>
-      <text x="45" y="15" text-anchor="middle">
-        market · <tspan fill="#E6C36B">3m</tspan>
-      </text>
+    <!-- top chip -->
+    <g transform="translate(80,90)">
+      <rect x="0" y="0" width="80" height="22" rx="11" fill="none"/>
+      <text x="40" y="15" text-anchor="middle">market · 3m</text>
     </g>
   </g>
 </svg>
