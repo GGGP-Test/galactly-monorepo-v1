@@ -2163,28 +2163,41 @@
               <h4>Real-time Signals</h4>
               <p>&lt; 30-second lead indicator from web + market activity.</p>
             
-              <!-- Inline instance with per-tile knobs -->
               <svg class="rts-visual" viewBox="0 0 240 240"
                    style="
+                     /* glow look */
+                     --glow-opacity:.98; --glow-scale:1.06; --glow-dx:0px; --glow-dy:2px;
+            
+                     /* bracket ink + thickness */
+                     --brk-ink: rgba(155,183,255,.34); --brk-w:1.35;
+            
+                     /* === BRACKET placement (use viewBox units) ===
+                        Left base corner defaults: (84,142). Right: (156,142).
+                        To move a base corner to (X,Y): set X-84 / Y-142 (left) or X-156 / Y-142 (right). */
+                     /* match your screenshot feel */
+                     --brk-left-x:-8px;  --brk-left-y:-4px;  /* puts left at (~76,138) */
+                     --brk-left-sx:-1;                     /* flip outward */
+            
+                     --brk-right-x:28px; --brk-right-y:-4px; /* puts right at (~184,138) */
+                     --brk-right-rot:-6deg;                 /* slight tilt */
+            
+                     /* === CHIP placement (translate takes the chip's top-left)
+                        Chip size = 96×22. For center at (CX,CY): x=CX-48, y=CY-11. */
+                     --chip-top-x:72px;  --chip-top-y:87px;  /* center ≈ (120,98) */
+                     --chip-ll-x:16px;   --chip-ll-y:165px;  /* center ≈ (64,176) */
+            
+                     /* optional chip transforms */
+                     --chip-top-rot:0deg;  --chip-top-scale:1;
+                     --chip-ll-rot:0deg;   --chip-ll-scale:1;
+            
                      /* chip colors */
-                     --chip-label:#DCEBFF;
-                     --chip-value:#7AE1FF;
+                     --chip-label:#DCEBFF; --chip-value:#7AE1FF;
                      --chip-stroke:rgba(155,183,255,.30);
-            
-                     /* crosshair color */
-                     --cross-ink: rgba(155,183,255,.42);
-            
-                     /* glow feel */
-                     --glow-opacity:.98;
-                     --glow-blur:0px;
-                     --glow-scale:1.06;
-                     --glow-dx:0px;
-                     --glow-dy:2px;
                    ">
                 <use href="#rts" xlink:href="#rts"></use>
               </svg>
             </article>
-  
+
             <!-- Sales AI -->
             <article class="tile ai-sdr" data-tile="ai" data-asset="rings.svg" style="--col:1; --row:1">
               <h4>Sales AI</h4>
