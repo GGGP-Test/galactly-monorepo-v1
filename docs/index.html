@@ -1827,6 +1827,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0"
      style="position:absolute;left:-9999px;visibility:hidden" aria-hidden="true">
   <!-- === RTS SPRITE (one-time defs) — updated with glow+blip knobs === -->
+  <!-- === RTS SPRITE (one-time defs) — regenerated with master move knobs === -->
   <symbol id="rts" viewBox="0 0 240 240">
     <defs>
       <!-- Glow colors are tweakable via CSS vars -->
@@ -1843,26 +1844,69 @@
       </linearGradient>
     </defs>
   
-    <!-- GLOW DOME -->
-    <g style="
-        opacity:var(--glow-opacity,.98);
-        transform-origin:120px 150px;
-        transform:
-          translate(var(--glow-dx,0px), var(--glow-dy,2px))
-          scale(var(--glow-scale,1.06));
-        filter: blur(var(--glow-blur,8px));">
-      <ellipse cx="120" cy="150" rx="92" ry="76" fill="url(#cg)"/>
+    <!-- CORE MOVABLE CLUSTER (glow + arcs + rays + blips + ring) -->
+    <g id="rtsCore" style="
+         transform:
+           translate(var(--rts-x,0px), var(--rts-y,0px))
+           rotate(var(--rts-rot,0deg))
+           scale(var(--rts-scale,1));
+         transform-origin: var(--rts-ox,120px) var(--rts-oy,150px);
+         transform-box: fill-box;">
+  
+      <!-- GLOW DOME (keeps your glow knobs) -->
+      <g style="
+          opacity:var(--glow-opacity,.98);
+          transform-origin:120px 150px;
+          transform:
+            translate(var(--glow-dx,0px), var(--glow-dy,2px))
+            scale(var(--glow-scale,1.06));
+          filter: blur(var(--glow-blur,8px));">
+        <ellipse cx="120" cy="150" rx="92" ry="76" fill="url(#cg)"/>
+      </g>
+  
+      <!-- SCANNER RAILS (arcs) -->
+      <g id="rails" style="transform: translate(var(--rails-x,0px), var(--rails-y,0px));"
+         fill="none" stroke="url(#rail)" stroke-linecap="round">
+        <path d="M44,168 A96,96 0 0 1 196,168" stroke-width="1.6"/>
+        <path d="M56,162 A84,84 0 0 1 184,162" stroke-width="1.35"/>
+        <path d="M72,156 A68,68 0 0 1 168,156" stroke-width="1.15"/>
+        <path d="M90,150 A50,50 0 0 1 150,150" stroke-width="1"/>
+      </g>
+  
+      <!-- TRIANGULATION RAYS (connections) -->
+      <g id="rays" style="transform: translate(var(--rays-x,0px), var(--rays-y,0px)); stroke:url(#rail)"
+         stroke-dasharray="3 3" opacity=".9">
+        <path d="M120,150 L98,156"/>
+        <path d="M120,150 L152,166"/>
+      </g>
+  
+      <!-- BLIPS + CENTER RING (moves together) -->
+      <g id="targets" style="transform: translate(var(--blips-x,0px), var(--blips-y,0px));">
+        <g id="blips" style="--dot-fill:#E6C36B">
+          <!-- dot 1 -->
+          <g id="dot1" style="transform-origin:98px 156px; transform:scale(var(--dot1-scale,1));">
+            <circle cx="98" cy="156" r="4" style="fill:var(--dot1-fill, var(--dot-fill));"/>
+          </g>
+          <!-- dot 2 (center) -->
+          <g id="dot2" style="transform-origin:120px 150px; transform:scale(var(--dot2-scale,1));">
+            <circle cx="120" cy="150" r="3.6" style="fill:var(--dot2-fill, var(--dot-fill));"/>
+          </g>
+          <!-- dot 3 -->
+          <g id="dot3" style="transform-origin:152px 166px; transform:scale(var(--dot3-scale,1));">
+            <circle cx="152" cy="166" r="4" style="fill:var(--dot3-fill, var(--dot-fill));"/>
+          </g>
+        </g>
+  
+        <!-- ring follows the blips offset -->
+        <circle cx="120" cy="150" r="8"
+                fill="none"
+                style="stroke: var(--ring-color, var(--dot2-fill, var(--dot-fill)));
+                       stroke-opacity: var(--ring-alpha,.45);
+                       stroke-width: var(--ring-w,1px);"/>
+      </g>
     </g>
   
-    <!-- SCANNER RAILS -->
-    <g fill="none" stroke="url(#rail)" stroke-linecap="round">
-      <path d="M44,168 A96,96 0 0 1 196,168" stroke-width="1.6"/>
-      <path d="M56,162 A84,84 0 0 1 184,162" stroke-width="1.35"/>
-      <path d="M72,156 A68,68 0 0 1 168,156" stroke-width="1.15"/>
-      <path d="M90,150 A50,50 0 0 1 150,150" stroke-width="1"/>
-    </g>
-  
-    <!-- CAMERA CORNER BRACKETS (same knobs as before) -->
+    <!-- CAMERA CORNER BRACKETS (unchanged controls/values) -->
     <g fill="none" stroke="var(--brk-ink, rgba(155,183,255,.28))"
        stroke-width="var(--brk-w,1.2)" stroke-linecap="round">
       <g id="brkLeft" style="
@@ -1885,36 +1929,7 @@
       </g>
     </g>
   
-    <!-- TRIANGULATION RAYS -->
-    <g style="stroke:url(#rail)" stroke-dasharray="3 3" opacity=".9">
-      <path d="M120,150 L98,156"/>
-      <path d="M120,150 L152,166"/>
-    </g>
-  
-    <!-- BLIPS / DETECTIONS (now with size & color knobs) -->
-    <g id="blips" style="--dot-fill:#E6C36B">
-      <!-- dot 1 -->
-      <g id="dot1" style="transform-origin:98px 156px; transform:scale(var(--dot1-scale,1));">
-        <circle cx="98" cy="156" r="4" style="fill:var(--dot1-fill, var(--dot-fill));"/>
-      </g>
-      <!-- dot 2 (center) -->
-      <g id="dot2" style="transform-origin:120px 150px; transform:scale(var(--dot2-scale,1));">
-        <circle cx="120" cy="150" r="3.6" style="fill:var(--dot2-fill, var(--dot-fill));"/>
-      </g>
-      <!-- dot 3 -->
-      <g id="dot3" style="transform-origin:152px 166px; transform:scale(var(--dot3-scale,1));">
-        <circle cx="152" cy="166" r="4" style="fill:var(--dot3-fill, var(--dot-fill));"/>
-      </g>
-    </g>
-  
-    <!-- RING around center blip -->
-    <circle cx="120" cy="150" r="8"
-            fill="none"
-            style="stroke: var(--ring-color, var(--dot2-fill, var(--dot-fill)));
-                   stroke-opacity: var(--ring-alpha,.45);
-                   stroke-width: var(--ring-w,1px);"/>
-  
-    <!-- DEMO CHIPS (same knobs as before) -->
+    <!-- DEMO CHIPS (unchanged controls/values) -->
     <g id="chips" font-family="Inter, system-ui" font-size="11"
        style="--chip-label:#DCEBFF; --chip-value:#7AE1FF; --chip-stroke:rgba(155,183,255,.30)">
       <g id="chipTop" style="transform:translate(var(--chip-top-x,72px), var(--chip-top-y,154px))
@@ -2170,30 +2185,43 @@
               <p>&lt; 30-second lead indicator from web + market activity.</p>
             
               <svg class="rts-visual" viewBox="0 0 240 240" style="
-                /* —— glow knobs —— */
-                --glow-opacity:.76;     /* strength */
-                --glow-scale:1.08;      /* size (bigger/smaller dome) */
-                --glow-blur:10px;       /* softness */
+                /* —— glow knobs (UNCHANGED VALUES) —— */
+                --glow-opacity:.76;
+                --glow-scale:1.08;
+                --glow-blur:10px;
                 --glow-dx:0px; --glow-dy:2px;
               
-                /* —— rail tint (optional) —— */
+                /* —— rail tint (UNCHANGED) —— */
                 --rail-c1:#9BB7FF; --rail-c2:#4C6FAE;
               
-                /* —— bracket placement/look (examples) —— */
+                /* —— bracket placement/look (UNCHANGED VALUES) —— */
                 --brk-ink: rgba(155,183,255,.34); --brk-w:1.35;
                 --brk-left-x:-8px;  --brk-left-y:-75px;  --brk-left-sx:-1;
                 --brk-right-x:28px; --brk-right-y:-75px; --brk-right-rot:0deg;
               
-                /* —— chip placement —— */
+                /* —— chip placement (UNCHANGED VALUES) —— */
                 --chip-top-x:132px; --chip-top-y:21px;
                 --chip-ll-x:16px;  --chip-ll-y:21px;
               
-                /* —— blip color & size —— */
-                --dot-fill:#E6C36B;      /* global */
+                /* —— blip color & size (UNCHANGED VALUES) —— */
+                --dot-fill:#E6C36B;
                 --dot1-fill:#E6C36B; --dot1-scale:1.00;
-                --dot2-fill:#FFD57A; --dot2-scale:1.15;  /* make center a bit bigger */
+                --dot2-fill:#FFD57A; --dot2-scale:1.15;
                 --dot3-fill:#E6C36B; --dot3-scale:0.95;
                 --ring-color:#FFD57A; --ring-alpha:.5; --ring-w:1.1px;
+              
+                /* === NEW: master move/rotate/scale for the whole cluster (neutral) === */
+                --rts-x: 0px;        /* shift ALL (glow+arcs+rays+blips) horizontally */
+                --rts-y: 0px;        /* shift ALL vertically */
+                --rts-rot: 0deg;     /* rotate ALL */
+                --rts-scale: 1;      /* scale ALL */
+                --rts-ox: 120px;     /* pivot X (leave as-is) */
+                --rts-oy: 150px;     /* pivot Y */
+              
+                /* === NEW: optional per-subsystem nudges (neutral) === */
+                --rails-x: 0px; --rails-y: 0px;   /* arcs only */
+                --rays-x:  0px; --rays-y:  0px;   /* dashed connections only */
+                --blips-x: 0px; --blips-y: 0px;   /* blips + ring only */
               ">
                 <use href="#rts" xlink:href="#rts"></use>
               </svg>
