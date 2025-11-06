@@ -1869,7 +1869,7 @@
           transform:
             translate(var(--brk-left-x,0px), var(--brk-left-y,0px))
             rotate(var(--brk-left-rot,0deg))
-            scale(var(--brk-left-sx,-1), var(--brk-left-sy,-1));
+            scale(var(--brk-left-sx,1), var(--brk-left-sy,1));
           transform-box:fill-box;
           transform-origin: var(--brk-left-ox,84px) var(--brk-left-oy,142px);">
         <path d="M84,142 h-16 v-16"/>
@@ -1878,7 +1878,7 @@
           transform:
             translate(var(--brk-right-x,0px), var(--brk-right-y,0px))
             rotate(var(--brk-right-rot,0deg))
-            scale(var(--brk-right-sx,-1), var(--brk-right-sy,-1));
+            scale(var(--brk-right-sx,1), var(--brk-right-sy,1));
           transform-box:fill-box;
           transform-origin: var(--brk-right-ox,156px) var(--brk-right-oy,142px);">
         <path d="M156,142 h16 v-16"/>
@@ -2173,7 +2173,7 @@
                 /* —— glow knobs —— */
                 --glow-opacity:.76;     /* strength */
                 --glow-scale:1.08;      /* size (bigger/smaller dome) */
-                --glow-blur:30px;       /* softness */
+                --glow-blur:10px;       /* softness */
                 --glow-dx:0px; --glow-dy:2px;
               
                 /* —— rail tint (optional) —— */
