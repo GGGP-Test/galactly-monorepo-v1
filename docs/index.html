@@ -1867,7 +1867,94 @@
 
 
 
-
+  /* ==== TILE SPACING MASTER KNOBS ======================================= */
+  /* Global defaults (inherit your existing values so nothing jumps) */
+  #growth .tile{
+    /* total tile padding (falls back to your --tile-pad) */
+    --t-pad-x: var(--tile-pad);
+    --t-pad-y: var(--tile-pad);
+    padding: var(--t-pad-y) var(--t-pad-x);
+  }
+  
+  /* Title inside each tile (h4) */
+  #growth .tile h4{
+    /* per-title “padding” + spacing knobs */
+    --t-title-pad-x: 14px;
+    --t-title-pad-y: 14px;
+    --t-title-mb: var(--tile-title-gap, 12px);   /* you already have --tile-title-gap on phone */
+    padding: var(--t-title-pad-y) var(--t-title-pad-x);
+    margin-bottom: var(--t-title-mb);
+  }
+  
+  /* Subline/body copy in tiles (includes Real-time Signals .rt-sub) */
+  #growth .tile p,
+  #growth [data-tile="signals"] .rt-sub{
+    --t-sub-mt: 0px;
+    --t-sub-mb: 0px;
+    margin-top: var(--t-sub-mt);
+    margin-bottom: var(--t-sub-mb);
+  }
+  
+  /* Visuals: give the “thing” in each tile a consistent breathing room knob */
+  #growth .rts-visual,
+  #growth .slot-avatars,
+  #growth .slot-3d,
+  #growth .bar:first-of-type{          /* first progress bar often sits under a kv row */
+    --t-vis-mt: 10px;
+    --t-vis-mb: 0px;
+    margin-top: var(--t-vis-mt);
+    margin-bottom: var(--t-vis-mb);
+  }
+  
+  /* Optional: separate knobs for x/y tile padding by breakpoint */
+  @media (max-width:900px){
+    #growth .tile{ --t-pad-x: var(--tile-pad, 18px); --t-pad-y: var(--tile-pad, 18px); }
+  }
+  @media (max-width:640px){
+    #growth .tile{ --t-pad-x: var(--tile-pad, 22px); --t-pad-y: var(--tile-pad, 22px); }
+  }
+  
+  
+  /* ==== REAL-TIME SIGNALS — PHONE + TABLET KNOBS ======================== */
+  /* You already have desktop values. These just expose the *same knobs* for tablets/phones. */
+  @media (max-width:900px) and (min-width:641px){  /* TABLET */
+    #growth [data-tile="signals"]{
+      /* Title words */
+      --rt-title-w1-fs: 15px; --rt-title-w1-wt: 800; --rt-title-w1-track: -.01em;
+      --rt-title-w2-fs: 15px; --rt-title-w2-wt: 800; --rt-title-w2-track: -.01em;
+  
+      /* Subline words */
+      --rt-sub-w1-fs: 11px; --rt-sub-w2-fs: 11px; --rt-sub-w3-fs: 11px; --rt-sub-w4-fs: 11px;
+      --rt-sub-w5-fs: 11px; --rt-sub-w6-fs: 11px; --rt-sub-w7-fs: 11px; --rt-sub-w8-fs: 11px;
+  
+      /* Chip tspans (label / value / tail) */
+      --chip-top-w1-fs: 8px;  --chip-top-w2-fs: 10px; --chip-top-w3-fs: 8px;
+      --chip-ll-w1-fs:  8px;  --chip-ll-w2-fs: 10px; --chip-ll-w3-fs:  8px;
+  
+      /* Tile-local spacing (if you want tablet to be a hair tighter) */
+      --t-title-mb: 8px;
+      --t-sub-mb: 6px;
+      --t-vis-mt: 8px;
+    }
+  }
+  
+  @media (max-width:640px){                                   /* PHONE */
+    #growth [data-tile="signals"]{
+      --rt-title-w1-fs: 14px; --rt-title-w1-wt: 800; --rt-title-w1-track: -.01em;
+      --rt-title-w2-fs: 14px; --rt-title-w2-wt: 800; --rt-title-w2-track: -.01em;
+  
+      --rt-sub-w1-fs: 10px; --rt-sub-w2-fs: 10px; --rt-sub-w3-fs: 10px; --rt-sub-w4-fs: 10px;
+      --rt-sub-w5-fs: 10px; --rt-sub-w6-fs: 10px; --rt-sub-w7-fs: 10px; --rt-sub-w8-fs: 10px;
+  
+      --chip-top-w1-fs: 7px;  --chip-top-w2-fs: 9px; --chip-top-w3-fs: 7px;
+      --chip-ll-w1-fs:  7px;  --chip-ll-w2-fs: 9px; --chip-ll-w3-fs:  7px;
+  
+      /* phone breathing room */
+      --t-title-mb: 6px;
+      --t-sub-mb: 6px;
+      --t-vis-mt: 6px;
+    }
+  }
 
 
 
