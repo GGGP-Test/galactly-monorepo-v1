@@ -1876,6 +1876,11 @@
 
 
 
+
+
+
+
+
 </style>
 </head>
 <body>
@@ -1987,27 +1992,46 @@
       </g>
     </g>
   
-    <!-- DEMO CHIPS (unchanged controls/values) -->
-    <g id="chips" font-family="Inter, system-ui" font-size="11"
+    <!-- REPLACE ONLY THIS GROUP INSIDE <symbol id="rts"> -->
+    <g id="chips" font-family="Inter, system-ui"
        style="--chip-label:#DCEBFF; --chip-value:#7AE1FF; --chip-stroke:rgba(155,183,255,.30)">
       <g id="chipTop" style="transform:translate(var(--chip-top-x,72px), var(--chip-top-y,154px))
                              rotate(var(--chip-top-rot,0deg)) scale(var(--chip-top-scale,1));
                              transform-box:fill-box; transform-origin:center;">
         <rect x="0" y="0" width="96" height="22" rx="11" fill="none" style="stroke: var(--chip-stroke)"/>
         <text x="48" y="15" text-anchor="middle">
-          <tspan style="fill: var(--chip-label)">market · </tspan>
-          <tspan style="fill: var(--chip-value)">3m</tspan>
-          <tspan style="fill: var(--chip-label)">ago</tspan>
+          <tspan
+            style="fill:var(--chip-top-w1-color, var(--chip-label));
+                   font-size:var(--chip-top-w1-fs, 10px);
+                   font-weight:var(--chip-top-w1-wt, 600)">market · </tspan>
+          <tspan
+            style="fill:var(--chip-top-w2-color, var(--chip-value));
+                   font-size:var(--chip-top-w2-fs, 12px);
+                   font-weight:var(--chip-top-w2-wt, 900)">3m</tspan>
+          <tspan
+            style="fill:var(--chip-top-w3-color, var(--chip-label));
+                   font-size:var(--chip-top-w3-fs, 10px);
+                   font-weight:var(--chip-top-w3-wt, 600)">ago</tspan>
         </text>
       </g>
+    
       <g id="chipLL" style="transform:translate(var(--chip-ll-x,28px), var(--chip-ll-y,168px))
                             rotate(var(--chip-ll-rot,0deg)) scale(var(--chip-ll-scale,1));
                             transform-box:fill-box; transform-origin:center;">
         <rect x="0" y="0" width="96" height="22" rx="11" fill="none" style="stroke: var(--chip-stroke)"/>
         <text x="48" y="15" text-anchor="middle">
-          <tspan style="fill: var(--chip-label)">web · </tspan>
-          <tspan style="fill: var(--chip-value)">47s</tspan>
-          <tspan style="fill: var(--chip-label)">ago</tspan>
+          <tspan
+            style="fill:var(--chip-ll-w1-color, var(--chip-label));
+                   font-size:var(--chip-ll-w1-fs, 10px);
+                   font-weight:var(--chip-ll-w1-wt, 700)">web · </tspan>
+          <tspan
+            style="fill:var(--chip-ll-w2-color, var(--chip-value));
+                   font-size:var(--chip-ll-w2-fs, 12px);
+                   font-weight:var(--chip-ll-w2-wt, 900)">47s</tspan>
+          <tspan
+            style="fill:var(--chip-ll-w3-color, var(--chip-label));
+                   font-size:var(--chip-ll-w3-fs, 10px);
+                   font-weight:var(--chip-ll-w3-wt, 700)">ago</tspan>
         </text>
       </g>
     </g>
