@@ -1010,6 +1010,12 @@
     .rts-visual{ max-width:280px; }
   }
 
+  #growth [data-tile="signals"] .rts-visual{
+  --chip-label: rgba(242,220,160,.85);
+  --chip-value: url(#chipValueGrad);          /* ← gradient! */
+  --chip-top-w2-color: var(--chip-value);
+  --chip-ll-w2-color: var(--chip-value);
+}
 
 
 
@@ -1995,6 +2001,10 @@
     <!-- REPLACE ONLY THIS GROUP INSIDE <symbol id="rts"> -->
     <g id="chips" font-family="Inter, system-ui"
        style="--chip-label:#DCEBFF; --chip-value:#7AE1FF; --chip-stroke:rgba(155,183,255,.30)">
+      <linearGradient id="chipValueGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0"  style="stop-color: var(--gold-300)"/>
+        <stop offset="1"  style="stop-color: var(--gold-700)"/>
+      </linearGradient>
       <g id="chipTop" style="transform:translate(var(--chip-top-x,72px), var(--chip-top-y,154px))
                              rotate(var(--chip-top-rot,0deg)) scale(var(--chip-top-scale,1));
                              transform-box:fill-box; transform-origin:center;">
