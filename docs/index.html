@@ -2087,6 +2087,18 @@
 }
 
 
+/* PHONE: give 2B tiles a real hairline edge */
+@media (max-width:640px){
+  #growth .tile{
+    border:1px solid rgba(255,255,255,.18) !important;   /* visible but tasteful */
+    background-clip: padding-box;                         /* keep glass clean */
+  }
+  /* prevent double outline if ::after also draws a line */
+  #growth .tile::after{ box-shadow:none !important; }
+}
+
+
+
 
 
 
