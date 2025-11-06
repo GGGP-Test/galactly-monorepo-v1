@@ -2194,11 +2194,11 @@
   --s2b-sub-to-slot-gap-y: 10px;
 
   /* SPECIAL: Signals tile – subtitle → SVG gap (falls back to the generic slot gap) */
-  --s2b-signals-sub-to-svg-gap-y: 20px;
+  --s2b-signals-sub-to-svg-gap-y: var(--s2b-sub-to-slot-gap-y);
 
   /* SPECIAL: Customers tile (tile-specific overrides; fall back to generics when unset) */
   --s2b-cust-title-to-sub-gap-y: var(--s2b-title-to-sub-gap-y);
-  --s2b-cust-sub-to-rows-gap-y:  5px;
+  --s2b-cust-sub-to-rows-gap-y:  20px;
   --s2b-cust-kv-row-gap-y:       10px;  /* between “kv” rows */
   --s2b-cust-rows-to-avatars-gap-y: 40px;
 }
