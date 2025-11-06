@@ -2321,19 +2321,32 @@
   border: 1px solid rgba(255,255,255,0.12);
 }
 
-/* Exact placement to create W/M pattern with items 1–5 photos, 6–10 gray */
-.customers-grid > :nth-child(1)  { grid-column: 1; grid-row: 1; } /* photo */
-.customers-grid > :nth-child(2)  { grid-column: 3; grid-row: 1; } /* photo */
-.customers-grid > :nth-child(3)  { grid-column: 5; grid-row: 1; } /* photo */
-.customers-grid > :nth-child(4)  { grid-column: 2; grid-row: 2; } /* photo */
-.customers-grid > :nth-child(5)  { grid-column: 4; grid-row: 2; } /* photo */
+/* Customers card: mini photo tiles ONLY */
+.customers-grid .tile{
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.customers-grid .tile.img{
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+  background: #111;
+  display: grid;
+}
+.customers-grid .tile.img img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.customers-grid .tile.gray{
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+}
 
-.customers-grid > :nth-child(6)  { grid-column: 2; grid-row: 1; } /* gray  */
-.customers-grid > :nth-child(7)  { grid-column: 4; grid-row: 1; } /* gray  */
-.customers-grid > :nth-child(8)  { grid-column: 1; grid-row: 2; } /* gray  */
-.customers-grid > :nth-child(9)  { grid-column: 3; grid-row: 2; } /* gray  */
-.customers-grid > :nth-child(10) { grid-column: 5; grid-row: 2; } /* gray  */
 
+/* Ensure system tiles never inherit the square aspect */
+#growth .tile { aspect-ratio: auto; }
 
 
 
