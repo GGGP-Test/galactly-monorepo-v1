@@ -1867,92 +1867,96 @@
 
 
 
-  /* ==== TILE SPACING MASTER KNOBS ======================================= */
-  /* Global defaults (inherit your existing values so nothing jumps) */
-  #growth .tile{
-    /* total tile padding (falls back to your --tile-pad) */
-    --t-pad-x: var(--tile-pad);
-    --t-pad-y: var(--tile-pad);
-    padding: var(--t-pad-y) var(--t-pad-x);
+  /* SECTION 2B — minimal typography/spacing SSoT */
+  :root{
+    /* grid */
+    --s2b-cols-desktop: 3;
+    --s2b-cols-tablet: 3;
+    --s2b-cols-phone: 1;
+    --s2b-gap: 24px;
+  
+    /* tile inner padding + alignment */
+    --tile-pad-x: 26px;
+    --tile-pad-y: 26px;
+    --tile-align: left;
+  
+    /* title (h4) */
+    --tile-title-font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    --tile-title-fs: 18px;
+    --tile-title-lh: 1.2;
+    --tile-title-wt: 600;
+    --tile-title-track: 0em;
+    --tile-title-color: var(--text);
+    --tile-title-mt: 0px;
+    --tile-title-mb: 10px;
+    --tile-title-pad-x: 14px;
+    --tile-title-pad-y: 14px;
+  
+    /* subtitle/body (<p>) */
+    --tile-sub-font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    --tile-sub-fs: 13px;
+    --tile-sub-lh: 1.45;
+    --tile-sub-wt: 350;
+    --tile-sub-track: 0em;
+    --tile-sub-color: #a9bfd6;
+    --tile-sub-mt: 0px;
+    --tile-sub-mb: 0px;
+    --tile-sub-pad-x: 14px;
+    --tile-sub-pad-y: 0px;
   }
   
-  /* Title inside each tile (h4) */
-  #growth .tile h4{
-    /* per-title “padding” + spacing knobs */
-    --t-title-pad-x: 14px;
-    --t-title-pad-y: 14px;
-    --t-title-mb: var(--tile-title-gap, 9px);   /* you already have --tile-title-gap on phone */
-    padding: var(--t-title-pad-y) var(--t-title-pad-x);
-    margin-bottom: var(--t-title-mb);
+  /* grid columns */
+  #growth .g-grid{
+    display:grid;
+    grid-template-columns: repeat(var(--s2b-cols-desktop), minmax(0,1fr));
+    gap: var(--s2b-gap);
   }
-  
-  /* Subline/body copy in tiles (includes Real-time Signals .rt-sub) */
-  #growth .tile p,
-  #growth [data-tile="signals"] .rt-sub{
-    --t-sub-mt: 14px;
-    --t-sub-mb: 0px;
-    margin-top: var(--t-sub-mt);
-    margin-bottom: var(--t-sub-mb);
-  }
-  
-  /* Visuals: give the “thing” in each tile a consistent breathing room knob */
-  #growth .rts-visual,
-  #growth .slot-avatars,
-  #growth .slot-3d,
-  #growth .bar:first-of-type{          /* first progress bar often sits under a kv row */
-    --t-vis-mt: 10px;
-    --t-vis-mb: 0px;
-    margin-top: var(--t-vis-mt);
-    margin-bottom: var(--t-vis-mb);
-  }
-  
-  /* Optional: separate knobs for x/y tile padding by breakpoint */
-  @media (max-width:900px){
-    #growth .tile{ --t-pad-x: var(--tile-pad, 18px); --t-pad-y: var(--tile-pad, 18px); }
+  @media (max-width:1080px){
+    #growth .g-grid{ grid-template-columns: repeat(var(--s2b-cols-tablet), minmax(0,1fr)); }
   }
   @media (max-width:640px){
-    #growth .tile{ --t-pad-x: var(--tile-pad, 22px); --t-pad-y: var(--tile-pad, 22px); }
+    #growth .g-grid{ grid-template-columns: repeat(var(--s2b-cols-phone), minmax(0,1fr)); }
   }
   
+  /* tile text only (no visuals controlled here) */
+  #growth .tile{
+    padding: var(--tile-pad-y) var(--tile-pad-x);
+    text-align: var(--tile-align);
+  }
+  #growth .tile h4{
+    margin-top: var(--tile-title-mt);
+    margin-bottom: var(--tile-title-mb);
+    padding: var(--tile-title-pad-y) var(--tile-title-pad-x);
+    font: var(--tile-title-wt) var(--tile-title-fs)/var(--tile-title-lh) var(--tile-title-font);
+    letter-spacing: var(--tile-title-track);
+    color: var(--tile-title-color);
+  }
+  #growth .tile p{
+    margin-top: var(--tile-sub-mt);
+    margin-bottom: var(--tile-sub-mb);
+    padding: var(--tile-sub-pad-y) var(--tile-sub-pad-x);
+    font: var(--tile-sub-wt) var(--tile-sub-fs)/var(--tile-sub-lh) var(--tile-sub-font);
+    letter-spacing: var(--tile-sub-track);
+    color: var(--tile-sub-color);
+  }
   
-  /* ==== REAL-TIME SIGNALS — PHONE + TABLET KNOBS ======================== */
-  /* You already have desktop values. These just expose the *same knobs* for tablets/phones. */
-  @media (max-width:900px) and (min-width:641px){  /* TABLET */
-    #growth [data-tile="signals"]{
-      /* Title words */
-      --rt-title-w1-fs: 15px; --rt-title-w1-wt: 800; --rt-title-w1-track: -.01em;
-      --rt-title-w2-fs: 15px; --rt-title-w2-wt: 800; --rt-title-w2-track: -.01em;
-  
-      /* Subline words */
-      --rt-sub-w1-fs: 11px; --rt-sub-w2-fs: 11px; --rt-sub-w3-fs: 11px; --rt-sub-w4-fs: 11px;
-      --rt-sub-w5-fs: 11px; --rt-sub-w6-fs: 11px; --rt-sub-w7-fs: 11px; --rt-sub-w8-fs: 11px;
-  
-      /* Chip tspans (label / value / tail) */
-      --chip-top-w1-fs: 8px;  --chip-top-w2-fs: 10px; --chip-top-w3-fs: 8px;
-      --chip-ll-w1-fs:  8px;  --chip-ll-w2-fs: 10px; --chip-ll-w3-fs:  8px;
-  
-      /* Tile-local spacing (if you want tablet to be a hair tighter) */
-      --t-title-mb: 8px;
-      --t-sub-mb: 6px;
-      --t-vis-mt: 8px;
+  /* tablet overrides (641–900px) */
+  @media (max-width:900px) and (min-width:641px){
+    :root{
+      --s2b-gap: 20px;
+      --tile-pad-x: 24px; --tile-pad-y: 24px;
+      --tile-title-fs: 13px; --tile-title-mb: 10px;
+      --tile-sub-fs: 12px;
     }
   }
   
-  @media (max-width:640px){                                   /* PHONE */
-    #growth [data-tile="signals"]{
-      --rt-title-w1-fs: 14px; --rt-title-w1-wt: 800; --rt-title-w1-track: -.01em;
-      --rt-title-w2-fs: 14px; --rt-title-w2-wt: 800; --rt-title-w2-track: -.01em;
-  
-      --rt-sub-w1-fs: 10px; --rt-sub-w2-fs: 10px; --rt-sub-w3-fs: 10px; --rt-sub-w4-fs: 10px;
-      --rt-sub-w5-fs: 10px; --rt-sub-w6-fs: 10px; --rt-sub-w7-fs: 10px; --rt-sub-w8-fs: 10px;
-  
-      --chip-top-w1-fs: 7px;  --chip-top-w2-fs: 9px; --chip-top-w3-fs: 7px;
-      --chip-ll-w1-fs:  7px;  --chip-ll-w2-fs: 9px; --chip-ll-w3-fs:  7px;
-  
-      /* phone breathing room */
-      --t-title-mb: 6px;
-      --t-sub-mb: 6px;
-      --t-vis-mt: 6px;
+  /* phone overrides (≤640px) */
+  @media (max-width:640px){
+    :root{
+      --s2b-gap: 16px;
+      --tile-pad-x: 22px; --tile-pad-y: 22px;
+      --tile-title-fs: 13px; --tile-title-mb: 8px;
+      --tile-sub-fs: 12px;
     }
   }
 
