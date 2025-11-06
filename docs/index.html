@@ -1751,6 +1751,64 @@
       --slot-center-y: 66%;
     }
   }
+  
+  
+  /* === Real-time Signals: per-word knobs (title, subline, SVG chip tspans) === */
+  #growth [data-tile="signals"]{
+    /* Title words */
+    --rt-title-w1-fs: inherit; --rt-title-w1-color: inherit; --rt-title-w1-wt: inherit; --rt-title-w1-track: normal;
+    --rt-title-w2-fs: inherit; --rt-title-w2-color: inherit; --rt-title-w2-wt: inherit; --rt-title-w2-track: normal;
+  
+    /* Subline words (adjust as many as you wrap) */
+    --rt-sub-w1-fs: inherit; --rt-sub-w1-color: inherit; --rt-sub-w1-wt: inherit;
+    --rt-sub-w2-fs: inherit; --rt-sub-w2-color: inherit; --rt-sub-w2-wt: inherit;
+    --rt-sub-w3-fs: inherit; --rt-sub-w3-color: inherit; --rt-sub-w3-wt: inherit;
+    --rt-sub-w4-fs: inherit; --rt-sub-w4-color: inherit; --rt-sub-w4-wt: inherit;
+    --rt-sub-w5-fs: inherit; --rt-sub-w5-color: inherit; --rt-sub-w5-wt: inherit;
+    --rt-sub-w6-fs: inherit; --rt-sub-w6-color: inherit; --rt-sub-w6-wt: inherit;
+    --rt-sub-w7-fs: inherit; --rt-sub-w7-color: inherit; --rt-sub-w7-wt: inherit;
+    --rt-sub-w8-fs: inherit; --rt-sub-w8-color: inherit; --rt-sub-w8-wt: inherit;
+  
+    /* Chips (SVG <tspan> #1=label, #2=value, #3=tail label) */
+    --chip-top-w1-fs: 11px; --chip-top-w1-color: var(--chip-label); --chip-top-w1-wt: 600;
+    --chip-top-w2-fs: 11px; --chip-top-w2-color: var(--chip-value); --chip-top-w2-wt: 800;
+    --chip-top-w3-fs: 11px; --chip-top-w3-color: var(--chip-label); --chip-top-w3-wt: 600;
+  
+    --chip-ll-w1-fs: 11px; --chip-ll-w1-color: var(--chip-label); --chip-ll-w1-wt: 600;
+    --chip-ll-w2-fs: 11px; --chip-ll-w2-color: var(--chip-value); --chip-ll-w2-wt: 800;
+    --chip-ll-w3-fs: 11px; --chip-ll-w3-color: var(--chip-label); --chip-ll-w3-wt: 600;
+  }
+  
+  /* Map knobs → title words */
+  #growth [data-tile="signals"] .rt-title .w1{
+    font-size: var(--rt-title-w1-fs); color: var(--rt-title-w1-color);
+    font-weight: var(--rt-title-w1-wt); letter-spacing: var(--rt-title-w1-track);
+  }
+  #growth [data-tile="signals"] .rt-title .w2{
+    font-size: var(--rt-title-w2-fs); color: var(--rt-title-w2-color);
+    font-weight: var(--rt-title-w2-wt); letter-spacing: var(--rt-title-w2-track);
+  }
+  
+  /* Map knobs → subline words (extend if you add more .wN spans) */
+  #growth [data-tile="signals"] .rt-sub .w1{ font-size:var(--rt-sub-w1-fs); color:var(--rt-sub-w1-color); font-weight:var(--rt-sub-w1-wt); }
+  #growth [data-tile="signals"] .rt-sub .w2{ font-size:var(--rt-sub-w2-fs); color:var(--rt-sub-w2-color); font-weight:var(--rt-sub-w2-wt); }
+  #growth [data-tile="signals"] .rt-sub .w3{ font-size:var(--rt-sub-w3-fs); color:var(--rt-sub-w3-color); font-weight:var(--rt-sub-w3-wt); }
+  #growth [data-tile="signals"] .rt-sub .w4{ font-size:var(--rt-sub-w4-fs); color:var(--rt-sub-w4-color); font-weight:var(--rt-sub-w4-wt); }
+  #growth [data-tile="signals"] .rt-sub .w5{ font-size:var(--rt-sub-w5-fs); color:var(--rt-sub-w5-color); font-weight:var(--rt-sub-w5-wt); }
+  #growth [data-tile="signals"] .rt-sub .w6{ font-size:var(--rt-sub-w6-fs); color:var(--rt-sub-w6-color); font-weight:var(--rt-sub-w6-wt); }
+  #growth [data-tile="signals"] .rt-sub .w7{ font-size:var(--rt-sub-w7-fs); color:var(--rt-sub-w7-color); font-weight:var(--rt-sub-w7-wt); }
+  #growth [data-tile="signals"] .rt-sub .w8{ font-size:var(--rt-sub-w8-fs); color:var(--rt-sub-w8-color); font-weight:var(--rt-sub-w8-wt); }
+  
+  /* Map knobs → SVG chip tspans (no symbol edits; targets existing tspan order) */
+  #growth [data-tile="signals"] .rts-visual #chipTop text tspan:nth-child(1){ fill:var(--chip-top-w1-color); font-size:var(--chip-top-w1-fs); font-weight:var(--chip-top-w1-wt); }
+  #growth [data-tile="signals"] .rts-visual #chipTop text tspan:nth-child(2){ fill:var(--chip-top-w2-color); font-size:var(--chip-top-w2-fs); font-weight:var(--chip-top-w2-wt); }
+  #growth [data-tile="signals"] .rts-visual #chipTop text tspan:nth-child(3){ fill:var(--chip-top-w3-color); font-size:var(--chip-top-w3-fs); font-weight:var(--chip-top-w3-wt); }
+  
+  #growth [data-tile="signals"] .rts-visual #chipLL text tspan:nth-child(1){ fill:var(--chip-ll-w1-color); font-size:var(--chip-ll-w1-fs); font-weight:var(--chip-ll-w1-wt); }
+  #growth [data-tile="signals"] .rts-visual #chipLL text tspan:nth-child(2){ fill:var(--chip-ll-w2-color); font-size:var(--chip-ll-w2-fs); font-weight:var(--chip-ll-w2-wt); }
+  #growth [data-tile="signals"] .rts-visual #chipLL text tspan:nth-child(3){ fill:var(--chip-ll-w3-color); font-size:var(--chip-ll-w3-fs); font-weight:var(--chip-ll-w3-wt); }
+  
+  
 
 
 
@@ -2181,49 +2239,61 @@
 
             </article>
   
-            <!-- Real-time Signals (INLINE) -->
+            <!-- Real-time Signals (REGENERATED FOR PER-WORD CONTROL; values unchanged) -->
             <article class="tile realtime" data-tile="signals" style="--col:1; --row:1">
-              <h4>Real-time Signals</h4>
-              <p>&lt; 30-second lead indicator from web + market activity.</p>
+              <h4 class="rt-title">
+                <span class="w1">Real-time</span> <span class="w2">Signals</span>
+              </h4>
+              <p class="rt-sub">
+                <span class="w1">&lt; 30-second</span>
+                <span class="w2">lead</span>
+                <span class="w3">indicator</span>
+                <span class="w4">from</span>
+                <span class="w5">web</span>
+                <span class="w6">+</span>
+                <span class="w7">market</span>
+                <span class="w8">activity.</span>
+              </p>
             
+              <!-- Your exact RTS visual with your latest values -->
               <svg class="rts-visual" viewBox="0 0 240 240" style="
                 /* —— glow knobs (UNCHANGED VALUES) —— */
                 --glow-opacity:.66;
                 --glow-scale:1.08;
                 --glow-blur:8px;
                 --glow-dx:0px; --glow-dy:2px;
-              
+            
                 /* —— rail tint (UNCHANGED) —— */
                 --rail-c1:#9BB7FF; --rail-c2:#4C6FAE;
-              
+            
                 /* —— bracket placement/look (UNCHANGED VALUES) —— */
                 --brk-ink: rgba(155,183,255,.34); --brk-w:1.35;
                 --brk-left-x:-8px;  --brk-left-y:-50px;  --brk-left-sx:-1;
                 --brk-right-x:28px; --brk-right-y:-50px; --brk-right-rot:0deg;
-              
+            
                 /* —— chip placement (UNCHANGED VALUES) —— */
                 --chip-top-x:132px; --chip-top-y:51px;
                 --chip-ll-x:16px;  --chip-ll-y:51px;
-              
+            
                 /* —— blip color & size (UNCHANGED VALUES) —— */
                 --dot-fill:#E6C36B;
-                --dot1-fill:#E6C36B; --dot1-scale:0.80;
+                --dot1-fill:#E6C36B; --dot1-scale:1.00;
                 --dot2-fill:#FFD57A; --dot2-scale:1.15;
-                --dot3-fill:#E6C36B; --dot3-scale:0.75;
-                --ring-color:#FFD57A; --ring-alpha:.4; --ring-w:0.9px;
-              
-                /* === NEW: master move/rotate/scale for the whole cluster (neutral) === */
-                --rts-x: 0px;        /* shift ALL (glow+arcs+rays+blips) horizontally */
-                --rts-y: -25px;        /* shift ALL vertically */
-                --rts-rot: 0deg;     /* rotate ALL */
-                --rts-scale: 1;      /* scale ALL */
-                --rts-ox: 120px;     /* pivot X (leave as-is) */
-                --rts-oy: 150px;     /* pivot Y */
-              
-                /* === NEW: optional per-subsystem nudges (neutral) === */
-                --rails-x: 0px; --rails-y: 0px;   /* arcs only */
-                --rays-x:  0px; --rays-y:  0px;   /* dashed connections only */
-                --blips-x: 0px; --blips-y: 0px;   /* blips + ring only */
+                --dot3-fill:#E6C36B; --dot3-scale:0.95;
+                --ring-color:#FFD57A; --ring-alpha:.5; --ring-w:1.1px;
+            
+                /* === master move/rotate/scale (your current) === */
+                --rts-x: 0px;
+                --rts-y: -25px;
+                --rts-rot: 0deg;
+                --rts-scale: 1;
+                --rts-ox: 120px;
+                --rts-oy: 150px;
+            
+                /* === per-subsystem nudges (neutral) === */
+                --rails-x: 0px; --rails-y: 0px;
+                --rays-x:  0px; --rays-y:  0px;
+                --blips-x: 0px; --blips-y: 0px;
               ">
                 <use href="#rts" xlink:href="#rts"></use>
               </svg>
