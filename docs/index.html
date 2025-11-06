@@ -2098,7 +2098,59 @@
 }
 
 
+/* === Pipelines: 3-column SSoT (label | bar | value) across all breakpoints === */
 
+/* Base knobs (used everywhere) */
+#growth [data-tile="pipelines"]{
+  --pipe-label-w: clamp(90px, 28vw, 128px);
+  --pipe-gap:     clamp(8px, 2.2vw, 16px);
+  --pipe-bar-h:   clamp(6px, 1.4vw, 10px);
+  --pipe-row-gap: clamp(10px, 2.2vw, 16px);
+  --pipe-pad-x:   clamp(10px, 3.6vw, 16px);  /* horizontal breathing */
+}
+
+/* Single 3-col grid definition (desktop/tablet/phone) */
+#growth [data-tile="pipelines"] .pipe-row{
+  display:grid;
+  grid-template-columns: var(--pipe-label-w) 1fr auto;
+  align-items:center;
+  gap: var(--pipe-gap);
+}
+
+/* Kill the previous phone "stack" override + tighten sizes with vars */
+@media (max-width:640px){
+  #growth [data-tile="pipelines"] .pipe-row{
+    grid-template-columns: var(--pipe-label-w) 1fr auto !important;
+    grid-template-areas: none !important;
+  }
+  #growth [data-tile="pipelines"] .pipe-row .label,
+  #growth [data-tile="pipelines"] .pipe-row .bar,
+  #growth [data-tile="pipelines"] .pipe-row .v{
+    grid-area: auto !important; /* neutralize old area mapping */
+  }
+
+  /* Phone-only sizing tweaks via variables (no layout duplication) */
+  #growth [data-tile="pipelines"]{
+    --pipe-label-w: 92px;
+    --pipe-gap: 10px;
+    --pipe-bar-h: 8px;
+    --pipe-row-gap: 12px;
+    --pipe-pad-x: 14px;
+  }
+
+  /* Small type + safe truncation so labels don’t collide with the bar */
+  #growth [data-tile="pipelines"] .pipe-row .label,
+  #growth [data-tile="pipelines"] .pipe-row .v{ font-size:12px; }
+  #growth [data-tile="pipelines"] .pipe-row .label{
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+}
+
+/* Respect the X padding knob you already added */
+#growth [data-tile="pipelines"] .pipe-rows{ padding-inline: var(--pipe-pad-x); }
+
+/* Ensure bar thickness follows the knob */
+#growth [data-tile="pipelines"] .pipe-row .bar{ height: var(--pipe-bar-h); margin:0; }
 
 
 
