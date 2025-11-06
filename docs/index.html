@@ -2048,16 +2048,43 @@
     --outer-stroke-w: 1.1px; --outer-stroke-a: .13;
   }
 }
-@media (max-width:640px){            /* Phone */
-  :root{
-    --rim-w: 14px;
-    --rim1-blur: 30px; --rim1-spread: -8px; --rim1-alpha: .11;
-    --rim2-blur: 100px; --rim2-spread: -54px; --rim2-alpha: .04;
-    --outer-stroke-w: 1.0px; --outer-stroke-a: .12;
+/* === PHONE GLOW RESTORE (2A + 2B) — place LAST === */
+@media (max-width:640px){
+  /* Re-enable the ring glow on phones */
+  #proof .glass::before,
+  #growth .tile::before{
+    content:"" !important;
+    padding: var(--rim-w,14px) !important;
+
+    /* keep the rim-only mask */
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask-composite: exclude;
+
+    /* actual glow (tweak to taste) */
+    box-shadow:
+      inset 0 0 var(--rim1-blur,30px) var(--rim1-spread,-8px) rgba(var(--theme-glow-rgb), var(--rim1-alpha,.11)),
+      inset 0 var(--rim2-offset-y,6px) var(--rim2-blur,100px) var(--rim2-spread,-54px) rgba(var(--theme-glow-rgb), var(--rim2-alpha,.04)) !important;
+    opacity: 1 !important;
+  }
+
+  /* keep the outside hairline visible */
+  #proof .glass::after,
+  #growth .tile::after{
+    box-shadow: 0 0 var(--outer-stroke-blur,1px)
+                     var(--outer-stroke-w,1px)
+                     rgba(255,255,255,var(--outer-stroke-a,.14)) !important;
   }
 }
 
-
+/* === If the device lacks backdrop-filter, still allow the glow layer === */
+@supports not ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))){
+  #proof .glass::before,
+  #growth .tile::before{
+    content:"" !important; /* override the earlier 'content:none' */
+  }
+}
 
 
 
