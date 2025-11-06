@@ -1884,9 +1884,9 @@
   
     /* Title (h4) */
     --tile-title-font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    --tile-title-fs: 18px;        /* desktop */
+    --tile-title-fs: 22px;        /* desktop */
     --tile-title-lh: 1.2;
-    --tile-title-wt: 500;         /* medium */
+    --tile-title-wt: 400;         /* medium */
     --tile-title-track: 0em;
     --tile-title-color: var(--text);
     --tile-title-mt: 0px;
@@ -1969,8 +1969,55 @@
   }
 
 
-
-
+  /* === Pipelines tile: label → bar → value (AIacquisition-style) === */
+  #growth [data-tile="pipelines"]{
+    --pipe-label-w: 128px;   /* left column width */
+    --pipe-gap: 12px;        /* column gap */
+    --pipe-bar-h: 8px;       /* bar thickness */
+    --pipe-row-gap: 10px;    /* vertical gap between rows */
+  }
+  
+  /* stack of rows */
+  #growth [data-tile="pipelines"] .pipe-rows{
+    display:flex; flex-direction:column; gap:var(--pipe-row-gap);
+  }
+  
+  /* each row becomes a 3-col grid: [label][bar][value] */
+  #growth [data-tile="pipelines"] .pipe-row{
+    display:grid;
+    grid-template-columns: var(--pipe-label-w) 1fr auto;
+    align-items:center;
+    gap: var(--pipe-gap);
+  }
+  
+  /* left labels (sit OUTSIDE the bar now) */
+  #growth [data-tile="pipelines"] .pipe-row .label{
+    color:#b3c4e9; font-weight:600; white-space:nowrap;
+  }
+  
+  /* reuse your bar styling, but remove external margins for tight rows */
+  #growth [data-tile="pipelines"] .pipe-row .bar{
+    height:var(--pipe-bar-h);
+    margin:0;                     /* important: no extra top/bottom margin */
+  }
+  
+  /* right-side value */
+  #growth [data-tile="pipelines"] .pipe-row .v{
+    font-weight:800; text-align:right; min-width:3ch;
+  }
+  
+  /* phone: put label/value on first line, bar below for breathing room */
+  @media (max-width:640px){
+    #growth [data-tile="pipelines"] .pipe-row{
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "label v"
+        "bar   bar";
+    }
+    #growth [data-tile="pipelines"] .pipe-row .label{ grid-area:label; }
+    #growth [data-tile="pipelines"] .pipe-row .bar{   grid-area:bar; }
+    #growth [data-tile="pipelines"] .pipe-row .v{     grid-area:v; }
+  }
 
 
 
@@ -2354,21 +2401,37 @@
               <h4>Pipelines</h4>
               <p>Track packaging stages at a glance—Lead, Qualified, Proposal, Negotiation, Closed.</p>
   
-              <div class="kv"><span class="kv-label" data-icon="">Lead</span><span class="v" data-count="45">45</span></div>
-              <div class="bar"><i style="--pct:100"></i></div>
-  
-              <div class="kv"><span class="kv-label" data-icon="">Qualified</span><span class="v" data-count="32">32</span></div>
-              <div class="bar"><i style="--pct:71.11"></i></div>
-  
-              <div class="kv"><span class="kv-label" data-icon="">Proposal</span><span class="v" data-count="18">18</span></div>
-              <div class="bar"><i style="--pct:40"></i></div>
-  
-              <div class="kv"><span class="kv-label" data-icon="">Negotiation</span><span class="v" data-count="7">7</span></div>
-              <div class="bar"><i style="--pct:15.56"></i></div>
-  
-              <div class="kv"><span class="kv-label" data-icon="">Closed</span><span class="v" data-count="3">3</span></div>
-              <div class="bar"><i style="--pct:6.67"></i></div>
-  
+              <div class="pipe-rows">
+                <div class="pipe-row">
+                  <span class="label">Lead</span>
+                  <div class="bar"><i style="--pct:100"></i></div>
+                  <span class="v" data-count="45">45</span>
+                </div>
+              
+                <div class="pipe-row">
+                  <span class="label">Qualified</span>
+                  <div class="bar"><i style="--pct:71.11"></i></div>
+                  <span class="v" data-count="32">32</span>
+                </div>
+              
+                <div class="pipe-row">
+                  <span class="label">Proposal</span>
+                  <div class="bar"><i style="--pct:40"></i></div>
+                  <span class="v" data-count="18">18</span>
+                </div>
+              
+                <div class="pipe-row">
+                  <span class="label">Negotiation</span>
+                  <div class="bar"><i style="--pct:15.56"></i></div>
+                  <span class="v" data-count="7">7</span>
+                </div>
+              
+                <div class="pipe-row">
+                  <span class="label">Closed</span>
+                  <div class="bar"><i style="--pct:6.67"></i></div>
+                  <span class="v" data-count="3">3</span>
+                </div>
+              </div>  
 
             </article>
   
