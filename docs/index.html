@@ -2031,20 +2031,31 @@
 
 
 
-  /* FINAL: tune the rim-only glow */
+/* 2B rim glow — per breakpoint (FINAL override) */
+@media (min-width:901px){            /* Desktop */
   :root{
-    --rim1-blur: 14px;     /* tight rim blur */
-    --rim1-spread: -10px;  /* tight rim spread */
-    --rim1-alpha: .12;     /* tight rim strength */
-  
-    --rim2-blur: 120px;    /* feather halo blur */
-    --rim2-spread: -60px;  /* feather halo spread */
-    --rim2-offset-y: 8px;  /* slight downward bias */
-    --rim2-alpha: .4;     /* feather strength */
-  
-    --outer-stroke-a: .16; /* outside hairline visibility */
-    /* color of the glow is already from --theme-glow-rgb */
+    --rim-w: 28px;                   /* ← ring thickness */
+    --rim1-blur: 42px; --rim1-spread: -10px; --rim1-alpha: .16;  /* tight rim */
+    --rim2-blur: 160px; --rim2-spread: -72px; --rim2-offset-y: 8px; --rim2-alpha: .05; /* feather */
+    --outer-stroke-w: 1.2px; --outer-stroke-a: .14;              /* outside hairline */
   }
+}
+@media (max-width:900px) and (min-width:641px){  /* Tablet */
+  :root{
+    --rim-w: 16px;
+    --rim1-blur: 36px; --rim1-spread: -10px; --rim1-alpha: .14;
+    --rim2-blur: 130px; --rim2-spread: -64px; --rim2-alpha: .045;
+    --outer-stroke-w: 1.1px; --outer-stroke-a: .13;
+  }
+}
+@media (max-width:640px){            /* Phone */
+  :root{
+    --rim-w: 14px;
+    --rim1-blur: 30px; --rim1-spread: -8px; --rim1-alpha: .11;
+    --rim2-blur: 100px; --rim2-spread: -54px; --rim2-alpha: .04;
+    --outer-stroke-w: 1.0px; --outer-stroke-a: .12;
+  }
+}
 
 
 
