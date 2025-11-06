@@ -1625,7 +1625,7 @@
   
     /* Make bars a touch thinner on phones */
     #growth .bar{ height:8px; }
-    #growth .bar.thin{ height:5px; }
+    #growth .bar.thin{ height:8px; }
   
     /* Tile padding to feel “airy but compact” */
     :root{ --tile-pad: 22px; }
@@ -1867,7 +1867,9 @@
 
 
 
-  /* SECTION 2B — minimal typography/spacing SSoT */
+  /* === SECTION 2B — Typography & Spacing SSoT (drop-in) === */
+  /* Paste at end of <style> */
+  
   :root{
     /* grid */
     --s2b-cols-desktop: 3;
@@ -1880,11 +1882,11 @@
     --tile-pad-y: 26px;
     --tile-align: left;
   
-    /* title (h4) */
+    /* Title (h4) */
     --tile-title-font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    --tile-title-fs: 36px;
+    --tile-title-fs: 36px;        /* desktop */
     --tile-title-lh: 1.2;
-    --tile-title-wt: 500;
+    --tile-title-wt: 500;         /* medium */
     --tile-title-track: 0em;
     --tile-title-color: var(--text);
     --tile-title-mt: 0px;
@@ -1892,11 +1894,11 @@
     --tile-title-pad-x: 14px;
     --tile-title-pad-y: 14px;
   
-    /* subtitle/body (<p>) */
+    /* Subtitle/body (<p>) */
     --tile-sub-font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    --tile-sub-fs: 15px;
+    --tile-sub-fs: 15px;          /* desktop */
     --tile-sub-lh: 1.45;
-    --tile-sub-wt: 350;
+    --tile-sub-wt: 350;           /* demi-book feel */
     --tile-sub-track: 0em;
     --tile-sub-color: #a9bfd6;
     --tile-sub-mt: 0px;
@@ -1905,7 +1907,7 @@
     --tile-sub-pad-y: 0px;
   }
   
-  /* grid columns */
+  /* Grid columns */
   #growth .g-grid{
     display:grid;
     grid-template-columns: repeat(var(--s2b-cols-desktop), minmax(0,1fr));
@@ -1918,7 +1920,7 @@
     #growth .g-grid{ grid-template-columns: repeat(var(--s2b-cols-phone), minmax(0,1fr)); }
   }
   
-  /* tile text only (no visuals controlled here) */
+  /* Tile text only (visuals controlled elsewhere) */
   #growth .tile{
     padding: var(--tile-pad-y) var(--tile-pad-x);
     text-align: var(--tile-align);
@@ -1940,22 +1942,28 @@
     color: var(--tile-sub-color);
   }
   
-  /* tablet overrides (641–900px) */
+  /* Tablet 641–900px */
   @media (max-width:900px) and (min-width:641px){
     :root{
       --s2b-gap: 20px;
-      --tile-pad-x: 24px; --tile-pad-y: 24px;
-      --tile-title-fs: 13px; --tile-title-mb: 10px;
+      --tile-pad-x: 24px;
+      --tile-pad-y: 24px;
+  
+      /* your tablet sizes */
+      --tile-title-fs: 13px;
       --tile-sub-fs: 12px;
     }
   }
   
-  /* phone overrides (≤640px) */
+  /* Phone ≤640px */
   @media (max-width:640px){
     :root{
       --s2b-gap: 16px;
-      --tile-pad-x: 22px; --tile-pad-y: 22px;
-      --tile-title-fs: 13px; --tile-title-mb: 8px;
+      --tile-pad-x: 22px;
+      --tile-pad-y: 22px;
+  
+      /* your phone sizes */
+      --tile-title-fs: 13px;
       --tile-sub-fs: 12px;
     }
   }
@@ -2356,10 +2364,10 @@
               <div class="bar"><i style="--pct:40"></i></div>
   
               <div class="kv"><span class="kv-label" data-icon="">Negotiation</span><span class="v" data-count="7">7</span></div>
-              <div class="bar thin"><i style="--pct:15.56"></i></div>
+              <div class="bar"><i style="--pct:15.56"></i></div>
   
               <div class="kv"><span class="kv-label" data-icon="">Closed</span><span class="v" data-count="3">3</span></div>
-              <div class="bar thin"><i style="--pct:6.67"></i></div>
+              <div class="bar"><i style="--pct:6.67"></i></div>
   
 
             </article>
