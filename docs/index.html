@@ -1870,7 +1870,7 @@
              transform:
                translate(var(--brk-left-x,0px), var(--brk-left-y,0px))
                rotate(var(--brk-left-rot,0deg))
-               scale(var(--brk-left-sx,1), var(--brk-left-sy,1));
+               scale(var(--brk-left-sx,-1), var(--brk-left-sy,1));
              transform-box: fill-box;
              transform-origin: var(--brk-left-ox,64px) var(--brk-left-oy,172px);
            ">
@@ -1884,7 +1884,7 @@
              transform:
                translate(var(--brk-right-x,0px), var(--brk-right-y,0px))
                rotate(var(--brk-right-rot,0deg))
-               scale(var(--brk-right-sx,1), var(--brk-right-sy,1));
+               scale(var(--brk-right-sx,-1), var(--brk-right-sy,1));
              transform-box: fill-box;
              transform-origin: var(--brk-right-ox,176px) var(--brk-right-oy,172px);
            ">
@@ -1920,8 +1920,8 @@
         <g id="chipTop"
            style="
              transform:
-               translate(calc(var(--chip-top-x,72px) + var(--chip-dx)),
-                         calc(var(--chip-top-y,104px) + var(--chip-dy)))
+               translate(calc(var(--chip-top-x,82px) + var(--chip-dx)),
+                         calc(var(--chip-top-y,124px) + var(--chip-dy)))
                rotate(var(--chip-top-rot,0deg))
                scale(var(--chip-top-scale,1));
              transform-box: fill-box; transform-origin: center;
@@ -1938,13 +1938,13 @@
         <g id="chipLL"
            style="
              transform:
-               translate(calc(var(--chip-ll-x,28px) + var(--chip-dx)),
-                         calc(var(--chip-ll-y,168px) + var(--chip-dy)))
+               translate(calc(var(--chip-ll-x,18px) + var(--chip-dx)),
+                         calc(var(--chip-ll-y,268px) + var(--chip-dy)))
                rotate(var(--chip-ll-rot,0deg))
                scale(var(--chip-ll-scale,1));
              transform-box: fill-box; transform-origin: center;
            ">
-          <rect x="-20" y="120" width="96" height="22" rx="11" fill="none"
+          <rect x="0" y="0" width="96" height="22" rx="11" fill="none"
                 style="stroke: var(--chip-stroke)"/>
           <text x="48" y="15" text-anchor="middle">
             <tspan style="fill: var(--chip-label)">web · </tspan>
