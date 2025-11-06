@@ -2169,14 +2169,14 @@
   /* Title padding to tile edges (X/Y). Y applies to top+bottom equally,
      but you can override sides explicitly with the *_top/bottom/left/right knobs. */
   --s2b-title-pad-x: 14px;
-  --s2b-title-pad-y: 0px;
+  --s2b-title-pad-y: 5px;
   --s2b-title-pad-top:    var(--s2b-title-pad-y);
   --s2b-title-pad-bottom: var(--s2b-title-pad-y);
   --s2b-title-pad-left:   var(--s2b-title-pad-x);
   --s2b-title-pad-right:  var(--s2b-title-pad-x);
 
   /* Extra vertical space ABOVE the title (usually 0 because padding handles the edge) */
-  --s2b-title-mt: 0px;
+  --s2b-title-mt: 2px;
 
   /* Title → Subtitle vertical spacing (this is the one you tweak most) */
   --s2b-title-to-sub-gap-y: 10px;
@@ -2184,7 +2184,7 @@
   /* --- SUBTITLE/BODY (<p>) --- */
   /* Subtitle padding to tile edges (X/Y) + side overrides if needed */
   --s2b-sub-pad-x: 14px;
-  --s2b-sub-pad-y: 0px;
+  --s2b-sub-pad-y: 2px;
   --s2b-sub-pad-top:    var(--s2b-sub-pad-y);
   --s2b-sub-pad-bottom: var(--s2b-sub-pad-y);
   --s2b-sub-pad-left:   var(--s2b-sub-pad-x);
@@ -2198,9 +2198,9 @@
 
   /* SPECIAL: Customers tile (tile-specific overrides; fall back to generics when unset) */
   --s2b-cust-title-to-sub-gap-y: var(--s2b-title-to-sub-gap-y);
-  --s2b-cust-sub-to-rows-gap-y:  var(--s2b-sub-to-slot-gap-y);
+  --s2b-cust-sub-to-rows-gap-y:  5px;
   --s2b-cust-kv-row-gap-y:       10px;  /* between “kv” rows */
-  --s2b-cust-rows-to-avatars-gap-y: 10px;
+  --s2b-cust-rows-to-avatars-gap-y: 40px;
 }
 
 /* ---------- Tablet overrides (641–900px) ---------- */
