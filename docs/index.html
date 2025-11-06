@@ -1823,14 +1823,11 @@
 <body>
   
   
-  <!-- RTS sprite — keep just one on the page -->
+  <!-- === RTS SPRITE (one-time defs) === -->
   <svg xmlns="http://www.w3.org/2000/svg"
        xmlns:xlink="http://www.w3.org/1999/xlink"
        width="0" height="0"
-       style="position:absolute; width:0; height:0; overflow:hidden"
-       aria-hidden="true">
-    <!-- === rts symbol (static demo) === -->
-    <!-- DROP-IN: replace your existing <symbol id="rts"> with this variant -->
+       style="position:absolute;left:-9999px;visibility:hidden" aria-hidden="true">
     <symbol id="rts" viewBox="0 0 240 240">
       <defs>
         <radialGradient id="cg" cx="50%" cy="62%" r="60%">
@@ -1844,54 +1841,49 @@
         </linearGradient>
         <filter id="soft"><feGaussianBlur stdDeviation="8"/></filter>
       </defs>
-    
+  
       <!-- glow dome -->
-      <g style="opacity:.98; transform-origin:120px 150px; transform:translate(0,2px) scale(1.06)">
+      <g style="opacity:var(--glow-opacity,.98);
+                transform-origin:120px 150px;
+                transform:translate(var(--glow-dx,0px),var(--glow-dy,2px)) 
+                          scale(var(--glow-scale,1.06))">
         <ellipse cx="120" cy="150" rx="92" ry="76" fill="url(#cg)" filter="url(#soft)"/>
       </g>
-    
-      <!-- scanner rails -->
+  
+      <!-- rails -->
       <g fill="none" stroke="url(#rail)" stroke-linecap="round">
         <path d="M44,168 A96,96 0 0 1 196,168" stroke-width="1.6"/>
         <path d="M56,162 A84,84 0 0 1 184,162" stroke-width="1.35"/>
         <path d="M72,156 A68,68 0 0 1 168,156" stroke-width="1.15"/>
         <path d="M90,150 A50,50 0 0 1 150,150" stroke-width="1"/>
       </g>
-    
-      <!-- corner brackets (independent knobs) -->
-      <g fill="none"
-         stroke="var(--brk-ink, rgba(155,183,255,.28))"
-         stroke-width="var(--brk-w, 1.2)"
-         stroke-linecap="round">
-    
-        <!-- LEFT bracket -->
-        <g id="brkLeft"
-           style="
-             transform:
-               translate(var(--brk-left-x,0px), var(--brk-left-y,0px))
-               rotate(var(--brk-left-rot,0deg))
-               scale(var(--brk-left-sx,-1), var(--brk-left-sy,1));
-             transform-box: fill-box;
-             transform-origin: var(--brk-left-ox,64px) var(--brk-left-oy,172px);
-           ">
-          <!-- default position draws the inward corner at (84,142) -->
-          <path d="M84,142 h-16 v+16"/>
+  
+      <!-- BRACKETS with full knobs -->
+      <g fill="none" stroke="var(--brk-ink, rgba(155,183,255,.28))"
+         stroke-width="var(--brk-w,1.2)" stroke-linecap="round">
+        <!-- LEFT bracket — base corner at (84,142) -->
+        <g id="brkLeft" style="
+            transform:
+              translate(var(--brk-left-x,0px), var(--brk-left-y,0px))
+              rotate(var(--brk-left-rot,0deg))
+              scale(var(--brk-left-sx,1), var(--brk-left-sy,1));
+            transform-box:fill-box;
+            transform-origin: var(--brk-left-ox,84px) var(--brk-left-oy,142px);">
+          <path d="M84,142 h-16 v-16"/>
         </g>
-    
-        <!-- RIGHT bracket -->
-        <g id="brkRight"
-           style="
-             transform:
-               translate(var(--brk-right-x,0px), var(--brk-right-y,0px))
-               rotate(var(--brk-right-rot,0deg))
-               scale(var(--brk-right-sx,-1), var(--brk-right-sy,1));
-             transform-box: fill-box;
-             transform-origin: var(--brk-right-ox,176px) var(--brk-right-oy,172px);
-           ">
-          <path d="M156,142 h16 v+16"/>
+  
+        <!-- RIGHT bracket — base corner at (156,142) -->
+        <g id="brkRight" style="
+            transform:
+              translate(var(--brk-right-x,0px), var(--brk-right-y,0px))
+              rotate(var(--brk-right-rot,0deg))
+              scale(var(--brk-right-sx,1), var(--brk-right-sy,1));
+            transform-box:fill-box;
+            transform-origin: var(--brk-right-ox,156px) var(--brk-right-oy,142px);">
+          <path d="M156,142 h16 v-16"/>
         </g>
       </g>
-    
+  
       <!-- triangulation rays + detections -->
       <g style="stroke:url(#rail)" stroke-dasharray="3 3" opacity=".9">
         <path d="M120,150 L98,156"/>
@@ -1903,47 +1895,32 @@
         <circle cx="152" cy="166" r="4"/>
       </g>
       <circle cx="120" cy="150" r="8" fill="none" stroke="#E6C36B" stroke-opacity=".45"/>
-    
-      <!-- DEMO CHIPS (independent knobs) -->
-      <g font-family="Inter, system-ui" font-size="11"
-         style="
-           --chip-label: #DCEBFF;
-           --chip-value: #7AE1FF;
-           --chip-stroke: rgba(155,183,255,.30);
-    
-           /* global chip nudge */
-           --chip-dx: 0px;
-           --chip-dy: 0px;
-         ">
-    
-        <!-- TOP chip: default at (72,104) -->
-        <g id="chipTop"
-           style="
+  
+      <!-- CHIPS with full knobs -->
+      <g id="chips" font-family="Inter, system-ui" font-size="11"
+         style="--chip-label:#DCEBFF; --chip-value:#7AE1FF; --chip-stroke:rgba(155,183,255,.30)">
+        <!-- TOP chip (center roughly 120,98) -->
+        <g id="chipTop" style="
              transform:
-               translate(calc(var(--chip-top-x,82px) + var(--chip-dx)),
-                         calc(var(--chip-top-y,124px) + var(--chip-dy)))
+               translate(var(--chip-top-x,72px), var(--chip-top-y,104px))
                rotate(var(--chip-top-rot,0deg))
                scale(var(--chip-top-scale,1));
-             transform-box: fill-box; transform-origin: center;
-           ">
-          <rect x="80" y="30" width="96" height="22" rx="11" fill="none"
+             transform-box:fill-box; transform-origin:center;">
+          <rect x="0" y="0" width="96" height="22" rx="11" fill="none"
                 style="stroke: var(--chip-stroke)"/>
           <text x="48" y="15" text-anchor="middle">
             <tspan style="fill: var(--chip-label)">market · </tspan>
             <tspan style="fill: var(--chip-value)">3m</tspan>
           </text>
         </g>
-    
-        <!-- LOWER-LEFT chip: default at (28,168) -->
-        <g id="chipLL"
-           style="
+  
+        <!-- LOWER-LEFT chip (center roughly 64,176) -->
+        <g id="chipLL" style="
              transform:
-               translate(calc(var(--chip-ll-x,18px) + var(--chip-dx)),
-                         calc(var(--chip-ll-y,268px) + var(--chip-dy)))
+               translate(var(--chip-ll-x,28px), var(--chip-ll-y,168px))
                rotate(var(--chip-ll-rot,0deg))
                scale(var(--chip-ll-scale,1));
-             transform-box: fill-box; transform-origin: center;
-           ">
+             transform-box:fill-box; transform-origin:center;">
           <rect x="0" y="0" width="96" height="22" rx="11" fill="none"
                 style="stroke: var(--chip-stroke)"/>
           <text x="48" y="15" text-anchor="middle">
