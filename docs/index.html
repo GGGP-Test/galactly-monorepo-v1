@@ -1964,7 +1964,7 @@
   
       /* your phone sizes */
       --tile-title-fs: 1px;
-      --tile-sub-fs: 1px;
+      --tile-sub-fs: 5px;
     }
   }
 
@@ -2151,6 +2151,144 @@
 
 /* Ensure bar thickness follows the knob */
 #growth [data-tile="pipelines"] .pipe-row .bar{ height: var(--pipe-bar-h); margin:0; }
+
+
+
+
+
+
+
+/* ============================================================
+   SECTION 2B — SPACING SSoT (titles, subtitles, SVG/slots)
+   Put this at the VERY END of <style>. It overrides earlier rules.
+   ============================================================ */
+
+/* ---------- Desktop defaults ---------- */
+:root{
+  /* --- TITLE (h4) --- */
+  /* Title padding to tile edges (X/Y). Y applies to top+bottom equally,
+     but you can override sides explicitly with the *_top/bottom/left/right knobs. */
+  --s2b-title-pad-x: 14px;
+  --s2b-title-pad-y: 10px;
+  --s2b-title-pad-top:    var(--s2b-title-pad-y);
+  --s2b-title-pad-bottom: var(--s2b-title-pad-y);
+  --s2b-title-pad-left:   var(--s2b-title-pad-x);
+  --s2b-title-pad-right:  var(--s2b-title-pad-x);
+
+  /* Extra vertical space ABOVE the title (usually 0 because padding handles the edge) */
+  --s2b-title-mt: 0px;
+
+  /* Title → Subtitle vertical spacing (this is the one you tweak most) */
+  --s2b-title-to-sub-gap-y: 10px;
+
+  /* --- SUBTITLE/BODY (<p>) --- */
+  /* Subtitle padding to tile edges (X/Y) + side overrides if needed */
+  --s2b-sub-pad-x: 14px;
+  --s2b-sub-pad-y: 0px;
+  --s2b-sub-pad-top:    var(--s2b-sub-pad-y);
+  --s2b-sub-pad-bottom: var(--s2b-sub-pad-y);
+  --s2b-sub-pad-left:   var(--s2b-sub-pad-x);
+  --s2b-sub-pad-right:  var(--s2b-sub-pad-x);
+
+  /* Subtitle → next “slot” (bars/avatars/SVG/etc.) gap */
+  --s2b-sub-to-slot-gap-y: 10px;
+
+  /* SPECIAL: Signals tile – subtitle → SVG gap (falls back to the generic slot gap) */
+  --s2b-signals-sub-to-svg-gap-y: var(--s2b-sub-to-slot-gap-y);
+
+  /* SPECIAL: Customers tile (tile-specific overrides; fall back to generics when unset) */
+  --s2b-cust-title-to-sub-gap-y: var(--s2b-title-to-sub-gap-y);
+  --s2b-cust-sub-to-rows-gap-y:  var(--s2b-sub-to-slot-gap-y);
+  --s2b-cust-kv-row-gap-y:       10px;  /* between “kv” rows */
+  --s2b-cust-rows-to-avatars-gap-y: 10px;
+}
+
+/* ---------- Tablet overrides (641–900px) ---------- */
+@media (max-width:900px) and (min-width:641px){
+  :root{
+    --s2b-title-pad-x: 12px;
+    --s2b-title-pad-y: 8px;
+    --s2b-title-to-sub-gap-y: 8px;
+
+    --s2b-sub-pad-x: 12px;
+    --s2b-sub-pad-y: 0px;
+    --s2b-sub-to-slot-gap-y: 10px;
+
+    --s2b-signals-sub-to-svg-gap-y: 8px;
+
+    --s2b-cust-kv-row-gap-y: 10px;
+    --s2b-cust-rows-to-avatars-gap-y: 10px;
+  }
+}
+
+/* ---------- Phone overrides (≤640px) ---------- */
+@media (max-width:640px){
+  :root{
+    --s2b-title-pad-x: 12px;
+    --s2b-title-pad-y: 10px; /* explicit Y padding on the title (top & bottom) */
+    --s2b-title-to-sub-gap-y: 6px;
+
+    --s2b-sub-pad-x: 12px;
+    --s2b-sub-pad-y: 0px;
+    --s2b-sub-to-slot-gap-y: 8px;
+
+    --s2b-signals-sub-to-svg-gap-y: 6px;
+
+    --s2b-cust-kv-row-gap-y: 12px;
+    --s2b-cust-rows-to-avatars-gap-y: 12px;
+  }
+}
+
+/* ---------- Bridges (wire knobs to DOM) ---------- */
+
+/* All 2B tiles: Title spacing/padding */
+#growth .tile h4{
+  /* Edge padding, side-specific first (falls back to X/Y knobs) */
+  padding-top:    var(--s2b-title-pad-top);
+  padding-right:  var(--s2b-title-pad-right);
+  padding-bottom: var(--s2b-title-pad-bottom);
+  padding-left:   var(--s2b-title-pad-left);
+
+  /* Margin: top is explicit; bottom is the Title → Subtitle gap */
+  margin-top: var(--s2b-title-mt);
+  margin-bottom: var(--s2b-title-to-sub-gap-y);
+}
+
+/* All 2B tiles: Subtitle/body spacing/padding */
+#growth .tile p{
+  padding-top:    var(--s2b-sub-pad-top);
+  padding-right:  var(--s2b-sub-pad-right);
+  padding-bottom: var(--s2b-sub-pad-bottom);
+  padding-left:   var(--s2b-sub-pad-left);
+
+  /* Sub → next content (bars/avatars/SVG…) */
+  margin-top: 0;
+  margin-bottom: var(--s2b-sub-to-slot-gap-y);
+}
+
+/* Signals tile: Subtitle → SVG gap (uses its dedicated knob) */
+#growth [data-tile="signals"] .rt-sub{
+  margin-bottom: var(--s2b-signals-sub-to-svg-gap-y);
+}
+
+/* Customers tile: finer control over the extra rows/avatars */
+#growth [data-tile="customers"] h4{
+  margin-bottom: var(--s2b-cust-title-to-sub-gap-y);
+}
+#growth [data-tile="customers"] p{
+  margin-bottom: var(--s2b-cust-sub-to-rows-gap-y);
+}
+#growth [data-tile="customers"] .kv + .kv{
+  margin-top: var(--s2b-cust-kv-row-gap-y);
+}
+#growth [data-tile="customers"] .slot-avatars{
+  margin-top: var(--s2b-cust-rows-to-avatars-gap-y);
+}
+
+
+
+
+
 
 
 
