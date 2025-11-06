@@ -2021,10 +2021,13 @@
 
 
 
-/* Pipelines: vertical offset knob */
-#growth [data-tile="pipelines"]{ --pipe-offset-y: 38px; } /* tweak this */
-#growth [data-tile="pipelines"] .pipe-rows{ margin-top: var(--pipe-offset-y); }
-
+  /* Pipelines: vertical offset knob */
+  #growth [data-tile="pipelines"]{ --pipe-offset-y: 38px; } /* tweak this */
+  #growth [data-tile="pipelines"] .pipe-rows{ margin-top: var(--pipe-offset-y); }
+  /* Horizontal (X) padding only for the rows stack */
+  #growth [data-tile="pipelines"] .pipe-rows{
+    padding-inline: var(--pipe-pad-x, 16px); /* ← tweak this */
+  }
 
 
 
