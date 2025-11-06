@@ -1867,8 +1867,167 @@
 
 
 
+  /* === SECTION 2B — Typography & Spacing SSoT (drop-in) === */
+  /* Paste at end of <style> */
+  
+  :root{
+    /* grid */
+    --s2b-cols-desktop: 3;
+    --s2b-cols-tablet: 3;
+    --s2b-cols-phone: 1;
+    --s2b-gap: 24px;
+  
+    /* tile inner padding + alignment */
+    --tile-pad-x: 26px;
+    --tile-pad-y: 26px;
+    --tile-align: left;
+  
+    /* Title (h4) */
+    --tile-title-font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    --tile-title-fs: 22px;        /* desktop */
+    --tile-title-lh: 1.2;
+    --tile-title-wt: 400;         /* medium */
+    --tile-title-track: 0em;
+    --tile-title-color: var(--text);
+    --tile-title-mt: 0px;
+    --tile-title-mb: 10px;
+    --tile-title-pad-x: 14px;
+    --tile-title-pad-y: 14px;
+  
+    /* Subtitle/body (<p>) */
+    --tile-sub-font: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    --tile-sub-fs: 15px;          /* desktop */
+    --tile-sub-lh: 1.45;
+    --tile-sub-wt: 350;           /* demi-book feel */
+    --tile-sub-track: 0em;
+    --tile-sub-color: #a9bfd6;
+    --tile-sub-mt: 0px;
+    --tile-sub-mb: 0px;
+    --tile-sub-pad-x: 14px;
+    --tile-sub-pad-y: 0px;
+  }
+  
+  /* Grid columns */
+  #growth .g-grid{
+    display:grid;
+    grid-template-columns: repeat(var(--s2b-cols-desktop), minmax(0,1fr));
+    gap: var(--s2b-gap);
+  }
+  @media (max-width:1080px){
+    #growth .g-grid{ grid-template-columns: repeat(var(--s2b-cols-tablet), minmax(0,1fr)); }
+  }
+  @media (max-width:640px){
+    #growth .g-grid{ grid-template-columns: repeat(var(--s2b-cols-phone), minmax(0,1fr)); }
+  }
+  
+  /* Tile text only (visuals controlled elsewhere) */
+  #growth .tile{
+    padding: var(--tile-pad-y) var(--tile-pad-x);
+    text-align: var(--tile-align);
+  }
+  #growth .tile h4{
+    margin-top: var(--tile-title-mt);
+    margin-bottom: var(--tile-title-mb);
+    padding: var(--tile-title-pad-y) var(--tile-title-pad-x);
+    font: var(--tile-title-wt) var(--tile-title-fs)/var(--tile-title-lh) var(--tile-title-font);
+    letter-spacing: var(--tile-title-track);
+    color: var(--tile-title-color);
+  }
+  #growth .tile p{
+    margin-top: var(--tile-sub-mt);
+    margin-bottom: var(--tile-sub-mb);
+    padding: var(--tile-sub-pad-y) var(--tile-sub-pad-x);
+    font: var(--tile-sub-wt) var(--tile-sub-fs)/var(--tile-sub-lh) var(--tile-sub-font);
+    letter-spacing: var(--tile-sub-track);
+    color: var(--tile-sub-color);
+  }
+  
+  /* Tablet 641–900px */
+  @media (max-width:900px) and (min-width:641px){
+    :root{
+      --s2b-gap: 20px;
+      --tile-pad-x: 24px;
+      --tile-pad-y: 24px;
+  
+      /* your tablet sizes */
+      --tile-title-fs: 8px;
+      --tile-sub-fs: 12px;
+    }
+  }
+  
+  /* Phone ≤640px */
+  @media (max-width:640px){
+    :root{
+      --s2b-gap: 16px;
+      --tile-pad-x: 22px;
+      --tile-pad-y: 22px;
+  
+      /* your phone sizes */
+      --tile-title-fs: 1px;
+      --tile-sub-fs: 5px;
+    }
+  }
 
-}
+
+  /* === Pipelines tile: label → bar → value (AIacquisition-style) === */
+  #growth [data-tile="pipelines"]{
+    --pipe-label-w: 128px;   /* left column width */
+    --pipe-gap: 16px;        /* column gap */
+    --pipe-bar-h: 10px;       /* bar thickness */
+    --pipe-row-gap: 15px;    /* vertical gap between rows */
+  }
+  
+  /* stack of rows */
+  #growth [data-tile="pipelines"] .pipe-rows{
+    display:flex; flex-direction:column; gap:var(--pipe-row-gap);
+  }
+  
+  /* each row becomes a 3-col grid: [label][bar][value] */
+  #growth [data-tile="pipelines"] .pipe-row{
+    display:grid;
+    grid-template-columns: var(--pipe-label-w) 1fr auto;
+    align-items:center;
+    gap: var(--pipe-gap);
+  }
+  
+  /* left labels (sit OUTSIDE the bar now) */
+  #growth [data-tile="pipelines"] .pipe-row .label{
+    color:#b3c4e9; font-weight:600; white-space:nowrap;
+  }
+  
+  /* reuse your bar styling, but remove external margins for tight rows */
+  #growth [data-tile="pipelines"] .pipe-row .bar{
+    height:var(--pipe-bar-h);
+    margin:0;                     /* important: no extra top/bottom margin */
+  }
+  
+  /* right-side value */
+  #growth [data-tile="pipelines"] .pipe-row .v{
+    font-weight:800; text-align:right; min-width:3ch;
+  }
+  
+  /* phone: put label/value on first line, bar below for breathing room */
+  @media (max-width:640px){
+    #growth [data-tile="pipelines"] .pipe-row{
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "label v"
+        "bar   bar";
+    }
+    #growth [data-tile="pipelines"] .pipe-row .label{ grid-area:label; }
+    #growth [data-tile="pipelines"] .pipe-row .bar{   grid-area:bar; }
+    #growth [data-tile="pipelines"] .pipe-row .v{     grid-area:v; }
+  }
+
+
+
+  /* Pipelines: vertical offset knob */
+  #growth [data-tile="pipelines"]{ --pipe-offset-y: 38px; } /* tweak this */
+  #growth [data-tile="pipelines"] .pipe-rows{ margin-top: var(--pipe-offset-y); }
+  /* Horizontal (X) padding only for the rows stack */
+  #growth [data-tile="pipelines"] .pipe-rows{
+    padding-inline: var(--pipe-pad-x, 16px); /* ← tweak this */
+  }
 
 
 
