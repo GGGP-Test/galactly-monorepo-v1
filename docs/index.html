@@ -2349,7 +2349,42 @@
 #growth .tile { aspect-ratio: auto; }
 
 
+/* Customers mini tiles — isolated, pinned, AIacquisition-style */
+.customers-grid{
+  --ct-size: 60px;         /* desktop size (tweak 56–64 to taste) */
+  --ct-gap: 12px;
+  display:grid;
+  grid-template-columns: repeat(5, var(--ct-size));
+  grid-template-rows: repeat(2, var(--ct-size));
+  gap: var(--ct-gap);
+  margin-top: 12px;
+}
 
+.customers-grid .c-tile{
+  width: var(--ct-size);
+  height: var(--ct-size);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+}
+
+/* photos */
+.customers-grid .c-tile.img{ display:grid; }
+.customers-grid .c-tile.img img{
+  width:100%; height:100%; object-fit:cover; display:block;
+}
+
+/* blanks */
+.customers-grid .c-tile.gray{
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.12);
+}
+
+/* Tablet / Phone scale */
+@media (max-width:900px){ .customers-grid{ --ct-size:54px; --ct-gap:10px; } }
+@media (max-width:640px){ .customers-grid{ --ct-size:48px; --ct-gap:8px; } }
 
 
 
@@ -2727,18 +2762,18 @@
   
               <div class="customers-grid" aria-label="Customer tiles">
                 <!-- 1–5: photos (W shape) -->
-                <img class="tile img" src="/galactly-monorepo-v1/assets/avatars/a1.jpg" alt="">
-                <img class="tile img" src="/galactly-monorepo-v1/assets/avatars/a2.jpg" alt="">
-                <img class="tile img" src="/galactly-monorepo-v1/assets/avatars/a3.jpg" alt="">
-                <img class="tile img" src="/galactly-monorepo-v1/assets/avatars/a4.jpg" alt="">
-                <img class="tile img" src="/galactly-monorepo-v1/assets/avatars/a5.jpg" alt="">
+                <img class="c-tile img" src="/galactly-monorepo-v1/assets/avatars/a1.jpg" alt="">
+                <img class="c-tile img" src="/galactly-monorepo-v1/assets/avatars/a2.jpg" alt="">
+                <img class="c-tile img" src="/galactly-monorepo-v1/assets/avatars/a3.jpg" alt="">
+                <img class="c-tile img" src="/galactly-monorepo-v1/assets/avatars/a4.jpg" alt="">
+                <img class="c-tile img" src="/galactly-monorepo-v1/assets/avatars/a5.jpg" alt="">
               
                 <!-- 6–10: gray tiles (M shape) -->
-                <div class="tile gray" aria-hidden="true"></div>
-                <div class="tile gray" aria-hidden="true"></div>
-                <div class="tile gray" aria-hidden="true"></div>
-                <div class="tile gray" aria-hidden="true"></div>
-                <div class="tile gray" aria-hidden="true"></div>
+                <div class="c-tile gray" aria-hidden="true"></div>
+                <div class="c-tile gray" aria-hidden="true"></div>
+                <div class="c-tile gray" aria-hidden="true"></div>
+                <div class="c-tile gray" aria-hidden="true"></div>
+                <div class="c-tile gray" aria-hidden="true"></div>
               </div>
             </article>
   
