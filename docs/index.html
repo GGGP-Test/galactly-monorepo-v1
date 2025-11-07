@@ -2410,114 +2410,67 @@
   --sa-amber:#ffd58a;   /* faint gold */
 }
 
-/* === SALES AI · tile === */
-.tile--sales-ai .sai-visual{
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 11; /* keeps it neat across breakpoints */
-  display: grid;
-  place-items: center;
-  /* knobs */
-  --sai-scale-desktop: 0.95;
-  --sai-scale-tablet: 0.98;
-  --sai-scale-phone: 1.0;
-}
-.tile--sales-ai .sai-svg{
-  width: calc(100% * var(--sai-scale-desktop));
-  height: auto;
-
-
-.tile--salesai .sa-line{ 
-  fill: none; 
-  stroke: url(#neonSA); 
-  stroke-width: 2; 
-  stroke-linecap: round; 
-  stroke-linejoin: round; 
-  filter: url(#glowSA);
-}
-.tile--salesai .sa-line-faint{ 
-  fill: none; 
-  stroke: url(#neonSA2); 
-  stroke-width: 1.5; 
-  opacity: .55; 
-  filter: url(#glowSA);
-}
-
-.tile--salesai .sa-dot{
-  fill: #0b0f14;                /* dark tile base */
-  stroke: url(#neonSA); 
-  stroke-width: 2; 
-  filter: url(#glowSA);
-  rx: 6; ry: 6;
-}
-
-.tile--salesai .sa-label{
-  font: 500 10px/1.1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  fill: rgba(255,255,255,.85);
-  letter-spacing: .2px;
-  user-select: none;
-}
-
-.tile--salesai .sa-star{
-  fill: none; 
-  stroke: url(#neonSA); 
-  stroke-width: 1.6; 
-  filter: url(#glowSA);
-  opacity: .9;
-}
-
-
-/* === Sales AI knobs: placement + cosmetics === */
-
-/* Map CSS vars → transform on the core group */
-#growth [data-tile="ai"] .salesai-svg #saCore{
-  transform:
-    translate(var(--sa-x,0px), var(--sa-y,0px))
-    rotate(var(--sa-rot,0deg))
-    scale(var(--sa-scale,1));
-  transform-origin: var(--sa-ox,300px) var(--sa-oy,80px);
-  transform-box: fill-box;
-}
-
-/* Let the visual’s inset be variable-driven like RTS */
-#growth [data-tile="ai"] .salesai-visual{
-  inset: var(--sa-inset-t,12px)
-         var(--sa-inset-r,12px)
-         var(--sa-inset-b,48px)
-         var(--sa-inset-l,12px);
-}
-
-/* Cosmetic knobs (optional) */
-#growth [data-tile="ai"] .sa-star{ 
-  stroke-width: var(--sa-star-w,1.6);
-  opacity: var(--sa-star-a,.9);
-}
-#growth [data-tile="ai"] .sa-dot{
-  stroke-width: var(--sa-dot-w,2);
-}
-
-/* ===== Desktop (default): keep your current look ===== */
+/* === Sales AI — Pills Funnel (REPLACE OLD SALES-AI CSS) === */
 #growth [data-tile="ai"]{
-  --sa-x: 0px;
-  --sa-y: 0px;
-  --sa-rot: 0deg;
-  --sa-scale: 1;
-  --sa-inset-t: 12px; --sa-inset-r: 12px; --sa-inset-b: 48px; --sa-inset-l: 12px;
-  --sa-star-w: 1.6; --sa-star-a: .9; --sa-dot-w: 2;
+  /* global knobs */
+  --sai-scale: 1;          /* overall art scale */
+  --sai-tx: 0px;           /* x nudge */
+  --sai-ty: 8px;           /* y nudge */
+  --sai-alpha: .92;        /* overall opacity */
+
+  /* grid + glow */
+  --sai-grid-alpha: .10;   /* mesh strength */
+  --sai-glow: 14;          /* drop-shadow blur px */
+  --sai-stroke: 2.6;       /* stroke thickness (if you ever need it) */
+
+  /* label knobs */
+  --sai-label-fs: 12px;
+  --sai-l1-x: 34%; --sai-l1-y: 66%;
+  --sai-l2-x: 39%; --sai-l2-y: 80%;
+  --sai-l3-x: 44%; --sai-l3-y: 94%;
 }
+
+#growth [data-tile="ai"] .sai-visual{ position: relative; }
+
+#growth [data-tile="ai"] .sai-svg{
+  display:block;
+  width:520px; height:280px;            /* matches viewBox; gets scaled */
+  transform: translate(var(--sai-tx), var(--sai-ty)) scale(var(--sai-scale));
+  opacity: var(--sai-alpha);
+  filter: drop-shadow(0 0 calc(var(--sai-glow)*1px) rgba(64,160,255,.55));
+}
+#growth [data-tile="ai"] .sai-label{
+  position:absolute;
+  font-size: var(--sai-label-fs);
+  font-weight:700;
+  letter-spacing:.2px;
+  color: rgba(173,208,255,.95);
+  text-shadow: 0 0 10px rgba(64,166,255,.35);
+  transform: translate(-50%,-50%);
+  pointer-events:none;
+}
+#growth [data-tile="ai"] .sai-label--top{ left:var(--sai-l1-x); top:var(--sai-l1-y); }
+#growth [data-tile="ai"] .sai-label--mid{ left:var(--sai-l2-x); top:var(--sai-l2-y); }
+#growth [data-tile="ai"] .sai-label--bot{ left:var(--sai-l3-x); top:var(--sai-l3-y); }
 
 /* Tablet */
-@media (max-width: 1024px){
-  .tile--sales-ai .sai-svg{
-    width: calc(100% * var(--sai-scale-tablet));
+@media (max-width:900px){
+  #growth [data-tile="ai"]{
+    --sai-scale:.95; --sai-tx:-2px; --sai-ty:10px;
+    --sai-label-fs:11px;
+    --sai-l1-x:35%; --sai-l1-y:66%;
+    --sai-l2-x:40%; --sai-l2-y:80%;
+    --sai-l3-x:45%; --sai-l3-y:94%;
   }
 }
-
 /* Phone */
-@media (max-width: 640px){
-  .tile--sales-ai .sai-visual{ aspect-ratio: 1 / 1; }
-  .tile--sales-ai .sai-svg{
-    width: calc(100% * var(--sai-scale-phone));
+@media (max-width:640px){
+  #growth [data-tile="ai"]{
+    --sai-scale:.88; --sai-tx:0px; --sai-ty:8px;
+    --sai-label-fs:12px;
+    --sai-l1-x:50%; --sai-l1-y:64%;
+    --sai-l2-x:50%; --sai-l2-y:78%;
+    --sai-l3-x:50%; --sai-l3-y:92%;
   }
 }
 
@@ -3003,104 +2956,62 @@
             </article>
 
             <!-- Sales AI -->
-            <article class="tile ai-sdr" data-tile="ai" data-asset="rings.svg" style="--col:1; --row:1">
-              <h4>Sales AI</h4>
-              <p>Find the right buyer, tailor the pitch, and reach out at the right time, automatically.</p>
-          
-              <!-- SALES AI · visual -->
-              <div class="sai-visual" aria-hidden="true">
-                <svg class="sai-svg" viewBox="0 0 640 420" role="img" aria-label="Sales AI: Prospect → Timing + Channel → Handoff">
+            <article class="tile ai-sdr" data-tile="ai">
+              <h3 class="tile-title">Sales AI</h3>
+              <p class="tile-sub">
+                Find the right buyer, tailor the pitch, and reach out at the right time, automatically.
+              </p>
+            
+              <!-- SALES AI — Pills Funnel (static, neon-blue mesh) -->
+              <div class="sai-visual">
+                <svg class="slot-asset sai-svg" viewBox="0 0 540 280" aria-hidden="true">
                   <defs>
-                    <!-- blue neon gradient -->
-                    <linearGradient id="saiGrad" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stop-color="#5EE1FF"/>
-                      <stop offset="100%" stop-color="#1D6BFF"/>
+                    <!-- bluish neon stroke -->
+                    <linearGradient id="saiBlue" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%"  stop-color="#79B4FF"/>
+                      <stop offset="100%" stop-color="#2C7BFF"/>
                     </linearGradient>
-              
-                    <!-- soft edge fade for the grid -->
-                    <radialGradient id="saiFade" cx="50%" cy="50%" r="70%">
-                      <stop offset="65%" stop-color="white"/>
-                      <stop offset="100%" stop-color="black"/>
+            
+                    <!-- faint grid pattern -->
+                    <pattern id="saiGrid" width="24" height="24" patternUnits="userSpaceOnUse">
+                      <path d="M 24 0 H 0 M 0 24 V 0" fill="none" stroke="#9ccaff" stroke-opacity=".12" />
+                    </pattern>
+            
+                    <!-- edge fade mask (radial) -->
+                    <radialGradient id="saiFade" cx="50%" cy="60%" r="70%">
+                      <stop offset="0%"  stop-color="#fff" stop-opacity="1"/>
+                      <stop offset="100%" stop-color="#000" stop-opacity="0"/>
                     </radialGradient>
                     <mask id="saiEdgeMask">
-                      <rect x="0" y="0" width="640" height="420" fill="url(#saiFade)"/>
+                      <rect width="100%" height="100%" fill="url(#saiFade)"/>
                     </mask>
-              
-                    <!-- neon glow filter -->
-                    <filter id="saiNeon" x="-50%" y="-50%" width="200%" height="200%">
-                      <feGaussianBlur stdDeviation="3" result="blur1"/>
-                      <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="blur2"/>
-                      <feMerge>
-                        <feMergeNode in="blur1"/>
-                        <feMergeNode in="blur2"/>
-                        <feMergeNode in="SourceGraphic"/>
-                      </feMerge>
-                    </filter>
                   </defs>
-              
-                  <!-- faint mesh grid with faded edges -->
-                  <g mask="url(#saiEdgeMask)" opacity="0.25">
-                    <!-- verticals -->
-                    <g>
-                      <!-- 16 columns @ 40px -->
-                      <g stroke="#3B7DFF" stroke-width="1">
-                        <!-- generated lines -->
-                        <line x1="40" y1="40" x2="40" y2="380"/>
-                        <line x1="80" y1="40" x2="80" y2="380"/>
-                        <line x1="120" y1="40" x2="120" y2="380"/>
-                        <line x1="160" y1="40" x2="160" y2="380"/>
-                        <line x1="200" y1="40" x2="200" y2="380"/>
-                        <line x1="240" y1="40" x2="240" y2="380"/>
-                        <line x1="280" y1="40" x2="280" y2="380"/>
-                        <line x1="320" y1="40" x2="320" y2="380"/>
-                        <line x1="360" y1="40" x2="360" y2="380"/>
-                        <line x1="400" y1="40" x2="400" y2="380"/>
-                        <line x1="440" y1="40" x2="440" y2="380"/>
-                        <line x1="480" y1="40" x2="480" y2="380"/>
-                        <line x1="520" y1="40" x2="520" y2="380"/>
-                        <line x1="560" y1="40" x2="560" y2="380"/>
-                        <line x1="600" y1="40" x2="600" y2="380"/>
-                      </g>
-                    </g>
-                    <!-- horizontals -->
-                    <g stroke="#3B7DFF" stroke-width="1">
-                      <line x1="40" y1="80" x2="600" y2="80"/>
-                      <line x1="40" y1="120" x2="600" y2="120"/>
-                      <line x1="40" y1="160" x2="600" y2="160"/>
-                      <line x1="40" y1="200" x2="600" y2="200"/>
-                      <line x1="40" y1="240" x2="600" y2="240"/>
-                      <line x1="40" y1="280" x2="600" y2="280"/>
-                      <line x1="40" y1="320" x2="600" y2="320"/>
-                    </g>
+            
+                  <!-- mesh with edge fade -->
+                  <g mask="url(#saiEdgeMask)">
+                    <rect width="100%" height="100%" fill="url(#saiGrid)"/>
                   </g>
-              
-                  <!-- funnel rails (very faint, to reinforce funnel shape) -->
-                  <path d="M120,60 Q120,210 120,360" stroke="#72B8FF" stroke-opacity="0.18" stroke-width="2" fill="none"/>
-                  <path d="M520,60 Q520,210 520,360" stroke="#72B8FF" stroke-opacity="0.18" stroke-width="2" fill="none"/>
-              
-                  <!-- three stacked neon pills -->
-                  <g filter="url(#saiNeon)" stroke="url(#saiGrad)" fill="none" stroke-width="6" stroke-linejoin="round">
-                    <!-- Top: Prospect Match -->
-                    <rect x="140" y="90" rx="28" ry="28" width="360" height="70"/>
-                    <!-- connector -->
-                    <path d="M320,160 L320,190" stroke="url(#saiGrad)" stroke-width="4"/>
-              
-                    <!-- Middle: Timing + Channel -->
-                    <rect x="180" y="190" rx="24" ry="24" width="280" height="62"/>
-                    <!-- connector -->
-                    <path d="M320,252 L320,276" stroke="url(#saiGrad)" stroke-width="4"/>
-              
-                    <!-- Bottom: Handoff -->
-                    <rect x="230" y="276" rx="22" ry="22" width="180" height="54"/>
+            
+                  <!-- subtle funnel cheeks -->
+                  <g stroke="url(#saiBlue)" stroke-opacity=".22" fill="none">
+                    <path d="M78,70 C78,110 110,108 110,108" />
+                    <path d="M462,70 C462,110 430,108 430,108" />
+                    <path d="M110,210 C78,220 78,250 78,250" />
+                    <path d="M430,210 C462,220 462,250 462,250" />
                   </g>
-              
-                  <!-- labels (subtle, readable) -->
-                  <g font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI" font-size="16" fill="#A9C8FF" fill-opacity="0.9" text-anchor="middle">
-                    <text x="320" y="132">Prospect match</text>
-                    <text x="320" y="228">Timing + channel</text>
-                    <text x="320" y="314">Handoff</text>
+            
+                  <!-- three stacked pills -->
+                  <g fill="none" stroke="url(#saiBlue)" stroke-linejoin="round" stroke-linecap="round">
+                    <rect x="90"  y="72"  width="360" height="46" rx="23" stroke-width="2.6"/>
+                    <rect x="140" y="128" width="260" height="46" rx="23" stroke-width="2.6"/>
+                    <rect x="185" y="184" width="170" height="46" rx="23" stroke-width="2.6"/>
                   </g>
                 </svg>
+            
+                <!-- labels (HTML so they’re easy to position per-breakpoint) -->
+                <div class="sai-label sai-label--top">Prospect match</div>
+                <div class="sai-label sai-label--mid">Timing + channel</div>
+                <div class="sai-label sai-label--bot">Handoff</div>
               </div>
             </article>
   
