@@ -2389,6 +2389,126 @@
 
 
 
+:root{
+  --tile: clamp(44px, 5.2vw, 64px); /* exact small size feel, responsive */
+  --gap:  14px;
+  --radius: 14px;
+  --ring: 2px;
+  --ring-color: #2dd4bf; /* teal highlight like the screenshot */
+  --ghost-border: rgba(255,255,255,.06);
+  --ghost-glow: rgba(0,0,0,.35);
+}
+
+/* Container that fixes total size so tiles stay consistent */
+.wm-stack{
+  position: relative;
+  width: calc(5 * var(--tile) + 4 * var(--gap));
+  height: calc(2 * var(--tile) + 1 * var(--gap));
+}
+
+/* Both layers use the same grid; people layer is stacked on top */
+.grid{
+  display: grid;
+  grid-template-columns: repeat(5, var(--tile));
+  grid-template-rows: repeat(2, var(--tile));
+  gap: var(--gap);
+}
+.wm-people{ position:absolute; inset:0; pointer-events:none; }
+
+/* Ghost tiles (the “M” layer) */
+.wm-ghost .tile{
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+  border: 1px solid var(--ghost-border);
+  box-shadow:
+    inset 0 8px 30px var(--ghost-glow),
+    inset 0 -1px 0 rgba(255,255,255,.02);
+}
+
+/* Avatars: tight, round, slightly inset */
+.wm-people img{
+  width:100%; height:100%;
+  object-fit:cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--ghost-border);
+  box-shadow: 0 6px 16px rgba(0,0,0,.35);
+  filter: grayscale(100%) contrast(.95) brightness(.9); /* default = gray */
+}
+
+/* Center avatar is colored + ring */
+.wm-people > :nth-child(3){
+  filter: none;
+  box-shadow:
+    0 0 0 var(--ring) var(--ring-color),
+    0 10px 24px rgba(0,0,0,.45);
+}
+
+/* --- Exact positions --- */
+/* W shape for people: 1,2,3,4,5 across columns, rows 1-2-1-2-1 */
+.wm-people > :nth-child(1){ grid-column:1; grid-row:1; }
+.wm-people > :nth-child(2){ grid-column:2; grid-row:2; }
+.wm-people > :nth-child(3){ grid-column:3; grid-row:1; } /* colored middle */
+.wm-people > :nth-child(4){ grid-column:4; grid-row:2; }
+.wm-people > :nth-child(5){ grid-column:5; grid-row:1; }
+
+/* M shape for ghosts: 1-2-3-4-5 across columns, rows 2-1-2-1-2 */
+.wm-ghost > :nth-child(1){ grid-column:1; grid-row:2; }
+.wm-ghost > :nth-child(2){ grid-column:2; grid-row:1; }
+.wm-ghost > :nth-child(3){ grid-column:3; grid-row:2; }
+.wm-ghost > :nth-child(4){ grid-column:4; grid-row:1; }
+.wm-ghost > :nth-child(5){ grid-column:5; grid-row:2; }
+
+@media (max-width: 600px){
+  :root{ --tile: clamp(40px, 7vw, 56px); --gap: 12px; --radius: 12px; }
+}
+
+
+/* Customers → two-photo layout (scoped) */
+#growth [data-tile="customers"] .customers-grid{
+  /* sizes tuned for the vibe of your page; tweak to taste */
+  --ct-size: 72px;   /* desktop */
+  --ct-gap:  12px;
+
+  display: grid;
+  grid-template-columns: repeat(2, var(--ct-size));
+  grid-template-rows: var(--ct-size);
+  gap: var(--ct-gap);
+  margin-top: 12px; /* keep breathing room under the text */
+}
+
+/* Hide everything after the first two pictures */
+#growth [data-tile="customers"] .customers-grid .c-tile:nth-child(n+3){
+  display: none !important;
+}
+
+/* Keep the same polished look on the two tiles */
+#growth [data-tile="customers"] .customers-grid .c-tile{
+  border-radius: 12px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+}
+
+/* Tablet */
+@media (max-width:900px){
+  #growth [data-tile="customers"] .customers-grid{
+    --ct-size: 60px;
+    --ct-gap: 10px;
+  }
+}
+
+/* Phone */
+@media (max-width:640px){
+  #growth [data-tile="customers"] .customers-grid{
+    --ct-size: 54px;
+    --ct-gap: 8px;
+  }
+}
+
+
+
+
+
 
 
 
