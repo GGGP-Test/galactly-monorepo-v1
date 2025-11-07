@@ -2464,6 +2464,66 @@
 }
 
 
+/* === Sales AI knobs: placement + cosmetics === */
+
+/* Map CSS vars → transform on the core group */
+#growth [data-tile="ai"] .salesai-svg #saCore{
+  transform:
+    translate(var(--sa-x,0px), var(--sa-y,0px))
+    rotate(var(--sa-rot,0deg))
+    scale(var(--sa-scale,1));
+  transform-origin: var(--sa-ox,300px) var(--sa-oy,80px);
+  transform-box: fill-box;
+}
+
+/* Let the visual’s inset be variable-driven like RTS */
+#growth [data-tile="ai"] .salesai-visual{
+  inset: var(--sa-inset-t,12px)
+         var(--sa-inset-r,12px)
+         var(--sa-inset-b,48px)
+         var(--sa-inset-l,12px);
+}
+
+/* Cosmetic knobs (optional) */
+#growth [data-tile="ai"] .sa-star{ 
+  stroke-width: var(--sa-star-w,1.6);
+  opacity: var(--sa-star-a,.9);
+}
+#growth [data-tile="ai"] .sa-dot{
+  stroke-width: var(--sa-dot-w,2);
+}
+
+/* ===== Desktop (default): keep your current look ===== */
+#growth [data-tile="ai"]{
+  --sa-x: 0px;
+  --sa-y: 0px;
+  --sa-rot: 0deg;
+  --sa-scale: 1;
+  --sa-inset-t: 12px; --sa-inset-r: 12px; --sa-inset-b: 48px; --sa-inset-l: 12px;
+  --sa-star-w: 1.6; --sa-star-a: .9; --sa-dot-w: 2;
+}
+
+/* ===== Tablet (<=900px): slightly smaller art, tighter bottom ===== */
+@media (max-width:900px){
+  #growth [data-tile="ai"]{
+    --sa-scale: .95;
+    --sa-y: -2px;
+    --sa-inset-b: 40px;
+  }
+}
+
+/* ===== Phone (<=640px): scale down + recentre to avoid overflow ===== */
+@media (max-width:640px){
+  #growth [data-tile="ai"]{
+    --sa-scale: .86;
+    --sa-y: 2px;
+    --sa-inset-b: 40px;
+    /* you can also tweak origin if needed */
+    /* --sa-ox: 300px; --sa-oy: 78px; */
+  }
+}
+
+
 
 
 
@@ -2950,47 +3010,33 @@
               <p>Find the right buyer, tailor the pitch, and reach out at the right time, automatically.</p>
           
               <div class="salesai-visual tile--salesai">
-                <svg class="salesai-svg" viewBox="0 0 600 160" aria-hidden="true" role="presentation">
-                  <defs>
-                    <linearGradient id="neonSA" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%"  stop-color="#6bdcff"/>
-                      <stop offset="100%" stop-color="#ffd58a"/>
-                    </linearGradient>
-                    <linearGradient id="neonSA2" x1="100%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%"  stop-color="#ffd58a"/>
-                      <stop offset="100%" stop-color="#6bdcff"/>
-                    </linearGradient>
-                    <filter id="glowSA">
-                      <feGaussianBlur stdDeviation="3" result="blur"/>
-                      <feMerge>
-                        <feMergeNode in="blur"/>
-                        <feMergeNode in="SourceGraphic"/>
-                      </feMerge>
-                    </filter>
-                    <marker id="arrowSA" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
-                      <path d="M0,0 L10,5 L0,10 Z" fill="url(#neonSA)"/>
-                    </marker>
-                  </defs>
+                <svg class="salesai-svg" viewBox="0 0 600 160" aria-hidden="true" role="presentation"
+                     style="
+                       /* defaults; tweak per breakpoint in CSS */
+                       --sa-x: 0px;         /* translateX */
+                       --sa-y: 0px;         /* translateY */
+                       --sa-rot: 0deg;      /* rotation */
+                       --sa-scale: 1;       /* scale */
+                       --sa-ox: 300px;      /* transform origin X (viewBox coords) */
+                       --sa-oy: 80px;       /* transform origin Y */
+                     ">
+                  <defs>…(keep your existing <defs>)…</defs>
               
-                  <!-- two braided flows -->
-                  <path class="sa-line-faint" d="M30,52 C140,18 220,120 300,92 S480,10 570,70" />
-                  <path class="sa-line-faint" d="M30,118 C140,150 220,40 300,66 S480,150 570,90" marker-end="url(#arrowSA)"/>
+                  <!-- wrap ALL existing paths/rects/etc inside this group -->
+                  <g id="saCore">
+                    <!-- two braided flows -->
+                    <path class="sa-line-faint" d="M30,52 C140,18 220,120 300,92 S480,10 570,70" />
+                    <path class="sa-line-faint" d="M30,118 C140,150 220,40 300,66 S480,150 570,90" marker-end="url(#arrowSA)"/>
               
-                  <!-- checkpoints -->
-                  <rect class="sa-dot" x="70"  y="44"  width="14" height="14" rx="5"/>
-                  <rect class="sa-dot" x="190" y="110" width="14" height="14" rx="5"/>
-                  <rect class="sa-dot" x="310" y="60"  width="14" height="14" rx="5"/>
-                  <rect class="sa-dot" x="430" y="22"  width="14" height="14" rx="5"/>
+                    <!-- checkpoints -->
+                    <rect class="sa-dot" x="70"  y="44"  width="14" height="14" rx="5"/>
+                    <rect class="sa-dot" x="190" y="110" width="14" height="14" rx="5"/>
+                    <rect class="sa-dot" x="310" y="60"  width="14" height="14" rx="5"/>
+                    <rect class="sa-dot" x="430" y="22"  width="14" height="14" rx="5"/>
               
-                  <!-- convergence star -->
-                  <path class="sa-star" d="M510,86 l6,-10 l6,10 l11,3 l-11,3 l-6,10 l-6,-10 l-11,-3 z"/>
-              
-                  <!-- minimal labels -->
-                  <text class="sa-label" x="62"  y="34">Prospect</text>
-                  <text class="sa-label" x="182" y="136">Match</text>
-                  <text class="sa-label" x="302" y="86">Personalize</text>
-                  <text class="sa-label" x="422" y="20">Timing</text>
-                  <text class="sa-label" x="528" y="102">Connect</text>
+                    <!-- convergence star -->
+                    <path class="sa-star" d="M510,86 l6,-10 l6,10 l11,3 l-11,3 l-6,10 l-6,-10 l-11,-3 z"/>
+                  </g>
                 </svg>
               </div>
             </article>
