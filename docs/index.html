@@ -2947,7 +2947,7 @@
             <!-- Sales AI -->
             <article class="tile ai-sdr" data-tile="ai" data-asset="rings.svg" style="--col:1; --row:1">
               <h4>Sales AI</h4>
-              <p>Find the right buyer, tailor the pitch, and reaches out at the right time—automatically.</p>
+              <p>Find the right buyer, tailor the pitch, and reach out at the right time, automatically.</p>
           
               <div class="salesai-visual tile--salesai">
                 <svg class="salesai-svg" viewBox="0 0 600 160" aria-hidden="true" role="presentation">
@@ -2956,9 +2956,9 @@
                       <stop offset="0%"  stop-color="#6bdcff"/>
                       <stop offset="100%" stop-color="#ffd58a"/>
                     </linearGradient>
-                    <linearGradient id="neonSA2" x1="0%" y1="100%" x2="100%" y2="0%">
-                      <stop offset="0%"  stop-color="#6bdcff"/>
-                      <stop offset="100%" stop-color="#ffd58a"/>
+                    <linearGradient id="neonSA2" x1="100%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%"  stop-color="#ffd58a"/>
+                      <stop offset="100%" stop-color="#6bdcff"/>
                     </linearGradient>
                     <filter id="glowSA">
                       <feGaussianBlur stdDeviation="3" result="blur"/>
@@ -2972,22 +2972,25 @@
                     </marker>
                   </defs>
               
-                  <!-- main journey curve -->
-                  <path class="sa-line" d="M30,110 C120,30 240,30 300,85 S480,140 570,60" marker-end="url(#arrowSA)"/>
+                  <!-- two braided flows -->
+                  <path class="sa-line-faint" d="M30,52 C140,18 220,120 300,92 S480,10 570,70" />
+                  <path class="sa-line-faint" d="M30,118 C140,150 220,40 300,66 S480,150 570,90" marker-end="url(#arrowSA)"/>
               
-                  <!-- stops (top/bottom rhythm for movement) -->
-                  <rect class="sa-dot" x="48"  y="96"  width="16" height="16" rx="6"/>
-                  <rect class="sa-dot" x="168" y="48"  width="16" height="16" rx="6"/>
-                  <rect class="sa-dot" x="288" y="78"  width="16" height="16" rx="6"/>
-                  <rect class="sa-dot" x="408" y="112" width="16" height="16" rx="6"/>
-                  <rect class="sa-dot" x="528" y="52"  width="16" height="16" rx="6"/>
+                  <!-- checkpoints -->
+                  <rect class="sa-dot" x="70"  y="44"  width="14" height="14" rx="5"/>
+                  <rect class="sa-dot" x="190" y="110" width="14" height="14" rx="5"/>
+                  <rect class="sa-dot" x="310" y="60"  width="14" height="14" rx="5"/>
+                  <rect class="sa-dot" x="430" y="22"  width="14" height="14" rx="5"/>
               
-                  <!-- labels -->
-                  <text class="sa-label" x="56"  y="128">Prospect</text>
-                  <text class="sa-label" x="176" y="44">Match</text>
-                  <text class="sa-label" x="296" y="106">Timing</text>
-                  <text class="sa-label" x="416" y="138">Channel</text>
-                  <text class="sa-label" x="536" y="46">Offer</text>
+                  <!-- convergence star -->
+                  <path class="sa-star" d="M510,86 l6,-10 l6,10 l11,3 l-11,3 l-6,10 l-6,-10 l-11,-3 z"/>
+              
+                  <!-- minimal labels -->
+                  <text class="sa-label" x="62"  y="34">Prospect</text>
+                  <text class="sa-label" x="182" y="136">Match</text>
+                  <text class="sa-label" x="302" y="86">Personalize</text>
+                  <text class="sa-label" x="422" y="20">Timing</text>
+                  <text class="sa-label" x="528" y="102">Connect</text>
                 </svg>
               </div>
             </article>
