@@ -2389,7 +2389,18 @@
 
 
 
+/* Force 2-row zig-zag (W) layout across 5 columns */
+.customers-grid .c-tile:nth-child(1)  { grid-column:1; grid-row:1; }
+.customers-grid .c-tile:nth-child(2)  { grid-column:2; grid-row:2; }
+.customers-grid .c-tile:nth-child(3)  { grid-column:3; grid-row:1; }
+.customers-grid .c-tile:nth-child(4)  { grid-column:4; grid-row:2; }
+.customers-grid .c-tile:nth-child(5)  { grid-column:5; grid-row:1; }
 
+.customers-grid .c-tile:nth-child(6)  { grid-column:1; grid-row:2; }
+.customers-grid .c-tile:nth-child(7)  { grid-column:2; grid-row:1; }
+.customers-grid .c-tile:nth-child(8)  { grid-column:3; grid-row:2; }
+.customers-grid .c-tile:nth-child(9)  { grid-column:4; grid-row:1; }
+.customers-grid .c-tile:nth-child(10) { grid-column:5; grid-row:2; }
 
 
 
@@ -2762,9 +2773,9 @@
   
               <div class="customers-grid" aria-label="Customer tiles">
                 <!-- 1–5: photos (W shape) -->
-                <img class="c-tile img" src="/galactly-monorepo-v1/assets/avatars/a1.jpg" alt="">
-                <img class="c-tile img" src="/galactly-monorepo-v1/assets/avatars/a2.jpg" alt="">
                 <img class="c-tile img" src="/galactly-monorepo-v1/assets/avatars/a3.jpg" alt="">
+                <img class="c-tile img" src="/galactly-monorepo-v1/assets/avatars/a2.jpg" alt="">
+                <img class="c-tile img" src="/galactly-monorepo-v1/assets/avatars/a1.jpg" alt="">
                 <img class="c-tile img" src="/galactly-monorepo-v1/assets/avatars/a4.jpg" alt="">
                 <img class="c-tile img" src="/galactly-monorepo-v1/assets/avatars/a5.jpg" alt="">
               
