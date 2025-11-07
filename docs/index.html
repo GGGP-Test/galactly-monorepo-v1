@@ -2404,7 +2404,64 @@
 
 
 
+/* ---- SALES AI VISUAL (shared styles) ---- */
+:root{
+  --sa-cyan: #6bdcff;   /* neon-cyan */
+  --sa-amber:#ffd58a;   /* faint gold */
+}
 
+.tile--salesai .salesai-visual{ 
+  position: absolute; 
+  inset: 12px 12px 48px 12px;   /* mimic your RT Signals inset */
+  pointer-events: none; 
+}
+
+.tile--salesai .salesai-svg{
+  width: 100%; 
+  height: 100%; 
+  display: block; 
+  mix-blend-mode: screen;   /* same embedded glow vibe */
+  opacity: 0.95;
+}
+
+.tile--salesai .sa-line{ 
+  fill: none; 
+  stroke: url(#neonSA); 
+  stroke-width: 2; 
+  stroke-linecap: round; 
+  stroke-linejoin: round; 
+  filter: url(#glowSA);
+}
+.tile--salesai .sa-line-faint{ 
+  fill: none; 
+  stroke: url(#neonSA2); 
+  stroke-width: 1.5; 
+  opacity: .55; 
+  filter: url(#glowSA);
+}
+
+.tile--salesai .sa-dot{
+  fill: #0b0f14;                /* dark tile base */
+  stroke: url(#neonSA); 
+  stroke-width: 2; 
+  filter: url(#glowSA);
+  rx: 6; ry: 6;
+}
+
+.tile--salesai .sa-label{
+  font: 500 10px/1.1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  fill: rgba(255,255,255,.85);
+  letter-spacing: .2px;
+  user-select: none;
+}
+
+.tile--salesai .sa-star{
+  fill: none; 
+  stroke: url(#neonSA); 
+  stroke-width: 1.6; 
+  filter: url(#glowSA);
+  opacity: .9;
+}
 
 
 
@@ -2890,8 +2947,49 @@
             <!-- Sales AI -->
             <article class="tile ai-sdr" data-tile="ai" data-asset="rings.svg" style="--col:1; --row:1">
               <h4>Sales AI</h4>
-              <p>Convert hot buyers into booked calls—auto snippets, follow-ups, and hand-offs.</p>
-
+              <p>Find the right buyer, tailor the pitch, and reaches out at the right time—automatically.</p>
+          
+              <div class="salesai-visual tile--salesai">
+                <svg class="salesai-svg" viewBox="0 0 600 160" aria-hidden="true" role="presentation">
+                  <defs>
+                    <linearGradient id="neonSA" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%"  stop-color="#6bdcff"/>
+                      <stop offset="100%" stop-color="#ffd58a"/>
+                    </linearGradient>
+                    <linearGradient id="neonSA2" x1="0%" y1="100%" x2="100%" y2="0%">
+                      <stop offset="0%"  stop-color="#6bdcff"/>
+                      <stop offset="100%" stop-color="#ffd58a"/>
+                    </linearGradient>
+                    <filter id="glowSA">
+                      <feGaussianBlur stdDeviation="3" result="blur"/>
+                      <feMerge>
+                        <feMergeNode in="blur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
+                    <marker id="arrowSA" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                      <path d="M0,0 L10,5 L0,10 Z" fill="url(#neonSA)"/>
+                    </marker>
+                  </defs>
+              
+                  <!-- main journey curve -->
+                  <path class="sa-line" d="M30,110 C120,30 240,30 300,85 S480,140 570,60" marker-end="url(#arrowSA)"/>
+              
+                  <!-- stops (top/bottom rhythm for movement) -->
+                  <rect class="sa-dot" x="48"  y="96"  width="16" height="16" rx="6"/>
+                  <rect class="sa-dot" x="168" y="48"  width="16" height="16" rx="6"/>
+                  <rect class="sa-dot" x="288" y="78"  width="16" height="16" rx="6"/>
+                  <rect class="sa-dot" x="408" y="112" width="16" height="16" rx="6"/>
+                  <rect class="sa-dot" x="528" y="52"  width="16" height="16" rx="6"/>
+              
+                  <!-- labels -->
+                  <text class="sa-label" x="56"  y="128">Prospect</text>
+                  <text class="sa-label" x="176" y="44">Match</text>
+                  <text class="sa-label" x="296" y="106">Timing</text>
+                  <text class="sa-label" x="416" y="138">Channel</text>
+                  <text class="sa-label" x="536" y="46">Offer</text>
+                </svg>
+              </div>
             </article>
   
             <!-- Quotes -->
