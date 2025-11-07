@@ -1381,8 +1381,8 @@
   @media (max-width:900px){ #growth{ padding-block:120px; } }
   @media (max-width:640px){ #growth{ padding-block:36px; } }
   #growth .growth-wrap{ padding-inline:64px; }
-  @media (max-width:900px){ #growth .growth-wrap{ padding-inline:40px; } }
-  @media (max-width:640px){ #growth .growth-wrap{ padding-inline:20px; } }
+  @media (max-width:900px){ #growth .growth-wrap{ padding-inline:15px; } }
+  @media (max-width:640px){ #growth .growth-wrap{ padding-inline:10px; } }
   
   /* Grid */
   #growth .g-grid{
@@ -3010,33 +3010,37 @@
               <p>Find the right buyer, tailor the pitch, and reach out at the right time, automatically.</p>
           
               <div class="salesai-visual tile--salesai">
-                <svg class="salesai-svg" viewBox="0 0 600 160" aria-hidden="true" role="presentation"
-                     style="
-                       /* defaults; tweak per breakpoint in CSS */
-                       --sa-x: 0px;         /* translateX */
-                       --sa-y: 0px;         /* translateY */
-                       --sa-rot: 0deg;      /* rotation */
-                       --sa-scale: 1;       /* scale */
-                       --sa-ox: 300px;      /* transform origin X (viewBox coords) */
-                       --sa-oy: 80px;       /* transform origin Y */
-                     ">
-                  <defs>…(keep your existing <defs>)…</defs>
-              
-                  <!-- wrap ALL existing paths/rects/etc inside this group -->
-                  <g id="saCore">
-                    <!-- two braided flows -->
-                    <path class="sa-line-faint" d="M30,52 C140,18 220,120 300,92 S480,10 570,70" />
-                    <path class="sa-line-faint" d="M30,118 C140,150 220,40 300,66 S480,150 570,90" marker-end="url(#arrowSA)"/>
-              
-                    <!-- checkpoints -->
-                    <rect class="sa-dot" x="70"  y="44"  width="14" height="14" rx="5"/>
-                    <rect class="sa-dot" x="190" y="110" width="14" height="14" rx="5"/>
-                    <rect class="sa-dot" x="310" y="60"  width="14" height="14" rx="5"/>
-                    <rect class="sa-dot" x="430" y="22"  width="14" height="14" rx="5"/>
-              
-                    <!-- convergence star -->
-                    <path class="sa-star" d="M510,86 l6,-10 l6,10 l11,3 l-11,3 l-6,10 l-6,-10 l-11,-3 z"/>
-                  </g>
+                <svg viewBox="0 0 600 220" width="100%" aria-label="Sales AI journey – conveyor" role="img">
+                  <defs>
+                    <linearGradient id="neon" x1="0" x2="1" y1="0" y2="0">
+                      <stop offset="0"  stop-color="#7EC3FF"/>
+                      <stop offset="1"  stop-color="#2A7FF0"/>
+                    </linearGradient>
+                    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur stdDeviation="6" result="b"/>
+                      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <style>
+                      .line { stroke:url(#neon); stroke-width:14; stroke-linecap:round; fill:none; filter:url(#glow); }
+                      .dot  { fill:url(#neon); filter:url(#glow); }
+                      .lab  { font: 500 14px/1.2 Inter, system-ui; fill:#a9bfd6; text-anchor:middle; }
+                    </style>
+                  </defs>
+                
+                  <!-- straight rounded track -->
+                  <path class="line" d="M60,140 H540" />
+                
+                  <!-- stops -->
+                  <circle class="dot" cx="120" cy="140" r="6"/>
+                  <circle class="dot" cx="240" cy="140" r="6"/>
+                  <circle class="dot" cx="360" cy="140" r="6"/>
+                  <circle class="dot" cx="480" cy="140" r="6"/>
+                
+                  <!-- labels -->
+                  <text class="lab" x="120" y="105">Prospect</text>
+                  <text class="lab" x="240" y="105">Match USPs</text>
+                  <text class="lab" x="360" y="105">Right Time + Channel</text>
+                  <text class="lab" x="480" y="105">Pitch → Hand-off</text>
                 </svg>
               </div>
             </article>
