@@ -3097,79 +3097,52 @@
               </p>
             
               <div class="sales-ai-svg-wrap">
-                <svg class="salesai-svg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                <svg class="salesai-svg" viewBox="0 0 1200 420" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
                   <defs>
-                    <linearGradient id="ai_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%"  stop-color="#59A7FF"/><stop offset="50%" stop-color="#8FD3FF"/><stop offset="100%" stop-color="#59A7FF"/>
+                    <linearGradient id="rail" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%"  stop-color="#5AA8FF" stop-opacity=".35"/>
+                      <stop offset="50%" stop-color="#95D6FF" stop-opacity=".9"/>
+                      <stop offset="100%" stop-color="#5AA8FF" stop-opacity=".35"/>
                     </linearGradient>
-                    <linearGradient id="ai_connector" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%"  stop-color="#59A7FF" stop-opacity=".55"/>
-                      <stop offset="50%" stop-color="#8FD3FF" stop-opacity=".95"/>
-                      <stop offset="100%" stop-color="#59A7FF" stop-opacity=".55"/>
+                    <linearGradient id="cap" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%"  stop-color="#5AA8FF"/><stop offset="50%" stop-color="#95D6FF"/><stop offset="100%" stop-color="#5AA8FF"/>
                     </linearGradient>
-                    <filter id="ai_glow" x="-40%" y="-40%" width="180%" height="180%">
-                      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
-                      <feColorMatrix type="matrix" values="0 0 0 0 0.35  0 0 0 0 0.60  0 0 0 0 1.00  0 0 0 0.0 0" result="tint"/>
+                    <filter id="g" x="-40%" y="-40%" width="180%" height="180%">
+                      <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="b"/>
+                      <feColorMatrix type="matrix" values="0 0 0 0 0.33  0 0 0 0 0.58  0 0 0 0 1.00  0 0 0 0.0 0" result="tint"/>
                       <feMerge><feMergeNode in="tint"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
                     <style>
-                      .label{font:700 16px/1 Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill:#EAF4FF; letter-spacing:.2px; dominant-baseline:middle; text-anchor:middle}
-                      .conn path{vector-effect:non-scaling-stroke}
+                      .t{font:700 16px/1 Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill:#EAF4FF; dominant-baseline:middle; text-anchor:middle}
                     </style>
                   </defs>
               
-                  <!-- Connectors under chips -->
-                  <g class="conn" fill="none" stroke="url(#ai_connector)" stroke-linecap="round" filter="url(#ai_glow)" opacity=".95" stroke-width="6">
-                    <!-- TL hook → row 1 left -->
-                    <path d="M120 214 V236 C120 246 130 254 142 254 H170"/>
-                    <!-- row1 right → down → row2 right -->
-                    <path d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330 C1110 342 1102 350 1090 350 H900"/>
-                    <!-- row2 left → down → row3 left -->
-                    <path d="M260 360 H200 C188 360 180 368 180 380 V436 C180 448 188 456 200 456 H360"/>
-                    <!-- exit →
-                    -->
-                    <path d="M780 456 H1060"/>
+                  <!-- conveyor rail -->
+                  <g filter="url(#g)">
+                    <path d="M120 210 H1080" stroke="url(#rail)" stroke-width="10" stroke-linecap="round" fill="none"/>
+                    <path d="M120 260 H1080" stroke="url(#rail)" stroke-width="10" stroke-linecap="round" fill="none" opacity=".55"/>
                   </g>
               
-                  <!-- ROW 1 (outer translucent + rim + inner solid) -->
-                  <g filter="url(#ai_glow)">
-                    <rect x="230" y="-200" width="720" height="190" rx="30" fill="rgba(18,35,64,.30)"/>
-                    <rect x="230" y="-200" width="720" height="190" rx="30" fill="none" stroke="url(#ai_stroke)" stroke-width="3"/>
-                    <rect x="230" y="-200" width="720" height="190" rx="30" fill="none" stroke="#fff" stroke-opacity=".14"/>
-                    <rect x="250" y="-182" width="680" height="170" rx="14" fill="rgba(16,24,40,.92)"/>
-    
-                    <!-- tick -->
-                    <g transform="translate(230 254)">
-                      <rect x="-18" y="-14" width="28" height="28" rx="9" fill="rgba(20,36,64,.75)" stroke="url(#ai_stroke)" stroke-width="1.5"/>
-                      <path d="M -7 0 l 6 6 l 12 -14" fill="none" stroke="#CFE8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </g>
-                    <text class="label" x="590" y="-100">Find Buyer</text>
+                  <!-- capsule 1 -->
+                  <g filter="url(#g)">
+                    <rect x="220" y="198" width="280" height="74" rx="36" fill="rgba(16,24,40,.92)" stroke="url(#cap)" stroke-width="3"/>
+                    <text class="t" x="360" y="235">Find Buyer</text>
+                    <path d="M120 235 H220" stroke="url(#cap)" stroke-width="6" stroke-linecap="round"/>
                   </g>
               
-                  <!-- ROW 2 -->
-                  <g filter="url(#ai_glow)">
-                    <rect x="260" y="50" width="640" height="190" rx="30" fill="rgba(18,35,64,.30)"/>
-                    <rect x="260" y="50" width="640" height="190" rx="30" fill="none" stroke="url(#ai_stroke)" stroke-width="3"/>
-                    <rect x="260" y="50" width="640" height="190" rx="30" fill="none" stroke="#fff" stroke-opacity=".14"/>
-                    <rect x="280" y="60" width="600" height="170" rx="14" fill="rgba(16,24,40,.92)"/>
-                    <g transform="translate(320 360)">
-                      <rect x="-18" y="-14" width="28" height="28" rx="9" fill="rgba(20,36,64,.75)" stroke="url(#ai_stroke)" stroke-width="1.5"/>
-                      <path d="M -7 0 l 6 6 l 12 -14" fill="none" stroke="#CFE8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </g>
-                    <text class="label" x="580" y="360">Timing · Channel · Pitch</text>
+                  <!-- capsule 2 -->
+                  <g filter="url(#g)">
+                    <rect x="490" y="198" width="280" height="74" rx="36" fill="rgba(16,24,40,.92)" stroke="url(#cap)" stroke-width="3"/>
+                    <text class="t" x="630" y="235">Timing · Channel · Pitch</text>
+                    <path d="M500 235 H490" stroke="url(#cap)" stroke-width="6" stroke-linecap="round"/>
+                    <path d="M770 235 H780" stroke="url(#cap)" stroke-width="6" stroke-linecap="round"/>
                   </g>
               
-                  <!-- ROW 3 -->
-                  <g filter="url(#ai_glow)">
-                    <rect x="360" y="412" width="420" height="88" rx="44" fill="rgba(18,35,64,.30)"/>
-                    <rect x="360" y="412" width="420" height="88" rx="44" fill="none" stroke="url(#ai_stroke)" stroke-width="3"/>
-                    <rect x="360" y="412" width="420" height="88" rx="44" fill="none" stroke="#fff" stroke-opacity=".14"/>
-                    <rect x="378" y="428" width="384" height="56" rx="28" fill="rgba(16,24,40,.92)"/>
-                    <g transform="translate(420 456)">
-                      <rect x="-18" y="-14" width="28" height="28" rx="9" fill="rgba(20,36,64,.75)" stroke="url(#ai_stroke)" stroke-width="1.5"/>
-                      <path d="M -7 0 l 6 6 l 12 -14" fill="none" stroke="#CFE8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </g>
-                    <text class="label" x="570" y="456">Handoff / Close</text>
+                  <!-- capsule 3 -->
+                  <g filter="url(#g)">
+                    <rect x="760" y="198" width="260" height="74" rx="36" fill="rgba(16,24,40,.92)" stroke="url(#cap)" stroke-width="3"/>
+                    <text class="t" x="890" y="235">Handoff / Close</text>
+                    <path d="M1020 235 H1080" stroke="url(#cap)" stroke-width="6" stroke-linecap="round"/>
                   </g>
                 </svg>
               </div>
