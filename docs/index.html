@@ -2406,71 +2406,54 @@
 
 /* === SALES AI — chips + inner pills + mesh + connectors (scoped) === */
 #growth [data-tile="ai"]{
-  /* Color system */
-  --ai-stroke-1: #59A7FF;
-  --ai-stroke-2: #8FD3FF;
-  --ai-chip-outer: rgba(18,35,64,.35); /* outer chip surface */
-  --ai-pill-fill: rgba(12,18,28,.92);  /* solid inner pill (readable) */
-  --ai-text: #EAF4FF;
+  /* Colors */
+  --ai-stroke-1:#59A7FF; --ai-stroke-2:#8FD3FF;
+  --ai-chip-outer:rgba(18,35,64,.35);
+  --ai-pill-fill:rgba(12,18,28,.92);
+  --ai-text:#EAF4FF;
 
   /* Mesh */
-  --ai-mesh-opacity: .35;  /* 0 → off, .25–.45 subtle */
+  --ai-mesh-opacity:.35;
 
-  /* Global placement */
-  --ai-scale-d: 1;  --ai-x-d: 0px;  --ai-y-d: 6px;
-
-  /* Per-chip nudges (desktop) */
-  --chip1-dx: 0px; --chip1-dy: 0px; --chip1-scale: 1;
-  --chip2-dx: 0px; --chip2-dy: 0px; --chip2-scale: 1;
-  --chip3-dx: 0px; --chip3-dy: 0px; --chip3-scale: 1;
-
-  /* Connector look */
-  --ai-conn-w: 6;          /* stroke width */
-  --ai-conn-alpha: 1;      /* 0–1 */
-  --ai-corner-r: 12;       /* connector corner radius (px) */
+  /* Placement */
+  --ai-scale-d:1;  --ai-x-d:0px;  --ai-y-d:6px;
 
   /* Text */
-  --ai-text-fs: 22px;      /* readable labels */
-  --ai-text-wt: 650;
+  --ai-text-fs:22px; --ai-text-wt:650;
+
+  /* Connector look */
+  --ai-conn-w:6; --ai-conn-alpha:1;
 }
 
 #growth [data-tile="ai"] .salesai-svg{
   width:100%; height:360px; display:block;
-  transform: translate(var(--ai-x-d),var(--ai-y-d)) scale(var(--ai-scale-d));
+  transform:translate(var(--ai-x-d),var(--ai-y-d)) scale(var(--ai-scale-d));
 }
 
-/* Make group transforms predictable inside SVG */
 #growth [data-tile="ai"] .salesai-svg .chip,
 #growth [data-tile="ai"] .salesai-svg .conn{
-  transform-box: fill-box; transform-origin: center;
+  transform-box:fill-box; transform-origin:center;
 }
 
-/* Text styling inside the inner pills */
 #growth [data-tile="ai"] .salesai-svg text{
-  font-family: Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  font-weight: var(--ai-text-wt);
-  font-size: var(--ai-text-fs);
-  fill: var(--ai-text);
-  dominant-baseline: middle; text-anchor: middle; letter-spacing:.2px;
+  font-family:Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-weight:var(--ai-text-wt);
+  font-size:var(--ai-text-fs);
+  fill:var(--ai-text);
+  dominant-baseline:middle; text-anchor:middle; letter-spacing:.2px;
 }
 
 /* Tablet */
 @media (max-width:1024px){
-  #growth [data-tile="ai"]{
-    --ai-scale-d:.96; --ai-x-d:0px; --ai-y-d:2px;
-    --ai-text-fs: 20px;
-  }
+  #growth [data-tile="ai"]{ --ai-scale-d:.96; --ai-y-d:2px; --ai-text-fs:20px; }
   #growth [data-tile="ai"] .salesai-svg{ height:330px; }
 }
-
 /* Phone */
 @media (max-width:700px){
-  #growth [data-tile="ai"]{
-    --ai-scale-d:.92; --ai-x-d:0px; --ai-y-d:0px;
-    --ai-text-fs: 18px;
-  }
+  #growth [data-tile="ai"]{ --ai-scale-d:.92; --ai-y-d:0px; --ai-text-fs:18px; }
   #growth [data-tile="ai"] .salesai-svg{ height:310px; }
 }
+
 
 
 
@@ -2964,22 +2947,18 @@
               <div class="sales-ai-svg-wrap">
                 <!-- ===== SALES AI: Funnel Pills + Mesh + Connectors (REPLACE WHOLE SVG) ===== -->
 
-                <!-- === SALES AI — exact Figma layout with mesh + connected brackets === -->
+                <!-- === SALES AI — Figma-accurate chips + mesh + connected brackets === -->
                 <svg class="salesai-svg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
                   <defs>
-                    <!-- Subtle grid pattern -->
                     <pattern id="ai_grid" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
                       <path d="M24 0H0V24" stroke="rgba(140,170,200,0.15)" stroke-width="1"/>
                     </pattern>
-                
-                    <!-- Fade mesh at edges -->
                     <radialGradient id="ai_fade" cx="50%" cy="50%" r="75%">
                       <stop offset="55%" stop-color="white" stop-opacity="0.9"/>
                       <stop offset="100%" stop-color="white" stop-opacity="0"/>
                     </radialGradient>
                     <mask id="ai_fade_mask"><rect width="1200" height="520" fill="url(#ai_fade)"/></mask>
                 
-                    <!-- Neon strokes -->
                     <linearGradient id="ai_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%"  stop-color="var(--ai-stroke-1)"/>
                       <stop offset="50%" stop-color="var(--ai-stroke-2)"/>
@@ -2991,7 +2970,6 @@
                       <stop offset="100%" stop-color="var(--ai-stroke-1)" stop-opacity=".55"/>
                     </linearGradient>
                 
-                    <!-- Glow -->
                     <filter id="ai_glow" x="-40%" y="-40%" width="180%" height="180%">
                       <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
                       <feColorMatrix type="matrix" values="
@@ -3003,22 +2981,22 @@
                     </filter>
                   </defs>
                 
-                  <!-- Mesh backdrop (faded to edges) -->
+                  <!-- Mesh backdrop -->
                   <g opacity="var(--ai-mesh-opacity)" mask="url(#ai_fade_mask)">
                     <rect x="54" y="96" width="1092" height="360" fill="url(#ai_grid)"/>
                   </g>
                 
-                  <!-- === CHIP #1 (top) === -->
+                  <!-- CHIP #1 -->
                   <g class="chip chip1" filter="url(#ai_glow)">
-                    <!-- Outer chip -->
+                    <!-- outer chip -->
                     <rect x="170" y="206" width="860" height="96" rx="48"
                           fill="var(--ai-chip-outer)" stroke="url(#ai_stroke)" stroke-width="3"/>
-                    <!-- Inner pill (solid) -->
+                    <!-- inner pill -->
                     <rect x="190" y="224" width="820" height="60" rx="30" fill="var(--ai-pill-fill)"/>
                     <text x="600" y="254">Buyers Finder</text>
                   </g>
                 
-                  <!-- === CHIP #2 (middle) === -->
+                  <!-- CHIP #2 -->
                   <g class="chip chip2" filter="url(#ai_glow)">
                     <rect x="260" y="314" width="640" height="92" rx="46"
                           fill="var(--ai-chip-outer)" stroke="url(#ai_stroke)" stroke-width="3"/>
@@ -3026,7 +3004,7 @@
                     <text x="580" y="360">Timing · Channel · Pitch</text>
                   </g>
                 
-                  <!-- === CHIP #3 (bottom) === -->
+                  <!-- CHIP #3 -->
                   <g class="chip chip3" filter="url(#ai_glow)">
                     <rect x="360" y="412" width="420" height="88" rx="44"
                           fill="var(--ai-chip-outer)" stroke="url(#ai_stroke)" stroke-width="3"/>
@@ -3034,33 +3012,19 @@
                     <text x="570" y="456">Handoff / Close</text>
                   </g>
                 
-                  <!-- === CONNECTORS (TL → R → L → R) === -->
+                  <!-- CONNECTORS (fixed numbers; no CSS vars inside 'd') -->
                   <g class="conn" fill="none" stroke="url(#ai_connector)" stroke-linecap="round"
                      filter="url(#ai_glow)" opacity="var(--ai-conn-alpha)">
-                    <!-- enter from top-left to chip#1 -->
-                    <path d="
-                      M 120 254
-                      v 58
-                      a var(--ai-corner-r) var(--ai-corner-r) 0 0 0 var(--ai-corner-r) var(--ai-corner-r)
-                      h 50" stroke-width="var(--ai-conn-w)"/>
-                    <!-- chip#1 right → down → chip#2 right -->
-                    <path d="
-                      M 1030 254
-                      h 50
-                      a var(--ai-corner-r) var(--ai-corner-r) 0 0 1 var(--ai-corner-r) var(--ai-corner-r)
-                      v 72
-                      a var(--ai-corner-r) var(--ai-corner-r) 0 0 1 -var(--ai-corner-r) var(--ai-corner-r)
-                      h -50" stroke-width="var(--ai-conn-w)"/>
-                    <!-- chip#2 left → down → chip#3 left -->
-                    <path d="
-                      M 260 360
-                      h -50
-                      a var(--ai-corner-r) var(--ai-corner-r) 0 0 0 -var(--ai-corner-r) var(--ai-corner-r)
-                      v 70
-                      a var(--ai-corner-r) var(--ai-corner-r) 0 0 0 var(--ai-corner-r) var(--ai-corner-r)
-                      h 50" stroke-width="var(--ai-conn-w)"/>
-                    <!-- exit to the right from chip#3 -->
-                    <path d="M 780 456 h 90" stroke-width="var(--ai-conn-w)"/>
+                    <!-- enter from top-left and hook into chip #1 -->
+                    <path d="M120 140 V236 C120 246 130 254 142 254 H170" stroke-width="var(--ai-conn-w)"/>
+                    <!-- chip #1 right → down → into chip #2 right -->
+                    <path d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330
+                             C1110 342 1102 350 1090 350 H900" stroke-width="var(--ai-conn-w)"/>
+                    <!-- chip #2 left → down → into chip #3 left -->
+                    <path d="M260 360 H200 C188 360 180 368 180 380 V436
+                             C180 448 188 456 200 456 H360" stroke-width="var(--ai-conn-w)"/>
+                    <!-- exit to the right from chip #3 -->
+                    <path d="M780 456 H870" stroke-width="var(--ai-conn-w)"/>
                   </g>
                 </svg>
               </div>
