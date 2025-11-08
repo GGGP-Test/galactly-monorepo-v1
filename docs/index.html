@@ -2457,7 +2457,131 @@
 @media (max-width:700px){  #growth [data-tile="ai"] .salesai-svg .l{ font-size:14px; } }
 
 
+/* === Sales AI: size + spacing knobs (desktop / tablet / phone) === */
+#growth [data-tile="ai"]{
+  /* connector thickness */
+  --ai-conn-w-d: 4px;    /* desktop */
+  --ai-conn-w-t: 3.5px;  /* tablet  */
+  --ai-conn-w-p: 3px;    /* phone   */
 
+  /* per-row heights (outer chip + inner pill) — start with your current values */
+  --h1-outer-d: 96px;  --h1-inner-d: 60px;
+  --h2-outer-d: 92px;  --h2-inner-d: 60px;
+  --h3-outer-d: 88px;  --h3-inner-d: 56px;
+
+  --h1-outer-t: 94px;  --h1-inner-t: 58px;
+  --h2-outer-t: 90px;  --h2-inner-t: 58px;
+  --h3-outer-t: 86px;  --h3-inner-t: 54px;
+
+  --h1-outer-p: 90px;  --h1-inner-p: 56px;
+  --h2-outer-p: 86px;  --h2-inner-p: 54px;
+  --h3-outer-p: 82px;  --h3-inner-p: 52px;
+
+  /* row gap (distance between row centers) */
+  --row-gap-d: 76px;
+  --row-gap-t: 70px;
+  --row-gap-p: 64px;
+
+  /* fixed row centers base (your current) */
+  --r1-cx: 600px; --r1-cy: 254px;
+  --r2-cx: 580px; --r2-cy: calc(var(--r1-cy) + var(--row-gap));
+  --r3-cx: 570px; --r3-cy: calc(var(--r2-cy) + var(--row-gap));
+}
+
+/* bind device presets -> active props */
+#growth [data-tile="ai"]{
+  --conn-w: var(--ai-conn-w-d);
+  --h1-outer: var(--h1-outer-d); --h1-inner: var(--h1-inner-d);
+  --h2-outer: var(--h2-outer-d); --h2-inner: var(--h2-inner-d);
+  --h3-outer: var(--h3-outer-d); --h3-inner: var(--h3-inner-d);
+  --row-gap:  var(--row-gap-d);
+}
+@media (max-width:1024px){
+  #growth [data-tile="ai"]{
+    --conn-w: var(--ai-conn-w-t);
+    --h1-outer: var(--h1-outer-t); --h1-inner: var(--h1-inner-t);
+    --h2-outer: var(--h2-outer-t); --h2-inner: var(--h2-inner-t);
+    --h3-outer: var(--h3-outer-t); --h3-inner: var(--h3-inner-t);
+    --row-gap:  var(--row-gap-t);
+  }
+}
+@media (max-width:700px){
+  #growth [data-tile="ai"]{
+    --conn-w: var(--ai-conn-w-p);
+    --h1-outer: var(--h1-outer-p); --h1-inner: var(--h1-inner-p);
+    --h2-outer: var(--h2-outer-p); --h2-inner: var(--h2-inner-p);
+    --h3-outer: var(--h3-outer-p); --h3-inner: var(--h3-inner-p);
+    --row-gap:  var(--row-gap-p);
+  }
+}
+
+/* keep elbows round and thin */
+#growth [data-tile="ai"] .salesai-svg .conn{
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#growth [data-tile="ai"] .salesai-svg .conn path{
+  stroke-width: var(--conn-w);
+  vector-effect: non-scaling-stroke; /* stays thin when the SVG scales */
+}
+
+/* === Pill height mapping (centers stay fixed, so connectors don’t drift) === */
+/* row 1 */
+#growth [data-tile="ai"] .chip1 .chipfill,
+#growth [data-tile="ai"] .chip1 .outer-rim{
+  height: var(--h1-outer);
+  y: calc(var(--r1-cy) - var(--h1-outer)/2);
+  rx: calc(var(--h1-outer) / 2);
+}
+#growth [data-tile="ai"] .chip1 .inner{
+  height: var(--h1-inner);
+  y: calc(var(--r1-cy) - var(--h1-inner)/2);
+  rx: calc(var(--h1-inner) / 2);
+}
+#growth [data-tile="ai"] .chip1 .label{ y: var(--r1-cy); }
+
+/* row 2 */
+#growth [data-tile="ai"] .chip2 .chipfill,
+#growth [data-tile="ai"] .chip2 .outer-rim{
+  height: var(--h2-outer);
+  y: calc(var(--r2-cy) - var(--h2-outer)/2);
+  rx: calc(var(--h2-outer) / 2);
+}
+#growth [data-tile="ai"] .chip2 .inner{
+  height: var(--h2-inner);
+  y: calc(var(--r2-cy) - var(--h2-inner)/2);
+  rx: calc(var(--h2-inner) / 2);
+}
+#growth [data-tile="ai"] .chip2 .label{ y: var(--r2-cy); }
+
+/* row 3 */
+#growth [data-tile="ai"] .chip3 .chipfill,
+#growth [data-tile="ai"] .chip3 .outer-rim{
+  height: var(--h3-outer);
+  y: calc(var(--r3-cy) - var(--h3-outer)/2);
+  rx: calc(var(--h3-outer) / 2);
+}
+#growth [data-tile="ai"] .chip3 .inner{
+  height: var(--h3-inner);
+  y: calc(var(--r3-cy) - var(--h3-inner)/2);
+  rx: calc(var(--h3-inner) / 2);
+}
+#growth [data-tile="ai"] .chip3 .label{ y: var(--r3-cy); }
+
+/* === Row-gap: nudge the connectors to follow new centers (Y-only) === */
+/* base Ys in your SVG are 254, 360, 456 — translate each connector by the delta */
+#growth [data-tile="ai"] .salesai-svg .conn .c1{
+  transform: translate(0, calc(var(--r1-cy) - 254px));
+}
+#growth [data-tile="ai"] .salesai-svg .conn .c2{
+  transform: translate(0, calc(var(--r1-cy) - 254px));
+}
+#growth [data-tile="ai"] .salesai-svg .conn .c3{
+  transform: translate(0, calc(var(--r2-cy) - 360px));
+}
+#growth [data-tile="ai"] .salesai-svg .conn .c4{
+  transform: translate(0, calc(var(--r3-cy) - 456px));
+}
 
 
 
@@ -2979,6 +3103,12 @@
                     <path d="M1080 254 H1140 V330 H940"/>
                     <path d="M220 360 H180 V456 H330"/>
                     <path d="M810 456 H1100"/>
+                  </g>
+                  <g class="conn" ...>
+                    <path class="c1" d="M120 214 V236 C120 246 130 254 142 254 H170"/>
+                    <path class="c2" d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330 C1110 342 1102 350 1090 350 H900"/>
+                    <path class="c3" d="M260 360 H200 C188 360 180 368 180 380 V436 C180 448 188 456 200 456 H360"/>
+                    <path class="c4" d="M780 456 H1060"/>
                   </g>
               
                   <!-- row 1 -->
