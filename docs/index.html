@@ -2405,6 +2405,7 @@
 
 
 
+
 /* ===== SALES AI — MASTER KNOBS (no mesh) ===== */
 :root{
   /* —— palette —— */
@@ -2415,11 +2416,11 @@
   --ai-text:#EAF4FF;
 
   /* —— connectors —— */
-  --ai-conn-w:6px;                 /* thickness (non-scaling; see rule below) */
+  --ai-conn-w:6px;       /* keep this; thickness is stabilized below */
   --ai-conn-alpha:.95;
   --ai-conn-dx:0px;
   --ai-conn-dy:0px;
-  --ai-conn-scale:1;
+  --ai-conn-scale:1;     /* do not scale connectors */
 
   /* —— whole-SVG placement per device —— */
   --ai-svg-x-desktop:0px;  --ai-svg-y-desktop:6px;  --ai-svg-scale-desktop:1;
@@ -2432,62 +2433,80 @@
   --r2-fs:16px; --r2-wt:700; --r2-track:.2px;
   --r3-fs:16px; --r3-wt:700; --r3-track:.2px;
 
-  /* ===== centers (with gap knobs) =====
-     These keep your original baselines but let you push rows apart
-     without breaking the connectors. 0px = no change. */
-  --gap12:0px;        /* extra space between row1 ↔ row2 */
-  --gap23:0px;        /* extra space between row2 ↔ row3 */
+  /* —— canonical centers (unchanged) —— */
+  --r1-cx:600px; --r1-cy:254px;
+  --r2-cx:580px; --r2-cy:360px;
+  --r3-cx:570px; --r3-cy:456px;
 
-  /* canonical X centers (unchanged) */
-  --r1-cx:600px; --r2-cx:580px; --r3-cx:570px;
-
-  /* canonical Y centers with gaps applied (values unchanged at 0 gaps) */
-  --r1-cy:254px;
-  --r2-cy:calc(360px + var(--gap12));
-  --r3-cy:calc(456px + var(--gap12) + var(--gap23));
-
-  /* —— your existing scale knobs (unchanged values preserved) —— */
+  /* —— row scaling (your values preserved) —— */
   --r1-outer-sx:0.50; --r1-outer-sy:1.10; --r1-inner-sx:.465; --r1-inner-sy:1.065;
   --r2-outer-sx:0.40; --r2-outer-sy:1.10; --r2-inner-sx:.365; --r2-inner-sy:1.065;
   --r3-outer-sx:0.30; --r3-outer-sy:1.10; --r3-inner-sx:.265; --r3-inner-sy:1.065;
 
-  /* per-row uniform magnification (blow up pill+chip together) */
+  /* uniform magnification per row (kept) */
   --r1-mag:1; --r2-mag:1; --r3-mag:1;
 
-  /* row nudges (move whole row; connectors auto-follow) */
+  /* row nudges */
   --r1-dx:0px; --r1-dy:0px;
   --r2-dx:0px; --r2-dy:0px;
   --r3-dx:0px; --r3-dy:0px;
 
-  /* ===== derived geometry used only for connector auto-follow ===== */
-  /* base sizes (from the SVG; don’t change) */
-  --r1-outer-w0:860px; --r1-outer-h0:96px;  --r1-inner-w0:820px; --r1-inner-h0:60px;
-  --r2-outer-w0:640px; --r2-outer-h0:92px;  --r2-inner-w0:600px; --r2-inner-h0:60px;
-  --r3-outer-w0:420px; --r3-outer-h0:88px;  --r3-inner-w0:384px; --r3-inner-h0:56px;
+  /* ===== derived geometry (auto-computed from your scales) ===== */
+  /* row 1 base: outer 860×96 at (170,206); inner 820×60 at (190,224) */
+  --r1-outer-w: calc(860px * var(--r1-outer-sx));
+  --r1-outer-h: calc( 96px * var(--r1-outer-sy));
+  --r1-outer-x: calc(var(--r1-cx) - var(--r1-outer-w)/2);
+  --r1-outer-y: calc(var(--r1-cy) - var(--r1-outer-h)/2);
+  --r1-outer-r: calc(48px * min(var(--r1-outer-sx), var(--r1-outer-sy)));
 
-  /* scaled widths for left/right calculations */
-  --r1-outer-w: calc(var(--r1-outer-w0) * var(--r1-outer-sx));
-  --r2-outer-w: calc(var(--r2-outer-w0) * var(--r2-outer-sx));
-  --r3-inner-w: calc(var(--r3-inner-w0) * var(--r3-inner-sx)); /* we attach c4 to inner right */
+  --r1-inner-w: calc(820px * var(--r1-inner-sx));
+  --r1-inner-h: calc( 60px * var(--r1-inner-sy));
+  --r1-inner-x: calc(var(--r1-cx) - var(--r1-inner-w)/2);
+  --r1-inner-y: calc(var(--r1-cy) - var(--r1-inner-h)/2);
+  --r1-inner-r: calc(30px * min(var(--r1-inner-sx), var(--r1-inner-sy)));
 
-  /* left/right edges at current widths (before row dx) */
-  --r1-left:  calc(var(--r1-cx) - var(--r1-outer-w)/2);
-  --r1-right: calc(var(--r1-cx) + var(--r1-outer-w)/2);
-  --r2-left:  calc(var(--r2-cx) - var(--r2-outer-w)/2);
+  --r1-left:  var(--r1-outer-x);
+  --r1-right: calc(var(--r1-outer-x) + var(--r1-outer-w));
+  --r1-tx:    var(--r1-cx);
+  --r1-ty:    var(--r1-cy);
 
-  /* row3 inner-right (for the final exit) */
-  --r3-inner-right: calc(var(--r3-cx) + var(--r3-inner-w)/2);
+  /* row 2 base: outer 640×92 at (260,314); inner 600×60 at (280,330) */
+  --r2-outer-w: calc(640px * var(--r2-outer-sx));
+  --r2-outer-h: calc( 92px * var(--r2-outer-sy));
+  --r2-outer-x: calc(var(--r2-cx) - var(--r2-outer-w)/2);
+  --r2-outer-y: calc(var(--r2-cy) - var(--r2-outer-h)/2);
+  --r2-outer-r: calc(46px * min(var(--r2-outer-sx), var(--r2-outer-sy)));
 
-  /* include per-row dx/dy (absolute anchors the connectors should hit) */
-  --r1-left-abs:  calc(var(--r1-left)  + var(--r1-dx));
-  --r1-right-abs: calc(var(--r1-right) + var(--r1-dx));
-  --r2-left-abs:  calc(var(--r2-left)  + var(--r2-dx));
-  --r3-ir-abs:    calc(var(--r3-inner-right) + var(--r3-dx));   /* inner right */
-  --r1-cy-abs:    calc(var(--r1-cy) + var(--r1-dy));
-  --r2-cy-abs:    calc(var(--r2-cy) + var(--r2-dy));
-  --r3-cy-abs:    calc(var(--r3-cy) + var(--r3-dy));
+  --r2-inner-w: calc(600px * var(--r2-inner-sx));
+  --r2-inner-h: calc( 60px * var(--r2-inner-sy));
+  --r2-inner-x: calc(var(--r2-cx) - var(--r2-inner-w)/2);
+  --r2-inner-y: calc(var(--r2-cy) - var(--r2-inner-h)/2);
+  --r2-inner-r: calc(30px * min(var(--r2-inner-sx), var(--r2-inner-sy)));
 
-  /* manual per-connector nudges (still available) */
+  --r2-left:  var(--r2-outer-x);
+  --r2-right: calc(var(--r2-outer-x) + var(--r2-outer-w));
+  --r2-tx:    var(--r2-cx);
+  --r2-ty:    var(--r2-cy);
+
+  /* row 3 base: outer 420×88 at (360,412); inner 384×56 at (378,428) */
+  --r3-outer-w: calc(420px * var(--r3-outer-sx));
+  --r3-outer-h: calc( 88px * var(--r3-outer-sy));
+  --r3-outer-x: calc(var(--r3-cx) - var(--r3-outer-w)/2);
+  --r3-outer-y: calc(var(--r3-cy) - var(--r3-outer-h)/2);
+  --r3-outer-r: calc(44px * min(var(--r3-outer-sx), var(--r3-outer-sy)));
+
+  --r3-inner-w: calc(384px * var(--r3-inner-sx));
+  --r3-inner-h: calc( 56px * var(--r3-inner-sy));
+  --r3-inner-x: calc(var(--r3-cx) - var(--r3-inner-w)/2);
+  --r3-inner-y: calc(var(--r3-cy) - var(--r3-inner-h)/2);
+  --r3-inner-r: calc(28px * min(var(--r3-inner-sx), var(--r3-inner-sy)));
+
+  --r3-left:  var(--r3-outer-x);
+  --r3-right: calc(var(--r3-outer-x) + var(--r3-outer-w));
+  --r3-tx:    var(--r3-cx);
+  --r3-ty:    var(--r3-cy);
+
+  /* per-connector manual nudges (still available) */
   --c1-dx:0px; --c1-dy:0px; --c1-scale:1;
   --c2-dx:0px; --c2-dy:0px; --c2-scale:1;
   --c3-dx:0px; --c3-dy:0px; --c3-scale:1;
@@ -2521,16 +2540,28 @@
 .ai-sdr .salesai-svg text.r2{ font-size:var(--r2-fs); font-weight:var(--r2-wt); letter-spacing:var(--r2-track); }
 .ai-sdr .salesai-svg text.r3{ font-size:var(--r3-fs); font-weight:var(--r3-wt); letter-spacing:var(--r3-track); }
 
-@media (max-width:1024px){ .ai-sdr{ --r1-fs:15px; --r2-fs:15px; --r3-fs:15px; } }
-@media (max-width:700px){  .ai-sdr{ --r1-fs:14px; --r2-fs:14px; --r3-fs:14px; } }
-
-/* row magnification + nudges (chips scale around their centers) */
+/* row magnification + nudges */
 .salesai-svg .chip1{ transform-origin:var(--r1-cx) var(--r1-cy); transform:translate(var(--r1-dx),var(--r1-dy)) scale(var(--r1-mag)); }
 .salesai-svg .chip2{ transform-origin:var(--r2-cx) var(--r2-cy); transform:translate(var(--r2-dx),var(--r2-dy)) scale(var(--r2-mag)); }
 .salesai-svg .chip3{ transform-origin:var(--r3-cx) var(--r3-cy); transform:translate(var(--r3-dx),var(--r3-dy)) scale(var(--r3-mag)); }
 
-/* keep connector strokes visually constant */
-.ai-sdr .salesai-svg .conn path{ vector-effect:non-scaling-stroke; }
+/* geometry is driven by CSS props (so connectors can follow) */
+.salesai-svg .chip1 .chipfill{ x:var(--r1-outer-x); y:var(--r1-outer-y); width:var(--r1-outer-w); height:var(--r1-outer-h); rx:var(--r1-outer-r); }
+.salesai-svg .chip1 .outer-rim{ x:var(--r1-outer-x); y:var(--r1-outer-y); width:var(--r1-outer-w); height:var(--r1-outer-h); rx:var(--r1-outer-r); }
+.salesai-svg .chip1 .inner   { x:var(--r1-inner-x); y:var(--r1-inner-y); width:var(--r1-inner-w); height:var(--r1-inner-h); rx:var(--r1-inner-r); }
+
+.salesai-svg .chip2 .chipfill{ x:var(--r2-outer-x); y:var(--r2-outer-y); width:var(--r2-outer-w); height:var(--r2-outer-h); rx:var(--r2-outer-r); }
+.salesai-svg .chip2 .outer-rim{ x:var(--r2-outer-x); y:var(--r2-outer-y); width:var(--r2-outer-w); height:var(--r2-outer-h); rx:var(--r2-outer-r); }
+.salesai-svg .chip2 .inner   { x:var(--r2-inner-x); y:var(--r2-inner-y); width:var(--r2-inner-w); height:var(--r2-inner-h); rx:var(--r2-inner-r); }
+
+.salesai-svg .chip3 .chipfill{ x:var(--r3-outer-x); y:var(--r3-outer-y); width:var(--r3-outer-w); height:var(--r3-outer-h); rx:var(--r3-outer-r); }
+.salesai-svg .chip3 .outer-rim{ x:var(--r3-outer-x); y:var(--r3-outer-y); width:var(--r3-outer-w); height:var(--r3-outer-h); rx:var(--r3-outer-r); }
+.salesai-svg .chip3 .inner   { x:var(--r3-inner-x); y:var(--r3-inner-y); width:var(--r3-inner-w); height:var(--r3-inner-h); rx:var(--r3-inner-r); }
+
+/* text centered on the computed centers */
+.salesai-svg text.r1{ x:var(--r1-tx); y:var(--r1-ty); }
+.salesai-svg text.r2{ x:var(--r2-tx); y:var(--r2-ty); }
+.salesai-svg text.r3{ x:var(--r3-tx); y:var(--r3-ty); }
 
 /* connector group (global) */
 .salesai-svg .conn{
@@ -2538,41 +2569,41 @@
   stroke-width:var(--ai-conn-w);
   transform: translate(var(--ai-conn-dx),var(--ai-conn-dy)) scale(var(--ai-conn-scale));
 }
+/* keep line thickness constant when transforms are applied */
+.salesai-svg .conn path{ vector-effect:non-scaling-stroke; }
 
-/* auto-follow: translate each connector path to the live attach points
-   (paths order: 1=TL→row1 L, 2=row1 R→down→row2 R, 3=row2 L→down→row3 L, 4=row3 inner R→exit) */
-.salesai-svg .conn path:nth-child(1){
+/* auto-follow: move each connector to current attach point */
+.salesai-svg .conn .c1{
   transform:
-    translate(calc(var(--r1-left-abs) - 170px),  /* 170 was the baked-in left rim x in the SVG path */
-              calc(var(--r1-cy-abs)  - 254px))   /* 254 was the baked-in y center */
+    translate(calc(var(--r1-left)  - 170px),
+              calc(var(--r1-cy)    - 254px))
     translate(var(--c1-dx),var(--c1-dy))
     scale(var(--c1-scale));
 }
-.salesai-svg .conn path:nth-child(2){
+.salesai-svg .conn .c2{
   transform:
-    translate(calc(var(--r1-right-abs) - 1030px), /* 1030 was the baked-in right rim x */
-              calc(var(--r1-cy-abs)    -  254px))
+    translate(calc(var(--r1-right) - 1030px),
+              calc(var(--r1-cy)    -  254px))
     translate(var(--c2-dx),var(--c2-dy))
     scale(var(--c2-scale));
 }
-.salesai-svg .conn path:nth-child(3){
+.salesai-svg .conn .c3{
   transform:
-    translate(calc(var(--r2-left-abs) - 260px),   /* 260 was the baked-in row2 left rim x */
-              calc(var(--r2-cy-abs)   - 360px))
+    translate(calc(var(--r2-left)  - 260px),
+              calc(var(--r2-cy)    - 360px))
     translate(var(--c3-dx),var(--c3-dy))
     scale(var(--c3-scale));
 }
-.salesai-svg .conn path:nth-child(4){
+.salesai-svg .conn .c4{
   transform:
-    translate(calc(var(--r3-ir-abs)  - 780px),    /* 780 was the baked-in row3 inner right x */
-              calc(var(--r3-cy-abs)  - 456px))
+    translate(calc((var(--r3-inner-x) + var(--r3-inner-w)) - 780px),
+              calc(var(--r3-cy)      - 456px))
     translate(var(--c4-dx),var(--c4-dy))
     scale(var(--c4-scale));
 }
 
-/* rim thickness (outer neon line on the chip) */
+/* rim thickness */
 .salesai-svg .outer-rim{ stroke-width:var(--ai-rim-w,1px); }
-
 
 
 
