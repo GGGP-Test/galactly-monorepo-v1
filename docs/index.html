@@ -2455,7 +2455,19 @@
 }
 
 
+/* ===== SALES AI knobs (no mesh) ===== */
+:root{
+  --salesai-stroke-1:#59A7FF;
+  --salesai-stroke-2:#8FD3FF;
+  --salesai-chip-outer:rgba(18,35,64,.32);  /* translucent outer surface */
+  --salesai-chip-inner:rgba(16,24,40,.92);  /* solid inner surface */
+  --salesai-text:#EAF4FF;
+}
 
+/* size/position */
+.ai-sdr .salesai-svg{ width:100%; height:360px; display:block; }
+@media (max-width:1024px){ .ai-sdr .salesai-svg{ height:330px; } }
+@media (max-width:700px){ .ai-sdr .salesai-svg{ height:310px; } }
 
 
 
@@ -2947,20 +2959,23 @@
               <div class="sales-ai-svg-wrap">
                 <!-- ===== SALES AI: Funnel Pills + Mesh + Connectors (REPLACE WHOLE SVG) ===== -->
 
-                <!-- === SALES AI — double-pills (no mesh) + connected brackets === -->
+                <!-- === SALES AI — double-pill chips (no mesh) + connectors === -->
                 <svg class="salesai-svg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
                   <defs>
-                    <linearGradient id="ai_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%"  stop-color="var(--ai-stroke-1)"/>
-                      <stop offset="50%" stop-color="var(--ai-stroke-2)"/>
-                      <stop offset="100%" stop-color="var(--ai-stroke-1)"/>
+                    <!-- Rim gradient + connector gradient reuse your knobs -->
+                    <linearGradient id="salesai_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%"  stop-color="var(--salesai-stroke-1)"/>
+                      <stop offset="50%" stop-color="var(--salesai-stroke-2)"/>
+                      <stop offset="100%" stop-color="var(--salesai-stroke-1)"/>
                     </linearGradient>
-                    <linearGradient id="ai_connector" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%"  stop-color="var(--ai-stroke-1)" stop-opacity=".55"/>
-                      <stop offset="50%" stop-color="var(--ai-stroke-2)" stop-opacity=".95"/>
-                      <stop offset="100%" stop-color="var(--ai-stroke-1)" stop-opacity=".55"/>
+                    <linearGradient id="salesai_connector" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%"  stop-color="var(--salesai-stroke-1)" stop-opacity=".55"/>
+                      <stop offset="50%" stop-color="var(--salesai-stroke-2)" stop-opacity=".95"/>
+                      <stop offset="100%" stop-color="var(--salesai-stroke-1)" stop-opacity=".55"/>
                     </linearGradient>
-                    <filter id="ai_glow" x="-40%" y="-40%" width="180%" height="180%">
+                
+                    <!-- Soft neon glow -->
+                    <filter id="salesai_glow" x="-40%" y="-40%" width="180%" height="180%">
                       <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
                       <feColorMatrix type="matrix" values="
                         0 0 0 0 0.35
@@ -2969,56 +2984,69 @@
                         0 0 0 0.0 0" result="tint"/>
                       <feMerge><feMergeNode in="tint"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
+                
+                    <!-- Hard rim (non-blur) trick if you prefer the “shadow with zero blur” approach -->
+                    <filter id="salesai_hardRim" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="0" stdDeviation="0" flood-color="var(--salesai-stroke-2)" flood-opacity=".9"/>
+                    </filter>
+                
                     <style>
                       .salesai-svg text{
                         font: 700 16px/1 Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-                        fill: var(--ai-text); letter-spacing:.2px; dominant-baseline:middle; text-anchor:middle;
+                        fill: var(--salesai-text);
+                        letter-spacing:.2px;
+                        dominant-baseline:middle;
+                        text-anchor:middle;
                       }
                     </style>
                   </defs>
                 
                   <!-- ===== ROW 1 ===== -->
-                  <g class="chip chip1" filter="url(#ai_glow)">
-                    <!-- draw inner first -->
-                    <rect x="190" y="224" width="820" height="60" rx="30" fill="var(--ai-pill-fill)"/>
-                    <!-- outer rim ON TOP so it stays visible -->
+                  <g class="chip chip1" filter="url(#salesai_glow)">
+                    <!-- inner solid pill (writing surface) -->
+                    <rect x="190" y="224" width="820" height="60" rx="30" fill="var(--salesai-chip-inner)"/>
+                    <!-- outer translucent chip fill (optional; keep very low) -->
+                    <rect x="170" y="206" width="860" height="96" rx="48" fill="var(--salesai-chip-outer)"/>
+                    <!-- outer rim on top (thick = clearly visible double-pill) -->
                     <rect x="170" y="206" width="860" height="96" rx="48" fill="none"
-                          stroke="url(#ai_stroke)" stroke-width="var(--ai-stroke-w)" stroke-linejoin="round"/>
-                    <!-- faint rim sheen to read at a glance -->
+                          stroke="url(#salesai_stroke)" stroke-width="12" stroke-linejoin="round"/>
+                    <!-- faint white sheen to separate shapes -->
                     <rect x="170" y="206" width="860" height="96" rx="48" fill="none"
                           stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
                     <text x="600" y="254">Buyers Finder</text>
                   </g>
                 
                   <!-- ===== ROW 2 ===== -->
-                  <g class="chip chip2" filter="url(#ai_glow)">
-                    <rect x="280" y="330" width="600" height="60" rx="30" fill="var(--ai-pill-fill)"/>
+                  <g class="chip chip2" filter="url(#salesai_glow)">
+                    <rect x="280" y="330" width="600" height="60" rx="30" fill="var(--salesai-chip-inner)"/>
+                    <rect x="260" y="314" width="640" height="92" rx="46" fill="var(--salesai-chip-outer)"/>
                     <rect x="260" y="314" width="640" height="92" rx="46" fill="none"
-                          stroke="url(#ai_stroke)" stroke-width="var(--ai-stroke-w)" stroke-linejoin="round"/>
+                          stroke="url(#salesai_stroke)" stroke-width="12" stroke-linejoin="round"/>
                     <rect x="260" y="314" width="640" height="92" rx="46" fill="none"
                           stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
                     <text x="580" y="360">Timing · Channel · Pitch</text>
                   </g>
                 
                   <!-- ===== ROW 3 ===== -->
-                  <g class="chip chip3" filter="url(#ai_glow)">
-                    <rect x="378" y="428" width="384" height="56" rx="28" fill="var(--ai-pill-fill)"/>
+                  <g class="chip chip3" filter="url(#salesai_glow)">
+                    <rect x="378" y="428" width="384" height="56" rx="28" fill="var(--salesai-chip-inner)"/>
+                    <rect x="360" y="412" width="420" height="88" rx="44" fill="var(--salesai-chip-outer)"/>
                     <rect x="360" y="412" width="420" height="88" rx="44" fill="none"
-                          stroke="url(#ai_stroke)" stroke-width="var(--ai-stroke-w)" stroke-linejoin="round"/>
+                          stroke="url(#salesai_stroke)" stroke-width="12" stroke-linejoin="round"/>
                     <rect x="360" y="412" width="420" height="88" rx="44" fill="none"
                           stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
                     <text x="570" y="456">Handoff / Close</text>
                   </g>
                 
-                  <!-- ===== CONNECTORS (TL → R → L → R) ===== -->
-                  <g class="conn" fill="none" stroke="url(#ai_connector)" stroke-linecap="round"
-                     filter="url(#ai_glow)" opacity="var(--ai-conn-alpha)">
-                    <path d="M120 140 V236 C120 246 130 254 142 254 H170" stroke-width="var(--ai-conn-w)"/>
+                  <!-- ===== CONNECTORS (enter TL → out R → down R → out L → down L → out R) ===== -->
+                  <g class="conn" fill="none" stroke="url(#salesai_connector)" stroke-linecap="round"
+                     filter="url(#salesai_glow)" opacity=".9">
+                    <path d="M120 140 V236 C120 246 130 254 142 254 H170" stroke-width="6"/>
                     <path d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330
-                             C1110 342 1102 350 1090 350 H900" stroke-width="var(--ai-conn-w)"/>
+                             C1110 342 1102 350 1090 350 H900" stroke-width="6"/>
                     <path d="M260 360 H200 C188 360 180 368 180 380 V436
-                             C180 448 188 456 200 456 H360" stroke-width="var(--ai-conn-w)"/>
-                    <path d="M780 456 H870" stroke-width="var(--ai-conn-w)"/>
+                             C180 448 188 456 200 456 H360" stroke-width="6"/>
+                    <path d="M780 456 H870" stroke-width="6"/>
                   </g>
                 </svg>
               </div>
