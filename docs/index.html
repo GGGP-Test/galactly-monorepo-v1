@@ -2408,8 +2408,8 @@
 #growth [data-tile="ai"]{
   /* tile height + art placement */
   --ai-tile-min-h: 380px;      /* match RTS headroom */
-  --ai-center-y: 100%;          /* vertical anchor of the SVG */
-  --ai-scale-desktop: 1.32;    /* dial this to match the RTS visual weight */
+  --ai-center-y: 20%;          /* vertical anchor of the SVG */
+  --ai-scale-desktop: 1.12;    /* dial this to match the RTS visual weight */
   --ai-scale-tablet: 1.02;
   --ai-scale-phone:  .94;
 }
@@ -2425,7 +2425,7 @@
   left: 50%;
   top: var(--ai-center-y);
   transform: translate(-50%, -50%) scale(var(--ai-scale-desktop));
-  width: 100%;                 /* respect the tile’s width */
+  width: 80%;                 /* respect the tile’s width */
   height: auto;
   max-width: none;
   pointer-events: none;        /* purely decorative */
