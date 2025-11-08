@@ -2585,7 +2585,106 @@
 
 
 
+/* —— bridge device knobs → live knobs —— */
+#growth [data-tile="ai"]{
+  /* live connector thickness */
+  --ai-conn-w: var(--ai-conn-w-d);
 
+  /* activate device-specific heights */
+  --h1-outer: var(--h1-outer-d); --h1-inner: var(--h1-inner-d);
+  --h2-outer: var(--h2-outer-d); --h2-inner: var(--h2-inner-d);
+  --h3-outer: var(--h3-outer-d); --h3-inner: var(--h3-inner-d);
+
+  /* single row-gap knob (you can keep your d/t/p values) */
+  --row-gap: var(--row-gap-d);
+
+  /* row center baselines (from your SVG) */
+  --r1-cx:600px; --r1-cy:254px;
+  --r2-cx:580px; --r2-cy:360px; /* Δ12 = 106 */
+  --r3-cx:570px; --r3-cy:456px; /* Δ23 = 96  */
+}
+@media (max-width:1024px){
+  #growth [data-tile="ai"]{
+    --ai-conn-w: var(--ai-conn-w-t);
+    --h1-outer: var(--h1-outer-t); --h1-inner: var(--h1-inner-t);
+    --h2-outer: var(--h2-outer-t); --h2-inner: var(--h2-inner-t);
+    --h3-outer: var(--h3-outer-t); --h3-inner: var(--h3-inner-t);
+    --row-gap:  var(--row-gap-t);
+  }
+}
+@media (max-width:700px){
+  #growth [data-tile="ai"]{
+    --ai-conn-w: var(--ai-conn-w-p);
+    --h1-outer: var(--h1-outer-p); --h1-inner: var(--h1-inner-p);
+    --h2-outer: var(--h2-outer-p); --h2-inner: var(--h2-inner-p);
+    --h3-outer: var(--h3-outer-p); --h3-inner: var(--h3-inner-p);
+    --row-gap:  var(--row-gap-p);
+  }
+}
+
+/* —— convert “desired heights” → vertical scale factors (scaleY) —— */
+/* base heights from your SVG: row1 96/60, row2 92/60, row3 88/56 */
+#growth [data-tile="ai"]{
+  --h1o-base:96px; --h1i-base:60px;
+  --h2o-base:92px; --h2i-base:60px;
+  --h3o-base:88px; --h3i-base:56px;
+
+  --s1o: calc(var(--h1-outer)/var(--h1o-base));  /* outer chip scaleY */
+  --s1i: calc(var(--h1-inner)/var(--h1i-base));  /* inner pill scaleY */
+  --s2o: calc(var(--h2-outer)/var(--h2o-base));
+  --s2i: calc(var(--h2-inner)/var(--h2i-base));
+  --s3o: calc(var(--h3-outer)/var(--h3o-base));
+  --s3i: calc(var(--h3-inner)/var(--h3i-base));
+
+  /* turn one row-gap into per-row offsets vs your baselines (106/96) */
+  --gap12: calc(var(--row-gap) - 106px);
+  --gap23: calc(var(--row-gap) -  96px);
+
+  /* push rows by writing into the same vars your SVG uses */
+  --r2-dy: var(--gap12);
+  --r3-dy: calc(var(--gap12) + var(--gap23));
+}
+
+/* —— apply height scaling around each row center —— */
+#growth [data-tile="ai"] .salesai-svg .chip1 .chipfill,
+#growth [data-tile="ai"] .salesai-svg .chip1 .outer-rim{
+  transform-origin: var(--r1-cx) var(--r1-cy);
+  transform: scale(1, var(--s1o));
+}
+#growth [data-tile="ai"] .salesai-svg .chip1 .inner{
+  transform-origin: var(--r1-cx) var(--r1-cy);
+  transform: scale(1, var(--s1i));
+}
+
+#growth [data-tile="ai"] .salesai-svg .chip2 .chipfill,
+#growth [data-tile="ai"] .salesai-svg .chip2 .outer-rim{
+  transform-origin: var(--r2-cx) var(--r2-cy);
+  transform: scale(1, var(--s2o));
+}
+#growth [data-tile="ai"] .salesai-svg .chip2 .inner{
+  transform-origin: var(--r2-cx) var(--r2-cy);
+  transform: scale(1, var(--s2i));
+}
+
+#growth [data-tile="ai"] .salesai-svg .chip3 .chipfill,
+#growth [data-tile="ai"] .salesai-svg .chip3 .outer-rim{
+  transform-origin: var(--r3-cx) var(--r3-cy);
+  transform: scale(1, var(--s3o));
+}
+#growth [data-tile="ai"] .salesai-svg .chip3 .inner{
+  transform-origin: var(--r3-cx) var(--r3-cy);
+  transform: scale(1, var(--s3i));
+}
+
+/* —— connector thickness + rounded elbows + follow-row offsets —— */
+#growth [data-tile="ai"] .salesai-svg .conn{ stroke-linejoin:round; stroke-linecap:round; }
+#growth [data-tile="ai"] .salesai-svg .conn path{
+  stroke-width: var(--ai-conn-w);
+  vector-effect: non-scaling-stroke;
+}
+#growth [data-tile="ai"] .salesai-svg .conn .c2{ transform: translateY(var(--gap12)); }
+#growth [data-tile="ai"] .salesai-svg .conn .c3,
+#growth [data-tile="ai"] .salesai-svg .conn .c4{ transform: translateY(calc(var(--gap12) + var(--gap23))); }
 
 
 
