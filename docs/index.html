@@ -2410,46 +2410,38 @@
   --sa-amber:#ffd58a;   /* faint gold */
 }
 
-/* === SALES AI (Funnel Pills) — knobs & layout === */
-.sales-ai-svg-wrap {
-  /* Positioning of the whole SVG inside the tile */
-  --sai-nudge-x: 0px;          /* nudge left/right of SVG */
-  --sai-nudge-y: 8px;          /* nudge up/down of SVG */
-  --sai-scale: 1;              /* overall scale of SVG */
-  --sai-grid-opacity: .24;     /* mesh visibility */
-  --sai-text-size: 18px;       /* label text size */
+/* Sales AI (Funnel Pills) — knobs & layout (v2) */
+#growth [data-tile="sales-ai"]{
+  /* mesh + svg placement */
+  --sai-grid-opacity: .22;        /* 0–1 */
+  --sai-svg-scale: 1;             /* overall scale */
+  --sai-svg-ty: 12px;             /* vertical nudge */
 
-  width: 100%;
-  aspect-ratio: 4 / 3;         /* stable box so nothing collapses */
-  transform: translate(var(--sai-nudge-x), var(--sai-nudge-y))
-             scale(var(--sai-scale));
-  display: block;
+  /* text tweaks (if you need) */
+  --sai-label-fs-1: 16px;
+  --sai-label-fs-2: 15px;
+  --sai-label-fs-3: 14px;
+}
+#growth [data-tile="sales-ai"] .sales-ai-svg{
+  display:block; width:100%; height:auto;
+  transform: translateY(var(--sai-svg-ty)) scale(var(--sai-svg-scale));
 }
 
-.sai-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  overflow: visible;           /* prevents clipping of glow */
-}
-
-/* Tablet tweaks */
-@media (max-width: 1024px) {
-  .sales-ai-svg-wrap {
-    --sai-scale: 0.95;
-    --sai-text-size: 16px;
+/* Tablet */
+@media (max-width:900px){
+  #growth [data-tile="sales-ai"]{
     --sai-grid-opacity: .20;
-    --sai-nudge-y: 4px;
+    --sai-svg-scale: .94;
+    --sai-svg-ty: 8px;
   }
 }
 
-/* Phone tweaks */
-@media (max-width: 640px) {
-  .sales-ai-svg-wrap {
-    --sai-scale: 1.06;
-    --sai-text-size: 14px;
+/* Phone */
+@media (max-width:640px){
+  #growth [data-tile="sales-ai"]{
     --sai-grid-opacity: .18;
-    --sai-nudge-y: 0px;
+    --sai-svg-scale: .86;
+    --sai-svg-ty: 4px;
   }
 }
 
@@ -2941,76 +2933,111 @@
                 Find the right buyer, tailor the pitch, and reach out at the right time, automatically.
               </p>
             
-              <!-- SALES AI: Funnel Pills SVG (single source of truth) -->
+              <!-- SALES AI: Funnel Pills SVG (v2) -->
               <div class="sales-ai-svg-wrap">
-                <svg class="sai-svg" viewBox="0 0 800 520" aria-hidden="true">
+                <svg class="sales-ai-svg" viewBox="0 0 720 480" width="100%" height="100%" aria-hidden="true">
                   <defs>
-                    <!-- Neon stroke gradient -->
-                    <linearGradient id="sai-blue" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%"  stop-color="#6CC6FF"/>
-                      <stop offset="100%" stop-color="#3A83FF"/>
-                    </linearGradient>
+                    <!-- Mesh grid (fades at edges) -->
+                    <pattern id="sai-mesh" width="24" height="24" patternUnits="userSpaceOnUse">
+                      <path d="M0 0H24 M0 0V24" stroke="#85B8FF" stroke-opacity=".14" stroke-width="1"/>
+                    </pattern>
+                    <radialGradient id="sai-mesh-fade" cx="50%" cy="50%" r="65%">
+                      <stop offset="0%"  stop-color="#fff" stop-opacity="1"/>
+                      <stop offset="70%" stop-color="#fff" stop-opacity=".25"/>
+                      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+                    </radialGradient>
+                    <mask id="sai-fade-mask">
+                      <rect width="100%" height="100%" fill="url(#sai-mesh-fade)"/>
+                    </mask>
               
-                    <!-- Outer glow -->
-                    <filter id="sai-glow" x="-60%" y="-60%" width="220%" height="220%">
-                      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
+                    <!-- Neon-ish blue for pills & connectors -->
+                    <linearGradient id="sai-blue" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0" stop-color="#6CC6FF"/>
+                      <stop offset="1" stop-color="#3A83FF"/>
+                    </linearGradient>
+                    <filter id="sai-glow-8" x="-40%" y="-40%" width="180%" height="180%">
+                      <feGaussianBlur stdDeviation="8" result="b"/>
                       <feMerge>
-                        <feMergeNode in="blur"/>
+                        <feMergeNode in="b"/>
                         <feMergeNode in="SourceGraphic"/>
                       </feMerge>
                     </filter>
-              
-                    <!-- Faint mesh grid -->
-                    <pattern id="sai-grid" width="32" height="32" patternUnits="userSpaceOnUse">
-                      <path d="M32 0H0M0 0V32" stroke="#9BC6FF" stroke-opacity=".22" stroke-width="1"/>
-                    </pattern>
-              
-                    <!-- Edge fade so the mesh disappears toward the card edges -->
-                    <radialGradient id="sai-fade" cx="50%" cy="50%" r="70%">
-                      <stop offset="60%" stop-color="white" stop-opacity="1"/>
-                      <stop offset="100%" stop-color="white" stop-opacity="0"/>
-                    </radialGradient>
-                    <mask id="sai-fade-mask">
-                      <rect width="100%" height="100%" fill="url(#sai-fade)"/>
-                    </mask>
+                    <filter id="sai-glow-12" x="-40%" y="-40%" width="180%" height="180%">
+                      <feGaussianBlur stdDeviation="12" result="b"/>
+                      <feMerge>
+                        <feMergeNode in="b"/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
                   </defs>
               
-                  <!-- Mesh -->
-                  <rect width="100%" height="100%" fill="url(#sai-grid)"
-                        mask="url(#sai-fade-mask)" opacity="var(--sai-grid-opacity)"/>
+                  <!-- faint mesh -->
+                  <rect x="40" y="150" width="640" height="260"
+                        fill="url(#sai-mesh)" mask="url(#sai-fade-mask)"
+                        opacity="var(--sai-grid-opacity, .22)"/>
               
-                  <!-- Subtle funnel side guides -->
-                  <g stroke="url(#sai-blue)" opacity=".35" filter="url(#sai-glow)">
-                    <path d="M120,70 L120,450" fill="none"/>
-                    <path d="M680,70 L680,450" fill="none"/>
+                  <!-- funnel side guides (very subtle) -->
+                  <path d="M110 210v160" stroke="url(#sai-blue)" stroke-width="3" stroke-opacity=".25" filter="url(#sai-glow-8)"/>
+                  <path d="M610 210v160" stroke="url(#sai-blue)" stroke-width="3" stroke-opacity=".25" filter="url(#sai-glow-8)"/>
+              
+                  <!-- Pills -->
+                  <!-- 1: Find Buyer -->
+                  <g transform="translate(70,220)">
+                    <!-- glow stroke -->
+                    <rect x="0" y="0" rx="32" ry="32" width="580" height="60"
+                          fill="none" stroke="url(#sai-blue)" stroke-width="14" opacity=".30" filter="url(#sai-glow-12)"/>
+                    <!-- body -->
+                    <rect x="0" y="0" rx="32" ry="32" width="580" height="60"
+                          fill="rgba(18,29,53,.45)" stroke="url(#sai-blue)" stroke-width="2"/>
+                    <text x="290" y="38" text-anchor="middle" fill="#DDE9FF" font-size="16" font-weight="600" letter-spacing=".02em">
+                      Find Buyer
+                    </text>
                   </g>
               
-                  <!-- Three stacked pills + connectors -->
-                  <g filter="url(#sai-glow)" stroke="url(#sai-blue)" stroke-width="3"
-                     fill="rgba(12,32,80,.18)">
-                    <!-- Big pill -->
-                    <rect x="90"  y="90"  width="620" height="86" rx="36"/>
-                    <!-- Medium pill -->
-                    <rect x="160" y="214" width="480" height="86" rx="32"/>
-                    <!-- Small pill -->
-                    <rect x="240" y="338" width="320" height="86" rx="28"/>
-              
-                    <!-- Connectors (simple curves right then left to suggest flow) -->
-                    <path d="M710,133 C740,133 740,247 710,247" fill="none"/>
-                    <path d="M90,247  C60,247  60,381  90,381"   fill="none"/>
+                  <!-- 2: Timing · Channel · Pitch -->
+                  <g transform="translate(140,300)">
+                    <rect x="0" y="0" rx="28" ry="28" width="440" height="56"
+                          fill="none" stroke="url(#sai-blue)" stroke-width="12" opacity=".30" filter="url(#sai-glow-12)"/>
+                    <rect x="0" y="0" rx="28" ry="28" width="440" height="56"
+                          fill="rgba(18,29,53,.45)" stroke="url(#sai-blue)" stroke-width="2"/>
+                    <text x="220" y="36" text-anchor="middle" fill="#DDE9FF" font-size="15" font-weight="600" letter-spacing=".02em">
+                      Timing · Channel · Pitch
+                    </text>
                   </g>
               
-                  <!-- Labels -->
-                  <g class="sai-labels" fill="#D7E8FF" font-weight="700"
-                     font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto"
-                     font-size="var(--sai-text-size)">
-                    <text x="400" y="140" text-anchor="middle">Find Buyer</text>
-                    <text x="400" y="265" text-anchor="middle">Timing · Channel · Pitch</text>
-                    <text x="400" y="389" text-anchor="middle">Handoff / Close</text>
+                  <!-- 3: Handoff / Close -->
+                  <g transform="translate(230,378)">
+                    <rect x="0" y="0" rx="26" ry="26" width="260" height="54"
+                          fill="none" stroke="url(#sai-blue)" stroke-width="10" opacity=".30" filter="url(#sai-glow-12)"/>
+                    <rect x="0" y="0" rx="26" ry="26" width="260" height="54"
+                          fill="rgba(18,29,53,.45)" stroke="url(#sai-blue)" stroke-width="2"/>
+                    <text x="130" y="34" text-anchor="middle" fill="#DDE9FF" font-size="14" font-weight="600" letter-spacing=".02em">
+                      Handoff / Close
+                    </text>
                   </g>
+              
+                  <!-- Connectors (soft light, both sides) -->
+                  <!-- from pill 1 → right rail -->
+                  <path d="M650 250 C 650 250, 650 265, 610 265"
+                        fill="none" stroke="url(#sai-blue)" stroke-width="7" stroke-opacity=".50" filter="url(#sai-glow-12)"/>
+                  <!-- from pill 1 → left rail -->
+                  <path d="M70 250 C 70 250, 70 265, 110 265"
+                        fill="none" stroke="url(#sai-blue)" stroke-width="7" stroke-opacity=".50" filter="url(#sai-glow-12)"/>
+              
+                  <!-- from pill 2 → right rail -->
+                  <path d="M580 328 C 600 328, 610 338, 610 360"
+                        fill="none" stroke="url(#sai-blue)" stroke-width="6" stroke-opacity=".45" filter="url(#sai-glow-12)"/>
+                  <!-- from pill 2 → left rail -->
+                  <path d="M140 328 C 120 328, 110 338, 110 360"
+                        fill="none" stroke="url(#sai-blue)" stroke-width="6" stroke-opacity=".45" filter="url(#sai-glow-12)"/>
+              
+                  <!-- from pill 3 → bottom center (suggesting flow onward) -->
+                  <path d="M360 432 V 460"
+                        fill="none" stroke="url(#sai-blue)" stroke-width="6" stroke-opacity=".45" filter="url(#sai-glow-12)"/>
                 </svg>
               </div>
-              <!-- /SALES AI SVG -->
+              <!-- /SALES AI: Funnel Pills SVG (v2) -->
+
             </article>
   
             <!-- Quotes -->
