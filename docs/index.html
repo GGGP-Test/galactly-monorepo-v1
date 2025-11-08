@@ -3117,7 +3117,38 @@
                     <rect x="360" y="412" width="420" height="88" rx="44" fill="none"
                           stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
                     <text class="label r3" x="570" y="456">Handoff / Close</text>
-                  </g>
+                    
+                    <!-- ===== CONNECTORS (TL → R → L → R) ===== -->
+                    <g class="conn"
+                       fill="none"
+                       stroke="url(#ai_connector)"
+                       stroke-linecap="round"
+                       filter="url(#ai_glow)">
+                      <!-- enter from top-left → into row 1 (x≈170 is the outer rim left) -->
+                      <path d="M120 214
+                               V236
+                               C120 246 130 254 142 254
+                               H170" />
+                    
+                      <!-- row 1 right → down → into row 2 right (row1 right rim x≈1030) -->
+                      <path d="M1030 254
+                               H1090
+                               C1102 254 1110 262 1110 274
+                               V330
+                               C1110 342 1102 350 1090 350
+                               H900" />
+                    
+                      <!-- row 2 left → down → into row 3 left (row2 left rim x≈260) -->
+                      <path d="M260 360
+                               H200
+                               C188 360 180 368 180 380
+                               V436
+                               C180 448 188 456 200 456
+                               H360" />
+                    
+                      <!-- exit to the right from row 3 (row3 right inner x≈780) -->
+                      <path d="M780 456 H900" />
+                    </g>
                 </svg>
               </div>
             </article>
