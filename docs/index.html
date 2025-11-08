@@ -2947,18 +2947,10 @@
               <div class="sales-ai-svg-wrap">
                 <!-- ===== SALES AI: Funnel Pills + Mesh + Connectors (REPLACE WHOLE SVG) ===== -->
 
-                <!-- === SALES AI — Figma-accurate chips + mesh + connected brackets === -->
+                <!-- === SALES AI — double-pills (no mesh) + connected brackets === -->
                 <svg class="salesai-svg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
                   <defs>
-                    <pattern id="ai_grid" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
-                      <path d="M24 0H0V24" stroke="rgba(140,170,200,0.15)" stroke-width="1"/>
-                    </pattern>
-                    <radialGradient id="ai_fade" cx="50%" cy="50%" r="75%">
-                      <stop offset="55%" stop-color="white" stop-opacity="0.9"/>
-                      <stop offset="100%" stop-color="white" stop-opacity="0"/>
-                    </radialGradient>
-                    <mask id="ai_fade_mask"><rect width="1200" height="520" fill="url(#ai_fade)"/></mask>
-                
+                    <!-- neon edge + connector -->
                     <linearGradient id="ai_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%"  stop-color="var(--ai-stroke-1)"/>
                       <stop offset="50%" stop-color="var(--ai-stroke-2)"/>
@@ -2970,6 +2962,7 @@
                       <stop offset="100%" stop-color="var(--ai-stroke-1)" stop-opacity=".55"/>
                     </linearGradient>
                 
+                    <!-- subtle outer glow -->
                     <filter id="ai_glow" x="-40%" y="-40%" width="180%" height="180%">
                       <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
                       <feColorMatrix type="matrix" values="
@@ -2981,49 +2974,44 @@
                     </filter>
                   </defs>
                 
-                  <!-- Mesh backdrop -->
-                  <g opacity="var(--ai-mesh-opacity)" mask="url(#ai_fade_mask)">
-                    <rect x="54" y="96" width="1092" height="360" fill="url(#ai_grid)"/>
-                  </g>
-                
-                  <!-- CHIP #1 -->
+                  <!-- ===== ROW 1 ===== -->
                   <g class="chip chip1" filter="url(#ai_glow)">
-                    <!-- outer chip -->
-                    <rect x="170" y="206" width="860" height="96" rx="48"
-                          fill="var(--ai-chip-outer)" stroke="url(#ai_stroke)" stroke-width="3"/>
-                    <!-- inner pill -->
+                    <!-- outer = transparent pill (stroke only) -->
+                    <rect x="170" y="206" width="860" height="96" rx="48" fill="none"
+                          stroke="url(#ai_stroke)" stroke-width="3"/>
+                    <!-- inner = filled pill (slightly smaller) -->
                     <rect x="190" y="224" width="820" height="60" rx="30" fill="var(--ai-pill-fill)"/>
                     <text x="600" y="254">Buyers Finder</text>
                   </g>
                 
-                  <!-- CHIP #2 -->
+                  <!-- ===== ROW 2 ===== -->
                   <g class="chip chip2" filter="url(#ai_glow)">
-                    <rect x="260" y="314" width="640" height="92" rx="46"
-                          fill="var(--ai-chip-outer)" stroke="url(#ai_stroke)" stroke-width="3"/>
+                    <rect x="260" y="314" width="640" height="92" rx="46" fill="none"
+                          stroke="url(#ai_stroke)" stroke-width="3"/>
                     <rect x="280" y="330" width="600" height="60" rx="30" fill="var(--ai-pill-fill)"/>
                     <text x="580" y="360">Timing · Channel · Pitch</text>
                   </g>
                 
-                  <!-- CHIP #3 -->
+                  <!-- ===== ROW 3 ===== -->
                   <g class="chip chip3" filter="url(#ai_glow)">
-                    <rect x="360" y="412" width="420" height="88" rx="44"
-                          fill="var(--ai-chip-outer)" stroke="url(#ai_stroke)" stroke-width="3"/>
+                    <rect x="360" y="412" width="420" height="88" rx="44" fill="none"
+                          stroke="url(#ai_stroke)" stroke-width="3"/>
                     <rect x="378" y="428" width="384" height="56" rx="28" fill="var(--ai-pill-fill)"/>
                     <text x="570" y="456">Handoff / Close</text>
                   </g>
                 
-                  <!-- CONNECTORS (fixed numbers; no CSS vars inside 'd') -->
+                  <!-- ===== CONNECTORS (fixed numbers; no CSS vars inside d) ===== -->
                   <g class="conn" fill="none" stroke="url(#ai_connector)" stroke-linecap="round"
                      filter="url(#ai_glow)" opacity="var(--ai-conn-alpha)">
-                    <!-- enter from top-left and hook into chip #1 -->
+                    <!-- enter TL → chip1 -->
                     <path d="M120 140 V236 C120 246 130 254 142 254 H170" stroke-width="var(--ai-conn-w)"/>
-                    <!-- chip #1 right → down → into chip #2 right -->
+                    <!-- chip1 right → down → chip2 right -->
                     <path d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330
                              C1110 342 1102 350 1090 350 H900" stroke-width="var(--ai-conn-w)"/>
-                    <!-- chip #2 left → down → into chip #3 left -->
+                    <!-- chip2 left → down → chip3 left -->
                     <path d="M260 360 H200 C188 360 180 368 180 380 V436
                              C180 448 188 456 200 456 H360" stroke-width="var(--ai-conn-w)"/>
-                    <!-- exit to the right from chip #3 -->
+                    <!-- exit → right of chip3 -->
                     <path d="M780 456 H870" stroke-width="var(--ai-conn-w)"/>
                   </g>
                 </svg>
