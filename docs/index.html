@@ -2404,206 +2404,58 @@
 
 
 
-
-
-/* ===== SALES AI — MASTER KNOBS (no mesh) ===== */
-:root{
-  /* —— palette —— */
-  --ai-stroke-1:#59A7FF;
-  --ai-stroke-2:#8FD3FF;
-  --ai-pill-fill:rgba(16,24,40,.92);
-  --ai-chip-fill:rgba(18,35,64,.30);
-  --ai-text:#EAF4FF;
-
-  /* —— connectors —— */
-  --ai-conn-w:1px;       /* keep this; thickness is stabilized below */
-  --ai-conn-alpha:.95;
-  --ai-conn-dx:0px;
-  --ai-conn-dy:0px;
-  --ai-conn-scale:1;     /* do not scale connectors */
-
-  /* —— whole-SVG placement per device —— */
-  --ai-svg-x-desktop:0px;  --ai-svg-y-desktop:6px;  --ai-svg-scale-desktop:1;
-  --ai-svg-x-tablet:0px;   --ai-svg-y-tablet:0px;   --ai-svg-scale-tablet:.96;
-  --ai-svg-x-phone:0px;    --ai-svg-y-phone:0px;    --ai-svg-scale-phone:.92;
-
-  /* —— typography —— */
-  --ai-font:Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  --r1-fs:16px; --r1-wt:700; --r1-track:.2px;
-  --r2-fs:16px; --r2-wt:700; --r2-track:.2px;
-  --r3-fs:16px; --r3-wt:700; --r3-track:.2px;
-
-  /* —— canonical centers (unchanged) —— */
-  --r1-cx:600px; --r1-cy:254px;
-  --r2-cx:580px; --r2-cy:360px;
-  --r3-cx:570px; --r3-cy:456px;
-
-  /* —— row scaling (your values preserved) —— */
-  --r1-outer-sx:0.020; --r1-outer-sy:1.10; --r1-inner-sx:.165; --r1-inner-sy:1.065;
-  --r2-outer-sx:0.020; --r2-outer-sy:1.10; --r2-inner-sx:.165; --r2-inner-sy:1.065;
-  --r3-outer-sx:0.020; --r3-outer-sy:1.10; --r3-inner-sx:.165; --r3-inner-sy:1.065;
-
-  /* uniform magnification per row (kept) */
-  --r1-mag:1; --r2-mag:1; --r3-mag:1;
-
-  /* row nudges */
-  --r1-dx:0px; --r1-dy:10px;
-  --r2-dx:0px; --r2-dy:10px;
-  --r3-dx:0px; --r3-dy:10px;
-
-  /* ===== derived geometry (auto-computed from your scales) ===== */
-  /* row 1 base: outer 860×96 at (170,206); inner 820×60 at (190,224) */
-  --r1-outer-w: calc(860px * var(--r1-outer-sx));
-  --r1-outer-h: calc( 96px * var(--r1-outer-sy));
-  --r1-outer-x: calc(var(--r1-cx) - var(--r1-outer-w)/2);
-  --r1-outer-y: calc(var(--r1-cy) - var(--r1-outer-h)/2);
-  --r1-outer-r: calc(48px * min(var(--r1-outer-sx), var(--r1-outer-sy)));
-
-  --r1-inner-w: calc(820px * var(--r1-inner-sx));
-  --r1-inner-h: calc( 60px * var(--r1-inner-sy));
-  --r1-inner-x: calc(var(--r1-cx) - var(--r1-inner-w)/2);
-  --r1-inner-y: calc(var(--r1-cy) - var(--r1-inner-h)/2);
-  --r1-inner-r: calc(30px * min(var(--r1-inner-sx), var(--r1-inner-sy)));
-
-  --r1-left:  var(--r1-outer-x);
-  --r1-right: calc(var(--r1-outer-x) + var(--r1-outer-w));
-  --r1-tx:    var(--r1-cx);
-  --r1-ty:    var(--r1-cy);
-
-  /* row 2 base: outer 640×92 at (260,314); inner 600×60 at (280,330) */
-  --r2-outer-w: calc(640px * var(--r2-outer-sx));
-  --r2-outer-h: calc( 92px * var(--r2-outer-sy));
-  --r2-outer-x: calc(var(--r2-cx) - var(--r2-outer-w)/2);
-  --r2-outer-y: calc(var(--r2-cy) - var(--r2-outer-h)/2);
-  --r2-outer-r: calc(46px * min(var(--r2-outer-sx), var(--r2-outer-sy)));
-
-  --r2-inner-w: calc(600px * var(--r2-inner-sx));
-  --r2-inner-h: calc( 60px * var(--r2-inner-sy));
-  --r2-inner-x: calc(var(--r2-cx) - var(--r2-inner-w)/2);
-  --r2-inner-y: calc(var(--r2-cy) - var(--r2-inner-h)/2);
-  --r2-inner-r: calc(30px * min(var(--r2-inner-sx), var(--r2-inner-sy)));
-
-  --r2-left:  var(--r2-outer-x);
-  --r2-right: calc(var(--r2-outer-x) + var(--r2-outer-w));
-  --r2-tx:    var(--r2-cx);
-  --r2-ty:    var(--r2-cy);
-
-  /* row 3 base: outer 420×88 at (360,412); inner 384×56 at (378,428) */
-  --r3-outer-w: calc(420px * var(--r3-outer-sx));
-  --r3-outer-h: calc( 88px * var(--r3-outer-sy));
-  --r3-outer-x: calc(var(--r3-cx) - var(--r3-outer-w)/2);
-  --r3-outer-y: calc(var(--r3-cy) - var(--r3-outer-h)/2);
-  --r3-outer-r: calc(44px * min(var(--r3-outer-sx), var(--r3-outer-sy)));
-
-  --r3-inner-w: calc(384px * var(--r3-inner-sx));
-  --r3-inner-h: calc( 56px * var(--r3-inner-sy));
-  --r3-inner-x: calc(var(--r3-cx) - var(--r3-inner-w)/2);
-  --r3-inner-y: calc(var(--r3-cy) - var(--r3-inner-h)/2);
-  --r3-inner-r: calc(28px * min(var(--r3-inner-sx), var(--r3-inner-sy)));
-
-  --r3-left:  var(--r3-outer-x);
-  --r3-right: calc(var(--r3-outer-x) + var(--r3-outer-w));
-  --r3-tx:    var(--r3-cx);
-  --r3-ty:    var(--r3-cy);
-
-  /* per-connector manual nudges (still available) */
-  --c1-dx:0px; --c1-dy:0px; --c1-scale:1;
-  --c2-dx:0px; --c2-dy:0px; --c2-scale:1;
-  --c3-dx:0px; --c3-dy:0px; --c3-scale:1;
-  --c4-dx:0px; --c4-dy:0px; --c4-scale:1;
+/* === Make Sales AI size/position like Real-time Signals === */
+#growth [data-tile="ai"]{
+  /* tile height + art placement */
+  --ai-tile-min-h: 380px;      /* match RTS headroom */
+  --ai-center-y: 64%;          /* vertical anchor of the SVG */
+  --ai-scale-desktop: 1.12;    /* dial this to match the RTS visual weight */
+  --ai-scale-tablet: 1.02;
+  --ai-scale-phone:  .94;
 }
 
-/* SVG placement/scale per device */
-.ai-sdr .salesai-svg{
-  width:100%; height:360px; display:block;
-  transform: translate(var(--ai-svg-x-desktop),var(--ai-svg-y-desktop)) scale(var(--ai-svg-scale-desktop));
+#growth [data-tile="ai"] .sales-ai-svg-wrap{
+  position: relative;
+  min-height: var(--ai-tile-min-h);
 }
+
+/* center+scale the SVG (like your RTS .slot-asset) */
+#growth [data-tile="ai"] .salesai-svg{
+  position: absolute;
+  left: 50%;
+  top: var(--ai-center-y);
+  transform: translate(-50%, -50%) scale(var(--ai-scale-desktop));
+  width: 100%;                 /* respect the tile’s width */
+  height: auto;
+  max-width: none;
+  pointer-events: none;        /* purely decorative */
+  opacity: .96;
+}
+
 @media (max-width:1024px){
-  .ai-sdr .salesai-svg{
-    height:330px;
-    transform: translate(var(--ai-svg-x-tablet),var(--ai-svg-y-tablet)) scale(var(--ai-svg-scale-tablet));
+  #growth [data-tile="ai"] .salesai-svg{
+    transform: translate(-50%, -50%) scale(var(--ai-scale-tablet));
   }
 }
 @media (max-width:700px){
-  .ai-sdr .salesai-svg{
-    height:310px;
-    transform: translate(var(--ai-svg-x-phone),var(--ai-svg-y-phone)) scale(var(--ai-svg-scale-phone));
+  #growth [data-tile="ai"] .salesai-svg{
+    transform: translate(-50%, -50%) scale(var(--ai-scale-phone));
   }
 }
 
-/* labels */
-.ai-sdr .salesai-svg text.label{
-  fill:var(--ai-text); font-family:var(--ai-font);
-  dominant-baseline:middle; text-anchor:middle;
-}
-.ai-sdr .salesai-svg text.r1{ font-size:var(--r1-fs); font-weight:var(--r1-wt); letter-spacing:var(--r1-track); }
-.ai-sdr .salesai-svg text.r2{ font-size:var(--r2-fs); font-weight:var(--r2-wt); letter-spacing:var(--r2-track); }
-.ai-sdr .salesai-svg text.r3{ font-size:var(--r3-fs); font-weight:var(--r3-wt); letter-spacing:var(--r3-track); }
-
-/* row magnification + nudges */
-.salesai-svg .chip1{ transform-origin:var(--r1-cx) var(--r1-cy); transform:translate(var(--r1-dx),var(--r1-dy)) scale(var(--r1-mag)); }
-.salesai-svg .chip2{ transform-origin:var(--r2-cx) var(--r2-cy); transform:translate(var(--r2-dx),var(--r2-dy)) scale(var(--r2-mag)); }
-.salesai-svg .chip3{ transform-origin:var(--r3-cx) var(--r3-cy); transform:translate(var(--r3-dx),var(--r3-dy)) scale(var(--r3-mag)); }
-
-/* ——— geometry is driven by CSS props (force-override inline attrs) ——— */
-.salesai-svg .chip1 .chipfill{ x:var(--r1-outer-x) !important; y:var(--r1-outer-y) !important; width:var(--r1-outer-w) !important; height:var(--r1-outer-h) !important; rx:var(--r1-outer-r) !important; }
-.salesai-svg .chip1 .outer-rim{ x:var(--r1-outer-x) !important; y:var(--r1-outer-y) !important; width:var(--r1-outer-w) !important; height:var(--r1-outer-h) !important; rx:var(--r1-outer-r) !important; }
-.salesai-svg .chip1 .inner   { x:var(--r1-inner-x) !important; y:var(--r1-inner-y) !important; width:var(--r1-inner-w) !important; height:var(--r1-inner-h) !important; rx:var(--r1-inner-r) !important; }
-
-.salesai-svg .chip2 .chipfill{ x:var(--r2-outer-x) !important; y:var(--r2-outer-y) !important; width:var(--r2-outer-w) !important; height:var(--r2-outer-h) !important; rx:var(--r2-outer-r) !important; }
-.salesai-svg .chip2 .outer-rim{ x:var(--r2-outer-x) !important; y:var(--r2-outer-y) !important; width:var(--r2-outer-w) !important; height:var(--r2-outer-h) !important; rx:var(--r2-outer-r) !important; }
-.salesai-svg .chip2 .inner   { x:var(--r2-inner-x) !important; y:var(--r2-inner-y) !important; width:var(--r2-inner-w) !important; height:var(--r2-inner-h) !important; rx:var(--r2-inner-r) !important; }
-
-.salesai-svg .chip3 .chipfill{ x:var(--r3-outer-x) !important; y:var(--r3-outer-y) !important; width:var(--r3-outer-w) !important; height:var(--r3-outer-h) !important; rx:var(--r3-outer-r) !important; }
-.salesai-svg .chip3 .outer-rim{ x:var(--r3-outer-x) !important; y:var(--r3-outer-y) !important; width:var(--r3-outer-w) !important; height:var(--r3-outer-h) !important; rx:var(--r3-outer-r) !important; }
-.salesai-svg .chip3 .inner   { x:var(--r3-inner-x) !important; y:var(--r3-inner-y) !important; width:var(--r3-inner-w) !important; height:var(--r3-inner-h) !important; rx:var(--r3-inner-r) !important; }
-
-/* text centered on the computed centers */
-.salesai-svg text.r1{ x:var(--r1-tx) !important; y:var(--r1-ty) !important; }
-.salesai-svg text.r2{ x:var(--r2-tx) !important; y:var(--r2-ty) !important; }
-.salesai-svg text.r3{ x:var(--r3-tx) !important; y:var(--r3-ty) !important; }
-
-/* connector group (global) */
-.salesai-svg .conn{
-  opacity:var(--ai-conn-alpha);
-  stroke-width:var(--ai-conn-w);
-  transform: translate(var(--ai-conn-dx),var(--ai-conn-dy)) scale(var(--ai-conn-scale));
-}
-/* keep line thickness constant when transforms are applied */
-.salesai-svg .conn path{ vector-effect:non-scaling-stroke; }
-
-/* auto-follow: move each connector to current attach point */
-.salesai-svg .conn .c1{
-  transform:
-    translate(calc(var(--r1-left)  - 170px),
-              calc(var(--r1-cy)    - 254px))
-    translate(var(--c1-dx),var(--c1-dy))
-    scale(var(--c1-scale));
-}
-.salesai-svg .conn .c2{
-  transform:
-    translate(calc(var(--r1-right) - 1030px),
-              calc(var(--r1-cy)    - 254px))
-    translate(var(--c2-dx),var(--c2-dy))
-    scale(var(--c2-scale));
-}
-.salesai-svg .conn .c3{
-  transform:
-    translate(calc(var(--r2-left)  - 260px),
-              calc(var(--r2-cy)    - 360px))
-    translate(var(--c3-dx),var(--c3-dy))
-    scale(var(--c3-scale));
-}
-.salesai-svg .conn .c4{
-  transform:
-    translate(calc((var(--r3-inner-x) + var(--r3-inner-w)) - 780px),
-              calc(var(--r3-cy)      - 456px))
-    translate(var(--c4-dx),var(--c4-dy))
-    scale(var(--c4-scale));
+/* keep ALL strokes thin when the SVG is scaled */
+#growth [data-tile="ai"] .salesai-svg .c path,
+#growth [data-tile="ai"] .salesai-svg rect[stroke]{
+  vector-effect: non-scaling-stroke;
 }
 
-/* rim thickness */
-.salesai-svg .outer-rim{ stroke-width:var(--ai-rim-w,1px); }
+/* label sizing aligned to RTS breakpoints */
+#growth [data-tile="ai"] .salesai-svg .l{
+  font-weight: 600; font-size: 16px;
+}
+@media (max-width:1024px){ #growth [data-tile="ai"] .salesai-svg .l{ font-size:15px; } }
+@media (max-width:700px){  #growth [data-tile="ai"] .salesai-svg .l{ font-size:14px; } }
+
 
 
 
