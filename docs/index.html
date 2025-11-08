@@ -2437,6 +2437,20 @@
   --r2-cx:580px; --r2-cy:360px;
   --r3-cx:570px; --r3-cy:456px;
 
+  /* independent transform origins so we can lock left or right edges */
+  --r1-outer-cx: var(--r1-cx); --r1-inner-cx: var(--r1-cx);
+  --r2-outer-cx: var(--r2-cx); --r2-inner-cx: var(--r2-cx);
+  --r3-outer-cx: var(--r3-cx); --r3-inner-cx: var(--r3-cx);
+
+  /* per-row uniform magnification (scales pill+chip together) */
+  --r1-mag: 1; --r2-mag: 1; --r3-mag: 1;
+
+  /* per-connector nudges so you can reattach after width changes */
+  --c1-dx:0px; --c1-dy:0px; --c1-scale:1;
+  --c2-dx:0px; --c2-dy:0px; --c2-scale:1;
+  --c3-dx:0px; --c3-dy:0px; --c3-scale:1;
+  --c4-dx:0px; --c4-dy:0px; --c4-scale:1;
+
   /* move a single row */
   --r1-dx:0px; --r1-dy:0px;
   --r2-dx:0px; --r2-dy:0px;
@@ -2493,42 +2507,45 @@
 
 /* ——— per-row transforms (sizes & nudges) ——— */
 /* ROW 1 */
+.salesai-svg .chip1{ transform-origin: var(--r1-cx) var(--r1-cy); transform: scale(var(--r1-mag)); }
 .salesai-svg .chip1 .outer-rim,
 .salesai-svg .chip1 .chipfill{
-  transform-origin:var(--r1-cx) var(--r1-cy);
+  transform-origin: var(--r1-outer-cx) var(--r1-cy);
   transform:translate(var(--r1-dx),var(--r1-dy))
             scale(var(--r1-outer-sx),var(--r1-outer-sy));
 }
 .salesai-svg .chip1 .inner{
-  transform-origin:var(--r1-cx) var(--r1-cy);
+  transform-origin: var(--r1-inner-cx) var(--r1-cy);
   transform:translate(var(--r1-dx),var(--r1-dy))
             scale(var(--r1-inner-sx),var(--r1-inner-sy));
 }
 .salesai-svg text.r1{ transform:translate(var(--r1-dx),var(--r1-dy)); }
 
 /* ROW 2 */
+.salesai-svg .chip2{ transform-origin: var(--r2-cx) var(--r2-cy); transform: scale(var(--r2-mag)); }
 .salesai-svg .chip2 .outer-rim,
 .salesai-svg .chip2 .chipfill{
-  transform-origin:var(--r2-cx) var(--r2-cy);
+  transform-origin: var(--r2-outer-cx) var(--r2-cy);
   transform:translate(var(--r2-dx),var(--r2-dy))
             scale(var(--r2-outer-sx),var(--r2-outer-sy));
 }
 .salesai-svg .chip2 .inner{
-  transform-origin:var(--r2-cx) var(--r2-cy);
+  transform-origin: var(--r2-inner-cx) var(--r2-cy);
   transform:translate(var(--r2-dx),var(--r2-dy))
             scale(var(--r2-inner-sx),var(--r2-inner-sy));
 }
 .salesai-svg text.r2{ transform:translate(var(--r2-dx),var(--r2-dy)); }
 
 /* ROW 3 */
+.salesai-svg .chip3{ transform-origin: var(--r3-cx) var(--r3-cy); transform: scale(var(--r3-mag)); }
 .salesai-svg .chip3 .outer-rim,
 .salesai-svg .chip3 .chipfill{
-  transform-origin:var(--r3-cx) var(--r3-cy);
+  transform-origin: var(--r3-outer-cx) var(--r3-cy);
   transform:translate(var(--r3-dx),var(--r3-dy))
             scale(var(--r3-outer-sx),var(--r3-outer-sy));
 }
 .salesai-svg .chip3 .inner{
-  transform-origin:var(--r3-cx) var(--r3-cy);
+  transform-origin: var(--r3-inner-cx) var(--r3-cy);
   transform:translate(var(--r3-dx),var(--r3-dy))
             scale(var(--r3-inner-sx),var(--r3-inner-sy));
 }
@@ -2542,9 +2559,29 @@
     translate(var(--ai-conn-dx),var(--ai-conn-dy))
     scale(var(--ai-conn-scale));
 }
+/* anchor each connector near its attach point + allow nudges */
+.salesai-svg .conn .c1{
+  transform-origin:170px 254px;  /* row1 left rim */
+  transform:translate(var(--c1-dx),var(--c1-dy)) scale(var(--c1-scale));
+}
+.salesai-svg .conn .c2{
+  transform-origin:1030px 254px; /* row1 right rim → row2 right */
+  transform:translate(var(--c2-dx),var(--c2-dy)) scale(var(--c2-scale));
+}
+.salesai-svg .conn .c3{
+  transform-origin:260px 360px;  /* row2 left rim → row3 left */
+  transform:translate(var(--c3-dx),var(--c3-dy)) scale(var(--c3-scale));
+}
+.salesai-svg .conn .c4{
+  transform-origin:780px 456px;  /* row3 right inner exit */
+  transform:translate(var(--c4-dx),var(--c4-dy)) scale(var(--c4-scale));
+}
 
 /* ——— rim thickness ——— */
 .salesai-svg .outer-rim{ stroke-width:var(--ai-rim-w); }
+
+
+
 
 
 
@@ -3041,7 +3078,6 @@
                 <!-- === SALES AI — double-pill chips (no mesh) + connectors (fixed IDs & groups) === -->
                 <svg class="salesai-svg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
                   <defs>
-                    <!-- Rim gradient + connector gradient (IDs = ai_*) -->
                     <linearGradient id="ai_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%"  stop-color="var(--ai-stroke-1)"/>
                       <stop offset="50%" stop-color="var(--ai-stroke-2)"/>
@@ -3052,8 +3088,7 @@
                       <stop offset="50%" stop-color="var(--ai-stroke-2)" stop-opacity=".95"/>
                       <stop offset="100%" stop-color="var(--ai-stroke-1)" stop-opacity=".55"/>
                     </linearGradient>
-              
-                    <!-- Soft neon glow -->
+                
                     <filter id="ai_glow" x="-40%" y="-40%" width="180%" height="180%">
                       <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
                       <feColorMatrix type="matrix" values="
@@ -3063,33 +3098,19 @@
                         0 0 0 0.0 0" result="tint"/>
                       <feMerge><feMergeNode in="tint"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
-              
-                    <style>
-                      .salesai-svg text{
-                        font: 700 16px/1 Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-                        fill: var(--ai-text);
-                        letter-spacing:.2px;
-                        dominant-baseline:middle;
-                        text-anchor:middle;
-                      }
-                    </style>
                   </defs>
-              
+                
                   <!-- ===== ROW 1 ===== -->
                   <g class="chip chip1" filter="url(#ai_glow)">
-                    <!-- inner solid pill -->
                     <rect class="inner"    x="190" y="224" width="820" height="60" rx="30" fill="var(--ai-pill-fill)"/>
-                    <!-- translucent outer chip (so you get the “double pill”) -->
                     <rect class="chipfill" x="170" y="206" width="860" height="96" rx="48" fill="var(--ai-chip-fill)"/>
-                    <!-- glowing rim -->
                     <rect class="outer-rim" x="170" y="206" width="860" height="96" rx="48"
                           fill="none" stroke="url(#ai_stroke)" stroke-width="var(--ai-stroke-w,3)" stroke-linejoin="round"/>
-                    <!-- faint top sheen for readability -->
                     <rect x="170" y="206" width="860" height="96" rx="48" fill="none"
                           stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
-                    <text x="600" y="254">Buyers Finder</text>
+                    <text class="label r1" x="600" y="254">Buyers Finder</text>
                   </g>
-              
+                
                   <!-- ===== ROW 2 ===== -->
                   <g class="chip chip2" filter="url(#ai_glow)">
                     <rect class="inner"    x="280" y="330" width="600" height="60" rx="30" fill="var(--ai-pill-fill)"/>
@@ -3098,9 +3119,9 @@
                           fill="none" stroke="url(#ai_stroke)" stroke-width="var(--ai-stroke-w,3)" stroke-linejoin="round"/>
                     <rect x="260" y="314" width="640" height="92" rx="46" fill="none"
                           stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
-                    <text x="580" y="360">Timing · Channel · Pitch</text>
+                    <text class="label r2" x="580" y="360">Timing · Channel · Pitch</text>
                   </g>
-              
+                
                   <!-- ===== ROW 3 ===== -->
                   <g class="chip chip3" filter="url(#ai_glow)">
                     <rect class="inner"    x="378" y="428" width="384" height="56" rx="28" fill="var(--ai-pill-fill)"/>
@@ -3109,26 +3130,18 @@
                           fill="none" stroke="url(#ai_stroke)" stroke-width="var(--ai-stroke-w,3)" stroke-linejoin="round"/>
                     <rect x="360" y="412" width="420" height="88" rx="44" fill="none"
                           stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
-                    <text x="570" y="456">Handoff / Close</text>
+                    <text class="label r3" x="570" y="456">Handoff / Close</text>
                   </g>
-              
+                
                   <!-- ===== CONNECTORS (TL → R → L → R) ===== -->
                   <g class="conn" fill="none" stroke="url(#ai_connector)" stroke-linecap="round"
                      filter="url(#ai_glow)" opacity="var(--ai-conn-alpha,1)">
-                    <!-- enter from TL into row 1 -->
-                    <path d="M120 214 V236 C120 246 130 254 142 254 H170"
-                          stroke-width="var(--ai-conn-w,6)"/>
-                    <!-- row 1 right → down → row 2 right -->
-                    <path d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330
-                             C1110 342 1102 350 1090 350 H900"
-                          stroke-width="var(--ai-conn-w,6)"/>
-                    <!-- row 2 left → down → row 3 left -->
-                    <path d="M260 360 H200 C188 360 180 368 180 380 V436
-                             C180 448 188 456 200 456 H360"
-                          stroke-width="var(--ai-conn-w,6)"/>
-                    <!-- exit →
-                    -->
-                    <path d="M780 456 H900" stroke-width="var(--ai-conn-w,6)"/>
+                    <g class="c1"><path d="M120 214 V236 C120 246 130 254 142 254 H170"/></g>
+                    <g class="c2"><path d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330
+                                             C1110 342 1102 350 1090 350 H900"/></g>
+                    <g class="c3"><path d="M260 360 H200 C188 360 180 368 180 380 V436
+                                             C180 448 188 456 200 456 H360"/></g>
+                    <g class="c4"><path d="M780 456 H900"/></g>
                   </g>
                 </svg>
               </div>
