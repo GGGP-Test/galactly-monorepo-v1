@@ -3097,63 +3097,97 @@
               </p>
             
                <div class="sales-ai-svg-wrap">
-                <!-- === SALES AI — double-pill chips (no mesh) + connectors (fixed IDs & groups) === -->
-                <svg class="salesai-svg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                <!-- SALES AI · single-file SVG (connectors below chips, ticks inside) -->
+                <svg class="salesai-svg" viewBox="0 0 1200 520" aria-hidden="true" role="img">
                   <defs>
-                    <linearGradient id="ai_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%"  stop-color="var(--ai-stroke-1)"/>
-                      <stop offset="50%" stop-color="var(--ai-stroke-2)"/>
-                      <stop offset="100%" stop-color="var(--ai-stroke-1)"/>
+                    <!-- Neon stroke & connector gradients -->
+                    <linearGradient id="aiStroke" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%"  stop-color="#59A7FF"/>
+                      <stop offset="50%" stop-color="#8FD3FF"/>
+                      <stop offset="100%" stop-color="#59A7FF"/>
                     </linearGradient>
-                    <linearGradient id="ai_connector" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%"  stop-color="var(--ai-stroke-1)" stop-opacity=".55"/>
-                      <stop offset="50%" stop-color="var(--ai-stroke-2)" stop-opacity=".95"/>
-                      <stop offset="100%" stop-color="var(--ai-stroke-1)" stop-opacity=".55"/>
+                    <linearGradient id="aiConn" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%"  stop-color="#59A7FF" stop-opacity=".55"/>
+                      <stop offset="50%" stop-color="#8FD3FF" stop-opacity=".95"/>
+                      <stop offset="100%" stop-color="#59A7FF" stop-opacity=".55"/>
                     </linearGradient>
-                    <filter id="ai_glow" x="-40%" y="-40%" width="180%" height="180%">
+                
+                    <!-- Soft neon glow -->
+                    <filter id="aiGlow" x="-40%" y="-40%" width="180%" height="180%">
                       <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
                       <feColorMatrix type="matrix" values="
                         0 0 0 0 0.35
                         0 0 0 0 0.60
                         0 0 0 0 1.00
-                        0 0 0 0.0 0" result="tint"/>
+                        0 0 0 0 0" result="tint"/>
                       <feMerge><feMergeNode in="tint"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
+                
+                    <!-- Small check icon -->
+                    <symbol id="tick" viewBox="0 0 24 24">
+                      <path d="M5 12.5l4 4 10-10" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </symbol>
+                
                     <style>
-                      .salesai-svg text{ font:700 16px/1 var(--ai-font); fill:var(--ai-text); letter-spacing:.2px; }
+                      .label{font:700 16px/1 Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill:#EAF4FF; text-anchor:middle; dominant-baseline:middle}
+                      .chipfill{fill:rgba(18,35,64,.30)}
+                      .inner{fill:rgba(16,24,40,.92)}
+                      .outer-rim{fill:none; stroke:url(#aiStroke); stroke-width:3}
+                      .sheen{fill:none; stroke:#fff; stroke-opacity:.14; stroke-width:1}
+                      .conn path{stroke:url(#aiConn); stroke-width:6; stroke-linecap:round; fill:none; filter:url(#aiGlow)}
+                      .tickbox{fill:#0E1726; stroke:url(#aiStroke); stroke-width:2; rx:7; ry:7; filter:url(#aiGlow)}
                     </style>
                   </defs>
                 
-                  <!-- ROW 1 -->
-                  <g class="chip chip1" filter="url(#ai_glow)">
-                    <rect class="chipfill" fill="var(--ai-chip-fill)" rx="48"/>
-                    <rect class="outer-rim" fill="none" stroke="url(#ai_stroke)" rx="48"/>
-                    <rect class="inner"    fill="var(--ai-pill-fill)" rx="30"/>
-                    <text class="label r1">Buyers Finder</text>
+                  <!-- ===================== CONNECTORS (drawn first, sit under chips) ===================== -->
+                  <g class="conn">
+                    <!-- Enter TL -> Row 1 left rim -->
+                    <path d="M120 214 V236 C120 246 130 254 142 254 H170"/>
+                    <!-- Row 1 right rim -> down -> Row 2 right rim -->
+                    <path d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330
+                             C1110 342 1102 350 1090 350 H900"/>
+                    <!-- Row 2 left rim -> down -> Row 3 left rim -->
+                    <path d="M260 360 H200 C188 360 180 368 180 380 V436
+                             C180 448 188 456 200 456 H360"/>
+                    <!-- Exit from Row 3 right rim -->
+                    <path d="M780 456 H900"/>
                   </g>
                 
-                  <!-- ROW 2 -->
-                  <g class="chip chip2" filter="url(#ai_glow)">
-                    <rect class="chipfill" fill="var(--ai-chip-fill)" rx="46"/>
-                    <rect class="outer-rim" fill="none" stroke="url(#ai_stroke)" rx="46"/>
-                    <rect class="inner"    fill="var(--ai-pill-fill)" rx="30"/>
-                    <text class="label r2">Timing · Channel · Pitch</text>
+                  <!-- ===================== ROW 1 ===================== -->
+                  <!-- geometry: outer 860×96 @ (170,206); inner 820×60 @ (190,224); center (600,254) -->
+                  <g filter="url(#aiGlow)">
+                    <rect class="chipfill" x="170" y="206" width="860" height="96" rx="48"/>
+                    <rect class="inner"    x="190" y="224" width="820" height="60" rx="30"/>
+                    <rect class="outer-rim" x="170" y="206" width="860" height="96" rx="48"/>
+                    <rect class="sheen"    x="170" y="206" width="860" height="96" rx="48"/>
+                    <!-- tick (inside inner pill, left side) -->
+                    <rect class="tickbox" x="206" y="236" width="28" height="28"/>
+                    <use href="#tick" x="206" y="236" width="28" height="28"/>
+                    <text class="label" x="600" y="254">Buyers Finder</text>
                   </g>
                 
-                  <!-- ROW 3 -->
-                  <g class="chip chip3" filter="url(#ai_glow)">
-                    <rect class="chipfill" fill="var(--ai-chip-fill)" rx="44"/>
-                    <rect class="outer-rim" fill="none" stroke="url(#ai_stroke)" rx="44"/>
-                    <rect class="inner"    fill="var(--ai-pill-fill)" rx="28"/>
-                    <text class="label r3">Handoff / Close</text>
+                  <!-- ===================== ROW 2 ===================== -->
+                  <!-- geometry: outer 640×92 @ (260,314); inner 600×60 @ (280,330); center (580,360) -->
+                  <g filter="url(#aiGlow)">
+                    <rect class="chipfill" x="260" y="314" width="640" height="92" rx="46"/>
+                    <rect class="inner"    x="280" y="330" width="600" height="60" rx="30"/>
+                    <rect class="outer-rim" x="260" y="314" width="640" height="92" rx="46"/>
+                    <rect class="sheen"    x="260" y="314" width="640" height="92" rx="46"/>
+                    <rect class="tickbox" x="296" y="346" width="28" height="28"/>
+                    <use href="#tick" x="296" y="346" width="28" height="28"/>
+                    <text class="label" x="580" y="360">Timing · Channel · Pitch</text>
                   </g>
                 
-                  <!-- CONNECTORS (now auto-following) -->
-                  <g class="conn" fill="none" stroke="url(#ai_connector)" stroke-linecap="round" opacity="var(--ai-conn-alpha,1)" filter="url(#ai_glow)">
-                    <g class="c1"><path d="M120 214 V236 C120 246 130 254 142 254 H170"/></g>
-                    <g class="c2"><path d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330 C1110 342 1102 350 1090 350 H900"/></g>
-                    <g class="c3"><path d="M260 360 H200 C188 360 180 368 180 380 V436 C180 448 188 456 200 456 H360"/></g>
-                    <g class="c4"><path d="M780 456 H900"/></g>
+                  <!-- ===================== ROW 3 ===================== -->
+                  <!-- geometry: outer 420×88 @ (360,412); inner 384×56 @ (378,428); center (570,456) -->
+                  <g filter="url(#aiGlow)">
+                    <rect class="chipfill" x="360" y="412" width="420" height="88" rx="44"/>
+                    <rect class="inner"    x="378" y="428" width="384" height="56" rx="28"/>
+                    <rect class="outer-rim" x="360" y="412" width="420" height="88" rx="44"/>
+                    <rect class="sheen"    x="360" y="412" width="420" height="88" rx="44"/>
+                    <rect class="tickbox" x="394" y="440" width="28" height="28"/>
+                    <use href="#tick" x="394" y="440" width="28" height="28"/>
+                    <text class="label" x="570" y="456">Handoff / Close</text>
                   </g>
                 </svg>
               </div>
