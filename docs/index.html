@@ -3098,10 +3098,28 @@
                   </defs>
               
                   <!-- connectors -->
-                  <g class="conn" ...>
-                    <path class="c1" d="M120 214 V236 C120 246 130 254 142 254 H170"/>
-                    <path class="c2" d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330 C1110 342 1102 350 1090 350 H900"/>
-                    <path class="c3" d="M260 360 H200 C188 360 180 368 180 380 V436 C180 448 188 456 200 456 H360"/>
+                  <g class="conn" fill="none" stroke="url(#ai_connector)" stroke-linecap="round"
+                     filter="url(#ai_glow)" opacity="var(--ai-conn-alpha,0.95)">
+                    <!-- TL hook → row 1 -->
+                    <path class="c1" d="M120 214
+                                         V236
+                                         C120 246 130 254 142 254
+                                         H170"/>
+                    <!-- row 1 right → down → row 2 right -->
+                    <path class="c2" d="M1030 254
+                                         H1090
+                                         C1102 254 1110 262 1110 274
+                                         V330
+                                         C1110 342 1102 350 1090 350
+                                         H900"/>
+                    <!-- row 2 left → down → row 3 left -->
+                    <path class="c3" d="M260 360
+                                         H200
+                                         C188 360 180 368 180 380
+                                         V436
+                                         C180 448 188 456 200 456
+                                         H360"/>
+                    <!-- exit right from row 3 -->
                     <path class="c4" d="M780 456 H1060"/>
                   </g>
               
