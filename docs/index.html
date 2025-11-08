@@ -2404,70 +2404,152 @@
 
 
 
-/* === SALES AI — chips + inner pills + mesh + connectors (scoped) === */
-#growth [data-tile="ai"]{
-  /* Colors */
-  --ai-stroke-1:#59A7FF; --ai-stroke-2:#8FD3FF;
-  --ai-chip-outer:rgba(18,35,64,.35);
-  --ai-pill-fill:rgba(12,18,28,.92);
+/* ===== SALES AI — MASTER KNOBS (no mesh) ===== */
+:root{
+  /* —— palette —— */
+  --ai-stroke-1:#59A7FF;         /* rim gradient A */
+  --ai-stroke-2:#8FD3FF;         /* rim gradient B */
+  --ai-pill-fill:rgba(16,24,40,.92);   /* inner, solid */
+  --ai-chip-fill:rgba(18,35,64,.30);   /* outer, translucent */
   --ai-text:#EAF4FF;
 
-  /* Mesh */
-  --ai-mesh-opacity:.35;
+  /* —— connectors —— */
+  --ai-conn-w:6px;               /* thickness */
+  --ai-conn-alpha:.95;           /* visibility */
+  --ai-conn-dx:0px;              /* move whole connector group */
+  --ai-conn-dy:0px;
+  --ai-conn-scale:1;
 
-  /* Placement */
-  --ai-scale-d:1;  --ai-x-d:0px;  --ai-y-d:6px;
+  /* —— whole-SVG placement per device —— */
+  --ai-svg-x-desktop:0px;  --ai-svg-y-desktop:6px;  --ai-svg-scale-desktop:1;
+  --ai-svg-x-tablet:0px;   --ai-svg-y-tablet:0px;   --ai-svg-scale-tablet:.96;
+  --ai-svg-x-phone:0px;    --ai-svg-y-phone:0px;    --ai-svg-scale-phone:.92;
 
-  /* Text */
-  --ai-text-fs:22px; --ai-text-wt:650;
+  /* —— typography (defaults) —— */
+  --ai-font:Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  --r1-fs:16px; --r1-wt:700; --r1-track:.2px;
+  --r2-fs:16px; --r2-wt:700; --r2-track:.2px;
+  --r3-fs:16px; --r3-wt:700; --r3-track:.2px;
 
-  /* Connector look */
-  --ai-conn-w:6; --ai-conn-alpha:1;
+  /* —— double-pill geometry (per row) —— */
+  /* centers used for scale/transform-origin */
+  --r1-cx:600px; --r1-cy:254px;
+  --r2-cx:580px; --r2-cy:360px;
+  --r3-cx:570px; --r3-cy:456px;
+
+  /* move a single row */
+  --r1-dx:0px; --r1-dy:0px;
+  --r2-dx:0px; --r2-dy:0px;
+  --r3-dx:0px; --r3-dy:0px;
+
+  /* scale the OUTER rim vs the INNER solid (controls gap) */
+  --r1-outer-sx:1.00; --r1-outer-sy:1.00; --r1-inner-sx:.965; --r1-inner-sy:.965;
+  --r2-outer-sx:1.00; --r2-outer-sy:1.00; --r2-inner-sx:.965; --r2-inner-sy:.965;
+  --r3-outer-sx:1.00; --r3-outer-sy:1.00; --r3-inner-sx:.965; --r3-inner-sy:.965;
+
+  /* rim thickness for all rows */
+  --ai-rim-w:12px;
 }
 
-#growth [data-tile="ai"] .salesai-svg{
+/* ——— whole-SVG placement/scale + height per device ——— */
+.ai-sdr .salesai-svg{
   width:100%; height:360px; display:block;
-  transform:translate(var(--ai-x-d),var(--ai-y-d)) scale(var(--ai-scale-d));
+  transform:
+    translate(var(--ai-svg-x-desktop),var(--ai-svg-y-desktop))
+    scale(var(--ai-svg-scale-desktop));
 }
-
-#growth [data-tile="ai"] .salesai-svg .chip,
-#growth [data-tile="ai"] .salesai-svg .conn{
-  transform-box:fill-box; transform-origin:center;
-}
-
-#growth [data-tile="ai"] .salesai-svg text{
-  font-family:Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  font-weight:var(--ai-text-wt);
-  font-size:var(--ai-text-fs);
-  fill:var(--ai-text);
-  dominant-baseline:middle; text-anchor:middle; letter-spacing:.2px;
-}
-
-/* Tablet */
 @media (max-width:1024px){
-  #growth [data-tile="ai"]{ --ai-scale-d:.96; --ai-y-d:2px; --ai-text-fs:20px; }
-  #growth [data-tile="ai"] .salesai-svg{ height:330px; }
+  .ai-sdr .salesai-svg{
+    height:330px;
+    transform:
+      translate(var(--ai-svg-x-tablet),var(--ai-svg-y-tablet))
+      scale(var(--ai-svg-scale-tablet));
+  }
 }
-/* Phone */
 @media (max-width:700px){
-  #growth [data-tile="ai"]{ --ai-scale-d:.92; --ai-y-d:0px; --ai-text-fs:18px; }
-  #growth [data-tile="ai"] .salesai-svg{ height:310px; }
+  .ai-sdr .salesai-svg{
+    height:310px;
+    transform:
+      translate(var(--ai-svg-x-phone),var(--ai-svg-y-phone))
+      scale(var(--ai-svg-scale-phone));
+  }
 }
 
+/* ——— text controls ——— */
+.ai-sdr .salesai-svg text.label{
+  fill:var(--ai-text); font-family:var(--ai-font);
+  dominant-baseline:middle; text-anchor:middle;
+}
+.ai-sdr .salesai-svg text.r1{ font-size:var(--r1-fs); font-weight:var(--r1-wt); letter-spacing:var(--r1-track); }
+.ai-sdr .salesai-svg text.r2{ font-size:var(--r2-fs); font-weight:var(--r2-wt); letter-spacing:var(--r2-track); }
+.ai-sdr .salesai-svg text.r3{ font-size:var(--r3-fs); font-weight:var(--r3-wt); letter-spacing:var(--r3-track); }
 
-/* ===== SALES AI knobs (no mesh) ===== */
-:root{
-  --salesai-stroke-1:#59A7FF;
-  --salesai-stroke-2:#8FD3FF;
-  --salesai-chip-outer:rgba(18,35,64,.32);  /* translucent outer surface */
-  --salesai-chip-inner:rgba(16,24,40,.92);  /* solid inner surface */
-  --salesai-text:#EAF4FF;
+@media (max-width:1024px){
+  .ai-sdr{ --r1-fs:15px; --r2-fs:15px; --r3-fs:15px; }
+}
+@media (max-width:700px){
+  .ai-sdr{ --r1-fs:14px; --r2-fs:14px; --r3-fs:14px; }
 }
 
-/* size/position */
-.ai-sdr .salesai-svg{ width:100%; height:360px; display:block; }
-@media (max-width:1024px){ .ai-sdr .salesai-svg{ height:330px; } }
-@media (max-width:700px){ .ai-sdr .salesai-svg{ height:310px; } }
+/* ——— per-row transforms (sizes & nudges) ——— */
+/* ROW 1 */
+.salesai-svg .chip1 .outer-rim,
+.salesai-svg .chip1 .chipfill{
+  transform-origin:var(--r1-cx) var(--r1-cy);
+  transform:translate(var(--r1-dx),var(--r1-dy))
+            scale(var(--r1-outer-sx),var(--r1-outer-sy));
+}
+.salesai-svg .chip1 .inner{
+  transform-origin:var(--r1-cx) var(--r1-cy);
+  transform:translate(var(--r1-dx),var(--r1-dy))
+            scale(var(--r1-inner-sx),var(--r1-inner-sy));
+}
+.salesai-svg text.r1{ transform:translate(var(--r1-dx),var(--r1-dy)); }
+
+/* ROW 2 */
+.salesai-svg .chip2 .outer-rim,
+.salesai-svg .chip2 .chipfill{
+  transform-origin:var(--r2-cx) var(--r2-cy);
+  transform:translate(var(--r2-dx),var(--r2-dy))
+            scale(var(--r2-outer-sx),var(--r2-outer-sy));
+}
+.salesai-svg .chip2 .inner{
+  transform-origin:var(--r2-cx) var(--r2-cy);
+  transform:translate(var(--r2-dx),var(--r2-dy))
+            scale(var(--r2-inner-sx),var(--r2-inner-sy));
+}
+.salesai-svg text.r2{ transform:translate(var(--r2-dx),var(--r2-dy)); }
+
+/* ROW 3 */
+.salesai-svg .chip3 .outer-rim,
+.salesai-svg .chip3 .chipfill{
+  transform-origin:var(--r3-cx) var(--r3-cy);
+  transform:translate(var(--r3-dx),var(--r3-dy))
+            scale(var(--r3-outer-sx),var(--r3-outer-sy));
+}
+.salesai-svg .chip3 .inner{
+  transform-origin:var(--r3-cx) var(--r3-cy);
+  transform:translate(var(--r3-dx),var(--r3-dy))
+            scale(var(--r3-inner-sx),var(--r3-inner-sy));
+}
+.salesai-svg text.r3{ transform:translate(var(--r3-dx),var(--r3-dy)); }
+
+/* ——— connectors group ——— */
+.salesai-svg .conn{
+  opacity:var(--ai-conn-alpha);
+  stroke-width:var(--ai-conn-w);
+  transform:
+    translate(var(--ai-conn-dx),var(--ai-conn-dy))
+    scale(var(--ai-conn-scale));
+}
+
+/* ——— rim thickness ——— */
+.salesai-svg .outer-rim{ stroke-width:var(--ai-rim-w); }
+
+
+
+
+
 
 
 
@@ -3002,51 +3084,39 @@
                   </defs>
                 
                   <!-- ===== ROW 1 ===== -->
-                  <g class="chip chip1" filter="url(#salesai_glow)">
-                    <!-- inner solid pill (writing surface) -->
-                    <rect x="190" y="224" width="820" height="60" rx="30" fill="var(--salesai-chip-inner)"/>
-                    <!-- outer translucent chip fill (optional; keep very low) -->
-                    <rect x="170" y="206" width="860" height="96" rx="48" fill="var(--salesai-chip-outer)"/>
-                    <!-- outer rim on top (thick = clearly visible double-pill) -->
-                    <rect x="170" y="206" width="860" height="96" rx="48" fill="none"
-                          stroke="url(#salesai_stroke)" stroke-width="12" stroke-linejoin="round"/>
-                    <!-- faint white sheen to separate shapes -->
+                  <g class="chip chip1" filter="url(#ai_glow)">
+                    <!-- inner solid pill -->
+                    <rect class="inner"    x="190" y="224" width="820" height="60" rx="30" fill="var(--ai-pill-fill)"/>
+                    <!-- translucent outer “chip” -->
+                    <rect class="chipfill" x="170" y="206" width="860" height="96" rx="48" fill="var(--ai-chip-fill)"/>
+                    <!-- glowing rim (outer pill) -->
+                    <rect class="outer-rim" x="170" y="206" width="860" height="96" rx="48"
+                          fill="none" stroke="url(#ai_stroke)" stroke-linejoin="round"/>
                     <rect x="170" y="206" width="860" height="96" rx="48" fill="none"
                           stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
-                    <text x="600" y="254">Buyers Finder</text>
+                    <text class="label r1" x="600" y="254">Buyers Finder</text>
                   </g>
-                
+                  
                   <!-- ===== ROW 2 ===== -->
-                  <g class="chip chip2" filter="url(#salesai_glow)">
-                    <rect x="280" y="330" width="600" height="60" rx="30" fill="var(--salesai-chip-inner)"/>
-                    <rect x="260" y="314" width="640" height="92" rx="46" fill="var(--salesai-chip-outer)"/>
-                    <rect x="260" y="314" width="640" height="92" rx="46" fill="none"
-                          stroke="url(#salesai_stroke)" stroke-width="12" stroke-linejoin="round"/>
+                  <g class="chip chip2" filter="url(#ai_glow)">
+                    <rect class="inner"    x="280" y="330" width="600" height="60" rx="30" fill="var(--ai-pill-fill)"/>
+                    <rect class="chipfill" x="260" y="314" width="640" height="92" rx="46" fill="var(--ai-chip-fill)"/>
+                    <rect class="outer-rim" x="260" y="314" width="640" height="92" rx="46"
+                          fill="none" stroke="url(#ai_stroke)" stroke-linejoin="round"/>
                     <rect x="260" y="314" width="640" height="92" rx="46" fill="none"
                           stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
-                    <text x="580" y="360">Timing · Channel · Pitch</text>
+                    <text class="label r2" x="580" y="360">Timing · Channel · Pitch</text>
                   </g>
-                
+                  
                   <!-- ===== ROW 3 ===== -->
-                  <g class="chip chip3" filter="url(#salesai_glow)">
-                    <rect x="378" y="428" width="384" height="56" rx="28" fill="var(--salesai-chip-inner)"/>
-                    <rect x="360" y="412" width="420" height="88" rx="44" fill="var(--salesai-chip-outer)"/>
-                    <rect x="360" y="412" width="420" height="88" rx="44" fill="none"
-                          stroke="url(#salesai_stroke)" stroke-width="12" stroke-linejoin="round"/>
+                  <g class="chip chip3" filter="url(#ai_glow)">
+                    <rect class="inner"    x="378" y="428" width="384" height="56" rx="28" fill="var(--ai-pill-fill)"/>
+                    <rect class="chipfill" x="360" y="412" width="420" height="88" rx="44" fill="var(--ai-chip-fill)"/>
+                    <rect class="outer-rim" x="360" y="412" width="420" height="88" rx="44"
+                          fill="none" stroke="url(#ai_stroke)" stroke-linejoin="round"/>
                     <rect x="360" y="412" width="420" height="88" rx="44" fill="none"
                           stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
-                    <text x="570" y="456">Handoff / Close</text>
-                  </g>
-                
-                  <!-- ===== CONNECTORS (enter TL → out R → down R → out L → down L → out R) ===== -->
-                  <g class="conn" fill="none" stroke="url(#salesai_connector)" stroke-linecap="round"
-                     filter="url(#salesai_glow)" opacity=".9">
-                    <path d="M120 140 V236 C120 246 130 254 142 254 H170" stroke-width="6"/>
-                    <path d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330
-                             C1110 342 1102 350 1090 350 H900" stroke-width="6"/>
-                    <path d="M260 360 H200 C188 360 180 368 180 380 V436
-                             C180 448 188 456 200 456 H360" stroke-width="6"/>
-                    <path d="M780 456 H870" stroke-width="6"/>
+                    <text class="label r3" x="570" y="456">Handoff / Close</text>
                   </g>
                 </svg>
               </div>
