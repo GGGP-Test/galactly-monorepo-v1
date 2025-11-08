@@ -2545,23 +2545,23 @@
 .salesai-svg .chip2{ transform-origin:var(--r2-cx) var(--r2-cy); transform:translate(var(--r2-dx),var(--r2-dy)) scale(var(--r2-mag)); }
 .salesai-svg .chip3{ transform-origin:var(--r3-cx) var(--r3-cy); transform:translate(var(--r3-dx),var(--r3-dy)) scale(var(--r3-mag)); }
 
-/* geometry is driven by CSS props (so connectors can follow) */
-.salesai-svg .chip1 .chipfill{ x:var(--r1-outer-x); y:var(--r1-outer-y); width:var(--r1-outer-w); height:var(--r1-outer-h); rx:var(--r1-outer-r); }
-.salesai-svg .chip1 .outer-rim{ x:var(--r1-outer-x); y:var(--r1-outer-y); width:var(--r1-outer-w); height:var(--r1-outer-h); rx:var(--r1-outer-r); }
-.salesai-svg .chip1 .inner   { x:var(--r1-inner-x); y:var(--r1-inner-y); width:var(--r1-inner-w); height:var(--r1-inner-h); rx:var(--r1-inner-r); }
+/* ——— geometry is driven by CSS props (force-override inline attrs) ——— */
+.salesai-svg .chip1 .chipfill{ x:var(--r1-outer-x) !important; y:var(--r1-outer-y) !important; width:var(--r1-outer-w) !important; height:var(--r1-outer-h) !important; rx:var(--r1-outer-r) !important; }
+.salesai-svg .chip1 .outer-rim{ x:var(--r1-outer-x) !important; y:var(--r1-outer-y) !important; width:var(--r1-outer-w) !important; height:var(--r1-outer-h) !important; rx:var(--r1-outer-r) !important; }
+.salesai-svg .chip1 .inner   { x:var(--r1-inner-x) !important; y:var(--r1-inner-y) !important; width:var(--r1-inner-w) !important; height:var(--r1-inner-h) !important; rx:var(--r1-inner-r) !important; }
 
-.salesai-svg .chip2 .chipfill{ x:var(--r2-outer-x); y:var(--r2-outer-y); width:var(--r2-outer-w); height:var(--r2-outer-h); rx:var(--r2-outer-r); }
-.salesai-svg .chip2 .outer-rim{ x:var(--r2-outer-x); y:var(--r2-outer-y); width:var(--r2-outer-w); height:var(--r2-outer-h); rx:var(--r2-outer-r); }
-.salesai-svg .chip2 .inner   { x:var(--r2-inner-x); y:var(--r2-inner-y); width:var(--r2-inner-w); height:var(--r2-inner-h); rx:var(--r2-inner-r); }
+.salesai-svg .chip2 .chipfill{ x:var(--r2-outer-x) !important; y:var(--r2-outer-y) !important; width:var(--r2-outer-w) !important; height:var(--r2-outer-h) !important; rx:var(--r2-outer-r) !important; }
+.salesai-svg .chip2 .outer-rim{ x:var(--r2-outer-x) !important; y:var(--r2-outer-y) !important; width:var(--r2-outer-w) !important; height:var(--r2-outer-h) !important; rx:var(--r2-outer-r) !important; }
+.salesai-svg .chip2 .inner   { x:var(--r2-inner-x) !important; y:var(--r2-inner-y) !important; width:var(--r2-inner-w) !important; height:var(--r2-inner-h) !important; rx:var(--r2-inner-r) !important; }
 
-.salesai-svg .chip3 .chipfill{ x:var(--r3-outer-x); y:var(--r3-outer-y); width:var(--r3-outer-w); height:var(--r3-outer-h); rx:var(--r3-outer-r); }
-.salesai-svg .chip3 .outer-rim{ x:var(--r3-outer-x); y:var(--r3-outer-y); width:var(--r3-outer-w); height:var(--r3-outer-h); rx:var(--r3-outer-r); }
-.salesai-svg .chip3 .inner   { x:var(--r3-inner-x); y:var(--r3-inner-y); width:var(--r3-inner-w); height:var(--r3-inner-h); rx:var(--r3-inner-r); }
+.salesai-svg .chip3 .chipfill{ x:var(--r3-outer-x) !important; y:var(--r3-outer-y) !important; width:var(--r3-outer-w) !important; height:var(--r3-outer-h) !important; rx:var(--r3-outer-r) !important; }
+.salesai-svg .chip3 .outer-rim{ x:var(--r3-outer-x) !important; y:var(--r3-outer-y) !important; width:var(--r3-outer-w) !important; height:var(--r3-outer-h) !important; rx:var(--r3-outer-r) !important; }
+.salesai-svg .chip3 .inner   { x:var(--r3-inner-x) !important; y:var(--r3-inner-y) !important; width:var(--r3-inner-w) !important; height:var(--r3-inner-h) !important; rx:var(--r3-inner-r) !important; }
 
 /* text centered on the computed centers */
-.salesai-svg text.r1{ x:var(--r1-tx); y:var(--r1-ty); }
-.salesai-svg text.r2{ x:var(--r2-tx); y:var(--r2-ty); }
-.salesai-svg text.r3{ x:var(--r3-tx); y:var(--r3-ty); }
+.salesai-svg text.r1{ x:var(--r1-tx) !important; y:var(--r1-ty) !important; }
+.salesai-svg text.r2{ x:var(--r2-tx) !important; y:var(--r2-ty) !important; }
+.salesai-svg text.r3{ x:var(--r3-tx) !important; y:var(--r3-ty) !important; }
 
 /* connector group (global) */
 .salesai-svg .conn{
@@ -2583,7 +2583,7 @@
 .salesai-svg .conn .c2{
   transform:
     translate(calc(var(--r1-right) - 1030px),
-              calc(var(--r1-cy)    -  254px))
+              calc(var(--r1-cy)    - 254px))
     translate(var(--c2-dx),var(--c2-dy))
     scale(var(--c2-scale));
 }
@@ -3097,7 +3097,7 @@
               </p>
             
               <div class="sales-ai-svg-wrap">
-                <!-- SALES AI · single-file SVG (masked connectors; ticks inside; same geometry) -->
+                <!-- SALES AI · single-file SVG (connectors first; chips on top) -->
                 <svg class="salesai-svg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
                   <defs>
                     <!-- Rim gradient + connector gradient -->
@@ -3111,7 +3111,7 @@
                       <stop offset="50%" stop-color="var(--ai-stroke-2,#8FD3FF)" stop-opacity=".95"/>
                       <stop offset="100%" stop-color="var(--ai-stroke-1,#59A7FF)" stop-opacity=".55"/>
                     </linearGradient>
-                
+            
                     <!-- Glow -->
                     <filter id="ai_glow" x="-40%" y="-40%" width="180%" height="180%">
                       <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
@@ -3122,7 +3122,7 @@
                         0 0 0 0.0 0" result="tint"/>
                       <feMerge><feMergeNode in="tint"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
-                
+            
                     <style>
                       .label{
                         font: 700 16px/1 Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -3135,49 +3135,48 @@
                       .conn path{ vector-effect: non-scaling-stroke; }
                     </style>
                   </defs>
-                
-                  <!-- === CONNECTORS FIRST (so chips render on top) === -->
+            
+                  <!-- === CONNECTORS FIRST (classed for auto-follow) === -->
                   <g class="conn" fill="none" stroke="url(#ai_connector)" stroke-linecap="round"
                      filter="url(#ai_glow)" opacity="var(--ai-conn-alpha,0.95)">
                     <!-- TL hook → row 1 left rim -->
-                    <path d="M120 214
-                             V236
-                             C120 246 130 254 142 254
-                             H170"
+                    <path class="c1" d="M120 214
+                                         V236
+                                         C120 246 130 254 142 254
+                                         H170"
                           stroke-width="var(--ai-conn-w,6)"/>
-                    <!-- row 1 right rim → down → into row 2 right rim -->
-                    <path d="M1030 254
-                             H1090
-                             C1102 254 1110 262 1110 274
-                             V330
-                             C1110 342 1102 350 1090 350
-                             H900"
+                    <!-- row 1 right rim → down → row 2 right rim -->
+                    <path class="c2" d="M1030 254
+                                         H1090
+                                         C1102 254 1110 262 1110 274
+                                         V330
+                                         C1110 342 1102 350 1090 350
+                                         H900"
                           stroke-width="var(--ai-conn-w,6)"/>
-                    <!-- row 2 left rim → down → into row 3 left rim -->
-                    <path d="M260 360
-                             H200
-                             C188 360 180 368 180 380
-                             V436
-                             C180 448 188 456 200 456
-                             H360"
+                    <!-- row 2 left rim → down → row 3 left rim -->
+                    <path class="c3" d="M260 360
+                                         H200
+                                         C188 360 180 368 180 380
+                                         V436
+                                         C180 448 188 456 200 456
+                                         H360"
                           stroke-width="var(--ai-conn-w,6)"/>
-                    <!-- exit to the right (kept inside the viewBox) -->
-                    <path d="M780 456 H1060" stroke-width="var(--ai-conn-w,6)"/>
+                    <!-- exit to the right -->
+                    <path class="c4" d="M780 456 H1060" stroke-width="var(--ai-conn-w,6)"/>
                   </g>
-                
+            
                   <!-- ===== ROW 1 ===== -->
                   <g class="chip chip1" filter="url(#ai_glow)"
                      transform="translate(var(--r1-dx,0) var(--r1-dy,0)) scale(var(--r1-mag,1))">
-                    <!-- Outer translucent chip -->
-                    <rect x="170" y="206" width="860" height="96" rx="48"
+                    <!-- Outer translucent chip + rim -->
+                    <rect class="chipfill" x="170" y="206" width="860" height="96" rx="48"
                           fill="var(--ai-chip-fill,rgba(18,35,64,.30))"/>
-                    <!-- Rim on top so it’s always visible -->
-                    <rect x="170" y="206" width="860" height="96" rx="48"
+                    <rect class="outer-rim" x="170" y="206" width="860" height="96" rx="48"
                           fill="none" stroke="url(#ai_stroke)" stroke-width="var(--ai-rim-w,3)"/>
                     <rect x="170" y="206" width="860" height="96" rx="48"
                           fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
                     <!-- Inner solid pill -->
-                    <rect x="190" y="224" width="820" height="60" rx="30"
+                    <rect class="inner" x="190" y="224" width="820" height="60" rx="30"
                           fill="var(--ai-pill-fill,rgba(16,24,40,.92))"/>
                     <!-- Tick -->
                     <g transform="translate(230 254)">
@@ -3185,45 +3184,45 @@
                             fill="rgba(20,36,64,.75)" stroke="url(#ai_stroke)" stroke-width="1.5"/>
                       <path d="M -7 0 l 6 6 l 12 -14" fill="none" stroke="#CFE8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </g>
-                    <text class="label" x="600" y="254">Buyers Finder</text>
+                    <text class="label r1" x="600" y="254">Buyers Finder</text>
                   </g>
-                
+            
                   <!-- ===== ROW 2 ===== -->
                   <g class="chip chip2" filter="url(#ai_glow)"
                      transform="translate(var(--r2-dx,0) var(--r2-dy,0)) scale(var(--r2-mag,1))">
-                    <rect x="260" y="314" width="640" height="92" rx="46"
+                    <rect class="chipfill" x="260" y="314" width="640" height="92" rx="46"
                           fill="var(--ai-chip-fill,rgba(18,35,64,.30))"/>
-                    <rect x="260" y="314" width="640" height="92" rx="46"
+                    <rect class="outer-rim" x="260" y="314" width="640" height="92" rx="46"
                           fill="none" stroke="url(#ai_stroke)" stroke-width="var(--ai-rim-w,3)"/>
                     <rect x="260" y="314" width="640" height="92" rx="46"
                           fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
-                    <rect x="280" y="330" width="600" height="60" rx="30"
+                    <rect class="inner" x="280" y="330" width="600" height="60" rx="30"
                           fill="var(--ai-pill-fill,rgba(16,24,40,.92))"/>
                     <g transform="translate(320 360)">
                       <rect x="-18" y="-14" width="28" height="28" rx="9"
                             fill="rgba(20,36,64,.75)" stroke="url(#ai_stroke)" stroke-width="1.5"/>
                       <path d="M -7 0 l 6 6 l 12 -14" fill="none" stroke="#CFE8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </g>
-                    <text class="label" x="580" y="360">Timing · Channel · Pitch</text>
+                    <text class="label r2" x="580" y="360">Timing · Channel · Pitch</text>
                   </g>
-                
+            
                   <!-- ===== ROW 3 ===== -->
                   <g class="chip chip3" filter="url(#ai_glow)"
                      transform="translate(var(--r3-dx,0) var(--r3-dy,0)) scale(var(--r3-mag,1))">
-                    <rect x="360" y="412" width="420" height="88" rx="44"
+                    <rect class="chipfill" x="360" y="412" width="420" height="88" rx="44"
                           fill="var(--ai-chip-fill,rgba(18,35,64,.30))"/>
-                    <rect x="360" y="412" width="420" height="88" rx="44"
+                    <rect class="outer-rim" x="360" y="412" width="420" height="88" rx="44"
                           fill="none" stroke="url(#ai_stroke)" stroke-width="var(--ai-rim-w,3)"/>
                     <rect x="360" y="412" width="420" height="88" rx="44"
                           fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="1"/>
-                    <rect x="378" y="428" width="384" height="56" rx="28"
+                    <rect class="inner" x="378" y="428" width="384" height="56" rx="28"
                           fill="var(--ai-pill-fill,rgba(16,24,40,.92))"/>
                     <g transform="translate(420 456)">
                       <rect x="-18" y="-14" width="28" height="28" rx="9"
                             fill="rgba(20,36,64,.75)" stroke="url(#ai_stroke)" stroke-width="1.5"/>
                       <path d="M -7 0 l 6 6 l 12 -14" fill="none" stroke="#CFE8FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </g>
-                    <text class="label" x="570" y="456">Handoff / Close</text>
+                    <text class="label r3" x="570" y="456">Handoff / Close</text>
                   </g>
                 </svg>
               </div>
