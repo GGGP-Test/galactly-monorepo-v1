@@ -2448,6 +2448,7 @@
 @media (max-width:1024px){
   #growth [data-tile="ai"]{
     --conn-w: var(--conn-w-d);
+    --ai-nudge: var(--ai-nudge-t);
     --r1-h: var(--r1-h-d); --r2-h: var(--r2-h-d); --r3-h: var(--r3-h-d);
     --gap: var(--gap-d);
     --r2-cy: calc(var(--r1-cy-base) + var(--gap));
@@ -2457,6 +2458,7 @@
 @media (max-width:700px){
   #growth [data-tile="ai"]{
     --conn-w: var(--conn-w-d);
+    --ai-nudge: var(--ai-nudge-p);
     --r1-h: var(--r1-h-d); --r2-h: var(--r2-h-d); --r3-h: var(--r3-h-d);
     --gap: var(--gap-d);
     --r2-cy: calc(var(--r1-cy-base) + var(--gap));
@@ -2467,8 +2469,9 @@
 /* position & scale the SVG in the tile */
 #growth [data-tile="ai"] .sales-ai-svg-wrap{ position:relative; min-height:var(--ai-tile-min-h); }
 #growth [data-tile="ai"] .salesai-svg{
-  position:absolute; left:50%; top:var(--ai-center-y);
-  transform:translate(-50%,-50%) scale(var(--ai-scale-desktop));
+  position:absolute; left:50%;
+  top: calc(var(--ai-center) + var(--ai-nudge));  /* percent + px nudge */
+  transform: translate(-50%,-50%) scale(var(--ai-scale-desktop));
   width:80%; height:auto; max-width:none; pointer-events:none; opacity:.96;
 }
 
