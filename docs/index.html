@@ -2545,82 +2545,85 @@
 #growth [data-tile="ai"] .sales-ai-svg-wrap{ position:relative; }
 #growth [data-tile="ai"] .salesai-svg{ z-index:1; }
 
-/* the mesh itself */
-#growth [data-tile="ai"] .sales-ai-svg-wrap::before{
-  content:"";
-  position:absolute; inset:0;
-  z-index:0; pointer-events:none;
+/* --- GRID/ MESH KNOBS (tweak these only) ------------------------------ */
+#growth [data-tile="ai"]{
+  /* cell sizes */
+  --mesh-cell: 24px;              /* minor grid spacing */
+  --mesh-major-step: calc(var(--mesh-cell) * 6);  /* major every 6 minors */
 
-  /* 4-layer grid: minor vertical + minor horizontal + major vertical + major horizontal */
+  /* colors (cool cyan, very faint) */
+  --mesh-minor-v: rgba(110,170,255,.08);  /* minor vertical */
+  --mesh-minor-h: rgba(110,170,255,.06);  /* minor horizontal (slightly dimmer) */
+  --mesh-major-v: rgba(160,210,255,.22);  /* major vertical (a touch stronger) */
+  --mesh-major-h: rgba(160,210,255,.16);  /* major horizontal */
+
+  /* overall strength + optional offset */
+  --mesh-strength: .55;            /* whole grid opacity after blend */
+  --mesh-x: 0px;                   /* nudge grid if you want to align lines */
+  --mesh-y: 0px;
+}
+
+/* keep the overlay behind the SVG and non-interactive */
+#growth [data-tile="ai"] .sales-ai-svg-wrap{ position:relative; }
+#growth [data-tile="ai"] .salesai-grid-overlay{
+  position:absolute;
+  inset: 0;                        /* full tile area */
+  z-index:0;                       /* under the SVG */
+  pointer-events:none;
+
+  /* four gradient layers: minor V, minor H, major V, major H */
   background-image:
-    /* minor vertical */
+    /* minor vertical lines */
     repeating-linear-gradient(
       to right,
-      rgba(var(--mesh-c1), var(--mesh-minor-alpha)) 0,
-      rgba(var(--mesh-c1), var(--mesh-minor-alpha)) 1px,
-      transparent 1px,
-      transparent var(--mesh-minor)
+      var(--mesh-minor-v) 0 1px,
+      transparent 1px var(--mesh-cell)
     ),
-    /* minor horizontal */
+    /* minor horizontal lines */
     repeating-linear-gradient(
       to bottom,
-      rgba(var(--mesh-c1), var(--mesh-minor-alpha)) 0,
-      rgba(var(--mesh-c1), var(--mesh-minor-alpha)) 1px,
-      transparent 1px,
-      transparent var(--mesh-minor)
+      var(--mesh-minor-h) 0 1px,
+      transparent 1px var(--mesh-cell)
     ),
     /* major vertical */
     repeating-linear-gradient(
       to right,
-      rgba(var(--mesh-c2), var(--mesh-major-alpha)) 0,
-      rgba(var(--mesh-c2), var(--mesh-major-alpha)) 1.5px,
-      transparent 1.5px,
-      transparent var(--mesh-major)
+      transparent 0 calc(var(--mesh-major-step) - 1px),
+      var(--mesh-major-v) calc(var(--mesh-major-step) - 1px) var(--mesh-major-step)
     ),
     /* major horizontal */
     repeating-linear-gradient(
       to bottom,
-      rgba(var(--mesh-c2), var(--mesh-major-alpha)) 0,
-      rgba(var(--mesh-c2), var(--mesh-major-alpha)) 1.5px,
-      transparent 1.5px,
-      transparent var(--mesh-major)
+      transparent 0 calc(var(--mesh-major-step) - 1px),
+      var(--mesh-major-h) calc(var(--mesh-major-step) - 1px) var(--mesh-major-step)
     );
 
-  /* optional tilt of the whole grid */
-  transform: rotate(var(--mesh-tilt));
-
-  /* gentle edge fade so it “dies” toward the tile borders */
-  -webkit-mask-image: radial-gradient(
-    circle at 50% 55%,
-    rgba(0,0,0,1) 0%,
-    rgba(0,0,0,1) var(--mesh-fade),
-    rgba(0,0,0,0) 100%
-  );
-  mask-image: radial-gradient(
-    circle at 50% 55%,
-    rgba(0,0,0,1) 0%,
-    rgba(0,0,0,1) var(--mesh-fade),
-    rgba(0,0,0,0) 100%
-  );
-
-  /* blend softly on dark backgrounds; remove if you don’t want blending */
+  /* align + subtle cyan lift on dark bg */
+  background-position:
+    var(--mesh-x) var(--mesh-y),
+    var(--mesh-x) var(--mesh-y),
+    var(--mesh-x) var(--mesh-y),
+    var(--mesh-x) var(--mesh-y);
   mix-blend-mode: screen;
-  opacity:.9; /* global intensity cap (your alpha knobs still control line strength) */
+  opacity: var(--mesh-strength);
+
+  /* edge fade similar to the example */
+  -webkit-mask-image:
+    radial-gradient(120% 120% at 50% 45%,
+      rgba(0,0,0,1) 0%,
+      rgba(0,0,0,.75) 55%,
+      rgba(0,0,0,.25) 78%,
+      rgba(0,0,0,0) 100%);
+  mask-image:
+    radial-gradient(120% 120% at 50% 45%,
+      rgba(0,0,0,1) 0%,
+      rgba(0,0,0,.75) 55%,
+      rgba(0,0,0,.25) 78%,
+      rgba(0,0,0,0) 100%);
 }
 
-/* (Optional) responsive tweaks if you want denser grid on smaller screens */
-@media (max-width:1024px){
-  #growth [data-tile="ai"]{
-    --mesh-minor: 22px; --mesh-major: 110px;
-    --mesh-minor-alpha:.11; --mesh-major-alpha:.24;
-  }
-}
-@media (max-width:700px){
-  #growth [data-tile="ai"]{
-    --mesh-minor: 20px; --mesh-major: 100px;
-    --mesh-minor-alpha:.12; --mesh-major-alpha:.26;
-  }
-}
+/* ensure the SVG stays above the grid */
+#growth [data-tile="ai"] .salesai-svg{ position:relative; z-index:1; }
 
 
 
@@ -3117,6 +3120,7 @@
               </p>
           
               <div class="sales-ai-svg-wrap">
+              <div class="salesai-grid-overlay" aria-hidden="true"></div>
                  <svg class="salesai-svg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" overflow="visible" aria-hidden="true">
                   <defs>
                     <linearGradient id="s2c_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
