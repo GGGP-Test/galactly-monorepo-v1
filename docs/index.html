@@ -2405,7 +2405,6 @@
 
 /* ---------- Sales AI: size, heights, gaps, connector thickness ---------- */
 #growth [data-tile="ai"]{
-  /* overall placement (keep what you liked) */
   --ai-tile-min-h: 480px;
   --ai-center-y: 30%;
   --ai-scale-desktop: 1.12;
@@ -2417,33 +2416,28 @@
   --conn-w-t: .75px;
   --conn-w-p: .5px;
 
-  /* per-row target heights (this SVG has one rect per row) */
-  /* desktop */
-  --r1-h-d: 160px;  --r2-h-d: 160px;  --r3-h-d: 156px;
-  /* tablet  */
-  --r1-h-t: 58px;  --r2-h-t: 58px;  --r3-h-t: 54px;
-  /* phone   */
-  --r1-h-p: 56px;  --r2-h-p: 56px;  --r3-h-p: 52px;
+  /* per-row target heights */
+  --r1-h-d: 160px;  --r2-h-d: 160px;  --r3-h-d: 156px; /* desktop */
+  --r1-h-t: 58px;   --r2-h-t: 58px;   --r3-h-t: 54px;  /* tablet  */
+  --r1-h-p: 56px;   --r2-h-p: 56px;   --r3-h-p: 52px;  /* phone   */
 
-  /* row center-to-center gap (affects row 2 & 3 positions and connector offsets) */
-  --gap-d: 106px;   /* matches current 254→360 */
+  /* gaps */
+  --gap-d: 106px;   /* 254→360 */
   --gap-t: 96px;
   --gap-p: 90px;
 
-  /* baselines (from the SVG you pasted) */
-  --r1-cy-base: 254px;
-  --r2-cy-base: 360px;
-  --r3-cy-base: 456px;
+  /* baselines from SVG */
+  --r1-cy-base: 254px; --r2-cy-base: 360px; --r3-cy-base: 456px;
 
-  /* row centers on desktop */
-  --r1-cy: var(--r1-cy-base);
-  --r2-cy: calc(var(--r1-cy-base) + var(--gap-d));
-  --r3-cy: calc(var(--r1-cy-base) + (var(--gap-d) + var(--gap-d)));
-
-  /* active knobs (desktop by default) */
+  /* desktop active */
   --conn-w: var(--conn-w-d);
   --r1-h: var(--r1-h-d); --r2-h: var(--r2-h-d); --r3-h: var(--r3-h-d);
   --gap: var(--gap-d);
+
+  /* computed row centers */
+  --r1-cy: var(--r1-cy-base);
+  --r2-cy: calc(var(--r1-cy-base) + var(--gap));
+  --r3-cy: calc(var(--r1-cy-base) + var(--gap) + var(--gap));
 }
 
 /* tablet/phone overrides */
@@ -2453,7 +2447,7 @@
     --r1-h: var(--r1-h-t); --r2-h: var(--r2-h-t); --r3-h: var(--r3-h-t);
     --gap: var(--gap-t);
     --r2-cy: calc(var(--r1-cy-base) + var(--gap));
-    --r3-cy: calc(var(--r1-cy-base) + (var(--gap) + var(--gap)));
+    --r3-cy: calc(var(--r1-cy-base) + var(--gap) + var(--gap));
   }
 }
 @media (max-width:700px){
@@ -2462,7 +2456,7 @@
     --r1-h: var(--r1-h-p); --r2-h: var(--r2-h-p); --r3-h: var(--r3-h-p);
     --gap: var(--gap-p);
     --r2-cy: calc(var(--r1-cy-base) + var(--gap));
-    --r3-cy: calc(var(--r1-cy-base) + (var(--gap) + var(--gap)));
+    --r3-cy: calc(var(--r1-cy-base) + var(--gap) + var(--gap));
   }
 }
 
@@ -2476,89 +2470,49 @@
 @media (max-width:1024px){ #growth [data-tile="ai"] .salesai-svg{ transform:translate(-50%,-50%) scale(var(--ai-scale-tablet)); } }
 @media (max-width:700px){  #growth [data-tile="ai"] .salesai-svg{ transform:translate(-50%,-50%) scale(var(--ai-scale-phone)); } }
 
-/* keep all strokes thin when the SVG scales */
+/* keep strokes thin when the SVG scales */
 #growth [data-tile="ai"] .salesai-svg .conn path,
 #growth [data-tile="ai"] .salesai-svg rect[stroke]{ vector-effect:non-scaling-stroke; }
 
-/* labels (same class you already use: .l) */
+/* label sizing (unchanged values) */
 #growth [data-tile="ai"]{
   --label-fs-d:36px; --label-fs-t:35px; --label-fs-p:34px;
-  --label-wt:500;      /* weight */
-  --label-track:.2px;  /* letter-spacing */
+  --label-wt:500; --label-track:.2px;
 }
-#growth [data-tile="ai"] .salesai-svg .l{
-  font-size:var(--label-fs-d);
-  font-weight:var(--label-wt);
-  letter-spacing:var(--label-track);
-}
+#growth [data-tile="ai"] .salesai-svg .l{ font-size:var(--label-fs-d); font-weight:var(--label-wt); letter-spacing:var(--label-track); }
 @media (max-width:1024px){ #growth [data-tile="ai"] .salesai-svg .l{ font-size:var(--label-fs-t); } }
 @media (max-width:700px){  #growth [data-tile="ai"] .salesai-svg .l{ font-size:var(--label-fs-p); } }
 
-/* ---------------- heights & gaps (no HTML changes needed) ---------------- */
-/* We scale each rect vertically around its own center. */
-#growth [data-tile="ai"] .salesai-svg rect{ transform-box:fill-box; transform-origin:50% 50%; }
+/* ---------------- heights & gaps ---------------- */
+#growth [data-tile="ai"] .salesai-svg .row rect{ transform-box:fill-box; transform-origin:50% 50%; }
 
-/* Row 1 (second <g> in the SVG) */
-#growth [data-tile="ai"] .salesai-svg > g:nth-of-type(2) rect{
-  /* base height is 60px in your SVG → scale to the target height */
-  transform: scale(1, calc(var(--r1-h) / 60px));
-}
+/* base heights in SVG: row1=60, row2=60, row3=56 */
+#growth [data-tile="ai"] .salesai-svg .row1 rect{ transform: scale(1, calc(var(--r1-h) / 60px)); }
+#growth [data-tile="ai"] .salesai-svg .row2 rect{ transform: scale(1, calc(var(--r2-h) / 60px)); }
+#growth [data-tile="ai"] .salesai-svg .row3 rect{ transform: scale(1, calc(var(--r3-h) / 56px)); }
 
-/* Row 2 (third <g>): move by gap delta, then scale */
-#growth [data-tile="ai"] .salesai-svg > g:nth-of-type(3){
-  transform: translateY(calc(var(--r2-cy) - var(--r2-cy-base)));
-}
-#growth [data-tile="ai"] .salesai-svg > g:nth-of-type(3) rect{
-  transform: scale(1, calc(var(--r2-h) / 60px));
-}
+/* move rows by new centers */
+#growth [data-tile="ai"] .salesai-svg .row2{ transform: translateY(calc(var(--r2-cy) - var(--r2-cy-base))); }
+#growth [data-tile="ai"] .salesai-svg .row3{ transform: translateY(calc(var(--r3-cy) - var(--r3-cy-base))); }
 
-/* Row 3 (fourth <g>): move by cumulative gap delta, then scale */
-#growth [data-tile="ai"] .salesai-svg > g:nth-of-type(4){
-  transform: translateY(calc(var(--r3-cy) - var(--r3-cy-base)));
-}
-#growth [data-tile="ai"] .salesai-svg > g:nth-of-type(4) rect{
-  transform: scale(1, calc(var(--r3-h) / 56px)); /* base height row3 = 56 */
-}
-
-/* ---------------- connectors: width + rounded elbows + follow rows ------- */
+/* ---------------- connectors ---------------- */
 #growth [data-tile="ai"] .salesai-svg .conn{ stroke-linecap:round; stroke-linejoin:round; }
 #growth [data-tile="ai"] .salesai-svg .conn path{ stroke-width:var(--conn-w); }
-
-/* move c2 with row2; c3 & c4 with row3 (your paths already have class="c1…c4") */
-#growth [data-tile="ai"] .salesai-svg .conn .c2{
-  transform: translateY(calc(var(--r2-cy) - var(--r2-cy-base)));
-}
+/* follow rows */
+#growth [data-tile="ai"] .salesai-svg .conn .c2{ transform: translateY(calc(var(--r2-cy) - var(--r2-cy-base))); }
 #growth [data-tile="ai"] .salesai-svg .conn .c3,
-#growth [data-tile="ai"] .salesai-svg .conn .c4{
-  transform: translateY(calc(var(--r3-cy) - var(--r3-cy-base)));
-}
+#growth [data-tile="ai"] .salesai-svg .conn .c4{ transform: translateY(calc(var(--r3-cy) - var(--r3-cy-base))); }
 
-
-/* knobs that follow your row centers */
+/* text positions driven by row centers (optional overrides kept) */
 #growth [data-tile="ai"]{
   --r1-tx:600px; --r1-ty:var(--r1-cy);
   --r2-tx:580px; --r2-ty:var(--r2-cy);
   --r3-tx:570px; --r3-ty:var(--r3-cy);
-
-  /* optional tiny nudges */
-  --r1-tdx:0px; --r1-tdy:0px;
-  --r2-tdx:0px; --r2-tdy:0px;
-  --r3-tdx:0px; --r3-tdy:0px;
+  --r1-tdx:0px; --r1-tdy:0px; --r2-tdx:0px; --r2-tdy:0px; --r3-tdx:0px; --r3-tdy:0px;
 }
-
-/* override the presentational attributes with CSS */
-#growth [data-tile="ai"] .salesai-svg > g:nth-of-type(2) text{
-  x: calc(var(--r1-tx) + var(--r1-tdx));
-  y: calc(var(--r1-ty) + var(--r1-tdy));
-}
-#growth [data-tile="ai"] .salesai-svg > g:nth-of-type(3) text{
-  x: calc(var(--r2-tx) + var(--r2-tdx));
-  y: calc(var(--r2-ty) + var(--r2-tdy));
-}
-#growth [data-tile="ai"] .salesai-svg > g:nth-of-type(4) text{
-  x: calc(var(--r3-tx) + var(--r3-tdx));
-  y: calc(var(--r3-ty) + var(--r3-tdy));
-}
+#growth [data-tile="ai"] .salesai-svg .row1 text{ x:calc(var(--r1-tx) + var(--r1-tdx)); y:calc(var(--r1-ty) + var(--r1-tdy)); }
+#growth [data-tile="ai"] .salesai-svg .row2 text{ x:calc(var(--r2-tx) + var(--r2-tdx)); y:calc(var(--r2-ty) + var(--r2-tdy)); }
+#growth [data-tile="ai"] .salesai-svg .row3 text{ x:calc(var(--r3-tx) + var(--r3-tdx)); y:calc(var(--r3-ty) + var(--r3-tdy)); }
 
 
 
@@ -3052,7 +3006,7 @@
               </p>
           
               <div class="sales-ai-svg-wrap">
-                <svg class="salesai-svg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" overflow="visible" aria-hidden="true">
+                 <svg class="salesai-svg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" overflow="visible" aria-hidden="true">
                   <defs>
                     <linearGradient id="s2c_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%"  stop-color="#5AA8FF"/><stop offset="50%" stop-color="#95D6FF"/><stop offset="100%" stop-color="#5AA8FF"/>
@@ -3062,91 +3016,64 @@
                       <stop offset="50%" stop-color="#95D6FF" stop-opacity=".9"/>
                       <stop offset="100%" stop-color="#5AA8FF" stop-opacity=".45"/>
                     </linearGradient>
+                
                     <filter id="s2c_glow" x="-40%" y="-40%" width="180%" height="180%">
                       <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="b"/>
                       <feColorMatrix type="matrix" values="0 0 0 0 0.33  0 0 0 0 0.58  0 0 0 0 1.00  0 0 0 0.0 0" result="tint"/>
                       <feMerge><feMergeNode in="tint"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
+                
                     <style>
                       svg.salesai-svg{width:100%;height:360px;display:block}
                       .l{font:600 16px/1 Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill:#EAF4FF; dominant-baseline:middle; text-anchor:middle; letter-spacing:.2px}
-                      .c path{vector-effect:non-scaling-stroke}
+                      .conn path{vector-effect:non-scaling-stroke}
                       @media (max-width:1024px){ svg.salesai-svg{height:330px} .l{font-size:15px} }
                       @media (max-width:700px){  svg.salesai-svg{height:310px} .l{font-size:14px} }
                     </style>
-                    <!-- ——— faint grid patterns + edge fade ——— -->
+                
+                    <!-- faint grid -->
                     <pattern id="sai_grid" patternUnits="userSpaceOnUse" width="24" height="24">
-                      <path d="M24 0H0V24" fill="none"
-                            stroke="var(--ai-stroke-1,#5AA8FF)" stroke-opacity=".08" stroke-width="1"
-                            vector-effect="non-scaling-stroke" shape-rendering="geometricPrecision"/>
+                      <path d="M24 0H0V24" fill="none" stroke="#5AA8FF" stroke-opacity=".08" stroke-width="1" vector-effect="non-scaling-stroke"/>
                     </pattern>
-                    
                     <pattern id="sai_gridMajor" patternUnits="userSpaceOnUse" width="120" height="120">
-                      <path d="M120 0H0V120" fill="none"
-                            stroke="var(--ai-stroke-2,#8FD3FF)" stroke-opacity=".10" stroke-width="1"
-                            vector-effect="non-scaling-stroke" shape-rendering="geometricPrecision"/>
+                      <path d="M120 0H0V120" fill="none" stroke="#8FD3FF" stroke-opacity=".10" stroke-width="1" vector-effect="non-scaling-stroke"/>
                     </pattern>
-                    
                     <radialGradient id="sai_mesh_fade" cx="50%" cy="50%" r="70%">
-                      <stop offset="0%"   stop-color="#fff" stop-opacity=".70"/>
-                      <stop offset="65%"  stop-color="#fff" stop-opacity=".30"/>
+                      <stop offset="0%" stop-color="#fff" stop-opacity=".7"/>
+                      <stop offset="65%" stop-color="#fff" stop-opacity=".3"/>
                       <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
                     </radialGradient>
-                    
-                    <mask id="sai_mesh_mask">
-                      <!-- 100% height so it tracks your current (taller) viewBox -->
-                      <rect x="0" y="0" width="1200" height="100%" fill="url(#sai_mesh_fade)"/>
+                    <mask id="sai_mesh_mask" maskUnits="userSpaceOnUse">
+                      <rect x="0" y="0" width="1200" height="520" fill="url(#sai_mesh_fade)"/>
                     </mask>
-                    
-                    <style>
-                      .mesh path{ vector-effect:non-scaling-stroke }
-                    </style>
                   </defs>
-                  <!-- very faint background mesh -->
+                
+                  <!-- mesh behind everything -->
                   <g class="mesh" mask="url(#sai_mesh_mask)" opacity=".22" pointer-events="none">
-                    <rect x="0" y="0" width="1200" height="100%" fill="url(#sai_grid)"/>
-                    <rect x="0" y="0" width="1200" height="100%" fill="url(#sai_gridMajor)" opacity=".35"/>
+                    <rect x="0" y="0" width="1200" height="520" fill="url(#sai_grid)"/>
+                    <rect x="0" y="0" width="1200" height="520" fill="url(#sai_gridMajor)" opacity=".35"/>
                   </g>
-              
+                
                   <!-- connectors -->
                   <g class="conn" fill="none" stroke="url(#s2c_conn)" filter="url(#s2c_glow)" opacity="var(--ai-conn-alpha,.95)">
-
-                     filter="url(#ai_glow)" opacity="var(--ai-conn-alpha,0.95)">
-                    <!-- TL hook → row 1 -->
-                    <path class="c1" d="M120 214
-                                         V236
-                                         C120 246 130 254 142 254
-                                         H170"/>
-                    <!-- row 1 right → down → row 2 right -->
-                    <path class="c2" d="M1030 254
-                                         H1090
-                                         C1102 254 1110 262 1110 274
-                                         V330
-                                         C1110 342 1102 350 1090 350
-                                         H900"/>
-                    <!-- row 2 left → down → row 3 left -->
-                    <path class="c3" d="M260 360
-                                         H200
-                                         C188 360 180 368 180 380
-                                         V436
-                                         C180 448 188 456 200 456
-                                         H360"/>
-                    <!-- exit right from row 3 -->
+                    <path class="c1" d="M120 214 V236 C120 246 130 254 142 254 H170"/>
+                    <path class="c2" d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330 C1110 342 1102 350 1090 350 H900"/>
+                    <path class="c3" d="M260 360 H200 C188 360 180 368 180 380 V436 C180 448 188 456 200 456 H360"/>
                     <path class="c4" d="M780 456 H1060"/>
                   </g>
-              
-                  <!-- row 1 -->
-                  <g filter="url(#s2c_glow)">
+                
+                  <!-- rows (named so CSS can target safely) -->
+                  <g class="row row1" filter="url(#s2c_glow)">
                     <rect x="120" y="224" width="960" height="60" rx="28" fill="rgba(16,24,40,.92)" stroke="url(#s2c_stroke)" stroke-width="2"/>
                     <text class="l" x="600" y="254">Find Buyer</text>
                   </g>
-                  <!-- row 2 -->
-                  <g filter="url(#s2c_glow)">
+                
+                  <g class="row row2" filter="url(#s2c_glow)">
                     <rect x="220" y="330" width="720" height="60" rx="28" fill="rgba(16,24,40,.92)" stroke="url(#s2c_stroke)" stroke-width="2"/>
                     <text class="l" x="580" y="360">Timing · Channel · Pitch</text>
                   </g>
-                  <!-- row 3 -->
-                  <g filter="url(#s2c_glow)">
+                
+                  <g class="row row3" filter="url(#s2c_glow)">
                     <rect x="330" y="428" width="480" height="56" rx="26" fill="rgba(16,24,40,.92)" stroke="url(#s2c_stroke)" stroke-width="2"/>
                     <text class="l" x="570" y="456">Handoff / Close</text>
                   </g>
