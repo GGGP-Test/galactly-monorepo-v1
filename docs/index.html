@@ -2515,6 +2515,21 @@
 #growth [data-tile="ai"] .salesai-svg .row3 text{ x:calc(var(--r3-tx) + var(--r3-tdx)); y:calc(var(--r3-ty) + var(--r3-tdy)); }
 
 
+#growth [data-tile="ai"]{
+  --mesh-alpha: .28;         /* whole grid */
+  --mesh-major-alpha: .38;   /* thicker “major” lines */
+  --mesh-cell: 32px;         /* minor cell size */
+  --mesh-major-cell: 160px;  /* major cell size */
+}
+#growth [data-tile="ai"] .salesai-svg .mesh{ opacity: var(--mesh-alpha); }
+#growth [data-tile="ai"] .salesai-svg .mesh .major{ opacity: var(--mesh-major-alpha); }
+/* If you want different cell sizes later:
+   set pattern widths via <pattern> or duplicate patterns with other sizes. */
+
+
+
+
+
 
 
 
@@ -3031,27 +3046,38 @@
                       @media (max-width:700px){  svg.salesai-svg{height:310px} .l{font-size:14px} }
                     </style>
                 
-                    <!-- faint grid -->
-                    <pattern id="sai_grid" patternUnits="userSpaceOnUse" width="24" height="24">
-                      <path d="M24 0H0V24" fill="none" stroke="#5AA8FF" stroke-opacity=".08" stroke-width="1" vector-effect="non-scaling-stroke"/>
+                    <!-- Mesh defs (minor/major grid + softer edge mask) -->
+                    <pattern id="sai_minor" patternUnits="userSpaceOnUse" width="32" height="32">
+                      <!-- draw on .5px to hit the pixel grid; crisp so it survives scaling -->
+                      <path d="M0 .5 H32 M .5 0 V32"
+                            fill="none"
+                            stroke="#5AA8FF" stroke-opacity=".18" stroke-width="1"
+                            shape-rendering="crispEdges"/>
                     </pattern>
-                    <pattern id="sai_gridMajor" patternUnits="userSpaceOnUse" width="120" height="120">
-                      <path d="M120 0H0V120" fill="none" stroke="#8FD3FF" stroke-opacity=".10" stroke-width="1" vector-effect="non-scaling-stroke"/>
+                    
+                    <pattern id="sai_major" patternUnits="userSpaceOnUse" width="160" height="160">
+                      <path d="M0 .5 H160 M .5 0 V160"
+                            fill="none"
+                            stroke="#8FD3FF" stroke-opacity=".20" stroke-width="1"
+                            shape-rendering="crispEdges"/>
                     </pattern>
+                    
+                    <!-- gentler fade so the grid is actually visible -->
                     <radialGradient id="sai_mesh_fade" cx="50%" cy="50%" r="70%">
-                      <stop offset="0%" stop-color="#fff" stop-opacity=".7"/>
-                      <stop offset="65%" stop-color="#fff" stop-opacity=".3"/>
+                      <stop offset="0%"  stop-color="#fff" stop-opacity=".55"/>
+                      <stop offset="65%" stop-color="#fff" stop-opacity=".25"/>
                       <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
                     </radialGradient>
-                    <mask id="sai_mesh_mask" maskUnits="userSpaceOnUse">
+                    <mask id="sai_mesh_mask">
+                      <!-- match your viewBox height exactly -->
                       <rect x="0" y="0" width="1200" height="520" fill="url(#sai_mesh_fade)"/>
                     </mask>
                   </defs>
                 
-                  <!-- mesh behind everything -->
-                  <g class="mesh" mask="url(#sai_mesh_mask)" opacity=".22" pointer-events="none">
-                    <rect x="0" y="0" width="1200" height="520" fill="url(#sai_grid)"/>
-                    <rect x="0" y="0" width="1200" height="520" fill="url(#sai_gridMajor)" opacity=".35"/>
+                  <!-- faint background mesh (behind everything) -->
+                  <g class="mesh" mask="url(#sai_mesh_mask)" style="opacity:.28;mix-blend-mode:screen" pointer-events="none">
+                    <rect x="0" y="0" width="1200" height="520" fill="url(#sai_minor)"/>
+                    <rect class="major" x="0" y="0" width="1200" height="520" fill="url(#sai_major)" style="opacity:.38"/>
                   </g>
                 
                   <!-- connectors -->
