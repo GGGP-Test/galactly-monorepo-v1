@@ -2408,13 +2408,13 @@
   --ai-tile-min-h: 480px;
   --ai-center-y: 30%;
   --ai-scale-desktop: 1.12;
-  --ai-scale-tablet: 1.12;
-  --ai-scale-phone: 1.12;
+  --ai-scale-tablet: 1.02;
+  --ai-scale-phone: .94;
 
   /* connector width knobs */
-  --conn-w-d: 1.5px;
-  --conn-w-t: 1px;
-  --conn-w-p: 1px;
+  --conn-w-d: 1px;
+  --conn-w-t: .75px;
+  --conn-w-p: .5px;
 
   /* per-row target heights */
   --r1-h-d: 160px;  --r2-h-d: 160px;  --r3-h-d: 156px; /* desktop */
@@ -2477,7 +2477,7 @@
 /* label sizing (unchanged values) */
 #growth [data-tile="ai"]{
   --label-fs-d:48px; --label-fs-t:47px; --label-fs-p:44px;
-  --label-wt:400; --label-track:.2px;
+  --label-wt:500; --label-track:.2px;
 }
 #growth [data-tile="ai"] .salesai-svg .l{ font-size:var(--label-fs-d); font-weight:var(--label-wt); letter-spacing:var(--label-track); }
 @media (max-width:1024px){ #growth [data-tile="ai"] .salesai-svg .l{ font-size:var(--label-fs-t); } }
@@ -2612,13 +2612,13 @@
     radial-gradient(120% 120% at 50% 45%,
       rgba(0,0,0,1) 0%,
       rgba(0,0,0,.75) 2%,
-      rgba(0,0,0,.25) 35%,
+      rgba(0,0,0,.25) 20%,
       rgba(0,0,0,0) 100%);
   mask-image:
     radial-gradient(120% 120% at 50% 45%,
       rgba(0,0,0,1) 0%,
       rgba(0,0,0,.75) 2%,
-      rgba(0,0,0,.25) 35%,
+      rgba(0,0,0,.25) 20%,
       rgba(0,0,0,0) 100%);
 }
 
@@ -3162,7 +3162,6 @@
                   <g class="row row1" filter="url(#s2c_glow)">
                     <rect x="120" y="224" width="960" height="60" rx="28" fill="rgba(16,24,40,.92)" stroke="url(#s2c_stroke)" stroke-width="2"/>
                     <text class="l" x="600" y="254">Find Buyer</text>
-                     <h3>
                   </g>
                 
                   <g class="row row2" filter="url(#s2c_glow)">
