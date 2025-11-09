@@ -2480,9 +2480,18 @@
 #growth [data-tile="ai"] .salesai-svg rect[stroke]{ vector-effect:non-scaling-stroke; }
 
 /* labels (same class you already use: .l) */
-#growth [data-tile="ai"] .salesai-svg .l{ font-weight:600; font-size:16px; }
-@media (max-width:1024px){ #growth [data-tile="ai"] .salesai-svg .l{ font-size:15px; } }
-@media (max-width:700px){  #growth [data-tile="ai"] .salesai-svg .l{ font-size:14px; } }
+#growth [data-tile="ai"]{
+  --label-fs-d:16px; --label-fs-t:15px; --label-fs-p:14px;
+  --label-wt:500;      /* weight */
+  --label-track:.2px;  /* letter-spacing */
+}
+#growth [data-tile="ai"] .salesai-svg .l{
+  font-size:var(--label-fs-d);
+  font-weight:var(--label-wt);
+  letter-spacing:var(--label-track);
+}
+@media (max-width:1024px){ #growth [data-tile="ai"] .salesai-svg .l{ font-size:var(--label-fs-t); } }
+@media (max-width:700px){  #growth [data-tile="ai"] .salesai-svg .l{ font-size:var(--label-fs-p); } }
 
 /* ---------------- heights & gaps (no HTML changes needed) ---------------- */
 /* We scale each rect vertically around its own center. */
@@ -2522,6 +2531,38 @@
 #growth [data-tile="ai"] .salesai-svg .conn .c4{
   transform: translateY(calc(var(--r3-cy) - var(--r3-cy-base)));
 }
+
+
+/* knobs that follow your row centers */
+#growth [data-tile="ai"]{
+  --r1-tx:600px; --r1-ty:var(--r1-cy);
+  --r2-tx:580px; --r2-ty:var(--r2-cy);
+  --r3-tx:570px; --r3-ty:var(--r3-cy);
+
+  /* optional tiny nudges */
+  --r1-tdx:0px; --r1-tdy:0px;
+  --r2-tdx:0px; --r2-tdy:0px;
+  --r3-tdx:0px; --r3-tdy:0px;
+}
+
+/* override the presentational attributes with CSS */
+#growth [data-tile="ai"] .salesai-svg > g:nth-of-type(2) text{
+  x: calc(var(--r1-tx) + var(--r1-tdx));
+  y: calc(var(--r1-ty) + var(--r1-tdy));
+}
+#growth [data-tile="ai"] .salesai-svg > g:nth-of-type(3) text{
+  x: calc(var(--r2-tx) + var(--r2-tdx));
+  y: calc(var(--r2-ty) + var(--r2-tdy));
+}
+#growth [data-tile="ai"] .salesai-svg > g:nth-of-type(4) text{
+  x: calc(var(--r3-tx) + var(--r3-tdx));
+  y: calc(var(--r3-ty) + var(--r3-tdy));
+}
+
+
+
+
+
 
 
 
