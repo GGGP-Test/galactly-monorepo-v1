@@ -2406,7 +2406,11 @@
 /* ---------- Sales AI: size, heights, gaps, connector thickness ---------- */
 #growth [data-tile="ai"]{
   --ai-tile-min-h: 480px;
-  --ai-center-y: 30%;
+  --ai-center: 30%;        /* the base anchor (percent of wrapper height) */
+  --ai-nudge-d: 0px;       /* desktop extra offset */
+  --ai-nudge-t: 0px;       /* tablet extra offset */
+  --ai-nudge-p: 12px;      /* phone extra offset (pushes it down a hair) */
+  --ai-nudge: var(--ai-nudge-d);
   --ai-scale-desktop: 1.12;
   --ai-scale-tablet: 1.02;
   --ai-scale-phone: .94;
