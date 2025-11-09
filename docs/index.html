@@ -2240,30 +2240,43 @@
   }
 }
 
-/* ---------- Bridges (wire knobs to DOM) ---------- */
+/* ---------- Bridges (wire knobs to DOM) — UNIVERSAL ---------- */
 
-/* All 2B tiles: Title spacing/padding */
-#growth .tile h4{
-  /* Edge padding, side-specific first (falls back to X/Y knobs) */
+/* Add a weight knob so all tiles match */
+:root{ --s2b-title-wt: 600; }           /* adjust if you want slightly lighter/heavier */
+@media (max-width:900px){ :root{ --s2b-title-wt: 600; } }
+@media (max-width:640px){ :root{ --s2b-title-wt: 600; } }
+
+/* Titles: match your actual markup everywhere */
+#growth .tile :is(h2,h3,h4).tile-title{
+  /* edge padding via knobs */
   padding-top:    var(--s2b-title-pad-top);
   padding-right:  var(--s2b-title-pad-right);
   padding-bottom: var(--s2b-title-pad-bottom);
   padding-left:   var(--s2b-title-pad-left);
 
-  /* Margin: top is explicit; bottom is the Title → Subtitle gap */
+  /* spacing to subtitle */
   margin-top: var(--s2b-title-mt);
   margin-bottom: var(--s2b-title-to-sub-gap-y);
+
+  /* normalize weight so Sales AI matches other tiles */
+  font-weight: var(--s2b-title-wt);
 }
-/* All 2B tiles: Subtitle/body spacing/padding */
-#growth .tile p{
+
+/* Subtitles: match your actual markup everywhere */
+#growth .tile .tile-sub{
   padding-top:    var(--s2b-sub-pad-top);
   padding-right:  var(--s2b-sub-pad-right);
   padding-bottom: var(--s2b-sub-pad-bottom);
   padding-left:   var(--s2b-sub-pad-left);
 
-  /* Sub → next content (bars/avatars/SVG…) */
   margin-top: 0;
   margin-bottom: var(--s2b-sub-to-slot-gap-y);
+}
+
+/* Tile-specific override you already had for Signals (keep as-is) */
+#growth [data-tile="signals"] .rt-sub{
+  margin-bottom: var(--s2b-signals-sub-to-svg-gap-y);
 }
 
 /* Signals tile: Subtitle → SVG gap (uses its dedicated knob) */
