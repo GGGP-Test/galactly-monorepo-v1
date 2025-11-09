@@ -2792,7 +2792,28 @@
   --q-line-w: .9px;        /* thin “text” lines */
   --q-dim-alpha: .82;      /* side cards dimmer */
   --q-line-alpha: .9;
+  /* default cyan rim + line ink */
+  --q-stroke-c1:#5AA8FF; --q-stroke-c2:#95D6FF; --q-stroke-c3:#5AA8FF;
+  --q-left-ink:#BFE3FF;  --q-center-ink:#BFE3FF; --q-right-ink:#BFE3FF;
+
+  /* reduce padding if the base feels heavy */
+  --tile-pad-x: 22px;
+  --tile-pad-y: 18px;
 }
+
+#growth [data-tile="quotes"] .quotesvg .qb-hair{ stroke:url(#qb_stroke); stroke-width:var(--q-hair-w); vector-effect:non-scaling-stroke; }
+#growth [data-tile="quotes"] .quotesvg .qb-strong{ stroke:url(#qb_stroke); stroke-width:var(--q-strong-w); vector-effect:non-scaling-stroke; }
+#growth [data-tile="quotes"] .quotesvg .qb-line{ stroke-width:var(--q-line-w); opacity:var(--q-line-alpha); }
+
+/* map rim gradient (keeps your cyan neon) */
+#growth [data-tile="quotes"] .quotesvg #qb_stroke stop:nth-child(1){ stop-color: var(--q-stroke-c1); }
+#growth [data-tile="quotes"] .quotesvg #qb_stroke stop:nth-child(2){ stop-color: var(--q-stroke-c2); }
+#growth [data-tile="quotes"] .quotesvg #qb_stroke stop:nth-child(3){ stop-color: var(--q-stroke-c3); }
+
+/* per-card inner line inks only (cards keep cyan rims) */
+#growth [data-tile="quotes"] .quotesvg .qb-left  .qb-line{ stroke: var(--q-left-ink); }
+#growth [data-tile="quotes"] .quotesvg .qb-center .qb-line{ stroke: var(--q-center-ink); }
+#growth [data-tile="quotes"] .quotesvg .qb-right .qb-line{ stroke: var(--q-right-ink); }
 
 #growth [data-tile="quotes"] .quotesvg .qb-card{ fill: var(--q-card-fill); }
 #growth [data-tile="quotes"] .quotesvg .qb-hair{ stroke-width: var(--q-hair-w); vector-effect: non-scaling-stroke; }
@@ -2834,11 +2855,20 @@
   /* tiny outer hairline alpha */
   --q-pill-stroke-a:.12;
 }
-#growth [data-tile="quotes"] .quotesvg g[data-role="switch"]{
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: translate(var(--q-switch-x), var(--q-switch-y)) scale(var(--q-pill-scale));
+
+
+
+#growth [data-tile="quotes"]{
+  --q-switch-xpx: 630px;   /* center of center card */
+  --q-switch-ypx: 52px;    /* slightly above the top edge */
+  --q-pill-scale: 1.25;    /* size of the switch */
 }
+#growth [data-tile="quotes"] .quotesvg g[data-role="switch"]{
+  transform: translate(var(--q-switch-xpx), var(--q-switch-ypx)) scale(var(--q-pill-scale));
+}
+
+
+
 /* set roundness via CSS (works on SVG rects) */
 #growth [data-tile="quotes"] .quotesvg g[data-role="switch"] rect{ rx: var(--q-pill-r); }
 /* pill gradient */
@@ -2864,10 +2894,29 @@
 }
 
 
+#growth [data-tile="quotes"]{
+  --q-pill-r-outer: 24px;
+  --q-pill-r-inner: 16px;
+}
+#growth [data-tile="quotes"] .quotesvg .pill-outer{ rx: var(--q-pill-r-outer); }
+#growth [data-tile="quotes"] .quotesvg .pill-inner{ rx: var(--q-pill-r-inner); }
 
 
-
-
+@media (max-width:900px) and (min-width:641px){
+  #growth [data-tile="quotes"]{
+    --q-switch-xpx: 630px;
+    --q-switch-ypx: 58px;
+    --q-pill-scale: 1.15;
+  }
+}
+@media (max-width:640px){
+  #growth [data-tile="quotes"]{
+    --q-switch-xpx: 600px;  /* same SVG coords; scale handles visible size */
+    --q-switch-ypx: 64px;
+    --q-pill-scale: 1.0;
+    --tile-pad-x: 18px; --tile-pad-y: 14px;
+  }
+}
 
 
 
