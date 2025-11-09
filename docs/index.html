@@ -2445,7 +2445,7 @@
 
   /* gaps */
   --gap-d: 120px;   /* 254→360 */
-  --gap-t: 96px;
+  --gap-t: 120px;
   --gap-p: 90px;
 
   /* baselines from SVG */
@@ -2737,8 +2737,32 @@
 }
 
 
+/* accent colors (no filters on <tspan>) */
+#growth [data-tile="ai"] .salesai-svg .l tspan.accent-gold { fill:#F6D36F; }
+#growth [data-tile="ai"] .salesai-svg .l tspan.accent-cyan { fill:#7AD7FF; }
+#growth [data-tile="ai"] .salesai-svg .l tspan.accent-rose { fill:#FF9AB3; }
 
 
+/* Make the Sales AI H3 look like the other H4 titles */
+#growth [data-tile="ai"] h3.tile-title{
+  /* weight + size */
+  font-weight: 400;                /* same weight as your other titles */
+  font-size: 22px;                 /* match your H4 size; tweak 22–26px if needed */
+  line-height: 1.25;
+  letter-spacing: 0;
+
+  /* edge padding inside the tile */
+  padding: 6px 14px;               /* top/bottom, left/right */
+
+  /* spacing to subtitle below */
+  margin: 0 0 10px;                /* top 0, bottom gap 10px */
+}
+@media (max-width:900px) and (min-width:641px){
+  #growth [data-tile="ai"] h3.tile-title{ font-size: 24px; padding: 6px 10px; margin-bottom: 8px; }
+}
+@media (max-width:640px){
+  #growth [data-tile="ai"] h3.tile-title{ font-size: 22px; padding: 8px 12px; margin-bottom: 6px; }
+}
 
 
 
