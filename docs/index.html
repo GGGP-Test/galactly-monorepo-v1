@@ -3297,72 +3297,71 @@
               </div>
             </article>
   
-            <!-- QUOTES · ITERATION 2 (Assembly Line)
-                 Inputs → auto-filled quote sheet with 99% ring + Approve chip -->
-            <article class="tile quotes" data-tile="quotes" data-variant="qv2" style="--col:1; --row:1">
+            <!-- QUOTES · ITERATION 3 (Compare & Recommend)
+                 Three candidate quotes; center card is AI’s pick with badge -->
+            <article class="tile quotes" data-tile="quotes" data-variant="qv3" style="--col:1; --row:1">
               <h4 class="tile-title">Quotes</h4>
-              <p class="tile-sub">From specs to signed—AI fills 99% of the quote, you approve.</p>
+              <p class="tile-sub">AI drafts multiple quotes, highlights the best match—one tap to send.</p>
             
               <div class="quote-svg-wrap">
                 <svg class="quotesvg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
                   <defs>
-                    <linearGradient id="qa_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <linearGradient id="qb_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stop-color="#5AA8FF"/><stop offset="50%" stop-color="#95D6FF"/><stop offset="100%" stop-color="#5AA8FF"/>
                     </linearGradient>
-                    <filter id="qa_glow" x="-40%" y="-40%" width="180%" height="180%">
-                      <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="b"/>
+                    <filter id="qb_glow" x="-40%" y="-40%" width="180%" height="180%">
+                      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
                       <feColorMatrix type="matrix" values="0 0 0 0 0.33  0 0 0 0 0.58  0 0 0 0 1.00  0 0 0 0.0 0" result="tint"/>
                       <feMerge><feMergeNode in="tint"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
                     <style>
                       svg.quotesvg{width:100%;height:auto;display:block}
-                      .qa-s{stroke:url(#qa_stroke);vector-effect:non-scaling-stroke}
-                      .qa-g{filter:url(#qa_glow)}
-                      .qa-card{fill:rgba(16,24,40,.92)}
-                      .qa-hair{stroke-width:1.4}
-                      .qa-thick{stroke-width:2}
-                      .qa-line{stroke:#9FCDFE;stroke-linecap:round;opacity:.9;vector-effect:non-scaling-stroke}
-                      .qa-muted{stroke:rgba(255,255,255,.14)}
+                      .qb-s{stroke:url(#qb_stroke);vector-effect:non-scaling-stroke}
+                      .qb-g{filter:url(#qb_glow)}
+                      .qb-card{fill:rgba(16,24,40,.92)}
+                      .qb-hair{stroke-width:1.4}
+                      .qb-thick{stroke-width:2.2}
+                      .qb-line{stroke:#9FCDFE;stroke-linecap:round;opacity:.9;vector-effect:non-scaling-stroke}
+                      .qb-dim{opacity:.75}
                     </style>
                   </defs>
             
-                  <!-- Left: three input chips feeding the quote -->
-                  <g class="qa-g">
-                    <rect x="210" y="230" width="180" height="44" rx="22" fill="#0F1A2A" class="qa-s qa-hair"/>
-                    <rect x="210" y="290" width="180" height="44" rx="22" fill="#0F1A2A" class="qa-s qa-hair" opacity=".85"/>
-                    <rect x="210" y="350" width="180" height="44" rx="22" fill="#0F1A2A" class="qa-s qa-hair"/>
-                    <!-- arrows to the doc -->
-                    <path d="M390 252 H 600" fill="none" class="qa-s qa-hair"/>
-                    <path d="M390 312 H 600" fill="none" class="qa-s qa-hair" opacity=".9"/>
-                    <path d="M390 372 H 600" fill="none" class="qa-s qa-hair"/>
-                    <!-- arrowheads -->
-                    <path d="M600 252 l-12 -8 v16 z" fill="#5AA8FF" opacity=".9"/>
-                    <path d="M600 312 l-12 -8 v16 z" fill="#5AA8FF" opacity=".9"/>
-                    <path d="M600 372 l-12 -8 v16 z" fill="#5AA8FF" opacity=".9"/>
+                  <!-- three cards laid out; center is recommended -->
+                  <!-- left -->
+                  <g transform="translate(230,140)" class="qb-g qb-dim">
+                    <rect x="0" y="0" width="220" height="340" rx="20" class="qb-card qb-s qb-hair"/>
+                    <line x1="24" y1="60" x2="150" y2="60" class="qb-line" stroke-width="4"/>
+                    <line x1="24" y1="110" x2="140" y2="110" class="qb-line" stroke-width="4"/>
+                    <line x1="24" y1="160" x2="136" y2="160" class="qb-line" stroke-width="4"/>
+                    <rect x="24" y="200" width="120" height="26" rx="13" fill="#0F1A2A" class="qb-s qb-hair"/>
                   </g>
             
-                  <!-- Right: tall quote sheet -->
-                  <g class="qa-g">
-                    <rect x="650" y="120" width="380" height="360" rx="22" class="qa-card qa-s qa-thick"/>
-                    <!-- header line & short spec lines -->
-                    <line x1="680" y1="180" x2="820" y2="180" class="qa-line" stroke-width="4"/>
-                    <line x1="680" y1="230" x2="770" y2="230" class="qa-line" stroke-width="4"/>
-                    <line x1="680" y1="280" x2="760" y2="280" class="qa-line" stroke-width="4"/>
-                    <line x1="680" y1="330" x2="755" y2="330" class="qa-line" stroke-width="4"/>
-                    <!-- approve chip -->
-                    <rect x="680" y="368" width="126" height="32" rx="16" fill="#112038" class="qa-s qa-hair"/>
-                    <path d="M695 384 l8 8 l14 -14" fill="none" stroke="#8FE29A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-            
-                    <!-- 99% ring (top-right of sheet) -->
-                    <g transform="translate(980,180)">
-                      <circle cx="0" cy="0" r="30" fill="none" class="qa-muted" stroke-width="8"/>
-                      <!-- progress arc using dasharray -->
-                      <circle cx="0" cy="0" r="30" fill="none" class="qa-s" stroke-width="8"
-                              transform="rotate(-90)"
-                              stroke-dasharray="188"
-                              stroke-dashoffset="2"/>
-                      <text x="0" y="5" font-family="Inter, ui-sans-serif" font-size="14" text-anchor="middle" fill="#BFE3FF">99%</text>
+                  <!-- center (AI pick) -->
+                  <g transform="translate(490,120)" class="qb-g">
+                    <rect x="0" y="0" width="220" height="370" rx="20" class="qb-card qb-s qb-thick"/>
+                    <!-- badge -->
+                    <g transform="translate(190,-16)">
+                      <circle cx="0" cy="0" r="14" fill="#0F1A2A" class="qb-s qb-hair"/>
+                      <path d="M-6 0 l6 6 l10 -10" fill="none" stroke="#8FE29A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
                     </g>
+                    <!-- lines -->
+                    <line x1="24" y1="70" x2="170" y2="70" class="qb-line" stroke-width="4"/>
+                    <line x1="24" y1="122" x2="166" y2="122" class="qb-line" stroke-width="4"/>
+                    <line x1="24" y1="174" x2="160" y2="174" class="qb-line" stroke-width="4"/>
+                    <!-- highlight band (total) -->
+                    <rect x="24" y="214" width="172" height="30" rx="10" fill="#112038" class="qb-s qb-hair"/>
+                    <!-- send button -->
+                    <rect x="24" y="272" width="120" height="32" rx="16" fill="#112038" class="qb-s qb-hair"/>
+                    <path d="M42 288 l14 -6 v12 z" fill="#5AA8FF"/>
+                  </g>
+            
+                  <!-- right -->
+                  <g transform="translate(750,140)" class="qb-g qb-dim">
+                    <rect x="0" y="0" width="220" height="340" rx="20" class="qb-card qb-s qb-hair"/>
+                    <line x1="24" y1="60" x2="150" y2="60" class="qb-line" stroke-width="4"/>
+                    <line x1="24" y1="110" x2="138" y2="110" class="qb-line" stroke-width="4"/>
+                    <line x1="24" y1="160" x2="132" y2="160" class="qb-line" stroke-width="4"/>
+                    <rect x="24" y="200" width="120" height="26" rx="13" fill="#0F1A2A" class="qb-s qb-hair"/>
                   </g>
                 </svg>
               </div>
