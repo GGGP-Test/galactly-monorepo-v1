@@ -3074,7 +3074,39 @@
                       @media (max-width:1024px){ svg.salesai-svg{height:330px} .l{font-size:15px} }
                       @media (max-width:700px){  svg.salesai-svg{height:310px} .l{font-size:14px} }
                     </style>
+                    <!-- ——— faint grid patterns + edge fade ——— -->
+                    <pattern id="sai_grid" patternUnits="userSpaceOnUse" width="24" height="24">
+                      <path d="M24 0H0V24" fill="none"
+                            stroke="var(--ai-stroke-1,#5AA8FF)" stroke-opacity=".08" stroke-width="1"
+                            vector-effect="non-scaling-stroke" shape-rendering="geometricPrecision"/>
+                    </pattern>
+                    
+                    <pattern id="sai_gridMajor" patternUnits="userSpaceOnUse" width="120" height="120">
+                      <path d="M120 0H0V120" fill="none"
+                            stroke="var(--ai-stroke-2,#8FD3FF)" stroke-opacity=".10" stroke-width="1"
+                            vector-effect="non-scaling-stroke" shape-rendering="geometricPrecision"/>
+                    </pattern>
+                    
+                    <radialGradient id="sai_mesh_fade" cx="50%" cy="50%" r="70%">
+                      <stop offset="0%"   stop-color="#fff" stop-opacity=".70"/>
+                      <stop offset="65%"  stop-color="#fff" stop-opacity=".30"/>
+                      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+                    </radialGradient>
+                    
+                    <mask id="sai_mesh_mask">
+                      <!-- 100% height so it tracks your current (taller) viewBox -->
+                      <rect x="0" y="0" width="1200" height="100%" fill="url(#sai_mesh_fade)"/>
+                    </mask>
+                    
+                    <style>
+                      .mesh path{ vector-effect:non-scaling-stroke }
+                    </style>
                   </defs>
+                  <!-- very faint background mesh -->
+                  <g class="mesh" mask="url(#sai_mesh_mask)" opacity=".22" pointer-events="none">
+                    <rect x="0" y="0" width="1200" height="100%" fill="url(#sai_grid)"/>
+                    <rect x="0" y="0" width="1200" height="100%" fill="url(#sai_gridMajor)" opacity=".35"/>
+                  </g>
               
                   <!-- connectors -->
                   <g class="conn" fill="none" stroke="url(#s2c_conn)" filter="url(#s2c_glow)">
