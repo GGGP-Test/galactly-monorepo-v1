@@ -2462,6 +2462,29 @@
   --r3-cy: calc(var(--r1-cy-base) + var(--gap) + var(--gap));
 }
 
+
+/* Make the Sales AI H3 look like the other H4 titles */
+#growth [data-tile="ai"] h3.tile-title{
+  /* weight + size */
+  font-weight: 600;                /* same weight as your other titles */
+  font-size: 24px;                 /* match your H4 size; tweak 22–26px if needed */
+  line-height: 1.25;
+  letter-spacing: 0;
+
+  /* edge padding inside the tile */
+  padding: 6px 14px;               /* top/bottom, left/right */
+
+  /* spacing to subtitle below */
+  margin: 0 0 10px;                /* top 0, bottom gap 10px */
+}
+@media (max-width:900px) and (min-width:641px){
+  #growth [data-tile="ai"] h3.tile-title{ font-size: 24px; padding: 6px 10px; margin-bottom: 8px; }
+}
+@media (max-width:640px){
+  #growth [data-tile="ai"] h3.tile-title{ font-size: 22px; padding: 8px 12px; margin-bottom: 6px; }
+}
+
+
 /* Keep desktop knobs on smaller screens */
 @media (max-width:1024px){
   #growth [data-tile="ai"]{
@@ -2701,7 +2724,17 @@
 #growth [data-tile="ai"] .salesai-svg .l tspan.accent-gold { fill:#F6D36F; }
 #growth [data-tile="ai"] .salesai-svg .l tspan.accent-rose { fill:#FF9AB3; }
 /* optional: make accent words slightly brighter */
-#growth [data-tile="ai"] .salesai-svg .l tspan[class^="accent-"] { filter:drop-shadow(0 0 0.3px rgba(255,255,255,.25)); }
+/* accent colors (no filters on <tspan>) */
+#growth [data-tile="ai"] .salesai-svg .l tspan.accent-gold { fill:#F6D36F; }
+#growth [data-tile="ai"] .salesai-svg .l tspan.accent-cyan { fill:#7AD7FF; }
+#growth [data-tile="ai"] .salesai-svg .l tspan.accent-rose { fill:#FF9AB3; }
+
+/* optional tiny outline that doesn't move the baseline */
+#growth [data-tile="ai"] .salesai-svg .l tspan[class^="accent-"]{
+  paint-order: stroke fill;
+  stroke: rgba(255,255,255,.18);
+  stroke-width: .25px;
+}
 
 
 
@@ -3194,7 +3227,7 @@
 
             <!-- Sales AI -->
             <article class="tile ai-sdr" data-tile="ai">
-              <h4 class="tile-title">Sales AI</h4>
+              <h3 class="tile-title">Sales AI</h3>
               <p class="tile-sub">
                 Find the right buyer, tailor your packaging pitch, and reach out at the right time, on auto-pilot.
               </p>
