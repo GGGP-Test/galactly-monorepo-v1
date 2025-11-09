@@ -2528,6 +2528,102 @@
 
 
 
+/* ====== Sales AI · background mesh (CSS-only, no SVG edits) ====== */
+#growth [data-tile="ai"]{
+  /* knobs */
+  --mesh-minor: 24px;           /* small cell */
+  --mesh-major: 120px;          /* big cell */
+  --mesh-minor-alpha: .10;      /* minor line strength */
+  --mesh-major-alpha: .22;      /* major line strength */
+  --mesh-c1: 90,168,255;        /* rgb() for minor lines  (#5AA8FF) */
+  --mesh-c2: 149,214,255;       /* rgb() for major lines  (#95D6FF) */
+  --mesh-fade: 62%;             /* how far the radial fade reaches */
+  --mesh-tilt: 0deg;            /* rotate grid if you like */
+}
+
+/* make sure the SVG paints above the mesh */
+#growth [data-tile="ai"] .sales-ai-svg-wrap{ position:relative; }
+#growth [data-tile="ai"] .salesai-svg{ z-index:1; }
+
+/* the mesh itself */
+#growth [data-tile="ai"] .sales-ai-svg-wrap::before{
+  content:"";
+  position:absolute; inset:0;
+  z-index:0; pointer-events:none;
+
+  /* 4-layer grid: minor vertical + minor horizontal + major vertical + major horizontal */
+  background-image:
+    /* minor vertical */
+    repeating-linear-gradient(
+      to right,
+      rgba(var(--mesh-c1), var(--mesh-minor-alpha)) 0,
+      rgba(var(--mesh-c1), var(--mesh-minor-alpha)) 1px,
+      transparent 1px,
+      transparent var(--mesh-minor)
+    ),
+    /* minor horizontal */
+    repeating-linear-gradient(
+      to bottom,
+      rgba(var(--mesh-c1), var(--mesh-minor-alpha)) 0,
+      rgba(var(--mesh-c1), var(--mesh-minor-alpha)) 1px,
+      transparent 1px,
+      transparent var(--mesh-minor)
+    ),
+    /* major vertical */
+    repeating-linear-gradient(
+      to right,
+      rgba(var(--mesh-c2), var(--mesh-major-alpha)) 0,
+      rgba(var(--mesh-c2), var(--mesh-major-alpha)) 1.5px,
+      transparent 1.5px,
+      transparent var(--mesh-major)
+    ),
+    /* major horizontal */
+    repeating-linear-gradient(
+      to bottom,
+      rgba(var(--mesh-c2), var(--mesh-major-alpha)) 0,
+      rgba(var(--mesh-c2), var(--mesh-major-alpha)) 1.5px,
+      transparent 1.5px,
+      transparent var(--mesh-major)
+    );
+
+  /* optional tilt of the whole grid */
+  transform: rotate(var(--mesh-tilt));
+
+  /* gentle edge fade so it “dies” toward the tile borders */
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 55%,
+    rgba(0,0,0,1) 0%,
+    rgba(0,0,0,1) var(--mesh-fade),
+    rgba(0,0,0,0) 100%
+  );
+  mask-image: radial-gradient(
+    circle at 50% 55%,
+    rgba(0,0,0,1) 0%,
+    rgba(0,0,0,1) var(--mesh-fade),
+    rgba(0,0,0,0) 100%
+  );
+
+  /* blend softly on dark backgrounds; remove if you don’t want blending */
+  mix-blend-mode: screen;
+  opacity:.9; /* global intensity cap (your alpha knobs still control line strength) */
+}
+
+/* (Optional) responsive tweaks if you want denser grid on smaller screens */
+@media (max-width:1024px){
+  #growth [data-tile="ai"]{
+    --mesh-minor: 22px; --mesh-major: 110px;
+    --mesh-minor-alpha:.11; --mesh-major-alpha:.24;
+  }
+}
+@media (max-width:700px){
+  #growth [data-tile="ai"]{
+    --mesh-minor: 20px; --mesh-major: 100px;
+    --mesh-minor-alpha:.12; --mesh-major-alpha:.26;
+  }
+}
+
+
+
 
 
 
