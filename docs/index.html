@@ -2405,15 +2405,15 @@
 
 /* ---------- Sales AI: size, heights, gaps, connector thickness ---------- */
 #growth [data-tile="ai"]{
-  --ai-tile-min-h: 480px;
+  --ai-tile-min-h: 300px;
   --ai-center: 30%;        /* the base anchor (percent of wrapper height) */
   --ai-nudge-d: 0px;       /* desktop extra offset */
   --ai-nudge-t: 0px;       /* tablet extra offset */
   --ai-nudge-p: 12px;      /* phone extra offset (pushes it down a hair) */
   --ai-nudge: var(--ai-nudge-d);
   --ai-scale-desktop: 1.12;
-  --ai-scale-tablet: 1.02;
-  --ai-scale-phone: .94;
+  --ai-scale-tablet: 1.12;
+  --ai-scale-phone: 1.12;
   /* connector elongation knobs + anchor Xs (chip entry points) */
   --c1-anchor-x: 170px; --c1-elong: 1.00;  /* row1, left side */
   --c2-anchor-x: 900px; --c2-elong: 1.12;  /* row2, right side */
@@ -2436,7 +2436,7 @@
   --gap-p: 90px;
 
   /* baselines from SVG */
-  --r1-cy-base: 254px; --r2-cy-base: 360px; --r3-cy-base: 456px;
+  --r1-cy-base: 354px; --r2-cy-base: 460px; --r3-cy-base: 556px;
 
   /* desktop active */
   --conn-w: var(--conn-w-d);
@@ -3183,7 +3183,7 @@
             <article class="tile ai-sdr" data-tile="ai">
               <h3 class="tile-title">Sales AI</h3>
               <p class="tile-sub">
-                Find the right buyer, tailor the pitch, and reach out at the right time, automatically.
+                Find the right buyer, tailor your packaging pitch, and reach out at the right time, on auto-pilot.
               </p>
           
               <div class="sales-ai-svg-wrap">
