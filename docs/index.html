@@ -2742,6 +2742,171 @@
 
 
 
+/* ============================================================
+   QUOTES · One-file control panel (drop at end of <style>)
+   Targets the "Compare & Recommend" SVG you inserted earlier
+   ============================================================ */
+
+/* ---------- Top-level knobs (desktop defaults) ---------- */
+#growth [data-tile="quotes"]{
+  /* Tile text (overrides your SSoT if needed) */
+  --q-title-fs: 22px;
+  --q-title-wt: 400;
+  --q-title-pad-x: 14px;
+  --q-title-pad-y: 10px;
+  --q-title-gap: 10px;        /* title → subtitle */
+
+  --q-sub-fs: 15px;
+  --q-sub-wt: 350;
+  --q-sub-pad-x: 14px;
+  --q-sub-pad-y: 0px;
+  --q-sub-gap: 10px;          /* subtitle → SVG */
+
+  /* SVG placement & scale */
+  --q-tile-min-h: 440px;      /* wrapper height floor */
+  --q-center-y: 64%;          /* SVG vertical anchor */
+  --q-nudge: 0px;             /* extra Y offset */
+  --q-scale: 1.16;            /* desktop scale */
+
+  /* Per-card emphasis / hairlines / lines */
+  --q-dim-alpha: .78;         /* left/right card group opacity */
+  --q-card-alpha: .92;        /* card fill alpha */
+  --q-hair-w: 1.2px;          /* hairline stroke width */
+  --q-strong-w: 1.6px;        /* center card stroke */
+  --q-line-w: 1px;            /* “text” lines */
+  --q-line-alpha: .88;
+
+  /* Colors & palette */
+  --q-card-fill: rgba(16,24,40,var(--q-card-alpha));
+  --q-line-color: #BFE3FF;    /* “ink” for the faux lines */
+  --q-plane-fill: #7AD7FF;    /* little arrow/plane */
+
+  /* Stroke gradient for card rims (left→right) */
+  --q-stroke-c1: #5AA8FF;     /* start  */
+  --q-stroke-c2: #95D6FF;     /* middle */
+  --q-stroke-c3: #5AA8FF;     /* end    */
+
+  /* Switch (pill) gradient + sizes */
+  --q-pill-c1: #7EC3FF;
+  --q-pill-c2: #2A7FF0;
+  --q-pill-inner-w: 1.2px;    /* inner ring width */
+  --q-pill-stroke-a: .12;     /* outer hairline alpha */
+  --q-pill-scale: 1.25;
+
+  /* Switch placement: set one of these (keep numbers, not keywords) */
+  --q-switch-x: 50%;          /* center by default */
+  --q-switch-y: -8px;         /* overlap above center card */
+  /* For below-card look, try: --q-switch-y: 360px; */
+
+  /* Optional: per-card micro nudges (no DOM edits needed) */
+  --q-left-dx: 0px;  --q-left-dy: 0px;
+  --q-center-dx: 0px;--q-center-dy: 0px;
+  --q-right-dx: 0px; --q-right-dy: 0px;
+}
+
+/* ---------- Tablet (641–900) ---------- */
+@media (max-width:900px) and (min-width:641px){
+  #growth [data-tile="quotes"]{
+    --q-title-fs: 20px;
+    --q-sub-fs: 14px;
+    --q-tile-min-h: 420px;
+    --q-scale: 1.06;
+    --q-center-y: 62%;
+  }
+}
+
+/* ---------- Phone (≤640) ---------- */
+@media (max-width:640px){
+  #growth [data-tile="quotes"]{
+    --q-title-fs: 20px;
+    --q-sub-fs: 13px;
+    --q-tile-min-h: 400px;
+    --q-scale: .98;
+    --q-center-y: 62%;
+    --q-nudge: 4px;            /* tiny downward push on phones */
+  }
+}
+
+/* ---------- Bridge: title & subtitle to your SSoT hooks ---------- */
+#growth [data-tile="quotes"] .tile-title{
+  font-size:var(--q-title-fs); font-weight:var(--q-title-wt);
+  padding: var(--q-title-pad-y) var(--q-title-pad-x);
+  margin: 0 0 var(--q-title-gap);
+}
+#growth [data-tile="quotes"] .tile-sub{
+  font-size:var(--q-sub-fs); font-weight:var(--q-sub-wt);
+  padding: var(--q-sub-pad-y) var(--q-sub-pad-x);
+  margin: 0 0 var(--q-sub-gap);
+}
+
+/* ---------- Bridge: SVG placement & scale ---------- */
+#growth [data-tile="quotes"] .quote-svg-wrap{ position:relative; min-height:var(--q-tile-min-h); }
+#growth [data-tile="quotes"] .quotesvg{
+  position:absolute; left:50%;
+  top: calc(var(--q-center-y) + var(--q-nudge));
+  transform: translate(-50%,-50%) scale(var(--q-scale));
+  width:80%; height:auto; max-width:none; pointer-events:none;
+}
+
+/* ---------- Wire card fills, strokes, hairlines, line ink ---------- */
+#growth [data-tile="quotes"] .quotesvg .qb-card{ fill: var(--q-card-fill); }
+#growth [data-tile="quotes"] .quotesvg .qb-hair{ stroke-width: var(--q-hair-w); vector-effect: non-scaling-stroke; }
+#growth [data-tile="quotes"] .quotesvg .qb-strong{ stroke-width: var(--q-strong-w); vector-effect: non-scaling-stroke; }
+#growth [data-tile="quotes"] .quotesvg .qb-line{
+  stroke: var(--q-line-color);
+  stroke-width: var(--q-line-w);
+  opacity: var(--q-line-alpha);
+  vector-effect: non-scaling-stroke;
+}
+#growth [data-tile="quotes"] .quotesvg .qb-g.qb-dim{ opacity: var(--q-dim-alpha); }
+#growth [data-tile="quotes"] .quotesvg .qb-plane{ fill: var(--q-plane-fill); }
+
+/* ---------- Stroke gradient (card rims) via CSS vars ---------- */
+#growth [data-tile="quotes"] .quotesvg #qb_stroke stop:nth-child(1){ stop-color: var(--q-stroke-c1); }
+#growth [data-tile="quotes"] .quotesvg #qb_stroke stop:nth-child(2){ stop-color: var(--q-stroke-c2); }
+#growth [data-tile="quotes"] .quotesvg #qb_stroke stop:nth-child(3){ stop-color: var(--q-stroke-c3); }
+
+/* ---------- Switch (pill) palette + hairline ---------- */
+#growth [data-tile="quotes"] .quotesvg #pillInk stop:nth-child(1){ stop-color: var(--q-pill-c1); }
+#growth [data-tile="quotes"] .quotesvg #pillInk stop:nth-child(2){ stop-color: var(--q-pill-c2); }
+/* inner glowing ring on the pill */
+#growth [data-tile="quotes"] .quotesvg g[data-role="switch"] rect[filter*="pillOuter"]{
+  stroke-width: var(--q-pill-inner-w);
+}
+/* faint pill outer border */
+#growth [data-tile="quotes"] .quotesvg g[data-role="switch"] > rect:first-child{
+  stroke: rgba(255,255,255,var(--q-pill-stroke-a));
+}
+
+/* ---------- Switch placement (CSS controls the group) ---------- */
+#growth [data-tile="quotes"] .quotesvg g[data-role="switch"]{
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: translate(-50%,-50%) translate(var(--q-switch-x), var(--q-switch-y)) scale(var(--q-pill-scale));
+}
+
+/* ---------- Optional: per-card micro-nudges (no DOM edits) ----------
+   Works because your three cards are the first 3 <g> after <defs>.
+   If you later insert extra groups before them, add classes instead. */
+#growth [data-tile="quotes"] .quotesvg > g:nth-of-type(1){ transform: translate(var(--q-left-dx),  var(--q-left-dy))  translate(140px,90px); }
+#growth [data-tile="quotes"] .quotesvg > g:nth-of-type(2){ transform: translate(var(--q-center-dx),var(--q-center-dy)) translate(470px,70px); }
+#growth [data-tile="quotes"] .quotesvg > g:nth-of-type(3){ transform: translate(var(--q-right-dx), var(--q-right-dy)) translate(860px,90px); }
+/* keep their original internal transforms by appending translates */
+
+/* Gold theme */
+#growth [data-tile="quotes"]{
+  --q-stroke-c1:#F6D36F; --q-stroke-c2:#FFE39B; --q-stroke-c3:#F6D36F;
+  --q-line-color:#FFE39B; --q-plane-fill:#F6D36F;
+  --q-pill-c1:#FFD778; --q-pill-c2:#F2B84B;
+}
+
+/* Cyan→Gold split */
+#growth [data-tile="quotes"]{
+  --q-stroke-c1:#7AD7FF; --q-stroke-c2:#BFE3FF; --q-stroke-c3:#F6D36F;
+  --q-plane-fill:#F6D36F;
+  --q-pill-c1:#7EC3FF; --q-pill-c2:#F0C86E;
+}
+
 
 
 
@@ -3374,7 +3539,7 @@
                   <!-- SWITCH (inline pill.svg), centered above the center card, slight overlap -->
                   <!-- Center card anchor: (x=470,y=70,w=320) → center x=630, top y=70 -->
                   <!-- Pill native size: 160x56 → center at (80,28). Place at (630, 52) and scale 1.25 -->
-                  <g transform="translate(630,52) scale(1.25) translate(-80,-28)" class="qb-g">
+                  <g transform="translate(0,0)" class="qb-g" data-role="switch">
                     <defs>
                       <linearGradient id="pillInk" x1="0" y1="0" x2="1" y2="1">
                         <stop offset="0" stop-color="#7EC3FF"/>
