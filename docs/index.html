@@ -3297,67 +3297,77 @@
               </div>
             </article>
   
-            <!-- QUOTES · ITERATION B (Switch → Form)
-                 Model: pill at top → arrow → tall form with auto-filled fields + confirm chip -->
-            <article class="tile quotes" data-tile="quotes" data-variant="qv2" style="--col:1; --row:1">
+            <!-- QUOTES · ITERATION C (Chat → Receipt)
+                 Model: pill + chat bubbles funnel into a tall receipt-style quote with perforation + total band -->
+            <article class="tile quotes" data-tile="quotes" data-variant="qv3" style="--col:1; --row:1">
               <h4 class="tile-title">Quotes</h4>
-              <p class="tile-sub">From conversation to configured quote—AI fills the fields, you approve.</p>
+              <p class="tile-sub">AI handles the back-and-forth and composes the quote—your tap sends it.</p>
             
               <div class="quote-svg-wrap">
                 <svg class="quotesvg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
                   <defs>
-                    <linearGradient id="q2_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <linearGradient id="q3_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stop-color="#5AA8FF"/><stop offset="50%" stop-color="#95D6FF"/><stop offset="100%" stop-color="#5AA8FF"/>
                     </linearGradient>
-                    <filter id="q2_glow" x="-40%" y="-40%" width="180%" height="180%">
+                    <filter id="q3_glow" x="-40%" y="-40%" width="180%" height="180%">
                       <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="b"/>
                       <feColorMatrix type="matrix" values="0 0 0 0 0.33  0 0 0 0 0.58  0 0 0 0 1.00  0 0 0 0.0 0" result="tint"/>
                       <feMerge><feMergeNode in="tint"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
             
                     <!-- pill defs (unique IDs) -->
-                    <linearGradient id="q2_pillInk" x1="0" y1="0" x2="1" y2="1">
+                    <linearGradient id="q3_pillInk" x1="0" y1="0" x2="1" y2="1">
                       <stop offset="0" stop-color="#7EC3FF"/>
                       <stop offset="1" stop-color="#2A7FF0"/>
                     </linearGradient>
-                    <filter id="q2_outer" x="-50%" y="-50%" width="200%" height="200%">
+                    <filter id="q3_outer" x="-50%" y="-50%" width="200%" height="200%">
                       <feGaussianBlur stdDeviation="6" result="b"/>
                       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
             
                     <style>
                       svg.quotesvg{width:100%;height:auto;display:block}
-                      .q2-s{stroke:url(#q2_stroke);vector-effect:non-scaling-stroke}
-                      .q2-g{filter:url(#q2_glow)}
-                      .q2-fill{fill:rgba(16,24,40,.92)}
-                      .q2-hair{stroke-width:1.4}
-                      .q2-thick{stroke-width:2}
+                      .q3-s{stroke:url(#q3_stroke);vector-effect:non-scaling-stroke}
+                      .q3-g{filter:url(#q3_glow)}
+                      .q3-fill{fill:rgba(16,24,40,.92)}
+                      .q3-hair{stroke-width:1.4}
+                      .q3-thick{stroke-width:2}
+                      .q3-line{stroke:#9FCDFE;stroke-linecap:round;opacity:.9;vector-effect:non-scaling-stroke}
                     </style>
                   </defs>
             
                   <!-- pill -->
-                  <g transform="translate(520,80)" class="q2-g">
+                  <g transform="translate(520,76)" class="q3-g">
                     <rect x="4" y="4" width="152" height="48" rx="24" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)"/>
-                    <rect x="12" y="12" width="136" height="32" rx="16" stroke="url(#q2_pillInk)" stroke-width="2" filter="url(#q2_outer)" fill="none"/>
-                    <circle cx="28" cy="28" r="6" fill="url(#q2_pillInk)" filter="url(#q2_outer)"/>
+                    <rect x="12" y="12" width="136" height="32" rx="16" stroke="url(#q3_pillInk)" stroke-width="2" filter="url(#q3_outer)" fill="none"/>
+                    <circle cx="28" cy="28" r="6" fill="url(#q3_pillInk)" filter="url(#q3_outer)"/>
                   </g>
             
-                  <!-- flow arrow -->
-                  <g class="q2-g">
-                    <path d="M600 142 C600 172 600 192 600 212" fill="none" class="q2-s q2-hair"/>
-                    <path d="M600 212 l-9 -14 h18 z" fill="#5AA8FF" opacity=".85"/>
+                  <!-- chat bubbles (left) -->
+                  <g class="q3-g">
+                    <rect x="360" y="230" rx="12" ry="12" width="160" height="44" class="q3-fill q3-s q3-hair"/>
+                    <rect x="380" y="285" rx="12" ry="12" width="140" height="44" class="q3-fill q3-s q3-hair" opacity=".72"/>
+                    <rect x="340" y="340" rx="12" ry="12" width="180" height="44" class="q3-fill q3-s q3-hair"/>
                   </g>
             
-                  <!-- tall form card (300×360) -->
-                  <g class="q2-g">
-                    <rect x="450" y="220" width="300" height="360" rx="22" class="q2-fill q2-s q2-thick"/>
-                    <!-- auto-filled fields (varying width; still short-ish) -->
-                    <rect x="480" y="270" width="210" height="14" rx="7" fill="#0F1A2A" class="q2-s q2-hair"/>
-                    <rect x="480" y="320" width="180" height="14" rx="7" fill="#0F1A2A" class="q2-s q2-hair"/>
-                    <rect x="480" y="370" width="140" height="14" rx="7" fill="#0F1A2A" class="q2-s q2-hair"/>
-                    <!-- confirm chip -->
-                    <rect x="480" y="420" width="118" height="28" rx="14" fill="#112038" class="q2-s q2-hair"/>
-                    <path d="M492 434 l8 8 l14 -14" fill="none" stroke="#8FE29A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+                  <!-- funnel arrow -->
+                  <g class="q3-g">
+                    <path d="M540 310 C580 310, 620 310, 660 310" fill="none" class="q3-s q3-hair"/>
+                    <path d="M660 310 l-18 -10 v20 z" fill="#5AA8FF" opacity=".85"/>
+                  </g>
+            
+                  <!-- receipt-like quote (tall) -->
+                  <g class="q3-g">
+                    <path d="M700 220 h 300 a 12 12 0 0 1 12 12 v 370 a 12 12 0 0 1 -12 12 h -300 a 12 12 0 0 1 -12 -12 v -370 a 12 12 0 0 1 12 -12 z"
+                          class="q3-fill q3-s q3-thick"/>
+                    <!-- perforation -->
+                    <path d="M712 236 h 276" stroke-dasharray="6 6" class="q3-s q3-hair" fill="none"/>
+                    <!-- short spec lines (~20–25% width) -->
+                    <line x1="730" y1="290" x2="800" y2="290" class="q3-line" stroke-width="4"/>
+                    <line x1="730" y1="340" x2="795" y2="340" class="q3-line" stroke-width="4"/>
+                    <line x1="730" y1="390" x2="790" y2="390" class="q3-line" stroke-width="4"/>
+                    <!-- total band -->
+                    <rect x="730" y="430" rx="10" ry="10" width="240" height="28" fill="#0F1A2A" class="q3-s q3-hair"/>
                   </g>
                 </svg>
               </div>
