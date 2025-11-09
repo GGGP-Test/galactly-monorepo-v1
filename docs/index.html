@@ -2440,21 +2440,21 @@
   --r3-cy: calc(var(--r1-cy-base) + var(--gap) + var(--gap));
 }
 
-/* tablet/phone overrides */
+/* Keep desktop knobs on smaller screens */
 @media (max-width:1024px){
   #growth [data-tile="ai"]{
-    --conn-w: var(--conn-w-t);
-    --r1-h: var(--r1-h-t); --r2-h: var(--r2-h-t); --r3-h: var(--r3-h-t);
-    --gap: var(--gap-t);
+    --conn-w: var(--conn-w-d);
+    --r1-h: var(--r1-h-d); --r2-h: var(--r2-h-d); --r3-h: var(--r3-h-d);
+    --gap: var(--gap-d);
     --r2-cy: calc(var(--r1-cy-base) + var(--gap));
     --r3-cy: calc(var(--r1-cy-base) + var(--gap) + var(--gap));
   }
 }
 @media (max-width:700px){
   #growth [data-tile="ai"]{
-    --conn-w: var(--conn-w-p);
-    --r1-h: var(--r1-h-p); --r2-h: var(--r2-h-p); --r3-h: var(--r3-h-p);
-    --gap: var(--gap-p);
+    --conn-w: var(--conn-w-d);
+    --r1-h: var(--r1-h-d); --r2-h: var(--r2-h-d); --r3-h: var(--r3-h-d);
+    --gap: var(--gap-d);
     --r2-cy: calc(var(--r1-cy-base) + var(--gap));
     --r3-cy: calc(var(--r1-cy-base) + var(--gap) + var(--gap));
   }
@@ -2467,8 +2467,17 @@
   transform:translate(-50%,-50%) scale(var(--ai-scale-desktop));
   width:80%; height:auto; max-width:none; pointer-events:none; opacity:.96;
 }
-@media (max-width:1024px){ #growth [data-tile="ai"] .salesai-svg{ transform:translate(-50%,-50%) scale(var(--ai-scale-tablet)); } }
-@media (max-width:700px){  #growth [data-tile="ai"] .salesai-svg{ transform:translate(-50%,-50%) scale(var(--ai-scale-phone)); } }
+
+@media (max-width:1024px){
+  #growth [data-tile="ai"] .salesai-svg{
+    transform: translate(-50%, -50%) scale(var(--ai-scale-desktop));
+  }
+}
+@media (max-width:700px){
+  #growth [data-tile="ai"] .salesai-svg{
+    transform: translate(-50%, -50%) scale(var(--ai-scale-desktop));
+  }
+}
 
 /* keep strokes thin when the SVG scales */
 #growth [data-tile="ai"] .salesai-svg .conn path,
@@ -2480,8 +2489,8 @@
   --label-wt:500; --label-track:.2px;
 }
 #growth [data-tile="ai"] .salesai-svg .l{ font-size:var(--label-fs-d); font-weight:var(--label-wt); letter-spacing:var(--label-track); }
-@media (max-width:1024px){ #growth [data-tile="ai"] .salesai-svg .l{ font-size:var(--label-fs-t); } }
-@media (max-width:700px){  #growth [data-tile="ai"] .salesai-svg .l{ font-size:var(--label-fs-p); } }
+@media (max-width:1024px){ #growth [data-tile="ai"] .salesai-svg .l{ font-size:var(--label-fs-d); } }
+@media (max-width:700px){  #growth [data-tile="ai"] .salesai-svg .l{ font-size:var(--label-fs-d); } }
 
 /* ---------------- heights & gaps ---------------- */
 #growth [data-tile="ai"] .salesai-svg .row rect{ transform-box:fill-box; transform-origin:50% 50%; }
@@ -2631,6 +2640,20 @@
 #growth [data-tile="ai"] .salesai-grid-overlay{
   position:absolute; inset:0; z-index:0; pointer-events:none;
 }
+
+
+/* word accents inside the SVG labels */
+#growth [data-tile="ai"] .salesai-svg .l tspan.accent-cyan { fill:#7AD7FF; }
+#growth [data-tile="ai"] .salesai-svg .l tspan.accent-gold { fill:#F6D36F; }
+#growth [data-tile="ai"] .salesai-svg .l tspan.accent-rose { fill:#FF9AB3; }
+/* optional: make accent words slightly brighter */
+#growth [data-tile="ai"] .salesai-svg .l tspan[class^="accent-"] { filter:drop-shadow(0 0 0.3px rgba(255,255,255,.25)); }
+
+
+
+
+
+
 
 
 
@@ -3142,11 +3165,16 @@
                     </filter>
                 
                     <style>
-                      svg.salesai-svg{width:100%;height:360px;display:block}
-                      .l{font:600 16px/1 Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill:#EAF4FF; dominant-baseline:middle; text-anchor:middle; letter-spacing:.2px}
-                      .conn path{vector-effect:non-scaling-stroke}
-                      @media (max-width:1024px){ svg.salesai-svg{height:330px} .l{font-size:15px} }
-                      @media (max-width:700px){  svg.salesai-svg{height:310px} .l{font-size:14px} }
+                      /* Let page CSS control size; do not force smaller heights here */
+                      svg.salesai-svg{width:100%;height:auto;display:block}
+                      .l{
+                        /* no font-size here; page CSS decides */
+                        fill:#EAF4FF;
+                        dominant-baseline:middle;
+                        text-anchor:middle;
+                        letter-spacing:.2px;
+                      }
+                      .conn path{ vector-effect:non-scaling-stroke; stroke-linecap:round; stroke-linejoin:round; }
                     </style>
                   </defs>
                 
@@ -3161,12 +3189,18 @@
                   <!-- rows (named so CSS can target safely) -->
                   <g class="row row1" filter="url(#s2c_glow)">
                     <rect x="120" y="224" width="960" height="60" rx="28" fill="rgba(16,24,40,.92)" stroke="url(#s2c_stroke)" stroke-width="2"/>
-                    <text class="l" x="600" y="254">Find Buyer</text>
+                    <!-- row 1 -->
+                    <text class="l" x="600" y="254" xml:space="preserve">
+                      Find <tspan class="accent-cyan">Buyer</tspan>
+                    </text>
                   </g>
                 
                   <g class="row row2" filter="url(#s2c_glow)">
                     <rect x="220" y="330" width="720" height="60" rx="28" fill="rgba(16,24,40,.92)" stroke="url(#s2c_stroke)" stroke-width="2"/>
-                    <text class="l" x="580" y="360">Timing · Channel · Pitch</text>
+                    <!-- row 2 -->
+                    <text class="l" x="580" y="360" xml:space="preserve">
+                      Timing · Channel · <tspan class="accent-gold">Pitch</tspan>
+                    </text>
                   </g>
                 
                   <g class="row row3" filter="url(#s2c_glow)">
