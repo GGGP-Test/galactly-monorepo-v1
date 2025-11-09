@@ -3297,60 +3297,67 @@
               </div>
             </article>
   
-            <!-- QUOTES · ITERATION A (Switch → Note)
-                 Model: pill at top + tall rounded note card with short lines (~23% width) -->
-            <article class="tile quotes" data-tile="quotes" data-variant="qv1" style="--col:1; --row:1">
+            <!-- QUOTES · ITERATION B (Switch → Form)
+                 Model: pill at top → arrow → tall form with auto-filled fields + confirm chip -->
+            <article class="tile quotes" data-tile="quotes" data-variant="qv2" style="--col:1; --row:1">
               <h4 class="tile-title">Quotes</h4>
-              <p class="tile-sub">AI turns buyer context into a draft quote—your 1% is just approve.</p>
+              <p class="tile-sub">From conversation to configured quote—AI fills the fields, you approve.</p>
             
               <div class="quote-svg-wrap">
                 <svg class="quotesvg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
                   <defs>
-                    <!-- theme stroke + glow -->
-                    <linearGradient id="q1_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <linearGradient id="q2_stroke" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stop-color="#5AA8FF"/><stop offset="50%" stop-color="#95D6FF"/><stop offset="100%" stop-color="#5AA8FF"/>
                     </linearGradient>
-                    <filter id="q1_glow" x="-40%" y="-40%" width="180%" height="180%">
+                    <filter id="q2_glow" x="-40%" y="-40%" width="180%" height="180%">
                       <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="b"/>
                       <feColorMatrix type="matrix" values="0 0 0 0 0.33  0 0 0 0 0.58  0 0 0 0 1.00  0 0 0 0.0 0" result="tint"/>
                       <feMerge><feMergeNode in="tint"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
             
-                    <!-- inlined pill.svg (unique IDs) -->
-                    <linearGradient id="q1_pillInk" x1="0" y1="0" x2="1" y2="1">
+                    <!-- pill defs (unique IDs) -->
+                    <linearGradient id="q2_pillInk" x1="0" y1="0" x2="1" y2="1">
                       <stop offset="0" stop-color="#7EC3FF"/>
                       <stop offset="1" stop-color="#2A7FF0"/>
                     </linearGradient>
-                    <filter id="q1_outer" x="-50%" y="-50%" width="200%" height="200%">
+                    <filter id="q2_outer" x="-50%" y="-50%" width="200%" height="200%">
                       <feGaussianBlur stdDeviation="6" result="b"/>
                       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
             
                     <style>
                       svg.quotesvg{width:100%;height:auto;display:block}
-                      .q1-s{stroke:url(#q1_stroke);vector-effect:non-scaling-stroke}
-                      .q1-g{filter:url(#q1_glow)}
-                      .q1-fill{fill:rgba(16,24,40,.92)}
-                      .q1-hair{stroke-width:1.4}
-                      .q1-thick{stroke-width:2}
-                      .q1-line{stroke:#9FCDFE;stroke-linecap:round;opacity:.9;vector-effect:non-scaling-stroke}
+                      .q2-s{stroke:url(#q2_stroke);vector-effect:non-scaling-stroke}
+                      .q2-g{filter:url(#q2_glow)}
+                      .q2-fill{fill:rgba(16,24,40,.92)}
+                      .q2-hair{stroke-width:1.4}
+                      .q2-thick{stroke-width:2}
                     </style>
                   </defs>
             
-                  <!-- pill (top center) -->
-                  <g transform="translate(520,90)" class="q1-g">
+                  <!-- pill -->
+                  <g transform="translate(520,80)" class="q2-g">
                     <rect x="4" y="4" width="152" height="48" rx="24" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)"/>
-                    <rect x="12" y="12" width="136" height="32" rx="16" stroke="url(#q1_pillInk)" stroke-width="2" filter="url(#q1_outer)" fill="none"/>
-                    <circle cx="28" cy="28" r="6" fill="url(#q1_pillInk)" filter="url(#q1_outer)"/>
+                    <rect x="12" y="12" width="136" height="32" rx="16" stroke="url(#q2_pillInk)" stroke-width="2" filter="url(#q2_outer)" fill="none"/>
+                    <circle cx="28" cy="28" r="6" fill="url(#q2_pillInk)" filter="url(#q2_outer)"/>
                   </g>
             
-                  <!-- portrait note card (taller than wide: 300×360) -->
-                  <g class="q1-g">
-                    <rect x="450" y="180" width="300" height="360" rx="26" class="q1-fill q1-s q1-thick"/>
-                    <!-- short lines ≈ 70px (~23% of 300) -->
-                    <line x1="480" y1="260" x2="550" y2="260" class="q1-line" stroke-width="4"/>
-                    <line x1="480" y1="315" x2="548" y2="315" class="q1-line" stroke-width="4"/>
-                    <line x1="480" y1="370" x2="545" y2="370" class="q1-line" stroke-width="4"/>
+                  <!-- flow arrow -->
+                  <g class="q2-g">
+                    <path d="M600 142 C600 172 600 192 600 212" fill="none" class="q2-s q2-hair"/>
+                    <path d="M600 212 l-9 -14 h18 z" fill="#5AA8FF" opacity=".85"/>
+                  </g>
+            
+                  <!-- tall form card (300×360) -->
+                  <g class="q2-g">
+                    <rect x="450" y="220" width="300" height="360" rx="22" class="q2-fill q2-s q2-thick"/>
+                    <!-- auto-filled fields (varying width; still short-ish) -->
+                    <rect x="480" y="270" width="210" height="14" rx="7" fill="#0F1A2A" class="q2-s q2-hair"/>
+                    <rect x="480" y="320" width="180" height="14" rx="7" fill="#0F1A2A" class="q2-s q2-hair"/>
+                    <rect x="480" y="370" width="140" height="14" rx="7" fill="#0F1A2A" class="q2-s q2-hair"/>
+                    <!-- confirm chip -->
+                    <rect x="480" y="420" width="118" height="28" rx="14" fill="#112038" class="q2-s q2-hair"/>
+                    <path d="M492 434 l8 8 l14 -14" fill="none" stroke="#8FE29A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
                   </g>
                 </svg>
               </div>
