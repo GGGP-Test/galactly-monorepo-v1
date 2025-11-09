@@ -2414,6 +2414,11 @@
   --ai-scale-desktop: 1.12;
   --ai-scale-tablet: 1.02;
   --ai-scale-phone: .94;
+  /* connector elongation knobs + anchor Xs (chip entry points) */
+  --c1-anchor-x: 170px; --c1-elong: 1.00;  /* row1, left side */
+  --c2-anchor-x: 900px; --c2-elong: 1.04;  /* row2, right side */
+  --c3-anchor-x: 360px; --c3-elong: 1.03;  /* row3, left side */
+  --c4-anchor-x: 780px; --c4-elong: 1.06;  /* row3, right exit */
 
   /* connector width knobs */
   --conn-w-d: 2px;
@@ -2515,9 +2520,38 @@
 #growth [data-tile="ai"] .salesai-svg .conn{ stroke-linecap:round; stroke-linejoin:round; }
 #growth [data-tile="ai"] .salesai-svg .conn path{ stroke-width:var(--conn-w); }
 /* follow rows */
-#growth [data-tile="ai"] .salesai-svg .conn .c2{ transform: translateY(calc(var(--r2-cy) - var(--r2-cy-base))); }
-#growth [data-tile="ai"] .salesai-svg .conn .c3,
-#growth [data-tile="ai"] .salesai-svg .conn .c4{ transform: translateY(calc(var(--r3-cy) - var(--r3-cy-base))); }
+/* keep strokes non-scaling */
+#growth [data-tile="ai"] .salesai-svg .conn path{ vector-effect:non-scaling-stroke; }
+
+/* c1: row1 left hook (no Y follow needed—row1 stays at baseline) */
+#growth [data-tile="ai"] .salesai-svg .conn .c1{
+  transform-origin: var(--c1-anchor-x) var(--r1-cy);
+  transform: scaleX(var(--c1-elong));
+}
+
+/* c2: row2 right hook */
+#growth [data-tile="ai"] .salesai-svg .conn .c2{
+  transform-origin: var(--c2-anchor-x) var(--r2-cy);
+  transform:
+    translateY(calc(var(--r2-cy) - var(--r2-cy-base)))
+    scaleX(var(--c2-elong));
+}
+
+/* c3: row3 left hook */
+#growth [data-tile="ai"] .salesai-svg .conn .c3{
+  transform-origin: var(--c3-anchor-x) var(--r3-cy);
+  transform:
+    translateY(calc(var(--r3-cy) - var(--r3-cy-base)))
+    scaleX(var(--c3-elong));
+}
+
+/* c4: row3 right exit */
+#growth [data-tile="ai"] .salesai-svg .conn .c4{
+  transform-origin: var(--c4-anchor-x) var(--r3-cy);
+  transform:
+    translateY(calc(var(--r3-cy) - var(--r3-cy-base)))
+    scaleX(var(--c4-elong));
+}
 
 /* text positions driven by row centers (optional overrides kept) */
 #growth [data-tile="ai"]{
@@ -3186,7 +3220,7 @@
                   </defs>
                 
                   <!-- connectors -->
-                  <g class="conn" fill="none" stroke="url(#s2c_conn)" filter="url(#s2c_glow)" opacity="var(--ai-conn-alpha,.95)">
+                  <g class="conn" fill="none" stroke="url(#s2c_conn)" filter="url(#s2c_glow)" opacity="var(--ai-conn-alpha,.98)">
                     <path class="c1" d="M120 214 V236 C120 246 130 254 142 254 H170"/>
                     <path class="c2" d="M1030 254 H1090 C1102 254 1110 262 1110 274 V330 C1110 342 1102 350 1090 350 H900"/>
                     <path class="c3" d="M260 360 H200 C188 360 180 368 180 380 V436 C180 448 188 456 200 456 H360"/>
