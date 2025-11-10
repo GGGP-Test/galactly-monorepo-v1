@@ -2745,17 +2745,12 @@
    QUOTES · Control panel (desktop defaults)
    ============================================================ */
 #growth [data-tile="quotes"]{
-  /* --- Tile padding & text (override SSoT if needed) --- */
-  --q-pad-x: 29px;                 /* reduce base padding */
-  --q-pad-y: 29px;
-  --q-title-fs: 22px;  --q-title-wt: 400;
-  --q-title-gap: 12px;
-  --q-sub-fs: 15px;   --q-sub-wt: 350;
-  --q-sub-gap: 10px;
+  --s2b-title-pad-x: 14px;     /* X padding for title */
+  --s2b-title-pad-y: 8px;      /* Y padding for title */
+  --s2b-title-to-sub-gap-y: 12px;
 
-  /* apply to the actual tile */
-  --tile-pad-x: var(--q-pad-x);
-  --tile-pad-y: var(--q-pad-y);
+  --s2b-sub-pad-x: 14px;       /* X padding for subtitle */
+  --s2b-sub-pad-y: 0px;
 }
 
 #growth [data-tile="quotes"] .tile-title{
@@ -2765,6 +2760,22 @@
 #growth [data-tile="quotes"] .tile-sub{
   font-size:var(--q-sub-fs); font-weight:var(--q-sub-wt);
   margin:0 0 var(--q-sub-gap);
+}
+
+/* QUOTES title/subtitle — force SSoT vars to win */
+#growth [data-tile="quotes"] .tile-title{
+  padding-left:   var(--s2b-title-pad-left,  var(--s2b-title-pad-x)) !important;
+  padding-right:  var(--s2b-title-pad-right, var(--s2b-title-pad-x)) !important;
+  padding-top:    var(--s2b-title-pad-top,   var(--s2b-title-pad-y)) !important;
+  padding-bottom: var(--s2b-title-pad-bottom,var(--s2b-title-pad-y)) !important;
+  margin-bottom:  var(--s2b-title-to-sub-gap-y) !important;
+}
+#growth [data-tile="quotes"] .tile-sub{
+  padding-left:   var(--s2b-sub-pad-left,  var(--s2b-sub-pad-x)) !important;
+  padding-right:  var(--s2b-sub-pad-right, var(--s2b-sub-pad-x)) !important;
+  padding-top:    var(--s2b-sub-pad-top,   var(--s2b-sub-pad-y)) !important;
+  padding-bottom: var(--s2b-sub-pad-bottom,var(--s2b-sub-pad-y)) !important;
+  margin-bottom:  var(--s2b-sub-to-slot-gap-y) !important;
 }
 
 /* --- SVG placement & scale --- */
