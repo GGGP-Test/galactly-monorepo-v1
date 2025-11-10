@@ -2746,7 +2746,7 @@
    ============================================================ */
 #growth [data-tile="quotes"]{
   --s2b-title-pad-x: 14px;     /* X padding for title */
-  --s2b-title-pad-y: 8px;      /* Y padding for title */
+  --s2b-title-pad-y: 14px;      /* Y padding for title */
   --s2b-title-to-sub-gap-y: 12px;
 
   --s2b-sub-pad-x: 14px;       /* X padding for subtitle */
@@ -2762,21 +2762,6 @@
   margin:0 0 var(--q-sub-gap);
 }
 
-/* QUOTES title/subtitle — force SSoT vars to win */
-#growth [data-tile="quotes"] .tile-title{
-  padding-left:   var(--s2b-title-pad-left,  var(--s2b-title-pad-x)) !important;
-  padding-right:  var(--s2b-title-pad-right, var(--s2b-title-pad-x)) !important;
-  padding-top:    var(--s2b-title-pad-top,   var(--s2b-title-pad-y)) !important;
-  padding-bottom: var(--s2b-title-pad-bottom,var(--s2b-title-pad-y)) !important;
-  margin-bottom:  var(--s2b-title-to-sub-gap-y) !important;
-}
-#growth [data-tile="quotes"] .tile-sub{
-  padding-left:   var(--s2b-sub-pad-left,  var(--s2b-sub-pad-x)) !important;
-  padding-right:  var(--s2b-sub-pad-right, var(--s2b-sub-pad-x)) !important;
-  padding-top:    var(--s2b-sub-pad-top,   var(--s2b-sub-pad-y)) !important;
-  padding-bottom: var(--s2b-sub-pad-bottom,var(--s2b-sub-pad-y)) !important;
-  margin-bottom:  var(--s2b-sub-to-slot-gap-y) !important;
-}
 
 /* --- SVG placement & scale --- */
 #growth [data-tile="quotes"]{
@@ -3009,10 +2994,31 @@
   }
 }
 
+/* QUOTES title/subtitle — force SSoT vars to win */
+#growth [data-tile="quotes"] .tile-title{
+  padding-left:   var(--s2b-title-pad-left,  var(--s2b-title-pad-x)) !important;
+  padding-right:  var(--s2b-title-pad-right, var(--s2b-title-pad-x)) !important;
+  padding-top:    var(--s2b-title-pad-top,   var(--s2b-title-pad-y)) !important;
+  padding-bottom: var(--s2b-title-pad-bottom,var(--s2b-title-pad-y)) !important;
+  margin-bottom:  var(--s2b-title-to-sub-gap-y) !important;
+}
+#growth [data-tile="quotes"] .tile-sub{
+  padding-left:   var(--s2b-sub-pad-left,  var(--s2b-sub-pad-x)) !important;
+  padding-right:  var(--s2b-sub-pad-right, var(--s2b-sub-pad-x)) !important;
+  padding-top:    var(--s2b-sub-pad-top,   var(--s2b-sub-pad-y)) !important;
+  padding-bottom: var(--s2b-sub-pad-bottom,var(--s2b-sub-pad-y)) !important;
+  margin-bottom:  var(--s2b-sub-to-slot-gap-y) !important;
+}
 
 
+#growth [data-tile="quotes"]{
+  --s2b-title-pad-x: 14px;     /* X padding for title */
+  --s2b-title-pad-y: 8px;      /* Y padding for title */
+  --s2b-title-to-sub-gap-y: 12px;
 
-
+  --s2b-sub-pad-x: 14px;       /* X padding for subtitle */
+  --s2b-sub-pad-y: 0px;
+}
 
 
 
