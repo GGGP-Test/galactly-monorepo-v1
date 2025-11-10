@@ -2742,34 +2742,106 @@
 
 
 /* ============================================================
-   QUOTES · Control panel (desktop defaults)
+   QUOTES · One clean block (scoped knobs + wiring)
+   - No duplicate rules
+   - Title/Sub padding driven by your global SSoT
+   - SVG + switch fully controllable via vars
    ============================================================ */
+
+/* ---------- 1) Scoped knobs (desktop defaults) ---------- */
 #growth [data-tile="quotes"]{
-  --s2b-title-pad-x: 14px;     /* X padding for title */
-  --s2b-title-pad-y: 14px;      /* Y padding for title */
+  /* Tile inner padding (your global `.tile` reads --tile-pad-x/y) */
+  --tile-pad-x: 22px;
+  --tile-pad-y: 18px;
+
+  /* Title typography (your global `font:` rule reads these) */
+  --tile-title-fs: 22px;
+  --tile-title-wt: 400;
+
+  /* Subtitle typography */
+  --tile-sub-fs: 15px;
+  --tile-sub-wt: 350;
+
+  /* Title/Sub padding + gaps (your global SSoT bridge reads these) */
+  --s2b-title-pad-x: 14px;     /* L/R inside the title */
+  --s2b-title-pad-y: 14px;     /* T/B inside the title */
   --s2b-title-to-sub-gap-y: 12px;
 
-  --s2b-sub-pad-x: 14px;       /* X padding for subtitle */
+  --s2b-sub-pad-x: 14px;       /* L/R inside the subtitle */
   --s2b-sub-pad-y: 0px;
-}
+  --s2b-sub-to-slot-gap-y: 16px;
 
-#growth [data-tile="quotes"] .tile-title{
-  font-size:var(--q-title-fs); font-weight:var(--q-title-wt);
-  margin:0 0 var(--q-title-gap);
-}
-#growth [data-tile="quotes"] .tile-sub{
-  font-size:var(--q-sub-fs); font-weight:var(--q-sub-wt);
-  margin:0 0 var(--q-sub-gap);
-}
+  /* Optional: extra space above the title (rare) */
+  --s2b-title-mt: 0px;
 
-
-/* --- SVG placement & scale --- */
-#growth [data-tile="quotes"]{
+  /* SVG placement & scale */
   --q-tile-min-h: 300px;
   --q-center-y: 35%;
   --q-nudge: 0px;
   --q-scale: 1.16;
+
+  /* Rims / lines / fills */
+  --q-card-fill: rgba(16,24,40,.92);
+  --q-hair-w: 1.1px;      /* side-card rim */
+  --q-strong-w: 1.4px;    /* center-card rim */
+  --q-line-w: .9px;       /* faux text lines */
+  --q-line-alpha: .9;
+  --q-dim-alpha: .82;     /* side cards opacity */
+
+  /* Rim gradient (keeps the cyan neon) */
+  --q-stroke-c1:#5AA8FF; --q-stroke-c2:#95D6FF; --q-stroke-c3:#5AA8FF;
+
+  /* Per-card “ink” (inner lines only) */
+  --q-left-ink:#BFE3FF;
+  --q-center-ink:#F6D36F;   /* try #7AD7FF or #FF9AB3 to theme */
+  --q-right-ink:#BFE3FF;
+
+  /* Switch (pill) position in SVG viewBox px + size/roundness */
+  --q-switch-x: 630px;
+  --q-switch-y: 52px;
+  --q-pill-scale: 1.25;
+  --q-pill-r-outer: 24px;  /* outer rect rx */
+  --q-pill-r-inner: 16px;  /* inner rect rx */
+  --q-pill-c1:#7EC3FF;     /* pill gradient */
+  --q-pill-c2:#2A7FF0;
+  --q-pill-stroke-a:.12;   /* faint pill outer border alpha */
 }
+
+/* ---------- 2) Tablet / Phone overrides (vars only) ---------- */
+@media (max-width:900px) and (min-width:641px){
+  #growth [data-tile="quotes"]{
+    --tile-pad-x: 20px; --tile-pad-y: 16px;
+
+    --tile-title-fs: 20px;
+    --tile-sub-fs: 14px;
+
+    --s2b-title-pad-x: 12px; --s2b-title-pad-y: 10px;
+    --s2b-title-to-sub-gap-y: 10px;
+    --s2b-sub-pad-x: 12px; --s2b-sub-pad-y: 0px; --s2b-sub-to-slot-gap-y: 14px;
+
+    --q-scale: 1.06; --q-center-y: 62%; --q-nudge: 0px;
+
+    --q-switch-x: 630px; --q-switch-y: 58px; --q-pill-scale: 1.15;
+  }
+}
+@media (max-width:640px){
+  #growth [data-tile="quotes"]{
+    --tile-pad-x: 18px; --tile-pad-y: 14px;
+
+    --tile-title-fs: 20px;
+    --tile-sub-fs: 13px;
+
+    --s2b-title-pad-x: 12px; --s2b-title-pad-y: 10px;
+    --s2b-title-to-sub-gap-y: 8px;
+    --s2b-sub-pad-x: 12px; --s2b-sub-pad-y: 0px; --s2b-sub-to-slot-gap-y: 12px;
+
+    --q-scale: .98; --q-center-y: 62%; --q-nudge: 4px;
+
+    --q-switch-x: 600px; --q-switch-y: 64px; --q-pill-scale: 1.00;
+  }
+}
+
+/* ---------- 3) SVG wrapper & placement (uses the vars above) ---------- */
 #growth [data-tile="quotes"] .quote-svg-wrap{ position:relative; min-height:var(--q-tile-min-h); }
 #growth [data-tile="quotes"] .quotesvg{
   position:absolute; left:50%;
@@ -2778,246 +2850,45 @@
   width:80%; height:auto; max-width:none; pointer-events:none;
 }
 
-/* --- Hairlines, rims, and faux text lines (global) --- */
-#growth [data-tile="quotes"]{
-  /* restore cyan “neon” rims */
-  --q-stroke-c1:#5AA8FF; --q-stroke-c2:#95D6FF; --q-stroke-c3:#5AA8FF;
-  --q-card-fill: rgba(16,24,40,.92);
-  --q-hair-w: 1.1px;       /* rim hairline */
-  --q-strong-w: 1.4px;     /* center card rim */
-  --q-line-w: .9px;        /* thin “text” lines */
-  --q-dim-alpha: .82;      /* side cards dimmer */
-  --q-line-alpha: .9;
-  /* default cyan rim + line ink */
-  --q-stroke-c1:#5AA8FF; --q-stroke-c2:#95D6FF; --q-stroke-c3:#5AA8FF;
-  --q-left-ink:#BFE3FF;  --q-center-ink:#BFE3FF; --q-right-ink:#BFE3FF;
-
-  /* reduce padding if the base feels heavy */
-  --tile-pad-x: 22px;
-  --tile-pad-y: 18px;
-}
-
-#growth [data-tile="quotes"] .quotesvg .qb-hair{ stroke:url(#qb_stroke); stroke-width:var(--q-hair-w); vector-effect:non-scaling-stroke; }
-#growth [data-tile="quotes"] .quotesvg .qb-strong{ stroke:url(#qb_stroke); stroke-width:var(--q-strong-w); vector-effect:non-scaling-stroke; }
-#growth [data-tile="quotes"] .quotesvg .qb-line{ stroke-width:var(--q-line-w); opacity:var(--q-line-alpha); }
-
-/* map rim gradient (keeps your cyan neon) */
-#growth [data-tile="quotes"] .quotesvg #qb_stroke stop:nth-child(1){ stop-color: var(--q-stroke-c1); }
-#growth [data-tile="quotes"] .quotesvg #qb_stroke stop:nth-child(2){ stop-color: var(--q-stroke-c2); }
-#growth [data-tile="quotes"] .quotesvg #qb_stroke stop:nth-child(3){ stop-color: var(--q-stroke-c3); }
-
-/* per-card inner line inks only (cards keep cyan rims) */
-#growth [data-tile="quotes"] .quotesvg .qb-left  .qb-line{ stroke: var(--q-left-ink); }
-#growth [data-tile="quotes"] .quotesvg .qb-center .qb-line{ stroke: var(--q-center-ink); }
-#growth [data-tile="quotes"] .quotesvg .qb-right .qb-line{ stroke: var(--q-right-ink); }
-
+/* ---------- 4) Map strokes/fills/lines to knobs ---------- */
 #growth [data-tile="quotes"] .quotesvg .qb-card{ fill: var(--q-card-fill); }
-#growth [data-tile="quotes"] .quotesvg .qb-hair{ stroke-width: var(--q-hair-w); vector-effect: non-scaling-stroke; }
-#growth [data-tile="quotes"] .quotesvg .qb-strong{ stroke-width: var(--q-strong-w); vector-effect: non-scaling-stroke; }
-#growth [data-tile="quotes"] .quotesvg .qb-g.qb-dim{ opacity: var(--q-dim-alpha); }
+#growth [data-tile="quotes"] .quotesvg .qb-hair{
+  stroke: url(#qb_stroke);
+  stroke-width: var(--q-hair-w);
+  vector-effect: non-scaling-stroke;
+}
+#growth [data-tile="quotes"] .quotesvg .qb-strong{
+  stroke: url(#qb_stroke);
+  stroke-width: var(--q-strong-w);
+  vector-effect: non-scaling-stroke;
+}
 #growth [data-tile="quotes"] .quotesvg .qb-line{
   stroke-width: var(--q-line-w);
   opacity: var(--q-line-alpha);
   vector-effect: non-scaling-stroke;
 }
-/* gradient stops for the rims */
+#growth [data-tile="quotes"] .quotesvg .qb-g.qb-dim{ opacity: var(--q-dim-alpha); }
+
+/* Rim gradient stops */
 #growth [data-tile="quotes"] .quotesvg #qb_stroke stop:nth-child(1){ stop-color: var(--q-stroke-c1); }
 #growth [data-tile="quotes"] .quotesvg #qb_stroke stop:nth-child(2){ stop-color: var(--q-stroke-c2); }
 #growth [data-tile="quotes"] .quotesvg #qb_stroke stop:nth-child(3){ stop-color: var(--q-stroke-c3); }
 
-/* --- Per-card “ink” colors (ONLY the internal lines) --- */
-#growth [data-tile="quotes"]{
-  /* left & right stay cyan; center shows gold accent by default */
-  --q-left-ink:  #BFE3FF;
-  --q-center-ink:#F6D36F;  /* change to #7AD7FF or #FF9AB3 if you prefer */
-  --q-right-ink: #BFE3FF;
-}
-#growth [data-tile="quotes"] .quotesvg .qb-left   .qb-line{ stroke: var(--q-left-ink); }
-#growth [data-tile="quotes"] .quotesvg .qb-center .qb-line{ stroke: var(--q-center-ink); }
-#growth [data-tile="quotes"] .quotesvg .qb-right  .qb-line{ stroke: var(--q-right-ink); }
+/* Per-card inner-line ink */
+#growth [data-tile="quotes"] .quotesvg .qb-left  .qb-line{  stroke: var(--q-left-ink); }
+#growth [data-tile="quotes"] .quotesvg .qb-center .qb-line{  stroke: var(--q-center-ink); }
+#growth [data-tile="quotes"] .quotesvg .qb-right .qb-line{   stroke: var(--q-right-ink); }
 
-/* --- Switch (pill) placement/size/roundness & palette --- */
-#growth [data-tile="quotes"]{
-  /* absolute SVG coords (px) */
-  --q-switch-x: 600px;      /* move left/right */
-  --q-switch-y: 250px;      /* move up/down; keep within viewBox height */
-  --q-pill-scale: 1.35;     /* size */
-  --q-pill-r: 16px;         /* roundness (corner radius) */
-
-  /* pill gradient */
-  --q-pill-c1:#7EC3FF;
-  --q-pill-c2:#2A7FF0;
-
-  /* tiny outer hairline alpha */
-  --q-pill-stroke-a:.12;
-}
-
-
-
-#growth [data-tile="quotes"]{
-  --q-switch-xpx: 630px;   /* center of center card */
-  --q-switch-ypx: 52px;    /* slightly above the top edge */
-  --q-pill-scale: 1.25;    /* size of the switch */
-}
+/* ---------- 5) Switch (pill) placement + palette ---------- */
 #growth [data-tile="quotes"] .quotesvg g[data-role="switch"]{
-  transform: translate(var(--q-switch-xpx), var(--q-switch-ypx)) scale(var(--q-pill-scale));
+  transform: translate(var(--q-switch-x), var(--q-switch-y)) scale(var(--q-pill-scale));
 }
-
-
-
-/* set roundness via CSS (works on SVG rects) */
-#growth [data-tile="quotes"] .quotesvg g[data-role="switch"] rect{ rx: var(--q-pill-r); }
-/* pill gradient */
+#growth [data-tile="quotes"] .quotesvg .pill-outer{ rx: var(--q-pill-r-outer); }
+#growth [data-tile="quotes"] .quotesvg .pill-inner{ rx: var(--q-pill-r-inner); }
 #growth [data-tile="quotes"] .quotesvg #pillInk stop:nth-child(1){ stop-color: var(--q-pill-c1); }
 #growth [data-tile="quotes"] .quotesvg #pillInk stop:nth-child(2){ stop-color: var(--q-pill-c2); }
-/* faint outer border */
 #growth [data-tile="quotes"] .quotesvg g[data-role="switch"] > rect:first-child{
   stroke: rgba(255,255,255,var(--q-pill-stroke-a));
-}
-
-/* --- Recommended starting positions for each viewport --- */
-@media (max-width:900px) and (min-width:641px){
-  #growth [data-tile="quotes"]{
-    --q-scale: 1.06; --q-center-y: 62%;
-    --q-switch-x: 600px; --q-switch-y: 245px; --q-pill-scale: 1.25;
-  }
-}
-@media (max-width:640px){
-  #growth [data-tile="quotes"]{
-    --q-scale: .98; --q-center-y: 62%; --q-nudge: 4px;
-    --q-switch-x: 600px; --q-switch-y: 248px; --q-pill-scale: 1.18;
-  }
-}
-
-
-#growth [data-tile="quotes"]{
-  --q-pill-r-outer: 24px;
-  --q-pill-r-inner: 16px;
-}
-#growth [data-tile="quotes"] .quotesvg .pill-outer{ rx: var(--q-pill-r-outer); }
-#growth [data-tile="quotes"] .quotesvg .pill-inner{ rx: var(--q-pill-r-inner); }
-
-
-@media (max-width:900px) and (min-width:641px){
-  #growth [data-tile="quotes"]{
-    --q-switch-xpx: 630px;
-    --q-switch-ypx: 58px;
-    --q-pill-scale: 1.15;
-  }
-}
-@media (max-width:640px){
-  #growth [data-tile="quotes"]{
-    --q-switch-xpx: 600px;  /* same SVG coords; scale handles visible size */
-    --q-switch-ypx: 64px;
-    --q-pill-scale: 1.0;
-    --tile-pad-x: 18px; --tile-pad-y: 14px;
-  }
-}
-
-
-/* ===== QUOTES · scope SSoT spacing knobs (these are the ones the bridge uses) ===== */
-#growth [data-tile="quotes"]{
-  /* title padding + gap (L/R = X, T/B = Y) */
-  --s2b-title-pad-x: 9px;
-  --s2b-title-pad-y: 26px;
-  --s2b-title-to-sub-gap-y: 18px;   /* title → subtitle gap */
-
-  /* subtitle padding + gap to SVG */
-  --s2b-sub-pad-x: 9px;
-  --s2b-sub-pad-y: 0px;
-  --s2b-sub-to-slot-gap-y: 16px;    /* subtitle → SVG gap */
-
-  /* optional: extra space above title (rarely needed) */
-  --s2b-title-mt: 18px;
-
-  /* if the whole tile’s inner padding feels heavy, trim here */
-  --tile-pad-x: 39px;
-  --tile-pad-y: 16px;
-}
-
-
-/* QUOTES — title/subtitle padding driven by SSoT */
-#growth [data-tile="quotes"]{
-  /* Title padding (left/right) */
-  --s2b-title-pad-x: 2px;        /* or set the sides explicitly: */
-  /* --s2b-title-pad-left: 12px;
-     --s2b-title-pad-right: 12px; */
-
-  /* (optional) Title top/bottom padding + gap to subtitle */
-  --s2b-title-pad-y: 9px;
-  --s2b-title-to-sub-gap-y: 14px;
-
-  /* Subtitle padding */
-  --s2b-sub-pad-x: 12px;
-  --s2b-sub-pad-y: 5px;
-  
-}
-
-
-/* (Optional) If you kept any older Quotes-specific margin/padding rules for
-   .tile-title / .tile-sub, neutralize them so the SSoT knobs above always win. */
-#growth [data-tile="quotes"] > .tile-title,
-#growth [data-tile="quotes"] > .tile-sub{
-  padding-inline: initial; /* the SSoT bridge will set padding via the vars */
-  padding-block:  initial;
-  margin-top: 0;
-  /* margin-bottom is handled by the SSoT vars too */
-}
-
-/* ===== QUOTES · switch (pill) — use ONE set of px knobs ===== */
-#growth [data-tile="quotes"]{
-  --q-switch-xpx: 630px;   /* horizontal position in SVG viewBox units */
-  --q-switch-ypx: 52px;    /* vertical position */
-  --q-pill-scale: 1.25;    /* size */
-  --q-pill-r-outer: 24px;  /* outer roundness */
-  --q-pill-r-inner: 16px;  /* inner roundness */
-}
-#growth [data-tile="quotes"] .quotesvg g[data-role="switch"]{
-  transform: translate(var(--q-switch-xpx), var(--q-switch-ypx)) scale(var(--q-pill-scale));
-}
-#growth [data-tile="quotes"] .quotesvg .pill-outer{ rx: var(--q-pill-r-outer); }
-#growth [data-tile="quotes"] .quotesvg .pill-inner{ rx: var(--q-pill-r-inner); }
-
-/* Tablet / phone nudges (only if needed) */
-@media (max-width:900px) and (min-width:641px){
-  #growth [data-tile="quotes"]{
-    --q-switch-ypx: 58px;
-    --q-pill-scale: 1.15;
-  }
-}
-@media (max-width:640px){
-  #growth [data-tile="quotes"]{
-    --q-switch-ypx: 64px;
-    --q-pill-scale: 1.00;
-    --tile-pad-x: 18px;
-    --tile-pad-y: 14px;
-  }
-}
-
-/* QUOTES title/subtitle — force SSoT vars to win */
-#growth [data-tile="quotes"] .tile-title{
-  padding-left:   var(--s2b-title-pad-left,  var(--s2b-title-pad-x)) !important;
-  padding-right:  var(--s2b-title-pad-right, var(--s2b-title-pad-x)) !important;
-  padding-top:    var(--s2b-title-pad-top,   var(--s2b-title-pad-y)) !important;
-  padding-bottom: var(--s2b-title-pad-bottom,var(--s2b-title-pad-y)) !important;
-  margin-bottom:  var(--s2b-title-to-sub-gap-y) !important;
-}
-#growth [data-tile="quotes"] .tile-sub{
-  padding-left:   var(--s2b-sub-pad-left,  var(--s2b-sub-pad-x)) !important;
-  padding-right:  var(--s2b-sub-pad-right, var(--s2b-sub-pad-x)) !important;
-  padding-top:    var(--s2b-sub-pad-top,   var(--s2b-sub-pad-y)) !important;
-  padding-bottom: var(--s2b-sub-pad-bottom,var(--s2b-sub-pad-y)) !important;
-  margin-bottom:  var(--s2b-sub-to-slot-gap-y) !important;
-}
-
-
-#growth [data-tile="quotes"]{
-  --s2b-title-pad-x: 14px;     /* X padding for title */
-  --s2b-title-pad-y: 8px;      /* Y padding for title */
-  --s2b-title-to-sub-gap-y: 12px;
-
-  --s2b-sub-pad-x: 14px;       /* X padding for subtitle */
-  --s2b-sub-pad-y: 0px;
 }
 
 
