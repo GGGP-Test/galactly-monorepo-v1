@@ -2919,6 +2919,71 @@
 }
 
 
+/* ===== QUOTES · scope SSoT spacing knobs (these are the ones the bridge uses) ===== */
+#growth [data-tile="quotes"]{
+  /* title padding + gap (L/R = X, T/B = Y) */
+  --s2b-title-pad-x: 18px;
+  --s2b-title-pad-y: 8px;
+  --s2b-title-to-sub-gap-y: 10px;   /* title → subtitle gap */
+
+  /* subtitle padding + gap to SVG */
+  --s2b-sub-pad-x: 18px;
+  --s2b-sub-pad-y: 0px;
+  --s2b-sub-to-slot-gap-y: 16px;    /* subtitle → SVG gap */
+
+  /* optional: extra space above title (rarely needed) */
+  --s2b-title-mt: 0px;
+
+  /* if the whole tile’s inner padding feels heavy, trim here */
+  --tile-pad-x: 22px;
+  --tile-pad-y: 16px;
+}
+
+/* (Optional) If you kept any older Quotes-specific margin/padding rules for
+   .tile-title / .tile-sub, neutralize them so the SSoT knobs above always win. */
+#growth [data-tile="quotes"] > .tile-title,
+#growth [data-tile="quotes"] > .tile-sub{
+  padding-inline: initial; /* the SSoT bridge will set padding via the vars */
+  padding-block:  initial;
+  margin-top: 0;
+  /* margin-bottom is handled by the SSoT vars too */
+}
+
+/* ===== QUOTES · switch (pill) — use ONE set of px knobs ===== */
+#growth [data-tile="quotes"]{
+  --q-switch-xpx: 630px;   /* horizontal position in SVG viewBox units */
+  --q-switch-ypx: 52px;    /* vertical position */
+  --q-pill-scale: 1.25;    /* size */
+  --q-pill-r-outer: 24px;  /* outer roundness */
+  --q-pill-r-inner: 16px;  /* inner roundness */
+}
+#growth [data-tile="quotes"] .quotesvg g[data-role="switch"]{
+  transform: translate(var(--q-switch-xpx), var(--q-switch-ypx)) scale(var(--q-pill-scale));
+}
+#growth [data-tile="quotes"] .quotesvg .pill-outer{ rx: var(--q-pill-r-outer); }
+#growth [data-tile="quotes"] .quotesvg .pill-inner{ rx: var(--q-pill-r-inner); }
+
+/* Tablet / phone nudges (only if needed) */
+@media (max-width:900px) and (min-width:641px){
+  #growth [data-tile="quotes"]{
+    --q-switch-ypx: 58px;
+    --q-pill-scale: 1.15;
+  }
+}
+@media (max-width:640px){
+  #growth [data-tile="quotes"]{
+    --q-switch-ypx: 64px;
+    --q-pill-scale: 1.00;
+    --tile-pad-x: 18px;
+    --tile-pad-y: 14px;
+  }
+}
+
+
+
+
+
+
 
 
 
@@ -3474,7 +3539,7 @@
             <!-- QUOTES · ITERATION 3 (Compare & Recommend — fixed placement + rims) -->
             <article class="tile quotes" data-tile="quotes" data-variant="qv3-refined" style="--col:1; --row:1">
               <h4 class="tile-title">Quotes</h4>
-              <p class="tile-sub">AI drafts multiple quotes, highlights the best match—one tap to send.</p>
+              <p class="tile-sub">Auto generate buyer-ready quotes straight from your Sales AI conversations.</p>
             
               <div class="quote-svg-wrap">
                 <svg class="quotesvg" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet" overflow="visible" aria-hidden="true">
