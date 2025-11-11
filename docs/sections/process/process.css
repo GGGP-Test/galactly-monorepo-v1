@@ -323,12 +323,13 @@
 }
 
 #section-process .proc-title{
-  font-family: "Newsreader", Georgia, serif;
+  font: 400 clamp(26px, 4.8vw, 52px)/1.15 Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  letter-spacing: -0.01em;
   font-weight: 600;
   font-size: clamp(24px, 3.6vw, 40px);
   line-height: 1.12;
   margin: 0;
-  padding: var(--proc-title-pad-y) var(--proc-title-pad-x);
+  padding-inline: 24px;
   text-align: left;
 }
 
