@@ -2890,65 +2890,82 @@
   stroke: rgba(255,255,255,var(--q-pill-stroke-a));
 }
 
-/* ===== Section 2B → Section 3 spacing knobs ===== */
+/* =========================
+   SECTION BREAKS: 2B → 3
+   ========================= */
+
+/* How much empty space sits after the tile grid (Section 2B) */
 :root{
-  /* Gap *after* Section 2B (smaller = closer to Process) */
-  --s2b-after-gap: clamp(24px, 3.5vw, 56px);
-
-  /* Top padding *inside* Section 3's band so a title fits comfortably */
-  --process-top-pad: clamp(40px, 6vw, 120px);
-
-  /* Title knobs for Process (H2) */
-  --process-title-fs: clamp(22px, 2.2vw, 32px);
-  --process-title-wt: 600;    /* semi-bold to match your system heads */
-  --process-title-track: 0em; /* letter-spacing */
-  --process-title-color: var(--text, #EAF4FF);
-  --process-title-pad-x: 14px;
-  --process-title-pad-y: 6px;
-  --process-title-mb: clamp(8px, 1.4vw, 18px);
-
-  /* Optional subtitle below the title (if you add one later) */
-  --process-sub-fs: clamp(14px, 1.35vw, 18px);
-  --process-sub-wt: 350;
-  --process-sub-color: #a9bfd6;
-  --process-sub-pad-x: 14px;
-  --process-sub-pad-y: 0px;
-  --process-sub-mb: clamp(10px, 1.6vw, 22px);
+  --s2b-bottom-gap: 18px;   /* ↓ lower = tighter (try 12–24px) */
 }
 
-/* Make the 2B wrapper leave less empty space below */
-#s2b-scale{ margin-bottom: var(--s2b-after-gap); }
+/* If Section 2B lives in #growth, trim its bottom padding/margin */
+#growth{ padding-bottom: var(--s2b-bottom-gap) !important; margin-bottom: 0 !important; }
+/* In case a grid has its own bottom margin, kill it */
+#growth .g-grid{ margin-bottom: 0 !important; }
 
-/* Give the Process band breathing room for a title */
+/* Ensure any glow layers don’t overlap the next section */
+#growth .tile::before,
+#growth .tile::after{ pointer-events: none; }
+
+/* =========================
+   SECTION 3 (Process)
+   ========================= */
+
+/* Global knobs */
+:root{
+  --proc-max-w: 1200px;       /* content width */
+  --proc-pad-top: 64px;       /* more top room for the title */
+  --proc-pad-bottom: 64px;    /* breathing at the bottom */
+  --proc-gap-after-title: 16px;
+  --proc-title-fs: 28px;      /* keep it short + strong */
+  --proc-title-lh: 1.2;
+  --proc-title-wt: 600;
+}
+
+/* The section wrapper */
 #section-process{
-  padding-top: var(--process-top-pad);
-  /* keep any previous margin from inflating the gap */
-  margin-top: 0 !important;
+  position: relative;
+  z-index: 0;                 /* stays above any lingering glows */
+  padding: var(--proc-pad-top) 0 var(--proc-pad-bottom);
 }
 
-/* Process title + optional subtitle (scoped) */
+/* Title line */
 #section-process .proc-title{
-  font: var(--process-title-wt) var(--process-title-fs)/1.25 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  letter-spacing: var(--process-title-track);
-  color: var(--process-title-color);
-  margin: 0 0 var(--process-title-mb);
-  padding: var(--process-title-pad-y) var(--process-title-pad-x);
-  text-align: left;           /* flip to center if needed */
+  max-width: var(--proc-max-w);
+  margin: 0 auto var(--proc-gap-after-title);
+  padding: 0 16px;            /* horizontal container pad */
+  font: var(--proc-title-wt) var(--proc-title-fs)/var(--proc-title-lh) Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  letter-spacing: .01em;
+  color: var(--text, #EAF4FF);
 }
 
-#section-process .proc-sub{
-  font: var(--process-sub-wt) var(--process-sub-fs)/1.45 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: var(--process-sub-color);
-  margin: 0 0 var(--process-sub-mb);
-  padding: var(--process-sub-pad-y) var(--process-sub-pad-x);
+/* Mount wrapper the JS paints into */
+#process-root{
+  position: relative;         /* anchor for absolutely-positioned canvases */
+  max-width: var(--proc-max-w);
+  margin: 0 auto;
+  padding: 0 16px;            /* align with title */
+  min-height: 560px;          /* reserve space so it can’t collapse */
 }
 
-/* Tablet/phone nudges (optional) */
-@media (max-width:900px){
-  :root{ --s2b-after-gap: clamp(20px, 4vw, 40px); }
+/* Inner legacy mount (if the script still uses #process) */
+#process{ position: relative; min-height: 560px; }
+
+/* Tablet / phone nudges */
+@media (max-width: 900px){
+  :root{
+    --proc-pad-top: 48px;
+    --proc-title-fs: 24px;
+  }
+  #process-root, #process{ min-height: 520px; }
 }
-@media (max-width:640px){
-  :root{ --s2b-after-gap: clamp(14px, 5vw, 28px); --process-top-pad: clamp(28px, 10vw, 64px); }
+@media (max-width: 640px){
+  :root{
+    --proc-pad-top: 40px;
+    --proc-title-fs: 22px;
+  }
+  #process-root, #process{ min-height: 480px; }
 }
 
 
@@ -4651,12 +4668,14 @@ window.SCOREBOARD_KNOBS = {
 <script defer src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 
 
-<!-- Section 3 (Process) scripts -->
-<section id="section-process" data-section="process">
-  <h2 class="proc-title">Buyer Intelligence: 5 Pillars</h2>
-  <div id="process-root"></div>
-</section>
+<!-- Section 3 (Process) -->
+<h2 class="proc-title">
+  AI-Driven Packaging Sales:
+  <span class="accent-gold force-break nowrap">6&nbsp;Pillars</span>
+</h2>
 
+
+<!-- Process scripts -->
 <script defer src="./sections/process/process.data.js"></script>
 <script defer src="./sections/process/process.js"></script>
 <script defer src="./sections/process/process.mobile.global.js"></script>
