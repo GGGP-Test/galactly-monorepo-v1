@@ -322,17 +322,6 @@
   --proc-title-pad-y: 8px;    /* top/bottom padding */
 }
 
-#section-process .proc-title{
-  font: 400 clamp(26px, 4.8vw, 52px)/1.15 Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  letter-spacing: -0.01em;
-  font-weight: 600;
-  font-size: clamp(24px, 3.6vw, 40px);
-  line-height: 1.12;
-  margin: 0;
-  padding-inline: 24px;
-  text-align: left;
-}
-
 #section-process .proc-title .accent-gold{
   color: #F6D36F;
   text-shadow: 0 0 8px rgba(246,211,111,.18);
