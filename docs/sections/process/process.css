@@ -314,3 +314,26 @@
   pointer-events: none;
   opacity: .0;
 }
+
+
+/* Section 3 title — match Section 2 */
+#section-process .proc-title{
+  font-family: "Newsreader", Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(24px, 3.6vw, 40px);
+  line-height: 1.12;
+  letter-spacing: 0;
+  margin: 0;
+  padding-inline: var(--proc-title-pad-x, 24px);
+  padding-block: var(--proc-title-pad-y, 8px);
+}
+#section-process .proc-title .accent-gold{
+  color:#F6D36F;
+  text-shadow: 0 0 10px rgba(246,211,111,.18);
+}
+#section-process .proc-title .nowrap{ white-space:nowrap; }
+
+
+
+#section-process{ --proc-title-pad-x:24px; --proc-title-pad-y:8px; }
+
