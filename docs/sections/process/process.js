@@ -1,6 +1,9 @@
 // sections/process/process.js
 (() => {
-  const mount = document.getElementById("section-process");
+  const section = document.getElementById("section-process");
+  if (!section) return;
+  const mount = section.querySelector("#process-root")
+    || section.appendChild(Object.assign(document.createElement("div"), { id:"process-root" }));
   if (!mount) return;
 
   /* ----------------- GLOBALS (desktop unchanged) ----------------- */
