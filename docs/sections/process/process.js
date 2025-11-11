@@ -782,27 +782,3 @@
   if (document.readyState === "complete") init();
   else addEventListener("load", init, {once:true});
 })();
-
-
-
-/* Section 3 title (match Section 2) */
-#section-process .proc-title{
-  font-family: "Newsreader", Georgia, serif;
-  font-weight: 600;
-  font-size: clamp(24px, 3.6vw, 40px);
-  line-height: 1.12;
-  letter-spacing: 0;
-  margin: 0;
-  /* horizontal padding control (see next section) */
-  padding-inline: var(--proc-title-pad-x, 24px);
-  padding-block: var(--proc-title-pad-y, 8px);
-}
-
-/* gold accent like Section 2 */
-#section-process .proc-title .accent-gold{
-  color:#F6D36F;
-  text-shadow: 0 0 10px rgba(246,211,111,.18);
-}
-
-/* keep “6 Pillars” together if you use &nbsp; */
-#section-process .proc-title .nowrap{ white-space:nowrap; }
