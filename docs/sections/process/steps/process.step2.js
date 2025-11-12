@@ -8,11 +8,11 @@
   // -------------------- CONFIG (desktop visuals unchanged; phones use M_* knobs) --------------------
   function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
-    root.step3 = root.step3 || {};
+    root.step2 = root.step2 || {};
     const dflt = {
       // ===== DESKTOP layout knobs (kept consistent with other steps) =====
       BOX_W_RATIO: 0.10, BOX_H_RATIO: 0.12, GAP_RATIO: 0.035,
-      STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.21, NUDGE_X: -230, NUDGE_Y: -20,
+      STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.21, NUDGE_X: -260, NUDGE_Y: -40,
       RADIUS_RECT: 14, RADIUS_PILL: 18, RADIUS_OVAL: 999,
       SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true,
       LEFT_STOP_RATIO: 0.35, RIGHT_MARGIN_PX: 16, H_LINE_Y_BIAS: -0.06,
@@ -73,8 +73,8 @@
         { type: "rect",  label: "Ops Clock (PO due, stockouts)", heightRatio: 1.00, fontPt: null }
       ]
     };
-    for (const k in dflt) if (!(k in root.step3)) root.step3[k] = dflt[k];
-    return root.step3;
+    for (const k in dflt) if (!(k in root.step2)) root.step2[k] = dflt[k];
+    return root.step2;
   }
 
   // -------------------- helpers --------------------
