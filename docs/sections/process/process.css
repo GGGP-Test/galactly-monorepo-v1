@@ -316,16 +316,61 @@
 }
 
 
-/* --- Section 3 header --- */
-/* Title only — Newsreader like Section 2; side pad via CSS var */
+/* Section 3 – Process (heading + spacing master; UI drawn by process.js)
+   ───────────────────────────────────────────────────────────────────────
+   One source of truth for spacing: the title’s bottom margin.
+   Set these on #section-process inline (index.html), e.g.:
+     style="
+       --proc-title-pad-x:48px; --proc-title-gap:64px; --proc-title-margin-top:24px;
+       --proc-title-pad-x-tablet:28px; --proc-title-gap-tablet:44px; --proc-title-margin-top-tablet:16px;
+       --proc-title-pad-x-phone:16px;  --proc-title-gap-phone:28px;  --proc-title-margin-top-phone:8px;
+     "
+
+   Base knobs (desktop):
+     --proc-title-pad-x            : left/right padding for the title text
+     --proc-title-gap              : space AFTER the title (pushes the lamp/rail/steps down)
+     --proc-title-margin-top       : space BEFORE the title (pushes the title down)
+
+   Tablet overrides (≤900px):
+     --proc-title-pad-x-tablet
+     --proc-title-gap-tablet
+     --proc-title-margin-top-tablet
+
+   Phone overrides (≤640px):
+     --proc-title-pad-x-phone
+     --proc-title-gap-phone
+     --proc-title-margin-top-phone
+*/
+
+/* ---------- Theme fallbacks ---------- */
+#section-process{
+  --p-text:#e9f1f7;
+
+  /* desktop defaults */
+  --proc-title-pad-x:24px;
+  --proc-title-gap:48px;
+  --proc-title-margin-top:0px;
+
+  /* optional per-device overrides (only used if you set them inline) */
+  --proc-title-pad-x-tablet: 24px;
+  --proc-title-gap-tablet:   28px;
+  --proc-title-margin-top-tablet: 0px;
+
+  --proc-title-pad-x-phone: 16px;
+  --proc-title-gap-phone:   18px;
+  --proc-title-margin-top-phone: 0px;
+}
+
+/* ---------- Title (desktop) ---------- */
 #section-process .proc-title{
-  max-width: 1140px;
-  margin: var(--proc-title-margin-top, 0) auto var(--proc-title-gap, 32px);
-  margin-inline-start: var(--proc-title-pad-x, 24px); /* desktop left pad (text only) */
-  padding: 0 var(--proc-title-pad-x, 24px);  /* left/right only */
-  font: 600 clamp(28px, 4.8vw, 40px)/1.15 "Newsreader", Georgia, serif;
-  letter-spacing: -.01em;
-  color: var(--p-text, #e9f1f7);
+  max-width:1140px;
+  /* top | horiz auto | bottom — bottom gap is the spacer before the UI */
+  margin: var(--proc-title-margin-top) auto var(--proc-title-gap) !important;
+  /* left/right padding only affects the text, not the UI below */
+  padding: 0 var(--proc-title-pad-x);
+  font:600 clamp(28px,4.8vw,40px)/1.15 "Newsreader", Georgia, serif;
+  letter-spacing:-.01em;
+  color:var(--p-text);
 }
 #section-process .proc-title .accent-gold{
   color:#F6D36F;
@@ -334,85 +379,40 @@
 }
 #section-process .proc-title .nowrap{ white-space:nowrap; }
 
+/* The UI block inserted by process.js sits right after the title.
+   Kill any stray top margins so the title’s bottom margin is the only spacer. */
+#section-process .proc{ margin-top:0 !important; }
 
-/* Title spacing knobs */
-#section-process{
-  --proc-title-pad-x: 24px;     /* text’s left/right pad */
-  --proc-title-gap: 48px;       /* space AFTER title (moves the UI down) */
-  --proc-title-margin-top: 8px; /* space BEFORE title */
-}
-
-/* responsive gaps */
-@media (max-width:900px){ #section-process{ --proc-title-gap: 28px } }
-@media (max-width:640px){ #section-process{ --proc-title-gap: 18px } }
-
-
-/* Tablet + phone: center title, remove left push */
-@media (max-width: 900px){
-  #section-process .proc-title{
-    text-align:center;
-    margin-inline-start: 0;
-  }
-}
-@media (max-width: 640px){
-  #section-process .proc-title{
-    text-align:center;
-    margin-inline-start: 0;
-  }
-}
-
-
-
-
-#section-process { 
-  --proc-title-pad-x: 24px;   /* ← change this number to adjust X padding */
-  --proc-title-pad-y: 8px;    /* top/bottom padding */
-}
-
-#section-process .proc-title .accent-gold{
-  color: #F6D36F;
-  text-shadow: 0 0 8px rgba(246,211,111,.18);
-}
-
-#section-process .proc-title .nowrap{ white-space: nowrap; }
-
-/* phone tweaks */
-@media (max-width: 640px){
+/* ---------- Tablet (≤900px) ---------- */
+@media (max-width:900px){
+  /* Swap in tablet overrides; if you didn't set them, fall back to the defaults above */
   #section-process{
-    --proc-title-pad-x: 16px;
-    --proc-title-pad-y: 6px;
+    --proc-title-pad-x:     var(--proc-title-pad-x-tablet, var(--proc-title-pad-x));
+    --proc-title-gap:       var(--proc-title-gap-tablet,   var(--proc-title-gap));
+    --proc-title-margin-top:var(--proc-title-margin-top-tablet, var(--proc-title-margin-top));
   }
+  #section-process .proc-title{ text-align:center; }
+}
+
+/* ---------- Phone (≤640px) ---------- */
+@media (max-width:640px){
+  /* Swap in phone overrides; if you didn't set them, fall back gracefully */
+  #section-process{
+    --proc-title-pad-x:     var(--proc-title-pad-x-phone, var(--proc-title-pad-x));
+    --proc-title-gap:       var(--proc-title-gap-phone,   var(--proc-title-gap));
+    --proc-title-margin-top:var(--proc-title-margin-top-phone, var(--proc-title-margin-top));
+  }
+  #section-process .proc-title{ text-align:center; }
+}
+
+/* ---------- Legacy hooks (no-op so old markup doesn’t flash) ---------- */
+.proc-stage, .proc-canvas, .proc-core, .proc-ring, .proc-col-title, .proc-node{
+  pointer-events:none; opacity:0;
 }
 
 
 
-#section-process{ --proc-title-pad-x:24px; --proc-title-pad-y:8px; }
 
 
 
-/* Keep the step rail flush; override JS padding */
-#section-process .proc{
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-
-
-/* Space between Section 3 title and the UI (lamp + steps + canvas) */
-#section-process .proc{
-  margin-top: var(--proc-ui-offset, 178px);
-}
-
-/* Tablet & phone offsets */
-@media (max-width: 900px){
-  #section-process .proc{ margin-top: var(--proc-ui-offset-tablet, 22px); }
-}
-@media (max-width: 640px){
-  #section-process .proc{ margin-top: var(--proc-ui-offset-phone, 18px); }
-}
-
-/* final override to ensure the title gap wins */
-#section-process .proc-title{
-  margin-bottom: var(--proc-title-gap, 48px) !important;
-}
 
