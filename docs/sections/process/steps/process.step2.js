@@ -12,7 +12,7 @@
     const dflt = {
       // ===== DESKTOP layout knobs (kept consistent with other steps) =====
       BOX_W_RATIO: 0.10, BOX_H_RATIO: 0.12, GAP_RATIO: 0.035,
-      STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.21, NUDGE_X: -260, NUDGE_Y: -40,
+      STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.21, NUDGE_X: -230, NUDGE_Y: -20,
       RADIUS_RECT: 14, RADIUS_PILL: 18, RADIUS_OVAL: 999,
       SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true,
       LEFT_STOP_RATIO: 0.35, RIGHT_MARGIN_PX: 16, H_LINE_Y_BIAS: -0.06,
@@ -29,7 +29,7 @@
       TITLE_TEXT: "Right-Time Score",
       TITLE_PT: 14, TITLE_WEIGHT: 700,
       TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-      TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -28, TITLE_LETTER_SPACING: 0.2,
+      TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -40, TITLE_LETTER_SPACING: 0.2,
 
       // Left copy (desktop) — SEO-optimized
       COPY_LEFT_RATIO: 0.035, COPY_TOP_RATIO: 0.18,
