@@ -73,6 +73,27 @@
       // NEW: inter-step spacing for phones (affects distance from other steps)
       M_SECTION_TOP: 550,       // top margin for step 1 block
       M_SECTION_BOTTOM: 72     // bottom margin for step 1 block
+
+      // ===== TABLET knobs (apply at <=900px; phones override below) =====
+      T_BREAKPOINT: 900,          // tablet cutoff
+      T_MAX_W: 680,               // tablet content width
+      T_SIDE_PAD: 20,             // tablet page side padding
+      T_STACK_GAP: 16,            // gap between shapes on tablet
+      T_BOX_MIN_H: 60,            // min height of boxes on tablet
+      T_BORDER_PX: 2,             // outline weight tablet
+      T_FONT_PT: 12,              // labels inside shapes (tablet)
+      T_TITLE_PT: 18,             // step title size (tablet)
+      T_COPY_H_PT: 24,            // copy <h3> size (tablet)
+      T_COPY_BODY_PT: 15,         // copy <p> size (tablet)
+      T_SECTION_TOP: 48,          // step block margin top on tablet
+      T_SECTION_BOTTOM: 80,       // step block margin bottom on tablet
+      
+      // NEW: box content padding controls (both breakpoints)
+      M_BOX_PAD_X: 12, M_BOX_PAD_Y: 10,   // phones
+      T_BOX_PAD_X: 16, T_BOX_PAD_Y: 12,   // tablets
+
+      T_DIAMOND_SIZE_PCT: 42  // diamond width as % of stack width on tablet
+
     };
     for (const k in dflt) if (!(k in root.step1)) root.step1[k] = dflt[k];
     return root.step1;
