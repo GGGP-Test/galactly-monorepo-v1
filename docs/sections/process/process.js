@@ -354,8 +354,8 @@
     const copy = mountCopy({
       top: copyTop, left: fromRail,
       html: `<h3>We start with your company.</h3>
-             <p>We read your company and data to learn what matters. Then our system builds simple metrics around your strengths.
-             With that map in hand, we move forward to find real buyers who match your persona.</p>`
+             <p>We'll get to know your company to learn what matters. Then our system builds strong metrics around your strengths.
+             With that map in hand, we move forward to find real buyers who match your situation.</p>`
     });
 
     requestAnimationFrame(() => {
