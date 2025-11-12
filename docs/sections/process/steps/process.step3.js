@@ -6,7 +6,7 @@
   // -------------------- CONFIG (DESKTOP UNCHANGED; MOBILE ONLY VIA M_* KNOBS) --------------------
   function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
-    root.step2 = root.step2 || {};
+    root.step3 = root.step3 || {};
     const dflt = {
       // ===== DESKTOP knobs (same visuals) =====
       BOX_W_RATIO: 0.10, BOX_H_RATIO: 0.12, GAP_RATIO: 0.035,
@@ -73,8 +73,8 @@
         { type: "oval",   label: "Switching Risk / Approvals", heightRatio: null, fontPt: null }
       ]
     };
-    for (const k in dflt) if (!(k in root.step2)) root.step2[k] = dflt[k];
-    return root.step2;
+    for (const k in dflt) if (!(k in root.step3)) root.step3[k] = dflt[k];
+    return root.step3;
   }
 
   // -------------------- helpers --------------------
