@@ -71,7 +71,7 @@
       M_COPY_BODY_PT: 14,      // mobile body size
 
       // NEW: inter-step spacing for phones (affects distance from other steps)
-      M_SECTION_TOP: 40,       // top margin for step 1 block
+      M_SECTION_TOP: 550,       // top margin for step 1 block
       M_SECTION_BOTTOM: 72     // bottom margin for step 1 block
     };
     for (const k in dflt) if (!(k in root.step1)) root.step1[k] = dflt[k];
