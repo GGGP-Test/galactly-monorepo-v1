@@ -320,9 +320,9 @@
 /* Title only — Newsreader like Section 2; side pad via CSS var */
 #section-process .proc-title{
   max-width: 1140px;
-  margin: 0 auto var(--proc-title-pad-y, 8px);
+  margin: var(--proc-title-margin-top, 0) auto var(--proc-title-gap, 32px);
   margin-inline-start: var(--proc-title-pad-x, 24px); /* desktop left pad (text only) */
-  padding: 0;
+  padding: 0 var(--proc-title-pad-x, 24px);  /* left/right only */
   font: 600 clamp(28px, 4.8vw, 40px)/1.15 "Newsreader", Georgia, serif;
   letter-spacing: -.01em;
   color: var(--p-text, #e9f1f7);
@@ -335,7 +335,16 @@
 #section-process .proc-title .nowrap{ white-space:nowrap; }
 
 
+/* Title spacing knobs */
+#section-process{
+  --proc-title-pad-x: 24px;     /* text’s left/right pad */
+  --proc-title-gap: 48px;       /* space AFTER title (moves the UI down) */
+  --proc-title-margin-top: 8px; /* space BEFORE title */
+}
 
+/* responsive gaps */
+@media (max-width:900px){ #section-process{ --proc-title-gap: 28px } }
+@media (max-width:640px){ #section-process{ --proc-title-gap: 18px } }
 
 
 /* Tablet + phone: center title, remove left push */
