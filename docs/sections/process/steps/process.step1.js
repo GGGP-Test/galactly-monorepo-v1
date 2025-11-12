@@ -197,7 +197,8 @@
   // ---------------- MOBILE: DOM layout (no rail, no nested scroll) ----------------
   function ensureMobileCSS() {
     const id = "p1m-style";
-    if (document.getElementById(id)) return;
+    const existing = document.getElementById(id);
+      if (existing) existing.remove(); // allow fresh knobs to apply
 
     const s = document.createElement("style"); s.id = id;
     const bp = C().MOBILE_BREAKPOINT;
@@ -206,7 +207,7 @@
     s.textContent = `
     @media (max-width:${C().T_BREAKPOINT}px){
       html,body,#section-process{overflow-x:hidden}
-      #section-process .p1m-wrap.s1{
+      .p1m-wrap.s1{
         position:relative; margin:${C().T_SECTION_TOP}px auto ${C().T_SECTION_BOTTOM}px !important;
         max-width:${C().T_MAX_W}px; padding:0 ${C().T_SIDE_PAD}px 8px; z-index:0;
       }
@@ -245,7 +246,7 @@
     /* PHONE overrides (<= MOBILE_BREAKPOINT) */
     @media (max-width:${bp}px){
       html,body,#section-process{overflow-x:hidden}
-      #section-process .p1m-wrap.s1{
+      .p1m-wrap.s1{
         position:relative; margin:${C().M_SECTION_TOP}px auto ${C().M_SECTION_BOTTOM}px !important;
         max-width:${C().M_MAX_W}px; padding:0 ${C().M_SIDE_PAD}px 8px; z-index:0;
       }
@@ -295,6 +296,11 @@
     const wrap = document.createElement("div");
     wrap.className = "p1m-wrap s1";   // <- specific class so our margins override global mobile css
 
+    const phone = window.innerWidth <= C().MOBILE_BREAKPOINT;
+    wrap.style.margin = `${phone?C().M_SECTION_TOP:C().T_SECTION_TOP}px auto ${phone?C().M_SECTION_BOTTOM:C().T_SECTION_BOTTOM}px`;
+    wrap.style.maxWidth = `${phone?C().M_MAX_W:C().T_MAX_W}px`;
+    wrap.style.padding = `0 ${phone?C().M_SIDE_PAD:C().T_SIDE_PAD}px 8px`;
+
     const copyHTML = `
       <h3>Who buys packaging?</h3>
       <p>Our <b>Intent Score</b> uses our olympiad-grade math structure + multiple LLM reasoning finds accounts most likely to purchase in the next cycle.
@@ -324,8 +330,6 @@
                       (window.innerWidth <= C().T_BREAKPOINT);
     
     if (isCompact) return drawMobile(ctx);
-
-    if (isMobile) return drawMobile(ctx);  // MOBILE path only
 
     // DESKTOP path: original SVG scene (UNCHANGED)
     const W = b.width, H = Math.min(560, b.sH-40);
