@@ -33,7 +33,7 @@
 
       // Left copy (desktop) — SEO-optimized
       COPY_LEFT_RATIO: 0.035, COPY_TOP_RATIO: 0.18,
-      COPY_NUDGE_X: 0, COPY_NUDGE_Y: 0, COPY_MAX_W_PX: 300,
+      COPY_NUDGE_X: -20, COPY_NUDGE_Y: 0, COPY_MAX_W_PX: 300,
       COPY_H_PT: 20, COPY_H_WEIGHT: 500, COPY_BODY_PT: 11, COPY_BODY_WEIGHT: 400,
       COPY_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       COPY_LINE_HEIGHT: 1.6,
