@@ -72,7 +72,7 @@
 
       // NEW: inter-step spacing for phones (affects distance from other steps)
       M_SECTION_TOP: 550,       // top margin for step 1 block
-      M_SECTION_BOTTOM: 72     // bottom margin for step 1 block
+      M_SECTION_BOTTOM: 72,     // bottom margin for step 1 block
 
       // ===== TABLET knobs (apply at <=900px; phones override below) =====
       T_BREAKPOINT: 900,          // tablet cutoff
@@ -204,49 +204,82 @@
     const cyan = C().COLOR_CYAN;
 
     s.textContent = `
-      @media (max-width:${bp}px){
-        html, body, #section-process { overflow-x:hidden; }
-
-        /* Make wrap participate in normal flow; specific .s1 class beats global style */
-        #section-process .p1m-wrap.s1{
-          position:relative; margin:${C().M_SECTION_TOP}px auto ${C().M_SECTION_BOTTOM}px !important;
-          max-width:${C().M_MAX_W}px; padding:0 ${C().M_SIDE_PAD}px 8px; z-index:0;
-        }
-
-        .p1m-title{
-          text-align:center; color:#ddeaef;
-          font:${C().TITLE_WEIGHT} ${C().M_TITLE_PT}pt ${C().TITLE_FAMILY};
-          letter-spacing:${C().TITLE_LETTER_SPACING}px; margin:6px 0 10px;
-        }
-        .p1m-copy{ margin:0 auto 14px; color:#a7bacb; }
-        .p1m-copy h3{ margin:0 0 8px; color:#eaf0f6; font:600 ${C().M_COPY_H_PT}px "Newsreader", Georgia, serif; }
-        .p1m-copy p { margin:0; font:400 ${C().M_COPY_BODY_PT}px/1.55 Inter, system-ui; }
-
-        .p1m-stack{ display:flex; flex-direction:column; align-items:center; gap:${C().M_STACK_GAP}px; }
-        .p1m-box{
-          width:100%; min-height:${C().M_BOX_MIN_H}px;
-          border:${C().M_BORDER_PX}px solid ${cyan}; border-radius:14px;
-          padding:10px 12px; display:flex; align-items:center; justify-content:center;
-          text-align:center; color:#ddeaef; background:rgba(255,255,255,.02);
-          font:${C().FONT_WEIGHT_BOX} ${C().M_FONT_PT}pt ${C().FONT_FAMILY_BOX};
-          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
-        }
-        .p1m-box.oval{ border-radius:9999px }
-        .p1m-diamond{
-          width:45%; aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
-          transform:rotate(45deg); background:rgba(255,255,255,.02); margin-top:2px;
-          display:flex; align-items:center; justify-content:center;
-        }
-        .p1m-diamond > span{
-          transform:rotate(-45deg); display:flex; align-items:center; justify-content:center;
-          width:70%; height:70%; text-align:center; color:#ddeaef;
-          font:${C().FONT_WEIGHT_BOX} ${Math.max(8, C().M_FONT_PT - 1)}pt ${C().FONT_FAMILY_BOX};
-          letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
-          padding:10px 12px;
-        }
-        .p1m-dots{ display:flex; gap:14px; justify-content:center; padding-top:6px }
-        .p1m-dots i{ width:6px; height:6px; border-radius:50%; background:${cyan}; display:inline-block; }
+    @media (max-width:${C().T_BREAKPOINT}px){
+      html,body,#section-process{overflow-x:hidden}
+      #section-process .p1m-wrap.s1{
+        position:relative; margin:${C().T_SECTION_TOP}px auto ${C().T_SECTION_BOTTOM}px !important;
+        max-width:${C().T_MAX_W}px; padding:0 ${C().T_SIDE_PAD}px 8px; z-index:0;
       }
+      .p1m-title{
+        text-align:center; color:#ddeaef;
+        font:${C().TITLE_WEIGHT} ${C().T_TITLE_PT}pt ${C().TITLE_FAMILY};
+        letter-spacing:${C().TITLE_LETTER_SPACING}px; margin:6px 0 10px;
+      }
+      .p1m-copy{ margin:0 auto 14px; color:#a7bacb; }
+      .p1m-copy h3{ margin:0 0 8px; color:#eaf0f6; font:600 ${C().T_COPY_H_PT}px "Newsreader", Georgia, serif; }
+      .p1m-copy p { margin:0; font:400 ${C().T_COPY_BODY_PT}px/1.55 Inter, system-ui; }
+      .p1m-stack{ display:flex; flex-direction:column; align-items:center; gap:${C().T_STACK_GAP}px; }
+      .p1m-box{
+        width:100%; min-height:${C().T_BOX_MIN_H}px; border:${C().T_BORDER_PX}px solid ${cyan}; border-radius:14px;
+        padding:${C().T_BOX_PAD_Y}px ${C().T_BOX_PAD_X}px; display:flex; align-items:center; justify-content:center;
+        text-align:center; color:#ddeaef; background:rgba(255,255,255,.02);
+        font:${C().FONT_WEIGHT_BOX} ${C().T_FONT_PT}pt ${C().FONT_FAMILY_BOX};
+        letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+      }
+      .p1m-box.oval{ border-radius:9999px }
+      .p1m-diamond{ width:${C().T_DIAMOND_SIZE_PCT || 42}%; aspect-ratio:1/1; border:${C().T_BORDER_PX}px solid ${cyan};
+        transform:rotate(45deg); background:rgba(255,255,255,.02); margin-top:2px;
+        display:flex; align-items:center; justify-content:center;
+      }
+      .p1m-diamond > span{
+        transform:rotate(-45deg); display:flex; align-items:center; justify-content:center;
+        width:70%; height:70%; text-align:center; color:#ddeaef;
+        font:${C().FONT_WEIGHT_BOX} ${Math.max(8, (C().T_FONT_PT||12) - 1)}pt ${C().FONT_FAMILY_BOX};
+        letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+        padding:${C().T_BOX_PAD_Y}px ${C().T_BOX_PAD_X}px;
+      }
+      .p1m-dots{ display:flex; gap:14px; justify-content:center; padding-top:6px }
+      .p1m-dots i{ width:6px; height:6px; border-radius:50%; background:${cyan}; display:inline-block; }
+    }
+    
+    /* PHONE overrides (<= MOBILE_BREAKPOINT) */
+    @media (max-width:${bp}px){
+      html,body,#section-process{overflow-x:hidden}
+      #section-process .p1m-wrap.s1{
+        position:relative; margin:${C().M_SECTION_TOP}px auto ${C().M_SECTION_BOTTOM}px !important;
+        max-width:${C().M_MAX_W}px; padding:0 ${C().M_SIDE_PAD}px 8px; z-index:0;
+      }
+      .p1m-title{
+        text-align:center; color:#ddeaef;
+        font:${C().TITLE_WEIGHT} ${C().M_TITLE_PT}pt ${C().TITLE_FAMILY};
+        letter-spacing:${C().TITLE_LETTER_SPACING}px; margin:6px 0 10px;
+      }
+      .p1m-copy{ margin:0 auto 14px; color:#a7bacb; }
+      .p1m-copy h3{ margin:0 0 8px; color:#eaf0f6; font:600 ${C().M_COPY_H_PT}px "Newsreader", Georgia, serif; }
+      .p1m-copy p { margin:0; font:400 ${C().M_COPY_BODY_PT}px/1.55 Inter, system-ui; }
+      .p1m-stack{ display:flex; flex-direction:column; align-items:center; gap:${C().M_STACK_GAP}px; }
+      .p1m-box{
+        width:100%; min-height:${C().M_BOX_MIN_H}px; border:${C().M_BORDER_PX}px solid ${cyan}; border-radius:14px;
+        padding:${C().M_BOX_PAD_Y}px ${C().M_BOX_PAD_X}px; display:flex; align-items:center; justify-content:center;
+        text-align:center; color:#ddeaef; background:rgba(255,255,255,.02);
+        font:${C().FONT_WEIGHT_BOX} ${C().M_FONT_PT}pt ${C().FONT_FAMILY_BOX};
+        letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+      }
+      .p1m-box.oval{ border-radius:9999px }
+      .p1m-diamond{ width:45%; aspect-ratio:1/1; border:${C().M_BORDER_PX}px solid ${cyan};
+        transform:rotate(45deg); background:rgba(255,255,255,.02); margin-top:2px;
+        display:flex; align-items:center; justify-content:center;
+      }
+      .p1m-diamond > span{
+        transform:rotate(-45deg); display:flex; align-items:center; justify-content:center;
+        width:70%; height:70%; text-align:center; color:#ddeaef;
+        font:${C().FONT_WEIGHT_BOX} ${Math.max(8, C().M_FONT_PT - 1)}pt ${C().FONT_FAMILY_BOX};
+        letter-spacing:${C().FONT_LETTER_SPACING}px; line-height:${C().LINE_HEIGHT_EM}em;
+        padding:${C().M_BOX_PAD_Y}px ${C().M_BOX_PAD_X}px;
+      }
+      .p1m-dots{ display:flex; gap:14px; justify-content:center; padding-top:6px }
+      .p1m-dots i{ width:6px; height:6px; border-radius:50%; background:${cyan}; display:inline-block; }
+    }
     `;
     document.head.appendChild(s);
   }
