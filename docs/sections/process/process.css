@@ -391,7 +391,7 @@
 
 /* Space between Section 3 title and the UI (lamp + steps + canvas) */
 #section-process .proc{
-  margin-top: var(--proc-ui-offset, 78px);
+  margin-top: var(--proc-ui-offset, 178px);
 }
 
 /* Tablet & phone offsets */
