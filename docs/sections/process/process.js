@@ -78,7 +78,7 @@
         
         // ===== Step 1: Mobile-only knobs (existing) =====
         step1: {
-          maxW: 520, sidePad: 16, top: 40, bottom: 72, nudgeX: 0, nudgeY: 0,
+          maxW: 520, sidePad: 16, top: 10, bottom: 72, nudgeX: 0, nudgeY: 0,
           titleShow: true, titlePt: 16, titleWeight: 700, titleLetter: 0.2, titleAlign: "center", titleMarginTop: 6, titleMarginBottom: 10,
           copyHpt: 22, copyBodyPt: 14, copyLine: 1.55, copyColor: "#a7bacb", copyHColor: "#eaf0f6", copyGapBottom: 14,
           stackGap: 14,
