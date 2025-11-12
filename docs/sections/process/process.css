@@ -317,6 +317,40 @@
 
 
 /* --- Section 3 header --- */
+/* Title only — Newsreader like Section 2; side pad via CSS var */
+#section-process .proc-title{
+  max-width: 1140px;
+  margin: 0 auto var(--proc-title-pad-y, 8px);
+  margin-inline-start: var(--proc-title-pad-x, 24px); /* desktop left pad (text only) */
+  padding: 0;
+  font: 600 clamp(28px, 4.8vw, 40px)/1.15 "Newsreader", Georgia, serif;
+  letter-spacing: -.01em;
+  color: var(--p-text, #e9f1f7);
+}
+#section-process .proc-title .accent-gold{
+  color:#F6D36F;
+  text-shadow:0 0 8px rgba(246,211,111,.18);
+  font-weight:600;
+}
+#section-process .proc-title .nowrap{ white-space:nowrap; }
+
+/* Tablet + phone: center title, remove left push */
+@media (max-width: 900px){
+  #section-process .proc-title{
+    text-align:center;
+    margin-inline-start: 0;
+  }
+}
+@media (max-width: 640px){
+  #section-process .proc-title{
+    text-align:center;
+    margin-inline-start: 0;
+  }
+}
+
+
+
+
 #section-process { 
   --proc-title-pad-x: 24px;   /* ← change this number to adjust X padding */
   --proc-title-pad-y: 8px;    /* top/bottom padding */
@@ -341,3 +375,10 @@
 
 #section-process{ --proc-title-pad-x:24px; --proc-title-pad-y:8px; }
 
+
+
+/* Keep the step rail flush; override JS padding */
+#section-process .proc{
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
