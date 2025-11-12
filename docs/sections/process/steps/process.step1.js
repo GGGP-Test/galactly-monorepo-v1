@@ -320,8 +320,10 @@
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx){
     const b = ctx.bounds;
-    const isMobile = (window.PROCESS_FORCE_MOBILE === true) ||
-                     (window.innerWidth <= C().MOBILE_BREAKPOINT);
+    const isCompact = (window.PROCESS_FORCE_MOBILE === true) ||
+                      (window.innerWidth <= C().T_BREAKPOINT);
+    
+    if (isCompact) return drawMobile(ctx);
 
     if (isMobile) return drawMobile(ctx);  // MOBILE path only
 
