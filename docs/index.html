@@ -2914,7 +2914,7 @@
 
 /* Global knobs */
 :root{
-  --proc-pad-top: 164px;       /* more top room for the title */
+  --proc-pad-top: 64px;       /* more top room for the title */
   --proc-pad-bottom: 64px;    /* breathing at the bottom */
   --proc-gap-after-title: 16px;
   --proc-title-fs: 16px;      /* keep it short + strong */
@@ -2985,7 +2985,7 @@
 @media (max-width:900px){
   #section-process .proc-title{
     text-align:center;
-    padding: clamp(8px,2.6vw,16px) clamp(14px,4.2vw,24px);
+    padding: clamp(8px,2.6vw,9px) clamp(14px,4.2vw,15px);
     font-size: clamp(22px,4.2vw,32px);
   }
   #section-process .proc-title .force-break{ display:block; }
@@ -3003,11 +3003,11 @@
 
 
 /* desktop default */
-#section-process{ --proc-title-pad-x: 0px; --proc-title-pad-y: 8px; }
+#section-process{ --proc-title-pad-x: 0px; --proc-title-pad-y: 0px; }
 
 /* tablet */
 @media (max-width:900px){
-  #section-process{ --proc-title-pad-x: 18px; }
+  #section-process{ --proc-title-pad-x: 0px; }
 }
 
 /* phone */
