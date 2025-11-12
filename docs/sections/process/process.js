@@ -20,6 +20,43 @@
       mobile: {
         BP: 640,                 // <= px uses mobile path (set 640 for phones only)
         MODE: "dom",              // "dom" = render mobile here; "scenes" = call per-step files
+        /* ========= UNIVERSAL PHONE THEME (applies to all steps) ========= */
+        theme: {
+          stepTop: 40,        // default margin-top for each step
+          stepBottom: 80,     // default margin-bottom for each step
+          maxW: 520,          // content width column
+          sidePad: 20,        // padding from screen edge
+          stackGap: 18,       // gap between boxes in a stack
+  
+          box: {              // default box sizing for all phone steps
+            widthPct: 100,
+            minH: 64,
+            padX: 18,
+            padY: 14,
+            border: 2,
+            radius: 16,
+            fontPt: 11.5,
+            fontWeight: 525,
+            letter: 0.3,
+            lineEm: 1.25,
+            align: "center"
+          },
+  
+          diamond: {          // default phone diamond
+            widthPct: 54,
+            border: 2,
+            labelPt: 11,
+            pad: 10
+          },
+  
+          dots: {             // default dots row
+            show: true,
+            count: 3,
+            size: 6,
+            gap: 10,
+            padTop: 10
+          }
+        },
 
         // ===== Step 0 (Pill) : Mobile-only knobs =====
         step0: {
@@ -76,18 +113,46 @@
           height: 380    // reserved height (tweak to taste)
         },
         
-        // ===== Step 1: Mobile-only knobs (existing) =====
+        // ===== Step 1: Mobile-only knobs (uses theme) =====
         step1: {
-          maxW: 520, sidePad: 16, top: 10, bottom: 72, nudgeX: 0, nudgeY: 0,
-          titleShow: true, titlePt: 16, titleWeight: 700, titleLetter: 0.2, titleAlign: "center", titleMarginTop: 6, titleMarginBottom: 20,
-          copyHpt: 22, copyBodyPt: 14, copyLine: 1.55, copyColor: "#a7bacb", copyHColor: "#eaf0f6", copyGapBottom: 24,
-          stackGap: 24,
-          box: { widthPct: 100, minH: 56, padX: 12, padY: 10, border: 2, radius: 14, fontPt: 11, fontWeight: 525, letter: 0.3, lineEm: 1.15, align: "center" },
-          diamond: { widthPct: 45, border: 2, labelPt: 10, pad: 10 },
-          dots: { show: true, count: 3, size: 6, gap: 14, padTop: 6 },
-          overrides: { rect1:{}, rect2:{}, round3:{}, oval4:{ radius:9999 }, diamond5:{} },
+          useTheme: true,          // starts from mobile.theme
+  
+          // layout / spacing overrides
+          top: 40,
+          bottom: 80,
+          maxW: 520,
+          sidePad: 20,
+          nudgeX: 0,
+          nudgeY: 0,
+  
+          // title above the copy
+          titleShow: true,
+          titlePt: 17,
+          titleWeight: 700,
+          titleLetter: 0.2,
+          titleAlign: "center",
+          titleMarginTop: 10,
+          titleMarginBottom: 12,
+  
+          // H3 + paragraph
+          copyHpt: 22,
+          copyBodyPt: 14,
+          copyLine: 1.6,
+          copyColor: "#a7bacb",
+          copyHColor: "#eaf0f6",
+          copyGapBottom: 26,
+  
+          // Per-step tweaks on top of theme.box / theme.diamond / theme.dots
+          box: { },
+          diamond: { },
+          dots: { },
+  
+          overrides: {
+            oval4: { radius: 9999 }
+          },
+  
           order: ["rect1","rect2","round3","oval4","diamond5"]
-        }
+        },
       }
     },
     window.PROCESS_CONFIG || {}
@@ -545,14 +610,27 @@
     }
   }
   function renderStep1_DOM(){
-    const cfg = window.PROCESS_CONFIG.step1 || {};
-    const M = (window.PROCESS_CONFIG.mobile?.step1) || {};
-
-    const wrap = mStepContainer({
-      top: M.top ?? 40, bottom: M.bottom ?? 72,
-      maxW: M.maxW ?? 520, sidePad: M.sidePad ?? 16,
-      nudgeX: M.nudgeX ?? 0, nudgeY: M.nudgeY ?? 0
-    });
+      const cfg    = window.PROCESS_CONFIG.step1 || {};
+      const mobile = window.PROCESS_CONFIG.mobile || {};
+      const theme  = mobile.theme || {};
+      const step1  = mobile.step1 || {};
+  
+      // merge theme + step1 (step1 wins)
+      const M = {
+        ...theme,
+        ...step1,
+        box:     { ...(theme.box     || {}), ...(step1.box     || {}) },
+        diamond: { ...(theme.diamond || {}), ...(step1.diamond || {}) },
+        dots:    { ...(theme.dots    || {}), ...(step1.dots    || {}) }
+    };
+      const wrap = mStepContainer({
+        top:    M.top    ?? theme.stepTop    ?? 40,
+        bottom: M.bottom ?? theme.stepBottom ?? 80,
+        maxW:   M.maxW   ?? theme.maxW       ?? 520,
+        sidePad:M.sidePad?? theme.sidePad    ?? 20,
+        nudgeX: M.nudgeX ?? 0,
+        nudgeY: M.nudgeY ?? 0
+      });
 
     if (M.titleShow !== false){
       const t = document.createElement("div");
@@ -583,7 +661,7 @@
 
     const stack = document.createElement("div");
     stack.className = "mstack";
-    stack.style.gap = `${M.stackGap ?? 14}px`;
+    stack.style.gap = `${M.stackGap ?? theme.stackGap ?? 18}px`;
 
     const labels = {
       rect1:    cfg.LABEL_RECT_1    ?? "Back-To-Back Search (last 14d)",
