@@ -349,7 +349,7 @@
   /* desktop defaults */
   --proc-title-pad-x:24px;
   --proc-title-gap:48px;
-  --proc-title-margin-top:0px;
+  --proc-title-margin-top:30px;
 
   /* optional per-device overrides (only used if you set them inline) */
   --proc-title-pad-x-tablet: 24px;
