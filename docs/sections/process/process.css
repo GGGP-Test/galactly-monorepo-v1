@@ -334,6 +334,10 @@
 }
 #section-process .proc-title .nowrap{ white-space:nowrap; }
 
+
+
+
+
 /* Tablet + phone: center title, remove left push */
 @media (max-width: 900px){
   #section-process .proc-title{
@@ -381,4 +385,19 @@
 #section-process .proc{
   padding-left: 0 !important;
   padding-right: 0 !important;
+}
+
+
+
+/* Space between Section 3 title and the UI (lamp + steps + canvas) */
+#section-process .proc{
+  margin-top: var(--proc-ui-offset, 28px);
+}
+
+/* Tablet & phone offsets */
+@media (max-width: 900px){
+  #section-process .proc{ margin-top: var(--proc-ui-offset-tablet, 22px); }
+}
+@media (max-width: 640px){
+  #section-process .proc{ margin-top: var(--proc-ui-offset-phone, 18px); }
 }
