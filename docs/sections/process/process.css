@@ -358,7 +358,7 @@
 
   --proc-title-pad-x-phone: 16px;
   --proc-title-gap-phone:   18px;
-  --proc-title-margin-top-phone: 0px;
+  --proc-title-margin-top-phone: -20px;
 }
 
 /* ---------- Title (desktop) ---------- */
