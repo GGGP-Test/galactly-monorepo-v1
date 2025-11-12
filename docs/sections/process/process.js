@@ -79,7 +79,7 @@
         // ===== Step 1: Mobile-only knobs (existing) =====
         step1: {
           maxW: 520, sidePad: 16, top: 10, bottom: 72, nudgeX: 0, nudgeY: 0,
-          titleShow: true, titlePt: 16, titleWeight: 700, titleLetter: 0.2, titleAlign: "center", titleMarginTop: 6, titleMarginBottom: 10,
+          titleShow: true, titlePt: 16, titleWeight: 700, titleLetter: 0.2, titleAlign: "center", titleMarginTop: 6, titleMarginBottom: 20,
           copyHpt: 22, copyBodyPt: 14, copyLine: 1.55, copyColor: "#a7bacb", copyHColor: "#eaf0f6", copyGapBottom: 14,
           stackGap: 14,
           box: { widthPct: 100, minH: 56, padX: 12, padY: 10, border: 2, radius: 14, fontPt: 11, fontWeight: 525, letter: 0.3, lineEm: 1.15, align: "center" },
