@@ -61,7 +61,7 @@
       TITLE_SEO: "Who becomes a long-term customer?",
       COPY_SEO_HTML:
         '<h3>Who becomes a long-term customer?</h3>\
-         <p>Our <b>Weight Score</b> estimates retention by combining four signals:\
+         <p>Our <b>Weight Score</b> estimates retention by combining several signals:\
          how much the product depends on packaging, how deeply packaging is embedded in operations,\
          reorder cadence & SKU velocity, and the risk of switching due to specs, approvals, or compliance.\
          It highlights accounts likely to stay and grow — not just click.</p>',
