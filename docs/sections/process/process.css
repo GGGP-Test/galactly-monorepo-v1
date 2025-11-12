@@ -410,3 +410,9 @@
 @media (max-width: 640px){
   #section-process .proc{ margin-top: var(--proc-ui-offset-phone, 18px); }
 }
+
+/* final override to ensure the title gap wins */
+#section-process .proc-title{
+  margin-bottom: var(--proc-title-gap, 48px) !important;
+}
+
