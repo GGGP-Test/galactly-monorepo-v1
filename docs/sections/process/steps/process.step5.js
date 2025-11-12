@@ -173,7 +173,7 @@
 
   // SEO copy (unchanged)
   function seoCopyHTML(){
-    return '<h3>Our realtime AI Orchestrator</h3>\
+    return '<h3>Our Realtime AI Orchestrator</h3>\
 <p><b>It</b> Blends our Olympiad-grade math structure with multi-LLM reasoning to set live scores across <b>Intent Scoring</b>, <b>Timing</b>, <b>Loyalty</b>, <b>Platform Scoring</b>, and your <b>Sales AI</b> metrics. It also routes every company to <b>cool / warm / hot / hot+</b> B2B packaging buyer categories and a <b>right-now-platform score</b> so engagement has the highest chance of conversion.</p>';
   }
 
