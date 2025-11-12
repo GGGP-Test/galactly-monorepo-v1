@@ -98,7 +98,7 @@
   style.textContent = `
   :root{ --ink:#0b1117; --copyMax:300px; --accent:#63D3FF; --accent2:#F2DCA0; }
   #section-process{ position:relative; isolation:isolate; }
-  #section-process .proc{ position:relative; min-height:560px; padding:44px 12px 40px; overflow:visible; }
+  #section-process .proc{ position:relative; min-height:560px; padding:44px 0 40px; overflow:visible; }
 
   .railWrap{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.88);
     z-index:5; transition:left .45s cubic-bezier(.22,.61,.36,1), transform .45s cubic-bezier(.22,.61,.36,1); }
