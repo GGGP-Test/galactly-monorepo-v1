@@ -62,7 +62,7 @@
       MOBILE_BREAKPOINT: 640,  // triggers the mobile DOM layout
       M_MAX_W: 520,            // max content width
       M_SIDE_PAD: 16,          // page side padding
-      M_STACK_GAP: 14,         // gap between shapes INSIDE step 1
+      M_STACK_GAP: 34,         // gap between shapes INSIDE step 1
       M_BOX_MIN_H: 56,         // min height of each mobile box
       M_BORDER_PX: 2,          // outline weight
       M_FONT_PT: 11,           // label size inside shapes
@@ -71,7 +71,7 @@
       M_COPY_BODY_PT: 14,      // mobile body size
 
       // NEW: inter-step spacing for phones (affects distance from other steps)
-      M_SECTION_TOP: 550,       // top margin for step 1 block
+      M_SECTION_TOP: 950,       // top margin for step 1 block
       M_SECTION_BOTTOM: 72,     // bottom margin for step 1 block
 
       // ===== TABLET knobs (apply at <=900px; phones override below) =====
