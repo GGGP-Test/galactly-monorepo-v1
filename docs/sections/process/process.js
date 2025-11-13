@@ -152,12 +152,12 @@
           // ALL rectangular / pill boxes in this step
           box: {
             widthPct: 50,
-            minH: 35,        // change this to make them shorter/taller
+            minH: 15,        // change this to make them shorter/taller
             padX: 12,
             padY: 10,
             border: 2,
             radius: 18,
-            fontPt: 10,
+            fontPt: 7,
             fontWeight: 525,
             letter: 0.3,
             lineEm: 1.2,
@@ -171,8 +171,8 @@
             size: 80,       // overall diamond size
             border: 2,
             pad: 12,
-            labelPt: 9,
-            nudgeY: 19,       // pull it closer to the last pill (more negative = higher)
+            labelPt: 7,
+            nudgeY: 16,       // pull it closer to the last pill (more negative = higher)
           },
         
           // three dots under the diamond
@@ -721,7 +721,7 @@
       rect2:    cfg.LABEL_RECT_2    ?? "RFQ/RFP Keywords Detected",
       round3:   cfg.LABEL_ROUND_3   ?? "Pricing & Sample Page Hits",
       oval4:    cfg.LABEL_OVAL_4    ?? "Rising # of Ad Creatives (last 14d)",
-      diamond5: cfg.LABEL_DIAMOND_5 ?? "Import/Export End of Cycle"
+      diamond5: cfg.LABEL_DIAMOND_5 ?? "Import/Export Cycle"
     };
   
     const order = Array.isArray(M.order) ? M.order : ["rect1","rect2","round3","oval4","diamond5"];
