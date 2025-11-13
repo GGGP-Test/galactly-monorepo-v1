@@ -29,13 +29,13 @@
           stackGap: 18,       // gap between boxes in a stack
   
           box: {              // default box sizing for all phone steps
-            widthPct: 100,
+            widthPct: 70,
             minH: 64,
-            padX: 18,
+            padX: 38,
             padY: 14,
             border: 2,
             radius: 16,
-            fontPt: 11.5,
+            fontPt: 10,
             fontWeight: 525,
             letter: 0.3,
             lineEm: 1.25,
@@ -43,7 +43,7 @@
           },
   
           diamond: {          // default phone diamond
-            widthPct: 54,
+            widthPct: 24,
             border: 2,
             labelPt: 11,
             pad: 10
@@ -80,11 +80,11 @@
 
           // Pill visuals
           pill: {
-            widthPct: 92,         // pill width as % of inner width
+            widthPct: 68,         // pill width as % of inner width
             height: 64,           // pill height (px)
             radius: 16,           // corner radius (px)
             stroke: 2.5,          // outline width (px)
-            nudgeX: 0,            // translate just the pill (not the text above)
+            nudgeX: 38,            // translate just the pill (not the text above)
             nudgeY: 15,
             showTrail: false      // the glowing trail to the right (usually off on mobile)
           },
