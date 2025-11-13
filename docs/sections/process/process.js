@@ -80,8 +80,8 @@
 
           // Pill visuals
           pill: {
-            widthPct: 60,         // pill width as % of inner width
-            height: 120,           // pill height (px)
+            widthPct: 68,         // pill width as % of inner width
+            height: 64,           // pill height (px)
             radius: 16,           // corner radius (px)
             stroke: 2.5,          // outline width (px)
             nudgeX: 38,            // translate just the pill (not the text above)
@@ -113,19 +113,19 @@
           height: 380    // reserved height (tweak to taste)
         },
         
-        // ===== Step 1: Mobile-only knobs (uses theme) =====
+        // ===== Step 1: Time-to-Buy Intent (MOBILE knobs) =====
         step1: {
-          useTheme: true,          // starts from mobile.theme
-  
-          // layout / spacing overrides
-          top: 50,
-          bottom: 80,
+          useTheme: true,
+        
+          // whole-section placement
+          top: 50,          // space above this step
+          bottom: 80,       // space below this step
           maxW: 520,
           sidePad: 20,
           nudgeX: 0,
           nudgeY: 0,
-  
-          // title above the copy
+        
+          // small title: "Time-to-Buy Intent"
           titleShow: true,
           titlePt: 17,
           titleWeight: 700,
@@ -133,24 +133,61 @@
           titleAlign: "center",
           titleMarginTop: 10,
           titleMarginBottom: 12,
-  
-          // H3 + paragraph
+        
+          // h3 + body: "Who’s ready now?"
           copyHpt: 22,
           copyBodyPt: 14,
           copyLine: 1.6,
           copyColor: "#a7bacb",
           copyHColor: "#eaf0f6",
-          copyGapBottom: 26,
-  
-          // Per-step tweaks on top of theme.box / theme.diamond / theme.dots
-          box: { },
-          diamond: { },
-          dots: { },
-  
-          overrides: {
-            oval4: { radius: 9999 }
+          copyGapBottom: 20,   // gap from paragraph → first box
+        
+          // gap between the boxes themselves
+          stackGap: 14,
+        
+          // ALL rectangular / pill boxes in this step
+          box: {
+            widthPct: 100,
+            minH: 56,        // change this to make them shorter/taller
+            padX: 16,
+            padY: 10,
+            border: 2,
+            radius: 18,
+            fontPt: 12,
+            fontWeight: 525,
+            letter: 0.3,
+            lineEm: 1.2,
+            align: "center"
           },
-  
+        
+          // diamond at the bottom
+          diamond: {
+            size: 120,       // overall diamond size
+            border: 2,
+            pad: 12,
+            labelPt: 11,
+            nudgeY: -4       // pull it closer to the last pill (more negative = higher)
+          },
+        
+          // three dots under the diamond
+          dots: {
+            show: true,
+            count: 3,
+            size: 6,
+            gap: 8,
+            padTop: 4
+          },
+        
+          // per-shape overrides (all REAL keys now)
+          overrides: {
+            rect1:   { },            // Back-to-Back Search
+            rect2:   { },            // RFQ/RFP Keywords
+            round3:  { },            // Pricing & Sample Page Hits
+            oval4:   { radius: 9999 }, // Rising # of Ad Creatives → pill
+            diamond5:{ }             // Import/Export End of Cycle
+          },
+        
+          // draw order top → bottom, then diamond
           order: ["rect1","rect2","round3","oval4","diamond5"]
         },
       }
