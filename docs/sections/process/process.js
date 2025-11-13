@@ -136,7 +136,7 @@
           
           // NEW: move the title alone
           titleNudgeX: 74,   // + = right, - = left
-          titleNudgeY: 0,    // + = down,  - = up
+          titleNudgeY: 10,    // + = down,  - = up
         
           // h3 + body: "Who’s ready now?"
           copyHpt: 22,
@@ -163,7 +163,7 @@
             lineEm: 1.2,
             align: "center",
             nudgeX: 74,   // positive = push boxes to the right
-            nudgeY: 0,     // positive = push boxes down
+            nudgeY: 10,     // positive = push boxes down
           },
         
           // diamond at the bottom
@@ -172,7 +172,7 @@
             border: 2,
             pad: 12,
             labelPt: 9,
-            nudgeY: 16       // pull it closer to the last pill (more negative = higher)
+            nudgeY: 19,       // pull it closer to the last pill (more negative = higher)
           },
         
           // three dots under the diamond
