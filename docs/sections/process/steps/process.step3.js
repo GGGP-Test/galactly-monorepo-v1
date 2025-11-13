@@ -224,8 +224,11 @@
     wrap.className = "p2m-wrap s2";
 
     wrap.innerHTML =
-      (C().TITLE_SHOW ? '<div class="p2m-title">' + C().TITLE_TEXT + "</div>" : "") +
+      // 1) copy FIRST
       '<div class="p2m-copy">' + C().COPY_SEO_HTML + "</div>" +
+      // 2) step title AFTER the copy
+      (C().TITLE_SHOW ? '<div class="p2m-title">' + C().TITLE_TEXT + "</div>" : "") +
+      // 3) boxes
       '<div class="p2m-stack">' +
       // circle first
       '<div class="p2m-circle">' + C().ITEMS[0].label + "</div>" +
