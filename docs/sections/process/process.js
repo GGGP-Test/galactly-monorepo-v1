@@ -157,7 +157,7 @@
             fontWeight: 525,
             letter: 0.3,
             lineEm: 1.2,
-            align: "center"
+            align: "center",
             nudgeX: 74,   // positive = push boxes to the right
             nudgeY: 0,     // positive = push boxes down
           },
