@@ -31,7 +31,7 @@
           box: {              // default box sizing for all phone steps
             widthPct: 70,
             minH: 64,
-            padX: 38,
+            padX: 68,
             padY: 14,
             border: 2,
             radius: 16,
