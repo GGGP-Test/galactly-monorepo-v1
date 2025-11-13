@@ -118,7 +118,7 @@
           useTheme: true,          // starts from mobile.theme
   
           // layout / spacing overrides
-          top: 40,
+          top: 50,
           bottom: 80,
           maxW: 520,
           sidePad: 20,
