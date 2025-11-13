@@ -135,7 +135,7 @@
           titleMarginBottom: 12,
           
           // NEW: move the title alone
-          titleNudgeX: 74,   // + = right, - = left
+          titleNudgeX: 60,   // + = right, - = left
           titleNudgeY: 10,    // + = down,  - = up
         
           // h3 + body: "Who’s ready now?"
@@ -157,7 +157,7 @@
             padY: 10,
             border: 2,
             radius: 18,
-            fontPt: 7,
+            fontPt: 8,
             fontWeight: 525,
             letter: 0.3,
             lineEm: 1.2,
@@ -168,7 +168,7 @@
         
           // diamond at the bottom
           diamond: {
-            size: 80,       // overall diamond size
+            size: 50,       // overall diamond size
             border: 2,
             pad: 12,
             labelPt: 7,
