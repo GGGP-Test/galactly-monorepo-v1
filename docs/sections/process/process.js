@@ -122,7 +122,7 @@
           bottom: 80,       // space below this step
           maxW: 520,
           sidePad: 20,
-          nudgeX: 60,
+          nudgeX: 0,
           nudgeY: 0,
         
           // small title: "Time-to-Buy Intent"
