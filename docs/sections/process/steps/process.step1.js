@@ -89,7 +89,7 @@
       T_SECTION_BOTTOM: 80,       // step block margin bottom on tablet
       
       // NEW: box content padding controls (both breakpoints)
-      M_BOX_PAD_X: 12, M_BOX_PAD_Y: 50,   // phones
+      M_BOX_PAD_X: 52, M_BOX_PAD_Y: 50,   // phones
       T_BOX_PAD_X: 16, T_BOX_PAD_Y: 12,   // tablets
 
       T_DIAMOND_SIZE_PCT: 22  // diamond width as % of stack width on tablet
