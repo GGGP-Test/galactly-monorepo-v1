@@ -250,8 +250,11 @@
     // removed chip text usage to avoid undefined/NaN display
 
     wrap.innerHTML =
-      (C().TITLE_SHOW ? '<div class="p4m-title">' + C().TITLE_TEXT + "</div>" : "") +
+      // 1) copy FIRST
       '<div class="p4m-copy">' + C().COPY_SEO_HTML + "</div>" +
+      // 2) step title AFTER the copy
+      (C().TITLE_SHOW ? '<div class="p4m-title">' + C().TITLE_TEXT + "</div>" : "") +
+      // 3) boxes
       '<div class="p4m-stack">' +
         '<div class="p4m-diamond"><span>' + C().ITEMS[0].label + '</span></div>' +
         '<div class="p4m-box">' + C().ITEMS[1].label + "</div>" +
