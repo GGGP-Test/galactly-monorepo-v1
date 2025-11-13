@@ -149,12 +149,12 @@
           box: {
             widthPct: 50,
             minH: 35,        // change this to make them shorter/taller
-            padX: 16,
+            padX: 46,
             padY: 10,
             border: 2,
             radius: 18,
-            fontPt: 12,
-            fontWeight: 525,
+            fontPt: 10,
+            fontWeight: 500,
             letter: 0.3,
             lineEm: 1.2,
             align: "center"
@@ -162,11 +162,11 @@
         
           // diamond at the bottom
           diamond: {
-            size: 30,       // overall diamond size
+            size: 60,       // overall diamond size
             border: 2,
             pad: 12,
             labelPt: 11,
-            nudgeY: 0       // pull it closer to the last pill (more negative = higher)
+            nudgeY: 20       // pull it closer to the last pill (more negative = higher)
           },
         
           // three dots under the diamond
