@@ -419,7 +419,7 @@
     const copy = mountCopy({
       top: copyTop, left: fromRail,
       html: `<h3>We start with your company.</h3>
-             <p>We'll get to know your company to learn what matters. Then our system builds strong metrics around your strengths.
+             <p>We'll start with your company to learn what matters. Then our system builds strong metrics around your strengths.
              With that map in hand, we move forward to find real buyers who match your situation.</p>`
     });
 
@@ -463,8 +463,8 @@
         </h3>
         <p style="margin:0; color:${M0.copyColor ?? "#a7bacb"};
                   font:400 ${(M0.copyBodyPt ?? 15)}px/${(M0.copyLine ?? 1.65)} Inter, system-ui;">
-          We read your company and data to learn what matters. Then our system builds simple metrics around your strengths.
-          With that map in hand, we move forward to find real buyers who match your persona.
+          We'll start with your company to learn what matters. Then our system builds strong metrics around your strengths.
+          With that map in hand, we move forward to find real buyers who match your situation.
         </p>`;
     }
     wrap.appendChild(copy);
@@ -539,7 +539,7 @@
   
       // Label
       const label = document.createElementNS(ns,"text");
-      label.setAttribute("x", pillX + (M0.labelPadX ?? 16));
+      label.setAttribute("x", pillX + (M0.labelPadX ?? 8));
       label.setAttribute("y", pillY + pillH/2 + 6);
       label.setAttribute("fill", M0.labelColor ?? "#ddeaef");
       label.setAttribute("font-weight", String(M0.labelWeight ?? 800));
