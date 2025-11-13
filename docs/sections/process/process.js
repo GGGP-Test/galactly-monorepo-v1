@@ -127,7 +127,7 @@
         
           // small title: "Time-to-Buy Intent"
           titleShow: true,
-          titlePt: 13,
+          titlePt: 11,
           titleWeight: 700,
           titleLetter: 0.2,
           titleAlign: "center",
@@ -147,7 +147,7 @@
           copyGapBottom: 20,   // gap from paragraph → first box
         
           // gap between the boxes themselves
-          stackGap: 14,
+          stackGap: 10,
         
           // ALL rectangular / pill boxes in this step
           box: {
@@ -172,7 +172,7 @@
             border: 2,
             pad: 12,
             labelPt: 9,
-            nudgeY: 13       // pull it closer to the last pill (more negative = higher)
+            nudgeY: 16       // pull it closer to the last pill (more negative = higher)
           },
         
           // three dots under the diamond
