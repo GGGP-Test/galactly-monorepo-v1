@@ -222,8 +222,11 @@
     wrap.className = "p3m-wrap s3";
 
     wrap.innerHTML =
-      (C().TITLE_SHOW ? '<div class="p3m-title">' + C().TITLE_TEXT + "</div>" : "") +
+      // 1) copy block FIRST
       '<div class="p3m-copy">' + C().COPY_SEO_HTML + "</div>" +
+      // 2) step title AFTER the copy
+      (C().TITLE_SHOW ? '<div class="p3m-title">' + C().TITLE_TEXT + "</div>" : "") +
+      // 3) boxes
       '<div class="p3m-stack">' +
       // 1) OVAL
       '<div class="p3m-box p3m-oval">' + C().ITEMS[0].label + "</div>" +
