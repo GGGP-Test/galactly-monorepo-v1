@@ -63,7 +63,7 @@
       LABEL_RECT_2: "RFQ/RFP Keywords Detected",
       LABEL_ROUND_3: "Pricing & Sample Page Hits",
       LABEL_OVAL_4: "Rising # of Ad Creatives (last 14d)",
-      LABEL_DIAMOND_5: "Import/Export End of Cycle",
+      LABEL_DIAMOND_5: "Imp/Exp Cycle",
 
       // Title (desktop)
       TITLE_SHOW: true,
