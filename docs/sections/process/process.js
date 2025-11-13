@@ -610,28 +610,38 @@
     }
   }
   function renderStep1_DOM(){
-      const cfg    = window.PROCESS_CONFIG.step1 || {};
-      const mobile = window.PROCESS_CONFIG.mobile || {};
-      const theme  = mobile.theme || {};
-      const step1  = mobile.step1 || {};
+    const cfg = window.PROCESS_CONFIG.step1 || {};
+    const M = (window.PROCESS_CONFIG.mobile?.step1) || {};
   
-      // merge theme + step1 (step1 wins)
-      const M = {
-        ...theme,
-        ...step1,
-        box:     { ...(theme.box     || {}), ...(step1.box     || {}) },
-        diamond: { ...(theme.diamond || {}), ...(step1.diamond || {}) },
-        dots:    { ...(theme.dots    || {}), ...(step1.dots    || {}) }
-    };
-      const wrap = mStepContainer({
-        top:    M.top    ?? theme.stepTop    ?? 40,
-        bottom: M.bottom ?? theme.stepBottom ?? 80,
-        maxW:   M.maxW   ?? theme.maxW       ?? 520,
-        sidePad:M.sidePad?? theme.sidePad    ?? 20,
-        nudgeX: M.nudgeX ?? 0,
-        nudgeY: M.nudgeY ?? 0
-      });
-
+    // Outer container for the whole step
+    const wrap = mStepContainer({
+      top: M.top ?? 40,
+      bottom: M.bottom ?? 72,
+      maxW: M.maxW ?? 520,
+      sidePad: M.sidePad ?? 16,
+      nudgeX: M.nudgeX ?? 0,
+      nudgeY: M.nudgeY ?? 0
+    });
+  
+    // 1) COPY BLOCK FIRST: "Who’s ready now?" + body
+    const copy = document.createElement("div");
+    copy.className = "mstep-copy";
+    // gap between copy and the STEP TITLE (we're about to add below)
+    copy.style.marginBottom = `${M.copyGapBottom ?? 14}px`;
+    copy.innerHTML = `
+      <h3 style="margin:0 0 ${M.copyHGap ?? 8}px; color:${M.copyHColor ?? "#eaf0f6"};
+                 font:600 ${(M.copyHpt ?? 22)}px 'Newsreader', Georgia, serif;">
+        Who’s ready now?
+      </h3>
+      <p style="margin:0; color:${M.copyColor ?? "#a7bacb"};
+                font:400 ${(M.copyBodyPt ?? 14)}px/${(M.copyLine ?? 1.55)} Inter, system-ui;">
+        Our <b>Time-to-Buy Intent</b> finds accounts most likely to purchase in the next cycle.
+        We weight <b>recent</b> signals like search bursts, RFQ/RFP language, visits to pricing & sample pages,
+        and events/trade shows, new product launches, and 38+ more metrics, then surface the prospects your team should contact today.
+      </p>`;
+    wrap.appendChild(copy);
+  
+    // 2) STEP TITLE AFTER COPY: "Time-to-Buy Intent"
     if (M.titleShow !== false){
       const t = document.createElement("div");
       t.className = "mstep-title";
@@ -640,29 +650,17 @@
       t.style.fontWeight = String(M.titleWeight ?? 700);
       t.style.fontSize = `${M.titlePt ?? 16}pt`;
       t.style.letterSpacing = `${M.titleLetter ?? 0.2}px`;
-      t.style.marginTop = `${M.titleMarginTop ?? 6}px`;
-      t.style.marginBottom = `${M.titleMarginBottom ?? 10}px`;
+      // gap above/below title
+      t.style.marginTop = `${M.titleMarginTop ?? 6}px`;      // gap between copy and title
+      t.style.marginBottom = `${M.titleMarginBottom ?? 18}px`; // gap between title and boxes
       wrap.appendChild(t);
     }
-
-    const copy = document.createElement("div");
-    copy.className = "mstep-copy";
-    copy.style.marginBottom = `${M.copyGapBottom ?? 14}px`;
-    copy.innerHTML = `
-      <h3 style="margin:0 0 8px; color:${M.copyHColor ?? "#eaf0f6"};
-                 font:600 ${(M.copyHpt ?? 22)}px 'Newsreader', Georgia, serif;">Who’s ready now?</h3>
-      <p style="margin:0; color:${M.copyColor ?? "#a7bacb"};
-                font:400 ${(M.copyBodyPt ?? 14)}px/${(M.copyLine ?? 1.55)} Inter, system-ui;">
-        Our <b>Time-to-Buy Intent</b> finds accounts most likely to purchase in the next cycle.
-        We weight <b>recent</b> signals like search bursts, RFQ/RFP language, visits to pricing & sample pages,
-        and events/trade shows, new product launches, and 38+ more metrics, then surface the prospects your team should contact today.
-      </p>`;
-    wrap.appendChild(copy);
-
+  
+    // 3) BOX STACK (unchanged)
     const stack = document.createElement("div");
     stack.className = "mstack";
-    stack.style.gap = `${M.stackGap ?? theme.stackGap ?? 18}px`;
-
+    stack.style.gap = `${M.stackGap ?? 24}px`;
+  
     const labels = {
       rect1:    cfg.LABEL_RECT_1    ?? "Back-To-Back Search (last 14d)",
       rect2:    cfg.LABEL_RECT_2    ?? "RFQ/RFP Keywords Detected",
@@ -670,11 +668,11 @@
       oval4:    cfg.LABEL_OVAL_4    ?? "Rising # of Ad Creatives (last 14d)",
       diamond5: cfg.LABEL_DIAMOND_5 ?? "Import/Export End of Cycle"
     };
-
+  
     const order = Array.isArray(M.order) ? M.order : ["rect1","rect2","round3","oval4","diamond5"];
     const baseBox = M.box || {};
     const OVR = M.overrides || {};
-
+  
     for (const key of order){
       const ov = OVR[key] || {};
       if (key === "diamond5"){
@@ -682,7 +680,9 @@
         dWrap.className = "mdiamond";
         dWrap.style.width = `${(M.diamond?.widthPct ?? 45)}%`;
         dWrap.style.border = `${(M.diamond?.border ?? 2)}px solid rgba(99,211,255,.95)`;
-        if (ov.nudgeX || ov.nudgeY) dWrap.style.transform = `translate(${ov.nudgeX|0}px, ${ov.nudgeY|0}px) rotate(45deg)`;
+        if (ov.nudgeX || ov.nudgeY) {
+          dWrap.style.transform = `translate(${ov.nudgeX|0}px, ${ov.nudgeY|0}px) rotate(45deg)`;
+        }
         const s = document.createElement("span");
         s.textContent = labels[key];
         s.style.width = "70%";
@@ -691,7 +691,8 @@
         s.style.letterSpacing = `${baseBox.letter ?? 0.3}px`;
         s.style.lineHeight = `${baseBox.lineEm ?? 1.15}em`;
         s.style.padding = `${(M.diamond?.pad ?? 10)}px`;
-        dWrap.appendChild(s); stack.appendChild(dWrap);
+        dWrap.appendChild(s);
+        stack.appendChild(dWrap);
       } else {
         const box = document.createElement("div");
         box.className = "mbox" + (key==="oval4" ? " oval" : "");
@@ -700,7 +701,7 @@
         stack.appendChild(box);
       }
     }
-
+  
     const dots = (M.dots || {});
     if (dots.show !== false){
       const row = document.createElement("div");
@@ -711,12 +712,13 @@
       for (let i=0;i<n;i++){
         const dot = document.createElement("i");
         const size = `${dots.size ?? 6}px`;
-        dot.style.width = size; dot.style.height = size;
+        dot.style.width = size;
+        dot.style.height = size;
         row.appendChild(dot);
       }
       stack.appendChild(row);
     }
-
+  
     wrap.appendChild(stack);
     canvas.appendChild(wrap);
   }
