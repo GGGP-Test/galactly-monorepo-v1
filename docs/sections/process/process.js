@@ -22,9 +22,9 @@
         MODE: "dom",              // "dom" = render mobile here; "scenes" = call per-step files
         /* ========= UNIVERSAL PHONE THEME (applies to all steps) ========= */
         theme: {
-          stepTop: 40,        // default margin-top for each step
-          stepBottom: 80,     // default margin-bottom for each step
-          maxW: 520,          // content width column
+          stepTop: 60,        // default margin-top for each step
+          stepBottom: 100,     // default margin-bottom for each step
+          maxW: 320,          // content width column
           sidePad: 20,        // padding from screen edge
           stackGap: 18,       // gap between boxes in a stack
   
