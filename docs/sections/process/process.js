@@ -127,7 +127,7 @@
         
           // small title: "Time-to-Buy Intent"
           titleShow: true,
-          titlePt: 17,
+          titlePt: 13,
           titleWeight: 700,
           titleLetter: 0.2,
           titleAlign: "center",
@@ -149,12 +149,12 @@
           box: {
             widthPct: 50,
             minH: 35,        // change this to make them shorter/taller
-            padX: 46,
+            padX: 12,
             padY: 10,
             border: 2,
             radius: 18,
             fontPt: 10,
-            fontWeight: 500,
+            fontWeight: 525,
             letter: 0.3,
             lineEm: 1.2,
             align: "center"
@@ -165,8 +165,8 @@
             size: 60,       // overall diamond size
             border: 2,
             pad: 12,
-            labelPt: 11,
-            nudgeY: 20       // pull it closer to the last pill (more negative = higher)
+            labelPt: 9,
+            nudgeY: 13       // pull it closer to the last pill (more negative = higher)
           },
         
           // three dots under the diamond
