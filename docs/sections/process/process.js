@@ -135,8 +135,8 @@
           titleMarginBottom: 12,
           
           // NEW: move the title alone
-          titleNudgeX: 60,   // + = right, - = left
-          titleNudgeY: 10,    // + = down,  - = up
+          titleNudgeX: 42,   // + = right, - = left
+          titleNudgeY: 0,    // + = down,  - = up
         
           // h3 + body: "Who’s ready now?"
           copyHpt: 22,
@@ -162,8 +162,8 @@
             letter: 0.3,
             lineEm: 1.2,
             align: "center",
-            nudgeX: 60,   // positive = push boxes to the right
-            nudgeY: 10,     // positive = push boxes down
+            nudgeX: 42,   // positive = push boxes to the right
+            nudgeY: 0,     // positive = push boxes down
           },
         
           // diamond at the bottom
