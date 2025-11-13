@@ -25,7 +25,7 @@
           stepTop: 60,        // default margin-top for each step
           stepBottom: 100,     // default margin-bottom for each step
           maxW: 320,          // content width column
-          sidePad: 20,        // padding from screen edge
+          sidePad: 70,        // padding from screen edge
           stackGap: 18,       // gap between boxes in a stack
   
           box: {              // default box sizing for all phone steps
