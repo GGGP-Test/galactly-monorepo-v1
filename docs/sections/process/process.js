@@ -158,6 +158,8 @@
             letter: 0.3,
             lineEm: 1.2,
             align: "center"
+            nudgeX: 75,   // positive = push boxes to the right
+            nudgeY: 0     // positive = push boxes down
           },
         
           // diamond at the bottom
