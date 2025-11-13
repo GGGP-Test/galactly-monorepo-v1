@@ -106,8 +106,8 @@
 
       // ===== MOBILE knobs (phones only; desktop unaffected) =====
       MOBILE_BREAKPOINT: 640, // phones
-      M_MAX_W: 520,
-      M_SIDE_PAD: 18,
+      M_MAX_W: 52,
+      M_SIDE_PAD: 38,
       M_STACK_GAP: 18,        // gap between shapes
       M_BOX_MIN_H: 52,
       M_BORDER_PX: 2,
@@ -402,8 +402,8 @@
         display:flex;
         align-items:center;
         justify-content:center;
-        width:78%;
-        height:78%;
+        width:38%;
+        height:38%;
         text-align:center;
         color:#ddeaef;
         font:${C().FONT_WEIGHT_BOX} ${Math.max(8,(C().T_FONT_PT||12)-1)}pt ${C().FONT_FAMILY_BOX};
