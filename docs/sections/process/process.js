@@ -136,7 +136,7 @@
           
           // NEW: move the title alone
           titleNudgeX: 42,   // + = right, - = left
-          titleNudgeY: 0,    // + = down,  - = up
+          titleNudgeY: 10,    // + = down,  - = up
         
           // h3 + body: "Who’s ready now?"
           copyHpt: 22,
@@ -163,7 +163,7 @@
             lineEm: 1.2,
             align: "center",
             nudgeX: 42,   // positive = push boxes to the right
-            nudgeY: 0,     // positive = push boxes down
+            nudgeY:10,     // positive = push boxes down
           },
         
           // diamond at the bottom
@@ -721,7 +721,7 @@
       rect2:    cfg.LABEL_RECT_2    ?? "RFQ/RFP Keywords Detected",
       round3:   cfg.LABEL_ROUND_3   ?? "Pricing & Sample Page Hits",
       oval4:    cfg.LABEL_OVAL_4    ?? "Rising # of Ad Creatives (last 14d)",
-      diamond5: cfg.LABEL_DIAMOND_5 ?? "Import/Export Cycle"
+      diamond5: cfg.LABEL_DIAMOND_5 ?? "Imp/Exp Cycle"
     };
   
     const order = Array.isArray(M.order) ? M.order : ["rect1","rect2","round3","oval4","diamond5"];
