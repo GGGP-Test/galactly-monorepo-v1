@@ -162,7 +162,7 @@
         
           // diamond at the bottom
           diamond: {
-            size: 40,       // overall diamond size
+            size: 10,       // overall diamond size
             border: 2,
             pad: 12,
             labelPt: 11,
