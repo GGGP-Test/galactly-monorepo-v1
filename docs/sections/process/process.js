@@ -539,7 +539,7 @@
   
       // Label
       const label = document.createElementNS(ns,"text");
-      label.setAttribute("x", pillX + (M0.labelPadX ?? 8));
+      label.setAttribute("x", pillX + (M0.labelPadX ?? 16));
       label.setAttribute("y", pillY + pillH/2 + 6);
       label.setAttribute("fill", M0.labelColor ?? "#ddeaef");
       label.setAttribute("font-weight", String(M0.labelWeight ?? 800));
