@@ -162,7 +162,7 @@
             letter: 0.3,
             lineEm: 1.2,
             align: "center",
-            nudgeX: 74,   // positive = push boxes to the right
+            nudgeX: 60,   // positive = push boxes to the right
             nudgeY: 10,     // positive = push boxes down
           },
         
