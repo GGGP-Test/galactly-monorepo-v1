@@ -80,8 +80,8 @@
 
           // Pill visuals
           pill: {
-            widthPct: 68,         // pill width as % of inner width
-            height: 64,           // pill height (px)
+            widthPct: 60,         // pill width as % of inner width
+            height: 120,           // pill height (px)
             radius: 16,           // corner radius (px)
             stroke: 2.5,          // outline width (px)
             nudgeX: 38,            // translate just the pill (not the text above)
