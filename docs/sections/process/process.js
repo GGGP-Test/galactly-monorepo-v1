@@ -122,7 +122,7 @@
           bottom: 80,       // space below this step
           maxW: 520,
           sidePad: 20,
-          nudgeX: 0,
+          nudgeX: 20,
           nudgeY: 0,
         
           // small title: "Time-to-Buy Intent"
@@ -162,7 +162,7 @@
         
           // diamond at the bottom
           diamond: {
-            size: 60,       // overall diamond size
+            size: 80,       // overall diamond size
             border: 2,
             pad: 12,
             labelPt: 9,
