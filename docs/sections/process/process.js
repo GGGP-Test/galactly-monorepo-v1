@@ -133,6 +133,10 @@
           titleAlign: "center",
           titleMarginTop: 10,
           titleMarginBottom: 12,
+          
+          // NEW: move the title alone
+          titleNudgeX: 74,   // + = right, - = left
+          titleNudgeY: 0,    // + = down,  - = up
         
           // h3 + body: "Who’s ready now?"
           copyHpt: 22,
@@ -694,8 +698,16 @@
       t.style.fontSize = `${M.titlePt ?? 16}pt`;
       t.style.letterSpacing = `${M.titleLetter ?? 0.2}px`;
       // gap above/below title
-      t.style.marginTop = `${M.titleMarginTop ?? 6}px`;      // gap between copy and title
-      t.style.marginBottom = `${M.titleMarginBottom ?? 18}px`; // gap between title and boxes
+      t.style.marginTop = `${M.titleMarginTop ?? 6}px`;         // gap between copy and title
+      t.style.marginBottom = `${M.titleMarginBottom ?? 18}px`;  // gap between title and boxes
+    
+      // NEW: per-title nudge (does NOT move copy)
+      const tNx = M.titleNudgeX ?? 0;
+      const tNy = M.titleNudgeY ?? 0;
+      if (tNx || tNy) {
+        t.style.transform = `translate(${tNx}px, ${tNy}px)`;
+      }
+    
       wrap.appendChild(t);
     }
   
