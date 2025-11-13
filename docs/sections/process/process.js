@@ -171,7 +171,7 @@
         
           // three dots under the diamond
           dots: {
-            show: true,
+            show: false,
             count: 3,
             size: 6,
             gap: 8,
@@ -631,7 +631,7 @@
     return el;
   }
   function applyBoxStyles(node, base, ov){
-    const b = Object.assign({}, base, ov||{});
+    const b = Object.assign({}, base, ov || {});
     node.style.width = `${b.widthPct ?? 100}%`;
     node.style.minHeight = `${b.minH ?? 56}px`;
     node.style.padding = `${b.padY ?? 10}px ${b.padX ?? 12}px`;
@@ -642,8 +642,12 @@
     node.style.letterSpacing = `${b.letter ?? 0.3}px`;
     node.style.lineHeight = `${b.lineEm ?? 1.15}em`;
     node.style.textAlign = b.align || "center";
-    if (ov && (ov.nudgeX || ov.nudgeY)){
-      node.style.transform = `translate(${ov.nudgeX|0}px, ${(ov.nudgeY|0)}px)`;
+  
+    // NEW: allow base or override nudgeX/nudgeY
+    const nx = b.nudgeX || 0;
+    const ny = b.nudgeY || 0;
+    if (nx || ny) {
+      node.style.transform = `translate(${nx}px, ${ny}px)`;
     }
   }
   function renderStep1_DOM(){
@@ -715,19 +719,34 @@
       if (key === "diamond5"){
         const dWrap = document.createElement("div");
         dWrap.className = "mdiamond";
-        dWrap.style.width = `${(M.diamond?.widthPct ?? 45)}%`;
-        dWrap.style.border = `${(M.diamond?.border ?? 2)}px solid rgba(99,211,255,.95)`;
-        if (ov.nudgeX || ov.nudgeY) {
-          dWrap.style.transform = `translate(${ov.nudgeX|0}px, ${ov.nudgeY|0}px) rotate(45deg)`;
+        
+        const dCfg = M.diamond || {};
+        // Prefer a % width knob; fall back to a pixel "size" knob; then to 45%
+        if (typeof dCfg.widthPct === "number") {
+          dWrap.style.width = `${dCfg.widthPct}%`;
+        } else if (typeof dCfg.size === "number") {
+          dWrap.style.width = `${dCfg.size}px`;
+        } else {
+          dWrap.style.width = "45%";
         }
+        
+        dWrap.style.border = `${(dCfg.border ?? 2)}px solid rgba(99,211,255,.95)`;
+        
+        // allow diamond-specific nudge, falling back to box nudge if needed
+        const dNx = (ov.nudgeX ?? baseBox.nudgeX ?? 0);
+        const dNy = (ov.nudgeY ?? baseBox.nudgeY ?? (dCfg.nudgeY ?? 0));
+        if (dNx || dNy) {
+          dWrap.style.transform = `translate(${dNx}px, ${dNy}px) rotate(45deg)`;
+        }
+        
         const s = document.createElement("span");
         s.textContent = labels[key];
         s.style.width = "70%";
         s.style.height = "70%";
-        s.style.font = `${(baseBox.fontWeight ?? 525)} ${(M.diamond?.labelPt ?? 10)}pt Inter, system-ui`;
+        s.style.font = `${(baseBox.fontWeight ?? 525)} ${(dCfg.labelPt ?? baseBox.fontPt ?? 11)}pt Inter, system-ui`;
         s.style.letterSpacing = `${baseBox.letter ?? 0.3}px`;
         s.style.lineHeight = `${baseBox.lineEm ?? 1.15}em`;
-        s.style.padding = `${(M.diamond?.pad ?? 10)}px`;
+        s.style.padding = `${(dCfg.pad ?? 10)}px`;
         dWrap.appendChild(s);
         stack.appendChild(dWrap);
       } else {
