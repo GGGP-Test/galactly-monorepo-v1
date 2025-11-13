@@ -162,11 +162,11 @@
         
           // diamond at the bottom
           diamond: {
-            size: 10,       // overall diamond size
+            size: 30,       // overall diamond size
             border: 2,
             pad: 12,
             labelPt: 11,
-            nudgeY: -4       // pull it closer to the last pill (more negative = higher)
+            nudgeY: 0       // pull it closer to the last pill (more negative = higher)
           },
         
           // three dots under the diamond
