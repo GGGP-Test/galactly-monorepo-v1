@@ -114,19 +114,19 @@
       // ===== MOBILE knobs (phones only; desktop unaffected) =====
       MOBILE_BREAKPOINT: 640, // phones
       M_MAX_W: 520,
-      M_SIDE_PAD: 38,
-      M_STACK_GAP: 18,
-      M_BOX_MIN_H: 52,
+      M_SIDE_PAD: 20,
+      M_STACK_GAP: 10,
+      M_BOX_MIN_H: 15,
       M_BORDER_PX: 2,
-      M_FONT_PT: 11,
+      M_FONT_PT: 8,
       M_TITLE_PT: 16,
       M_COPY_H_PT: 22,
       M_COPY_BODY_PT: 14,
       M_SECTION_TOP: 72,      // distance from previous section
       M_SECTION_BOTTOM: 84,
-      M_BOX_W_PCT: 78,        // width % of stack for boxes
-      M_CIRCLE_PCT: 52,       // circle width % of stack
-      M_BOX_PAD_X: 18,
+      M_BOX_W_PCT: 50,        // width % of stack for boxes
+      M_CIRCLE_PCT: 27,       // circle width % of stack
+      M_BOX_PAD_X: 42,
       M_BOX_PAD_Y: 10,
 
       // ===== TABLET knobs (<= T_BREAKPOINT; phones override below) =====
