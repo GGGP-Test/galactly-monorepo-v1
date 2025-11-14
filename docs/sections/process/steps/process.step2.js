@@ -1,115 +1,221 @@
 // sections/process/steps/process.step2.js
 (() => {
-  // NOTE: per request, this registers as STEP 2 so timing shows second.
-  // If you later want it to be the third step again, change STEP to 3.
   const STEP = 2;
   const NS = "http://www.w3.org/2000/svg";
 
-  // -------------------- CONFIG (desktop visuals unchanged; phones use M_* knobs) --------------------
+  // ---------------- CONFIG (desktop unchanged; tablet/phone via step2 knobs) ----------------
   function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step2 = root.step2 || {};
-    const dflt = {
-      // ===== DESKTOP layout knobs (kept consistent with other steps) =====
-      BOX_W_RATIO: 0.10, BOX_H_RATIO: 0.12, GAP_RATIO: 0.035,
-      STACK_X_RATIO: 0.705, STACK_TOP_RATIO: 0.21, NUDGE_X: -230, NUDGE_Y: -20,
-      RADIUS_RECT: 14, RADIUS_PILL: 18, RADIUS_OVAL: 999,
-      SHOW_LEFT_LINE: true, SHOW_RIGHT_LINE: true,
-      LEFT_STOP_RATIO: 0.35, RIGHT_MARGIN_PX: 16, H_LINE_Y_BIAS: -0.06,
-      CONNECT_X_PAD: 8, LINE_STROKE_PX: 2.5,
+    const cfg = root.step2;
 
-      FONT_PT_CIRCLE: 8, FONT_PT_BOX: 8,
+    // ---- Compatibility: map older mobile-theme-style knobs into the new ones if present ----
+    if (cfg.top != null && cfg.M_SECTION_TOP == null) cfg.M_SECTION_TOP = cfg.top;
+    if (cfg.bottom != null && cfg.M_SECTION_BOTTOM == null)
+      cfg.M_SECTION_BOTTOM = cfg.bottom;
+    if (cfg.maxW != null && cfg.M_MAX_W == null) cfg.M_MAX_W = cfg.maxW;
+    if (cfg.sidePad != null && cfg.M_SIDE_PAD == null) cfg.M_SIDE_PAD = cfg.sidePad;
+
+    if (cfg.titleShow != null && cfg.TITLE_SHOW == null)
+      cfg.TITLE_SHOW = cfg.titleShow;
+    if (cfg.titlePt != null && cfg.M_TITLE_PT == null)
+      cfg.M_TITLE_PT = cfg.titlePt;
+    if (cfg.titleWeight != null && cfg.TITLE_WEIGHT == null)
+      cfg.TITLE_WEIGHT = cfg.titleWeight;
+    if (cfg.titleLetter != null && cfg.TITLE_LETTER_SPACING == null)
+      cfg.TITLE_LETTER_SPACING = cfg.titleLetter;
+
+    if (cfg.copyHpt != null && cfg.M_COPY_H_PT == null)
+      cfg.M_COPY_H_PT = cfg.copyHpt;
+    if (cfg.copyBodyPt != null && cfg.M_COPY_BODY_PT == null)
+      cfg.M_COPY_BODY_PT = cfg.copyBodyPt;
+    if (cfg.copyLine != null && cfg.COPY_LINE_HEIGHT == null)
+      cfg.COPY_LINE_HEIGHT = cfg.copyLine;
+
+    const dflt = {
+      // ===== DESKTOP knobs (same SVG layout system as Step 1) =====
+      BOX_W_RATIO: 0.10,
+      BOX_H_RATIO: 0.12,
+      GAP_RATIO: 0.035,
+      STACK_X_RATIO: 0.705,
+      STACK_TOP_RATIO: 0.21,
+      NUDGE_X: -230,
+      NUDGE_Y: -20,
+      RADIUS_RECT: 18,
+      RADIUS_PILL: 18,
+      RADIUS_OVAL: 999,
+      CIRCLE_DESKTOP_DIAM_RATIO: 0.10,
+      SHOW_LEFT_LINE: true,
+      SHOW_RIGHT_LINE: true,
+      LEFT_STOP_RATIO: 0.35,
+      RIGHT_MARGIN_PX: 16,
+      H_LINE_Y_BIAS: -0.06,
+      CONNECT_X_PAD: 8,
+      LINE_STROKE_PX: 2.5,
+
+      FONT_PT_OVAL: 8,
+      FONT_PT_PILL: 8,
+      FONT_PT_RECT: 8,
+      FONT_PT_CIRCLE: 8,
       FONT_WEIGHT_BOX: 525,
-      FONT_FAMILY_BOX: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-      FONT_LETTER_SPACING: 0.3, LINE_HEIGHT_EM: 1.15,
-      PADDING_X: 4, PADDING_Y: 4, UPPERCASE: false,
+      FONT_FAMILY_BOX:
+        'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      FONT_LETTER_SPACING: 0.3,
+      LINE_HEIGHT_EM: 1.15,
+      PADDING_X: 4,
+      PADDING_Y: 4,
+      UPPERCASE: false,
+
+      // Labels (Step 2 content)
+      LABEL_OVAL_1: "Deadline Window (T-48h \u2192 T-30d)",
+      LABEL_PILL_2: "Trigger Events (Launch/Expo/Recall)",
+      LABEL_CIRCLE_3: "Back-to-Back Search (last 72h)",
+      LABEL_RECT_4: "Ops Clock (PO due, stockouts)",
 
       // Title (desktop)
       TITLE_SHOW: true,
       TITLE_TEXT: "Right-Time Score",
-      TITLE_PT: 14, TITLE_WEIGHT: 700,
-      TITLE_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-      TITLE_OFFSET_X: 0, TITLE_OFFSET_Y: -28, TITLE_LETTER_SPACING: 0.2,
+      TITLE_PT: 14,
+      TITLE_WEIGHT: 700,
+      TITLE_FAMILY:
+        'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      TITLE_OFFSET_X: 0,
+      TITLE_OFFSET_Y: -28,
+      TITLE_LETTER_SPACING: 0.2,
 
-      // Left copy (desktop) — SEO-optimized
-      COPY_LEFT_RATIO: 0.035, COPY_TOP_RATIO: 0.18,
-      COPY_NUDGE_X: -20, COPY_NUDGE_Y: 0, COPY_MAX_W_PX: 300,
-      COPY_H_PT: 20, COPY_H_WEIGHT: 500, COPY_BODY_PT: 11, COPY_BODY_WEIGHT: 400,
-      COPY_FAMILY: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      // Copy block (desktop)
+      COPY_LEFT_RATIO: 0.035,
+      COPY_TOP_RATIO: 0.18,
+      COPY_NUDGE_X: -20,
+      COPY_NUDGE_Y: 0,
+      COPY_MAX_W_PX: 330,
+      COPY_H_PT: 20,
+      COPY_H_WEIGHT: 500,
+      COPY_BODY_PT: 11,
+      COPY_BODY_WEIGHT: 400,
+      COPY_FAMILY:
+        'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
       COPY_LINE_HEIGHT: 1.6,
 
       // Animation & colors
-      STROKE_PX: 2.8, GLOW_PX: 16, FLOW_SPEED_S: 6.5, REDUCE_MOTION: false,
-      COLOR_CYAN: "rgba(99,211,255,0.95)", COLOR_GOLD: "rgba(242,220,160,0.92)",
+      STROKE_PX: 2.8,
+      GLOW_PX: 16,
+      FLOW_SPEED_S: 6.5,
+      COLOR_CYAN: "rgba(99,211,255,0.95)",
+      COLOR_GOLD: "rgba(242,220,160,0.92)",
+      REDUCE_MOTION: false,
 
-      // Dots
-      DOTS_COUNT: 3, DOTS_SIZE_PX: 2.2, DOTS_GAP_PX: 26, DOTS_Y_OFFSET: 26,
+      // Dots (desktop SVG)
+      DOTS_COUNT: 3,
+      DOTS_SIZE_PX: 2.2,
+      DOTS_GAP_PX: 26,
+      DOTS_Y_OFFSET: 26,
 
-      // ===== MOBILE (phones only; desktop unaffected) =====
-      MOBILE_BREAKPOINT: 640,
-      M_MAX_W: 520, M_SIDE_PAD: 16, M_STACK_GAP: 14,
-      M_BOX_MIN_H: 56, M_BORDER_PX: 2, M_FONT_PT: 11,
-      M_TITLE_PT: 16, M_COPY_H_PT: 22, M_COPY_BODY_PT: 14,
-      M_SECTION_TOP: 40, M_SECTION_BOTTOM: 72,
+      // ===== MOBILE knobs (phones only; desktop unaffected) =====
+      MOBILE_BREAKPOINT: 640, // phones
+      M_MAX_W: 52,
+      M_SIDE_PAD: 38,
+      M_STACK_GAP: 18,
+      M_BOX_MIN_H: 52,
+      M_BORDER_PX: 2,
+      M_FONT_PT: 11,
+      M_TITLE_PT: 16,
+      M_COPY_H_PT: 22,
+      M_COPY_BODY_PT: 14,
+      M_SECTION_TOP: 72,      // distance from previous section
+      M_SECTION_BOTTOM: 84,
+      M_BOX_W_PCT: 78,        // width % of stack for boxes
+      M_CIRCLE_PCT: 52,       // circle width % of stack
+      M_BOX_PAD_X: 18,
+      M_BOX_PAD_Y: 10,
 
-      // Shape sizes
-      CIRCLE_DESKTOP_DIAM_RATIO: 0.10,
-      CIRCLE_MOBILE_DIAM_PX: 96,
-
-      // ===== Labels / copy (Time > everything) =====
-      TITLE_SEO: "Who needs packaging right now?",
-      COPY_SEO_HTML:
-        '<h3>Who needs packaging right now?</h3>\
-         <p>Our <b>Right-Time Score</b> finds buyers in an active window to purchase — not just “interested.”\
-         deadlines and events, last-72-hour Back-to-Back Search, operations clocks\
-         like PO due dates and stockouts - (and 118 more & counting). It’s built for queries like “<i>rush packaging</i>,” “<i>need boxes by Friday</i>,”\
-         and “<i>trade-show packaging ASAP</i>," and etc. We surface accounts where timing — not just loyalty — says “go now.”</p>',
-
-      // You asked for this exact shape order: OVAL → ROUNDED RECT → CIRCLE → RECTANGLE
-      ITEMS: [
-        { type: "oval",  label: "Deadline Window (T-48h → T-30d)",  heightRatio: 1.00, fontPt: null },
-        { type: "pill",  label: "Trigger Events (Launch/Expo/Recall)", heightRatio: 1.00, fontPt: null },
-        { type: "circle",label: "Back-to-Back Search (last 72h)", circleDiamRatio: null, fontPt: null },
-        { type: "rect",  label: "Ops Clock (PO due, stockouts)", heightRatio: 1.00, fontPt: null }
-      ]
+      // ===== TABLET knobs (<= T_BREAKPOINT; phones override below) =====
+      T_BREAKPOINT: 900,
+      T_MAX_W: 700,
+      T_SIDE_PAD: 24,
+      T_STACK_GAP: 18,
+      T_BOX_MIN_H: 60,
+      T_BORDER_PX: 2,
+      T_FONT_PT: 12,
+      T_TITLE_PT: 18,
+      T_COPY_H_PT: 24,
+      T_COPY_BODY_PT: 15,
+      T_SECTION_TOP: 56,
+      T_SECTION_BOTTOM: 88,
+      T_BOX_W_PCT: 72,
+      T_CIRCLE_PCT: 46,
+      T_BOX_PAD_X: 18,
+      T_BOX_PAD_Y: 12
     };
-    for (const k in dflt) if (!(k in root.step2)) root.step2[k] = dflt[k];
-    return root.step2;
+
+    for (const k in dflt) if (!(k in cfg)) cfg[k] = dflt[k];
+    return cfg;
   }
 
-  // -------------------- helpers --------------------
   const reduceMotion = () =>
-    (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) || C().REDUCE_MOTION;
+    (window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches) ||
+    C().REDUCE_MOTION;
 
+  // ---------------- DESKTOP SVG helpers (unchanged visuals) ----------------
   function makeFlowGradients(svg, { spanX, y }) {
     const defs = document.createElementNS(NS, "defs");
 
     const gFlow = document.createElementNS(NS, "linearGradient");
-    gFlow.id = "gradFlow"; gFlow.setAttribute("gradientUnits", "userSpaceOnUse");
-    gFlow.setAttribute("x1", 0); gFlow.setAttribute("y1", y);
-    gFlow.setAttribute("x2", spanX); gFlow.setAttribute("y2", y);
-    [["0%", C().COLOR_GOLD], ["35%", "rgba(255,255,255,.95)"], ["75%", C().COLOR_CYAN], ["100%", "rgba(99,211,255,.60)"]]
-      .forEach(([o, c]) => { const s = document.createElementNS(NS, "stop"); s.setAttribute("offset", o); s.setAttribute("stop-color", c); gFlow.appendChild(s); });
+    gFlow.id = "gradFlow";
+    gFlow.setAttribute("gradientUnits", "userSpaceOnUse");
+    gFlow.setAttribute("x1", 0);
+    gFlow.setAttribute("y1", y);
+    gFlow.setAttribute("x2", spanX);
+    gFlow.setAttribute("y2", y);
+    [
+      ["0%", C().COLOR_GOLD],
+      ["35%", "rgba(255,255,255,.95)"],
+      ["75%", C().COLOR_CYAN],
+      ["100%", "rgba(99,211,255,.60)"]
+    ].forEach(([o, c]) => {
+      const s = document.createElementNS(NS, "stop");
+      s.setAttribute("offset", o);
+      s.setAttribute("stop-color", c);
+      gFlow.appendChild(s);
+    });
     if (!reduceMotion() && C().FLOW_SPEED_S > 0) {
       const a1 = document.createElementNS(NS, "animateTransform");
-      a1.setAttribute("attributeName", "gradientTransform"); a1.setAttribute("type", "translate");
-      a1.setAttribute("from", "0 0"); a1.setAttribute("to", `${spanX} 0`);
-      a1.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a1.setAttribute("repeatCount", "indefinite");
+      a1.setAttribute("attributeName", "gradientTransform");
+      a1.setAttribute("type", "translate");
+      a1.setAttribute("from", "0 0");
+      a1.setAttribute("to", `${spanX} 0`);
+      a1.setAttribute("dur", `${C().FLOW_SPEED_S}s`);
+      a1.setAttribute("repeatCount", "indefinite");
       gFlow.appendChild(a1);
     }
     defs.appendChild(gFlow);
 
     const gTrail = document.createElementNS(NS, "linearGradient");
-    gTrail.id = "gradTrailFlow"; gTrail.setAttribute("gradientUnits", "userSpaceOnUse");
-    gTrail.setAttribute("x1", spanX); gTrail.setAttribute("y1", y);
-    gTrail.setAttribute("x2", spanX * 2); gTrail.setAttribute("y2", y);
-    [["0%", C().COLOR_GOLD], ["45%", C().COLOR_CYAN], ["100%", "rgba(99,211,255,.18)"]]
-      .forEach(([o, c]) => { const s = document.createElementNS(NS, "stop"); s.setAttribute("offset", o); s.setAttribute("stop-color", c); gTrail.appendChild(s); });
+    gTrail.id = "gradTrailFlow";
+    gTrail.setAttribute("gradientUnits", "userSpaceOnUse");
+    gTrail.setAttribute("x1", spanX);
+    gTrail.setAttribute("y1", y);
+    gTrail.setAttribute("x2", spanX * 2);
+    gTrail.setAttribute("y2", y);
+    [
+      ["0%", C().COLOR_GOLD],
+      ["45%", "rgba(99,211,255,.90)"],
+      ["100%", "rgba(99,211,255,.18)"]
+    ].forEach(([o, c]) => {
+      const s = document.createElementNS(NS, "stop");
+      s.setAttribute("offset", o);
+      s.setAttribute("stop-color", c);
+      gTrail.appendChild(s);
+    });
     if (!reduceMotion() && C().FLOW_SPEED_S > 0) {
       const a2 = document.createElementNS(NS, "animateTransform");
-      a2.setAttribute("attributeName", "gradientTransform"); a2.setAttribute("type", "translate");
-      a2.setAttribute("from", "0 0"); a2.setAttribute("to", `${spanX} 0`);
-      a2.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a2.setAttribute("repeatCount", "indefinite");
+      a2.setAttribute("attributeName", "gradientTransform");
+      a2.setAttribute("type", "translate");
+      a2.setAttribute("from", "0 0");
+      a2.setAttribute("to", `${spanX} 0`);
+      a2.setAttribute("dur", `${C().FLOW_SPEED_S}s`);
+      a2.setAttribute("repeatCount", "indefinite");
       gTrail.appendChild(a2);
     }
     defs.appendChild(gTrail);
@@ -119,19 +225,36 @@
   function makeSegmentGradient(svg, x1, y, x2) {
     const id = "seg_" + Math.random().toString(36).slice(2, 8);
     let defs = svg.querySelector("defs");
-    if (!defs) { defs = document.createElementNS(NS, "defs"); svg.appendChild(defs); }
+    if (!defs) {
+      defs = document.createElementNS(NS, "defs");
+      svg.appendChild(defs);
+    }
     const g = document.createElementNS(NS, "linearGradient");
     g.setAttribute("id", id);
     g.setAttribute("gradientUnits", "userSpaceOnUse");
-    g.setAttribute("x1", x1); g.setAttribute("y1", y);
-    g.setAttribute("x2", x2); g.setAttribute("y2", y);
-    [["0%", C().COLOR_GOLD], ["35%", "rgba(255,255,255,.95)"], ["75%", C().COLOR_CYAN], ["100%", "rgba(99,211,255,.60)"]]
-      .forEach(([o, c]) => { const s = document.createElementNS(NS, "stop"); s.setAttribute("offset", o); s.setAttribute("stop-color", c); g.appendChild(s); });
+    g.setAttribute("x1", x1);
+    g.setAttribute("y1", y);
+    g.setAttribute("x2", x2);
+    g.setAttribute("y2", y);
+    [
+      ["0%", C().COLOR_GOLD],
+      ["35%", "rgba(255,255,255,.95)"],
+      ["75%", C().COLOR_CYAN],
+      ["100%", "rgba(99,211,255,.60)"]
+    ].forEach(([o, c]) => {
+      const s = document.createElementNS(NS, "stop");
+      s.setAttribute("offset", o);
+      s.setAttribute("stop-color", c);
+      g.appendChild(s);
+    });
     if (!reduceMotion() && C().FLOW_SPEED_S > 0) {
       const a = document.createElementNS(NS, "animateTransform");
       a.setAttribute("attributeName", "gradientTransform");
-      a.setAttribute("type", "translate"); a.setAttribute("from", "0 0"); a.setAttribute("to", `${(x2 - x1)} 0`);
-      a.setAttribute("dur", `${C().FLOW_SPEED_S}s`); a.setAttribute("repeatCount", "indefinite");
+      a.setAttribute("type", "translate");
+      a.setAttribute("from", "0 0");
+      a.setAttribute("to", `${x2 - x1} 0`);
+      a.setAttribute("dur", `${C().FLOW_SPEED_S}s`);
+      a.setAttribute("repeatCount", "indefinite");
       g.appendChild(a);
     }
     defs.appendChild(g);
@@ -142,8 +265,8 @@
     const R = Math.min(r, Math.min(w, h) / 2);
     return `M ${x + R} ${y} H ${x + w - R} Q ${x + w} ${y} ${x + w} ${y + R}
             V ${y + h - R} Q ${x + w} ${y + h} ${x + w - R} ${y + h}
-            H ${x + R} Q ${x} ${y + h} ${x} ${y + h - R}
-            V ${y + R} Q ${x} ${y} ${x + R} ${y} Z`;
+            H ${x + R}   Q ${x}   ${y + h} ${x}   ${y + h - R}
+            V ${y + R}   Q ${x}   ${y}   ${x + R} ${y} Z`;
   };
 
   function addPath(svg, d, stroke, sw) {
@@ -161,97 +284,242 @@
 
   function addCircle(svg, cx, cy, r, stroke, sw) {
     const c = document.createElementNS(NS, "circle");
-    c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", r);
-    c.setAttribute("fill", "none"); c.setAttribute("stroke", stroke);
-    c.setAttribute("stroke-width", sw); c.setAttribute("class", "glow");
+    c.setAttribute("cx", cx);
+    c.setAttribute("cy", cy);
+    c.setAttribute("r", r);
+    c.setAttribute("fill", "none");
+    c.setAttribute("stroke", stroke);
+    c.setAttribute("stroke-width", sw);
+    c.setAttribute("class", "glow");
     svg.appendChild(c);
     return c;
   }
 
   function addFO(svg, x, y, w, h, html, styles) {
     const fo = document.createElementNS(NS, "foreignObject");
-    fo.setAttribute("x", x); fo.setAttribute("y", y);
-    fo.setAttribute("width", w); fo.setAttribute("height", h);
+    fo.setAttribute("x", x);
+    fo.setAttribute("y", y);
+    fo.setAttribute("width", w);
+    fo.setAttribute("height", h);
     const d = document.createElement("div");
     d.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-    Object.assign(d.style, {
-      width: "100%", height: "100%", display: "flex",
-      alignItems: "center", justifyContent: "center", textAlign: "center",
-      color: "#ddeaef", whiteSpace: "pre-wrap", wordBreak: "break-word", pointerEvents: "none"
-    }, styles || {});
+    Object.assign(
+      d.style,
+      {
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        color: "#ddeaef",
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+        pointerEvents: "none"
+      },
+      styles || {}
+    );
     d.innerHTML = html;
     fo.appendChild(d);
     svg.appendChild(fo);
   }
 
-  // -------------------- MOBILE DOM (phones; avoids nested scroll) --------------------
+  // ---------------- MOBILE / TABLET: DOM layout (no rail, no nested scroll) ----------------
   function ensureMobileCSS() {
-    const id = "p3m-style";
-    if (document.getElementById(id)) return;
+    const id = "p2m-style";
+    const existing = document.getElementById(id);
+    if (existing) existing.remove(); // allow fresh knobs to apply each redraw
 
-    const s = document.createElement("style"); s.id = id;
-    const bp = C().MOBILE_BREAKPOINT;
+    const s = document.createElement("style");
+    s.id = id;
+    const bpPhone = C().MOBILE_BREAKPOINT;
+    const bpTablet = C().T_BREAKPOINT;
     const cyan = C().COLOR_CYAN;
 
-    s.textContent =
-      "@media (max-width:" + bp + "px){" +
-      "  html,body,#section-process{overflow-x:hidden}" +
-      "  #section-process .p3m-wrap.s3{position:relative;margin:" + C().M_SECTION_TOP + "px auto " + C().M_SECTION_BOTTOM + "px !important;max-width:" + C().M_MAX_W + "px;padding:0 " + C().M_SIDE_PAD + "px 12px;z-index:0}" +
-      "  .p3m-title{text-align:center;color:#ddeaef;font:" + C().TITLE_WEIGHT + " " + C().M_TITLE_PT + "pt " + C().TITLE_FAMILY + ";letter-spacing:" + C().TITLE_LETTER_SPACING + "px;margin:6px 0 10px}" +
-      "  .p3m-copy{margin:0 auto 14px;color:#a7bacb}" +
-      "  .p3m-copy h3{margin:0 0 8px;color:#eaf0f6;font:600 " + C().M_COPY_H_PT + "px Newsreader, Georgia, serif}" +
-      "  .p3m-copy p{margin:0;font:400 " + C().M_COPY_BODY_PT + "px/1.55 Inter, system-ui}" +
-      "  .p3m-stack{display:flex;flex-direction:column;align-items:center;gap:" + C().M_STACK_GAP + "px}" +
-      "  .p3m-box{width:100%;min-height:" + C().M_BOX_MIN_H + "px;border:" + C().M_BORDER_PX + "px solid " + cyan + ";border-radius:14px;padding:10px 12px;display:flex;align-items:center;justify-content:center;text-align:center;color:#ddeaef;background:rgba(255,255,255,.02);font:" + C().FONT_WEIGHT_BOX + " " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:" + C().FONT_LETTER_SPACING + "px;line-height:" + C().LINE_HEIGHT_EM + "em}" +
-      "  .p3m-oval{border-radius:9999px}" +
-      "  .p3m-circle{width:" + C().CIRCLE_MOBILE_DIAM_PX + "px;height:" + C().CIRCLE_MOBILE_DIAM_PX + "px;border:" + C().M_BORDER_PX + "px solid " + cyan + ";border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.02);color:#ddeaef;text-align:center;padding:6px;font:" + C().FONT_WEIGHT_BOX + " " + C().M_FONT_PT + "pt " + C().FONT_FAMILY_BOX + ";letter-spacing:" + C().FONT_LETTER_SPACING + "px;line-height:" + C().LINE_HEIGHT_EM + "em}" +
-      "  .p3m-dots{display:flex;gap:14px;justify-content:center;padding-top:8px}" +
-      "  .p3m-dots i{width:6px;height:6px;border-radius:50%;background:" + cyan + ";display:inline-block}" +
-      "}";
+    s.textContent = `
+    /* Tablet & down */
+    @media (max-width:${bpTablet}px){
+      html,body,#section-process{overflow-x:hidden}
+
+      #section-process .p2m-wrap.s2{
+        position:relative;
+        margin:${C().T_SECTION_TOP}px auto ${C().T_SECTION_BOTTOM}px !important;
+        max-width:${C().T_MAX_W}px;
+        padding:0 ${C().T_SIDE_PAD}px 16px;
+        z-index:0;
+      }
+
+      #section-process .p2m-title{
+        text-align:left;
+        color:#ddeaef;
+        font:${C().TITLE_WEIGHT} ${C().T_TITLE_PT}pt ${C().TITLE_FAMILY};
+        letter-spacing:${C().TITLE_LETTER_SPACING}px;
+        margin:6px 0 10px;
+      }
+
+      #section-process .p2m-copy{
+        margin:0 0 14px;
+        color:#a7bacb;
+      }
+      #section-process .p2m-copy h3{
+        margin:0 0 8px;
+        color:#eaf0f6;
+        font:600 ${C().T_COPY_H_PT}px "Newsreader", Georgia, serif;
+      }
+      #section-process .p2m-copy p{
+        margin:0;
+        font:400 ${C().T_COPY_BODY_PT}px/1.55 Inter, system-ui;
+      }
+
+      #section-process .p2m-stack{
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:${C().T_STACK_GAP}px;
+      }
+
+      #section-process .p2m-box{
+        width:${C().T_BOX_W_PCT}%;
+        min-height:${C().T_BOX_MIN_H}px;
+        border:${C().T_BORDER_PX}px solid ${cyan};
+        border-radius:14px;
+        padding:${C().T_BOX_PAD_Y}px ${C().T_BOX_PAD_X}px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        color:#ddeaef;
+        background:rgba(255,255,255,.02);
+        font:${C().FONT_WEIGHT_BOX} ${C().T_FONT_PT}pt ${C().FONT_FAMILY_BOX};
+        letter-spacing:${C().FONT_LETTER_SPACING}px;
+        line-height:${C().LINE_HEIGHT_EM}em;
+      }
+      #section-process .p2m-box.oval{
+        border-radius:9999px;
+      }
+
+      #section-process .p2m-circle{
+        width:${C().T_CIRCLE_PCT}%;
+        aspect-ratio:1/1;
+        border:${C().T_BORDER_PX}px solid ${cyan};
+        border-radius:9999px;
+        background:rgba(255,255,255,.02);
+        margin-top:4px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        color:#ddeaef;
+        font:${C().FONT_WEIGHT_BOX} ${Math.max(8,(C().T_FONT_PT||12)-1)}pt ${C().FONT_FAMILY_BOX};
+        letter-spacing:${C().FONT_LETTER_SPACING}px;
+        line-height:${C().LINE_HEIGHT_EM}em;
+        padding:${C().T_BOX_PAD_Y}px ${C().T_BOX_PAD_X}px;
+      }
+
+      #section-process .p2m-dots{
+        display:flex;
+        justify-content:center;
+        gap:8px;
+        padding-top:8px;
+      }
+      #section-process .p2m-dots i{
+        width:6px;
+        height:6px;
+        border-radius:50%;
+        background:${cyan};
+        display:inline-block;
+      }
+    }
+
+    /* Phone overrides */
+    @media (max-width:${bpPhone}px){
+      #section-process .p2m-wrap.s2{
+        margin:${C().M_SECTION_TOP}px auto ${C().M_SECTION_BOTTOM}px !important;
+        max-width:${C().M_MAX_W}px;
+        padding:0 ${C().M_SIDE_PAD}px 16px;
+      }
+
+      #section-process .p2m-title{
+        font:${C().TITLE_WEIGHT} ${C().M_TITLE_PT}pt ${C().TITLE_FAMILY};
+      }
+
+      #section-process .p2m-copy h3{
+        font:600 ${C().M_COPY_H_PT}px "Newsreader", Georgia, serif;
+      }
+      #section-process .p2m-copy p{
+        font:400 ${C().M_COPY_BODY_PT}px/1.55 Inter, system-ui;
+      }
+
+      #section-process .p2m-stack{
+        gap:${C().M_STACK_GAP}px;
+      }
+
+      #section-process .p2m-box{
+        width:${C().M_BOX_W_PCT}%;
+        min-height:${C().M_BOX_MIN_H}px;
+        border:${C().M_BORDER_PX}px solid ${cyan};
+        padding:${C().M_BOX_PAD_Y}px ${C().M_BOX_PAD_X}px;
+        font:${C().FONT_WEIGHT_BOX} ${C().M_FONT_PT}pt ${C().FONT_FAMILY_BOX};
+      }
+
+      #section-process .p2m-circle{
+        width:${C().M_CIRCLE_PCT}%;
+        border:${C().M_BORDER_PX}px solid ${cyan};
+        font:${C().FONT_WEIGHT_BOX} ${Math.max(8, C().M_FONT_PT - 1)}pt ${C().FONT_FAMILY_BOX};
+        padding:${C().M_BOX_PAD_Y}px ${C().M_BOX_PAD_X}px;
+      }
+    }
+    `;
     document.head.appendChild(s);
   }
 
   function drawMobile(ctx) {
     ensureMobileCSS();
 
+    // Let the canvas flow with the page (prevents nested scroll)
     ctx.canvas.style.position = "relative";
     ctx.canvas.style.inset = "auto";
     ctx.canvas.style.pointerEvents = "auto";
 
     const wrap = document.createElement("div");
-    wrap.className = "p3m-wrap s3";
+    wrap.className = "p2m-wrap s2";
 
-    wrap.innerHTML =
-      // 1) copy block FIRST
-      '<div class="p3m-copy">' + C().COPY_SEO_HTML + "</div>" +
-      // 2) step title AFTER the copy
-      (C().TITLE_SHOW ? '<div class="p3m-title">' + C().TITLE_TEXT + "</div>" : "") +
-      // 3) boxes
-      '<div class="p3m-stack">' +
-      // 1) OVAL
-      '<div class="p3m-box p3m-oval">' + C().ITEMS[0].label + "</div>" +
-      // 2) ROUNDED RECT (pill)
-      '<div class="p3m-box">' + C().ITEMS[1].label + "</div>" +
-      // 3) CIRCLE
-      '<div class="p3m-circle">' + C().ITEMS[2].label + "</div>" +
-      // 4) RECT
-      '<div class="p3m-box">' + C().ITEMS[3].label + "</div>" +
-      '<div class="p3m-dots"><i></i><i></i><i></i></div>' +
-      "</div>";
+    const copyHTML = `
+      <h3>Who&rsquo;s needs packaging right now?</h3>
+      <p>Our <b>Right-Time Score</b> finds buyers in an active window to purchase &mdash; not just &ldquo;interested.&rdquo;
+      We blend deadlines and events, last-72-hour Back-to-Back Search, operations clocks like PO due dates and stockouts, and more,
+      then surface accounts where timing &mdash; not just loyalty &mdash; says &ldquo;go now.&rdquo;</p>
+    `;
+
+    wrap.innerHTML = `
+      ${C().TITLE_SHOW ? `<div class="p2m-title">${C().TITLE_TEXT}</div>` : ``}
+      <div class="p2m-copy">${copyHTML}</div>
+      <div class="p2m-stack">
+        <div class="p2m-box oval">${C().LABEL_OVAL_1}</div>
+        <div class="p2m-box">${C().LABEL_PILL_2}</div>
+        <div class="p2m-circle">${C().LABEL_CIRCLE_3}</div>
+        <div class="p2m-box">${C().LABEL_RECT_4}</div>
+        <div class="p2m-dots"><i></i><i></i><i></i></div>
+      </div>
+    `;
 
     ctx.canvas.appendChild(wrap);
   }
+  }
 
-  // -------------------- DESKTOP (keeps the same right-side scene style) --------------------
+  // ---------------- DESKTOP DRAW (original SVG scene for Step 2) ----------------
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx) {
     const b = ctx.bounds;
-    const isMobile =
-      (window.PROCESS_FORCE_MOBILE === true) || (window.innerWidth <= C().MOBILE_BREAKPOINT);
+    const isCompact =
+      window.PROCESS_FORCE_MOBILE === true ||
+      window.innerWidth <= C().T_BREAKPOINT;
 
-    if (isMobile) { drawMobile(ctx); return; }
+    if (isCompact) return drawMobile(ctx);
 
-    const W = b.width, H = Math.min(560, b.sH - 40);
+    // DESKTOP path: original SVG-style scene, but with Step 2 shapes/labels
+    const W = b.width;
+    const H = Math.min(560, b.sH - 40);
     const svg = document.createElementNS(NS, "svg");
     svg.style.position = "absolute";
     svg.style.left = b.left + "px";
@@ -268,66 +536,112 @@
     const gap = H * C().GAP_RATIO;
     let x = W * C().STACK_X_RATIO + C().NUDGE_X;
     let y = H * C().STACK_TOP_RATIO + C().NUDGE_Y;
-    const itemsDrawn = [];
+    const items = [];
 
-    // 1: OVAL
+    // 1) OVAL: Deadline Window (T-48h → T-30d)
     {
-      const h = boxH * (C().ITEMS[0].heightRatio || 1);
-      addPath(svg, rr(x, y, boxW, h, C().RADIUS_OVAL), "url(#gradFlow)", C().STROKE_PX);
-      addFO(svg, x, y, boxW, h, C().ITEMS[0].label, {
-        font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_BOX}pt ${C().FONT_FAMILY_BOX}`,
-        letterSpacing: `${C().FONT_LETTER_SPACING}px`, lineHeight: `${C().LINE_HEIGHT_EM}em`,
-        padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
-      });
-      itemsDrawn.push({ x, y, w: boxW, h }); y += h + gap;
+      const d = rr(x, y, boxW, boxH, 999);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(
+        svg,
+        x,
+        y,
+        boxW,
+        boxH,
+        C().LABEL_OVAL_1,
+        {
+          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_OVAL}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
+          lineHeight: `${C().LINE_HEIGHT_EM}em`,
+          textTransform: C().UPPERCASE ? "uppercase" : "none",
+          padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
+        }
+      );
+      items.push({ x, y, w: boxW, h: boxH });
+      y += boxH + gap;
     }
 
-    // 2: ROUNDED RECT (PILL)
+    // 2) PILL: Trigger Events (Launch/Expo/Recall)
     {
-      const h = boxH * (C().ITEMS[1].heightRatio || 1);
-      addPath(svg, rr(x, y, boxW, h, C().RADIUS_PILL), "url(#gradFlow)", C().STROKE_PX);
-      addFO(svg, x, y, boxW, h, C().ITEMS[1].label, {
-        font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_BOX}pt ${C().FONT_FAMILY_BOX}`,
-        letterSpacing: `${C().FONT_LETTER_SPACING}px`, lineHeight: `${C().LINE_HEIGHT_EM}em`,
-        padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
-      });
-      itemsDrawn.push({ x, y, w: boxW, h }); y += h + gap;
+      const d = rr(x, y, boxW, boxH, C().RADIUS_PILL);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(
+        svg,
+        x,
+        y,
+        boxW,
+        boxH,
+        C().LABEL_PILL_2,
+        {
+          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_PILL}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
+          lineHeight: `${C().LINE_HEIGHT_EM}em`,
+          textTransform: C().UPPERCASE ? "uppercase" : "none",
+          padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
+        }
+      );
+      items.push({ x, y, w: boxW, h: boxH });
+      y += boxH + gap;
     }
 
-    // 3: CIRCLE
+    // 3) CIRCLE: Back-to-Back Search (last 72h)
     {
-      const diam = (C().ITEMS[2].circleDiamRatio || C().CIRCLE_DESKTOP_DIAM_RATIO) * W;
+      const diam = C().CIRCLE_DESKTOP_DIAM_RATIO * W;
       const r = diam / 2;
       const cx = x + boxW / 2;
       const cy = y + r;
+
       addCircle(svg, cx, cy, r, "url(#gradFlow)", C().STROKE_PX);
-      addFO(svg, cx - r, cy - r, diam, diam, C().ITEMS[2].label, {
-        font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_CIRCLE}pt ${C().FONT_FAMILY_BOX}`,
-        letterSpacing: `${C().FONT_LETTER_SPACING}px`, lineHeight: `${C().LINE_HEIGHT_EM}em`,
-        padding: "3px 4px"
-      });
-      itemsDrawn.push({ x: cx - r, y: cy - r, w: diam, h: diam, cx, cy });
+      addFO(
+        svg,
+        cx - r,
+        cy - r,
+        diam,
+        diam,
+        C().LABEL_CIRCLE_3,
+        {
+          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_CIRCLE}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
+          lineHeight: `${C().LINE_HEIGHT_EM}em`,
+          textTransform: C().UPPERCASE ? "uppercase" : "none",
+          padding: "3px 4px"
+        }
+      );
+      items.push({ x: cx - r, y: cy - r, w: diam, h: diam });
       y += diam + gap;
     }
 
-    // 4: RECTANGLE
+    // 4) RECT: Ops Clock (PO due, stockouts)
     {
-      const h = boxH * (C().ITEMS[3].heightRatio || 1);
-      addPath(svg, rr(x, y, boxW, h, C().RADIUS_RECT), "url(#gradFlow)", C().STROKE_PX);
-      addFO(svg, x, y, boxW, h, C().ITEMS[3].label, {
-        font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_BOX}pt ${C().FONT_FAMILY_BOX}`,
-        letterSpacing: `${C().FONT_LETTER_SPACING}px`, lineHeight: `${C().LINE_HEIGHT_EM}em`,
-        padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
-      });
-      itemsDrawn.push({ x, y, w: boxW, h }); y += h + C().DOTS_Y_OFFSET;
+      const d = rr(x, y, boxW, boxH, C().RADIUS_RECT);
+      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addFO(
+        svg,
+        x,
+        y,
+        boxW,
+        boxH,
+        C().LABEL_RECT_4,
+        {
+          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_RECT}pt ${C().FONT_FAMILY_BOX}`,
+          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
+          lineHeight: `${C().LINE_HEIGHT_EM}em`,
+          textTransform: C().UPPERCASE ? "uppercase" : "none",
+          padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
+        }
+      );
+      items.push({ x, y, w: boxW, h: boxH });
+      y += boxH + C().DOTS_Y_OFFSET;
     }
 
     // dots
     if (C().DOTS_COUNT > 0) {
-      const centerX = x + boxW / 2; let dotY = y;
+      const centerX = x + boxW / 2;
+      let dotY = y;
       for (let i = 0; i < C().DOTS_COUNT; i++) {
         const c = document.createElementNS(NS, "circle");
-        c.setAttribute("cx", centerX); c.setAttribute("cy", dotY);
+        c.setAttribute("cx", centerX);
+        c.setAttribute("cy", dotY);
         c.setAttribute("r", C().DOTS_SIZE_PX);
         c.setAttribute("fill", C().COLOR_CYAN);
         c.setAttribute("class", "glow");
@@ -336,12 +650,12 @@
       }
     }
 
-    // Title
-    if (C().TITLE_SHOW) {
+    // title
+    if (C().TITLE_SHOW && items.length) {
       const t = document.createElementNS(NS, "text");
-      const topBox = itemsDrawn[0];
-      t.setAttribute("x", (topBox.x + topBox.w / 2) + C().TITLE_OFFSET_X);
-      t.setAttribute("y", (topBox.y) + C().TITLE_OFFSET_Y);
+      const topBox = items[0];
+      t.setAttribute("x", topBox.x + topBox.w / 2 + C().TITLE_OFFSET_X);
+      t.setAttribute("y", topBox.y + C().TITLE_OFFSET_Y);
       t.setAttribute("text-anchor", "middle");
       t.setAttribute("fill", "#ddeaef");
       t.setAttribute("font-family", C().TITLE_FAMILY);
@@ -352,20 +666,22 @@
       svg.appendChild(t);
     }
 
-    // Horizontal rails from the first item
-    if (itemsDrawn.length) {
-      const first = itemsDrawn[0];
+    // rails
+    if (items.length) {
+      const first = items[0];
       const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
+
       if (C().SHOW_LEFT_LINE) {
         const xs = W * Math.max(0, Math.min(1, C().LEFT_STOP_RATIO));
-        const xe = itemsDrawn[0].x - C().CONNECT_X_PAD;
+        const xe = first.x - C().CONNECT_X_PAD;
         if (xe > xs) {
           const stroke = makeSegmentGradient(svg, xs, attachY, xe);
           addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
         }
       }
+
       if (C().SHOW_RIGHT_LINE) {
-        const xs = itemsDrawn[0].x + itemsDrawn[0].w + C().CONNECT_X_PAD;
+        const xs = first.x + first.w + C().CONNECT_X_PAD;
         const xe = W - C().RIGHT_MARGIN_PX;
         if (xe > xs) {
           const stroke = makeSegmentGradient(svg, xs, attachY, xe);
@@ -374,26 +690,41 @@
       }
     }
 
-    // Vertical connectors
-    for (let i = 0; i < itemsDrawn.length - 1; i++) {
-      const a = itemsDrawn[i], b2 = itemsDrawn[i + 1];
+    // vertical connectors
+    for (let i = 0; i < items.length - 1; i++) {
+      const a = items[i];
+      const b2 = items[i + 1];
       const xMid = a.x + a.w / 2;
       const y1 = a.y + a.h;
       const y2 = b2.y;
       const pad = Math.max(2, C().STROKE_PX);
-      addPath(svg, `M ${xMid} ${y1 + pad} V ${y2 - pad}`, "url(#gradTrailFlow)", C().LINE_STROKE_PX);
+      addPath(
+        svg,
+        `M ${xMid} ${y1 + pad} V ${y2 - pad}`,
+        "url(#gradTrailFlow)",
+        C().LINE_STROKE_PX
+      );
     }
 
-    // Left copy (SEO)
+    // Copy block (desktop)
     const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
     const top = b.top + H * C().COPY_TOP_RATIO + C().COPY_NUDGE_Y;
+    const html = `
+      <h3>Who&rsquo;s needs packaging right now?</h3>
+      <p>Our <b>Right-Time Score</b> finds buyers in an active window to purchase &mdash; not just &ldquo;interested.&rdquo;
+      We blend deadlines and events, last-72-hour Back-to-Back Search, operations clocks like PO due dates and stockouts, and more,
+      then surface accounts where timing &mdash; not just loyalty &mdash; says &ldquo;go now.&rdquo;</p>
+    `;
     if (typeof ctx.mountCopy === "function") {
-      const el = ctx.mountCopy({ top, left, html: C().COPY_SEO_HTML });
+      const el = ctx.mountCopy({ top, left, html });
       el.style.maxWidth = `${C().COPY_MAX_W_PX}px`;
       el.style.fontFamily = C().COPY_FAMILY;
-      const h3 = el.querySelector("h3"); if (h3) h3.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
-      const p = el.querySelector("p"); if (p) p.style.cssText =
-        `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
+      const h3 = el.querySelector("h3");
+      if (h3)
+        h3.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
+      const p = el.querySelector("p");
+      if (p)
+        p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
     }
   };
 })();
