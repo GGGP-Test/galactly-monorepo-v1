@@ -181,11 +181,11 @@
         },
 
         // circle width % (circle tile)
-        circlePct: 25,
+        circlePct: 15,
 
         // diamond-specific knobs
         diamond: {
-          widthPct: 20,  // width of rotated diamond container
+          widthPct: 10,  // width of rotated diamond container
           border: 2,
           labelPt: 8,
           pad: 10,
