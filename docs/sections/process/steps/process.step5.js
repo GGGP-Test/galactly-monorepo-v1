@@ -119,7 +119,7 @@
       M_COPY_BODY_PT: 14,
 
       // Global phone scaler — shrink whole SVG as a unit (0.5–1.0)
-      M_SCALE: 1,
+      M_SCALE: 0.7,
 
       M_COL_GAP_RATIO: 0.09,
       M_COL_W_RATIO: null,
