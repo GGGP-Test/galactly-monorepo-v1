@@ -191,7 +191,7 @@
 
         // dots row
         dots: {
-          show: true,
+          show: false,
           count: 3,
           size: 6,
           gap: 8,
