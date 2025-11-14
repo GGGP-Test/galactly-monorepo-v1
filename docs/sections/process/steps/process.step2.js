@@ -505,7 +505,7 @@
 
     ctx.canvas.appendChild(wrap);
   }
-  }
+}
 
   // ---------------- DESKTOP DRAW (original SVG scene for Step 2) ----------------
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
