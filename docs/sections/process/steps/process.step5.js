@@ -119,7 +119,7 @@
       M_COPY_BODY_PT: 14,
 
       // Global phone scaler — shrink whole SVG as a unit (0.5–1.0)
-      M_SCALE: 0.7,
+      M_SCALE: 0.9,
 
       M_COL_GAP_RATIO: 0.09,
       M_COL_W_RATIO: null,
@@ -152,7 +152,7 @@
       M_HEAD_MAX_WIDTH_PCT: null,
       M_HEAD_BASELINE_BIAS: null,
       M_TITLE_OFFSET_X: null,
-      M_TITLE_OFFSET_Y: 150,
+      M_TITLE_OFFSET_Y: 250,
 
       // mobile-specific padding from last item to first dot
       M_DOTS_TOP_PAD: 30,
