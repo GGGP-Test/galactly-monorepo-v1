@@ -3,34 +3,11 @@
   const STEP = 2;
   const NS = "http://www.w3.org/2000/svg";
 
-  // ---------------- CONFIG (desktop unchanged; tablet/phone via step2 knobs) ----------------
+  // ---------------- CONFIG: DESKTOP (unchanged) ----------------
   function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step2 = root.step2 || {};
     const cfg = root.step2;
-
-    // ---- Compatibility: map older mobile-theme-style knobs into the new ones if present ----
-    if (cfg.top != null && cfg.M_SECTION_TOP == null) cfg.M_SECTION_TOP = cfg.top;
-    if (cfg.bottom != null && cfg.M_SECTION_BOTTOM == null)
-      cfg.M_SECTION_BOTTOM = cfg.bottom;
-    if (cfg.maxW != null && cfg.M_MAX_W == null) cfg.M_MAX_W = cfg.maxW;
-    if (cfg.sidePad != null && cfg.M_SIDE_PAD == null) cfg.M_SIDE_PAD = cfg.sidePad;
-
-    if (cfg.titleShow != null && cfg.TITLE_SHOW == null)
-      cfg.TITLE_SHOW = cfg.titleShow;
-    if (cfg.titlePt != null && cfg.M_TITLE_PT == null)
-      cfg.M_TITLE_PT = cfg.titlePt;
-    if (cfg.titleWeight != null && cfg.TITLE_WEIGHT == null)
-      cfg.TITLE_WEIGHT = cfg.titleWeight;
-    if (cfg.titleLetter != null && cfg.TITLE_LETTER_SPACING == null)
-      cfg.TITLE_LETTER_SPACING = cfg.titleLetter;
-
-    if (cfg.copyHpt != null && cfg.M_COPY_H_PT == null)
-      cfg.M_COPY_H_PT = cfg.copyHpt;
-    if (cfg.copyBodyPt != null && cfg.M_COPY_BODY_PT == null)
-      cfg.M_COPY_BODY_PT = cfg.copyBodyPt;
-    if (cfg.copyLine != null && cfg.COPY_LINE_HEIGHT == null)
-      cfg.COPY_LINE_HEIGHT = cfg.copyLine;
 
     const dflt = {
       // ===== DESKTOP knobs (same SVG layout system as Step 1) =====
@@ -109,47 +86,98 @@
       DOTS_COUNT: 3,
       DOTS_SIZE_PX: 2.2,
       DOTS_GAP_PX: 26,
-      DOTS_Y_OFFSET: 26,
-
-      // ===== MOBILE knobs (phones only; desktop unaffected) =====
-      MOBILE_BREAKPOINT: 640, // phones
-      M_MAX_W: 520,
-      M_SIDE_PAD: 20,
-      M_STACK_GAP: 10,
-      M_BOX_MIN_H: 15,
-      M_BORDER_PX: 2,
-      M_FONT_PT: 8,
-      M_TITLE_PT: 16,
-      M_COPY_H_PT: 22,
-      M_COPY_BODY_PT: 14,
-      M_SECTION_TOP: 72,      // distance from previous section
-      M_SECTION_BOTTOM: 84,
-      M_BOX_W_PCT: 50,        // width % of stack for boxes
-      M_CIRCLE_PCT: 27,       // circle width % of stack
-      M_BOX_PAD_X: 42,
-      M_BOX_PAD_Y: 10,
-
-      // ===== TABLET knobs (<= T_BREAKPOINT; phones override below) =====
-      T_BREAKPOINT: 900,
-      T_MAX_W: 700,
-      T_SIDE_PAD: 24,
-      T_STACK_GAP: 18,
-      T_BOX_MIN_H: 60,
-      T_BORDER_PX: 2,
-      T_FONT_PT: 12,
-      T_TITLE_PT: 18,
-      T_COPY_H_PT: 24,
-      T_COPY_BODY_PT: 15,
-      T_SECTION_TOP: 56,
-      T_SECTION_BOTTOM: 88,
-      T_BOX_W_PCT: 72,
-      T_CIRCLE_PCT: 46,
-      T_BOX_PAD_X: 18,
-      T_BOX_PAD_Y: 12
+      DOTS_Y_OFFSET: 26
     };
 
     for (const k in dflt) if (!(k in cfg)) cfg[k] = dflt[k];
     return cfg;
+  }
+
+  // ---------------- CONFIG: MOBILE STEP 2 (mirrors mobile.step1 knobs) ----------------
+  function M() {
+    const root   = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
+    const mobile = (root.mobile = root.mobile || {});
+
+    // Only create defaults if the user hasn't defined mobile.step2 in process.js
+    if (!mobile.step2) {
+      mobile.step2 = {
+        useTheme: true,
+
+        // whole-section placement
+        top: 50,
+        bottom: 80,
+        maxW: 520,
+        sidePad: 20,
+        nudgeX: 0,
+        nudgeY: 0,
+
+        // small title: "Right-Time Score"
+        titleShow: true,
+        titlePt: 11,
+        titleWeight: 700,
+        titleLetter: 0.2,
+        titleAlign: "center",
+        titleMarginTop: 10,      // gap from copy → step title
+        titleMarginBottom: 12,   // gap from step title → boxes
+        titleNudgeX: 42,
+        titleNudgeY: 10,
+
+        // h3 + body: "Who needs packaging right now?"
+        copyHpt: 22,
+        copyBodyPt: 14,
+        copyLine: 1.6,
+        copyColor: "#a7bacb",
+        copyHColor: "#eaf0f6",
+        copyGapBottom: 14,       // gap from copy → step title
+        copyHGap: 8,             // gap between h3 and paragraph
+        copyHTML: null,          // optional custom HTML override
+
+        // gap between the boxes themselves
+        stackGap: 10,
+
+        // ALL rectangular / pill boxes in this step
+        box: {
+          widthPct: 50,
+          minH: 15,
+          padX: 12,
+          padY: 10,
+          border: 2,
+          radius: 18,
+          fontPt: 8,
+          fontWeight: 525,
+          letter: 0.3,
+          lineEm: 1.2,
+          align: "center",
+          nudgeX: 42,   // positive = push boxes to the right
+          nudgeY: 10    // positive = push boxes down
+        },
+
+        // "Circle" sizing knob for Back-to-Back Search
+        circlePct: 27,
+
+        // three dots under the stack
+        dots: {
+          show: true,
+          count: 3,
+          size: 6,
+          gap: 8,
+          padTop: 4
+        },
+
+        // per-shape overrides (all REAL keys)
+        overrides: {
+          oval1:   { },            // Deadline Window
+          pill2:   { },            // Trigger Events
+          circle3: { },            // Back-to-Back Search
+          rect4:   { }             // Ops Clock
+        },
+
+        // draw order top → bottom
+        order: ["oval1", "pill2", "circle3", "rect4"]
+      };
+    }
+
+    return mobile.step2;
   }
 
   const reduceMotion = () =>
@@ -323,186 +351,157 @@
     fo.appendChild(d);
     svg.appendChild(fo);
   }
+  
+  // ---------------- MOBILE DOM LAYOUT (Step 2, uses same theme as step1) ----------------
+  function applyBoxStyles2(node, base, ov) {
+    const b = Object.assign({}, base || {}, ov || {});
+    node.style.width       = (b.widthPct != null ? `${b.widthPct}%` : "100%");
+    node.style.minHeight   = `${b.minH ?? 56}px`;
+    node.style.padding     = `${b.padY ?? 10}px ${b.padX ?? 12}px`;
+    node.style.borderWidth = `${b.border ?? 2}px`;
+    node.style.borderStyle = "solid";
+    node.style.borderColor = "rgba(99,211,255,.95)";
+    node.style.borderRadius= `${b.radius ?? 14}px`;
+    node.style.font        =
+      `${b.fontWeight ?? 525} ${b.fontPt ?? 11}pt ` +
+      'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    node.style.letterSpacing = `${b.letter ?? 0.3}px`;
+    node.style.lineHeight    = `${b.lineEm ?? 1.15}em`;
+    node.style.textAlign     = b.align || "center";
 
-  // ---------------- MOBILE / TABLET: DOM layout (no rail, no nested scroll) ----------------
-  function ensureMobileCSS() {
-    const id = "p2m-style";
-    const existing = document.getElementById(id);
-    if (existing) existing.remove(); // allow fresh knobs to apply each redraw
-
-    const s = document.createElement("style");
-    s.id = id;
-    const bpPhone = C().MOBILE_BREAKPOINT;
-    const bpTablet = C().T_BREAKPOINT;
-    const cyan = C().COLOR_CYAN;
-
-    s.textContent = `
-    /* Tablet & down */
-    @media (max-width:${bpTablet}px){
-      html,body,#section-process{overflow-x:hidden}
-
-      #section-process .p2m-wrap.s2{
-        position:relative;
-        margin:${C().T_SECTION_TOP}px auto ${C().T_SECTION_BOTTOM}px !important;
-        max-width:${C().T_MAX_W}px;
-        padding:0 ${C().T_SIDE_PAD}px 16px;
-        z-index:0;
-      }
-
-      #section-process .p2m-title{
-        text-align:left;
-        color:#ddeaef;
-        font:${C().TITLE_WEIGHT} ${C().T_TITLE_PT}pt ${C().TITLE_FAMILY};
-        letter-spacing:${C().TITLE_LETTER_SPACING}px;
-        margin:6px 0 10px;
-      }
-
-      #section-process .p2m-copy{
-        margin:0 0 14px;
-        color:#a7bacb;
-      }
-      #section-process .p2m-copy h3{
-        margin:0 0 8px;
-        color:#eaf0f6;
-        font:600 ${C().T_COPY_H_PT}px "Newsreader", Georgia, serif;
-      }
-      #section-process .p2m-copy p{
-        margin:0;
-        font:400 ${C().T_COPY_BODY_PT}px/1.55 Inter, system-ui;
-      }
-
-      #section-process .p2m-stack{
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        gap:${C().T_STACK_GAP}px;
-      }
-
-      #section-process .p2m-box{
-        width:${C().T_BOX_W_PCT}%;
-        min-height:${C().T_BOX_MIN_H}px;
-        border:${C().T_BORDER_PX}px solid ${cyan};
-        border-radius:14px;
-        padding:${C().T_BOX_PAD_Y}px ${C().T_BOX_PAD_X}px;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        text-align:center;
-        color:#ddeaef;
-        background:rgba(255,255,255,.02);
-        font:${C().FONT_WEIGHT_BOX} ${C().T_FONT_PT}pt ${C().FONT_FAMILY_BOX};
-        letter-spacing:${C().FONT_LETTER_SPACING}px;
-        line-height:${C().LINE_HEIGHT_EM}em;
-      }
-      #section-process .p2m-box.oval{
-        border-radius:9999px;
-      }
-
-      #section-process .p2m-circle{
-        width:${C().T_CIRCLE_PCT}%;
-        aspect-ratio:1/1;
-        border:${C().T_BORDER_PX}px solid ${cyan};
-        border-radius:9999px;
-        background:rgba(255,255,255,.02);
-        margin-top:4px;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        text-align:center;
-        color:#ddeaef;
-        font:${C().FONT_WEIGHT_BOX} ${Math.max(8,(C().T_FONT_PT||12)-1)}pt ${C().FONT_FAMILY_BOX};
-        letter-spacing:${C().FONT_LETTER_SPACING}px;
-        line-height:${C().LINE_HEIGHT_EM}em;
-        padding:${C().T_BOX_PAD_Y}px ${C().T_BOX_PAD_X}px;
-      }
-
-      #section-process .p2m-dots{
-        display:flex;
-        justify-content:center;
-        gap:8px;
-        padding-top:8px;
-      }
-      #section-process .p2m-dots i{
-        width:6px;
-        height:6px;
-        border-radius:50%;
-        background:${cyan};
-        display:inline-block;
-      }
+    const nx = b.nudgeX || 0;
+    const ny = b.nudgeY || 0;
+    if (nx || ny) {
+      node.style.transform = `translate(${nx}px, ${ny}px)`;
     }
-
-    /* Phone overrides */
-    @media (max-width:${bpPhone}px){
-      #section-process .p2m-wrap.s2{
-        margin:${C().M_SECTION_TOP}px auto ${C().M_SECTION_BOTTOM}px !important;
-        max-width:${C().M_MAX_W}px;
-        padding:0 ${C().M_SIDE_PAD}px 16px;
-      }
-
-      #section-process .p2m-title{
-        font:${C().TITLE_WEIGHT} ${C().M_TITLE_PT}pt ${C().TITLE_FAMILY};
-      }
-
-      #section-process .p2m-copy h3{
-        font:600 ${C().M_COPY_H_PT}px "Newsreader", Georgia, serif;
-      }
-      #section-process .p2m-copy p{
-        font:400 ${C().M_COPY_BODY_PT}px/1.55 Inter, system-ui;
-      }
-
-      #section-process .p2m-stack{
-        gap:${C().M_STACK_GAP}px;
-      }
-
-      #section-process .p2m-box{
-        width:${C().M_BOX_W_PCT}%;
-        min-height:${C().M_BOX_MIN_H}px;
-        border:${C().M_BORDER_PX}px solid ${cyan};
-        padding:${C().M_BOX_PAD_Y}px ${C().M_BOX_PAD_X}px;
-        font:${C().FONT_WEIGHT_BOX} ${C().M_FONT_PT}pt ${C().FONT_FAMILY_BOX};
-      }
-
-      #section-process .p2m-circle{
-        width:${C().M_CIRCLE_PCT}%;
-        border:${C().M_BORDER_PX}px solid ${cyan};
-        font:${C().FONT_WEIGHT_BOX} ${Math.max(8, C().M_FONT_PT - 1)}pt ${C().FONT_FAMILY_BOX};
-        padding:${C().M_BOX_PAD_Y}px ${C().M_BOX_PAD_X}px;
-      }
-    }
-    `;
-    document.head.appendChild(s);
   }
 
   function drawMobile(ctx) {
-    ensureMobileCSS();
+    const cfg = C();
+    const m   = M();
 
-    // Let the canvas flow with the page (prevents nested scroll)
-    ctx.canvas.style.position = "relative";
-    ctx.canvas.style.inset = "auto";
-    ctx.canvas.style.pointerEvents = "auto";
-
+    // canvas is already set up for mobile in process.js
     const wrap = document.createElement("div");
-    wrap.className = "p2m-wrap s2";
+    wrap.className = "mstep mstep2";
+    wrap.style.marginTop    = `${m.top ?? 50}px`;
+    wrap.style.marginBottom = `${m.bottom ?? 80}px`;
+    wrap.style.maxWidth     = `${m.maxW ?? 520}px`;
+    wrap.style.padding      = `0 ${m.sidePad ?? 20}px`;
+    wrap.style.transform    = `translate(${m.nudgeX ?? 0}px, ${m.nudgeY ?? 0}px)`;
 
-    const copyHTML = `
-      <h3>Who&rsquo;s needs packaging right now?</h3>
-      <p>Our <b>Right-Time Score</b> finds buyers in an active window to purchase &mdash; not just &ldquo;interested.&rdquo;
-      We blend deadlines and events, last-72-hour Back-to-Back Search, operations clocks like PO due dates and stockouts, and more,
-      then surface accounts where timing &mdash; not just loyalty &mdash; says &ldquo;go now.&rdquo;</p>
-    `;
+    // 1) COPY BLOCK FIRST: "Who needs packaging right now?" + body
+    const copy = document.createElement("div");
+    copy.className = "mstep-copy";
+    copy.style.marginBottom = `${m.copyGapBottom ?? 14}px`;
 
-    wrap.innerHTML = `
-      ${C().TITLE_SHOW ? `<div class="p2m-title">${C().TITLE_TEXT}</div>` : ``}
-      <div class="p2m-copy">${copyHTML}</div>
-      <div class="p2m-stack">
-        <div class="p2m-box oval">${C().LABEL_OVAL_1}</div>
-        <div class="p2m-box">${C().LABEL_PILL_2}</div>
-        <div class="p2m-circle">${C().LABEL_CIRCLE_3}</div>
-        <div class="p2m-box">${C().LABEL_RECT_4}</div>
-        <div class="p2m-dots"><i></i><i></i><i></i></div>
-      </div>
-    `;
+    if (m.copyHTML) {
+      copy.innerHTML = m.copyHTML;
+    } else {
+      const hGap = m.copyHGap ?? 8;
+      copy.innerHTML = `
+        <h3 style="margin:0 0 ${hGap}px; color:${m.copyHColor ?? "#eaf0f6"};
+                   font:600 ${(m.copyHpt ?? 22)}px 'Newsreader', Georgia, serif;">
+          Who needs packaging right now?
+        </h3>
+        <p style="margin:0; color:${m.copyColor ?? "#a7bacb"};
+                  font:400 ${(m.copyBodyPt ?? 14)}px/${(m.copyLine ?? 1.55)} Inter, system-ui;">
+          Our <b>Right-Time Score</b> finds buyers in an active window to purchase &mdash; not just &ldquo;interested.&rdquo;
+          We blend deadlines and events, last-72-hour Back-to-Back Search, operations clocks like PO due dates and stockouts, and more,
+          then surface accounts where timing &mdash; not just loyalty &mdash; says &ldquo;go now.&rdquo;
+        </p>
+      `;
+    }
+    wrap.appendChild(copy);
 
+    // 2) STEP TITLE AFTER COPY: "Right-Time Score" above the boxes
+    if (m.titleShow !== false) {
+      const t = document.createElement("div");
+      t.className = "mstep-title";
+      t.textContent = cfg.TITLE_TEXT || "Right-Time Score";
+      t.style.textAlign     = m.titleAlign || "center";
+      t.style.fontWeight    = String(m.titleWeight ?? 700);
+      t.style.fontSize      = `${m.titlePt ?? 11}pt`;
+      t.style.letterSpacing = `${m.titleLetter ?? 0.2}px`;
+      t.style.marginTop     = `${m.titleMarginTop ?? 10}px`;
+      t.style.marginBottom  = `${m.titleMarginBottom ?? 12}px`;
+      const tNx = m.titleNudgeX ?? 0;
+      const tNy = m.titleNudgeY ?? 0;
+      if (tNx || tNy) {
+        t.style.transform = `translate(${tNx}px, ${tNy}px)`;
+      }
+      wrap.appendChild(t);
+    }
+
+    // 3) BOX STACK
+    const stack = document.createElement("div");
+    stack.className = "mstack";
+    stack.style.gap = `${m.stackGap ?? 10}px`;
+
+    const labels = {
+      oval1:   cfg.LABEL_OVAL_1,
+      pill2:   cfg.LABEL_PILL_2,
+      circle3: cfg.LABEL_CIRCLE_3,
+      rect4:   cfg.LABEL_RECT_4
+    };
+
+    const order   = Array.isArray(m.order) ? m.order : ["oval1", "pill2", "circle3", "rect4"];
+    const baseBox = m.box || {};
+    const OVR     = m.overrides || {};
+
+    for (const key of order) {
+      const label = labels[key];
+      if (!label) continue;
+
+      if (key === "circle3") {
+        // circular pill
+        const circle = document.createElement("div");
+        circle.className = "mbox circle";
+        circle.textContent = label;
+
+        const ov = Object.assign(
+          {
+            widthPct: m.circlePct ?? 27,
+            radius: 9999
+          },
+          OVR.circle3 || {}
+        );
+
+        applyBoxStyles2(circle, baseBox, ov);
+        circle.style.aspectRatio = "1 / 1";
+        stack.appendChild(circle);
+      } else {
+        // rectangular / pill boxes
+        const box = document.createElement("div");
+        const isPill = key === "oval1" || key === "pill2";
+        box.className = "mbox" + (isPill ? " oval" : "");
+        box.textContent = label;
+
+        const extra = isPill ? { radius: 9999 } : {};
+        const ov = Object.assign({}, extra, OVR[key] || {});
+        applyBoxStyles2(box, baseBox, ov);
+        stack.appendChild(box);
+      }
+    }
+
+    // 4) Dots row under stack
+    const dots = m.dots || {};
+    if (dots.show !== false) {
+      const row = document.createElement("div");
+      row.className = "mdots";
+      row.style.gap       = `${dots.gap ?? 8}px`;
+      row.style.paddingTop= `${dots.padTop ?? 4}px`;
+      const n = Math.max(0, dots.count ?? 3);
+      for (let i = 0; i < n; i++) {
+        const dot = document.createElement("i");
+        const size = `${dots.size ?? 6}px`;
+        dot.style.width  = size;
+        dot.style.height = size;
+        row.appendChild(dot);
+      }
+      stack.appendChild(row);
+    }
+
+    wrap.appendChild(stack);
     ctx.canvas.appendChild(wrap);
   }
 
@@ -510,11 +509,20 @@
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx) {
     const b = ctx.bounds;
+
+    const mobileBP =
+      (window.PROCESS_CONFIG &&
+        window.PROCESS_CONFIG.mobile &&
+        window.PROCESS_CONFIG.mobile.BP) || 640;
+
     const isCompact =
       window.PROCESS_FORCE_MOBILE === true ||
-      window.innerWidth <= C().T_BREAKPOINT;
+      window.innerWidth <= mobileBP;
 
-    if (isCompact) return drawMobile(ctx);
+    if (isCompact) {
+      drawMobile(ctx);
+      return;
+    }
 
     // DESKTOP path: original SVG-style scene, but with Step 2 shapes/labels
     const W = b.width;
@@ -532,7 +540,7 @@
 
     const boxW = W * C().BOX_W_RATIO;
     const boxH = H * C().BOX_H_RATIO;
-    const gap = H * C().GAP_RATIO;
+    const gap  = H * C().GAP_RATIO;
     let x = W * C().STACK_X_RATIO + C().NUDGE_X;
     let y = H * C().STACK_TOP_RATIO + C().NUDGE_Y;
     const items = [];
@@ -586,9 +594,9 @@
     // 3) CIRCLE: Back-to-Back Search (last 72h)
     {
       const diam = C().CIRCLE_DESKTOP_DIAM_RATIO * W;
-      const r = diam / 2;
-      const cx = x + boxW / 2;
-      const cy = y + r;
+      const r    = diam / 2;
+      const cx   = x + boxW / 2;
+      const cy   = y + r;
 
       addCircle(svg, cx, cy, r, "url(#gradFlow)", C().STROKE_PX);
       addFO(
@@ -667,7 +675,7 @@
 
     // rails
     if (items.length) {
-      const first = items[0];
+      const first   = items[0];
       const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
 
       if (C().SHOW_LEFT_LINE) {
@@ -691,12 +699,12 @@
 
     // vertical connectors
     for (let i = 0; i < items.length - 1; i++) {
-      const a = items[i];
+      const a  = items[i];
       const b2 = items[i + 1];
       const xMid = a.x + a.w / 2;
-      const y1 = a.y + a.h;
-      const y2 = b2.y;
-      const pad = Math.max(2, C().STROKE_PX);
+      const y1   = a.y + a.h;
+      const y2   = b2.y;
+      const pad  = Math.max(2, C().STROKE_PX);
       addPath(
         svg,
         `M ${xMid} ${y1 + pad} V ${y2 - pad}`,
@@ -707,23 +715,27 @@
 
     // Copy block (desktop)
     const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
-    const top = b.top + H * C().COPY_TOP_RATIO + C().COPY_NUDGE_Y;
+    const top  = b.top + H * C().COPY_TOP_RATIO + C().COPY_NUDGE_Y;
     const html = `
-      <h3>Who&rsquo;s needs packaging right now?</h3>
+      <h3>Who needs packaging right now?</h3>
       <p>Our <b>Right-Time Score</b> finds buyers in an active window to purchase &mdash; not just &ldquo;interested.&rdquo;
       We blend deadlines and events, last-72-hour Back-to-Back Search, operations clocks like PO due dates and stockouts, and more,
       then surface accounts where timing &mdash; not just loyalty &mdash; says &ldquo;go now.&rdquo;</p>
     `;
     if (typeof ctx.mountCopy === "function") {
       const el = ctx.mountCopy({ top, left, html });
-      el.style.maxWidth = `${C().COPY_MAX_W_PX}px`;
+      el.style.maxWidth   = `${C().COPY_MAX_W_PX}px`;
       el.style.fontFamily = C().COPY_FAMILY;
       const h3 = el.querySelector("h3");
-      if (h3)
+      if (h3) {
         h3.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
+      }
       const p = el.querySelector("p");
-      if (p)
-        p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
+      if (p) {
+        p.style.cssText =
+          `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; ` +
+          `line-height:${C().COPY_LINE_HEIGHT}`;
+      }
     }
   };
 })();
