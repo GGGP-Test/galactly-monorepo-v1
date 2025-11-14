@@ -118,7 +118,7 @@
       M_COPY_H_PT: 22,
       M_COPY_BODY_PT: 14,
 
-      // NEW: phones — scale the entire SVG layout (0.5–1.0)
+      // Global phone scaler — shrink whole SVG as a unit (0.5–1.0)
       M_SCALE: 1,
 
       M_COL_GAP_RATIO: 0.09,
@@ -143,7 +143,7 @@
       M_SHAPE_COLOR_BY_STEP: null,
       M_SHAPE_WIDTH_BY_STEP: null,
       M_LINE_STYLE_BY_PAIR: null,
-      M_LAST_DIM: 0.85, // number = uniform opacity for last item per column
+      M_LAST_DIM: 0.85, // number = uniform opacity for last item
 
       // Mobile headings
       M_HEAD_BOX_H: null,
@@ -154,10 +154,10 @@
       M_TITLE_OFFSET_X: null,
       M_TITLE_OFFSET_Y: 150,
 
-      // NEW: mobile-specific padding from last item to first dot
+      // mobile-specific padding from last item to first dot
       M_DOTS_TOP_PAD: 30,
 
-      // ---- exact step recipes
+      // ---- columns recipes
       COLS: [
         { key: "step0", items: ["pill"] },
         {
@@ -183,6 +183,7 @@
             H ${x + R} Q ${x} ${y + h} ${x} ${y + h - R}
             V ${y + R} Q ${x} ${y} ${x + R} ${y} Z`;
   };
+
   const diamondPath = (cx, cy, w, h) =>
     `M ${cx} ${cy - h / 2} L ${cx + w / 2} ${cy} L ${cx} ${cy + h / 2} L ${
       cx - w / 2
@@ -380,12 +381,12 @@
     const H = Math.min(cfg.HEIGHT_MAX_PX, bounds.sH - 40);
     const W = isMobile ? fullW : Math.max(300, fullW * cfg.WIDTH_RATIO);
 
-    // For desktop we respect right-rail placement; for mobile we center (x0 = 0)
+    // For desktop we respect right-rail placement; for mobile we center at 0
     const x0 = isMobile ? 0 : fullW * cfg.STACK_X_RATIO + cfg.NUDGE_X;
     const y0 = H * cfg.STACK_TOP_RATIO + cfg.NUDGE_Y;
 
     // Global scale knob for phones (1 = normal, <1 = shrink)
-    const scale = isMobile ? cfg.M_SCALE ?? 1 : 1;
+    const scale = isMobile ? (cfg.M_SCALE != null ? cfg.M_SCALE : 1) : 1;
 
     let svg;
     if (isMobile) {
@@ -465,9 +466,13 @@
       const headHBase = pick(isMobile, "HEAD_BOX_H") || cfg.HEAD_BOX_H;
       const headH = headHBase * scale;
       const headOffsetY =
-        (pick(isMobile, "HEAD_OFFSET_Y") ?? cfg.HEAD_OFFSET_Y) * scale;
+        (pick(isMobile, "HEAD_OFFSET_Y") != null
+          ? pick(isMobile, "HEAD_OFFSET_Y")
+          : cfg.HEAD_OFFSET_Y) * scale;
       const headSpacing =
-        (pick(isMobile, "HEAD_SPACING") ?? cfg.HEAD_SPACING) * scale;
+        (pick(isMobile, "HEAD_SPACING") != null
+          ? pick(isMobile, "HEAD_SPACING")
+          : cfg.HEAD_SPACING) * scale;
 
       const headX = colX + (colW - headW) / 2;
       const headY = Math.max(0, colY0 + headOffsetY);
@@ -486,7 +491,7 @@
         pickMap(isMobile, "SHAPE_WIDTH_BY_STEP")[key] || SHAPE_W;
 
       col.items.forEach((type, i) => {
-        const hm = hMults[i] ?? 1;
+        const hm = hMults[i] != null ? hMults[i] : 1;
         const h =
           type === "circle" || type === "diamond"
             ? baseH * 0.9 * hm
@@ -505,8 +510,8 @@
           dimSpec = (dimConfig || cfg.LAST_DIM)[key] || {};
         }
 
-        const opacity = isLast ? dimSpec.opacity ?? 1 : 1;
-        const blurAmt = isLast ? dimSpec.blur ?? 0 : 0;
+        const opacity = isLast ? (dimSpec.opacity != null ? dimSpec.opacity : 1) : 1;
+        const blurAmt = isLast ? (dimSpec.blur != null ? dimSpec.blur : 0) : 0;
         const filterId = blurAmt > 0 ? "p5blur" : null;
         if (filterId) {
           const blurNode = svg.querySelector("#p5blur feGaussianBlur");
@@ -562,15 +567,19 @@
 
       // Dots
       if (col.dots > 0) {
-        const lastRight =
-          anchorsByCol[anchorsByCol.length - 1]?.right || [];
+        const lastRight = anchorsByCol[anchorsByCol.length - 1]?.right || [];
         const lastY = lastRight.length
           ? lastRight[lastRight.length - 1].y
           : 0;
-        const pad =
-          ((pick(isMobile, "DOTS_TOP_PAD") ??
-            cfg.DOTS_TOP_PAD ??
-            6) as number) * scale;
+
+        const padBase =
+          pick(isMobile, "DOTS_TOP_PAD") != null
+            ? pick(isMobile, "DOTS_TOP_PAD")
+            : cfg.DOTS_TOP_PAD != null
+            ? cfg.DOTS_TOP_PAD
+            : 6;
+
+        const pad = padBase * scale;
         const dotsY = lastY + pad;
         const dotGap = cfg.DOT_GAP * scale;
         const dotSize = cfg.DOT_SIZE * scale;
@@ -592,21 +601,14 @@
     for (let i = 0; i < anchorsByCol.length - 1; i++) {
       const A = anchorsByCol[i];
       const B = anchorsByCol[i + 1];
-      const pairKey = `${A.key}->${B.key}`;
+      const pairKey = A.key + "->" + B.key;
       const style = pairStyles[pairKey] || {};
       const color = style.color || LINE_COLOR;
-      const width = (style.width || LINE_W) as number;
+      const width = style.width != null ? style.width : LINE_W;
 
       for (const p of A.right) {
         for (const q of B.left) {
-          addPath(
-            svg,
-            `M ${p.x} ${p.y} L ${q.x} ${q.y}`,
-            color,
-            width,
-            1,
-            null
-          );
+          addPath(svg, `M ${p.x} ${p.y} L ${q.x} ${q.y}`, color, width, 1, null);
         }
       }
     }
