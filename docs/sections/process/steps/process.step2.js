@@ -113,7 +113,7 @@
 
       // ===== MOBILE knobs (phones only; desktop unaffected) =====
       MOBILE_BREAKPOINT: 640, // phones
-      M_MAX_W: 52,
+      M_MAX_W: 520,
       M_SIDE_PAD: 38,
       M_STACK_GAP: 18,
       M_BOX_MIN_H: 52,
