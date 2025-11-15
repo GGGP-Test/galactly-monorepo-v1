@@ -3,7 +3,7 @@
   const STEP = 2;
   const NS = "http://www.w3.org/2000/svg";
 
-  // ---------------- CONFIG: DESKTOP (unchanged semantics) ----------------
+  // ---------------- CONFIG: DESKTOP + TABLET ----------------
   function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step2 = root.step2 || {};
@@ -88,22 +88,23 @@
       DOTS_GAP_PX: 26,
       DOTS_Y_OFFSET: 26,
 
-      // ===== TABLET TUNING (applies between mobile BP and TABLET_BP) =====
+      // ===== TABLET TUNING (between mobile BP and TABLET_BP) =====
       TABLET_BP: 1024,          // up to this width = treat as tablet
-      TABLET_SCALE: 0.86,       // scale SVG + copy down a bit
-      TABLET_COPY_MAX_W_PX: 300 // slightly narrower copy on tablet
+      TABLET_SCALE: 0.86,       // scale SVG + copy a bit down on tablet
+      TABLET_COPY_MAX_W_PX: 300 // slightly narrower copy column on tablet
     };
 
-    for (const k in dflt) if (!(k in cfg)) cfg[k] = dflt[k];
+    for (const k in dflt) {
+      if (!(k in cfg)) cfg[k] = dflt[k];
+    }
     return cfg;
   }
 
-  // ---------------- CONFIG: MOBILE STEP 2 (same as before) ----------------
+  // ---------------- CONFIG: MOBILE STEP 2 ----------------
   function M() {
     const root   = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     const mobile = (root.mobile = root.mobile || {});
 
-    // Only create defaults if the user hasn't defined mobile.step2 in process.js
     if (!mobile.step2) {
       mobile.step2 = {
         useTheme: true,
@@ -122,20 +123,20 @@
         titleWeight: 700,
         titleLetter: 0.2,
         titleAlign: "center",
-        titleMarginTop: 10,      // gap from copy → step title
-        titleMarginBottom: 12,   // gap from step title → boxes
+        titleMarginTop: 10,
+        titleMarginBottom: 12,
         titleNudgeX: 42,
         titleNudgeY: 10,
 
-        // h3 + body: "Who needs packaging right now?"
+        // h3 + body
         copyHpt: 22,
         copyBodyPt: 14,
         copyLine: 1.6,
         copyColor: "#a7bacb",
         copyHColor: "#eaf0f6",
-        copyGapBottom: 14,       // gap from copy → step title
-        copyHGap: 8,             // gap between h3 and paragraph
-        copyHTML: null,          // optional custom HTML override
+        copyGapBottom: 14,
+        copyHGap: 8,
+        copyHTML: null,
 
         // gap between the boxes themselves
         stackGap: 10,
@@ -153,14 +154,14 @@
           letter: 0.3,
           lineEm: 1.2,
           align: "center",
-          nudgeX: 42,   // positive = push boxes to the right
-          nudgeY: 10    // positive = push boxes down
+          nudgeX: 42,
+          nudgeY: 10
         },
 
-        // "Circle" sizing knob for Back-to-Back Search
+        // "Circle" sizing knob
         circlePct: 27,
 
-        // three dots under the stack
+        // dots
         dots: {
           show: false,
           count: 3,
@@ -169,15 +170,13 @@
           padTop: 4
         },
 
-        // per-shape overrides (all REAL keys)
         overrides: {
-          oval1:   { },            // Deadline Window
-          pill2:   { },            // Trigger Events
-          circle3: { },            // Back-to-Back Search
-          rect4:   { }             // Ops Clock
+          oval1:   {},
+          pill2:   {},
+          circle3: {},
+          rect4:   {}
         },
 
-        // draw order top → bottom
         order: ["oval1", "pill2", "circle3", "rect4"]
       };
     }
@@ -190,8 +189,9 @@
       window.matchMedia("(prefers-reduced-motion: reduce)").matches) ||
     C().REDUCE_MOTION;
 
-  // ---------------- DESKTOP SVG helpers (unchanged visuals) ----------------
+  // ---------------- DESKTOP SVG HELPERS ----------------
   function makeFlowGradients(svg, { spanX, y }) {
+    const cfg = C();
     const defs = document.createElementNS(NS, "defs");
 
     const gFlow = document.createElementNS(NS, "linearGradient");
@@ -202,9 +202,9 @@
     gFlow.setAttribute("x2", spanX);
     gFlow.setAttribute("y2", y);
     [
-      ["0%", C().COLOR_GOLD],
+      ["0%", cfg.COLOR_GOLD],
       ["35%", "rgba(255,255,255,.95)"],
-      ["75%", C().COLOR_CYAN],
+      ["75%", cfg.COLOR_CYAN],
       ["100%", "rgba(99,211,255,.60)"]
     ].forEach(([o, c]) => {
       const s = document.createElementNS(NS, "stop");
@@ -212,13 +212,13 @@
       s.setAttribute("stop-color", c);
       gFlow.appendChild(s);
     });
-    if (!reduceMotion() && C().FLOW_SPEED_S > 0) {
+    if (!reduceMotion() && cfg.FLOW_SPEED_S > 0) {
       const a1 = document.createElementNS(NS, "animateTransform");
       a1.setAttribute("attributeName", "gradientTransform");
       a1.setAttribute("type", "translate");
       a1.setAttribute("from", "0 0");
       a1.setAttribute("to", `${spanX} 0`);
-      a1.setAttribute("dur", `${C().FLOW_SPEED_S}s`);
+      a1.setAttribute("dur", `${cfg.FLOW_SPEED_S}s`);
       a1.setAttribute("repeatCount", "indefinite");
       gFlow.appendChild(a1);
     }
@@ -232,7 +232,7 @@
     gTrail.setAttribute("x2", spanX * 2);
     gTrail.setAttribute("y2", y);
     [
-      ["0%", C().COLOR_GOLD],
+      ["0%", cfg.COLOR_GOLD],
       ["45%", "rgba(99,211,255,.90)"],
       ["100%", "rgba(99,211,255,.18)"]
     ].forEach(([o, c]) => {
@@ -241,13 +241,13 @@
       s.setAttribute("stop-color", c);
       gTrail.appendChild(s);
     });
-    if (!reduceMotion() && C().FLOW_SPEED_S > 0) {
+    if (!reduceMotion() && cfg.FLOW_SPEED_S > 0) {
       const a2 = document.createElementNS(NS, "animateTransform");
       a2.setAttribute("attributeName", "gradientTransform");
       a2.setAttribute("type", "translate");
       a2.setAttribute("from", "0 0");
       a2.setAttribute("to", `${spanX} 0`);
-      a2.setAttribute("dur", `${C().FLOW_SPEED_S}s`);
+      a2.setAttribute("dur", `${cfg.FLOW_SPEED_S}s`);
       a2.setAttribute("repeatCount", "indefinite");
       gTrail.appendChild(a2);
     }
@@ -256,6 +256,7 @@
   }
 
   function makeSegmentGradient(svg, x1, y, x2) {
+    const cfg = C();
     const id = "seg_" + Math.random().toString(36).slice(2, 8);
     let defs = svg.querySelector("defs");
     if (!defs) {
@@ -270,9 +271,9 @@
     g.setAttribute("x2", x2);
     g.setAttribute("y2", y);
     [
-      ["0%", C().COLOR_GOLD],
+      ["0%", cfg.COLOR_GOLD],
       ["35%", "rgba(255,255,255,.95)"],
-      ["75%", C().COLOR_CYAN],
+      ["75%", cfg.COLOR_CYAN],
       ["100%", "rgba(99,211,255,.60)"]
     ].forEach(([o, c]) => {
       const s = document.createElementNS(NS, "stop");
@@ -280,13 +281,13 @@
       s.setAttribute("stop-color", c);
       g.appendChild(s);
     });
-    if (!reduceMotion() && C().FLOW_SPEED_S > 0) {
+    if (!reduceMotion() && cfg.FLOW_SPEED_S > 0) {
       const a = document.createElementNS(NS, "animateTransform");
       a.setAttribute("attributeName", "gradientTransform");
       a.setAttribute("type", "translate");
       a.setAttribute("from", "0 0");
       a.setAttribute("to", `${x2 - x1} 0`);
-      a.setAttribute("dur", `${C().FLOW_SPEED_S}s`);
+      a.setAttribute("dur", `${cfg.FLOW_SPEED_S}s`);
       a.setAttribute("repeatCount", "indefinite");
       g.appendChild(a);
     }
@@ -357,7 +358,7 @@
     svg.appendChild(fo);
   }
 
-  // ---------------- MOBILE DOM LAYOUT (Step 2, uses same theme as step1) ----------------
+  // ---------------- MOBILE DOM LAYOUT (Step 2) ----------------
   function applyBoxStyles2(node, base, ov) {
     const b = Object.assign({}, base || {}, ov || {});
     node.style.width       = (b.widthPct != null ? `${b.widthPct}%` : "100%");
@@ -385,7 +386,6 @@
     const cfg = C();
     const m   = M();
 
-    // canvas is already set up for mobile in process.js
     const wrap = document.createElement("div");
     wrap.className = "mstep mstep2";
     wrap.style.marginTop    = `${m.top ?? 50}px`;
@@ -394,7 +394,7 @@
     wrap.style.padding      = `0 ${m.sidePad ?? 20}px`;
     wrap.style.transform    = `translate(${m.nudgeX ?? 0}px, ${m.nudgeY ?? 0}px)`;
 
-    // 1) COPY BLOCK FIRST: "Who needs packaging right now?" + body
+    // 1) copy
     const copy = document.createElement("div");
     copy.className = "mstep-copy";
     copy.style.marginBottom = `${m.copyGapBottom ?? 14}px`;
@@ -418,11 +418,10 @@
     }
     wrap.appendChild(copy);
 
-    // 2) STEP TITLE AFTER COPY: "Right-Time Score" above the boxes
+    // 2) title
     if (m.titleShow !== false) {
       const t = document.createElement("div");
       t.className = "mstep-title";
-      // First word wrapped so it can reuse the gold mobile class
       t.innerHTML = '<span class="mstep-title-intent">Right-Time</span> Score';
       t.style.textAlign     = m.titleAlign || "center";
       t.style.fontWeight    = String(m.titleWeight ?? 700);
@@ -438,7 +437,7 @@
       wrap.appendChild(t);
     }
 
-    // 3) BOX STACK
+    // 3) boxes
     const stack = document.createElement("div");
     stack.className = "mstack";
     stack.style.gap = `${m.stackGap ?? 10}px`;
@@ -459,7 +458,6 @@
       if (!label) continue;
 
       if (key === "circle3") {
-        // circular pill
         const circle = document.createElement("div");
         circle.className = "mbox circle";
         circle.textContent = label;
@@ -471,12 +469,10 @@
           },
           OVR.circle3 || {}
         );
-
         applyBoxStyles2(circle, baseBox, ov);
         circle.style.aspectRatio = "1 / 1";
         stack.appendChild(circle);
       } else {
-        // rectangular / pill boxes
         const box = document.createElement("div");
         const isPill = key === "oval1" || key === "pill2";
         box.className = "mbox" + (isPill ? " oval" : "");
@@ -489,7 +485,7 @@
       }
     }
 
-    // 4) Dots row under stack
+    // 4) dots
     const dots = m.dots || {};
     if (dots.show !== false) {
       const row = document.createElement("div");
@@ -511,7 +507,7 @@
     ctx.canvas.appendChild(wrap);
   }
 
-  // ---------------- DESKTOP/TABLET DRAW (Step 2) ----------------
+  // ---------------- DESKTOP + TABLET DRAW ----------------
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx) {
     const b   = ctx.bounds;
@@ -521,28 +517,19 @@
       (window.PROCESS_CONFIG &&
         window.PROCESS_CONFIG.mobile &&
         window.PROCESS_CONFIG.mobile.BP) ||
-      cfg.MOBILE_BREAKPOINT ||
       640;
 
-    const viewportW =
-      typeof window !== "undefined"
-        ? (window.innerWidth || b.sW || mobileBP)
-        : b.sW;
-
+    const vw = window.innerWidth || b.sW || mobileBP;
     const isPhone =
-      window.PROCESS_FORCE_MOBILE === true ||
-      viewportW <= mobileBP;
+      window.PROCESS_FORCE_MOBILE === true || vw <= mobileBP;
+    const isTablet = !isPhone && vw <= (cfg.TABLET_BP || 1024);
 
     if (isPhone) {
-      // phones: keep using DOM/mobile path
       drawMobile(ctx);
       return;
     }
 
-    const tabletBP = cfg.TABLET_BP || 1024;
-    const isTablet = viewportW <= tabletBP;
-
-    // DESKTOP-style layout (shared by desktop + tablet)
+    // desktop-style SVG for both desktop + tablet
     const W = b.width;
     const H = Math.min(560, b.sH - 40);
     const svg = document.createElementNS(NS, "svg");
@@ -553,7 +540,6 @@
     svg.setAttribute("height", H);
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
 
-    // Tablet: scale the whole SVG down a bit so it fits like desktop but smaller
     if (isTablet) {
       const s = cfg.TABLET_SCALE || 0.9;
       svg.style.transformOrigin = "50% 50%";
@@ -571,53 +557,37 @@
     let y = H * cfg.STACK_TOP_RATIO + cfg.NUDGE_Y;
     const items = [];
 
-    // 1) OVAL: Deadline Window (T-48h → T-30d)
+    // 1) oval
     {
       const d = rr(x, y, boxW, boxH, 999);
       addPath(svg, d, "url(#gradFlow)", cfg.STROKE_PX);
-      addFO(
-        svg,
-        x,
-        y,
-        boxW,
-        boxH,
-        cfg.LABEL_OVAL_1,
-        {
-          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_OVAL}pt ${cfg.FONT_FAMILY_BOX}`,
-          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
-          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
-          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
-          padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
-        }
-      );
+      addFO(svg, x, y, boxW, boxH, cfg.LABEL_OVAL_1, {
+        font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_OVAL}pt ${cfg.FONT_FAMILY_BOX}`,
+        letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+        lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+        textTransform: cfg.UPPERCASE ? "uppercase" : "none",
+        padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
+      });
       items.push({ x, y, w: boxW, h: boxH });
       y += boxH + gap;
     }
 
-    // 2) PILL: Trigger Events (Launch/Expo/Recall)
+    // 2) pill
     {
       const d = rr(x, y, boxW, boxH, cfg.RADIUS_PILL);
       addPath(svg, d, "url(#gradFlow)", cfg.STROKE_PX);
-      addFO(
-        svg,
-        x,
-        y,
-        boxW,
-        boxH,
-        cfg.LABEL_PILL_2,
-        {
-          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_PILL}pt ${cfg.FONT_FAMILY_BOX}`,
-          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
-          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
-          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
-          padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
-        }
-      );
+      addFO(svg, x, y, boxW, boxH, cfg.LABEL_PILL_2, {
+        font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_PILL}pt ${cfg.FONT_FAMILY_BOX}`,
+        letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+        lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+        textTransform: cfg.UPPERCASE ? "uppercase" : "none",
+        padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
+      });
       items.push({ x, y, w: boxW, h: boxH });
       y += boxH + gap;
     }
 
-    // 3) CIRCLE: Back-to-Back Search (last 72h)
+    // 3) circle
     {
       const diam = cfg.CIRCLE_DESKTOP_DIAM_RATIO * W;
       const r    = diam / 2;
@@ -625,44 +595,28 @@
       const cy   = y + r;
 
       addCircle(svg, cx, cy, r, "url(#gradFlow)", cfg.STROKE_PX);
-      addFO(
-        svg,
-        cx - r,
-        cy - r,
-        diam,
-        diam,
-        cfg.LABEL_CIRCLE_3,
-        {
-          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_CIRCLE}pt ${cfg.FONT_FAMILY_BOX}`,
-          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
-          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
-          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
-          padding: "3px 4px"
-        }
-      );
+      addFO(svg, cx - r, cy - r, diam, diam, cfg.LABEL_CIRCLE_3, {
+        font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_CIRCLE}pt ${cfg.FONT_FAMILY_BOX}`,
+        letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+        lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+        textTransform: cfg.UPPERCASE ? "uppercase" : "none",
+        padding: "3px 4px"
+      });
       items.push({ x: cx - r, y: cy - r, w: diam, h: diam });
       y += diam + gap;
     }
 
-    // 4) RECT: Ops Clock (PO due, stockouts)
+    // 4) rect
     {
       const d = rr(x, y, boxW, boxH, cfg.RADIUS_RECT);
       addPath(svg, d, "url(#gradFlow)", cfg.STROKE_PX);
-      addFO(
-        svg,
-        x,
-        y,
-        boxW,
-        boxH,
-        cfg.LABEL_RECT_4,
-        {
-          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_RECT}pt ${cfg.FONT_FAMILY_BOX}`,
-          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
-          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
-          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
-          padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
-        }
-      );
+      addFO(svg, x, y, boxW, boxH, cfg.LABEL_RECT_4, {
+        font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_RECT}pt ${cfg.FONT_FAMILY_BOX}`,
+        letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+        lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+        textTransform: cfg.UPPERCASE ? "uppercase" : "none",
+        padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
+      });
       items.push({ x, y, w: boxW, h: boxH });
       y += boxH + cfg.DOTS_Y_OFFSET;
     }
@@ -739,7 +693,7 @@
       );
     }
 
-    // Copy block (desktop / tablet)
+    // copy block
     const left = b.left + W * cfg.COPY_LEFT_RATIO + cfg.COPY_NUDGE_X;
     const top  = b.top + H * cfg.COPY_TOP_RATIO + cfg.COPY_NUDGE_Y;
     const html = `
@@ -766,7 +720,6 @@
           `line-height:${cfg.COPY_LINE_HEIGHT}`;
       }
 
-      // Tablet: scale the copy block down a bit to match the shrunken SVG
       if (isTablet) {
         const s = cfg.TABLET_SCALE || 0.9;
         el.style.transformOrigin = "top left";
