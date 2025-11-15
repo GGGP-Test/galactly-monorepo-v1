@@ -93,7 +93,7 @@
       ITEMS: [
         {
           type: "diamond",
-          label: "Posts / Platform (frequency)",
+          label: "Posts/Platform (frequency)",
           heightRatio: 1,
           fontPt: 7,
         },
@@ -185,7 +185,7 @@
 
         // diamond-specific knobs
         diamond: {
-          widthPct: 20,  // width of rotated diamond container
+          widthPct: 14,  // width of rotated diamond container
           border: 2,
           labelPt: 7,
           pad: 10,
@@ -489,7 +489,7 @@
     stack.style.gap = `${m.stackGap ?? 10}px`;
 
     const labels = {
-      diamond1: items[0]?.label || "Posts / Platform (frequency)",
+      diamond1: items[0]?.label || "Posts/Platform (frequency)",
       pill2:
         items[1]?.label ||
         "Comments & Messages / Platform (velocity)",
