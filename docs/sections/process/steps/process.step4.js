@@ -185,9 +185,9 @@
 
         // diamond-specific knobs
         diamond: {
-          widthPct: 15,  // width of rotated diamond container
+          widthPct: 20,  // width of rotated diamond container
           border: 2,
-          labelPt: 8,
+          labelPt: 7,
           pad: 10,
           nudgeY: 16
         },
