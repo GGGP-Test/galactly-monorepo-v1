@@ -227,7 +227,7 @@
         RAIL_DOCK_SCALE: 0.84,
 
         // lamp adjustments (extra offset on top of desktop math)
-        LAMP_EXTRA_X: -20, // + = move lamp right, - = left
+        LAMP_EXTRA_X: -40, // + = move lamp right, - = left
         LAMP_EXTRA_W: 0, // + = widen lamp, - = shrink
         LAMP_OPACITY: 0.32, // default intensity on tablet
 
@@ -250,7 +250,7 @@
           LABEL_NUDGE_Y: 6,   // + = move down, - = up
 
           // title+copy block (h3 + paragraph) position (tablet)
-          COPY_NUDGE_X: -20,    // + = right, - = left
+          COPY_NUDGE_X: -30,    // + = right, - = left
           COPY_NUDGE_Y: 0     // + = down, - = up
         },
           // ===== MAIN TITLE (Our AI Packaging Sales Intelligence: 6 Pillars) =====
