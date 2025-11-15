@@ -220,7 +220,7 @@
         BP_MAX: 900, // <= px is treated as "tablet" for these knobs
 
         // copy column width on tablet (Section 3 subtitle + body)
-        COPY_MAX_PX: 260,
+        COPY_MAX_PX: 200,
 
         // rail wrap when docked (left side step buttons)
         RAIL_DOCK_LEFT_PX: 12,
