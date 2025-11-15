@@ -227,9 +227,32 @@
         RAIL_DOCK_SCALE: 0.84,
 
         // lamp adjustments (extra offset on top of desktop math)
-        LAMP_EXTRA_X: -25, // + = move lamp right, - = left
+        LAMP_EXTRA_X: -20, // + = move lamp right, - = left
         LAMP_EXTRA_W: 0, // + = widen lamp, - = shrink
-        LAMP_OPACITY: 0.32 // default intensity on tablet
+        LAMP_OPACITY: 0.32, // default intensity on tablet
+
+        // ===== STEP 0: TABLET-ONLY OVERRIDES =====
+        step0: {
+          // pill box sizing (tablet)
+          PILL_W_MAX: 400,    // max width in px
+          PILL_W_RATIO: 0.48, // fraction of canvas width
+          PILL_H: 70,         // height in px
+          PILL_RADIUS: 16,    // corner radius
+
+          // extra pill translation (tablet-only, on top of desktop NUDGE_X/Y)
+          PILL_NUDGE_X: 0,   // + = right, - = left
+          PILL_NUDGE_Y: 0,   // + = down,  - = up
+
+
+          // label inside pill (tablet)
+          LABEL_PT: 18,       // font-size
+          LABEL_NUDGE_X: 18,  // + = move right, - = left
+          LABEL_NUDGE_Y: 6,   // + = move down, - = up
+
+          // title+copy block (h3 + paragraph) position (tablet)
+          COPY_NUDGE_X: -20,    // + = right, - = left
+          COPY_NUDGE_Y: 0     // + = down, - = up
+        }
       }
     },
     window.PROCESS_CONFIG || {}
@@ -550,13 +573,18 @@
     while (canvas.firstChild) canvas.removeChild(canvas.firstChild);
   }
 
-  /* ----------------- STEP 0: Desktop SVG (unchanged) ----------------- */
+  /* ----------------- STEP 0: Desktop SVG (desktop + tablet) ----------------- */
   function scenePill(bOverride) {
     const C = window.PROCESS_CONFIG.step0;
-    const b = bOverride || (isMobile() ? boundsMobile(18, 600) : boundsDesktop());
+    const b =
+      bOverride || (isMobile() ? boundsMobile(18, 600) : boundsDesktop());
 
-    const nodeW = b.width,
-      nodeH = Math.min(560, b.sH - 40);
+    const onTablet = isTablet();
+    const T0 = (onTablet && TCFG().step0) ? TCFG().step0 : {};
+
+    const nodeW = b.width;
+    const nodeH = Math.min(560, b.sH - 40);
+
     const svg = document.createElementNS(ns, "svg");
     svg.style.position = "absolute";
     svg.style.left = b.left + "px";
@@ -566,17 +594,26 @@
     svg.setAttribute("viewBox", `0 0 ${nodeW} ${nodeH}`);
     canvas.appendChild(svg);
 
-    const pillW = Math.min(440, nodeW * 0.48),
-      pillH = 80;
-    const lampCenter = nodeW / 2,
-      leftBias = Math.min(80, nodeW * 0.08);
+    // ---- pill sizing: desktop defaults + tablet overrides ----
+    const pillWMax   = onTablet && T0.PILL_W_MAX   != null ? T0.PILL_W_MAX   : 440;
+    const pillWRatio = onTablet && T0.PILL_W_RATIO != null ? T0.PILL_W_RATIO : 0.48;
+    const pillH      = onTablet && T0.PILL_H       != null ? T0.PILL_H       : 80;
+    const r          = onTablet && T0.PILL_RADIUS  != null ? T0.PILL_RADIUS  : 16;
+
+    // extra tablet-only translation for the pill
+    const pillNX = onTablet && T0.PILL_NUDGE_X != null ? T0.PILL_NUDGE_X : 0;
+    const pillNY = onTablet && T0.PILL_NUDGE_Y != null ? T0.PILL_NUDGE_Y : 0;
+
+    const pillW = Math.min(pillWMax, nodeW * pillWRatio);
+    const lampCenter = nodeW / 2;
+    const leftBias = Math.min(80, nodeW * 0.08);
+
     const pillX = Math.max(
       18,
-      lampCenter - leftBias - pillW / 2 + C.NUDGE_X
+      lampCenter - leftBias - pillW / 2 + C.NUDGE_X + pillNX
     );
-    const pillY = Math.max(12, nodeH * 0.2 + C.NUDGE_Y);
-    const r = 16,
-      yMid = pillY + pillH / 2;
+    const pillY = Math.max(12, nodeH * 0.2 + C.NUDGE_Y + pillNY);
+    const yMid = pillY + pillH / 2;
     const xTrailEnd = nodeW - 10;
 
     svg.appendChild(
@@ -610,12 +647,17 @@
       "stroke-dashoffset 1100ms cubic-bezier(.22,.61,.36,1)";
     requestAnimationFrame(() => (outline.style.strokeDashoffset = "0"));
 
+    // ---- label: size + nudges (tablet-only knobs) ----
+    const labelPx = onTablet && T0.LABEL_PT       != null ? T0.LABEL_PT       : 18;
+    const labelNx = onTablet && T0.LABEL_NUDGE_X  != null ? T0.LABEL_NUDGE_X  : 18;
+    const labelNy = onTablet && T0.LABEL_NUDGE_Y  != null ? T0.LABEL_NUDGE_Y  : 6;
+
     const label = document.createElementNS(ns, "text");
-    label.setAttribute("x", pillX + 18);
-    label.setAttribute("y", pillY + pillH / 2 + 6);
+    label.setAttribute("x", pillX + labelNx);
+    label.setAttribute("y", pillY + pillH / 2 + labelNy);
     label.setAttribute("fill", "#ddeaef");
     label.setAttribute("font-weight", "800");
-    label.setAttribute("font-size", "18");
+    label.setAttribute("font-size", String(labelPx));
     label.setAttribute(
       "font-family",
       "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
@@ -623,6 +665,7 @@
     label.textContent = C.LABEL;
     svg.appendChild(label);
 
+    // trail line
     const trail = document.createElementNS(ns, "line");
     trail.setAttribute("x1", pillX + pillW);
     trail.setAttribute("y1", yMid);
@@ -634,11 +677,15 @@
     trail.setAttribute("class", "glow");
     svg.appendChild(trail);
 
-    // Desktop copy (absolute)
+    // ---- copy block (h3 + paragraph) with tablet nudges ----
+    const copyNX = onTablet && T0.COPY_NUDGE_X != null ? T0.COPY_NUDGE_X : 0;
+    const copyNY = onTablet && T0.COPY_NUDGE_Y != null ? T0.COPY_NUDGE_Y : 0;
+
     const basePillY = Math.max(12, nodeH * 0.2);
     const minInside = b.left + 12;
     const fromRail = Math.max(minInside, b.left + 24);
-    const copyTop = b.top + basePillY - 2;
+    const copyTop = b.top + basePillY - 2 + copyNY;
+
     const copy = mountCopy({
       top: copyTop,
       left: fromRail,
@@ -654,6 +701,7 @@
         boxLeftAbs - window.PROCESS_CONFIG.step0.COPY_GAP - copyBox.width;
       idealLeft = Math.min(copyBox.left, idealLeft);
       idealLeft = Math.max(idealLeft, minInside);
+      idealLeft += copyNX; // tablet extra shove
       copy.style.left = idealLeft + "px";
     });
 
