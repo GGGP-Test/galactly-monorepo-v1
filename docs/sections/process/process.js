@@ -259,6 +259,7 @@
           NUDGE_Y: -50  // + = move down,  - = up
         }
       }
+    },
     window.PROCESS_CONFIG || {}
   );
 
