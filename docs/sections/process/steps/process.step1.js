@@ -76,7 +76,7 @@
       TITLE_OFFSET_Y: -28,
       TITLE_LETTER_SPACING: 0.2,
 
-      // Copy block (desktop)
+      // Copy block (desktop defaults)
       COPY_LEFT_RATIO: 0.035,
       COPY_TOP_RATIO: 0.18,
       COPY_NUDGE_X: -20,
@@ -104,8 +104,8 @@
       DOTS_GAP_PX: 26,
       DOTS_Y_OFFSET: 26,
 
-      // ===== MOBILE knobs (phones only; desktop unaffected) =====
-      MOBILE_BREAKPOINT: 640, // phones
+      // ===== MOBILE knobs (phones only) =====
+      MOBILE_BREAKPOINT: 640, // phones only
       M_MAX_W: 52,
       M_SIDE_PAD: 38,
       M_STACK_GAP: 18,        // gap between shapes
@@ -117,22 +117,24 @@
       M_COPY_BODY_PT: 14,
       M_SECTION_TOP: 72,      // distance from previous section
       M_SECTION_BOTTOM: 84,
-      M_BOX_W_PCT: 78,        // width % of stack for boxes (so they don't fill screen)
+      M_BOX_W_PCT: 78,        // width % of stack for boxes
       M_DIAMOND_PCT: 52,      // diamond width % of stack
       M_BOX_PAD_X: 18,
       M_BOX_PAD_Y: 10,
 
-      // ===== TABLET knobs (<= T_BREAKPOINT; phones override below) =====
-      T_BREAKPOINT: 900,
+      // ===== TABLET knobs (for fonts / spacing; layout stays like desktop) =====
+      T_BREAKPOINT: 900,      // <= this is "tablet" for step1
       T_MAX_W: 700,
       T_SIDE_PAD: 24,
       T_STACK_GAP: 18,
       T_BOX_MIN_H: 60,
       T_BORDER_PX: 2,
       T_FONT_PT: 12,
-      T_TITLE_PT: 18,
-      T_COPY_H_PT: 24,
-      T_COPY_BODY_PT: 15,
+      T_TITLE_PT: 18,         // tablet title font
+      T_COPY_H_PT: 24,        // tablet copy h3 size
+      T_COPY_BODY_PT: 15,     // tablet copy body size
+      T_COPY_BODY_LINE: 1.6,  // tablet copy line-height
+      T_COPY_MAX_W_PX: 340,   // tablet max-width for copy block
       T_SECTION_TOP: 56,
       T_SECTION_BOTTOM: 88,
       T_BOX_W_PCT: 72,
@@ -312,7 +314,7 @@
     svg.appendChild(fo);
   }
 
-  // ---------------- MOBILE / TABLET: DOM layout (no rail, no nested scroll) ----------------
+  // ---------------- MOBILE / TABLET: DOM layout (phones only now) ----------------
   function ensureMobileCSS() {
     const id = "p1m-style";
     const existing = document.getElementById(id);
@@ -506,17 +508,32 @@
     ctx.canvas.appendChild(wrap);
   }
 
-  // ---------------- DESKTOP DRAW (original SVG scene) ----------------
+  // ---------------- DESKTOP + TABLET DRAW (SVG scene) ----------------
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx) {
     const b = ctx.bounds;
-    const isCompact =
-      window.PROCESS_FORCE_MOBILE === true ||
-      window.innerWidth <= C().T_BREAKPOINT;
 
-    if (isCompact) return drawMobile(ctx);
+    const viewportW =
+      window.innerWidth ||
+      document.documentElement.clientWidth ||
+      b.sW ||
+      b.width ||
+      0;
 
-    // DESKTOP path: original SVG scene
+    const phoneBP = C().MOBILE_BREAKPOINT;
+    const tabletBP = C().T_BREAKPOINT;
+
+    const isPhone =
+      window.PROCESS_FORCE_MOBILE === true || viewportW <= phoneBP;
+    const isTablet =
+      !isPhone && viewportW > phoneBP && viewportW <= tabletBP;
+
+    if (isPhone) {
+      // phones: DOM layout
+      return drawMobile(ctx);
+    }
+
+    // DESKTOP + TABLET path: SVG scene (same layout), tablet can tweak fonts
     const W = b.width;
     const H = Math.min(560, b.sH - 40);
     const svg = document.createElementNS(NS, "svg");
@@ -670,7 +687,7 @@
       }
     }
 
-    // title
+    // title (desktop+tablet; tablet can bump font size)
     if (C().TITLE_SHOW) {
       const t = document.createElementNS(NS, "text");
       const topBox = items[0];
@@ -680,7 +697,8 @@
       t.setAttribute("fill", "#ddeaef");
       t.setAttribute("font-family", C().TITLE_FAMILY);
       t.setAttribute("font-weight", C().TITLE_WEIGHT);
-      t.setAttribute("font-size", `${C().TITLE_PT}pt`);
+      const titlePt = isTablet ? (C().T_TITLE_PT || C().TITLE_PT) : C().TITLE_PT;
+      t.setAttribute("font-size", `${titlePt}pt`);
       t.textContent = C().TITLE_TEXT;
       t.style.letterSpacing = `${C().TITLE_LETTER_SPACING}px`;
       svg.appendChild(t);
@@ -726,7 +744,7 @@
       );
     }
 
-    // Copy block (desktop)
+    // Copy block (desktop + tablet; tablet gets separate knobs)
     const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
     const top = b.top + H * C().COPY_TOP_RATIO + C().COPY_NUDGE_Y;
     const html = `
@@ -736,14 +754,25 @@
     `;
     if (typeof ctx.mountCopy === "function") {
       const el = ctx.mountCopy({ top, left, html });
-      el.style.maxWidth = `${C().COPY_MAX_W_PX}px`;
+
+      // tablet-specific typography like Step 0’s tablet knobs
+      const copyH = isTablet ? (C().T_COPY_H_PT || C().COPY_H_PT) : C().COPY_H_PT;
+      const copyBody = isTablet ? (C().T_COPY_BODY_PT || C().COPY_BODY_PT) : C().COPY_BODY_PT;
+      const copyLine = isTablet
+        ? (C().T_COPY_BODY_LINE || C().COPY_LINE_HEIGHT)
+        : C().COPY_LINE_HEIGHT;
+      const copyMaxW = isTablet
+        ? (C().T_COPY_MAX_W_PX || C().COPY_MAX_W_PX)
+        : C().COPY_MAX_W_PX;
+
+      el.style.maxWidth = `${copyMaxW}px`;
       el.style.fontFamily = C().COPY_FAMILY;
       const h3 = el.querySelector("h3");
       if (h3)
-        h3.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
+        h3.style.font = `${C().COPY_H_WEIGHT} ${copyH}pt ${C().COPY_FAMILY}`;
       const p = el.querySelector("p");
       if (p)
-        p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; line-height:${C().COPY_LINE_HEIGHT}`;
+        p.style.cssText = `font:${C().COPY_BODY_WEIGHT} ${copyBody}pt ${C().COPY_FAMILY}; line-height:${copyLine}`;
     }
   };
 })();
