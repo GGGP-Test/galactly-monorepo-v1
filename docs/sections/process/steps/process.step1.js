@@ -731,7 +731,7 @@
     const top = b.top + H * C().COPY_TOP_RATIO + C().COPY_NUDGE_Y;
     const html = `
       <h3>Who&rsquo;s ready now?</h3>
-      <p>Our <b>Time-to-Buy Intent</b> finds accounts most likely to purchase in the next cycle.
+      <p>Our <b>Intent Score</b> finds accounts most likely to purchase in the next cycle.
       We weight recent signals like RFQ/RFP language, pricing &amp; sample page hits, ad creative volume and more, then surface the prospects your team should contact.</p>
     `;
     if (typeof ctx.mountCopy === "function") {
