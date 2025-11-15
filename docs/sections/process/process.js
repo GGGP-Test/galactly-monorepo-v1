@@ -682,7 +682,7 @@
       </h3>
       <p style="margin:0; color:${M.copyColor ?? "#a7bacb"};
                 font:400 ${(M.copyBodyPt ?? 14)}px/${(M.copyLine ?? 1.55)} Inter, system-ui;">
-        Our <b>Time-to-Buy Intent</b> finds accounts most likely to purchase in the next cycle.
+        Our <b>Intent Score</b> finds accounts most likely to purchase in the next cycle.
         We weight <b>recent</b> signals like search bursts, RFQ/RFP language, visits to pricing & sample pages,
         and events/trade shows, new product launches, and 38+ more metrics, then surface the prospects your team should contact today.
       </p>`;
