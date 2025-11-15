@@ -93,7 +93,7 @@
       ITEMS: [
         {
           type: "diamond",
-          label: "Posts/Platform (frequency)",
+          label: "Posts (frequency)",
           heightRatio: 1,
           fontPt: 7,
         },
@@ -489,7 +489,7 @@
     stack.style.gap = `${m.stackGap ?? 10}px`;
 
     const labels = {
-      diamond1: items[0]?.label || "Posts/Platform (frequency)",
+      diamond1: items[0]?.label || "Posts (frequency)",
       pill2:
         items[1]?.label ||
         "Comments & Messages / Platform (velocity)",
