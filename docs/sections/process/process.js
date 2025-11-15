@@ -253,7 +253,7 @@
           COPY_NUDGE_Y: 0,    // + = down,  - = up
         
           // >>> TABLET-ONLY TYPOGRAPHY FOR STEP 0 COPY <<<
-          COPY_TITLE_PT: 24,     // h3 font-size on tablet (px)
+          COPY_TITLE_PT: 22,     // h3 font-size on tablet (px)
           COPY_TITLE_WEIGHT: 600,
           COPY_BODY_PT: 12,      // paragraph font-size on tablet (px)
           COPY_BODY_LINE: 1.6    // paragraph line-height on tablet
