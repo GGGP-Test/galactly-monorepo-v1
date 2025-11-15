@@ -3,7 +3,7 @@
   const STEP = 2;
   const NS = "http://www.w3.org/2000/svg";
 
-  // ---------------- CONFIG: DESKTOP (unchanged) ----------------
+  // ---------------- CONFIG: DESKTOP (unchanged semantics) ----------------
   function C() {
     const root = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     root.step2 = root.step2 || {};
@@ -86,14 +86,19 @@
       DOTS_COUNT: 3,
       DOTS_SIZE_PX: 2.2,
       DOTS_GAP_PX: 26,
-      DOTS_Y_OFFSET: 26
+      DOTS_Y_OFFSET: 26,
+
+      // ===== TABLET TUNING (applies between mobile BP and TABLET_BP) =====
+      TABLET_BP: 1024,          // up to this width = treat as tablet
+      TABLET_SCALE: 0.86,       // scale SVG + copy down a bit
+      TABLET_COPY_MAX_W_PX: 300 // slightly narrower copy on tablet
     };
 
     for (const k in dflt) if (!(k in cfg)) cfg[k] = dflt[k];
     return cfg;
   }
 
-  // ---------------- CONFIG: MOBILE STEP 2 (mirrors mobile.step1 knobs) ----------------
+  // ---------------- CONFIG: MOBILE STEP 2 (same as before) ----------------
   function M() {
     const root   = (window.PROCESS_CONFIG = window.PROCESS_CONFIG || {});
     const mobile = (root.mobile = root.mobile || {});
@@ -351,7 +356,7 @@
     fo.appendChild(d);
     svg.appendChild(fo);
   }
-  
+
   // ---------------- MOBILE DOM LAYOUT (Step 2, uses same theme as step1) ----------------
   function applyBoxStyles2(node, base, ov) {
     const b = Object.assign({}, base || {}, ov || {});
@@ -417,6 +422,7 @@
     if (m.titleShow !== false) {
       const t = document.createElement("div");
       t.className = "mstep-title";
+      // First word wrapped so it can reuse the gold mobile class
       t.innerHTML = '<span class="mstep-title-intent">Right-Time</span> Score';
       t.style.textAlign     = m.titleAlign || "center";
       t.style.fontWeight    = String(m.titleWeight ?? 700);
@@ -505,63 +511,83 @@
     ctx.canvas.appendChild(wrap);
   }
 
-  // ---------------- DESKTOP DRAW (original SVG scene for Step 2) ----------------
+  // ---------------- DESKTOP/TABLET DRAW (Step 2) ----------------
   window.PROCESS_SCENES = window.PROCESS_SCENES || {};
   window.PROCESS_SCENES[STEP] = function draw(ctx) {
-    const b = ctx.bounds;
+    const b   = ctx.bounds;
+    const cfg = C();
 
     const mobileBP =
       (window.PROCESS_CONFIG &&
         window.PROCESS_CONFIG.mobile &&
-        window.PROCESS_CONFIG.mobile.BP) || 640;
+        window.PROCESS_CONFIG.mobile.BP) ||
+      cfg.MOBILE_BREAKPOINT ||
+      640;
 
-    const isCompact =
+    const viewportW =
+      typeof window !== "undefined"
+        ? (window.innerWidth || b.sW || mobileBP)
+        : b.sW;
+
+    const isPhone =
       window.PROCESS_FORCE_MOBILE === true ||
-      window.innerWidth <= mobileBP;
+      viewportW <= mobileBP;
 
-    if (isCompact) {
+    if (isPhone) {
+      // phones: keep using DOM/mobile path
       drawMobile(ctx);
       return;
     }
 
-    // DESKTOP path: original SVG-style scene, but with Step 2 shapes/labels
+    const tabletBP = cfg.TABLET_BP || 1024;
+    const isTablet = viewportW <= tabletBP;
+
+    // DESKTOP-style layout (shared by desktop + tablet)
     const W = b.width;
     const H = Math.min(560, b.sH - 40);
     const svg = document.createElementNS(NS, "svg");
     svg.style.position = "absolute";
     svg.style.left = b.left + "px";
-    svg.style.top = b.top + "px";
+    svg.style.top  = b.top + "px";
     svg.setAttribute("width", W);
     svg.setAttribute("height", H);
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+    // Tablet: scale the whole SVG down a bit so it fits like desktop but smaller
+    if (isTablet) {
+      const s = cfg.TABLET_SCALE || 0.9;
+      svg.style.transformOrigin = "50% 50%";
+      svg.style.transform = `scale(${s})`;
+    }
+
     ctx.canvas.appendChild(svg);
 
     makeFlowGradients(svg, { spanX: W * 0.15, y: 0 });
 
-    const boxW = W * C().BOX_W_RATIO;
-    const boxH = H * C().BOX_H_RATIO;
-    const gap  = H * C().GAP_RATIO;
-    let x = W * C().STACK_X_RATIO + C().NUDGE_X;
-    let y = H * C().STACK_TOP_RATIO + C().NUDGE_Y;
+    const boxW = W * cfg.BOX_W_RATIO;
+    const boxH = H * cfg.BOX_H_RATIO;
+    const gap  = H * cfg.GAP_RATIO;
+    let x = W * cfg.STACK_X_RATIO + cfg.NUDGE_X;
+    let y = H * cfg.STACK_TOP_RATIO + cfg.NUDGE_Y;
     const items = [];
 
     // 1) OVAL: Deadline Window (T-48h → T-30d)
     {
       const d = rr(x, y, boxW, boxH, 999);
-      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      addPath(svg, d, "url(#gradFlow)", cfg.STROKE_PX);
       addFO(
         svg,
         x,
         y,
         boxW,
         boxH,
-        C().LABEL_OVAL_1,
+        cfg.LABEL_OVAL_1,
         {
-          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_OVAL}pt ${C().FONT_FAMILY_BOX}`,
-          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
-          lineHeight: `${C().LINE_HEIGHT_EM}em`,
-          textTransform: C().UPPERCASE ? "uppercase" : "none",
-          padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
+          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_OVAL}pt ${cfg.FONT_FAMILY_BOX}`,
+          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
+          padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
         }
       );
       items.push({ x, y, w: boxW, h: boxH });
@@ -570,21 +596,21 @@
 
     // 2) PILL: Trigger Events (Launch/Expo/Recall)
     {
-      const d = rr(x, y, boxW, boxH, C().RADIUS_PILL);
-      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      const d = rr(x, y, boxW, boxH, cfg.RADIUS_PILL);
+      addPath(svg, d, "url(#gradFlow)", cfg.STROKE_PX);
       addFO(
         svg,
         x,
         y,
         boxW,
         boxH,
-        C().LABEL_PILL_2,
+        cfg.LABEL_PILL_2,
         {
-          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_PILL}pt ${C().FONT_FAMILY_BOX}`,
-          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
-          lineHeight: `${C().LINE_HEIGHT_EM}em`,
-          textTransform: C().UPPERCASE ? "uppercase" : "none",
-          padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
+          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_PILL}pt ${cfg.FONT_FAMILY_BOX}`,
+          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
+          padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
         }
       );
       items.push({ x, y, w: boxW, h: boxH });
@@ -593,24 +619,24 @@
 
     // 3) CIRCLE: Back-to-Back Search (last 72h)
     {
-      const diam = C().CIRCLE_DESKTOP_DIAM_RATIO * W;
+      const diam = cfg.CIRCLE_DESKTOP_DIAM_RATIO * W;
       const r    = diam / 2;
       const cx   = x + boxW / 2;
       const cy   = y + r;
 
-      addCircle(svg, cx, cy, r, "url(#gradFlow)", C().STROKE_PX);
+      addCircle(svg, cx, cy, r, "url(#gradFlow)", cfg.STROKE_PX);
       addFO(
         svg,
         cx - r,
         cy - r,
         diam,
         diam,
-        C().LABEL_CIRCLE_3,
+        cfg.LABEL_CIRCLE_3,
         {
-          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_CIRCLE}pt ${C().FONT_FAMILY_BOX}`,
-          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
-          lineHeight: `${C().LINE_HEIGHT_EM}em`,
-          textTransform: C().UPPERCASE ? "uppercase" : "none",
+          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_CIRCLE}pt ${cfg.FONT_FAMILY_BOX}`,
+          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
           padding: "3px 4px"
         }
       );
@@ -620,79 +646,79 @@
 
     // 4) RECT: Ops Clock (PO due, stockouts)
     {
-      const d = rr(x, y, boxW, boxH, C().RADIUS_RECT);
-      addPath(svg, d, "url(#gradFlow)", C().STROKE_PX);
+      const d = rr(x, y, boxW, boxH, cfg.RADIUS_RECT);
+      addPath(svg, d, "url(#gradFlow)", cfg.STROKE_PX);
       addFO(
         svg,
         x,
         y,
         boxW,
         boxH,
-        C().LABEL_RECT_4,
+        cfg.LABEL_RECT_4,
         {
-          font: `${C().FONT_WEIGHT_BOX} ${C().FONT_PT_RECT}pt ${C().FONT_FAMILY_BOX}`,
-          letterSpacing: `${C().FONT_LETTER_SPACING}px`,
-          lineHeight: `${C().LINE_HEIGHT_EM}em`,
-          textTransform: C().UPPERCASE ? "uppercase" : "none",
-          padding: `${C().PADDING_Y}px ${C().PADDING_X}px`
+          font: `${cfg.FONT_WEIGHT_BOX} ${cfg.FONT_PT_RECT}pt ${cfg.FONT_FAMILY_BOX}`,
+          letterSpacing: `${cfg.FONT_LETTER_SPACING}px`,
+          lineHeight: `${cfg.LINE_HEIGHT_EM}em`,
+          textTransform: cfg.UPPERCASE ? "uppercase" : "none",
+          padding: `${cfg.PADDING_Y}px ${cfg.PADDING_X}px`
         }
       );
       items.push({ x, y, w: boxW, h: boxH });
-      y += boxH + C().DOTS_Y_OFFSET;
+      y += boxH + cfg.DOTS_Y_OFFSET;
     }
 
     // dots
-    if (C().DOTS_COUNT > 0) {
+    if (cfg.DOTS_COUNT > 0) {
       const centerX = x + boxW / 2;
       let dotY = y;
-      for (let i = 0; i < C().DOTS_COUNT; i++) {
+      for (let i = 0; i < cfg.DOTS_COUNT; i++) {
         const c = document.createElementNS(NS, "circle");
         c.setAttribute("cx", centerX);
         c.setAttribute("cy", dotY);
-        c.setAttribute("r", C().DOTS_SIZE_PX);
-        c.setAttribute("fill", C().COLOR_CYAN);
+        c.setAttribute("r", cfg.DOTS_SIZE_PX);
+        c.setAttribute("fill", cfg.COLOR_CYAN);
         c.setAttribute("class", "glow");
         svg.appendChild(c);
-        dotY += C().DOTS_GAP_PX;
+        dotY += cfg.DOTS_GAP_PX;
       }
     }
 
     // title
-    if (C().TITLE_SHOW && items.length) {
+    if (cfg.TITLE_SHOW && items.length) {
       const t = document.createElementNS(NS, "text");
       const topBox = items[0];
-      t.setAttribute("x", topBox.x + topBox.w / 2 + C().TITLE_OFFSET_X);
-      t.setAttribute("y", topBox.y + C().TITLE_OFFSET_Y);
+      t.setAttribute("x", topBox.x + topBox.w / 2 + cfg.TITLE_OFFSET_X);
+      t.setAttribute("y", topBox.y + cfg.TITLE_OFFSET_Y);
       t.setAttribute("text-anchor", "middle");
       t.setAttribute("fill", "#ddeaef");
-      t.setAttribute("font-family", C().TITLE_FAMILY);
-      t.setAttribute("font-weight", C().TITLE_WEIGHT);
-      t.setAttribute("font-size", `${C().TITLE_PT}pt`);
-      t.textContent = C().TITLE_TEXT;
-      t.style.letterSpacing = `${C().TITLE_LETTER_SPACING}px`;
+      t.setAttribute("font-family", cfg.TITLE_FAMILY);
+      t.setAttribute("font-weight", cfg.TITLE_WEIGHT);
+      t.setAttribute("font-size", `${cfg.TITLE_PT}pt`);
+      t.textContent = cfg.TITLE_TEXT;
+      t.style.letterSpacing = `${cfg.TITLE_LETTER_SPACING}px`;
       svg.appendChild(t);
     }
 
     // rails
     if (items.length) {
       const first   = items[0];
-      const attachY = first.y + first.h * (0.5 + C().H_LINE_Y_BIAS);
+      const attachY = first.y + first.h * (0.5 + cfg.H_LINE_Y_BIAS);
 
-      if (C().SHOW_LEFT_LINE) {
-        const xs = W * Math.max(0, Math.min(1, C().LEFT_STOP_RATIO));
-        const xe = first.x - C().CONNECT_X_PAD;
+      if (cfg.SHOW_LEFT_LINE) {
+        const xs = W * Math.max(0, Math.min(1, cfg.LEFT_STOP_RATIO));
+        const xe = first.x - cfg.CONNECT_X_PAD;
         if (xe > xs) {
           const stroke = makeSegmentGradient(svg, xs, attachY, xe);
-          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
+          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, cfg.LINE_STROKE_PX);
         }
       }
 
-      if (C().SHOW_RIGHT_LINE) {
-        const xs = first.x + first.w + C().CONNECT_X_PAD;
-        const xe = W - C().RIGHT_MARGIN_PX;
+      if (cfg.SHOW_RIGHT_LINE) {
+        const xs = first.x + first.w + cfg.CONNECT_X_PAD;
+        const xe = W - cfg.RIGHT_MARGIN_PX;
         if (xe > xs) {
           const stroke = makeSegmentGradient(svg, xs, attachY, xe);
-          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, C().LINE_STROKE_PX);
+          addPath(svg, `M ${xs} ${attachY} H ${xe}`, stroke, cfg.LINE_STROKE_PX);
         }
       }
     }
@@ -704,18 +730,18 @@
       const xMid = a.x + a.w / 2;
       const y1   = a.y + a.h;
       const y2   = b2.y;
-      const pad  = Math.max(2, C().STROKE_PX);
+      const pad  = Math.max(2, cfg.STROKE_PX);
       addPath(
         svg,
         `M ${xMid} ${y1 + pad} V ${y2 - pad}`,
         "url(#gradTrailFlow)",
-        C().LINE_STROKE_PX
+        cfg.LINE_STROKE_PX
       );
     }
 
-    // Copy block (desktop)
-    const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
-    const top  = b.top + H * C().COPY_TOP_RATIO + C().COPY_NUDGE_Y;
+    // Copy block (desktop / tablet)
+    const left = b.left + W * cfg.COPY_LEFT_RATIO + cfg.COPY_NUDGE_X;
+    const top  = b.top + H * cfg.COPY_TOP_RATIO + cfg.COPY_NUDGE_Y;
     const html = `
       <h3>Who needs packaging right now?</h3>
       <p>Our <b>Right-Time Score</b> finds buyers in an active window to purchase &mdash; not just &ldquo;interested.&rdquo;
@@ -724,17 +750,27 @@
     `;
     if (typeof ctx.mountCopy === "function") {
       const el = ctx.mountCopy({ top, left, html });
-      el.style.maxWidth   = `${C().COPY_MAX_W_PX}px`;
-      el.style.fontFamily = C().COPY_FAMILY;
+      const maxW = isTablet
+        ? (cfg.TABLET_COPY_MAX_W_PX || cfg.COPY_MAX_W_PX)
+        : cfg.COPY_MAX_W_PX;
+      el.style.maxWidth   = `${maxW}px`;
+      el.style.fontFamily = cfg.COPY_FAMILY;
       const h3 = el.querySelector("h3");
       if (h3) {
-        h3.style.font = `${C().COPY_H_WEIGHT} ${C().COPY_H_PT}pt ${C().COPY_FAMILY}`;
+        h3.style.font = `${cfg.COPY_H_WEIGHT} ${cfg.COPY_H_PT}pt ${cfg.COPY_FAMILY}`;
       }
       const p = el.querySelector("p");
       if (p) {
         p.style.cssText =
-          `font:${C().COPY_BODY_WEIGHT} ${C().COPY_BODY_PT}pt ${C().COPY_FAMILY}; ` +
-          `line-height:${C().COPY_LINE_HEIGHT}`;
+          `font:${cfg.COPY_BODY_WEIGHT} ${cfg.COPY_BODY_PT}pt ${cfg.COPY_FAMILY}; ` +
+          `line-height:${cfg.COPY_LINE_HEIGHT}`;
+      }
+
+      // Tablet: scale the copy block down a bit to match the shrunken SVG
+      if (isTablet) {
+        const s = cfg.TABLET_SCALE || 0.9;
+        el.style.transformOrigin = "top left";
+        el.style.transform = `scale(${s})`;
       }
     }
   };
