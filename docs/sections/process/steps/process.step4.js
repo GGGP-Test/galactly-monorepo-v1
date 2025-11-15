@@ -457,6 +457,11 @@
     } else {
       copy.innerHTML = cfg.COPY_SEO_HTML;
     }
+        // Make the "What Platform?!$*&" heading white on mobile
+    const mh3 = copy.querySelector("h3");
+    if (mh3) {
+      mh3.style.color = "#ffffff";
+    }
     wrap.appendChild(copy);
 
     // 2) STEP TITLE AFTER COPY ("Platform Score")
