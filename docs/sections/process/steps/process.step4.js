@@ -95,7 +95,7 @@
           type: "diamond",
           label: "Posts / Platform (frequency)",
           heightRatio: 1,
-          fontPt: null
+          fontPt: 7,
         },
         {
           type: "pill",
