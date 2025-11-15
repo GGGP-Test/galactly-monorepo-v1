@@ -189,7 +189,7 @@
           border: 2,
           labelPt: 7,
           pad: 10,
-          nudgeY: 16
+          nudgeY: 20
         },
 
         // dots row
