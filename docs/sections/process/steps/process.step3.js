@@ -45,7 +45,7 @@
 
       // Title (desktop)
       TITLE_SHOW: true,
-      TITLE_TEXT: "Weight Score — Who stays the longest?",
+      TITLE_TEXT: "Weight Score",
       TITLE_PT: 14,
       TITLE_WEIGHT: 700,
       TITLE_FAMILY:
@@ -454,7 +454,7 @@
     if (m.titleShow !== false) {
       const t = document.createElement("div");
       t.className = "mstep-title";
-      t.textContent = cfg.TITLE_TEXT || "Weight Score — Who stays the longest?";
+      t.textContent = cfg.TITLE_TEXT || "Weight Score";
       t.style.textAlign = m.titleAlign || "center";
       t.style.fontWeight = String(m.titleWeight ?? 700);
       t.style.fontSize = `${m.titlePt ?? 11}pt`;
