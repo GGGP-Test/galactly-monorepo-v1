@@ -253,6 +253,12 @@
           COPY_NUDGE_X: -20,    // + = right, - = left
           COPY_NUDGE_Y: 0     // + = down, - = up
         }
+        
+          // ===== MAIN TITLE (Our AI Packaging Sales Intelligence: 6 Pillars) =====
+        mainTitle: {
+          NUDGE_X: 0,   // + = move right, - = left
+          NUDGE_Y: -50  // + = move down,  - = up
+        }
       }
     },
     window.PROCESS_CONFIG || {}
@@ -393,6 +399,7 @@
   const dots = Array.from(mount.querySelectorAll(".p-step"));
   const prevBtn = mount.querySelector("#prevBtn");
   const nextBtn = mount.querySelector("#nextBtn");
+  const mainTitle = section.querySelector(".proc-title");
 
   /* ----------------- STATE ----------------- */
   let step = 0; // 0..5
@@ -571,6 +578,23 @@
   }
   function clearCanvas() {
     while (canvas.firstChild) canvas.removeChild(canvas.firstChild);
+  }
+  
+    // Tablet-only: nudge the main process title (Our AI Packaging Sales Intelligence: 6 Pillars)
+  function applyTabletMainTitleNudge() {
+    if (!mainTitle) return;
+
+    const tCfg = TCFG();
+    const MT = tCfg.mainTitle || {};
+
+    if (isTablet()) {
+      const nx = MT.NUDGE_X || 0;
+      const ny = MT.NUDGE_Y || 0;
+      mainTitle.style.transform = `translate(${nx}px, ${ny}px)`;
+    } else {
+      // reset on desktop + phones
+      mainTitle.style.transform = "";
+    }
   }
 
   /* ----------------- STEP 0: Desktop SVG (desktop + tablet) ----------------- */
@@ -1194,6 +1218,7 @@
 
   function drawScene() {
     isMobile() ? drawMobile() : drawDesktop();
+    applyTabletMainTitleNudge();
   }
 
   function setStep(n, opts = {}) {
