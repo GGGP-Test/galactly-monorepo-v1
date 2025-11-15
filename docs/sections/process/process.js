@@ -236,7 +236,7 @@
           // pill box sizing (tablet)
           PILL_W_MAX: 400,    // max width in px
           PILL_W_RATIO: 0.48, // fraction of canvas width
-          PILL_H: 50,         // height in px
+          PILL_H: 60,         // height in px
           PILL_RADIUS: 16,    // corner radius
         
           // extra pill translation (tablet-only, on top of desktop NUDGE_X/Y)
