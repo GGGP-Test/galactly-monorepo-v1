@@ -188,8 +188,8 @@
           widthPct: 14,  // width of rotated diamond container
           border: 2,
           labelPt: 7,
-          pad: 10,
-          nudgeY: 20
+          pad: 0,
+          nudgeY: 30,
         },
 
         // dots row
