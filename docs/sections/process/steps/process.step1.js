@@ -67,9 +67,7 @@
 
       // Title (desktop)
       TITLE_SHOW: true,
-      TITLE_TEXT: <p>
-        <span class="accent-gold">Intent </span>
-        Score</p>,
+      TITLE_TEXT: "Intent Score",
       TITLE_PT: 14,
       TITLE_WEIGHT: 700,
       TITLE_FAMILY:
