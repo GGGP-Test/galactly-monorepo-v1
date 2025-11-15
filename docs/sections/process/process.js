@@ -238,20 +238,25 @@
           PILL_W_RATIO: 0.48, // fraction of canvas width
           PILL_H: 50,         // height in px
           PILL_RADIUS: 16,    // corner radius
-
+        
           // extra pill translation (tablet-only, on top of desktop NUDGE_X/Y)
           PILL_NUDGE_X: 0,   // + = right, - = left
           PILL_NUDGE_Y: 0,   // + = down,  - = up
-
-
+        
           // label inside pill (tablet)
           LABEL_PT: 16,       // font-size
           LABEL_NUDGE_X: 18,  // + = move right, - = left
           LABEL_NUDGE_Y: 6,   // + = move down, - = up
-
+        
           // title+copy block (h3 + paragraph) position (tablet)
-          COPY_NUDGE_X: -30,    // + = right, - = left
-          COPY_NUDGE_Y: 0     // + = down, - = up
+          COPY_NUDGE_X: -30,  // + = right, - = left
+          COPY_NUDGE_Y: 0,    // + = down,  - = up
+        
+          // >>> TABLET-ONLY TYPOGRAPHY FOR STEP 0 COPY <<<
+          COPY_TITLE_PT: 24,     // h3 font-size on tablet (px)
+          COPY_TITLE_WEIGHT: 600,
+          COPY_BODY_PT: 12,      // paragraph font-size on tablet (px)
+          COPY_BODY_LINE: 1.6    // paragraph line-height on tablet
         },
           // ===== MAIN TITLE (Our AI Packaging Sales Intelligence: 6 Pillars) =====
         mainTitle: {
@@ -703,18 +708,42 @@
     // ---- copy block (h3 + paragraph) with tablet nudges ----
     const copyNX = onTablet && T0.COPY_NUDGE_X != null ? T0.COPY_NUDGE_X : 0;
     const copyNY = onTablet && T0.COPY_NUDGE_Y != null ? T0.COPY_NUDGE_Y : 0;
-
+  
     const basePillY = Math.max(12, nodeH * 0.2);
     const minInside = b.left + 12;
     const fromRail = Math.max(minInside, b.left + 24);
     const copyTop = b.top + basePillY - 2 + copyNY;
-
+  
+    // Tablet-only font knobs (fall back to desktop defaults when not tablet)
+    const titlePt = onTablet && T0.COPY_TITLE_PT != null ? T0.COPY_TITLE_PT : 26;
+    const titleWeight =
+      onTablet && T0.COPY_TITLE_WEIGHT != null ? T0.COPY_TITLE_WEIGHT : 600;
+    const bodyPt = onTablet && T0.COPY_BODY_PT != null ? T0.COPY_BODY_PT : 15;
+    const bodyLine =
+      onTablet && T0.COPY_BODY_LINE != null ? T0.COPY_BODY_LINE : 1.6;
+  
+    const copyHTML = `
+      <h3 style="
+        margin:0 0 .45rem;
+        color:#eaf0f6;
+        font:${titleWeight} ${titlePt}px 'Newsreader', Georgia, serif;
+      ">
+        We start with your company.
+      </h3>
+      <p style="
+        margin:.35rem 0 0;
+        color:#a7bacb;
+        font:400 ${bodyPt}px/${bodyLine} Inter, system-ui;
+      ">
+        We'll start with your company to learn what matters. Then our system builds strong metrics around your strengths.
+        With that map in hand, we move forward to find real buyers who match your situation.
+      </p>
+    `;
+  
     const copy = mountCopy({
       top: copyTop,
       left: fromRail,
-      html: `<h3>We start with your company.</h3>
-             <p>We'll start with your company to learn what matters. Then our system builds strong metrics around your strengths.
-             With that map in hand, we move forward to find real buyers who match your situation.</p>`
+      html: copyHTML
     });
 
     requestAnimationFrame(() => {
