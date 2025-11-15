@@ -258,10 +258,108 @@
           COPY_BODY_PT: 12,      // paragraph font-size on tablet (px)
           COPY_BODY_LINE: 1.6    // paragraph line-height on tablet
         },
-          // ===== MAIN TITLE (Our AI Packaging Sales Intelligence: 6 Pillars) =====
+
+        // ===== STEP 1: TABLET-ONLY LAYOUT (boxes + diamond) =====
+        step1: {
+          useTheme: true,
+
+          // whole-step placement on tablet
+          top: 50,          // space above this step
+          bottom: 90,       // space below this step
+          maxW: 480,        // column width on tablet
+          sidePad: 24,      // padding inside the column
+          nudgeX: 0,        // translate the whole block
+          nudgeY: 0,
+
+          // small title: "Intent Score"
+          titleShow: true,
+          titlePt: 13,
+          titleWeight: 700,
+          titleLetter: 0.3,
+          titleAlign: "left",
+          titleMarginTop: 10,
+          titleMarginBottom: 16,
+          titleNudgeX: 0,
+          titleNudgeY: 0,
+
+          // h3 + body copy
+          copyHpt: 22,
+          copyBodyPt: 14,
+          copyLine: 1.6,
+          copyColor: "#a7bacb",
+          copyHColor: "#eaf0f6",
+          copyHGap: 10,
+          copyGapBottom: 18, // gap from paragraph → first box
+
+          // gap between the boxes themselves
+          stackGap: 14,
+
+          // base box knobs (all 4 boxes)
+          box: {
+            widthPct: 72,
+            minH: 46,
+            padX: 18,
+            padY: 12,
+            border: 2,
+            radius: 18,
+            fontPt: 9,
+            fontWeight: 525,
+            letter: 0.3,
+            lineEm: 1.25,
+            align: "left",
+            nudgeX: 0,  // + = push boxes to the right
+            nudgeY: 0   // + = push boxes down
+          },
+
+          // diamond at the bottom
+          diamond: {
+            widthPct: 34,  // width as % of column
+            size: null,    // if set, wins over widthPct (px)
+            border: 2,
+            pad: 14,
+            labelPt: 9,
+            nudgeY: 18     // positive = further from last box
+          },
+
+          // three dots under the diamond
+          dots: {
+            show: true,
+            count: 3,
+            size: 6,
+            gap: 10,
+            padTop: 8
+          },
+
+          // per-shape overrides (tablet-only tuning)
+          overrides: {
+            rect1: {
+              // Back-to-Back Search
+              // nudgeX: 0, nudgeY: 0
+            },
+            rect2: {
+              // RFQ/RFP Keywords
+            },
+            round3: {
+              // Pricing & Sample Page Hits
+            },
+            oval4: {
+              // Rising # of Ad Creatives → pill
+              radius: 9999
+            },
+            diamond5: {
+              // Import/Export End of Cycle (diamond)
+              // you can add nudgeX / nudgeY here too
+            }
+          },
+
+          // draw order top → bottom, then diamond
+          order: ["rect1", "rect2", "round3", "oval4", "diamond5"]
+        },
+
+        // ===== MAIN TITLE (Our AI Packaging Sales Intelligence: 6 Pillars) =====
         mainTitle: {
-          NUDGE_X: 0,   // + = move right, - = left
-          NUDGE_Y: -50  // + = move down,  - = up
+          NUDGE_X: 0,
+          NUDGE_Y: -50
         }
       }
     },
@@ -1138,15 +1236,188 @@
     wrap.appendChild(stack);
     canvas.appendChild(wrap);
   }
+  
+  /* ----------------- TABLET: Step 1 DOM (tablet-only) ----------------- */
+  function renderStep1_TABLET() {
+    const cfg = window.PROCESS_CONFIG.step1 || {};
+    const T = TCFG().step1 || {};
+
+    // Outer container for the whole step (tablet column)
+    const wrap = mStepContainer({
+      top: T.top ?? 50,
+      bottom: T.bottom ?? 90,
+      maxW: T.maxW ?? 480,
+      sidePad: T.sidePad ?? 24,
+      nudgeX: T.nudgeX ?? 0,
+      nudgeY: T.nudgeY ?? 0
+    });
+    wrap.classList.add("mstep-tablet", "mstep1-tablet");
+    // center the column horizontally
+    wrap.style.marginLeft = "auto";
+    wrap.style.marginRight = "auto";
+
+    // 1) COPY BLOCK (same text as mobile, tablet knobs for sizes/colors)
+    const copy = document.createElement("div");
+    copy.className = "mstep-copy";
+    copy.style.marginBottom = `${T.copyGapBottom ?? 18}px`;
+    copy.innerHTML = `
+      <h3 style="margin:0 0 ${(T.copyHGap ?? 10)}px; color:${
+        T.copyHColor ?? "#eaf0f6"
+      };
+                 font:600 ${(T.copyHpt ?? 22)}px 'Newsreader', Georgia, serif;">
+        Who buys your stuff?
+      </h3>
+      <p style="margin:0; color:${T.copyColor ?? "#a7bacb"};
+                font:400 ${(T.copyBodyPt ?? 14)}px/${(T.copyLine ?? 1.6)} Inter, system-ui;">
+        Our <b>Intent Score</b> finds accounts most likely to purchase in the next cycle.
+        We weight <b>recent</b> signals like search bursts, RFQ/RFP language, visits to pricing & sample pages,
+        and events/trade shows, new product launches, and 38+ more metrics, then surface the prospects your team should contact today.
+      </p>`;
+    wrap.appendChild(copy);
+
+    // 2) STEP TITLE ("Intent Score")
+    if (T.titleShow !== false) {
+      const t = document.createElement("div");
+      t.className = "mstep-title";
+      t.innerHTML = '<span class="mstep-title-intent">Intent</span> Score';
+      t.style.textAlign = T.titleAlign || "left";
+      t.style.fontWeight = String(T.titleWeight ?? 700);
+      t.style.fontSize = `${T.titlePt ?? 13}pt`;
+      t.style.letterSpacing = `${T.titleLetter ?? 0.3}px`;
+      t.style.marginTop = `${T.titleMarginTop ?? 10}px`;
+      t.style.marginBottom = `${T.titleMarginBottom ?? 16}px`;
+
+      const tNx = T.titleNudgeX ?? 0;
+      const tNy = T.titleNudgeY ?? 0;
+      if (tNx || tNy) {
+        t.style.transform = `translate(${tNx}px, ${tNy}px)`;
+      }
+
+      wrap.appendChild(t);
+    }
+
+    // 3) BOX STACK (4 boxes + diamond)
+    const stack = document.createElement("div");
+    stack.className = "mstack";
+    stack.style.gap = `${T.stackGap ?? 14}px`;
+
+    const labels = {
+      rect1:
+        cfg.LABEL_RECT_1 ?? "Back-To-Back Search (last 14d)",
+      rect2:
+        cfg.LABEL_RECT_2 ?? "RFQ/RFP Keywords Detected",
+      round3:
+        cfg.LABEL_ROUND_3 ?? "Pricing & Sample Page Hits",
+      oval4:
+        cfg.LABEL_OVAL_4 ??
+        "Rising # of Ad Creatives (last 14d)",
+      diamond5: cfg.LABEL_DIAMOND_5 ?? "Imp/Exp Cycle"
+    };
+
+    const order = Array.isArray(T.order)
+      ? T.order
+      : ["rect1", "rect2", "round3", "oval4", "diamond5"];
+    const baseBox = T.box || {};
+    const OVR = T.overrides || {};
+
+    for (const key of order) {
+      const ov = OVR[key] || {};
+
+      if (key === "diamond5") {
+        // diamond at the bottom
+        const dWrap = document.createElement("div");
+        dWrap.className = "mdiamond";
+
+        const dCfg = T.diamond || {};
+        if (typeof dCfg.widthPct === "number") {
+          dWrap.style.width = `${dCfg.widthPct}%`;
+        } else if (typeof dCfg.size === "number") {
+          dWrap.style.width = `${dCfg.size}px`;
+        } else {
+          dWrap.style.width = "40%";
+        }
+
+        dWrap.style.border = `${dCfg.border ?? 2}px solid rgba(99,211,255,.95)`;
+
+        const dNx = ov.nudgeX ?? baseBox.nudgeX ?? 0;
+        const dNy =
+          ov.nudgeY ?? baseBox.nudgeY ?? (dCfg.nudgeY ?? 0);
+        let transform = "rotate(45deg)";
+        if (dNx || dNy) {
+          transform = `translate(${dNx}px, ${dNy}px) ${transform}`;
+        }
+        dWrap.style.transform = transform;
+
+        const s = document.createElement("span");
+        s.textContent = labels[key];
+        s.style.width = "70%";
+        s.style.height = "70%";
+        s.style.font = `${
+          baseBox.fontWeight ?? 525
+        } ${(dCfg.labelPt ?? baseBox.fontPt ?? 9)}pt Inter, system-ui`;
+        s.style.letterSpacing = `${baseBox.letter ?? 0.3}px`;
+        s.style.lineHeight = `${baseBox.lineEm ?? 1.25}em`;
+        s.style.padding = `${dCfg.pad ?? 14}px`;
+        dWrap.appendChild(s);
+        stack.appendChild(dWrap);
+      } else {
+        const box = document.createElement("div");
+        box.className =
+          "mbox" + (key === "oval4" ? " oval" : "");
+        box.textContent = labels[key];
+        applyBoxStyles(
+          box,
+          baseBox,
+          Object.assign(
+            {},
+            key === "oval4" ? { radius: 9999 } : {},
+            ov
+          )
+        );
+        stack.appendChild(box);
+      }
+    }
+
+    // 4) DOTS ROW UNDER DIAMOND
+    const dotsCfg = T.dots || {};
+    if (dotsCfg.show !== false) {
+      const row = document.createElement("div");
+      row.className = "mdots";
+      row.style.gap = `${dotsCfg.gap ?? 10}px`;
+      row.style.paddingTop = `${dotsCfg.padTop ?? 8}px`;
+      const n = Math.max(0, dotsCfg.count ?? 3);
+      for (let i = 0; i < n; i++) {
+        const dot = document.createElement("i");
+        const size = `${dotsCfg.size ?? 6}px`;
+        dot.style.width = size;
+        dot.style.height = size;
+        row.appendChild(dot);
+      }
+      stack.appendChild(row);
+    }
+
+    wrap.appendChild(stack);
+    canvas.appendChild(wrap);
+  }
+  
 
   /* ----------------- ROUTERS ----------------- */
   // Desktop route (original — used for desktop + tablet)
   function drawDesktop() {
     clearCanvas();
+
     if (step === 0 && phase === 1) {
       scenePill();
       return;
     }
+
+    // >>> TABLET-ONLY STEP 1 DOM LAYOUT <<<
+    if (isTablet() && step === 1) {
+      renderStep1_TABLET();
+      return;
+    }
+
+    // default: desktop scenes (also used for other tablet steps)
     const scene = window.PROCESS_SCENES[step];
     if (typeof scene === "function") {
       try {
