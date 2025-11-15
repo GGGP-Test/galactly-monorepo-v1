@@ -417,7 +417,7 @@
     if (m.titleShow !== false) {
       const t = document.createElement("div");
       t.className = "mstep-title";
-      t.textContent = cfg.TITLE_TEXT || "Right-Time Score";
+      t.innerHTML = '<span class="mstep-title-intent">Right-Time</span> Score';
       t.style.textAlign     = m.titleAlign || "center";
       t.style.fontWeight    = String(m.titleWeight ?? 700);
       t.style.fontSize      = `${m.titlePt ?? 11}pt`;
