@@ -341,7 +341,7 @@
 
       #section-process .p1m-title{
         text-align:left;
-        color:#ddeaef;
+        color:#f2dca0;
         font:${C().TITLE_WEIGHT} ${C().T_TITLE_PT}pt ${C().TITLE_FAMILY};
         letter-spacing:${C().TITLE_LETTER_SPACING}px;
         margin:6px 0 10px;
