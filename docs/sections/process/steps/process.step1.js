@@ -485,7 +485,7 @@
     wrap.className = "p1m-wrap s1";
 
     const copyHTML = `
-      <h3>Who&rsquo;s ready now?</h3>
+      <h3>Who buys your stuff?</h3>
       <p>Our <b>Intent Score</b> finds accounts most likely to purchase in the next cycle.
       We weight recent signals like RFQ/RFP language, pricing &amp; sample page hits, ad creative volume and more, then surface prospects your team should contact.</p>
     `;
@@ -730,7 +730,7 @@
     const left = b.left + W * C().COPY_LEFT_RATIO + C().COPY_NUDGE_X;
     const top = b.top + H * C().COPY_TOP_RATIO + C().COPY_NUDGE_Y;
     const html = `
-      <h3>Who&rsquo;s ready now?</h3>
+      <h3>Who buys your stuff?</h3>
       <p>Our <b>Intent Score</b> finds accounts most likely to purchase in the next cycle.
       We weight recent signals like RFQ/RFP language, pricing &amp; sample page hits, ad creative volume and more, then surface the prospects your team should contact.</p>
     `;
