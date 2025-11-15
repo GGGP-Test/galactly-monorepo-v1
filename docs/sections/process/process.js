@@ -227,7 +227,7 @@
         RAIL_DOCK_SCALE: 0.84,
 
         // lamp adjustments (extra offset on top of desktop math)
-        LAMP_EXTRA_X: 0, // + = move lamp right, - = left
+        LAMP_EXTRA_X: -25, // + = move lamp right, - = left
         LAMP_EXTRA_W: 0, // + = widen lamp, - = shrink
         LAMP_OPACITY: 0.32 // default intensity on tablet
       }
