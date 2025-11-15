@@ -692,7 +692,7 @@
     if (M.titleShow !== false){
       const t = document.createElement("div");
       t.className = "mstep-title";
-      t.textContent = (cfg.TITLE_TEXT || "Time-to-Buy Intent");
+      t.textContent = (cfg.TITLE_TEXT || "Intent Score");
       t.style.textAlign = (M.titleAlign || "center");
       t.style.fontWeight = String(M.titleWeight ?? 700);
       t.style.fontSize = `${M.titlePt ?? 16}pt`;
