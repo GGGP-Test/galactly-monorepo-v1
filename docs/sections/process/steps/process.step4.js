@@ -171,7 +171,7 @@
           padY: 10,
           border: 2,
           radius: 18,
-          fontPt: 8,
+          fontPt: 7,
           fontWeight: 525,
           letter: 0.3,
           lineEm: 1.2,
