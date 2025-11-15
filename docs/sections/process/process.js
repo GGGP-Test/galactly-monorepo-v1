@@ -678,7 +678,7 @@
     copy.innerHTML = `
       <h3 style="margin:0 0 ${M.copyHGap ?? 8}px; color:${M.copyHColor ?? "#eaf0f6"};
                  font:600 ${(M.copyHpt ?? 22)}px 'Newsreader', Georgia, serif;">
-        Who’s ready now?
+        Who buys your stuff?
       </h3>
       <p style="margin:0; color:${M.copyColor ?? "#a7bacb"};
                 font:400 ${(M.copyBodyPt ?? 14)}px/${(M.copyLine ?? 1.55)} Inter, system-ui;">
