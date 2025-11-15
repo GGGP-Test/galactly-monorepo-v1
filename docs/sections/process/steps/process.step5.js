@@ -148,11 +148,11 @@
       // Mobile headings
       M_HEAD_BOX_H: null,
       M_HEAD_SPACING: null,
-      M_HEAD_OFFSET_Y: 220,
+      M_HEAD_OFFSET_Y: 200,
       M_HEAD_MAX_WIDTH_PCT: null,
       M_HEAD_BASELINE_BIAS: null,
       M_TITLE_OFFSET_X: null,
-      M_TITLE_OFFSET_Y: 250,
+      M_TITLE_OFFSET_Y: -250,
 
       // mobile-specific padding from last item to first dot
       M_DOTS_TOP_PAD: 30,
