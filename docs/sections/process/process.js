@@ -275,6 +275,7 @@
     #section-process { position: relative; z-index: 1; overflow: visible !important; }
     #section-process .mstep { scroll-margin-top: 64px; }
     #section-process .mstep-title{ color:#ddeaef; }
+    #section-process .mstep-title-intent{ color:var(--accent2); }
     #section-process .mstep-copy{ color:#a7bacb; }
     #section-process .mstack{ display:flex; flex-direction:column; align-items:center; }
     #section-process .mbox{ color:#ddeaef; background:rgba(255,255,255,.02); border-style:solid; display:flex; align-items:center; justify-content:center; text-align:center; }
@@ -692,7 +693,7 @@
     if (M.titleShow !== false){
       const t = document.createElement("div");
       t.className = "mstep-title";
-      t.textContent = (cfg.TITLE_TEXT || "Intent Score");
+      t.innerHTML = '<span class="mstep-title-intent">Intent</span> Score';
       t.style.textAlign = (M.titleAlign || "center");
       t.style.fontWeight = String(M.titleWeight ?? 700);
       t.style.fontSize = `${M.titlePt ?? 16}pt`;
