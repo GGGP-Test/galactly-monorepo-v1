@@ -252,7 +252,6 @@
           // title+copy block (h3 + paragraph) position (tablet)
           COPY_NUDGE_X: -20,    // + = right, - = left
           COPY_NUDGE_Y: 0,     // + = down, - = up
-        }
         
           // ===== MAIN TITLE (Our AI Packaging Sales Intelligence: 6 Pillars) =====
         mainTitle: {
